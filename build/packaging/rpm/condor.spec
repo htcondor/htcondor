@@ -141,10 +141,6 @@ Requires: openssh-server
 Requires: net-tools
 
 Requires: /usr/sbin/sendmail
-Requires: condor-classads = %{version}-%{release}
-Requires: condor-procd = %{version}-%{release}
-
-Requires: %name-blahp = %version-%release
 
 # Useful tools are using the Python bindings
 Requires: python3-condor = %{version}-%{release}
@@ -220,6 +216,21 @@ Obsoletes: condor-bosco < 9.5.0
 # externals package discontinued as of 10.8.0
 Obsoletes: condor-externals < 10.8.0
 
+# blahp package discontinued as of 10.8.0
+Obsoletes: condor-blahp < 10.8.0
+
+# procd package discontinued as of 10.8.0
+Obsoletes: condor-procd < 10.8.0
+
+# all package discontinued as of 10.8.0
+Obsoletes: condor-all < 10.8.0
+
+# classds package discontinued as of 10.8.0
+Obsoletes: condor-classds < 10.8.0
+
+# classad-devel package discontinued as of 10.8.0
+Obsoletes: condor-classad-devel < 10.8.0
+
 %description
 HTCondor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems, HTCondor
@@ -250,20 +261,10 @@ Development files for HTCondor
 %endif
 
 #######################
-%package procd
-Summary: HTCondor Process tracking Daemon
-Group: Applications/System
-
-%description procd
-A daemon for tracking child processes started by a parent.
-Part of HTCondor, but able to be stand-alone
-
-#######################
 %package kbdd
 Summary: HTCondor Keyboard Daemon
 Group: Applications/System
 Requires: %name = %version-%release
-Requires: %name-classads = %{version}-%{release}
 
 %description kbdd
 The condor_kbdd monitors logged in X users for activity. It is only
@@ -277,7 +278,6 @@ Summary: HTCondor's VM Gahp
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: libvirt
-Requires: %name-classads = %{version}-%{release}
 
 %description vm-gahp
 The condor_vm-gahp enables the Virtual Machine Universe feature of
@@ -285,48 +285,12 @@ HTCondor. The VM Universe uses libvirt to start and control VMs under
 HTCondor's Startd.
 
 %endif
-#######################
-%package classads
-Summary: HTCondor's classified advertisement language
-Group: Development/Libraries
-
-%description classads
-Classified Advertisements (classads) are the lingua franca of
-HTCondor. They are used for describing jobs, workstations, and other
-resources. They are exchanged by HTCondor processes to schedule
-jobs. They are logged to files for statistical and debugging
-purposes. They are used to enquire about current state of the system.
-
-A classad is a mapping from attribute names to expressions. In the
-simplest cases, the expressions are simple constants (integer,
-floating point, or string). A classad is thus a form of property
-list. Attribute expressions can also be more complicated. There is a
-protocol for evaluating an attribute expression of a classad vis a vis
-another ad. For example, the expression "other.size > 3" in one ad
-evaluates to true if the other ad has an attribute named size and the
-value of that attribute is (or evaluates to) an integer greater than
-three. Two classads match if each ad has an attribute requirements
-that evaluates to true in the context of the other ad. Classad
-matching is used by the HTCondor central manager to determine the
-compatibility of jobs and workstations where they may be run.
-
-#######################
-%package classads-devel
-Summary: Headers for HTCondor's classified advertisement language
-Group: Development/System
-Requires: %name-classads = %version-%release
-Requires: pcre2-devel
-
-%description classads-devel
-Header files for HTCondor's ClassAd Library, a powerful and flexible,
-semi-structured representation of data.
 
 #######################
 %package test
 Summary: HTCondor Self Tests
 Group: Applications/System
 Requires: %name = %version-%release
-Requires: %name-classads = %{version}-%{release}
 
 %description test
 A collection of tests to verify that HTCondor is operating properly.
@@ -427,23 +391,6 @@ The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
 
 #######################
-%package blahp
-Summary: BLAHP daemon
-Group: System/Libraries
-BuildRequires:  docbook-style-xsl, libxslt
-Requires: %name = %version-%release
-%if 0%{?rhel} >= 8 || 0%{?fedora}
-Requires: python3
-%else
-Requires: python >= 2.2
-%endif
-Provides: blahp = %{version}-%{release}
-Obsoletes: blahp < 9.5.0
-
-%description blahp
-%{summary}
-
-#######################
 %package -n minicondor
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
@@ -498,24 +445,6 @@ HTCondor V9 to V10 check for for known breaking changes:
 
 %files upgrade-checks
 %_bindir/condor_upgrade_check
-
-#######################
-%package all
-Summary: All condor packages in a typical installation
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: %name-procd = %version-%release
-Requires: %name-kbdd = %version-%release
-%if ! 0%{?amzn}
-Requires: %name-vm-gahp = %version-%release
-%endif
-Requires: %name-classads = %version-%release
-%if 0%{?rhel} >= 7 || 0%{?fedora}
-Requires: python3-condor = %version-%release
-%endif
-
-%description all
-Include dependencies for all condor packages in a typical installation
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
@@ -879,7 +808,6 @@ rm -rf %{buildroot}
 #make check-seralized
 
 #################
-%files all
 %files
 %defattr(-,root,root,-)
 %doc LICENSE NOTICE.txt examples
@@ -1193,6 +1121,36 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
 
+###### blahp files #######
+%config %_sysconfdir/blah.config
+%config %_sysconfdir/blparser.conf
+%dir %_sysconfdir/blahp/
+%config %_sysconfdir/blahp/condor_local_submit_attributes.sh
+%config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
+%config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
+%config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
+%config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
+%_bindir/blahpd
+%_sbindir/blah_check_config
+%_sbindir/blahpd_daemon
+%dir %_libexecdir/blahp
+%_libexecdir/blahp/*
+
+####### procd files #######
+%_sbindir/condor_procd
+%_sbindir/gidd_alloc
+%_sbindir/procd_ctl
+%_mandir/man1/procd_ctl.1.gz
+%_mandir/man1/gidd_alloc.1.gz
+%_mandir/man1/condor_procd.1.gz
+
+####### classads files #######
+%defattr(-,root,root,-)
+%doc LICENSE NOTICE.txt
+%_libdir/libclassad.so.*
+
 #################
 %files devel
 %{_includedir}/condor/chirp_client.h
@@ -1203,49 +1161,7 @@ rm -rf %{buildroot}
 %{_libdir}/condor/libcondorapi.a
 %{_libdir}/libclassad.a
 
-
-%if %uw_build
-#################
-%files tarball
-%{_bindir}/make-personal-from-tarball
-%{_sbindir}/condor_configure
-%{_sbindir}/condor_install
-%{_mandir}/man1/condor_configure.1.gz
-%{_mandir}/man1/condor_install.1.gz
-%endif
-
-#################
-%files procd
-%_sbindir/condor_procd
-%_sbindir/gidd_alloc
-%_sbindir/procd_ctl
-%_mandir/man1/procd_ctl.1.gz
-%_mandir/man1/gidd_alloc.1.gz
-%_mandir/man1/condor_procd.1.gz
-
-#################
-%files kbdd
-%defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
-%_sbindir/condor_kbdd
-
-#################
-%if ! 0%{?amzn}
-%files vm-gahp
-%defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
-%_sbindir/condor_vm-gahp
-%_libexecdir/condor/libvirt_simple_script.awk
-
-%endif
-#################
-%files classads
-%defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
-%_libdir/libclassad.so.*
-
-#################
-%files classads-devel
+####### classads-devel files #######
 %defattr(-,root,root,-)
 %doc LICENSE NOTICE.txt
 %_bindir/classad_functional_tester
@@ -1287,6 +1203,31 @@ rm -rf %{buildroot}
 %_includedir/classad/xmlSink.h
 %_includedir/classad/xmlSource.h
 
+%if %uw_build
+#################
+%files tarball
+%{_bindir}/make-personal-from-tarball
+%{_sbindir}/condor_configure
+%{_sbindir}/condor_install
+%{_mandir}/man1/condor_configure.1.gz
+%{_mandir}/man1/condor_install.1.gz
+%endif
+
+#################
+%files kbdd
+%defattr(-,root,root,-)
+%doc LICENSE NOTICE.txt
+%_sbindir/condor_kbdd
+
+#################
+%if ! 0%{?amzn}
+%files vm-gahp
+%defattr(-,root,root,-)
+%doc LICENSE NOTICE.txt
+%_sbindir/condor_vm-gahp
+%_libexecdir/condor/libvirt_simple_script.awk
+
+%endif
 #################
 %files test
 %defattr(-,root,root,-)
@@ -1356,24 +1297,6 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
-
-%files blahp
-%config %_sysconfdir/blah.config
-%config %_sysconfdir/blparser.conf
-%_sysconfdir/rc.d/init.d/glite-ce-blah-parser
-%dir %_sysconfdir/blahp/
-%config %_sysconfdir/blahp/condor_local_submit_attributes.sh
-%config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
-%config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
-%config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
-%config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
-%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
-%config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
-%_bindir/blahpd
-%_sbindir/blah_check_config
-%_sbindir/blahpd_daemon
-%dir %_libexecdir/blahp
-%_libexecdir/blahp/*
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
