@@ -53,12 +53,6 @@ dc::AwaitableDeadlineReaper::born( pid_t pid, int timeout ) {
 
 
 int
-dc::AwaitableDeadlineReaper::reaper_id() {
-	return reaperID;
-}
-
-
-int
 dc::AwaitableDeadlineReaper::reaper( pid_t pid, int status ) {
 	ASSERT(pids.contains(pid));
 

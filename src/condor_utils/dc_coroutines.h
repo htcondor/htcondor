@@ -50,7 +50,7 @@ namespace dc {
 			bool born( pid_t pid, int timeout );
 
 			// Useful as an argument to Create_Process().
-			int reaper_id();
+			int reaper_id() const { return reaperID; }
 
 			// How many born have not died?
 			size_t living() const { return pids.size(); }
