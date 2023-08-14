@@ -212,7 +212,7 @@ precedence is shown in the following example:
 .. code-block:: text
 
       - (unary negation)   (high precedence)
-      *   /
+      *  /   %
       +   - (addition, subtraction)
       <   <=   >=   >
       ==  !=  =?=  is  =!=  isnt
