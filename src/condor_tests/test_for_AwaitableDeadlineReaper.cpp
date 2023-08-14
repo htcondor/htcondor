@@ -6,6 +6,7 @@
 #include "subsystem_info.h"
 
 #include "dc_coroutines.h"
+using namespace condor;
 
 
 //
