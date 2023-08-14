@@ -29,10 +29,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Turn on coroutines on all platforms.  Not sure why this isn't included
 # in the C++20 standard.
-if(${CMAKE_COMPILER_IS_GNUCXX})
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
-endif()
-
 if(${MSVC})
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /await:strict")
 endif()
