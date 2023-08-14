@@ -22,6 +22,7 @@
 
 #include "condor_classad.h"
 #include "list.h"
+#include "schedd_negotiate.h"
 #include "scheduler.h"
 #include <vector>
 
@@ -495,6 +496,7 @@ class DedicatedScheduler : public Service {
 		// onto a resource without using it before we release it? 
 
 	friend class CandidateList;
+	friend class DedicatedScheddNegotiate;
 
 	std::vector<PROC_ID> jobsToReconnect;
 	//int				checkReconnectQueue_tid;

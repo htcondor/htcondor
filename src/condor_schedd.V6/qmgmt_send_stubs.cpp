@@ -36,28 +36,6 @@ extern ReliSock *qmgmt_sock;
 int terrno;
 
 int
-InitializeConnection( const char * /*owner*/, const char * /* domain */ )
-{
-	CurrentSysCall = CONDOR_InitializeConnection;
-
-	qmgmt_sock->encode();
-	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-
-	return( 0 );
-}
-
-int
-InitializeReadOnlyConnection( const char * /*owner*/ )
-{
-	CurrentSysCall = CONDOR_InitializeReadOnlyConnection;
-
-	qmgmt_sock->encode();
-	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-
-	return( 0 );
-}
-
-int
 QmgmtSetAllowProtectedAttrChanges( int val )
 {
 	int	rval = -1;
@@ -463,7 +441,7 @@ SetAttributeByConstraint( char const *constraint, char const *attr_name, char co
 int
 SetAttribute( int cluster_id, int proc_id, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags_in, CondorError *)
 {
-	int	rval;
+	int	rval = 0;
 
 	// only some of the flags can be sent on the wire, the upper bits are private to the schedd
 	SetAttributePublicFlags_t flags = (flags_in & SetAttribute_PublicFlagsMask);
@@ -724,7 +702,7 @@ GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char 
 {
 	int	rval = -1;
 
-	*val = NULL;
+	*val = nullptr;
 
 	CurrentSysCall = CONDOR_GetAttributeString;
 
@@ -757,7 +735,7 @@ GetAttributeExprNew( int cluster_id, int proc_id, char const *attr_name, char **
 
 	CurrentSysCall = CONDOR_GetAttributeExpr;
 
-	*value = NULL;
+	*value = nullptr;
 
 	qmgmt_sock->encode();
 	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
@@ -922,14 +900,14 @@ GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_e
 			null_on_error( qmgmt_sock->code(terrno) );
 			null_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
-			return NULL;
+			return nullptr;
 		}
-		ClassAd *ad = new ClassAd;
+		auto *ad = new ClassAd;
 
 		if ( !(getClassAd(qmgmt_sock, *ad)) ) {
 			delete ad;
 			errno = ETIMEDOUT;
-			return NULL;
+			return nullptr;
 		}
 
 		null_on_error( qmgmt_sock->end_of_message() );
@@ -956,14 +934,14 @@ GetJobByConstraint( char const *constraint )
 			null_on_error( qmgmt_sock->code(terrno) );
 			null_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
-			return NULL;
+			return nullptr;
 		}
-		ClassAd *ad = new ClassAd;
+		auto *ad = new ClassAd;
 
 		if ( !(getClassAd(qmgmt_sock, *ad)) ) {
 			delete ad;
 			errno = ETIMEDOUT;
-			return NULL;
+			return nullptr;
 		}
 
 		null_on_error( qmgmt_sock->end_of_message() );
@@ -990,15 +968,15 @@ GetNextJob( int initScan )
 			null_on_error( qmgmt_sock->code(terrno) );
 			null_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
-			return NULL;
+			return nullptr;
 		}
 		
-		ClassAd *ad = new ClassAd;
+		auto *ad = new ClassAd;
 
 		if ( !(getClassAd(qmgmt_sock, *ad)) ) {
 			delete ad;
 			errno = ETIMEDOUT;
-			return NULL;
+			return nullptr;
 		}
 
 		null_on_error( qmgmt_sock->end_of_message() );
@@ -1026,15 +1004,15 @@ GetNextJobByConstraint( char const *constraint, int initScan )
 		null_on_error( qmgmt_sock->code(terrno) );
 		null_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
-		return NULL;
+		return nullptr;
 	}
 
-	ClassAd *ad = new ClassAd;
+	auto *ad = new ClassAd;
 
 	if ( ! (getClassAd(qmgmt_sock, *ad)) ) {
 		delete ad;
 		errno = ETIMEDOUT;
-		return NULL;
+		return nullptr;
 	}
 
 	null_on_error( qmgmt_sock->end_of_message() );
@@ -1063,22 +1041,22 @@ GetAllJobsByConstraint_imp( char const *constraint, char const *projection, Clas
 				null_on_error( qmgmt_sock->code(terrno) );
 				null_on_error( qmgmt_sock->end_of_message() );
 				errno = terrno;
-				return NULL;
+				return nullptr;
 			}
 
-			ClassAd *ad = new ClassAd;
+			auto *ad = new ClassAd;
 
 			if ( ! (getClassAd(qmgmt_sock, *ad)) ) {
 				delete ad;
 				errno = ETIMEDOUT;
-				return NULL;
+				return nullptr;
 			}
 			list.Insert(ad);
 
 		};
 		null_on_error( qmgmt_sock->end_of_message() );
 
-	return 0;
+	return nullptr;
 }
 
 void
@@ -1144,15 +1122,15 @@ GetNextDirtyJobByConstraint( char const *constraint, int initScan )
 		null_on_error( qmgmt_sock->code(terrno) );
 		null_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
-		return NULL;
+		return nullptr;
 	}
 
-	ClassAd *ad = new ClassAd;
+	auto *ad = new ClassAd;
 
 	if ( ! (getClassAd(qmgmt_sock, *ad)) ) {
 		delete ad;
 		errno = ETIMEDOUT;
-		return NULL;
+		return nullptr;
 	}
 
 	null_on_error( qmgmt_sock->end_of_message() );

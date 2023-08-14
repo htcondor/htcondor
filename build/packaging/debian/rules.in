@@ -47,7 +47,7 @@ override_dh_auto_configure:
 
 
 override_dh_auto_build: doc/build
-	dh_auto_build --parallel -- VERBOSE=1
+	dh_auto_build --parallel
 	# The tests don't get built eventhough was asked for them
 	(cd obj-*; make tests)
 	# post-fixing things that have to be done due to changes introduced by
@@ -89,14 +89,14 @@ override_dh_auto_install:
 
 
 override_dh_fixperms-arch:
-	chmod -x debian/htcondor/usr/lib/condor/libexec/interactive.sub
+	chmod -x debian/htcondor/usr/libexec/condor/interactive.sub
 
 
 override_dh_install-arch:
 	dh_install
 	# fix permissions
 	# remove duplicate that is also installed as a config file
-	rm -f debian/htcondor/usr/lib/condor/libexec/linux-kernel-tuning
+	rm -f debian/htcondor/usr/libexec/condor/linux-kernel-tuning
 
 
 override_dh_auto_clean:
@@ -110,7 +110,8 @@ override_dh_auto_clean:
 		src/condor_examples/condor_config.patched
 	-rm src/condor_tests/Condor.pm src/condor_tests/CondorPersonal.pm \\
 		src/condor_tests/CondorTest.pm src/condor_tests/CondorUtils.pm \\
-		src/condor_tests/batch_test.pl
+		src/condor_tests/batch_test.pl \\
+		src/condor_tests/condor_credmon_oauth_dummy
 	-rm src/condor_utils/param_info.c
 	# docs
 	$(MAKE) -C docs clean

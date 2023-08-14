@@ -2368,6 +2368,11 @@ default=true
 type=bool
 tags=condor_ssh_to_job
 
+[ENABLE_USERLOG_FSYNC]
+default=false
+type=bool
+tags=read_user_log
+
 [ENABLE_USERLOG_LOCKING]
 default=false
 type=bool
@@ -4473,6 +4478,14 @@ version=7.7.5
 type=string
 tags=schedd,startd,claim
 
+[ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS]
+default=false
+type=bool
+
+[MAX_PARTITIONABLE_SLOT_CLAIM_TIME]
+default=3600
+type=int
+
 [MOUNT_UNDER_SCRATCH]
 default="/tmp,/var/tmp"
 win32_default=
@@ -4719,7 +4732,7 @@ tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
-default=none
+default=hard
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen

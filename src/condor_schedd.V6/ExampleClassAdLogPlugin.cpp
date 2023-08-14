@@ -21,25 +21,25 @@
 struct ExampleClassAdLogPlugin : public ClassAdLogPlugin
 {
 	void
-	initialize()
+	initialize() override
 	{
 		printf("Init\n");
 	}
 
 	void
-	shutdown()
+	shutdown() override
 	{
 		printf("Shutdown\n");
 	}
 
 	void
-	newClassAd(const char *key)
+	newClassAd(const char *key) override
 	{
 		printf("newClassAd: %s\n", key);
 	}
 
 	void
-	destroyClassAd(const char *key)
+	destroyClassAd(const char *key) override
 	{
 		printf("destroyClassAd: %s\n", key);
 	}
@@ -47,14 +47,14 @@ struct ExampleClassAdLogPlugin : public ClassAdLogPlugin
 	void
 	setAttribute(const char *key,
 				 const char *name,
-				 const char *value)
+				 const char *value) override
 	{
 		printf("setAttribute: %s[%s] = %s\n", key, name, value);
 	}
 
 	void
 	deleteAttribute(const char *key,
-					const char *name)
+					const char *name) override
 	{
 		printf("deleteAttribute: %s[%s]\n", key, name);
 	}

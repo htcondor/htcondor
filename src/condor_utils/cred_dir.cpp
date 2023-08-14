@@ -137,7 +137,7 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 	std::string job_user;
 	if (!m_ad.EvaluateAttrString(ATTR_USER, job_user)) {
 		dprintf(D_ALWAYS|D_FAILURE, "Shadow copy of the job ad does not have user attribute.\n");
-		return -1;
+		return false;
 	}
 	auto at_pos = job_user.find('@');
 	auto user = job_user.substr(0, at_pos);

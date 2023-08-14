@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+# Copyright 2023 HTCondor Team, Computer Sciences Department,
+# University of Wisconsin-Madison, WI.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+"""
+*** Dummy OAuth credmon, for testing purposes only! ***
+***  Do not use this in a production environment!   ***
+***        Does not produce valid tokens!           ***
+***             You have been warned!               ***
+
+Suggested condor_config:
+use feature : OAUTH
+CREDMON_OAUTH = $(LIBEXEC)/condor_credmon_oauth_dummy
+DUMMY_CLIENT_ID = dummy_client_id
+DUMMY_CLIENT_SECRET_FILE = $(CONFIG_ROOT)/dummy.secret
+DUMMY_RETURN_URL_SUFFIX = /return
+DUMMY_AUTHORIZATION_URL = https://$(FULL_HOSTNAME)/authorize
+DUMMY_TOKEN_URL = https://$(FULL_HOSTNAME)/token
+"""
+
+
+import os
+import sys
+import time
+import signal
+import htcondor
+from classad import parseAds
+from datetime import datetime
+from pathlib import Path
+from traceback import format_exc
+
+
+CRED_DIR = Path(
+    htcondor.param.get("SEC_CREDENTIAL_DIRECTORY_OAUTH",
+        htcondor.param.get("SEC_CREDENTIAL_DIRECTORY",
+            "/var/lib/condor/oauth_credentials")))
+CLIENT_SECRET_FILE = Path(
+    htcondor.param.get("DUMMY_CLIENT_SECRET_FILE",
+        "/etc/condor/dummy.secret"))
+LOG_FILE = htcondor.param.get("CREDMON_OAUTH_LOG")
+
+
+def log(msg, logfile_only=False):
+    s = f"{datetime.now()} (pid:{os.getpid()}) - {msg}"
+    if not logfile_only:
+        print(s, file=sys.stderr)
+    if LOG_FILE is not None:
+        with open(LOG_FILE, "a") as f:
+            print(s, file=f)
+
+
+def credmon_complete():
+    (CRED_DIR / "CREDMON_COMPLETE").touch()
+
+
+def get_keyfiles():
+    for f in CRED_DIR.glob("*"):
+        if f.is_file() and len(f.name) == 64:
+            yield f
+
+
+def create_creds_from_keyfiles():
+    for keyfile in get_keyfiles():
+        log(f"Reading requested credentials from {str(keyfile)}.")
+        for ad in parseAds(keyfile.open()):
+            user_cred_dir = CRED_DIR / ad["LocalUser"]
+            user_cred_dir.mkdir(parents=True, exist_ok=True)
+            cred_name = f"{ad['Provider']}_{ad.get('Handle', '')}".rstrip("_")
+            cred_path_top = user_cred_dir / f"{cred_name}.top"
+            cred_path_use = user_cred_dir / f"{cred_name}.use"
+            if not cred_path_top.exists() or not cred_path_use.exists():
+                log(f"Creating dummy refresh credential at {str(cred_path_top)}.")
+                with cred_path_top.open("w") as f:
+                    f.write("refresh_token")
+                log(f"Creating dummy access credential at {str(cred_path_use)}.")
+                with cred_path_use.open("w") as f:
+                    f.write("access_token")
+            else:
+                log(f"{ad['LocalUser']}'s {cred_name} credentials already exist.")
+        log(f"Removing {str(keyfile)}.")
+        keyfile.unlink()
+
+
+def get_missing_access_tokens():
+    for f in CRED_DIR.glob("*/*.top"):
+        if not f.with_suffix(".use").exists():
+            yield f
+
+
+def create_creds_from_topfiles():
+    for topfile in get_missing_access_tokens():
+        log(f"Found bare refresh token at {str(topfile)}.")
+        log(f"Creating dummy access credential at {str(topfile.with_suffix('.use'))}.")
+        with topfile.with_suffix(".use").open("w") as f:
+            f.write("access_token")
+
+
+def signal_handler(signum, frame):
+    if signum == signal.SIGHUP:
+        log(f"Caught signal SIGHUP, creating dummy credentials.")
+        create_creds_from_keyfiles()
+        create_creds_from_topfiles()
+        credmon_complete()
+        return
+    log(f"Caught signal {signal.Signals(signum).name}, exiting with success.")
+    sys.exit(0)
+
+
+def run_credmon_loop():
+    for loop in range(4, -1, -1):
+        log(f"Sleeping for 60 seconds, exiting w/ failure after {loop} more loops.")
+        time.sleep(60)
+    log(f"Failed to exit by signal, exiting with failure.")
+    sys.exit(1)
+
+
+def main():
+    try:
+        log("Dummy credmon starting up!")
+        log("Expecting SIGHUP to refresh creds or SIGTERM to exit.")
+
+        htcondor.set_subsystem("CREDMON_OAUTH", htcondor.SubsystemType.Daemon)
+
+        if not CRED_DIR.exists():
+            CRED_DIR.mkdir(parents=True, exist_ok=True, mode=0o2770)
+        if not CLIENT_SECRET_FILE.exists():
+            CLIENT_SECRET_FILE.open("w").write("dummy_client_secret")
+            CLIENT_SECRET_FILE.chmod(0o600)
+
+        for signum in [signal.SIGHUP, signal.SIGINT, signal.SIGTERM]:
+            signal.signal(signum, signal_handler)
+
+        with (CRED_DIR / "pid").open("w") as f:
+            f.write(f"{os.getpid()}")
+
+        try:
+            log(f"Sending DC_SET_READY message to condor_master.")
+            htcondor.set_ready_state("Ready")
+        except Exception:
+            log(f"Could not send DC_SET_READY message to condor_master.")
+
+        run_credmon_loop()
+
+    except Exception:
+        log(f"Got an error:\n{format_exc()}", logfile_only=True)
+        raise
+
+
+if __name__ == '__main__':
+    main()

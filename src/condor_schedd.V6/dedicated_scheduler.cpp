@@ -701,6 +701,18 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 		return false;
 	}
 
+	match_rec *mrec = nullptr;
+
+	// There's a race condition with partitionable slots where we can get the same
+	// mrec twice, if we are claiming partitionable leftovers at the same time
+	// as we are claiming.  If there's a dup, just drop it here instead of
+	// messing up all our data structures.
+	//
+
+	if (dedicated_scheduler.all_matches_by_id->lookup(claim_id, mrec) == 0) {
+		return false;
+	}
+
 	Daemon startd(&match_ad,DT_STARTD,NULL);
 	if( !startd.addr() ) {
 		dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
@@ -708,7 +720,7 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 		return false;
 	}
 
-	match_rec *mrec = dedicated_scheduler.AddMrec(claim_id,startd.addr(),slot_name,job_id,&match_ad,getRemotePool());
+	mrec = dedicated_scheduler.AddMrec(claim_id,startd.addr(),slot_name,job_id,&match_ad,getRemotePool());
 	if( !mrec ) {
 		return false;
 	}
@@ -1024,6 +1036,7 @@ DedicatedScheduler::reaper( int pid, int status )
 		case JOB_CKPTED:
 		case JOB_SHOULD_REQUEUE:
 		case JOB_NOT_STARTED:
+		case JOB_RECONNECT_FAILED:
 			if (!srec->removed) {
 				shutdownMpiJob( srec , true);
 			}
@@ -1104,7 +1117,7 @@ DedicatedScheduler::reaper( int pid, int status )
 				 pid, daemonCore->GetExceptionString(status) );
 
 		dprintf( D_ALWAYS, "Shadow exited prematurely, "
-				 "shutting down MPI computation\n" );
+				 "shutting down parallel computation\n" );
 
 			// If the shadow died with a signal, it's in bad shape,
 			// and probably didn't clean up anything.  So, try to
@@ -1291,7 +1304,7 @@ DedicatedScheduler::addDedicatedCluster( int cluster )
 		idle_clusters = new std::vector<int>;
 	}
 	idle_clusters->push_back(cluster);
-	dprintf( D_FULLDEBUG, "Found idle MPI cluster %d\n", cluster );
+	dprintf( D_FULLDEBUG, "Found idle parallel cluster %d\n", cluster );
 }
 
 
@@ -3932,7 +3945,7 @@ DedicatedScheduler::holdAllDedicatedJobs( void )
 	for( i=0; i<last_cluster; i++ ) {
 		cluster = (*idle_clusters)[i];
 		holdJob( cluster, 0, 
-		         "No condor_shadow installed that supports MPI jobs",
+		         "No condor_shadow installed that supports parallel jobs",
 		         CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
 		         false, should_notify_admin );
 		if( should_notify_admin ) {

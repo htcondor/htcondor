@@ -1,3 +1,31 @@
+condor (10.7.1-1) stable; urgency=medium
+
+  * Fix performance problem detecting futile nodes in a large and bushy DAG
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 09 Aug 2023 09:36:00 -0500
+
+condor (10.7.0-1) stable; urgency=medium
+
+  * Support for Debian 12 (Bookworm)
+  * Can run defrag daemons with different policies on distinct sets of nodes
+  * Added want_io_proxy submit command
+  * Apptainer is now included in the HTCondor tarballs
+  * Fix 10.5.0 bug where reported CPU time is very low when using cgroups v1
+  * Fix 10.5.0 bug where .job.ad and .machine.ad were missing for local jobs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 31 Jul 2023 14:53:00 -0500
+
+condor (10.0.7-1) stable; urgency=medium
+
+  * Fixed bug where held condor cron jobs would never run when released
+  * Improved daemon IDTOKENS logging to make useful messages more prominent
+  * Remove limit on certificate chain length in SSL authentication
+  * condor_config_val -summary now works with a remote configuration query
+  * Prints detailed message when condor_remote_cluster fails to fetch a URL
+  * Improvements to condor_preen
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 25 Jul 2023 10:56:00 -0500
+
 condor (9.0.19-1) stable; urgency=medium
 
   * Remove limit on certificate chain length in SSL authentication

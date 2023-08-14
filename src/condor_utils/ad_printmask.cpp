@@ -461,7 +461,7 @@ MyRowOfValues::~MyRowOfValues()
 int MyRowOfValues::SetMaxCols(int max_cols)
 {
 	if (max_cols > cmax) {
-		classad::Value * pd = new classad::Value[max_cols];
+		classad::Value * pd = new classad::Value[(unsigned int)max_cols];
 		unsigned char * pv = new unsigned char[max_cols];
 		memset(pv, '\0', max_cols);
 

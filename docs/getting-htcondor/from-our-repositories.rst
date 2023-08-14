@@ -46,7 +46,7 @@ Additionally, the following repositories are required for specific platforms:
 deb-based Distributions
 -----------------------
 
-We support three deb-based platforms: Debian 11 (Bullseye); and
+We support four deb-based platforms: Debian 11 (Bullseye) and Debian 12 (Bookworm); and
 Ubuntu 20.04 (Focal Fossa) and 22.04 (Jammy Jellyfish).
 Binaries are only available for x86-64.
 These repositories also include the source packages.
@@ -58,6 +58,7 @@ Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTC
 with ``apt-key add`` before adding the repositories below.
 
 * Debian 11: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/10.x bullseye main``
+* Debian 12: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/10.x bookworm main``
 
 Ubuntu 20.04, and 22.04
 #######################

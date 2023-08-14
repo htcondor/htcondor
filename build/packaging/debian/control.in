@@ -38,7 +38,7 @@ Build-Depends: cmake (>= 3.8),
                python3-setuptools,
                python3-sphinx,
                python3-sphinx-rtd-theme,
-#if defined(FOCAL) || defined(JAMMY)
+#if defined(FOCAL) || defined(JAMMY) || defined(BOOKWORM)
                python3-nbsphinx,
                python3-sphinx-autodoc-typehints,
 #endif
@@ -61,14 +61,13 @@ Depends: adduser,
          python3,
          python3-requests,
          lsb-base (>= 3.0-6),
-         libclassad16 (= ${binary:Version}),
          libcom-err2,
          libgssapi-krb5-2,
          libk5crypto3,
          libkrb5-3,
          libkrb5support0,
          libmunge2,
-#if defined(JAMMY)
+#if defined(JAMMY) || defined(BOOKWORM)
          libssl3,
 #else
          libssl1.1,
@@ -295,32 +294,3 @@ Description: distributed workload management system - debugging symbols
  .
  This package provides the debugging symbols for HTCondor.
 
-Package: libclassad-dev
-Architecture: any
-Section: libdevel
-Depends: libclassad16 (= ${binary:Version}),
-         ${misc:Depends}
-Conflicts: libclassad0-dev
-Replaces: libclassad0-dev
-Description: HTCondor classads expression language - development library
- Classified Advertisements (classads) are the lingua franca of HTCondor, used
- for describing jobs, workstations, and other resources. There is a protocol
- for evaluating whether two classads match, which is used by the HTCondor
- central manager to determine the compatibility of jobs, and workstations where
- they may be run.
- .
- This package provides the static library and header files.
-
-Package: libclassad16
-Architecture: any
-Section: libs
-Depends: ${misc:Depends},
-         ${shlibs:Depends}
-Description: HTCondor classads expression language - runtime library
- Classified Advertisements (classads) are the lingua franca of HTCondor, used
- for describing jobs, workstations, and other resources. There is a protocol
- for evaluating whether two classads match, which is used by the HTCondor
- central manager to determine the compatibility of jobs, and workstations where
- they may be run.
- .
- This package provides the runtime library.

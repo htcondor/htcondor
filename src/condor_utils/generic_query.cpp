@@ -165,10 +165,30 @@ addString (const int cat, const char *value)
     return Q_INVALID_CATEGORY;
 }
 
+bool GenericQuery::
+hasString(const int cat, const char * value)
+{
+	if (cat >= 0 && cat < stringThreshold) {
+		return hasItem(stringConstraints[cat], value);
+	}
+	return false;
+}
+
+bool GenericQuery::
+hasStringNoCase(const int cat, const char * value)
+{
+	if (cat >= 0 && cat < stringThreshold) {
+		return hasItemNoCase(stringConstraints[cat], value);
+	}
+	return false;
+}
+
+
 int GenericQuery::
 addCustomOR (const char *value)
 {
-    char *x = new_strdup (value);
+	if (hasCustomOR(value)) return Q_OK;
+	char *x = new_strdup (value);
 	if (!x) return Q_MEMORY_ERROR;
 	customORConstraints.Append (x);
 	return Q_OK;
@@ -177,7 +197,8 @@ addCustomOR (const char *value)
 int GenericQuery::
 addCustomAND (const char *value)
 {
-    char *x = new_strdup (value);
+	if (hasCustomAND(value)) return Q_OK;
+	char *x = new_strdup (value);
 	if (!x) return Q_MEMORY_ERROR;
 	customANDConstraints.Append (x);
 	return Q_OK;

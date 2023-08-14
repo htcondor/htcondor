@@ -2720,8 +2720,9 @@ ResMgr::checkForDrainCompletion() {
 		if(! rip->wasAcceptedWhileDraining()) {
 			// Not sure how COD and draining are supposed to interact, but
 			// the partitionable slot is never accepted-while-draining,
-			// nor claimed, nor should it block drain from completing.
+			// nor should it block drain from completing.
 			if(! rip->hasAnyClaim()) { continue; }
+			if(rip->is_partitionable_slot()) { continue; }
 			allAcceptedWhileDraining = false;
 		}
 	}

@@ -166,9 +166,6 @@ void testing_parser(bool verbose, const char * mode)
 		src = new MyStringCharSource(regex_canon, false);
 		REQUIRE(gmf->ParseCanonicalization(*src, "regex_canon", assume_regex) == 0);
 		delete src; src = NULL;
-		if (verbose) {
-			print_usage(stdout, gmf, gelapsed_time);
-		}
 	}
 
 #ifdef USE_MAPFILE_V2

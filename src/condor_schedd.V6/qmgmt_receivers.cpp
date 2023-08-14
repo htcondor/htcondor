@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #define _POSIX_SOURCE
+
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_classad.h"
@@ -30,6 +31,7 @@
 #include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "qmgmt_constants.h"
+#include <memory>
 
 #define syscall_sock qmgmt_sock
 
@@ -50,7 +52,7 @@ static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 static std::unique_ptr<CondorError> g_transaction_error;
 
 int
-do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
+do_Q_request(QmgmtPeer &Q_PEER)
 {
 	int	request_num = -1;
 	int	rval = -1;
@@ -66,51 +68,22 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_InitializeConnection:
 	{
-		// once we have set read-only we can't go back to read-write
-		if (Q_PEER.getReadOnly()) {
-			return -1;
-		}
-
 		// dprintf( D_ALWAYS, "InitializeConnection()\n" );
-		// Authenticate socket, if not already done by daemonCore
-		if( !syscall_sock->triedAuthentication() ) {
-			if( IsDebugLevel(D_SECURITY) ) {
-				auto methods = SecMan::getAuthenticationMethods(WRITE);
-				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.c_str());
-			}
-			CondorError errstack;
-			if( ! SecMan::authenticate_sock(syscall_sock, WRITE, &errstack) ) {
-					// Failed to authenticate
-				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n",
-						 errstack.getFullText().c_str() );
-			}
-		}
-
-		InitializeConnectionInternal(Q_PEER, false, true);
+		// This is now a no-op.
 		return 0;
 	}
 
 	case CONDOR_InitializeReadOnlyConnection:
 	{
 		// dprintf( D_ALWAYS, "InitializeReadOnlyConnection()\n" );
-
-		// We need to record if this is a read-only connection so that
-		// we can avoid expanding $$ in GetJobAd; simply checking if the
-		// connection is authenticated isn't sufficient, because the
-		// security session cache means that read-only connection could
-		// be authenticated by a previous authenticated connection from
-		// the same address (when using host-based security) less than
-		// the expiration period ago.
-		InitializeConnectionInternal(Q_PEER, true, false);
-
-		may_fork = true;
+		// This is now a no-op.
 		return 0;
 	}
 
 	case CONDOR_SetAllowProtectedAttrChanges:
 	{
-		int val;
-		int terrno;
+		int val = 0;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->get(val) );
 		neg_on_error( syscall_sock->end_of_message() );
@@ -134,7 +107,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	case CONDOR_SetEffectiveOwner:
 	{
 		std::string owner;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->get(owner) );
 		neg_on_error( syscall_sock->end_of_message() );
@@ -160,10 +133,10 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_NewCluster:
 	  {
-		int terrno;
+		int terrno = 0;
 		const char * reason = "";
 
-		if (!g_transaction_error) g_transaction_error.reset(new CondorError());
+		if (!g_transaction_error) g_transaction_error = std::make_unique<CondorError>();
 		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -202,8 +175,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	case CONDOR_NewProc:
 	  {
 		int cluster_id = -1;
-		int terrno;
-		if (!g_transaction_error) g_transaction_error.reset(new CondorError());
+		int terrno = 0;
+		if (!g_transaction_error) g_transaction_error = std::make_unique<CondorError>();
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -234,7 +207,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -262,7 +235,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	case CONDOR_DestroyCluster:
 	  {
 		int cluster_id = -1;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -311,9 +284,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	case CONDOR_SetAttributeByConstraint2:
 	  {
 		std::string attr_name;
-		char *attr_value=NULL;
-		char *constraint=NULL;
-		int terrno;
+		char *attr_value=nullptr;
+		char *constraint=nullptr;
+		int terrno = 0;
 		SetAttributeFlags_t flags = 0;
 
 		neg_on_error( syscall_sock->code(constraint) );
@@ -321,7 +294,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		neg_on_error( syscall_sock->code(attr_value) );
 		neg_on_error( syscall_sock->code(attr_name) );
 		if( request_num == CONDOR_SetAttributeByConstraint2 ) {
-			SetAttributePublicFlags_t wflags = (SetAttributePublicFlags_t)flags;
+			auto wflags = (SetAttributePublicFlags_t)flags;
 			neg_on_error( syscall_sock->code( wflags ) );
 			flags = (SetAttributeFlags_t)(wflags & SetAttribute_PublicFlagsMask);
 		}
@@ -366,8 +339,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int cluster_id = -1;
 		int proc_id = -1;
 		std::string attr_name;
-		char *attr_value=NULL;
-		int terrno;
+		char *attr_value=nullptr;
+		int terrno = 0;
 		SetAttributeFlags_t flags = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
@@ -377,7 +350,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		neg_on_error( syscall_sock->code(attr_value) );
 		neg_on_error( syscall_sock->code(attr_name) );
 		if( request_num == CONDOR_SetAttribute2 ) {
-			SetAttributePublicFlags_t wflags = (SetAttributePublicFlags_t)flags;
+			auto wflags = (SetAttributePublicFlags_t)flags;
 			neg_on_error( syscall_sock->code( wflags ) );
 			flags = (SetAttributeFlags_t)(wflags & SetAttribute_PublicFlagsMask);
 		}
@@ -471,8 +444,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_SendJobQueueAd:
 	{
-		int cluster_id, ad_type;
-		unsigned int flags;
+		int cluster_id = 0, ad_type = 0;
+		unsigned int flags = 0;
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		neg_on_error( syscall_sock->code(ad_type) );
@@ -505,15 +478,15 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	case CONDOR_SetJobFactory:
 	case CONDOR_SetMaterializeData:
 	{
-		int cluster_id, num;
+		int cluster_id = 0, num = 0;
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		neg_on_error( syscall_sock->code(num) );
 		dprintf( D_SYSCALLS, "	num = %d\n", num );
-		char * filename = NULL;
+		char * filename = nullptr;
 		neg_on_error( syscall_sock->code(filename) );
 		dprintf( D_SYSCALLS, "	factory_filename = %s\n", filename ? filename : "NULL" );
-		char * text = NULL;
+		char * text = nullptr;
 		neg_on_error( syscall_sock->code(text) );
 		if (text) { dprintf( D_SYSCALLS, "	factory_text = %s\n", text ); }
 		neg_on_error( syscall_sock->end_of_message() );
@@ -542,8 +515,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			terrno = errno;
 		}
 
-		if (filename) { free(filename); filename = NULL; } 
-		if (text)     { free(text); text = NULL; }
+		if (filename) { free(filename); filename = nullptr; } 
+		if (text)     { free(text); text = nullptr; }
 
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		// send a status reply
@@ -558,7 +531,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_SendMaterializeData:
 	{
-		int cluster_id, flags, row_count = 0;
+		int cluster_id = 0, flags = 0, row_count = 0;
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		neg_on_error( syscall_sock->code(flags) );
@@ -591,7 +564,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	} break;
 
 	case CONDOR_GetCapabilities: {
-		int mask;
+		int mask = 0;
 		neg_on_error( syscall_sock->code(mask) );
 		neg_on_error( syscall_sock->end_of_message() );
 
@@ -610,7 +583,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int proc_id = -1;
 		std::string attr_name;
 		int duration = 0;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -643,8 +616,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_BeginTransaction:
 	  {
-		int terrno;
-		g_transaction_error.reset(new CondorError());
+		int terrno = 0;
+		g_transaction_error = std::make_unique<CondorError>();
 
 		neg_on_error( syscall_sock->end_of_message() );;
 
@@ -665,7 +638,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_AbortTransaction:
 	{
-		int terrno;
+		int terrno = 0;
 		g_transaction_error.reset();
 
 		neg_on_error( syscall_sock->end_of_message() );;
@@ -691,8 +664,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	case CONDOR_CommitTransactionNoFlags:
 	case CONDOR_CommitTransaction:
 	  {
-		int terrno;
-		int flags;
+		int terrno = 0;
+		int flags = 0;
 
 		if( request_num == CONDOR_CommitTransaction ) {
 			neg_on_error( syscall_sock->code(flags) );
@@ -710,7 +683,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			if (terrno == 0) terrno = -1;
 			else if (terrno > 0) terrno = -terrno;
 		} else {
-			errstack.reset(new CondorError());
+			errstack = std::make_unique<CondorError>();
 			errno = 0;
 			rval = CommitTransactionAndLive( flags, errstack.get() );
 			terrno = errno;
@@ -760,7 +733,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int proc_id = -1;
 		std::string attr_name;
 		double value = 0.0;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -799,7 +772,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int proc_id = -1;
 		std::string attr_name;
 		int value = 0;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -844,7 +817,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int proc_id = -1;
 		std::string attr_name;
 		std::string value;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -884,7 +857,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int proc_id = -1;
 		std::string attr_name;
 
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -894,7 +867,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		neg_on_error( syscall_sock->end_of_message() );;
 
-		char *value = NULL;
+		char *value = nullptr;
 
 		errno = 0;
 		if( QmgmtMayAccessAttribute( attr_name.c_str())) {
@@ -936,7 +909,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int proc_id = -1;
 		ClassAd updates;
 
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -972,7 +945,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int cluster_id = -1;
 		int proc_id = -1;
 		std::string attr_name;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -1000,8 +973,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		ClassAd *ad = NULL;
-		int terrno;
+		ClassAd *ad = nullptr;
+		int terrno = 0;
 		bool delete_ad = false;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
@@ -1058,9 +1031,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_GetJobByConstraint:
 	  {
-		char *constraint=NULL;
-		ClassAd *ad;
-		int terrno;
+		char *constraint=nullptr;
+		ClassAd *ad = nullptr;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(constraint) );
 		neg_on_error( syscall_sock->end_of_message() );;
@@ -1087,9 +1060,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_GetNextJob:
 	  {
-		ClassAd *ad;
+		ClassAd *ad = nullptr;
 		int initScan = 0;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "	initScan = %d\n", initScan );
@@ -1116,17 +1089,17 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_GetNextJobByConstraint:
 	  {
-		char *constraint=NULL;
-		ClassAd *ad;
+		char *constraint=nullptr;
+		ClassAd *ad = nullptr;
 		int initScan = 0;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "	initScan = %d\n", initScan );
 		if ( !(syscall_sock->code(constraint)) ) {
-			if (constraint != NULL) {
+			if (constraint != nullptr) {
 				free(constraint);
-				constraint = NULL;
+				constraint = nullptr;
 			}
 			return -1;
 		}
@@ -1153,17 +1126,17 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	}
 	case CONDOR_GetNextDirtyJobByConstraint:
 	{
-		char *constraint=NULL;
-		ClassAd *ad;
+		char *constraint=nullptr;
+		ClassAd *ad = nullptr;
 		int initScan = 0;
-		int terrno;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "  initScan = %d\n", initScan );
 		if ( !(syscall_sock->code(constraint)) ) {
-			if (constraint != NULL) {
+			if (constraint != nullptr) {
 				free(constraint);
-				constraint = NULL;
+				constraint = nullptr;
 			}
 			return -1;
 		}
@@ -1191,8 +1164,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_SendSpoolFile:
 	  {
-		char *filename=NULL;
-		int terrno;
+		char *filename=nullptr;
+		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(filename) );
 		neg_on_error( syscall_sock->end_of_message() );;
@@ -1216,7 +1189,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_SendSpoolFileIfNeeded:
 	  {
-		int terrno;
+		int terrno = 0;
 
 		ClassAd ad;
 		neg_on_error( getClassAd(syscall_sock, ad) );
@@ -1232,25 +1205,25 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_GetAllJobsByConstraint:
 	  {
-		char *constraint=NULL;
-		char *projection=NULL;
-		ClassAd *ad;
-		int terrno;
+		char *constraint=nullptr;
+		char *projection=nullptr;
+		ClassAd *ad = nullptr;
+		int terrno = 0;
 		int initScan = 1;
 		classad::References proj;
 
 		if ( !(syscall_sock->code(constraint)) ) {
-			if (constraint != NULL) {
+			if (constraint != nullptr) {
 				free(constraint);
-				constraint = NULL;
+				constraint = nullptr;
 			}
 			return -1;
 		}
 		if ( !(syscall_sock->code(projection)) ) {
-			if (projection != NULL) {
+			if (projection != nullptr) {
 				free(constraint);
 				free(projection);
-				projection = NULL;
+				projection = nullptr;
 			}
 			return -1;
 		}
@@ -1262,7 +1235,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		// if there is a projection, convert it into a set of attribute names
 		if (projection) {
 			StringTokenIterator list(projection);
-			const std::string * attr;
+			const std::string * attr = nullptr;
 			while ((attr = list.next_string())) { proj.insert(*attr); }
 		}
 
@@ -1286,7 +1259,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 			// Condor-C relies on the ServerTimer attribute
 			if( rval >= 0 ) {
-				neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME, proj.empty() ? NULL : &proj) );
+				neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME, proj.empty() ? nullptr : &proj) );
 				FreeJobAd(ad);
 			}
 		} while (rval >= 0);

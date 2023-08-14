@@ -657,6 +657,7 @@ sub check_status {
 	}
 },
 'Slots' => sub {
+	if ($_[1] =~ /S$/){return 1;} # <num>S for static slots
 	return $_[1] eq $Attr_new{$_[0]-1}{NumDynamicSlots};
 },
 'Cpus' => sub {
@@ -669,7 +670,7 @@ sub check_status {
 },
 'Gpus' => sub {
 	my $num = sprintf("%d",$Attr_new{$_[0]-1}{TotalGpus});
-	if ($_[1] eq $num) {
+	if ($_[1] eq $num || ($num eq 0 && $_[1] eq "")) {
 		return 1;
 	} else {
 		print "        output is $_[1]\n        should be $num\n";
@@ -814,10 +815,10 @@ sub check_status {
 			if ($machine_name =~ /02/){unless ($machine_info[3][$i] eq 'Claimed'){return 0;}}
 			if ($machine_name =~ /03/){unless ($machine_info[3][$i] eq 'Matched'){return 0;}}
 			if ($machine_name =~ /04/){unless ($machine_info[3][$i] eq 'Preempting'){return 0;}}
-			if ($machine_name =~ /05/){unless ($machine_info[3][$i] eq 'Backfill'){return 0;}}
+			if ($machine_name =~ /05/){unless ($machine_info[3][$i] eq 'Owner'){return 0;}}
 		}		
 		if ($summary[1][1] eq scalar (@{$machine_info[0]})-1 && $summary[1][2] eq (@{$machine_info[0]})-1){
-			for my $i (3..7){
+			for my $i (2..6){
 				for my $j (1..2){
 					unless ($summary[$i][$j] eq $counter){return 0;}
 				}
@@ -944,7 +945,7 @@ sub check_status {
 			print "       FAILED: Total is not correct\n";
 			return 0;
 		} else {
-			for my $i (3..7){
+			for my $i (2..6){
 				if ($summary[$i][1] ne (scalar keys %Attr_new)/5 || $summary[$i][2] ne (scalar keys %Attr_new)/5){
 					print "        FAILED: Total of different state is incorrect\n";
 					return 0;
@@ -1103,14 +1104,15 @@ sub count_status_state {
 		$table{$key}{"Unclaimed"} = 0;
 		$table{$key}{"Matched"} = 0;
 		$table{$key}{"Preempting"} = 0;
-		$table{$key}{"Backfill"} = 0;
 		$table{$key}{"Drain"} = 0;
+		$table{$key}{"Backfill"} = 0;
+		$table{$key}{"BkIdle"} = 0;
 		for my $i (0..(scalar keys %Attr) -1){
 			if ($key eq substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSysShortName},1,length($Attr{$i}{OpSysShortName})-2) || $key eq substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSys},1,length($Attr{$i}{OpSys})-2)){
 				$table{$key}{substr($Attr{$i}{State},1,length($Attr{$i}{State})-2)}++;
 			}
 		}
-	$table{$key}{"Total"} = $table{$key}{"Owner"} + $table{$key}{"Claimed"} + $table{$key}{"Unclaimed"} + $table{$key}{"Matched"} + $table{$key}{"Preempting"} + $table{$key}{"Backfill"} + $table{$key}{"Drain"};		
+	$table{$key}{"Total"} = $table{$key}{"Owner"} + $table{$key}{"Claimed"} + $table{$key}{"Unclaimed"} + $table{$key}{"Matched"} + $table{$key}{"Preempting"} + $table{$key}{"Drain"} + $table{$key}{"Backfill"} + $table{$key}{"BkIdle"}
 	}
 	return %table;
 }
@@ -1410,7 +1412,7 @@ sub check_heading {
 		'-globus' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+STATUS\s+MANAGER\s+HOST\s+EXECUTABLE/;},
 		'-tot' => sub {print "-tot does not have a heading\n";return 1;},
 		'status_machine' => sub {return $data{0} =~ /\s*Name\s+OpSys\s+Arch\s+State\s+Activity\s+LoadAv\s+Mem\s+ActvtyTime/;},
-		'status_summary' => sub {return $data{0} =~ /\s+Total\s+Owner\s+Claimed\s+Unclaimed\s+Matched\s+Preempting\s+Backfill\s+Drain/;},
+		'status_summary' => sub {return $data{0} =~ /\s+Total\s+Owner\s+Claimed\s+Unclaimed\s+Matched\s+Preempting\s+Drain\s+Backfill\s+BkIdle/;},
 		'status_claimed_machine' => sub {return $data{0} =~ /\s*Name\s+OpSys\s+Arch\s+LoadAv\s+RemoteUser\s+ClientMachine/;},
 		'status_claimed_summary' => sub {return $data{0} =~ /\s*Machines\s+MIPS\s+KFLOPS\s+AvgLoadAvg/;},
 		'status_compact_machine' => sub {return $data{0} =~ /\s*Machine\s+Platform\s+Slots\s+Cpus\s+Gpus\s+TotalGb\s+FreCpu\s+FreeGb\s+CpuLoad\s+ST\s+Jobs\/Min\s+MaxSlotGb/;},
@@ -2171,7 +2173,7 @@ sub check_transform {
 	} else {
 	if ($option eq 'general'){
 		for my $i (0..$index-1){
-			if ($Attr{$i}{ClusterId} ne 200 || $Attr{$i}{Fooo} ne "\"test\"" || $Attr{$i}{TransferIn} ne $Attr{$i}{OnExitRemove} || defined $Attr{$i}{TransferInputSizeMB} || defined $Attr{$i}{TransferErr} || !(defined $Attr{$i}{Err})){
+			if ($Attr{$i}{ClusterId} ne 200 || $Attr{$i}{Fooo} ne "\"test\"" || $Attr{$i}{TransferIn} ne $Attr{$i}{ExitBySignal} || defined $Attr{$i}{TransferInputSizeMB} || defined $Attr{$i}{TransferErr} || !(defined $Attr{$i}{Err})){
 				return 0;
 			}
 		}
@@ -2193,9 +2195,9 @@ sub check_transform {
 	}
 	if ($option eq 'regex'){
 		for my $i (0..$index-1){
-			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteUser} || defined $Attr{$i}{PeriodicHold} || defined $Attr{$i}{PeriodicRelease} || defined $Attr{$i}{PeriodicRemove}){
+			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteUser} || defined $Attr{$i}{RequestCpus} || defined $Attr{$i}{RequestDisk} || defined $Attr{$i}{RequestMemory}){
 				return 0;
-			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestRemoteUser} && defined $Attr{$i}{TimeHold} && defined $Attr{$i}{TimeRelease} && defined $Attr{$i}{TimeRemove}){
+			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestRemoteUser} && defined $Attr{$i}{TimeCpus} && defined $Attr{$i}{TimeMemory} && defined $Attr{$i}{TimeDisk}){
 				return 1;
 			} else {return 0;}
 		}

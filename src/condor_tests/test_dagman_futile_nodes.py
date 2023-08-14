@@ -338,7 +338,7 @@ def job_handle(job_info):
 #Wait for the dag job to finish
 @action
 def job_wait(job_handle):
-    job_handle.wait(condition=ClusterState.all_complete,timeout=80)
+    assert job_handle.wait(condition=ClusterState.all_complete,timeout=80)
     return job_handle
 
 #==================================================================
