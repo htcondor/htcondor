@@ -2,6 +2,7 @@
 #include "condor_daemon_core.h"
 #include "dc_coroutines.h"
 
+using namespace condor;
 
 dc::AwaitableDeadlineReaper::AwaitableDeadlineReaper() {
 	reaperID = daemonCore->Register_Reaper(

@@ -10,6 +10,7 @@
 #include <exception>
 #include <coroutine>
 
+namespace condor {
 namespace dc {
 
 	//
@@ -155,6 +156,7 @@ namespace dc {
 		};
 	};
 
+} // end namespace dc
 } // end namespace dc
 
 #endif /* defined(_CONDOR_DC_COROUTINES_H) */
