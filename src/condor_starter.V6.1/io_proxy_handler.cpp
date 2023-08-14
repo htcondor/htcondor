@@ -474,7 +474,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		ad = event.toClassAd(true);
 		ASSERT(ad);
 
-		result = REMOTE_CONDOR_ulog( ad );
+		result = REMOTE_CONDOR_ulog(*ad);
 		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result,errno));
 		r->put_line_raw(line);
 		delete ad;

@@ -120,7 +120,6 @@ my @default_build_configure_args =
 	(
 	 '-DPROPER:BOOL'	 => 'OFF',
 	 '-D_VERBOSE:BOOL'	 => 'ON',
-	 #'-DSCRATCH_EXTERNALS:BOOL' => 'ON',
 	);
 
 ############################################################
@@ -528,7 +527,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_Fedora'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},

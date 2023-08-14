@@ -1106,20 +1106,18 @@ char const*
 Starter::getIpAddr( void )
 {
 	if( ! s_pid ) {
-		return NULL;
+		return nullptr;
 	}
 	if( !m_starter_addr.empty() ) {
 		return m_starter_addr.c_str();
 	}
 
-	// Fall back on the raw contact string known to daemonCore.
-	// Unfortunately, that doesn't include any of the fancy
-	// stuff like private network info and CCB.
-	dprintf(D_ALWAYS,
-			"Warning: giving raw address in response to starter address query,"
-			"because update from starter not received yet.\n");
-
-	return daemonCore->InfoCommandSinfulString( s_pid );
+	// At this point, we haven't gotten an update from the starter (yet)
+	// so the starter hasn't told us the real, external address with CCB
+	// extensions and other goodness.  We used to return a guess for what
+	// we thought the address to be, but that broke condor_ssh_to_job
+	// so, if we don't know for sure, return that we don't know.
+	return nullptr;
 }
 
 

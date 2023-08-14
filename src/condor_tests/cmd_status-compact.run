@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -27,6 +26,16 @@ use strict;
 use warnings;
 
 my $testname = "cmd_status-compact";
+
+# configure the personal condor that we need
+#
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	use FEATURE : PartitionableSlot
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+
 
 # needs to specify every time before a check
 my $command_arg;
@@ -138,7 +147,6 @@ open(FH,">$rules_file") || print "FAILED opening file $rules_file\n";
 print FH $rules_content;
 close(FH);
 
-`condor_submit $submitfile`;
 my $counter = 100;
 while ($counter ne 0){
 	if ($counter == 0){
@@ -176,6 +184,7 @@ if (check_heading('status_compact_machine',\%table1) && check_heading('status_su
 unlink($new_ads);
 unlink($orig_ads);
 print "############################################################################\n";
+`condor_submit $submitfile`;
 $option = "run";
 $counter = 100;
 while ($counter ne 0){

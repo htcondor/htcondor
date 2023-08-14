@@ -17,6 +17,14 @@ Release Notes:
 
 New Features:
 
+- In an HTCondor Execution Point started by root on Linux, the default
+  for cgroups memory has changed to be enforcing.  This means that
+  jobs that use more then their provisioned memory will be put
+  on hold with an appropriate hold message. *condor_q -hold* will show
+  that message.  The previous default can be restored by setting
+  :macro:`CGROUP_MEMORY_LIMIT_POLICY` = none on the Execution points.
+  :jira:`1974`
+
 - Partitionable slots can now be directly claimed by a *condor_schedd*
   (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
   While a slot is claimed, no other *condor_schedd* is able to create
@@ -42,6 +50,17 @@ New Features:
   of emails.  Now HTCondor will only send one email per day.
   :jira:`1937`
 
+- Added a ``-gpus`` option to *condor_status*. With this option *condor_status*
+  will show only machines that have GPUs provisioned; and it will show information
+  about the GPU properties.
+  :jira:`1958`
+
+- The output of *condor_status* when using the ``-compact`` option has been improved
+  to show a separate row for the second and subsequent slot type for machines that have
+  multiple slot types. Also the totals now count slots that have the ``BackfillSlot``
+  attribute under the ``Backfill`` or ``BkIdle`` columns.
+  :jira:`1957`
+
 - Improved output for ``htcondor dag status`` command to include more information
   about the specified DAG.
   :jira:`1951`
@@ -62,20 +81,51 @@ New Features:
   submitted from.
   :jira:`1955`
 
+- Updated *condor_upgrade_check* script to check and warn about known incompatibilites
+  introduced in the feature series for HTCondor ``V10`` that can cause issues when
+  upgrading to a newer version (i.e. HTCondor ``V23``).
+  :jira:`1960`
+
+- Self-checkpointing jobs may now include the time spent generating
+  successfully-stored checkpoints as part of their `CommittedTime`
+  job ad attribute.
+  :jira:`1942`
+
 Bugs Fixed:
 
 - Fixed bug in parallel universe that would cause the *condor_schedd* to
   assert when running with partitionable slots.
   :jira:`1952`
 
+- Fixed bugs in *condor_store_cred* that could cause it to crash or
+  write incorrect data for the pool password.
+  :jira:`1587`
+
+- Fixed a bug with *condor_ssh_to_job* where it would fail if the Execution
+  point was behind CCB, and the command was run immediately after the job
+  started.
+  :jira:`1979`
+
+- Fixed a bug introduced in 10.5.0 that caused jobs to fail to start
+  if they requested an OAuth credential whose service name included
+  an asterisk.
+  :jira:`1966`
+
+Version 10.7.1
+--------------
+
+- HTCondor version 10.7.1 released on August 9, 2023.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
 - Fixed inefficiency in DAGMan setting a nodes descendants to futile status
   which would result in DAGMan taking an extremely long time when a node fails
   in a very large and bushy DAG.
   :jira:`1945`
-
-- Fixed  bugs in *condor_store_cred* that could cause it to crash or
-  write incorrect data for the pool password.
-  :jira:`1587`
 
 Version 10.7.0
 --------------
@@ -96,12 +146,20 @@ New Features:
   :macro:`DEFRAG_REQUIREMENTS` that select mutually exclusive subsets of the pool.
   :jira:`1903`
 
+- If a job does not define any of the periodic policy expressions (like
+  periodic_hold), HTCondor no longer sets a default value (like false) in the
+  job ad.  The system knows that if these aren't set, to take the default action.
+  This removes about 10% of the attributes in a job ad, with corresponding 
+  benefits for all consumers of the job ad.
+  :jira:`1919`
+
 - Added submit command **want_io_proxy**.
   This replaces the old command **+WantIOProxy**.
   :jira:`1875`
 
 - Apptainer is now included in the tarballs.
   :jira:`1932`
+
 
 Bugs Fixed:
 

@@ -73,7 +73,7 @@ $rules_file = "$option.rules";
 $rules_content = 
 "SET ClusterId 200
 DEFAULT Fooo \"test\"
-COPY OnExitRemove TransferIn
+COPY ExitBySignal TransferIn
 RENAME NumCkpts NumCheckPoints
 DELETE TransferInputSizeMB
 DELETE /(.+)Err/
@@ -222,7 +222,7 @@ $rules_file = "$option.rules";
 $rules_content = 
 "COPY /^Max(.+)/  TotalSuspensions
 RENAME /(.+)User/ Test\\0
-RENAME /^Periodic(.+)/ Time\\1
+RENAME /^Request(.+)/ Time\\1
 TRANSFORM";
 
 open(FH, ">$rules_file") || print "FAILED opening file $rules_file\n";
