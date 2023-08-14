@@ -5,7 +5,7 @@ debian/tmp/usr/lib/libclassad*.so.*
 debian/tmp/usr/lib/condor/*.jar usr/lib/condor/
 debian/tmp/usr/lib/condor/*.class usr/lib/condor/
 debian/tmp/usr/lib/condor/condor_ssh* usr/lib/condor/
-debian/tmp/usr/lib/condor/libexec usr/lib/condor/
+debian/tmp/usr/libexec/condor/* usr/libexec/condor/
 debian/tmp/usr/sbin/* usr/sbin/
 debian/tmp/usr/lib/python3/* usr/lib/python3/
 debian/tmp/usr/libexec/blahp/* usr/libexec/blahp/
