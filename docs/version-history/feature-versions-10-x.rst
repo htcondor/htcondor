@@ -34,6 +34,9 @@ New Features:
   default.
   :jira:`1824`
 
+- The htcondor cli tool now print information about goodput for jobs.
+  :jira:`1982`
+
 - By default, the user event logs are no longer fsync'd by the schedd.  This
   should improve the performance of the schedd, especially when the user's event
   logs are on non-solid state disks.  There is a knob to revert to the old
