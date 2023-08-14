@@ -209,6 +209,7 @@ endif ()
 			# Note that ctest can NOT find this test if it's named
 			# test_AwaitableDeadlineReaper.  I can't even.
 			condor_pl_test(test_awaitable_deadline_reaper "Test annex create constraints" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineReaper.exe")
+			add_dependencies_suffix_hack(test_awaitable_deadline_reaper test_for_AwaitableDeadlineReaper.exe)
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
