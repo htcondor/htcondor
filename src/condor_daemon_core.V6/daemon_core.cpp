@@ -108,6 +108,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 
 #include "systemd_manager.h"
 
+#include <algorithm>
+
 static const char* EMPTY_DESCRIP = "<NULL>";
 
 // special errno values that may be returned from Create_Process
