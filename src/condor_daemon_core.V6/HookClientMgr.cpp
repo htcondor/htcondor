@@ -95,7 +95,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, const std::string & hook
 
 	std::string create_process_error_msg;
 	OptionalCreateProcessArgs cpArgs(create_process_error_msg);
-	cpArgs.priv(priv).reaperId(reaper_id).env(env).std(std_fds);
+	cpArgs.priv(priv).reaperID(reaper_id).env(env).std(std_fds);
 	// Only set up family info if we want to utilize the procd
 	// 		Don't want to for shadow hooks
 	if (useProcd()) {
