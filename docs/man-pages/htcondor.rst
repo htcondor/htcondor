@@ -3,7 +3,7 @@
 *htcondor*
 ===============
 
-Manage HTCondor jobs, job sets, dags, logs and resources
+Manage HTCondor jobs, job sets, dags, event logs, and resources
 :index:`htcondor<single: htcondor; HTCondor commands>`\ :index:`htcondor command`
 
 Synopsis
@@ -29,16 +29,14 @@ Synopsis
 Description
 -----------
 
-*htcondor* is a tool for managing HTCondor jobs, job sets, resources, logs and
-dags.  It can replace *condor_submit*, *condor_submit_dag*, *condor_q*,
-*condor_status*, *condor_userlog*, and is intended to be a more self-consistent
-interface to the HTCondor system instead of those tools which have organically
-grown over decades.
+*htcondor* is a tool for managing HTCondor jobs, job sets, resources, event logs, and
+DAGs.  It can replace *condor_submit*, *condor_submit_dag*, *condor_q*,
+*condor_status*, and *condor_userlog*, as well as all-new functionality and features.  The user interface is more consistent than its predecessor tools.
 
 The first argument of the *htcondor* command (ignoring any global options) is
 the *noun* representing an object in the HTCondor system to be operated on.
 The nouns include an individual *job*, *jobset*, *eventlog*, or a *dag*.  Each
-noun is then followed by a noun-specific verb that describe the operation on
+noun is then followed by a noun-specific *verb* that describe the operation on
 that noun.
 
 One of the following optional global option may appear before the noun:
@@ -58,19 +56,19 @@ Global Options
 Job Verbs
 ---------
 
- **htcondor job submit submit_file**
+ **htcondor job submit** *submit_file*
      Takes as an argument a submit file in the *condor_submit* job submit
      description language, and places a new job in an Access Point
 
-     **htcondor job submit Options**
+     Options
      
-          **htcondor job submit --resource resource_type submit_file**
+          **htcondor job submit --resource** *resource_type submit_file*
             Resource type used to run this job. Currently supports ``Slurm`` and ``EC2``.
             Assumes the necessary setup is complete and security tokens available.
-          **htcondor job submit --runtime runtime_in_seconds submit_file**
+          **htcondor job submit --runtime** *runtime_in_seconds submit_file*
             Amount of time in seconds to allocate resources.
             Used in conjunction with the *--resource* flag.
-          **htcondor job submit --email address submit_file**
+          **htcondor job submit --email** *address submit_file*
             Email address to receive notification messages.
             Used in conjunction with the *--resource* flag.
     
@@ -82,7 +80,7 @@ Job Verbs
 
      **job status option**
 
-      **htcondor job status --skip-history job.id**
+      **htcondor job status --skip-history** *job.id*
 
         Passed to the *status* verb to skip checking history
         if job not found in the active job queue.
@@ -113,12 +111,12 @@ Jobset Options
 Eventlog Verbs
 --------------
 
- **htcondor eventlog read logfile**
+ **htcondor eventlog read** *logfile*
      Takes as an argument an event log to process.  It may be the per-job or
      per-jobset eventlog, which was specified by the *log = some_file* in the
-     submit description language.  For a dag, it can also be the *nodes.log*
+     submit description language.  For a dag, it may also be the *nodes.log*
      file that all dags generate.  Or, if the global event log is enabled by an
-     administrator with the *EVENT_LOG* configuration knob, it is the global
+     administrator with the *EVENT_LOG* configuration knob, it may be the global
      event log, containing information about all jobs on the Access point.
 
      Given this file, `htcondor eventlog read` returns information about all
@@ -127,7 +125,7 @@ Eventlog Verbs
      files.  Unlike *condor_history*, it will also show information about
      jobs that have not yet left the queue.
 
- **htcondor eventlog follow logfile**
+ **htcondor eventlog follow** *logfile*
      Takes as an argument an event log to process, as above, but instead
      of processing that file to completion, it does the equivalent of
      *tail -f*, and runs until interruption, emitting information about
