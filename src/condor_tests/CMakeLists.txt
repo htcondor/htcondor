@@ -97,6 +97,9 @@ if (BUILD_TESTING)
 	condor_exe_test(lib_eventlog_base_executable.exe "lib_eventlog_base.cpp" condor_utils)
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" condor_utils)
+	if(NOT WINDOWS)
+		condor_exe_test(test_for_AwaitableDeadlineReaper.exe "test_for_AwaitableDeadlineReaper.cpp" condor_utils)
+	endif(NOT WINDOWS)
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	if( WINDOWS )
@@ -202,7 +205,11 @@ endif ()
 			# but run_test.pl doesn't know that, and always runs pytest with an
 			# ornithology-specific command-line flag
 			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_htcondor_annex_create_constraints "Test annex create constraings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_htcondor_annex_create_constraints "Test annex create constraints" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			# Note that ctest can NOT find this test if it's named
+			# test_AwaitableDeadlineReaper.  I can't even.
+			condor_pl_test(test_awaitable_deadline_reaper "Test annex create constraints" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineReaper.exe")
+			add_dependencies_suffix_hack(test_awaitable_deadline_reaper test_for_AwaitableDeadlineReaper.exe)
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable

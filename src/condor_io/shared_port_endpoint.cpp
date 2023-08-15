@@ -752,7 +752,7 @@ SharedPortEndpoint::TouchSocketInterval()
 }
 #ifndef WIN32
 void
-SharedPortEndpoint::SocketCheck()
+SharedPortEndpoint::SocketCheck(int /* timerID */)
 {
 	if( !m_listening || m_full_name.empty() || !m_is_file_socket) {
 		return;
@@ -871,7 +871,7 @@ SharedPortEndpoint::InitRemoteAddress()
 }
 
 void
-SharedPortEndpoint::RetryInitRemoteAddress()
+SharedPortEndpoint::RetryInitRemoteAddress(int /* timerID */)
 {
 	const int remote_addr_retry_time = 60;
 	const int remote_addr_refresh_time = 300;
@@ -1366,7 +1366,9 @@ SharedPortEndpoint::UseSharedPort(std::string *why_not,bool already_open)
 		if (!GetDaemonSocketDir(socket_dir)) {
 			is_file_socket = true;
 			if (!GetAltDaemonSocketDir(socket_dir)) {
-				*why_not = "No DAEMON_SOCKET_DIR is available";
+				if( why_not ) {
+					*why_not = "No DAEMON_SOCKET_DIR is available";
+				}
 				cached_result = false;
 				return cached_result;
 			}

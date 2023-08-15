@@ -47,7 +47,7 @@ public:
 		// a call to takesnapshot() itself.
 	void get_max_imagesize(unsigned long & max_image ) const;
 
-	void takesnapshot();
+	void takesnapshot( int timerID = -1 );
 
 		// Allocates an array for all pids in the current pid family, 
 		// sets the given pointer to that array, and returns the

@@ -143,7 +143,7 @@ BaseUserPolicy::checkAtExit( void )
  * method.
  **/
 void
-BaseUserPolicy::checkPeriodic( void )
+BaseUserPolicy::checkPeriodic( int /* timerID */ )
 {
 	double old_run_time;
 	this->updateJobTime( &old_run_time );

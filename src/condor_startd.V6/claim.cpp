@@ -562,7 +562,7 @@ Claim::cancel_match_timer()
 
 
 void
-Claim::match_timed_out()
+Claim::match_timed_out( int /* timerID */ )
 {
 	char* my_id = id();
 	if( !my_id ) {
@@ -963,7 +963,7 @@ Claim::cancelLeaseTimer()
 }
 
 void
-Claim::sendAlive()
+Claim::sendAlive( int /* timerID */ )
 {
 	const char* c_addr = NULL;
 
@@ -1170,7 +1170,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 
 
 void
-Claim::leaseExpired()
+Claim::leaseExpired( int /* timerID */ )
 {
 	cancelLeaseTimer();  // cancel timer(s) in case we are being called directly
 

@@ -42,7 +42,7 @@ private:
 	int log_reader_polling_timer;
 	int log_reader_polling_period;
 
-	void TimerHandler_JobLogPolling();
+	void TimerHandler_JobLogPolling( int timerID = -1 );
 };
 
 #endif

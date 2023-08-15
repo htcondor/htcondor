@@ -51,7 +51,7 @@ class SharedPortServer: Service {
 	int HandleConnectRequest(int cmd,Stream *sock);
 	int HandleDefaultRequest(int cmd,Stream *sock);
 	int PassRequest(Sock *sock, const char *shared_port_id);
-	void PublishAddress();
+	void PublishAddress(int timerID = -1);
 };
 
 #endif

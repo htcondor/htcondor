@@ -365,7 +365,7 @@ class RemoteResource : public Service {
 			public so DaemonCore can use it, but it's not meant to be 
 			called by other parts of the shadow.
 		*/
-	virtual void attemptReconnect( void );
+	virtual void attemptReconnect( int timerID = -1 );
 
 		/// If this resource has a lease, how much time until it expires?
 	virtual int remainingLeaseDuration( void );
@@ -375,14 +375,14 @@ class RemoteResource : public Service {
 			Intended for use as a DaemonCore timer handler (thus, it's public),
 			but should be safe if you really feel like calling it yourself.
 		*/
-	virtual void checkX509Proxy( void );
+	virtual void checkX509Proxy( int timerID = -1 );
 
 		/** This timer handler is called if too much time has passed since we got
 		    an update from the starter.  This could indicate a problem with our
 			remote syscall sock connection, or the starter died somehow.
 			Intended for use as a DaemonCore timer handler (this, public).
 		*/
-	void updateFromStarterTimeout( void );
+	void updateFromStarterTimeout( int timerID = -1 );
 	
 	/**
 	 * used to suspend a remotely running job
@@ -548,7 +548,7 @@ private:
 	void setRemoteProxyRenewTime(time_t expiration_time);
 	void setRemoteProxyRenewTime();
 	void startCheckingProxy();
-	void attemptShutdownTimeout();
+	void attemptShutdownTimeout( int timerID = -1 );
 	void attemptShutdown();
 	int transferStatusUpdateCallback(FileTransfer *transobject);
 };

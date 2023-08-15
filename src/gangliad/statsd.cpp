@@ -754,7 +754,7 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 }
 
 void
-StatsD::publishMetrics()
+StatsD::publishMetrics( int /* timerID */ )
 {
 	dprintf(D_ALWAYS,"Starting update...\n");
 

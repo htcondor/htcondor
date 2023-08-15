@@ -838,7 +838,7 @@ DedicatedScheduler::handleDedicatedJobTimer( int seconds )
 
 
 void
-DedicatedScheduler::callHandleDedicatedJobs( void )
+DedicatedScheduler::callHandleDedicatedJobs( int /* timerID */ )
 {
 	hdjt_tid = -1;
 	handleDedicatedJobs();
@@ -3744,7 +3744,7 @@ DedicatedScheduler::setScheduler( ClassAd* job_ad )
 // Make sure we're not holding onto any resources we're not using for
 // longer than the unused_timeout.
 void
-DedicatedScheduler::checkSanity( void )
+DedicatedScheduler::checkSanity( int /* timerID */ )
 {
 	if( ! unused_timeout ) {
 			// Without a value for the timeout, there's nothing to
@@ -4000,7 +4000,7 @@ DedicatedScheduler::enqueueReconnectJob( PROC_ID job) {
  */
 
 void
-DedicatedScheduler::checkReconnectQueue( void ) {
+DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 	dprintf(D_FULLDEBUG, "In DedicatedScheduler::checkReconnectQueue\n");
 
 	CondorQuery query(STARTD_AD);

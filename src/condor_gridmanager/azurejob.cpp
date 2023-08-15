@@ -266,7 +266,7 @@ void AzureJob::Reconfig()
 }
 
 
-void AzureJob::doEvaluateState()
+void AzureJob::doEvaluateState( int /* timerID */ )
 {
 	int old_gm_state;
 	bool reevaluate_state = true;

@@ -842,7 +842,7 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 }
 
 void
-VMProc::notify_status_fn()
+VMProc::notify_status_fn( int /* timerID */ )
 {
 	// this function will be called from timer function
 	bool has_error = false;
@@ -891,7 +891,7 @@ VMProc::notify_status_fn()
 }
 
 void
-VMProc::CheckStatus()
+VMProc::CheckStatus( int /* timerID */ )
 {
 	if( !m_vm_id || !m_vmgahp ) {
 		return;

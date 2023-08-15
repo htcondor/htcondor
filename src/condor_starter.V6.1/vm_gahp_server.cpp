@@ -1005,7 +1005,7 @@ VMGahpServer::poll_real_soon()
 }
 
 void
-VMGahpServer::poll_now()
+VMGahpServer::poll_now( int /* timerID */ )
 {
 	m_poll_real_soon_tid = -1;
 	(void)poll();
