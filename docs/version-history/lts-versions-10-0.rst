@@ -24,6 +24,10 @@ New Features:
 
 Bugs Fixed:
 
+- Removed cgroup v1 blkio controller support -- this prevents
+  a kernel panic in some EL8 kernels.
+  :jira:`1985`
+
 - Fixed a bug with parallel universe that would result in the startd
   rejecting start attempts from the schedd and causing the schedd
   to crash.

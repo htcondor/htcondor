@@ -12,7 +12,11 @@ CgroupLimits::CgroupLimits(std::string &cgroup) : m_cgroup_string(cgroup)
 {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	CgroupManager::getInstance().create(m_cgroup_string, m_cgroup,
-		CgroupManager::MEMORY_CONTROLLER | CgroupManager::CPU_CONTROLLER | CgroupManager::BLOCK_CONTROLLER,
+		CgroupManager::MEMORY_CONTROLLER | CgroupManager::CPU_CONTROLLER 
+#ifdef CGROUP_BLOCKIO_CONTROLLER_WORKS
+		| CgroupManager::BLOCK_CONTROLLER
+#endif
+		,
 		CgroupManager::NO_CONTROLLERS,
 		false, false);
 }
@@ -137,6 +141,7 @@ int CgroupLimits::set_cpu_shares(uint64_t shares)
 
 int CgroupLimits::set_blockio_weight(uint64_t weight)
 {
+#ifdef CGROUP_BLOCKIO_CONTROLLER_WORKS
 	if (!m_cgroup.isValid() || !CgroupManager::getInstance().isMounted(CgroupManager::BLOCK_CONTROLLER)) {
 		dprintf(D_ALWAYS, "Unable to set blockio weight because cgroup is invalid.\n");
 		return 1;
@@ -166,6 +171,9 @@ int CgroupLimits::set_blockio_weight(uint64_t weight)
 		}
 	}
 	return 0;
+#else
+	return weight == 0; // actually unused, but quiet compiler
+#endif
 }
 
 #endif

@@ -247,6 +247,9 @@ ProcFamily::set_cgroup(const std::string &cgroup_string)
 	get_cpu_usage_cgroup(m_initial_user_cpu, m_initial_sys_cpu);
 
 	// Reset block IO controller
+	// cgroup v1 blockio controller usage is panicing some rh kernels
+	// we don't use it too much, so ifdef it out
+#ifdef CGROUP_BLOCKIO_CONTROLLER_WORKS
 	if (m_cm.isMounted(CgroupManager::BLOCK_CONTROLLER)) {
 		struct cgroup *tmp_cgroup = cgroup_new_cgroup(m_cgroup_string.c_str());
 		struct cgroup_controller *blkio_controller = cgroup_add_controller(tmp_cgroup, BLOCK_CONTROLLER_STR);
@@ -262,6 +265,7 @@ ProcFamily::set_cgroup(const std::string &cgroup_string)
 		}
 		cgroup_free(&tmp_cgroup);
 	}
+#endif
 
 	return 0;
 }
@@ -695,9 +699,11 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	// Update CPU
 	get_cpu_usage_cgroup(usage->user_cpu_time, usage->sys_cpu_time);
 
+#ifdef CGROUP_BLOCKIO_CONTROLLER_WORKS
 	aggregate_usage_cgroup_blockio(usage);
 	aggregate_usage_cgroup_blockio_io_serviced(usage);
 	aggregate_usage_cgroup_io_wait(usage);
+#endif
 
 	// Finally, update the list of tasks
 	if ((err = count_tasks_cgroup()) < 0) {
