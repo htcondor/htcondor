@@ -50,7 +50,7 @@ void pcccStopCoalescing( PROC_ID nowJob );
 class pcccDoneCallback : public Service {
 	public:
 		pcccDoneCallback( PROC_ID nj ) : nowJob(nj) { }
-		void callback();
+		void callback( int timerID = -1 );
 
 	private:
 		PROC_ID nowJob;
@@ -60,7 +60,7 @@ class pcccStopCallback : public Service {
 	public:
 		pcccStopCallback( PROC_ID nj, classy_counted_ptr<TwoClassAdMsg> tcam, const char * n, const char * a, int rr ) : nowJob(nj), message(tcam), name(n), addr(a), retriesRemaining(rr) { }
 
-		void callback();
+		void callback( int timerID = -1 );
 		static void failed( PROC_ID nowJob );
 		void dcMessageCallback( DCMsgCallback * cb );
 
@@ -256,7 +256,7 @@ pcccDumpTable( int flags ) {
 }
 
 void
-pcccDoneCallback::callback() {
+pcccDoneCallback::callback( int /* timerID */ ) {
 	dprintf( D_ALWAYS, "[now job %d.%d]: targeted job(s) did not vacate quickly enough, failing\n", nowJob.cluster, nowJob.proc );
 
 	// Prevent outstanding deactivations for claims we haven't got() yet
@@ -299,7 +299,7 @@ class SlowRetryCallback : public Service {
 	public:
 		SlowRetryCallback( PROC_ID nj, int rr ) : nowJob(nj), retriesRemaining(rr) { }
 
-		void callback() {
+		void callback( int /* timerID */ ) {
 			dprintf( D_FULLDEBUG, "SlowRetryCallback::callback( %d, %d )\n", nowJob.cluster, nowJob.proc );
 			pcccStartCoalescing( nowJob, retriesRemaining - 1 );
 			delete( this );
@@ -312,7 +312,7 @@ class SlowRetryCallback : public Service {
 
 
 void
-pcccStopCallback::callback() {
+pcccStopCallback::callback( int /* timerID */ ) {
 	dprintf( D_ALWAYS, "[now job %d.%d]: coalesce command timed out, failing\n", nowJob.cluster, nowJob.proc );
 
 	// This calls dcMessageCallback(), which turns around and

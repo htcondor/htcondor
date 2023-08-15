@@ -927,7 +927,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 
 
 void
-ResMgr::update_all( void )
+ResMgr::update_all( int /* timerID */ )
 {
 	num_updates = 0;
 
@@ -964,7 +964,7 @@ ResMgr::update_all( void )
 
 
 void
-ResMgr::eval_and_update_all( void )
+ResMgr::eval_and_update_all( int /* timerID */ )
 {
 #if HAVE_HIBERNATION
 	if ( !hibernating () ) {
@@ -978,7 +978,7 @@ ResMgr::eval_and_update_all( void )
 
 
 void
-ResMgr::eval_all( void )
+ResMgr::eval_all( int /* timerID */ )
 {
 #if HAVE_HIBERNATION
 	if ( !hibernating () ) {
@@ -1509,7 +1509,7 @@ ResMgr::check_polling( void )
 
 
 void
-ResMgr::sweep_timer_handler( void ) const
+ResMgr::sweep_timer_handler( int /* timerID */ ) const
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
@@ -2023,7 +2023,7 @@ ResMgr::allHibernating( std::string &target ) const
 
 
 void
-ResMgr::checkHibernate( void )
+ResMgr::checkHibernate( int /* timerID */ )
 {
 
 		// If we have already issued the command to hibernate, then

@@ -1643,8 +1643,8 @@ int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* cons
 }
 
 
-void Matchmaker::
-negotiationTime ()
+void
+Matchmaker::negotiationTime( int /* timerID */ )
 {
 	ClassAdList_DeleteAdsAndMatchList allAds(this); //contains ads from collector
 	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
@@ -5968,7 +5968,7 @@ init_public_ad()
 }
 
 void
-Matchmaker::updateCollector() {
+Matchmaker::updateCollector( int /* timerID */ ) {
 	dprintf(D_FULLDEBUG, "enter Matchmaker::updateCollector\n");
 
 		// in case our address changes, re-initialize public ad every time

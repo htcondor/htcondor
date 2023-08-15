@@ -453,9 +453,9 @@ private:
 	void proxyExpiring();
 
 	bool refreshSandboxCredentialsKRB();
-	void refreshSandboxCredentialsKRB_from_timer() { (void)refreshSandboxCredentialsKRB(); }
+	void refreshSandboxCredentialsKRB_from_timer( int /* timerID */ ) { (void)refreshSandboxCredentialsKRB(); }
 	bool refreshSandboxCredentialsOAuth();
-	void refreshSandboxCredentialsOAuth_from_timer() { (void)refreshSandboxCredentialsOAuth(); }
+	void refreshSandboxCredentialsOAuth_from_timer( int /* timerID */ ) { (void)refreshSandboxCredentialsOAuth(); }
 
 	bool shadowDisconnected() const { return syscall_sock_lost_time > 0; };
 
@@ -529,7 +529,7 @@ private:
 		/** timer id of timer to invoke job_lease_expired() when syscall_sock closed */
 	int syscall_sock_lost_tid;
 		/** invoked when job lease expired - exits w/ well known status */
-	void job_lease_expired() const;
+	void job_lease_expired( int timerID = -1 ) const;
 		/** must be invoked whenever our syscall_sock is reconnected */
 	void syscall_sock_reconnect();
 		/** must be invoked whenever we notice our syscall_sock is borked */

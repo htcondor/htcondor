@@ -98,6 +98,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_auth_passwd.h"
 #include "exit.h"
 
+#include <algorithm>
+
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
 #endif
@@ -107,6 +109,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #endif
 
 #include "systemd_manager.h"
+
+#include <algorithm>
 
 static const char* EMPTY_DESCRIP = "<NULL>";
 
@@ -2693,6 +2697,12 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 	return res;
 }
 
+int
+DaemonCore::numRegisteredReapers() {
+	return std::count_if(reapTable.begin(), reapTable.end(),
+			[](const auto &entry) { return entry.handler || entry.handlercpp; });
+}
+
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
 	const char *descrip1;
@@ -2797,7 +2807,7 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 }
 
 void
-DaemonCore::refreshDNS() {
+DaemonCore::refreshDNS( int /* timerID */ ) {
 #if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
 		// re-initialize dns info (e.g. IP addresses of nameservers)
 	res_init();
@@ -6425,7 +6435,13 @@ void CreateProcessForkit::exec() {
 				msg += ' ';
 			}
 		}
-		dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
+
+		// This causes the child to exit with an indecipherable error
+		// message if the log file is only available because of an
+		// environment variable over-ride, and/or maybe just because
+		// we're a daemon core process running in -t mode, and we
+		// just closed the FD that dprintf() was using.
+		// dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
 
 			// Re-open 'em to point at /dev/null as place holders
 		if ( num_closed ) {
@@ -8337,7 +8353,7 @@ class FakeCreateThreadReaperCaller: public Service {
 public:
 	FakeCreateThreadReaperCaller(int exit_status,int reaper_id);
 
-	void CallReaper();
+	void CallReaper(int timerID = -1);
 
 	int FakeThreadID() const { return m_tid; }
 
@@ -8363,7 +8379,7 @@ FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int r
 }
 
 void
-FakeCreateThreadReaperCaller::CallReaper() {
+FakeCreateThreadReaperCaller::CallReaper( int /* timerID */ ) {
 	daemonCore->CallReaper( m_reaper_id, "fake thread", m_tid, m_exit_status );
 	delete this;
 }

@@ -162,7 +162,7 @@ public:
 		 * 
 		 * 
 		 **/
-	virtual void SpawnPreScript( void );
+	virtual void SpawnPreScript( int timerID = -1 );
 
 		/** Does initial cleanup once all the jobs (and post script, if
 			any) have completed.  This notifies the JIC so it can
@@ -380,7 +380,7 @@ private:
 		// Check the disk usage of this job; if over the limits, potentially
 		// put the job on hold.
 		//
-	void CheckDiskUsage(void);
+	void CheckDiskUsage( int timerID = -1 );
 
 		// // // // // // // //
 		// Private Data Members

@@ -77,7 +77,7 @@ class BaseUserPolicy : public Service
 			This method is registered as a periodic timer handler
 			while the job is executing.
 		*/
-	void checkPeriodic( void );
+	void checkPeriodic( int timerID = -1 );
 
 		/* Reset our periodic evaluation timer to fire immediately,
 		 * then resume the usual interval.

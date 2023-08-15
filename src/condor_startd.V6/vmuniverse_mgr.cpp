@@ -777,7 +777,7 @@ VMUniverseMgr::checkVMUniverse( bool warn )
 }
 
 void 
-VMUniverseMgr::docheckVMUniverse(void)
+VMUniverseMgr::docheckVMUniverse( int /* timerID */ )
 {
 	char *vm_type = param( "VM_TYPE" );
 	dprintf( D_ALWAYS, "VM universe will be tested "

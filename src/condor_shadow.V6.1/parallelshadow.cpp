@@ -174,7 +174,7 @@ ParallelShadow::spawn( void )
 
 
 void
-ParallelShadow::getResources( void )
+ParallelShadow::getResources( int /* timerID */ )
 {
     dprintf ( D_FULLDEBUG, "Getting machines from schedd now...\n" );
 

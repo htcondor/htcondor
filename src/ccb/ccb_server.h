@@ -96,7 +96,7 @@ class CCBServer: Service {
 
 	int HandleRequestDisconnect( Stream *stream );
 
-	void PollSockets();
+	void PollSockets(int timerID = -1);
 	int EpollSockets(int);
 	void EpollAdd(CCBTarget *);
 	void EpollRemove(CCBTarget *);

@@ -363,7 +363,7 @@ void GCEJob::Reconfig()
 }
 
 
-void GCEJob::doEvaluateState()
+void GCEJob::doEvaluateState( int /* timerID */ )
 {
 	int old_gm_state;
 	bool reevaluate_state = true;

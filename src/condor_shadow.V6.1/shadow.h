@@ -85,7 +85,7 @@ class UniShadow : public BaseShadow
 		/**
 		 * Invoked when the job hook times out
 		 */
-	void hookTimeout();
+	void hookTimeout( int timerID = -1 );
 	void hookTimerCancel();
 
 		/** Shadow should attempt to reconnect to a disconnected
@@ -192,7 +192,7 @@ class UniShadow : public BaseShadow
 	virtual void exitAfterEvictingJob( int reason );
 	virtual bool exitDelayed( int &reason );
 
-	void exitLeaseHandler( void ) const;
+	void exitLeaseHandler( int timerID = -1 ) const;
 
 	ClassAd *getJobAd() { return remRes ? remRes->getJobAd() : nullptr; };
  protected:

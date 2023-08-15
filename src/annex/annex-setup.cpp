@@ -87,7 +87,7 @@ check_account_setup( const std::string & publicKeyFile, const std::string & priv
 		commandState, commandID, scratchpad );
 
 	int setupTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		 (void (Service::*)()) & FunctorSequence::operator(),
+		 (void (Service::*)(int)) & FunctorSequence::timer,
 		 "CheckForStacks", fs );
 	cfGahp->setNotificationTimerId( setupTimer );
 	ec2Gahp->setNotificationTimerId( setupTimer );
@@ -374,7 +374,7 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 
 
 	int setupTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		 (void (Service::*)()) & FunctorSequence::operator(),
+		 (void (Service::*)(int)) & FunctorSequence::timer,
 		 "CreateStack, DescribeStacks, WriteConfigFile", fs );
 	cfGahp->setNotificationTimerId( setupTimer );
 	ec2Gahp->setNotificationTimerId( setupTimer );

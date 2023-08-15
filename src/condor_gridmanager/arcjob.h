@@ -45,7 +45,7 @@ class ArcJob : public BaseJob
 	~ArcJob();
 
 	void Reconfig();
-	void doEvaluateState();
+	void doEvaluateState( int timerID = -1 );
 	BaseResource *GetResource();
 	void SetRemoteJobId( const char *job_id );
 

@@ -1189,7 +1189,7 @@ mergeClassAd (CollectorHashTable &hashTable,
 
 void
 CollectorEngine::
-housekeeper()
+housekeeper( int /* timerID */ )
 {
 	time_t now;
 

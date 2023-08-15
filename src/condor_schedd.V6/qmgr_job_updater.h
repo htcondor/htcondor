@@ -109,7 +109,7 @@ private:
 		/** Timer handler which just calls updateJobInQueue with the
 			right arguments so we do a periodic update.
 		*/
-	void periodicUpdateQ( void );
+	void periodicUpdateQ( int timerID = -1 );
 
 
 		/** Update a specific attribute from our job ad into the

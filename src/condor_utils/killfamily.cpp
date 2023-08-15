@@ -244,7 +244,7 @@ KillFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
 }
 
 void
-KillFamily::takesnapshot()
+KillFamily::takesnapshot( int /* timerID */ )
 {
 	std::vector<a_pid> *new_pids;
 	struct procInfo *pinfo = NULL;
