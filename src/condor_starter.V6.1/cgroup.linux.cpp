@@ -64,8 +64,10 @@ int CgroupManager::initialize()
 			m_cgroup_mounts |= (info.hierarchy != 0) ? CPUACCT_CONTROLLER : NO_CONTROLLERS;
 		} else if (strcmp(info.name, FREEZE_CONTROLLER_STR) == 0) {
 			m_cgroup_mounts |= (info.hierarchy != 0) ? FREEZE_CONTROLLER : NO_CONTROLLERS;
+#ifdef CGROUP_BLOCKIO_CONTROLLER_WORKS
 		} else if (strcmp(info.name, BLOCK_CONTROLLER_STR) == 0) {
 			m_cgroup_mounts |= (info.hierarchy != 0) ? BLOCK_CONTROLLER : NO_CONTROLLERS;
+#endif
 		} else if (strcmp(info.name, CPU_CONTROLLER_STR) == 0) {
 			m_cgroup_mounts |= (info.hierarchy != 0) ? CPU_CONTROLLER : NO_CONTROLLERS;
 		}
@@ -74,9 +76,11 @@ int CgroupManager::initialize()
 	if (handle) {
 		cgroup_get_all_controller_end(&handle);
 	}
+#ifdef CGROUP_BLOCKIO_CONTROLLER_WORKS
 	if (!isMounted(BLOCK_CONTROLLER)) {
 		dprintf(D_ALWAYS, "Cgroup controller for I/O statistics is not available.\n");
 	}
+#endif
 	if (!isMounted(FREEZE_CONTROLLER)) {
 		dprintf(D_ALWAYS, "Cgroup controller for process management is not available.\n");
 	}
@@ -187,6 +191,7 @@ int CgroupManager::create(const std::string &cgroup_string, Cgroup &cgroup,
 			has_cgroup, changed_cgroup)) {
 		return -1;
 	}
+#ifdef CGROUP_BLOCKIO_CONTROLLER_WORKS
 	if ((preferred_controllers & BLOCK_CONTROLLER) &&
 		initialize_controller(*cgroupp, BLOCK_CONTROLLER,
 			BLOCK_CONTROLLER_STR,
@@ -194,6 +199,7 @@ int CgroupManager::create(const std::string &cgroup_string, Cgroup &cgroup,
 			has_cgroup, changed_cgroup)) {
 		return -1;
 	}
+#endif
 	if ((preferred_controllers & CPU_CONTROLLER) &&
 		initialize_controller(*cgroupp, CPU_CONTROLLER,
 			CPU_CONTROLLER_STR,
