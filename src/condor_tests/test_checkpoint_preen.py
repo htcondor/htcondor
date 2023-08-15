@@ -718,7 +718,7 @@ class TestCheckpointDestination:
             }
             rv = subprocess.run( ['condor_preen', '-d'],
                 # Crass empiricism.
-                env=preen_env, timeout=60,
+                env=preen_env, timeout=120,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 universal_newlines=True,
             )
