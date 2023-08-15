@@ -9,22 +9,22 @@ Manage HTCondor jobs, job sets, dags, event logs, and resources
 Synopsis
 --------
 
-**htcondor** [ **-h** | **--help** ] [ **-v** | **-q** ]
+**htcondor** [ **-h** | **-\-help** ] [ **-v** | **-q** ]
 
-| **htcondor** **job** *submit* [**--resource** *resource-type*] [**--runtime** *time-seconds*] [**--email** *email-address*] submit_file
-| **htcondor** **job** *status* [**--resource** *resource-type*] [**--skip-history**] job_id
-| **htcondor** **job** *resources* [**--resource** *resource-type*] [**--skip-history**] job_id
+| **htcondor** **job** *submit* [**-\-resource** *resource-type*] [**-\-runtime** *time-seconds*] [**-\-email** *email-address*] submit_file
+| **htcondor** **job** *status* [**-\-resource** *resource-type*] [**-\-skip-history**] job_id
+| **htcondor** **job** *resources* [**-\-resource** *resource-type*] [**-\-skip-history**] job_id
 
 | **htcondor** **jobset** *submit* description-file
-| **htcondor** **jobset** *list* [**--allusers**]
-| **htcondor** **jobset** *status* job-set-name [**--owner** *user-name*] [**--nobatch**] [**--skip-history**]
-| **htcondor** **jobset** *remove* job-set-name [**--owner** *user-name*] [**--nobatch**] [**--skip-history**]
+| **htcondor** **jobset** *list* [**-\-allusers**]
+| **htcondor** **jobset** *status* job-set-name [**-\-owner** *user-name*] [**-\-nobatch**] [**-\-skip-history**]
+| **htcondor** **jobset** *remove* job-set-name [**-\-owner** *user-name*] [**-\-nobatch**] [**-\-skip-history**]
 
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
 
-| **htcondor** **eventlog** *read* [ **-csv** | **-json**] [ **--groupby attribute** ] eventlog
-| **htcondor** **eventlog** *follow* [ **-csv** | **-json**] [ **--groupby attribute** ] eventlog 
+| **htcondor** **eventlog** *read* [ **-csv** | **-json**] [ **-\-groupby attribute** ] eventlog
+| **htcondor** **eventlog** *follow* [ **-csv** | **-json**] [ **-\-groupby attribute** ] eventlog 
 
 Description
 -----------
@@ -44,7 +44,7 @@ One of the following optional global option may appear before the noun:
 Global Options
 --------------
 
- **htcondor -h**, **htcondor --help**
+ **htcondor -h**, **htcondor -\-help**
      Display the help message. Can also be specified after any
      verb to display the options available for each verb.
  **htcondor -q ...**
@@ -62,15 +62,15 @@ Job Verbs
 
      Options
      
-          **htcondor job submit --resource** *resource_type submit_file*
+          **htcondor job submit -\-resource** *resource_type submit_file*
             Resource type used to run this job. Currently supports ``Slurm`` and ``EC2``.
             Assumes the necessary setup is complete and security tokens available.
-          **htcondor job submit --runtime** *runtime_in_seconds submit_file*
+          **htcondor job submit -\-runtime** *runtime_in_seconds submit_file*
             Amount of time in seconds to allocate resources.
-            Used in conjunction with the *--resource* flag.
-          **htcondor job submit --email** *address submit_file*
+            Used in conjunction with the *-\-resource* flag.
+          **htcondor job submit -\-email** *address submit_file*
             Email address to receive notification messages.
-            Used in conjunction with the *--resource* flag.
+            Used in conjunction with the *-\-resource* flag.
     
     
  **htcondor job status**
@@ -80,7 +80,7 @@ Job Verbs
 
      **job status option**
 
-      **htcondor job status --skip-history** *job.id*
+      **htcondor job status -\-skip-history** *job.id*
 
         Passed to the *status* verb to skip checking history
         if job not found in the active job queue.
@@ -93,18 +93,18 @@ Job Verbs
 Jobset Options
 --------------
 
- **--allusers**
+ **-\-allusers**
     Passed to the *list* verb to show job sets from all users
     rather than just the current user.
- **--nobatch**
+ **-\-nobatch**
     Passed to the *status* verb to display the status of
     individual job clusters within a job set
- **--owner=USERNAME**
+ **-\-owner=USERNAME**
     Passed to the *status* or *remove* verb to act on job sets
     submitted by the specified user instead of the current
     user. Using this option to *remove* job sets requires superuser
     permissions.
- **--skip-history**
+ **-\-skip-history**
     Passed to the *status* verb to skip checking history
     if job clusters are not found in the active job queue.
 
@@ -133,17 +133,17 @@ Eventlog Verbs
 
      **Eventlog Options**
 
-       **--csv**
+       **-\-csv**
           By default, *htcondor eventlog read* emits a table of information
           in human readable format.  With this option, the output is in
           a command separated value format, suitable for injestion by a spreadsheet
           or database.
 
-       **--json**
+       **-\-json**
           Emits output in the json format. Only one of **-csv** or **-json** should
           be given.
 
-      **--group-by attributeName**
+      **-\-group-by attributeName**
           With a job ad attribute name, instead of one line per job, emit one line
           summarizing all jobs that share the same value for the attribute name
           given.  In the OSG, the GLIDEIN_SITE attribute is injected into all jobs,
