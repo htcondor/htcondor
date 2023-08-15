@@ -1415,12 +1415,12 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	auto checkpointCleanupDir = std::filesystem::directory_iterator( checkpointCleanup );
 	for( const auto & entry : checkpointCleanupDir ) {
 		if(! entry.is_directory()) { continue; }
-		dprintf( D_ZKM, "Found directory %s\n", entry.path().string().c_str() );
+		// dprintf( D_ZKM, "Found directory %s\n", entry.path().string().c_str() );
 
 		auto userSpecificDir = std::filesystem::directory_iterator(entry);
 		for( const auto & jobDir : userSpecificDir ) {
 			if(! jobDir.is_directory()) { continue; }
-			dprintf( D_ZKM, "Found directory %s\n", jobDir.path().string().c_str() );
+			// dprintf( D_ZKM, "Found directory %s\n", jobDir.path().string().c_str() );
 
 			auto pathToJobAd = jobDir.path() / ".job.ad";
 			FILE * fp = NULL;
@@ -1480,7 +1480,7 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 			pidToPathMap[spawned_pid] = jobDir.path();
 			logansRun.born( spawned_pid, CLEANUP_TIMEOUT );
 			if( logansRun.living() >= MAX_CHECKPOINT_CLEANUP_PROCS ) {
-				dprintf( D_ZKM, "Hit MAX_CHECKPOINT_CLEANUP_PROCS, pausing.\n" );
+				// dprintf( D_ZKM, "Hit MAX_CHECKPOINT_CLEANUP_PROCS, pausing.\n" );
 				auto [pid, timed_out, status] = co_await( logansRun );
 				if( timed_out ) {
 					badPathMap[pidToPathMap[pid]] = "Timed out.";
@@ -1496,7 +1496,7 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 					daemonCore->Shutdown_Graceful( pid );
 				} else if( status != 0 ) {
 					formatstr( message, "checkpoint clean-up proc %d returned %d", pid, status );
-					dprintf( D_ZKM, "%s\n", message.c_str() );
+					// dprintf( D_ZKM, "%s\n", message.c_str() );
 					// This could be the event from us killing the timed-out
 					// process, so don't overwrite the bad path map.
 					if(! badPathMap.contains(pidToPathMap[pid])) {
@@ -1508,18 +1508,19 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	}
 
 	while( logansRun.living() ) {
-		dprintf( D_ZKM, "co_await logansRun.await()\n" );
+		// dprintf( D_ZKM, "co_await logansRun.await()\n" );
 		auto [pid, timed_out, status] = co_await( logansRun );
-		dprintf( D_ZKM, "co_await() = %d, %d, %d\n", pid, timed_out, status );
+		// dprintf( D_ZKM, "co_await() = %d, %d, %d\n", pid, timed_out, status );
 		if( timed_out ) {
 			badPathMap[pidToPathMap[pid]] = "Timed out.";
 			// FIXME: see note in copy of this code below, refactor this
 			// code into a function.
 			// daemonCore->Kill_Family( pid );
-			kill( pid, SIGTERM );
+			// kill( pid, SIGTERM );
+			daemonCore->Shutdown_Graceful( pid );
 		} else if( status != 0 ) {
 			formatstr( message, "checkpoint clean-up proc %d returned %d", pid, status );
-			dprintf( D_ZKM, "%s\n", message.c_str() );
+			// dprintf( D_ZKM, "%s\n", message.c_str() );
 			badPathMap[pidToPathMap[pid]] = message;
 		}
 	}
@@ -1540,7 +1541,7 @@ check_cleanup_dir() {
 	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
 
 	if(! std::filesystem::exists( checkpointCleanup )) {
-		dprintf( D_ZKM, "Directory '%s' does not exist, ignoring.\n", checkpointCleanup.string().c_str() );
+		// dprintf( D_ZKM, "Directory '%s' does not exist, ignoring.\n", checkpointCleanup.string().c_str() );
 		return false;
 	}
 

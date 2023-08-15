@@ -13,8 +13,8 @@
 
 
 int
-Scheduler::checkpointCleanUpReaper( int pid, int status ) {
-	dprintf( D_ZKM, "checkpoint clean-up proc %d returned %d\n", pid, status );
+Scheduler::checkpointCleanUpReaper( int /* pid */, int /* status */ ) {
+	// dprintf( D_ZKM, "checkpoint clean-up proc %d returned %d\n", pid, status );
 
 	return 0;
 }
@@ -48,7 +48,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	// create the next subdirectory.  So we rename the job-specific directory
 	// out of the way.
 	//
-	dprintf( D_ZKM, "doCheckpointCleanup(): renaming job (%d.%d) spool directory to permit cleanup.\n", cluster, proc );
+	// dprintf( D_ZKM, "doCheckpointCleanup(): renaming job (%d.%d) spool directory to permit cleanup.\n", cluster, proc );
 
 	std::string spoolPath;
 	SpooledJobFiles::getJobSpoolPath( jobAd, spoolPath );
@@ -112,7 +112,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 
 
 	std::filesystem::path target_dir = owner_dir / spool.filename();
-	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): renaming job (%d.%d) spool directory from '%s' to '%s'.\n", cluster, proc, spool.string().c_str(), target_dir.string().c_str() );
+	// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): renaming job (%d.%d) spool directory from '%s' to '%s'.\n", cluster, proc, spool.string().c_str(), target_dir.string().c_str() );
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		std::filesystem::rename( spool, target_dir, errCode );
