@@ -1399,6 +1399,7 @@ get_corefile_program( const char* corefile, const char* dir ) {
 //
 
 #include "dc_coroutines.h"
+using namespace condor;
 
 
 dc::void_coroutine
