@@ -86,7 +86,7 @@ char* dirname( const char* path );
    This does NOT mean it is in any sort of absolute "canonical" format.
    It may still contain references to ".." or to symlinks or whatever.
 */
-int fullpath( const char* path );
+bool fullpath( const char* path );
 
 
 #endif /* _CONDOR_BASENAME_H */

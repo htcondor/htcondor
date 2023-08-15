@@ -102,7 +102,7 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 // NOTE: this function will NOT return false for successful evaluation to a type not in the mask
 // it only returns false for successful evalatation when the type was unsafe and was therefore destroyed
 // This is done so that callers can print useful diagnostics.
-int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
+bool EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
 				  classad::Value::ValueType type_mask,
 				  const std::string & sourceAlias = "",

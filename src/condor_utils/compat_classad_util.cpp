@@ -822,15 +822,15 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 	}
 }
 
-int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
+bool EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
 				  classad::Value::ValueType type_mask,
 				  const std::string & sourceAlias,
 				  const std::string & targetAlias )
 {
-	int rc = TRUE;
+	bool rc = true;
 	if ( !expr || !source ) {
-		return FALSE;
+		return false;
 	}
 
 	const classad::ClassAd *old_scope = expr->GetParentScope();
@@ -841,7 +841,7 @@ int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 		mad = getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
 	if ( !source->EvaluateExpr( expr, result, type_mask ) ) {
-		rc = FALSE;
+		rc = false;
 	}
 
 	if ( mad ) {
