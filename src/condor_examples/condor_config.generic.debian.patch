@@ -57,7 +57,7 @@
 +LIB     = $(RELEASE_DIR)/lib/condor
 +INCLUDE = $(RELEASE_DIR)/include/condor
 +SBIN    = $(RELEASE_DIR)/sbin
-+LIBEXEC = $(RELEASE_DIR)/lib/condor/libexec
++LIBEXEC = $(RELEASE_DIR)/libexec/condor
 +SHARE   = $(RELEASE_DIR)/share/condor
 +GANGLIA_LIB64_PATH = /lib,/usr/lib,/usr/local/lib
 +

@@ -13,7 +13,7 @@
 #
 # 5-Nov-2012  Created 
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 
 install(FILES 
     blah.config.template 
@@ -24,11 +24,4 @@ install(FILES
     blparser.conf.template
     RENAME blparser.conf
     DESTINATION etc)
-
-install(FILES 
-    glite-ce-blah-parser
-    PERMISSIONS OWNER_WRITE OWNER_READ OWNER_EXECUTE
-                GROUP_READ GROUP_EXECUTE
-                WORLD_READ WORLD_EXECUTE
-    DESTINATION etc/rc.d/init.d)
 

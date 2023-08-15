@@ -210,3 +210,6 @@ __pycache__
 
 # Project exclude paths
 /_build/
+
+# vscode files
+.vscode/

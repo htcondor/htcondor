@@ -10,6 +10,7 @@
 #include <exception>
 #include <coroutine>
 
+namespace condor {
 namespace dc {
 
 	//
@@ -46,22 +47,22 @@ namespace dc {
 			virtual ~AwaitableDeadlineReaper();
 
 			// Call when you've spawned a child process.
-			bool born( int pid, int timeout );
+			bool born( pid_t pid, int timeout );
 
 			// Useful as an argument to Create_Process().
-			int reaper_id();
+			int reaper_id() const { return reaperID; }
 
 			// How many born have not died?
 			size_t living() const { return pids.size(); }
 
 			// Is the given PID alive?
-			bool contains( int pid ) const { return pids.contains(pid); }
+			bool contains( pid_t pid ) const { return pids.contains(pid); }
 
 
 			//
 			// The API for daemon core.
 			//
-			int reaper( int pid, int status );
+			int reaper( pid_t pid, int status );
 			void timer( int timerID );
 
 
@@ -116,10 +117,10 @@ namespace dc {
 			int reaperID = -1;
 			std::coroutine_handle<> the_coroutine;
 
-			std::set<int> pids;
-			std::map<int, int> timerIDToPIDMap;
+			std::set<pid_t> pids;
+			std::map<int, pid_t> timerIDToPIDMap;
 
-			int the_pid = -1;
+			pid_t the_pid = -1;
 			int the_status = -1;
 			bool timed_out = false;
 	};
@@ -155,6 +156,7 @@ namespace dc {
 		};
 	};
 
+} // end namespace dc
 } // end namespace dc
 
 #endif /* defined(_CONDOR_DC_COROUTINES_H) */

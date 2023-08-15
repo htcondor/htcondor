@@ -98,6 +98,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_auth_passwd.h"
 #include "exit.h"
 
+#include <algorithm>
+
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
 #endif
@@ -107,6 +109,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #endif
 
 #include "systemd_manager.h"
+
+#include <algorithm>
 
 static const char* EMPTY_DESCRIP = "<NULL>";
 
@@ -2695,14 +2699,8 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 
 int
 DaemonCore::numRegisteredReapers() {
-	// This would be better as std::count_if() or something.
-	int rv = 0;
-	for (size_t i = 0; i < nReap; ++i) {
-		if( reapTable[i].handler || reapTable[i].handlercpp ) {
-			++rv;
-		}
-	}
-	return rv;
+	return std::count_if(reapTable.begin(), reapTable.end(),
+			[](const auto &entry) { return entry.handler || entry.handlercpp; });
 }
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)

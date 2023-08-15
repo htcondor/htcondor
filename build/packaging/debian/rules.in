@@ -89,14 +89,14 @@ override_dh_auto_install:
 
 
 override_dh_fixperms-arch:
-	chmod -x debian/htcondor/usr/lib/condor/libexec/interactive.sub
+	chmod -x debian/htcondor/usr/libexec/condor/interactive.sub
 
 
 override_dh_install-arch:
 	dh_install
 	# fix permissions
 	# remove duplicate that is also installed as a config file
-	rm -f debian/htcondor/usr/lib/condor/libexec/linux-kernel-tuning
+	rm -f debian/htcondor/usr/libexec/condor/linux-kernel-tuning
 
 
 override_dh_auto_clean:

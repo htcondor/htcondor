@@ -2,6 +2,7 @@
 #include "condor_daemon_core.h"
 #include "dc_coroutines.h"
 
+using namespace condor;
 
 dc::AwaitableDeadlineReaper::AwaitableDeadlineReaper() {
 	reaperID = daemonCore->Register_Reaper(
@@ -33,7 +34,7 @@ dc::AwaitableDeadlineReaper::~AwaitableDeadlineReaper() {
 
 
 bool
-dc::AwaitableDeadlineReaper::born( int pid, int timeout ) {
+dc::AwaitableDeadlineReaper::born( pid_t pid, int timeout ) {
 	auto [dummy, inserted] = pids.insert(pid);
 	if(! inserted) { return false; }
 	dprintf( D_ZKM, "Inserted %d into  %p\n", pid, & pids );
@@ -52,13 +53,7 @@ dc::AwaitableDeadlineReaper::born( int pid, int timeout ) {
 
 
 int
-dc::AwaitableDeadlineReaper::reaper_id() {
-	return reaperID;
-}
-
-
-int
-dc::AwaitableDeadlineReaper::reaper( int pid, int status ) {
+dc::AwaitableDeadlineReaper::reaper( pid_t pid, int status ) {
 	ASSERT(pids.contains(pid));
 
 	// We will never hear from this process again, so forget about it.
