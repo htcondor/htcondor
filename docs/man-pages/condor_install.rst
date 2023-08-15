@@ -15,14 +15,14 @@ Synopsis
 **condor_configure** or **condor_install** [--**help**] [--**usage**]
 
 **condor_configure** or **condor_install**
-[--**install[=<path/to/release>]**] [--**install-dir=<path>**]
-[--**prefix=<path>**] [--**local-dir=<path>**]
-[--**make-personal-condor**] [--**bosco**] [--**type = < submit,
-execute, manager >**] [--**central-manager = < hostname>**] [--**owner =
-< ownername >**] [--**maybe-daemon-owner**] [--**install-log = < file
->**] [--**overwrite**] [--**ignore-missing-libs**] [--**force**]
-[--**no-env-scripts**] [--**env-scripts-dir = < directory >**]
-[--**backup**] [--**credd**] [--**verbose**]
+[-\-**install[=<path/to/release>]**] [-\-**install-dir=<path>**]
+[-\-**prefix=<path>**] [-\-**local-dir=<path>**]
+[-\-**make-personal-condor**] [-\-**bosco**] [-\-**type = < submit,
+execute, manager >**] [-\-**central-manager = < hostname>**] [-\-**owner =
+< ownername >**] [-\-**maybe-daemon-owner**] [-\-**install-log = < file
+>**] [-\-**overwrite**] [-\-**ignore-missing-libs**] [-\-**force**]
+[-\-**no-env-scripts**] [-\-**env-scripts-dir = < directory >**]
+[-\-**backup**] [-\-**credd**] [-\-**verbose**]
 
 Description
 -----------
@@ -46,7 +46,7 @@ or
 
 .. code-block:: console
 
-    $ condor_configure -\-install
+    $ condor_configure --install
 
 or, it can change the configuration files when invoked via
 
@@ -227,7 +227,7 @@ unzipped HTCondor distribution directories:
 
 .. code-block:: console
 
-    $ condor_install -\-type=submit,execute,manager
+    $ condor_install --type=submit,execute,manager
 
 This will allow the machine to submit and execute HTCondor jobs, in
 addition to being the central manager of the pool.
@@ -240,14 +240,14 @@ installed:
 
 .. code-block:: console
 
-    $ condor_configure -\-central-manager=machine1@cs.wisc.edu -\-type=execute
+    $ condor_configure --central-manager=machine1@cs.wisc.edu --type=execute
 
 To change the location of the ``LOCAL_DIR`` directory in the
 configuration file, do (from the directory where HTCondor is installed):
 
 .. code-block:: console
 
-    $ condor_configure -\-local-dir=/path/to/new/local/directory
+    $ condor_configure --local-dir=/path/to/new/local/directory
 
 This will move the ``log``,\ ``spool``,\ ``execute`` directories to
 ``/path/to/new/local/directory`` from the current local directory.

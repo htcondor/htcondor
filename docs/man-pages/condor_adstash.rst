@@ -33,15 +33,15 @@ Description
 ClassAds (typically from *condor_schedd* and/or *condor_startd* history queries)
 and pushing the ClassAds as documents to some target (typically Elasticsearch).
 
-Unless run in ``-\-standalone`` mode, *condor_adstash* expects to be invoked
+Unless run in ``--standalone`` mode, *condor_adstash* expects to be invoked
 as a daemon by a *condor_master*, i.e. *condor_adstash* should be invoked in
 standalone mode when run on the command-line.
 Whether invoked by *condor_master* or run standalone, *condor_adstash* gets
 its configuration, in increasing priority, from the HTCondor configuration
-macros beginning with ``ADSTASH_`` (when ``-\-process_name`` is not provided),
+macros beginning with ``ADSTASH_`` (when ``--process_name`` is not provided),
 then environment variables, and finally command-line options.
 
-*condor_adstash* must be able to write its ``-\-checkpoint_file`` to a
+*condor_adstash* must be able to write its ``--checkpoint_file`` to a
 persistent location so that duplicate job ClassAds are not fetched from the
 daemons' histories in consecutive polls.
 
@@ -145,7 +145,7 @@ configuration:
 
 .. code-block:: console
 
-      $ condor_adstash -\-standalone
+      $ condor_adstash --standalone
 
 By default, *condor_adstash* looks for HTCondor configuration variables with
 names are prefixed with ``ADSTASH_``, e.g. ``ADSTASH_READ_SCHEDDS = *``.
@@ -153,7 +153,7 @@ These values can be overridden on the command-line:
 
 .. code-block:: console
 
-      $ condor_adstash -\-standalone -\-schedds=myschedd.localdomain
+      $ condor_adstash --standalone --schedds=myschedd.localdomain
 
 *condor_adstash* configuration variables can be also be named using custom
 prefixes, with the prefix passed in using ``-\-process_name=PREFIX``.
@@ -164,9 +164,9 @@ For example, if the HTCondor configuration contained
 
 .. code-block:: console
 
-      $ condor_adstash -\-standalone -\-process_name=FOO
+      $ condor_adstash --standalone --process_name=FOO
 
-Providing a ``PREFIX`` to ``-\-process_name`` that does not match any HTCondor
+Providing a ``PREFIX`` to ``--process_name`` that does not match any HTCondor
 configuration variables will cause *condor_adstash* to fallback to a default set
 of configuration values, which may be useful in debugging.
 
@@ -176,5 +176,5 @@ The values will be listed as the default values for each command-line option:
 
 .. code-block:: console
 
-      $ condor_adstash -\-help
-      $ condor_adstash -\-process_name=FOO -\-help
+      $ condor_adstash --help
+      $ condor_adstash --process_name=FOO --help
