@@ -75,9 +75,15 @@ void removeFromList(std::vector<PROC_ID> &, CAList *);
 //  AllocationNode
 //////////////////////////////////////////////////////////////
 
-AllocationNode::AllocationNode( int cluster_id, int n_procs ) : status(A_NEW), claim_id(nullptr), cluster(cluster_id), num_procs(n_procs), jobs(new std::vector<ClassAd*>), matches(new std::vector<MRecArray*>), num_resources(0), is_reconnect(false)
-{ }
-
+AllocationNode::AllocationNode( int cluster_id, int n_procs ) : 
+	status(A_NEW), 
+	claim_id(nullptr), 
+	cluster(cluster_id), 
+	num_procs(n_procs), 
+	jobs(new std::vector<ClassAd*>), 
+	matches(new std::vector<MRecArray*>), 
+	num_resources(0), 
+	is_reconnect(false) {}
 
 AllocationNode::~AllocationNode()
 {
@@ -414,8 +420,20 @@ CandidateList::markScheduled()
 //  DedicatedScheduler
 //////////////////////////////////////////////////////////////
 
-DedicatedScheduler::DedicatedScheduler() : idle_clusters(nullptr), resources(nullptr), idle_resources(nullptr), serial_resources(nullptr), unclaimed_resources(nullptr), limbo_resources(nullptr), busy_resources(nullptr), allocations(new HashTable < int, AllocationNode*>( hashFuncInt )), pending_preemptions(nullptr), all_matches(new HashTable < std::string, match_rec*>( hashFunction )), all_matches_by_id(new HashTable < std::string, match_rec*>( hashFunction )), ds_name(nullptr), ds_owner(nullptr)
-{ }
+DedicatedScheduler::DedicatedScheduler() : 
+	idle_clusters(nullptr), 
+	resources(nullptr),
+   	idle_resources(nullptr),
+   	serial_resources(nullptr),
+   	unclaimed_resources(nullptr),
+   	limbo_resources(nullptr),
+   	busy_resources(nullptr),
+   	allocations(new HashTable < int, AllocationNode*>( hashFuncInt)),
+   	pending_preemptions(nullptr),
+   	all_matches(new HashTable < std::string, match_rec*>( hashFunction )),
+   	all_matches_by_id(new HashTable < std::string, match_rec*>( hashFunction )),
+   	ds_name(nullptr),
+   	ds_owner(nullptr) {}
 
 
 DedicatedScheduler::~DedicatedScheduler()
