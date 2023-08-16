@@ -53,6 +53,9 @@ Global Options
      Increase verbosity of log messages.
 
 
+A noun-specific verb appears after each noun; the verbs are sorted by noun in
+the list, which includes with their individual option flags.
+
 Job Verbs
 ---------
 
