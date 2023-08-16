@@ -127,6 +127,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	// to clean up fails and we need to try it again later.
 	FILE * jobAdFile = NULL;
 	std::filesystem::path jobAdPath = target_dir / ".job.ad";
+#if ! defined(WINDOWS)
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
@@ -134,6 +135,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 		// (job owner) can remove it even if it's still owned by root.
 		chown( jobAdPath.string().c_str(), owner_uid, owner_gid );
 	}
+#endif /* ! defined(WINDOWS ) */
 	if( jobAdFile == NULL ) {
 		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to open job ad file '%s'\n", jobAdPath.string().c_str() );
 		return false;
