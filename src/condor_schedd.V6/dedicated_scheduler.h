@@ -140,7 +140,7 @@ class ResList : public CAList {
 
 	void sortByRank( ClassAd *rankAd);
 
-	int num_matches;
+	int num_matches{0};
 	
 	static bool machineSortByRank(const struct rankSortRec &lhs, const struct rankSortRec &rhs);
 
@@ -306,7 +306,7 @@ class DedicatedScheduler : public Service {
 
 	void			checkReconnectQueue( int timerID = 1 );
 
-	int		rid;			// DC reaper id
+	int		rid{-1};			// DC reaper id
 
  private:
 
@@ -406,14 +406,14 @@ class DedicatedScheduler : public Service {
 		// // // // // // 
 
 		// Stuff for interacting w/ DaemonCore
-	int		hdjt_tid;		// DC timer id for handleDedicatedJobTimer()
-	int		sanity_tid;		// DC timer id for sanityCheck()
+	int		hdjt_tid{-1};		// DC timer id for handleDedicatedJobTimer()
+	int		sanity_tid{-1};		// DC timer id for sanityCheck()
 
 		// data structures for managing dedicated jobs and resources. 
 	std::vector<int>*		idle_clusters;	// Idle cluster ids
 
 	ClassAdList*		resources;		// All dedicated resources 
-	int					total_cores;    // sum of all cores above
+	int					total_cores{0};    // sum of all cores above
 
 
 		// All resources, sorted by the time they'll next be available 
@@ -470,7 +470,7 @@ class DedicatedScheduler : public Service {
 		// Queue for resource requests we need to negotiate for. 
 	std::list<PROC_ID> resource_requests;
 
-	int split_match_count;
+	int split_match_count{0};
         // stores job classads, indexed by each job's pending claim-id
     std::map<std::string, ClassAd*> pending_requests;
 
@@ -482,7 +482,7 @@ class DedicatedScheduler : public Service {
     std::map<std::string, std::string> pending_claims;
 
 
-	int		num_matches;	// Total number of matches in all_matches 
+	int		num_matches{0};	// Total number of matches in all_matches 
 
     static const int MPIShadowSockTimeout;
 
@@ -492,7 +492,7 @@ class DedicatedScheduler : public Service {
 		                // used for ATTR_SCHEDULER.
 	char* ds_owner;		// "Owner" to identify this dedicated scheduler 
 
-	int unused_timeout;	// How many seconds are we willing to hold
+	int unused_timeout{0};	// How many seconds are we willing to hold
 		// onto a resource without using it before we release it? 
 
 	friend class CandidateList;
@@ -503,7 +503,7 @@ class DedicatedScheduler : public Service {
 	
 	StringList scheduling_groups;
 
-	time_t startdQueryTime; // Time to get all the startds from collector
+	time_t startdQueryTime{0}; // Time to get all the startds from collector
 };
 
 
