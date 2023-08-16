@@ -566,8 +566,7 @@ int main (int argc, const char **argv)
 
 			scheddAddr = strdup(schedd.addr());
 			if( (tmp = schedd.name()) ) {
-				scheddName = strdup(tmp);
-				Q.addSchedd(scheddName);
+				Q.addSchedd(tmp);
 			} else {
 				scheddName = strdup("Unknown");
 			}
