@@ -128,14 +128,14 @@ dirname( const char* path )
    full pathname, we mean it either begins with "/" or "\" or "*:\"
    (something like "c:\..." on windoze).
 */
-int
+bool
 fullpath( const char* path )
 {
 	if( ! path ) {
-		return FALSE;
+		return false;
 	}
 	if( path[0] == '/' || path[0]=='\\' ) {
-		return TRUE;
+		return true;
 	}
 		/*
 		  for this next check, we should be careful not to walk off
@@ -149,7 +149,7 @@ fullpath( const char* path )
 		// slashes -- wenger 2006-01-13.
 	if( path[0] && path[1] && path[1]==':' &&
 			(path[2]=='\\' || path[2]=='/') ) {
-		return TRUE;
+		return true;
 	}
-	return FALSE;
+	return false;
 }
