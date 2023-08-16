@@ -19,19 +19,19 @@ msgstr ""
 
 #. Type: title
 #. Description
-#: ../htcondor.templates:1001
+#: ../condor.templates:1001
 msgid "HTCondor configuration"
 msgstr "Configuration de HTCondor"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:2001
+#: ../condor.templates:2001
 msgid "Manage initial HTCondor configuration automatically?"
 msgstr "Faut-il gérer la configuration initiale de HTCondor automatiquement ?"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:2001
+#: ../condor.templates:2001
 msgid ""
 "The setup for HTCondor can be handled automatically, asking a few questions "
 "to create an initial configuration appropriate for a machine that is either "
@@ -47,7 +47,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:2001
+#: ../condor.templates:2001
 msgid ""
 "Otherwise, HTCondor will be installed with a default configuration that "
 "needs to be customized manually."
@@ -57,13 +57,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:3001
+#: ../condor.templates:3001
 msgid "Enable submission of usage statistics?"
 msgstr "Faut-il activer l'inscription des statistiques d'utilisation ?"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:3001
+#: ../condor.templates:3001
 msgid ""
 "The HTCondor authors politely request that each HTCondor pool sends them "
 "periodic updates with basic information about the status of the pool. "
@@ -82,13 +82,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:4001
+#: ../condor.templates:4001
 msgid "Address of the central manager:"
 msgstr "Adresse du gestionnaire central :"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:4001
+#: ../condor.templates:4001
 msgid ""
 "If this machine is intended to join an existing HTCondor pool, the address "
 "of the central manager machine has to be specified. Any address format "
@@ -101,37 +101,37 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:4001
+#: ../condor.templates:4001
 msgid "Example: condor-manager.example.org"
 msgstr "Exemple : condor-manager.example.org"
 
 #. Type: multiselect
 #. Choices
-#: ../htcondor.templates:5001
+#: ../condor.templates:5001
 msgid "Job submission"
 msgstr "Soumission de travail"
 
 #. Type: multiselect
 #. Choices
-#: ../htcondor.templates:5001
+#: ../condor.templates:5001
 msgid "Job execution"
 msgstr "Exécution de travail"
 
 #. Type: multiselect
 #. Choices
-#: ../htcondor.templates:5001
+#: ../condor.templates:5001
 msgid "Central manager"
 msgstr "Gestionnaire central"
 
 #. Type: multiselect
 #. Description
-#: ../htcondor.templates:5002
+#: ../condor.templates:5002
 msgid "Role of this machine in the HTCondor pool:"
 msgstr "Rôle de cette machine au sein du groupement HTCondor :"
 
 #. Type: multiselect
 #. Description
-#: ../htcondor.templates:5002
+#: ../condor.templates:5002
 msgid ""
 "Please specify the intended role or roles of this machine, for which the "
 "corresponding daemons will be started automatically."
@@ -141,7 +141,7 @@ msgstr ""
 
 #. Type: multiselect
 #. Description
-#: ../htcondor.templates:5002
+#: ../condor.templates:5002
 msgid ""
 "A machine in a HTCondor pool can have multiple roles. In general there is "
 "one central manager and multiple nodes that run jobs. Often the central "
@@ -157,13 +157,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:6001
+#: ../condor.templates:6001
 msgid "Email address of the local HTCondor administrator:"
 msgstr "Adresse électronique de l'administrateur local de HTCondor :"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:6001
+#: ../condor.templates:6001
 msgid ""
 "The HTCondor administrator will receive error messages if something goes "
 "wrong with HTCondor on this machine."
@@ -173,13 +173,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:7001
+#: ../condor.templates:7001
 msgid "user directory domain label:"
 msgstr "Étiquette de domaine du répertoire utilisateur :"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:7001
+#: ../condor.templates:7001
 msgid ""
 "This label is a string that HTCondor uses to decide if a submitting machine "
 "and an execute machine share the same directory of user accounts (that is, "
@@ -204,7 +204,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:7001
+#: ../condor.templates:7001
 msgid ""
 "Any domain format supported by HTCondor can be used, including macro "
 "expressions. Example: $(FULL_HOSTNAME)"
@@ -214,13 +214,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:8001
+#: ../condor.templates:8001
 msgid "File system domain label:"
 msgstr "Étiquette de domaine du système de fichiers :"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:8001
+#: ../condor.templates:8001
 msgid ""
 "This label is an arbitrary string that is used to decide if a submitting "
 "machine and an execute machine share the same file system. In a dedicated "
@@ -241,19 +241,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:8001
+#: ../condor.templates:8001
 msgid "Example: my_shared_volume"
 msgstr "Exemple : mon_volume_partagé"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:9001
+#: ../condor.templates:9001
 msgid "Perform a \"Personal HTCondor installation\"?"
 msgstr "Faut-il effectuer une « installation personnelle de HTCondor » ?"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:9001
+#: ../condor.templates:9001
 msgid ""
 "A Personal HTCondor installation is a fully functional HTCondor pool on a "
 "single machine. HTCondor will automatically configure and advertise as many "
@@ -268,7 +268,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:9001
+#: ../condor.templates:9001
 msgid ""
 "This configuration is not appropriate if this machine is intended to be a "
 "member of a pool."
@@ -278,13 +278,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:10001
+#: ../condor.templates:10001
 msgid "Amount of physical memory to withhold from HTCondor (in MB):"
 msgstr "Quantité de mémoire physique à retenir pour HTCondor (en Mo) :"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:10001
+#: ../condor.templates:10001
 msgid ""
 "By default, HTCondor considers all the physical memory of a machine as "
 "available to be used by HTCondor jobs. If this value is defined, HTCondor "
@@ -296,19 +296,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:10001
+#: ../condor.templates:10001
 msgid "Example (to reserve 1 GB): 1024"
 msgstr "Exemple pour réserver 1 Go : 1024"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:11001
+#: ../condor.templates:11001
 msgid "Machines with write access to this host:"
 msgstr "Machines ayant un accès en écriture sur cet hôte :"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:11001
+#: ../condor.templates:11001
 msgid ""
 "All machines that are to participate in the HTCondor pool need to be listed "
 "here. This setting can be a plain comma-separated list, a domain with "
@@ -323,13 +323,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:11001
+#: ../condor.templates:11001
 msgid "Example: *.condor-pool.example.org"
 msgstr "Exemple : *.groupement-condor.example.org"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:12001
+#: ../condor.templates:12001
 msgid "Run HTCondor jobs regardless of other machine activity?"
 msgstr ""
 "Faut-il exécuter les travaux de HTCondor malgré l'activité des autres "
@@ -337,7 +337,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:12001
+#: ../condor.templates:12001
 msgid ""
 "By default HTCondor only starts jobs when a machine is idle, i.e. no "
 "keyboard activity or CPU load for some time. Moreover, it also suspends jobs "
@@ -359,7 +359,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:12001
+#: ../condor.templates:12001
 msgid ""
 "If you plan to compose a custom policy it is best to keep HTCondor's default "
 "here."

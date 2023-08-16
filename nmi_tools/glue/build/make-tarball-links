@@ -39,11 +39,11 @@ ln -s usr/share/man man
 ln -s usr/include include
 ln -s sbin/condor_configure condor_configure
 ln -s sbin/condor_install condor_install
-if [ -d usr/share/doc/htcondor/examples/etc ]; then
+if [ -d usr/share/doc/condor/examples/etc ]; then
     # Debian and Ubuntu
-    ln -s usr/share/doc/htcondor/examples/etc examples
+    ln -s usr/share/doc/condor/examples/etc examples
     cp -p /usr/share/common-licenses/Apache-2.0 LICENSE
-    ln -s usr/share/doc/htcondor/NOTICE.txt NOTICE.txt
+    ln -s usr/share/doc/condor/NOTICE.txt NOTICE.txt
 elif [ -d usr/share/doc/condor/examples ]; then
     # Modern RPM
     ln -s usr/share/doc/condor/examples examples
