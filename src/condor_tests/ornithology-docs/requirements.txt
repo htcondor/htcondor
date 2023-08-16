@@ -1,4 +1,5 @@
+htcondor
 pytest
 pytest-httpserver
-htcondor
+sphinx-autodoc-typehints
 sphinx-rtd-theme
