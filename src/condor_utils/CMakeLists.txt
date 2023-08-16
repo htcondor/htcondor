@@ -687,6 +687,8 @@ if(WITH_LOTMAN)
 	target_link_libraries(condor_utils_s PRIVATE LotMan)
 	target_link_libraries(condor_utils PRIVATE LotMan)
 	target_link_libraries(condor_utils_objects PRIVATE LotMan)
+else()
+	message("NOT COMPILING WITH LOTMAN")
 endif()
 
 # Brain twister:

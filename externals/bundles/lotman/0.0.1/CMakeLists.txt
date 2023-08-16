@@ -17,10 +17,20 @@
 #
 ###############################################################
 
-if (UNIX)
-	# Set default not to use LotMan
-	option(WITH_LOTMAN "Compiling with support for LotMan" OFF)
-endif(UNIX)
+# Set default not to use LotMan
+option(WITH_LOTMAN "Compiling with support for LotMan" OFF)
+
+if (LINUX_NAME MATCHES "AlmaLinux" OR LINUX_NAME MATCHES "RedHat")
+	if (LINUX_VER MATCHES "^[89][.]")
+		if (SYS_ARCH MATCHES "x86_64")
+			# LotMan is packaged for the OS. Turn on support
+			option(WITH_LOTMAN "compiling support for LotMan" ON)
+			message("LOTMAN SUPPORT TURNED ON")
+		endif()
+	endif()
+else()
+	message("NO LOTMAN SUPPORT TURNED ON")
+endif()
 
 # If we build condor to dlopen the lotman library, we'll need a target that holds
 # the header file include directory, but no library code.
