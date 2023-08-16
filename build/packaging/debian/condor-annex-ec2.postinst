@@ -1,5 +1,5 @@
 #!/bin/bash
-# postinst script for htcondor-annex-ec2
+# postinst script for condor-annex-ec2
 
 set -e
 
