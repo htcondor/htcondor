@@ -2,3 +2,4 @@ htcondor
 pytest
 pytest-httpserver
 sphinx-autodoc-typehints
+sphinx-rtd-thme
