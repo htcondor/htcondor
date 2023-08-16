@@ -1,0 +1,2 @@
+debian/tmp/usr/sbin/condor_vm-gahp
+debian/tmp/usr/libexec/condor/libvirt_simple_script.awk
