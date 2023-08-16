@@ -63,6 +63,8 @@ public:
 	static void removeAllKnownHooks();
 	std::string getHookKeyword(const classad::ClassAd &ad);
 
+	virtual bool useProcd() const override {return true;}
+
 	// List of job ids and hooks currently running and awaiting output
 	static std::vector<HOOK_RUN_INFO*> m_job_hook_list;
 
