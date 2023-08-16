@@ -18,7 +18,7 @@ Synopsis
 | **htcondor** **jobset** *submit* description-file
 | **htcondor** **jobset** *list* [**-\-allusers**]
 | **htcondor** **jobset** *status* job-set-name [**-\-owner** *user-name*] [**-\-nobatch**] [**-\-skip-history**]
-| **htcondor** **jobset** *remove* job-set-name [**-\-owner** *user-name*] [**-\-nobatch**] [**-\-skip-history**]
+| **htcondor** **jobset** *remove* job-set-name [**-\-owner** *user-name*]
 
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
@@ -60,8 +60,8 @@ Job Verbs
      Takes as an argument a submit file in the *condor_submit* job submit
      description language, and places a new job in an Access Point
 
-     Options
-     
+     **htcondor job submit options**
+
           **htcondor job submit -\-resource** *resource_type submit_file*
             Resource type used to run this job. Currently supports ``Slurm`` and ``EC2``.
             Assumes the necessary setup is complete and security tokens available.
@@ -90,23 +90,47 @@ Job Verbs
      and returns a human readable presentation the machine resource
      used by this job.
 
-Jobset Options
---------------
+Jobset Verbs
+------------
 
- **-\-allusers**
-    Passed to the *list* verb to show job sets from all users
-    rather than just the current user.
- **-\-nobatch**
-    Passed to the *status* verb to display the status of
-    individual job clusters within a job set
- **-\-owner=USERNAME**
-    Passed to the *status* or *remove* verb to act on job sets
-    submitted by the specified user instead of the current
-    user. Using this option to *remove* job sets requires superuser
-    permissions.
- **-\-skip-history**
-    Passed to the *status* verb to skip checking history
-    if job clusters are not found in the active job queue.
+ **htcondor jobset submit** *submit_file*
+     Takes as an argument a submit file in the *condor_submit* job submit
+     description language, and places a new job set in an Access Point
+
+ **htcondor jobset list**
+    Succinctly lists all the jobsets in the queue which are owned by the current user.
+
+     **htcondor jobset list options**
+     
+          **htcondor jobset list -\-allusers**
+            Shows jobs from all users, not just those owned by the current user.
+
+ **htcondor jobset status** *submit_file*
+     Takes as an argument a job set name, and shows detailed information about
+     that job set.
+
+     **htcondor jobset status options**
+     
+          **htcondor jobset status -\-nobatch**
+            Shows jobs in a more detailed view, one line per job
+     
+          **htcondor jobset status -\-owner** *ownername*
+            Shows jobs from the specified job owner.
+     
+          **htcondor jobset status -\-skiphistory**
+            Shows detailed information only about active jobs in the queue, and
+            ignore historical jobs which have left the queue.  This runs much
+            faster.
+
+
+ **htcondor jobset remove** *job_name*
+     Takes as an argument a *job_name* in the queue, and removes it from 
+     the Access Point.
+
+     **htcondor jobsets remove options**
+     
+          **htcondor jobset remove -\-owner=owner_name**
+          Removes all jobs owned by the given owner.
 
 Eventlog Verbs
 --------------
