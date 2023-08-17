@@ -40,9 +40,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	allLogFiles(hashFunction),
-	activeLogFiles(hashFunction)
+ReadMultipleUserLogs::ReadMultipleUserLogs()
 {
 }
 
@@ -102,9 +100,7 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 
 	LogFileMonitor *oldestEventMon = NULL;
 
-	activeLogFiles.startIterations();
-	LogFileMonitor *monitor;
-	while ( activeLogFiles.iterate( monitor ) ) {
+	for (auto& [key, monitor] : activeLogFiles) {
 		ULogEventOutcome outcome = ULOG_OK;
 			// If monitor->lastLogEvent != null, we already have an
 			// unconsumed event from that log, so we don't need to
@@ -150,12 +146,10 @@ ReadMultipleUserLogs::GetLogStatus()
 {
 	dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::GetLogStatus()\n" );
 
-	LogFileMonitor *monitor;
 	ReadUserLog::FileStatus status = ReadUserLog::LOG_STATUS_NOCHANGE;
 
 	// Iterate over all the log files and check their statuses.
-	activeLogFiles.startIterations();
-	while ( activeLogFiles.iterate( monitor ) ) {
+	for (auto& [key, monitor] : activeLogFiles) {
 		ReadUserLog::FileStatus fs = monitor->readUserLog->CheckFileStatus();
 		// If a log files has grown, we want to return ReadUserLog::LOG_STATUS_GROWN
 		// Do not exit the loop early, since checking the file status also
@@ -182,7 +176,7 @@ ReadMultipleUserLogs::GetLogStatus()
 int
 ReadMultipleUserLogs::totalLogFileCount() const
 {
-	return allLogFiles.getNumElements();
+	return (int)allLogFiles.size();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -231,9 +225,7 @@ ReadMultipleUserLogs::cleanup()
 {
 	activeLogFiles.clear();
 
-	allLogFiles.startIterations();
-	LogFileMonitor *monitor;
-	while ( allLogFiles.iterate( monitor ) ) {
+	for (auto& [key, monitor] : allLogFiles) {
 		delete monitor;
 	}
 	allLogFiles.clear();
@@ -662,12 +654,13 @@ ReadMultipleUserLogs::monitorLogFile( const std::string & l,
 		return false;
 	}
 
-	LogFileMonitor *monitor;
-	if ( allLogFiles.lookup( fileID, monitor ) == 0 ) {
+	LogFileMonitor *monitor = nullptr;
+	auto it = allLogFiles.find(fileID);
+	if (it != allLogFiles.end()) {
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
 					"LogFileMonitor object for %s (%s)\n",
 					logfile.c_str(), fileID.c_str() );
-
+		monitor = it->second;
 	} else {
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: didn't "
 					"find LogFileMonitor object for %s (%s)\n",
@@ -689,13 +682,7 @@ ReadMultipleUserLogs::monitorLogFile( const std::string & l,
 			// Note: we're only putting a pointer to the LogFileMonitor
 			// object into the hash table; the actual LogFileMonitor should
 			// only be deleted in this object's destructor.
-		if ( allLogFiles.insert( fileID, monitor ) != 0 ) {
-			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-						"Error inserting %s into allLogFiles",
-						logfile.c_str() );
-			delete monitor;
-			return false;
-		}
+		allLogFiles[fileID] = monitor;
 	}
 
 	if ( monitor->refCount < 1 ) {
@@ -721,16 +708,10 @@ ReadMultipleUserLogs::monitorLogFile( const std::string & l,
 						new ReadUserLog( monitor->logFile.c_str() );
 		}
 
-		if ( activeLogFiles.insert( fileID, monitor ) != 0 ) {
-			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-						"Error inserting %s (%s) into activeLogFiles",
-						logfile.c_str(), fileID.c_str() );
-			return false;
-		} else {
-			dprintf( D_LOG_FILES, "ReadMultipleUserLogs: added log "
-						"file %s (%s) to active list\n", logfile.c_str(),
-						fileID.c_str() );
-		}
+		activeLogFiles[fileID] = monitor;
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: added log "
+					"file %s (%s) to active list\n", logfile.c_str(),
+					fileID.c_str() );
 	}
 
 	monitor->refCount++;
@@ -756,7 +737,8 @@ ReadMultipleUserLogs::unmonitorLogFile( const std::string & l,
 	}
 
 	LogFileMonitor *monitor;
-	if ( activeLogFiles.lookup( fileID, monitor ) != 0 ) {
+	auto it = activeLogFiles.find(fileID);
+	if (it == activeLogFiles.end()) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Didn't find LogFileMonitor object for log "
 					"file %s (%s)!", logfile.c_str(),
@@ -766,6 +748,7 @@ ReadMultipleUserLogs::unmonitorLogFile( const std::string & l,
 		printAllLogMonitors( NULL );
 		return false;
 	}
+	monitor = it->second;
 
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
 				"LogFileMonitor object for %s (%s)\n",
@@ -809,7 +792,7 @@ ReadMultipleUserLogs::unmonitorLogFile( const std::string & l,
 
 			// Now we remove this file from the "active" list, so
 			// we don't check it the next time we get an event.
-		if ( activeLogFiles.remove( fileID ) != 0 ) {
+		if (activeLogFiles.erase(fileID) == 0) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error removing %s (%s) from activeLogFiles",
 						logfile.c_str(), fileID.c_str() );
@@ -857,12 +840,9 @@ ReadMultipleUserLogs::printActiveLogMonitors( FILE *stream ) const
 
 void
 ReadMultipleUserLogs::printLogMonitors( FILE *stream,
-			HashTable<std::string, LogFileMonitor *> logTable ) const
+			const std::map<std::string, LogFileMonitor *>& logTable ) const
 {
-	logTable.startIterations();
-	std::string fileID;
-	LogFileMonitor *	monitor;
-	while ( logTable.iterate( fileID,  monitor ) ) {
+	for (auto& [fileID, monitor] : logTable) {
 		if ( stream != NULL ) {
 			fprintf( stream, "  File ID: %s\n", fileID.c_str() );
 			fprintf( stream, "    Monitor: %p\n", monitor );

@@ -197,7 +197,7 @@ public:
 		/** Returns the number of log files we're actively monitoring
 			at the present time.
 		 */
-	int activeLogFileCount() const { return activeLogFiles.getNumElements(); }
+	int activeLogFileCount() const { return (int)activeLogFiles.size(); }
 
 		/** Print information about all LogMonitor objects.
 			@param the stream to print to.  If NULL, do dprintf().
@@ -267,9 +267,9 @@ private:
 		// Note: these should be changed to STL maps, and should
 		// also index on a combination of st_ino and st_dev (see gittrac
 		// #328). wenger 2009-07-16.
-	HashTable<std::string, LogFileMonitor *>	allLogFiles;
+	std::map<std::string, LogFileMonitor *> allLogFiles;
 
-	HashTable<std::string, LogFileMonitor *>	activeLogFiles;
+	std::map<std::string, LogFileMonitor *> activeLogFiles;
 
 	// For instantiation in programs that use this class.
 #define MULTI_LOG_HASH_INSTANCE template class \
@@ -288,7 +288,7 @@ private:
 			@param the logTable to print (all or active only).
 		*/
 	void printLogMonitors(FILE *stream,
-				HashTable<std::string, LogFileMonitor *> logTable) const;
+				const std::map<std::string, LogFileMonitor *>& logTable) const;
 
 };
 
