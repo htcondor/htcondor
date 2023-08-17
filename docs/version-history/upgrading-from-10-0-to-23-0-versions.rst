@@ -1,9 +1,9 @@
-Upgrading from an 10.0 LTS version to an 11.0 LTS version of HTCondor
+Upgrading from an 10.0 LTS version to an 23.0 LTS version of HTCondor
 =====================================================================
 
 :index:`items to be aware of<single: items to be aware of; upgrading>`
 
-Upgrading from a 10.0 LTS version of HTCondor to a 11.0 LTS version will bring
+Upgrading from a 10.0 LTS version of HTCondor to a 23.0 LTS version will bring
 new features introduced in the 10.x versions of HTCondor. These new
 features include the following (note that this list contains only the
 most significant changes; a full list of changes can be found in the
@@ -11,7 +11,7 @@ version history: \ `Version 10 Feature Releases <../version-history/feature-vers
 
 - Placeholder
 
-Upgrading from a 10.0 LTS version of HTCondor to a 11.0 LTS version will also
+Upgrading from a 10.0 LTS version of HTCondor to a 23.0 LTS version will also
 introduce changes that administrators and users of sites running from an
 older HTCondor version should be aware of when planning an upgrade. Here
 is a list of items that administrators should be aware of.
@@ -23,3 +23,8 @@ is a list of items that administrators should be aware of.
   environment variables to the DAGMan proper job set the :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV`
   configuration option.
   :jira:`1580`
+
+- We added the ability for the *condor_schedd* to track users over time. Once
+  you have upgraded to HTCondor 23, you may no longer downgrade to a version before
+  HTCondor 10.5.0 or HTCondor 10.0.4 LTS.
+  :jira:`1432`
