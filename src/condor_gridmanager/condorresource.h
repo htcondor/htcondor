@@ -78,9 +78,9 @@ class CondorResource : public BaseResource
 	struct ScheddPollInfo {
 		time_t m_lastPoll;
 		bool m_pollActive;
-		List<CondorJob> m_submittedJobs;
+		std::vector<CondorJob*> m_submittedJobs;
 	};
-	static HashTable <std::string, ScheddPollInfo *> PollInfoByName;
+	static std::map<std::string, ScheddPollInfo *> PollInfoByName;
 
 	const char *GetHashName();
 

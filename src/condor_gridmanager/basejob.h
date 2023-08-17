@@ -24,9 +24,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "user_job_policy.h"
-#include "HashTable.h"
 #include "baseresource.h"
-#include "proxymanager.h"
 
 class BaseResource;
 
