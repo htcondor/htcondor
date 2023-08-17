@@ -26,6 +26,7 @@
 #include "user_job_policy.h"
 #include "HashTable.h"
 #include "baseresource.h"
+#include "proxymanager.h"
 
 class BaseResource;
 
@@ -39,7 +40,7 @@ class BaseJob : public Service
 
 	virtual void Reconfig() {}
 	void SetEvaluateState() const;
-	virtual void doEvaluateState();
+	virtual void doEvaluateState( int timerID = -1 );
 	virtual BaseResource *GetResource();
 
 	void JobSubmitted( const char *remote_host);
@@ -60,8 +61,8 @@ class BaseJob : public Service
 	void UpdateJobLeaseReceived( time_t new_expiration_time );
 
 	void SetJobLeaseTimers();
-	virtual void JobLeaseSentExpired();
-	virtual void JobLeaseReceivedExpired();
+	virtual void JobLeaseSentExpired( int timerID = -1 );
+	virtual void JobLeaseReceivedExpired( int timerID = -1 );
 
 	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad );
 

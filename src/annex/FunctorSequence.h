@@ -37,6 +37,7 @@ class FunctorSequence : public Service {
 		virtual ~FunctorSequence() { }
 
 		void operator() ();
+		void timer( int /* timerID */ ) { (*this)(); }
 
 		void log();
 

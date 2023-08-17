@@ -4732,7 +4732,7 @@ tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
-default=none
+default=hard
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen

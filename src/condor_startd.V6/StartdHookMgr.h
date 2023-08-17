@@ -88,6 +88,8 @@ public:
 		 */
 	void hookEvictClaim(Resource* rip);
 
+	virtual bool useProcd() const override {return true;}
+
 private:
 		/// Number of hooks used by the startd
 	const int NUM_HOOKS;
@@ -122,6 +124,7 @@ private:
 		   hasn't been initialized yet.
 		*/
 	HashTable<std::string, char**> m_keyword_hook_paths;
+
 
 };
 

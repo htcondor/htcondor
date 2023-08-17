@@ -44,12 +44,12 @@ public:
 	~EC2Job();
 
 	void Reconfig();
-	void doEvaluateState();
+	void doEvaluateState( int timerID = -1 );
 	void NotifyResourceDown();
 	void NotifyResourceUp();
 	BaseResource *GetResource();
 
-	void ResourceLeaseExpired();
+	void ResourceLeaseExpired( int timerID = -1 );
 
 	void SetKeypairId( const char *keypair_id );
 	void SetInstanceId( const char *instance_id );

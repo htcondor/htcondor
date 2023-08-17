@@ -1380,7 +1380,7 @@ bool evalInEachContext_func( const char * name,
 
 		result.SetListValue(lst);
 	} else {
-		// for countMatches - return an integer count of results that evaluate to TRUE
+		// for countMatches - return an integer count of results that evaluate to true
 		// This is useful for matching a job to a heterogenous array of custom resources like GPUs.
 		// the slot ad will have (actual names are longer)
 		//    AvailableGPUs = { GPUs_tag1, GPUs_tag2 }
@@ -2296,7 +2296,7 @@ initAdFromString( char const *str, classad::ClassAd &ad )
 
 
 		// output functions
-int
+bool
 fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
 	std::string buffer;
@@ -2395,13 +2395,13 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 	return true;
 }
 
-int
+bool
 sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
 	return _sPrintAd( output, ad, true, attr_include_list, excludeAttrs );
 }
 
-int
+bool
 sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
 	return _sPrintAd( output, ad, false, attr_include_list, excludeAttrs );
@@ -2410,9 +2410,9 @@ sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList
 /** Get a sorted list of attributes that are in the given ad, and also match the given includelist (if any)
 	and privacy criteria.
 	@param attrs the set of attrs to insert into. This is set is NOT cleared first.
-	@return TRUE
+	@return true
 */
-int
+bool
 sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, bool ignore_parent )
 {
 	classad::ClassAd::const_iterator itr;
@@ -2443,14 +2443,14 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 /** Format the given attributes from the ClassAd as an old ClassAd into the given string
 	@param output The std::string to write into
-	@return TRUE
+	@return true
 */
-int
+bool
 sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs, const char * indent /*=NULL*/ )
 {
 	classad::ClassAdUnParser unp;
@@ -2468,7 +2468,7 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 /** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
@@ -2652,21 +2652,21 @@ CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const
 
 //////////////XML functions///////////
 
-int
+bool
 fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list)
 {
     if(!fp)
     {
-        return FALSE;
+        return false;
     }
 
     std::string out;
     sPrintAdAsXML(out,ad,attr_include_list);
     fprintf(fp, "%s", out.c_str());
-    return TRUE;
+    return true;
 }
 
-int
+bool
 sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list)
 {
 	classad::ClassAdXMLUnParser unparser;
@@ -2689,25 +2689,25 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 		unparser.Unparse( xml, &ad );
 	}
 	output += xml;
-	return TRUE;
+	return true;
 }
 ///////////// end XML functions /////////
 
-int
+bool
 fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
 {
     if(!fp)
     {
-        return FALSE;
+        return false;
     }
 
     std::string out;
     sPrintAdAsJson(out,ad,attr_include_list,oneline);
     fprintf(fp, "%s", out.c_str());
-    return TRUE;
+    return true;
 }
 
-int
+bool
 sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
 {
 	classad::ClassAdJsonUnParser unparser(oneline);
@@ -2727,7 +2727,7 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 	} else {
 		unparser.Unparse( output, &ad );
 	}
-	return TRUE;
+	return true;
 }
 
 char const *

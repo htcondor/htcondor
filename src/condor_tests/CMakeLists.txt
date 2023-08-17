@@ -49,7 +49,8 @@ if (BUILD_TESTING)
 			   CondorTest.pm
 			   CondorPersonal.pm
 			   CondorUtils.pm
-               run_test.pl)
+			   run_test.pl
+			   condor_credmon_oauth_dummy)
 		configure_file(${CONDOR_SCRIPTS_DIR}/${scriptFile}
 				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
 	endforeach(scriptFile)
@@ -80,7 +81,7 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
-	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl")
+	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl;condor_credmon_oauth_dummy")
 
 	##########################################################
 	# exe test targets
@@ -96,6 +97,9 @@ if (BUILD_TESTING)
 	condor_exe_test(lib_eventlog_base_executable.exe "lib_eventlog_base.cpp" condor_utils)
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" condor_utils)
+	if(NOT WINDOWS)
+		condor_exe_test(test_for_AwaitableDeadlineReaper.exe "test_for_AwaitableDeadlineReaper.cpp" condor_utils)
+	endif(NOT WINDOWS)
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	if( WINDOWS )
@@ -148,8 +152,11 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_test_logrotation "basic log rotation test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+if (NOT WINDOWS)
 	condor_pl_test(fetch_work_static_slot "work fetch static smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_fetchwork_scripts.tar.gz")
 	condor_pl_test(fetch_work_pslot "work fetch pslot smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_fetchwork_scripts.tar.gz")
+endif ()
+
 	condor_pl_test(lib_auth_protocol-ssl "SSL authentication test" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_auth_protocol-ssl.cmd;src/condor_tests/x_sleep.pl")
 	#condor_pl_test(lib_auth_protocol-pw "PW authentication test" "quick;ctest")
 	#condor_pl_test(job_dagman_node_status_rm "Check status file shows condor_rm" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_node_status_rm.dag;src/condor_tests/job_dagman_node_status_rm_node.pl;src/condor_tests/job_dagman_node_status_rm_node.cmd;src/condor_tests/job_dagman_node_status_rm_node.template")
@@ -198,7 +205,11 @@ endif ()
 			# but run_test.pl doesn't know that, and always runs pytest with an
 			# ornithology-specific command-line flag
 			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_htcondor_annex_create_constraints "Test annex create constraings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_htcondor_annex_create_constraints "Test annex create constraints" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			# Note that ctest can NOT find this test if it's named
+			# test_AwaitableDeadlineReaper.  I can't even.
+			condor_pl_test(test_awaitable_deadline_reaper "Test annex create constraints" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineReaper.exe")
+			add_dependencies_suffix_hack(test_awaitable_deadline_reaper test_for_AwaitableDeadlineReaper.exe)
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
@@ -272,6 +283,7 @@ endif ()
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_hpc_annex_require_job "Test HPC_ANNEX_REQUIRE_JOB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_checkpoint_destination "Test checkpoint_destination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_checkpoint_ct "Test checkpoint CommittedTime" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_plugin_timeout "Test plugin timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
@@ -299,6 +311,7 @@ endif ()
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
 				condor_pl_test(test_condor_manifest "Test MANIFEST implementation via condor_manifest tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+				condor_pl_test(test_job_token_transfer "Test secure token transfer from shadow to starter" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_scripts/condor_credmon_oauth_dummy")
 			endif()
 
 			# The AES test depends on strace'ing the condor_shadow binary.  Strace isn't supported under 

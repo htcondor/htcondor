@@ -400,7 +400,7 @@ HADStateMachine::reinitialize(void)
     once in m_hadInterval call step() functions - step of HAD state machine
 */
 void
-HADStateMachine::cycle(void)
+HADStateMachine::cycle( int /* timerID */ )
 {
     dprintf( D_FULLDEBUG, "-------------- > Timer m_stateMachineTimerID"
         " is called\n");
@@ -1122,7 +1122,7 @@ HADStateMachine::printParamsInformation(void)
  *                      for later updates
  */
 void
-HADStateMachine::updateCollectors(void)
+HADStateMachine::updateCollectors( int /* timerID */ )
 {
     dprintf(D_FULLDEBUG, "HADStateMachine::updateCollectors started\n");
 

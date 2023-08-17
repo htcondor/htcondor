@@ -810,7 +810,7 @@ bool DockerProc::ShutdownFast() {
 
 
 void
-DockerProc::getStats() {
+DockerProc::getStats( int /* timerID */ ) {
 	if( shouldAskForServicePorts ) {
 		if( DockerAPI::getServicePorts( containerName, * JobAd, serviceAd ) == 0 ) {
 			shouldAskForServicePorts = false;

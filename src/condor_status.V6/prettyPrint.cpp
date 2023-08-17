@@ -646,7 +646,7 @@ ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
 "SUMMARY STANDARD\n";
 
 
-void PrettyPrinter::ppSetGPUsCols (int width, const char * & constr)
+void PrettyPrinter::ppSetGPUsCols (int /*width*/, const char * & constr)
 {
 	if (compactMode) {
 		const char * tag = "GPUsCompact";

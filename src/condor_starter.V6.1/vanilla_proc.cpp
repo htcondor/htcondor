@@ -349,7 +349,7 @@ VanillaProc::StartJob()
 		// setting cgroup memory limits
 		m_memory_limit = memory * 1024 * 1024;
 		std::string policy;
-		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "none");
+		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "hard");
 		if (policy == "hard") {
 			fi.cgroup_memory_limit = (uint64_t) memory * 1024 * 1024;
 		}
@@ -780,8 +780,18 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 	// might as well send it along.
 	//
 	ClassAd updateAd;
+
 	Starter->publishUpdateAd( & updateAd );
 	updateAd.Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+
+	// UserProc::PublishUpdateAd() truncates, so we will too.
+	int lastCheckpointTime = job_exit_time.tv_sec;
+	updateAd.Assign( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime );
+
+	// UserProc::PublishUpdateAd() truncates, so we will too.
+	int newlyCommittedTime = (int)timersub_double(job_exit_time, job_start_time);
+	updateAd.Assign( ATTR_JOB_NEWLY_COMMITTED_TIME, newlyCommittedTime );
+
 	Starter->jic->periodicJobUpdate( & updateAd, false );
 }
 

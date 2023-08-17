@@ -659,7 +659,7 @@ DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMs
 	daemonCore->Register_DataPtr( qc );
 }
 
-void DCMessenger::startCommandAfterDelay_alarm()
+void DCMessenger::startCommandAfterDelay_alarm(int /* timerID */)
 {
 	QueuedCommand *qc = (QueuedCommand *)daemonCore->GetDataPtr();
 	ASSERT(qc);

@@ -15,22 +15,6 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
 
-
-ON_RTD = os.environ.get("READTHEDOCS") == "True"
-if ON_RTD:
-    print("ON RTD, THEREFORE INSTALLING HTCONDOR PACKAGE")
-    cmd = "{} -m pip install 'htcondor'".format(sys.executable)
-    print("EXECUTING COMMAND: {}".format(cmd))
-    os.system(cmd)
-    print("INSTALLED HTCONDOR PACKAGE")
-
-    print("ON RTD, THEREFORE INSTALLING TEST STUFF")
-    dev_reqs = os.path.abspath("../../requirements.txt")
-    cmd = "{} -m pip install -r {}".format(sys.executable, dev_reqs)
-    print("EXECUTING COMMAND: {}".format(cmd))
-    os.system(cmd)
-    print("INSTALLED TEST STUFF")
-
 # -- Project information -----------------------------------------------------
 
 project = "Ornithology"
@@ -67,11 +51,11 @@ pygments_style = "colorful"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-import sphinx_rtd_theme
 
-html_theme = "sphinx_rtd_theme"
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+# import sphinx_rtd_theme
+
+# html_theme = "sphinx_rtd_theme"
+# html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -83,5 +67,5 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 autoclass_content = "both"
 
 intersphinx_mapping = {
-    "https://docs.python.org/3/": None,
+    'python': ("https://docs.python.org/3/", None),
 }

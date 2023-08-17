@@ -2173,7 +2173,7 @@ sub check_transform {
 	} else {
 	if ($option eq 'general'){
 		for my $i (0..$index-1){
-			if ($Attr{$i}{ClusterId} ne 200 || $Attr{$i}{Fooo} ne "\"test\"" || $Attr{$i}{TransferIn} ne $Attr{$i}{OnExitRemove} || defined $Attr{$i}{TransferInputSizeMB} || defined $Attr{$i}{TransferErr} || !(defined $Attr{$i}{Err})){
+			if ($Attr{$i}{ClusterId} ne 200 || $Attr{$i}{Fooo} ne "\"test\"" || $Attr{$i}{TransferIn} ne $Attr{$i}{ExitBySignal} || defined $Attr{$i}{TransferInputSizeMB} || defined $Attr{$i}{TransferErr} || !(defined $Attr{$i}{Err})){
 				return 0;
 			}
 		}
@@ -2195,9 +2195,9 @@ sub check_transform {
 	}
 	if ($option eq 'regex'){
 		for my $i (0..$index-1){
-			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteUser} || defined $Attr{$i}{PeriodicHold} || defined $Attr{$i}{PeriodicRelease} || defined $Attr{$i}{PeriodicRemove}){
+			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteUser} || defined $Attr{$i}{RequestCpus} || defined $Attr{$i}{RequestDisk} || defined $Attr{$i}{RequestMemory}){
 				return 0;
-			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestRemoteUser} && defined $Attr{$i}{TimeHold} && defined $Attr{$i}{TimeRelease} && defined $Attr{$i}{TimeRemove}){
+			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestRemoteUser} && defined $Attr{$i}{TimeCpus} && defined $Attr{$i}{TimeMemory} && defined $Attr{$i}{TimeDisk}){
 				return 1;
 			} else {return 0;}
 		}

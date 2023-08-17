@@ -128,7 +128,7 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		commandState, commandID, scratchpad );
 
 	int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		(void (Service::*)()) & FunctorSequence::operator(),
+		(void (Service::*)(int)) & FunctorSequence::timer,
 		"updateOneAnnex() sequence", fs );
    	eventsGahp->setNotificationTimerId( functorSequenceTimer );
 

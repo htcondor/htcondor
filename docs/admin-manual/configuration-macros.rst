@@ -6162,7 +6162,7 @@ These settings affect the *condor_starter*.
 
 :macro-def:`CGROUP_MEMORY_LIMIT_POLICY`
     A string with possible values of ``hard``, ``soft``, ``custom`` and ``none``.
-    The default value is ``none``. If set to ``hard``, when the job tries
+    The default value is ``hard``. If set to ``hard``, when the job tries
     to use more memory than the slot size, it will be put on hold with
     an appropriate message.  Also, the cgroup soft limit will set to
     90% of the hard limit to encourage the kernel to lower 
@@ -6175,6 +6175,8 @@ These settings affect the *condor_starter*.
     When set to custom, the two additional knobs CGROUP_HARD_MEMORY_LIMIT and
     CGROUP_SOFT_MEMORY_LIMIT must be set, which are classad expressions evaluated
     in the context of the machine and the job which determine the hard and soft limits.
+    Note that "soft" is only meaningful on a cgroup v1 Linux system, and should not be
+    set on a cgroup v2 system.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB`
     A boolean that defaults to false.  When true, and cgroups are in effect, the

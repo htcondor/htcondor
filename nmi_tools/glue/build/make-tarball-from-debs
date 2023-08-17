@@ -88,7 +88,7 @@ tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$
 rm -r condor_tests-$version-$release-$arch_dist
 
 # Move configuration files back to example directory
-mv tarball/etc/condor/config.d/* tarball/usr/share/doc/htcondor/examples/
+mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor/examples/
 
 AVERSION=(${version//./ })
 MAJOR_VER=${AVERSION[0]}

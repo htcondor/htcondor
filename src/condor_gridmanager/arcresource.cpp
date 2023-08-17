@@ -191,7 +191,7 @@ void ArcResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 	}
 }
 
-void ArcResource::DoJobStatus()
+void ArcResource::DoJobStatus( int /* timerID */ )
 {
 	if ( ( registeredJobs.empty() || resourceDown ) &&
 		 m_jobStatusActive == false ) {

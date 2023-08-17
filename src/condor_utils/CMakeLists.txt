@@ -260,6 +260,8 @@ data_reuse.cpp
 data_reuse.h
 date_util.cpp
 date_util.h
+dc_coroutines.cpp
+dc_coroutines.h
 dc_service.cpp
 dc_service.h
 DelegationInterface.cpp

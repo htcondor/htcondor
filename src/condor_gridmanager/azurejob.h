@@ -44,7 +44,7 @@ public:
 	~AzureJob();
 
 	void Reconfig();
-	void doEvaluateState();
+	void doEvaluateState( int timerID = -1 );
 	BaseResource *GetResource();
 	void SetRemoteJobId( const char *vm_name );
 	

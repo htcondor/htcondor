@@ -179,9 +179,9 @@ class SharedPortEndpoint: Service {
 	void ReceiveSocket( ReliSock *local_sock, ReliSock *return_remote_sock );
 #endif
 	bool InitRemoteAddress();
-	void RetryInitRemoteAddress();
+	void RetryInitRemoteAddress(int timerID = -1);
 #ifndef WIN32
-	void SocketCheck();
+	void SocketCheck(int timerID = -1);
 	bool MakeDaemonSocketDir();
 #endif
 };

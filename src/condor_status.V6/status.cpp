@@ -146,7 +146,7 @@ public:
 	}
 	// make sure that the primary key is the same as arg, inserting arg as the first key if needed
 	// if the primary key is the same as attr, *replace* the primary key rather than inserting a new one.
-	bool ForcePrimaryKey(const char * attr, const char * arg=nullptr, const char * arg2=nullptr) {
+	bool ForcePrimaryKey(const char * attr, const char * arg=nullptr) {
 		if ( ! key_args.size() || key_args[0].empty() || YourStringNoCase(attr) != key_args[0] 
 			   || (key_args.size() && arg && YourStringNoCase(arg) != key_args[0])) {
 			ExprTree* expr = NULL;
@@ -681,7 +681,9 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 
 		// ingest GPU properties ads, If we added any, we may need to re-render some p-slot GPUs columns
 		StringList gpu_ids_added, gpu_ids_offline;
-		bool gpu_ads_added = pi->gpusInfo && (pi->gpusInfo->ingest(ad, &gpu_ids_added, &gpu_ids_offline) > 0);
+		if (pi->gpusInfo) {
+		   	pi->gpusInfo->ingest(ad, &gpu_ids_added, &gpu_ids_offline);
+		}
 
 		// we can do normal totals now. but compact mode totals we have to do after checking the slot type
 		if (totals && ( ! pi->columns || ! compactMode)) { totals->update(ad); }
@@ -1025,7 +1027,7 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter
 
 	// If the source slot is partitionable, we fold differently than if it is static
 	bool partitionable = (bb.flags & SROD_PARTITIONABLE_SLOT) != 0;
-	bool backfill      = (bb.flags & SROD_BACKFILL_SLOT) != 0;
+	//bool backfill      = (bb.flags & SROD_BACKFILL_SLOT) != 0;
 
 	// calculate the memory size of the largest slot
 	double amem = 0.0;
@@ -1914,7 +1916,7 @@ doNormalOutput( struct _process_ads_info & ai, AdTypes & adType ) {
 	}
 }
 
-const char * extractGPUsProps ( const classad::Value & value, ClassAd* slot, std::string &list_out ) {
+const char * extractGPUsProps ( const classad::Value & value, ClassAd* /*slot*/, std::string &list_out ) {
 	std::set<std::string> uniq;
 
 	classad::ClassAdUnParser unparser;
@@ -2023,7 +2025,7 @@ bool getGPUPropertyRange(const char * ids, const std::string & attr, std::set<st
 	return retval;
 }
 
-bool local_render_slot_type_letter ( classad::Value & value, ClassAd* ad, Formatter & )
+bool local_render_slot_type_letter ( classad::Value & value, ClassAd* /*ad*/, Formatter & )
 {
 	std::string buffer;
 	value.IsStringValue(buffer);
@@ -2037,7 +2039,7 @@ bool local_render_slot_type_letter ( classad::Value & value, ClassAd* ad, Format
 }
 
 // Suffix tag for NumDynamicSlots column
-bool local_render_slot_count_tag ( classad::Value & value, ClassAd* ad, Formatter & )
+bool local_render_slot_count_tag ( classad::Value & value, ClassAd* /*ad*/, Formatter & )
 {
 	std::string buffer;
 	value.IsStringValue(buffer);
@@ -2070,8 +2072,8 @@ static bool render_gpus_Capability(std::string & buffer, const char * gpulist, i
 				} else {
 					formatstr(buffer, "%.1f", maxcap);
 				}
-				if (buffer.size() < width) {
-					buffer.insert(0, width - buffer.size(), ' ');
+				if (buffer.size() < (size_t) width) {
+					buffer.insert(0, (size_t) width - buffer.size(), ' ');
 				}
 				return true;
 			}
@@ -2092,8 +2094,8 @@ static bool render_gpus_GlobalMemoryMB(std::string & buffer, const char * gpulis
 				} else {
 					formatstr(buffer, "%.1f GB", maxmem/1024.0);
 				}
-				if (buffer.size() < width) {
-					buffer.insert(0, width - buffer.size(), ' ');
+				if (buffer.size() < (size_t) width) {
+					buffer.insert(0, (size_t) width - buffer.size(), ' ');
 				}
 				return true;
 			}
@@ -2122,7 +2124,7 @@ static bool render_gpus_DeviceName (std::string & buffer, const char * gpulist)
 }
 
 
-bool local_render_gpus_caps ( classad::Value & value, ClassAd* ad, Formatter & fmt)
+bool local_render_gpus_caps ( classad::Value & value, ClassAd* /*ad*/, Formatter & fmt)
 {
 	std::string buffer;
 	const char * gpulist = nullptr;
@@ -2133,7 +2135,7 @@ bool local_render_gpus_caps ( classad::Value & value, ClassAd* ad, Formatter & f
 	return false;
 }
 
-bool local_render_gpus_mem ( classad::Value & value, ClassAd* ad, Formatter & fmt)
+bool local_render_gpus_mem ( classad::Value & value, ClassAd* /*ad*/, Formatter & fmt)
 {
 	std::string buffer;
 	const char * gpulist = nullptr;
@@ -2144,7 +2146,7 @@ bool local_render_gpus_mem ( classad::Value & value, ClassAd* ad, Formatter & fm
 	return false;
 }
 
-bool local_render_gpus_names ( classad::Value & value, ClassAd* ad, Formatter & )
+bool local_render_gpus_names ( classad::Value & value, ClassAd* /*ad*/, Formatter & )
 {
 	std::string buffer;
 	const char * gpulist = nullptr;
@@ -2175,7 +2177,7 @@ bool local_render_totgpus ( classad::Value & value, ClassAd* ad, Formatter & fmt
 		}
 		if (num_offline) { formatstr(gpus, "%4d-%d", num_assigned, num_offline); }
 		else { formatstr(gpus, "%4d", num_assigned); }
-		if (gpus.size() < fmt.width) {
+		if (gpus.size() < (size_t) fmt.width) {
 			gpus.append(fmt.width - gpus.size(), ' ');
 		}
 		value.SetStringValue(gpus);

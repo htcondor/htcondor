@@ -9,11 +9,11 @@ Install and configure HTCondor on Linux machines.
 Synopsis
 --------
 
-**get_htcondor** <**-h** | **--help**>
+**get_htcondor** <**-h** | **-\-help**>
 
-**get_htcondor** [**--[no-]dry-run**] [**--channel** *name*] [**--minicondor** | [**--central-manager** | **--submit** | **--execute**] *central-manager-name*] [**--shared-filesystem-domain** *filesystem-domain-name*]
+**get_htcondor** [**--[no-]dry-run**] [**-\-channel** *name*] [**-\-minicondor** | [**-\-central-manager** | **-\-submit** | **-\-execute**] *central-manager-name*] [**-\-shared-filesystem-domain** *filesystem-domain-name*]
 
-**get_htcondor** **--dist**
+**get_htcondor** **-\-dist**
 
 Description
 -----------
@@ -30,33 +30,33 @@ Options
     **-help**
         Print a usage reminder.
 
-    **--dry-run**
+    **-\-dry-run**
         Do not issue commands, only print them.  [default]
 
-    **--no-dry-run**
+    **-\-no-dry-run**
         Issue all the commands needed to install HTCondor.
 
-    **--channel** *name*
+    **-\-channel** *name*
         Specify channel *name* to install; *name* may be
         ``current``, the most recent release with new features [default]
         or ``stable``, the most recent release with only bug-fixes
 
-    **--dist**
+    **-\-dist**
         Display the detected operating system and exit.
 
-    **--minicondor**
+    **-\-minicondor**
         Configure as a single-machine ("mini") HTCondor.  [default]
 
-    **--central-manager** *central-manager-name*
+    **-\-central-manager** *central-manager-name*
 
-    **--submit** *central-manager-name*
+    **-\-submit** *central-manager-name*
 
-    **--execute** *central-manager-name*
+    **-\-execute** *central-manager-name*
 
         Configure this installation with the central manager, submit,
         or execute role.
 
-    **--shared-filesystem-domain** *filesystem-domain-name*
+    **-\-shared-filesystem-domain** *filesystem-domain-name*
 
         Configure this installation to assume that machines specifying
         the same *filesystem-domain-name* share a filesystem.

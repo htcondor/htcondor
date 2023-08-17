@@ -11,8 +11,8 @@ Synopsis
 
 **condor_qusers** [**-help**] [**-version**] [**-debug** ]
 [**-name** *schedd-name*] [**-pool** *pool-name*]
-[**-long** | **--af** *{attrs}* | **-format** *fmt* *attr*]
-[**-add** | **-enable** | **--disable** [**-reason** *reason-string*]] *{users}*
+[**-long** | **-\-af** *{attrs}* | **-format** *fmt* *attr*]
+[**-add** | **-enable** | **-\-disable** [**-reason** *reason-string*]] *{users}*
 
 Description
 -----------

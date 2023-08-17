@@ -50,7 +50,7 @@ const   int     STAR = -1;
 typedef void     (*TimerHandler)();
 
 /// Service Method
-typedef void     (Service::*TimerHandlercpp)();
+typedef void     (Service::*TimerHandlercpp)(int timerID);
 
 /** Function, which given a pointer to a void* releases its 
 	memory (C Version).
@@ -225,6 +225,8 @@ class TimerManager
 
     /// Not_Yet_Documented.
     void DumpTimerList(int, const char* = NULL );
+
+    int countTimersByDescription( const char * description );
 
     /** Not_Yet_Documented.
         @return Not_Yet_Documented

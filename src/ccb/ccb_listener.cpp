@@ -206,7 +206,7 @@ CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack
 }
 
 void
-CCBListener::ReconnectTime()
+CCBListener::ReconnectTime(int /* timerID */)
 {
 	m_reconnect_timer = -1;
 
@@ -329,7 +329,7 @@ CCBListener::RescheduleHeartbeat()
 }
 
 void
-CCBListener::HeartbeatTime()
+CCBListener::HeartbeatTime(int /* timerID */)
 {
 	int age = time(NULL) - m_last_contact_from_peer;
 	if( age > 3*m_heartbeat_interval ) {
