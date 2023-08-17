@@ -2376,7 +2376,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}
-//	dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload final_transfer=%d\n",final_transfer);
 
 	filesize_t sandbox_size = 0;
 	if( PeerDoesXferInfo ) {
@@ -2497,7 +2496,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
-
 			// This check must come after we have called set_priv()
 		if( !LegalPathInSandbox(filename.c_str(),outputDirectory.c_str()) ) {
 			// Our peer sent us an illegal path!
@@ -2767,7 +2765,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-
 			// examine subcommand
 			//
 			TransferSubCommand subcommand;
@@ -2779,7 +2776,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					subcommand = static_cast<TransferSubCommand>(subcommand_int);
 				}
 			}
-
 			// perform specified subcommand
 			//
 			// (this can be made a switch statement when more show up)
@@ -4509,16 +4505,10 @@ FileTransfer::computeFileList(
 				// While (* total_bytes_ptr) and numFiles should both be 0
 				// at this point, we should probably be explicit.
 				filesize_t logTCPStats = 0;
-				return ExitDoUpload( & logTCPStats,
-					/* num files */ 0,
-					s, saved_priv, protocolState.socket_default_crypto,
-					/* upload success */ false,
-					/* do upload ACK (required to put job on hold) */ true,
-					/* do download ACK */ false,
-					/* try again */ false,
-					FILETRANSFER_HOLD_CODE::UploadFileError,
-					/* hold subcode */ 3,
-					errorMessage.c_str(), __LINE__ );
+				UploadExitInfo xfer_info;
+				xfer_info.setError(errorMessage, FILETRANSFER_HOLD_CODE::UploadFileError, 3);
+				xfer_info.doAck(TransferAck::UPLOAD).line(__LINE__);
+				return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, &logTCPStats, xfer_info);
 			}
 		}
 	}
@@ -4668,14 +4658,10 @@ FileTransfer::computeFileList(
 			// While (* total_bytes_ptr) and numFiles should both be 0
 			// at this point, we should probably be explicit.
 			filesize_t logTCPStats = 0;
-			return ExitDoUpload( & logTCPStats,
-				/* num files */ 0,
-				s, saved_priv, protocolState.socket_default_crypto,
-				/* upload success */ false,
-				/* do upload ACK (required to avoid hanging the shadow and starter */ true,
-				/* do download ACK */ false,
-				/* try again */ false,
-				holdCode, holdSubCode, holdReason.c_str(), __LINE__ );
+			UploadExitInfo xfer_info;
+			xfer_info.setError(holdReason, holdCode, holdSubCode);
+			xfer_info.doAck(TransferAck::UPLOAD).line(__LINE__);
+			return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, &logTCPStats, xfer_info);
 		}
 
 		classad::Value value;
@@ -4773,13 +4759,8 @@ FileTransfer::uploadFileList(
 	std::string fullname;
 	filesize_t bytes = 0;
 
+	UploadExitInfo xfer_info;
 	bool is_the_executable;
-	bool upload_success = false;
-	bool do_download_ack = false;
-	bool do_upload_ack = false;
-	bool try_again = false;
-	int hold_code = 0;
-	int hold_subcode = 0;
 	int numFiles = 0;
 	int plugin_exit_code = 0;
 
@@ -4792,13 +4773,7 @@ FileTransfer::uploadFileList(
 	// job hadn't completed writing all the files as specified in
 	// transfer_output_files. These variables represent the saved state of the
 	// first failed transfer. See gt #487.
-	bool first_failed_file_transfer_happened = false;
-	bool first_failed_upload_success = false;
-	bool first_failed_try_again = false;
-	int first_failed_hold_code = 0;
-	int first_failed_hold_subcode = 0;
-	std::string first_failed_error_desc;
-	int first_failed_line_number = 0;
+	bool has_failure = false;
 
 	int currentUploadDeferred = 0;
 
@@ -4822,7 +4797,6 @@ FileTransfer::uploadFileList(
 	{
 		auto &filename = fileitem.srcName();
 		auto &dest_dir = fileitem.destDir();
-
 			// Anything the remote side was able to reuse we do not send again.
 		if (skip_files.find(filename) != skip_files.end()) {
 			dprintf(D_FULLDEBUG, "Skipping file %s as it was reused.\n", filename.c_str());
@@ -4912,17 +4886,10 @@ FileTransfer::uploadFileList(
 		if( !fileitem.isSrcUrl() && perm_obj && !is_the_executable &&
 			(perm_obj->read_access(fullname.c_str()) != 1) ) {
 			// we do _not_ have permission to read this file!!
-			upload_success = false;
 			formatstr(error_desc,"error reading from %s: permission denied",fullname.c_str());
-			do_upload_ack = true;    // tell receiver that we failed
-			do_download_ack = true;
-			try_again = false; // put job on hold
-			hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
-			hold_subcode = EPERM;
-			return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
-			                    upload_success,do_upload_ack,do_download_ack,
-								try_again,hold_code,hold_subcode,
-								error_desc.c_str(),__LINE__);
+			xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, EPERM);
+			xfer_info.line(__LINE__).doAck(TransferAck::BOTH).files(numFiles);
+			return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, total_bytes_ptr, xfer_info);
 		}
 #else
 		if (is_the_executable) {} // Done to get rid of the compiler set-but-not-used warnings.
@@ -5001,14 +4968,9 @@ FileTransfer::uploadFileList(
 			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack, upload_bytes);
 			if (result == TransferPluginResult::Error) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
-				if (!first_failed_file_transfer_happened) {
-					first_failed_file_transfer_happened = true;
-					first_failed_upload_success = false;
-					first_failed_try_again = false;
-					first_failed_hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
-					first_failed_hold_subcode = 1;
-					first_failed_error_desc = error_desc;
-					first_failed_line_number = __LINE__;
+				if (!has_failure) {
+					has_failure = true;
+					xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, 1).line(__LINE__);
 				}
 			}
 			currentUploadPlugin = "";
@@ -5172,7 +5134,6 @@ FileTransfer::uploadFileList(
 				source_filename += filename;
 
 				const std::string &local_output_url = fileitem.destUrl();
-
 				// Potentially execute the multifile plugin.  Note all the error handling
 				// occurs outside this gigantic if block - we must carefully set `rc` for it
 				// to work correctly.
@@ -5312,13 +5273,10 @@ FileTransfer::uploadFileList(
 			rc = s->put_file( &bytes, fullname.c_str(), 0, this_file_max_bytes, &xfer_queue );
 		}
 		if( rc < 0 ) {
-			int the_error = errno;
-			upload_success = false;
+			int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
+			int hold_subcode = errno;
 			formatstr(error_desc,"|Error: sending file %s",UrlSafePrint(fullname));
 			if((rc == PUT_FILE_OPEN_FAILED) || (rc == PUT_FILE_PLUGIN_FAILED) || (rc == PUT_FILE_MAX_BYTES_EXCEEDED)) {
-				try_again = false; // put job on hold
-				hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
-				hold_subcode = the_error;
 
 				// If plugin_exit_code is greater than 0, that indicates a
 				// transfer plugin error. In this case set hold_subcode to the
@@ -5336,7 +5294,7 @@ FileTransfer::uploadFileList(
 					// the while loop.
 
 					replace_str(error_desc,"sending","reading from");
-					formatstr_cat(error_desc,": (errno %d) %s",the_error,strerror(the_error));
+					formatstr_cat(error_desc,": (errno %d) %s",hold_subcode,strerror(hold_subcode));
 					if( fail_because_mkdir_not_supported ) {
 						formatstr_cat(error_desc, "- Remote condor version is too old to transfer directories.");
 					}
@@ -5351,7 +5309,7 @@ FileTransfer::uploadFileList(
 											 (long int)(effective_max_upload_bytes/1024/1024),
 											 (long int)(this_file_size/1024/1024));
 					hold_code = using_peer_max_transfer_bytes ? CONDOR_HOLD_CODE::MaxTransferOutputSizeExceeded : CONDOR_HOLD_CODE::MaxTransferInputSizeExceeded;
-					the_error = 0;
+					hold_subcode = 0;
 				} else {
 					// add on the error string from the errstack used
 					formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
@@ -5366,14 +5324,9 @@ FileTransfer::uploadFileList(
 				// attribute in the job ad representing this failure. That
 				// is not currently implemented....
 
-				if (first_failed_file_transfer_happened == false) {
-					first_failed_file_transfer_happened = true;
-					first_failed_upload_success = false;
-					first_failed_try_again = false;
-					first_failed_hold_code = hold_code;
-					first_failed_hold_subcode = the_error;
-					first_failed_error_desc = error_desc;
-					first_failed_line_number = __LINE__;
+				if (!has_failure) {
+					has_failure = true;
+					xfer_info.setError(error_desc, hold_code, hold_subcode).line(__LINE__);
 				}
 			}
 			else {
@@ -5382,21 +5335,16 @@ FileTransfer::uploadFileList(
 				// report, and those that are due to a genuine
 				// disconnect between us and the receiver.  Therefore,
 				// always try reading the download ack.
-				do_download_ack = true;
 				// The stream _from_ us to the receiver is in an undefined
 				// state.  Some network operation may have failed part
 				// way through the transmission, so we cannot expect
 				// the other side to be able to read our upload ack.
-				do_upload_ack = false;
-				try_again = true;
-
+				xfer_info.setError(error_desc, hold_code, hold_subcode);
+				xfer_info.doAck(TransferAck::DOWNLOAD).retry().line(__LINE__).files(numFiles);
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
-				return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,
-								protocolState.socket_default_crypto,upload_success,
-								do_upload_ack,do_download_ack,
-			                    try_again,hold_code,hold_subcode,
-			                    error_desc.c_str(),__LINE__);
+				return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, total_bytes_ptr, xfer_info);
+
 			}
 		}
 
@@ -5446,14 +5394,10 @@ FileTransfer::uploadFileList(
 		TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack, upload_bytes);
 		if (result != TransferPluginResult::Success) {
 			formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
-			if (!first_failed_file_transfer_happened) {
-				first_failed_file_transfer_happened = true;
-				first_failed_upload_success = false;
-				first_failed_try_again = false;
-				first_failed_hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
-				first_failed_hold_subcode = static_cast<int>(result) << 8;
-				first_failed_error_desc = error_desc;
-				first_failed_line_number = __LINE__;
+			if (!has_failure) {
+				has_failure = true;
+				xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, static_cast<int>(result) << 8);
+				xfer_info.line(__LINE__);
 			}
 		}
 		*total_bytes_ptr += upload_bytes;
@@ -5463,34 +5407,18 @@ FileTransfer::uploadFileList(
 	// send a reasonable error back to the queue.  Hence, we delay looking at the error object until now.
 	if (!m_reuse_info_err.empty()) {
 		formatstr_cat(error_desc, ": %s", m_reuse_info_err.getFullText().c_str());
-		if (!first_failed_file_transfer_happened) {
-			first_failed_file_transfer_happened = true;
-			first_failed_upload_success = false;
-			first_failed_try_again = false;
-			first_failed_hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
-			first_failed_hold_subcode = 2;
-			first_failed_error_desc = error_desc;
-			first_failed_line_number = __LINE__;
+		if (!has_failure) {
+			has_failure = true;
+			xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, 2).line(__LINE__);
 		}
 	}
 
-	do_download_ack = true;
-	do_upload_ack = true;
-
-	if (first_failed_file_transfer_happened == true) {
-		return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
-			first_failed_upload_success,do_upload_ack,do_download_ack,
-			first_failed_try_again,first_failed_hold_code,
-			first_failed_hold_subcode,first_failed_error_desc.c_str(),
-			first_failed_line_number);
-	}
+	if (!has_failure) { xfer_info.noError().success(); }
+	xfer_info.doAck(TransferAck::BOTH).files(numFiles);
 
 	uploadEndTime = condor_gettimestamp_double();
 
-	upload_success = true;
-	return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
-	                    upload_success,do_upload_ack,do_download_ack,
-	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
+	return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, total_bytes_ptr, xfer_info);
 }
 
 void
@@ -5807,25 +5735,26 @@ FileTransfer::DoReceiveTransferGoAhead(
 }
 
 int
-FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
+FileTransfer::ExitDoUpload(ReliSock *s, bool socket_default_crypto, priv_state saved_priv, const filesize_t *total_bytes_ptr, UploadExitInfo& xfer_info)
 {
-	int rc = upload_success ? 0 : -1;
+	int rc = xfer_info.upload_success ? 0 : -1;
 	bool download_success = false;
 	std::string error_buf;
 	std::string download_error_buf;
-	char const *error_desc = "";
 
-	dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",DoUpload_exit_line);
+
+	dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", xfer_info.exit_line);
+	dprintf(D_FULLDEBUG, "%s\n", xfer_info.displayStr().c_str());
 
 	if( saved_priv != PRIV_UNKNOWN ) {
-		_set_priv(saved_priv,__FILE__,DoUpload_exit_line,1);
+		_set_priv(saved_priv, __FILE__, xfer_info.exit_line, 1);
 	}
 
 	bytesSent += *total_bytes_ptr;
 
-	if(do_upload_ack) {
+	if(xfer_info.checkAck(TransferAck::UPLOAD)) {
 		// peer is still expecting us to send a file command
-		if(!PeerDoesTransferAck && !upload_success) {
+		if(!PeerDoesTransferAck && !xfer_info.upload_success) {
 			// We have no way to tell the other side that something has
 			// gone wrong other than slamming the connection without
 			// sending the final file command 0.  Therefore, send nothing.
@@ -5838,16 +5767,17 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, Reli
 			s->set_crypto_mode(socket_default_crypto);
 
 			std::string error_desc_to_send;
-			if(!upload_success) {
+			if(!xfer_info.upload_success) {
 				formatstr(error_desc_to_send, "%s at %s failed to send file(s) to %s",
 										   get_mySubSystem()->getName(),
 										   s->my_ip_str(),
 										   s->get_sinful_peer());
-				if(upload_error_desc) {
-					formatstr_cat(error_desc_to_send,": %s",upload_error_desc);
+				if (!xfer_info.error_desc.empty()) {
+					formatstr_cat(error_desc_to_send,": %s", xfer_info.error_desc.c_str());
 				}
 			}
-			SendTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
+			SendTransferAck(s, xfer_info.upload_success, xfer_info.try_again,
+			                xfer_info.hold_code, xfer_info.hold_subcode,
 			                error_desc_to_send.c_str());
 		}
 	} else {
@@ -5861,8 +5791,9 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, Reli
 	// for reasons that are likely to be transient network issues
 	// (e.g. timeout writing), then ideally do_download_ack would be false,
 	// and we will skip this step.
-	if(do_download_ack) {
-		GetTransferAck(s,download_success,try_again,hold_code,hold_subcode,
+	if(xfer_info.checkAck(TransferAck::DOWNLOAD)) {
+		GetTransferAck(s, download_success, xfer_info.try_again,
+		               xfer_info.hold_code, xfer_info.hold_subcode,
 		               download_error_buf);
 		if(!download_success) {
 			rc = -1;
@@ -5878,21 +5809,20 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, Reli
 		formatstr(error_buf, "%s at %s failed to send file(s) to %s",
 						  get_mySubSystem()->getName(),
 						  s->my_ip_str(),receiver_ip_str);
-		if(upload_error_desc) {
-			formatstr_cat(error_buf, ": %s",upload_error_desc);
+		if(!xfer_info.error_desc.empty()) {
+			formatstr_cat(error_buf, ": %s", xfer_info.error_desc.c_str());
 		}
 
 		if(!download_error_buf.empty()) {
 			formatstr_cat(error_buf, "; %s", download_error_buf.c_str());
 		}
 
-		error_desc = error_buf.c_str();
-
-		if(try_again) {
-			dprintf(D_ALWAYS,"DoUpload: %s\n",error_desc);
+		if(xfer_info.try_again) {
+			dprintf(D_ALWAYS,"DoUpload: %s\n", error_buf.c_str());
 		}
 		else {
-			dprintf(D_ALWAYS,"DoUpload: (Condor error code %d, subcode %d) %s\n",hold_code,hold_subcode,error_desc);
+			dprintf(D_ALWAYS,"DoUpload: (Condor error code %d, subcode %d) %s\n",
+			                 xfer_info.hold_code, xfer_info.hold_subcode, error_buf.c_str());
 		}
 	}
 
@@ -5900,10 +5830,10 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, Reli
 	// the transfer status pipe and/or observed by the caller
 	// of Upload().
 	Info.success = rc == 0;
-	Info.try_again = try_again;
-	Info.hold_code = hold_code;
-	Info.hold_subcode = hold_subcode;
-	Info.error_desc = error_desc;
+	Info.try_again = xfer_info.try_again;
+	Info.hold_code = xfer_info.hold_code;
+	Info.hold_subcode = xfer_info.hold_subcode;
+	Info.error_desc = error_buf;
 
 		// Log some tcp statistics about this transfer
 	if (*total_bytes_ptr > 0) {
@@ -5914,7 +5844,8 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, Reli
 
 		char *stats = s->get_statistics();
 		formatstr(Info.tcp_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
-			cluster, proc, numFiles, (long long)*total_bytes_ptr, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : ""));
+		          cluster, proc, xfer_info.xfered_files, (long long)*total_bytes_ptr, (uploadEndTime - uploadStartTime),
+		          s->peer_ip_str(), (stats ? stats : ""));
 		dprintf(D_STATS, "%s", Info.tcp_stats.c_str());
 	}
 
