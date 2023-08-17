@@ -2,9 +2,7 @@
 
 import logging
 from getpass import getuser
-from pathlib import Path
 from ornithology import (
-    config,
     standup,
     action,
     Condor,
@@ -30,34 +28,35 @@ cat ${args[@]/#/$_CONDOR_CREDS/}
 @standup
 def condor(pytestconfig, test_dir):
 
-    # Prepare credmon
+    logger.info("Preparing credmon")
     credmon = pytestconfig.invocation_dir / "condor_credmon_oauth_dummy"
     credmon.chmod(0o755)  # make sure the credmon is executable
 
-    # Prepare top level credential directory
+    logger.info("Preparing top-level credentials directory")
     cred_dir = test_dir / "oauth_credentials"
     cred_dir.mkdir(parents=True, exist_ok=True)
     cred_dir.chmod(0o2770)
 
-    # Prepare test user credential directory
+    logger.info("Preparing user credential directory")
     user_cred_dir = cred_dir / USER
     user_cred_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create fake tokens in user credential directory
+    logger.info("Creating fake user credentials")
     for token_name in ["dummy", "dummy_A", "dummy_B"]:
         (user_cred_dir / token_name).with_suffix(".top").open("w").write(f"refresh_{token_name}")
         (user_cred_dir / token_name).with_suffix(".use").open("w").write(f"access_{token_name}")
 
-    # Prepare fake OAuth secret file
+    logger.info("Creating fake OAuth secret")
     secret_file = test_dir / "dummy.secret"
     secret_file.open("w").write("dummy_secret")
     secret_file.chmod(0o600)
 
-    # Prepare test executable
+    logger.info("Creating test wrapper script")
     test_executable = test_dir / "test_wrapper.sh"
     test_executable.open("w").write(TEST_SCRIPT)
     test_executable.chmod(0o755)
 
+    logger.info("Setting up HTCondor")
     with Condor(
         local_dir=test_dir / "condor",
         config={
@@ -80,6 +79,7 @@ def condor(pytestconfig, test_dir):
 
 @action
 def vanilla_one_service_no_handles(condor, test_dir):
+    logger.info("Running vanilla_one_service_no_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "vanilla_one_service_no_handles.out"
     job = condor.submit(
@@ -99,6 +99,7 @@ def vanilla_one_service_no_handles(condor, test_dir):
 
 @action
 def vanilla_one_service_two_handles(condor, test_dir):
+    logger.info("Running vanilla_one_service_two_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "vanilla_one_service_two_handles.out"
     job = condor.submit(
@@ -120,6 +121,7 @@ def vanilla_one_service_two_handles(condor, test_dir):
 
 @action
 def local_one_service_no_handles(condor, test_dir):
+    logger.info("Running local_one_service_no_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "local_one_service_no_handles.out"
     job = condor.submit(
@@ -139,6 +141,7 @@ def local_one_service_no_handles(condor, test_dir):
 
 @action
 def local_one_service_two_handles(condor, test_dir):
+    logger.info("Running local_one_service_two_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "local_one_service_two_handles.out"
     job = condor.submit(
@@ -160,6 +163,7 @@ def local_one_service_two_handles(condor, test_dir):
 
 @action
 def scheduler_one_service_no_handles(condor, test_dir):
+    logger.info("Running scheduler_one_service_no_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "scheduler_one_service_no_handles.out"
     job = condor.submit(
@@ -179,6 +183,7 @@ def scheduler_one_service_no_handles(condor, test_dir):
 
 @action
 def scheduler_one_service_two_handles(condor, test_dir):
+    logger.info("Running scheduler_one_service_two_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "scheduler_one_service_two_handles.out"
     job = condor.submit(
@@ -200,20 +205,20 @@ def scheduler_one_service_two_handles(condor, test_dir):
 
 class TestJobTokenTransfer:
 
-    def vanilla_test_one_service_no_handles(self, vanilla_one_service_no_handles):
+    def test_vanilla_one_service_no_handles(self, vanilla_one_service_no_handles):
         assert vanilla_one_service_no_handles == "access_dummy"
 
-    def vanilla_test_one_service_two_handles(self, vanilla_one_service_two_handles):
+    def test_vanilla_one_service_two_handles(self, vanilla_one_service_two_handles):
         assert vanilla_one_service_two_handles == "access_dummy_Aaccess_dummy_B"
 
-    def local_test_one_service_no_handles(self, local_one_service_no_handles):
+    def test_local_one_service_no_handles(self, local_one_service_no_handles):
         assert local_one_service_no_handles == "access_dummy"
 
-    def local_test_one_service_two_handles(self, local_one_service_two_handles):
+    def test_local_one_service_two_handles(self, local_one_service_two_handles):
         assert local_one_service_two_handles == "access_dummy_Aaccess_dummy_B"
 
-    def scheduler_test_one_service_no_handles(self, scheduler_one_service_no_handles):
+    def test_scheduler_one_service_no_handles(self, scheduler_one_service_no_handles):
         assert scheduler_one_service_no_handles == "access_dummy"
 
-    def scheduler_test_one_service_two_handles(self, scheduler_one_service_two_handles):
+    def test_scheduler_one_service_two_handles(self, scheduler_one_service_two_handles):
         assert scheduler_one_service_two_handles == "access_dummy_Aaccess_dummy_B"
