@@ -502,7 +502,7 @@ def the_job_description(test_dir, path_to_the_job_script):
 TEST_CASES = {
     "spool": {},
     "local": {
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
     },
     # See HTCONDOR-1220 and -1221 for some of the bugs found while hand-
@@ -510,7 +510,7 @@ TEST_CASES = {
     # output_destination -related problems and only check to make sure
     # that output_destination doesn't screw up checkpoint_destination.
     "with_output_destination": {
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "output_destination":           'local://example.vo/example.fs/od/',
 
@@ -520,7 +520,7 @@ TEST_CASES = {
         "error":                        "test_job_$(CLUSTER).err",
     },
     "check_files_local": {
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         '{test_dir}/check_files_local/',
         "transfer_checkpoint_files":    'saved-state, a, b, c, d, e',
@@ -551,7 +551,7 @@ TEST_CASES = {
         "iwd":                          '{test_dir}/HTCONDOR_1218_1',
         "transfer_output_files":        "d1",
 
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         'd1/d2',
         "transfer_checkpoint_files":    'saved-state, d1/d2/a',
@@ -561,7 +561,7 @@ TEST_CASES = {
         "iwd":                          '{test_dir}/HTCONDOR_1218_2',
         "transfer_output_files":        "d1",
 
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         'd1',
         "transfer_checkpoint_files":    'saved-state, d1/a',
@@ -700,7 +700,7 @@ def the_completed_job_stderr(test_dir, the_completed_job):
 
 HOLD_CASES = {
     "missing_destination": {
-        "+CheckpointDestination":       '"local://{test_dir}/missing"',
+        "checkpoint_destination":       '"local://{test_dir}/missing"',
         "transfer_plugins":             'local={plugin_shell_file}',
     },
     "symlink_to_dir": {
@@ -774,17 +774,17 @@ def hold_job(hold_job_handle):
 
 FAIL_CASES = {
     "missing_file": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "checkpoint_destination":       '"local://{test_dir}/"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         "{path_to_mutate_script_a}",
     },
     "corrupt_file": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "checkpoint_destination":       '"local://{test_dir}/"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         "{path_to_mutate_script_b}",
     },
     "corrupt_manifest": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "checkpoint_destination":       '"local://{test_dir}/"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         "{path_to_mutate_script_c}",
     },
