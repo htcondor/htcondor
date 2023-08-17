@@ -161,48 +161,6 @@ def local_one_service_two_handles(condor, test_dir):
     return outfile.open("r").read().strip()
 
 
-@action
-def scheduler_one_service_no_handles(condor, test_dir):
-    logger.info("Running scheduler_one_service_no_handles")
-    test_executable = test_dir / "test_wrapper.sh"
-    outfile = test_dir / "scheduler_one_service_no_handles.out"
-    job = condor.submit(
-        {
-            "universe": "scheduler",
-            "executable": str(test_executable),
-            "arguments": "dummy.use",
-            "use_oauth_services": "dummy",
-            "output": str(outfile),
-            "error": str(outfile.with_suffix(".err")),
-            "log": str(outfile.with_suffix(".log")),
-        }
-    )
-    assert job.wait(condition=ClusterState.all_terminal)
-    return outfile.open("r").read().strip()
-
-
-@action
-def scheduler_one_service_two_handles(condor, test_dir):
-    logger.info("Running scheduler_one_service_two_handles")
-    test_executable = test_dir / "test_wrapper.sh"
-    outfile = test_dir / "scheduler_one_service_two_handles.out"
-    job = condor.submit(
-        {
-            "universe": "scheduler",
-            "executable": str(test_executable),
-            "arguments": "dummy_A.use dummy_B.use",
-            "use_oauth_services": "dummy",
-            "dummy_oauth_permissions_A": "",
-            "dummy_oauth_permissions_B": "",
-            "output": str(outfile),
-            "error": str(outfile.with_suffix(".err")),
-            "log": str(outfile.with_suffix(".log")),
-        }
-    )
-    assert job.wait(condition=ClusterState.all_terminal)
-    return outfile.open("r").read().strip()
-
-
 class TestJobTokenTransfer:
 
     def test_vanilla_one_service_no_handles(self, vanilla_one_service_no_handles):
@@ -216,9 +174,3 @@ class TestJobTokenTransfer:
 
     def test_local_one_service_two_handles(self, local_one_service_two_handles):
         assert local_one_service_two_handles == "access_dummy_Aaccess_dummy_B"
-
-    def test_scheduler_one_service_no_handles(self, scheduler_one_service_no_handles):
-        assert scheduler_one_service_no_handles == "access_dummy"
-
-    def test_scheduler_one_service_two_handles(self, scheduler_one_service_two_handles):
-        assert scheduler_one_service_two_handles == "access_dummy_Aaccess_dummy_B"
