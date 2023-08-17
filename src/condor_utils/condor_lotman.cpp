@@ -8,8 +8,15 @@
 #endif
 
 #include "condor_lotman.h"
+// Note that defining PICOJSON_USE_INT64 is IMPORTANT
+// because not doing so will override picojson for other
+// files that use it, causing things to break... like 
+// auth-related jwt files.
+#define PICOJSON_USE_INT64
+#include "picojson/picojson.h"
+
 #include <filesystem>
-#include <picojson/picojson.h>
+
 
 #ifdef HAVE_EXT_LOTMAN
 #include <lotman/lotman.h>
