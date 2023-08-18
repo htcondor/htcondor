@@ -201,47 +201,47 @@ Provides: %{name}-static = %{version}-%{release}
 
 # Standard Universe discontinued as of 8.9.0
 Obsoletes: %{name}-std-universe < 8.9.0
-Provides: %{name}-static = %{version}-%{release}
+Provides: %{name}-std-universe = %{version}-%{release}
 
 # Cream gahp discontinued as of 8.9.9
 Obsoletes: %{name}-cream-gahp < 8.9.9
-Provides: %{name}-static = %{version}-%{release}
+Provides: %{name}-cream-gahp = %{version}-%{release}
 
 # 32-bit shadow discontinued as of 8.9.9
 Obsoletes: %{name}-small-shadow < 8.9.9
-Provides: %{name}-static = %{version}-%{release}
+Provides: %{name}-small-shadow = %{version}-%{release}
 
 # external-libs package discontinued as of 8.9.9
 Obsoletes: %{name}-external-libs < 8.9.9
-Provides: %{name}-static = %{version}-%{release}
+Provides: %{name}-external-libs = %{version}-%{release}
 
 # Bosco package discontinued as of 9.5.0
 Obsoletes: %{name}-bosco < 9.5.0
-Provides: %{name}-static = %{version}-%{release}
+Provides: %{name}-bosco = %{version}-%{release}
 
 # externals package discontinued as of 10.8.0
 Obsoletes: %{name}-externals < 10.8.0
-Provides: %{name}-static = %{version}-%{release}
+Provides: %{name}-externals = %{version}-%{release}
 
 # blahp package discontinued as of 10.8.0
 Obsoletes: %{name}-blahp < 10.8.0
-Provides: %{name}-static = %{version}-%{release}
+Provides: %{name}-blahp = %{version}-%{release}
 
 # procd package discontinued as of 10.8.0
 Obsoletes: %{name}-procd < 10.8.0
-Provides: %{name}-static = %{version}-%{release}
+Provides: %{name}-procd = %{version}-%{release}
 
 # all package discontinued as of 10.8.0
 Obsoletes: %{name}-all < 10.8.0
-Provides: %{name}-static = %{version}-%{release}
+Provides: %{name}-all = %{version}-%{release}
 
-# classds package discontinued as of 10.8.0
-Obsoletes: %{name}-classds < 10.8.0
-Provides: %{name}-static = %{version}-%{release}
+# classads package discontinued as of 10.8.0
+Obsoletes: %{name}-classads < 10.8.0
+Provides: %{name}-classads = %{version}-%{release}
 
-# classad-devel package discontinued as of 10.8.0
-Obsoletes: %{name}-classad-devel < 10.8.0
-Provides: %{name}-static = %{version}-%{release}
+# classads-devel package discontinued as of 10.8.0
+Obsoletes: %{name}-classads-devel < 10.8.0
+Provides: %{name}-classads-devel = %{version}-%{release}
 
 %description
 HTCondor is a specialized workload management system for
