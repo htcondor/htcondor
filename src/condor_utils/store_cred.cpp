@@ -1034,12 +1034,6 @@ int store_cred_password(const char *user, const char *pw, int mode)
 				delete[] pw_wc;
 			}
 
-			if (!isValidCredential(user, pw)) {
-				dprintf(D_FULLDEBUG, "store_cred: invalid credential given for delete\n");
-				answer = FAILURE_BAD_PASSWORD;
-				break;
-			}
-
 			// call lsa_mgr api
 			// answer = return code
 			if (!lsa_man.remove(userbuf)) {
