@@ -494,7 +494,6 @@ int main (int argc, const char **argv)
 {
 	ClassAd		*ad;
 	bool		first;
-	char		*scheddName=NULL;
 	std::string		scheddMachine;
 	int		useFastScheddQuery = 0;
 	const char	*tmp;
@@ -564,11 +563,13 @@ int main (int argc, const char **argv)
 
 		if ( schedd.locate() ) {
 
+			std::string scheddName;
 			scheddAddr = strdup(schedd.addr());
 			if( (tmp = schedd.name()) ) {
+				scheddName = tmp;
 				Q.addSchedd(tmp);
 			} else {
-				scheddName = strdup("Unknown");
+				scheddName = "Unknown";
 			}
 			if( (tmp = schedd.fullHostname()) ) {
 				scheddMachine = tmp;
@@ -587,7 +588,7 @@ int main (int argc, const char **argv)
 			}
 
 			CondorClassAdListWriter writer(dash_long_format);
-			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
+			retval = show_schedd_queue(scheddAddr, scheddName.c_str(), scheddMachine.c_str(), useFastScheddQuery, writer);
 			if (dash_long) {
 				writer.writeFooter(stdout, always_write_xml_footer);
 			}
@@ -685,8 +686,10 @@ int main (int argc, const char **argv)
 		   included in the list of attributes given to scheddQuery.setDesiredAttrs()
 		   and to submittorQuery.setDesiredAttrs() !!! This is done early in main().
 		*/
-		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
-				ad->LookupString(ATTR_NAME, &scheddName) &&
+		std::string scheddName;
+		std::string scheddAddr;
+		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
+				ad->LookupString(ATTR_NAME, scheddName) &&
 				ad->LookupString(ATTR_MACHINE, scheddMachine)
 				)
 			)
@@ -707,9 +710,7 @@ int main (int argc, const char **argv)
 			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 		}
 		Q.useDefaultingOperator(v.built_since_version(8,6,0));
-		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
-		free(scheddName);
-		free(scheddAddr);
+		retval = show_schedd_queue(scheddAddr.c_str(), scheddName.c_str(), scheddMachine.c_str(), useFastScheddQuery, writer);
 	}
 
 	// close list
