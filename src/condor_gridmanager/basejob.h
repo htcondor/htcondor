@@ -38,7 +38,7 @@ class BaseJob : public Service
 
 	virtual void Reconfig() {}
 	void SetEvaluateState() const;
-	virtual void doEvaluateState( int timerID = -1 );
+	virtual void doEvaluateState(int timerID);
 	virtual BaseResource *GetResource();
 
 	void JobSubmitted( const char *remote_host);
@@ -59,8 +59,8 @@ class BaseJob : public Service
 	void UpdateJobLeaseReceived( time_t new_expiration_time );
 
 	void SetJobLeaseTimers();
-	virtual void JobLeaseSentExpired( int timerID = -1 );
-	virtual void JobLeaseReceivedExpired( int timerID = -1 );
+	virtual void JobLeaseSentExpired(int timerID);
+	virtual void JobLeaseReceivedExpired(int timerID);
 
 	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad );
 

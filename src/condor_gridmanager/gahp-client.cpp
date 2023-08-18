@@ -1991,7 +1991,7 @@ GenericGahpClient::get_pending_result(const char *,const char *)
 		// Handle blocking mode if enabled
 	if ( (m_mode == blocking) && (!pending_result) ) {
 		for (;;) {
-			server->poll();
+			server->poll(-1);
 			if ( pending_result ) {
 					// We got the result, stop blocking
 				break;

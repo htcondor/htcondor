@@ -48,7 +48,7 @@ class CondorResource : public BaseResource
 	void CondorRegisterJob( CondorJob *job, const char *submitter_id );
 	void UnregisterJob( BaseJob *job );
 
-	void DoScheddPoll( int timerID = -1 );
+	void DoScheddPoll(int timerID);
 
 	static std::string & HashName( const char *resource_name,
 	                             const char *pool_name,

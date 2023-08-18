@@ -2444,7 +2444,7 @@ void EC2Job::NotifyResourceDown() {
 			(TimerHandlercpp) & EC2Job::ResourceLeaseExpired,
 			"ResourceLeaseExpired", (Service *) this );
 	} else {
-		ResourceLeaseExpired();
+		ResourceLeaseExpired(-1);
 	}
 }
 
