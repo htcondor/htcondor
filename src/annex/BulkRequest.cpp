@@ -323,7 +323,7 @@ BulkRequest::operator() () {
 		// means it both safe to repeat the request and that we'll get back
 		// the information we want (the spot fleet request ID).
 
-		ClassAd * commandAd;
+		ClassAd * commandAd = nullptr;
 		commandState->Lookup( commandID, commandAd );
 		commandAd->LookupInteger( "State_TryCount", tryCount );
 		if( incrementTryCount ) {
