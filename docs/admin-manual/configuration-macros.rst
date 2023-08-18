@@ -6473,7 +6473,7 @@ These settings affect the *condor_starter*.
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value or classad expression containing a list of extra arguments to be appended
     to the Singularity command line. This can be an expression evaluted in the context of the
-    job ad and the machine ad.
+    slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
 
 condor_submit Configuration File Entries
 -----------------------------------------

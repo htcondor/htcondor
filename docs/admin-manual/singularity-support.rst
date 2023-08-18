@@ -199,20 +199,21 @@ for example if the image is missing, or malformed, the job is put
 on hold.  This is controlled by the condor knob
 :macro:`SINGULARITY_RUN_TEST_BEFORE_JOB`, which defaults to true.
 
-If an administrator wants to pass additional arguments to the
-singularity exec command instead of the defaults used ht HTCondor, several parameters exist to do this - see
-the *condor_starter* configuration parameters that begin with the prefix
-SINGULARITY in defined in section :ref:`admin-manual/configuration-macros:condor_starter configuration file entries`.
-There you will find parameters to customize things such as the use of PID namespaces,
-cache directory, and several other options.  However, should an administrator
-need to customize Singularity behavior that HTCondor does not currently support, the
-parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows arbitrary additional
-parameters to be passed to the singularity exec command. Note that this
-can be a classad expression, evaluated in the context of the job ad
-and the machine, so the admin could set different options for different
-kinds of jobs.  For example, to
-pass the ``-w`` argument, to make the image writeable, an administrator
-could set
+If an administrator wants to pass additional arguments to the singularity exec
+command instead of the defaults used ht HTCondor, several parameters exist to
+do this - see the *condor_starter* configuration parameters that begin with the
+prefix SINGULARITY in defined in section
+:ref:`admin-manual/configuration-macros:condor_starter configuration file
+entries`.  There you will find parameters to customize things such as the use
+of PID namespaces, cache directory, and several other options.  However, should
+an administrator need to customize Singularity behavior that HTCondor does not
+currently support, the parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows
+arbitrary additional parameters to be passed to the singularity exec command.
+Note that this can be a classad expression, evaluated in the context of the
+slot ad and the job ad, where the slot ad can be referenced via "MY.", and the
+job ad via the "TARGET." reference.  In this way, the admin could set different
+options for different kinds of jobs.  For example, to pass the ``-w`` argument,
+to make the image writeable, an administrator could set
 
 .. code-block:: condor-config
 
