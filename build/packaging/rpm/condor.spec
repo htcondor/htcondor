@@ -196,9 +196,7 @@ Requires: condor-stash-plugin
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
 
-Obsoletes: %{name}-static < 7.2.0
-Provides: %{name}-static = %{version}-%{release}
-
+%if 0%{?rhel} == 7
 # Standard Universe discontinued as of 8.9.0
 Obsoletes: %{name}-std-universe < 8.9.0
 Provides: %{name}-std-universe = %{version}-%{release}
@@ -210,7 +208,9 @@ Provides: %{name}-cream-gahp = %{version}-%{release}
 # 32-bit shadow discontinued as of 8.9.9
 Obsoletes: %{name}-small-shadow < 8.9.9
 Provides: %{name}-small-shadow = %{version}-%{release}
+%endif
 
+%if 0%{?rhel} <= 8
 # external-libs package discontinued as of 8.9.9
 Obsoletes: %{name}-external-libs < 8.9.9
 Provides: %{name}-external-libs = %{version}-%{release}
@@ -218,6 +218,7 @@ Provides: %{name}-external-libs = %{version}-%{release}
 # Bosco package discontinued as of 9.5.0
 Obsoletes: %{name}-bosco < 9.5.0
 Provides: %{name}-bosco = %{version}-%{release}
+%endif
 
 # externals package discontinued as of 10.8.0
 Obsoletes: %{name}-externals < 10.8.0
