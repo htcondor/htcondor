@@ -100,7 +100,10 @@ int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 //ad2 treated as candidate to match against ad1, so we want to find a match for ad1
 bool IsAMatch( ClassAd *ad1, ClassAd *ad2 );
 
+// evaluate My.Requirements in the context of a target ad
 bool IsAHalfMatch( ClassAd *my, ClassAd *target );
+// also check that the MyType of the target ad matches the given targetType.  The collector uses this
+bool IsATargetMatch( ClassAd *my, ClassAd *target, const char * targetType );
 
 bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch = false);
 
