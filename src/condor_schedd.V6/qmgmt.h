@@ -857,7 +857,7 @@ extern int JobsSeenOnQueueWalk;
 void InitQmgmt();
 void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void PostInitJobQueue();
-void CleanJobQueue();
+void CleanJobQueue(int tid = -1);
 bool setQSock( ReliSock* rsock );
 void unsetQSock();
 void MarkJobClean(PROC_ID job_id);

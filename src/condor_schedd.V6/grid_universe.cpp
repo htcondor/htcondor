@@ -171,7 +171,7 @@ GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
 }
 
 void
-GridUniverseLogic::SendAddSignal()
+GridUniverseLogic::SendAddSignal(int /* tid */)
 {
 	// This method is called via a DC Timer set in JobAdded method
 
@@ -189,7 +189,7 @@ GridUniverseLogic::SendAddSignal()
 }
 
 void
-GridUniverseLogic::SendRemoveSignal()
+GridUniverseLogic::SendRemoveSignal(int /* tid */)
 {
 	// This method is called via a DC Timer set in JobRemoved method
 

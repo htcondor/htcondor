@@ -85,14 +85,14 @@ int scheddFailureCount = 0;
 int maxScheddFailures = 10;	// Years of careful research...
 
 void RequestContactSchedd();
-void doContactSchedd();
+void doContactSchedd(int);
 
 std::map<std::string, BaseJob*> FetchProxyList;
 
 // handlers
 int ADD_JOBS_signalHandler(int );
 int REMOVE_JOBS_signalHandler(int );
-void CHECK_LEASES_signalHandler();
+void CHECK_LEASES_signalHandler(int);
 int UPDATE_JOBAD_signalHandler(int );
 int FetchProxyDelegationHandler(int, Stream * );
 
@@ -411,7 +411,7 @@ initJobExprs()
 }
 
 void
-CHECK_LEASES_signalHandler()
+CHECK_LEASES_signalHandler(int /* tid */)
 {
 	dprintf(D_FULLDEBUG,"Received CHECK_LEASES signal\n");
 
@@ -422,7 +422,7 @@ CHECK_LEASES_signalHandler()
 }
 
 void
-doContactSchedd()
+doContactSchedd(int /* tid */)
 {
 	int rc;
 	Qmgr_connection *schedd;

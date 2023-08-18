@@ -76,7 +76,7 @@ void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
-void	run_preen();	 // timer handler
+void	run_preen(int tid);	 // timer handler
 int		run_preen_now(); // actually start preen if it is not already running.
 void	usage(const char* );
 void	main_shutdown_graceful();
@@ -2095,7 +2095,7 @@ create_dirs_at_master_startup()
 }
 
 // this is the preen timer callback
-void run_preen() { run_preen_now(); }
+void run_preen(int /* tid */) { run_preen_now(); }
 
 void
 RestartMaster()

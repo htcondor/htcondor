@@ -231,7 +231,7 @@ GahpServer::GahpStatistics::GahpStatistics()
 	Pool.SetRecentMax( RecentWindowMax, RecentWindowQuantum );
 }
 
-void GahpServer::GahpStatistics::Tick()
+void GahpServer::GahpStatistics::Tick(int /* tid */)
 {
 	for (auto& [key, next_server] : GahpServer::GahpServersById) {
 		next_server->m_stats.Pool.Advance( 1 );

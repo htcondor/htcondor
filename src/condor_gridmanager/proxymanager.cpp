@@ -53,7 +53,7 @@ int minProxy_time = 3 * 60;				// default value
 
 static int next_proxy_id = 1;
 
-void CheckProxies();
+void CheckProxies(int tid);
 
 static bool
 SetMasterProxy( Proxy *master, const Proxy *copy_src )
@@ -400,7 +400,7 @@ void doCheckProxies()
 // This function is called
 // periodically to check for updated proxies. It can be called earlier
 // if a proxy is about to expire.
-void CheckProxies()
+void CheckProxies(int /* tid */)
 {
 	time_t now = time(NULL);
 	time_t next_check = CheckProxies_interval + now;

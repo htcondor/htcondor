@@ -2035,7 +2035,7 @@ void CollectorDaemon::Shutdown()
 	return;
 }
 
-void CollectorDaemon::sendCollectorAd()
+void CollectorDaemon::sendCollectorAd(int /* tid */)
 {
     // compute submitted jobs information
     submittorRunningJobs = 0;

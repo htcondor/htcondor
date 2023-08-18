@@ -36,7 +36,7 @@ int configured_statistics_window_quantum() {
     return quantum;
 }
 
-static void self_monitor()
+static void self_monitor(int /* tid */)
 {
     daemonCore->monitor_data.CollectData();
     daemonCore->dc_stats.Tick(daemonCore->monitor_data.last_sample_time);

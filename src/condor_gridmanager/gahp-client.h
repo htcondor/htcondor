@@ -99,7 +99,7 @@ class GahpServer : public Service {
 		void Publish( ClassAd & ad ) const;
 		void Unpublish( ClassAd & ad ) const;
 
-		static void Tick();
+		static void Tick(int tid);
 
 		static int RecentWindowMax;
 		static int RecentWindowQuantum;

@@ -47,7 +47,7 @@ const   int     STAR = -1;
 //@{
 /** Function
 */
-typedef void     (*TimerHandler)();
+typedef void     (*TimerHandler)(int timerID);
 
 /// Service Method
 typedef void     (Service::*TimerHandlercpp)(int timerID);
