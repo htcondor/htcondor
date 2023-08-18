@@ -96,8 +96,8 @@ class VMProc : public OsProc
 		*/
 		int PIDofVM();
 		void setVMPID(int vm_pid);
-		void setVMMAC(const char *mac);
-		void setVMIP(const char *ip);
+		void setVMMAC(const std::string &mac);
+		void setVMIP(const std::string  &ip);
 
 		void updateUsageOfVM();
 		void getUsageOfVM(long &sys_time, long& user_time, unsigned long &max_image, unsigned long& rss, unsigned long &pss, bool& pss_available);
