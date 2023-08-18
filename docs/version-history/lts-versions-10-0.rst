@@ -61,6 +61,9 @@ Bugs Fixed:
   the Elasticsearch Python library.
   :jira:`1930`
 
+- Fixed a bug that prevented deletion of stored user passwords with
+  *condor_store_cred* on Windows.
+  :jira:`1998`
 
 .. _lts-version-history-1007:
 
