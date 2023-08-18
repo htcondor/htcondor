@@ -20,8 +20,18 @@ USER = getuser()
 # This test scripts prints out the cat'd contents
 # of $_CONDOR_CREDS/{$1,$2,...,$n}
 TEST_SCRIPT = """#!/bin/bash
-args=($@)
-cat ${args[@]/#/$_CONDOR_CREDS/}
+tokenfiles=($@)
+cat ${tokenfiles[@]/#/$_CONDOR_CREDS/}
+ls $_CONDOR_CREDS >/dev/null 2>&1 || \
+    >&2 echo 'Could not list $_CONDOR_CREDS:' "$(stat -L -c "%A %u %g" $_CONDOR_CREDS) (I am $(id -u) with group $(id -g))"
+for tokenfile in $tokenfiles; do
+    tokenpath="$_CONDOR_CREDS/$tokenfile"
+    [ "$(id -u)" -eq "$(stat -L -c "%u" "$tokenpath")" ] || \
+        >&2 echo "Bad ownership of $tokenfile: $(stat -L -c "%A %u %g" $tokenpath) (I am $(id -u) with group $(id -g))"
+    tokenperms=$(stat -L -c "%a" "$tokenpath")
+    [ "${tokenperms:0-2}" -eq "00" ] || \
+        >&2 echo "Bad permissions on $tokenfile: $(stat -L -c "%A %u %g" $tokenpath) (I am $(id -u) with group $(id -g))"
+done
 """
 
 
@@ -82,6 +92,7 @@ def vanilla_one_service_no_handles(condor, test_dir):
     logger.info("Running vanilla_one_service_no_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "vanilla_one_service_no_handles.out"
+    errfile = outfile.with_suffix(".err")
     job = condor.submit(
         {
             "universe": "vanilla",
@@ -89,12 +100,12 @@ def vanilla_one_service_no_handles(condor, test_dir):
             "arguments": "dummy.use",
             "use_oauth_services": "dummy",
             "output": str(outfile),
-            "error": str(outfile.with_suffix(".err")),
+            "error": str(errfile),
             "log": str(outfile.with_suffix(".log")),
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
-    return outfile.open("r").read().strip()
+    return (outfile.open("r").read().strip(), errfile.open("r").read().strip())
 
 
 @action
@@ -102,6 +113,7 @@ def vanilla_one_service_two_handles(condor, test_dir):
     logger.info("Running vanilla_one_service_two_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "vanilla_one_service_two_handles.out"
+    errfile = outfile.with_suffix(".err")
     job = condor.submit(
         {
             "universe": "vanilla",
@@ -111,12 +123,12 @@ def vanilla_one_service_two_handles(condor, test_dir):
             "dummy_oauth_permissions_A": "",
             "dummy_oauth_permissions_B": "",
             "output": str(outfile),
-            "error": str(outfile.with_suffix(".err")),
+            "error": str(errfile),
             "log": str(outfile.with_suffix(".log")),
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
-    return outfile.open("r").read().strip()
+    return (outfile.open("r").read().strip(), errfile.open("r").read().strip())
 
 
 @action
@@ -124,6 +136,7 @@ def local_one_service_no_handles(condor, test_dir):
     logger.info("Running local_one_service_no_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "local_one_service_no_handles.out"
+    errfile = outfile.with_suffix(".err")
     job = condor.submit(
         {
             "universe": "local",
@@ -131,12 +144,12 @@ def local_one_service_no_handles(condor, test_dir):
             "arguments": "dummy.use",
             "use_oauth_services": "dummy",
             "output": str(outfile),
-            "error": str(outfile.with_suffix(".err")),
+            "error": str(errfile),
             "log": str(outfile.with_suffix(".log")),
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
-    return outfile.open("r").read().strip()
+    return (outfile.open("r").read().strip(), errfile.open("r").read().strip())
 
 
 @action
@@ -144,6 +157,7 @@ def local_one_service_two_handles(condor, test_dir):
     logger.info("Running local_one_service_two_handles")
     test_executable = test_dir / "test_wrapper.sh"
     outfile = test_dir / "local_one_service_two_handles.out"
+    errfile = outfile.with_suffix(".err")
     job = condor.submit(
         {
             "universe": "local",
@@ -153,24 +167,28 @@ def local_one_service_two_handles(condor, test_dir):
             "dummy_oauth_permissions_A": "",
             "dummy_oauth_permissions_B": "",
             "output": str(outfile),
-            "error": str(outfile.with_suffix(".err")),
+            "error": str(errfile),
             "log": str(outfile.with_suffix(".log")),
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
-    return outfile.open("r").read().strip()
+    return (outfile.open("r").read().strip(), errfile.open("r").read().strip())
 
 
 class TestJobTokenTransfer:
 
     def test_vanilla_one_service_no_handles(self, vanilla_one_service_no_handles):
-        assert vanilla_one_service_no_handles == "access_dummy"
+        assert vanilla_one_service_no_handles[0] == "access_dummy"
+        assert vanilla_one_service_no_handles[1] == ""
 
     def test_vanilla_one_service_two_handles(self, vanilla_one_service_two_handles):
-        assert vanilla_one_service_two_handles == "access_dummy_Aaccess_dummy_B"
+        assert vanilla_one_service_two_handles[0] == "access_dummy_Aaccess_dummy_B"
+        assert vanilla_one_service_two_handles[1] == ""
 
     def test_local_one_service_no_handles(self, local_one_service_no_handles):
-        assert local_one_service_no_handles == "access_dummy"
+        assert local_one_service_no_handles[0] == "access_dummy"
+        assert local_one_service_no_handles[1] == ""
 
     def test_local_one_service_two_handles(self, local_one_service_two_handles):
-        assert local_one_service_two_handles == "access_dummy_Aaccess_dummy_B"
+        assert local_one_service_two_handles[0] == "access_dummy_Aaccess_dummy_B"
+        assert local_one_service_two_handles[1] == ""
