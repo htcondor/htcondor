@@ -62,7 +62,7 @@ void vmprintf( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 #endif
 void write_to_daemoncore_pipe(int pipefd, const char* str, int len);
 void write_to_daemoncore_pipe(const char* fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
-void write_stderr_to_pipe();
+void write_stderr_to_pipe(int tid);
 int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out = NULL, StringList * cmd_in = NULL,
 		   StringList * cmd_err = NULL, bool merge_stderr_with_stdout = true);
 std::string makeErrorMessage(const char* err_string);
