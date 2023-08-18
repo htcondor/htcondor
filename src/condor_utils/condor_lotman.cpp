@@ -8,12 +8,15 @@
 #endif
 
 #include "condor_lotman.h"
-// Note that defining PICOJSON_USE_INT64 is IMPORTANT
-// because not doing so will override picojson for other
-// files that use it, causing things to break... like 
-// auth-related jwt files.
-#define PICOJSON_USE_INT64
-#include "picojson/picojson.h"
+// Getting the picojson headers from jwt-cpp
+// versus importing directly, because doing so
+// can cause errors by overriding how other files
+// happen to use picojson
+GCC_DIAG_OFF(float-equal)
+GCC_DIAG_OFF(cast-qual)
+#include "jwt-cpp/jwt.h"
+GCC_DIAG_ON(float-equal)
+GCC_DIAG_ON(cast-qual)
 
 #include <filesystem>
 

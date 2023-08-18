@@ -39,6 +39,7 @@
 #include "globus_utils.h"
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
+#include "condor_lotman.h"
 #include "mk_cache_links.h"
 #include "subsystem_info.h"
 #include "condor_url.h"
@@ -64,8 +65,6 @@
 #include <unordered_map>
 #include <string>
 #include <filesystem>
-
-#include "condor_lotman.h"
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -3406,6 +3405,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// End of the main download loop
 
 	// Report statistics of file transfer to LotMan
+#ifndef WIN32
 	bool use_lotman = param_true("LOTMAN_TRACK_SPOOL");
 	if (use_lotman) {
 		std::string spool_path;
@@ -3414,10 +3414,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			dprintf( D_ALWAYS, "Updating usage for lot with path %s\n", spool_path.c_str() );
 			bool lot_updated = condor_lotman::update_usage(spool_path.c_str(), numFiles, *total_bytes_ptr, true, true, errstack);
 			if (!lot_updated) {
-				dprintf( D_ALWAYS, "Failed to update lot usage for path %s...\n\n\n", spool_path.c_str() );
+				dprintf( D_ALWAYS, "Failed to update lot usage for path %s...\n", spool_path.c_str() );
 			}
 		}
 	}
+#endif
 
 	// Release transfer queue slot after file has been put but before the
 	// final transfer ACKs are done.  In the future where multifile transfers

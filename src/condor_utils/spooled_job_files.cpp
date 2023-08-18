@@ -439,6 +439,7 @@ SpooledJobFiles::removeJobSpoolDirectory(classad::ClassAd * ad)
 
 	chownSpoolDirectoryToCondor(ad);
 
+#ifndef WIN32
 	bool use_lotman = param_true("LOTMAN_TRACK_SPOOL");
 	if (use_lotman) {
 		// Before deleting the dir, get some stats for LotMan to update the new lot usage
@@ -455,6 +456,7 @@ SpooledJobFiles::removeJobSpoolDirectory(classad::ClassAd * ad)
 			dprintf( D_ALWAYS, lot_removed ? "Successfully removed path %s from lot db":"Failed to remove path %s from lot db\n",
 					spool_path.c_str() );
 	}
+#endif
 
 	remove_spool_directory(spool_path.c_str());
 
