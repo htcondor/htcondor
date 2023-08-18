@@ -109,6 +109,7 @@ ShadowHookMgr::tryHookPrepareJob()
 		dprintf(D_ALWAYS|D_FAILURE, "Shadow does not have a copy of the job ad.\n");
 		return -1;
 	}
+	sPrintAd(hook_stdin, *job_ad);
 
 	auto hook_client = new HookShadowPrepareJobClient(m_hook_prepare_job);
 	auto hook_name = getHookTypeString(hook_client->type());
