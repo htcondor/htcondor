@@ -149,7 +149,7 @@ bool IsATargetMatch( ClassAd *my, ClassAd *target, const char * targetType );
 // evaluates the query REQUIREMENTS against the target ad
 // but does *NOT* care about TargetType
 bool IsAConstraintMatch( ClassAd *query, ClassAd *target );
-bool IsAHalfMatch( ClassAd *my, ClassAd *target ) { return IsAConstraintMatch(my, target); }
+#define IsAHalfMatch IsAConstraintMatch
 
 bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch = false);
 
