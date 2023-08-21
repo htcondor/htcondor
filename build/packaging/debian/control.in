@@ -84,9 +84,12 @@ Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
           slurm-client
-Conflicts: condor (<< ${binary:Version})
-Breaks: condor (<< ${binary:Version})
-Replaces: condor (<< ${binary:Version})
+Conflicts: htcondor (<< ${binary:Version}),
+           libclassad16 (<< ${binary:Version})
+Breaks: htcondor (<< ${binary:Version}),
+        libclassad16 (<< ${binary:Version})
+Replaces: htcondor (<< ${binary:Version}),
+          libclassad16 (<< ${binary:Version})
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -110,9 +113,12 @@ Architecture: any
 Section: libdevel
 Depends: ${misc:Depends},
          ${shlibs:Depends}
-Conflicts: condor-dev (<< ${binary:Version})
-Breaks: condor-dev (<< ${binary:Version})
-Replaces: condor-dev (<< ${binary:Version})
+Conflicts: htcondor-dev (<< ${binary:Version}),
+           libclassad-dev (<< ${binary:Version})
+Breaks: htcondor-dev (<< ${binary:Version}),
+        libclassad-dev (<< ${binary:Version})
+Replaces: htcondor-dev (<< ${binary:Version}),
+          libclassad-dev (<< ${binary:Version})
 Description: distributed workload management system - development files
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -134,9 +140,9 @@ Package: condor-doc
 Architecture: all
 Section: doc
 Depends: ${misc:Depends}
-Conflicts: condor-doc (<< ${binary:Version})
-Breaks: condor-doc (<< ${binary:Version})
-Replaces: condor-doc (<< ${binary:Version})
+Conflicts: htcondor-doc (<< ${binary:Version})
+Breaks: htcondor-doc (<< ${binary:Version})
+Replaces: htcondor-doc (<< ${binary:Version})
 Description: distributed workload management system - documentation
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -159,6 +165,9 @@ Architecture: all
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
+Conflicts: minihtcondor (<< ${binary:Version})
+Breaks: minihtcondor (<< ${binary:Version})
+Replaces: minihtcondor (<< ${binary:Version})
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -182,6 +191,9 @@ Architecture: all
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
+Conflicts: htcondor-annex-ce2 (<< ${binary:Version})
+Breaks: htcondor-annex-ce2 (<< ${binary:Version})
+Replaces: htcondor-annex-ce2 (<< ${binary:Version})
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -205,6 +217,9 @@ Section: science
 Depends: condor,
          pcre2-utils,
          ${misc:Depends}
+Conflicts: htcondor-upgrade-checks (<< ${binary:Version})
+Breaks: htcondor-upgrade-checks (<< ${binary:Version})
+Replaces: htcondor-upgrade-checks (<< ${binary:Version})
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -229,6 +244,9 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
+Conflicts: htcondor-tarball (<< ${binary:Version})
+Breaks: htcondor-tarball (<< ${binary:Version})
+Replaces: htcondor-tarball (<< ${binary:Version})
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -298,6 +316,9 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
+Conflicts: htcondor-test (<< ${binary:Version})
+Breaks: htcondor-test (<< ${binary:Version})
+Replaces: htcondor-test (<< ${binary:Version})
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -320,9 +341,9 @@ Architecture: any
 Section: debug
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
-Conflicts: condor-dbg (<< ${binary:Version})
-Breaks: condor-dbg (<< ${binary:Version})
-Replaces: condor-dbg (<< ${binary:Version})
+Conflicts: htcondor-dbg (<< ${binary:Version})
+Breaks: htcondor-dbg (<< ${binary:Version})
+Replaces: htcondor-dbg (<< ${binary:Version})
 Description: distributed workload management system - debugging symbols
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
