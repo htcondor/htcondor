@@ -50,7 +50,7 @@ ReadMultipleUserLogs::~ReadMultipleUserLogs()
 {
 	if (activeLogFileCount() != 0) {
     	dprintf(D_ALWAYS, "Warning: ReadMultipleUserLogs destructor "
-					"called, but still monitoring %d log(s)!\n",
+					"called, but still monitoring %zu log(s)!\n",
 					activeLogFileCount());
 	}
 	cleanup();
@@ -173,10 +173,10 @@ ReadMultipleUserLogs::GetLogStatus()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int
+size_t
 ReadMultipleUserLogs::totalLogFileCount() const
 {
-	return (int)allLogFiles.size();
+	return allLogFiles.size();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

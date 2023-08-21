@@ -175,7 +175,7 @@ public:
 		/** Returns the total number of user logs this object "knows
 			about".
 		 */
-	int totalLogFileCount() const;
+	size_t totalLogFileCount() const;
 
 		/** Monitor the given log file
 			@param the log file to monitor
@@ -197,7 +197,7 @@ public:
 		/** Returns the number of log files we're actively monitoring
 			at the present time.
 		 */
-	int activeLogFileCount() const { return (int)activeLogFiles.size(); }
+	size_t activeLogFileCount() const { return activeLogFiles.size(); }
 
 		/** Print information about all LogMonitor objects.
 			@param the stream to print to.  If NULL, do dprintf().
