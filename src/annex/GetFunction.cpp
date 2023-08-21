@@ -12,7 +12,7 @@ GetFunction::operator() () {
 	dprintf( D_FULLDEBUG, "GetFunction::operator()\n" );
 
 	int tryCount = 0;
-	ClassAd * commandAd;
+	ClassAd * commandAd = nullptr;
 	commandState->Lookup( commandID, commandAd );
 	commandAd->LookupInteger( "State_TryCount", tryCount );
 	if( incrementTryCount ) {
