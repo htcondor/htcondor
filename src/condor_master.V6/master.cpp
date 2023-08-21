@@ -1661,7 +1661,6 @@ init_classad()
 	ad = new ClassAd();
 
 	SetMyTypeName(*ad, MASTER_ADTYPE);
-	SetTargetTypeName(*ad, "");
 
 	if (MasterName) {
 		ad->Assign(ATTR_NAME, MasterName);
@@ -1881,7 +1880,7 @@ void
 invalidate_ads() {
 	ClassAd cmd_ad;
 	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
-	SetTargetTypeName( cmd_ad, MASTER_ADTYPE );
+	cmd_ad.Assign(ATTR_TARGET_TYPE, MASTER_ADTYPE);
 	
 	std::string line;
 	std::string escaped_name;

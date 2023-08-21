@@ -518,8 +518,8 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	} else {
 		// Dummy up an ad, assume a boinc type job.
 		int now = (int) time(0);
-		SetMyTypeName(dummyAd, "Job");
-		SetTargetTypeName(dummyAd, "Machine");
+		SetMyTypeName(dummyAd, JOB_ADTYPE);
+		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");

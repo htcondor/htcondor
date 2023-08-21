@@ -552,7 +552,7 @@ bool WriteClassAdLogState(
 
 	la.startIterations();
 	while(la.nextIteration(key, ad)) {
-		log = new LogNewClassAd(key, GetMyTypeName(*ad), GetTargetTypeName(*ad), maker);
+		log = new LogNewClassAd(key, GetMyTypeName(*ad), maker);
 		if (log->Write(fp) < 0) {
 			formatstr(errmsg, "write to %s failed, errno = %d", filename, errno);
 			delete log;
@@ -643,19 +643,17 @@ LogHistoricalSequenceNumber::WriteBody(FILE *fp)
 	return (fwrite(buf, 1, len, fp) < (unsigned)len) ? -1: len;
 }
 
-LogNewClassAd::LogNewClassAd(const char *k, const char *m, const char *t, const ConstructLogEntry & c) : ctor(c)
+LogNewClassAd::LogNewClassAd(const char *k, const char *m, const ConstructLogEntry & c) : ctor(c)
 {
 	op_type = CondorLogOp_NewClassAd;
 	key = strdup(k);
 	mytype = strdup(m);
-	targettype = strdup(t);
 }
 
 LogNewClassAd::~LogNewClassAd()
 {
 	free(key);
 	free(mytype);
-	free(targettype);
 }
 
 int
@@ -665,7 +663,10 @@ LogNewClassAd::Play(void *data_structure)
 	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
 	ClassAd *ad = ctor.New(key, mytype);
 	SetMyTypeName(*ad, mytype);
-	SetTargetTypeName(*ad, targettype);
+	// backward compat hack for working with versions of HTCondor before 23.0
+	if (mytype && MATCH == strcasecmp(mytype, "Job") && ! ad->Lookup(ATTR_TARGET_TYPE)) {
+		ad->Assign(ATTR_TARGET_TYPE, "Machine");
+	}
 	ad->EnableDirtyTracking();
 	result = table->insert(key, ad) ? 0 : -1;
 	if ( result == -1 ) {
@@ -695,12 +696,14 @@ LogNewClassAd::ReadBody(FILE* fp)
 	}
 	if (rval1 < 0) return rval1;
 	rval += rval1;
-	free(targettype);
-	rval1 = readword(fp, targettype);
-	if( targettype && strcmp(targettype,EMPTY_CLASSAD_TYPE_NAME)==0 ) {
-		free(targettype);
-		targettype = strdup("");
-		ASSERT( targettype );
+
+	// Obsolete targettype, read and forget
+	char * dummy = nullptr;
+	rval1 = readword(fp, dummy);
+	if (dummy) {
+		free(dummy);
+	} else {
+		rval1 = 0; // not an error if targettype is missing.
 	}
 	if (rval1 < 0) return rval1;
 	return rval + rval1;
@@ -728,7 +731,16 @@ LogNewClassAd::WriteBody(FILE* fp)
 	rval1 = fwrite(" ", sizeof(char), 1, fp);
 	if (rval1 < 1) return -1;
 	rval += rval1;
-	s = targettype;
+	s = nullptr;
+	// backward compatible creation of TargetType,
+	// todo: remove this code once we no longer care about rolling back to HTCondor versions before 23.0
+	if (mytype) {
+		if (MATCH == strcasecmp(mytype,"Job")) {
+			s = "Machine"; // old Schedd expects : Job Machine
+		} else if (*mytype == '*') {
+			s = mytype;    // old negotiator expects : * *
+		}
+	}
 	if( !s || !s[0] ) {
 			// Because writing an empty string would result
 			// in a log entry with the wrong number of fields,
@@ -1059,7 +1071,7 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLog
             log_rec = new LogRecordError();
             break;
 	    case CondorLogOp_NewClassAd:
-		    log_rec = new LogNewClassAd("", "", "", ctor);
+		    log_rec = new LogNewClassAd("", "", ctor);
 			break;
 	    case CondorLogOp_DestroyClassAd:
 		    log_rec = new LogDestroyClassAd("", ctor);
