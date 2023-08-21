@@ -141,7 +141,8 @@ spawnCheckpointCleanupProcess(
 	cleanup_process_args.push_back( buffer );
 
 
-	int uid, gid;
+	uid_t uid = (uid_t) -1; 
+	gid_t gid = (gid_t) -1;
 	bool use_old_user_ids = user_ids_are_inited();
 	bool switch_users = param_boolean("RUN_CLEANUP_PLUGINS_AS_OWNER", true);
 
@@ -151,6 +152,7 @@ spawnCheckpointCleanupProcess(
 			uid = get_user_uid();
 			gid = get_user_gid();
 		}
+
 		if(! init_user_ids( owner.c_str(), NULL )) {
 			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: unable to switch to user '%s'.!\n", cluster, proc, owner.c_str() );
 			return false;
