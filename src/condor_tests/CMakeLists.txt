@@ -335,7 +335,7 @@ endif ()
 =======
 			endif()
 			if(WITH_LOTMAN)
-				condor_pl_test(test_condor_lotman "Tests some stuff related to LotMan and spool dir tracking" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_condor_lotman "Tests LotMan tracking for spool directory" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 >>>>>>> 886183b11c (Update CMake instructions for RHEL 8/9)
 		endif()

@@ -680,15 +680,13 @@ if (LINUX OR APPLE)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
 endif(LINUX OR APPLE)
 
-# Justin's lotman linking
-# not sure if I need all three of these...
 if(WITH_LOTMAN)
-	message("COMPILING WITH LOTMAN")
+	message("Compiling with LotMan support")
 	target_link_libraries(condor_utils_s PRIVATE LotMan)
 	target_link_libraries(condor_utils PRIVATE LotMan)
 	target_link_libraries(condor_utils_objects PRIVATE LotMan)
 else()
-	message("NOT COMPILING WITH LOTMAN")
+	message("Not compiling with LotMan support")
 endif()
 
 # Brain twister:

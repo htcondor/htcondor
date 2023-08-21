@@ -22,9 +22,7 @@ option(WITH_LOTMAN "Compiling with support for LotMan" OFF)
 
 if ((LINUX_NAME MATCHES "AlmaLinux" OR LINUX_NAME MATCHES "RedHat") AND (LINUX_VER MATCHES "^[89][.]") AND (SYS_ARCH MATCHES "X86_64"))
 	set(WITH_LOTMAN ON CACHE BOOL "Lotman support turned on based on OS/ARCH" FORCE)
-	message("LOTMAN SUPPORT TURNED ON BASED ON DETECTED OS AND ARCH")
-else()
-	message("NO LOTMAN SUPPORT TURNED ON")
+	message("LotMan support turned on based on detected OS/ARCH")
 endif()
 
 # If we build condor to dlopen the lotman library, we'll need a target that holds
