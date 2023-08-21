@@ -98,7 +98,7 @@ protected:
 	friend class MapFile;
 	void dump(FILE* fp);
 	Type entry_type;
-	char spare[sizeof(void*)-1];
+	char spare[sizeof(void*)-sizeof(Type)];
 };
 
 class CanonicalMapRegexEntry : public CanonicalMapEntry {
