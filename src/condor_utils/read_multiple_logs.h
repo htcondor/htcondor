@@ -260,13 +260,15 @@ private:
 		ULogEvent	*lastLogEvent;
 	};
 
-		// allLogFiles contains pointers to all of the LogFileMonitors
-		// we know about; activeLogFiles contains just the active ones
-		// (to make it easier to read events).  Note that active log files
-		// are in *both* hash tables.
-		// Note: these should be changed to STL maps, and should
-		// also index on a combination of st_ino and st_dev (see gittrac
-		// #328). wenger 2009-07-16.
+		// allLogFiles contains pointers to all of the LogFileMonitors we know
+		// about; 
+		// activeLogFiles contains just the active ones (to make it
+		// easier to read events).  Note that active log files are in *both*
+		// hash tables.  
+		//
+		// Note: these should also index on a combination of
+		// st_ino and st_dev (see gittrac #328). wenger 2009-07-16.
+
 	std::map<std::string, LogFileMonitor *> allLogFiles;
 
 	std::map<std::string, LogFileMonitor *> activeLogFiles;
