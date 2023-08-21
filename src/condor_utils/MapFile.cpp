@@ -151,7 +151,7 @@ private:
 
 class CanonicalMapPrefixEntry : public CanonicalMapEntry {
 public:
-	CanonicalMapPrefixEntry() : CanonicalMapEntry(Type::PREFIX) { }
+	CanonicalMapPrefixEntry() : CanonicalMapEntry(Type::PREFIX), prefix_map(NULL) { }
 	~CanonicalMapPrefixEntry() { clear(); }
 
 	void clear() {
