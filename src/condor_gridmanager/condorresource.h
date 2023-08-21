@@ -48,7 +48,7 @@ class CondorResource : public BaseResource
 	void CondorRegisterJob( CondorJob *job, const char *submitter_id );
 	void UnregisterJob( BaseJob *job );
 
-	void DoScheddPoll( int timerID = -1 );
+	void DoScheddPoll(int timerID);
 
 	static std::string & HashName( const char *resource_name,
 	                             const char *pool_name,
@@ -78,9 +78,9 @@ class CondorResource : public BaseResource
 	struct ScheddPollInfo {
 		time_t m_lastPoll;
 		bool m_pollActive;
-		List<CondorJob> m_submittedJobs;
+		std::vector<CondorJob*> m_submittedJobs;
 	};
-	static HashTable <std::string, ScheddPollInfo *> PollInfoByName;
+	static std::map<std::string, ScheddPollInfo *> PollInfoByName;
 
 	const char *GetHashName();
 

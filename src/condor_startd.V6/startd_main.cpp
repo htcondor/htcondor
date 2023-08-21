@@ -901,7 +901,7 @@ do_cleanup(int,int,const char*)
 
 
 void
-startd_check_free()
+startd_check_free(int /* tid */)
 {	
 	if ( cron_job_mgr && ( ! cron_job_mgr->ShutdownOk() ) ) {
 		return;

@@ -69,7 +69,7 @@ extern char		default_dc_daemon_list[];
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
-extern void		run_preen();
+extern void		run_preen(int tid);
 
 extern int condor_main_argc;
 extern char **condor_main_argv;

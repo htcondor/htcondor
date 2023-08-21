@@ -24,9 +24,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "user_job_policy.h"
-#include "HashTable.h"
 #include "baseresource.h"
-#include "proxymanager.h"
 
 class BaseResource;
 
@@ -40,7 +38,7 @@ class BaseJob : public Service
 
 	virtual void Reconfig() {}
 	void SetEvaluateState() const;
-	virtual void doEvaluateState( int timerID = -1 );
+	virtual void doEvaluateState(int timerID);
 	virtual BaseResource *GetResource();
 
 	void JobSubmitted( const char *remote_host);
@@ -61,16 +59,16 @@ class BaseJob : public Service
 	void UpdateJobLeaseReceived( time_t new_expiration_time );
 
 	void SetJobLeaseTimers();
-	virtual void JobLeaseSentExpired( int timerID = -1 );
-	virtual void JobLeaseReceivedExpired( int timerID = -1 );
+	virtual void JobLeaseSentExpired(int timerID);
+	virtual void JobLeaseReceivedExpired(int timerID);
 
 	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad );
 
-	static void EvalAllPeriodicJobExprs();
+	static void EvalAllPeriodicJobExprs(int tid);
 	int EvalPeriodicJobExpr();
 	int EvalOnExitJobExpr();
 
-	static void CheckAllRemoteStatus();
+	static void CheckAllRemoteStatus(int tid);
 	static int m_checkRemoteStatusTid;
 	void CheckRemoteStatus();
 

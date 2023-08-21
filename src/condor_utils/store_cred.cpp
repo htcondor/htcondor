@@ -1419,7 +1419,7 @@ bail_out:
 
 
 // forward declare the non-blocking continuation function.
-void store_cred_handler_continue();
+void store_cred_handler_continue(int tid);
 
 // declare a simple data structure for holding the info needed
 // across non-blocking retries
@@ -1688,7 +1688,7 @@ cleanup_and_exit:
 }
 
 
-void store_cred_handler_continue()
+void store_cred_handler_continue(int /* tid */)
 {
 	// can only be called when daemonCore is non-null since otherwise
 	// there's no data

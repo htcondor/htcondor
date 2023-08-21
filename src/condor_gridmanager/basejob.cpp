@@ -728,7 +728,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 }
 
-void BaseJob::EvalAllPeriodicJobExprs()
+void BaseJob::EvalAllPeriodicJobExprs(int /* tid */)
 {
 	dprintf( D_FULLDEBUG, "Evaluating periodic job policy expressions.\n" );
 
@@ -851,7 +851,7 @@ int BaseJob::EvalOnExitJobExpr()
 	return 0;
 }
 
-void BaseJob::CheckAllRemoteStatus()
+void BaseJob::CheckAllRemoteStatus(int /* tid */)
 {
 	dprintf( D_FULLDEBUG, "Evaluating staleness of remote job statuses.\n" );
 

@@ -638,7 +638,7 @@ void ExitSuccess() {
 	DC_Exit( EXIT_OKAY );
 }
 
-void condor_event_timer();
+void condor_event_timer(int tid);
 
 /****** FOR TESTING *******
 int main_testing_stub( Service *, int ) {
@@ -1706,7 +1706,7 @@ jobad_update() {
 
 }
 
-void condor_event_timer () {
+void condor_event_timer (int /* tid */) {
 
 	ASSERT( dagman.dag != NULL );
 

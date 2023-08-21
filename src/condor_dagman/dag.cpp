@@ -479,7 +479,7 @@ Dag::GetCondorLogStatus () {
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessLogEvents (bool recovery) {
 
-	debug_printf( DEBUG_VERBOSE, "Currently monitoring %d HTCondor "
+	debug_printf( DEBUG_VERBOSE, "Currently monitoring %zu HTCondor "
 				"log file(s)\n", _condorLogRdr.activeLogFileCount() );
 
 	bool done = false;  // Keep scanning until ULOG_NO_EVENT

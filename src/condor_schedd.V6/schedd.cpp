@@ -11386,7 +11386,7 @@ Scheduler::RecomputeAliveInterval(int cluster, int proc)
 
 
 void
-CkptWallClock()
+CkptWallClock(int /* tid */)
 {
 	int first_time = 1;
 	time_t current_time = time(0);

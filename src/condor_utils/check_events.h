@@ -245,11 +245,6 @@ class CheckEvents {
 
 		// Special Condor ID for POST script run after submit failures.
 	CondorID	noSubmitId;
-
-	// For instantiation in programs that use this class.
-#define CHECK_EVENTS_HASH_INSTANCE template class \
-		HashTable<CondorID, CheckEvents::JobInfo *>;
-
 };
 
 #endif // CHECK_EVENTS_H

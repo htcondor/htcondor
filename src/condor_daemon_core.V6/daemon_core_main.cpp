@@ -608,9 +608,9 @@ private:
 	// Turns out, the answer is 1 - ((D-1)/D) ^ N.  Setting D = 9999999 and
 	// N = 60*10, there is a 0.006% chance of a determined attacker guessing
 	// a 7-digit number
-RequestRateLimiter g_request_limit(10);
+	RequestRateLimiter g_request_limit(10);
 
-void cleanup_request_map() {
+	void cleanup_request_map(int /* tid */) {
 	std::vector<int> requests_to_delete;
 	auto now = time(NULL);
 	auto lifetime = param_integer("SEC_TOKEN_REQUEST_LIFETIME", 3600);
@@ -677,7 +677,7 @@ DCTokenRequester::daemonUpdateCallback(bool success, Sock *sock, CondorError *er
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
 void
-check_parent( )
+check_parent(int /* tid */)
 {
 	if ( daemonCore->Is_Pid_Alive( daemonCore->getppid() ) == FALSE ) {
 		// our parent is gone!
@@ -691,7 +691,7 @@ check_parent( )
 
 // This function clears expired sessions from the cache
 void
-check_session_cache( )
+check_session_cache(int /* tid */)
 {
 	daemonCore->getSecMan()->invalidateExpiredCache();
 }
@@ -713,7 +713,7 @@ bool global_dc_get_cookie(int &len, unsigned char* &data) {
 }
 
 void
-handle_cookie_refresh( )
+handle_cookie_refresh(int /* tid */)
 {
 	unsigned char randomjunk[256];
 	char symbols[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
@@ -1168,7 +1168,7 @@ handle_log_append( char* append_str )
 
 
 void
-dc_touch_log_file( )
+dc_touch_log_file(int /* tid */)
 {
 	dprintf_touch_log();
 
@@ -1177,7 +1177,7 @@ dc_touch_log_file( )
 }
 
 void
-dc_touch_lock_files( )
+dc_touch_lock_files(int /* tid */)
 {
 	priv_state p;
 
@@ -3304,7 +3304,7 @@ handle_dc_sighup(int )
 
 
 void
-TimerHandler_main_shutdown_fast()
+TimerHandler_main_shutdown_fast(int /* tid */)
 {
 	dc_main_shutdown_fast();
 }
@@ -3349,7 +3349,7 @@ handle_dc_sigterm(int )
 }
 
 void
-TimerHandler_dc_sigterm()
+TimerHandler_dc_sigterm(int /* tid */)
 {
 	handle_dc_sigterm(SIGTERM);
 }

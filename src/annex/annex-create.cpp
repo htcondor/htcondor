@@ -472,7 +472,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 }
 
 void
-callCreateOneAnnex() {
+callCreateOneAnnex(int /* tid */) {
 	Stream * s = NULL;
 	ClassAd * reply = new ClassAd();
 

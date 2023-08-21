@@ -709,7 +709,7 @@ int ViewServer::ReadTimeChkName(const std::string &line, const std::string& Name
 // Scan function for submittor data
 //---------------------------------------------------------------------
 
-void ViewServer::WriteHistory()
+void ViewServer::WriteHistory(int /* tid */)
 {
 	std::string Key;
 	GeneralRecord* GenRec;
