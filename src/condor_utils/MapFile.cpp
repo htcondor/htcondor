@@ -295,7 +295,14 @@ int MapFile::size(MapFileUsage * pusage) // returns number of items in the map
 					size_t chm = pitem->prefix_map->size();
 					cHash += chm;
 
-					// Ask TJ what I'm supposed to do here.
+					// According to TJ, this function was intendeded for
+					// developer use only, to help us compare the memory
+					// usage of hash vs regex entries.  If somebody using
+					// prefix entries ever has problems, we can come back
+					// and fix this part of the code up.
+					//
+					// Notes: - cbStructs may be intended to be total memory.
+					//        - Each element in map is at least one cAlloc.
 				}
 			} else {
 				++cAllocs; cbStructs += sizeof(*item);
@@ -553,69 +560,6 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 
 	return 0;
 }
-
-int
-MapFile::ParseUsermapFile(const std::string& filename, bool assume_hash /*=false*/)
-{
-	FILE *file = safe_fopen_wrapper_follow(filename.c_str(), "r");
-	if (NULL == file) {
-		dprintf(D_ALWAYS,
-				"ERROR: Could not open usermap file '%s' (%s)\n",
-				filename.c_str(),
-				strerror(errno));
-		return -1;
-	}
-
-	MyStringFpSource myfs(file, true);
-
-	return ParseUsermap(myfs, filename.c_str(), assume_hash);
-}
-
-int
-MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_hash /*=false*/)
-{
-	int line = 0;
-
-    while ( ! src.isEof()) {
-		std::string input_line;
-		size_t offset;
-		std::string canonicalization;
-		std::string user;
-
-		line++;
-
-		readLine(input_line, src); // Result ignored, we already monitor EOF
-
-		if (input_line.empty()) {
-			continue;
-		}
-
-		offset = 0;
-		uint32_t regex_opts = assume_hash ? 0 : PCRE2_NOTEMPTY;
-		offset = ParseField(input_line, offset, canonicalization, assume_hash ? &regex_opts : NULL);
-		if (canonicalization.length() == 0 || canonicalization[0] == '#') continue; // ignore blank and comment lines
-		offset = ParseField(input_line, offset, user);
-
-		dprintf(D_FULLDEBUG,
-				"MapFile: Usermap File: canonicalization='%s' user='%s'\n",
-				canonicalization.c_str(),
-				user.c_str());
-
-		if (canonicalization.empty() ||
-			user.empty()) {
-				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.\n",
-						line, srcname);
-				return line;
-		}
-
-		CanonicalMapList* list = GetMapList(NULL); // NULL is the 'method' key for the usermap list
-		ASSERT(list);
-		AddEntry(list, regex_opts, canonicalization.c_str(), user.c_str());
-	}
-
-	return 0;
-}
-
 
 void MapFile::dump(FILE* fp)
 {

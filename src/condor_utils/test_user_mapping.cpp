@@ -352,11 +352,11 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 		MyStringFpSource mystdin(stdin, false);
 		if (dash_verbose) { fprintf(stdout, "Loading grid-mapping data (%s) from stdin\n", mode); }
 		dstart = _condor_debug_get_time_double();
-		rval = gmf->ParseUsermap(mystdin, "stdin", assume_hash);
+		rval = gmf->ParseCanonicalization(mystdin, "stdin", assume_hash);
 	} else {
 		if (dash_verbose) { fprintf(stdout, "Loading (%s) grid-map %s\n", mode, mapfile); }
 		dstart = _condor_debug_get_time_double();
-		rval = gmf->ParseUsermapFile(mapfile, assume_hash);
+		rval = gmf->ParseCanonicalizationFile(mapfile, assume_hash);
 	}
 	if (dash_verbose) {
 		double elapsed_time = _condor_debug_get_time_double() - dstart;

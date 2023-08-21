@@ -52,12 +52,6 @@ class MapFile
 	ParseCanonicalization(MyStringSource & src, const char* srcname, bool assume_hash=false, bool allow_include=true, bool is_prefix=false);
 
 	int
-	ParseUsermapFile(const std::string& filename, bool assume_hash=true);
-
-	int
-	ParseUsermap(MyStringSource & src, const char * srcname, bool assume_hash=true);
-
-	int
 	GetCanonicalization(const std::string& method,
 	                    const std::string& principal,
 	                    std::string & canonicalization);
