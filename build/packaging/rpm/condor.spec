@@ -196,40 +196,53 @@ Requires: condor-stash-plugin
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
 
-Obsoletes: condor-static < 7.2.0
-
+%if 0%{?rhel} == 7
 # Standard Universe discontinued as of 8.9.0
-Obsoletes: condor-std-universe < 8.9.0
+Obsoletes: %{name}-std-universe < 8.9.0
+Provides: %{name}-std-universe = %{version}-%{release}
 
 # Cream gahp discontinued as of 8.9.9
-Obsoletes: condor-cream-gahp < 8.9.9
+Obsoletes: %{name}-cream-gahp < 8.9.9
+Provides: %{name}-cream-gahp = %{version}-%{release}
 
 # 32-bit shadow discontinued as of 8.9.9
-Obsoletes: condor-small-shadow < 8.9.9
+Obsoletes: %{name}-small-shadow < 8.9.9
+Provides: %{name}-small-shadow = %{version}-%{release}
+%endif
 
+%if 0%{?rhel} <= 8
 # external-libs package discontinued as of 8.9.9
-Obsoletes: condor-external-libs < 8.9.9
+Obsoletes: %{name}-external-libs < 8.9.9
+Provides: %{name}-external-libs = %{version}-%{release}
 
 # Bosco package discontinued as of 9.5.0
-Obsoletes: condor-bosco < 9.5.0
+Obsoletes: %{name}-bosco < 9.5.0
+Provides: %{name}-bosco = %{version}-%{release}
+%endif
 
 # externals package discontinued as of 10.8.0
-Obsoletes: condor-externals < 10.8.0
+Obsoletes: %{name}-externals < 10.8.0
+Provides: %{name}-externals = %{version}-%{release}
 
 # blahp package discontinued as of 10.8.0
-Obsoletes: condor-blahp < 10.8.0
+Obsoletes: %{name}-blahp < 10.8.0
+Provides: %{name}-blahp = %{version}-%{release}
 
 # procd package discontinued as of 10.8.0
-Obsoletes: condor-procd < 10.8.0
+Obsoletes: %{name}-procd < 10.8.0
+Provides: %{name}-procd = %{version}-%{release}
 
 # all package discontinued as of 10.8.0
-Obsoletes: condor-all < 10.8.0
+Obsoletes: %{name}-all < 10.8.0
+Provides: %{name}-all = %{version}-%{release}
 
-# classds package discontinued as of 10.8.0
-Obsoletes: condor-classds < 10.8.0
+# classads package discontinued as of 10.8.0
+Obsoletes: %{name}-classads < 10.8.0
+Provides: %{name}-classads = %{version}-%{release}
 
-# classad-devel package discontinued as of 10.8.0
-Obsoletes: condor-classad-devel < 10.8.0
+# classads-devel package discontinued as of 10.8.0
+Obsoletes: %{name}-classads-devel < 10.8.0
+Provides: %{name}-classads-devel = %{version}-%{release}
 
 %description
 HTCondor is a specialized workload management system for
