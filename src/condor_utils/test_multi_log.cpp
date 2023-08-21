@@ -31,8 +31,6 @@
 
 static const char * VERSION = "0.9.3";
 
-MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
-
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
 static int		verbosity = 0;

@@ -31,12 +31,6 @@
 //#include "ReplicationCommands.h"
 #include "FilesOperations.h"
 
-// gcc compilation pecularities demand explicit declaration of template classes
-// and functions instantiation
-template void utilClearList<AbstractReplicatorStateMachine::ProcessMetadata>
-				( List<AbstractReplicatorStateMachine::ProcessMetadata>& );
-template void utilClearList<Version>( List<Version>& );
-                                                                                
 AbstractReplicatorStateMachine::AbstractReplicatorStateMachine()
 {
 	dprintf( D_ALWAYS, "AbstractReplicatorStateMachine ctor started\n" );

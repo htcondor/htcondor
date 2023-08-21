@@ -273,10 +273,6 @@ private:
 
 	std::map<std::string, LogFileMonitor *> activeLogFiles;
 
-	// For instantiation in programs that use this class.
-#define MULTI_LOG_HASH_INSTANCE template class \
-		HashTable<std::string, ReadMultipleUserLogs::LogFileMonitor *>
-
 		/**
 		 * Read an event from a log monitor.
 		 * @param The log monitor to read from.
