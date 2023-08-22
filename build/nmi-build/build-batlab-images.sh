@@ -51,7 +51,6 @@ buildimage ppc64le_Ubuntu20 ppc64le/ubuntu:focal &
 buildimage x86_64_AlmaLinux8 almalinux:8 &
 buildimage x86_64_AlmaLinux9 almalinux:9 &
 buildimage x86_64_AmazonLinux2023 amazonlinux:2023 &
-buildimage x86_64_CentOS7 centos:7 &
 buildimage x86_64_Debian11 debian:bullseye &
 buildimage x86_64_Debian12 debian:bookworm &
 buildimage x86_64_Fedora38 fedora:38 &

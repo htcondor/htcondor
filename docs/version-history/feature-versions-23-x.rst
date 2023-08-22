@@ -15,6 +15,8 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-2300`.
 
+- Enterprise Linux 7 support is discontinued with this release.
+
 New Features:
 
 - None.
