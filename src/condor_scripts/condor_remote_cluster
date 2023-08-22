@@ -49,7 +49,7 @@ commands:
  -d|--debug                 Display debugging output
  -h|--help                  Show this help message
 
-Where host is user@fqdn.example.com
+Where host is [user@]fqdn.example.com[:22]
 $0 can manage max 254 clustars
 
 EOM
