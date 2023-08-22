@@ -18,6 +18,9 @@ PASSPHRASE_LOCATION=$HOME/.bosco/.pass
 # Bosco cluster list location
 CLUSTERLIST_LOCATION=$HOME/.bosco/.clusterlist
 
+# Directory under $HOME to install into on the remote machine
+remote_base_dir_host=bosco
+
 # Additional arguments for all ssh commands
 ssh_args=""
 ssh_host=""
@@ -907,7 +910,6 @@ fi
 #TODO: do we need a separate sandbox for each cluster?
 remote_base_dir_root="bosco/cluster"
 remote_base_dir_default="$remote_base_dir_root/default"
-[[ $remote_base_dir_host ]] || remote_base_dir_host=bosco
 tmp_install_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
 mkdir -p "$tmp_install_dir/$remote_base_dir_host"
 local_install_dir="$tmp_install_dir/$remote_base_dir_host"
