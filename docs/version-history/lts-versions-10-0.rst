@@ -28,6 +28,8 @@ Bugs Fixed:
   *condor_store_cred* on Windows.
   :jira:`1998`
 
+- Fixed an issue for the PPC build with misalligned pointers in the config system.
+  :jira:`2001`
 
 .. _lts-version-history-1008:
 
