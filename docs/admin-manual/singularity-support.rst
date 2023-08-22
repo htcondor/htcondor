@@ -174,7 +174,7 @@ expression could be
 
 .. code-block:: condor-config
 
-      SINGULARITY_BIND_EXPR = (Owner == "TrustedUser") ? SomeExpressionFromJob : ""
+      SINGULARITY_BIND_EXPR = (Target.Owner == "TrustedUser") ? SomeExpressionFromJob : ""
 
 If the source directory for the bind mount is missing on the host machine,
 HTCondor will skip that mount and run the job without it.  If the image is
