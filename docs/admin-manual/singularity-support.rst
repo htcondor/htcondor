@@ -200,7 +200,7 @@ on hold.  This is controlled by the condor knob
 :macro:`SINGULARITY_RUN_TEST_BEFORE_JOB`, which defaults to true.
 
 If an administrator wants to pass additional arguments to the singularity exec
-command instead of the defaults used ht HTCondor, several parameters exist to
+command instead of the defaults used by HTCondor, several parameters exist to
 do this - see the *condor_starter* configuration parameters that begin with the
 prefix SINGULARITY in defined in section
 :ref:`admin-manual/configuration-macros:condor_starter configuration file
