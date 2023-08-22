@@ -3285,18 +3285,17 @@ DedicatedScheduler::AddMrec(
     // not to store just one 'dynamic' slot per host into all_matches 
     // and leave behind all extra created dynamic slots 
     // we need to use/fill pending_matches. Try checking for
-    // SlotTypeID == PARTITIONABLE_SLOT, as this is left unchanged by
+    // SlotType == "Static", as this is left unchanged by
     // ScheddNegotiate::fixupPartitionableSlot.
-    // if (is_partitionable(match_ad)) {
-    int slot_type_id = 0;
-    match_ad->LookupInteger(ATTR_SLOT_TYPE_ID, slot_type_id);
-    if (slot_type_id == 1) { // Cannot include Resource.h from here.
+	std::string slot_type;
+    match_ad->LookupString(ATTR_SLOT_TYPE, slot_type);
+    if (slot_type == "Static") {
+        ASSERT( all_matches->insert(slot_name, mrec) == 0 );
+        ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
+    } else {
         update_negotiator_attrs_for_partitionable_slots(mrec->my_match_ad);
         pending_matches[claim_id] = mrec;
         pending_claims[mrec->claim_id.publicClaimId()] = claim_id;
-    } else {
-        ASSERT( all_matches->insert(slot_name, mrec) == 0 );
-        ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
     }
 
 	removeRequest( job_id );
