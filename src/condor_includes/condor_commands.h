@@ -249,7 +249,7 @@ std::array<std::pair<int, const char *>, 199> makeCommandTable() {
 		{VACATE_CLAIM_FAST, "VACATE_CLAIM_FAST"},
 #define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
 		{REJECTED_WITH_REASON, "REJECTED_WITH_REASON"},
-#define START_AGENT			(SCHED_VERS+77) // have the master start an agent
+#define START_AGENT			(SCHED_VERS+77) // have the master start an agenta (Not used)
 		{START_AGENT, "START_AGENT"},
 #define ACT_ON_JOBS			(SCHED_VERS+78) // have the schedd act on some jobs (rm, hold, release)
 		{ACT_ON_JOBS, "ACT_ON_JOBS"},
