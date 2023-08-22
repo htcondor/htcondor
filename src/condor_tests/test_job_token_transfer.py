@@ -1,6 +1,8 @@
 #!/usr/bin/env pytest
 
 import logging
+import os
+import stat
 from getpass import getuser
 from ornithology import (
     standup,
@@ -34,9 +36,44 @@ for tokenfile in $tokenfiles; do
 done
 """
 
+@standup
+def write_job_hook_no_handles(test_dir):
+    creds_no_handles = test_dir / "creds_no_handles.out"
+
+    script_file = test_dir / "shadow_hook_no_handles.sh"
+     # Check files and permissions for contents and current cred_dir
+    script_contents = f"""#!/bin/bash
+    for filepath in $_CONDOR_CREDS/* $_CONDOR_CREDS; do
+        filename=$(basename "$filepath")
+        stat -c '%A '"$filename" "$filepath"
+    done > {creds_no_handles}
+    exit 0"""
+    script = open(script_file, "w")
+    script.write(script_contents)
+    script.close()
+    st = os.stat(script_file)
+    os.chmod(script_file, st.st_mode | stat.S_IEXEC)
 
 @standup
-def condor(pytestconfig, test_dir):
+def write_job_hook_two_handles(test_dir):
+    creds_two_handles = test_dir / "creds_two_handles.out"
+
+    script_file = test_dir / "shadow_hook_two_handles.sh"
+    # Check files and permissions for contents and current cred_dir
+    script_contents = f"""#!/bin/bash
+    for filepath in $_CONDOR_CREDS/* $_CONDOR_CREDS; do
+        filename=$(basename "$filepath")
+        stat -c '%A '"$filename" "$filepath"
+    done > {creds_two_handles}
+    exit 0"""
+    script = open(script_file, "w")
+    script.write(script_contents)
+    script.close()
+    st = os.stat(script_file)
+    os.chmod(script_file, st.st_mode | stat.S_IEXEC)
+
+@standup
+def condor(pytestconfig, test_dir, write_job_hook_no_handles, write_job_hook_two_handles):
 
     logger.info("Preparing credmon")
     credmon = pytestconfig.invocation_dir / "condor_credmon_oauth_dummy"
@@ -82,6 +119,8 @@ def condor(pytestconfig, test_dir):
             "DUMMY_RETURN_URL_SUFFIX":           "/return",
             "DUMMY_AUTHORIZATION_URL":           "https://$(FULL_HOSTNAME)/auth",
             "DUMMY_TOKEN_URL":                   "https://$(FULL_HOSTNAME)/token",
+            "NONE_HOOK_SHADOW_PREPARE_JOB":      test_dir / "shadow_hook_no_handles.sh",
+            "HANDLE_HOOK_SHADOW_PREPARE_JOB":    test_dir / "shadow_hook_two_handles.sh",
         },
     ) as condor:
         yield condor
@@ -102,6 +141,7 @@ def vanilla_one_service_no_handles(condor, test_dir):
             "output": str(outfile),
             "error": str(errfile),
             "log": str(outfile.with_suffix(".log")),
+            "+HookKeyword": '"none"',
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
@@ -125,6 +165,7 @@ def vanilla_one_service_two_handles(condor, test_dir):
             "output": str(outfile),
             "error": str(errfile),
             "log": str(outfile.with_suffix(".log")),
+            "+HookKeyword": '"handle"',
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
@@ -192,3 +233,18 @@ class TestJobTokenTransfer:
     def test_local_one_service_two_handles(self, local_one_service_two_handles):
         assert local_one_service_two_handles[0] == "access_dummy_Aaccess_dummy_B"
         assert local_one_service_two_handles[1] == ""
+
+    # Below tests if shadow job hooks can read from the cred dir
+    def test_shadow_hook_no_handles(self):
+        with open('creds_no_handles.out') as f:
+            log = f.read()
+            assert "-r-------- dummy.use" in log
+            assert "drwxr-xr-x _condor_creds.cluster1.proc0" in log
+
+    def test_shadow_hook_two_handles(self):
+        with open('creds_two_handles.out') as f:
+            log = f.read()
+            assert "-r-------- dummy_A.use" in log
+            assert "-r-------- dummy_B.use" in log
+            assert "drwxr-xr-x _condor_creds.cluster2.proc0" in log
+
