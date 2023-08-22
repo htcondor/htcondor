@@ -281,6 +281,9 @@ char * _allocation_pool::consume(int cb, int cbAlign)
 
 	char * pb = ph->pb + ph->ixFree;
 	if (cbConsume > cb) memset(pb+cb, 0, cbConsume - cb);
+	size_t total_size = ph->cbAlloc;
+	void *vph = pb;
+	pb = (char *)std::align(cbAlign, cbConsume, vph, total_size);
 	ph->ixFree += cbConsume;
 	return pb;
 }
