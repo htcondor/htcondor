@@ -2060,7 +2060,6 @@ GahpServer::poll( int /* timerID */ )
 {
 	Gahp_Args* result = NULL;
 	int num_results = 0;
-	int result_reqid;
 	GenericGahpClient* entry;
 	std::vector<Gahp_Args*> result_lines;
 
@@ -2122,7 +2121,7 @@ GahpServer::poll( int /* timerID */ )
 		if ( result ) delete result;
 		result = result_line;
 
-		result_reqid = 0;
+		int result_reqid = 0;
 		if ( result->argc > 0 ) {
 			result_reqid = atoi(result->argv[0]);
 		}
@@ -2193,7 +2192,7 @@ GahpServer::poll( int /* timerID */ )
 				// it is dequeued from the waitingHigh/Medium/Low queues.
 				// So now remove the entry from the hash table
 				// so the reqid can be reused.
-			requestTable->remove(result_reqid);
+			requestTable->remove(waiting_reqid);
 		}
 	}
 }
