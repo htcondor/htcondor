@@ -230,7 +230,10 @@ char * _allocation_pool::consume(int cb, int cbAlign)
 	int cbFree = 0;
 	if (this->nHunk < this->cMaxHunks) {
 		ph = &this->phunks[this->nHunk];
-		cbFree = ph->cbAlloc - ph->ixFree;
+		// reduce calculated free space by the aligment requirement
+		// this presumes withat ph->pb is always sufficiently aligned, which it should be
+		// since we get it from malloc
+		cbFree = ph->cbAlloc - ((ph->ixFree + cbAlign-1) & ~(cbAlign-1));
 	}
 
 	// do we need to allocate more hunks to service this request?
@@ -271,17 +274,22 @@ char * _allocation_pool::consume(int cb, int cbAlign)
 			SAL_assume(ph->pb != NULL);
 		}
 
-		//PRAGMA_REMIND("TJ: fix to account for extra size needed to align start ptr")
-		if (ph->ixFree + cbConsume > ph->cbAlloc) {
+		// if the requested allocation doesn't fit in the current hunk, make a new hunk
+		if (((ph->ixFree + cbAlign-1) & ~(cbAlign-1)) + cbConsume > ph->cbAlloc) {
 			int cbAlloc = MAX(ph->cbAlloc * 2, cbConsume);
 			ph = &this->phunks[++this->nHunk];
 			ph->reserve(cbAlloc);
 		}
 	}
 
-	char * pb = ph->pb + ph->ixFree;
+	// we want to align the return pointer as well as the size of the returned allocation
+	// ixStart give an aligned return pointer. we zero fill before it if is not the same as ixFree
+	// then zero fill at the end if we resized the requested allocation to align the size.
+	int ixStart = (ph->ixFree + cbAlign-1) & ~(cbAlign-1);
+	if (ixStart > ph->ixFree) memset(ph->pb + ph->ixFree, 0, ixStart - ph->ixFree);
+	char * pb = ph->pb + ixStart;
 	if (cbConsume > cb) memset(pb+cb, 0, cbConsume - cb);
-	ph->ixFree += cbConsume;
+	ph->ixFree = ixStart + cbConsume;
 	return pb;
 }
 
