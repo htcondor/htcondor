@@ -124,7 +124,6 @@ extern GridUniverseLogic* _gridlogic;
 
 extern char* Spool;
 extern char * Name;
-static char * NameInEnv = NULL;
 extern char * JobHistoryFileName;
 extern char * PerJobHistoryDir;
 
