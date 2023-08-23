@@ -75,7 +75,7 @@ int pidenvid_append(PidEnvID *penvid, char *line)
 
 	for (i = 0; i < penvid->num; i++)
 	{
-		if (penvid->ancestors[i].active == false) {
+		if ( ! penvid->ancestors[i].active) {
 			/* insert the name and val */
 
 			/* check to make sure the name, val, =, and NUL all fit */
@@ -155,13 +155,13 @@ int pidenvid_match(PidEnvID *left, PidEnvID *right)
 	for (l = 0; l < left->num; l++) {
 
 		/* if I run out of the left hand side, abort whole operation */
-		if (left->ancestors[l].active == false) {
+		if ( ! left->ancestors[l].active) {
 			break;
 		} 
 
 		for (r = 0; r < right->num; r++) {
 			/* abort when I get to the end of the right side */
-			if (right->ancestors[r].active == false) {
+			if ( ! right->ancestors[r].active) {
 				break;
 			}
 			
@@ -217,7 +217,7 @@ void pidenvid_copy(PidEnvID *to, PidEnvID *from)
 
 	for (i = 0; i < from->num; i++) {
 		to->ancestors[i].active = from->ancestors[i].active;
-		if (from->ancestors[i].active == true) {
+		if (from->ancestors[i].active) {
 			strncpy(to->ancestors[i].envid, from->ancestors[i].envid, PIDENVID_ENVID_SIZE);
 			to->ancestors[i].envid[PIDENVID_ENVID_SIZE-1] = '\0';
 		}
@@ -233,9 +233,9 @@ void pidenvid_dump(PidEnvID *penvid, int dlvl)
 
 	for (i = 0; i < penvid->num; i++) {
 		/* only print out true ones */
-		if (penvid->ancestors[i].active == true) {
+		if (penvid->ancestors[i].active) {
 			dprintf(dlvl, "\t[%d]: active = %s\n", i,
-				penvid->ancestors[i].active == true ? "TRUE" : "FALSE");
+				penvid->ancestors[i].active ? "TRUE" : "FALSE");
 			dprintf(dlvl, "\t\t%s\n", penvid->ancestors[i].envid);
 		}
 	}
