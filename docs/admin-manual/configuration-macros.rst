@@ -6447,10 +6447,14 @@ These settings affect the *condor_starter*.
 
 :macro-def:`SINGULARITY_JOB`
     A boolean value specifying whether this startd should run jobs under
-    Singularity. The default value is ``False``.
+    Singularity.  This can be an expression evaluted in the context of the slot
+    ad and the job ad, where the slot ad is the "MY.", and the job ad is the
+    "TARGET.". The default value is ``False``.
 
 :macro-def:`SINGULARITY_IMAGE_EXPR`
-    The path to the Singularity container image file. The default value
+    The path to the Singularity container image file.  This can be an
+    expression evaluted in the context of the slot ad and the job ad, where the
+    slot ad is the "MY.", and the job ad is the "TARGET.".  The default value
     is ``"SingularityImage"``.
 
 :macro-def:`SINGULARITY_TARGET_DIR`
@@ -6459,8 +6463,10 @@ These settings affect the *condor_starter*.
     value is ``""``.
 
 :macro-def:`SINGULARITY_BIND_EXPR`
-    A string value containing a list of bind mount specifications to be
-    passed to Singularity. The default value is ``"SingularityBind"``.
+    A string value containing a list of bind mount specifications to be passed
+    to Singularity.  This can be an expression evaluted in the context of the
+    slot ad and the job ad, where the slot ad is the "MY.", and the job ad is
+    the "TARGET.". The default value is ``"SingularityBind"``.
 
 :macro-def:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
     A boolean value defaulting to false.  If true, and the singularity
@@ -6478,7 +6484,7 @@ These settings affect the *condor_starter*.
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value or classad expression containing a list of extra arguments to be appended
     to the Singularity command line. This can be an expression evaluted in the context of the
-    job ad and the machine ad.
+    slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
 
 condor_submit Configuration File Entries
 -----------------------------------------

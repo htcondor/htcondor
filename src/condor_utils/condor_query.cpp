@@ -596,14 +596,20 @@ filterAds (ClassAdList &in, ClassAdList &out)
 	result = getQueryAd (queryAd);
 	if (result != Q_OK) return result;
 
+	const char * targetType = nullptr;
+	std::string targetTypeStr;
+	if (queryAd.LookupString(ATTR_TARGET_TYPE, targetTypeStr) && ! targetTypeStr.empty()) {
+		targetType = targetTypeStr.c_str();
+	}
+
 	in.Open();
 	while( (candidate = (ClassAd *) in.Next()) )
-    {
-        // if a match occurs
-		if (IsAHalfMatch(&queryAd, candidate)) out.Insert (candidate);
-    }
-    in.Close ();
-    
+	{
+		// if a match occurs
+		if (IsATargetMatch(&queryAd, candidate, targetType)) out.Insert (candidate);
+	}
+	in.Close ();
+
 	return Q_OK;
 }
 

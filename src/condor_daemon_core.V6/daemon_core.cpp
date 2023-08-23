@@ -6944,7 +6944,7 @@ int DaemonCore::Create_Process(
                 inheritFds[numInheritFds] = tempSock->get_file_desc();
                 numInheritFds++;
                     // make certain that this socket is inheritable
-                if ( !(tempSock->set_inheritable(TRUE)) ) {
+                if ( !(tempSock->set_inheritable(true)) ) {
 					goto wrapup;
                 }
             }
@@ -7011,8 +7011,8 @@ int DaemonCore::Create_Process(
 		for(SockPairVec::iterator it = socks.begin(); it != socks.end(); it++) {
 			// now duplicate the underlying SOCKET to make it inheritable
 			ASSERT(it->has_relisock()); // No relisock(TCP)? We expected one.
-			if ( (!it->rsock()->set_inheritable(TRUE)) ||
-				 (want_udp && !it->ssock()->set_inheritable(TRUE)) ) {
+			if ( (!it->rsock()->set_inheritable(true)) ||
+				 (want_udp && !it->ssock()->set_inheritable(true)) ) {
 				dprintf(D_ALWAYS,"Create_Process:Failed to set command "
 						"socks inheritable\n");
 				goto wrapup;
@@ -7744,7 +7744,7 @@ int DaemonCore::Create_Process(
 			 (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS) ;
 			 i++)
         {
-			((Sock *)sock_inherit_list[i])->set_inheritable(FALSE);
+			((Sock *)sock_inherit_list[i])->set_inheritable(false);
 		}
 	}
 #else
@@ -8739,7 +8739,7 @@ int extractInheritedSocks (
 				ReliSock * rsock = new ReliSock();
 				ptmp = list.next();
 				rsock->deserialize(ptmp);
-				rsock->set_inheritable(FALSE);
+				rsock->set_inheritable(false);
 				dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
 				// place into array...
 				socks[cSocks++] = (Stream *)rsock;
@@ -8749,7 +8749,7 @@ int extractInheritedSocks (
 				SafeSock * ssock = new SafeSock();
 				ptmp = list.next();
 				ssock->deserialize(ptmp);
-				ssock->set_inheritable(FALSE);
+				ssock->set_inheritable(false);
 				dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
 				// place into array...
 				socks[cSocks++] = (Stream *)ssock;
@@ -8906,7 +8906,7 @@ DaemonCore::Inherit( void )
 					ReliSock * rsock = new ReliSock();
 					ptmp=inherit_list.next();
 					rsock->deserialize(ptmp);
-					rsock->set_inheritable(FALSE);
+					rsock->set_inheritable(false);
 					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
 					// place into array...
 					inheritedSocks[numInheritedSocks++] = (Stream *)rsock;
@@ -8916,7 +8916,7 @@ DaemonCore::Inherit( void )
 					SafeSock * ssock = new SafeSock();
 					ptmp=inherit_list.next();
 					ssock->deserialize(ptmp);
-					ssock->set_inheritable(FALSE);
+					ssock->set_inheritable(false);
 					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
 					// place into array...
 					inheritedSocks[numInheritedSocks++] = (Stream *)ssock;
@@ -8958,7 +8958,7 @@ DaemonCore::Inherit( void )
 					}
 					dc_socks.back().has_relisock(true);
 					dc_socks.back().rsock()->deserialize(ptmp);
-					dc_socks.back().rsock()->set_inheritable(FALSE);
+					dc_socks.back().rsock()->set_inheritable(false);
 					break;
 				}
 
@@ -8976,7 +8976,7 @@ DaemonCore::Inherit( void )
 						}
 						dc_socks.back().has_safesock(true);
 						dc_socks.back().ssock()->deserialize(ptmp);
-						dc_socks.back().ssock()->set_inheritable(FALSE);
+						dc_socks.back().ssock()->set_inheritable(false);
 					}
 					break;
 				}
@@ -9246,8 +9246,8 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		}
 		daemonCore->Register_Command_Socket( (Stream*)super_dc_rsock );
 		daemonCore->Register_Command_Socket( (Stream*)super_dc_ssock );
-		super_dc_rsock->set_inheritable(FALSE);
-		super_dc_ssock->set_inheritable(FALSE);
+		super_dc_rsock->set_inheritable(false);
+		super_dc_ssock->set_inheritable(false);
 		m_super_dc_port = super_dc_rsock->get_port();
 
 		free(superAddrFN);

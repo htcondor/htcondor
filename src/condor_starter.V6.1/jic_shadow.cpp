@@ -199,11 +199,15 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 
 JICShadow::~JICShadow()
 {
-	if( m_refresh_sandbox_creds_tid != -1 ){
-		daemonCore->Cancel_Timer(m_refresh_sandbox_creds_tid);
-	}
-	if( m_proxy_expiration_tid != -1 ){
-		daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+	// On exit, the global daemonCore object may have been
+	// destructed before us
+	if (daemonCore) {
+		if( m_refresh_sandbox_creds_tid != -1 ){
+			daemonCore->Cancel_Timer(m_refresh_sandbox_creds_tid);
+		}
+		if( m_proxy_expiration_tid != -1 ){
+			daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+		}
 	}
 	if( shadow ) {
 		delete shadow;

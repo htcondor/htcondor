@@ -18,19 +18,19 @@ msgstr ""
 
 #. Type: title
 #. Description
-#: ../htcondor.templates:1001
+#: ../condor.templates:1001
 msgid "HTCondor configuration"
 msgstr "HTCondor の設定"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:2001
+#: ../condor.templates:2001
 msgid "Manage initial HTCondor configuration automatically?"
 msgstr "HTCondor の初期設定を自動的に行いますか?"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:2001
+#: ../condor.templates:2001
 msgid ""
 "The setup for HTCondor can be handled automatically, asking a few questions "
 "to create an initial configuration appropriate for a machine that is either "
@@ -44,7 +44,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:2001
+#: ../condor.templates:2001
 msgid ""
 "Otherwise, HTCondor will be installed with a default configuration that "
 "needs to be customized manually."
@@ -54,13 +54,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:3001
+#: ../condor.templates:3001
 msgid "Enable submission of usage statistics?"
 msgstr "利用状況の統計の提出を有効にしますか?"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:3001
+#: ../condor.templates:3001
 msgid ""
 "The HTCondor authors politely request that each HTCondor pool sends them "
 "periodic updates with basic information about the status of the pool. "
@@ -77,13 +77,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:4001
+#: ../condor.templates:4001
 msgid "Address of the central manager:"
 msgstr "中央管理マシンのアドレス:"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:4001
+#: ../condor.templates:4001
 msgid ""
 "If this machine is intended to join an existing HTCondor pool, the address "
 "of the central manager machine has to be specified. Any address format "
@@ -95,37 +95,37 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:4001
+#: ../condor.templates:4001
 msgid "Example: condor-manager.example.org"
 msgstr "例: condor-manager.example.org"
 
 #. Type: multiselect
 #. Choices
-#: ../htcondor.templates:5001
+#: ../condor.templates:5001
 msgid "Job submission"
 msgstr "ジョブ提出"
 
 #. Type: multiselect
 #. Choices
-#: ../htcondor.templates:5001
+#: ../condor.templates:5001
 msgid "Job execution"
 msgstr "ジョブ実行"
 
 #. Type: multiselect
 #. Choices
-#: ../htcondor.templates:5001
+#: ../condor.templates:5001
 msgid "Central manager"
 msgstr "中央管理マシン"
 
 #. Type: multiselect
 #. Description
-#: ../htcondor.templates:5002
+#: ../condor.templates:5002
 msgid "Role of this machine in the HTCondor pool:"
 msgstr "HTCondor 連合 (pool) でのこのマシンの役割:"
 
 #. Type: multiselect
 #. Description
-#: ../htcondor.templates:5002
+#: ../condor.templates:5002
 msgid ""
 "Please specify the intended role or roles of this machine, for which the "
 "corresponding daemons will be started automatically."
@@ -135,7 +135,7 @@ msgstr ""
 
 #. Type: multiselect
 #. Description
-#: ../htcondor.templates:5002
+#: ../condor.templates:5002
 msgid ""
 "A machine in a HTCondor pool can have multiple roles. In general there is "
 "one central manager and multiple nodes that run jobs. Often the central "
@@ -149,13 +149,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:6001
+#: ../condor.templates:6001
 msgid "Email address of the local HTCondor administrator:"
 msgstr "ローカル HTCondor 管理者のメールアドレス:"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:6001
+#: ../condor.templates:6001
 msgid ""
 "The HTCondor administrator will receive error messages if something goes "
 "wrong with HTCondor on this machine."
@@ -165,13 +165,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:7001
+#: ../condor.templates:7001
 msgid "user directory domain label:"
 msgstr "ユーザディレクトリドメインラベル:"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:7001
+#: ../condor.templates:7001
 msgid ""
 "This label is a string that HTCondor uses to decide if a submitting machine "
 "and an execute machine share the same directory of user accounts (that is, "
@@ -193,7 +193,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:7001
+#: ../condor.templates:7001
 msgid ""
 "Any domain format supported by HTCondor can be used, including macro "
 "expressions. Example: $(FULL_HOSTNAME)"
@@ -203,13 +203,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:8001
+#: ../condor.templates:8001
 msgid "File system domain label:"
 msgstr "ファイルシステムドメインラベル:"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:8001
+#: ../condor.templates:8001
 msgid ""
 "This label is an arbitrary string that is used to decide if a submitting "
 "machine and an execute machine share the same file system. In a dedicated "
@@ -226,19 +226,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:8001
+#: ../condor.templates:8001
 msgid "Example: my_shared_volume"
 msgstr "例: my_shared_volume"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:9001
+#: ../condor.templates:9001
 msgid "Perform a \"Personal HTCondor installation\"?"
 msgstr "「Personal HTCondor インストール」を実行しますか?"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:9001
+#: ../condor.templates:9001
 msgid ""
 "A Personal HTCondor installation is a fully functional HTCondor pool on a "
 "single machine. HTCondor will automatically configure and advertise as many "
@@ -252,7 +252,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:9001
+#: ../condor.templates:9001
 msgid ""
 "This configuration is not appropriate if this machine is intended to be a "
 "member of a pool."
@@ -260,13 +260,13 @@ msgstr "このマシンを連合 (pool) の一員にする場合この設定は�
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:10001
+#: ../condor.templates:10001
 msgid "Amount of physical memory to withhold from HTCondor (in MB):"
 msgstr "HTCondor で使わずに残しておく物理メモリの量 (MB):"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:10001
+#: ../condor.templates:10001
 msgid ""
 "By default, HTCondor considers all the physical memory of a machine as "
 "available to be used by HTCondor jobs. If this value is defined, HTCondor "
@@ -278,19 +278,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:10001
+#: ../condor.templates:10001
 msgid "Example (to reserve 1 GB): 1024"
 msgstr "例 (1 GB を確保する場合): 1024"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:11001
+#: ../condor.templates:11001
 msgid "Machines with write access to this host:"
 msgstr "このホストに書き込みできるマシン:"
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:11001
+#: ../condor.templates:11001
 msgid ""
 "All machines that are to participate in the HTCondor pool need to be listed "
 "here. This setting can be a plain comma-separated list, a domain with "
@@ -304,19 +304,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../htcondor.templates:11001
+#: ../condor.templates:11001
 msgid "Example: *.condor-pool.example.org"
 msgstr "例: *.condor-pool.example.org"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:12001
+#: ../condor.templates:12001
 msgid "Run HTCondor jobs regardless of other machine activity?"
 msgstr "他のマシンの動作状況を問わず HTCondor ジョブを実行しますか?"
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:12001
+#: ../condor.templates:12001
 msgid ""
 "By default HTCondor only starts jobs when a machine is idle, i.e. no "
 "keyboard activity or CPU load for some time. Moreover, it also suspends jobs "
@@ -335,7 +335,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../htcondor.templates:12001
+#: ../condor.templates:12001
 msgid ""
 "If you plan to compose a custom policy it is best to keep HTCondor's default "
 "here."

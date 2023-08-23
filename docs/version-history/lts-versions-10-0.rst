@@ -7,6 +7,30 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1009:
+
+Version 10.0.9
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.9 released on Month Date, 2023.
+
+- HTCondor version 10.0.9 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug that prevented deletion of stored user passwords with
+  *condor_store_cred* on Windows.
+  :jira:`1998`
+
+- Fixed an issue for the PPC build with misaligned pointers in the config system.
+  :jira:`2001`
+
 .. _lts-version-history-1008:
 
 Version 10.0.8
@@ -23,6 +47,10 @@ New Features:
 - None.
 
 Bugs Fixed:
+
+- Removed cgroup v1 blkio controller support -- this prevents
+  a kernel panic in some EL8 kernels.
+  :jira:`1985`
 
 - Fixed a bug with parallel universe that would result in the startd
   rejecting start attempts from the schedd and causing the schedd
@@ -56,7 +84,6 @@ Bugs Fixed:
   new attributes needed to be added to the index and when using version 8.0.0 or newer of
   the Elasticsearch Python library.
   :jira:`1930`
-
 
 .. _lts-version-history-1007:
 

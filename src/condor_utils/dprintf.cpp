@@ -668,7 +668,9 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, DebugHeaderInfo &info, De
 }
 
 // forward ref to the function that helps use remove dprintf calls from the call stack
+#ifdef HAVE_BACKTRACE
 static bool is_dprintf_function_addr(const void * pfn);
+#endif
 
 /* _condor_dprintf_getbacktrace
  * fill in backtrace in the DebugHeaderInfo structure, paying attention to dprintf flags
@@ -2592,6 +2594,7 @@ static const DPRINTF_CPP_FN dprintf_cpp_addr = &dprintf;
 /*
  * this should be the last function in the dprintf module so that it can see all of the statics
  */
+#ifdef HAVE_BACKTRACE
 static bool is_dprintf_function_addr(const void * pfn)
 {
 	static const struct {
@@ -2614,4 +2617,5 @@ static bool is_dprintf_function_addr(const void * pfn)
 	}
 	return false;
 }
+#endif
 

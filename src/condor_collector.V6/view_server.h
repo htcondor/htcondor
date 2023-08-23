@@ -91,7 +91,7 @@ public:
 	static int SendListReply(Stream*,const std::string& FileName, int FromDate, int ToDatei, std::set<std::string>& Names);
 	static int SendDataReply(Stream*,const std::string& FileName, int FromDate, int ToDate, int Options, const std::string& Arg);
 
-	static void WriteHistory();
+	static void WriteHistory(int tid);
 	static int SubmittorScanFunc(CollectorRecord*);
 	static int SubmittorTotalFunc(void);
 	static int StartdScanFunc(CollectorRecord*);

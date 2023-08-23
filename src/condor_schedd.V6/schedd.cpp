@@ -2306,6 +2306,12 @@ int Scheduler::command_query_ads(int command, Stream* stream)
 		return handleMachineAdsQuery( stream, queryAd );
 	}
 
+	const char * targetType = nullptr;
+	std::string targetTypeStr;
+	if (queryAd.LookupString(ATTR_TARGET_TYPE, targetTypeStr) && ! targetTypeStr.empty()) {
+		targetType = targetTypeStr.c_str();
+	}
+
 		// Construct a list of all our ClassAds. we pass queryAd 
 		// through so that if there is a STATISTICS_TO_PUBLISH attribute
 		// it can be used to control the verbosity of statistics
@@ -2315,7 +2321,7 @@ int Scheduler::command_query_ads(int command, Stream* stream)
 	stream->encode();
 	ads.Open();
 	while( (ad = ads.Next()) ) {
-		if( IsAHalfMatch( &queryAd, ad ) ) {
+		if( IsATargetMatch( &queryAd, ad, targetType ) ) {
 			if( !stream->code(more) || !putClassAd(stream, *ad) ) {
 				dprintf (D_ALWAYS, 
 						 "Error sending query result to client -- aborting\n");
@@ -11380,7 +11386,7 @@ Scheduler::RecomputeAliveInterval(int cluster, int proc)
 
 
 void
-CkptWallClock()
+CkptWallClock(int /* tid */)
 {
 	int first_time = 1;
 	time_t current_time = time(0);

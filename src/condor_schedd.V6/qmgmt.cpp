@@ -289,9 +289,9 @@ static classad::References immutable_attrs, protected_attrs, secure_attrs;
 static int flush_job_queue_log_timer_id = -1;
 static int dirty_notice_timer_id = -1;
 static int flush_job_queue_log_delay = 0;
-static void HandleFlushJobQueueLogTimer();
+static void HandleFlushJobQueueLogTimer(int tid);
 static int dirty_notice_interval = 0;
-static void PeriodicDirtyAttributeNotification();
+static void PeriodicDirtyAttributeNotification(int tid);
 static void ScheduleJobQueueLogFlush();
 
 bool qmgmt_all_users_trusted = false;
@@ -845,7 +845,7 @@ bool CheckMaterializePolicyExpression(JobQueueCluster * /*cad*/, int & /*retry_d
 // or schedule the cluster for removal.
 // 
 void
-JobMaterializeTimerCallback()
+JobMaterializeTimerCallback(int /* tid */)
 {
 	dprintf(D_MATERIALIZE | D_VERBOSE, "in JobMaterializeTimerCallback\n");
 
@@ -995,7 +995,7 @@ ScheduleClusterForJobMaterializeNow(int cluster_id)
 // our job here is to either materialize a new job, or actually do the cluster cleanup.
 // 
 void
-DeferredClusterCleanupTimerCallback()
+DeferredClusterCleanupTimerCallback(int /* tid */)
 {
 	dprintf(D_MATERIALIZE | D_VERBOSE, "in DeferredClusterCleanupTimerCallback\n");
 
@@ -2727,7 +2727,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 
 void
-CleanJobQueue()
+CleanJobQueue(int /* tid */)
 {
 	if (JobQueueDirty) {
 		dprintf(D_ALWAYS, "Cleaning job queue...\n");
@@ -5844,7 +5844,7 @@ SendDirtyJobAdNotification(const PROC_ID & job_id)
 }
 
 void
-PeriodicDirtyAttributeNotification()
+PeriodicDirtyAttributeNotification(int /* tid */)
 {
 	char	*job_id_str = nullptr;
 
@@ -5888,7 +5888,7 @@ ScheduleJobQueueLogFlush()
 }
 
 void
-HandleFlushJobQueueLogTimer()
+HandleFlushJobQueueLogTimer(int /* tid */)
 {
 	flush_job_queue_log_timer_id = -1;
 	JobQueue->FlushLog();
@@ -9259,7 +9259,7 @@ static void DoBuildPrioRecArray() {
  * for a rebuild.
  * This is meant to be called periodically as a DaemonCore timer.
  */
-void BuildPrioRecArrayPeriodic()
+void BuildPrioRecArrayPeriodic(int /* tid */)
 {
 	if ( time(nullptr) >= PrioRecArrayTimeslice.getStartTime().tv_sec + PrioRecRebuildMaxInterval ) {
 		PrioRecArrayIsDirty = true;

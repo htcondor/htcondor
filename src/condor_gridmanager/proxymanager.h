@@ -24,7 +24,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "simplelist.h"
+#include <vector>
 
 typedef void (Service::*CallbackType)();
 
@@ -59,7 +59,7 @@ struct ProxySubject {
 	char *email;
 	bool has_voms_attrs;
 	Proxy *master_proxy;
-	List<Proxy> proxies;
+	std::vector<Proxy*> proxies;
 };
 
 #define PROXY_NEAR_EXPIRED( p ) \

@@ -102,7 +102,7 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 // NOTE: this function will NOT return false for successful evaluation to a type not in the mask
 // it only returns false for successful evalatation when the type was unsafe and was therefore destroyed
 // This is done so that callers can print useful diagnostics.
-int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
+bool EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
 				  classad::Value::ValueType type_mask,
 				  const std::string & sourceAlias = "",
@@ -142,11 +142,14 @@ inline int EvalExprToScalar( classad::ExprTree *expr, ClassAd *source,
 //ad2 treated as candidate to match against ad1, so we want to find a match for ad1
 bool IsAMatch( ClassAd *ad1, ClassAd *ad2 );
 
-bool IsAHalfMatch( ClassAd *my, ClassAd *target );
+// evaluate My.Requirements in the context of a target ad
+// also check that the MyType of the target ad matches the given targetType.  The collector uses this
+bool IsATargetMatch( ClassAd *my, ClassAd *target, const char * targetType );
 
 // evaluates the query REQUIREMENTS against the target ad
 // but does *NOT* care about TargetType
 bool IsAConstraintMatch( ClassAd *query, ClassAd *target );
+#define IsAHalfMatch IsAConstraintMatch
 
 bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch = false);
 

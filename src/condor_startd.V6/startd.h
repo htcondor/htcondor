@@ -145,7 +145,7 @@ extern CleanupReminderMap cleanup_reminders;
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
 // Check to see if we're all free
-void	startd_check_free();
+void	startd_check_free(int tid = -1);
 // so we can call this to reconfig on command
 void	main_config();
 

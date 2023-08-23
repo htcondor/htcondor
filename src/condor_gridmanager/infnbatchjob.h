@@ -47,7 +47,7 @@ class INFNBatchJob : public BaseJob
 	~INFNBatchJob();
 
 	void Reconfig();
-	void doEvaluateState( int timerID = -1 );
+	void doEvaluateState(int timerID);
 	BaseResource *GetResource();
 
 	static int submitInterval;

@@ -109,7 +109,7 @@ request_pipe_handler(int) {
 
 
 void
-doContactSchedd()
+doContactSchedd(int /* tid */)
 {
 	if (command_queue.empty()) {
 		daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval ); // Come back in a min
