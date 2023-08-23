@@ -5832,6 +5832,11 @@ These macros control the *condor_schedd*.
     when a job requests OAuth2 credentials
     for a configured OAuth2 service.
 
+:macro-def:`CHECKPOINT_DESTINATION_MAPFILE`
+    The location on disk of the file which maps from checkpoint destinations
+    to how invoke the corresponding clean-up plug-in.  Defaults to
+    ``$(ETC)/checkpoint-destination-mapfile``.
+
 condor_shadow Configuration File Entries
 -----------------------------------------
 

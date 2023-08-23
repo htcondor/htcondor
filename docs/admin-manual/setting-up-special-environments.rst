@@ -1506,3 +1506,62 @@ are required to make their output directories on AFS writable to any
 process running on any of our machines, instead of any process on any
 machine with AFS on the Internet.
 
+Self-Checkpointing Jobs
+-----------------------
+
+As of HTCondor 23.1, self-checkpointing jobs may set ``checkpoint_destination``
+(see the *condor_submit* :ref:`man page<checkpoint_destination>`),
+which causes HTCondor to store the job's checkpoint(s) at the specific URL
+(rather than in the AP's :macro:`SPOOL` directory).  This can be a major
+improvement in scalability.  Once the job leaves the queue, HTCondor should
+delete its stored checkpoints -- but the plug-in for the checkpoint destination
+wrote the files, so HTCondor doesn't know how to delete them.  You, the
+HTCondor administrator, need to tell HTCondor how to delete checkpoints by
+registering the corresponding clean-up plug-in.
+
+You may also wish to prevent jobs with checkpoint destinations that HTCondor
+doesn't know how to clean up from entering the queue.  To enable this, add
+``use feature:OnlyRegisteredCheckpointDestinations``
+[FIXME: LINK]
+to your HTCondor configuration.
+
+Registering a Checkpoint Destination
+''''''''''''''''''''''''''''''''''''
+
+When transferring files to or from a URL, HTCondor assumes that a plug-in
+which handles a particular schema (e.g., ``https``) can read from and write
+to any URL starting with ``https://``.  However, this may not be true for
+a clean-up plug-in (see below).  Therefore, when registering a clean-up
+plug-in, you specify a URL prefix for which that plug-in is responsible,
+using a map file syntax.  A map file is line-oriented; every line has three
+columns, separated by whitespace.  The left column must be ``*``; the
+middle column is a URL prefix; and the right column is the clean-up plug-in
+to invoke, plus any required arguments.  Prefixes are checked in order of
+decreasing length, regardless of their order in the file.
+
+The default location of the checkpoint destination mapfile is
+``$(ETC)/checkpoint-destination-mapfile``, but it can be specified by
+the configuration value :macro:`CHECKPOINT_DESTINATION_MAPFILE`.
+
+Checkpoint Destinations with a Filesystem Mounted on the AP
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+HTCondor ships with a clean-up plugin (``local-cleanup``) that deletes
+checkpoints from a filesystem mounted on the AP.  This is more useful than
+it sounds, because the mounted filesystem could the remote backing store
+for files available through some other service, perhaps on a different
+machine.  The plug-in needs to be told how to map from the destination URL to
+the corresponding location in the filesystem.  For instance, if you’ve mounted
+a CephFS at ``/ceph/example-fs`` and made that origin available via the OSDF at
+``osdf:///example.vo/example-fs``, your map file would include the line
+
+.. code-block:: text
+
+   *       osdf:///example.vo/example-fs/      ./local-cleanup /ceph/example-fs
+
+because the ``local-cleanup`` script that ships with HTCondor needs to know
+where the ``example-fs`` is mounted.
+
+Other Checkpoint Destinations
+'''''''''''''''''''''''''''''
+
