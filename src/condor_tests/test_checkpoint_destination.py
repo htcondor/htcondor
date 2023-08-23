@@ -27,16 +27,18 @@ logger.setLevel(logging.DEBUG)
 
 @action
 def the_condor(test_dir):
+    local_dir = test_dir / "condor"
+
     with Condor(
-        local_dir=test_dir / "condor",
+        local_dir=local_dir,
         config={
             'ENABLE_URL_TRANSFERS':         'TRUE',
-            'LOCAL_CLEANUP_PLUGIN':         '$(LIBEXEC)/cleanup_locally_mounted_checkpoint',
-            'LOCAL_CLEANUP_PLUGIN_URL':     'local://example.vo/example.fs',
-            'LOCAL_CLEANUP_PLUGIN_PATH':    test_dir.as_posix(),
             'SCHEDD_DEBUG':                 'D_ZKM D_SUB_SECOND D_CATEGORY',
         }
     ) as the_condor:
+        (local_dir / "checkpoint-destination-mapfile").write_text(
+            f"*   local://example.vo/example.fs   cleanup_locally_mounted_checkpoint,-prefix,\\0,-path,{test_dir.as_posix()}\n"
+        )
         yield the_condor
 
 

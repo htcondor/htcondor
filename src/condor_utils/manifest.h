@@ -55,13 +55,12 @@ namespace manifest {
         std::string & error );
 
     // Assuming a valid MANIFEST file at `manifestFileName`, invokes
-    // the script specified by `pluginFileName` to delete the files
-    // listed there (aside from `manifestFileName`) from the
+    // the script implied by `checkpointDestination` to delete the files
+    // listed in the MANIFEST (aside from `manifestFileName`) from
     // `checkpointDestination`.
     bool deleteFilesStoredAt(
       const std::string & checkpointDestination,
       const std::string & manifestFileName,
-      const std::string & pluginFileName,
       std::string & error );
 }
 

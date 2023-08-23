@@ -39,7 +39,8 @@
 
 #include "shortfile.h"
 
-#include "condor_url.h"
+#include "MapFile.h"
+#include "condor_config.h"
 
 namespace manifest {
 
@@ -186,7 +187,6 @@ bool
 deleteFilesStoredAt(
   const std::string & checkpointDestination,
   const std::string & manifestFileName,
-  const std::string & pluginFileName,
   std::string & error
 ) {
 	FILE * fp = safe_fopen_no_create( manifestFileName.c_str(), "r" );
@@ -198,6 +198,48 @@ deleteFilesStoredAt(
 	std::filesystem::path pathToManifestFile(manifestFileName);
 	std::filesystem::path fileName = pathToManifestFile.filename();
 
+
+	std::string cdmf;
+	param( cdmf, "CHECKPOINT_DESTINATION_MAPFILE" );
+
+	MapFile mf;
+	int rv = mf.ParseCanonicalizationFile( cdmf.c_str(), true, true, true );
+	if( rv < 0 ) {
+		formatstr( error,
+			"Failed to parse checkpoint destination map file (%s), aborting",
+			cdmf.c_str()
+		);
+		return false;
+	}
+
+	std::string argl;
+	if( mf.GetCanonicalization( "*", checkpointDestination.c_str(), argl ) != 0 ) {
+		formatstr( error,
+		    "Failed to find checkpoint destination %s in map file, aborting",
+		    checkpointDestination.c_str()
+		);
+		return false;
+	}
+
+	StringList sl( argl );
+	sl.rewind();
+	std::string pluginFileName = sl.next();
+	std::filesystem::path pluginPath( pluginFileName );
+	if( pluginPath.is_relative() ) {
+		std::string libexec;
+		param( libexec, "LIBEXEC" );
+		pluginFileName = libexec / pluginPath;
+	}
+
+	if(! std::filesystem::exists( pluginFileName )) {
+		formatstr( error,
+		    "Clean-up plug-in for '%s' (%s) does not exist, aborting",
+		    checkpointDestination.c_str(), pluginFileName.c_str()
+		);
+		return false;
+	}
+
+
 	std::string manifestLine;
 	for( bool rv = false; (rv = readLine( manifestLine, fp )); ) {
 		trim( manifestLine );
@@ -208,11 +250,12 @@ deleteFilesStoredAt(
 			continue;
 		}
 
-		std::string protocol = getURLType(checkpointDestination.c_str(), false);
-
 		ArgList args;
 		args.AppendArg(pluginFileName);
-		args.AppendArg(protocol);
+		sl.rewind(); sl.next();
+		for( char * entry = sl.next(); entry != NULL; entry = sl.next() ) {
+			args.AppendArg(entry);
+		}
 		args.AppendArg("-from");
 		args.AppendArg(checkpointDestination);
 		args.AppendArg("-delete");

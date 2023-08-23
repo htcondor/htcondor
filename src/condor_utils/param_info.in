@@ -5913,6 +5913,11 @@ description=Hidden knob.  If true, all daemon core daemons will kill all of thei
 type=bool
 default=true
 
+[CHECKPOINT_DESTINATION_MAPFILE]
+description=Location of the checkpoint destination map file
+default=$(LOCAL_DIR)/checkpoint-destination-mapfile
+type=path
+
 ######
 ## add metaknobs below this banner
 ##

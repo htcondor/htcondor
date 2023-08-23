@@ -708,12 +708,14 @@ class TestCheckpointDestination:
         with the_condor.use_config():
             SPOOL = htcondor.param["SPOOL"]
 
+            local_dir = Path(htcondor.param["LOCAL_DIR"])
+            (local_dir / "checkpoint-destination-mapfile").write_text(
+                f"*   local://example.vo/example.fs   cleanup_locally_mounted_checkpoint,-prefix,\\0,-path,{test_dir.as_posix()}\n"
+            )
+
             preen_env = {
                 ** os.environ,
                 '_CONDOR_SPOOL': SPOOL,
-                '_CONDOR_LOCAL_CLEANUP_PLUGIN': '$(LIBEXEC)/cleanup_locally_mounted_checkpoint',
-                '_CONDOR_LOCAL_CLEANUP_PLUGIN_URL': 'local://example.vo/example.fs',
-                '_CONDOR_LOCAL_CLEANUP_PLUGIN_PATH': test_dir.as_posix(),
                 '_CONDOR_TOOL_DEBUG': 'D_ZKM D_SUB_SECOND D_CATEGORY',
             }
             try:

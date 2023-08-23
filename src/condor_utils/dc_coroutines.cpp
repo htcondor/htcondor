@@ -37,7 +37,7 @@ bool
 dc::AwaitableDeadlineReaper::born( pid_t pid, int timeout ) {
 	auto [dummy, inserted] = pids.insert(pid);
 	if(! inserted) { return false; }
-	dprintf( D_ZKM, "Inserted %d into  %p\n", pid, & pids );
+	// dprintf( D_ZKM, "Inserted %d into %p\n", pid, & pids );
 
 	// Register a timer for this process.
 	int timerID = daemonCore->Register_Timer(
