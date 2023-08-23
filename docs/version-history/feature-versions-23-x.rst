@@ -19,7 +19,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- You can now specify an alternate ssh port with
+  *condor_remote_cluster*.
+  :jira:`2002`
 
 Bugs Fixed:
 
