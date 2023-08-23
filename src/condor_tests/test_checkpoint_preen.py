@@ -714,14 +714,23 @@ class TestCheckpointDestination:
                 '_CONDOR_LOCAL_CLEANUP_PLUGIN': '$(LIBEXEC)/cleanup_locally_mounted_checkpoint',
                 '_CONDOR_LOCAL_CLEANUP_PLUGIN_URL': 'local://example.vo/example.fs',
                 '_CONDOR_LOCAL_CLEANUP_PLUGIN_PATH': test_dir.as_posix(),
-                '_CONDOR_TOOL_DEBUG': 'D_ZKM D_CATEGORY',
+                '_CONDOR_TOOL_DEBUG': 'D_ZKM D_SUB_SECOND D_CATEGORY',
             }
-            rv = subprocess.run( ['condor_preen', '-d'],
-                # Crass empiricism.
-                env=preen_env, timeout=120,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                universal_newlines=True,
-            )
+            try:
+                rv = subprocess.run( ['condor_preen', '-d'],
+                    # Crass empiricism.
+                    env=preen_env, timeout=120,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    universal_newlines=True,
+                )
+            except subprocess.TimeoutExpired as te:
+                # WTAF is going on here?
+                stdout = str(te.stdout).replace( "\\n", "\n" )
+                if stdout.startswith("b'"):
+                    stdout = stdout[2:-1]
+                stdout = "\n" + stdout
+                logger.debug(stdout)
+                raise te
         logger.debug(rv.stdout)
         assert(rv.returncode == 0)
 

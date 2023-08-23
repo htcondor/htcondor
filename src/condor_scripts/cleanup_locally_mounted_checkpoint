@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function usage() {
-    echo "usage: $0 -from CHECKPOINT_DESTINATION/CHECKPOINT_DIR -delete FILE"
+    echo "usage: $0 NAME -from CHECKPOINT_DESTINATION/CHECKPOINT_DIR -delete FILE"
     exit 1
 }
 

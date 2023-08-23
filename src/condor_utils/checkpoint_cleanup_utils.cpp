@@ -15,7 +15,7 @@ spawnCheckpointCleanupProcess(
     int cluster, int proc, ClassAd * jobAd, int cleanup_reaper_id,
     int & pid, std::string & error
 ) {
-	// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): %d.%d\n", cluster, proc );
+	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): %d.%d\n", cluster, proc );
 
 	std::string checkpointDestination;
 	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
@@ -178,6 +178,6 @@ spawnCheckpointCleanupProcess(
 	}
 #endif /* ! defined(WINDOWS) */
 
-	// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
+	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
 	return true;
 }

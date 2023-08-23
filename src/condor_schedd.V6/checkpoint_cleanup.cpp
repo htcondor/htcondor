@@ -14,7 +14,7 @@
 
 int
 Scheduler::checkpointCleanUpReaper( int /* pid */, int /* status */ ) {
-	// dprintf( D_ZKM, "checkpoint clean-up proc %d returned %d\n", pid, status );
+	dprintf( D_ZKM, "checkpoint clean-up proc %d returned %d\n", pid, status );
 
 	return 0;
 }

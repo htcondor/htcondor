@@ -34,6 +34,7 @@ def the_condor(test_dir):
             'LOCAL_CLEANUP_PLUGIN':         '$(LIBEXEC)/cleanup_locally_mounted_checkpoint',
             'LOCAL_CLEANUP_PLUGIN_URL':     'local://example.vo/example.fs',
             'LOCAL_CLEANUP_PLUGIN_PATH':    test_dir.as_posix(),
+            'SCHEDD_DEBUG':                 'D_ZKM D_SUB_SECOND D_CATEGORY',
         }
     ) as the_condor:
         yield the_condor
