@@ -331,12 +331,12 @@ protected:
 
 class LogNewClassAd : public LogRecord {
 public:
-	LogNewClassAd(const char *key, const char *mytype, const char *targettype, const ConstructLogEntry & ctor_in = DefaultMakeClassAdLogTableEntry);
+	LogNewClassAd(const char *key, const char *mytype, const ConstructLogEntry & ctor_in = DefaultMakeClassAdLogTableEntry);
 	virtual ~LogNewClassAd();
 	int Play(void * data_structure); // data_structure should be of type LoggableClassAdTable *
 	virtual char const *get_key() { return key; }
 	char const *get_mytype() { return mytype; }
-	char const *get_targettype() { return targettype; }
+//	char const *get_targettype() { return targettype; }
 
 private:
 	virtual int WriteBody(FILE *fp);
@@ -345,7 +345,7 @@ private:
 	const ConstructLogEntry & ctor;
 	char *key;
 	char *mytype;
-	char *targettype;
+//	char *targettype;
 };
 
 

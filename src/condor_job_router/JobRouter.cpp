@@ -897,8 +897,7 @@ JobRouter::InitPublicAd()
 
 	m_public_ad = ClassAd();
 
-	SetMyTypeName(m_public_ad, "Job_Router");
-	SetTargetTypeName(m_public_ad, "");
+	SetMyTypeName(m_public_ad, JOB_ROUTER_ADTYPE);
 
 	m_public_ad.Assign(ATTR_NAME,daemonName);
 
@@ -2985,7 +2984,7 @@ JobRouter::InvalidatePublicAd() {
 	ASSERT( ! m_operate_as_tool);
 
 	SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
-	SetTargetTypeName(invalidate_ad, "Job_Router");
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, JOB_ROUTER_ADTYPE);
 
 	formatstr(line, "%s == \"%s\"", ATTR_NAME, daemonName.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());

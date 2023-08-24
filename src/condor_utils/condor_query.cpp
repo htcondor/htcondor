@@ -504,79 +504,79 @@ getQueryAd (ClassAd &queryAd)
 	switch (queryType) {
 
 	  case DEFRAG_AD:
-		SetTargetTypeName(queryAd, DEFRAG_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, DEFRAG_ADTYPE);
 		break;
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
-		SetTargetTypeName (queryAd, STARTD_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
 		break;
 
 	  case SCHEDD_AD:
-		SetTargetTypeName (queryAd, SCHEDD_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, SCHEDD_ADTYPE);
 		break;
 
 	  case SUBMITTOR_AD:
-		SetTargetTypeName (queryAd, SUBMITTER_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, SUBMITTER_ADTYPE);
 		break;
 
 	  case LICENSE_AD:
-		SetTargetTypeName (queryAd, LICENSE_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, LICENSE_ADTYPE);
 		break;
 
 	  case MASTER_AD:
-		SetTargetTypeName (queryAd, MASTER_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, MASTER_ADTYPE);
 		break;
 
 	  case CKPT_SRVR_AD:
-		SetTargetTypeName (queryAd, CKPT_SRVR_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, CKPT_SRVR_ADTYPE);
 		break;
 
 	  case COLLECTOR_AD:
-		SetTargetTypeName (queryAd, COLLECTOR_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, COLLECTOR_ADTYPE);
 		break;
 
 	  case NEGOTIATOR_AD:
-		SetTargetTypeName (queryAd, NEGOTIATOR_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, NEGOTIATOR_ADTYPE);
 		break;
 
-      case STORAGE_AD:
-        SetTargetTypeName (queryAd, STORAGE_ADTYPE);
-        break;
+	  case STORAGE_AD:
+		queryAd.Assign(ATTR_TARGET_TYPE, STORAGE_ADTYPE);
+		break;
 
-      case CREDD_AD:
-        SetTargetTypeName (queryAd, CREDD_ADTYPE);
-        break;
+	  case CREDD_AD:
+		queryAd.Assign(ATTR_TARGET_TYPE, CREDD_ADTYPE);
+		break;
 
 	  case GENERIC_AD:
 		if ( genericQueryType ) {
-			SetTargetTypeName (queryAd, genericQueryType);
+			queryAd.Assign(ATTR_TARGET_TYPE, genericQueryType);
 		} else {
-			SetTargetTypeName (queryAd, GENERIC_ADTYPE);
+			queryAd.Assign(ATTR_TARGET_TYPE, GENERIC_ADTYPE);
 		}
 		break;
 
 	  case ANY_AD:
-		SetTargetTypeName (queryAd, ANY_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, ANY_ADTYPE);
 		break;
 
 	  case DATABASE_AD:
-		SetTargetTypeName (queryAd, DATABASE_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, DATABASE_ADTYPE);
 		break;
 
 	  case TT_AD:
-		SetTargetTypeName (queryAd, TT_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, TT_ADTYPE);
 		break;
 
-      case GRID_AD:
-        SetTargetTypeName (queryAd, GRID_ADTYPE);
-        break;
+	  case GRID_AD:
+		queryAd.Assign(ATTR_TARGET_TYPE, GRID_ADTYPE);
+		break;
 
 	  case HAD_AD:
-		SetTargetTypeName (queryAd, HAD_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, HAD_ADTYPE);
 		break;
 
 	  case ACCOUNTING_AD:
-		SetTargetTypeName(queryAd, ACCOUNTING_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, ACCOUNTING_ADTYPE);
 		break;
 	  default:
 		return Q_INVALID_QUERY;

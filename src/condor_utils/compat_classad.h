@@ -392,11 +392,6 @@ char const *QuoteAdStringValue(char const *val, std::string &buf);
 void SetMyTypeName(classad::ClassAd &ad, const char *);
 	/** Get the value of the MyType attribute */
 const char*	GetMyTypeName(const classad::ClassAd &ad);
-	/** Set the value of the TargetType attribute */
-void SetTargetTypeName(classad::ClassAd &ad, const char *);
-	/** Get the value of the TargetType attribtute */
-const char*	GetTargetTypeName(const classad::ClassAd& ad);
-
 
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
                                       classad::ClassAd *target,
