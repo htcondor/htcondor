@@ -140,6 +140,7 @@ inline int EvalExprToScalar( classad::ExprTree *expr, ClassAd *source,
 }
 
 //ad2 treated as candidate to match against ad1, so we want to find a match for ad1
+// This does reciprocal Requirements matching, but as of 23.0 (and 10.0.9) it no longer checks TargetType
 bool IsAMatch( ClassAd *ad1, ClassAd *ad2 );
 
 // evaluate My.Requirements in the context of a target ad
@@ -149,7 +150,6 @@ bool IsATargetMatch( ClassAd *my, ClassAd *target, const char * targetType );
 // evaluates the query REQUIREMENTS against the target ad
 // but does *NOT* care about TargetType
 bool IsAConstraintMatch( ClassAd *query, ClassAd *target );
-#define IsAHalfMatch IsAConstraintMatch
 
 bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch = false);
 

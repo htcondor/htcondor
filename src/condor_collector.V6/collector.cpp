@@ -2126,7 +2126,6 @@ void CollectorDaemon::init_classad(int interval)
     ad = new ClassAd();
 
     SetMyTypeName(*ad, COLLECTOR_ADTYPE);
-    SetTargetTypeName(*ad, "");
 
     char *tmp;
     tmp = param( "CONDOR_ADMIN" );

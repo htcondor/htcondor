@@ -1632,7 +1632,7 @@ Resource::final_update( void )
 
 		// Set the correct types
 	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
-	SetTargetTypeName( invalidate_ad, STARTD_ADTYPE );
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
 
 	/*
 	 * NOTE: the collector depends on the data below for performance reasons
@@ -2418,7 +2418,7 @@ void Resource::publish_static(ClassAd* cap)
 
 	// Set the correct types on the ClassAd
 	SetMyTypeName( *cap,STARTD_ADTYPE );
-	SetTargetTypeName( *cap, JOB_ADTYPE );
+	cap->Assign(ATTR_TARGET_TYPE, JOB_ADTYPE); // because matchmaking before 23.0 needs this
 
 	// We need these for both public and private ads
 	cap->Assign(ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString());

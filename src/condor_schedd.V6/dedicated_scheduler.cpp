@@ -545,7 +545,7 @@ DedicatedScheduler::initialize( void )
 		// Next, fill in the dummy job ad we're going to send to 
 		// startds for claiming them.
 	SetMyTypeName( dummy_job, JOB_ADTYPE );
-	SetTargetTypeName( dummy_job, STARTD_ADTYPE );
+	dummy_job.Assign( ATTR_TARGET_TYPE, STARTD_ADTYPE );
 	dummy_job.Assign( ATTR_REQUIREMENTS, true );
 	dummy_job.Assign( ATTR_OWNER, ds_owner );
 	dummy_job.Assign( ATTR_USER, ds_name );
@@ -3476,7 +3476,6 @@ DedicatedScheduler::publishRequestAd( void )
 	dprintf( D_FULLDEBUG, "In DedicatedScheduler::publishRequestAd()\n" );
 
 	SetMyTypeName(ad, SUBMITTER_ADTYPE);
-	SetTargetTypeName(ad, STARTD_ADTYPE);
 
         // Publish all DaemonCore-specific attributes, which also handles
         // SCHEDD_ATTRS for us.

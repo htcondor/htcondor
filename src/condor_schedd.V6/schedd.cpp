@@ -2164,6 +2164,8 @@ int Scheduler::make_ad_list(
    // when the list is destroyed.
    ClassAd * cad = new ClassAd(*m_adSchedd);
 
+   // TODO: use ATTR_TARGET_TYPE of the queryAd to restrict what ads are created here?
+
    std::string stats_config;
    if (pQueryAd) {
       pQueryAd->LookupString("STATISTICS_TO_PUBLISH",stats_config);
@@ -13670,7 +13672,6 @@ Scheduler::Init()
     // first put attributes into the Base ad that we want to
     // share between the Scheduler AD and the Submitter Ad
     //
-	SetTargetTypeName(*m_adBase, "");
     m_adBase->Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr());
         // Tell negotiator to send us the startd ad
 		// As of 7.1.3, the negotiator no longer pays attention to this
@@ -14453,7 +14454,7 @@ Scheduler::invalidate_ads()
 		// regular one, so just create a temporary one
 	ClassAd * cad = new ClassAd;
     SetMyTypeName( *cad, QUERY_ADTYPE );
-    SetTargetTypeName( *cad, SCHEDD_ADTYPE );
+    cad->Assign(ATTR_TARGET_TYPE, SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
 	formatstr( line, "TARGET.%s == \"%s\"", ATTR_NAME, Name );
@@ -17976,7 +17977,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 	// write the a header ad to the job queue
 	JobQueueKey hdr_id(0,0);
 	int tmp_int = 0;
-	export_queue.NewClassAd(hdr_id, JOB_ADTYPE, STARTD_ADTYPE);
+	export_queue.NewClassAd(hdr_id, JOB_ADTYPE);
 	if ( GetAttributeInt(0, 0, ATTR_NEXT_CLUSTER_NUM, &tmp_int) >= 0 ) {
 		std::string int_str = std::to_string(tmp_int);
 		export_queue.SetAttribute(hdr_id, ATTR_NEXT_CLUSTER_NUM, int_str.c_str());
@@ -17988,7 +17989,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		if ( ! jqc) continue;
 
 		// export the cluster classad, marking all of the jobs in the cluster as leave-in-queue
-		export_queue.NewClassAd(jqc->jid, JOB_ADTYPE, STARTD_ADTYPE);
+		export_queue.NewClassAd(jqc->jid, JOB_ADTYPE);
 		for ( auto attr_itr = jqc->begin(); attr_itr != jqc->end(); attr_itr++ ) {
 			if (YourStringNoCase(ATTR_JOB_LEAVE_IN_QUEUE) == attr_itr->first.c_str()) {
 				// nothing
@@ -18012,7 +18013,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 			// TODO: skip jobs that aren't idle?
 
 			// add the job to the external queue
-			export_queue.NewClassAd(job->jid, JOB_ADTYPE, STARTD_ADTYPE);
+			export_queue.NewClassAd(job->jid, JOB_ADTYPE);
 
 			// copy the job attributes to the external queue
 			for ( auto attr_itr = job->begin(); attr_itr != job->end(); attr_itr++ ) {

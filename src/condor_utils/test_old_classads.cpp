@@ -185,8 +185,6 @@ void test_time_value(ClassAd *classad, const char *attribute_name,
 */
 void test_mytype(ClassAd *classad, const char *expected_value, 
 	int line_number, TestResults *results);
-void test_targettype(ClassAd *classad, const char *expected_value, 
-    int line_number, TestResults *results);
 void test_ads_match(ClassAd *classad_1, ClassAd *classad_2,
     int line_number, TestResults  *results);
 void test_ads_dont_match(ClassAd *classad_1, ClassAd *classad_2,
@@ -350,7 +348,6 @@ main(
 		test_integer_value(classads[0], "B", 2, __LINE__, &test_results);
 		test_integer_value(classads[0], "C", 3, __LINE__, &test_results);
 		test_mytype(classads[0], "", __LINE__, &test_results);
-		test_targettype(classads[0], "", __LINE__, &test_results);
 #if 0
 		test_time_string_value(classads[0], "D", "2001-04-05T12:14:15",
 							   __LINE__, &test_results);
@@ -368,7 +365,6 @@ main(
 
 		test_string_value(classads[1], "D", "alain", __LINE__, &test_results);
 		test_mytype(classads[1], "foo", __LINE__, &test_results);
-		test_targettype(classads[1], "blah", __LINE__, &test_results);
 		
 		test_ads_match(classads[4], classads[5], __LINE__, &test_results);
 		test_ads_match(classads[5], classads[4], __LINE__, &test_results);
@@ -1139,38 +1135,6 @@ test_mytype(
 	return;
 }
 
-/***************************************************************
- *
- * Function: test_targettype
- * Purpose:  Given a classad, test that the target type is what
- *           we expect it to be.
- *
- ***************************************************************/
-void 
-test_targettype(
-    ClassAd     *classad,        // IN: The ClassAd we're examining
-	const char  *expected_value, // IN: The targettype we're expecting
-	int         line_number,     // IN: The line number to print
-    TestResults *results)        // OUT: Modified to reflect result of test
-{
-	static const char *actual_value;
-
-	actual_value = GetTargetTypeName(*classad);
-	if (!strcmp(expected_value, actual_value)) {
-		printf("Passed: TargetType is \"");
-		print_truncated_string(expected_value, 40);
-		printf("\" in line %d\n", line_number);
-		results->AddResult(true);
-	} else {
-		printf("Failed: TargetType is \"");
-		print_truncated_string(actual_value, 30);
-		printf("\" not \"");
-		print_truncated_string(expected_value, 30);
-		printf("\" in line %d\n", line_number);
-		results->AddResult(false);
-	}
-	return;
-}
 
 /***************************************************************
  *
