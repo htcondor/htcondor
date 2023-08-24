@@ -273,7 +273,6 @@ class FileTransfer final: public Service {
 	float TotalBytesSent() const { return bytesSent; }
 
 	float TotalBytesReceived() const { return bytesRcvd; };
-
 	//
 	// Add the given filename to the list of "output" files.  Will
 	// create the empty list of output files if necessary; never
@@ -502,6 +501,7 @@ class FileTransfer final: public Service {
 	bool PeerDoesReuseInfo{false};
 	bool PeerDoesS3Urls{false};
 	bool PeerRenamesExecutable{true};
+	bool PeerKnowsProtectedURLs{false};
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
 	StringList* ExceptionFiles{nullptr};
@@ -550,6 +550,7 @@ class FileTransfer final: public Service {
 	bool I_support_filetransfer_plugins{false};
 	bool I_support_S3{false};
 	bool multifile_plugins_enabled{false};
+	bool m_has_protected_url{false};
 #ifdef WIN32
 	perm* perm_obj{nullptr};
 #endif
@@ -590,7 +591,7 @@ class FileTransfer final: public Service {
 	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);
 
 	// Called internally by DoUpload() in order to handle common wrapup tasks.
-	int ExitDoUpload(ReliSock *s, bool socket_default_crypto, priv_state saved_priv, const filesize_t *total_bytes_ptr, UploadExitInfo& xfer_info);
+	int ExitDoUpload(ReliSock *s, bool socket_default_crypto, priv_state saved_priv, DCTransferQueue & xfer_queue, const filesize_t *total_bytes_ptr, UploadExitInfo& xfer_info);
 
 	// Send acknowledgment of success/failure after downloading files.
 	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
@@ -631,7 +632,7 @@ class FileTransfer final: public Service {
 	// because -- for example -- directories must be created before the
 	// file that live in them.
 	//
-	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths );
+	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths, const char* queue = nullptr );
 
 		// This function generates a list of files to transfer, including
 		// directories to create and their full contents.
@@ -651,7 +652,7 @@ class FileTransfer final: public Service {
 		//      paths of files stored in SPOOL, whether from
 		//      self-checkpointing, ON_EXIT_OR_EVICT, or remote input
 		//      file spooling.
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved );
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved, const char* queue = nullptr);
 
 		// Function internal to ExpandFileTransferList() -- called twice there.
 		// The SpoolSpace argument is only necessary because this function
@@ -762,9 +763,9 @@ public:
 
 	std::string displayStr() {
 		std::string temp;
-		formatstr(temp, "Upload Exit Info:\nError[%d.%d] = '%s'\nAck = %s\nLine = %d\nFiles = %d\nSuccess = %s\nRetry = %s",
-		          hold_code, hold_subcode, error_desc.c_str(), ackStr(), exit_line, xfered_files,
-		          upload_success ? "True" : "False", try_again ? "True" : "False");
+		formatstr(temp, "Success = %s | Error[%d.%d] = '%s' | Ack = %s | Line = %d | Files = %d | Retry = %s",
+		          upload_success ? "True" : "False", hold_code, hold_subcode, error_desc.c_str(),
+		          ackStr(), exit_line, xfered_files, try_again ? "True" : "False");
 		return temp;
 	}
 
