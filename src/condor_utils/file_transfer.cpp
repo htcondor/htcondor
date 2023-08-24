@@ -2373,7 +2373,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// find out if this is the final download.  if so, we put the files
 	// into the user's Iwd instead of our SpoolSpace.
 	if( !s->code(final_transfer) ) {
-		dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+		dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}
 //	dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload final_transfer=%d\n",final_transfer);
@@ -2382,14 +2382,14 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	if( PeerDoesXferInfo ) {
 		ClassAd xfer_info;
 		if( !getClassAd(s,xfer_info) ) {
-			dprintf(D_ALWAYS,"DoDownload: failed to receive xfer info; exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoDownload: failed to receive xfer info; exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 		xfer_info.LookupInteger(ATTR_SANDBOX_SIZE,sandbox_size);
 	}
 
 	if( !s->end_of_message() ) {
-		dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+		dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}
 
@@ -2462,13 +2462,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		{
 			int reply;
 			if( !s->code(reply) ) {
-				dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 			xfer_command = static_cast<TransferCommand>(reply);
 		}
 		if( !s->end_of_message() ) {
-			dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 		dprintf( D_FULLDEBUG, "FILETRANSFER: incoming file_command is %i\n", static_cast<int>(xfer_command));
@@ -2479,7 +2479,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		if ((xfer_command == TransferCommand::EnableEncryption) || (PeerDoesS3Urls && xfer_command == TransferCommand::DownloadUrl)) {
 			bool cryp_ret = s->set_crypto_mode(true);
 			if (!cryp_ret) {
-				dprintf(D_ALWAYS,"DoDownload: failed to enable crypto on incoming file, exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoDownload: failed to enable crypto on incoming file, exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 		} else if (xfer_command == TransferCommand::DisableEncryption) {
@@ -2494,7 +2494,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 		if( !s->code(filename) ) {
-			dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 
@@ -2669,7 +2669,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 		if( PeerDoesGoAhead ) {
 			if( !s->end_of_message() ) {
-				dprintf(D_ALWAYS,"DoDownload: failed on eom before GoAhead: exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoDownload: failed on eom before GoAhead: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 
@@ -2679,7 +2679,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// file.  It then sends a message to our peer
 					// telling it to go ahead.
 				if( !ObtainAndSendTransferGoAhead(xfer_queue,true,s,sandbox_size,fullname.c_str(),I_go_ahead_always) ) {
-					dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+					dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 			}
@@ -2690,7 +2690,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			if( !peer_goes_ahead_always ) {
 
 				if( !ReceiveTransferGoAhead(s,fullname.c_str(),true,peer_goes_ahead_always,peer_max_transfer_bytes) ) {
-					dprintf(D_ALWAYS, "DoDownload: exiting at %d\n",__LINE__);
+					dprintf(D_ERROR, "DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 			}
@@ -2763,7 +2763,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			// receive the classad
 			ClassAd file_info;
 			if (!getClassAd(s, file_info)) {
-				dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 
@@ -2932,7 +2932,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				}
 				s->encode();
 				if (!putClassAd(s, ad) || !s->end_of_message()) {
-					dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+					dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 				s->decode();
@@ -2941,7 +2941,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				dprintf(D_FULLDEBUG, "DoDownload: Received request to sign URLs.\n");
 					// We must consume the EOM in order to send the ClassAd later.
 				if (!s->end_of_message()) {
-					dprintf(D_ALWAYS, "DoDownload: exiting at %d\n",__LINE__);
+					dprintf(D_ERROR, "DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 				ClassAd result_ad;
@@ -3022,7 +3022,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// Send resulting list of signed URLs, encrypted if possible.
 				classad::References encrypted_attrs{"SignList"};
 				if (!putClassAd(s, result_ad, 0, NULL, &encrypted_attrs) || !s->end_of_message()) {
-					dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+					dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 				s->decode();
@@ -3045,7 +3045,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			// receive the URL from the wire
 
 			if (!s->code(URL)) {
-				dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 
@@ -3301,7 +3301,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// what went wrong, for what it is worth.
 				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.c_str());
 
-				dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 		}
@@ -4398,19 +4398,19 @@ FileTransfer::computeFileList(
 	// if it is the final transfer, the server places the files
 	// into the user's Iwd.  if not, the files go into SpoolSpace.
 	if( !s->code(m_final_transfer_flag) ) {
-		dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+		dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}
 	if( PeerDoesXferInfo ) {
 		ClassAd xfer_info;
 		xfer_info.Assign(ATTR_SANDBOX_SIZE,sandbox_size);
 		if( !putClassAd(s,xfer_info) ) {
-			dprintf(D_ALWAYS,"DoUpload: failed to send xfer_info; exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoUpload: failed to send xfer_info; exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 	}
 	if( !s->end_of_message() ) {
-		dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+		dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}
 
@@ -4537,23 +4537,23 @@ FileTransfer::computeFileList(
 
 			// Indicate a ClassAd-based command.
 		if( !s->snd_int(static_cast<int>(TransferCommand::Other), false) || !s->end_of_message() ) {
-			dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 			// Fake an empty filename.
 		if (!s->put("") || !s->end_of_message()) {
-			dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv(-1);
 		}
 
 			// Here, we must wait for the go-ahead from the transfer peer.
 		if (!ReceiveTransferGoAhead(s, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
-			dprintf(D_ALWAYS, "DoUpload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR, "DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 			// Obtain the transfer token from the transfer queue.
 		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", protocolState.I_go_ahead_always) ) {
-			dprintf(D_ALWAYS, "DoUpload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR, "DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 
@@ -4572,17 +4572,17 @@ FileTransfer::computeFileList(
 		}
 		file_info.Insert("ReuseList", classad::ExprList::MakeExprList(info_list));
 		if (!putClassAd(s, file_info) || !s->end_of_message()) {
-			dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv(-1);
 		}
 		ClassAd reuse_ad;
 		s->decode();
 		if (!getClassAd(s, reuse_ad)) {
-			dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv(-1);
 		}
 		if (!s->end_of_message()) {
-			dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv(-1);
 		}
 		s->encode();
@@ -4614,23 +4614,23 @@ FileTransfer::computeFileList(
 
 			// Indicate a ClassAd-based command.
 		if (!s->snd_int(static_cast<int>(TransferCommand::Other), false) || !s->end_of_message()) {
-			dprintf(D_ALWAYS,"DoUpload: exiting at %d\n", __LINE__);
+			dprintf(D_ERROR,"DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
 			// Fake an empty filename.
 		if (!s->put("") || !s->end_of_message()) {
-			dprintf(D_ALWAYS,"DoUpload: exiting at %d\n", __LINE__);
+			dprintf(D_ERROR,"DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
 
 			// Here, we must wait for the go-ahead from the transfer peer.
 		if (!ReceiveTransferGoAhead(s, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
-			dprintf(D_ALWAYS, "DoUpload: exiting at %d\n", __LINE__);
+			dprintf(D_ERROR, "DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
 			// Obtain the transfer token from the transfer queue.
 		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", protocolState.I_go_ahead_always) ) {
-			dprintf(D_ALWAYS, "DoUpload: exiting at %d\n", __LINE__);
+			dprintf(D_ERROR, "DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
 
@@ -4644,7 +4644,7 @@ FileTransfer::computeFileList(
 		file_info.Insert("SignList", classad::ExprList::MakeExprList(info_list));
 
 		if (!putClassAd(s, file_info) || !s->end_of_message()) {
-			dprintf(D_ALWAYS, "DoUpload: exiting at %d\n", __LINE__);
+			dprintf(D_ERROR, "DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
 		ClassAd signed_ad;
@@ -4652,7 +4652,7 @@ FileTransfer::computeFileList(
 		if (!getClassAd(s, signed_ad) ||
 			!s->end_of_message())
 		{
-			dprintf(D_ALWAYS, "DoUpload: exiting at %d\n", __LINE__);
+			dprintf(D_ERROR, "DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
 		s->encode();
@@ -5046,11 +5046,11 @@ FileTransfer::uploadFileList(
 		bool no_defer_header = multifilePluginPath.empty() || !currentUploadDeferred;
 		if (no_defer_header) {
 			if( !s->snd_int(static_cast<int>(file_command), false) ) {
-				dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 			if( !s->end_of_message() ) {
-				dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 		}
@@ -5060,7 +5060,7 @@ FileTransfer::uploadFileList(
 		if (file_command == TransferCommand::EnableEncryption || (PeerDoesS3Urls && (file_command == TransferCommand::DownloadUrl))) {
 			bool cryp_ret = s->set_crypto_mode(true);
 			if (!cryp_ret) {
-				dprintf(D_ALWAYS,"DoUpload: failed to enable crypto on outgoing file, exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoUpload: failed to enable crypto on outgoing file, exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 
@@ -5070,7 +5070,7 @@ FileTransfer::uploadFileList(
 		else {
 			bool cryp_ret = s->set_crypto_mode(protocolState.socket_default_crypto);
 			if (!cryp_ret) {
-				dprintf(D_ALWAYS,"DoUpload: failed to set default crypto on outgoing file, exiting at %d\n",__LINE__);
+				dprintf(D_ERROR,"DoUpload: failed to set default crypto on outgoing file, exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 		}
@@ -5083,13 +5083,13 @@ FileTransfer::uploadFileList(
 		// like 'CLASSAD'?
 		//
 		if( no_defer_header && !s->put(dest_filename.c_str()) ) {
-			dprintf(D_ALWAYS,"DoUpload: exiting at %d\n",__LINE__);
+			dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 
 		if( PeerDoesGoAhead ) {
 			if( no_defer_header && !s->end_of_message() ) {
-				dprintf(D_ALWAYS, "DoUpload: failed on eom before GoAhead; exiting at %d\n",__LINE__);
+				dprintf(D_ERROR, "DoUpload: failed on eom before GoAhead; exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 
@@ -5097,7 +5097,7 @@ FileTransfer::uploadFileList(
 					// Now wait for our peer to tell us it is ok for us to
 					// go ahead and send data.
 				if( !ReceiveTransferGoAhead(s,fullname.c_str(),false,protocolState.peer_goes_ahead_always,protocolState.peer_max_transfer_bytes) ) {
-					dprintf(D_ALWAYS, "DoUpload: exiting at %d\n",__LINE__);
+					dprintf(D_ERROR, "DoUpload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 			}
@@ -5106,7 +5106,7 @@ FileTransfer::uploadFileList(
 					// Now tell our peer when it is ok for us to read data
 					// from disk for sending.
 				if( !ObtainAndSendTransferGoAhead(xfer_queue,false,s,sandbox_size,fullname.c_str(),protocolState.I_go_ahead_always) ) {
-					dprintf(D_ALWAYS, "DoUpload: exiting at %d\n",__LINE__);
+					dprintf(D_ERROR, "DoUpload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 			}
@@ -5232,7 +5232,7 @@ FileTransfer::uploadFileList(
 					// Always encrypt the URL as it might contain an authorization.
 					const classad::References encrypted_attrs{"OutputDestination"};
 					if(!putClassAd(s, file_info, 0, NULL, &encrypted_attrs)) {
-						dprintf(D_ALWAYS,"DoDownload: exiting at %d\n",__LINE__);
+						dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 						return_and_resetpriv( -1 );
 					}
 
@@ -5401,7 +5401,7 @@ FileTransfer::uploadFileList(
 		}
 
 		if( !currentUploadDeferred && !s->end_of_message() ) {
-			dprintf(D_ALWAYS,"DoUpload: socket communication failure; exiting at line %d\n",__LINE__);
+			dprintf(D_ERROR,"DoUpload: socket communication failure; exiting at line %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 
