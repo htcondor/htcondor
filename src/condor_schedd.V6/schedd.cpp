@@ -124,7 +124,6 @@ extern GridUniverseLogic* _gridlogic;
 
 extern char* Spool;
 extern char * Name;
-static char * NameInEnv = NULL;
 extern char * JobHistoryFileName;
 extern char * PerJobHistoryDir;
 
@@ -13223,25 +13222,6 @@ Scheduler::Init()
 	m_include_default_flock_param = param_boolean("FLOCK_BY_DEFAULT", true);
 
 	dprintf( D_FULLDEBUG, "Using name: %s\n", Name );
-
-		// Put SCHEDD_NAME in the environment, so the shadow can use
-		// it.  (Since the schedd's name may have been set on the
-		// command line, the shadow can't compute the schedd's name on
-		// its own.)  
-		// Only put in in the env if it is not already there, so 
-		// we don't leak memory without reason.		
-
-#define SCHEDD_NAME_LHS "SCHEDD_NAME"
-	
-	if ( NameInEnv == NULL || strcmp(NameInEnv,Name) ) {
-		free( NameInEnv );
-		NameInEnv = strdup( Name );
-		if ( SetEnv( SCHEDD_NAME_LHS, NameInEnv ) == FALSE ) {
-			dprintf(D_ALWAYS, "SetEnv(%s=%s) failed!\n", SCHEDD_NAME_LHS,
-					NameInEnv);
-		}
-	}
-
 
 	if( AccountantName ) free( AccountantName );
 	if( ! (AccountantName = param("ACCOUNTANT_HOST")) ) {
