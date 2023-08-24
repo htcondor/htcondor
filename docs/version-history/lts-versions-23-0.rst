@@ -24,5 +24,7 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where the *blahpd* would incorrectly believe that an LSF
+  batch scheduler was not working.
+  :jira:`2003`
 

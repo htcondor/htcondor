@@ -11013,7 +11013,7 @@ DaemonCore::PidEntry::PidEntry() : pid(0),
 	}
 	penvid.num = PIDENVID_MAX;
 	for (int i = 0;i<PIDENVID_MAX; ++i) {
-		penvid.ancestors[i].active=0;
+		penvid.ancestors[i].active=false;
 		for (unsigned int j=0;j<PIDENVID_ENVID_SIZE;++j)
 			penvid.ancestors[i].envid[j]='\0';
 	}

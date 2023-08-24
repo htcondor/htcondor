@@ -95,7 +95,7 @@ typedef struct PidEnvIDEntry_s {
 
 	/* whether or not this pid entry is actively being used at this
 		time. */
-	int active;
+	bool active;
 
 	/* The structure that this structure is being embedded in doesn't have
 		any allocated memory in it, and therefore no code that deals it

@@ -34,11 +34,11 @@ New Features:
   default.
   :jira:`1824`
 
-- By default, the user event logs are no longer fsync'd by the schedd.  This
-  should improve the performance of the schedd, especially when the user's event
+- By default, the user event logs are no longer fsync'd by the *condor_schedd*.  This
+  should improve the performance of the *condor_schedd*, especially when the user's event
   logs are on non-solid state disks.  There is a knob to revert to the old
   semantics, ENABLE_USERLOG_FSYNC, which defaults to false.
-  :jira:`1934`
+  :jira:`1550`
 
 - A new configuration variable :macro:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY` was
   added to allow administrators to restrict job submission to users that have
@@ -65,23 +65,18 @@ New Features:
   about the specified DAG.
   :jira:`1951`
 
-- Preen now preserves all files in the spool directory matching `*OfflineLog*`
-  so that central managers with multiple active collectors can have offline
-  ads.
-  :jira:`1933`
-
-- Updated DAGMan to utilize the ``-reason`` flag to add a meassage about why
+- Updated DAGMan to utilize the ``-reason`` flag to add a message about why
   a job was removed when DAGMan removes managed jobs via *condor_rm* for some
   reason.
   :jira:`1950`
 
 - Added new DAG command ``ENV`` for DAGMan. This command allows users to specify
-  environment variables to be added into the DAGMan job propers environment either
+  environment variables to be added into the DAGMan job proper's environment either
   by setting values explicitly or getting them from the environment the job is
   submitted from.
   :jira:`1955`
 
-- Updated *condor_upgrade_check* script to check and warn about known incompatibilites
+- Updated *condor_upgrade_check* script to check and warn about known incompatibilities
   introduced in the feature series for HTCondor ``V10`` that can cause issues when
   upgrading to a newer version (i.e. HTCondor ``V23``).
   :jira:`1960`
@@ -598,7 +593,7 @@ New Features:
 - The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
   now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
   to 128k, if it was below this.  This improves the scalability of the
-  schedd when running more than 16k jobs from any one user.
+  *condor_schedd* when running more than 16k jobs from any one user.
   :jira:`1556`
 
 - The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
