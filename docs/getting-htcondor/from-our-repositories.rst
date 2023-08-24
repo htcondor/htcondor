@@ -51,8 +51,8 @@ Ubuntu 20.04 (Focal Fossa) and 22.04 (Jammy Jellyfish).
 Binaries are only available for x86-64.
 These repositories also include the source packages.
 
-Debian 11
-#########
+Debian 11, and 12
+#################
 
 Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-10.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
