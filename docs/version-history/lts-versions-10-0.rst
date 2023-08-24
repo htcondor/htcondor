@@ -28,8 +28,8 @@ Bugs Fixed:
   a kernel panic in some EL8 kernels.
   :jira:`1985`
 
-- Fixed a bug with parallel universe that would result in the startd
-  rejecting start attempts from the schedd and causing the schedd
+- Fixed a bug with parallel universe that would result in the *condor_startd*
+  rejecting start attempts from the *condor_schedd* and causing the *condor_schedd*
   to crash.
   :jira:`1959`
 
@@ -50,13 +50,13 @@ Bugs Fixed:
 - Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
   :jira:`1954`
 
-- Fixed a bug where **condor_adstash** would not import the OpenSearch library properly.
+- Fixed a bug where *condor_adstash* would not import the OpenSearch library properly.
   :jira:`1965`
 
 - Fixed a bug that broke the version check for older versions of the Elasticsearch Python library.
   :jira:`1964`
 
-- Fixed a bug in **condor_adstash** that caused a "unexpected keyword argument" error to occur when
+- Fixed a bug in *condor_adstash* that caused a "unexpected keyword argument" error to occur when
   new attributes needed to be added to the index and when using version 8.0.0 or newer of
   the Elasticsearch Python library.
   :jira:`1930`
