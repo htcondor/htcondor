@@ -15,7 +15,7 @@ spawnCheckpointCleanupProcess(
     int cluster, int proc, ClassAd * jobAd, int cleanup_reaper_id,
     int & pid, std::string & error
 ) {
-	// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): for job %d.%d\n", cluster, proc );
+	dprintf( D_TEST, "spawnCheckpointCleanupProcess(): for job %d.%d\n", cluster, proc );
 
 	std::string checkpointDestination;
 	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
@@ -51,7 +51,6 @@ spawnCheckpointCleanupProcess(
 	std::filesystem::path condor_manifest = BIN / "condor_manifest";
 	if(! std::filesystem::exists(condor_manifest)) {
 		formatstr( error, "'%s' does not exist, aborting", condor_manifest.string().c_str() );
-		// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): %s\n", error.c_str() );
 		return false;
 	}
 
@@ -136,7 +135,6 @@ spawnCheckpointCleanupProcess(
 #endif /* ! defined(WINDOWS) */
 
 	OptionalCreateProcessArgs cleanup_process_opts;
-	// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): spawning as %d.%d\n", get_user_uid(), get_user_gid() );
 	pid = daemonCore->CreateProcessNew(
 		condor_manifest.string(),
 		cleanup_process_args,
@@ -151,6 +149,6 @@ spawnCheckpointCleanupProcess(
 	}
 #endif /* ! defined(WINDOWS) */
 
-	// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
+	dprintf( D_TEST, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
 	return true;
 }

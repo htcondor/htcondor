@@ -33,7 +33,7 @@ def the_condor(test_dir):
         local_dir=local_dir,
         config={
             'ENABLE_URL_TRANSFERS':         'TRUE',
-            'SCHEDD_DEBUG':                 'D_ZKM D_SUB_SECOND D_CATEGORY',
+            'SCHEDD_DEBUG':                 'D_TEST D_SUB_SECOND D_CATEGORY',
         }
     ) as the_condor:
         (local_dir / "checkpoint-destination-mapfile").write_text(

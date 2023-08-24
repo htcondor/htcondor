@@ -716,7 +716,7 @@ class TestCheckpointDestination:
             preen_env = {
                 ** os.environ,
                 '_CONDOR_SPOOL': SPOOL,
-                '_CONDOR_TOOL_DEBUG': 'D_ZKM D_SUB_SECOND D_CATEGORY',
+                '_CONDOR_TOOL_DEBUG': 'D_TEST D_SUB_SECOND D_CATEGORY',
             }
             try:
                 rv = subprocess.run( ['condor_preen', '-d'],
