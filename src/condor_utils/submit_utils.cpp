@@ -216,7 +216,7 @@ bool SubmitHash::AssignJobVal(const char * attr, long long val) { return job->As
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
-	typedef struct string_value { char * psz; int flags; } string_value;
+	typedef struct string_value { const char * psz; int flags; } string_value;
 	struct key_value_pair { const char * key; const string_value * def; };
 	struct key_table_pair { const char * key; const key_value_pair * aTable; int cElms; }; // metaknob table
 	typedef struct kvp_value { const char * key; int flags; const key_value_pair * aTable; int cElms; } kvp_value;
@@ -389,9 +389,10 @@ condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const
 	condor_params::string_value * NewDef = set.apool.consume<condor_params::string_value>(1, sizeof(void*));
 	NewDef->flags = Def.flags;
 	if (cch > 0) {
-		NewDef->psz = set.apool.consume(cch, sizeof(void*));
-		memset(NewDef->psz, 0, cch);
-		if (Def.psz) strcpy(NewDef->psz, Def.psz);
+		char * psz = set.apool.consume(cch, sizeof(void*));
+		memset(psz, 0, cch);
+		if (Def.psz) strcpy(psz, Def.psz);
+		NewDef->psz = psz;
 	} else {
 		NewDef->psz = NULL;
 	}
@@ -420,11 +421,11 @@ void SubmitHash::setup_macro_defaults()
 	SubmitMacroSet.defaults->metat = NULL;
 
 	// allocate space for the 'live' macro default string_values and for the strings themselves.
-	LiveNodeString = allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24)->psz;
-	LiveClusterString = allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24)->psz;
-	LiveProcessString = allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24)->psz;
-	LiveRowString = allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24)->psz;
-	LiveStepString = allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24)->psz;
+	LiveNodeString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24)->psz);
+	LiveClusterString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24)->psz);
+	LiveProcessString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24)->psz);
+	LiveRowString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24)->psz);
+	LiveStepString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24)->psz);
 }
 
 // set the value that $(SUBMIT_FILE) will expand to. (set into the defaults table, not the submit hash table)
@@ -448,7 +449,7 @@ void SubmitHash::insert_submit_filename(const char * filename, MACRO_SOURCE & so
 		if (pdi[ii].def == &UnliveSubmitFileMacroDef) { 
 			condor_params::string_value * NewDef = SubmitMacroSet.apool.consume<condor_params::string_value>(1, sizeof(void*));
 			NewDef->flags = UnliveSubmitFileMacroDef.flags;
-			NewDef->psz = const_cast<char*>(macro_source_filename(source, SubmitMacroSet));
+			NewDef->psz = macro_source_filename(source, SubmitMacroSet);
 			pdi[ii].def = NewDef;
 		}
 	}
@@ -1233,7 +1234,7 @@ const char * init_submit_default_macros()
 		int ix = 0;
 		for (auto it : templates) {
 			aTable[ix].key = ap.insert(it.first.c_str());
-			defs[ix].psz = const_cast<char*>(ap.insert(it.second.c_str()));
+			defs[ix].psz = ap.insert(it.second.c_str());
 			defs[ix].flags = PARAM_TYPE_STRING;
 			aTable[ix].def = &defs[ix];
 			++ix;
@@ -8760,8 +8761,7 @@ struct _parse_up_to_q_callback_args { char * line; int source_id; };
 static int parse_q_callback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*macro_set*/, char * line, std::string & errmsg)
 {
 	struct _parse_up_to_q_callback_args * pargs = (struct _parse_up_to_q_callback_args *)pv;
-	char * queue_args = const_cast<char*>(SubmitHash::is_queue_statement(line));
-	if ( ! queue_args) {
+	if ( ! SubmitHash::is_queue_statement(line)) {
 		// not actually a queue line, so stop parsing and return error
 		pargs->line = line;
 		return -1;
