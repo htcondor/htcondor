@@ -134,6 +134,14 @@ spawnCheckpointCleanupProcess(
 	}
 #endif /* ! defined(WINDOWS) */
 
+	if( IsDebugLevel( D_TEST ) ) {
+		std::string cl;
+		for( const auto & a : cleanup_process_args ) {
+			formatstr_cat( cl, " %s", a.c_str() );
+		}
+		dprintf( D_TEST, "spawnCheckpointCleanupProcess(): %s\n", cl.c_str() );
+	}
+
 	OptionalCreateProcessArgs cleanup_process_opts;
 	pid = daemonCore->CreateProcessNew(
 		condor_manifest.string(),

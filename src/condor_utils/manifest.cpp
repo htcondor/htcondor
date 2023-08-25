@@ -228,7 +228,7 @@ deleteFilesStoredAt(
 	if( pluginPath.is_relative() ) {
 		std::string libexec;
 		param( libexec, "LIBEXEC" );
-		pluginFileName = libexec / pluginPath;
+		pluginFileName = (libexec / pluginPath).string();
 	}
 
 	if(! std::filesystem::exists( pluginFileName )) {
