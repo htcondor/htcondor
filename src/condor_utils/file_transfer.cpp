@@ -4394,6 +4394,11 @@ FileTransfer::computeFileList(
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
 	// dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), after ExpandeFileTransferList():" );
 
+	// Presently, `inHandleCommands` will only be set on the shadow.  The conditional
+	// here is abstractly, "if this side is telling the other side which URLs to download";
+	// if it is, this side can take care of managing transfer slots without the other
+	// side having to do anything.  See the ticket for HTCONDOR-1819.  This logic
+	// currently works because this function is only called on the upload side.
 	if (inHandleCommands && m_has_protected_url) {
 		ExprTree * tree = jobAd.Lookup(ATTR_TRANSFER_Q_URL_IN_LIST);
 		if (tree && tree->GetKind() == ClassAd::ExprTree::EXPR_LIST_NODE) {
@@ -4936,8 +4941,10 @@ FileTransfer::uploadFileList(
 			(perm_obj->read_access(fullname.c_str()) != 1) ) {
 			// we do _not_ have permission to read this file!!
 			formatstr(error_desc,"error reading from %s: permission denied",fullname.c_str());
-			xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, EPERM);
-			xfer_info.line(__LINE__).doAck(TransferAck::BOTH).files(numFiles);
+			xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, EPERM)
+			         .doAck(TransferAck::BOTH)
+			         .files(numFiles)
+			         .line(__LINE__);
 			return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes_ptr, xfer_info);
 		}
 #else
@@ -5019,7 +5026,8 @@ FileTransfer::uploadFileList(
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!has_failure) {
 					has_failure = true;
-					xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, 1).line(__LINE__);
+					xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, 1)
+					         .line(__LINE__);
 				}
 			}
 			currentUploadPlugin = "";
@@ -5375,7 +5383,8 @@ FileTransfer::uploadFileList(
 
 				if (!has_failure) {
 					has_failure = true;
-					xfer_info.setError(error_desc, hold_code, hold_subcode).line(__LINE__);
+					xfer_info.setError(error_desc, hold_code, hold_subcode)
+					         .line(__LINE__);
 				}
 			}
 			else {
@@ -5388,8 +5397,11 @@ FileTransfer::uploadFileList(
 				// state.  Some network operation may have failed part
 				// way through the transmission, so we cannot expect
 				// the other side to be able to read our upload ack.
-				xfer_info.setError(error_desc, hold_code, hold_subcode);
-				xfer_info.doAck(TransferAck::DOWNLOAD).retry().line(__LINE__).files(numFiles);
+				xfer_info.setError(error_desc, hold_code, hold_subcode)
+				         .doAck(TransferAck::DOWNLOAD)
+				         .retry()
+				         .files(numFiles)
+				         .line(__LINE__);
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
 				return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes_ptr, xfer_info);
@@ -5446,8 +5458,8 @@ FileTransfer::uploadFileList(
 			formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 			if (!has_failure) {
 				has_failure = true;
-				xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, static_cast<int>(result) << 8);
-				xfer_info.line(__LINE__);
+				xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, static_cast<int>(result) << 8)
+				         .line(__LINE__);
 			}
 		}
 		*total_bytes_ptr += upload_bytes;
@@ -5459,12 +5471,14 @@ FileTransfer::uploadFileList(
 		formatstr_cat(error_desc, ": %s", m_reuse_info_err.getFullText().c_str());
 		if (!has_failure) {
 			has_failure = true;
-			xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, 2).line(__LINE__);
+			xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, 2)
+			         .line(__LINE__);
 		}
 	}
 
 	if (!has_failure) { xfer_info.noError().success(); }
-	xfer_info.doAck(TransferAck::BOTH).files(numFiles);
+	xfer_info.doAck(TransferAck::BOTH)
+	         .files(numFiles);
 
 	uploadEndTime = condor_gettimestamp_double();
 
