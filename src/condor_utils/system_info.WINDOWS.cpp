@@ -41,6 +41,7 @@
 #include "condor_debug.h"
 #include <process.h>
 #include "system_info.WINDOWS.h"
+#include "stl_string_utils.h"
 
 /*
 #ifndef WINNT
