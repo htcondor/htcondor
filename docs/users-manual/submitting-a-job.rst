@@ -351,7 +351,7 @@ file.
     naming output files.
 
 ``$(Year)`` ``$(Month)`` ``$(Day)``
-    These integer values are derived from the `$(SUBMIT_FILE)` macro above.
+    These integer values are derived from the `$(SUBMIT_TIME)` macro above.
 
 ``$(Item)``
     The default name of the variable when no ``<varname>`` is provided
