@@ -248,7 +248,7 @@ send_email()
 
 	if( MailFlag ) {
 		if( (mailer=email_nonjob_open(PreenAdmin, subject.c_str())) == NULL ) {
-			dprintf(D_ALWAYS|D_FAILURE, "Can't do email_open(\"%s\", \"%s\")\n",PreenAdmin,subject.c_str());
+			dprintf(D_ERROR, "Can't do email_open(\"%s\", \"%s\")\n",PreenAdmin,subject.c_str());
 		#ifdef WIN32
 			if ( ! param_defined("SMTP_SERVER")) {
 				dprintf(D_ALWAYS, "SMTP_SERVER not configured\n");

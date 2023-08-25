@@ -1040,7 +1040,7 @@ int daemon::RealStart( )
 
 	if ( pid == FALSE ) {
 		// Create_Process failed!
-		dprintf( D_FAILURE|D_ALWAYS,
+		dprintf( D_ERROR,
 				 "ERROR: Create_Process failed trying to start %s\n",
 				 process_name);
 		pid = 0;
@@ -1352,11 +1352,7 @@ daemon::Exited(int status)
 			expected = true;
 		}
 	}
-	int d_flag = D_ALWAYS;
-	if( had_failure ) {
-		d_flag |= D_FAILURE;
-	}
-	dprintf(d_flag, "%s\n", msg.c_str());
+	dprintf(had_failure ? D_ALWAYS : (D_ERROR | D_EXCEPT), "%s\n", msg.c_str());
 
 		// For HA, release the lock
 	if ( is_ha && ha_lock ) {

@@ -1016,7 +1016,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		std::string errmsg;
 		if (ifstack.line_is_if(line, errmsg, macro_set, ctx)) {
 			if ( ! errmsg.empty()) {
-				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), line);
+				dprintf(D_CONFIG | D_ERROR_ALSO, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), line);
 				return -1111;
 			} else {
 				dprintf(D_CONFIG | D_VERBOSE, "config %lld,%lld,%lld line: %s\n", ifstack.top, ifstack.state, ifstack.estate, line);
@@ -1487,7 +1487,7 @@ Parse_macros(
 		std::string errmsg;
 		if (ifstack.line_is_if(name, errmsg, macro_set, *pctx)) {
 			if ( ! errmsg.empty()) {
-				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), name);
+				dprintf(D_CONFIG | D_ERROR_ALSO, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), name);
 				config_errmsg = errmsg;
 				retval = -1;
 				name = NULL;

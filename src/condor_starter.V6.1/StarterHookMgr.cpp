@@ -120,7 +120,7 @@ StarterHookMgr::tryHookPrepareJob_implementation(const char *m_hook_prepare_job,
 		std::string err_msg;
 		formatstr(err_msg, "failed to execute %s (%s)",
 						hook_name, m_hook_prepare_job);
-		dprintf(D_ALWAYS|D_FAILURE,
+		dprintf(D_ERROR,
 				"ERROR in StarterHookMgr::tryHookPrepareJob_implementation: %s\n",
 				err_msg.c_str());
 		Starter->jic->notifyStarterError(err_msg.c_str(), true,
@@ -158,7 +158,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 	Starter->PublishToEnv(&env);
 
 	if (!spawn(&client, NULL, hook_stdin, PRIV_USER_FINAL, &env)) {
-		dprintf(D_ALWAYS|D_FAILURE,
+		dprintf(D_ERROR,
 				"ERROR in StarterHookMgr::hookUpdateJobInfo: "
 				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n",
 				m_hook_update_job_info.c_str());
@@ -212,7 +212,7 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 	Starter->PublishToEnv(&env);
 
 	if (!spawn(hook_client, &args, hook_stdin, PRIV_USER_FINAL, &env)) {
-		dprintf(D_ALWAYS|D_FAILURE,
+		dprintf(D_ERROR,
 				"ERROR in StarterHookMgr::tryHookJobExit: "
 				"failed to spawn HOOK_JOB_EXIT (%s)\n", m_hook_job_exit.c_str());
 		delete hook_client;
@@ -303,7 +303,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 	if (exit_status != 0) {
 			// HOOK RETURNED FAILURE
 
-		dprintf(D_ALWAYS|D_FAILURE,
+		dprintf(D_ERROR,
 				"ERROR in HookPrepareJobClient::hookExited: %s\n",
 				log_msg.c_str());
 		Starter->RemoteShutdownFast(0);

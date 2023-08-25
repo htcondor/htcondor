@@ -154,7 +154,7 @@ HookClientMgr::reaperOutput(int exit_pid, int exit_status)
 
 	if (!found_it) {
 			// Uhh... now what?
-		dprintf(D_ALWAYS|D_FAILURE, "Unexpected: HookClientMgr::reaper() "
+		dprintf(D_ERROR, "Unexpected: HookClientMgr::reaper() "
 				"called with pid %d but no HookClient found that matches.\n",
 				exit_pid);
 		return FALSE;

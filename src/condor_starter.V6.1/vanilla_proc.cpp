@@ -413,7 +413,7 @@ VanillaProc::StartJob()
                        {
                            TemporaryPrivSentry sentry(PRIV_ROOT);
                            if( mkdir(full_dir_str.c_str(), S_IRWXU) < 0 ) {
-                               dprintf( D_FAILURE|D_ALWAYS,
+                               dprintf( D_ERROR,
                                    "Failed to create sandbox directory in chroot (%s): %s\n",
                                    full_dir_str.c_str(),
                                    strerror(errno) );
