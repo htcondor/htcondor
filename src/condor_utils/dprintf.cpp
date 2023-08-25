@@ -467,11 +467,11 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
 				}
 			}
-			// If the D_FAILURE flag was or'd to the category, then this is both a category message (i.e. D_AUDIT)
+			// If the D_ERROR_ALSO or D_EXCEPT flag was or'd to the category, then this is both a category message (i.e. D_AUDIT)
 			// and should also show up in the primary log as a D_ERROR category message. we print this as |D_FAILURE for
 			// most categories, but just as D_ERROR for D_ALWAYS and D_ERROR categories.
 			const char * orfail = "";
-			if (cat_and_flags & D_FAILURE) {
+			if (cat_and_flags & D_ERROR_MASK) {
 				if (cat > D_ERROR) { orfail = "|D_FAILURE"; }
 				else { cat = D_ERROR; }
 			}
@@ -868,7 +868,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	} 
 
 		/* See if this is one of the messages we are logging */
-	if ( ! IsDebugCatAndVerbosity(cat_and_flags) && ! (cat_and_flags & D_FAILURE))
+	if ( ! IsDebugCatAndVerbosity(cat_and_flags) && ! (cat_and_flags & D_ERROR_MASK))
 		return;
 
 	// if this dprintf is enabled, switch runtime accumulation into the enabled counters
@@ -983,9 +983,9 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		unsigned int verbose_flag = 1<<(cat_and_flags&D_CATEGORY_MASK);
 		int ixOutput = 0;
 
-		// if the message is tagged as a failure message, then it is always in the D_ERROR category
-		// as well as whatever category it's currently in.
-		if (cat_and_flags & D_FAILURE) { basic_flag |= 1<<D_ERROR; }
+		// if the message is tagged as a D_EXCEPT or D_ERROR_ALSO message it is
+		// always in the D_ERROR category as well is its normal category
+		if (cat_and_flags & D_ERROR_MASK) { basic_flag |= 1<<D_ERROR; }
 
 		//PRAGMA_REMIND("TJ: fix this to distinguish between verbose:2 and verbose:3")
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++, ++ixOutput)

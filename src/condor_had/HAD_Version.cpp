@@ -276,13 +276,13 @@ Version::load( )
 //    ifstream versionFile( m_versionFilePath.c_str( ) );
 //
 //    if( ! versionFile.is_open( ) ) {
-//        dprintf( D_FAILURE, "Version::load unable to open %s\n",
+//        dprintf( D_ERROR, "Version::load unable to open %s\n",
 //                 m_versionFilePath.c_str( ) );
 //        return false;
 //    }
     // read gid
 //    if( versionFile.eof( ) ) {
-//        dprintf( D_FAILURE, "Version::load %s format is corrupted, "
+//        dprintf( D_ERROR, "Version::load %s format is corrupted, "
 //                            "nothing appears inside it\n", 
 //				 m_versionFilePath.c_str( ) );
 //        return false;
@@ -294,7 +294,7 @@ Version::load( )
 //    dprintf( D_FULLDEBUG, "Version::load gid = %d\n", temporaryGid );
     // read version
 //    if( versionFile.eof( ) ) {
-//        dprintf( D_FAILURE, "Version::load %s format is corrupted, "
+//        dprintf( D_ERROR, "Version::load %s format is corrupted, "
 //                			"only gid appears inside it\n", 
 //				 m_versionFilePath.c_str( ) );
 //        return false;
@@ -324,13 +324,13 @@ Version::load( int& temporaryGid, int& temporaryLogicalClock ) const
 	std::ifstream versionFile( m_versionFilePath.c_str( ) );
 
     if( ! versionFile.is_open( ) ) {
-        dprintf( D_FAILURE, "Version::load unable to open %s\n",
+        dprintf( D_ERROR, "Version::load unable to open %s\n",
                  m_versionFilePath.c_str( ) );
         return false;
     }
     // read gid
     if( versionFile.eof( ) ) {
-        dprintf( D_FAILURE, "Version::load %s format is corrupted, "
+        dprintf( D_ERROR, "Version::load %s format is corrupted, "
                             "nothing appears inside it\n",
                  m_versionFilePath.c_str( ) );
         return false;
@@ -342,7 +342,7 @@ Version::load( int& temporaryGid, int& temporaryLogicalClock ) const
     dprintf( D_FULLDEBUG, "Version::load gid = %d\n", temporaryGid );
     // read version
     if( versionFile.eof( ) ) {
-        dprintf( D_FAILURE, "Version::load %s format is corrupted, "
+        dprintf( D_ERROR, "Version::load %s format is corrupted, "
                             "only gid appears inside it\n",
                  m_versionFilePath.c_str( ) );
         return false;
