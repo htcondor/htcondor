@@ -1352,7 +1352,7 @@ daemon::Exited(int status)
 			expected = true;
 		}
 	}
-	dprintf(had_failure ? D_ALWAYS : (D_ERROR | D_EXCEPT), "%s\n", msg.c_str());
+	dprintf(had_failure ? (D_ERROR | D_EXCEPT) : D_ALWAYS, "%s\n", msg.c_str());
 
 		// For HA, release the lock
 	if ( is_ha && ha_lock ) {
