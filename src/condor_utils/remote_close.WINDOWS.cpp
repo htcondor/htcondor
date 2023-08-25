@@ -195,12 +195,8 @@ DWORD RemoteFindAndCloseA ( PCSTR filename, PCSTR filter )  {
 
     while ( it.Next ( h ) ) {
 
-        // This test is backwards and the code below is unreachable,
-        // barring a tight race condition.
-        // But the code below is pure evil. It spawns threads in other
-        // processes on the system to close all handles to the given file.
         auto spi_it = pi.m_ProcessInfos.find(h.ProcessID);
-        if (spi_it != pi.m_ProcessInfos.end())
+        if (spi_it == pi.m_ProcessInfos.end())
             continue;
 
         pPi = spi_it->second;
