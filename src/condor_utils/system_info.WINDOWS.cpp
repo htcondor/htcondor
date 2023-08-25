@@ -311,7 +311,6 @@ size_t hashFunction ( const DWORD &key ) {
 }
 
 SystemProcessInformation::SystemProcessInformation( BOOL bRefresh ) 
-: m_ProcessInfos (hashFunction)
 {
 	m_pBuffer = (UCHAR*)VirtualAlloc (NULL,
 						BufferSize, 
@@ -324,9 +323,8 @@ SystemProcessInformation::SystemProcessInformation( BOOL bRefresh )
 
 SystemProcessInformation::~SystemProcessInformation()
 {
-	SYSTEM_PROCESS_INFORMATION* ptmp; 
-	m_ProcessInfos.startIterations ();
-	while ( m_ProcessInfos.iterate ( ptmp ) ) {
+	SYSTEM_PROCESS_INFORMATION* ptmp;
+	for (auto [key, ptmp]: m_ProcessInfos) {
 		VirtualFree ( ptmp, 0, MEM_RELEASE );
 	}
 	VirtualFree( m_pBuffer, 0, MEM_RELEASE );
@@ -334,10 +332,7 @@ SystemProcessInformation::~SystemProcessInformation()
 
 BOOL SystemProcessInformation::Refresh()
 {
-	//m_ProcessInfos.RemoveAll();
-	SYSTEM_PROCESS_INFORMATION* ptmp; 
-	m_ProcessInfos.startIterations ();
-	while ( m_ProcessInfos.iterate ( ptmp ) ) {
+	for (auto [key, ptmp]: m_ProcessInfos) {
 		VirtualFree ( ptmp, 0, MEM_RELEASE );
 	}
 	m_ProcessInfos.clear ();
@@ -367,8 +362,7 @@ BOOL SystemProcessInformation::Refresh()
 		memcpy ( pNewSysProcess, pSysProcess, blockSize );		
 				
 		// fill the process information map
-		//m_ProcessInfos.SetAt( pSysProcess->dUniqueProcessId, pSysProcess );
-		m_ProcessInfos.insert ( pNewSysProcess->dUniqueProcessId, pNewSysProcess );
+		m_ProcessInfos.insert ( {pNewSysProcess->dUniqueProcessId, pNewSysProcess} );
 
 		/*
 		dprintf ( D_FULLDEBUG, "process map: %d -> 0x%x\n", 

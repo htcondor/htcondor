@@ -31,7 +31,6 @@
 #include "condor_adtypes.h"
 #include "condor_uid.h"
 #include "daemon.h"
-#include "HashTable.h"
 #include "basename.h"
 #include "condor_distribution.h"
 #include "subsystem_info.h"
@@ -415,9 +414,8 @@ main(int argc, char *argv[])
 	int i;
 	int iExitUsageCode=1;
 	char buffer[1024];
-	HashTable<std::string, int>	*slot_counts;
+	std::map<std::string, int> slot_counts;
 
-	slot_counts = new HashTable <std::string, int> (hashFunction);
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
@@ -552,30 +550,20 @@ main(int argc, char *argv[])
 		if(WantMachineNames) {
 			if (offer->LookupString (ATTR_MACHINE, remoteHost) ) {
 				int slot_count;
-				int slot_count_thus_far;
 
 				// How many slots are on that machine?
 				if (!offer->LookupInteger(ATTR_TOTAL_SLOTS, slot_count)) {
 					slot_count = 1;
 				}
 
-				slot_count_thus_far = 0;
-				// Keep track of what we've seen in a hashtable
-				if(!slot_counts->lookup(remoteHost, slot_count_thus_far)) {
-					//printf("DEBUG: Already seen a %s %d times\n",
-					//		 remoteHost.c_str(), slot_count_thus_far);
-					slot_counts->remove(remoteHost);
-				}			
-
 				// If we don't have enough slots to complete the set,
-				// stick it in the hash table, remove it from the list
+				// stick it in the map, remove it from the list
 				// of startd ads, and keep looking.
 				// FIXME(?) This would probably blow up with bogus ads 
 				// (ie duplicate ads, but I dunno if those can happen)
-				if(++slot_count_thus_far < slot_count) {
+				if(++slot_counts[remoteHost] < slot_count) {
 					//printf("DEBUG: Adding %s with %d\n", remoteHost.c_str(),
-					//		slot_count_thus_far);
-					slot_counts->insert(remoteHost, slot_count_thus_far);
+					//		slot_counts[remoteHost]);
 					startdAds.Delete(offer);
 					i--;
 					continue;
