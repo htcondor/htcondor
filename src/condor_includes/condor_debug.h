@@ -38,36 +38,36 @@
 enum {
    D_CATEGORY_BASE = 0,
    D_ALWAYS = 0,
-   D_ERROR,
-   D_STATUS,
-   D_ZKM,
-   D_JOB,
-   D_MACHINE,
-   D_CONFIG,
-   D_PROTOCOL,
-   D_PRIV,
-   D_DAEMONCORE,
+   D_ERROR,       // ALWAYS messages that are error messages
+   D_STATUS,      // ALWAYS messages that are status/progress message
+   D_ZKM,         // developer messages that should be removed before code review
+   D_JOB,         // more detail about the job being processed, print full job ad
+   D_MACHINE,     // more detail about the slot ad
+   D_CONFIG,      // detailed config file parsing messages
+   D_PROTOCOL,    // slot claiming protocol
+   D_PRIV,        // setpriv
+   D_DAEMONCORE,  // for debugging daemon core
    D_GENERIC_VERBOSE, // (1<<D_GENERIC_VERBOSE) == D_FULLDEBUG
-   D_SECURITY,
-   D_COMMAND,
-   D_MATCH,
-   D_NETWORK,
-   D_KEYBOARD,
-   D_PROCFAMILY,
-   D_IDLE,
-   D_THREADS,
+   D_SECURITY,    // for debugging security problems
+   D_COMMAND,     // commands (from condor_commands.h) are being sent/recieved
+   D_MATCH,       // messages that go to the negotiator match log
+   D_NETWORK,     // debug the network layer
+   D_KEYBOARD,    // debug the keyboard/mouse detection
+   D_PROCFAMILY,  // debug the procd
+   D_IDLE,        // debug the startd desktop policy triggers for idle/busy
+   D_THREADS,     // debug the daemon core threads
    D_ACCOUNTANT,
-   D_SYSCALLS,
-   D_CKPT,
-   D_HOSTNAME,
-   D_PERF_TRACE,
-   D_LOAD,
-   D_PROC,
-   D_NFS,
+   D_SYSCALLS,    // debug qmgmt, starter/shadow and chirp syscall layer
+   D_obsolete_CKPT, // available for redefinition
+   D_HOSTNAME,    // the network layer hostname detection
+   D_PERF_TRACE,  // daemoncore select logging
+   D_LOAD,        // debug the startd load avg code
+   D_obsolete_PROC,
+   D_obsolete_NFS,
    D_AUDIT, // messages for the audit log
    D_TEST,  // messages with this category are parsed by various tests.
-   D_STATS,
-   D_MATERIALIZE,
+   D_STATS,       // tcp STATS for file transfer, used by the C_GAHP
+   D_MATERIALIZE, // materialization of jobs in the schedd
    D_BUG,   // messages that indicate the daemon is going down.
 
    // NOTE: can't go beyond 31 categories so long as DebugOutputChoice is just an unsigned int.
