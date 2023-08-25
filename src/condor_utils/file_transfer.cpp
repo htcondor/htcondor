@@ -4560,8 +4560,9 @@ FileTransfer::computeFileList(
 				// at this point, we should probably be explicit.
 				filesize_t logTCPStats = 0;
 				UploadExitInfo xfer_info;
-				xfer_info.setError(errorMessage, FILETRANSFER_HOLD_CODE::UploadFileError, 3);
-				xfer_info.doAck(TransferAck::UPLOAD).line(__LINE__);
+				xfer_info.setError(errorMessage, FILETRANSFER_HOLD_CODE::UploadFileError, 3)
+				         .doAck(TransferAck::UPLOAD)
+				         .line(__LINE__);
 				return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, &logTCPStats, xfer_info);
 			}
 		}
@@ -4713,8 +4714,9 @@ FileTransfer::computeFileList(
 			// at this point, we should probably be explicit.
 			filesize_t logTCPStats = 0;
 			UploadExitInfo xfer_info;
-			xfer_info.setError(holdReason, holdCode, holdSubCode);
-			xfer_info.doAck(TransferAck::UPLOAD).line(__LINE__);
+			xfer_info.setError(holdReason, holdCode, holdSubCode)
+			         .doAck(TransferAck::UPLOAD)
+			         .line(__LINE__);
 			return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, &logTCPStats, xfer_info);
 		}
 
