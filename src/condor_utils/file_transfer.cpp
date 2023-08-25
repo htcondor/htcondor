@@ -4411,6 +4411,7 @@ FileTransfer::computeFileList(
 				} else { /*Fail?*/ }
 				if (files.empty()) { continue; }
 				StringList protectedURLs(files.c_str(), ",");
+				// We don't have to worry about order in `filelist` because we're going to sort it later.
 				ExpandFileTransferList(&protectedURLs, filelist, preserveRelativePaths, attr.c_str());
 			}
 		}
