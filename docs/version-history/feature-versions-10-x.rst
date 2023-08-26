@@ -106,6 +106,10 @@ Bugs Fixed:
   an asterisk.
   :jira:`1966`
 
+- Some support scripts for the ``htcondor annex`` command are now
+  properly installed as executable.
+  :jira:`1984`
+
 Version 10.7.1
 --------------
 
