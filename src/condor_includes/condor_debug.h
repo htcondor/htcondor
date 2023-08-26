@@ -38,36 +38,36 @@
 enum {
    D_CATEGORY_BASE = 0,
    D_ALWAYS = 0,
-   D_ERROR,
-   D_STATUS,
-   D_ZKM,
-   D_JOB,
-   D_MACHINE,
-   D_CONFIG,
-   D_PROTOCOL,
-   D_PRIV,
-   D_DAEMONCORE,
+   D_ERROR,       // ALWAYS messages that are error messages
+   D_STATUS,      // ALWAYS messages that are status/progress message
+   D_ZKM,         // developer messages that should be removed before code review
+   D_JOB,         // more detail about the job being processed, print full job ad
+   D_MACHINE,     // more detail about the slot ad
+   D_CONFIG,      // detailed config file parsing messages
+   D_PROTOCOL,    // slot claiming protocol
+   D_PRIV,        // setpriv
+   D_DAEMONCORE,  // for debugging daemon core
    D_GENERIC_VERBOSE, // (1<<D_GENERIC_VERBOSE) == D_FULLDEBUG
-   D_SECURITY,
-   D_COMMAND,
-   D_MATCH,
-   D_NETWORK,
-   D_KEYBOARD,
-   D_PROCFAMILY,
-   D_IDLE,
-   D_THREADS,
-   D_ACCOUNTANT,
-   D_SYSCALLS,
-   D_CKPT,
-   D_HOSTNAME,
-   D_PERF_TRACE,
-   D_LOAD,
-   D_PROC,
-   D_NFS,
+   D_SECURITY,    // for debugging security problems
+   D_COMMAND,     // commands (from condor_commands.h) are being sent/recieved
+   D_MATCH,       // messages that go to the negotiator match log
+   D_NETWORK,     // debug the network layer
+   D_KEYBOARD,    // debug the keyboard/mouse detection
+   D_PROCFAMILY,  // debug the procd
+   D_IDLE,        // debug the startd desktop policy triggers for idle/busy
+   D_THREADS,     // debug the daemon core threads
+   D_ACCOUNTANT,  // the Accountant in the negotiator
+   D_SYSCALLS,    // debug qmgmt, starter/shadow and chirp syscall layer
+   D_obsolete_CKPT, // ---- available -----
+   D_HOSTNAME,    // the network layer hostname detection
+   D_PERF_TRACE,  // daemoncore select logging
+   D_LOAD,        // debug the startd load avg code
+   D_obsolete_PROC, // ---- available -----
+   D_obsolete_NFS, // ---- available -----
    D_AUDIT, // messages for the audit log
    D_TEST,  // messages with this category are parsed by various tests.
-   D_STATS,
-   D_MATERIALIZE,
+   D_STATS,       // tcp STATS for file transfer, used by the C_GAHP
+   D_MATERIALIZE, // materialization of jobs in the schedd
    D_BUG,   // messages that indicate the daemon is going down.
 
    // NOTE: can't go beyond 31 categories so long as DebugOutputChoice is just an unsigned int.
@@ -84,10 +84,11 @@ enum {
 #define D_DIAGNOSTIC    (2<<8)
 #define D_NEVER         (3<<8)
 
-#define D_FULLDEBUG     (1<<10) // when or'd with a D_category, it means that category, or (D_ALWAYS|D_VERBOSE)
-#define D_EXPR          (1<<11) // set by condor_submit, used by ??
-#define D_FAILURE       (1<<12) // nearly always mixed with D_ALWAYS, ignored for now.
-
+#define D_FULLDEBUG     (1<<10) // old name for D_VERBOSE mask, when used alone it means (D_ALWAYS|D_VERBOSE)
+#define D_ERROR_ALSO    (1<<11) // when set with a category, sends the message to the category log and also to D_ERROR
+#define D_EXCEPT        (1<<12) // send message to D_ERROR:1 and to the FAILURE log, used for EXCEPT and for the master when a child excepts
+#define D_FAILURE       D_ERROR_ALSO // D_FAILURE is obsolete name for D_ERROR_ALSO flag
+#define D_ERROR_MASK    (D_EXCEPT | D_ERROR_ALSO) // for quickly checking the flags that force logging to D_ERROR
 
 // format-modifying flags to change the appearance of the dprintf line
 #define D_BACKTRACE     (1<<24) // print stack backtrace

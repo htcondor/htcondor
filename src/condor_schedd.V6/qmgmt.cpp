@@ -6221,7 +6221,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	TemporaryPrivSentry tps( owner != nullptr );
 	if ( owner != nullptr ) {
 		if ( !init_user_ids( owner, nullptr ) ) {
-			dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
+			dprintf( D_ERROR, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
 			return false;
 		}
 		set_user_priv();
@@ -6237,7 +6237,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	X509Credential* proxy_handle = x509_proxy_read( file );
 
 	if ( proxy_handle == nullptr ) {
-		dprintf( D_FAILURE, "Failed to read job proxy: %s\n",
+		dprintf( D_ERROR, "Failed to read job proxy: %s\n",
 				 x509_error_string() );
 		return false;
 	}

@@ -619,7 +619,7 @@ main_init( int argc, char* argv[] )
 			int saved_errno = errno;
 #if defined(EDQUOT)
 			if (saved_errno == EDQUOT) {
-				dprintf(D_ALWAYS | D_FAILURE,
+				dprintf(D_ERROR,
 				   "Error during DISCARD_SESSION_KEYRING_ON_STARTUP, suggest "
 				   "increasing /proc/sys/kernel/keys/root_maxkeys\n");
 			}

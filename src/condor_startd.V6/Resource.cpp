@@ -2533,7 +2533,7 @@ void Resource::publish_static(ClassAd* cap)
 				cap->Delete(attr);
 			} else {
 				if ( ! cap->AssignExpr(attr, tmp.ptr()) ) {
-					dprintf(D_ALWAYS | D_FAILURE,
+					dprintf(D_ERROR,
 						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s."
 						"  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
 						attr, tmp.ptr(), slot_name.c_str() );
@@ -3370,14 +3370,14 @@ Resource::willingToRun(ClassAd* request_ad)
 
 		if (!slot_requirements || !req_requirements) {
 			if (!slot_requirements) {
-				dprintf(D_FAILURE|D_ALWAYS, "Slot requirements not satisfied.\n");
+				dprintf(D_ERROR, "Slot requirements not satisfied.\n");
 				dprintf(D_ALWAYS, "Job ad was ============================\n");
 				dPrintAd(D_ALWAYS, *request_ad);
 				dprintf(D_ALWAYS, "Slot ad was ============================\n");
 				dPrintAd(D_ALWAYS, *r_classad);
 			}
 			if (!req_requirements) {
-				dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
+				dprintf(D_ERROR, "Job requirements not satisfied.\n");
 				dprintf(D_ALWAYS, "Job ad was ============================\n");
 				dPrintAd(D_ALWAYS, *request_ad);
 				dprintf(D_ALWAYS, "Slot ad was ============================\n");
@@ -3469,7 +3469,7 @@ Resource::spawnFetchedWork(void)
 	if ( ! r_cur->spawnStarter(tmp_starter, NULL)) {
 		delete tmp_starter; tmp_starter = NULL;
 
-		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
+		dprintf(D_ERROR, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
 		change_state(owner_state);
 		return false;
 	}

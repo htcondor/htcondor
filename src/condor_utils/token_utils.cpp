@@ -43,7 +43,7 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
-			dprintf(D_FAILURE, "write_out_token(%s): Failed to switch to user priv\n", owner.c_str());
+			dprintf(D_ERROR, "write_out_token(%s): Failed to switch to user priv\n", owner.c_str());
 			return 0;
 		}
 		set_user_priv();

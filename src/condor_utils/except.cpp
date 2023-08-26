@@ -73,7 +73,7 @@ _EXCEPT_(const char *fmt, ...)
 		_EXCEPT_Reporter(buf, _EXCEPT_Line, _EXCEPT_File);
 	} else
 	if( _condor_dprintf_works ) {
-		dprintf( D_ALWAYS|D_FAILURE, "ERROR \"%s\" at line %d in file %s\n",
+		dprintf( D_ERROR | D_EXCEPT, "ERROR \"%s\" at line %d in file %s\n",
 				 buf, _EXCEPT_Line, _EXCEPT_File );
 	} else {
 		fprintf( stderr, "ERROR \"%s\" at line %d in file %s\n",

@@ -448,7 +448,7 @@ private:
 			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
 			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		if (!req.m_daemon) {
-			dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
+			dprintf(D_ERROR, "Logic error!  Token request without associated daemon.\n");
 			req.m_client_id = "";
 			(*req.m_callback_fn)(false, req.m_callback_data);
 			return false;

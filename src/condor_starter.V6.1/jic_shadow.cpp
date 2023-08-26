@@ -107,7 +107,7 @@ ShadowCredDirCreator::GetCreds(CondorError &err)
 	dprintf(D_FULLDEBUG, "Starter is retrieving credentials from the shadow.\n");
 	if (REMOTE_CONDOR_getcreds(CredDir().c_str(), m_creds) <= 0) {
 		err.push("GetCreds", 1, "Failed to receive user credentials");
-		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		dprintf(D_ERROR, "%s\n", err.message());
 		return false;
 	}
 	return true;
@@ -122,7 +122,7 @@ ShadowCredDirCreator::GetOAuth2Credential(const std::string &service_name, const
 	if (iter == m_creds.end()) {
 		err.pushf("GetOAuth2Credential", 1, "Shadow failed to provide credential for service %s",
 			service_name.c_str());
-		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		dprintf(D_ERROR, "%s\n", err.message());
 		return false;
 	}
 	cred = *iter->second;
@@ -239,7 +239,7 @@ JICShadow::init( void )
 		// shadow.  This is totally independent of the shadow version,
 		// etc, and is the first step to everything else. 
 	if( ! getJobAdFromShadow() ) {
-		dprintf( D_ALWAYS|D_FAILURE,
+		dprintf( D_ERROR,
 				 "Failed to get job ad from shadow!\n" );
 		return false;
 	}
@@ -293,7 +293,7 @@ JICShadow::init( void )
 		// to know about the job itself, like are we doing file
 		// transfer, what should the std files be called, etc.
 	if( ! initJobInfo() ) { 
-		dprintf( D_ALWAYS|D_FAILURE,
+		dprintf( D_ERROR,
 				 "Failed to initialize job info from ClassAd!\n" );
 		return false;
 	}
@@ -2670,7 +2670,7 @@ JICShadow::getJobAdFromShadow( void )
     job_ad = new ClassAd;
 
 	if( REMOTE_CONDOR_get_job_info(job_ad) < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS, 
+		dprintf( D_ERROR,
 				 "Failed to get job info from Shadow!\n" );
 		return false;
 	}
@@ -2794,7 +2794,7 @@ JICShadow::initIOProxy( void )
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.c_str());
 		if( !io_proxy.init(this, io_proxy_config_file.c_str(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
-			dprintf( D_FAILURE|D_ALWAYS, 
+			dprintf( D_ERROR,
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;
 		}

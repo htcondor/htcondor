@@ -375,7 +375,7 @@ void AuditLogJobProxy( const Sock &sock, PROC_ID job_id, const char *proxy_file 
 	X509Credential* proxy_handle = x509_proxy_read( proxy_file );
 
 	if ( proxy_handle == NULL ) {
-		dprintf( D_AUDIT|D_FAILURE, sock, "Failed to read job proxy: %s\n",
+		dprintf( D_AUDIT|D_ERROR_ALSO, sock, "Failed to read job proxy: %s\n",
 				 x509_error_string() );
 		return;
 	}
@@ -5650,7 +5650,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			"TRANSFER_DATA/WITH_PERMS: %d jobs to be sent\n", JobAdsArrayLen);
 		rsock->encode();
 		if ( !rsock->code(JobAdsArrayLen) || !rsock->end_of_message() ) {
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to send JobAdsArrayLen (%d) \n",
 					 JobAdsArrayLen );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -5664,7 +5664,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		proc = (*jobs)[i].proc;
 		ClassAd * ad = GetJobAd( cluster, proc );
 		if ( !ad ) {
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 					 "job ad %d.%d not found\n",cluster,proc );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
 			refuse(s);
@@ -5691,7 +5691,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			std::string owner;
 			ad->LookupString( ATTR_OWNER, owner );
 			if ( !init_user_ids( owner.c_str(), NULL ) ) {
-				dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
+				dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 						 "failed to initialize user id for job %d.%d\n",
 						 cluster, proc );
 				s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -5710,7 +5710,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 								   (mode == TRANSFER_DATA ||
 									mode == TRANSFER_DATA_WITH_PERMS));
 		if ( !result ) {
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to init filetransfer for job %d.%d \n",
 					 cluster,proc );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -5743,7 +5743,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			// first send the classad for the job
 			result = putClassAd(rsock, *ad);
 			if (!result) {
-				dprintf(D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
+				dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 					"failed to send job ad for job %d.%d \n",
 					cluster,proc );
 			} else {
@@ -5760,7 +5760,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 #endif
 
 		if ( !result ) {
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to transfer files for job %d.%d \n",
 					 cluster,proc );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -5854,7 +5854,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				// need better error propagation for that...
 			errstack.push( "SCHEDD", SCHEDD_ERR_SPOOL_FILES_FAILED,
 					"Failure to spool job files - Authentication failed" );
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles() aborting: %s\n",
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "spoolJobFiles() aborting: %s\n",
 					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
@@ -5869,7 +5869,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case TRANSFER_DATA_WITH_PERMS:	// downloading perm files from schedd
 			peer_version = "";
 			if ( !rsock->code(peer_version) ) {
-				dprintf(D_AUDIT | D_FAILURE, *rsock, 
+				dprintf(D_AUDIT | D_ERROR_ALSO, *rsock,
 					 	"spoolJobFiles(): failed to read peer_version\n" );
 				refuse(s);
 				return FALSE;
@@ -5896,14 +5896,14 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case SPOOL_JOB_FILES_WITH_PERMS:
 			// read the number of jobs involved
 			if ( !rsock->code(JobAdsArrayLen) ) {
-				    dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): "
+				    dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "spoolJobFiles(): "
 							 "failed to read JobAdsArrayLen (%d)\n",
 							 JobAdsArrayLen );
 					refuse(s);
 					return FALSE;
 			}
 			if ( JobAdsArrayLen <= 0 ) {
-				dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): "
+				dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "spoolJobFiles(): "
 					 	"read bad JobAdsArrayLen value %d\n", JobAdsArrayLen );
 				refuse(s);
 				return FALSE;
@@ -5921,7 +5921,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			// read constraint string
 			if ( !rsock->code(constraint_string) || constraint_string == NULL )
 			{
-					dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): "
+					dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "spoolJobFiles(): "
 						 	"failed to read constraint string\n" );
 					refuse(s);
 					return FALSE;
@@ -5968,7 +5968,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					time_t finish_time = 0;
 					if( GetAttributeInt(a_job.cluster,a_job.proc,
 					    ATTR_STAGE_IN_FINISH,&finish_time) >= 0 ) {
-						dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
+						dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "spoolJobFiles(): cannot allow"
 						         " stagein for job %d.%d, because stagein"
 						         " already finished for this job.\n",
 						         a_job.cluster, a_job.proc);
@@ -5985,7 +5985,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						dprintf( D_FULLDEBUG, "job_status is %d\n", job_status);
 						if(job_status == HELD &&
 								holdcode != CONDOR_HOLD_CODE::SpoolingInput) {
-							dprintf( D_AUDIT | D_FAILURE, *rsock, "Job %d.%d is not in hold state for "
+							dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "Job %d.%d is not in hold state for "
 								"spooling. Do not allow stagein\n",
 								a_job.cluster, a_job.proc);
 							delete jobs;
@@ -5996,7 +5996,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 									ATTR_STAGE_IN_START,now);
 				} else {
 					// UserCheck2 failed.
-					dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
+					dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "spoolJobFiles(): cannot allow"
 							" user %s to spool files for job %d.%d\n",
 							EffectiveUserName(rsock), a_job.cluster, a_job.proc);
 					delete jobs;
@@ -6171,7 +6171,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 				// need better error propagation for that...
 			errstack.push( "SCHEDD", SCHEDD_ERR_UPDATE_GSI_CRED_FAILED,
 					"Failure to update GSI cred - Authentication failed" );
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d) aborting: %s\n", cmd,
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "updateGSICred(%d) aborting: %s\n", cmd,
 					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
@@ -6182,7 +6182,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		// read the job id from the client
 	rsock->decode();
 	if ( !rsock->code(jobid) || !rsock->end_of_message() ) {
-		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): "
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "updateGSICred(%d): "
 					 "failed to read job id\n", cmd );
 			refuse(s);
 			return FALSE;
@@ -6192,7 +6192,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		cmd,jobid.cluster,jobid.proc);
 	jobad = GetJobAd(jobid.cluster,jobid.proc);
 	if ( !jobad ) {
-		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "updateGSICred(%d): failed, "
 				 "job %d.%d not found\n", cmd, jobid.cluster, jobid.proc );
 		refuse(s);
 		return FALSE;
@@ -6206,7 +6206,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		authorized = true;
 	}
 	if ( !authorized ) {
-		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "updateGSICred(%d): failed, "
 				 "user %s not authorized to edit job %d.%d\n", cmd,
 				 rsock->getFullyQualifiedUser(),jobid.cluster, jobid.proc );
 		refuse(s);
@@ -6229,7 +6229,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		}
 	}
 	if ( !proxy_path || strncmp(SpoolSpace.c_str(),proxy_path,SpoolSpace.length()) ) {
-		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "updateGSICred(%d): failed, "
 			 "job %d.%d does not contain a gsi credential in SPOOL\n", 
 			 cmd, jobid.cluster, jobid.proc );
 		refuse(s);
@@ -6253,7 +6253,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		//   the job owner).
 	StatInfo si( SpoolSpace.c_str() );
 	if ( si.Error() != SIGood ) {
-		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "updateGSICred(%d): failed, "
 			"stat of spool dirctory for job %d.%d failed: %d\n",
 			cmd, jobid.cluster, jobid.proc, (int)si.Error() );
 		refuse(s);
@@ -6270,7 +6270,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	}
 	if ( !p_cache->get_user_uid( job_owner.c_str(), job_uid ) ) {
 			// Failed to find uid for this owner, badness.
-		dprintf( D_AUDIT | D_FAILURE, *rsock, "Failed to find uid for user %s (job %d.%d)\n",
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "Failed to find uid for user %s (job %d.%d)\n",
 				 job_owner.c_str(), jobid.cluster, jobid.proc );
 		refuse(s);
 		return FALSE;
@@ -6281,7 +6281,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	if ( proxy_uid == job_uid ) {
 			// We're not Windows here, so we don't need the NT Domain
 		if ( !init_user_ids( job_owner.c_str(), NULL ) ) {
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
 					 job_owner.c_str() );
 			refuse(s);
 			return FALSE;
@@ -6357,7 +6357,7 @@ UpdateGSICredContinuation::finish(Stream *stream)
 #ifndef WIN32
 	if (!m_job_owner.empty()) {
 		if ( !init_user_ids(m_job_owner.c_str(), NULL) ) {
-			dprintf(D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
+			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
 				m_job_owner.c_str());
 			delete this;
 			return false;
@@ -6472,7 +6472,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// need better error propagation for that...
 			errstack.push( "SCHEDD", SCHEDD_ERR_JOB_ACTION_FAILED,
 					"Failed to act on jobs - Authentication failed");
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs() aborting: %s\n",
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "actOnJobs() aborting: %s\n",
 					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
@@ -6483,7 +6483,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		// read the command ClassAd + EOM
 	if( ! (getClassAd(rsock, command_ad) && rsock->end_of_message()) ) {
-		dprintf( D_AUDIT | D_FAILURE, *rsock, "Can't read command ad from tool\n" );
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "Can't read command ad from tool\n" );
 		refuse( s );
 		return FALSE;
 	}
@@ -6512,7 +6512,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		   It may optionally contain ATTR_HOLD_REASON_SUBCODE.
 		*/
 	if( ! command_ad.LookupInteger(ATTR_JOB_ACTION, action_num) ) {
-		dprintf( D_AUDIT | D_FAILURE, *rsock,
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock,
 				 "actOnJobs(): ClassAd does not contain %s, aborting\n", 
 				 ATTR_JOB_ACTION );
 		refuse( s );
@@ -6549,7 +6549,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		needs_transaction = false;
 		break;
 	default:
-		dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs(): ClassAd contains invalid "
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "actOnJobs(): ClassAd contains invalid "
 				 "%s (%d), aborting\n", ATTR_JOB_ACTION, action_num );
 		refuse( s );
 		return FALSE;
@@ -6663,7 +6663,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	char * tmp = NULL;
 	if( command_ad.LookupString(ATTR_ACTION_IDS, &tmp) ) {
 		if( constraint ) {
-			dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs(): "
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "actOnJobs(): "
 					 "ClassAd has both %s and %s, aborting\n",
 					 ATTR_ACTION_CONSTRAINT, ATTR_ACTION_IDS );
 			refuse( s );
@@ -7018,7 +7018,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	if( ! (putClassAd(rsock, *response_ad) && rsock->end_of_message()) ) {
 			// Failed to send reply, the client might be dead, so
 			// abort our transaction.
-		dprintf( D_AUDIT | D_FAILURE, *rsock,
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock,
 				 "actOnJobs: couldn't send results to client: aborting\n" );
 		if( needs_transaction ) {
 			AbortTransaction();
@@ -7028,8 +7028,12 @@ Scheduler::actOnJobs(int, Stream* s)
 
 	if( num_success == 0 ) {
 			// We didn't do anything, so we want to bail out now...
-		dprintf( D_AUDIT | D_FAILURE | D_FULLDEBUG, *rsock, 
-				 "actOnJobs: didn't do any work, aborting\n" );
+		if (IsDebugCategory(D_AUDIT)) {
+			dprintf(D_AUDIT, *rsock, "actOnJobs: didn't do any work, aborting\n" );
+		}
+		if (IsFulldebug(D_FULLDEBUG)) {
+			dprintf(D_FULLDEBUG, "actOnJobs: didn't do any work, aborting\n" );
+		}
 		if( needs_transaction ) {
 			AbortTransaction();
 		}
@@ -7041,7 +7045,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	rsock->decode();
 	if( ! (rsock->code(reply) && rsock->end_of_message() && reply == OK) ) {
 			// we couldn't get the reply, or they told us to bail
-		dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs: client not responding: aborting\n" );
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "actOnJobs: client not responding: aborting\n" );
 		if( needs_transaction ) {
 			AbortTransaction();
 		}
@@ -10181,7 +10185,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	if( pid == FALSE ) {
 		std::string arg_string;
 		args.GetArgsStringForDisplay(arg_string);
-		dprintf( D_FAILURE|D_ALWAYS, "spawnJobHandlerRaw: "
+		dprintf( D_ERROR, "spawnJobHandlerRaw: "
 				 "CreateProcess(%s, %s) failed\n", path, arg_string.c_str() );
 		for( int i = 0; i < 2; i++ ) {
 			if( pipe_fds[i] >= 0 ) {
@@ -10369,7 +10373,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_path = NULL;
 
 	if( ! rval ) {
-		dprintf( D_ALWAYS|D_FAILURE, "Can't spawn local starter for "
+		dprintf( D_ERROR, "Can't spawn local starter for "
 				 "job %d.%d\n", job_id->cluster, job_id->proc );
 		mark_job_stopped( job_id );
 		delete_shadow_rec( srec );
@@ -10683,15 +10687,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 #endif
 	
 	if ((inouterr[0] = safe_open_wrapper_follow(input.c_str(), O_RDONLY, S_IREAD)) < 0) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input.c_str(), errno );
+		dprintf ( D_ERROR, "Open of %s failed, errno %d\n", input.c_str(), errno );
 		cannot_open_files = true;
 	}
 	if ((inouterr[1] = safe_open_wrapper_follow(output.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output.c_str(), errno );
+		dprintf ( D_ERROR, "Open of %s failed, errno %d\n", output.c_str(), errno );
 		cannot_open_files = true;
 	}
 	if ((inouterr[2] = safe_open_wrapper_follow(error.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error.c_str(), errno );
+		dprintf ( D_ERROR, "Open of %s failed, errno %d\n", error.c_str(), errno );
 		cannot_open_files = true;
 	}
 
@@ -10702,7 +10706,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			if (errno == EEXIST) {
 				directory_exists = true;
 			} else {
-				dprintf( D_FAILURE|D_ALWAYS,
+				dprintf( D_ERROR,
 					"couldn't create dir %s: (%s, errno=%d).\n",
 					job_execute_dir.c_str(),
 					strerror(errno), errno );
@@ -10718,7 +10722,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			// write it
 			FILE *job_ad_fp = NULL;
 			if (!(job_ad_fp = safe_fopen_wrapper_follow(job_ad_path.c_str(), "w"))) {
-				dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed (%s, errno=%d).\n", job_ad_path.c_str(), strerror(errno), errno );
+				dprintf ( D_ERROR, "Open of %s failed (%s, errno=%d).\n", job_ad_path.c_str(), strerror(errno), errno );
 			} else {
 				// fPrindAd does not have any usable error reporting.
 				fPrintAd(job_ad_fp, *userJob);
@@ -10833,7 +10837,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	daemonCore->SetInheritParentSinful( MyShadowSockName );
 
 	if ( pid <= 0 ) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Create_Process problems!\n" );
+		dprintf ( D_ERROR, "Create_Process problems!\n" );
 		goto wrapup;
 	}
 	
@@ -12350,7 +12354,7 @@ Scheduler::child_exit(int pid, int status)
 	 	} else if( WIFSIGNALED(status) ) {
  			// The job died with a signal, so there's not much
  			// that we can do for it
-			dprintf( D_FAILURE|D_ALWAYS, "%s pid %d died with %s\n",
+			dprintf( D_ERROR, "%s pid %d died with %s\n",
 					 name, pid, daemonCore->GetExceptionString(status) );
 
 			// If the shadow was killed (i.e. by this schedd) and
@@ -12833,7 +12837,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	if ( execute_dir.Find_Named_Entry( dir_name.c_str() ) ) {
 		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", LocalUnivExecuteDir, DIR_DELIM_CHAR, dir_name.c_str() );
 		if (!execute_dir.Remove_Current_File()) {
-			dprintf( D_FAILURE|D_ALWAYS, "Failed to remove execute directory %s%c%s for scheduler universe job.\n", LocalUnivExecuteDir, DIR_DELIM_CHAR, dir_name.c_str() );
+			dprintf( D_ERROR, "Failed to remove execute directory %s%c%s for scheduler universe job.\n", LocalUnivExecuteDir, DIR_DELIM_CHAR, dir_name.c_str() );
 		}
 	} else {
 		dprintf( D_ALWAYS, "Execute sub-directory (%s) missing in %s.\n", dir_name.c_str(), LocalUnivExecuteDir );
@@ -15126,7 +15130,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 			error_string = "Internal state error.";
 		} else {
 			result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
-			dprintf(D_ALWAYS | D_AUDIT, *static_cast<Sock*>(stream),
+			dprintf(D_AUDIT, *static_cast<Sock*>(stream),
 				"Collector %s token request for ID %s, bounding set %s,"
 				" and lifetime %d issued.\n", peer_location, requested_identity.c_str(),
 				bounding_set_str.empty() ? "(none)" : bounding_set_str.c_str(),
@@ -15281,7 +15285,7 @@ Scheduler::HadException( match_rec* mrec )
 	}
 	mrec->num_exceptions++;
 	if( mrec->num_exceptions >= MaxExceptions ) {
-		dprintf( D_FAILURE|D_ALWAYS, 
+		dprintf( D_ERROR, 
 				 "Match for cluster %d has had %d shadow exceptions, relinquishing.\n",
 				 mrec->cluster, mrec->num_exceptions );
 		DelMrec(mrec);
@@ -15672,7 +15676,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	return TRUE;
 
  error_wrapup:
-	dprintf(D_AUDIT|D_FAILURE, *sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.c_str() );
+	dprintf(D_AUDIT|D_ERROR_ALSO, *sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.c_str() );
 	reply.Assign(ATTR_RESULT,false);
 	reply.Assign(ATTR_ERROR_STRING,error_msg);
 	if( retry_is_sensible ) {
@@ -17079,7 +17083,7 @@ WriteCompletionVisa(ClassAd* ad)
 	}
 
 	if (!ad->LookupString(ATTR_JOB_IWD, iwd)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "WriteCompletionVisa ERROR: Job contained no IWD\n");
 		return;
 	}
