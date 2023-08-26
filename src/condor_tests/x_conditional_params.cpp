@@ -138,7 +138,7 @@ static const char * const aVerTrue[] = {
 	"version <= %D.%S", "version < %D.%S.%P", "version < %D.%S.%N",
 	"version > %D.%S.%L", "version > %D.%R.%M", "version > %D.%R",
 	"version < %D.%S.99", "version < %D.%T", "version < %E.0",
-	"version < 12.0", " VERSION < 12.0 ", " Version < 12.0"
+	"version < 32.0", " VERSION < 32.0 ", " Version < 32.0"
 };
 
 static const char * const aVerFalse[] = {
@@ -149,7 +149,7 @@ static const char * const aVerFalse[] = {
 	"!version >= %D.%S", "version > " CONDOR_VERSION, "version > %D.%S.%N",
 	"version < %D.%S.%L", "version < %D.%R.%M", "version < %D.%R",
 	"version > %D.%S.99", "version > %D.%S", "version > %E.0",
-	"version > 12.0",
+	"version > 32.0",
 };
 
 static const char * const aDefTrue[] = {
