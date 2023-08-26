@@ -11,6 +11,32 @@
 
 
 bool
+fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, std::string & argl, std::string & error ) {
+	std::string cdmf;
+	param( cdmf, "CHECKPOINT_DESTINATION_MAPFILE" );
+
+	MapFile mf;
+	int rv = mf.ParseCanonicalizationFile( cdmf.c_str(), true, true, true );
+	if( rv < 0 ) {
+		formatstr( error,
+			"Failed to parse checkpoint destination map file (%s), aborting",
+			cdmf.c_str()
+		);
+		return false;
+	}
+
+	if( mf.GetCanonicalization( "*", checkpointDestination.c_str(), argl ) != 0 ) {
+		formatstr( error,
+		    "Failed to find checkpoint destination %s in map file, aborting",
+		    checkpointDestination.c_str()
+		);
+		return false;
+	}
+
+    return true;
+}
+
+bool
 spawnCheckpointCleanupProcess(
     int cluster, int proc, ClassAd * jobAd, int cleanup_reaper_id,
     int & pid, std::string & error
@@ -25,6 +51,15 @@ spawnCheckpointCleanupProcess(
 	std::string owner;
 	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
 		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: no owner attribute found!\n", cluster, proc );
+		return false;
+	}
+
+	std::string dummy;
+	if(! fetchCheckpointDestinationCleanup( checkpointDestination, dummy, error )) {
+		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up"
+		         " job %d.%d: no clean-up plug-in registered for checkpoint"
+		         " destination '%s' (%s).\n",
+		         cluster, proc, checkpointDestination.c_str(), error.c_str() );
 		return false;
 	}
 

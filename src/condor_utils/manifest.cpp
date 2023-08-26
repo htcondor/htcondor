@@ -41,6 +41,8 @@
 
 #include "MapFile.h"
 #include "condor_config.h"
+#include "checkpoint_cleanup_utils.h"
+
 
 namespace manifest {
 
@@ -199,25 +201,9 @@ deleteFilesStoredAt(
 	std::filesystem::path fileName = pathToManifestFile.filename();
 
 
-	std::string cdmf;
-	param( cdmf, "CHECKPOINT_DESTINATION_MAPFILE" );
-
-	MapFile mf;
-	int rv = mf.ParseCanonicalizationFile( cdmf.c_str(), true, true, true );
-	if( rv < 0 ) {
-		formatstr( error,
-			"Failed to parse checkpoint destination map file (%s), aborting",
-			cdmf.c_str()
-		);
-		return false;
-	}
-
 	std::string argl;
-	if( mf.GetCanonicalization( "*", checkpointDestination.c_str(), argl ) != 0 ) {
-		formatstr( error,
-		    "Failed to find checkpoint destination %s in map file, aborting",
-		    checkpointDestination.c_str()
-		);
+	if(! fetchCheckpointDestinationCleanup( checkpointDestination, argl, error )) {
+		// fetchCheckpointDestinationCleanup() set error for us already.
 		return false;
 	}
 
