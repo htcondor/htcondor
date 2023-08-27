@@ -6744,6 +6744,12 @@ These macros affect *condor_preen*.
     one job failed to clean up.  This macro limits the number of simultaneous
     clean-up processes.
 
+:macro-def:`CHECKPOINT_CLEANUP_TIMEOUT`
+    A checkpoint clean-up plug-in is invoked once per file in the checkpoint,
+    and must therefore do its job relatively quickly.  This macro controls
+    how long HTCondor will wait for a checkpoint clean-up plug-in to exit
+    before it declares that it's stuck and kills it.
+
 condor_collector Configuration File Entries
 --------------------------------------------
 

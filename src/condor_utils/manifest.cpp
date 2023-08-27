@@ -266,7 +266,8 @@ deleteFilesStoredAt(
 		}
 
 		int exit_status;
-		time_t timeout = 20;
+		// time_t timeout = 20;
+		time_t timeout = param_integer( "CHECKPOINT_CLEANUP_TIMEOUT", 20 );
 		if(! subprocess.wait_for_exit( timeout, & exit_status )) {
 			const char * output = subprocess.output().data();
 			subprocess.close_program(1);
