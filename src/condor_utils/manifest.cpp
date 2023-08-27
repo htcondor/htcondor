@@ -189,6 +189,7 @@ bool
 deleteFilesStoredAt(
   const std::string & checkpointDestination,
   const std::string & manifestFileName,
+  const std::filesystem::path & jobAdPath,
   std::string & error
 ) {
 	FILE * fp = safe_fopen_no_create( manifestFileName.c_str(), "r" );
@@ -246,6 +247,8 @@ deleteFilesStoredAt(
 		args.AppendArg(checkpointDestination);
 		args.AppendArg("-delete");
 		args.AppendArg(file);
+		args.AppendArg("-jobad");
+		args.AppendArg(jobAdPath.string());
 
 		std::string argStr;
 		args.GetArgsStringForLogging( argStr );

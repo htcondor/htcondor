@@ -125,6 +125,11 @@ main( int argc, char ** argv ) {
             return 1;
         }
 
+        std::filesystem::path fileStemPath(fileStem);
+        std::filesystem::path parentPath = fileStemPath.parent_path();
+        std::filesystem::path jobAdPath = parentPath / ".job.ad";
+
+
         std::string file;
         std::string error;
         bool deleted = true;
@@ -133,18 +138,14 @@ main( int argc, char ** argv ) {
             formatstr( destination, "%s/%.4ld", locationStem.c_str(), i );
             formatstr( file, "%s.%.4ld", fileStem.c_str(), i );
 
-            fprintf( stderr, "%s %s\n", destination.c_str(), file.c_str() );
-            if(! manifest::deleteFilesStoredAt( destination, file, error )) {
+            // fprintf( stderr, "%s %s\n", destination.c_str(), file.c_str() );
+            if(! manifest::deleteFilesStoredAt( destination, file, jobAdPath, error )) {
                 fprintf( stdout, "%s\n", error.c_str() );
                 deleted = false;
             }
         }
 
         if( deleted ) {
-            std::filesystem::path fileStemPath(fileStem);
-            std::filesystem::path parentPath = fileStemPath.parent_path();
-            std::filesystem::path jobAdPath = parentPath / ".job.ad";
-
             fprintf( stderr, "Removing %s after successful clean-up.\n", jobAdPath.string().c_str() );
             std::filesystem::remove( jobAdPath );
 

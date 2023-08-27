@@ -48,6 +48,7 @@
 #include "credmon_interface.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"
+#include <filesystem>
 #include "manifest.h"
 #include "checksum.h"
 
