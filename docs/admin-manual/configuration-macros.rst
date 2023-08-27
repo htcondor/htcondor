@@ -6736,6 +6736,14 @@ These macros affect *condor_preen*.
     *condor_preen* considers invalid files to find in the ``$(LOG)``
     directory. There is no default value.
 
+:macro-def:`MAX_CHECKPOINT_CLEANUP_PROCS`
+    If a checkpoint clean-up plug-in fails when the *condor_schedd*
+    (indirectly) invokes it after a job exits the queue, the next run of
+    *condor_preen* will retry it.  *condor_preen* assumes that the clean-up
+    process is relatively light-weight and starts more than one if more than
+    one job failed to clean up.  This macro limits the number of simultaneous
+    clean-up processes.
+
 condor_collector Configuration File Entries
 --------------------------------------------
 
