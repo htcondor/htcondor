@@ -850,6 +850,7 @@ rm -rf %{buildroot}
 %_libdir/libcondorapi.so
 %_libdir/condor/libgetpwnam.so
 %dir %_libexecdir/condor/
+%_libexecdir/condor/cleanup_locally_mounted_checkpoint
 %_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
 %_libexecdir/condor/condor_chirp

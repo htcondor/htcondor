@@ -155,6 +155,7 @@ build_job_env.cpp
 build_job_env.h
 check_events.cpp
 check_events.h
+checkpoint_cleanup_utils.cpp
 checksum.cpp
 checksum.h
 classad_collection.cpp

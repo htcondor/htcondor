@@ -36,6 +36,8 @@
 #include "manifest.h"
 
 #include <fstream>
+#include <algorithm>
+
 #include "spooled_job_files.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -2227,7 +2229,7 @@ RemoteResource::initFileTransfer()
 	//
 
 	std::string checkpointDestination;
-	if(! jobAd->LookupString( "CheckpointDestination", checkpointDestination )) {
+	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination )) {
 		return;
 	}
 
@@ -2291,6 +2293,7 @@ RemoteResource::initFileTransfer()
 	std::string globalJobID;
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
 	ASSERT(! globalJobID.empty());
+	std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
 
 	std::string manifestLine;
 	std::string nextManifestLine;

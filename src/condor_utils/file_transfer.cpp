@@ -4198,7 +4198,7 @@ createCheckpointManifest(
 	}
 	std::string manifestHash;
 	if(! compute_file_sha256_checksum( manifestFileName, manifestHash )) {
-		dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", ".MANIFEST" );
+		dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", manifestFileName.c_str() );
 		unlink( manifestFileName.c_str() );
 		return -1;
 	}
@@ -4210,7 +4210,7 @@ createCheckpointManifest(
 		manifestHash.c_str(), manifestFileName.c_str()
 	);
 	if(! htcondor::appendShortFile( manifestFileName,  append )) {
-		dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", ".MANIFEST" );
+		dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", manifestFileName.c_str() );
 		unlink( manifestFileName.c_str() );
 		return -1;
 	}
@@ -4495,6 +4495,8 @@ FileTransfer::computeFileList(
 					std::string globalJobID;
 					jobAd.LookupString(ATTR_GLOBAL_JOB_ID, globalJobID);
 					ASSERT(! globalJobID.empty());
+					std::replace( globalJobID.begin(), globalJobID.end(),
+					    '#', '_' );
 					formatstr_cat( local_output_url, "%s/%.4d/",
 					    globalJobID.c_str(),
 					    this->checkpointNumber
@@ -6590,6 +6592,9 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	// Close the plugin
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
+	// FIXME: this closes the pipe and _then_ waits for the child to exit,
+	// whereas it would be way better to do the reverse, even given that we
+	// completely ignore the pipe (which we shouldn't do anyway).
 	int rc = my_pclose_ex(plugin_pipe, (unsigned int)timeout, true);
 
 	int exit_status;
@@ -6643,6 +6648,14 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			"$ORIGIN, and then dynamic library loader refuses to load those for security "
 			"reasons.  Run 'ldd' on your plugin and move needed libraries to a system "
 			"location controlled by root. Good luck!\n");
+	}
+
+	// Is there a good reason we weren't doing this before?
+	std::string contents;
+	if( IsFulldebug(D_FULLDEBUG) ) {
+		if( htcondor::readShortFile( output_filename, contents )) {
+			dprintf( D_FULLDEBUG, "Plugin output: '%s'\n", contents.c_str() );
+		}
 	}
 
 	// Output stats regardless of success or failure

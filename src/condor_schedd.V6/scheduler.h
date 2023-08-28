@@ -753,6 +753,10 @@ class Scheduler : public Service
 	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const OwnerInfo *user);
 
 	bool forwardMatchToSidecarCM(const char *claim_id, const char *claim_ids, ClassAd &match_ad, const char *slot_name);
+
+	// Returns false if the checkpoint clean-up failed to launch.
+	bool doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd );
+
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
@@ -887,6 +891,8 @@ private:
 
 	SelfDrainingQueue job_is_finished_queue;
 	int jobIsFinishedHandler( ServiceData* job_id );
+
+	int checkpointCleanUpReaper(int, int);
 
 		// variables to implement SCHEDD_VANILLA_START expression
 	ConstraintHolder vanilla_start_expr;

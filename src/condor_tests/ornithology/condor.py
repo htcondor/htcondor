@@ -681,9 +681,8 @@ class Condor:
         )
         with self.use_config():
             schedd = self.get_local_schedd()
-            with schedd.transaction() as txn:
-                result = sub.queue_with_itemdata(txn, count, itemdata)
-                logger.debug("Got submit result:\n{}".format(result))
+            result = schedd.submit(sub, count=count, itemdata=itemdata)
+            logger.debug("Got submit result:\n{}".format(result))
 
         return handles.ClusterHandle(self, result)
 
