@@ -3397,16 +3397,6 @@ static void OutOfMemoryHandler()
 		   rss);
 }
 
-static void InstallOutOfMemoryHandler()
-{
-	if( !oom_reserve_buf ) {
-		oom_reserve_buf = new char[OOM_RESERVE];
-		memset(oom_reserve_buf,0,OOM_RESERVE);
-	}
-
-	std::set_new_handler(OutOfMemoryHandler);
-}
-
 #ifndef WIN32
 // if we fork into the background, this is the write pipe in the child
 // and the read pipe for the parent (i.e. the current process)
@@ -4462,11 +4452,6 @@ int dc_main( int argc, char** argv )
 	// now re-set the identity so that any children we spawn will have it
 	// in their environment
 	SetEnv( envName, daemonCore->sec_man->my_unique_id() );
-
-	// create a database connection object
-	//DBObj = createConnection();
-
-	InstallOutOfMemoryHandler();
 
 	// call the daemon's main_init()
 	dc_main_init( argc, argv );
