@@ -11,32 +11,48 @@
 
 #include "checkpoint_cleanup_utils.h"
 
+#include "dc_coroutines.h"
+using namespace condor;
 
-int
-Scheduler::checkpointCleanUpReaper( int pid, int status ) {
-	dprintf( D_TEST, "checkpoint clean-up proc %d returned %d\n", pid, status );
 
-	return 0;
+dc::void_coroutine
+spawnCheckpointCleanupProcessWithTimeout( int cluster, int proc, ClassAd * jobAd, time_t timeout ) {
+	dc::AwaitableDeadlineReaper logansRun;
+
+	std::string error;
+	int spawned_pid = -1;
+	bool rv = spawnCheckpointCleanupProcess(
+		cluster, proc, jobAd, logansRun.reaper_id(),
+		spawned_pid, error
+	);
+	if(! rv) { co_return /* false */; }
+
+	logansRun.born( spawned_pid, timeout );
+	auto [pid, timed_out, status] = co_await( logansRun );
+	// This pointer could have been invalidated while we were co_await()ing.
+	jobAd = NULL;
+
+	if( timed_out ) {
+		daemonCore->Shutdown_Graceful( pid );
+		dprintf( D_TEST, "checkpoint clean-up proc %d timed out after %ld seconds\n", pid, timeout );
+		// This keeps the awaitable deadline reaper alive until the process
+		// we just killed is reaped, which prevents a log message about an
+		// unknown process dying.
+		co_await( logansRun );
+	} else {
+		dprintf( D_TEST, "checkpoint clean-up proc %d returned %d\n", pid, status );
+	}
+
+	co_return /* true */;
 }
 
 
-bool
+void
 Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
-	static int cleanup_reaper_id = -1;
-	if( cleanup_reaper_id == -1 ) {
-		cleanup_reaper_id = daemonCore->Register_Reaper(
-			"externally-stored checkpoint reaper",
-			(ReaperHandlercpp) & Scheduler::checkpointCleanUpReaper,
-			"externally-stored checkpoint reaper",
-			this
-		);
-	}
-
-
 	std::string owner;
 	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
 		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): no owner attribute in job, not cleaning up.\n" );
-		return false;
+		return /* false */;
 	}
 
 
@@ -60,13 +76,13 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	if( std::filesystem::exists( checkpointCleanup ) ) {
 		if(! std::filesystem::is_directory( checkpointCleanup )) {
 			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", checkpointCleanup.string().c_str() );
-			return false;
+			return /* false */;
 		}
 	} else {
 		std::filesystem::create_directory( checkpointCleanup, SPOOL, errCode );
 		if( errCode ) {
 			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", checkpointCleanup.string().c_str(), errCode.value(), errCode.message().c_str() );
-			return false;
+			return /* false */;
 		}
 	}
 
@@ -86,7 +102,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	if( std::filesystem::exists( owner_dir ) ) {
 		if(! std::filesystem::is_directory( owner_dir )) {
 			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", owner_dir.string().c_str() );
-			return false;
+			return /* false */;
 		}
 	} else {
 		// Sadly, std::filesystem doesn't handle ownership, and we can't
@@ -94,7 +110,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 		std::filesystem::create_directory( owner_dir, checkpointCleanup, errCode );
 		if( errCode ) {
 			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errCode.value(), errCode.message().c_str() );
-			return false;
+			return /* false */;
 		}
 
 #if ! defined(WINDOWS)
@@ -103,7 +119,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 			int rv = chown( owner_dir.string().c_str(), owner_uid, owner_gid );
 			if( rv == -1 ) {
 				dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to chown() checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errno, strerror(errno) );
-				return false;
+				return /* false */;
 			}
 		}
 #endif /* ! defined(WINDOWS) */
@@ -117,7 +133,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	}
 	if( errCode ) {
 		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to rename job (%d.%d) spool directory (%d: %s), will not clean up.\n", cluster, proc, errCode.value(), errCode.message().c_str() );
-		return false;
+		return /* false */;
 	}
 
 
@@ -136,16 +152,14 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 #endif /* ! defined(WINDOWS ) */
 	if( jobAdFile == NULL ) {
 		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to open job ad file '%s'\n", jobAdPath.string().c_str() );
-		return false;
+		return /* false */;
 	}
 	fPrintAd( jobAdFile, * jobAd );
 	fclose( jobAdFile );
 
-
-	std::string error;
-	int spawned_pid = -1;
-	return spawnCheckpointCleanupProcess(
-		cluster, proc, jobAd, cleanup_reaper_id,
-		spawned_pid, error
-	);
+	int CLEANUP_TIMEOUT = param_integer( "SCHEDD_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
+	// We can convert back to a bool return type for this function
+	// (even though the return type is currently ignored) when we
+	// implement dc::coroutine<bool>, I think.
+	spawnCheckpointCleanupProcessWithTimeout( cluster, proc, jobAd, CLEANUP_TIMEOUT );
 }

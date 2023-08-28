@@ -5837,6 +5837,11 @@ These macros control the *condor_schedd*.
     to how invoke the corresponding clean-up plug-in.  Defaults to
     ``$(ETC)/checkpoint-destination-mapfile``.
 
+:macro-def:`SCHEDD_CHECKPOINT_CLEANUP_TIMEOUT`
+    There's only so long that the *condor_schedd* is willing to let clean-up
+    for a single job (including all of its checkpoints) take.  This macro
+    defines that duration (as an integer number of seconds).
+
 condor_shadow Configuration File Entries
 -----------------------------------------
 
