@@ -6751,7 +6751,7 @@ These macros affect *condor_preen*.
     how long HTCondor will wait for a checkpoint clean-up plug-in to exit
     before it declares that it's stuck and kills it.
 
-:macro-def:`CLEANUP_TIMEOUT`
+:macro-def:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`
     In addition to the per-file time-out :macro:`CHECKPOINT_CLEANUP_TIMEOUT`,
     there's only so long that *condor_preen* is willing to let clean-up for
     a single job (including all of its checkpoints) take.  This macro
