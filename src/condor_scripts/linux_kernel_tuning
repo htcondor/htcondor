@@ -50,9 +50,10 @@ LOCAL_PORT_RANGE="1024 65535"
 
 #
 # Increase the length of the TCP listen queue.  This allows more connections
-# to pile up while HTCondor is otherwise busy.
+# to pile up while HTCondor is otherwise busy.  Linux kernels pre 5.4 set this
+# to 128, which is way too low.  5.4 changed this to 4096.
 #
-TCP_LISTEN_QUEUE=1024
+TCP_LISTEN_QUEUE=4096
 
 #
 # Likewise, the central manager (collector) needs have large UDP buffers.
