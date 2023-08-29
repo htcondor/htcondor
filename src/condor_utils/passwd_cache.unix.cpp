@@ -76,7 +76,7 @@ passwd_cache::getUseridMap(std::string &usermap)
 
 	for (auto& [index, uent] : uid_table) {
 		if( !usermap.empty() ) {
-			usermap += " ";
+			usermap += ' ';
 		}
 		formatstr_cat(usermap, "%s=%ld,%ld",index.c_str(),(long)uent.uid,(long)uent.gid);
 		auto it = group_table.find(index);
@@ -337,9 +337,7 @@ passwd_cache::num_groups(const char* user) {
 bool
 passwd_cache::get_groups( const char *user, size_t groupsize, gid_t gid_list[] ) {
 
-    unsigned int i;
 	group_entry *cache_entry;
-
 
 		/* , check the cache for an existing entry */
 	if ( !lookup_group( user, cache_entry) ) {
@@ -363,10 +361,8 @@ passwd_cache::get_groups( const char *user, size_t groupsize, gid_t gid_list[] )
 		return false;
 	}
 
-		/* note that if groupsize is 0, only the size is returned. */
-	for (auto gid: cache_entry->gidlist) {
-		gid_list[i] = gid;
-	}
+	std::copy(cache_entry->gidlist.begin(), cache_entry->gidlist.end(), gid_list);
+
 	return true;
 }
 

@@ -528,7 +528,7 @@ Worker*
 IOProcess::createNewWorker(void)
 {
 	int new_id = newWorkerId();
-	auto [it, success] = m_workers_list.insert({new_id, Worker(new_id)});
+	auto [it, success] = m_workers_list.emplace(new_id, Worker(new_id));
 	ASSERT(success);
 	Worker& new_worker = it->second;
 
