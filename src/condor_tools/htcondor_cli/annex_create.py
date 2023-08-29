@@ -12,6 +12,9 @@ import secrets
 import textwrap
 import subprocess
 from pathlib import Path
+import urllib.request
+import urllib.error
+import json
 
 import htcondor
 import classad
@@ -472,6 +475,39 @@ def create_annex_token(logger, type):
         raise RuntimeError(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds")
 
 
+def system_is_in_outage(sys):
+    try:
+        response = urllib.request.urlopen(
+            "https://operations-api.access-ci.org/wh2/news/v1/affiliation/access-ci.org/current_outages/",
+            # "https://operations-api.access-ci.org/wh2/news/v1/affiliation/access-ci.org/all_outages/",
+            timeout=2,
+        )
+
+        if response.status != 200:
+            return
+
+        blob = response.read()
+        outages = json.loads(blob)
+
+        resources_down = {}
+        for outage in outages["results"]:
+            for resource in outage["AffectedResources"]:
+                resources_down[resource["ResourceID"]] = True
+
+        if sys.resource_id in resources_down:
+            print( "The ACCESS Operations API indicates that this resource is currently down." )
+            return True;
+
+        # TODO: Look at future outages (below) as well, and see if the lease
+        # "https://operations-api.access-ci.org/wh2/news/v1/affiliation/access-ci.org/future_outages/",
+        # will last until after the beginning of the outage.
+
+    except urllib.error.URLError:
+        pass
+
+    return False
+
+
 def annex_inner_func(
     logger,
     annex_name,
@@ -560,6 +596,13 @@ def annex_inner_func(
 
     if test is not None and test == 1:
         return
+
+
+    # Is the system currently down?
+    sys = SYSTEM_TABLE[system]
+    if sys.resource_id is not None:
+        if system_is_in_outage(sys):
+            return
 
     # Location of the local universe script files
     local_script_dir = (

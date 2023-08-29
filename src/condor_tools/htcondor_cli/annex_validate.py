@@ -21,6 +21,7 @@ class System:
         other_scripts: list,
         allocation_reqd: bool = False,
         queues: dict,
+        ** kwargs,
     ):
         assert isinstance(pretty_name, str)
         self.pretty_name = pretty_name
@@ -45,6 +46,11 @@ class System:
 
         assert isinstance(queues, dict)
         self.queues = queues
+
+        self.resource_id = None
+        if "resource_id" in kwargs:
+            assert isinstance(kwargs["resource_id"], str)
+            self.resource_id = kwargs["resource_id"]
 
 
     def __str__(self):
@@ -260,6 +266,7 @@ SYSTEM_TABLE = {
         "executable":       "hpc.sh",
         "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  False,
+        "resource_id":      "stampede2.tacc.access-ci.org",
 
         "queues": {
             "normal": {
@@ -301,6 +308,7 @@ SYSTEM_TABLE = {
         "executable":       "hpc.sh",
         "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  True,
+        "resource_id":      "expanse.sdsc.access-ci.org",
 
         "queues": {
             "compute": {
@@ -357,6 +365,8 @@ SYSTEM_TABLE = {
         "executable":       "hpc.sh",
         "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  False,
+        # Also anvil-gpu...
+        "resource_id":      "anvil.purdue.access-ci.org",
 
         "queues": {
             "wholenode": {
@@ -424,6 +434,8 @@ SYSTEM_TABLE = {
         "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "batch_system":     "SLURM",
         "allocation_reqd":  False,
+        # Also bridges2-em, bridges2-gpu, bridges2-rm ...
+        "resource_id":      "bridges2.psc.xsede.org",
 
         "queues": {
             "RM": {
