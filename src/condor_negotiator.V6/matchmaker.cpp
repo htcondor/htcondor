@@ -1984,9 +1984,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 				updateAd.Assign(ATTR_LAST_UPDATE, accountant.GetLastUpdateTime());
 
-				updateAd.Assign("MyType", "Accounting");
-				SetMyTypeName(updateAd, "Accounting");
-				SetTargetTypeName(updateAd, "none");
+				SetMyTypeName(updateAd, ACCOUNTING_ADTYPE);
 
 				DCCollectorAdSequences seq; // Don't need them, interface requires them
 				int resUsed = -1;
@@ -2007,9 +2005,7 @@ void
 Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	ClassAd accountingAd;
-	accountingAd.Assign("MyType", "Accounting");
-	SetMyTypeName(accountingAd, "Accounting");
-	SetTargetTypeName(accountingAd, "none");
+	SetMyTypeName(accountingAd, ACCOUNTING_ADTYPE);
 	accountingAd.Assign(ATTR_LAST_UPDATE, accountant.GetLastUpdateTime());
 	accountingAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 
@@ -5952,7 +5948,6 @@ init_public_ad()
 	publicAd = new ClassAd();
 
 	SetMyTypeName(*publicAd, NEGOTIATOR_ADTYPE);
-	SetTargetTypeName(*publicAd, "");
 
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
@@ -6005,7 +6000,7 @@ Matchmaker::invalidateNegotiatorAd( void )
 
 		// Set the correct types
 	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
-	SetTargetTypeName( cmd_ad, NEGOTIATOR_ADTYPE );
+	cmd_ad.Assign(ATTR_TARGET_TYPE, NEGOTIATOR_ADTYPE);
 
 	formatstr( line, "TARGET.%s == \"%s\"",
 				  ATTR_NAME,

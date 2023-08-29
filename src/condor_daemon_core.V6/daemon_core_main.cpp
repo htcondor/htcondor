@@ -448,7 +448,7 @@ private:
 			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
 			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		if (!req.m_daemon) {
-			dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
+			dprintf(D_ERROR, "Logic error!  Token request without associated daemon.\n");
 			req.m_client_id = "";
 			(*req.m_callback_fn)(false, req.m_callback_data);
 			return false;
@@ -2135,12 +2135,12 @@ handle_dc_finish_token_request(int, Stream* stream)
 		if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str)) {
 			error_code = 2;
 			error_string = "No request ID provided.";
-		}
-		try {
-			request_id = std::stol(request_id_str);
-		} catch (...) {
-			error_code = 2;
-			error_string = "Unable to convert request ID to integer.";
+		} else {
+			YourStringDeserializer des(request_id_str);
+			if ( ! des.deserialize_int(&request_id) || ! des.at_end()) {
+				error_code = 2;
+				error_string = "Unable to convert request ID to integer.";
+			}
 		}
 	}
 
@@ -2226,9 +2226,9 @@ handle_dc_list_token_request(int, Stream* stream)
 	// The filter is optional; if it's absent, we'll list all pending requests.
 	std::string request_filter_str;
 	if (!error_code && (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_filter_str) && !request_filter_str.empty())) {
-		try {
-			std::stol(request_filter_str);
-		} catch (...) {
+		int request_id=-1;
+		YourStringDeserializer des(request_filter_str);
+		if ( ! des.deserialize_int(&request_id) || ! des.at_end()) {
 			error_code = 2;
 			error_string = "Unable to convert request ID to integer.";
 		}
@@ -2335,17 +2335,15 @@ handle_dc_approve_token_request(int, Stream* stream)
 		static_cast<Sock*>(stream)->getFullyQualifiedUser());
 
 	// See comment in handle_dc_list_token_request().
+	int request_id = -1;
 	std::string request_id_str;
 	if (!error_code && (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str) || request_id_str.empty()))
 	{
 		error_code = 1;
 		error_string = "Request ID not provided.";
-	}
-	int request_id = -1;
-	try {
-		request_id = std::stol(request_id_str);
-	} catch (...) {
-		if (!error_code) {
+	} else {
+		YourStringDeserializer des(request_id_str);
+		if ( ! des.deserialize_int(&request_id) || ! des.at_end()) {
 			error_code = 2;
 			error_string = "Unable to convert request ID to integer.";
 		}

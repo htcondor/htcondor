@@ -249,7 +249,7 @@ void
 make_request_ad(ClassAd & requestAd, const char *rank)
 {
 	SetMyTypeName (requestAd, JOB_ADTYPE);
-	SetTargetTypeName (requestAd, STARTD_ADTYPE);
+	requestAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE); // For pre 23.0 
 
 	get_mySubSystem()->setTempName( "SUBMIT" );
 	config_fill_ad( &requestAd );

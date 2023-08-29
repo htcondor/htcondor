@@ -983,21 +983,21 @@ int FetchProxyDelegationHandler(int, Stream *sock )
 		// read the xfer id from the client
 	rsock->decode();
 	if ( !rsock->code( xfer_id ) || !rsock->end_of_message() ) {
-		dprintf( D_FAILURE, "FetchProxyDelegationHandler(): failed to read xfer id\n" );
+		dprintf( D_ERROR, "FetchProxyDelegationHandler(): failed to read xfer id\n" );
 		goto refuse;
 	}
 	dprintf( D_FULLDEBUG, "FetchProxyDelegationHandler(): xfer id: %s\n", xfer_id.c_str() );
 
 	xfer_ptr = FetchProxyList.find( xfer_id );
 	if ( xfer_ptr == FetchProxyList.end() ) {
-		dprintf( D_FAILURE, "FetchProxyDelegationHandler(): unknown transfer id: %s\n",
+		dprintf( D_ERROR, "FetchProxyDelegationHandler(): unknown transfer id: %s\n",
 				 xfer_id.c_str() );
 		goto refuse;
 	}
 
 	job = dynamic_cast<INFNBatchJob*>(xfer_ptr->second);
 	if ( job == NULL ) {
-		dprintf( D_FAILURE, "FetchProxyDelegationHandler(): cast failed\n" );
+		dprintf( D_ERROR, "FetchProxyDelegationHandler(): cast failed\n" );
 		goto refuse;
 	}
 

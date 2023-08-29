@@ -2174,7 +2174,7 @@ param_integer( const char *name, int &value,
 
 		if (is_long) {
 			if (was_truncated)
-				dprintf (D_CONFIG | D_FAILURE, "Error - long param %s was fetched as integer and truncated\n", name);
+				dprintf (D_ERROR, "Error - long param %s was fetched as integer and truncated\n", name);
 			else
 				dprintf (D_CONFIG, "Warning - long param %s fetched as integer\n", name);
 		}
@@ -3394,7 +3394,7 @@ static void process_persistent_config_or_die (const char * source_file, bool top
 	}
 
 	if (rval < 0) {
-		dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading"
+		dprintf( D_ERROR, "Configuration Error Line %d %s while reading"
 					"%s persistent config source: %s\n",
 					source.line, errmsg.c_str(), top_level ? " top-level" : " ", source_file );
 		exit(1);

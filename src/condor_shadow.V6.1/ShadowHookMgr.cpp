@@ -40,17 +40,17 @@ std::string getCredDir()
 {
 	auto job_ad = Shadow->getJobAd();
 	if (!job_ad) {
-		dprintf(D_ALWAYS|D_FAILURE, "Shadow does not have a copy of the job ad.\n");
+		dprintf(D_ERROR, "Shadow does not have a copy of the job ad.\n");
 		return "";
 	}
 	std::string spool;
 	if (!param(spool, "SPOOL")) {
-		dprintf(D_ALWAYS|D_FAILURE, "Cannot create necessary spool directory because SPOOL is unset.\n");
+		dprintf(D_ERROR, "Cannot create necessary spool directory because SPOOL is unset.\n");
 		return "";
 	}
 	int cluster, proc;
 	if (!job_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster) || !job_ad->EvaluateAttrInt(ATTR_PROC_ID, proc)) {
-		dprintf(D_ALWAYS|D_FAILURE, "Cannot create necessary spool directory because job cluster / proc is unset\n");
+		dprintf(D_ERROR, "Cannot create necessary spool directory because job cluster / proc is unset\n");
 		return "";
 	}
 	std::string cred_dir;
@@ -72,7 +72,7 @@ ShadowHookMgr::~ShadowHookMgr()
 		// Always try to delete the credential directory.
 	std::string cred_dir;
 	if ((cred_dir = getCredDir()) == "") {
-		dprintf(D_ALWAYS|D_FAILURE, "Failed to generate directory to potentially cleanup\n");
+		dprintf(D_ERROR, "Failed to generate directory to potentially cleanup\n");
 	}
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -106,7 +106,7 @@ ShadowHookMgr::tryHookPrepareJob()
 	std::string hook_stdin;
 	auto job_ad = Shadow->getJobAd();
 	if (!job_ad) {
-		dprintf(D_ALWAYS|D_FAILURE, "Shadow does not have a copy of the job ad.\n");
+		dprintf(D_ERROR, "Shadow does not have a copy of the job ad.\n");
 		return -1;
 	}
 	sPrintAd(hook_stdin, *job_ad);
@@ -138,7 +138,7 @@ ShadowHookMgr::tryHookPrepareJob()
 		delete hook_client;
 		std::string err_msg;
 		formatstr(err_msg, "failed to execute %s (%s)", hook_name, m_hook_prepare_job.c_str());
-		dprintf(D_ALWAYS|D_FAILURE, "ERROR in ShadowHookMgr::tryHookPrepareJob: %s\n",
+		dprintf(D_ERROR, "ERROR in ShadowHookMgr::tryHookPrepareJob: %s\n",
 			err_msg.c_str());
 		BaseShadow::log_except("Job hook execution failed");
 		Shadow->shutDown(JOB_NOT_STARTED);
@@ -161,7 +161,7 @@ HookShadowPrepareJobClient::hookExited(int exit_status) {
 		// Always try to delete the credential directory.
 	std::string cred_dir;
 	if ((cred_dir = getCredDir()) == "") {
-		dprintf(D_ALWAYS|D_FAILURE, "Failed to generate directory to potentially cleanup\n");
+		dprintf(D_ERROR, "Failed to generate directory to potentially cleanup\n");
 	}
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -210,7 +210,7 @@ HookShadowPrepareJobClient::hookExited(int exit_status) {
 		msg_from_stdout.empty() ? "<no message>" : msg_from_stdout.c_str());
 
 	if (exit_status) {
-		dprintf(D_ALWAYS|D_FAILURE, "ERROR in HookPrepareJobClient::hookExited: %s\n", log_msg.c_str());
+		dprintf(D_ERROR, "ERROR in HookPrepareJobClient::hookExited: %s\n", log_msg.c_str());
 		if (exit_status < 300) {
 			Shadow->holdJobAndExit(log_msg.c_str(), CONDOR_HOLD_CODE::HookShadowPrepareJobFailure, exit_status);
 		} else {

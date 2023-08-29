@@ -51,8 +51,6 @@ static bool test_lookup_string_long(void);
 static bool test_lookup_string_file(void);
 static bool test_get_my_type_name_no(void);
 static bool test_get_my_type_name_yes(void);
-static bool test_get_target_type_name_no(void);
-static bool test_get_target_type_name_yes(void);
 static bool test_is_a_match_true(void);
 static bool test_is_a_match_true_reverse(void);
 static bool test_is_a_match_false_memory(void);
@@ -335,8 +333,6 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_lookup_string_file);
 	driver.register_function(test_get_my_type_name_no);
 	driver.register_function(test_get_my_type_name_yes);
-	driver.register_function(test_get_target_type_name_no);
-	driver.register_function(test_get_target_type_name_yes);
 	driver.register_function(test_is_a_match_true);
 	driver.register_function(test_is_a_match_true_reverse);
 	driver.register_function(test_is_a_match_false_memory);
@@ -1092,48 +1088,6 @@ static bool test_get_my_type_name_yes() {
 	initAdFromString(classad_string, classad);
 	const char* expect = "foo";
 	const char* result = GetMyTypeName(classad);
-	emit_input_header();
-	emit_param("ClassAd", classad_string);
-	emit_output_expected_header();
-	emit_retval("%s", expect);
-	emit_output_actual_header();
-	emit_retval("%s", result);
-	if(strcmp(result, expect) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_target_type_name_no() {
-	emit_test("Test GetTargetTypeName() on a classad that doesn't have a "
-		"target type name.");
-	const char* classad_string = "\tA = 1\n\t\tB=2\n\t\tC = 3\n\t\t"
-		"D='2001-04-05T12:14:15'\n\t\tG=GetTime(1)\n\t\tH=foo(1)";
-	ClassAd classad;
-	initAdFromString(classad_string, classad);
-	const char* expect = "";
-	const char* result = GetTargetTypeName(classad);
-	emit_input_header();
-	emit_param("ClassAd", classad_string);
-	emit_output_expected_header();
-	emit_retval("%s", expect);
-	emit_output_actual_header();
-	emit_retval("%s", result);
-	if(strcmp(result, expect) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_target_type_name_yes() {
-	emit_test("Test GetTargetTypeName() on a classad that has a target type"
-		" name.");
-	const char* classad_string = "\tA = 0.7\n\t\tB=2\n\t\tC = 3\n\t\t"
-		"D = \"alain\"\n\t\tMyType=\"foo\"\n\t\tTargetType=\"blah\"";
-	ClassAd classad;
-	initAdFromString(classad_string, classad);
-	const char* expect = "blah";
-	const char* result = GetTargetTypeName(classad);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();

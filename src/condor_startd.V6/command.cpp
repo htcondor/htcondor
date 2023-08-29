@@ -2051,7 +2051,7 @@ caUpdateMachineAd( Stream * s, char * c, ClassAd * ad ) {
 	ClassAd reply;
 	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 	if( ! sendCAReply( s, c, & reply ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to send update machine ad reply.\n" );
+		dprintf( D_ERROR, "Failed to send update machine ad reply.\n" );
 		return FALSE;
 	}
 

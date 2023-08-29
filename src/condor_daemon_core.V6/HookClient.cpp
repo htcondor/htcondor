@@ -98,7 +98,7 @@ HookClient::hookExited(int exit_status) {
 	// Log stderr from hook script to the StarterLog
 	std::string hook_name(getHookTypeString(type()));
 	if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
-		logHookErr(D_ALWAYS | D_FAILURE, hook_name + " Failure", getStdErr());
+		logHookErr(D_ERROR, hook_name + " Failure", getStdErr());
 	}
 	else {
 		logHookErr(D_FULLDEBUG, hook_name, getStdErr());

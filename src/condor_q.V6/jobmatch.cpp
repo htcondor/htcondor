@@ -546,7 +546,7 @@ static bool checkOffer(
 	const char * slotname)
 {
 	// 1. Request satisfied? 
-	if( !IsAHalfMatch( request, offer ) ) {
+	if ( ! IsAConstraintMatch(request, offer)) {
 		ac.fReqConstraint++;
 		if (pmat) pmat->append_to_fail_list(anaMachines::ReqConstraint, slotname);
 		return false;
@@ -554,7 +554,7 @@ static bool checkOffer(
 	ac.job_matches_slot++;
 
 	// 2. Offer satisfied? 
-	if ( !IsAHalfMatch( offer, request ) ) {
+	if ( ! IsAConstraintMatch(offer, request)) {
 		ac.fOffConstraint++;
 		if (pmat) pmat->append_to_fail_list(anaMachines::OffConstraint, slotname);
 		return false;
@@ -1329,13 +1329,13 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 			cUniqueJobs += 1;
 
 			// 2. Offer satisfied?
-			bool offer_match = IsAHalfMatch(slot, job);
+			bool offer_match = IsAConstraintMatch(slot, job);
 			if (offer_match) {
 				cOffConstraint += cJobsToInc;
 			}
 
 			// 1. Request satisfied?
-			if (IsAHalfMatch(job, slot)) {
+			if (IsAConstraintMatch(job, slot)) {
 				cReqConstraint += cJobsToInc;
 				if (offer_match) {
 					cBothMatch += cJobsToInc;

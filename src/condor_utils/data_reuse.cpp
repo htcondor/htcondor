@@ -349,7 +349,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				resEvent.getUUID().c_str());
 			m_reserved_space += resEvent.getReservedSpace();
 		} else if (iter->second->getTag() != resEvent.getTag()) {
-			dprintf(D_FAILURE, "Duplicate space reservation with incorrect tag (%s)\n",
+			dprintf(D_ERROR, "Duplicate space reservation with incorrect tag (%s)\n",
 				resEvent.getTag().c_str());
 			err.pushf("DataReuse", 13, "Duplicate space reservation with incorrect tag (%s)",
 				resEvent.getTag().c_str());
@@ -382,7 +382,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 		auto comEvent = static_cast<FileCompleteEvent&>(event);
 		auto iter = m_space_reservations.find(comEvent.getUUID());
 		if (iter == m_space_reservations.end()) {
-			dprintf(D_FAILURE, "File completed for non-existent space reservation %s.\n",
+			dprintf(D_ERROR, "File completed for non-existent space reservation %s.\n",
 				comEvent.getUUID().c_str());
 			err.pushf("DataReuse", 11, "File completed for non-existent space reservation %s",
 				comEvent.getUUID().c_str());
@@ -391,7 +391,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 		std::string fname = FileEntry::fname(m_dirpath, comEvent.getChecksumType(),
 			comEvent.getChecksum(), iter->second->getTag());
 		if (iter->second->getReservedSpace() < comEvent.getSize()) {
-			dprintf(D_FAILURE, "File completed with size %zu, which is larger than the space"
+			dprintf(D_ERROR, "File completed with size %zu, which is larger than the space"
 				" reservation size.\n", comEvent.getSize());
 			err.pushf("DataReuse", 12, "File completed with size %zu, which is larger than the space"
 				" reservation size.", comEvent.getSize());
@@ -400,7 +400,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 		}
 		auto event_time = std::chrono::system_clock::from_time_t(event.GetEventclock());
 		if (iter->second->getExpirationTime() < event_time) {
-			dprintf(D_FAILURE, "File (checksum=%s, type=%s, tag=%s) completed at time %lu after "
+			dprintf(D_ERROR, "File (checksum=%s, type=%s, tag=%s) completed at time %lu after "
 				"space reservation %s expired at %lu.\n", comEvent.getChecksum().c_str(),
 				comEvent.getChecksumType().c_str(), iter->second->getTag().c_str(),
 				event.GetEventclock(), comEvent.getUUID().c_str(),
@@ -483,7 +483,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 					entry->tag() == remEvent.getTag();
 			});
 		if (iter == m_contents.end()) {
-			dprintf(D_FAILURE, "File with checksum %s removed - but file is unknown to our state.\n",
+			dprintf(D_ERROR, "File with checksum %s removed - but file is unknown to our state.\n",
 				remEvent.getChecksum().c_str());
 			err.pushf("DataReuse", 15, "File with checksum %s removed - but file is unknown to our state",
 				remEvent.getChecksum().c_str());

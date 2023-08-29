@@ -619,7 +619,7 @@ main_init( int argc, char* argv[] )
 			int saved_errno = errno;
 #if defined(EDQUOT)
 			if (saved_errno == EDQUOT) {
-				dprintf(D_ALWAYS | D_FAILURE,
+				dprintf(D_ERROR,
 				   "Error during DISCARD_SESSION_KEYRING_ON_STARTUP, suggest "
 				   "increasing /proc/sys/kernel/keys/root_maxkeys\n");
 			}
@@ -1582,7 +1582,6 @@ init_classad()
 	ad = new ClassAd();
 
 	SetMyTypeName(*ad, MASTER_ADTYPE);
-	SetTargetTypeName(*ad, "");
 
 	if (MasterName) {
 		ad->Assign(ATTR_NAME, MasterName);
@@ -1802,7 +1801,7 @@ void
 invalidate_ads() {
 	ClassAd cmd_ad;
 	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
-	SetTargetTypeName( cmd_ad, MASTER_ADTYPE );
+	cmd_ad.Assign(ATTR_TARGET_TYPE, MASTER_ADTYPE);
 	
 	std::string line;
 	std::string escaped_name;

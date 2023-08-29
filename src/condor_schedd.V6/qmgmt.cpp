@@ -1885,6 +1885,12 @@ void JobQueueJob::PopulateFromAd()
 	// First have our base class fill in whatever it can
 	JobQueueBase::PopulateFromAd();
 
+	if ( ! this->Lookup(ATTR_TARGET_TYPE)) {
+		// For backward compat matchmaking with pre 23.0 HTCondor Execute nodes and Negotiators
+		// TODO: move this into the the code that creates resource requests?
+		this->Assign(ATTR_TARGET_TYPE, JOB_TARGET_ADTYPE);
+	}
+
 	if ( ! universe) {
 		int uni = 0;
 		if (this->LookupInteger(ATTR_JOB_UNIVERSE, uni)) {
@@ -2229,7 +2235,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	if (!JobQueue->Lookup(HeaderKey, bad)) {
 		// we failed to find header ad, so create one
-		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE, STARTD_ADTYPE);
+		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE);
 		CreatedAd = true;
 	}
 
@@ -3887,7 +3893,7 @@ NewCluster(CondorError* errstack)
 	// put a new classad in the transaction log to serve as the cluster ad
 	JobQueueKeyBuf cluster_key;
 	IdToKey(active_cluster_num,-1,cluster_key);
-	JobQueue->NewClassAd(cluster_key, JOB_ADTYPE, STARTD_ADTYPE);
+	JobQueue->NewClassAd(cluster_key, JOB_ADTYPE);
 
 	return active_cluster_num;
 }
@@ -3990,7 +3996,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
-	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
+	JobQueue->NewClassAd(key, JOB_ADTYPE);
 
 	job_queued_count += 1;
 
@@ -6215,7 +6221,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	TemporaryPrivSentry tps( owner != nullptr );
 	if ( owner != nullptr ) {
 		if ( !init_user_ids( owner, nullptr ) ) {
-			dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
+			dprintf( D_ERROR, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
 			return false;
 		}
 		set_user_priv();
@@ -6231,7 +6237,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	X509Credential* proxy_handle = x509_proxy_read( file );
 
 	if ( proxy_handle == nullptr ) {
-		dprintf( D_FAILURE, "Failed to read job proxy: %s\n",
+		dprintf( D_ERROR, "Failed to read job proxy: %s\n",
 				 x509_error_string() );
 		return false;
 	}
@@ -6277,7 +6283,7 @@ static bool MakeUserRec(JobQueueKey & key,
 	const char * ntdomain=nullptr,
 	bool enabled=true)
 {
-	bool rval = JobQueue->NewClassAd(key, OWNER_ADTYPE, "") &&
+	bool rval = JobQueue->NewClassAd(key, OWNER_ADTYPE) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_USER, user) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_OWNER, owner) &&
 		( ! ntdomain || 0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_NT_DOMAIN, ntdomain)) &&
@@ -9707,7 +9713,7 @@ bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName)
 		BeginTransaction();
 	}
 
-	bool rval = JobQueue->NewClassAd(key, JOB_SET_ADTYPE, JOB_SET_ADTYPE) &&
+	bool rval = JobQueue->NewClassAd(key, JOB_SET_ADTYPE) &&
 		0 == SetSecureAttributeInt(key.cluster, key.proc, ATTR_JOB_SET_ID, setId) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_JOB_SET_NAME, setName) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, attr_JobUser.c_str(), ownerinfoName)

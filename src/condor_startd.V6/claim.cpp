@@ -194,7 +194,7 @@ Claim::vacate()
 		                                    20, nullptr, nullptr, false,
 		                                    c_id->secSessionId());
 		if( ! sock ) {
-			dprintf(D_FAILURE|D_ALWAYS, "Can't connect to schedd (%s)\n",
+			dprintf(D_ERROR, "Can't connect to schedd (%s)\n",
 			        c_client->c_addr.c_str());
 		} else {
 			if( !sock->put_secret(c_id->id()) ) {
@@ -518,7 +518,7 @@ Claim::start_match_timer()
 			  continue. 
 			*/
 		
-	   dprintf( D_FAILURE|D_ALWAYS, "Warning: got matched twice for same ClaimId."
+	   dprintf( D_ERROR, "Warning: got matched twice for same ClaimId."
 				" Canceling old match timer (%d)\n", c_match_tid );
 	   if( daemonCore->Cancel_Timer(c_match_tid) < 0 ) {
 		   dprintf( D_ALWAYS, "Failed to cancel old match timer (%d): "
@@ -570,14 +570,14 @@ Claim::match_timed_out( int /* timerID */ )
 			// Don't use our dprintf(), use the "real" version, since
 			// if we're this confused, our rip pointer might be messed
 			// up, too, and we don't want to seg fault.
-		::dprintf( D_FAILURE|D_ALWAYS,
+		::dprintf( D_ERROR,
 				   "ERROR: Match timed out but there's no ClaimId\n" );
 		return;
 	}
 		
 	Resource* res_ip = resmgr->get_by_any_id( my_id );
 	if( !res_ip ) {
-		::dprintf( D_FAILURE|D_ALWAYS,
+		::dprintf( D_ERROR,
 				   "ERROR: Can't find resource of expired match\n" );
 		return;
 	}
@@ -595,7 +595,7 @@ Claim::match_timed_out( int /* timerID */ )
 				  since the ResState code will deal with resetting the
 				  claim objects once we hit the owner state...
 				*/
-			dprintf( D_FAILURE|D_ALWAYS, "WARNING: Match timed out "
+			dprintf( D_ERROR, "WARNING: Match timed out "
 					 "while still in the %s state. This might mean "
 					 "your MATCH_TIMEOUT setting (%d) is too small, "
 					 "or that there's a problem with how quickly your "
@@ -619,7 +619,7 @@ Claim::match_timed_out( int /* timerID */ )
 				   sending email at this point with the last 300 lines
 				   of the log file or something.  -Derek 10/9/00
 				*/
-			dprintf( D_FAILURE|D_FULLDEBUG, 
+			dprintf( D_ERROR | D_VERBOSE,
 					 "WARNING: Current match timed out but in %s state.\n",
 					 state_to_string(res_ip->state()) );
 			return;
@@ -629,7 +629,7 @@ Claim::match_timed_out( int /* timerID */ )
 			// a weird, invalid state.  don't rely on using any member
 			// functions or data until we return.
 		res_ip->r_cur = new Claim( res_ip );
-		res_ip->dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
+		res_ip->dprintf( D_ERROR, "State change: match timed out\n" );
 		res_ip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting claim.
@@ -1009,7 +1009,7 @@ Claim::sendAlive( int /* timerID */ )
 	int connect_timeout = MAX(20, ((c_lease_duration / 3)-3) );
 
 	if (!(sock = matched_schedd.reliSock( connect_timeout, 0, NULL, true ))) {
-		dprintf( D_FAILURE|D_ALWAYS, 
+		dprintf( D_ERROR,
 				"Alive failed - couldn't initiate connection to %s\n",
 		         c_addr );
 		return;
@@ -1064,7 +1064,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 	dprintf( D_PROTOCOL, "In Claim::sendAliveConnectHandler id %s\n", publicClaimId());
 
 	if (!sock) {
-		dprintf( D_FAILURE|D_ALWAYS, 
+		dprintf( D_ERROR,
 				 "NULL sock when connecting to schedd %s\n",
 				 c_addr );
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
@@ -1073,7 +1073,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 	ASSERT(c_alive_inprogress_sock == sock);
 
 	if (!sock->is_connected()) {
-		dprintf( D_FAILURE|D_ALWAYS, "Failed to connect to schedd %s\n",
+		dprintf( D_ERROR, "Failed to connect to schedd %s\n",
 				 c_addr );
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
 	}
@@ -1082,7 +1082,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 		// the claim id, and schedd responds with an int ack.
 
 	if (!matched_schedd.startCommand(ALIVE, sock, 20, NULL, NULL, false, secSessionId() )) {
-		dprintf( D_FAILURE|D_ALWAYS, 
+		dprintf( D_ERROR,
 				"Couldn't send ALIVE to schedd at %s\n",
 				 c_addr );
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
@@ -1091,7 +1091,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 	sock->encode();
 
 	if ( !sock->put_secret( claimId ) || !sock->end_of_message() ) {
-			dprintf( D_FAILURE|D_ALWAYS, 
+			dprintf( D_ERROR,
 				 "Failed to send Alive to schedd %s for job %d.%d id %s\n",
 				 c_addr, c_cluster, c_proc, publicClaimId() );
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
@@ -1153,7 +1153,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 		// If the response is -1, that means the schedd knows nothing
 		// about this claim, so relinquish it.
 	if ( reply == -1 ) {
-		dprintf(D_FAILURE|D_ALWAYS,"State change: claim no longer recognized "
+		dprintf(D_ERROR,"State change: claim no longer recognized "
 			 "by the schedd - removing claim\n" );
 		c_alive_inprogress_sock = NULL;
 		finishKillClaim();	// get rid of the claim
@@ -1175,7 +1175,7 @@ Claim::leaseExpired( int /* timerID */ )
 	cancelLeaseTimer();  // cancel timer(s) in case we are being called directly
 
 	if( c_type == CLAIM_COD ) {
-		dprintf( D_FAILURE|D_ALWAYS, "COD claim %s lease expired "
+		dprintf( D_ERROR, "COD claim %s lease expired "
 				 "(client must not have called 'condor_cod renew' within %d seconds)\n", id(), c_lease_duration );
 		if( removeClaim(false) ) {
 				// There is no starter, so remove immediately.
@@ -1187,7 +1187,7 @@ Claim::leaseExpired( int /* timerID */ )
 		return;
 	}
 
-	dprintf( D_FAILURE|D_ALWAYS, "State change: claim lease expired "
+	dprintf( D_ERROR, "State change: claim lease expired "
 			 "(condor_schedd gone?), evicting claim\n" );
 
 		// Kill the claim.

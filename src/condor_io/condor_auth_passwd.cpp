@@ -193,7 +193,7 @@ findTokens(const std::string &issuer,
 	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
-			dprintf(D_FAILURE, "findTokens(%s): Failed to switch to user priv\n", owner.c_str());
+			dprintf(D_ERROR, "findTokens(%s): Failed to switch to user priv\n", owner.c_str());
 			return false;
 		}
 		set_user_priv();

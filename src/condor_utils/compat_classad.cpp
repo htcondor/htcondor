@@ -2549,26 +2549,6 @@ GetMyTypeName( const classad::ClassAd &ad )
 	return myTypeStr.c_str( );
 }
 
-void
-SetTargetTypeName( classad::ClassAd &ad, const char *targetType )
-{
-	if( targetType ) {
-		ad.InsertAttr( ATTR_TARGET_TYPE, std::string( targetType ) );
-	}
-
-	return;
-}
-
-const char*
-GetTargetTypeName( const classad::ClassAd &ad )
-{
-	static std::string targetTypeStr;
-	if( !ad.EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
-		return "";
-	}
-	return targetTypeStr.c_str( );
-}
-
 // Determine if a value is valid to be written to the log. The value
 // is a RHS of an expression. According to LogSetAttribute::WriteBody,
 // the only invalid character is a '\n'.

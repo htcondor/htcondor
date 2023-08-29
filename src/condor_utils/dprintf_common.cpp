@@ -57,8 +57,8 @@ const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT] = {
 	"D_PRIV", "D_DAEMONCORE", "D_FULLDEBUG", "D_SECURITY",
 	"D_COMMAND", "D_MATCH", "D_NETWORK", "D_KEYBOARD",
 	"D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
-	"D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_PERF_TRACE",
-	"D_LOAD", "D_PROC", "D_NFS", "D_AUDIT", "D_TEST",
+	"D_SYSCALLS", "D_21", "D_HOSTNAME", "D_PERF_TRACE", // D_21 formerly D_CKPT
+	"D_LOAD", "D_25", "D_26", "D_AUDIT", "D_TEST",      // D_25 formerly D_PROC (HAD)  D_26 formerly D_NFS
 	"D_STATS", "D_MATERIALIZE", "D_31",
 };
 // these are flags rather than categories
@@ -183,8 +183,6 @@ _condor_parse_merge_debug_flags(
 				hdr = D_FDS;
 			} else if( strcasecmp(flag, "D_IDENT") == 0 ) {
 				hdr = D_IDENT;
-			} else if( strcasecmp(flag, "D_EXPR") == 0 ) {
-				hdr = D_EXPR;
 			} else if( (strcasecmp(flag, "D_LEVEL") == 0) || (strcasecmp(flag, "D_CATEGORY") == 0) || (strcasecmp(flag, "D_CAT") == 0) ) {
 				hdr = D_CAT;
 			} else if( strcasecmp(flag, "D_SUB_SECOND") == 0 ) {
@@ -198,13 +196,13 @@ _condor_parse_merge_debug_flags(
 				flag_verbosity *= 2; // so D_FULLDEBUG:1 ends up as D_ALWAYS:2
 				bit = (1<<D_ALWAYS);
 			} else if( strcasecmp(flag, "D_FAILURE") == 0 ) {
-				// D_FAILURE is a special case because lots of condor code sets D_ALWAYS|D_FAILURE
-				// to indicate _either_ messages that should be output always OR messages that should
-				// show up in a 'failure' log. if D_FAILURE were a category rather than a flag, then
-				// when OR'd with D_ALWAYS, it would equal D_FAILURE and thus NOT output in D_ALWAYS logs
-				// so treat D_FAILURE as header flag from the dprintf side, and as a synonym for the D_ERROR
+				// D_FAILURE is a special case because old code used it with 2 meanings, sometimes
+				// to indicate messages that should be D_ERROR.  but also in some code to indicate
+				// messages that should show up in a FAILURE (exception) log. if D_FAILURE were a category rather than a flag, then
+				// when OR'd with D_ALWAYS, it would equal D_FAILURE and thus NOT output in D_ALWAYS logs.
+				// So treat we split it to D_ERROR_ALSO and D_EXCEPTfrom the dprintf side, and as a synonym for the D_ERROR
 				// category from the condor_config side.
-				hdr = D_FAILURE;
+				hdr = D_EXCEPT;
 				bit = (1<<D_ERROR);
 			} else {
 				for(unsigned int i = 0; i < COUNTOF(_condor_DebugCategoryNames); i++ ) {

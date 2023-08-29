@@ -1844,6 +1844,8 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		compute_dynamic(true);
 	}
 
+	// TODO: use ATTR_TARGET_TYPE of the queryAd to restrict what ads are created here?
+
 	// we will put the Machine ads we intend to return here temporarily
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> ads;
 	// these get filled in with Resource and Job(Claim) ads only when snapshot == true
@@ -1885,7 +1887,7 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		ClassAd * ad = new ClassAd;
 		rip->publish_single_slot_ad(*ad, cur_time, purp);
 
-		if (IsAHalfMatch(&queryAd, ad) /* || (claim_ad && IsAHalfMatch(&queryAd, claim_ad))*/) {
+		if (IsAConstraintMatch(&queryAd, ad) /* || (claim_ad && IsAConstraintMatch(&queryAd, claim_ad))*/) {
 			ads[rip->r_name] = ad;
 			if (res_ad) { res_ads[rip->r_name] = res_ad; }
 			if (cfg_ad) { cfg_ads[rip->r_name] = cfg_ad; }

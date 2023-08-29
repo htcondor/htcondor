@@ -1464,8 +1464,8 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 
 		ClassAd * ad = new ClassAd(*CustomerAd);
 		ad->Assign(ATTR_NAME, CustomerName);
-		SetMyTypeName(*ad, "Accounting"); // MyType in the accounting log is * (so is target type actually)
-		SetTargetTypeName(*ad, "none");
+		SetMyTypeName(*ad, ACCOUNTING_ADTYPE); // MyType in the accounting log is * (so is target type actually)
+		// SetTargetTypeName(*ad, "none");
 		ad->Assign(PriorityAttr, effectivePriority);
 		ad->Assign(CeilingAttr, ceiling);
 		ad->Assign(FloorAttr, floor);
@@ -1686,7 +1686,7 @@ bool Accountant::DeleteClassAd(const std::string& Key)
 void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, int64_t AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
-    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
+    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*");
     AcctLog->AppendLog(log);
   }
   char value[24] = { 0 };
@@ -1702,7 +1702,7 @@ void Accountant::SetAttributeInt(const std::string& Key, const std::string& Attr
 void Accountant::SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
-    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
+    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*");
     AcctLog->AppendLog(log);
   }
   
@@ -1719,7 +1719,7 @@ void Accountant::SetAttributeFloat(const std::string& Key, const std::string& At
 void Accountant::SetAttributeString(const std::string& Key, const std::string& AttrName, const std::string& AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
-    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
+    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*");
     AcctLog->AppendLog(log);
   }
   

@@ -228,7 +228,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	TranslateClient* translate_client = new TranslateClient(hook_translate, r_job);
 	if (NULL == translate_client)
 	{
-		dprintf(D_ALWAYS|D_FAILURE, 
+		dprintf(D_ERROR,
 			"ERROR in JobRouterHookMgr::hookTranslateJob: "
 			"failed to create translation client\n");
 		return -1;
@@ -241,7 +241,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	}
 	if (0 == spawn(translate_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
-		dprintf(D_ALWAYS|D_FAILURE,
+		dprintf(D_ERROR,
 				"ERROR in JobRouterHookMgr::hookTranslateJob: "
 				"failed to spawn HOOK_TRANSLATE_JOB (%s)\n", hook_translate);
 		delete translate_client;
@@ -298,7 +298,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	StatusClient* status_client = new StatusClient(hook_update_job_info, r_job);
 	if (NULL == status_client)
 	{
-		dprintf(D_ALWAYS|D_FAILURE, 
+		dprintf(D_ERROR,
 			"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
 			"failed to create status update client\n");
 		return -1;
@@ -311,7 +311,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	}
 	if (0 == spawn(status_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
-		dprintf(D_ALWAYS|D_FAILURE,
+		dprintf(D_ERROR,
 				"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
 				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n", hook_update_job_info);
 		delete status_client;
@@ -377,7 +377,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 	ExitClient *exit_client = new ExitClient(hook_job_exit, r_job);
 	if (NULL == exit_client)
 	{
-		dprintf(D_ALWAYS|D_FAILURE, 
+		dprintf(D_ERROR,
 			"ERROR in JobRouterHookMgr::hookJobExit: "
 			"failed to create exit client\n");
 		return -1;
@@ -390,7 +390,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 	}
 	if (0 == spawn(exit_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
-		dprintf(D_ALWAYS|D_FAILURE,
+		dprintf(D_ERROR,
 				"ERROR in JobRouterHookMgr::hookJobExit: "
 				"failed to spawn HOOK_JOB_FINALIZE (%s)\n", hook_job_exit);
 		delete exit_client;
@@ -452,7 +452,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	CleanupClient* cleanup_client = new CleanupClient(hook_cleanup, r_job);
 	if (NULL == cleanup_client)
 	{
-		dprintf(D_ALWAYS|D_FAILURE, 
+		dprintf(D_ERROR,
 			"ERROR in JobRouterHookMgr::hookJobCleanup: "
 			"failed to create status update client\n");
 		return -1;
@@ -465,7 +465,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	}
 	if (0 == spawn(cleanup_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
-		dprintf(D_ALWAYS|D_FAILURE,
+		dprintf(D_ERROR,
 				"ERROR in JobRouterHookMgr::JobCleanup: "
 				"failed to spawn HOOK_JOB_CLEANUP (%s)\n", hook_cleanup);
 		delete cleanup_client;
@@ -570,7 +570,7 @@ TranslateClient::hookExited(int exit_status)
 	std::string key = m_routed_job->src_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_TRANSLATE_JOB))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "TranslateClient::hookExited (%s): "
+		dprintf(D_ERROR, "TranslateClient::hookExited (%s): "
 			"Failed to remove hook info for job key %s.\n", 
 			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("TranslateClient::hookExited: Received exit "
@@ -654,7 +654,7 @@ StatusClient::hookExited(int exit_status)
 	std::string key = m_routed_job->dest_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_UPDATE_JOB_INFO))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "StatusClient::hookExited (%s): "
+		dprintf(D_ERROR, "StatusClient::hookExited (%s): "
 			"Failed to remove hook info for job key %s.\n", 
 			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("StatusClient::hookExited: Received exit notification "
@@ -741,7 +741,7 @@ ExitClient::hookExited(int exit_status) {
 	std::string key = m_routed_job->dest_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_JOB_FINALIZE))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "ExitClient::hookExited (%s): "
+		dprintf(D_ERROR, "ExitClient::hookExited (%s): "
 			"Failed to remove hook info for job key %s.\n",
 			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("ExitClient::hookExited: Received exit notification for "
@@ -849,7 +849,7 @@ CleanupClient::hookExited(int exit_status)
 	std::string key = m_routed_job->dest_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_JOB_CLEANUP))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "CleanupClient::hookExited (%s): "
+		dprintf(D_ERROR, "CleanupClient::hookExited (%s): "
 			"Failed to remove hook info for job key %s.\n", 
 			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("CleanupClient::hookExited: Received exit notification "
@@ -880,7 +880,7 @@ CleanupClient::hookExited(int exit_status)
 		// Hook failed
 		std::string error_msg;
 		statusString(exit_status, error_msg);
-		dprintf(D_ALWAYS|D_FAILURE, "CleanupClient::hookExited (%s): "
+		dprintf(D_ERROR, "CleanupClient::hookExited (%s): "
 			"HOOK_JOB_CLEANUP (%s) failed (%s)\n",
 			m_routed_job->JobDesc().c_str(), m_hook_path, 
 			error_msg.c_str());

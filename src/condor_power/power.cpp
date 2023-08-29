@@ -238,7 +238,6 @@ serialize_input( void )
 			mechanism */
 		ad = new ClassAd ();
 		SetMyTypeName ( *ad, STARTD_ADTYPE );
-		SetTargetTypeName ( *ad, JOB_ADTYPE );
 		ad->Assign ( ATTR_HARDWARE_ADDRESS, mac );
 		ad->Assign ( ATTR_SUBNET_MASK, mask );
 		ad->Assign ( ATTR_MY_ADDRESS, sinful );

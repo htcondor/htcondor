@@ -2096,7 +2096,7 @@ void CollectorDaemon::sendCollectorAd(int /* tid */)
 
 	CollectorRecord* self_rec = nullptr;
 	if( ! (self_rec = collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error )) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
+		dprintf( D_ERROR, "Failed to add my own ad to myself (%d).\n", error );
 		delete selfAd;
 	}
 
@@ -2126,7 +2126,6 @@ void CollectorDaemon::init_classad(int interval)
     ad = new ClassAd();
 
     SetMyTypeName(*ad, COLLECTOR_ADTYPE);
-    SetTargetTypeName(*ad, "");
 
     char *tmp;
     tmp = param( "CONDOR_ADMIN" );

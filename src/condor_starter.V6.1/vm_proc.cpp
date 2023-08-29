@@ -173,7 +173,7 @@ bool handleFTL( const char * reason ) {
 	const char *nullString = nullptr;
 	DCStartd startd( nullString);
 	if( ! startd.locate() ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
+		dprintf( D_ERROR, "Unable to locate startd: %s\n", startd.error() );
 		return false;
 	}
 
@@ -190,7 +190,7 @@ bool handleFTL( const char * reason ) {
 
 	ClassAd reply;
 	if( ! startd.updateMachineAd( & update, & reply ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to update machine ad: %s\n", startd.error() );
+		dprintf( D_ERROR, "Unable to update machine ad: %s\n", startd.error() );
 		return false;
 	}
 
