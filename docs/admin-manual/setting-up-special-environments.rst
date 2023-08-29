@@ -1587,7 +1587,8 @@ a job for *condor_preen*.  When *condor_preen* runs, if a job's checkpoint
 has not been cleaned up, it will also spawn *condor_manifest*, and do so in
 exactly the same way the *condor_schedd* did.  Failures will be reported via
 the usual channels for *condor_preen*.  You may specify how long
-*condor_manifest* may run with the configuration macro :macro:`FIXME`.  The
+*condor_manifest* may run with the configuration macro
+:macro:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`.  The
 *condor_manifest* tool removes each MANIFEST file as its contents get cleaned
 up, so this timeout need only be long enough to complete a single checkpoint's
 worth of clean-up in order to make progress.
