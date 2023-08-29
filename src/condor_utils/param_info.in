@@ -6932,4 +6932,24 @@ default : @fin
 	endif
 @fin
 
+[$POLICY.OnlyRegisteredCheckpointDestinations]
+description=Use submit requirement to reject jobs whose checkpoint destination is not registered.
+default : @fin
+	TOOL_CLASSAD_USER_MAP_NAMES = $(TOOL_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	SCHEDD_CLASSAD_USER_MAP_NAMES = $(SCHEDD_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	CLASSAD_USER_MAPFILE_checkpoint_destination_map = $(CHECKPOINT_DESTINATION_MAPFILE)
+	CLASSAD_USER_MAP_PREFIX_checkpoint_destination_map = TRUE
+
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) ValidateCheckpointDestination
+	JOB_TRANSFORM_ValidateCheckpointDestination @=end
+		EVALSET CheckpointDestinationValid = ifthenelse(undefined =?= userMap("checkpoint_destination_map", CheckpointDestination), undefined, True)
+	@end
+
+	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) CheckpointDestinationValid
+
+	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) RejectInvalidCheckpointDestination
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination = CheckpointDestination =?= undefined || CheckpointDestinationValid =?= True
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination_REASON = "You specified a checkpoint_destination this AP does not know how to clean up.  You may need to add a trailing / to the URL."
+@fin
+
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

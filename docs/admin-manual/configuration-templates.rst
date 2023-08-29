@@ -257,6 +257,14 @@ incorporates.
        with the ``Limit_Job_Runtimes`` policy, order the specification
        by placing this ``Always_Run_Jobs`` policy first.
 
+.. _OnlyRegisteredCheckpointDestinations:
+
+    -  ``OnlyRegisteredCheckpointDestinations``
+
+       Jobs which specify a checkpoint destination must specify a checkpoint
+       destination that the AP knows how to clean up (that has a matching
+       entry in :macro:`CHECKPOINT_DESTINATION_MAPFILE`).
+
     -  ``UWCS_Desktop``
 
        This was the default policy before HTCondor version 8.1.6. It is

@@ -1521,8 +1521,8 @@ registering the corresponding clean-up plug-in.
 
 You may also wish to prevent jobs with checkpoint destinations that HTCondor
 doesn't know how to clean up from entering the queue.  To enable this, add
-``use feature:OnlyRegisteredCheckpointDestinations``
-[FIXME: LINK]
+``use policy:OnlyRegisteredCheckpointDestinations``
+(:ref:`reference<OnlyRegisteredCheckpointDestinations>`)
 to your HTCondor configuration.
 
 Registering a Checkpoint Destination
