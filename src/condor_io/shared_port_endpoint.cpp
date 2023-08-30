@@ -386,7 +386,7 @@ SharedPortEndpoint::CreateListener()
 		return false;
 	}
 
-	if( listen( sock_fd, param_integer( "SOCKET_LISTEN_BACKLOG", 500 ) ) ) {
+	if( listen( sock_fd, param_integer( "SOCKET_LISTEN_BACKLOG", 4096 ) ) ) {
 		dprintf(D_ALWAYS,
 				"ERROR: SharedPortEndpoint: failed to listen on %s: %s\n",
 				m_full_name.c_str(), strerror(errno));
