@@ -3289,7 +3289,7 @@ type=int
 tags=schedd
 
 [CURB_MATCHMAKING]
-default=RecentDaemonCoreDutyCycle > 0.98
+default=(RecentDaemonCoreDutyCycle > 0.98) || (TransferQueueNumWaitingToUpload > 1000)
 type=string
 description=Curb Expression for Matchmaking
 tags=schedd
