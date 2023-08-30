@@ -865,6 +865,10 @@ endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
+# We'll just build a static libfmt.a, so no need to install
+set(FMT_INSTALL 0)
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
+
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)
 if (NOT WINDOWS)
