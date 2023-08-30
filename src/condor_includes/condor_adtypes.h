@@ -87,9 +87,6 @@ enum AdTypes
 	NUM_AD_TYPES,
 };
 
-AdTypes
-AdTypeFromString(const char* adtype_string) ;
-
 const char*
 AdTypeToString( AdTypes type );
 
