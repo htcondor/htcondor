@@ -4967,7 +4967,7 @@ tags=collector
 restart=true
 
 [SCHEDD_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for the scheduler.
@@ -4986,7 +4986,7 @@ usage=
 default=
 
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for condor_shared_port.
