@@ -537,6 +537,11 @@ CondorTryCopyDirectory (
             __leave;
         }
 
+        // Don't spawn threads in other processes on the system to
+        // close file handles.
+        // TODO Finding and logging the processes that have our
+        //   directory open and locked would be worthwhile.
+#if 0
         /*******************************************************
         NOTE: For future implementations which allow for any
         user to load their profile, what follows bellow is 
@@ -572,6 +577,7 @@ CondorTryCopyDirectory (
         if ( directory_created ) {
             __leave;
         }
+#endif
          
         /* if we are here, then something went really wrong */
         ok = FALSE;
@@ -628,6 +634,11 @@ CondorTryCopyFile (
             __leave;
         }
 
+        // Don't spawn threads in other processes on the system to
+        // close file handles.
+        // TODO Finding and logging the processes that have our
+        //   directory open and locked would be worthwhile.
+#if 0
         /*******************************************************
         NOTE: For future implementations which allow for any
         user to load their profile, what follows bellow is 
@@ -663,6 +674,7 @@ CondorTryCopyFile (
         if ( directory_created ) {
             __leave;
         }
+#endif
          
         /* if we are here, then something went really wrong */
         ok = FALSE;
@@ -1470,6 +1482,11 @@ CondorTryRemoveDirectory (
             __leave;
         }
 
+        // Don't spawn threads in other processes on the system to
+        // close file handles.
+        // TODO Finding and logging the processes that have our
+        //   directory open and locked would be worthwhile.
+#if 0
         /*******************************************************
         NOTE: For future implementations which allow for any
         user to load their profile, what follows bellow is 
@@ -1505,6 +1522,7 @@ CondorTryRemoveDirectory (
         if ( directory_removed ) {
             __leave;
         }
+#endif
 
         /* if we are here, then something went really wrong */
         ok = FALSE;
@@ -1559,6 +1577,11 @@ CondorTryRemoveFile (
             __leave;
         }
 
+        // Don't spawn threads in other processes on the system to
+        // close file handles.
+        // TODO Finding and logging the processes that have our
+        //   directory open and locked would be worthwhile.
+#if 0
         /*******************************************************
         NOTE: For future implementations which allow for any
         user to load their profile, what follows bellow is 
@@ -1594,6 +1617,7 @@ CondorTryRemoveFile (
         if ( directory_removed ) {
             __leave;
         }
+#endif
 
         /* if we are here, then something went really wrong */
         ok = FALSE;

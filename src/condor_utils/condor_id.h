@@ -35,9 +35,7 @@ class CondorID : public ServiceData
 {
   public:
     /// Constructor
-    CondorID () : _cluster(-1), _proc(-1), _subproc(-1) {}
-
-    /// Copy Constructor
+    CondorID() = default;
     CondorID (int cluster, int proc, int subproc):
         _cluster(cluster), _proc(proc), _subproc(subproc) {}
     
@@ -52,7 +50,7 @@ class CondorID : public ServiceData
         @param condorID the other CondorID to compare
         @return zero if they match
     */
-    int Compare (const CondorID condorID) const;
+    int Compare (const CondorID& condorID) const;
 
 	/** Parses provided string of the form "cluster[.proc][.subproc]",
 		and updates this object's values accordingly.
@@ -90,13 +88,13 @@ class CondorID : public ServiceData
 	virtual size_t HashFn( ) const;
 
     /// The job cluster
-    int _cluster;
+    int _cluster{-1};
 
     /// The job process number
-    int _proc;
+    int _proc{-1};
 
     /// The job subprocess number
-    int _subproc;
+    int _subproc{-1};
 };
 
 

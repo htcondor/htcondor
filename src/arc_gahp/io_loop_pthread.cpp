@@ -574,70 +574,47 @@ IOProcess::stdinPipeHandler()
 Worker*
 IOProcess::createNewWorker(void)
 {
-	Worker *new_worker = NULL;
-	new_worker = new Worker(newWorkerId());
+	int new_id = newWorkerId();
+	auto [it, success] = m_workers_list.emplace(new_id, Worker(new_id));
+	ASSERT(success);
+	Worker& new_worker = it->second;
 
 	dprintf (D_FULLDEBUG, "About to start a new thread\n");
 
 	// Create pthread
 	pthread_t thread;
 	if( pthread_create(&thread, NULL,
-				worker_function, (void *)new_worker) !=  0 ) {
+				worker_function, (void *)&new_worker) !=  0 ) {
 		dprintf(D_ALWAYS, "Failed to create a new thread\n");
 
-		delete new_worker;
-		return NULL;
+		m_workers_list.erase(it);
+		return nullptr;
 	}
 
 	// Deatch this thread
 	pthread_detach(thread);
 
-	// Insert a new worker to the map
-	m_workers_list[new_worker->m_id] = new_worker;
 	m_avail_workers_num++;
 
-	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker->m_id);
-	return new_worker;
+	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker.m_id);
+	return &new_worker;
 }
 
 Worker*
 IOProcess::findFreeWorker(void)
 {
-	for( auto worker : m_workers_list ) {
-
-		if( !worker.second->m_is_doing ) {
-
-			return worker.second;
+	for (auto& [key, worker]: m_workers_list) {
+		if (!worker.m_is_doing) {
+			return &worker;
 		}
-
 	}
-	return NULL;
-}
-
-Worker*
-IOProcess::findWorker(int id)
-{
-	Worker *worker = NULL;
-
-	auto itr = m_workers_list.find(id);
-	if ( itr != m_workers_list.end() ) {
-		worker = itr->second;
-	}
-	return worker;
+	return nullptr;
 }
 
 bool
 IOProcess::removeWorkerFromWorkerList(int id)
 {
-	Worker* worker = findWorker(id);
-	if( worker ) {
-		m_workers_list.erase(id);
-
-		delete worker;
-		return true;
-	}
-
-	return false;
+	return (m_workers_list.erase(id) > 0);
 }
 
 GahpRequest*
@@ -700,8 +677,7 @@ IOProcess::newWorkerId(void)
 		}
 
 		// Make certain this worker_id is not already in use
-		auto itr = m_workers_list.find(m_next_worker_id);
-		if( itr == m_workers_list.end() ) {
+		if (m_workers_list.find(m_next_worker_id) == m_workers_list.end()) {
 			// not in use, we are done
 			return m_next_worker_id;
 		}

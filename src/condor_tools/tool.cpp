@@ -44,7 +44,6 @@
 #include "daemon_list.h"
 #include "my_username.h"
 #include "string_list.h"
-#include "HashTable.h"
 
 
 void computeRealAction( void );
@@ -93,7 +92,7 @@ bool IgnoreMissingDaemon = false;
 
 bool all_good = true;
 
-HashTable<std::string, bool> addresses_sent( hashFunction );
+std::set<std::string> addresses_sent;
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -1413,12 +1412,12 @@ doCommand( Daemon* d )
 		// since we'll send the claim-id after the command and it
 		// won't be duplication of effort.
 		if( ! is_per_claim_startd_cmd ) {
-			std::string hash_key = d->addr();
-			bool sent_it = false;
-			if( addresses_sent.lookup(hash_key, sent_it) >= 0 && sent_it ) {
+			// If we fail to insert the address, then it's already present
+			// in the set, which means we've already contacted the daemon.
+			auto [it, success] = addresses_sent.insert(d->addr());
+			if (!success) {
 				return;
 			}
-			addresses_sent.insert( hash_key, true );
 		}
 
 		/* Connect to the daemon */
