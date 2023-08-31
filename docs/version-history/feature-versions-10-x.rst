@@ -13,6 +13,25 @@ Release Notes:
 
 - HTCondor version 10.8.0 not yet released.
 
+- The packaged builds (RPMs and debs) have been reorganized.
+  We no longer wish to support the ClassAd library and it has been folded into
+  the main ``condor`` package. The ``condor-blahp`` and ``condor-procd`` packages
+  have also been folder into the ``condor`` package.
+  :jira:`1981`
+
+- On Debian based systems, the HTCondor's ``libexec`` directory has moved to
+  the more standard ``/usr/libexec/condor``.
+  :jira:`1981`
+
+- The Debian packaging has been aligned with the RPM packaging.
+  The package names are now ``condor`` and ``minicondor``.
+  The ``condor-kbdd`` package has been split out, since many installations
+  are server based and do not require the keyboard daemon and all of its
+  dependencies on the X Window system. Also, the ``condor-vm-gahp`` package
+  has been split out for sites that do not want to support VM Universe and
+  the ``libvirt`` dependencies that come along with it.
+  :jira:`1987`
+
 - This version includes all the updates from :ref:`lts-version-history-1008`.
 
 New Features:
