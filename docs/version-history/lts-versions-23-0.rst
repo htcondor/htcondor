@@ -5,6 +5,13 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
 23.0.y versions. New features will be added in the 23.x.y feature versions.
 
+.. warning::
+    The configuration macros JOB_ROUTER_DEFAULTS, JOB_ROUTER_ENTRIES, JOB_ROUTER_ENTRIES_CMD,
+    and JOB_ROUTER_ENTRIES_FILE are deprecated and will be removed for V24 of HTCondor. New
+    configuration syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and
+    JOB_ROUTER_ROUTE_<name>. Note: The removal will occur during the lifetime of the
+    HTCondor V23 feature series.
+
 The details of each version are described below.
 
 .. _lts-version-history-2300:
@@ -23,7 +30,7 @@ New Features:
 - The ``TargetType`` attribute is no longer a required attribute in most Classads.  It is still used for
   queries to the *condor_collector* and it remains in the Job ClassAd and the Machine ClassAd because
   of older versions of HTCondor.require it to be present.
-  jira:`1997`
+  :jira:`1997`
 
 Bugs Fixed:
 

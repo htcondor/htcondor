@@ -8177,14 +8177,24 @@ These macros affect the *condor_job_router* daemon.
     The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
 :macro-def:`JOB_ROUTER_DEFAULTS`
-    Deprecated, use ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES` instead.
     Defined by a single ClassAd in New ClassAd syntax, used to provide
     default values for routes in the *condor_job_router* daemon's
     routing table that are specified by the also deprecated ``JOB_ROUTER_ENTRIES*``.
     The enclosing square brackets are optional.
 
 :macro-def:`JOB_ROUTER_ENTRIES`
-    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     Specification of the job routing table. It is a list of ClassAds, in
     New ClassAd syntax, where each individual ClassAd is surrounded by
     square brackets, and the ClassAds are separated from each other by
@@ -8207,14 +8217,24 @@ These macros affect the *condor_job_router* daemon.
     with the ``JOB_ROUTER_DEFAULTS`` before being used.
 
 :macro-def:`JOB_ROUTER_ENTRIES_FILE`
-    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     A path and file name of a file that contains the ClassAds, in New
     ClassAd syntax, describing the routing table. The specified file is
     periodically reread to check for new information. This occurs every
     ``$(JOB_ROUTER_ENTRIES_REFRESH)`` seconds.
 
 :macro-def:`JOB_ROUTER_ENTRIES_CMD`
-    Deprecated, use ``JOB_ROUTER_ENTRIES_<NAME)`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     Specifies the command line of an external program to run. The output
     of the program defines or updates the routing table, and the output
     must be given in New ClassAd syntax. The specified command is
