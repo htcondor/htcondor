@@ -16,7 +16,7 @@ Release Notes:
 - The packaged builds (RPMs and debs) have been reorganized.
   We no longer wish to support the ClassAd library and it has been folded into
   the main ``condor`` package. The ``condor-blahp`` and ``condor-procd`` packages
-  have also been folder into the ``condor`` package.
+  have also been folded into the ``condor`` package.
   :jira:`1981`
 
 - On Debian based systems, the HTCondor's ``libexec`` directory has moved to
