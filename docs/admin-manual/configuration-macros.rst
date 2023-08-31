@@ -1870,7 +1870,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     restart of a daemon.
 
 :macro-def:`SOCKET_LISTEN_BACKLOG`
-    An integer value that defaults to 500, which defines the backlog
+    An integer value that defaults to 4096, which defines the backlog
     value for the listen() network call when a daemon creates a socket
     for incoming connections. It limits the number of new incoming
     network connections the operating system will accept for a daemon
