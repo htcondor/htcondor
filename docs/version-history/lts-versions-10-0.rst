@@ -52,11 +52,6 @@ Bugs Fixed:
   a kernel panic in some EL8 kernels.
   :jira:`1985`
 
-- Fixed a bug with parallel universe that would result in the *condor_startd*
-  rejecting start attempts from the *condor_schedd* and causing the *condor_schedd*
-  to crash.
-  :jira:`1959`
-
 - Fixed a bug in DAGMan where service nodes that finish before the DAGs
   end would result in DAGMan crashing due to an assertion failure.
   :jira:`1909`
@@ -65,14 +60,6 @@ Bugs Fixed:
   administrator.  Prior versions of HTCondor would send an arbitrarily large number
   of emails.  Now HTCondor will only send one email per day.
   :jira:`1937`
-
-- Preen now preserves all files in the spool directory matching `*OfflineLog*`
-  so that central managers with multiple active collectors can have offline
-  ads.
-  :jira:`1933`
-
-- Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
-  :jira:`1954`
 
 - Fixed a bug where *condor_adstash* would not import the OpenSearch library properly.
   :jira:`1965`
@@ -84,6 +71,19 @@ Bugs Fixed:
   new attributes needed to be added to the index and when using version 8.0.0 or newer of
   the Elasticsearch Python library.
   :jira:`1930`
+
+- Fixed a bug with parallel universe that would result in the *condor_startd*
+  rejecting start attempts from the *condor_schedd* and causing the *condor_schedd*
+  to crash.
+  :jira:`1952`
+
+- Preen now preserves all files in the spool directory matching `*OfflineLog*`
+  so that central managers with multiple active collectors can have offline
+  ads.
+  :jira:`1933`
+
+- Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
+  :jira:`1954`
 
 .. _lts-version-history-1007:
 
