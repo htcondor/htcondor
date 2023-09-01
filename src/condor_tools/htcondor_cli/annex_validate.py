@@ -47,10 +47,10 @@ class System:
         assert isinstance(queues, dict)
         self.queues = queues
 
-        self.resource_id = None
-        if "resource_id" in kwargs:
-            assert isinstance(kwargs["resource_id"], str)
-            self.resource_id = kwargs["resource_id"]
+        self.resource_ids = None
+        if "resource_ids" in kwargs:
+            assert isinstance(kwargs["resource_ids"], list)
+            self.resource_ids = kwargs["resource_ids"]
 
 
     def __str__(self):
@@ -266,7 +266,7 @@ SYSTEM_TABLE = {
         "executable":       "hpc.sh",
         "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  False,
-        "resource_id":      "stampede2.tacc.access-ci.org",
+        "resource_ids":     ["stampede2.tacc.access-ci.org"],
 
         "queues": {
             "normal": {
@@ -308,7 +308,7 @@ SYSTEM_TABLE = {
         "executable":       "hpc.sh",
         "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  True,
-        "resource_id":      "expanse.sdsc.access-ci.org",
+        "resource_ids":      ["expanse.sdsc.access-ci.org"],
 
         "queues": {
             "compute": {
@@ -365,8 +365,7 @@ SYSTEM_TABLE = {
         "executable":       "hpc.sh",
         "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  False,
-        # Also anvil-gpu...
-        "resource_id":      "anvil.purdue.access-ci.org",
+        "resource_ids":      ["anvil.purdue.access-ci.org", "anvil-gpu.purdue.access-ci.org"],
 
         "queues": {
             "wholenode": {
@@ -434,8 +433,12 @@ SYSTEM_TABLE = {
         "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "batch_system":     "SLURM",
         "allocation_reqd":  False,
-        # Also bridges2-em, bridges2-gpu, bridges2-rm ...
-        "resource_id":      "bridges2.psc.xsede.org",
+        "resource_ids":      [
+            "bridges2.psc.xsede.org",
+            "bridges2-em.psc.xsede.org",
+            "bridges2-rm.psc.xsede.org",
+            "bridges2-gpu.psc.xsede.org",
+        ],
 
         "queues": {
             "RM": {

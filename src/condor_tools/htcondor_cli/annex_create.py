@@ -494,7 +494,7 @@ def system_is_in_outage(sys):
             for resource in outage["AffectedResources"]:
                 resources_down[resource["ResourceID"]] = True
 
-        if sys.resource_id in resources_down:
+        if any(rid in resources_down for rid in sys.resource_ids):
             print( "The ACCESS Operations API indicates that this resource is currently down." )
             return True;
 
@@ -600,7 +600,7 @@ def annex_inner_func(
 
     # Is the system currently down?
     sys = SYSTEM_TABLE[system]
-    if sys.resource_id is not None:
+    if sys.resource_ids is not None:
         if system_is_in_outage(sys):
             return
 
