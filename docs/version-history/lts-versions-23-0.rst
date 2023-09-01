@@ -25,6 +25,10 @@ New Features:
   of older versions of HTCondor.require it to be present.
   jira:`1997`
 
+- The ``-dry-run`` option of *condor_submit* will now print the output of a ``SEC_CREDENTIAL_STORER`` script.
+  This can be useful when developing such a script.
+  jira:`2014`
+
 Bugs Fixed:
 
 - Fixed a bug where the *blahpd* would incorrectly believe that an LSF
