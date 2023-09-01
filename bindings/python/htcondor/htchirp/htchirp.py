@@ -848,7 +848,6 @@ class HTChirp:
         if recursive:
             self.rmall(remote_path)
         else:
-
             self._simple_command("rmdir {0}\n".format(quote(remote_path)))
 
     def rmall(self, remote_path):
@@ -986,7 +985,6 @@ class HTChirp:
         if stat_dict == True:
             return self.getlongdir(remote_path)
         else:
-
             length = int(
                 self._simple_command("getdir {0}\n".format(quote(remote_path)))
             )
