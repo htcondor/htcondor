@@ -511,10 +511,8 @@ def warn_dagman_env():
     """Warn about DAGMan cleansing its environment"""
     if "SCHEDD" not in htcondor.param["DAEMON_LIST"].upper():
         return 0
-    htc_version = htcondor.param["CONDOR_VERSION"].split(".")
-    if int(htc_version[0]) < 10 or (
-        int(htc_version[0]) == 10 and int(htc_version[1]) < 4
-    ):
+    htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
+    if htc_version < (10, 4, 0):
         format_print("Warning:", newline=True)
         format_print("DAGMan no longer copies the entire environment from", offset=4)
         format_print("which it was submitted. This will affect any DAG items", offset=4)
@@ -528,10 +526,8 @@ def warn_user_records():
     """Warn about AP user records backporting issue"""
     if "SCHEDD" not in htcondor.param["DAEMON_LIST"].upper():
         return 0
-    htc_version = htcondor.param["CONDOR_VERSION"].split(".")
-    if int(htc_version[0]) < 10 or (
-        int(htc_version[0]) == 10 and int(htc_version[1]) < 5
-    ):
+    htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
+    if htc_version < (10, 5, 0):
         format_print("Warning:", newline=True)
         format_print("The AP job queue log has new additional information", offset=4)
         format_print("written into it. HTCondor versions older than V10.6.0", offset=4)
@@ -578,7 +574,7 @@ def warn_job_router_syntax_deprecation():
         )
         format_print(
             """For more information visit:
-  https://htcondor.readthedocs.io/en/latest/grid-computing/job-router.html?highlight=job%20router#the-htcondor-job-router""",
+  https://htcondor.readthedocs.io/en/latest/grid-computing/job-router.html#the-htcondor-job-router""",
             offset=4,
         )
         format_print(
@@ -594,10 +590,9 @@ def warn_job_router_syntax_deprecation():
 def check_desktop_policy():
     """Check for use of desktop policy configuration knobs that became hidden in V10.4.0"""
     htc_version = htcondor.param["CONDOR_VERSION"].split(".")
-    if int(htc_version[0]) < 10 or (
-        int(htc_version[0]) == 10 and int(htc_version[1]) < 4
-    ):
-        # Config items formally avaible 100% of the time
+    htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
+    if htc_version < (10, 4, 0):
+        # Config items formerly available 100% of the time
         attrs = [
             "ActivationTimer",
             "ConsoleBusy",
@@ -611,7 +606,7 @@ def check_desktop_policy():
             "NonCondorLoadAvg",
         ]
         default_suspend_line = "SUSPEND = ($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))"
-        found_attrs = []
+        found_attrs = set()
         has_cpu_busy_time = []
 
         p = subprocess.run(["condor_config_val", "-dump"], stdout=subprocess.PIPE)
@@ -641,7 +636,7 @@ def check_desktop_policy():
                             not_in_other_def = False
                             break
                     if not_in_other_def:
-                        found_attrs.append(attr)
+                        found_attrs.add(attr)
             if "cpubusytime" in check and line != default_suspend_line:
                 has_cpu_busy_time.append(line)
                 has_problem = True
@@ -686,7 +681,7 @@ def check_desktop_policy():
             )
             need_newline = False
             if len(found_attrs) > 0:
-                found_attrs.sort()
+                found_attrs = sorted(found_attrs)
                 format_print("The following configuration macros:", offset=4)
                 for attr in found_attrs:
                     format_print(f"- {attr}", offset=6)
@@ -705,7 +700,7 @@ def check_desktop_policy():
                 need_newline = True
             if len(has_cpu_busy_time) > 0:
                 format_print(
-                    "The attribute CpuBusyTime no longer represents a delta time.",
+                    "The attribute CpuBusyTime no longer represents a delta time",
                     newline=need_newline,
                     offset=4,
                 )
