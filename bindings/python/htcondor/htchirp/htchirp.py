@@ -72,9 +72,9 @@ class HTChirp:
     A Chirp client compatible with the HTCondor Chirp implementation.
 
     If the host and port of a Chirp server are not specified, you are assumed
-    to be running in a HTCondor job with ``WantIOProxy = true`` and therefore that
-    ``$_CONDOR_SCRATCH_DIR/.chirp.config`` contains the host, port, and cookie for
-    connecting to the embedded chirp proxy.
+    to be running in a HTCondor job with ``$_CONDOR_CHIRP_CONFIG`` that
+    contains the host, port, and cookie for connecting to the embedded chirp
+    proxy.
     """
 
     # static reference variables
@@ -101,11 +101,7 @@ class HTChirp:
         # initialize storage variables
         self.fds = {}  # open file descriptors
 
-        chirp_config = ".chirp.config"
-        try:
-            chirp_config = os.path.join(os.environ["_CONDOR_SCRATCH_DIR"], chirp_config)
-        except KeyError:
-            pass
+        chirp_config = os.environ.get("_CONDOR_CHIRP_CONFIG", ".chirp.config")
 
         if host and port:
             # don't read chirp_config if host and port are set
