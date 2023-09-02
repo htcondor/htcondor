@@ -218,6 +218,10 @@ Provides: %{name}-external-libs = %{version}-%{release}
 # Bosco package discontinued as of 9.5.0
 Obsoletes: %{name}-bosco < 9.5.0
 Provides: %{name}-bosco = %{version}-%{release}
+
+# Blahp provided by condor-blahp as of 9.5.0
+Provides: blahp = %{version}-%{release}
+Obsoletes: blahp < 9.5.0
 %endif
 
 # externals package discontinued as of 10.8.0
