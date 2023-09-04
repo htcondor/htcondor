@@ -861,7 +861,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 	}
 	
 	SetMyTypeName( *req, COMMAND_ADTYPE );
-	SetTargetTypeName( *req, REPLY_ADTYPE );
+	req->Assign(ATTR_TARGET_TYPE, REPLY_ADTYPE );
 
 	if( timeout >= 0 ) {
 		cmd_sock->timeout( timeout );

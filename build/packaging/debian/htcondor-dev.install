@@ -1,2 +1,0 @@
-debian/tmp/usr/include/condor/*.h usr/include/condor
-debian/tmp/usr/lib/condor/*.a usr/lib/

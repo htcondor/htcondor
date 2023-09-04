@@ -69,7 +69,6 @@ GCEResource::GCEResource( const char *resource_name,
 						  const char *auth_file,
 						  const char *account ) :
 		BaseResource( resource_name ),
-		jobsByInstanceID( hashFunction ),
 		m_hadAuthFailure( false )
 {
 	// although no one will use resource_name, we still keep it for base class constructor

@@ -129,7 +129,7 @@ CpuAttributes** buildCpuAttrs(
 					cap->cat_totals(logbuf);
 					logbuf += "\n\tAvailable:  ";
 					avail.cat_totals(logbuf, cap->executePartitionID());
-					dprintf( D_ALWAYS | D_FAILURE,
+					dprintf( D_ERROR | (except ? D_EXCEPT : 0),
 							 "ERROR: Can't allocate %s slot of type %d\n%s\n",
 							 num_string(j+1), i, logbuf.c_str() );
 					delete cap;	// This isn't in our array yet.
@@ -190,7 +190,7 @@ CpuAttributes** buildCpuAttrs(
 				avail.cat_totals(logbuf, cap->executePartitionID());
 			}
 
-			dprintf(D_ALWAYS | D_FAILURE,
+			dprintf(D_ERROR,
 					"ERROR: Can't allocate slot id %d (slot type %d) during auto allocation of resources\n%s\n",
 					i+1, cap->type(), logbuf.c_str() );
 

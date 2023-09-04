@@ -154,7 +154,7 @@ ReliSock::listen()
 	// value is too large, the OS will cap it at the kernel's current
 	// maxiumum. Why not just use SOMAXCONN? Unfortunately, it's a
 	// fairly small value (128) on many platforms.
-	if( ::listen( _sock, param_integer( "SOCKET_LISTEN_BACKLOG", 500 ) ) < 0 ) {
+	if( ::listen( _sock, param_integer( "SOCKET_LISTEN_BACKLOG", 4096 ) ) < 0 ) {
 
             char const *self_address = get_sinful();
             if( !self_address ) {

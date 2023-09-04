@@ -394,6 +394,7 @@ class OptionalCreateProcessArgs {
     OptionalCreateProcessArgs & daemonSock(const char * daemon_sock) { this->daemon_sock = daemon_sock; return *this; }
     OptionalCreateProcessArgs & remap(FilesystemRemap * fsr) { this->_remap = fsr; return *this; }
     OptionalCreateProcessArgs & asHardLimit(long ahl) { this->as_hard_limit = ahl; return *this; }
+    OptionalCreateProcessArgs & reaperID(int ri) { this->reaper_id = ri; return *this; }
 
 
     // Special case for usability; may be a bad idea, but allows you to
@@ -467,7 +468,7 @@ class DaemonCore : public Service
 		*/
     void reconfig();
 
-	void refreshDNS();
+	void refreshDNS( int timerID = -1 );
 
     /** Not_Yet_Documented
         @param perm Not_Yet_Documented
@@ -850,7 +851,11 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Reaper (int rid);
-   
+
+
+    int numRegisteredReapers();
+    int countTimersByDescription( const char * description ) { return t.countTimersByDescription(description); }
+
 
     /** Not_Yet_Documented
         @param signal signal
@@ -1945,24 +1950,22 @@ class DaemonCore : public Service
 	// variable.  Returns index into sockTable, -1 if none available.
 	int initial_command_sock() const;
 
-    struct CommandEnt
-    {
-        int             num;
-        bool            is_cpp;
-        bool            force_authentication;
-        CommandHandler  handler;
-        CommandHandlercpp   handlercpp;
-        DCpermission    perm;
-        Service*        service; 
-        char*           command_descrip;
-        char*           handler_descrip;
-        void*           data_ptr;
-	int             wait_for_payload;
+	struct CommandEnt
+	{
+		int             num{0};
+		bool            is_cpp{true};
+		bool            force_authentication{false};
+		CommandHandler  handler{nullptr};
+		CommandHandlercpp   handlercpp{nullptr};
+		DCpermission    perm{ALLOW};
+		Service*        service{nullptr};
+		char*           command_descrip{nullptr};
+		char*           handler_descrip{nullptr};
+		void*           data_ptr{nullptr};
+		int             wait_for_payload{0};
 		// If there are alternate permission levels where the
 		// command is permitted, they will be listed here.
-	std::vector<DCpermission> *alternate_perm{nullptr};
-
-		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), wait_for_payload(0) {}
+		std::vector<DCpermission> *alternate_perm{nullptr};
     };
 
     void                DumpCommandTable(int, const char* = NULL);
@@ -2205,7 +2208,7 @@ class DaemonCore : public Service
 	// Method to check on and possibly recover from a bad connection
 	// to the procd. Suitable to be registered as a one-shot timer.
 	int CheckProcInterface();
-	void CheckProcInterfaceFromTimer() { (void)CheckProcInterface(); }
+	void CheckProcInterfaceFromTimer( int /* timerID */ ) { (void)CheckProcInterface(); }
 
 	// misc helper functions
 	void CheckPrivState( void );

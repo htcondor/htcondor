@@ -95,7 +95,7 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
     if ((PerJobHistoryDir = param(per_job_history_param)) != NULL) {
         StatInfo si(PerJobHistoryDir);
         if (!si.IsDirectory()) {
-            dprintf(D_ALWAYS | D_FAILURE,
+            dprintf(D_ERROR,
                     "invalid %s (%s): must point to a "
                     "valid directory; disabling per-job history output\n",
                     per_job_history_param, PerJobHistoryDir);
@@ -227,12 +227,12 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	// construct the name (use cluster.proc)
 	int cluster, proc;
 	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "not writing per-job history file: no cluster id in ad\n");
 		return;
 	}
 	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "not writing per-job history file: no proc id in ad\n");
 		return;
 	}
@@ -256,14 +256,14 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	// first write out the file to the temp_file_name
 	int fd = safe_open_wrapper_follow(temp_file_name.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd == -1) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "error %d (%s) opening per-job history file for job %d.%d\n",
 		        errno, strerror(errno), cluster, proc);
 		return;
 	}
 	FILE* fp = fdopen(fd, "w");
 	if (fp == NULL) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
 		        errno, strerror(errno), cluster, proc);
 		close(fd);
@@ -278,7 +278,7 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	}
 
 	if (!fPrintAd(fp, *ad, true, nullptr, include_env ? nullptr : &env)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "error writing per-job history file for job %d.%d\n",
 		        cluster, proc);
 		fclose(fp);
@@ -289,7 +289,7 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 
 	// now atomically rename from temp_file_name to file_name
     if (rotate_file(temp_file_name.c_str(), file_name.c_str())) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "error writing per-job history file for job %d.%d (during rename)\n",
 		        cluster, proc);
 		unlink(temp_file_name.c_str());

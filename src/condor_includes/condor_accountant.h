@@ -156,7 +156,7 @@ private:
   ClassAdLog<std::string, ClassAd*> * AcctLog;
   time_t LastUpdateTime;
 
-  HashTable<std::string, double> concurrencyLimits;
+  std::map<std::string, double> concurrencyLimits;
 
   GroupEntry* hgq_root_group;
   std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;

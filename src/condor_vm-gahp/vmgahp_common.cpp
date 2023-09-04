@@ -327,7 +327,7 @@ write_to_daemoncore_pipe(const char* fmt, ... )
 }
 
 void
-write_stderr_to_pipe()
+write_stderr_to_pipe(int /* tid */)
 {
 	if( vmgahp_stderr_pipe == -1 ) {
 		return;

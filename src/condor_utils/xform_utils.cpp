@@ -280,9 +280,9 @@ void XFormHash::setup_macro_defaults()
 	}
 
 	// allocate space for the 'live' macro default string_values and for the strings themselves.
-	LiveProcessString = allocate_live_default_string(LocalMacroSet, UnliveProcessMacroDef, 24)->psz;
-	LiveRowString = allocate_live_default_string(LocalMacroSet, UnliveRowMacroDef, 24)->psz;
-	LiveStepString = allocate_live_default_string(LocalMacroSet, UnliveStepMacroDef, 24)->psz;
+	LiveProcessString = const_cast<char*>(allocate_live_default_string(LocalMacroSet, UnliveProcessMacroDef, 24)->psz);
+	LiveRowString = const_cast<char*>(allocate_live_default_string(LocalMacroSet, UnliveRowMacroDef, 24)->psz);
+	LiveStepString = const_cast<char*>(allocate_live_default_string(LocalMacroSet, UnliveStepMacroDef, 24)->psz);
 	LiveRulesFileMacroDef = allocate_live_default_string(LocalMacroSet, UnliveRulesFileMacroDef, 2);
 	LiveIteratingMacroDef = allocate_live_default_string(LocalMacroSet, UnliveIteratingMacroDef, 2);
 }
@@ -451,7 +451,7 @@ void XFormHash::set_iterate_step(int step, int proc)
 void XFormHash::set_iterate_row(int row, bool iterating)
 {
 	if (LiveRowString) { auto [p, ec] = std::to_chars(LiveRowString,    LiveRowString + 12, row); *p = '\0';}
-	if (LiveIteratingMacroDef) LiveIteratingMacroDef->psz = const_cast<char*>(iterating ? "1" : "0");
+	if (LiveIteratingMacroDef) LiveIteratingMacroDef->psz = iterating ? "1" : "0";
 }
 
 void XFormHash::set_local_param_used(const char *name) 
@@ -648,7 +648,7 @@ void XFormHash::insert_source(const char * filename, MACRO_SOURCE & source)
 void XFormHash::set_RulesFile(const char * filename, MACRO_SOURCE & source)
 {
 	this->insert_source(filename, source);
-	if (LiveRulesFileMacroDef) LiveRulesFileMacroDef->psz = const_cast<char*>(filename);
+	if (LiveRulesFileMacroDef) LiveRulesFileMacroDef->psz = filename;
 }
 
 const char* XFormHash::get_RulesFilename()

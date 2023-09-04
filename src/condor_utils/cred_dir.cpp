@@ -63,7 +63,7 @@ bool CredDirCreator::WriteToCredDir(const std::string &path, const CredData &cre
 			err.pushf("WriteToCredDir", errno,
 				"Failed to write out kerberos-style credential for %s: %s\n",
 				m_use_case.c_str(), strerror(errno));
-			dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+			dprintf(D_ERROR, "%s\n", err.message());
 			return false;
 		}
 	}
@@ -74,13 +74,13 @@ bool CredDirCreator::WriteToCredDir(const std::string &path, const CredData &cre
 			err.pushf("WriteToCredDir", errno,
 				"Failed to chmod credential to 0400 for %s: %s",
 				m_use_case.c_str(), strerror(errno));
-			dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+			dprintf(D_ERROR, "%s\n", err.message());
 			return false;
 		}
 		if (-1 == chown(path.c_str(), get_user_uid(), get_user_gid())) {
 			err.pushf("WriteToCredDir", errno, "Failed to chown credential to user %d for %s: %s\n",
 				get_user_uid(), m_use_case.c_str(), strerror(errno));
-			dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+			dprintf(D_ERROR, "%s\n", err.message());
 			return false;
 		}
 	}
@@ -111,7 +111,7 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 	if (m_cred_dir.empty()) {
 		err.pushf("PrepareCredDir", 1, "Credentials directory for %s is empty (internal error)",
 			m_use_case.c_str());
-		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		dprintf(D_ERROR, "%s\n", err.message());
 		return false;
 	}
 
@@ -127,7 +127,7 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 	if (!mkdir_and_parents_if_needed(m_cred_dir.c_str(), 0755, m_creddir_user_priv ? PRIV_USER : PRIV_CONDOR))
 #endif
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "Failed to create credentials directory %s for %s: %s\n",
+		dprintf(D_ERROR, "Failed to create credentials directory %s for %s: %s\n",
 			m_cred_dir.c_str(), m_use_case.c_str(), strerror(errno));
 		return false;
 	}
@@ -136,7 +136,7 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 
 	std::string job_user;
 	if (!m_ad.EvaluateAttrString(ATTR_USER, job_user)) {
-		dprintf(D_ALWAYS|D_FAILURE, "Shadow copy of the job ad does not have user attribute.\n");
+		dprintf(D_ERROR, "Shadow copy of the job ad does not have user attribute.\n");
 		return false;
 	}
 	auto at_pos = job_user.find('@');
@@ -209,7 +209,7 @@ bool LocalCredDirCreator::GetKerberosCredential(const std::string &user, const s
 	if (!cred.buf) {
 		err.pushf("GetKerberosCredential", 1, "Unable to read stored credential for %s",
 			m_use_case.c_str());
-		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		dprintf(D_ERROR, "%s\n", err.message());
 		return false;
 	}
 	cred.len = credlen;
@@ -223,7 +223,7 @@ bool LocalCredDirCreator::GetOAuth2Credential(const std::string &name, const std
 	if (!param(oauth_cred_dir, "SEC_CREDENTIAL_DIRECTORY_OAUTH")) {
 		err.pushf("GetOAuth2Credential", 1, "Unable to retrieve OAuth2-style credentials for %s"
 			" as SEC_CREDENTIAL_DIRECTORY_OAUTH is unset.", m_use_case.c_str());
-		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		dprintf(D_ERROR, "%s\n", err.message());
 		return false;
 	}
 
@@ -240,7 +240,7 @@ bool LocalCredDirCreator::GetOAuth2Credential(const std::string &name, const std
 		name.c_str(), m_use_case.c_str());
 
 	if (!read_secure_file(fullname.c_str(), (void**)(&cred.buf), &cred.len, true, verify_mode)) {
-		dprintf(D_ALWAYS|D_FAILURE, "Failed to read credential file %s: %s\n",
+		dprintf(D_ERROR, "Failed to read credential file %s: %s\n",
 			fullname.c_str(), errno ? strerror(errno) : "unknown error");
 		return false;
 	}

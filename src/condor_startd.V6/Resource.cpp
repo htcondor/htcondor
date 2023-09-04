@@ -1544,7 +1544,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 }
 
 void
-Resource::do_update( void )
+Resource::do_update( int /* timerID */ )
 {
 	int rval;
 	ClassAd private_ad;
@@ -1632,7 +1632,7 @@ Resource::final_update( void )
 
 		// Set the correct types
 	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
-	SetTargetTypeName( invalidate_ad, STARTD_ADTYPE );
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
 
 	/*
 	 * NOTE: the collector depends on the data below for performance reasons
@@ -2418,7 +2418,7 @@ void Resource::publish_static(ClassAd* cap)
 
 	// Set the correct types on the ClassAd
 	SetMyTypeName( *cap,STARTD_ADTYPE );
-	SetTargetTypeName( *cap, JOB_ADTYPE );
+	cap->Assign(ATTR_TARGET_TYPE, JOB_ADTYPE); // because matchmaking before 23.0 needs this
 
 	// We need these for both public and private ads
 	cap->Assign(ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString());
@@ -2533,7 +2533,7 @@ void Resource::publish_static(ClassAd* cap)
 				cap->Delete(attr);
 			} else {
 				if ( ! cap->AssignExpr(attr, tmp.ptr()) ) {
-					dprintf(D_ALWAYS | D_FAILURE,
+					dprintf(D_ERROR,
 						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s."
 						"  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
 						attr, tmp.ptr(), slot_name.c_str() );
@@ -3301,7 +3301,7 @@ Resource::startTimerToEndCODLoadHack( void )
 
 
 void
-Resource::endCODLoadHack( void )
+Resource::endCODLoadHack( int /* timerID */ )
 {
 		// our timer went off, so we can clear our tid
 	r_cod_load_hack_tid = -1;
@@ -3370,14 +3370,14 @@ Resource::willingToRun(ClassAd* request_ad)
 
 		if (!slot_requirements || !req_requirements) {
 			if (!slot_requirements) {
-				dprintf(D_FAILURE|D_ALWAYS, "Slot requirements not satisfied.\n");
+				dprintf(D_ERROR, "Slot requirements not satisfied.\n");
 				dprintf(D_ALWAYS, "Job ad was ============================\n");
 				dPrintAd(D_ALWAYS, *request_ad);
 				dprintf(D_ALWAYS, "Slot ad was ============================\n");
 				dPrintAd(D_ALWAYS, *r_classad);
 			}
 			if (!req_requirements) {
-				dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
+				dprintf(D_ERROR, "Job requirements not satisfied.\n");
 				dprintf(D_ALWAYS, "Job ad was ============================\n");
 				dPrintAd(D_ALWAYS, *request_ad);
 				dprintf(D_ALWAYS, "Slot ad was ============================\n");
@@ -3469,7 +3469,7 @@ Resource::spawnFetchedWork(void)
 	if ( ! r_cur->spawnStarter(tmp_starter, NULL)) {
 		delete tmp_starter; tmp_starter = NULL;
 
-		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
+		dprintf(D_ERROR, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
 		change_state(owner_state);
 		return false;
 	}
@@ -3546,7 +3546,7 @@ Resource::evalNextFetchWorkDelay(void)
 
 
 void
-Resource::tryFetchWork(void)
+Resource::tryFetchWork( int /* timerID */ )
 {
 		// First, make sure we're configured for fetching at all.
 	if (!getHookKeyword()) {

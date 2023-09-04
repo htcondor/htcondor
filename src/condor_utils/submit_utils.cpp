@@ -216,7 +216,7 @@ bool SubmitHash::AssignJobVal(const char * attr, long long val) { return job->As
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
-	typedef struct string_value { char * psz; int flags; } string_value;
+	typedef struct string_value { const char * psz; int flags; } string_value;
 	struct key_value_pair { const char * key; const string_value * def; };
 	struct key_table_pair { const char * key; const key_value_pair * aTable; int cElms; }; // metaknob table
 	typedef struct kvp_value { const char * key; int flags; const key_value_pair * aTable; int cElms; } kvp_value;
@@ -389,9 +389,10 @@ condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const
 	condor_params::string_value * NewDef = set.apool.consume<condor_params::string_value>(1, sizeof(void*));
 	NewDef->flags = Def.flags;
 	if (cch > 0) {
-		NewDef->psz = set.apool.consume(cch, sizeof(void*));
-		memset(NewDef->psz, 0, cch);
-		if (Def.psz) strcpy(NewDef->psz, Def.psz);
+		char * psz = set.apool.consume(cch, sizeof(void*));
+		memset(psz, 0, cch);
+		if (Def.psz) strcpy(psz, Def.psz);
+		NewDef->psz = psz;
 	} else {
 		NewDef->psz = NULL;
 	}
@@ -420,11 +421,11 @@ void SubmitHash::setup_macro_defaults()
 	SubmitMacroSet.defaults->metat = NULL;
 
 	// allocate space for the 'live' macro default string_values and for the strings themselves.
-	LiveNodeString = allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24)->psz;
-	LiveClusterString = allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24)->psz;
-	LiveProcessString = allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24)->psz;
-	LiveRowString = allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24)->psz;
-	LiveStepString = allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24)->psz;
+	LiveNodeString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveNodeMacroDef, 24)->psz);
+	LiveClusterString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveClusterMacroDef, 24)->psz);
+	LiveProcessString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24)->psz);
+	LiveRowString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24)->psz);
+	LiveStepString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24)->psz);
 }
 
 // set the value that $(SUBMIT_FILE) will expand to. (set into the defaults table, not the submit hash table)
@@ -448,7 +449,7 @@ void SubmitHash::insert_submit_filename(const char * filename, MACRO_SOURCE & so
 		if (pdi[ii].def == &UnliveSubmitFileMacroDef) { 
 			condor_params::string_value * NewDef = SubmitMacroSet.apool.consume<condor_params::string_value>(1, sizeof(void*));
 			NewDef->flags = UnliveSubmitFileMacroDef.flags;
-			NewDef->psz = const_cast<char*>(macro_source_filename(source, SubmitMacroSet));
+			NewDef->psz = macro_source_filename(source, SubmitMacroSet);
 			pdi[ii].def = NewDef;
 		}
 	}
@@ -539,10 +540,14 @@ SubmitHash::SubmitHash()
 	, already_warned_notification_never(false)
 	, already_warned_require_gpus(false)
 	, UseDefaultResourceParams(true)
+	, InsertDefaultPolicyExprs(false)
 	, s_method(1)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
+
+	// TODO: move this to condor_submit? or expose a method on the class to set this?
+	InsertDefaultPolicyExprs = param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false);
 
 	mctx.init("SUBMIT", 3);
 }
@@ -1229,7 +1234,7 @@ const char * init_submit_default_macros()
 		int ix = 0;
 		for (auto it : templates) {
 			aTable[ix].key = ap.insert(it.first.c_str());
-			defs[ix].psz = const_cast<char*>(ap.insert(it.second.c_str()));
+			defs[ix].psz = ap.insert(it.second.c_str());
 			defs[ix].flags = PARAM_TYPE_STRING;
 			aTable[ix].def = &defs[ix];
 			++ix;
@@ -2062,7 +2067,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_HOLD_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+		if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_PERIODIC_HOLD_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_HOLD_CHECK, false);
 		}
 	}
@@ -2086,7 +2091,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_RELEASE_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+		if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_PERIODIC_RELEASE_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_RELEASE_CHECK, false);
 		}
 	}
@@ -2102,7 +2107,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_REMOVE_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+		if ( ! clusterAd && InsertDefaultPolicyExprs  && ! job->Lookup(ATTR_PERIODIC_REMOVE_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_REMOVE_CHECK, false);
 		}
 	}
@@ -3933,14 +3938,14 @@ int SubmitHash::SetJobRetries()
 		// if none of these knobs are defined, then there are no retries.
 		// Just insert the default on-exit-hold and on-exit-remove expressions
 		if (erc.empty()) {
-			if (!job->Lookup(ATTR_ON_EXIT_REMOVE_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) { 
+			if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_ON_EXIT_REMOVE_CHECK)) { 
 				AssignJobVal(ATTR_ON_EXIT_REMOVE_CHECK, true);
 			}
 		} else {
 			AssignJobExpr (ATTR_ON_EXIT_REMOVE_CHECK, erc.c_str());
 		}
 		if (ehc.empty()) {
-			if (!job->Lookup(ATTR_ON_EXIT_HOLD_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+			if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_ON_EXIT_HOLD_CHECK)) {
 				AssignJobVal(ATTR_ON_EXIT_HOLD_CHECK, false);
 			}
 		} else {
@@ -6174,7 +6179,8 @@ int SubmitHash::SetRequirements()
 			}
 
 
-			if ( ! checks_file_transfer_plugin_methods) {
+			// insert expressions to match on transfer plugin methods
+			{
 				classad::References methods;    // methods referened by TransferInputFiles that are not in TransferPlugins
 				classad::References jobmethods; // plugin methods (like HTTP) that are supplied by the job's TransferPlugins
 
@@ -6226,12 +6232,20 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
+				std::string wantMethods; // string list of file transfer plugins the job needs but does not supply
 				bool presignS3URLs = param_boolean( "SIGN_S3_URLS", true );
 				for (auto it = methods.begin(); it != methods.end(); ++it) {
+					if (!wantMethods.empty()) wantMethods += ",";
+					wantMethods += *it;
+
+					if (checks_file_transfer_plugin_methods)
+						continue;
+
 					answer += " && stringListIMember(\"";
 					answer += *it;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
 
+					// TODO: move this to ReportCommonMistakes
 					if( presignS3URLs &&
 					  (strcasecmp( it->c_str(), "s3" ) == 0 || strcasecmp( it->c_str(), "gs" ) == 0) ) {
 						bool present = true;
@@ -6251,6 +6265,12 @@ int SubmitHash::SetRequirements()
 							ABORT_AND_RETURN(1);
 						}
 					}
+				}
+
+				// TODO: someday change the above stringListIMember expressions to
+				// a single stringListISubsetMatch expression using this attribute
+				if ( ! wantMethods.empty()) {
+					AssignJobString(ATTR_WANT_TRANSFER_PLUGIN_METHODS, wantMethods.c_str());
 				}
 			}
 
@@ -7724,7 +7744,7 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 
 	// set up types of the ad
 	SetMyTypeName (baseJob, JOB_ADTYPE);
-	SetTargetTypeName (baseJob, STARTD_ADTYPE);
+	baseJob.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE); // needed for HTCondor before version 23.0
 
 	if (submit_time_in) {
 		submit_time = submit_time_in;
@@ -8741,8 +8761,7 @@ struct _parse_up_to_q_callback_args { char * line; int source_id; };
 static int parse_q_callback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*macro_set*/, char * line, std::string & errmsg)
 {
 	struct _parse_up_to_q_callback_args * pargs = (struct _parse_up_to_q_callback_args *)pv;
-	char * queue_args = const_cast<char*>(SubmitHash::is_queue_statement(line));
-	if ( ! queue_args) {
+	if ( ! SubmitHash::is_queue_statement(line)) {
 		// not actually a queue line, so stop parsing and return error
 		pargs->line = line;
 		return -1;

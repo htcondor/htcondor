@@ -193,7 +193,7 @@ char *BaseResource::ResourceName()
 	return resourceName;
 }
 
-void BaseResource::DeleteMe()
+void BaseResource::DeleteMe( int /* timerID */ )
 {
 	deleteMeTid = TIMER_UNSET;
 
@@ -261,7 +261,7 @@ bool BaseResource::SendUpdate () {
 	return daemonCore->sendUpdates( UPDATE_GRID_AD, &ad, NULL, true ) > 0;
 }
 
-void BaseResource::UpdateCollector () {
+void BaseResource::UpdateCollector( int /* timerID */ ) {
 
 	/* avoid updating the collector too often, except on the 
 	first update */
@@ -469,7 +469,7 @@ void BaseResource::AlreadySubmitted( BaseJob *job )
 	SetJobPollInterval();
 }
 
-void BaseResource::Ping()
+void BaseResource::Ping( int /* timerID */ )
 {
 	// Don't start a new ping too soon after the previous one. If the
 	// resource is up, the minimum time between pings is probeDelay. If the
@@ -585,7 +585,7 @@ void BaseResource::RequestUpdateLeases() const
 	}
 }
 
-void BaseResource::UpdateLeases()
+void BaseResource::UpdateLeases( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"*** UpdateLeases called\n");
 	if ( hasLeases == false ) {
@@ -778,7 +778,7 @@ GahpClient * BaseResource::BatchGahp()
 	return 0;
 }
 
-void BaseResource::DoBatchStatus()
+void BaseResource::DoBatchStatus( int /* timerID */ )
 {
 	dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus for %s.\n", ResourceName());
 

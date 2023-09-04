@@ -452,10 +452,10 @@ public:
 	unsigned int getUniqueId() const { return m_uniqueId; }
 
 #ifdef WIN32
-	int set_inheritable( int flag );
+	bool set_inheritable( bool flag );
 #else
 	// On unix, sockets are always inheritable
-	inline int set_inheritable( int ) { return TRUE; }
+	bool set_inheritable(bool) { return true;}
 #endif
 
 //	PRIVATE INTERFACE TO ALL SOCKS

@@ -1847,7 +1847,7 @@ Starter::createTempExecuteDir( void )
 		free(who);
 
 		if( mkdir(WorkingDir.c_str(), dir_perms) < 0 ) {
-			dprintf( D_FAILURE|D_ALWAYS,
+			dprintf( D_ERROR,
 			         "couldn't create dir %s: %s\n",
 			         WorkingDir.c_str(),
 			         strerror(errno) );
@@ -2002,7 +2002,7 @@ Starter::createTempExecuteDir( void )
 	set_priv( ch_p );
 
 	if( chdir_result < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir.c_str(),
+		dprintf( D_ERROR, "couldn't move to %s: %s\n", WorkingDir.c_str(),
 				 strerror(errno) ); 
 		set_priv( priv );
 		return false;
@@ -2288,7 +2288,7 @@ Starter::removeDeferredJobs() {
  * return true if no errors occured
  **/
 void
-Starter::SpawnPreScript( void )
+Starter::SpawnPreScript( int /* timerID */ )
 {
 		//
 		// Unset the deferral timer so that we know that no job
@@ -3482,7 +3482,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		const char * psub = strchr(pre, chRe);
 		const char * pend = psub ? strchr(psub+1,chRe) : psub;
 		if ( ! psub || ! pend ) {
-			dprintf(D_ALWAYS|D_FAILURE, "Assigned%s environment '%s' ignored - missing replacment end marker: %s\n", tag, env_name.c_str(), peq);
+			dprintf(D_ERROR, "Assigned%s environment '%s' ignored - missing replacment end marker: %s\n", tag, env_name.c_str(), peq);
 			break;
 		}
 		// at this point if your expression is /aa/bbb/
@@ -3501,7 +3501,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		PCRE2_SPTR pat_pcre2str = reinterpret_cast<const unsigned char *>(pat.c_str());
 		pcre2_code *re = pcre2_compile(pat_pcre2str, PCRE2_ZERO_TERMINATED, 0, &errcode, &erroff, NULL);
 		if ( ! re) {
-			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex PCRE2 error code %d at offset %d in: %s\n",
+			dprintf(D_ERROR, "Assigned%s environment '%s' regex PCRE2 error code %d at offset %d in: %s\n",
 				tag, env_name.c_str(), errcode, static_cast<int>(erroff), pat.c_str());
 			break;
 		}
@@ -3936,7 +3936,7 @@ Starter::RecordJobExitStatus(int status) {
 }
 
 void
-Starter::CheckDiskUsage(void)
+Starter::CheckDiskUsage( int /* timerID */ )
 {
 #ifdef LINUX
 		// Avoid repeatedly triggering

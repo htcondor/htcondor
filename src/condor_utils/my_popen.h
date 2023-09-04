@@ -90,6 +90,15 @@ char* run_command(time_t timeout, const ArgList &args, int options, const Env* e
 class MyPopenTimer {
 public:
 	static const int NOT_INTIALIZED=0xd01e;
+
+	static const bool WITH_STDERR = true;
+	static const bool WITHOUT_STDERR = false;
+
+	static const bool DROP_PRIVS = true;
+	static const bool KEEP_PRIVS = false;
+
+	static const int ALREADY_RUNNING = -1;
+
 	MyPopenTimer() : fp(NULL), status(0), error(NOT_INTIALIZED), begin_time(0), src(NULL, true), bytes_read(0), run_time(0) {}
 	virtual ~MyPopenTimer();
 

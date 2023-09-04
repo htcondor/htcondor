@@ -155,6 +155,7 @@ build_job_env.cpp
 build_job_env.h
 check_events.cpp
 check_events.h
+checkpoint_cleanup_utils.cpp
 checksum.cpp
 checksum.h
 classad_collection.cpp
@@ -260,6 +261,8 @@ data_reuse.cpp
 data_reuse.h
 date_util.cpp
 date_util.h
+dc_coroutines.cpp
+dc_coroutines.h
 dc_service.cpp
 dc_service.h
 DelegationInterface.cpp

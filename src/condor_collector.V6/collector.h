@@ -121,7 +121,7 @@ public:
 	static void unixsigint_handler();
 	
 	static void init_classad(int interval);
-	static void sendCollectorAd();
+	static void sendCollectorAd(int tid);
 
 	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
 

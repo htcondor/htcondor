@@ -53,7 +53,7 @@ static bool find_singularity(std::string &exec)
 #ifdef LINUX
 	std::string singularity;
 	if (!param(singularity, "SINGULARITY")) {
-		dprintf(D_ALWAYS | D_FAILURE, "SINGULARITY is undefined.\n");
+		dprintf(D_ERROR, "SINGULARITY is undefined.\n");
 		return false;
 	}
 	exec = singularity;
@@ -111,7 +111,7 @@ Singularity::detect(CondorError &err)
 		// treat 'file not found' as not really error
 		int d_level = D_FULLDEBUG;
 		if (pgm.error_code() != ENOENT) {
-			d_level = D_ALWAYS | D_FAILURE;
+			d_level = D_ERROR;
 			err.pushf("Singularity::detect", 1, "Failed to run '%s' errno = %d %s.", displayString.c_str(), pgm.error_code(), pgm.error_str());
 		}
 		dprintf(d_level, "Failed to run '%s' errno=%d %s.\n", displayString.c_str(), pgm.error_code(), pgm.error_str() );

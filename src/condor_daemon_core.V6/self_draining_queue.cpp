@@ -157,7 +157,7 @@ SelfDrainingQueue::enqueue( ServiceData* data, bool allow_dups )
 
 
 void
-SelfDrainingQueue::timerHandler( void )
+SelfDrainingQueue::timerHandler( int /* timerID */ )
 {
 	dprintf( D_FULLDEBUG,
 			 "Inside SelfDrainingQueue::timerHandler() for %s\n", name );

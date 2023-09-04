@@ -260,7 +260,7 @@ type=int
 description=Max number of seconds to serve a Collector query, 0=no limit
 
 [SOCKET_LISTEN_BACKLOG]
-default=500
+default=4096
 range=1,
 type=int
 restart=true
@@ -3006,7 +3006,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img, checkpoint-cleanup
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor
@@ -4732,7 +4732,7 @@ tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
-default=none
+default=hard
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen

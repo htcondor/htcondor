@@ -40,9 +40,11 @@
 #define ACCOUNTING_ADTYPE			"Accounting"
 #define NEGOTIATOR_ADTYPE		"Negotiator"
 #define HAD_ADTYPE			"HAD"
+#define REPLICATION_ADTYPE		"Replication"
 #define XFER_SERVICE_ADTYPE		"XferService"		/* No longer used */
 #define LEASE_MANAGER_ADTYPE		"LeaseManager"	/* No longer used */
 #define CREDD_ADTYPE			"CredD"
+#define JOB_ROUTER_ADTYPE		"Job_Router"
 #define ANY_ADTYPE			"Any"
 #define GENERIC_ADTYPE			"Generic"
 #define SUBMITTER_ADTYPE		"Submitter"
@@ -84,9 +86,6 @@ enum AdTypes
 	// This should *ALWAYS* be at the end of this list
 	NUM_AD_TYPES,
 };
-
-AdTypes
-AdTypeFromString(const char* adtype_string) ;
 
 const char*
 AdTypeToString( AdTypes type );

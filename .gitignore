@@ -123,6 +123,7 @@ src/condor_tests/CondorPersonal.pm
 src/condor_tests/CondorTest.pm
 src/condor_tests/CondorUtils.pm
 src/condor_tests/batch_test.pl
+src/condor_tests/condor_credmon_oauth_dummy
 src/condor_tests/list_all
 src/condor_tests/list_ckpt
 src/condor_tests/list_condorc
@@ -210,8 +211,10 @@ __pycache__
 # Project exclude paths
 /_build/
 
-# results from my compilation
+# vscode files
+.vscode/
 
+# results from my compilation
 _deps/
 bindings/python/build/
 bindings/python/htcondor.egg-info/

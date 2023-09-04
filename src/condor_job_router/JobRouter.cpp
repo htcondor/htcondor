@@ -268,7 +268,7 @@ static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
 }
 
 void
-JobRouter::config() {
+JobRouter::config( int /* timerID */ ) {
 	bool allow_empty_requirements = false;
 	m_enable_job_routing = true;
 
@@ -655,7 +655,7 @@ JobRouter::config() {
 }
 
 void
-JobRouter::refreshIDTokens() {
+JobRouter::refreshIDTokens( int /* timerID */ ) {
 	StringList items;
 	param_and_insert_unique_items("JOB_ROUTER_CREATE_IDTOKEN_NAMES", items);
 	items.remove_anycase("NAMES");
@@ -897,8 +897,7 @@ JobRouter::InitPublicAd()
 
 	m_public_ad = ClassAd();
 
-	SetMyTypeName(m_public_ad, "Job_Router");
-	SetTargetTypeName(m_public_ad, "");
+	SetMyTypeName(m_public_ad, JOB_ROUTER_ADTYPE);
 
 	m_public_ad.Assign(ATTR_NAME,daemonName);
 
@@ -906,7 +905,7 @@ JobRouter::InitPublicAd()
 }
 
 void
-JobRouter::EvalAllSrcJobPeriodicExprs()
+JobRouter::EvalAllSrcJobPeriodicExprs( int /* timerID */ )
 {
 	RoutedJob *job;
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
@@ -1494,7 +1493,7 @@ JobRouter::NumManagedJobs() {
 }
 
 void
-JobRouter::Poll() {
+JobRouter::Poll( int /* timerID */ ) {
 	dprintf(D_FULLDEBUG,"JobRouter: polling state of (%d) managed jobs.\n",NumManagedJobs());
 
 	// Update our mirror(s) of the job queue(s).
@@ -2973,7 +2972,7 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 }
 
 void
-JobRouter::TimerHandler_UpdateCollector() {
+JobRouter::TimerHandler_UpdateCollector( int /* timerID */ ) {
 	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
 }
 
@@ -2985,7 +2984,7 @@ JobRouter::InvalidatePublicAd() {
 	ASSERT( ! m_operate_as_tool);
 
 	SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
-	SetTargetTypeName(invalidate_ad, "Job_Router");
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, JOB_ROUTER_ADTYPE);
 
 	formatstr(line, "%s == \"%s\"", ATTR_NAME, daemonName.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());

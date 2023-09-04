@@ -41,6 +41,10 @@ GCC_DIAG_OFF(invalid-offsetof)
 #define JOB_QUEUE_PAYLOAD_IS_BASE 1
 #define USE_JOB_QUEUE_USERREC 1 // replace ephemeral OwnerInfo struct with a persistent JobQueueUserRec struct
 
+// until we can remove targettype from the classad log entirely
+// use the legacy "Machine" value as the target adtype
+#define JOB_TARGET_ADTYPE "Machine"
+
 class Service;
 
 class QmgmtPeer {
@@ -857,7 +861,7 @@ extern int JobsSeenOnQueueWalk;
 void InitQmgmt();
 void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void PostInitJobQueue();
-void CleanJobQueue();
+void CleanJobQueue(int tid = -1);
 bool setQSock( ReliSock* rsock );
 void unsetQSock();
 void MarkJobClean(PROC_ID job_id);

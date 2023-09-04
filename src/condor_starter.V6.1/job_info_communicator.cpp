@@ -343,7 +343,7 @@ JobInfoCommunicator::allJobsDone( void )
 
 #if HAVE_JOB_HOOKS
 void
-JobInfoCommunicator::hookTimeout( void )
+JobInfoCommunicator::hookTimeout( int /* timerID */  )
 {
 	dprintf(D_FULLDEBUG, "Timed out waiting for hook to exit\n");
 	finishAllJobsDone();
@@ -955,7 +955,7 @@ JobInfoCommunicator::periodicJobUpdateTimerMaxInterval(void)
    non-ensure version.
 */
 void
-JobInfoCommunicator::periodicJobUpdateTimerHandler( void )
+JobInfoCommunicator::periodicJobUpdateTimerHandler( int /* timerID */ )
 {
 	periodicJobUpdate(NULL, false);
 }

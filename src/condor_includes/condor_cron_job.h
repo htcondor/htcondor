@@ -130,10 +130,10 @@ class CronJob : public Service
 
 	// Private methods; these can be overloaded
 	virtual int RunJob( void );
-	virtual void RunJobFromTimer() { RunJob(); }
+	virtual void RunJobFromTimer( int /* timerID */ ) { RunJob(); }
 	virtual int StartJob( void );
-	virtual void StartJobFromTimer() { StartJob(); }
-	virtual void KillHandler( void );
+	virtual void StartJobFromTimer( int /* timerID */ ) { StartJob(); }
+	virtual void KillHandler( int timerID = -1 );
 	virtual int StdoutHandler( int pipe );
 	virtual int StderrHandler( int pipe );
 	virtual int Reaper( int exitPid, int exitStatus );

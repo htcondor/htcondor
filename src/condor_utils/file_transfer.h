@@ -33,11 +33,13 @@
 #include "dc_transfer_queue.h"
 #include <vector>
 
+
 extern const char * const StdoutRemapName;
 extern const char * const StderrRemapName;
 
 class FileTransfer;	// forward declatation
 class FileTransferItem;
+class UploadExitInfo;
 typedef std::vector<FileTransferItem> FileTransferList;
 
 
@@ -74,6 +76,13 @@ enum FileTransferStatus {
 	XFER_STATUS_DONE
 };
 
+enum class TransferAck {
+	NONE,
+	UPLOAD,
+	DOWNLOAD,
+	BOTH,
+};
+
 enum class TransferPluginResult {
 	Success = 0,
 	Error = 1,
@@ -84,7 +93,6 @@ enum class TransferPluginResult {
 namespace htcondor {
 class DataReuseDirectory;
 }
-
 
 class FileTransfer final: public Service {
 
@@ -265,7 +273,6 @@ class FileTransfer final: public Service {
 	float TotalBytesSent() const { return bytesSent; }
 
 	float TotalBytesReceived() const { return bytesRcvd; };
-
 	//
 	// Add the given filename to the list of "output" files.  Will
 	// create the empty list of output files if necessary; never
@@ -494,6 +501,7 @@ class FileTransfer final: public Service {
 	bool PeerDoesReuseInfo{false};
 	bool PeerDoesS3Urls{false};
 	bool PeerRenamesExecutable{true};
+	bool PeerKnowsProtectedURLs{false};
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
 	StringList* ExceptionFiles{nullptr};
@@ -542,6 +550,7 @@ class FileTransfer final: public Service {
 	bool I_support_filetransfer_plugins{false};
 	bool I_support_S3{false};
 	bool multifile_plugins_enabled{false};
+	bool m_has_protected_url{false};
 #ifdef WIN32
 	perm* perm_obj{nullptr};
 #endif
@@ -582,7 +591,7 @@ class FileTransfer final: public Service {
 	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);
 
 	// Called internally by DoUpload() in order to handle common wrapup tasks.
-	int ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
+	int ExitDoUpload(ReliSock *s, bool socket_default_crypto, priv_state saved_priv, DCTransferQueue & xfer_queue, const filesize_t *total_bytes_ptr, UploadExitInfo& xfer_info);
 
 	// Send acknowledgment of success/failure after downloading files.
 	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
@@ -623,7 +632,7 @@ class FileTransfer final: public Service {
 	// because -- for example -- directories must be created before the
 	// file that live in them.
 	//
-	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths );
+	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths, const char* queue = nullptr );
 
 		// This function generates a list of files to transfer, including
 		// directories to create and their full contents.
@@ -643,7 +652,7 @@ class FileTransfer final: public Service {
 		//      paths of files stored in SPOOL, whether from
 		//      self-checkpointing, ON_EXIT_OR_EVICT, or remote input
 		//      file spooling.
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved );
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved, const char* queue = nullptr);
 
 		// Function internal to ExpandFileTransferList() -- called twice there.
 		// The SpoolSpace argument is only necessary because this function
@@ -717,6 +726,58 @@ class FileTransfer final: public Service {
     FileTransferList checkpointList;
 
     FileTransferList inputList;
+};
+
+class UploadExitInfo {
+public:
+	friend class FileTransfer;
+	UploadExitInfo() = default;
+
+	UploadExitInfo & doAck(TransferAck newAck) { ack = newAck; return *this; }
+	UploadExitInfo & retry() { try_again = true; return *this; }
+	UploadExitInfo & success() { upload_success = true; return *this; }
+	UploadExitInfo & line(int line) { exit_line = line; return *this; }
+	UploadExitInfo & files(int count) { xfered_files = count; return *this; }
+	UploadExitInfo & setError(const std::string& desc, int code, int subcode = -1) {
+		error_desc = desc;
+		hold_code = code;
+		hold_subcode = subcode;
+		return *this;
+	}
+	UploadExitInfo & noError() {
+		error_desc.clear();
+		hold_code = 0;
+		hold_subcode = 0;
+		return *this;
+	}
+
+	bool checkAck(TransferAck check) { return ack == TransferAck::BOTH || ack == check; }
+
+	const char* ackStr() {
+		if (ack == TransferAck::NONE) { return "NONE"; }
+		else if (ack == TransferAck::UPLOAD) { return "UPLOAD"; }
+		else if (ack == TransferAck::DOWNLOAD) { return "DOWNLOAD"; }
+		else if (ack == TransferAck::BOTH) { return "BOTH"; }
+		else { return "UNKOWN"; }
+	}
+
+	std::string displayStr() {
+		std::string temp;
+		formatstr(temp, "Success = %s | Error[%d.%d] = '%s' | Ack = %s | Line = %d | Files = %d | Retry = %s",
+		          upload_success ? "True" : "False", hold_code, hold_subcode, error_desc.c_str(),
+		          ackStr(), exit_line, xfered_files, try_again ? "True" : "False");
+		return temp;
+	}
+
+private:
+	std::string error_desc = "";
+	int hold_code = -1;
+	int hold_subcode = -1;
+	TransferAck ack = TransferAck::NONE;
+	int exit_line = 0;
+	int xfered_files = 0;
+	bool upload_success = false;
+	bool try_again = false;
 };
 
 // returns 0 if no expiration

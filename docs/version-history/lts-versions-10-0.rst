@@ -7,6 +7,30 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1009:
+
+Version 10.0.9
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.9 released on Month Date, 2023.
+
+- HTCondor version 10.0.9 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug that prevented deletion of stored user passwords with
+  *condor_store_cred* on Windows.
+  :jira:`1998`
+
+- Fixed an issue for the PPC build with misaligned pointers in the config system.
+  :jira:`2001`
+
 .. _lts-version-history-1008:
 
 Version 10.0.8
@@ -24,10 +48,9 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug with parallel universe that would result in the startd
-  rejecting start attempts from the schedd and causing the schedd
-  to crash.
-  :jira:`1959`
+- Removed cgroup v1 blkio controller support -- this prevents
+  a kernel panic in some EL8 kernels.
+  :jira:`1985`
 
 - Fixed a bug in DAGMan where service nodes that finish before the DAGs
   end would result in DAGMan crashing due to an assertion failure.
@@ -38,6 +61,22 @@ Bugs Fixed:
   of emails.  Now HTCondor will only send one email per day.
   :jira:`1937`
 
+- Fixed a bug where *condor_adstash* would not import the OpenSearch library properly.
+  :jira:`1965`
+
+- Fixed a bug that broke the version check for older versions of the Elasticsearch Python library.
+  :jira:`1964`
+
+- Fixed a bug in *condor_adstash* that caused a "unexpected keyword argument" error to occur when
+  new attributes needed to be added to the index and when using version 8.0.0 or newer of
+  the Elasticsearch Python library.
+  :jira:`1930`
+
+- Fixed a bug with parallel universe that would result in the *condor_startd*
+  rejecting start attempts from the *condor_schedd* and causing the *condor_schedd*
+  to crash.
+  :jira:`1952`
+
 - Preen now preserves all files in the spool directory matching `*OfflineLog*`
   so that central managers with multiple active collectors can have offline
   ads.
@@ -45,18 +84,6 @@ Bugs Fixed:
 
 - Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
   :jira:`1954`
-
-- Fixed a bug where **condor_adstash** would not import the OpenSearch library properly.
-  :jira:`1965`
-
-- Fixed a bug that broke the version check for older versions of the Elasticsearch Python library.
-  :jira:`1964`
-
-- Fixed a bug in **condor_adstash** that caused a "unexpected keyword argument" error to occur when
-  new attributes needed to be added to the index and when using version 8.0.0 or newer of
-  the Elasticsearch Python library.
-  :jira:`1930`
-
 
 .. _lts-version-history-1007:
 

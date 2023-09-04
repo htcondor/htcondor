@@ -1870,7 +1870,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     restart of a daemon.
 
 :macro-def:`SOCKET_LISTEN_BACKLOG`
-    An integer value that defaults to 500, which defines the backlog
+    An integer value that defaults to 4096, which defines the backlog
     value for the listen() network call when a daemon creates a socket
     for incoming connections. It limits the number of new incoming
     network connections the operating system will accept for a daemon
@@ -6162,7 +6162,7 @@ These settings affect the *condor_starter*.
 
 :macro-def:`CGROUP_MEMORY_LIMIT_POLICY`
     A string with possible values of ``hard``, ``soft``, ``custom`` and ``none``.
-    The default value is ``none``. If set to ``hard``, when the job tries
+    The default value is ``hard``. If set to ``hard``, when the job tries
     to use more memory than the slot size, it will be put on hold with
     an appropriate message.  Also, the cgroup soft limit will set to
     90% of the hard limit to encourage the kernel to lower 
@@ -6175,6 +6175,8 @@ These settings affect the *condor_starter*.
     When set to custom, the two additional knobs CGROUP_HARD_MEMORY_LIMIT and
     CGROUP_SOFT_MEMORY_LIMIT must be set, which are classad expressions evaluated
     in the context of the machine and the job which determine the hard and soft limits.
+    Note that "soft" is only meaningful on a cgroup v1 Linux system, and should not be
+    set on a cgroup v2 system.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
@@ -6440,10 +6442,14 @@ These settings affect the *condor_starter*.
 
 :macro-def:`SINGULARITY_JOB`
     A boolean value specifying whether this startd should run jobs under
-    Singularity. The default value is ``False``.
+    Singularity.  This can be an expression evaluted in the context of the slot
+    ad and the job ad, where the slot ad is the "MY.", and the job ad is the
+    "TARGET.". The default value is ``False``.
 
 :macro-def:`SINGULARITY_IMAGE_EXPR`
-    The path to the Singularity container image file. The default value
+    The path to the Singularity container image file.  This can be an
+    expression evaluted in the context of the slot ad and the job ad, where the
+    slot ad is the "MY.", and the job ad is the "TARGET.".  The default value
     is ``"SingularityImage"``.
 
 :macro-def:`SINGULARITY_TARGET_DIR`
@@ -6452,8 +6458,10 @@ These settings affect the *condor_starter*.
     value is ``""``.
 
 :macro-def:`SINGULARITY_BIND_EXPR`
-    A string value containing a list of bind mount specifications to be
-    passed to Singularity. The default value is ``"SingularityBind"``.
+    A string value containing a list of bind mount specifications to be passed
+    to Singularity.  This can be an expression evaluted in the context of the
+    slot ad and the job ad, where the slot ad is the "MY.", and the job ad is
+    the "TARGET.". The default value is ``"SingularityBind"``.
 
 :macro-def:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
     A boolean value defaulting to false.  If true, and the singularity
@@ -6471,7 +6479,7 @@ These settings affect the *condor_starter*.
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value or classad expression containing a list of extra arguments to be appended
     to the Singularity command line. This can be an expression evaluted in the context of the
-    job ad and the machine ad.
+    slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
 
 condor_submit Configuration File Entries
 -----------------------------------------

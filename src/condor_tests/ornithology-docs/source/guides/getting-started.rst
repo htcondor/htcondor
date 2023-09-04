@@ -10,9 +10,9 @@ Ornithology is a Python-based testing framework for HTCondor.
 It uses ``pytest`` as its test execution engine, and provides a wide variety
 of tools for inspecting the state of an HTCondor pool.
 
-Ornithology is designed to be flexible and extensible.
-If you find yourself needing a new tool that might be useful in other
-contexts, feel free to add it the ``ornithology`` module itself.
+Ornithology is designed to be flexible and extensible.  If you need a new tool
+that might be useful in other contexts, feel free to add such a tool to the
+`ornithology`` module itself.
 
 An annotated version of a test file written using Ornithology,
 ``test_hold_and_release.py``, is shown below. The goal of the test is to walk

@@ -208,10 +208,10 @@ class BaseShadow : public Service
 		/** Set a timer to call terminateJob() so we retry
 		    our attempts to update the job queue etc.
 		*/
-	void retryJobCleanup( void );
+	void retryJobCleanup();
 
 		/// DaemonCore timer handler to actually do the retry.
-	void retryJobCleanupHandler( void );
+	void retryJobCleanupHandler( int timerID = -1 );
 
 		/** The job exited but it's not ready to leave the queue.  
 			We still want to log an evict event, possibly email the

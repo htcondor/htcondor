@@ -77,7 +77,6 @@ class IOProcess {
 
 	Worker* createNewWorker(void);
 	Worker* findFreeWorker(void);
-	Worker* findWorker(int id);
 	bool removeWorkerFromWorkerList(int id);
 
 	GahpRequest* addNewRequest(const char* cmd);
@@ -108,7 +107,7 @@ class IOProcess {
 
 	StringList m_result_list; // The list of results ready to be output to IO
 
-	std::map<int, Worker*> m_workers_list;
+	std::map<int, Worker> m_workers_list;
 
 	std::vector<GahpRequest*> m_pending_req_list;
 

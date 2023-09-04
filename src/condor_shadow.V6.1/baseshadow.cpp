@@ -700,7 +700,7 @@ void BaseShadow::removeJob( const char* reason )
 }
 
 void
-BaseShadow::retryJobCleanup( void )
+BaseShadow::retryJobCleanup()
 {
 	m_num_cleanup_retries++;
 	if (m_num_cleanup_retries > m_max_cleanup_retries) {
@@ -722,7 +722,7 @@ BaseShadow::retryJobCleanup( void )
 
 
 void
-BaseShadow::retryJobCleanupHandler( void )
+BaseShadow::retryJobCleanupHandler( int /* timerID */ )
 {
 	m_cleanup_retry_tid = -1;
 	dprintf(D_ALWAYS, "Retrying job cleanup, calling terminateJob()\n");
@@ -809,7 +809,10 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
     // Update final Job committed time
     time_t last_ckpt_time = 0;
-    jobAd->LookupInteger(ATTR_LAST_CKPT_TIME, last_ckpt_time);
+    if(! jobAd->LookupInteger(ATTR_LAST_CKPT_TIME, last_ckpt_time)) {
+        jobAd->LookupInteger(ATTR_JOB_LAST_CHECKPOINT_TIME, last_ckpt_time);
+    }
+
     time_t current_start_time = 0;
     jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, current_start_time);
     time_t int_value = (last_ckpt_time > current_start_time) ?

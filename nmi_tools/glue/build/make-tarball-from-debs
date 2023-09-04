@@ -88,19 +88,10 @@ tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$
 rm -r condor_tests-$version-$release-$arch_dist
 
 # Move configuration files back to example directory
-mv tarball/etc/condor/config.d/* tarball/usr/share/doc/htcondor/examples/
-
-AVERSION=(${version//./ })
-MAJOR_VER=${AVERSION[0]}
-MINOR_VER=${AVERSION[1]}
-if [ "$MINOR_VER" -eq 0 ]; then
-    REPO_VERSION=$MAJOR_VER.0
-else
-    REPO_VERSION=$MAJOR_VER.x
-fi
+mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor/examples/
 
 # Extract external debs
-for path in /usr/local/condor/externals/$REPO_VERSION/*.deb; do
+for path in /usr/local/condor/externals/*.deb; do
     file=${path##*/}
     echo ======= $file =======
     extract_deb $path tarball
@@ -125,9 +116,9 @@ if [ $? -ne 0 ];then
 fi
 
 # Add in apptainer if available
-if [ -d /usr/local/condor/externals/$REPO_VERSION/apptainer ]; then
-    /usr/local/condor/externals/$REPO_VERSION/apptainer/bin/apptainer --version
-    cp -a /usr/local/condor/externals/$REPO_VERSION/apptainer/* tarball/usr
+if [ -d /usr/local/condor/externals/apptainer ]; then
+    /usr/local/condor/externals/apptainer/bin/apptainer --version
+    cp -a /usr/local/condor/externals/apptainer/* tarball/usr
     tarball/bin/apptainer --version >> tarball/Manifest.txt
 fi
 

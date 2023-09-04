@@ -167,7 +167,7 @@ class CollectorEngine : public Service
 	int	clientTimeout;
 	int	machineUpdateInterval;
 
-	void  housekeeper ();
+	void  housekeeper ( int timerID = -1 );
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t, HashFunc) const;
 	CollectorRecord* updateClassAd(CollectorHashTable&,const char*, const char *,

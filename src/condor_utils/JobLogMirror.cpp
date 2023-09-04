@@ -74,7 +74,7 @@ JobLogMirror::poll()
 }
 
 void
-JobLogMirror::TimerHandler_JobLogPolling() {
+JobLogMirror::TimerHandler_JobLogPolling( int /* timerID */ ) {
 	dprintf(D_FULLDEBUG, "TimerHandler_JobLogPolling() called\n");
 	ASSERT(job_log_reader.Poll() != POLL_ERROR);
 }

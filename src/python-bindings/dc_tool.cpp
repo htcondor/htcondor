@@ -111,21 +111,18 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     {
         THROW_EX(HTCondorValueError, "Daemon type not available in location ClassAd.");
     }
-    int ad_type = AdTypeFromString(ad_type_str.c_str());
-    if (ad_type == NO_AD)
-    {
-        THROW_EX(HTCondorValueError, "Unknown ad type.");
-    }
-    daemon_t d_type;
-    switch (ad_type) {
-    case MASTER_AD: d_type = DT_MASTER; break;
-    case STARTD_AD: d_type = DT_STARTD; break;
-    case SCHEDD_AD: d_type = DT_SCHEDD; break;
-    case NEGOTIATOR_AD: d_type = DT_NEGOTIATOR; break;
-    case COLLECTOR_AD: d_type = DT_COLLECTOR; break;
-    case CREDD_AD: d_type = DT_CREDD; break;
+    daemon_t d_type = AdTypeStringToDaemonType(ad_type_str.c_str());
+    switch (d_type) {
+    case DT_MASTER:
+    case DT_STARTD:
+    case DT_SCHEDD:
+    case DT_COLLECTOR:
+    case DT_NEGOTIATOR:
+    case DT_CREDD:
+    case DT_GENERIC:
+    case DT_HAD:
+        break;
     default:
-        d_type = DT_NONE;
         THROW_EX(HTCondorEnumError, "Unknown daemon type.");
     }
 

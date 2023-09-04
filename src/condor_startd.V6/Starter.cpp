@@ -518,8 +518,8 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	} else {
 		// Dummy up an ad, assume a boinc type job.
 		int now = (int) time(0);
-		SetMyTypeName(dummyAd, "Job");
-		SetTargetTypeName(dummyAd, "Machine");
+		SetMyTypeName(dummyAd, JOB_ADTYPE);
+		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");
@@ -884,7 +884,7 @@ int Starter::execDCStarter(
 		formatstr_cat(s_execute_dir,"%cencrypted%lu",
 				DIR_DELIM_CHAR,privdirnum++);
 		if( mkdir(s_execute_dir.c_str(), 0755) < 0 ) {
-			dprintf( D_FAILURE|D_ALWAYS,
+			dprintf( D_ERROR,
 			         "Failed to create encrypted dir %s: %s\n",
 			         s_execute_dir.c_str(),
 			         strerror(errno) );
@@ -1106,20 +1106,18 @@ char const*
 Starter::getIpAddr( void )
 {
 	if( ! s_pid ) {
-		return NULL;
+		return nullptr;
 	}
 	if( !m_starter_addr.empty() ) {
 		return m_starter_addr.c_str();
 	}
 
-	// Fall back on the raw contact string known to daemonCore.
-	// Unfortunately, that doesn't include any of the fancy
-	// stuff like private network info and CCB.
-	dprintf(D_ALWAYS,
-			"Warning: giving raw address in response to starter address query,"
-			"because update from starter not received yet.\n");
-
-	return daemonCore->InfoCommandSinfulString( s_pid );
+	// At this point, we haven't gotten an update from the starter (yet)
+	// so the starter hasn't told us the real, external address with CCB
+	// extensions and other goodness.  We used to return a guess for what
+	// we thought the address to be, but that broke condor_ssh_to_job
+	// so, if we don't know for sure, return that we don't know.
+	return nullptr;
 }
 
 
@@ -1273,7 +1271,7 @@ Starter::cancelKillTimer( void )
 
 
 void
-Starter::sigkillStarter( void )
+Starter::sigkillStarter( int /* timerID */ )
 {
 		// In case the kill fails for some reason, we are on a periodic
 		// timer that will keep trying.
@@ -1290,7 +1288,7 @@ Starter::sigkillStarter( void )
 }
 
 void
-Starter::softkillTimeout( void )
+Starter::softkillTimeout( int /* timerID */ )
 {
 	s_softkill_tid = -1;
 	if( active() ) {

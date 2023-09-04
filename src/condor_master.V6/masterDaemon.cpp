@@ -69,7 +69,7 @@ extern char		default_dc_daemon_list[];
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
-extern void		run_preen();
+extern void		run_preen(int tid);
 
 extern int condor_main_argc;
 extern char **condor_main_argv;
@@ -280,7 +280,7 @@ daemon::runs_on_this_host()
 
 
 void
-daemon::Recover()
+daemon::Recover( int /* timerID */ )
 {
 	restarts = 0;
 	recover_tid = -1; 
@@ -356,7 +356,7 @@ int daemon::Restart(bool by_command)
 // This little function is used so when the start timer goes off, we
 // can set the start_tid back to -1 before we actually call Start().
 void
-daemon::DoStart()
+daemon::DoStart( int /* timerID */ )
 {
 	start_tid = -1;
 	Start( true );		// Don't forward this on to the controller!
@@ -1040,7 +1040,7 @@ int daemon::RealStart( )
 
 	if ( pid == FALSE ) {
 		// Create_Process failed!
-		dprintf( D_FAILURE|D_ALWAYS,
+		dprintf( D_ERROR,
 				 "ERROR: Create_Process failed trying to start %s\n",
 				 process_name);
 		pid = 0;
@@ -1230,7 +1230,7 @@ daemon::StopPeaceful()
 }
 
 void
-daemon::StopFastTimer()
+daemon::StopFastTimer( int /* timerID */ )
 {
 	StopFast(false);
 }
@@ -1289,7 +1289,7 @@ daemon::StopFast( bool never_forward )
 }
 
 void
-daemon::HardKill()
+daemon::HardKill( int /* timerID */ )
 {
 	if( type == DT_MASTER ) {
 			// Never want to stop master.
@@ -1352,11 +1352,7 @@ daemon::Exited(int status)
 			expected = true;
 		}
 	}
-	int d_flag = D_ALWAYS;
-	if( had_failure ) {
-		d_flag |= D_FAILURE;
-	}
-	dprintf(d_flag, "%s\n", msg.c_str());
+	dprintf(had_failure ? (D_ERROR | D_EXCEPT) : D_ALWAYS, "%s\n", msg.c_str());
 
 		// For HA, release the lock
 	if ( is_ha && ha_lock ) {
@@ -2147,7 +2143,7 @@ bool Daemons::GetDaemonReadyStates(std::string & ready)
 
 // timer callback to handle deferred replys for DC_QUERY_READY command
 void
-Daemons::DeferredQueryReadyReply()
+Daemons::DeferredQueryReadyReply( int /* timerID */ )
 {
 	if (deferred_queries.empty()) {
 		dprintf(D_ALWAYS, "WARNING: DeferredQueryReadyReply called with empty queries list\n");
@@ -2350,7 +2346,7 @@ Daemons::FindDaemon( const char *name )
 
 
 void
-Daemons::CheckForNewExecutable()
+Daemons::CheckForNewExecutable( int /* timerID */ )
 {
 	int found_new = FALSE;
 	std::map<std::string, class daemon*>::iterator iter;
@@ -2503,7 +2499,7 @@ Daemons::CancelRetryStartAllDaemons()
 }
 
 void
-Daemons::RetryStartAllDaemons()
+Daemons::RetryStartAllDaemons( int /* timerID */ )
 {
 	m_retry_start_all_daemons_tid = -1;
 	StartAllDaemons();
@@ -2695,7 +2691,7 @@ Daemons::SetPeacefulShutdown(int timeout)
 void
 Daemons::DoPeacefulShutdown(
 	int             timeout,
-	void (Daemons::*pfn)(void),
+	void (Daemons::*pfn)(int),
 	const char *    lbl)
 {
 	int messages = SetPeacefulShutdown(timeout);
@@ -2715,7 +2711,7 @@ Daemons::DoPeacefulShutdown(
 	// if the shutdown/restart command isn't going to happen on a timer,
 	// then do it now.
 	if ( ! fTimer) {
-		((this)->*(pfn))();
+		((this)->*(pfn))(-1);
 	}
 }
 
@@ -2835,7 +2831,7 @@ Daemons::RestartMaster()
 }
 
 void
-Daemons::RestartMasterPeaceful()
+Daemons::RestartMasterPeaceful( int /* timerID */ )
 {
 	MasterShuttingDown = TRUE;
 	immediate_restart_master = immediate_restart;
@@ -2956,7 +2952,7 @@ Daemons::ExecMaster()
 
 // Function that actually does the restart of the master.
 void
-Daemons::FinalRestartMaster()
+Daemons::FinalRestartMaster( int /* timerID */ )
 {
 	int i;
 	const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
@@ -3469,7 +3465,7 @@ Daemons::Update( ClassAd* ca )
 
 
 void
-Daemons::UpdateCollector()
+Daemons::UpdateCollector( int /* timerID */ )
 {
 	// If we are shutting down, we've already send our invalidation
 	// and we shouldn't further update and un-invalidate or worse,

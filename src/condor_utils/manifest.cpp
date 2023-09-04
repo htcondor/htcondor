@@ -17,10 +17,16 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+#include "safe_fopen.h"
+#include "condor_arglist.h"
+#include "my_popen.h"
+
 #include <string.h>
 #include <string>
 #include <map>
 #include <fstream>
+#include <filesystem>
 
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
@@ -30,8 +36,10 @@
 #include "checksum.h"
 #include "stl_string_utils.h"
 #include "AWSv4-impl.h"
-#include "safe_fopen.h"
 
+#include "shortfile.h"
+
+#include "condor_url.h"
 
 namespace manifest {
 
@@ -172,6 +180,136 @@ validateFilesListedIn(
 	fclose(fp);
 
 	return readOneLine;
+}
+
+bool
+deleteFilesStoredAt(
+  const std::string & checkpointDestination,
+  const std::string & manifestFileName,
+  const std::string & pluginFileName,
+  std::string & error
+) {
+	FILE * fp = safe_fopen_no_create( manifestFileName.c_str(), "r" );
+	if( fp == NULL ) {
+		error = "Failed to open MANIFEST, aborting.";
+		return false;
+	}
+
+	std::filesystem::path pathToManifestFile(manifestFileName);
+	std::filesystem::path fileName = pathToManifestFile.filename();
+
+	std::string manifestLine;
+	for( bool rv = false; (rv = readLine( manifestLine, fp )); ) {
+		trim( manifestLine );
+		std::string file = manifest::FileFromLine( manifestLine );
+
+		// Don't delete the MANIFEST file until we're sure we're done with it.
+		if( fileName.string() == file ) {
+			continue;
+		}
+
+		std::string protocol = getURLType(checkpointDestination.c_str(), false);
+
+		ArgList args;
+		args.AppendArg(pluginFileName);
+		args.AppendArg(protocol);
+		args.AppendArg("-from");
+		args.AppendArg(checkpointDestination);
+		args.AppendArg("-delete");
+		args.AppendArg(file);
+
+		std::string argStr;
+		args.GetArgsStringForLogging( argStr );
+		dprintf( D_FULLDEBUG, "About to run '%s'...\n", argStr.c_str() );
+
+		MyPopenTimer subprocess;
+		int rc = subprocess.start_program( args, subprocess.WITH_STDERR,
+		  nullptr, subprocess.DROP_PRIVS
+		);
+		ASSERT( rc != subprocess.ALREADY_RUNNING );
+
+		if( rc != 0 ) {
+			formatstr( error, "Failed to run '%s': %d (%s), aborting.", argStr.c_str(), rc, subprocess.error_str() );
+			return false;
+		}
+
+		int exit_status;
+		time_t timeout = 20;
+		if(! subprocess.wait_for_exit( timeout, & exit_status )) {
+			const char * output = subprocess.output().data();
+			subprocess.close_program(1);
+
+			formatstr( error, "Timed out after %lu seconds waiting for '%s', aborting.\n", timeout, argStr.c_str() );
+			if( output != NULL ) {
+				formatstr_cat( error, "(Partial output: '%s')\n", output );
+			}
+
+			return false;
+		}
+
+		if( exit_status != 0 ) {
+			const char * output = subprocess.output().data();
+
+			formatstr( error, "Failure running '%s': exit code was %d, aborting.\n", argStr.c_str(), exit_status );
+			if( output != NULL ) {
+				formatstr_cat( error, "(Output: '%s')\n", output );
+			}
+
+			return false;
+		}
+
+		const char * output = subprocess.output().data();
+		if( output != NULL ) {
+			dprintf( D_FULLDEBUG, "Ran '%s', output on next line:\n%s\n", argStr.c_str(), output );
+		}
+	}
+
+	fclose(fp);
+	std::filesystem::remove(pathToManifestFile);
+
+	return true;
+}
+
+bool
+createManifestFor(
+    const std::string & path,
+    const std::string & manifestFileName,
+    std::string & error
+) {
+    std::string manifestText;
+
+    for( const auto & dentry : std::filesystem::recursive_directory_iterator(path) ) {
+        if( dentry.is_directory() || dentry.is_socket() ) { continue; }
+        std::string fileName = dentry.path().string();
+
+        std::string fileHash;
+        if(! compute_file_sha256_checksum( fileName, fileHash )) {
+            formatstr( error, "Failed to compute file (%s) checksum, aborting.\n", fileName.c_str() );
+            return false;
+        }
+
+        formatstr_cat( manifestText, "%s *%s\n", fileHash.c_str(), fileName.c_str() );
+    }
+
+    if(! htcondor::writeShortFile( manifestFileName, manifestText )) {
+        formatstr( error, "Failed write manifest file (%s), aborting.\n", manifestFileName.c_str() );
+        return false;
+    }
+
+    std::string manifestHash;
+    if(! compute_file_sha256_checksum( manifestFileName, manifestHash )) {
+        formatstr( error, "Failed to compute manifest (%s) checksum, aborting.\n", manifestFileName.c_str() );
+        return false;
+    }
+
+    std::string append;
+    formatstr( append, "%s *%s\n", manifestHash.c_str(), manifestFileName.c_str() );
+    if(! htcondor::appendShortFile( manifestFileName, append )) {
+        formatstr( error, "Failed to write manifest checksum to manifest (%s), aborting.\n", manifestFileName.c_str() );
+        return false;
+    }
+
+    return true;
 }
 
 } /* end namespace 'manifest' */
