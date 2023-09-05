@@ -35,3 +35,6 @@ Bugs Fixed:
   batch scheduler was not working.
   :jira:`2003`
 
+- Fixed the Execution Point's detection of whether libvirt is working
+  properly for the VM universe.
+  :jira:`2009`
