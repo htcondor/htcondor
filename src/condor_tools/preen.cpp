@@ -395,6 +395,7 @@ check_spool_dir()
 		"local_univ_execute",
 		"EventdShutdownRate.log",
 		"*OfflineLog*",
+		"*OfflineAds*",
 		// SCHEDD.lock: High availability lock file.  Current
 		// manual recommends putting it in the spool, so avoid it.
 		"SCHEDD.lock",
