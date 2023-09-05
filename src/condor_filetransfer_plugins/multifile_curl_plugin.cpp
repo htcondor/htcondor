@@ -236,6 +236,19 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 		fprintf(stderr, "Can't setopt WRITEDATA\n");
 	}
 
+    const char* capath = getenv("X509_CERT_DIR");
+
+    if (capath != NULL) {
+	        r = curl_easy_setopt( _handle, CURLOPT_SSL_VERIFYPEER, 1L);
+	        if (r != CURLE_OK) {
+	                fprintf(stderr, "Can't setopt SSL_VERIFYPEER\n");
+	        }
+	        r = curl_easy_setopt( _handle, CURLOPT_CAPATH, capath);
+	        if (r != CURLE_OK) {
+	                fprintf(stderr, "Can't setopt CAPATH\n");
+	        }
+    }
+
     std::string token;
 
     // Libcurl options for HTTP, HTTPS and FILE

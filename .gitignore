@@ -285,3 +285,5 @@ src/gpu/condor_gpu_discovery
 src/rvgahp/rvgahp_client
 src/rvgahp/rvgahp_proxy
 src/rvgahp/rvgahp_server
+src/condor_tests/test_classad_funcs
+src/condor_tests/test_for_AwaitableDeadlineReaper.exe
