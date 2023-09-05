@@ -23,13 +23,17 @@ New Features:
 - The ``TargetType`` attribute is no longer a required attribute in most Classads.  It is still used for
   queries to the *condor_collector* and it remains in the Job ClassAd and the Machine ClassAd because
   of older versions of HTCondor.require it to be present.
-  jira:`1997`
+  :jira:`1997`
 
 - The ``-dry-run`` option of *condor_submit* will now print the output of a ``SEC_CREDENTIAL_STORER`` script.
   This can be useful when developing such a script.
-  jira:`2014`
+  :jira:`2014`
 
 Bugs Fixed:
+
+- Fixed a bug where *condor_preen* was deleteing files named '*OfflineAds*' 
+  in the spool directory.
+  :jira:`2019`
 
 - Fixed a bug where the *blahpd* would incorrectly believe that an LSF
   batch scheduler was not working.
