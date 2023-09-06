@@ -133,7 +133,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 		jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
 		// It's annoying if this fails, but not fatal; the directory owner
 		// (job owner) can remove it even if it's still owned by root.
-		(void) chown( jobAdPath.string().c_str(), owner_uid, owner_gid );
+		std::ignore = chown( jobAdPath.string().c_str(), owner_uid, owner_gid );
 	}
 #endif /* ! defined(WINDOWS ) */
 	if( jobAdFile == NULL ) {
