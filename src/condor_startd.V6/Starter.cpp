@@ -1305,7 +1305,20 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 		return true;
 	}
 
-	classy_counted_ptr<DCStarter> starter = new DCStarter(getIpAddr());
+	// If we can't find the complete-with-CCB address, use the socket we
+    // handed to the starter when we created it.  Since the startd is always
+    // local to the starter (until further notice), this should always work.
+    //
+    // Arguably, we shouldn't be using TCP/IP to communicated with our
+    // starters anyway, and even if we must, it should almost certainly
+    // be done over the loopback interface where we hopefully don't have to
+    // fight for port numbers or deal with nearly as many attackers.
+    const char * sinful = getIpAddr();
+    if( sinful == NULL ) {
+        sinful = daemonCore->InfoCommandSinfulString( s_pid );
+    }
+
+    classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
 	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
 
 	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
