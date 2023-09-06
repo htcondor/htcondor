@@ -36,13 +36,7 @@ import struct
 import htcondor
 import classad
 
-try:
-    from colorama import init
-
-    init()
-    HAS_COLORAMA = True
-except ImportError:
-    HAS_COLORAMA = False
+from htcondor._utils.ansii import Color, colorize, can_color
 
 IS_WINDOWS = os.name == "nt"
 
@@ -217,7 +211,7 @@ def parse_args():
         "-no-color",
         action=NegateAction,
         nargs=0,
-        default=sys.stdout.isatty() and (not IS_WINDOWS or HAS_COLORAMA),
+        default=can_color(),
         help="Enable/disable colored output. Enabled by default if connected to a tty. Disabled on Windows if colorama is not available.",
     )
     parser.add_argument(
@@ -548,6 +542,7 @@ def watch_q(
                         row_fmt=row_fmt,
                         alignment=TABLE_ALIGNMENT,
                         fill="-",
+                        color=color,
                     )
                     msg += [""]
 
@@ -958,29 +953,6 @@ def make_rows_from_groups(groups, key, cluster_id_to_nodes_total):
         rows[attribute_value] = row_data
 
     return rows, totals
-
-
-class Color(str, enum.Enum):
-    BLACK = "\033[30m"
-    RED = "\033[31m"
-    BRIGHT_RED = "\033[31;1m"
-    GREEN = "\033[32m"
-    BRIGHT_GREEN = "\033[32;1m"
-    YELLOW = "\033[33m"
-    BRIGHT_YELLOW = "\033[33;1m"
-    BLUE = "\033[34m"
-    BRIGHT_BLUE = "\033[34;1m"
-    MAGENTA = "\033[35m"
-    BRIGHT_MAGENTA = "\033[35;1m"
-    CYAN = "\033[36m"
-    BRIGHT_CYAN = "\033[36;1m"
-    WHITE = "\033[37m"
-    BRIGHT_WHITE = "\033[37;1m"
-    RESET = "\033[0m"
-
-
-def colorize(string, color):
-    return color + string + Color.RESET
 
 
 def determine_row_color(row):
