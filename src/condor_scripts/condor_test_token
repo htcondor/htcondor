@@ -1,5 +1,7 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
+import os
+import sys
 import argparse
 import base64
 import binascii
@@ -10,6 +12,8 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
 import cryptography
+
+import htcondor
 
 # For invoking the scitokens-cpp library
 import cffi
@@ -79,12 +83,36 @@ def init_ffi():
     int scitoken_set_claim_string(void *token, const char *key, const char *value, char **err_msg);
     void scitoken_set_lifetime(void *token, int lifetime);
     int scitoken_serialize(const void *token, char **value, char **err_msg);
+    int scitoken_config_set_str(const char *key, const char *value, char **err_msg);
     """)
     global g_C
     g_C = g_FFI.dlopen(None)
     global g_ST
-    g_ST = g_FFI.dlopen("libSciTokens.0.dylib")
+    lib_filename = "libSciTokens.so.0"
+    if sys.platform == "darwin":
+        lib_filename = "libSciTokens.0.dylib"
+    g_ST = g_FFI.dlopen(lib_filename)
 
+
+def configure_cache(cache):
+    try:
+        if cache == None:
+            # Look up SEC_SCITOKENS_CACHE in condor config
+            cache = htcondor.param["SEC_SCITOKENS_CACHE"]
+        # TODO early-out if cache==None?
+        err_msg = g_FFI.new("char**", g_FFI.NULL)
+        rv = g_ST.scitoken_config_set_str(b"keycache.cache_home", cache.encode(), err_msg)
+        if rv != 0:
+            err_msg_str = "Unknown Error"
+            if err_msg[0] != g_FFI.NULL:
+                err_msg_str = g_FFI.string(err_msg[0]).decode()
+                g_C.free(err_msg[0])
+            raise RuntimeError(err_msg_str)
+    except (AttributeError):
+        # TODO ModuleNotFoundError: can't find htcondor module
+        #      KeyError: can't find SEC_SCITOKENS_CACHE param
+        pass
+    return 0
 
 def get_cached_jwks(issuer):
     jwks_result = g_FFI.new("char**", g_FFI.NULL)
@@ -135,9 +163,9 @@ def inject_key(issuer, private_key):
     set_jwks(issuer, jwks)
 
 
-def configure_token(token, issuer, subject, lifetime):
+def configure_token(token, args):
     err_msg = g_FFI.new("char**", g_FFI.NULL)
-    rv = g_ST.scitoken_set_claim_string(token, b"iss", issuer.encode(), err_msg)
+    rv = g_ST.scitoken_set_claim_string(token, b"iss", args.issuer.encode(), err_msg)
     if rv != 0:
        err_msg_str = "Unknown Error"
        if err_msg[0] != g_FFI.NULL:
@@ -145,19 +173,40 @@ def configure_token(token, issuer, subject, lifetime):
            g_C.free(err_msg[0])
        raise RuntimeError(err_msg_str)
 
-    err_msg = g_FFI.new("char**", g_FFI.NULL)
-    rv = g_ST.scitoken_set_claim_string(token, b"sub", subject.encode(), err_msg)
-    if rv != 0:
-       err_msg_str = "Unknown Error"
-       if err_msg[0] != g_FFI.NULL:
-           err_msg_str = g_FFI.string(err_msg[0]).decode()
-           g_C.free(err_msg[0])
-       raise RuntimeError(err_msg_str)
+    if args.subject is not None:
+        err_msg = g_FFI.new("char**", g_FFI.NULL)
+        rv = g_ST.scitoken_set_claim_string(token, b"sub", args.subject.encode(), err_msg)
+        if rv != 0:
+            err_msg_str = "Unknown Error"
+            if err_msg[0] != g_FFI.NULL:
+                err_msg_str = g_FFI.string(err_msg[0]).decode()
+                g_C.free(err_msg[0])
+            raise RuntimeError(err_msg_str)
 
-    g_ST.scitoken_set_lifetime(token, lifetime)
+    if args.scope is not None:
+        err_msg = g_FFI.new("char**", g_FFI.NULL)
+        rv = g_ST.scitoken_set_claim_string(token, b"scope", args.scope.encode(), err_msg)
+        if rv != 0:
+            err_msg_str = "Unknown Error"
+            if err_msg[0] != g_FFI.NULL:
+                err_msg_str = g_FFI.string(err_msg[0]).decode()
+                g_C.free(err_msg[0])
+            raise RuntimeError(err_msg_str)
+
+    if args.audience is not None:
+        err_msg = g_FFI.new("char**", g_FFI.NULL)
+        rv = g_ST.scitoken_set_claim_string(token, b"aud", args.audience.encode(), err_msg)
+        if rv != 0:
+            err_msg_str = "Unknown Error"
+            if err_msg[0] != g_FFI.NULL:
+                err_msg_str = g_FFI.string(err_msg[0]).decode()
+                g_C.free(err_msg[0])
+            raise RuntimeError(err_msg_str)
+
+    g_ST.scitoken_set_lifetime(token, args.lifetime)
 
 
-def create_token(issuer, subject, lifetime, private_key):
+def create_token(args, private_key):
     err_msg = g_FFI.new("char**", g_FFI.NULL)
     key = g_FFI.new("void**")
     key[0] = g_ST.scitoken_key_create(generate_key_id(private_key).encode(),
@@ -170,7 +219,7 @@ def create_token(issuer, subject, lifetime, private_key):
     token[0] = g_ST.scitoken_create(key[0])
 
     try:
-        configure_token(token[0], issuer, subject, lifetime)
+        configure_token(token[0], args)
         value = g_FFI.new("char**", g_FFI.NULL)
         rv = g_ST.scitoken_serialize(token[0], value, err_msg)
         if rv == 0:
@@ -188,15 +237,23 @@ def create_token(issuer, subject, lifetime, private_key):
         g_ST.scitoken_key_destroy(key[0])
 
 def parse_args():
-    usage = "usage: %prog [options]"
+    usage = "%(prog)s [options]"
     parser = argparse.ArgumentParser(usage=usage)
     parser.add_argument("-i", "--issuer",
+                        required=True,
                         help="Issuer URL to use for new token")
     parser.add_argument("-s", "--subject",
                         help="Subject to use for new token")
     parser.add_argument("-l", "--lifetime",
                         type=int, default=60*60,
                         help="Lifetime (in seconds) for new token")
+    parser.add_argument("-S", "--scope",
+                        required=True,
+                        help="Scope to use for new token")
+    parser.add_argument("-a", "--audience",
+                        help="Audience to use for new token")
+    parser.add_argument("-c", "--cache",
+                        help="Location of cache directory")
     return parser.parse_args()
 
 
@@ -204,12 +261,13 @@ def main():
     args = parse_args()
     init_ffi()
 
+    configure_cache(args.cache)
     private_key = generate_private_key()
     inject_key(args.issuer, private_key)
 
     private_pem = generate_private_key_pem(private_key)
 
-    print(create_token(args.issuer, args.subject, args.lifetime, private_key))
+    print(create_token(args, private_key))
 
 if __name__ == '__main__':
     main()
