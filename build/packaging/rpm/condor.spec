@@ -512,6 +512,9 @@ make -C docs man
 %define condor_build_id UW_development
 %endif
 
+# Any changes here should be synchronized with
+# ../debian/rules 
+
 %cmake3 \
 %if %uw_build
        -DBUILDID:STRING=%condor_build_id \

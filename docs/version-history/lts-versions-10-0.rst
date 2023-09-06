@@ -31,6 +31,10 @@ Bugs Fixed:
 - Fixed an issue for the PPC build with misaligned pointers in the config system.
   :jira:`2001`
 
+- Fixed :mod:`htcondor.htchirp` to find its configuration at `_CONDOR_CHIRP_CONFIG`
+  instead of at `_CONDOR_SCRATCH_DIR/.chirp.config`.
+  :jira:`2012`
+
 .. _lts-version-history-1008:
 
 Version 10.0.8
