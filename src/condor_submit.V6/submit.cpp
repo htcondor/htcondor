@@ -2724,7 +2724,7 @@ int process_job_credentials()
 				fprintf(stderr, "\nWARNING: SEC_CREDENIAL_STORER=%s did not exit", storer.c_str());
 			}
 			if (DashDryRun && pgm.output_size()) {
-				fprintf(stdout, "::SEC_CREDENTIAL_STORER=%s exit=%d, output:\n%", storer.c_str(), exit_status);
+				fprintf(stdout, "::SEC_CREDENTIAL_STORER=%s exit=%d, output:\n", storer.c_str(), exit_status);
 				std::string line;
 				while (pgm.output().readLine(line)) { fputs(line.c_str(), stdout); }
 				fprintf(stdout, "::end of SEC_CREDENTIAL_STORER output\n");
