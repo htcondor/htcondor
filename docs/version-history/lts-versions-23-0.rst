@@ -31,6 +31,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that would cause the *condor_startd* to crash in rare cases
+  when jobs go on hold
+  :jira:`2016`
+
 - Fixed a bug where *condor_preen* was deleteing files named '*OfflineAds*' 
   in the spool directory.
   :jira:`2019`
