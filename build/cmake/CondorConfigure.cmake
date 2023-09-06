@@ -560,7 +560,6 @@ if("${OS_NAME}" STREQUAL "LINUX")
 
     if (HAVE_XSS_H)
 	  find_library(HAVE_XSS Xss)
-	  find_library(HAVE_XEXT Xext)
 	endif()
 
     check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
