@@ -956,7 +956,7 @@ fi
 
 # Do the actual rsync
 # Delete any old files, but save everything in the sanbdox directory.
-show_progress "Installing on cluster $remote_host" rsync --delete "--filter=protect sandbox/*" -aqK -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path" "$local_install_dir" $remote_host:
+show_progress "Installing on cluster $remote_host" rsync --delete "--filter=protect sandbox/*" "--filter=protect .nfs*" -aqK -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path" "$local_install_dir" $remote_host:
 exit_code=$?
 
 rm -rf $tmp_install_dir
