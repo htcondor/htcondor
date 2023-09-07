@@ -2721,10 +2721,10 @@ int process_job_credentials()
 			bool exited = pgm.wait_for_exit(timeout, &exit_status);
 			pgm.close_program(1); // close fp, wait 1 sec, then SIGKILL (does nothing if program already exited)
 			if ( ! exited) {
-				fprintf(stderr, "\nWARNING: SEC_CREDENIAL_STORER=%s did not exit", storer.c_str());
+				fprintf(stderr, "\nWARNING: SEC_CREDENIAL_STORER=%s did not exit\n", storer.c_str());
 			}
 			if (DashDryRun && pgm.output_size()) {
-				fprintf(stdout, "::SEC_CREDENTIAL_STORER=%s exit=%d, output:\n%", storer.c_str(), exit_status);
+				fprintf(stdout, "::SEC_CREDENTIAL_STORER=%s exit=%d, output:\n", storer.c_str(), exit_status);
 				std::string line;
 				while (pgm.output().readLine(line)) { fputs(line.c_str(), stdout); }
 				fprintf(stdout, "::end of SEC_CREDENTIAL_STORER output\n");

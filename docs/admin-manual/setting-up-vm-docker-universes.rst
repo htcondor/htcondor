@@ -271,10 +271,10 @@ local machine. This number may be controlled with the configuration variable
 :macro:`DOCKER_IMAGE_CACHE_SIZE`, to increase or decrease the number of images,
 and the corresponding disk space, used by Docker.
 
-By default, Docker containers will be run with all rootly capabilties dropped,
+By default, Docker containers will be run with all rootly capabilities dropped,
 and with setuid and setgid binaries disabled, for security reasons. If you need
-to run containers with root privilige, you may set the configuration parameter
-:macro:`DOCKER_DROP_ALL_CAPABILITIES` to an expression that evalutes to false.
+to run containers with root privilege, you may set the configuration parameter
+:macro:`DOCKER_DROP_ALL_CAPABILITIES` to an expression that evaluates to false.
 This expression is evaluted in the context of the machine ad (my) and the job
 ad (target).
 

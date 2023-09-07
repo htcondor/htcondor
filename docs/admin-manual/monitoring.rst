@@ -204,7 +204,7 @@ Recognized metric attribute names and their use:
     ``Machine`` in order to make the IP value unique to each instance of
     HTCondor running on the same host.
  Lifetime
-    A postive integer value representing the max number of seconds
+    A positive integer value representing the max number of seconds
     without updating a metric will be kept before deletion. This is
     represented in ganglia as DMAX. If no Lifetime is defined for a
     metric then the default value will be set to a calculated value
