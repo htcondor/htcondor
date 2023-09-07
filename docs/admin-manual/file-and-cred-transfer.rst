@@ -202,7 +202,7 @@ send it along with your job by including the following in the submit file:
 When the job arrives at an exeuction point, it will know to use the plugin
 script provided to transfer these URLs. If your ``custommethod://`` protocol
 is already supported at your execution point, the plugin provided in your
-submit file will take predence.
+submit file will take precedence.
 
 Enabling the Transfer of Public Input Files over HTTP
 -----------------------------------------------------
@@ -297,7 +297,7 @@ storage.  Each method uses a separate credmon implementation and rpm
 and have their own advantages and disadvantages.
 
 If the native OAuth client is used with a remote token issuer, then each
-time a new refresh token is needed the user has to reauthorize it through
+time a new refresh token is needed the user has to re-authorize it through
 a web browser.  An hour after all jobs of a user are stopped (by default),
 the refresh tokens are deleted.  If the client is used with the native
 token issuer is used, then no web browser authorizations are needed but
@@ -311,7 +311,7 @@ use) for multiple use cases.  It can be used both by multiple HTCondor
 access points and by other client commands that need access tokens.
 Submit machines keep a medium term vault token (typically about a week)
 so at most users have to authorize in their web browser once a week.  If
-kerberos is also available, new vault tokens can be obtained automatically
+Kerberos is also available, new vault tokens can be obtained automatically
 without any user intervention.  The HTCondor vault credmon also stores a
 longer lived vault token for use as long as jobs might run.
 
