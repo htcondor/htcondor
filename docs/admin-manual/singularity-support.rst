@@ -114,7 +114,7 @@ above, A complete submit file that uses singularity might look like
      Request_cpus = 1
 
      should_transfer_files = yes
-     tranfer_input_files = some_input
+     transfer_input_files = some_input
      when_to_transfer_output = on_exit
 
      log = log
@@ -142,7 +142,7 @@ directory, the submit file would look like:
      Request_cpus = 1
 
      should_transfer_files = yes
-     tranfer_input_files = image
+     transfer_input_files = image
      when_to_transfer_output = on_exit
 
      log = log
