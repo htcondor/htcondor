@@ -1869,7 +1869,7 @@ check:
 +---------------------------------------+
 |:macro:`SEC_READ_INTEGRITY`            |
 +---------------------------------------+
-|:macro:`SEC_WRITE_INTEGRITY`            |
+|:macro:`SEC_WRITE_INTEGRITY`           |
 +---------------------------------------+
 |:macro:`SEC_ADMINISTRATOR_INTEGRITY`   |
 +---------------------------------------+
