@@ -120,6 +120,10 @@ Bugs Fixed:
   properly installed as executable.
   :jira:`1984`
 
+- Fixed a bug where *condor_remote_cluster* could get stuck in a loop
+  while installing files into an NFS directory.
+  :jira:`2023`
+
 Version 10.7.1
 --------------
 
