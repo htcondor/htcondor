@@ -29,6 +29,11 @@ New Features:
   This can be useful when developing such a script.
   jira:`2014`
 
+- Added new tool *condor_test_token*, which will create a SciToken
+  with configurable contents (including issuer) which will be accepted
+  for a short period of time by the local HTCondor daemons.
+  :jira:`1115`
+
 Bugs Fixed:
 
 - Fixed a bug where the *blahpd* would incorrectly believe that an LSF
