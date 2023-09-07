@@ -459,7 +459,7 @@ As of version 8.9.4, HTCondor only issues ToE in three cases:
 - when the job terminates of its own accord (issued by the starter,
   ``HowCode`` 0);
 - and when the startd terminates the job because it received a
-  ``DEACTIVATE_CLAIM`` commmand (``HowCode`` 1)
+  ``DEACTIVATE_CLAIM`` command (``HowCode`` 1)
 - or a ``DEACTIVATE_CLAIM_FORCIBLY`` command (``HowCode`` 2).
 
 In both cases, HTCondor records the ToE in the job ad.  In the event
