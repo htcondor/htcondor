@@ -3315,12 +3315,28 @@ QmgmtSetEffectiveOwner(char const *o)
 	if (o) {
 		urec = scheduler.lookup_owner_const(o);
 		if ( ! urec) {
-			dprintf(D_ALWAYS, "SetEffectiveOwner security violation: No User record named %s\n", o);
-		} else if (urec == real_urec) {
+			if (allow_submit_from_known_users_only || Q_SOCK->getReadOnly()) {
+				dprintf(D_ALWAYS, "SetEffectiveOwner(): fail because no User record for %s\n", o);
+				errno = EACCES;
+				return -1;
+			} else {
+				// create user a user record for a new submitter
+				// the insert_owner_const will make a pending user record
+				// which we then add to the current transaction by calling MakeUserRec
+				urec = scheduler.insert_owner_const(o);
+				if ( ! MakeUserRec(urec, true)) {
+					dprintf(D_ALWAYS, "SetEffectiveOwner(): failed to create new User record for %s\n", o);
+					errno = EACCES;
+					return -1;
+				}
+			}
+		}
+		if (urec == real_urec) {
 			// myself, but without superuser perms. I'll allow it.
 		} else {
+			std::string buf;
 			bool is_super = real_urec && real_urec->IsSuperUser();
-			bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(o);
+			bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(name_of_user(o, buf));
 			if( !is_super || !is_allowed_owner)
 			{
 				if ( ! is_allowed_owner) {
