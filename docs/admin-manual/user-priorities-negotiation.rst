@@ -803,7 +803,7 @@ against a *condor_collector*, and still consider it one pool.
 In such a scenario, each *condor_negotiator* is responsible for some
 non-overlapping partition of the slots in the pool.  This might be for
 performance -- if you have more than 100,000 slots in the pool, you may need to
-shard this pool into several smaller setions in order to lower the time each
+shard this pool into several smaller sections in order to lower the time each
 negotiator spends.  Because accounting is done at the the negotiator level, you
 may want to do this to have separate accounting and distinct fair share between
 different kinds of machines in your pool.  For example, let's say you have some
@@ -813,7 +813,7 @@ would be to have a separate negotiator for the GPU machines vs the non-GPU
 machines.   At Wisconsin, we have a separate, small subset of our pool for
 quick-starting interactive jobs.  By allocating a negotiator to only negotiate
 for these few machines, we can speed up the time to match these machines to
-interative users who submit with *condor_submit -i*.
+interactive users who submit with *condor_submit -i*.
 
 Sharding the negotiator is straightforward.  Simply add the NEGOTIATOR entry to
 the :macro:`DAEMON_LIST` on an additional machine.  While is is possible to run
