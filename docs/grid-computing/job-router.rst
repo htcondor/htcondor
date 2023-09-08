@@ -498,6 +498,10 @@ may appear in a Routing Table entry.
 
 Deprecated router configuration
 ---------------------------------------
+.. warning::
+    The deprecated job router configuration macro JOB_ROUTER_DEFAULTS will
+    be removed during the lifetime of the HTCondor V23 feature series in
+    preparation of HTCondor V24.
 
 Prior to version 8.9.7 the *condor_job_router* used a list of ClassAds
 to configure the routes. This form of configuration is still supported.
@@ -575,6 +579,11 @@ so routes were normally given mutually exclusive requirements.
 
 Deprecated Routing Table Entry ClassAd Attributes
 ------------------------------------------------------
+.. warning::
+    The deprecated job router configuration macros JOB_ROUTER_ENTRIES,
+    JOB_ROUTER_ENTRIES_FILE, and JOB_ROUTER_ENTRIES_CMD will be removed
+    during the lifetime of the HTCondor V23 feature series in preparation
+    of HTCondor V24.
 
 In the deprecated *condor_job_router* configuration, each route is the
 result of merging the `JOB_ROUTER_DEFAULTS` ClassAd with one of the
