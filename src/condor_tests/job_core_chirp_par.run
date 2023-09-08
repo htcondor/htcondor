@@ -69,6 +69,7 @@ my $firstappend_condor_config = "
 	SCHEDD_DEBUG = D_FULLDEBUG
 	SCHEDD_NAME = schedd$mypid$version
 	NUM_CPUS = 8
+	use FEATURE : StaticSlots
 	SUSPEND = FALSE
 ";
  
