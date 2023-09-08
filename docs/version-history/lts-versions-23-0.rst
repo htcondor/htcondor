@@ -5,6 +5,13 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
 23.0.y versions. New features will be added in the 23.x.y feature versions.
 
+.. warning::
+    The configuration macros JOB_ROUTER_DEFAULTS, JOB_ROUTER_ENTRIES, JOB_ROUTER_ENTRIES_CMD,
+    and JOB_ROUTER_ENTRIES_FILE are deprecated and will be removed for V24 of HTCondor. New
+    configuration syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and
+    JOB_ROUTER_ROUTE_<name>. Note: The removal will occur during the lifetime of the
+    HTCondor V23 feature series.
+
 The details of each version are described below.
 
 .. _lts-version-history-2300:
@@ -28,6 +35,7 @@ New Features:
 - The ``-dry-run`` option of *condor_submit* will now print the output of a ``SEC_CREDENTIAL_STORER`` script.
   This can be useful when developing such a script.
   :jira:`2014`
+
 
 Bugs Fixed:
 
