@@ -87,7 +87,7 @@ class TestChirpToDAGMan:
             begin = time()
             for event in log.events(stop_after=None):
                 if event.type is htcondor.JobEventType.GENERIC:
-                    info = event.get("Info")
+                    info = event.get("Info", "")
                     break
                 assert time() - begin < 30
         assert info == "In both job & DAGMan logs?"
@@ -101,7 +101,7 @@ class TestChirpToDAGMan:
             begin = time()
             for event in log.events(stop_after=None):
                 if event.type is htcondor.JobEventType.GENERIC:
-                    info = event.get("Info")
+                    info = event.get("Info", "")
                     if "Error" in info:
                         print(f"\nUnexpected chirp message: {info}")
                     elif info in expected_msgs:
