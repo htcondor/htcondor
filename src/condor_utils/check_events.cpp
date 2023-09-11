@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "check_events.h"
 #include "read_multiple_logs.h"
+#include "stl_string_utils.h"
 
 //-----------------------------------------------------------------------------
 
