@@ -161,6 +161,10 @@ const char * SlotType::type_param(const char * name)
 	for (size_t ix = 0; ix < types.size(); ++ix) { types[ix].clear(); }
 	warned_startd_attrs_once = false; // allow the warning about mixing STARTD_ATTRS and STARTD_EXPRS once again
 
+	// default SLOT_TYPE_0_PARTITIONABLE to true
+	// we do this here rather than in the param table so it will not be visible to config_val
+	types[0].params["PARTITIONABLE"] = "true";
+
 	Regex re;
 	int errcode = 0, erroffset = 0;
 	ASSERT(re.compile("^SLOT_TYPE_[0-9]+", &errcode, &erroffset, PCRE2_CASELESS));
