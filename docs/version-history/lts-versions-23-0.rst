@@ -20,6 +20,11 @@ Release Notes:
 
 New Features:
 
+- A *condor_startd* without any slot types defined will now default to a single partitionable slot rather
+  than a number of static slots equal to the number of cores as it was in previous versions.
+  The configuration template ``use FEATURE : StaticSlots`` was added for admins wanting the old behavior.
+  :jira:`2026`
+
 - The ``TargetType`` attribute is no longer a required attribute in most Classads.  It is still used for
   queries to the *condor_collector* and it remains in the Job ClassAd and the Machine ClassAd because
   of older versions of HTCondor.require it to be present.
