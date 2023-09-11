@@ -2551,9 +2551,9 @@ void Resource::publish_static(ClassAd* cap)
 		cap->Update(r_attr->get_mach_attr()->machres_attrs());
 
 		// advertise the slot type id number, as in SLOT_TYPE_<N>
-		cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type());
+		//cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type());
 		// advertise slot type id, but don't treat negative as a signal for "dynamic"
-		//cap->Assign(ATTR_SLOT_TYPE_ID, (r_attr->type() < 0) ? -(r_attr->type()) : r_attr->type() );
+		cap->Assign(ATTR_SLOT_TYPE_ID, (r_attr->type() < 0) ? -(r_attr->type()) : r_attr->type() );
 
 		switch (get_feature()) {
 		case PARTITIONABLE_SLOT:
