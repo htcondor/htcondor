@@ -765,7 +765,7 @@ def usage():
     )
     format_print("Options:", newline=True, offset=8)
     format_print("-h/-help         Display Usage", offset=12)
-    format_print("-p/-previous     Check previous incomatabilites between V9 & V10")
+    format_print("-p/-previous     Check previous incomatabilites between V9 & V10", offset=12)
     format_print("-ce              This host is an HTCondor-CE", offset=12)
     format_print("-ignore-pcre2    Skip checking PCRE2 incompatability", offset=12)
     format_print("-ignore-token    Skip checking IDTokens incompatability", offset=12)
