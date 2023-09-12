@@ -296,7 +296,8 @@ main_pre_dc_init( int argc, char* argv[] )
 		// exit, without going back to daemoncore or anything.  we
 		// need to do this *after* we set get_mySubSystem(), since this ends
 		// up calling functions that rely on it being defined...  
-	if( argc == 2 && strncasecmp(argv[1],"-cla",4) == MATCH ) {
+	bool is_hawkeye = strncasecmp(argv[1],"-hawk",4) == MATCH;
+	if( argc == 2 && ((strncasecmp(argv[1],"-cla",4) == MATCH) || is_hawkeye) ) {
 			// needed for Java stuff
 		config_ex(CONFIG_OPT_WANT_QUIET);
 
@@ -321,6 +322,9 @@ main_pre_dc_init( int argc, char* argv[] )
 		dprintf_config(get_mySubSystem()->getName());
 
 		printClassAd();
+		if (is_hawkeye) {
+			printf("- update:true\n");
+		}
 		exit(0);
 	}
 
