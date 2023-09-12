@@ -718,6 +718,32 @@ def check_desktop_policy():
     return 0
 
 
+def check_pslot_default():
+    """Check for use of RANK in startd config due to incompatibility with
+       P-Slots on by default in V23.0.0"""
+    htc_version = htcondor.param["CONDOR_VERSION"].split(".")
+    htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
+    if htc_version >= (23, 0, 0):
+        return 0
+    for key in htcondor.param.keys():
+        if "SLOT_TYPE_" in key:
+            return 0
+    rank = htcondor.param.get("RANK")
+    if rank is None:
+        pass
+    else:
+        try:
+            temp = float(rank)
+        except ValueError:
+            format_print("Issue found with StartD Rank:", newline=True)
+            format_print("Partitionable Slot is turned on by default in V23.0.0 of", offset=4)
+            format_print(f"HTCondor. This makes the configuration 'RANK = {rank}'", offset=4)
+            format_print("inconsequential. To continue having RANK be applied to jobs", offset=4)
+            format_print("ran on this EP configure the use of Static slots by adding", offset=4)
+            format_print("eiter custom Slot Types or 'use FEATURE:StaticSlots'.", offset=4)
+            return 1
+    return 0
+
 def usage():
     """Print Script Usage"""
     format_print("HTCondor Upgrade Incompatabilities Script", newline=True)
@@ -766,6 +792,7 @@ def main():
     num_gotchas += warn_user_records()
     num_gotchas += warn_job_router_syntax_deprecation()
     num_gotchas += check_desktop_policy()
+    num_gotchas += check_pslot_default()
     if not do_prev and num_gotchas == 0:
         format_print("*** No incompatibilites found ***", newline=True, offset=8)
     if do_prev:
