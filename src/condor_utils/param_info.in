@@ -6421,6 +6421,15 @@ default : @end
 	SLOT_TYPE_$(1:1)=$(2+:100%)
 @end
 
+[$FEATURE.StaticSlots]
+description=Configure a set of Static slots, args:([type# [num [, allocation]]])  default: 1, $(NUM_CPUS), 1/$(NUM_CPUS)
+default : @end
+	NUM_SLOTS_TYPE_$(1:1)=$(2:$(NUM_CPUS))
+	SLOT_TYPE_$(1:1)_PARTITIONABLE=false
+	SLOT_TYPE_$(1:1)=$(3+:1/$(NUM_SLOTS_TYPE_$(1:1)))
+	SLOT_TYPE_$(1:1)=$(3+)
+@end
+
 [$FEATURE.OneShotCronHook]
 description=Configure a OneShot Cron Hook, args:(STARTD_CRON | SCHEDD_CRON, tag, hook_exe [,hook_args])
 default : @end

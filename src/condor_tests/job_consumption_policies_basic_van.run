@@ -105,10 +105,9 @@ sub timed_callback {
     if ($negotiate_test_passed_or_failed && !$slot_test_passed_or_failed) {
         # notice I'm ignoring Disk - it's hard to check disk directly because you have to use a 
         # percentage or fraction, and that means I can't know ahead of time how much disk to expect
-        #my @res = `condor_status -constraint "SlotTypeID > 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
 		my @res = ();
 		my $result = 0;
-		$result = runCondorTool("condor_status -constraint \"SlotTypeID > 0\" -af SlotTypeID SlotWeight Cpus Memory Tokens",\@res,2,{emit_output=>1});
+		$result = runCondorTool("condor_status -constraint \"DynamicSlot =!= true\" -af SlotTypeID SlotWeight Cpus Memory Tokens",\@res,2,{emit_output=>1});
         my %hist = ();
         foreach $rec (@res) {
             fullchomp($rec);
@@ -120,10 +119,9 @@ sub timed_callback {
             }
         }
 
-        #my @res2 = `condor_status -constraint "SlotTypeID < 0" -af SlotTypeID SlotWeight Cpus Memory Tokens`;
 		my @res2 = ();
 		my $result2 = 0;
-		$result2 = runCondorTool("condor_status -constraint \"SlotTypeID < 0\" -af SlotTypeID SlotWeight Cpus Memory Tokens",\@res2,2,{emit_output=>1});
+		$result2 = runCondorTool("condor_status -constraint DynamicSlot -af SlotTypeID SlotWeight Cpus Memory Tokens",\@res2,2,{emit_output=>1});
         my %hist2 = ();
         foreach $rec (@res2) {
             fullchomp($rec);
@@ -137,7 +135,8 @@ sub timed_callback {
 
         my $sz = scalar keys %hist;
         my $sz2 = scalar keys %hist2;
-        if (($sz == 4) && ($hist{"1 0 0 95 0"} == 1) && ($hist{"2 0 1 0 0"} == 1) && ($hist{"3 0 2 97 0"} == 1) && ($hist{"4 0 0 0 0"} == 1) && ($sz2 == 4) && ($hist2{"-1 1 1 1 0"} == 5) && ($hist2{"-2 1 1 25 0"} == 4) && ($hist2{"-3 1 1 1 1"} == 3) && ($hist2{"-4 5 5 100 0"} == 1)) {
+        if (($sz == 4) && ($hist{"1 0 0 95 0"} == 1) && ($hist{"2 0 1 0 0"} == 1) && ($hist{"3 0 2 97 0"} == 1) && ($hist{"4 0 0 0 0"} == 1)
+            && ($sz2 == 4) && ($hist2{"1 1 1 1 0"} == 5) && ($hist2{"2 1 1 25 0"} == 4) && ($hist2{"3 1 1 1 1"} == 3) && ($hist2{"4 5 5 100 0"} == 1)) {
             print "slot test passed\n";
             $slot_test_passed_or_failed = 1;
         } elsif (scalar(@res2) == 13) {

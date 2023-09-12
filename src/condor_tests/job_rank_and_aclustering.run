@@ -35,6 +35,7 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 	WANT_SUSPEND = FALSE
 	ALL_DEBUG = D_FULLDEBUG
 	NUM_CPUS = 5
+	use FEATURE : StaticSlots
 	STARTD_ATTRS = $(STARTD_ATTRS) MachineDataSet
 	SLOT1_MachineDataSet = "S00"
 	SLOT2_MachineDataSet = "S01"

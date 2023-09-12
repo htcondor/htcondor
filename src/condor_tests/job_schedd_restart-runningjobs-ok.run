@@ -30,6 +30,7 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
     WANT_SUSPEND = FALSE
     ALL_DEBUG = D_FULLDEBUG
     NUM_CPUS = 6
+    use FEATURE : StaticSlots
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 

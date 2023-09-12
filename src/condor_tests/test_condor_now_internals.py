@@ -24,6 +24,7 @@ logger.setLevel(logging.DEBUG)
 def condor_config():
     config = {
         "NUM_CPUS": 2,
+        "SLOT_TYPE_0_PARTITIONABLE": "false",
         "SCHEDD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST",
     }
     raw_config = None
