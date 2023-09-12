@@ -720,7 +720,7 @@ def check_desktop_policy():
 
 def check_pslot_default():
     """Check for use of RANK in startd config due to incompatibility with
-       P-Slots on by default in V23.0.0"""
+    P-Slots on by default in V23.0.0"""
     htc_version = htcondor.param["CONDOR_VERSION"].split(".")
     htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
     if htc_version >= (23, 0, 0):
@@ -736,13 +736,24 @@ def check_pslot_default():
             temp = float(rank)
         except ValueError:
             format_print("Issue found with StartD Rank:", newline=True)
-            format_print("Partitionable Slot is turned on by default in V23.0.0 of", offset=4)
-            format_print(f"HTCondor. This makes the configuration 'RANK = {rank}'", offset=4)
-            format_print("inconsequential. To continue having RANK be applied to jobs", offset=4)
-            format_print("ran on this EP configure the use of Static slots by adding", offset=4)
-            format_print("eiter custom Slot Types or 'use FEATURE:StaticSlots'.", offset=4)
+            format_print(
+                "Partitionable Slot is turned on by default in V23.0.0 of", offset=4
+            )
+            format_print(
+                f"HTCondor. This makes the configuration 'RANK = {rank}'", offset=4
+            )
+            format_print(
+                "inconsequential. To continue having RANK be applied to jobs", offset=4
+            )
+            format_print(
+                "ran on this EP configure the use of static slots by adding", offset=4
+            )
+            format_print(
+                "either custom slot types or 'use FEATURE:StaticSlots'.", offset=4
+            )
             return 1
     return 0
+
 
 def usage():
     """Print Script Usage"""
