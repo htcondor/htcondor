@@ -38,6 +38,7 @@ my $firstappend_condor_config = '
 	WANT_SUSPEND = False
 	KILL = FALSE
 	NUM_CPUS = 2
+	use FEATURE : StaticSlots
 	MASTER_UPDATE_INTERVAL = 2
 ';
 
@@ -52,6 +53,7 @@ my $secondappend_condor_config = '
 	STARTD_NAME = master_remote
 	MASTER_NAME = master_remote
 	NUM_CPUS = 4
+	use FEATURE : StaticSlots
 	MASTER_UPDATE_INTERVAL = 2
 ';
 

@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -24,6 +23,13 @@ use CondorUtils;
 
 use Cwd;
 use Sys::Hostname;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	# test assumes slots have constant memory size
+	use FEATURE : STATICSLOTS
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 $cmd = 'job_core_macros-dollardollar_van.cmd';
 $testdesc =  'condor_submit macros - vanilla U';
@@ -93,7 +99,7 @@ $success = sub
 		RegisterResult(0,"test_name", $testname);
 	} else {
 		RegisterResult(1,"test_name", $testname);
-		print "Good got Mermory from machine ads:$machinemem\n";
+		print "Good got Memory from machine ads:$machinemem\n";
 	}
 	
 	if(defined $wontbethere) {

@@ -1707,22 +1707,23 @@ and disk space will be divided for use by the slots. There are two main
 ways to go about dividing the resources of a multi-core machine:
 
 Evenly divide all resources.
-    By default, the *condor_startd* will automatically divide the
-    machine into slots, placing one core in each slot, and evenly
-    dividing all shared resources among the slots. The only
-    specification may be how many slots are reported at a time. By
-    default, all slots are reported to HTCondor.
+    Prior to HTCondor 23.0 the *condor_startd* will automatically divide the
+    machine into multiple slots by default, placing one core in each slot, and evenly
+    dividing all shared resources among the slots. Beginning with HTCondor 23.0
+    the *condor_startd* will create a single partitionable slot by default.
 
-    How many slots are reported at a time is accomplished by setting the
-    configuration variable :macro:`NUM_SLOTS` to the
-    integer number of slots desired. If variable ``NUM_SLOTS`` is not
-    defined, it defaults to the number of cores within the machine.
-    Variable ``NUM_SLOTS`` may not be used to make HTCondor advertise
+    In HTCondor 23.0 you can use the configuration template ``use FEATURE : StaticSlots``
+    to configure a number of static slots. If used without arguments this
+    configuration template will define a number of single core static slots equal to
+    the number of detected cpu cores.
+
+    To simply configure static slots in any version, configure :macro:`NUM_SLOTS` to the
+    integer number of slots desired. ``NUM_SLOTS`` may not be used to make HTCondor advertise
     more slots than there are cores on the machine. The number of cores
     is defined by :macro:`NUM_CPUS`.
 
 Define slot types.
-    Instead of an even division of resources per slot, the machine may
+    Instead of the default slot configuration, the machine may
     have definitions of slot types, where each type is provided with a
     fraction of shared system resources. Given the slot type definition,
     control how many of each type are reported at any given time with
