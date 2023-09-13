@@ -9054,6 +9054,15 @@ int SubmitHash::query_universe(std::string & sub_type, const char * & topping)
 	} else if (uni == CONDOR_UNIVERSE_VM) {
 		sub_type = submit_param_string(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
 		lower_case(sub_type);
+	} else if (uni == CONDOR_UNIVERSE_VANILLA) {
+		if ( ! topping) {
+			// set the implicit container universe topping
+			std::string str;
+			if (submit_param_exists(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE, str) ||
+				submit_param_exists(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE, str)) {
+				topping = "container";
+			}
+		}
 	}
 
 	return uni;
@@ -9094,7 +9103,8 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 
 	// if submit file has no universe command, and the effective universe is a topping
 	// we want to put the topping into the digest to simplify things for the schedd
-	if ( ! param_defined(SUBMIT_KEY_Universe)) {
+	std::string str;
+	if ( ! submit_param_exists(SUBMIT_KEY_Universe, ATTR_JOB_UNIVERSE, str)) {
 		std::string sub_type;
 		const char * topping = nullptr;
 		if (query_universe(sub_type, topping) == CONDOR_UNIVERSE_VANILLA && topping) {
