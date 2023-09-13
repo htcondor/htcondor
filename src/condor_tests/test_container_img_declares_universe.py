@@ -103,8 +103,10 @@ def run_late_materialization(condor, test_dir, path_to_sleep, request):
     condor.job_queue.wait_for_events(
         {jobid: [SetJobStatus(JobStatus.IDLE)] for jobid in jobids},
     )
-    ads = condor.query(projection=["ContainerImage","DockerImage","WantContainer","WantDockerImage"])
-    condor.act(JobAction.Remove)
+    ads = condor.query(
+        constraint=f"ClusterId=={clusterid}",
+        projection=["ContainerImage","DockerImage","WantContainer","WantDockerImage"]
+    )
     expect_docker_img = True if "docker_image" in request.param[1] else False
     return (ads, expect_docker_img)
 
