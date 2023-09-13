@@ -59,3 +59,7 @@ Bugs Fixed:
 - Fixed the Execution Point's detection of whether libvirt is working
   properly for the VM universe.
   :jira:`2009`
+
+- Fixed a bug where the *condor_startd* could crash if a new match is
+  made at the end a drain request.
+  :jira:`2032`
