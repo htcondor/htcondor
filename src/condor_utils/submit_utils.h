@@ -833,7 +833,7 @@ protected:
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
 	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
-	int query_universe(std::string & sub_type); // figure out universe, but DON'T modify the cached members
+	int query_universe(std::string & sub_type, const char * & topping); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
 	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);

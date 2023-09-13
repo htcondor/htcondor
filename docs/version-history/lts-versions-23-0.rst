@@ -59,3 +59,7 @@ Bugs Fixed:
 - Fixed the Execution Point's detection of whether libvirt is working
   properly for the VM universe.
   :jira:`2009`
+
+- Fixed a bug where container universe did not work for late materialization jobs
+  submitted to the *condor_schedd*
+  :jira:`2031`
