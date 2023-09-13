@@ -359,7 +359,7 @@ command_request_claim(int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	if (rip->isDraining() && resmgr->gracefulDrainingTimeRemaining(rip) < 120) {
+	if (rip->isDraining() && resmgr->gracefulDrainingTimeRemaining(rip) < 20) {
 		rip->dprintf( D_ALWAYS, "Got %s near end of draining, ignoring.\n",
 			getCommandString(REQUEST_CLAIM) );
 		free( id );
