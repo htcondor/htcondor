@@ -215,7 +215,7 @@ format_time( int tot_secs )
         min = tot_secs / MINUTE;
         secs = tot_secs % MINUTE;
 
-        (void)snprintf( answer, sizeof(answer), "%3d+%02d:%02d:%02d", days, hours, min, secs );
+		std::ignore = snprintf( answer, sizeof(answer), "%3d+%02d:%02d:%02d", days, hours, min, secs );
         return answer;
 }
 

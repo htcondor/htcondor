@@ -1659,7 +1659,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& Cu
 ClassAd* Accountant::GetClassAd(const std::string& Key)
 {
   ClassAd* ad=NULL;
-  (void) AcctLog->table.lookup(Key,ad);
+  std::ignore = AcctLog->table.lookup(Key,ad);
   return ad;
 }
 
