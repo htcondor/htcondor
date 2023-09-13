@@ -678,6 +678,7 @@ protected:
 	CAResult _error_code;
 	std::string _id_str;
 	std::string _subsys;
+	std::string _cmd_str;
 	int _port;
 	daemon_t _type;
 	bool _is_local;
@@ -842,7 +843,6 @@ protected:
 		   command we tried to perform.
 		 */
 	void setCmdStr( const char* cmd );
-	std::string _cmd_str;
 
 		/** 
  		   Helper method for the client-side of the ClassAd-only

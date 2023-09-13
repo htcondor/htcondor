@@ -390,7 +390,7 @@ Daemon::display( FILE* fp )
 	fprintf( fp, "FullHost: %s, Host: %s, Pool: %s, Port: %d\n", 
 			 _full_hostname.c_str(),
 			 _hostname.c_str(),
-			 _port );
+			 _pool.c_str(), _port );
 	fprintf( fp, "IsLocal: %s, IdStr: %s, Error: %s\n", 
 			 _is_local ? "Y" : "N",
 			 _id_str.c_str(),
