@@ -979,6 +979,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%_mandir/man1/condor_test_token.1.gz
 %_mandir/man1/condor_token_create.1.gz
 %_mandir/man1/condor_token_fetch.1.gz
 %_mandir/man1/condor_token_list.1.gz
@@ -1085,6 +1086,7 @@ rm -rf %{buildroot}
 %_bindir/condor_remote_cluster
 %_bindir/bosco_cluster
 %_bindir/condor_ssh_start
+%_bindir/condor_test_token
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise

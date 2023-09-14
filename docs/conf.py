@@ -178,6 +178,7 @@ man_pages = [
     ('man-pages/condor_submit_dag', 'condor_submit_dag', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_suspend', 'condor_suspend', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_tail', 'condor_tail', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_test_token', 'condor_test_token', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_token_create', 'condor_token_create', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_token_fetch', 'condor_token_fetch', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_token_list', 'condor_token_list', u'HTCondor Manual', [u'HTCondor Team'], 1),
