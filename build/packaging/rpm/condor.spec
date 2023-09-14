@@ -980,6 +980,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%_mandir/man1/condor_test_token.1.gz
 %_mandir/man1/condor_token_create.1.gz
 %_mandir/man1/condor_token_fetch.1.gz
 %_mandir/man1/condor_token_list.1.gz
@@ -1086,6 +1087,7 @@ rm -rf %{buildroot}
 %_bindir/condor_remote_cluster
 %_bindir/bosco_cluster
 %_bindir/condor_ssh_start
+%_bindir/condor_test_token
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1370,6 +1372,20 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.8.0-1
+- Fold the classads, blahp, and procd RPMs into the main condor RPM
+- Align the Debian packages and package names with the RPM packaging
+- On Linux, the default configuration enforces memory limits with cgroups
+- condor_status -gpus shows nodes with GPUs and the GPU properties
+- condor_status -compact shows a row for each slot type
+- New ENV command controls which environment variables are present in DAGMan
+
+* Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.8-1
+- Avoid kernel panic on some Enterprise Linux 8 systems
+- Fix bug where early termination of service nodes could crash DAGMan
+- Limit email about long file transfer queue to once daily
+- Various fixes to condor_adstash
+
 * Wed Aug 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.7.1-1
 - Fix performance problem detecting futile nodes in a large and bushy DAG
 

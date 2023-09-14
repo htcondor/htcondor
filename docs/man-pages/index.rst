@@ -64,6 +64,7 @@ Command Reference Manual (man pages)
    condor_submit_dag
    condor_suspend
    condor_tail
+   condor_test_token
    condor_token_create
    condor_token_fetch
    condor_token_list

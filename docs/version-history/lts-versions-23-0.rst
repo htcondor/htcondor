@@ -42,6 +42,11 @@ New Features:
   :jira:`2014`
 
 
+- Added new tool *condor_test_token*, which will create a SciToken
+  with configurable contents (including issuer) which will be accepted
+  for a short period of time by the local HTCondor daemons.
+  :jira:`1115`
+
 Bugs Fixed:
 
 - Fixed a bug that would cause the *condor_startd* to crash in rare cases
@@ -60,6 +65,11 @@ Bugs Fixed:
   properly for the VM universe.
   :jira:`2009`
 
+- Fixed a bug where container universe did not work for late materialization jobs
+  submitted to the *condor_schedd*
+  :jira:`2031`
+
 - Fixed a bug where the *condor_startd* could crash if a new match is
   made at the end a drain request.
   :jira:`2032`
+
