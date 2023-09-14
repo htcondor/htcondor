@@ -27,7 +27,7 @@ htcondor/_job_status.py
 classad/__init__.py
 # Private python utilities
 htcondor/_utils/__init__.py
-htcondor/_utils/ansii.py
+htcondor/_utils/ansi.py
 )
 
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")

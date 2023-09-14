@@ -8,7 +8,7 @@ import time
 import shutil
 import math
 
-from htcondor._utils.ansii import Color, colorize
+from htcondor._utils.ansi import Color, colorize
 from datetime import datetime
 from pathlib import Path
 
