@@ -60,6 +60,11 @@ Bugs Fixed:
   properly for the VM universe.
   :jira:`2009`
 
+- Fixed a bug where container universe did not work for late materialization jobs
+  submitted to the *condor_schedd*
+  :jira:`2031`
+
 - Fixed a bug where the *condor_startd* could crash if a new match is
   made at the end a drain request.
   :jira:`2032`
+

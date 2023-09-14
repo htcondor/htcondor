@@ -4258,7 +4258,9 @@ int SubmitHash::SetExecutable()
 	}
 
 	if (IsContainerJob) {
-		// container universe also allows docker_image to force a docker image to be used
+		// container universe also allows docker_image to force a docker image to be used.
+		// Note that in the normal late materialization case, neither image command will be present
+		// by the time we materialize ProcId > 0, that just means that the image is the same for all jobs
 		auto_free_ptr docker_image(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
 		if (docker_image) {
 			const char * image = check_docker_image(docker_image.ptr());
@@ -4277,6 +4279,21 @@ int SubmitHash::SetExecutable()
 				ABORT_AND_RETURN(1);
 			}
 			AssignJobString(ATTR_CONTAINER_IMAGE, image);
+
+			ContainerImageType image_type = image_type_from_string(image);
+			switch (image_type) {
+			case ContainerImageType::DockerRepo:
+				AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
+				break;
+			case ContainerImageType::SIF:
+				AssignJobVal(ATTR_WANT_SIF,true);
+				break;
+			case ContainerImageType::SandboxImage:
+			default: // default should be unreachable...
+				AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
+				break;
+			}
+
 		} else if (!job->Lookup(ATTR_CONTAINER_IMAGE) && !job->Lookup(ATTR_DOCKER_IMAGE)) {
 			push_error(stderr, "container jobs require a container_image or docker_image\n");
 			ABORT_AND_RETURN(1);
@@ -4394,6 +4411,8 @@ static bool mightTransfer( int universe )
 }
 
 
+// Universe is immutable and must be the same for all jobs in a cluster
+// So this function is only called for ProcId <= 0  (cluster ad and first proc ad)
 int SubmitHash::SetUniverse()
 {
 	RETURN_IF_ABORT();
@@ -4412,15 +4431,11 @@ int SubmitHash::SetUniverse()
 	JobGridType.clear();
 	VMType.clear();
 
-	bool CanHaveImages = false;
-	//Check to see if a docker/container image was declared in submit file
-	auto_free_ptr dockerImg(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
-	auto_free_ptr containerImg(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
-	if (dockerImg && containerImg) { //If both container and docker image declared then abort
-		push_error(stderr, "Both '%s' and '%s' were declared. Only one can be declared in a submit file.\n",
-							SUBMIT_KEY_DockerImage, SUBMIT_KEY_ContainerImage);
-		ABORT_AND_RETURN(1);
-	}
+	// ---------- WARNING --- WARNING ---- WARNING ---- WARNING ---- WARNING ------
+	//  TJ sez.  do not add code that looks at submit keywords here!
+	//  Most submit keywords are *not* present in the late materialization SubmitHash
+	//  Also this method is called only for ProcId <= 0
+	// ---------- WARNING --- WARNING ---- WARNING ---- WARNING ---- WARNING ------
 
 	if (univ) {
 		JobUniverse = CondorUniverseNumberEx(univ.ptr());
@@ -4429,29 +4444,53 @@ int SubmitHash::SetUniverse()
 			if (MATCH == strcasecmp(univ.ptr(), "docker")) {
 				JobUniverse = CONDOR_UNIVERSE_VANILLA;
 				IsDockerJob = true;
-				CanHaveImages = true;
 			}
 			// maybe it is the "container" topping?
 
 			if (MATCH == strcasecmp(univ.ptr(), "container")) {
 				JobUniverse = CONDOR_UNIVERSE_VANILLA;
 				IsContainerJob = true;
-				CanHaveImages = true;
 			}
 		}
 	} else {
 		// if nothing else, it must be a vanilla universe
 		//  *changed from "standard" for 7.2.0*
 		JobUniverse = CONDOR_UNIVERSE_VANILLA;
-		CanHaveImages = true;
-		if (dockerImg) IsDockerJob = true;
-		if (containerImg) IsContainerJob = true;
 	}
 
-	if (!CanHaveImages && (dockerImg || containerImg)) { //If docker or container image is in declared universe
-		push_error(stderr, "%s universe for job does not allow use of %s_image.\n",
-							CondorUniverseName(JobUniverse), dockerImg ? "docker" : "container");
-		ABORT_AND_RETURN(1);
+	// set IsDockerJob or IsContainerJob and do submit time checks
+	// for mismatch between universe topping and image declaration
+	if (clusterAd) {
+		// when materializing in the schedd, we just want to set the SubmitHash variables.
+		// error checks have already happened.
+		IsContainerJob = clusterAd->Lookup(ATTR_CONTAINER_IMAGE) || clusterAd->Lookup(ATTR_WANT_CONTAINER);
+		if ( ! IsContainerJob) {
+			IsDockerJob = clusterAd->Lookup(ATTR_DOCKER_IMAGE) != nullptr;
+		}
+	} else if (JobUniverse == CONDOR_UNIVERSE_VANILLA) {
+		auto_free_ptr containerImg(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+		if (IsDockerJob) {
+			// universe=docker does not allow the use of container_image
+			if (containerImg) {
+				push_error(stderr, "docker universe does not allow use of container_image.\n");
+				ABORT_AND_RETURN(1);
+			}
+		} else {
+			// Universe=container or Universe=vanilla or universe not set
+			// allow either docker_image or container_image but not both
+			auto_free_ptr dockerImg(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
+			if (dockerImg && containerImg) {
+				push_error(stderr, "cannot declare both docker_image and container_image\n");
+				ABORT_AND_RETURN(1);
+			} else if (dockerImg || containerImg) {
+				// if any image is specified we have implicit container universe
+				IsContainerJob = true; // in case this is not already set
+				if (dockerImg) {
+					// set a job attr for Universe=container but docker_image is used instead of container_image
+					AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
+				}
+			}
+		}
 	}
 
 	// set the universe into the job
@@ -4507,6 +4546,9 @@ int SubmitHash::SetUniverse()
 
 		if (IsContainerJob) {
 			AssignJobVal(ATTR_WANT_CONTAINER, true);
+		#if 1
+			// can't look at submit keywords here, code moved to SetExecutable
+		#else
 			auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 			auto_free_ptr docker_image(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
 
@@ -4538,6 +4580,7 @@ int SubmitHash::SetUniverse()
 						ABORT_AND_RETURN(1);
 					}
 				}
+		#endif
 			}
 			return 0;
 	}
@@ -8894,6 +8937,7 @@ const char* SubmitHash::to_string(std::string & out, int flags)
 
 enum FixupKeyId {
 	idKeyNone=0,
+	idKeyUniverse,
 	idKeyExecutable,
 	idKeyInitialDir,
 };
@@ -8920,6 +8964,7 @@ static const DIGEST_FIXUP_KEY aDigestFixupAttrs[] = {
 	{ SUBMIT_KEY_InitialDir,    idKeyInitialDir }, // "initialdir"
 	{ ATTR_JOB_IWD,             idKeyInitialDir }, // "Iwd"
 	{ SUBMIT_KEY_JobIwd,        idKeyInitialDir }, // "job_iwd"     <- special case legacy hack (sigh)
+	{ SUBMIT_KEY_Universe,      idKeyUniverse },
 };
 
 // while building a submit digest, fixup right hand side for certain key=rhs pairs
@@ -8934,9 +8979,10 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 	// Some universes don't have an actual executable, so we have to look deeper for that key
 	// TODO: capture pseudo-ness explicitly in SetExecutable? so we don't have to keep this in sync...
 	bool pseudo = false;
-	if (found->id == idKeyExecutable) {
+	const char * topping = nullptr;
+	if (found->id == idKeyExecutable || found->id == idKeyUniverse) {
 		std::string sub_type;
-		int uni = query_universe(sub_type);
+		int uni = query_universe(sub_type, topping);
 		if (uni == CONDOR_UNIVERSE_VM) {
 			pseudo = true;
 		} else if (uni == CONDOR_UNIVERSE_GRID) {
@@ -8944,6 +8990,9 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 			pseudo = (sub_type == "ec2" || sub_type == "gce" || sub_type == "azure");
 		}
 	}
+
+	// set the topping as the universe if there is a topping
+	if (found->id == idKeyUniverse && topping) { rhs = topping; }
 
 	// the Executable and InitialDir should be expanded to a fully qualified path here.
 	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo)) {
@@ -8958,11 +9007,16 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 
 // returns the universe and grid type, either by looking at the cached values
 // or by querying the hashtable if the cached values haven't been set yet.
-int SubmitHash::query_universe(std::string & sub_type)
+int SubmitHash::query_universe(std::string & sub_type, const char * & topping)
 {
+	topping = nullptr;
 	if (JobUniverse != CONDOR_UNIVERSE_MIN) {
 		if (JobUniverse == CONDOR_UNIVERSE_GRID) { sub_type = JobGridType; }
 		else if (JobUniverse == CONDOR_UNIVERSE_VM) { sub_type = VMType; }
+		else if (JobUniverse == CONDOR_UNIVERSE_VANILLA) {
+			if (IsContainerJob) { topping = "container"; }
+			else if (IsDockerJob) { topping = "docker"; }
+		}
 		return JobUniverse;
 	}
 
@@ -8979,9 +9033,11 @@ int SubmitHash::query_universe(std::string & sub_type)
 			// maybe it's a topping?
 			if (MATCH == strcasecmp(univ.ptr(), "docker")) {
 				uni = CONDOR_UNIVERSE_VANILLA;
+				topping = "docker";
 			}
 			if (MATCH == strcasecmp(univ.ptr(), "container")) {
 				uni = CONDOR_UNIVERSE_VANILLA;
+				topping = "container";
 			}
 		}
 	} else {
@@ -8998,6 +9054,15 @@ int SubmitHash::query_universe(std::string & sub_type)
 	} else if (uni == CONDOR_UNIVERSE_VM) {
 		sub_type = submit_param_string(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
 		lower_case(sub_type);
+	} else if (uni == CONDOR_UNIVERSE_VANILLA) {
+		if ( ! topping) {
+			// set the implicit container universe topping
+			std::string str;
+			if (submit_param_exists(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE, str) ||
+				submit_param_exists(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE, str)) {
+				topping = "container";
+			}
+		}
 	}
 
 	return uni;
@@ -9035,6 +9100,17 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 	}
 
 	std::string rhs;
+
+	// if submit file has no universe command, and the effective universe is a topping
+	// we want to put the topping into the digest to simplify things for the schedd
+	std::string str;
+	if ( ! submit_param_exists(SUBMIT_KEY_Universe, ATTR_JOB_UNIVERSE, str)) {
+		std::string sub_type;
+		const char * topping = nullptr;
+		if (query_universe(sub_type, topping) == CONDOR_UNIVERSE_VANILLA && topping) {
+			formatstr_cat(out, "Universe=%s\n", topping);
+		}
+	}
 
 	// tell the job factory to skip processing SetRequirements and just use the cluster requirements for all jobs
 	out += "FACTORY.Requirements=MY.Requirements\n";
