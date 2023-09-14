@@ -14,9 +14,7 @@ Version 10.0.8
 
 Release Notes:
 
-.. HTCondor version 10.0.8 released on Month Date, 2023.
-
-- HTCondor version 10.0.8 not yet released.
+- HTCondor version 10.0.8 released on September 14, 2023.
 
 New Features:
 
