@@ -721,12 +721,11 @@ def check_desktop_policy():
 def check_pslot_default():
     """Check for use of RANK in startd config due to incompatibility with
     P-Slots on by default in V23.0.0"""
-    htc_version = htcondor.param["CONDOR_VERSION"].split(".")
     htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
     if htc_version >= (23, 0, 0):
         return 0
     for key in htcondor.param.keys():
-        if "SLOT_TYPE_" in key:
+        if key.lower().startswith("slot_type_"):
             return 0
     rank = htcondor.param.get("RANK")
     if rank is None:
