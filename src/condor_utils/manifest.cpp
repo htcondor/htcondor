@@ -208,9 +208,9 @@ deleteFilesStoredAt(
 		return false;
 	}
 
-	StringList sl( argl );
-	sl.rewind();
-	std::string pluginFileName = sl.next();
+    StringTokenIterator sti( argl );
+	sti.rewind();
+	std::string pluginFileName = sti.next();
 	std::filesystem::path pluginPath( pluginFileName );
 	if( pluginPath.is_relative() ) {
 		std::string libexec;
@@ -239,8 +239,8 @@ deleteFilesStoredAt(
 
 		ArgList args;
 		args.AppendArg(pluginFileName);
-		sl.rewind(); sl.next();
-		for( char * entry = sl.next(); entry != NULL; entry = sl.next() ) {
+		sti.rewind(); sti.next();
+		for( const char * entry = sti.next(); entry != NULL; entry = sti.next() ) {
 			args.AppendArg(entry);
 		}
 		args.AppendArg("-from");
