@@ -1630,6 +1630,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.8-1
+- Avoid kernel panic on some Enterprise Linux 8 systems
+- Fix bug where early termination of service nodes could crash DAGMan
+- Limit email about long file transfer queue to once daily
+- Various fixes to condor_adstash
+
 * Tue Jul 25 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.7-1
 - Fixed bug where held condor cron jobs would never run when released
 - Improved daemon IDTOKENS logging to make useful messages more prominent
