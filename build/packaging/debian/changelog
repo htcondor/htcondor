@@ -1,3 +1,12 @@
+condor (10.0.8-1) stable; urgency=medium
+
+  * Avoid kernel panic on some Enterprise Linux 8 systems
+  * Fix bug where early termination of service nodes could crash DAGMan
+  * Limit email about long file transfer queue to once daily
+  * Various fixes to condor_adstash
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 14 Sep 2023 08:56:00 -0500
+
 condor (10.0.7-1) stable; urgency=medium
 
   * Fixed bug where held condor cron jobs would never run when released
