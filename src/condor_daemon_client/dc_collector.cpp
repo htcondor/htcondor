@@ -157,9 +157,9 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 	rSock.timeout(5);
 	if (!connectSock(&rSock)) {
 		err.pushf("DCCollector", 2, "Failed to connect "
-			"to remote daemon at '%s'", _addr ? _addr : "(unknown)");
+			"to remote daemon at '%s'", _addr.c_str());
 		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to connect "
-			"to remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+			"to remote daemon at '%s'\n", _addr.c_str());
 		return false;
 	}
 
@@ -167,10 +167,10 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 	{
 		err.pushf("DAEMON", 1, "failed to start "
 			"command for token request with remote collector at '%s'.",
-			_addr ? _addr : "(unknown)");
+			_addr.c_str());
 		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to start "
 			"command for token request with remote collector at '%s'.",
-			_addr ? _addr : "(unknown)");
+			_addr.c_str());
 		return false;
 	}
 
@@ -178,10 +178,10 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 	if (!putClassAd(&rSock, request_ad) || !rSock.end_of_message()) {
 		err.pushf("DAEMON", 1, "Failed to send request to "
 			"remote collector at '%s'",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to send "
 			"request to remote collector at '%s'\n",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		return false;
 	}
 
@@ -190,10 +190,10 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 	if (!getClassAd(&rSock, result_ad) || !rSock.end_of_message()) {
 		err.pushf("DAEMON", 1, "Failed to recieve "
 			"response from remote collector at '%s'",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to recieve "
 			"response from remote daemon at '%s'\n",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		return false;
 	}
 
@@ -211,11 +211,11 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 		err.pushf("DAEMON", 1, "BUG! DCCollector::requestScheddToken() "
 			"received a malformed ad, containing no resulting token and no "
 			"error message, from remote collector at '%s'",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		dprintf(D_FULLDEBUG, "BUG!  DCCollector::requestScheddToken() "
 			"received a malformed ad, containing no resulting token and no "
 			"error message, from remote daemon at '%s'\n",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		return false;
 	}
 
@@ -227,7 +227,7 @@ DCCollector::reconfig( void )
 {
 	use_nonblocking_update = param_boolean("NONBLOCKING_COLLECTOR_UPDATE",true);
 
-	if( ! _addr ) {
+	if( _addr.empty() ) {
 		locate();
 		if( ! _is_configured ) {
 			dprintf( D_FULLDEBUG, "COLLECTOR address not defined in "
@@ -261,8 +261,8 @@ DCCollector::parseTCPInfo( void )
 
 			tcp_collectors.initializeFromString( tmp );
 			free( tmp );
- 			if( _name && 
-				tcp_collectors.contains_anycase_withwildcard(_name) )
+			if( ! _name.empty() &&
+				tcp_collectors.contains_anycase_withwildcard(_name.c_str()) )
 			{	
 				use_tcp = true;
 				break;
@@ -328,11 +328,11 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 	if( _port == 0 ) {
 		dprintf( D_HOSTNAME, "About to update collector with port 0, "
 				 "attempting to re-read address file\n" );
-		if( readAddressFile(_subsys) ) {
-			_port = string_to_port( _addr );
+		if( readAddressFile(_subsys.c_str()) ) {
+			_port = string_to_port( _addr.c_str() );
 			parseTCPInfo(); // update use_tcp
 			dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
-					 _port, _addr );
+					 _port, _addr.c_str() );
 		}
 	}
 
@@ -363,14 +363,14 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 				}
 				return false;
 			}
-			if( _addr == NULL ) {
-				dprintf( D_ALWAYS, "Failing attempt to update or invalidate collector ad because of missing daemon address (probably an unresolved hostname; daemon name is '%s').\n", _name );
+			if( _addr.empty() ) {
+				dprintf( D_ALWAYS, "Failing attempt to update or invalidate collector ad because of missing daemon address (probably an unresolved hostname; daemon name is '%s').\n", _name.c_str() );
 				if (callback_fn) {
 					(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
 				}
 				return false;
 			}
-			if( strcmp( myOwnSinful, _addr ) == 0 ) {
+			if( strcmp( myOwnSinful, _addr.c_str() ) == 0 ) {
 				EXCEPT( "Collector attempted to send itself an update.\n" );
 			}
 		}
@@ -771,14 +771,14 @@ DCCollector::initDestinationStrings( void )
 		// Updates will always be sent to whatever info we've got
 		// in the Daemon object.  So, there's nothing hard to do for
 		// this... just see what useful info we have and use it. 
-	if( _full_hostname ) {
+	if( ! _full_hostname.empty() ) {
 		dest = _full_hostname;
-		if ( _addr) {
+		if (! _addr.empty()) {
 			dest += ' ';
 			dest += _addr;
 		}
 	} else {
-		if (_addr) dest = _addr;
+		dest = _addr;
 	}
 	update_destination = strdup( dest.c_str() );
 }

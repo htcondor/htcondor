@@ -339,8 +339,8 @@ DCSchedd::exportJobsWorker(
 	if (new_spool_dir) { cmd_ad.Assign("NewSpoolDir", new_spool_dir); }
 
 	rsock.timeout(20);   // years of research... :)
-	if ( ! rsock.connect(_addr)) {
-		dprintf(D_ALWAYS, "DCSchedd::exportJobs: Failed to connect to schedd (%s)\n", _addr);
+	if ( ! rsock.connect(_addr.c_str())) {
+		dprintf(D_ALWAYS, "DCSchedd::exportJobs: Failed to connect to schedd (%s)\n", _addr.c_str());
 		if (errstack) {
 			errstack->push("DCSchedd::exportJobs", CEDAR_ERR_CONNECT_FAILED,
 			               "Failed to connect to schedd");
@@ -368,7 +368,7 @@ DCSchedd::exportJobsWorker(
 	rsock.decode();
 	ClassAd* result_ad = new ClassAd();
 	if ( ! getClassAd(&rsock, *result_ad) || ! rsock.end_of_message()) {
-		dprintf(D_ALWAYS, "DCSchedd:exportJobs: Can't read response ad from %s\n", _addr );
+		dprintf(D_ALWAYS, "DCSchedd:exportJobs: Can't read response ad from %s\n", _addr.c_str());
 		if (errstack) {
 			errstack->push("DCSchedd::exportJobs", CEDAR_ERR_GET_FAILED,
 							"Can't read response ad" );
@@ -431,8 +431,8 @@ DCSchedd::importExportedJobResults(const char * import_dir, CondorError * errsta
 	cmd_ad.Assign("ExportDir", import_dir);
 
 	rsock.timeout(20);   // years of research... :)
-	if ( ! rsock.connect(_addr)) {
-		dprintf(D_ALWAYS, "DCSchedd::importExportedJobResults: Failed to connect to schedd (%s)\n", _addr);
+	if ( ! rsock.connect(_addr.c_str())) {
+		dprintf(D_ALWAYS, "DCSchedd::importExportedJobResults: Failed to connect to schedd (%s)\n", _addr.c_str());
 		if (errstack) {
 			errstack->push("DCSchedd::importExportedJobResults", CEDAR_ERR_CONNECT_FAILED,
 			               "Failed to connect to schedd");
@@ -460,7 +460,7 @@ DCSchedd::importExportedJobResults(const char * import_dir, CondorError * errsta
 	rsock.decode();
 	ClassAd* result_ad = new ClassAd();
 	if ( ! getClassAd(&rsock, *result_ad) || ! rsock.end_of_message()) {
-		dprintf(D_ALWAYS, "DCSchedd:importExportedJobResults: Can't read response ad from %s\n", _addr );
+		dprintf(D_ALWAYS, "DCSchedd:importExportedJobResults: Can't read response ad from %s\n", _addr.c_str());
 		if (errstack) {
 			errstack->push("DCSchedd::importExportedJobResults", CEDAR_ERR_GET_FAILED,
 							"Can't read response ad" );
@@ -522,8 +522,8 @@ DCSchedd::unexportJobsWorker(
 	}
 
 	rsock.timeout(20);   // years of research... :)
-	if ( ! rsock.connect(_addr)) {
-		dprintf(D_ALWAYS, "DCSchedd::unexportJobs: Failed to connect to schedd (%s)\n", _addr);
+	if ( ! rsock.connect(_addr.c_str())) {
+		dprintf(D_ALWAYS, "DCSchedd::unexportJobs: Failed to connect to schedd (%s)\n", _addr.c_str());
 		if (errstack) {
 			errstack->push("DCSchedd::unexportJobs", CEDAR_ERR_CONNECT_FAILED,
 			               "Failed to connect to schedd");
@@ -551,7 +551,7 @@ DCSchedd::unexportJobsWorker(
 	rsock.decode();
 	ClassAd* result_ad = new ClassAd();
 	if ( ! getClassAd(&rsock, *result_ad) || ! rsock.end_of_message()) {
-		dprintf(D_ALWAYS, "DCSchedd:unexportJobs: Can't read response ad from %s\n", _addr );
+		dprintf(D_ALWAYS, "DCSchedd:unexportJobs: Can't read response ad from %s\n", _addr.c_str());
 		if (errstack) {
 			errstack->push("DCSchedd::unexportJobs", CEDAR_ERR_GET_FAILED,
 							"Can't read response ad" );
@@ -626,9 +626,9 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		// // // // // // // //
 
 	rsock.timeout(20);   // years of research... :)
-	if( ! rsock.connect(_addr) ) {
+	if( ! rsock.connect(_addr.c_str()) ) {
 		dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
-				 "Failed to connect to schedd (%s)\n", _addr );
+				 "Failed to connect to schedd (%s)\n", _addr.c_str() );
 		if ( errstack ) {
 			errstack->push( "DCSchedd::receiveJobSandbox",
 							CEDAR_ERR_CONNECT_FAILED,
@@ -665,10 +665,10 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	// it out of CEDAR. It's important to know for the FileTransfer
 	// protocol.
 	const CondorVersionInfo *peer_version = rsock.get_peer_version();
-	if ( _version == NULL && peer_version != NULL ) {
-		_version = peer_version->get_version_string();
+	if ( _version.empty() && peer_version != NULL ) {
+		_version = peer_version->get_version_stdstring();
 	}
-	if ( _version == NULL ) {
+	if ( _version.empty() ) {
 		dprintf( D_ALWAYS, "Unable to determine schedd version for file transfer\n" );
 	}
 
@@ -704,7 +704,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		std::string errmsg;
 		formatstr(errmsg,
 				"Can't send initial message (version + constraint) to schedd (%s), probably an authorization failure",
-				_addr);
+				_addr.c_str());
 
 		dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.c_str());
 
@@ -723,7 +723,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		std::string errmsg;
 		formatstr(errmsg,
 				"Can't receive JobAdsArrayLen from the schedd (%s)",
-				_addr);
+				_addr.c_str());
 
 		dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.c_str());
 
@@ -856,9 +856,9 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		// // // // // // // //
 
 	rsock.timeout(20);   // years of research... :)
-	if( ! rsock.connect(_addr) ) {
+	if( ! rsock.connect(_addr.c_str()) ) {
 		std::string errmsg;
-		formatstr(errmsg, "Failed to connect to schedd (%s)", _addr);
+		formatstr(errmsg, "Failed to connect to schedd (%s)", _addr.c_str());
 
 		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: %s\n", errmsg.c_str() );
 
@@ -875,7 +875,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 			dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
 				"Failed to send command (SPOOL_JOB_FILES_WITH_PERMS) "
-				"to the schedd (%s)\n", _addr );
+				"to the schedd (%s)\n", _addr.c_str() );
 
 			return false;
 		}
@@ -883,7 +883,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		if( ! startCommand(SPOOL_JOB_FILES, (Sock*)&rsock, 0, errstack) ) {
 			dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
 					 "Failed to send command (SPOOL_JOB_FILES) "
-					 "to the schedd (%s)\n", _addr );
+					 "to the schedd (%s)\n", _addr.c_str() );
 
 			return false;
 		}
@@ -900,10 +900,10 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 	// it out of CEDAR. It's important to know for the FileTransfer
 	// protocol.
 	const CondorVersionInfo *peer_version = rsock.get_peer_version();
-	if ( _version == NULL && peer_version != NULL ) {
-		_version = peer_version->get_version_string();
+	if ( _version.empty() && peer_version != NULL ) {
+		_version = peer_version->get_version_stdstring();
 	}
-	if ( _version == NULL ) {
+	if ( _version.empty() ) {
 		dprintf( D_ALWAYS, "Unable to determine schedd version for file transfer\n" );
 	}
 
@@ -939,7 +939,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		std::string errmsg;
 		formatstr(errmsg,
 				"Can't send initial message (version + count) to schedd (%s), probably an authorization failure",
-				_addr);
+				_addr.c_str());
 
 		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.c_str());
 
@@ -978,7 +978,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 	if( !rsock.end_of_message() ) {
 		std::string errmsg;
-		formatstr(errmsg, "Failed while sending job ids to schedd (%s)", _addr);
+		formatstr(errmsg, "Failed while sending job ids to schedd (%s)", _addr.c_str());
 
 		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.c_str());
 
@@ -1066,9 +1066,9 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 
 		// connect to the schedd, send the UPDATE_GSI_CRED command
 	rsock.timeout(20);   // years of research... :)
-	if( ! rsock.connect(_addr) ) {
+	if( ! rsock.connect(_addr.c_str()) ) {
 		dprintf( D_ALWAYS, "DCSchedd::updateGSIcredential: "
-				 "Failed to connect to schedd (%s)\n", _addr );
+				 "Failed to connect to schedd (%s)\n", _addr.c_str() );
 		if ( errstack ) {
 			errstack->push( "DCSchedd::updateGSIcredential",
 							CEDAR_ERR_CONNECT_FAILED,
@@ -1157,9 +1157,9 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 
 		// connect to the schedd, send the DELEGATE_GSI_CRED_SCHEDD command
 	rsock.timeout(20);   // years of research... :)
-	if( ! rsock.connect(_addr) ) {
+	if( ! rsock.connect(_addr.c_str()) ) {
 		dprintf( D_ALWAYS, "DCSchedd::delegateGSIcredential: "
-				 "Failed to connect to schedd (%s)\n", _addr );
+				 "Failed to connect to schedd (%s)\n", _addr.c_str() );
 		if ( errstack ) {
 			errstack->push( "DCSchedd::delegateGSIcredential",
 							CEDAR_ERR_CONNECT_FAILED,
@@ -1284,9 +1284,9 @@ DCSchedd::actOnJobs( JobAction action,
 		// // // // // // // //
 
 	rsock.timeout(20);   // years of research... :)
-	if( ! rsock.connect(_addr) ) {
+	if( ! rsock.connect(_addr.c_str()) ) {
 		dprintf( D_ALWAYS, "DCSchedd::actOnJobs: "
-				 "Failed to connect to schedd (%s)\n", _addr );
+				 "Failed to connect to schedd (%s)\n", _addr.c_str() );
 		if ( errstack ) {
 			errstack->push( "DCSchedd::actOnJobs", CEDAR_ERR_CONNECT_FAILED,
 							"Failed to connect to schedd" );
@@ -1323,7 +1323,7 @@ DCSchedd::actOnJobs( JobAction action,
 	ClassAd* result_ad = new ClassAd();
 	if( ! (getClassAd(&rsock, *result_ad) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: "
-				 "Can't read response ad from %s\n", _addr );
+				 "Can't read response ad from %s\n", _addr.c_str() );
 		if ( errstack ) {
 			errstack->push( "DCSchedd::actOnJobs", CEDAR_ERR_GET_FAILED,
 							"Can't read response ad" );
@@ -1362,7 +1362,7 @@ DCSchedd::actOnJobs( JobAction action,
 	rsock.decode();
 	if( ! (rsock.code(reply) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: "
-				 "Can't read confirmation from %s\n", _addr );
+				 "Can't read confirmation from %s\n", _addr.c_str() );
 		if ( errstack ) {
 			errstack->push( "DCSchedd::actOnJobs", CEDAR_ERR_GET_FAILED,
 							"Can't read confirmation" );
@@ -1709,7 +1709,7 @@ bool DCSchedd::getJobConnectInfo(
 
 	if (IsDebugLevel(D_COMMAND)) {
 		dprintf (D_COMMAND, "DCSchedd::getJobConnectInfo(%s,...) making connection to %s\n",
-			getCommandStringSafe(GET_JOB_CONNECT_INFO), _addr ? _addr : "NULL");
+			getCommandStringSafe(GET_JOB_CONNECT_INFO), _addr.c_str());
 	}
 
 	ReliSock sock;
@@ -1779,7 +1779,7 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 
 	if (IsDebugLevel(D_COMMAND)) {
 		dprintf (D_COMMAND, "DCSchedd::recycleShadow(%s,...) making connection to %s\n",
-			getCommandStringSafe(RECYCLE_SHADOW), _addr ? _addr : "NULL");
+			getCommandStringSafe(RECYCLE_SHADOW), _addr.c_str());
 	}
 
 	ReliSock sock;
@@ -1860,7 +1860,7 @@ DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage
 	if( IsDebugLevel( D_COMMAND ) ) {
 		dprintf( D_COMMAND, "DCSchedd::reassignSlot( %d.%d <- %s ) making connection to %s\n",
 			bid.cluster, bid.proc, vidList.c_str(),
-			_addr ? _addr : "NULL");
+			_addr.c_str());
 	}
 
 	ReliSock sock;
@@ -2077,7 +2077,7 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 {
 	if (IsDebugLevel(D_COMMAND)) {
 		dprintf(D_COMMAND, "DCSchedd::requestImpersonationTokenAsync() making connection "
-			" to '%s'\n", _addr ? _addr : "NULL" );
+			" to '%s'\n", _addr.c_str());
 	}
 
 	if (identity.empty()) {
