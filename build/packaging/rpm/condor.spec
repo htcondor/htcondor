@@ -1366,6 +1366,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.8.0-1
+- Fold the classads, blahp, and procd RPMs into the main condor RPM
+- Align the Debian packages and package names with the RPM packaging
+- On Linux, the default configuration enforces memory limits with cgroups
+- condor_status -gpus shows nodes with GPUs and the GPU properties
+- condor_status -compact shows a row for each slot type
+- New ENV command controls which environment variables are present in DAGMan
+
 * Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.8-1
 - Avoid kernel panic on some Enterprise Linux 8 systems
 - Fix bug where early termination of service nodes could crash DAGMan

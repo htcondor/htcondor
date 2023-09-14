@@ -1,3 +1,14 @@
+condor (10.8.0-1) stable; urgency=medium
+
+  * Fold the classads, blahp, and procd RPMs into the main condor RPM
+  * Align the Debian packages and package names with the RPM packaging
+  * On Linux, the default configuration enforces memory limits with cgroups
+  * condor_status -gpus shows nodes with GPUs and the GPU properties
+  * condor_status -compact shows a row for each slot type
+  * New ENV command controls which environment variables are present in DAGMan
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 14 Sep 2023 09:05:00 -0500
+
 condor (10.0.8-1) stable; urgency=medium
 
   * Avoid kernel panic on some Enterprise Linux 8 systems
