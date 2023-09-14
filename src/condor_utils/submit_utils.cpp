@@ -4843,6 +4843,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	// Self-checkpointing
 	{SUBMIT_KEY_CheckpointExitCode, ATTR_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
+	{SUBMIT_KEY_CheckpointDestination, ATTR_JOB_CHECKPOINT_DESTINATION, SimpleSubmitKeyword::f_as_string},
 
 	// Presigned S3 URLs
 	{SUBMIT_KEY_AWSRegion, ATTR_AWS_REGION, SimpleSubmitKeyword::f_as_string},

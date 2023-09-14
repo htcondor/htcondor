@@ -5832,6 +5832,16 @@ These macros control the *condor_schedd*.
     when a job requests OAuth2 credentials
     for a configured OAuth2 service.
 
+:macro-def:`CHECKPOINT_DESTINATION_MAPFILE`
+    The location on disk of the file which maps from checkpoint destinations
+    to how invoke the corresponding clean-up plug-in.  Defaults to
+    ``$(ETC)/checkpoint-destination-mapfile``.
+
+:macro-def:`SCHEDD_CHECKPOINT_CLEANUP_TIMEOUT`
+    There's only so long that the *condor_schedd* is willing to let clean-up
+    for a single job (including all of its checkpoints) take.  This macro
+    defines that duration (as an integer number of seconds).
+
 condor_shadow Configuration File Entries
 -----------------------------------------
 
@@ -6730,6 +6740,27 @@ These macros affect *condor_preen*.
     This macro contains a (comma or space separated) list of files that
     *condor_preen* considers invalid files to find in the ``$(LOG)``
     directory. There is no default value.
+
+:macro-def:`MAX_CHECKPOINT_CLEANUP_PROCS`
+    If a checkpoint clean-up plug-in fails when the *condor_schedd*
+    (indirectly) invokes it after a job exits the queue, the next run of
+    *condor_preen* will retry it.  *condor_preen* assumes that the clean-up
+    process is relatively light-weight and starts more than one if more than
+    one job failed to clean up.  This macro limits the number of simultaneous
+    clean-up processes.
+
+:macro-def:`CHECKPOINT_CLEANUP_TIMEOUT`
+    A checkpoint clean-up plug-in is invoked once per file in the checkpoint,
+    and must therefore do its job relatively quickly.  This macro defines
+    (as an integer number of seconds)
+    how long HTCondor will wait for a checkpoint clean-up plug-in to exit
+    before it declares that it's stuck and kills it.
+
+:macro-def:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`
+    In addition to the per-file time-out :macro:`CHECKPOINT_CLEANUP_TIMEOUT`,
+    there's only so long that *condor_preen* is willing to let clean-up for
+    a single job (including all of its checkpoints) take.  This macro
+    defines that duration (as an integer number of seconds).
 
 condor_collector Configuration File Entries
 --------------------------------------------

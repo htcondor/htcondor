@@ -711,7 +711,7 @@ bool CanonicalMapPrefixEntry::matches(const char * principal, int /*cch*/, std::
 			if(pcanon) { *pcanon = value; }
 			if(groups) {
 				groups->clear();
-				groups->push_back(value);
+				groups->push_back(key.c_str());
 			}
 
 			return true;

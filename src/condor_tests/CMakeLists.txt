@@ -284,13 +284,14 @@ endif ()
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_hpc_annex_require_job "Test HPC_ANNEX_REQUIRE_JOB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
-				# These three tests are very timing depedent, and fail intermittantly on all our emulated platforms
-				if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+				if(NOT EMULATED_PLATFORM)
+					# The emulated platforms are too slow to run these tests.
 					condor_pl_test(test_checkpoint_destination "Test checkpoint_destination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-                    condor_pl_test(test_checkpoint_preen "Test checkpoint_destination cleanup via preen" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-                    condor_pl_test(test_checkpoint_ct "Test checkpoint CommittedTime" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-                    condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-				endif()
+					condor_pl_test(test_checkpoint_preen "Test checkpoint_destination cleanup via preen" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+					condor_pl_test(test_checkpoint_ct "Test checkpoint CommittedTime" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+					condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				endif(NOT EMULATED_PLATFORM)
+
 				condor_pl_test(test_plugin_timeout "Test plugin timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 				condor_pl_test(test_ft_plugin_testing "Test file transfer plugin testing mode" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -308,9 +309,9 @@ endif ()
 			condor_pl_test(test_broken_hash_bang "Test Broken Hash Bang" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# Container universe is only available on linux.
 			condor_pl_test(test_container_uni "Test container uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
-			if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")))
+			if( NOT EMULATED_PLATFORM )
 				condor_pl_test(test_singularity_sif "Test container uni with sif file" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			endif()
+			endif( NOT EMULATED_PLATFORM )
 			# The manifest code should work on macos, but
 			# the tests are failing.
 			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
@@ -323,9 +324,9 @@ endif ()
 			# The AES test depends on strace'ing the condor_shadow binary.  Strace isn't supported under 
 			# qemu, which is where we run our ppc and arm tests. 
 			# And strace is only available on linux.
-			if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64"))) 
+			if( NOT EMULATED_PLATFORM )
 				condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
-			endif()
+			endif( NOT EMULATED_PLATFORM )
 
 		endif()
 	endif()

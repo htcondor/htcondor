@@ -754,8 +754,7 @@ class Scheduler : public Service
 
 	bool forwardMatchToSidecarCM(const char *claim_id, const char *claim_ids, ClassAd &match_ad, const char *slot_name);
 
-	// Returns false if the checkpoint clean-up failed to launch.
-	bool doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd );
+	void doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd );
 
 private:
 

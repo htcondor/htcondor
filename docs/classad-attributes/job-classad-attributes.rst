@@ -160,6 +160,9 @@ all attributes.
 :classad-attribute:`BlockWrites`
     The integer number of blocks written to disk for this job.
 
+:classad-attribute:`CheckpointDestination`
+    A URL, as defined by submit command **checkpoint_destination**.
+
 :classad-attribute:`CloudLabelNames`
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
