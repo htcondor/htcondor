@@ -67,6 +67,9 @@ AdTypes convert_to_ad_type(daemon_t d_type)
     case DT_CREDD:
         ad_type = CREDD_AD;
         break;
+    case DT_GRIDMANAGER:
+        ad_type = GRID_AD;
+        break;
     default:
         THROW_EX(HTCondorEnumError, "Unknown daemon type.");
     }

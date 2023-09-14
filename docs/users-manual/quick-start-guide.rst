@@ -533,7 +533,7 @@ Where to Go from Here
 
 .. What we really want here is a link to a nice page in the user manual
 .. that briefly describes HTCondor's major features and/or what you'd use
-.. them for, as kind of a roadmap to the user manual.
+.. them for, as kind of a road map to the user manual.
 
 * Consider watching our
   `video tutorial <https://www.youtube.com/watch?v=p2X6s_7e51k&list=PLO7gMRGDPNumCuo3pCdRk23GDLNKFVjHn>`_

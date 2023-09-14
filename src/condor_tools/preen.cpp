@@ -55,6 +55,7 @@
 #include "my_popen.h"
 #include "stl_string_utils.h"
 #include "checkpoint_cleanup_utils.h"
+#include "format_time.h"
 
 #include <array>
 #include <memory>
@@ -99,7 +100,7 @@ void check_log_dir();
 void rec_lock_cleanup(const char *path, int depth, bool remove_self = false);
 void check_tmp_dir();
 void check_daemon_sock_dir();
-void bad_file( const char *, const char *, Directory & );
+void bad_file( const char *, const char *, Directory &, const char * extra = NULL );
 void good_file( const char *, const char * );
 int send_email();
 bool is_valid_shared_exe( const char *name );
@@ -501,6 +502,7 @@ check_spool_dir()
 		"local_univ_execute",
 		"EventdShutdownRate.log",
 		"*OfflineLog*",
+		"*OfflineAds*",
 		// SCHEDD.lock: High availability lock file.  Current
 		// manual recommends putting it in the spool, so avoid it.
 		"SCHEDD.lock",
@@ -916,23 +918,31 @@ check_log_dir()
 				if ( coreFile ) {
 					StatInfo statinfo( Log, f );
 					if( statinfo.Error() == 0 ) {
+						std::string daemonExe = get_corefile_program( f, dir.GetDirectoryPath() );
 						// If this core file is stale, flag it for removal
 						if( abs((int)( time(NULL) - statinfo.GetModifyTime() )) > coreFileStaleAge ) {
-							bad_file( Log, f, dir );
+							std::string coreFileDetails;
+							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zu",
+								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), statinfo.GetFileSize()
+							);
+							bad_file( Log, f, dir, coreFileDetails.c_str() );
 							continue;
 						}
 						// If this core file exceeds a certain size, flag for removal
 						if( statinfo.GetFileSize() > coreFileMaxSize ) {
 							//If core file belongs to schedd, negotiator, or collector daemon then
 							//add to data struct for later processing else flag for removal
-							std::string daemonExe = get_corefile_program( f, dir.GetDirectoryPath() );
 							if (daemonExe.find("condor_schedd") != std::string::npos ||
 								daemonExe.find("condor_negotiator") != std::string::npos ||
 								daemonExe.find("condor_collector") != std::string::npos) {
 									largeCoreFiles[condor_basename(daemonExe.c_str())].insert(std::make_pair(statinfo.GetModifyTime(),
 															std::pair<std::string,filesize_t>(std::string(f),statinfo.GetFileSize())));
 							} else {
-								bad_file( Log, f, dir );
+								std::string coreFileDetails;
+								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zu",
+									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), statinfo.GetFileSize()
+								);
+								bad_file( Log, f, dir, coreFileDetails.c_str() );
 							}
 							continue;
 						}
@@ -1235,7 +1245,7 @@ good_file( const char *dir, const char *name )
   arguments.
 */
 void
-bad_file( const char *dirpath, const char *name, Directory & dir )
+bad_file( const char *dirpath, const char *name, Directory & dir, const char * extra )
 {
 	std::string pathname;
 	std::string buf;
@@ -1261,6 +1271,10 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 		}
 	} else {
 		formatstr( buf, "%s - Not Removed", pathname.c_str() );
+	}
+
+	if( extra != NULL ) {
+		formatstr_cat( buf, " - %s", extra );
 	}
 	BadFiles->append( buf.c_str() );
 }

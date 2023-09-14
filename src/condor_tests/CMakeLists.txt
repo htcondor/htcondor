@@ -259,6 +259,7 @@ endif ()
 			condor_pl_test(test_dagman_proper_env "Test ability to set DAGMan proper job environment" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_save_files "Test ability for DAGMan to write and load save point files" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_futile_nodes_efficiency "Test DAGMan is not inefficiently setting nodes to futile" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_chirp_to_dagman_log "Test chirp events get written to DAGMan log" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -282,13 +283,15 @@ endif ()
 				# Sadly, Python doesn't implement a way to get disk space on Windows.
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_hpc_annex_require_job "Test HPC_ANNEX_REQUIRE_JOB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 				if(NOT EMULATED_PLATFORM)
 					# The emulated platforms are too slow to run these tests.
 					condor_pl_test(test_checkpoint_destination "Test checkpoint_destination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 					condor_pl_test(test_checkpoint_preen "Test checkpoint_destination cleanup via preen" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 					condor_pl_test(test_checkpoint_ct "Test checkpoint CommittedTime" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+					condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				endif(NOT EMULATED_PLATFORM)
-				condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 				condor_pl_test(test_plugin_timeout "Test plugin timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 				condor_pl_test(test_ft_plugin_testing "Test file transfer plugin testing mode" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")

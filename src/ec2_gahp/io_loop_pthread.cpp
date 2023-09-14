@@ -26,7 +26,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "string_list.h"
-#include "HashTable.h"
 #include "PipeBuffer.h"
 #include "my_getopt.h"
 #include "io_loop_pthread.h"
@@ -392,7 +391,6 @@ Worker::removeRequest(int req_id)
 
 // Functions for IOProcess class
 IOProcess::IOProcess()
-	: m_workers_list(&hashFuncInt)
 {
 	m_async_mode = false;
 	m_new_results_signaled = false;
@@ -528,91 +526,63 @@ IOProcess::stdinPipeHandler()
 Worker*
 IOProcess::createNewWorker(void)
 {
-	Worker *new_worker = NULL;
-	new_worker = new Worker(newWorkerId());
+	int new_id = newWorkerId();
+	auto [it, success] = m_workers_list.emplace(new_id, Worker(new_id));
+	ASSERT(success);
+	Worker& new_worker = it->second;
 
 	dprintf (D_FULLDEBUG, "About to start a new thread\n");
 
 	// Set this worker is available
-	new_worker->m_can_use = true;
+	new_worker.m_can_use = true;
 
 	// Create pthread
 	pthread_t thread;
 	if( pthread_create(&thread, NULL,
-				worker_function, (void *)new_worker) !=  0 ) {
+				worker_function, (void *)&new_worker) !=  0 ) {
 		dprintf(D_ALWAYS, "Failed to create a new thread\n");
 
-		delete new_worker;
-		return NULL;
+		m_workers_list.erase(it);
+		return nullptr;
 	}
 
 	// Deatch this thread
 	pthread_detach(thread);
 
-	// Insert a new worker to HashTable
-	ASSERT( m_workers_list.insert(new_worker->m_id, new_worker) == 0 );
 	m_avail_workers_num++;
 
-	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker->m_id);
-	return new_worker;
+	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker.m_id);
+	return &new_worker;
 }
 
 Worker*
 IOProcess::findFreeWorker(void)
 {
-	int currentkey = 0;
-	Worker *worker = NULL;
-
-	m_workers_list.startIterations();
-	while( m_workers_list.iterate(currentkey, worker) != 0 ) {
-		if( !worker->m_is_doing && worker->m_can_use ) {
-			worker->m_must_be_alive = true;
-			return worker;
+	for (auto& [key, worker]: m_workers_list) {
+		if (!worker.m_is_doing && worker.m_can_use) {
+			worker.m_must_be_alive = true;
+			return &worker;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 Worker*
 IOProcess::findFirstAvailWorker(void)
 {
-	int currentkey = 0;
-	Worker *worker = NULL;
-
-	m_workers_list.startIterations();
-	while( m_workers_list.iterate(currentkey, worker) != 0 ) {
-
-		if( worker->m_can_use ) {
-			worker->m_must_be_alive = true;
-			return worker;
+	for (auto& [key, worker]: m_workers_list) {
+		if (worker.m_can_use) {
+			worker.m_must_be_alive = true;
+			return &worker;
 		}
 	}
-
-	return NULL;
-}
-
-
-Worker*
-IOProcess::findWorker(int id)
-{
-	Worker *worker = NULL;
-
-	m_workers_list.lookup(id, worker);
-	return worker;
+	return nullptr;
 }
 
 bool
 IOProcess::removeWorkerFromWorkerList(int id)
 {
-	Worker* worker = findWorker(id);
-	if( worker ) {
-		m_workers_list.remove(id);
-
-		delete worker;
-		return true;
-	}
-
-	return false;
+	return (m_workers_list.erase(id) > 0);
 }
 
 void
@@ -674,7 +644,6 @@ IOProcess::addResult(const char *result)
 int
 IOProcess::newWorkerId(void)
 {
-	Worker* unused = NULL;
 	int starting_worker_id = m_next_worker_id++;
 
 	while( starting_worker_id != m_next_worker_id ) {
@@ -688,7 +657,7 @@ IOProcess::newWorkerId(void)
 		}
 
 		// Make certain this worker_id is not already in use
-		if( m_workers_list.lookup(m_next_worker_id, unused) == -1 ) {
+		if (m_workers_list.find(m_next_worker_id) == m_workers_list.end()) {
 			// not in use, we are done
 			return m_next_worker_id;
 		}

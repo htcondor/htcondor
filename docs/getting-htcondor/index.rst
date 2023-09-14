@@ -107,5 +107,5 @@ HTCondor also supports cloud-native distribution.
   pool that scales automatically to run submitted jobs. If you're new to
   HTCondor, you can proceed to the :ref:`quick_start_guide` immediately after
   following those instructions.
-* We also have documention on creating a
+* We also have documentation on creating a
   :doc:`../cloud-computing/condor-in-the-cloud` by hand.

@@ -21,7 +21,6 @@
 #include "condor_open.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "HashTable.h"
 #include "MapFile.h"
 #include "directory.h"
 #include "basename.h"

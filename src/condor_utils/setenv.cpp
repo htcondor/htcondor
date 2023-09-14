@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "HashTable.h"
 
 #include "setenv.h"
 
@@ -28,19 +27,6 @@
 #include <crt_externs.h>
 #else
 extern DLL_IMPORT_MAGIC char **environ;
-#endif
-
-// Under unix, we maintain a hash-table of all environment variables that
-// have been inserted using SetEnv() below. If they are overwritten by
-// another call to SetEnv() or removed by UnsetEnv(), we delete the
-// allocated memory. Windows does its own memory management for environment
-// variables, so this hash-table is unnecessary there.
-
-#ifndef WIN32
-
-
-HashTable <std::string, char *> EnvVars( hashFunction );
-
 #endif
 
 char **GetEnviron()
@@ -64,31 +50,11 @@ int SetEnv( const char *key, const char *value)
 		return FALSE;
 	}
 #else
-	char *buf;
-	size_t bufsz = strlen(key) + strlen(value) + 2;
-	buf = new char[bufsz];
-	snprintf(buf, bufsz, "%s=%s", key, value);
-	if( putenv(buf) != 0 )
+	if( setenv(key, value, 1) != 0 )
 	{
-		dprintf(D_ALWAYS, "putenv failed: %s (errno=%d)\n",
+		dprintf(D_ERROR, "setenv failed: %s (errno=%d)\n",
 				strerror(errno), errno);
-		delete[] buf;
 		return FALSE;
-	}
-
-	char *hashed_var=0;
-	if ( EnvVars.lookup( key, hashed_var ) == 0 ) {
-			// found old one
-			// remove old one
-		EnvVars.remove( key );
-			// delete old one
-		delete [] hashed_var;
-			// insert new one
-		EnvVars.insert( key, buf );
-	} else {
-			// no old one
-			// add new one
-		EnvVars.insert( key, buf );
 	}
 #endif
 	return TRUE;
@@ -147,25 +113,7 @@ int UnsetEnv( const char *env_var )
 		return FALSE;
 	}
 #else
-	char **my_environ = GetEnviron();
-
-	for ( int i = 0 ; my_environ[i] != NULL; i++ ) {
-		if ( strncmp( my_environ[i], env_var, strlen(env_var) ) == 0 ) {
-            for ( ; my_environ[i] != NULL; i++ ) {
-                my_environ[i] = my_environ[i+1];
-			}
-		    break;
-		}
-	}
-
-	char *hashed_var=0;
-	if ( EnvVars.lookup( env_var, hashed_var ) == 0 ) {
-			// found it
-			// remove it
-		EnvVars.remove( env_var );
-			// delete it
-		delete [] hashed_var;
-	}
+	unsetenv(env_var);
 #endif
 
 	return TRUE;

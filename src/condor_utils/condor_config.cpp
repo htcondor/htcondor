@@ -72,7 +72,6 @@
 #include "condor_distribution.h"
 #include "condor_environ.h"
 #include "setenv.h"
-#include "HashTable.h"
 #include "condor_uid.h"
 #include "condor_mkstemp.h"
 #include "basename.h"

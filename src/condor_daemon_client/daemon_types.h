@@ -27,12 +27,14 @@
 enum daemon_t { DT_NONE, DT_ANY,  DT_MASTER, DT_SCHEDD, DT_STARTD,
 				DT_COLLECTOR, DT_NEGOTIATOR, DT_KBDD, 
 				DT_DAGMAN, DT_VIEW_COLLECTOR, DT_CLUSTER,  
-				DT_SHADOW, DT_STARTER, DT_CREDD, DT_STORK, 
+				DT_SHADOW, DT_STARTER, DT_CREDD, DT_GRIDMANAGER, 
 				DT_TRANSFERD, DT_LEASE_MANAGER, DT_HAD,
 				DT_GENERIC, _dt_threshold_ };
 
 const char* daemonString( daemon_t dt );
 daemon_t stringToDaemonType( const char* name );
+// convert MyType string from a location ad to the daemon_t enum
+daemon_t AdTypeStringToDaemonType( const char* adtype_name );
 
 
 #endif /* _CONDOR_DAEMON_TYPES_H */

@@ -2554,7 +2554,14 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 				                   ft_info.hold_code,ft_info.hold_subcode);
 			}
 
-			EXCEPT( "Failed to transfer files" );
+			std::string message {"Failed to transfer files: "};
+			if (ft_info.error_desc.empty()) {
+				message += " reason unknown.";
+			} else {
+				message += ft_info.error_desc;
+			}
+
+			EXCEPT("%s", message.c_str());
 		}
 
 		// It's not enought to for the FTO to believe that the transfer

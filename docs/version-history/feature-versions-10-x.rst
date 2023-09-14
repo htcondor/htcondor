@@ -13,6 +13,25 @@ Release Notes:
 
 - HTCondor version 10.8.0 not yet released.
 
+- The packaged builds (RPMs and debs) have been reorganized.
+  We no longer wish to support the ClassAd library and it has been folded into
+  the main ``condor`` package. The ``condor-blahp`` and ``condor-procd`` packages
+  have also been folded into the ``condor`` package.
+  :jira:`1981`
+
+- On Debian based systems, the HTCondor's ``libexec`` directory has moved to
+  the more standard ``/usr/libexec/condor``.
+  :jira:`1981`
+
+- The Debian packaging has been aligned with the RPM packaging.
+  The package names are now ``condor`` and ``minicondor``.
+  The ``condor-kbdd`` package has been split out, since many installations
+  are server based and do not require the keyboard daemon and all of its
+  dependencies on the X Window system. Also, the ``condor-vm-gahp`` package
+  has been split out for sites that do not want to support VM Universe and
+  the ``libvirt`` dependencies that come along with it.
+  :jira:`1987`
+
 - This version includes all the updates from :ref:`lts-version-history-1008`.
 
 New Features:
@@ -24,6 +43,32 @@ New Features:
   that message.  The previous default can be restored by setting
   :macro:`CGROUP_MEMORY_LIMIT_POLICY` = none on the Execution points.
   :jira:`1974`
+
+- Added a ``-gpus`` option to *condor_status*. With this option *condor_status*
+  will show only machines that have GPUs provisioned; and it will show information
+  about the GPU properties.
+  :jira:`1958`
+
+- The output of *condor_status* when using the ``-compact`` option has been improved
+  to show a separate row for the second and subsequent slot type for machines that have
+  multiple slot types. Also the totals now count slots that have the ``BackfillSlot``
+  attribute under the ``Backfill`` or ``BkIdle`` columns.
+  :jira:`1957`
+
+- Added new DAG command ``ENV`` for DAGMan. This command allows users to specify
+  environment variables to be added into the DAGMan job proper's environment either
+  by setting values explicitly or getting them from the environment the job is
+  submitted from.
+  :jira:`1955`
+
+- Improved output for ``htcondor dag status`` command to include more information
+  about the specified DAG.
+  :jira:`1951`
+
+- Updated DAGMan to utilize the ``-reason`` flag to add a message about why
+  a job was removed when DAGMan removes managed jobs via *condor_rm* for some
+  reason.
+  :jira:`1950`
 
 - Partitionable slots can now be directly claimed by a *condor_schedd*
   (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
@@ -45,37 +90,6 @@ New Features:
   already been added to the *condor_schedd* using the *condor_qusers* tool.
   :jira:`1934`
 
-- When the file transfer queue is growing too big, HTCondor sends email to the
-  administrator.  Prior versions of HTCondor would send an arbitrarily large number
-  of emails.  Now HTCondor will only send one email per day.
-  :jira:`1937`
-
-- Added a ``-gpus`` option to *condor_status*. With this option *condor_status*
-  will show only machines that have GPUs provisioned; and it will show information
-  about the GPU properties.
-  :jira:`1958`
-
-- The output of *condor_status* when using the ``-compact`` option has been improved
-  to show a separate row for the second and subsequent slot type for machines that have
-  multiple slot types. Also the totals now count slots that have the ``BackfillSlot``
-  attribute under the ``Backfill`` or ``BkIdle`` columns.
-  :jira:`1957`
-
-- Improved output for ``htcondor dag status`` command to include more information
-  about the specified DAG.
-  :jira:`1951`
-
-- Updated DAGMan to utilize the ``-reason`` flag to add a message about why
-  a job was removed when DAGMan removes managed jobs via *condor_rm* for some
-  reason.
-  :jira:`1950`
-
-- Added new DAG command ``ENV`` for DAGMan. This command allows users to specify
-  environment variables to be added into the DAGMan job proper's environment either
-  by setting values explicitly or getting them from the environment the job is
-  submitted from.
-  :jira:`1955`
-
 - Updated *condor_upgrade_check* script to check and warn about known incompatibilities
   introduced in the feature series for HTCondor ``V10`` that can cause issues when
   upgrading to a newer version (i.e. HTCondor ``V23``).
@@ -88,9 +102,10 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug in parallel universe that would cause the *condor_schedd* to
-  assert when running with partitionable slots.
-  :jira:`1952`
+- Fixed a bug introduced in 10.5.0 that caused jobs to fail to start
+  if they requested an OAuth credential whose service name included
+  an asterisk.
+  :jira:`1966`
 
 - Fixed bugs in *condor_store_cred* that could cause it to crash or
   write incorrect data for the pool password.
@@ -101,14 +116,13 @@ Bugs Fixed:
   started.
   :jira:`1979`
 
-- Fixed a bug introduced in 10.5.0 that caused jobs to fail to start
-  if they requested an OAuth credential whose service name included
-  an asterisk.
-  :jira:`1966`
-
 - Some support scripts for the ``htcondor annex`` command are now
   properly installed as executable.
   :jira:`1984`
+
+- Fixed a bug where *condor_remote_cluster* could get stuck in a loop
+  while installing files into an NFS directory.
+  :jira:`2023`
 
 Version 10.7.1
 --------------

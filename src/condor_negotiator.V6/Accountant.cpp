@@ -75,8 +75,7 @@ GCC_DIAG_OFF(float-equal)
 // Constructor - One time initialization
 //------------------------------------------------------------------
 
-Accountant::Accountant():
-	concurrencyLimits(hashFunction)
+Accountant::Accountant()
 {
   MinPriority=0.5;
   AcctLog=NULL;
@@ -1660,7 +1659,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& Cu
 ClassAd* Accountant::GetClassAd(const std::string& Key)
 {
   ClassAd* ad=NULL;
-  (void) AcctLog->table.lookup(Key,ad);
+  std::ignore = AcctLog->table.lookup(Key,ad);
   return ad;
 }
 
@@ -1863,15 +1862,15 @@ void Accountant::LoadLimits(ClassAdListDoesNotDeleteAds &resourceList)
 
 double Accountant::GetLimit(const  std::string& limit)
 {
-	double count = 0;
-
-	if (-1 == concurrencyLimits.lookup(limit, count)) {
+	auto it = concurrencyLimits.find(limit);
+	if (it == concurrencyLimits.end()) {
 		dprintf(D_ACCOUNTANT,
 				"Looking for Limit '%s' count, which does not exist\n",
 				limit.c_str());
+		return 0.0;
 	}
 
-	return count;
+	return it->second;
 }
 
 double Accountant::GetLimitMax(const  std::string& limit)
@@ -1888,20 +1887,14 @@ double Accountant::GetLimitMax(const  std::string& limit)
 
 void Accountant::DumpLimits()
 {
-	std::string limit;
- 	double count;
-	concurrencyLimits.startIterations();
-	while (concurrencyLimits.iterate(limit, count)) {
+	for (const auto& [limit, count]: concurrencyLimits) {
 		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.c_str(), count);
 	}
 }
 
 void Accountant::ReportLimits(ClassAd *attrList)
 {
-	std::string limit;
- 	double count;
-	concurrencyLimits.startIterations();
-	while (concurrencyLimits.iterate(limit, count)) {
+	for (const auto& [limit, count]: concurrencyLimits) {
 		std::string attr;
         formatstr(attr, "ConcurrencyLimit_%s", limit.c_str());
         // classad wire protocol doesn't currently support attribute names that include
@@ -1915,12 +1908,9 @@ void Accountant::ReportLimits(ClassAd *attrList)
 
 void Accountant::ClearLimits()
 {
-	std::string limit;
- 	double count;
-	concurrencyLimits.startIterations();
-	while (concurrencyLimits.iterate(limit, count)) {
-		concurrencyLimits.insert(limit, 0, true);
+	for (auto& [limit, count]: concurrencyLimits) {
 		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.c_str(), count);
+		count = 0.0;
 	}
 }
 
@@ -1933,7 +1923,7 @@ void Accountant::IncrementLimit(const std::string& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) + increment, true);
+		concurrencyLimits[limit] = GetLimit(limit) + increment;
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
@@ -1952,7 +1942,7 @@ void Accountant::DecrementLimit(const std::string& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) - increment, true);
+		concurrencyLimits[limit] = GetLimit(limit) - increment;
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
