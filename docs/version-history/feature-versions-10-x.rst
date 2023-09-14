@@ -9,9 +9,7 @@ Version 10.8.0
 
 Release Notes:
 
-.. HTCondor version 10.8.0 released on Month Date, 2023.
-
-- HTCondor version 10.8.0 not yet released.
+- HTCondor version 10.8.0 released on September 14, 2023.
 
 - The packaged builds (RPMs and debs) have been reorganized.
   We no longer wish to support the ClassAd library and it has been folded into
