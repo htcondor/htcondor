@@ -10,7 +10,7 @@ Create a short-lived SciToken to authenticate with local HTCondor daemons
 Synopsis
 --------
 
-**condor_test_token** [**--help]
+**condor_test_token** [**--help**]
 
 **condor_test_token**
 **--issuer** *issuer-url*
