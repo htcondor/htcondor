@@ -131,6 +131,13 @@ incorporates.
        :ref:`admin-manual/policy-configuration:*condor_startd* policy
        configuration` for information on partitionable slot policies.
 
+    -  ``StaticSlots( slot_type_num [, num_slots, [, allocation] ] )``
+
+       Sets up a number of static slots of the specified slot type number
+       (defaults for slot_type_num and num_slots are 1 and ``$(NUM_CPUS)`` respectively).
+       The number of slots will be equal to ``num_slots``. If no value is provided for the allocation,
+       the default is to divide 100% of the machine resources evenly across the slots.
+
     -  ``AssignAccountingGroup( map_filename [, check_request] )`` Sets up a
        *condor_schedd* job transform that assigns an accounting group
        to each job as it is submitted. The accounting group is determined by
@@ -256,6 +263,14 @@ incorporates.
        used with dedicated resources. If this policy is used together
        with the ``Limit_Job_Runtimes`` policy, order the specification
        by placing this ``Always_Run_Jobs`` policy first.
+
+.. _OnlyRegisteredCheckpointDestinations:
+
+    -  ``OnlyRegisteredCheckpointDestinations``
+
+       Jobs which specify a checkpoint destination must specify a checkpoint
+       destination that the AP knows how to clean up (that has a matching
+       entry in :macro:`CHECKPOINT_DESTINATION_MAPFILE`).
 
     -  ``UWCS_Desktop``
 

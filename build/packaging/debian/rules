@@ -32,18 +32,18 @@ endif
 %:
 	dh $@ --with python3
 
+# Any changes here should be synchronized with changes
+# to ../rpm/condor.spec
+
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		$(CMAKE_TOOLCHAIN) \
-		-DCONDOR_PACKAGE_BUILD:BOOL=ON \
-		-DPROPER:BOOL=ON \
-		-D_DEBUG:BOOL=TRUE \
 		-DBUILDID:STRING="$(buildid)"\
-		-DPACKAGEID:STRING="$(debver)"\
-		-DCMAKE_INSTALL_PREFIX:PATH=/ \
-		-DCMAKE_SKIP_RPATH:BOOL=ON \
 		-DBUILD_TESTING:BOOL=ON \
-		-DWITH_CAMPUSFACTORY:BOOL=OFF
+		-DCMAKE_SKIP_RPATH:BOOL=ON \
+		-DPACKAGEID:STRING="$(debver)"\
+		-DCONDOR_PACKAGE_BUILD:BOOL=ON \
+		-DCMAKE_INSTALL_PREFIX:PATH=/
 
 
 override_dh_auto_build: doc/build

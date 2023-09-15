@@ -1349,6 +1349,16 @@ FILE TRANSFER COMMANDS
     The list is interpreted like ``transfer_output_files``, but there is
     no corresponding ``remaps`` command.
 
+    .. _checkpoint_destination:
+
+    :index:`checkpoint_destination<single: checkpoint_destination; submit commands>`
+    :index:`checkpoint file(s) specified by URL<single: checkpoint file(s) specified by URL; file transfer mechanism>`
+ checkpoint_destination = <destination-URL>
+    When present, defines a URL that specifies both a plug-in and a
+    destination for the transfer of the entire checkpoint of a job.
+    The plug-in does the transfer of files, and no files are sent back
+    to the access point.
+
     :index:`preserve_relative_paths<single: preserve_relative_paths; submit commands>`
  preserve_relative_paths = < True | False >
     For vanilla and Docker -universe jobs (and others that use the shadow),

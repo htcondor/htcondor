@@ -204,7 +204,6 @@ tdp_wait_stopped_child (pid_t pid)
 #endif /* LINUX && TDP */
 
 static int _condor_fast_exit = 0;
-static int dummyGlobal;
 
 void **curr_dataptr;
 void **curr_regdataptr;
@@ -5926,8 +5925,8 @@ pid_t CreateProcessForkit::fork(int flags) {
     return retval;
 
 #else
-    (void) m_clone_newpid_pid;
-    (void) m_clone_newpid_ppid;
+	std::ignore = m_clone_newpid_pid;
+	std::ignore = m_clone_newpid_ppid;
 
     // Note we silently ignore flags if there's no clone on the platform.
     return ::fork();
@@ -6113,7 +6112,7 @@ void CreateProcessForkit::exec() {
 		// close the read end of our error pipe and set the
 		// close-on-exec flag on the write end
 	close(m_errorpipe[0]);
-	dummyGlobal = fcntl(m_errorpipe[1], F_SETFD, FD_CLOEXEC);
+	std::ignore = fcntl(m_errorpipe[1], F_SETFD, FD_CLOEXEC);
 
 		/********************************************************
 			  Make sure we're not about to re-use a PID that
@@ -8501,7 +8500,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
             // close the read end of our error pipe and set the
             // close-on-exec flag on the write end
         close(errorpipe[0]);
-        (void) fcntl(errorpipe[1], F_SETFD, FD_CLOEXEC);
+		std::ignore = fcntl(errorpipe[1], F_SETFD, FD_CLOEXEC);
 
 		dprintf_init_fork_child();
 
@@ -8511,7 +8510,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
                 // we've already got this pid in our table! we've got
                 // to bail out immediately so our parent can retry.
             int child_errno = ERRNO_PID_COLLISION;
-            dummyGlobal = write(errorpipe[1], &child_errno, sizeof(child_errno));
+			std::ignore = write(errorpipe[1], &child_errno, sizeof(child_errno));
 			close( errorpipe[1] );
 			exit(4);
         }

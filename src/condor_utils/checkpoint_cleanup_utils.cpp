@@ -11,11 +11,37 @@
 
 
 bool
+fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, std::string & argl, std::string & error ) {
+	std::string cdmf;
+	param( cdmf, "CHECKPOINT_DESTINATION_MAPFILE" );
+
+	MapFile mf;
+	int rv = mf.ParseCanonicalizationFile( cdmf.c_str(), true, true, true );
+	if( rv < 0 ) {
+		formatstr( error,
+			"Failed to parse checkpoint destination map file (%s), aborting",
+			cdmf.c_str()
+		);
+		return false;
+	}
+
+	if( mf.GetCanonicalization( "*", checkpointDestination.c_str(), argl ) != 0 ) {
+		formatstr( error,
+		    "Failed to find checkpoint destination %s in map file, aborting",
+		    checkpointDestination.c_str()
+		);
+		return false;
+	}
+
+    return true;
+}
+
+bool
 spawnCheckpointCleanupProcess(
     int cluster, int proc, ClassAd * jobAd, int cleanup_reaper_id,
     int & pid, std::string & error
 ) {
-	// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): %d.%d\n", cluster, proc );
+	dprintf( D_TEST, "spawnCheckpointCleanupProcess(): for job %d.%d\n", cluster, proc );
 
 	std::string checkpointDestination;
 	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
@@ -28,6 +54,15 @@ spawnCheckpointCleanupProcess(
 		return false;
 	}
 
+	std::string dummy;
+	if(! fetchCheckpointDestinationCleanup( checkpointDestination, dummy, error )) {
+		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up"
+		         " job %d.%d: no clean-up plug-in registered for checkpoint"
+		         " destination '%s' (%s).\n",
+		         cluster, proc, checkpointDestination.c_str(), error.c_str() );
+		return false;
+	}
+
 	//
 	// Create a subprocess to invoke the deletion plug-in.  Its
 	// reaper will call JobIsFinished() and JobIsFinishedDone().
@@ -35,7 +70,6 @@ spawnCheckpointCleanupProcess(
 	// The call will be
 	//
 	// `/full/path/to/condor_manifest deleteFilesStoredAt
-	//      /full/path/to/protocol-specific-clean-up-plug-in
 	//      checkpointDestination/globalJobID
 	//      /full/path/to/manifest-file-trailing-checkpoint-number
 	//      lowCheckpointNo highCheckpointNo`
@@ -52,32 +86,6 @@ spawnCheckpointCleanupProcess(
 	std::filesystem::path condor_manifest = BIN / "condor_manifest";
 	if(! std::filesystem::exists(condor_manifest)) {
 		formatstr( error, "'%s' does not exist, aborting", condor_manifest.string().c_str() );
-		// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): %s\n", error.c_str() );
-		return false;
-	}
-
-
-	// Determine and validate `full/path/to/protocol-specific-clean-up-plug-in`.
-	std::string protocol = checkpointDestination.substr( 0, checkpointDestination.find( "://" ) );
-	if( protocol == checkpointDestination ) {
-		formatstr( error,
-			"Invalid checkpoint destination (%s) in checkpoint clean-up attempt should be impossible, aborting.",
-			checkpointDestination.c_str()
-		);
-		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): %s\n", error.c_str() );
-		return false;
-	}
-
-	std::string cleanupPluginConfigKey;
-	formatstr( cleanupPluginConfigKey, "%s_CLEANUP_PLUGIN", protocol.c_str() );
-	std::string destinationSpecificBinary;
-	param( destinationSpecificBinary, cleanupPluginConfigKey.c_str() );
-	if(! std::filesystem::exists( destinationSpecificBinary )) {
-		formatstr( error,
-			"Clean-up plug-in for '%s' (%s) does not exist, aborting",
-			protocol.c_str(), destinationSpecificBinary.c_str()
-		);
-		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): %s\n", error.c_str() );
 		return false;
 	}
 
@@ -119,7 +127,6 @@ spawnCheckpointCleanupProcess(
 	std::vector< std::string > cleanup_process_args;
 	cleanup_process_args.push_back( condor_manifest.string() );
 	cleanup_process_args.push_back( "deleteFilesStoredAt" );
-	cleanup_process_args.push_back( destinationSpecificBinary );
 
 	// Construct the checkpoint-specific location prefix.
 	formatstr(
@@ -164,8 +171,15 @@ spawnCheckpointCleanupProcess(
 	}
 #endif /* ! defined(WINDOWS) */
 
+	if( IsDebugLevel( D_TEST ) ) {
+		std::string cl;
+		for( const auto & a : cleanup_process_args ) {
+			formatstr_cat( cl, " %s", a.c_str() );
+		}
+		dprintf( D_TEST, "spawnCheckpointCleanupProcess(): %s\n", cl.c_str() );
+	}
+
 	OptionalCreateProcessArgs cleanup_process_opts;
-	// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): spawning as %d.%d\n", get_user_uid(), get_user_gid() );
 	pid = daemonCore->CreateProcessNew(
 		condor_manifest.string(),
 		cleanup_process_args,
@@ -180,6 +194,6 @@ spawnCheckpointCleanupProcess(
 	}
 #endif /* ! defined(WINDOWS) */
 
-	// dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
+	dprintf( D_TEST, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
 	return true;
 }

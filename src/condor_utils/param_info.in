@@ -3289,7 +3289,7 @@ type=int
 tags=schedd
 
 [CURB_MATCHMAKING]
-default=RecentDaemonCoreDutyCycle > 0.98
+default=(RecentDaemonCoreDutyCycle > 0.98) || (TransferQueueNumWaitingToUpload > TransferQueueMaxUploading)
 type=string
 description=Curb Expression for Matchmaking
 tags=schedd
@@ -4967,7 +4967,7 @@ tags=collector
 restart=true
 
 [SCHEDD_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for the scheduler.
@@ -4986,7 +4986,7 @@ usage=
 default=
 
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for condor_shared_port.
@@ -5913,6 +5913,11 @@ description=Hidden knob.  If true, all daemon core daemons will kill all of thei
 type=bool
 default=true
 
+[CHECKPOINT_DESTINATION_MAPFILE]
+description=Location of the checkpoint destination map file
+default=$(LOCAL_DIR)/checkpoint-destination-mapfile
+type=path
+
 ######
 ## add metaknobs below this banner
 ##
@@ -6421,6 +6426,15 @@ default : @end
 	SLOT_TYPE_$(1:1)=$(2+:100%)
 @end
 
+[$FEATURE.StaticSlots]
+description=Configure a set of Static slots, args:([type# [num [, allocation]]])  default: 1, $(NUM_CPUS), 1/$(NUM_CPUS)
+default : @end
+	NUM_SLOTS_TYPE_$(1:1)=$(2:$(NUM_CPUS))
+	SLOT_TYPE_$(1:1)_PARTITIONABLE=false
+	SLOT_TYPE_$(1:1)=$(3+:1/$(NUM_SLOTS_TYPE_$(1:1)))
+	SLOT_TYPE_$(1:1)=$(3+)
+@end
+
 [$FEATURE.OneShotCronHook]
 description=Configure a OneShot Cron Hook, args:(STARTD_CRON | SCHEDD_CRON, tag, hook_exe [,hook_args])
 default : @end
@@ -6925,6 +6939,26 @@ default : @fin
 			endif
 		@end
 	endif
+@fin
+
+[$POLICY.OnlyRegisteredCheckpointDestinations]
+description=Use submit requirement to reject jobs whose checkpoint destination is not registered.
+default : @fin
+	TOOL_CLASSAD_USER_MAP_NAMES = $(TOOL_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	SCHEDD_CLASSAD_USER_MAP_NAMES = $(SCHEDD_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	CLASSAD_USER_MAPFILE_checkpoint_destination_map = $(CHECKPOINT_DESTINATION_MAPFILE)
+	CLASSAD_USER_MAP_PREFIX_checkpoint_destination_map = TRUE
+
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) ValidateCheckpointDestination
+	JOB_TRANSFORM_ValidateCheckpointDestination @=end
+		EVALSET CheckpointDestinationValid = ifthenelse(undefined =?= userMap("checkpoint_destination_map", CheckpointDestination), undefined, True)
+	@end
+
+	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) CheckpointDestinationValid
+
+	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) RejectInvalidCheckpointDestination
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination = CheckpointDestination =?= undefined || CheckpointDestinationValid =?= True
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination_REASON = "You specified a checkpoint_destination this AP does not know how to clean up.  You may need to add a trailing / to the URL."
 @fin
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

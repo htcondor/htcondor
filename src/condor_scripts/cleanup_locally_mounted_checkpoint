@@ -1,32 +1,35 @@
 #!/bin/bash
 
 function usage() {
-    echo "usage: $0 -from CHECKPOINT_DESTINATION/CHECKPOINT_DIR -delete FILE"
+    echo "usage: $0 -prefix PREFIX -path PATH -from URL_TO_FILE -delete FILE"
     exit 1
 }
 
-if [[ $# -lt 5 ]]; then
+if [[ $# -lt 8 ]]; then
     usage
 fi
 
-NAME=$1
-shift
-
-if [[ $1 != "-from" ]]; then
+if [[ $1 != "-prefix" ]]; then
     usage
 fi
-FROM=$2
+PREFIX=$2
 
-if [[ $3 != "-delete" ]]; then
+if [[ $3 != "-path" ]]; then
     usage
 fi
-DELETE=$4
+LOCAL_PATH=$4
 
+if [[ $5 != "-from" ]]; then
+    usage
+fi
+FROM=$6
 
-CHECKPOINT_PLUGIN_URL=`condor_config_val ${NAME}_CLEANUP_PLUGIN_URL`
-CHECKPOINT_PLUGIN_PATH=`condor_config_val ${NAME}_CLEANUP_PLUGIN_PATH`
+if [[ $7 != "-delete" ]]; then
+    usage
+fi
+DELETE=$8
 
-FROM_REGEX="^${CHECKPOINT_PLUGIN_URL}(.*)"
+FROM_REGEX="^${PREFIX}(.*)"
 
 if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
     CHECKPOINT_DIR=${BASH_REMATCH[1]}
@@ -36,8 +39,8 @@ if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
         CHECKPOINT_DIR=${CHECKPOINT_DIR}/
     fi
 
-    if [[ ${CHECKPOINT_PLUGIN_PATH} =~ $NO_TRAILING_SLASH_REGEX ]]; then
-        CHECKPOINT_PLUGIN_PATH=${CHECKPOINT_PLUGIN_PATH}/
+    if [[ ${LOCAL_PATH} =~ $NO_TRAILING_SLASH_REGEX ]]; then
+        LOCAL_PATH=${LOCAL_PATH}/
     fi
 
     LEADING_SLASH_REGEX='^/(.*)'
@@ -46,11 +49,11 @@ if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
     fi
 
     # Delete the file.
-    if ! rm -f ${CHECKPOINT_PLUGIN_PATH}${CHECKPOINT_DIR}${DELETE}; then
+    if ! rm -f ${LOCAL_PATH}${CHECKPOINT_DIR}${DELETE}; then
         exit 2
     fi
 
-    DIR=${CHECKPOINT_PLUGIN_PATH}${CHECKPOINT_DIR}
+    DIR=${LOCAL_PATH}${CHECKPOINT_DIR}
     # We created directories in ${DIR} as necessary to write the
     # checkpoint, so delete them if we just removed the last file
     # in them.  This won't delete directories which didn't have

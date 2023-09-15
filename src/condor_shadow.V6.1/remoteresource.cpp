@@ -33,6 +33,7 @@
 #include "authentication.h"
 #include "globus_utils.h"
 #include "limit_directory_access.h"
+#include <filesystem>
 #include "manifest.h"
 
 #include <fstream>

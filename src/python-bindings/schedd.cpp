@@ -1553,12 +1553,11 @@ struct Schedd {
         KeyCacheEntry *k = NULL;
         int ret = 0;
 
-        // IMPORTANT: this hashtable returns 0 on success!
-        ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
-        if (ret)
-        {
+        auto command_pair = SecMan::command_map.find(cmd_map_ent);
+        if (command_pair == SecMan::command_map.end()) {
             return false;
         }
+        session_id = command_pair->second;
 
         // IMPORTANT: this hashtable returns 1 on success!
         ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
@@ -1567,7 +1566,7 @@ struct Schedd {
             return false;
         }
 
-	ClassAd *policy = k->policy();
+        ClassAd *policy = k->policy();
 
         if (!policy->EvaluateAttrString(ATTR_SEC_MY_REMOTE_USER_NAME, result))
         {

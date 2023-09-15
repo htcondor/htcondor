@@ -506,7 +506,7 @@ def the_job_description(test_dir, path_to_the_job_script):
 TEST_CASES = {
     "spool": {},
     "local": {
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       'local://example.vo/example.fs',
         "transfer_plugins":             'local={plugin_shell_file}',
     },
     # See HTCONDOR-1220 and -1221 for some of the bugs found while hand-
@@ -514,7 +514,7 @@ TEST_CASES = {
     # output_destination -related problems and only check to make sure
     # that output_destination doesn't screw up checkpoint_destination.
     "with_output_destination": {
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       'local://example.vo/example.fs',
         "transfer_plugins":             'local={plugin_shell_file}',
         "output_destination":           'local://example.vo/example.fs/od/',
 
@@ -524,7 +524,7 @@ TEST_CASES = {
         "error":                        "test_job_$(CLUSTER).err",
     },
     "check_files_local": {
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       'local://example.vo/example.fs',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         '{test_dir}/check_files_local/',
         "transfer_checkpoint_files":    'saved-state, a, b, c, d, e',
@@ -555,7 +555,7 @@ TEST_CASES = {
         "iwd":                          '{test_dir}/HTCONDOR_1218_1',
         "transfer_output_files":        "d1",
 
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       'local://example.vo/example.fs',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         'd1/d2',
         "transfer_checkpoint_files":    'saved-state, d1/d2/a',
@@ -565,7 +565,7 @@ TEST_CASES = {
         "iwd":                          '{test_dir}/HTCONDOR_1218_2',
         "transfer_output_files":        "d1",
 
-        "+CheckpointDestination":       '"local://example.vo/example.fs"',
+        "checkpoint_destination":       'local://example.vo/example.fs',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         'd1',
         "transfer_checkpoint_files":    'saved-state, d1/a',
@@ -708,20 +708,31 @@ class TestCheckpointDestination:
         with the_condor.use_config():
             SPOOL = htcondor.param["SPOOL"]
 
+            local_dir = Path(htcondor.param["LOCAL_DIR"])
+            (local_dir / "checkpoint-destination-mapfile").write_text(
+                f"*   local://example.vo/example.fs   cleanup_locally_mounted_checkpoint,-prefix,\\0,-path,{test_dir.as_posix()}\n"
+            )
+
             preen_env = {
                 ** os.environ,
                 '_CONDOR_SPOOL': SPOOL,
-                '_CONDOR_LOCAL_CLEANUP_PLUGIN': '$(LIBEXEC)/cleanup_locally_mounted_checkpoint',
-                '_CONDOR_LOCAL_CLEANUP_PLUGIN_URL': 'local://example.vo/example.fs',
-                '_CONDOR_LOCAL_CLEANUP_PLUGIN_PATH': test_dir.as_posix(),
-                '_CONDOR_TOOL_DEBUG': 'D_ZKM D_CATEGORY',
+                '_CONDOR_TOOL_DEBUG': 'D_TEST D_SUB_SECOND D_CATEGORY',
             }
-            rv = subprocess.run( ['condor_preen', '-d'],
-                # Crass empiricism.
-                env=preen_env, timeout=120,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                universal_newlines=True,
-            )
+            try:
+                rv = subprocess.run( ['condor_preen', '-d'],
+                    # Crass empiricism.
+                    env=preen_env, timeout=120,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    universal_newlines=True,
+                )
+            except subprocess.TimeoutExpired as te:
+                # WTAF is going on here?
+                stdout = str(te.stdout).replace( "\\n", "\n" )
+                if stdout.startswith("b'"):
+                    stdout = stdout[2:-1]
+                stdout = "\n" + stdout
+                logger.debug(stdout)
+                raise te
         logger.debug(rv.stdout)
         assert(rv.returncode == 0)
 
