@@ -2427,7 +2427,7 @@ struct Schedd {
 		return result;
 	}
 
-    boost::shared_ptr<HistoryIterator> epochHistory(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
+    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
         return history_query(requirement, projection, match, since, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
     }
@@ -4272,7 +4272,7 @@ void export_schedd()
             (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #endif
             )
-        .def("epochHistory", &Schedd::epochHistory,
+        .def("jobEpochHistory", &Schedd::jobEpochHistory,
             R"C0ND0R(
             Fetch per job run instance (epoch) history records from the *condor_schedd* daemon.
 

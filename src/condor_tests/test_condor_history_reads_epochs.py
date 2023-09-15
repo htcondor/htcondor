@@ -238,7 +238,7 @@ def runPyBindings(condor):
     proj = ["ClusterId", "ProcId"]
     hist_itr = None
     with condor.use_config():
-        hist_itr = htcondor.Schedd().epochHistory("ClusterId==1", proj)
+        hist_itr = htcondor.Schedd().jobEpochHistory("ClusterId==1", proj)
     return hist_itr
 
 #============================================================================================
