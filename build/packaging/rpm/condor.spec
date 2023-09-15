@@ -646,10 +646,8 @@ Requires: python3-condor
 Requires: pcre2-tools
 
 %description upgrade-checks
-HTCondor V9 to V10 check for for known breaking changes:
-1. IDToken TRUST_DOMAIN default value change
-2. Upgrade to PCRE2 breaking map file regex sequences
-3. The way to request GPU resources for a job
+Examines the current HTCondor installation and recommends changes to ensure
+a smooth upgrade to a subsequent HTCondor version.
 
 %files upgrade-checks
 %_bindir/condor_upgrade_check
