@@ -38,6 +38,7 @@ Interacting with Schedulers
    .. automethod:: act
    .. automethod:: edit
    .. automethod:: history
+   .. automethod:: epochHistory
    .. automethod:: submit
    .. automethod:: submitMany
    .. automethod:: spool
