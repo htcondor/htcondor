@@ -234,10 +234,8 @@ Description: distributed workload management system - single node configuration
  system is available, HTCondor can transfer the job's data files on behalf of
  the user.
  .
- HTCondor V9 to V10 check for for known breaking changes:
- 1. IDToken TRUST_DOMAIN default value change
- 2. Upgrade to PCRE2 breaking map file regex sequences
- 3. The way to request GPU resources for a job
+ Examines the current HTCondor installation and recommends changes to ensure
+ a smooth upgrade to a subsequent HTCondor version.
 
 Package: condor-tarball
 Architecture: any

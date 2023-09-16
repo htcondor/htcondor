@@ -41,6 +41,8 @@ New Features:
   This can be useful when developing such a script.
   :jira:`2014`
 
+- Added ability to query epoch history records from the python bindings.
+  :jira:`2036`
 
 - Added new tool *condor_test_token*, which will create a SciToken
   with configurable contents (including issuer) which will be accepted

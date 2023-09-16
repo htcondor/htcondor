@@ -322,7 +322,7 @@ private:
 #endif
 
 boost::shared_ptr<HistoryIterator>
-history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int cmd, const std::string & addr)
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int hrs, int cmd, const std::string & addr)
 {
 	bool want_startd = (cmd == GET_HISTORY);
 
@@ -406,6 +406,20 @@ history_query(boost::python::object requirement, boost::python::list projection,
 	// PRAGMA_REMIND("projection should be a string, not a classad list")
 	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
 	ad.Insert(ATTR_PROJECTION, projTree);
+
+	switch (hrs) {
+		case HRS_SCHEDD_JOB_HIST:
+			break;
+		case HRS_STARTD_JOB_HIST:
+			ad.InsertAttr("HistoryRecordSource","STARTD");
+			break;
+		case HRS_JOB_EPOCH:
+			ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+			break;
+		default:
+			THROW_EX(HTCondorValueError, "Unknown history record source given");
+			break;
+	}
 
 	daemon_t dt = DT_SCHEDD;
 	if (want_startd) {
@@ -2412,10 +2426,15 @@ struct Schedd {
 		return result;
 	}
 
+    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
+    {
+        return history_query(requirement, projection, match, since, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
+    }
+
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
 #if 1
-		return history_query(requirement, projection, match, since, QUERY_SCHEDD_HISTORY, m_addr);
+		return history_query(requirement, projection, match, since, HRS_SCHEDD_JOB_HIST, QUERY_SCHEDD_HISTORY, m_addr);
 #else
         std::string val_str;
         extract<ExprTreeHolder &> exprtree_extract(requirement);
@@ -4251,6 +4270,44 @@ void export_schedd()
 #else
             (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #endif
+            )
+        .def("jobEpochHistory", &Schedd::jobEpochHistory,
+            R"C0ND0R(
+            Fetch per job run instance (epoch) history records from the *condor_schedd* daemon.
+
+            :param constraint: A query constraint.
+                Only jobs matching this constraint will be returned.
+                ``None`` will return all jobs.
+            :type constraint: str or :class:`~classad.ExprTree`
+            :param projection: Attributes that will be returned for each job
+                in the query.  At least the attributes in this list will be
+                returned, but additional ones may be returned as well.
+                An empty list returns all attributes.
+            :type projection: list[str]
+            :param int match: A limit on the number of jobs to include; the
+                default (``-1``) indicates to return all matching jobs.
+                The schedd may return fewer than ``match`` jobs because of its
+                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 10,000).
+            :param since: A cluster ID, job ID, or expression.  If a cluster ID
+                (passed as an `int`) or job ID (passed a `str` in the format
+                ``{clusterID}.{procID}``), only jobs recorded in the history
+                file after (and not including) the matching ID will be
+                returned.  If an expression (passed as a `str` or
+                :class:`~classad.ExprTree`), jobs will be returned,
+                most-recently-recorded first, until the expression becomes
+                true; the job making the expression become true will not be
+                returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
+                same set of jobs.
+            :type since: int, str, or :class:`~classad.ExprTree`
+            :return: All matching ads in the Schedd history, with attributes according to the
+                ``projection`` keyword.
+            :rtype: :class:`HistoryIterator`
+            )C0ND0R",
+#if BOOST_VERSION >= 103400
+             (boost::python::arg("self"),
+#endif
+             boost::python::arg("constraint"), boost::python::arg("projection"), boost::python::arg("match")=-1,
+             boost::python::arg("since")=boost::python::object())
             )
         .def("history", &Schedd::history,
             R"C0ND0R(
