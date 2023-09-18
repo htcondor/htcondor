@@ -1623,9 +1623,3 @@ EventInfo::GetSize( int mult ) const
 		return randint( mult );
 	}
 }
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/
