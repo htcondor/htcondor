@@ -1202,9 +1202,17 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 
 	if( !rval ) {
 		// Failed to transfer.
-		dprintf( D_ALWAYS, "JICShadow::uploadCheckpointFiles() failed.\n" );
-		holdJob( "Starter failed to upload checkpoint",
-		         CONDOR_HOLD_CODE::FailedToCheckpoint, -1 );
+		m_ft_info = filetrans->GetInfo();
+		if (m_ft_info.try_again) {
+			dprintf(D_ALWAYS, "JICShadow::uploadCheckpointFiles() failed: %s\n", m_ft_info.error_desc.c_str());
+			dprintf(D_ALWAYS, "JICShadow::uploadCheckpointFiles() will retry checkpoint upload later.\n");
+			return false;
+		} else {
+			dprintf(D_ALWAYS, "JICShadow::uploadCheckpointFiles() putting job on hold, checkpoint failure was: %s\n", m_ft_info.error_desc.c_str());
+			holdJob("Starter failed to upload checkpoint", CONDOR_HOLD_CODE::FailedToCheckpoint, -1);
+			return false;
+		}
+
 		return false;
 	}
 	dprintf( D_FULLDEBUG, "JICShadow::uploadCheckpointFiles() succeeded.\n" );

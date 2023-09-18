@@ -55,6 +55,11 @@ Bugs Fixed:
   when jobs go on hold
   :jira:`2016`
 
+- Fixed a bug where if a user-level checkpoint could not be transfered from
+  the starter to the AP, the job would go on hold.  Now it will retry, or
+  go back to idle.
+  :jira:`2034`
+
 - Fixed a bug where *condor_preen* was deleteing files named '*OfflineAds*' 
   in the spool directory.
   :jira:`2019`
