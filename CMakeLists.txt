@@ -91,7 +91,7 @@ string( TOUPPER "${CMAKE_SYSTEM_PROCESSOR}" SYS_ARCH )
 set(EMULATED_PLATFORM FALSE)
 if( ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le" OR ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64" )
     set(EMULATED_PLATFORM TRUE)
-endif( SYS_ARCH STREQUAL "ppc64le" OR SYS_ARCH STREQUAL "aarch64" )
+endif()
 
 site_name(HOSTNAME)
 option(_DEBUG "Debug statements and set default build config" OFF)
