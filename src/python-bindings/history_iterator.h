@@ -45,7 +45,13 @@ private:
 	boost::shared_ptr<Sock> m_sock;
 };
 
+enum HistoryRecordSource {
+	HRS_SCHEDD_JOB_HIST=0,
+	HRS_STARTD_JOB_HIST,
+	HRS_JOB_EPOCH,
+};
+
 boost::shared_ptr<HistoryIterator>
-history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int cmd, const std::string & addr);
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int hrs, int cmd, const std::string & addr);
 
 #endif

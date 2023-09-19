@@ -1639,12 +1639,6 @@ WriteUserLog::GenerateGlobalId( std::string &id )
 	formatstr_cat( id, "%s%d.%ld.%ld", GetGlobalIdBase(), m_global_sequence,
 	               (long)now.tv_sec, (long)now.tv_usec );
 }
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/
 
 FileLockBase *
 WriteUserLog::getLock(CondorError &err) {

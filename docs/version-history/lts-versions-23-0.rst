@@ -41,6 +41,8 @@ New Features:
   This can be useful when developing such a script.
   :jira:`2014`
 
+- Added ability to query epoch history records from the python bindings.
+  :jira:`2036`
 
 - Added new tool *condor_test_token*, which will create a SciToken
   with configurable contents (including issuer) which will be accepted
@@ -52,6 +54,11 @@ Bugs Fixed:
 - Fixed a bug that would cause the *condor_startd* to crash in rare cases
   when jobs go on hold
   :jira:`2016`
+
+- Fixed a bug where if a user-level checkpoint could not be transfered from
+  the starter to the AP, the job would go on hold.  Now it will retry, or
+  go back to idle.
+  :jira:`2034`
 
 - Fixed a bug where *condor_preen* was deleteing files named '*OfflineAds*' 
   in the spool directory.
