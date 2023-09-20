@@ -3,30 +3,55 @@ from typing import Union;
 
 from ._common_imports import (
     classad,
+    Collector,
+    DaemonType,
 )
 
 from ._query_opts import QueryOpts;
 
-# from .htcondor2_impl import ()
+from .htcondor2_impl import (
+    _schedd_query,
+)
 
 
 class Schedd():
 
     def __init__(self, location : classad.ClassAd = None):
-        # FIXME
-        pass
+        if location is None:
+            c = Collector()
+            location = c.locate(DaemonType.Schedd)
+
+        if not isinstance(location, classad.ClassAd):
+            raise TypeError("location must be a ClassAd")
+
+        self._addr = location['MyAddress']
+        # We never actually use this for anything.
+        # self._version = location['CondorVersion']
 
 
     def query(self,
-        constraint : bool = True,
+        constraint : Union[str, classad.ExprTree] = 'true',
         projection : list[str] = [],
         callback : callable = None,
         limit : int = -1,
         opts : QueryOpts = QueryOpts.Default
     ) -> list[classad.ClassAd]:
-        # FIXME
-        pass
+        results = _schedd_query(self._addr, str(constraint), projection, int(limit), int(opts))
+        if callback is None:
+            return results
 
+        # We could pass `None` as the first argument to filter() if we
+        # were sure that nothing coming back from callback() was false-ish.
+        #
+        # The parentheses make the second argument a generator, which is
+        # probably a little more efficient than a list comprehension even
+        # though we immediately turn it back into a list.
+        return list(
+            filter(
+                lambda r: r is not None,
+                (callback(result) for result in results)
+            )
+        )
 
     def act(self,
         action : "JobAction", # FIXME: remove quotes

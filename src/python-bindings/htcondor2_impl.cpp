@@ -33,6 +33,9 @@
 #include "my_username.h"
 #include "htcondor2/credd.cpp"
 
+// htcondor.Schedd
+#include "condor_q.h"
+#include "htcondor2/schedd.cpp"
 
 static PyMethodDef htcondor2_impl_methods[] = {
 	{"_version", & _version, METH_VARARGS, R"C0ND0R(
@@ -80,7 +83,11 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 
 	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},
+
 	{"_credd_do_check_oauth_creds", &_credd_do_check_oauth_creds, METH_VARARGS, NULL},
+
+
+	{"_schedd_query", &_schedd_query, METH_VARARGS, NULL},
 
 	{NULL, NULL, 0, NULL}
 };
