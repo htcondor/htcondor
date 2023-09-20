@@ -44,6 +44,12 @@ New Features:
 - Added ability to query epoch history records from the python bindings.
   :jira:`2036`
 
+- The default value of :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS` will now be visible
+  in *condor_config_val*. The default for :macro:`SEC_*_AUTHENTICATION_METHODS`
+  will inherit from this value, and thus no ``READ`` and ``CLIENT`` will no longer
+  automatically have ``CLAIMTOBE``.
+  :jira:`2047`
+
 - Added new tool *condor_test_token*, which will create a SciToken
   with configurable contents (including issuer) which will be accepted
   for a short period of time by the local HTCondor daemons.

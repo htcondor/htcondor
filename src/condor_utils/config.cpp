@@ -3129,6 +3129,28 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 	return lval;
 }
 
+const char * lookup_macro_default(const char * name, MACRO_SET & macro_set, MACRO_EVAL_CONTEXT & ctx)
+{
+	if ( ! macro_set.defaults) {
+		return nullptr;
+	}
+
+	const MACRO_DEF_ITEM * p = nullptr;
+	if (ctx.localname) {
+		p = find_macro_subsys_def_item(name, ctx.localname, macro_set, ctx.use_mask);
+	}
+	if ( ! p && ctx.subsys) {
+		p = find_macro_subsys_def_item(name, ctx.subsys, macro_set, ctx.use_mask);
+	}
+	if ( ! p) {
+		p = find_macro_def_item(name, macro_set, ctx.use_mask);
+	}
+	if (p && p->def) {
+		return p->def->psz;
+	}
+	return nullptr;
+}
+
 // given the body text of a config macro, and the macro id and macro context
 // evaluate the body and return a string. the string may be a literal, or
 // may point into to the buffer returned in tbuf.  The caller will NOT free

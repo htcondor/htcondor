@@ -2646,6 +2646,14 @@ param_false( const char * name ) {
 	return valid && (!value);
 }
 
+const char * param_raw_default(const char *name)
+{
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	ctx.use_mask = 3;
+	return lookup_macro_default(name, ConfigMacroSet, ctx);
+}
+
 char *
 expand_param( const char *str )
 {
