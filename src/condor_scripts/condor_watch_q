@@ -365,7 +365,7 @@ def cli():
     args = parse_args()
 
     if args.clusters is not None and args.since is not None:
-        error("Use of both -clusters and -since flag is prohibited.")
+        error("Use of both -clusters and -larger-than flag is prohibited.")
         sys.exit(1)
 
     if args.debug:
