@@ -86,12 +86,12 @@ def parse_args():
         "-clusters", nargs="+", metavar="CLUSTER_ID", help="Which cluster IDs to track."
     )
     parser.add_argument(
-        "-since",
+        "-larger-than",
         type=int,
-        nargs=1,
+        dest='since',
         default=None,
         metavar="CLUSTER_ID",
-        help="Track all clusters since specified cluster ID."
+        help="Track all jobs with cluster IDs greater than or equal to the specifiec CLUSTER_ID."
     )
     parser.add_argument(
         "-files", nargs="+", metavar="FILE", help="Which event logs to track."
@@ -903,7 +903,7 @@ class JobStateTracker:
                 if self.filter_ids is not None and event.cluster not in self.filter_ids:
                     continue
 
-                if self.since is not None and event.cluster < self.since[0]:
+                if self.since is not None and event.cluster < self.since:
                     continue
 
                 new_status = JOB_EVENT_STATUS_TRANSITIONS.get(event.type, None)
