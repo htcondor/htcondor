@@ -39,6 +39,8 @@ htcondor2/_ad_type.py
 htcondor2/_drain_type.py
 htcondor2/_completion_type.py
 htcondor2/_common_imports.py
+htcondor2/_schedd.py
+htcondor2/_query_opts.py
 htcondor2/__init__.py
 
 classad/__init__.py

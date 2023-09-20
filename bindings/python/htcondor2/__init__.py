@@ -13,6 +13,7 @@ from ._ad_type import AdType
 from ._drain_type import DrainType
 from ._completion_type import CompletionType
 from ._cred_type import CredType
+from ._query_opts import QueryOpts
 
 # Classes.
 from ._collector import Collector
@@ -20,8 +21,10 @@ from ._negotiator import Negotiator
 from ._startd import Startd
 from ._credd import Credd
 from ._cred_check import CredCheck
+from ._schedd import Schedd
 
 # Additional aliases for compatibility with the `htcondor` module.
 from ._daemon_type import DaemonType as DaemonTypes
 from ._ad_type import AdType as AdTypes
 from ._cred_type import CredType as CredTypes
+from ._drain_type import DrainType as DrainTypes
