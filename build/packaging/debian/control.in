@@ -58,7 +58,7 @@ Depends: adduser,
          libdate-manip-perl,
          python3,
          python3-requests,
-         lsb-base (>= 3.0-6),
+         lsb-release,
          libcom-err2,
          libgssapi-krb5-2,
          libk5crypto3,
@@ -159,7 +159,7 @@ Description: distributed workload management system - documentation
  as configuration and other examples.
 
 Package: minicondor
-Architecture: all
+Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
@@ -185,7 +185,7 @@ Description: distributed workload management system - single node configuration
  basic security, and shortens many timers to be more responsive.
 
 Package: condor-annex-ec2
-Architecture: all
+Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
@@ -263,7 +263,8 @@ Package: condor-kbdd
 Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
-         ${misc:Depends}
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -288,7 +289,8 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          libvirt,
-         ${misc:Depends}
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -311,7 +313,8 @@ Package: condor-test
 Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
-         ${misc:Depends}
+         ${misc:Depends},
+         ${shlibs:Depends}
 Conflicts: htcondor-test (<< ${binary:Version})
 Breaks: htcondor-test (<< ${binary:Version})
 Replaces: htcondor-test (<< ${binary:Version})
@@ -357,7 +360,7 @@ Description: distributed workload management system - debugging symbols
  This package provides the debugging symbols for HTCondor.
 
 Package: htcondor
-Architecture: all
+Architecture: any
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -365,7 +368,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-dev
-Architecture: all
+Architecture: any
 Depends: condor-dev (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -381,7 +384,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: minihtcondor
-Architecture: all
+Architecture: any
 Depends: minicondor (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -389,7 +392,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-annex-ec2
-Architecture: all
+Architecture: any
 Depends: condor-annex-ec2 (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -405,7 +408,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-tarball
-Architecture: all
+Architecture: any
 Depends: condor-tarball (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -413,7 +416,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-test
-Architecture: all
+Architecture: any
 Depends: condor-test (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -421,7 +424,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-dbg
-Architecture: all
+Architecture: any
 Depends: condor-dbg (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
