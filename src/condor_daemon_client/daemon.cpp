@@ -1641,7 +1641,10 @@ Daemon::initHostnameFromFull( void )
 		// domain the same way for _hostname.
 	if( ! _full_hostname.empty() ) {
 		_hostname = _full_hostname;
-		_hostname.erase(_hostname.find('.'));
+		size_t dot = _hostname.find('.');
+		if (dot != std::string::npos) {
+			_hostname.erase(dot);
+		}
 		return true; 
 	}
 	return false;
