@@ -16,6 +16,7 @@ from ._cred_type import CredType
 # Should probably be singular for consistency.
 from ._query_opts import QueryOpts
 from ._job_action import JobAction
+from ._transaction_flag import TransactionFlag
 
 # Classes.
 from ._collector import Collector
@@ -30,3 +31,4 @@ from ._daemon_type import DaemonType as DaemonTypes
 from ._ad_type import AdType as AdTypes
 from ._cred_type import CredType as CredTypes
 from ._drain_type import DrainType as DrainTypes
+from ._transaction_flag import TransactionFlag as TransactionFlags

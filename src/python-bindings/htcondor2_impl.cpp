@@ -36,6 +36,7 @@
 // htcondor.Schedd
 #include "condor_q.h"
 #include "dc_schedd.h"
+#include "condor_qmgr.h"
 #include "htcondor2/schedd.cpp"
 
 static PyMethodDef htcondor2_impl_methods[] = {
@@ -93,6 +94,10 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_act_on_job_ids", &_schedd_act_on_job_ids, METH_VARARGS, NULL},
 
 	{"_schedd_act_on_job_constraint", &_schedd_act_on_job_constraint, METH_VARARGS, NULL},
+
+	{"_schedd_edit_job_ids", &_schedd_edit_job_ids, METH_VARARGS, NULL},
+
+	{"_schedd_edit_job_constraint", &_schedd_edit_job_constraint, METH_VARARGS, NULL},
 
 	{NULL, NULL, 0, NULL}
 };

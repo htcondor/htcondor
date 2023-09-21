@@ -217,6 +217,10 @@ _schedd_act_on_job_constraint(PyObject *, PyObject * args) {
         return NULL;
     }
 
+    if( constraint == NULL || constraint[0] == '\0' ) {
+        constraint = "true";
+    }
+
 
     ClassAd * result = NULL;
     DCSchedd schedd(addr);
@@ -266,4 +270,148 @@ _schedd_act_on_job_constraint(PyObject *, PyObject * args) {
 
 
     return py_new_htcondor2_classad(result->Copy());
+}
+
+
+static PyObject *
+_schedd_edit_job_ids(PyObject *, PyObject * args) {
+    // schedd_edit_job_ids(addr, jobIDList, attr, value, flags)
+
+    const char * addr = NULL;
+    PyObject * jobIDList = NULL;
+    const char * attr = NULL;
+    const char * value = NULL;
+    long flags = 0;
+
+    if(! PyArg_ParseTuple( args, "zOzzl", & addr, & jobIDList, & attr, & value, & flags )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    if(! PyList_Check(jobIDList)) {
+        PyErr_SetString(PyExc_TypeError, "job_spec must be a list");
+        return NULL;
+    }
+
+    flags = flags | SetAttribute_NoAck;
+
+
+    // FIXME: It was not at all clear that ConnectionSentry opened the (?!)
+    // global connection to the schedd, but having it disconnect when it
+    // goes out of scope is really kind of nice.
+    //
+    // And yes, I know, the ConnectQ()/SetAttribute()/DisconnectQ() interface
+    // is brokenly stupid.
+    DCSchedd schedd(addr);
+    if( ConnectQ(schedd) == NULL ) {
+        // This was HTCondorIOError, in version 1.
+        PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
+        return NULL;
+    }
+
+
+    long matchCount = 0;
+    Py_ssize_t size = PyList_Size(jobIDList);
+    for( int i = 0; i < size; ++i ) {
+        PyObject * py_jobID = PyList_GetItem(jobIDList, i);
+        if( py_jobID == NULL ) {
+            // FIXME: Check error return and use error stack.
+            DisconnectQ(NULL);
+
+            // PyList_GetItem() has already set an exception for us.
+            return NULL;
+        }
+
+        if(! PyUnicode_Check(py_jobID)) {
+            // FIXME: Check error return and use error stack.
+            DisconnectQ(NULL);
+
+            PyErr_SetString(PyExc_TypeError, "job_spec must be a list of strings");
+            return NULL;
+        }
+
+        std::string jobID;
+        if( py_str_to_std_string(py_jobID, jobID) != -1 ) {
+            JOB_ID_KEY jobIDKey;
+            if(! jobIDKey.set(jobID.c_str())) {
+                // FIXME: Check error return and use error stack.
+                DisconnectQ(NULL);
+
+                // This was HTCondorValueError, in version 1.
+                PyErr_SetString(PyExc_ValueError, "Invalid ID");
+                return NULL;
+            }
+
+            int rv = SetAttribute(jobIDKey.cluster, jobIDKey.proc, attr, value, flags);
+            if( rv == -1 ) {
+                // FIXME: Check error return and use error stack.
+                DisconnectQ(NULL);
+
+                // This was HTCondorIOError, in version 1.
+                PyErr_SetString(PyExc_RuntimeError, "Unable to edit job");
+                return NULL;
+            }
+            matchCount += 1;
+        } else {
+            // FIXME: Check error return and use error stack.
+            DisconnectQ(NULL);
+
+            // py_str_to_std_str() has already set an exception for us.
+            return NULL;
+        }
+    }
+
+
+    // FIXME: Check error return and use error stack.
+    DisconnectQ(NULL);
+
+    return PyLong_FromLong(matchCount);
+}
+
+
+static PyObject *
+_schedd_edit_job_constraint(PyObject *, PyObject * args) {
+    // schedd_edit_job_ids(addr, constraint, attr, value, flags)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+    const char * attr = NULL;
+    const char * value = NULL;
+    long flags = 0;
+
+    if(! PyArg_ParseTuple( args, "zzzzl", & addr, & constraint, & attr, & value, & flags )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    if( constraint == NULL || constraint[0] == '\0' ) {
+        constraint = "true";
+    }
+
+    if(! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
+        flags = flags | SetAttribute_OnlyMyJobs;
+    }
+    flags = flags | SetAttribute_NoAck;
+
+
+    DCSchedd schedd(addr);
+    if( ConnectQ(schedd) == NULL ) {
+        // This was HTCondorIOError, in version 1.
+        PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
+        return NULL;
+    }
+
+    int rval = SetAttributeByConstraint( constraint, attr, value, flags );
+    if( rval == -1 ) {
+        // FIXME: Check error return and use error stack.
+        DisconnectQ(NULL);
+        // This was HTCondorIOError, in version 1.
+        PyErr_SetString(PyExc_IOError, "Unable to edit jobs matching constraint");
+        return NULL;
+    }
+
+    // FIXME: Check error return and use error stack.
+    DisconnectQ(NULL);
+
+    return PyLong_FromLong(rval);
 }

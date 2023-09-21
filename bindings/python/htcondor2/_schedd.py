@@ -11,11 +11,14 @@ from ._common_imports import (
 
 from ._query_opts import QueryOpts;
 from ._job_action import JobAction;
+from ._transaction_flag import TransactionFlag;
 
 from .htcondor2_impl import (
     _schedd_query,
     _schedd_act_on_job_ids,
     _schedd_act_on_job_constraint,
+    _schedd_edit_job_ids,
+    _schedd_edit_job_constraint,
 )
 
 
@@ -57,6 +60,7 @@ class Schedd():
                 (callback(result) for result in results)
             )
         )
+
 
     def act(self,
         action : JobAction,
@@ -109,6 +113,45 @@ class Schedd():
         pyResult["TotalChangedAds"] = result["ActionResult"]
 
         return pyResult
+
+
+    # Note that edit(ClassAd) and edit_multiple() aren't documented.
+    def edit(self,
+        job_spec : Union[list[str], str, classad.ExprTree],
+        attr : str,
+        value : Union[str, classad.ExprTree],
+        flags : TransactionFlag = TransactionFlag.Default,
+    ) -> classad.ClassAd:
+        if not isinstance(flags, TransactionFlag):
+            raise TypeError("flags must be a TransactionFlag")
+
+
+        # We pass the list into C++ so that we don't have to (re)connect to
+        # the schedd for each job ID.  We don't want to avoid that with a
+        # handle_t stored in `self` because that would imply leaving a socket
+        # open to the schedd while Python code has control, which we think
+        # is a really bad idea.
+
+        match_count = None
+        if isinstance(job_spec, list):
+            match_count = _schedd_edit_job_ids(
+                self._addr,
+                job_spec, attr, str(value), flags
+            )
+        elif re.fullmatch('\d+(\.\d+)?', job_spec):
+            match_count = _schedd_edit_job_ids(
+                self._addr,
+                [job_spec], attr, str(value), flags
+            )
+        else:
+            match_count = _schedd_edit_job_constraint(
+                self._addr,
+                str(job_spec), attr, str(value), flags
+            )
+
+
+        # FIXME: Does this really need to be an undocumented object?
+        return match_count
 
 
     # `match` should be `limit` for consistency with `query()`.
