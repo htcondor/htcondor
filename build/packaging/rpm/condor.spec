@@ -160,6 +160,9 @@ Requires: python2-condor = %{version}-%{release}
 Requires: python-requests
 %endif
 
+Requires(post): /sbin/ldconfig
+Requires(postun): /sbin/ldconfig
+
 Requires(pre): shadow-utils
 
 Requires(post): systemd-units
@@ -251,7 +254,7 @@ Provides: %{name}-classads-devel = %{version}-%{release}
 %description
 HTCondor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems, HTCondor
-provides a job queueing mechanism, scheduling policy, priority scheme,
+provides a job queuing mechanism, scheduling policy, priority scheme,
 resource monitoring, and resource management. Users submit their
 serial or parallel jobs to HTCondor, HTCondor places them into a queue,
 chooses when and where to run the jobs based upon a policy, carefully
@@ -273,7 +276,7 @@ Summary: Files needed to build an HTCondor tarball
 Group: Applications/System
 
 %description tarball
-Development files for HTCondor
+Files needed to build an HTCondor tarball
 
 %endif
 
@@ -315,7 +318,7 @@ A collection of tests to verify that HTCondor is operating properly.
 #######################
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %package -n python2-condor
-Summary: Python bindings for HTCondor.
+Summary: Python bindings for HTCondor
 Group: Applications/System
 Requires: python >= 2.2
 Requires: %name = %version-%release
@@ -337,7 +340,7 @@ the ClassAd library and HTCondor from python
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 #######################
 %package -n python3-condor
-Summary: Python bindings for HTCondor.
+Summary: Python bindings for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
@@ -355,7 +358,7 @@ the ClassAd library and HTCondor from python
 
 #######################
 %package credmon-oauth
-Summary: OAuth2 credmon for HTCondor.
+Summary: OAuth2 credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
@@ -384,7 +387,7 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 
 #######################
 %package credmon-vault
-Summary: Vault credmon for HTCondor.
+Summary: Vault credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
@@ -423,7 +426,7 @@ shortens many timers to be more responsive.
 
 #######################
 %package annex-ec2
-Summary: Configuration and scripts to make an EC2 image annex-compatible.
+Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
 Requires: %name = %version-%release
 Requires(post): /sbin/chkconfig
@@ -1219,6 +1222,7 @@ rm -rf %{buildroot}
 
 
 %post
+/sbin/ldconfig
 %if 0%{?fedora}
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
@@ -1252,6 +1256,7 @@ if [ $1 -eq 0 ] ; then
 fi
 
 %postun
+/sbin/ldconfig
 /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 # Note we don't try to restart - HTCondor will automatically notice the
 # binary has changed and do graceful or peaceful restart, based on its
