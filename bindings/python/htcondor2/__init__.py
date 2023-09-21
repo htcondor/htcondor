@@ -13,7 +13,9 @@ from ._ad_type import AdType
 from ._drain_type import DrainType
 from ._completion_type import CompletionType
 from ._cred_type import CredType
+# Should probably be singular for consistency.
 from ._query_opts import QueryOpts
+from ._job_action import JobAction
 
 # Classes.
 from ._collector import Collector

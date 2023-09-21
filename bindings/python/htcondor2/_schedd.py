@@ -1,3 +1,5 @@
+import re
+
 # We'll be able to just use `|` when our minimum Python version becomes 3.10.
 from typing import Union;
 
@@ -8,9 +10,12 @@ from ._common_imports import (
 )
 
 from ._query_opts import QueryOpts;
+from ._job_action import JobAction;
 
 from .htcondor2_impl import (
     _schedd_query,
+    _schedd_act_on_job_ids,
+    _schedd_act_on_job_constraint,
 )
 
 
@@ -54,12 +59,56 @@ class Schedd():
         )
 
     def act(self,
-        action : "JobAction", # FIXME: remove quotes
+        action : JobAction,
         job_spec : Union[list[str], str, classad.ExprTree],
         reason : str = None,
     ) -> classad.ClassAd:
-        # FIXME
-        pass
+        if not isinstance(action, JobAction):
+            raise TypeError("action must be a JobAction")
+
+        reason_code = None
+        reason_string = None
+
+        if reason is None:
+            reason_string = "Python-initiated action"
+        elif isinstance(reason, tuple):
+            (reason_string, reason_code) = reason
+
+        result = None
+        if isinstance(job_spec, list):
+            job_spec_string = ", ".join(job_spec)
+            result = _schedd_act_on_job_ids(
+                self._addr,
+                job_spec_string, int(action), reason_string, str(reason_code)
+            )
+        elif re.fullmatch('\d+(\.\d+)?', job_spec):
+            result = _schedd_act_on_job_ids(
+                self._addr,
+                job_spec, int(action), reason_string, str(reason_code)
+            )
+        else:
+            job_constraint = str(job_spec)
+            result = _schedd_act_on_job_constraint(
+                self._addr,
+                job_constraint, int(action), reason_string, str(reason_code)
+            )
+
+
+        if result is None:
+            return None
+
+        # Why did we do this in version 1?
+        pyResult = classad.ClassAd()
+        pyResult["TotalError"] = result["result_total_0"]
+        pyResult["TotalSuccess"] = result["result_total_1"]
+        pyResult["TotalNotFound"] = result["result_total_2"]
+        pyResult["TotalBadStatus"] = result["result_total_3"]
+        pyResult["TotalAlreadyDone"] = result["result_total_4"]
+        pyResult["TotalPermissionDenied"] = result["result_total_5"]
+        pyResult["TotalJobAds"] = result["TotalJobAds"]
+        pyResult["TotalChangedAds"] = result["ActionResult"]
+
+        return pyResult
 
 
     # `match` should be `limit` for consistency with `query()`.

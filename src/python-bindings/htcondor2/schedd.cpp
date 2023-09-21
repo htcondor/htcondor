@@ -131,3 +131,139 @@ _schedd_query(PyObject *, PyObject * args) {
 
     return list;
 }
+
+
+static PyObject *
+_schedd_act_on_job_ids(PyObject *, PyObject * args) {
+    // _schedd_act_on_job_ids(addr, job_spec, action, reason_string, reason_code)
+
+    const char * addr = NULL;
+    const char * job_spec = NULL;
+    long action = 0;
+    const char * reason_string = NULL;
+    const char * reason_code = NULL;
+
+    if(! PyArg_ParseTuple( args, "zzlzz", & addr, & job_spec, & action, & reason_string, & reason_code )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    StringList ids(job_spec);
+
+
+    ClassAd * result = NULL;
+    DCSchedd schedd(addr);
+    switch( action ) {
+        case JA_HOLD_JOBS:
+            result = schedd.holdJobs(& ids, reason_string, reason_code, NULL, AR_TOTALS );
+            break;
+
+        case JA_RELEASE_JOBS:
+            result = schedd.releaseJobs(& ids, reason_string, NULL, AR_TOTALS );
+            break;
+
+        case JA_REMOVE_JOBS:
+            result = schedd.removeJobs(& ids, reason_string, NULL, AR_TOTALS );
+            break;
+
+        case JA_REMOVE_X_JOBS:
+            result = schedd.removeXJobs(& ids, reason_string, NULL, AR_TOTALS );
+            break;
+
+        case JA_VACATE_JOBS:
+        case JA_VACATE_FAST_JOBS:
+            {
+            auto vacate_type = action == JA_VACATE_JOBS ? VACATE_GRACEFUL : VACATE_FAST;
+            result = schedd.vacateJobs(& ids, vacate_type, NULL, AR_TOTALS);
+            } break;
+
+        case JA_SUSPEND_JOBS:
+            result = schedd.suspendJobs(& ids, reason_string, NULL, AR_TOTALS );
+            break;
+
+        case JA_CONTINUE_JOBS:
+            result = schedd.continueJobs(& ids, reason_string, NULL, AR_TOTALS );
+            break;
+
+        default:
+            // This was HTCondorEnumError, in version 1.
+            PyErr_SetString(PyExc_RuntimeError, "Job action not implemented.");
+            return NULL;
+    }
+
+    if( result == NULL ) {
+        // This was HTCondorReplyError, in version 1.
+        PyErr_SetString(PyExc_RuntimeError, "Error when performing action on the schedd.");
+        return NULL;
+    }
+
+
+    return py_new_htcondor2_classad(result->Copy());
+}
+
+
+static PyObject *
+_schedd_act_on_job_constraint(PyObject *, PyObject * args) {
+    // _schedd_act_on_job_ids(addr, constraint, action, reason_string, reason_code)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+    long action = 0;
+    const char * reason_string = NULL;
+    const char * reason_code = NULL;
+
+    if(! PyArg_ParseTuple( args, "zzlzz", & addr, & constraint, & action, & reason_string, & reason_code )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    ClassAd * result = NULL;
+    DCSchedd schedd(addr);
+    switch( action ) {
+        case JA_HOLD_JOBS:
+            result = schedd.holdJobs(constraint, reason_string, reason_code, NULL, AR_TOTALS );
+            break;
+
+        case JA_RELEASE_JOBS:
+            result = schedd.releaseJobs(constraint, reason_string, NULL, AR_TOTALS );
+            break;
+
+        case JA_REMOVE_JOBS:
+            result = schedd.removeJobs(constraint, reason_string, NULL, AR_TOTALS );
+            break;
+
+        case JA_REMOVE_X_JOBS:
+            result = schedd.removeXJobs(constraint, reason_string, NULL, AR_TOTALS );
+            break;
+
+        case JA_VACATE_JOBS:
+        case JA_VACATE_FAST_JOBS:
+            {
+            auto vacate_type = action == JA_VACATE_JOBS ? VACATE_GRACEFUL : VACATE_FAST;
+            result = schedd.vacateJobs(constraint, vacate_type, NULL, AR_TOTALS);
+            } break;
+
+        case JA_SUSPEND_JOBS:
+            result = schedd.suspendJobs(constraint, reason_string, NULL, AR_TOTALS );
+            break;
+
+        case JA_CONTINUE_JOBS:
+            result = schedd.continueJobs(constraint, reason_string, NULL, AR_TOTALS );
+            break;
+
+        default:
+            // This was HTCondorEnumError, in version 1.
+            PyErr_SetString(PyExc_RuntimeError, "Job action not implemented.");
+            return NULL;
+    }
+
+    if( result == NULL ) {
+        // This was HTCondorReplyError, in version 1.
+        PyErr_SetString(PyExc_RuntimeError, "Error when performing action on the schedd.");
+        return NULL;
+    }
+
+
+    return py_new_htcondor2_classad(result->Copy());
+}
