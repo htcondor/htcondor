@@ -272,54 +272,6 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 	return getClassAd(&sock, ad);
 }
 
-#if 0
-struct HistoryIterator
-{
-    HistoryIterator(boost::shared_ptr<Sock> sock)
-      : m_count(0), m_sock(sock)
-    {}
-
-    inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
-
-    boost::shared_ptr<ClassAdWrapper> next()
-    {
-        if (m_count < 0) { THROW_EX(StopIteration, "All ads processed"); }
-
-        boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) {
-            THROW_EX(HTCondorIOError, "Failed to receive remote ad.");
-        }
-        long long intVal;
-        if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
-        { // Last ad.
-            if (!m_sock->end_of_message()) THROW_EX(HTCondorIOError, "Unable to close remote socket");
-            m_sock->close();
-            std::string errorMsg;
-            if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
-            {
-                THROW_EX(HTCondorIOError, errorMsg.c_str());
-            }
-            if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) {
-                THROW_EX(HTCondorReplyError, "Remote side had parse errors on history file");
-            }
-            if (!ad->EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != m_count)) {
-                THROW_EX(HTCondorReplyError, "Incorrect number of ads returned");
-            }
-
-            // Everything checks out!
-            m_count = -1;
-            THROW_EX(StopIteration, "All ads processed");
-        }
-        m_count++;
-        return ad;
-    }
-
-private:
-    int m_count;
-    boost::shared_ptr<Sock> m_sock;
-};
-
-#endif
 
 boost::shared_ptr<HistoryIterator>
 history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int cmd, const std::string & addr)
@@ -2412,121 +2364,10 @@ struct Schedd {
 		return result;
 	}
 
+
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
-#if 1
 		return history_query(requirement, projection, match, since, QUERY_SCHEDD_HISTORY, m_addr);
-#else
-        std::string val_str;
-        extract<ExprTreeHolder &> exprtree_extract(requirement);
-        extract<std::string> string_extract(requirement);
-        classad::ExprTree *expr = NULL;
-        boost::shared_ptr<classad::ExprTree> expr_ref;
-        if (string_extract.check())
-        {
-            classad::ClassAdParser parser;
-            std::string val_str = string_extract();
-            if (!parser.ParseExpression(val_str, expr))
-            {
-                THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
-            }
-            expr_ref.reset(expr);
-        }
-        else if (exprtree_extract.check())
-        {
-            expr = exprtree_extract().get();
-        }
-        else
-        {
-            THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
-        }
-        classad::ExprTree *expr_copy = expr->Copy();
-        if (!expr_copy) {
-            THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression");
-        }
-
-	classad::ExprList *projList(new classad::ExprList());
-	unsigned len_attrs = py_len(projection);
-	for (unsigned idx = 0; idx < len_attrs; idx++)
-	{
-		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
-		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-		if (!entry) {
-		    THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.")
-		}
-		projList->push_back(entry);
-	}
-
-	// decode the since argument, this can either be an expression, or a string
-	// containing either an expression, a cluster id or a full job id.
-	classad::ExprTree *since_expr_copy = NULL;
-	extract<ExprTreeHolder &> since_exprtree_extract(since);
-	extract<std::string> since_string_extract(since);
-	extract<int>  since_cluster_extract(since);
-	if (since_cluster_extract.check()) {
-		std::string expr_str;
-		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
-		classad::ClassAdParser parser;
-		parser.ParseExpression(expr_str, since_expr_copy);
-	} else if (since_string_extract.check()) {
-		std::string since_str = since_string_extract();
-		classad::ClassAdParser parser;
-		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
-			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
-		} else {
-			classad::Value val;
-			if (ExprTreeIsLiteral(since_expr_copy, val) && (val.IsIntegerValue() || val.IsRealValue())) {
-				delete since_expr_copy; since_expr_copy = NULL;
-				// if the stop constraint is a numeric literal.
-				// then there are a few special cases...
-				// it might be a job id. or it might (someday) be a time value
-				PROC_ID jid;
-				const char * pend;
-				if (StrIsProcId(since_str.c_str(), jid.cluster, jid.proc, &pend) && !*pend) {
-					if (jid.proc >= 0) {
-						formatstr(since_str, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
-					} else {
-						formatstr(since_str, "ClusterId == %d", jid.cluster);
-					}
-					parser.ParseExpression(since_str, since_expr_copy);
-				}
-			}
-		}
-	} else if (since_exprtree_extract.check()) {
-		since_expr_copy = since_exprtree_extract().get()->Copy();
-	} else if (since.ptr() != Py_None) {
-		THROW_EX(HTCondorValueError, "invalid since argument");
-	}
-
-
-	classad::ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, expr_copy);
-	ad.InsertAttr(ATTR_NUM_MATCHES, match);
-	if (since_expr_copy) { ad.Insert("Since", since_expr_copy); }
-
-	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
-	ad.Insert(ATTR_PROJECTION, projTree);
-
-	DCSchedd schedd(m_addr.c_str());
-	Sock* sock;
-        bool result;
-        {
-        condor::ModuleLock ml;
-        result = !(sock = schedd.startCommand(QUERY_SCHEDD_HISTORY, Stream::reli_sock, 0));
-        }
-        if (result)
-        {
-            THROW_EX(HTCondorIOError, "Unable to connect to schedd");
-        }
-        boost::shared_ptr<Sock> sock_sentry(sock);
-
-        if (!putClassAdAndEOM(*sock, ad)) {
-            THROW_EX(HTCondorIOError, "Unable to send request classad to schedd");
-        }
-
-        boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
-        return iter;
-#endif
     }
 
 
