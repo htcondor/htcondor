@@ -19,6 +19,7 @@ from .htcondor2_impl import (
     _schedd_act_on_job_constraint,
     _schedd_edit_job_ids,
     _schedd_edit_job_constraint,
+    _schedd_reschedule,
 )
 
 
@@ -154,6 +155,14 @@ class Schedd():
         return match_count
 
 
+    # In version 1, history() returned a HistoryIterator which kept a
+    # socket around to read results from; this was OK, because the socket
+    # usually required no, and at most minimal, attention from the schedd
+    # before being handed entirely off to the history helper process.
+    #
+    # This can certainly be done in version 2, but I'd like to see where
+    # else we'd like to keep a socket open before implementing anything.
+
     # `match` should be `limit` for consistency with `query()`.
     def history(self,
         constraint : Union[str, classad.ExprTree],
@@ -189,11 +198,11 @@ class Schedd():
 
 
     # Assuming this should be deprecated.
-    # def refreshGSIProxy(self,
+    # def refreshGSIProxy()
 
 
     def reschedule(self) -> None:
-        # FIXME
+        _schedd_reschedule(self._addr)
         pass
 
 

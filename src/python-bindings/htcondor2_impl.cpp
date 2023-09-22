@@ -99,6 +99,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 	{"_schedd_edit_job_constraint", &_schedd_edit_job_constraint, METH_VARARGS, NULL},
 
+	{"_schedd_reschedule", &_schedd_reschedule, METH_VARARGS, NULL},
+
 	{NULL, NULL, 0, NULL}
 };
 

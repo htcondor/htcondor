@@ -415,3 +415,26 @@ _schedd_edit_job_constraint(PyObject *, PyObject * args) {
 
     return PyLong_FromLong(rval);
 }
+
+
+static PyObject *
+_schedd_reschedule(PyObject *, PyObject * args) {
+    // schedd_reschedule(addr)
+
+    const char * addr = NULL;
+
+    if(! PyArg_ParseTuple( args, "z", & addr )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    DCSchedd schedd(addr);
+    Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+    if(! schedd.sendCommand(RESCHEDULE, st, 0)) {
+        dprintf( D_ALWAYS, "Can't send RESCHEDULE command to schedd.\n" );
+    }
+
+    return Py_None;
+}
+
+
