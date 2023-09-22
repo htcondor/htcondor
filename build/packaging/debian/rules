@@ -121,11 +121,6 @@ override_dh_auto_clean:
 	-rm -f doc/figuresizing.tex doc/fontsize.tex
 
 
-override_dh_clean:
-	dh_clean
-	debconf-updatepo
-
-
 # PDF come in dedicated doc package -- no compression
 override_dh_compress:
 	dh_compress -X.pdf
