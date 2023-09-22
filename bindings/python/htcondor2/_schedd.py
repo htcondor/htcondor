@@ -20,6 +20,9 @@ from .htcondor2_impl import (
     _schedd_edit_job_ids,
     _schedd_edit_job_constraint,
     _schedd_reschedule,
+    _schedd_export_job_ids,
+    _schedd_export_job_constraint,
+    _schedd_import_exported_job_results,
 )
 
 
@@ -200,7 +203,7 @@ class Schedd():
         new_spool_dir : str,
     ) -> classad.ClassAd:
         return job_spec_hack(self._addr, job_spec,
-            _schedd_export_job_ids, _schedd_export_constraint,
+            _schedd_export_job_ids, _schedd_export_job_constraint,
             (str(export_dir), str(new_spool_dir)),
         )
 
@@ -208,8 +211,7 @@ class Schedd():
     def import_exported_job_results(self,
         import_dir : str
     ) -> classad.ClassAd:
-        # FIXME
-        pass
+        return _schedd_import_exported_job_results(self._addr, import_dir)
 
 
     def unexport_jobs(self,

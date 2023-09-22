@@ -304,10 +304,11 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
+    StringList ids(job_list);
+
 
     long matchCount = 0;
     const char * id = NULL;
-    StringList ids(job_list);
     for( ids.rewind(); (id = ids.next()) != NULL; ) {
         JOB_ID_KEY jobIDKey;
         if(! jobIDKey.set(id)) {
@@ -399,6 +400,7 @@ _schedd_reschedule(PyObject *, PyObject * args) {
         return NULL;
     }
 
+
     DCSchedd schedd(addr);
     Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
     if(! schedd.sendCommand(RESCHEDULE, st, 0)) {
@@ -409,3 +411,112 @@ _schedd_reschedule(PyObject *, PyObject * args) {
 }
 
 
+static PyObject *
+_schedd_export_job_ids(PyObject *, PyObject * args) {
+    // _schedd_export_job_ids(addr, job_list, export_dir, new_spool_dir)
+
+    const char * addr = NULL;
+    const char * job_list = NULL;
+    const char * export_dir = NULL;
+    const char * new_spool_dir = NULL;
+
+    if(! PyArg_ParseTuple( args, "zzzz", & addr, & job_list, & export_dir, & new_spool_dir )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    StringList ids(job_list);
+
+
+    CondorError errorStack;
+    DCSchedd schedd(addr);
+    ClassAd * result = schedd.exportJobs(
+        & ids, export_dir, new_spool_dir, & errorStack
+    );
+
+    if( errorStack.code() > 0 ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        return NULL;
+    }
+    if( result == NULL ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "No result ad" );
+        return NULL;
+    }
+
+    return py_new_htcondor2_classad(result->Copy());
+}
+
+
+static PyObject *
+_schedd_export_job_constraint(PyObject *, PyObject * args) {
+    // _schedd_export_job_constraint(addr, constraint, export_dir, new_spool_dir)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+    const char * export_dir = NULL;
+    const char * new_spool_dir = NULL;
+
+    if(! PyArg_ParseTuple( args, "zzzz", & addr, & constraint, & export_dir, & new_spool_dir )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    if( constraint == NULL || constraint[0] == '\0' ) {
+        constraint = "true";
+    }
+
+
+    CondorError errorStack;
+    DCSchedd schedd(addr);
+    ClassAd * result = schedd.exportJobs(
+        constraint, export_dir, new_spool_dir, & errorStack
+    );
+
+    if( errorStack.code() > 0 ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        return NULL;
+    }
+    if( result == NULL ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "No result ad" );
+        return NULL;
+    }
+
+
+    return py_new_htcondor2_classad(result->Copy());
+}
+
+
+static PyObject *
+_schedd_import_exported_job_results(PyObject *, PyObject * args) {
+    // schedd_reschedule(addr, import_dir)
+
+    const char * addr = NULL;
+    const char * import_dir = NULL;
+
+    if(! PyArg_ParseTuple( args, "zz", & addr, & import_dir )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    DCSchedd schedd(addr);
+    CondorError errorStack;
+    ClassAd * result = schedd.importExportedJobResults( import_dir, & errorStack );
+
+    // Check for errorStack.code()?
+
+    if( result == NULL ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "No result ad" );
+        return NULL;
+    }
+
+    // Check for `Error` attribute in result?
+
+
+    return py_new_htcondor2_classad(result->Copy());
+}
