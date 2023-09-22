@@ -2,9 +2,13 @@ Source: condor
 Maintainer: HTCondor Developers <htcondor-debian@cs.wisc.edu>
 Uploaders: Tim Theisen <tim@cs.wisc.edu>
 Section: science
-Priority: extra
-Build-Depends: cmake (>= 3.8),
-               debhelper (>= 9~),
+Priority: optional
+Build-Depends: cmake (>= 3.16),
+#if defined(FOCAL)
+               debhelper-compat (= 12),
+#else
+               debhelper-compat (= 13),
+#endif
 #if ! defined(PPC64LE)
                default-jdk,
 #endif
@@ -44,10 +48,10 @@ Build-Depends: cmake (>= 3.8),
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
 Standards-Version: 3.9.8
-Vcs-Browser: https://anonscm.debian.org/cgit/pkg-exppsy/condor.git
-Vcs-Git: git://anonscm.debian.org/pkg-exppsy/condor.git
-Homepage: https://htcondor.org
-X-Python3-Version: >= 3.6
+Vcs-Browser: https://github.com/htcondor/htcondor
+Vcs-Git: git://github.com/htcondor/htcondor.git
+Homepage: https://htcondor.org/
+X-Python3-Version: >= 3.7
 
 
 Package: condor
@@ -424,7 +428,7 @@ Description: transitional dummy package
 
 Package: htcondor-dbg
 Architecture: any
-Depends: condor-dbg (= ${binary:Version}),
+Depends: htcondor (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
  This package aids upgrades of existing htcondor installations to the

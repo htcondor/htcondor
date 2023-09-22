@@ -366,5 +366,5 @@ sub check_deb {
     # Run lintian on the packages.
     # Add '--fail-on error' when Ubuntu20 is retired
     # The ls can be dropped, when the errors are resolved.
-    return "lintian --jobs=$ENV{OMP_NUM_THREADS} *.changes; ls -lh *.deb";
+    return "lintian --suppress-tags latest-debian-changelog-entry-without-new-date,latest-changelog-entry-without-new-date *.changes; ls -lh *.deb";
 }
