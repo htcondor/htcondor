@@ -520,3 +520,75 @@ _schedd_import_exported_job_results(PyObject *, PyObject * args) {
 
     return py_new_htcondor2_classad(result->Copy());
 }
+
+
+static PyObject *
+_schedd_unexport_job_ids(PyObject *, PyObject * args) {
+    // _schedd_unexport_job_constraint(addr, job_list)
+
+    const char * addr = NULL;
+    const char * job_list = NULL;
+
+    if(! PyArg_ParseTuple( args, "zz", & addr, & job_list )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    StringList ids(job_list);
+
+
+    DCSchedd schedd(addr);
+    CondorError errorStack;
+    ClassAd * result = schedd.unexportJobs( & ids, & errorStack );
+
+    if( errorStack.code() > 0 ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        return NULL;
+    }
+    if( result == NULL ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "No result ad" );
+        return NULL;
+    }
+
+
+    return py_new_htcondor2_classad(result->Copy());
+}
+
+
+static PyObject *
+_schedd_unexport_job_constraint(PyObject *, PyObject * args) {
+    // _schedd_unexport_job_constraint(addr, constraint)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+
+    if(! PyArg_ParseTuple( args, "zz", & addr, & constraint )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    if( constraint == NULL || constraint[0] == '\0' ) {
+        constraint = "true";
+    }
+
+
+    DCSchedd schedd(addr);
+    CondorError errorStack;
+    ClassAd * result = schedd.unexportJobs( constraint, & errorStack );
+
+    if( errorStack.code() > 0 ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        return NULL;
+    }
+    if( result == NULL ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "No result ad" );
+        return NULL;
+    }
+
+
+    return py_new_htcondor2_classad(result->Copy());
+}

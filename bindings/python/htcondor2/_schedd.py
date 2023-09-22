@@ -23,6 +23,8 @@ from .htcondor2_impl import (
     _schedd_export_job_ids,
     _schedd_export_job_constraint,
     _schedd_import_exported_job_results,
+    _schedd_unexport_job_ids,
+    _schedd_unexport_job_constraint,
 )
 
 
@@ -217,5 +219,7 @@ class Schedd():
     def unexport_jobs(self,
         job_spec : Union[list[str], str, classad.ExprTree],
     ) -> classad.ClassAd:
-        # FIXME
-        pass
+        return job_spec_hack(self._addr, job_spec,
+            _schedd_unexport_job_ids, _schedd_unexport_job_constraint,
+            (),
+        )
