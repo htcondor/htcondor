@@ -23,6 +23,23 @@ from .htcondor2_impl import (
 )
 
 
+def job_spec_hack(
+    addr : str,
+    job_spec : Union[list[str], str, classad.ExprTree],
+    f_job_ids : callable,
+    f_constraint : callable,
+    args : list,
+):
+    if isinstance(job_spec, list):
+        job_spec_string = ", ".join(job_spec)
+        return f_job_ids(addr, job_spec_string, *args)
+    elif re.fullmatch('\d+(\.\d+)?', job_spec):
+        return f_job_ids(addr, job_spec, *args)
+    else:
+        job_constraint = str(job_spec)
+        return f_constraint(addr, job_constraint, *args)
+
+
 class Schedd():
 
     def __init__(self, location : classad.ClassAd = None):
@@ -79,25 +96,10 @@ class Schedd():
         elif isinstance(reason, tuple):
             (reason_string, reason_code) = reason
 
-        result = None
-        if isinstance(job_spec, list):
-            job_spec_string = ", ".join(job_spec)
-            result = _schedd_act_on_job_ids(
-                self._addr,
-                job_spec_string, int(action), reason_string, str(reason_code)
-            )
-        elif re.fullmatch('\d+(\.\d+)?', job_spec):
-            result = _schedd_act_on_job_ids(
-                self._addr,
-                job_spec, int(action), reason_string, str(reason_code)
-            )
-        else:
-            job_constraint = str(job_spec)
-            result = _schedd_act_on_job_constraint(
-                self._addr,
-                job_constraint, int(action), reason_string, str(reason_code)
-            )
-
+        result = job_spec_hack(self._addr, job_spec,
+            _schedd_act_on_job_ids, _schedd_act_on_job_constraint,
+            (int(action), reason_string, str(reason_code))
+        )
 
         if result is None:
             return None
@@ -133,23 +135,10 @@ class Schedd():
         # open to the schedd while Python code has control, which we think
         # is a really bad idea.
 
-        match_count = None
-        if isinstance(job_spec, list):
-            match_count = _schedd_edit_job_ids(
-                self._addr,
-                job_spec, attr, str(value), flags
-            )
-        elif re.fullmatch('\d+(\.\d+)?', job_spec):
-            match_count = _schedd_edit_job_ids(
-                self._addr,
-                [job_spec], attr, str(value), flags
-            )
-        else:
-            match_count = _schedd_edit_job_constraint(
-                self._addr,
-                str(job_spec), attr, str(value), flags
-            )
-
+        match_count = job_spec_hack(self._addr, job_spec,
+            _schedd_edit_job_ids, _schedd_edit_job_constraint,
+            (attr, str(value), flags),
+        )
 
         # FIXME: Does this really need to be an undocumented object?
         return match_count
@@ -203,7 +192,6 @@ class Schedd():
 
     def reschedule(self) -> None:
         _schedd_reschedule(self._addr)
-        pass
 
 
     def export_jobs(self,
@@ -211,8 +199,10 @@ class Schedd():
         export_dir : str,
         new_spool_dir : str,
     ) -> classad.ClassAd:
-        # FIXME
-        pass
+        return job_spec_hack(self._addr, job_spec,
+            _schedd_export_job_ids, _schedd_export_constraint,
+            (str(export_dir), str(new_spool_dir)),
+        )
 
 
     def import_exported_job_results(self,

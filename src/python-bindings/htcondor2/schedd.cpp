@@ -135,20 +135,20 @@ _schedd_query(PyObject *, PyObject * args) {
 
 static PyObject *
 _schedd_act_on_job_ids(PyObject *, PyObject * args) {
-    // _schedd_act_on_job_ids(addr, job_spec, action, reason_string, reason_code)
+    // _schedd_act_on_job_ids(addr, job_list, action, reason_string, reason_code)
 
     const char * addr = NULL;
-    const char * job_spec = NULL;
+    const char * job_list = NULL;
     long action = 0;
     const char * reason_string = NULL;
     const char * reason_code = NULL;
 
-    if(! PyArg_ParseTuple( args, "zzlzz", & addr, & job_spec, & action, & reason_string, & reason_code )) {
+    if(! PyArg_ParseTuple( args, "zzlzz", & addr, & job_list, & action, & reason_string, & reason_code )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
 
-    StringList ids(job_spec);
+    StringList ids(job_list);
 
 
     ClassAd * result = NULL;
@@ -275,21 +275,16 @@ _schedd_act_on_job_constraint(PyObject *, PyObject * args) {
 
 static PyObject *
 _schedd_edit_job_ids(PyObject *, PyObject * args) {
-    // schedd_edit_job_ids(addr, jobIDList, attr, value, flags)
+    // schedd_edit_job_ids(addr, job_list, attr, value, flags)
 
     const char * addr = NULL;
-    PyObject * jobIDList = NULL;
+    const char * job_list = NULL;
     const char * attr = NULL;
     const char * value = NULL;
     long flags = 0;
 
-    if(! PyArg_ParseTuple( args, "zOzzl", & addr, & jobIDList, & attr, & value, & flags )) {
+    if(! PyArg_ParseTuple( args, "zzzzl", & addr, & job_list, & attr, & value, & flags )) {
         // PyArg_ParseTuple() has already set an exception for us.
-        return NULL;
-    }
-
-    if(! PyList_Check(jobIDList)) {
-        PyErr_SetString(PyExc_TypeError, "job_spec must be a list");
         return NULL;
     }
 
@@ -311,54 +306,30 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
 
 
     long matchCount = 0;
-    Py_ssize_t size = PyList_Size(jobIDList);
-    for( int i = 0; i < size; ++i ) {
-        PyObject * py_jobID = PyList_GetItem(jobIDList, i);
-        if( py_jobID == NULL ) {
+    const char * id = NULL;
+    StringList ids(job_list);
+    for( ids.rewind(); (id = ids.next()) != NULL; ) {
+        JOB_ID_KEY jobIDKey;
+        if(! jobIDKey.set(id)) {
             // FIXME: Check error return and use error stack.
             DisconnectQ(NULL);
 
-            // PyList_GetItem() has already set an exception for us.
+            // This was HTCondorValueError, in version 1.
+            PyErr_SetString(PyExc_ValueError, "Invalid ID");
             return NULL;
         }
 
-        if(! PyUnicode_Check(py_jobID)) {
+        int rv = SetAttribute(jobIDKey.cluster, jobIDKey.proc, attr, value, flags);
+        if( rv == -1 ) {
             // FIXME: Check error return and use error stack.
             DisconnectQ(NULL);
 
-            PyErr_SetString(PyExc_TypeError, "job_spec must be a list of strings");
+            // This was HTCondorIOError, in version 1.
+            PyErr_SetString(PyExc_RuntimeError, "Unable to edit job");
             return NULL;
         }
 
-        std::string jobID;
-        if( py_str_to_std_string(py_jobID, jobID) != -1 ) {
-            JOB_ID_KEY jobIDKey;
-            if(! jobIDKey.set(jobID.c_str())) {
-                // FIXME: Check error return and use error stack.
-                DisconnectQ(NULL);
-
-                // This was HTCondorValueError, in version 1.
-                PyErr_SetString(PyExc_ValueError, "Invalid ID");
-                return NULL;
-            }
-
-            int rv = SetAttribute(jobIDKey.cluster, jobIDKey.proc, attr, value, flags);
-            if( rv == -1 ) {
-                // FIXME: Check error return and use error stack.
-                DisconnectQ(NULL);
-
-                // This was HTCondorIOError, in version 1.
-                PyErr_SetString(PyExc_RuntimeError, "Unable to edit job");
-                return NULL;
-            }
-            matchCount += 1;
-        } else {
-            // FIXME: Check error return and use error stack.
-            DisconnectQ(NULL);
-
-            // py_str_to_std_str() has already set an exception for us.
-            return NULL;
-        }
+        matchCount += 1;
     }
 
 
