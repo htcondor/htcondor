@@ -11,6 +11,7 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
     configuration syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and
     JOB_ROUTER_ROUTE_<name>. Note: The removal will occur during the lifetime of the
     HTCondor V23 feature series.
+    :jira:`1968`
 
 The details of each version are described below.
 
