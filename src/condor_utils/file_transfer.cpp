@@ -1182,7 +1182,7 @@ FileTransfer::DownloadFiles(bool blocking)
 					 "%s\n", TransSock );
 			Info.success = 0;
 			Info.in_progress = false;
-			formatstr( Info.error_desc, "FileTransfer: Unable to connect to to server %s",
+			formatstr( Info.error_desc, "FileTransfer: Unable to connect to server %s",
 					 TransSock );
 			return FALSE;
 		}
@@ -1581,7 +1581,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 					 "%s\n", TransSock );
 			Info.success = 0;
 			Info.in_progress = false;
-			formatstr( Info.error_desc, "FileTransfer: Unable to connecto to server %s",
+			formatstr( Info.error_desc, "FileTransfer: Unable to connect to server %s",
 					 TransSock );
 			return FALSE;
 		}

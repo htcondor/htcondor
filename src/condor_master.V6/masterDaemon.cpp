@@ -2696,7 +2696,7 @@ Daemons::DoPeacefulShutdown(
 {
 	int messages = SetPeacefulShutdown(timeout);
 
-	// if we sent any messages, set a timer to to do the StopPeaceful call.
+	// if we sent any messages, set a timer to do the StopPeaceful call.
 	// to give the messages a chance to arrive.
 	bool fTimer = false;
 	if (messages > 0) {

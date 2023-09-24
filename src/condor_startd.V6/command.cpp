@@ -1138,7 +1138,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 	if (claim_pslot && rip->r_has_cp) {
 		// TODO refuse claim entirely, or accept claim of single dslot or
-		//   sending to to WorkingCM?
+		//   sending to WorkingCM?
 		rip->dprintf(D_FULLDEBUG, "Refusing claim of pslot with consumption policy\n");
 		refuse(stream);
 		ABORT;

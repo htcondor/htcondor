@@ -68,7 +68,7 @@ Platform-Specific Configuration File Settings
 The configuration variables that are truly platform-specific are:
 
 :macro:`RELEASE_DIR`
-    Full path to to the installed HTCondor binaries. While the
+    Full path to the installed HTCondor binaries. While the
     configuration files may be shared among different platforms, the
     binaries certainly cannot. Therefore, maintain separate release
     directories for each platform in the pool.
