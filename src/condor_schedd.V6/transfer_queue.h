@@ -36,8 +36,17 @@ class IOStats {
 	stats_entry_sum_ema_rate<double> file_write;
 	stats_entry_sum_ema_rate<double> net_read;
 	stats_entry_sum_ema_rate<double> net_write;
+	stats_entry_sum_ema_rate<double> upload_io_seconds;
+	stats_entry_sum_ema_rate<double> download_io_seconds;
+	stats_entry_sum_ema_rate<double> upload_queued_seconds;
+	stats_entry_sum_ema_rate<double> download_queued_seconds;
 	stats_entry_abs<double> upload_MB_waiting;
 	stats_entry_abs<double> download_MB_waiting;
+	stats_entry_abs<double> upload_MB_active;
+	stats_entry_abs<double> download_MB_active;
+	stats_entry_abs<double> uploading_time;
+	stats_entry_abs<double> downloading_time;
+	_condor_runtime stopwatch;
 
 	void Add(IOStats &s);
 	void Clear();
@@ -55,14 +64,15 @@ class TransferQueueRequest {
 
 	bool SendGoAhead(XFER_QUEUE_ENUM go_ahead=XFER_QUEUE_GO_AHEAD,char const *reason=NULL);
 
-	bool ReadReport(class TransferQueueManager *manager) const;
+	bool ReadReport(class TransferQueueManager *manager);
 
 	ReliSock *m_sock;
 	std::string m_queue_user;   // Name of file transfer queue user. (TRANSFER_QUEUE_USER_EXPR)
 	std::string m_up_down_queue_user; // queue user prefixed by "U" or "D" for upload/download
 	std::string  m_jobid;   // For information purposes, the job associated with
 	                    // this file transfer.
-	double m_sandbox_size_MB;
+	uint64_t m_sandbox_size_bytes; // The number of bytes in the sandbox
+	uint64_t m_sandbox_remaining_bytes; // The number of bytes remaining to be transferred in the sandbox
 	std::string  m_fname;   // File this client originally requested to transfer.
 	                    // In current implementation, it may silently move on
 	                    // to a different file without notifying us.
@@ -73,6 +83,10 @@ class TransferQueueRequest {
 	                        // 0 indicates no limit
 	time_t m_time_born;
 	time_t m_time_go_ahead;
+
+	double io_seconds{0};
+	double queued_seconds{0};
+	_condor_runtime stopwatch;
 
 	std::string m_description; // buffer for Description()
 };
@@ -114,6 +128,8 @@ class TransferQueueManager: public Service {
 	void publish_user_stats(ClassAd * ad, const char *user, int pubflags);
 
 	void AddRecentIOStats(IOStats &s,const std::string &up_down_queue_user);
+
+	bool JobCanStart(ClassAd &job_ad, ClassAd &machine_ad);
  private:
 	std::vector<TransferQueueRequest *> m_xfer_queue;
 	int m_max_uploads{0};   // 0 if unlimited
@@ -137,11 +153,15 @@ class TransferQueueManager: public Service {
 	int m_waiting_to_download{0};
 	int m_upload_wait_time{0};
 	int m_download_wait_time{0};
+	double m_uploading_time{0};
+	double m_downloading_time{0};
 
 	stats_entry_abs<int> m_max_uploading_stat;
 	stats_entry_abs<int> m_max_downloading_stat;
 	stats_entry_abs<int> m_uploading_stat;
+	stats_entry_abs<double> m_uploading_time_stat;
 	stats_entry_abs<int> m_downloading_stat;
+	stats_entry_abs<double> m_downloading_time_stat;
 	stats_entry_abs<int> m_waiting_to_upload_stat;
 	stats_entry_abs<int> m_waiting_to_download_stat;
 	stats_entry_abs<int> m_upload_wait_time_stat;
@@ -177,6 +197,13 @@ class TransferQueueManager: public Service {
 	StatisticsPool m_stat_pool;
 	int m_publish_flags{0};
 
+	long long m_defaultBandwidth{1000000}; // The default estimate of user queue bandwidth if the collected statistics are too low.
+	double m_minimumLoad{0.2}; // A load threshold where, above which, we assume the collected statistics are sufficient.
+	uint64_t m_queue_threshold{0}; // The queue threshold above which jobs shouldn't be started.  Time in seconds.
+
+	// The ClassAd expression for determining the user's transfer queue
+	std::unique_ptr<ExprTree> m_user_expr;
+
 	bool AddRequest( TransferQueueRequest *client );
 	void RemoveRequest( TransferQueueRequest *client );
 
@@ -191,10 +218,16 @@ class TransferQueueManager: public Service {
 	void UnregisterStats(char const *user,IOStats &iostats,ClassAd *unpublish_ad) {
 		RegisterStats(user,iostats,true,unpublish_ad);
 	}
+	// Calculate the estimated queue time for an `IOStats` collection, given the configuration of the
+	// manager.
+	void queueTimeEstimate(IOStats &iostats) const;
 
 	void parseThrottleConfig(char const *config_param,bool &enable_throttle,double &low,double &high,std::string &throttle_short_horizon,std::string &throttle_long_horizon,time_t &throttle_increment_wait);
 	void notifyAboutTransfersTakingTooLong();
 
+	// Given a job and machine ad, evaluate the transfer queue user_expr to determine the queue's transfer
+	// user.
+	static bool GetTransferQueueUserInternal(ClassAd &job_ad, ClassAd &machine_ad, ExprTree &user_expr, std::string &user);
 };
 
 

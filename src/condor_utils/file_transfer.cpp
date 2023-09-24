@@ -5518,23 +5518,25 @@ std::string
 FileTransfer::GetTransferQueueUser()
 {
 	std::string user;
+	std::string user_expr;
+	std::unique_ptr<ExprTree> user_tree;
+	if (param(user_expr, "TRANSFER_QUEUE_USER_EXPR", "strcat(\"Owner_\",Owner)") ) {
+		ExprTree *user_tree_raw = nullptr;
+		ParseClassAdRvalExpr(user_expr.c_str(), user_tree_raw);
+		user_tree.reset(user_tree_raw);
+	}
 	ClassAd *job = GetJobAd();
-	if( job ) {
-		std::string user_expr;
-		if( param(user_expr,"TRANSFER_QUEUE_USER_EXPR","strcat(\"Owner_\",Owner)") ) {
-			ExprTree *user_tree = NULL;
-			if( ParseClassAdRvalExpr( user_expr.c_str(), user_tree ) == 0 && user_tree ) {
-				classad::Value val;
-				const char *str = NULL;
-				if ( EvalExprToString(user_tree,job,NULL,val) && val.IsStringValue(str) )
-				{
-					user = str;
-				}
-				delete user_tree;
-			}
-		}
+	if (job && user_tree) {
+		GetTransferQueueUserStatic(*job, m_machine_ad, *user_tree.get(), user);
 	}
 	return user;
+}
+
+bool
+FileTransfer::GetTransferQueueUserStatic(ClassAd &job_ad, ClassAd &machine_ad, ExprTree &user_expr, std::string &user)
+{
+	classad::Value val;
+	return EvalExprToString(&user_expr, &job_ad, &machine_ad, val, "JOB", "SLOT") && val.IsStringValue(user);
 }
 
 bool
@@ -6360,13 +6362,13 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		dprintf(D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n", proxy_filename);
 	}
 
-	if (!m_job_ad.empty()) {
-		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
-		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime job ad to %s\n", m_job_ad.c_str());
+	if (!m_job_ad_fname.empty()) {
+		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad_fname.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime job ad to %s\n", m_job_ad_fname.c_str());
 	}
-	if (!m_machine_ad.empty()) {
-		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
-		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime machine ad to %s\n", m_machine_ad.c_str());
+	if (!m_machine_ad_fname.empty()) {
+		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad_fname.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime machine ad to %s\n", m_machine_ad_fname.c_str());
 	}
 
 	// prepare args for the plugin
@@ -6531,13 +6533,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		dprintf( D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n",
 				proxy_filename );
 	}
-	if (!m_job_ad.empty()) {
-		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
-		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime job ad to %s\n", m_job_ad.c_str());
+	if (!m_job_ad_fname.empty()) {
+		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad_fname.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime job ad to %s\n", m_job_ad_fname.c_str());
 	}
-	if (!m_machine_ad.empty()) {
-		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
-		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime machine ad to %s\n", m_machine_ad.c_str());
+	if (!m_machine_ad_fname.empty()) {
+		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad_fname.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime machine ad to %s\n", m_machine_ad_fname.c_str());
 	}
 
 

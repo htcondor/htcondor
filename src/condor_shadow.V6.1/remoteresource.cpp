@@ -880,6 +880,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		free(starter_version);
 	}
 
+	filetrans.SetMachineAd(starterAd);
 	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
 
 	if( ad->LookupBool(ATTR_HAS_RECONNECT, supports_reconnect) ) {

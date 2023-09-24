@@ -4694,6 +4694,17 @@ These macros control the *condor_schedd*.
     :index:`TRANSFER_IO_REPORT_TIMESPANS`. The default is ``5m``,
     which is 5 minutes.
 
+:macro-def:`FILE_TRANSFER_QUEUE_TIME_ESTIMATE_THRESHOLD`
+    This variable specifies the threshold for the total estimated time
+    to complete the current queue of transfers.  Its value, in seconds,
+    is computed by dividing the sum of the active and queued transfers by
+    the currently-estimated bandwidth.
+
+    This value is computed for each queue user (as defined by the
+    ``TRANSFER_QUEUE_USER_EXPR`` :index:`TRANSFER_QUEUE_USER_EXPR`).  If
+    the user's transfer queue is above the threshold, then additional jobs
+    will not be started until the transfer queue is below threshold.
+
 :macro-def:`TRANSFER_QUEUE_USER_EXPR`
     This rarely configured expression specifies the user name to be used
     for scheduling purposes in the file transfer queue. The scheduler

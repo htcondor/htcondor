@@ -139,6 +139,10 @@ class FileTransfer final: public Service {
 						 bool use_file_catalog = true,
 						 bool is_spool = false);
 
+	// When computing the file transfer queue user, the machine ad may provide useful information.
+	// Make a copy of it as an optional part of initializing the file transfer object
+	void SetMachineAd(ClassAd *new_machine_ad) {if (new_machine_ad) {m_machine_ad.CopyFrom(*new_machine_ad);}}
+
 	/** @param Ad contains filename remaps for downloaded files.
 		       If NULL, turns off remaps.
 		@return 1 on success, 0 on failure */
@@ -176,7 +180,7 @@ class FileTransfer final: public Service {
 	 *  @param machine_ad The location of the machine ad.
 	 */
 	void setRuntimeAds(const std::string &job_ad, const std::string &machine_ad)
-	{m_job_ad = job_ad; m_machine_ad = machine_ad;}
+	{m_job_ad_fname = job_ad; m_machine_ad_fname = machine_ad;}
 
 		/** Set limits on how much data will be sent/received per job
 			(i.e. per call to DoUpload() or DoDownload()).  The job is
@@ -408,6 +412,9 @@ class FileTransfer final: public Service {
 
 	bool transferIsInProgress() const { return ActiveTransferTid != -1; }
 
+	// Allows external callers to share the logic for fetching the transfer queue user.
+	static bool GetTransferQueueUserStatic(ClassAd &job_ad, ClassAd &machine_ad, ExprTree &user_expr, std::string &user);
+
   protected:
 
 	// Because FileTransferItem doesn't store the destination file name
@@ -573,8 +580,8 @@ class FileTransfer final: public Service {
 	std::string m_jobid; // what job we are working on, for informational purposes
 	char *m_sec_session_id{nullptr};
 	std::string m_cred_dir;
-	std::string m_job_ad;
-	std::string m_machine_ad;
+	std::string m_job_ad_fname;
+	std::string m_machine_ad_fname;
 	filesize_t MaxUploadBytes{-1};  // no limit by default
 	filesize_t MaxDownloadBytes{-1};
 
@@ -622,6 +629,8 @@ class FileTransfer final: public Service {
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 	ClassAd jobAd;
+	// Used to compute the transfer queue user.
+	ClassAd m_machine_ad;
 
 	//
 	// As of this writing, this function should only ever be called from

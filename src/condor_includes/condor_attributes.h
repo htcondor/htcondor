@@ -1139,7 +1139,9 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_DOTNET_VERSIONS  "DotNetVersions"
 
 #define ATTR_TRANSFER_QUEUE_NUM_UPLOADING  "TransferQueueNumUploading"
+#define ATTR_TRANSFER_QUEUE_UPLOADING_TIME "TransferQueueUploadingTimeEstimate"
 #define ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING  "TransferQueueNumDownloading"
+#define ATTR_TRANSFER_QUEUE_DOWNLOADING_TIME  "TransferQueueDownloadingTimeEstimate"
 #define ATTR_TRANSFER_QUEUE_MAX_UPLOADING  "TransferQueueMaxUploading"
 #define ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING  "TransferQueueMaxDownloading"
 #define ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD  "TransferQueueNumWaitingToUpload"

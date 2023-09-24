@@ -4919,6 +4919,22 @@ type=int
 description=
 tags=schedd
 
+[FILE_TRANSFER_QUEUE_TIME_ESTIMATE_THRESHOLD]
+default=1800
+type=int
+description=If the estimated time in the transfer queue for a new job is above this threshold (in seconds), the job will not be started
+tags=schedd
+
+[FILE_TRANSFER_QUEUE_TIME_ESTIMATE_MINIMUM_LOAD]
+default=0.2
+type=double
+description=The minimum file transfer load (active + queued transfers) where the current bandwidth estimate is considered reliable.  Below this threshold, the FILE_TRANSFER_QUEUE_TIME_ESTIMATE_BANDWIDTH is used as the bandwidth estimate.  Here, the load is the average number of files that have been transferring over the last minute (or the current value of FILE_TRANSFER_DISK_LOAD_THROTTLE_SHORT_HORIZON).
+
+[FILE_TRANSFER_QUEUE_TIME_ESTIMATE_BANDWIDTH]
+default=1000000
+type=int
+description=If there is insufficient transfer history to generate a bandwidth estimate (see FILE_TRANSFER_QUEUE_TIME_ESTIMATE_MINIMUM_LOAD), then this value, in bytes per second, is used instead for the purpose of estimating the queue time.
+
 [RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
 default=false
 type=bool

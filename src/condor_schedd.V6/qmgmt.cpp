@@ -9541,6 +9541,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 			}
 #endif
 
+			if (!scheduler.canStartXfer(*static_cast<ClassAd*>(ad), *my_match_ad)) {
+				dprintf(D_FULLDEBUG | D_MATCH, "job %d.%d matches but cannot start due to transfer queue limits\n", ad->jid.cluster, ad->jid.proc);
+				continue;
+			}
+
 				// Make sure that the startd ranks this job >= the
 				// rank of the job that initially claimed it.
 				// We stashed that rank in the startd ad when
