@@ -97,7 +97,6 @@ dpkg-buildpackage -uc -us
 
 cd ..
 
-mv ./*.dsc ./*.debian.tar.xz ./*.orig.tar.gz "$dest_dir"
-mv ./*.changes ./*.deb "$dest_dir"
+mv ./*.buildinfo ./*.changes ./*.deb ./*.debian.tar.* ./*.dsc ./*.orig.tar.* "$dest_dir"
 rm -rf "$tmpd"
 ls -lh "$dest_dir"

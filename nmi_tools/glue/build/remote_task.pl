@@ -344,8 +344,9 @@ sub create_rpm {
 }
 
 sub check_rpm {
-    # List files in the package
-    return "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
+    # Run rpmlint on the packages.
+    # The ls can be dropped, when the errors are resolved.
+    return "rpmlint *.rpm; ls -lh *.rpm";
 }
 
 sub create_deb {    
@@ -362,16 +363,8 @@ sub create_deb {
 }
 
 sub check_deb {
-    # Print package summary
-    # We would like to run lintian, but it is not available on all NMI machine
-    my $debs;
-    for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
-    if ( ! defined $debs) { $debs = "*.deb"; }
-    if ($ENV{NMI_PLATFORM} =~ /Debian8/) {
-        # Only works with a single deb
-        return "dpkg-deb -I $debs";
-    } else {
-        # return "lintian $debs";
-        return "dpkg-deb -W $debs";
-    }
+    # Run lintian on the packages.
+    # Add '--fail-on error' when Ubuntu20 is retired
+    # The ls can be dropped, when the errors are resolved.
+    return "lintian --suppress-tags latest-debian-changelog-entry-without-new-date,latest-changelog-entry-without-new-date *.changes; ls -lh *.deb";
 }
