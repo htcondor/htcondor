@@ -381,7 +381,7 @@ incorporates.
 
     -  ``Startd_Publish_CpusUsage``
 
-       Publish the number of CPU cores being used by the job into to
+       Publish the number of CPU cores being used by the job into the
        slot ad as attribute ``CpusUsage``. This value will be the
        average number of cores used by the job over the past minute,
        sampling every 5 seconds.

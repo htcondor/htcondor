@@ -8581,7 +8581,7 @@ int SubmitHash::parse_q_args(
 	while (isspace(*pqargs)) ++pqargs;
 
 	// parse the queue arguments, handling the count and finding the in,from & matching keywords
-	// on success pqargs will point to to \0 or to just after the keyword.
+	// on success pqargs will point to \0 or to just after the keyword.
 	rval = o.parse_queue_args(pqargs);
 	if (rval < 0) {
 		errmsg = "invalid Queue statement";
