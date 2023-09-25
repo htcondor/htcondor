@@ -193,7 +193,7 @@ units are megabytes and disk kilobytes.
     request_disk            = 1G
 
 
-If this script/batch file were to to be invoked from the command line, and
+If this script/batch file were to be invoked from the command line, and
 outside of HTCondor, its single line of output
 
 .. code-block:: text

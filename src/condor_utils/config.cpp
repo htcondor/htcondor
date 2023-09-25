@@ -3131,7 +3131,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 
 // given the body text of a config macro, and the macro id and macro context
 // evaluate the body and return a string. the string may be a literal, or
-// may point into to the buffer returned in tbuf.  The caller will NOT free
+// may point into the buffer returned in tbuf.  The caller will NOT free
 // the return value, but will free tbuf if it is not NULL with the understanding
 // that the return value may be freed as a result.
 static const char * evaluate_macro_func (
@@ -3881,7 +3881,7 @@ typedef struct _config_macro_position {
 
 // given the body text of a config macro, and the macro id and macro context
 // evaluate the body and return a string. the string may be a literal, or
-// may point into to the buffer returned in tbuf.  The caller will NOT free
+// may point into the buffer returned in tbuf.  The caller will NOT free
 // the return value, but will free tbuf if it is not NULL with the understanding
 // that the return value may be freed as a result.
 static ptrdiff_t evaluate_macro_func (
@@ -4846,7 +4846,7 @@ protected:
 ** expands the macro whose name is specified in the self argument.
 ** Expand parameter references of the form "left$(self)right".  This
 ** is deceptively simple, but does handle multiple and or nested references.
-** We only expand references to to the parameter specified by self. use expand_macro
+** We only expand references to the parameter specified by self. use expand_macro
 ** to expand all references. 
 */
 char *

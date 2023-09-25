@@ -98,7 +98,7 @@ bool parse_int64_bytes(const char * input, int64_t & value, int base)
 
         val = (int64_t)((val + fract) * mult + base-1) / base;
 
-        // if we to to here and we are at the end of the string
+        // if we to here and we are at the end of the string
         // then the input is valid, return true;
         if (!*p || !p[1]) {
                 value = val;

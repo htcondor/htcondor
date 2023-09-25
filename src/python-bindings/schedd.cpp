@@ -3501,7 +3501,7 @@ public:
 			if (ssi.has_items()) {
 				std::string items_filename;
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, items_filename, &row_count) < 0 || row_count <= 0) {
-					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
+					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 
 				// PRAGMA_REMIND("fix this when python submit supports foreach, maybe make this common with condor_submit")
@@ -3662,7 +3662,7 @@ public:
 			int row_count = 1;
 			if (ssi.has_items()) {
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, ssi.fea().items_filename, &row_count) < 0 || row_count <= 0) {
-					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
+					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 				num_jobs = row_count * ssi.step_size();
 			}
