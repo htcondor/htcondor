@@ -24,6 +24,5 @@ Administrators' Manual
    singularity-support
    power-management
    hooks
-   windows-installer
    directories
    setting-up-special-environments

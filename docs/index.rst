@@ -61,7 +61,7 @@ Manual built on |release_date|
 .. toctree::
    :maxdepth: 2
    :glob:
-   :caption: Appendix and Tables
+   :caption: Reference, Glossary and Index
 
    man-pages/index
    classad-attributes/index
