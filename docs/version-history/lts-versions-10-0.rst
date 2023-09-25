@@ -24,16 +24,16 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed :mod:`htcondor.htchirp` to find its configuration at `_CONDOR_CHIRP_CONFIG`
+  instead of at `_CONDOR_SCRATCH_DIR/.chirp.config`.
+  :jira:`2012`
+
 - Fixed a bug that prevented deletion of stored user passwords with
   *condor_store_cred* on Windows.
   :jira:`1998`
 
-- Fixed an issue for the PPC build with misaligned pointers in the config system.
+- Fixed misaligned pointers issue for the PowerPC architecture in the configuration system.
   :jira:`2001`
-
-- Fixed :mod:`htcondor.htchirp` to find its configuration at `_CONDOR_CHIRP_CONFIG`
-  instead of at `_CONDOR_SCRATCH_DIR/.chirp.config`.
-  :jira:`2012`
 
 .. _lts-version-history-1008:
 
