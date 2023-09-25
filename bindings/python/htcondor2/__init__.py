@@ -25,6 +25,7 @@ from ._startd import Startd
 from ._credd import Credd
 from ._cred_check import CredCheck
 from ._schedd import Schedd
+from ._submit import Submit
 
 # Additional aliases for compatibility with the `htcondor` module.
 from ._daemon_type import DaemonType as DaemonTypes

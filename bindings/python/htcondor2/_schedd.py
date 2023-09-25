@@ -177,6 +177,10 @@ class Schedd():
         pass
 
 
+    # Let's not support submitMany() unless we have to, since it
+    # requires a ClassAd like the one we're deprecating out of submit().
+
+
     def spool(self,
         ad_list : list[classad.ClassAd],
     ) -> None:
