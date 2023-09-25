@@ -11,6 +11,7 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
     configuration syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and
     JOB_ROUTER_ROUTE_<name>. Note: The removal will occur during the lifetime of the
     HTCondor V23 feature series.
+    :jira:`1968`
 
 The details of each version are described below.
 
@@ -59,6 +60,10 @@ Bugs Fixed:
   the starter to the AP, the job would go on hold.  Now it will retry, or
   go back to idle.
   :jira:`2034`
+
+- Fixed a bug where the *CommittedTime* attribute was not set correctly
+  for Docker Universe jobs doing user level checkpointing.
+  :jira:`2014`
 
 - Fixed a bug where *condor_preen* was deleteing files named '*OfflineAds*' 
   in the spool directory.
