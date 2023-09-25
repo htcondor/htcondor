@@ -111,11 +111,6 @@ bool SecMan::_should_check_env_for_unique_id = true;
 IpVerify *SecMan::m_ipverify = NULL;
 classad::References SecMan::m_resume_proj;
 
-// Forward dec'l; this was previously a SecMan method but not hidden here to discourage
-// its use; in all cases, an external caller should use SecMan::getAuthenticationMethods
-// instead.
-static std::string getDefaultAuthenticationMethods(DCpermission perm);
-
 void
 SecMan::setTag(const std::string &tag) {
 
@@ -369,7 +364,10 @@ SecMan::getAuthenticationMethods(DCpermission perm) {
 	std::unique_ptr<char, decltype(&free)> config_methods(getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", perm), free);
 
 	if (!config_methods) {
-		methods = getDefaultAuthenticationMethods(perm);
+		// lookup the param table default value.  getSecSetting has already looked for a config file default
+		// so we only get here if there is not one.
+		const char * def = param_raw_default("SEC_DEFAULT_AUTHENTICATION_METHODS");
+		if (def) { methods = def; }
 	} else {
 		methods = std::string(config_methods.get());
 	}
@@ -3647,46 +3645,6 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 		result += tmp;
 	}
 	return result;
-}
-
-
-	// Given a known permission level, determine the default authentication
-	// methods we should use (as a string list) if the sysadmin provides
-	// no input.
-	//
-	// NOTE: this does *not* filter the authentication methods; some might
-	// not be valid for the current build of HTCondor
-static std::string
-getDefaultAuthenticationMethods(DCpermission perm) {
-	std::string methods;
-#if defined(WIN32)
-	// default windows method
-	methods = "NTSSPI";
-#else
-	// default unix method
-	methods = "FS";
-#endif
-
-	methods += ",TOKEN";
-
-#if defined(HAVE_EXT_KRB5)
-	methods += ",KERBEROS";
-#endif
-
-#if defined(HAVE_EXT_SCITOKENS)
-	methods += ",SCITOKENS";
-#endif
-
-	// SSL is last as this may cause the client to be anonymous.
-	methods += ",SSL";
-
-	if (perm == READ) {
-		methods += ",CLAIMTOBE";
-	} else if (perm == CLIENT_PERM) {
-		methods += ",CLAIMTOBE";
-	}
-
-	return methods;
 }
 
 

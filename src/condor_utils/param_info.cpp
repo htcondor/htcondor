@@ -28,6 +28,37 @@
 #  include <pcre2.h>
 #endif
 
+// --- setup a macro SEC_STD_AUTH_METHOD_NAMES for the param table to use
+//     as the value of SEC_<perm>_AUTHENTICATION_METHODS
+#if defined(WIN32)
+  #define OS_AUTH_METHOD_NAME "NTSSPI"
+  #define USE_PW_AUTH_METHOD_NAME ",PASSWORD"
+#else
+  #define OS_AUTH_METHOD_NAME "FS"
+  #define USE_PW_AUTH_METHOD_NAME
+#endif
+//
+#if defined(HAVE_EXT_KRB5)
+  #define KRB5_AUTH_METHOD_NAME ",KERBEROS"
+#else
+  #define KRB5_AUTH_METHOD_NAME
+#endif
+//
+#if defined(HAVE_EXT_SCITOKENS)
+  #define SCITOKENS_AUTH_METHOD_NAME ",SCITOKENS"
+#else
+  #define SCITOKENS_AUTH_METHOD_NAME
+#endif
+//
+#define SEC_STD_AUTH_METHOD_NAMES \
+	OS_AUTH_METHOD_NAME \
+	",IDTOKENS" USE_PW_AUTH_METHOD_NAME \
+	KRB5_AUTH_METHOD_NAME \
+	SCITOKENS_AUTH_METHOD_NAME \
+	",SSL"
+#define SEC_STD_READ_AUTH_METHOD_NAMES SEC_STD_AUTH_METHOD_NAMES ",CLAIMTOBE"
+// ^--- setup a macro SEC_STD_AUTH_METHOD_NAMES
+
 #define PARAM_DECLARE_TABLES 1 // so param_info_table will give us the table declarations.
 #include "param_info_tables.h"
 int param_info_init(const void ** pvdefaults)

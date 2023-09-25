@@ -5742,6 +5742,13 @@ default=0
 type=int
 customization=const
 
+[SEC_DEFAULT_AUTHENTICATION_METHODS]
+# the c++ macro value is expected to win here
+macro=SEC_STD_AUTH_METHOD_NAMES
+default=FS,TOKEN
+type=string
+customization=const
+
 [MINUTE]
 default=60
 customization=const
