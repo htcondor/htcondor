@@ -61,6 +61,10 @@ Bugs Fixed:
   go back to idle.
   :jira:`2034`
 
+- Fixed a bug where the *CommittedTime* attribute was not set correctly
+  for Docker Universe jobs doing user level checkpointing.
+  :jira:`2014`
+
 - Fixed a bug where *condor_preen* was deleteing files named '*OfflineAds*' 
   in the spool directory.
   :jira:`2019`
