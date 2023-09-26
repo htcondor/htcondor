@@ -1,7 +1,7 @@
 import re
 
 # We'll be able to just use `|` when our minimum Python version becomes 3.10.
-from typing import Union;
+from typing import Union
 
 from ._common_imports import (
     classad,
