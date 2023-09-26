@@ -54,7 +54,6 @@ bool write_local_settings_from_file(FILE* out_fp,
 
 bool verify_digit_arg(const char *s);
 bool verify_number_args(const int is, const int should_be);
-bool validate_vmgahp_result_string(const char *result_string);
 
 #ifndef vmprintf
 void vmprintf( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);

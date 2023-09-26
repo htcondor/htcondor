@@ -256,41 +256,6 @@ bool verify_number_args(const int is, const int should_be)
 	return true;
 }
 
-// Validate a result string
-bool validate_vmgahp_result_string(const char *result_string)
-{
-	StringList result_list(result_string, " ");
-	if( result_list.isEmpty() ) {
-		return false;
-	}
-
-	// Format: <req_id> 0 <result1> ..
-	// Format: <req_id> 1 <result1> ..
-
-	if(result_list.number() < 3 ) {
-		return false;
-	}
-
-	char *arg = NULL;
-	result_list.rewind();
-
-	// first arg must be digit
-	arg = result_list.next();
-	if( !arg || !verify_digit_arg(arg)) {
-		vmprintf(D_ALWAYS, "First arg in result must be digit: %s\n", result_string);
-		return false;
-	}
-
-	// second arg must be either 0 or 1
-	arg = result_list.next();
-	if( !arg || ( strcmp(arg, "0") && strcmp(arg, "1") ) ) {
-		vmprintf(D_ALWAYS, "Second arg in result must be either 0 or 1: %s\n", result_string);
-		return false;
-	}
-
-	return true;
-}
-
 void
 write_to_daemoncore_pipe(int pipefd, const char* str, int len)
 {

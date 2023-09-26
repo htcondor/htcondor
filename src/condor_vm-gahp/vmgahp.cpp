@@ -102,7 +102,6 @@ unsigned __stdcall pipe_forward_thread(void *)
 #endif
 
 VMGahp::VMGahp(VMGahpConfig* config, const char* iwd)
-	: m_pending_req_table(&hashFuncInt)
 {
 	m_async_mode = true;
 	m_new_results_signaled = false;
@@ -201,17 +200,9 @@ VMGahp::cleanUp()
 	is_called = true;
 
 	// delete reqs
-	int currentkey = 0;
-	VMRequest *req = NULL;
-	m_pending_req_table.startIterations();
-	while( m_pending_req_table.iterate(currentkey, req) != 0 ) {
-		if( req ) {
-			delete req;
-		}
-	}
 	m_pending_req_table.clear();
 
-	m_result_list.clearAll();
+	m_result_list.clear();
 
 	// delete VMs
 	for (auto vm : m_vm_list) {
@@ -248,67 +239,21 @@ VMGahp::getNewVMId(void)
 	return m_max_vm_id;
 }
 
-int
-VMGahp::numOfVM(void)
-{
-	 return (int) m_vm_list.size();
-}
-
-int
-VMGahp::numOfReq(void)
-{
-	 return numOfPendingReq() + numOfReqWithResult();
-}
-
-int
-VMGahp::numOfPendingReq(void)
-{
-	 return m_pending_req_table.getNumElements();
-}
-
-int
-VMGahp::numOfReqWithResult(void)
-{
-	 return m_result_list.number();
-}
-
 VMRequest *
 VMGahp::addNewRequest(const char *cmd)
 {
 	if(!cmd) {
 		return NULL;
 	}
-	VMRequest *new_req = new VMRequest(cmd);
-	ASSERT(new_req);
 
-	if ( m_pending_req_table.insert(new_req->m_reqid, new_req) == 0 ) {
-		return new_req;
+	VMRequest new_req(cmd);
+	int req_id = new_req.m_reqid;
+	auto [itr, rc] = m_pending_req_table.emplace(req_id, std::move(new_req));
+	if (rc) {
+		return &itr->second;
 	} else {
-		delete new_req;
 		return NULL;
 	}
-}
-
-void
-VMGahp::removePendingRequest(int req_id)
-{
-	VMRequest *req = findPendingRequest(req_id);
-	if( req != NULL ) {
-		m_pending_req_table.remove(req_id);
-		delete req;
-		return;
-	}
-}
-
-void
-VMGahp::removePendingRequest(VMRequest *req)
-{
-	if(!req) {
-		return;
-	}
-	m_pending_req_table.remove(req->m_reqid);
-	delete req;
-	return;
 }
 
 void
@@ -317,33 +262,20 @@ VMGahp::movePendingReqToResultList(VMRequest *req)
 	if(!req) {
 		return;
 	}
-	m_result_list.append(make_result_line(req));
-	removePendingRequest(req);
+	m_result_list.emplace_back(make_result_line(req));
+
+	m_pending_req_table.erase(req->m_reqid);
 }
 
 void
 VMGahp::printAllReqsWithResult()
 {
-	char *one_result = NULL;
-	std::string output;
-	m_result_list.rewind();
-	while( (one_result = m_result_list.next()) != NULL ) {
-		output = one_result;
-		output += "\n";
+	for (auto& one_result: m_result_list) {
+		one_result += "\n";
 		write_to_daemoncore_pipe(vmgahp_stdout_pipe,
-				output.c_str(), output.length());
-		m_result_list.deleteCurrent();
+				one_result.c_str(), one_result.size());
 	}
-}
-
-VMRequest *
-VMGahp::findPendingRequest(int req_id)
-{
-	VMRequest *req = NULL;
-
-	m_pending_req_table.lookup(req_id, req);
-
-	return req;
+	m_result_list.clear();
 }
 
 void
@@ -512,8 +444,8 @@ VMGahp::verify_request_id(const char *s)
 		return false;
 	}
 	// check duplicated req_id
-	if( findPendingRequest(req_id) != NULL ) {
-		vmprintf(D_ALWAYS, "Request id(%s) is conflict with "
+	if (m_pending_req_table.find(req_id) != m_pending_req_table.end()) {
+		vmprintf(D_ALWAYS, "Request id(%s) conflicts with "
 						"the existing one\n", s);
 		return false;
 	}
@@ -1027,7 +959,7 @@ VMGahp::executeSupportVMS(void)
 void
 VMGahp::executeResults(void)
 {
-	write_to_daemoncore_pipe("S %d\n", numOfReqWithResult());
+	write_to_daemoncore_pipe("S %zu\n", m_result_list.size());
 
 	// Print each result line
 	printAllReqsWithResult();
