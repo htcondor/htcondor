@@ -34,6 +34,10 @@ New Features:
   provided cluster ID.
   :jira:`2046`
 
+- Somewhat improved the performance of the _DEBUG flag D_FDS.  But please
+  don't use this unless absoultely needed.
+  :jira:`2050`
+
 Bugs Fixed:
 
 - None.
