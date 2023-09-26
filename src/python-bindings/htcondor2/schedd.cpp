@@ -407,7 +407,7 @@ _schedd_reschedule(PyObject *, PyObject * args) {
         dprintf( D_ALWAYS, "Can't send RESCHEDULE command to schedd.\n" );
     }
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 
