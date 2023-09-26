@@ -43,6 +43,7 @@ htcondor2/_schedd.py
 htcondor2/_query_opts.py
 htcondor2/_job_action.py
 htcondor2/_transaction_flag.py
+htcondor2/_submit.py
 htcondor2/__init__.py
 
 classad/__init__.py

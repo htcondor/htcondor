@@ -40,7 +40,8 @@
 #include "htcondor2/schedd.cpp"
 
 // htcondor.Submit
-#include "hcondor2/submit.cpp"
+#include "submit_utils.h"
+#include "htcondor2/submit.cpp"
 
 
 static PyMethodDef htcondor2_impl_methods[] = {
@@ -117,6 +118,12 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},
+
+	{"_submit__getitem__", &_submit__getitem__, METH_VARARGS, NULL},
+
+	{"_submit__setitem__", &_submit__setitem__, METH_VARARGS, NULL},
+
+	{"_submit_keys", &_submit_keys, METH_VARARGS, NULL},
 
 
 	{NULL, NULL, 0, NULL}
