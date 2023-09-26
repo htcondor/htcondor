@@ -20,7 +20,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Updated *condor_upgrade_check* script to check and warn about known incompatibilites
+  introduced in the feature series for HTCondor ``V10`` that can cause issues when
+  upgrading to a newer version (i.e. HTCondor ``V23``).
+  :jira:`1960`
 
 Bugs Fixed:
 
