@@ -26,7 +26,6 @@ VMRequest::VMRequest (const char *cmd)
 {
 	m_has_result = false;
 	m_is_success = false;
-	m_raw_cmd = cmd;
 	parse_vmgahp_command(cmd, m_args);
-	m_reqid = (int)strtol(m_args.argv[1], (char **)NULL, 10);
+	m_reqid = (int)strtol(m_args[1].c_str(), (char **)NULL, 10);
 }

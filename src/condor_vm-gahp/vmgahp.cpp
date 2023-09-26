@@ -403,7 +403,7 @@ VMGahp::waitForCommand(int   /*pipe_end*/)
 
 		const char *command = line->c_str();
 
-		Gahp_Args args;
+		std::vector<std::string> args;
 		VMRequest *new_req = NULL;
 
 		if( m_inClassAd )  {
@@ -420,8 +420,8 @@ VMGahp::waitForCommand(int   /*pipe_end*/)
 			}
 		}else {
 			if(parse_vmgahp_command(command, args) &&
-					verifyCommand(args.argv, args.argc)) {
-				new_req = preExecuteCommand(command, &args);
+					verifyCommand(args)) {
+				new_req = preExecuteCommand(command, args);
 
 				if( new_req != NULL ) {
 					// Execute the new request
@@ -456,20 +456,20 @@ VMGahp::waitForCommand(int   /*pipe_end*/)
 }
 
 // Check the validity of the given parameters
-bool VMGahp::verifyCommand(char **argv, int argc) {
-	if(strcasecmp(argv[0], VMGAHP_COMMAND_VM_START) == 0 ) {
+bool VMGahp::verifyCommand(const std::vector<std::string>& args) {
+	if(strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_START) == 0 ) {
 		// Expecting: VMGAHP_COMMAND_VM_START <req_id> <type>
-		return verify_number_args(argc, 3) &&
-			verify_request_id(argv[1]) &&
-			verify_vm_type(argv[2]);
+		return verify_number_args(args.size(), 3) &&
+			verify_request_id(args[1].c_str()) &&
+			verify_vm_type(args[2].c_str());
 
-	} else if(strcasecmp(argv[0], VMGAHP_COMMAND_VM_STOP) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_SUSPEND) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_SOFT_SUSPEND) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_RESUME) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_CHECKPOINT) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_STATUS) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_GETPID) == 0) {
+	} else if(strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_STOP) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_SUSPEND) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_SOFT_SUSPEND) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_RESUME) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_CHECKPOINT) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_STATUS) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_GETPID) == 0) {
 		// Expecting: VMGAHP_COMMAND_VM_STOP <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_SUSPEND <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_SOFT_SUSPEND <req_id> <vmid>
@@ -478,21 +478,21 @@ bool VMGahp::verifyCommand(char **argv, int argc) {
 		// Expecting: VMGAHP_COMMAND_VM_STATUS <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_GETPID <req_id> <vmid>
 
-		return verify_number_args(argc, 3) &&
-			verify_request_id(argv[1]) &&
-			verify_vm_id(argv[2]);
+		return verify_number_args(args.size(), 3) &&
+			verify_request_id(args[1].c_str()) &&
+			verify_vm_id(args[2].c_str());
 
-	} else if(strcasecmp(argv[0], VMGAHP_COMMAND_ASYNC_MODE_ON) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_ASYNC_MODE_OFF) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_QUIT) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VERSION) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_COMMANDS) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_SUPPORT_VMS) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_RESULTS) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_CLASSAD) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_CLASSAD_END) == 0 ) {
+	} else if(strcasecmp(args[0].c_str(), VMGAHP_COMMAND_ASYNC_MODE_ON) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_ASYNC_MODE_OFF) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_QUIT) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VERSION) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_COMMANDS) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_SUPPORT_VMS) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_RESULTS) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_CLASSAD) == 0 ||
+		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_CLASSAD_END) == 0 ) {
 		//These commands need no-args
-		return verify_number_args(argc,1);
+		return verify_number_args(args.size(),1);
 	}
 
 	vmprintf(D_ALWAYS, "Unknown command\n");
@@ -561,9 +561,9 @@ VMGahp::returnOutputError(void)
 }
 
 VMRequest *
-VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args)
+VMGahp::preExecuteCommand(const char* cmd, const std::vector<std::string>& args)
 {
-	char *command = args->argv[0];
+	const char *command = args[0].c_str();
 
 	vmprintf(D_FULLDEBUG, "Command: %s\n", command);
 
@@ -617,7 +617,7 @@ VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args)
 void
 VMGahp::executeCommand(VMRequest *req)
 {
-	char *command = req->m_args.argv[0];
+	const char *command = req->m_args[0].c_str();
 
 	priv_state priv = set_user_priv();
 
@@ -648,7 +648,7 @@ void
 VMGahp::executeStart(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_START <req_id> <type>
-	char* vmtype = req->m_args.argv[2];
+	const char* vmtype = req->m_args[2].c_str();
 
 	if( m_jobAd == NULL ) {
 		req->m_has_result = true;
@@ -751,7 +751,7 @@ void
 VMGahp::executeStop(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_STOP <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -786,7 +786,7 @@ void
 VMGahp::executeSuspend(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_SUSPEND <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -819,7 +819,7 @@ void
 VMGahp::executeSoftSuspend(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_SOFT_SUSPEND <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -853,7 +853,7 @@ void
 VMGahp::executeResume(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_RESUME <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -887,7 +887,7 @@ void
 VMGahp::executeCheckpoint(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_CHECKPOINT <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -921,7 +921,7 @@ void
 VMGahp::executeStatus(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_STATUS <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -956,7 +956,7 @@ void
 VMGahp::executeGetpid(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_GETPID <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 

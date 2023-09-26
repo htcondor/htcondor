@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "gahp_common.h"
 #include "vm_univ_utils.h"
 #include "vmgahp.h"
 
@@ -41,7 +40,7 @@ extern int oriDebugFlags;
 #endif
 extern int vmgahp_mode;
 
-bool parse_vmgahp_command(const char* raw, Gahp_Args& args);
+bool parse_vmgahp_command(const char* raw, std::vector<std::string>& args);
 
 bool verify_vm_type(const char *vmtype);
 bool check_vm_read_access_file(const char *file, bool is_root = false);

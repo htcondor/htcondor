@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
-#include "gahp_common.h"
 #include "condor_uid.h"
 #include "HashTable.h"
 #include "simplelist.h"
@@ -101,7 +100,7 @@ class VMGahp : public Service {
 		int quitFast();
 		void killAllProcess();
 
-		bool verifyCommand(char **argv, int argc);
+		bool verifyCommand(const std::vector<std::string>& args);
 		bool verify_request_id(const char *s);
 		bool verify_vm_id(const char *s);
 
@@ -109,7 +108,7 @@ class VMGahp : public Service {
 		void returnOutputSuccess(void);
 		void returnOutputError(void); 
 
-		VMRequest* preExecuteCommand(const char* cmd, Gahp_Args *args);
+		VMRequest* preExecuteCommand(const char* cmd, const std::vector<std::string>& args);
 		void executeCommand(VMRequest *req);
 
 		void executeQuit(void);
