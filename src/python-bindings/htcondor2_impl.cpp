@@ -125,6 +125,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 	{"_submit_keys", &_submit_keys, METH_VARARGS, NULL},
 
+	{"_submit_expand", &_submit_expand, METH_VARARGS, NULL},
+
 
 	{NULL, NULL, 0, NULL}
 };

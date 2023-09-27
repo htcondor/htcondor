@@ -12,6 +12,7 @@ from .htcondor2_impl import (
     _submit__getitem__,
     _submit__setitem__,
     _submit_keys,
+    _submit_expand,
 )
 
 #
@@ -49,13 +50,20 @@ class Submit(MutableMapping):
         if isinstance(input, dict) and len(input) != 0:
             pairs = []
             for key,value in input.items():
+                if not isinstance(key, str):
+                    raise TypeError("key must be a string")
                 # This was an undocumented feature in version 1, and it's
                 # likely to be useless.  This implementation assumes that
                 # str(classad.ExprTree) is always valid as a submit-file.
                 if isinstance(value, classad.ClassAd):
                     pairs.append(f"{key} = {repr(value)}")
                 else:
-                    pairs.append(f"{key} = {str(value)}")
+                    # In version 1, we didn't do this check, despite
+                    # claiming that we did.  If we need to remove it,
+                    # just put a `str()` around the `value` below.
+                    if not isinstance(value, str):
+                        raise TypeError("value must be a string")
+                    pairs.append(f"{key} = {value}")
             s = "\n".join(pairs)
             _submit_init(self, self._handle, s)
         elif isinstance(input, str):
@@ -117,7 +125,9 @@ class Submit(MutableMapping):
 
 
     def expand(self, attr : str) -> str:
-        pass
+        if not isinstance(attr, str):
+            raise TypeError("attr must be a string")
+        return _submit_expand(self, self._handle, attr)
 
 
     # In version 1, the documentation widly disagrees with the implementation;

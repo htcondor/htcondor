@@ -18,6 +18,7 @@ struct SubmitBlob {
         const char * lookup(const char * key) { return m_hash.lookup(key); }
         void set_submit_param( const char * key, const char * value ) { m_hash.set_submit_param(key, value); }
         void keys( std::string & buffer );
+        const char * expand(const char * key) { return m_hash.submit_param(key); }
 
     private:
         SubmitHash m_hash;
@@ -178,3 +179,23 @@ _submit_keys( PyObject *, PyObject * args ) {
 }
 
 
+static PyObject *
+_submit_expand( PyObject *, PyObject * args ) {
+    PyObject * self = NULL;
+    PyObject_Handle * handle = NULL;
+    const char * key = NULL;
+
+    if(! PyArg_ParseTuple( args, "OOz", & self, (PyObject **)& handle, & key )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+    const char * value = sb->expand(key);
+    if( value == NULL ) {
+        PyErr_SetString(PyExc_KeyError, key);
+        return NULL;
+    }
+
+    return PyUnicode_FromString(value);
+}
