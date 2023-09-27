@@ -15,7 +15,7 @@ Upgrading from a 10.0 LTS version of HTCondor to a 23.0 LTS version will also
 introduce changes that administrators and users of sites running from an
 older HTCondor version should be aware of when planning an upgrade. Here
 is a list of items that administrators should be aware of. To see if any of
-the following items will effect an upgrade run ``condor_upgrade_check``.
+the following items will affect an upgrade run ``condor_upgrade_check``.
 
 - HTCondor will no longer pass all environment variables to the DAGMan proper manager
   jobs environment. This may result in DAGMan and its various parts (primarily PRE,
@@ -30,7 +30,7 @@ the following items will effect an upgrade run ``condor_upgrade_check``.
   HTCondor 10.5.0 or HTCondor 10.0.4 LTS.
   :jira:`1432`
 
-- Startds without any administrator defined slot configuration will now default
+- Execution Points without any administrator defined slot configuration will now default
   to creating and utilizing one partitionable slot. To revert an Execution Point
   to use static slots add ``use FEATURE:StaticSlots`` to the Execution Point configuration.
   :jira:`2026`
@@ -47,7 +47,7 @@ the following items will effect an upgrade run ``condor_upgrade_check``.
   desktop policies to the configuration.
   :jira:`1502`
 
-- The jobrouter configuration macros :macro:`JOB_ROUTER_DEFAULTS`, :macro:`JOB_ROUTER_ENTRIES`,
+- The job router configuration macros :macro:`JOB_ROUTER_DEFAULTS`, :macro:`JOB_ROUTER_ENTRIES`,
   :macro:`JOB_ROUTER_ENTRIES_FILE`, and :macro:`JOB_ROUTER_ENTRIES_CMD` are deprecated and will
   be removed during the lifetime of the HTCondor **V23** feature series.
   :jira:`1968`
