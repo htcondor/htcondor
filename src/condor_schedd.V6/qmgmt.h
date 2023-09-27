@@ -547,7 +547,7 @@ void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
 
 // returns 1 if a job was materialized, 0 if factory was paused or complete or itemdata is not yet available
 // returns < 0 on error.  if return is 0, retry_delay is set to non-zero to indicate the retrying later might yield success
-int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, TransactionWatcher & trans, int & retry_delay);
+int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, TransactionWatcher & trans, int & retry_delay, MapFile* url_map);
 
 // returns true if there is no materialize policy expression, or if the expression evalues to true
 // returns false if there is an expression and it evaluates to false. When false is returned, retry_delay is set

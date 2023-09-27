@@ -18,6 +18,7 @@
 #include "my_username.h"
 #include "condor_version.h"
 #include "../condor_utils/dagman_utils.h"
+#include "../condor_utils/MapFile.h"
 
 #include <classad/operators.h>
 
@@ -923,12 +924,14 @@ struct SubmitJobsIterator {
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, boost::python::object from, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, num, from)
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(false)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 			// copy the input submit hash into our new hash.
 			m_hash.init(JSM_PYTHON_BINDINGS);
+			m_protected_url_map = getProtectedURLMap();
 			copy_hash(h);
 			m_hash.setDisableFileChecks(true);
 			m_hash.init_base_ad(qdate, owner.c_str());
@@ -937,12 +940,14 @@ struct SubmitJobsIterator {
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, const std::string & qargs, MacroStreamMemoryFile & ms_inline_items, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, 0, boost::python::object())
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(true)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 		// copy the input submit hash into our new hash.
 		m_hash.init(JSM_PYTHON_BINDINGS);
+		m_protected_url_map = getProtectedURLMap();
 		copy_hash(h);
 		m_hash.setDisableFileChecks(true);
 		m_hash.init_base_ad(qdate, owner.c_str());
@@ -967,7 +972,12 @@ struct SubmitJobsIterator {
 	}
 
 
-	~SubmitJobsIterator() {}
+	~SubmitJobsIterator() {
+		if (m_protected_url_map) {
+			delete m_protected_url_map;
+			m_protected_url_map = nullptr;
+		}
+	}
 
 	void copy_hash(SubmitHash & h)
 	{
@@ -1011,6 +1021,7 @@ struct SubmitJobsIterator {
 		// on first iteration, if the initial proc id is not 0, then we need to make sure
 		// to call make_job_ad with a proc id of 0 to force the cluster ad to be created.
 		ClassAd * job = NULL;
+		m_hash.attachTransferMap(m_protected_url_map);
 		if (rval == 2 && jid.proc > 0) {
 			JOB_ID_KEY cid(jid.cluster, 0);
 			job = m_hash.make_job_ad(cid, item_index, step, false, m_spool, NULL, NULL);
@@ -1020,6 +1031,7 @@ struct SubmitJobsIterator {
 		} else {
 			job = m_hash.make_job_ad(jid, item_index, step, false, m_spool, NULL, NULL);
 		}
+		m_hash.detachTransferMap();
 		process_submit_errstack(m_hash.error_stack());
 
 		if ( ! job) {
@@ -1055,6 +1067,7 @@ private:
 	SubmitHash m_hash;
 	SubmitStepFromPyIter m_sspi;
 	SubmitStepFromQArgs m_ssqa;
+	MapFile* m_protected_url_map;
 	bool m_iter_qargs;
 	bool m_return_proc_ads;
 	bool m_spool;
@@ -2944,6 +2957,7 @@ public:
        , m_queue_may_append_to_cluster(false)
     {
         m_hash.init(JSM_PYTHON_BINDINGS);
+        m_protected_url_map = getProtectedURLMap();
     }
 
 
@@ -2953,6 +2967,7 @@ public:
        , m_queue_may_append_to_cluster(false)
     {
         m_hash.init(JSM_PYTHON_BINDINGS);
+        m_protected_url_map = getProtectedURLMap();
         update(input);
     }
 
@@ -2992,6 +3007,7 @@ public:
        , m_queue_may_append_to_cluster(false)
 	{
 		m_hash.init(JSM_PYTHON_BINDINGS);
+		m_protected_url_map = getProtectedURLMap();
 		if ( ! lines.empty()) {
 			m_hash.insert_source("<PythonString>", m_src_pystring);
 			MacroStreamMemoryFile ms(lines.c_str(), lines.size(), m_src_pystring);
@@ -3015,6 +3031,14 @@ public:
 					}
 				}
 			}
+		}
+	}
+
+
+	~Submit() {
+		if (m_protected_url_map) {
+			delete m_protected_url_map;
+			m_protected_url_map = nullptr;
 		}
 	}
 
@@ -3444,6 +3468,8 @@ public:
 			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
 		}
 
+		m_hash.attachTransferMap(m_protected_url_map);
+
 		if (factory_submit) {
 
 			// force re-initialization (and a new cluster) if this hash is used again.
@@ -3553,6 +3579,8 @@ public:
 			}
 		}
 
+		m_hash.detachTransferMap();
+
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
             txn->reschedule();
@@ -3610,6 +3638,8 @@ public:
 		JOB_ID_KEY jid;
 		int step=0, item_index=0, rval;
 		SubmitStepFromPyIter ssi(m_hash, JOB_ID_KEY(cluster, first_proc_id), count, from);
+
+		m_hash.attachTransferMap(m_protected_url_map);
 
 		if (factory_submit) {
 
@@ -3711,6 +3741,8 @@ public:
 			}
 
 		}
+
+		m_hash.detachTransferMap();
 
 		if (rval < 0) { ssi.throw_error(); }
 
@@ -3954,6 +3986,7 @@ private:
     MACRO_SOURCE m_src_pystring; // needed for MacroStreamMemoryFile to point to
     MacroStreamMemoryFile m_ms_inline; // extra lines after queue statement, used if we are doing inline foreach data
     bool m_queue_may_append_to_cluster; // when true, the queue() method can add jobs to the existing cluster
+    MapFile* m_protected_url_map{nullptr};
 };
 
 boost::python::object Schedd::submit(boost::python::object submitObj, int count/*=0*/, bool spool/*=false*/, object result/*=object()*/, object itemdata/*=object()*/)

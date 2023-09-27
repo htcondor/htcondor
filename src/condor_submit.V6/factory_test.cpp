@@ -653,7 +653,7 @@ int NewProcFromAd(FILE * out, const classad::ClassAd * ad, int ProcId, JobFactor
 // return value is 0 for 'can't materialize now, try later'
 // in which case retry_delay is set to indicate how long later should be
 // retry_delay of 0 means we are done, either because of failure or because we ran out of jobs to materialize.
-int  MaterializeNextFactoryJob(FILE* out, JobFactory * factory, int & retry_delay)
+int  MaterializeNextFactoryJob(FILE* out, JobFactory * factory, int & retry_delay, MapFile* url_map)
 {
 	// dummy up the parts of a JobQueueCluster that we use here.
 	struct _jqc { JOB_ID_KEY jid; } jqc = { {factory->getClusterId(), -1 } };
@@ -784,7 +784,9 @@ int  MaterializeNextFactoryJob(FILE* out, JobFactory * factory, int & retry_dela
 
 	// have the factory make a job and give us a pointer to it.
 	// note that this ia not a transfer of ownership, the factory still owns the job and will delete it
+	factory->attachTransferMap(url_map);
 	const classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, NULL);
+	factory->detachTransferMap();
 	if (! job) {
 		std::string msg;
 		std::string txt(factory->error_stack()->getFullText()); if (txt.empty()) { txt = ""; }
@@ -947,6 +949,7 @@ main( int argc, const char *argv[] )
 	}
 
 	JobFactory * factory = new JobFactory(digest_file, cluster_id);
+	MapFile* protected_url_map = getProtectedURLMap();
 
 	StringList items;
 	if (items_file) {
@@ -1019,7 +1022,7 @@ main( int argc, const char *argv[] )
 	int num_jobs = 0;
 	for (;;) {
 		int retry_delay = 0; // will be set to non-zero when we should try again later.
-		int rv = MaterializeNextFactoryJob(out, factory, retry_delay);
+		int rv = MaterializeNextFactoryJob(out, factory, retry_delay, protected_url_map);
 		if (rv >= 1) {
 			// made a job.
 			if (verbose) fprintf(out, "# %d jobs\n", rv);

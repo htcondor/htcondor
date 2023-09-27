@@ -1659,6 +1659,9 @@ int submit_jobs (
 	const char* token_seps = ", \t";
 	const char* token_ws = " \t";
 
+	std::unique_ptr<MapFile> url_map(getProtectedURLMap());
+	submit_hash.attachTransferMap(url_map.get());
+
 	// if there is a queue statement from the command line, get ready to parse it.
 	// we will end up actually parsing it only if there is no queue statement in the file.
 	// we make a copy here because parsing the queue line is destructive.
@@ -2008,6 +2011,8 @@ int submit_jobs (
 			break;
 
 	} // end for(;;)
+
+	submit_hash.detachTransferMap();
 
 	// report errors from submit
 	//

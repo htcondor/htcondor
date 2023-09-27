@@ -912,7 +912,7 @@ JobMaterializeTimerCallback(int /* tid */)
 						int retry_delay = 0; // will be set to non-zero when we should try again later.
 						int rv = 0;
 						if (CheckMaterializePolicyExpression(cad, num_materialized, retry_delay)) {
-							rv = MaterializeNextFactoryJob(cad->factory, cad, txn, retry_delay);
+							rv = MaterializeNextFactoryJob(cad->factory, cad, txn, retry_delay, scheduler.getProtectedUrlMap());
 						}
 						if (rv == 1) {
 							num_materialized += 1;
@@ -2839,7 +2839,7 @@ int MaterializeJobs(JobQueueCluster * clusterad, TransactionWatcher &txn, int & 
 			retry_delay = retry;
 			break;
 		}
-		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, txn, retry) == 1) {
+		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, txn, retry, scheduler.getProtectedUrlMap()) == 1) {
 			num_materialized += 1;
 		} else {
 			retry_delay = MAX(retry_delay, retry);

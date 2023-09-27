@@ -951,6 +951,8 @@ Scheduler::~Scheduler()
 		delete this->cronTabs;
 	}
 
+	if (m_protected_url_map) { delete m_protected_url_map; }
+
 	delete slotWeightOfJob;
 	delete slotWeightGuessAd;
 }
@@ -13643,6 +13645,9 @@ Scheduler::Init()
 
 	JobStopCount = param_integer( "JOB_STOP_COUNT", 1, 1 );
 	stop_job_queue.setCountPerInterval( JobStopCount );
+
+	if (m_protected_url_map) { delete m_protected_url_map; }
+	m_protected_url_map = getProtectedURLMap();
 
 		////////////////////////////////////////////////////////////////////
 		// Initialize the queue managment code
