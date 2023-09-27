@@ -31,8 +31,9 @@ the following items will affect an upgrade run ``condor_upgrade_check``.
   :jira:`1432`
 
 - Execution Points without any administrator defined slot configuration will now default
-  to creating and utilizing one partitionable slot. To revert an Execution Point
-  to use static slots add ``use FEATURE:StaticSlots`` to the Execution Point configuration.
+  to creating and utilizing one partitionable slot. This causes Startd ``RANK`` expressions
+  to have no effect. To revert an Execution Point to use static slots add
+  ``use FEATURE:StaticSlots`` to the Execution Point configuration.
   :jira:`2026`
 
 - The configuration expression constant ``CpuBusyTime`` no longer represents a time delta but
