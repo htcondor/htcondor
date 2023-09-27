@@ -32,11 +32,13 @@
  // This returns return a std::array at compile time that other
  // consteval functions can use as a lookup table
 constexpr 
-std::array<std::pair<const char *, daemon_t>,21>
+std::array<std::pair<const char *, daemon_t>,23>
 makeAdTypeToDaemonTable() {
 	return {{ // yes, there needs to be 2 open braces here...
 		{ ANY_ADTYPE,			DT_ANY },
-		{ STARTD_ADTYPE,		DT_STARTD },
+		{ STARTD_SLOT_ADTYPE,	DT_STARTD },
+		{ STARTD_DAEMON_ADTYPE, DT_STARTD },
+		{ STARTD_OLD_ADTYPE,	DT_STARTD },
 		{ SCHEDD_ADTYPE,		DT_SCHEDD },
 		{ SUBMITTER_ADTYPE,		DT_SCHEDD },
 		{ MASTER_ADTYPE,		DT_MASTER },

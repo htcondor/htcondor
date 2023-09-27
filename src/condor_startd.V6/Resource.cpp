@@ -1636,7 +1636,11 @@ Resource::final_update( void )
 
 		// Set the correct types
 	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
-	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+#ifdef USE_STARTD_SLOT_ADTYPE
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_SLOT_ADTYPE);
+#else
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
+#endif
 
 	/*
 	 * NOTE: the collector depends on the data below for performance reasons
@@ -2421,7 +2425,11 @@ void Resource::publish_static(ClassAd* cap)
 	}
 
 	// Set the correct types on the ClassAd
-	SetMyTypeName( *cap,STARTD_ADTYPE );
+#ifdef USE_STARTD_SLOT_ADTYPE
+	SetMyTypeName( *cap,STARTD_SLOT_ADTYPE );
+#else
+	SetMyTypeName( *cap,STARTD_OLD_ADTYPE );
+#endif
 	cap->Assign(ATTR_TARGET_TYPE, JOB_ADTYPE); // because matchmaking before 23.0 needs this
 
 	// We need these for both public and private ads
@@ -2843,7 +2851,11 @@ Resource::publish_private( ClassAd *ad )
 {
 		// Needed by the collector to correctly respond to queries
 		// for private ads.  As of 7.2.0, the 
-	SetMyTypeName( *ad, STARTD_ADTYPE );
+#ifdef USE_STARTD_SLOT_ADTYPE
+	SetMyTypeName( *ad, STARTD_SLOT_ADTYPE );
+#else
+	SetMyTypeName( *ad, STARTD_OLD_ADTYPE );
+#endif
 
 		// For backward compatibility with pre 7.2.0 collectors, send
 		// name and IP address in private ad (needed to match up the

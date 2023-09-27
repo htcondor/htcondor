@@ -37,6 +37,10 @@ class VolumeManager;
 
 #define USE_STARTD_LATCHES 1
 
+// If USE_STARTD_SLOT_ADTYPE is set, the MyType of ads will be "Slot" (the new value)
+// if not defined the MyType of ads will be "Machine" (the old value)
+// #define USE_STARTD_SLOT_ADTYPE 1
+
 class SlotType
 {
 public:

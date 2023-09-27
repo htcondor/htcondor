@@ -670,14 +670,6 @@ void AnalyzeRequirementsForEachTarget(
 	bool show_work = (fmt.detail_mask & detail_diagnostic) != 0;
 	const bool count_soft_matches = false; // when true, "soft" always and never show  up as counts of machines
 
-	/*
-	bool request_is_machine = false;
-	if (0 == strcmp(GetMyTypeName(*request),STARTD_ADTYPE)) {
-		//attrConstraint = ATTR_START;
-		request_is_machine = true;
-	}
-	*/
-
 	classad::ExprTree* exprReq = request->LookupExpr(attrConstraint);
 	if ( ! exprReq)
 		return;
