@@ -71,6 +71,21 @@ GCC_DIAG_OFF(float-equal)
 
 #define exit(n)  poison_exit(n)
 
+// TODO: Set up retrieval of map file from schedd for and remove this function
+MapFile* getProtectedURLMap() {
+	MapFile *map = nullptr;
+	std::string urlMapFile;
+	param(urlMapFile, "PROTECTED_URL_TRANSFER_MAPFILE");
+	if (! urlMapFile.empty()) {
+		map = new MapFile();
+		int ret = map->ParseCanonicalizationFile(urlMapFile, true, true, true);;
+		if (ret < 0) {
+			delete map;
+			map = nullptr;
+		}
+	}
+	return map;
+}
 // When this class is wrapped around a classad that has a chained parent ad
 // inserts and assignments will check to see if the value being assigned
 // is the same as the value in the chained parent, and if so will NOT do
@@ -542,6 +557,7 @@ SubmitHash::SubmitHash()
 	, UseDefaultResourceParams(true)
 	, InsertDefaultPolicyExprs(false)
 	, s_method(1)
+	, m_protected_url_map(nullptr)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
@@ -561,6 +577,7 @@ SubmitHash::~SubmitHash()
 	delete job; job = nullptr;
 	delete procAd; procAd = nullptr;
 	delete jobsetAd; jobsetAd = nullptr;
+	m_protected_url_map = nullptr; // Submit Hash does not own this object
 
 	// detach but do not delete the cluster ad
 	//PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
@@ -7426,6 +7443,97 @@ int SubmitHash::SetTransferFiles()
 	return 0;
 }
 
+int SubmitHash::SetProtectedURLTransferLists() {
+	RETURN_IF_ABORT();
+
+	// If we don't have a protected URL map file do nothing
+	if (! m_protected_url_map) { return 0; }
+
+	// Set of queue input lists found in cluster ad to be emptied in job ad
+	std::set<std::string> clusterInputQueues;
+
+	if (clusterAd) {
+		// Check for transfer queue list in the cluster ad
+		ExprTree * tree = clusterAd->Lookup(ATTR_TRANSFER_Q_URL_IN_LIST);
+		if (tree) {
+			if (tree->GetKind() == ClassAd::ExprTree::EXPR_LIST_NODE) {
+				classad::ExprList* list = dynamic_cast<classad::ExprList*>(tree);
+				for(classad::ExprList::iterator it = list->begin() ; it != list->end(); ++it ) {
+					std::string attr;
+					classad::ClassAdUnParser unparser;
+					unparser.SetOldClassAd(true, true);
+					unparser.Unparse(attr, *it);
+					clusterInputQueues.insert(attr);
+				}
+			} else {
+				push_error(stderr, "Cluster Ad %s attribute is not a classad list as expected\n",
+				           ATTR_TRANSFER_Q_URL_IN_LIST);
+				ABORT_AND_RETURN( 1 );
+			}
+		}
+	}
+
+	// Process Transfer Input Files
+	std::string input_files;
+	if (job->LookupString(ATTR_TRANSFER_INPUT_FILES, input_files)) {
+		std::string new_input_list; // Protected URL trimmed input files list
+		std::map<std::string,std::string> protected_url_lists;
+		StringTokenIterator in_files(input_files, ",");
+
+		for (const auto& file : in_files) {
+			bool is_protected = true;
+			const char* url = IsUrl(file.c_str());
+			if (url) {
+				url += 3; // Skip '://' part of URL
+				std::string queue;
+				std::string scheme = getURLType(file.c_str(), true);
+				if (m_protected_url_map->GetCanonicalization(scheme, url, queue) == 0) {
+					upper_case(queue);
+					if (queue.compare("*") == MATCH) { queue = "LOCAL"; }
+					if (protected_url_lists.contains(queue)) {
+						protected_url_lists[queue] += "," + file;
+					} else {
+						protected_url_lists.insert({queue, file});
+					}
+				} else { is_protected = false; }
+			} else { is_protected = false; }
+			// Not a protected URL then add back to transfer input list
+			if (! is_protected){
+				if (! new_input_list.empty()) { new_input_list += ","; }
+				new_input_list += file;
+			}
+		}
+
+		if (! protected_url_lists.empty()) {
+			AssignJobString(ATTR_TRANSFER_INPUT_FILES, new_input_list.c_str());
+
+			std::vector<ExprTree*> queue_xfer_lists;
+			for (const auto& [queue, files] : protected_url_lists) {
+				std::string key = std::string(ATTR_TRANSFER_INPUT_FILES) + "From_" + queue;
+				AssignJobString(key.c_str(), files.c_str());
+				clusterInputQueues.erase(key);//Remove queue list attrs that are overwritten from set to empty
+				queue_xfer_lists.push_back(classad::AttributeReference::MakeAttributeReference(nullptr, key));
+			}
+
+			classad::ExprTree *list = classad::ExprList::MakeExprList(queue_xfer_lists);
+			if (! job->Insert(ATTR_TRANSFER_Q_URL_IN_LIST, list)) {
+				push_error(stderr, "failed to insert list of transfer queue input file attributes to %s\n",
+				           ATTR_TRANSFER_Q_URL_IN_LIST);
+				ABORT_AND_RETURN( 1 );
+			}
+
+			// Set all cluster ad queue input list attrs not overwritten to empty string
+			for (const auto& attr : clusterInputQueues) { AssignJobString(attr.c_str(), ""); }
+		}
+
+	}
+
+	//TODO: Process Output Remaps to URLS
+	//TODO: Check output destination for URL
+
+	return 0;
+}
+
 int SubmitHash::FixupTransferInputFiles()
 {
 	RETURN_IF_ABORT();
@@ -8036,6 +8144,12 @@ ClassAd* SubmitHash::make_job_ad (
 	// SetCronTab(), SetPerFileEncryption(), SetAutoAttributes().
 	// and after SetForcedAttributes()
 	SetRequirements();
+
+	// Check transfer list against protected URL map
+	// Note: Below FixupTransferInputFiles only effects non-URLs
+	//       so it should be safe to remove protected URLs from
+	//       the input list
+	SetProtectedURLTransferLists();
 
 	// This must come after all things that modify the input file list
 	FixupTransferInputFiles();

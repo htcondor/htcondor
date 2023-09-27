@@ -362,6 +362,9 @@
 #define SUBMIT_KEY_HoldKillSig "hold_kill_sig"
 #define SUBMIT_KEY_KillSigTimeout "kill_sig_timeout"
 
+//Temporary function to get a mapfile object point to protected url map
+MapFile* getProtectedURLMap();
+
 // class to parse, hold and manage a python style slice: [x:y:z]
 // used by the condor_submit queue 'foreach' handling
 class qslice {
@@ -680,6 +683,11 @@ public:
 		Unknown
 	};
 
+	// Attach and detach Protected URL transfer map object by pointer
+	// Note: SubmitHash does not own this pointer
+	void attachTransferMap(MapFile* map) { m_protected_url_map = map; }
+	void detachTransferMap() { m_protected_url_map = nullptr; }
+
 protected:
 	MACRO_SET SubmitMacroSet;
 	MACRO_EVAL_CONTEXT mctx;
@@ -808,6 +816,7 @@ protected:
 
 	// a LOT of the above functions must happen before SetTransferFiles, which in turn must be before SetRequirements
 	int SetTransferFiles();
+	int SetProtectedURLTransferLists();
 	int FixupTransferInputFiles();
 	int SetRequirements(); // after SetTransferFiles
 
@@ -861,6 +870,7 @@ private:
 	ContainerImageType image_type_from_string(std::string image) const;
 
 	int s_method; //-1 represents undefined job submit method
+	MapFile *m_protected_url_map;
 };
 
 struct SubmitStepFromQArgs {

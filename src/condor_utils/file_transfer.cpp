@@ -4411,13 +4411,14 @@ FileTransfer::computeFileList(
 						classad::ClassAdUnParser unparser;
 						unparser.SetOldClassAd( true, true );
 						unparser.Unparse(attr, *it);
-						//TODO: De-construct attr for specified xfer queue
 					} else { /*Fail?*/ }
 				} else { /*Fail?*/ }
 				if (files.empty()) { continue; }
+				auto pos = attr.find_first_of("_") + 1;
+				std::string queue = attr.substr(pos);
 				StringList protectedURLs(files.c_str(), ",");
 				// We don't have to worry about order in `filelist` because we're going to sort it later.
-				ExpandFileTransferList(&protectedURLs, filelist, preserveRelativePaths, attr.c_str());
+				ExpandFileTransferList(&protectedURLs, filelist, preserveRelativePaths, queue.c_str());
 			}
 		}
 		//dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), after adding protected URLs:" );
