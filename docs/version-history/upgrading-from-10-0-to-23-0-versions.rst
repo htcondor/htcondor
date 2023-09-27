@@ -30,9 +30,10 @@ the following items will effect an upgrade run ``condor_upgrade_check``.
   HTCondor 10.5.0 or HTCondor 10.0.4 LTS.
   :jira:`1432`
 
-- Startds without any administrator defined slot configuration will now default
-  to creating and utilizing one partitionable slot. To revert an Execution Point
-  to use static slots add ``use FEATURE:StaticSlots`` to the Execution Point configuration.
+- Startds without any administrator defined slot configuration will now default to
+  creating and utilizing one partitionable slot. This makes Startd ``RANK`` expressions
+  have no effect. To revert an Execution Point to use static slots add
+  ``use FEATURE:StaticSlots`` to the Execution Point configuration.
   :jira:`2026`
 
 - The configuration expression constant ``CpuBusyTime`` no longer represents a time delta but
