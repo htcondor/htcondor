@@ -251,7 +251,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	ClassAd *job_ad = new ClassAd();
 
 	SetMyTypeName(*job_ad, JOB_ADTYPE);
-	job_ad->Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+	job_ad->Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
 
 	if ( owner ) {
 		job_ad->Assign( ATTR_OWNER, owner );

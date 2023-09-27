@@ -7788,7 +7788,7 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 
 	// set up types of the ad
 	SetMyTypeName (baseJob, JOB_ADTYPE);
-	baseJob.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE); // needed for HTCondor before version 23.0
+	baseJob.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE); // needed for HTCondor before version 23.0
 
 	if (submit_time_in) {
 		submit_time = submit_time_in;

@@ -621,7 +621,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				// the startd could stop bothering to send these attributes.
 
 				// Queries of private ads depend on the following:
-			SetMyTypeName( *pvtAd, STARTD_ADTYPE );
+			CopyAttribute(ATTR_MY_TYPE, *pvtAd, *clientAd);
 
 				// Negotiator matches up private ad with public ad by
 				// using the following.
