@@ -10,7 +10,7 @@ Windows installer GUI.
 
 For more information about the installation options, or how to use
 the installer in unattended batch mode, see the complete
-:doc:`../admin-manual/windows-installer` guide.
+:doc:`../platform-specific/windows-installer` guide.
 
 It is possible to manually install HTCondor on Windows, without the
 provided MSI program, but we strongly discourage this unless you have

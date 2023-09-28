@@ -1271,6 +1271,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 28 2023 Tim Theisen <tim@cs.wisc.edu> - 10.9.0-1
+- The condor_upgrade_check script now provides guidance on updating to 23.0
+- The htchirp Python binding now properly locates the chirp configuration
+- Fix bug that prevented deletion of HTCondor passwords on Windows
+
+* Thu Sep 28 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.9-1
+- The condor_upgrade_check script now provides guidance on updating to 23.0
+- The htchirp Python binding now properly locates the chirp configuration
+- Fix bug that prevented deletion of HTCondor passwords on Windows
+
 * Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.8.0-1
 - Fold the classads, blahp, and procd RPMs into the main condor RPM
 - Align the Debian packages and package names with the RPM packaging
