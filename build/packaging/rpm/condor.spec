@@ -1628,6 +1628,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 28 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.9-1
+- The condor_upgrade_check script now provides guidance on updating to 23.0
+- The htchirp Python binding now properly locates the chirp configuration
+- Fix bug that prevented deletion of HTCondor passwords on Windows
+
 * Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.8-1
 - Avoid kernel panic on some Enterprise Linux 8 systems
 - Fix bug where early termination of service nodes could crash DAGMan

@@ -14,13 +14,11 @@ Version 10.0.9
 
 Release Notes:
 
-.. HTCondor version 10.0.9 released on Month Date, 2023.
-
-- HTCondor version 10.0.9 not yet released.
+- HTCondor version 10.0.9 released on September 28, 2023.
 
 New Features:
 
-- Updated *condor_upgrade_check* script to check and warn about known incompatibilites
+- Updated *condor_upgrade_check* script to check and warn about known incompatibilities
   introduced in the feature series for HTCondor ``V10`` that can cause issues when
   upgrading to a newer version (i.e. HTCondor ``V23``).
   :jira:`1960`
