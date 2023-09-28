@@ -34,6 +34,11 @@ New Features:
   provided cluster ID.
   :jira:`2046`
 
+- Job running in cgroup v2 systems can now subdivide the cgroup they
+  have been given, so that pilots can enforce sub-limits of the resources
+  they are given.
+  :jira:`2058`
+
 Bugs Fixed:
 
 - None.
