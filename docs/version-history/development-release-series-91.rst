@@ -225,7 +225,7 @@ Bugs Fixed:
 - Fixed bug where specifying more than 2TB of ``RESERVED_DISK`` would
   cause HTCondor to instead pretend that available disk space was larger,
   rather than smaller.
-  `jira`:1228
+  :jira:`1228`
 
 - Fixed two bugs which could occur when resuming from a checkpoint with
   ``preserve_relative_paths`` set.  Both involved the checkpoint transfer
