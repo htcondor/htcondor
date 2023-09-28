@@ -22,9 +22,7 @@ Version 23.0.0
 
 Release Notes:
 
-.. HTCondor version 23.0.0 released on Month Date, 2023.
-
-- HTCondor version 23.0.0 not yet released.
+- HTCondor version 23.0.0 released on September 29, 2023.
 
 New Features:
 
@@ -62,16 +60,16 @@ Bugs Fixed:
   when jobs go on hold
   :jira:`2016`
 
-- Fixed a bug where if a user-level checkpoint could not be transfered from
+- Fixed a bug where if a user-level checkpoint could not be transferred from
   the starter to the AP, the job would go on hold.  Now it will retry, or
   go back to idle.
   :jira:`2034`
 
 - Fixed a bug where the *CommittedTime* attribute was not set correctly
-  for Docker Universe jobs doing user level checkpointing.
+  for Docker Universe jobs doing user level check-pointing.
   :jira:`2014`
 
-- Fixed a bug where *condor_preen* was deleteing files named '*OfflineAds*' 
+- Fixed a bug where *condor_preen* was deleting files named '*OfflineAds*'
   in the spool directory.
   :jira:`2019`
 
