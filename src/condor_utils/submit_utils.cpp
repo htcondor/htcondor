@@ -78,7 +78,7 @@ MapFile* getProtectedURLMap() {
 	param(urlMapFile, "PROTECTED_URL_TRANSFER_MAPFILE");
 	if (! urlMapFile.empty()) {
 		map = new MapFile();
-		int ret = map->ParseCanonicalizationFile(urlMapFile, true, true, true);;
+		int ret = map->ParseCanonicalizationFile(urlMapFile, true, true, true);
 		if (ret < 0) {
 			delete map;
 			map = nullptr;
@@ -557,7 +557,7 @@ SubmitHash::SubmitHash()
 	, UseDefaultResourceParams(true)
 	, InsertDefaultPolicyExprs(false)
 	, s_method(1)
-	, m_protected_url_map(nullptr)
+	, protectedUrlMap(nullptr)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
@@ -577,7 +577,7 @@ SubmitHash::~SubmitHash()
 	delete job; job = nullptr;
 	delete procAd; procAd = nullptr;
 	delete jobsetAd; jobsetAd = nullptr;
-	m_protected_url_map = nullptr; // Submit Hash does not own this object
+	protectedUrlMap = nullptr; // Submit Hash does not own this object
 
 	// detach but do not delete the cluster ad
 	//PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
@@ -7491,7 +7491,8 @@ int SubmitHash::SetProtectedURLTransferLists() {
 	RETURN_IF_ABORT();
 
 	// If we don't have a protected URL map file do nothing
-	if (! m_protected_url_map) { return 0; }
+	if (! protectedUrlMap) { return 0; }
+	if (protectedUrlMap->empty()) { return 0; }
 
 	// Set of queue input lists found in cluster ad to be emptied in job ad
 	std::set<std::string> clusterInputQueues;
@@ -7531,7 +7532,7 @@ int SubmitHash::SetProtectedURLTransferLists() {
 				url += 3; // Skip '://' part of URL
 				std::string queue;
 				std::string scheme = getURLType(file.c_str(), true);
-				if (m_protected_url_map->GetCanonicalization(scheme, url, queue) == 0) {
+				if (protectedUrlMap->GetCanonicalization(scheme, url, queue) == 0) {
 					upper_case(queue);
 					if (queue.compare("*") == MATCH) { queue = "LOCAL"; }
 					if (protected_url_lists.contains(queue)) {
@@ -7580,6 +7581,10 @@ int SubmitHash::SetProtectedURLTransferLists() {
 
 int SubmitHash::FixupTransferInputFiles()
 {
+
+	// Check transfer in/out list against protected URL map
+	SetProtectedURLTransferLists();
+
 	RETURN_IF_ABORT();
 
 		// See the comment in the function body of ExpandInputFileList
@@ -8188,12 +8193,6 @@ ClassAd* SubmitHash::make_job_ad (
 	// SetCronTab(), SetPerFileEncryption(), SetAutoAttributes().
 	// and after SetForcedAttributes()
 	SetRequirements();
-
-	// Check transfer list against protected URL map
-	// Note: Below FixupTransferInputFiles only effects non-URLs
-	//       so it should be safe to remove protected URLs from
-	//       the input list
-	SetProtectedURLTransferLists();
 
 	// This must come after all things that modify the input file list
 	FixupTransferInputFiles();
