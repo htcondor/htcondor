@@ -1673,7 +1673,7 @@ MachAttributes::credd_test()
 #endif
 
 CpuAttributes::CpuAttributes( MachAttributes* map_arg, 
-							  int slot_type,
+							  unsigned int slot_type,
 							  double num_cpus_arg,
 							  int num_phys_mem,
 							  double virt_mem_fraction,
@@ -1684,7 +1684,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 							  const std::string &execute_partition_id )
 {
 	map = map_arg;
-	c_type = slot_type;
+	c_type_id = slot_type;
 	c_num_slot_cpus = c_num_cpus = num_cpus_arg;
 	c_allow_fractional_cpus = num_cpus_arg > 0 && num_cpus_arg < 0.9;
 	c_slot_mem = c_phys_mem = num_phys_mem;
