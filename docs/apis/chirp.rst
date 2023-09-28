@@ -9,7 +9,7 @@ features that only runs in a running job on the EP.
 
 Common uses for chirp include appending to the job event log to log on the AP
 the completion percentage of the job.  Or, say, a job has three different
-phases: preparation, activity and cleanup.  With chirp, the job can ask
+phases: preparation, activity, and cleanup.  With chirp, the job can ask
 HTCondor to append an event to the job event log informing the AP and the user
 there what phase the job has entered. For example, a running job could run the
 command line tool:
