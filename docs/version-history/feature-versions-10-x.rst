@@ -9,9 +9,7 @@ Version 10.9.0
 
 Release Notes:
 
-.. HTCondor version 10.9.0 released on Month Date, 2023.
-
-- HTCondor version 10.9.0 not yet released.
+- HTCondor version 10.9.0 released on September 28, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-1009`.
 
