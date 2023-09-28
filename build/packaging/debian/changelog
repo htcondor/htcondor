@@ -1,3 +1,22 @@
+condor (23.0.0-1) stable; urgency=medium
+
+  * Absent slot configuration, execution points will use a partitionable slot
+  * Linux cgroups enforce maximum memory utilization by default
+  * Can now define DAGMan save points to be able to rerun DAGs from there
+  * Much better control over environment variables when using DAGMan
+  * Administrators can enable and disable job submission for a specific user
+  * Can set a minimum number of CPUs allocated to a user
+  * condor_status -gpus shows nodes with GPUs and the GPU properties
+  * condor_status -compact shows a row for each slot type
+  * Container images may now be transferred via a file transfer plugin
+  * Support for Enterprise Linux 9, Amazon Linux 2023, and Debian 12
+  * Can write job information in AP history file for every execution attempt
+  * Can run defrag daemons with different policies on distinct sets of nodes
+  * Add condor_test_token tool to generate a short lived SciToken for testing
+  * The job’s executable is no longer renamed to ‘condor_exec.exe’
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 29 Sep 2023 17:22:00 -0500
+
 condor (10.9.0-1) stable; urgency=medium
 
   * The condor_upgrade_check script now provides guidance on updating to 23.0
