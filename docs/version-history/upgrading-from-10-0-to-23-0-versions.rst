@@ -9,7 +9,33 @@ features include the following (note that this list contains only the
 most significant changes; a full list of changes can be found in the
 version history: \ `Version 10 Feature Releases <../version-history/feature-versions-10-x.html>`_):
 
-- Placeholder
+- Absent slot configuration, execution points will use a partitionable slot.
+
+- Linux cgroups enforce maximum memory utilization by default.
+
+- Can now define DAGMan save points to be able to rerun DAGs from there.
+
+- Much better control over environment variables when using DAGMan.
+
+- Administrators can enable and disable job submission for a specific user.
+
+- Can set a minimum number of CPUs allocated to a user.
+
+- condor_status -gpus shows nodes with GPUs and the GPU properties.
+
+- condor_status -compact shows a row for each slot type.
+
+- Container images may now be transferred via a file transfer plugin.
+
+- Support for Enterprise Linux 9, Amazon Linux 2023, and Debian 12.
+
+- Can write job information in AP history file for every execution attempt.
+
+- Can run defrag daemons with different policies on distinct sets of nodes.
+
+- Add condor_test_token tool to generate a short lived SciToken for testing.
+
+- The job’s executable is no longer renamed to ‘condor_exec.exe’.
 
 Upgrading from a 10.0 LTS version of HTCondor to a 23.0 LTS version will also
 introduce changes that administrators and users of sites running from an
