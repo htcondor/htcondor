@@ -9824,7 +9824,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 #endif
 	// Now remove this pid from our tables ----
-	pidTable.erase(itr);
+	if (itr != pidTable.end()) {
+		pidTable.erase(itr);
+	}
 
 	// Finally, some hard-coded logic.  If the pid that exited was our parent,
 	// then shutdown fast.  This is where we notice our parent going away on
