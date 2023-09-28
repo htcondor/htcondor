@@ -61,7 +61,7 @@ my $numstartd = 0;
 
 my $numany = 0;
 my %discoveries = ();
-my @expectations = ("Submitter", "Negotiator", "DaemonMaster", "Scheduler", "Machine");
+my @expectations = ("Submitter", "Negotiator", "DaemonMaster", "Scheduler", "Slot");
 
 if($stable == 1) {
 	print "Looking for 5 Ad types - ";
@@ -78,11 +78,12 @@ if($stable == 1) {
 		foreach my $line (@adarray) {
 			CondorTest::debug("-any: $line\n",$debuglevel);
 			if( $line =~ /^(\w+):(.*)$/ ) {
-				if( !(exists $discoveries{$1})) {
-					print "Adding ($1/$2) to hash\n";
-					$discoveries{$1} = $2;
+				my $mytype = $1; if ($mytype eq "Machine") {$mytype = "Slot";}
+				if( !(exists $discoveries{$mytype})) {
+					print "Adding ($mytype/$2) to hash\n";
+					$discoveries{$mytype} = $2;
 				} else {
-					#print "($1) already found....\n";
+					#print "($mytype) already found....\n";
 				}
 			}
 		}

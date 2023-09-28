@@ -72,7 +72,6 @@
 #include "condor_distribution.h"
 #include "condor_environ.h"
 #include "setenv.h"
-#include "HashTable.h"
 #include "condor_uid.h"
 #include "condor_mkstemp.h"
 #include "basename.h"
@@ -87,7 +86,7 @@
 #include <algorithm> // for std::sort
 #include "CondorError.h"
 
-// define this to keep param who's values match defaults from going into to runtime param table.
+// define this to keep param who's values match defaults from going into the runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
 // define this to parse for #opt:newcomment/#opt:oldcomment to decide commenting rules
 #define PARSE_CONFIG_TO_DECIDE_COMMENT_RULES
@@ -2644,6 +2643,14 @@ param_false( const char * name ) {
 	bool valid = string_is_boolean_param( string, value );
 	free( string );
 	return valid && (!value);
+}
+
+const char * param_raw_default(const char *name)
+{
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	ctx.use_mask = 3;
+	return lookup_macro_default(name, ConfigMacroSet, ctx);
 }
 
 char *

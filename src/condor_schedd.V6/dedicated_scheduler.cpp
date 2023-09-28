@@ -521,7 +521,7 @@ DedicatedScheduler::initialize( )
 		// Next, fill in the dummy job ad we're going to send to 
 		// startds for claiming them.
 	SetMyTypeName( dummy_job, JOB_ADTYPE );
-	dummy_job.Assign( ATTR_TARGET_TYPE, STARTD_ADTYPE );
+	dummy_job.Assign( ATTR_TARGET_TYPE, JOB_TARGET_ADTYPE );
 	dummy_job.Assign( ATTR_REQUIREMENTS, true );
 	dummy_job.Assign( ATTR_OWNER, ds_owner );
 	dummy_job.Assign( ATTR_USER, ds_name );

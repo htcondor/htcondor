@@ -403,7 +403,7 @@ public:
 	friend class AvailAttributes;
 	friend class ResBag;
 
-	CpuAttributes( MachAttributes*, int slot_type, double num_cpus,
+	CpuAttributes( MachAttributes*, unsigned int slot_type, double num_cpus,
 				   int num_phys_mem, double virt_mem_fraction,
 				   double disk_fraction,
 				   const slotres_map_t& slotres_map,
@@ -432,7 +432,7 @@ public:
 	void set_console( time_t k ) { c_console_idle = k; };
 	time_t keyboard_idle() const { return c_idle; };
 	time_t console_idle() const { return c_console_idle; };
-	int	type() const { return c_type; };
+	unsigned int type_id() const { return c_type_id; };
 
 	void display(int dpf_flags) const;
 	void dprintf( int, const char*, ... ) const;
@@ -504,7 +504,7 @@ private:
 	std::string     c_execute_dir;
 	std::string     c_execute_partition_id;  // unique id for partition
 
-	int				c_type;		// The type of this resource
+	unsigned int	c_type_id;		// The slot type of this resource
 
 #ifdef LINUX
 	VolumeManager *m_volume_mgr{nullptr};

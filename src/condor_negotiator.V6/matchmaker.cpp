@@ -2949,22 +2949,24 @@ obtainAdsFromCollector (
 
     cp_resources = false;
 
+	static const char * submitter_ad_constraint = "MyType == \"" SUBMITTER_ADTYPE "\"";
+	static const char * slot_ad_constraint = "MyType == \"" STARTD_SLOT_ADTYPE "\" || MyType == \"" STARTD_OLD_ADTYPE "\"";
+
     // build a query for Scheduler, Submitter and (constrained) machine ads
     //
 	CondorQuery publicQuery(ANY_AD);
 	std::string constraint;
 	if (!m_SubmitterConstraintStr.empty()) {
-		formatstr(constraint, "((MyType == \"Submitter\") && (%s))",
-		          m_SubmitterConstraintStr.c_str());
+		formatstr(constraint, "(%s) && (%s)", submitter_ad_constraint, m_SubmitterConstraintStr.c_str());
 		publicQuery.addORConstraint(constraint.c_str());
 	} else {
-		publicQuery.addORConstraint("(MyType == \"Submitter\")");
+		publicQuery.addORConstraint(submitter_ad_constraint);
 	}
     if (strSlotConstraint && strSlotConstraint[0]) {
-        formatstr(constraint, "((MyType == \"Machine\") && (%s))", strSlotConstraint);
+        formatstr(constraint, "(%s) && (%s)", slot_ad_constraint, strSlotConstraint);
         publicQuery.addORConstraint(constraint.c_str());
     } else {
-        publicQuery.addORConstraint("(MyType == \"Machine\")");
+        publicQuery.addORConstraint(slot_ad_constraint);
     }
 
 	privateQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
@@ -3014,7 +3016,8 @@ obtainAdsFromCollector (
 		// let's see if we've already got it - first lookup the sequence
 		// number from the new ad, then let's look and see if we've already
 		// got something for this one.		
-		if(!strcmp(GetMyTypeName(*ad),STARTD_ADTYPE)) {
+		const char * mytype = GetMyTypeName(*ad);
+		if(MATCH == strcmp(mytype,STARTD_SLOT_ADTYPE) || MATCH == strcmp(mytype,STARTD_OLD_ADTYPE)) {
 
 			// first, let's make sure that will want to actually use this
 			// ad, and if we can use it (old startds had no seq. number)

@@ -521,6 +521,9 @@ public:
 	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
 };
 
+// until we can remove targettype from the classad log entirely
+// use the legacy "Machine" value as the target adtype
+#define JOB_TARGET_ADTYPE "Machine"
 
 class TransactionWatcher;
 

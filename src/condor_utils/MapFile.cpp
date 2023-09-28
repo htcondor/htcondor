@@ -21,7 +21,6 @@
 #include "condor_open.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "HashTable.h"
 #include "MapFile.h"
 #include "directory.h"
 #include "basename.h"
@@ -712,7 +711,7 @@ bool CanonicalMapPrefixEntry::matches(const char * principal, int /*cch*/, std::
 			if(pcanon) { *pcanon = value; }
 			if(groups) {
 				groups->clear();
-				groups->push_back(value);
+				groups->push_back(key.c_str());
 			}
 
 			return true;

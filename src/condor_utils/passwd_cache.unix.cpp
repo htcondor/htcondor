@@ -26,7 +26,6 @@ IMPORTANT NOTE: Don't dprintf() in here, unless its a fatal error! */
 #include "condor_common.h"
 #include "passwd_cache.unix.h"
 #include "condor_config.h"
-#include "HashTable.h"
 #include "condor_random_num.h"
 
 

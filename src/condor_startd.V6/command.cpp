@@ -359,6 +359,14 @@ command_request_claim(int cmd, Stream* stream )
 		return FALSE;
 	}
 
+	if (rip->isDraining() && resmgr->gracefulDrainingTimeRemaining(rip) < 20) {
+		rip->dprintf( D_ALWAYS, "Got %s near end of draining, ignoring.\n",
+			getCommandString(REQUEST_CLAIM) );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+
 	Claim *claim = NULL;
 	if( rip->state() == claimed_state && !rip->is_partitionable_slot() ) {
 		if( rip->r_pre_pre ) {
@@ -1130,7 +1138,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 	if (claim_pslot && rip->r_has_cp) {
 		// TODO refuse claim entirely, or accept claim of single dslot or
-		//   sending to to WorkingCM?
+		//   sending to WorkingCM?
 		rip->dprintf(D_FULLDEBUG, "Refusing claim of pslot with consumption policy\n");
 		refuse(stream);
 		ABORT;

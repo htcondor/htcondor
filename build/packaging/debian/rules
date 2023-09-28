@@ -84,12 +84,14 @@ override_dh_auto_install:
 	find debian/tmp|sort > /tmp/files
 	find obj-*|sort > /tmp/obj
 	mv obj-*/condor_tests-*.tar.gz debian/tmp/usr/lib/condor/condor_tests-$(upstreamver).tar.gz
-	# things we do not need in Debian
-	#rm debian/tmp/usr/sbin/condor_install*
+	# Remove extranenous files
+	rm debian/tmp/usr/share/doc/condor/LICENSE
+	rm debian/tmp/usr/share/doc/condor/README
 
 
 override_dh_fixperms-arch:
 	chmod -x debian/condor/usr/libexec/condor/interactive.sub
+	dh_fixperms
 
 
 override_dh_install-arch:
@@ -97,6 +99,10 @@ override_dh_install-arch:
 	# fix permissions
 	# remove duplicate that is also installed as a config file
 	rm -f debian/condor/usr/libexec/condor/linux-kernel-tuning
+	# move etc/bash_completion.d/ to usr/share/bash-completion/completions
+	mkdir -p debian/condor/usr/share/bash-completion/completions
+	mv debian/condor/etc/bash_completion.d/* debian/condor/usr/share/bash-completion/completions
+	rmdir debian/condor/etc/bash_completion.d
 
 
 override_dh_auto_clean:
@@ -119,11 +125,6 @@ override_dh_auto_clean:
 	-rm -rf doc/just-man-pages
 	-rm -rf doc/build
 	-rm -f doc/figuresizing.tex doc/fontsize.tex
-
-
-override_dh_clean:
-	dh_clean
-	debconf-updatepo
 
 
 # PDF come in dedicated doc package -- no compression

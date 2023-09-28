@@ -17,6 +17,9 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+#include "condor_config.h"
+
 #include <stdio.h>
 #include <string>
 
@@ -50,11 +53,15 @@ main( int argc, char ** argv ) {
         return usage( argv[0] );
     }
 
+    set_priv_initialize();
+    config();
+    // dprintf_set_tool_debug( "TOOL", 0 );
+
     std::string function = argv[1];
     std::string argument = argv[2];
 
     if( function == "deleteFilesStoredAt" ) {
-        if( argc != 7 ) {
+        if( argc != 6 ) {
             return usage( argv[0] );
         }
     } else if( argc != 3 ) {
@@ -100,24 +107,28 @@ main( int argc, char ** argv ) {
         }
         return created ? 0 : 1;
     } else if( function == "deleteFilesStoredAt" ) {
-        // `deleteFilesStoredAt cleanUpScript location-stem file-stem
+        // `deleteFilesStoredAt location-stem file-stem
         //                      lowCheckpointNo highCheckpointNo`
 
-        std::string plugin = argv[2];
-        std::string locationStem = argv[3];
-        std::string fileStem = argv[4];
+        std::string locationStem = argv[2];
+        std::string fileStem = argv[3];
 
         char * endptr = NULL;
-        long lowCheckpointNo = strtol( argv[5], & endptr, 10 );
+        long lowCheckpointNo = strtol( argv[4], & endptr, 10 );
+        if( endptr == argv[4] || *endptr != '\0' ) {
+            fprintf( stderr, "'%s' is not a number, aborting.\n", argv[4] );
+            return 1;
+        }
+        long highCheckpointNo = strtol( argv[5], & endptr, 10 );
         if( endptr == argv[5] || *endptr != '\0' ) {
             fprintf( stderr, "'%s' is not a number, aborting.\n", argv[5] );
             return 1;
         }
-        long highCheckpointNo = strtol( argv[6], & endptr, 10 );
-        if( endptr == argv[6] || *endptr != '\0' ) {
-            fprintf( stderr, "'%s' is not a number, aborting.\n", argv[6] );
-            return 1;
-        }
+
+        std::filesystem::path fileStemPath(fileStem);
+        std::filesystem::path parentPath = fileStemPath.parent_path();
+        std::filesystem::path jobAdPath = parentPath / ".job.ad";
+
 
         std::string file;
         std::string error;
@@ -127,18 +138,14 @@ main( int argc, char ** argv ) {
             formatstr( destination, "%s/%.4ld", locationStem.c_str(), i );
             formatstr( file, "%s.%.4ld", fileStem.c_str(), i );
 
-            fprintf( stderr, "%s %s\n", destination.c_str(), file.c_str() );
-            if(! manifest::deleteFilesStoredAt( destination, file, plugin, error )) {
+            // fprintf( stderr, "%s %s\n", destination.c_str(), file.c_str() );
+            if(! manifest::deleteFilesStoredAt( destination, file, jobAdPath, error )) {
                 fprintf( stdout, "%s\n", error.c_str() );
                 deleted = false;
             }
         }
 
         if( deleted ) {
-            std::filesystem::path fileStemPath(fileStem);
-            std::filesystem::path parentPath = fileStemPath.parent_path();
-            std::filesystem::path jobAdPath = parentPath / ".job.ad";
-
             fprintf( stderr, "Removing %s after successful clean-up.\n", jobAdPath.string().c_str() );
             std::filesystem::remove( jobAdPath );
 

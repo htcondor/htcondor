@@ -1912,6 +1912,10 @@ void CollectorDaemon::Config()
 		auto_free_ptr tmp(param("CONDOR_VIEW_CLASSAD_TYPES"));
 		if (tmp) {
 			viewCollectorTypes = new StringList(tmp);
+			if (viewCollectorTypes->contains_anycase(STARTD_OLD_ADTYPE) && 
+				! viewCollectorTypes->contains_anycase(STARTD_SLOT_ADTYPE)) {
+				viewCollectorTypes->append(STARTD_SLOT_ADTYPE);
+			}
 			auto_free_ptr types(viewCollectorTypes->print_to_string());
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
 				types ? types.ptr() : "");

@@ -1060,10 +1060,3 @@ Options::parseValue( const SimpleArg &arg )
 	}
 	return false;
 }
-
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/

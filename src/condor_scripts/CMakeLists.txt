@@ -57,6 +57,7 @@ if (NOT WINDOWS)
     install ( FILES box_plugin.py gdrive_plugin.py onedrive_plugin.py DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( FILES condor_adstash DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( DIRECTORY adstash DESTINATION ${C_LIBEXEC} )
+    install ( FILES condor_test_token DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
     if (LINUX)
         install ( FILES linux_kernel_tuning DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

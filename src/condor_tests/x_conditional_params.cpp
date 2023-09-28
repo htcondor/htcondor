@@ -218,7 +218,7 @@ static const struct _test_set {
 };
 
 
-// copy the incoming condition, changing %x to to one of the fields of condor version
+// copy the incoming condition, changing %x to one of the fields of condor version
 // where x is D, S or M for first second and third digit of the version
 // and x may be the next or previous letter to indicate ver-1 or ver+1
 // For instance, if the condor_version is 8.3.5  then %D.%T.%L translates as 8.4.4

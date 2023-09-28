@@ -3691,7 +3691,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 bool
 service_this_universe(int universe, ClassAd* job)
 {
-	// "service" seems to to really mean find a matching resource or not...
+	// "service" seems to really mean find a matching resource or not...
 
 	/*  If a non-grid job is externally managed, it's been grabbed by
 		the schedd-on-the-side and we don't want to touch it.

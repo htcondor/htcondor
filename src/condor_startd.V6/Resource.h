@@ -37,6 +37,10 @@ class VolumeManager;
 
 #define USE_STARTD_LATCHES 1
 
+// If USE_STARTD_SLOT_ADTYPE is set, the MyType of ads will be "Slot" (the new value)
+// if not defined the MyType of ads will be "Machine" (the old value)
+// #define USE_STARTD_SLOT_ADTYPE 1
+
 class SlotType
 {
 public:
@@ -46,9 +50,9 @@ public:
 	const char * Shares() { return shares.empty() ? NULL : shares.c_str(); }
 
 	static const char * type_param(CpuAttributes* p_attr, const char * name);
-	static const char * type_param(int type_id, const char * name);
+	static const char * type_param(unsigned int type_id, const char * name);
 	static bool type_param_boolean(CpuAttributes* p_attr, const char * name, bool def_value);
-	static bool type_param_boolean(int type_id, const char * name, bool def_value);
+	static bool type_param_boolean(unsigned int type_id, const char * name, bool def_value);
 	static long long type_param_long(CpuAttributes* p_attr, const char * name, long long def_value);
 	static char * param(CpuAttributes* p_attr, const char * name);
 	static const char * param(std::string& out, CpuAttributes* p_attr, const char * name);
@@ -429,7 +433,7 @@ public:
 	bool 			m_bUserSuspended;
 	bool			r_no_collector_updates;
 
-	int				type( void ) { return r_attr->type(); };
+	unsigned int type_id( void ) { return r_attr->type_id(); };
 
 	char const *executeDir() { return r_attr->executeDir(); }
 

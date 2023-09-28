@@ -519,7 +519,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// Dummy up an ad, assume a boinc type job.
 		int now = (int) time(0);
 		SetMyTypeName(dummyAd, JOB_ADTYPE);
-		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE); // TODO: remove this once no-one needs TargetType anymore
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");
@@ -734,11 +734,11 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 
 	// If a slot-type is defined, pass it as the local name
 	// so starter params can switch on slot-type
-	if (claim->rip()->type() != 0) {
+	if (claim->rip()->type_id() != 0) {
 		args.AppendArg("-local-name");
 
 		std::string slot_type_name("slot_type_");
-		formatstr_cat(slot_type_name, "%d", abs(claim->rip()->type()));
+		formatstr_cat(slot_type_name, "%d", claim->rip()->type_id());
 		args.AppendArg(slot_type_name);
 	}
 
@@ -1305,7 +1305,20 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 		return true;
 	}
 
-	classy_counted_ptr<DCStarter> starter = new DCStarter(getIpAddr());
+	// If we can't find the complete-with-CCB address, use the socket we
+	// handed to the starter when we created it.  Since the startd is always
+	// local to the starter (until further notice), this should always work.
+	//
+	// Arguably, we shouldn't be using TCP/IP to communicated with our
+	// starters anyway, and even if we must, it should almost certainly
+	// be done over the loopback interface where we hopefully don't have to
+	// fight for port numbers or deal with nearly as many attackers.
+	const char * sinful = getIpAddr();
+	if( sinful == NULL ) {
+		sinful = daemonCore->InfoCommandSinfulString( s_pid );
+	}
+
+	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
 	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
 
 	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );

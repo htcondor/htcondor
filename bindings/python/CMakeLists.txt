@@ -1,6 +1,6 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
+set(PACKAGES      "classad" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum" "htcondor/_utils")
 
 # The python sources to copy
 set(PYTHON_SOURCES
@@ -25,6 +25,9 @@ htcondor/dags/node.py
 htcondor/_deprecation.py
 htcondor/_job_status.py
 classad/__init__.py
+# Private python utilities
+htcondor/_utils/__init__.py
+htcondor/_utils/ansi.py
 )
 
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
@@ -41,6 +44,7 @@ if (WITH_PYTHON_BINDINGS)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/compat_enum)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/_utils)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
 
 	# Now make a command to copy each source file to the destination

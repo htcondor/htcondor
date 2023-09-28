@@ -23,7 +23,7 @@ By default, jobs will not be run in Singularity.
 
 For Singularity to work, the administrator must install Singularity
 on the worker node.  The HTCondor startd will detect this installation
-at startup.  When it detects a useable installation, it will
+at startup.  When it detects a usable installation, it will
 advertise two attributes in the slot ad:
 
 .. code-block:: condor-config
@@ -114,7 +114,7 @@ above, A complete submit file that uses singularity might look like
      Request_cpus = 1
 
      should_transfer_files = yes
-     tranfer_input_files = some_input
+     transfer_input_files = some_input
      when_to_transfer_output = on_exit
 
      log = log
@@ -142,7 +142,7 @@ directory, the submit file would look like:
      Request_cpus = 1
 
      should_transfer_files = yes
-     tranfer_input_files = image
+     transfer_input_files = image
      when_to_transfer_output = on_exit
 
      log = log
@@ -179,7 +179,7 @@ expression could be
 If the source directory for the bind mount is missing on the host machine,
 HTCondor will skip that mount and run the job without it.  If the image is
 an exploded file directory, and the target directory is missing inside
-the image, and the configuration parameter :macro:`SINGULRITY_IGNORE_MISSING_BIND_TARGET`
+the image, and the configuration parameter :macro:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
 is set to true (the default is false), then this mount attempt will also
 be skipped.  Otherwise, the job will return an error when run.
 
@@ -213,7 +213,7 @@ Note that this can be a classad expression, evaluated in the context of the
 slot ad and the job ad, where the slot ad can be referenced via "MY.", and the
 job ad via the "TARGET." reference.  In this way, the admin could set different
 options for different kinds of jobs.  For example, to pass the ``-w`` argument,
-to make the image writeable, an administrator could set
+to make the image writable, an administrator could set
 
 .. code-block:: condor-config
 

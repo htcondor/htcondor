@@ -39,7 +39,10 @@
 
 #include "shortfile.h"
 
-#include "condor_url.h"
+#include "MapFile.h"
+#include "condor_config.h"
+#include "checkpoint_cleanup_utils.h"
+
 
 namespace manifest {
 
@@ -186,7 +189,7 @@ bool
 deleteFilesStoredAt(
   const std::string & checkpointDestination,
   const std::string & manifestFileName,
-  const std::string & pluginFileName,
+  const std::filesystem::path & jobAdPath,
   std::string & error
 ) {
 	FILE * fp = safe_fopen_no_create( manifestFileName.c_str(), "r" );
@@ -198,6 +201,32 @@ deleteFilesStoredAt(
 	std::filesystem::path pathToManifestFile(manifestFileName);
 	std::filesystem::path fileName = pathToManifestFile.filename();
 
+
+	std::string argl;
+	if(! fetchCheckpointDestinationCleanup( checkpointDestination, argl, error )) {
+		// fetchCheckpointDestinationCleanup() set error for us already.
+		return false;
+	}
+
+    StringTokenIterator sti( argl );
+	sti.rewind();
+	std::string pluginFileName = sti.next();
+	std::filesystem::path pluginPath( pluginFileName );
+	if( pluginPath.is_relative() ) {
+		std::string libexec;
+		param( libexec, "LIBEXEC" );
+		pluginFileName = (libexec / pluginPath).string();
+	}
+
+	if(! std::filesystem::exists( pluginFileName )) {
+		formatstr( error,
+		    "Clean-up plug-in for '%s' (%s) does not exist, aborting",
+		    checkpointDestination.c_str(), pluginFileName.c_str()
+		);
+		return false;
+	}
+
+
 	std::string manifestLine;
 	for( bool rv = false; (rv = readLine( manifestLine, fp )); ) {
 		trim( manifestLine );
@@ -208,15 +237,18 @@ deleteFilesStoredAt(
 			continue;
 		}
 
-		std::string protocol = getURLType(checkpointDestination.c_str(), false);
-
 		ArgList args;
 		args.AppendArg(pluginFileName);
-		args.AppendArg(protocol);
+		sti.rewind(); sti.next();
+		for( const char * entry = sti.next(); entry != NULL; entry = sti.next() ) {
+			args.AppendArg(entry);
+		}
 		args.AppendArg("-from");
 		args.AppendArg(checkpointDestination);
 		args.AppendArg("-delete");
 		args.AppendArg(file);
+		args.AppendArg("-jobad");
+		args.AppendArg(jobAdPath.string());
 
 		std::string argStr;
 		args.GetArgsStringForLogging( argStr );
@@ -234,7 +266,8 @@ deleteFilesStoredAt(
 		}
 
 		int exit_status;
-		time_t timeout = 20;
+		// time_t timeout = 20;
+		time_t timeout = param_integer( "CHECKPOINT_CLEANUP_TIMEOUT", 20 );
 		if(! subprocess.wait_for_exit( timeout, & exit_status )) {
 			const char * output = subprocess.output().data();
 			subprocess.close_program(1);

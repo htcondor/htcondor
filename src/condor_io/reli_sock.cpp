@@ -835,7 +835,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 
 	// Block on short reads for the header.  Since the header is very short (typically, 5 bytes),
 	// we don't care to gracefully handle the case where it has been fragmented over multiple
-	// TCP packets.  If in non-blocking mode, we want to limit the wait to to a maximum of 1 second.
+	// TCP packets.  If in non-blocking mode, we want to limit the wait to a maximum of 1 second.
 	// This is larger than the contractual delay of 'never block' but we need that header to proceeed.
 	if ( (retval > 0) && (retval != header_size) ) {
 

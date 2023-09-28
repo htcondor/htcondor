@@ -9,9 +9,7 @@ Version 10.8.0
 
 Release Notes:
 
-.. HTCondor version 10.8.0 released on Month Date, 2023.
-
-- HTCondor version 10.8.0 not yet released.
+- HTCondor version 10.8.0 released on September 14, 2023.
 
 - The packaged builds (RPMs and debs) have been reorganized.
   We no longer wish to support the ClassAd library and it has been folded into
@@ -119,6 +117,10 @@ Bugs Fixed:
 - Some support scripts for the ``htcondor annex`` command are now
   properly installed as executable.
   :jira:`1984`
+
+- Fixed a bug where *condor_remote_cluster* could get stuck in a loop
+  while installing files into an NFS directory.
+  :jira:`2023`
 
 Version 10.7.1
 --------------
