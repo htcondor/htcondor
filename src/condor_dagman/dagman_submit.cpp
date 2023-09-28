@@ -628,7 +628,6 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	const char * queue_args = NULL;
 	MacroStreamFile ms;
 	DCSchedd schedd;
-	std::unique_ptr<MapFile> url_map(getProtectedURLMap());
 
 	// If the submitDesc hash is not set, we need to parse it from the file
 	if (!node->GetSubmitDesc()) {
@@ -687,7 +686,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, false);
 
 	submitHash->init_base_ad(time(NULL), owner);
-	submitHash->attachTransferMap(url_map.get());
+	submitHash->attachTransferMap(dm._protectedUrlMap);
 
 	qmgr = ConnectQ(schedd);
 	if (qmgr) {
@@ -769,7 +768,6 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	}
 
 finis:
-
 	submitHash->detachTransferMap();
 	if (qmgr) {
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.

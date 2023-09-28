@@ -146,7 +146,8 @@ Dagman::Dagman() :
 	_batchId(""),
 	_dagmanClassad(NULL),
 	_removeNodeJobs(true),
-	_schedd(nullptr)
+	_schedd(nullptr),
+	_protectedUrlMap(nullptr)
 {
 	debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -670,6 +671,8 @@ void main_init (int argc, char ** const argv) {
 	dagman.Config();
 
 	dagman.LocateSchedd();
+
+	dagman._protectedUrlMap = getProtectedURLMap();
 
 	// The DCpermission (last parm) should probably be PARENT, if it existed
 	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",

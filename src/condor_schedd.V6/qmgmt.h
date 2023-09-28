@@ -530,7 +530,7 @@ class TransactionWatcher;
 
 // from qmgmt_factory.cpp
 // make an empty job factory
-class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds);
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds, MapFile* urlMap);
 // make a job factory from submit digest text, used on submit, optional user_ident is who to inpersonate when reading item data file (if any)
 bool LoadJobFactoryDigest(JobFactory *factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
 // attach submitted itemdata to a job factory that is pending submit.
@@ -543,6 +543,7 @@ class JobFactory * MakeJobFactory(
 	const classad::ClassAd * extended_cmds,
 	const char * submit_file,
 	bool spooled_submit_file,
+	MapFile* urlMap,
 	std::string & errmsg);
 void DestroyJobFactory(JobFactory * factory);
 
@@ -550,7 +551,7 @@ void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
 
 // returns 1 if a job was materialized, 0 if factory was paused or complete or itemdata is not yet available
 // returns < 0 on error.  if return is 0, retry_delay is set to non-zero to indicate the retrying later might yield success
-int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, TransactionWatcher & trans, int & retry_delay, MapFile* url_map);
+int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, TransactionWatcher & trans, int & retry_delay);
 
 // returns true if there is no materialize policy expression, or if the expression evalues to true
 // returns false if there is an expression and it evaluates to false. When false is returned, retry_delay is set

@@ -757,7 +757,7 @@ class Scheduler : public Service
 	void doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd );
 
 	// Return a pointer to the protected URL map for late materilization factories
-	MapFile* getProtectedUrlMap() { return m_protected_url_map; }
+	MapFile* getProtectedUrlMap() { return &m_protected_url_map; }
 
 private:
 
@@ -1107,7 +1107,7 @@ private:
 	bool m_include_default_flock_param{true};
 	DCTokenRequester m_token_requester;
 
-	MapFile* m_protected_url_map{nullptr};
+	MapFile m_protected_url_map;
 
 	friend class DedicatedScheduler;
 };

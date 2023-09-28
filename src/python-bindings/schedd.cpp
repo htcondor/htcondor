@@ -949,6 +949,7 @@ struct SubmitJobsIterator {
 			copy_hash(h);
 			m_hash.setDisableFileChecks(true);
 			m_hash.init_base_ad(qdate, owner.c_str());
+			m_hash.attachTransferMap(m_protected_url_map);
 	}
 
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, const std::string & qargs, MacroStreamMemoryFile & ms_inline_items, time_t qdate, const std::string & owner, bool spool=false)
@@ -965,6 +966,7 @@ struct SubmitJobsIterator {
 		copy_hash(h);
 		m_hash.setDisableFileChecks(true);
 		m_hash.init_base_ad(qdate, owner.c_str());
+		m_hash.attachTransferMap(m_protected_url_map);
 
 		if (qargs.empty()) {
 			m_ssqa.begin(id, num);
@@ -1035,7 +1037,6 @@ struct SubmitJobsIterator {
 		// on first iteration, if the initial proc id is not 0, then we need to make sure
 		// to call make_job_ad with a proc id of 0 to force the cluster ad to be created.
 		ClassAd * job = NULL;
-		m_hash.attachTransferMap(m_protected_url_map);
 		if (rval == 2 && jid.proc > 0) {
 			JOB_ID_KEY cid(jid.cluster, 0);
 			job = m_hash.make_job_ad(cid, item_index, step, false, m_spool, NULL, NULL);
@@ -1045,7 +1046,6 @@ struct SubmitJobsIterator {
 		} else {
 			job = m_hash.make_job_ad(jid, item_index, step, false, m_spool, NULL, NULL);
 		}
-		m_hash.detachTransferMap();
 		process_submit_errstack(m_hash.error_stack());
 
 		if ( ! job) {

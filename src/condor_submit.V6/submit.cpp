@@ -106,6 +106,7 @@ std::string ScheddAddr;
 AbstractScheddQ * MyQ = NULL;
 char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
+MapFile *protectedUrlMap = nullptr;
 
 char	*My_fs_domain;
 
@@ -1078,6 +1079,7 @@ main( int argc, const char *argv[] )
 		as_factory = (dash_factory ? 1 : 0) | (default_to_factory ? (1|2) : 0);
 	}
 	int rval = submit_jobs(fp, FileMacroSource, as_factory, extraLines, queueCommandLine);
+	if (protectedUrlMap) { delete protectedUrlMap; protectedUrlMap = nullptr; }
 	if( rval < 0 ) {
 		if( ExtraLineNo == 0 ) {
 			fprintf( stderr,
@@ -1659,9 +1661,6 @@ int submit_jobs (
 	const char* token_seps = ", \t";
 	const char* token_ws = " \t";
 
-	std::unique_ptr<MapFile> url_map(getProtectedURLMap());
-	submit_hash.attachTransferMap(url_map.get());
-
 	// if there is a queue statement from the command line, get ready to parse it.
 	// we will end up actually parsing it only if there is no queue statement in the file.
 	// we make a copy here because parsing the queue line is destructive.
@@ -1861,15 +1860,16 @@ int submit_jobs (
 				// otherwise we just fall back to non-factory submit
 				want_factory = 0;
 			}
+
+			ClassAd extended_submit_commands;
+			if (MyQ->has_extended_submit_commands(extended_submit_commands)) {
+				submit_hash.addExtendedCommands(extended_submit_commands);
+			}
+			submit_hash.attachTransferMap(protectedUrlMap);
 		}
 
 		// At this point we really expect to  have a working queue connection (possibly simulated)
 		if ( ! MyQ) { rval = -1; break; }
-
-		ClassAd extended_submit_commands;
-		if (MyQ->has_extended_submit_commands(extended_submit_commands)) {
-			submit_hash.addExtendedCommands(extended_submit_commands);
-		}
 
 		// allocate a cluster object if this is the first time through the loop, or if the executable changed.
 		if (NewExecutable || (ClusterId < 0)) {
@@ -2559,6 +2559,7 @@ init_params()
 		setattrflags &= ~SetAttribute_NoAck; // clear noack flag
 	}
 
+	protectedUrlMap = getProtectedURLMap();
 }
 
 

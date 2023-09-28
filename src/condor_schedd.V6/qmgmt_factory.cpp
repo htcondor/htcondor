@@ -161,6 +161,7 @@ protected:
 		const classad::ClassAd * extended_cmds,
 		const char * submit_digest_filename,
 		bool spooled_submit_file,
+		MapFile* urlMap,
 		std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
@@ -224,9 +225,11 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 	return false;
 }
 
-class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds)
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds, MapFile* urlMap)
 {
-	return new JobFactory(nullptr, cluster_id, extended_cmds);
+	auto * factory = new JobFactory(nullptr, cluster_id, extended_cmds);
+	factory->attachTransferMap(urlMap);
+	return factory;
 }
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
@@ -286,6 +289,7 @@ JobFactory * MakeJobFactory(
 	const classad::ClassAd * extended_cmds,
 	const char * submit_digest_file,
 	bool spooled_submit_file,
+	MapFile* urlMap,
 	std::string & errmsg)
 {
 
@@ -339,6 +343,7 @@ JobFactory * MakeJobFactory(
 		factory = nullptr;
 	} else {
 		factory->set_cluster_ad(job);
+		factory->attachTransferMap(urlMap);
 	}
 	return factory;
 }
@@ -504,7 +509,7 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 // return value is 0 for 'can't materialize now, try later'
 // in which case retry_delay is set to indicate how long later should be
 // retry_delay of 0 means we are done, either because of failure or because we ran out of jobs to materialize.
-int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd, TransactionWatcher & txn, int & retry_delay, MapFile* url_map=nullptr)
+int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd, TransactionWatcher & txn, int & retry_delay)
 {
 	retry_delay = 0;
 	if (factory->IsPaused()) {
@@ -630,9 +635,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 
 	// have the factory make a job and give us a pointer to it.
 	// note that this ia not a transfer of ownership, the factory still owns the job and will delete it
-	factory->attachTransferMap(url_map);
 	const classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, nullptr);
-	factory->detachTransferMap();
 	if ( ! job) {
 		std::string msg;
 		std::string txt(factory->error_stack()->getFullText()); if (txt.empty()) { txt = ""; }

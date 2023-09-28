@@ -912,7 +912,7 @@ JobMaterializeTimerCallback(int /* tid */)
 						int retry_delay = 0; // will be set to non-zero when we should try again later.
 						int rv = 0;
 						if (CheckMaterializePolicyExpression(cad, num_materialized, retry_delay)) {
-							rv = MaterializeNextFactoryJob(cad->factory, cad, txn, retry_delay, scheduler.getProtectedUrlMap());
+							rv = MaterializeNextFactoryJob(cad->factory, cad, txn, retry_delay);
 						}
 						if (rv == 1) {
 							num_materialized += 1;
@@ -2839,7 +2839,7 @@ int MaterializeJobs(JobQueueCluster * clusterad, TransactionWatcher &txn, int & 
 			retry_delay = retry;
 			break;
 		}
-		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, txn, retry, scheduler.getProtectedUrlMap()) == 1) {
+		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, txn, retry) == 1) {
 			num_materialized += 1;
 		} else {
 			retry_delay = MAX(retry_delay, retry);
@@ -2914,7 +2914,7 @@ int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, std::string 
 		factory = pending;
 	} else {
 		// parse the submit digest and (possibly) open the itemdata file.
-		factory = NewJobFactory(cluster_id, scheduler.getExtendedSubmitCommands());
+		factory = NewJobFactory(cluster_id, scheduler.getExtendedSubmitCommands(), scheduler.getProtectedUrlMap());
 		pending = factory;
 	}
 
@@ -3016,7 +3016,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 			factory = pending;
 		} else {
 			// parse the submit digest and (possibly) open the itemdata file.
-			factory = NewJobFactory(cluster_id, scheduler.getExtendedSubmitCommands());
+			factory = NewJobFactory(cluster_id, scheduler.getExtendedSubmitCommands(), scheduler.getProtectedUrlMap());
 			pending = factory;
 		}
 
@@ -6928,8 +6928,9 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 								bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
 
 								std::string errmsg;
-								clusterad->factory = MakeJobFactory(clusterad,
-									scheduler.getExtendedSubmitCommands(), submit_digest.c_str(), spooled_digest, errmsg);
+								clusterad->factory = MakeJobFactory(clusterad, scheduler.getExtendedSubmitCommands(),
+								                                    submit_digest.c_str(), spooled_digest,
+								                                    scheduler.getProtectedUrlMap(), errmsg);
 								if ( ! clusterad->factory) {
 									chomp(errmsg);
 									setJobFactoryPauseAndLog(clusterad, mmInvalid, 0, errmsg);
@@ -9202,8 +9203,9 @@ void load_job_factories()
 			bool spooled_digest = ! allow_unspooled_factories || (YourStringNoCase(spooled_filename) == submit_digest);
 
 			std::string errmsg;
-			clusterad->factory = MakeJobFactory(clusterad,
-				scheduler.getExtendedSubmitCommands(), submit_digest.c_str(), spooled_digest, errmsg);
+			clusterad->factory = MakeJobFactory(clusterad, scheduler.getExtendedSubmitCommands(),
+			                                    submit_digest.c_str(), spooled_digest,
+			                                    scheduler.getProtectedUrlMap(), errmsg);
 			if (clusterad->factory) {
 				++num_loaded;
 			} else {
