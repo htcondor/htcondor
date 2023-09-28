@@ -9,33 +9,79 @@ features include the following (note that this list contains only the
 most significant changes; a full list of changes can be found in the
 version history: \ `Version 10 Feature Releases <../version-history/feature-versions-10-x.html>`_):
 
-- Absent slot configuration, execution points will use a partitionable slot.
+- A *condor_startd* without any slot types defined will now default to a single
+  partitionable slot rather than a number of static slots equal to the number of
+  cores as it was in previous versions. The configuration template
+  ``use FEATURE : StaticSlots`` was added for admins wanting the old behavior.
+  :jira:`2026`
 
-- Linux cgroups enforce maximum memory utilization by default.
+- In an HTCondor Execution Point started by root on Linux, the default for cgroups
+  memory has changed to be enforcing.  This means that jobs that use more then
+  their provisioned memory will be put on hold with an appropriate hold message.
+  The previous default can be restored by setting :macro:`CGROUP_MEMORY_LIMIT_POLICY`
+  = none on the Execution points.
+  :jira:`1974`
 
-- Can now define DAGMan save points to be able to rerun DAGs from there.
+- Users can now define DAGMan save points to be able to save the state of a DAGs
+  progess to a file and then re-run a DAG from that saved point of progress.
+  :jira:`1636`
 
-- Much better control over environment variables when using DAGMan.
+- DAGMan has much better user control of enviroment variables present
+  in the DAGMan job propers environment via *condor_submit_dag*\'s new
+  flags (``-include_env`` & ``-insert_env``) and/or the new DAG file
+  description command ``ENV``.
+  :jira:`1955`
+  :jira:`1580`
 
-- Administrators can enable and disable job submission for a specific user.
+- Added the :ref:`man-pages/condor_qusers:*condor_qusers*` command to monitor
+  and control users at the Access Point. Users disabled at the Access Point
+  are no longer allowed to submit jobs. Jobs submitted before the user was
+  disabled are allowed to run to completion. When a user is disabled, an
+  optional reason string can be provided.
+  :jira:`1723`
+  :jira:`1853`
 
-- Can set a minimum number of CPUs allocated to a user.
+- The *condor_negotiator* now support setting a minimum floor number of cores
+  that any given submitter should get, regardless of their fair share. This
+  can be set or queried via the *condor_userprio* tool, in the same way that
+  the ceiling can be set or get.
+  :jira:`557`
 
-- condor_status -gpus shows nodes with GPUs and the GPU properties.
+- Added a ``-gpus`` option to *condor_status*. With this option *condor_status*
+  will show only machines that have GPUs provisioned; and it will show information
+  about the GPU properties.
+  :jira:`1958`
 
-- condor_status -compact shows a row for each slot type.
+- The output of *condor_status* when using the ``-compact`` option has been improved
+  to show a separate row for the second and subsequent slot type for machines that have
+  multiple slot types. Also the totals now count slots that have the ``BackfillSlot``
+  attribute under the ``Backfill`` or ``BkIdle`` columns.
+  :jira:`1957`
 
-- Container images may now be transferred via a file transfer plugin.
+- Container universe jobs may now specify the *container_image* to be an image
+  transferred via a file transfer plugin.
+  :jira:`1820`
 
 - Support for Enterprise Linux 9, Amazon Linux 2023, and Debian 12.
+  :jira:`1285`
+  :jira:`1742`
+  :jira:`1938`
 
-- Can write job information in AP history file for every execution attempt.
+- Administrators can specify a new history file for Access Points that records information
+  about a job for each execution attempt. If enabled then this information can be queried
+  via *condor_history* ``-epochs``.
+  :jira:`1104`
 
-- Can run defrag daemons with different policies on distinct sets of nodes.
+- A single HTCondor pool can now have multiple *condor_defrag* daemons running and they
+  will not interfere with each other so long as each has :macro:`DEFRAG_REQUIREMENTS`
+  that select mutually exclusive subsets of the pool.
+  :jira:`1903`
 
-- Add condor_test_token tool to generate a short lived SciToken for testing.
+- Add *condor_test_token* tool to generate a short lived SciToken for testing.
+  :jira:`1115`
 
-- The job’s executable is no longer renamed to ‘condor_exec.exe’.
+- The job’s executable is no longer renamed to ``condor_exec.exe``.
+  :jira:`1227`
 
 Upgrading from a 10.0 LTS version of HTCondor to a 23.0 LTS version will also
 introduce changes that administrators and users of sites running from an
