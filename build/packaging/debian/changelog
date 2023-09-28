@@ -1,3 +1,19 @@
+condor (10.9.0-1) stable; urgency=medium
+
+  * The condor_upgrade_check script now provides guidance on updating to 23.0
+  * The htchirp Python binding now properly locates the chirp configuration
+  * Fix bug that prevented deletion of HTCondor passwords on Windows
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 28 Sep 2023 07:25:00 -0500
+
+condor (10.0.9-1) stable; urgency=medium
+
+  * The condor_upgrade_check script now provides guidance on updating to 23.0
+  * The htchirp Python binding now properly locates the chirp configuration
+  * Fix bug that prevented deletion of HTCondor passwords on Windows
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 28 Sep 2023 07:00:00 -0500
+
 condor (10.8.0-1) stable; urgency=medium
 
   * Fold the classads, blahp, and procd RPMs into the main condor RPM
