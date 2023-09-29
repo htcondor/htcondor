@@ -579,7 +579,7 @@ sub check_status {
 # $i is $_[0]
 'Name' => sub{
 	my $machine_name = unquote($Attr_new{$_[0]-1}{Machine});
-	if ($_[1] =~ /slot[0-9]+\@$machine_name/){
+	if ($_[1] =~ /slot[0-9_]+\@$machine_name/){
 		return 1;
 	} else {
 		print "Output is $_[1]\nshould be slotxx\@$machine_name\n";
