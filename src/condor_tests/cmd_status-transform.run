@@ -150,7 +150,7 @@ while ($counter ne 0){
 		print "Took too long!\n";
 		exit(1);
 	} else {
-		`condor_status -limit 2 -af Name SlotId > $orig_ads`;
+		`condor_status -limit 2 -l > $orig_ads`;
 		%Attr_old = read_attr($orig_ads);
 		if (scalar keys %Attr_old == 0){
 			sleep(1);
