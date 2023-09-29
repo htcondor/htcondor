@@ -271,7 +271,7 @@ void
 VMGahp::printAllReqsWithResult()
 {
 	for (auto& one_result: m_result_list) {
-		one_result += "\n";
+		one_result += '\n';
 		write_to_daemoncore_pipe(vmgahp_stdout_pipe,
 				one_result.c_str(), one_result.size());
 	}
@@ -389,19 +389,20 @@ VMGahp::waitForCommand(int   /*pipe_end*/)
 
 // Check the validity of the given parameters
 bool VMGahp::verifyCommand(const std::vector<std::string>& args) {
-	if(strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_START) == 0 ) {
+	istring_view cmd(args[0]);
+	if(cmd == istring_view(VMGAHP_COMMAND_VM_START)) {
 		// Expecting: VMGAHP_COMMAND_VM_START <req_id> <type>
 		return verify_number_args(args.size(), 3) &&
 			verify_request_id(args[1].c_str()) &&
 			verify_vm_type(args[2].c_str());
 
-	} else if(strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_STOP) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_SUSPEND) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_SOFT_SUSPEND) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_RESUME) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_CHECKPOINT) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_STATUS) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VM_GETPID) == 0) {
+	} else if(cmd == istring_view(VMGAHP_COMMAND_VM_STOP) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_SUSPEND) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_SOFT_SUSPEND) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_RESUME) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_CHECKPOINT) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_STATUS) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_GETPID)) {
 		// Expecting: VMGAHP_COMMAND_VM_STOP <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_SUSPEND <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_SOFT_SUSPEND <req_id> <vmid>
@@ -414,15 +415,15 @@ bool VMGahp::verifyCommand(const std::vector<std::string>& args) {
 			verify_request_id(args[1].c_str()) &&
 			verify_vm_id(args[2].c_str());
 
-	} else if(strcasecmp(args[0].c_str(), VMGAHP_COMMAND_ASYNC_MODE_ON) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_ASYNC_MODE_OFF) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_QUIT) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_VERSION) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_COMMANDS) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_SUPPORT_VMS) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_RESULTS) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_CLASSAD) == 0 ||
-		strcasecmp(args[0].c_str(), VMGAHP_COMMAND_CLASSAD_END) == 0 ) {
+	} else if(cmd == istring_view(VMGAHP_COMMAND_ASYNC_MODE_ON) ||
+		cmd == istring_view(VMGAHP_COMMAND_ASYNC_MODE_OFF) ||
+		cmd == istring_view(VMGAHP_COMMAND_QUIT) ||
+		cmd == istring_view(VMGAHP_COMMAND_VERSION) ||
+		cmd == istring_view(VMGAHP_COMMAND_COMMANDS) ||
+		cmd == istring_view(VMGAHP_COMMAND_SUPPORT_VMS) ||
+		cmd == istring_view(VMGAHP_COMMAND_RESULTS) ||
+		cmd == istring_view(VMGAHP_COMMAND_CLASSAD) ||
+		cmd == istring_view(VMGAHP_COMMAND_CLASSAD_END)) {
 		//These commands need no-args
 		return verify_number_args(args.size(),1);
 	}

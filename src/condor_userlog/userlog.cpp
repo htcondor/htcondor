@@ -86,8 +86,8 @@ struct HostStatistics {
 
 // explicit template instantiation
 
-std::map<std::string, JobStatistics> Stats;
-std::map<std::string, HostStatistics> HStats;
+std::map<std::string, JobStatistics, std::less<>> Stats;
+std::map<std::string, HostStatistics, std::less<>> HStats;
 int numJobStats = 0;
 int numHostStats = 0;
 bool totals_only = false;
@@ -209,9 +209,9 @@ display_stats()
 			   "0+00:00");
 		printf("%6.1f%% %5.1f%%\n",
 			   hs.wall_time ?
-			   float(hs.good_time)/float(hs.wall_time)*100 : 0.0,
+			   double(hs.good_time)/double(hs.wall_time)*100 : 0.0,
 			   hs.good_time ?
-			   float(hs.cpu_usage)/float(hs.good_time)*100 : 0.0);
+			   double(hs.cpu_usage)/double(hs.good_time)*100 : 0.0);
 	}
 	HStats.clear();
 	printf("\n");
@@ -366,8 +366,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 	ULogEventOutcome result;
 	ULogEvent *event=NULL;
 	char hash[40];
-	std::map<std::string, ExecuteEvent *> ExecRecs;
-	std::map<std::string, CheckpointedEvent *> CkptRecs;
+	std::map<std::string, ExecuteEvent *, std::less<>> ExecRecs;
+	std::map<std::string, CheckpointedEvent *, std::less<>> CkptRecs;
 	
 	if (ulog.initialize(filename,0,false,true)==false) {
 		fprintf(stderr,

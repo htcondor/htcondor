@@ -27,5 +27,6 @@ VMRequest::VMRequest (const char *cmd)
 	m_has_result = false;
 	m_is_success = false;
 	parse_vmgahp_command(cmd, m_args);
-	m_reqid = (int)strtol(m_args[1].c_str(), (char **)NULL, 10);
+	m_reqid = 0;
+	std::from_chars(m_args[1].c_str(), m_args[1].c_str() + m_args[1].size(), m_reqid);
 }
