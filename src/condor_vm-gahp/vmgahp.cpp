@@ -389,7 +389,7 @@ VMGahp::waitForCommand(int   /*pipe_end*/)
 
 // Check the validity of the given parameters
 bool VMGahp::verifyCommand(const std::vector<std::string>& args) {
-	istring_view cmd(args[0]);
+	istring_view cmd(args[0].c_str(), args[0].size());
 	if(cmd == istring_view(VMGAHP_COMMAND_VM_START)) {
 		// Expecting: VMGAHP_COMMAND_VM_START <req_id> <type>
 		return verify_number_args(args.size(), 3) &&
