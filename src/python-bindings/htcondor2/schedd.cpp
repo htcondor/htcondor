@@ -99,7 +99,7 @@ _schedd_query(PyObject *, PyObject * args) {
             // This was HTCondorIOError in version 1.
             std::string error = "Failed to fetch ads from schedd, errmsg="
                               + errStack.getFullText();
-            PyErr_SetString(PyExc_IOError, "");
+            PyErr_SetString(PyExc_IOError, error.c_str());
             return NULL;
     }
 
@@ -591,4 +591,131 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
 
 
     return py_new_htcondor2_classad(result->Copy());
+}
+
+
+static PyObject *
+_schedd_submit( PyObject *, PyObject * args ) {
+    // _schedd_submit(addr, submit.handle_t, count, spool)
+
+    const char * addr = NULL;
+    PyObject_Handle * handle = NULL;
+    long count = 0;
+    bool spool = false;
+
+    if(! PyArg_ParseTuple( args, "zOlp", & addr, (PyObject **)& handle, & count, & spool )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+
+
+    DCSchedd schedd(addr);
+    if( ConnectQ(schedd) == NULL ) {
+        // This was HTCondorIOError, in version 1.
+        PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
+        return NULL;
+    }
+
+
+    //
+    // Create a new cluster ad.
+    //
+
+    // Handle SUBMIT_SKIP_FILECHECKS.
+    sb->setDisableFileChecks( param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", true) ? 1 : 0 );
+
+    // Set the remote schedd version.
+    if( schedd.version() != NULL ) {
+        sb->setScheddVersion( schedd.version() );
+    } else {
+        sb->setScheddVersion( CondorVersion() );
+    }
+
+    // Initialize the new cluster ad.
+    if( sb->init_base_ad( time(NULL), schedd.getOwner().c_str() ) != 0 ) {
+        std::string error = "Failed to create a cluster ad, errmsg="
+            + sb->error_stack()->getFullText();
+
+        // This was HTCondorInternalError in version 1.
+        PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+        return NULL;
+    }
+
+    // Get a new cluster ID.
+    int clusterID = NewCluster();
+    if( clusterID < 0 ) {
+        // This was HTCondorInternalError in version 1.
+        PyErr_SetString( PyExc_RuntimeError, "Failed to create new cluster." );
+        return NULL;
+    }
+
+    if( count == 0 ) {
+        count = sb->queueStatementCount();
+        if( count < 0 ) {
+            // This was HTCondorValueError in version 1.
+            PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
+            return NULL;
+        }
+    }
+
+    //
+    // Create new proc ads.
+    //
+    for( auto c = 0; c < count; ++c ) {
+        int procID = NewProc( clusterID );
+        if( procID < 0 ) {
+            // This was HTCondorInternalError in version 1.
+            PyErr_SetString( PyExc_RuntimeError, "Failed to create new proc ID." );
+            return NULL;
+        }
+
+        ClassAd * procAd = sb->make_job_ad( JOB_ID_KEY(clusterID, procID),
+            0, c, false, false, NULL, NULL );
+        // FIXME: do something with sb->error_stack().
+        if(! procAd) {
+            // This was HTCondorInternalError in version 1.
+            PyErr_SetString( PyExc_RuntimeError, "Failed to create job ad" );
+            return NULL;
+        }
+
+        // FIXME: This is dumb.  Ask TJ if it would work to just create
+        // the first job ad twice (so that the cluster ad could be sent
+        // before the procAd loop fires).
+        if( c == 0 ) {
+            //
+            // Send the cluster ad.
+            //
+            ClassAd * clusterAd = procAd->GetChainedParentAd();
+            if(! clusterAd) {
+                PyErr_SetString( PyExc_RuntimeError, "Failed to get parent ad" );
+                return NULL;
+            }
+
+            int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
+                * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
+            // FIXME: do something with sb->error_stack()
+            if( rval < 0 ) {
+                PyErr_SetString( PyExc_RuntimeError, "Failed to send cluster attributes" );
+                return NULL;
+            }
+        }
+
+        int rval = SendJobAttributes( JOB_ID_KEY(clusterID, procID),
+            * procAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
+        if( rval < 0 ) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to send proc attributes" );
+            return NULL;
+        }
+    }
+
+    // FIXME: Check error return and use error stack.
+    DisconnectQ(NULL);
+
+
+    // FIXME
+    // return new SubmitResult( JOB_ID_KEY(clusterID, 0), num_jobs, clusterAd );
+    Py_RETURN_NONE;
 }

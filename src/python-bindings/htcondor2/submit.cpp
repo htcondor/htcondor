@@ -12,13 +12,29 @@ struct SubmitBlob {
 
         virtual ~SubmitBlob() { }
 
+        void keys( std::string & buffer );
         bool from_lines( const char * lines, std::string & errorMessage );
 
         // In version 1, we converted leading `+`s to leading `MY.`s on lookup.
-        const char * lookup(const char * key) { return m_hash.lookup(key); }
-        void set_submit_param( const char * key, const char * value ) { m_hash.set_submit_param(key, value); }
-        void keys( std::string & buffer );
-        const char * expand(const char * key) { return m_hash.submit_param(key); }
+        const char * lookup( const char * key );
+        void set_submit_param( const char * key, const char * value );
+        bool setDisableFileChecks( bool value );
+        void setScheddVersion( const char * version );
+        int init_base_ad(time_t submitTime, const char * userName );
+        ClassAd * make_job_ad( JOB_ID_KEY j,
+            int itemIndex, int step,
+            bool interactive, bool remote,
+            int (* check_file)( void * pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags ),
+            void * pv_check_arg
+        );
+        CondorError * error_stack() const;
+        // Given a `QUEUE [count] [in|from|matching ...]` statement, `count`
+        // is an optional integer expression.  This function returns 1
+        // if it's missing, a value less than 0 if the parse failed, and
+        // the value otherwise.
+        int queueStatementCount() const;
+
+        const char * expand( const char * key );
 
     private:
         SubmitHash m_hash;
@@ -33,6 +49,71 @@ struct SubmitBlob {
 
 
 MACRO_SOURCE SubmitBlob::EmptyMacroSrc = { false, false, 3, -2, -1, -2 };
+
+
+const char *
+SubmitBlob::lookup(const char * key) {
+    return m_hash.lookup( key );
+}
+
+
+void
+SubmitBlob::set_submit_param( const char * key, const char * value ) {
+    m_hash.set_submit_param( key, value );
+}
+
+
+bool
+SubmitBlob::setDisableFileChecks( bool value ) {
+    return m_hash.setDisableFileChecks( value );
+}
+
+
+void
+SubmitBlob::setScheddVersion( const char * version ) {
+    m_hash.setScheddVersion( version );
+}
+
+
+int
+SubmitBlob::init_base_ad( time_t submitTime, const char * userName ) {
+    return m_hash.init_base_ad( submitTime, userName );
+}
+
+
+const char *
+SubmitBlob::expand( const char * key ) {
+    return m_hash.submit_param(key);
+}
+
+
+ClassAd *
+SubmitBlob::make_job_ad( JOB_ID_KEY jid,
+            int itemIndex, int step,
+            bool interactive, bool remote,
+            int (* check_file)( void * pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags ),
+            void * pv_check_arg
+) {
+    return m_hash.make_job_ad( jid,
+        itemIndex, step, interactive, remote, check_file, pv_check_arg
+    );
+}
+
+
+int
+SubmitBlob::queueStatementCount() const {
+    char * expanded_queue_args = m_hash.expand_macro( m_qargs.c_str() );
+
+    SubmitForeachArgs sfa;
+    int rval = sfa.parse_queue_args(expanded_queue_args);
+    if( rval < 0 ) {
+        free(expanded_queue_args);
+        return rval;
+    }
+
+    free(expanded_queue_args);
+    return sfa.queue_num;
+}
 
 
 bool
@@ -60,6 +141,13 @@ SubmitBlob::from_lines( const char * lines, std::string & errorMessage ) {
 
     return true;
 }
+
+
+CondorError *
+SubmitBlob::error_stack() const {
+    return m_hash.error_stack();
+}
+
 
 void
 SubmitBlob::keys( std::string & buffer ) {

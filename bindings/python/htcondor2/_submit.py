@@ -125,6 +125,13 @@ class Submit(MutableMapping):
 
 
     def expand(self, attr : str) -> str:
+        '''
+        Expand all macros for the given attribute.
+
+        :param str attr: The name of the attribute to expand.
+        :return: The value of the given attribute, with all macros expanded.
+        :rtype: str
+        '''
         if not isinstance(attr, str):
             raise TypeError("attr must be a string")
         return _submit_expand(self, self._handle, attr)
@@ -140,6 +147,7 @@ class Submit(MutableMapping):
         qdate : int = 0,
         owner : str = "",
     ):
+        # FIXME
         pass
 
 
@@ -153,6 +161,7 @@ class Submit(MutableMapping):
         qdate : int = 0,
         owner : str = "",
     ):
+        # FIXME
         pass
 
 
@@ -161,10 +170,12 @@ class Submit(MutableMapping):
 
 
     def setQArgs(self, args : str):
+        # FIXME
         pass
 
 
     def from_dag(filename : str, options : dict = {}):
+        # FIXME
         pass
 
 
@@ -172,8 +183,10 @@ class Submit(MutableMapping):
         method_value : int = -1,
         allow_reserved_values : bool = False
     ):
+        # FIXME
         pass
 
 
     def getSubmitMethod(self) -> int:
+        # FIXME
         pass

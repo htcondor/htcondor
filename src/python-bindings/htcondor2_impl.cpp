@@ -33,15 +33,15 @@
 #include "my_username.h"
 #include "htcondor2/credd.cpp"
 
+// htcondor.Submit
+#include "submit_utils.h"
+#include "htcondor2/submit.cpp"
+
 // htcondor.Schedd
 #include "condor_q.h"
 #include "dc_schedd.h"
 #include "condor_qmgr.h"
 #include "htcondor2/schedd.cpp"
-
-// htcondor.Submit
-#include "submit_utils.h"
-#include "htcondor2/submit.cpp"
 
 
 static PyMethodDef htcondor2_impl_methods[] = {
@@ -115,6 +115,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_unexport_job_ids", &_schedd_unexport_job_ids, METH_VARARGS, NULL},
 
 	{"_schedd_unexport_job_constraint", &_schedd_unexport_job_constraint, METH_VARARGS, NULL},
+
+	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},
