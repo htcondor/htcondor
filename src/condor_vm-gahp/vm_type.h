@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
-#include "gahp_common.h"
 #include "utc_time.h"
 #include "directory.h"
 #include "condor_vm_universe_types.h"

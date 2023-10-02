@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 
+#include <set>
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
 #include "condor_io.h"
@@ -168,14 +169,14 @@ void Rooster::poll( int /* timerID */ )
 	startdAds.Open();
 	int num_woken = 0;
 	ClassAd *startd_ad;
-	HashTable<std::string,bool> machines_done(hashFunction);
+	std::set<std::string> machines_done;
 	while( (startd_ad=startdAds.Next()) ) {
 		std::string machine;
 		std::string name;
 		startd_ad->LookupString(ATTR_MACHINE,machine);
 		startd_ad->LookupString(ATTR_NAME,name);
 
-		if( machines_done.exists(machine)==0 ) {
+		if( machines_done.count(machine)!=0 ) {
 			dprintf(D_FULLDEBUG,
 					"Skipping %s: already attempted to wake up %s in this cycle.\n",
 					name.c_str(),machine.c_str());
@@ -192,7 +193,7 @@ void Rooster::poll( int /* timerID */ )
 		}
 
 		if( wakeUp(startd_ad) ) {
-			machines_done.insert(machine,true);
+			machines_done.emplace(machine);
 
 			if( ++num_woken >= m_max_unhibernate && m_max_unhibernate > 0 ) {
 				dprintf(D_ALWAYS,
