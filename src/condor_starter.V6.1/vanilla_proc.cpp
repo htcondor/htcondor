@@ -921,11 +921,13 @@ VanillaProc::JobReaper(int pid, int status)
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
 	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
+#ifdef LINUX
 	if (status & DC_STATUS_OOM_KILLED) {
 		// Will put the job on hold
 		this->outOfMemoryEvent();
 		status &= ~DC_STATUS_OOM_KILLED;
 	} 
+#endif
 	
 	//
 	//

@@ -32,6 +32,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug on Windows where jobs would be inappropriately put on hold with an out of memory
+  error if they returned an exit code with high bits set
+  :jira:`2061`
+
 - Fixed a bug where jobs put on hold internally by the shadow were not writing their ad to the
   job epoch history file.
   :jira:`2060`
