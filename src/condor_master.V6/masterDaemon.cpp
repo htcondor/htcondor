@@ -426,7 +426,7 @@ daemon::DoConfig( bool init )
 	
 	if (param_boolean("MASTER_SET_TZ", true)) {
 		// But don't overwrite it, if already set
-		if (!env.HasEnv("TZ")) {
+		if (!env.HasEnv("TZ") && !getenv("TZ")) {
 
 			// /etc/localtime should always exist, but just
 			// double check to be sure
