@@ -108,5 +108,3 @@ If you want to run the very latest release, also enable the updates
 repository to get the targeted fixes.  However, these fixes may come
 frequently, and you may wish to pick and choose which updates to install.
 
-
-
