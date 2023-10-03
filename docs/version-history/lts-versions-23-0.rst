@@ -32,7 +32,13 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug on Windows where jobs would be inappropriately put on hold with an out of memory
+  error if they returned an exit code with high bits set
+  :jira:`2061`
+
+- Fixed a bug where jobs put on hold internally by the shadow were not writing their ad to the
+  job epoch history file.
+  :jira:`2060`
 
 .. _lts-version-history-2300:
 
@@ -52,7 +58,7 @@ New Features:
 
 - The ``TargetType`` attribute is no longer a required attribute in most Classads.  It is still used for
   queries to the *condor_collector* and it remains in the Job ClassAd and the Machine ClassAd because
-  of older versions of HTCondor.require it to be present.
+  of older versions of HTCondor require it to be present.
   :jira:`1997`
 
 - The ``-dry-run`` option of *condor_submit* will now print the output of a ``SEC_CREDENTIAL_STORER`` script.
