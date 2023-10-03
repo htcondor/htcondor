@@ -29,6 +29,11 @@ New Features:
   the amount of output lines when using an aggregate/shared log file.
   :jira:`2046`
 
+- Improved performance of *condor_schedd*, and other daemons, by cacheing the
+  value in /etc/localtime, so that debugging logs aren't always stat'ing that
+  file.
+  :jira:`2064`
+
 - Added new ``-larger-than`` flag to *condor_watch_q* that filters tracked
   jobs to only include jobs with cluster IDs greater than or equal to the
   provided cluster ID.
