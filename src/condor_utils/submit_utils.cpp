@@ -557,7 +557,6 @@ SubmitHash::SubmitHash()
 	, UseDefaultResourceParams(true)
 	, InsertDefaultPolicyExprs(false)
 	, s_method(1)
-	, protectedUrlMap(nullptr)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();

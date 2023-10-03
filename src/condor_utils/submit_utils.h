@@ -701,6 +701,7 @@ protected:
 	time_t     submit_time;
 	std::string   submit_username; // username specified to init_cluster_ad
 	ClassAd extendedCmds; // extended submit keywords, from config
+	MapFile *protectedUrlMap{nullptr}; // Map file for protected url separation in job ad
 
 	// these are used with the internal ABORT_AND_RETURN() and RETURN_IF_ABORT() methods
 	mutable int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
@@ -871,7 +872,6 @@ private:
 	ContainerImageType image_type_from_string(std::string image) const;
 
 	int s_method; //-1 represents undefined job submit method
-	MapFile *protectedUrlMap;
 };
 
 struct SubmitStepFromQArgs {

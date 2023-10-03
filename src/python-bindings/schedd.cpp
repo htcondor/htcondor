@@ -1122,6 +1122,7 @@ public:
     std::string owner() const;
     std::string schedd_version();
     const ClassAd* capabilites();
+    MapFile* urlMap();
 
     static boost::shared_ptr<ConnectionSentry> enter(boost::shared_ptr<ConnectionSentry> obj);
     static bool exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object obj2, boost::python::object obj3);
@@ -1423,14 +1424,15 @@ struct Schedd {
 
 
     Schedd()
-     : m_connection(NULL)
+     : m_connection(NULL), m_protected_url_map(nullptr)
     {
         use_local_schedd();
+        m_protected_url_map = getProtectedURLMap();
     }
 
 
     Schedd(boost::python::object loc)
-      : m_connection(NULL), m_addr(), m_name("Unknown"), m_version("")
+      : m_connection(NULL), m_protected_url_map(nullptr), m_addr(), m_name("Unknown"), m_version("")
     {
 		int rv = construct_for_location(loc, DT_SCHEDD, m_addr, m_version, &m_name);
 		if (rv == 0) {
@@ -1439,11 +1441,16 @@ struct Schedd {
 			if (rv == -2) { boost::python::throw_error_already_set(); }
 			THROW_EX(HTCondorValueError, "Unknown type");
 		}
+		m_protected_url_map = getProtectedURLMap();
     }
 
     ~Schedd()
     {
         if (m_connection) { m_connection->abort(); }
+        if (m_protected_url_map) {
+            delete m_protected_url_map;
+            m_protected_url_map = nullptr;
+        }
     }
 
     boost::python::object location() const {
@@ -2652,10 +2659,13 @@ struct Schedd {
         return iter;
     }
 
+
+    MapFile* getUrlMap() { return m_protected_url_map; }
+
 private:
 
     ConnectionSentry* m_connection;
-
+    MapFile *m_protected_url_map;
     std::string m_addr, m_name, m_version;
 
 };
@@ -2706,6 +2716,11 @@ const ClassAd* ConnectionSentry::capabilites()
 		return &m_capabilities;
 	}
 	return NULL;
+}
+
+MapFile* ConnectionSentry::urlMap()
+{
+    return m_schedd.getUrlMap();
 }
 
 int
@@ -2975,7 +2990,6 @@ public:
        , m_queue_may_append_to_cluster(false)
     {
         m_hash.init(JSM_PYTHON_BINDINGS);
-        m_protected_url_map = getProtectedURLMap();
     }
 
 
@@ -2985,7 +2999,6 @@ public:
        , m_queue_may_append_to_cluster(false)
     {
         m_hash.init(JSM_PYTHON_BINDINGS);
-        m_protected_url_map = getProtectedURLMap();
         update(input);
     }
 
@@ -3025,7 +3038,6 @@ public:
        , m_queue_may_append_to_cluster(false)
 	{
 		m_hash.init(JSM_PYTHON_BINDINGS);
-		m_protected_url_map = getProtectedURLMap();
 		if ( ! lines.empty()) {
 			m_hash.insert_source("<PythonString>", m_src_pystring);
 			MacroStreamMemoryFile ms(lines.c_str(), lines.size(), m_src_pystring);
@@ -3053,12 +3065,7 @@ public:
 	}
 
 
-	~Submit() {
-		if (m_protected_url_map) {
-			delete m_protected_url_map;
-			m_protected_url_map = nullptr;
-		}
-	}
+	~Submit() {}
 
 
     std::string
@@ -3486,7 +3493,7 @@ public:
 			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
 		}
 
-		m_hash.attachTransferMap(m_protected_url_map);
+		m_hash.attachTransferMap(txn->urlMap());
 
 		if (factory_submit) {
 
@@ -3657,7 +3664,7 @@ public:
 		int step=0, item_index=0, rval;
 		SubmitStepFromPyIter ssi(m_hash, JOB_ID_KEY(cluster, first_proc_id), count, from);
 
-		m_hash.attachTransferMap(m_protected_url_map);
+		m_hash.attachTransferMap(txn->urlMap());
 
 		if (factory_submit) {
 
@@ -4004,7 +4011,6 @@ private:
     MACRO_SOURCE m_src_pystring; // needed for MacroStreamMemoryFile to point to
     MacroStreamMemoryFile m_ms_inline; // extra lines after queue statement, used if we are doing inline foreach data
     bool m_queue_may_append_to_cluster; // when true, the queue() method can add jobs to the existing cluster
-    MapFile* m_protected_url_map{nullptr};
 };
 
 boost::python::object Schedd::submit(boost::python::object submitObj, int count/*=0*/, bool spool/*=false*/, object result/*=object()*/, object itemdata/*=object()*/)
