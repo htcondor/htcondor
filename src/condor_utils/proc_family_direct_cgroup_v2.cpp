@@ -24,6 +24,7 @@
 #include "directory.h"
 #include "proc_family_direct_cgroup_v2.h"
 #include <numeric>
+#include <algorithm>
 
 #include <filesystem>
 #include <charconv>
@@ -157,6 +158,35 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		close(fd);
 	} else {
 		dprintf(D_ALWAYS, "Error enabling per-cgroup oom killing: %d (%s)\n", errno, strerror(errno));
+	}
+
+	// Enable delgation.  That is, allow processes in this cgroup to make sub-cgroups within this one.
+	// So, e.g. if the job is a glidein, the glidein can create sub-cgroups for each of its slots, and
+	// divide up the memory, etc. resources here and apply limits.
+	// Delegation requires three things.
+	// 1.) cgroup directory writeable (unix permission-wise) by the user
+	// 2.) cgroup.procs file writeable by the user (so they can move processes out of the interior
+	//                  node and into the leaf.  Cgroupv2 requires all processes to live in the leaf nodes.
+	// 3.) cgroup.subtree_control
+	
+	uid_t uid = get_user_uid();
+	gid_t gid = get_user_gid();
+	
+	if ( (uid != (uid_t) -1) && (gid != (gid_t) -1)) {
+		r = chown((cgroup_mount_point() / stdfs::path(cgroup_name)).c_str(), uid, gid);
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Error chown'ing cgroup directory to user %u and group %u: %s\n", uid, gid, strerror(errno));
+		}
+
+		r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.procs").c_str(), uid, gid);
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Error chown'ing cgroup.procs file to user %u and group %u: %s\n", uid, gid, strerror(errno));
+		}
+
+		r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.subtree_control").c_str(), uid, gid);
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Error chown'ing cgroup.subtree_control file to user %u and group %u: %s\n", uid, gid, strerror(errno));
+		}
 	}
 
 	return true;
@@ -327,7 +357,7 @@ ProcFamilyDirectCgroupV2::signal_process(pid_t pid, int sig)
 	return true;
 }
 
-// Writing a '1' to cgroup.freeze freezes all the processes in this cgrup
+// Writing a '1' to cgroup.freeze freezes all the processes in this cgroup
 // and also freezes all descendent cgroups.  Might need to poll
 // cgroup.freeze until it reads '1' to verify that everyone is frozen.
 bool
@@ -401,6 +431,38 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	return true;
 }
 
+// Return a vector of the absolute paths to all the
+// cgroup directories rooted here.
+static std::vector<stdfs::path> getTree(std::string cgroup_name) {
+	std::vector<stdfs::path> dirs;
+
+	// First add the root of the tree, the iterator below skips it
+	dirs.emplace_back(cgroup_mount_point() / cgroup_name);
+
+	// append all directories from here on down
+	for (auto entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name}) {
+		if (stdfs::is_directory(entry)) {
+			dirs.emplace_back(entry);
+		}	
+	}
+
+	auto deepest_first = [](const stdfs::path &p1, const stdfs::path &p2) {
+		// Sort by length first, so deepest path sorts first
+		if (p1.string().length() != p2.string().length()) {
+			return p1.string().length() > p2.string().length();
+		}
+
+		// otherwise we don't care, just lexi
+		return p1.string() > p2.string();
+	};
+
+	// Sort them so deeper (longer) dirs come first
+	std::sort(dirs.begin(), dirs.end(), deepest_first);
+
+	return dirs;
+}
+
+//
 // Note: DaemonCore doesn't call this from the starter, because
 // the starter exits from the JobReaper, and dc call this after
 // calling the reaper.
@@ -412,11 +474,12 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::unregister_family for pid %u\n", pid);
 	// Remove this cgroup, so that we clear the various peak statistics it holds
 	
-	// TODO: should recursively remove all descendent directories
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	int r = rmdir((cgroup_mount_point() / cgroup_name).c_str());
-	if (r < 0) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::unregister_family error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
+	for (auto dir: getTree(cgroup_mount_point() / cgroup_name)) {
+		int r = rmdir(dir.c_str());
+		if (r < 0) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::unregister_family error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
+		}
 	}
 
 	return true;
