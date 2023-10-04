@@ -759,8 +759,8 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 				// Assume it's always a normal exit.
 				jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 				jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
-				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60.0 );
-				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60.0 );
+				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock );
+				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu );
 				gmState = GM_STAGE_OUT;
 			} else {
 				if ( info_ad.LookupString("Error", val) ) {
