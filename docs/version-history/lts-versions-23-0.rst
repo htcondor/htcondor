@@ -44,6 +44,10 @@ Bugs Fixed:
   job epoch history file.
   :jira:`2060`
 
+- The job attributes ``CpusProvisioned``, ``DiskProvisioned``, and
+  ``MemoryProvisioned`` are now updated for Condor-C and Job Router jobs.
+  :jira:`2069`
+
 .. _lts-version-history-2300:
 
 Version 23.0.0
