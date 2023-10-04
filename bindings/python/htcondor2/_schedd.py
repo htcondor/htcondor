@@ -251,7 +251,6 @@ class Schedd():
             a count of 3.  If specified, this parameter overrides the count
             in :param:`description`.``.
         '''
-        # FIXME deal with itemdata.
         return _schedd_submit(self._addr, description._handle, count, spool)
 
 

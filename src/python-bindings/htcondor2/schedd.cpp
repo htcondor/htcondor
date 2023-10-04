@@ -594,6 +594,63 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
 }
 
 
+bool
+submitProcAds( int clusterID, long count, SubmitBlob * sb, int itemIndex = 0 ) {
+
+    //
+    // Create new proc ads.
+    //
+    for( auto c = 0; c < count; ++c ) {
+        int procID = NewProc( clusterID );
+        if( procID < 0 ) {
+            // This was HTCondorInternalError in version 1.
+            PyErr_SetString( PyExc_RuntimeError, "Failed to create new proc ID." );
+            return false;
+        }
+
+        // This appears to be superfluous.
+        // sb->setClusterAndProcBuffers( clusterID, procID );
+
+        ClassAd * procAd = sb->make_job_ad( JOB_ID_KEY(clusterID, procID),
+            itemIndex, c, false, false, NULL, NULL );
+        // FIXME: do something with sb->error_stack().
+        if(! procAd) {
+            // This was HTCondorInternalError in version 1.
+            PyErr_SetString( PyExc_RuntimeError, "Failed to create job ad" );
+            return false;
+        }
+
+        if( c == 0 ) {
+            //
+            // Send the cluster ad.
+            //
+            ClassAd * clusterAd = procAd->GetChainedParentAd();
+            if(! clusterAd) {
+                PyErr_SetString( PyExc_RuntimeError, "Failed to get parent ad" );
+                return false;
+            }
+
+            int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
+                * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
+            // FIXME: do something with sb->error_stack()
+            if( rval < 0 ) {
+                PyErr_SetString( PyExc_RuntimeError, "Failed to send cluster attributes" );
+                return false;
+            }
+        }
+
+        int rval = SendJobAttributes( JOB_ID_KEY(clusterID, procID),
+            * procAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
+        if( rval < 0 ) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to send proc attributes" );
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 static PyObject *
 _schedd_submit( PyObject *, PyObject * args ) {
     // _schedd_submit(addr, submit.handle_t, count, spool)
@@ -661,55 +718,46 @@ _schedd_submit( PyObject *, PyObject * args ) {
         }
     }
 
-    //
-    // Create new proc ads.
-    //
-    for( auto c = 0; c < count; ++c ) {
-        int procID = NewProc( clusterID );
-        if( procID < 0 ) {
-            // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Failed to create new proc ID." );
+
+    // Handle itemdata.
+    SubmitForeachArgs * itemdata = sb->init_vars( clusterID );
+    if( itemdata == NULL ) {
+        PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
+        return NULL;
+    }
+
+    int itemCount = itemdata->items.number();
+
+    if( itemCount == 0 ) {
+        if(! submitProcAds( clusterID, count, sb )) {
+            // submitProcAds() has already set an exception for us.
+            delete itemdata;
             return NULL;
         }
-
-        ClassAd * procAd = sb->make_job_ad( JOB_ID_KEY(clusterID, procID),
-            0, c, false, false, NULL, NULL );
-        // FIXME: do something with sb->error_stack().
-        if(! procAd) {
-            // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Failed to create job ad" );
-            return NULL;
-        }
-
-        // FIXME: This is dumb.  Ask TJ if it would work to just create
-        // the first job ad twice (so that the cluster ad could be sent
-        // before the procAd loop fires).
-        if( c == 0 ) {
-            //
-            // Send the cluster ad.
-            //
-            ClassAd * clusterAd = procAd->GetChainedParentAd();
-            if(! clusterAd) {
-                PyErr_SetString( PyExc_RuntimeError, "Failed to get parent ad" );
-                return NULL;
+    } else {
+        int itemIndex = 0;
+        char * item = NULL;
+        itemdata->items.rewind();
+        while( (item = itemdata->items.next()) ) {
+            if( itemdata->slice.selected( itemIndex, itemCount ) ) {
+                sb->set_vars( itemdata->vars, item, itemIndex );
+                if(! submitProcAds( clusterID, count, sb, itemIndex )) {
+                    // submitProcAds() has already set an exception for us.
+                    delete itemdata;
+                    return NULL;
+                }
             }
-
-            int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
-                * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
-            // FIXME: do something with sb->error_stack()
-            if( rval < 0 ) {
-                PyErr_SetString( PyExc_RuntimeError, "Failed to send cluster attributes" );
-                return NULL;
-            }
-        }
-
-        int rval = SendJobAttributes( JOB_ID_KEY(clusterID, procID),
-            * procAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
-        if( rval < 0 ) {
-            PyErr_SetString( PyExc_RuntimeError, "Failed to send proc attributes" );
-            return NULL;
+            ++itemIndex;
         }
     }
+
+    // Since we can't remove keys from the submit hash, set their values
+    // to NULL.  We normally set NULL values to the empty string, but
+    // doing it this way means we can distinguish between keys in the
+    // submit hash and keys in the submit object.
+    sb->cleanup_vars( itemdata->vars );
+    delete itemdata;
+
 
     // FIXME: Check error return and use error stack.
     DisconnectQ(NULL);

@@ -91,6 +91,7 @@ class Submit(MutableMapping):
 
 
     def __delitem__(self, key):
+        # We can actually fake this (using NULL values), but should we?
         raise NotImplementedError("Submit object keys can not be removed, but the empty string is defined to have no effect.")
 
 

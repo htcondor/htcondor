@@ -5,7 +5,8 @@ struct SubmitBlob {
         SubmitBlob() :
             m_src_pystring(EmptyMacroSrc),
             m_ms_inline("", 0, EmptyMacroSrc),
-            m_queue_may_append_to_cluster(false)
+            m_queue_may_append_to_cluster(false),
+            EmptyItemString{'\0'}
         {
             m_hash.init(JSM_PYTHON_BINDINGS);
         }
@@ -28,13 +29,22 @@ struct SubmitBlob {
             void * pv_check_arg
         );
         CondorError * error_stack() const;
+        const char * expand( const char * key );
+
+
         // Given a `QUEUE [count] [in|from|matching ...]` statement, `count`
         // is an optional integer expression.  This function returns 1
         // if it's missing, a value less than 0 if the parse failed, and
         // the value otherwise.
         int queueStatementCount() const;
 
-        const char * expand( const char * key );
+        // Given a cluster ID, parses the queue statement and initializes
+        // the itemdata variables.  Returns the corresponding SubmitForeachArgs
+        // pointer or NULL on a failure.
+        SubmitForeachArgs * init_vars( int clusterID );
+        void set_vars( StringList & vars, char * item, int itemIndex );
+        void cleanup_vars( StringList & vars );
+
 
     private:
         SubmitHash m_hash;
@@ -45,6 +55,11 @@ struct SubmitBlob {
         // We could easily keep these in Python, if that simplifies things.
         std::string m_qargs;
         std::string m_remainder;
+
+        // See comment in init_vars().
+        char ClusterString[20];
+        char ProcessString[20];
+        char EmptyItemString[1];
 };
 
 
@@ -116,6 +131,96 @@ SubmitBlob::queueStatementCount() const {
 }
 
 
+SubmitForeachArgs *
+SubmitBlob::init_vars( int /* clusterID */ ) {
+    char * expanded_queue_args = m_hash.expand_macro( m_qargs.c_str() );
+    SubmitForeachArgs * sfa = new SubmitForeachArgs();
+    int rval = sfa->parse_queue_args(expanded_queue_args);
+    free( expanded_queue_args );
+    expanded_queue_args = NULL;
+    if( rval < 0 ) {
+        delete sfa;
+        return NULL;
+    }
+
+    // Actually finish parsing the queue statement.
+    std::string errorMessage;
+    rval = m_hash.load_inline_q_foreach_items( m_ms_inline, *sfa, errorMessage );
+    if( rval == 1 ) {
+        rval = m_hash.load_external_q_foreach_items( *sfa, false, errorMessage );
+    }
+    if( rval < 0 ) {
+        delete sfa;
+        return NULL;
+    }
+
+
+// This is superfluous.
+#if 0
+    // For rather silly optimization reasons, ClusterString and ProcessString
+    // must remain valid for the life of the hashtable; since the hashtable
+    // doesn't want to manage them, let's make them members of the submit blob.
+    snprintf( ClusterString, sizeof(ClusterString), "%d", clusterID );
+    snprintf( ProcessString, sizeof(ProcessString), "%d", 0 );
+    m_hash.set_live_submit_variable( SUBMIT_KEY_Cluster, ClusterString );
+    m_hash.set_live_submit_variable( SUBMIT_KEY_Process, ProcessString );
+#endif
+
+
+    char * var = NULL;
+    sfa->vars.rewind();
+    while( (var = sfa->vars.next()) ) {
+        // Note that this implies that updates to variables created by the
+        // queue statement MUST be pointer replacements.
+        m_hash.set_live_submit_variable( var, EmptyItemString, false );
+    }
+
+    m_hash.optimize();
+    return sfa;
+}
+
+
+void
+SubmitBlob::set_vars( StringList & vars, char * item, int /* itemIndex */ ) {
+    if( vars.isEmpty() ) { return; }
+
+    if( item == NULL ) {
+        item = EmptyItemString;
+    }
+
+    // This is awful, but it's what condor_submit does.
+    vars.rewind();
+    char * var = vars.next();
+    char * data = item;
+    m_hash.set_live_submit_variable( var, data, false );
+
+    // This is for the human-readable form in the submit file.
+    const char * separators = ", \t";
+    const char * whitespace = " \t";
+
+    while( (var = vars.next()) ) {
+        while (*data && ! strchr(separators, *data)) ++data;
+        if( data != NULL ) {
+            *data++ = 0;
+            while (*data && strchr(whitespace, *data)) ++data;
+            m_hash.set_live_submit_variable(var, data, false);
+        }
+    }
+}
+
+
+void
+SubmitBlob::cleanup_vars( StringList & vars ) {
+    if( vars.isEmpty() ) { return; }
+
+    vars.rewind();
+    char * var = NULL;
+    while( (var = vars.next()) ) {
+        m_hash.set_live_submit_variable( var, NULL, false );
+    }
+}
+
+
 bool
 SubmitBlob::from_lines( const char * lines, std::string & errorMessage ) {
     m_hash.insert_source("<PythonString>", m_src_pystring);
@@ -156,6 +261,13 @@ SubmitBlob::keys( std::string & buffer ) {
     HASHITER iter = hash_iter_begin( m_hash.macros() );
     while(! hash_iter_done(iter)) {
         const char * key = hash_iter_key(iter);
+        const char * value = lookup(key);
+
+        // We don't normally allow values to be NULL, so if it is, that
+        // means this key was inserted to handle item data, and should
+        // have been removed (but the submit hash doesn't allow that).
+        if( value == NULL ) { continue; }
+
         keys.push_back( key );
         bufferSize += 1 + strlen( key );
         hash_iter_next(iter);
