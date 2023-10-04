@@ -219,6 +219,8 @@ int		LockFd = -1;
 
 bool	log_keep_open = false;
 
+bool 	should_block_signals = false;
+
 static bool DebugRotateLog = true;
 
 static	int DprintfBroken = 0;
@@ -880,14 +882,22 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 
 	/* Block any signal handlers which might try to print something */
 	/* Note: do this BEFORE grabbing the _condor_dprintf_critsec mutex */
-	sigfillset( &mask );
-	sigdelset( &mask, SIGABRT );
-	sigdelset( &mask, SIGBUS );
-	sigdelset( &mask, SIGFPE );
-	sigdelset( &mask, SIGILL );
-	sigdelset( &mask, SIGSEGV );
-	sigdelset( &mask, SIGTRAP );
-	sigprocmask( SIG_BLOCK, &mask, &omask );
+
+	// Do we really need this?  Not sure.  Cowardly conditionalizing
+	// this with a knob  Profiling shows the sigprocmask is more
+	// expensive that you might think, especially with D_FULLDEBUG
+	// or code that dprintfs a lot..
+
+	if (should_block_signals) {
+		sigfillset( &mask );
+		sigdelset( &mask, SIGABRT );
+		sigdelset( &mask, SIGBUS );
+		sigdelset( &mask, SIGFPE );
+		sigdelset( &mask, SIGILL );
+		sigdelset( &mask, SIGSEGV );
+		sigdelset( &mask, SIGTRAP );
+		sigprocmask( SIG_BLOCK, &mask, &omask );
+	}
 #endif
 
 	/* We want dprintf to be thread safe.  For now, we achieve this
@@ -1038,7 +1048,9 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 
 #if !defined(WIN32) // signals don't exist in WIN32
 		/* Let them signal handlers go!! */
-	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
+	if (should_block_signals) {
+		std::ignore = sigprocmask( SIG_SETMASK, &omask, 0 );
+	}	
 #endif
 }
 

@@ -43,7 +43,7 @@ DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
 	: Daemon( DT_STARTD, tName, tPool )
 {
 	if( tAddr ) {
-		New_addr( strdup(tAddr) );
+		Set_addr(tAddr);
 	}
 		// claim_id isn't initialized by Daemon's constructor, so we
 		// have to treat it slightly differently 
@@ -373,16 +373,16 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
-		dprintf (D_COMMAND, "DCStartd::deactivateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::deactivateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -504,7 +504,7 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	if( !tmp->code(reply) || !tmp->end_of_message()) {
 		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
-		err += _addr ? _addr : "NULL";
+		err += _addr.c_str();
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		delete tmp;
 		return CONDOR_ERROR;
@@ -867,16 +867,16 @@ DCStartd::vacateClaim( const char* name_vacate )
 
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = VACATE_CLAIM;
-		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::vacateClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -923,16 +923,16 @@ DCStartd::_suspendClaim( )
 	
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = SUSPEND_CLAIM;
-		dprintf (D_COMMAND, "DCStartd::_suspendClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::_suspendClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::_suspendClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -981,16 +981,16 @@ DCStartd::_continueClaim( )
 	
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = CONTINUE_CLAIM;
-		dprintf (D_COMMAND, "DCStartd::_continueClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::_continueClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::_continueClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -1032,16 +1032,16 @@ DCStartd::checkpointJob( const char* name_ckpt )
 
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = PCKPT_JOB;
-		dprintf (D_COMMAND, "DCStartd::checkpointJob(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::checkpointJob(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::checkpointJob: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -1119,7 +1119,7 @@ DCStartd::checkClaimId( void )
 		return true;
 	}
 	std::string err_msg;
-	if( _cmd_str ) {
+	if( ! _cmd_str.empty() ) {
 		err_msg += _cmd_str;
 		err_msg += ": ";
 	}

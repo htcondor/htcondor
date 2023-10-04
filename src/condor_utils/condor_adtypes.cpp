@@ -25,12 +25,12 @@ AdTypeToString( AdTypes type )
 {
 	// ad type names indexed by *_AD enum
 	static const char* const adtypes[NUM_AD_TYPES] = {
-		STARTD_ADTYPE,		//STARTD_AD
+		STARTD_OLD_ADTYPE,	//STARTD_AD
 		SCHEDD_ADTYPE,		//SCHEDD_AD
 		MASTER_ADTYPE,		//MASTER_AD
 		GATEWAY_ADTYPE,		//GATEWAY_AD
 		CKPT_SRVR_ADTYPE,	//CKPT_SRVR_AD
-		STARTD_PVT_ADTYPE,	//STARTD_PVT_AD /* no longer used */
+		"MachinePrivate",	//STARTD_PVT_AD /* no longer used */
 		SUBMITTER_ADTYPE,	//SUBMITTOR_AD
 		COLLECTOR_ADTYPE,	//COLLECTOR_AD
 		LICENSE_ADTYPE,		//LICENSE_AD

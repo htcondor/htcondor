@@ -73,7 +73,6 @@ class ProcFamilyInterface;
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
-template <class Key, class Value> class HashTable; // forward declaration
 class Probe;
 
 #define USE_MIRON_PROBE_FOR_DC_RUNTIME_STATS
@@ -2112,8 +2111,7 @@ class DaemonCore : public Service
 
 	int m_refresh_dns_timer;
 
-    typedef HashTable <pid_t, PidEntry *> PidHashTable;
-    PidHashTable* pidTable;
+	std::map<pid_t, PidEntry> pidTable;
     pid_t mypid;
     pid_t ppid;
 

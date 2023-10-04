@@ -20,6 +20,8 @@
 
 #include "condor_common.h"
 
+#include <tuple>
+
 extern "C" {
 
 char *
@@ -44,7 +46,7 @@ d_format_time( double dsecs )
         minutes = secs / MINUTES;
         secs %= MINUTES;
 
-        (void)snprintf(answer, sizeof(answer), "%d %02d:%02d:%02d", days, hours, minutes, secs);
+		std::ignore = snprintf(answer, sizeof(answer), "%d %02d:%02d:%02d", days, hours, minutes, secs);
 
         return( answer );
 }

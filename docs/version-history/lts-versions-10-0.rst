@@ -14,26 +14,27 @@ Version 10.0.9
 
 Release Notes:
 
-.. HTCondor version 10.0.9 released on Month Date, 2023.
-
-- HTCondor version 10.0.9 not yet released.
+- HTCondor version 10.0.9 released on September 28, 2023.
 
 New Features:
 
-- None.
+- Updated *condor_upgrade_check* script to check and warn about known incompatibilities
+  introduced in the feature series for HTCondor ``V10`` that can cause issues when
+  upgrading to a newer version (i.e. HTCondor ``V23``).
+  :jira:`1960`
 
 Bugs Fixed:
+
+- Fixed :mod:`htcondor.htchirp` to find its configuration at `_CONDOR_CHIRP_CONFIG`
+  instead of at `_CONDOR_SCRATCH_DIR/.chirp.config`.
+  :jira:`2012`
 
 - Fixed a bug that prevented deletion of stored user passwords with
   *condor_store_cred* on Windows.
   :jira:`1998`
 
-- Fixed an issue for the PPC build with misaligned pointers in the config system.
+- Fixed misaligned pointers issue for the PowerPC architecture in the configuration system.
   :jira:`2001`
-
-- Fixed :mod:`htcondor.htchirp` to find its configuration at `_CONDOR_CHIRP_CONFIG`
-  instead of at `_CONDOR_SCRATCH_DIR/.chirp.config`.
-  :jira:`2012`
 
 .. _lts-version-history-1008:
 
@@ -42,9 +43,7 @@ Version 10.0.8
 
 Release Notes:
 
-.. HTCondor version 10.0.8 released on Month Date, 2023.
-
-- HTCondor version 10.0.8 not yet released.
+- HTCondor version 10.0.8 released on September 14, 2023.
 
 New Features:
 

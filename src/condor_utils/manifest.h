@@ -20,6 +20,12 @@
 #ifndef _CHECKPOINT_MANIFEST_H
 #define _CHECKPOINT_MANIFEST_H
 
+///
+// #include <string>
+// #include <filesystem>
+// #include "manifest.h"
+//
+
 namespace manifest {
 
     // If `fileName` matches `/^MANIFEST.(d\+)$/`, return (\d+) as an int;
@@ -55,13 +61,14 @@ namespace manifest {
         std::string & error );
 
     // Assuming a valid MANIFEST file at `manifestFileName`, invokes
-    // the script specified by `pluginFileName` to delete the files
-    // listed there (aside from `manifestFileName`) from the
-    // `checkpointDestination`.
+    // the script implied by `checkpointDestination` to delete the files
+    // listed in the MANIFEST (aside from `manifestFileName`) from
+    // `checkpointDestination`, passing jobAdPath (among other things)
+    // on tht script's command line.
     bool deleteFilesStoredAt(
       const std::string & checkpointDestination,
       const std::string & manifestFileName,
-      const std::string & pluginFileName,
+      const std::filesystem::path & jobAdPath,
       std::string & error );
 }
 

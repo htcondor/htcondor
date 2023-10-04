@@ -508,7 +508,7 @@ getQueryAd (ClassAd &queryAd)
 		break;
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
-		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
 		break;
 
 	  case SCHEDD_AD:

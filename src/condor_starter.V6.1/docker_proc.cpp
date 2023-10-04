@@ -371,6 +371,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
 		}
+		condor_gettimestamp( job_start_time );
+	
 		// Start a timer to poll for job usage updates.
 		int polling_interval = param_integer("POLLING_INTERVAL",5);
 		updateTid = daemonCore->Register_Timer(2,

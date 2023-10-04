@@ -1607,7 +1607,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		}
 
 		// We only get here if we are actually switching state. (Not if we
-		// requested to to switch to the current state, or if we requested
+		// requested to switch to the current state, or if we requested
 		// to switch away from a _FINAL state).
 
 #ifdef LINUX

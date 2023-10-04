@@ -43,8 +43,7 @@ JobRouterHookMgr::JobRouterHookMgr()
 	  m_warn_translate(true),
 	  m_warn_exit(true),
 	  NUM_HOOKS(5),
-	  UNDEFINED("UNDEFINED"),
-	  m_hook_paths(hashFunction)
+	  UNDEFINED("UNDEFINED")
 {
 	// JOB_EXIT is an old name for JOB_FINALIZE.
 	// Keep both for anyone still using the old name.
@@ -78,24 +77,15 @@ JobRouterHookMgr::~JobRouterHookMgr()
 void
 JobRouterHookMgr::clearHookPaths()
 {
-	std::string key;
-	char** paths;
-	if (0 < m_hook_paths.getNumElements())
-	{
-		m_hook_paths.startIterations();
-		while (m_hook_paths.iterate(key, paths))
-		{
-			for (int i = 0; i < NUM_HOOKS; i++)
-			{
-				if (NULL != paths[i] && UNDEFINED != paths[i])
-				{
-					free(paths[i]);
-				}
+	for (auto& [key, paths]: m_hook_paths) {
+		for (int i=0; i<NUM_HOOKS; i++) {
+			if (paths[i] && paths[i] != UNDEFINED) {
+				free(paths[i]);
 			}
-			delete[] paths;
 		}
-		m_hook_paths.clear();
+		delete [] paths;
 	}
+	m_hook_paths.clear();
 }
 
 
@@ -146,15 +136,17 @@ JobRouterHookMgr::getHookPath(HookType hook_type, const classad::ClassAd &ad)
 		return NULL;
 	}
 
-	if (0 > m_hook_paths.lookup(keyword, paths))
-	{
+	auto itr = m_hook_paths.find(keyword);
+	if (itr == m_hook_paths.end()) {
 		// Initialize the hook paths for this keyword
 		paths = new char*[NUM_HOOKS];
 		for (int i = 0; i < NUM_HOOKS; i++)
 		{
 			paths[i] = NULL;
 		}
-		m_hook_paths.insert(keyword, paths);
+		m_hook_paths[keyword] = paths;
+	} else {
+		paths = itr->second;
 	}
 
 	hook_path = paths[m_hook_maps[hook_type]-1];

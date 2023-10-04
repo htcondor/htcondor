@@ -200,9 +200,16 @@ static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
 	bool valid_defaults = true;
 	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
 
+	bool using_defaults = param_defined("JOB_ROUTER_DEFAULTS");
+	if (using_defaults) {
+		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is deprecated and will be removed for V24 of HTCondor. New configuration\n");
+		dprintf(D_ALWAYS, "                   syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.\n");
+		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series\n");
+	}
+
 	// NOTE: for htcondor 9.0 we should change the default of this knob to false
 	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
-	if ( ! use_entries && param_defined("JOB_ROUTER_DEFAULTS")) {
+	if ( ! use_entries && using_defaults) {
 		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is defined, but will be ignored because JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES is false\n");
 		return true;
 	}
@@ -380,6 +387,23 @@ JobRouter::config( int /* timerID */ ) {
 	auto_free_ptr routing_file(param("JOB_ROUTER_ENTRIES_FILE"));
 	auto_free_ptr routing_cmd(param("JOB_ROUTER_ENTRIES_CMD"));
 	auto_free_ptr routing_entries(param("JOB_ROUTER_ENTRIES"));
+
+	std::string used_deprecated = "";
+	if (routing_file) used_deprecated += "JOB_ROUTER_ENTRIES_FILE";
+	if (routing_cmd) {
+		if (! used_deprecated.empty()) used_deprecated += ", ";
+		used_deprecated += "JOB_ROUTER_ENTRIES_CMD";
+	}
+	if (routing_entries) {
+		if (! used_deprecated.empty()) used_deprecated += ", ";
+		used_deprecated += "JOB_ROUTER_ENTRIES";
+	}
+
+	if (! used_deprecated.empty()) {
+		dprintf(D_ALWAYS, "JobRouter WARNING: %s are deprecated and will be removed for V24 of HTCondor. New configuration\n", used_deprecated.c_str());
+		dprintf(D_ALWAYS, "                   syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.\n");
+		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series.\n");
+	}
 
 	// NOTE: for htcondor 9.0 we should change the default of this knob to false
 	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);

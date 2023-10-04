@@ -157,6 +157,6 @@ namespace dc {
 	};
 
 } // end namespace dc
-} // end namespace dc
+} // end namespace condor
 
 #endif /* defined(_CONDOR_DC_COROUTINES_H) */

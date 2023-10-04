@@ -89,20 +89,14 @@ License: BSD-4-clause
  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Files: src/condor_rmdir/{tokenize.cpp bprint.h harylist.h}
+Files: src/condor_rmdir/tokenize.cpp
+       src/condor_rmdir/bprint.h
+       src/condor_rmdir/harylist.h
 Copyright: 2010, John M. Knoeller
-License: Apache-2.0
-
-Files: src/condor_dagman/node_scheduler/*
-Copyright: 2005 Argonne National Laboratory
 License: Apache-2.0
 
 Files: src/safefile/*
 Copyright: 2007-2008, 2011 James A. Kupsch
-License: Apache-2.0
-
-Files: src/condor_filetransfer_plugins/hdfs*
-Copyright: 2006, Apache Software Foundation
 License: Apache-2.0
 
 Files: src/condor_filetransfer_plugins/stdint-msvc.h
@@ -138,9 +132,7 @@ Files: *.cmake
  src/condor_startd.V6/*StartdPlugin*
  src/condor_schedd.V6/*Plugin*
  src/condor_utils/*Plugin*
- src/condor_utils/ConcurrencyLimitUtils.*
  src/condor_negotiator.V6/*NegotiatorPlugin*
- src/condor_mail/AssemblyInfo.cpp
  src/condor_examples/condor_limits_wrapper.sh
 Copyright: 2008 Red Hat, Inc
 License: Apache-2.0

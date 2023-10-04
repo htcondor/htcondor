@@ -51,25 +51,23 @@ const char * SlotType::type_param(const char * name)
 	return NULL;
 }
 
-/*static*/ const char * SlotType::type_param(int type_id, const char * name)
+/*static*/ const char * SlotType::type_param(unsigned int type_id, const char * name)
 {
-	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
-	if (type_id < (int)types.size()) {
+	if (type_id < types.size()) {
 		return types[type_id].type_param(name);
 	}
 	return NULL;
 }
 /*static*/ const char * SlotType::type_param(CpuAttributes* p_attr, const char * name)
 {
-	if (p_attr) { return type_param(p_attr->type(), name); }
+	if (p_attr) { return type_param(p_attr->type_id(), name); }
 	return NULL;
 }
 
-/*static*/ bool SlotType::type_param_boolean(int type_id, const char * name, bool def_value)
+/*static*/ bool SlotType::type_param_boolean(unsigned int type_id, const char * name, bool def_value)
 {
 	bool result = def_value;
-	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
-	if (type_id < (int)types.size()) {
+	if (type_id < types.size()) {
 		const char * str = types[type_id].type_param(name);
 		if ( ! str || ! string_is_boolean_param(str, result))
 			result = def_value;
@@ -79,16 +77,15 @@ const char * SlotType::type_param(const char * name)
 /*static*/ bool SlotType::type_param_boolean(CpuAttributes* p_attr, const char * name, bool def_value)
 {
 	if ( ! p_attr) return def_value;
-	return type_param_boolean(p_attr->type(), name, def_value);
+	return type_param_boolean(p_attr->type_id(), name, def_value);
 }
 /*static*/ long long SlotType::type_param_long(CpuAttributes* p_attr, const char * name, long long def_value)
 {
 	if ( ! p_attr) return def_value;
 
 	long long result = def_value;
-	int type_id = p_attr->type();
-	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
-	if (type_id < (int)types.size()) {
+	unsigned int type_id = p_attr->type_id();
+	if (type_id < types.size()) {
 		const char * str = types[type_id].type_param(name);
 		if ( ! str || ! string_is_long_param(str, result))
 			result = def_value;
@@ -160,6 +157,10 @@ const char * SlotType::type_param(const char * name)
 	}
 	for (size_t ix = 0; ix < types.size(); ++ix) { types[ix].clear(); }
 	warned_startd_attrs_once = false; // allow the warning about mixing STARTD_ATTRS and STARTD_EXPRS once again
+
+	// default SLOT_TYPE_0_PARTITIONABLE to true
+	// we do this here rather than in the param table so it will not be visible to config_val
+	types[0].params["PARTITIONABLE"] = "true";
 
 	Regex re;
 	int errcode = 0, erroffset = 0;
@@ -313,9 +314,9 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	m_hook_keyword_initialized = false;
 #endif
 
-	if( r_attr->type() ) {
+	if( r_attr->type_id() ) {
 		dprintf( D_ALWAYS, "New %smachine resource of type %d allocated\n",
-				 r_backfill_slot ? "backfill " : "",  r_attr->type() );
+				 r_backfill_slot ? "backfill " : "",  r_attr->type_id() );
 	} else {
 		dprintf( D_ALWAYS, "New %smachine resource allocated\n", r_backfill_slot ? "backfill " : "");
 	}
@@ -1632,7 +1633,11 @@ Resource::final_update( void )
 
 		// Set the correct types
 	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
-	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+#ifdef USE_STARTD_SLOT_ADTYPE
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_SLOT_ADTYPE);
+#else
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
+#endif
 
 	/*
 	 * NOTE: the collector depends on the data below for performance reasons
@@ -2417,7 +2422,11 @@ void Resource::publish_static(ClassAd* cap)
 	}
 
 	// Set the correct types on the ClassAd
-	SetMyTypeName( *cap,STARTD_ADTYPE );
+#ifdef USE_STARTD_SLOT_ADTYPE
+	SetMyTypeName( *cap,STARTD_SLOT_ADTYPE );
+#else
+	SetMyTypeName( *cap,STARTD_OLD_ADTYPE );
+#endif
 	cap->Assign(ATTR_TARGET_TYPE, JOB_ADTYPE); // because matchmaking before 23.0 needs this
 
 	// We need these for both public and private ads
@@ -2551,9 +2560,7 @@ void Resource::publish_static(ClassAd* cap)
 		cap->Update(r_attr->get_mach_attr()->machres_attrs());
 
 		// advertise the slot type id number, as in SLOT_TYPE_<N>
-		cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type());
-		// advertise slot type id, but don't treat negative as a signal for "dynamic"
-		//cap->Assign(ATTR_SLOT_TYPE_ID, (r_attr->type() < 0) ? -(r_attr->type()) : r_attr->type() );
+		cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type_id() );
 
 		switch (get_feature()) {
 		case PARTITIONABLE_SLOT:
@@ -2589,7 +2596,7 @@ void Resource::publish_static(ClassAd* cap)
 		std::string expr;
 		// A negative slot type indicates a d-slot, in which case I want to use
 		// the slot-type of its parent for inheriting CP-related configurations:
-		int slot_type = (type() >= 0) ? type() : -type();
+		unsigned int slot_type = type_id();
 
 		if ( ! SlotType::param(expr, r_attr, "SLOT_WEIGHT") &&
 			 ! SlotType::param(expr, r_attr, "SlotWeight")) {
@@ -2839,7 +2846,11 @@ Resource::publish_private( ClassAd *ad )
 {
 		// Needed by the collector to correctly respond to queries
 		// for private ads.  As of 7.2.0, the 
-	SetMyTypeName( *ad, STARTD_ADTYPE );
+#ifdef USE_STARTD_SLOT_ADTYPE
+	SetMyTypeName( *ad, STARTD_SLOT_ADTYPE );
+#else
+	SetMyTypeName( *ad, STARTD_OLD_ADTYPE );
+#endif
 
 		// For backward compatibility with pre 7.2.0 collectors, send
 		// name and IP address in private ad (needed to match up the
@@ -3918,7 +3929,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 				"Match requesting resources: %s\n", reslist.ptr());
 		}
 
-		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, -rip->type(), false );
+		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, rip->type_id(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );

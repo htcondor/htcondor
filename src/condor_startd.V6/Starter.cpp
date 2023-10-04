@@ -519,7 +519,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// Dummy up an ad, assume a boinc type job.
 		int now = (int) time(0);
 		SetMyTypeName(dummyAd, JOB_ADTYPE);
-		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE); // TODO: remove this once no-one needs TargetType anymore
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");
@@ -734,11 +734,11 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 
 	// If a slot-type is defined, pass it as the local name
 	// so starter params can switch on slot-type
-	if (claim->rip()->type() != 0) {
+	if (claim->rip()->type_id() != 0) {
 		args.AppendArg("-local-name");
 
 		std::string slot_type_name("slot_type_");
-		formatstr_cat(slot_type_name, "%d", abs(claim->rip()->type()));
+		formatstr_cat(slot_type_name, "%d", claim->rip()->type_id());
 		args.AppendArg(slot_type_name);
 	}
 

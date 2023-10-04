@@ -2,15 +2,17 @@ Source: condor
 Maintainer: HTCondor Developers <htcondor-debian@cs.wisc.edu>
 Uploaders: Tim Theisen <tim@cs.wisc.edu>
 Section: science
-Priority: extra
-Build-Depends: cmake (>= 3.8),
-               debhelper (>= 9~),
+Priority: optional
+Build-Depends: cmake (>= 3.16),
+#if defined(FOCAL)
+               debhelper-compat (= 12),
+#else
+               debhelper-compat (= 13),
+#endif
 #if ! defined(PPC64LE)
-               default-jdk | gcj-jdk,
+               default-jdk,
 #endif
                dh-python,
-               dpkg,
-               dpkg-dev,
                libboost-filesystem-dev,
                libboost-program-options-dev,
                libboost-python-dev,
@@ -19,7 +21,7 @@ Build-Depends: cmake (>= 3.8),
                libboost-test-dev,
                libboost-thread-dev,
                libcgroup-dev,
-               libcurl4-openssl-dev | libcurl4-gnutls-dev,
+               libcurl4-openssl-dev,
                libkrb5-dev,
                libldap2-dev | libldap-dev,
                libmunge-dev,
@@ -33,7 +35,6 @@ Build-Depends: cmake (>= 3.8),
                libxml2-dev,
                libxss-dev,
                lsb-release,
-               po-debconf,
                python3-dev,
                python3-setuptools,
                python3-sphinx,
@@ -47,20 +48,19 @@ Build-Depends: cmake (>= 3.8),
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
 Standards-Version: 3.9.8
-Vcs-Browser: https://anonscm.debian.org/cgit/pkg-exppsy/condor.git
-Vcs-Git: git://anonscm.debian.org/pkg-exppsy/condor.git
-Homepage: https://htcondor.org
-X-Python3-Version: >= 3.6
+Vcs-Browser: https://github.com/htcondor/htcondor
+Vcs-Git: git://github.com/htcondor/htcondor.git
+Homepage: https://htcondor.org/
+X-Python3-Version: >= 3.7
 
 
 Package: condor
 Architecture: any
 Depends: adduser,
-         debconf | debconf-2.0,
          libdate-manip-perl,
          python3,
          python3-requests,
-         lsb-base (>= 3.0-6),
+         lsb-release,
          libcom-err2,
          libgssapi-krb5-2,
          libk5crypto3,
@@ -85,11 +85,11 @@ Suggests: docker.io,
           singularity-container,
           slurm-client
 Conflicts: htcondor (<< ${binary:Version}),
-           libclassad16 (<< ${binary:Version})
+           libclassad16
 Breaks: htcondor (<< ${binary:Version}),
-        libclassad16 (<< ${binary:Version})
+        libclassad16
 Replaces: htcondor (<< ${binary:Version}),
-          libclassad16 (<< ${binary:Version})
+          libclassad16
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -114,11 +114,11 @@ Section: libdevel
 Depends: ${misc:Depends},
          ${shlibs:Depends}
 Conflicts: htcondor-dev (<< ${binary:Version}),
-           libclassad-dev (<< ${binary:Version})
+           libclassad-dev
 Breaks: htcondor-dev (<< ${binary:Version}),
-        libclassad-dev (<< ${binary:Version})
+        libclassad-dev
 Replaces: htcondor-dev (<< ${binary:Version}),
-          libclassad-dev (<< ${binary:Version})
+          libclassad-dev
 Description: distributed workload management system - development files
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -161,7 +161,7 @@ Description: distributed workload management system - documentation
  as configuration and other examples.
 
 Package: minicondor
-Architecture: all
+Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
@@ -187,13 +187,13 @@ Description: distributed workload management system - single node configuration
  basic security, and shortens many timers to be more responsive.
 
 Package: condor-annex-ec2
-Architecture: all
+Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
-Conflicts: htcondor-annex-ce2 (<< ${binary:Version})
-Breaks: htcondor-annex-ce2 (<< ${binary:Version})
-Replaces: htcondor-annex-ce2 (<< ${binary:Version})
+Conflicts: htcondor-annex-ec2 (<< ${binary:Version})
+Breaks: htcondor-annex-ec2 (<< ${binary:Version})
+Replaces: htcondor-annex-ec2 (<< ${binary:Version})
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -215,6 +215,7 @@ Package: condor-upgrade-checks
 Architecture: all
 Section: science
 Depends: condor,
+         python3,
          pcre2-utils,
          ${misc:Depends}
 Conflicts: htcondor-upgrade-checks (<< ${binary:Version})
@@ -234,10 +235,8 @@ Description: distributed workload management system - single node configuration
  system is available, HTCondor can transfer the job's data files on behalf of
  the user.
  .
- HTCondor V9 to V10 check for for known breaking changes:
- 1. IDToken TRUST_DOMAIN default value change
- 2. Upgrade to PCRE2 breaking map file regex sequences
- 3. The way to request GPU resources for a job
+ Examines the current HTCondor installation and recommends changes to ensure
+ a smooth upgrade to a subsequent HTCondor version.
 
 Package: condor-tarball
 Architecture: any
@@ -267,7 +266,8 @@ Package: condor-kbdd
 Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
-         ${misc:Depends}
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -292,7 +292,8 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          libvirt,
-         ${misc:Depends}
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -315,7 +316,8 @@ Package: condor-test
 Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
-         ${misc:Depends}
+         ${misc:Depends},
+         ${shlibs:Depends}
 Conflicts: htcondor-test (<< ${binary:Version})
 Breaks: htcondor-test (<< ${binary:Version})
 Replaces: htcondor-test (<< ${binary:Version})
@@ -361,7 +363,7 @@ Description: distributed workload management system - debugging symbols
  This package provides the debugging symbols for HTCondor.
 
 Package: htcondor
-Architecture: all
+Architecture: any
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -369,7 +371,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-dev
-Architecture: all
+Architecture: any
 Depends: condor-dev (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -385,7 +387,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: minihtcondor
-Architecture: all
+Architecture: any
 Depends: minicondor (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -393,7 +395,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-annex-ec2
-Architecture: all
+Architecture: any
 Depends: condor-annex-ec2 (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -409,7 +411,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-tarball
-Architecture: all
+Architecture: any
 Depends: condor-tarball (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -417,7 +419,7 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-test
-Architecture: all
+Architecture: any
 Depends: condor-test (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -425,8 +427,8 @@ Description: transitional dummy package
  package name "condor". The package is empty and it can safely be removed.
 
 Package: htcondor-dbg
-Architecture: all
-Depends: condor-dbg (= ${binary:Version}),
+Architecture: any
+Depends: htcondor (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
  This package aids upgrades of existing htcondor installations to the

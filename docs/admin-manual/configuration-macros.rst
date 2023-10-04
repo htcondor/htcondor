@@ -5832,6 +5832,16 @@ These macros control the *condor_schedd*.
     when a job requests OAuth2 credentials
     for a configured OAuth2 service.
 
+:macro-def:`CHECKPOINT_DESTINATION_MAPFILE`
+    The location on disk of the file which maps from checkpoint destinations
+    to how invoke the corresponding clean-up plug-in.  Defaults to
+    ``$(ETC)/checkpoint-destination-mapfile``.
+
+:macro-def:`SCHEDD_CHECKPOINT_CLEANUP_TIMEOUT`
+    There's only so long that the *condor_schedd* is willing to let clean-up
+    for a single job (including all of its checkpoints) take.  This macro
+    defines that duration (as an integer number of seconds).
+
 condor_shadow Configuration File Entries
 -----------------------------------------
 
@@ -6730,6 +6740,27 @@ These macros affect *condor_preen*.
     This macro contains a (comma or space separated) list of files that
     *condor_preen* considers invalid files to find in the ``$(LOG)``
     directory. There is no default value.
+
+:macro-def:`MAX_CHECKPOINT_CLEANUP_PROCS`
+    If a checkpoint clean-up plug-in fails when the *condor_schedd*
+    (indirectly) invokes it after a job exits the queue, the next run of
+    *condor_preen* will retry it.  *condor_preen* assumes that the clean-up
+    process is relatively light-weight and starts more than one if more than
+    one job failed to clean up.  This macro limits the number of simultaneous
+    clean-up processes.
+
+:macro-def:`CHECKPOINT_CLEANUP_TIMEOUT`
+    A checkpoint clean-up plug-in is invoked once per file in the checkpoint,
+    and must therefore do its job relatively quickly.  This macro defines
+    (as an integer number of seconds)
+    how long HTCondor will wait for a checkpoint clean-up plug-in to exit
+    before it declares that it's stuck and kills it.
+
+:macro-def:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`
+    In addition to the per-file time-out :macro:`CHECKPOINT_CLEANUP_TIMEOUT`,
+    there's only so long that *condor_preen* is willing to let clean-up for
+    a single job (including all of its checkpoints) take.  This macro
+    defines that duration (as an integer number of seconds).
 
 condor_collector Configuration File Entries
 --------------------------------------------
@@ -8177,14 +8208,24 @@ These macros affect the *condor_job_router* daemon.
     The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
 :macro-def:`JOB_ROUTER_DEFAULTS`
-    Deprecated, use ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES` instead.
     Defined by a single ClassAd in New ClassAd syntax, used to provide
     default values for routes in the *condor_job_router* daemon's
     routing table that are specified by the also deprecated ``JOB_ROUTER_ENTRIES*``.
     The enclosing square brackets are optional.
 
 :macro-def:`JOB_ROUTER_ENTRIES`
-    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     Specification of the job routing table. It is a list of ClassAds, in
     New ClassAd syntax, where each individual ClassAd is surrounded by
     square brackets, and the ClassAds are separated from each other by
@@ -8207,14 +8248,24 @@ These macros affect the *condor_job_router* daemon.
     with the ``JOB_ROUTER_DEFAULTS`` before being used.
 
 :macro-def:`JOB_ROUTER_ENTRIES_FILE`
-    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     A path and file name of a file that contains the ClassAds, in New
     ClassAd syntax, describing the routing table. The specified file is
     periodically reread to check for new information. This occurs every
     ``$(JOB_ROUTER_ENTRIES_REFRESH)`` seconds.
 
 :macro-def:`JOB_ROUTER_ENTRIES_CMD`
-    Deprecated, use ``JOB_ROUTER_ENTRIES_<NAME)`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     Specifies the command line of an external program to run. The output
     of the program defines or updates the routing table, and the output
     must be given in New ClassAd syntax. The specified command is

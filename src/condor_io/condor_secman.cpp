@@ -101,7 +101,7 @@ std::map<DCpermission, std::string> SecMan::m_tag_methods;
 std::string SecMan::m_tag_token_owner;
 KeyCache *SecMan::session_cache = &SecMan::m_default_session_cache;
 std::string SecMan::m_pool_password;
-HashTable<std::string,std::string> SecMan::command_map(hashFunction);
+std::map<std::string,std::string> SecMan::command_map;
 HashTable<std::string,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(hashFunction);
 int SecMan::sec_man_ref_count = 0;
 std::set<std::string> SecMan::m_not_my_family;
@@ -110,11 +110,6 @@ char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
 IpVerify *SecMan::m_ipverify = NULL;
 classad::References SecMan::m_resume_proj;
-
-// Forward dec'l; this was previously a SecMan method but not hidden here to discourage
-// its use; in all cases, an external caller should use SecMan::getAuthenticationMethods
-// instead.
-static std::string getDefaultAuthenticationMethods(DCpermission perm);
 
 void
 SecMan::setTag(const std::string &tag) {
@@ -369,7 +364,10 @@ SecMan::getAuthenticationMethods(DCpermission perm) {
 	std::unique_ptr<char, decltype(&free)> config_methods(getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", perm), free);
 
 	if (!config_methods) {
-		methods = getDefaultAuthenticationMethods(perm);
+		// lookup the param table default value.  getSecSetting has already looked for a config file default
+		// so we only get here if there is not one.
+		const char * def = param_raw_default("SEC_DEFAULT_AUTHENTICATION_METHODS");
+		if (def) { methods = def; }
 	} else {
 		methods = std::string(config_methods.get());
 	}
@@ -1490,7 +1488,12 @@ SecManStartCommand::sendAuthInfo_inner()
 	}
 	bool found_map_ent = false;
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
-		found_map_ent = (m_sec_man.command_map.lookup(m_session_key, sid) == 0);
+
+		auto command_pair = m_sec_man.command_map.find(m_session_key);
+		if (command_pair != m_sec_man.command_map.end()) {
+			found_map_ent = true;
+			sid = command_pair->second;
+		}
 	}
 	if (found_map_ent) {
 		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.c_str(), m_session_key.c_str());
@@ -1501,7 +1504,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
-			if (m_sec_man.command_map.remove(m_session_key.c_str()) == 0) {
+			if (m_sec_man.command_map.erase(m_session_key) == 0) {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found, removed %s from map.\n", sid.c_str(), m_session_key.c_str());
 			} else {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.c_str(), m_session_key.c_str());
@@ -2672,14 +2675,9 @@ SecManStartCommand::receivePostAuthInfo_inner()
 					formatstr (keybuf, "{%s,<%s>}", m_sock->get_connect_addr(), p);
 				}
 
-				// NOTE: HashTable returns ZERO on SUCCESS!!!
-				if (m_sec_man.command_map.insert(keybuf, sesid, true) == 0) {
-					// success
-					if (IsDebugVerbose(D_SECURITY)) {
-						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
-					}
-				} else {
-					dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.c_str());
+				m_sec_man.command_map.insert_or_assign(keybuf, sesid);
+				if (IsDebugVerbose(D_SECURITY)) {
+					dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
 				}
 			}
 			
@@ -3227,7 +3225,7 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
             char * cmd = NULL;
             while ( (cmd = cmd_list.next()) ) {
                 formatstr (keybuf, "{%s,<%s>}", addr.c_str(), cmd);
-                command_map.remove(keybuf);
+                command_map.erase(keybuf);
             }
         }
     }
@@ -3650,46 +3648,6 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 }
 
 
-	// Given a known permission level, determine the default authentication
-	// methods we should use (as a string list) if the sysadmin provides
-	// no input.
-	//
-	// NOTE: this does *not* filter the authentication methods; some might
-	// not be valid for the current build of HTCondor
-static std::string
-getDefaultAuthenticationMethods(DCpermission perm) {
-	std::string methods;
-#if defined(WIN32)
-	// default windows method
-	methods = "NTSSPI";
-#else
-	// default unix method
-	methods = "FS";
-#endif
-
-	methods += ",TOKEN";
-
-#if defined(HAVE_EXT_KRB5)
-	methods += ",KERBEROS";
-#endif
-
-#if defined(HAVE_EXT_SCITOKENS)
-	methods += ",SCITOKENS";
-#endif
-
-	// SSL is last as this may cause the client to be anonymous.
-	methods += ",SSL";
-
-	if (perm == READ) {
-		methods += ",CLAIMTOBE";
-	} else if (perm == CLIENT_PERM) {
-		methods += ",CLAIMTOBE";
-	}
-
-	return methods;
-}
-
-
 std::string SecMan::getDefaultCryptoMethods() {
 	return "AES,BLOWFISH,3DES";
 }
@@ -4056,14 +4014,9 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 			formatstr (keybuf, "{%s,<%s>}", peer_sinful, p);
 		}
 
-		// NOTE: HashTable returns ZERO on SUCCESS!!!
-		if (command_map.insert(keybuf, sesid, true) == 0) {
-			// success
-			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
-			}
-		} else {
-			dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.c_str());
+		command_map.insert_or_assign(keybuf, sesid);
+		if (IsDebugVerbose(D_SECURITY)) {
+			dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
 		}
 	}
 

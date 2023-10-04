@@ -416,6 +416,29 @@ daemon::DoConfig( bool init )
 	this->env.Clear();
 	this->env.MergeFrom(env_parser);
 
+#ifdef LINUX
+	// dprintf calls localtime() (under the hood) a lot.  if the TZ environment
+	// variable is not set, localtime() is required to stat /etc/localtime on 
+	// every call, to see if it hasn't changed.  On busy schedds, this stat consumes
+	// 5 or more percent of our cpu time(!).  Explicitly setting the TZ env var
+	// to :/etc/localtime causes localtime to cache the results.
+	//
+	
+	if (param_boolean("MASTER_SET_TZ", true)) {
+		// But don't overwrite it, if already set
+		if (!env.HasEnv("TZ") && !getenv("TZ")) {
+
+			// /etc/localtime should always exist, but just
+			// double check to be sure
+			struct stat sb;
+			int r = stat("/etc/localtime", &sb);
+			if (r == 0) {
+				env.SetEnv("TZ", ":/etc/localtime");
+			}
+		}
+	}
+#endif
+
 	if( NULL != controller_name ) {
 		DetachController();
 		free( controller_name );
@@ -2696,7 +2719,7 @@ Daemons::DoPeacefulShutdown(
 {
 	int messages = SetPeacefulShutdown(timeout);
 
-	// if we sent any messages, set a timer to to do the StopPeaceful call.
+	// if we sent any messages, set a timer to do the StopPeaceful call.
 	// to give the messages a chance to arrive.
 	bool fTimer = false;
 	if (messages > 0) {

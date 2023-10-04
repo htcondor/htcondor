@@ -160,6 +160,9 @@ Requires: python2-condor = %{version}-%{release}
 Requires: python-requests
 %endif
 
+Requires(post): /sbin/ldconfig
+Requires(postun): /sbin/ldconfig
+
 Requires(pre): shadow-utils
 
 Requires(post): systemd-units
@@ -251,7 +254,7 @@ Provides: %{name}-classads-devel = %{version}-%{release}
 %description
 HTCondor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems, HTCondor
-provides a job queueing mechanism, scheduling policy, priority scheme,
+provides a job queuing mechanism, scheduling policy, priority scheme,
 resource monitoring, and resource management. Users submit their
 serial or parallel jobs to HTCondor, HTCondor places them into a queue,
 chooses when and where to run the jobs based upon a policy, carefully
@@ -273,7 +276,7 @@ Summary: Files needed to build an HTCondor tarball
 Group: Applications/System
 
 %description tarball
-Development files for HTCondor
+Files needed to build an HTCondor tarball
 
 %endif
 
@@ -315,7 +318,7 @@ A collection of tests to verify that HTCondor is operating properly.
 #######################
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %package -n python2-condor
-Summary: Python bindings for HTCondor.
+Summary: Python bindings for HTCondor
 Group: Applications/System
 Requires: python >= 2.2
 Requires: %name = %version-%release
@@ -337,7 +340,7 @@ the ClassAd library and HTCondor from python
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 #######################
 %package -n python3-condor
-Summary: Python bindings for HTCondor.
+Summary: Python bindings for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
@@ -355,7 +358,7 @@ the ClassAd library and HTCondor from python
 
 #######################
 %package credmon-oauth
-Summary: OAuth2 credmon for HTCondor.
+Summary: OAuth2 credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
@@ -384,7 +387,7 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 
 #######################
 %package credmon-vault
-Summary: Vault credmon for HTCondor.
+Summary: Vault credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
@@ -423,7 +426,7 @@ shortens many timers to be more responsive.
 
 #######################
 %package annex-ec2
-Summary: Configuration and scripts to make an EC2 image annex-compatible.
+Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
 Requires: %name = %version-%release
 Requires(post): /sbin/chkconfig
@@ -455,10 +458,8 @@ Requires: python3-condor
 Requires: pcre2-tools
 
 %description upgrade-checks
-HTCondor V9 to V10 check for for known breaking changes:
-1. IDToken TRUST_DOMAIN default value change
-2. Upgrade to PCRE2 breaking map file regex sequences
-3. The way to request GPU resources for a job
+Examines the current HTCondor installation and recommends changes to ensure
+a smooth upgrade to a subsequent HTCondor version.
 
 %files upgrade-checks
 %_bindir/condor_upgrade_check
@@ -590,7 +591,6 @@ ln -s condor_shadow %{buildroot}/%{_sbindir}/condor_shadow_s
 %endif
 
 populate /usr/share/doc/condor-%{version}/examples %{buildroot}/usr/share/doc/condor-%{version}/etc/examples/*
-#rm -rf %{buildroot}/usr/share/doc/condor-%{version}/etc
 
 mkdir -p %{buildroot}/%{_sysconfdir}/condor
 # the default condor_config file is not architecture aware and thus
@@ -626,17 +626,6 @@ mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/krb_credentials
 mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 
 
-# not packaging deployment tools
-#rm -f %{buildroot}/%{_mandir}/man1/condor_config_bind.1
-#rm -f %{buildroot}/%{_mandir}/man1/condor_cold_start.1
-#rm -f %{buildroot}/%{_mandir}/man1/condor_cold_stop.1
-#rm -f %{buildroot}/%{_mandir}/man1/uniq_pid_midwife.1
-#rm -f %{buildroot}/%{_mandir}/man1/uniq_pid_undertaker.1
-#rm -f %{buildroot}/%{_mandir}/man1/filelock_midwife.1
-#rm -f %{buildroot}/%{_mandir}/man1/filelock_undertaker.1
-#rm -f %{buildroot}/%{_mandir}/man1/install_release.1
-#rm -f %{buildroot}/%{_mandir}/man1/cleanup_release.1
-
 # not packaging configure/install scripts
 %if ! %uw_build
 rm -f %{buildroot}%{_bindir}/make-personal-from-tarball
@@ -645,16 +634,6 @@ rm -f %{buildroot}%{_sbindir}/condor_install
 rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_install.1
 %endif
-
-# not packaging legacy cruft
-#rm -f %{buildroot}/%{_mandir}/man1/condor_master_off.1
-#rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
-
-# this one got removed but the manpage was left around
-#rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
-
-# remove junk man page (Fedora 32 build)
-#rm -f %{buildroot}/%{_mandir}/man1/_static/graphviz.css
 
 mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
 mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
@@ -676,10 +655,6 @@ mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
 ln -s ../../../..%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
 %endif
 ###
-
-# Remove junk
-#rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
-#rm -rf %{buildroot}/%{_sysconfdir}/init.d
 
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_tmpfilesdir}
@@ -713,90 +688,12 @@ mv %{buildroot}/usr/lib64/condor/libpyclassad2*.so %{buildroot}/usr/lib64
 %endif
 mv %{buildroot}/usr/lib64/condor/libpyclassad3*.so %{buildroot}/usr/lib64
 
-#rm -rf %{buildroot}/usr/include/condor
-#rm -rf %{buildroot}/usr/lib64/condor/libchirp_client.a
-#rm -rf %{buildroot}/usr/lib64/condor/libcondorapi.a
-#rm -rf %{buildroot}/usr/lib64/libclassad.a
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/NOTICE.txt
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/README
 
 # we must place the config examples in builddir so %doc can find them
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%condor_version
-
-# Remove stuff that comes from the full-deploy
-#rm -rf %{buildroot}%{_sbindir}/cleanup_release
-#rm -rf %{buildroot}%{_sbindir}/condor
-#rm -rf %{buildroot}%{_sbindir}/condor_cleanup_local
-#rm -rf %{buildroot}%{_sbindir}/condor_cold_start
-#rm -rf %{buildroot}%{_sbindir}/condor_cold_stop
-#rm -rf %{buildroot}%{_sbindir}/condor_config_bind
-#rm -rf %{buildroot}%{_sbindir}/condor_configure
-#rm -rf %{buildroot}%{_sbindir}/condor_install
-#rm -rf %{buildroot}%{_sbindir}/condor_install_local
-#rm -rf %{buildroot}%{_sbindir}/condor_local_start
-#rm -rf %{buildroot}%{_sbindir}/condor_local_stop
-#rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
-#rm -rf %{buildroot}%{_sbindir}/filelock_midwife
-#rm -rf %{buildroot}%{_sbindir}/filelock_undertaker
-#rm -rf %{buildroot}%{_sbindir}/install_release
-#rm -rf %{buildroot}%{_sbindir}/uniq_pid_command
-#rm -rf %{buildroot}%{_sbindir}/uniq_pid_midwife
-#rm -rf %{buildroot}%{_sbindir}/uniq_pid_undertaker
-#rm -rf %{buildroot}%{_sbindir}/condor_master_off
-#rm -rf %{buildroot}%{_sbindir}/condor_reconfig_schedd
-#rm -rf %{buildroot}%{_datadir}/condor/Execute.pm
-#rm -rf %{buildroot}%{_datadir}/condor/ExecuteLock.pm
-#rm -rf %{buildroot}%{_datadir}/condor/FileLock.pm
-#rm -rf %{buildroot}%{_usrsrc}/chirp/chirp_*
-#rm -rf %{buildroot}%{_usrsrc}/startd_factory
-#rm -rf %{buildroot}/usr/DOC
-#rm -rf %{buildroot}/usr/INSTALL
-#rm -rf %{buildroot}/usr/LICENSE
-#rm -rf %{buildroot}/usr/NOTICE.txt
-#rm -rf %{buildroot}/usr/README
-#rm -rf %{buildroot}/usr/examples/
-#rm -rf %{buildroot}%{_includedir}/MyString.h
-#rm -rf %{buildroot}%{_includedir}/chirp_client.h
-#rm -rf %{buildroot}%{_includedir}/compat_classad*
-#rm -rf %{buildroot}%{_includedir}/condor_classad.h
-#rm -rf %{buildroot}%{_includedir}/condor_constants.h
-#rm -rf %{buildroot}%{_includedir}/condor_event.h
-#rm -rf %{buildroot}%{_includedir}/condor_header_features.h
-#rm -rf %{buildroot}%{_includedir}/condor_holdcodes.h
-#rm -rf %{buildroot}%{_includedir}/file_lock.h
-#rm -rf %{buildroot}%{_includedir}/iso_dates.h
-#rm -rf %{buildroot}%{_includedir}/read_user_log.h
-#rm -rf %{buildroot}%{_includedir}/stl_string_utils.h
-#rm -rf %{buildroot}%{_includedir}/user_log.README
-#rm -rf %{buildroot}%{_includedir}/user_log.c++.h
-#rm -rf %{buildroot}%{_includedir}/usr/include/condor_ast.h
-#rm -rf %{buildroot}%{_includedir}/condor_astbase.h
-#rm -rf %{buildroot}%{_includedir}/condor_attrlist.h
-#rm -rf %{buildroot}%{_includedir}/condor_exprtype.h
-#rm -rf %{buildroot}%{_includedir}/condor_parser.h
-#rm -rf %{buildroot}%{_includedir}/write_user_log.h
-#rm -rf %{buildroot}%{_includedir}/condor_ast.h
-#rm -rf %{buildroot}%{_includedir}/README
-#rm -rf %{buildroot}%{_libexecdir}/condor/bgp_*
-#rm -rf %{buildroot}%{_datadir}/condor/libchirp_client.a
-#rm -rf %{buildroot}%{_datadir}/condor/libcondorapi.a
-#rm -rf %{buildroot}%{_mandir}/man1/cleanup_release.1*
-#rm -rf %{buildroot}%{_mandir}/man1/condor_cold_start.1*
-#rm -rf %{buildroot}%{_mandir}/man1/condor_cold_stop.1*
-#rm -rf %{buildroot}%{_mandir}/man1/condor_config_bind.1*
-#rm -rf %{buildroot}%{_mandir}/man1/condor_configure.1*
-#rm -rf %{buildroot}%{_mandir}/man1/condor_load_history.1*
-#rm -rf %{buildroot}%{_mandir}/man1/filelock_midwife.1*
-#rm -rf %{buildroot}%{_mandir}/man1/filelock_undertaker.1*
-#rm -rf %{buildroot}%{_mandir}/man1/install_release.1*
-#rm -rf %{buildroot}%{_mandir}/man1/uniq_pid_midwife.1*
-#rm -rf %{buildroot}%{_mandir}/man1/uniq_pid_undertaker.1*
-
-#rm -rf %{buildroot}%{_datadir}/condor/python/{htcondor,classad}.so
-#rm -rf %{buildroot}%{_datadir}/condor/{libpyclassad*,htcondor,classad}.so
-#rm -rf %{buildroot}%{_datadir}/condor/python/{py3htcondor,py3classad}.so
-#rm -rf %{buildroot}%{_datadir}/condor/{libpy3classad*,py3htcondor,py3classad}.so
 
 # Fix up blahp installation
 %if 0%{?rhel} == 7
@@ -984,6 +881,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%_mandir/man1/condor_test_token.1.gz
 %_mandir/man1/condor_token_create.1.gz
 %_mandir/man1/condor_token_fetch.1.gz
 %_mandir/man1/condor_token_list.1.gz
@@ -1090,6 +988,7 @@ rm -rf %{buildroot}
 %_bindir/condor_remote_cluster
 %_bindir/bosco_cluster
 %_bindir/condor_ssh_start
+%_bindir/condor_test_token
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1328,6 +1227,7 @@ rm -rf %{buildroot}
 
 
 %post
+/sbin/ldconfig
 %if 0%{?fedora}
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
@@ -1361,6 +1261,7 @@ if [ $1 -eq 0 ] ; then
 fi
 
 %postun
+/sbin/ldconfig
 /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 # Note we don't try to restart - HTCondor will automatically notice the
 # binary has changed and do graceful or peaceful restart, based on its
@@ -1374,6 +1275,46 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Sep 29 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.0-1
+- Absent slot configuration, execution points will use a partitionable slot
+- Linux cgroups enforce maximum memory utilization by default
+- Can now define DAGMan save points to be able to rerun DAGs from there
+- Much better control over environment variables when using DAGMan
+- Administrators can enable and disable job submission for a specific user
+- Can set a minimum number of CPUs allocated to a user
+- condor_status -gpus shows nodes with GPUs and the GPU properties
+- condor_status -compact shows a row for each slot type
+- Container images may now be transferred via a file transfer plugin
+- Support for Enterprise Linux 9, Amazon Linux 2023, and Debian 12
+- Can write job information in AP history file for every execution attempt
+- Can run defrag daemons with different policies on distinct sets of nodes
+- Add condor_test_token tool to generate a short lived SciToken for testing
+- The job’s executable is no longer renamed to ‘condor_exec.exe’
+
+* Thu Sep 28 2023 Tim Theisen <tim@cs.wisc.edu> - 10.9.0-1
+- The condor_upgrade_check script now provides guidance on updating to 23.0
+- The htchirp Python binding now properly locates the chirp configuration
+- Fix bug that prevented deletion of HTCondor passwords on Windows
+
+* Thu Sep 28 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.9-1
+- The condor_upgrade_check script now provides guidance on updating to 23.0
+- The htchirp Python binding now properly locates the chirp configuration
+- Fix bug that prevented deletion of HTCondor passwords on Windows
+
+* Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.8.0-1
+- Fold the classads, blahp, and procd RPMs into the main condor RPM
+- Align the Debian packages and package names with the RPM packaging
+- On Linux, the default configuration enforces memory limits with cgroups
+- condor_status -gpus shows nodes with GPUs and the GPU properties
+- condor_status -compact shows a row for each slot type
+- New ENV command controls which environment variables are present in DAGMan
+
+* Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.8-1
+- Avoid kernel panic on some Enterprise Linux 8 systems
+- Fix bug where early termination of service nodes could crash DAGMan
+- Limit email about long file transfer queue to once daily
+- Various fixes to condor_adstash
+
 * Wed Aug 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.7.1-1
 - Fix performance problem detecting futile nodes in a large and bushy DAG
 

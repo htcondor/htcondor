@@ -1,3 +1,58 @@
+condor (23.0.0-1) stable; urgency=medium
+
+  * Absent slot configuration, execution points will use a partitionable slot
+  * Linux cgroups enforce maximum memory utilization by default
+  * Can now define DAGMan save points to be able to rerun DAGs from there
+  * Much better control over environment variables when using DAGMan
+  * Administrators can enable and disable job submission for a specific user
+  * Can set a minimum number of CPUs allocated to a user
+  * condor_status -gpus shows nodes with GPUs and the GPU properties
+  * condor_status -compact shows a row for each slot type
+  * Container images may now be transferred via a file transfer plugin
+  * Support for Enterprise Linux 9, Amazon Linux 2023, and Debian 12
+  * Can write job information in AP history file for every execution attempt
+  * Can run defrag daemons with different policies on distinct sets of nodes
+  * Add condor_test_token tool to generate a short lived SciToken for testing
+  * The job’s executable is no longer renamed to ‘condor_exec.exe’
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 29 Sep 2023 17:22:00 -0500
+
+condor (10.9.0-1) stable; urgency=medium
+
+  * The condor_upgrade_check script now provides guidance on updating to 23.0
+  * The htchirp Python binding now properly locates the chirp configuration
+  * Fix bug that prevented deletion of HTCondor passwords on Windows
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 28 Sep 2023 07:25:00 -0500
+
+condor (10.0.9-1) stable; urgency=medium
+
+  * The condor_upgrade_check script now provides guidance on updating to 23.0
+  * The htchirp Python binding now properly locates the chirp configuration
+  * Fix bug that prevented deletion of HTCondor passwords on Windows
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 28 Sep 2023 07:00:00 -0500
+
+condor (10.8.0-1) stable; urgency=medium
+
+  * Fold the classads, blahp, and procd RPMs into the main condor RPM
+  * Align the Debian packages and package names with the RPM packaging
+  * On Linux, the default configuration enforces memory limits with cgroups
+  * condor_status -gpus shows nodes with GPUs and the GPU properties
+  * condor_status -compact shows a row for each slot type
+  * New ENV command controls which environment variables are present in DAGMan
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 14 Sep 2023 09:05:00 -0500
+
+condor (10.0.8-1) stable; urgency=medium
+
+  * Avoid kernel panic on some Enterprise Linux 8 systems
+  * Fix bug where early termination of service nodes could crash DAGMan
+  * Limit email about long file transfer queue to once daily
+  * Various fixes to condor_adstash
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 14 Sep 2023 08:56:00 -0500
+
 condor (10.7.1-1) stable; urgency=medium
 
   * Fix performance problem detecting futile nodes in a large and bushy DAG
