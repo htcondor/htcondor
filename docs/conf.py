@@ -121,7 +121,7 @@ pygments_style = 'colorful'
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('man-pages/classad_eval', 'classad_eval', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/classads', 'classads', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/classads', 'classads', u'HTCondor Manual', [u'HTCondor Team'], 7),
     ('man-pages/condor_adstash', 'condor_adstash', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_advertise', 'condor_advertise', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_annex', 'condor_annex', u'HTCondor Manual', [u'HTCondor Team'], 1),
