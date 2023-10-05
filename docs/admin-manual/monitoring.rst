@@ -241,8 +241,7 @@ invalidate the absent machine ClassAd.
 Absent ClassAds, like offline ClassAds, are stored to disk to ensure
 that they are remembered, even across *condor_collector* crashes. The
 configuration variable :macro:`COLLECTOR_PERSISTENT_AD_LOG` defines the file in which the
-ClassAds are stored, and replaces the no longer used variable
-``OFFLINE_LOG``. Absent ClassAds are retained on disk as maintained by
+ClassAds are stored. Absent ClassAds are retained on disk as maintained by
 the *condor_collector* for a length of time in seconds defined by the
 configuration variable :macro:`ABSENT_EXPIRE_ADS_AFTER`. A value of 0 for this variable
 means that the ClassAds are never discarded, and the default value is
