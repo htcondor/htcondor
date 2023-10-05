@@ -1561,8 +1561,6 @@ int generic_stats_ParseConfigString(
 class StatisticsPool {
 public:
    StatisticsPool()
-      : zpub(hashFunction)
-      , pool(hashFuncVoidPtr)
       {
       };
    ~StatisticsPool();
@@ -1597,18 +1595,18 @@ public:
    //
    template <typename T> T* GetProbe(const char * name)
    {
-      pubitem item;
-      if (zpub.lookup(name, item) >= 0)
-         return (T*)item.pitem;
+      auto itr = zpub.find(name);
+      if (itr != zpub.end())
+         return (T*)itr->second.pitem;
       return 0;
    }
 
    stats_entry_base* GetProbe(const char * name, int & units)
    {
-      pubitem item;
-      if (zpub.lookup(name, item) >= 0) {
-         units = item.units;
-         return (stats_entry_base*)item.pitem;
+      auto itr = zpub.find(name);
+      if (itr != zpub.end()) {
+         units = itr->second.units;
+         return (stats_entry_base*)itr->second.pitem;
       }
       return 0;
    }
@@ -1712,10 +1710,10 @@ private:
       FN_STATS_ENTRY_DELETE  Delete;
    };
    // table of values to publish, possibly more than one for each probe
-   HashTable<std::string,pubitem> zpub;
+   std::map<std::string, pubitem, std::less<>> zpub;
 
    // table of unique probes counters, used to Advance and Clear the items.
-   HashTable<void*,poolitem> pool;
+   std::map<void*,poolitem> pool;
 
    void InsertProbe (
       const char * name,       // unique name for the probe
