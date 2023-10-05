@@ -1783,11 +1783,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		}
 		dprintf(D_SECURITY|D_VERBOSE, "SESSION: fallback crypto method would be %s.\n", fallback_method_str.c_str());
 
-		std::vector<KeyInfo*> keyvec;
+		std::vector<KeyInfo> keyvec;
 		dprintf(D_SECURITY|D_VERBOSE, "SESSION: server checking key type: %i\n", (m_key ? m_key->getProtocol() : -1));
 		if (m_key) {
 			// put the normal key into the vector
-			keyvec.push_back(new KeyInfo(*m_key));
+			keyvec.emplace_back(*m_key);
 
 			// now see if we want to (and are allowed) to add a fallback key in addition to AES
 			if (m_key->getProtocol() == CONDOR_AESGCM) {
@@ -1796,7 +1796,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 					dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
 					StringList sl(all_methods.c_str());
 					if (sl.contains_anycase(fallback_method_str.c_str())) {
-						keyvec.push_back(new KeyInfo(m_key->getKeyData(), 24, fallback_method, 0));
+						keyvec.emplace_back(m_key->getKeyData(), 24, fallback_method, 0);
 						dprintf(D_SECURITY, "SESSION: server duplicated AES to %s key for UDP.\n",
 							fallback_method_str.c_str());
 					} else {
@@ -1814,7 +1814,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		// because then this key would get confused for an
 		// outgoing session to a daemon with that IP and
 		// port as its command socket.
-		KeyCacheEntry tmp_key(m_sid, "", keyvec, m_policy, expiration_time, session_lease );
+		KeyCacheEntry tmp_key(m_sid, "", keyvec, *m_policy, expiration_time, session_lease );
 		m_sec_man->session_cache->insert(tmp_key);
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
 		if (IsDebugVerbose(D_SECURITY)) {

@@ -2608,11 +2608,11 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			int session_lease = 0;
 			m_auth_info.LookupInteger(ATTR_SEC_SESSION_LEASE, session_lease );
 
-			std::vector<KeyInfo*> keyvec;
+			std::vector<KeyInfo> keyvec;
 			dprintf(D_SECURITY|D_VERBOSE, "SESSION: client checking key type: %i\n", (m_private_key ? m_private_key->getProtocol() : -1));
 			if (m_private_key) {
 				// put the normal key into the vector
-				keyvec.push_back(new KeyInfo(*m_private_key));
+				keyvec.emplace_back(*m_private_key);
 
 				// now see if we want to (and are allowed) to add a BLOWFISH key in addition to AES
 				if (m_private_key->getProtocol() == CONDOR_AESGCM) {
@@ -2632,7 +2632,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 						dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
 						StringList sl(all_methods.c_str());
 						if (sl.contains_anycase(fallback_method_str.c_str())) {
-							keyvec.push_back(new KeyInfo(m_private_key->getKeyData(), 24, fallback_method, 0));
+							keyvec.emplace_back(m_private_key->getKeyData(), 24, fallback_method, 0);
 							dprintf(D_SECURITY, "SESSION: client duplicated AES to %s key for UDP.\n", fallback_method_str.c_str());
 						} else {
 							dprintf(D_SECURITY, "SESSION: %s not allowed.  UDP will not work.\n", fallback_method_str.c_str());
@@ -2646,7 +2646,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
 			KeyCacheEntry tmp_key( sesid, m_sock->get_connect_addr(), keyvec,
-								   &m_auth_info, expiration_time,
+								   m_auth_info, expiration_time,
 								   session_lease ); 
 			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
 
@@ -3915,7 +3915,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	// TODO What happens if we don't support any of the methods in the list?
 	//   The old code creates a KeyInfo with CONDOR_NO_PROTOCOL.
-	std::vector<KeyInfo*> keys_list;
+	std::vector<KeyInfo> keys_list;
 	Tokenize(crypto_methods);
 	const char *next_crypto;
 	while ((next_crypto = GetNextToken(",", true))) {
@@ -3939,19 +3939,17 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 				" key generation failed.\n",sesid);
 			return false;
 		}
-		KeyInfo *keyinfo;
 		if (crypt_protocol == CONDOR_AESGCM) {
-			keyinfo = new KeyInfo(keybuf, 32, crypt_protocol, 0);
+			keys_list.emplace_back(keybuf, 32, crypt_protocol, 0);
 		} else {
 			// should this be MAC_SIZE?
-			keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0);
+			keys_list.emplace_back(keybuf, MAC_SIZE, crypt_protocol, 0);
 		}
-		keys_list.push_back(keyinfo);
 		free( keybuf );
 		keybuf = NULL;
 	}
 
-	KeyCacheEntry key(sesid,peer_sinful ? peer_sinful : "",keys_list,&policy,expiration_time,0);
+	KeyCacheEntry key(sesid,peer_sinful ? peer_sinful : "",keys_list,policy,expiration_time,0);
 
 	if( !session_cache->insert(key) ) {
 		KeyCacheEntry *existing = NULL;

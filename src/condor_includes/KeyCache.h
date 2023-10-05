@@ -35,23 +35,11 @@ class KeyCacheEntry {
     KeyCacheEntry(
 			const std::string& id,
 			const std::string& addr,
-			const KeyInfo * key,
-			const ClassAd * policy,
+			std::vector<KeyInfo> key,
+			const ClassAd & policy,
 			time_t expiration,
 			int session_lease
 			);
-    KeyCacheEntry(
-			const std::string& id,
-			const std::string& addr,
-			std::vector<KeyInfo *> key,
-			const ClassAd * policy,
-			time_t expiration,
-			int session_lease
-			);
-    KeyCacheEntry(const KeyCacheEntry &copy);
-    ~KeyCacheEntry();
-
-	const KeyCacheEntry& operator=(const KeyCacheEntry &kc);
 
 	const std::string&    id() const { return _id; }
 	const std::string&    addr() const { return _addr; }
@@ -70,13 +58,10 @@ class KeyCacheEntry {
 	void                  renewLease();
  private:
 
-	void delete_storage();
-	void copy_storage(const KeyCacheEntry &);
-
 	std::string           _id;
 	std::string           _addr;
-	std::vector<KeyInfo*> _keys;
-    ClassAd*             _policy;
+	std::vector<KeyInfo>  _keys;
+    ClassAd              _policy;
     time_t               _expiration;
 	int                  _lease_interval;   // max seconds of unused time
 	time_t               _lease_expiration; // time of lease expiration
