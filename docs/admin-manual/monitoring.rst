@@ -1,14 +1,34 @@
-Monitoring
-==========
+Monitoring with Ganglia, Elasticsearch, etc.
+===========================================
 
 :index:`monitoring<single: monitoring; pool management>`
 :index:`monitoring pools` :index:`pool monitoring`
 
-Information that the *condor_collector* collects can be used to monitor
-a pool. The *condor_status* command can be used to display snapshot of
-the current state of the pool. Monitoring systems can be set up to track
-the state over time, and they might go further, to alert the system
-administrator about exceptional conditions.
+HTCondor keeps operational data about different aspects of the system in
+different places: The *condor_collector* stores current data about all the
+slots and all the daemons in the system.  If absent ads are enabled, the
+*condor_collector* also stores information about slots that are no longer in
+the system, for a fixed amount of time.  All this data may be queried with
+appropriate options to the *condor_status* command. The AP's job history file
+stores data about recent completed and removed jobs, similarly, each EP stores
+a startd_history file with information about jobs that have only run on that
+EP. Both of these may be queried with the *condor_history* command.
+
+While using *condor_status* or *condor_history* works well for one-off or
+ad-hoc queries, both tend to be slow, because none of the data is indexed or
+stored in a proper database.  Furthermore, all these data sources age old data
+out quickly.  Also, there is no graphical UI provided to visualize or analyze
+any of the data.
+
+As there are many robust, well-documented systems to do these sorts of things,
+the best solution is to copy the original data out of the proprietary HTCondor
+formats and into third party monitoring, database and visualization systems.
+
+The *condor_gangliad* is an HTCSS daemon that periodically copies data out of
+the *condor_collector* and into the ganglia monitoring system.  It can also be
+used to populate grafana.  *condor_adstash* is a HTCSS daemon which can copy
+job history information out of the AP's history file and into the Elasticsearch
+database for further querying.
 
 Ganglia
 -------
@@ -17,43 +37,38 @@ Ganglia
 :index:`Ganglia monitoring`
 :index:`condor_gangliad daemon`
 
-Support for the Ganglia monitoring system
-(`http://ganglia.info/ <http://ganglia.info/>`_) is integral to
-HTCondor. Nagios (`http://www.nagios.org/ <http://www.nagios.org/>`_)
-is often used to provide alerts based on data from the Ganglia
-monitoring system. The *condor_gangliad* daemon provides an efficient
-way to take information from an HTCondor pool and supply it to the
-Ganglia monitoring system.
+Installation and configuration of Ganglia itself is beyond the scope of this
+document: complete information is available at the ganglia homepage at
+(`http://ganglia.info/ <http://ganglia.info/>`_), from the O'Reilly book on
+the subject, or numerous webpages.
 
-The *condor_gangliad* gathers up data as specified by its
-configuration, and it streamlines getting that data to the Ganglia
-monitoring system. Updates sent to Ganglia are done using the Ganglia
-shared libraries for efficiency.
+Generally speaking, the *condor_gangliad* should be setup to run on the same
+system where the ganglia *gmetad* is running.  Unless the pools is exceptionally
+large, putting the gmetad and the *condor_gangliad* on the central manager
+machine is a good choice.  To enable the *condor_gangliad*, simply add
+the line
 
-If Ganglia is already deployed in the pool, the monitoring of HTCondor
-is enabled by running the *condor_gangliad* daemon on a single machine
-within the pool. If the machine chosen is the one running Ganglia's
-*gmetad*, then the HTCondor configuration consists of adding
-:macro:`GANGLIAD` to the definition of configuration variable :macro:`DAEMON_LIST`
-on that machine. It may be advantageous to run the *condor_gangliad*
-daemon on the same machine as is running the *condor_collector* daemon,
-because on a large pool with many ClassAds, there is likely to be less
-network traffic. If the *condor_gangliad* daemon is to run on a
-different machine than the one running Ganglia's *gmetad*, modify
+.. code-block:: condor-config
+
+      use FEATURE: ganglia
+
+to the config file on the central manager machine, and *condor_restart* the
+HTCondor system on that machine.  If the *condor_gangliad* daemon is to run on
+a different machine than the one running Ganglia's *gmetad*, modify
 configuration variable :macro:`GANGLIA_GSTAT_COMMAND`
-:index:`GANGLIA_GSTAT_COMMAND` to get the list of monitored hosts
-from the master *gmond* program.
+:index:`GANGLIA_GSTAT_COMMAND` to get the list of monitored hosts from the
+master *gmond* program.
 
-If the pool does not use Ganglia, the pool can still be monitored by a
-separate server running Ganglia.
+The above steps alone should be sufficient to get a default set of metrics
+about the pool into ganglia.  Additional metrics, tuning and other
+information, if needed, follows.
 
-By default, the *condor_gangliad* will only propagate metrics to hosts
-that are already monitored by Ganglia. Set configuration variable
-:macro:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS` to ``True`` to set up a
-Ganglia host to monitor a pool not monitored by Ganglia or have a
-heterogeneous pool where some hosts are not monitored. In this case,
-default graphs that Ganglia provides will not be present. However, the
-HTCondor metrics will appear.
+By default, the *condor_gangliad* will only propagate metrics to hosts that are
+already monitored by Ganglia. Set configuration variable
+:macro:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS` to ``True`` to set up a Ganglia host
+to monitor a pool not monitored by Ganglia or have a heterogeneous pool where
+some hosts are not monitored. In this case, default graphs that Ganglia
+provides will not be present. However, the HTCondor metrics will appear.
 
 On large pools, setting configuration variable
 :macro:`GANGLIAD_PER_EXECUTE_NODE_METRICS` to ``False`` will reduce the amount
@@ -62,11 +77,9 @@ monitor. One can also limit the amount of data by setting configuration
 variable :macro:`GANGLIAD_REQUIREMENTS` Be aware that aggregate sums over the
 entire pool will not be accurate if this variable limits the ClassAds queried.
 
-Metrics to be sent to Ganglia are specified in all files within the
-directory specified by configuration variable
-:macro:`GANGLIAD_METRICS_CONFIG_DIR`. Each file in the directory
-is read, and the format within each file is that of New ClassAds. Here
-is an example of a single metric definition given as a New ClassAd:
+Metrics to be sent to Ganglia are specified in files within the directory
+specified by variable :macro:`GANGLIAD_METRICS_CONFIG_DIR`.  Here is an example
+of a single metric definition given as a New ClassAd:
 
 .. code-block:: condor-classad
 
@@ -217,54 +230,49 @@ Absent ClassAds
 :index:`absent ClassAds<single: absent ClassAds; pool management>`
 :index:`absent ClassAd` :index:`absent ClassAd<single: absent ClassAd; ClassAd>`
 
-By default, HTCondor assumes that resources are transient: the
-*condor_collector* will discard ClassAds older than
-:macro:`CLASSAD_LIFETIME` seconds. Its
-default configuration value is 15 minutes, and as such, the default
-value for :macro:`UPDATE_INTERVAL` will pass
-three times before HTCondor forgets about a resource. In some pools,
-especially those with dedicated resources, this approach may make it
-unnecessarily difficult to determine what the composition of the pool
-ought to be, in the sense of knowing which machines would be in the
-pool, if HTCondor were properly functioning on all of them.
+By default, HTCondor assumes that slots are transient: the
+*condor_collector* will discard ClassAds older than :macro:`CLASSAD_LIFETIME`
+seconds. Its default configuration value is 15 minutes, and as such, the
+default value for :macro:`UPDATE_INTERVAL` will pass three times before
+HTCondor forgets about a resource. In some pools, especially those with
+dedicated resources, this approach may make it unnecessarily difficult to
+determine what the composition of the pool ought to be, in the sense of knowing
+which machines would be in the pool, if HTCondor were properly functioning on
+all of them.
 
-This assumption of transient machines can be modified by the use of
-absent ClassAds. When a machine ClassAd would otherwise expire, the
-*condor_collector* evaluates the configuration variable
-:macro:`ABSENT_REQUIREMENTS` against the
-machine ClassAd. If ``True``, the machine ClassAd will be saved in a
-persistent manner and be marked as absent; this causes the machine to
-appear in the output of ``condor_status -absent``. When the machine
-returns to the pool, its first update to the *condor_collector* will
-invalidate the absent machine ClassAd.
+This assumption of transient machines can be modified by the use of absent
+ClassAds. When a slot ClassAd would otherwise expire, the *condor_collector*
+evaluates the configuration variable :macro:`ABSENT_REQUIREMENTS` against the
+machine ClassAd. If ``True``, the machine ClassAd will be saved in a persistent
+manner and be marked as absent; this causes the machine to appear in the output
+of ``condor_status -absent``. When the machine returns to the pool, its first
+update to the *condor_collector* will invalidate the absent machine ClassAd.
 
-Absent ClassAds, like offline ClassAds, are stored to disk to ensure
-that they are remembered, even across *condor_collector* crashes. The
-configuration variable :macro:`COLLECTOR_PERSISTENT_AD_LOG` defines the file in which the
-ClassAds are stored, and replaces the no longer used variable
-``OFFLINE_LOG``. Absent ClassAds are retained on disk as maintained by
-the *condor_collector* for a length of time in seconds defined by the
-configuration variable :macro:`ABSENT_EXPIRE_ADS_AFTER`. A value of 0 for this variable
-means that the ClassAds are never discarded, and the default value is
-thirty days.
+Absent ClassAds, like offline ClassAds, are stored to disk to ensure that they
+are remembered, even across *condor_collector* crashes. The configuration
+variable :macro:`COLLECTOR_PERSISTENT_AD_LOG` defines the file in which the
+ClassAds are stored, and replaces the no longer used variable ``OFFLINE_LOG``.
+Absent ClassAds are retained on disk as maintained by the *condor_collector*
+for a length of time in seconds defined by the configuration variable
+:macro:`ABSENT_EXPIRE_ADS_AFTER`. A value of 0 for this variable means that the
+ClassAds are never discarded, and the default value is thirty days.
 
-Absent ClassAds are only returned by the *condor_collector* and
-displayed when the **-absent** option to *condor_status* is specified,
-or when the absent machine ClassAd attribute is mentioned on the
-*condor_status* command line. This renders absent ClassAds invisible to
-the rest of the HTCondor infrastructure.
+Absent ClassAds are only returned by the *condor_collector* and displayed when
+the **-absent** option to *condor_status* is specified, or when the absent
+machine ClassAd attribute is mentioned on the *condor_status* command line.
+This renders absent ClassAds invisible to the rest of the HTCondor
+infrastructure.
 
-A daemon may inform the *condor_collector* that the daemon's ClassAd
-should not expire, but should be removed right away; the daemon asks for
-its ClassAd to be invalidated. It may be useful to place an invalidated
-ClassAd in the absent state, instead of having it removed as an
-invalidated ClassAd. An example of a ClassAd that could benefit from
-being absent is a system with an uninterruptible power supply that shuts
-down cleanly but unexpectedly as a result of a power outage. To cause
-all invalidated ClassAds to become absent instead of invalidated, set
-:macro:`EXPIRE_INVALIDATED_ADS` to
-``True``. Invalidated ClassAds will instead be treated as if they
-expired, including when evaluating :macro:`ABSENT_REQUIREMENTS`.
+A daemon may inform the *condor_collector* that the daemon's ClassAd should not
+expire, but should be removed right away; the daemon asks for its ClassAd to be
+invalidated. It may be useful to place an invalidated ClassAd in the absent
+state, instead of having it removed as an invalidated ClassAd. An example of a
+ClassAd that could benefit from being absent is a system with an
+uninterruptible power supply that shuts down cleanly but unexpectedly as a
+result of a power outage. To cause all invalidated ClassAds to become absent
+instead of invalidated, set :macro:`EXPIRE_INVALIDATED_ADS` to ``True``.
+Invalidated ClassAds will instead be treated as if they expired, including when
+evaluating :macro:`ABSENT_REQUIREMENTS`.
 
 GPUs
 ----

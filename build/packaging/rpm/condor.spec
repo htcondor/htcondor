@@ -752,6 +752,10 @@ rm -rf %{buildroot}
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
 %_libdir/libcondorapi.so
+%_libdir/condor/libfmt.so
+%_libdir/condor/libfmt.so.10
+%_libdir/condor/libfmt.so.10.1.0
+
 %_libdir/condor/libgetpwnam.so
 %dir %_libexecdir/condor/
 %_libexecdir/condor/cleanup_locally_mounted_checkpoint

@@ -76,6 +76,12 @@ Types of Releases
     release.  These releases have undergone code review and light testing.
     These patch releases are cumulative.
 
+-   By default, a feature release in the same series is compatible with
+    the previous release. That is, release **X.Y+1.x** will be compatible with
+    release **X.Y.x**, such the nodes in a cluster may be upgraded without
+    losing state information. There may be a pause in operation during upgrade.
+    **Check the release notes** for exceptions prior to updating nodes.
+
 Repositories
 ^^^^^^^^^^^^
 

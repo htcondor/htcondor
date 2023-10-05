@@ -6968,4 +6968,11 @@ default : @fin
 	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination_REASON = "You specified a checkpoint_destination this AP does not know how to clean up.  You may need to add a trailing / to the URL."
 @fin
 
+[$FEATURE.GANGLIA]
+description=Enable condor_gangliad daemon
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
+@end
+
+
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

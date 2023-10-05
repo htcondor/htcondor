@@ -72,7 +72,7 @@ usr/bin/condor_wait
 usr/bin/condor_watch_q
 usr/bin/condor_who
 usr/bin/htcondor
-debian/tmp/usr/lib/condor/*.so usr/lib/
+debian/tmp/usr/lib/condor/*.so* usr/lib/
 debian/tmp/usr/lib/libclassad*.so.*
 debian/tmp/usr/lib/condor/*.jar usr/lib/condor/
 debian/tmp/usr/lib/condor/*.class usr/lib/condor/
