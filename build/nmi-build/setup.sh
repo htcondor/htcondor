@@ -262,6 +262,9 @@ else
     pip3 install pytest pytest-httpserver
 fi
 
+# Install sphinx-mermaid so docs can have images
+pip3 install sphinxcontrib-mermaid
+
 if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then
     # Pip installs a updated version of markupsafe that is incompatiable
     # with sphinx on these platforms. Downgrade markupsafe and hope for the best
