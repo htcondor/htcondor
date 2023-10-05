@@ -26,6 +26,23 @@ queue
     return path
 
 @action
+def fail_job(test_dir):
+    script = os.path.join(str(test_dir), "fail.sh")
+    with open(script, "w") as f:
+        f.write("""#!/bin/bash
+exit 1
+""")
+    os.chmod(script, 0o755)
+    submit = os.path.join(str(test_dir), "fail.sub")
+    with open(submit, "w") as f:
+        f.write("""# Job that fails
+executable = fail.sh
+log = fail.log
+queue
+""")
+    return submit
+
+@action
 def sleep_job(test_dir, path_to_sleep):
     path = os.path.join(str(test_dir), "sleep.sub")
     with open(path, "w") as f:
@@ -38,9 +55,10 @@ queue
     return path
 
 @action
-def submit_dag(default_condor, test_dir, echo_job, sleep_job):
+def submit_dag(default_condor, test_dir, echo_job, sleep_job, fail_job):
     contents = f"""JOB SLEEP {sleep_job}
 SERVICE FAST {echo_job}
+SERVICE FAIL {fail_job}
 """
     filename = os.path.join(str(test_dir), "test.dag")
     with open(filename, "w") as f:
@@ -55,4 +73,5 @@ class TestDAGManServiceNodes:
         with open(submit_dag, "r") as f:
             for line in f:
                 assert "Assertion ERROR on (_numJobsSubmitted >= 0)" not in line
+                assert "Assertion ERROR on (dagman.dag->NumNodesDone( true ) + dagman.dag->NumNodesFailed() <= dagman.dag->NumNodes( true ))" not in line
 

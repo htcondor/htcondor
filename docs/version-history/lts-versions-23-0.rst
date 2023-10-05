@@ -36,6 +36,10 @@ Bugs Fixed:
   error if they returned an exit code with high bits set
   :jira:`2061`
 
+- Fixed a bug in DAGMan where ``Service`` nodes that failed caused the DAGMan process to fail
+  an assertion check and crash.
+  :jira:`2051`
+
 - Fixed a bug where jobs put on hold internally by the shadow were not writing their ad to the
   job epoch history file.
   :jira:`2060`

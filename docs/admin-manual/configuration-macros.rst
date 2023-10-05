@@ -4293,10 +4293,6 @@ details.
     particular method, set ``LINUX_HIBERNATION_METHOD`` to one of the
     defined strings.
 
-:macro-def:`OFFLINE_LOG`
-    This configuration variable is no longer used. It has been replaced
-    by ``COLLECTOR_PERSISTENT_AD_LOG``.
-
 :macro-def:`OFFLINE_EXPIRE_ADS_AFTER`
     An integer number of seconds specifying the lifetime of the
     persistent machine ClassAd representing a hibernating machine.
@@ -7144,9 +7140,6 @@ section :ref:`admin-manual/monitoring:absent classads` for more details.
     other than the directory defined by ``$(SPOOL)``. Alternatively, if
     this log file is to go in the directory defined by ``$(SPOOL)``, add
     the file to the list given by ``VALID_SPOOL_FILES``.
-
-    This configuration variable replaces ``OFFLINE_LOG``, which is no
-    longer used.
 
 :macro-def:`EXPIRE_INVALIDATED_ADS`
     A boolean value that defaults to ``False``. When ``True``, causes
