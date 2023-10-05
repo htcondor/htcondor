@@ -3065,9 +3065,6 @@ public:
 	}
 
 
-	~Submit() {}
-
-
     std::string
     expand(const std::string attr) const
     {

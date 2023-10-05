@@ -4413,9 +4413,11 @@ FileTransfer::computeFileList(
 						unparser.Unparse(attr, *it);
 					} else { /*Fail?*/ }
 				} else { /*Fail?*/ }
+
 				if (files.empty()) { continue; }
-				auto pos = attr.find_first_of("_") + 1;
-				std::string queue = attr.substr(pos);
+				auto pos = attr.find_first_of('_');
+				if (pos == std::string::npos) { continue; }
+				std::string queue = attr.substr(pos+1);
 				StringList protectedURLs(files.c_str(), ",");
 				// We don't have to worry about order in `filelist` because we're going to sort it later.
 				ExpandFileTransferList(&protectedURLs, filelist, preserveRelativePaths, queue.c_str());

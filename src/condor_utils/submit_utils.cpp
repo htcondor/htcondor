@@ -7486,6 +7486,24 @@ int SubmitHash::SetTransferFiles()
 	return 0;
 }
 
+/*
+*   Function to check transfer input/output lists for URL transfers
+*   against an attached protected URL map. This map is a prefix matching
+*   map of various 'scheme://path' to specific transfer queues that an
+*   admin has deemed protected. All transfer files found matching a map
+*   entry will be separated out into a new attribute in the job ad
+*   representing a list of files to transfer in association with a
+*   specified transfer queue.
+*   Example:
+*      - Map: foo:// -> alpha, bar:// -> beta
+*      - TransferInputList=one,foo://two,foo://three,bar://four,baz://five
+*   Reuslt:
+*      - TransferIn=one,baz://five
+*      - TransferInFrom_ALPHA=foo://two,foo://three
+*      - TransferInFrom_BETA=bar://four
+*      - TransferQueueInputList = [ TransferInFrom_ALPHA, TransferInFrom_BETA ]
+*   Author: Cole Bollig - 2023-10-04
+*/
 int SubmitHash::SetProtectedURLTransferLists() {
 	RETURN_IF_ABORT();
 
@@ -7499,20 +7517,14 @@ int SubmitHash::SetProtectedURLTransferLists() {
 	if (clusterAd) {
 		// Check for transfer queue list in the cluster ad
 		ExprTree * tree = clusterAd->Lookup(ATTR_TRANSFER_Q_URL_IN_LIST);
-		if (tree) {
-			if (tree->GetKind() == ClassAd::ExprTree::EXPR_LIST_NODE) {
-				classad::ExprList* list = dynamic_cast<classad::ExprList*>(tree);
-				for(classad::ExprList::iterator it = list->begin() ; it != list->end(); ++it ) {
-					std::string attr;
-					classad::ClassAdUnParser unparser;
-					unparser.SetOldClassAd(true, true);
-					unparser.Unparse(attr, *it);
-					clusterInputQueues.insert(attr);
-				}
-			} else {
-				push_error(stderr, "Cluster Ad %s attribute is not a classad list as expected\n",
-				           ATTR_TRANSFER_Q_URL_IN_LIST);
-				ABORT_AND_RETURN( 1 );
+		if (tree && tree->GetKind() == ClassAd::ExprTree::EXPR_LIST_NODE) {
+			classad::ExprList* list = dynamic_cast<classad::ExprList*>(tree);
+			for(classad::ExprList::iterator it = list->begin() ; it != list->end(); ++it ) {
+				std::string attr;
+				classad::ClassAdUnParser unparser;
+				unparser.SetOldClassAd(true, true);
+				unparser.Unparse(attr, *it);
+				clusterInputQueues.insert(attr);
 			}
 		}
 	}
@@ -7550,20 +7562,24 @@ int SubmitHash::SetProtectedURLTransferLists() {
 
 		if (! protected_url_lists.empty()) {
 			AssignJobString(ATTR_TRANSFER_INPUT_FILES, new_input_list.c_str());
+			bool has_diff_queue_list = false;
 
 			std::vector<ExprTree*> queue_xfer_lists;
 			for (const auto& [queue, files] : protected_url_lists) {
 				std::string key = std::string(ATTR_TRANSFER_INPUT_FILES) + "From_" + queue;
 				AssignJobString(key.c_str(), files.c_str());
+				if (! clusterInputQueues.contains(key)) { has_diff_queue_list = true; }
 				clusterInputQueues.erase(key);//Remove queue list attrs that are overwritten from set to empty
 				queue_xfer_lists.push_back(classad::AttributeReference::MakeAttributeReference(nullptr, key));
 			}
 
-			classad::ExprTree *list = classad::ExprList::MakeExprList(queue_xfer_lists);
-			if (! job->Insert(ATTR_TRANSFER_Q_URL_IN_LIST, list)) {
-				push_error(stderr, "failed to insert list of transfer queue input file attributes to %s\n",
-				           ATTR_TRANSFER_Q_URL_IN_LIST);
-				ABORT_AND_RETURN( 1 );
+			if (has_diff_queue_list || clusterInputQueues.size() > 0) {
+				classad::ExprTree *list = classad::ExprList::MakeExprList(queue_xfer_lists);
+				if (! job->Insert(ATTR_TRANSFER_Q_URL_IN_LIST, list)) {
+					push_error(stderr, "failed to insert list of transfer queue input file attributes to %s\n",
+					           ATTR_TRANSFER_Q_URL_IN_LIST);
+					ABORT_AND_RETURN( 1 );
+				}
 			}
 
 			// Set all cluster ad queue input list attrs not overwritten to empty string
@@ -7581,10 +7597,10 @@ int SubmitHash::SetProtectedURLTransferLists() {
 int SubmitHash::FixupTransferInputFiles()
 {
 
+	RETURN_IF_ABORT();
+
 	// Check transfer in/out list against protected URL map
 	SetProtectedURLTransferLists();
-
-	RETURN_IF_ABORT();
 
 		// See the comment in the function body of ExpandInputFileList
 		// for an explanation of what is going on here.

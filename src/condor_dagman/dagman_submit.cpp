@@ -685,8 +685,8 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	// set submit keywords defined by dagman and VARS
 	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, false);
 
-	submitHash->init_base_ad(time(NULL), owner);
 	submitHash->attachTransferMap(dm._protectedUrlMap);
+	submitHash->init_base_ad(time(NULL), owner);
 
 	qmgr = ConnectQ(schedd);
 	if (qmgr) {

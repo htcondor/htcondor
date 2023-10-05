@@ -179,7 +179,6 @@ JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * exte
 	, fp_digestX(NULL)
 #endif
 	, ident(id)
-	 
 {
 	CheckProxyFile = false;
 	memset(&source, 0, sizeof(source));
@@ -228,8 +227,7 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 
 class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds, MapFile* urlMap)
 {
-	auto * factory = new JobFactory(nullptr, cluster_id, extended_cmds, urlMap);
-	return factory;
+	return new JobFactory(nullptr, cluster_id, extended_cmds, urlMap);
 }
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
