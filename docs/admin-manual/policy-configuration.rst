@@ -269,12 +269,29 @@ point in the negotiations has been reached. The possible states are
     have been divided in a partitionable slot. Consolidating the
     resources gives large jobs a chance to run.
 
-.. figure:: /_images/machine-states-transitions.png
-  :width: 600
-  :alt: Machine states and the possible transitions between the states
-  :align: center
-  
-  Machine states and the possible transitions between the states.
+.. mermaid:: 
+   :caption: Machine states and the possible transitions between the states
+   :align: center
+
+   stateDiagram-v2
+     direction LR
+     [*]--> Owner
+     Owner --> Unclaimed: A
+     Unclaimed --> Matched: C
+     Unclaimed --> Owner: B
+     Unclaimed --> Drained: P
+     Unclaimed --> Backfill: E
+     Unclaimed --> Claimed: D
+     Backfill  --> Owner: K
+     Backfill  --> Matched: L
+     Backfill  --> Claimed: M
+     Matched --> Claimed: G
+     Matched --> Owner: F
+     Claimed --> Preempting: H
+     Preempting --> Owner: J
+     Preempting --> Claimed: I
+     Owner --> Drained: N
+     Drained --> Owner: O
 
 
 Each transition is labeled with a letter. The cause of each transition
