@@ -13,6 +13,8 @@ from .htcondor2_impl import (
     _submit__setitem__,
     _submit_keys,
     _submit_expand,
+    _submit_getqargs,
+    _submit_setqargs,
 )
 
 #
@@ -115,6 +117,9 @@ class Submit(MutableMapping):
     # values as well (in C++, or less efficiently in Python), but that
     # doesn't seem helpful.
     #
+    # It actually turns out to be necessary to correctly regenerate submit
+    # files from submit hashes.
+    #
     def __iter__(self):
         keys = _submit_keys(self, self._handle)
         for key in keys.split('\0'):
@@ -123,6 +128,16 @@ class Submit(MutableMapping):
 
     def __len__(self):
         return len(self.keys())
+
+
+    def __str__(self):
+        # FIXME
+        pass
+
+
+    def __repr__(self):
+        # FIXME
+        pass
 
 
     def expand(self, attr : str) -> str:
@@ -167,12 +182,17 @@ class Submit(MutableMapping):
 
 
     def getQArgs(self) -> str:
-        pass
+        return _submit_getqargs(self, self._handle)
 
 
     def setQArgs(self, args : str):
-        # FIXME
-        pass
+        '''
+        Set the queue statement.  This statement replaces the queue statement,
+        if any, passed to the original constructor.
+        '''
+        if not isinstance(args, str):
+            raise TypeError("args must be a string")
+        _submit_setqargs(self, self._handle, args)
 
 
     def from_dag(filename : str, options : dict = {}):

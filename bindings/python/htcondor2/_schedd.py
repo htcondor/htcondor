@@ -251,7 +251,69 @@ class Schedd():
             a count of 3.  If specified, this parameter overrides the count
             in :param:`description`.``.
         '''
-        return _schedd_submit(self._addr, description._handle, count, spool)
+
+        if itemdata is None:
+            return _schedd_submit(self._addr, description._handle, count, spool)
+
+        # Build a valid submit file equivalent to `description`, but with
+        # the item data extracted from `itemdata` instead of `description`.
+        #
+        # This is totally broken if it includes the default keys, even if
+        # illegal keys and values are filtered out.
+        submit_file = ''
+        for key, value in description.items():
+            submit_file = submit_file + f"{key} = {value}\n"
+        submit_file = submit_file + "\n"
+
+        # In version 1, setQArgs() was completely ignored by Schedd.submit();
+        # you had to explicitly set `itemdata` to `s.itemdata()`, which is
+        # of course completely insane.  There was also no way to use the
+        # count from the statement passed to setQArgs(), which is just stupid.
+        #
+        # TJ has declared that it is a bug that
+        #       s.setQArgs(a_queue_statement)
+        #       schedd.submit(s)
+        # does not queue job(s) according to `a_queue_statement`, so in
+        # version 2 we'll make sure that works.  Note that version 1 had
+        # a further bug where it did not raise an exception if the queue
+        # statement it was setting was invalid.
+
+        # A better API would be to permit at submit-time the specification
+        # of a list[str] that is the variable names (in order), and a
+        # list[str] or list list[list[str]] that is the values (in order),
+        # either as a space-separated string or a list of strings.  The
+        # Submit object would permit the specification of either or both
+        # ahead of time.  You could make use of QUEUE FROM FILES (etc) by
+        # asking a Submit object to produce a new Submit object with the
+        # variable names and values corresponding to that queue statement.
+
+        # The documentation for version 1 did not clearly specify if the
+        # the itemdata list's elements all had to be the same type.  The
+        # documentation specified dictionaries or strings, but accepted
+        # lists of strings as elements as well, and allowed mixed types
+        # in the same list.  It's massively unclear if this is a good
+        # idea, so for now I'm going to stick with itemdata typehint above.
+        first = next(itemdata)
+        if isinstance(first, str):
+            submit_file = submit_file + "QUEUE item FROM "
+        elif isinstance(first, dict):
+            if any(not isinstance(x, str) for x in first.keys()):
+                raise TypeError("itemdata dictionaries must have string keys")
+            keys_list = ",".join(first.keys())
+            submit_file = submit_file + f"QUEUE {keys_list} FROM "
+        else:
+            raise TypeError("itemdata must be a list of strings or dictionaries")
+
+
+        submit_file = submit_file + "(\n"
+        submit_file = _add_line_from_itemdata(submit_file, first)
+        for item in itemdata:
+            submit_file = _add_line_from_itemdata(submit_file, item)
+        submit_file = submit_file + ")\n"
+
+        print(submit_file)
+        real = Submit(submit_file)
+        return _schedd_submit(self._addr, real._handle, count, spool)
 
 
     # Let's not support submitMany() unless we have to, since it
@@ -313,3 +375,15 @@ class Schedd():
             _schedd_unexport_job_ids, _schedd_unexport_job_constraint,
             (),
         )
+
+
+def _add_line_from_itemdata(submit_file, item):
+    if isinstance(item, str):
+        if "\n" in item:
+            raise ValueError("itemdata strings must not contain newlines")
+        submit_file = submit_file + item + "\n"
+    elif isinstance(item, dict):
+        if any(["\n" in x for x in item.keys()]):
+            raise ValueError("itemdata strings must not contain newlines")
+        submit_file = submit_file + " ".join(item.values()) + "\n"
+    return submit_file

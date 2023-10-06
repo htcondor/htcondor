@@ -5,10 +5,14 @@ struct SubmitBlob {
         SubmitBlob() :
             m_src_pystring(EmptyMacroSrc),
             m_ms_inline("", 0, EmptyMacroSrc),
-            m_queue_may_append_to_cluster(false),
             EmptyItemString{'\0'}
         {
             m_hash.init(JSM_PYTHON_BINDINGS);
+            // If we want to differentiate between the Python string
+            // passed to from_lines() and the Python string passed to
+            // set_queue_args(), we can move this line to those functions
+            // and unique-ify things appropriately.
+            m_hash.insert_source("<PythonString>", m_src_pystring);
         }
 
         virtual ~SubmitBlob() { }
@@ -45,12 +49,13 @@ struct SubmitBlob {
         void set_vars( StringList & vars, char * item, int itemIndex );
         void cleanup_vars( StringList & vars );
 
+        const std::string & get_queue_args() const;
+        bool set_queue_args( const char * queue_args );
 
     private:
         SubmitHash m_hash;
         MACRO_SOURCE m_src_pystring;
         MacroStreamMemoryFile m_ms_inline;
-        bool m_queue_may_append_to_cluster;
 
         // We could easily keep these in Python, if that simplifies things.
         std::string m_qargs;
@@ -68,7 +73,8 @@ MACRO_SOURCE SubmitBlob::EmptyMacroSrc = { false, false, 3, -2, -1, -2 };
 
 const char *
 SubmitBlob::lookup(const char * key) {
-    return m_hash.lookup( key );
+    // return m_hash.lookup( key );
+    return m_hash.lookup_no_default( key );
 }
 
 
@@ -99,6 +105,21 @@ SubmitBlob::init_base_ad( time_t submitTime, const char * userName ) {
 const char *
 SubmitBlob::expand( const char * key ) {
     return m_hash.submit_param(key);
+}
+
+
+const std::string &
+SubmitBlob::get_queue_args() const {
+    return m_qargs;
+}
+
+
+bool
+SubmitBlob::set_queue_args( const char * qArgs ) {
+    std::string miniSubmitFile = "\n queue " + std::string(qArgs);
+
+    std::string errorMessage;
+    return from_lines( miniSubmitFile.c_str(), errorMessage );
 }
 
 
@@ -134,6 +155,7 @@ SubmitBlob::queueStatementCount() const {
 SubmitForeachArgs *
 SubmitBlob::init_vars( int /* clusterID */ ) {
     char * expanded_queue_args = m_hash.expand_macro( m_qargs.c_str() );
+
     SubmitForeachArgs * sfa = new SubmitForeachArgs();
     int rval = sfa->parse_queue_args(expanded_queue_args);
     free( expanded_queue_args );
@@ -155,18 +177,6 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
     }
 
 
-// This is superfluous.
-#if 0
-    // For rather silly optimization reasons, ClusterString and ProcessString
-    // must remain valid for the life of the hashtable; since the hashtable
-    // doesn't want to manage them, let's make them members of the submit blob.
-    snprintf( ClusterString, sizeof(ClusterString), "%d", clusterID );
-    snprintf( ProcessString, sizeof(ProcessString), "%d", 0 );
-    m_hash.set_live_submit_variable( SUBMIT_KEY_Cluster, ClusterString );
-    m_hash.set_live_submit_variable( SUBMIT_KEY_Process, ProcessString );
-#endif
-
-
     char * var = NULL;
     sfa->vars.rewind();
     while( (var = sfa->vars.next()) ) {
@@ -174,6 +184,7 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
         // queue statement MUST be pointer replacements.
         m_hash.set_live_submit_variable( var, EmptyItemString, false );
     }
+
 
     m_hash.optimize();
     return sfa;
@@ -223,7 +234,6 @@ SubmitBlob::cleanup_vars( StringList & vars ) {
 
 bool
 SubmitBlob::from_lines( const char * lines, std::string & errorMessage ) {
-    m_hash.insert_source("<PythonString>", m_src_pystring);
     MacroStreamMemoryFile msmf(lines, strlen(lines), m_src_pystring);
 
     char * qLine = NULL;
@@ -240,7 +250,7 @@ SubmitBlob::from_lines( const char * lines, std::string & errorMessage ) {
     size_t remainingBytes;
     const char * remainder = msmf.remainder(remainingBytes);
     if( remainder != NULL && remainingBytes > 0 ) {
-        m_remainder.assign(remainder, remainingBytes );
+        m_remainder.assign(remainder, remainingBytes);
         m_ms_inline.set(m_remainder.c_str(), remainingBytes, 0, m_src_pystring);
     }
 
@@ -258,7 +268,7 @@ void
 SubmitBlob::keys( std::string & buffer ) {
     size_t bufferSize = 0;
     std::vector<std::string> keys;
-    HASHITER iter = hash_iter_begin( m_hash.macros() );
+    HASHITER iter = hash_iter_begin( m_hash.macros(), HASHITER_NO_DEFAULTS );
     while(! hash_iter_done(iter)) {
         const char * key = hash_iter_key(iter);
         const char * value = lookup(key);
@@ -398,4 +408,43 @@ _submit_expand( PyObject *, PyObject * args ) {
     }
 
     return PyUnicode_FromString(value);
+}
+
+
+static PyObject *
+_submit_setqargs( PyObject *, PyObject * args ) {
+    PyObject * self = NULL;
+    PyObject_Handle * handle = NULL;
+    const char * queue_args = NULL;
+
+    if(! PyArg_ParseTuple( args, "OOz", & self, (PyObject **)& handle, & queue_args )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+    if(! sb->set_queue_args( queue_args )) {
+        PyErr_SetString(PyExc_ValueError, "invalid queue statement");
+        return NULL;
+    }
+
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_submit_getqargs( PyObject *, PyObject * args ) {
+    PyObject * self = NULL;
+    PyObject_Handle * handle = NULL;
+
+    if(! PyArg_ParseTuple( args, "OO", & self, (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+    const std::string & buffer = sb->get_queue_args();
+
+    return PyUnicode_FromString( buffer.c_str() );
 }

@@ -264,6 +264,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	//   it will be valid until the MACRO_SET is cleared (usually a reconfig)
 	//
 	const char * lookup_macro(const char * name, MACRO_SET& set, MACRO_EVAL_CONTEXT &ctx);
+	const char * lookup_macro_exact_no_default_impl(const char *name, MACRO_SET & set, int use = 3);
 
 	// find an item in the macro_set, but do not look in the defaults table.
 	// if prefix is not NULL, then "prefix.name" is looked up and "name" is NOT
