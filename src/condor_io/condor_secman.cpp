@@ -30,7 +30,6 @@
 #include "condor_adtypes.h"
 #include "my_hostname.h"
 #include "internet.h"
-#include "HashTable.h"
 #include "KeyCache.h"
 #include "condor_daemon_core.h"
 #include "condor_ipverify.h"
@@ -456,13 +455,10 @@ SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str)) {
 		return;
 	}
-	StringList  method_list( method_list_str.c_str() );
-	const char *method;
 
-	method_list.rewind();
-	while ( (method = method_list.next()) ) {
-		if (!strcmp(method, "TOKEN") || !strcmp(method, "TOKENS") ||
-			!strcmp(method, "IDTOKEN") || !strcmp(method, "IDTOKENS"))
+	for (auto& method : StringTokenIterator(method_list_str)) {
+		if (!strcmp(method.c_str(), "TOKEN") || !strcmp(method.c_str(), "TOKENS") ||
+			!strcmp(method.c_str(), "IDTOKEN") || !strcmp(method.c_str(), "IDTOKENS"))
 		{
 			Condor_Auth_Passwd::preauth_metadata(ad);
 		}
@@ -903,12 +899,9 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
 
 		// send the single method for pre 6.5.0
-		StringList  tmpmethodlist( the_methods.c_str() );
-		char* first;
-		tmpmethodlist.rewind();
-		first = tmpmethodlist.next();
-		if (first) {
+		for (auto& first : StringTokenIterator(the_methods)) {
 			action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, first);
+			break;
 		}
 	}
 
@@ -2628,8 +2621,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 					std::string all_methods;
 					if (m_auth_info.LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
 						dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
-						StringList sl(all_methods.c_str());
-						if (sl.contains_anycase(fallback_method_str.c_str())) {
+						if (contains_anycase(split(all_methods), fallback_method_str)) {
 							keyvec.emplace_back(m_private_key->getKeyData(), 24, fallback_method, 0);
 							dprintf(D_SECURITY, "SESSION: client duplicated AES to %s key for UDP.\n", fallback_method_str.c_str());
 						} else {
@@ -2656,17 +2648,13 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// now add entrys which map all the {<sinful_string>,<command>} pairs
 			// to the same key id (which is in the variable sesid)
 
-			StringList coms(cmd_list);
-			char *p;
-
-			coms.rewind();
-			while ( (p = coms.next()) ) {
+			for (auto& p : StringTokenIterator(cmd_list)) {
 				std::string keybuf;
 				const std::string &tag = SecMan::getTag();
 				if (tag.size()) {
-					formatstr (keybuf, "{%s,%s,<%s>}", tag.c_str(), m_sock->get_connect_addr(), p);
+					formatstr (keybuf, "{%s,%s,<%s>}", tag.c_str(), m_sock->get_connect_addr(), p.c_str());
 				} else {
-					formatstr (keybuf, "{%s,<%s>}", m_sock->get_connect_addr(), p);
+					formatstr (keybuf, "{%s,<%s>}", m_sock->get_connect_addr(), p.c_str());
 				}
 
 				m_sec_man.command_map.insert_or_assign(keybuf, sesid);
@@ -3211,12 +3199,9 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
         // Remove all commands from the command map
         if (!commands.empty() && !addr.empty()) {
             std::string keybuf;
-            StringList cmd_list(commands);
-        
-            cmd_list.rewind();
-            char * cmd = NULL;
-            while ( (cmd = cmd_list.next()) ) {
-                formatstr (keybuf, "{%s,<%s>}", addr.c_str(), cmd);
+
+            for (auto& cmd : StringTokenIterator(commands)) {
+                formatstr (keybuf, "{%s,<%s>}", addr.c_str(), cmd.c_str());
                 command_map.erase(keybuf);
             }
         }
@@ -3269,13 +3254,10 @@ SecMan::getAuthBitmask ( const char * methods ) {
 		return 0;
 	}
 
-	StringList server( methods );
-	char *tmp = NULL;
 	int retval = 0;
 
-	server.rewind();
-	while ( (tmp = server.next()) ) {
-		retval |= sec_char_to_auth_method(tmp);
+	for (auto& tmp : StringTokenIterator(methods)) {
+		retval |= sec_char_to_auth_method(tmp.c_str());
 	}
 
 	return retval;
@@ -3292,26 +3274,19 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 	// the output will be a list of methods supported by both, in the
 	// order that the server prefers.
 
-	StringList server_methods( srv_methods );
-	StringList client_methods( cli_methods );
-	const char *sm = NULL;
-	const char *cm = NULL;
-
 	std::string results;
 	int match = 0;
 
 	// server methods, one at a time
-	server_methods.rewind();
-	while ( (sm = server_methods.next()) ) {
-		client_methods.rewind();
-		if (!strcasecmp("TOKENS", sm) || !strcasecmp("IDTOKENS", sm) || !strcasecmp("IDTOKEN", sm)) {
+	for (auto& sm : StringTokenIterator(srv_methods)) {
+		if (!strcasecmp("TOKENS", sm.c_str()) || !strcasecmp("IDTOKENS", sm.c_str()) || !strcasecmp("IDTOKEN", sm.c_str())) {
 			sm = "TOKEN";
 		}
-		while ( (cm = client_methods.next()) ) {
-			if (!strcasecmp("TOKENS", cm) || !strcasecmp("IDTOKENS", cm) || !strcasecmp("IDTOKEN", cm)) {
+		for (auto cm: StringTokenIterator(cli_methods)) {
+			if (!strcasecmp("TOKENS", cm.c_str()) || !strcasecmp("IDTOKENS", cm.c_str()) || !strcasecmp("IDTOKEN", cm.c_str())) {
 				cm = "TOKEN";
 			}
-			if (!strcasecmp(sm, cm)) {
+			if (!strcasecmp(sm.c_str(), cm.c_str())) {
 				// add a comma if it isn't the first match
 				if (match) {
 					results += ",";
@@ -3528,13 +3503,10 @@ SecMan::invalidateExpiredCache()
 
 std::string SecMan::filterCryptoMethods(const std::string &input_methods)
 {
-	StringList meth_iter(input_methods.c_str());
-	meth_iter.rewind();
-	const char *tmp = nullptr;
 	bool first = true;
 	std::string result;
-	while ((tmp = meth_iter.next())) {
-		if (strcmp(tmp, "AES") && strcmp(tmp, "3DES") && strcmp(tmp, "TRIPLEDES") && strcmp(tmp, "BLOWFISH")) {
+	for (auto& tmp : StringTokenIterator(input_methods)) {
+		if (strcmp(tmp.c_str(), "AES") && strcmp(tmp.c_str(), "3DES") && strcmp(tmp.c_str(), "TRIPLEDES") && strcmp(tmp.c_str(), "BLOWFISH")) {
 			continue;
 		}
 		if (first) {first = false;}
@@ -3553,15 +3525,12 @@ std::string SecMan::filterCryptoMethods(const std::string &input_methods)
 	// Issues warnings as appropriate to D_SECURITY.
 std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::string &input_methods)
 {
-	StringList meth_iter(input_methods.c_str());
-	meth_iter.rewind();
-	const char *tmp = NULL;
 	bool first = true;
 	std::string result;
 	dprintf(D_FULLDEBUG|D_SECURITY, "Filtering authentication methods (%s) prior to offering them remotely.\n",
 		input_methods.c_str());
-	while ((tmp = meth_iter.next())) {
-		int method = sec_char_to_auth_method(tmp);
+	for (auto& tmp : StringTokenIterator(input_methods)) {
+		int method = sec_char_to_auth_method(tmp.c_str());
 		switch (method) {
 			case CAUTH_TOKEN: {
 				if (!Condor_Auth_Passwd::should_try_auth()) {
@@ -3626,7 +3595,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 			}
 			case 0: {
 				dprintf(D_SECURITY, "Requested configured authentication method "
-					"%s not known or supported by HTCondor.\n", tmp);
+				        "%s not known or supported by HTCondor.\n", tmp.c_str());
 				continue;
 			}
 			// As additional filters are made, we can add them here.
@@ -3736,19 +3705,16 @@ Protocol
 SecMan::getCryptProtocolNameToEnum(char const *name) {
 	if (!name) return CONDOR_NO_PROTOCOL;
 
-	StringList list(name);
-	list.rewind();
-	char *tmp;
-	while ((tmp = list.next())) {
-		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp);
-		if (!strcasecmp(tmp, "BLOWFISH")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+	for (auto& tmp : StringTokenIterator(name)) {
+		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp.c_str());
+		if (!strcasecmp(tmp.c_str(), "BLOWFISH")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return CONDOR_BLOWFISH;
-		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(tmp, "TRIPLEDES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+		} else if (!strcasecmp(tmp.c_str(), "3DES") || !strcasecmp(tmp.c_str(), "TRIPLEDES")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return CONDOR_3DES;
-		} else if (!strcasecmp(tmp, "AES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+		} else if (!strcasecmp(tmp.c_str(), "AES")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return CONDOR_AESGCM;
 		}
 	}
@@ -3777,19 +3743,16 @@ std::string
 SecMan::getPreferredOldCryptProtocol(const std::string &name)
 {
 	std::string answer;
-	StringList list(name.c_str());
-	list.rewind();
-	char *tmp;
-	while ((tmp = list.next())) {
-		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp);
-		if (!strcasecmp(tmp, "BLOWFISH")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+	for (auto& tmp : StringTokenIterator(name)) {
+		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp.c_str());
+		if (!strcasecmp(tmp.c_str(), "BLOWFISH")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return "BLOWFISH";
-		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(tmp, "TRIPLEDES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+		} else if (!strcasecmp(tmp.c_str(), "3DES") || !strcasecmp(tmp.c_str(), "TRIPLEDES")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return "3DES";
-		} else if (!strcasecmp(tmp, "AES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+		} else if (!strcasecmp(tmp.c_str(), "AES")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			answer = tmp;
 		}
 	}
@@ -3967,17 +3930,14 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if (peer_sinful && peer_sinful[0]) {
 		policy.LookupString(ATTR_SEC_VALID_COMMANDS, valid_coms);
 	}
-	StringList coms(valid_coms.c_str());
-	char *p;
 
-	coms.rewind();
-	while ( (p = coms.next()) ) {
+	for (auto& p : StringTokenIterator(valid_coms)) {
 		std::string keybuf;
 		const std::string &tag = SecMan::getTag();
 		if (tag.size()) {
-			formatstr (keybuf, "{%s,%s,<%s>}", tag.c_str(), peer_sinful, p);
+			formatstr (keybuf, "{%s,%s,<%s>}", tag.c_str(), peer_sinful, p.c_str());
 		} else {
-			formatstr (keybuf, "{%s,<%s>}", peer_sinful, p);
+			formatstr (keybuf, "{%s,<%s>}", peer_sinful, p.c_str());
 		}
 
 		command_map.insert_or_assign(keybuf, sesid);
@@ -4021,14 +3981,10 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 		// get rid of final ']'
 	buf.erase(buf.length()-1);
 
-	StringList lines(buf.c_str(),";");
-	lines.rewind();
-
-	char const *line;
 	ClassAd imp_policy;
-	while( (line=lines.next()) ) {
+	for (auto& line : StringTokenIterator(buf, ";")) {
 		if( !imp_policy.Insert(line) ) {
-			dprintf( D_ALWAYS, "ImportSecSessionInfo: invalid imported session info: '%s' in %s\n", line, session_info );
+			dprintf( D_ALWAYS, "ImportSecSessionInfo: invalid imported session info: '%s' in %s\n", line.c_str(), session_info );
 			return false;
 		}
 	}
