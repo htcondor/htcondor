@@ -94,7 +94,7 @@ const char SecMan::sec_req_rev[][10] = {
 };
 
 KeyCache SecMan::m_default_session_cache;
-std::map<std::string,KeyCache*> *SecMan::m_tagged_session_cache = NULL;
+std::map<std::string,KeyCache> SecMan::m_tagged_session_cache;
 std::string SecMan::m_tag;
 std::string SecMan::m_token;
 std::map<DCpermission, std::string> SecMan::m_tag_methods;
@@ -124,18 +124,13 @@ SecMan::setTag(const std::string &tag) {
 		session_cache = &m_default_session_cache;
 		return;
 	}
-	if (m_tagged_session_cache == NULL) {
-		m_tagged_session_cache = new std::map<std::string, KeyCache*>();
+	auto iter = m_tagged_session_cache.find(tag);
+	if (iter == m_tagged_session_cache.end()) {
+		auto [new_iter, inserted] = m_tagged_session_cache.emplace(tag, KeyCache());
+		ASSERT(inserted);
+		iter = new_iter;
 	}
-	std::map<std::string, KeyCache*>::const_iterator iter = m_tagged_session_cache->find(tag);
-	KeyCache *tmp = NULL;
-	if (iter == m_tagged_session_cache->end()) {
-		tmp = new KeyCache();
-		m_tagged_session_cache->insert(std::make_pair(tag, tmp));
-	} else {
-		tmp = iter->second;
-	}
-	session_cache = tmp;
+	session_cache = &iter->second;
 }
 
 
@@ -3526,15 +3521,8 @@ void
 SecMan::invalidateExpiredCache()
 {
 	invalidateOneExpiredCache(&m_default_session_cache);
-	if (!m_tagged_session_cache) {return;}
-	std::map<std::string,KeyCache*>::iterator session_cache_iter;
-	for (session_cache_iter = m_tagged_session_cache->begin();
-		session_cache_iter != m_tagged_session_cache->end();
-		session_cache_iter++)
-	{
-		if (session_cache_iter->second) {
-			invalidateOneExpiredCache(session_cache_iter->second);
-		}
+	for (auto& [key, cache] : m_tagged_session_cache) {
+		invalidateOneExpiredCache(&cache);
 	}
 }
 
