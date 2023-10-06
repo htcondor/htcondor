@@ -56,6 +56,15 @@ extensions = [
     'jira',
     'classad-attribute',
 ]
+
+# nbsphinx and mermaid collide, and mermaid won't load
+# unless the following is set.  Hopefully some future
+# version of either will allow us to remove this hack.
+# Another possible solution is to re-write the generated
+# HTML to always load mermaid before nbsphinx.
+
+nbsphinx_requirejs_path = ''
+
 autosectionlabel_prefix_document = True
 
 # -- Options for HTML output ----------------------------------------------

@@ -48,6 +48,10 @@ Bugs Fixed:
   ``MemoryProvisioned`` are now updated for Condor-C and Job Router jobs.
   :jira:`2069`
 
+- Fixed a bug where execution times reported for ARC CE jobs were
+  inflated by a factor of 60.
+  :jira:`2068`
+
 .. _lts-version-history-2300:
 
 Version 23.0.0
