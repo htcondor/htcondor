@@ -44,6 +44,7 @@ post script.
     PREscript --> Job
     Job --> POSTscript
     end
+    Job --> End((End))
     POSTscript --> End((End))
 
 An **edge** in DAGMan describes a dependency between two nodes. DAG edges are
