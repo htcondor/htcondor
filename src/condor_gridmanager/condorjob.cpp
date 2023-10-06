@@ -1292,6 +1292,9 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_DISK_USAGE,
 		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
+		"CpusProvisioned",
+		"DiskProvisioned",
+		"MemoryProvisioned",
 		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {

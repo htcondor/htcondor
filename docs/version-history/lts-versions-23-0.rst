@@ -48,6 +48,10 @@ Bugs Fixed:
   user is present and the ``/var/lib/condor`` directory is not.
   :jira:`2074`
 
+- The job attributes ``CpusProvisioned``, ``DiskProvisioned``, and
+  ``MemoryProvisioned`` are now updated for Condor-C and Job Router jobs.
+  :jira:`2069`
+
 - Fixed a bug where execution times reported for ARC CE jobs were
   inflated by a factor of 60.
   :jira:`2068`
