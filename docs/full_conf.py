@@ -17,25 +17,6 @@ import os
 
 import re
 
-from pathlib import Path
-
-ON_RTD = os.environ.get('READTHEDOCS') == 'True'
-if ON_RTD:
-    print("ON RTD, THEREFORE INSTALLING HTCONDOR PACKAGE")
-    text = (Path(__file__).parent.parent / 'CMakeLists.txt').read_text()
-    match = re.search(r"^\s*set ?\( ?VERSION \"(\d+\.\d+\.\d+)-?\d*\" ?\)", text, re.MULTILINE)
-    if match is not None:
-        version = match.group(1)
-        pre = version + 'a0'
-        post = version + '.post999'
-        print("DETECTED VERSION {}".format(version))
-        cmd = "{} -m pip install 'htcondor>={},<{}'".format(sys.executable, pre, post)
-        print("EXECUTING COMMAND: {}".format(cmd))
-        os.system(cmd)
-        print("INSTALLED HTCONDOR PACKAGE")
-    else:
-        print('ERROR: regex did not match, check regex and root CMakeLists.txt')
-
 # -- General configuration ------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
