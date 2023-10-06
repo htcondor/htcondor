@@ -24,12 +24,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "CryptKey.h"
-#include "HashTable.h"
-#include "string_list.h"
-#include "simplelist.h"
-#include "condor_sockaddr.h"
 
-class SecMan;
 class KeyCacheEntry {
  public:
     KeyCacheEntry(
@@ -72,30 +67,7 @@ class KeyCacheEntry {
 };
 
 
-
-class KeyCache {
-    friend class SecMan;
-public:
-	KeyCache();
-	KeyCache(const KeyCache&);
-	~KeyCache();
-	const KeyCache& operator=(const KeyCache&);
-
-	void clear();
-	bool insert(KeyCacheEntry&);
-	bool lookup(const char *key_id, KeyCacheEntry*&);
-	bool remove(const char *key_id);
-	void expire(KeyCacheEntry*);
-	int  count();
-
-	StringList * getExpiredKeys();
-
-private:
-	void copy_storage(const KeyCache &kc);
-	void delete_storage();
-
-	HashTable<std::string, KeyCacheEntry*> *key_table;
-};
+typedef std::map<std::string, KeyCacheEntry> KeyCache;
 
 
 #endif

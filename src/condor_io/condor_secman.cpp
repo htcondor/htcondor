@@ -1443,15 +1443,18 @@ SecManStartCommand::startCommand_inner()
 bool
 SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_key)
 {
-	if(!session_cache->lookup(session_id,session_key)) {
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
 		return false;
 	}
+	session_key = &itr->second;
 
 		// check the expiration.
 	time_t cutoff_time = time(0);
 	time_t expiration = session_key->expiration();
 	if (expiration && expiration <= cutoff_time) {
-		session_cache->expire(session_key);
+		dprintf(D_SECURITY|D_FULLDEBUG, "KEYCACHE: Session %s %s expired at %s\n", session_key->id().c_str(), session_key->expirationType(), ctime(&expiration));
+		session_cache->erase(itr);
 		session_key = NULL;
 		return false;
 	}
@@ -2643,21 +2646,17 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				}
 			}
 
-				// This makes a copy of the policy ad, so we don't
-				// have to. 
-			KeyCacheEntry tmp_key( sesid, m_sock->get_connect_addr(), keyvec,
-								   m_auth_info, expiration_time,
-								   session_lease ); 
+			// stick the key in the cache
+			m_sec_man.session_cache->emplace(sesid, KeyCacheEntry(sesid,
+								m_sock->get_connect_addr(), keyvec,
+								m_auth_info, expiration_time,
+								session_lease));
 			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
 
             if (dur) {
                 free(dur);
 				dur = NULL;
             }
-
-			// stick the key in the cache
-			m_sec_man.session_cache->insert(tmp_key);
-
 
 			// now add entrys which map all the {<sinful_string>,<command>} pairs
 			// to the same key id (which is in the variable sesid)
@@ -3174,17 +3173,18 @@ SecManStartCommand::PopulateKeyExchange()
 
 bool SecMan :: invalidateKey(const char * key_id)
 {
-    bool removed = true;
     KeyCacheEntry * keyEntry = NULL;
 
-	int r = session_cache->lookup(key_id, keyEntry);
-	if (!r) {
+	auto itr = session_cache->find(key_id);
+	if (itr == session_cache->end()) {
 		dprintf( D_SECURITY,
 				 "DC_INVALIDATE_KEY: security session %s not found in cache.\n",
 				 key_id);
+		return false;
 	}
+	keyEntry = &itr->second;
 
-	if ( keyEntry && keyEntry->expiration() <= time(NULL) && keyEntry->expiration() > 0 ) {
+	if ( keyEntry->expiration() <= time(NULL) && keyEntry->expiration() > 0 ) {
 		dprintf( D_SECURITY,
 				 "DC_INVALIDATE_KEY: security session %s %s expired.\n",
 				 key_id, keyEntry->expirationType() );
@@ -3195,18 +3195,15 @@ bool SecMan :: invalidateKey(const char * key_id)
 	// Now, remove session id
 	if (daemonCore && !strcmp(daemonCore->m_family_session_id.c_str(), key_id) ) {
 		dprintf ( D_SECURITY, "DC_INVALIDATE_KEY: ignoring request to invalidate family security key.\n" );
-	} else
-	if (session_cache->remove(key_id)) {
-		dprintf ( D_SECURITY, 
-				  "DC_INVALIDATE_KEY: removed key id %s.\n", 
-				  key_id);
+		return false;
 	} else {
+		session_cache->erase(itr);
 		dprintf ( D_SECURITY, 
-				  "DC_INVALIDATE_KEY: ignoring request to invalidate non-existant key %s.\n", 
+				  "DC_INVALIDATE_KEY: removed key id %s.\n",
 				  key_id);
 	}
 
-    return removed;
+    return true;
 }
 
 void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
@@ -3501,7 +3498,6 @@ void
 SecMan::invalidateOneExpiredCache(KeyCache *cache)
 {
     // Go through all cache and invalide the ones that are expired
-    StringList * list = cache->getExpiredKeys();
 
     // The current session cache, command map does not allow
     // easy random access based on host direcly. Therefore,
@@ -3509,12 +3505,21 @@ SecMan::invalidateOneExpiredCache(KeyCache *cache)
     // In this case, I assume the command map will be bigger
     // so, outloop will be command map, inner loop will be host
 
-    list->rewind();
-    char * p;
-    while ( (p = list->next()) ) {
-        invalidateKey(p);
-    }
-    delete list;
+	// invalidateKey() will erase the given cache entry, so be careful to
+	// advance our iterator before calling it.
+	time_t cutoff = time(nullptr);
+	std::string key;
+	auto itr = cache->begin();
+	while (itr != cache->end()) {
+		bool expired = itr->second.expiration() && itr->second.expiration() < cutoff;
+		if (expired) {
+			key = itr->first;
+		}
+		itr++;
+		if (expired) {
+			invalidateKey(key.c_str());
+		}
+	}
 }
 
 void
@@ -3949,43 +3954,18 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		keybuf = NULL;
 	}
 
-	KeyCacheEntry key(sesid,peer_sinful ? peer_sinful : "",keys_list,policy,expiration_time,0);
-
-	if( !session_cache->insert(key) ) {
-		KeyCacheEntry *existing = NULL;
-		bool fixed = false;
-		if( !session_cache->lookup(sesid,existing) ) {
-			existing = NULL;
-		}
-		if( existing ) {
-			if( !LookupNonExpiredSession(sesid,existing) ) {
-					// the existing session must have expired, so try again
-				existing = NULL;
-				if( session_cache->insert(key) ) {
-					fixed = true;
-				}
-			}
-			else if( existing && existing->getLingerFlag() ) {
-				dprintf(D_ALWAYS,"SECMAN: removing lingering non-negotiated security session %s because it conflicts with new request\n",sesid);
-				session_cache->expire(existing);
-				existing = NULL;
-				if( session_cache->insert(key) ) {
-					fixed = true;
-				}
-			}
-		}
-
-		if( !fixed ) {
-			ClassAd *existing_policy = existing ? existing->policy() : NULL;
-			if( existing_policy ) {
-				dprintf(D_SECURITY,"SECMAN: not creating new session, found existing session %s\n", sesid);
-				dPrintAd(D_SECURITY | D_FULLDEBUG, *existing_policy);
-			} else {
-				dprintf(D_ALWAYS, "SECMAN: failed to create session %s.\n", sesid);
-			}
+	KeyCacheEntry* existing = nullptr;
+	if (LookupNonExpiredSession(sesid, existing)) {
+		if (existing->getLingerFlag()) {
+			dprintf(D_ALWAYS, "SECMAN: removing lingering non-negotiated security session %s because it conflicts with new request\n", sesid);
+			session_cache->erase(sesid);
+		} else {
+			dprintf(D_SECURITY,"SECMAN: not creating new session, found existing session %s\n", sesid);
+			dPrintAd(D_SECURITY | D_FULLDEBUG, *existing->policy());
 			return false;
 		}
 	}
+	session_cache->emplace(sesid, KeyCacheEntry(sesid, peer_sinful ? peer_sinful : "", keys_list, policy, expiration_time, 0));
 
 	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
 			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
@@ -4111,10 +4091,11 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 bool
 SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 {
-	KeyCacheEntry *session_key = NULL;
-	if (!session_cache->lookup(session_id, session_key)) {return false;}
-	ClassAd *policy = session_key->policy();
-	if (!policy) {return false;}
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
+		return false;
+	}
+	ClassAd *policy = itr->second.policy();
 
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_SUBJECT);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_EXPIRATION);
@@ -4135,10 +4116,11 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 bool
 SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name, std::string &attr_value)
 {
-	KeyCacheEntry *session_key = NULL;
-	if (!session_cache->lookup(session_id, session_key)) {return false;}
-	ClassAd *policy = session_key->policy();
-	if (!policy) {return false;}
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
+		return false;
+	}
+	ClassAd *policy = itr->second.policy();
 
 	return policy->LookupString(attr_name,attr_value) ? true : false;
 }
@@ -4147,13 +4129,13 @@ bool
 SecMan::ExportSecSessionInfo(char const *session_id,std::string &session_info) {
 	ASSERT( session_id );
 
-	KeyCacheEntry *session_key = NULL;
-	if(!session_cache->lookup(session_id,session_key)) {
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
 		dprintf(D_ALWAYS,"SECMAN: ExportSecSessionInfo failed to find "
 				"session %s\n",session_id);
 		return false;
 	}
-	ClassAd *policy = session_key->policy();
+	ClassAd *policy = itr->second.policy();
 	ASSERT( policy );
 
 	dprintf(D_SECURITY|D_VERBOSE, "EXPORT: Exporting session attributes from ad:\n");
@@ -4226,13 +4208,13 @@ bool
 SecMan::SetSessionExpiration(char const *session_id,time_t expiration_time) {
 	ASSERT( session_id );
 
-	KeyCacheEntry *session_key = NULL;
-	if(!session_cache->lookup(session_id,session_key)) {
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
 		dprintf(D_ALWAYS,"SECMAN: SetSessionExpiration failed to find "
 				"session %s\n",session_id);
 		return false;
 	}
-	session_key->setExpiration(expiration_time);
+	itr->second.setExpiration(expiration_time);
 
 	dprintf(D_SECURITY,"Set expiration time for security session %s to %ds\n",session_id,(int)(expiration_time-time(NULL)));
 
@@ -4243,13 +4225,13 @@ bool
 SecMan::SetSessionLingerFlag(char const *session_id) {
 	ASSERT( session_id );
 
-	KeyCacheEntry *session_key = NULL;
-	if(!session_cache->lookup(session_id,session_key)) {
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
 		dprintf(D_ALWAYS,"SECMAN: SetSessionLingerFlag failed to find "
 				"session %s\n",session_id);
 		return false;
 	}
-	session_key->setLingerFlag(true);
+	itr->second.setLingerFlag(true);
 
 	return true;
 }
