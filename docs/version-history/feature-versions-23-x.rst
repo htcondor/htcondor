@@ -44,6 +44,11 @@ New Features:
   they are given.
   :jira:`2058`
 
+- The curl_plugin tool now recognizes the environment variable
+  X509_CERT_DIR and configures libcurl to search  the given directory for
+  CA certificates.
+  :jira:`2065`
+
 Bugs Fixed:
 
 - None.
