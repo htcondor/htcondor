@@ -39,6 +39,10 @@ case "$1" in
         if [ -d $condor_home ]; then
             # Open up the permission, if the directory exists
             chmod o+rx $condor_home
+        else
+            # Create the home directory, if non-existant
+            mkdir -p $condor_home
+            chown $condor_user $condor_home
         fi
         # condor_master needs a log directory to start up
         dirname=$(condor_config_val LOG 2>/dev/null)
