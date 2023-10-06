@@ -44,6 +44,10 @@ Bugs Fixed:
   job epoch history file.
   :jira:`2060`
 
+- Fix a bug where HTCondor fails to install on Debian and Ubuntu platforms when the ``condor``
+  user is present and the ``/var/lib/condor`` directory is not.
+  :jira:`2074`
+
 .. _lts-version-history-2300:
 
 Version 23.0.0
