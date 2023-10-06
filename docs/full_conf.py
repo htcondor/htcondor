@@ -47,6 +47,8 @@ extensions = [
 
 nbsphinx_requirejs_path = ''
 
+mermaid_version = '10.5.0'
+
 autosectionlabel_prefix_document = True
 
 # -- Options for HTML output ----------------------------------------------
