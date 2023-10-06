@@ -13644,6 +13644,11 @@ Scheduler::Init()
 	JobStopCount = param_integer( "JOB_STOP_COUNT", 1, 1 );
 	stop_job_queue.setCountPerInterval( JobStopCount );
 
+	m_protected_url_map.clear();
+	auto_free_ptr protectedUrlMapFile(param("PROTECTED_URL_TRANSFER_MAPFILE"));
+	if (protectedUrlMapFile) {
+		m_protected_url_map.ParseCanonicalizationFile(protectedUrlMapFile.ptr(), true, true, true);
+	}
 		////////////////////////////////////////////////////////////////////
 		// Initialize the queue managment code
 		////////////////////////////////////////////////////////////////////

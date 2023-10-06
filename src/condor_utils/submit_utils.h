@@ -363,6 +363,9 @@
 #define SUBMIT_KEY_HoldKillSig "hold_kill_sig"
 #define SUBMIT_KEY_KillSigTimeout "kill_sig_timeout"
 
+//Temporary function to get a mapfile object point to protected url map
+MapFile* getProtectedURLMap();
+
 // class to parse, hold and manage a python style slice: [x:y:z]
 // used by the condor_submit queue 'foreach' handling
 class qslice {
@@ -681,6 +684,11 @@ public:
 		Unknown
 	};
 
+	// Attach and detach Protected URL transfer map object by pointer
+	// Note: SubmitHash does not own this pointer
+	void attachTransferMap(MapFile* map) { protectedUrlMap = map; }
+	void detachTransferMap() { protectedUrlMap = nullptr; }
+
 protected:
 	MACRO_SET SubmitMacroSet;
 	MACRO_EVAL_CONTEXT mctx;
@@ -693,6 +701,7 @@ protected:
 	time_t     submit_time;
 	std::string   submit_username; // username specified to init_cluster_ad
 	ClassAd extendedCmds; // extended submit keywords, from config
+	MapFile *protectedUrlMap{nullptr}; // Map file for protected url separation in job ad
 
 	// these are used with the internal ABORT_AND_RETURN() and RETURN_IF_ABORT() methods
 	mutable int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
@@ -852,6 +861,7 @@ private:
 	int SetRequestDisk(const char * key);  /* used by SetRequestResources */
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
 	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
+	int SetProtectedURLTransferLists();    /* used by FixupTransferInputFiles*/
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,

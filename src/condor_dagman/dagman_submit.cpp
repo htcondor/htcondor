@@ -685,6 +685,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	// set submit keywords defined by dagman and VARS
 	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, false);
 
+	submitHash->attachTransferMap(dm._protectedUrlMap);
 	submitHash->init_base_ad(time(NULL), owner);
 
 	qmgr = ConnectQ(schedd);
@@ -767,6 +768,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	}
 
 finis:
+	submitHash->detachTransferMap();
 	if (qmgr) {
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.
 		DisconnectQ(qmgr, false); qmgr = NULL;

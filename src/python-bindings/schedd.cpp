@@ -18,6 +18,7 @@
 #include "my_username.h"
 #include "condor_version.h"
 #include "../condor_utils/dagman_utils.h"
+#include "../condor_utils/MapFile.h"
 
 #include <classad/operators.h>
 
@@ -937,29 +938,35 @@ struct SubmitJobsIterator {
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, boost::python::object from, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, num, from)
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(false)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 			// copy the input submit hash into our new hash.
 			m_hash.init(JSM_PYTHON_BINDINGS);
+			m_protected_url_map = getProtectedURLMap();
 			copy_hash(h);
 			m_hash.setDisableFileChecks(true);
 			m_hash.init_base_ad(qdate, owner.c_str());
+			m_hash.attachTransferMap(m_protected_url_map);
 	}
 
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, const std::string & qargs, MacroStreamMemoryFile & ms_inline_items, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, 0, boost::python::object())
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(true)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 		// copy the input submit hash into our new hash.
 		m_hash.init(JSM_PYTHON_BINDINGS);
+		m_protected_url_map = getProtectedURLMap();
 		copy_hash(h);
 		m_hash.setDisableFileChecks(true);
 		m_hash.init_base_ad(qdate, owner.c_str());
+		m_hash.attachTransferMap(m_protected_url_map);
 
 		if (qargs.empty()) {
 			m_ssqa.begin(id, num);
@@ -981,7 +988,12 @@ struct SubmitJobsIterator {
 	}
 
 
-	~SubmitJobsIterator() {}
+	~SubmitJobsIterator() {
+		if (m_protected_url_map) {
+			delete m_protected_url_map;
+			m_protected_url_map = nullptr;
+		}
+	}
 
 	void copy_hash(SubmitHash & h)
 	{
@@ -1069,6 +1081,7 @@ private:
 	SubmitHash m_hash;
 	SubmitStepFromPyIter m_sspi;
 	SubmitStepFromQArgs m_ssqa;
+	MapFile* m_protected_url_map;
 	bool m_iter_qargs;
 	bool m_return_proc_ads;
 	bool m_spool;
@@ -1109,6 +1122,7 @@ public:
     std::string owner() const;
     std::string schedd_version();
     const ClassAd* capabilites();
+    MapFile* urlMap();
 
     static boost::shared_ptr<ConnectionSentry> enter(boost::shared_ptr<ConnectionSentry> obj);
     static bool exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object obj2, boost::python::object obj3);
@@ -1410,14 +1424,15 @@ struct Schedd {
 
 
     Schedd()
-     : m_connection(NULL)
+     : m_connection(NULL), m_protected_url_map(nullptr)
     {
         use_local_schedd();
+        m_protected_url_map = getProtectedURLMap();
     }
 
 
     Schedd(boost::python::object loc)
-      : m_connection(NULL), m_addr(), m_name("Unknown"), m_version("")
+      : m_connection(NULL), m_protected_url_map(nullptr), m_addr(), m_name("Unknown"), m_version("")
     {
 		int rv = construct_for_location(loc, DT_SCHEDD, m_addr, m_version, &m_name);
 		if (rv == 0) {
@@ -1426,11 +1441,16 @@ struct Schedd {
 			if (rv == -2) { boost::python::throw_error_already_set(); }
 			THROW_EX(HTCondorValueError, "Unknown type");
 		}
+		m_protected_url_map = getProtectedURLMap();
     }
 
     ~Schedd()
     {
         if (m_connection) { m_connection->abort(); }
+        if (m_protected_url_map) {
+            delete m_protected_url_map;
+            m_protected_url_map = nullptr;
+        }
     }
 
     boost::python::object location() const {
@@ -2639,10 +2659,13 @@ struct Schedd {
         return iter;
     }
 
+
+    MapFile* getUrlMap() { return m_protected_url_map; }
+
 private:
 
     ConnectionSentry* m_connection;
-
+    MapFile *m_protected_url_map;
     std::string m_addr, m_name, m_version;
 
 };
@@ -2693,6 +2716,11 @@ const ClassAd* ConnectionSentry::capabilites()
 		return &m_capabilities;
 	}
 	return NULL;
+}
+
+MapFile* ConnectionSentry::urlMap()
+{
+    return m_schedd.getUrlMap();
 }
 
 int
@@ -3462,6 +3490,8 @@ public:
 			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
 		}
 
+		m_hash.attachTransferMap(txn->urlMap());
+
 		if (factory_submit) {
 
 			// force re-initialization (and a new cluster) if this hash is used again.
@@ -3571,6 +3601,8 @@ public:
 			}
 		}
 
+		m_hash.detachTransferMap();
+
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
             txn->reschedule();
@@ -3628,6 +3660,8 @@ public:
 		JOB_ID_KEY jid;
 		int step=0, item_index=0, rval;
 		SubmitStepFromPyIter ssi(m_hash, JOB_ID_KEY(cluster, first_proc_id), count, from);
+
+		m_hash.attachTransferMap(txn->urlMap());
 
 		if (factory_submit) {
 
@@ -3729,6 +3763,8 @@ public:
 			}
 
 		}
+
+		m_hash.detachTransferMap();
 
 		if (rval < 0) { ssi.throw_error(); }
 
