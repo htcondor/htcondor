@@ -206,6 +206,8 @@ man_pages = [
     ('man-pages/procd_ctl', 'procd_ctl', u'HTCondor Manual', [u'HTCondor Team'], 1)
 ]
 
+man_make_section_directory = True
+
 # If true, show URL addresses after external links.
 # man_show_urls = False
 
