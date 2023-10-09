@@ -55,8 +55,6 @@ Vcs-Git: git://github.com/htcondor/htcondor.git
 Homepage: https://htcondor.org/
 X-Python3-Version: >= 3.7
 
-Rules-Requires-Root: no
-
 Package: condor
 Architecture: any
 Depends: adduser,
