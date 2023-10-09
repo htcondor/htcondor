@@ -5,8 +5,8 @@ set -e
 
 case "$1" in
     configure)
-        # take care of starting enabling condor-annex-ec2
-        systemctl enable condor-annex-ec2
+        # take care of starting enabling condor-annex-ec2, do no harm if no systemd
+        systemctl enable condor-annex-ec2 || true
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
