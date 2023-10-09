@@ -20,8 +20,6 @@
 #ifndef _CONDOR_GETCWD_H_
 #define _CONDOR_GETCWD_H_
 
-class MyString;
-
 /* condor_getcwd() gets the current working directory, creating as large
    a buffer as necessary.
    returns: true on success, false on failure (errno contains reason)

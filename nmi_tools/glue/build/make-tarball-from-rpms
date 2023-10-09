@@ -40,8 +40,8 @@ for file in $rpmdir/*.rpm; do
     elif [[ $file == */python2-* ]]; then
         # Skip Python 2 bindings
         echo Skipping $file
-    elif [[ $file == *-credmon-oauth-* ]]; then
-        # Skip oath credmon
+    elif [[ $file == *-credmon-* ]]; then
+        # Skip any credmon
         echo Skipping $file
     else
         eval $(perl -e "(\$package, \$version, \$release, \$dist, \$arch) = '$file' =~ m:^.*/(.*)-([0-9][0-9.]*)-([0-9][0-9.]*)\.([^.]+)\.([^.]+)\.rpm$:; print \"package=\$package version=\$version release=\$release dist=\$dist arch=\$arch\";")
@@ -51,16 +51,19 @@ for file in $rpmdir/*.rpm; do
     fi
 done
 
-if [[ $dist == amzn2 ]]; then
-    arch_dist="${arch}_AmazonLinux2"
+if [[ $dist == amzn2023 ]]; then
+    arch_dist="${arch}_AmazonLinux2023"
 elif [[ $dist == el7 ]]; then
     arch_dist="${arch}_CentOS7"
 elif [[ $dist == el8 ]]; then
     arch_dist="${arch}_AlmaLinux8"
 elif [[ $dist == el9 ]]; then
     arch_dist="${arch}_AlmaLinux9"
-elif [[ $dist == fc32 ]]; then
-    arch_dist="${arch}_Fedora32"
+elif [[ $dist == fc38 ]]; then
+    arch_dist="${arch}_Fedora38"
+else
+    echo 'Platform not defined'
+    exit 1
 fi
 
 # Blow away whatever BaTLab made
@@ -82,17 +85,8 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
-AVERSION=(${version//./ })
-MAJOR_VER=${AVERSION[0]}
-MINOR_VER=${AVERSION[1]}
-if [ "$MINOR_VER" -eq 0 ]; then
-    REPO_VERSION=$MAJOR_VER.0
-else
-    REPO_VERSION=$MAJOR_VER.x
-fi
-
 # Extract external RPMs
-for path in /usr/local/condor/externals/$REPO_VERSION/*.rpm; do
+for path in /usr/local/condor/externals/*.rpm; do
     file=${path##*/}
     echo ======= $file =======
     echo $file >> tarball/Manifest.txt
@@ -104,7 +98,7 @@ if [ $? -ne 0 ];then
     echo 'ERROR: tarball link script failed'
     exit 1
 fi
-$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
+$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64:$ORIGIN/../lib64/condor'
 if [ $? -ne 0 ];then
     echo 'ERROR: set rpath script failed'
     exit 1
@@ -116,6 +110,16 @@ chmod 755 tarball/etc/condor/tokens.d
 chmod 755 tarball/var/lib/condor/execute
 chmod 755 tarball/var/lib/condor/oauth_credentials
 chmod g-s tarball/var/lib/condor/oauth_credentials
+
+# Add in apptainer if available
+if [ -d /usr/local/condor/externals/apptainer ]; then
+    /usr/local/condor/externals/apptainer/bin/apptainer --version
+    cp -a /usr/local/condor/externals/apptainer/* tarball/usr
+    tarball/bin/apptainer --version >> tarball/Manifest.txt
+fi
+
+echo ======= Manifest.txt =======
+cat tarball/Manifest.txt
 
 # Package final tarball
 mv tarball condor-$version-$release-$arch_dist-stripped

@@ -69,12 +69,6 @@ const char* tfstr(int);
 /*  tfstr() for ints where -1 indicates failure and 0 indicates success */
 const char* tfnze(int);
 
-/* For MyString, calls vsprintf on the given str */
-bool vsprintfHelper(MyString* str, const char* format, ...);
-
-/* For MyString, calls vformatstr_cat on the given str */
-bool vformatstr_catHelper(MyString* str, const char* format, ...);
-
 /* Returns the empty string when the passed string is null */
 const char* nicePrint(const char* str);
 
@@ -98,8 +92,6 @@ ClassAd* get_classad_from_file();
 /* Originally from condor_c++_util/test_old_classads.cpp*/
 bool floats_close( double one, double two, double diff = .0001);
 
-bool strings_similar(const MyString* str1, const MyString* str2, 
-	const char* delims = " ");
 bool strings_similar(const std::string& str1, const std::string& str2,
 	const char* delims = " ");
 
@@ -111,11 +103,10 @@ bool strings_similar(const char* str1, const char* str2,
 	const char* delims = " ");
 
 /* Converts the given char** into a MyString seperated by the given delims */
-MyString* convert_string_array(char** str, int size, const char* delim = " ");
+std::string * convert_string_array(char** str, int size, const char* delim = " ");
 
 /* Converts the given char** into a MyString seperated by the given delims */
-MyString* convert_string_array(const char** str, int size, 
-	const char* delim = " ");
+std::string * convert_string_array(const char** str, int size, const char* delim = " ");
 
 /* Deletes a char** */
 void delete_helper(char** array, int num_strs);

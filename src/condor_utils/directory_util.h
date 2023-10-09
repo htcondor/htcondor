@@ -20,7 +20,6 @@
 #ifndef DIRECTORY_UTIL_H
 #define DIRECTORY_UTIL_H
 
-class MyString;
 #include <string>
 
 /** Returns a path to subdirectory to use for temporary files.

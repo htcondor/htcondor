@@ -33,9 +33,12 @@
 #include "authentication.h"
 #include "globus_utils.h"
 #include "limit_directory_access.h"
+#include <filesystem>
 #include "manifest.h"
 
 #include <fstream>
+#include <algorithm>
+
 #include "spooled_job_files.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -69,8 +72,6 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	dc_startd = NULL;
 	machineName = NULL;
 	starterAddress = NULL;
-	starterArch = NULL;
-	starterOpsys = NULL;
 	jobAd = NULL;
 	claim_sock = NULL;
 	last_job_lease_renewal = 0;
@@ -128,8 +129,7 @@ RemoteResource::~RemoteResource()
 	if ( dc_startd     ) delete dc_startd;
 	if ( machineName   ) free( machineName );
 	if ( starterAddress) free( starterAddress );
-	if ( starterArch   ) free( starterArch );
-	if ( starterOpsys  ) free( starterOpsys );
+	if ( starterAd ) { delete starterAd; starterAd = nullptr; }
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
@@ -146,10 +146,10 @@ RemoteResource::~RemoteResource()
 
 
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( m_claim_session.secSessionId() ) {
+		if( m_claim_session.secSessionId()[0] != '\0' ) {
 			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
 		}
-		if( m_filetrans_session.secSessionId() ) {
+		if( m_filetrans_session.secSessionId()[0] != '\0' ) {
 			daemonCore->getSecMan()->invalidateKey( m_filetrans_session.secSessionId() );
 		}
 	}
@@ -422,7 +422,7 @@ RemoteResource::dprintfSelf( int debugLevel )
 }
 
 void
-RemoteResource::attemptShutdownTimeout()
+RemoteResource::attemptShutdownTimeout( int /* timerID */ )
 {
 	m_attempt_shutdown_tid = -1;
 	attemptShutdown();
@@ -606,6 +606,8 @@ RemoteResource::closeClaimSock( void )
 void
 RemoteResource::disconnectClaimSock(const char *err_msg)
 {
+	abortFileTransfer();
+
 	if (!claim_sock) {
 		return;
 	}
@@ -740,7 +742,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 
 	m_claim_session = ClaimIdParser(claim_id);
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( m_claim_session.secSessionId() == NULL ) {
+		if( m_claim_session.secSessionId()[0] == '\0' ) {
 			dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: warning - failed to create security session from claim id %s because claim has no session information, likely because the matched startd has SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION set to False\n",m_claim_session.publicClaimId());
 		}
 		else {
@@ -824,66 +826,46 @@ void
 RemoteResource::setStarterInfo( ClassAd* ad )
 {
 
-	char* tmp = NULL;
+	std::string buf;
+	dprintf(D_MACHINE, "StarterInfo ad:\n%s", formatAd(buf, *ad, "\t")); // formatAt guarantees a newline.
 
-	if( ad->LookupString(ATTR_STARTER_IP_ADDR, &tmp) ) {
-		setStarterAddress( tmp );
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_STARTER_IP_ADDR, tmp ); 
-		free( tmp );
-		tmp = NULL;
+	// save (most of) the incoming starter ad for later
+	if (starterAd) { starterAd->Clear(); }
+	else { starterAd = new ClassAd(); }
+	starterAd->Update(*ad);
+
+	if( ad->LookupString(ATTR_STARTER_IP_ADDR, buf) ) {
+		setStarterAddress( buf.c_str() );
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_STARTER_IP_ADDR, buf.c_str() );
+		starterAd->Delete(ATTR_STARTER_IP_ADDR);
 	}
 
-	if( ad->LookupString(ATTR_UID_DOMAIN, &tmp) ) {
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_UID_DOMAIN, tmp );
-		free( tmp );
-		tmp = NULL;
+	if( ad->LookupString(ATTR_UID_DOMAIN, buf) ) {
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_UID_DOMAIN, buf.c_str() );
+		starterAd->Delete(ATTR_UID_DOMAIN);
 	}
 
-	if( ad->LookupString(ATTR_FILE_SYSTEM_DOMAIN, &tmp) ) {
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_FILE_SYSTEM_DOMAIN,
-				 tmp );  
-		free( tmp );
-		tmp = NULL;
+	if( ad->LookupString(ATTR_FILE_SYSTEM_DOMAIN, buf) ) {
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_FILE_SYSTEM_DOMAIN, buf.c_str() );
+		starterAd->Delete(ATTR_FILE_SYSTEM_DOMAIN);
 	}
 
-	if( ad->LookupString(ATTR_NAME, &tmp) ) {
+	if( ad->LookupString(ATTR_NAME, buf) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
 				free(machineName);
-				machineName = strdup( tmp );
+				machineName = strdup( buf.c_str() );
 			}
 		}	
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
-		free( tmp );
-		tmp = NULL;
-	} else if( ad->LookupString(ATTR_MACHINE, &tmp) ) {
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
+	} else if( ad->LookupString(ATTR_MACHINE, buf) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
 				free(machineName);
-				machineName = strdup( tmp );
+				machineName = strdup( buf.c_str() );
 			}
 		}	
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
-		free( tmp );
-		tmp = NULL;
-	}
-
-	if( ad->LookupString(ATTR_ARCH, &tmp) ) {
-		if( starterArch ) {
-			free( starterArch );
-		}	
-		starterArch = tmp;
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_ARCH, tmp ); 
-		tmp = NULL;
-	}
-
-	if( ad->LookupString(ATTR_OPSYS, &tmp) ) {
-		if( starterOpsys ) {
-			free( starterOpsys );
-		}	
-		starterOpsys = tmp;
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_OPSYS, tmp ); 
-		tmp = NULL;
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	}
 
 	char* starter_version=NULL;
@@ -911,6 +893,34 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	}
 }
 
+void
+RemoteResource::populateExecuteEvent(std::string & slotName, ClassAd & props)
+{
+	const ClassAd * starterAd = getStarterAd();
+	if (starterAd) {
+		starterAd->LookupString(ATTR_NAME, slotName);
+
+		std::string scratch;
+		if (starterAd->LookupString(ATTR_CONDOR_SCRATCH_DIR, scratch)) {
+			props.Assign(ATTR_CONDOR_SCRATCH_DIR, scratch);
+		}
+
+		CopyMachineResources(props, *starterAd, false);
+		if (jobAd) {
+			std::string requestAttrs;
+			if (jobAd->LookupString(ATTR_ULOG_EXECUTE_EVENT_ATTRS, requestAttrs)) {
+				CopySelectAttrs(props, *starterAd, requestAttrs, false); //Don't allow overwrites
+			}
+		}
+	} else if (machineName) {
+		slotName = machineName;
+	} else if (dc_startd) {
+		const char* localName = dc_startd->name();
+		if (localName ) {
+			slotName = localName;
+		}
+	}
+}
 
 void
 RemoteResource::setMachineName( const char * mName )
@@ -1079,7 +1089,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 }
 
 void
-RemoteResource::updateFromStarterTimeout()
+RemoteResource::updateFromStarterTimeout( int /* timerID */ )
 {
 	// If we landed here, then we expected to receive an update from the starter,
 	// but it didn't arrive yet.  Even if the remote syscall sock is still connected,
@@ -1275,6 +1285,24 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     int checkpointNumber = -1;
     if( update_ad->LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber )) {
         jobAd->Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+    }
+
+    // Likewise, most starter updates don't include the newly committed time.
+    int newlyCommittedTime = 0;
+    if( update_ad->LookupInteger( ATTR_JOB_NEWLY_COMMITTED_TIME, newlyCommittedTime ) ) {
+        int committedTime = 0;
+        jobAd->LookupInteger( ATTR_JOB_COMMITTED_TIME, committedTime );
+        committedTime += newlyCommittedTime;
+        jobAd->Assign( ATTR_JOB_COMMITTED_TIME, committedTime );
+    }
+
+    // ... or the time of the time of the last checkpoint.  At some point,
+    // we might decide that it's safe to trigger all of the left-over old
+    // standard universe code by using its attribute names, but let's not
+    // for now.
+    int lastCheckpointTime = -1;
+    if( update_ad->LookupInteger( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime ) ) {
+        jobAd->Assign( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime );
     }
 
     // these are headed for job ads in the scheduler, so rename them
@@ -1481,7 +1509,7 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 
 		// Finally, we need to update some attributes in our in-memory
 		// copy of the job ClassAd
-	int now = (int)time(NULL);
+	time_t now = time(nullptr);
 	int total_suspensions = 0;
 
 	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
@@ -1515,9 +1543,9 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 	}
 
 		// Now, update our in-memory copy of the job ClassAd
-	int now = (int)time(NULL);
+	time_t now = time(nullptr);
 	int cumulative_suspension_time = 0;
-	int last_suspension_time = 0;
+	time_t last_suspension_time = 0;
 
 		// add in the time I spent suspended to a running total
 	jobAd->LookupInteger( ATTR_CUMULATIVE_SUSPENSION_TIME,
@@ -1557,7 +1585,7 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 {
 	bool rval = true;
 	std::string string_value;
-	int int_value = 0;
+	time_t int_value = 0;
 	static float last_recv_bytes = 0.0;
 
 		// First, log this to the UserLog
@@ -1577,7 +1605,7 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	}
 
 	// Now, update our in-memory copy of the job ClassAd
-	int now = (int)time(NULL);
+	time_t now = time(nullptr);
 
 	// Increase the total count of checkpoint
 	// by default, we round ATTR_NUM_CKPTS, so fetch the raw value
@@ -1589,10 +1617,10 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	ckpt_count++;
 	jobAd->Assign(ATTR_NUM_CKPTS, ckpt_count);
 
-	int last_ckpt_time = 0;
+	time_t last_ckpt_time = 0;
 	jobAd->LookupInteger(ATTR_LAST_CKPT_TIME, last_ckpt_time);
 
-	int current_start_time = 0;
+	time_t current_start_time = 0;
 	jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, current_start_time);
 
 	int_value = (last_ckpt_time > current_start_time) ? 
@@ -1873,7 +1901,7 @@ void
 RemoteResource::hadContact( void )
 {
 	last_job_lease_renewal = time(0);
-	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, (int)last_job_lease_renewal );
+	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, last_job_lease_renewal );
 }
 
 
@@ -1925,8 +1953,8 @@ RemoteResource::reconnect( void )
 					ATTR_LAST_JOB_LEASE_RENEWAL );
 		}
 		dprintf( D_ALWAYS, "Trying to reconnect to disconnected job\n" );
-		dprintf( D_ALWAYS, "%s: %d %s", ATTR_LAST_JOB_LEASE_RENEWAL,
-				 (int)last_job_lease_renewal, 
+		dprintf( D_ALWAYS, "%s: %lld %s", ATTR_LAST_JOB_LEASE_RENEWAL,
+				 (long long)last_job_lease_renewal,
 				 ctime(&last_job_lease_renewal) );
 		dprintf( D_ALWAYS, "%s: %d seconds\n",
 				 ATTR_JOB_LEASE_DURATION, lease_duration );
@@ -1976,7 +2004,7 @@ RemoteResource::reconnect( void )
 
 
 void
-RemoteResource::attemptReconnect( void )
+RemoteResource::attemptReconnect( int /* timerID */ )
 {
 		// now that the timer went off, clear out this variable so we
 		// don't get confused later.
@@ -2007,7 +2035,7 @@ RemoteResource::remainingLeaseDuration( void )
 			// No lease, nothing remains.
 		return 0;
 	}
-	int now = (int)time(0);
+	time_t now = (int)time(0);
 	int remaining = lease_duration - (now - last_job_lease_renewal);
 	return ((remaining < 0) ? 0 : remaining);
 }
@@ -2034,8 +2062,9 @@ RemoteResource::locateReconnectStarter( void )
 			free( claimid );
 			return true;
 		} else {
-			EXCEPT( "impossible: locateStarter() returned success "
-					"but %s not found", ATTR_STARTER_IP_ADDR );
+			reconnect();
+			free( claimid );
+			return false;
 		}
 	}
 	
@@ -2201,7 +2230,7 @@ RemoteResource::initFileTransfer()
 	//
 
 	std::string checkpointDestination;
-	if(! jobAd->LookupString( "CheckpointDestination", checkpointDestination )) {
+	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination )) {
 		return;
 	}
 
@@ -2265,6 +2294,7 @@ RemoteResource::initFileTransfer()
 	std::string globalJobID;
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
 	ASSERT(! globalJobID.empty());
+	std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
 
 	std::string manifestLine;
 	std::string nextManifestLine;
@@ -2454,7 +2484,7 @@ RemoteResource::setRemoteProxyRenewTime(time_t expiration_time)
 {
 	m_remote_proxy_expiration = expiration_time;
 	m_remote_proxy_renew_time = GetDelegatedProxyRenewalTime(expiration_time);
-	jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, (int)expiration_time);
+	jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, expiration_time);
 }
 
 void
@@ -2530,7 +2560,7 @@ RemoteResource::updateX509Proxy(const char * filename)
 }
 
 void 
-RemoteResource::checkX509Proxy( void )
+RemoteResource::checkX509Proxy( int /* timerID */ )
 {
 	if( state != RR_EXECUTING ) {
 		dprintf(D_FULLDEBUG,"checkX509Proxy() doing nothing, because resource is not in EXECUTING state.\n");
@@ -2590,7 +2620,7 @@ RemoteResource::getSecSessionInfo(
 		dprintf(D_ALWAYS,"Request for security session info from starter, but SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION is not True, so ignoring.\n");
 		return false;
 	}
-	if (!m_claim_session.secSessionId() || !m_filetrans_session.secSessionId()) {
+	if (m_claim_session.secSessionId()[0] == '\0' || m_filetrans_session.secSessionId()[0] == '\0') {
 		dprintf(D_ALWAYS,"Request for security session info from starter, but claim id has no security session, so ignoring.\n");
 		return false;
 	}

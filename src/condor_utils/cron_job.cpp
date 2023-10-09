@@ -147,8 +147,8 @@ CronJob::HandleReconfig( void )
 		if ( Period() == m_old_period ) {
 			return 0;
 		}
-		unsigned now = time(NULL);
-		unsigned last_time;
+		time_t now = time(nullptr);
+		time_t last_time;
 		unsigned period;
 		if ( IsPeriodic() ) {
 			last_time = m_last_start_time;
@@ -169,7 +169,7 @@ CronJob::HandleReconfig( void )
 			return 0;
 		}
 		else {
-			return SetTimer( last_time + Period() - now, period );
+			return SetTimer( (unsigned)(last_time + Period() - now), period );
 		}
 	}
 
@@ -328,7 +328,7 @@ CronJob::StartJob( void )
 
 // Handle the kill timer
 void
-CronJob::KillHandler( void )
+CronJob::KillHandler( int /* timerID */ )
 {
 
 	// Log that we're here

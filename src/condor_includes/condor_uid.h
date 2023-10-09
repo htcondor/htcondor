@@ -131,10 +131,17 @@ typedef enum {
    COMPARE_IGNORE_DOMAIN,    // compare users only, ingnore domains
    COMPARE_DOMAIN_PREFIX,    // compare users & domains, allow one domain to be a prefix of the other
    COMPARE_DOMAIN_FULL,      // usernames and domains must be the same (domain is case-insensitive)
-   COMPARE_MASK = 0x0F,      // mask to strip compare type from options
+   DOMAIN_MASK = 0x0F,      // mask to strip compare type from options
    ASSUME_UID_DOMAIN = 0x10, // if this bit is set, assume UID_DOMAIN when domain is unspecified.
+   CASELESS_USER = 0x20,     // if this bit is set, do case-insensitive comparison of user (domain is always caseless)
    } CompareUsersOpt;
-bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt);
+bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt, const char * uid_domain);
+bool is_same_domain(const char * domain1, const char * domain2, CompareUsersOpt opt, const char * uid_domain);
+
+// given a bare user name "bob" or fully-qualified user name "bob@domain" return "bob". buffer used only if needed.
+const char * name_of_user(const char user[], std::string & buf);
+// given a bare username "bob" or fully-qualified user name "bob@domain" return "domain" or def_domain
+const char * domain_of_user(const char user[], const char * def_domain);
 
 
 #if ! defined WIN32

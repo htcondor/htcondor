@@ -67,6 +67,7 @@ ScheddNegotiate::ScheddNegotiate
 	m_current_resources_requested(1),
 	m_current_resources_delivered(0),
 	m_jobs_can_offer(-1),
+	m_will_match_claimed_pslots(false),
 	m_owner(owner ? owner : ""),
 	m_remote_pool(remote_pool ? remote_pool : ""),
 	m_current_auto_cluster_id(-1),
@@ -112,7 +113,7 @@ char const *
 ScheddNegotiate::getRemotePool()
 {
 	if( m_remote_pool.empty() ) {
-		return NULL;
+		return nullptr;
 	}
 	return m_remote_pool.c_str();
 }
@@ -155,7 +156,7 @@ ScheddNegotiate::nextJob()
 					continue;
 				}
 
-				if( !scheduler_skipJob(job, NULL, skip_all, because) ) {
+				if( !scheduler_skipJob(job, nullptr, skip_all, because) ) {
 					// now get a *copy* of the job into m_current_job_ad. it is still linked to the cluster ad
 					// until we call ChainCollapse() on the copy which we do before leaving this method.
 					if( !scheduler_getJobAd( m_current_job_id, m_current_job_ad ) )
@@ -271,7 +272,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		// once the claim is requested.
 
 	bool result = true;
-	int64_t cpus, memory, disk;
+	int64_t cpus = 0, memory = 0, disk = 0;
 
 	cpus = 1;
 	EvalInteger(ATTR_REQUEST_CPUS, job_ad, match_ad, cpus);
@@ -434,7 +435,7 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		classad::References sig_attrs;
 
 		StringTokenIterator list(auto_cluster_attrs);
-		const std::string *attr;
+		const std::string *attr = nullptr;
 		while ((attr = list.next_string())) { sig_attrs.insert(*attr); }
 
 		// besides significant attrs, we also always want to send these attrs cuz
@@ -448,7 +449,6 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
 		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
 		sig_attrs.insert(ATTR_WANT_PSLOT_PREEMPTION);
-		sig_attrs.insert(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
 
 		if (IsDebugVerbose(D_MATCH)) {
 			std::string tmp;
@@ -514,15 +514,16 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		// this information out of m_reject_reason.
 		size_t pos = m_reject_reason.find('|');
 		if ( pos != std::string::npos ) {
-			MyStringTokener tok;
-			tok.Tokenize(m_reject_reason.c_str());
-			/*const char *reason =*/ tok.GetNextToken("|",false);
-			const char *ac = tok.GetNextToken("|",false);
-			const char *jobid = tok.GetNextToken("|",false);
-			if (ac && jobid) {
-				int rr_cluster, rr_proc;
+			StringTokenIterator tok(m_reject_reason, "|");
+			/*const char *reason =*/ tok.next();
+			const char *ac = tok.next();
+			if (ac) {
 				m_current_auto_cluster_id = atoi(ac);
-				StrIsProcId(jobid,rr_cluster,rr_proc,NULL);
+			}
+			const char *jobid = tok.next();
+			if (jobid) {
+				int rr_cluster = 0, rr_proc = 0;
+				StrIsProcId(jobid,rr_cluster,rr_proc,nullptr);
 				if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
 					m_current_resources_delivered = 0;
 				}
@@ -607,7 +608,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		if (RRLRequestIsPending()) {
 			dprintf(D_ALWAYS, "Finished sending rrls to negotiator\n");
 		} else {
-			dprintf( D_ALWAYS, "Negotiation ended - %d jobs matched\n",
+			dprintf( D_ALWAYS, "Negotiation ended: %d jobs matched\n",
 					 m_jobs_matched );
 		}
 
@@ -622,7 +623,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 	if( m_negotiation_finished ) {
 			// the following function takes ownership of sock
 		scheduler_handleNegotiationFinished( sock );
-		sock = NULL;
+		sock = nullptr;
 	}
 	else {
 			// wait for negotiator to write a response
@@ -688,7 +689,7 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 		break;
 
 	case PERMISSION_AND_AD: {
-		char *claim_id = NULL;
+		char *claim_id = nullptr;
 		if( !sock->get_secret(claim_id) || !claim_id ) {
 			dprintf( D_ALWAYS,
 					 "Can't receive ClaimId from negotiator\n" );

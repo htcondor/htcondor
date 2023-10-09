@@ -19,7 +19,6 @@
 
 #include "filename_tools.h"
 #include "condor_debug.h"
-#include "MyString.h"
 #include "condor_uid.h"
 #include "filesystem_remap.h"
 #include "condor_config.h"
@@ -610,10 +609,10 @@ void FilesystemRemap::RemapProc() {
   (11) super options:  per super block options
  */
 
-#define ADVANCE_TOKEN(token, str) { \
-	if ((token = str.GetNextToken(" ", false)) == NULL) { \
+#define ADVANCE_TOKEN(token, sti, full_str) {	\
+	if ((token = sti.next()) == NULL) { \
 		fclose(fd); \
-		dprintf(D_ALWAYS, "Invalid line in mountinfo file: %s\n", str.Value()); \
+		dprintf(D_ALWAYS, "Invalid line in mountinfo file: %s\n", full_str.c_str()); \
 		return; \
 	} \
 }
@@ -624,7 +623,7 @@ void FilesystemRemap::ParseMountinfo() {
 
 #if defined(LINUX)
 
-	MyString str2;
+	std::string str2;
 	const char * token;
 	FILE *fd;
 	bool is_shared;
@@ -638,25 +637,24 @@ void FilesystemRemap::ParseMountinfo() {
 		return;
 	}
 
-	while (str2.readLine(fd, false)) {
-		MyStringWithTokener str(str2);
-		str.Tokenize();
-		ADVANCE_TOKEN(token, str) // mount ID
-		ADVANCE_TOKEN(token, str) // parent ID
-		ADVANCE_TOKEN(token, str) // major:minor
-		ADVANCE_TOKEN(token, str) // root
-		ADVANCE_TOKEN(token, str) // mount point
+	while (readLine(str2, fd, false)) {
+		StringTokenIterator sti(str2);
+		ADVANCE_TOKEN(token, sti, str2); // mount ID
+		ADVANCE_TOKEN(token, sti, str2); // parent ID
+		ADVANCE_TOKEN(token, sti, str2); // major:minor
+		ADVANCE_TOKEN(token, sti, str2); // root
+		ADVANCE_TOKEN(token, sti, str2); // mount point
 		std::string mp(token);
-		ADVANCE_TOKEN(token, str) // mount options
-		ADVANCE_TOKEN(token, str) // optional fields
+		ADVANCE_TOKEN(token, sti, str2); // mount options
+		ADVANCE_TOKEN(token, sti, str2); // optional fields
 		is_shared = false;
 		while (strcmp(token, "-") != 0) {
 			is_shared = is_shared || (strncmp(token, SHARED_STR, strlen(SHARED_STR)) == 0);
-			ADVANCE_TOKEN(token, str)
+			ADVANCE_TOKEN(token, sti, str2);
 		}
-		ADVANCE_TOKEN(token, str) // filesystem type
+		ADVANCE_TOKEN(token, sti, str2); // filesystem type
 		if ((!is_shared) && (strcmp(token, "autofs") == 0)) {
-			ADVANCE_TOKEN(token, str)
+			ADVANCE_TOKEN(token, sti, str2);
 			m_mounts_autofs.push_back(pair_strings(token, mp));
 		}
 		// This seems a bit too chatty - disabling for now.
@@ -679,19 +677,21 @@ root_dir_list()
 		chroot_list.rewind();
 		const char * next_chroot;
 		while ( (next_chroot=chroot_list.next()) ) {
-			MyStringWithTokener chroot_spec(next_chroot);
-			chroot_spec.Tokenize();
-			const char * chroot_name = chroot_spec.GetNextToken("=", false);
-			if (chroot_name == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
+			StringTokenIterator chroot_spec(next_chroot, "=");
+			const char* tok;
+			tok = chroot_spec.next();
+			if (tok == NULL) {
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
 				continue;
 			}
-			const char * next_dir = chroot_spec.GetNextToken("=", false);
-			if (next_dir == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
+			std::string chroot_name = tok;
+			tok = chroot_spec.next();
+			if (tok == NULL) {
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
 				continue;
 			}
-			if (IsDirectory(next_dir)) {
+			std::string next_dir = tok;
+			if (IsDirectory(next_dir.c_str())) {
 				pair_strings p(chroot_name, next_dir);
 				execute_dir_list.push_back(p);
 			}

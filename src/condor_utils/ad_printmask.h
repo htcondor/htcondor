@@ -192,7 +192,7 @@ class AttrListPrintMask
 	void clearPrefixes();
 	ALLOCATION_POOL stringpool;
 
-	void PrintCol(MyString * pretval, Formatter & fmt, const char * value);
+	void PrintCol(std::string * pretval, Formatter & fmt, const char * value);
 	void commonRegisterFormat (int wid, int opts, const char *print, const CustomFormatFn & sf,
 							const char *attr
 							);
@@ -218,7 +218,7 @@ public:
 		memset( pvalid, '\0', cmax );
 
 		if( pdata != NULL ) { delete pdata; }
-		pdata = new classad::Value[cmax];
+		pdata = new classad::Value[(unsigned int)cmax];
 		for( int i = 0; i < cmax; ++i ) {
 			pdata[i] = rhs.pdata[i];
 			pvalid[i] = rhs.pvalid[i];
@@ -230,7 +230,7 @@ public:
 	MyRowOfValues( const MyRowOfValues & in ) :
 	  pdata( NULL ), pvalid( NULL ), cols( 0 ), cmax( 0 ) { * this = in; }
 
-	bool empty() const { return cols > 0; }
+	bool empty() const { return ! (cols > 0); }
 	int ColCount() const { return cols; }
 	classad::Value * Column(int index) {
 		if (index < 0) index = cols+index;

@@ -67,15 +67,12 @@ the *condor_master* to ask all of its children to perform their own
 quick shutdown methods. In both cases, the *condor_master* exits after
 all its children have exited. In the *condor_startd*, if the machine is
 not claimed and running a job, both the ``SIGTERM`` and ``SIGQUIT``
-signals result in an immediate exit. However, if the *condor_startd* is
-running a job, a graceful shutdown results in that job writing a
-checkpoint, while a fast shutdown does not. In the *condor_schedd*, if
+signals result in an immediate exit. In the *condor_schedd*, if
 there are no jobs currently running, there will be no *condor_shadow*
 processes, and both signals result in an immediate exit. However, with
 jobs running, a graceful shutdown causes the *condor_schedd* to ask
 each *condor_shadow* to gracefully vacate the job it is serving, while
-a quick shutdown results in a hard kill of every *condor_shadow*, with
-no chance to write a checkpoint.
+a quick shutdown results in a hard kill of every *condor_shadow*.
 
 For all daemons, a reconfigure results in the daemon re-reading its
 configuration file(s), causing any settings that have changed to take

@@ -66,7 +66,8 @@ $dagfile=
 JOB test job_dagman_vars_prepend.cmd
 VARS test PREPEND pass_var1=\"Passed Prepend\"
 VARS test APPEND test_var2=\"Passed Append\"
-VARS test test_var3=\"Outer\"";
+VARS test test_var3=\"Outer\"
+VARS test PREPEND +ThisShouldNotBreakShellSubmission=\"asdf\"";
 
 $submitfile=
 "executable = \$CHOICE(isWindows, /bin/echo, ..\\appendmsg.exe)

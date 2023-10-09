@@ -151,7 +151,7 @@ cudaError_t basicPropsFromCudaProps(cudaDevicePropStrings * dps, cudaDevicePropI
 	p->ECCEnabled = dpi->ECCEnabled;
 	p->setUUIDFromBuffer( dps->uuid );
 	if (dpi->pciBusID || dpi->pciDeviceID) {
-		sprintf(p->pciId, "%04X:%02X:%02X.0", dpi->pciDomainID, dpi->pciBusID, dpi->pciDeviceID);
+		snprintf(p->pciId, sizeof(p->pciId), "%04X:%02X:%02X.0", dpi->pciDomainID, dpi->pciBusID, dpi->pciDeviceID);
 	}
 	return cudaSuccess;
 }
@@ -417,6 +417,9 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart, bool must_load ) 
 	} else {
 		print_error(MODE_DIAGNOSTIC_MSG, "# Unable to load a CUDA library (%s or %s).\n",
 			cuda_library, cudart_library);
+	}
+	if (cuda_handle) {
+		dlclose(cuda_handle);
 	}
 	return NULL;
 }

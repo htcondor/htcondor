@@ -47,8 +47,7 @@ bool logGahpIo = true;
 unsigned long logGahpIoSize = 0;
 int gahpResponseTimeout = 20;
 
-HashTable <std::string, GahpServer *>
-    GahpServer::GahpServersById( hashFunction );
+std::map <std::string, GahpServer *> GahpServer::GahpServersById;
 
 const int GahpServer::m_buffer_size = 4096;
 
@@ -82,10 +81,7 @@ void GahpReconfig()
 
 	tmp_int = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
 
-	GahpServer *next_server = NULL;
-	GahpServer::GahpServersById.startIterations();
-
-	while ( GahpServer::GahpServersById.iterate( next_server ) != 0 ) {
+	for (auto& [key, next_server] : GahpServer::GahpServersById) {
 		next_server->max_pending_requests = tmp_int;
 			// TODO should we kick the server in the ass to submit any
 			//   unsubmitted requests?
@@ -112,22 +108,22 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 											   const char *path,
 											   const ArgList *args)
 {
-	int rc;
 	GahpServer *server = NULL;
 
-	rc = GahpServersById.lookup( id, server );
-	if ( rc != 0 ) {
+	auto it = GahpServersById.find(id);
+	if (it == GahpServersById.end()) {
 		server = new GahpServer( id, path, args );
 		ASSERT(server);
-		GahpServersById.insert( id, server );
+		GahpServersById[id] = server;
 	} else {
-		ASSERT(server);
+		server = it->second;
 	}
 
 	return server;
 }
 
 GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
+	: m_setCondorInherit(false)
 {
 	m_gahp_pid = -1;
 	m_gahp_startup_failed = false;
@@ -144,16 +140,12 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	num_pending_requests = 0;
 	poll_pending = false;
 	use_prefix = false;
-	requestTable = NULL;
 	current_proxy = NULL;
 	skip_next_r = false;
 	m_deleteMeTid = TIMER_UNSET;
 
 	next_reqid = 1;
 	rotated_reqids = false;
-
-	requestTable = new HashTable<int,GenericGahpClient*>( &hashFuncInt );
-	ASSERT(requestTable);
 
 	m_ssh_forward_port = 0;
 	my_id = strdup(id);
@@ -165,7 +157,6 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	master_proxy = NULL;
 	is_initialized = false;
 	can_cache_proxies = false;
-	ProxiesByFilename = NULL;
 
 	m_gahp_version[0] = '\0';
 	m_buffer_pos = 0;
@@ -177,7 +168,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 GahpServer::~GahpServer()
 {
 	if ( my_id != NULL ) {
-		GahpServersById.remove( my_id );
+		GahpServersById.erase(my_id);
 	}
 	if ( m_deleteMeTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( m_deleteMeTid );
@@ -202,32 +193,22 @@ GahpServer::~GahpServer()
 		daemonCore->Cancel_Timer( poll_tid );
 	}
 	if ( master_proxy != NULL ) {
-		ReleaseProxy( master_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
+		ReleaseProxy( master_proxy->proxy, (CallbackType)&GahpServer::ProxyCallback,
 					  this );
 		delete master_proxy;
 	}
 	if ( proxy_check_tid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( proxy_check_tid );
 	}
-	if ( ProxiesByFilename != NULL ) {
-		GahpProxyInfo *gahp_proxy;
-
-		ProxiesByFilename->startIterations();
-		while ( ProxiesByFilename->iterate( gahp_proxy ) != 0 ) {
-			ReleaseProxy( gahp_proxy->proxy,
-						  (TimerHandlercpp)&GahpServer::ProxyCallback, this );
-			delete gahp_proxy;
-		}
-
-		delete ProxiesByFilename;
-	}
-	if ( requestTable != NULL ) {
-		delete requestTable;
+	for (auto& [key, gahp_proxy] : ProxiesByFilename) {
+		ReleaseProxy(gahp_proxy->proxy,
+		             (CallbackType)&GahpServer::ProxyCallback, this);
+		delete gahp_proxy;
 	}
 }
 
 void
-GahpServer::DeleteMe()
+GahpServer::DeleteMe( int /* timerID */ )
 {
 	m_deleteMeTid = TIMER_UNSET;
 
@@ -250,12 +231,9 @@ GahpServer::GahpStatistics::GahpStatistics()
 	Pool.SetRecentMax( RecentWindowMax, RecentWindowQuantum );
 }
 
-void GahpServer::GahpStatistics::Tick()
+void GahpServer::GahpStatistics::Tick(int /* tid */)
 {
-	GahpServer *next_server = NULL;
-	GahpServer::GahpServersById.startIterations();
-
-	while ( GahpServer::GahpServersById.iterate( next_server ) != 0 ) {
+	for (auto& [key, next_server] : GahpServer::GahpServersById) {
 		next_server->m_stats.Pool.Advance( 1 );
 	}
 }
@@ -341,10 +319,8 @@ GahpServer::Reaper(int pid,int status)
 	   goes away for any reason, we EXCEPT. */
 
 	GahpServer *dead_server = NULL;
-	GahpServer *next_server = NULL;
 
-	GahpServersById.startIterations();
-	while ( GahpServersById.iterate( next_server ) != 0 ) {
+	for (auto& [key, next_server] : GahpServersById) {
 		if ( pid == next_server->m_gahp_pid ) {
 			dead_server = next_server;
 			break;
@@ -657,13 +633,12 @@ int
 GahpServer::new_reqid()
 {
 	int starting_reqid;
-	GenericGahpClient* unused;
 
 	starting_reqid  = next_reqid;
 	
 	next_reqid++;
 	while (starting_reqid != next_reqid) {
-		if ( next_reqid > 990000000 ) {
+		if ( next_reqid > 990'000'000 ) {
 			next_reqid = 1;
 			rotated_reqids = true;
 		}
@@ -671,7 +646,7 @@ GahpServer::new_reqid()
 			// Optimization: only need to do the lookup if we have
 			// rotated request ids...
 		if ( (!rotated_reqids) || 
-			 (requestTable->lookup(next_reqid,unused) == -1) ) {
+			 (requestTable.find(next_reqid) == requestTable.end()) ) {
 				// not in use, we are done
 			return next_reqid;
 		}
@@ -826,8 +801,10 @@ GahpServer::Startup(bool force)
 	io_redirect[2] = stderr_pipefds[1]; // stderr get write side of err pipe
 
 
-	// Don't set CONDOR_INHERIT in the GAHP's environment
-	job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
+	// Don't set CONDOR_INHERIT in the GAHP's environment, unless requested
+	if (!m_setCondorInherit) {
+		job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
+	}
 
 	m_gahp_pid = daemonCore->Create_Process(
 			binary_path,	// Name of executable
@@ -985,7 +962,7 @@ GahpServer::Initialize( Proxy *proxy )
 
 	master_proxy = new GahpProxyInfo;
 	master_proxy->proxy = proxy->subject->master_proxy;
-	AcquireProxy( master_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
+	AcquireProxy( master_proxy->proxy, (CallbackType)&GahpServer::ProxyCallback,
 				  this );
 	master_proxy->cached_expiration = 0;
 
@@ -1007,9 +984,6 @@ GahpServer::Initialize( Proxy *proxy )
 			dprintf( D_ALWAYS, "GAHP: Failed to cache proxy from file!\n" );
 			return false;
 		}
-
-		ProxiesByFilename = new HashTable<std::string,GahpProxyInfo*>( hashFunction );
-		ASSERT(ProxiesByFilename);
 	}
 
 	master_proxy->cached_expiration = master_proxy->proxy->expiration_time;
@@ -1284,7 +1258,7 @@ GahpServer::ProxyCallback()
 }
 
 void
-GahpServer::doProxyCheck()
+GahpServer::doProxyCheck( int /* timerID */ )
 {
 	proxy_check_tid = TIMER_UNSET;
 
@@ -1292,22 +1266,14 @@ GahpServer::doProxyCheck()
 		return;
 	}
 
-	GahpProxyInfo *next_proxy;
+	for (auto& [key, next_proxy] : ProxiesByFilename) {
+		if ( next_proxy->proxy->expiration_time >
+			 next_proxy->cached_expiration ) {
 
-	if ( ProxiesByFilename ) {
-		ProxiesByFilename->startIterations();
-		while ( ProxiesByFilename->iterate( next_proxy ) != 0 ) {
-
-			if ( next_proxy->proxy->expiration_time >
-				 next_proxy->cached_expiration ) {
-
-				if ( cacheProxyFromFile( next_proxy ) == false ) {
-					EXCEPT( "Failed to refresh proxy!" );
-				}
-				next_proxy->cached_expiration = next_proxy->proxy->expiration_time;
-
+			if ( cacheProxyFromFile( next_proxy ) == false ) {
+				EXCEPT( "Failed to refresh proxy!" );
 			}
-
+			next_proxy->cached_expiration = next_proxy->proxy->expiration_time;
 		}
 	}
 
@@ -1338,10 +1304,9 @@ GahpServer::doProxyCheck()
 GahpProxyInfo *
 GahpServer::RegisterProxy( Proxy *proxy )
 {
-	int rc;
 	GahpProxyInfo *gahp_proxy = NULL;
 
-	if ( ProxiesByFilename == NULL || proxy == NULL ||
+	if ( is_initialized == false || proxy == NULL ||
 		 can_cache_proxies == false ) {
 
 		return NULL;
@@ -1352,13 +1317,12 @@ GahpServer::RegisterProxy( Proxy *proxy )
 		return master_proxy;
 	}
 
-	rc = ProxiesByFilename->lookup( proxy->proxy_filename, gahp_proxy );
-
-	if ( rc != 0 ) {
+	auto it = ProxiesByFilename.find(proxy->proxy_filename);
+	if (it == ProxiesByFilename.end()) {
 		gahp_proxy = new GahpProxyInfo;
 		ASSERT(gahp_proxy);
 		gahp_proxy->proxy = AcquireProxy( proxy,
-										  (TimerHandlercpp)&GahpServer::ProxyCallback,
+										  (CallbackType)&GahpServer::ProxyCallback,
 										  this );
 		gahp_proxy->cached_expiration = 0;
 		gahp_proxy->num_references = 1;
@@ -1367,9 +1331,9 @@ GahpServer::RegisterProxy( Proxy *proxy )
 		}
 		gahp_proxy->cached_expiration = gahp_proxy->proxy->expiration_time;
 
-		ProxiesByFilename->insert( proxy->proxy_filename, gahp_proxy );
+		ProxiesByFilename[proxy->proxy_filename] = gahp_proxy;
 	} else {
-		gahp_proxy->num_references++;
+		it->second->num_references++;
 	}
 
 	return gahp_proxy;
@@ -1378,10 +1342,9 @@ GahpServer::RegisterProxy( Proxy *proxy )
 void
 GahpServer::UnregisterProxy( Proxy *proxy )
 {
-	int rc;
 	GahpProxyInfo *gahp_proxy = NULL;
 
-	if ( ProxiesByFilename == NULL || proxy == NULL ||
+	if ( is_initialized == false || proxy == NULL ||
 		 can_cache_proxies == false ) {
 
 		return;
@@ -1392,19 +1355,20 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 		return;
 	}
 
-	rc = ProxiesByFilename->lookup( proxy->proxy_filename, gahp_proxy );
+	auto it = ProxiesByFilename.find(proxy->proxy_filename);
 
-	if ( rc != 0 ) {
+	if (it == ProxiesByFilename.end()) {
 		dprintf( D_ALWAYS, "GahpServer::UnregisterProxy() called with unknown proxy %s\n", proxy->proxy_filename );
 		return;
 	}
 
+	gahp_proxy = it->second;
 	gahp_proxy->num_references--;
 
 	if ( gahp_proxy->num_references == 0 ) {
-		ProxiesByFilename->remove( gahp_proxy->proxy->proxy_filename );
+		ProxiesByFilename.erase(gahp_proxy->proxy->proxy_filename);
 		uncacheProxy( gahp_proxy );
-		ReleaseProxy( gahp_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
+		ReleaseProxy( gahp_proxy->proxy, (CallbackType)&GahpServer::ProxyCallback,
 					  this );
 		delete gahp_proxy;
 	}
@@ -1873,13 +1837,13 @@ GenericGahpClient::clear_pending()
 {
 	if ( pending_reqid ) {
 			// remove from hashtable
-		if (server->requestTable->remove(pending_reqid) == 0) {
+		if (server->requestTable.erase(pending_reqid) != 0) {
 				// entry was still in the hashtable, which means
 				// that this reqid is still with the gahp server or
 				// still in our waitingHigh/Medium/LowPrio queues.
 				// so re-insert an entry with this pending_reqid
 				// with a NULL data field so we do not reuse this reqid.
-			server->requestTable->insert(pending_reqid,NULL);
+			server->requestTable[pending_reqid] = nullptr;
 		}
 	}
 	pending_reqid = 0;
@@ -1903,7 +1867,7 @@ GenericGahpClient::clear_pending()
 }
 
 void
-GenericGahpClient::reset_user_timer_alarm()
+GenericGahpClient::reset_user_timer_alarm( int /* timerID */ )
 {
 	reset_user_timer(pending_timeout_tid);
 }
@@ -1954,7 +1918,7 @@ GenericGahpClient::now_pending(const char *command,const char *buf,
 		}
 		pending_proxy = cmd_proxy;
 			// add new reqid to hashtable
-		server->requestTable->insert(pending_reqid,this);
+		server->requestTable[pending_reqid] = this;
 	}
 	ASSERT( pending_command != NULL );
 
@@ -2027,7 +1991,7 @@ GenericGahpClient::get_pending_result(const char *,const char *)
 		// Handle blocking mode if enabled
 	if ( (m_mode == blocking) && (!pending_result) ) {
 		for (;;) {
-			server->poll();
+			server->poll(-1);
 			if ( pending_result ) {
 					// We got the result, stop blocking
 				break;
@@ -2053,11 +2017,10 @@ GenericGahpClient::get_pending_result(const char *,const char *)
 }
 
 void
-GahpServer::poll()
+GahpServer::poll( int /* timerID */ )
 {
 	Gahp_Args* result = NULL;
 	int num_results = 0;
-	int result_reqid;
 	GenericGahpClient* entry;
 	std::vector<Gahp_Args*> result_lines;
 
@@ -2119,7 +2082,7 @@ GahpServer::poll()
 		if ( result ) delete result;
 		result = result_line;
 
-		result_reqid = 0;
+		int result_reqid = 0;
 		if ( result->argc > 0 ) {
 			result_reqid = atoi(result->argv[0]);
 		}
@@ -2131,7 +2094,10 @@ GahpServer::poll()
 
 			// Now lookup in our hashtable....
 		entry = NULL;
-		requestTable->lookup(result_reqid,entry);
+		auto it = requestTable.find(result_reqid);
+		if (it != requestTable.end()) {
+			entry = it->second;
+		}
 		if ( entry ) {
 				// found the entry!  stash the result
 			entry->pending_result = result;
@@ -2150,7 +2116,7 @@ GahpServer::poll()
 			entry->pending_submitted_to_gahp = 0;
 		}
 			// clear entry from our hashtable so we can reuse the reqid
-		requestTable->remove(result_reqid);
+		requestTable.erase(result_reqid);
 
 	}	// end of looping through each result line
 
@@ -2178,7 +2144,10 @@ GahpServer::poll()
 		}
 		m_stats.CommandsQueued -= 1;
 		entry = NULL;
-		requestTable->lookup(waiting_reqid,entry);
+		auto it = requestTable.find(waiting_reqid);
+		if (it != requestTable.end()) {
+			entry = it->second;
+		}
 		if ( entry ) {
 			ASSERT(entry->pending_reqid == waiting_reqid);
 				// Try to send this request to the gahp.
@@ -2190,7 +2159,7 @@ GahpServer::poll()
 				// it is dequeued from the waitingHigh/Medium/Low queues.
 				// So now remove the entry from the hash table
 				// so the reqid can be reused.
-			requestTable->remove(result_reqid);
+			requestTable.erase(waiting_reqid);
 		}
 	}
 }
@@ -2900,8 +2869,8 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(proxy_file) );
-	int x = formatstr(reqline, "%s %d.%d %s %d", esc1, job_id.cluster, job_id.proc,
-					  esc2, (int)proxy_expiration);
+	int x = formatstr(reqline, "%s %d.%d %s %lld", esc1, job_id.cluster, job_id.proc,
+					  esc2, (long long)proxy_expiration);
 	free(esc1);
 	free(esc2);
 	ASSERT( x > 0 );

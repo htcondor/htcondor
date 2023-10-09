@@ -181,6 +181,8 @@ int ArcJob::maxConnectFailures = 3;	// default value
 // If ARC_JOB_INFO retruns stale data, how long to wait before retrying
 int ArcJob::jobInfoInterval = 60;
 
+int ArcJob::m_arcGahpId = 0;
+
 ArcJob::ArcJob( ClassAd *classad )
 	: BaseJob( classad )
 {
@@ -213,7 +215,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+							 (CallbackType)&BaseJob::SetEvaluateState, this );
 
 	jobAd->LookupString( ATTR_SCITOKENS_FILE, m_tokenFile );
 
@@ -227,10 +229,26 @@ ArcJob::ArcJob( ClassAd *classad )
 		error_string = "ARC_GAHP not defined";
 		goto error_exit;
 	}
-	snprintf( buff, sizeof(buff), "ARC/%s#%s",
+	snprintf( buff, sizeof(buff), "ARC/%d/%s#%s",
+	          m_arcGahpId,
 	          (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
 	          m_tokenFile.c_str() );
 	gahp = new GahpClient( buff, gahp_path );
+#if defined(CURL_USES_NSS)
+	// NSS as used by libcurl has a memory leak. To deal with this, we
+	// start a new arc_gahp for new jobs when the previous gahp has
+	// handled too many requests. Once the previous jobs leave the system,
+	// the old arc_gahp will quietly exit.
+	if (gahp->getNextReqId() > param_integer("ARC_GAHP_COMMAND_LIMIT", 1000)) {
+		delete gahp;
+		m_arcGahpId++;
+		snprintf(buff, sizeof(buff), "ARC/%d/%s#%s",
+		         m_arcGahpId,
+		         (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
+		          m_tokenFile.c_str());
+		gahp = new GahpClient(buff, gahp_path);
+	}
+#endif
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
@@ -268,7 +286,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	}
 
 	myResource = ArcResource::FindOrCreateResource( resourceManagerString,
-	                 m_tokenFile.empty() ? jobProxy : nullptr, m_tokenFile );
+	                 m_arcGahpId, m_tokenFile.empty() ? jobProxy : nullptr, m_tokenFile );
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
@@ -295,7 +313,7 @@ ArcJob::ArcJob( ClassAd *classad )
 ArcJob::~ArcJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (CallbackType)&BaseJob::SetEvaluateState, this );
 	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
@@ -320,7 +338,7 @@ void ArcJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-void ArcJob::doEvaluateState()
+void ArcJob::doEvaluateState( int /* timerID */ )
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
@@ -649,6 +667,7 @@ void ArcJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) exit info gathering failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
+				break;
 			}
 
 			if ( reply.empty() ) {
@@ -740,8 +759,8 @@ void ArcJob::doEvaluateState()
 				// Assume it's always a normal exit.
 				jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 				jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
-				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60.0 );
-				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60.0 );
+				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock );
+				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu );
 				gmState = GM_STAGE_OUT;
 			} else {
 				if ( info_ad.LookupString("Error", val) ) {
@@ -868,39 +887,13 @@ void ArcJob::doEvaluateState()
 			// Remove all knowledge of any previous or present job
 			// submission, in both the gridmanager and the schedd.
 
-			// If we are doing a rematch, we are simply waiting around
-			// for the schedd to be updated and subsequently this globus job
-			// object to be destroyed.  So there is nothing to do.
-			if ( wantRematch ) {
-				break;
-			}
-
 			// For now, put problem jobs on hold instead of
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
-			if ( remoteJobId != NULL
-				     && condorState != REMOVED
-					 && wantResubmit == false
-					 && doResubmit == 0 ) {
+			if (remoteJobId != NULL && condorState != REMOVED) {
 				gmState = GM_HOLD;
 				break;
-			}
-			// Only allow a rematch *if* we are also going to perform a resubmit
-			if ( wantResubmit || doResubmit ) {
-				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
-			}
-			if ( wantResubmit ) {
-				wantResubmit = false;
-				dprintf(D_ALWAYS,
-						"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
-			}
-			if ( doResubmit ) {
-				doResubmit = 0;
-				dprintf(D_ALWAYS,
-					"(%d.%d) Resubmitting to Globus (last submit failed)\n",
-						procID.cluster, procID.proc );
 			}
 			errorString = "";
 			if ( remoteJobId != NULL ) {
@@ -915,25 +908,6 @@ void ArcJob::doEvaluateState()
 				}
 			}
 			myResource->CancelSubmit( this );
-
-			if ( wantRematch ) {
-				dprintf(D_ALWAYS,
-						"(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
-
-				// Set ad attributes so the schedd finds a new match.
-				bool dummy;
-				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					jobAd->Assign( ATTR_JOB_MATCHED, false );
-					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
-				}
-
-				// If we are rematching, we need to forget about this job
-				// cuz we wanna pull a fresh new job ad, with a fresh new match,
-				// from the all-singing schedd.
-				gmState = GM_DELETE;
-				break;
-			}
 
 			// If there are no updates to be done when we first enter this
 			// state, requestScheddUpdate will return done immediately

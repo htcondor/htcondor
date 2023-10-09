@@ -88,10 +88,26 @@ if(NOT WINDOWS)
 	# the interpreter, which find the root directory where the interpreter
 	# is installed, and exports the python major/minor/patch version 
 	# cmake variables.  To build the wheels, we rely on an outside script
-	# to set the PYTHON_INCLUDE_DIR 
+	# to set the USE_PYTHON3_INCLUDE_DIR and USE_PYTHON3_EXT_SUFFIX
 
 	if (WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter)
+
+		# All these variables are used later, and were defined in cmake 2.6
+		# days.  At some point, we should not copy the find_package python
+		# variables into these, and use the native cmake variables and targets.
+		set(PYTHON3_EXECUTABLE        ${Python3_EXECUTABLE})
+		set(PYTHON3_VERSION_STRING    ${Python3_VERSION})
+		set(PYTHON3_VERSION_MAJOR     ${Python3_VERSION_MAJOR})
+		set(PYTHON3_VERSION_MINOR     ${Python3_VERSION_MINOR})
+
+		set(PYTHON3_INCLUDE_DIRS      ${USE_PYTHON3_INCLUDE_DIR})
+		set(PYTHON3_MODULE_SUFFIX     ${USE_PYTHON3_EXT_SUFFIX})
+
+		if (Python3_FOUND)
+			set(PYTHON3LIBS_FOUND TRUE)
+		endif()
+
 	endif()
 
 	if (WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
@@ -407,12 +423,8 @@ if( NOT WINDOWS)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
       add_definitions(-D_FORTIFY_SOURCE=2)
-	  # -g3 causes the debug info extractor to seg fault on x86_64_CentOS8
-	  # Perhaps, make this conditional on platform?
-	  # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
-	  # set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
-	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
-	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
+	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
 	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	endif()
 
@@ -548,7 +560,6 @@ if("${OS_NAME}" STREQUAL "LINUX")
 
     if (HAVE_XSS_H)
 	  find_library(HAVE_XSS Xss)
-	  find_library(HAVE_XEXT Xext)
 	endif()
 
     check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
@@ -573,6 +584,16 @@ if("${OS_NAME}" STREQUAL "LINUX")
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
     option(WITH_BLAHP "Compiling the blahp" ON)
+
+	# Does libcurl use NSS for security?
+	# We need to employ some workarounds for NSS problems.
+	execute_process(COMMAND /usr/bin/curl --version
+		COMMAND grep -q NSS
+		RESULT_VARIABLE CURL_NSS_TEST)
+	if (CURL_NSS_TEST EQUAL 0)
+		set(CURL_USES_NSS TRUE)
+	endif()
+
 elseif(APPLE)
 	add_definitions(-DDarwin)
 	# CRUFT Remove this variable. All cmake files should be using APPLE.
@@ -823,9 +844,8 @@ else ()
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.7.1)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.0.0)
 
 	# old voms builds on manylinux1 (centos5 docker image)
     if (LINUX)
@@ -843,6 +863,18 @@ else ()
 endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
+
+# We'll do the installation ourselves, below
+set (FMT_INSTALL false)
+
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
+
+# But don't try to install the header files anywhere
+set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
+install(TARGETS fmt
+	LIBRARY DESTINATION "${C_LIB}"
+	ARCHIVE DESTINATION "${C_LIB}"
+	RUNTIME DESTINATION "${C_LIB}")
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)

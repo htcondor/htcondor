@@ -55,6 +55,7 @@ public:
 		lower_case(ret);
 		return ret;
 	}
+	static std::string makeAlias(const std::string& name, const OwnerInfo &owni);
 	
 private:
 

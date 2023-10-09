@@ -57,9 +57,8 @@ int main(int argc,char **argv)
 
 
 
-	for(myarg = 2; myarg < argc; myarg++) {
+	for(myarg = 2; myarg < argc; myarg += 2) {
 		printf("%s\n",argv[myarg]);
-		myarg++;
 		//printf("%s\n",argv[myarg]);
 		/*printf("%d\n",atoi(argv[myarg]));*/
 	}

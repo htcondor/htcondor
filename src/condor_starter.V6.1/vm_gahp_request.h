@@ -102,7 +102,7 @@ class VMGahpRequest : public Service {
 		void setReqId(int id);
 		void setPendingStatus(reqstatus status);
 		void setResult(Gahp_Args *result);
-		void pending_timer_fn();
+		void pending_timer_fn( int timerID = -1 );
 
 		reqmode m_mode;
 		std::string m_command;

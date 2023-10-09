@@ -42,17 +42,17 @@ classad_visa_write(ClassAd* ad,
 	bool ret = false;
 
 	if (ad == NULL) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "classad_visa_write ERROR: Ad is NULL\n");
 		goto EXIT;
 	}
 	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "classad_visa_write ERROR: Job contained no CLUSTER_ID\n");
 		goto EXIT;
 	}
 	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "classad_visa_write ERROR: Job contained no PROC_ID\n");
 		goto EXIT;
 	}
@@ -60,34 +60,34 @@ classad_visa_write(ClassAd* ad,
 		// make a copy of the passed-in ad and tack on some attributes
 		// describing this visa
 	visa_ad = *ad;
-	if (visa_ad.Assign(ATTR_VISA_TIMESTAMP, (int)time(NULL)) != TRUE) {
-		dprintf(D_ALWAYS | D_FAILURE,
+	if (visa_ad.Assign(ATTR_VISA_TIMESTAMP, time(nullptr)) != TRUE) {
+		dprintf(D_ERROR,
 		        "classad_visa_write ERROR: could not add attribute %s\n",
 		        ATTR_VISA_TIMESTAMP);
 		goto EXIT;
 	}
 	ASSERT(daemon_type != NULL);
 	if (visa_ad.Assign(ATTR_VISA_DAEMON_TYPE, daemon_type) != TRUE) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "classad_visa_write ERROR: could not add attribute %s\n",
 		        ATTR_VISA_DAEMON_TYPE);
 		goto EXIT;
 	}
 	if (visa_ad.Assign(ATTR_VISA_DAEMON_PID, (int)getpid()) != TRUE) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "classad_visa_write ERROR: could not add attribute %s\n",
 		        ATTR_VISA_DAEMON_PID);
 		goto EXIT;
 	}
 	if (visa_ad.Assign(ATTR_VISA_HOSTNAME, get_local_fqdn()) != TRUE) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "classad_visa_write ERROR: could not add attribute %s\n",
 		        ATTR_VISA_HOSTNAME);
 		goto EXIT;
 	}
 	ASSERT(daemon_sinful != NULL);
 	if (visa_ad.Assign(ATTR_VISA_IP, daemon_sinful) != TRUE) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "classad_visa_write ERROR: could not add attribute %s\n",
 		        ATTR_VISA_IP);
 		goto EXIT;
@@ -104,7 +104,7 @@ classad_visa_write(ClassAd* ad,
 	while (-1 == (fd = safe_open_wrapper_follow(file_path,
 	                                     O_WRONLY|O_CREAT|O_EXCL))) {
 		if (EEXIST != errno) {
-			dprintf(D_ALWAYS | D_FAILURE,
+			dprintf(D_ERROR,
 					"classad_visa_write ERROR: '%s', %d (%s)\n",
 					file_path, errno, strerror(errno));
 			goto EXIT;
@@ -115,14 +115,14 @@ classad_visa_write(ClassAd* ad,
 	}
 
 	if (NULL == (file = fdopen(fd, "w"))) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 				"classad_visa_write ERROR: error %d (%s) opening file '%s'\n",
 				errno, strerror(errno), file_path);
 		goto EXIT;
 	}
 										   
 	if (!fPrintAd(file, visa_ad)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "classad_visa_write ERROR: Error writing to file '%s'\n",
 		        file_path);
 		goto EXIT;

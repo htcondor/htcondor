@@ -40,12 +40,12 @@ escape_for_filename(const std::string& s)
 {
 	std::ostringstream out;
 	out << std::hex << std::setfill('0');
-	for (std::string::const_iterator i = s.begin(); i != s.end(); i++) {
-		if (isalnum(*i) || (*i == '_') || (*i == '.')) {
-			out << *i;
+	for (char i : s) {
+		if (isalnum(i) || (i == '_') || (i == '.')) {
+			out << i;
 		}
 		else {
-			out << '%' << std::setw(2) << static_cast<int>(*i);
+			out << '%' << std::setw(2) << static_cast<int>(i);
 		}
 	}
 	return out.str();

@@ -14,6 +14,7 @@ REQUEST_ID=$5
 STARTD_NAME=$6
 CPUS=$7
 MEM_MB=$8
+SCHEDD_NAME=$9
 
 
 #
@@ -64,7 +65,7 @@ use role:execute
 use security:recommended_v9_0
 use feature:PartitionableSLot
 
-COLLECTOR_HOST = ${COLLECTOR_HOST}
+COLLECTOR_HOST = <${COLLECTOR_HOST}>
 
 SHARED_PORT_PORT = 0
 
@@ -119,6 +120,18 @@ MASTER_ATTRS = \$(MASTER_ATTRS) AnnexName IsAnnex hpc_annex_request_id
 # This pilot runs in a container; the image is expected to have singularity
 # installed and configured correctly.
 SINGULARITY                 = /usr/bin/singularity
+
+#
+# Connect directly to the schedd.
+#
+STARTD_DIRECT_ATTACH_SCHEDD_NAME = ${SCHEDD_NAME}
+STARTD_DIRECT_ATTACH_SCHEDD_POOL = ${COLLECTOR}
+
+# Update slots often enough that we can do more than one job. ;)
+# The direct attach interval is the minimum interval; this interval
+# is checked every UPDATE_INTERVAL.
+STARTD_DIRECT_ATTACH_INTERVAL = 5
+UPDATE_INTERVAL = 5
 
 " > local/config.d/00-basic-pilot
 

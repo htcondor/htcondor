@@ -1,6 +1,6 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor2/compat_enum" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
+set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor2/compat_enum" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum" "htcondor/_utils")
 
 # The python sources to copy
 set(PYTHON_SOURCES
@@ -25,6 +25,13 @@ htcondor/dags/node.py
 htcondor/_deprecation.py
 htcondor/_job_status.py
 
+classad/__init__.py
+
+# Private python utilities
+htcondor/_utils/__init__.py
+htcondor/_utils/ansi.py
+
+# Version 2.
 htcondor2/compat_enum/__init__.py
 htcondor2/compat_enum/LICENSE
 htcondor2/_negotiator.py
@@ -46,16 +53,16 @@ htcondor2/_transaction_flag.py
 htcondor2/_submit.py
 htcondor2/__init__.py
 
-classad/__init__.py
-
 classad2/__init__.py
 classad2/_class_ad.py
 classad2/_value.py
 classad2/_expr_tree.py
 
+# Version 3
 classad3/__init__.py
 classad3/ClassAd.py
 classad3/Expression.py
+
 )
 
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
@@ -72,6 +79,7 @@ if (WITH_PYTHON_BINDINGS)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/compat_enum)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/_utils)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad3)
 

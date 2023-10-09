@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "condor_classad.h"
+#include "cred_dir.h"
 #include "condor_sys.h"
 #include "starter.h"
 #include "condor_event.h"
@@ -42,7 +43,7 @@ extern JICShadow* syscall_jic_shadow;
 #define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d (%s)\n", x, errno, strerror(errno));syscall_jic_shadow->disconnect();errno=ETIMEDOUT;return -1;}
 
 int
-REMOTE_CONDOR_register_starter_info( ClassAd* ad )
+REMOTE_CONDOR_register_starter_info(const ClassAd& ad)
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
@@ -51,11 +52,6 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 	dprintf ( D_SYSCALLS, "Doing CONDOR_register_starter_info\n" );
 
 	CurrentSysCall = CONDOR_register_starter_info;
-
-	if( ! ad ) {
-		EXCEPT( "CONDOR_register_starter_info called with NULL ClassAd!" ); 
-		return -1;
-	}
 
 	if( ! syscall_sock->is_connected() ) {
 		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
@@ -66,7 +62,7 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 	syscall_sock->encode();
 	result = syscall_sock->code(CurrentSysCall);
 	ON_ERROR_RETURN( result );
-	result = putClassAd(syscall_sock, *ad);
+	result = putClassAd(syscall_sock, ad);
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
@@ -92,7 +88,7 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 
 
 int
-REMOTE_CONDOR_register_job_info( ClassAd* ad )
+REMOTE_CONDOR_register_job_info(const ClassAd& ad)
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
@@ -111,11 +107,6 @@ REMOTE_CONDOR_register_job_info( ClassAd* ad )
 		  hoping to get a request for a reconnect.
 		*/
 
-	if( ! ad ) {
-		EXCEPT( "CONDOR_register_job_info called with NULL ClassAd!" ); 
-		return -1;
-	}
-
 	if( ! syscall_sock->is_connected() ) {
 		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
 		errno = ETIMEDOUT;
@@ -124,7 +115,7 @@ REMOTE_CONDOR_register_job_info( ClassAd* ad )
 
 	syscall_sock->encode();
 	ON_ERROR_RETURN( syscall_sock->code(CurrentSysCall) );
-	ON_ERROR_RETURN( putClassAd(syscall_sock, *ad) );
+	ON_ERROR_RETURN( putClassAd(syscall_sock, ad) );
 	ON_ERROR_RETURN( syscall_sock->end_of_message() );
 
 	syscall_sock->decode();
@@ -331,7 +322,7 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 }
 
 int
-REMOTE_CONDOR_job_termination( ClassAd* ad )
+REMOTE_CONDOR_job_termination(const ClassAd& ad)
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
@@ -340,11 +331,6 @@ REMOTE_CONDOR_job_termination( ClassAd* ad )
 	dprintf ( D_SYSCALLS, "Doing CONDOR_job_termination\n" );
 
 	CurrentSysCall = CONDOR_job_termination;
-
-	if( ! ad ) {
-		EXCEPT( "CONDOR_job_termination called with NULL ClassAd!" ); 
-		return -1;
-	}
 
 	if( ! syscall_sock->is_connected() ) {
 		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
@@ -355,7 +341,7 @@ REMOTE_CONDOR_job_termination( ClassAd* ad )
 	syscall_sock->encode();
 	result = syscall_sock->code(CurrentSysCall);
 	ON_ERROR_RETURN( result );
-	result = putClassAd(syscall_sock, *ad);
+	result = putClassAd(syscall_sock, ad);
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
@@ -999,24 +985,19 @@ REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char co
 	event.setHoldReasonSubCode( hold_reason_subcode );
 	ad = event.toClassAd(true);
 	ASSERT(ad);
-	int retval = REMOTE_CONDOR_ulog( ad );
+	int retval = REMOTE_CONDOR_ulog( *ad );
 	delete ad;
 	return retval;
 }
 
 int
-REMOTE_CONDOR_ulog( ClassAd *ad )
+REMOTE_CONDOR_ulog(const ClassAd& ad)
 {
 	int result = 0;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_ulog\n" );
 
 	CurrentSysCall = CONDOR_ulog;
-
-	if( ! ad ) {
-		EXCEPT( "CONDOR_ulog called with NULL ClassAd!" ); 
-		return -1;
-	}
 
 	if( ! syscall_sock->is_connected() ) {
 		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
@@ -1027,7 +1008,7 @@ REMOTE_CONDOR_ulog( ClassAd *ad )
 	syscall_sock->encode();
 	result = syscall_sock->code(CurrentSysCall);
 	ON_ERROR_RETURN( result );
-	result = putClassAd(syscall_sock, *ad);
+	result = putClassAd(syscall_sock, ad);
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
@@ -2595,7 +2576,8 @@ REMOTE_CONDOR_dprintf_stats(const char *message)
 // on the wire, for future compatibility, we send a string.  currently
 // this is ignored by the receiver.
 int
-REMOTE_CONDOR_getcreds(const char* creds_receive_dir)
+REMOTE_CONDOR_getcreds(const char* creds_receive_dir,
+	std::unordered_map<std::string, std::unique_ptr<htcondor::CredData>> &creds)
 {
 	int result = 0;
 
@@ -2643,46 +2625,41 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir)
 		ClassAd ad;
 		result = ( getClassAd(syscall_sock, ad) );
 		ON_ERROR_RETURN( result );
-		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad:\n" );
-		dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+		if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+			dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad:\n" );
+			dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+		}
 
 		std::string fname, b64;
 		ad.LookupString("Service", fname);
 		ad.LookupString("Data", b64);
 
-		std::string full_name = creds_receive_dir;
-		full_name += DIR_DELIM_CHAR;
-		full_name += fname;
-
-		std::string tmpname = full_name;
-		tmpname += ".tmp";
-
-		// contents of pw are base64 encoded.  decode now just before they go
-		// into the file.
-		int rawlen = -1;
-		unsigned char* rawbuf = NULL;
-		zkm_base64_decode(b64.c_str(), &rawbuf, &rawlen);
-
-		if (rawlen <= 0) {
-			EXCEPT("Failed to decode credential sent by shadow!");
+		// CRUFT Older shadows (before 10.8.0) put ".use" at the end of
+		// the service name and replace '*' with '_' (indicating the
+		// filename to write).
+		if (ends_with(fname, ".use")) {
+			fname.erase(fname.size() - 4);
+			if (fname.find('*') == std::string::npos) {
+				replace_str(fname, "_", "*");
+			}
 		}
 
-		// write temp file
-		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.c_str());
-		// 4th param false means "as user"  (as opposed to as root)
-		bool rc = write_secure_file(tmpname.c_str(), rawbuf, rawlen, false);
+		dprintf(D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad with credentials for service '%s'\n",
+			fname.c_str());
 
-		// caller of condor_base64_decode is responsible for freeing buffer
-		free(rawbuf);
+		// contents of pw are base64 encoded.
+		std::unique_ptr<htcondor::CredData> cred(new htcondor::CredData());
+		int credlen;
+		zkm_base64_decode(b64.c_str(), &cred->buf, &credlen);
+		cred->len = credlen;
 
-		if (rc != true) {
-			dprintf(D_ALWAYS, "REMOTE_CONDOR_getcreds: failed to write secure temp file %s\n", tmpname.c_str());
-			EXCEPT("failure");
+		if (cred->len <= 0) {
+			dprintf(D_ALWAYS, "Failed to decode credential sent by shadow!\n");
+			cmd = -1;
+			break;
 		}
 
-		// do this as the user (no priv switching to root)
-		dprintf (D_SECURITY, "Moving %s to %s\n", tmpname.c_str(), full_name.c_str());
-		rename(tmpname.c_str(), full_name.c_str());
+		creds[fname] = std::move(cred);
 	}
 
 	result = ( syscall_sock->end_of_message() );
@@ -2739,16 +2716,11 @@ REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* pr
 }
 
 int
-REMOTE_CONDOR_event_notification( ClassAd * event ) {
+REMOTE_CONDOR_event_notification(const ClassAd& event ) {
 	int result = 0, rval = -1;
 
 	dprintf( D_SYSCALLS, "Doing CONDOR_event_notification\n" );
 	CurrentSysCall = CONDOR_event_notification;
-
-	if(! event) {
-		EXCEPT( "CONDOR_event_notification called with NULL event!" );
-		return -1;
-	}
 
 	if(! syscall_sock->is_connected()) {
 		dprintf( D_ALWAYS, "RPC error: disconnected from shadow\n" );
@@ -2759,7 +2731,7 @@ REMOTE_CONDOR_event_notification( ClassAd * event ) {
 	syscall_sock->encode();
 	result = syscall_sock->code(CurrentSysCall);
 	ON_ERROR_RETURN( result );
-	result = putClassAd(syscall_sock, *event);
+	result = putClassAd(syscall_sock, event);
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );

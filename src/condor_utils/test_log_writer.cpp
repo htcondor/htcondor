@@ -802,7 +802,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 
 		}
 		else if ( arg.Match("version") ) {
-			printf("test_log_writer: %s, %s\n", VERSION, __DATE__);
+			printf("test_log_writer: %s\n", VERSION);
 			status = STATUS_CANCEL;
 
 		}
@@ -1623,9 +1623,3 @@ EventInfo::GetSize( int mult ) const
 		return randint( mult );
 	}
 }
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/

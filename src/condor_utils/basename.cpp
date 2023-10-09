@@ -73,41 +73,33 @@ condor_basename_extension_ptr(const char* filename) {
 }
 
 /*
-  A dirname() function that is happy on both Unix and NT.
-  This allocates space for a new string that holds the path of the
-  parent directory of the path it was given.  If the given path has no
-  directory delimiters, or is NULL, we just return ".".  In all
-  cases, the string we return is new space, and must be deallocated
-  with free().   Derek Wright 9/23/99
+  A dirname() function that is happy on both Unix and NT.  If the given path
+  has no directory delimiters, or is NULL, we just return ".".  
+  Derek Wright 9/23/99
 */
-char *
-condor_dirname(const char *path)
-{
-	char *s, *parent;
-	char *lastDelim = NULL;
-
-	if( ! path ) {
-		return strdup( "." );
+std::string 
+condor_dirname(const char *path) { 
+	
+	if (!path) { 
+		return ".";
 	}
 
-	parent = strdup( path );
-	for (s = parent; s && *s != '\0'; s++) {
+	const char *lastDelim = nullptr;
+
+	for (const char *s = path; *s != '\0'; s++) {
 		if (*s == '\\' || *s == '/') {
 			lastDelim = s;
 		}
 	}
 
 	if ( lastDelim ) {
-		if ( lastDelim != parent ) {
-			*lastDelim = '\0';
+		if ( lastDelim != path) {
+			return {path, lastDelim};
 		} else {
-				// Last delimiter is first char of path.
-			*(lastDelim+1) = '\0';
+			return {path, lastDelim + 1};
 		}
-		return parent;
 	} else {
-		free(parent);
-		return strdup( "." );
+		return ".";
 	}
 }
 
@@ -136,14 +128,14 @@ dirname( const char* path )
    full pathname, we mean it either begins with "/" or "\" or "*:\"
    (something like "c:\..." on windoze).
 */
-int
+bool
 fullpath( const char* path )
 {
 	if( ! path ) {
-		return FALSE;
+		return false;
 	}
 	if( path[0] == '/' || path[0]=='\\' ) {
-		return TRUE;
+		return true;
 	}
 		/*
 		  for this next check, we should be careful not to walk off
@@ -157,7 +149,7 @@ fullpath( const char* path )
 		// slashes -- wenger 2006-01-13.
 	if( path[0] && path[1] && path[1]==':' &&
 			(path[2]=='\\' || path[2]=='/') ) {
-		return TRUE;
+		return true;
 	}
-	return FALSE;
+	return false;
 }

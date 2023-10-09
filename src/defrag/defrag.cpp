@@ -88,11 +88,10 @@ DefragLog::write_to_ad(ClassAd * ad) const {
 
 DefragLog defrag_log;
 
-// This constraint clause ignores machines that were drained by others
-#define DEFRAG_DRAIN_REASON_CONSTRAINT "(" ATTR_DRAIN_REASON " is undefined || " ATTR_DRAIN_REASON " == \"Defrag\")"
-
-static char const * const ATTR_LAST_POLL = "LastPoll";
-static char const * const DRAINING_CONSTRAINT = "PartitionableSlot && Offline=!=True && Draining && " DEFRAG_DRAIN_REASON_CONSTRAINT;
+// The basic constraint for p-slots that are currently draining.
+#define BASE_SLOT_CONSTRAINT "PartitionableSlot && Offline=!=True"
+// alternate BASE_SLOT_CONSTRAINT "PartitionableSlot && Offline=!=True && " ATTR_SLOT_BACKFILL " =!= True"
+#define BASE_DRAINING_CONSTRAINT BASE_SLOT_CONSTRAINT " && Draining"
 
 Defrag::Defrag():
 	m_polling_interval(-1),
@@ -128,14 +127,21 @@ void Defrag::init()
 
 void Defrag::config()
 {
-
-	ASSERT( param(m_state_file,"DEFRAG_STATE_FILE") );
+#ifdef USE_DEFRAG_STATE_FILE
 	if( m_last_poll==0 ) {
 		loadState();
 	}
+#endif
+
+	if ( ! param(m_defrag_name,"DEFRAG_NAME")) {
+		param(m_defrag_name, "LOCALNAME");
+	}
+	auto_free_ptr valid_name(build_valid_daemon_name(m_defrag_name.c_str()));
+	ASSERT( valid_name );
+	m_daemon_name = valid_name.ptr();
 
 	int old_polling_interval = m_polling_interval;
-	m_polling_interval = param_integer("DEFRAG_INTERVAL",60);
+	m_polling_interval = param_integer("DEFRAG_INTERVAL",600);
 	if( m_polling_interval <= 0 ) {
 		dprintf(D_ALWAYS,
 				"DEFRAG_INTERVAL=%d, so no pool defragmentation "
@@ -201,14 +207,20 @@ void Defrag::config()
 		validateExpr(m_defrag_requirements.c_str(), "DEFRAG_REQUIREMENTS");
 	}
 
-	ASSERT( param( m_draining_start_expr, "DEFRAG_DRAINING_START_EXPR" ) );
-	validateExpr( m_draining_start_expr.c_str(), "DEFRAG_DRAINING_START_EXPR" );
+	formatstr(m_drain_by_me_expr, "(" ATTR_DRAIN_REASON " is undefined || " ATTR_DRAIN_REASON " == \"Defrag %s\")",
+	          m_daemon_name.c_str());
+
+	if (param(m_draining_start_expr, "DEFRAG_DRAINING_START_EXPR")) {
+		validateExpr( m_draining_start_expr.c_str(), "DEFRAG_DRAINING_START_EXPR" );
+	}
 
 	ASSERT( param(m_whole_machine_expr,"DEFRAG_WHOLE_MACHINE_EXPR") );
 	validateExpr( m_whole_machine_expr.c_str(), "DEFRAG_WHOLE_MACHINE_EXPR" );
-	m_whole_machine_expr += " && Offline =!= True && PartitionableSlot && " DEFRAG_DRAIN_REASON_CONSTRAINT;
+	m_whole_machine_expr += " && " BASE_SLOT_CONSTRAINT " && ";
+	m_whole_machine_expr += m_drain_by_me_expr;
 
-	ASSERT( param(m_draining_schedule_str,"DEFRAG_DRAINING_SCHEDULE") );
+
+	param(m_draining_schedule_str,"DEFRAG_DRAINING_SCHEDULE");
 	if( m_draining_schedule_str.empty() ) {
 		m_draining_schedule = DRAIN_GRACEFUL;
 		m_draining_schedule_str = "graceful";
@@ -223,6 +235,7 @@ void Defrag::config()
 	m_drain_attrs.clear();
 	// we always need the attributes of a location lookup to send drain or cancel commands
 	m_drain_attrs.insert(ATTR_NAME);
+	m_drain_attrs.insert(ATTR_STATE);
 	m_drain_attrs.insert(ATTR_MACHINE);
 	m_drain_attrs.insert(ATTR_VERSION);
 	m_drain_attrs.insert(ATTR_PLATFORM); // TODO: get rid if this after Daemon object is fixed to work without it.
@@ -273,8 +286,6 @@ void Defrag::config()
 		m_cancel_requirements = "";
 	}
 
-
-	param(m_defrag_name,"DEFRAG_NAME");
 
 	int stats_quantum = m_polling_interval;
 	int stats_window = 10*stats_quantum;
@@ -460,10 +471,13 @@ int Defrag::countMachines(char const *constraint,char const *constraint_source,	
 	return count;
 }
 
+#ifdef USE_DEFRAG_STATE_FILE
+
+static char const * const ATTR_LAST_POLL = "LastPoll";
 void Defrag::saveState()
 {
 	ClassAd ad;
-	ad.Assign(ATTR_LAST_POLL,(int)m_last_poll);
+	ad.Assign(ATTR_LAST_POLL, m_last_poll);
 
 	std::string new_state_file;
 	formatstr(new_state_file,"%s.new",m_state_file.c_str());
@@ -482,6 +496,13 @@ void Defrag::saveState()
 
 void Defrag::loadState()
 {
+	if (m_state_file.empty()) {
+		if ( ! param(m_state_file,"DEFRAG_STATE_FILE")) {
+			auto_free_ptr state_file(expand_param("$(LOCK)/$(LOCALNAME:defrag)_state"));
+			m_state_file = state_file.ptr();
+		}
+	}
+
 	FILE *fp;
 	if( !(fp = safe_fopen_wrapper_follow(m_state_file.c_str(), "r")) ) {
 		if( errno == ENOENT ) {
@@ -501,15 +522,16 @@ void Defrag::loadState()
 			dprintf(D_ALWAYS,"WARNING: failed to parse state from %s\n",m_state_file.c_str());
 		}
 
-		int timestamp = (int)m_last_poll;
+		time_t timestamp = m_last_poll;
 		ad->LookupInteger(ATTR_LAST_POLL,timestamp);
-		m_last_poll = (time_t)timestamp;
+		m_last_poll = timestamp;
 
-		dprintf(D_ALWAYS,"Last poll: %d\n",(int)m_last_poll);
+		dprintf(D_ALWAYS, "Last poll: %lld\n", (long long)m_last_poll);
 
 		delete ad;
 	}
 }
+#endif
 
 void Defrag::slotNameToDaemonName(std::string const &name,std::string &machine)
 {
@@ -525,7 +547,7 @@ void Defrag::slotNameToDaemonName(std::string const &name,std::string &machine)
 // n is a number per period.  If we are partly through
 // the interval, make n be in proportion to how much
 // is left.
-static int prorate(int n,int period_elapsed,int period,int granularity)
+static int prorate(int n,int period_elapsed,int period,int granularity, double* real_answer)
 {
 	int time_remaining = period-period_elapsed;
 	double frac = ((double)time_remaining)/period;
@@ -535,6 +557,7 @@ static int prorate(int n,int period_elapsed,int period,int granularity)
 
 	frac += ((double)granularity)/period;
 
+	if (real_answer) { *real_answer = n*frac; }
 	int answer = (int)floor(n*frac + 0.5);
 
 	if( (n > 0 && answer > n) || (n < 0 && answer < n) ) {
@@ -553,25 +576,17 @@ void Defrag::poll_cancel(MachineSet &cancelled_machines)
 		return;
 	}
 
-	MachineSet draining_whole_machines;
-	std::string draining_whole_machines_ex(DRAINING_CONSTRAINT);
+	// build a constraint out of the basic contraint for matching a draining p-slot
+	// that was draind by this defrag and the cancel_requirements expression
+	// (which should include the whole-machine constraint)
+	std::string draining_constraint(BASE_DRAINING_CONSTRAINT " && ");
+	draining_constraint += m_drain_by_me_expr;
 	if ( ! m_cancel_requirements.empty()) {
-		formatstr_cat(draining_whole_machines_ex, " && (%s)", m_cancel_requirements.c_str());
-	}
-	int num_draining_whole_machines = countMachines(draining_whole_machines_ex.c_str(),
-		"<DEFRAG_CANCEL_REQUIREMENTS>", &draining_whole_machines);
-
-	if (num_draining_whole_machines)
-	{
-		dprintf(D_ALWAYS, "Of the whole machines, %d are in the draining state.\n", num_draining_whole_machines);
-	}
-	else
-	{	// Early exit: nothing to do.
-		return;
+		formatstr_cat(draining_constraint, " && (%s)", m_cancel_requirements.c_str());
 	}
 
 	ClassAdList startdAds;
-	if (!queryMachines(DRAINING_CONSTRAINT, "DRAINING_CONSTRAINT <all draining slots>",startdAds,&m_drain_attrs))
+	if (!queryMachines(draining_constraint.c_str(), "CANCEL_REQUIREMENTS",startdAds,&m_drain_attrs))
 	{
 		return;
 	}
@@ -591,7 +606,7 @@ void Defrag::poll_cancel(MachineSet &cancelled_machines)
 		startd_ad.LookupString(ATTR_NAME,name);
 		slotNameToDaemonName(name,machine);
 
-		if( !cancelled_machines.count(machine) && draining_whole_machines.count(machine) ) {
+		if( !cancelled_machines.count(machine)) {
 			cancel_this_drain(startd_ad);
 			cancelled_machines.insert(machine);
 			cancel_count ++;
@@ -618,7 +633,7 @@ Defrag::dprintf_set(const char *message, Defrag::MachineSet *m) const {
 	
 }
 
-void Defrag::poll()
+void Defrag::poll( int /* timerID */ )
 {
 	dprintf(D_FULLDEBUG,"Evaluating defragmentation policy.\n");
 
@@ -631,26 +646,38 @@ void Defrag::poll()
 	time_t now = time(NULL);
 	time_t prev = m_last_poll;
 	m_last_poll = now;
+#ifdef USE_DEFRAG_STATE_FILE
 	saveState();
+#endif
 
 	m_stats.Tick();
 
 	int num_to_drain = m_draining_per_poll;
+	double real_num_to_drain = num_to_drain;
 
-	time_t last_hour    = (prev / 3600)*3600;
-	time_t current_hour = (now  / 3600)*3600;
-	time_t last_day     = (prev / (3600*24))*3600*24;
-	time_t current_day  = (now  / (3600*24))*3600*24;
+	if (prev != 0) {
+		time_t last_hour    = (prev / 3600)*3600;
+		time_t current_hour = (now  / 3600)*3600;
+		time_t last_day     = (prev / (3600*24))*3600*24;
+		time_t current_day  = (now  / (3600*24))*3600*24;
+		double real_frac = 0.0;
 
-	if( current_hour != last_hour ) {
-		num_to_drain += prorate(m_draining_per_poll_hour,now-current_hour,3600,m_polling_interval);
+		if( current_hour != last_hour ) {
+			num_to_drain += prorate(m_draining_per_poll_hour,now-current_hour,3600,m_polling_interval,&real_frac);
+		}
+		if( current_day != last_day ) {
+			num_to_drain += prorate(m_draining_per_poll_day,now-current_day,3600*24,m_polling_interval,&real_frac);
+		}
+		real_num_to_drain += real_frac;
 	}
-	if( current_day != last_day ) {
-		num_to_drain += prorate(m_draining_per_poll_day,now-current_day,3600*24,m_polling_interval);
-	}
+
+	// build a constraint that matches machines that are draining where the
+	// drain command came from me (or for an unknown reason).
+	std::string draining_constraint(BASE_DRAINING_CONSTRAINT " && ");
+	draining_constraint += m_drain_by_me_expr;
 
 	MachineSet draining_machines;
-	int num_draining = countMachines(DRAINING_CONSTRAINT,"<InternalDrainingConstraint>", &draining_machines);
+	int num_draining = countMachines(draining_constraint.c_str(),"<Machines currently draining>", &draining_machines);
 	m_stats.MachinesDraining = num_draining;
 
 	MachineSet whole_machines;
@@ -681,7 +708,7 @@ void Defrag::poll()
 						std::inserter(no_longer_whole_machines, no_longer_whole_machines.begin()));
 
 	dprintf_set("Set of current whole machines is ", &whole_machines);
-	dprintf_set("Set of current draining machine is ", &draining_machines);
+	dprintf_set("Set of current draining machines is ", &draining_machines);
 	dprintf_set("Newly Arrived whole machines is ", &new_machines);
 	dprintf_set("Newly departed draining machines is ", &no_longer_whole_machines);
 
@@ -734,8 +761,8 @@ void Defrag::poll()
 	poll_cancel(cancelled_machines);
 
 	if( num_to_drain <= 0 ) {
-		dprintf(D_ALWAYS,"Doing nothing, because number to drain in next %ds is calculated to be 0.\n",
-				m_polling_interval);
+		dprintf(D_ALWAYS,"Doing nothing, because number to drain in next %ds is calculated to be %.3f.\n",
+				m_polling_interval, real_num_to_drain);
 		return;
 	}
 
@@ -788,7 +815,7 @@ void Defrag::poll()
 	dprintf(D_ALWAYS,"Looking for %d machines to drain.\n",num_to_drain);
 
 	ClassAdList startdAds;
-	std::string requirements = "PartitionableSlot && Offline =!= true && Draining =!= true";
+	std::string requirements(BASE_SLOT_CONSTRAINT " && Draining =!= true");
 	if ( ! m_defrag_requirements.empty()) {
 		formatstr_cat(requirements, " && (%s)", m_defrag_requirements.c_str());
 	}
@@ -898,8 +925,10 @@ Defrag::drain_this(const ClassAd &startd_ad)
 				(int)(badput_growth_tolerance*quick_badput) + negligible_badput);
 	}
 
+	std::string drain_reason;
+	formatstr(drain_reason, "Defrag %s", m_daemon_name.c_str());
 	std::string request_id;
-	bool rval = startd.drainJobs( m_draining_schedule, "Defrag", DRAIN_RESUME_ON_COMPLETION,
+	bool rval = startd.drainJobs( m_draining_schedule, drain_reason.c_str(), DRAIN_RESUME_ON_COMPLETION,
 		draining_check_expr.c_str(), m_draining_start_expr.c_str(), request_id );
 
 	if( !rval ) {
@@ -938,13 +967,7 @@ Defrag::cancel_this_drain(const ClassAd &startd_ad)
 void
 Defrag::publish(ClassAd *ad)
 {
-	char *valid_name = build_valid_daemon_name(m_defrag_name.c_str());
-	ASSERT( valid_name );
-	m_daemon_name = valid_name;
-	free(valid_name);
-
-	SetMyTypeName(*ad, "Defrag");
-	SetTargetTypeName(*ad, "");
+	SetMyTypeName(*ad, DEFRAG_ADTYPE);
 
 	ad->Assign(ATTR_NAME,m_daemon_name);
 
@@ -956,7 +979,7 @@ Defrag::publish(ClassAd *ad)
 }
 
 void
-Defrag::updateCollector() {
+Defrag::updateCollector( int /* timerID */ ) {
 	publish(&m_public_ad);
 	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
 }
@@ -967,7 +990,7 @@ Defrag::invalidatePublicAd() {
 	std::string line;
 
 	SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
-	SetTargetTypeName(invalidate_ad, "Defrag");
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, DEFRAG_ADTYPE);
 
 	formatstr(line,"%s == \"%s\"", ATTR_NAME, m_daemon_name.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());

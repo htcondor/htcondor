@@ -63,7 +63,7 @@ void SecMan::key_printf(int debug_levels, KeyInfo *k) {
 			int   length  =  k->getKeyLength();
 
 			for (int i = 0; (i < length) && (i < 24); i++) {
-				sprintf (&hexout[i*2], "%02x", *dataptr++);
+				snprintf (&hexout[i*2], 3, "%02x", *dataptr++);
 			}
 
 			dprintf (debug_levels, "KEYPRINTF: [%i] %s\n", length, hexout);
@@ -101,7 +101,7 @@ std::map<DCpermission, std::string> SecMan::m_tag_methods;
 std::string SecMan::m_tag_token_owner;
 KeyCache *SecMan::session_cache = &SecMan::m_default_session_cache;
 std::string SecMan::m_pool_password;
-HashTable<std::string,std::string> SecMan::command_map(hashFunction);
+std::map<std::string,std::string> SecMan::command_map;
 HashTable<std::string,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(hashFunction);
 int SecMan::sec_man_ref_count = 0;
 std::set<std::string> SecMan::m_not_my_family;
@@ -110,11 +110,6 @@ char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
 IpVerify *SecMan::m_ipverify = NULL;
 classad::References SecMan::m_resume_proj;
-
-// Forward dec'l; this was previously a SecMan method but not hidden here to discourage
-// its use; in all cases, an external caller should use SecMan::getAuthenticationMethods
-// instead.
-static std::string getDefaultAuthenticationMethods(DCpermission perm);
 
 void
 SecMan::setTag(const std::string &tag) {
@@ -369,7 +364,10 @@ SecMan::getAuthenticationMethods(DCpermission perm) {
 	std::unique_ptr<char, decltype(&free)> config_methods(getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", perm), free);
 
 	if (!config_methods) {
-		methods = getDefaultAuthenticationMethods(perm);
+		// lookup the param table default value.  getSecSetting has already looked for a config file default
+		// so we only get here if there is not one.
+		const char * def = param_raw_default("SEC_DEFAULT_AUTHENTICATION_METHODS");
+		if (def) { methods = def; }
 	} else {
 		methods = std::string(config_methods.get());
 	}
@@ -1105,13 +1103,6 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		}
 	}
 
-	int operator== (const SecManStartCommand &other) const {
-			// We do not care about a deep comparison.
-			// This is just to make the compiler happy on
-			// SimpleList< classy_counted_ptr< SecManStartCommand > >
-		return this == &other;
-	}
-
  private:
 	int m_cmd;
 	int m_subcmd;
@@ -1497,7 +1488,12 @@ SecManStartCommand::sendAuthInfo_inner()
 	}
 	bool found_map_ent = false;
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
-		found_map_ent = (m_sec_man.command_map.lookup(m_session_key, sid) == 0);
+
+		auto command_pair = m_sec_man.command_map.find(m_session_key);
+		if (command_pair != m_sec_man.command_map.end()) {
+			found_map_ent = true;
+			sid = command_pair->second;
+		}
 	}
 	if (found_map_ent) {
 		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.c_str(), m_session_key.c_str());
@@ -1508,7 +1504,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
-			if (m_sec_man.command_map.remove(m_session_key.c_str()) == 0) {
+			if (m_sec_man.command_map.erase(m_session_key) == 0) {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found, removed %s from map.\n", sid.c_str(), m_session_key.c_str());
 			} else {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.c_str(), m_session_key.c_str());
@@ -1766,7 +1762,9 @@ SecManStartCommand::sendAuthInfo_inner()
 		global_dc_get_cookie (len, randomjunk);
 		
 		m_auth_info.Assign(ATTR_SEC_COOKIE,randomjunk);
-		dprintf (D_SECURITY, "SECMAN: %s=\"%s\"\n", ATTR_SEC_COOKIE,randomjunk);
+		if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+			dprintf (D_SECURITY, "SECMAN: %s=\"%s\"\n", ATTR_SEC_COOKIE,randomjunk);
+		}
 
 		free(randomjunk);
 		randomjunk = NULL;
@@ -1915,7 +1913,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				}
 
 				// prepare the buffer to pass in udp header
-				MyString key_id = session_entry->id();
+				std::string key_id = session_entry->id();
 
 				// stick our command socket sinful string in there
 				char const* dcsss = global_dc_sinful();
@@ -1929,10 +1927,10 @@ SecManStartCommand::sendAuthInfo_inner()
 				// if the encryption method is AES, we don't actually want to enable the MAC
 				// here as that instantiates an MD5 object which will cause FIPS to blow up.
 				if(ki->getProtocol() != CONDOR_AESGCM) {
-					m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.Value());
+					m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.c_str());
 				} else {
 					dprintf(D_SECURITY|D_VERBOSE, "SECMAN: because protocal is AES, not using other MAC.\n");
-					m_sock->set_MD_mode(MD_OFF, ki, key_id.Value());
+					m_sock->set_MD_mode(MD_OFF, ki, key_id.c_str());
 				}
 
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
@@ -1953,7 +1951,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				}
 
 					// prepare the buffer to pass in udp header
-				MyString key_id = session_entry->id();
+				std::string key_id = session_entry->id();
 
 					// stick our command socket sinful string in there
 				char const* dcsss = global_dc_sinful();
@@ -2508,12 +2506,12 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if((response_rc != "") && (response_rc != "AUTHORIZED")) {
 				// gather some additional data for useful error reporting
 				std::string response_user;
-				MyString response_method = m_sock->getAuthenticationMethodUsed();
+				const char* response_method = m_sock->getAuthenticationMethodUsed();
 				post_auth_info.LookupString(ATTR_SEC_USER,response_user);
 
 				// push error message on the stack and print to the log
 				std::string errmsg;
-				if (response_method == "") {
+				if (response_method == nullptr || response_method[0] == '\0') {
 					response_method = "(no authentication)";
 					formatstr( errmsg, "Received \"%s\" from server for user %s using no authentication method, which may imply host-based security.  Our address was '%s', and server's address was '%s'.  Check your ALLOW settings and IP protocols.",
 						response_rc.c_str(), response_user.c_str(),
@@ -2523,7 +2521,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				} else {
 					m_sock->setShouldTryTokenRequest(true);
 					formatstr(errmsg, "Received \"%s\" from server for user %s using method %s.",
-						response_rc.c_str(), response_user.c_str(), response_method.c_str());
+						response_rc.c_str(), response_user.c_str(), response_method);
 				}
 				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.c_str());
 				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.c_str());
@@ -2601,7 +2599,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			char *dur = NULL;
 			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
 
-			int expiration_time = 0;
+			time_t expiration_time = 0;
 			time_t now = time(0);
 			if( dur ) {
 				expiration_time = now + atoi(dur);
@@ -2677,14 +2675,9 @@ SecManStartCommand::receivePostAuthInfo_inner()
 					formatstr (keybuf, "{%s,<%s>}", m_sock->get_connect_addr(), p);
 				}
 
-				// NOTE: HashTable returns ZERO on SUCCESS!!!
-				if (m_sec_man.command_map.insert(keybuf, sesid, true) == 0) {
-					// success
-					if (IsDebugVerbose(D_SECURITY)) {
-						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
-					}
-				} else {
-					dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.c_str());
+				m_sec_man.command_map.insert_or_assign(keybuf, sesid);
+				if (IsDebugVerbose(D_SECURITY)) {
+					dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
 				}
 			}
 			
@@ -2771,11 +2764,14 @@ SecManStartCommand::DoTCPAuth_inner()
 	tcp_auth_sock->timeout(TCP_SOCK_TIMEOUT);
 
 		// we already know the address - condor uses the same TCP port as it does UDP port.
-	MyString tcp_addr = m_sock->get_connect_addr();
-	if (!tcp_auth_sock->connect(tcp_addr.c_str(),0,m_nonblocking)) {
-		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.c_str());
+	const char* tcp_addr = m_sock->get_connect_addr();
+	if (tcp_addr == nullptr) {
+		tcp_addr = "";
+	}
+	if (!tcp_auth_sock->connect(tcp_addr,0,m_nonblocking)) {
+		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr);
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						  "TCP auth connection to %s failed.", tcp_addr.c_str());
+		                  "TCP auth connection to %s failed.", tcp_addr);
 		delete tcp_auth_sock;
 		return StartCommandFailed;
 	}
@@ -3017,10 +3013,12 @@ SecMan::GenerateKeyExchange(CondorError *errstack)
 	}
 	pkey.reset(pkey_raw);
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> key(EVP_PKEY_get1_EC_KEY(pkey.get()), &EC_KEY_free);
 	if (key) {
 		EC_KEY_set_asn1_flag(key.get(), OPENSSL_EC_NAMED_CURVE);
 	}
+#endif
 	return pkey;
 }
 
@@ -3227,7 +3225,7 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
             char * cmd = NULL;
             while ( (cmd = cmd_list.next()) ) {
                 formatstr (keybuf, "{%s,<%s>}", addr.c_str(), cmd);
-                command_map.remove(keybuf);
+                command_map.erase(keybuf);
             }
         }
     }
@@ -3650,46 +3648,6 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 }
 
 
-	// Given a known permission level, determine the default authentication
-	// methods we should use (as a string list) if the sysadmin provides
-	// no input.
-	//
-	// NOTE: this does *not* filter the authentication methods; some might
-	// not be valid for the current build of HTCondor
-static std::string
-getDefaultAuthenticationMethods(DCpermission perm) {
-	std::string methods;
-#if defined(WIN32)
-	// default windows method
-	methods = "NTSSPI";
-#else
-	// default unix method
-	methods = "FS";
-#endif
-
-	methods += ",TOKEN";
-
-#if defined(HAVE_EXT_KRB5)
-	methods += ",KERBEROS";
-#endif
-
-#if defined(HAVE_EXT_SCITOKENS)
-	methods += ",SCITOKENS";
-#endif
-
-	// SSL is last as this may cause the client to be anonymous.
-	methods += ",SSL";
-
-	if (perm == READ) {
-		methods += ",CLAIMTOBE";
-	} else if (perm == CLIENT_PERM) {
-		methods += ",CLAIMTOBE";
-	}
-
-	return methods;
-}
-
-
 std::string SecMan::getDefaultCryptoMethods() {
 	return "AES,BLOWFISH,3DES";
 }
@@ -3709,8 +3667,8 @@ char* SecMan::my_unique_id() {
 #endif
 
 		std::string tid;
-        formatstr( tid, "%s:%i:%i", get_local_hostname().c_str(), mypid, 
-					 (int)time(0));
+        formatstr( tid, "%s:%i:%lld", get_local_hostname().c_str(), mypid,
+		           (long long)time(0));
 
         _my_unique_id = strdup(tid.c_str());
     }
@@ -3939,7 +3897,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 
 		// extract the session duration from the (imported) policy
-	int expiration_time = 0;
+	time_t expiration_time = 0;
 
 	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
@@ -4056,14 +4014,9 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 			formatstr (keybuf, "{%s,<%s>}", peer_sinful, p);
 		}
 
-		// NOTE: HashTable returns ZERO on SUCCESS!!!
-		if (command_map.insert(keybuf, sesid, true) == 0) {
-			// success
-			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
-			}
-		} else {
-			dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.c_str());
+		command_map.insert_or_assign(keybuf, sesid);
+		if (IsDebugVerbose(D_SECURITY)) {
+			dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
 		}
 	}
 
@@ -4194,14 +4147,6 @@ SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name,
 
 bool
 SecMan::ExportSecSessionInfo(char const *session_id,std::string &session_info) {
-    MyString ms;
-    bool rv = ExportSecSessionInfo(session_id, ms);
-    if(! ms.empty()) { session_info = ms; }
-    return rv;
-}
-
-bool
-SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	ASSERT( session_id );
 
 	KeyCacheEntry *session_key = NULL;

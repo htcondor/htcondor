@@ -22,6 +22,7 @@
 #include "classad_oldnew.h"
 #include "string_list.h"
 #include "condor_adtypes.h"
+#include "condor_attributes.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope
 
 #include "compat_classad_list.h"
@@ -751,15 +752,85 @@ bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList *ignored_attrs, bo
 	return ! found_diff;
 }
 
-int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
+// copy attributes listed as "MachineResources" from the src to the destination ad
+// This will also copy Available<res> attributes and any attributes referenced therein
+void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_res_list)
+{
+	std::string resnames, attr;
+	if(srcAd.LookupString( ATTR_MACHINE_RESOURCES, resnames)) {
+		if (include_res_list) { destAd.Assign(ATTR_MACHINE_RESOURCES, resnames); }
+	} else {
+		resnames = "CPUs, Disk, Memory";
+	}
+
+	// copy the primary quantities of each of the machine resources into the starter ad
+	// for AvailableGPUs, also copy the gpu properties if any
+	StringTokenIterator tags(resnames);
+	for (const char * tag = tags.first(); tag != nullptr; tag = tags.next()) {
+		ExprTree * tree = srcAd.Lookup(tag);
+		if (tree) { 
+			tree = SkipExprEnvelope(tree);
+			destAd.Insert(tag, tree->Copy());
+		}
+
+		// if there is an attribute "Available<tag>" in the machine ad
+		// copy it, and also any attributes that it references
+		attr = "Available"; attr += tag;
+		tree = srcAd.Lookup(attr);
+		if (tree) {
+			tree = SkipExprEnvelope(tree);
+			destAd.Insert(attr, tree->Copy());
+
+			classad::References refs;
+			srcAd.GetInternalReferences(tree, refs, true);
+			for (auto it : refs) {
+				ExprTree * expr = srcAd.Lookup(it);
+				if (expr) { 
+					expr = SkipExprEnvelope(expr);
+					destAd.Insert(it, expr->Copy());
+				}
+			}
+		}
+	}
+}
+
+// Copy all matching attributes in attrs list along with any referenced attrs
+// from srcAd to destAd. If overwrite is True then an attrbute that already
+// exists in the destAd can be overwritten by data from the srcAd
+void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &attrs, bool overwrite)
+{
+	classad::References refs;
+	StringTokenIterator listAttrs(attrs);
+	// Create set of attribute references to copy
+	for (auto attr : listAttrs) {
+		ExprTree *tree = srcAd.Lookup(attr);
+		if (tree) {
+			refs.insert(attr);
+			srcAd.GetInternalReferences(tree, refs, true);
+		}
+	}
+	// Copy found references
+	for (auto it : refs) {
+		ExprTree *expr = srcAd.Lookup(it);
+		if (expr) {
+			// Only copy if given overwrite or if not found in destAd
+			if (overwrite || !destAd.Lookup(it)) {
+				expr = SkipExprEnvelope(expr);
+				destAd.Insert(it, expr->Copy());
+			}
+		}
+	}
+}
+
+bool EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
 				  classad::Value::ValueType type_mask,
 				  const std::string & sourceAlias,
 				  const std::string & targetAlias )
 {
-	int rc = TRUE;
+	bool rc = true;
 	if ( !expr || !source ) {
-		return FALSE;
+		return false;
 	}
 
 	const classad::ClassAd *old_scope = expr->GetParentScope();
@@ -770,7 +841,7 @@ int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 		mad = getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
 	if ( !source->EvaluateExpr( expr, result, type_mask ) ) {
-		rc = FALSE;
+		rc = false;
 	}
 
 	if ( mad ) {
@@ -798,8 +869,8 @@ static std::vector<ClassAd*> *matched_ads = NULL;
 bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch)
 {
 	int adCount = candidates.size();
-	static int cpu_count = 0;
-	int current_cpu_count = threads;
+	static size_t cpu_count = 0;
+	size_t current_cpu_count = threads;
 	int iterations = 0;
 	size_t matched = 0;
 
@@ -833,7 +904,7 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 	if(!candidates.size())
 		return false;
 
-	for(int index = 0; index < cpu_count; index++)
+	for(size_t index = 0; index < cpu_count; index++)
 	{
 		target_pool[index].CopyFrom(*ad1);
 		match_pool[index].ReplaceLeftAd(&(target_pool[index]));
@@ -862,27 +933,6 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 				break;
 			ClassAd *ad2 = candidates[offset];
 
-/*
-			if(halfMatch)
-			{
-				char const *my_target_type = target_pool[omp_id].GetTargetTypeName();
-				char const *target_type = ad2->GetMyTypeName();
-				if( !my_target_type ) {
-					my_target_type = "";
-				}
-				if( !target_type ) {
-					target_type = "";
-				}
-				if( strcasecmp(target_type,my_target_type) &&
-					strcasecmp(my_target_type,ANY_ADTYPE) )
-				{
-					result = false;
-					continue;
-				}
-			}
-*/
-
-
 			match_pool[omp_id].ReplaceRightAd(ad2);
 		
 			if(halfMatch)
@@ -899,7 +949,7 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 		}
 	}
 
-	for(int index = 0; index < cpu_count; index++)
+	for(size_t index = 0; index < cpu_count; index++)
 	{
 		match_pool[index].RemoveLeftAd();
 		matched += matched_ads[index].size();
@@ -908,7 +958,7 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 	if(matches.capacity() < matched)
 		matches.reserve(matched);
 
-	for(int index = 0; index < cpu_count; index++)
+	for(size_t index = 0; index < cpu_count; index++)
 	{
 		if(matched_ads[index].size())
 			matches.insert(matches.end(), matched_ads[index].begin(), matched_ads[index].end());
@@ -917,32 +967,32 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 	return matches.size() > 0;
 }
 
-bool IsAHalfMatch( ClassAd *my, ClassAd *target )
+bool IsAConstraintMatch( ClassAd *query, ClassAd *target )
 {
-		// The collector relies on this function to check the target type.
-		// Eventually, we should move that check either into the collector
-		// or into the requirements expression.
-	char const *my_target_type = GetTargetTypeName(*my);
-	char const *target_type = GetMyTypeName(*target);
-	if( !my_target_type ) {
-		my_target_type = "";
-	}
-	if( !target_type ) {
-		target_type = "";
-	}
-	if( strcasecmp(target_type,my_target_type) &&
-		strcasecmp(my_target_type,ANY_ADTYPE) )
-	{
-		return false;
-	}
-
-	classad::MatchClassAd *mad = getTheMatchAd( my, target );
+	classad::MatchClassAd *mad = getTheMatchAd( query, target );
 
 	bool result = mad->rightMatchesLeft();
 
 	releaseTheMatchAd();
 	return result;
 }
+
+bool IsATargetMatch( ClassAd *my, ClassAd *target, const char * targetType )
+{
+	// first check to see that the MyType of the target matches the desired targetType
+	if (targetType && targetType[0] && YourStringNoCase(targetType) != ANY_ADTYPE) {
+		char const *mytype_of_target = GetMyTypeName(*target);
+		if( !mytype_of_target ) {
+			mytype_of_target = "";
+		}
+		if (YourStringNoCase(targetType) != mytype_of_target) {
+			return false;
+		}
+	}
+
+	return IsAConstraintMatch(my, target);
+}
+
 
 /**************************************************************************
  *

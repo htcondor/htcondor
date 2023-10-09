@@ -24,7 +24,6 @@
 
 #include "condor_classad.h"
 #include "HashTable.h"
-#include "MyString.h"
 #include "classad_log.h"
 
 // these two definitions allow us to dereference a template type
@@ -194,9 +193,9 @@ public:
       @param targettype The class-ad's TargetType attribute value.
       @return true on success, false otherwise.
   */
-  bool NewClassAd(const K& key, const char* mytype, const char* targettype) {
+  bool NewClassAd(const K& key, const char* mytype) {
 	const std::string str = key;
-	this->AppendLog(new LogNewClassAd(str.c_str(),mytype,targettype, this->GetTableEntryMaker()));
+	this->AppendLog(new LogNewClassAd(str.c_str(), mytype, this->GetTableEntryMaker()));
 	return true;
   }
 
@@ -209,7 +208,7 @@ public:
   */
   bool NewClassAd(K key, AD ad) {
 	const std::string str = key;
-	LogRecord* log = new LogNewClassAd(str.c_str(),GetMyTypeName(*ad),GetTargetTypeName(*ad), this->GetTableEntryMaker());
+	LogRecord* log = new LogNewClassAd(str.c_str(), GetMyTypeName(*ad), this->GetTableEntryMaker());
 	this->AppendLog(log);
 	for (auto itr = ad->begin(); itr != ad->end(); itr++ ) {
 		log = new LogSetAttribute(str.c_str(),itr->first.c_str(),ExprTreeToString(itr->second));

@@ -98,7 +98,6 @@ public:
 	void set_scope_id(uint32_t scope_id);
 
 	bool from_ip_string(const std::string& ip_string);
-	//bool from_ip_string(const MyString& ip_string);
 	bool from_ip_string(const char* ip_string);
 
 	bool from_ip_and_port_string( const char * ip_and_port_string );

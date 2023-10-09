@@ -44,6 +44,17 @@ JobStatus = [
     "JOB_STATUS_MAX"
 ]
 
+# Must be consistent with dag status definitions in
+# src/condor_utils/dagman_utils.h
+DagStatus = [
+    "OK",
+    "ERROR",
+    "FAILED-NODE",
+    "ABORT-ON-SIGNAL",
+    "REMOVED",
+    "CYCLE",
+    "HALTED"
+]
 
 # Import all of the noun classes (do this section last) and then
 # create an OrderedDict of nouns, mapping the name to be used on the
@@ -52,11 +63,12 @@ from collections import OrderedDict as _OrderedDict
 from htcondor_cli.dagman import DAG
 from htcondor_cli.job import Job
 from htcondor_cli.job_set import JobSet
+from htcondor_cli.eventlog import EventLog
 NOUNS = _OrderedDict()
 NOUNS["dag"] = DAG
 NOUNS["job"] = Job
 NOUNS["jobset"] = JobSet
-
+NOUNS["eventlog"] = EventLog
 
 # Should we knob these lines?
 from htcondor_cli.annex import Annex

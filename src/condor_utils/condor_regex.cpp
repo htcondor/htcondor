@@ -69,7 +69,7 @@ Regex::compile(const char * pattern,
 	PCRE2_SIZE erroffset_pcre2 = 0;
 	re = pcre2_compile(pattern_pcre2str, PCRE2_ZERO_TERMINATED, options_param, errcode, &erroffset_pcre2, NULL);
 
-	*erroffset = static_cast<int>(erroffset_pcre2);
+	if(erroffset) { *erroffset = static_cast<int>(erroffset_pcre2); }
 
 	return (NULL != re);
 }

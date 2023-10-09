@@ -110,11 +110,6 @@ BaseJob::BaseJob( ClassAd *classad )
 								(TimerHandlercpp)&BaseJob::doEvaluateState,
 								"doEvaluateState", (Service*) this );;
 
-	wantRematch = false;
-	doResubmit = 0;		// set if gridmanager wants to resubmit job
-	wantResubmit = false;	// set if user wants to resubmit job via RESUBMIT_CHECK
-	jobAd->LookupBool(ATTR_GLOBUS_RESUBMIT_CHECK,wantResubmit);
-
 	jobAd->EnableDirtyTracking();
 	jobAd->ClearAllDirtyFlags();
 
@@ -166,7 +161,7 @@ void BaseJob::SetEvaluateState() const
 	daemonCore->Reset_Timer( evaluateStateTid, 0 );
 }
 
-void BaseJob::doEvaluateState()
+void BaseJob::doEvaluateState( int /* timerID */ )
 {
 	JobHeld( "the gridmanager can't handle this job type" );
 	DoneWithJob();
@@ -188,7 +183,7 @@ void BaseJob::JobRunning()
 
 		condorState = RUNNING;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		UpdateRuntimeStats();
 
@@ -210,7 +205,7 @@ void BaseJob::JobIdle()
 
 		condorState = IDLE;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		UpdateRuntimeStats();
 
@@ -254,7 +249,7 @@ void BaseJob::JobCompleted()
 
 		condorState = COMPLETED;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		UpdateRuntimeStats();
 
@@ -338,7 +333,7 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 		}
 		condorState = HELD;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		jobAd->Assign( ATTR_HOLD_REASON, hold_reason );
 		jobAd->Assign(ATTR_HOLD_REASON_CODE, hold_code);
@@ -371,7 +366,7 @@ void BaseJob::JobRemoved( const char *remove_reason )
 	if ( condorState != REMOVED ) {
 		condorState = REMOVED;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		jobAd->Assign( ATTR_REMOVE_REASON, remove_reason );
 
@@ -393,8 +388,8 @@ void BaseJob::UpdateRuntimeStats()
 	if ( condorState == RUNNING && shadowBirthdate == 0 ) {
 
 		// The job has started a new interval of running
-		int current_time = (int)time(NULL);
-		int last_start_date = 0;
+		time_t current_time = time(nullptr);
+		time_t last_start_date = 0;
 		jobAd->Assign( ATTR_SHADOW_BIRTHDATE, current_time );
 		if ( jobAd->LookupInteger( ATTR_JOB_START_DATE, last_start_date ) == 0 ) {
 			jobAd->Assign( ATTR_JOB_START_DATE, current_time );
@@ -546,10 +541,10 @@ dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 	}
 }
 
-void BaseJob::UpdateJobLeaseSent( int new_expiration_time )
+void BaseJob::UpdateJobLeaseSent( time_t new_expiration_time )
 {
-dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.proc,(int)new_expiration_time);
-	int old_expiration_time = TIMER_UNSET;
+dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%lld)\n",procID.cluster,procID.proc,(long long)new_expiration_time);
+	time_t old_expiration_time = TIMER_UNSET;
 
 	jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION,
 						  old_expiration_time );
@@ -583,10 +578,10 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.pro
 	}
 }
 
-void BaseJob::UpdateJobLeaseReceived( int new_expiration_time )
+void BaseJob::UpdateJobLeaseReceived( time_t new_expiration_time )
 {
-	int old_expiration_time = TIMER_UNSET;
-dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%d)\n",procID.cluster,procID.proc,(int)new_expiration_time);
+	time_t old_expiration_time = TIMER_UNSET;
+dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%lld)\n",procID.cluster,procID.proc,(long long)new_expiration_time);
 
 	jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK, old_expiration_time );
 
@@ -603,9 +598,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%d)\n",procID.cluster,procID
 		}
 
 		if ( new_expiration_time < old_expiration_time ) {
-			dprintf( D_ALWAYS, "(%d.%d) New lease expiration (%d) is older than old lease expiration (%d), ignoring!\n",
-					 procID.cluster, procID.proc, new_expiration_time,
-					 old_expiration_time );
+			dprintf( D_ALWAYS, "(%d.%d) New lease expiration (%lld) is older than old lease expiration (%lld), ignoring!\n",
+			         procID.cluster, procID.proc, (long long)new_expiration_time,
+			         (long long)old_expiration_time );
 			return;
 		}
 
@@ -616,7 +611,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%d)\n",procID.cluster,procID
 	}
 }
 
-void BaseJob::JobLeaseSentExpired()
+void BaseJob::JobLeaseSentExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseSentExpiredTid != TIMER_UNSET ) {
@@ -626,7 +621,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,pr
 	SetEvaluateState();
 }
 
-void BaseJob::JobLeaseReceivedExpired()
+void BaseJob::JobLeaseReceivedExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {
@@ -733,7 +728,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 }
 
-void BaseJob::EvalAllPeriodicJobExprs()
+void BaseJob::EvalAllPeriodicJobExprs(int /* tid */)
 {
 	dprintf( D_FULLDEBUG, "Evaluating periodic job policy expressions.\n" );
 
@@ -856,7 +851,7 @@ int BaseJob::EvalOnExitJobExpr()
 	return 0;
 }
 
-void BaseJob::CheckAllRemoteStatus()
+void BaseJob::CheckAllRemoteStatus(int /* tid */)
 {
 	dprintf( D_FULLDEBUG, "Evaluating staleness of remote job statuses.\n" );
 
@@ -944,7 +939,7 @@ void BaseJob::NotifyResourceDown()
 	resourceStateKnown = true;
 	if ( resourceDown == false ) {
 		WriteGridResourceDownEventToUserLog( jobAd );
-		jobAd->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, (int)time(NULL) );
+		jobAd->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, time(nullptr) );
 		requestScheddUpdate( this, false );
 	}
 	resourceDown = true;

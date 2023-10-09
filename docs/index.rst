@@ -43,6 +43,7 @@ Manual built on |release_date|
    users-manual/index
    admin-manual/index
    classads/index
+   automated-workflows/index
    apis/python-bindings/index
 
 .. toctree::
@@ -50,9 +51,9 @@ Manual built on |release_date|
    :glob:
    :caption: Additional Docs 
 
-   grid-computing/index
+   apis/chirp.rst
    cloud-computing/index
-   apis/index
+   grid-computing/index
    platform-specific/index
    faq/index
    version-history/index
@@ -60,11 +61,12 @@ Manual built on |release_date|
 .. toctree::
    :maxdepth: 2
    :glob:
-   :caption: Appendix and Tables
+   :caption: Reference, Glossary and Index
 
    man-pages/index
    classad-attributes/index
    codes-other-values/index
+   codes-other-values/glossary
    genindex
 
 

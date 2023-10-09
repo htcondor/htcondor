@@ -28,6 +28,12 @@
 #include "classad_merge.h"
 
 
+// static helper function
+std::string JobSets::makeAlias(const std::string& name, const OwnerInfo &owni) {
+	std::string ret = name + "/" + owni.Name();
+	lower_case(ret);
+	return ret;
+}
 
 void
 JobSets::reconfig()
@@ -50,7 +56,7 @@ JobSets::restoreJobSet(JobQueueJobSet *setAd)
 	setAd->PopulateFromAd(); // pull fields from the classad
 
 	// Add into our per-user name to id map, making sure it is not already there
-	std::string alias = makeAlias(name, setAd->ownerinfo->name);
+	std::string alias = makeAlias(name, *setAd->ownerinfo);
 	unsigned int &setId = mapAliasToId[alias];
 	if (setId && (setId != setAd->Jobset())) {
 		dprintf(D_ERROR, "ERROR: restoreJobSet - log has duplicate JobSet names (%s,%d) for set %d for user %s\n",
@@ -85,7 +91,7 @@ bool JobSets::removeSet(JobQueueJobSet* & jobset)
 			else { ++it; }
 		}
 	} else {
-		alias = makeAlias(name, jobset->ownerinfo->name);
+		alias = makeAlias(name, *jobset->ownerinfo);
 		dprintf(D_STATUS, "Removing JobSet %s id=%d (%u refs)\n", alias.c_str(), jobset->Jobset(), jobset->member_count);
 		mapAliasToId.erase(alias);
 	}
@@ -113,7 +119,7 @@ bool JobSets::addToSet(JobQueueJob & job)
 			return false;
 		}
 		// here we want to get the set, but not create it
-		std::string alias = makeAlias(setName, job.ownerinfo->name);
+		std::string alias = makeAlias(setName, *job.ownerinfo);
 		auto it = mapAliasToId.find(alias);
 		if (it != mapAliasToId.end()) {
 			job.set_id = it->second;

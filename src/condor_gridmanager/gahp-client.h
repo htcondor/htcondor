@@ -25,7 +25,6 @@
 #include "condor_daemon_core.h"
 #include "gahp_common.h"
 
-#include "HashTable.h"
 #include "globus_utils.h"
 #include "proxymanager.h"
 #include "condor_arglist.h"
@@ -41,7 +40,7 @@
 struct GahpProxyInfo
 {
 	Proxy *proxy;
-	int cached_expiration;
+	time_t cached_expiration;
 	int num_references;
 };
 
@@ -66,7 +65,7 @@ class GahpServer : public Service {
 	static GahpServer *FindOrCreateGahpServer(const char *id,
 											  const char *path,
 											  const ArgList *args = NULL);
-	static HashTable <std::string, GahpServer *> GahpServersById;
+	static std::map <std::string, GahpServer *> GahpServersById;
 
 	GahpServer(const char *id, const char *path, const ArgList *args = NULL);
 	~GahpServer();
@@ -76,7 +75,7 @@ class GahpServer : public Service {
 	bool UpdateToken(const std::string &token_file);
 	bool CreateSecuritySession();
 
-	void DeleteMe();
+	void DeleteMe(int timerID);
 
 	static const int m_buffer_size;
 	char *m_buffer;
@@ -100,7 +99,7 @@ class GahpServer : public Service {
 		void Publish( ClassAd & ad ) const;
 		void Unpublish( ClassAd & ad ) const;
 
-		static void Tick();
+		static void Tick(int tid);
 
 		static int RecentWindowMax;
 		static int RecentWindowQuantum;
@@ -128,7 +127,7 @@ class GahpServer : public Service {
 	void RemoveGahpClient();
 
 	void ProxyCallback();
-	void doProxyCheck();
+	void doProxyCheck(int timerID);
 	GahpProxyInfo *RegisterProxy( Proxy *proxy );
 	void UnregisterProxy( Proxy *proxy );
 
@@ -159,7 +158,7 @@ class GahpServer : public Service {
 		notification.
 		@see setPollInterval
 	*/
-	void poll();
+	void poll(int timerID);
 
 	void poll_real_soon();
 
@@ -186,7 +185,7 @@ class GahpServer : public Service {
 	bool rotated_reqids;
 
 	unsigned int m_reference_count;
-	HashTable<int,GenericGahpClient*> *requestTable;
+	std::map<int,GenericGahpClient*> requestTable;
 	std::deque<int> waitingHighPrio;
 	std::deque<int> waitingMediumPrio;
 	std::deque<int> waitingLowPrio;
@@ -200,6 +199,7 @@ class GahpServer : public Service {
 	std::string m_gahp_error_buffer;
 	std::list<std::string> m_gahp_error_list;
 	bool m_gahp_startup_failed;
+	bool m_setCondorInherit;
 	char m_gahp_version[150];
 	std::string m_gahp_condor_version;
 	std::vector<std::string> m_commands_supported;
@@ -223,7 +223,7 @@ class GahpServer : public Service {
 	int proxy_check_tid;
 	bool is_initialized;
 	bool can_cache_proxies;
-	HashTable<std::string,GahpProxyInfo*> *ProxiesByFilename;
+	std::map<std::string, GahpProxyInfo*> ProxiesByFilename;
 }; // end of class GahpServer
 
 class GenericGahpClient : public Service {
@@ -239,6 +239,8 @@ class GenericGahpClient : public Service {
 		bool Initialize( Proxy * proxy );
 		bool UpdateToken(const std::string &token_file);
 		bool CreateSecuritySession();
+
+		void SetCondorInherit(bool set_inherit) { server->m_setCondorInherit = set_inherit; }
 
 		void purgePendingRequests() { clear_pending(); }
 		bool pendingRequestIssued() { return pending_submitted_to_gahp || pending_result; }
@@ -276,6 +278,8 @@ class GenericGahpClient : public Service {
 		const char * getVersion();
 		const char * getCondorVersion();
 
+		int getNextReqId() { return server->next_reqid; }
+
 		enum PrioLevel {
 			low_prio,
 			medium_prio,
@@ -298,7 +302,7 @@ class GenericGahpClient : public Service {
 		Gahp_Args * get_pending_result( const char *, const char * );
 		bool check_pending_timeout( const char *, const char * );
 		int reset_user_timer( int tid );
-		void reset_user_timer_alarm();
+		void reset_user_timer_alarm(int timerID);
 
 		unsigned int m_timeout;
 		mode m_mode;

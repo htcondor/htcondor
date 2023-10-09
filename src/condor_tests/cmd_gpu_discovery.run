@@ -49,6 +49,7 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 
 	# General settings 
 	NUM_CPUS = 6
+	use FEATURE : StaticSlots
 	ALL_DEBUG = D_FULLDEBUG
 	MASTER_DEBUG = D_SECURITY:1 D_COMMAND:1
 CONDOR_TESTREQ_CONFIG
@@ -205,6 +206,11 @@ if($res == 0) {
 #$res = system("condor_config_val -startd OFFLINE_MACHINE_RESOURCE_GPUS");
 
 runToolNTimes("condor_restart -daemon startd",1,0);
+if(is_windows()) {
+	runCondorTool('condor_who -wait:120 IsReady&&STARTD_State=?=\"Ready\"');
+} else {
+	runCondorTool("condor_who -wait:120 'IsReady && STARTD_State =?= \"Ready\"'");
+}
 
 my $slotsupdated = 0;
 my @updates = ();
@@ -218,7 +224,7 @@ while($slotsupdated < $totalcpus) {
 	$slotsupdated =  @updates;
 	$trys += 1;
 	if($trys == 10) {
-		print "failed to see desired $totalgpus updates: only see $slotsupdated\n";
+		print "failed to see desired $totalcpus updates: only see $slotsupdated\n";
 		RegisterResult(0,test_name,$testname);
 		last;
 	}

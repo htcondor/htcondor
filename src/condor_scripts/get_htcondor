@@ -113,6 +113,10 @@ check_forked() {
 			fi
 			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
 			case $dist_version in
+				12)
+					dist_version_number=12
+					dist_version="bookworm"
+				;;
 				11)
 					dist_version_number=11
 					dist_version="bullseye"
@@ -153,7 +157,7 @@ get_distribution() {
 		# platforms follow.
 		#
 		#     debian bullseye 11
-		#     ubuntu bionic
+		#     debian bookworm 12
 		#     ubuntu focal
 		#     ubuntu jammy
 		#     centos 7
@@ -194,6 +198,9 @@ get_distribution() {
 			# raspbian?
 			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
 			case $dist_version in
+				12)
+					dist_version="bookworm"
+				;;
 				11)
 					dist_version="bullseye"
 				;;
@@ -279,16 +286,21 @@ do_token_security() {
 
 	# Ensure that the password directory exists, since the condor_master has
 	# not yet been run.
-	$sh_c "umask 0077; mkdir -p $(condor_config_val SEC_PASSWORD_DIRECTORY)"
+	$sh_c "umask 0077; mkdir -p \$(condor_config_val SEC_PASSWORD_DIRECTORY)"
 
 	# So 'echo' is a shell built-in, which means no command-line to show
 	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
 	# '$sh_c', because the '$sh_c' itself will show up in 'ps'.
-	echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
+	# But if we're a dry run, then we need the $sh_c first.
+	if is_dry_run; then
+		$sh_c "echo -n \"${PASSWORD}\" | condor_store_cred add -c -i -"
+	else
+		echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
+	fi
 
 	# Ensure that the tokens directory exists, since the condor_master has
 	# not yet been run.
-	$sh_c "umask 0077; mkdir -p $(condor_config_val SEC_TOKEN_SYSTEM_DIRECTORY)"
+	$sh_c "umask 0077; mkdir -p \$(condor_config_val SEC_TOKEN_SYSTEM_DIRECTORY)"
 
 	# Now issue myself a token.
 	$sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
@@ -407,7 +419,7 @@ do_install() {
 
 				# Add our repository.
 				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
-				$sh_c "echo \"deb [arch=amd64] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" > ${HTCONDOR_LIST}"
+				$sh_c "echo \"deb ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" > ${HTCONDOR_LIST}"
 				$sh_c "echo \"deb-src ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" >> ${HTCONDOR_LIST}"
 
 				echo -e "\n# Updating package lists"
@@ -446,11 +458,13 @@ do_install() {
 				set -x
 			fi
 
-			# The Amazon Linux container doesn't include ps by default.
-			if [ "${lsb_dist}" = "amzn" ]; then
-				echo -e "\n# Installing ps"a
-				$sh_c "yum install -y procps"
-			fi
+			# Some distros don't include ps by default.
+			case $lsb_dist in
+			amzn|almalinux|rocky)
+				echo -e "\n# Installing ps"
+				$sh_c "yum install -y procps-ng"
+				;;
+			esac
 
 			repo_dist=$lsb_dist
 			case $lsb_dist in
@@ -784,7 +798,7 @@ done
 # to update a symlink, like we do for 'current', because we don't
 # want to surprise other stable-channel users with new features.
 if [ "${CHANNEL}" = "stable" ]; then
-	CHANNEL_DIR=10.0
+	CHANNEL_DIR=23.0
 else
 	CHANNEL_DIR=$CHANNEL
 fi

@@ -34,7 +34,6 @@
 #include "CryptKey.h"
 #include "store_cred.h"
 #include "my_username.h"
-#include "MyString.h"
 #include "condor_config.h"
 #include "classad/source.h"
 #include "condor_attributes.h"
@@ -117,13 +116,13 @@ bool checkToken(const std::string &line,
 		}
 		const std::string &tmp_key_id = decoded_jwt.get_key_id();
 		if (!server_key_ids.empty() && (server_key_ids.find(tmp_key_id) == server_key_ids.end())) {
-			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it was signed with key %s (not known to the server).\n", tmp_key_id.c_str());
+			dprintf(D_SECURITY, "Ignoring token as it was signed with key %s (not known to the server).\n", tmp_key_id.c_str());
 			return false;
 		}
-		dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %zu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
+		dprintf(D_SECURITY|D_VERBOSE, "JWT object was signed with server key %s (out of %zu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
 		const std::string &tmp_issuer = decoded_jwt.get_issuer();
 		if (!issuer.empty() && issuer != tmp_issuer) {
-			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it is from trust domain %s (server trust domain is %s).\n", tmp_issuer.c_str(), issuer.c_str());
+			dprintf(D_SECURITY, "Ignoring token as it is from trust domain %s (server trust domain is %s).\n", tmp_issuer.c_str(), issuer.c_str());
 			return false;
 		}
 		if (!decoded_jwt.has_subject()) {
@@ -135,7 +134,7 @@ bool checkToken(const std::string &line,
 		signature = decoded_jwt.get_signature();
 	} catch (...) {
 		if (!tokenfilename.empty()) {
-			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
+			dprintf(D_SECURITY, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
 		} else {
 			dprintf(D_ALWAYS, "Failed to decode provided JWT; ignoring.\n");
 		}
@@ -194,7 +193,7 @@ findTokens(const std::string &issuer,
 	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
-			dprintf(D_FAILURE, "findTokens(%s): Failed to switch to user priv\n", owner.c_str());
+			dprintf(D_ERROR, "findTokens(%s): Failed to switch to user priv\n", owner.c_str());
 			return false;
 		}
 		set_user_priv();
@@ -209,7 +208,7 @@ findTokens(const std::string &issuer,
 			// Only utilize a "user_file" if the owner is set.
 		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
 			if (!owner.empty()) {
-				dprintf(D_FULLDEBUG, "findTokens(%s): Unable to find any tokens for owner.\n", owner.c_str());
+				dprintf(D_SECURITY|D_VERBOSE, "findTokens(%s): Unable to find any tokens for owner.\n", owner.c_str());
 				return false;
 			}
 			param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
@@ -217,14 +216,14 @@ findTokens(const std::string &issuer,
 			dirpath = file_location;
 		}
 	}
-	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s for issuer %s\n", dirpath.c_str(), issuer.c_str());
+	dprintf(D_SECURITY|D_VERBOSE, "Looking for tokens in directory %s for issuer %s\n", dirpath.c_str(), issuer.c_str());
 
 	int _errcode, _erroffset;
 	std::string excludeRegex;
 		// We simply fail invalid regex as the config subsys should have EXCEPT'd
 		// in this case.
 	if (!param(excludeRegex, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP")) {
-		dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP is unset");
+		dprintf(D_SECURITY|D_VERBOSE, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP is unset");
 		return false;
 	}
 	Regex excludeFilesRegex;
@@ -236,7 +235,7 @@ findTokens(const std::string &issuer,
 		return false;
 	}
 	if(!excludeFilesRegex.isInitialized() ) {
-		dprintf(D_FULLDEBUG, "Failed to initialize exclude files regex.");
+		dprintf(D_SECURITY|D_VERBOSE, "Failed to initialize exclude files regex.");
 		return false;
 	}
 
@@ -263,7 +262,7 @@ findTokens(const std::string &issuer,
 				subsys_token_file = dir.GetFullPath();
 			}
 		} else {
-			dprintf(D_FULLDEBUG|D_SECURITY, "Ignoring token file "
+			dprintf(D_SECURITY, "Ignoring token file "
 				"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
 				"'%s'\n", dir.GetFullPath());
 		}
@@ -562,7 +561,7 @@ Condor_Auth_Passwd::fetchLogin()
 				}
 			}
 			if (!found_token) {
-				dprintf(D_ALWAYS, "TOKEN: No token found.\n");
+				dprintf(D_SECURITY, "TOKEN: No token found.\n");
 				return nullptr;
 			}
 		}
@@ -1729,7 +1728,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 	init_t_buf(&m_t_client);
 	init_t_buf(&m_t_server);
 	init_sk(&m_sk);
-	dprintf(D_SECURITY, "PW.\n");
+	dprintf(D_SECURITY|D_VERBOSE, "PW.\n");
 
 	if ( mySock_->isClient() ) {
 			// ** client side authentication **
@@ -1737,7 +1736,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// Get my name, password and setup the shared keys based
 			// on this data.  The server will do the same when it
 			// learns my name.
-		dprintf(D_SECURITY, "PW: getting name.\n");
+		dprintf(D_SECURITY|D_VERBOSE, "PW: getting name.\n");
 		m_t_client.a = fetchLogin();
 		if (!m_t_client.a) {
 			dprintf(D_SECURITY, "PW: Failed to fetch a login name\n");
@@ -1747,7 +1746,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// We complete the entire protocol even if there's an
 			// error, but there's no point trying to actually do any
 			// work.  This is protocol step (a).
-		dprintf(D_SECURITY, "PW: Generating ra.\n");
+		dprintf(D_SECURITY|D_VERBOSE, "PW: Generating ra.\n");
 
 		if(m_client_status == AUTH_PW_A_OK) {
 			m_t_client.ra = Condor_Crypt_Base::randomKey(AUTH_PW_KEY_LEN);
@@ -1761,14 +1760,14 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// only that the client also sends its name "A".  The
 			// protocol doesn't mention how the peers know who they're
 			// talking to.  This is also protocol step (a).
-		dprintf(D_SECURITY, "PW: Client sending.\n");
+		dprintf(D_SECURITY|D_VERBOSE, "PW: Client sending.\n");
 		m_client_status = client_send_one(m_client_status, &m_t_client);
 
 		if(m_client_status == AUTH_PW_ABORT) {
 			goto client_abort;
 		}
 			// This is protocol step (b).
-		dprintf(D_SECURITY, "PW: Client receiving.\n");
+		dprintf(D_SECURITY|D_VERBOSE, "PW: Client receiving.\n");
 		m_server_status = client_receive(&m_client_status, &m_t_server);
 		if(m_client_status == AUTH_PW_ABORT) {
 			goto client_abort;
@@ -1783,20 +1782,20 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 		if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
 			// If we have a pre-derived key, use that.
 			if (m_k && m_k_prime) {
-				dprintf(D_SECURITY, "PW: Client using pre-derived key of length %zu.\n", m_k_len);
+				dprintf(D_SECURITY|D_VERBOSE, "PW: Client using pre-derived key of length %zu.\n", m_k_len);
 				m_sk.ka = m_k; m_k = NULL;
 				m_sk.ka_len = m_k_len; m_k_len = 0;
 				m_sk.kb = m_k_prime; m_k_prime = NULL;
 				m_sk.kb_len = m_k_prime_len; m_k_prime_len = 0;
 			} else {
 				if (m_version == 2) {
-					dprintf(D_SECURITY, "PW: Client using pool shared key.\n");
+					dprintf(D_SECURITY|D_VERBOSE, "PW: Client using pool shared key.\n");
 					m_sk.shared_key = fetchPoolSharedKey(m_sk.len);
 				} else {
-					dprintf(D_SECURITY, "PW: Client using pool password.\n");
+					dprintf(D_SECURITY|D_VERBOSE, "PW: Client using pool password.\n");
 					m_sk.shared_key = fetchPoolPassword(m_sk.len);
 				}
-				dprintf(D_SECURITY, "PW: Client setting keys.\n");
+				dprintf(D_SECURITY|D_VERBOSE, "PW: Client setting keys.\n");
 				if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 					m_client_status = AUTH_PW_ERROR;
 				}
@@ -1806,13 +1805,13 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// This is protocol step (c).
 		if(m_client_status == AUTH_PW_A_OK
 		   && m_server_status == AUTH_PW_A_OK) {
-			dprintf(D_SECURITY, "PW: Client checking T.\n");
+			dprintf(D_SECURITY|D_VERBOSE, "PW: Client checking T.\n");
 			m_client_status = client_check_t_validity(&m_t_client, &m_t_server, &m_sk);
 		}
 
 			// Are we copying the data into the m_t_client struct?
 			// This is protocol step (d).  Server does (e).
-		dprintf(D_SECURITY, "PW: CLient sending two.\n");
+		dprintf(D_SECURITY|D_VERBOSE, "PW: CLient sending two.\n");
 		m_client_status = client_send_two(m_client_status, &m_t_client, &m_sk);
 		if(m_client_status == AUTH_PW_ABORT) {
 			goto client_abort;
@@ -1823,7 +1822,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 		if(m_client_status == AUTH_PW_A_OK
 		   && m_server_status == AUTH_PW_A_OK
 		   && set_session_key(&m_t_client, &m_sk)) {
-			dprintf(D_SECURITY, "PW: CLient set session key.\n");
+			dprintf(D_SECURITY|D_VERBOSE, "PW: CLient set session key.\n");
 			m_ret_value = 1;
 		} else {
 			m_ret_value = 0;
@@ -1879,7 +1878,7 @@ int Condor_Auth_Passwd::authenticate_continue(CondorError* errstack, bool non_bl
 //		old_timeout = mySock_->timeout(password_auth_timeout);
 //	}
 
-	dprintf(D_SECURITY, "PASSWORD: entered authenticate_continue, state==%i\n", (int)m_state);
+	dprintf(D_SECURITY|D_VERBOSE, "PASSWORD: entered authenticate_continue, state==%i\n", (int)m_state);
 
 	CondorAuthPasswordRetval retval = Continue;
 	while (retval == Continue)
@@ -1902,7 +1901,7 @@ int Condor_Auth_Passwd::authenticate_continue(CondorError* errstack, bool non_bl
 //		mySock_->timeout(old_timeout); //put it back to what it was before
 //	}
 
-	dprintf(D_SECURITY, "PASSWORD: leaving authenticate_continue, state==%i, return=%i\n", (int)m_state, (int)retval);
+	dprintf(D_SECURITY|D_VERBOSE, "PASSWORD: leaving authenticate_continue, state==%i, return=%i\n", (int)m_state, (int)retval);
 	return static_cast<int>(retval);
 }
 
@@ -1919,7 +1918,7 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 
 		// First we get the client's name and ra, protocol step
 		// (a).
-	dprintf(D_SECURITY, "PW: Server receiving 1.\n");
+	dprintf(D_SECURITY|D_VERBOSE, "PW: Server receiving 1.\n");
 	m_client_status = server_receive_one(&m_server_status, &m_t_client);
 	if(m_client_status == AUTH_PW_ABORT || m_server_status == AUTH_PW_ABORT) {
 		m_ret_value = 0;
@@ -1929,7 +1928,7 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 		// Then we do the key setup, and generate the random string.
 	if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
 		m_t_server.b = fetchLogin();
-		dprintf(D_SECURITY, "PW: Server fetching password.\n");
+		dprintf(D_SECURITY|D_VERBOSE, "PW: Server fetching password.\n");
 			// In version 2, we always want to forcibly fetch the pool password.
 			// However, the client ID might not actually be condor_pool@whatever;
 			// hence, in this case we just use the server name twice (which is
@@ -1951,7 +1950,7 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 		if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 			m_server_status = AUTH_PW_ERROR;
 		} else {
-			dprintf(D_SECURITY, "PW: Server generating rb.\n");
+			dprintf(D_SECURITY|D_VERBOSE, "PW: Server generating rb.\n");
 			//m_server_status = server_gen_rand_rb(&m_t_server);
 			m_t_server.rb = Condor_Crypt_Base::randomKey(AUTH_PW_KEY_LEN);
 			if(m_t_client.a) {
@@ -1973,7 +1972,7 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 	}
 
 		// Protocol message (2), step (b).
-	dprintf(D_SECURITY, "PW: Server sending.\n");
+	dprintf(D_SECURITY|D_VERBOSE, "PW: Server sending.\n");
 	m_server_status = server_send(m_server_status, &m_t_server, &m_sk);
 	if(m_server_status == AUTH_PW_ABORT) {
 		m_ret_value = 0;
@@ -2019,13 +2018,13 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 		return WouldBlock;
 	}
 
-	dprintf(D_SECURITY, "PW: Server receiving 2.\n");
+	dprintf(D_SECURITY|D_VERBOSE, "PW: Server receiving 2.\n");
 	m_client_status = server_receive_two(&m_server_status, &m_t_client);
 
 	if(m_server_status == AUTH_PW_A_OK
 	   && m_client_status == AUTH_PW_A_OK) {
 			// Protocol step (e)
-		dprintf(D_SECURITY, "PW: Server checking hk.\n");
+		dprintf(D_SECURITY|D_VERBOSE, "PW: Server checking hk.\n");
 		m_server_status = server_check_hk_validity(&m_t_client, &m_t_server, &m_sk);
 	}
 
@@ -2033,7 +2032,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	if(m_client_status == AUTH_PW_A_OK
 	   && m_server_status == AUTH_PW_A_OK
 	   && set_session_key(&m_t_server, &m_sk)) {
-		dprintf(D_SECURITY, "PW: Server set session key.\n");
+		dprintf(D_SECURITY|D_VERBOSE, "PW: Server set session key.\n");
 		m_ret_value = 1;
 	} else {
 		m_ret_value = 0;
@@ -2041,7 +2040,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 
 	// the protocol has the client sending their claimed identity.  we'll log it
 	// here, but it should not be trusted.
-	dprintf (D_SECURITY | D_FULLDEBUG, "PW: client in mode %i and ID %s.\n", getMode(), m_t_client.a);
+	dprintf (D_SECURITY | D_VERBOSE, "PW: client in mode %i and ID %s.\n", getMode(), m_t_client.a);
 
 	// sanity check -- we shouldn't be in this code if not using these methods
 	if ((getMode() != CAUTH_PASSWORD) && (getMode() != CAUTH_TOKEN)) {
@@ -2083,7 +2082,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 			std::string username, issuer, groups, jti;
 			try {
 				auto decoded_jwt = jwt::decode(m_t_client.a_token + ".");
-				dprintf(D_SECURITY | D_FULLDEBUG, "PW: decoded JWT.\n");
+				dprintf(D_SECURITY | D_VERBOSE, "PW: decoded JWT.\n");
 
 				// extract the expected_subject
 				if(! decoded_jwt.has_subject() ) {
@@ -2192,7 +2191,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 				domain++;
 			}
 
-			dprintf(D_SECURITY | D_FULLDEBUG, "PW: setting authenticated user (%s) and domain (%s)\n",
+			dprintf(D_SECURITY | D_VERBOSE, "PW: setting authenticated user (%s) and domain (%s)\n",
 				login, domain ? domain : "NULL");
 			setRemoteUser(login);
 			setRemoteDomain(domain);
@@ -2201,7 +2200,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 
 			free(login);
 		} else {
-			dprintf(D_ALWAYS, "PW: WARNING: client ID (%s) and expected ID (%s) do not match.  Failing.\n",
+			dprintf(D_SECURITY, "PW: WARNING: client ID (%s) and expected ID (%s) do not match.  Failing.\n",
 				m_t_client.a, expected_subject.c_str());
 			m_ret_value = 0;
 		}
@@ -2236,7 +2235,7 @@ Condor_Auth_Passwd::calculate_hk(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	unsigned char *buffer;
 	int prefix_len, buffer_len;
 
-	dprintf(D_SECURITY, "In calculate_hk.\n");
+	dprintf(D_SECURITY|D_VERBOSE, "In calculate_hk.\n");
 	if(!t_buf->a || !t_buf->rb) {
 		dprintf(D_SECURITY, "Can't hk hmac NULL.\n");
 		return false;
@@ -2293,7 +2292,7 @@ Condor_Auth_Passwd::client_send_two(int client_status,
 	int send_c_len = 0;
 	char nullstr[2];
 
-	dprintf(D_SECURITY, "In client_send_two.\n");
+	dprintf(D_SECURITY|D_VERBOSE, "In client_send_two.\n");
 
 	nullstr[0] = 0;
 	nullstr[1] = 0;
@@ -2320,7 +2319,7 @@ Condor_Auth_Passwd::client_send_two(int client_status,
 			client_status = AUTH_PW_ERROR;
 			dprintf(D_SECURITY, "Client can't calculate hk.\n");
 		} else {
-			dprintf(D_SECURITY, "Client calculated hk.\n");
+			dprintf(D_SECURITY|D_VERBOSE, "Client calculated hk.\n");
 		}
 	}
 
@@ -2337,7 +2336,7 @@ Condor_Auth_Passwd::client_send_two(int client_status,
 		send_c_len = t_client->hk_len;
 	}
 
-	dprintf(D_SECURITY, "Client sending: %d(%s) %d %d\n",
+	dprintf(D_SECURITY|D_VERBOSE, "Client sending: %d(%s) %d %d\n",
 			send_a_len, send_a, send_b_len, send_c_len);
 
 	mySock_->encode();
@@ -2353,7 +2352,7 @@ Condor_Auth_Passwd::client_send_two(int client_status,
 				"Aborting...\n");
 		client_status = AUTH_PW_ABORT;
 	}
-	dprintf(D_SECURITY, "Sent ok.\n");
+	dprintf(D_SECURITY|D_VERBOSE, "Sent ok.\n");
 	return client_status;
 }
 
@@ -2533,7 +2532,7 @@ bool Condor_Auth_Passwd::calculate_hkt(msg_t_buf *t_buf, sk_buf *sk)
 	int prefix_len, buffer_len;
 
 	if(t_buf->a && t_buf->b)
-		dprintf(D_SECURITY, "Calculating hkt '%s' (%lu), '%s' (%lu).\n",
+		dprintf(D_SECURITY|D_VERBOSE, "Calculating hkt '%s' (%lu), '%s' (%lu).\n",
 			t_buf->a, (unsigned long)strlen(t_buf->a),
 			t_buf->b, (unsigned long)strlen(t_buf->b));
 		// Assemble the buffer to be hmac'd by concatentating T in
@@ -2601,7 +2600,7 @@ int Condor_Auth_Passwd::server_send(int server_status,
 	int send_hkt_len = 0;
 	char nullstr[2];
 
-	dprintf(D_SECURITY, "In server_send: %d.\n", server_status);
+	dprintf(D_SECURITY|D_VERBOSE, "In server_send: %d.\n", server_status);
 
 	nullstr[0] = 0;
 	nullstr[1] = 0;
@@ -2637,7 +2636,7 @@ int Condor_Auth_Passwd::server_send(int server_status,
 		send_hkt = t_server->hkt;
 		send_hkt_len = t_server->hkt_len;
 	}
-	dprintf(D_SECURITY, "Server send '%s', '%s', %d %d %d\n", 
+	dprintf(D_SECURITY|D_VERBOSE, "Server send '%s', '%s', %d %d %d\n", 
 			send_a, send_b, send_ra_len, send_rb_len, send_hkt_len);
 
 	mySock_->encode();
@@ -2718,7 +2717,7 @@ int Condor_Auth_Passwd :: client_receive(int *client_status,
 		t_server->a = a;
 		t_server->b = b;
 		t_server->ra = ra;
-		dprintf(D_SECURITY, "Wrote server ra.\n");
+		dprintf(D_SECURITY|D_VERBOSE, "Wrote server ra.\n");
 		t_server->rb =rb;
 		t_server->hkt = hkt;
 		t_server->hkt_len = hkt_len;
@@ -2764,7 +2763,7 @@ int Condor_Auth_Passwd::client_send_one(int client_status, msg_t_buf *t_client)
 		send_a_len = 0;
 		send_b_len = 0;
 	}
-	dprintf(D_SECURITY, "Client sending: %d, %d(%s), %d\n", 
+	dprintf(D_SECURITY|D_VERBOSE, "Client sending: %d, %d(%s), %d\n", 
 			client_status, send_a_len, send_a, send_b_len);
 
 	mySock_->encode();
@@ -2815,7 +2814,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 		client_status = AUTH_PW_ABORT;
 		goto server_receive_one_abort;
 	}
-	dprintf(D_SECURITY, "Received: %d, %d(%s), %d\n", client_status, a_len, 
+	dprintf(D_SECURITY|D_VERBOSE, "Received: %d, %d(%s), %d\n", client_status, a_len, 
 			a, ra_len);
 		// If everything's ok, incorporate into data structure.
 	if(client_status == AUTH_PW_A_OK 
@@ -2852,7 +2851,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	unsigned char *key = (unsigned char *)malloc(key_strength_bytes());
 	unsigned int key_len = key_strength_bytes();
 	
-	dprintf(D_SECURITY, "Setting session key.\n");
+	dprintf(D_SECURITY|D_VERBOSE, "Setting session key.\n");
 
 	if(!t_buf->rb || !sk->kb || !sk->kb_len || !key) {
 			// shouldn't happen
@@ -2886,7 +2885,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 		}
 	}
 
-	dprintf(D_SECURITY, "Key length: %d\n", key_len);
+	dprintf(D_SECURITY|D_VERBOSE, "Key length: %d\n", key_len);
 		// Fill the key structure.
 	KeyInfo thekey(key, (int)key_len, CONDOR_3DES, 0);
 	m_crypto = new Condor_Crypt_3des();
@@ -2918,7 +2917,7 @@ Condor_Auth_Passwd::key_strength_bytes() const
 bool
 Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 {
-	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
+	dprintf(D_SECURITY|D_VERBOSE, "Inserting pre-auth metadata for TOKEN.\n");
 	CondorError err;
 	const std::string & keys = getCachedIssuerKeyNames(&err);
 	if ( ! err.empty()) {
@@ -2936,16 +2935,35 @@ Condor_Auth_Passwd::create_pool_signing_key_if_needed()
 {
 	// This method is invoked by DaemonCore upon startup and a reconfig.
 
-	// Currently only the Collector will generate a token signing key by default...
-	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
-		return;
+	// The collector will generate a token signing key by default.
+	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR) ) {
+		std::string filepath;
+		if(! param(filepath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE")) {
+			return;
+		}
+
+		create_signing_key( filepath, "POOL" );
 	}
 
-	std::string filepath;
-	if (!param(filepath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE")) {
-		return;
-	}
+	const char * localName = get_mySubSystem()->getLocalName();
+	if( localName && strcmp( localName, "AP_COLLECTOR" ) == 0 ) {
+		std::string filepath;
+		if(! param(filepath, "SEC_PASSWORD_DIRECTORY")) {
+			return;
+		}
 
+		std::string tokenname;
+		if(! param(tokenname, "SEC_TOKEN_AP_SIGNING_KEY_NAME")) {
+			return;
+		}
+
+		filepath += "/" + tokenname;
+		create_signing_key( filepath, "AP" );
+	}
+}
+
+void
+Condor_Auth_Passwd::create_signing_key( const std::string & filepath, const char * name ) {
 		// Try to create the signing key file if it doesn't exist.
 	int fd = -1;
 	{
@@ -2974,10 +2992,10 @@ Condor_Auth_Passwd::create_pool_signing_key_if_needed()
 
 		// Write out the signing key.
 	if (TRUE == write_binary_password_file(filepath.c_str(), rand_buffer, sizeof(rand_buffer))) {
-		dprintf(D_ALWAYS, "Created a POOL token signing key in file %s\n", filepath.c_str());
+		dprintf(D_ALWAYS, "Created %s token signing key in file %s\n", name, filepath.c_str());
 	}
 	else {
-		dprintf(D_ALWAYS, "WARNING: Failed to create a POOL token signing keyin file %s\n", filepath.c_str());
+		dprintf(D_ALWAYS, "WARNING: Failed to create %s token signing key in file %s\n", name, filepath.c_str());
 	}
 }
 
@@ -2995,7 +3013,7 @@ Condor_Auth_Passwd::should_try_auth()
 	}
 	has_named_creds = ! keys.empty();
 	if (has_named_creds) {
-		dprintf(D_SECURITY|D_FULLDEBUG,
+		dprintf(D_SECURITY|D_VERBOSE,
 			"Can try token auth because we have at least one named credential.\n");
 		return true;
 	}
@@ -3013,7 +3031,7 @@ Condor_Auth_Passwd::should_try_auth()
 
 	m_tokens_avail = findTokens(issuer, server_key_ids, SecMan::getTagCredentialOwner(), username, token, signature);
 	if (m_tokens_avail) {
-		dprintf(D_SECURITY/*|D_FULLDEBUG*/,
+		dprintf(D_SECURITY/*|D_VERBOSE*/,
 			"Can try token auth because we have at least one token.\n");
 	}
 	return m_tokens_avail;

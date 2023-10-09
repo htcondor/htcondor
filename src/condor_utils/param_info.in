@@ -86,7 +86,7 @@ type=int
 
 [PREEN_COREFILE_MAX_SIZE]
 default=50000000
-type=int
+type=long
 description=Maximum size allowed for coredump files. Anything bigger gets erased. Default 50Mb.
 tags=preen
 
@@ -260,7 +260,7 @@ type=int
 description=Max number of seconds to serve a Collector query, 0=no limit
 
 [SOCKET_LISTEN_BACKLOG]
-default=500
+default=4096
 range=1,
 type=int
 restart=true
@@ -354,7 +354,7 @@ type=bool
 tags=vm-gahp
 
 [PROCD_ADDRESS]
-default=$(LOCK)/procd_pipe
+default=$(RUN)/procd_pipe
 win32_default=\\.\pipe\$Fpub(LOCK)
 type=string
 tags=master,starter
@@ -797,6 +797,18 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_NODE_RECORD_INFO]
+default=
+type=string
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_RECORD_MACHINE_ATTRS]
+default=
+type=string
+tags=dagman,dagman_main
+restart=never
+
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
 win32_default=$(BIN)
@@ -908,6 +920,10 @@ type=bool
 
 [SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS]
 default=https://aai-dev.egi.eu/auth/realms/egi
+type=string
+
+[SEC_SCITOKENS_CACHE]
+default=$(RUN)/cache
 type=string
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
@@ -1857,6 +1873,10 @@ default=$(LOG)
 type=string
 tags=startd,Starter
 
+[RUN]
+default=$(LOCK)
+type=path
+
 [VM_KILLING_TIMEOUT]
 default=60
 type=int
@@ -2348,6 +2368,11 @@ default=true
 type=bool
 tags=condor_ssh_to_job
 
+[ENABLE_USERLOG_FSYNC]
+default=false
+type=bool
+tags=read_user_log
+
 [ENABLE_USERLOG_LOCKING]
 default=false
 type=bool
@@ -2451,10 +2476,13 @@ type=string
 tags=condor_auth_passwd
 
 [SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS]
-default=POOL
+default=POOL AP
 description=StringList of keys allowed to sign from condor_token_request
 type=string
 tags=condor_auth_passwd
+
+[SEC_TOKEN_AP_SIGNING_KEY_NAME]
+default=AP
 
 [SEC_TOKEN_POOL_SIGNING_KEY_FILE]
 default=$(SEC_PASSWORD_FILE)
@@ -2556,6 +2584,14 @@ type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE]
+default=false
+type=bool
+
+[AUTH_SSL_ALLOW_CLIENT_PROXY]
+default=false
+type=bool
+
+[AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR]
 default=false
 type=bool
 
@@ -2970,7 +3006,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img, checkpoint-cleanup
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor
@@ -3253,7 +3289,7 @@ type=int
 tags=schedd
 
 [CURB_MATCHMAKING]
-default=RecentDaemonCoreDutyCycle > 0.98
+default=(RecentDaemonCoreDutyCycle > 0.98) || (TransferQueueNumWaitingToUpload > TransferQueueMaxUploading)
 type=string
 description=Curb Expression for Matchmaking
 tags=schedd
@@ -3290,6 +3326,13 @@ type=int
 customization=normal
 description=Max jobs in a single submit
 usage=Circuit breaker to prevent an excessive number of a jobs in a single submission. Use to reject one form of mistake
+tags=schedd
+
+[ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY]
+default=false
+type=bool
+customization=normal
+description=Restrict job submission to users that already have already been added using condor_qusers
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
@@ -4372,12 +4415,6 @@ customization=normal
 description=
 tags=defrag
 
-[DEFRAG_STATE_FILE]
-default=$(LOCK)/defrag_state
-type=string
-description=
-tags=defrag
-
 [DEFRAG_LOG]
 default=$(LOG)/DefragLog
 type=path
@@ -4440,6 +4477,14 @@ default=$(NEGOTIATOR_USE_SLOT_WEIGHTS)
 version=7.7.5
 type=string
 tags=schedd,startd,claim
+
+[ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS]
+default=false
+type=bool
+
+[MAX_PARTITIONABLE_SLOT_CLAIM_TIME]
+default=3600
+type=int
 
 [MOUNT_UNDER_SCRATCH]
 default="/tmp,/var/tmp"
@@ -4687,7 +4732,7 @@ tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
-default=none
+default=hard
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen
@@ -4922,7 +4967,7 @@ tags=collector
 restart=true
 
 [SCHEDD_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for the scheduler.
@@ -4941,7 +4986,7 @@ usage=
 default=
 
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for condor_shared_port.
@@ -5456,6 +5501,14 @@ default=$(SBIN)/arc_gahp
 [ARC_GAHP_LOG]
 default=/tmp/ArcGahpLog.$(USERNAME)
 
+[ARC_GAHP_COMMAND_LIMIT]
+default=1000
+type=int
+
+[ARC_GAHP_USE_THREADS]
+default=false
+type=bool
+
 [GAHP_SSL_CAFILE]
 default=
 type=path
@@ -5689,6 +5742,13 @@ default=0
 type=int
 customization=const
 
+[SEC_DEFAULT_AUTHENTICATION_METHODS]
+# the c++ macro value is expected to win here
+macro=SEC_STD_AUTH_METHOD_NAMES
+default=FS,TOKEN
+type=string
+customization=const
+
 [MINUTE]
 default=60
 customization=const
@@ -5850,6 +5910,20 @@ default=240
 description=Where should condor_adstash place JSON files if using the jsonfile interface
 type=path
 default=$(LOG)
+[TOOLS_ASSUME_FIREWALLS]
+description=If a connection to a daemon using CCB is from a machine using shared port, and the connecting client can not listen on the shared port because it can not write to the daemon socket directory (e.g., it's a tool), give up -- assuming a firewall -- rather than hang after opening a listen socket.
+default=false
+type=bool
+
+[DEFAULT_KILL_CHILDREN_ON_EXIT]
+description=Hidden knob.  If true, all daemon core daemons will kill all of their children on exit.
+type=bool
+default=true
+
+[CHECKPOINT_DESTINATION_MAPFILE]
+description=Location of the checkpoint destination map file
+default=$(LOCAL_DIR)/checkpoint-destination-mapfile
+type=path
 
 ######
 ## add metaknobs below this banner
@@ -6359,6 +6433,15 @@ default : @end
 	SLOT_TYPE_$(1:1)=$(2+:100%)
 @end
 
+[$FEATURE.StaticSlots]
+description=Configure a set of Static slots, args:([type# [num [, allocation]]])  default: 1, $(NUM_CPUS), 1/$(NUM_CPUS)
+default : @end
+	NUM_SLOTS_TYPE_$(1:1)=$(2:$(NUM_CPUS))
+	SLOT_TYPE_$(1:1)_PARTITIONABLE=false
+	SLOT_TYPE_$(1:1)=$(3+:1/$(NUM_SLOTS_TYPE_$(1:1)))
+	SLOT_TYPE_$(1:1)=$(3+)
+@end
+
 [$FEATURE.OneShotCronHook]
 description=Configure a OneShot Cron Hook, args:(STARTD_CRON | SCHEDD_CRON, tag, hook_exe [,hook_args])
 default : @end
@@ -6645,6 +6728,7 @@ default : @end
 	MAX_STORK_LOG
 	STORK_PORT
 	STORK_ARGS
+	DEFRAG_STATE_FILE
 @end
 
 [$UPGRADE.DISCARDX]
@@ -6769,28 +6853,70 @@ default : @end
 	STARTD_CRON_cloud_PREFIX = Cloud
 @end
 
-[$FEATURE.AssignAnnex]
-description=Automatically sets jobs' annex attributes if jobs set TargetAnnexName args:(annex_collector[, annex_token_domain])
+[$FEATURE.HPC_ANNEX]
+description=Enable HPC Annex
 default : @fin
-	if ! $(1?)
-		error : use FEATURE : AssignAnnex requires at least 1 argument: annex_collector [,annex_token_domain]
-	endif
+	# Let the command-line tool know that things are configured.
 	HPC_ANNEX_ENABLED = true
-	ANNEX_COLLECTOR = $(1)
-	ANNEX_TOKEN_DOMAIN = $(ANNEX_COLLECTOR)
-	if $(2?)
-		ANNEX_TOKEN_DOMAIN = $(2)
+
+
+	## The annex EPs need a specific port number.
+
+	# This is the default value from `use role:personal`.
+	ispersonal = "127.0.0.1:0"=="$(COLLECTOR_HOST)"
+	if $INT(ispersonal)
+		COLLECTOR_HOST = $(FULL_HOSTNAME):$(COLLECTOR_PORT)
 	endif
+
+	# This is the default value from the `make-personal-condor` script.
+	ispersonal = "$(FULL_HOSTNAME):0"=="$(COLLECTOR_HOST)"
+	if $INT(ispersonal)
+		COLLECTOR_HOST = $(FULL_HOSTNAME):$(COLLECTOR_PORT)
+	endif
+
+
+	# Create an "AP collector".  At some point, we'd like to make such a
+	# thing first-class.  In the short term, adding a command-line flag
+	# to the collector to set its subsystem would be an improvement.
+	AP_COLLECTOR = $(COLLECTOR)
+	AP_COLLECTOR.COLLECTOR_LOG = $(LOG)/AP_Collector.log
+	AP_COLLECTOR.CCB_RECONNECT_FILE = $(SPOOL)/AP_Collector.ccb_reconnect
+	DAEMON_LIST = $(DAEMON_LIST) AP_COLLECTOR
+
+	# Giving the AP collector a stable shared port ID means we don't
+	# have to worry about updating annex pilots because of a restart.
+	AP_COLLECTOR_ARGS = -f -local-name AP_COLLECTOR -sock ap_collector
+
+	# For now, don't worry about quoting the Sinful brackets.
+	ANNEX_COLLECTOR = $(FULL_HOSTNAME):$(SHARED_PORT_PORT)?sock=ap_collector
+
+	# Any user who can submit jobs can use the AP collector for annex.
+	AP_COLLECTOR.ALLOW_ADVERTISE_STARTD = $(ALLOW_ADVERTISE_STARTD) $(ALLOW_WRITE)
+	AP_COLLECTOR.ALLOW_ADVERTISE_MASTER = $(ALLOW_ADVERTISE_MASTER) $(ALLOW_WRITE)
+
+	# Until we can give the schedd a stable shared port ID, the annex
+	# pilot needs to be able to look the schedd up in the AP collector.
+	if defined COLLECTOR_HOST
+		SCHEDD.COLLECTOR_HOST = $(COLLECTOR_HOST) $(ANNEX_COLLECTOR)
+	else
+		SCHEDD.COLLECTOR_HOST = $(ANNEX_COLLECTOR)
+	endif
+
+	# The AP collector creates the "AP" signing key.
+	ANNEX_TOKEN_KEY_NAME = $(SEC_TOKEN_AP_SIGNING_KEY_NAME)
+	ANNEX_TOKEN_DOMAIN = $(UID_DOMAIN)
+
+
+	# We assume that the token directories (passwords.d and tokens.d) are
+	# already set.  HTCondor should create and populate the appropriately,
+	# if so.
+
+
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAnnex
 	JOB_TRANSFORM_AssignAnnex @=end
 		REQUIREMENTS TargetAnnexName =!= undefined
 		my_identity = "$(MY.Owner)@$(ANNEX_TOKEN_DOMAIN)"
 		addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, $(my_identity) == TARGET.AuthenticatedIdentity) && (MY.TargetAnnexName == TARGET.AnnexName)
-		if defined MY.FlockTo
-			SET FlockTo "$(MY.FlockTo),$(ANNEX_COLLECTOR)"
-		else
-			SET FlockTo "$(ANNEX_COLLECTOR)"
-		endif
 		if defined MY.JobMachineAttrs
 			SET JobMachineAttrs "$(MY.JobMachineAttrs),AnnexName"
 		else
@@ -6803,7 +6929,12 @@ default : @fin
 		endif
 	@end
 
-	if $(ANNEX_JOBS_EXCLUSIVELY:TRUE)
+	# The schedd will not try to activate a directly-connected claim
+	# with a job whose owner is not the authenticated identity of the
+	# directly-connected EP.  This limits the damage that can be done
+	# by a misconfigured EP to only running the annex owner's other
+	# jobs, which I think no long justifies tranforming all other jobs.
+	if $(ANNEX_JOBS_EXCLUSIVELY:FALSE)
 		JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AnnexJobsExclusively
 		JOB_TRANSFORM_AnnexJobsExclusively @=end
 			REQUIREMENTS TargetAnnexName =?= undefined
@@ -6816,5 +6947,32 @@ default : @fin
 		@end
 	endif
 @fin
+
+[$POLICY.OnlyRegisteredCheckpointDestinations]
+description=Use submit requirement to reject jobs whose checkpoint destination is not registered.
+default : @fin
+	TOOL_CLASSAD_USER_MAP_NAMES = $(TOOL_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	SCHEDD_CLASSAD_USER_MAP_NAMES = $(SCHEDD_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	CLASSAD_USER_MAPFILE_checkpoint_destination_map = $(CHECKPOINT_DESTINATION_MAPFILE)
+	CLASSAD_USER_MAP_PREFIX_checkpoint_destination_map = TRUE
+
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) ValidateCheckpointDestination
+	JOB_TRANSFORM_ValidateCheckpointDestination @=end
+		EVALSET CheckpointDestinationValid = ifthenelse(undefined =?= userMap("checkpoint_destination_map", CheckpointDestination), undefined, True)
+	@end
+
+	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) CheckpointDestinationValid
+
+	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) RejectInvalidCheckpointDestination
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination = CheckpointDestination =?= undefined || CheckpointDestinationValid =?= True
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination_REASON = "You specified a checkpoint_destination this AP does not know how to clean up.  You may need to add a trailing / to the URL."
+@fin
+
+[$FEATURE.GANGLIA]
+description=Enable condor_gangliad daemon
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
+@end
+
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

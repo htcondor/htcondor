@@ -34,6 +34,8 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
+CondorTest::runCondorTool("condor_off -negotiator");
+
 my $debuglevel = 2;
 my $pid = $$;
 
@@ -58,6 +60,18 @@ my @vdata =
 my @skiplines = ();
 my $datafile = "$testname$pid.data";
 my $count = 4;
+
+my $SubmitSuccess = sub
+{
+	my @submitters = ();
+	# Make sure both submitters ads (nice and rude) are in the collector
+	while ($#submitters  < 1) {
+		CondorTest::runCondorTool("condor_status -af Name -submitters", \@submitters, 2, {emit_output=>0});
+		sleep(2);
+}
+
+	CondorTest::runCondorTool("condor_on -negotiator");
+};
 
 my $ExitSuccess = sub 
 {
@@ -84,12 +98,14 @@ CreateEmptyFile("$datafile");
 
 SimpleJob::RunCheck(
     runthis=>"x_do_niceuser.pl",
+	# "Duration" means "arguments"
 	duration=>'$(accounting_group) ' . $datafile,
 	should_transfer_files=>"YES",
 	when_to_transfer_output=>"ON_EXIT",
 	transfer_input_files=>"$datafile",
 	transfer_output_files=>"$datafile",
 	on_success=>$ExitSuccess,
+	on_submit=>$SubmitSuccess,
 	queue_sz=>"accounting_group in (nice-user, rude, rude, nice-user)"
 );
 

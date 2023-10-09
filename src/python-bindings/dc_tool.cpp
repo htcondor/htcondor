@@ -91,6 +91,14 @@ enum LogLevel
   DNOHEADER = D_NOHEADER
 };
 
+bool
+fnHadSharedPortProblem( void * v, int code, const char * /* subsys */, const char * msg ) {
+    if( code == CEDAR_ERR_NO_SHARED_PORT ) {
+        *(const char **)v = msg;
+    }
+    return true;
+}
+
 void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::string &target="")
 {
     std::string addr;
@@ -103,21 +111,18 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     {
         THROW_EX(HTCondorValueError, "Daemon type not available in location ClassAd.");
     }
-    int ad_type = AdTypeFromString(ad_type_str.c_str());
-    if (ad_type == NO_AD)
-    {
-        THROW_EX(HTCondorValueError, "Unknown ad type.");
-    }
-    daemon_t d_type;
-    switch (ad_type) {
-    case MASTER_AD: d_type = DT_MASTER; break;
-    case STARTD_AD: d_type = DT_STARTD; break;
-    case SCHEDD_AD: d_type = DT_SCHEDD; break;
-    case NEGOTIATOR_AD: d_type = DT_NEGOTIATOR; break;
-    case COLLECTOR_AD: d_type = DT_COLLECTOR; break;
-    case CREDD_AD: d_type = DT_CREDD; break;
+    daemon_t d_type = AdTypeStringToDaemonType(ad_type_str.c_str());
+    switch (d_type) {
+    case DT_MASTER:
+    case DT_STARTD:
+    case DT_SCHEDD:
+    case DT_COLLECTOR:
+    case DT_NEGOTIATOR:
+    case DT_CREDD:
+    case DT_GENERIC:
+    case DT_HAD:
+        break;
     default:
-        d_type = DT_NONE;
         THROW_EX(HTCondorEnumError, "Unknown daemon type.");
     }
 
@@ -133,13 +138,20 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
         THROW_EX(HTCondorLocateError, "Unable to locate daemon.");
     }
     ReliSock sock;
+    CondorError errorStack;
     {
     condor::ModuleLock ml;
-    result = !sock.connect(d.addr());
+    result = !sock.connect(d.addr(), 0, false, & errorStack);
     }
     if (result)
     {
-        THROW_EX(HTCondorIOError, "Unable to connect to the remote daemon");
+        const char * theSharedPortProblem = NULL;
+        errorStack.walk( fnHadSharedPortProblem, &theSharedPortProblem );
+        if( theSharedPortProblem != NULL ) {
+            THROW_EX(HTCondorIOError, theSharedPortProblem );
+        } else {
+            THROW_EX(HTCondorIOError, "Unable to connect to the remote daemon");
+        }
     }
     {
     condor::ModuleLock ml;

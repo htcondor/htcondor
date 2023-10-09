@@ -239,7 +239,7 @@ PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int raw
 
 	ccfile.clear();
 
-	int rc;
+	long long rc;
 	std::string pw;
 	if ((mode & MODE_MASK) == GENERIC_ADD) {
 		pw.assign((const char *)rawbuf, rawlen);
@@ -1034,12 +1034,6 @@ int store_cred_password(const char *user, const char *pw, int mode)
 				delete[] pw_wc;
 			}
 
-			if (!isValidCredential(user, pw)) {
-				dprintf(D_FULLDEBUG, "store_cred: invalid credential given for delete\n");
-				answer = FAILURE_BAD_PASSWORD;
-				break;
-			}
-
 			// call lsa_mgr api
 			// answer = return code
 			if (!lsa_man.remove(userbuf)) {
@@ -1425,7 +1419,7 @@ bail_out:
 
 
 // forward declare the non-blocking continuation function.
-void store_cred_handler_continue();
+void store_cred_handler_continue(int tid);
 
 // declare a simple data structure for holding the info needed
 // across non-blocking retries
@@ -1694,7 +1688,7 @@ cleanup_and_exit:
 }
 
 
-void store_cred_handler_continue()
+void store_cred_handler_continue(int /* tid */)
 {
 	// can only be called when daemonCore is non-null since otherwise
 	// there's no data
@@ -1861,10 +1855,10 @@ spch_cleanup:
 }
 
 
-// OBSOLETE!!! do_store_cred for LEGACY password modes only!!. 
-// use the other do_store_cred for working with Krb or OAuth creds
+// OBSOLETE!!! For LEGACY password modes only!!.
+// use do_store_cred() for working with Krb or OAuth creds
 int 
-do_store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
+do_store_cred_passwd(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	
 	int result;
 	int return_val;
@@ -2060,7 +2054,9 @@ do_store_cred (
 	if ( is_root() && d == NULL ) {
 		std::string ccfile;	// we don't care about a completion file, but we have to pass this in anyway
 		if (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE) {
-			return_val = store_cred_password(user, (const char *)cred, mode);
+			std::string pw;
+			if (cred) pw.assign((const char *)cred, credlen);
+			return_val = store_cred_password(user, pw.c_str(), mode);
 		} else {
 			return_val = store_cred_blob(user, mode, cred, credlen, ad, ccfile);
 		}
@@ -2068,7 +2064,7 @@ do_store_cred (
 		// send out the request remotely.
 
 		// first see if we're operating on the pool password
-		// if we are just use the version of do_store_cred that handles passwords
+		// if we are just use do_store_cred_passwd(), which handles passwords
 		int domain_pos = -1;
 		if (username_is_pool_password(user, &domain_pos)) {
 			int cred_type = (mode & ~MODE_MASK);
@@ -2077,7 +2073,7 @@ do_store_cred (
 			}
 			std::string pw;
 			if (cred) pw.assign((const char *)cred, credlen);
-			return do_store_cred(user, pw.c_str(), mode, d);
+			return do_store_cred_passwd(user, pw.c_str(), mode, d);
 		}
 		if ((domain_pos <= 0) && user[0]) {
 			dprintf(D_ALWAYS, "store_cred: FAILED. user \"%s\" not in user@domain format\n", user);
@@ -2365,13 +2361,11 @@ read_from_keyboard(char* buf, int maxlength, bool echo) {
 			
 	while ( ch_count < maxlength-1 ) {
 		ch = getchar();
-		if ( ch == end_char ) {
+		if ( ch == end_char || ch == EOF ) {
 			break;
 		} else if ( ch == '\b') { // backspace
 			if ( ch_count > 0 ) { ch_count--; }
 			continue;
-		} else if ( ch == '\003' ) { // CTRL-C
-			return FALSE;
 		}
 		buf[ch_count++] = (char) ch;
 	}

@@ -72,13 +72,13 @@ static int ingest_attrs_from_file(const char * filename, classad::References & o
 		fprintf(stderr, "can't open %s. err=%d : %s", filename, en, strerror(en));
 		return 0;
 	}
-	MyStringFpSource ms(fp, true); // this will free the fp
 
 	std::string attr;
-	while (ms.readLine(attr, false)) {
+	while (readLine(attr, fp, false)) {
 		trim(attr);
-		out.insert(attr.c_str());
+		out.insert(attr);
 	}
+	fclose(fp);
 	return (int)out.size();
 }
 

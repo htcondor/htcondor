@@ -401,6 +401,14 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( arg );
 	}
 
+	// Machine attrs to record in userlog and job ad
+	if (!dm._requestedMachineAttrs.empty()) {
+		std::string setLog = "job_ad_information_attrs=" + dm._ulogMachineAttrs;
+		args.AppendArg(setLog);
+		std::string setJobAd = "job_machine_attrs=" + dm._requestedMachineAttrs;
+		args.AppendArg(setJobAd);
+	}
+
 		//
 		// Add parents of this node to arguments, if we have room.
 		//
@@ -551,6 +559,12 @@ static void init_dag_vars(SubmitHash * submitHash,
 			submitHash->set_arg_variable(SUBMIT_KEY_AcctGroupUser, dm._submitDagDeepOpts.acctGroupUser.c_str());
 		}
 
+		// Machine attrs to record in userlog and job ad
+		if (!dm._requestedMachineAttrs.empty()) {
+			submitHash->set_arg_variable("job_ad_information_attrs", dm._ulogMachineAttrs.c_str());
+			submitHash->set_arg_variable("job_machine_attrs", dm._requestedMachineAttrs.c_str());
+		}
+
 		//PRAGMA_REMIND("TODO: fix the tests to use $(DAG_PARENT_NAMES), and then remove custom job attribute")
 		submitHash->set_arg_variable("DAG_PARENT_NAMES", parents.c_str());
 		// TODO: remove this when the tests no longer need it.
@@ -671,6 +685,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	// set submit keywords defined by dagman and VARS
 	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, false);
 
+	submitHash->attachTransferMap(dm._protectedUrlMap);
 	submitHash->init_base_ad(time(NULL), owner);
 
 	qmgr = ConnectQ(schedd);
@@ -753,6 +768,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	}
 
 finis:
+	submitHash->detachTransferMap();
 	if (qmgr) {
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.
 		DisconnectQ(qmgr, false); qmgr = NULL;
@@ -951,6 +967,7 @@ getEventMask()
 			ULOG_JOB_EVICTED,
 			ULOG_JOB_TERMINATED,
 			ULOG_SHADOW_EXCEPTION,
+			ULOG_GENERIC,
 			ULOG_JOB_ABORTED,
 			ULOG_JOB_SUSPENDED,
 			ULOG_JOB_UNSUSPENDED,

@@ -121,7 +121,7 @@ SharedPortServer::RemoveDeadAddressFile()
 }
 
 void
-SharedPortServer::PublishAddress()
+SharedPortServer::PublishAddress(int /* timerID */)
 {
 	if( !param(m_shared_port_server_ad_file,"SHARED_PORT_DAEMON_AD_FILE") ) {
 		EXCEPT("SHARED_PORT_DAEMON_AD_FILE must be defined");

@@ -328,7 +328,7 @@ public:
 		   updates, and this ensures that we use the UDP version of
 		   UpdateShadow().
 		*/
-	void periodicJobUpdateTimerHandler( void );
+	void periodicJobUpdateTimerHandler( int timerID = -1 );
 
 		/**
 		   Return the max controller update interval in seconds, or -1 if unknown.
@@ -558,7 +558,7 @@ private:
 		/// Cancel our timer for the periodic job updates
 	void cancelUpdateTimer( void );
 
-	void hookTimeout( void );
+	void hookTimeout( int timerID = -1 );
 
 		/// timer id for periodically sending info on job to Shadow
 	int m_periodic_job_update_tid;

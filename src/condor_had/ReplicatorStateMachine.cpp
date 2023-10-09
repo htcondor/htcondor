@@ -104,7 +104,7 @@ ReplicatorStateMachine::finalizeDelta( )
     }
 
     SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
-    SetTargetTypeName( invalidate_ad, "Replication" );
+    invalidate_ad.Assign(ATTR_TARGET_TYPE, REPLICATION_ADTYPE );
     formatstr( line, "%s == \"%s\"", ATTR_NAME, m_name.c_str( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str( ) );
 	invalidate_ad.Assign( ATTR_NAME, m_name );
@@ -222,8 +222,7 @@ ReplicatorStateMachine::initializeClassAd()
 
     m_classAd = new ClassAd();
 
-    SetMyTypeName(*m_classAd, "Replication");
-    SetTargetTypeName(*m_classAd, "");
+    SetMyTypeName(*m_classAd, REPLICATION_ADTYPE);
 
     formatstr( m_name, "replication@%s -p %d", get_local_fqdn().c_str(),
 				  daemonCore->InfoCommandPort( ) );
@@ -828,7 +827,7 @@ ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
  *              'm_replicationTimerId' each 'REPLICATION_INTERVAL' seconds
  */
 void
-ReplicatorStateMachine::replicationTimer( )
+ReplicatorStateMachine::replicationTimer( int /* timerID */ )
 {
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicationTimer "
 					   "cancelling timer\n" );
@@ -842,7 +841,7 @@ ReplicatorStateMachine::replicationTimer( )
     if( m_state == VERSION_REQUESTING ) {
         return ;
     }
-	int currentTime = time( NULL );
+	time_t currentTime = time( NULL );
     /* Killing stuck uploading/downloading processes: allowing downloading/
      * uploading for about several replication intervals only
      */
@@ -890,7 +889,7 @@ ReplicatorStateMachine::replicationTimer( )
  *				machine with the best version
  */
 void
-ReplicatorStateMachine::versionRequestingTimer( )
+ReplicatorStateMachine::versionRequestingTimer( int /* timerID */ )
 {
     dprintf( D_ALWAYS, 
 			"ReplicatorStateMachine::versionRequestingTimer started\n" );
@@ -924,7 +923,7 @@ ReplicatorStateMachine::versionRequestingTimer( )
  *              BACKUP state
  */
 void
-ReplicatorStateMachine::versionDownloadingTimer( )
+ReplicatorStateMachine::versionDownloadingTimer( int /* timerID */ )
 {
     dprintf( D_ALWAYS, 
 			"ReplicatorStateMachine::versionDownloadingTimer started\n" );
@@ -942,7 +941,7 @@ ReplicatorStateMachine::versionDownloadingTimer( )
  * Description : sends the classad update to collectors
  */
 void
-ReplicatorStateMachine::updateCollectors()
+ReplicatorStateMachine::updateCollectors( int /* timerID */ )
 {
     if (m_classAd) {
        daemonCore->sendUpdates (UPDATE_AD_GENERIC, m_classAd);

@@ -402,7 +402,7 @@ authenticate:
 			if (!auth_rc && !param_boolean( "DISABLE_AUTHENTICATION_IP_CHECK", false)) {
 				errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_METHOD_FAILED,
 								"authenticated remote host does not match connection address (%s vs %s)", authip, sockip );
-				dprintf (D_ALWAYS, "AUTHENTICATE: ERROR: authenticated remot ehost does not match connection address (%s vs %s); configure DISABLE_AUTHENTICATION_IP_CHECK=TRUE if this check should be skipped\n",authip,sockip);
+				dprintf (D_ALWAYS, "AUTHENTICATE: ERROR: authenticated remote host does not match connection address (%s vs %s); configure DISABLE_AUTHENTICATION_IP_CHECK=TRUE if this check should be skipped\n",authip,sockip);
 			}
 		}
 

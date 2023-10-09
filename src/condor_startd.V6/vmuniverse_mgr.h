@@ -100,7 +100,7 @@ private:
 	bool init();
 
 	bool testVMGahp(const char* vmgahppath, const char* vmtype);
-	void docheckVMUniverse(void);
+	void docheckVMUniverse( int timerID = -1 );
 	void killVM(VMStarterInfo *info);
 	VMStarterInfo* findVMStarterInfoWithStarterPid(pid_t s_pid);
 	VMStarterInfo* findVMStarterInfoWithVMPid(pid_t vm_pid);

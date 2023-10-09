@@ -48,9 +48,9 @@ class CondorJob : public BaseJob
 	~CondorJob();
 
 	void Reconfig();
-	void doEvaluateState();
+	void doEvaluateState(int timerID);
 	BaseResource *GetResource();
-	void JobLeaseSentExpired();
+	void JobLeaseSentExpired(int timerID);
 
 	static int submitInterval;
 	static int removeInterval;

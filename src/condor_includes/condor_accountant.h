@@ -83,7 +83,7 @@ public:
 
   void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
 
-  int GetLastUpdateTime() const { return LastUpdateTime; }
+  time_t GetLastUpdateTime() const { return LastUpdateTime; }
 
   double GetLimit(const std::string& limit);
   double GetLimitMax(const std::string& limit);
@@ -154,9 +154,9 @@ private:
   //--------------------------------------------------------
 
   ClassAdLog<std::string, ClassAd*> * AcctLog;
-  int LastUpdateTime;
+  time_t LastUpdateTime;
 
-  HashTable<std::string, double> concurrencyLimits;
+  std::map<std::string, double> concurrencyLimits;
 
   GroupEntry* hgq_root_group;
   std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;
@@ -182,11 +182,13 @@ private:
 
   bool DeleteClassAd(const std::string& Key);
 
-  void SetAttributeInt(const std::string& Key, const std::string& AttrName, int AttrValue);
+  void SetAttributeInt(const std::string& Key, const std::string& AttrName, int64_t AttrValue);
   void SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue);
   void SetAttributeString(const std::string& Key, const std::string& AttrName, const std::string& AttrValue);
 
   bool GetAttributeInt(const std::string& Key, const std::string& AttrName, int& AttrValue);
+  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, long& AttrValue);
+  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, long long& AttrValue);
   bool GetAttributeFloat(const std::string& Key, const std::string& AttrName, double& AttrValue);
   bool GetAttributeString(const std::string& Key, const std::string& AttrName, std::string& AttrValue);
 

@@ -117,7 +117,7 @@ public:
 		the call would block.
 		@see do_connect_finish
 	*/
-	virtual int connect(char const *host, int port=0, bool do_not_block = false) = 0;
+	virtual int connect( char const *host, int port=0, bool do_not_block = false, CondorError * errorStack = NULL ) = 0;
 
 	/** Close the socket.  Note that reusing the socket after closing it is not
 		recommended; instead simply delete the Socket (it will be closed in the
@@ -452,10 +452,10 @@ public:
 	unsigned int getUniqueId() const { return m_uniqueId; }
 
 #ifdef WIN32
-	int set_inheritable( int flag );
+	bool set_inheritable( bool flag );
 #else
 	// On unix, sockets are always inheritable
-	inline int set_inheritable( int ) { return TRUE; }
+	bool set_inheritable(bool) { return true;}
 #endif
 
 //	PRIVATE INTERFACE TO ALL SOCKS
@@ -498,7 +498,7 @@ protected:
 			is reached.  For DaemonCore applications, this is handled
 			by passing the socket to DaemonCore's Register_Socket() function.
     */
-	int do_connect(char const *host, int port, bool non_blocking_flag = false);
+	int do_connect(char const *host, int port, bool non_blocking_flag = false, CondorError * errorStack = NULL);
 
 	/**
 	   Called internally by do_connect() to examine the address and
@@ -508,22 +508,22 @@ protected:
 	   see if we are connecting to a shared port (SharedPortServer)
        requiring further directions to route us to our final destination.
 	*/
-	int special_connect(char const *host,int port,bool nonblocking);
+	int special_connect(char const *host,int port,bool nonblocking,CondorError * errorStack);
 
-	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking) = 0;
+	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorError * errorStack) = 0;
 	virtual void cancel_reverse_connect() = 0;
 	virtual int do_shared_port_local_connect( char const *shared_port_id,bool nonblocking,char const *sharedPortIP ) = 0;
 
 	void set_connect_addr(char const *addr);
 
 	inline SOCKET get_socket (void) const { return _sock; }
-	const char * serialize(const char *);
+	const char * deserialize(const char *);
 	static void close_serialized_socket(char const *buf);
-	char * serialize() const;
-    const char * serializeCryptoInfo(const char * buf);
-    char * serializeCryptoInfo() const;
-    const char * serializeMdInfo(const char * buf);
-    char * serializeMdInfo() const;
+	void serialize(std::string& outbuf) const;
+    const char * deserializeCryptoInfo(const char * buf);
+    void serializeCryptoInfo(std::string& outbuf) const;
+    const char * deserializeMdInfo(const char * buf);
+    void serializeMdInfo(std::string& outbuf) const;
         
 	virtual int encrypt(bool);
 	///

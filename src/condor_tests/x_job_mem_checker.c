@@ -166,13 +166,6 @@ int main(int argc,char **argv)
 
 	//printf("Chunk size %d\n",chunksize);
 
-	for(myarg = 2; myarg < argc; myarg++) {
-		//printf("%s\n",argv[myarg]);
-		myarg++;
-		//printf("%s\n",argv[myarg]);
-		/*printf("%d\n",atoi(argv[myarg]));*/
-	}
-
 	//printf("Storing requests\n");
 
 	request = timesteps;

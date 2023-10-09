@@ -47,7 +47,7 @@ HookClient::~HookClient() {
 }
 
 
-MyString*
+std::string*
 HookClient::getStdOut() {
 	if (m_has_exited) {
 		return &m_std_out;
@@ -56,7 +56,7 @@ HookClient::getStdOut() {
 }
 
 
-MyString*
+std::string*
 HookClient::getStdErr() {
 	if (m_has_exited) {
 		return &m_std_err;
@@ -65,11 +65,11 @@ HookClient::getStdErr() {
 }
 
 void
-HookClient::logHookErr(int lvl, const std::string &prefix, MyString *err) {
+HookClient::logHookErr(int lvl, const std::string &prefix, std::string *err) {
 	if (!err) { return; }
 
 	std::string dest;
-	MyStringCharSource source(const_cast<char *>(err->Value()), false);
+	MyStringCharSource source(const_cast<char *>(err->c_str()), false);
 	dprintf(lvl, "Stderr of %s:\n", prefix.c_str());
 	while (readLine(dest, source)) {
 		dprintf(lvl, "(%s): %s", prefix.c_str(), dest.c_str());
@@ -86,11 +86,11 @@ HookClient::hookExited(int exit_status) {
 	statusString(exit_status, status_txt);
 	dprintf(D_FULLDEBUG, "%s\n", status_txt.c_str());
 
-	MyString* std_out = daemonCore->Read_Std_Pipe(m_pid, 1);
+	std::string* std_out = daemonCore->Read_Std_Pipe(m_pid, 1);
 	if (std_out) {
 		m_std_out = *std_out;
 	}
-	MyString* std_err = daemonCore->Read_Std_Pipe(m_pid, 2);
+	std::string* std_err = daemonCore->Read_Std_Pipe(m_pid, 2);
 	if (std_err) {
 		m_std_err = *std_err;
 	}
@@ -98,7 +98,7 @@ HookClient::hookExited(int exit_status) {
 	// Log stderr from hook script to the StarterLog
 	std::string hook_name(getHookTypeString(type()));
 	if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
-		logHookErr(D_ALWAYS | D_FAILURE, hook_name + " Failure", getStdErr());
+		logHookErr(D_ERROR, hook_name + " Failure", getStdErr());
 	}
 	else {
 		logHookErr(D_FULLDEBUG, hook_name, getStdErr());

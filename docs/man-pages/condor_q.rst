@@ -657,7 +657,7 @@ some situations such as when several submitters are contending for
 resources, or if the pool is rapidly changing state which cannot be
 accurately diagnosed.
 
-It is possible to to hold jobs that are in the X state. To avoid this it
+It is possible to hold jobs that are in the X state. To avoid this it
 is best to construct a **-constraint** *expression* that option
 contains ``JobStatus != 3`` if the user wishes to avoid this condition.
 

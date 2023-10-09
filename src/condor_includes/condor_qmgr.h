@@ -72,10 +72,6 @@ const SetAttributeFlags_t SetAttribute_PostSubmitClusterChange = (1<<7); // spec
 // bool setQmgmtConnectionInfo(QmgmtPeer *peer);
 void unsetQmgmtConnection();
 
-
-int InitializeConnection(const char *, const char *);
-int InitializeReadOnlyConnection(const char * );
-
 /** Initiate connection to schedd job queue and begin transaction.
     @param schedd is the schedd to connect to
     @param timeout specifies the maximum time (in seconds) to wait for TCP
@@ -101,16 +97,28 @@ bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true, CondorErr
 
 /** Start a new job cluster.  This cluster becomes the
 	active cluster, and jobs may only be submitted to this cluster.
-	@return the new cluster id on success, < 0 on failure: -1 == "owner check failed"
-    -2 == "MAX_JOBS_SUBMITTED exceeded", -3 == "cluster id collision"
+	@return the new cluster id on success, < 0 on failure: -1 == "access denied"
+		-2 == "MAX_JOBS_SUBMITTED exceeded", see NEWJOB_ERR_* codes
 */
+int NewCluster(CondorError* errstack);
+#ifdef SCHEDD_EXTERNAL_DECLARATIONS
+// external callers have access to a backward compat NewCluster function
 int NewCluster(void);
+#endif
 
 /** Signal the start of a new job description (a new job process).
 	@param cluster_id cluster id of the active job cluster (from NewCluster())
-	@return -1 on failure; the new proc id on success
+	@return the new proc id on success, < 0 on failure; -1 == "general failure"
+		-2 == "MAX_JOBS_SUBMITTED exceeded", see NEWJOB_ERR_* codes
 */
 int NewProc( int cluster_id);
+
+const int NEWJOB_ERR_MAX_JOBS_SUBMITTED = -2;
+const int NEWJOB_ERR_MAX_JOBS_PER_OWNER = -3;
+const int NEWJOB_ERR_MAX_JOBS_PER_SUBMISSION = -4;
+const int NEWJOB_ERR_DISABLED_USER = -5;
+const int NEWJOB_ERR_UNKNOWN_USER = -6;
+const int NEWJOB_ERR_INTERNAL = -10;
 
 const int DESTROYPROC_SUCCESS_DELAY = 1; // DestoryProc succeeded. The job is still enqueued, but that's okay
 const int DESTROYPROC_SUCCESS = 0; // DestroyProc succeeded
@@ -159,7 +167,7 @@ int SetAttributeByConstraint(const char *constraint, const char *attr,
 	@return -1 on failure; 0 on success
 */
 int SetAttributeIntByConstraint(const char *constraint, const char *attr,
-							 int value,
+							 int64_t value,
 							 SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value will be a ClassAd floating-point literal.
@@ -193,7 +201,7 @@ int SetAttribute(int cluster, int proc, const char *attr, const char *value, Set
 	will be a ClassAd integer literal.
 	@return -1 on failure; 0 on success
 */
-int SetAttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
+int SetAttributeInt(int cluster, int proc, const char *attr, int64_t value, SetAttributeFlags_t flags = 0 );
 /** Set attr = value for job with specified cluster and proc.  The value
 	will be a ClassAd floating-point literal.
 	@return -1 on failure; 0 on success
@@ -279,6 +287,8 @@ int GetAttributeFloat(int cluster, int proc, const char *attr, double *value);
 	@return -1 on failure; 0 on success
 */
 int GetAttributeInt(int cluster, int proc, const char *attr, int *value);
+int GetAttributeInt(int cluster, int proc, const char *attr, long *value);
+int GetAttributeInt(int cluster, int proc, const char *attr, long long *value);
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
@@ -291,8 +301,6 @@ int GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 /** Get value of string attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success.
 */
-int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
-						MyString &val );
 int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
                         std::string &val );
 /** Get value of attr for job with specified cluster and proc.

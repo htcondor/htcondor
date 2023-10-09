@@ -25,7 +25,6 @@
 #include "globus_utils.h"
 #include "grid_universe.h"
 #include "directory.h"
-#include "MyString.h"
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
 #include "exit.h"
@@ -37,18 +36,18 @@
 // Initialize static data members
 const int GridUniverseLogic::job_added_delay = 3;
 const int GridUniverseLogic::job_removed_delay = 2;
-GridUniverseLogic::GmanPidTable_t * GridUniverseLogic::gman_pid_table = NULL;
+GridUniverseLogic::GmanPidTable_t * GridUniverseLogic::gman_pid_table = nullptr;
 int GridUniverseLogic::rid = -1;
 static const char scratch_prefix[] = "condor_g_scratch.";
 
 // globals
-GridUniverseLogic* _gridlogic = NULL;
+GridUniverseLogic* _gridlogic = nullptr;
 
 
 GridUniverseLogic::GridUniverseLogic() 
 {
 	// This class should only be instantiated once
-	ASSERT( gman_pid_table == NULL );
+	ASSERT( gman_pid_table == nullptr );
 
 	// Make our hashtable
 	gman_pid_table = new GmanPidTable_t(hashFunction);
@@ -66,7 +65,7 @@ GridUniverseLogic::GridUniverseLogic()
 GridUniverseLogic::~GridUniverseLogic()
 {
 	if ( gman_pid_table) {
-		gman_node_t * node;
+		gman_node_t * node = nullptr;
 		gman_pid_table->startIterations();
 		while (gman_pid_table->iterate( node ) == 1 ) {
 			if (daemonCore) {
@@ -85,7 +84,7 @@ GridUniverseLogic::~GridUniverseLogic()
 		delete gman_pid_table;
 		rid = 0;
 	}
-	gman_pid_table = NULL;
+	gman_pid_table = nullptr;
 	return;
 }
 
@@ -124,7 +123,7 @@ void
 GridUniverseLogic::JobAdded(const char* owner, const char* domain,
 	   	const char* attr_value, const char* attr_name, int cluster, int proc)
 {
-	gman_node_t* node;
+	gman_node_t* node = nullptr;
 
 	node = StartOrFindGManager(owner, domain, attr_value, attr_name, cluster, proc);
 
@@ -150,7 +149,7 @@ void
 GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
 	   	const char* attr_value, const char* attr_name,int cluster, int proc)
 {
-	gman_node_t* node;
+	gman_node_t* node = nullptr;
 
 	node = StartOrFindGManager(owner, domain, attr_value, attr_name, cluster, proc);
 
@@ -172,12 +171,12 @@ GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
 }
 
 void
-GridUniverseLogic::SendAddSignal()
+GridUniverseLogic::SendAddSignal(int /* tid */)
 {
 	// This method is called via a DC Timer set in JobAdded method
 
 	// First get our gridmanager node
-	gman_node_t * node = (gman_node_t *)daemonCore->GetDataPtr();
+	auto * node = (gman_node_t *)daemonCore->GetDataPtr();
 	ASSERT(node);
 
 	// Record in the node that there is no outstanding timer set anymore
@@ -190,12 +189,12 @@ GridUniverseLogic::SendAddSignal()
 }
 
 void
-GridUniverseLogic::SendRemoveSignal()
+GridUniverseLogic::SendRemoveSignal(int /* tid */)
 {
 	// This method is called via a DC Timer set in JobRemoved method
 
 	// First get our gridmanager node
-	gman_node_t * node = (gman_node_t *)daemonCore->GetDataPtr();
+	auto * node = (gman_node_t *)daemonCore->GetDataPtr();
 	ASSERT(node);
 
 	// Record in the node that there is no outstanding timer set anymore
@@ -213,7 +212,7 @@ GridUniverseLogic::signal_all(int sig)
 	// Iterate through our entire table and send the desired sig
 
 	if (gman_pid_table) {
-		gman_node_t* tmpnode;
+		gman_node_t* tmpnode = nullptr;
 		gman_pid_table->startIterations();
 		while ( gman_pid_table->iterate(tmpnode) ) {
 			if (tmpnode->pid) {
@@ -240,7 +239,7 @@ GridUniverseLogic::scratchFilePath(gman_node_t *gman_node, std::string & path)
 int 
 GridUniverseLogic::GManagerReaper(int pid, int exit_status)
 {
-	gman_node_t* gman_node = NULL;
+	gman_node_t* gman_node = nullptr;
 	std::string owner;
 
 	// Iterate through our table to find the node w/ this pid
@@ -249,7 +248,7 @@ GridUniverseLogic::GManagerReaper(int pid, int exit_status)
 	// are not that many of them.
 
 	if (gman_pid_table) {
-		gman_node_t* tmpnode;
+		gman_node_t* tmpnode = nullptr;
 		gman_pid_table->startIterations();
 		while ( gman_pid_table->iterate(owner,tmpnode) ) {
 			if (tmpnode->pid == pid ) {
@@ -287,8 +286,8 @@ GridUniverseLogic::GManagerReaper(int pid, int exit_status)
 			 * so helpful and polite.  Ah, well, we can always dream...
 			 */
 		static time_t last_email_re_gridmanlog = 0;
-		if ( time(NULL) - last_email_re_gridmanlog > 6 * 60 * 60 ) {
-			last_email_re_gridmanlog = time(NULL);
+		if ( time(nullptr) - last_email_re_gridmanlog > 6 * 60 * 60 ) {
+			last_email_re_gridmanlog = time(nullptr);
 			FILE *email = email_admin_open("Unable to launch grid universe jobs.");
 			if ( email ) {
 				fprintf(email,
@@ -357,7 +356,7 @@ GridUniverseLogic::gman_node_t *
 GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* attr_value,
 					int cluster, int proc)
 {
-	gman_node_t* result = NULL;
+	gman_node_t* result = nullptr;
 	std::string owner_key(owner);
 	if(attr_value){
 		owner_key += attr_value;
@@ -369,7 +368,7 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* attr_value,
 	if (!gman_pid_table) {
 		// destructor has already been called; we are probably
 		// closing down.
-		return NULL;
+		return nullptr;
 	}
 
 	gman_pid_table->lookup(owner_key,result);
@@ -382,10 +381,10 @@ GridUniverseLogic::FindGManagerPid(const char* owner,
 					const char* attr_value,	
 					int cluster, int proc)
 {
-	gman_node_t* gman_node;
+	gman_node_t* gman_node = nullptr;
 
 	if ( attr_value && strlen(attr_value)==0 ) {
-		attr_value = NULL;
+		attr_value = nullptr;
 	}
 
 	if ( (gman_node=lookupGmanByOwner(owner, attr_value, cluster, proc)) ) {
@@ -400,19 +399,19 @@ GridUniverseLogic::gman_node_t *
 GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	   	const char* attr_value, const char* attr_name, int cluster, int proc)
 {
-	gman_node_t* gman_node;
-	int pid;
+	gman_node_t* gman_node = nullptr;
+	int pid = 0;
 
 		// If attr_value is an empty string, convert to NULL since code
 		// after this point expects that.
 	if ( attr_value && strlen(attr_value)==0 ) {
-		attr_value = NULL;
-		attr_name = NULL;
+		attr_value = nullptr;
+		attr_name = nullptr;
 	}
 
 	if ( !owner ) {
 		dprintf(D_ALWAYS,"ERROR - missing owner field\n");
-		return NULL;
+		return nullptr;
 	}
 
 	if ( (gman_node=lookupGmanByOwner(owner, attr_value, cluster, proc)) ) {
@@ -426,25 +425,25 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	if (!gman_pid_table) {
 		// destructor has already been called; we are probably
 		// closing down.
-		return NULL;
+		return nullptr;
 	}
 
 
 #ifndef WIN32
 	if (strcasecmp(owner, "root") == 0 ) {
 		dprintf(D_ALWAYS, "Tried to start condor_gmanager as root.\n");
-		return NULL;
+		return nullptr;
 	}
 #endif
 
 	dprintf( D_FULLDEBUG, "Starting condor_gmanager for owner %s (%d.%d)\n",
 			owner, cluster, proc);
 
-	char *gman_binary;
+	char *gman_binary = nullptr;
 	gman_binary = param("GRIDMANAGER");
 	if ( !gman_binary ) {
 		dprintf(D_ALWAYS,"ERROR - GRIDMANAGER not defined in config file\n");
-		return NULL;
+		return nullptr;
 	}
 
 	ArgList args;
@@ -471,7 +470,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 				 error_msg.c_str());
 		free(gman_binary);
 		free(gman_args);
-		return NULL;
+		return nullptr;
 	}
 	free(gman_args);
 
@@ -481,7 +480,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 						   ATTR_OWNER,owner,
 						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
 	} else {
-		formatstr(constraint, "(%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
+		formatstr(constraint, R"((%s=?="%s"&&%s=?="%s"&&%s==%d))",
 						   ATTR_OWNER,owner,
 						   attr_name,attr_value,
 						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
@@ -502,7 +501,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	if (!init_user_ids(owner, domain)) {
 		dprintf(D_ALWAYS,"ERROR - init_user_ids() failed in GRIDMANAGER\n");
 		free(gman_binary);
-		return NULL;
+		return nullptr;
 	}
 
 	static bool first_time_through = true;
@@ -516,9 +515,9 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		char *prefix = temp_dir_path();
 		ASSERT(prefix);
 		Directory tmp( prefix, PRIV_USER );
-		const char *f;
-		char const *dot;
-		int fname_pid;
+		const char *f = nullptr;
+		char const *dot = nullptr;
+		int fname_pid = 0;
 		int mypid = daemonCore->getpid();
 		int scratch_pre_len = strlen(scratch_prefix);
 		while ( (f=tmp.Next()) ) {
@@ -575,7 +574,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		// we already did dprintf reason to the log...
 		free(gman_binary);
 		delete gman_node;
-		return NULL;
+		return nullptr;
 	}
 
 	if(IsFulldebug(D_FULLDEBUG)) {
@@ -591,8 +590,8 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		PRIV_ROOT,				// Run as root, so it can switch to
 		                        //   PRIV_CONDOR
 		rid,					// Reaper ID
-		TRUE, TRUE, NULL, NULL, NULL, NULL,
-		NULL, NULL, 0, NULL, 0, NULL, NULL,
+		TRUE, TRUE, nullptr, nullptr, nullptr, nullptr,
+		nullptr, nullptr, 0, nullptr, 0, nullptr, nullptr,
 		daemon_sock.c_str()
 		);
 
@@ -601,7 +600,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	if ( pid <= 0 ) {
 		dprintf ( D_ALWAYS, "StartOrFindGManager: Create_Process problems!\n" );
 		if (gman_node) delete gman_node;
-		return NULL;
+		return nullptr;
 	}
 
 	// If we made it here, we happily started up a new gridmanager process

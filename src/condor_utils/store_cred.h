@@ -102,7 +102,7 @@ class Service;
 int store_pool_cred_handler(int, Stream *s);
 
 // talk to credd to query, delete or store a credential, use this one for passwords, but NOT kerberose or Oauth 
-int do_store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL, bool force = false);
+int do_store_cred_passwd(const char *user, const char* pw, int mode, Daemon *d = NULL, bool force = false);
 
 // talk to credd to query, delete, or store a credential, use this one for password, kerberos, or oauth
 // pass return value to store_cred_failed to determine if the return is an error or other information
@@ -152,6 +152,11 @@ bool isValidCredential( const char *user, const char* pw );
 	TJ says - DO NOT USE THIS FOR SOME OTHER PURPOSE ON LINUX!
 */
 char* getStoredPassword(const char *user, const char *domain);
+
+/**
+ * Retrieve the stored credential from the KRB5 credential directory.
+ */
+unsigned char* getStoredCredential(int mode, const char *username, const char *domain, int & credlen);
 
 /** Get an IDTOKEN signing key from disk. */
 bool getTokenSigningKey(const std::string &key_id, std::string &contents, CondorError *err);

@@ -24,7 +24,7 @@
 #include "condor_config.h"
 
 // Basic constructor
-ScheddCronJobMgr::ScheddCronJobMgr( void ) :
+ScheddCronJobMgr::ScheddCronJobMgr( ) :
 		CronJobMgr( ),
 		m_shutting_down( false )
 {
@@ -39,12 +39,12 @@ ScheddCronJobMgr::~ScheddCronJobMgr( )
 int
 ScheddCronJobMgr::Initialize( const char *name )
 {
-	int status;
+	int status = 0;
 
 	SetName( name, name, "_cron" );
 	
 	char *cron_name = param( "SCHEDD_CRON_NAME" );
-	if ( NULL != cron_name ) {
+	if ( nullptr != cron_name ) {
 		dprintf( D_ALWAYS,
 				 "WARNING: The use of SCHEDD_CRON_NAME to 'name' your "
 				 "Schedd's Daemon ClassAd Hook Manager is not longer supported "
@@ -54,7 +54,7 @@ ScheddCronJobMgr::Initialize( const char *name )
 	}
 
 	status = CronJobMgr::Initialize( name );
-	if ( NULL != cron_name ) {
+	if ( nullptr != cron_name ) {
 		free( cron_name );
 	}
 	return status;
@@ -71,7 +71,7 @@ ScheddCronJobMgr::Shutdown( bool force )
 
 // Check shutdown
 bool
-ScheddCronJobMgr::ShutdownOk( void )
+ScheddCronJobMgr::ShutdownOk( )
 {
 	bool	idle = IsAllIdle( );
 
@@ -92,7 +92,7 @@ ScheddCronJobMgr::CreateJob( CronJobParams *job_params )
 	dprintf( D_FULLDEBUG,
 			 "*** Creating Schedd Cron job '%s'***\n",
 			 job_params->GetName() );
-	ClassAdCronJobParams *params =
+	auto *params =
 		dynamic_cast<ClassAdCronJobParams *>(job_params);
 	ASSERT( params );
 	return new ScheddCronJob( params, *this );

@@ -25,6 +25,9 @@
 #include "condor_daemon_core.h"
 #include "defrag_stats.h"
 
+// We don't currently have a need for a defrag state file
+//#define USE_DEFRAG_STATE_FILE 1
+
 // Defrag is a daemon that schedules the draining of machines
 // according to a configurable policy.  The intention is to
 // defragment partitionable slots so that jobs requiring
@@ -39,7 +42,7 @@ class Defrag: public Service {
 	void config();
 	void stop();
 
-	void poll(); // do the periodic policy evaluation
+	void poll( int timerID = -1 ); // do the periodic policy evaluation
 
 	typedef std::set< std::string > MachineSet;
 
@@ -61,10 +64,13 @@ class Defrag: public Service {
 	int m_draining_schedule;
 	std::string m_draining_schedule_str;
 	std::string m_cancel_requirements; // Requirements to stop a drain.
+	std::string m_drain_by_me_expr;   // constraint expression matches only machines draining that I drained
 
 	time_t m_last_poll;
 
+#ifdef USE_DEFRAG_STATE_FILE
 	std::string m_state_file;
+#endif
 
 	std::string m_defrag_name;
 	std::string m_daemon_name;
@@ -94,12 +100,14 @@ class Defrag: public Service {
 		// returns -1 on error
 	int countMachines(char const *constraint,char const *constraint_source,MachineSet *machines=NULL);
 
+#ifdef USE_DEFRAG_STATE_FILE
 	void loadState();
 	void saveState();
+#endif
 	void slotNameToDaemonName(std::string const &name,std::string &machine);
 
 	void publish(ClassAd *ad);
-	void updateCollector();
+	void updateCollector( int timerID = -1 );
 	void invalidatePublicAd();
 	void queryDrainingCost();
 

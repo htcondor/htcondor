@@ -21,6 +21,9 @@
 #if !defined( _CONDOR_BASENAME_H )
 #define _CONDOR_BASENAME_H
 
+#include <condor_common.h>
+#include <string>
+
 /*
   NOTE: The semantics of condor_basename() and condor_dirname()
   are slightly different tha the semantics of the default basename()
@@ -56,14 +59,11 @@ const char* condor_basename_extension_ptr(const char* basename);
 
 
 /*
-  A dirname() function that is happy on both Unix and NT.
-  This allocates space for a new string that holds the path of the
-  parent directory of the path it was given.  If the given path has no
-  directory delimiters, or is NULL, we just return ".".  In all
-  cases, the string we return is new space, and must be deallocated
-  with free().
+  A dirname() function that is happy on both Unix and NT.  This holds the path
+  of the parent directory of the path it was given.  If the given path has no
+  directory delimiters, or is NULL, we just return ".".
 */
-char* condor_dirname( const char* path );
+std::string condor_dirname( const char* path );
 
 /*
   DEPRECATED: just in case we need changes along the lines of
@@ -86,7 +86,7 @@ char* dirname( const char* path );
    This does NOT mean it is in any sort of absolute "canonical" format.
    It may still contain references to ".." or to symlinks or whatever.
 */
-int fullpath( const char* path );
+bool fullpath( const char* path );
 
 
 #endif /* _CONDOR_BASENAME_H */

@@ -48,7 +48,7 @@ open(DATA,">job_chirp_io.txtdata") || die "Can't open output file $!\n";
 MakeChirpIoData("Testing message");
 
 my $proxy = '
-	+WantIOProxy = true
+	want_io_proxy = true
 ';
 
 SimpleJob::RunCheck(

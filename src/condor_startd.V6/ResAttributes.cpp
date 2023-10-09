@@ -1396,7 +1396,7 @@ MachAttributes::publish_static(ClassAd* cp)
 	// Temporary Hack until this is a fixed path
 	// the Starter will expand this magic string to the
 	// actual value
-	cp->Assign("CondorScratchDir", "#CoNdOrScRaTcHdIr#");
+	cp->Assign(ATTR_CONDOR_SCRATCH_DIR, "#CoNdOrScRaTcHdIr#");
 }
 
 // return true if the given slot has resources that are assigned to both normal and backfill
@@ -1673,7 +1673,7 @@ MachAttributes::credd_test()
 #endif
 
 CpuAttributes::CpuAttributes( MachAttributes* map_arg, 
-							  int slot_type,
+							  unsigned int slot_type,
 							  double num_cpus_arg,
 							  int num_phys_mem,
 							  double virt_mem_fraction,
@@ -1684,7 +1684,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 							  const std::string &execute_partition_id )
 {
 	map = map_arg;
-	c_type = slot_type;
+	c_type_id = slot_type;
 	c_num_slot_cpus = c_num_cpus = num_cpus_arg;
 	c_allow_fractional_cpus = num_cpus_arg > 0 && num_cpus_arg < 0.9;
 	c_slot_mem = c_phys_mem = num_phys_mem;
@@ -1981,9 +1981,9 @@ CpuAttributes::display(int dpf_flags) const
 {
 	// dpf_flags is expected to be 0 or D_VERBOSE
 	dprintf( D_KEYBOARD | dpf_flags,
-				"Idle time: %s %-8d %s %d\n",
-				"Keyboard:", (int)c_idle, 
-				"Console:", (int)c_console_idle );
+				"Idle time: %s %-8lld %s %lld\n",
+				"Keyboard:", (long long)c_idle,
+				"Console:", (long long)c_console_idle );
 
 	dprintf( D_LOAD | dpf_flags,
 				"%s %.2f  %s %.2f  %s %.2f\n",

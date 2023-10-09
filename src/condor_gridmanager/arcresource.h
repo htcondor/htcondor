@@ -35,17 +35,19 @@ class ArcResource : public BaseResource
 {
  public:
 
-	ArcResource( const char *resource_name, const Proxy *proxy,
-	             const std::string& token_file );
+	ArcResource( const char *resource_name, int gahp_id,
+	             const Proxy *proxy, const std::string& token_file );
 	~ArcResource();
 
 	const char *ResourceType();
 	void Reconfig();
 
 	static std::string & HashName( const char *resource_name,
+	                               int gahp_id,
 	                               const char *proxy_subject,
 	                               const std::string& token_file );
 	static ArcResource *FindOrCreateResource( const char *resource_name,
+	                                          int gahp_id,
 	                                          const Proxy *proxy,
 	                                          const std::string& token_file );
 
@@ -57,6 +59,7 @@ class ArcResource : public BaseResource
 	char *proxyFQAN;
 	std::string m_tokenFile;
 	GahpClient *gahp;
+	int m_gahpId;
 
 	static std::map <std::string, ArcResource *> ResourcesByName;
 
@@ -64,7 +67,7 @@ class ArcResource : public BaseResource
 	void DoPing( unsigned& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded  );
 
-	void DoJobStatus();
+	void DoJobStatus(int timerID);
 
 	bool m_jobStatusActive;
 	int m_jobStatusTid;

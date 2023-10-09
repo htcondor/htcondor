@@ -64,11 +64,11 @@ public:
         @param s can be a hostname or sinful string
 		@param do_not_block if True, call returns immediately
     **/
-	virtual int connect(char const *s, int port=0, bool do_not_block = false);
+	virtual int connect(char const *s, int port=0, bool do_not_block = false, CondorError * errorStack = NULL);
 
 	virtual int close();
 
-	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking);
+	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorError * errorStack);
 
 	virtual void cancel_reverse_connect();
 	virtual int do_shared_port_local_connect( char const *shared_port_id, bool nonblocking,char const *sharedPortIP );
@@ -128,8 +128,8 @@ public:
 	virtual int peek(char &);
 
 	// serialize and deserialize
-	const char * serialize(const char *);
-	char * serialize() const;
+	const char * deserialize(const char *);
+	void serialize(std::string& outbuf) const;
 
 //	PRIVATE INTERFACE TO SAFE SOCKS
 //

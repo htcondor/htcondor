@@ -24,6 +24,7 @@
 #include "HookClientMgr.h"
 #include "enum_utils.h"
 #include "RoutedJob.h"
+#include <vector>
 
 #include "classad/classad_distribution.h"
 
@@ -62,8 +63,10 @@ public:
 	static void removeAllKnownHooks();
 	std::string getHookKeyword(const classad::ClassAd &ad);
 
+	virtual bool useProcd() const override {return true;}
+
 	// List of job ids and hooks currently running and awaiting output
-	static SimpleList<HOOK_RUN_INFO*> m_job_hook_list;
+	static std::vector<HOOK_RUN_INFO*> m_job_hook_list;
 
 private:
 	bool m_warn_cleanup;
@@ -82,7 +85,7 @@ private:
 
 	// Hook definitions in a hash table.  Hook keyword is the hash key,
 	// and the validated hook paths are the value
-	HashTable<std::string, char**> m_hook_paths;
+	std::map<std::string, char**> m_hook_paths;
 
 	// Mapping of HookType sequential numbers that is used for
 	// storing/accessing the hooks for a specific keyword

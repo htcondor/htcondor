@@ -86,7 +86,7 @@ Even if this machine is turned off, the AP will find a matching Execution
 Point to run the job on, and run it to completion.
 
 This means that any input files specified in *transfer_input_files*
-are copied off of this submit machine as part of the submit process
+are copied off of this access point as part of the submit process
 and stored in a safe place on the Access Point.  This safe place is
 the spool directory.  While a user can force spooling to happen
 by adding the ``-spool`` option to ``condor_submit``, any remote

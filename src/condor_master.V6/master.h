@@ -89,9 +89,9 @@ public:
 	bool	WaitingforStartup(bool & for_file) { for_file = ! m_after_startup_wait_for_file.empty(); return m_waiting_for_startup; }
 	void	Stop( bool never_forward = false );
 	void	StopFast( bool never_forward = false );
-	void	StopFastTimer();
+	void	StopFastTimer( int timerID = -1 );
 	void	StopPeaceful();
-	void	HardKill();
+	void	HardKill( int timerID = -1 );
 	bool	Exited(int status);
 	void	Obituary( int );
 	void	CancelAllTimers();
@@ -119,8 +119,8 @@ public:
 private:
 
 	int		runs_on_this_host();
-	void	Recover();
-	void	DoStart();
+	void	Recover( int timerID = -1 );
+	void	DoStart( int timerID = -1 );
 	void	DoConfig( bool init );
 	int		SetupHighAvailability( void );
 	int		HaLockAcquired( LockEventSrc src );
@@ -184,7 +184,7 @@ public:
 	void 	UnRegisterAllDaemons() { for(auto &kvpair: daemon_ptr) { delete kvpair.second;} ; daemon_ptr.clear();}
 	void 	InitParams();
 
-	void	CheckForNewExecutable();
+	void	CheckForNewExecutable( int timerID = -1 );
 	void	DaemonsOn();
 	void	DaemonsOff( int fast = 0 );
 	void	DaemonsOffPeaceful();
@@ -200,9 +200,9 @@ public:
 
 	void	InitMaster();
 	void    RestartMaster();
-	void    RestartMasterPeaceful();
+	void    RestartMasterPeaceful( int timerID = -1 );
 	void	FinishRestartMaster();
-	void	FinalRestartMaster();
+	void	FinalRestartMaster( int timerID = -1 );
 
 	void	CleanupBeforeRestart();
 	void	ExecMaster();
@@ -238,7 +238,7 @@ public:
 	StringList	ordered_daemon_names;
 
 	void	Update( ClassAd* );
-	void	UpdateCollector();
+	void	UpdateCollector( int timerID = -1 );
 
 	class daemon*	FindDaemon( daemon_t dt );
 	class daemon*	FindDaemon( const char * );
@@ -263,12 +263,12 @@ private:
 
 	void ScheduleRetryStartAllDaemons();
 	void CancelRetryStartAllDaemons();
-	void RetryStartAllDaemons();
-	void DeferredQueryReadyReply();
+	void RetryStartAllDaemons( int timerID = -1 );
+	void DeferredQueryReadyReply( int timerID = -1 );
 	bool InitDaemonReadyAd(ClassAd & readyAd, bool include_addrs);
 	//bool GetDaemonReadyStates(std::string & ready);
 	int  SendSetPeacefulShutdown(class daemon*, int timeout);
-	void DoPeacefulShutdown(int timeout, void (Daemons::*pfn)(void), const char * lbl);
+	void DoPeacefulShutdown(int timeout, void (Daemons::*pfn)(int), const char * lbl);
 	int  ReapPreen(int pid, int status);
 
 		// returns true if there are no remaining daemons

@@ -12,18 +12,23 @@ Synopsis
 **condor_off** [**-help | -version** ]
 
 **condor_off** [**-graceful | -fast | -peaceful |
--force-graceful** ] [**-annex** *name*] [**-debug** ]
+-force-graceful | -drain** ] [**-annex** *name*] [**-debug[:opts]** ]
 [**-pool** *centralmanagerhostname[:portnumber]*] [
 **-name** *hostname* | *hostname* | **-addr** *"<a.b.c.d:port>"*
 | *"<a.b.c.d:port>"* | **-constraint** *expression* | **-all** ]
-[**-daemon** *daemonname*]
+[**-daemon** *daemonname* | **-master**]
+[**-exec** *name*]
+[**-reason** *"reason-string"*]
+[**-request-id** *id*]
+[**-check** *expr*]
+[**-start** *expr*]
 
 Description
 -----------
 
 *condor_off* shuts down a set of the HTCondor daemons running on a set
-of one or more machines. It does this cleanly so that checkpointable
-jobs may gracefully exit with minimal loss of work.
+of one or more machines.  By default, it does this cleanly, so that
+jobs have time to shut down.
 
 The command *condor_off* without any arguments will shut down all
 daemons except *condor_master*, unless **-annex** *name* is
@@ -31,9 +36,17 @@ specified. The *condor_master* can then handle both local and remote
 requests to restart the other HTCondor daemons if need be. To restart
 HTCondor running on a machine, see the *condor_on* command.
 
+When the **-drain** option is chosen, draining options can be specified
+by using the optional **-reason**, **-request-id**, **-check**, and **-start**
+arguments.
+
 With the **-daemon** *master* option, *condor_off* will shut down all
 daemons including the *condor_master*. Specification using the
 **-daemon** option will shut down only the specified daemon.
+
+When shutting down all daemons including the *condor_master*, the **-exec**
+argument can be used to tell the master to run a configured :macro:`MASTER_SHUTDOWN_<Name>`
+script before it exits.
 
 For security reasons of authentication and authorization, this command
 requires ``ADMINISTRATOR`` level of access.
@@ -57,12 +70,25 @@ Options
     Force a graceful shutdown, even after issuing a **-peaceful**
     command. A minimum of the first two characters of this option must
     be specified, to distinguish it from the **-fast** command.
+ **-drain**
+    Send a *condor_drain* command with the *-exit-on-completion* option to all
+    *condor_startd* daemons that are managed by this master. Then wait for all *condor_startd*
+    daemons to exit before before shutting down other daemons.
+ **-reason** *"reason-string"*
+    Use with **-drain** to set a **-reason** *"reason-string"* value for the *condor_drain* command.
+ **-request-id** *id*
+    Use with **-drain** to set a **-request-id** *id* value for the *condor_drain* command.
+ **-check** *expr*
+    Use with **-drain** to set a **-check** *expr* value for the *condor_drain* command.
+ **-start** *expr*
+    Use with **-drain** to set a **-start** *expr* value for the *condor_drain* command.
  **-annex** *name*
     Turn off master daemons in the specified annex. By default this will
     result in the corresponding instances shutting down.
- **-debug**
-    Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+ **-debug[:opts]**
+    Causes debugging information to be sent to ``stderr``. The debug level can be set
+    by specifying an optional *opts* value. Otherwise, the configuration variable ``TOOL_DEBUG``
+    sets the debug level.
  **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
@@ -79,6 +105,11 @@ Options
     *expression*
  **-all**
     Send the command to all machines in the pool
+ **-master**
+    Shutdown the *condor_master* after shutting down all other daemons.
+ **-exec** *name*
+    When used with **-master**, the *condor_master* will run the program configured as
+    :macro:`MASTER_SHUTDOWN_<Name>` after shutting down all other daemons.
  **-daemon** *daemonname*
     Send the command to the named daemon. Without this option, the
     command is sent to the *condor_master* daemon.

@@ -214,13 +214,20 @@ CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 		return 0;
 	}
 
+	// the query target type constrains what ads should be returned
+	const char * targetType = nullptr;
+	std::string targetTypeStr;
+	if (query.LookupString(ATTR_TARGET_TYPE, targetTypeStr) && ! targetTypeStr.empty()) {
+		targetType = targetTypeStr.c_str();
+	}
+
 	int count = 0;
 	CollectorRecord  *record;
 	AdNameHashKey  hk;
 	std::string hkString;
 	(*table).startIterations();
 	while ((*table).iterate (record)) {
-		if (IsAHalfMatch(&query, record->m_publicAd)) {
+		if (IsATargetMatch(&query, record->m_publicAd, targetType)) {
 			(*table).getCurrentKey(hk);
 			hk.sprint(hkString);
 			if ((*table).remove(hk) == -1) {
@@ -614,7 +621,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				// the startd could stop bothering to send these attributes.
 
 				// Queries of private ads depend on the following:
-			SetMyTypeName( *pvtAd, STARTD_ADTYPE );
+			CopyAttribute(ATTR_MY_TYPE, *pvtAd, *clientAd);
 
 				// Negotiator matches up private ad with public ad by
 				// using the following.
@@ -1088,7 +1095,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		insert = 1;
 
 		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
-			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
+			new_ad->Assign( ATTR_LAST_FORWARDED, time(nullptr) );
 		}
 
 		return record;
@@ -1189,7 +1196,7 @@ mergeClassAd (CollectorHashTable &hashTable,
 
 void
 CollectorEngine::
-housekeeper()
+housekeeper( int /* timerID */ )
 {
 	time_t now;
 

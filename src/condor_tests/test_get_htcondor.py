@@ -60,30 +60,33 @@ if "THE_URL" in os.environ:
 IMAGES_BY_CHANNEL = {
     "stable": [
         "debian:11",
-        "ubuntu:18.04",
-        "ubuntu:20.04",
-        "ubuntu:22.04",
-        "centos:7",
-        "scientificlinux/sl:7",
-        "rockylinux:8",
-        "almalinux:8",
-        "arm64v8/almalinux:8",
-        "ppc64le/almalinux:8",
-    ],
-    "current": [
-        "debian:11",
-        "ubuntu:18.04",
+        "debian:12",
         "ubuntu:20.04",
         "ubuntu:22.04",
         "centos:7",
         "scientificlinux/sl:7",
         "rockylinux:8",
         "rockylinux:9",
-        "almalinux:9",
         "almalinux:8",
+        "almalinux:9",
         "arm64v8/almalinux:8",
         "arm64v8/almalinux:9",
         "ppc64le/almalinux:8",
+        "ppc64le/ubuntu:20.04",
+    ],
+    "current": [
+        "debian:11",
+        "debian:12",
+        "ubuntu:20.04",
+        "ubuntu:22.04",
+        "rockylinux:8",
+        "rockylinux:9",
+        "almalinux:8",
+        "almalinux:9",
+        "arm64v8/almalinux:8",
+        "arm64v8/almalinux:9",
+        "ppc64le/almalinux:8",
+        "ppc64le/ubuntu:20.04",
     ],
 }
 
@@ -129,9 +132,10 @@ TESTS = {
 
 PREFICES_BY_IMAGE = {
     "debian:11" : "apt-get update && apt-get install -y curl",
-    "ubuntu:18.04": "apt-get update && apt-get install -y curl",
+    "debian:12" : "apt-get update && apt-get install -y curl",
     "ubuntu:20.04": "apt-get update && apt-get install -y curl",
     "ubuntu:22.04": "apt-get update && apt-get install -y curl",
+    "ppc64le/ubuntu:20.04": "apt-get update && apt-get install -y curl",
 }
 
 CHANNELS_BY_IMAGE = {}
@@ -221,7 +225,7 @@ def results_from_container(channel, cached_container_image, flag, postscript):
     return subprocess.run(args,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        timeout=240)
+        timeout=360)
 
 
 # We can parameterize further to string(s) required to be in the log,

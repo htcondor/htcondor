@@ -60,6 +60,10 @@ class Dagman {
 			delete _schedd;
 			_schedd = NULL;
 		}
+		if (_protectedUrlMap) {
+			delete _protectedUrlMap;
+			_protectedUrlMap = nullptr;
+		}
 	}
 
 		// Check (based on the version from the .condor.sub file, etc.),
@@ -233,6 +237,11 @@ class Dagman {
 		// log file.
 	std::string _defaultNodeLog;
 
+		// Comma seperated list of Machine Attrs to add to a Job ad
+		// and user log via job submit description language
+	std::string _requestedMachineAttrs;
+	std::string _ulogMachineAttrs;
+
 		// Whether to generate the .condor.sub files for sub-DAGs
 		// at run time (just before the node is submitted).
 	bool _generateSubdagSubmits;
@@ -283,6 +292,9 @@ class Dagman {
 
 		// The schedd we need to talk to to update the classad.
 	DCSchedd *_schedd;
+
+	// Protected URL Mapfile
+	MapFile *_protectedUrlMap;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

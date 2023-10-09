@@ -22,7 +22,6 @@
 #define _PROC_FAMILY_DIRECT_H
 
 #include "proc_family_interface.h"
-#include "HashTable.h"
 
 class KillFamily;
 struct ProcFamilyDirectContainer;
@@ -75,7 +74,7 @@ public:
 
 private:
 
-	HashTable<pid_t, ProcFamilyDirectContainer*> m_table;
+	std::map<pid_t, ProcFamilyDirectContainer> m_table;
 
 	KillFamily* lookup(pid_t);
 };

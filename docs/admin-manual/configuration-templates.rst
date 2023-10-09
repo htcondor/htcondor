@@ -120,7 +120,7 @@ incorporates.
 
        Configures a custom machine resource monitor with the given name,
        mode, period, executable, and metrics. See
-       :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for the definitions of
+       :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for the definitions of
        these terms.
 
     -  ``PartitionableSlot( slot_type_num [, allocation] )``
@@ -129,7 +129,14 @@ incorporates.
        and allocation (defaults for slot_type_num and allocation are 1
        and 100% respectively). See the 
        :ref:`admin-manual/policy-configuration:*condor_startd* policy
-       configuration` for information on partitionalble slot policies.
+       configuration` for information on partitionable slot policies.
+
+    -  ``StaticSlots( slot_type_num [, num_slots, [, allocation] ] )``
+
+       Sets up a number of static slots of the specified slot type number
+       (defaults for slot_type_num and num_slots are 1 and ``$(NUM_CPUS)`` respectively).
+       The number of slots will be equal to ``num_slots``. If no value is provided for the allocation,
+       the default is to divide 100% of the machine resources evenly across the slots.
 
     -  ``AssignAccountingGroup( map_filename [, check_request] )`` Sets up a
        *condor_schedd* job transform that assigns an accounting group
@@ -151,61 +158,61 @@ incorporates.
        attribute of each job as it is submitted. The value of dst_attr
        is determined by mapping the src_attr of the job using the
        usermap named map_name. If the optional map_filename argument
-       is specifed, then this metaknob also defines a *condor_schedd*
+       is specified, then this metaknob also defines a *condor_schedd*
        usermap named map_Name using the given map file.
 
     -  ``StartdCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor_startd* job hook.
-       (See :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for more information
+       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
        about job hooks.)
 
     -  ``StartdCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor_startd* job hook.
-       (See :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for more information
+       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
        about job hooks.)
 
     -  ``StartdCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor_startd* job hook.
-       (See :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for more information
+       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
        about job hooks.)
 
     -  ``ScheddCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor_schedd* job hook.
-       (See :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for more information
+       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
        about job hooks.)
 
     -  ``ScheddCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor_schedd* job hook.
-       (See :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for more information
+       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
        about job hooks.)
 
     -  ``ScheddCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor_schedd* job hook.
-       (See :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for more information
+       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
        about job hooks.)
 
     -  ``OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )``
 
        Create a one-shot job hook.
-       (See :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for more information
+       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
        about job hooks.)
 
     -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe [,hook_args] )``
 
        Create a periodic job hook.
-       (See :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for more information
+       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
        about job hooks.)
 
     -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args] )``
 
        Create a (nearly) continuous job hook.
-       (See :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks` for more information
+       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
        about job hooks.)
 
     -  ``OAuth``
@@ -257,6 +264,14 @@ incorporates.
        with the ``Limit_Job_Runtimes`` policy, order the specification
        by placing this ``Always_Run_Jobs`` policy first.
 
+.. _OnlyRegisteredCheckpointDestinations:
+
+    -  ``OnlyRegisteredCheckpointDestinations``
+
+       Jobs which specify a checkpoint destination must specify a checkpoint
+       destination that the AP knows how to clean up (that has a matching
+       entry in :macro:`CHECKPOINT_DESTINATION_MAPFILE`).
+
     -  ``UWCS_Desktop``
 
        This was the default policy before HTCondor version 8.1.6. It is
@@ -266,7 +281,7 @@ incorporates.
 
     -  ``Desktop``
 
-       An updated and reimplementation of the ``UWCS_Desktop`` policy,
+       An updated and re-implementation of the ``UWCS_Desktop`` policy,
        but without the ``UWCS`` naming of some configuration variables.
 
     -  ``Limit_Job_Runtimes( limit_in_seconds )``
@@ -359,14 +374,14 @@ incorporates.
        Add the given policy to the ``WANT_HOLD`` expression; if the
        ``WANT_HOLD`` expression is defined, ``policy_variable`` is
        prepended to the existing expression; otherwise ``WANT_HOLD`` is
-       simply set to the value of the textttpolicy_variable macro.
+       simply set to the value of the policy_variable macro.
 
        See an example here:
        :ref:`admin-manual/configuration-templates:configuration template examples`.
 
     -  ``Startd_Publish_CpusUsage``
 
-       Publish the number of CPU cores being used by the job into to
+       Publish the number of CPU cores being used by the job into the
        slot ad as attribute ``CpusUsage``. This value will be the
        average number of cores used by the job over the past minute,
        sampling every 5 seconds.

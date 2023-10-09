@@ -104,7 +104,7 @@ used by each instance of the job. So, ``stdout``, and ``stderr`` will refer to
 ``out.0``, and ``err.0`` for the first run of the program,
 ``out.1``, and ``err.1`` for the second run of the program,
 and so forth. A log file containing entries about when and where
-HTCondor runs, checkpoints, and migrates processes for all the 150
+HTCondor runs, transfer files, and terminates for all the 150
 queued programs will be written into the single file ``foo.log``.
 If there are 150 or more available slots in your pool, all 150 instances
 might be run at the same time, otherwise, HTCondor will run as many as
@@ -351,7 +351,7 @@ file.
     naming output files.
 
 ``$(Year)`` ``$(Month)`` ``$(Day)``
-    These integer values are derived from the `$(SUBMIT_FILE)` macro above.
+    These integer values are derived from the `$(SUBMIT_TIME)` macro above.
 
 ``$(Item)``
     The default name of the variable when no ``<varname>`` is provided
@@ -914,7 +914,7 @@ the machine of 0.0. The ``Rank`` attribute will only rank machines where
 the attribute is defined. Therefore, the machine with the highest
 floating point performance may not be the one given the highest rank.
 
-So, it is wise when writing a ``Rank`` expression to check if the
+So, it is wise when writing a ``Rank`` expression to    check if the
 expression's evaluation will lead to the expected resulting ranking of
 machines. This can be accomplished using the *condor_status* command
 with the *-constraint* argument. This allows the user to see a list of
@@ -1049,12 +1049,12 @@ Jobs That Require Credentials
 
 :index:`requesting OAuth credentials for a job<single: requesting OAuth credentials for a job; OAuth>`
 
-If the HTCondor pool administrator has configured the submit machine
+If the HTCondor pool administrator has configured the access point
 with one or more credential monitors,
 jobs submitted on that machine may automatically be provided with credentials
 and/or it may be possible for users to request and obtain credentials for their jobs.
 
-Suppose the administrator has configured the submit machine
+Suppose the administrator has configured the access point
 such that users may obtain credentials from a storage service called "CloudBoxDrive."
 A job that needs credentials from CloudBoxDrive
 should contain the submit command
@@ -1064,13 +1064,13 @@ should contain the submit command
     use_oauth_services = cloudboxdrive
 
 Upon submitting this job for the first time,
-the user will be directed to a webpage hosted on the submit machine
+the user will be directed to a webpage hosted on the access point
 which will guide the user through the process of obtaining a CloudBoxDrive credential.
-The credential is then stored securely on the submit machine.
+The credential is then stored securely on the access point.
 (**Note: depending on which credential monitor is used, the original
 job may have to be re-submitted at this point.**)
-(Also note that at no point is the user's *password* stored on the submit machine.)
-Once a credential is stored on the submit machine,
+(Also note that at no point is the user's *password* stored on the access point.)
+Once a credential is stored on the access point,
 as long as it remains valid,
 it is transferred securely to all subsequently submitted jobs that contain ``use_oauth_services = cloudboxdrive``.
 
@@ -1119,7 +1119,7 @@ the submit file might look like
 It is possible for a single job to request and/or use credentials from multiple services
 by listing each service in the ``use_oauth_services`` command.
 Suppose the nearby university has a SciTokens service that provides credentials to access the ``localstorage.myuni.edu`` machine,
-and the HTCondor pool administrator has configured the submit machine to allow users to obtain credentials from this service,
+and the HTCondor pool administrator has configured the access point to allow users to obtain credentials from this service,
 and that a user has write access to the `/foo` directory on the storage machine.
 A submit file that would result in a job that contains credentials
 that can read from CloudBoxDrive and write to the local university storage might look like

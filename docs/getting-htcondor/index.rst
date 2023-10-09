@@ -44,7 +44,6 @@ instructions corresponding to your operating system:
 
 * :doc:`Windows <install-windows-as-administrator>`.
 * :doc:`Linux <install-linux-as-root>`.  HTCondor supports
-  Enterprise Linux 7 including Red Hat, CentOS, and Scientific Linux 7;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Debian 11; and Ubuntu 20.04 and 22.04.
@@ -61,7 +60,6 @@ works for the user who installed it, at least you know who to blame for
 misbehaving jobs.
 
 * :doc:`Linux <install-linux-as-user>`.  HTCondor supports
-  Enterprise Linux 7 including Red Hat, CentOS, and Scientific Linux 7;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Debian 11; and Ubuntu 20.04 and 22.04.
@@ -109,5 +107,5 @@ HTCondor also supports cloud-native distribution.
   pool that scales automatically to run submitted jobs. If you're new to
   HTCondor, you can proceed to the :ref:`quick_start_guide` immediately after
   following those instructions.
-* We also have documention on creating a
+* We also have documentation on creating a
   :doc:`../cloud-computing/condor-in-the-cloud` by hand.

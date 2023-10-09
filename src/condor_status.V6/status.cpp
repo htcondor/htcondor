@@ -26,7 +26,6 @@
 #include "get_daemon_name.h"
 #include "daemon.h"
 #include "dc_collector.h"
-#include "extArray.h"
 #include "sig_install.h"
 #include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
@@ -40,6 +39,7 @@
 #include "prettyPrint.h"
 #include "setflags.h"
 #include "adcluster.h"
+#include "metric_units.h" // for readable mem mb
 
 #include <vector>
 #include <sstream>
@@ -62,6 +62,8 @@ public:
 	unsigned int flags;    // SROD_* flags used while processing
 	ClassAd * ad;
 	class StatusRowOfData * next_slot; // used at runtime to linkup slots for a machine.
+	std::string label;     // label for the row
+
 	StatusRowOfData(unsigned int _ord)
 		: ordinal(_ord), flags(0), ad(NULL)
 		, next_slot(NULL)
@@ -110,9 +112,13 @@ typedef std::map<std::string, StatusRowOfData, STRVCMPStr> ROD_MAP_BY_KEY;
 #define SROD_SKIP    0x0002   // this row should be skipped entirely
 #define SROD_FOLDED  0x0004   // data from this row has been folded into another row
 #define SROD_PRINTED 0x0008   // Set during printing so we can know what has already been printed
+#define SROD_ROWN    0x0010   // Set while folding to indicate that this is the 2nd or later row for a given machine
 
-#define SROD_PARTITIONABLE_SLOT 0x1000 // is a partitionable slot
-#define SROD_BUSY_SLOT          0x2000 // is an busy slot (Claimed/Matched/Preempting)
+#define SROD_DYNAMIC_SLOT       0x0200 // is a dynamic slot
+#define SROD_PARTITIONABLE_SLOT 0x0400 // is a partitionable slot
+#define SROD_BACKFILL_SLOT      0x0800 // is a backfill slot
+#define SROD_AP_RESERVED_SLOT   0x1000 // is a claimed p-slot. i.e. reserved to a single AP
+#define SROD_BUSY_SLOT          0x2000 // is an busy slot (Claimed/Matched/Preempting) (but no Claimed p-slots)
 #define SROD_UNAVAIL_SLOT       0x4000 // is an unavailable slot (Owner/Drained/Delete?)
 #define SROD_EXHAUSTED_SLOT     0x8000 // is a partitionable slot with no cores remaining.
 
@@ -139,15 +145,36 @@ public:
 		return true;
 	}
 	// make sure that the primary key is the same as arg, inserting arg as the first key if needed
-	bool ForcePrimaryKey(const char * arg) {
-		if ( ! key_args.size() || key_args[0].empty() || MATCH != strcasecmp(key_args[0].c_str(), arg)) {
+	// if the primary key is the same as attr, *replace* the primary key rather than inserting a new one.
+	bool ForcePrimaryKey(const char * attr, const char * arg=nullptr) {
+		if ( ! key_args.size() || key_args[0].empty() || YourStringNoCase(attr) != key_args[0] 
+			   || (key_args.size() && arg && YourStringNoCase(arg) != key_args[0])) {
 			ExprTree* expr = NULL;
-			if (ParseClassAdRvalExpr(arg, expr)) {
+			const char * str = arg ? arg : attr;
+			if (ParseClassAdRvalExpr(str, expr)) {
 				return false;
 			}
-			key_exprs.insert(key_exprs.begin(), expr);
-			key_args.insert(key_args.begin(), arg);
+			if (key_args.size() && arg && YourStringNoCase(attr) == key_args[0]) {
+				delete key_exprs[0];
+				key_exprs[0] = expr;
+				key_args[0] = arg;
+			} else {
+				key_exprs.insert(key_exprs.begin(), expr);
+				key_args.insert(key_args.begin(), str);
+			}
 		}
+		/*
+		if (arg2) {
+			if (key_args.size() < 2 || YourStringNoCase(arg2) != key_args[1]) {
+				ExprTree * expr = nullptr;
+				if (ParseClassAdRvalExpr(arg2, expr)) {
+					return false;
+				}
+				key_exprs.insert(key_exprs.begin() + 1, expr);
+				key_args.insert(key_args.begin() + 1, arg2);
+			}
+		}
+		*/
 		return true;
 	}
 
@@ -206,6 +233,7 @@ bool			offlineMode = false;
 bool			mergeMode = false;
 bool			annexMode = false;
 bool			compactMode = false;
+bool			dash_gpus = false;
 
 // Merge-mode globals.
 const char * rightFileName = NULL;
@@ -222,6 +250,7 @@ typedef struct {
 
 // The main pretty printer.
 PrettyPrinter mainPP( PP_NOTSET, PP_NOTSET, STD_HEADFOOT );
+
 
 // function declarations
 void usage 		(const char * opts=NULL);
@@ -321,10 +350,238 @@ static State LookupStartdState(ClassAd* ad)
 	return string_to_state (state);
 }
 
+// keep track of the state of all of the slots of a machine
+struct _slot_state {
+	union {
+		unsigned int all;
+		struct {
+			unsigned int id     : 16;
+
+			unsigned int state   : 4;
+			unsigned int act     : 4;
+
+			unsigned int pslot   : 1;
+			unsigned int dslot   : 1;
+			unsigned int bkfill  : 1;
+			unsigned int offline : 1;
+
+			unsigned int idle    : 1;
+		} bit;
+	};
+	_slot_state(unsigned flags = 0) : all(flags) {};
+	_slot_state(const struct _slot_state & that) : all(that.all) {};
+};
+struct _machine_state
+{
+	std::string machine;
+	std::map<std::string, unsigned int> slots;
+	const char * print(std::string &buf) const;
+};
+
+const char * _machine_state::print(std::string & buf) const {
+	buf += machine;
+	for (auto it : slots) {
+		buf += " ";
+		buf += it.first;
+		buf += "/";
+		formatstr_cat(buf, "%x", it.second);
+	}
+	return buf.c_str();
+}
+
+// object manages gpu property ads and track slot ownership of them
+class TrackGPUs
+{
+public:
+	TrackGPUs () {};
+	~TrackGPUs() {};
+
+	int  ingest(ClassAd * ad, StringList * ids_added, StringList * ids_offline);
+	void displayGPUs(FILE * out, bool verbose) const;
+	bool haveGPUs() const { return ! gpu_props.empty(); }
+
+	bool IsOffline(const std::string & id) const {
+		return gpu_offline.count(id) > 0;
+	}
+
+	const ClassAd* Lookup(const std::string & id) const {
+		std::map<std::string,ClassAd>::const_iterator found = gpu_props.find(id);
+		if (found != gpu_props.end()) {
+			return &found->second;
+		}
+		return nullptr;
+	}
+
+	bool LookupBool(const std::string & id, const std::string & attr, bool & value) const {
+		const ClassAd * ad = Lookup(id);
+		if (ad) { return ad->LookupBool(attr, value); }
+		return false;
+	}
+
+	template<typename T>
+	bool LookupInteger(const std::string & id, const std::string & attr, T & value) const {
+		const ClassAd * ad = Lookup(id);
+		if (ad) { return ad->LookupInteger(attr, value); }
+		return false;
+	}
+
+	template<typename T>
+	bool LookupFloat(const std::string & id, const std::string & attr, T & value) const {
+		const ClassAd * ad = Lookup(id);
+		if (ad) { return ad->LookupFloat(attr, value); }
+		return false;
+	}
+
+	template<typename T>
+	bool LookupString(const std::string & id, const std::string & attr, T & value) const {
+		const ClassAd * ad = Lookup(id);
+		if (ad) { return ad->LookupString(attr, value); }
+		return false;
+	}
+
+private:
+	std::map<std::string,ClassAd> gpu_props;
+	std::set<std::string> gpu_offline;
+	std::map<std::string,struct _machine_state> gpu_slots;
+};
+
+// global GPU property ads
+TrackGPUs mainGpuInfo;
+
+int TrackGPUs::ingest(ClassAd * ad, StringList * ids_added, StringList * ids_offline)
+{
+	classad::ClassAdUnParser unparser;
+	unparser.SetOldClassAd( true, true );
+
+	std::string machine, name, offline, tmp;
+	ad->LookupString(ATTR_MACHINE, machine);
+	ad->LookupString(ATTR_NAME, name);
+	ad->LookupString("OfflineGPUs", offline);
+
+	// extract the slotname part from the name field
+	size_t off = name.find('@',0);
+	if (off > 0 && off < name.size()) { name.erase(off); }
+
+	State st = no_state;
+	Activity act = no_act;
+	if (ad->LookupString(ATTR_STATE, tmp))    { st = string_to_state(tmp.c_str()); }
+	if (ad->LookupString(ATTR_ACTIVITY, tmp)) { act = string_to_activity(tmp.c_str()); }
+
+	bool PSlot = false, BkSlot = false, DSlot = false;
+	ad->LookupBool(ATTR_SLOT_BACKFILL, BkSlot);
+	ad->LookupBool(ATTR_SLOT_PARTITIONABLE, PSlot);
+	ad->LookupBool(ATTR_SLOT_DYNAMIC, DSlot);
+
+	struct _slot_state slot_state(0); // TODO: set slot id?
+	slot_state.bit.state = (unsigned int)st;
+	slot_state.bit.act = (unsigned int)act;
+	if (BkSlot) { slot_state.bit.bkfill = 1; }
+	if (PSlot)  { slot_state.bit.pslot = 1; }
+	if (DSlot)  { slot_state.bit.dslot = 1; }
+
+	bool unavail_slot = st == drained_state || st == owner_state || st == shutdown_state || st == delete_state;
+	bool busy_slot = st == matched_state || st == claimed_state || st == preempting_state;
+	slot_state.bit.idle = ( ! unavail_slot && (PSlot || ! busy_slot));
+
+	// grap GPU properties ads from the current ad and update our gpu_props and gpu_slots maps
+	int added = false;
+
+	ExprTree * tree = ad->Lookup("AvailableGPUs");
+	if (tree && tree->GetKind() == ClassAd::ExprTree::EXPR_LIST_NODE) {
+		classad::ExprList* list = dynamic_cast<classad::ExprList*>(tree);
+		for(classad::ExprList::iterator it = list->begin() ; it != list->end(); ++it ) {
+			std::string gpu_id;
+
+			// lookup and copy gpu properties the first time we see each unique GPU Id
+			classad::Value item;
+			ClassAd * gpuAd = nullptr;
+			if (ad->EvaluateExpr(*it, item, classad::Value::ALL_VALUES) && item.IsClassAdValue(gpuAd)) {
+				if ( ! gpuAd->LookupString("Id", gpu_id)) {
+					gpu_id.clear();
+					unparser.Unparse(gpu_id, *it);
+				}
+				ClassAd & propsAd = gpu_props[gpu_id];
+				if ( ! propsAd.size()) {
+					propsAd.Update(*gpuAd);
+					++added;
+					if (ids_added) ids_added->append(gpu_id.c_str());
+				}
+			}
+
+			slot_state.bit.offline = 0;
+			if ( ! offline.empty()) {
+				StringList ol(offline);
+				if (ol.contains(gpu_id.c_str())) {
+					slot_state.bit.offline = 1;
+				}
+				for (const char * offid = ol.first(); offid; offid = ol.next()) {
+					if (gpu_offline.count(offid)) continue;
+					if (ids_offline) { ids_offline->append(offid); }
+					gpu_offline.insert(offid);
+				}
+			}
+
+			auto & slots = gpu_slots[gpu_id];
+			slots.machine = machine;
+			slots.slots[name] = slot_state.all;
+		}
+	}
+
+	return added;
+}
+
+void TrackGPUs::displayGPUs(FILE * out, bool verbose) const
+{
+	std::string output;
+	std::string label;
+	output.reserve(4096);
+
+	std::map<std::string, std::vector<int>> gpu_states;
+
+	for (auto it : gpu_props) {
+
+		const char * slots = "";
+		auto found = gpu_slots.find(it.first);
+		if (found != gpu_slots.end()) { 
+			label.clear();
+			slots = found->second.print(label);
+		}
+
+		output.clear();
+
+		ClassAd & ad = it.second;
+		ad.LookupString("DeviceName", label);
+		output += label;
+		output += "/";
+		long long mem = 0;
+		ad.LookupInteger("GlobalMemoryMb", mem);
+		output += metric_units(mem * 1024.0 * 1024.0);
+		output += "/";
+
+		std::vector<int> & states = gpu_states[output];
+		states.resize(8);
+
+		if (verbose) {
+			output.clear();
+			formatstr(output, "# %s : %s\n", it.first.c_str(), slots);
+			formatAd(output, it.second, "\t", nullptr, false); 	// exclude_private will stupidly delete Capabilities!
+			output += "\n";
+			fputs(output.c_str(), out);
+		}
+	}
+
+	fflush(out);
+}
+
+bool local_render_gpus_caps ( classad::Value & value, ClassAd* ad, Formatter & );
+bool local_render_gpus_mem ( classad::Value & value, ClassAd* ad, Formatter & );
+bool local_render_gpus_names ( classad::Value & value, ClassAd* ad, Formatter & );
+
 // arguments passed to the process_ads_callback
 struct _process_ads_info {
    ROD_MAP_BY_KEY * pmap;
    TrackTotals *  totals;
+   TrackGPUs *    gpusInfo;
    unsigned int  ordinal;
    int           columns;
    FILE *        hfDiag; // write raw ads to this file for diagnostic purposes
@@ -340,6 +597,30 @@ static bool store_ads_callback( void * arg, ClassAd * ad ) {
 	return false;
 }
 
+static void reduce_gpu_device_name(std::string &devname)
+{
+	if (starts_with(devname, "NVIDIA ")) devname.erase(0,7);
+	if (ends_with(devname,"GB")) {
+		size_t ix = devname.size()-3;
+		if (isdigit(devname[ix])) {
+			devname.erase(ix);
+			while (isdigit(devname.back())) devname.pop_back();
+			if (devname.back() == '-') devname.pop_back();
+		}
+	}
+}
+
+static void totalize_row(struct _process_ads_info & pi, ClassAd* ad, const char * subtot_key, int options)
+{
+	TrackTotals * totals = pi.totals;
+	if (subtot_key) {
+		PrettyPrinter & thePP = * pi.pp;
+		int len = strlen(subtot_key);
+		thePP.max_totals_subkey = MAX(thePP.max_totals_subkey, len);
+	}
+	totals->update(ad, options, subtot_key);
+}
+
 static bool process_ads_callback(void * pv,  ClassAd* ad)
 {
 	bool done_with_ad = true;
@@ -349,10 +630,20 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 	PrettyPrinter &  thePP = * pi->pp;
 	ASSERT( pi->pp != NULL );
 
+	// HACK!!  fix negative SlotTypeId value before we render the key
+	int SlotTypeId = 999;
+	if (compactMode) {
+		if (ad->LookupInteger(ATTR_SLOT_TYPE_ID, SlotTypeId) && SlotTypeId < 0) {
+			ad->Assign(ATTR_SLOT_TYPE_ID, 0 - SlotTypeId);
+		}
+	}
+
 	std::string key;
 	unsigned int ord = pi->ordinal++;
 	sortSpecs.RenderKey(key, ord, ad);
-	//make_status_key(key, ord, ad);
+
+	// put slot type id back
+	if (SlotTypeId < 0) { ad->Assign(ATTR_SLOT_TYPE_ID, SlotTypeId); }
 
 	if (dash_group_by) {
 		std::string id(key), attrs;
@@ -380,8 +671,6 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 			fPrintAd(pi->hfDiag, *ad);
 			fputc('\n', pi->hfDiag);
 		}
-
-		return true; // done processing this ad
 	}
 
 	std::pair<ROD_MAP_BY_KEY::iterator,bool> pp = pmap->insert(std::pair<std::string, StatusRowOfData>(key, ord));
@@ -389,6 +678,12 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 		fprintf( stderr, "Error: Two results with the same key.\n" );
 		done_with_ad = true;
 	} else {
+
+		// ingest GPU properties ads, If we added any, we may need to re-render some p-slot GPUs columns
+		StringList gpu_ids_added, gpu_ids_offline;
+		if (pi->gpusInfo) {
+		   	pi->gpusInfo->ingest(ad, &gpu_ids_added, &gpu_ids_offline);
+		}
 
 		// we can do normal totals now. but compact mode totals we have to do after checking the slot type
 		if (totals && ( ! pi->columns || ! compactMode)) { totals->update(ad); }
@@ -399,43 +694,84 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 			srod.rov.SetMaxCols(pi->columns);
 			thePP.pm.render(srod.rov, ad);
 
-			bool fPslot = false;
+			bool fBkfill = false;
+			if (ad->LookupBool(ATTR_SLOT_BACKFILL, fBkfill) && fBkfill) {
+				srod.flags |= SROD_BACKFILL_SLOT;
+			}
+
+			bool fPslot = false, fDynSlot = false;
 			if (ad->LookupBool(ATTR_SLOT_PARTITIONABLE, fPslot) && fPslot) {
 				srod.flags |= SROD_PARTITIONABLE_SLOT;
 				double cpus = 0;
 				if (ad->LookupFloat(ATTR_CPUS, cpus)) {
 					if (cpus < 0.1) srod.flags |= SROD_EXHAUSTED_SLOT;
 				}
-			} // else
+			} else if (ad->LookupBool(ATTR_SLOT_DYNAMIC, fDynSlot) && fDynSlot) {
+				srod.flags |= SROD_DYNAMIC_SLOT;
+			}
+
 			{
 				State state = LookupStartdState(ad);
+				if (fPslot && (state == claimed_state)) {
+					srod.flags |= SROD_AP_RESERVED_SLOT;
+				} else
 				if (state == matched_state || state == claimed_state || state == preempting_state)
 					srod.flags |= SROD_BUSY_SLOT;
 				else if (state == drained_state || state == owner_state || state == shutdown_state || state == delete_state)
 					srod.flags |= SROD_UNAVAIL_SLOT;
 			}
 			if (totals && compactMode) {
-				char keybuf[64] = " ";
-				const char * subtot_key = keybuf;
-				switch(thePP.ppTotalStyle) {
-					case PP_SUBMITTER_NORMAL: srod.getString(0, keybuf, sizeof(keybuf)-1); break;
+				std::string keybuf, devname;
+				int bk_opt = (srod.flags & SROD_BACKFILL_SLOT) ? TOTALS_OPTION_BACKFILL_SLOTS : 0;
+				if (dash_gpus) {
+					for (const char * gpuid = gpu_ids_added.first(); gpuid; gpuid = gpu_ids_added.next()) {
+						double capy=0.0;
+						long long mb=0;
+						if ( ! pi->gpusInfo->LookupFloat(gpuid, "Capability", capy)) continue;
+						formatstr(keybuf, "Capability %.1f", capy);
+						if (pi->gpusInfo->LookupInteger(gpuid, "GlobalMemoryMb", mb)) {
+							formatstr_cat(keybuf, ", %.1f GB", mb/1024.0);
+							//formatstr_cat(keybuf, ", %lld MB", mb);
+						}
+						if (pi->gpusInfo->LookupString(gpuid, "DeviceName", devname)) {
+							reduce_gpu_device_name(devname);
+							formatstr_cat(keybuf, ", %s", devname.c_str());
+						}
+						totalize_row(*pi, ad, keybuf.c_str(), bk_opt);
+					}
+				} else {
+					const char * subtot_key = nullptr;
+					switch(thePP.ppTotalStyle) {
+					case PP_SUBMITTER_NORMAL:
+						srod.getString(0, keybuf);
+						subtot_key = keybuf.c_str();
+						break;
 					case PP_SCHEDD_NORMAL:
 					case PP_SCHEDD_DATA:
-					case PP_SCHEDD_RUN: subtot_key = NULL; break;
-					case PP_STARTD_STATE: subtot_key = NULL; break; /* use activity as key */
-					default: srod.getString(thePP.startdCompact_ixCol_Platform, keybuf, sizeof(keybuf)-1); break;
-				}
-				if (subtot_key) {
-					int len = strlen(subtot_key);
-					thePP.max_totals_subkey = MAX(thePP.max_totals_subkey, len);
-				}
-				totals->update(ad, TOTALS_OPTION_ROLLUP_PARTITIONABLE | TOTALS_OPTION_IGNORE_DYNAMIC, subtot_key);
-				if ((srod.flags & (SROD_PARTITIONABLE_SLOT | SROD_EXHAUSTED_SLOT)) == SROD_PARTITIONABLE_SLOT) {
-					totals->update(ad, 0, subtot_key);
+					case PP_SCHEDD_RUN:
+					case PP_STARTD_STATE:
+						subtot_key = nullptr; /* use totals default key generated from ad */
+						break;
+					default:
+						srod.getString(thePP.startdCompact_ixCol_Platform, keybuf);
+						subtot_key = keybuf.c_str();
+						break;
+					}
+					totalize_row(*pi, ad, subtot_key, bk_opt | TOTALS_OPTION_ROLLUP_PARTITIONABLE | TOTALS_OPTION_IGNORE_DYNAMIC);
+					if ((srod.flags & (SROD_PARTITIONABLE_SLOT | SROD_EXHAUSTED_SLOT | SROD_BACKFILL_SLOT)) == SROD_PARTITIONABLE_SLOT) {
+						totalize_row(*pi, ad, subtot_key, bk_opt | TOTALS_OPTION_IGNORE_DYNAMIC);
+					}
 				}
 			}
 
-			// for compact mode, we are about to throw about child state and activity attributes
+			// save off the slot name in the label field, we may need this later..
+			if (thePP.startdCompact_ixCol_MachineSlot >= 0) {
+				ad->LookupString(ATTR_NAME, srod.label);
+				size_t off = srod.label.find('@');
+				if (off != std::string::npos) { srod.label.erase(off); }
+			}
+
+			// for compact mode, we are about to throw out child state and activity attributes
 			// so roll them up now
 			if (compactMode && fPslot && thePP.startdCompact_ixCol_ActCode >= 0) {
 				State consensus_state = no_state;
@@ -513,7 +849,6 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 					tmp[0] = asc; tmp[1] = aac; tmp[2] = 0;
 					srod.rov.Column(thePP.startdCompact_ixCol_ActCode)->SetStringValue(tmp);
 				}
-
 			}
 
 			done_with_ad = true;
@@ -527,15 +862,27 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 }
 
 // return true if the strings are non-empty and match up to the first \n
-// or match exactly if there is no \n
-bool same_primary_key(const std::string & aa, const std::string & bb)
+// or match exactly if there is no \n.
+// set same_machine to true if the keys match up to :N
+bool same_primary_key(const std::string & aa, const std::string & bb, bool & slotype_mismatch)
 {
+	slotype_mismatch = false;
+	bool got_colon = false;
 	size_t cb = aa.size();
 	if ( ! cb) return false;
 	for (size_t ix = 0; ix < cb; ++ix) {
 		char ch = aa[ix];
-		if (bb[ix] != ch) return false;
+		if (bb[ix] != ch) {
+			// ignore mismatch for a number after a colon since this is the slottypeid suffix
+			// but keep track of the fact that we had a slottypeid mismatch
+			if (got_colon && (ch >= '0' && ch <= '9' && bb[ix] >= '0' && bb[ix] <= '9')) {
+				slotype_mismatch = true;
+			} else {
+				return false;
+			}
+		}
 		if (ch == '\n') return true;
+		got_colon = ch == ':';
 	}
 	return bb.size() == cb;
 }
@@ -586,10 +933,22 @@ static bool merge_ads_callback( void * arg, ClassAd * ad ) {
 	}
 }
 
+static bool render_gpus_Capability(std::string & buffer, const char * gpulist, int width);
+static bool render_gpus_GlobalMemoryMB(std::string & buffer, const char * gpulist, int width);
+static bool render_gpus_DeviceName (std::string & buffer, const char * gpulist);
+
 // fold slot bb into aa assuming startdCompact format
 void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter & thePP)
 {
 	if (aa.rov.empty()) return;
+
+	if (diagnose) {
+		if (pbb) {
+			fprintf(stderr, "folding(%x) %s into %x %s\n", pbb->flags, pbb->label.c_str(), aa.flags, aa.label.c_str());
+		} else {
+			fprintf(stderr, "folding(%x) %s\n", aa.flags, aa.label.c_str());
+		}
+	}
 
 	// If the destination slot is not partitionable and hasn't already been cooked, some setup work is needed.
 	if ( ! (aa.flags & SROD_PARTITIONABLE_SLOT) && ! (aa.flags & SROD_COOKED)) {
@@ -608,6 +967,8 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter
 			if (thePP.startdCompact_ixCol_FreeMem >= 0) aa.rov.Column(thePP.startdCompact_ixCol_FreeMem)->SetRealValue(0.0);
 		}
 
+		//fprintf(stderr, "cook slot(%x) %s\n", aa.flags, aa.label.c_str());
+
 		// The Slots column should be set to 1
 		if (thePP.startdCompact_ixCol_Slots >= 0) {
 			aa.rov.Column(thePP.startdCompact_ixCol_Slots)->SetIntegerValue(1);
@@ -615,6 +976,48 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter
 		}
 
 		aa.flags |= SROD_COOKED;
+	} else
+	if (aa.flags & SROD_PARTITIONABLE_SLOT) {
+		// The initial render of some of the GPU info columns can fail on a p-slot
+		// because not all of the GPU property ads have been captured yet (we get some from d-slots)
+		// so we we try again to render GPU Capability, GlobalMemoryMB and DeviceName aggregates
+		std::string buffer;
+		const char * gpulist = nullptr;
+		int ixcol = thePP.startdCompact_ixCol_GPUsPropsCaps;
+		if (ixcol >= 0 && ixcol < aa.rov.ColCount() &&
+			! aa.rov.is_valid(ixcol) && aa.rov.Column(ixcol)->IsStringValue(gpulist)) {
+
+			if (diagnose && gpulist) {
+				const char * machine = "";
+				aa.rov.Column(0)->IsStringValue(machine);
+				fprintf(stderr, "fixup gpu cap for %s %s : %s\n", machine, aa.label.c_str(), gpulist);
+			}
+			// TODO: what if column is no longer the default width?
+			if (render_gpus_Capability(buffer, gpulist, 10)) {
+				aa.rov.Column(ixcol)->SetStringValue(buffer);
+				aa.rov.set_col_valid(ixcol, true);
+			}
+			if (diagnose) { fprintf(stderr, "gpu cap now %s\n", buffer.c_str()); }
+		}
+		ixcol = thePP.startdCompact_ixCol_GPUsPropsMem;
+		if (ixcol >= 0 && ixcol < aa.rov.ColCount() &&
+			! aa.rov.is_valid(ixcol) && aa.rov.Column(ixcol)->IsStringValue(gpulist)) {
+			// TODO: what if column is no longer the default width?
+			if (render_gpus_GlobalMemoryMB(buffer, gpulist, 10)) {
+				aa.rov.Column(ixcol)->SetStringValue(buffer);
+				aa.rov.set_col_valid(ixcol, true);
+			}
+			if (diagnose) { fprintf(stderr, "gpu mem now %s\n", buffer.c_str()); }
+		}
+		ixcol = thePP.startdCompact_ixCol_GPUsPropsName;
+		if (ixcol >= 0 && ixcol < aa.rov.ColCount() &&
+			! aa.rov.is_valid(ixcol) && aa.rov.Column(ixcol)->IsStringValue(gpulist)) {
+			if (render_gpus_DeviceName(buffer, gpulist)) {
+				aa.rov.Column(ixcol)->SetStringValue(buffer);
+				aa.rov.set_col_valid(ixcol, true);
+			}
+			if (diagnose) { fprintf(stderr, "gpu names now %s\n", buffer.c_str()); }
+		}
 	}
 
 	if ( ! pbb)
@@ -624,6 +1027,7 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter
 
 	// If the source slot is partitionable, we fold differently than if it is static
 	bool partitionable = (bb.flags & SROD_PARTITIONABLE_SLOT) != 0;
+	//bool backfill      = (bb.flags & SROD_BACKFILL_SLOT) != 0;
 
 	// calculate the memory size of the largest slot
 	double amem = 0.0;
@@ -654,9 +1058,13 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter
 	// Increment the aa Slots column
 	int aslots, bslots = 1;
 	if (thePP.startdCompact_ixCol_Slots >= 0) {
-		aa.getNumber(thePP.startdCompact_ixCol_Slots, aslots);
+		if ( ! aa.getNumber(thePP.startdCompact_ixCol_Slots, aslots)) {
+			aslots = 1;
+			aa.rov.set_col_valid(thePP.startdCompact_ixCol_Slots, true);
+		};
 		if (partitionable) bb.getNumber(thePP.startdCompact_ixCol_Slots, bslots);
 		aa.rov.Column(thePP.startdCompact_ixCol_Slots)->SetIntegerValue(aslots + bslots);
+		//fprintf(stderr, "sum slots(%x) %d+%d=%d\n", aa.flags, aslots, bslots, aslots+bslots);
 	}
 
 	// Sum the number of job starts
@@ -687,17 +1095,58 @@ void reduce_slot_results(ROD_MAP_BY_KEY & rmap, PrettyPrinter & thePP )
 	if (rmap.empty())
 		return;
 
+	//fprintf(stderr, "reduce_slot_results %d\n", ! rmap.empty());
+
+	bool fold_last = false;
 	ROD_MAP_BY_KEY::iterator it, itMachine = rmap.begin();
 	it = itMachine;
 	for (++it; it != rmap.end(); ++it) {
-		if (same_primary_key(it->first, itMachine->first)) {
+		bool slottype_mismatch = false;
+		bool same_machine = same_primary_key(it->first, itMachine->first, slottype_mismatch);
+		//if (diagnose) { fprintf(stderr, "[%s:%x] %d%d : \n", it->first.c_str(), it->second.flags, same_machine, slottype_mismatch); }
+		if (same_machine && ! slottype_mismatch) {
 			fold_slot_result(itMachine->second, &it->second, thePP);
 			it->second.flags |= SROD_FOLDED;
+			fold_last = false;
 		} else {
 			fold_slot_result(itMachine->second, NULL, thePP);
+			// if we have a MachineSlot column, and this is the same machine but a different slot type
+			// we want to change the text of the MachineSlot column to just be the slot name
+			if (thePP.startdCompact_ixCol_MachineSlot >= 0 &&  same_machine && slottype_mismatch) {
+				it->second.flags |= SROD_ROWN; // mark this is RowN i.e. the 2nd and subsequent rows for a machine
+
+			#if 1
+				if ( ! it->second.label.empty()) {
+					std::string name("   ");
+					name += it->second.label;
+					it->second.rov.Column(thePP.startdCompact_ixCol_MachineSlot)->SetStringValue(name);
+				}
+			#else
+				// HACK! TODO: better way to construct the indented Machine column values?
+				// assume that the sort key is hostname \n slot@hostname
+				// so we can find the first \n and then the first @ after that to get the slot name
+				size_t off1, off2;
+				std::string name;
+				off1 = it->first.find('\n');
+				if (off1 != std::string::npos) {
+					off2 = it->first.find_first_of("@\n", off1+1);
+					if (off2 != std::string::npos && it->first[off2] == '@') {
+						name = it->first.substr(off1+1,off2-off1-1);
+					}
+				}
+
+				if ( ! name.empty()) {
+					name.insert(0,"   ");
+					it->second.rov.Column(thePP.startdCompact_ixCol_MachineSlot)->SetStringValue(name);
+				}
+			#endif
+			}
 			itMachine = it;
+			fold_last = true;
 		}
 	}
+	// in case the last row is was not folded into a earlier row, do a singleton fold on it.
+	if (fold_last) { fold_slot_result(itMachine->second, NULL, thePP); }
 }
 
 void doNormalOutput( struct _process_ads_info & ai, AdTypes & adType );
@@ -738,8 +1187,10 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 	// if a first-pass setMode set a mode_constraint, apply it now to the query object
+	// TODO: tj 2023 I think this will never fire? check and remove if not
 	if (mode_constraint && ! explicit_format) {
 		query->addANDConstraint(mode_constraint);
+		mode_constraint = nullptr;
 	}
 
 	// set result limit if any is desired.
@@ -757,32 +1208,31 @@ main (int argc, char *argv[])
 		query->setGenericQueryType(genericType);
 	}
 
-	// set the constraints implied by the mode
+	// set the OR constraints implied by the mode
+	// TODO: tj 2023 : is this a bug? shouldn't it be AND?
+	mode_constraint = nullptr;
 	if (sdo_mode == SDO_Startd_Avail && ! compactMode) {
 		// -avail shows unclaimed slots
-		snprintf (buffer, sizeof(buffer), "%s == \"%s\" && Cpus > 0", ATTR_STATE, state_to_string(unclaimed_state));
-		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
-		query->addORConstraint (buffer);
+		mode_constraint = PMODE_AVAIL_CONSTRAINT;
 	}
 	else if (sdo_mode == SDO_Startd_Claimed && ! compactMode) {
 		// -claimed shows claimed slots
-		snprintf (buffer, sizeof(buffer), "%s == \"%s\"", ATTR_STATE, state_to_string(claimed_state));
-		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
-		query->addORConstraint (buffer);
+		mode_constraint = PMODE_CLAIMED_CONSTRAINT;
 	}
 	else if (sdo_mode == SDO_Startd_Cod) {
 		// -run shows claimed slots
-		snprintf (buffer, sizeof(buffer), ATTR_NUM_COD_CLAIMS " > 0");
-		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
-		query->addORConstraint (buffer);
+		mode_constraint = ATTR_NUM_COD_CLAIMS;
+	}
+	if (mode_constraint) {
+		if (diagnose) { printf ("Adding OR constraint [%s]\n", mode_constraint); }
+		query->addORConstraint (mode_constraint);
+		mode_constraint = nullptr;
 	}
 
+
 	if(javaMode) {
-		snprintf( buffer, sizeof(buffer), "%s == TRUE", ATTR_HAS_JAVA );
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", buffer);
-		}
-		query->addANDConstraint (buffer);
+		if (diagnose) { printf ("Adding constraint [%s]\n", ATTR_HAS_JAVA); }
+		query->addANDConstraint (ATTR_HAS_JAVA);
 
 		projList.insert(ATTR_HAS_JAVA);
 		projList.insert(ATTR_JAVA_VENDOR);
@@ -790,16 +1240,16 @@ main (int argc, char *argv[])
 	}
 
 	if(offlineMode) {
-		query->addANDConstraint( "size( OfflineUniverses ) != 0" );
+		const char * constr = "size( OfflineUniverses ) != 0";
+		if (diagnose) { printf( "Adding constraint [%s]\n", constr ); }
+		query->addANDConstraint(constr);
+
 		projList.insert( "OfflineUniverses" );
 	}
 
 	if(absentMode) {
-	    snprintf( buffer, sizeof(buffer), "%s == TRUE", ATTR_ABSENT );
-	    if (diagnose) {
-	        printf( "Adding constraint %s\n", buffer );
-	    }
-	    query->addANDConstraint( buffer );
+		if (diagnose) { printf( "Adding constraint [%s]\n", ATTR_ABSENT ); }
+		query->addANDConstraint( ATTR_ABSENT );
 
 	    projList.insert( ATTR_ABSENT );
 	    projList.insert( ATTR_LAST_HEARD_FROM );
@@ -807,11 +1257,8 @@ main (int argc, char *argv[])
 	}
 
 	if(vmMode) {
-		snprintf( buffer, sizeof(buffer), "%s == TRUE", ATTR_HAS_VM);
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", buffer);
-		}
-		query->addANDConstraint (buffer);
+		if (diagnose) { printf ("Adding constraint [%s]\n", ATTR_HAS_VM); }
+		query->addANDConstraint (ATTR_HAS_VM);
 
 		projList.insert(ATTR_VM_TYPE);
 		projList.insert(ATTR_VM_MEMORY);
@@ -826,24 +1273,34 @@ main (int argc, char *argv[])
 	}
 
 	if (compactMode && ! (vmMode || javaMode)) {
+		mode_constraint = nullptr;
 		if (sdo_mode == SDO_Startd_Avail) {
 			// State==Unclaimed picks up partitionable and unclaimed static, Cpus > 0 picks up only partitionable that have free memory
-			snprintf(buffer, sizeof(buffer), "State == \"%s\" && Cpus > 0 && Memory > 0", state_to_string(unclaimed_state));
+			mode_constraint = PMODE_AVAIL_COMPACT_CONSTRAINT;
 		} else if (sdo_mode == SDO_Startd_Claimed) {
 			// State==Claimed picks up static slots, NumDynamicSlots picks up partitionable slots that are partly claimed.
-			snprintf(buffer, sizeof(buffer), "(State == \"%s\" && DynamicSlot =!= true) || (NumDynamicSlots isnt undefined && NumDynamicSlots > 0)", state_to_string(claimed_state));
+			// in later versions of HTCondor p-slots can be Claimed, but not before 10.7.0
+			mode_constraint = PMODE_CLAIMED_COMPACT_CONSTRAINT;
+		} else if (sdo_mode == SDO_Startd_GPUs) {
+			// Note: this check for AvailableGPUs will miss GPUs on machines that do not have nested GPU properties enabled.
+			mode_constraint = PMODE_GPUS_COMPACT_CONSTRAINT;
+			//projList.insert("AvailableGPUs");
+			//projList.insert("AssignedGPUs");
+			//projList.insert("OfflineGPUs");
 		} else {
-			snprintf(buffer, sizeof(buffer), "PartitionableSlot =?= true || DynamicSlot =!= true");
+			mode_constraint = PMODE_STARTD_COMPACT_CONSTRAINT;
 		}
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", buffer);
+		if (mode_constraint) { 
+			if (diagnose) { printf ("Adding constraint [%s]\n", mode_constraint); }
+			query->addANDConstraint (mode_constraint);
+			mode_constraint = nullptr;
 		}
-		query->addANDConstraint (buffer);
 		projList.insert(ATTR_ARCH);
 		projList.insert(ATTR_OPSYS_AND_VER);
 		projList.insert(ATTR_OPSYS_NAME);
 		projList.insert(ATTR_SLOT_DYNAMIC);
 		projList.insert(ATTR_SLOT_PARTITIONABLE);
+		projList.insert(ATTR_SLOT_BACKFILL);
 		projList.insert(ATTR_STATE);
 		projList.insert(ATTR_ACTIVITY);
 		//projList.insert(ATTR_MACHINE_RESOURCES);
@@ -866,17 +1323,19 @@ main (int argc, char *argv[])
 		sortSpecs.Add(ATTR_NAME);
 	}
 	if (compactMode && !mergeMode) {
-		// compact mode reqires machine to be the primary sort key,
+		// compact mode reqires machine to be the primary sort key, and slot type to be secondary
 		// but merge mode requires that we respect the sort key.
 		// FIXME: We should be using a merge key for merging, probably,
 		// anyway, maybe even just as the argument to -merge.
-		sortSpecs.ForcePrimaryKey(ATTR_MACHINE);
+		sortSpecs.ForcePrimaryKey(ATTR_MACHINE, "join(\":\",Machine,SlotTypeId)");
 	}
 	sortSpecs.AddToProjection(projList);
 
 	// initialize the totals object
 	if (mainPP.ppStyle == PP_CUSTOM && mainPP.using_print_format) {
 		if (mainPP.pmHeadFoot & HF_NOSUMMARY) mainPP.ppTotalStyle = PP_CUSTOM;
+	} else if (dash_gpus) {
+		mainPP.ppTotalStyle = PP_STARTD_STATE;
 	} else {
 		mainPP.ppTotalStyle = mainPP.ppStyle;
 	}
@@ -1001,7 +1460,6 @@ main (int argc, char *argv[])
 			temp.reserve(4096);
 			PrintPrintMask(temp, *pFnTable, mainPP.pm, pheadings, pmms, group_by_keys, NULL);
 			fprintf(fout, "%s\n", temp.c_str());
-			//exit (1);
 		}
 
 		fprintf(fout, "diagnose: ");
@@ -1043,6 +1501,8 @@ main (int argc, char *argv[])
 
 		fprintf (fout, "\n\n");
 		fprintf (stdout, "Result of making query ad was:  %d\n", q);
+		// if we have a diag ads file declared, we want to go ahead and make the query and
+		// save the raw query results to a file, otherwise we are done and can exit now.
 		if ( ! diagnostics_ads_file) exit (1);
 	}
 
@@ -1127,6 +1587,7 @@ main (int argc, char *argv[])
 	struct _process_ads_info right_ai = {
 		& right,
 		(rpp->pmHeadFoot&HF_NOSUMMARY) ? NULL : & rightTotals,
+		dash_gpus ? &mainGpuInfo : nullptr,
 		1, rpp->pm.ColCount(), NULL, 0, rpp
 	};
 
@@ -1165,6 +1626,7 @@ main (int argc, char *argv[])
 	struct _process_ads_info left_ai = {
 		& left,
 		(lpp->pmHeadFoot&HF_NOSUMMARY) ? NULL : & leftTotals,
+		dash_gpus ? &mainGpuInfo : nullptr,
 		1, lpp->pm.ColCount(), NULL, 0, lpp
 	};
 
@@ -1172,6 +1634,7 @@ main (int argc, char *argv[])
 	struct _process_ads_info both_ai = {
 		& both,
 		(bpp->pmHeadFoot&HF_NOSUMMARY) ? NULL : & bothTotals,
+		dash_gpus ? &mainGpuInfo : nullptr,
 		1, bpp->pm.ColCount(), NULL, 0, bpp
 	};
 
@@ -1217,7 +1680,7 @@ main (int argc, char *argv[])
 			fclose(right_ai.hfDiag);
 			right_ai.hfDiag = NULL;
 		}
-		exit(1);
+		if ( ! diagnostics_ads_file)  exit(1);
 	}
 
 
@@ -1311,9 +1774,7 @@ main (int argc, char *argv[])
 		ClassAd * ad;
 		while ((ad = groups.next()) != NULL) {
 			output.clear();
-			classad::References attrs;
-			sGetAdAttrs(attrs, *ad);
-			sPrintAdAttrs(output, *ad, attrs);
+			formatAd(output, *ad, nullptr, nullptr, false);	// exclude_private will stupidly delete attributes!
 			output += "\n";
 			fputs(output.c_str(), stdout);
 		}
@@ -1448,7 +1909,296 @@ doNormalOutput( struct _process_ads_info & ai, AdTypes & adType ) {
 		int totals_key_width = (mainPP.wide_display || auto_width) ? -1 : MAX(14, mainPP.max_totals_subkey);
 		totals->displayTotals(stdout, totals_key_width);
 	}
+	// if gpu total are required, display them now
+	if (any_ads && !(mainPP.pmHeadFoot&HF_NOSUMMARY) && ai.gpusInfo && ai.gpusInfo->haveGPUs()) {
+		fputc('\n', stdout);
+		ai.gpusInfo->displayGPUs(stdout, false);
+	}
 }
+
+const char * extractGPUsProps ( const classad::Value & value, ClassAd* /*slot*/, std::string &list_out ) {
+	std::set<std::string> uniq;
+
+	classad::ClassAdUnParser unparser;
+	unparser.SetOldClassAd( true, true );
+
+	const classad::ExprList * list = NULL;
+	if (value.IsListValue(list)) {
+		// for lists, unparse each item into the uniqueness set.
+		for(classad::ExprList::const_iterator it = list->begin() ; it != list->end(); ++it ) {
+			std::string item;
+			if ((*it)->GetKind() != classad::ExprTree::LITERAL_NODE) {
+				unparser.Unparse( item, *it );
+			} else {
+				classad::Value val;
+				reinterpret_cast<classad::Literal*>(*it)->GetValue(val);
+				if ( ! val.IsStringValue(item)) {
+					unparser.Unparse( item, *it );
+				}
+			}
+			uniq.insert(item);
+		}
+	} else if (value.IsStringValue(list_out)) {
+		// for strings, parse as a string list, and add each unique item into the set
+		StringList lst(list_out.c_str());
+		for (const char * psz = lst.first(); psz; psz = lst.next()) {
+			uniq.insert(psz);
+		}
+	} else {
+		// for other types treat as a single item, no need to uniqify
+		list_out.clear();
+		ClassAdValueToString(value, list_out);
+		return list_out.c_str();
+	}
+
+	list_out.clear();
+	for (std::set<std::string>::const_iterator it = uniq.begin(); it != uniq.end(); ++it) {
+		if (list_out.empty()) list_out = *it;
+		else {
+			list_out += ", ";
+			list_out += *it;
+		}
+	}
+
+	return list_out.c_str();
+}
+
+
+bool getGPUPropertyRange(const char * ids, const std::string & attr, double & dmin, double & dmax, int & missing)
+{
+	StringTokenIterator gpuids(ids);
+	double dinit = dmax;
+	missing = 0;
+	bool retval = false;
+	for (auto gpuid : gpuids) {
+		double dval = dinit;
+		if (mainGpuInfo.LookupFloat(gpuid, attr, dval)) {
+			if (dval < dmin) dmin = dval;
+			if (dval > dmax) dmax = dval;
+			retval = true;
+		} else if (mainGpuInfo.IsOffline(gpuid)) {
+			// not an error, but not yet a success either
+		} else {
+			++missing;
+		}
+	}
+	return retval;
+}
+
+bool getGPUPropertyRange(const char * ids, const std::string & attr, long long & dmin, long long & dmax, int & missing)
+{
+	StringTokenIterator gpuids(ids);
+	long long dinit = dmax;
+	missing = 0;
+	bool retval = false;
+	for (auto gpuid : gpuids) {
+		long long dval = dinit;
+		if (mainGpuInfo.LookupInteger(gpuid, attr, dval)) {
+			if (dval < dmin) dmin = dval;
+			if (dval > dmax) dmax = dval;
+			retval = true;
+		} else if (mainGpuInfo.IsOffline(gpuid)) {
+			// not an error, but not yet a success either
+		} else {
+			++missing;
+		}
+	}
+	return retval;
+}
+
+bool getGPUPropertyRange(const char * ids, const std::string & attr, std::set<std::string> & range, int & missing)
+{
+	StringTokenIterator gpuids(ids);
+	missing = 0;
+	bool retval = false;
+	for (auto gpuid : gpuids) {
+		std::string item;
+		if (mainGpuInfo.LookupString(gpuid, attr, item)) {
+			range.insert(item);
+			retval = true;
+		} else if (mainGpuInfo.IsOffline(gpuid)) {
+			// not an error, but not yet a success either
+		} else {
+			++missing;
+		}
+	}
+	return retval;
+}
+
+bool local_render_slot_type_letter ( classad::Value & value, ClassAd* /*ad*/, Formatter & )
+{
+	std::string buffer;
+	value.IsStringValue(buffer);
+	if (buffer == "Static") { buffer = "s"; }
+	else if (buffer == "Dynamic") { buffer = "d"; }
+	else if (buffer == "Partitionable") { buffer = " "; }
+	else if ( ! buffer.empty())  { buffer.erase(1); }
+
+	value.SetStringValue(buffer);
+	return true;
+}
+
+// Suffix tag for NumDynamicSlots column
+bool local_render_slot_count_tag ( classad::Value & value, ClassAd* /*ad*/, Formatter & )
+{
+	std::string buffer;
+	value.IsStringValue(buffer);
+	if (buffer == "Static") { buffer = "S"; }
+	else if (buffer == "Partitionable") { buffer = " "; }
+	else if ( ! buffer.empty())  { buffer.erase(1); }
+
+	value.SetStringValue(buffer);
+	return true;
+}
+
+
+bool local_render_num_dslots ( classad::Value & value, ClassAd* ad, Formatter & )
+{
+	if (value.IsUndefinedValue()) {
+		if ( ! ad->Lookup(ATTR_SLOT_DYNAMIC)) value.SetIntegerValue(1);
+	}
+	return true;
+}
+
+static bool render_gpus_Capability(std::string & buffer, const char * gpulist, int width)
+{
+	if (gpulist && gpulist[0]) {
+		double mincap=1000,maxcap=-1;
+		int missing = 0;
+		if (getGPUPropertyRange(gpulist, "Capability", mincap, maxcap, missing) && ! missing) {
+			if (maxcap > 0) {
+				if (mincap < maxcap) {
+					formatstr(buffer, "%.1f to %.1f", mincap, maxcap);
+				} else {
+					formatstr(buffer, "%.1f", maxcap);
+				}
+				if (buffer.size() < (size_t) width) {
+					buffer.insert(0, (size_t) width - buffer.size(), ' ');
+				}
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+static bool render_gpus_GlobalMemoryMB(std::string & buffer, const char * gpulist, int width)
+{
+	if (gpulist && gpulist[0]) {
+		long long minmem=LONG_MAX,maxmem=-1;
+		int missing = 0;
+		if (getGPUPropertyRange(gpulist, "GlobalMemoryMB", minmem, maxmem, missing) && ! missing) {
+			if (minmem > 0) {
+				if (minmem < maxmem) {
+					formatstr(buffer, "%.1f to %.1f GB", minmem/1024.0, maxmem/1024.0);
+				} else {
+					formatstr(buffer, "%.1f GB", maxmem/1024.0);
+				}
+				if (buffer.size() < (size_t) width) {
+					buffer.insert(0, (size_t) width - buffer.size(), ' ');
+				}
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+static bool render_gpus_DeviceName (std::string & buffer, const char * gpulist)
+{
+	if (gpulist && gpulist[0]) {
+		buffer.clear();
+		std::set<std::string> names;
+		int missing = 0;
+		if (getGPUPropertyRange(gpulist, "DeviceName", names, missing)) {
+			if ( ! names.empty()) {
+				for (auto name : names) {
+					if ( ! buffer.empty()) buffer += ",";
+					buffer += name;
+				}
+			}
+			return ! missing;
+		}
+	}
+	return false;
+}
+
+
+bool local_render_gpus_caps ( classad::Value & value, ClassAd* /*ad*/, Formatter & fmt)
+{
+	std::string buffer;
+	const char * gpulist = nullptr;
+	if (value.IsStringValue(gpulist) && render_gpus_Capability(buffer, gpulist, fmt.width)) {
+		value.SetStringValue(buffer);
+		return true;
+	}
+	return false;
+}
+
+bool local_render_gpus_mem ( classad::Value & value, ClassAd* /*ad*/, Formatter & fmt)
+{
+	std::string buffer;
+	const char * gpulist = nullptr;
+	if (value.IsStringValue(gpulist) && render_gpus_GlobalMemoryMB(buffer, gpulist, fmt.width)) {
+		value.SetStringValue(buffer);
+		return true;
+	}
+	return false;
+}
+
+bool local_render_gpus_names ( classad::Value & value, ClassAd* /*ad*/, Formatter & )
+{
+	std::string buffer;
+	const char * gpulist = nullptr;
+	if (value.IsStringValue(gpulist) && render_gpus_DeviceName(buffer, gpulist)) {
+		value.SetStringValue(buffer);
+		return true;
+	}
+	return false;
+}
+
+bool local_render_gpus_props ( classad::Value & value, ClassAd* ad, Formatter & )
+{
+	std::string buffer;
+	value.SetStringValue(extractGPUsProps(value, ad, buffer));
+	return true;
+}
+
+bool local_render_totgpus ( classad::Value & value, ClassAd* ad, Formatter & fmt )
+{
+	std::string gpus, offline;
+	if (ad->LookupString("AssignedGPUs", gpus)) {
+		int num_assigned = 0, num_offline = 0;
+		StringList sl(gpus); num_assigned = sl.number();
+		if (ad->LookupString("OfflineGPUs", offline) && ! offline.empty()) {
+			for (auto id : StringTokenIterator(offline)) {
+				if (sl.contains_anycase(id.c_str())) { ++num_offline; }
+			}
+		}
+		if (num_offline) { formatstr(gpus, "%4d-%d", num_assigned, num_offline); }
+		else { formatstr(gpus, "%4d", num_assigned); }
+		if (gpus.size() < (size_t) fmt.width) {
+			gpus.append(fmt.width - gpus.size(), ' ');
+		}
+		value.SetStringValue(gpus);
+		return true;
+	}
+
+	return false;
+}
+
+// !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
+static const CustomFormatFnTableItem LocalPrintFormats[] = {
+	{ "GPUS_CAPS", "AssignedGpus", 0, local_render_gpus_caps, "AvailableGPUs\0OfflineGPUs\0" },
+	{ "GPUS_MEM", "AssignedGpus", 0, local_render_gpus_mem, "AvailableGPUs\0OfflineGPUs\0" },
+	{ "GPUS_NAMES", "AssignedGpus", 0, local_render_gpus_names, "AvailableGPUs\0OfflineGPUs\0" },
+	{ "GPUS_PROPERTIES", "AvailableGPUs", 0, local_render_gpus_props, "AssignedGPUs\0OfflineGPUs\0" },
+	{ "NUM_DSLOTS", ATTR_NUM_DYNAMIC_SLOTS, "%4d", local_render_num_dslots, "DynamicSlot\0" },
+	{ "SLOT_COUNT_TAG", ATTR_SLOT_TYPE, 0, local_render_slot_count_tag, "\0" },
+	{ "SLOT_TYPE_LETTER", ATTR_SLOT_TYPE, 0, local_render_slot_type_letter, "\0" },
+	{ "TOTAL_GPUS", "GPUs", 0, local_render_totgpus, "AssignedGPUs\0OfflineGPUs\0" },
+};
+static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
 
 int PrettyPrinter::set_status_print_mask_from_stream (
@@ -1482,7 +2232,7 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 	//PRAGMA_REMIND("tj: fix to handle summary formatting.")
 	int err = SetAttrListPrintMaskFromStream(
 					*pstream,
-					NULL,
+					&LocalPrintFormatsTable,
 					pm,
 					pmopt,
 					group_by_keys,
@@ -1494,6 +2244,8 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 			fprintf(stderr, "print-format aggregation not supported\n");
 			return -1;
 		}
+
+		pmHeadFoot = pmopt.headfoot;
 
 		if ( ! pmopt.where_expression.empty()) {
 			*pconstraint = pm.store(pmopt.where_expression.c_str());
@@ -1600,6 +2352,7 @@ usage (const char * opts)
 		"\t       new     'new' classad form without newlines\n"
 		"\t       auto    Guess the format from reading the input stream\n"
 		"\t-grid\t\t\tDisplay grid resources\n"
+		"\t-gpus\t\t\tDisplay resources that have GPUs\n"
 		"\t-run\t\t\tDisplay running job stats\n"
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
@@ -1951,6 +2704,10 @@ firstPass (int argc, char *argv[])
 		} else
 		if( is_dash_arg_prefix (argv[i], "cod", 3) ) {
 			mainPP.setMode (SDO_Startd_Cod, i, argv[i]);
+		} else
+		if( is_dash_arg_prefix (argv[i], "gpus", 3) ) {
+			mainPP.setMode (SDO_Startd_GPUs, i, argv[i]);
+			dash_gpus = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "java", 1)) {
 			/*explicit_mode =*/ javaMode = true;
@@ -2305,6 +3062,7 @@ secondPass (int argc, char *argv[])
 			i++;
 			if ( ! noSort) {
 				snprintf( buffer, sizeof(buffer), "%s =!= UNDEFINED", argv[i] );
+				if (diagnose) { printf ("Adding constraint [%s]\n", buffer); }
 				query->addANDConstraint( buffer );
 			}
 			continue;

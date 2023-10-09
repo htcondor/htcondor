@@ -140,24 +140,6 @@ displayTotals (FILE *file, int keyLength)
 }
 
 
-
-StartdNormalTotal::
-StartdNormalTotal()
-{
-	ppo = PP_STARTD_NORMAL;
-	machines = 0;
-	owner = 0;
-	unclaimed = 0;
-	claimed = 0;
-	matched = 0;
-	preempting = 0;
-#if HAVE_BACKFILL
-	backfill = 0;
-#endif /* HAVE_BACKFILL */
-	drained = 0;
-}
-
-
 int StartdNormalTotal::
 update (ClassAd *ad, int options)
 {
@@ -165,9 +147,11 @@ update (ClassAd *ad, int options)
 
 	bool partitionable_slot = false;
 	bool dynamic_slot = false;
+	bool backfill_slot = false;
 	if (options) {
 		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, partitionable_slot);
 		if ( ! partitionable_slot) { ad->LookupBool(ATTR_SLOT_DYNAMIC, dynamic_slot); }
+		if (options & TOTALS_OPTION_BACKFILL_SLOTS) { ad->LookupBool(ATTR_SLOT_BACKFILL, backfill_slot); }
 	}
 
 	if ((options & TOTALS_OPTION_IGNORE_PARTITIONABLE) && partitionable_slot) return 1;
@@ -179,29 +163,35 @@ update (ClassAd *ad, int options)
 		for (auto it : *plist) {
 			const char * cstr = nullptr;
 			if (ExprTreeIsLiteralString(it, cstr) && cstr) {
-				update(cstr);
+				update(cstr, backfill_slot);
 			}
 		}
 		return 1;
 	} else {
 		if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
-		return update(state);
+		return update(state, backfill_slot);
 	}
 }
 
 int StartdNormalTotal::
-update (const char * state)
+update (const char * state, bool backfill_slot)
 {
-	switch (string_to_state (state))
+	State st = string_to_state (state);
+	if (backfill_slot) {
+		if (st == unclaimed_state) {
+			++backfill_idle;
+			return 1; // don't count idle backfill slots in the machine total
+		}
+		if (st == claimed_state) st = backfill_state;
+	}
+	switch (st)
 	{
 		case owner_state: 		owner++; 		break;
 		case unclaimed_state: 	unclaimed++; 	break;
 		case claimed_state:		claimed++;		break;
 		case matched_state:		matched++;		break;
 		case preempting_state:	preempting++;	break;
-#if HAVE_BACKFILL
 		case backfill_state:	backfill++;		break;
-#endif
 		case drained_state:		drained++;	break;
 		default: return 0;
 	}
@@ -213,28 +203,18 @@ update (const char * state)
 void StartdNormalTotal::
 displayHeader(FILE *file)
 {
-#if HAVE_BACKFILL
-	fprintf (file, "%6.6s %5.5s %7.7s %9.9s %7.7s %10.10s %8.8s %6.6s\n",
+	fprintf (file, "%6.6s %5.5s %7.7s %9.9s %7.7s %10.10s %6.6s %8.8s %6.6s\n",
 					"Total", "Owner", "Claimed", "Unclaimed", "Matched",
-					"Preempting", "Backfill", "Drain");
-#else
-	fprintf (file, "%9.9s %5.5s %7.7s %9.9s %7.7s %10.10s %6.6s\n", "Machines",
-					"Owner", "Claimed", "Unclaimed", "Matched", "Preempting", "Drain");
-#endif /* HAVE_BACKFILL */
+					"Preempting", "Drain", "Backfill", "BkIdle");
 }
 
 
 void StartdNormalTotal::
 displayInfo (FILE *file, int)
 {
-#if HAVE_BACKFILL
-	fprintf ( file, "%6d %5d %7d %9d %7d %10d %8d %6d\n", machines, owner,
-			  claimed, unclaimed, matched, preempting, backfill, drained );
+	fprintf ( file, "%6d %5d %7d %9d %7d %10d %6d %8d %6d\n", machines, owner,
+			  claimed, unclaimed, matched, preempting, drained, backfill, backfill_idle);
 
-#else 
-	fprintf (file, "%9d %5d %7d %9d %7d %10d %6d\n", machines, owner, claimed,
-					unclaimed, matched, preempting, drained);
-#endif /* HAVE_BACKFILL */
 }
 
 
@@ -366,21 +346,6 @@ displayInfo (FILE *file, int)
 }
 
 
-StartdStateTotal::
-StartdStateTotal()
-{
-	machines = 0;
-	owner = 0;
-	unclaimed = 0;
-	claimed = 0;
-	preempt = 0;
-	matched = 0;
-#if HAVE_BACKFILL
-	backfill = 0;
-#endif
-	drained = 0;
-}
-
 int StartdStateTotal::
 update (ClassAd *ad, int options)
 {
@@ -388,9 +353,11 @@ update (ClassAd *ad, int options)
 
 	bool partitionable_slot = false;
 	bool dynamic_slot = false;
+	bool backfill_slot = false;
 	if (options) {
 		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, partitionable_slot);
 		if ( ! partitionable_slot) { ad->LookupBool(ATTR_SLOT_DYNAMIC, dynamic_slot); }
+		if (options & TOTALS_OPTION_BACKFILL_SLOTS) { ad->LookupBool(ATTR_SLOT_BACKFILL, backfill_slot); }
 	}
 
 	if ((options & TOTALS_OPTION_IGNORE_PARTITIONABLE) && partitionable_slot) return 1;
@@ -402,29 +369,35 @@ update (ClassAd *ad, int options)
 		for (auto it : *plist) {
 			const char * cstr = nullptr;
 			if (ExprTreeIsLiteralString(it, cstr) && cstr) {
-				update(cstr);
+				update(cstr, backfill_slot);
 			}
 		}
 		return 1;
 	} else {
 		if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
-		return update(state);
+		return update(state, backfill_slot);
 	}
 }
 
 
 int StartdStateTotal::
-update (const char * state)
+update (const char * state, bool backfill_slot)
 {
-	switch (string_to_state(state)) {
+	State st = string_to_state (state);
+	if (backfill_slot) {
+		if (st == unclaimed_state) {
+			++backfill_idle;
+			return 1; // don't count idle backfill slots in the machine total
+		}
+		if (st == claimed_state) st = backfill_state;
+	}
+	switch (st) {
 		case owner_state	:	owner++;		break;
 		case unclaimed_state:	unclaimed++;	break;
 		case claimed_state	:	claimed++;		break;
 		case preempting_state:	preempt++;		break;
 		case matched_state	:	matched++;		break;
-#if HAVE_BACKFILL
 		case backfill_state:	backfill++;		break;
-#endif
 		case drained_state:		drained++;	break;
 		default				:	return false;
 	}
@@ -436,27 +409,17 @@ update (const char * state)
 void StartdStateTotal::
 displayHeader(FILE *file)
 {
-#if HAVE_BACKFILL
-	fprintf (file, "%6.6s %5.5s %9.9s %7.7s %10.10s %7.7s %8.8s %6.6s\n",
+	fprintf (file, "%6.6s %5.5s %9.9s %7.7s %10.10s %7.7s %6.6s %8.8s %6.6s\n",
 					"Total", "Owner", "Unclaimed", "Claimed",
-					"Preempting", "Matched", "Backfill", "Drain");
-#else
-	fprintf( file, "%10.10s %5.5s %9.9s %7.7s %10.10s %7.7s %6.6s\n", "Machines",
-				"Owner", "Unclaimed", "Claimed", "Preempting", "Matched", "Drain" );
-#endif /* HAVE_BACKFILL */
+					"Preempting", "Matched", "Drain", "Backfill", "BkIdle");
 }
 
 
 void StartdStateTotal::
 displayInfo( FILE *file, int )
 {
-#if HAVE_BACKFILL
-	fprintf( file, "%6d %5d %9d %7d %10d %7d %8d %6d\n", machines, owner, 
-			 unclaimed, claimed, preempt, matched, backfill, drained );
-#else
-	fprintf( file, "%10d %5d %9d %7d %10d %7d %6d\n", machines, owner, 
-			 unclaimed, claimed, preempt, matched, drained );
-#endif /* HAVE_BACKFILL */
+	fprintf( file, "%6d %5d %9d %7d %10d %7d %6d %8d %6d\n", machines, owner,
+			 unclaimed, claimed, preempt, matched, drained, backfill, backfill_idle);
 }
 
 
@@ -657,19 +620,6 @@ displayInfo (FILE *file, int tl)
 	if (tl) fprintf (file, "%8d %11" PRIu64"\n",
 					 numServers, (PRIu64_t) disk);
 }
-
-ClassTotal::
-ClassTotal()
-{
-	ppo = PP_NOTSET;
-}
-
-
-ClassTotal::
-~ClassTotal()
-{
-}
-
 
 ClassTotal *ClassTotal::
 makeTotalObject (ppOption ppo)

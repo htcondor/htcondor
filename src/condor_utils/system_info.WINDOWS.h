@@ -43,7 +43,7 @@
 #pragma warning( disable : 4200 )
 
 // #include <afxtempl.h>
-#include "HashTable.h"
+#include <map>
 #include "list.h"
 
 // #include <winternl.h>
@@ -222,7 +222,7 @@ public:
 
 public:
 	// CMap< DWORD, DWORD&, SYSTEM_PROCESS_INFORMATION*, SYSTEM_PROCESS_INFORMATION*> m_ProcessInfos;
-	HashTable< DWORD, SYSTEM_PROCESS_INFORMATION* > m_ProcessInfos;
+	std::map< DWORD, SYSTEM_PROCESS_INFORMATION* > m_ProcessInfos;
 	SYSTEM_PROCESS_INFORMATION* m_pCurrentProcessInfo;
 
 protected:

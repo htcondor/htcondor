@@ -42,10 +42,6 @@ $dagman_args = "-verbose";
 	'^\d+ NodeA PRE_SCRIPT_SUCCESS - local - 1$',
 	'^\d+ NodeA SUBMIT \d+.\d local - 1$',
 	'^\d+ NodeA SUBMIT \d+.\d local - 1$',
-	'^\d+ NodeA EXECUTE \d+.\d local - 1$',
-	'^\d+ NodeA EXECUTE \d+.\d local - 1$',
-	'^\d+ NodeA JOB_TERMINATED \d+.\d local - 1$',
-	'^\d+ NodeA JOB_TERMINATED \d+.\d local - 1$',
 	'^\d+ NodeA JOB_FAILURE 2 local - 1$',
 	'^\d+ NodeA POST_SCRIPT_STARTED \d+.0 local - 1$',
 	'^\d+ NodeA POST_SCRIPT_TERMINATED \d+.0 local - 1$',
@@ -53,10 +49,7 @@ $dagman_args = "-verbose";
 	'^\d+ NodeB PRE_SCRIPT_STARTED - viz - 2$',
 	'^\d+ NodeB PRE_SCRIPT_SUCCESS - viz - 2$',
 	'^\d+ NodeB SUBMIT \d+.\d viz - 2$',
-	'^\d+ NodeB SUBMIT \d+.\d viz - 2$',
 	'^\d+ NodeB EXECUTE \d+.\d viz - 2$',
-	'^\d+ NodeB EXECUTE \d+.\d viz - 2$',
-	'^\d+ NodeB JOB_TERMINATED \d+.\d viz - 2$',
 	'^\d+ NodeB JOB_TERMINATED \d+.\d viz - 2$',
 	'^\d+ NodeB JOB_SUCCESS 0 viz - 2$',
 	'^\d+ NodeB POST_SCRIPT_STARTED \d+.0 viz - 2$',
@@ -180,6 +173,7 @@ $success = sub
 		$outindex = 0;
 		$line = "";
 		$passed = 0;
+		%nodeA_events = ('submit' => 0, 'exe' => 0, 'term' => 0, 'abrt' => 0, 'evict' => 0);
 		$canopen = open(OUT,"<$name");
 		if( ! (defined $canopen)) {
 			CondorTest::debug("Can not open outfile<$name>:$!\n",1);
@@ -198,8 +192,57 @@ $success = sub
 				# when schedd is overloaded. dagman will retry
 			next if ($line =~ /Node[^E] SUBMIT_FAILURE/);
 
-			if( $line =~ /$target/ ) {
+			if ($line =~ /^\d+ NodeA EXECUTE \d+.\d local - 1$/) {
+				if ($nodeA_events{'submit'} != 2) {
+					CondorTest::debug("failed: line \"$line\" expects 2 submit events for NodeA\n"); last;
+				} else {
+					CondorTest::debug("$name: $line\n",1);
+					$nodeA_events{'exe'}++;
+				}
+				next;
+			} elsif ($line =~ /^\d+ NodeA JOB_TERMINATED \d+.\d local - 1$/) {
+				if ($nodeA_events{'submit'} != 2) {
+					CondorTest::debug("failed: line \"$line\" expects 2 submit events for NodeA\n"); last;
+				} else {
+					CondorTest::debug("$name: $line\n",1);
+					$nodeA_events{'term'}++;
+				}
+				next;
+			} elsif ($line =~ /^\d+ NodeA JOB_ABORTED \d+.\d local - 1$/) {
+				if ($nodeA_events{'submit'} != 2) {
+					CondorTest::debug("failed: line \"$line\" expects 2 submit events for NodeA\n"); last;
+				} else {
+					CondorTest::debug("$name: $line\n",1);
+					$nodeA_events{'abrt'}++;
+				}
+				next;
+			} elsif ($line =~ /^\d+ NodeA JOB_EVICTED \d+.\d local - 1$/) {
+				if ($nodeA_events{'submit'} != 2) {
+					CondorTest::debug("failed: line \"$line\" expects 2 submit events for NodeA\n"); last;
+				} else {
+					CondorTest::debug("$name: $line\n",1);
+					$nodeA_events{'evict'}++;
+				}
+				next;
+			}
 
+			if( $line =~ /$target/ ) {
+				if ( $line =~ /^\d+ NodeA SUBMIT \d+.\d local - 1$/) {
+					$nodeA_events{'submit'}++;
+				} elsif ($line =~ /^\d+ NodeA JOB_FAILURE 2 local - 1$/) {
+					if ($nodeA_events{'exe'} != 2) {
+						CondorTest::debug("failure: NodeA FAILURE event occured prior to 2 execute events\n"); last;
+					}
+					elsif ($nodeA_events{'term'} != 1) {
+						CondorTest::debug("failure: NodeA FAILURE event occured prior to a job terminate event\n"); last;
+					}
+					elsif ($nodeA_events{'abrt'} != 1) {
+						CondorTest::debug("failure: NodeA FAILURE event occured prior to a job abort event\n"); last;
+					}
+					elsif ($nodeA_events{'evict'} != 1) {
+						CondorTest::debug("failure: NodeA FAILURE event occured prior to a job evict event\n"); last;
+					}
+				}
 				CondorTest::debug("$name: $line\n",1);
 				$outindex++;
 				if ($outindex > $#outlines) {
@@ -207,7 +250,7 @@ $success = sub
 					last;
 				}
 			} else {
-				CondorTest::debug("failed: \"extra\" output line $line\n");
+				CondorTest::debug("failed: \"extra\" output line: $line\n");
 				$diditpass = 0;
 			}
 		}

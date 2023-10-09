@@ -84,6 +84,7 @@
 #define SUBMIT_KEY_ExitRequirements "exit_requirements"
 #define SUBMIT_KEY_UserLogFile "log"
 #define SUBMIT_KEY_UserLogUseXML "log_xml"
+#define SUBMIT_KEY_ULogExecuteEventAttrs "ulog_execute_attrs"
 #define SUBMIT_KEY_DagmanLogFile "dagman_log"
 #define SUBMIT_KEY_CoreSize "core_size"
 #define SUBMIT_KEY_NiceUser "nice_user"
@@ -150,6 +151,7 @@
 #define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
+#define SUBMIT_KEY_WantIoProxy "want_io_proxy"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"
@@ -223,6 +225,7 @@
 
 // Self-Checkpointing Parameters
 #define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
+#define SUBMIT_KEY_CheckpointDestination "checkpoint_destination"
 
 // ...
 #define SUBMIT_KEY_EraseOutputAndErrorOnRestart "erase_output_and_error_on_restart"
@@ -360,6 +363,9 @@
 #define SUBMIT_KEY_HoldKillSig "hold_kill_sig"
 #define SUBMIT_KEY_KillSigTimeout "kill_sig_timeout"
 
+//Temporary function to get a mapfile object point to protected url map
+MapFile* getProtectedURLMap();
+
 // class to parse, hold and manage a python style slice: [x:y:z]
 // used by the condor_submit queue 'foreach' handling
 class qslice {
@@ -482,7 +488,7 @@ public:
 
 	void init(int value=-1);
 	void clear(); // clear, but do not deallocate
-	void setScheddVersion(const char * version) { ScheddVersion = version; }
+	void setScheddVersion(const char * version) { ScheddVersion = version ? version : ""; }
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
 	bool addExtendedCommands(const classad::ClassAd & cmds) { return extendedCmds.Update(cmds); }
@@ -690,6 +696,11 @@ public:
 		Unknown
 	};
 
+	// Attach and detach Protected URL transfer map object by pointer
+	// Note: SubmitHash does not own this pointer
+	void attachTransferMap(MapFile* map) { protectedUrlMap = map; }
+	void detachTransferMap() { protectedUrlMap = nullptr; }
+
 protected:
 	MACRO_SET SubmitMacroSet;
 	MACRO_EVAL_CONTEXT mctx;
@@ -702,6 +713,7 @@ protected:
 	time_t     submit_time;
 	std::string   submit_username; // username specified to init_cluster_ad
 	ClassAd extendedCmds; // extended submit keywords, from config
+	MapFile *protectedUrlMap{nullptr}; // Map file for protected url separation in job ad
 
 	// these are used with the internal ABORT_AND_RETURN() and RETURN_IF_ABORT() methods
 	mutable int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
@@ -746,12 +758,13 @@ protected:
 	bool already_warned_notification_never;
 	bool already_warned_require_gpus;
 	bool UseDefaultResourceParams;
+	bool InsertDefaultPolicyExprs;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
 	std::string JobGridType;  // set from "GridResource" for grid universe jobs.
 	std::string VMType;
 	std::string TempPathname; // temporary path used by full_path
-	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.
+	std::string ScheddVersion; // target version of schedd, influences how jobad is filled in.
 	classad::References stringReqRes; // names of request_xxx submit variables that are string valued
 	classad::References forcedSubmitAttrs; // + and MY. attribute names from SUBMIT_ATTRS/EXPRS
 
@@ -818,16 +831,12 @@ protected:
 	// a LOT of the above functions must happen before SetTransferFiles, which in turn must be before SetRequirements
 	int SetTransferFiles();
 	int FixupTransferInputFiles();
-	//bool check_requirements( char const *orig, MyString &answer );
 	int SetRequirements(); // after SetTransferFiles
 
 	int SetForcedSubmitAttrs(); // set +Attrib (MY.Attrib) values from SUBMIT_ATTRS directly into the job ad. this should be called second to last
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.
 
 	int ProcessJobsetAttributes();
-
-	// construct the Requirements expression for a VM uinverse job.
-	int AppendVMRequirements(MyString & vmanswer, bool VMCheckpoint, bool VMNetworking, const MyString &VMNetworkType, bool VMHardwareVT, bool vm_need_fsdomain);
 
 	// check if the job ad has  Cron attributes set, checked by SetRequirements
 	// return value is NULL if false,
@@ -846,7 +855,7 @@ protected:
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
 	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
-	int query_universe(std::string & sub_type); // figure out universe, but DON'T modify the cached members
+	int query_universe(std::string & sub_type, const char * & topping); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
 	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
@@ -864,6 +873,7 @@ private:
 	int SetRequestDisk(const char * key);  /* used by SetRequestResources */
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
 	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
+	int SetProtectedURLTransferLists();    /* used by FixupTransferInputFiles*/
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,
@@ -871,7 +881,7 @@ private:
 
 	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
-	ContainerImageType image_type_from_string(const std::string &image) const;
+	ContainerImageType image_type_from_string(std::string image) const;
 
 	int s_method; //-1 represents undefined job submit method
 };

@@ -24,6 +24,7 @@
 #include "param_info_tables.h"
 #include "condor_version.h"
 #include <stdlib.h>
+#include <charconv>
 
 const char * check_configif = NULL;
 
@@ -137,7 +138,7 @@ static const char * const aVerTrue[] = {
 	"version <= %D.%S", "version < %D.%S.%P", "version < %D.%S.%N",
 	"version > %D.%S.%L", "version > %D.%R.%M", "version > %D.%R",
 	"version < %D.%S.99", "version < %D.%T", "version < %E.0",
-	"version < 12.0", " VERSION < 12.0 ", " Version < 12.0"
+	"version < 32.0", " VERSION < 32.0 ", " Version < 32.0"
 };
 
 static const char * const aVerFalse[] = {
@@ -148,7 +149,7 @@ static const char * const aVerFalse[] = {
 	"!version >= %D.%S", "version > " CONDOR_VERSION, "version > %D.%S.%N",
 	"version < %D.%S.%L", "version < %D.%R.%M", "version < %D.%R",
 	"version > %D.%S.99", "version > %D.%S", "version > %E.0",
-	"version > 12.0",
+	"version > 32.0",
 };
 
 static const char * const aDefTrue[] = {
@@ -217,7 +218,7 @@ static const struct _test_set {
 };
 
 
-// copy the incoming condition, changing %x to to one of the fields of condor version
+// copy the incoming condition, changing %x to one of the fields of condor version
 // where x is D, S or M for first second and third digit of the version
 // and x may be the next or previous letter to indicate ver-1 or ver+1
 // For instance, if the condor_version is 8.3.5  then %D.%T.%L translates as 8.4.4
@@ -246,7 +247,7 @@ const char* fixup_version(const char * cond, char* buf, int cbBuf)
 			if (v > -10) {
 				if (v < 0) return NULL; // version cannot be fixed up!
 				++ix;
-				sprintf(p, "%d", (int)v);
+				{ auto [end, ec] = std::to_chars(p, p + 16, (int)v); *end = '\0';}
 				p += strlen(p);
 			}
 		} else {

@@ -25,6 +25,8 @@
 #include "baseshadow.h"
 #include "remoteresource.h"
 
+class ShadowHookMgr;
+
 /** This class is the implementation for the shadow.  It is 
 	called UniShadow because:
 	<ul>
@@ -71,8 +73,20 @@ class UniShadow : public BaseShadow
 	void init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info );
 	
 		/** Shadow should spawn a new starter for this job.
+		 *  May be asynchronous if there's a shadow hook defined.
 		 */
 	void spawn( void );
+
+		/**
+		 * Callback after shadow hook has finished.
+		 */
+	void spawnFinish();
+
+		/**
+		 * Invoked when the job hook times out
+		 */
+	void hookTimeout( int timerID = -1 );
+	void hookTimerCancel();
 
 		/** Shadow should attempt to reconnect to a disconnected
 			starter that might still be running for this job.  
@@ -178,8 +192,9 @@ class UniShadow : public BaseShadow
 	virtual void exitAfterEvictingJob( int reason );
 	virtual bool exitDelayed( int &reason );
 
-	void exitLeaseHandler( void ) const;
+	void exitLeaseHandler( int timerID = -1 ) const;
 
+	ClassAd *getJobAd() { return remRes ? remRes->getJobAd() : nullptr; };
  protected:
 
 	virtual void logReconnectedEvent( void );
@@ -188,6 +203,9 @@ class UniShadow : public BaseShadow
 
  private:
 	RemoteResource *remRes;
+	std::unique_ptr<ShadowHookMgr> m_hook_mgr;
+	int m_exit_hook_timer_tid{-1};
+
 	int delayedExitReason;
 
 	void requestJobRemoval();

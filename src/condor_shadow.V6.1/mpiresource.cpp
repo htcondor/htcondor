@@ -140,6 +140,9 @@ MpiResource::beginExecution( void )
 	NodeExecuteEvent event;
 	event.executeHost = startd_addr;
 	event.node = node_num;
+
+	populateExecuteEvent(event.slotName, event.setProp());
+
 	if( ! writeULogEvent(&event) ) {
 		dprintf( D_ALWAYS, "Unable to log NODE_EXECUTE event.\n" );
 	}
@@ -157,7 +160,7 @@ MpiResource::reconnect( void )
 
 
 void
-MpiResource::attemptReconnect( void )
+MpiResource::attemptReconnect( int /* timerID */ )
 {
 	RemoteResource::attemptReconnect();
 }

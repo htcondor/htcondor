@@ -72,7 +72,7 @@ Transform a set of ads
 
 // declare enough of the condor_params structure definitions so that we can define hashtable defaults
 namespace condor_params {
-	typedef struct string_value { char * psz; int flags; } string_value;
+	typedef struct string_value { const char * psz; int flags; } string_value;
 	struct key_value_pair { const char * key; const string_value * def; };
 }
 
@@ -239,6 +239,7 @@ const char * init_xform_default_macros();
 bool ValidateXForm (
 	MacroStreamXFormSource & xfm,  // the set of transform rules
 	XFormHash & mset,              // the hashtable used as temporary storage
+	int * step_count,              // if non-null returns the number of transform commands
 	std::string & errmsg);          // holds parse errors on failure
 
 // load a MacroStreamXFormSource from a jobrouter classad style route.

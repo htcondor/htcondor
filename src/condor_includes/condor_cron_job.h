@@ -130,10 +130,10 @@ class CronJob : public Service
 
 	// Private methods; these can be overloaded
 	virtual int RunJob( void );
-	virtual void RunJobFromTimer() { RunJob(); }
+	virtual void RunJobFromTimer( int /* timerID */ ) { RunJob(); }
 	virtual int StartJob( void );
-	virtual void StartJobFromTimer() { StartJob(); }
-	virtual void KillHandler( void );
+	virtual void StartJobFromTimer( int /* timerID */ ) { StartJob(); }
+	virtual void KillHandler( int timerID = -1 );
 	virtual int StdoutHandler( int pipe );
 	virtual int StderrHandler( int pipe );
 	virtual int Reaper( int exitPid, int exitStatus );
@@ -177,8 +177,8 @@ class CronJob : public Service
 	int				 m_num_outputs;		// # output blocks have we processed?
 	int				 m_num_runs;		// # of times the job has run
 	int				 m_num_fails;		// # of times we failed to exec it
-	unsigned		 m_last_start_time;	// Last run time
-	unsigned		 m_last_exit_time;	// Last exit time
+	time_t			 m_last_start_time;	// Last run time
+	time_t			 m_last_exit_time;	// Last exit time
 	double			 m_run_load;		// Run load of the job
 	bool			 m_marked;			// Is this one marked?
 	unsigned		 m_old_period;		// Period before reconfig

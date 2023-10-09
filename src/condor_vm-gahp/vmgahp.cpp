@@ -102,7 +102,6 @@ unsigned __stdcall pipe_forward_thread(void *)
 #endif
 
 VMGahp::VMGahp(VMGahpConfig* config, const char* iwd)
-	: m_pending_req_table(&hashFuncInt)
 {
 	m_async_mode = true;
 	m_new_results_signaled = false;
@@ -201,17 +200,9 @@ VMGahp::cleanUp()
 	is_called = true;
 
 	// delete reqs
-	int currentkey = 0;
-	VMRequest *req = NULL;
-	m_pending_req_table.startIterations();
-	while( m_pending_req_table.iterate(currentkey, req) != 0 ) {
-		if( req ) {
-			delete req;
-		}
-	}
 	m_pending_req_table.clear();
 
-	m_result_list.clearAll();
+	m_result_list.clear();
 
 	// delete VMs
 	for (auto vm : m_vm_list) {
@@ -248,67 +239,21 @@ VMGahp::getNewVMId(void)
 	return m_max_vm_id;
 }
 
-int
-VMGahp::numOfVM(void)
-{
-	 return (int) m_vm_list.size();
-}
-
-int
-VMGahp::numOfReq(void)
-{
-	 return numOfPendingReq() + numOfReqWithResult();
-}
-
-int
-VMGahp::numOfPendingReq(void)
-{
-	 return m_pending_req_table.getNumElements();
-}
-
-int
-VMGahp::numOfReqWithResult(void)
-{
-	 return m_result_list.number();
-}
-
 VMRequest *
 VMGahp::addNewRequest(const char *cmd)
 {
 	if(!cmd) {
 		return NULL;
 	}
-	VMRequest *new_req = new VMRequest(cmd);
-	ASSERT(new_req);
 
-	if ( m_pending_req_table.insert(new_req->m_reqid, new_req) == 0 ) {
-		return new_req;
+	VMRequest new_req(cmd);
+	int req_id = new_req.m_reqid;
+	auto [itr, rc] = m_pending_req_table.emplace(req_id, std::move(new_req));
+	if (rc) {
+		return &itr->second;
 	} else {
-		delete new_req;
 		return NULL;
 	}
-}
-
-void
-VMGahp::removePendingRequest(int req_id)
-{
-	VMRequest *req = findPendingRequest(req_id);
-	if( req != NULL ) {
-		m_pending_req_table.remove(req_id);
-		delete req;
-		return;
-	}
-}
-
-void
-VMGahp::removePendingRequest(VMRequest *req)
-{
-	if(!req) {
-		return;
-	}
-	m_pending_req_table.remove(req->m_reqid);
-	delete req;
-	return;
 }
 
 void
@@ -317,33 +262,20 @@ VMGahp::movePendingReqToResultList(VMRequest *req)
 	if(!req) {
 		return;
 	}
-	m_result_list.append(make_result_line(req));
-	removePendingRequest(req);
+	m_result_list.emplace_back(make_result_line(req));
+
+	m_pending_req_table.erase(req->m_reqid);
 }
 
 void
 VMGahp::printAllReqsWithResult()
 {
-	char *one_result = NULL;
-	std::string output;
-	m_result_list.rewind();
-	while( (one_result = m_result_list.next()) != NULL ) {
-		output = one_result;
-		output += "\n";
+	for (auto& one_result: m_result_list) {
+		one_result += '\n';
 		write_to_daemoncore_pipe(vmgahp_stdout_pipe,
-				output.c_str(), output.length());
-		m_result_list.deleteCurrent();
+				one_result.c_str(), one_result.size());
 	}
-}
-
-VMRequest *
-VMGahp::findPendingRequest(int req_id)
-{
-	VMRequest *req = NULL;
-
-	m_pending_req_table.lookup(req_id, req);
-
-	return req;
+	m_result_list.clear();
 }
 
 void
@@ -403,7 +335,7 @@ VMGahp::waitForCommand(int   /*pipe_end*/)
 
 		const char *command = line->c_str();
 
-		Gahp_Args args;
+		std::vector<std::string> args;
 		VMRequest *new_req = NULL;
 
 		if( m_inClassAd )  {
@@ -420,8 +352,8 @@ VMGahp::waitForCommand(int   /*pipe_end*/)
 			}
 		}else {
 			if(parse_vmgahp_command(command, args) &&
-					verifyCommand(args.argv, args.argc)) {
-				new_req = preExecuteCommand(command, &args);
+					verifyCommand(args)) {
+				new_req = preExecuteCommand(command, args);
 
 				if( new_req != NULL ) {
 					// Execute the new request
@@ -456,20 +388,21 @@ VMGahp::waitForCommand(int   /*pipe_end*/)
 }
 
 // Check the validity of the given parameters
-bool VMGahp::verifyCommand(char **argv, int argc) {
-	if(strcasecmp(argv[0], VMGAHP_COMMAND_VM_START) == 0 ) {
+bool VMGahp::verifyCommand(const std::vector<std::string>& args) {
+	istring_view cmd(args[0].c_str(), args[0].size());
+	if(cmd == istring_view(VMGAHP_COMMAND_VM_START)) {
 		// Expecting: VMGAHP_COMMAND_VM_START <req_id> <type>
-		return verify_number_args(argc, 3) &&
-			verify_request_id(argv[1]) &&
-			verify_vm_type(argv[2]);
+		return verify_number_args(args.size(), 3) &&
+			verify_request_id(args[1].c_str()) &&
+			verify_vm_type(args[2].c_str());
 
-	} else if(strcasecmp(argv[0], VMGAHP_COMMAND_VM_STOP) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_SUSPEND) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_SOFT_SUSPEND) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_RESUME) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_CHECKPOINT) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_STATUS) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VM_GETPID) == 0) {
+	} else if(cmd == istring_view(VMGAHP_COMMAND_VM_STOP) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_SUSPEND) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_SOFT_SUSPEND) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_RESUME) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_CHECKPOINT) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_STATUS) ||
+		cmd == istring_view(VMGAHP_COMMAND_VM_GETPID)) {
 		// Expecting: VMGAHP_COMMAND_VM_STOP <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_SUSPEND <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_SOFT_SUSPEND <req_id> <vmid>
@@ -478,21 +411,21 @@ bool VMGahp::verifyCommand(char **argv, int argc) {
 		// Expecting: VMGAHP_COMMAND_VM_STATUS <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_GETPID <req_id> <vmid>
 
-		return verify_number_args(argc, 3) &&
-			verify_request_id(argv[1]) &&
-			verify_vm_id(argv[2]);
+		return verify_number_args(args.size(), 3) &&
+			verify_request_id(args[1].c_str()) &&
+			verify_vm_id(args[2].c_str());
 
-	} else if(strcasecmp(argv[0], VMGAHP_COMMAND_ASYNC_MODE_ON) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_ASYNC_MODE_OFF) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_QUIT) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_VERSION) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_COMMANDS) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_SUPPORT_VMS) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_RESULTS) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_CLASSAD) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_CLASSAD_END) == 0 ) {
+	} else if(cmd == istring_view(VMGAHP_COMMAND_ASYNC_MODE_ON) ||
+		cmd == istring_view(VMGAHP_COMMAND_ASYNC_MODE_OFF) ||
+		cmd == istring_view(VMGAHP_COMMAND_QUIT) ||
+		cmd == istring_view(VMGAHP_COMMAND_VERSION) ||
+		cmd == istring_view(VMGAHP_COMMAND_COMMANDS) ||
+		cmd == istring_view(VMGAHP_COMMAND_SUPPORT_VMS) ||
+		cmd == istring_view(VMGAHP_COMMAND_RESULTS) ||
+		cmd == istring_view(VMGAHP_COMMAND_CLASSAD) ||
+		cmd == istring_view(VMGAHP_COMMAND_CLASSAD_END)) {
 		//These commands need no-args
-		return verify_number_args(argc,1);
+		return verify_number_args(args.size(),1);
 	}
 
 	vmprintf(D_ALWAYS, "Unknown command\n");
@@ -512,8 +445,8 @@ VMGahp::verify_request_id(const char *s)
 		return false;
 	}
 	// check duplicated req_id
-	if( findPendingRequest(req_id) != NULL ) {
-		vmprintf(D_ALWAYS, "Request id(%s) is conflict with "
+	if (m_pending_req_table.find(req_id) != m_pending_req_table.end()) {
+		vmprintf(D_ALWAYS, "Request id(%s) conflicts with "
 						"the existing one\n", s);
 		return false;
 	}
@@ -561,9 +494,9 @@ VMGahp::returnOutputError(void)
 }
 
 VMRequest *
-VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args)
+VMGahp::preExecuteCommand(const char* cmd, const std::vector<std::string>& args)
 {
-	char *command = args->argv[0];
+	const char *command = args[0].c_str();
 
 	vmprintf(D_FULLDEBUG, "Command: %s\n", command);
 
@@ -617,7 +550,7 @@ VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args)
 void
 VMGahp::executeCommand(VMRequest *req)
 {
-	char *command = req->m_args.argv[0];
+	const char *command = req->m_args[0].c_str();
 
 	priv_state priv = set_user_priv();
 
@@ -648,7 +581,7 @@ void
 VMGahp::executeStart(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_START <req_id> <type>
-	char* vmtype = req->m_args.argv[2];
+	const char* vmtype = req->m_args[2].c_str();
 
 	if( m_jobAd == NULL ) {
 		req->m_has_result = true;
@@ -751,7 +684,7 @@ void
 VMGahp::executeStop(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_STOP <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -786,7 +719,7 @@ void
 VMGahp::executeSuspend(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_SUSPEND <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -819,7 +752,7 @@ void
 VMGahp::executeSoftSuspend(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_SOFT_SUSPEND <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -853,7 +786,7 @@ void
 VMGahp::executeResume(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_RESUME <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -887,7 +820,7 @@ void
 VMGahp::executeCheckpoint(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_CHECKPOINT <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -921,7 +854,7 @@ void
 VMGahp::executeStatus(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_STATUS <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -956,7 +889,7 @@ void
 VMGahp::executeGetpid(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_GETPID <req_id> <vmid>
-	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
+	int vm_id = strtol(req->m_args[2].c_str(), (char **)NULL, 10);
 
 	VMType *vm = findVM(vm_id);
 
@@ -1027,7 +960,7 @@ VMGahp::executeSupportVMS(void)
 void
 VMGahp::executeResults(void)
 {
-	write_to_daemoncore_pipe("S %d\n", numOfReqWithResult());
+	write_to_daemoncore_pipe("S %zu\n", m_result_list.size());
 
 	// Print each result line
 	printAllReqsWithResult();

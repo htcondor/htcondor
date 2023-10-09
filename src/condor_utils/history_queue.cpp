@@ -197,9 +197,24 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 			args.AppendArg("-attributes");
 			args.AppendArg(state.Projection());
 		}
-		if (state.m_searchdir) { args.AppendArg("-dir"); }
-		if ( ! state.RecordSrc().empty()) {
+		//Here we tell condor_history where to search for history files/directories
+		std::string searchKnob = "HISTORY";
+		if (state.m_searchdir) {
+			searchKnob += "_DIR";
+			args.AppendArg("-dir");
 			if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) { args.AppendArg("-epochs"); }
+		}
+		if ( ! state.RecordSrc().empty()) {
+			searchKnob = state.RecordSrc() + "_" + searchKnob;
+		}
+		auto_free_ptr searchPath(param(searchKnob.c_str()));
+		if (searchPath) {
+			args.AppendArg("-search");
+			args.AppendArg(searchPath);
+		} else {
+			std::string errmsg;
+			formatstr(errmsg, "%s undefined in remote configuration. No such related history to be queried.", searchKnob.c_str());
+			return sendHistoryErrorAd(state.GetStream(), 5, errmsg);
 		}
 		std::string myargs;
 		args.GetArgsStringForLogging(myargs);

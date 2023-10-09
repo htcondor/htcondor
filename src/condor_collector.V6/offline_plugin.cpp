@@ -335,7 +335,7 @@ OfflineCollectorPlugin::update (
 		ad.Assign ( ATTR_ENTERED_CURRENT_ACTIVITY, 0 );
 
 		/* Set the heart-beat time */
-		int now = static_cast<int> ( time ( NULL ) );
+		time_t now = time(nullptr);
 		ad.Assign ( ATTR_MY_CURRENT_TIME, now );
 		ad.Assign ( ATTR_LAST_HEARD_FROM, now );
 
@@ -449,7 +449,8 @@ OfflineCollectorPlugin::expire (
 	/* for now, if the ad is of any type other than a startd ad, bail out. currently
 	   absent ads only supported for ads of type Machine, because our offline storage
 	   assumes that. */
-	if ( strcmp(GetMyTypeName(ad),STARTD_ADTYPE) ) {
+	// PRAGMA_REMIND("TJ: how to fix for Slot vs Machine vs StartDaemon ads?");
+	if ( strcmp(GetMyTypeName(ad),STARTD_OLD_ADTYPE) ) {
 		return false;	// return false tells collector to delete this ad
 	}
 	/*	The ad may be a STARTD_PVT_ADTYPE, even though GetMyTypeName() claims 

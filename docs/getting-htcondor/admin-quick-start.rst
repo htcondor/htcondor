@@ -73,13 +73,13 @@ small number, of machines acting in the submit role.
 A submit-role machine requires a bit under a megabyte of RAM for each
 running job, and its ability to transfer data to and from the execute-role
 machines may become a performance bottleneck.  We typically recommend adding
-another submit machine for every twenty thousand simultaneously running
-jobs.  A submit machine must have outbound network connectivity, but a submit
+another access point for every twenty thousand simultaneously running
+jobs.  A access point must have outbound network connectivity, but a submit
 machine without inbound network connectivity can't use execute-role machines
 without inbound network connectivity.  As execute machines are more numerous,
-submit machines typically allow inbound connections.  Although you may allow
+access points typically allow inbound connections.  Although you may allow
 users to submit jobs over the network, we recommend allowing users SSH access
-to the submit machine.
+to the access point.
 
 The Central Manager Role
 ########################
@@ -93,7 +93,7 @@ descriptions to the central manager as "advertising" because it's the
 primary way execute machines get jobs to run.
 
 A central manager must accept connections from each execute machine and each
-submit machine in a pool.  However, users should never need access to the
+access point in a pool.  However, users should never need access to the
 central manager.  Every machine in the pool updates the central manager every
 few minutes, and it answers both system and user queries about the status of
 the pool's resources, so a fast network is important.  For very large pools,
@@ -116,7 +116,7 @@ In the command lines below, replace ``$central_manager_name`` with the host
 name or IP address you want to use.
 
 When you :doc:`get HTCondor <index>`, start with the central manager, then add
-the submit machine(s), and then add the execute machine(s).  You may
+the access point(s), and then add the execute machine(s).  You may
 not have ``sudo`` installed; you may omit it from the command lines below
 if you run them as root.
 
@@ -138,7 +138,7 @@ if you run them as root.
 
     curl -fsSL https://get.htcondor.org | sudo GET_HTCONDOR_PASSWORD="$htcondor_password" /bin/bash -s -- --no-dry-run --execute $central_manager_name
 
-At this point, users logged in on the submit machine should be able to see
+At this point, users logged in on the access point should be able to see
 execute machines in the pool (using ``condor_status``), submit jobs
 (using ``condor_submit``), and see them run (using ``condor_q``).
 
@@ -198,7 +198,7 @@ on machines with GPUs -- using the options described in
 
 * It may be helpful to at least skim the :doc:`../users-manual/index` to get
   an idea of what your users might want or expect, particularly the
-  sections on :doc:`../users-manual/dagman-workflows`,
+  sections on :doc:`../automated-workflows/dagman-introduction`,
   :doc:`../users-manual/choosing-an-htcondor-universe`, and
   :doc:`../users-manual/self-checkpointing-applications`.
 * Understanding :doc:`../classads/classad-mechanism` is essential for

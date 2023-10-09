@@ -41,7 +41,10 @@ CONDOR_TESTREQ_CONFIG
 #
 # for X86_64 shadows
 my %memory_data64 = (
+	"almalinux8"  => "644",
+	"almalinux9"  => "1500",
 	"amazonlinux2"  => "644",
+	"amazonlinux2023"  => "1200",
 	"centos7"  => "644",
 	"centos8"  => "644",
 	"debian6"  => "652",
@@ -49,11 +52,15 @@ my %memory_data64 = (
 	"debian8"  => "692",
 	"debian9"  => "768",
 	"debian10" => "768",
+	"debian11" => "768",
+	"debian12" => "1300",
 	"fedora20" => "660",
 	"fedora21" => "668",
 	"fedora27" => "704",
 	"fedora32" => "704",
 	"fedora33" => "704",
+	"fedora37" => "904",
+	"fedora38" => "904",
 	"redhat5"  => "448",
 	"redhat6"  => "492",
 	"redhat7"  => "644",
@@ -64,6 +71,7 @@ my %memory_data64 = (
 	"ubuntu16" => "664",
 	"ubuntu18" => "752",
 	"ubuntu20" => "752",
+	"ubuntu22" => "1500",
 );
 # for X86 shadows
 my %memory_data32 = (
@@ -104,7 +112,7 @@ print "Platform is $arch $opsys, expecting shadow memory = $expectedmemory, will
 
 # run a job and look at shadow memory usage
 my $append_submit_commands = '
-+WantIOProxy = true
+want_io_proxy = true
 executable = x_shadow_mem_usage.pl
 output = ' . $testname . '.out
 error  = ' . $testname . '.err
@@ -216,6 +224,8 @@ sub smap_sum_verbose {
       } elsif ($overmem > 0) {
          print "Shadow private memory use is $usedmem, which is $overmem more than expected, but address randomization is using $romem, so the test passes with a warning\n";
       }
+   } else {
+      die "Allowed private shadow memory is not defined for $arch $opsys\n";
    }
 
 }

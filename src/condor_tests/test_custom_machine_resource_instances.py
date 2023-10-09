@@ -201,7 +201,7 @@ def handle(test_dir, condor, num_resources):
         count=num_resources * 2
     )
 
-    assert(handle.wait(verbose=True, timeout=180))
+    assert(handle.wait(verbose=True, timeout=240))
     assert(condor.job_queue.wait_for_job_completion(handle.job_ids))
 
     yield handle

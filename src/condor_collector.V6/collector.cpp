@@ -1912,6 +1912,10 @@ void CollectorDaemon::Config()
 		auto_free_ptr tmp(param("CONDOR_VIEW_CLASSAD_TYPES"));
 		if (tmp) {
 			viewCollectorTypes = new StringList(tmp);
+			if (viewCollectorTypes->contains_anycase(STARTD_OLD_ADTYPE) && 
+				! viewCollectorTypes->contains_anycase(STARTD_SLOT_ADTYPE)) {
+				viewCollectorTypes->append(STARTD_SLOT_ADTYPE);
+			}
 			auto_free_ptr types(viewCollectorTypes->print_to_string());
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
 				types ? types.ptr() : "");
@@ -2035,7 +2039,7 @@ void CollectorDaemon::Shutdown()
 	return;
 }
 
-void CollectorDaemon::sendCollectorAd()
+void CollectorDaemon::sendCollectorAd(int /* tid */)
 {
     // compute submitted jobs information
     submittorRunningJobs = 0;
@@ -2096,7 +2100,7 @@ void CollectorDaemon::sendCollectorAd()
 
 	CollectorRecord* self_rec = nullptr;
 	if( ! (self_rec = collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error )) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
+		dprintf( D_ERROR, "Failed to add my own ad to myself (%d).\n", error );
 		delete selfAd;
 	}
 
@@ -2126,7 +2130,6 @@ void CollectorDaemon::init_classad(int interval)
     ad = new ClassAd();
 
     SetMyTypeName(*ad, COLLECTOR_ADTYPE);
-    SetTargetTypeName(*ad, "");
 
     char *tmp;
     tmp = param( "CONDOR_ADMIN" );

@@ -22,6 +22,9 @@
 // and the qmgmt server (i.e. the schedd).
 
 #include "condor_common.h"
+
+#include <charconv>
+
 #include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
 #include "scheduler.h"
@@ -31,12 +34,12 @@
 extern Scheduler scheduler;
 
 int
-SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t flags )
+SetAttributeInt(int cl, int pr, const char *name, int64_t val, SetAttributeFlags_t flags )
 {
-	char buf[100];
-	int rval;
+	char buf[24] = { 0 };
+	int rval = 0;
 
-	snprintf(buf,100,"%d",val);
+	std::to_chars(buf, buf+sizeof(buf)-1, val);
 	rval = SetAttribute(cl,pr,name,buf,flags);
 	return(rval);
 }
@@ -45,7 +48,7 @@ int
 SetAttributeFloat(int cl, int pr, const char *name, double val, SetAttributeFlags_t flags )
 {
 	char buf[100];
-	int rval;
+	int rval = 0;
 
 	snprintf(buf,100,"%f",val);
 	rval = SetAttribute(cl,pr,name,buf,flags);
@@ -56,7 +59,7 @@ int
 SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags )
 {
 	std::string buf;
-	int rval;
+	int rval = 0;
 
 	QuoteAdStringValue(val,buf);
 
@@ -68,7 +71,7 @@ int
 SetAttributeExpr(int cl, int pr, const char *name, const ExprTree *val, SetAttributeFlags_t flags )
 {
 	std::string buf;
-	int rval;
+	int rval = 0;
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
@@ -79,12 +82,12 @@ SetAttributeExpr(int cl, int pr, const char *name, const ExprTree *val, SetAttri
 }
 
 int
-SetAttributeIntByConstraint(const char *con, const char *name, int val, SetAttributeFlags_t flags)
+SetAttributeIntByConstraint(const char *con, const char *name, int64_t val, SetAttributeFlags_t flags)
 {
-	char buf[100];
-	int rval;
+	char buf[24] = { 0 };
+	int rval = 0;
 
-	snprintf(buf,100,"%d",val);
+	std::to_chars(buf, buf+sizeof(buf)-1, val);
 	rval = SetAttributeByConstraint(con,name,buf, flags);
 	return(rval);
 }
@@ -93,7 +96,7 @@ int
 SetAttributeFloatByConstraint(const char *con, const char *name, float val, SetAttributeFlags_t flags)
 {
 	char buf[100];
-	int rval;
+	int rval = 0;
 
 	snprintf(buf,100,"%f",val);
 	rval = SetAttributeByConstraint(con,name,buf, flags);
@@ -106,7 +109,7 @@ SetAttributeStringByConstraint(const char *con, const char *name,
 							 SetAttributeFlags_t flags)
 {
 	std::string buf;
-	int rval;
+	int rval = 0;
 
 	QuoteAdStringValue(val,buf);
 
@@ -120,7 +123,7 @@ SetAttributeExprByConstraint(const char *con, const char *name,
                              SetAttributeFlags_t flags)
 {
 	std::string buf;
-	int rval;
+	int rval = 0;
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
@@ -161,7 +164,7 @@ static const ATTR_FORCE_PAIR aForcedSetAttrs[] = {
 // that require special handling during SetAttribute.
 static int IsForcedProcAttribute(const char *attr)
 {
-	const ATTR_FORCE_PAIR* found = NULL;
+	const ATTR_FORCE_PAIR* found = nullptr;
 	found = BinaryLookup<ATTR_FORCE_PAIR>(
 		aForcedSetAttrs,
 		COUNTOF(aForcedSetAttrs),
@@ -229,8 +232,8 @@ int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAt
 
 	// (shallow) iterate the attributes in this ad and send them to the schedd
 	//
-	for (auto it = ad.begin(); it != ad.end(); ++it) {
-		const char * attr = it->first.c_str();
+	for (const auto & it : ad) {
+		const char * attr = it.first.c_str();
 
 		// skip attributes that are forced into the other sort of ad, or have already been sent.
 		int forced = IsForcedProcAttribute(attr);
@@ -241,7 +244,7 @@ int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAt
 			if ( ! is_cluster && (forced != 1)) continue;
 		}
 
-		if ( ! it->second) {
+		if ( ! it.second) {
 			if (errstack) {
 				errstack->pushf(who, SCHEDD_ERR_SET_ATTRIBUTE_FAILED,
 					"job %d.%d ERROR: %s=NULL", key.cluster, key.proc, attr);
@@ -250,7 +253,7 @@ int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAt
 			break;
 		}
 		rhs.clear();
-		unparser.Unparse(rhs, it->second);
+		unparser.Unparse(rhs, it.second);
 
 		if (SetAttribute(key.cluster, key.proc, attr, rhs.c_str(), saflags) == -1) {
 			if (errstack) {

@@ -16,7 +16,7 @@ Description
 
 *condor_chirp* is not intended for use as a command-line tool. It is
 most often invoked by an HTCondor job, while the job is executing. It
-accesses files or job ClassAd attributes on the submit machine. Files
+accesses files or job ClassAd attributes on the access point. Files
 can be read, written or removed. Job attributes can be read, and most
 attributes can be updated.
 
@@ -35,7 +35,7 @@ set to ``True`` in the job ClassAd. To do this, place
 
 .. code-block:: condor-submit
 
-    +WantIOProxy = true
+    want_io_proxy = true
 
 in the submit description file of the job.
 
@@ -46,7 +46,7 @@ Chirp Commands
 --------------
 
  **fetch** *RemoteFileName LocalFileName*
-    Copy the *RemoteFileName* from the submit machine to the execute
+    Copy the *RemoteFileName* from the access point to the execute
     machine, naming it *LocalFileName*.
  **put** [**-mode** *mode*] [**-perm** *UnixPerm*] *LocalFileName* *RemoteFileName*
     Copy the *LocalFileName* from the execute machine to the submit
@@ -61,7 +61,7 @@ Chirp Commands
     fail if ``c`` is given and the file already exists.
 
  **remove** *RemoteFileName*
-    Remove the *RemoteFileName* file from the submit machine.
+    Remove the *RemoteFileName* file from the access point.
  **get_job_attr** *JobAttributeName*
     Prints the named job ClassAd attribute to standard output.
  **set_job_attr** *JobAttributeName AttributeValue*
@@ -138,7 +138,7 @@ Chirp Commands
 Examples
 --------
 
-To copy a file from the submit machine to the execute machine while the
+To copy a file from the access point to the execute machine while the
 user job is running, run
 
 .. code-block:: console

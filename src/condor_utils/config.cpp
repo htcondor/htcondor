@@ -122,10 +122,11 @@ getline_implementation( T & src, int requested_bufsize, int options, int & line_
 		int		len = buflen - (end_ptr - buf);
 		if( len <= 5 ) {
 			// we need a larger buffer -- grow buffer by 4kbytes
+			ptrdiff_t line_offset = line_ptr - buf;
 			char *newbuf = (char *)realloc(buf, 4096 + buflen);
 			if ( newbuf ) {
 				end_ptr = (end_ptr - buf) + newbuf;
-				line_ptr = (line_ptr - buf) + newbuf;
+				line_ptr = line_offset + newbuf;
 				buf = newbuf;	// note: realloc() freed our old buf if needed
 				buflen += 4096;
 				len += 4096;
@@ -1015,7 +1016,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		std::string errmsg;
 		if (ifstack.line_is_if(line, errmsg, macro_set, ctx)) {
 			if ( ! errmsg.empty()) {
-				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), line);
+				dprintf(D_CONFIG | D_ERROR_ALSO, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), line);
 				return -1111;
 			} else {
 				dprintf(D_CONFIG | D_VERBOSE, "config %lld,%lld,%lld line: %s\n", ifstack.top, ifstack.state, ifstack.estate, line);
@@ -1196,7 +1197,7 @@ void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char*
 			if (message[cchPre-1] == '\n') { --cchPre; }
 			else { message[cchPre-1] = ' '; }
 		}
-		vsprintf ( message + cchPre, format, ap );
+		vsnprintf(message + cchPre, cch + 1, format, ap);
 	}
 	va_end(ap);
 
@@ -1486,7 +1487,7 @@ Parse_macros(
 		std::string errmsg;
 		if (ifstack.line_is_if(name, errmsg, macro_set, *pctx)) {
 			if ( ! errmsg.empty()) {
-				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), name);
+				dprintf(D_CONFIG | D_ERROR_ALSO, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), name);
 				config_errmsg = errmsg;
 				retval = -1;
 				name = NULL;
@@ -2124,15 +2125,22 @@ extern "C++" MACRO_ITEM* find_macro_item (const char *name, const char * prefix,
 	}
 }
 
-// insert a source name into the MACRO_SET's table of names
-// and initialize the MACRO_SOURCE.
-void insert_source(const char * filename, MACRO_SET & set, MACRO_SOURCE & source)
+void insert_special_sources(MACRO_SET& set)
 {
 	if ( ! set.sources.size()) {
 		set.sources.push_back("<Detected>");
 		set.sources.push_back("<Default>");
 		set.sources.push_back("<Environment>");
 		set.sources.push_back("<Over>");
+	}
+}
+
+// insert a source name into the MACRO_SET's table of names
+// and initialize the MACRO_SOURCE.
+void insert_source(const char * filename, MACRO_SET & set, MACRO_SOURCE & source)
+{
+	if ( ! set.sources.size()) {
+		insert_special_sources(set);
 	}
 	source.line = 0;
 	source.is_inside = false;
@@ -3121,9 +3129,31 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 	return lval;
 }
 
+const char * lookup_macro_default(const char * name, MACRO_SET & macro_set, MACRO_EVAL_CONTEXT & ctx)
+{
+	if ( ! macro_set.defaults) {
+		return nullptr;
+	}
+
+	const MACRO_DEF_ITEM * p = nullptr;
+	if (ctx.localname) {
+		p = find_macro_subsys_def_item(name, ctx.localname, macro_set, ctx.use_mask);
+	}
+	if ( ! p && ctx.subsys) {
+		p = find_macro_subsys_def_item(name, ctx.subsys, macro_set, ctx.use_mask);
+	}
+	if ( ! p) {
+		p = find_macro_def_item(name, macro_set, ctx.use_mask);
+	}
+	if (p && p->def) {
+		return p->def->psz;
+	}
+	return nullptr;
+}
+
 // given the body text of a config macro, and the macro id and macro context
 // evaluate the body and return a string. the string may be a literal, or
-// may point into to the buffer returned in tbuf.  The caller will NOT free
+// may point into the buffer returned in tbuf.  The caller will NOT free
 // the return value, but will free tbuf if it is not NULL with the understanding
 // that the return value may be freed as a result.
 static const char * evaluate_macro_func (
@@ -3873,7 +3903,7 @@ typedef struct _config_macro_position {
 
 // given the body text of a config macro, and the macro id and macro context
 // evaluate the body and return a string. the string may be a literal, or
-// may point into to the buffer returned in tbuf.  The caller will NOT free
+// may point into the buffer returned in tbuf.  The caller will NOT free
 // the return value, but will free tbuf if it is not NULL with the understanding
 // that the return value may be freed as a result.
 static ptrdiff_t evaluate_macro_func (
@@ -4838,7 +4868,7 @@ protected:
 ** expands the macro whose name is specified in the self argument.
 ** Expand parameter references of the form "left$(self)right".  This
 ** is deceptively simple, but does handle multiple and or nested references.
-** We only expand references to to the parameter specified by self. use expand_macro
+** We only expand references to the parameter specified by self. use expand_macro
 ** to expand all references. 
 */
 char *

@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "MyString.h"
 
 #include "basejob.h"
 #include "arcresource.h"
@@ -46,7 +45,7 @@ class ArcJob : public BaseJob
 	~ArcJob();
 
 	void Reconfig();
-	void doEvaluateState();
+	void doEvaluateState(int timerID);
 	BaseResource *GetResource();
 	void SetRemoteJobId( const char *job_id );
 
@@ -54,6 +53,8 @@ class ArcJob : public BaseJob
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
 	static int jobInfoInterval;
+
+	static int m_arcGahpId;
 
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }

@@ -83,7 +83,7 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
     if (DoHistoryRotation) {
         dprintf(D_ALWAYS, "History file rotation is enabled.\n");
         dprintf(D_ALWAYS, "  Maximum history file size is: %zd bytes\n",
-                hri.MaxHistoryFileSize);
+                (ssize_t)hri.MaxHistoryFileSize);
         dprintf(D_ALWAYS, "  Number of rotated history files is: %d\n", 
                 hri.NumberBackupHistoryFiles);
     } else {
@@ -95,7 +95,7 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
     if ((PerJobHistoryDir = param(per_job_history_param)) != NULL) {
         StatInfo si(PerJobHistoryDir);
         if (!si.IsDirectory()) {
-            dprintf(D_ALWAYS | D_FAILURE,
+            dprintf(D_ERROR,
                     "invalid %s (%s): must point to a "
                     "valid directory; disabling per-job history output\n",
                     per_job_history_param, PerJobHistoryDir);
@@ -227,12 +227,12 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	// construct the name (use cluster.proc)
 	int cluster, proc;
 	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "not writing per-job history file: no cluster id in ad\n");
 		return;
 	}
 	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "not writing per-job history file: no proc id in ad\n");
 		return;
 	}
@@ -256,14 +256,14 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	// first write out the file to the temp_file_name
 	int fd = safe_open_wrapper_follow(temp_file_name.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd == -1) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "error %d (%s) opening per-job history file for job %d.%d\n",
 		        errno, strerror(errno), cluster, proc);
 		return;
 	}
 	FILE* fp = fdopen(fd, "w");
 	if (fp == NULL) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
 		        errno, strerror(errno), cluster, proc);
 		close(fd);
@@ -278,7 +278,7 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	}
 
 	if (!fPrintAd(fp, *ad, true, nullptr, include_env ? nullptr : &env)) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "error writing per-job history file for job %d.%d\n",
 		        cluster, proc);
 		fclose(fp);
@@ -289,7 +289,7 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 
 	// now atomically rename from temp_file_name to file_name
     if (rotate_file(temp_file_name.c_str(), file_name.c_str())) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ERROR,
 		        "error writing per-job history file for job %d.%d (during rename)\n",
 		        cluster, proc);
 		unlink(temp_file_name.c_str());
@@ -449,54 +449,51 @@ static int
 MaybeDeleteOneHistoryBackup(int max_backups, const char* original_filename)
 {
     int num_backups = 0;
-    char *history_dir = condor_dirname(original_filename);
+	std::string history_dir = condor_dirname(original_filename);
 
-    if (history_dir != NULL) {
-        Directory dir(history_dir);
-        const char *current_filename;
-        time_t current_time;
-        char *oldest_history_filename = NULL;
-        time_t oldest_time = 0;
+	Directory dir(history_dir.c_str());
+	const char *current_filename;
+	time_t current_time;
+	char *oldest_history_filename = NULL;
+	time_t oldest_time = 0;
 
-        // Find number of backups and oldest backup
-        for (current_filename = dir.Next(); 
-             current_filename != NULL; 
-             current_filename = dir.Next()) {
-            
-            if (IsHistoryFilename(original_filename, current_filename, &current_time)) {
-                num_backups++;
-                if (oldest_history_filename == NULL 
-                    || current_time < oldest_time) {
+	// Find number of backups and oldest backup
+	for (current_filename = dir.Next(); 
+			current_filename != NULL; 
+			current_filename = dir.Next()) {
 
-                    if (oldest_history_filename != NULL) {
-                        free(oldest_history_filename);
-                    }
-                    oldest_history_filename = strdup(current_filename);
-                    oldest_time = current_time;
-                }
-            }
-        }
+		if (IsHistoryFilename(original_filename, current_filename, &current_time)) {
+			num_backups++;
+			if (oldest_history_filename == NULL 
+					|| current_time < oldest_time) {
 
-        // If we have too many backups, delete the oldest
-        if (oldest_history_filename != NULL && num_backups >= max_backups) {
-            dprintf(D_ALWAYS, "Before rotation, deleting old history file %s\n",
-                    oldest_history_filename);
-            num_backups--;
+				if (oldest_history_filename != NULL) {
+					free(oldest_history_filename);
+				}
+				oldest_history_filename = strdup(current_filename);
+				oldest_time = current_time;
+			}
+		}
+	}
 
-            if (dir.Find_Named_Entry(oldest_history_filename)) {
-                if (!dir.Remove_Current_File()) {
-                    dprintf(D_ALWAYS, "Failed to delete %s\n", oldest_history_filename);
-                    num_backups = 0; // prevent looping forever
-                }
-            } else {
-                dprintf(D_ALWAYS, "Failed to find/delete %s\n", oldest_history_filename);
-                num_backups = 0; // prevent looping forever
-            }
-        }
-        free(history_dir);
-		free(oldest_history_filename);
-    }
-    return num_backups;
+	// If we have too many backups, delete the oldest
+	if (oldest_history_filename != NULL && num_backups >= max_backups) {
+		dprintf(D_ALWAYS, "Before rotation, deleting old history file %s\n",
+				oldest_history_filename);
+		num_backups--;
+
+		if (dir.Find_Named_Entry(oldest_history_filename)) {
+			if (!dir.Remove_Current_File()) {
+				dprintf(D_ALWAYS, "Failed to delete %s\n", oldest_history_filename);
+				num_backups = 0; // prevent looping forever
+			}
+		} else {
+			dprintf(D_ALWAYS, "Failed to find/delete %s\n", oldest_history_filename);
+			num_backups = 0; // prevent looping forever
+		}
+	}
+	free(oldest_history_filename);
+	return num_backups;
 }
 
 // --------------------------------------------------------------------------

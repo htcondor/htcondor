@@ -22,7 +22,7 @@ Machine ClassAd Attributes
         A job is currently suspended
 
     ``"Vacating"``
-        A job is currently checkpointing
+        A job is currently vacating
 
     ``"Killing"``
         A job is currently being killed
@@ -56,6 +56,12 @@ Machine ClassAd Attributes
     *condor_startd* initializes, it checks for this support. If the
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
+
+:classad-attribute:`ClaimEndTime`
+    The time at which the slot will leave the ``Claimed`` state.
+    Currently, this only applies to partitionable slots.
+    This is measured in the number of integer seconds since the Unix
+    epoch (00:00:00 UTC, Jan 1, 1970).
 
 :classad-attribute:`ClockDay`
     The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
@@ -164,7 +170,7 @@ Machine ClassAd Attributes
     The job run time in cpu-seconds that would be lost if graceful
     draining were initiated at the time this ClassAd was published. This
     calculation assumes that jobs will run for the full retirement time
-    and then be evicted without saving a checkpoint.
+    and then be evicted.
 
 :classad-attribute:`ExpectedMachineGracefulDrainingCompletion`
     The estimated time at which graceful draining of the machine could
@@ -461,6 +467,11 @@ Machine ClassAd Attributes
 :classad-attribute:`MachineMaxVacateTime`
     An integer expression that specifies the time in seconds the machine
     will allow the job to gracefully shut down.
+
+:classad-attribute:`MaxClaimTime`
+    The maximum number of seconds that the slot may remain in the
+    `Claimed` state before returning to the `Unclaimed` state.
+    Currently, this only applies to partitionable slots.
 
 :classad-attribute:`MaxJobRetirementTime`
     When the *condor_startd* wants to kick the job off, a job which has
@@ -893,7 +904,7 @@ Machine ClassAd Attributes
         The machine is claimed by a remote *condor_schedd* and is
         probably running a job.
      ``"Preempting"``
-        An HTCondor job is being preempted (possibly via checkpointing)
+        An HTCondor job is being preempted
         in order to clear the machine for either a higher priority job
         or because the machine owner wants the machine back.
      ``"Drained"``
@@ -1135,6 +1146,9 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     ``RemoteUser`` would hold the name of the entity currently using the
     resource, while ``RemoteOwner`` would hold the name of the entity
     that claimed the resource.
+
+:classad-attribute:`RemoteScheddName`
+    The name of the *condor_schedd* which claimed this resource.
 
 :classad-attribute:`PreemptingOwner`
     The name of the user who is preempting the job that is currently

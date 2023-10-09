@@ -118,7 +118,7 @@ ClaimJobResult claim_job(int cluster, int proc, std::string * error_details, con
 	ASSERT(proc >= 0);
 
 	// Check that the job's status is still IDLE
-	int status;
+	int status = 0;
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) == -1) {
 		if(error_details) {
 			formatstr(*error_details, "Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 
@@ -450,6 +450,10 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	filter_attrs.insert( ATTR_TOKEN_SCOPES );
 	filter_attrs.insert( ATTR_TOKEN_ID );
 
+	std::set<std::string, classad::CaseIgnLTStr> proc_attrs;
+	proc_attrs.insert(ATTR_PROC_ID);
+	proc_attrs.insert(ATTR_JOB_STATUS);
+
 	int cluster = NewCluster();
 	if( cluster < 0 ) {
 		failobj.fail("Failed to create a new cluster (%d)\n", cluster);
@@ -490,6 +494,8 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	formatstr(leaveinqueue, "%s == %d", ATTR_JOB_STATUS, COMPLETED);
 	src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.c_str());
 
+	bool put_in_proc = false;
+
 	ExprTree * tree;
 	const char *lhstr = 0;
 	const char *rhstr = 0;
@@ -499,12 +505,13 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 			continue;
 		}
+		put_in_proc = proc_attrs.find(lhstr) != proc_attrs.end();
 		rhstr = ExprTreeToString( tree );
 		if( !rhstr) { 
 			failobj.fail("Problem processing classad\n");
 			return false;
 		}
-		if( SetAttribute(cluster, proc, lhstr, rhstr) == -1 ) {
+		if( SetAttribute(cluster, put_in_proc ? proc : -1, lhstr, rhstr) == -1 ) {
 			failobj.fail("Failed to set %s = %s\n", lhstr, rhstr);
 			return false;
 		}

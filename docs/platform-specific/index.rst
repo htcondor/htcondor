@@ -15,5 +15,6 @@ on different computing platforms and operating systems.
    linux
    microsoft-windows
    macintosh-osx
+   windows-installer
 
       

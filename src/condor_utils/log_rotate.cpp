@@ -90,16 +90,14 @@ void setBaseName(const char *baseName) {
 		isInitialized = 0;
 	}
 	if (isInitialized == 0) {
-		char *tmpDir;
 
 		if (logBaseName)
 			free(logBaseName);
 		logBaseName = strdup(baseName);
-		tmpDir = condor_dirname(logBaseName);
+		std::string tmpDir = condor_dirname(logBaseName);
 		if (baseDirName)
 			free(baseDirName);
-		baseDirName = strdup(tmpDir);
-		free(tmpDir);
+		baseDirName = strdup(tmpDir.c_str());
 #ifdef WIN32
 		if (searchLogName)
 			free(searchLogName);
@@ -179,7 +177,7 @@ int cleanUpOldLogFiles(int maxNum) {
 			// and don't try and delete more files than we initially thought there were.
 			delete_attempts += 1;
 			if (delete_attempts > MIN(initial_count, 10)) {
-				dprintf(D_ALWAYS | D_FAILURE, "Giving up on rotation cleanup of old files after %d attempts. Something is very wrong!\n", delete_attempts);
+				dprintf(D_ERROR, "Giving up on rotation cleanup of old files after %d attempts. Something is very wrong!\n", delete_attempts);
 				break;
 			}
 		}

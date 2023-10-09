@@ -148,14 +148,15 @@ JobRouter::~JobRouter() {
 
 void JobRouter::clear_pre_and_post_xfms()
 {
-	MacroStreamXFormSource *xfm = NULL;
-	m_pre_route_xfms.Rewind();
-	while (m_pre_route_xfms.Next(xfm)) { delete xfm; }
-	m_pre_route_xfms.Clear();
+	for (MacroStreamXFormSource *xfm : m_pre_route_xfms) {
+		delete xfm;
+	}
+	m_pre_route_xfms.clear();
 
-	m_post_route_xfms.Rewind();
-	while (m_post_route_xfms.Next(xfm)) { delete xfm; }
-	m_post_route_xfms.Clear();
+	for (MacroStreamXFormSource *xfm : m_post_route_xfms) {
+		delete xfm;
+	}
+	m_post_route_xfms.clear();
 }
 
 void
@@ -199,9 +200,16 @@ static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
 	bool valid_defaults = true;
 	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
 
+	bool using_defaults = param_defined("JOB_ROUTER_DEFAULTS");
+	if (using_defaults) {
+		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is deprecated and will be removed for V24 of HTCondor. New configuration\n");
+		dprintf(D_ALWAYS, "                   syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.\n");
+		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series\n");
+	}
+
 	// NOTE: for htcondor 9.0 we should change the default of this knob to false
 	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
-	if ( ! use_entries && param_defined("JOB_ROUTER_DEFAULTS")) {
+	if ( ! use_entries && using_defaults) {
 		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is defined, but will be ignored because JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES is false\n");
 		return true;
 	}
@@ -267,7 +275,7 @@ static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
 }
 
 void
-JobRouter::config() {
+JobRouter::config( int /* timerID */ ) {
 	bool allow_empty_requirements = false;
 	m_enable_job_routing = true;
 
@@ -379,6 +387,23 @@ JobRouter::config() {
 	auto_free_ptr routing_file(param("JOB_ROUTER_ENTRIES_FILE"));
 	auto_free_ptr routing_cmd(param("JOB_ROUTER_ENTRIES_CMD"));
 	auto_free_ptr routing_entries(param("JOB_ROUTER_ENTRIES"));
+
+	std::string used_deprecated = "";
+	if (routing_file) used_deprecated += "JOB_ROUTER_ENTRIES_FILE";
+	if (routing_cmd) {
+		if (! used_deprecated.empty()) used_deprecated += ", ";
+		used_deprecated += "JOB_ROUTER_ENTRIES_CMD";
+	}
+	if (routing_entries) {
+		if (! used_deprecated.empty()) used_deprecated += ", ";
+		used_deprecated += "JOB_ROUTER_ENTRIES";
+	}
+
+	if (! used_deprecated.empty()) {
+		dprintf(D_ALWAYS, "JobRouter WARNING: %s are deprecated and will be removed for V24 of HTCondor. New configuration\n", used_deprecated.c_str());
+		dprintf(D_ALWAYS, "                   syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.\n");
+		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series.\n");
+	}
 
 	// NOTE: for htcondor 9.0 we should change the default of this knob to false
 	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
@@ -495,7 +520,7 @@ JobRouter::config() {
 				m_enable_job_routing = false;
 				delete xfm;
 			} else {
-				m_pre_route_xfms.Append(xfm);
+				m_pre_route_xfms.push_back(xfm);
 			}
 		} else {
 			dprintf(D_ALWAYS, "ERROR: %s not found\n", xfm_param.c_str());
@@ -519,7 +544,7 @@ JobRouter::config() {
 				m_enable_job_routing = false;
 				delete xfm;
 			} else {
-				m_post_route_xfms.Append(xfm);
+				m_post_route_xfms.push_back(xfm);
 			}
 		} else {
 			dprintf(D_ALWAYS, "ERROR: %s not found\n", xfm_param.c_str());
@@ -654,7 +679,7 @@ JobRouter::config() {
 }
 
 void
-JobRouter::refreshIDTokens() {
+JobRouter::refreshIDTokens( int /* timerID */ ) {
 	StringList items;
 	param_and_insert_unique_items("JOB_ROUTER_CREATE_IDTOKEN_NAMES", items);
 	items.remove_anycase("NAMES");
@@ -783,17 +808,15 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 {
 	// build a set of route names, we will remove names from this list as we print them
 	classad::References remaining_names;
-	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
-		JobRoute * route = it->second;
+	for (auto & m_route : *m_routes) {
+		JobRoute * route = m_route.second;
 		remaining_names.insert(route->Name());
 	}
 
 	// dump pre route transforms
 	std::string buf;
-	if ( ! m_pre_route_xfms.IsEmpty()) {
-		m_pre_route_xfms.Rewind();
-		MacroStreamXFormSource * xfm;
-		while (m_pre_route_xfms.Next(xfm)) {
+	if ( ! m_pre_route_xfms.empty()) {
+		for (MacroStreamXFormSource *xfm : m_pre_route_xfms) {
 			fprintf(hf, "Pre-Route Transform : %s\n", xfm->getName());
 			buf.clear();
 			xfm->getFormattedText(buf, "\t", true);
@@ -803,10 +826,8 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 	}
 
 	// dump post route transforms
-	if ( ! m_post_route_xfms.IsEmpty()) {
-		m_post_route_xfms.Rewind();
-		MacroStreamXFormSource * xfm;
-		while (m_post_route_xfms.Next(xfm)) {
+	if ( ! m_post_route_xfms.empty()) {
+		for (MacroStreamXFormSource *xfm : m_post_route_xfms) {
 			fprintf(hf, "Post-Route Transform : %s\n", xfm->getName());
 			buf.clear();
 			xfm->getFormattedText(buf, "\t", true);
@@ -818,8 +839,8 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 
 	// print the enabled routes in the order that they will be used
 	int ixRoute = 1;
-	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
-		JobRoute *route = safe_lookup_route(*it);
+	for (auto & it : m_route_order) {
+		JobRoute *route = safe_lookup_route(it);
 		if ( ! route) continue;
 		remaining_names.erase(route->Name());
 		/*
@@ -900,8 +921,7 @@ JobRouter::InitPublicAd()
 
 	m_public_ad = ClassAd();
 
-	SetMyTypeName(m_public_ad, "Job_Router");
-	SetTargetTypeName(m_public_ad, "");
+	SetMyTypeName(m_public_ad, JOB_ROUTER_ADTYPE);
 
 	m_public_ad.Assign(ATTR_NAME,daemonName);
 
@@ -909,7 +929,7 @@ JobRouter::InitPublicAd()
 }
 
 void
-JobRouter::EvalAllSrcJobPeriodicExprs()
+JobRouter::EvalAllSrcJobPeriodicExprs( int /* timerID */ )
 {
 	RoutedJob *job;
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
@@ -1045,7 +1065,7 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 	if (HELD != status && REMOVED != status && COMPLETED != status)
 	{
 		ad.InsertAttr(ATTR_JOB_STATUS, HELD);
-		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
+		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, time(nullptr));
 		ad.InsertAttr(ATTR_HOLD_REASON, hold_reason);
 		ad.InsertAttr(ATTR_HOLD_REASON_CODE, hold_code);
 		ad.InsertAttr(ATTR_HOLD_REASON_SUBCODE, sub_code);
@@ -1095,7 +1115,7 @@ JobRouter::SetJobRemoved(classad::ClassAd& ad, const char* remove_reason)
 	if (REMOVED != status)
 	{
 		ad.InsertAttr(ATTR_JOB_STATUS, REMOVED);
-		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
+		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, time(nullptr));
 		ad.InsertAttr(ATTR_REMOVE_REASON, remove_reason);
 		if(false == push_dirty_attributes(ad,m_schedd1_name,m_schedd1_pool))
 		{
@@ -1497,7 +1517,7 @@ JobRouter::NumManagedJobs() {
 }
 
 void
-JobRouter::Poll() {
+JobRouter::Poll( int /* timerID */ ) {
 	dprintf(D_FULLDEBUG,"JobRouter: polling state of (%d) managed jobs.\n",NumManagedJobs());
 
 	// Update our mirror(s) of the job queue(s).
@@ -2976,7 +2996,7 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 }
 
 void
-JobRouter::TimerHandler_UpdateCollector() {
+JobRouter::TimerHandler_UpdateCollector( int /* timerID */ ) {
 	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
 }
 
@@ -2988,7 +3008,7 @@ JobRouter::InvalidatePublicAd() {
 	ASSERT( ! m_operate_as_tool);
 
 	SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
-	SetTargetTypeName(invalidate_ad, "Job_Router");
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, JOB_ROUTER_ADTYPE);
 
 	formatstr(line, "%s == \"%s\"", ATTR_NAME, daemonName.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
@@ -3129,8 +3149,8 @@ JobRoute::AdjustFailureThrottles() {
 bool
 JobRoute::ApplyRoutingJobEdits(
 	ClassAd *src_ad,
-	SimpleList<MacroStreamXFormSource*>& pre_route,
-	SimpleList<MacroStreamXFormSource*>& post_route,
+	std::vector<MacroStreamXFormSource*>& pre_route,
+	std::vector<MacroStreamXFormSource*>& post_route,
 	unsigned int xform_flags)
 {
 	XFormHash mset(XFormHash::Flavor::Basic);
@@ -3139,10 +3159,8 @@ JobRoute::ApplyRoutingJobEdits(
 
 	std::string errmsg;
 	int rval = 0;
-	if (m_use_pre_route_transform && !pre_route.IsEmpty()) {
-		MacroStreamXFormSource* xfm;
-		pre_route.Rewind();
-		while (pre_route.Next(xfm)) {
+	if (m_use_pre_route_transform && !pre_route.empty()) {
+		for (MacroStreamXFormSource* xfm: pre_route) {
 			if ( ! xfm->matches(src_ad)) {
 				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
@@ -3168,10 +3186,8 @@ JobRoute::ApplyRoutingJobEdits(
 		return false;
 	}
 
-	if (m_use_pre_route_transform && ! post_route.IsEmpty()) {
-		MacroStreamXFormSource* xfm;
-		post_route.Rewind();
-		while (post_route.Next(xfm)) {
+	if (m_use_pre_route_transform && ! post_route.empty()) {
+		for (MacroStreamXFormSource* xfm: post_route) {
 			if ( ! xfm->matches(src_ad)) {
 				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
@@ -3254,7 +3270,7 @@ JobRoute::ParseNext(
 
 	// insure that the resulting xform will parse, and also populate the XFormHash with it's params
 	// so that we can query/store them for use in the routing process prior to actual job transformation.
-	if ( ! ValidateXForm(m_route, mset, errmsg)) {
+	if ( ! ValidateXForm(m_route, mset, nullptr, errmsg)) {
 		dprintf(D_ALWAYS, "JobRouter: route %s is not valid: %s\n", name, errmsg.c_str());
 		return false;
 	}

@@ -23,7 +23,7 @@ By default, jobs will not be run in Singularity.
 
 For Singularity to work, the administrator must install Singularity
 on the worker node.  The HTCondor startd will detect this installation
-at startup.  When it detects a useable installation, it will
+at startup.  When it detects a usable installation, it will
 advertise two attributes in the slot ad:
 
 .. code-block:: condor-config
@@ -114,7 +114,7 @@ above, A complete submit file that uses singularity might look like
      Request_cpus = 1
 
      should_transfer_files = yes
-     tranfer_input_files = some_input
+     transfer_input_files = some_input
      when_to_transfer_output = on_exit
 
      log = log
@@ -142,7 +142,7 @@ directory, the submit file would look like:
      Request_cpus = 1
 
      should_transfer_files = yes
-     tranfer_input_files = image
+     transfer_input_files = image
      when_to_transfer_output = on_exit
 
      log = log
@@ -174,12 +174,12 @@ expression could be
 
 .. code-block:: condor-config
 
-      SINGULARITY_BIND_EXPR = (Owner == "TrustedUser") ? SomeExpressionFromJob : ""
+      SINGULARITY_BIND_EXPR = (Target.Owner == "TrustedUser") ? SomeExpressionFromJob : ""
 
 If the source directory for the bind mount is missing on the host machine,
 HTCondor will skip that mount and run the job without it.  If the image is
 an exploded file directory, and the target directory is missing inside
-the image, and the configuration parameter :macro:`SINGULRITY_IGNORE_MISSING_BIND_TARGET`
+the image, and the configuration parameter :macro:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
 is set to true (the default is false), then this mount attempt will also
 be skipped.  Otherwise, the job will return an error when run.
 
@@ -199,20 +199,21 @@ for example if the image is missing, or malformed, the job is put
 on hold.  This is controlled by the condor knob
 :macro:`SINGULARITY_RUN_TEST_BEFORE_JOB`, which defaults to true.
 
-If an administrator wants to pass additional arguments to the
-singularity exec command instead of the defaults used ht HTCondor, several parameters exist to do this - see
-the *condor_starter* configuration parameters that begin with the prefix
-SINGULARITY in defined in section :ref:`admin-manual/configuration-macros:condor_starter configuration file entries`.
-There you will find parameters to customize things such as the use of PID namespaces,
-cache directory, and several other options.  However, should an administrator
-need to customize Singularity behavior that HTCondor does not currently support, the
-parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows arbitrary additional
-parameters to be passed to the singularity exec command. Note that this
-can be a classad expression, evaluated in the context of the job ad
-and the machine, so the admin could set different options for different
-kinds of jobs.  For example, to
-pass the ``-w`` argument, to make the image writeable, an administrator
-could set
+If an administrator wants to pass additional arguments to the singularity exec
+command instead of the defaults used by HTCondor, several parameters exist to
+do this - see the *condor_starter* configuration parameters that begin with the
+prefix SINGULARITY in defined in section
+:ref:`admin-manual/configuration-macros:condor_starter configuration file
+entries`.  There you will find parameters to customize things such as the use
+of PID namespaces, cache directory, and several other options.  However, should
+an administrator need to customize Singularity behavior that HTCondor does not
+currently support, the parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows
+arbitrary additional parameters to be passed to the singularity exec command.
+Note that this can be a classad expression, evaluated in the context of the
+slot ad and the job ad, where the slot ad can be referenced via "MY.", and the
+job ad via the "TARGET." reference.  In this way, the admin could set different
+options for different kinds of jobs.  For example, to pass the ``-w`` argument,
+to make the image writable, an administrator could set
 
 .. code-block:: condor-config
 
@@ -253,7 +254,7 @@ to the StarterLog might look like the following:
 
 .. code-block:: text
 
-    About to exec /usr/bin/singularity -s exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/condor_exec.exe 3
+    About to exec /usr/bin/singularity -s exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/demo 3
 
 In this example, no GPUs have been requested, so there is no ``-nv`` option.
 :macro:`MOUNT_UNDER_SCRATCH` is set to the default of ``/tmp,/var/tmp``, so condor

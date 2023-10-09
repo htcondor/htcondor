@@ -118,16 +118,13 @@ DaemonKeepAlive::get_stats()
 int
 DaemonKeepAlive::ScanForHungChildren()
 {
-	unsigned int now = (unsigned int)time(NULL);
+	time_t now = time(nullptr);
 
-	DaemonCore::PidEntry *pid_entry;
-	daemonCore->pidTable->startIterations();
-	while( daemonCore->pidTable->iterate(pid_entry) ) {
-		if( pid_entry &&
-			pid_entry->hung_past_this_time &&
-			now > pid_entry->hung_past_this_time )
+	for (auto& [key, pid_entry] : daemonCore->pidTable) {
+		if( pid_entry.hung_past_this_time &&
+			now > pid_entry.hung_past_this_time )
 		{
-			KillHungChild(pid_entry);
+			KillHungChild(&pid_entry);
 		}
 	}
 
@@ -249,7 +246,6 @@ DaemonKeepAlive::HandleChildAliveCommand(int, Stream* stream)
 {
 	pid_t child_pid = 0;
 	unsigned int timeout_secs = 0;
-	DaemonCore::PidEntry *pidentry;
 	double dprintf_lock_delay = 0.0;
 
 	if (!stream->code(child_pid) ||
@@ -275,16 +271,18 @@ DaemonKeepAlive::HandleChildAliveCommand(int, Stream* stream)
 	}
 
 
-	if ((daemonCore->pidTable->lookup(child_pid, pidentry) < 0)) {
+	auto itr = daemonCore->pidTable.find(child_pid);
+	if (itr == daemonCore->pidTable.end()) {
 		// we have no information on this pid
 		dprintf(D_ALWAYS,
 			"Received child alive command from unknown pid %d\n",child_pid);
 		return FALSE;
 	}
+	DaemonCore::PidEntry& pidentry = itr->second;
 
-	pidentry->hung_past_this_time = (unsigned int) time(NULL) + timeout_secs;
-	pidentry->was_not_responding = FALSE;
-	pidentry->got_alive_msg += 1;
+	pidentry.hung_past_this_time = time(nullptr) + timeout_secs;
+	pidentry.was_not_responding = FALSE;
+	pidentry.got_alive_msg += 1;
 
 	dprintf(D_DAEMONCORE,
 			"received childalive, pid=%d, secs=%d, dprintf_lock_delay=%f\n",child_pid,timeout_secs,dprintf_lock_delay);
@@ -384,7 +382,7 @@ DaemonKeepAlive::KillHungChild(void *child)
 		else {
 			dprintf(D_ALWAYS, "Sending SIGABRT to child to generate a core file.\n");
 			const unsigned int want_core_timeout = 600;
-			pidentry->hung_past_this_time = (unsigned int) time(NULL) + want_core_timeout;
+			pidentry->hung_past_this_time = time(nullptr) + want_core_timeout;
 		}
 	}
 #endif

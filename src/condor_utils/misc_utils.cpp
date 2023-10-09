@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "MyString.h"
 #include "condor_config.h"
 #include <time.h>
 

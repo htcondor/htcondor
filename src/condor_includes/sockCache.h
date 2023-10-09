@@ -52,10 +52,10 @@ class SocketCache
 {
 public:
 		// ctor/dtor
-	SocketCache( int size = DEFAULT_SOCKET_CACHE_SIZE );
+	SocketCache( size_t size = DEFAULT_SOCKET_CACHE_SIZE );
 	~SocketCache();
 
-	void resize( int size );
+	void resize( size_t size );
 
 	void clearCache( void );
 	void invalidateSock( const char* );
@@ -74,7 +74,7 @@ private:
 	struct sockEntry
 	{
 		bool		valid;
-		MyString	addr;
+		std::string	addr;
 		ReliSock	*sock;
 		int			timeStamp;
 	};
@@ -85,7 +85,7 @@ private:
 
 	int			timeStamp;
 	sockEntry 	*sockCache;
-	int			cacheSize;
+	size_t			cacheSize;
 };
 			
 		

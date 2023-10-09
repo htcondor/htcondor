@@ -24,6 +24,15 @@ system. Other system-wide settings can be found in
 :ref:`admin-manual/configuration-macros:network-related configuration file entries`
 and :ref:`admin-manual/configuration-macros:shared file system configuration file macros`.
 
+:macro-def:`SUBSYSTEM`
+    Various configuration macros described below may include ``<SUBSYS>`` in the macro name.
+    This allows for one general macro name to apply to specific subsystems via a common
+    pattern. Just replace the ``<SUBSYS>`` part of the given macro with a valid HTCondor
+    subsystem name to apply that macro. Note that some configuration macros with ``<SUBSYS>``
+    only work for select subsystems. List of HTCondor Subsystems:
+
+    .. include:: subsystems.rst
+
 :macro-def:`CONDOR_HOST`
     This macro is used to define the ``$(COLLECTOR_HOST)`` macro.
     Normally the *condor_collector* and *condor_negotiator* would run
@@ -165,10 +174,10 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
 :macro-def:`SPOOL`
     The spool directory is where certain files used by the
-    *condor_schedd* are stored, such as the job queue file and the
-    initial executables of any jobs that have been submitted. In
-    addition, all the checkpoint files from jobs that have been submitted
-    will be stored in that machine's spool directory. Therefore,
+    *condor_schedd* are stored, such as the job queue file.  The
+    spool also stores all input and output files for
+    remotely-submitted jobs and all intermediate or checkpoint
+    files.  Therefore,
     you will want to ensure that the spool directory is located on a
     partition with enough disk space. If a given machine is only set up
     to execute HTCondor jobs and not submit them, it would not need a
@@ -368,6 +377,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     will send mail to if something goes wrong with the named
     ``<SUBSYS>``. Identical to ``CONDOR_ADMIN``, but done on a per
     subsystem basis. There is no default value.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`CONDOR_SUPPORT_EMAIL`
     The email address to be included at the bottom of all email HTCondor
@@ -928,6 +939,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     mappings for the specified daemon. Names must be separated by spaces
     or commas.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`CLASSAD_USER_MAPFILE_<name>`
     A string giving the name of a file to parse to initialize the map
     for the given username. Note that this macro is only used if
@@ -1013,8 +1026,7 @@ Daemon Logging Configuration File Entries
 
 These entries control how and where the HTCondor daemons write to log
 files. Many of the entries in this section represents multiple macros.
-There is one for each subsystem (listed in
-:ref:`admin-manual/introduction-to-configuration:pre-defined macros`).
+There is one for each subsystem (listed in :macro:`SUBSYSTEM`).
 The macro name for each substitutes ``<SUBSYS>`` with the name of the
 subsystem corresponding to the daemon.
 
@@ -1031,6 +1043,8 @@ subsystem corresponding to the daemon.
     attempt to log this into a new file of the name
     ``$(LOG)/dprintf_failure.<SUBSYS>`` before the daemon exits.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`LOG_TO_SYSLOG`
     A boolean value that is ``False`` by default. When ``True``, all
     daemon logs are routed to the syslog facility on Linux.
@@ -1045,6 +1059,8 @@ subsystem corresponding to the daemon.
     Note that a log file for the *condor_procd* does not use this
     configuration variable definition. Its implementation is separate.
     See :macro:`MAX_PROCD_LOG`.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`MAX_DEFAULT_LOG`
     Controls the maximum size in bytes or amount of time that any log
@@ -1079,12 +1095,16 @@ subsystem corresponding to the daemon.
     Thus, at most ``MAX_NUM_<SUBSYS>_LOG + 1`` log files of the same
     program coexist at a given time. The default value is 1.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`TRUNC_<SUBSYS>_LOG_ON_OPEN`
     If this macro is defined and set to ``True``, the affected log will
     be truncated and started from an empty file with each invocation of
     the program. Otherwise, new invocations of the program will append
     to the previous log file. By default this setting is ``False`` for
     all daemons.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`<SUBSYS>_LOG_KEEP_OPEN`
     A boolean value that controls
@@ -1101,6 +1121,8 @@ subsystem corresponding to the daemon.
     all daemons, except the *condor_shadow*, due to a global file
     descriptor limit.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`<SUBSYS>_LOCK`
     This macro specifies the lock file used
     to synchronize append operations to the log file for this subsystem.
@@ -1110,6 +1132,8 @@ subsystem corresponding to the daemon.
     required for log files which are accessed by more than one process.
     Currently, this includes only the ``SHADOW`` subsystem. This macro
     is defined relative to the ``$(LOCK)`` macro.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`JOB_QUEUE_LOG`
     A full path and file name, specifying the job queue log. The default
@@ -1436,6 +1460,8 @@ subsystem corresponding to the daemon.
         of each line in the log file will contain a fractional part to
         the seconds field that is accurate to the millisecond.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`ALL_DEBUG`
     Used to make all subsystems share a debug flag. Set the parameter
     ``ALL_DEBUG`` instead of changing all of the individual parameters.
@@ -1463,12 +1489,13 @@ Log files may optionally be specified per debug level as follows:
     specifies a log file that only captures *condor_negotiator* debug
     events occurring with matches.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`MAX_<SUBSYS>_<LEVEL>_LOG`
     See :macro:`MAX_<SUBSYS>_LOG`.
 
 :macro-def:`TRUNC_<SUBSYS>_<LEVEL>_LOG_ON_OPEN`
-    Similar to ``TRUNC_<SUBSYS>_LOG_ON_OPEN``
-    :index:`TRUNC_<SUBSYS>_LOG_ON_OPEN`.
+    See :macro:`TRUNC_<SUBSYS>_LOG_ON_OPEN`.
 
 The following macros control where and what is written to the event log,
 a file that receives job events, but across all users and user's jobs.
@@ -1679,9 +1706,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     daemon. This macro is not necessary for the *condor_collector*
     daemon, since its command socket is at a well-known port.
 
-    The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`<SUBSYS>_SUPER_ADDRESS_FILE`
     :index:`SCHEDD_SUPER_ADDRESS_FILE`
@@ -1698,12 +1723,16 @@ that DaemonCore uses which affect all HTCondor daemons.
     ``$(LOG)/.collector_address.super``. When not defined for other
     DaemonCore daemons, there will be no higher priority command port.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`<SUBSYS>_DAEMON_AD_FILE`
     A complete path to a file
     that is to contain the ClassAd for a daemon. When the daemon sends a
     ClassAd describing itself to the *condor_collector*, it will also
     place a copy of the ClassAd in this file. Currently, this setting
     only works for the *condor_schedd*. :index:`<SUBSYS>_ATTRS`
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`<SUBSYS>_ATTRS`
     Allows any DaemonCore daemon to advertise arbitrary expressions from
@@ -1714,8 +1743,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     **rank** and **requirements**.
 
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    subsystem string as defined by :macro:`SUBSYSTEM`.
 
     .. note::
 
@@ -1743,6 +1771,7 @@ that DaemonCore uses which affect all HTCondor daemons.
             MY_STRING = "$(STRING)"
             STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`DAEMON_SHUTDOWN`
     Starting with HTCondor version 6.9.3, whenever a daemon is about to
@@ -1818,6 +1847,8 @@ that DaemonCore uses which affect all HTCondor daemons.
     *condor_schedd* 's parent daemon will wait without receiving an
     alive and well message from the *condor_schedd* before killing it.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`NOT_RESPONDING_WANT_CORE`
     A boolean value with a default value of ``False``. This parameter is
     for debugging purposes on Unix systems, and it controls the behavior
@@ -1839,7 +1870,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     restart of a daemon.
 
 :macro-def:`SOCKET_LISTEN_BACKLOG`
-    An integer value that defaults to 500, which defines the backlog
+    An integer value that defaults to 4096, which defines the backlog
     value for the listen() network call when a daemon creates a socket
     for incoming connections. It limits the number of new incoming
     network connections the operating system will accept for a daemon
@@ -2012,6 +2043,8 @@ More information about networking in HTCondor can be found in
     *condor_schedd* daemon, the value defaults to 4096. If the
     *condor_shared_port* daemon is in use, its value for this
     parameter should match the largest value set for the other daemons.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`MAX_FILE_DESCRIPTORS`
     Under Unix, this specifies the maximum number of file descriptors to
@@ -2228,6 +2261,8 @@ More information about networking in HTCondor can be found in
     until a timeout occurs. This configuration variable is intended for
     use by developers for debugging purposes, where communication
     timeouts interfere.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`NONBLOCKING_COLLECTOR_UPDATE`
     A boolean value that defaults to ``True``. When ``True``, the
@@ -2549,8 +2584,7 @@ These macros control the *condor_master*.
     These are most often defined relative to the ``$(SBIN)`` macro.
 
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    subsystem string as defined by :macro:`SUBSYSTEM`.
 
 :macro-def:`<DaemonName>_ENVIRONMENT`
     ``<DaemonName>`` is the name of a daemon listed in ``DAEMON_LIST``.
@@ -2582,8 +2616,7 @@ These macros control the *condor_master*.
     extra command line arguments to the *condor_startd*.
 
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    subsystem string as defined by :macro:`SUBSYSTEM`.
 
 :macro-def:`<SUBSYS>_USERID`
     The account name that should be used
@@ -2610,6 +2643,8 @@ These macros control the *condor_master*.
     necessary to make a copy of the credential, make it be owned by the
     account the daemons are using, and configure the daemons to use that
     copy.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`PREEN`
     In addition to the daemons defined in ``$(DAEMON_LIST)``, the
@@ -2713,8 +2748,9 @@ These macros control the *condor_master*.
     call, instead of the normal call to exit(). Multiple programs to
     execute may be defined with multiple entries, each with a unique
     ``Name``. These macros have no effect on a *condor_master* unless
-    *condor_set_shutdown* is run. The ``Name`` specified as an
-    argument to the *condor_set_shutdown* program must match the
+    *condor_set_shutdown* is run, or the `-exec` argument is used with
+    *condor_off* or *condor_restart*. The ``Name`` specified as an
+    argument to the *condor_set_shutdown* program or `-exec` arg must match the
     ``Name`` portion of one of these ``MASTER_SHUTDOWN_<Name>`` macros;
     if not, the *condor_master* will log an error and ignore the
     command. If a match is found, the *condor_master* will attempt to
@@ -3049,7 +3085,7 @@ section.
 :macro-def:`KILL`
     A boolean expression that, when ``True``, causes HTCondor to
     immediately stop the execution of a vacating job, without delay. The
-    job is hard-killed, so any attempt by the job to checkpoint or clean
+    job is hard-killed, so any attempt by the job to clean
     up will be aborted. This expression should normally be ``False``.
     When desired, it may be used to abort the graceful shutdown of a job
     earlier than the limit imposed by ``MachineMaxVacateTime``
@@ -3057,7 +3093,7 @@ section.
 
 :macro-def:`PERIODIC_CHECKPOINT`
     A boolean expression that, when ``True``, causes HTCondor to
-    initiate a checkpoint of the currently running job. This setting
+    initiate a checkpoint of the currently running job.  This setting
     applies to vm universe jobs that have set
     **vm_checkpoint** :index:`vm_checkpoint<single: vm_checkpoint; submit commands>`
     to ``True`` in the submit description file.
@@ -3101,7 +3137,7 @@ section.
 :macro-def:`WANT_VACATE`
     A boolean expression that, when ``True``, defines that a preempted
     HTCondor job is to be vacated, instead of killed. This means the job
-    will be soft-killed and given time to checkpoint or clean up. The
+    will be soft-killed and given time to clean up. The
     amount of time given depends on ``MachineMaxVacateTime``
     :index:`MachineMaxVacateTime` and ``KILL``
     :index:`KILL`. The default value is ``True``.
@@ -3232,7 +3268,7 @@ section.
     ``CLAIM_WORKLIFE`` expires, any existing job may continue to run as
     usual, but once it finishes or is preempted, the claim is closed.
     When ``CLAIM_WORKLIFE`` is -1, this is treated as an infinite claim
-    worklife, so claims may be held indefinitely (as long as they are
+    work life, so claims may be held indefinitely (as long as they are
     not preempted and the user does not run out of jobs, of course). A
     value of 0 has the effect of not allowing more than one job to run
     per claim, since it immediately expires after the first job starts
@@ -3313,7 +3349,7 @@ section.
         into the machine ClassAd.
 
 :macro-def:`STARTD_LATCH_EXPRS`
-    Each time a slot is created, activated, or when periodicy STARTD policy
+    Each time a slot is created, activated, or when periodic STARTD policy
     is evaluated HTCondor will evaluate expressions whose names are listed
     in this configuration variable.  If the evaluated value can be converted
     to an integer, and the value of the integer changes, the time of the change
@@ -3628,7 +3664,7 @@ from using more scratch space than provisioned.
     This string-valued parameter has no default, and should be set to the
     name of the Linux LVM volume group to be used for logical volumes
     for ephemeral execute directories.
-    ``"htcondor_vg"`` might be a good choice.  This seeting only matters when 
+    ``"htcondor_vg"`` might be a good choice.  This setting only matters when 
     :macro:`STARTD_ENFORCE_DISK_LIMITS` is True, and HTCondor has root
     privilege.
 
@@ -3817,6 +3853,22 @@ needs.
     slot, the *condor_startd* returns the slot's ClassAd and a claim id
     for leftover resources. In doing so, the *condor_schedd* can claim
     multiple dynamic slots without waiting for a negotiation cycle.
+
+:macro-def:`ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS`
+    A boolean variable that defaults to ``False``.
+    When set to ``True`` in the configuration of both the
+    *condor_startd* and the *condor_schedd*, and the *condor_schedd*
+    claims a partitionable slot, the partitionable slot's ``State`` will
+    change to ``Claimed`` in addition to the creation of a ``Claimed``
+    dynamic slot.
+    While the slot is ``Claimed``, no other *condor_schedd* is able
+    to create new dynamic slots to run jobs.
+
+:macro-def:`MAX_PARTITIONABLE_SLOT_CLAIM_TIME`
+    An integer that indicates the maximum amount of time that a
+    partitionable slot can be in the ``Claimed`` state before
+    returning to the Unclaimed state, expressed in seconds.
+    The default value is 3600.
 
 :macro-def:`MACHINE_RESOURCE_NAMES`
     A comma and/or space separated list of resource names that represent
@@ -4241,10 +4293,6 @@ details.
     particular method, set ``LINUX_HIBERNATION_METHOD`` to one of the
     defined strings.
 
-:macro-def:`OFFLINE_LOG`
-    This configuration variable is no longer used. It has been replaced
-    by ``COLLECTOR_PERSISTENT_AD_LOG``.
-
 :macro-def:`OFFLINE_EXPIRE_ADS_AFTER`
     An integer number of seconds specifying the lifetime of the
     persistent machine ClassAd representing a hibernating machine.
@@ -4428,6 +4476,23 @@ These macros control the *condor_schedd*.
 
             START_SCHEDULER_UNIVERSE = TotalSchedulerJobsRunning < 10
 
+:macro-def:`START_VANILLA_UNIVERSE`
+    A boolean expression that defaults to nothing.
+    When this macro is defined the *condor_schedd* uses it
+    to determine whether to start a **vanilla** universe job.
+    The *condor_schedd* uses the expression
+    when matching a job with a slot in addition to the ``Requirements``
+    expression of the job and the slot ClassAds.  The expression can
+    refer to job attributes by using the prefix ``JOB``, slot attributes
+    by using the prefix ``SLOT``, and job owner attributes by using the prefix ``OWNER``.
+
+    The following example prevents jobs owned by a user from starting when
+    that user has more than 25 held jobs
+
+    .. code-block:: condor-config
+
+            START_VANILLA_UNIVERSE = OWNER.JobsHeld <= 25
+
 
 :macro-def:`SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE`
     A boolean value that defaults to false. When true, the
@@ -4511,6 +4576,15 @@ These macros control the *condor_schedd*.
     This configuration variable may be most useful in conjunction with
     ``MAX_JOBS_SUBMITTED``, to ensure that no one user can dominate the
     queue.
+
+:macro-def:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY`
+    This boolean value determines if a User record will be created automatically
+    when an unknown user submits a job.
+    When true, only daemons or users that have a User record in the *condor_schedd*
+    can submit jobs. When false, a User record will be added during job submission
+    for users that have never submitted a job before. The default value is false
+    which is consistent with the behavior of the *condor_schedd* before User records
+    were added.
 
 :macro-def:`MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER`
     This integer value limits the number of scheduler universe jobs that
@@ -4905,7 +4979,7 @@ These macros control the *condor_schedd*.
     ``job_queue.log`` file, not the ``SchedLog`` file). This file
     contains an initial state of the job queue, and a series of
     transactions that were performed on the queue (such as new jobs
-    submitted, jobs completing, and checkpointing). Periodically, the
+    submitted or jobs completing). Periodically, the
     *condor_schedd* will go through this log, truncate all the
     transactions and create a new file with containing only the new
     initial state of the log. This is a somewhat expensive operation,
@@ -5549,7 +5623,7 @@ These macros control the *condor_schedd*.
     -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. 
        this provides a way for admins to disable existing submit commands.
     -  *undefined* - the literal ``undefined`` will be treated by *condor_submit* as if that
-       attribute is not in this ad. This is intended to aid composability of this ad across multiple
+       attribute is not in this ad. This is intended to aid composibility of this ad across multiple
        configuration files.
 
     The following example will add four new submit commands and disable the use of the
@@ -5562,7 +5636,7 @@ These macros control the *condor_schedd*.
              Project = "string"
              FavoriteFruit = "a,b"
              SomeFile = "filename"
-             acounting_group_user = error
+             accounting_group_user = error
           @end
 
 :macro-def:`EXTENDED_SUBMIT_HELPFILE`
@@ -5587,7 +5661,7 @@ These macros control the *condor_schedd*.
     a value from 0 thru 9.  ``$(0)`` expands to all of the arguments,
     ``$(1)`` to the first argument, ``$(2)`` to the second argument, and so on.
     The argument number can be followed by ``?`` to test if the argument
-    was specfied, or by ``+`` to expand to that argument and all subsequent
+    was specified, or by ``+`` to expand to that argument and all subsequent
     arguments.  Thus ``$(0)`` and ``$(1+)`` will expand to the same thing.
 
     For example:
@@ -5754,6 +5828,16 @@ These macros control the *condor_schedd*.
     when a job requests OAuth2 credentials
     for a configured OAuth2 service.
 
+:macro-def:`CHECKPOINT_DESTINATION_MAPFILE`
+    The location on disk of the file which maps from checkpoint destinations
+    to how invoke the corresponding clean-up plug-in.  Defaults to
+    ``$(ETC)/checkpoint-destination-mapfile``.
+
+:macro-def:`SCHEDD_CHECKPOINT_CLEANUP_TIMEOUT`
+    There's only so long that the *condor_schedd* is willing to let clean-up
+    for a single job (including all of its checkpoints) take.  This macro
+    defines that duration (as an integer number of seconds).
+
 condor_shadow Configuration File Entries
 -----------------------------------------
 
@@ -5903,7 +5987,7 @@ These settings affect the *condor_shadow*.
     HTCondor does not automatically  delete these files, so unchecked the
     directory can grow very large. Either an external entity needs to clean
     up or *condor_history* can use the -epochs options optional ``:d``
-    extention to read and delete the files.
+    extension to read and delete the files.
 
     .. code-block:: console
 
@@ -5921,21 +6005,6 @@ These settings affect the *condor_starter*.
     on Linux by setting the no-new-privileges flag.  This can be
     enabled (i.e. to disallow setuid binaries) by setting ``DISABLE_SETUID``
     to true.
-
-:macro-def:`EXEC_TRANSFER_ATTEMPTS`
-    Sometimes due to a router misconfiguration, kernel bug, or other
-    network problem, the transfer of the initial checkpoint from the
-    access point to the execute machine will fail midway through. This
-    parameter allows a retry of the transfer a certain number of times
-    that must be equal to or greater than 1. If this parameter is not
-    specified, or specified incorrectly, then it will default to three.
-    If the transfer of the initial executable fails every attempt, then
-    the job goes back into the idle state until the next renegotiation
-    cycle.
-
-    .. note::
-
-        This parameter does not exist in the NT starter.
 
 :macro-def:`JOB_RENICE_INCREMENT`
     When the *condor_starter* spawns an HTCondor job, it can do so with
@@ -6099,7 +6168,7 @@ These settings affect the *condor_starter*.
 
 :macro-def:`CGROUP_MEMORY_LIMIT_POLICY`
     A string with possible values of ``hard``, ``soft``, ``custom`` and ``none``.
-    The default value is ``none``. If set to ``hard``, when the job tries
+    The default value is ``hard``. If set to ``hard``, when the job tries
     to use more memory than the slot size, it will be put on hold with
     an appropriate message.  Also, the cgroup soft limit will set to
     90% of the hard limit to encourage the kernel to lower 
@@ -6112,6 +6181,8 @@ These settings affect the *condor_starter*.
     When set to custom, the two additional knobs CGROUP_HARD_MEMORY_LIMIT and
     CGROUP_SOFT_MEMORY_LIMIT must be set, which are classad expressions evaluated
     in the context of the machine and the job which determine the hard and soft limits.
+    Note that "soft" is only meaningful on a cgroup v1 Linux system, and should not be
+    set on a cgroup v2 system.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
@@ -6150,7 +6221,7 @@ These settings affect the *condor_starter*.
     character which matches anything at that position.  Members can have two ``*`` characters if one of them
     is at the end. Members can be prefixed with ``!``
     to force a matching environment variable to not be imported.  The order of members in the Matchlist
-    has no effect on the result.  For backward compatiblity a single value of ``True`` behaves as if the value
+    has no effect on the result.  For backward compatibility a single value of ``True`` behaves as if the value
     was set to ``*``.  Prior to HTCondor version 10.1.0 all values other than ``True`` are treated as ``False``.
 
 :macro-def:`NAMED_CHROOT`
@@ -6222,9 +6293,15 @@ These settings affect the *condor_starter*.
     names for plug-ins that will accomplish the task of doing file
     transfer when a job requests the transfer of an input file by
     specifying a URL. See
-    :ref:`admin-manual/setting-up-special-environments:enabling the transfer
-    of files specified by a url` for a description of the functionality
-    required of a plug-in.
+    :ref:`admin-manual/file-and-cred-transfer:Custom File Transfer Plugins`
+    for a description of the functionality required of a plug-in.
+
+:macro-def:`<PLUGIN>_TEST_URL`
+    This configuration takes a URL to be tested against the specified
+    ``<PLUGIN>``. If this test fails, then that plugin is removed from
+    the *condor_starter* classad attribute ``HasFileTransferPluginMethods``.
+    This attribute determines what plugin capabilities the *condor_starter*
+    can utilize.
 
 :macro-def:`RUN_FILETRANSFER_PLUGINS_WITH_ROOT`
     A boolean value that affects only Unix platforms and defaults to
@@ -6371,10 +6448,14 @@ These settings affect the *condor_starter*.
 
 :macro-def:`SINGULARITY_JOB`
     A boolean value specifying whether this startd should run jobs under
-    Singularity. The default value is ``False``.
+    Singularity.  This can be an expression evaluted in the context of the slot
+    ad and the job ad, where the slot ad is the "MY.", and the job ad is the
+    "TARGET.". The default value is ``False``.
 
 :macro-def:`SINGULARITY_IMAGE_EXPR`
-    The path to the Singularity container image file. The default value
+    The path to the Singularity container image file.  This can be an
+    expression evaluted in the context of the slot ad and the job ad, where the
+    slot ad is the "MY.", and the job ad is the "TARGET.".  The default value
     is ``"SingularityImage"``.
 
 :macro-def:`SINGULARITY_TARGET_DIR`
@@ -6383,8 +6464,10 @@ These settings affect the *condor_starter*.
     value is ``""``.
 
 :macro-def:`SINGULARITY_BIND_EXPR`
-    A string value containing a list of bind mount specifications to be
-    passed to Singularity. The default value is ``"SingularityBind"``.
+    A string value containing a list of bind mount specifications to be passed
+    to Singularity.  This can be an expression evaluted in the context of the
+    slot ad and the job ad, where the slot ad is the "MY.", and the job ad is
+    the "TARGET.". The default value is ``"SingularityBind"``.
 
 :macro-def:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
     A boolean value defaulting to false.  If true, and the singularity
@@ -6402,7 +6485,7 @@ These settings affect the *condor_starter*.
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value or classad expression containing a list of extra arguments to be appended
     to the Singularity command line. This can be an expression evaluted in the context of the
-    job ad and the machine ad.
+    slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
 
 condor_submit Configuration File Entries
 -----------------------------------------
@@ -6422,7 +6505,7 @@ condor_submit Configuration File Entries
     defaults to ``NEVER``, such that HTCondor will not send email about
     events for jobs. Possible values are ``NEVER``, ``ERROR``,
     ``ALWAYS``, or ``COMPLETE``. If ``ALWAYS``, the owner will be
-    notified whenever the job produces a checkpoint, as well as when the
+    notified whenever the
     job completes. If ``COMPLETE``, the owner will be notified when the
     job terminates. If ``ERROR``, the owner will only be notified if the
     job terminates abnormally, or if the job is placed on hold because
@@ -6653,6 +6736,27 @@ These macros affect *condor_preen*.
     This macro contains a (comma or space separated) list of files that
     *condor_preen* considers invalid files to find in the ``$(LOG)``
     directory. There is no default value.
+
+:macro-def:`MAX_CHECKPOINT_CLEANUP_PROCS`
+    If a checkpoint clean-up plug-in fails when the *condor_schedd*
+    (indirectly) invokes it after a job exits the queue, the next run of
+    *condor_preen* will retry it.  *condor_preen* assumes that the clean-up
+    process is relatively light-weight and starts more than one if more than
+    one job failed to clean up.  This macro limits the number of simultaneous
+    clean-up processes.
+
+:macro-def:`CHECKPOINT_CLEANUP_TIMEOUT`
+    A checkpoint clean-up plug-in is invoked once per file in the checkpoint,
+    and must therefore do its job relatively quickly.  This macro defines
+    (as an integer number of seconds)
+    how long HTCondor will wait for a checkpoint clean-up plug-in to exit
+    before it declares that it's stuck and kills it.
+
+:macro-def:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`
+    In addition to the per-file time-out :macro:`CHECKPOINT_CLEANUP_TIMEOUT`,
+    there's only so long that *condor_preen* is willing to let clean-up for
+    a single job (including all of its checkpoints) take.  This macro
+    defines that duration (as an integer number of seconds).
 
 condor_collector Configuration File Entries
 --------------------------------------------
@@ -7036,9 +7140,6 @@ section :ref:`admin-manual/monitoring:absent classads` for more details.
     other than the directory defined by ``$(SPOOL)``. Alternatively, if
     this log file is to go in the directory defined by ``$(SPOOL)``, add
     the file to the list given by ``VALID_SPOOL_FILES``.
-
-    This configuration variable replaces ``OFFLINE_LOG``, which is no
-    longer used.
 
 :macro-def:`EXPIRE_INVALIDATED_ADS`
     A boolean value that defaults to ``False``. When ``True``, causes
@@ -7714,8 +7815,7 @@ condor_procd Configuration File Macros
     receive requests from other HTCondor daemons. On Unix, this should
     point to a file system location that can be used for a named pipe.
     On Windows, named pipes are also used but they do not exist in the
-    file system. The default setting therefore depends on the platform
-    and distribution: $(LOCK)/procd_pipe or $(RUN)/procd_pipe on Unix
+    file system. The default setting is $(RUN)/procd_pipe on Unix
     and \\\\.\\pipe\\procd_pipe on Windows.
 
 :macro-def:`USE_GID_PROCESS_TRACKING`
@@ -8035,6 +8135,17 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the ARC GAHP executable.
     The default value is ``$(SBIN)``/arc_gahp.
 
+:macro-def:`ARC_GAHP_COMMAND_LIMIT`
+    On systems where libcurl uses NSS for security, start a new
+    *arc_gahp* process when the existing one has handled the given
+    number of commands.
+    The default is 1000.
+
+:macro-def:`ARC_GAHP_USE_THREADS`
+    Controls whether the *arc_gahp* should run multiple HTTPS requests
+    in parallel in different threads.
+    The default is ``False``.
+
 :macro-def:`GCE_GAHP`
     The complete path and file name of the GCE GAHP executable. The
     default value is ``$(SBIN)``/gce_gahp.
@@ -8090,14 +8201,24 @@ These macros affect the *condor_job_router* daemon.
     The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
 :macro-def:`JOB_ROUTER_DEFAULTS`
-    Deprecated, use ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES` instead.
     Defined by a single ClassAd in New ClassAd syntax, used to provide
     default values for routes in the *condor_job_router* daemon's
     routing table that are specified by the also deprecated ``JOB_ROUTER_ENTRIES*``.
     The enclosing square brackets are optional.
 
 :macro-def:`JOB_ROUTER_ENTRIES`
-    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     Specification of the job routing table. It is a list of ClassAds, in
     New ClassAd syntax, where each individual ClassAd is surrounded by
     square brackets, and the ClassAds are separated from each other by
@@ -8120,14 +8241,24 @@ These macros affect the *condor_job_router* daemon.
     with the ``JOB_ROUTER_DEFAULTS`` before being used.
 
 :macro-def:`JOB_ROUTER_ENTRIES_FILE`
-    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     A path and file name of a file that contains the ClassAds, in New
     ClassAd syntax, describing the routing table. The specified file is
     periodically reread to check for new information. This occurs every
     ``$(JOB_ROUTER_ENTRIES_REFRESH)`` seconds.
 
 :macro-def:`JOB_ROUTER_ENTRIES_CMD`
-    Deprecated, use ``JOB_ROUTER_ENTRIES_<NAME)`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     Specifies the command line of an external program to run. The output
     of the program defines or updates the routing table, and the output
     must be given in New ClassAd syntax. The specified command is
@@ -8445,7 +8576,7 @@ HTCondor.
 **Note**: Many, if not all, of these configuration variables will be
 most appropriately set on a per DAG basis, rather than in the global
 HTCondor configuration files. Per DAG configuration is explained in
-:ref:`users-manual/dagman-workflows:advanced features of dagman`. Also
+:ref:`automated-workflows/dagman-config:Configuration Specific to a DAG`. Also
 note that configuration settings of a running *condor_dagman* job are
 not changed by doing a *condor_reconfig*.
 
@@ -8496,21 +8627,13 @@ General
     ``DAGMAN_ABORT_DUPLICATES`` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
-:macro-def:`DAGMAN_USE_OLD_DAG_READER`
-    As of HTCondor version 8.3.3, this variable is no longer supported.
-    Its value will always be ``False``. A setting of ``True`` will
-    result in a warning, and the setting will have no effect on how a
-    DAG input file is read. The variable was previously used to change
-    the reading of DAG input files to that of HTCondor versions prior to
-    8.0.6. **Note: users should never change this setting.**
-
 :macro-def:`DAGMAN_USE_SHARED_PORT`
     A boolean value that controls whether *condor_dagman* will attempt
     to connect to the shared port daemon. If not defined,
     ``DAGMAN_USE_SHARED_PORT`` defaults to ``False``. There is no reason
     to ever change this value; it was introduced to prevent spurious
     shared port-related error messages from appearing in ``dagman.out``
-    files. (Introduced in version 8.6.1.)
+    files.
 
 :macro-def:`DAGMAN_USE_DIRECT_SUBMIT`
     A boolean value that controls whether *condor_dagman* submits jobs using
@@ -8548,16 +8671,32 @@ General
     file's ``getenv`` option. This will in turn add any found matching environment
     variables to the DAGMan proper jobs **environment**. Setting this value to
     ``True`` will result in ``getenv = true``. The Base ``.condor.sub`` values for
-    ``getenv`` are:
+    ``getenv`` are the following.
 
-    .. code-block:: dagman-base-getenv
-
-        getenv = CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ
+    +---------------+--------------------+--------------------+--------------------+
+    |               |        PATH        |        HOME        |        USER        |
+    |               +--------------------+--------------------+--------------------+
+    | General Shell |         TZ         |        LANG        |       LC_ALL       |
+    |               +--------------------+--------------------+--------------------+
+    |               |     PYTHONPATH     |        PERL*       |                    |
+    +---------------+--------------------+--------------------+--------------------+
+    |    HTCondor   |   CONDOR_CONFIG    |       CONDOR_*     |                    |
+    +---------------+--------------------+--------------------+--------------------+
+    |    Scitoken   |    BEARER_TOKEN    | BEAERER_TOKEN_FILE |   XDG_RUNTIME_DIR  |
+    +---------------+--------------------+--------------------+--------------------+
+    |     Misc.     |     PEGASUS_*      |                    |                    |
+    +---------------+--------------------+--------------------+--------------------+
 
 :macro-def:`DAGMAN_NODE_RECORD_INFO`
     A string that when set to ``RETRY`` will cause DAGMan to insert a nodes current
     retry attempt number into the nodes job ad as the attribute ``DAGManNodeRetry``
     at submission time. This knob is not set by default.
+
+:macro-def:`DAGMAN_RECORD_MACHINE_ATTRS`
+    A comma separated list of machine attributes that DAGMan will insert into a
+    node jobs submit description for ``job_ad_information_attrs`` and ``job_machine_attrs``.
+    This will result in the listed machine attributes to be injected into the nodes
+    produced job ads and userlog. This knob is not set by default.
 
 Throttling
 ''''''''''
@@ -8607,6 +8746,11 @@ Throttling
     overridden by the *condor_submit_dag* **-maxpost** command line
     option.
 
+:macro-def:`DAGMAN_MAX_HOLD_SCRIPTS`
+    An integer defining the maximum number of HOLD scripts that any
+    given *condor_dagman* will run at the same time. The default value
+    0 allows any number of HOLD scripts to run.
+
 :macro-def:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE`
     A boolean that determines if after changing some of these throttle limits,
     *condor_dagman* should forceably remove jobs to meet the new limit.
@@ -8632,10 +8776,9 @@ Priority, node semantics
     scripts, the order will not be strictly depth-first, but it will
     tend to favor depth rather than breadth in executing the DAG. If
     ``DAGMAN_SUBMIT_DEPTH_FIRST`` is set to ``True``, consider also
-    setting ``DAGMAN_RETRY_SUBMIT_FIRST`` and
-    ``DAGMAN_RETRY_NODE_FIRST`` :index:`DAGMAN_RETRY_NODE_FIRST`
-    to ``True``. If not defined, ``DAGMAN_SUBMIT_DEPTH_FIRST`` defaults
-    to ``False``.
+    setting :macro:`DAGMAN_RETRY_SUBMIT_FIRST` and
+    :macro:`DAGMAN_RETRY_NODE_FIRST` to ``True``. If not defined,
+    ``DAGMAN_SUBMIT_DEPTH_FIRST`` defaults to ``False``.
 
 :macro-def:`DAGMAN_ALWAYS_RUN_POST`
     A boolean value defining whether *condor_dagman* will ignore the
@@ -8644,9 +8787,7 @@ Priority, node semantics
     PRE script causes the POST script to not be executed. Changing this
     to ``True`` will restore the previous behavior of *condor_dagman*,
     which is that a POST script is always executed, even if the PRE
-    script fails. (The default for this value had originally been
-    ``False``, was changed to ``True`` in version 7.7.2, and then was
-    changed back to ``False`` in version 8.5.4.)
+    script fails.
 
 Node job submission/removal
 '''''''''''''''''''''''''''
@@ -8660,10 +8801,9 @@ Node job submission/removal
     the CPU time *condor_dagman* spends checking files, perhaps
     fruitlessly, but increases responsiveness to nodes completing or
     failing. The legal range of values is 1 to INT_MAX. If not defined,
-    it defaults to 5 seconds. (As of version 8.4.2, the default may be
-    automatically decreased if ``DAGMAN_MAX_JOBS_IDLE``
-    :index:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
-    this will be noted in the ``dagman.out`` file.)
+    it defaults to 5 seconds. This default may be automatically decreased
+    if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
+    this will be noted in the ``dagman.out`` file.
 
 :macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`
     An integer that controls how many individual jobs *condor_dagman*
@@ -8671,10 +8811,9 @@ Node job submission/removal
     *condor_rm*). The legal range of values is 1 to 1000. If defined
     with a value less than 1, the value 1 will be used. If defined with
     a value greater than 1000, the value 1000 will be used. If not
-    defined, it defaults to 100. (As of version 8.4.2, the default may
-    be automatically decreased if ``DAGMAN_MAX_JOBS_IDLE``
-    :index:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
-    this will be noted in the ``dagman.out`` file.)
+    defined, it defaults to 100. This default may be automatically
+    decreased if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
+    this will be noted in the ``dagman.out`` file.
 
     **Note: The maximum rate at which DAGMan can submit jobs is
     DAGMAN_MAX_SUBMITS_PER_INTERVAL / DAGMAN_USER_LOG_SCAN_INTERVAL.**
@@ -8826,8 +8965,7 @@ Rescue/retry
 
 :macro-def:`DAGMAN_WRITE_PARTIAL_RESCUE`
     A boolean value that controls whether *condor_dagman* writes a
-    partial or a full DAG file as a Rescue DAG. As of HTCondor version
-    7.2.2, writing a partial DAG is preferred. If not defined,
+    partial or a full DAG file as a Rescue DAG. If not defined,
     ``DAGMAN_WRITE_PARTIAL_RESCUE`` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
@@ -8851,10 +8989,6 @@ Rescue/retry
     ``False``, when a node with retries fails, the node is placed at the
     tail of the queue of ready nodes. This had been the behavior of
     *condor_dagman*. If not defined, it defaults to ``False``.
-
-:macro-def:`DAGMAN_OLD_RESCUE`
-    This configuration variable is no longer used. **Note: users should
-    never change this setting.**
 
 Log files
 '''''''''
@@ -8947,17 +9081,14 @@ Log files
     The ``DAGMAN_ALLOW_EVENTS`` value is a logical bitwise OR of the
     following values:
 
-        0 = allow no bad events
-        1 = allow all bad events, except the event
-        ``"job re-run after terminated event"``
-        2 = allow terminated/aborted event combination
-        4 = allow a ``"job re-run after terminated event"`` bug
-        8 = allow garbage or orphan events
-        16 = allow an execute or terminate event before job's submit
-        event
-        32 = allow two terminated events per job, as sometimes seen with
-        grid jobs
-        64 = allow duplicated events in general
+        -  0 = allow no bad events
+        -  1 = allow all bad events, except the event ``"job re-run after terminated event"``
+        -  2 = allow terminated/aborted event combination
+        -  4 = allow a ``"job re-run after terminated event"`` bug
+        -  8 = allow garbage or orphan events
+        - 16 = allow an execute or terminate event before job's submit event
+        - 32 = allow two terminated events per job, as sometimes seen with grid jobs
+        - 64 = allow duplicated events in general
 
     The default value is 114, which allows terminated/aborted event
     combination, allows an execute and/or terminated event before job's
@@ -8973,50 +9104,6 @@ Log files
     this value should almost never be used, because the
     ``"job re-run after terminated event"`` bug breaks the semantics of
     the DAG.
-
-:macro-def:`DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION`
-    This configuration variable is no longer used. The improved
-    functionality of the ``DAGMAN_ALLOW_EVENTS`` macro eliminates the
-    need for this variable. **Note: users should never change this
-    setting.**
-
-    For completeness, here is the definition for historical purposes: A
-    boolean value that controls whether *condor_dagman* aborts or
-    continues with a DAG in the rare case that HTCondor erroneously
-    executes the job within a DAG node more than once. A bug in HTCondor
-    very occasionally causes a job to run twice. Running a job twice is
-    contrary to the semantics of a DAG. The configuration macro
-    ``DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION`` determines whether
-    *condor_dagman* considers this a fatal error or not. The default
-    value is ``False``; *condor_dagman* considers running the job more
-    than once a fatal error, logs this fact, and aborts the DAG. When
-    set to ``True``, *condor_dagman* still logs this fact, but
-    continues with the DAG.
-
-    This configuration macro is to remain at its default value except in
-    the case where a site encounters the HTCondor bug in which DAG job
-    nodes are executed twice, and where it is certain that having a DAG
-    job node run twice will not corrupt the DAG. The logged messages
-    within ``*.dagman.out`` files in the case of that a node job runs
-    twice contain the string "EVENT ERROR."
-
-:macro-def:`DAGMAN_ALWAYS_USE_NODE_LOG`
-    As of HTCondor version 8.3.1, the value must always be the default
-    value of ``True``. Attempting to set it to ``False`` results in an
-    error. This causes incompatibility with using a *condor_submit*
-    executable that is older than HTCondor version 7.9.0. **Note: users
-    should never change this setting.**
-
-    For completeness, here is the definition for historical purposes: A
-    boolean value that when ``True`` causes *condor_dagman* to read
-    events from its default node log file, as defined by
-    ``DAGMAN_DEFAULT_NODE_LOG`` :index:`DAGMAN_DEFAULT_NODE_LOG`,
-    instead of from the log file(s) defined in the node job submit
-    description files. When ``True``, *condor_dagman* will read events
-    only from the default log file, and POST script terminated events
-    will be written only to the default log file, and not to the log
-    file(s) defined in the node job submit description files. The
-    default value is ``True``.
 
 Debug output
 ''''''''''''
@@ -9272,7 +9359,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     shared secret key. The session expires to reduce the window of
     opportunity where the key may be compromised by attack. A short
     session duration increases the frequency with which daemons have to
-    reauthenticate with each other, which may impact performance.
+    re-authenticate with each other, which may impact performance.
 
     If the client and server are configured with different durations,
     the shorter of the two will be used. The default for daemons is
@@ -9498,6 +9585,20 @@ macros are described in the :doc:`/admin-manual/security` section.
     If set to ``True`` and the client doesn't have a credential, then
     the SSL authentication will fail and other authentication methods
     will be tried.
+    The default is ``False``.
+
+:macro-def:`AUTH_SSL_ALLOW_CLIENT_PROXY`
+    A boolean value that controls whether a daemon will accept an
+    X.509 proxy certificate from a client during SSL authentication.
+    The default is ``False``.
+
+:macro-def:`AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR`
+    A boolean value that controls whether a client checks environment
+    variable `X509_USER_PROXY` for the location the X.509 credential
+    to use for SSL authentication with a daemon.
+    If this parameter is ``True`` and `X509_USER_PROXY` is set, then
+    that file is used instead of the files specified by
+    `AUTH_SSL_CLIENT_CERTFILE` and `AUTH_SSL_CLIENT_KEYFILE`.
     The default is ``False``.
 
 :macro-def:`SSL_SKIP_HOST_CHECK`
@@ -9887,6 +9988,8 @@ These macros affect the high availability operation of HTCondor.
     not defined for each subsystem, ``HA_<SUBSYS>_LOCK_URL`` is ignored,
     and the value of ``HA_LOCK_URL`` is used.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`HA_LOCK_HOLD_TIME`
     This macro specifies the number of seconds that the *condor_master*
     will hold the lock for each High Availability daemon. Upon gaining
@@ -9907,6 +10010,8 @@ These macros affect the high availability operation of HTCondor.
     ``HA_<SUBSYS>_LOCK_HOLD_TIME`` is ignored, and the value of
     ``HA_LOCK_HOLD_TIME`` is used.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`HA_POLL_PERIOD`
     This macro specifies how often the *condor_master* polls the High
     Availability locks to see if any locks are either stale (meaning not
@@ -9923,6 +10028,8 @@ These macros affect the high availability operation of HTCondor.
     ``HA_POLL_PERIOD``. If not defined for each subsystem,
     ``HA_<SUBSYS>_POLL_PERIOD`` is ignored, and the value of
     ``HA_POLL_PERIOD`` is used.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`MASTER_<SUBSYS>_CONTROLLER`
     Used only in HA configurations involving the *condor_had*.
@@ -9945,8 +10052,7 @@ These macros affect the high availability operation of HTCondor.
         MASTER_NEGOTIATOR_CONTROLLER = HAD
 
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    subsystem string as defined by :macro:`SUBSYSTEM`.
 
 :macro-def:`HAD_LIST`
     A comma-separated list of all *condor_had* daemons in the form
@@ -10562,7 +10668,7 @@ startd cron and schedd cron.  These run executables or scripts
 directly from the *condor_startd* and *condor_schedd*
 daemons.  The output is merged into the 
 ClassAd generated by the respective daemon.  The mechanism is described
-in :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks`.
+in :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron`.
 
 These macros all include ``CRON`` because the default mode for a daemon 
 ClassAd hook is to run periodically.  A specific daemon ClassAd 
@@ -10737,7 +10843,7 @@ are probably the most common.
     resource monitor (CMRM), and its output is handled differently than
     a normal job's. A CMRM should output one ad per custom machine
     resource instance and use ``SlotMergeConstraint``\ s (see
-    :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks`) to specify the instance to
+    :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron`) to specify the instance to
     which it applies.
 
     The ad corresponding to each custom machine resource instance should
@@ -10883,7 +10989,7 @@ are probably the most common.
     incorporate the output of the job specified by ``<JobName>``. If the
     list is not specified, any slot may. Whether or not a specific slot
     actually incorporates the output depends on the output; see
-    :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks`.
+    :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron`.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable ``STARTD_CRON_JOBLIST`` or
@@ -10922,8 +11028,9 @@ general discussion of *condor_defrag* may be found in
 :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
 
 :macro-def:`DEFRAG_NAME`
-    Used to give an alternative value to the ``Name`` attribute in the
-    *condor_defrag* daemon's ClassAd. This esoteric configuration macro
+    Used to give an prefix value to the ``Name`` attribute in the
+    *condor_defrag* daemon's ClassAd. Defaults to the name given in the :macro:``DAEMON_LIST``.
+    This esoteric configuration macro
     might be used in the situation where there are two *condor_defrag*
     daemons running on one machine, and each reports to the same
     *condor_collector*. Different names will distinguish the two
@@ -10983,7 +11090,8 @@ general discussion of *condor_defrag* may be found in
     This could be used to drain partial rather than whole machines.
     Beginning with version 8.9.11, only machines that have no ``DrainReason``
     or a value of ``"Defrag"`` for ``DrainReason``
-    will be checked to see if draining should be cancelled.
+    will be checked to see if draining should be cancelled.  Beginning with
+    10.7.0 The Defrag daemon will also check for its own name in the ``DrainReason``.
 
 :macro-def:`DEFRAG_RANK`
     An expression that specifies which machines are more desirable to
@@ -11051,19 +11159,12 @@ general discussion of *condor_defrag* may be found in
         jobs is the longer one.
      quick
         ``MaxJobRetirementTime`` is not honored. Eviction of jobs is
-        immediately initiated. Jobs are given time to shut down and
-        produce a checkpoint according to the usual policy, as given by
+        immediately initiated. Jobs are given time to shut down
+        according to the usual policy, as given by
         ``MachineMaxVacateTime``.
      fast
         Jobs are immediately hard-killed, with no chance to gracefully
-        shut down or produce a checkpoint.
-
-:macro-def:`DEFRAG_STATE_FILE`
-    The path to a file used to record information used by
-    *condor_defrag* when it is restarted. This should only need to be
-    modified if there will be multiple instances of the *condor_defrag*
-    daemon running on the same machine. The default is
-    ``$(LOCK)/defrag_state``.
+        shut down.
 
 :macro-def:`DEFRAG_LOG`
     The path to the *condor_defrag* daemon's log file. The default log

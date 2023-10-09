@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -27,6 +26,16 @@ use strict;
 use warnings;
 
 my $testname = "cmd_status-compact";
+
+# configure the personal condor that we need
+#
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	use FEATURE : PartitionableSlot
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+
 
 # needs to specify every time before a check
 my $command_arg;
@@ -77,7 +86,7 @@ $rules_content =
 "DOMAIN=cs.wisc.edu
 SharedFileSystem=true
 NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS MyType == \"Machine\" || MyType == \"Slot\"
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1
@@ -138,7 +147,6 @@ open(FH,">$rules_file") || print "FAILED opening file $rules_file\n";
 print FH $rules_content;
 close(FH);
 
-`condor_submit $submitfile`;
 my $counter = 100;
 while ($counter ne 0){
 	if ($counter == 0){
@@ -158,7 +166,6 @@ while ($counter ne 0){
 `condor_status -long > $orig_ads`;
 %Attr_old = read_attr($orig_ads);
 `condor_transform_ads -rules $rules_file -out $new_ads $orig_ads`;
-`condor_rm -all`;
 
 @content = `condor_status -ads $new_ads -compact`;
 %Attr_new = read_attr($new_ads);
@@ -177,8 +184,8 @@ if (check_heading('status_compact_machine',\%table1) && check_heading('status_su
 unlink($new_ads);
 unlink($orig_ads);
 print "############################################################################\n";
-$option = "run";
 `condor_submit $submitfile`;
+$option = "run";
 $counter = 100;
 while ($counter ne 0){
 	if ($counter == 0){
@@ -196,12 +203,21 @@ while ($counter ne 0){
 		$counter --;
 	}
 }
-`condor_status -schedd -long > $orig_ads`;
-%Attr_old = read_attr($orig_ads);
-`condor_transform_ads -rules $rules_file -out $new_ads $orig_ads`;
-@content = `condor_status -ads $new_ads -run`;
+`condor_status -schedd -long > "${orig_ads}.drain"`;
+%Attr_old = read_attr("${orig_ads}.drain");
+print "attr_old is\n";
+my $k;
+foreach $k (sort keys %Attr_old) {
+    print "$k => $Attr_old{$k}\n";
+}
+print "attr_old was\n";
+`condor_transform_ads -rules $rules_file -out "${new_ads}.drain" "${orig_ads}.drain"`;
+print "new ads are\n";
+system("/bin/cat ${new_ads}.drain");
+print "new ads were\n";
+@content = `condor_status -ads "${new_ads}.drain" -run`;
 `condor_rm -all`;
-%Attr_new = read_attr($new_ads);
+%Attr_new = read_attr("${new_ads}.drain");
 print @content;
 my $index = 0;
 for my $i (0.. scalar @content -1){

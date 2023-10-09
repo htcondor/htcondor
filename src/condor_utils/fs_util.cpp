@@ -80,19 +80,17 @@ detect_nfs_statfs( const char *path, bool *is_nfs )
 
 	if ( ( status < 0 ) && ( errno == ENOENT )) {
 			// file doesn't exist yet, so check parent directory.
-			char *_dir_name;
-			_dir_name = condor_dirname(path);
+			std::string _dir_name = condor_dirname(path);
 # ifdef FS_UTIL_TEST
-			printf("checking %s instead...\n", _dir_name);
+			printf("checking %s instead...\n", _dir_name.c_str());
 # endif
 # if (STATFS_ARGS == 2)
-			status = statfs( _dir_name, &buf );
+			status = statfs( _dir_name.c_str(), &buf );
 # elif (STATFS_ARGS == 4)
-			status = statfs( _dir_name, &buf, sizeof(buf), 0 );
+			status = statfs( _dir_name.c_str(), &buf, sizeof(buf), 0 );
 # else
 #  error "Unknown statfs() implemenation"
 # endif
-			free(_dir_name);
 	}
 
 	if ( status < 0 ) {

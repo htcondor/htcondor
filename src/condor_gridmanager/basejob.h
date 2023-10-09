@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "user_job_policy.h"
-#include "HashTable.h"
 #include "baseresource.h"
 
 class BaseResource;
@@ -39,7 +38,7 @@ class BaseJob : public Service
 
 	virtual void Reconfig() {}
 	void SetEvaluateState() const;
-	virtual void doEvaluateState();
+	virtual void doEvaluateState(int timerID);
 	virtual BaseResource *GetResource();
 
 	void JobSubmitted( const char *remote_host);
@@ -56,20 +55,20 @@ class BaseJob : public Service
 	virtual void SetRemoteJobId( const char *job_id );
 	bool SetRemoteJobStatus( const char *job_status );
 
-	void UpdateJobLeaseSent( int new_expiration_time );
-	void UpdateJobLeaseReceived( int new_expiration_time );
+	void UpdateJobLeaseSent( time_t new_expiration_time );
+	void UpdateJobLeaseReceived( time_t new_expiration_time );
 
 	void SetJobLeaseTimers();
-	virtual void JobLeaseSentExpired();
-	virtual void JobLeaseReceivedExpired();
+	virtual void JobLeaseSentExpired(int timerID);
+	virtual void JobLeaseReceivedExpired(int timerID);
 
 	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad );
 
-	static void EvalAllPeriodicJobExprs();
+	static void EvalAllPeriodicJobExprs(int tid);
 	int EvalPeriodicJobExpr();
 	int EvalOnExitJobExpr();
 
-	static void CheckAllRemoteStatus();
+	static void CheckAllRemoteStatus(int tid);
 	static int m_checkRemoteStatusTid;
 	void CheckRemoteStatus();
 
@@ -104,16 +103,12 @@ class BaseJob : public Service
 	bool deleteFromGridmanager;
 	bool deleteFromSchedd;
 
-	bool wantResubmit;
-	int doResubmit;
-	bool wantRematch;
-
 	bool resourceDown;
 	bool resourceStateKnown;
 	bool resourcePingPending;
 	bool resourcePingComplete;
 
-	int m_lastRemoteStatusUpdate;
+	time_t m_lastRemoteStatusUpdate;
 	bool m_currentStatusUnknown;
 
 	int evaluateStateTid;

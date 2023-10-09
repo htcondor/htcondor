@@ -25,6 +25,7 @@
 #include "KeyCache.h"
 #include "classy_counted_ptr.h"
 #include "reli_sock.h"
+#include <map>
 
 // For AES (and newer).
 #define SEC_SESSION_KEY_LENGTH_V9  32
@@ -85,7 +86,7 @@ public:
 	// Alternate tag methods
 	static std::map<DCpermission, std::string> m_tag_methods;
 	static std::string m_tag_token_owner;
-	static HashTable<std::string, std::string> command_map;
+	static std::map<std::string, std::string> command_map;
 	static int sec_man_ref_count;
 	static std::set<std::string> m_not_my_family;
 
@@ -300,7 +301,6 @@ public:
 		// Get security session info to send to our peer so that peer
 		// can create pre-built security session compatible with ours.
 		// This basically serializes selected attributes of the session.
-	bool ExportSecSessionInfo(char const *session_id,MyString &session_info);
 	bool ExportSecSessionInfo(char const *session_id,std::string &session_info);
 
 		// This can be used, for example, to expire a non-negotiated session

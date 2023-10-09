@@ -30,6 +30,7 @@
 #include <memory>
 #include "condor_sinful.h"
 #include "shared_port_endpoint.h"
+#include "condor_config.h"
 
 static bool registered_reverse_connect_command = false;
 
@@ -137,6 +138,19 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 			continue;
 		}
 
+		// If this (or any other) CCB (reverse) connection can't use the
+		// shared port [to listen for the reversed connection] because
+		// it can't write to the daemon socket directory, that implies
+		// that the shared port is turned on [true by default] and that
+		// the connection is not being made by a daemon (because the
+		// daemons use the "anonymous" unix domain socket, instead).  In
+		// that case, rather than try to open a listen socket on a
+		// random port that's probably firewalled and hang, assume that
+		// there's a firewall and just give up.
+		//
+		// Defaults to false for backwards compatibility worries.
+		bool toolsAssumeFirewalls = param_boolean("TOOLS_ASSUME_FIREWALLS", false);
+
 		//
 		// Generate a listen port for the appropriate protocol.  It will be
 		// distressing that we're passed CCB contact strings rather than
@@ -144,7 +158,8 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		//
 		// FIXME: Assumes that shared port knows what it's doing.
 		//
-		if( SharedPortEndpoint::UseSharedPort() ) {
+		std::string reason;
+		if( SharedPortEndpoint::UseSharedPort(& reason) ) {
 			shared_listener = std::make_shared<SharedPortEndpoint>();
 			shared_listener->InitAndReconfig();
 			std::string errmsg;
@@ -163,6 +178,16 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 				dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.c_str());
 				return false;
 			}
+		} else if( starts_with(reason, "cannot write") && toolsAssumeFirewalls ) {
+			std::string errmsg = reason;
+
+			if( error ) {
+				error->push( "CCBClient", CEDAR_ERR_NO_SHARED_PORT, errmsg.c_str() );
+			}
+
+			dprintf( D_ALWAYS, "%s.\n", errmsg.c_str() );
+
+			return false;
 		} else {
 			condor_sockaddr ccbSA;
 			std::string faked_sinful = "<" + ccb_address + ">";
@@ -747,7 +772,7 @@ CCBClient::RegisterReverseConnectCallback()
 }
 
 void
-CCBClient::DeadlineExpired()
+CCBClient::DeadlineExpired(int /* timerID */)
 {
 	dprintf(D_ALWAYS,
 			"CCBClient: deadline expired for reverse connection to %s.\n",

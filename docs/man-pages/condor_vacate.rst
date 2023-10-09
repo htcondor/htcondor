@@ -19,8 +19,8 @@ Synopsis
 Description
 -----------
 
-*condor_vacate* causes HTCondor to checkpoint any running jobs on a set
-of machines and force the jobs to vacate the machine. The job(s) remains
+*condor_vacate* causes HTCondor force jobs to vacate from a given set of
+machines. The job(s) remains
 in the submitting machine's job queue.
 
 Given the (default) **-graceful** option, jobs are killed
@@ -40,9 +40,9 @@ Options
  **-version**
     Display version information
  **-graceful**
-    Inform the job to checkpoint, then soft-kill it.
+    Give the job a change to shut down cleanly, then soft-kill it.
  **-fast**
-    Hard-kill jobs instead of checkpointing them
+    Hard-kill jobs instead of giving them to shut down cleanly.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.

@@ -417,7 +417,7 @@ int Sock::assign(
   #define SIO_BASE_HANDLE _WSAIOR(IOC_WS2,34)
 #endif
 
-int Sock::set_inheritable( int flag )
+bool Sock::set_inheritable( bool flag )
 {
 	// on unix, all sockets are always inheritable by a child process.
 	// but on Win32, each individual socket has a flag that says if it can
@@ -429,9 +429,6 @@ int Sock::set_inheritable( int flag )
 
 	SOCKET RealKernelSock;
 	SOCKET DuplicateSock;
-
-	if ( (flag != TRUE) && (flag != FALSE) )
-		return FALSE;	// flag must be either TRUE or FALSE...
 
 	DWORD BytesReturned = 0;  // useless pointer needed for winsock call
 
@@ -501,7 +498,7 @@ int Sock::set_inheritable( int flag )
 				dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed "
 								 "in Sock:set_inheritable(%d), error=%d\n"
 					  ,flag,GetLastError());
-				return FALSE;
+				return false;
 		}
 		// if made it here, successful duplication; replace original.
 		// note we close _sock, not RealKernelSock, since _sock is
@@ -511,7 +508,7 @@ int Sock::set_inheritable( int flag )
 		_sock = DuplicateSock;
 	}
 
-	return TRUE;
+	return true;
 }
 #endif	// of WIN32
 
@@ -668,7 +665,7 @@ int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
 	// the default inheritable socket.  Note on Win95, it is the opposite:
 	// i.e. on Win95 sockets are created non-inheritable by default.
 	// note: on UNIX, set_inheritable just always return TRUE.
-	if ( !set_inheritable(FALSE) ) {
+	if ( !set_inheritable(false) ) {
 		::closesocket(_sock);
 		_sock = INVALID_SOCKET;
 		return FALSE;
@@ -719,7 +716,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port)
 #else
 	LARGE_INTEGER li;
 	::QueryPerformanceCounter(&li);
-	randomish_val = li.LowPart % 1000000; // force into range of usec to avoid overflow when we multiply
+	randomish_val = li.LowPart % 1'000'000; // force into range of usec to avoid overflow when we multiply
 #endif
 
 	int range = high_port - low_port + 1;
@@ -1301,7 +1298,8 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 int Sock::do_connect(
 	char const	*host,
 	int		port,
-	bool	non_blocking_flag
+	bool	non_blocking_flag,
+	CondorError * errorStack
 	)
 {
 	if (!host || port < 0) return FALSE;
@@ -1333,7 +1331,7 @@ int Sock::do_connect(
 	// to a shared port (SharedPortServer) that needs further information
 	// to route us to the final destination.
 
-	int retval=special_connect(host,port,non_blocking_flag);
+	int retval=special_connect(host,port,non_blocking_flag,errorStack);
 	if( retval != CEDAR_ENOCCB ) {
 		return retval;
 	}
@@ -1602,7 +1600,7 @@ Sock::reportConnectionFailure(bool timed_out) const
 	char const *reason = connect_state.connect_failure_reason;
 	char timeout_reason_buf[100];
 	if((!reason || !*reason) && timed_out) {
-		sprintf(timeout_reason_buf,
+		snprintf(timeout_reason_buf, sizeof(timeout_reason_buf), 
 		        "timed out after %d seconds",
 		        connect_state.retry_timeout_interval);
 		reason = timeout_reason_buf;
@@ -2070,7 +2068,7 @@ Sock::timeout(int sec)
 	return t;
 }
 
-char * Sock::serializeCryptoInfo() const
+void Sock::serializeCryptoInfo(std::string& outbuf) const
 {
     const unsigned char * kserial = NULL;
     int len = 0;
@@ -2084,54 +2082,36 @@ char * Sock::serializeCryptoInfo() const
     // currently we are not serializing the ivec.  this works because the
     // crypto state (including ivec) is reset to zero after inheriting.
 
-    // here we want to save our state into a buffer
-    char * outbuf = NULL;
-    if (len > 0) {
-        int buflen = len*2+32;
-	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
-		// grow the buffer to hold the StreamCryptoState data
-		buflen += (3 * sizeof(StreamCryptoState));
-	}
-        outbuf = new char[buflen];
+	if (len > 0) {
+		formatstr_cat(outbuf, "%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
+		              (int)get_encryption());
 
-        snprintf(outbuf, buflen, "%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
-                (int)get_encryption());
+		// if protocol is 3 (AES) then we need to send the StreamCryptoState
+		if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
+			// this is daemon-to-daemon inheritance so no need to worry
+			// about byte-order.  furthermore there are no pointers, just a
+			// struct with data.  we send hex bytes, receiver serializes
+			// them.
 
-	// if protocol is 3 (AES) then we need to send the StreamCryptoState
-	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
-		dprintf(D_NETWORK|D_VERBOSE, "SOCK: sending more StreamCryptoState!.\n");
-		// this is daemon-to-daemon inheritance so no need to worry
-		// about byte-order.  furthermore there are no pointers, just a
-		// struct with data.  we send hex bytes, receiver serializes
-		// them.
+			unsigned char * ccs_serial = (unsigned char*)(&(crypto_state_->m_stream_crypto_state));
+			for (unsigned int i=0; i < sizeof(StreamCryptoState); i++, ccs_serial++) {
+				formatstr_cat(outbuf, "%02X", *ccs_serial);
+			}
 
-		char * ptr = outbuf + strlen(outbuf);
-		unsigned char * ccs_serial = (unsigned char*)(&(crypto_state_->m_stream_crypto_state));
-		dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %zu bytes.\n", sizeof(StreamCryptoState));
-		for (unsigned int i=0; i < sizeof(StreamCryptoState); i++, ccs_serial++, ptr+=2) {
-			sprintf(ptr, "%02X", *ccs_serial);
+			outbuf += '*';
 		}
 
-		sprintf(ptr, "*");
-		ptr++;
+		// Hex encode the binary key
+		for (int i=0; i < len; i++, kserial++) {
+			formatstr_cat(outbuf, "%02X", *kserial);
+		}
 	}
-	dprintf(D_NETWORK|D_VERBOSE, "SOCK: buf so far: %s.\n", outbuf);
-
-        // Hex encode the binary key
-        char *ptr = outbuf + strlen(outbuf);
-        for (int i=0; i < len; i++, kserial++, ptr+=2) {
-            sprintf(ptr, "%02X", *kserial);
-        }
-    }
-    else {
-        outbuf = new char[2];
-        memset(outbuf, 0, 2);
-        snprintf(outbuf, 2, "%d", 0);
-    }
-    return( outbuf );
+	else {
+		outbuf += '0';
+	}
 }
 
-char * Sock::serializeMdInfo() const
+void Sock::serializeMdInfo(std::string& outbuf) const
 {
     const unsigned char * kmd = NULL;
     int len = 0;
@@ -2142,27 +2122,20 @@ char * Sock::serializeMdInfo() const
     }
 
 	// here we want to save our state into a buffer
-	char * outbuf = NULL;
-    if (len > 0) {
-        int buflen = len*2+32;
-        outbuf = new char[buflen];
-        snprintf(outbuf, buflen, "%d*", len*2);
+	if (len > 0) {
+		formatstr_cat(outbuf, "%d*", len*2);
 
-        // Hex encode the binary key
-        char * ptr = outbuf + strlen(outbuf);
-        for (int i=0; i < len; i++, kmd++, ptr+=2) {
-            sprintf(ptr, "%02X", *kmd);
-        }
-    }
-    else {
-        outbuf = new char[2];
-        memset(outbuf, 0, 2);
-        sprintf(outbuf,"%d",0);
-    }
-	return( outbuf );
+		// Hex encode the binary key
+		for (int i=0; i < len; i++, kmd++) {
+			formatstr_cat(outbuf, "%02X", *kmd);
+		}
+	}
+	else {
+		outbuf += '0';
+	}
 }
 
-const char * Sock::serializeCryptoInfo(const char * buf)
+const char * Sock::deserializeCryptoInfo(const char * buf)
 {
 	unsigned char * kserial = NULL;
     const char * ptmp = buf;
@@ -2271,7 +2244,7 @@ const char * Sock::serializeCryptoInfo(const char * buf)
 	return ptmp;
 }
 
-const char * Sock::serializeMdInfo(const char * buf)
+const char * Sock::deserializeMdInfo(const char * buf)
 {
 	unsigned char * kmd = NULL;
     const char * ptmp = buf;
@@ -2321,7 +2294,7 @@ const char * Sock::serializeMdInfo(const char * buf)
 }
 
 
-char * Sock::serialize() const
+void Sock::serialize(std::string& outbuf) const
 {
 	// here we want to save our state into a buffer
 	size_t fqu_len = _fqu ? strlen(_fqu) : 0;
@@ -2341,25 +2314,23 @@ char * Sock::serialize() const
 		}
 	}
 
-	MyString out;
-	char * outbuf = NULL;
-	if (out.serialize_int(_sock)                 && out.serialize_sep("*") &&
-		out.serialize_int((int)_state)           && out.serialize_sep("*") &&
-		out.serialize_int(_timeout)              && out.serialize_sep("*") &&
-		out.serialize_int(triedAuthentication()) && out.serialize_sep("*") &&
-		out.serialize_int(fqu_len)               && out.serialize_sep("*") &&
-		out.serialize_int(verstring_len)         && out.serialize_sep("*") &&
-		out.serialize_string(_fqu)               && out.serialize_sep("*") &&
-		out.serialize_string(verstring)          && out.serialize_sep("*"))
-	{
-		outbuf = out.detach_buffer();
-	}
-	else
-	{
-		dprintf(D_ALWAYS, "Sock::serialize failed - Out of memory?\n");
-	}
+	outbuf += std::to_string(_sock);
+	outbuf += '*';
+	outbuf += std::to_string((int)_state);
+	outbuf += '*';
+	outbuf += std::to_string(_timeout);
+	outbuf += '*';
+	outbuf += std::to_string(triedAuthentication());
+	outbuf += '*';
+	outbuf += std::to_string(fqu_len);
+	outbuf += '*';
+	outbuf += std::to_string(verstring_len);
+	outbuf += '*';
+	outbuf += _fqu ? _fqu : "";
+	outbuf += '*';
+	outbuf += verstring ? verstring : "";
+	outbuf += '*';
 	free( verstring );
-	return( outbuf );
 }
 
 void
@@ -2374,7 +2345,7 @@ Sock::close_serialized_socket(char const *buf)
 }
 
 
-const char * Sock::serialize(const char *buf)
+const char * Sock::deserialize(const char *buf)
 {
 	SOCKET passed_sock;
 	size_t fqulen = 0;
@@ -2398,7 +2369,7 @@ const char * Sock::serialize(const char *buf)
 
 	setTriedAuthentication(tried_authentication);
 
-	MyString str;
+	std::string str;
 	if ( ! in.deserialize_string(str, "*") || ! in.deserialize_sep("*")) {
 		EXCEPT("Failed to parse serialized socket FullyQualifiedUser at offset %d: '%s'",(int)in.offset(),buf);
 	}
@@ -2411,7 +2382,7 @@ const char * Sock::serialize(const char *buf)
 	if ( ! str.empty()) {
 		// daemoncore does not like spaces in our serialized string so they were changed to _
 		// we need to put them back now.
-		str.replaceString("_"," ");
+		replace_str(str, "_", " ");
 		CondorVersionInfo peer_version(str.c_str());
 		set_peer_version( &peer_version );
 	}

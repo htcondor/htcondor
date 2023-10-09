@@ -50,14 +50,14 @@
 
 struct JobType
 {
-	char *Name;
+	std::string Name;
 	void(*InitFunc)();
 	void(*ReconfigFunc)();
 	bool(*AdMatchFunc)(const ClassAd*);
 	BaseJob *(*CreateFunc)(ClassAd*);
 };
 
-List<JobType> jobTypes;
+std::vector<JobType> jobTypes;
 
 std::vector<int> scheddUpdateNotifications;
 
@@ -66,7 +66,7 @@ struct ScheddUpdateRequest {
 	bool m_notify;
 };
 
-HashTable <PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates( hashFuncPROC_ID );
+std::map<PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates;
 bool addJobsSignaled = false;
 bool updateJobsSignaled = false;
 bool checkLeasesSignaled = false;
@@ -85,14 +85,14 @@ int scheddFailureCount = 0;
 int maxScheddFailures = 10;	// Years of careful research...
 
 void RequestContactSchedd();
-void doContactSchedd();
+void doContactSchedd(int);
 
 std::map<std::string, BaseJob*> FetchProxyList;
 
 // handlers
 int ADD_JOBS_signalHandler(int );
 int REMOVE_JOBS_signalHandler(int );
-void CHECK_LEASES_signalHandler();
+void CHECK_LEASES_signalHandler(int);
 int UPDATE_JOBAD_signalHandler(int );
 int FetchProxyDelegationHandler(int, Stream * );
 
@@ -118,26 +118,6 @@ static int tSetAttributeString(int cluster, int proc,
 	return SetAttribute( cluster, proc, attr_name, tmp.c_str());
 }
 
-// Check if a job ad needs $$() expansion performed on it. The initial ad
-// we get is unexpanded, so we need to fetch it a second time if expansion
-// is needed. We look at the (currently unused) MustExpand attribute and
-// the resource name attribute to see if expansion is needed.
-bool MustExpandJobAd( const ClassAd *job_ad ) {
-	bool must_expand = false;
-
-	job_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-	if ( !must_expand ) {
-		std::string resource_name;
-		if ( job_ad->LookupString( ATTR_GRID_RESOURCE, resource_name ) ) {
-			if ( strstr(resource_name.c_str(),"$$") ) {
-				must_expand = true;
-			}
-		}
-	}
-
-	return must_expand;
-}
-
 // Job objects should call this function when they have changes that need
 // to be propagated to the schedd.
 // return value of true means requested update has been committed to schedd.
@@ -158,18 +138,18 @@ requestScheddUpdate( BaseJob *job, bool notify )
 		return;
 	}
 
-	// Check if the job is already in the hash table
-	if ( pendingScheddUpdates.lookup( job->procID, request ) != 0 ) {
-
+	// Check if the job is already in the map
+	auto it = pendingScheddUpdates.find(job->procID);
+	if (it != pendingScheddUpdates.end()) {
+		if (it->second->m_notify == false) {
+			it->second->m_notify = notify;
+		}
+	} else {
 		request = new ScheddUpdateRequest();
 		request->m_job = job;
 		request->m_notify = notify;
-		pendingScheddUpdates.insert( job->procID, request );
+		pendingScheddUpdates[job->procID] = request;
 		RequestContactSchedd();
-	} else {
-		if ( request->m_notify == false ) {
-			request->m_notify = notify;
-		}
 	}
 }
 
@@ -242,61 +222,52 @@ Init()
 		EXCEPT( "Failed to initialize Proxymanager" );
 	}
 
-	JobType *new_type;
+	JobType new_type;
 
-	new_type = new JobType;
-	new_type->Name = strdup( "ARC" );
-	new_type->InitFunc = ArcJobInit;
-	new_type->ReconfigFunc = ArcJobReconfig;
-	new_type->AdMatchFunc = ArcJobAdMatch;
-	new_type->CreateFunc = ArcJobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "ARC";
+	new_type.InitFunc = ArcJobInit;
+	new_type.ReconfigFunc = ArcJobReconfig;
+	new_type.AdMatchFunc = ArcJobAdMatch;
+	new_type.CreateFunc = ArcJobCreate;
+	jobTypes.push_back(new_type);
 
-#if defined( LINUX ) || defined(DARWIN) || defined(WIN32)
-	new_type = new JobType;
-	new_type->Name = strdup( "EC2" );
-	new_type->InitFunc = EC2JobInit;
-	new_type->ReconfigFunc = EC2JobReconfig;
-	new_type->AdMatchFunc = EC2JobAdMatch;
-	new_type->CreateFunc = EC2JobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "EC2";
+	new_type.InitFunc = EC2JobInit;
+	new_type.ReconfigFunc = EC2JobReconfig;
+	new_type.AdMatchFunc = EC2JobAdMatch;
+	new_type.CreateFunc = EC2JobCreate;
+	jobTypes.push_back(new_type);
 
-	new_type = new JobType;
-	new_type->Name = strdup( "GCE" );
-	new_type->InitFunc = GCEJobInit;
-	new_type->ReconfigFunc = GCEJobReconfig;
-	new_type->AdMatchFunc = GCEJobAdMatch;
-	new_type->CreateFunc = GCEJobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "GCE";
+	new_type.InitFunc = GCEJobInit;
+	new_type.ReconfigFunc = GCEJobReconfig;
+	new_type.AdMatchFunc = GCEJobAdMatch;
+	new_type.CreateFunc = GCEJobCreate;
+	jobTypes.push_back(new_type);
 
-	new_type = new JobType;
-	new_type->Name = strdup( "Azure" );
-	new_type->InitFunc = AzureJobInit;
-	new_type->ReconfigFunc = AzureJobReconfig;
-	new_type->AdMatchFunc = AzureJobAdMatch;
-	new_type->CreateFunc = AzureJobCreate;
-	jobTypes.Append( new_type );
-#endif
+	new_type.Name = "Azure";
+	new_type.InitFunc = AzureJobInit;
+	new_type.ReconfigFunc = AzureJobReconfig;
+	new_type.AdMatchFunc = AzureJobAdMatch;
+	new_type.CreateFunc = AzureJobCreate;
+	jobTypes.push_back(new_type);
 
-	new_type = new JobType;
-	new_type->Name = strdup( "INFNBatch" );
-	new_type->InitFunc = INFNBatchJobInit;
-	new_type->ReconfigFunc = INFNBatchJobReconfig;
-	new_type->AdMatchFunc = INFNBatchJobAdMatch;
-	new_type->CreateFunc = INFNBatchJobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "INFNBatch";
+	new_type.InitFunc = INFNBatchJobInit;
+	new_type.ReconfigFunc = INFNBatchJobReconfig;
+	new_type.AdMatchFunc = INFNBatchJobAdMatch;
+	new_type.CreateFunc = INFNBatchJobCreate;
+	jobTypes.push_back(new_type);
 
-	new_type = new JobType;
-	new_type->Name = strdup( "Condor" );
-	new_type->InitFunc = CondorJobInit;
-	new_type->ReconfigFunc = CondorJobReconfig;
-	new_type->AdMatchFunc = CondorJobAdMatch;
-	new_type->CreateFunc = CondorJobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "Condor";
+	new_type.InitFunc = CondorJobInit;
+	new_type.ReconfigFunc = CondorJobReconfig;
+	new_type.AdMatchFunc = CondorJobAdMatch;
+	new_type.CreateFunc = CondorJobCreate;
+	jobTypes.push_back(new_type);
 
-	jobTypes.Rewind();
-	while ( jobTypes.Next( new_type ) ) {
-		new_type->InitFunc();
+	for (auto job_type: jobTypes) {
+		job_type.InitFunc();
 	}
 
 }
@@ -344,10 +315,8 @@ Reconfig()
 	GahpReconfig();
 	BaseJob::BaseJobReconfig();
 
-	JobType *job_type;
-	jobTypes.Rewind();
-	while ( jobTypes.Next( job_type ) ) {
-		job_type->ReconfigFunc();
+	for (auto job_type: jobTypes) {
+		job_type.ReconfigFunc();
 	}
 
 	// Tell all the job objects to deal with their new config values
@@ -404,13 +373,6 @@ UPDATE_JOBAD_signalHandler(int )
 // Call initJobExprs before using any of the expr_*
 // variables.  It is safe to repeatedly call
 // initJobExprs.
-static const char * expr_false = "FALSE";
-// Not currently used
-//static const char * expr_true = "TRUE";
-//static const char * expr_undefined = "UNDEFINED";
-	// The job is matched, or in unknown match state.
-	// definately unmatched
-static std::string expr_matched_or_undef;
 	// Job is being managed by an external process
 	// (probably this gridmanager process)
 static std::string expr_managed;
@@ -429,7 +391,6 @@ static std::string expr_schedd_job_constraint;
 static std::string expr_completely_done;
 	// Opposite of expr_completely_done
 static std::string expr_not_completely_done;
-	// Whether the job has dirty attributes
 
 static void 
 initJobExprs()
@@ -437,7 +398,6 @@ initJobExprs()
 	static bool done = false;
 	if(done) { return; }
 
-	formatstr(expr_matched_or_undef, "(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
 	formatstr(expr_managed, "(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
 	formatstr(expr_not_managed, "(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
 	formatstr(expr_not_held, "(%s != %d)", ATTR_JOB_STATUS, HELD);
@@ -451,7 +411,7 @@ initJobExprs()
 }
 
 void
-CHECK_LEASES_signalHandler()
+CHECK_LEASES_signalHandler(int /* tid */)
 {
 	dprintf(D_FULLDEBUG,"Received CHECK_LEASES signal\n");
 
@@ -462,7 +422,7 @@ CHECK_LEASES_signalHandler()
 }
 
 void
-doContactSchedd()
+doContactSchedd(int /* tid */)
 {
 	int rc;
 	Qmgr_connection *schedd;
@@ -536,19 +496,13 @@ doContactSchedd()
 
 		dprintf( D_FULLDEBUG, "querying for new jobs\n" );
 
-		// Make sure we grab all Globus Universe jobs (except held ones
+		// Make sure we grab all Grid Universe jobs (except held ones
 		// that we previously indicated we were done with)
 		// when we first start up in case we're recovering from a
 		// shutdown/meltdown.
 		// Otherwise, grab all jobs that are unheld and aren't marked as
-		// currently being managed and aren't marked as not matched.
+		// currently being managed.
 		// If JobManaged is undefined, equate it with false.
-		// If Matched is undefined, equate it with true.
-		// NOTE: Schedds from Condor 6.6 and earlier don't include
-		//   "(Universe==9)" in the constraint they give to the gridmanager,
-		//   so this gridmanager will pull down non-globus-universe ads,
-		//   although it won't use them. This is inefficient but not
-		//   incorrect behavior.
 		if ( firstScheddContact ) {
 			// Grab all jobs for us to manage. This expression is a
 			// derivative of the expression below for new jobs. We add
@@ -558,20 +512,18 @@ doContactSchedd()
 			// "&& Managed =!= TRUE" from the new jobs expression becomes
 			// superfluous (by boolean logic), so we drop it.
 			snprintf( expr_buf, sizeof(expr_buf),
-					 "%s && %s && ((%s && %s) || %s)",
+					 "%s && %s && (%s || %s)",
 					 expr_schedd_job_constraint.c_str(), 
 					 expr_not_completely_done.c_str(),
-					 expr_matched_or_undef.c_str(),
 					 expr_not_held.c_str(),
 					 expr_managed.c_str()
 					 );
 		} else {
 			// Grab new jobs for us to manage
 			snprintf( expr_buf, sizeof(expr_buf),
-					 "%s && %s && %s && %s && %s",
+					 "%s && %s && %s && %s",
 					 expr_schedd_job_constraint.c_str(), 
 					 expr_not_completely_done.c_str(),
-					 expr_matched_or_undef.c_str(),
 					 expr_not_held.c_str(),
 					 expr_not_managed.c_str()
 					 );
@@ -580,52 +532,24 @@ doContactSchedd()
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
-			bool job_is_matched = true; // default to true if not in ClassAd
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 			bool job_is_managed = jobExternallyManaged(next_ad);
-			next_ad->LookupBool(ATTR_JOB_MATCHED,job_is_matched);
 
 			auto itr = BaseJob::JobsByProcId.find(procID);
 			if (itr == BaseJob::JobsByProcId.end()) {
 				JobType *job_type = NULL;
 				BaseJob *new_job = NULL;
 
-				// job had better be either managed or matched! (or both)
-				ASSERT( job_is_managed || job_is_matched );
-
-				if ( MustExpandJobAd( next_ad ) ) {
-					// Get the expanded ClassAd from the schedd, which
-					// has the GridResource filled in with info from
-					// the matched ad.
-					delete next_ad;
-					next_ad = NULL;
-					next_ad = GetJobAd(procID.cluster,procID.proc);
-					if ( next_ad == NULL && errno == ETIMEDOUT ) {
-						failure_line_num = __LINE__;
-						commit_transaction = false;
-						goto contact_schedd_disconnect;
-					}
-					if ( next_ad == NULL ) {
-						// We may get here if it was not possible to expand
-						// one of the $$() expressions.  We don't want to
-						// roll back the transaction and blow away the
-						// hold that the schedd just put on the job, so
-						// simply skip over this ad.
-						dprintf(D_ALWAYS,"Failed to get expanded job ClassAd from Schedd for %d.%d.  errno=%d\n",procID.cluster,procID.proc,errno);
-						goto contact_schedd_next_add_job;
-					}
-				}
-
 				// Search our job types for one that'll handle this job
-				jobTypes.Rewind();
-				while ( jobTypes.Next( job_type ) ) {
-					if ( job_type->AdMatchFunc( next_ad ) ) {
+				for (auto & next_type: jobTypes) {
+					if (next_type.AdMatchFunc(next_ad)) {
 
 						// Found one!
 						dprintf( D_FULLDEBUG, "Using job type %s for job %d.%d\n",
-								 job_type->Name, procID.cluster, procID.proc );
+								 next_type.Name.c_str(), procID.cluster, procID.proc );
+						job_type = &next_type;
 						break;
 					}
 				}
@@ -672,7 +596,6 @@ doContactSchedd()
 
 			}
 
-contact_schedd_next_add_job:
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}	// end of while next_ad
 		if ( errno == ETIMEDOUT ) {
@@ -822,10 +745,7 @@ contact_schedd_next_add_job:
 
 	// Update existing jobs
 	/////////////////////////////////////////////////////
-	ScheddUpdateRequest *curr_request;
-	pendingScheddUpdates.startIterations();
-
-	while ( pendingScheddUpdates.iterate( curr_request ) != 0 ) {
+	for (auto& [key, curr_request]: pendingScheddUpdates) {
 
 		curr_job = curr_request->m_job;
 		dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",
@@ -890,9 +810,7 @@ contact_schedd_next_add_job:
 		goto contact_schedd_disconnect;
 	}
 
-	pendingScheddUpdates.startIterations();
-
-	while ( pendingScheddUpdates.iterate( curr_request ) != 0 ) {
+	for (auto& [key, curr_request]: pendingScheddUpdates) {
 
 		curr_job = curr_request->m_job;
 		if ( curr_job->deleteFromSchedd ) {
@@ -957,10 +875,8 @@ contact_schedd_next_add_job:
 
 	// Wake up jobs that had schedd updates pending and delete job
 	// objects that wanted to be deleted
-	pendingScheddUpdates.startIterations();
-
-	while ( pendingScheddUpdates.iterate( curr_request ) != 0 ) {
-
+	for (auto it = pendingScheddUpdates.begin(); it != pendingScheddUpdates.end();) {
+		ScheddUpdateRequest* curr_request = it->second;
 		curr_job = curr_request->m_job;
 		curr_job->jobAd->ClearAllDirtyFlags();
 
@@ -972,18 +888,15 @@ contact_schedd_next_add_job:
 				// from the schedd.
 			if ( curr_job->deleteFromSchedd == true &&
 				 schedd_deletes_complete == false ) {
+				it++;
 				continue;
 			}
 
-				// If wantRematch is set, send a reschedule now
-			if ( curr_job->wantRematch ) {
-				send_reschedule = true;
-			}
-			pendingScheddUpdates.remove( curr_job->procID );
+			it = pendingScheddUpdates.erase(it);
 			delete curr_job;
 
 		} else {
-			pendingScheddUpdates.remove( curr_job->procID );
+			it = pendingScheddUpdates.erase(it);
 
 			if ( curr_request->m_notify ) {
 				curr_job->SetEvaluateState();
@@ -1070,21 +983,21 @@ int FetchProxyDelegationHandler(int, Stream *sock )
 		// read the xfer id from the client
 	rsock->decode();
 	if ( !rsock->code( xfer_id ) || !rsock->end_of_message() ) {
-		dprintf( D_FAILURE, "FetchProxyDelegationHandler(): failed to read xfer id\n" );
+		dprintf( D_ERROR, "FetchProxyDelegationHandler(): failed to read xfer id\n" );
 		goto refuse;
 	}
 	dprintf( D_FULLDEBUG, "FetchProxyDelegationHandler(): xfer id: %s\n", xfer_id.c_str() );
 
 	xfer_ptr = FetchProxyList.find( xfer_id );
 	if ( xfer_ptr == FetchProxyList.end() ) {
-		dprintf( D_FAILURE, "FetchProxyDelegationHandler(): unknown transfer id: %s\n",
+		dprintf( D_ERROR, "FetchProxyDelegationHandler(): unknown transfer id: %s\n",
 				 xfer_id.c_str() );
 		goto refuse;
 	}
 
 	job = dynamic_cast<INFNBatchJob*>(xfer_ptr->second);
 	if ( job == NULL ) {
-		dprintf( D_FAILURE, "FetchProxyDelegationHandler(): cast failed\n" );
+		dprintf( D_ERROR, "FetchProxyDelegationHandler(): cast failed\n" );
 		goto refuse;
 	}
 

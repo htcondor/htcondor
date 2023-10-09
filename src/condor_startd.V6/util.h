@@ -28,9 +28,10 @@ class Resource;
 class StringList;
 
 // Our utilities 
-void	cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir=false);
+void	cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_path, bool abnormal_exit);
 void	cleanup_execute_dirs( StringList &list );
 void	check_execute_dir_perms( StringList &list );
+void	check_recovery_file( const char *sandbox_dir, bool abnormal_exit );
 
 bool	reply( Stream*, int );
 bool	refuse( Stream* );

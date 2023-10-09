@@ -67,7 +67,7 @@ class VMProc : public OsProc
 		virtual bool Ckpt();
 		virtual void CkptDone(bool success);
 
-		virtual void CheckStatus();
+		virtual void CheckStatus( int timerID = -1 );
 
 		/** Publish all attributes we care about for updating the job
 		  controller into the given ClassAd.  This function is just
@@ -84,7 +84,7 @@ class VMProc : public OsProc
 		bool StopVM();
 
 		void cleanup();
-		void notify_status_fn();
+		void notify_status_fn( int timerID = -1 );
 		/*
 		 *  This function will return the PID of actual process for VM.
 		 *  For example, VMware creates one process for each VM.
@@ -96,8 +96,8 @@ class VMProc : public OsProc
 		*/
 		int PIDofVM();
 		void setVMPID(int vm_pid);
-		void setVMMAC(const char *mac);
-		void setVMIP(const char *ip);
+		void setVMMAC(const std::string &mac);
+		void setVMIP(const std::string  &ip);
 
 		void updateUsageOfVM();
 		void getUsageOfVM(long &sys_time, long& user_time, unsigned long &max_image, unsigned long& rss, unsigned long &pss, bool& pss_available);

@@ -1847,28 +1847,13 @@ Starter::createTempExecuteDir( void )
 		free(who);
 
 		if( mkdir(WorkingDir.c_str(), dir_perms) < 0 ) {
-			dprintf( D_FAILURE|D_ALWAYS,
+			dprintf( D_ERROR,
 			         "couldn't create dir %s: %s\n",
 			         WorkingDir.c_str(),
 			         strerror(errno) );
 			set_priv( priv );
 			return false;
 		}
-#if !defined(WIN32)
-		WriteAdFiles();
-		if (use_chown) {
-			priv_state p = set_root_priv();
-			if (chown(WorkingDir.c_str(),
-			          get_user_uid(),
-			          get_user_gid()) == -1)
-			{
-				EXCEPT("chown error on %s: %s",
-				       WorkingDir.c_str(),
-				       strerror(errno));
-			}
-			set_priv(p);
-		}
-#endif
 	}
 
 #ifdef WIN32
@@ -1954,9 +1939,6 @@ Starter::createTempExecuteDir( void )
 	// this is where we honor that.  Note that a registry create/load can take multiple seconds
 	loadUserRegistry(jic->jobClassAd());
 
-	// now we can finally write .machine.ad and .job.ad into the sandbox
-	WriteAdFiles();
-
 #endif /* WIN32 */
 
 #ifdef LINUX
@@ -1964,6 +1946,7 @@ Starter::createTempExecuteDir( void )
 	const char *thinpool_vg = getenv("_CONDOR_THINPOOL_VG");
 	const char *thinpool_size = getenv("_CONDOR_THINPOOL_SIZE_KB");
 	if (thinpool && thinpool_vg && thinpool_size) {
+		bool lvm_setup_successful = false;
 		try {
 			m_lvm_max_size_kb = std::stol(thinpool_size);
 		} catch (...) {
@@ -1971,27 +1954,47 @@ Starter::createTempExecuteDir( void )
 		}
 		if (m_lvm_max_size_kb > 0) {
 			CondorError err;
-                        std::string thinpool_str(thinpool), slot_name(getMySlotName());
-                        bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
-                        if (do_encrypt) {
-                            slot_name += "-enc";
-                            thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
-                        }
+			std::string thinpool_str(thinpool), slot_name(getMySlotName());
+			bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
+			if (do_encrypt) {
+				slot_name += "-enc";
+				thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
+			}
 			m_volume_mgr.reset(new VolumeManager::Handle(WorkingDir, slot_name, thinpool_str, thinpool_vg, m_lvm_max_size_kb, err));
 			if (!err.empty()) {
 				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
-				m_volume_mgr.reset();
+				m_volume_mgr.reset(); //This calls handle destructor and cleans up any partial setup
+			} else {
+				lvm_setup_successful = true;
+				m_lvm_thin_volume = slot_name;
+				m_lvm_thin_pool = thinpool_str;
+				m_lvm_volume_group = thinpool_vg;
+				m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
+					(TimerHandlercpp)&Starter::CheckDiskUsage,
+					"check disk usage", this);
 			}
-			m_lvm_thin_volume = slot_name;
-			m_lvm_thin_pool = thinpool_str;
-			m_lvm_volume_group = thinpool_vg;
-			m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
-				(TimerHandlercpp)&Starter::CheckDiskUsage,
-				"check disk usage", this);
 		}
+		ASSERT( lvm_setup_successful );
 	}
 #endif // LINUX
 
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
+
+#if !defined(WIN32)
+	if (use_chown) {
+		priv_state p = set_root_priv();
+		if (chown(WorkingDir.c_str(),
+					get_user_uid(),
+					get_user_gid()) == -1)
+		{
+			EXCEPT("chown error on %s: %s",
+					WorkingDir.c_str(),
+					strerror(errno));
+		}
+		set_priv(p);
+	}
+#endif
 
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
@@ -1999,7 +2002,7 @@ Starter::createTempExecuteDir( void )
 	set_priv( ch_p );
 
 	if( chdir_result < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir.c_str(),
+		dprintf( D_ERROR, "couldn't move to %s: %s\n", WorkingDir.c_str(),
 				 strerror(errno) ); 
 		set_priv( priv );
 		return false;
@@ -2285,7 +2288,7 @@ Starter::removeDeferredJobs() {
  * return true if no errors occured
  **/
 void
-Starter::SpawnPreScript( void )
+Starter::SpawnPreScript( int /* timerID */ )
 {
 		//
 		// Unset the deferral timer so that we know that no job
@@ -3479,7 +3482,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		const char * psub = strchr(pre, chRe);
 		const char * pend = psub ? strchr(psub+1,chRe) : psub;
 		if ( ! psub || ! pend ) {
-			dprintf(D_ALWAYS|D_FAILURE, "Assigned%s environment '%s' ignored - missing replacment end marker: %s\n", tag, env_name.c_str(), peq);
+			dprintf(D_ERROR, "Assigned%s environment '%s' ignored - missing replacment end marker: %s\n", tag, env_name.c_str(), peq);
 			break;
 		}
 		// at this point if your expression is /aa/bbb/
@@ -3498,7 +3501,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		PCRE2_SPTR pat_pcre2str = reinterpret_cast<const unsigned char *>(pat.c_str());
 		pcre2_code *re = pcre2_compile(pat_pcre2str, PCRE2_ZERO_TERMINATED, 0, &errcode, &erroff, NULL);
 		if ( ! re) {
-			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex PCRE2 error code %d at offset %d in: %s\n",
+			dprintf(D_ERROR, "Assigned%s environment '%s' regex PCRE2 error code %d at offset %d in: %s\n",
 				tag, env_name.c_str(), errcode, static_cast<int>(erroff), pat.c_str());
 			break;
 		}
@@ -3752,6 +3755,14 @@ Starter::removeTempExecuteDir( void )
 		dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", Execute, strerror(errno));
 	}
 
+#ifdef LINUX
+	if (m_volume_mgr) {
+		//LVM managed... reset handle pointer to call destructor for cleanup
+		//We can't determine if the cleanup failed or not, and need to rm the working dir
+		m_volume_mgr.reset(nullptr);
+	}
+#endif /* LINUX */
+
 	// Remove the directory from all possible chroots.
 	// On Windows, we expect the root_dir_list to have only a single entry - "/"
 	std::string full_exec_dir(Execute);
@@ -3925,7 +3936,7 @@ Starter::RecordJobExitStatus(int status) {
 }
 
 void
-Starter::CheckDiskUsage(void)
+Starter::CheckDiskUsage( int /* timerID */ )
 {
 #ifdef LINUX
 		// Avoid repeatedly triggering

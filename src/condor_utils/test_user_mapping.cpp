@@ -122,6 +122,14 @@ char hash_canon[] =
 	"GSI \"/DC=com/DC=DigiCert-Grid/O=Open Science Grid/OU=People/CN=Jack Miller\" jmiller\n"
 	;
 
+char prefix_canon[] =
+	"osdf	/example.vo/example.fs	/cephfs/example.fs\n"
+	"dav	dav.example.vo/private	/nfs/private\n"
+	"https	squid.example.vo/priv	squid_priv\n"
+	"https	squid.example.vo/		squid_public\n"
+	;
+
+
 void print_usage(FILE * out, MapFile * mf, double elapsed_time)
 {
 	MapFileUsage useage;
@@ -149,10 +157,6 @@ void print_usage(FILE * out, MapFile * mf, double elapsed_time)
 void testing_parser(bool verbose, const char * mode)
 {
 	YourString m(mode);
-#ifdef USE_MAPFILE_V2
-#else
-	mode = "v1";
-#endif
 	if (verbose) {
 		fprintf( stdout, "\n----- testing_parser (%s)----\n\n", mode);
 	}
@@ -160,20 +164,16 @@ void testing_parser(bool verbose, const char * mode)
 	const bool assume_regex = false;
 	MyStringCharSource * src = NULL;
 
-	if (m == "all" || m == "regex") {
+	if (m == "regex") {
 		delete gmf; gmf = NULL;
 		gmf = new MapFile;
 		src = new MyStringCharSource(regex_canon, false);
 		REQUIRE(gmf->ParseCanonicalization(*src, "regex_canon", assume_regex) == 0);
 		delete src; src = NULL;
-		if (verbose) {
-			print_usage(stdout, gmf, gelapsed_time);
-		}
 	}
 
-#ifdef USE_MAPFILE_V2
 	const bool assume_hash = true;
-	if (m == "all" || m == "hash") {
+	if (m == "hash") {
 		delete gmf; gmf = NULL;
 		gmf = new MapFile;
 		src = new MyStringCharSource(hash_canon, false);
@@ -183,19 +183,48 @@ void testing_parser(bool verbose, const char * mode)
 			print_usage(stdout, gmf, gelapsed_time);
 		}
 	}
-#endif
+
+	if (m == "prefix") {
+		delete gmf; gmf = NULL;
+		gmf = new MapFile;
+		src = new MyStringCharSource(prefix_canon, false);
+		REQUIRE(gmf->ParseCanonicalization(*src, "prefix_canon", assume_hash, true, true) == 0);
+		gmf->dump(stderr);
+		delete src; src = NULL;
+		if (verbose) {
+			print_usage(stdout, gmf, gelapsed_time);
+		}
+	}
 }
 
 
 void testing_lookups(bool verbose, const char * mode)
 {
 	YourString m(mode);
-#ifdef USE_MAPFILE_V2
-#else
-	mode = "v1";
-#endif
 	if (verbose) {
 		fprintf( stdout, "\n----- testing_lookups (%s)----\n\n", mode);
+	}
+
+	if( 0 == strcmp(mode, "prefix") ) {
+		double dstart = _condor_debug_get_time_double();
+
+		REQUIRE( lookup("osdf", "/example.vo/example.fs/example") == "/cephfs/example.fs" );
+		REQUIRE( lookup("osdf", "prefix/example.vo/example.fs/example") == "" );
+
+		REQUIRE( lookup("dav", "dav.example.vo/private/file") == "/nfs/private");
+		REQUIRE( lookup("dav", "dav.other.vo/private/file") == "");
+		REQUIRE( lookup("dav", "private-dav.example.vo/private/file") == "");
+
+		REQUIRE( lookup("https", "squid.example.vo/priv/file") == "squid_priv" );
+		REQUIRE( lookup("https", "prefix-squid.example.vo/priv/file") == "" );
+		REQUIRE( lookup("https", "squid.example.vo/file") == "squid_public" );
+		REQUIRE( lookup("https", "prefix-squid.example.vo/file") == "" );
+
+		if (verbose) {
+			double elapsed_time = _condor_debug_get_time_double() - dstart;
+			fprintf(stdout, "    %.3f millisec\n", elapsed_time*1000);
+		}
+		return;
 	}
 
 	double dstart = _condor_debug_get_time_double();
@@ -243,11 +272,7 @@ int read_mapfile(const char * mapfile, bool assume_hash, bool dump_it, const cha
 	int rval = 0;
 	double dstart;
 
-#ifdef USE_MAPFILE_V2
 	const char * mode = assume_hash ? "hash" : "regex";
-#else
-	const char * mode = "v1";
-#endif
 
 	delete gmf; gmf = NULL;
 	gmf = new MapFile;
@@ -286,9 +311,9 @@ int read_mapfile(const char * mapfile, bool assume_hash, bool dump_it, const cha
 			dstart = _condor_debug_get_time_double();
 			int cLookups = 0;
 			while ( ! src.isEof()) {
-				MyString input_line;
-				input_line.readLine(src); // Result ignored, we already monitor EOF
-				input_line.trim();
+				std::string input_line;
+				readLine(input_line, src); // Result ignored, we already monitor EOF
+				trim(input_line);
 				if (input_line.empty() || input_line[0] == '#') {
 					continue;
 				}
@@ -319,11 +344,7 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 	int rval = 0;
 	double dstart;
 
-#ifdef USE_MAPFILE_V2
 	const char * mode = assume_hash ? "hash" : "regex";
-#else
-	const char * mode = "v1";
-#endif
 
 	delete gmf; gmf = NULL;
 	gmf = new MapFile;
@@ -331,11 +352,11 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 		MyStringFpSource mystdin(stdin, false);
 		if (dash_verbose) { fprintf(stdout, "Loading grid-mapping data (%s) from stdin\n", mode); }
 		dstart = _condor_debug_get_time_double();
-		rval = gmf->ParseUsermap(mystdin, "stdin", assume_hash);
+		rval = gmf->ParseCanonicalization(mystdin, "stdin", assume_hash);
 	} else {
 		if (dash_verbose) { fprintf(stdout, "Loading (%s) grid-map %s\n", mode, mapfile); }
 		dstart = _condor_debug_get_time_double();
-		rval = gmf->ParseUsermapFile(mapfile, assume_hash);
+		rval = gmf->ParseCanonicalizationFile(mapfile, assume_hash);
 	}
 	if (dash_verbose) {
 		double elapsed_time = _condor_debug_get_time_double() - dstart;
@@ -353,9 +374,9 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 			dstart = _condor_debug_get_time_double();
 			int cLookups = 0;
 			while ( ! src.isEof()) {
-				MyString input_line;
-				input_line.readLine(src); // Result ignored, we already monitor EOF
-				input_line.trim();
+				std::string input_line;
+				readLine(input_line, src); // Result ignored, we already monitor EOF
+				trim(input_line);
 				if (input_line.empty() || input_line[0] == '#') {
 					continue;
 				}
@@ -387,7 +408,7 @@ void timed_lookups(bool verbose, const char * lookup_method, StringList & users)
 	int cLookups = 0;
 	int cFailed = 0;
 	if (lookup_method) {
-		MyString meth(lookup_method);
+		std::string meth(lookup_method);
 		double dstart = _condor_debug_get_time_double();
 		for (const char * user = users.first(); user; user = users.next()) {
 			gmstr.clear();
@@ -429,7 +450,7 @@ void Usage(const char * appname, FILE * out)
 		"  Unless -verbose is specified, only failed tests produce output.\n"
 		"  This program returns 0 if all tests succeed, 1 if any tests fails.\n\n"
 		"  Instead of running tests, this program can validate map files\n"
-		"  and map users againts them. Use the <queryopts> for this.\n\n"
+		"  and map users against them. Use the <queryopts> for this.\n\n"
 		"    -file <mapfile>\t Parse <mapfile> as a 3 field mapfile\n"
 		"    -gridfile <gridfile> Parse <gridfile> as a 2 field user map\n"
 		"        If <gridfile> or <mapfile> is -, read from stdin\n"
@@ -485,8 +506,8 @@ int main( int /*argc*/, const char ** argv) {
 			if (pcolon) {
 				while (*++pcolon) {
 					switch (*pcolon) {
-					case 'l': test_flags |= 0x0011; break; // lookup
-					case 'p': test_flags |= 0x0022; break; // parse
+					case 'l': test_flags |= 0x0111; break; // lookup
+					case 'p': test_flags |= 0x0222; break; // parse
 					}
 				}
 			} else {
@@ -553,6 +574,8 @@ int main( int /*argc*/, const char ** argv) {
 	if (test_flags & 0x0002) testing_lookups(dash_verbose, "regex");
 	if (test_flags & 0x0010) testing_parser(dash_verbose, "hash");
 	if (test_flags & 0x0020) testing_lookups(dash_verbose, "hash");
+	if (test_flags & 0x0100) testing_parser(dash_verbose, "prefix");
+	if (test_flags & 0x0200) testing_lookups(dash_verbose, "prefix");
 
 	if (mapfile) {
 		int rval = read_mapfile(mapfile, assume_hash, dump_map, lookup_method, user);
@@ -586,9 +609,9 @@ int main( int /*argc*/, const char ** argv) {
 		MyStringFpSource src(file, true);
 		StringList users;
 		while ( ! src.isEof()) {
-			MyString line;
-			line.readLine(src); // Result ignored, we already monitor EOF
-			line.chomp();
+			std::string line;
+			readLine(line, src); // Result ignored, we already monitor EOF
+			chomp(line);
 			if (line.empty()) continue;
 			users.append(line.c_str());
 		}

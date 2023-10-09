@@ -97,6 +97,7 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	, have_abort_dag_return_val(false)
 	, is_factory(false)
 	, countedAsDone(false)
+	, _isSavePoint(false)
 	, _noop(false)
 	, _hold(false)
 	, _type(NodeType::JOB)
@@ -112,6 +113,7 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	, _submitDesc(NULL)
 	, _dagFile(NULL)
 	, _jobName(NULL)
+	, _saveFile({})
 
 	, _Status(STATUS_READY)
 	, _parent(NO_ID)
@@ -503,7 +505,9 @@ int Job::SetDescendantsToFutile(Dag& dag)
 					ASSERT(child != NULL);
 					//If Status is already futile or the node is preDone don't try
 					//to set status and update counts
-					if (child->GetStatus() != Job::STATUS_FUTILE && !child->IsPreDone()) {
+					if (child->GetStatus() == Job::STATUS_FUTILE) {
+						continue;
+					} else if (!child->IsPreDone()) {
 						ASSERT(!child->CanSubmit());
 						if (child->SetStatus(Job::STATUS_FUTILE)) { count++; }
 						else {
@@ -519,7 +523,9 @@ int Job::SetDescendantsToFutile(Dag& dag)
 			ASSERT(child != NULL);
 			//If Status is already futile or the node is preDone don't try
 			//to set status and update counts
-			if (child->GetStatus() != Job::STATUS_FUTILE && !child->IsPreDone()) {
+			if (child->GetStatus() == Job::STATUS_FUTILE) {
+				return 0;
+			} else if (!child->IsPreDone()) {
 				ASSERT(!child->CanSubmit());
 				if (child->SetStatus(Job::STATUS_FUTILE)) { count++; }
 				else {

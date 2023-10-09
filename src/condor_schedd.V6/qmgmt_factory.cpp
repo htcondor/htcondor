@@ -41,7 +41,7 @@
 class JobFactory : public SubmitHash {
 
 public:
-	JobFactory(const char * name, int id, const classad::ClassAd* extended_cmds);
+	JobFactory(const char * name, int id, const classad::ClassAd* extended_cmds, MapFile* url_map);
 	~JobFactory();
 
 	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
@@ -49,7 +49,7 @@ public:
 	// load the submit file/digest that was passed in our constructor
 	int LoadDigest(MacroStream & ms, ClassAd * user_ident, int cluster_id, std::string & errmsg);
 	// load the item data for the given row, and setup the live submit variables for that item.
-	int LoadRowData(int row, std::string * empty_var_names=NULL);
+	int LoadRowData(int row, std::string * empty_var_names=nullptr);
 	// returns true when the row data is not yet loaded, but might be available if you try again later.
 	bool RowDataIsLoading(int row);
 
@@ -143,13 +143,13 @@ protected:
 	//FILE * fp_digest;
 #endif
 	int          ident;
-	MaterializeMode paused; // 0 is not paused, non-zero is pause code.
-	MACRO_SOURCE source;
+	MaterializeMode paused{mmInvalid}; // 0 is not paused, non-zero is pause code.
+	MACRO_SOURCE source{};
 	MyAsyncFileReader reader; // used when there is external foreach data
 	SubmitForeachArgs fea;
-	char emptyItemString[4];
-	int cached_total_procs;
-	bool is_submit_on_hold;
+	char emptyItemString[4]{};
+	int cached_total_procs{-42};
+	bool is_submit_on_hold{false};
 
 	// let these functions access internal factory data
 	friend bool LoadJobFactoryDigest(JobFactory* factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
@@ -161,6 +161,7 @@ protected:
 		const classad::ClassAd * extended_cmds,
 		const char * submit_digest_filename,
 		bool spooled_submit_file,
+		MapFile* urlMap,
 		std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
@@ -172,21 +173,19 @@ protected:
 		std::string & errmsg);           // OUT: error message if return value is not 0
 };
 
-JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * extended_cmds)
-	: name(NULL)
+JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * extended_cmds, MapFile* url_map)
+	: name(nullptr)
 #ifdef HOLDS_DIGEST_FILE_OPEN
 	, fp_digestX(NULL)
 #endif
 	, ident(id)
-	, paused(mmInvalid)
-	, cached_total_procs(-42)
-	, is_submit_on_hold(false)
 {
 	CheckProxyFile = false;
 	memset(&source, 0, sizeof(source));
 	this->init();
 	setScheddVersion(CondorVersion());
 	if (extended_cmds) { this->addExtendedCommands(*extended_cmds); }
+	protectedUrlMap = url_map;
 	// add digestfile into string pool, and store that pointer in the class
 	insert_source(_name, source);
 	name = macro_source_filename(source, SubmitMacroSet);
@@ -226,9 +225,9 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 	return false;
 }
 
-class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds)
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds, MapFile* urlMap)
 {
-	return new JobFactory(NULL, cluster_id, extended_cmds);
+	return new JobFactory(nullptr, cluster_id, extended_cmds, urlMap);
 }
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
@@ -288,10 +287,11 @@ JobFactory * MakeJobFactory(
 	const classad::ClassAd * extended_cmds,
 	const char * submit_digest_file,
 	bool spooled_submit_file,
+	MapFile* urlMap,
 	std::string & errmsg)
 {
 
-	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster, extended_cmds);
+	auto * factory = new JobFactory(submit_digest_file, job->jid.cluster, extended_cmds, urlMap);
 
 	// Starting the 8.7.3 The digest file may be in the spool directory and owned by condor
 	// or in the user directory and owned by the user (the 8.7.1 model).
@@ -300,7 +300,7 @@ JobFactory * MakeJobFactory(
 	bool restore_priv = false;
 	priv_state priv = PRIV_UNKNOWN;
 
-	FILE* fp = NULL;
+	FILE* fp = nullptr;
 	if (spooled_submit_file) {
 		fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
 	} else {
@@ -310,7 +310,7 @@ JobFactory * MakeJobFactory(
 	}
 
 	errmsg = "";
-	int rval;
+	int rval = 0;
 	if ( ! fp) {
 		formatstr(errmsg, "Failed to open factory submit digest : %s", strerror(errno));
 		rval = errno ? errno : -1;
@@ -321,13 +321,13 @@ JobFactory * MakeJobFactory(
 		// to impersonate the user while loading the itemdata.
 		// An 8.7.9 condor_submit will put the itemdata into SPOOL, so we would only impersonate
 		// if the condor_submit was 8.7.5 thru 8.7.8 (and not remote). we choose not to support that case.
-		rval = factory->LoadDigest(ms, NULL, factory->ID(), errmsg);
+		rval = factory->LoadDigest(ms, nullptr, factory->ID(), errmsg);
 	#else
 		// If we are already impersonating the user, dont pass the job ad to LoadDigest since it only needs it to impersonate the user
 		rval = factory->LoadDigest(ms, restore_priv ? NULL : job, errmsg);
 	#endif
 		fclose(fp);
-		fp = NULL;
+		fp = nullptr;
 	}
 
 	if (restore_priv) {
@@ -338,7 +338,7 @@ JobFactory * MakeJobFactory(
 	if (rval) {
 		dprintf(D_ALWAYS, "failed to load job factory %d submit digest %s : %s\n", job->jid.cluster, submit_digest_file, errmsg.c_str());
 		delete factory;
-		factory = NULL;
+		factory = nullptr;
 	} else {
 		factory->set_cluster_ad(job);
 	}
@@ -590,7 +590,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	const bool check_empty = true;
 	const bool fail_empty = false;
 	std::string empty_var_names;
-	int row_num = factory->LoadRowData(row, check_empty ? &empty_var_names : NULL);
+	int row_num = factory->LoadRowData(row, check_empty ? &empty_var_names : nullptr);
 	if (row_num < row) {
 		// we are done
 		dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. LoadRowData returned %d for row %d\n", ClusterAd->jid.cluster, row_num, row);
@@ -632,7 +632,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 
 	// have the factory make a job and give us a pointer to it.
 	// note that this ia not a transfer of ownership, the factory still owns the job and will delete it
-	const classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, NULL);
+	const classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, nullptr);
 	if ( ! job) {
 		std::string msg;
 		std::string txt(factory->error_stack()->getFullText()); if (txt.empty()) { txt = ""; }
@@ -699,7 +699,7 @@ static bool EnableOverlappedIO() {
 
 int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id, std::string & errmsg)
 {
-	char * qline = NULL;
+	char * qline = nullptr;
 	int rval = parse_up_to_q_line(ms, errmsg, &qline);
 	if (rval == 0 && qline) {
 		const char * pqargs = is_queue_statement(qline);
@@ -714,7 +714,7 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 			if (fea.vars.isEmpty()) {
 				set_live_submit_variable("item", emptyItemString);
 			} else {
-				for (const char * var = fea.vars.first(); var != NULL; var = fea.vars.next()) {
+				for (const char * var = fea.vars.first(); var != nullptr; var = fea.vars.next()) {
 					set_live_submit_variable(var, emptyItemString, false);
 				}
 			}
@@ -805,9 +805,9 @@ bool JobFactory::RowDataIsLoading(int row)
 	if (fea.foreach_mode == foreach_from_async) {
 
 		// put all of the items we have read so far into the item list
-		MyString str;
+		std::string str;
 		while (reader.output().readLine(str, false)) {
-			str.trim();
+			trim(str);
 			fea.items.append(str.c_str());
 		}
 

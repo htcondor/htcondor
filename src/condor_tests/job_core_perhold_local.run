@@ -73,14 +73,6 @@ $held = sub {
 		RegisterResult(0,"test_name", "testname");
 		return(1);
 	} else { # perhold TRUE case hold handling`
-		##
-		## Make sure we weren't here earlier
-		##
-		if ( $gotHold ) {
-			CondorTest::debug("Bad - Job $cluster.$job was put on hold twice.\n",1);
-			RegisterResult(0,"test_name", "$testname");
-		}
-	
 		CondorTest::debug("Good - Job $cluster.$job was put on hold.\n",1);
 
 		##

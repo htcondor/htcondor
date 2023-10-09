@@ -50,7 +50,7 @@ void pcccStopCoalescing( PROC_ID nowJob );
 class pcccDoneCallback : public Service {
 	public:
 		pcccDoneCallback( PROC_ID nj ) : nowJob(nj) { }
-		void callback();
+		void callback( int timerID = -1 );
 
 	private:
 		PROC_ID nowJob;
@@ -60,7 +60,7 @@ class pcccStopCallback : public Service {
 	public:
 		pcccStopCallback( PROC_ID nj, classy_counted_ptr<TwoClassAdMsg> tcam, const char * n, const char * a, int rr ) : nowJob(nj), message(tcam), name(n), addr(a), retriesRemaining(rr) { }
 
-		void callback();
+		void callback( int timerID = -1 );
 		static void failed( PROC_ID nowJob );
 		void dcMessageCallback( DCMsgCallback * cb );
 
@@ -158,13 +158,13 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 	auto i = matches.begin();
 	match_rec * match = * i;
 	classy_counted_ptr<DCStartd> startd = new DCStartd( match->description(),
-		NULL, match->peer, match->claimId() );
+		NULL, match->peer, match->claim_id.claimId() );
 
 	ClassAd commandAd;
 	std::string claimIDList;
-	formatstr( claimIDList, "%s", match->claimId() );
+	formatstr( claimIDList, "%s", match->claim_id.claimId() );
 	for( ++i; i != matches.end(); ++i ) {
-		formatstr( claimIDList, "%s, %s", claimIDList.c_str(), (* i)->claimId() );
+		formatstr( claimIDList, "%s, %s", claimIDList.c_str(), (* i)->claim_id.claimId() );
 	}
 	// ATTR_CLAIM_ID_LIST is one of the magic attributes that we automatically
 	// encrypt/decrypt whenever we're about to put/get it on/from the wire.
@@ -184,7 +184,9 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 
 	classy_counted_ptr<TwoClassAdMsg> cMsg = new TwoClassAdMsg( COALESCE_SLOTS, commandAd, * jobAd );
 	cMsg->setStreamType( Stream::reli_sock );
-	cMsg->setSecSessionId( match->secSessionId() );
+	if (match->use_sec_session) {
+		cMsg->setSecSessionId( match->claim_id.secSessionId() );
+	}
 	cMsg->setSuccessDebugLevel( D_FULLDEBUG );
 	pcccStopCallback * pcs = new pcccStopCallback( nowJob, cMsg, match->description(), match->peer, retriesRemaining );
 	// Annoyingly, the deadline only applies to /sending/ the message.
@@ -254,7 +256,7 @@ pcccDumpTable( int flags ) {
 }
 
 void
-pcccDoneCallback::callback() {
+pcccDoneCallback::callback( int /* timerID */ ) {
 	dprintf( D_ALWAYS, "[now job %d.%d]: targeted job(s) did not vacate quickly enough, failing\n", nowJob.cluster, nowJob.proc );
 
 	// Prevent outstanding deactivations for claims we haven't got() yet
@@ -297,7 +299,7 @@ class SlowRetryCallback : public Service {
 	public:
 		SlowRetryCallback( PROC_ID nj, int rr ) : nowJob(nj), retriesRemaining(rr) { }
 
-		void callback() {
+		void callback( int /* timerID */ ) {
 			dprintf( D_FULLDEBUG, "SlowRetryCallback::callback( %d, %d )\n", nowJob.cluster, nowJob.proc );
 			pcccStartCoalescing( nowJob, retriesRemaining - 1 );
 			delete( this );
@@ -310,7 +312,7 @@ class SlowRetryCallback : public Service {
 
 
 void
-pcccStopCallback::callback() {
+pcccStopCallback::callback( int /* timerID */ ) {
 	dprintf( D_ALWAYS, "[now job %d.%d]: coalesce command timed out, failing\n", nowJob.cluster, nowJob.proc );
 
 	// This calls dcMessageCallback(), which turns around and

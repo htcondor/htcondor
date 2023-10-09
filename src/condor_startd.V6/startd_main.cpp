@@ -845,11 +845,11 @@ reaper(int pid, int status)
 {
 
 	if( WIFSIGNALED(status) ) {
-		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d died on signal %d (%s)\n",
+		dprintf(D_ERROR | D_EXCEPT, "Starter pid %d died on signal %d (%s)\n",
 				pid, WTERMSIG(status), daemonCore->GetExceptionString(status));
 	} else {
-		int d_stat = status ? D_FAILURE : D_ALWAYS;
-		dprintf(d_stat|D_ALWAYS, "Starter pid %d exited with status %d\n",
+		int d_stat = status ? D_ERROR : D_ALWAYS;
+		dprintf(d_stat, "Starter pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
 	}
 
@@ -866,7 +866,7 @@ reaper(int pid, int status)
 		starter->exited(NULL, status);
 		delete starter;
 	} else {
-		dprintf(D_FAILURE|D_ALWAYS, "ERROR: Starter pid %d is not associated with a Starter object or a Claim.\n", pid);
+		dprintf(D_ERROR, "ERROR: Starter pid %d is not associated with a Starter object or a Claim.\n", pid);
 	}
 	return TRUE;
 }
@@ -893,7 +893,7 @@ do_cleanup(int,int,const char*)
 			// Otherwise, quickly kill all the active starters.
 		const bool fast = true;
 		resmgr->vacate_all(fast);
-		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
+		dprintf( D_ERROR | D_EXCEPT, "startd exiting because of fatal exception.\n" );
 	}
 
 	return TRUE;
@@ -901,7 +901,7 @@ do_cleanup(int,int,const char*)
 
 
 void
-startd_check_free()
+startd_check_free(int /* tid */)
 {	
 	if ( cron_job_mgr && ( ! cron_job_mgr->ShutdownOk() ) ) {
 		return;
@@ -912,6 +912,10 @@ startd_check_free()
 	if ( ! resmgr ) {
 		startd_exit();
 	}
+	// TODO This check ignores claimed pslots, thus we won't send a
+	//   RELEASE_CLAIM for those before shutting down.
+	//   Today, those messages would fail, as the schedd doesn't keep
+	//   track of claimed pslots. We expect this to change in the future.
 	if( ! resmgr->hasAnyClaim() ) {
 		startd_exit();
 	}

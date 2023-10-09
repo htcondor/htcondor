@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_universe.h"
-#include "MyString.h"
 #include "tokener.h"
 
 /*

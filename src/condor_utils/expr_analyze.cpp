@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "MyString.h"
 #include "string_list.h"
 #include "CondorError.h"
 #include "ad_printmask.h"
@@ -670,14 +669,6 @@ void AnalyzeRequirementsForEachTarget(
 	int console_width = fmt.console_width;
 	bool show_work = (fmt.detail_mask & detail_diagnostic) != 0;
 	const bool count_soft_matches = false; // when true, "soft" always and never show  up as counts of machines
-
-	/*
-	bool request_is_machine = false;
-	if (0 == strcmp(GetMyTypeName(*request),STARTD_ADTYPE)) {
-		//attrConstraint = ATTR_START;
-		request_is_machine = true;
-	}
-	*/
 
 	classad::ExprTree* exprReq = request->LookupExpr(attrConstraint);
 	if ( ! exprReq)

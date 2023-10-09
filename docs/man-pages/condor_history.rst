@@ -13,7 +13,7 @@ Synopsis
 **condor_history** [**-name** *name*]
 [**-pool** *centralmanagerhostname[:portnumber]*] [**-backwards**]
 [**-forwards**] [**-constraint** *expr*] [**-file** *filename*]
-[**-userlog** *filename*] [**-search** *filename*] [**-dir | -directory**]
+[**-userlog** *filename*] [**-search** *path*] [**-dir | -directory**]
 [**-local**] [**-startd**] [**-epochs**]
 [**-format** *formatString AttributeName*]
 [**-autoformat[:jlhVr,tng]** *attr1 [attr2 ...]*]
@@ -112,9 +112,11 @@ Options
     instead of from the default history file. A job event log does not
     contain all of the job information, so some fields in the normal
     output of *condor_history* will be blank.
- **-search** *filename*
-    Use the specified filename and all matching condor time rotated files
-    ``filename.YYYYMMDDTHHMMSS`` instead of the default history file.
+ **-search** *path*
+    Use the specified path to filename and all matching condor time rotated files
+    ``filename.YYYYMMDDTHHMMSS`` instead of the default history file. If used
+    with **-dir** option then *condor_history* will use the provided path as the
+    directory to search for specific pattern matching history files.
  **-dir** or **-directory**
     Search for files in a sources alternate directory configuration knob to
     read from instead of default history file. Note: only applies to **-epochs**.

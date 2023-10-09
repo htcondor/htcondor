@@ -349,9 +349,6 @@ GCEJob::~GCEJob()
 {
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
-		if( ! m_instanceId.empty() ) {
-			myResource->jobsByInstanceID.remove( m_instanceId );
-		}
 	}
 	delete gahp;
 }
@@ -363,7 +360,7 @@ void GCEJob::Reconfig()
 }
 
 
-void GCEJob::doEvaluateState()
+void GCEJob::doEvaluateState( int /* timerID */ )
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
@@ -660,38 +657,13 @@ void GCEJob::doEvaluateState()
 				// Remove all knowledge of any previous or present job
 				// submission, in both the gridmanager and the schedd.
 
-				// If we are doing a rematch, we are simply waiting around
-				// for the schedd to be updated and subsequently this globus job
-				// object to be destroyed.  So there is nothing to do.
-				if ( wantRematch ) {
-					break;
-				}
-
 				// For now, put problem jobs on hold instead of
 				// forgetting about current submission and trying again.
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
-				if ( !m_instanceId.empty() && condorState != REMOVED
-					 && wantResubmit == false && doResubmit == 0 ) {
+				if (!m_instanceId.empty() && condorState != REMOVED) {
 					gmState = GM_HOLD;
 					break;
-				}
-
-				// Only allow a rematch *if* we are also going to perform a resubmit
-				if ( wantResubmit || doResubmit ) {
-					jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
-				}
-
-				if ( wantResubmit ) {
-					wantResubmit = false;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
-				}
-
-				if ( doResubmit ) {
-					doResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus (last submit failed)\n",
-						procID.cluster, procID.proc );
 				}
 
 				errorString = "";
@@ -712,24 +684,6 @@ void GCEJob::doEvaluateState()
 				if ( remoteJobState != "" ) {
 					remoteJobState = "";
 					SetRemoteJobStatus( NULL );
-				}
-
-				if ( wantRematch ) {
-					dprintf(D_ALWAYS, "(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
-
-					// Set ad attributes so the schedd finds a new match.
-					bool dummy;
-					if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-						jobAd->Assign( ATTR_JOB_MATCHED, false );
-						jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
-					}
-
-					// If we are rematching, we need to forget about this job
-					// cuz we wanna pull a fresh new job ad, with a fresh new match,
-					// from the all-singing schedd.
-					gmState = GM_DELETE;
-					break;
 				}
 
 				// If there are no updates to be done when we first enter this
@@ -956,8 +910,6 @@ void GCEJob::GCESetRemoteJobId( const char *instance_name, const char *instance_
 	if ( instance_name && instance_name[0] ) {
 		formatstr( full_job_id, "gce %s %s", m_serviceUrl.c_str(), instance_name );
 		if ( instance_id && instance_id[0] ) {
-			// We need this to do bulk status queries.
-			myResource->jobsByInstanceID.insert( instance_id, this );
 			formatstr_cat( full_job_id, " %s", instance_id );
 		}
 	}

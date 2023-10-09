@@ -155,6 +155,9 @@ JobEventLog::next() {
 			THROW_EX( HTCondorInternalError, "WaitForUserLog::readEvent() returned an unknown outcome." );
 		break;
 	}
+
+	// should never get here, return something to prevent "not all control paths return a value"
+	return 0;
 }
 
 //
@@ -374,6 +377,9 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 	} else {
 		return d;
 	}
+
+	// should never get here, return something to prevent "not all control paths return a value" warning
+	return boost::python::object();
 }
 
 boost::python::object
@@ -402,6 +408,9 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	} else {
 		THROW_EX( KeyError, k.c_str() );
 	}
+
+	// should never get here, return something to prevent "not all control paths return a value" warning
+	return boost::python::object();
 }
 
 std::string

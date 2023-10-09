@@ -151,11 +151,11 @@ AWSv4-utils.cpp
 AWSv4-utils.h
 AWSv4-impl.h
 backward_file_reader.cpp
-binary_search.h
 build_job_env.cpp
 build_job_env.h
 check_events.cpp
 check_events.h
+checkpoint_cleanup_utils.cpp
 checksum.cpp
 checksum.h
 classad_collection.cpp
@@ -184,7 +184,6 @@ classad_usermap.cpp
 classad_visa.cpp
 classad_visa.h
 classy_counted_ptr.h
-command_name_tables.h
 command_strings.cpp
 command_strings.h
 compat_classad_list.cpp
@@ -247,6 +246,8 @@ consumption_policy.h
 copy_file.cpp
 credmon_interface.cpp
 credmon_interface.h
+cred_dir.cpp
+cred_dir.h
 cron_job.cpp
 cron_job_io.cpp
 cron_job_list.cpp
@@ -260,6 +261,8 @@ data_reuse.cpp
 data_reuse.h
 date_util.cpp
 date_util.h
+dc_coroutines.cpp
+dc_coroutines.h
 dc_service.cpp
 dc_service.h
 DelegationInterface.cpp
@@ -287,7 +290,6 @@ escapes.cpp
 exit_utils.cpp
 expr_analyze.cpp
 expr_analyze.h
-extArray.h
 file_modified_trigger.cpp
 file_modified_trigger.h
 filename_tools_cpp.cpp
@@ -393,14 +395,11 @@ param_info.cpp
 param_info.h
 param_info_help.cpp
 param_info_tables.h
-path_utils.cpp
-path_utils.h
 perm.h
 PluginManager.h
 printf_format.cpp
 print_wrapped_text.cpp
 print_wrapped_text.h
-prioritysimplelist.h
 proc.cpp
 procd_config.cpp
 procd_config.h
@@ -526,6 +525,7 @@ if(LINUX)
 		hibernator.linux.h
 		network_adapter.linux.cpp
 		network_adapter.linux.h
+		proc_family_direct_cgroup_v1.cpp
 		proc_family_direct_cgroup_v2.cpp
 	)
 endif(LINUX)
@@ -550,30 +550,26 @@ if(WINDOWS)
 endif(WINDOWS)
 
 
-##################################################
-add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
-		COMMAND perl
-		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h -o ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
-		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl)
-
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h
 		COMMAND perl
 		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in -o ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h -p ${PLATFORM}
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl)
 
-add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h)
+add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h)
 
 if(UNIX)
 	set_source_files_properties(param_info.cpp PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
+	# The inotify system call is basically impossible to use without triggering casting to larger
+	# alignment warnings.  So just turn that off for this file
+	set_source_files_properties(file_modified_trigger.cpp PROPERTIES COMPILE_FLAGS -Wno-cast-align)
+
+	# ditto for this file
+	set_source_files_properties(ipv6_hostname.cpp PROPERTIES COMPILE_FLAGS -Wno-cast-align)
 endif(UNIX)
 
 ############ end generate params
 # These sources depend on the generated param_info_tables.  Everything else can build in parallel
 set_source_files_properties(config.cpp condor_config.cpp param_info.cpp param_info_help.cpp PROPERTIES OBJECT_DEPENDS  ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h)
-
-# Only command_strings.cpp depends on the generator above.  Everything else can build in parallel
-set_source_files_properties(command_strings.cpp PROPERTIES OBJECT_DEPENDS  ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h)
-
 
 # These are source files that reside in other directories that we want to
 # include in libcondor_utils. They used to be in separate libraries.
@@ -776,6 +772,7 @@ endif()
 
 set_source_files_properties(test_log_reader.cpp PROPERTIES DEFINITIONS ENABLE_STATE_DUMP)
 
+condor_exe_test(test_classad_funcs "test_classad_funcs.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")

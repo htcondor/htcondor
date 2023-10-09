@@ -349,7 +349,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				resEvent.getUUID().c_str());
 			m_reserved_space += resEvent.getReservedSpace();
 		} else if (iter->second->getTag() != resEvent.getTag()) {
-			dprintf(D_FAILURE, "Duplicate space reservation with incorrect tag (%s)\n",
+			dprintf(D_ERROR, "Duplicate space reservation with incorrect tag (%s)\n",
 				resEvent.getTag().c_str());
 			err.pushf("DataReuse", 13, "Duplicate space reservation with incorrect tag (%s)",
 				resEvent.getTag().c_str());
@@ -382,7 +382,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 		auto comEvent = static_cast<FileCompleteEvent&>(event);
 		auto iter = m_space_reservations.find(comEvent.getUUID());
 		if (iter == m_space_reservations.end()) {
-			dprintf(D_FAILURE, "File completed for non-existent space reservation %s.\n",
+			dprintf(D_ERROR, "File completed for non-existent space reservation %s.\n",
 				comEvent.getUUID().c_str());
 			err.pushf("DataReuse", 11, "File completed for non-existent space reservation %s",
 				comEvent.getUUID().c_str());
@@ -391,7 +391,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 		std::string fname = FileEntry::fname(m_dirpath, comEvent.getChecksumType(),
 			comEvent.getChecksum(), iter->second->getTag());
 		if (iter->second->getReservedSpace() < comEvent.getSize()) {
-			dprintf(D_FAILURE, "File completed with size %zu, which is larger than the space"
+			dprintf(D_ERROR, "File completed with size %zu, which is larger than the space"
 				" reservation size.\n", comEvent.getSize());
 			err.pushf("DataReuse", 12, "File completed with size %zu, which is larger than the space"
 				" reservation size.", comEvent.getSize());
@@ -400,7 +400,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 		}
 		auto event_time = std::chrono::system_clock::from_time_t(event.GetEventclock());
 		if (iter->second->getExpirationTime() < event_time) {
-			dprintf(D_FAILURE, "File (checksum=%s, type=%s, tag=%s) completed at time %lu after "
+			dprintf(D_ERROR, "File (checksum=%s, type=%s, tag=%s) completed at time %lu after "
 				"space reservation %s expired at %lu.\n", comEvent.getChecksum().c_str(),
 				comEvent.getChecksumType().c_str(), iter->second->getTag().c_str(),
 				event.GetEventclock(), comEvent.getUUID().c_str(),
@@ -483,7 +483,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 					entry->tag() == remEvent.getTag();
 			});
 		if (iter == m_contents.end()) {
-			dprintf(D_FAILURE, "File with checksum %s removed - but file is unknown to our state.\n",
+			dprintf(D_ERROR, "File with checksum %s removed - but file is unknown to our state.\n",
 				remEvent.getChecksum().c_str());
 			err.pushf("DataReuse", 15, "File with checksum %s removed - but file is unknown to our state",
 				remEvent.getChecksum().c_str());
@@ -633,7 +633,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	EVP_MD_CTX_destroy(mdctx);
 	std::vector<char> computed_checksum(2*md_len + 1, 0);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
-		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
+		snprintf(&computed_checksum[2*idx], 3, "%02x", md_value[idx]);
 	}
 	if (strcmp(&computed_checksum[0], checksum.c_str())) {
 		err.pushf("DataReuse", 11, "Source file checksum does not match expected one.");
@@ -841,7 +841,7 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	EVP_MD_CTX_destroy(mdctx);
 	std::vector<char> computed_checksum(2*md_len + 1, 0);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
-		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
+		snprintf(&computed_checksum[2*idx], 3, "%02x", md_value[idx]);
 	}
 	if (strcmp(&computed_checksum[0], checksum.c_str())) {
 		err.pushf("DataReuse", 10, "Source file checksum does not match expected one.");
@@ -986,11 +986,11 @@ DataReuseDirectory::Publish(classad::ClassAd &ad)
 	auto retval = true;
 	retval &= ad.InsertAttr("HasDataReuse", m_valid);
 	retval &= ad.InsertAttr("DataReuseAllocatedMB",
-		static_cast<double>(m_allocated_space)/1000000.0);
+		static_cast<double>(m_allocated_space)/1'000'000.0);
 	retval &= ad.InsertAttr("DataReuseReservedMB",
-		static_cast<double>(m_reserved_space)/1000000.0);
+		static_cast<double>(m_reserved_space)/1'000'000.0);
 	retval &= ad.InsertAttr("DataReuseUsedMB",
-		static_cast<double>(m_stored_space)/1000000.0);
+		static_cast<double>(m_stored_space)/1'000'000.0);
 
 	std::unordered_map<std::string, SpaceUtilization> per_user_lifetime;
 	SpaceUtilization global_util;
@@ -1004,18 +1004,18 @@ DataReuseDirectory::Publish(classad::ClassAd &ad)
 		global_util.incDeleted(entry.second.deleted());
 	}
 	retval &= ad.InsertAttr("DataReuseAggregateWrittenMB",
-		static_cast<double>(global_util.written())/1000000.0);
+		static_cast<double>(global_util.written())/1'000'000.0);
 	retval &= ad.InsertAttr("DataReuseAggregateReadMB",
-		static_cast<double>(global_util.used())/1000000.0);
+		static_cast<double>(global_util.used())/1'000'000.0);
 	retval &= ad.InsertAttr("DataReuseAggregateDeletedMB",
-		static_cast<double>(global_util.deleted())/1000000.0);
+		static_cast<double>(global_util.deleted())/1'000'000.0);
 	for (const auto &entry : per_user_lifetime) {
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_AggregateWrittenMB",
-			static_cast<double>(entry.second.written())/1000000.0);
+			static_cast<double>(entry.second.written())/1'000'000.0);
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_AggregateReadMB",
-			static_cast<double>(entry.second.used()/1000000.0));
+			static_cast<double>(entry.second.used()/1'000'000.0));
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_AggregateDeletedMB",
-			static_cast<double>(entry.second.deleted()/1000000.0));
+			static_cast<double>(entry.second.deleted()/1'000'000.0));
 	}
 
 		// No reason to print out per-user info for an invalid directory.
@@ -1035,7 +1035,7 @@ DataReuseDirectory::Publish(classad::ClassAd &ad)
 	}
 	for (const auto &entry : per_user_reservations) {
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_SpaceReservedMB",
-			static_cast<double>(entry.second.first)/1000000.0);
+			static_cast<double>(entry.second.first)/1'000'000.0);
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_ReservationCount",
 			static_cast<int32_t>(entry.second.second));
 	}
@@ -1051,7 +1051,7 @@ DataReuseDirectory::Publish(classad::ClassAd &ad)
 	}
 	for (const auto &entry : per_user_space) {
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_SpaceUsedMB",
-			static_cast<double>(entry.second.first)/1000000.0);
+			static_cast<double>(entry.second.first)/1'000'000.0);
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_FileCount",
 			static_cast<int32_t>(entry.second.second));
 	}

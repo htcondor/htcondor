@@ -20,8 +20,6 @@
 #ifndef _SETENV_H
 #define _SETENV_H
 
-class MyString;
-
 /** @name Environment management.
  */
 //@{

@@ -23,6 +23,7 @@
 #include <climits>
 #include <math.h>
 #include <iomanip>
+#include <charconv>
 
 #include "condor_accountant.h"
 #include "condor_debug.h"
@@ -74,8 +75,7 @@ GCC_DIAG_OFF(float-equal)
 // Constructor - One time initialization
 //------------------------------------------------------------------
 
-Accountant::Accountant():
-	concurrencyLimits(hashFunction)
+Accountant::Accountant()
 {
   MinPriority=0.5;
   AcctLog=NULL;
@@ -84,7 +84,7 @@ Accountant::Accountant():
   DefaultPriorityFactor = 1e3;
   HalfLifePeriod = 1.0f;
   LastUpdateTime = 0;
-  MaxAcctLogSize = 1000000;
+  MaxAcctLogSize = 1'000'000;
   NiceUserPriorityFactor = 1e10;
   RemoteUserPriorityFactor = 1e7;
   hgq_root_group = NULL;
@@ -155,7 +155,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       RemoteUserPriorityFactor=1;
   }
 
-  MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1000000);
+  MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1'000'000);
 
   if ( ! param(LogFileName, "ACCOUNTANT_DATABASE_FILE")) {
 	tmp = param("SPOOL");
@@ -705,7 +705,7 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
       DeleteClassAd(ResourceRecord+ResourceName);
       return;
   }
-  int StartTime=0;
+  time_t StartTime=0;
   GetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,StartTime);
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
@@ -838,7 +838,7 @@ void Accountant::DisplayMatches()
 
 void Accountant::UpdatePriorities() 
 {
-  int T=time(0);
+  time_t T=time(0);
   int TimePassed=T-LastUpdateTime;
   if (TimePassed==0) return;
 
@@ -1073,7 +1073,7 @@ ClassAd* Accountant::ReportState(const std::string& CustomerName) {
 
     std::string HK;
     ClassAd* ResourceAd;
-    int StartTime;
+    time_t StartTime;
 
     ClassAd* ad = new ClassAd();
 
@@ -1463,8 +1463,8 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 
 		ClassAd * ad = new ClassAd(*CustomerAd);
 		ad->Assign(ATTR_NAME, CustomerName);
-		SetMyTypeName(*ad, "Accounting"); // MyType in the accounting log is * (so is target type actually)
-		SetTargetTypeName(*ad, "none");
+		SetMyTypeName(*ad, ACCOUNTING_ADTYPE); // MyType in the accounting log is * (so is target type actually)
+		// SetTargetTypeName(*ad, "none");
 		ad->Assign(PriorityAttr, effectivePriority);
 		ad->Assign(CeilingAttr, ceiling);
 		ad->Assign(FloorAttr, floor);
@@ -1659,7 +1659,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& Cu
 ClassAd* Accountant::GetClassAd(const std::string& Key)
 {
   ClassAd* ad=NULL;
-  (void) AcctLog->table.lookup(Key,ad);
+  std::ignore = AcctLog->table.lookup(Key,ad);
   return ad;
 }
 
@@ -1682,14 +1682,14 @@ bool Accountant::DeleteClassAd(const std::string& Key)
 // Set an Integer attribute
 //------------------------------------------------------------------
 
-void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, int AttrValue)
+void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, int64_t AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
-    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
+    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*");
     AcctLog->AppendLog(log);
   }
-  char value[50];
-  snprintf(value,sizeof(value),"%d",AttrValue);
+  char value[24] = { 0 };
+  std::to_chars(value, value+sizeof(value)-1, AttrValue);
   LogSetAttribute* log=new LogSetAttribute(Key.c_str(),AttrName.c_str(),value);
   AcctLog->AppendLog(log);
 }
@@ -1701,7 +1701,7 @@ void Accountant::SetAttributeInt(const std::string& Key, const std::string& Attr
 void Accountant::SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
-    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
+    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*");
     AcctLog->AppendLog(log);
   }
   
@@ -1718,7 +1718,7 @@ void Accountant::SetAttributeFloat(const std::string& Key, const std::string& At
 void Accountant::SetAttributeString(const std::string& Key, const std::string& AttrName, const std::string& AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
-    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
+    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*");
     AcctLog->AppendLog(log);
   }
   
@@ -1733,6 +1733,22 @@ void Accountant::SetAttributeString(const std::string& Key, const std::string& A
 //------------------------------------------------------------------
 
 bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, int& AttrValue)
+{
+  ClassAd* ad;
+  if (AcctLog->table.lookup(Key,ad)==-1) return false;
+  if (ad->LookupInteger(AttrName,AttrValue)==0) return false;
+  return true;
+}
+
+bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, long& AttrValue)
+{
+  ClassAd* ad;
+  if (AcctLog->table.lookup(Key,ad)==-1) return false;
+  if (ad->LookupInteger(AttrName,AttrValue)==0) return false;
+  return true;
+}
+
+bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, long long& AttrValue)
 {
   ClassAd* ad;
   if (AcctLog->table.lookup(Key,ad)==-1) return false;
@@ -1846,15 +1862,15 @@ void Accountant::LoadLimits(ClassAdListDoesNotDeleteAds &resourceList)
 
 double Accountant::GetLimit(const  std::string& limit)
 {
-	double count = 0;
-
-	if (-1 == concurrencyLimits.lookup(limit, count)) {
+	auto it = concurrencyLimits.find(limit);
+	if (it == concurrencyLimits.end()) {
 		dprintf(D_ACCOUNTANT,
 				"Looking for Limit '%s' count, which does not exist\n",
 				limit.c_str());
+		return 0.0;
 	}
 
-	return count;
+	return it->second;
 }
 
 double Accountant::GetLimitMax(const  std::string& limit)
@@ -1871,20 +1887,14 @@ double Accountant::GetLimitMax(const  std::string& limit)
 
 void Accountant::DumpLimits()
 {
-	std::string limit;
- 	double count;
-	concurrencyLimits.startIterations();
-	while (concurrencyLimits.iterate(limit, count)) {
+	for (const auto& [limit, count]: concurrencyLimits) {
 		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.c_str(), count);
 	}
 }
 
 void Accountant::ReportLimits(ClassAd *attrList)
 {
-	std::string limit;
- 	double count;
-	concurrencyLimits.startIterations();
-	while (concurrencyLimits.iterate(limit, count)) {
+	for (const auto& [limit, count]: concurrencyLimits) {
 		std::string attr;
         formatstr(attr, "ConcurrencyLimit_%s", limit.c_str());
         // classad wire protocol doesn't currently support attribute names that include
@@ -1898,12 +1908,9 @@ void Accountant::ReportLimits(ClassAd *attrList)
 
 void Accountant::ClearLimits()
 {
-	std::string limit;
- 	double count;
-	concurrencyLimits.startIterations();
-	while (concurrencyLimits.iterate(limit, count)) {
-		concurrencyLimits.insert(limit, 0, true);
+	for (auto& [limit, count]: concurrencyLimits) {
 		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.c_str(), count);
+		count = 0.0;
 	}
 }
 
@@ -1916,7 +1923,7 @@ void Accountant::IncrementLimit(const std::string& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) + increment, true);
+		concurrencyLimits[limit] = GetLimit(limit) + increment;
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
@@ -1935,7 +1942,7 @@ void Accountant::DecrementLimit(const std::string& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) - increment, true);
+		concurrencyLimits[limit] = GetLimit(limit) - increment;
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",

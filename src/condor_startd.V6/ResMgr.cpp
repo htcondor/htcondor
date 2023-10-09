@@ -130,8 +130,8 @@ ResMgr::ResMgr() :
 	const char *death_time = getenv(ENV_DAEMON_DEATHTIME);
 	if (death_time && death_time[0]) {
 		deathTime = atoi(death_time);
-		dprintf( D_ALWAYS, ENV_DAEMON_DEATHTIME " Env set to %s (%d seconds from now)\n",
-			death_time, (int)time_to_live());
+		dprintf( D_ALWAYS, ENV_DAEMON_DEATHTIME " Env set to %s (%lld seconds from now)\n",
+			death_time, (long long)time_to_live());
 	}
 
 	max_types = 0;
@@ -270,8 +270,8 @@ ResMgr::init_config_classad( void )
 #if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
 	if( !configInsert( config_classad, ATTR_UNHIBERNATE, false ) ) {
-		MyString default_expr;
-		default_expr.formatstr("MY.%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
+		std::string default_expr;
+		formatstr(default_expr, "MY.%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
 		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.c_str() );
 	}
 #endif /* HAVE_HIBERNATION */
@@ -472,7 +472,10 @@ ResMgr::init_resources( void )
 	m_execution_xfm.config("JOB_EXECUTION");
 
 #ifdef LINUX
-	m_volume_mgr.reset(new VolumeManager());
+	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
+		dprintf(D_STATUS, "Startd will not enforce disk limits via logical volume management.\n");
+		m_volume_mgr.reset(nullptr);
+	} else { m_volume_mgr.reset(new VolumeManager()); }
 #endif // LINUX
 
     stats.Init();
@@ -654,21 +657,6 @@ ResMgr::adlist_find( const char * name )
 {
 	NamedClassAd * nad = extra_ads.Find(name);
 	return dynamic_cast<StartdNamedClassAd*>(nad);
-}
-
-int
-ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff, const char *prefix )
-{
-	if( report_diff ) {
-		StringList ignore_list;
-		MyString ignore = prefix;
-		ignore += "LastUpdate";
-		ignore_list.append( ignore.c_str() );
-		return extra_ads.Replace( name, newAd, true, &ignore_list );
-	}
-	else {
-		return extra_ads.Replace( name, newAd );
-	}
 }
 
 bool ResMgr::needsPolling(void) { return call_until<bool>(&Resource::needsPolling); }
@@ -921,14 +909,14 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 		if ( ! param_boolean("STARTD_SEND_READY_AFTER_FIRST_UPDATE", true)) return res;
 
 		// send a DC_SET_READY message to the master to indicate the STARTD is ready to go
-		MyString master_sinful(daemonCore->InfoCommandSinfulString(-2));
-		if ( ! master_sinful.empty()) {
-			dprintf( D_ALWAYS, "Sending DC_SET_READY message to master %s\n", master_sinful.c_str());
+		const char* master_sinful(daemonCore->InfoCommandSinfulString(-2));
+		if ( master_sinful ) {
+			dprintf( D_ALWAYS, "Sending DC_SET_READY message to master %s\n", master_sinful);
 			ClassAd readyAd;
 			readyAd.Assign("DaemonPID", getpid());
 			readyAd.Assign("DaemonName", "STARTD"); // fix to use the environment
 			readyAd.Assign("DaemonState", "Ready");
-			classy_counted_ptr<Daemon> dmn = new Daemon(DT_ANY,master_sinful.c_str());
+			classy_counted_ptr<Daemon> dmn = new Daemon(DT_ANY,master_sinful);
 			classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(DC_SET_READY, readyAd);
 			dmn->sendMsg(msg.get());
 		}
@@ -939,7 +927,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 
 
 void
-ResMgr::update_all( void )
+ResMgr::update_all( int /* timerID */ )
 {
 	num_updates = 0;
 
@@ -976,7 +964,7 @@ ResMgr::update_all( void )
 
 
 void
-ResMgr::eval_and_update_all( void )
+ResMgr::eval_and_update_all( int /* timerID */ )
 {
 #if HAVE_HIBERNATION
 	if ( !hibernating () ) {
@@ -990,7 +978,7 @@ ResMgr::eval_and_update_all( void )
 
 
 void
-ResMgr::eval_all( void )
+ResMgr::eval_all( int /* timerID */ )
 {
 #if HAVE_HIBERNATION
 	if ( !hibernating () ) {
@@ -1124,11 +1112,12 @@ ResMgr::report_updates( void ) const
 
 	CollectorList* collectors = daemonCore->getCollectorList();
 	if( collectors ) {
-		MyString list;
+		std::string list;
 		Daemon * collector;
 		collectors->rewind();
 		while (collectors->next (collector)) {
-			list += collector->fullHostname();
+			const char* host = collector->fullHostname();
+			list += host ? host : "";
 			list += " ";
 		}
 		dprintf( D_FULLDEBUG,
@@ -1520,7 +1509,7 @@ ResMgr::check_polling( void )
 
 
 void
-ResMgr::sweep_timer_handler( void ) const
+ResMgr::sweep_timer_handler( int /* timerID */ ) const
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
@@ -1787,16 +1776,16 @@ ResMgr::deleteResource( Resource* rip )
 
 // return the count of claims on this machine associated with this user
 // used to decide when to delete credentials
-int ResMgr::claims_for_this_user(const char * user)
+int ResMgr::claims_for_this_user(const std::string &user)
 {
-	if ( ! user || ! user[0]) {
+	if (user.empty()) {
 		return 0;
 	}
 	int num_matches = 0;
 
-	for (Resource * res : slots) {
-		if (res && res->r_cur && res->r_cur->client() && res->r_cur->client()->user()) {
-			if (MATCH == strcmp(res->r_cur->client()->user(), user)) {
+	for (const Resource *res : slots) {
+		if (res && res->r_cur && res->r_cur->client() && !res->r_cur->client()->c_user.empty()) {
+			if (user == res->r_cur->client()->c_user) {
 				num_matches += 1;
 			}
 		}
@@ -1855,6 +1844,8 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		compute_dynamic(true);
 	}
 
+	// TODO: use ATTR_TARGET_TYPE of the queryAd to restrict what ads are created here?
+
 	// we will put the Machine ads we intend to return here temporarily
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> ads;
 	// these get filled in with Resource and Job(Claim) ads only when snapshot == true
@@ -1896,7 +1887,7 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		ClassAd * ad = new ClassAd;
 		rip->publish_single_slot_ad(*ad, cur_time, purp);
 
-		if (IsAHalfMatch(&queryAd, ad) /* || (claim_ad && IsAHalfMatch(&queryAd, claim_ad))*/) {
+		if (IsAConstraintMatch(&queryAd, ad) /* || (claim_ad && IsAConstraintMatch(&queryAd, claim_ad))*/) {
 			ads[rip->r_name] = ad;
 			if (res_ad) { res_ads[rip->r_name] = res_ad; }
 			if (cfg_ad) { cfg_ads[rip->r_name] = cfg_ad; }
@@ -2034,7 +2025,7 @@ ResMgr::allHibernating( std::string &target ) const
 
 
 void
-ResMgr::checkHibernate( void )
+ResMgr::checkHibernate( int /* timerID */ )
 {
 
 		// If we have already issued the command to hibernate, then
@@ -2219,7 +2210,7 @@ bool ResMgr::hibernating () const {
 void
 ResMgr::check_use( void )
 {
-	int current_time = time(NULL);
+	time_t current_time = time(NULL);
 	if( hasAnyClaim() ) {
 		last_in_use = current_time;
 	}
@@ -2632,10 +2623,10 @@ ResMgr::publish_draining_attrs(Resource *rip, ClassAd *cap)
 		cap->Assign( ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME, total_draining_unclaimed );
 	}
 	if( last_drain_start_time != 0 ) {
-		cap->Assign( ATTR_LAST_DRAIN_START_TIME, (int)last_drain_start_time );
+		cap->Assign( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
 	}
 	if( last_drain_stop_time != 0 ) {
-	    cap->Assign( ATTR_LAST_DRAIN_STOP_TIME, (int)last_drain_stop_time );
+	    cap->Assign( ATTR_LAST_DRAIN_STOP_TIME, last_drain_stop_time );
 	}
 }
 
@@ -2731,8 +2722,9 @@ ResMgr::checkForDrainCompletion() {
 		if(! rip->wasAcceptedWhileDraining()) {
 			// Not sure how COD and draining are supposed to interact, but
 			// the partitionable slot is never accepted-while-draining,
-			// nor claimed, nor should it block drain from completing.
+			// nor should it block drain from completing.
 			if(! rip->hasAnyClaim()) { continue; }
+			if(rip->is_partitionable_slot()) { continue; }
 			allAcceptedWhileDraining = false;
 		}
 	}

@@ -36,7 +36,7 @@ int configured_statistics_window_quantum() {
     return quantum;
 }
 
-static void self_monitor()
+static void self_monitor(int /* tid */)
 {
     daemonCore->monitor_data.CollectData();
     daemonCore->dc_stats.Tick(daemonCore->monitor_data.last_sample_time);
@@ -323,15 +323,15 @@ void DaemonCore::Stats::Publish(ClassAd & ad, int flags) const
    if ( ! this->enabled) return;
 
    if ((flags & IF_PUBLEVEL) > 0) {
-      ad.Assign("DCStatsLifetime", (int)StatsLifetime);
+      ad.Assign("DCStatsLifetime", StatsLifetime);
       if (flags & IF_VERBOSEPUB)
-         ad.Assign("DCStatsLastUpdateTime", (int)StatsLastUpdateTime);
+         ad.Assign("DCStatsLastUpdateTime", StatsLastUpdateTime);
 
       if (flags & IF_RECENTPUB) {
-         ad.Assign("DCRecentStatsLifetime", (int)RecentStatsLifetime);
+         ad.Assign("DCRecentStatsLifetime", RecentStatsLifetime);
          if (flags & IF_VERBOSEPUB) {
-            ad.Assign("DCRecentStatsTickTime", (int)RecentStatsTickTime);
-            ad.Assign("DCRecentWindowMax", (int)RecentWindowMax);
+            ad.Assign("DCRecentStatsTickTime", RecentStatsTickTime);
+            ad.Assign("DCRecentWindowMax", RecentWindowMax);
          }
       }
    }
@@ -622,7 +622,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
          Pool.NewProbe<stats_recent_counter_timer>(name, attr.c_str(), as);
         #if 0 // def DEBUG
          attr += "Debug";
-         Pool.AddPublish(attr.Value(), probe, NULL, 0, 
+         Pool.AddPublish(attr.c_str(), probe, NULL, 0,
                        (FN_STATS_ENTRY_PUBLISH)&stats_recent_counter_timer::PublishDebug);
         #endif
          probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);

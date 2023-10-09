@@ -25,7 +25,6 @@
 #include "condor_version.h"
 #include "dagman_utils.h"
 #include "my_popen.h"
-#include "MyString.h"
 #include "read_multiple_logs.h"
 #include "../condor_procapi/processid.h"
 #include "../condor_procapi/procapi.h"
@@ -92,11 +91,13 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	*	Update DAGMAN_MANAGER_JOB_APPEND_GETENV Macro documentation if base
 	*	getEnv value changes. -Cole Bollig 2023-02-21
 	*/
-	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ";
+	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL";
 	auto_free_ptr conf_getenvVars = param("DAGMAN_MANAGER_JOB_APPEND_GETENV");
 	if (conf_getenvVars && strcasecmp(conf_getenvVars.ptr(),"true") == MATCH) {
 		getEnv = "true";
 	} else {
+		//Scitoken related variables
+		getEnv += ",BEARER_TOKEN,BEARER_TOKEN_FILE,XDG_RUNTIME_DIR";
 		//Add user defined via flag vars to getenv
 		if (!deepOpts.getFromEnv.empty()) { getEnv += ","; getEnv += deepOpts.getFromEnv; }
 		//Add config defined vars to add getenv
@@ -279,17 +280,22 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 
 	if(!deepOpts.getFromEnv.empty()) {
 		args.AppendArg("-Include_env");
-		args.AppendArg(deepOpts.getFromEnv.c_str());
+		args.AppendArg(deepOpts.getFromEnv);
 	}
 
 	for (auto &kv_pairs : deepOpts.addToEnv) {
 		args.AppendArg( "-Insert_env" );
-		args.AppendArg(kv_pairs.c_str());
+		args.AppendArg(kv_pairs);
 	}
 
 	if( shallowOpts.priority != 0 ) {
 		args.AppendArg("-Priority");
 		args.AppendArg(std::to_string(shallowOpts.priority));
+	}
+
+	if (!shallowOpts.saveFile.empty()) {
+		args.AppendArg("-load_save");
+		args.AppendArg(shallowOpts.saveFile);
 	}
 
 	std::string arg_str,args_error;
@@ -372,7 +378,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	for (auto & dagFileAttrLine : dagFileAttrLines) {
 			// Note:  prepending "+" here means that this only works
 			// for setting ClassAd attributes.
-		fprintf( pSubFile, "+%s\n", dagFileAttrLine.c_str() );
+		fprintf( pSubFile, "My.%s\n", dagFileAttrLine.c_str() );
 	}
 
 		// ...now things specified directly on the command line.
@@ -590,9 +596,7 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 		return 1;
 	}
 	std::string msg;
-	if ( !GetConfigAndAttrs( shallowOpts.dagFiles, deepOpts.useDagDir,
-				shallowOpts.strConfigFile,
-				dagFileAttrLines, msg) ) {
+	if ( !processDagCommands(deepOpts, shallowOpts, dagFileAttrLines, msg) ) {
 		fprintf( stderr, "ERROR: %s\n", msg.c_str() );
 		return 1;
 	}
@@ -600,42 +604,31 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 	return 0;
 }
 
-/** Get the configuration file (if any) and the submit append commands
-	(if any), specified by the given list of DAG files.  If more than one
-	DAG file specifies a configuration file, they must specify the same file.
-	@param dagFiles: the list of DAG files
-	@param useDagDir: run DAGs in directories from DAG file paths 
-			if true
-	@param configFile: holds the path to the config file; if a config
-			file is specified on the command line, configFile should
-			be set to that value before this method is called; the
-			value of configFile will be changed if it's not already
-			set and the DAG file(s) specify a configuration file
-	@param attrLines: a std::list<std::string> to receive the submit attributes
-	@param errMsg: a string to receive any error message
+/** Read the DAG files for DAG commands that need to be parsed
+	before the submission of the DAGMan job proper because the
+	commands effect the produced .condor.sub file
+	@param deepOpts: DAGMan deep options struct
+	@param shallowOpts: DAGMan shallow options struct
+	@param attrLines: list of strings of attributes to be added
+	                  to the DAGMan job propers classad
+	@param errMsg: error message
 	@return true if the operation succeeded; otherwise false
 */
 bool
-DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir, 
-			std::string &configFile, std::list<std::string> &attrLines, std::string &errMsg )
+DagmanUtils::processDagCommands( SubmitDagDeepOptions& deepOpts, SubmitDagShallowOptions& shallowOpts,
+                                 std::list<std::string> &attrLines, std::string &errMsg )
 {
-	bool		result = true;
-		// Note: destructor will change back to original directory.
-	TmpDir		  dagDir;
+	bool result = true;
+	// Note: destructor will change back to original directory.
+	TmpDir dagDir;
 
-	for (auto & dagFile : dagFiles) {
-
-			//
-			// Change to the DAG file's directory if necessary, and
-			// get the filename we need to use for it from that directory.
-			//
+	for (auto & dagFile : shallowOpts.dagFiles) {
 		std::string newDagFile;
-		if ( useDagDir ) {
+		// Switch to DAG Dir if needed
+		if (deepOpts.useDagDir) {
 			std::string	tmpErrMsg;
 			if ( !dagDir.Cd2TmpDirFile( dagFile.c_str(), tmpErrMsg ) ) {
-				AppendError( errMsg,
-						std::string("Unable to change to DAG directory ") +
-						tmpErrMsg );
+				errMsg = "Unable to change to DAG directory " + tmpErrMsg;
 				return false;
 			}
 			newDagFile = condor_basename( dagFile.c_str() );
@@ -644,89 +637,90 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 		}
 
 		std::list<std::string> configFiles;
-			// Note: destructor will close file.
+		// Note: destructor will close file.
 		MultiLogFiles::FileReader reader;
 		errMsg = reader.Open( newDagFile );
 		if ( errMsg != "" ) {
 			return false;
 		}
 
+		//Read DAG file
 		std::string logicalLine;
 		while ( reader.NextLogicalLine( logicalLine ) ) {
 			if ( logicalLine != "" ) {
-
-				// Initialize list of tokens from logicalLine
-				std::list<std::string> tokens;
-				MyStringTokener tok;
 				trim(logicalLine);
-				tok.Tokenize(logicalLine.c_str());
-				while( const char* token = tok.GetNextToken(" \t", true) ) {
-					tokens.emplace_back(token);
-				}
-
-				const char *firstToken = tokens.front().c_str();
-				if ( !strcasecmp( firstToken, "config" ) ) {
-
-						// Get the value, which is the next token in the list
-					tokens.pop_front();
-					const char *newValue = tokens.front().c_str();
-					if ( !newValue || !strcmp( newValue, "" ) ) {
-						AppendError( errMsg, "Improperly-formatted "
-									"file: value missing after keyword "
-									"CONFIG" );
+				StringTokenIterator tokens(logicalLine);
+				const char* cmd = tokens.first();
+				// Parse CONFIG command
+				if (strcasecmp(cmd, "CONFIG") == MATCH) {
+					const char* newFile = tokens.remain();
+					while (newFile && isspace(*newFile) && *newFile != '\0') { newFile++; }
+					if (!newFile || *newFile == '\0') {
+						AppendError(errMsg, "Improperly-formatted file: value missing after keyword CONFIG");
 						result = false;
 					} else {
-
-							// Add the value we just found to the config
-							// files list (if it's not already in the
-							// list -- we don't want duplicates).
 						bool alreadyInList = false;
-						for (auto & configFile : configFiles) {
-							if ( !strcmp( configFile.c_str(), newValue ) ) {
+						for (auto & configFile : configFiles)
+							if (strcmp(configFile.c_str(), newFile) == MATCH)
 								alreadyInList = true;
+						if (!alreadyInList)
+							configFiles.emplace_back(newFile);
+					}
+				// Parse SET_JOB_ATTR command
+				} else if (strcasecmp(cmd, "SET_JOB_ATTR") == MATCH) {
+					const char* attr = tokens.remain();
+					while (attr && isspace(*attr) && *attr != '\0') { attr++; }
+					if (!attr || *attr == '\0') {
+						AppendError(errMsg, "Improperly-formatted file: value missing after keyword SET_JOB_ATTR");
+						result = false;
+					} else {
+						attrLines.emplace_back(attr);
+					}
+				// Parse ENV command
+				} else if (strcasecmp(cmd, "ENV") == MATCH) {
+					const char* type = tokens.next();
+					// Parse GET option
+					if (strcasecmp(type, "GET") == MATCH) {
+						const char* remain = tokens.remain();
+						while (remain && isspace(*remain) && *remain != '\0') { remain++; }
+						if (!remain || *remain == '\0') {
+							AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV GET");
+							result = false;
+						} else {
+							StringTokenIterator vars(remain);
+							for (auto& var : vars) {
+								if (!deepOpts.getFromEnv.empty()) { deepOpts.getFromEnv += ","; }
+								deepOpts.getFromEnv += var;
 							}
 						}
-
-						if ( !alreadyInList ) {
-								// Note: append copies the string here.
-							configFiles.emplace_back(newValue );
-						}
-					}
-
-					//some DAG commands are needed for condor_submit_dag, too...
-				} else if ( !strcasecmp( firstToken, "SET_JOB_ATTR" ) ) {
-						// Strip of DAGMan-specific command name; the
-						// rest we pass to the submit file.
-					replace_str(logicalLine, "SET_JOB_ATTR", "");
-					trim(logicalLine);
-					if ( logicalLine == "" ) {
-						AppendError( errMsg, "Improperly-formatted "
-									"file: value missing after keyword "
-									"SET_JOB_ATTR" );
-						result = false;
+					// Parse SET option
+					} else if (strcasecmp(type, "SET") == MATCH) {
+						const char* info = tokens.remain();
+						while (info && isspace(*info) && *info != '\0') { info++; }
+						if (!info || *info == '\0') {
+							AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV SET");
+							result = false;
+						} else { deepOpts.addToEnv.push_back(info); }
+					// Else error
 					} else {
-						attrLines.emplace_back(logicalLine);
+						AppendError(errMsg, "Improperly-formatted file: sub-command (SET or GET) missing after keyword ENV");
+						result = false;
 					}
 				}
 			}
 		}
-	
+
 		reader.Close();
-			//
-			// Check the specified config file(s) against whatever we
-			// currently have, setting the config file if it hasn't
-			// been set yet, flagging an error if config files conflict.
-			//
+		// Verify config files (only 1 file given)
 		for (auto & configfile_it : configFiles) {
 			std::string cfgFileMS = configfile_it.c_str();
 			std::string tmpErrMsg;
 			if ( MakePathAbsolute( cfgFileMS, tmpErrMsg ) ) {
-				if ( configFile == "" ) {
-					configFile = cfgFileMS;
-				} else if ( configFile != cfgFileMS ) {
-					AppendError( errMsg, std::string("Conflicting DAGMan ") +
-								"config files specified: " + configFile +
-								" and " + cfgFileMS );
+				if (shallowOpts.strConfigFile.empty()) {
+					shallowOpts.strConfigFile = cfgFileMS;
+				} else if ( shallowOpts.strConfigFile != cfgFileMS ) {
+					AppendError( errMsg, "Conflicting DAGMan config files specified: " +
+					                     shallowOpts.strConfigFile + " and " + cfgFileMS );
 					result = false;
 				}
 			} else {
@@ -735,14 +729,10 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 			}
 		}
 
-			//
-			// Go back to our original directory.
-			//
+		// Switch back to original directory
 		std::string tmpErrMsg;
 		if ( !dagDir.Cd2MainDir( tmpErrMsg ) ) {
-			AppendError( errMsg,
-					std::string("Unable to change to original directory ") +
-					tmpErrMsg );
+			AppendError( errMsg, "Unable to change to original directory " + tmpErrMsg );
 			result = false;
 		}
 	}
@@ -971,7 +961,8 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 	bool bHadError = false;
 		// If not running a rescue DAG, check for existing files
 		// generated by condor_submit_dag...
-	if (!autoRunningRescue && deepOpts.doRescueFrom < 1 && !deepOpts.updateSubmit) {
+	if (!autoRunningRescue && deepOpts.doRescueFrom < 1 &&
+				!deepOpts.updateSubmit && shallowOpts.saveFile.empty()) {
 		if (fileExists(shallowOpts.strSubFile))
 		{
 			fprintf( stderr, "ERROR: \"%s\" already exists.\n",

@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "MyString.h"
 #include "tokener.h"
 #include "ad_printmask.h"
 
@@ -95,27 +94,31 @@ static const SortedTestTable TestTbl = SORTED_TOKENER_TABLE(SortedTestItems);
 static bool test_unsorted_table() {
     emit_test("Test UNSORTED_TOKENER_TABLE");
 
-	MyString msg;
+	std::string msg;
 
 	for (size_t ii = 0; ii < TestTbl.cItems; ++ii) {
 		const char * key = TestTbl.pTable[ii].key;
 		const TestTableItem * tti = UnTestTbl.lookup(key);
 		if ( ! tti) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned NULL", key));
+			formatstr(msg, "lookup('%s') returned NULL", key);
+			emit_step_failure(__LINE__, msg.c_str());
 			continue;
 		}
 		if (tti->id != TestTbl.pTable[ii].id) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned '%s'", key, tti->key));
+			formatstr(msg, "lookup('%s') returned '%s'", key, tti->key);
+			emit_step_failure(__LINE__, msg.c_str());
 		}
 
 		tokener toke(key); toke.next();
 		tti = UnTestTbl.lookup_token(toke);
 		if ( ! tti) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned NULL", key));
+			formatstr(msg, "lookup_token('%s') returned NULL", key);
+			emit_step_failure(__LINE__, msg.c_str());
 			continue;
 		}
 		if (tti->id != TestTbl.pTable[ii].id) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned '%s'", key, tti->key));
+			formatstr(msg, "lookup_token('%s') returned '%s'", key, tti->key);
+			emit_step_failure(__LINE__, msg.c_str());
 		}
 	}
 
@@ -125,7 +128,7 @@ static bool test_unsorted_table() {
 static bool test_sorted_table() {
     emit_test("Test SORTED_TOKENER_TABLE");
 
-	MyString msg;
+	std::string msg;
 
 	// test the case sensitive sorted table
 	for (size_t ii = 0; ii < UnTestTbl.cItems; ++ii) {
@@ -133,21 +136,25 @@ static bool test_sorted_table() {
 		int id = UnTestTbl.pTable[ii].id;
 		const TestTableItem * tti = TestTbl.lookup(key);
 		if ( ! tti) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned NULL", key));
+			formatstr(msg, "lookup('%s') returned NULL", key);
+			emit_step_failure(__LINE__, msg.c_str());
 			continue;
 		}
 		if (tti->id != id) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned '%s'", key, tti->key));
+			formatstr(msg, "lookup('%s') returned '%s'", key, tti->key);
+			emit_step_failure(__LINE__, msg.c_str());
 		}
 
 		tokener toke(key); toke.next();
 		tti = TestTbl.lookup_token(toke);
 		if ( ! tti) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned NULL", key));
+			formatstr(msg, "lookup_token('%s') returned NULL", key);
+			emit_step_failure(__LINE__, msg.c_str());
 			continue;
 		}
 		if (tti->id != id) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned '%s'", key, tti->key));
+			formatstr(msg, "lookup_token('%s') returned '%s'", key, tti->key);
+			emit_step_failure(__LINE__, msg.c_str());
 		}
 	}
 
@@ -168,7 +175,7 @@ static const NocaseTestTable NcTestTbl = SORTED_TOKENER_TABLE(NCSortedTestItems)
 static bool test_nocase_sorted_table() {
     emit_test("Test NOCASE SORTED_TOKENER_TABLE");
 
-	MyString msg;
+	std::string msg;
 
 	// test the case sensitive sorted table
 	for (size_t ii = 0; ii < UnTestTbl.cItems; ++ii) {
@@ -177,21 +184,25 @@ static bool test_nocase_sorted_table() {
 		if (id == item_aaa) { id = item_AAA; } //  This table has only the AAA item, not the aaa item.
 		const TestTableItem * tti = NcTestTbl.lookup(key);
 		if ( ! tti) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned NULL", key));
+			formatstr(msg, "lookup('%s') returned NULL", key);
+			emit_step_failure(__LINE__, msg.c_str());
 			continue;
 		}
 		if (tti->id != id) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup('%s') returned '%s'", key, tti->key));
+			formatstr(msg, "lookup('%s') returned '%s'", key, tti->key);
+			emit_step_failure(__LINE__, msg.c_str());
 		}
 
 		tokener toke(key); toke.next();
 		tti = NcTestTbl.lookup_token(toke);
 		if ( ! tti) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned NULL", key));
+			formatstr(msg, "lookup_token('%s') returned NULL", key);
+			emit_step_failure(__LINE__, msg.c_str());
 			continue;
 		}
 		if (tti->id != id) {
-			emit_step_failure(__LINE__, msg.formatstr("lookup_token('%s') returned '%s'", key, tti->key));
+			formatstr(msg, "lookup_token('%s') returned '%s'", key, tti->key);
+			emit_step_failure(__LINE__, msg.c_str());
 		}
 	}
 
@@ -201,7 +212,7 @@ static bool test_nocase_sorted_table() {
 static bool test_tokener_parse_basic() {
     emit_test("Test basic tokener parsing functions");
 
-	MyString msg;
+	std::string msg;
 	std::string temp;
 	tokener toke("now is the time");
 
@@ -252,11 +263,13 @@ static bool test_tokener_parse_basic() {
 	toke.next();
 	toke.copy_marked(temp);
 	if (temp != " is 'the end'") {
-		emit_step_failure(__LINE__, msg.formatstr("toke.copy_marked() returned |%s| should be | is 'the end'|", temp.c_str()));
+		formatstr(msg, "toke.copy_marked() returned |%s| should be | is 'the end'|", temp.c_str());
+		emit_step_failure(__LINE__, msg.c_str());
 	}
 	toke.copy_to_end(temp);
 	if (temp != ", really") {
-		emit_step_failure(__LINE__, msg.formatstr("toke.copy_marked() returned |%s| should be |, really|", temp.c_str()));
+		formatstr(msg, "toke.copy_marked() returned |%s| should be |, really|", temp.c_str());
+		emit_step_failure(__LINE__, msg.c_str());
 	}
 
 
@@ -266,7 +279,7 @@ static bool test_tokener_parse_basic() {
 static bool test_tokener_parse_regex() {
     emit_test("Test tokener regex parsing");
 
-	MyString msg;
+	std::string msg;
 	uint32_t fl;
 	std::string temp;
 	tokener toke("/(.*)/i");
@@ -274,21 +287,24 @@ static bool test_tokener_parse_regex() {
 	REQUIRE(toke.next() && toke.is_regex());
 	REQUIRE(toke.copy_regex(temp,fl) && temp=="(.*)");
 	if (fl != 8) {
-		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 8", fl));
+		formatstr(msg, "toke.copy_regex() returned pcre_flags==%d, should be 8", fl);
+		emit_step_failure(__LINE__, msg.c_str());
 	}
 
 	toke.set(" /([\\d]*)/i ");
 	REQUIRE(toke.next() && toke.is_regex());
 	REQUIRE(toke.copy_regex(temp,fl) && temp=="([\\d]*)");
 	if (fl != 8) {
-		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 8", fl));
+		formatstr(msg, "toke.copy_regex() returned pcre_flags==%d, should be 8", fl);
+		emit_step_failure(__LINE__, msg.c_str());
 	}
 
 	toke.set(" /^Now is the|Time$/ ");
 	REQUIRE(toke.next() && toke.is_regex());
 	REQUIRE(toke.copy_regex(temp,fl) && temp=="^Now is the|Time$");
 	if (fl != 0) {
-		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 0", fl));
+		formatstr(msg, "toke.copy_regex() returned pcre_flags==%d, should be 0", fl);
+		emit_step_failure(__LINE__, msg.c_str());
 	}
 
 	return REQUIRED_RESULT();
@@ -313,7 +329,7 @@ static const SortedTestTable Keywords = SORTED_TOKENER_TABLE(KeywordItems);
 static bool test_tokener_parse_realistic() {
     emit_test("Test realistic tokener parsing functions");
 
-	MyString msg;
+	std::string msg;
 	std::string temp;
 	std::set<std::string> attrs;
 	std::set<std::string> labels;
@@ -436,13 +452,16 @@ static bool test_tokener_parse_realistic() {
 	REQUIRE(it == formats.end());
 	/*
 	for (it = attrs.begin(); it != attrs.end(); ++it) {
-		emit_comment(msg.formatstr("attr: '%s'", it->c_str()));
+		formatstr(msg, "attr: '%s'", it->c_str());
+		emit_comment(msg.c_str());
 	}
 	for (it = labels.begin(); it != labels.end(); ++it) {
-		emit_comment(msg.formatstr("label: '%s'", it->c_str()));
+		formatstr(msg, "label: '%s'", it->c_str());
+		emit_comment(msg.c_str());
 	}
 	for (it = formats.begin(); it != formats.end(); ++it) {
-		emit_comment(msg.formatstr("format: '%s'", it->c_str()));
+		formatstr(msg, "format: '%s'", it->c_str());
+		emit_comment(msg.c_str());
 	}
 	*/
 

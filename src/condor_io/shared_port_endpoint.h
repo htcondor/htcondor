@@ -85,7 +85,7 @@ class SharedPortEndpoint: Service {
 		// Appends string to buffer and sets file descriptor that needs
 		// to be inherited so that this object can be reconstructed
 		// in a child process.
-	bool serialize(MyString &inherit_buf,int &inherit_fd);
+	bool serialize(std::string &inherit_buf,int &inherit_fd);
 
 		// Restore state of object stored with serialize().
 		// Returns pointer to anything trailing in inherit_buf.
@@ -179,9 +179,9 @@ class SharedPortEndpoint: Service {
 	void ReceiveSocket( ReliSock *local_sock, ReliSock *return_remote_sock );
 #endif
 	bool InitRemoteAddress();
-	void RetryInitRemoteAddress();
+	void RetryInitRemoteAddress(int timerID = -1);
 #ifndef WIN32
-	void SocketCheck();
+	void SocketCheck(int timerID = -1);
 	bool MakeDaemonSocketDir();
 #endif
 };

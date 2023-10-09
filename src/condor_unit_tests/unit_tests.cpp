@@ -52,7 +52,6 @@ bool FTEST_your_string(void);
 bool FTEST_tokener(void);
 bool OTEST_HashTable(void);
 bool OTEST_Regex(void);
-bool OTEST_MyString(void);
 bool OTEST_StringList(void);
 bool OTEST_Old_Classads(void);
 bool OTEST_Env(void);
@@ -90,7 +89,6 @@ const static struct {
 	{"start of objects", NULL},	//placeholder to separate functions and objects
 	map(OTEST_HashTable),
 	map(OTEST_Regex),
-	map(OTEST_MyString),
 	map(OTEST_StringList),
 	map(OTEST_Old_Classads),
 	map(OTEST_Env),

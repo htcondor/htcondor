@@ -53,7 +53,7 @@ static bool handleFTL(int error) {
 	const char * nullString = nullptr;
 	DCStartd startd( nullString);
 	if( ! startd.locate() ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
+		dprintf( D_ERROR, "Unable to locate startd: %s\n", startd.error() );
 		return false;
 	}
 
@@ -70,7 +70,7 @@ static bool handleFTL(int error) {
 
 	ClassAd reply;
 	if( ! startd.updateMachineAd( &update, &reply ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to update machine ad: %s\n", startd.error() );
+		dprintf( D_ERROR, "Unable to update machine ad: %s\n", startd.error() );
 		return false;
 	}
 
@@ -104,7 +104,7 @@ int DockerProc::StartJob() {
 
 	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
 		if (! JobAd->LookupString(ATTR_CONTAINER_IMAGE, imageID)) {
-			dprintf( D_ALWAYS | D_FAILURE, "Neither %s nor %s defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE, ATTR_CONTAINER_IMAGE);
+			dprintf( D_ERROR, "Neither %s nor %s defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE, ATTR_CONTAINER_IMAGE);
 			return FALSE;
 		}
 	}
@@ -140,28 +140,18 @@ int DockerProc::StartJob() {
 	std::string innerdir = Starter->jic->jobRemoteIWD();
 #endif
 
-	//
-	// This code is deliberately wrong, probably for backwards-compability.
-	// (See the code in JICShadow::beginFileTransfer(), which assumes that
-	// we transferred the executable if ATTR_TRANSFER_EXECUTABLE is unset.)
-	// Rather than risk breaking anything by fixing condor_submit (which
-	// does not set ATTR_TRANSFER_EXECUTABLE unless it's false) -- and
-	// introducing a version dependency -- assume the executable was
-	// transferred unless it was explicitly noted otherwise.
-	//
-	
 	bool transferExecutable = true;
 	JobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transferExecutable );
-	if( transferExecutable ) {
-		// Transfered executables are still renamed (sadly)
-		command = "./condor_exec.exe";
+	if( Starter->jic->usingFileTransfer() && transferExecutable ) {
+		std::string old_cmd = command;
+		formatstr(command, "./%s", condor_basename(old_cmd.c_str()));
 	}
 
 	ArgList args;
 	args.SetArgV1SyntaxToCurrentPlatform();
 	std::string argsError;
 	if( ! args.AppendArgsFromClassAd( JobAd, argsError ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to read job arguments from job ad: '%s'.\n", argsError.c_str() );
+		dprintf( D_ERROR, "Failed to read job arguments from job ad: '%s'.\n", argsError.c_str() );
 		return FALSE;
 	}
 	//
@@ -239,7 +229,7 @@ int DockerProc::StartJob() {
 		extras, JobPid, childFDs,
 		shouldAskForServicePorts, err, affinity_mask);
 	if( rv < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
+		dprintf( D_ERROR, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		handleFTL(rv);
 		return FALSE;
 	}
@@ -335,7 +325,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 			int rv = DockerAPI::copyToContainer(workingDir, containerName, innerPath, &opts);
 			if (rv < 0) {
-				dprintf(D_ALWAYS | D_FAILURE, "DockerAPI::copyToContainer( %s, %s, %s ) failed with return value %d\n",
+				dprintf(D_ERROR, "DockerAPI::copyToContainer( %s, %s, %s ) failed with return value %d\n",
 					workingDir.c_str(), containerName.c_str(), innerPath.c_str(), rv);
 				return FALSE;
 			}
@@ -359,18 +349,18 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		// getStdFile() returns -1 on error.
 
 		if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
-			dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdin.\n" );
+			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stdin.\n" );
 			return FALSE;
 		}
 
 		if( -1 == (childFDs[1] = openStdFile( SFT_OUT, NULL, true, "Output file" )) ) {
 
-			dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdout.\n" );
+			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stdout.\n" );
 			daemonCore->Close_FD( childFDs[0] );
 			return FALSE;
 		}
 		if( -1 == (childFDs[2] = openStdFile( SFT_ERR, NULL, true, "Error file" )) ) {
-			dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stderr.\n" );
+			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stderr.\n" );
 			daemonCore->Close_FD( childFDs[0] );
 			daemonCore->Close_FD( childFDs[1] );
 			return FALSE;
@@ -381,6 +371,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
 		}
+		condor_gettimestamp( job_start_time );
+	
 		// Start a timer to poll for job usage updates.
 		int polling_interval = param_integer("POLLING_INTERVAL",5);
 		updateTid = daemonCore->Register_Timer(2,
@@ -457,17 +449,17 @@ bool DockerProc::JobReaper( int pid, int status ) {
 // FIXME: Move all this shared conditional-checking into a function.
 
 		if( rv < 0 ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
+			dprintf( D_ERROR, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
 			EXCEPT("Cannot inspect exited container");
 		}
 
 		if( ! dockerAd.LookupBool( "Running", running ) ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its running state.\n", containerName.c_str() );
+			dprintf( D_ERROR, "Inspection of container '%s' failed to reveal its running state.\n", containerName.c_str() );
 			return VanillaProc::JobReaper( pid, status );
 		}
 
 		if( running ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Inspection reveals that container '%s' is still running.\n", containerName.c_str() );
+			dprintf( D_ERROR, "Inspection reveals that container '%s' is still running.\n", containerName.c_str() );
 			return VanillaProc::JobReaper( pid, status );
 		}
 
@@ -477,7 +469,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		// TODO: Set status appropriately (as if it were from waitpid()).
 		std::string oomkilled;
 		if (! dockerAd.LookupString( "OOMKilled", oomkilled)) {
-			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal whether it was OOM killed. Assuming it was not.\n", containerName.c_str() );
+			dprintf( D_ERROR, "Inspection of container '%s' failed to reveal whether it was OOM killed. Assuming it was not.\n", containerName.c_str() );
 		}
 
 		if (oomkilled.find("true") == 0) {
@@ -505,7 +497,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			// most likely invalid executable
 		std::string dockerError;
 		if (! dockerAd.LookupString( "DockerError", dockerError)) {
-			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal whether there was an internal docker error.\n", containerName.c_str() );
+			dprintf( D_ERROR, "Inspection of container '%s' failed to reveal whether there was an internal docker error.\n", containerName.c_str() );
 		}
 
 		if (dockerError.length() > 0) {
@@ -528,7 +520,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		int dockerStatus;
 		if( ! dockerAd.LookupInteger( "ExitCode", dockerStatus ) ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );
+			dprintf( D_ERROR, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );
 			return VanillaProc::JobReaper( pid, status );
 		}
 		status = dockerStatus > 128 ? (dockerStatus - 128) : (dockerStatus << 8);
@@ -663,23 +655,23 @@ bool DockerProc::JobExit() {
 	CondorError error;
 	int rv = DockerAPI::inspect( containerName, & dockerAd, error );
 	if( rv < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
+		dprintf( D_ERROR, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
 		return VanillaProc::JobExit();
 	}
 
 	bool running;
 	if( ! dockerAd.LookupBool( "Running", running ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its running state.\n", containerName.c_str() );
+		dprintf( D_ERROR, "Inspection of container '%s' failed to reveal its running state.\n", containerName.c_str() );
 		return VanillaProc::JobExit();
 	}
 	if( running ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Inspection reveals that container '%s' is still running.\n", containerName.c_str() );
+		dprintf( D_ERROR, "Inspection reveals that container '%s' is still running.\n", containerName.c_str() );
 		return VanillaProc::JobExit();
 	}
 
 	rv = DockerAPI::rm( containerName, error );
 	if( rv < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s'.\n", containerName.c_str() );
+		dprintf( D_ERROR, "Failed to remove container '%s'.\n", containerName.c_str() );
 	}
 	}
 
@@ -697,7 +689,7 @@ void DockerProc::Suspend() {
 	}
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	if( rv < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to suspend container '%s'.\n", containerName.c_str() );
+		dprintf( D_ERROR, "Failed to suspend container '%s'.\n", containerName.c_str() );
 	}
 
 	is_suspended = true;
@@ -715,7 +707,7 @@ void DockerProc::Continue() {
 			rv = DockerAPI::unpause( containerName, error );
 		}
 		if( rv < 0 ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to unpause container '%s'.\n", containerName.c_str() );
+			dprintf( D_ERROR, "Failed to unpause container '%s'.\n", containerName.c_str() );
 		}
 
 
@@ -820,7 +812,7 @@ bool DockerProc::ShutdownFast() {
 
 
 void
-DockerProc::getStats() {
+DockerProc::getStats( int /* timerID */ ) {
 	if( shouldAskForServicePorts ) {
 		if( DockerAPI::getServicePorts( containerName, * JobAd, serviceAd ) == 0 ) {
 			shouldAskForServicePorts = false;
@@ -935,7 +927,7 @@ DockerProc::restartCheckpointedJob() {
 	CondorError error;
 	int rv = DockerAPI::rm( containerName, error );
 	if( rv < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s' after checkpoint exit.\n", containerName.c_str() );
+		dprintf( D_ERROR, "Failed to remove container '%s' after checkpoint exit.\n", containerName.c_str() );
 		// Will fail later when we try to restart if it still exists.  If it doesn't :shrug: all good!
 	}
 

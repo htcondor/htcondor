@@ -451,15 +451,7 @@ bool MyStringAioSource::allDataIsAvailable()
 	return aio.eof_was_read();
 }
 
-bool
-MyStringAioSource::readLine(std::string & str, bool append) {
-	MyString ms(str.c_str());
-	bool rv = readLine(ms, append);
-	str = ms;
-	return rv;
-}
-
-bool MyStringAioSource::readLine(MyString & str, bool append /* = false*/)
+bool MyStringAioSource::readLine(std::string & str, bool append /* = false*/)
 {
 	const char * p1;
 	const char * p2;
@@ -488,13 +480,9 @@ bool MyStringAioSource::readLine(MyString & str, bool append /* = false*/)
 		}
 
 		if (append) {
-			int cbtot = str.length() + len + 1;
-			if (str.Capacity() < cbtot) { str.reserve_at_least(cbtot); }
 			str.append(p1, MIN(c1, len));
 		} else {
-			int cbtot = len + 1;
-			if (str.Capacity() < cbtot) { str.reserve_at_least(cbtot); }
-			str.set(p1, MIN(c1, len));
+			str.assign(p1, MIN(c1, len));
 		}
 		if (p2 && (len > c1)) {
 			str.append(p2, len-c1);

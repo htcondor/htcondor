@@ -24,9 +24,9 @@
 
 #include "dc_service.h"
 #include "dc_transfer_queue.h"
-#include "simplelist.h"
 #include "reli_sock.h"
 #include "generic_stats.h"
+#include <vector>
 
 class IOStats {
  public:
@@ -41,7 +41,7 @@ class IOStats {
 
 	void Add(IOStats &s);
 	void Clear();
-	void ConfigureEMAHorizons(std::shared_ptr<stats_ema_config> config);
+	void ConfigureEMAHorizons(const std::shared_ptr<stats_ema_config>& config);
 };
 
 // transfer queue server's representation of a client
@@ -68,7 +68,6 @@ class TransferQueueRequest {
 	                    // to a different file without notifying us.
 	bool m_downloading; // true if client wants to download a file; o.w. upload
 	bool m_gave_go_ahead; // true if we told this client to go ahead
-	bool m_notified_about_taking_too_long;
 
 	time_t m_max_queue_age; // clean transfer from queue after this time
 	                        // 0 indicates no limit
@@ -93,7 +92,7 @@ class TransferQueueManager: public Service {
 
 		// Iterate through queue, pruning disconnected clients, and
 		// giving the go ahead to those that deserve it.
-	void CheckTransferQueue();
+	void CheckTransferQueue( int timerID = -1 );
 
 		// This is called to register a future call to CheckTransferQueue.
 	void TransferQueueChanged();
@@ -116,28 +115,28 @@ class TransferQueueManager: public Service {
 
 	void AddRecentIOStats(IOStats &s,const std::string &up_down_queue_user);
  private:
-	SimpleList<TransferQueueRequest *> m_xfer_queue;
-	int m_max_uploads;   // 0 if unlimited
-	int m_max_downloads; // 0 if unlimited
-	time_t m_default_max_queue_age; // 0 if unlimited
+	std::vector<TransferQueueRequest *> m_xfer_queue;
+	int m_max_uploads{0};   // 0 if unlimited
+	int m_max_downloads{0}; // 0 if unlimited
+	time_t m_default_max_queue_age{0}; // 0 if unlimited
 
-	bool m_throttle_disk_load;
-	double m_disk_load_low_throttle;
-	double m_disk_load_high_throttle;
-	int m_throttle_disk_load_max_concurrency;
-	time_t m_throttle_disk_load_incremented;
-	time_t m_throttle_disk_load_increment_wait;
+	bool m_throttle_disk_load{false};
+	double m_disk_load_low_throttle{0};
+	double m_disk_load_high_throttle{0};
+	int m_throttle_disk_load_max_concurrency{0};
+	time_t m_throttle_disk_load_incremented{0};
+	time_t m_throttle_disk_load_increment_wait{60};
 	std::string m_disk_throttle_short_horizon;
 	std::string m_disk_throttle_long_horizon;
 
-	int m_check_queue_timer;
+	int m_check_queue_timer{-1};
 
-	int m_uploading;
-	int m_downloading;
-	int m_waiting_to_upload;
-	int m_waiting_to_download;
-	int m_upload_wait_time;
-	int m_download_wait_time;
+	int m_uploading{0};
+	int m_downloading{0};
+	int m_waiting_to_upload{0};
+	int m_waiting_to_download{0};
+	int m_upload_wait_time{0};
+	int m_download_wait_time{0};
 
 	stats_entry_abs<int> m_max_uploading_stat;
 	stats_entry_abs<int> m_max_downloading_stat;
@@ -154,7 +153,7 @@ class TransferQueueManager: public Service {
 	stats_entry_ema<double> m_disk_throttle_excess;
 	stats_entry_ema<double> m_disk_throttle_shortfall;
 
-	unsigned int m_round_robin_counter; // increments each time we send GoAhead to a client
+	unsigned int m_round_robin_counter{0}; // increments each time we send GoAhead to a client
 
 	class TransferQueueUser {
 	public:
@@ -168,15 +167,15 @@ class TransferQueueManager: public Service {
 	typedef std::map< std::string,TransferQueueUser > QueueUserMap;
 	QueueUserMap m_queue_users;      // key = up_down_queue_user, value = TransferQueueUser record
 
-	unsigned int m_round_robin_garbage_counter;
+	unsigned int m_round_robin_garbage_counter{0};
 	time_t m_round_robin_garbage_time;
 
 	IOStats m_iostats;
-	int m_update_iostats_interval;
-	int m_update_iostats_timer;
+	int m_update_iostats_interval{0};
+	int m_update_iostats_timer{-1};
 	std::shared_ptr<stats_ema_config> ema_config;
 	StatisticsPool m_stat_pool;
-	int m_publish_flags;
+	int m_publish_flags{0};
 
 	bool AddRequest( TransferQueueRequest *client );
 	void RemoveRequest( TransferQueueRequest *client );
@@ -186,7 +185,7 @@ class TransferQueueManager: public Service {
 	void CollectUserRecGarbage(ClassAd *unpublish_ad);
 	void ClearRoundRobinRecency();
 	void ClearTransferCounts();
-	void UpdateIOStats();
+	void UpdateIOStats( int timerID = -1 );
 	void IOStatsChanged();
 	void RegisterStats(char const *user,IOStats &iostats,bool unregister=false,ClassAd *unpublish_ad=NULL);
 	void UnregisterStats(char const *user,IOStats &iostats,ClassAd *unpublish_ad) {

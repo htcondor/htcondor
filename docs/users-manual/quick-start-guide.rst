@@ -3,15 +3,20 @@
 Users' Quick Start Guide
 ========================
 
-To users, `HTCondor <https://htcondor.org>`_ is a batch job scheduler.  You give
-HTCondor a file with commands to tell it how to run your jobs.  HTCondor
-locates an appropriate machine for each job within the pool(s) of machines,
-packages up the job and ships it off to this Execution Point (EP) to run on.
-The jobs run, and output is returned to the machine that submitted the jobs.
+`HTCondor <https://htcondor.org>`_ is a system for dynamically sharing
+computational resources between competing computational tasks.  As an
+HTCondor user, you will describe your computational tasks as a series
+of independent, asynchronous "jobs."  You access computational resources
+managed by HTCondor by submitting (or "placing") job descriptions at an
+HTCondor "access point" (AP), also known as a "submit node."  HTCondor
+locates an appropriate machine for each job,
+packages up the job and ships it off to that machine for execution.
+Machines providing resources to HTCondor are therefore known as execution
+points (EP).
 
-Here is just enough guidance to submit and observe the successful
-completion of a first job.  It then suggests extensions that you can apply
-to your particular jobs.
+This guide covers submitting and observing the successful completion
+of a first, example job.  It then suggests extensions that you can apply to
+your own jobs.
 
 This guide presumes that
 
@@ -27,6 +32,25 @@ This guide presumes that
   interactive input.  Standard input (from the keyboard), standard output
   (seen on the display), and standard error (seen on the display) may still
   be used, but their contents will be redirected from/to files.
+
+What is a Job?
+--------------
+
+"Job" is a very specific term in HTCondor. A job is the atomic unit of work.
+A job may use multiple cores on one machine, but one job may not (in general)
+run across more than one machine.  To effectively use HTCondor, you will
+need to divide your total work (often called a workflow) into a number
+of jobs.  These atomic units of work run asynchronously with respect to each other, but 
+may be connected by input and output files.  Each job is described by a
+Job ClassAd, which is usually created by the system from a submit description file.
+HTCondor is a High Throughput system, which means it has been designed to 
+effectively manage hundreds of thousands of jobs.  Attributes of jobs that
+must be defined include the executable or script to run, the amount of memory, CPU
+and other machine resources it needs, and descriptions of the file inputs it need.
+The set of files used by a job is called the "sandbox".  There is an input sandbox,
+the input files that exist before a job starts; the output sandbox, the set of files
+created by the job; and a scratch sandbox, the set of files made as the job runs.
+
 
 A First HTCondor Job
 --------------------
@@ -158,7 +182,7 @@ possible on each EP without overloading them.  Jobs must declare the
 number of CPUs, the amount of memory and disk they need.  Special jobs
 may need to request other resources, such as GPUs or licenses.  Ask your
 administrator if your jobs requires such things.  The amount of cpus
-is unitless, but memory and disk requires can have a "M" for megabyte,
+is unit less, but memory and disk requires can have a "M" for megabyte,
 "G" for Gigabyte suffix for legibility.  Without the suffix, memory
 units are megabytes and disk kilobytes.
 
@@ -169,7 +193,7 @@ units are megabytes and disk kilobytes.
     request_disk            = 1G
 
 
-If this script/batch file were to to be invoked from the command line, and
+If this script/batch file were to be invoked from the command line, and
 outside of HTCondor, its single line of output
 
 .. code-block:: text
@@ -332,6 +356,7 @@ Here is the submit description file for this job:
     request_memory          = 512M
     request_disk            = 1G
 
+    num_retries             = 2
     log                     = science1.log
     queue
 
@@ -372,6 +397,17 @@ in this example.
 
 When the job completes, all files created by the executable as it ran are
 transferred back to the AP.
+
+HTCondor assumes that if the job exits of its own accord, with an exit code
+of zero, that indicates success, and any non-zero exit code is a failure.
+By default, when the job exits, it will leave the queue.  If you would
+like a job that exits with a non-zero exit code to be restarted some
+number of times until it does, set num_retries in the submit file like
+so:
+
+.. code-block:: condor-submit
+
+   num_retries = 2
 
 Expanding the science Job and the Organization of Files
 -------------------------------------------------------
@@ -415,6 +451,7 @@ description file for this proposed solution uniquely names the files:
     request_memory          = 512M
     request_disk            = 1G
 
+    num_retries             = 2
     log                     = science2.log
     queue 40
 
@@ -455,6 +492,7 @@ for the 100 instances of the following example submit file:
     request_memory          = 512M
     request_disk            = 1G
 
+    num_retries             = 2
     log                     = science3.log
     queue 100
 
@@ -495,7 +533,7 @@ Where to Go from Here
 
 .. What we really want here is a link to a nice page in the user manual
 .. that briefly describes HTCondor's major features and/or what you'd use
-.. them for, as kind of a roadmap to the user manual.
+.. them for, as kind of a road map to the user manual.
 
 * Consider watching our
   `video tutorial <https://www.youtube.com/watch?v=p2X6s_7e51k&list=PLO7gMRGDPNumCuo3pCdRk23GDLNKFVjHn>`_

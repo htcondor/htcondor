@@ -40,7 +40,7 @@ Scheduler ClassAd Attributes
     The amount of detected machine RAM in MBytes.
 
 :classad-attribute:`EffectiveFlockList`
-    A comma seperated list of *condor_collector* addresses to which
+    A comma separated list of *condor_collector* addresses to which
     *condor_schedd* jobs are actively flocking.
 
 :classad-attribute:`JobQueueBirthdate`
@@ -696,12 +696,6 @@ These attributes are only reported once a full time span has accumulated.
     The desired upper limit for the disk load from file transfers, as
     configured by ``FILE_TRANSFER_DISK_LOAD_THROTTLE``. :index:`FILE_TRANSFER_DISK_LOAD_THROTTLE`
     This attribute is published only if configuration variable
-    ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
-
-:classad-attribute:`FileTransferDiskThrottleLevel`
-    The current concurrency limit set by the disk load throttle. The
-    limit is applied to the sum of uploads and downloads. This attribute
-    is published only if configuration variable
     ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
 
 :classad-attribute:`FileTransferDiskThrottleLevel`

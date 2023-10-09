@@ -51,25 +51,23 @@ const char * SlotType::type_param(const char * name)
 	return NULL;
 }
 
-/*static*/ const char * SlotType::type_param(int type_id, const char * name)
+/*static*/ const char * SlotType::type_param(unsigned int type_id, const char * name)
 {
-	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
-	if (type_id < (int)types.size()) {
+	if (type_id < types.size()) {
 		return types[type_id].type_param(name);
 	}
 	return NULL;
 }
 /*static*/ const char * SlotType::type_param(CpuAttributes* p_attr, const char * name)
 {
-	if (p_attr) { return type_param(p_attr->type(), name); }
+	if (p_attr) { return type_param(p_attr->type_id(), name); }
 	return NULL;
 }
 
-/*static*/ bool SlotType::type_param_boolean(int type_id, const char * name, bool def_value)
+/*static*/ bool SlotType::type_param_boolean(unsigned int type_id, const char * name, bool def_value)
 {
 	bool result = def_value;
-	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
-	if (type_id < (int)types.size()) {
+	if (type_id < types.size()) {
 		const char * str = types[type_id].type_param(name);
 		if ( ! str || ! string_is_boolean_param(str, result))
 			result = def_value;
@@ -79,16 +77,15 @@ const char * SlotType::type_param(const char * name)
 /*static*/ bool SlotType::type_param_boolean(CpuAttributes* p_attr, const char * name, bool def_value)
 {
 	if ( ! p_attr) return def_value;
-	return type_param_boolean(p_attr->type(), name, def_value);
+	return type_param_boolean(p_attr->type_id(), name, def_value);
 }
 /*static*/ long long SlotType::type_param_long(CpuAttributes* p_attr, const char * name, long long def_value)
 {
 	if ( ! p_attr) return def_value;
 
 	long long result = def_value;
-	int type_id = p_attr->type();
-	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
-	if (type_id < (int)types.size()) {
+	unsigned int type_id = p_attr->type_id();
+	if (type_id < types.size()) {
 		const char * str = types[type_id].type_param(name);
 		if ( ! str || ! string_is_long_param(str, result))
 			result = def_value;
@@ -160,6 +157,10 @@ const char * SlotType::type_param(const char * name)
 	}
 	for (size_t ix = 0; ix < types.size(); ++ix) { types[ix].clear(); }
 	warned_startd_attrs_once = false; // allow the warning about mixing STARTD_ATTRS and STARTD_EXPRS once again
+
+	// default SLOT_TYPE_0_PARTITIONABLE to true
+	// we do this here rather than in the param table so it will not be visible to config_val
+	types[0].params["PARTITIONABLE"] = "true";
 
 	Regex re;
 	int errcode = 0, erroffset = 0;
@@ -313,9 +314,9 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	m_hook_keyword_initialized = false;
 #endif
 
-	if( r_attr->type() ) {
+	if( r_attr->type_id() ) {
 		dprintf( D_ALWAYS, "New %smachine resource of type %d allocated\n",
-				 r_backfill_slot ? "backfill " : "",  r_attr->type() );
+				 r_backfill_slot ? "backfill " : "",  r_attr->type_id() );
 	} else {
 		dprintf( D_ALWAYS, "New %smachine resource allocated\n", r_backfill_slot ? "backfill " : "");
 	}
@@ -741,9 +742,13 @@ Resource::needsPolling( void )
 
 
 // This one *only* looks at opportunistic claims
+// except for partitionable slots
 bool
 Resource::hasOppClaim( void )
 {
+	if (is_partitionable_slot()) {
+		return false;
+	}
 	State s = state();
 	if( s == claimed_state || s == preempting_state ) {
 		return true;
@@ -753,6 +758,7 @@ Resource::hasOppClaim( void )
 
 
 // This one checks if the Resource has *any* claims
+// except for paritionable slots
 bool
 Resource::hasAnyClaim( void )
 {
@@ -931,7 +937,7 @@ Resource::starterExited( Claim* cur_claim )
 	Activity a = activity();
 	switch( s ) {
 	case claimed_state:
-		r_cur->client()->setuser( r_cur->client()->owner() );
+		r_cur->client()->c_user = r_cur->client()->c_owner;
 		if(a == retiring_act) {
 			change_state(preempting_state);
 		}
@@ -1539,7 +1545,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 }
 
 void
-Resource::do_update( void )
+Resource::do_update( int /* timerID */ )
 {
 	int rval;
 	ClassAd private_ad;
@@ -1557,15 +1563,6 @@ Resource::do_update( void )
 	StartdPluginManager::Update(&public_ad, &private_ad);
 #endif
 
-	std::string priorState;
-
-	// If we are sending to a temporary "working" collector
-	// lie to our primary collector that we are claimed
-	// But keep the activity the same
-	if (!workingCM.empty()) {
-		public_ad.LookupString(ATTR_STATE, priorState);
-		public_ad.Assign(ATTR_STATE, "Claimed");
-	}
 		// Send class ads to owning collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad, true );
@@ -1576,13 +1573,11 @@ Resource::do_update( void )
 	}
 
 	// If we have a temporary CM, send update there, too
-	if (!workingCM.empty()) {
-		// And resource ATTR_STATE back to the correct value for our working collector
-		public_ad.Assign(ATTR_STATE, priorState);
-
-		CollectorList *workingCollectors = CollectorList::create(workingCM.c_str());
+	if (!r_cur->c_working_cm.empty()) {
+		CollectorList *workingCollectors = CollectorList::create(r_cur->c_working_cm.c_str());
 		workingCollectors->sendUpdates(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
-	} 
+		delete workingCollectors;
+	}
 
 	// We _must_ reset update_tid to -1 before we return so
 	// the class knows there is no pending update.
@@ -1638,7 +1633,11 @@ Resource::final_update( void )
 
 		// Set the correct types
 	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
-	SetTargetTypeName( invalidate_ad, STARTD_ADTYPE );
+#ifdef USE_STARTD_SLOT_ADTYPE
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_SLOT_ADTYPE);
+#else
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
+#endif
 
 	/*
 	 * NOTE: the collector depends on the data below for performance reasons
@@ -2423,8 +2422,12 @@ void Resource::publish_static(ClassAd* cap)
 	}
 
 	// Set the correct types on the ClassAd
-	SetMyTypeName( *cap,STARTD_ADTYPE );
-	SetTargetTypeName( *cap, JOB_ADTYPE );
+#ifdef USE_STARTD_SLOT_ADTYPE
+	SetMyTypeName( *cap,STARTD_SLOT_ADTYPE );
+#else
+	SetMyTypeName( *cap,STARTD_OLD_ADTYPE );
+#endif
+	cap->Assign(ATTR_TARGET_TYPE, JOB_ADTYPE); // because matchmaking before 23.0 needs this
 
 	// We need these for both public and private ads
 	cap->Assign(ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString());
@@ -2539,7 +2542,7 @@ void Resource::publish_static(ClassAd* cap)
 				cap->Delete(attr);
 			} else {
 				if ( ! cap->AssignExpr(attr, tmp.ptr()) ) {
-					dprintf(D_ALWAYS | D_FAILURE,
+					dprintf(D_ERROR,
 						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s."
 						"  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
 						attr, tmp.ptr(), slot_name.c_str() );
@@ -2557,14 +2560,19 @@ void Resource::publish_static(ClassAd* cap)
 		cap->Update(r_attr->get_mach_attr()->machres_attrs());
 
 		// advertise the slot type id number, as in SLOT_TYPE_<N>
-		cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type());
-		// advertise slot type id, but don't treat negative as a signal for "dynamic"
-		//cap->Assign(ATTR_SLOT_TYPE_ID, (r_attr->type() < 0) ? -(r_attr->type()) : r_attr->type() );
+		cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type_id() );
 
 		switch (get_feature()) {
 		case PARTITIONABLE_SLOT:
 			cap->Assign(ATTR_SLOT_PARTITIONABLE, true);
 			cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
+			if (param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false)) {
+				int lease = param_integer("MAX_PARTITIONABLE_SLOT_CLAIM_TIME", 3600);
+				cap->Assign(ATTR_MAX_CLAIM_TIME, lease);
+			}
+			if (state() == claimed_state) {
+				cap->Assign(ATTR_CLAIM_END_TIME, r_cur->getLeaseEndtime());
+			}
 			break;
 		case DYNAMIC_SLOT:
 			cap->Assign(ATTR_SLOT_DYNAMIC, true);
@@ -2588,7 +2596,7 @@ void Resource::publish_static(ClassAd* cap)
 		std::string expr;
 		// A negative slot type indicates a d-slot, in which case I want to use
 		// the slot-type of its parent for inheriting CP-related configurations:
-		int slot_type = (type() >= 0) ? type() : -type();
+		unsigned int slot_type = type_id();
 
 		if ( ! SlotType::param(expr, r_attr, "SLOT_WEIGHT") &&
 			 ! SlotType::param(expr, r_attr, "SlotWeight")) {
@@ -2838,7 +2846,11 @@ Resource::publish_private( ClassAd *ad )
 {
 		// Needed by the collector to correctly respond to queries
 		// for private ads.  As of 7.2.0, the 
-	SetMyTypeName( *ad, STARTD_ADTYPE );
+#ifdef USE_STARTD_SLOT_ADTYPE
+	SetMyTypeName( *ad, STARTD_SLOT_ADTYPE );
+#else
+	SetMyTypeName( *ad, STARTD_OLD_ADTYPE );
+#endif
 
 		// For backward compatibility with pre 7.2.0 collectors, send
 		// name and IP address in private ad (needed to match up the
@@ -3300,7 +3312,7 @@ Resource::startTimerToEndCODLoadHack( void )
 
 
 void
-Resource::endCODLoadHack( void )
+Resource::endCODLoadHack( int /* timerID */ )
 {
 		// our timer went off, so we can clear our tid
 	r_cod_load_hack_tid = -1;
@@ -3369,14 +3381,14 @@ Resource::willingToRun(ClassAd* request_ad)
 
 		if (!slot_requirements || !req_requirements) {
 			if (!slot_requirements) {
-				dprintf(D_FAILURE|D_ALWAYS, "Slot requirements not satisfied.\n");
+				dprintf(D_ERROR, "Slot requirements not satisfied.\n");
 				dprintf(D_ALWAYS, "Job ad was ============================\n");
 				dPrintAd(D_ALWAYS, *request_ad);
 				dprintf(D_ALWAYS, "Slot ad was ============================\n");
 				dPrintAd(D_ALWAYS, *r_classad);
 			}
 			if (!req_requirements) {
-				dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
+				dprintf(D_ERROR, "Job requirements not satisfied.\n");
 				dprintf(D_ALWAYS, "Job ad was ============================\n");
 				dPrintAd(D_ALWAYS, *request_ad);
 				dprintf(D_ALWAYS, "Slot ad was ============================\n");
@@ -3468,7 +3480,7 @@ Resource::spawnFetchedWork(void)
 	if ( ! r_cur->spawnStarter(tmp_starter, NULL)) {
 		delete tmp_starter; tmp_starter = NULL;
 
-		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
+		dprintf(D_ERROR, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
 		change_state(owner_state);
 		return false;
 	}
@@ -3545,7 +3557,7 @@ Resource::evalNextFetchWorkDelay(void)
 
 
 void
-Resource::tryFetchWork(void)
+Resource::tryFetchWork( int /* timerID */ )
 {
 		// First, make sure we're configured for fetching at all.
 	if (!getHookKeyword()) {
@@ -3679,7 +3691,7 @@ Resource::compute_rank( ClassAd* req_classad ) {
 //
 // Create dynamic slot from p-slot
 //
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
+Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
@@ -3917,7 +3929,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_
 				"Match requesting resources: %s\n", reslist.ptr());
 		}
 
-		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, -rip->type(), false );
+		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, rip->type_id(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );
@@ -3939,17 +3951,21 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_
 		new_rip->init_classad();
 		new_rip->refresh_classad_slot_attrs(); 
 
-			// The new resource needs the claim from its
-			// parititionable parent
-		delete new_rip->r_cur;
-		new_rip->r_cur = rip->r_cur;
-		new_rip->r_cur->setResource( new_rip );
+			// If the pslot isn't claimed, then move its current Claim
+			// to the new dslot. Otherwise, leave the current Claim with
+			// the pslot.
+		if (rip->state() != claimed_state) {
+				// The new resource needs the claim from its
+				// parititionable parent
+			delete new_rip->r_cur;
+			new_rip->r_cur = rip->r_cur;
+			new_rip->r_cur->setResource( new_rip );
 
-			// And the partitionable parent needs a new claim
-		rip->r_cur = new Claim( rip );
+				// And the partitionable parent needs a new claim
+			rip->r_cur = new Claim( rip );
+		}
 
 			// Recompute the partitionable slot's resources
-		rip->change_state( unclaimed_state );
 			// Call update() in case we were never matched, i.e. no state change
 			// Note: update() may create a new claim if pass thru Owner state
 		rip->update_needed(Resource::WhyFor::wf_dslotCreate);
@@ -3961,26 +3977,6 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_
 			// One thing this doesn't update is owner load and keyboard
 			// note that compute_dynamic will refresh both the d-slot and p-slot
 		resmgr->compute_and_refresh(new_rip);
-
-			// Stash pslot claim as the "leftover_claim", which
-			// we will send back directly to the schedd iff it supports
-			// receiving partitionable slot leftover info as part of the
-			// new-style extended claiming protocol. 
-			// But don't send a leftovers claim if consumption policies
-			// are enabled, as that means the negotiator is carving up
-			// the pslot.
-		bool scheddWantsLeftovers = false;
-			// presence of this attr in request ad tells us in a 
-			// backwards/forwards compatible way if the schedd understands
-			// the claim protocol enhancement to accept leftovers
-		req_classad->LookupBool("_condor_SEND_LEFTOVERS",scheddWantsLeftovers);
-		if ( scheddWantsLeftovers && 
-			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) &&
-			 rip->r_has_cp == false )
-		{
-			leftover_claim = rip->r_cur;
-			ASSERT(leftover_claim);
-		}
 
 		return new_rip;
 	}

@@ -68,7 +68,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	void UnregisterReverseConnectCallback();
 	static int ReverseConnectCommandHandler(int cmd,Stream *stream);
 	std::string myName();
-	void DeadlineExpired();
+	void DeadlineExpired(int timerID = -1);
 
 	// CCB contact information should be an opaque token to everyone, but
 	// Sinful needs to be able parse CCB IDs to generate v1 addresses.

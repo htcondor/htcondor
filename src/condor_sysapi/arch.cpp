@@ -39,19 +39,6 @@
 #include "my_popen.h"
 #endif
 
-/* ok, here's the deal with these. For some reason, gcc on IRIX is just old
-	enough to where it doesn't understand things like static const FALSE = 0.
-	So these two things used to be defined as the above, but it would fail with
-	a 'initializer element is not constant' during compile. I have defined
-	them as to make the preprocessor do the work instead of a const int.
-	-psilord 06/01/99 */
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
-
 #if defined(WIN32)
 
 // Names of all the architectures supported for Windows (Only some of
@@ -105,16 +92,16 @@ sysapi_uname_opsys(void)
 	return sysapi_opsys();
 }
 
-static int windows_inited = FALSE;
-static const char* opsys = NULL;
-static const char* opsys_versioned = NULL;
+static bool windows_inited = false;
+static const char* opsys = nullptr;
+static const char* opsys_versioned = nullptr;
 static int opsys_version = 0;
-static const char* opsys_name = NULL;
-static const char* opsys_long_name = NULL;
-static const char* opsys_short_name = NULL;
+static const char* opsys_name = nullptr;
+static const char* opsys_long_name = nullptr;
+static const char* opsys_short_name = nullptr;
 static int opsys_major_version = 0;
-static const char* opsys_legacy = NULL;
-static const char* opsys_super_short_name = NULL;
+static const char* opsys_legacy = nullptr;
+static const char* opsys_super_short_name = nullptr;
 
 
 // Find/create all opsys params in this method using OSVERSIONINFO
@@ -193,7 +180,7 @@ sysapi_get_windows_info(void)
         }
 
 	if ( opsys ) {
-		windows_inited = TRUE;
+		windows_inited = true;
 	}
 }
 
@@ -285,8 +272,8 @@ void sysapi_opsys_dump(int category)
 
 #else
 
-static int arch_inited = FALSE;
-static int utsname_inited = FALSE;
+static bool arch_inited = false;
+static bool utsname_inited = false;
 static const char* arch = NULL;
 static const char* uname_arch = NULL;
 static const char* uname_opsys = NULL;
@@ -342,7 +329,7 @@ init_utsname(void)
 	}
         
 	if ( utsname_sysname && utsname_nodename && utsname_release ) {
-		utsname_inited = TRUE;
+		utsname_inited = true;
 	}
 }
 
@@ -463,7 +450,7 @@ init_arch(void)
 	arch = sysapi_translate_arch( buf.machine, buf.sysname );
 
 	if ( arch && opsys ) {
-		arch_inited = TRUE;
+		arch_inited = true;
 	}
 }
 
@@ -513,7 +500,9 @@ sysapi_get_darwin_info(void)
 	opsys_major_version = major;
 
 	const char *osname = "Unknown";
-	if ( major == 12 ) {
+	if ( major == 13 ) {
+		osname = "Ventura";
+	} else if ( major == 12 ) {
 		osname = "Monterey";
 	} else if ( major == 11 ) {
 		osname = "BigSur";

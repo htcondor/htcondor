@@ -21,7 +21,7 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 
-SocketCache::SocketCache( int cSize )
+SocketCache::SocketCache( size_t cSize )
 {
 	cacheSize = cSize;
 	timeStamp = 0;
@@ -29,7 +29,7 @@ SocketCache::SocketCache( int cSize )
 	if( !sockCache ) {
 		EXCEPT( "SocketCache: Out of memory" );
 	}
-	for( int i = 0; i < cSize; i++ ) {
+	for( size_t i = 0; i < cSize; i++ ) {
 		initEntry( &(sockCache[i]) );
 	}
 }
@@ -43,7 +43,7 @@ SocketCache::~SocketCache()
 
 
 void
-SocketCache::resize( int newSize )
+SocketCache::resize( size_t newSize )
 {
 	if( newSize == cacheSize ) {
 			// nothing to do!
@@ -58,11 +58,10 @@ SocketCache::resize( int newSize )
 				 "ERROR: Cannot shrink a SocketCache with resize()\n" );
 		return;
 	}
-	dprintf( D_FULLDEBUG, "Resizing SocketCache - old: %d new: %d\n",
+	dprintf( D_FULLDEBUG, "Resizing SocketCache - old: %zu new: %zu\n",
 			 cacheSize, newSize ); 
-	sockEntry* new_cache = new sockEntry[newSize];
-	int i;
-	for( i=0; i<newSize; i++ ) {
+	sockEntry* new_cache = new sockEntry[(unsigned int)newSize];
+	for( size_t i=0; i<newSize; i++ ) {
 		if( i<cacheSize && sockCache[i].valid ) {
 			new_cache[i].valid = true;
 			new_cache[i].sock = sockCache[i].sock;
@@ -81,7 +80,7 @@ SocketCache::resize( int newSize )
 void
 SocketCache::clearCache()
 {
-	for( int i = 0; i < cacheSize; i++ ) {
+	for( size_t i = 0; i < cacheSize; i++ ) {
 		invalidateEntry( i );
 	}
 }
@@ -90,7 +89,7 @@ SocketCache::clearCache()
 void
 SocketCache::invalidateSock( const char* addr )
 {
-	for( int i = 0; i < cacheSize; i++ ) {
+	for( size_t i = 0; i < cacheSize; i++ ) {
 		if( sockCache[i].valid && addr == sockCache[i].addr ) {
 			invalidateEntry(i);
 		}
@@ -101,7 +100,7 @@ SocketCache::invalidateSock( const char* addr )
 ReliSock* 
 SocketCache::findReliSock( const char *addr )
 {
-    for( int i = 0; i < cacheSize; i++ ) {
+    for( size_t i = 0; i < cacheSize; i++ ) {
         if( sockCache[i].valid && addr == sockCache[i].addr ) {
 			return sockCache[i].sock;
 		}
@@ -124,7 +123,7 @@ SocketCache::addReliSock( const char* addr, ReliSock* rsock )
 bool
 SocketCache::isFull( void )
 {
-	for( int i = 0; i < cacheSize; i++ ) {
+	for( size_t i = 0; i < cacheSize; i++ ) {
 		if( ! sockCache[i].valid ) {
 			return false;
 		}
@@ -145,17 +144,16 @@ SocketCache::getCacheSlot()
 {
 	int time	= INT_MAX;
 	int	oldest  = -1;
-	int	i;
 
 	// increment time stamp
 	timeStamp++;
 
 	// find empty entry, or oldest entry
-	for (i = 0; i < cacheSize; i++)
+	for (size_t i = 0; i < cacheSize; i++)
 	{
 		if (!sockCache[i].valid)
 		{
-			dprintf (D_FULLDEBUG, "SocketCache:  Found unused slot %d\n", i);
+			dprintf (D_FULLDEBUG, "SocketCache:  Found unused slot %zu\n", i);
 			return i;
 		}
 

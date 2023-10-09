@@ -66,7 +66,7 @@ Here are the basic steps to run a job with HTCondor.
      preferred) the exit status of your program and various statistics about
      its performances, including time used and I/O performed. If you are
      using a log file for the job, the exit status will
-     be recorded in there.  Output files will be transfered back to the
+     be recorded in there.  Output files will be transferred back to the
      submitting machine, if a shared filesystem is not used.  After the job
      completes, it will not be visible to the :doc:`/man-pages/condor_q` command
      , but is queryable with the :doc:`/man-pages/condor_history` command.

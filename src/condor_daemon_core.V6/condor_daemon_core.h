@@ -42,7 +42,6 @@
 #include "condor_secman.h"
 #include "KeyCache.h"
 #include "list.h"
-#include "extArray.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"
@@ -74,7 +73,6 @@ class ProcFamilyInterface;
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
-template <class Key, class Value> class HashTable; // forward declaration
 class Probe;
 
 #define USE_MIRON_PROBE_FOR_DC_RUNTIME_STATS
@@ -88,7 +86,7 @@ static const int MAX_SOCKS_INHERITED = 4;
    Magic fd to include in the 'std' array argument to Create_Process()
    which means you want a pipe automatically created and handled.
    If you do this to stdin, you get a writeable pipe end (exposed as a FILE*
-   Write pipes created like this are stored as MyString objects, which
+   Write pipes created like this are stored as string objects, which
    you can access via the Get_Pipe_Data() call.
 */
 static const int DC_STD_FD_PIPE = -10;
@@ -395,6 +393,7 @@ class OptionalCreateProcessArgs {
     OptionalCreateProcessArgs & daemonSock(const char * daemon_sock) { this->daemon_sock = daemon_sock; return *this; }
     OptionalCreateProcessArgs & remap(FilesystemRemap * fsr) { this->_remap = fsr; return *this; }
     OptionalCreateProcessArgs & asHardLimit(long ahl) { this->as_hard_limit = ahl; return *this; }
+    OptionalCreateProcessArgs & reaperID(int ri) { this->reaper_id = ri; return *this; }
 
 
     // Special case for usability; may be a bad idea, but allows you to
@@ -468,7 +467,7 @@ class DaemonCore : public Service
 		*/
     void reconfig();
 
-	void refreshDNS();
+	void refreshDNS( int timerID = -1 );
 
     /** Not_Yet_Documented
         @param perm Not_Yet_Documented
@@ -851,7 +850,11 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Reaper (int rid);
-   
+
+
+    int numRegisteredReapers();
+    int countTimersByDescription( const char * description ) { return t.countTimersByDescription(description); }
+
 
     /** Not_Yet_Documented
         @param signal signal
@@ -1077,9 +1080,9 @@ class DaemonCore : public Service
 	   @param std_fd
 	     The fd to identify the pipe to read: 1 for stdout, 2 for stderr.
 	   @return
-	     Pointer to a MyString object containing all the data written so far.
+	     Pointer to a string object containing all the data written so far.
 	*/
-	MyString* Read_Std_Pipe(int pid, int std_fd);
+	std::string* Read_Std_Pipe(int pid, int std_fd);
 
 	/**
 	   Write data to the given DC process's stdin pipe.
@@ -1330,7 +1333,7 @@ class DaemonCore : public Service
                pipe and register everything for you automatically. If
                you use this for stdin, you can use Write_Std_Pipe() to
                write to the stdin of the child. If you use this for
-               std(out|err) then you can get a pointer to a MyString
+               std(out|err) then you can get a pointer to a string
                with all the data written by the child using Read_Std_Pipe().
         @param nice_inc The value to be passed to nice() in the
                child.  0 < nice < 20, and greater numbers mean
@@ -1780,7 +1783,9 @@ class DaemonCore : public Service
 		// its selfAd.
 	bool SetupAdministratorSession(unsigned duration, std::string &capability);
 
-  private:      
+	void kill_immediate_children();
+
+  private:
 
 		// do and our parents/children want/have a udp comment socket?
 	bool m_wants_dc_udp;
@@ -1944,24 +1949,22 @@ class DaemonCore : public Service
 	// variable.  Returns index into sockTable, -1 if none available.
 	int initial_command_sock() const;
 
-    struct CommandEnt
-    {
-        int             num;
-        bool            is_cpp;
-        bool            force_authentication;
-        CommandHandler  handler;
-        CommandHandlercpp   handlercpp;
-        DCpermission    perm;
-        Service*        service; 
-        char*           command_descrip;
-        char*           handler_descrip;
-        void*           data_ptr;
-	int             wait_for_payload;
+	struct CommandEnt
+	{
+		int             num{0};
+		bool            is_cpp{true};
+		bool            force_authentication{false};
+		CommandHandler  handler{nullptr};
+		CommandHandlercpp   handlercpp{nullptr};
+		DCpermission    perm{ALLOW};
+		Service*        service{nullptr};
+		char*           command_descrip{nullptr};
+		char*           handler_descrip{nullptr};
+		void*           data_ptr{nullptr};
+		int             wait_for_payload{0};
 		// If there are alternate permission levels where the
 		// command is permitted, they will be listed here.
-	std::vector<DCpermission> *alternate_perm{nullptr};
-
-		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), wait_for_payload(0) {}
+		std::vector<DCpermission> *alternate_perm{nullptr};
     };
 
     void                DumpCommandTable(int, const char* = NULL);
@@ -2079,22 +2082,22 @@ class DaemonCore : public Service
         HANDLE hProcess;
         HANDLE hThread;
         DWORD tid;
-        HWND hWnd;
 		LONG pipeReady;
 		PipeEnd *pipeEnd;
-		LONG deallocate;
 		HANDLE watcherEvent;
+		LONG deallocate;
 #endif
-        std::string sinful_string;
+		volatile unsigned int process_exited;   // set to true if the process has exited, set before reaper callback
+		std::string sinful_string;
         int is_local;
         int parent_is_local;
         int reaper_id;
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
-        MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
+        std::string* pipe_buf[3];  // Buffers for data written to DC std pipes.
         int stdin_offset;
 
 		// these three data members are set/used by the DaemonKeepAlive class
-        unsigned int hung_past_this_time;   // if >0, child is hung if time() > this value
+        time_t hung_past_this_time;   // if >0, child is hung if time() > this value
         int was_not_responding;
         int got_alive_msg; // number of child alive messages received
 
@@ -2108,8 +2111,7 @@ class DaemonCore : public Service
 
 	int m_refresh_dns_timer;
 
-    typedef HashTable <pid_t, PidEntry *> PidHashTable;
-    PidHashTable* pidTable;
+	std::map<pid_t, PidEntry> pidTable;
     pid_t mypid;
     pid_t ppid;
 
@@ -2204,7 +2206,7 @@ class DaemonCore : public Service
 	// Method to check on and possibly recover from a bad connection
 	// to the procd. Suitable to be registered as a one-shot timer.
 	int CheckProcInterface();
-	void CheckProcInterfaceFromTimer() { (void)CheckProcInterface(); }
+	void CheckProcInterfaceFromTimer( int /* timerID */ ) { (void)CheckProcInterface(); }
 
 	// misc helper functions
 	void CheckPrivState( void );

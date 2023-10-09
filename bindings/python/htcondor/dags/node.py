@@ -72,7 +72,7 @@ class DAGAbortCondition:
     """
     Represents the configuration of a node's DAG abort condition.
 
-    See :ref:`abort-dag-on` for more information about DAG aborts.
+    See :ref:`ABORT-DAG-ON <abort-dag-on>` for more information about DAG aborts.
     """
 
     def __init__(self, node_exit_value: int, dag_return_value: Optional[int] = None):
@@ -470,7 +470,7 @@ class SubDAG(BaseNode):
     """
     Represents a ``SUBDAG`` in the graph.
 
-    See :ref:`subdag-external` for more information on sub-DAGs.
+    See :ref:`SUBDAG EXTERNAL <subdag-external>` for more information on sub-DAGs.
     """
 
     def __init__(self, dag: "dag.DAG", *, dag_file: Path, **kwargs):
@@ -495,7 +495,7 @@ class FinalNode(BaseNode):
     """
     Represents the ``FINAL`` node in a DAG.
 
-    See :ref:`final-node` for more information on the ``FINAL`` node.
+    See :ref:`Final Node <final-node>` for more information on the ``FINAL`` node.
     """
 
     def __init__(

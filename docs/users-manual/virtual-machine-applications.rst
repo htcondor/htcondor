@@ -107,7 +107,7 @@ HTCondor uses these values when it
 produces the description file.
 
 If any files need to be transferred from the
-submit machine to the machine where the **vm** universe job will
+access point to the machine where the **vm** universe job will
 execute, HTCondor must be explicitly told to do so with the standard
 file transfer attributes:
 

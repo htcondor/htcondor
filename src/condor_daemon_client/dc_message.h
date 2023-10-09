@@ -351,7 +351,7 @@ private:
 	int receiveMsgCallback(Stream *sock);
 
 		// This is called by DaemonCore when the delay time has expired.
-	void startCommandAfterDelay_alarm();
+	void startCommandAfterDelay_alarm(int timerID = -1);
 
 		// Delete a sock unless it happens to be m_sock.
 	void doneWithSock(Stream *sock);

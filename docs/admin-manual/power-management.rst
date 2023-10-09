@@ -22,11 +22,11 @@ through configuration. This occurs when all slots on a machine agree
 that a low power state is desired.
 
 A slot's readiness to hibernate is determined by the evaluating the
-``HIBERNATE`` :index:`HIBERNATE` configuration variable (see
+:macro:`HIBERNATE` configuration variable (see
 the :ref:`admin-manual/configuration-macros:condor_startd configuration file
 macros` section) within the context of the slot. Readiness is evaluated at
-fixed intervals, as determined by the ``HIBERNATE_CHECK_INTERVAL``
-:index:`HIBERNATE_CHECK_INTERVAL` configuration variable. A
+fixed intervals, as determined by the
+:macro:`HIBERNATE_CHECK_INTERVAL` configuration variable. A
 non-zero value of this variable enables the power management facility.
 It is an integer value representing seconds, and it need not be a small
 value. There is a trade off between the extra time not at a low power
@@ -109,15 +109,15 @@ Keeping a ClassAd for a Hibernating Machine
 A pool's *condor_collector* daemon can be configured to keep a
 persistent ClassAd entry for each machine, once it has entered
 hibernation. This is required by *condor_rooster* so that it can
-evaluate the ``UNHIBERNATE`` :index:`UNHIBERNATE` expression of
+evaluate the :macro:`UNHIBERNATE` expression of
 the offline machines.
 
-To do this, define a log file using the ``OFFLINE_LOG``
-:index:`OFFLINE_LOG` configuration variable. See
+To do this, define a log file using the
+:macro:`COLLECTOR_PERSISTENT_AD_LOG` configuration variable. See
 the :ref:`admin-manual/configuration-macros:condor_startd configuration file
 macros` section for the definition. An optional expiration time for each
-ClassAd can be specified with ``OFFLINE_EXPIRE_ADS_AFTER``
-:index:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
+ClassAd can be specified with
+:macro:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
 the hibernating machine's ClassAd enters the *condor_collector* daemon.
 See the :ref:`admin-manual/configuration-macros:condor_startd configuration
 file macros` section for the definition.
@@ -146,10 +146,10 @@ chosen.
 
 This ordered detection may be bypassed, to use a specified method
 instead by setting the configuration variable
-``LINUX_HIBERNATION_METHOD`` with one of the defined strings. This
+:macro:`LINUX_HIBERNATION_METHOD` with one of the defined strings. This
 variable is defined in the :ref:`admin-manual/configuration-macros:condor_startd
 configuration file macros` section. If no usable methods are detected or the
-method specified by ``LINUX_HIBERNATION_METHOD`` is either not detected or
+method specified by :macro:`LINUX_HIBERNATION_METHOD` is either not detected or
 invalid, hibernation is disabled.
 
 The details of this selection process, and the final method selected can
