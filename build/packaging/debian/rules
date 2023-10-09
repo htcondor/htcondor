@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+
 # if this package is built in an i386 build environment on an amd64 host,
 # a toolchain file is required so cmake uses the right CMAKE_SYSTEM_PROCESSOR
 CMAKE_SYSTEM_PROCESSOR = $(shell  cmake --system-information | grep CMAKE_SYSTEM_PROCESSOR | cut -d'"' -f2)
