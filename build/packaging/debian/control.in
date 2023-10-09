@@ -4,6 +4,7 @@ Uploaders: Tim Theisen <tim@cs.wisc.edu>
 Section: science
 Priority: optional
 Build-Depends: cmake (>= 3.16),
+               debhelper,
 #if defined(FOCAL)
                debhelper-compat (= 12),
 #else
@@ -30,6 +31,7 @@ Build-Depends: cmake (>= 3.16),
                libpq-dev,
                libscitokens-dev,
                libsqlite3-dev,
+               libsystemd-dev,
                libvirt-dev,
                libx11-dev,
                libxml2-dev,
@@ -47,12 +49,13 @@ Build-Depends: cmake (>= 3.16),
                voms-dev,
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
-Standards-Version: 3.9.8
+Standards-Version: 4.6.1
 Vcs-Browser: https://github.com/htcondor/htcondor
 Vcs-Git: git://github.com/htcondor/htcondor.git
 Homepage: https://htcondor.org/
 X-Python3-Version: >= 3.7
 
+Rules-Requires-Root: no
 
 Package: condor
 Architecture: any
@@ -72,7 +75,7 @@ Depends: adduser,
 #else
          libssl1.1,
 #endif
-         libscitokens0 (>= 0.6.2),
+         libscitokens0,
          libvomsapi1v5,
          net-tools,
          ${misc:Depends},
@@ -337,30 +340,6 @@ Description: distributed workload management system - single node configuration
  .
  This package provides files needed to run tests against the extracted tarball
  in the BaTLab.
-
-Package: condor-dbg
-Architecture: any
-Section: debug
-Depends: condor (= ${binary:Version}),
-         ${misc:Depends}
-Conflicts: htcondor-dbg (<< ${binary:Version})
-Breaks: htcondor-dbg (<< ${binary:Version})
-Replaces: htcondor-dbg (<< ${binary:Version})
-Description: distributed workload management system - debugging symbols
- Like other full-featured batch systems, HTCondor provides a job queueing
- mechanism, scheduling policy, priority scheme, resource monitoring, and
- resource management. Users submit their serial or parallel jobs to HTCondor;
- HTCondor places them into a queue. It chooses when and where to run the jobs
- based upon a policy, carefully monitors their progress, and ultimately
- informs the user upon completion.
- .
- Unlike more traditional batch queueing systems, HTCondor can also effectively
- harness wasted CPU power from otherwise idle desktop workstations. HTCondor
- does not require a shared file system across machines - if no shared file
- system is available, HTCondor can transfer the job's data files on behalf of
- the user.
- .
- This package provides the debugging symbols for HTCondor.
 
 Package: htcondor
 Architecture: any
