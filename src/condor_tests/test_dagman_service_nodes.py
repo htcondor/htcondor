@@ -18,7 +18,6 @@ def echo_job(test_dir):
         f.write("""# Simple echo job
 executable = /bin/echo
 arguments  = 'Condor is King'
-universe   = local
 log        = echo.log
 output     = echo.out
 error      = echo.err
@@ -38,7 +37,6 @@ exit 1
     with open(submit, "w") as f:
         f.write("""# Job that fails
 executable = fail.sh
-universe   = local
 log = fail.log
 queue
 """)
@@ -51,7 +49,6 @@ def sleep_job(test_dir, path_to_sleep):
         f.write(f"""# Simple sleep job
 executable = {path_to_sleep}
 arguments  = 10
-universe   = local
 log        = sleep.log
 queue
 """)
@@ -68,7 +65,7 @@ SERVICE FAIL {fail_job}
         f.write(contents)
     dag = htcondor.Submit.from_dag(filename)
     job = default_condor.submit(dag)
-    assert job.wait(condition=ClusterState.all_complete,timeout=80)
+    assert job.wait(condition=ClusterState.all_complete,timeout=40)
     return filename + ".dagman.out"
 
 class TestDAGManServiceNodes:
