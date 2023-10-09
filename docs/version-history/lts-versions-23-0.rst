@@ -36,10 +36,6 @@ Bugs Fixed:
   error if they returned an exit code with high bits set
   :jira:`2061`
 
-- Fixed a race condition where if a parallel universe job was *condor_rm*'d immediately after
-  it started, it might not get removed, and would run to completion.
-  :jira:`2070`
-
 - Fixed a bug in DAGMan where ``Service`` nodes that failed caused the DAGMan process to fail
   an assertion check and crash.
   :jira:`2051`

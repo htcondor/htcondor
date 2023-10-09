@@ -540,8 +540,8 @@ ParallelShadow::shutDown( int exitReason )
 				// If the policy is wait for all nodes to exit
 				// see if any are still running.  If so,
 				// just return, and wait for them all to go
-				if ((r->getResourceState() != RR_FINISHED) && (r->getResourceState() != RR_PRE))  {
-				    dprintf (D_FULLDEBUG, "ParallelShadow::shutDown WAIT_FOR_ALL Not all resources have FINISHED\n");
+				if (r->getResourceState() != RR_FINISHED ) {
+				    dprintf( D_FULLDEBUG, "ParallelShadow::shutDown WAIT_FOR_ALL Not all resources have FINISHED\n");
 				    return;
 				}
 			}
@@ -551,7 +551,7 @@ ParallelShadow::shutDown( int exitReason )
 		}
 			// If node0 is still running, don't really shut down
 		RemoteResource *r =  ResourceList[0];
-		if ((r->getResourceState() != RR_PRE) && (r->getResourceState() != RR_FINISHED)) {
+		if (r->getResourceState() != RR_FINISHED) {
 			return;
 		}
 	}
