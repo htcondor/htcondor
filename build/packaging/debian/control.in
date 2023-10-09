@@ -296,7 +296,7 @@ Package: condor-vm-gahp
 Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
-         libvirt,
+         libvirt0,
          ${misc:Depends},
          ${shlibs:Depends}
 Description: distributed workload management system - single node configuration
