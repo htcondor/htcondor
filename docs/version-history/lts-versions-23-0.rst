@@ -44,6 +44,10 @@ Bugs Fixed:
   job epoch history file.
   :jira:`2060`
 
+- Fixed a rare race condition where *condor_rm*'ing a parallel universe job would not remove
+  the job if the rm happened after the job was matched but before it fully started
+  :jira:`2070`
+
 - Fix a bug where HTCondor fails to install on Debian and Ubuntu platforms when the ``condor``
   user is present and the ``/var/lib/condor`` directory is not.
   :jira:`2074`
