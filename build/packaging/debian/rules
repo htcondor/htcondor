@@ -68,9 +68,6 @@ override_dh_auto_install:
 	find debian/tmp|sort > /tmp/files
 	find obj-*|sort > /tmp/obj
 	mv obj-*/condor_tests-*.tar.gz debian/tmp/usr/lib/condor/condor_tests-$(upstreamver).tar.gz
-	# Remove extranenous files
-	rm debian/tmp/usr/share/docs/condor/LICENSE
-	rm debian/tmp/usr/share/docs/condor/README
 
 
 override_dh_fixperms-arch:
