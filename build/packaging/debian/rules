@@ -28,7 +28,7 @@ override_dh_auto_configure:
 		-DCMAKE_INSTALL_PREFIX:PATH=/
 
 
-override_dh_auto_build: doc/build
+override_dh_auto_build: docs/build
 	dh_auto_build --parallel
 	# The tests don't get built eventhough was asked for them
 	(cd obj-*; make tests)
@@ -45,7 +45,7 @@ override_dh_shlibdeps:
 	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib/ --dpkg-shlibdeps-params=--ignore-missing-info
 
 
-doc/build:
+docs/build:
 	mkdir -p $@
 	$(MAKE) -C docs man
 	mkdir -p $@/man
@@ -67,8 +67,8 @@ override_dh_auto_install:
 	find obj-*|sort > /tmp/obj
 	mv obj-*/condor_tests-*.tar.gz debian/tmp/usr/lib/condor/condor_tests-$(upstreamver).tar.gz
 	# Remove extranenous files
-	rm debian/tmp/usr/share/doc/condor/LICENSE
-	rm debian/tmp/usr/share/doc/condor/README
+	rm debian/tmp/usr/share/docs/condor/LICENSE
+	rm debian/tmp/usr/share/docs/condor/README
 
 
 override_dh_fixperms-arch:
@@ -103,13 +103,12 @@ override_dh_auto_clean:
 	-rm src/condor_utils/param_info.c
 	# docs
 	$(MAKE) -C docs clean
-	-rm -f doc/condor-*-Manual.tar
-	-rm -rf doc/just-man-pages
-	-rm -rf doc/build
-	-rm -f doc/figuresizing.tex doc/fontsize.tex
+	-rm -f docs/condor-*-Manual.tar
+	-rm -rf docs/just-man-pages
+	-rm -rf docs/build
 
 
-# PDF come in dedicated doc package -- no compression
+# PDF come in dedicated docs package -- no compression
 override_dh_compress:
 	dh_compress -X.pdf
 
