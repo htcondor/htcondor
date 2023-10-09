@@ -408,12 +408,15 @@ and the dependencies produced. Notice the naming of nodes scoped with
 the splice name. This hierarchy of splice names assures unique names
 associated with all nodes.
 
-.. figure:: /_images/dagman-diamond-spliced.png
-  :width: 350
-  :alt: The diamond-shaped DAG spliced between two nodes.
-  :align: center
+.. mermaid::
+   :caption: The diamond-shaped DAG spliced between two nodes.
+   :align: center
 
-  The diamond-shaped DAG spliced between two nodes.
+   flowchart TD 
+     X --> Diamond+A  
+     Diamond+A --> Diamond+B & Diamond+C
+     Diamond+B & Diamond+C --> Diamond+D
+     Diamond+D --> Y  
 
 SPLICING one DAG Twice Example
 ''''''''''''''''''''''''''''''
@@ -456,13 +459,13 @@ file is specified.
 
       # END DAG FILE X.dag
 
-.. figure:: /_images/dagman-x-shaped-dag.png
-  :width: 350
-  :alt: The X-shaped DAG.
-  :align: center
+.. mermaid::
+   :caption: The X-shaped DAG.
+   :align: center
 
-  The X-shaped DAG.
-
+   flowchart TD 
+     A & B & C  --> D
+     D --> E & F & G
 
 File ``s1.dag`` continues the example, presenting the DAG input file
 that incorporates two separate splices of the X-shaped DAG.

@@ -63,6 +63,16 @@ Central Manager
     network to the central manager. :index:`execute machine`
     :index:`execute<single: execute; machine>`
 
+.. note::
+
+   .. mermaid::
+      :caption: Daemons for Central Manager, both managed by a *condor_master*
+      :align: center
+
+      flowchart TD
+         condor_master --> condor_collector & condor_negotiator
+
+
 Execution Point
     Any machine in the pool, including the central manager, can be
     configured as to whether or not it should execute HTCondor jobs.
@@ -73,6 +83,20 @@ Execution Point
     of swap space, memory, number of CPUs, the larger variety of
     resource requests it can serve. :index:`access point`
     :index:`access<single: submit; machine>`
+
+.. note::
+
+   .. mermaid::
+      :caption: Daemons for a Execution Point, one *condor_starter* per running job.
+      :align: center
+
+      flowchart TD
+         condor_master --> condor_startd
+         condor_startd --> condor_starter_for_slot1
+         condor_startd --> condor_starter_for_slot2
+         condor_starter_for_slot1 --> job_in_slot1
+         condor_starter_for_slot2 --> job_in_slot2
+
 
 Access Point
     Any machine in the pool, including the central manager, can be
@@ -85,6 +109,19 @@ Access Point
     real memory.  HTCondor pools can scale out horizontally by adding
     additional access points.  Older terminology called these submit
     machines or scheduler machine.
+
+.. note::
+
+
+   .. mermaid::
+      :caption: Daemons for an Access Point, one *condor_shadow* per running job.
+      :align: center
+
+      flowchart TD
+         condor_master --> condor_schedd
+         condor_schedd --> condor_shadow_for_job1
+         condor_schedd --> condor_shadow_for_job2
+
 
 The HTCondor Daemons
 --------------------
