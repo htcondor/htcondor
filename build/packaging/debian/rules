@@ -44,7 +44,7 @@ override_dh_auto_build: docs/build
 
 
 override_dh_shlibdeps:
-	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib/ --dpkg-shlibdeps-params=--ignore-missing-info
+	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib/ -l$(CURDIR)/debian/tmp/usr/lib/condor --dpkg-shlibdeps-params=--ignore-missing-info
 
 
 docs/build:
@@ -71,8 +71,11 @@ override_dh_auto_install:
 
 
 override_dh_fixperms-arch:
-	chmod -x debian/condor/usr/libexec/condor/interactive.sub
 	dh_fixperms
+	chmod -x debian/condor/usr/libexec/condor/interactive.sub
+	chmod a-x debian/condor/usr/libexec/condor/ce-audit.so
+	#chmod a-x debian/condor/usr/libexec/condor/libclassad_python_user.cpython-311-x86_64-linux-gnu.so
+	chmod a-x debian/condor/usr/libexec/condor/libclassad_python_user.*.so
 
 
 override_dh_install-arch:
