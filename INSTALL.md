@@ -33,9 +33,11 @@ cd /tmp
 git clone https://github.com/htcondor/htcondor
 ```
 
-After the code is downloaded, make a \_\_build directory (note that the source
-code already has a directory named `build`, so that can't be used). Then
-use that directory to configure cmake and launch the build:
+Note that we don't support building inside the source tree, HTCondor can only
+be built with an out-of-tree build directory.  So, After the code is
+downloaded, make a \_\_build directory (note that the source code already has a
+directory named `build`, so that can't be used). Then use that directory to
+configure cmake and launch the build:
 
 ```sh
 cd htcondor
@@ -100,16 +102,8 @@ at the dockerfile we use to build the container above,
 	* remember to add the condor\msconfig to your path
 
 4. build condor
-	There are 2 methods to build condor 1. in source build and 2. out of source build
-	- a) in source build
-		This method builds the binaries within the source tree. 
-		1) cd to within the condor folder.
-		2) Generate the Visual Studio solution files with CMake
-			```sh
-			cmake -G "Visual Studio 11 2012"
-			```
-	- b) out of source builds
-		This method preserves the source tree and creates all files out side of the source tree
+	HTCondor only supports out of source builds
+	- a) Out of source builds preserves the source tree and creates all files out side of the source tree
 		- 1) cd to within the condor folder and set _condor_sources environment variable
 			```sh
 			cd condor
@@ -124,7 +118,7 @@ at the dockerfile we use to build the container above,
 			```sh
 			cmake CMakeLists.txt -G "Visual Studio 11 2012" %_condor_sources%
 			```
-	- c) Build condor
+	- b) Build condor
 		- 1) within the IDE
 			- a) Launch Visual Studio editor and open the CONDOR.sln
 			- b) Select the build type Debug or RelWithDebInfo (Release is being deprecated)
