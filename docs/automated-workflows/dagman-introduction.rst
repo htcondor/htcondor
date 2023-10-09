@@ -31,14 +31,21 @@ A **node** within a DAG represents a unit of work. It contains the following:
 -   **POST script** (optional): A script that runs after the job finishes.
     Typically used to verify outputs and clean up temporary files.
 
-The following diagram illustrates the elements of a node:
+The following diagram illustrates the elements of a node -- every
+node must contain a job, with an optional pre and an optional
+post script.
 
-.. figure:: /_images/dagman-node.png
-    :width: 400
-    :alt: One Node within a DAG
-    :align: center
+.. mermaid::
 
-    One Node within a DAG
+   flowchart LR
+    Start((Start)) --> Job
+    Start --> PREscript
+    subgraph DAG Node
+    PREscript --> Job
+    Job --> POSTscript
+    end
+    Job --> End((End))
+    POSTscript --> End((End))
 
 An **edge** in DAGMan describes a dependency between two nodes. DAG edges are
 directional; each has a **parent** and a **child**, where the parent node must
@@ -49,16 +56,14 @@ of parents and children.
 Example: Diamond DAG
 --------------------
 
-A simple diamond-shaped DAG, as shown in the following image
-is presented as a starting point for examples. This DAG contains 4
-nodes.
+A simple diamond-shaped DAG, as shown in the following image is presented as a
+starting point for examples. This diamond DAG contains 4 nodes.
 
-.. figure:: /_images/dagman-diamond-dag.png
-    :width: 300
-    :alt: Diamond DAG
-    :align: center
+.. mermaid::
 
-    Diamond DAG
+   flowchart TD 
+    A --> B & C
+    B & C --> D
 
 A very simple DAG input file for this diamond-shaped DAG is:
 
