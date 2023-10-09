@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #endif
 #include "match_prefix.h"
+#include "MapFile.h"
 
 #include "directory.h"
 #include "filename_tools.h"
