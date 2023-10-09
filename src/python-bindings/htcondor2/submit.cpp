@@ -116,7 +116,7 @@ SubmitBlob::get_queue_args() const {
 
 bool
 SubmitBlob::set_queue_args( const char * qArgs ) {
-    std::string miniSubmitFile = "\n queue " + std::string(qArgs);
+    std::string miniSubmitFile = "\n queue " + std::string(qArgs) + "\n";
 
     std::string errorMessage;
     return from_lines( miniSubmitFile.c_str(), errorMessage );
