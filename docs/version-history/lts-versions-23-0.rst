@@ -44,6 +44,10 @@ Bugs Fixed:
   job epoch history file.
   :jira:`2060`
 
+- Fixed a rare race condition where *condor_rm*'ing a parallel universe job would not remove
+  the job if the rm happened after the job was matched but before it fully started
+  :jira:`2070`
+
 .. _lts-version-history-2300:
 
 Version 23.0.0
