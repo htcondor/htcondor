@@ -419,7 +419,7 @@ do_install() {
 
 				# Add our repository.
 				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
-				$sh_c "echo \"deb [arch=amd64] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" > ${HTCONDOR_LIST}"
+				$sh_c "echo \"deb ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" > ${HTCONDOR_LIST}"
 				$sh_c "echo \"deb-src ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" >> ${HTCONDOR_LIST}"
 
 				echo -e "\n# Updating package lists"
@@ -798,7 +798,7 @@ done
 # to update a symlink, like we do for 'current', because we don't
 # want to surprise other stable-channel users with new features.
 if [ "${CHANNEL}" = "stable" ]; then
-	CHANNEL_DIR=10.0
+	CHANNEL_DIR=23.0
 else
 	CHANNEL_DIR=$CHANNEL
 fi
