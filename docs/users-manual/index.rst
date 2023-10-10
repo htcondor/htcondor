@@ -9,7 +9,6 @@ Users' Manual
    running-a-job-steps
    submitting-a-job
    file-transfer
-   submitting-a-remote-job
    managing-a-job
    automatic-job-management
    when-job-wont-run
@@ -24,5 +23,6 @@ Users' Manual
    docker-universe-applications
    container-universe-jobs
    self-checkpointing-applications
+   submitting-a-remote-job
    time-scheduling-for-job-execution
    special-environment-considerations
