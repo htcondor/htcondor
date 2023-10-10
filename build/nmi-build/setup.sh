@@ -256,14 +256,12 @@ if [ $ID != 'amzn' ]; then
 fi
 
 # Install pytest for BaTLab testing
-if [ "$VERSION_CODENAME" = 'bookworm' ]; then
-    pip3 install --break-system-packages pytest pytest-httpserver
-else
-    pip3 install pytest pytest-httpserver
-fi
-
 # Install sphinx-mermaid so docs can have images
-pip3 install sphinxcontrib-mermaid
+if [ "$VERSION_CODENAME" = 'bookworm' ]; then
+    pip3 install --break-system-packages pytest pytest-httpserver sphinxcontrib-mermaid
+else
+    pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+fi
 
 if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then
     # Pip installs a updated version of markupsafe that is incompatiable
