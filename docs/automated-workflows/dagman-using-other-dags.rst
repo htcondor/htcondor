@@ -496,12 +496,20 @@ The next description illustrates the resulting DAG.
 
       # END DAG FILE s1.dag
 
-.. figure:: /_images/dagman-s1-dag.png
-  :width: 350
-  :alt: The DAG described by s1.dag.
-  :align: center
+.. mermaid::
+   :caption: The DAG described by s1.dag.
+   :align: center
 
-  The DAG described by ``s1.dag``.
+   flowchart TD
+    A((A)) --> X1+A & X1+B & X1+C
+    X1+A & X1+B & X1+C --> X1+D
+    X1+D --> X1+E & X1+F & X1+G
+    X1+E & X1+F & X1+G --> X2+A
+    X1+E & X1+F & X1+G --> X2+B
+    X1+E & X1+F & X1+G --> X2+C
+    X2+A & X2+B & X2+C --> X2+D
+    X2+D --> X2+E & X2+F & X2+G
+    X2+E & X2+F & X2+G --> B
 
 Disjointed SPLICE Example
 '''''''''''''''''''''''''
@@ -542,12 +550,24 @@ having any dependencies associated with it in this top level DAG.
 
       # END DAG FILE toplevel.dag
 
-.. figure:: /_images/dagman-complex-splice.png
-  :width: 750
-  :alt: The complex splice example DAG.
-  :align: center
+.. mermaid::
+   :caption: The complex splice example DAG.
+   :align: center
 
-  The complex splice example DAG.
+   flowchart TD
+    A --> B & C
+    B & C --> D
+    D --> S2+A & S2+B & S2+C
+    S2+A & S2+B & S2+C --> S2+D
+    S2+D --> S2+E & S2+F & S2+G
+
+    S3+A --> S3+X1+A & S3+X1+B & S3+X1+C
+    S3+X1+A & S3+X1+B & S3+X1+C --> S3+X1+D
+    S3+X1+D --> S3+X1+E & S3+X1+F & S3+X1+G
+    S3+X1+E & S3+X1+F & S3+X1+G --> S3+X2+A & S3+X2+B & S3+X2+C
+    S3+X2+A & S3+X2+B & S3+X2+C --> S3+X2+D
+    S3+X2+D --> S3+X2+E & S3+X2+F & S3+X3+G
+    S3+X2+E & S3+X2+F & S3+X3+G --> S3+B
 
 Splice DIR option
 '''''''''''''''''
