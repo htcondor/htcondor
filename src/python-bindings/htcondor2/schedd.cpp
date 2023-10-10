@@ -594,8 +594,9 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
 }
 
 
-bool
-submitProcAds( int clusterID, long count, SubmitBlob * sb, int itemIndex = 0 ) {
+int
+submitProcAds( int clusterID, long count, SubmitBlob * sb, ClassAd * & clusterAd, int itemIndex = 0 ) {
+    int numJobs = 0;
 
     //
     // Create new proc ads.
@@ -605,11 +606,8 @@ submitProcAds( int clusterID, long count, SubmitBlob * sb, int itemIndex = 0 ) {
         if( procID < 0 ) {
             // This was HTCondorInternalError in version 1.
             PyErr_SetString( PyExc_RuntimeError, "Failed to create new proc ID." );
-            return false;
+            return -1;
         }
-
-        // This appears to be superfluous.
-        // sb->setClusterAndProcBuffers( clusterID, procID );
 
         ClassAd * procAd = sb->make_job_ad( JOB_ID_KEY(clusterID, procID),
             itemIndex, c, false, false, NULL, NULL );
@@ -617,17 +615,17 @@ submitProcAds( int clusterID, long count, SubmitBlob * sb, int itemIndex = 0 ) {
         if(! procAd) {
             // This was HTCondorInternalError in version 1.
             PyErr_SetString( PyExc_RuntimeError, "Failed to create job ad" );
-            return false;
+            return -1;
         }
 
         if( c == 0 ) {
             //
             // Send the cluster ad.
             //
-            ClassAd * clusterAd = procAd->GetChainedParentAd();
+            clusterAd = procAd->GetChainedParentAd();
             if(! clusterAd) {
                 PyErr_SetString( PyExc_RuntimeError, "Failed to get parent ad" );
-                return false;
+                return -1;
             }
 
             int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
@@ -635,7 +633,7 @@ submitProcAds( int clusterID, long count, SubmitBlob * sb, int itemIndex = 0 ) {
             // FIXME: do something with sb->error_stack()
             if( rval < 0 ) {
                 PyErr_SetString( PyExc_RuntimeError, "Failed to send cluster attributes" );
-                return false;
+                return -1;
             }
         }
 
@@ -643,11 +641,12 @@ submitProcAds( int clusterID, long count, SubmitBlob * sb, int itemIndex = 0 ) {
             * procAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
         if( rval < 0 ) {
             PyErr_SetString( PyExc_RuntimeError, "Failed to send proc attributes" );
-            return false;
+            return -1;
         }
+        ++numJobs;
     }
 
-    return true;
+    return numJobs;
 }
 
 
@@ -677,10 +676,6 @@ _schedd_submit( PyObject *, PyObject * args ) {
     }
 
 
-    //
-    // Create a new cluster ad.
-    //
-
     // Handle SUBMIT_SKIP_FILECHECKS.
     sb->setDisableFileChecks( param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", true) ? 1 : 0 );
 
@@ -701,6 +696,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
         return NULL;
     }
 
+    // This ends up being a pointer to a member of (a member of) `sb`.
+    ClassAd * clusterAd = NULL;
     // Get a new cluster ID.
     int clusterID = NewCluster();
     if( clusterID < 0 ) {
@@ -728,8 +725,10 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
     int itemCount = itemdata->items.number();
 
+    int numJobs = 0;
     if( itemCount == 0 ) {
-        if(! submitProcAds( clusterID, count, sb )) {
+        numJobs = submitProcAds( clusterID, count, sb, clusterAd );
+        if(numJobs < 0) {
             // submitProcAds() has already set an exception for us.
             delete itemdata;
             return NULL;
@@ -741,11 +740,13 @@ _schedd_submit( PyObject *, PyObject * args ) {
         while( (item = itemdata->items.next()) ) {
             if( itemdata->slice.selected( itemIndex, itemCount ) ) {
                 sb->set_vars( itemdata->vars, item, itemIndex );
-                if(! submitProcAds( clusterID, count, sb, itemIndex )) {
+                int nj = submitProcAds( clusterID, count, sb, clusterAd, itemIndex );
+                if( nj < 0 ) {
                     // submitProcAds() has already set an exception for us.
                     delete itemdata;
                     return NULL;
                 }
+                numJobs += nj;
             }
             ++itemIndex;
         }
@@ -763,7 +764,6 @@ _schedd_submit( PyObject *, PyObject * args ) {
     DisconnectQ(NULL);
 
 
-    // FIXME
-    // return new SubmitResult( JOB_ID_KEY(clusterID, 0), num_jobs, clusterAd );
-    Py_RETURN_NONE;
+    PyObject * pyClusterAd = py_new_htcondor2_classad(clusterAd->Copy());
+    return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd );
 }

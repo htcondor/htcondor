@@ -243,3 +243,21 @@ py_is_htcondor2_classad(PyObject * py) {
 	// since it's identical in this one and in py_new_htcondor2_classad
 	return PyObject_IsInstance( py, py_ClassAd_class );
 }
+
+
+PyObject *
+py_new_htcondor2_submit_result( int clusterID, int procID, int num_procs, PyObject * pyClassAd ) {
+	static PyObject * py_htcondor2_module = NULL;
+	if( py_htcondor2_module == NULL ) {
+		 py_htcondor2_module = PyImport_ImportModule( "htcondor2" );
+	}
+
+	static PyObject * py_SubmitResult_class = NULL;
+	if( py_SubmitResult_class == NULL ) {
+		py_SubmitResult_class = PyObject_GetAttrString( py_htcondor2_module, "SubmitResult" );
+	}
+
+	return PyObject_CallFunction( py_SubmitResult_class,
+	    "iiiO", clusterID, procID, num_procs, pyClassAd
+	);
+}
