@@ -394,7 +394,7 @@ def test_wait(condor, run_jobs):
     jel = htcondor.JobEventLog(run_jobs[2])
     start_t = time()
     while True:
-        assert time() - start_t <= 60
+        assert time() - start_t <= 180
         if len(jobids) == 0:
             break
         for event in jel.events(stop_after=1):

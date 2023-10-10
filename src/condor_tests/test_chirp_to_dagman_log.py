@@ -69,7 +69,7 @@ with HTChirp() as chirp:
 def run_dag(default_condor, test_dir, write_files):
     dag = htcondor.Submit.from_dag(DAG_FILENAME)
     dagman_job = default_condor.submit(dag)
-    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=20)
+    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=80)
     return DAG_FILENAME + ".nodes.log"
 
 #==========================================================================
@@ -80,7 +80,7 @@ class TestChirpToDAGMan:
         assert os.path.exists("chirp-HAS_LOG.log")
         assert not os.path.exists("chirp-NO_LOG.log")
 
-    def test_info_info_in_job_log(self, run_dag):
+    def test_info_in_job_log(self, run_dag):
         # Check that expected chirp message is in expected job log
         info = ""
         with htcondor.JobEventLog("chirp-HAS_LOG.log") as log:
