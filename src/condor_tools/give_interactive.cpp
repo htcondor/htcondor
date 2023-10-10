@@ -590,7 +590,7 @@ main(int argc, char *argv[])
 		else
 			offer->LookupString(ATTR_NAME, remoteHost);
 
-		if ( remoteHost[0] ) {
+		if (!remoteHost.empty()) {
 			printf("%s\n", remoteHost.c_str());
 		}
 
