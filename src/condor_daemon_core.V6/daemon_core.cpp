@@ -4933,7 +4933,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 		pidinfo = NULL;
 		target_has_dcpm = false;
 	}
-	if ( pidinfo && pidinfo->sinful_string[0] == '\0' ) {
+	if ( pidinfo && pidinfo->sinful_string.empty()) {
 		// process pid found in our table, but does not
 		// our table says it does _not_ have a command socket
 		target_has_dcpm = false;
