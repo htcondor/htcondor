@@ -1438,6 +1438,7 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 		if (verify_ptr && ((err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
 			(err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
 			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) ||
+			(err == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE) ||
 			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)))
 		{
 			bool is_permitted;
