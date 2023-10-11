@@ -364,7 +364,19 @@ sub create_deb {
 
 sub check_deb {
     # Run lintian on the packages.
-    # Add '--fail-on error' when Ubuntu20 is retired
-    # The ls can be dropped, when the errors are resolved.
-    return "lintian --suppress-tags latest-debian-changelog-entry-without-new-date,latest-changelog-entry-without-new-date *.changes; ls -lh *.deb";
+    my $fail_on_error='--fail-on error';
+    if ($ENV{NMI_PLATFORM} =~ /Ubuntu20/) {
+        $fail_on_error='';
+    }
+    # Suppress changelog checks, daily builds trigger these
+    my $suppress_tags='--suppress-tags latest-debian-changelog-entry-without-new-date,latest-changelog-entry-without-new-date';
+    if ($ENV{NMI_PLATFORM} =~ /Ubuntu/) {
+        # Ubuntu complains about the "unstable" distro
+        $suppress_tags="$suppress_tags,bad-distribution-in-changes-file";
+    }
+    if ($ENV{NMI_PLATFORM} =~ /Ubuntu|Debian11/) {
+        # Only Debian 12 and newer correctly process the lintian overrides for these
+        $suppress_tags="$suppress_tags,license-problem-json-evil,statically-linked-binary";
+    }
+    return "lintian $fail_on_error $suppress_tags *.changes";
 }
