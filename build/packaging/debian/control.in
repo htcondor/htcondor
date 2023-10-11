@@ -4,6 +4,7 @@ Uploaders: Tim Theisen <tim@cs.wisc.edu>
 Section: science
 Priority: optional
 Build-Depends: cmake (>= 3.16),
+               debhelper,
 #if defined(FOCAL)
                debhelper-compat (= 12),
 #else
@@ -30,6 +31,7 @@ Build-Depends: cmake (>= 3.16),
                libpq-dev,
                libscitokens-dev,
                libsqlite3-dev,
+               libsystemd-dev,
                libvirt-dev,
                libx11-dev,
                libxml2-dev,
@@ -47,7 +49,7 @@ Build-Depends: cmake (>= 3.16),
                voms-dev,
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
-Standards-Version: 3.9.8
+Standards-Version: 4.6.1
 Vcs-Browser: https://github.com/htcondor/htcondor
 Vcs-Git: git://github.com/htcondor/htcondor.git
 Homepage: https://htcondor.org/
@@ -72,7 +74,7 @@ Depends: adduser,
 #else
          libssl1.1,
 #endif
-         libscitokens0 (>= 0.6.2),
+         libscitokens0,
          libvomsapi1v5,
          net-tools,
          ${misc:Depends},
@@ -291,7 +293,7 @@ Package: condor-vm-gahp
 Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
-         libvirt,
+         libvirt0,
          ${misc:Depends},
          ${shlibs:Depends}
 Description: distributed workload management system - single node configuration
