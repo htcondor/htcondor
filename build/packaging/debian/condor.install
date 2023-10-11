@@ -1,4 +1,4 @@
-debian/tmp/etc/* etc/
+etc/* etc/
 usr/bin/blahpd
 usr/bin/bosco_cluster
 usr/bin/classad_eval
@@ -72,11 +72,11 @@ usr/bin/condor_wait
 usr/bin/condor_watch_q
 usr/bin/condor_who
 usr/bin/htcondor
-debian/tmp/usr/lib/condor/*.so* usr/lib/
-debian/tmp/usr/lib/libclassad*.so.*
-debian/tmp/usr/lib/condor/*.jar usr/lib/condor/
-debian/tmp/usr/lib/condor/*.class usr/lib/condor/
-debian/tmp/usr/lib/condor/condor_ssh* usr/lib/condor/
+usr/lib/condor/*.so* usr/lib/
+usr/lib/libclassad*.so.*
+usr/lib/condor/*.jar usr/lib/condor/
+usr/lib/condor/*.class usr/lib/condor/
+usr/lib/condor/condor_ssh* usr/lib/condor/
 usr/libexec/condor/accountant_log_fixer
 usr/libexec/condor/adstash
 usr/libexec/condor/annex
@@ -166,8 +166,8 @@ usr/sbin/rvgahp_client
 usr/sbin/rvgahp_proxy
 usr/sbin/rvgahp_server
 usr/sbin/scitokens_credential_producer
-debian/tmp/usr/lib/python3/* usr/lib/python3/
-debian/tmp/usr/libexec/blahp/* usr/libexec/blahp/
+usr/lib/python3/* usr/lib/python3/
+usr/libexec/blahp/* usr/libexec/blahp/
 src/condor_examples/condor.service /lib/systemd/system/
 src/condor_examples/condor-tmpfiles.conf usr/lib/tmpfiles.d/
 src/condor_examples/00-htcondor-9.0.config etc/condor/config.d/
