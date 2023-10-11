@@ -127,6 +127,16 @@ override_dh_auto_clean:
 	-rm -f doc/figuresizing.tex doc/fontsize.tex
 
 
+override_dh_installdocs:
+	dh_installdocs
+	for html in `find debian -name "*.html"` ; do \
+	    sed -i \
+		-e 's#https://maxcdn.bootstrapcdn.com/bootstrap/[^/]*/css/bootstrap.min.css#file:///usr/share/javascript/bootstrap/css/bootstrap.min.css#' \
+		-e 's#https://maxcdn.bootstrapcdn.com/bootstrap/.*/js/bootstrap.min.js#file:///usr/share/javascript/bootstrap/js/bootstrap.min.js#' \
+		-e 's#[htps:]*//code.jquery.com/jquery-[^/]*\.min\.js#file:///usr/share/javascript/jquery/jquery.min.js#' \
+		$${html} ; \
+	done
+
 # PDF come in dedicated doc package -- no compression
 override_dh_compress:
 	dh_compress -X.pdf
