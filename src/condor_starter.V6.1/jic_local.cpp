@@ -510,8 +510,8 @@ JICLocal::getJobStdFile( const char* attr_name )
 		filename += tmp;
 	}
 	free( tmp );
-	if( filename[0] ) { 
-		return strdup( filename.c_str() );
+	if (!filename.empty()) { 
+		return strdup(filename.c_str());
 	}
 	return NULL;
 }
