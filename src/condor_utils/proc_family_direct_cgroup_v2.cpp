@@ -37,12 +37,45 @@ static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
 }
 
+// given a relative cgroup name, send a signal
+// to every process in exactly that cgroup (but 
+// not sub-cgroups thereof)
+static bool
+signal_cgroup(const std::string &cgroup_name, int sig) {
+
+	pid_t me = getpid();
+	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	FILE *f = fopen(procs.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::signal_process cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
+		return false;
+	}
+	pid_t victim_pid;
+	while (fscanf(f, "%d", &victim_pid) != EOF) {
+		if (victim_pid != me) { // just in case
+			dprintf(D_FULLDEBUG, "cgroupv2 killing with signal %d to pid %d in cgroup %s\n", sig, victim_pid, cgroup_name.c_str());
+			kill(victim_pid, sig);
+		}
+	}
+	fclose(f);
+	return true;
+}
+
 // Return a vector of the absolute paths to all the
 // cgroup directories rooted here.
 static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	std::vector<stdfs::path> dirs;
 
-	// First add the root of the tree, the iterator below skips it
+	// First add the root of the tree, if it exists
+	std::error_code ec;
+	if (!stdfs::exists(cgroup_mount_point() / cgroup_name, ec)) {
+		// even the root of our tree doesn't exit, return empty vector
+		return std::vector<stdfs::path>();
+	}
+
+	// Now add the root, as the iterator below doesn't include it
 	dirs.emplace_back(cgroup_mount_point() / cgroup_name);
 
 	// append all directories from here on down
@@ -79,20 +112,33 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 
 static bool trimCgroupTree(std::string cgroup_name) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	// cgroup.kill is a new addition to cgroupv2, and doesn't exist on el9.  It is very useful, though:
+	// writing a '1' to it sends a kill -9 to all processes in this cgroup, and all processes in all
+	// sub-cgroups.  Let's try to use it, and also try the old-fashioned way.
+
 	stdfs::path kill_path = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.kill");
 	FILE *f = fopen(kill_path.c_str(), "r");
 	if (!f) {
-		// Could be it just doesn't exit
+		// Could be it just doesn't exist
 		dprintf(D_FULLDEBUG, "trimCgroupTree: cannot open %s: %d %s\n", kill_path.c_str(), errno, strerror(errno));
 	} else {
 		fprintf(f, "%c", '1');
 		fclose(f);
+	}
 
-		for (auto dir: getTree(cgroup_name)) {
-			int r = rmdir(dir.c_str());
-			if (r < 0) {
-				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::trimCgroupTree error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
-			}
+	// kill -9 any processes in any cgroup in us or under us
+	for (auto dir: getTree(cgroup_name)) {
+		// getTree returns absolute paths, but signal_cgroup needs relative -- rip off the mount_point
+		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
+		signal_cgroup(relative_cgroup, SIGKILL);
+	}
+
+	// And remove all the subcgroups, bottom up
+	for (auto dir: getTree(cgroup_name)) {
+		int r = rmdir(dir.c_str());
+		if (r < 0) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::trimCgroupTree error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
 		}
 	}
 	return true;
@@ -395,24 +441,7 @@ ProcFamilyDirectCgroupV2::signal_process(pid_t pid, int sig)
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::signal_process for %u sig %d\n", pid, sig);
 
 	std::string cgroup_name = cgroup_map[pid];
-
-	pid_t me = getpid();
-	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
-
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-	FILE *f = fopen(procs.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::signal_process cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
-		return false;
-	}
-	pid_t victim_pid;
-	while (fscanf(f, "%d", &victim_pid) != EOF) {
-		if (victim_pid != me) { // just in case
-			kill(victim_pid, sig);
-		}
-	}
-	fclose(f);
-	return true;
+	return signal_cgroup(cgroup_name, sig);
 }
 
 // Writing a '1' to cgroup.freeze freezes all the processes in this cgroup
@@ -484,7 +513,21 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	// Suspend the whole cgroup first, so that all processes are atomically
 	// killed
 	this->suspend_family(pid);
-	this->signal_process(pid, SIGKILL);
+
+	// This might not exist in your implementation of cgroupv2
+	stdfs::path kill_path = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.kill");
+	FILE *f = fopen(kill_path.c_str(), "r");
+	if (f) {
+		fprintf(f, "%c", '1');
+		fclose(f);
+	}
+
+	for (auto dir: getTree(cgroup_name)) {
+		// getTree returns absolute paths, but signal_cgroup needs relative -- rip off the mount_point
+		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
+		signal_cgroup(relative_cgroup, SIGKILL);
+	}
+
 	this->continue_family(pid);
 	return true;
 }
