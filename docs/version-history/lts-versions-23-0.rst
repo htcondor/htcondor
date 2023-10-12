@@ -15,6 +15,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-2302:
+
+Version 23.0.2
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.0.2 released on Month Date, 2023.
+
+- HTCondor version 23.0.2 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
@@ -31,6 +50,9 @@ New Features:
 - None.
 
 Bugs Fixed:
+
+- Fixed a bug that prevented USE_PID_NAMESPACES from working.
+  :jira:`2088`
 
 - Fixed a bug on Windows where jobs would be inappropriately put on hold with an out of memory
   error if they returned an exit code with high bits set
