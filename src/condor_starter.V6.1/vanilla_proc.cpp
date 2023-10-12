@@ -592,7 +592,6 @@ VanillaProc::StartJob()
 			}
 
 			Starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
-			this->m_pid_ns_status_filename = filename;
 			
 			// Now, set the job's CMD to the wrapper, and shift
 			// over the arguments by one
@@ -601,6 +600,12 @@ VanillaProc::StartJob()
 			std::string cmd;
 
 			JobAd->LookupString(ATTR_JOB_CMD, cmd);
+
+			this->canonicalizeJobPath(cmd, Starter->jic->jobRemoteIWD());
+
+			// Must set this *after* calling canonicalizeJobPath!
+			this->m_pid_ns_status_filename = filename;
+
 			args.AppendArg(cmd);
 			if (!args.AppendArgsFromClassAd(JobAd, arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
