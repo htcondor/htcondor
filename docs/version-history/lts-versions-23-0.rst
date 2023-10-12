@@ -32,6 +32,9 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that prevented USE_PID_NAMESPACES from working.
+  :jira:`2088`
+
 - Fixed a bug on Windows where jobs would be inappropriately put on hold with an out of memory
   error if they returned an exit code with high bits set
   :jira:`2061`
