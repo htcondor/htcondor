@@ -3192,16 +3192,16 @@ section.
 
 :macro-def:`UPDATE_OFFSET`
     An integer value representing the number of seconds of delay that
-    the *condor_startd* should wait before sending its initial update,
-    and the first update after a *condor_reconfig* command is sent to
-    the *condor_collector*. The time of all other updates sent after
+    the *condor_startd* should wait before sending its initial update.
+    The default is 0. The time of all other periodic updates sent after
     this initial update is determined by ``$(UPDATE_INTERVAL)``. Thus,
     the first update will be sent after ``$(UPDATE_OFFSET)`` seconds,
     and the second update will be sent after ``$(UPDATE_OFFSET)`` +
     ``$(UPDATE_INTERVAL)``. This is useful when used in conjunction with
     the ``$RANDOM_INTEGER()`` macro for large pools, to spread out the
-    updates sent by a large number of *condor_startd* daemons. Defaults
-    to zero. The example configuration
+    updates sent by a large number of *condor_startd* daemons when all
+    of the machines are started at the same time.
+    The example configuration
 
     .. code-block:: condor-config
 
@@ -3393,6 +3393,16 @@ section.
 
 :macro-def:`STARTD_ADDRESS_FILE`
     This macro is described in :macro:`<SUBSYS>_ADDRESS_FILE`
+
+:macro-def:`ENABLE_STARTD_DAEMON_AD`
+    Enable a daemon ad for the *condor_startd* that is separate from the slot ads used for matchmaking
+    and running jobs.  Allowed values are True, False, and Auto.
+    When the value is True, the *condor_startd* will advertise ``Slot`` ads describing the slot state
+    and ``StartDaemon`` ads describing the overall state of the daemon.
+    When the value is False, the *condor_startd* will advertise only ``Machine`` ads.
+    When the value is Auto, the *condor_startd* will advertise ``Slot`` and ``StartDaemon`` ads to
+    collectors that are HTCondor version 23.2 or later, and ``Machine`` ads to older collectors.
+    The default value is Auto.
 
 :macro-def:`STARTD_SHOULD_WRITE_CLAIM_ID_FILE`
     The *condor_startd* can be configured to write out the ``ClaimId``
