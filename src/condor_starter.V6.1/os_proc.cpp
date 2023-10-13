@@ -88,35 +88,8 @@ OsProc::~OsProc()
 }
 
 
-int
-OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
-{
-	int nice_inc = 0;
-	bool has_wrapper = false;
-
-	dprintf(D_FULLDEBUG,"in OsProc::StartJob()\n");
-
-	if ( !JobAd ) {
-		dprintf ( D_ALWAYS, "No JobAd in OsProc::StartJob()!\n" );
-		job_not_started = true;
-		return 0;
-	}
-
-	std::string JobName;
-	if ( JobAd->LookupString( ATTR_JOB_CMD, JobName ) != 1 ) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n",
-				 ATTR_JOB_CMD );
-		job_not_started = true;
-		return 0;
-	}
-
-	const char* job_iwd = Starter->jic->jobRemoteIWD();
-	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
-
-		// // // // // //
-		// Arguments
-		// // // // // //
-
+bool
+OsProc::canonicalizeJobPath(/* not const */ std::string &JobName, const char *job_iwd) {
 		// prepend the full path to this name so that we
 		// don't have to rely on the PATH inside the
 		// USER_JOB_WRAPPER or for exec().
@@ -150,6 +123,38 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			JobName = full_name;
 		}
 	}
+	return true;
+}
+
+int
+OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
+{
+	int nice_inc = 0;
+	bool has_wrapper = false;
+
+	dprintf(D_FULLDEBUG,"in OsProc::StartJob()\n");
+
+	if ( !JobAd ) {
+		dprintf ( D_ALWAYS, "No JobAd in OsProc::StartJob()!\n" );
+		job_not_started = true;
+		return 0;
+	}
+
+	std::string JobName;
+	if ( JobAd->LookupString( ATTR_JOB_CMD, JobName ) != 1 ) {
+		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n",
+				 ATTR_JOB_CMD );
+		job_not_started = true;
+		return 0;
+	}
+
+	const char* job_iwd = Starter->jic->jobRemoteIWD();
+	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
+
+		// // // // // //
+		// Arguments
+		// // // // // //
+	this->canonicalizeJobPath(JobName, job_iwd);
 
 	if( Starter->isGridshell() ) {
 			// if we're a gridshell, just try to chmod our job, since
@@ -170,10 +175,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// with platform-specific arg syntax in the user's args in order
 		// to successfully merge them with the additional wrapper args.
 	args.SetArgV1SyntaxToCurrentPlatform();
-
-		// First, put "condor_exec" or whatever at the front of Args,
-		// since that will become argv[0] of what we exec(), either
-		// the wrapper or the actual job.
 
 	std::string wrapper;
 	has_wrapper = param(wrapper, "USER_JOB_WRAPPER");
