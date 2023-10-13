@@ -2601,6 +2601,10 @@ description=Automatically trust the remote CA over SSL
 type=bool
 tags=io,condor_auth_ssl
 
+[BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER]
+default=true
+type=bool
+
 [COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
 default=true
 win32_default=false
