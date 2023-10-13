@@ -67,7 +67,7 @@ class KeyCacheEntry {
 };
 
 
-typedef std::map<std::string, KeyCacheEntry> KeyCache;
+using KeyCache = std::map<std::string, KeyCacheEntry, std::less<>>;
 
 
 #endif
