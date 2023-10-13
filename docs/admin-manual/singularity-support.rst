@@ -1,20 +1,19 @@
-Singularity Support
-===================
+Apptainer/Singularity Support
+=============================
 
 :index:`Singularity<single: Singularity; installation>` :index:`Singularity`
 
 Singularity (https://sylabs.io/singularity/) is a container runtime system
-popular in scientific and HPC communities.  Apptainer is an open
-source fork of Singularity that is API and CLI compatible with
-singularity.  Everything in this document that pertains to
-Singularity also is true for the Apptainer container runtime.
-HTCondor can run jobs
-inside Singularity containers either in a transparent way, where the
-job does not know that it is being contained, or, the HTCondor
-administrator can configure the HTCondor startd so that a job can
-opt into running inside a container.  This allows the operating
-system that the job sees to be different than the one on the host system,
-and provides more isolation between processes running in one job and another.
+popular in scientific and HPC communities.  Apptainer (https://apptainer.org)
+is an open source fork of Singularity that is API and CLI compatible with
+singularity.  Everything in this document that pertains to Singularity also is
+true for the Apptainer container runtime.  HTCondor can run jobs inside
+Singularity containers either in a transparent way, where the job does not know
+that it is being contained, or, the HTCondor administrator can configure the
+HTCondor startd so that a job can opt into running inside a container.  This
+allows the operating system that the job sees to be different than the one on
+the host system, and provides more isolation between processes running in one
+job and another.
 
 The decision to run a job inside Singularity
 ultimately resides on the worker node, although it can delegate that to the job.
