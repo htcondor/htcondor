@@ -37,8 +37,125 @@ static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
 }
 
+// given a relative cgroup name, send a signal
+// to every process in exactly that cgroup (but 
+// not sub-cgroups thereof)
+static bool
+signal_cgroup(const std::string &cgroup_name, int sig) {
+
+	pid_t me = getpid();
+	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	FILE *f = fopen(procs.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::signal_process cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
+		return false;
+	}
+	pid_t victim_pid;
+	while (fscanf(f, "%d", &victim_pid) != EOF) {
+		if (victim_pid != me) { // just in case
+			dprintf(D_FULLDEBUG, "cgroupv2 killing with signal %d to pid %d in cgroup %s\n", sig, victim_pid, cgroup_name.c_str());
+			kill(victim_pid, sig);
+		}
+	}
+	fclose(f);
+	return true;
+}
+
+// Return a vector of the absolute paths to all the
+// cgroup directories rooted here.
+static std::vector<stdfs::path> getTree(std::string cgroup_name) {
+	std::vector<stdfs::path> dirs;
+
+	// First add the root of the tree, if it exists
+	std::error_code ec;
+	if (!stdfs::exists(cgroup_mount_point() / cgroup_name, ec)) {
+		// even the root of our tree doesn't exit, return empty vector
+		return std::vector<stdfs::path>();
+	}
+
+	// Now add the root, as the iterator below doesn't include it
+	dirs.emplace_back(cgroup_mount_point() / cgroup_name);
+
+	// append all directories from here on down
+	for (auto entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name}) {
+		if (stdfs::is_directory(entry)) {
+			dirs.emplace_back(entry);
+		}	
+	}
+
+	auto deepest_first = [](const stdfs::path &p1, const stdfs::path &p2) {
+		// Sort by length first, so deepest path sorts first
+		if (p1.string().length() != p2.string().length()) {
+			return p1.string().length() > p2.string().length();
+		}
+
+		// otherwise we don't care, just lexi
+		return p1.string() > p2.string();
+	};
+
+	// Sort them so deeper (longer) dirs come first
+	std::sort(dirs.begin(), dirs.end(), deepest_first);
+
+	return dirs;
+}
+
+static bool killCgroupTree(const std::string &cgroup_name) {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	//
+	// cgroup.kill is a new addition to cgroupv2, and doesn't exist on el9.  It is very useful, though:
+	// writing a '1' to it sends a kill -9 to all processes in this cgroup, and all processes in all
+	// sub-cgroups.  Let's try to use it, and also try the old-fashioned way.
+
+	stdfs::path kill_path = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.kill");
+	FILE *f = fopen(kill_path.c_str(), "r");
+	if (!f) {
+		// Could be it just doesn't exist
+		dprintf(D_FULLDEBUG, "trimCgroupTree: cannot open %s: %d %s\n", kill_path.c_str(), errno, strerror(errno));
+	} else {
+		fprintf(f, "%c", '1');
+		fclose(f);
+	}
+
+	// kill -9 any processes in any cgroup in us or under us
+	for (auto dir: getTree(cgroup_name)) {
+		// getTree returns absolute paths, but signal_cgroup needs relative -- rip off the mount_point
+		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
+		signal_cgroup(relative_cgroup, SIGKILL);
+	}
+	return true;
+}
+
+// given a relative cgroup name, which may or may not exist,
+// remove all child cgroups.  rm -fr (or equivalent) can't
+// work because the files can't be rm'd, even by root, only
+// the directories.  And the directories can't be removed
+// if there is an active process in that cgroup, or if there
+// is a sub-cgroup.  So, first atomically kill all the
+// procs in cgroups rooted at this tree, then bottom-up
+// remove their directories
+
+static bool trimCgroupTree(const std::string &cgroup_name) {
+
+	// Kill all processes in the whole cgroup tree
+	killCgroupTree(cgroup_name);
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	
+	// Remove all the subcgroups, bottom up
+	for (auto dir: getTree(cgroup_name)) {
+		int r = rmdir(dir.c_str());
+		if (r < 0) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::trimCgroupTree error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
+		}
+	}
+	return true;
+}
+
 // mkdir the cgroup, and all required interior cgroups.  Note that the leaf
-// cgroup in v2 cannot have anything in .../cgroup_subtree_control, or else
+// cgroup in v2 cannot have anything in ../cgroup_subtree_control, or else
 // we can't put a process in it.  Interior nodes *must* have the controllers
 // put in that file, or else we won't have any controllers to query in
 // our interior nodes.
@@ -55,10 +172,7 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 
 	// If the full cgroup exists, remove it to clear the various
 	// peak statistics and any existing memory
-	int r = rmdir((cgroup_root_dir / cgroup_name).c_str());
-	if ((r < 0) && (errno != ENOENT))  {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::track_family_via_cgroup error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
-	}
+	trimCgroupTree(cgroup_name);
 
 	// Accumulate along path components
 	auto interior_dir_maker = [](const stdfs::path &fulldir, const stdfs::path &next_part) {
@@ -168,12 +282,12 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 	// 2.) cgroup.procs file writeable by the user (so they can move processes out of the interior
 	//                  node and into the leaf.  Cgroupv2 requires all processes to live in the leaf nodes.
 	// 3.) cgroup.subtree_control
-	
+
 	uid_t uid = get_user_uid();
 	gid_t gid = get_user_gid();
-	
+
 	if ( (uid != (uid_t) -1) && (gid != (gid_t) -1)) {
-		r = chown((cgroup_mount_point() / stdfs::path(cgroup_name)).c_str(), uid, gid);
+		int r = chown((cgroup_mount_point() / stdfs::path(cgroup_name)).c_str(), uid, gid);
 		if (r < 0) {
 			dprintf(D_ALWAYS, "Error chown'ing cgroup directory to user %u and group %u: %s\n", uid, gid, strerror(errno));
 		}
@@ -211,7 +325,7 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, const FamilyInfo *f
 	return true;
 }
 
-bool
+	bool
 ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
 {
 	// DaemonCore uses "get_usage(getpid())" to test the procd, ignoring the usage
@@ -277,7 +391,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 
 	usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
 	usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
-	
+
 	stdfs::path memory_current = leaf / "memory.current";
 	stdfs::path memory_peak   = leaf / "memory.peak";
 
@@ -303,7 +417,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
 	} else {
 		if (fscanf(f, "%ld", &memory_peak_value) != 1) {
-	
+
 			// But this error should never happen
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
 			fclose(f);
@@ -331,36 +445,19 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 // Note that in cgroup v2, cgroup.procs contains only those processes in
 // this direct cgroup, and does not contain processes in any descendent
 // cgroup (except the / croup, which does).
-bool
+	bool
 ProcFamilyDirectCgroupV2::signal_process(pid_t pid, int sig)
 {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::signal_process for %u sig %d\n", pid, sig);
 
 	std::string cgroup_name = cgroup_map[pid];
-
-	pid_t me = getpid();
-	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
-
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-	FILE *f = fopen(procs.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::signal_process cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
-		return false;
-	}
-	pid_t victim_pid;
-	while (fscanf(f, "%d", &victim_pid) != EOF) {
-		if (pid != me) { // just in case
-			kill(victim_pid, sig);
-		}
-	}
-	fclose(f);
-	return true;
+	return signal_cgroup(cgroup_name, sig);
 }
 
 // Writing a '1' to cgroup.freeze freezes all the processes in this cgroup
 // and also freezes all descendent cgroups.  Might need to poll
 // cgroup.freeze until it reads '1' to verify that everyone is frozen.
-bool
+	bool
 ProcFamilyDirectCgroupV2::suspend_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
@@ -388,7 +485,7 @@ ProcFamilyDirectCgroupV2::suspend_family(pid_t pid)
 	return success;
 }
 
-bool
+	bool
 ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
@@ -416,7 +513,7 @@ ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 	return success;
 }
 
-bool
+	bool
 ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
@@ -426,61 +523,28 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	// Suspend the whole cgroup first, so that all processes are atomically
 	// killed
 	this->suspend_family(pid);
-	this->signal_process(pid, SIGKILL);
+
+	// send SIGKILL or use cgroup.kill to SIGKILL the whole tree
+	killCgroupTree(cgroup_name);
+
 	this->continue_family(pid);
+
 	return true;
-}
-
-// Return a vector of the absolute paths to all the
-// cgroup directories rooted here.
-static std::vector<stdfs::path> getTree(std::string cgroup_name) {
-	std::vector<stdfs::path> dirs;
-
-	// First add the root of the tree, the iterator below skips it
-	dirs.emplace_back(cgroup_mount_point() / cgroup_name);
-
-	// append all directories from here on down
-	for (auto entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name}) {
-		if (stdfs::is_directory(entry)) {
-			dirs.emplace_back(entry);
-		}	
-	}
-
-	auto deepest_first = [](const stdfs::path &p1, const stdfs::path &p2) {
-		// Sort by length first, so deepest path sorts first
-		if (p1.string().length() != p2.string().length()) {
-			return p1.string().length() > p2.string().length();
-		}
-
-		// otherwise we don't care, just lexi
-		return p1.string() > p2.string();
-	};
-
-	// Sort them so deeper (longer) dirs come first
-	std::sort(dirs.begin(), dirs.end(), deepest_first);
-
-	return dirs;
 }
 
 //
 // Note: DaemonCore doesn't call this from the starter, because
 // the starter exits from the JobReaper, and dc call this after
 // calling the reaper.
-bool
+	bool
 ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::unregister_family for pid %u\n", pid);
 	// Remove this cgroup, so that we clear the various peak statistics it holds
-	
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-	for (auto dir: getTree(cgroup_mount_point() / cgroup_name)) {
-		int r = rmdir(dir.c_str());
-		if (r < 0) {
-			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::unregister_family error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
-		}
-	}
+
+	trimCgroupTree(cgroup_name);
 
 	return true;
 }
