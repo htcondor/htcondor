@@ -1011,7 +1011,7 @@ ResMgr::update_all( int /* timerID */ )
 
 #ifdef DO_BULK_COLLECTOR_UPDATES
 // Evaluate and send updates for dirty resources, and clear update dirty bits
-void ResMgr::send_updates_and_clear_dirty(int timerID /*= -1*/)
+void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 {
 	const unsigned int whyfor_mask = send_updates_whyfor_mask;
 	send_updates_tid = -1;
