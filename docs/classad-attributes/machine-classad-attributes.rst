@@ -242,6 +242,11 @@ Machine ClassAd Attributes
     as defined in :ref:`admin-manual/configuration-macros:condor_starter configuration file
     entries`.
 
+:classad-attribute:`HasRotationalScratch`
+    A boolean when true indicates that this machine's EXECUTE directory is on a rotational
+    hard disk.  When false, the EXECUTE directory is on a SSD, NVMe, tmpfs or other storage
+    system, generally with much better performance than a rotational disk.
+
 :classad-attribute:`HasUserNamespaces`
     A boolean value that when ``True`` identifies that the jobs on this machine
     can create user namespaces without root privileges.
