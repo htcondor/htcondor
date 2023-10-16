@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Linux EPs now advertise the startd attribute HasRotationalScratch to be
+  true when HTCondor detects that the execute directory is on a rotational
+  hard disk and false when the kernel reports it to be on SSD, NVME or tmpfs.
+  :jira:`2085`
 
 Bugs Fixed:
 
