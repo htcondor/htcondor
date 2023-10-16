@@ -1,5 +1,5 @@
-Policy Configuration for Access Points
-======================================
+Configuration for Access Points
+===============================
 
 *condor_schedd* Policy Configuration
 -------------------------------------

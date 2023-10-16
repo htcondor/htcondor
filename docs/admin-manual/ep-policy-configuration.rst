@@ -1,5 +1,5 @@
-Policy Configuration for Execution Points and for Access Points
-===============================================================
+Configuration for Execution Points
+==================================
 
 .. note::
     Configuration templates make it easier to implement certain
