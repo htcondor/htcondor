@@ -2541,17 +2541,35 @@ description=Disable client host checks for SSL authentication.
 type=bool
 tags=condor_auth_ssl
 
+[AUTH_SSL_SERVER_USE_DEFAULT_CAS]
+default=true
+type=bool
+
+[AUTH_SSL_CLIENT_USE_DEFAULT_CAS]
+default=true
+type=bool
+
 [AUTH_SSL_SERVER_CAFILE]
-default=/etc/pki/tls/certs/ca-bundle.crt
-win32_default=
-description=Default location of the system CA bundle
+default=
+description=Location of additonal CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CADIR]
+default=
+description=Location of additonal CA bundle
 type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_CLIENT_CAFILE]
-default=/etc/pki/tls/certs/ca-bundle.crt
-win32_default=
-description=Default location of the system CA bundle
+default=
+description=Location of additional CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_CLIENT_CADIR]
+default=
+description=Location of additional CA bundle
 type=path
 tags=condor_auth_ssl
 
