@@ -101,18 +101,10 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	return dirs;
 }
 
-// given a relative cgroup name, which may or may not exist,
-// remove all child cgroups.  rm -fr (or equivalent) can't
-// work because the files can't be rm'd, even by root, only
-// the directories.  And the directories can't be removed
-// if there is an active process in that cgroup, or if there
-// is a sub-cgroup.  So, first atomically kill all the
-// procs in cgroups rooted at this tree, then bottom-up
-// remove their directories
-
-static bool trimCgroupTree(std::string cgroup_name) {
+static bool killCgroupTree(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
+	//
 	// cgroup.kill is a new addition to cgroupv2, and doesn't exist on el9.  It is very useful, though:
 	// writing a '1' to it sends a kill -9 to all processes in this cgroup, and all processes in all
 	// sub-cgroups.  Let's try to use it, and also try the old-fashioned way.
@@ -133,8 +125,26 @@ static bool trimCgroupTree(std::string cgroup_name) {
 		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
 		signal_cgroup(relative_cgroup, SIGKILL);
 	}
+	return true;
+}
 
-	// And remove all the subcgroups, bottom up
+// given a relative cgroup name, which may or may not exist,
+// remove all child cgroups.  rm -fr (or equivalent) can't
+// work because the files can't be rm'd, even by root, only
+// the directories.  And the directories can't be removed
+// if there is an active process in that cgroup, or if there
+// is a sub-cgroup.  So, first atomically kill all the
+// procs in cgroups rooted at this tree, then bottom-up
+// remove their directories
+
+static bool trimCgroupTree(const std::string &cgroup_name) {
+
+	// Kill all processes in the whole cgroup tree
+	killCgroupTree(cgroup_name);
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	
+	// Remove all the subcgroups, bottom up
 	for (auto dir: getTree(cgroup_name)) {
 		int r = rmdir(dir.c_str());
 		if (r < 0) {
@@ -514,21 +524,11 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	// killed
 	this->suspend_family(pid);
 
-	// This might not exist in your implementation of cgroupv2
-	stdfs::path kill_path = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.kill");
-	FILE *f = fopen(kill_path.c_str(), "r");
-	if (f) {
-		fprintf(f, "%c", '1');
-		fclose(f);
-	}
-
-	for (auto dir: getTree(cgroup_name)) {
-		// getTree returns absolute paths, but signal_cgroup needs relative -- rip off the mount_point
-		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
-		signal_cgroup(relative_cgroup, SIGKILL);
-	}
+	// send SIGKILL or use cgroup.kill to SIGKILL the whole tree
+	killCgroupTree(cgroup_name);
 
 	this->continue_family(pid);
+
 	return true;
 }
 
