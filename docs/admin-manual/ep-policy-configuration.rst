@@ -99,7 +99,7 @@ configuration template, the ``IS_OWNER`` expression is a function of the
     START =?= FALSE
 
 See a detailed discussion of the ``IS_OWNER`` expression in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 However, the machine locally evaluates the ``IS_OWNER`` expression to determine
 if it is capable of running jobs for HTCondor. Any job ClassAd attributes
 appearing in the ``START`` expression, and hence in the ``IS_OWNER`` expression,
@@ -618,7 +618,7 @@ expression is optimized for a shared resource
 
 So, the machine will remain in the Owner state as long as the ``START``
 expression locally evaluates to FALSE.
-The :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+The :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 section provides more detail on the
 ``START`` expression. If the ``START`` locally evaluates to TRUE or
 cannot be locally evaluated (it evaluates to UNDEFINED), transition
@@ -1711,7 +1711,7 @@ available RAM. HTCondor will not directly enforce a RAM utilization
 limit on either slot. If a shared resource enforcement capability is
 needed, it is possible to write a policy that will evict a job that
 over subscribes to shared resources, as described in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 
 Dividing System Resources in Multi-core Machines
 ''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1855,7 +1855,7 @@ Define slot types.
     In addition to the standard resources of CPUs, memory, disk, and
     swap, the administrator may also define custom resources on a
     localized per-machine basis.
-    In addition to GPUs (see :ref:`admin-manual/policy-configuration:Configuring GPUs`.)
+    In addition to GPUs (see :ref:`admin-manual/ep-policy-configuration:Configuring GPUs`.)
     the administrator can define other types of custom resources.
 
     The resource names and quantities of available resources are defined
@@ -1901,7 +1901,7 @@ Define slot types.
 
     A job may request these local machine resources using the syntax
     **request_<name>** :index:`request_<name><single: request_<name>; submit commands>`,
-    as described in :ref:`admin-manual/policy-configuration:*condor_startd*
+    as described in :ref:`admin-manual/ep-policy-configuration:*condor_startd*
     policy configuration`. This example shows a portion of a submit description
     file that requests cogs and an actuator:
 
@@ -2394,7 +2394,7 @@ into 1GB dynamic slots. In this instance a job requiring 2GB of memory
 will be starved and unable to run. A partial solution to this problem is
 provided by defragmentation accomplished by the *condor_defrag* daemon,
 as discussed in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 :index:`partitionable slot preemption`
 :index:`pslot preemption`
 

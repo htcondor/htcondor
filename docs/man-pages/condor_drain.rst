@@ -56,7 +56,7 @@ draining state (see below). The **-start** expression you supply
 replaces the draining machine's normal ``START`` expression for the
 duration of the draining state, potentially making those resources
 available. See the
-:ref:`admin-manual/policy-configuration:*condor_startd* Policy Configuration`
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* Policy Configuration`
 section for more information.
 
 Once draining is complete, the machine will enter the Drained/Idle

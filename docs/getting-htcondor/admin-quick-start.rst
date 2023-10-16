@@ -192,7 +192,7 @@ users, or groups of users, using the user priority and group quota systems,
 described in :doc:`../admin-manual/user-priorities-negotiation`.  You
 can enforce machine-specific policies -- for instance, preferring GPU jobs
 on machines with GPUs -- using the options described in
-:doc:`../admin-manual/policy-configuration`.
+:doc:`../admin-manual/ep-policy-configuration`.
 
 .. rubric:: Further Reading
 
