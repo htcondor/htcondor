@@ -1531,13 +1531,10 @@ keyboard activity. :index:`disabling preemption<single: disabling preemption; po
 
 **Disabling and Enabling Preemption**
 
-Preemption causes a running job to be suspended or killed, such that
-another job can run. As of HTCondor version 8.1.5, preemption is
-disabled by the default configuration. Previous versions of HTCondor had
-configuration that enabled preemption. Upon upgrade, the previous
-behavior will continue, if the previous configuration files are used.
-New configuration file examples disable preemption, but contain
-directions for enabling preemption.
+Preemption causes a running job to be suspended or killed, such that another
+job can run. Preemption is disabled by the default configuration.
+Configuration file examples disable preemption, but contain directions for
+enabling preemption.
 :index:`suspending jobs instead of evicting them<single: suspending jobs instead of evicting them; policy>`
 
 **Job Suspension**
@@ -2161,20 +2158,13 @@ which can be used to define additional command line arguments for the
 causes the *condor_gpu_discovery* tool to output more attributes that
 describe the detected GPUs on the machine.
 
-Prior to HTCondor version 9.11 *condor_gpu_discovery* would publish GPU
-properties using attributes with a name prefix that indicated which GPU
-the property referred to.  Beginning with version 9.11, discovery would
-default to using nested ClassAds for GPU properties.  The administrator
+*condor_gpu_discovery* defaults to using nested ClassAds for GPU properties.  The administrator
 can be explicit about which form to use for properties by adding either the
 ``-nested`` or ``-not-nested`` option to :macro:`GPU_DISCOVERY_EXTRA`. 
 
 The format -- nested or not -- of GPU properties in the slot ad is the same as published
 by *condor_gpu_discovery*.  The use of nested GPU property ads is necessary
 to do GPU matchmaking and to properly support heterogeneous GPUs.  
-For pools that have execute nodes running older versions of HTCondor,
-you may want to config ``-not-nested`` on newer machines for consistency with older
-machines. However jobs that use the ``require_gpus`` keyword will never match machines
-that are configured to use ``-not-nested`` gpu discovery.
 
 For resources like GPUs that have individual properties, when configuring slots
 the slot configuration can specify a constraint on those properties
@@ -2779,11 +2769,10 @@ matching transforms are applied - not just the first one. (See the
 :doc:`/grid-computing/job-router` section for information on the
 *condor_job_router*.)
 
-Beginning with HTCondor 9.4.0, when a submission is a late materialization job factory,
-transforms that would match the first factory job will be applied to the Cluster ad at submit time.
-When job ads are later materialized, attribute values set by the transform
-will override values set by the job factory for those attributes.  Prior to this version
-transforms were applied to late materialization jobs only after submit time.
+When a submission is a late materialization job factory, transforms that would
+match the first factory job will be applied to the Cluster ad at submit time.
+When job ads are later materialized, attribute values set by the transform will
+override values set by the job factory for those attributes.
 
 The following example shows a set of two transforms: one that
 automatically assigns an accounting group to jobs based on the
