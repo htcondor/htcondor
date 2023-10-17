@@ -4,6 +4,7 @@ from ._common_imports import (
     classad,
 )
 
+from ._job_event_type import JobEventType
 
 class JobEvent(Mapping):
 
@@ -12,11 +13,9 @@ class JobEvent(Mapping):
         self._event_text = event_text
 
 
-    # In version 1, this was documented as a JobEventType,
-    # but the implementation always returned an int.
     @property
-    def type(self) -> int:
-        return self._data["type"]
+    def type(self) -> JobEventType:
+        return JobEventType(self._data["type"])
 
 
     @property
