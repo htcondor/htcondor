@@ -1014,7 +1014,7 @@ These CA certificates are used in addition to the default CA file and
 directory locations given in OpenSSL's configuration.
 If you do not want to use OpenSSL's default trusted CAs, you can set
 the configuration variables :macro:`AUTH_SSL_SERVER_USE_DEFAULT_CAS`
-and :macro:`AUTH_SSL_SERVER_USE_DEFAULT_CAS` to ``False``.
+and :macro:`AUTH_SSL_CLIENT_USE_DEFAULT_CAS` to ``False``.
 
 
 Bootstrapping SSL Authentication
