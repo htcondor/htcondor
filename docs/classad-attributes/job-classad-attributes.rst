@@ -23,7 +23,7 @@ all attributes.
     the
     **accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
     command. This attribute is only present if an accounting group was
-    requested by the submission. See the :doc:`/admin-manual/user-priorities-negotiation` section
+    requested by the submission. See the :doc:`/admin-manual/cm-configuration` section
     for more information about accounting groups.
 
 :classad-attribute:`AcctGroupUser`

@@ -70,7 +70,7 @@ STEP 3: This Machine's Roles.
 STEP 4: The Account Domain.
     Enter the machine's accounting (or UID) domain. On this version of
     HTCondor for Windows, this setting is only used for user priorities
-    (see the :doc:`/admin-manual/user-priorities-negotiation` section)
+    (see the :doc:`/admin-manual/cm-configuration` section)
     and to form a default e-mail address for the user.
 
 STEP 5: E-mail Settings.

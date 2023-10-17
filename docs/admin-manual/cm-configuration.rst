@@ -1,5 +1,11 @@
+Configuration for Central Managers
+==================================
+
+:index:`condor_schedd policy<single: condor_schedd policy; configuration>`
+:index:`policy configuration<single: policy configuration; submit host>`
+
 User Priorities and Negotiation
-===============================
+-------------------------------
 
 :index:`in machine allocation<single: in machine allocation; priority>`
 :index:`user priority`
@@ -29,7 +35,7 @@ priorities may be found in the
 file entries` section.
 
 Real User Priority (RUP)
-------------------------
+''''''''''''''''''''''''
 
 :index:`real user priority (RUP)`
 :index:`real (RUP)<single: real (RUP); user priority>`
@@ -68,7 +74,7 @@ their RUP will grow and shrink as shown below:
     :align: center
 
 Effective User Priority (EUP)
------------------------------
+'''''''''''''''''''''''''''''
 
 :index:`effective user priority (EUP)`
 :index:`effective (EUP)<single: effective (EUP); user priority>`
@@ -140,7 +146,7 @@ The priority boost factors for individual users can be set with the
 :doc:`/man-pages/condor_userprio` manual page.
 
 Priorities in Negotiation and Preemption
-----------------------------------------
+''''''''''''''''''''''''''''''''''''''''
 
 :index:`priority<single: priority; negotiation>` :index:`priority<single: priority; matchmaking>`
 :index:`priority<single: priority; preemption>`
@@ -258,7 +264,7 @@ entries` section for definitions of these configuration variables.
     via autoregroup.
 
 Priority Calculation
---------------------
+''''''''''''''''''''
 
 This section may be skipped if the reader so feels, but for the curious,
 here is HTCondor's priority calculation algorithm.
@@ -416,7 +422,7 @@ will change the definition of what the *condor_schedd* considers a cluster from
 the default definition of all jobs that share the same ``ClusterId``.
 
 The Layperson's Description of the Pie Spin and Pie Slice
----------------------------------------------------------
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 :index:`pie slice` :index:`pie spin`
 :index:`pie slice<single: pie slice; scheduling>`
