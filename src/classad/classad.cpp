@@ -19,7 +19,6 @@
 
 #include "classad/common.h"
 #include "classad/classad.h"
-#include "classad/classadItor.h"
 #include "classad/source.h"
 #include "classad/sink.h"
 #include "classad/classadCache.h"
@@ -2117,34 +2116,6 @@ FlattenAndInline( const ExprTree *tree , Value &val , ExprTree *&fexpr ) const
 	state.flattenAndInline = true;
 	return( tree->Flatten( state , val , fexpr ) );
 }
-
-bool ClassAdIterator::
-NextAttribute( string &attr, const ExprTree *&expr )
-{
-	if (!ad) return false;
-
-	attr = "";
-	expr = NULL;
-	if( itr==ad->attrList.end( ) ) return( false );
-	itr++;
-	if( itr==ad->attrList.end( ) ) return( false );
-	attr = itr->first;
-	expr = itr->second;
-	return( true );
-}
-
-
-bool ClassAdIterator::
-CurrentAttribute (string &attr, const ExprTree *&expr) const
-{
-	if (!ad ) return( false );
-	if( itr==ad->attrList.end( ) ) return( false );
-	attr = itr->first;
-	expr = itr->second;
-	return true;	
-}
-
-
 
 void ClassAd::ChainToAd(ClassAd *new_chain_parent_ad)
 {

@@ -144,6 +144,7 @@ static decltype(&SSL_CTX_set_options) SSL_CTX_set_options_ptr = nullptr;
 static decltype(&SSL_peek) SSL_peek_ptr = nullptr;
 static decltype(&SSL_CTX_free) SSL_CTX_free_ptr = nullptr;
 static decltype(&SSL_CTX_load_verify_locations) SSL_CTX_load_verify_locations_ptr = nullptr;
+static decltype(&SSL_CTX_set_default_verify_paths) SSL_CTX_set_default_verify_paths_ptr = nullptr;
 static decltype(&SSL_CTX_new) SSL_CTX_new_ptr = nullptr;
 static decltype(&SSL_CTX_set_cipher_list) SSL_CTX_set_cipher_list_ptr = nullptr;
 static decltype(&SSL_CTX_set_verify) SSL_CTX_set_verify_ptr = nullptr;
@@ -248,6 +249,7 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_peek_ptr = reinterpret_cast<decltype(SSL_peek_ptr)>(dlsym(dl_hdl, "SSL_peek"))) ||
 		 !(SSL_CTX_free_ptr = reinterpret_cast<decltype(SSL_CTX_free_ptr)>(dlsym(dl_hdl, "SSL_CTX_free"))) ||
 		 !(SSL_CTX_load_verify_locations_ptr = reinterpret_cast<decltype(SSL_CTX_load_verify_locations_ptr)>(dlsym(dl_hdl, "SSL_CTX_load_verify_locations"))) ||
+		 !(SSL_CTX_set_default_verify_paths_ptr = reinterpret_cast<decltype(SSL_CTX_set_default_verify_paths_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_default_verify_paths"))) ||
 		 !(SSL_CTX_new_ptr = reinterpret_cast<decltype(SSL_CTX_new_ptr)>(dlsym(dl_hdl, "SSL_CTX_new"))) ||
 		 !(SSL_CTX_set_cipher_list_ptr = reinterpret_cast<decltype(SSL_CTX_set_cipher_list_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_cipher_list"))) ||
 		 !(SSL_CTX_set_verify_ptr = reinterpret_cast<decltype(SSL_CTX_set_verify_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_verify"))) ||
@@ -310,6 +312,7 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_peek_ptr = SSL_peek;
 	SSL_CTX_free_ptr = SSL_CTX_free;
 	SSL_CTX_load_verify_locations_ptr = SSL_CTX_load_verify_locations;
+	SSL_CTX_set_default_verify_paths_ptr = SSL_CTX_set_default_verify_paths;
 	SSL_CTX_new_ptr = SSL_CTX_new;
 	SSL_CTX_set_cipher_list_ptr = SSL_CTX_set_cipher_list;
 	SSL_CTX_set_verify_ptr = SSL_CTX_set_verify;
@@ -1874,6 +1877,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
     X509_VERIFY_PARAM *verify_param = nullptr;
+    bool use_default_cas = true;
     bool i_need_cert   = is_server;
     bool allow_peer_proxy = false;
     const char *cafile_preferred = nullptr;
@@ -1891,6 +1895,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		cadir      = param( AUTH_SSL_SERVER_CADIR_STR );
 		certfile   = param( AUTH_SSL_SERVER_CERTFILE_STR );
 		keyfile    = param( AUTH_SSL_SERVER_KEYFILE_STR );
+		use_default_cas = param_boolean("AUTH_SSL_SERVER_USE_DEFAULT_CAS", true);
 		allow_peer_proxy = param_boolean("AUTH_SSL_ALLOW_CLIENT_PROXY", false);
 	} else {
 		cafile     = param( AUTH_SSL_CLIENT_CAFILE_STR );
@@ -1911,6 +1916,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 				keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
 			}
 		}
+		use_default_cas = param_boolean("AUTH_SSL_CLIENT_USE_DEFAULT_CAS", true);
 	}		
 	cipherlist = param( AUTH_SSL_CIPHERLIST_STR );
     if( cipherlist == NULL ) {
@@ -1982,10 +1988,16 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     }
     if( (cafile_preferred || cadir) && SSL_CTX_load_verify_locations_ptr( ctx, cafile_preferred, cadir ) != 1 ) {
         auto error_number = ERR_get_error();
-		auto error_string = error_number ? ERR_error_string(error_number, nullptr) : "Unknown error";
-        dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s): %s \n",
-			cafile_preferred, cadir, error_string);
-	goto setup_server_ctx_err;
+        auto error_string = error_number ? ERR_error_string(error_number, nullptr) : "Unknown error";
+        dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s): %s\n",
+            cafile_preferred, cadir, error_string);
+        goto setup_server_ctx_err;
+    }
+    if (use_default_cas && SSL_CTX_set_default_verify_paths_ptr(ctx) != 1) {
+        auto error_number = ERR_get_error();
+        auto error_string = error_number ? ERR_error_string(error_number, nullptr) : "Unknown error";
+        dprintf(D_SECURITY, "SSL Auth: Error loading default CA files: %s\n", error_string);
+        goto setup_server_ctx_err;
     }
     {
         StringList certfile_list(certfile ? certfile : "", ",");

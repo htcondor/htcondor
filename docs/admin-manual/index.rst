@@ -11,7 +11,8 @@ Administrators' Manual
    configuration-templates
    configuration-macros
    user-priorities-negotiation
-   policy-configuration
+   ep-policy-configuration
+   ap-policy-configuration
    daemon-cron
    security
    networking

@@ -20,7 +20,7 @@ read the other configuration-related sections:
    configuration macros.
 -  The settings that control the policy under which HTCondor will start,
    suspend, resume, vacate or kill jobs are described in
-   the :doc:`/admin-manual/policy-configuration` section on Policy
+   the :doc:`/admin-manual/ep-policy-configuration` section on Policy
    Configuration for the *condor_startd*.
 
 HTCondor Configuration Files

@@ -1247,7 +1247,7 @@ you can run the command
 
 Access to GPU resources by an HTCondor job needs special configuration
 of the machines that offer GPUs. Details of how to set up the
-configuration are in the :doc:`/admin-manual/policy-configuration` section.
+configuration are in the :doc:`/admin-manual/ep-policy-configuration` section.
 
 Interactive Jobs
 ----------------

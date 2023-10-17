@@ -73,7 +73,7 @@ fi
   fi
   
   
-  if [ "x${use_registry}" == "xyes" ]; then
+  if [ "x${use_registry}" = "xyes" ]; then
    GLITE_CE_BUPDATER=$bnotifier_path
    GLITE_CE_BNOTIFIER=$bupdater_path
   else
@@ -83,14 +83,14 @@ fi
   case "$1" in
 
   start)
-              if [ "x${use_registry}" == "xyes" ]; then
+              if [ "x${use_registry}" = "xyes" ]; then
 	       echo -n "Starting `basename $GLITE_CE_BUPDATER`: " 
 	       daemon --user=tomcat $GLITE_CE_BUPDATER
                RETVAL=$?
 	       echo 
 	      fi
 
-              if [ "x${use_registry}" == "xyes" ]; then
+              if [ "x${use_registry}" = "xyes" ]; then
                echo -n "Starting `basename $GLITE_CE_BNOTIFIER`: " 
                daemon --user=tomcat $GLITE_CE_BNOTIFIER
 	      else
@@ -102,14 +102,14 @@ fi
               ;;
 
   stop)
-              if [ "x${use_registry}" == "xyes" ]; then
+              if [ "x${use_registry}" = "xyes" ]; then
        	       echo -n "Shutting down `basename ${GLITE_CE_BUPDATER}`: "
        	       killproc ${GLITE_CE_BUPDATER} 
                RETVAL=$?
        	       echo
 	      fi
 
-              if [ "x${use_registry}" == "xyes" ]; then
+              if [ "x${use_registry}" = "xyes" ]; then
 	       echo -n "Shutting down `basename ${GLITE_CE_BNOTIFIER}`: "
                killproc ${GLITE_CE_BNOTIFIER} 
 	      else
@@ -121,7 +121,7 @@ fi
               ;;
 
   status)
-              if [ "x${use_registry}" == "xyes" ]; then
+              if [ "x${use_registry}" = "xyes" ]; then
 	       status ${GLITE_CE_BUPDATER}
 	       status ${GLITE_CE_BNOTIFIER}
 	      else

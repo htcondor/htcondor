@@ -1536,8 +1536,6 @@ struct Schedd {
         formatstr(cmd_map_ent, "{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
 
         std::string session_id;
-        KeyCacheEntry *k = NULL;
-        int ret = 0;
 
         auto command_pair = SecMan::command_map.find(cmd_map_ent);
         if (command_pair == SecMan::command_map.end()) {
@@ -1545,14 +1543,13 @@ struct Schedd {
         }
         session_id = command_pair->second;
 
-        // IMPORTANT: this hashtable returns 1 on success!
-        ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
-        if (!ret)
+        auto itr = (SecMan::session_cache)->find(session_id);
+        if (itr == (SecMan::session_cache)->end())
         {
             return false;
         }
 
-        ClassAd *policy = k->policy();
+        ClassAd *policy = itr->second.policy();
 
         if (!policy->EvaluateAttrString(ATTR_SEC_MY_REMOTE_USER_NAME, result))
         {

@@ -747,7 +747,7 @@ linux_count_cpus( CpuInfo *cpuinfo )
 		cpuinfo->num_cpus = 1;
 	}
 
-	dprintf( D_FULLDEBUG, "Using %s: %d processors, %d CPUs, %d HTs\n",
+	dprintf( D_CONFIG, "Using %s: %d processors, %d CPUs, %d HTs\n",
 			 ana_type,
 			 cpuinfo->num_processors,
 			 cpuinfo->num_cpus,

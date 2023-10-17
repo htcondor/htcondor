@@ -3121,7 +3121,7 @@ Daemons::AllReaper(int pid, int status)
 	// and we need to include the daemons that have been removed from the daemon
 	// list but have not yet been reaped.
 	int daemons = 0, startds = 0;
-	for (auto it : removed_daemons) {
+	for (auto & it : removed_daemons) {
 		const auto d = it.second;
 		if (d->runs_here && d->pid && !d->OnlyStopWhenMasterStops()) {
 			++daemons;

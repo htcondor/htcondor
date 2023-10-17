@@ -1,5 +1,5 @@
-Additional kinds of file and credential transfer
-================================================
+Third Party/Delegated file and credential transfer
+==================================================
 
 Enabling the Transfer of Files Specified by a URL
 -------------------------------------------------

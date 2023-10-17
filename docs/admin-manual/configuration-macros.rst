@@ -11,7 +11,7 @@ and possibly the :doc:`/admin-manual/configuration-templates` section.
 
 The settings that control the policy under which HTCondor will start,
 suspend, resume, vacate or kill jobs are described in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`,
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`,
 not in this section.
 
 HTCondor-wide Configuration File Entries
@@ -2998,13 +2998,13 @@ condor_startd Configuration File Macros
 .. note::
 
     If you are running HTCondor on a multi-CPU machine, be sure to
-    also read :ref:`admin-manual/policy-configuration:*condor_startd* policy
+    also read :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy
     configuration` which describes how to set up and configure HTCondor on
     multi-core machines.
 
 These settings control general operation of the *condor_startd*.
 Examples using these configuration macros, as well as further
-explanation is found in the :doc:`/admin-manual/policy-configuration`
+explanation is found in the :doc:`/admin-manual/ep-policy-configuration`
 section.
 
 :macro-def:`START`
@@ -3184,7 +3184,7 @@ section.
     update to the *condor_collector*. The *condor_startd* also sends
     update on any state or activity change, or if the value of its
     ``START`` expression changes. See
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     on *condor_startd* states, *condor_startd* Activities, and
     *condor_startd* ``START`` expression for details on states,
     activities, and the ``START`` expression. This macro is defined in
@@ -3192,16 +3192,16 @@ section.
 
 :macro-def:`UPDATE_OFFSET`
     An integer value representing the number of seconds of delay that
-    the *condor_startd* should wait before sending its initial update,
-    and the first update after a *condor_reconfig* command is sent to
-    the *condor_collector*. The time of all other updates sent after
+    the *condor_startd* should wait before sending its initial update.
+    The default is 0. The time of all other periodic updates sent after
     this initial update is determined by ``$(UPDATE_INTERVAL)``. Thus,
     the first update will be sent after ``$(UPDATE_OFFSET)`` seconds,
     and the second update will be sent after ``$(UPDATE_OFFSET)`` +
     ``$(UPDATE_INTERVAL)``. This is useful when used in conjunction with
     the ``$RANDOM_INTEGER()`` macro for large pools, to spread out the
-    updates sent by a large number of *condor_startd* daemons. Defaults
-    to zero. The example configuration
+    updates sent by a large number of *condor_startd* daemons when all
+    of the machines are started at the same time.
+    The example configuration
 
     .. code-block:: condor-config
 
@@ -3248,7 +3248,7 @@ section.
     time expires or ``SHUTDOWN_GRACEFUL_TIMEOUT``
     :index:`SHUTDOWN_GRACEFUL_TIMEOUT` expires. In fast shutdown
     mode, retirement time is ignored. See ``MAXJOBRETIREMENTTIME`` in
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     for further explanation.
 
     By default the *condor_negotiator* will not match jobs to a slot
@@ -3393,6 +3393,16 @@ section.
 
 :macro-def:`STARTD_ADDRESS_FILE`
     This macro is described in :macro:`<SUBSYS>_ADDRESS_FILE`
+
+:macro-def:`ENABLE_STARTD_DAEMON_AD`
+    Enable a daemon ad for the *condor_startd* that is separate from the slot ads used for matchmaking
+    and running jobs.  Allowed values are True, False, and Auto.
+    When the value is True, the *condor_startd* will advertise ``Slot`` ads describing the slot state
+    and ``StartDaemon`` ads describing the overall state of the daemon.
+    When the value is False, the *condor_startd* will advertise only ``Machine`` ads.
+    When the value is Auto, the *condor_startd* will advertise ``Slot`` and ``StartDaemon`` ads to
+    collectors that are HTCondor version 23.2 or later, and ``Machine`` ads to older collectors.
+    The default value is Auto.
 
 :macro-def:`STARTD_SHOULD_WRITE_CLAIM_ID_FILE`
     The *condor_startd* can be configured to write out the ``ClaimId``
@@ -3715,8 +3725,8 @@ htcondor for running backfill jobs` for details.
     is ``False`` (which means do not spawn a backfill job even if the
     machine is idle and ``ENABLE_BACKFILL`` expression is ``True``). For
     more information about policy expressions and the Backfill state,
-    see :doc:`/admin-manual/policy-configuration`, especially the
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    see :doc:`/admin-manual/ep-policy-configuration`, especially the
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     section.
 
 :macro-def:`EVICT_BACKFILL`
@@ -3727,13 +3737,13 @@ htcondor for running backfill jobs` for details.
     administrators to define a policy where interactive users on a
     machine will cause backfill jobs to be removed. The default value is
     ``False``. For more information about policy expressions and the
-    Backfill state, see :doc:`/admin-manual/policy-configuration`, especially the
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    Backfill state, see :doc:`/admin-manual/ep-policy-configuration`, especially the
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     section.
 
 The following macros only apply to the *condor_startd* daemon when it
 is running on a multi-core machine. See the
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 section for details.
 
 :macro-def:`STARTD_RESOURCE_PREFIX`
@@ -3806,7 +3816,7 @@ multi-core host, and what attributes each one has. They are only needed
 if you do not want to have a multi-core machine report to HTCondor with
 a separate slot for each CPU, with all shared system resources evenly
 divided among them. Please read
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 for details on how to properly configure these settings to suit your
 needs.
 
@@ -3838,13 +3848,13 @@ needs.
     ``NUM_SLOTS_TYPE_<N>``. N can be any integer from 1 to the value of
     ``$(MAX_SLOT_TYPES)``, such as ``SLOT_TYPE_1``. The format of this
     entry can be somewhat complex, so please refer to
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     for details on the different possibilities.
 
 :macro-def:`SLOT_TYPE_<N>_PARTITIONABLE`
     A boolean variable that defaults to ``False``. When ``True``, this
     slot permits dynamic provisioning, as specified in
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 
 :macro-def:`CLAIM_PARTITIONABLE_LEFTOVERS`
     A boolean variable that defaults to ``True``. When ``True`` within
@@ -4059,7 +4069,7 @@ needs.
 
 The following variables set consumption policies for partitionable
 slots.
-The :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+The :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 section details consumption policies.
 
 :macro-def:`CONSUMPTION_POLICY`
@@ -4303,8 +4313,8 @@ details.
     value is /usr/bin/docker. Remember that the condor user must also be
     in the docker group for Docker Universe to work. See the Docker
     universe manual section for more details
-    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the vm
-    and docker universes`). An example of the configuration for running the
+    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the docker universe`).
+    An example of the configuration for running the
     Docker CLI:
 
     .. code-block:: condor-config
@@ -4315,8 +4325,7 @@ details.
     A list of directories on the host execute machine to be volume
     mounted within the container. See the Docker Universe section for
     full details
-    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the vm
-    and docker universes`).
+    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the docker universe`).
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE`
     The number of most recently used Docker images that will be kept on
     the local machine. The default value is 8.
@@ -6017,7 +6026,7 @@ These settings affect the *condor_starter*.
     HTCondor jobs would always run, but interactive response on the
     machines would never suffer. A user most likely will not notice
     HTCondor is running jobs. See
-    :doc:`/admin-manual/policy-configuration` for more details on setting up a
+    :doc:`/admin-manual/ep-policy-configuration` for more details on setting up a
     policy for starting and stopping jobs on a given machine.
 
     The ClassAd expression is evaluated in the context of the job ad to
@@ -7355,7 +7364,7 @@ These macros affect the *condor_negotiator*.
     respects group quotas is desired. Note that this variable does not
     influence other potential causes of preemption, such as the ``RANK``
     of the *condor_startd*, or ``PREEMPT`` expressions. See
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     for a general discussion of limiting preemption.
 
 :macro-def:`PREEMPTION_REQUIREMENTS_STABLE`
@@ -9536,26 +9545,42 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`AUTH_SSL_SERVER_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the server side of a communication authenticating
-    with SSL.  On Linux, this defaults to ``/etc/pki/tls/certs/ca-bundle.crt``.
+    with SSL.
+    This file is used in addition to the default CA file configured
+    for OpenSSL.
 
 :macro-def:`AUTH_SSL_CLIENT_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the client side of a communication authenticating
-    with SSL.  On Linux, this defaults to ``/etc/pki/tls/certs/ca-bundle.crt``.
+    with SSL.
+    This file is used in addition to the default CA file configured
+    for OpenSSL.
 
 :macro-def:`AUTH_SSL_SERVER_CADIR`
-    The path to a directory that may contain the certificates (each in
+    The path to a directory containing the certificates (each in
     its own file) for multiple trusted CAs for the server side of a
-    communication authenticating with SSL. When defined, the
-    authenticating entity's certificate is utilized to identify the
-    trusted CA's certificate within the directory.
+    communication authenticating with SSL.
+    This directory is used in addition to the default CA directory
+    configured for OpenSSL.
 
 :macro-def:`AUTH_SSL_CLIENT_CADIR`
-    The path to a directory that may contain the certificates (each in
+    The path to a directory containing the certificates (each in
     its own file) for multiple trusted CAs for the client side of a
-    communication authenticating with SSL. When defined, the
-    authenticating entity's certificate is utilized to identify the
-    trusted CA's certificate within the directory.
+    communication authenticating with SSL.
+    This directory is used in addition to the default CA directory
+    configured for OpenSSL.
+
+:macro-def:`AUTH_SSL_SERVER_USE_DEFAULT_CAS`
+    A boolean value that controls whether the default trusted CA file
+    and directory configured for OpenSSL should be used by the server
+    during SSL authentication.
+    The default value is ``True``.
+
+:macro-def:`AUTH_SSL_CLIENT_USE_DEFAULT_CAS`
+    A boolean value that controls whether the default trusted CA file
+    and directory configured for OpenSSL should be used by the client
+    during SSL authentication.
+    The default value is ``True``.
 
 :macro-def:`AUTH_SSL_SERVER_CERTFILE`
     A comma-separated list of filenames to search for a public certificate
@@ -11025,7 +11050,7 @@ condor_defrag Configuration File Macros
 
 These configuration variables affect the *condor_defrag* daemon. A
 general discussion of *condor_defrag* may be found in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 
 :macro-def:`DEFRAG_NAME`
     Used to give an prefix value to the ``Name`` attribute in the

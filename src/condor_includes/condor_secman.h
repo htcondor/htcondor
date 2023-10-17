@@ -81,7 +81,7 @@ public:
 	// The default session cache - used when there are no tags
 	static KeyCache                      m_default_session_cache;
 	// Alternate session caches.
-	static std::map<std::string,KeyCache*> *m_tagged_session_cache;
+	static std::map<std::string,KeyCache> m_tagged_session_cache;
         static std::string m_tag;
 	// Alternate tag methods
 	static std::map<DCpermission, std::string> m_tag_methods;

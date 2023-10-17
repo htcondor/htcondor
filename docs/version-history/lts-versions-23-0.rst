@@ -15,6 +15,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-2302:
+
+Version 23.0.2
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.0.2 released on Month Date, 2023.
+
+- HTCondor version 23.0.2 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
@@ -32,6 +51,9 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that prevented USE_PID_NAMESPACES from working.
+  :jira:`2088`
+
 - Fixed a bug on Windows where jobs would be inappropriately put on hold with an out of memory
   error if they returned an exit code with high bits set
   :jira:`2061`
@@ -43,6 +65,10 @@ Bugs Fixed:
 - Fixed a bug where jobs put on hold internally by the shadow were not writing their ad to the
   job epoch history file.
   :jira:`2060`
+
+- Fixed a rare race condition where *condor_rm*'ing a parallel universe job would not remove
+  the job if the rm happened after the job was matched but before it fully started
+  :jira:`2070`
 
 - Fix a bug where HTCondor fails to install on Debian and Ubuntu platforms when the ``condor``
   user is present and the ``/var/lib/condor`` directory is not.

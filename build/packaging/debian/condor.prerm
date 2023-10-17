@@ -5,14 +5,7 @@ set -e
 
 case "$1" in
 	remove)
-		# init script fails of RUN is not there (i.e. broken install)
-		if [ -x "/etc/init.d/condor" ]; then
-			if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
-			invoke-rc.d condor stop || exit $?
-		else
-			/etc/init.d/condor stop || exit $?
-			fi
-		fi
+        # do nothing; debhelper will stop and remove service
 	;;
 	upgrade)
 		# do nothing as condor will keep working until the upgrade is

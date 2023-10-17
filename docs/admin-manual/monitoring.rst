@@ -1,5 +1,5 @@
 Monitoring with Ganglia, Elasticsearch, etc.
-===========================================
+============================================
 
 :index:`monitoring<single: monitoring; pool management>`
 :index:`monitoring pools` :index:`pool monitoring`

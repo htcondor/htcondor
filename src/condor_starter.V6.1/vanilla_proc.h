@@ -103,6 +103,8 @@ public:
 
 	virtual std::string CgroupSuffix() { return "";}
 
+	virtual bool ShouldConvertCmdToAbsolutePath() { return m_pid_ns_status_filename.empty();}
+
 	bool finishShutdownFast();
 
 protected:

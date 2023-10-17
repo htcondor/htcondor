@@ -1719,7 +1719,7 @@ JICShadow::getJobStdFile( const char* attr_name )
 		filename += base;
 	}
 	free( tmp );
-	if( filename[0] ) { 
+	if (!filename.empty()) { 
 		return strdup( filename.c_str() );
 	}
 	return NULL;

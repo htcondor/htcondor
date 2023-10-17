@@ -583,14 +583,22 @@ ParallelShadow::handleJobRemoval( int sig ) {
 
 	ResourceState s;
 
+	bool allPre = true;
+
     for ( size_t i=0 ; i<ResourceList.size() ; i++ ) {
 		s = ResourceList[i]->getResourceState();
+		if (s != RR_PRE) {
+			allPre = false;
+		}
 		if( s == RR_EXECUTING || s == RR_STARTUP ) {
 			ResourceList[i]->setExitReason( JOB_KILLED );
 			ResourceList[i]->killStarter();
 		}
     }
 
+	if (allPre) {
+		BaseShadow::shutDown(JOB_SHOULD_REMOVE);
+	}
 	return 0;
 }
 

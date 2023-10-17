@@ -1,5 +1,5 @@
-Policy Configuration for Execution Points and for Access Points
-===============================================================
+Configuration for Execution Points
+==================================
 
 .. note::
     Configuration templates make it easier to implement certain
@@ -99,7 +99,7 @@ configuration template, the ``IS_OWNER`` expression is a function of the
     START =?= FALSE
 
 See a detailed discussion of the ``IS_OWNER`` expression in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 However, the machine locally evaluates the ``IS_OWNER`` expression to determine
 if it is capable of running jobs for HTCondor. Any job ClassAd attributes
 appearing in the ``START`` expression, and hence in the ``IS_OWNER`` expression,
@@ -269,12 +269,29 @@ point in the negotiations has been reached. The possible states are
     have been divided in a partitionable slot. Consolidating the
     resources gives large jobs a chance to run.
 
-.. figure:: /_images/machine-states-transitions.png
-  :width: 600
-  :alt: Machine states and the possible transitions between the states
-  :align: center
-  
-  Machine states and the possible transitions between the states.
+.. mermaid:: 
+   :caption: Machine states and the possible transitions between the states
+   :align: center
+
+   stateDiagram-v2
+     direction LR
+     [*]--> Owner
+     Owner --> Unclaimed: A
+     Unclaimed --> Matched: C
+     Unclaimed --> Owner: B
+     Unclaimed --> Drained: P
+     Unclaimed --> Backfill: E
+     Unclaimed --> Claimed: D
+     Backfill  --> Owner: K
+     Backfill  --> Matched: L
+     Backfill  --> Claimed: M
+     Matched --> Claimed: G
+     Matched --> Owner: F
+     Claimed --> Preempting: H
+     Preempting --> Owner: J
+     Preempting --> Claimed: I
+     Owner --> Drained: N
+     Drained --> Owner: O
 
 
 Each transition is labeled with a letter. The cause of each transition
@@ -601,7 +618,7 @@ expression is optimized for a shared resource
 
 So, the machine will remain in the Owner state as long as the ``START``
 expression locally evaluates to FALSE.
-The :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+The :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 section provides more detail on the
 ``START`` expression. If the ``START`` locally evaluates to TRUE or
 cannot be locally evaluated (it evaluates to UNDEFINED), transition
@@ -1514,13 +1531,10 @@ keyboard activity. :index:`disabling preemption<single: disabling preemption; po
 
 **Disabling and Enabling Preemption**
 
-Preemption causes a running job to be suspended or killed, such that
-another job can run. As of HTCondor version 8.1.5, preemption is
-disabled by the default configuration. Previous versions of HTCondor had
-configuration that enabled preemption. Upon upgrade, the previous
-behavior will continue, if the previous configuration files are used.
-New configuration file examples disable preemption, but contain
-directions for enabling preemption.
+Preemption causes a running job to be suspended or killed, such that another
+job can run. Preemption is disabled by the default configuration.
+Configuration file examples disable preemption, but contain directions for
+enabling preemption.
 :index:`suspending jobs instead of evicting them<single: suspending jobs instead of evicting them; policy>`
 
 **Job Suspension**
@@ -1697,7 +1711,7 @@ available RAM. HTCondor will not directly enforce a RAM utilization
 limit on either slot. If a shared resource enforcement capability is
 needed, it is possible to write a policy that will evict a job that
 over subscribes to shared resources, as described in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 
 Dividing System Resources in Multi-core Machines
 ''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1841,7 +1855,7 @@ Define slot types.
     In addition to the standard resources of CPUs, memory, disk, and
     swap, the administrator may also define custom resources on a
     localized per-machine basis.
-    In addition to GPUs (see :ref:`admin-manual/policy-configuration:Configuring GPUs`.)
+    In addition to GPUs (see :ref:`admin-manual/ep-policy-configuration:Configuring GPUs`.)
     the administrator can define other types of custom resources.
 
     The resource names and quantities of available resources are defined
@@ -1887,7 +1901,7 @@ Define slot types.
 
     A job may request these local machine resources using the syntax
     **request_<name>** :index:`request_<name><single: request_<name>; submit commands>`,
-    as described in :ref:`admin-manual/policy-configuration:*condor_startd*
+    as described in :ref:`admin-manual/ep-policy-configuration:*condor_startd*
     policy configuration`. This example shows a portion of a submit description
     file that requests cogs and an actuator:
 
@@ -2144,20 +2158,13 @@ which can be used to define additional command line arguments for the
 causes the *condor_gpu_discovery* tool to output more attributes that
 describe the detected GPUs on the machine.
 
-Prior to HTCondor version 9.11 *condor_gpu_discovery* would publish GPU
-properties using attributes with a name prefix that indicated which GPU
-the property referred to.  Beginning with version 9.11, discovery would
-default to using nested ClassAds for GPU properties.  The administrator
+*condor_gpu_discovery* defaults to using nested ClassAds for GPU properties.  The administrator
 can be explicit about which form to use for properties by adding either the
 ``-nested`` or ``-not-nested`` option to :macro:`GPU_DISCOVERY_EXTRA`. 
 
 The format -- nested or not -- of GPU properties in the slot ad is the same as published
 by *condor_gpu_discovery*.  The use of nested GPU property ads is necessary
 to do GPU matchmaking and to properly support heterogeneous GPUs.  
-For pools that have execute nodes running older versions of HTCondor,
-you may want to config ``-not-nested`` on newer machines for consistency with older
-machines. However jobs that use the ``require_gpus`` keyword will never match machines
-that are configured to use ``-not-nested`` gpu discovery.
 
 For resources like GPUs that have individual properties, when configuring slots
 the slot configuration can specify a constraint on those properties
@@ -2387,7 +2394,7 @@ into 1GB dynamic slots. In this instance a job requiring 2GB of memory
 will be starved and unable to run. A partial solution to this problem is
 provided by defragmentation accomplished by the *condor_defrag* daemon,
 as discussed in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 :index:`partitionable slot preemption`
 :index:`pslot preemption`
 
@@ -2722,207 +2729,3 @@ ClassAd:
 
 :index:`configuration<single: configuration; SMP machines>`
 :index:`configuration<single: configuration; multi-core machines>`
-
-*condor_schedd* Policy Configuration
--------------------------------------
-
-:index:`condor_schedd policy<single: condor_schedd policy; configuration>`
-:index:`policy configuration<single: policy configuration; submit host>`
-
-There are two types of schedd policy: job transforms (which change the
-ClassAd of a job at submission) and submit requirements (which prevent
-some jobs from entering the queue). These policies are explained below.
-
-Job Transforms
-''''''''''''''
-
-:index:`job transforms`
-
-The *condor_schedd* can transform jobs as they are submitted.
-Transformations can be used to guarantee the presence of required job
-attributes, to set defaults for job attributes the user does not supply,
-or to modify job attributes so that they conform to schedd policy; an
-example of this might be to automatically set accounting attributes
-based on the owner of the job while letting the job owner indicate a
-preference.
-
-There can be multiple job transforms. Each transform can have a
-Requirements expression to indicate which jobs it should transform and
-which it should ignore. Transforms without a Requirements expression
-apply to all jobs. Job transforms are applied in order. The set of
-transforms and their order are configured using the Configuration
-variable :macro:`JOB_TRANSFORM_NAMES`.
-
-For each entry in this list there must be a corresponding
-:macro:`JOB_TRANSFORM_<name>`
-configuration variable that specifies the transform rules. Transforms
-can use the same syntax as *condor_job_router* transforms; although unlike
-the *condor_job_router* there is no default transform, and all
-matching transforms are applied - not just the first one. (See the
-:doc:`/grid-computing/job-router` section for information on the
-*condor_job_router*.)
-
-Beginning with HTCondor 9.4.0, when a submission is a late materialization job factory,
-transforms that would match the first factory job will be applied to the Cluster ad at submit time.
-When job ads are later materialized, attribute values set by the transform
-will override values set by the job factory for those attributes.  Prior to this version
-transforms were applied to late materialization jobs only after submit time.
-
-The following example shows a set of two transforms: one that
-automatically assigns an accounting group to jobs based on the
-submitting user, and one that shows one possible way to transform
-Vanilla jobs to Docker jobs.
-
-.. code-block:: text
-
-    JOB_TRANSFORM_NAMES = AssignGroup, SL6ToDocker
-
-    JOB_TRANSFORM_AssignGroup @=end
-       # map Owner to group using the existing accounting group attribute as requested group
-       EVALSET AcctGroup = userMap("Groups",Owner,AcctGroup)
-       EVALSET AccountingGroup = join(".",AcctGroup,Owner)
-    @end
-
-    JOB_TRANSFORM_SL6ToDocker @=end
-       # match only vanilla jobs that have WantSL6 and do not already have a DockerImage
-       REQUIREMENTS JobUniverse==5 && WantSL6 && DockerImage =?= undefined
-       SET  WantDocker = true
-       SET  DockerImage = "SL6"
-       SET  Requirements = TARGET.HasDocker && $(MY.Requirements)
-    @end
-
-The AssignGroup transform above assumes that a mapfile that can map an
-owner to one or more accounting groups has been configured via
-:macro:`SCHEDD_CLASSAD_USER_MAP_NAMES`, and given the name "Groups".
-
-The SL6ToDocker transform above is most likely incomplete, as it assumes
-a custom attribute (``WantSL6``) that your pool may or may not use.
-
-Submit Requirements
-'''''''''''''''''''
-
-:index:`submit requirements`
-
-The *condor_schedd* may reject job submissions, such that rejected jobs
-never enter the queue. Rejection may be best for the case in which there
-are jobs that will never be able to run; for instance, a job specifying
-an obsolete universe, like standard.
-Another appropriate example might be to reject all jobs that
-do not request a minimum amount of memory. Or, it may be appropriate to
-prevent certain users from using a specific submit host.
-
-Rejection criteria are configured. Configuration variable
-:macro:`SUBMIT_REQUIREMENT_NAMES`
-lists criteria, where each criterion is given a name. The chosen name is
-a major component of the default error message output if a user attempts
-to submit a job which fails to meet the requirements. Therefore, choose
-a descriptive name. For the three example submit requirements described:
-
-.. code-block:: text
-
-    SUBMIT_REQUIREMENT_NAMES = NotStandardUniverse, MinimalRequestMemory, NotChris
-
-The criterion for each submit requirement is then specified in
-configuration variable 
-:macro:`SUBMIT_REQUIREMENT_<Name>`, where ``<Name>`` matches the
-chosen name listed in ``SUBMIT_REQUIREMENT_NAMES``. The value is a
-boolean ClassAd expression. The three example criterion result in these
-configuration variable definitions:
-
-.. code-block:: text
-
-    SUBMIT_REQUIREMENT_NotStandardUniverse = JobUniverse != 1
-    SUBMIT_REQUIREMENT_MinimalRequestMemory = RequestMemory > 512
-    SUBMIT_REQUIREMENT_NotChris = Owner != "chris"
-
-Submit requirements are evaluated in the listed order; the first
-requirement that evaluates to ``False`` causes rejection of the job,
-terminates further evaluation of other submit requirements, and is the
-only requirement reported. Each submit requirement is evaluated in the
-context of the *condor_schedd* ClassAd, which is the ``MY.`` name space
-and the job ClassAd, which is the ``TARGET.`` name space. Note that
-``JobUniverse`` and ``RequestMemory`` are both job ClassAd attributes.
-
-Further configuration may associate a rejection reason with a submit
-requirement with the :macro:`SUBMIT_REQUIREMENT_<Name>_REASON`.
-
-.. code-block:: text
-
-    SUBMIT_REQUIREMENT_NotStandardUniverse_REASON = "This pool does not accept standard universe jobs."
-    SUBMIT_REQUIREMENT_MinimalRequestMemory_REASON = strcat( "The job only requested ", \
-      RequestMemory, " Megabytes.  If that small amount is really enough, please contact ..." )
-    SUBMIT_REQUIREMENT_NotChris_REASON = "Chris, you may only submit jobs to the instructional pool."
-
-The value must be a ClassAd expression which evaluates to a string.
-Thus, double quotes were required to make strings for both
-``SUBMIT_REQUIREMENT_NotStandardUniverse_REASON`` and
-``SUBMIT_REQUIREMENT_NotChris_REASON``. The ClassAd function strcat()
-produces a string in the definition of
-``SUBMIT_REQUIREMENT_MinimalRequestMemory_REASON``.
-
-Rejection reasons are sent back to the submitting program and will
-typically be immediately presented to the user. If an optional
-:macro:`SUBMIT_REQUIREMENT_<Name>_REASON` is not defined, a default reason
-will include the ``<Name>`` chosen for the submit requirement.
-Completing the presentation of the example submit requirements, upon an
-attempt to submit a standard universe job, *condor_submit* would print
-
-.. code-block:: text
-
-    Submitting job(s).
-    ERROR: Failed to commit job submission into the queue.
-    ERROR: This pool does not accept standard universe jobs.
-
-Where there are multiple jobs in a cluster, if any job within the
-cluster is rejected due to a submit requirement, the entire cluster of
-jobs will be rejected.
-
-Submit Warnings
-'''''''''''''''
-
-:index:`submit warnings`
-
-Starting in HTCondor 8.7.4, you may instead configure submit warnings. A
-submit warning is a submit requirement for which
-:macro:`SUBMIT_REQUIREMENT_<Name>_IS_WARNING` is true. A submit
-warning does not cause the submission to fail; instead, it returns a
-warning to the user's console (when triggered via *condor_submit*) or
-writes a message to the user log (always). Submit warnings are intended
-to allow HTCondor administrators to provide their users with advance
-warning of new submit requirements. For example, if you want to increase
-the minimum request memory, you could use the following configuration.
-
-.. code-block:: text
-
-    SUBMIT_REQUIREMENT_NAMES = OneGig $(SUBMIT_REQUIREMENT_NAMES)
-    SUBMIT_REQUIREMENT_OneGig = RequestMemory > 1024
-    SUBMIT_REQUIREMENT_OneGig_REASON = "As of <date>, the minimum requested memory will be 1024."
-    SUBMIT_REQUIREMENT_OneGig_IS_WARNING = TRUE
-
-When a user runs *condor_submit* to submit a job with ``RequestMemory``
-between 512 and 1024, they will see (something like) the following,
-assuming that the job meets all the other requirements.
-
-.. code-block:: text
-
-    Submitting job(s).
-    WARNING: Committed job submission into the queue with the following warning:
-    WARNING: As of <date>, the minimum requested memory will be 1024.
-
-    1 job(s) submitted to cluster 452.
-
-The job will contain (something like) the following:
-
-.. code-block:: text
-
-    000 (452.000.000) 10/06 13:40:45 Job submitted from host: <128.105.136.53:37317?addrs=128.105.136.53-37317+[fc00--1]-37317&noUDP&sock=19966_e869_5>
-        WARNING: Committed job submission into the queue with the following warning: As of <date>, the minimum requested memory will be 1024.
-    ...
-
-Marking a submit requirement as a warning does not change when or how it
-is evaluated, only the result of doing so. In particular, failing a
-submit warning does not terminate further evaluation of the submit
-requirements list. Currently, only one (the most recent) problem is
-reported for each submit attempt. This means users will see (as they
-previously did) only the first failed requirement; if all requirements
-passed, they will see the last failed warning, if any.

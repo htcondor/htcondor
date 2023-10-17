@@ -128,7 +128,7 @@ incorporates.
        Sets up a partitionable slot of the specified slot type number
        and allocation (defaults for slot_type_num and allocation are 1
        and 100% respectively). See the 
-       :ref:`admin-manual/policy-configuration:*condor_startd* policy
+       :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy
        configuration` for information on partitionable slot policies.
 
     -  ``StaticSlots( slot_type_num [, num_slots, [, allocation] ] )``

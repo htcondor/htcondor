@@ -51,7 +51,13 @@ ResMgr*	resmgr;			// Pointer to the resource manager object
 // Polling variables
 int	polling_interval = 0;	// Interval for polling when there are resources in use
 int	update_interval = 0;	// Interval to update CM
-int	update_offset = 0;		// Interval offset to update CM
+
+// When this variable is:
+//  0 - Advertise STARTD_OLD_ADTYPE for slots, and do not advertise STARTD_DAEMON_ADTYPE
+//  1 - Advertise STARTD_SLOT_ADTYPE and STARTD_DAEMON_ADTYPE always
+//  2 - Advertise STARTD_SLOT_ADTYPE and STARTD_DAEMON_ADTYPE to collectors that are 23.2 or later
+//      and advertise STARTD_OLD_ADTYPE to older collectors
+int enable_single_startd_daemon_ad = 0;
 
 // String Lists
 StringList *startd_job_attrs = NULL;
@@ -441,6 +447,8 @@ main_config()
 	init_params(0);
 
 		// Process any changes in the slot type specifications
+		// note that reconfig_resources will mark all slots as dirty
+		// and force collector update "soon"
 	resmgr->reconfig_resources();
 	finish_main_config();
 }
@@ -467,12 +475,6 @@ finish_main_config( void )
 #if HAVE_HIBERNATION
 	resmgr->updateHibernateConfiguration();
 #endif /* HAVE_HIBERNATION */
-
-		// Re-evaluate and update the CM for each resource (again, we
-		// don't need to recompute, since we just did that, so we call
-		// the special case version).
-		// This is now called by a timer registered by reset_timers()
-	//resmgr->update_all();
 }
 
 
@@ -491,7 +493,18 @@ init_params( int first_time)
 	polling_interval = param_integer( "POLLING_INTERVAL", 5 );
 
 	update_interval = param_integer( "UPDATE_INTERVAL", 300, 1 );
-	update_offset = param_integer( "UPDATE_OFFSET", 0, 0 );
+
+	// TODO: change this default to True or Auto
+	enable_single_startd_daemon_ad = 0;
+	auto_free_ptr send_daemon_ad(param("ENABLE_STARTD_DAEMON_AD"));
+	if (send_daemon_ad) {
+		bool bval = false;
+		if (string_is_boolean_param(send_daemon_ad, bval)) {
+			enable_single_startd_daemon_ad = bval ? 1 : 0;
+		} else if (YourStringNoCase("auto") == send_daemon_ad) {
+			enable_single_startd_daemon_ad = 2;
+		}
+	}
 
 	if( accountant_host ) {
 		free( accountant_host );

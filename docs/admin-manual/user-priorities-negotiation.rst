@@ -165,7 +165,7 @@ interval. Note that :macro:`PREEMPTION_REQUIREMENTS` only applies to
 preemptions due to user priority. It does not have any effect if the
 machine's :macro:`RANK` expression prefers a different job, or if the
 machine's policy causes the job to vacate due to other activity on the
-machine. See the :ref:`admin-manual/policy-configuration:*condor_startd* policy
+machine. See the :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy
 configuration` section for the current default policy on preemption.
 
 The following ephemeral attributes may be used within policy

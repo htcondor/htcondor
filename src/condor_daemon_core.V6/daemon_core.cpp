@@ -4922,7 +4922,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	} else {
 		pidinfo = &itr->second;
 	}
-	if ( pidinfo && pidinfo->sinful_string[0] == '\0' ) {
+	if ( pidinfo && pidinfo->sinful_string.empty()) {
 		// process pid found in our table, but does not
 		// our table says it does _not_ have a command socket
 		target_has_dcpm = false;
@@ -9814,7 +9814,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 	//Delete the session information.
 	if(pidentry->child_session_id)
-		getSecMan()->session_cache->remove(pidentry->child_session_id);
+		getSecMan()->session_cache->erase(pidentry->child_session_id);
 #ifdef WIN32
 		// close WIN32 handles
 	::CloseHandle(pidentry->hThread);  pidentry->hThread = NULL;
