@@ -98,7 +98,6 @@ make check
 %_includedir/classad/classad_distribution.h
 %_includedir/classad/classadErrno.h
 %_includedir/classad/classad.h
-%_includedir/classad/classadItor.h
 %_includedir/classad/classad_containers.h
 %_includedir/classad/collectionBase.h
 %_includedir/classad/collection.h

@@ -844,7 +844,6 @@ class ClassAd : public ExprTree
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
 		friend 	class EvalState;
-		friend 	class ClassAdIterator;
 
 
 		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
@@ -874,7 +873,5 @@ class ClassAd : public ExprTree
 };
 
 } // classad
-
-#include "classad/classadItor.h"
 
 #endif//__CLASSAD_CLASSAD_H__
