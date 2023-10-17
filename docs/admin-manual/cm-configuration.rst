@@ -314,7 +314,7 @@ the following ordered list of items.
    those resources.
 #. Obtain a list of all job submitters (for the entire pool).
 #. Sort the list of all job submitters based on EUP (see
-   :ref:`admin-manual/user-priorities-negotiation:the layperson's description
+   :ref:`admin-manual/cm-configuration:the layperson's description
    of the pie spin and pie slice` for an explanation of EUP). The
    submitter with the best priority is first within the sorted list.
 #. Iterate until there are either no more resources to match, or no more
@@ -582,7 +582,7 @@ may be a member of many groups. Jobs identify which group they are in by setting
 and
 **accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
 commands within the submit description file, as specified in the
-:ref:`admin-manual/user-priorities-negotiation:group accounting` section.
+:ref:`admin-manual/cm-configuration:group accounting` section.
 For example:
 
 .. code-block:: condor-submit
