@@ -17,7 +17,14 @@ Release Notes:
 
 New Features:
 
-- None.
+- The default trusted CAs for OpenSSL are now always used by default
+  in addition to any specified by :macro:`AUTH_SSL_SERVER_CAFILE`,
+  :macro:`AUTH_SSL_CLIENT_CAFILE`, :macro:`AUTH_SSL_SERVER_CADIR`, and
+  :macro:`AUTH_SSL_CLIENT_CADIR`.
+  The new configuration parameters :macro:`AUTH_SSL_SERVER_USE_DEFAULT_CAS`
+  and :macro:`AUTH_SSL_CLIENT_USE_DEFAULT_CAS` can be used to disable
+  use of the default CAs for OpenSSL.
+  :jira:`2090`
 
 Bugs Fixed:
 
