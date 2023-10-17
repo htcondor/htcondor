@@ -1010,6 +1010,12 @@ certificate authorities. Similarly, :macro:`AUTH_SSL_SERVER_CADIR` and
 :macro:`AUTH_SSL_CLIENT_CADIR` each specify a directory with one or more files,
 each which may contain a single CA certificate. The directories must be
 prepared using the OpenSSL ``c_rehash`` utility.
+These CA certificates are used in addition to the default CA file and
+directory locations given in OpenSSL's configuration.
+If you do not want to use OpenSSL's default trusted CAs, you can set
+the configuration variables :macro:`AUTH_SSL_SERVER_USE_DEFAULT_CAS`
+and :macro:`AUTH_SSL_CLIENT_USE_DEFAULT_CAS` to ``False``.
+
 
 Bootstrapping SSL Authentication
 ''''''''''''''''''''''''''''''''

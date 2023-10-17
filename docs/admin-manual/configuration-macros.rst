@@ -9545,26 +9545,42 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`AUTH_SSL_SERVER_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the server side of a communication authenticating
-    with SSL.  On Linux, this defaults to ``/etc/pki/tls/certs/ca-bundle.crt``.
+    with SSL.
+    This file is used in addition to the default CA file configured
+    for OpenSSL.
 
 :macro-def:`AUTH_SSL_CLIENT_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the client side of a communication authenticating
-    with SSL.  On Linux, this defaults to ``/etc/pki/tls/certs/ca-bundle.crt``.
+    with SSL.
+    This file is used in addition to the default CA file configured
+    for OpenSSL.
 
 :macro-def:`AUTH_SSL_SERVER_CADIR`
-    The path to a directory that may contain the certificates (each in
+    The path to a directory containing the certificates (each in
     its own file) for multiple trusted CAs for the server side of a
-    communication authenticating with SSL. When defined, the
-    authenticating entity's certificate is utilized to identify the
-    trusted CA's certificate within the directory.
+    communication authenticating with SSL.
+    This directory is used in addition to the default CA directory
+    configured for OpenSSL.
 
 :macro-def:`AUTH_SSL_CLIENT_CADIR`
-    The path to a directory that may contain the certificates (each in
+    The path to a directory containing the certificates (each in
     its own file) for multiple trusted CAs for the client side of a
-    communication authenticating with SSL. When defined, the
-    authenticating entity's certificate is utilized to identify the
-    trusted CA's certificate within the directory.
+    communication authenticating with SSL.
+    This directory is used in addition to the default CA directory
+    configured for OpenSSL.
+
+:macro-def:`AUTH_SSL_SERVER_USE_DEFAULT_CAS`
+    A boolean value that controls whether the default trusted CA file
+    and directory configured for OpenSSL should be used by the server
+    during SSL authentication.
+    The default value is ``True``.
+
+:macro-def:`AUTH_SSL_CLIENT_USE_DEFAULT_CAS`
+    A boolean value that controls whether the default trusted CA file
+    and directory configured for OpenSSL should be used by the client
+    during SSL authentication.
+    The default value is ``True``.
 
 :macro-def:`AUTH_SSL_SERVER_CERTFILE`
     A comma-separated list of filenames to search for a public certificate
