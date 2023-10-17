@@ -206,10 +206,6 @@
 			>
 		</File>
 		<File
-			RelativePath="..\classad\classadItor.h"
-			>
-		</File>
-		<File
 			RelativePath="..\collection.cpp"
 			>
 			<FileConfiguration
