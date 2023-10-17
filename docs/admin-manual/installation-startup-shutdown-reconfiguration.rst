@@ -1,5 +1,5 @@
-Starting Up, Shutting Down, Reconfiguring, and Restarting HTCondor
-==================================================================
+Starting Up, Shutting Down and  Reconfiguring the System
+========================================================
 
 If you installed HTCondor with administrative privileges, HTCondor will
 start up when the machine boots and shut down when the machine does, using

@@ -262,9 +262,7 @@ void print_info(bool rv, const char* dname, const char * addr, Sock* s, const st
 	}
 
 	std::string session_id;
-	KeyCacheEntry *k = NULL;
 	ClassAd *policy = NULL;
-	int ret = 0;
 
 	if(rv) {
 		auto result_pair = SecMan::command_map.find(cmd_map_ent);
@@ -275,13 +273,13 @@ void print_info(bool rv, const char* dname, const char * addr, Sock* s, const st
 		session_id = result_pair->second;
 
 		// IMPORTANT: this hashtable returns 1 on success!
-		ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
-		if (!ret) {
+		auto itr = (SecMan::session_cache)->find(session_id);
+		if (itr == (SecMan::session_cache)->end()) {
 			printf("no session!\n");
 			return;
 		}
 
-		policy = k->policy();
+		policy = itr->second.policy();
 	}
 
 

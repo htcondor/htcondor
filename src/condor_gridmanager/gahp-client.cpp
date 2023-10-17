@@ -342,7 +342,7 @@ GahpServer::Reaper(int pid,int status)
 		if ( !dead_server->m_sec_session_id.empty() ) {
 			SecMan *secman = daemonCore->getSecMan();
 			IpVerify *ipv = secman->getIpVerify();
-			secman->session_cache->remove( dead_server->m_sec_session_id.c_str() );
+			secman->session_cache->erase(dead_server->m_sec_session_id);
 			ipv->FillHole(DAEMON, CONDOR_CHILD_FQU);
 			ipv->FillHole(CLIENT_PERM, CONDOR_CHILD_FQU);
 		}
@@ -1081,7 +1081,7 @@ GahpServer::CreateSecuritySession()
 			reason = "Unspecified error";
 		}
 		dprintf( D_ALWAYS, "GAHP command '%s' failed: %s\n", command, reason );
-		secman->session_cache->remove( claimId.secSessionId() );
+		secman->session_cache->erase(claimId.secSessionId());
 		return false;
 	}
 

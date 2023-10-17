@@ -1641,10 +1641,16 @@ tags=gridmanager
 [STARTD_ATTRS]
 default=
 description=Names of attibutes from config file to insert into STARTD ads
+tags=startd
 
 [STARTD_LATCH_EXPRS]
 default=
 description=STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
+
+[ENABLE_STARTD_DAEMON_AD]
+default=false
+description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
+usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
 
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
