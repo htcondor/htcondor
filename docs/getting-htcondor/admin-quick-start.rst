@@ -189,7 +189,7 @@ Although your HTCondor pool should be fully functional at this point, it
 may not be behaving precisely as you wish, particularly with respect to
 resource allocation.  You can tune how HTCondor allocates resources to
 users, or groups of users, using the user priority and group quota systems,
-described in :doc:`../admin-manual/user-priorities-negotiation`.  You
+described in :doc:`../admin-manual/cm-configuration`.  You
 can enforce machine-specific policies -- for instance, preferring GPU jobs
 on machines with GPUs -- using the options described in
 :doc:`../admin-manual/ep-policy-configuration`.

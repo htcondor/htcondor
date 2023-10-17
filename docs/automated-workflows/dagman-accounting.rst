@@ -22,9 +22,9 @@ values can be specified using the **-append** flag to
     $ condor_submit_dag -append accounting_group=group_physics -append \
       accounting_group_user=albert relativity.dag
 
-See :ref:`admin-manual/user-priorities-negotiation:group accounting`
+See :ref:`admin-manual/cm-configuration:group accounting`
 for a discussion of group accounting and
-:ref:`admin-manual/user-priorities-negotiation:accounting groups with
+:ref:`admin-manual/cm-configuration:accounting groups with
 hierarchical group quotas` for a discussion of accounting groups with
 hierarchical group quotas.
 

@@ -10,9 +10,9 @@ Administrators' Manual
    introduction-to-configuration
    configuration-templates
    configuration-macros
-   user-priorities-negotiation
    ep-policy-configuration
    ap-policy-configuration
+   cm-configuration
    daemon-cron
    security
    networking
