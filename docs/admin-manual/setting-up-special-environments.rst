@@ -584,10 +584,10 @@ and clean up any processes it has spawned, freeing the machine resources
 for the new, higher priority task. More details about the different
 states an HTCondor resource can enter and all of the possible
 transitions between them are described in
-:doc:`/admin-manual/policy-configuration/`, especially the
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+:doc:`/admin-manual/ep-policy-configuration/`, especially the
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 and
-:ref:`admin-manual/policy-configuration:*condor_schedd* policy configuration`
+:ref:`admin-manual/ap-policy-configuration:*condor_schedd* policy configuration`
 sections.
 
 At this point, the only backfill system supported by HTCondor is BOINC.

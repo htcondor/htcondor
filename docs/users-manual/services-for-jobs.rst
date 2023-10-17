@@ -63,7 +63,7 @@ executing job that may be useful.
    gives the name of the slot (for multicore machines), on which the job is
    run. On machines with only a single slot, the value of this variable
    will be 1, just like the ``SlotID`` attribute in the machine's
-   ClassAd. See the :doc:`/admin-manual/policy-configuration` section for more 
+   ClassAd. See the :doc:`/admin-manual/ep-policy-configuration` section for more 
    details about configuring multicore machines.
 -  ``_CONDOR_JOB_AD``
    :index:`_CONDOR_JOB_AD environment variable`\ :index:`_CONDOR_JOB_AD<single: _CONDOR_JOB_AD; environment variables>`

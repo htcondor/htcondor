@@ -11,7 +11,7 @@ and possibly the :doc:`/admin-manual/configuration-templates` section.
 
 The settings that control the policy under which HTCondor will start,
 suspend, resume, vacate or kill jobs are described in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`,
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`,
 not in this section.
 
 HTCondor-wide Configuration File Entries
@@ -2998,13 +2998,13 @@ condor_startd Configuration File Macros
 .. note::
 
     If you are running HTCondor on a multi-CPU machine, be sure to
-    also read :ref:`admin-manual/policy-configuration:*condor_startd* policy
+    also read :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy
     configuration` which describes how to set up and configure HTCondor on
     multi-core machines.
 
 These settings control general operation of the *condor_startd*.
 Examples using these configuration macros, as well as further
-explanation is found in the :doc:`/admin-manual/policy-configuration`
+explanation is found in the :doc:`/admin-manual/ep-policy-configuration`
 section.
 
 :macro-def:`START`
@@ -3184,7 +3184,7 @@ section.
     update to the *condor_collector*. The *condor_startd* also sends
     update on any state or activity change, or if the value of its
     ``START`` expression changes. See
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     on *condor_startd* states, *condor_startd* Activities, and
     *condor_startd* ``START`` expression for details on states,
     activities, and the ``START`` expression. This macro is defined in
@@ -3248,7 +3248,7 @@ section.
     time expires or ``SHUTDOWN_GRACEFUL_TIMEOUT``
     :index:`SHUTDOWN_GRACEFUL_TIMEOUT` expires. In fast shutdown
     mode, retirement time is ignored. See ``MAXJOBRETIREMENTTIME`` in
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     for further explanation.
 
     By default the *condor_negotiator* will not match jobs to a slot
@@ -3725,8 +3725,8 @@ htcondor for running backfill jobs` for details.
     is ``False`` (which means do not spawn a backfill job even if the
     machine is idle and ``ENABLE_BACKFILL`` expression is ``True``). For
     more information about policy expressions and the Backfill state,
-    see :doc:`/admin-manual/policy-configuration`, especially the
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    see :doc:`/admin-manual/ep-policy-configuration`, especially the
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     section.
 
 :macro-def:`EVICT_BACKFILL`
@@ -3737,13 +3737,13 @@ htcondor for running backfill jobs` for details.
     administrators to define a policy where interactive users on a
     machine will cause backfill jobs to be removed. The default value is
     ``False``. For more information about policy expressions and the
-    Backfill state, see :doc:`/admin-manual/policy-configuration`, especially the
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    Backfill state, see :doc:`/admin-manual/ep-policy-configuration`, especially the
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     section.
 
 The following macros only apply to the *condor_startd* daemon when it
 is running on a multi-core machine. See the
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 section for details.
 
 :macro-def:`STARTD_RESOURCE_PREFIX`
@@ -3816,7 +3816,7 @@ multi-core host, and what attributes each one has. They are only needed
 if you do not want to have a multi-core machine report to HTCondor with
 a separate slot for each CPU, with all shared system resources evenly
 divided among them. Please read
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 for details on how to properly configure these settings to suit your
 needs.
 
@@ -3848,13 +3848,13 @@ needs.
     ``NUM_SLOTS_TYPE_<N>``. N can be any integer from 1 to the value of
     ``$(MAX_SLOT_TYPES)``, such as ``SLOT_TYPE_1``. The format of this
     entry can be somewhat complex, so please refer to
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     for details on the different possibilities.
 
 :macro-def:`SLOT_TYPE_<N>_PARTITIONABLE`
     A boolean variable that defaults to ``False``. When ``True``, this
     slot permits dynamic provisioning, as specified in
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 
 :macro-def:`CLAIM_PARTITIONABLE_LEFTOVERS`
     A boolean variable that defaults to ``True``. When ``True`` within
@@ -4069,7 +4069,7 @@ needs.
 
 The following variables set consumption policies for partitionable
 slots.
-The :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+The :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 section details consumption policies.
 
 :macro-def:`CONSUMPTION_POLICY`
@@ -4313,8 +4313,8 @@ details.
     value is /usr/bin/docker. Remember that the condor user must also be
     in the docker group for Docker Universe to work. See the Docker
     universe manual section for more details
-    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the vm
-    and docker universes`). An example of the configuration for running the
+    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the docker universe`).
+    An example of the configuration for running the
     Docker CLI:
 
     .. code-block:: condor-config
@@ -4325,8 +4325,7 @@ details.
     A list of directories on the host execute machine to be volume
     mounted within the container. See the Docker Universe section for
     full details
-    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the vm
-    and docker universes`).
+    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the docker universe`).
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE`
     The number of most recently used Docker images that will be kept on
     the local machine. The default value is 8.
@@ -6027,7 +6026,7 @@ These settings affect the *condor_starter*.
     HTCondor jobs would always run, but interactive response on the
     machines would never suffer. A user most likely will not notice
     HTCondor is running jobs. See
-    :doc:`/admin-manual/policy-configuration` for more details on setting up a
+    :doc:`/admin-manual/ep-policy-configuration` for more details on setting up a
     policy for starting and stopping jobs on a given machine.
 
     The ClassAd expression is evaluated in the context of the job ad to
@@ -7365,7 +7364,7 @@ These macros affect the *condor_negotiator*.
     respects group quotas is desired. Note that this variable does not
     influence other potential causes of preemption, such as the ``RANK``
     of the *condor_startd*, or ``PREEMPT`` expressions. See
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     for a general discussion of limiting preemption.
 
 :macro-def:`PREEMPTION_REQUIREMENTS_STABLE`
@@ -11035,7 +11034,7 @@ condor_defrag Configuration File Macros
 
 These configuration variables affect the *condor_defrag* daemon. A
 general discussion of *condor_defrag* may be found in
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 
 :macro-def:`DEFRAG_NAME`
     Used to give an prefix value to the ``Name`` attribute in the

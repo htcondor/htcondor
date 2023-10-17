@@ -13,7 +13,7 @@ cycle can take many minutes.
 Configuration variable :macro:`DAGMAN_HOLD_CLAIM_TIME` avoids the wait
 for a negotiation cycle. When set to a non zero value, the *condor_schedd*
 keeps a claim idle, such that the *condor_startd* delays in shifting from
-the Claimed to the Preempting state (see :doc:`/admin-manual/policy-configuration`).
+the Claimed to the Preempting state (see :doc:`/admin-manual/ep-policy-configuration`).
 Thus, if another job appears that is suitable for the claimed resource,
 then the *condor_schedd* will submit the job directly to the
 *condor_startd*, avoiding the wait and overhead of a negotiation cycle.

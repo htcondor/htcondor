@@ -143,7 +143,7 @@ This is intended to help you conserve money in case of problems or an
 extended shortage of work. As noted in the example output above, you can
 specify a max idle time (in decimal hours) with the -idle flag.
 *condor_annex* considers an instance idle if it's unclaimed (see
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 for a definition), so it won't get tricked by jobs with long quiescent
 periods.
 
