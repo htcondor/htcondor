@@ -99,20 +99,18 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`SCHEDD_HOST`
     The host name of the machine where the *condor_schedd* is running
     for your pool. This is the host that queues submitted jobs. If the
-    host specifies ``SCHEDD_NAME`` :index:`SCHEDD_NAME` or
-    ``MASTER_NAME`` :index:`MASTER_NAME`, that name must be
-    included in the form name@hostname. In most condor installations,
-    there is a *condor_schedd* running on each host from which jobs are
-    submitted. The default value of ``SCHEDD_HOST``
-    :index:`SCHEDD_HOST` is the current host with the optional
-    name included. For most pools, this macro is not defined, nor does
-    it need to be defined..
+    host specifies :macro:`SCHEDD_NAME` or :macro:`MASTER_NAME`, that
+    name must be included in the form name@hostname. In most condor
+    installations, there is a *condor_schedd* running on each host from
+    which jobs are submitted. The default value of :macro:`SCHEDD_HOST`
+    is the current host with the optional name included. For most pools,
+    this macro is not defined, nor does it need to be defined.
 
 :macro-def:`RELEASE_DIR`
     The full path to the HTCondor release directory, which holds the
     ``bin``, ``etc``, ``lib``, and ``sbin`` directories. Other macros
     are defined relative to this one. There is no default value for
-    ``RELEASE_DIR`` :index:`RELEASE_DIR`.
+    :macro:`RELEASE_DIR`.
 
 :macro-def:`BIN`
     This directory points to the HTCondor directory where user-level
@@ -137,11 +135,10 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`SBIN`
     This directory points to the HTCondor directory where HTCondor's
     system binaries (such as the binaries for the HTCondor daemons) and
-    administrative tools are installed. Whatever directory
-    ``$(SBIN)``\ :index:`SBIN` points to ought to be in the
-    ``PATH`` of users acting as HTCondor administrators. The default
-    value is ``$(BIN)`` in Windows and ``$(RELEASE_DIR)``/sbin on all
-    other platforms.
+    administrative tools are installed. Whatever directory ``$(SBIN)``
+    points to ought to be in the ``PATH`` of users acting as HTCondor
+    administrators. The default value is ``$(BIN)`` in Windows and
+    ``$(RELEASE_DIR)``/sbin on all other platforms.
 
 :macro-def:`LOCAL_DIR`
     The location of the local HTCondor directory on each machine in your
@@ -183,7 +180,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     to execute HTCondor jobs and not submit them, it would not need a
     spool directory (or this macro defined). The default value is
     ``$(LOCAL_DIR)``/spool. The *condor_schedd* will not function if
-    ``SPOOL`` :index:`SPOOL` is not defined.
+    :macro:`SPOOL` is not defined.
 
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
@@ -214,8 +211,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     use this directory are the *condor_gridmanager*,
     *condor_config_val* when using the **-rset** option, systems that
     use lock files when configuration variable
-    ``CREATE_LOCKS_ON_LOCAL_DISK``
-    :index:`CREATE_LOCKS_ON_LOCAL_DISK` is ``True``, the Web
+    :macro:`CREATE_LOCKS_ON_LOCAL_DISK` is ``True``, the Web
     Service API, and the *condor_credd* daemon. There is no default
     value.
 
@@ -228,8 +224,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     use this directory are the *condor_gridmanager*,
     *condor_config_val* when using the **-rset** option, systems that
     use lock files when configuration variable
-    ``CREATE_LOCKS_ON_LOCAL_DISK``
-    :index:`CREATE_LOCKS_ON_LOCAL_DISK` is ``True``, the Web
+    :macro:`CREATE_LOCKS_ON_LOCAL_DISK` is ``True``, the Web
     Service API, and the *condor_credd* daemon. There is no default
     value.
 
@@ -239,8 +234,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`SLOT<N>_EXECUTE`
     Specifies an execute directory for use by a specific batch slot.
     ``<N>`` represents the number of the batch slot, such as 1, 2, 3,
-    etc. This execute directory serves the same purpose as ``EXECUTE``
-    :index:`EXECUTE`, but it allows the configuration of the
+    etc. This execute directory serves the same purpose as
+    :macro:`EXECUTE`, but it allows the configuration of the
     directory independently for each batch slot. Having slots each using
     a different partition would be useful, for example, in preventing
     one job from filling up the same disk that other jobs are trying to
@@ -431,8 +426,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     The default value is 0, which disables this check. It is anticipated
     that this configuration variable will no longer be used in the near
     future. If ``RESERVED_SWAP`` is not set to 0, the value of
-    ``SHADOW_SIZE_ESTIMATE`` :index:`SHADOW_SIZE_ESTIMATE` is
-    used.
+    :macro:`SHADOW_SIZE_ESTIMATE` is used.
 
 :macro-def:`DISK`
     Tells HTCondor how much disk space (in kB) to advertise as being available
@@ -445,7 +439,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     a given partition on your machine, it will always subtract this
     amount. An example is the *condor_startd*, which advertises the
     amount of free space in the ``$(EXECUTE)`` directory. The default
-    value of ``RESERVED_DISK`` :index:`RESERVED_DISK` is zero.
+    value of :macro:`RESERVED_DISK` is zero.
 
 :macro-def:`LOCK`
     HTCondor needs to create lock files to synchronize access to various
@@ -582,8 +576,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
 :macro-def:`CREATE_CORE_FILES`
     Defines whether or not HTCondor daemons are to create a core file in
-    the ``LOG`` :index:`LOG` directory if something really bad
-    happens. It is used to set the resource limit for the size of a core
+    the :macro:`LOG` directory if something really bad happens.
+    It is used to set the resource limit for the size of a core
     file. If not defined, it leaves in place whatever limit was in
     effect when the HTCondor daemons (normally the *condor_master*)
     were started. This allows HTCondor to inherit the default system
@@ -604,9 +598,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`ABORT_ON_EXCEPTION`
     When HTCondor programs detect a fatal internal exception, they
     normally log an error message and exit. If you have turned on
-    ``CREATE_CORE_FILES`` :index:`CREATE_CORE_FILES`, in some
-    cases you may also want to turn on ``ABORT_ON_EXCEPTION``
-    :index:`ABORT_ON_EXCEPTION` so that core files are generated
+    :macro:`CREATE_CORE_FILES`, in some cases you may also want to
+    turn on :macro:`ABORT_ON_EXCEPTION` so that core files are generated
     when an exception occurs. Set the following to True if that is what
     you want.
 
@@ -734,8 +727,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
 :macro-def:`CLASSAD_USER_PYTHON_LIB`
     Specifies the path to the python libraries, which is needed when
-    ``CLASSAD_USER_PYTHON_MODULES``
-    :index:`CLASSAD_USER_PYTHON_MODULES` is set. Defaults to
+    :macro:`CLASSAD_USER_PYTHON_MODULES` is set. Defaults to
     ``$(LIBEXEC)/libclassad_python_user.so``, and would rarely be
     changed from the default value.
 
@@ -954,9 +946,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     A string containing data to be used to initialize the map for the
     given username. Note that this macro is only used if
     ``<SUBSYS>_CLASSAD_USER_MAP_NAMES`` is defined for the relevant
-    daemon, and ``CLASSAD_USER_MAPFILE_<name>``
-    :index:`CLASSAD_USER_MAPFILE_<name>` is not defined for the
-    given name.
+    daemon, and :macro:`CLASSAD_USER_MAPFILE_<name>` is not defined
+    for the given name.
 
     The format for the map data is the same as the format
     for the security unified map file (see
@@ -1054,7 +1045,7 @@ subsystem corresponding to the daemon.
     be allowed to grow. For any log not specified, the default is
     ``$(MAX_DEFAULT_LOG)``\ :index:`MAX_DEFAULT_LOG`, which
     currently defaults to 10 MiB in size. Values are specified with the
-    same syntax as ``MAX_DEFAULT_LOG`` :index:`MAX_DEFAULT_LOG`.
+    same syntax as :macro:`MAX_DEFAULT_LOG`.
 
     Note that a log file for the *condor_procd* does not use this
     configuration variable definition. Its implementation is separate.
@@ -1064,12 +1055,11 @@ subsystem corresponding to the daemon.
 
 :macro-def:`MAX_DEFAULT_LOG`
     Controls the maximum size in bytes or amount of time that any log
-    not explicitly specified using ``MAX_<SUBSYS>_LOG``
-    :index:`MAX_<SUBSYS>_LOG` will be allowed to grow. When it is
-    time to rotate a log file, it will be saved to a file with an ISO
-    timestamp suffix. The oldest rotated file receives the ending
-    ``.old``. The ``.old`` files are overwritten each time the maximum
-    number of rotated files (determined by the value of
+    not explicitly specified using :macro:`MAX_<SUBSYS>_LOG` will be
+    allowed to grow. When it is time to rotate a log file, it will be
+    saved to a file with an ISO timestamp suffix. The oldest rotated
+    file receives the ending ``.old``. The ``.old`` files are overwritten
+    each time the maximum number of rotated files (determined by the value of
     ``MAX_NUM_<SUBSYS>_LOG``) is exceeded. The default value is 10 MiB
     in size. A value of 0 specifies that the file may grow without
     bounds. A single integer value is specified; without a suffix, it
@@ -1408,9 +1398,8 @@ subsystem corresponding to the daemon.
         Enable debug messages relating to the TCP statistics for file
         transfers. Note that the shadow and starter, by default, log
         these statistics to special log files (see :macro:`SHADOW_STATS_LOG`
-        :index:`SHADOW_STATS_LOG` and :macro:`STARTER_STATS_LOG` 
-        :index:`STARTER_STATS_LOG`. Note that, as of version 8.5.6, 
-        ``C_GAHP_DEBUG`` :index:`C_GAHP_DEBUG` defaults to ``D_STATS``.
+        and :macro:`STARTER_STATS_LOG`. Note that, as of version 8.5.6, 
+        :macro:`C_GAHP_DEBUG` defaults to ``D_STATS``.
 
     ``D_PID``
         This flag is different from the other flags, because it is used
@@ -1485,9 +1474,8 @@ Log files may optionally be specified per debug level as follows:
     defined by ``<SUBSYS>_LOG`` and the the log file defined by
     ``<SUBSYS>_<LEVEL>_LOG``. As examples, ``SHADOW_SYSCALLS_LOG``
     specifies a log file for all remote system call debug messages, and
-    ``NEGOTIATOR_MATCH_LOG`` :index:`NEGOTIATOR_MATCH_LOG`
-    specifies a log file that only captures *condor_negotiator* debug
-    events occurring with matches.
+    :macro:`NEGOTIATOR_MATCH_LOG` specifies a log file that only captures
+    *condor_negotiator* debug events occurring with matches.
 
     List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
@@ -1622,8 +1610,8 @@ details on DaemonCore. There are certain configuration file settings
 that DaemonCore uses which affect all HTCondor daemons.
 
 :macro-def:`ALLOW...`
-    All macros that begin with either ``ALLOW`` :index:`ALLOW` or
-    ``DENY`` :index:`DENY` are settings for HTCondor's security.
+    All macros that begin with either :macro:`ALLOW` or
+    :macro:`DENY` are settings for HTCondor's security.
     See :ref:`admin-manual/security:authorization` on Setting
     up security in HTCondor for details on these macros and how to
     configure them.
@@ -1946,8 +1934,7 @@ More information about networking in HTCondor can be found in
     listed (separated by commas and/or spaces) for redundancy. The CCB
     server must authorize this daemon at DAEMON level for this
     configuration to succeed. It is highly recommended to also configure
-    ``PRIVATE_NETWORK_NAME`` :index:`PRIVATE_NETWORK_NAME` if you
-    configure ``CCB_ADDRESS`` :index:`CCB_ADDRESS` so
+    :macro:`PRIVATE_NETWORK_NAME` if you configure :macro:`CCB_ADDRESS` so
     communications originating within the same private network do not
     need to go through CCB. For more information about CCB, see
     :ref:`admin-manual/networking:htcondor connection brokering (ccb)`.
@@ -2023,16 +2010,14 @@ More information about networking in HTCondor can be found in
     configuring other daemons. The default is ``True``
 
 :macro-def:`SHARED_PORT_DEFAULT_ID`
-    When ``COLLECTOR_USES_SHARED_PORT``
-    :index:`COLLECTOR_USES_SHARED_PORT` is set to ``True``, this
+    When :macro:`COLLECTOR_USES_SHARED_PORT` is set to ``True``, this
     is the shared port ID used by the *condor_collector*. This defaults
     to ``collector`` and will not need to be changed by most sites.
 
 :macro-def:`AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST`
-    A boolean value that specifies whether ``SHARED_PORT``
-    :index:`SHARED_PORT` should be automatically inserted into
-    *condor_master* 's ``DAEMON_LIST``\ :index:`DAEMON_LIST`
-    when ``USE_SHARED_PORT``\ :index:`USE_SHARED_PORT` is
+    A boolean value that specifies whether :macro:`SHARED_PORT`
+    should be automatically inserted into *condor_master* 's
+    :macro:`DAEMON_LIST` when :macro:`USE_SHARED_PORT` is
     ``True``. The default for this setting is ``True``.
 
 :macro-def:`<SUBSYS>_MAX_FILE_DESCRIPTORS`
@@ -2089,8 +2074,7 @@ More information about networking in HTCondor can be found in
     space, or a loopback address, in that order of preference. If it is
     desired to advertise an IP address that is not associated with any
     local network interface, for example, when TCP forwarding is being
-    used, then ``TCP_FORWARDING_HOST``
-    :index:`TCP_FORWARDING_HOST` should be used instead of
+    used, then :macro:`TCP_FORWARDING_HOST` should be used instead of
     ``NETWORK_INTERFACE``.
 
     If ``BIND_ALL_INTERFACES`` is ``False``, then ``NETWORK_INTERFACE``
@@ -2233,15 +2217,13 @@ More information about networking in HTCondor can be found in
     for more details and a discussion of when this functionality is
     needed. When using TCP in large pools, it is also necessary to
     ensure that the *condor_collector* has a large enough file
-    descriptor limit using ``COLLECTOR_MAX_FILE_DESCRIPTORS``
-    :index:`COLLECTOR_MAX_FILE_DESCRIPTORS`. The default value is
-    ``True``.
+    descriptor limit using :macro:`COLLECTOR_MAX_FILE_DESCRIPTORS`.
+    The default value is ``True``.
 
 :macro-def:`UPDATE_VIEW_COLLECTOR_WITH_TCP`
     This boolean value controls whether TCP or UDP is used by the
     *condor_collector* to forward ClassAd updates to the
-    *condor_collector* daemons specified by ``CONDOR_VIEW_HOST``
-    :index:`CONDOR_VIEW_HOST`. Please read
+    *condor_collector* daemons specified by :macro:`CONDOR_VIEW_HOST`. Please read
     :ref:`admin-manual/networking:using tcp to send updates to the *condor_collector*`
     for more details and a discussion of when this functionality is
     needed. The default value is ``False``.
@@ -2281,8 +2263,7 @@ More information about networking in HTCondor can be found in
     larger than ``$(UDP_NETWORK_FRAGMENT_SIZE)``, then the message will
     be split (fragmented) into multiple packets no larger than
     ``$(UDP_NETWORK_FRAGMENT_SIZE)``. If the destination of the message
-    is the loopback network interface, see
-    ``UDP_LOOPBACK_FRAGMENT_SIZE``\ :index:`UDP_LOOPBACK_FRAGMENT_SIZE`
+    is the loopback network interface, see :macro:`UDP_LOOPBACK_FRAGMENT_SIZE`
     below. For instance, the maximum payload size of a UDP packet over
     Ethernet is typically 1472 bytes, and thus if a UDP payload exceeds
     1472 bytes the IP network stack on either hosts or forwarding
@@ -2300,8 +2281,8 @@ More information about networking in HTCondor can be found in
     is larger than ``$(UDP_LOOPBACK_FRAGMENT_SIZE)``, then the message
     will be split (fragmented) into multiple packets no larger than
     ``$(UDP_LOOPBACK_FRAGMENT_SIZE)``. If the destination of the message
-    is not the loopback interface, see ``UDP_NETWORK_FRAGMENT_SIZE``
-    :index:`UDP_NETWORK_FRAGMENT_SIZE` above.
+    is not the loopback interface, see :macro:`UDP_NETWORK_FRAGMENT_SIZE`
+    above.
 
 :macro-def:`ALWAYS_REUSEADDR`
     A boolean value that, when ``True``, tells HTCondor to set
@@ -2901,13 +2882,12 @@ probably will not want to change them for any reason.
     If the ``MASTER_NAME`` setting is used, and the *condor_master* is
     configured to spawn a *condor_schedd*, the name defined with
     ``MASTER_NAME`` takes precedence over the :macro:`SCHEDD_NAME`
-    :index:`SCHEDD_NAME` setting. Since HTCondor makes the
-    assumption that there is only one instance of the *condor_startd*
-    running on a machine, the ``MASTER_NAME`` is not automatically
-    propagated to the *condor_startd*. However, in situations where
-    multiple *condor_startd* daemons are running on the same host, the
-    ``STARTD_NAME`` should be set to uniquely identify the
-    *condor_startd* daemons.
+    setting. Since HTCondor makes the assumption that there is only
+    one instance of the *condor_startd* running on a machine, the
+    ``MASTER_NAME`` is not automatically propagated to the *condor_startd*.
+    However, in situations where multiple *condor_startd* daemons are
+    running on the same host, the ``STARTD_NAME`` should be set to
+    uniquely identify the *condor_startd* daemons.
 
     If an HTCondor daemon (master, schedd or startd) has been given a
     unique name, all HTCondor tools that need to contact that daemon can
@@ -3031,10 +3011,9 @@ section.
 
 :macro-def:`PREEMPT`
     A boolean expression that, when ``True``, causes HTCondor to stop a
-    currently running job once ``MAXJOBRETIREMENTTIME``
-    :index:`MAXJOBRETIREMENTTIME` has expired. This expression is
-    not evaluated if ``WANT_SUSPEND`` is ``True``. The default value is
-    ``False``, such that preemption is disabled.
+    currently running job once :macro:`MAXJOBRETIREMENTTIME` has expired.
+    This expression is not evaluated if ``WANT_SUSPEND`` is ``True``.
+    The default value is ``False``, such that preemption is disabled.
 
 :macro-def:`WANT_HOLD`
     A boolean expression that defaults to ``False``. When ``True`` and
@@ -3088,8 +3067,7 @@ section.
     job is hard-killed, so any attempt by the job to clean
     up will be aborted. This expression should normally be ``False``.
     When desired, it may be used to abort the graceful shutdown of a job
-    earlier than the limit imposed by ``MachineMaxVacateTime``
-    :index:`MachineMaxVacateTime`.
+    earlier than the limit imposed by :macro:`MachineMaxVacateTime`.
 
 :macro-def:`PERIODIC_CHECKPOINT`
     A boolean expression that, when ``True``, causes HTCondor to
@@ -3137,10 +3115,9 @@ section.
 :macro-def:`WANT_VACATE`
     A boolean expression that, when ``True``, defines that a preempted
     HTCondor job is to be vacated, instead of killed. This means the job
-    will be soft-killed and given time to clean up. The
-    amount of time given depends on ``MachineMaxVacateTime``
-    :index:`MachineMaxVacateTime` and ``KILL``
-    :index:`KILL`. The default value is ``True``.
+    will be soft-killed and given time to clean up. The amount of time
+    given depends on :macro:`MachineMaxVacateTime` and :macro:`KILL`.
+    The default value is ``True``.
 
 :macro-def:`IS_OWNER`
     A boolean expression that determines when a machine ad should enter
@@ -3224,11 +3201,11 @@ section.
     depends on whether the job has any excess retirement time. If the
     job has more retirement time left than the machine's maximum vacate
     time setting, then retirement time will be converted into vacating
-    time, up to the amount of ``JobMaxVacateTime``. The ``KILL``
-    :index:`KILL` expression may be used to abort the graceful
-    shutdown of the job at any time. At the time when the job is
-    preempted, the ``WANT_VACATE`` :index:`WANT_VACATE` expression
-    may be used to skip the graceful shutdown of the job.
+    time, up to the amount of ``JobMaxVacateTime``. The :macro:`KILL`
+    expression may be used to abort the graceful shutdown of the job
+    at any time. At the time when the job is preempted, the
+    :macro:`WANT_VACATE` expression may be used to skip the graceful
+    shutdown of the job.
 
 :macro-def:`MAXJOBRETIREMENTTIME`
     When the *condor_startd* wants to evict a job, a job which has run
@@ -3245,16 +3222,14 @@ section.
     then. Note that in peaceful shutdown mode of the *condor_startd*,
     retirement time is treated as though infinite. In graceful shutdown
     mode, the job will not be preempted until the configured retirement
-    time expires or ``SHUTDOWN_GRACEFUL_TIMEOUT``
-    :index:`SHUTDOWN_GRACEFUL_TIMEOUT` expires. In fast shutdown
+    time expires or :macro:`SHUTDOWN_GRACEFUL_TIMEOUT` expires. In fast shutdown
     mode, retirement time is ignored. See ``MAXJOBRETIREMENTTIME`` in
     :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     for further explanation.
 
     By default the *condor_negotiator* will not match jobs to a slot
     with retirement time remaining. This behavior is controlled by
-    ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION``
-    :index:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
+    :macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
 
     There is no default value for this configuration variable.
 
@@ -3277,7 +3252,6 @@ section.
 :macro-def:`MAX_CLAIM_ALIVES_MISSED`
     The *condor_schedd* sends periodic updates to each *condor_startd*
     as a keep alive (see the description of :macro:`ALIVE_INTERVAL`
-    :index:`ALIVE_INTERVAL`.
     If the *condor_startd* does not receive any keep alive messages, it
     assumes that something has gone wrong with the *condor_schedd* and
     that the resource is not being effectively used. Once this happens,
@@ -3491,8 +3465,7 @@ section.
     how much physical memory (in MB) your machine has, overriding the
     value HTCondor computes automatically. The actual amount of memory
     detected by HTCondor is always available in the pre-defined
-    configuration macro ``DETECTED_MEMORY``
-    :index:`DETECTED_MEMORY`.
+    configuration macro :macro:`DETECTED_MEMORY`.
 
 :macro-def:`RESERVED_MEMORY`
     How much memory would you like reserved from HTCondor? By default,
@@ -3719,8 +3692,8 @@ htcondor for running backfill jobs` for details.
     is in the Unclaimed/Idle state and the ``ENABLE_BACKFILL``
     expression is ``True``. If ``START_BACKFILL`` evaluates to ``True``,
     the machine will enter the Backfill state and attempt to spawn a
-    backfill computation. This expression is analogous to the ``START``
-    :index:`START` expression that controls when an HTCondor
+    backfill computation. This expression is analogous to the
+    :macro:`START` expression that controls when an HTCondor
     resource is available to run normal HTCondor jobs. The default value
     is ``False`` (which means do not spawn a backfill job even if the
     machine is idle and ``ENABLE_BACKFILL`` expression is ``True``). For
@@ -3790,7 +3763,7 @@ section for details.
 :macro-def:`STARTD_SLOT_ATTRS`
     The list of ClassAd attribute names that should be shared across all
     slots on the same machine. This setting was formerly know as
-    ``STARTD_VM_ATTRS`` :index:`STARTD_VM_ATTRS` For each attribute in the list, the attribute's value is
+    :macro:`STARTD_VM_ATTRS` For each attribute in the list, the attribute's value is
     taken from each slot's machine ClassAd and placed into the machine
     ClassAd of all the other slots within the machine. For example, if
     the configuration file for a 2-slot machine contains
@@ -3905,10 +3878,8 @@ needs.
     customized local machine resources that are currently offline, and
     therefore should not be allocated to a slot. The identifiers
     specified here must match those specified by value of configuration
-    variables ``MACHINE_RESOURCE_<name>``
-    :index:`MACHINE_RESOURCE_<name>` or
-    ``MACHINE_RESOURCE_INVENTORY_<name>``
-    :index:`MACHINE_RESOURCE_INVENTORY_<name>`, or the identifiers
+    variables :macro:`MACHINE_RESOURCE_<name>` or
+    :macro:`MACHINE_RESOURCE_INVENTORY_<name>`, or the identifiers
     will be ignored. The ``<name>`` identifies the type of resource, as
     specified by the value of configuration variable
     ``MACHINE_RESOURCE_NAMES``. This configuration variable is used to
@@ -3947,7 +3918,7 @@ needs.
     convenient way to specify a calculated or detected quantity of the
     resource, instead of specifying a fixed quantity or list of the
     resource in the the configuration when set by
-    ``MACHINE_RESOURCE_<name>`` :index:`MACHINE_RESOURCE_<name>`.
+    :macro:`MACHINE_RESOURCE_<name>`.
 
     The script may also output an attribute of the form
 
@@ -4065,7 +4036,7 @@ needs.
     multi-core machine, which would not be reported to the HTCondor
     pool. This value cannot be used to make HTCondor advertise more
     slots than there are CPUs on the machine. To do that, use
-    ``NUM_CPUS`` :index:`NUM_CPUS`.
+    :macro:`NUM_CPUS`.
 
 The following variables set consumption policies for partitionable
 slots.
@@ -4161,9 +4132,8 @@ advertisement.
     advertise .NET installations, but wishes to do so in a format
     different than what the *condor_startd* publishes in its ClassAds,
     setting a string in this expression will result in the
-    *condor_startd* publishing the string when
-    ``STARTD_PUBLISH_DOTNET`` :index:`STARTD_PUBLISH_DOTNET` is
-    ``True``. No value is set by default.
+    *condor_startd* publishing the string when :macro:`STARTD_PUBLISH_DOTNET`
+    is ``True``. No value is set by default.
 
 These macros control the power management capabilities of the
 *condor_startd* to optionally put the machine in to a low power state
@@ -4655,10 +4625,8 @@ These macros control the *condor_schedd*.
 :macro-def:`FILE_TRANSFER_DISK_LOAD_THROTTLE`
     This configures throttling of file transfers based on the disk load
     generated by file transfers. The maximum number of concurrent file
-    transfers is specified by ``MAX_CONCURRENT_UPLOADS``
-    :index:`MAX_CONCURRENT_UPLOADS` and
-    ``MAX_CONCURRENT_DOWNLOADS``
-    :index:`MAX_CONCURRENT_DOWNLOADS`. Throttling will dynamically
+    transfers is specified by :macro:`MAX_CONCURRENT_UPLOADS` and
+    :macro:`MAX_CONCURRENT_DOWNLOADS`. Throttling will dynamically
     reduce the level of concurrency further to attempt to prevent disk
     load from exceeding the specified level. Disk load is computed as
     the average number of file transfer processes conducting read/write
@@ -4688,32 +4656,28 @@ These macros control the *condor_schedd*.
 :macro-def:`FILE_TRANSFER_DISK_LOAD_THROTTLE_SHORT_HORIZON`
     This rarely configured variable specifies the string name of the
     short monitoring time span to use for throttling. The named time
-    span must exist in ``TRANSFER_IO_REPORT_TIMESPANS``
-    :index:`TRANSFER_IO_REPORT_TIMESPANS`. The default is ``1m``,
-    which is 1 minute.
+    span must exist in :macro:`TRANSFER_IO_REPORT_TIMESPANS`. The
+    default is ``1m``, which is 1 minute.
 
 :macro-def:`FILE_TRANSFER_DISK_LOAD_THROTTLE_LONG_HORIZON`
     This rarely configured variable specifies the string name of the
     long monitoring time span to use for throttling. The named time span
-    must exist in ``TRANSFER_IO_REPORT_TIMESPANS``
-    :index:`TRANSFER_IO_REPORT_TIMESPANS`. The default is ``5m``,
-    which is 5 minutes.
+    must exist in :macro:`TRANSFER_IO_REPORT_TIMESPANS`. The default is
+    ``5m``, which is 5 minutes.
 
 :macro-def:`TRANSFER_QUEUE_USER_EXPR`
     This rarely configured expression specifies the user name to be used
     for scheduling purposes in the file transfer queue. The scheduler
     attempts to give equal weight to each user when there are multiple
     jobs waiting to transfer files within the limits set by
-    ``MAX_CONCURRENT_UPLOADS`` :index:`MAX_CONCURRENT_UPLOADS`
-    and/or ``MAX_CONCURRENT_DOWNLOADS``
-    :index:`MAX_CONCURRENT_DOWNLOADS`. When choosing a new job to
-    allow to transfer, the first job belonging to the transfer queue
-    user who has least number of active transfers will be selected. In
-    case of a tie, the user who has least recently been given an
-    opportunity to start a transfer will be selected. By default, a
-    transfer queue user is identified as the job owner. A different user
-    name may be specified by configuring ``TRANSFER_QUEUE_USER_EXPR`` to
-    a string expression that is evaluated in the context of the job ad.
+    :macro:`MAX_CONCURRENT_UPLOADS` and/or :macro:`MAX_CONCURRENT_DOWNLOADS`.
+    When choosing a new job to allow to transfer, the first job belonging
+    to the transfer queue user who has least number of active transfers
+    will be selected. In case of a tie, the user who has least recently
+    been given an opportunity to start a transfer will be selected. By
+    default, a transfer queue user is identified as the job owner. A
+    different user name may be specified by configuring ``TRANSFER_QUEUE_USER_EXPR``
+    to a string expression that is evaluated in the context of the job ad.
     For example, if this expression were set to a name that is the same
     for all jobs, file transfers would be scheduled in
     first-in-first-out order rather than equal share order. Note that
@@ -4785,7 +4749,7 @@ These macros control the *condor_schedd*.
     reached, the next query will be handled in the *condor_schedd* 's
     main process.
 
-``CONDOR_Q_USE_V3_PROTOCOL`` :index:`CONDOR_Q_USE_V3_PROTOCOL`
+:macro-def:`CONDOR_Q_USE_V3_PROTOCOL`
     A boolean value that, when ``True``, causes the *condor_schedd* to
     use an algorithm that responds to *condor_q* requests by not
     forking itself to handle each request. It instead handles the
@@ -4844,21 +4808,18 @@ These macros control the *condor_schedd*.
     relatively small, and less frequently when the cost is high. The
     default is 0.05, which means the schedd will adapt its bookkeeping
     interval to consume no more than 5% of the total time available to
-    the schedd. The lower bound is configured by ``SCHEDD_MIN_INTERVAL``
-    :index:`SCHEDD_MIN_INTERVAL` (default 5 seconds), and the
-    upper bound is configured by ``SCHEDD_INTERVAL``
-    :index:`SCHEDD_INTERVAL` (default 300 seconds).
+    the schedd. The lower bound is configured by :macro:`SCHEDD_MIN_INTERVAL`
+    (default 5 seconds), and the upper bound is configured by
+    :macro:`SCHEDD_INTERVAL` (default 300 seconds).
 
 :macro-def:`JOB_START_COUNT`
-    This macro works together with the ``JOB_START_DELAY``
-    :index:`JOB_START_DELAY` macro to throttle job starts. The
-    default and minimum values for this integer configuration variable
-    are both 1.
+    This macro works together with the :macro:`JOB_START_DELAY` macro
+    to throttle job starts. The default and minimum values for this
+    integer configuration variable are both 1.
 
 :macro-def:`JOB_START_DELAY`
-    This integer-valued macro works together with the
-    ``JOB_START_COUNT`` :index:`JOB_START_COUNT` macro to throttle
-    job starts. The *condor_schedd* daemon starts
+    This integer-valued macro works together with the :macro:`JOB_START_COUNT`
+    macro to throttle job starts. The *condor_schedd* daemon starts
     ``$(JOB_START_COUNT)`` jobs at a time, then delays for
     ``$(JOB_START_DELAY)`` seconds before starting the next set of jobs.
     This delay prevents a sudden, large load on resources required by
@@ -4924,10 +4885,10 @@ These macros control the *condor_schedd*.
     the interval is further constrained by the floor value of 10
     seconds. If the *condor_startd* does not receive any of these keep
     alive messages during a certain period of time (defined via
-    :macro:`MAX_CLAIM_ALIVES_MISSED` :index:`MAX_CLAIM_ALIVES_MISSED`) the 
-    *condor_startd* releases the claim, and the *condor_schedd* no longer pays 
-    for the resource (in terms of user priority in the system). The macro is
-    defined in terms of seconds and defaults to 300, which is 5 minutes.
+    :macro:`MAX_CLAIM_ALIVES_MISSED`) the  *condor_startd* releases the claim,
+    and the *condor_schedd* no longer pays for the resource (in terms of
+    user priority in the system). The macro is defined in terms of seconds
+    and defaults to 300, which is 5 minutes.
 
 :macro-def:`STARTD_SENDS_ALIVES`
     Note: This setting is deprecated, and may go away in a future
@@ -4946,8 +4907,7 @@ These macros control the *condor_schedd*.
     This macro sets the time (in seconds) that the *condor_schedd* will
     wait for a claim to be granted by the *condor_startd*. The default
     is 30 minutes. This is only likely to matter if
-    ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION``
-    :index:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION` is ``True``, and
+    :macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION` is ``True``, and
     the *condor_startd* has an existing claim, and it takes a long time
     for the existing claim to be preempted due to
     ``MaxJobRetirementTime``. Once a request times out, the
@@ -5062,8 +5022,7 @@ These macros control the *condor_schedd*.
     run attempts, history of machine attributes from previous run
     attempts may be kept. The number of run attempts to store is
     specified by the configuration variable
-    ``SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH``
-    :index:`SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH`. A machine
+    :macro:`SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH`. A machine
     attribute named ``X`` will be inserted into the job ClassAd as an
     attribute named ``MachineAttrX0``. The previous value of this
     attribute will be named ``MachineAttrX1``, the previous to that will
@@ -5082,8 +5041,7 @@ These macros control the *condor_schedd*.
 :macro-def:`SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH`
     The integer number of run attempts to store in the job ClassAd when
     recording the values of machine attributes listed in
-    ``SYSTEM_JOB_MACHINE_ATTRS``
-    :index:`SYSTEM_JOB_MACHINE_ATTRS`. The default is 1. The
+    :macro:`SYSTEM_JOB_MACHINE_ATTRS`. The default is 1. The
     history length may also be extended on a per-job basis by using the
     submit file command
     **job_machine_attrs_history_length** :index:`job_machine_attrs_history_length<single: job_machine_attrs_history_length; submit commands>`.
@@ -5151,11 +5109,10 @@ These macros control the *condor_schedd*.
     This integer value controls how quickly flocking to various pools
     will occur. It defaults to 1, meaning that pools will be considered
     for flocking slowly. The first *condor_collector* daemon listed in
-    ``FLOCK_COLLECTOR_HOSTS`` :index:`FLOCK_COLLECTOR_HOSTS` will
-    be considered for flocking, and then the second, and so on. A larger
-    value increases the number of *condor_collector* daemons to be
-    considered for flocking. For example, a value of 2 will partition
-    the ``FLOCK_COLLECTOR_HOSTS`` :index:`FLOCK_COLLECTOR_HOSTS`
+    :macro:`FLOCK_COLLECTOR_HOSTS` will be considered for flocking, and
+    then the second, and so on. A larger value increases the number of
+    *condor_collector* daemons to be considered for flocking. For example,
+    a value of 2 will partition the :macro:`FLOCK_COLLECTOR_HOSTS`
     into sets of 2 *condor_collector* daemons, and each set will be
     considered for flocking.
 
@@ -5210,10 +5167,9 @@ These macros control the *condor_schedd*.
     frequently. The default time slice is 0.01, so the *condor_schedd*
     will set the interval between evaluations so that it spends only 1%
     of its time in this activity. The lower bound for the interval is
-    configured by ``PERIODIC_EXPR_INTERVAL``
-    :index:`PERIODIC_EXPR_INTERVAL` (default 60 seconds) and the
-    upper bound is configured with ``MAX_PERIODIC_EXPR_INTERVAL``
-    :index:`MAX_PERIODIC_EXPR_INTERVAL` (default 1200 seconds).
+    configured by :macro:`PERIODIC_EXPR_INTERVAL` (default 60 seconds)
+    and the upper bound is configured with :macro:`MAX_PERIODIC_EXPR_INTERVAL`
+    (default 1200 seconds).
 
 :macro-def:`SYSTEM_PERIODIC_HOLD_NAMES`
     A comma and/or space separated list of unique names, where each is
@@ -5919,10 +5875,8 @@ These settings affect the *condor_shadow*.
     updated or should be refreshed. The default is 600 seconds (10
     minutes). This variable's value should be small in comparison to the
     refresh interval required to keep delegated credentials from
-    expiring (configured via ``DELEGATE_JOB_GSI_CREDENTIALS_REFRESH``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS_REFRESH` and
-    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`). If this
+    expiring (configured via :macro:`DELEGATE_JOB_GSI_CREDENTIALS_REFRESH`
+    and :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`). If this
     variable's value is too small, proxy updates could happen very
     frequently, potentially creating a lot of load on the submit
     machine.
@@ -6342,13 +6296,12 @@ These settings affect the *condor_starter*.
     execute machines.
 
 :macro-def:`ENABLE_CHIRP_UPDATES`
-    A boolean value that defaults to ``True``. If ``ENABLE_CHIRP``
-    :index:`ENABLE_CHIRP` is ``True``, and
-    ``ENABLE_CHIRP_UPDATES`` is ``False``, then the user job can only
-    read job attributes from the submit side; it cannot change them or
-    write to the job event log. If ``ENABLE_CHIRP`` is ``False``, the
-    setting of this variable does not matter, as no Chirp updates are
-    allowed in that case.
+    A boolean value that defaults to ``True``. If :macro:`ENABLE_CHIRP`
+    is ``True``, and ``ENABLE_CHIRP_UPDATES`` is ``False``, then the
+    user job can only read job attributes from the submit side; it
+    cannot change them or write to the job event log. If ``ENABLE_CHIRP``
+    is ``False``, the setting of this variable does not matter, as no
+    Chirp updates are allowed in that case.
 
 :macro-def:`ENABLE_CHIRP_IO`
     A boolean value that defaults to ``True``. If ``False``, the file
@@ -6579,12 +6532,6 @@ site use the following macros:
 
 :macro-def:`APPEND_RANK_VANILLA`
     Expression to append to vanilla job rank.
-
-.. note::
-
-    The ``APPEND_RANK_VANILLA`` macro
-    was called ``APPEND_PREF_VANILLA`` :index:`APPEND_PREF_VANILLA` in
-    previous versions of HTCondor.
 
 In addition, you may provide default ``Rank`` expressions if your users
 do not specify their own with:
@@ -6884,8 +6831,7 @@ These macros affect the *condor_collector*.
 
     .. note::
 
-        See the note for ``COLLECTOR_SOCKET_BUFSIZE``
-        :index:`COLLECTOR_SOCKET_BUFSIZE`.
+        See the note for :macro:`COLLECTOR_SOCKET_BUFSIZE`.
 
 :macro-def:`KEEP_POOL_HISTORY`
     This boolean macro is used to decide if the collector will write out
@@ -6951,18 +6897,16 @@ These macros affect the *condor_collector*.
     the *condor_collector* inserts into the ClassAds it stores and
     sends. The default value is 128, which means that history is stored
     and published for the latest 128 updates. This variable's value is
-    ignored, if ``COLLECTOR_DAEMON_STATS``
-    :index:`COLLECTOR_DAEMON_STATS` is not enabled.
+    ignored, if :macro:`COLLECTOR_DAEMON_STATS` is not enabled.
 
     If the value is a non-zero one, the *condor_collector* will insert
     attribute ``UpdatesHistory`` into the ClassAd (similar to
     ``UpdatesTotal``). AttrUpdatesHistory is a hexadecimal string which
-    represents a bitmap of the last ``COLLECTOR_DAEMON_HISTORY_SIZE``
-    :index:`COLLECTOR_DAEMON_HISTORY_SIZE` updates. The most
-    significant bit (MSB) of the bitmap represents the most recent
-    update, and the least significant bit (LSB) represents the least
-    recent. A value of zero means that the update was not lost, and a
-    value of 1 indicates that the update was detected as lost.
+    represents a bitmap of the last :macro:`COLLECTOR_DAEMON_HISTORY_SIZE`
+    updates. The most significant bit (MSB) of the bitmap represents
+    the most recent update, and the least significant bit (LSB) represents
+    the least recent. A value of zero means that the update was not lost,
+    and a value of 1 indicates that the update was detected as lost.
 
     For example, if the last update was not lost, the previous was lost,
     and the previous two not, the bitmap would be 0100, and the matching
@@ -6992,8 +6936,7 @@ These macros affect the *condor_collector*.
 
     Note that the *condor_collector* always publishes Lost, Total and
     Sequenced counts for all ClassAd classes. This is similar to the
-    statistics gathered if ``COLLECTOR_DAEMON_STATS``
-    :index:`COLLECTOR_DAEMON_STATS` is enabled.
+    statistics gathered if :macro:`COLLECTOR_DAEMON_STATS` is enabled.
 
 :macro-def:`COLLECTOR_QUERY_WORKERS`
     This macro sets the maximum number of child worker processes that
@@ -7012,17 +6955,15 @@ These macros affect the *condor_collector*.
     changed.
 
 :macro-def:`COLLECTOR_QUERY_WORKERS_RESERVE_FOR_HIGH_PRIO`
-    This macro defines the number of ``COLLECTOR_QUERY_WORKERS``
-    :index:`COLLECTOR_QUERY_WORKERS` slots will be held in reserve
-    to only service high priority query requests. Currently, high
-    priority queries are defined as those coming from the
-    *condor_negotiator* during the course of matchmaking, or via a
-    "condor_sos condor_status" command. The idea here is the critical
+    This macro defines the number of :macro:`COLLECTOR_QUERY_WORKERS`
+    slots will be held in reserve to only service high priority query
+    requests. Currently, high priority queries are defined as those
+    coming from the *condor_negotiator* during the course of matchmaking,
+    or via a "condor_sos condor_status" command. The idea here is the critical
     operation of matchmaking machines to jobs will take precedence over
     user condor_status invocations. Defaults to a value of 1. The
     maximum allowable value for this macro is equal to
-    ``COLLECTOR_QUERY_WORKERS`` :index:`COLLECTOR_QUERY_WORKERS`
-    minus 1.
+    :macro:`COLLECTOR_QUERY_WORKERS` minus 1.
 
 :macro-def:`COLLECTOR_QUERY_WORKERS_PENDING`
     This macro sets the maximum of collector pending query requests that
@@ -7301,8 +7242,7 @@ These macros affect the *condor_negotiator*.
     and will go directly from Unclaimed to Claimed. Because this
     notification is done via UDP, if a pool is configured so that the
     execute hosts do not create UDP command sockets (see the
-    :macro:`WANT_UDP_COMMAND_SOCKET` :index:`WANT_UDP_COMMAND_SOCKET`
-    setting for details), the
+    :macro:`WANT_UDP_COMMAND_SOCKET` setting for details), the
     *condor_negotiator* should be configured not to attempt to contact
     these *condor_startd* daemons by using the default value.
 
@@ -7356,14 +7296,13 @@ These macros affect the *condor_negotiator*.
     the ClassAd of the idle (candidate) job. There is no direct access
     to the currently running job, but attributes of the currently
     running job that need to be accessed in ``PREEMPTION_REQUIREMENTS``
-    can be placed in the machine ClassAd using ``STARTD_JOB_ATTRS``
-    :index:`STARTD_JOB_ATTRS`. If not explicitly set in the
-    HTCondor configuration file, the default value for this expression
-    is ``False``. ``PREEMPTION_REQUIREMENTS`` should include the term
-    ``(SubmitterGroup =?= RemoteGroup)``, if a preemption policy that
-    respects group quotas is desired. Note that this variable does not
-    influence other potential causes of preemption, such as the ``RANK``
-    of the *condor_startd*, or ``PREEMPT`` expressions. See
+    can be placed in the machine ClassAd using :macro:`STARTD_JOB_ATTRS`.
+    If not explicitly set in the HTCondor configuration file, the default
+    value for this expression is ``False``. ``PREEMPTION_REQUIREMENTS``
+    should include the term ``(SubmitterGroup =?= RemoteGroup)``, if a
+    preemption policy that respects group quotas is desired. Note that
+    this variable does not influence other potential causes of preemption,
+    such as the ``RANK`` of the *condor_startd*, or ``PREEMPT`` expressions. See
     :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     for a general discussion of limiting preemption.
 
@@ -7552,15 +7491,13 @@ These macros affect the *condor_negotiator*.
     For expert users only. A boolean value that defaults to ``True``.
     When ``False``, it can cause the *condor_negotiator* to run faster
     and also have better spinning pie accuracy. Only set this to
-    ``False`` if ``PREEMPTION_REQUIREMENTS``
-    :index:`PREEMPTION_REQUIREMENTS` is ``False``, and if all
+    ``False`` if :macro:`PREEMPTION_REQUIREMENTS` is ``False``, and if all
     *condor_startd* rank expressions are ``False``.
 
 :macro-def:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`
     A boolean value that when ``False`` (the default), prevents the
     *condor_negotiator* from matching jobs to claimed slots that cannot
-    immediately be preempted due to ``MAXJOBRETIREMENTTIME``
-    :index:`MAXJOBRETIREMENTTIME`.
+    immediately be preempted due to :macro:`MAXJOBRETIREMENTTIME`.
 
 :macro-def:`ALLOW_PSLOT_PREEMPTION`
     A boolean value that defaults to ``False``. When set to ``True`` for
@@ -7656,8 +7593,7 @@ The following configuration macros affect negotiation for group users.
            GROUP_QUOTA_DYNAMIC_group_biology = 0.25
 
 
-    The group name must be specified in the ``GROUP_NAMES``
-    :index:`GROUP_NAMES` list.
+    The group name must be specified in the :macro:`GROUP_NAMES` list.
 
     This section has not yet been completed
 
@@ -7749,8 +7685,7 @@ The following configuration macros affect negotiation for group users.
     requested cores across all idle jobs from that submitter,
     ``WeightedIdleJobs``. If partitionable slots are being used, and if
     hierarchical group quotas are used, and if any hierarchical group
-    quotas set ``GROUP_ACCEPT_SURPLUS``
-    :index:`GROUP_ACCEPT_SURPLUS` to ``True``, and if
+    quotas set :macro:`GROUP_ACCEPT_SURPLUS` to ``True``, and if
     configuration variable ``SlotWeight`` :index:`SlotWeight` is
     set to the number of cores, then setting this configuration variable
     to ``True`` allows the amount of surplus allocated to each group to
@@ -8001,8 +7936,7 @@ These macros affect the *condor_gridmanager*.
     The maximum number of job status probes per second that will be
     issued to a given remote resource. The time between status probes
     for individual jobs may be lengthened beyond
-    ``GRIDMANAGER_JOB_PROBE_INTERVAL``
-    :index:`GRIDMANAGER_JOB_PROBE_INTERVAL` to enforce this rate.
+    :macro:`GRIDMANAGER_JOB_PROBE_INTERVAL` to enforce this rate.
     The default is 5 probes per second. Rates specific to grid types can
     be set by appending the name of the grid type to the configuration
     variable name, as the example
@@ -8303,9 +8237,8 @@ These macros affect the *condor_job_router* daemon.
     within a routing table entry. In addition to the configurable
     constraints, the *condor_job_router* also has some hard-coded
     constraints. It avoids recursively routing jobs by requiring that
-    the job's attribute ``RoutedBy`` does not match ``JOB_ROUTER_NAME``
-    :index:`JOB_ROUTER_NAME`. When not running as root, it also
-    avoids routing jobs belonging to other users.
+    the job's attribute ``RoutedBy`` does not match :macro:`JOB_ROUTER_NAME`.
+    When not running as root, it also avoids routing jobs belonging to other users.
 
 :macro-def:`JOB_ROUTER_MAX_JOBS`
     An integer value representing the maximum number of jobs that may be
@@ -8391,8 +8324,7 @@ These macros affect the *condor_job_router* daemon.
     *condor_schedd* than the source *condor_schedd*, it is required
     that *condor_job_router* have permission to impersonate the job
     owners of the routed jobs. It is therefore usually necessary to
-    configure ``QUEUE_SUPER_USER_MAY_IMPERSONATE``
-    :index:`QUEUE_SUPER_USER_MAY_IMPERSONATE` in the configuration
+    configure :macro:`QUEUE_SUPER_USER_MAY_IMPERSONATE` in the configuration
     of the target *condor_schedd*.
 
 :macro-def:`JOB_ROUTER_SCHEDD1_NAME`
@@ -8401,8 +8333,8 @@ These macros affect the *condor_job_router* daemon.
     local *condor_schedd*. If specified, this parameter must name the
     same *condor_schedd* whose spool is configured in
     ``JOB_ROUTER_SCHEDD1_SPOOL``. If the named *condor_schedd* is not
-    advertised in the local pool, ``JOB_ROUTER_SCHEDD1_POOL``
-    :index:`JOB_ROUTER_SCHEDD1_POOL` will also need to be set.
+    advertised in the local pool, :macro:`JOB_ROUTER_SCHEDD1_POOL` will
+    also need to be set.
 
 :macro-def:`JOB_ROUTER_SCHEDD2_NAME`
     The advertised daemon name of the *condor_schedd* to which the
@@ -8410,15 +8342,13 @@ These macros affect the *condor_job_router* daemon.
     defaults to the local *condor_schedd*. If specified, this parameter
     must name the same *condor_schedd* whose spool is configured in
     ``JOB_ROUTER_SCHEDD2_SPOOL``. If the named *condor_schedd* is not
-    advertised in the local pool, ``JOB_ROUTER_SCHEDD2_POOL``
-    :index:`JOB_ROUTER_SCHEDD2_POOL` will also need to be set.
-    Note that when *condor_job_router* is running as root and is
-    submitting routed jobs to a different *condor_schedd* than the
-    source *condor_schedd*, it is required that *condor_job_router*
+    advertised in the local pool, :macro:`JOB_ROUTER_SCHEDD2_POOL` will
+    also need to be set. Note that when *condor_job_router* is running
+    as root and is submitting routed jobs to a different *condor_schedd*
+    than the source *condor_schedd*, it is required that *condor_job_router*
     have permission to impersonate the job owners of the routed jobs. It
     is therefore usually necessary to configure
-    ``QUEUE_SUPER_USER_MAY_IMPERSONATE``
-    :index:`QUEUE_SUPER_USER_MAY_IMPERSONATE` in the configuration
+    :macro:`QUEUE_SUPER_USER_MAY_IMPERSONATE` in the configuration
     of the target *condor_schedd*.
 
 :macro-def:`JOB_ROUTER_SCHEDD1_POOL`
@@ -9303,9 +9233,8 @@ macros are described in the :doc:`/admin-manual/security` section.
     match. The alias is advertised to the *condor_collector* as part of
     the address of the daemon. When this is not set, clients validate
     the daemon's certificate host name by matching it against DNS A
-    records for the host they are connected to. See
-    ``SSL_SKIP_HOST_CHECK`` :index:`SSL_SKIP_HOST_CHECK` for ways
-    to disable this validation step.
+    records for the host they are connected to. See :macro:`SSL_SKIP_HOST_CHECK`
+    for ways to disable this validation step.
 
 :macro-def:`USE_COLLECTOR_HOST_CNAME`
     A boolean value that determines what hostname a client should
@@ -9346,13 +9275,10 @@ macros are described in the :doc:`/admin-manual/security` section.
     limited lifetime should be renewed. The renewal is attempted
     periodically at or near the specified fraction of the lifetime of
     the delegated credential. The default value is 0.25. This setting
-    has no effect if ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False`` or if
-    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME` is 0. For
+    has no effect if :macro:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False``
+    or if :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME` is 0. For
     non-grid jobs, the precise timing of the proxy refresh depends on
-    ``SHADOW_CHECKPROXY_INTERVAL``
-    :index:`SHADOW_CHECKPROXY_INTERVAL`. To ensure that the
+    :macro:`SHADOW_CHECKPROXY_INTERVAL`. To ensure that the
     delegated proxy remains valid, the interval for checking the proxy
     should be, at most, half of the interval for refreshing it.
 
@@ -9462,14 +9388,13 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_TCP_SESSION_DEADLINE`
     An integer representing the total length of time in seconds until
     giving up when establishing a security session. Whereas
-    ``SEC_TCP_SESSION_TIMEOUT`` :index:`SEC_TCP_SESSION_TIMEOUT`
-    specifies the timeout for individual blocking operations (connect,
-    read, write), this setting specifies the total time across all
-    operations, including non-blocking operations that have little cost
-    other than holding open the socket. The default value is 120
-    seconds. The intention of this setting is to avoid waiting for hours
-    for a response in the rare event that the other side freezes up and
-    the socket remains in a connected state. This problem has been
+    :macro:`SEC_TCP_SESSION_TIMEOUT` specifies the timeout for individual
+    blocking operations (connect, read, write), this setting specifies
+    the total time across all operations, including non-blocking operations
+    that have little cost other than holding open the socket. The default
+    value is 120 seconds. The intention of this setting is to avoid waiting
+    for hours for a response in the rare event that the other side freezes
+    up and the socket remains in a connected state. This problem has been
     observed in some types of operating system crashes.
 
 :macro-def:`SEC_DEFAULT_AUTHENTICATION_TIMEOUT`
@@ -9679,8 +9604,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 
 :macro-def:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS`
     For HTCondor version 8.5.8 and later. When this is true, the second
-    field of the ``CERTIFICATE_MAPFILE``
-    :index:`CERTIFICATE_MAPFILE` is not interpreted as a regular
+    field of the :macro:`CERTIFICATE_MAPFILE` is not interpreted as a regular
     expression unless it begins and ends with the slash / character.
 
 :macro-def:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`
@@ -10003,8 +9927,7 @@ These macros affect the high availability operation of HTCondor.
     Lock files are in the form <SUBSYS>.lock. *condor_preen* is not
     currently aware of the lock files and will delete them if they are
     placed in the ``SPOOL`` directory, so be sure to add <SUBSYS>.lock
-    to ``VALID_SPOOL_FILES`` :index:`VALID_SPOOL_FILES` for each
-    High Availability daemon.
+    to :macro:`VALID_SPOOL_FILES` for each High Availability daemon.
 
 :macro-def:`HA_<SUBSYS>_LOCK_URL`
     This macro controls the High Availability lock URL for a specific
@@ -10368,8 +10291,7 @@ pool's *condor_collector* daemon.
 
 For *condor_rooster* to wake up hibernating machines, the collecting of
 offline machine ClassAds must be enabled. See variable
-:macro:`COLLECTOR_PERSISTENT_AD_LOG` :index:`COLLECTOR_PERSISTENT_AD_LOG`
-for details on how to do this.
+:macro:`COLLECTOR_PERSISTENT_AD_LOG` for details on how to do this.
 
 :macro-def:`ROOSTER_INTERVAL`
     The integer number of seconds between checks for offline machines
@@ -10384,19 +10306,17 @@ for details on how to do this.
     up. The default expression is ``Offline && Unhibernate``. If network
     topology or other considerations demand that some machines in a pool
     be woken up by one instance of *condor_rooster*, while others be
-    woken up by a different instance, ``ROOSTER_UNHIBERNATE``
-    :index:`ROOSTER_UNHIBERNATE` may be set locally such that it
-    is different for the two instances of *condor_rooster*. In this
-    way, the different instances will only try to wake up their
-    respective subset of the pool.
+    woken up by a different instance, :macro:`ROOSTER_UNHIBERNATE` may
+    be set locally such that it is different for the two instances of
+    *condor_rooster*. In this way, the different instances will only
+    try to wake up their respective subset of the pool.
 
 :macro-def:`ROOSTER_UNHIBERNATE_RANK`
     A ClassAd expression specifying which machines should be woken up
     first in a given cycle. Higher ranked machines are woken first. If
     the number of machines to be woken up is limited by
-    ``ROOSTER_MAX_UNHIBERNATE`` :index:`ROOSTER_MAX_UNHIBERNATE`,
-    the rank may be used for determining which machines are woken before
-    reaching the limit.
+    :macro:`ROOSTER_MAX_UNHIBERNATE`, the rank may be used for determining
+    which machines are woken before reaching the limit.
 
 :macro-def:`ROOSTER_WAKEUP_CMD`
     A string representing the command line invoked by *condor_rooster*
@@ -10421,8 +10341,8 @@ see :ref:`admin-manual/networking:reducing port usage with the
     A boolean value that specifies whether HTCondor daemons should rely
     on the *condor_shared_port* daemon for receiving incoming
     connections. Under Unix, write access to the location defined by
-    ``DAEMON_SOCKET_DIR`` :index:`DAEMON_SOCKET_DIR` is required
-    for this to take effect. The default is ``True``.
+    :macro:`DAEMON_SOCKET_DIR` is required for this to take effect.
+    The default is ``True``.
 
 :macro-def:`SHARED_PORT_PORT`
     The default TCP port used by the *condor_shared_port* daemon. If
@@ -10486,9 +10406,8 @@ see :ref:`admin-manual/networking:reducing port usage with the
     socket allows command-line tools such as *condor_ssh_to_job* to
     use *condor_shared_port* as described.
 
-    On Linux platforms, setting ``SHARED_PORT_AUDIT_LOG``
-    :index:`SHARED_PORT_AUDIT_LOG` causes HTCondor to log the
-    following information about each connection made through the
+    On Linux platforms, setting :macro:`SHARED_PORT_AUDIT_LOG` causes HTCondor
+    to log the following information about each connection made through the
     ``DAEMON_SOCKET_DIR``: the source address, the socket file name, and
     the target process's PID, UID, GID, executable path, and command
     line. An administrator may use this logged information to deter
@@ -10649,8 +10568,7 @@ details. The other set replace functionality of the
 :macro-def:`FetchWorkDelay`
     An expression that defines the number of seconds that the
     *condor_startd* should wait after an invocation of
-    ``<Keyword>_HOOK_FETCH_WORK``
-    :index:`<Keyword>_HOOK_FETCH_WORK` completes before the hook
+    :macro:`<Keyword>_HOOK_FETCH_WORK` completes before the hook
     should be invoked again. The expression is evaluated in the context
     of the slot ClassAd, and the ClassAd of the currently running job
     (if any). The expression must evaluate to an integer. If not
@@ -10737,9 +10655,8 @@ are probably the most common.
         This default value causes the *condor_startd* to not
         automatically publish updates based on any jobs. Instead,
         updates rely on the usual behavior for sending updates, which is
-        periodic, based on the ``UPDATE_INTERVAL``
-        :index:`UPDATE_INTERVAL` configuration variable, or
-        whenever a given slot changes state.
+        periodic, based on the :macro:`UPDATE_INTERVAL` configuration
+        variable, or whenever a given slot changes state.
      ``Always``
         Causes the *condor_startd* to always send a new update to the
         *condor_collector* whenever any job exits.
@@ -11033,9 +10950,8 @@ These macros are utilized only on Windows platforms.
     built-in *rmdir* program. The HTCondor version will not fail when
     the directory contains files that have ACLs that deny the SYSTEM
     process delete access. If not defined, the built-in Windows *rmdir*
-    program is invoked, and a value defined for
-    ``WINDOWS_RMDIR_OPTIONS`` :index:`WINDOWS_RMDIR_OPTIONS` is
-    ignored.
+    program is invoked, and a value defined for :macro:`WINDOWS_RMDIR_OPTIONS`
+    is ignored.
 
 :macro-def:`WINDOWS_RMDIR_OPTIONS`
     Command line options to be specified when configuration variable
@@ -11070,17 +10986,16 @@ general discussion of *condor_defrag* may be found in
     to be one machine. The actual number of machines drained per hour
     may be less than this if draining is halted by one of the other
     defragmentation policy controls. The granularity in timing of
-    draining initiation is controlled by ``DEFRAG_INTERVAL``
-    :index:`DEFRAG_INTERVAL`. The lowest rate of draining that is
-    supported is one machine per day or one machine per
-    ``DEFRAG_INTERVAL`` :index:`DEFRAG_INTERVAL`, whichever is
+    draining initiation is controlled by :macro:`DEFRAG_INTERVAL`.
+    The lowest rate of draining that is supported is one machine per
+    day or one machine per :macro:`DEFRAG_INTERVAL`, whichever is
     lower. A fractional number of machines contributing to the value of
     ``DEFRAG_DRAINING_MACHINES_PER_HOUR`` is rounded to the nearest
     whole number of machines on a per day basis.
 
 :macro-def:`DEFRAG_DRAINING_START_EXPR`
-    A ClassAd expression that replaces the machine's ``START``
-    :index:`START` expression while it's draining. Slots which
+    A ClassAd expression that replaces the machine's :macro:`START`
+    expression while it's draining. Slots which
     accepted a job after the machine began draining set the machine ad
     attribute ``AcceptedWhileDraining`` to ``true``. When the last job
     which was not accepted while draining exits, all other jobs are
@@ -11098,8 +11013,7 @@ general discussion of *condor_defrag* may be found in
     A machine, meaning a *condor_startd*, is matched if any of its
     partitionable slots match this expression. Machines are automatically excluded if
     they cannot be drained, are already draining, or if they match
-    ``DEFRAG_WHOLE_MACHINE_EXPR``
-    :index:`DEFRAG_WHOLE_MACHINE_EXPR`.
+    :macro:`DEFRAG_WHOLE_MACHINE_EXPR`.
 
     The *condor_defrag* daemon will always add the following requirements to ``DEFRAG_REQUIREMENTS``
 
@@ -11231,9 +11145,8 @@ has.
     which is the default. Additional metrics can be enabled by
     increasing the verbosity to 1. In the default configuration, there
     are no metrics with verbosity levels higher than 1. Some metrics
-    depend on attributes that are not published to the
-    *condor_collector* when using the default value of
-    ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH`. For
+    depend on attributes that are not published to the *condor_collector*
+    when using the default value of :macro:`STATISTICS_TO_PUBLISH`. For
     example, per-user file transfer statistics will only be published to
     Ganglia if ``GANGLIA_VERBOSITY`` is set to 1 or higher in the
     *condor_gangliad* configuration and ``STATISTICS_TO_PUBLISH`` in
@@ -11288,26 +11201,23 @@ has.
 :macro-def:`GANGLIA_LIB`
     The full path and file name of the ``libganglia`` shared library to
     use. If none is specified, and if configuration variable
-    ``GANGLIA_GMETRIC`` :index:`GANGLIA_GMETRIC` is also not
-    specified, then a search for ``libganglia`` will be performed in the
-    directories listed in configuration variable ``GANGLIA_LIB_PATH``
-    :index:`GANGLIA_LIB_PATH` or ``GANGLIA_LIB64_PATH``
-    :index:`GANGLIA_LIB64_PATH`. The special value ``NOOP``
+    :macro:`GANGLIA_GMETRIC` is also not specified, then a search for
+    ``libganglia`` will be performed in the directories listed in
+    configuration variable :macro:`GANGLIA_LIB_PATH` or
+    :macro:`GANGLIA_LIB64_PATH`. The special value ``NOOP``
     indicates that *condor_gangliad* should not publish statistics to
     Ganglia, but should otherwise go through all the motions it normally
     does.
 
 :macro-def:`GANGLIA_LIB_PATH`
     A comma-separated list of directories within which to search for the
-    ``libganglia`` executable, if ``GANGLIA_LIB``
-    :index:`GANGLIA_LIB` is not configured. This is used in 32-bit
-    versions of HTCondor.
+    ``libganglia`` executable, if :macro:`GANGLIA_LIB` is not configured.
+    This is used in 32-bit versions of HTCondor.
 
 :macro-def:`GANGLIA_LIB64_PATH`
     A comma-separated list of directories within which to search for the
-    ``libganglia`` executable, if ``GANGLIA_LIB``
-    :index:`GANGLIA_LIB` is not configured. This is used in 64-bit
-    versions of HTCondor.
+    ``libganglia`` executable, if :macro:`GANGLIA_LIB` is not configured.
+    This is used in 64-bit versions of HTCondor.
 
 :macro-def:`GANGLIAD_DEFAULT_CLUSTER`
     An expression specifying the default name of the Ganglia cluster for
