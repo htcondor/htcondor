@@ -1398,7 +1398,7 @@ subsystem corresponding to the daemon.
     ``D_ACCOUNTANT``
         When this flag is set, the *condor_negotiator* will output
         debug messages relating to the computation of user priorities
-        (see :doc:`/admin-manual/user-priorities-negotiation`).
+        (see :doc:`/admin-manual/cm-configuration`).
 
     ``D_PROTOCOL``
         Enable debug messages relating to the protocol for HTCondor's
@@ -7239,12 +7239,12 @@ These macros affect the *condor_negotiator*.
 
 :macro-def:`DEFAULT_PRIO_FACTOR`
     Sets the priority factor for local users as they first submit jobs,
-    as described in :doc:`/admin-manual/user-priorities-negotiation`.
+    as described in :doc:`/admin-manual/cm-configuration`.
     Defaults to 1000.
 
 :macro-def:`NICE_USER_PRIO_FACTOR`
     Sets the priority factor for nice users, as described in
-    :doc:`/admin-manual/user-priorities-negotiation`.
+    :doc:`/admin-manual/cm-configuration`.
     Defaults to 10000000000.
 
 :macro-def:`NICE_USER_ACCOUNTING_GROUP_NAME`
@@ -7254,7 +7254,7 @@ These macros affect the *condor_negotiator*.
 :macro-def:`REMOTE_PRIO_FACTOR`
     Defines the priority factor for remote users, which are those users
     who who do not belong to the local domain. See
-    :doc:`/admin-manual/user-priorities-negotiation` for details.
+    :doc:`/admin-manual/cm-configuration` for details.
     Defaults to 10000000.
 
 :macro-def:`ACCOUNTANT_DATABASE_FILE`
@@ -7485,7 +7485,7 @@ These macros affect the *condor_negotiator*.
     talking to one submitter, for example someone with a very slow
     *condor_schedd* daemon. But, this can result in unfair allocation
     of machines or some machines not being allocated at all. See
-    :doc:`/admin-manual/user-priorities-negotiation`
+    :doc:`/admin-manual/cm-configuration`
     for a description of a pie slice. It defaults to 120 seconds.
 
 :macro-def:`NEGOTIATOR_DEPTH_FIRST`
