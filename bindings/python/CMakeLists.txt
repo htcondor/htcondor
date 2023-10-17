@@ -62,7 +62,7 @@ classad2/__init__.py
 classad2/_class_ad.py
 classad2/_value.py
 classad2/_expr_tree.py
-classad2/_parser.py
+classad2/_parser_type.py
 
 # Version 3
 classad3/__init__.py

@@ -6,7 +6,7 @@ else:
     import enum
 
 
-class Parser(enum.IntEnum):
+class ParserType(enum.IntEnum):
     """
     An enumeration of ClassAd parser types.
 
