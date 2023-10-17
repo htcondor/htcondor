@@ -40,6 +40,8 @@ _schedd_query(PyObject *, PyObject * args) {
 
 
     // FIXME: copied from _collector_query(), refactor.
+    // FIXME: Commas aren't legal in attribute names.  Consider rewriting
+    // to do the implosion on the Python side and a StringList here.
     std::vector<std::string> attributes;
     Py_ssize_t size = PyList_Size(projection);
     for( int i = 0; i < size; ++i ) {
@@ -772,4 +774,171 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
     PyObject * pyClusterAd = py_new_htcondor2_classad(clusterAd->Copy());
     return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd );
+}
+
+
+static PyObject *
+_history_query(PyObject *, PyObject * args) {
+    // _history_query( addr, constraint, projection, match, since, history_record_source, command )
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+    const char * projection = NULL;
+    long match = 0;
+    const char * since = NULL;
+    long history_record_source = -1;
+    long command = -1;
+    if(! PyArg_ParseTuple( args, "zzzlzll", & addr, & constraint, & projection, & match, & since, & history_record_source, & command )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    ClassAd commandAd;
+
+    if( strlen(constraint) != 0 ) {
+        if(! commandAd.AssignExpr(ATTR_REQUIREMENTS, constraint)) {
+            // This was ClassAdParseError in version 1.
+            PyErr_SetString( PyExc_ValueError, "invalid constraint" );
+            return NULL;
+        }
+    }
+
+    commandAd.Assign(ATTR_NUM_MATCHES, match);
+
+    StringList sl(projection);
+    std::string prefix = "";
+    std::string projectionList = "{";
+    const char * attr = NULL;
+    for( sl.rewind(); (attr = sl.next()) != NULL; ) {
+        projectionList += prefix + "\"" + attr + "\"";
+        prefix = ", ";
+    }
+    projectionList += "}";
+    commandAd.AssignExpr(ATTR_PROJECTION, projectionList.c_str());
+
+    if( since != NULL && since[0] != '\0' ) {
+        commandAd.AssignExpr("Since", since);
+    }
+
+    switch( history_record_source ) {
+        case 0: /* HRS_SCHEDD_JOB_HIST */
+            break;
+        case 1: /* HRS_STARTD_JOB_HIST */
+            commandAd.InsertAttr("HistoryRecordSource" /* FIXME */, "STARTD");
+            break;
+        case 2: /* HRS_JOB_EPOCH */
+            commandAd.InsertAttr("HistoryRecordSource" /* FIXME */, "JOB_EPOCH");
+            break;
+        default:
+            // This was HTCondorValueError in version 1.
+            PyErr_SetString( PyExc_RuntimeError, "unknown history record source" );
+            return NULL;
+    }
+
+
+    daemon_t dt = DT_SCHEDD;
+    if( command == GET_HISTORY ) {
+        dt = DT_STARTD;
+    }
+    Daemon d(dt, addr);
+
+    CondorError errorStack;
+    Sock * sock = d.startCommand( command, Stream::reli_sock, 0, & errorStack );
+    if( sock == NULL ) {
+        const char * message = errorStack.message(0);
+        if( message == NULL || message[0] == '\0' ) {
+            message = "Unable to connect to schedd";
+            if( dt == DT_STARTD ) { message = "Unable to connect to startd"; }
+
+            // This was HTCondorIOError in version 1.
+            PyErr_SetString( PyExc_IOError, message );
+            return NULL;
+        }
+    }
+
+    if(! putClassAd( sock, commandAd )) {
+        // This was HTCondorIOError in version 1.
+         PyErr_SetString( PyExc_IOError, "Unable to send history request classad" );
+        return NULL;
+    }
+
+    if(! sock->end_of_message()) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "Unable to send end-of-message" );
+        return NULL;
+    }
+
+    ClassAd result;
+    std::vector<ClassAd> results;
+
+    long long owner = -1;
+    while( owner != 0 ) {
+        if(! getClassAd( sock, result )) {
+            // This was HTCondorIOError in version 1.
+            PyErr_SetString( PyExc_IOError, "Failed to receive history ad." );
+            return NULL;
+        }
+
+        if( result.EvaluateAttrInt(ATTR_OWNER, owner) && (owner == 0) ) {
+            if(! sock->end_of_message()) {
+                // This was HTCondorIOError in version 1.
+                PyErr_SetString( PyExc_IOError, "Failed to send end-of-message." );
+                return NULL;
+            }
+            sock->close();
+
+            long long errorCode = -1;
+            std::string errorMessage;
+            if( result.EvaluateAttrInt(ATTR_ERROR_CODE, errorCode) &&
+              errorCode != 0 &&
+              result.EvaluateAttrString(ATTR_ERROR_STRING, errorMessage) ) {
+                // This was HTCondorIOError in version 1.
+                PyErr_SetString( PyExc_IOError, errorMessage.c_str() );
+                return NULL;
+            }
+
+            long long malformedAds = -1;
+            if( result.EvaluateAttrInt("MalformedAds", malformedAds) &&
+              malformedAds != 0 ) {
+                // This was HTCondorIOError in version 1.
+                PyErr_SetString( PyExc_IOError, "Remote side had parse errors in history file" );
+                return NULL;
+            }
+
+            long long matches = -1;
+            if( (! result.EvaluateAttrInt(ATTR_NUM_MATCHES, matches)) ||
+              matches != (long long)results.size() ) {
+                // This was (incorrectly) HTCondorValueError in version 1.
+                PyErr_SetString( PyExc_IOError, "Incorrect number of ads received" );
+                return NULL;
+            }
+
+            break;
+        }
+
+        results.push_back(result);
+    }
+
+    PyObject * list = PyList_New(0);
+    if( list == NULL ) {
+        PyErr_SetString( PyExc_MemoryError, "_history_query" );
+        return NULL;
+    }
+
+    for( auto & classAd : results ) {
+        // We could probably dispense with the copy by allocating the
+        // result ads on the heap in the first place, but that would
+        // require more attention to clean-up in the preceeding loop.
+        PyObject * pyClassAd = py_new_htcondor2_classad(classAd.Copy());
+        auto rv = PyList_Append(list, pyClassAd);
+        Py_DecRef(pyClassAd);
+
+        if( rv != 0 ) {
+            // PyList_Append() has already set an exception for us.
+            return NULL;
+        }
+    }
+
+    return list;
 }

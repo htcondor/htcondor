@@ -22,7 +22,7 @@ from ._query_opt import QueryOpt
 from ._job_action import JobAction
 from ._transaction_flag import TransactionFlag
 from ._job_event_type import JobEventType
-
+from ._file_transfer_event_type import FileTransferEventType
 
 # Classes.
 from ._collector import Collector

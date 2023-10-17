@@ -34,6 +34,7 @@ from .htcondor2_impl import (
     _schedd_unexport_job_ids,
     _schedd_unexport_job_constraint,
     _schedd_submit,
+    _history_query,
 )
 
 
@@ -213,6 +214,41 @@ class Schedd():
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
     ) -> "HistoryIterator": # FIXME: remove quotes
+        projection_string = ",".join(projection)
+
+        if isinstance(since, int):
+            since = f"ClusterID == {since}"
+        elif isinstance(since, str):
+            pattern = re.compile(r'(\d+).(\d+)')
+            matches = pattern.match(since)
+            if matches is None:
+                raise ValueError("since string must be in the form {clusterID}.{procID}")
+            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
+        elif isinstance(since, classad.ExprTree):
+            since = str(since)
+        elif since is None:
+            since = ""
+        else:
+            raise TypeError("since must be an int, string, or ExprTree")
+
+        if constraint is None:
+            constraint = ""
+
+        return _history_query(self._addr,
+            str(constraint), projection_string, int(match), since,
+            # HRS_JOB_HISTORY
+            0,
+            # QUERY_SCHEDD_HISTORY
+            515
+        )
+
+
+    def jobEpochHistory(self,
+        constraint : Union[str, classad.ExprTree],
+        projection : list[str] = [],
+        match : int = -1,
+        since : Union[int, str, classad.ExprTree] = None,
+    ) -> "HistoryIterator":
         # FIXME
         pass
 

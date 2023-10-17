@@ -167,6 +167,9 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_param_keys", &_param_keys, METH_VARARGS, NULL},
 
 
+	{"_history_query", &_history_query, METH_VARARGS, NULL},
+
+
 	{NULL, NULL, 0, NULL}
 };
 
