@@ -764,6 +764,12 @@ _schedd_submit( PyObject *, PyObject * args ) {
     DisconnectQ(NULL);
 
 
+    Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+    if(! schedd.sendCommand(RESCHEDULE, st, 0)) {
+        dprintf( D_ALWAYS, "Can't send RESCHEDULE command to schedd.\n" );
+    }
+
+
     PyObject * pyClusterAd = py_new_htcondor2_classad(clusterAd->Copy());
     return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd );
 }

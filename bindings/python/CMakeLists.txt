@@ -47,17 +47,22 @@ htcondor2/_drain_type.py
 htcondor2/_completion_type.py
 htcondor2/_common_imports.py
 htcondor2/_schedd.py
-htcondor2/_query_opts.py
+htcondor2/_query_opt.py
 htcondor2/_job_action.py
 htcondor2/_transaction_flag.py
 htcondor2/_submit.py
 htcondor2/_submit_result.py
+htcondor2/_job_event.py
+htcondor2/_job_event_log.py
+htcondor2/_job_event_type.py
+htcondor2/_param.py
 htcondor2/__init__.py
 
 classad2/__init__.py
 classad2/_class_ad.py
 classad2/_value.py
 classad2/_expr_tree.py
+classad2/_parser.py
 
 # Version 3
 classad3/__init__.py

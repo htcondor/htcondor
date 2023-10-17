@@ -43,25 +43,39 @@
 #include "condor_qmgr.h"
 #include "htcondor2/schedd.cpp"
 
+// htcondor.JobEventLog
+#include "read_user_log.h"
+#include "file_modified_trigger.h"
+#include "wait_for_user_log.h"
+#include "htcondor2/job_event_log.cpp"
+
+// htcondor._Param
+#include "param_info.h"
+#include "htcondor2/param.cpp"
+
 
 static PyMethodDef htcondor2_impl_methods[] = {
 	{"_version", & _version, METH_VARARGS, R"C0ND0R(
-        Returns the version of HTCondor this module is linked against.
-    )C0ND0R"},
+	    Returns the version of HTCondor this module is linked against.
+	)C0ND0R"},
 
 	{"_platform", & _platform, METH_VARARGS, R"C0ND0R(
         Returns the platform of HTCondor this module was compiled for.
-    )C0ND0R"},
+	)C0ND0R"},
 
 	{"_set_subsystem", & _set_subsystem, METH_VARARGS, R"C0ND0R(
-        Set the subsystem name for the object.
+	    Set the subsystem name for the object.
 
-        The subsystem is primarily used for the parsing of the HTCondor configuration file.
+	    The subsystem is primarily used for the parsing of the HTCondor configuration file.
 
-        :param str name: The subsystem name.
-        :param daemon_type: The HTCondor daemon type. The default value of :attr:`SubsystemType.Auto` infers the type from the name parameter.
-        :type daemon_type: :class:`SubsystemType`
-    )C0ND0R"},
+	    :param str name: The subsystem name.
+	    :param daemon_type: The HTCondor daemon type. The default value of :attr:`SubsystemType.Auto` infers the type from the name parameter.
+	    :type daemon_type: :class:`SubsystemType`
+	)C0ND0R"},
+
+	{"_reload_config", & _reload_config, METH_VARARGS, R"C0ND0R(
+	    Reload the HTCondor configuration from disk.
+	)C0ND0R"},
 
 
 	{"_collector_init", &_collector_init, METH_VARARGS, NULL},
@@ -132,6 +146,25 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_submit_getqargs", &_submit_getqargs, METH_VARARGS, NULL},
 
 	{"_submit_setqargs", &_submit_setqargs, METH_VARARGS, NULL},
+
+
+	{"_job_event_log_init", &_job_event_log_init, METH_VARARGS, NULL},
+
+	{"_job_event_log_next", &_job_event_log_next, METH_VARARGS, NULL},
+
+	{"_job_event_log_get_offset", &_job_event_log_get_offset, METH_VARARGS, NULL},
+
+	{"_job_event_log_set_offset", &_job_event_log_set_offset, METH_VARARGS, NULL},
+
+
+
+	{"_param__getitem__", &_param__getitem__, METH_VARARGS, NULL},
+
+	{"_param__setitem__", &_param__setitem__, METH_VARARGS, NULL},
+
+	{"_param__delitem__", &_param__delitem__, METH_VARARGS, NULL},
+
+	{"_param_keys", &_param_keys, METH_VARARGS, NULL},
 
 
 	{NULL, NULL, 0, NULL}

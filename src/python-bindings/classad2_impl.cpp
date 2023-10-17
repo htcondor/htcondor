@@ -34,6 +34,7 @@ static PyMethodDef classad2_impl_methods[] = {
     {"_classad_del_item", & _classad_del_item, METH_VARARGS, NULL},
     {"_classad_size", & _classad_size, METH_VARARGS, NULL},
     {"_classad_keys", & _classad_keys, METH_VARARGS, NULL},
+    {"_classad_parse_next", & _classad_parse_next, METH_VARARGS, NULL},
 
     {"_exprtree_init", & _exprtree_init, METH_VARARGS, NULL},
     {"_exprtree_eq", & _exprtree_eq, METH_VARARGS, NULL},

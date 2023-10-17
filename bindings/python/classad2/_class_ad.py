@@ -12,11 +12,15 @@ from .classad2_impl import (
     _exprtree_eq,
     _classad_size,
     _classad_keys,
+    _classad_parse_next,
 )
+
+from ._parser import Parser
 
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta, timezone
-
+from collections.abc import Iterator
+from typing import Union
 
 #
 # MutableMapping provides generic implementations for all mutable mapping
@@ -109,3 +113,82 @@ def _convert_local_datetime_to_utc_ts(dt):
         naive_ts = (dt - the_epoch) // timedelta(seconds=1)
         offset = dt.astimezone().utcoffset() // timedelta(seconds=1)
         return naive_ts - offset
+
+def _parse_ads_generator(input, parser=Parser.Auto):
+    total_offset = 0
+    if not isinstance(input, str):
+        total_offset = input.tell()
+
+    input_string = "".join(input)
+    while True:
+        (ad, offset) = _classad_parse_next(input_string, int(parser))
+
+        input_string = input_string[offset:]
+        if not isinstance(input, str):
+            total_offset += offset
+            input.seek(total_offset, 0)
+
+        if ad is None or offset == 0:
+            return
+
+        yield ad
+
+
+def _parseAds(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) -> Iterator[ClassAd]:
+    '''
+    Parses all of the ads in the input and returns a iterator over them.
+
+    Ads in the input may be separated by blank lines.
+    '''
+    return _parse_ads_generator(input, parser)
+
+
+def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) -> ClassAd:
+    '''
+    Parses all of the ads in the input, merges them into one, and returns it.
+
+    Ads in the input may be separated by blank lines.
+    '''
+    total_offset = 0
+    if not isinstance(input, str):
+        total_offset = input.tell()
+
+    result = ClassAd()
+    input_string = "".join(input)
+    while True:
+        (firstAd, offset) = _classad_parse_next(input_string, int(parser))
+
+        if firstAd is None or offset == 0:
+            return result
+
+        if firstAd is not None:
+            result.update(firstAd)
+        if offset != 0:
+            input_string = input_string[offset:]
+
+        if not isinstance(input, str):
+            total_offset += offset
+            input.seek(total_offset, 0)
+
+
+# In version 1, this never actually returned an iterator, and it only
+# advanced `input` if it was not a string.  Not sure why we bothered
+# to allow strings here at all, actually.
+def _parseNext(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) -> ClassAd:
+    '''
+    Parses the first ad in the input and returns it.
+
+    Ads in the input may be separated by blank lines.
+    '''
+    original = 0
+    if not isinstance(input, str):
+        original = input.tell()
+
+    input_string = "".join(input)
+    (firstAd, offset) = _classad_parse_next(input_string, int(parser))
+
+    if not isinstance(input, str):
+        input.seek(original + offset)
+
+    return firstAd
+

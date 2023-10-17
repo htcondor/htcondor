@@ -532,3 +532,76 @@ _classad_keys( PyObject *, PyObject * args ) {
 
     return list;
 }
+
+
+bool
+isOldAd( const char * in_string ) {
+    while( in_string[0] != '\0' ) {
+        // Don't know what the '/' is for, actually.
+        if( in_string[0] == '/' || in_string[0] == '[' ) { return false; }
+        if(! isspace(in_string[0])) { return true; }
+        ++in_string;
+    }
+    return false;
+}
+
+
+static PyObject *
+_classad_parse_next( PyObject *, PyObject * args ) {
+    // _classad_parse_next(input_string, int(parser))
+
+    long parser_type = -1;
+    const char * from_string = NULL;
+    if(! PyArg_ParseTuple( args, "zl", & from_string, & parser_type )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    // The 'auto' type from the ClassAdFileParseType and the 'auto' type
+    // from version 1 both have weird, undocumented semantics, and they
+    // disagree.  The 'auto' from version 1 only distinguished between
+    // new and old ClassAd serializations, but supported a stream of new-form
+    // ad serializations without requiring that they be a new ClassAd list,
+    // must less one which had a newline after its opening left brace.
+    //
+    // Instead, we add a Python-only parse type, the default, which acts
+    // like the version 1, and otherwise pass the other C++ types through.
+    ClassAdFileParseType::ParseType pType = (ClassAdFileParseType::ParseType)parser_type;
+    if( (long)pType == (long)-1 ) {
+        pType = isOldAd(from_string) ? ClassAdFileParseType::Parse_long : ClassAdFileParseType::Parse_new;
+    }
+
+    size_t from_string_length = strlen(from_string);
+    FILE * file = fmemopen( const_cast<char *>(from_string), from_string_length, "r" );
+    if( file == NULL ) {
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
+        return NULL;
+    }
+
+    CondorClassAdFileIterator ccafi;
+    if(! ccafi.begin( file, false, pType )) {
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
+        return NULL;
+    }
+
+    ClassAd * result = new ClassAd();
+    int numAttrs = ccafi.next( * result );
+    long offset = ftell( file );
+    if( numAttrs <= 0 ) {
+        if( offset == (long)from_string_length ) {
+            Py_INCREF(Py_None);
+            return Py_BuildValue("Oi", Py_None, 0);
+        }
+
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
+        return NULL;
+    }
+
+
+    auto py_class_ad = py_new_htcondor2_classad(result);
+    return Py_BuildValue("Ol", py_class_ad, offset);
+}

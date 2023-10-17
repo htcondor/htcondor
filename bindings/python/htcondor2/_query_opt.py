@@ -6,7 +6,7 @@ else:
     import enum
 
 
-class QueryOpts(enum.IntEnum):
+class QueryOpt(enum.IntEnum):
     """
     Enumerated flags sent to the *condor_schedd* during a query to alter its
     behavior.

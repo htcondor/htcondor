@@ -1,5 +1,7 @@
 from typing import Union
 
+from pathlib import Path
+
 from ._common_imports import (
     classad,
     handle_t,
@@ -60,10 +62,24 @@ class Submit(MutableMapping):
                 if isinstance(value, classad.ClassAd):
                     pairs.append(f"{key} = {repr(value)}")
                 else:
-                    # In version 1, we didn't do this check, despite
-                    # claiming that we did.  If we need to remove it,
-                    # just put a `str()` around the `value` below.
-                    if not isinstance(value, str):
+                    # In version 1, we (implicitly) document the dict as
+                    # being from strings to strings, but don't enforce it;
+                    # the code basically just calls str() on the value and
+                    # hopes for the best.  This is probably a mistake in
+                    # general, but it's really convenient, and Ornithology
+                    # depends on being able to submit bools and ints as
+                    # those types.  Luckily, those are easy to check for
+                    # specifically and unambiguous to handle.
+                    if isinstance(value, int):
+                        value = str(value)
+                    elif isinstance(value, float):
+                        value = str(value)
+                    elif isinstance(value, bool):
+                        value = str(value)
+                    # This is cheating, but we use it _a lot_ in the test suite.
+                    elif isinstance(value, Path):
+                        value = str(value)
+                    elif not isinstance(value, str):
                         raise TypeError("value must be a string")
                     pairs.append(f"{key} = {value}")
             s = "\n".join(pairs)
@@ -131,10 +147,16 @@ class Submit(MutableMapping):
 
 
     def __str__(self):
-        # FIXME
-        pass
+        rv = ''
+        for key, value in self.items():
+            rv = rv + f"{key} = {value}\n"
+        qargs = _submit_getqargs(self, self._handle)
+        if qargs is not None:
+            rv = rv + "queue " + qargs
+        return rv
 
 
+    # Consider making this do what Schedd.submit() does.
     def __repr__(self):
         # FIXME
         pass

@@ -36,8 +36,9 @@ class SubmitResult():
 
 
     def __str__(self):
-        # FIXME
-        pass
+        rv = f"Submitted {self._num_procs} jobs into cluster {self._cluster},{self._first_proc} :\n"
+        rv = rv + str(self._clusterad)
+        return rv
 
 
     def __repr__(self):

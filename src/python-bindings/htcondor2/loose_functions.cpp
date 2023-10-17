@@ -67,3 +67,13 @@ _set_subsystem( PyObject *, PyObject * args ) {
 
 	Py_RETURN_NONE;
 }
+
+
+static PyObject *
+_reload_config( PyObject *, PyObject * ) {
+	// FIXME: In version 1, there was some Windows-specific stuff to do here,
+	// which should probably be moved into config() itself.
+	config();
+
+	Py_RETURN_NONE;
+}

@@ -208,7 +208,7 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	// as a line from the file. we do this to avoid having to backtrack the FILE*
 	virtual int NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg);
 
-	enum ParseType {
+	enum class ParseType : long {
 		Parse_long=0, // file is in the traditional -long form, possibly with a delimiter line between ads
 		Parse_xml,    // file is in -xml form
 		Parse_json,   // file is in -json form, usually begins with a line of "[" and has a with a line of "," between ads
@@ -216,6 +216,14 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 		Parse_auto,   // parse helper should figure out what the form is
 		Parse_Unspecified  // value at initialization
 	};
+	// With g++ >= 11:
+	// using enum ParseType;
+	static const ParseType Parse_long = ParseType::Parse_long;
+	static const ParseType Parse_xml = ParseType::Parse_xml;
+	static const ParseType Parse_json = ParseType::Parse_json;
+	static const ParseType Parse_new = ParseType::Parse_new;
+	static const ParseType Parse_auto = ParseType::Parse_auto;
+	static const ParseType Parse_Unspecified = ParseType::Parse_Unspecified;
 
 	CondorClassAdFileParseHelper(std::string delim, ParseType typ=Parse_long) 
 		: ad_delimitor(delim), delim_line({}), parse_type(typ), new_parser(NULL),
