@@ -7,12 +7,8 @@ Configuration for Access Points
 :index:`condor_schedd policy<single: condor_schedd policy; configuration>`
 :index:`policy configuration<single: policy configuration; submit host>`
 
-There are two types of schedd policy: job transforms (which change the
-ClassAd of a job at submission) and submit requirements (which prevent
-some jobs from entering the queue). These policies are explained below.
-
-Job Transforms
-''''''''''''''
+Schedd Job Transforms
+---------------------
 
 :index:`job transforms`
 
@@ -76,7 +72,7 @@ The SL6ToDocker transform above is most likely incomplete, as it assumes
 a custom attribute (``WantSL6``) that your pool may or may not use.
 
 Submit Requirements
-'''''''''''''''''''
+-------------------
 
 :index:`submit requirements`
 
@@ -155,7 +151,7 @@ cluster is rejected due to a submit requirement, the entire cluster of
 jobs will be rejected.
 
 Submit Warnings
-'''''''''''''''
+---------------
 
 :index:`submit warnings`
 
