@@ -58,7 +58,7 @@ class Startd():
         projection : list[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
-    ) -> "HistoryIterator": # FIXME: remove quotes
+    ) -> list[classad.ClassAd]:
         projection_string = ",".join(projection)
 
         if isinstance(since, int):
