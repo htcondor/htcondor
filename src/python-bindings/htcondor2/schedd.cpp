@@ -869,21 +869,23 @@ _history_query(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    ClassAd result;
     std::vector<ClassAd> results;
 
     long long owner = -1;
-    while( owner != 0 ) {
+    while( true ) {
+        ClassAd result;
+
         if(! getClassAd( sock, result )) {
             // This was HTCondorIOError in version 1.
             PyErr_SetString( PyExc_IOError, "Failed to receive history ad." );
             return NULL;
         }
 
+        // Why is our code base so broken?  This unconditionally clears `owner.`
         if( result.EvaluateAttrInt(ATTR_OWNER, owner) && (owner == 0) ) {
             if(! sock->end_of_message()) {
                 // This was HTCondorIOError in version 1.
-                PyErr_SetString( PyExc_IOError, "Failed to send end-of-message." );
+                PyErr_SetString( PyExc_IOError, "Failed to receive end-of-message." );
                 return NULL;
             }
             sock->close();
