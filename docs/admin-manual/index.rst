@@ -18,7 +18,6 @@ Administrators' Manual
    networking
    daemoncore
    logging
-   monitoring
    file-and-cred-transfer 
    setting-up-vm-docker-universes
    singularity-support
