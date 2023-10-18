@@ -120,7 +120,7 @@ incorporates.
 
        Configures a custom machine resource monitor with the given name,
        mode, period, executable, and metrics. See
-       :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for the definitions of
+       :ref:`admin-manual/ep-policy-configuration:Startd Cron` for the definitions of
        these terms.
 
     -  ``PartitionableSlot( slot_type_num [, allocation] )``
@@ -164,55 +164,55 @@ incorporates.
     -  ``StartdCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor_startd* job hook.
-       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
     -  ``StartdCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor_startd* job hook.
-       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
     -  ``StartdCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor_startd* job hook.
-       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
     -  ``ScheddCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor_schedd* job hook.
-       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
     -  ``ScheddCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor_schedd* job hook.
-       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
     -  ``ScheddCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor_schedd* job hook.
-       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
     -  ``OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )``
 
        Create a one-shot job hook.
-       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
     -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe [,hook_args] )``
 
        Create a periodic job hook.
-       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
     -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args] )``
 
        Create a (nearly) continuous job hook.
-       (See :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` for more information
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
     -  ``OAuth``
@@ -226,7 +226,7 @@ incorporates.
        Sets configuration that enables *condor_adstash* to run as a daemon.
        *condor_adstash* polls job history ClassAds and pushes them to an
        Elasticsearch index, see section
-       :ref:`admin-manual/monitoring:Elasticsearch` for more information.
+       :ref:`admin-manual/cm-configuration:Elasticsearch` for more information.
 
     -  ``UWCS_Desktop_Policy_Values``
 

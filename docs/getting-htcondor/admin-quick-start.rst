@@ -204,7 +204,7 @@ on machines with GPUs -- using the options described in
 * Understanding :doc:`../classads/classad-mechanism` is essential for
   many administrative tasks.
 * The rest of the :doc:`../admin-manual/index`, particularly the section on
-  :doc:`../admin-manual/monitoring`.
+  :ref:`admin-manual/cm-configuration:Monitoring with Ganglia, Elasticsearch, etc.`.
 * Slides from
   `past HTCondor Weeks <https://htcondor.org/past_condor_weeks.html>`_
   -- our annual conference -- include a number of tutorials and talks on

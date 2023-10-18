@@ -337,5 +337,5 @@ no matchmaking with the schedd ads.  Administrators might want to
 use this to advertise some performance or resource usage of
 the machine the schedd is running on for further monitoring.
 
-See the section in :ref:`admin-manual/ep-configuration:Startd Cron`
+See the section in :ref:`admin-manual/ep-policy-configuration:Startd Cron`
 for examples and information about this.
