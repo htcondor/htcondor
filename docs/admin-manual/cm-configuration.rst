@@ -1111,14 +1111,13 @@ secondary *condor_negotiator* will be killed, and the primary will be
 restarted, only to exit again. If this happens too quickly, neither
 *condor_negotiator* will run long enough to complete a negotiation
 cycle, resulting in no jobs getting started. Increasing this value via
-``MASTER_HAD_BACKOFF_CONSTANT``
-:index:`MASTER_HAD_BACKOFF_CONSTANT` to be larger than a typical
+:macro:`MASTER_HAD_BACKOFF_CONSTANT` to be larger than a typical
 negotiation cycle can help solve this problem.
 
 To run a high availability pool without the replication feature, do the
 following operations:
 
-#. Set the ``HAD_USE_REPLICATION`` :index:`HAD_USE_REPLICATION`
+#. Set the :macro:`HAD_USE_REPLICATION`
    configuration variable to ``False``, and thus disable the replication
    on configuration level.
 #. Remove ``REPLICATION`` from both ``DAEMON_LIST`` and

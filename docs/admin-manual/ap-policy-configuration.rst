@@ -249,7 +249,7 @@ point):
     HA_LOCK_URL = file:/share/spool
     VALID_SPOOL_FILES = $(VALID_SPOOL_FILES) SCHEDD.lock
 
-Configuration macro ``MASTER_HA_LIST`` :index:`MASTER_HA_LIST`
+Configuration macro :macro:`MASTER_HA_LIST`
 identifies the *condor_schedd* daemon as the daemon that is to be
 watched to make sure that it is running. Each machine with this
 configuration must have access to the lock (the job queue) which
@@ -259,8 +259,7 @@ and is currently specified only with a file URL. The configuration
 specifies the shared space (``SPOOL``), and the URL of the lock.
 *condor_preen* is not currently aware of the lock file and will delete
 it if it is placed in the ``SPOOL`` directory, so be sure to add file
-``SCHEDD.lock`` to ``VALID_SPOOL_FILES``
-:index:`VALID_SPOOL_FILES`.
+``SCHEDD.lock`` to :macro:`VALID_SPOOL_FILES`.
 
 As HTCondor starts on machines that are configured to run the single
 *condor_schedd* daemon, the *condor_master* daemon of the first
@@ -305,7 +304,7 @@ running on a single machine. With the high availability of the job
 queue, there are multiple *condor_schedd* daemons, of which only one at
 a time is acting as the single submission point. To make remote
 submission of jobs work properly, set the configuration variable
-``SCHEDD_NAME`` :index:`SCHEDD_NAME` in the local configuration to
+:macro:`SCHEDD_NAME` in the local configuration to
 have the same value for each potentially running *condor_schedd*
 daemon. In addition, the value chosen for the variable ``SCHEDD_NAME``
 will need to include the at symbol (@), such that HTCondor will not
