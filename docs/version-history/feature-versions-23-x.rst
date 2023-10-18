@@ -22,6 +22,11 @@ New Features:
   hard disk and false when the kernel reports it to be on SSD, NVME or tmpfs.
   :jira:`2085`
 
+- Added TimeSlotBusy and TimeExecute to the event log terminate events
+  to indicate how much wall time a job used total (including file transfer)
+  and just for the job execution proper, respectively..
+  :jira:`2302`
+
 - The default trusted CAs for OpenSSL are now always used by default 
   in addition to any specified by :macro:`AUTH_SSL_SERVER_CAFILE`, 
   :macro:`AUTH_SSL_CLIENT_CAFILE`, :macro:`AUTH_SSL_SERVER_CADIR`, and 
