@@ -32,6 +32,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed bug in the *condor_userlog* tool where it would crash
+  when reading logs with parallel universe jobs in it.
+  :jira:`2099`
+
 - Fixed several small bugs with Trust On First Use (TOFU) for SSL
   authentication.
   Added configuration parameter
