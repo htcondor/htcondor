@@ -32,7 +32,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug in the *condor_userlog* tool where it would crash
+  when reading logs with parallel universe jobs in it.
+  :jira:`2099`
 
 .. _lts-version-history-2301:
 
