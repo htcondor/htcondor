@@ -1438,6 +1438,7 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 		if (verify_ptr && ((err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
 			(err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
 			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) ||
+			(err == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE) ||
 			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)))
 		{
 			bool is_permitted;
@@ -1467,10 +1468,11 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 				}
 			} else if (!encoded_cert.empty()) {
 				bool permitted = param_boolean("BOOTSTRAP_SSL_SERVER_TRUST", false);
+				bool prompt_user = param_boolean("BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER", true);
 				dprintf(D_SECURITY, "Adding remote host as known host with trust set to %s"
 					".\n", permitted ? "on" : "off");
 				// Provide an opportunity for users to manually confirm the SSL fingerprint.
-				if (!permitted && (get_mySubSystem()->isType(SUBSYSTEM_TYPE_TOOL) ||
+				if (!permitted && prompt_user && (get_mySubSystem()->isType(SUBSYSTEM_TYPE_TOOL) ||
 					get_mySubSystem()->isType(SUBSYSTEM_TYPE_SUBMIT)) && isatty(0))
 				{
 					unsigned char md[EVP_MAX_MD_SIZE];
