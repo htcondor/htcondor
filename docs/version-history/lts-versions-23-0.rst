@@ -32,7 +32,17 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug in the *condor_userlog* tool where it would crash
+  when reading logs with parallel universe jobs in it.
+  :jira:`2099`
+
+- Fixed several small bugs with Trust On First Use (TOFU) for SSL
+  authentication.
+  Added configuration parameter
+  ``BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER``, which can be used to
+  prevent tools from prompting the user about trusting the server's
+  SSL certificate.
+  :jira:`2080`
 
 .. _lts-version-history-2301:
 

@@ -2625,6 +2625,10 @@ description=Automatically trust the remote CA over SSL
 type=bool
 tags=io,condor_auth_ssl
 
+[BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER]
+default=true
+type=bool
+
 [COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
 default=true
 win32_default=false
@@ -2632,19 +2636,19 @@ type=bool
 
 [TRUST_DOMAIN_CAFILE]
 default=/etc/condor/trust_domain_ca.pem
-win32_default=$(RELEASE_DIR)\certs\ca.pem
+win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [TRUST_DOMAIN_CAKEY]
 default=/etc/condor/trust_domain_ca_privkey.pem
-win32_default=$(RELEASE_DIR)\certs\ca_privkey.pem
+win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [SEC_SYSTEM_KNOWN_HOSTS]
 default=/etc/condor/known_hosts
-win32_default=$(RELEASE_DIR)\known_hosts
+win32_default=$(LOCAL_DIR)\known_hosts
 type=path
 tags=io
 

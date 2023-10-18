@@ -9589,10 +9589,16 @@ macros are described in the :doc:`/admin-manual/security` section.
     A boolean variable controlling whether tools and daemons automatically trust
     the SSL host certificate presented on first authentication.  When the
     default of ``false`` is set, daemons only trust host certificates from known
-    CAs and tools prompt the user for confirmation if the certificate is not trusted.
+    CAs and tools may prompt the user for confirmation if the
+    certificate is not trusted (see ``BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER``).
     After the first authentication, the method and certificate are persisted to a
     ``known_hosts`` file; subsequent authentications will succeed only if the certificate
     is unchanged from the one in the ``known_hosts`` file.
+
+:macro-def:`BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER`
+    A boolean variable that controls if tools will prompt the user about
+    whether to trust an SSL host certificate from an unknown CA.
+    The default value is ``True``.
 
 :macro-def:`SEC_SYSTEM_KNOWN_HOSTS`
     The location of the ``known_hosts`` file for daemon authentication.  This defaults
