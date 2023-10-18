@@ -19,7 +19,6 @@ Administrators' Manual
    daemoncore
    logging
    monitoring
-   high-availability
    file-and-cred-transfer 
    setting-up-vm-docker-universes
    singularity-support

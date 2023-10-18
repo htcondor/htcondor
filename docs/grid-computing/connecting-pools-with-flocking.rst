@@ -15,7 +15,7 @@ flocking.
 
 NOTE: Flocking to pools which use HTCondor's high availability
 mechanisms is not advised. See 
-:ref:`admin-manual/high-availability:high availability of the central manager`
+:ref:`admin-manual/cm-configuration:high availability of the central manager`
 for a discussion of the issues.
 
 

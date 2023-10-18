@@ -199,3 +199,129 @@ requirements list. Currently, only one (the most recent) problem is
 reported for each submit attempt. This means users will see (as they
 previously did) only the first failed requirement; if all requirements
 passed, they will see the last failed warning, if any.
+
+High Availability of the Job Queue
+----------------------------------
+
+:index:`of job queue<single: of job queue; High Availability>`
+
+For a pool where all jobs are submitted through a single machine in the
+pool, and there are lots of jobs, this machine becoming nonfunctional
+means that jobs stop running. The *condor_schedd* daemon maintains the
+job queue. No job queue due to having a nonfunctional machine implies
+that no jobs can be run. This situation is worsened by using one machine
+as the single submission point. For each HTCondor job (taken from the
+queue) that is executed, a *condor_shadow* process runs on the machine
+where submitted to handle input/output functionality. If this machine
+becomes nonfunctional, none of the jobs can continue. The entire pool
+stops running jobs.
+
+The goal of High Availability in this special case is to transfer the
+*condor_schedd* daemon to run on another designated machine. Jobs
+caused to stop without finishing can be restarted from the beginning, or
+can continue execution using the most recent checkpoint. New jobs can
+enter the job queue. Without High Availability, the job queue would
+remain intact, but further progress on jobs would wait until the machine
+running the *condor_schedd* daemon became available (after fixing
+whatever caused it to become unavailable).
+
+HTCondor uses its flexible configuration mechanisms to allow the
+transfer of the *condor_schedd* daemon from one machine to another. The
+configuration specifies which machines are chosen to run the
+*condor_schedd* daemon. To prevent multiple *condor_schedd* daemons
+from running at the same time, a lock (semaphore-like) is held over the
+job queue. This synchronizes the situation in which control is
+transferred to a secondary machine, and the primary machine returns to
+functionality. Configuration variables also determine time intervals at
+which the lock expires, and periods of time that pass between polling to
+check for expired locks.
+
+To specify a single machine that would take over, if the machine running
+the *condor_schedd* daemon stops working, the following additions are
+made to the local configuration of any and all machines that are able to
+run the *condor_schedd* daemon (becoming the single pool submission
+point):
+
+.. code-block:: condor-config
+
+    MASTER_HA_LIST = SCHEDD
+    SPOOL = /share/spool
+    HA_LOCK_URL = file:/share/spool
+    VALID_SPOOL_FILES = $(VALID_SPOOL_FILES) SCHEDD.lock
+
+Configuration macro ``MASTER_HA_LIST`` :index:`MASTER_HA_LIST`
+identifies the *condor_schedd* daemon as the daemon that is to be
+watched to make sure that it is running. Each machine with this
+configuration must have access to the lock (the job queue) which
+synchronizes which single machine does run the *condor_schedd* daemon.
+This lock and the job queue must both be located in a shared file space,
+and is currently specified only with a file URL. The configuration
+specifies the shared space (``SPOOL``), and the URL of the lock.
+*condor_preen* is not currently aware of the lock file and will delete
+it if it is placed in the ``SPOOL`` directory, so be sure to add file
+``SCHEDD.lock`` to ``VALID_SPOOL_FILES``
+:index:`VALID_SPOOL_FILES`.
+
+As HTCondor starts on machines that are configured to run the single
+*condor_schedd* daemon, the *condor_master* daemon of the first
+machine that looks at (polls) the lock and notices that no lock is held.
+This implies that no *condor_schedd* daemon is running. This
+*condor_master* daemon acquires the lock and runs the *condor_schedd*
+daemon. Other machines with this same capability to run the
+*condor_schedd* daemon look at (poll) the lock, but do not run the
+daemon, as the lock is held. The machine running the *condor_schedd*
+daemon renews the lock periodically.
+
+If the machine running the *condor_schedd* daemon fails to renew the
+lock (because the machine is not functioning), the lock times out
+(becomes stale). The lock is released by the *condor_master* daemon if
+*condor_off* or *condor_off -schedd* is executed, or when the
+*condor_master* daemon knows that the *condor_schedd* daemon is no
+longer running. As other machines capable of running the
+*condor_schedd* daemon look at the lock (poll), one machine will be the
+first to notice that the lock has timed out or been released. This
+machine (correctly) interprets this situation as the *condor_schedd*
+daemon is no longer running. This machine's *condor_master* daemon then
+acquires the lock and runs the *condor_schedd* daemon.
+
+See the :ref:`admin-manual/configuration-macros:condor_master configuration
+file macros` section for details relating to the configuration variables used
+to set timing and polling intervals.
+
+Working with Remote Job Submission
+''''''''''''''''''''''''''''''''''
+
+:index:`of job queue, with remote job submission<single: of job queue, with remote job submission; High Availability>`
+
+Remote job submission requires identification of the job queue,
+submitting with a command similar to:
+
+.. code-block:: console
+
+      $ condor_submit -remote condor@example.com myjob.submit
+
+This implies the identification of a single *condor_schedd* daemon,
+running on a single machine. With the high availability of the job
+queue, there are multiple *condor_schedd* daemons, of which only one at
+a time is acting as the single submission point. To make remote
+submission of jobs work properly, set the configuration variable
+``SCHEDD_NAME`` :index:`SCHEDD_NAME` in the local configuration to
+have the same value for each potentially running *condor_schedd*
+daemon. In addition, the value chosen for the variable ``SCHEDD_NAME``
+will need to include the at symbol (@), such that HTCondor will not
+modify the value set for this variable. See the description of
+``MASTER_NAME`` in the :ref:`admin-manual/configuration-macros:condor_master
+configuration file macros` section for defaults and composition of valid values
+for ``SCHEDD_NAME``. As an example, include in each local configuration a value
+similar to:
+
+.. code-block:: condor-config
+
+    SCHEDD_NAME = had-schedd@
+
+Then, with this sample configuration, the submit command appears as:
+
+.. code-block:: console
+
+      $ condor_submit -remote had-schedd@  myjob.submit
+
