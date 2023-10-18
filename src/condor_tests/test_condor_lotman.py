@@ -8,6 +8,8 @@ import htcondor
 import logging
 from math import isclose
 import os,sys,stat
+import getpass
+import socket
 from pathlib import Path
 import sqlite3
 import time
@@ -83,8 +85,13 @@ def get_spool_size_and_count(dir_path, excluded_files=[]):
 
     return total_size, total_count
 
-def job_uid():
-    return os.getuid()
+def job_uname():
+    user = getpass.getuser()
+    host = socket.gethostname()
+    if user == "root":
+        return "condor@" + host
+    else:
+        return user + "@" + host
 
 def lotman_db_fpath(base_dir):
     lotDB_fpath = base_dir / ".lot" / "lotman_cpp.sqlite"
@@ -93,27 +100,28 @@ def lotman_db_fpath(base_dir):
 def lotDB_exists(base_dir):
     return os.path.isfile(lotman_db_fpath(base_dir).as_posix())
 
-def lotman_cumulative_f_sz(lotDB_path, job_uid):
+def lotman_cumulative_f_sz(lotDB_path, job_uname):
     # Connect to the database
     conn = sqlite3.connect(lotDB_path)
     cursor = conn.cursor()
 
     # Execute the query
-    cursor.execute("SELECT self_GB FROM lot_usage WHERE lot_name = ?", (str(job_uid),))
+    cursor.execute("SELECT self_GB FROM lot_usage WHERE lot_name = ?", (str(job_uname),))
     cumulative_f_sz = cursor.fetchone()
     
+    print(job_uname)
     # Close the connection
     conn.close()
     return cumulative_f_sz[0]
 
 
-def lotman_cumulative_f_count(lotDB_path, job_uid):
+def lotman_cumulative_f_count(lotDB_path, job_uname):
     # Connect to the database
     conn = sqlite3.connect(lotDB_path)
     cursor = conn.cursor()
 
     # Execute the query
-    cursor.execute("SELECT self_objects FROM lot_usage WHERE lot_name = ?", (str(job_uid),))
+    cursor.execute("SELECT self_objects FROM lot_usage WHERE lot_name = ?", (str(job_uname),))
     f_count = cursor.fetchone()
 
     # Close the connection
@@ -166,13 +174,13 @@ class TestLotManSpoolTracking:
         assert lotDB_exists(test_dir)
 
         # Assert that the total size is correct
-        # First get uid, which is what the lot will be named
-        my_uid = job_uid()
-        lotman_dir_size = lotman_cumulative_f_sz(lotman_db_fpath(test_dir).as_posix(), my_uid)
+        # First get FQ uname, which is what the lot will be named
+        my_uname = job_uname()
+        lotman_dir_size = lotman_cumulative_f_sz(lotman_db_fpath(test_dir).as_posix(), my_uname)
         assert isclose(true_dir_size, lotman_dir_size)
 
         # Assert that the total count is correct
-        lotman_f_count = lotman_cumulative_f_count(lotman_db_fpath(test_dir).as_posix(), my_uid)
+        lotman_f_count = lotman_cumulative_f_count(lotman_db_fpath(test_dir).as_posix(), my_uname)
         assert true_f_count == lotman_f_count
 
         # Now transfer files back and make sure LotMan decrements values,
@@ -189,7 +197,7 @@ class TestLotManSpoolTracking:
         true_dir_size, true_f_count = get_spool_size_and_count(spool_path, excluded_files=[log_name])
         assert true_dir_size == 0
         assert true_f_count == 0
-        lotman_dir_size = lotman_cumulative_f_sz(lotman_db_fpath(test_dir).as_posix(), my_uid)
+        lotman_dir_size = lotman_cumulative_f_sz(lotman_db_fpath(test_dir).as_posix(), my_uname)
         assert isclose(true_dir_size, lotman_dir_size)
-        lotman_f_count = lotman_cumulative_f_count(lotman_db_fpath(test_dir).as_posix(), my_uid)
+        lotman_f_count = lotman_cumulative_f_count(lotman_db_fpath(test_dir).as_posix(), my_uname)
         assert true_f_count == lotman_f_count
