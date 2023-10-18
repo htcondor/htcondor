@@ -325,3 +325,18 @@ Then, with this sample configuration, the submit command appears as:
 
       $ condor_submit -remote had-schedd@  myjob.submit
 
+Schedd Cron
+-----------
+
+:index:`Schedd Cron`
+
+Just as an administrator can dynamically add new classad attributes
+and values programmatically with script to the startd's ads, the
+same can be done with the classads the *condor_schedd* sends to the
+collector.  However, these are less generally useful, as there is
+no matchmaking with the schedd ads.  Administrators might want to 
+use this to advertise some performance or resource usage of
+the machine the schedd is running on for further monitoring.
+
+See the section in :ref:`admin-manual/ep-configuration:Startd Cron`
+for examples and information about this.

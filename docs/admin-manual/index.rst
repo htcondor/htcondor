@@ -13,7 +13,6 @@ Administrators' Manual
    ep-policy-configuration
    ap-policy-configuration
    cm-configuration
-   daemon-cron
    security
    networking
    daemoncore
