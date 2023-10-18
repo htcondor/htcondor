@@ -32,7 +32,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that could result in job sandboxes not being cleaned up
+  for **batch** grid jobs submitted to a remote cluster.
+  :jira:`2073`
 
 .. _lts-version-history-2301:
 
