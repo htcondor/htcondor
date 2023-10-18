@@ -13,13 +13,10 @@ Administrators' Manual
    ep-policy-configuration
    ap-policy-configuration
    cm-configuration
-   daemon-cron
    security
    networking
    daemoncore
    logging
-   monitoring
-   high-availability
    file-and-cred-transfer 
    setting-up-vm-docker-universes
    singularity-support

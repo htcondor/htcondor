@@ -798,6 +798,113 @@ If so, it represents the set of valid accounting groups a user can
 opt into.  If the user does not set an accounting group in the submit file
 the first entry in the list will be used.
 
+Defragmenting Dynamic Slots
+---------------------------
+
+:index:`condor_defrag daemon`
+
+When partitionable slots are used, some attention must be given to the
+problem of the starvation of large jobs due to the fragmentation of
+resources. The problem is that over time the machine resources may
+become partitioned into slots suitable only for running small jobs. If a
+sufficient number of these slots do not happen to become idle at the
+same time on a machine, then a large job will not be able to claim that
+machine, even if the large job has a better priority than the small
+jobs.
+
+One way of addressing the partitionable slot fragmentation problem is to
+periodically drain all jobs from fragmented machines so that they become
+defragmented. The *condor_defrag* daemon implements a configurable
+policy for doing that. Its implementation is targeted at machines
+configured to run whole-machine jobs and at machines that only have
+partitionable slots. The draining of a machine configured to have both
+partitionable slots and static slots would have a negative impact on
+single slot jobs running in static slots.
+
+To use this daemon, ``DEFRAG`` must be added to :macro:`DAEMON_LIST`, and the
+defragmentation policy must be configured. Typically, only one instance
+of the *condor_defrag* daemon would be run per pool. It is a
+lightweight daemon that should not require a lot of system resources.
+
+Here is an example configuration that puts the *condor_defrag* daemon
+to work:
+
+.. code-block:: text
+
+    DAEMON_LIST = $(DAEMON_LIST) DEFRAG
+    DEFRAG_INTERVAL = 3600
+    DEFRAG_DRAINING_MACHINES_PER_HOUR = 1.0
+    DEFRAG_MAX_WHOLE_MACHINES = 20
+    DEFRAG_MAX_CONCURRENT_DRAINING = 10
+
+This example policy tells *condor_defrag* to initiate draining jobs
+from 1 machine per hour, but to avoid initiating new draining if there
+are 20 completely defragmented machines or 10 machines in a draining
+state. A full description of each configuration variable used by the
+*condor_defrag* daemon may be found in the
+:ref:`admin-manual/configuration-macros:condor_defrag configuration file
+macros` section.
+
+By default, when a machine is drained, existing jobs are gracefully
+evicted. This means that each job will be allowed to use the remaining
+time promised to it by ``MaxJobRetirementTime``. If the job has not
+finished when the retirement time runs out, the job will be killed with
+a soft kill signal, so that it has an opportunity to save a checkpoint
+(if the job supports this).
+
+By default, no new jobs will be allowed to start while the machine is
+draining. To reduce unused time on the machine caused by some jobs
+having longer retirement time than others, the eviction of jobs with
+shorter retirement time is delayed until the job with the longest
+retirement time needs to be evicted.
+
+There is a trade off between reduced starvation and throughput. Frequent
+draining of machines reduces the chance of starvation of large jobs.
+However, frequent draining reduces total throughput. Some of the
+machine's resources may go unused during draining, if some jobs finish
+before others. If jobs that cannot produce checkpoints are killed
+because they run past the end of their retirement time during draining,
+this also adds to the cost of draining.
+
+To reduce these costs, you may set the configuration macro
+:macro:`DEFRAG_DRAINING_START_EXPR`. If draining gracefully, the
+defrag daemon will set the :macro:`START` expression for
+the machine to this value expression. Do not set this to your usual
+``START`` expression; jobs accepted while draining will not be given
+their ``MaxRetirementTime``. Instead, when the last retiring job
+finishes (either terminates or runs out of retirement time), all other
+jobs on machine will be evicted with a retirement time of 0. (Those jobs
+will be given their ``MaxVacateTime``, as usual.) The machine's
+``START`` expression will become ``FALSE`` and stay that way until - as
+usual - the machine exits the draining state.
+
+We recommend that you allow only interruptible jobs to start on draining
+machines. Different pools may have different ways of denoting
+interruptible, but a ``MaxJobRetirementTime`` of 0 is probably a good
+sign. You may also want to restrict the interruptible jobs'
+``MaxVacateTime`` to ensure that the machine will complete draining
+quickly.
+
+To help gauge the costs of draining, the *condor_startd* advertises the
+accumulated time that was unused due to draining and the time spent by
+jobs that were killed due to draining. These are advertised respectively
+in the attributes ``TotalMachineDrainingUnclaimedTime`` and
+``TotalMachineDrainingBadput``. The *condor_defrag* daemon averages
+these values across the pool and advertises the result in its daemon
+ClassAd in the attributes ``AvgDrainingBadput`` and
+``AvgDrainingUnclaimed``. Details of all attributes published by the
+*condor_defrag* daemon are described in the :doc:`/classad-attributes/defrag-classad-attributes` section.
+
+The following command may be used to view the *condor_defrag* daemon
+ClassAd:
+
+.. code-block:: console
+
+    $ condor_status -l -any -constraint 'MyType == "Defrag"'
+
+:index:`configuration<single: configuration; SMP machines>`
+:index:`configuration<single: configuration; multi-core machines>`
+
 Running Multiple Negotiators in One Pool
 ----------------------------------------
 
@@ -833,4 +940,818 @@ Running with multiple negotiators also means you need to be careful with the
 always name the specific negotiator you want to *condor_userprio* to talk to
 with the `-name` option.
 
+High Availability of the Central Manager
+----------------------------------------
 
+:index:`of central manager<single: of central manager; High Availability>`
+
+Interaction with Flocking
+'''''''''''''''''''''''''
+
+The HTCondor high availability mechanisms discussed in this section
+currently do not work well in configurations involving flocking. The
+individual problems listed listed below interact to make the situation
+worse. Because of these problems, we advise against the use of flocking
+to pools with high availability mechanisms enabled.
+
+-  The *condor_schedd* has a hard configured list of
+   *condor_collector* and *condor_negotiator* daemons, and does not
+   query redundant collectors to get the current *condor_negotiator*,
+   as it does when communicating with its local pool. As a result, if
+   the default *condor_negotiator* fails, the *condor_schedd* does not
+   learn of the failure, and thus, talk to the new *condor_negotiator*.
+-  When the *condor_negotiator* is unable to communicate with a
+   *condor_collector*, it utilizes the next *condor_collector* within
+   the list. Unfortunately, it does not start over at the top of the
+   list. When combined with the previous problem, a backup
+   *condor_negotiator* will never get jobs from a flocked
+   *condor_schedd*.
+
+Introduction
+''''''''''''
+
+The *condor_negotiator* and *condor_collector* daemons are the heart
+of the HTCondor matchmaking system. The availability of these daemons is
+critical to an HTCondor pool's functionality. Both daemons usually run
+on the same machine, most often known as the central manager. The
+failure of a central manager machine prevents HTCondor from matching new
+jobs and allocating new resources. High availability of the
+*condor_negotiator* and *condor_collector* daemons eliminates this
+problem.
+
+Configuration allows one of multiple machines within the pool to
+function as the central manager. While there are may be many active
+*condor_collector* daemons, only a single, active *condor_negotiator*
+daemon will be running. The machine with the *condor_negotiator* daemon
+running is the active central manager. The other potential central
+managers each have a *condor_collector* daemon running; these are the
+idle central managers.
+
+All submit and execute machines are configured to report to all
+potential central manager machines. :index:`condor_had daemon`
+
+Each potential central manager machine runs the high availability
+daemon, *condor_had*. These daemons communicate with each other,
+constantly monitoring the pool to ensure that one active central manager
+is available. If the active central manager machine crashes or is shut
+down, these daemons detect the failure, and they agree on which of the
+idle central managers is to become the active one. A protocol determines
+this.
+
+In the case of a network partition, idle *condor_had* daemons within
+each partition detect (by the lack of communication) a partitioning, and
+then use the protocol to chose an active central manager. As long as the
+partition remains, and there exists an idle central manager within the
+partition, there will be one active central manager within each
+partition. When the network is repaired, the protocol returns to having
+one central manager.
+
+Through configuration, a specific central manager machine may act as the
+primary central manager. While this machine is up and running, it
+functions as the central manager. After a failure of this primary
+central manager, another idle central manager becomes the active one.
+When the primary recovers, it again becomes the central manager. This is
+a recommended configuration, if one of the central managers is a
+reliable machine, which is expected to have very short periods of
+instability. An alternative configuration allows the promoted active
+central manager (in the case that the central manager fails) to stay
+active after the failed central manager machine returns.
+
+This high availability mechanism operates by monitoring communication
+between machines. Note that there is a significant difference in
+communications between machines when
+
+#. a machine is down
+#. a specific daemon (the *condor_had* daemon in this case) is not
+   running, yet the machine is functioning
+
+The high availability mechanism distinguishes between these two, and it
+operates based only on first (when a central manager machine is down). A
+lack of executing daemons does not cause the protocol to choose or use a
+new active central manager.
+
+The central manager machine contains state information, and this
+includes information about user priorities. The information is kept in a
+single file, and is used by the central manager machine. Should the
+primary central manager fail, a pool with high availability enabled
+would lose this information (and continue operation, but with
+re-initialized priorities). Therefore, the *condor_replication* daemon
+exists to replicate this file on all potential central manager machines.
+This daemon promulgates the file in a way that is safe from error, and
+more secure than dependence on a shared file system copy.
+:index:`condor_replication daemon`
+:index:`condor_transferer daemon`
+
+The *condor_replication* daemon runs on each potential central manager
+machine as well as on the active central manager machine. There is a
+unidirectional communication between the *condor_had* daemon and the
+*condor_replication* daemon on each machine. To properly do its job,
+the *condor_replication* daemon must transfer state files. When it
+needs to transfer a file, the *condor_replication* daemons at both the
+sending and receiving ends of the transfer invoke the
+*condor_transferer* daemon. These short lived daemons do the task of
+file transfer and then exit. Do not place ``TRANSFERER`` into
+``DAEMON_LIST``, as it is not a daemon that the *condor_master* should
+invoke or watch over.
+
+Configuration
+'''''''''''''
+
+The high availability of central manager machines is enabled through
+configuration. It is disabled by default. All machines in a pool must be
+configured appropriately in order to make the high availability
+mechanism work. See the :ref:`admin-manual/configuration-macros:configuration
+file entries relating to high availability` section, for definitions
+of these configuration variables.
+
+The *condor_had* and *condor_replication* daemons use the
+*condor_shared_port* daemon by default. If you want to use more than
+one *condor_had* or *condor_replication* daemon with the
+*condor_shared_port* daemon under the same master, you must configure
+those additional daemons to use nondefault socket names. (Set the
+``-sock`` option in ``<NAME>_ARGS``.) Because the *condor_had* daemon
+must know the *condor_replication* daemon's address a priori, you will
+also need to set ``<NAME>.REPLICATION_SOCKET_NAME`` appropriately.
+
+The stabilization period is the time it takes for the *condor_had*
+daemons to detect a change in the pool state such as an active central
+manager failure or network partition, and recover from this change. It
+may be computed using the following formula:
+
+.. code-block:: text
+
+    stabilization period = 12 * (number of central managers) *
+                              $(HAD_CONNECTION_TIMEOUT)
+
+To disable the high availability of central managers mechanism, it is
+sufficient to remove ``HAD``, ``REPLICATION``, and ``NEGOTIATOR`` from
+the ``DAEMON_LIST`` configuration variable on all machines, leaving only
+one *condor_negotiator* in the pool.
+
+To shut down a currently operating high availability mechanism, follow
+the given steps. All commands must be invoked from a host which has
+administrative permissions on all central managers. The first three
+commands kill all *condor_had*, *condor_replication*, and all running
+*condor_negotiator* daemons. The last command is invoked on the host
+where the single *condor_negotiator* daemon is to run.
+
+#. condor_off -all -neg
+#. condor_off -all -subsystem -replication
+#. condor_off -all -subsystem -had
+#. condor_on -neg
+
+When configuring *condor_had* to control the *condor_negotiator*, if
+the default backoff constant value is too small, it can result in a
+churning of the *condor_negotiator*, especially in cases in which the
+primary negotiator is unable to run due to misconfiguration. In these
+cases, the *condor_master* will kill the *condor_had* after the
+*condor_negotiator* exists, wait a short period, then restart
+*condor_had*. The *condor_had* will then win the election, so the
+secondary *condor_negotiator* will be killed, and the primary will be
+restarted, only to exit again. If this happens too quickly, neither
+*condor_negotiator* will run long enough to complete a negotiation
+cycle, resulting in no jobs getting started. Increasing this value via
+:macro:`MASTER_HAD_BACKOFF_CONSTANT` to be larger than a typical
+negotiation cycle can help solve this problem.
+
+To run a high availability pool without the replication feature, do the
+following operations:
+
+#. Set the :macro:`HAD_USE_REPLICATION`
+   configuration variable to ``False``, and thus disable the replication
+   on configuration level.
+#. Remove ``REPLICATION`` from both ``DAEMON_LIST`` and
+   ``DC_DAEMON_LIST`` in the configuration file.
+
+Sample Configuration
+''''''''''''''''''''
+
+:index:`sample configuration<single: sample configuration; High Availability>`
+
+This section provides sample configurations for high availability.
+
+We begin with a sample configuration using shared port, and then include
+a sample configuration for not using shared port. Both samples relate to
+the high availability of central managers.
+
+Each sample is split into two parts: the configuration for the central
+manager machines, and the configuration for the machines that will not
+be central managers.
+
+The following shared-port configuration is for the central manager
+machines.
+
+.. code-block:: condor-config
+
+    ## THE FOLLOWING MUST BE IDENTICAL ON ALL CENTRAL MANAGERS
+
+    CENTRAL_MANAGER1 = cm1.domain.name
+    CENTRAL_MANAGER2 = cm2.domain.name
+    CONDOR_HOST = $(CENTRAL_MANAGER1), $(CENTRAL_MANAGER2)
+
+    # Since we're using shared port, we set the port number to the shared
+    # port daemon's port number.  NOTE: this assumes that each machine in
+    # the list is using the same port number for shared port.  While this
+    # will be true by default, if you've changed it in configuration any-
+    # where, you need to reflect that change here.
+
+    HAD_USE_SHARED_PORT = TRUE
+    HAD_LIST = \
+    $(CENTRAL_MANAGER1):$(SHARED_PORT_PORT), \
+    $(CENTRAL_MANAGER2):$(SHARED_PORT_PORT)
+
+    REPLICATION_USE_SHARED_PORT = TRUE
+    REPLICATION_LIST = \
+    $(CENTRAL_MANAGER1):$(SHARED_PORT_PORT), \
+    $(CENTRAL_MANAGER2):$(SHARED_PORT_PORT)
+
+    # The recommended setting.
+    HAD_USE_PRIMARY = TRUE
+
+    # If you change which daemon(s) you're making highly-available, you must
+    # change both of these values.
+    HAD_CONTROLLEE = NEGOTIATOR
+    MASTER_NEGOTIATOR_CONTROLLER = HAD
+
+    ## THE FOLLOWING MAY DIFFER BETWEEN CENTRAL MANAGERS
+
+    # The daemon list may contain additional entries.
+    DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD, REPLICATION
+
+    # Using replication is optional.
+    HAD_USE_REPLICATION = TRUE
+
+    # This is the default location for the state file.
+    STATE_FILE = $(SPOOL)/Accountantnew.log
+
+    # See note above the length of the negotiation cycle.
+    MASTER_HAD_BACKOFF_CONSTANT = 360
+
+The following shared-port configuration is for the machines which that
+will not be central managers.
+
+.. code-block:: condor-config
+
+    CENTRAL_MANAGER1 = cm1.domain.name
+    CENTRAL_MANAGER2 = cm2.domain.name
+    CONDOR_HOST = $(CENTRAL_MANAGER1), $(CENTRAL_MANAGER2)
+
+The following configuration sets fixed port numbers for the central
+manager machines.
+
+.. code-block:: condor-config
+
+    ##########################################################################
+    # A sample configuration file for central managers, to enable the        #
+    # the high availability  mechanism.                                      #
+    ##########################################################################
+
+    #########################################################################
+    ## THE FOLLOWING MUST BE IDENTICAL ON ALL POTENTIAL CENTRAL MANAGERS.   #
+    #########################################################################
+    ## For simplicity in writing other expressions, define a variable
+    ## for each potential central manager in the pool.
+    ## These are samples.
+    CENTRAL_MANAGER1 = cm1.domain.name
+    CENTRAL_MANAGER2 = cm2.domain.name
+    ## A list of all potential central managers in the pool.
+    CONDOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
+
+    ## Define the port number on which the condor_had daemon will
+    ## listen.  The port must match the port number used
+    ## for when defining HAD_LIST.  This port number is
+    ## arbitrary; make sure that there is no port number collision
+    ## with other applications.
+    HAD_PORT = 51450
+    HAD_ARGS = -f -p $(HAD_PORT)
+
+    ## The following macro defines the port number condor_replication will listen
+    ## on on this machine. This port should match the port number specified
+    ## for that replication daemon in the REPLICATION_LIST
+    ## Port number is arbitrary (make sure no collision with other applications)
+    ## This is a sample port number
+    REPLICATION_PORT = 41450
+    REPLICATION_ARGS = -p $(REPLICATION_PORT)
+
+    ## The following list must contain the same addresses in the same order
+    ## as CONDOR_HOST. In addition, for each hostname, it should specify
+    ## the port number of condor_had daemon running on that host.
+    ## The first machine in the list will be the PRIMARY central manager
+    ## machine, in case HAD_USE_PRIMARY is set to true.
+    HAD_LIST = \
+    $(CENTRAL_MANAGER1):$(HAD_PORT), \
+    $(CENTRAL_MANAGER2):$(HAD_PORT)
+
+    ## The following list must contain the same addresses
+    ## as HAD_LIST. In addition, for each hostname, it should specify
+    ## the port number of condor_replication daemon running on that host.
+    ## This parameter is mandatory and has no default value
+    REPLICATION_LIST = \
+    $(CENTRAL_MANAGER1):$(REPLICATION_PORT), \
+    $(CENTRAL_MANAGER2):$(REPLICATION_PORT)
+
+    ## The following is the name of the daemon that the HAD controls.
+    ## This must match the name of a daemon in the master's DAEMON_LIST.
+    ## The default is NEGOTIATOR, but can be any daemon that the master
+    ## controls.
+    HAD_CONTROLLEE = NEGOTIATOR
+
+    ## HAD connection time.
+    ## Recommended value is 2 if the central managers are on the same subnet.
+    ## Recommended value is 5 if Condor security is enabled.
+    ## Recommended value is 10 if the network is very slow, or
+    ## to reduce the sensitivity of HA daemons to network failures.
+    HAD_CONNECTION_TIMEOUT = 2
+
+    ##If true, the first central manager in HAD_LIST is a primary.
+    HAD_USE_PRIMARY = true
+
+
+    ###################################################################
+    ## THE PARAMETERS BELOW ARE ALLOWED TO BE DIFFERENT ON EACH       #
+    ## CENTRAL MANAGER                                                #
+    ## THESE ARE MASTER SPECIFIC PARAMETERS
+    ###################################################################
+
+
+    ## the master should start at least these four daemons
+    DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD, REPLICATION
+
+
+    ## Enables/disables the replication feature of HAD daemon
+    ## Default: false
+    HAD_USE_REPLICATION = true
+
+    ## Name of the file from the SPOOL directory that will be replicated
+    ## Default: $(SPOOL)/Accountantnew.log
+    STATE_FILE = $(SPOOL)/Accountantnew.log
+
+    ## Period of time between two successive awakenings of the replication daemon
+    ## Default: 300
+    REPLICATION_INTERVAL = 300
+
+    ## Period of time, in which transferer daemons have to accomplish the
+    ## downloading/uploading process
+    ## Default: 300
+    MAX_TRANSFER_LIFETIME = 300
+
+
+    ## Period of time between two successive sends of classads to the collector by HAD
+    ## Default: 300
+    HAD_UPDATE_INTERVAL = 300
+
+
+    ## The HAD controls the negotiator, and should have a larger
+    ## backoff constant
+    MASTER_NEGOTIATOR_CONTROLLER = HAD
+    MASTER_HAD_BACKOFF_CONSTANT = 360
+
+The configuration for machines that will not be central managers is
+identical for the fixed- and shared- port cases.
+
+.. code-block:: condor-config
+
+    ##########################################################################
+    # Sample configuration relating to high availability for machines        #
+    # that DO NOT run the condor_had daemon.                                 #
+    ##########################################################################
+
+    ## For simplicity define a variable for each potential central manager
+    ## in the pool.
+    CENTRAL_MANAGER1 = cm1.domain.name
+    CENTRAL_MANAGER2 = cm2.domain.name
+    ## List of all potential central managers in the pool
+    CONDOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
+
+
+Monitoring with Ganglia, Elasticsearch, etc.
+--------------------------------------------
+
+:index:`monitoring<single: monitoring; pool management>`
+:index:`monitoring pools` :index:`pool monitoring`
+
+HTCondor keeps operational data about different aspects of the system in
+different places: The *condor_collector* stores current data about all the
+slots and all the daemons in the system.  If absent ads are enabled, the
+*condor_collector* also stores information about slots that are no longer in
+the system, for a fixed amount of time.  All this data may be queried with
+appropriate options to the *condor_status* command. The AP's job history file
+stores data about recent completed and removed jobs, similarly, each EP stores
+a startd_history file with information about jobs that have only run on that
+EP. Both of these may be queried with the *condor_history* command.
+
+While using *condor_status* or *condor_history* works well for one-off or
+ad-hoc queries, both tend to be slow, because none of the data is indexed or
+stored in a proper database.  Furthermore, all these data sources age old data
+out quickly.  Also, there is no graphical UI provided to visualize or analyze
+any of the data.
+
+As there are many robust, well-documented systems to do these sorts of things,
+the best solution is to copy the original data out of the proprietary HTCondor
+formats and into third party monitoring, database and visualization systems.
+
+The *condor_gangliad* is an HTCSS daemon that periodically copies data out of
+the *condor_collector* and into the ganglia monitoring system.  It can also be
+used to populate grafana.  *condor_adstash* is a HTCSS daemon which can copy
+job history information out of the AP's history file and into the Elasticsearch
+database for further querying.
+
+Ganglia
+-------
+
+:index:`with Ganglia<single: with Ganglia; Monitoring>`
+:index:`Ganglia monitoring`
+:index:`condor_gangliad daemon`
+
+Installation and configuration of Ganglia itself is beyond the scope of this
+document: complete information is available at the ganglia homepage at
+(`http://ganglia.info/ <http://ganglia.info/>`_), from the O'Reilly book on
+the subject, or numerous webpages.
+
+Generally speaking, the *condor_gangliad* should be setup to run on the same
+system where the ganglia *gmetad* is running.  Unless the pools is exceptionally
+large, putting the gmetad and the *condor_gangliad* on the central manager
+machine is a good choice.  To enable the *condor_gangliad*, simply add
+the line
+
+.. code-block:: condor-config
+
+      use FEATURE: ganglia
+
+to the config file on the central manager machine, and *condor_restart* the
+HTCondor system on that machine.  If the *condor_gangliad* daemon is to run on
+a different machine than the one running Ganglia's *gmetad*, modify
+configuration variable :macro:`GANGLIA_GSTAT_COMMAND`
+:index:`GANGLIA_GSTAT_COMMAND` to get the list of monitored hosts from the
+master *gmond* program.
+
+The above steps alone should be sufficient to get a default set of metrics
+about the pool into ganglia.  Additional metrics, tuning and other
+information, if needed, follows.
+
+By default, the *condor_gangliad* will only propagate metrics to hosts that are
+already monitored by Ganglia. Set configuration variable
+:macro:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS` to ``True`` to set up a Ganglia host
+to monitor a pool not monitored by Ganglia or have a heterogeneous pool where
+some hosts are not monitored. In this case, default graphs that Ganglia
+provides will not be present. However, the HTCondor metrics will appear.
+
+On large pools, setting configuration variable
+:macro:`GANGLIAD_PER_EXECUTE_NODE_METRICS` to ``False`` will reduce the amount
+of data sent to Ganglia. The execute node data is the least important to
+monitor. One can also limit the amount of data by setting configuration
+variable :macro:`GANGLIAD_REQUIREMENTS` Be aware that aggregate sums over the
+entire pool will not be accurate if this variable limits the ClassAds queried.
+
+Metrics to be sent to Ganglia are specified in files within the directory
+specified by variable :macro:`GANGLIAD_METRICS_CONFIG_DIR`.  Here is an example
+of a single metric definition given as a New ClassAd:
+
+.. code-block:: condor-classad
+
+    [
+      Name   = "JobsSubmitted";
+      Desc   = "Number of jobs submitted";
+      Units  = "jobs";
+      TargetType = "Scheduler";
+    ]
+
+A nice set of default metrics is in file:
+``$(GANGLIAD_METRICS_CONFIG_DIR)/00_default_metrics``.
+
+Recognized metric attribute names and their use:
+
+ Name
+    The name of this metric, which corresponds to the ClassAd attribute
+    name. Metrics published for the same machine must have unique names.
+ Value
+    A ClassAd expression that produces the value when evaluated. The
+    default value is the value in the daemon ClassAd of the attribute
+    with the same name as this metric.
+ Desc
+    A brief description of the metric. This string is displayed when the
+    user holds the mouse over the Ganglia graph for the metric.
+ Verbosity
+    The integer verbosity level of this metric. Metrics with a higher
+    verbosity level than that specified by configuration variable
+    :macro:`GANGLIA_VERBOSITY` will not be published.
+ TargetType
+    A string containing a comma-separated list of daemon ClassAd types
+    that this metric monitors. The specified values should match the
+    value of ``MyType`` of the daemon ClassAd. In addition, there are
+    special values that may be included. "Machine_slot1" may be
+    specified to monitor the machine ClassAd for slot 1 only. This is
+    useful when monitoring machine-wide attributes. The special value
+    "ANY" matches any type of ClassAd.
+ Requirements
+    A boolean expression that may restrict how this metric is
+    incorporated. It defaults to ``True``, which places no restrictions
+    on the collection of this ClassAd metric.
+ Title
+    The graph title used for this metric. The default is the metric
+    name.
+ Group
+    A string specifying the name of this metric's group. Metrics are
+    arranged by group within a Ganglia web page. The default is
+    determined by the daemon type. Metrics in different groups must have
+    unique names.
+ Cluster
+    A string specifying the cluster name for this metric. The default
+    cluster name is taken from the configuration variable
+    :macro:`GANGLIAD_DEFAULT_CLUSTER`.
+ Units
+    A string describing the units of this metric.
+ Scale
+    A scaling factor that is multiplied by the value of the ``Value``
+    attribute. The scale factor is used when the value is not in the
+    basic unit or a human-interpretable unit. For example, duty cycle is
+    commonly expressed as a percent, but the HTCondor value ranges from
+    0 to 1. So, duty cycle is scaled by 100. Some metrics are reported
+    in KiB. Scaling by 1024 allows Ganglia to pick the appropriate
+    units, such as number of bytes rather than number of KiB. When
+    scaling by large values, converting to the "float" type is
+    recommended.
+ Derivative
+    A boolean value that specifies if Ganglia should graph the
+    derivative of this metric. Ganglia versions prior to 3.4 do not
+    support this.
+ Type
+    A string specifying the type of the metric. Possible values are
+    "double", "float", "int32", "uint32", "int16", "uint16", "int8",
+    "uint8", and "string". The default is "string" for string values,
+    the default is "int32" for integer values, the default is "float"
+    for real values, and the default is "int8" for boolean values.
+    Integer values can be coerced to "float" or "double". This is
+    especially important for values stored internally as 64-bit values.
+ Regex
+    This string value specifies a regular expression that matches
+    attributes to be monitored by this metric. This is useful for
+    dynamic attributes that cannot be enumerated in advance, because
+    their names depend on dynamic information such as the users who are
+    currently running jobs. When this is specified, one metric per
+    matching attribute is created. The default metric name is the name
+    of the matched attribute, and the default value is the value of that
+    attribute. As usual, the ``Value`` expression may be used when the
+    raw attribute value needs to be manipulated before publication.
+    However, since the name of the attribute is not known in advance, a
+    special ClassAd attribute in the daemon ClassAd is provided to allow
+    the ``Value`` expression to refer to it. This special attribute is
+    named ``Regex``. Another special feature is the ability to refer to
+    text matched by regular expression groups defined by parentheses
+    within the regular expression. These may be substituted into the
+    values of other string attributes such as ``Name`` and ``Desc``.
+    This is done by putting macros in the string values. "\\\\1" is
+    replaced by the first group, "\\\\2" by the second group, and so on.
+ Aggregate
+    This string value specifies an aggregation function to apply,
+    instead of publishing individual metrics for each daemon ClassAd.
+    Possible values are "sum", "avg", "max", and "min".
+ AggregateGroup
+    When an aggregate function has been specified, this string value
+    specifies which aggregation group the current daemon ClassAd belongs
+    to. The default is the metric ``Name``. This feature works like
+    GROUP BY in SQL. The aggregation function produces one result per
+    value of ``AggregateGroup``. A single aggregate group would
+    therefore be appropriate for a pool-wide metric. As an example, to
+    publish the sum of an attribute across different types of slot
+    ClassAds, make the metric name an expression that is unique to each
+    type. The default ``AggregateGroup`` would be set accordingly. Note
+    that the assumption is still that the result is a pool-wide metric,
+    so by default it is associated with the *condor_collector* daemon's
+    host. To group by machine and publish the result into the Ganglia
+    page associated with each machine, make the ``AggregateGroup``
+    contain the machine name and override the default ``Machine``
+    attribute to be the daemon's machine name, rather than the
+    *condor_collector* daemon's machine name.
+ Machine
+    The name of the host associated with this metric. If configuration
+    variable :macro:`GANGLIAD_DEFAULT_MACHINE` is not specified, the
+    default is taken from the ``Machine`` attribute of the daemon
+    ClassAd. If the daemon name is of the form name@hostname, this may
+    indicate that there are multiple instances of HTCondor running on
+    the same machine. To avoid the metrics from these instances
+    overwriting each other, the default machine name is set to the
+    daemon name in this case. For aggregate metrics, the default value
+    of ``Machine`` will be the name of the *condor_collector* host.
+ IP
+    A string containing the IP address of the host associated with this
+    metric. If :macro:`GANGLIAD_DEFAULT_IP` is not specified, the default is
+    extracted from the ``MyAddress`` attribute of the daemon ClassAd.
+    This value must be unique for each machine published to Ganglia. It
+    need not be a valid IP address. If the value of ``Machine`` contains
+    an "@" sign, the default IP value will be set to the same value as
+    ``Machine`` in order to make the IP value unique to each instance of
+    HTCondor running on the same host.
+ Lifetime
+    A positive integer value representing the max number of seconds
+    without updating a metric will be kept before deletion. This is
+    represented in ganglia as DMAX. If no Lifetime is defined for a
+    metric then the default value will be set to a calculated value
+    based on the ganglia publish interval with a minimum value set by
+    :macro:`GANGLIAD_MIN_METRIC_LIFETIME`.
+
+Absent ClassAds
+---------------
+
+:index:`absent ClassAds<single: absent ClassAds; pool management>`
+:index:`absent ClassAd` :index:`absent ClassAd<single: absent ClassAd; ClassAd>`
+
+By default, HTCondor assumes that slots are transient: the
+*condor_collector* will discard ClassAds older than :macro:`CLASSAD_LIFETIME`
+seconds. Its default configuration value is 15 minutes, and as such, the
+default value for :macro:`UPDATE_INTERVAL` will pass three times before
+HTCondor forgets about a resource. In some pools, especially those with
+dedicated resources, this approach may make it unnecessarily difficult to
+determine what the composition of the pool ought to be, in the sense of knowing
+which machines would be in the pool, if HTCondor were properly functioning on
+all of them.
+
+This assumption of transient machines can be modified by the use of absent
+ClassAds. When a slot ClassAd would otherwise expire, the *condor_collector*
+evaluates the configuration variable :macro:`ABSENT_REQUIREMENTS` against the
+machine ClassAd. If ``True``, the machine ClassAd will be saved in a persistent
+manner and be marked as absent; this causes the machine to appear in the output
+of ``condor_status -absent``. When the machine returns to the pool, its first
+update to the *condor_collector* will invalidate the absent machine ClassAd.
+
+Absent ClassAds, like offline ClassAds, are stored to disk to ensure that they
+are remembered, even across *condor_collector* crashes. The configuration
+variable :macro:`COLLECTOR_PERSISTENT_AD_LOG` defines the file in which the
+ClassAds are stored.
+Absent ClassAds are retained on disk as maintained by the *condor_collector*
+for a length of time in seconds defined by the configuration variable
+:macro:`ABSENT_EXPIRE_ADS_AFTER`. A value of 0 for this variable means that the
+ClassAds are never discarded, and the default value is thirty days.
+
+Absent ClassAds are only returned by the *condor_collector* and displayed when
+the **-absent** option to *condor_status* is specified, or when the absent
+machine ClassAd attribute is mentioned on the *condor_status* command line.
+This renders absent ClassAds invisible to the rest of the HTCondor
+infrastructure.
+
+A daemon may inform the *condor_collector* that the daemon's ClassAd should not
+expire, but should be removed right away; the daemon asks for its ClassAd to be
+invalidated. It may be useful to place an invalidated ClassAd in the absent
+state, instead of having it removed as an invalidated ClassAd. An example of a
+ClassAd that could benefit from being absent is a system with an
+uninterruptible power supply that shuts down cleanly but unexpectedly as a
+result of a power outage. To cause all invalidated ClassAds to become absent
+instead of invalidated, set :macro:`EXPIRE_INVALIDATED_ADS` to ``True``.
+Invalidated ClassAds will instead be treated as if they expired, including when
+evaluating :macro:`ABSENT_REQUIREMENTS`.
+
+GPUs
+----
+
+:index:`monitoring GPUS`
+:index:`GPU monitoring`
+
+HTCondor supports monitoring GPU utilization for NVidia GPUs.  This feature
+is enabled by default if you set ``use feature : GPUs`` in your configuration
+file.
+
+Doing so will cause the startd to run the ``condor_gpu_utilization`` tool.
+This tool polls the (NVidia) GPU device(s) in the system and records their
+utilization and memory usage values.  At regular intervals, the tool reports
+these values to the *condor_startd*, assigning them to each device's usage
+to the slot(s) to which those devices have been assigned.
+
+Please note that ``condor_gpu_utilization`` can not presently assign GPU
+utilization directly to HTCondor jobs.  As a result, jobs sharing a GPU
+device, or a GPU device being used by from outside HTCondor, will result
+in GPU usage and utilization being misreported accordingly.
+
+However, this approach does simplify monitoring for the owner/administrator
+of the GPUs, because usage is reported by the *condor_startd* in addition
+to the jobs themselves.
+
+:index:`DeviceGPUsAverageUsage<single: DeviceGPUsAverageUsage; machine attribute>`
+
+  ``DeviceGPUsAverageUsage``
+    The number of seconds executed by GPUs assigned to this slot,
+    divided by the number of seconds since the startd started up.
+
+:index:`DeviceGPUsMemoryPeakUsage<single: DeviceGPUsMemoryPeakUsage; machine attribute>`
+
+  ``DeviceGPUsMemoryPeakUsage``
+    The largest amount of GPU memory used GPUs assigned to this slot,
+    since the startd started up.
+
+Elasticsearch
+-------------
+
+:index:`Elasticsearch`
+:index:`adstash`
+:index:`condor_adstash`
+
+HTCondor supports pushing *condor_schedd* and *condor_startd* job
+history ClassAds to Elasticsearch (and other targets) via the
+*condor_adstash* tool/daemon.
+*condor_adstash* collects job history ClassAds as specified by its
+configuration, either querying specified daemons' histories
+or reading job history ClassAds from a specified file,
+converts each ClassAd to a JSON document,
+and pushes each doc to the configured Elasticsearch index.
+The index is automatically created if it does not exist, and fields
+are added and configured based on well known job ClassAd attributes.
+(Custom attributes are also pushed, though always as keyword fields.)
+
+*condor_adstash* is a Python 3.6+ script that uses the
+HTCondor :ref:`apis/python-bindings/index:Python Bindings`
+and the
+`Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`_,
+both of which must be available to the system Python 3 installation
+if using the daemonized version of *condor_adstash*.
+*condor_adstash* can also be run as a standalone tool (e.g. in a
+Python 3 virtual environment containing the necessary libraries).
+
+Running *condor_adstash* as a daemon (i.e. under the watch of the
+*condor_master*) can be enabled by adding
+``use feature : adstash``
+to your HTCondor configuration.
+By default, this configuration will poll all *condor_schedds* that
+report to the ``$(CONDOR_HOST)`` *condor_collector* every 20 minutes
+and push the contents of the job history ClassAds to an Elasticsearch
+instance running on ``localhost`` to an index named
+``htcondor-000001``.
+Your situation and monitoring needs are likely different!
+See the ``condor_config.local.adstash`` example configuration file in
+the ``examples/`` directory for detailed information on how to modify
+your configuration.
+
+If you prefer to run *condor_adstash* in standalone mode, or are
+curious about other ClassAd sources or targets, see the
+:doc:`../man-pages/condor_adstash` man page for more
+details.
+
+Configuring a Pool to Report to the HTCondorView Server
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+For the HTCondorView server to function, configure the existing
+collector to forward ClassAd updates to it. This configuration is only
+necessary if the HTCondorView collector is a different collector from
+the existing *condor_collector* for the pool. All the HTCondor daemons
+in the pool send their ClassAd updates to the regular
+*condor_collector*, which in turn will forward them on to the
+HTCondorView server.
+
+Define the following configuration variable:
+
+.. code-block:: condor-config
+
+      CONDOR_VIEW_HOST = full.hostname[:portnumber]
+
+where full.hostname is the full host name of the machine running the
+HTCondorView collector. The full host name is optionally followed by a
+colon and port number. This is only necessary if the HTCondorView
+collector is configured to use a port number other than the default.
+
+Place this setting in the configuration file used by the existing
+*condor_collector*. It is acceptable to place it in the global
+configuration file. The HTCondorView collector will ignore this setting
+(as it should) as it notices that it is being asked to forward ClassAds
+to itself.
+
+Once the HTCondorView server is running with this change, send a
+*condor_reconfig* command to the main *condor_collector* for the
+change to take effect, so it will begin forwarding updates. A query to
+the HTCondorView collector will verify that it is working. A query
+example:
+
+.. code-block:: console
+
+      $ condor_status -pool condor.view.host[:portnumber]
+
+A *condor_collector* may also be configured to report to multiple
+HTCondorView servers. The configuration variable 
+:macro:`CONDOR_VIEW_HOST` can be given as a list of HTCondorView
+servers separated by commas and/or spaces.
+
+The following demonstrates an example configuration for two HTCondorView
+servers, where both HTCondorView servers (and the *condor_collector*)
+are running on the same machine, localhost.localdomain:
+
+.. code-block:: text
+
+    VIEWSERV01 = $(COLLECTOR)
+    VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01
+    VIEWSERV01_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog01"
+    VIEWSERV01.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist01
+    VIEWSERV01.KEEP_POOL_HISTORY = TRUE
+    VIEWSERV01.CONDOR_VIEW_HOST =
+
+    VIEWSERV02 = $(COLLECTOR)
+    VIEWSERV02_ARGS = -f -p 24680 -local-name VIEWSERV02
+    VIEWSERV02_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog02"
+    VIEWSERV02.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist02
+    VIEWSERV02.KEEP_POOL_HISTORY = TRUE
+    VIEWSERV02.CONDOR_VIEW_HOST =
+
+    CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680
+    DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
+
+Note that the value of :macro:`CONDOR_VIEW_HOST` for VIEWSERV01 and VIEWSERV02
+is unset, to prevent them from inheriting the global value of
+``CONDOR_VIEW_HOST`` and attempting to report to themselves or each other. If
+the HTCondorView servers are running on different machines where there is no
+global value for ``CONDOR_VIEW_HOST``, this precaution is not required.

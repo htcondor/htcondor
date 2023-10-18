@@ -896,7 +896,7 @@ New Features:
 
 - The PREPARE_JOB and PREPARE_JOB_BEFORE_TRANSFER job hooks can now return a ``HookStatusCode`` and 
   a ``HookStatusMessage`` to give better feedback to the user.
-  See the :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` manual section.
+  See the :ref:`admin-manual/ep-policy-configuration:Startd Cron` manual section.
   :jira:`1416`
 
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
