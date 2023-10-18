@@ -240,7 +240,9 @@ display_stats()
 		printf("%9.9s ", format_time_nosecs(js->wall_time));
 		printf("%9.9s ", format_time_nosecs(js->good_time));
 		printf("%9.9s ", format_time_nosecs(js->cpu_usage));
-		printf("%9.9s ", format_time_nosecs(js->wall_time/js->allocations));
+		printf("%9.9s ", js->allocations? 
+				format_time_nosecs(js->wall_time/js->allocations) :
+			   "0+00:00");
 		printf("%9.9s ", js->kills ?
 			   format_time_nosecs((js->wall_time-js->good_time)/js->kills) :
 			   "0+00:00");
