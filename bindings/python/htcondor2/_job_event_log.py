@@ -49,12 +49,11 @@ class JobEventLog():
         return JobEvent(data, event_text)
 
 
-    # Undocumented in version 1, probably never used.
     def __enter__(self):
         self._deadline = 0
+        return self
 
 
-    # Undocumented in version 1, probably never used.
     def __exit__(self, exceptionType, exceptionValue, traceback):
         self.close()
         return False

@@ -1,3 +1,5 @@
+from typing import Union
+
 from ._common_imports import (
     classad,
     Collector,
@@ -10,6 +12,7 @@ from ._completion_type import CompletionType
 from .htcondor2_impl import (
     _startd_drain_jobs,
     _startd_cancel_drain_jobs,
+    _history_query,
 )
 
 
@@ -47,3 +50,40 @@ class Startd():
 
     def cancelDrainJobs(self, request_id : str = None) -> None:
         _startd_cancel_drain_jobs(self._addr, request_id)
+
+
+    # Totally undocumented in version 1.
+    def history(self,
+        constraint : Union[str, classad.ExprTree],
+        projection : list[str] = [],
+        match : int = -1,
+        since : Union[int, str, classad.ExprTree] = None,
+    ) -> "HistoryIterator": # FIXME: remove quotes
+        projection_string = ",".join(projection)
+
+        if isinstance(since, int):
+            since = f"ClusterID == {since}"
+        elif isinstance(since, str):
+            pattern = re.compile(r'(\d+).(\d+)')
+            matches = pattern.match(since)
+            if matches is None:
+                raise ValueError("since string must be in the form {clusterID}.{procID}")
+            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
+        elif isinstance(since, classad.ExprTree):
+            since = str(since)
+        elif since is None:
+            since = ""
+        else:
+            raise TypeError("since must be an int, string, or ExprTree")
+
+        if constraint is None:
+            constraint = ""
+
+        return _history_query(self._addr,
+            str(constraint), projection_string, int(match), since,
+            # HRS_STARTD_JOB_HIST
+            1,
+            # GET_HISTORY
+            429,
+        )
+
