@@ -18,8 +18,6 @@ Administrators' Manual
    daemoncore
    logging
    file-and-cred-transfer 
-   setting-up-vm-docker-universes
-   singularity-support
    power-management
    hooks
    directories

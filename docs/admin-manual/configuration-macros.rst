@@ -4283,7 +4283,7 @@ details.
     value is /usr/bin/docker. Remember that the condor user must also be
     in the docker group for Docker Universe to work. See the Docker
     universe manual section for more details
-    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the docker universe`).
+    (:ref:`admin-manual/ep-policy-configuration:docker universe`).
     An example of the configuration for running the
     Docker CLI:
 
@@ -4295,7 +4295,7 @@ details.
     A list of directories on the host execute machine to be volume
     mounted within the container. See the Docker Universe section for
     full details
-    (:ref:`admin-manual/setting-up-vm-docker-universes:setting up the docker universe`).
+    (:ref:`admin-manual/ep-policy-configuration:docker universe`).
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE`
     The number of most recently used Docker images that will be kept on
     the local machine. The default value is 8.
