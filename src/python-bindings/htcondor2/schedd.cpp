@@ -659,7 +659,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
     const char * addr = NULL;
     PyObject_Handle * handle = NULL;
     long count = 0;
-    bool spool = false;
+    int spool = 0;
 
     if(! PyArg_ParseTuple( args, "zOlp", & addr, (PyObject **)& handle, & count, & spool )) {
         // PyArg_ParseTuple() has already set an exception for us.
