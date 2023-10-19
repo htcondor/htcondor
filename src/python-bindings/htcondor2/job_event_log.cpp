@@ -169,9 +169,8 @@ static PyObject *
 _job_event_log_get_offset( PyObject *, PyObject * args ) {
     PyObject * self = NULL;
     PyObject_Handle * handle = NULL;
-    const char * file_name = NULL;
 
-    if(! PyArg_ParseTuple( args, "OOz", & self, (PyObject **)& handle, & file_name )) {
+    if(! PyArg_ParseTuple( args, "OO", & self, (PyObject **)& handle )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
@@ -196,6 +195,23 @@ _job_event_log_set_offset( PyObject *, PyObject * args ) {
     auto wful = (WaitForUserLog *)handle->t;
 
     wful->setOffset(offset);
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_job_event_log_close( PyObject *, PyObject * args ) {
+    PyObject * self = NULL;
+    PyObject_Handle * handle = NULL;
+
+    if(! PyArg_ParseTuple( args, "OO", & self, (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto wful = (WaitForUserLog *)handle->t;
+    wful->releaseResources();
 
     Py_RETURN_NONE;
 }

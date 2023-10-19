@@ -152,6 +152,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 	{"_job_event_log_next", &_job_event_log_next, METH_VARARGS, NULL},
 
+	{"_job_event_log_close", &_job_event_log_close, METH_VARARGS, NULL},
+
 	{"_job_event_log_get_offset", &_job_event_log_get_offset, METH_VARARGS, NULL},
 
 	{"_job_event_log_set_offset", &_job_event_log_set_offset, METH_VARARGS, NULL},

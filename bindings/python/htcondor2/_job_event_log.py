@@ -7,6 +7,7 @@ from ._job_event import JobEvent
 from .htcondor2_impl import (
     _job_event_log_init,
     _job_event_log_next,
+    _job_event_log_close,
 )
 
 class JobEventLog():
