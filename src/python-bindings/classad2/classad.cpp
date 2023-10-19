@@ -605,3 +605,28 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     auto py_class_ad = py_new_htcondor2_classad(result);
     return Py_BuildValue("Ol", py_class_ad, offset);
 }
+
+
+static PyObject *
+_classad_quote( PyObject *, PyObject * args ) {
+    // _classad_quote(from_string)
+
+    const char * from_string = NULL;
+    if(! PyArg_ParseTuple( args, "z", & from_string )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    classad::Value v;
+    v.SetStringValue(from_string);
+    classad::ExprTree * expr = classad::Literal::MakeLiteral(v);
+    classad::ClassAdUnParser sink;
+
+    std::string result;
+    sink.Unparse(result, expr);
+    delete expr;
+
+
+    return PyUnicode_FromString(result.c_str());
+}

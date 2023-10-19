@@ -13,6 +13,7 @@ from .classad2_impl import (
     _classad_size,
     _classad_keys,
     _classad_parse_next,
+    _classad_quote,
 )
 
 from ._parser import Parser
@@ -192,3 +193,9 @@ def _parseNext(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto)
 
     return firstAd
 
+
+def _quote(input : str) -> str:
+    '''
+    Quote the Python string so it can be used for building ClassAd expressions.
+    '''
+    return _classad_quote(input)
