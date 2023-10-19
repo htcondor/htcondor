@@ -44,6 +44,10 @@ Bugs Fixed:
   SSL certificate.
   :jira:`2080`
 
+- Fixed warnings about use of deprecated HTCondor python binding methods
+  in the `htcondor dag submit` command.
+  :jira:`2104`
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
