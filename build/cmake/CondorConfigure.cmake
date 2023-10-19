@@ -847,13 +847,8 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.0.0)
 
-	# old voms builds on manylinux1 (centos5 docker image)
     if (LINUX)
-        if (${SYSTEM_NAME} MATCHES "centos5.11")
-            add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
-        else()
             add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
-        endif()
     endif()
 
         if (LINUX)
