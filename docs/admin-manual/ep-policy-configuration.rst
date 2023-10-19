@@ -2400,133 +2400,6 @@ their defaults are
     MODIFY_REQUEST_EXPR_REQUESTMEMORY = quantize(RequestMemory, {128})
     MODIFY_REQUEST_EXPR_REQUESTDISK = quantize(RequestDisk, {1024})
 
-Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
---------------------------------------------------------------------------------------------
-:index:`DISK usage`
-:index:`per job scratch filesystem`
-
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
-
-
-On Linux systems, when HTCondor is started as root, it optionally has the ability to create
-a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
-from using more scratch space than provisioned.  This also requires that the disk is managed
-with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
-this to work, in addition to the above requirements:
-
-.. code-block:: condor-config
-
-    THINPOOL_VOLUME_GROUP_NAME = vgname
-    THINPOOL_NAME = htcondor
-    STARTD_ENFORCE_DISK_LIMITS = true
-
-
-THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
-disk space to provision all the scratch directories for all running jobs on a worker node.
-THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
-be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_LIMITS is a boolean.  When
-true, if a job fills up the filesystem created for it, the starter will put the job on hold
-with the out of resources hold code (34).  This is the recommended value.  If false, should
-the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors
-and exit with an appropriate code in every part of the job that writes to the filesystem, including
-third party libraries.
-
-Note that the ephemeral filesystem created for the job is private to the job, so the contents
-of that filesystem are not visible outside the process hierarchy.  The administrator can use
-the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
-As this filesystem will never live through a system reboot, it is mounted with mount options
-that optimize for performance, not reliability, and may improve performance for I/O heavy
-jobs.
-
-
-
-condor_negotiator-Side Resource Consumption Policies
-----------------------------------------------------
-
-:index:`consumption policy`
-:index:`negotiator-side resource consumption policy<single: negotiator-side resource consumption policy; partitionable slots>`
-
-For partitionable slots, the specification of a consumption policy
-permits matchmaking at the negotiator. A dynamic slot carved from the
-partitionable slot acquires the required quantities of resources,
-leaving the partitionable slot with the remainder. This differs from
-scheduler matchmaking in that multiple jobs can match with the
-partitionable slot during a single negotiation cycle.
-
-All specification of the resources available is done by configuration of
-the partitionable slot. The machine is identified as having a resource
-consumption policy enabled with
-
-.. code-block:: text
-
-      CONSUMPTION_POLICY = True
-
-A defined slot type that is partitionable may override the machine value
-with
-
-.. code-block:: text
-
-      SLOT_TYPE_<N>_CONSUMPTION_POLICY = True
-
-A job seeking a match may always request a specific number of cores,
-amount of memory, and amount of disk space. Availability of these three
-resources on a machine and within the partitionable slot is always
-defined and have these default values:
-
-.. code-block:: text
-
-      CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
-      CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
-      CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
-
-Here is an example-driven definition of a consumption policy. Assume a
-single partitionable slot type on a multi-core machine with 8 cores, and
-that the resource this policy cares about allocating are the cores.
-Configuration for the machine includes the definition of the slot type
-and that it is partitionable.
-
-.. code-block:: text
-
-      SLOT_TYPE_1 = cpus=8
-      SLOT_TYPE_1_PARTITIONABLE = True
-      NUM_SLOTS_TYPE_1 = 1
-
-Enable use of the *condor_negotiator*-side resource consumption policy,
-allocating the job-requested number of cores to the dynamic slot, and
-use :macro:`SLOT_WEIGHT` to assess the user usage
-that will affect user priority by the number of cores allocated. Note
-that the only attributes valid within the 
-:macro:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This
-must the set to the same value on all machines in the pool.
-
-.. code-block:: text
-
-      SLOT_TYPE_1_CONSUMPTION_POLICY = True
-      SLOT_TYPE_1_CONSUMPTION_CPUS = TARGET.RequestCpus
-      SLOT_WEIGHT = Cpus
-
-If custom resources are available within the partitionable slot, they
-may be used in a consumption policy, by specifying the resource. Using a
-machine with 4 GPUs as an example custom resource, define the resource
-and include it in the definition of the partitionable slot:
-
-.. code-block:: text
-
-      MACHINE_RESOURCE_NAMES = gpus
-      MACHINE_RESOURCE_gpus = 4
-      SLOT_TYPE_2 = cpus=8, gpus=4
-      SLOT_TYPE_2_PARTITIONABLE = True
-      NUM_SLOTS_TYPE_2 = 1
-
-Add the consumption policy to incorporate availability of the GPUs:
-
-.. code-block:: text
-
-      SLOT_TYPE_2_CONSUMPTION_POLICY = True
-      SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu
-      SLOT_WEIGHT = Cpus
-
 Startd Cron
 -----------
 
@@ -2705,3 +2578,610 @@ jobs, and ones that use the *condor_schedd*.
     SCHEDD_CRON_TEST_ARGS = abc 123
 
 :index:`Hooks`
+
+Docker Universe
+---------------
+
+:index:`set up<single: set up; docker universe>`
+:index:`for the docker universe<single: for the docker universe; installation>`
+:index:`docker<single: docker; universe>`
+:index:`set up for the docker universe<single: set up for the docker universe; universe>`
+
+The execution of a docker universe job causes the instantiation of a
+Docker container on an execute host.
+
+The docker universe job is mapped to a vanilla universe job, and the
+submit description file must specify the submit command
+**docker_image** :index:`docker_image<single: docker_image; submit commands>` to
+identify the Docker image. The job's ``requirement`` ClassAd attribute
+is automatically appended, such that the job will only match with an
+execute machine that has Docker installed.
+:index:`HasDocker<single: HasDocker; ClassAd machine attribute>`
+
+The Docker service must be pre-installed on each execute machine that
+can execute a docker universe job. Upon start up of the *condor_startd*
+daemon, the capability of the execute machine to run docker universe
+jobs is probed, and the machine ClassAd attribute ``HasDocker`` is
+advertised for a machine that is capable of running Docker universe
+jobs.
+
+When a docker universe job is matched with a Docker-capable execute
+machine, HTCondor invokes the Docker CLI to instantiate the
+image-specific container. The job's scratch directory tree is mounted as
+a Docker volume. When the job completes, is put on hold, or is evicted,
+the container is removed.
+
+An administrator of a machine can optionally make additional directories
+on the host machine readable and writable by a running container. To do
+this, the admin must first give an HTCondor name to each directory with
+the DOCKER_VOLUMES parameter. Then, each volume must be configured with
+the path on the host OS with the DOCKER_VOLUME_DIR_XXX parameter.
+Finally, the parameter DOCKER_MOUNT_VOLUMES tells HTCondor which of
+these directories to always mount onto containers running on this
+machine.
+
+For example,
+
+.. code-block:: condor-config
+
+    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
+    DOCKER_VOLUME_DIR_SOME_DIR = /path1
+    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2
+    DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
+
+The *condor_startd* will advertise which docker volumes it has
+available for mounting with the machine attributes
+HasDockerVolumeSOME_NAME = true so that jobs can match to machines with
+volumes they need.
+
+Optionally, if the directory name is two directories, separated by a
+colon, the first directory is the name on the host machine, and the
+second is the value inside the container. If a ":ro" is specified after
+the second directory name, the volume will be mounted read-only inside
+the container.
+
+These directories will be bind-mounted unconditionally inside the
+container. If an administrator wants to bind mount a directory only for
+some jobs, perhaps only those submitted by some trusted user, the
+setting :macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF` may be used. This is a
+class ad expression, evaluated in the context of the job ad and the
+machine ad. Only when it evaluted to TRUE, is the volume mounted.
+Extending the above example,
+
+.. code-block:: condor-config
+
+    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
+    DOCKER_VOLUME_DIR_SOME_DIR = /path1
+    DOCKER_VOLUME_DIR_SOME_DIR_MOUNT_IF = WantSomeDirMounted && Owner == "smith"
+    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2
+    DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
+
+In this case, the directory /path1 will get mounted inside the container
+only for jobs owned by user "smith", and who set +WantSomeDirMounted =
+true in their submit file.
+
+In addition to installing the Docker service, the single configuration
+variable :macro:`DOCKER` must be set. It defines the
+location of the Docker CLI and can also specify that the
+*condor_starter* daemon has been given a password-less sudo permission
+to start the container as root. Details of the :macro:`DOCKER` configuration
+variable are in the :ref:`admin-manual/configuration-macros:condor_startd
+configuration file macros` section.
+
+Docker must be installed as root by following these steps on an
+Enterprise Linux machine.
+
+#. Acquire and install the docker-engine community edition by following
+   the installations instructions from docker.com
+#. Set up the groups:
+
+   .. code-block:: console
+
+        $ usermod -aG docker condor
+
+#. Invoke the docker software:
+
+   .. code-block:: console
+
+         $ systemctl start docker
+         $ systemctl enable docker
+
+#. Reconfigure the execute machine, such that it can set the machine
+   ClassAd attribute ``HasDocker``:
+
+   .. code-block:: console
+
+         $ condor_reconfig
+
+#. Check that the execute machine properly advertises that it is
+   docker-capable with:
+
+   .. code-block:: console
+
+         $ condor_status -l | grep -i docker
+
+   The output of this command line for a correctly-installed and
+   docker-capable execute host will be similar to
+
+   .. code-block:: condor-classad
+
+        HasDocker = true
+        DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
+
+By default, HTCondor will keep the 8 most recently used Docker images on the
+local machine. This number may be controlled with the configuration variable
+:macro:`DOCKER_IMAGE_CACHE_SIZE`, to increase or decrease the number of images,
+and the corresponding disk space, used by Docker.
+
+By default, Docker containers will be run with all rootly capabilities dropped,
+and with setuid and setgid binaries disabled, for security reasons. If you need
+to run containers with root privilege, you may set the configuration parameter
+:macro:`DOCKER_DROP_ALL_CAPABILITIES` to an expression that evaluates to false.
+This expression is evaluted in the context of the machine ad (my) and the job
+ad (target).
+
+Docker support an enormous number of command line options when creating
+containers. While HTCondor tries to map as many useful options from submit
+files and machine descriptions to command line options, an administrator may
+want additional options passed to the docker container create command. To do
+so, the parameter :macro:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will
+append these to the docker container create command.
+
+Docker universe jobs may fail to start on certain Linux machines when
+SELinux is enabled. The symptom is a permission denied error when
+reading or executing from the condor scratch directory. To fix this
+problem, an administrator will need to run the following command as root
+on the execute directories for all the startd machines:
+
+.. code-block:: console
+
+    $ chcon -Rt svirt_sandbox_file_t /var/lib/condor/execute
+
+
+All docker universe jobs can request either host-based networking
+or no networking at all.  The latter might be for security reasons.
+If the worker node administrator has defined additional custom docker
+networks, perhaps a VPN or other custom type, those networks can be
+defined for HTCondor jobs to opt into with the docker_network_type
+submit command.  Simple set
+
+.. code-block:: condor-config
+
+    DOCKER_NETWORKS = some_virtual_network, another_network
+
+
+And these two networks will be advertised by the startd, and
+jobs that request these network type will only match to machines
+that support it.  Note that HTCondor cannot test the validity
+of these networks, and merely trusts that the administrator has
+correctly configured them.
+
+To deal with a potentially user influencing option, there is an optional knob that
+can be configured to adapt the ``--shm-size`` Docker container create argument
+taking the machine's and job's classAds into account.
+Exemplary, setting the ``/dev/shm`` size to half the requested memory is achieved by:
+
+.. code-block:: condor-config
+
+    DOCKER_SHM_SIZE = Memory * 1024 * 1024 / 2
+
+or, using a user provided value ``DevShmSize`` if available and within the requested
+memory limit:
+
+.. code-block:: condor-config
+
+    DOCKER_SHM_SIZE = ifThenElse(DevShmSize isnt Undefined && isInteger(DevShmSize) && int(DevShmSize) <= (Memory * 1024 * 1024), int(DevShmSize), 2 * 1024 * 1024 * 1024)
+
+    
+Note: ``Memory`` is in MB, thus it needs to be scaled to bytes.
+
+Apptainer and Singularity Support
+---------------------------------
+
+:index:`Singularity<single: Singularity; installation>` :index:`Singularity`
+
+Singularity (https://sylabs.io/singularity/) is a container runtime system
+popular in scientific and HPC communities.  Apptainer (https://apptainer.org)
+is an open source fork of Singularity that is API and CLI compatible with
+singularity. HTCondor can run jobs inside Singularity containers either in a
+transparent way, where the job does not know that it is being contained, or,
+the HTCondor administrator can configure the HTCondor startd so that a job can
+opt into running inside a container.  This allows the operating system that the
+job sees to be different than the one on the host system, and provides more
+isolation between processes running in one job and another.
+
+.. note::
+    Everything in this document that pertains to Singularity is also true for the
+    Apptainer container runtime.
+
+
+The decision to run a job inside Singularity ultimately resides on the worker
+node, although it can delegate that to the job.
+
+By default, jobs will not be run in Singularity.
+
+For Singularity to work, the administrator must install Singularity
+on the worker node.  The HTCondor startd will detect this installation
+at startup.  When it detects a usable installation, it will
+advertise two attributes in the slot ad:
+
+.. code-block:: condor-config
+
+       HasSingularity = true
+       SingularityVersion = "singularity version 3.7.0-1.el7"
+
+If the detected Singularity installation fails to run test containers
+at startd startup, ``HasSingularity`` will be set to ``false``, and
+the slot ad attribute ``SingularityOfflineReason`` will contain an error string.
+
+HTCondor will run a job under Singularity when the startd configuration knob
+:macro:`SINGULARITY_JOB` evaluates to true.  This is evaluated in the context of the
+slot ad and the job ad.  If it evaluates to false or undefined, the job will
+run as normal, without singularity.
+
+When :macro:`SINGULARITY_JOB` evaluates to true, a second HTCondor knob is required
+to name the singularity image that must be run, :macro:`SINGULARITY_IMAGE_EXPR`.
+This also is evaluated in the context of the machine and the job ad, and must
+evaluate to a string.  This image name is passed to the singularity exec
+command, and can be any valid value for a singularity image name.  So, it
+may be a path to file on a local file system that contains an singularity
+image, in any format that singularity supports.  It may be a string that
+begins with ``docker://``, and refer to an image located on docker hub,
+or other repository.  It can begin with ``http://``, and refer to an image
+to be fetched from an HTTP server.  In this case, singularity will fetch
+the image into the job's scratch directory, convert it to a .sif file and
+run it from there.  Note this may require the job to request more disk space
+that it otherwise would need. It can be a relative path, in which
+case it refers to a file in the scratch directory, so that the image
+can be transferred by HTCondor's file transfer mechanism.
+
+Here's the simplest possible configuration file.  It will force all
+jobs on this machine to run under Singularity, and to use an image
+that it located in the file system in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
+
+.. code-block:: condor-config
+
+      # Forces _all_ jobs to run inside singularity.
+      SINGULARITY_JOB = true
+
+      # Forces all jobs to use the CernVM-based image.
+      SINGULARITY_IMAGE_EXPR = "/cvmfs/cernvm-prod.cern.ch/cvm3"
+
+Another common configuration is to allow the job to select whether
+to run under Singularity, and if so, which image to use.  This looks like:
+
+.. code-block:: condor-config
+
+      SINGULARITY_JOB = !isUndefined(TARGET.SingularityImage)
+      SINGULARITY_IMAGE_EXPR = TARGET.SingularityImage
+
+Then, users would add the following to their submit file (note the
+quoting):
+
+.. code-block:: condor-submit
+
+      +SingularityImage = "/cvmfs/cernvm-prod.cern.ch/cvm3"
+
+or maybe
+
+.. code-block:: condor-submit
+
+      +SingularityImage = "docker://ubuntu:20"
+
+By default, singularity will bind mount the scratch directory that
+contains transferred input files, working files, and other per-job
+information into the container, and make this the initial working
+directory of the job.  Thus, file transfer for singularity jobs works
+just like with vanilla universe jobs.  Any new files the job
+writes to this directory will be copied back to the submit node,
+just like any other sandbox, subject to transfer_output_files,
+as in vanilla universe.
+
+Assuming singularity is configured on the startd as described
+above, A complete submit file that uses singularity might look like
+
+.. code-block:: condor-submit
+
+     executable = /usr/bin/sleep
+     arguments = 30
+     +SingularityImage = "docker://ubuntu"
+
+     Requirements = HasSingularity
+
+     Request_Disk = 1024
+     Request_Memory = 1024
+     Request_cpus = 1
+
+     should_transfer_files = yes
+     transfer_input_files = some_input
+     when_to_transfer_output = on_exit
+
+     log = log
+     output = out.$(PROCESS)
+     error = err.$(PROCESS)
+
+     queue 1
+
+
+HTCondor can also transfer the whole singularity image, just like
+any other input file, and use that as the container image.  Given
+a singularity image file in the file named "image" in the submit
+directory, the submit file would look like:
+
+.. code-block:: condor-submit
+
+     executable = /usr/bin/sleep
+     arguments = 30
+     +SingularityImage = "image"
+
+     Requirements = HasSingularity
+
+     Request_Disk = 1024
+     Request_Memory = 1024
+     Request_cpus = 1
+
+     should_transfer_files = yes
+     transfer_input_files = image
+     when_to_transfer_output = on_exit
+
+     log = log
+     output = out.$(PROCESS)
+     error = err.$(PROCESS)
+
+     queue 1
+
+
+The administrator can optionally
+specify additional directories to be bind mounted into the container.
+For example, if there is some common shared input data located on a
+machine, or on a shared file system, this directory can be bind-mounted
+and be visible inside the container. This is controlled by the
+configuration parameter :macro:`SINGULARITY_BIND_EXPR`. This is an expression,
+which is evaluated in the context of the machine and job ads, and which
+should evaluated to a string which contains a space separated list of
+directories to mount.
+
+So, to always bind mount a directory named /nfs into the image, and
+administrator could set
+
+.. code-block:: condor-config
+
+     SINGULARITY_BIND_EXPR = "/nfs"
+
+Or, if a trusted user is allowed to bind mount anything on the host, an
+expression could be
+
+.. code-block:: condor-config
+
+      SINGULARITY_BIND_EXPR = (Target.Owner == "TrustedUser") ? SomeExpressionFromJob : ""
+
+If the source directory for the bind mount is missing on the host machine,
+HTCondor will skip that mount and run the job without it.  If the image is
+an exploded file directory, and the target directory is missing inside
+the image, and the configuration parameter :macro:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
+is set to true (the default is false), then this mount attempt will also
+be skipped.  Otherwise, the job will return an error when run.
+
+In general, HTCondor will try to set as many Singularity command line
+options as possible from settings in the machine ad and job ad, as
+make sense.  For example, if the slot the job runs in is provisioned with GPUs,
+perhaps in response to a ``request_GPUs`` line in the submit file, the
+Singularity flag ``-nv`` will be passed to Singularity, which should make
+the appropriate nvidia devices visible inside the container.
+If the submit file requests environment variables to be set for the job,
+HTCondor passes those through Singularity into the job.
+
+Before the *condor_starter* runs a job with singularity, it first
+runs singularity test on that image.  If no test is defined inside
+the image, it runs ``/bin/sh /bin/true``.  If the test returns non-zero,
+for example if the image is missing, or malformed, the job is put
+on hold.  This is controlled by the condor knob
+:macro:`SINGULARITY_RUN_TEST_BEFORE_JOB`, which defaults to true.
+
+If an administrator wants to pass additional arguments to the singularity exec
+command instead of the defaults used by HTCondor, several parameters exist to
+do this - see the *condor_starter* configuration parameters that begin with the
+prefix SINGULARITY in defined in section
+:ref:`admin-manual/configuration-macros:condor_starter configuration file
+entries`.  There you will find parameters to customize things such as the use
+of PID namespaces, cache directory, and several other options.  However, should
+an administrator need to customize Singularity behavior that HTCondor does not
+currently support, the parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows
+arbitrary additional parameters to be passed to the singularity exec command.
+Note that this can be a classad expression, evaluated in the context of the
+slot ad and the job ad, where the slot ad can be referenced via "MY.", and the
+job ad via the "TARGET." reference.  In this way, the admin could set different
+options for different kinds of jobs.  For example, to pass the ``-w`` argument,
+to make the image writable, an administrator could set
+
+.. code-block:: condor-config
+
+    SINGULARITY_EXTRA_ARGUMENTS = "-w"
+
+There are some rarely-used settings that some administrators may
+need to set. By default, HTCondor looks for the Singularity runtime
+in ``/usr/bin/singularity``, but this can be overridden with the SINGULARITY
+parameter:
+
+.. code-block:: condor-submit
+
+      SINGULARITY = /opt/singularity/bin/singularity
+
+By default, the initial working directory of the job will be the
+scratch directory, just like a vanilla universe job.  This directory
+probably doesn't exist in the image's file system.  Usually,
+Singularity will be able to create this directory in the image, but
+unprivileged versions of singularity with certain image types may
+not be able to do so.  If this is the case, the current directory
+on the inside of the container can be set via a knob.  This will
+still map to the scratch directory outside the container.
+
+.. code-block:: condor-config
+
+      # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
+      SINGULARITY_TARGET_DIR = /srv
+
+If :macro:`SINGULARITY_TARGET_DIR` is not specified by the admin,
+it may be specified in the job submit file via the submit command
+``container_target_dir``.  If both are set, the config knob
+version takes precedence.
+
+When the HTCondor starter runs a job under Singularity, it always
+prints to the log the exact command line used.  This can be helpful
+for debugging or for the curious.  An example command line printed
+to the StarterLog might look like the following:
+
+.. code-block:: text
+
+    About to exec /usr/bin/singularity -s exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/demo 3
+
+In this example, no GPUs have been requested, so there is no ``-nv`` option.
+:macro:`MOUNT_UNDER_SCRATCH` is set to the default of ``/tmp,/var/tmp``, so condor
+translates those into ``-S`` (scratch directory) requests in the command line.
+The ``--pwd`` is set to the scratch directory, ``-B`` bind mounts the scratch
+directory with the same name on the inside of the container, and the
+``-C`` option is set to contain all namespaces.  Then the image is named,
+and the executable, which in this case has been transferred by HTCondor
+into the scratch directory, and the job's argument (3).  Not visible
+in the log are any environment variables that HTCondor is setting for the job.
+
+All of the singularity container runtime's logging, warning and error messages
+are written to the job's stderr.  This is an unfortunate aspect of the runtime
+we hope to fix in the future.  By default, HTCondor passes "-s" (silent) to
+the singularity runtime, so that the only messages it writes to the job's
+stderr are fatal error messages.  If a worker node administrator needs more
+debugging information, they can change the value of the worker node config
+parameter :macro:`SINGULARITY_VERBOSITY` and set it to -d or -v to increase
+the debugging level.
+
+
+condor_negotiator-Side Resource Consumption Policies
+----------------------------------------------------
+
+:index:`consumption policy`
+:index:`negotiator-side resource consumption policy<single: negotiator-side resource consumption policy; partitionable slots>`
+
+.. warning::
+   Consumption policies are an experimental feature and may not work well
+   in combination with other HTCondor features.
+
+
+For partitionable slots, the specification of a consumption policy
+permits matchmaking at the negotiator. A dynamic slot carved from the
+partitionable slot acquires the required quantities of resources,
+leaving the partitionable slot with the remainder. This differs from
+scheduler matchmaking in that multiple jobs can match with the
+partitionable slot during a single negotiation cycle.
+
+All specification of the resources available is done by configuration of
+the partitionable slot. The machine is identified as having a resource
+consumption policy enabled with
+
+.. code-block:: text
+
+      CONSUMPTION_POLICY = True
+
+A defined slot type that is partitionable may override the machine value
+with
+
+.. code-block:: text
+
+      SLOT_TYPE_<N>_CONSUMPTION_POLICY = True
+
+A job seeking a match may always request a specific number of cores,
+amount of memory, and amount of disk space. Availability of these three
+resources on a machine and within the partitionable slot is always
+defined and have these default values:
+
+.. code-block:: text
+
+      CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
+      CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
+      CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
+
+Here is an example-driven definition of a consumption policy. Assume a
+single partitionable slot type on a multi-core machine with 8 cores, and
+that the resource this policy cares about allocating are the cores.
+Configuration for the machine includes the definition of the slot type
+and that it is partitionable.
+
+.. code-block:: text
+
+      SLOT_TYPE_1 = cpus=8
+      SLOT_TYPE_1_PARTITIONABLE = True
+      NUM_SLOTS_TYPE_1 = 1
+
+Enable use of the *condor_negotiator*-side resource consumption policy,
+allocating the job-requested number of cores to the dynamic slot, and
+use :macro:`SLOT_WEIGHT` to assess the user usage
+that will affect user priority by the number of cores allocated. Note
+that the only attributes valid within the 
+:macro:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This
+must the set to the same value on all machines in the pool.
+
+.. code-block:: text
+
+      SLOT_TYPE_1_CONSUMPTION_POLICY = True
+      SLOT_TYPE_1_CONSUMPTION_CPUS = TARGET.RequestCpus
+      SLOT_WEIGHT = Cpus
+
+If custom resources are available within the partitionable slot, they
+may be used in a consumption policy, by specifying the resource. Using a
+machine with 4 GPUs as an example custom resource, define the resource
+and include it in the definition of the partitionable slot:
+
+.. code-block:: text
+
+      MACHINE_RESOURCE_NAMES = gpus
+      MACHINE_RESOURCE_gpus = 4
+      SLOT_TYPE_2 = cpus=8, gpus=4
+      SLOT_TYPE_2_PARTITIONABLE = True
+      NUM_SLOTS_TYPE_2 = 1
+
+Add the consumption policy to incorporate availability of the GPUs:
+
+.. code-block:: text
+
+      SLOT_TYPE_2_CONSUMPTION_POLICY = True
+      SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu
+      SLOT_WEIGHT = Cpus
+
+
+Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
+--------------------------------------------------------------------------------------------
+:index:`DISK usage`
+:index:`per job scratch filesystem`
+
+.. warning::
+   The per job filesystem feature is a work in progress and not currently supported.
+
+
+On Linux systems, when HTCondor is started as root, it optionally has the ability to create
+a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
+from using more scratch space than provisioned.  This also requires that the disk is managed
+with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
+this to work, in addition to the above requirements:
+
+.. code-block:: condor-config
+
+    THINPOOL_VOLUME_GROUP_NAME = vgname
+    THINPOOL_NAME = htcondor
+    STARTD_ENFORCE_DISK_LIMITS = true
+
+
+THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
+disk space to provision all the scratch directories for all running jobs on a worker node.
+THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
+be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_LIMITS is a boolean.  When
+true, if a job fills up the filesystem created for it, the starter will put the job on hold
+with the out of resources hold code (34).  This is the recommended value.  If false, should
+the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors
+and exit with an appropriate code in every part of the job that writes to the filesystem, including
+third party libraries.
+
+Note that the ephemeral filesystem created for the job is private to the job, so the contents
+of that filesystem are not visible outside the process hierarchy.  The administrator can use
+the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
+As this filesystem will never live through a system reboot, it is mounted with mount options
+that optimize for performance, not reliability, and may improve performance for I/O heavy
+jobs.
