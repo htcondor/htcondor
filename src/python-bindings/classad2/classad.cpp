@@ -219,11 +219,12 @@ convert_classad_value_to_python(classad::Value & v) {
 
 static PyObject *
 _classad_get_item( PyObject *, PyObject * args ) {
-    // _classad_get_item( self._handle, key )
+    // _classad_get_item( self._handle, key, want_conversion )
 
     PyObject_Handle * handle = NULL;
     const char * key = NULL;
-    if(! PyArg_ParseTuple( args, "Os", (PyObject **)& handle, & key )) {
+    int want_conversion = true;
+    if(! PyArg_ParseTuple( args, "Osp", (PyObject **)& handle, & key, & want_conversion )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
@@ -236,7 +237,7 @@ _classad_get_item( PyObject *, PyObject * args ) {
     }
 
 
-    if( should_convert_to_python( expr ) ) {
+    if( want_conversion && should_convert_to_python( expr ) ) {
         classad::Value v;
         if(! expr->Evaluate( v )) {
             // This was ClassAdEvaluationError in version 1.

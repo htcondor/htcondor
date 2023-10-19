@@ -16,8 +16,9 @@ class ExprTree:
         # FIXME: This is awful, but at least it doesn't involve more C code.
         if expr is not None:
             classad_string = f'[expression = {str(expr)}]'
-            classad = ClassAd(classad_string)
-            expression = classad['expression']
+            c = ClassAd(classad_string)
+            expression = c.lookup('expression')
+            assert type(expression) == ExprTree
 
             ## We can't return `expression` (by the language spec), and
             ## assigning `expression` to `self` does nothing outside of

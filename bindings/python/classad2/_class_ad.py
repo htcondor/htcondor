@@ -58,6 +58,12 @@ class ClassAd(MutableMapping):
         return _classad_to_string(self._handle)
 
 
+    def lookup(self, attr : str) -> "ExprTree":
+        if not isinstance(attr, str):
+            raise KeyError("ClassAd keys are strings")
+        return _classad_get_item(self._handle, attr, False)
+
+
     # In version 1, we didn't allow Python to check it other knew how
     # to do equality comparisons against us, which was probably wrong.
     #
@@ -82,7 +88,7 @@ class ClassAd(MutableMapping):
     def __getitem__(self, key):
         if not isinstance(key, str):
             raise KeyError("ClassAd keys are strings")
-        return _classad_get_item(self._handle, key)
+        return _classad_get_item(self._handle, key, True)
 
 
     def __setitem__(self, key, value):
