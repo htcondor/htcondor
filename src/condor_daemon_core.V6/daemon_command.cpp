@@ -692,12 +692,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		bool valid_cookie		= false;
 
 		// check if we are using a cookie
-		char *incoming_cookie   = NULL;
-		if( m_auth_info.LookupString(ATTR_SEC_COOKIE, &incoming_cookie)) {
+		std::string incoming_cookie;
+		if( m_auth_info.LookupString(ATTR_SEC_COOKIE, incoming_cookie)) {
 			// compare it to the one we have internally
 
-			valid_cookie = daemonCore->cookie_is_valid((unsigned char*)incoming_cookie);
-			free (incoming_cookie);
+			valid_cookie = daemonCore->cookie_is_valid((const unsigned char *)incoming_cookie.c_str());
 
 			if ( valid_cookie ) {
 				// we have a match... trust this command.
@@ -787,15 +786,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					session = &sess_itr->second;
 
 					if (IsDebugLevel(D_SECURITY)) {
-						char *return_addr = NULL;
+						std::string return_addr;
 						if(session->policy()) {
-							session->policy()->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK,&return_addr);
+							session->policy()->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK,return_addr);
 						}
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s%s%s:\n",
 								 session->id().c_str(),
-								 return_addr ? " with return address " : "",
-								 return_addr ? return_addr : "");
-						free(return_addr);
+								 !return_addr.empty() ? " with return address " : "",
+								 !return_addr.empty() ? return_addr.c_str() : "");
 					}
 				}
 
@@ -861,27 +859,24 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				// grab some attributes out of the policy.
 				if (m_policy) {
-					char *tmp  = NULL;
-					m_policy->LookupString( ATTR_SEC_USER, &tmp);
-					if (tmp) {
+					std::string tmp;
+					m_policy->LookupString( ATTR_SEC_USER, tmp);
+					if (!tmp.empty()) {
 						// copy this to the HandleReq() scope
 						m_user = tmp;
-						free( tmp );
-						tmp = NULL;
+						tmp.clear();
 					}
-					m_policy->LookupString( ATTR_SEC_AUTHENTICATED_NAME, &tmp);
-					if (tmp) {
+					m_policy->LookupString( ATTR_SEC_AUTHENTICATED_NAME, tmp);
+					if (!tmp.empty()) {
 						// copy this to the HandleReq() scope
-						m_sock->setAuthenticatedName(tmp);
-						free( tmp );
-						tmp = NULL;
+						m_sock->setAuthenticatedName(tmp.c_str());
+						tmp.clear();
 					}
-					m_policy->LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &tmp);
-					if (tmp) {
+					m_policy->LookupString( ATTR_SEC_AUTHENTICATION_METHODS, tmp);
+					if (!tmp.empty()) {
 						// copy this to the HandleReq() scope
-						m_sock->setAuthenticationMethodUsed(tmp);
-						free( tmp );
-						tmp = NULL;
+						m_sock->setAuthenticationMethodUsed(tmp.c_str());
+						tmp.clear();
 					}
 
 					m_policy->LookupString( ATTR_SEC_REMOTE_VERSION, peer_version );
@@ -1182,10 +1177,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	// we know the ..METHODS_LIST attribute exists since it was put
 	// in by us.  pre 6.5.0 protocol does not put it in.
-	char * auth_methods = NULL;
-	m_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods);
+	std::string auth_methods;
+	m_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, auth_methods);
 
-	if (!auth_methods) {
+	if (auth_methods.empty()) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad from %s, failing!\n", m_sock->peer_description());
 		m_result = FALSE;
 		return CommandProtocolFinished;
@@ -1197,13 +1192,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	int auth_timeout = daemonCore->getSecMan()->getSecTimeout( m_comTable[m_cmd_index].perm );
 
-	m_sock->setAuthenticationMethodsTried(auth_methods);
+	m_sock->setAuthenticationMethodsTried(auth_methods.c_str());
 
 	char *method_used = NULL;
 	m_sock->setPolicyAd(*m_policy);
-	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, &method_used);
+	int auth_success = m_sock->authenticate(m_key, auth_methods.c_str(), m_errstack, auth_timeout, m_nonblocking, &method_used);
 	m_sock->getPolicyAd(*m_policy);
-	free( auth_methods );
 
 	if (auth_success == 2) {
 		m_state = CommandProtocolAuthenticateContinue;
