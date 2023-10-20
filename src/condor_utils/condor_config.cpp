@@ -771,6 +771,7 @@ bool config_ex(int config_options)
 #ifdef WIN32
 	char *locale = setlocale( LC_ALL, "English" );
 	//dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
+	_set_fmode(_O_BINARY);
 #endif
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
 	bool result = real_config(NULL, wantsQuiet, config_options, NULL);

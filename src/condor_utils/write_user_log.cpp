@@ -668,7 +668,6 @@ WriteUserLog::openFile(
 		flags |= O_APPEND;
 	}
 #if defined(WIN32)
-	flags |= _O_TEXT;
 
 	// if we want lock-free append, we have to open the handle in a diffent file mode than what the
 	// c-runtime uses.  FILE_APPEND_DATA but NOT FILE_WRITE_DATA or GENERIC_WRITE.
