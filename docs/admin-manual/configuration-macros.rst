@@ -93,7 +93,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     configuration to enable it. There is no default value for
     ``CONDOR_VIEW_HOST``. If ``CONDOR_VIEW_HOST`` is not defined, no
     HTCondorView server is used. See
-    :ref:`admin-manual/setting-up-special-environments:configuring the
+    :ref:`admin-manual/cm-configuration:configuring the
     htcondorview server` for more details.
 
 :macro-def:`SCHEDD_HOST`
@@ -1605,7 +1605,7 @@ DaemonCore Configuration File Entries
 
 :index:`DaemonCore configuration variables<single: DaemonCore configuration variables; configuration>`
 
-Please read :doc:`/admin-manual/daemoncore` for
+Please read :ref:`admin-manual/installation-startup-shutdown-reconfiguration:DaemonCore` for
 details on DaemonCore. There are certain configuration file settings
 that DaemonCore uses which affect all HTCondor daemons.
 
@@ -3494,7 +3494,7 @@ section.
 :macro-def:`DedicatedScheduler`
     A string that identifies the dedicated scheduler this machine is
     managed by.
-    :ref:`admin-manual/setting-up-special-environments:htcondor's dedicated
+    :ref:`admin-manual/ap-policy-configuration:htcondor's dedicated
     scheduling` details the use of a dedicated scheduler.
 
 :macro-def:`STARTD_NOCLAIM_SHUTDOWN`
@@ -7536,7 +7536,7 @@ These macros affect the *condor_negotiator*.
 :macro-def:`<NAME>_LIMIT`
     An integer value that defines the amount of resources available for
     jobs which declare that they use some consumable resource as
-    described in :ref:`admin-manual/setting-up-special-environments:concurrency
+    described in :ref:`admin-manual/cm-configuration:concurrency
     limits`. ``<Name>`` is a string invented to uniquely describe the resource.
 
 :macro-def:`CONCURRENCY_LIMIT_DEFAULT`

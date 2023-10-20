@@ -15,7 +15,6 @@ Administrators' Manual
    cm-configuration
    security
    networking
-   daemoncore
    logging
    file-and-cred-transfer 
    power-management

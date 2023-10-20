@@ -798,6 +798,180 @@ If so, it represents the set of valid accounting groups a user can
 opt into.  If the user does not set an accounting group in the submit file
 the first entry in the list will be used.
 
+Concurrency Limits
+------------------
+
+:index:`concurrency limits`
+
+Concurrency limits allow an administrator to limit the number of
+concurrently running jobs that declare that they use some pool-wide
+resource. This limit is applied globally to all jobs submitted from all
+schedulers across one HTCondor pool; the limits are not applied to
+scheduler, local, or grid universe jobs. This is useful in the case of a
+shared resource, such as an NFS or database server that some jobs use,
+where the administrator needs to limit the number of jobs accessing the
+server.
+
+The administrator must predefine the names and capacities of the
+resources to be limited in the negotiator's configuration file. The job
+submitter must declare in the submit description file which resources
+the job consumes.
+
+The administrator chooses a name for the limit. Concurrency limit names
+are case-insensitive. The names are formed from the alphabet letters 'A'
+to 'Z' and 'a' to 'z', the numerical digits 0 to 9, the underscore
+character '_' , and at most one period character. The names cannot
+start with a numerical digit.
+
+For example, assume that there are 3 licenses for the X software, so
+HTCondor should constrain the number of running jobs which need the X
+software to 3. The administrator picks XSW as the name of the resource
+and sets the configuration
+
+.. code-block:: text
+
+    XSW_LIMIT = 3
+
+where ``XSW`` is the invented name of this resource, and this name is
+appended with the string ``_LIMIT``. With this limit, a maximum of 3
+jobs declaring that they need this resource may be executed
+concurrently.
+
+In addition to named limits, such as in the example named limit ``XSW``,
+configuration may specify a concurrency limit for all resources that are
+not covered by specifically-named limits. The configuration variable
+:macro:`CONCURRENCY_LIMIT_DEFAULT` sets this value. For example,
+
+.. code-block:: text
+
+    CONCURRENCY_LIMIT_DEFAULT = 1
+
+will enforce a limit of at most 1 running job that declares a usage of
+an unnamed resource. If :macro:`CONCURRENCY_LIMIT_DEFAULT` is omitted from
+the configuration, then no limits are placed on the number of
+concurrently executing jobs for which there is no specifically-named
+concurrency limit.
+
+The job must declare its need for a resource by placing a command in its
+submit description file or adding an attribute to the job ClassAd. In
+the submit description file, an example job that requires the X software
+adds:
+
+.. code-block:: text
+
+    concurrency_limits = XSW
+
+This results in the job ClassAd attribute
+
+.. code-block:: text
+
+    ConcurrencyLimits = "XSW"
+
+Jobs may declare that they need more than one type of resource. In this
+case, specify a comma-separated list of resources:
+
+.. code-block:: text
+
+    concurrency_limits = XSW, DATABASE, FILESERVER
+
+The units of these limits are arbitrary. This job consumes one unit of
+each resource. Jobs can declare that they use more than one unit with
+syntax that follows the resource name by a colon character and the
+integer number of resources. For example, if the above job uses three
+units of the file server resource, it is declared with
+
+.. code-block:: text
+
+    concurrency_limits = XSW, DATABASE, FILESERVER:3
+
+If there are sets of resources which have the same capacity for each
+member of the set, the configuration may become tedious, as it defines
+each member of the set individually. A shortcut defines a name for a
+set. For example, define the sets called ``LARGE`` and ``SMALL``:
+
+.. code-block:: text
+
+    CONCURRENCY_LIMIT_DEFAULT = 5
+    CONCURRENCY_LIMIT_DEFAULT_LARGE = 100
+    CONCURRENCY_LIMIT_DEFAULT_SMALL = 25
+
+To use the set name in a concurrency limit, the syntax follows the set
+name with a period and then the set member's name. Continuing this
+example, there may be a concurrency limit named ``LARGE.SWLICENSE``,
+which gets the capacity of the default defined for the ``LARGE`` set,
+which is 100. A concurrency limit named ``LARGE.DBSESSION`` will also
+have a limit of 100. A concurrency limit named ``OTHER.LICENSE`` will
+receive the default limit of 5, as there is no set named ``OTHER``.
+
+A concurrency limit may be evaluated against the attributes of a matched
+machine. This allows a job to vary what concurrency limits it requires
+based on the machine to which it is matched. To implement this, the job
+uses submit command
+**concurrency_limits_expr** :index:`concurrency_limits_expr<single: concurrency_limits_expr; submit commands>`
+instead of
+**concurrency_limits** :index:`concurrency_limits<single: concurrency_limits; submit commands>`.
+Consider an example in which execute machines are located on one of two
+local networks. The administrator sets a concurrency limit to limit the
+number of network intensive jobs on each network to 10. Configuration of
+each execute machine advertises which local network it is on. A machine
+on ``"NETWORK_A"`` configures
+
+.. code-block:: text
+
+    NETWORK = "NETWORK_A"
+    STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
+
+and a machine on ``"NETWORK_B"`` configures
+
+.. code-block:: text
+
+    NETWORK = "NETWORK_B"
+    STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
+
+The configuration for the negotiator sets the concurrency limits:
+
+.. code-block:: text
+
+    NETWORK_A_LIMIT = 10
+    NETWORK_B_LIMIT = 10
+
+Each network intensive job identifies itself by specifying the limit
+within the submit description file:
+
+.. code-block:: text
+
+    concurrency_limits_expr = TARGET.NETWORK
+
+The concurrency limit is applied based on the network of the matched
+machine.
+
+An extension of this example applies two concurrency limits. One limit
+is the same as in the example, such that it is based on an attribute of
+the matched machine. The other limit is of a specialized application
+called ``"SWX"`` in this example. The negotiator configuration is
+extended to also include
+
+.. code-block:: text
+
+    SWX_LIMIT = 15
+
+The network intensive job that also uses two units of the ``SWX``
+application identifies the needed resources in the single submit
+command:
+
+.. code-block:: text
+
+    concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
+
+Submit command **concurrency_limits_expr** may not be used together
+with submit command **concurrency_limits**.
+
+Note that it is possible, under unusual circumstances, for more jobs to
+be started than should be allowed by the concurrency limits feature. In
+the presence of preemption and dropped updates from the *condor_startd*
+daemon to the *condor_collector* daemon, it is possible for the limit
+to be exceeded. If the limits are exceeded, HTCondor will not kill any
+job to reduce the number of running jobs to meet the limit.
 Defragmenting Dynamic Slots
 ---------------------------
 
@@ -904,6 +1078,88 @@ ClassAd:
 
 :index:`configuration<single: configuration; SMP machines>`
 :index:`configuration<single: configuration; multi-core machines>`
+
+Configuring The HTCondorView Server
+-----------------------------------
+
+:index:`Server<single: Server; HTCondorView>`
+
+The HTCondorView server is an alternate use of the *condor_collector*
+that logs information on disk, providing a persistent, historical
+database of pool state. This includes machine state, as well as the
+state of jobs submitted by users.
+
+An existing *condor_collector* may act as the HTCondorView collector
+through configuration. This is the simplest situation, because the only
+change needed is to turn on the logging of historical information. The
+alternative of configuring a new *condor_collector* to act as the
+HTCondorView collector is slightly more complicated, while it offers the
+advantage that the same HTCondorView collector may be used for several
+pools as desired, to aggregate information into one place.
+
+The following sections describe how to configure a machine to run a
+HTCondorView server and to configure a pool to send updates to it.
+
+Configuring a Machine to be a HTCondorView Server
+'''''''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`configuration<single: configuration; HTCondorView>`
+
+To configure the HTCondorView collector, a few configuration variables
+are added or modified for the *condor_collector* chosen to act as the
+HTCondorView collector. These configuration variables are described in
+:ref:`admin-manual/configuration-macros:condor_collector configuration file
+entries`. Here are brief explanations of the entries that must be customized:
+
+:macro:`POOL_HISTORY_DIR`
+    The directory where historical data will be stored. This directory
+    must be writable by whatever user the HTCondorView collector is
+    running as (usually the user condor). There is a configurable limit
+    to the maximum space required for all the files created by the
+    HTCondorView server called (:macro:`POOL_HISTORY_MAX_STORAGE`).
+
+    NOTE: This directory should be separate and different from the
+    ``spool`` or ``log`` directories already set up for HTCondor. There
+    are a few problems putting these files into either of those
+    directories.
+
+:macro:`KEEP_POOL_HISTORY`
+    A boolean value that determines if the HTCondorView collector should
+    store the historical information. It is ``False`` by default, and
+    must be specified as ``True`` in the local configuration file to
+    enable data collection.
+
+Once these settings are in place in the configuration file for the
+HTCondorView server host, create the directory specified in
+:macro:`POOL_HISTORY_DIR` and make it writable by the user the HTCondorView
+collector is running as. This is the same user that owns the
+``CollectorLog`` file in the ``log`` directory. The user is usually
+condor.
+
+If using the existing *condor_collector* as the HTCondorView collector,
+no further configuration is needed. To run a different
+*condor_collector* to act as the HTCondorView collector, configure
+HTCondor to automatically start it.
+
+If using a separate host for the HTCondorView collector, to start it, add the
+value :macro:`COLLECTOR` to :macro:`DAEMON_LIST`, and restart HTCondor on that
+host. To run the HTCondorView collector on the same host as another
+*condor_collector*, ensure that the two *condor_collector* daemons use
+different network ports. Here is an example configuration in which the main
+*condor_collector* and the HTCondorView collector are started up by the same
+*condor_master* daemon on the same machine. In this example, the HTCondorView
+collector uses port 12345.
+
+.. code-block:: condor-config
+
+      VIEW_SERVER = $(COLLECTOR)
+      VIEW_SERVER_ARGS = -f -p 12345
+      VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog"
+      DAEMON_LIST = MASTER, NEGOTIATOR, COLLECTOR, VIEW_SERVER
+
+For this change to take effect, restart the *condor_master* on this
+host. This may be accomplished with the *condor_restart* command, if
+the command is run with administrator access to the pool.
 
 Running Multiple Negotiators in One Pool
 ----------------------------------------

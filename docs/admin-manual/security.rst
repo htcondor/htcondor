@@ -2330,7 +2330,7 @@ Configuration examples and the settings of configuration variables using
 the *condor_config_val* command complete this section.
 
 Inside the HTCondor daemons or tools that use DaemonCore (see the
-:doc:`/admin-manual/daemoncore` section), most
+:ref:`admin-manual/installation-startup-shutdown-reconfiguration:DaemonCore` section), most
 tasks are accomplished by sending commands to another HTCondor daemon.
 These commands are represented by an integer value to specify which
 command is being requested, followed by any optional information that
