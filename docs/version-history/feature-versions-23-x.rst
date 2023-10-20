@@ -31,6 +31,12 @@ New Features:
   use of the default CAs for OpenSSL. 
   :jira:`2090`
 
+- Most files that HTCondor generates are now written in binary mode on
+  Windows. As a result, each line in these files will end in just a
+  line feed character, without a preceding carriage return character.
+  Files written by jobs are unaffected by this change.
+  :jira:`2098`
+
 Bugs Fixed:
 
 - None.
