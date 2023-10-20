@@ -327,7 +327,7 @@ These arguments and what they do are described below:
     the daemon it is attempting to kill has exited.
 
 \-l directory
-    Overrides the value of ``LOG`` :index:`LOG` as specified in
+    Overrides the value of :macro:`LOG` as specified in
     the configuration files. Primarily, this option is used with the
     *condor_kbdd* when it needs to run as the individual user logged
     into the machine, instead of running as root. Regular users would
