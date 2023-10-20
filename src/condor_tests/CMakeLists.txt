@@ -261,7 +261,6 @@ endif ()
 			condor_pl_test(test_dagman_futile_nodes_efficiency "Test DAGMan is not inefficiently setting nodes to futile" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_protected_url_xfers "test attribute setting for mapped AP protected URL transfers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_chirp_to_dagman_log "Test chirp events get written to DAGMan log" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_condor_lotman "Tests some stuff related to LotMan and spool dir tracking" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -329,15 +328,11 @@ endif ()
 			# And strace is only available on linux.
 			if( NOT EMULATED_PLATFORM )
 				condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
-<<<<<<< HEAD
 			endif( NOT EMULATED_PLATFORM )
 
-=======
-			endif()
 			if(WITH_LOTMAN)
 				condor_pl_test(test_condor_lotman "Tests LotMan tracking for spool directory" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
->>>>>>> 886183b11c (Update CMake instructions for RHEL 8/9)
 		endif()
 	endif()
 

@@ -949,10 +949,16 @@ type=bool
 tags=master
 usage=Set to true to allow the collector administrator(s) to manage the daemon
 
-[LOTMAN_DB]
+[LOTMAN_DB_LOCATION]
 default=auto
 type=string
 description=Filepath to where LotMan db should be placed
+tags=lotman
+
+[LOTMAN_DB_TIMEOUT]
+default=5000
+type=int
+description=Maximum time to wait for DB action to complete, in ms
 tags=lotman
 
 [LOTMAN_TRACK_SPOOL]

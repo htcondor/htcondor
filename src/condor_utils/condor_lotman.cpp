@@ -20,7 +20,7 @@ GCC_DIAG_ON(float-equal)
 GCC_DIAG_ON(cast-qual)
 
 #include <filesystem>
-
+#include <string>
 
 #ifdef HAVE_EXT_LOTMAN
 #include <lotman/lotman.h>
@@ -31,6 +31,7 @@ namespace {
 // Initialize function pointers for any LotMan functions that are needed 
 static int (*lotman_lot_exists_ptr)(const char *lot_name, char **err_msg) = nullptr;
 static int (*lotman_set_context_str_ptr)(const char *key, const char *value, char **err_msg) = nullptr;
+static int (*lotman_set_context_int_ptr)(const char *key, const int value, char **err_msg) = nullptr;
 static int (*lotman_add_lot_ptr)(const char *lotman_JSON_str, char **err_msg) = nullptr;
 static int (*lotman_add_to_lot_ptr)(const char *lotman_JSON_str, char **err_msg) = nullptr;
 static int (*lotman_rm_paths_from_lots_ptr)(const char *remove_dirs_JSON_str, char **err_msg) = nullptr;
@@ -111,6 +112,7 @@ condor_lotman::init_lotman()
 		!(dl_hdl = dlopen(LIBLOTMAN_SO, RTLD_LAZY)) ||
 		!(lotman_lot_exists_ptr = (int (*)(const char *lot_name, char **err_msg))dlsym(dl_hdl, "lotman_lot_exists")) ||
 		!(lotman_set_context_str_ptr = (int (*)(const char *key, const char *value, char **err_msg))dlsym(dl_hdl, "lotman_set_context_str")) ||
+		!(lotman_set_context_int_ptr = (int (*)(const char *key, const int value, char **err_msg))dlsym(dl_hdl, "lotman_set_context_int")) ||
 		!(lotman_add_lot_ptr = (int (*)(const char *lotman_JSON_str, char **err_msg))dlsym(dl_hdl, "lotman_add_lot")) ||
 		!(lotman_add_to_lot_ptr = (int (*)(const char *lotman_JSON_str, char **err_msg))dlsym(dl_hdl, "lotman_add_to_lot")) ||
 		!(lotman_rm_paths_from_lots_ptr = (int (*)(const char *remove_dirs_JSON_str, char **err_msg))dlsym(dl_hdl, "lotman_rm_paths_from_lots")) ||
@@ -128,6 +130,7 @@ condor_lotman::init_lotman()
 
     lotman_lot_exists_ptr = lotman_lot_exists;
     lotman_set_context_str_ptr = lotman_set_context_str;
+    lotman_set_context_int_ptr = lotman_set_context_int;
     lotman_add_lot_ptr = lotman_add_lot;
     lotman_add_to_lot_ptr = lotman_add_to_lot;
     lotman_rm_paths_from_lots_ptr = lotman_rm_paths_from_lots;
@@ -147,7 +150,7 @@ condor_lotman::init_lotman()
 
     if (g_init_success) { // only set lot home if we succeeded initialization
         std::string lotdb_loc;
-        param(lotdb_loc, "LOTMAN_DB");
+        param(lotdb_loc, "LOTMAN_DB_LOCATION");
         if (lotdb_loc == "auto") {
             if (!param(lotdb_loc, "RUN")) {
                 param(lotdb_loc, "LOCK");
@@ -160,9 +163,42 @@ condor_lotman::init_lotman()
             dprintf( D_ALWAYS|D_VERBOSE, "Setting LotMan DB directory to %s\n", lotdb_loc.c_str() );
             char *err = nullptr;
             if (lotman_set_context_str_ptr("lot_home", lotdb_loc.c_str(), &err) < 0) {
-                dprintf( D_ALWAYS, "Failed to set LotMan database directory to %s: %s\n", lotdb_loc.c_str(), err );
+                dprintf( D_ERROR, "Failed to set LotMan database directory to %s: %s\n", lotdb_loc.c_str(), err );
                 free(err);
+                g_init_success = false;
+                return g_init_success;
             }
+        }
+
+        // Set the DB timeouts
+        std::string lotdb_timeout_str;
+        param(lotdb_timeout_str, "LOTMAN_DB_TIMEOUT");
+        try {
+            // A spot to hold first (if any) invalid char of stoi conversion
+            size_t pos;
+            int lotdb_timeout = std::stoi(lotdb_timeout_str, &pos);
+            if (pos < lotdb_timeout_str.length()) {
+                dprintf( D_ERROR, "Invalid LOTMAN_DB_TIMEOUT argument. Trailing characters: %s\n", lotdb_timeout_str.substr(pos).c_str() );
+                g_init_success = false;
+                return g_init_success;
+            }
+
+            // We now have the valid int. Set the timeout
+            dprintf( D_ALWAYS|D_VERBOSE, "Setting LotMan DB timeout to %d\n", lotdb_timeout );
+            char *err = nullptr;
+            if (lotman_set_context_int_ptr("db_timeout", lotdb_timeout, &err) < 0) {
+                dprintf( D_ERROR, "Failed to set LotMan database timeout to %d: %s\n", lotdb_timeout, err );
+                free(err);
+                g_init_success = false;
+            }
+        }
+        catch (const std::invalid_argument& e) {
+            dprintf( D_ERROR, "Inavlid LOTMAN_DB_TIMEOUT argument: %s\n", e.what() );
+            g_init_success = false;
+        }
+        catch (const std::out_of_range& e) {
+            dprintf( D_ERROR, "LOTMAN_DB_TIMEOUT argument out of range: %s\n", e.what() );
+            g_init_success = false;
         }
     }
 

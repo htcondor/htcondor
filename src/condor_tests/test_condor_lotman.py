@@ -25,7 +25,8 @@ def condor(test_dir):
         local_dir = test_dir / "condor",
         config={
             "ALLOW_WRITE": "*",
-            "LOTMAN_DB": (test_dir).as_posix(),
+            "LOTMAN_DB_LOCATION": (test_dir).as_posix(),
+            "LOTMAN_DB_TIMEOUT": "4000",
             "LOTMAN_TRACK_SPOOL": "TRUE",
             "ALL_DEBUG": "D_FULLDEBUG"},
     ) as condor:
