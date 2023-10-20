@@ -91,6 +91,7 @@ if (WITH_KRB5)
 		find_so_name( LIBKRB5_SO ${LIBKRB5_PATH} )
 		find_library( LIBGSSAPI_KRB5_PATH "gssapi_krb5" )
 		find_so_name( LIBGSSAPI_KRB5_SO ${LIBGSSAPI_KRB5_PATH} )
+        message (STATUS "dlopen ${LIBCOM_ERR_PATH}, ${LIBKRB5SUPPORT_PATH}, ${LIBK5CRYPTO_PATH}, ${LIBKRB5_PATH}")
 		set( KRB5_FOUND "" )
 	endif()
 
