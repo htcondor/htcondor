@@ -385,7 +385,7 @@ Policy Scenario: Adding Desktop Resources To The Mix
     starting and stopping jobs, while jobs that require a dedicated
     resource always start and are not preempted.
 
-    The :macro:`START`, :macro:`SUSPEND`, :macro:`PREEMPT`, and macro:`RANK` policies are
+    The :macro:`START`, :macro:`SUSPEND`, :macro:`PREEMPT`, and :macro:`RANK` policies are
     set in the global configuration. Locally, the configuration is
     modified to this hybrid policy by adding a second case.
 
