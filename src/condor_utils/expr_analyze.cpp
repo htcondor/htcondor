@@ -196,9 +196,8 @@ int AnalyzeThisSubExpr(
 	switch(kind) {
 		case classad::ExprTree::LITERAL_NODE: {
 			classad::Value val;
-			classad::Value::NumberFactor factor;
-			((classad::Literal*)expr)->GetComponents(val, factor);
-			unparser.UnparseAux(strLabel, val, factor);
+			((classad::Literal*)expr)->GetComponents(val);
+			unparser.UnparseAux(strLabel, val);
 			if (chatty) {
 				printf("     %d:const : %s\n", kind, strLabel.c_str());
 			}
@@ -1380,8 +1379,7 @@ size_t AddExprTreeMemoryUse (const classad::ExprTree* expr, QuantizingAccumulato
 	switch(kind) {
 		case classad::ExprTree::LITERAL_NODE: {
 			classad::Value val;
-			classad::Value::NumberFactor factor;
-			((const classad::Literal*)expr)->GetComponents(val, factor);
+			((const classad::Literal*)expr)->GetComponents(val);
 			accum += sizeof(classad::Literal);
 			const char * s = NULL;
 			classad::ExprList * lst = NULL;

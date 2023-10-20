@@ -40,7 +40,7 @@ const double Value::ScaleFactor[] = {
 	1024.0*1024.0*1024.0*1024.0	// Terra
 };
 
-void Value::ApplyFactor()
+void Value::ApplyFactor(Value::NumberFactor factor)
 {
 	if (factor == NO_FACTOR) return;
 
@@ -163,7 +163,6 @@ CopyFrom( const Value &val )
 
 	_Clear();
 	valueType = val.valueType;
-	factor = val.factor;
 
 	switch (val.valueType) {
 		case STRING_VALUE:
