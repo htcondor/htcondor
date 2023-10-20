@@ -1066,10 +1066,9 @@ bool convert_python_to_constraint(boost::python::object value, std::string & con
 		// to contact the daemon but get no results
 		bool has_constraint = true;
 		if (expr->GetKind() == classad::ExprTree::LITERAL_NODE) {
-			classad::Value::NumberFactor factor;
 			classad::Value lvalue;
 			bool bvalue = false;
-			((classad::Literal*)expr)->GetComponents(lvalue, factor);
+			((classad::Literal*)expr)->GetComponents(lvalue);
 			if (lvalue.IsBooleanValue(bvalue) && bvalue) {
 				has_constraint = false;
 			} else {

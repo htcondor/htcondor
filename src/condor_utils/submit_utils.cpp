@@ -146,8 +146,7 @@ const classad::Value * DeltaClassAd::HasParentValue(const std::string & attr, cl
 	ExprTree * expr = HasParentTree(attr, ExprTree::NodeKind::LITERAL_NODE);
 	if ( ! expr)
 		return NULL;
-	classad::Value::NumberFactor f;
-	const classad::Value * pval = &static_cast<classad::Literal*>(expr)->getValue(f);
+	const classad::Value * pval = &static_cast<classad::Literal*>(expr)->getValue();
 	if (!pval || (pval->GetType() != vt))
 		return NULL;
 	return pval;
