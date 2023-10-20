@@ -74,6 +74,10 @@ if (WITH_KRB5)
 
 		condor_post_external( krb5 include OFF "" )
 
+	else()
+
+		find_multiple( "krb5;com_err;k5crypto;krb5support;gssapi_krb5" KRB5_FOUND )
+
 	endif( )
 
 	if( DLOPEN_SECURITY_LIBS )
