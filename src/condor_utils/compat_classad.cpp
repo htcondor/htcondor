@@ -1514,7 +1514,7 @@ bool CondorClassAdFileParseHelper::line_is_ad_delimitor(const std::string & line
 	if (blank_line_is_ad_delimitor) {
 		const char * p = line.c_str();
 		while (*p && isspace(*p)) ++p;
-		return ( ! *p || *p == '\n');
+		return ( ! *p );
 	}
 	bool is_delim = starts_with(line, ad_delimitor);
 	if (is_delim) { delim_line = line; }
@@ -1534,12 +1534,12 @@ int CondorClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd 
 	// tell the parse to skip those lines, otherwise tell the parser to
 	// parse the line.
 	for (size_t ix = 0; ix < line.size(); ++ix) {
-		if (line[ix] == '#' || line[ix] == '\n')
+		if (line[ix] == '#')
 			return 0; // skip this line, but don't stop parsing.
 		if (line[ix] != ' ' && line[ix] != '\t')
-			break;
+			return 1; // parse this line.
 	}
-	return 1; // parse this line.
+	return 0; // skip this line, but don't stop parsing.
 }
 
 // this method is called when the parser encounters an error
@@ -1563,6 +1563,7 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, classad::Clas
 			break;
 		if ( ! readLine(line, file, false))
 			break;
+		chomp(line);
 	}
 	return -1; // abort
 }
@@ -1662,15 +1663,16 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 				if ( ! readLine(buffer, file, false)) {
 					return feof(file) ? -99 : -1;
 				}
+				chomp(buffer);
 
 				int ee = PreParse(buffer, ad, file);
 				if (ee == 1) {
 					// pre-parser says parse it. can we use it to figure out what type we are?
 					// if we are still scanning to decide what the parse type is, we should be able to figure it out now...
-					if (buffer == "<?xml version=\"1.0\"?>\n") {
+					if (buffer == "<?xml version=\"1.0\"?>") {
 						parse_type = Parse_xml;
 						return NewParser(ad, file, detected_long, errmsg); // skip this line, but don't stop parsing, from now on
-					} else if (buffer == "[\n" || buffer == "{\n") {
+					} else if (buffer == "[" || buffer == "{") {
 						char ch = buffer[0];
 						// could be json or new classads, read character to figure out which.
 						int ch2 = fgetc(file);
@@ -1687,6 +1689,7 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 						} else {
 							buffer = ""; buffer[0] = ch;
 							readLine(buffer, file, true);
+							chomp(buffer);
 						}
 					}
 					// this doesn't look like a new classad prolog, so just parse it
@@ -1750,10 +1753,11 @@ InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ i
 			error = is_eof ? 0 : errno;
 			return cAttrs;
 		}
+		chomp(buffer);
 
 		// if there is a helper, give the helper first crack at the line
 		// otherwise set ee to decide what to do with this line.
-		ee = 1;
+		ee = 0;
 		if (phelp) {
 			ee = phelp->PreParse(buffer, ad, file);
 		} else {

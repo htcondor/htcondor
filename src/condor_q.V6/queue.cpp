@@ -398,12 +398,12 @@ class CondorQClassAdFileParseHelper : public CondorClassAdFileParseHelper
 int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/)
 {
 	// treat blank lines as delimiters.
-	if (line.size() <= 0) {
+	if (line.size() == 0) {
 		return 2; // end of classad.
 	}
 
 	// standard delimitors are ... and ***
-	if (starts_with(line,"\n") || starts_with(line,"...") || starts_with(line,"***")) {
+	if (starts_with(line,"...") || starts_with(line,"***")) {
 		return 2; // end of classad.
 	}
 
@@ -436,12 +436,12 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd
 	// tell the parser to skip those lines, otherwise tell the parser to
 	// parse the line.
 	for (size_t ix = 0; ix < line.size(); ++ix) {
-		if (line[ix] == '#' || line[ix] == '\n')
+		if (line[ix] == '#')
 			return 0; // skip this line, but don't stop parsing.
 		if (line[ix] != ' ' && line[ix] != '\t')
-			break;
+			return 1; // parse this line
 	}
-	return 1; // parse this line
+	return 0; // skip this line, but don't stop parsing.
 }
 
 // this method is called when the parser encounters an error
@@ -455,6 +455,7 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::Cla
 			ee = 2;
 			break;
 		}
+		chomp(line);
 		ee = this->PreParse(line, ad, file);
 	}
 	return ee;
