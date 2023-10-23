@@ -54,10 +54,9 @@ OR, if you want to build an RPM or .deb file, run the following inside the conta
 cd /tmp
 git clone https://github.com/htcondor/htcondor
 
-cd htcondor
 mkdir __build
 cd __build
-OMP_NUM_THREADS=8 ../build-on-linux.sh ..
+OMP_NUM_THREADS=8 ../htcondor/build-on-linux.sh ../htcondor
 ```
 
 
