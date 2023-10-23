@@ -1511,13 +1511,10 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 					// The following should match ATTR_JOB_AD_INFORMATION_ATTRS
 					// but cannot reference it directly because of what gets
 					// linked in libcondorapi
-				char *attrsToWrite = NULL;
-				param_jobad->LookupString("JobAdInformationAttrs",&attrsToWrite);
-				if (attrsToWrite) {
-					if (*attrsToWrite) {
-						writeJobAdInfoEvent(attrsToWrite, **p, event, param_jobad, false, fmt_opts);
-					}
-				free( attrsToWrite );
+				std::string attrsToWrite;
+				param_jobad->LookupString("JobAdInformationAttrs",attrsToWrite);
+				if (attrsToWrite.size() > 0) {
+					writeJobAdInfoEvent(attrsToWrite.c_str(), **p, event, param_jobad, false, fmt_opts);
 				}
 			}
 		}
