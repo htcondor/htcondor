@@ -789,7 +789,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s%s%s:\n",
 								 session->id().c_str(),
 								 !return_addr.empty() ? " with return address " : "",
-								 !return_addr.empty() ? return_addr.c_str() : "");
+								 return_addr.c_str());
 					}
 				}
 
