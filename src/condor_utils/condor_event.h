@@ -1589,7 +1589,7 @@ class JobAdInformationEvent : public ULogEvent
 	void Assign(const char * attr, bool value);
 
 	// Methods for accessing the info.
-	int LookupString (const char *attributeName, char **value) const;
+	int LookupString (const char *attributeName, std::string &value) const;
 	int LookupInteger (const char *attributeName, int &value) const;
 	int LookupInteger (const char *attributeName, long long &value) const;
 	int LookupFloat (const char *attributeName, double &value) const;
@@ -1921,7 +1921,7 @@ virtual void initFromClassAd(ClassAd* ad);
 	int next_proc_id;
 	int next_row;
 	CompletionCode completion; // -1 == error, 0 = incomplete, 1 = normal-completion, 2 = paused
-	char * notes;
+	std::string notes;
 };
 
 //------------------------------------------------------------------------
@@ -1930,13 +1930,13 @@ virtual void initFromClassAd(ClassAd* ad);
 */
 class FactoryPausedEvent : public ULogEvent
 {
-	char* reason; // why the factory was paused
+	std::string reason; // why the factory was paused
 	int pause_code;  // hold code if the factory is paused because the cluster is held
 	int hold_code;
 
 public:
-	FactoryPausedEvent () : reason(NULL), pause_code(0), hold_code(0) { eventNumber = ULOG_FACTORY_PAUSED; };
-	~FactoryPausedEvent () { if (reason) { free(reason); } reason = NULL; };
+	FactoryPausedEvent () : pause_code(0), hold_code(0) { eventNumber = ULOG_FACTORY_PAUSED; };
+	~FactoryPausedEvent () {}
 
 	// initialize this class by reading the next event from the given log file
 	virtual int readEvent (FILE * log_file, bool & got_sync_line);
@@ -1951,7 +1951,7 @@ public:
 	virtual void initFromClassAd(ClassAd* ad);
 
 	// @return pointer to reason, will be NULL if not set
-	const char* getReason() const { return reason; }
+	const std::string getReason() const { return reason; }
 	int getPauseCode() const { return pause_code; }
 	int getHoldCode() const { return hold_code; }
 
@@ -1963,11 +1963,11 @@ public:
 
 class FactoryResumedEvent : public ULogEvent
 {
-	char* reason;
+	std::string reason;
 
 public:
-	FactoryResumedEvent () : reason(NULL) { eventNumber = ULOG_FACTORY_RESUMED; };
-	~FactoryResumedEvent () { if (reason) { free(reason); } reason = NULL; };
+	FactoryResumedEvent () { eventNumber = ULOG_FACTORY_RESUMED; };
+	~FactoryResumedEvent () { };
 
 	// initialize this class by reading the next event from the given log file
 	virtual int readEvent (FILE *, bool & got_sync_line);
@@ -1979,7 +1979,7 @@ public:
 	virtual void initFromClassAd(ClassAd* ad);
 
 	// @return pointer to reason, will be "" if not set
-	const char* getReason() const { return reason; }
+	std::string getReason() const { return reason; }
 
 	// set the reason member to the given string
 	void setReason(const char* str);

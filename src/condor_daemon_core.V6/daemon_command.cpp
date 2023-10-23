@@ -58,7 +58,6 @@ DaemonCommandProtocol::DaemonCommandProtocol( Stream * sock, bool is_command_soc
 	m_allow_empty(false),
 	m_policy(NULL),
 	m_key(NULL),
-	m_sid(NULL),
 	m_prev_sock_ent(NULL),
 	m_async_waiting_time(0),
 	m_comTable(daemonCore->comTable),
@@ -105,9 +104,6 @@ DaemonCommandProtocol::~DaemonCommandProtocol()
 	}
 	if (m_key) {
 		delete m_key;
-	}
-	if (m_sid) {
-		free(m_sid);
 	}
 }
 
@@ -717,7 +713,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				KeyCacheEntry *session = NULL;
 
-				if( ! m_auth_info.LookupString(ATTR_SEC_SID, &m_sid)) {
+				if( ! m_auth_info.LookupString(ATTR_SEC_SID, m_sid)) {
 					dprintf (D_ERROR, "ERROR: DC_AUTHENTICATE unable to "
 							 "extract auth_info.%s from %s!\n", ATTR_SEC_SID,
 							 m_sock->peer_description());
@@ -736,8 +732,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					std::string return_addr;
 					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, return_addr);
 					dprintf (D_ERROR, "DC_AUTHENTICATE: attempt to open "
-					         "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr.empty() ? "(none)" : return_addr.c_str());
-					if( !strncmp( m_sid, "family:", strlen("family:") ) ) {
+					         "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid.c_str(), m_sock->peer_description(), return_addr.empty() ? "(none)" : return_addr.c_str());
+					if( !strncmp( m_sid.c_str(), "family:", strlen("family:") ) ) {
 						dprintf(D_ERROR, "  The remote daemon thinks that we are in the same family of Condor daemon processes as it, but I don't recognize its family security session.\n");
 						dprintf(D_ERROR, "  If we are in the same family of processes, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
 					}
@@ -769,7 +765,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						}
 
 						if( !return_addr.empty() ) {
-							daemonCore->send_invalidate_session( return_addr.c_str(), m_sid, &info_ad );
+							daemonCore->send_invalidate_session( return_addr.c_str(), m_sid.c_str(), &info_ad );
 						}
 
 						// consume the rejected message
@@ -952,12 +948,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// generate a new session
 
 					// generate a unique ID.
-					std::string tmpStr;
-					formatstr( tmpStr, "%s:%i:%lld:%i",
+					formatstr( m_sid, "%s:%i:%lld:%i",
 									get_local_hostname().c_str(), daemonCore->mypid,
 							   (long long)time(0), ZZZ_always_increase() );
-					assert (m_sid == NULL);
-					m_sid = strdup(tmpStr.c_str());
 
 					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
 						std::string crypto_method;
@@ -1006,20 +999,20 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							}
 							switch (method) {
 								case CONDOR_BLOWFISH:
-									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid);
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid.c_str());
 									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_OLD, CONDOR_BLOWFISH, 0);
 									break;
 								case CONDOR_3DES:
-									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid.c_str());
 									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_OLD, CONDOR_3DES, 0);
 									break;
 								case CONDOR_AESGCM: {
-									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid.c_str());
 									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_V9, CONDOR_AESGCM, 0);
 									}
 									break;
 								default:
-									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid.c_str());
 									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_OLD, CONDOR_NO_PROTOCOL, 0);
 									break;
 							}
@@ -1082,7 +1075,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					&& m_key )
 				{
 					m_sock->set_crypto_key(false, m_key);
-					dprintf(D_SECURITY, "DC_AUTHENTICATE: encryption enabled with session key id %s (but encryption mode is off by default for this packet).\n", m_sid ? m_sid : "(null)");
+					dprintf(D_SECURITY, "DC_AUTHENTICATE: encryption enabled with session key id %s (but encryption mode is off by default for this packet).\n", m_sid.c_str());
 				}
 			}
 
@@ -1296,7 +1289,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 				return CommandProtocolFinished;
 			}
 
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: generating %s key for session %s...\n", crypto_method.c_str(), m_sid);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: generating %s key for session %s...\n", crypto_method.c_str(), m_sid.c_str());
 			m_key = new KeyInfo(rbuf.get(), keylen, method, 0);
 		}
 	}
@@ -1350,7 +1343,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", m_sid);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", m_sid.c_str());
 		}
 	} else {
 		m_sock->set_crypto_key(false, m_key);
@@ -1381,7 +1374,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", m_sid);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", m_sid.c_str());
 			m_sec_man->key_printf (D_SECURITY, m_key);
 		}
 	} else {
@@ -1708,12 +1701,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		m_sock->encode();
 		if (! putClassAd(m_sock, pa_ad) ||
 			! m_sock->end_of_message() ) {
-			dprintf (D_ERROR, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", m_sid, m_sock->peer_description());
+			dprintf (D_ERROR, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", m_sid.c_str(), m_sock->peer_description());
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		} else {
 			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", m_sid);
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", m_sid.c_str());
 			}
 		}
 
@@ -1741,18 +1734,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		m_sock->setSessionID(m_sid);
 
 		// extract the session duration
-		char *dur = NULL;
-		m_policy->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
+		std::string dur;
+		m_policy->LookupString(ATTR_SEC_SESSION_DURATION, dur);
 
-		char *return_addr = NULL;
-		m_policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
+		std::string return_addr;
+		m_policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, return_addr);
 
 		// we add 20 seconds for "slop".  the idea is that if the client were
 		// to start a session just as it was expiring, the server will allow a
 		// window of 20 seconds to receive the command before throwing out the
 		// cached session.
 		int slop = param_integer("SEC_SESSION_DURATION_SLOP", 20);
-		int durint = atoi(dur) + slop;
+		int durint = atoi(dur.c_str()) + slop;
 		time_t now = time(0);
 		time_t expiration_time = now + durint;
 
@@ -1813,15 +1806,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		// outgoing session to a daemon with that IP and
 		// port as its command socket.
 		m_sec_man->session_cache->emplace(m_sid, KeyCacheEntry(m_sid, "", keyvec, *m_policy, expiration_time, session_lease));
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid.c_str(), durint, session_lease, return_addr.c_str());
 		if (IsDebugVerbose(D_SECURITY)) {
 			dPrintAd(D_SECURITY, *m_policy);
 		}
 
-		free( dur );
-		dur = NULL;
-		free( return_addr );
-		return_addr = NULL;
+		dur.clear();
+		return_addr.clear();
 	} else {
 		dprintf( D_DAEMONCORE, "DAEMONCORE: SendResponse() : NOT m_new_session\n");
 
