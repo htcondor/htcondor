@@ -3,6 +3,7 @@ from .classad2_impl import _handle as handle_t
 from .classad2_impl import _exprtree_init
 from .classad2_impl import _exprtree_eq
 from .classad2_impl import _classad_to_string
+from .classad2_impl import _classad_to_repr
 
 from ._class_ad import ClassAd
 

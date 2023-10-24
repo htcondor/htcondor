@@ -35,6 +35,7 @@
 
 // htcondor.Submit
 #include "submit_utils.h"
+#include "dagman_utils.h"
 #include "htcondor2/submit.cpp"
 
 // htcondor.Schedd
@@ -79,93 +80,58 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 
 	{"_collector_init", &_collector_init, METH_VARARGS, NULL},
-
 	{"_collector_query", &_collector_query, METH_VARARGS, NULL},
-
 	{"_collector_locate_local", & _collector_locate_local, METH_VARARGS, NULL},
-
 	{"_collector_advertise", & _collector_advertise, METH_VARARGS, NULL},
 
 
 	{"_negotiator_command", &_negotiator_command, METH_VARARGS, NULL},
-
 	{"_negotiator_command_return", &_negotiator_command_return, METH_VARARGS, NULL},
-
 	{"_negotiator_command_user", &_negotiator_command_user, METH_VARARGS, NULL},
-
 	{"_negotiator_command_user_return", &_negotiator_command_user_return, METH_VARARGS, NULL},
-
 	{"_negotiator_command_user_value", &_negotiator_command_user_value, METH_VARARGS, NULL},
 
 
 	{"_startd_drain_jobs", &_startd_drain_jobs, METH_VARARGS, NULL},
-
 	{"_startd_cancel_drain_jobs", &_startd_cancel_drain_jobs, METH_VARARGS, NULL},
 
 
 	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},
-
 	{"_credd_do_check_oauth_creds", &_credd_do_check_oauth_creds, METH_VARARGS, NULL},
-
-
 	{"_schedd_query", &_schedd_query, METH_VARARGS, NULL},
-
 	{"_schedd_act_on_job_ids", &_schedd_act_on_job_ids, METH_VARARGS, NULL},
-
 	{"_schedd_act_on_job_constraint", &_schedd_act_on_job_constraint, METH_VARARGS, NULL},
-
 	{"_schedd_edit_job_ids", &_schedd_edit_job_ids, METH_VARARGS, NULL},
-
 	{"_schedd_edit_job_constraint", &_schedd_edit_job_constraint, METH_VARARGS, NULL},
-
 	{"_schedd_reschedule", &_schedd_reschedule, METH_VARARGS, NULL},
-
 	{"_schedd_export_job_ids", &_schedd_export_job_ids, METH_VARARGS, NULL},
-
 	{"_schedd_export_job_constraint", &_schedd_export_job_constraint, METH_VARARGS, NULL},
-
 	{"_schedd_import_exported_job_results", &_schedd_import_exported_job_results, METH_VARARGS, NULL},
-
 	{"_schedd_unexport_job_ids", &_schedd_unexport_job_ids, METH_VARARGS, NULL},
-
 	{"_schedd_unexport_job_constraint", &_schedd_unexport_job_constraint, METH_VARARGS, NULL},
-
 	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},
-
 	{"_submit__getitem__", &_submit__getitem__, METH_VARARGS, NULL},
-
 	{"_submit__setitem__", &_submit__setitem__, METH_VARARGS, NULL},
-
 	{"_submit_keys", &_submit_keys, METH_VARARGS, NULL},
-
 	{"_submit_expand", &_submit_expand, METH_VARARGS, NULL},
-
 	{"_submit_getqargs", &_submit_getqargs, METH_VARARGS, NULL},
-
 	{"_submit_setqargs", &_submit_setqargs, METH_VARARGS, NULL},
+	{"_submit_from_dag", &_submit_from_dag, METH_VARARGS, NULL},
 
 
 	{"_job_event_log_init", &_job_event_log_init, METH_VARARGS, NULL},
-
 	{"_job_event_log_next", &_job_event_log_next, METH_VARARGS, NULL},
-
 	{"_job_event_log_close", &_job_event_log_close, METH_VARARGS, NULL},
-
 	{"_job_event_log_get_offset", &_job_event_log_get_offset, METH_VARARGS, NULL},
-
 	{"_job_event_log_set_offset", &_job_event_log_set_offset, METH_VARARGS, NULL},
 
 
-
 	{"_param__getitem__", &_param__getitem__, METH_VARARGS, NULL},
-
 	{"_param__setitem__", &_param__setitem__, METH_VARARGS, NULL},
-
 	{"_param__delitem__", &_param__delitem__, METH_VARARGS, NULL},
-
 	{"_param_keys", &_param_keys, METH_VARARGS, NULL},
 
 

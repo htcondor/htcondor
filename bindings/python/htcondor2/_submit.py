@@ -17,6 +17,7 @@ from .htcondor2_impl import (
     _submit_expand,
     _submit_getqargs,
     _submit_setqargs,
+    _submit_from_dag,
 )
 
 #
@@ -217,11 +218,6 @@ class Submit(MutableMapping):
         _submit_setqargs(self, self._handle, args)
 
 
-    def from_dag(filename : str, options : dict = {}):
-        # FIXME
-        pass
-
-
     def setSubmitMethod(self,
         method_value : int = -1,
         allow_reserved_values : bool = False
@@ -233,3 +229,44 @@ class Submit(MutableMapping):
     def getSubmitMethod(self) -> int:
         # FIXME
         pass
+
+
+# List does not include options which vary only in capitalization.
+_NewOptionNames = {
+    "dagman":                   "DagmanPath",
+    "schedd-daemon-ad-file":    "ScheddDaemonAdFile",
+    "schedd-address-file":      "ScheddAddressFile",
+    "alwaysrunpost":            "PostRun",
+    "debug":                    "DebugLevel",
+    "outfile_dir":              "OutfileDir",
+    "config":                   "ConfigFile",
+#   "batch-name":               "BatchName",
+    "load_save":                "SaveFile",
+    "do_recurse":               "Recurse",
+    "update_submit":            "UpdateSubmit",
+    "import_env":               "ImportEnv",
+    "include_env":              "GetFromEnv",
+    "dumprescue":               "DumpRescueDag",
+    "valgrind":                 "RunValgrind",
+    "suppress_notification":    "SuppressNotification",
+}
+
+
+def from_dag(filename : str, options : dict[str, Union[int, bool, str]] = {}) -> Submit:
+    if not isinstance(options, dict):
+        raise TypeError("options must be a dict")
+    if not Path(filename).exists():
+        raise IOError(f"{filename} does not exist")
+
+    # Convert from version 1 names to the proper internal names.
+    internal_options = {}
+    for key, value in options.items():
+        internal_key = _NewOptionNames.get(key, key)
+        internal_options[internal_key] = value
+
+    subfile = _submit_from_dag(filename, internal_options)
+    subfile_text = Path(subfile).read_text()
+    return Submit(subfile_text)
+
+
+Submit.from_dag = from_dag

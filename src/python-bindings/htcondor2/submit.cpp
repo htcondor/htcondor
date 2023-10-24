@@ -448,3 +448,191 @@ _submit_getqargs( PyObject *, PyObject * args ) {
 
     return PyUnicode_FromString( buffer.c_str() );
 }
+
+
+bool
+set_dag_options( PyObject * options, SubmitDagShallowOptions & shallow, SubmitDagDeepOptions & deep ) {
+    PyObject * key = NULL;
+    PyObject * value = NULL;
+    Py_ssize_t cursor = 0;
+
+    // `key` and `value` are borrowed references
+    while( PyDict_Next(options, &cursor, &key, &value) ) {
+        if(! PyUnicode_Check(key)) {
+            PyErr_SetString(PyExc_TypeError, "options keys must be strings");
+            return false;
+        }
+
+        std::string k;
+        if( py_str_to_std_string(key, k) == -1 ) {
+            // py_str_to_std_string() has already set an exception for us.
+            return false;
+        }
+
+
+        // Special case(s) to handle options that aren't string, bool, or int.
+        if( k == "insert_env" ) {
+            if(! PyUnicode_Check(value)) {
+                PyErr_SetString(PyExc_TypeError, "this option's value must be a string");
+                return false;
+            }
+
+            std::string v;
+            if( py_str_to_std_string(value, v) == -1 ) {
+                // py_str_to_std_string() has already set an exception for us.
+                return false;
+            }
+
+            std::string t(v); trim(t);
+            deep.addToEnv.push_back(t);
+            continue;
+        }
+
+
+        auto isStringOpt =
+            DagmanShallowOptions::str::_from_string_nocase_nothrow(k.c_str());
+        if( isStringOpt ) {
+            if(! PyUnicode_Check(value)) {
+                PyErr_SetString(PyExc_TypeError, "this option's value must be a string");
+                return false;
+            }
+
+            std::string v;
+            if( py_str_to_std_string(value, v) == -1 ) {
+                // py_str_to_std_string() has already set an exception for us.
+                return false;
+            }
+
+            shallow[*isStringOpt] = v;
+            continue;
+        }
+
+        auto isBoolOpt =
+            DagmanShallowOptions::b::_from_string_nocase_nothrow(k.c_str());
+        if( isBoolOpt ) {
+            if(! PyBool_Check(value)) {
+                PyErr_SetString(PyExc_TypeError, "this option's value must be a bool");
+                return false;
+            }
+
+            shallow[*isBoolOpt] = value == Py_True;
+            continue;
+        }
+
+        auto isIntOpt =
+            DagmanShallowOptions::i::_from_string_nocase_nothrow(k.c_str());
+        if( isIntOpt ) {
+            if(! PyLong_Check(value)) {
+                PyErr_SetString(PyExc_TypeError, "this option's value must be an integer");
+                return false;
+            }
+
+            shallow[*isIntOpt] = PyLong_AsLong(value);
+            continue;
+        }
+
+
+        auto isDeepStringOpt =
+            DagmanDeepOptions::str::_from_string_nocase_nothrow(k.c_str());
+        if( isDeepStringOpt ) {
+            if(! PyUnicode_Check(value)) {
+                PyErr_SetString(PyExc_TypeError, "this option's value must be a string");
+                return false;
+            }
+
+            std::string v;
+            if( py_str_to_std_string(value, v) == -1 ) {
+                // py_str_to_std_string() has already set an exception for us.
+                return false;
+            }
+
+            deep[*isDeepStringOpt] = v;
+            continue;
+        }
+
+        auto isDeepBoolOpt =
+            DagmanDeepOptions::b::_from_string_nocase_nothrow(k.c_str());
+        if( isDeepBoolOpt ) {
+            if(! PyBool_Check(value)) {
+                PyErr_SetString(PyExc_TypeError, "this option's value must be a bool");
+                return false;
+            }
+
+            deep[*isDeepBoolOpt] = value == Py_True;
+            continue;
+        }
+
+/*
+        // There aren't any integer deep options at the moment.
+        auto isDeepIntOpt =
+            DagmanDeepOptions::i::_from_string_nocase_nothrow(k.c_str());
+        if( isDeepIntOpt ) {
+            if(! PyLong_Check(value)) {
+                PyErr_SetString(PyExc_TypeError, "this option's value must be an integer");
+                return false;
+            }
+            deep[*isDeepIntOpt] = PyLong_AsLong(value);
+            continue;
+        }
+*/
+
+
+        std::string msg;
+        formatstr( msg, "%s is not a recognized DagMan option", k.c_str() );
+        PyErr_SetString(PyExc_KeyError, msg.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+static PyObject *
+_submit_from_dag( PyObject *, PyObject * args ) {
+    PyObject * options = NULL;
+    const char * filename = NULL;
+
+    if(! PyArg_ParseTuple( args, "zO", & filename, & options )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    SubmitDagShallowOptions shallow;
+    shallow.dagFiles.push_back(filename);
+    shallow.primaryDagFile = filename;
+
+    // I shouldn't have to set these defaults.
+    shallow.strSubFile = shallow.primaryDagFile + ".condor.sub";
+    shallow.strSchedLog = shallow.primaryDagFile + ".nodes.log";
+    shallow.strLibOut = shallow.primaryDagFile + ".lib.out";
+    shallow.strLibErr = shallow.primaryDagFile + ".lib.err";
+
+    SubmitDagDeepOptions deep;
+    if(! set_dag_options( options, shallow, deep )) {
+        // set_dag_options() has already set an exception for us.
+        return NULL;
+    }
+
+    DagmanUtils du;
+    // This is almost certainly an indication of a broken design.
+    du.usingPythonBindings = true;
+    if(! du.ensureOutputFilesExist( deep, shallow )) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString(PyExc_IOError, "Unable to write condor_dagman output files");
+        return NULL;
+    }
+
+    // How does ensureOutputFilesExist() work without the options being set up?
+    // Why not a vector?
+    std::list<std::string> lines;
+    du.setUpOptions( deep, shallow, lines );
+    if(! du.writeSubmitFile(deep, shallow, lines)) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString(PyExc_IOError, "Unable to write condor_dagman submit file");
+        return NULL;
+    }
+
+    // Why isn't this a method on DagmanUtils?
+    std::string submitFileName = filename + std::string(".condor.sub");
+    return PyUnicode_FromString(submitFileName.c_str());
+}
