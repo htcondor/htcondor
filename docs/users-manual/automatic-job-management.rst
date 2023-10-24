@@ -96,6 +96,22 @@ in the **periodic_release** expression.
        periodic_hold_subcode = 42
        periodic_release = (HoldReasonSubCode == 42)
 
+Automatically evicting a running job
+------------------------------------
+
+HTCondor can automatically evict a running job, from the machine
+it is running on, if a given constraint is true.  In the submit description file, set
+**periodic_vacate** to a classad expression.  When this expression evaluates
+to true, the scheduler will evicte the job, just as if **condor_vacate_job** had
+run on that job.  See :doc:`/users-manual/matchmaking-with-classads` for information
+about the classad language and :doc:`/classad-attributes/index` for the list of attributes
+which can be used in these expressions.  For example, to automatically evicte a 
+job which has been in the queue for more than 100 hours, and have it restart
+again, the submit file could have
+
+.. code-block:: condor-submit
+
+       periodic_vacate = (time() - QDate) > (100 * 3600)
 
 Holding a completed job
 -----------------------

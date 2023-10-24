@@ -5281,6 +5281,27 @@ These macros control the *condor_schedd*.
         SYSTEM_PERIODIC_REMOVE = \
           (JobStatus == 5 && time() - EnteredCurrentStatus > 3600*24*30)
 
+:macro-def:`SYSTEM_PERIODIC_VACATE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    running job in the queue. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_VACATE_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    case-insensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_VACATE`` expression will be evaluated. If any
+    of these expressions evaluates to ``True`` the job will be evicted
+    from the machine it is running on, and returned to the queue as Idle.  See also
+    ``SYSTEM_PERIODIC_VACATE`` There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_VACATE and SYSTEM_PERIODIC_VACATE_<Name>`
+    This expression behaves identically to the job expression
+    ``periodic_vacate``, but it is evaluated for every running job in the queue.
+    As it is in the configuration file, it is easy for an administrator
+    to set a vacate policy that applies to all jobs. It defaults to
+    ``False``. When ``True``, it causes the job to be evicted from the
+    machine it is running on.
+
 :macro-def:`SCHEDD_ASSUME_NEGOTIATOR_GONE`
     This macro determines the period, in seconds, that the
     *condor_schedd* will wait for the *condor_negotiator* to initiate
