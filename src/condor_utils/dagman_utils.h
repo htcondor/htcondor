@@ -70,35 +70,70 @@ protected:
 	List<std::string> tokens; // parsed tokens
 };
 
-    //
-    // These are options that are *not* passed to lower levels of
-    // condor_submit_dag when creating the submit files for nested
-    // DAGs.
-    //
-struct SubmitDagShallowOptions
-{
-    bool bSubmit;
+
+#include "enum.h"
+
+namespace DagmanShallowOptions {
+
+  BETTER_ENUM(str, long,
+    ScheddDaemonAdFile = 0, ScheddAddressFile, ConfigFile, SaveFile
+  );
+
+  BETTER_ENUM(b, long,
+    PostRun = 0, DumpRescueDag, RunValgrind
+  );
+
+  BETTER_ENUM(i, long,
+    MaxIdle = 0, MaxJobs, MaxPre, MaxPost, DebugLevel, Priority
+  );
+
+}
+
+
+class SubmitDagShallowOptions {
+
+  public:
+
+    SubmitDagShallowOptions()
+    {
+        using namespace DagmanShallowOptions;
+
+        param(appendFile, "DAGMAN_INSERT_SUB_FILE");
+        copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
+
+        boolOpts[b::PostRun] = false;
+        boolOpts[b::DumpRescueDag] = false;
+        boolOpts[b::RunValgrind] = false;
+
+        intOpts[i::MaxIdle] = 0;
+        intOpts[i::MaxJobs] = 0;
+        intOpts[i::MaxPre] = 0;
+        intOpts[i::MaxPost] = 0;
+        intOpts[i::DebugLevel] = DEBUG_UNSET;
+        intOpts[i::Priority] = 0;
+    }
+
+
+    // Options offered by the Python bindings in version 1.
+    const std::string & operator[]( DagmanShallowOptions::str opt ) const;
+    bool operator[]( DagmanShallowOptions::b opt ) const;
+    int operator[]( DagmanShallowOptions::i opt ) const;
+
+    std::string & operator[]( DagmanShallowOptions::str opt );
+    bool & operator[]( DagmanShallowOptions::b opt );
+    int & operator[]( DagmanShallowOptions::i opt );
+
+    // Command-line options.
+    bool bSubmit = true;
     std::string strRemoteSchedd;
-    std::string strScheddDaemonAdFile;
-    std::string strScheddAddressFile;
-    int iMaxIdle;
-    int iMaxJobs;
-    int iMaxPre;
-    int iMaxPost;
     std::string appendFile; // append to .condor.sub file before queue
     std::list<std::string> appendLines; // append to .condor.sub file before queue
-    std::string strConfigFile;
-    std::string saveFile;
-    bool dumpRescueDag;
-    bool runValgrind;
     std::string primaryDagFile;
     std::list<std::string> dagFiles;
-    bool doRecovery;
-    bool bPostRun;
-    bool bPostRunSet; // whether this was actually set on the command line
-    int priority;
+    bool doRecovery = false;
+    bool bPostRunSet = false; // whether this was actually set on the command line
 
-    // non-command line options
+    // Non-command-line options.
     std::string strLibOut;
     std::string strLibErr;
     std::string strDebugLog; // the dagman.out file
@@ -107,76 +142,78 @@ struct SubmitDagShallowOptions
     std::string strRescueFile;
     std::string strLockFile;
     bool copyToSpool;
-    int iDebugLevel;
 
-    SubmitDagShallowOptions() 
-    { 
-        bSubmit = true;
-        bPostRun = false;
-        bPostRunSet = false;
-        iMaxIdle = 0;
-        iMaxJobs = 0;
-        iMaxPre = 0;
-        iMaxPost = 0;
-        param(appendFile, "DAGMAN_INSERT_SUB_FILE");
-        strConfigFile = "";
-        saveFile = "";
-        dumpRescueDag = false;
-        runValgrind = false;
-        doRecovery = false;
-        copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
-        iDebugLevel = DEBUG_UNSET;
-        priority = 0;
-    }
+  private:
+
+    std::array<std::string, DagmanShallowOptions::str::_size()> stringOpts;
+    std::array<bool, DagmanShallowOptions::b::_size()> boolOpts;
+    std::array<int, DagmanShallowOptions::i::_size()> intOpts;
 };
 
-    //
-    // These are options that *are* passed to lower levels of
-    // condor_submit_dag when creating the submit files for nested
-    // DAGs.
-    //
-struct SubmitDagDeepOptions
-{
-    // these options come from the command line
-    bool bVerbose;
-    bool bForce;
+
+namespace DagmanDeepOptions {
+
+  BETTER_ENUM(str, long,
+    DagmanPath = 0, OutfileDir, BatchName, GetFromEnv
+  );
+
+  BETTER_ENUM(b, long,
+    Force = 0, ImportEnv, UseDagDir, AutoRescue, AllowVersionMismatch,
+    Recurse, UpdateSubmit, SuppressNotification
+  );
+
+}
+
+
+class SubmitDagDeepOptions {
+
+  public:
+
+    SubmitDagDeepOptions()
+    {
+        using namespace DagmanDeepOptions;
+
+        boolOpts[b::Force] = false;
+        boolOpts[b::UseDagDir] = false;
+        boolOpts[b::AutoRescue] = param_boolean( "DAGMAN_AUTO_RESCUE", true );
+        boolOpts[b::AllowVersionMismatch] = false;
+        boolOpts[b::Recurse] = false;
+        boolOpts[b::UpdateSubmit] = false;
+        boolOpts[b::ImportEnv] = false;
+        boolOpts[b::SuppressNotification] = false;
+    }
+
+
+    // Options offered by the Python bindings in version 1.
+    const std::string & operator[]( DagmanDeepOptions::str opt ) const;
+    bool operator[]( DagmanDeepOptions::b opt ) const;
+    // int operator[]( DagmanDeepOptions::i opt ) const;
+
+    std::string & operator[]( DagmanDeepOptions::str opt );
+    bool & operator[]( DagmanDeepOptions::b opt );
+    // int & operator[]( DagmanDeepOptions::i opt );
+
+
+    // Command-line options.
     std::string strNotification;
-	std::string strDagmanPath; // path to dagman binary
-    bool useDagDir;
-    std::string strOutfileDir;
     std::string batchName; // optional value from -batch-name argument, will be double quoted if it exists.
     std::string batchId;
-    bool autoRescue;
-    int doRescueFrom;
-    bool allowVerMismatch;
-    bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
-    bool updateSubmit; // allow updating submit file w/o -force
-    bool importEnv; // explicitly import environment into .condor.sub file
-    std::string getFromEnv; // explicitly import specified environment vars into .condor.sub file
-    std::vector<std::string> addToEnv; // explicitly add var=value envrionment info into .condor.sub file
-
-    bool suppress_notification;
     std::string acctGroup;
     std::string acctGroupUser;
 
-    SubmitDagDeepOptions() 
-    { 
-        bVerbose = false;
-        bForce = false;
-        useDagDir = false;
-        autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
-        doRescueFrom = 0; // 0 means no rescue DAG specified
-        allowVerMismatch = false;
-        recurse = false;
-        updateSubmit = false;
-        importEnv = false;
-        getFromEnv = "";
-        addToEnv = {};
-        suppress_notification = true;
-        acctGroup = "";
-        acctGroupUser = "";
-    }
+    bool bVerbose = false;
+
+    int doRescueFrom = 0; // 0 means no rescue DAG specified
+
+    std::vector<std::string> addToEnv; // explicitly add var=value envrionment info into .condor.sub file
+
+  private:
+
+    std::array<std::string, DagmanDeepOptions::str::_size()> stringOpts;
+    std::array<bool, DagmanDeepOptions::b::_size()> boolOpts;
+    // std::array<int, DagmanDeepOptions::i::_size()> intOpts;
 };
+
 
 class DagmanUtils {
 

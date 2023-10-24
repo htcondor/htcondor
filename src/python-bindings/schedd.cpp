@@ -2878,7 +2878,7 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
     shallow_opts.strLibOut = shallow_opts.primaryDagFile + ".lib.out";
     shallow_opts.strLibErr = shallow_opts.primaryDagFile + ".lib.err";
     deep_opts.doRescueFrom = 0;
-    deep_opts.updateSubmit = false;
+    deep_opts[DagmanDeepOptions::b::UpdateSubmit] = false;
 
     // Iterate over the list of arguments passed in and set the appropriate
     // values in m_shallowOpts and m_deepOpts
@@ -2915,63 +2915,65 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
         std::string key_lc = key;
         std::transform(key_lc.begin(), key_lc.end(), key_lc.begin(), ::tolower);
         if (key_lc == "dagman")
-            deep_opts.strDagmanPath = value.c_str();
+            deep_opts[DagmanDeepOptions::str::DagmanPath] = value.c_str();
         else if (key_lc == "force")
-            deep_opts.bForce = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::Force] = (value == "true") ? true : false;
         else if (key_lc == "schedd-daemon-ad-file")
-            shallow_opts.strScheddDaemonAdFile = value.c_str();
+            shallow_opts[DagmanShallowOptions::str::ScheddDaemonAdFile] = value.c_str();
         else if (key_lc == "schedd-address-file")
-            shallow_opts.strScheddAddressFile = value.c_str();
+            shallow_opts[DagmanShallowOptions::str::ScheddAddressFile] = value.c_str();
         else if (key_lc == "alwaysrunpost")
-            shallow_opts.bPostRun = (value == "true") ? true : false;
-        else if (key_lc == "maxidle") 
-            shallow_opts.iMaxIdle = atoi(value.c_str());
-        else if (key_lc == "maxjobs") 
-            shallow_opts.iMaxJobs = atoi(value.c_str());
+            shallow_opts[DagmanShallowOptions::b::PostRun] = (value == "true") ? true : false;
+        else if (key_lc == "maxidle")
+            shallow_opts[DagmanShallowOptions::i::MaxIdle] = atoi(value.c_str());
+        else if (key_lc == "maxjobs")
+            shallow_opts[DagmanShallowOptions::i::MaxJobs] = atoi(value.c_str());
         else if (key_lc == "maxpre")
-            shallow_opts.iMaxPre = atoi(value.c_str());
+            shallow_opts[DagmanShallowOptions::i::MaxPre] = atoi(value.c_str());
         else if (key_lc == "maxpost")
-            shallow_opts.iMaxPre = atoi(value.c_str());
+            // Bug!
+            shallow_opts[DagmanShallowOptions::i::MaxPre] = atoi(value.c_str());
         else if (key_lc == "usedagdir")
-            deep_opts.useDagDir = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::UseDagDir] = (value == "true") ? true : false;
         else if (key_lc == "debug")
-            shallow_opts.iDebugLevel = atoi(value.c_str());
+            shallow_opts[DagmanShallowOptions::i::DebugLevel] = atoi(value.c_str());
         else if (key_lc == "outfile_dir")
-            deep_opts.strOutfileDir = value.c_str();
+            deep_opts[DagmanDeepOptions::str::OutfileDir] = value.c_str();
         else if (key_lc == "config")
-            shallow_opts.strConfigFile = value.c_str();
+            shallow_opts[DagmanShallowOptions::str::ConfigFile] = value.c_str();
         else if (key_lc == "batch-name")
             deep_opts.batchName = value.c_str();
         else if (key_lc == "autorescue")
-            deep_opts.autoRescue = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::AutoRescue] = (value == "true") ? true : false;
         else if (key_lc == "dorescuefrom")
             deep_opts.doRescueFrom = atoi(value.c_str());
         else if (key_lc == "load_save")
-            shallow_opts.saveFile = value;
+            shallow_opts[DagmanShallowOptions::str::SaveFile] = value;
         else if (key_lc == "allowversionmismatch")
-            deep_opts.allowVerMismatch = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::AllowVersionMismatch] = (value == "true") ? true : false;
         else if (key_lc == "do_recurse")
-            deep_opts.recurse = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::Recurse] = (value == "true") ? true : false;
         else if (key_lc == "update_submit")
-            deep_opts.updateSubmit = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::UpdateSubmit] = (value == "true") ? true : false;
         else if (key_lc == "import_env")
-            deep_opts.importEnv = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::ImportEnv] = (value == "true") ? true : false;
         else if (key_lc == "include_env")
-            deep_opts.getFromEnv += value;
+            deep_opts[DagmanDeepOptions::str::GetFromEnv] += value;
         else if (key_lc == "insert_env") {
             trim(value);
             deep_opts.addToEnv.push_back(value);
             }
         else if (key_lc == "dumprescue")
-            shallow_opts.dumpRescueDag = (value == "true") ? true : false;
+            shallow_opts[DagmanShallowOptions::b::DumpRescueDag] = (value == "true") ? true : false;
         else if (key_lc == "valgrind")
-            shallow_opts.runValgrind = (value == "true") ? true : false;
+            shallow_opts[DagmanShallowOptions::b::RunValgrind] = (value == "true") ? true : false;
         else if (key_lc == "priority")
-            shallow_opts.priority = atoi(value.c_str());
+            shallow_opts[DagmanShallowOptions::i::Priority] = atoi(value.c_str());
         else if (key_lc == "suppress_notification")
-            deep_opts.suppress_notification = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::SuppressNotification] = (value == "true") ? true : false;
         else if (key_lc == "dorecov")
-            deep_opts.suppress_notification = (value == "true") ? true : false;
+            // Bug!
+            deep_opts[DagmanDeepOptions::b::SuppressNotification] = (value == "true") ? true : false;
         else
             printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
     }
