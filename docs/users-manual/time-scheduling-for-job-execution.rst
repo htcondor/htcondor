@@ -437,7 +437,7 @@ deferral times, because the mechanism is based upon deferral times.
 -  It is impossible to schedule vanilla universe jobs at
    intervals that are smaller than the interval at which HTCondor
    evaluates jobs. This interval is determined by the configuration
-   variable ``SCHEDD_INTERVAL`` :index:`SCHEDD_INTERVAL`. As a
+   variable :macro:`SCHEDD_INTERVAL`. As a
    vanilla universe job completes execution and is placed
    back into the job queue, it may not be placed in the idle state in
    time. This problem does not afflict local universe jobs.
