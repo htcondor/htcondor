@@ -31,50 +31,11 @@ else()
   set (CLASSADS_FOUND classads)
 endif()
 
-# The canonical way to say this is a standalone cmake,
-# not included by the higher level HTCondor
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-	# A random default
-	set(PACKAGE_VERSION "1.0.0")
-	set(CPACK_PACKAGE_VERSION_MAJOR "1")
-	set(CPACK_PACKAGE_VERSION_MINOR "0")
-	set(CPACK_PACKAGE_VERSION_PATCH "0")
+set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
 
-	set(CPACK_PACKAGE_VENDOR "Center for High Throughput Computing")
-	set(CPACK_INSTALL_PREFIX "/")
-
-	set (CPACK_PACKAGE_NAME "classads")
-	set (CPACK_SET_DESTDIR OFF)
-	#set (CPACK_INSTALL_PREFIX "/")
-
-
-	# Should use find_package here for either case
-	find_library(PCRE2_FOUND "pcre2-8")
-	add_library(pcre2-8 SHARED IMPORTED)
-	set_target_properties(pcre2-8 PROPERTIES IMPORTED_LOCATION ${PCRE2_FOUND})
-
-	set(C_BIN bin)
-	set(C_LIB_PUBLIC lib/condor)
-	set(C_INCLUDE_PUBLIC include/condor)
-
-	# This avoids quoting bugs in cpack.
-	# CPack can't have it on by default because of backward compatibility
-	set (CPACK_VERBATIM_VARIABLES ON)
-
-	# and away we go...
-	include (CPack)
-
-else()
-
-	# This branch is for actions that can only happen
-	# for classads build by the higher level condor cmake
-
-	set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
-
-	###### Test executables
-	condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND}" OFF)
-	condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND}" OFF)
-endif()
+###### Test executables
+condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND}" OFF)
+condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND}" OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -163,13 +124,7 @@ if (UNIX)
 target_compile_definitions(classads_objects PRIVATE UNIX)
 endif()
 
-# Older cmakes don't allow target_link_libraries to OBJECT libraries
-# remove this when we drop Ubuntu 18
-if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	include_directories(${PCRE2_INCLUDE})
-else()
-	target_link_libraries(classads_objects pcre2-8)
-endif()
+target_link_libraries(classads_objects pcre2-8)
 
 set_property(TARGET classads_objects PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library( classads STATIC $<TARGET_OBJECTS:classads_objects> )    # the one which all of condor depends upon
