@@ -849,6 +849,8 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 		// have a way of representing a single resource with multiple metrics.
 		else if( label == "Gpus" ) { label += " (Average)"; }
 		else if( label == "GpusMemory" ) { label += " (MB)"; }
+		else if( label == "TimeExecute" ) { label += " (s)"; }
+		else if( label == "TimeSlotBusy" ) { label += " (s)"; }
 		const SlotResTermSumy & psumy = i.second;
 		formatstr_cat( out, fString.c_str(), label.c_str(), psumy.use.c_str(),
 			psumy.req.c_str(), psumy.alloc.c_str(), psumy.assigned.c_str() );
@@ -2400,7 +2402,8 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 		}
 		else {
 			// no match, we have (probably) just read the banner of the useage ad.
-			if (starts_with(sz, "\tPartitionable ")) {
+			if (starts_with(sz, "\tPartitionable ") ||  
+				starts_with(sz, "\tResources")) {
 				if ( ! pusageAd) { pusageAd = new ClassAd(); }
 				pusageAd->Clear();
 				ulp.init(sz);
