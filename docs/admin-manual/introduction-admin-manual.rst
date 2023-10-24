@@ -41,7 +41,9 @@ Every machine in an HTCondor pool can serve a variety of roles. Most
 machines serve more than one role simultaneously. Certain roles can only
 be performed by a single machine in the pool. The following list
 describes what these roles are and what resources are required on the
-machine that is providing that service: :index:`central manager`
+machine that is providing that service:
+
+:index:`central manager`
 :index:`central manager<single: central manager; machine>`
 
 Central Manager
@@ -60,8 +62,7 @@ Central Manager
     be rebooted quickly if something goes wrong. The central manager
     will ideally have a good network connection to all the machines in
     the pool, since these pool machines all send updates over the
-    network to the central manager. :index:`execute machine`
-    :index:`execute<single: execute; machine>`
+    network to the central manager.
 
 .. note::
 
@@ -72,6 +73,8 @@ Central Manager
       flowchart TD
          condor_master --> condor_collector & condor_negotiator
 
+:index:`execute machine`
+:index:`execute<single: execute; machine>`
 
 Execution Point
     Any machine in the pool, including the central manager, can be
@@ -81,8 +84,7 @@ Execution Point
     require lots of resources. About the only resource that might matter
     is disk space. In general the more resources a machine has in terms
     of swap space, memory, number of CPUs, the larger variety of
-    resource requests it can serve. :index:`access point`
-    :index:`access<single: submit; machine>`
+    resource requests it can serve.
 
 .. note::
 
@@ -97,6 +99,8 @@ Execution Point
          condor_starter_for_slot1 --> job_in_slot1
          condor_starter_for_slot2 --> job_in_slot2
 
+:index:`access point`
+:index:`access<single: submit; machine>`
 
 Access Point
     Any machine in the pool, including the central manager, can be
