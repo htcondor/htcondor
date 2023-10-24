@@ -184,6 +184,7 @@
 #define SUBMIT_KEY_PeriodicHoldSubCode "periodic_hold_subcode"
 #define SUBMIT_KEY_PeriodicReleaseCheck "periodic_release"
 #define SUBMIT_KEY_PeriodicRemoveCheck "periodic_remove"
+#define SUBMIT_KEY_PeriodicVacateCheck "periodic_vacate"
 #define SUBMIT_KEY_OnExitHoldCheck "on_exit_hold"
 #define SUBMIT_KEY_OnExitHoldReason "on_exit_hold_reason"
 #define SUBMIT_KEY_OnExitHoldSubCode "on_exit_hold_subcode"

@@ -71,9 +71,6 @@ kinds of questions you could resolve when the user policy is invoked.
 -psilord 10/18/2001
 */
 
-/* determine what to do with this job. */
-ClassAd* user_job_policy(ClassAd *jad);
-
 /* determine what kind of classad it is with respect to the user_policy */
 int JadKind(ClassAd *suspect);
 
@@ -122,7 +119,7 @@ extern const char ATTR_USER_ERROR_REASON[];
 
 /* NEW INTERFACE */
 
-enum { STAYS_IN_QUEUE = 0, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, UNDEFINED_EVAL, RELEASE_FROM_HOLD };
+enum { STAYS_IN_QUEUE = 0, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, UNDEFINED_EVAL, RELEASE_FROM_HOLD, VACATE_FROM_RUNNING };
 enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 
 /* ok, here is the first set of expressions that should be available
@@ -134,11 +131,12 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	ATTR_PERIODIC_REMOVE_CHECK
 	ATTR_ON_EXIT_HOLD_CHECK
 	ATTR_ON_EXIT_REMOVE_CHECK
+	ATTR_PERIODIC_VACATE_CHECK
 
 	If any of the above attributes besides ATTR_TIMER_REMOVE_CHECK are 
 	not present, then they will be assigned defaults and inserted into 
 	the classad.
-	The defaults are: False, False, False, False, True, respectively.
+	The defaults are: False, False, False, False, True, False, respectively.
 
 	Now, if you are using mode PERIODIC_ONLY in AnalyzePolicy(),
 	then this is all that you need in the classad _plus_ any other
@@ -266,7 +264,7 @@ class UserPolicy
 		/* mode is PERIODIC_ONLY or PERIODIC_THEN_EXIT */
 		/* state is the job status, looked up in the ad if not provided */
 		/* returns STAYS_IN_QUEUE, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, 
-			UNDEFINED_EVAL, or RELEASE_FROM_HOLD */
+			UNDEFINED_EVAL, or RELEASE_FROM_HOLD, VACATE_FROM_RUNNING */
 		int AnalyzePolicy(ClassAd &ad, int mode, int state = -1);
 
 		/* This explains what expression caused the above action, if no 
@@ -286,7 +284,7 @@ class UserPolicy
 		bool FiringReason(std::string & reason, int & reason_code, int & reason_subcode);
 
 	private: /* functions */
-		/* This function inserts the five of the six (all but TimerRemove) user
+		/* This function inserts six of the seven (all but TimerRemove) user
 			job policy expressions with default values into the classad if they
 			are not already present. */
 		void Config(void);
@@ -326,7 +324,7 @@ class UserPolicy
 		that AnalyzePolicy should return.  If this function is false, retval is
 		undefined.
 		*/
-		enum SysPolicyId { SYS_POLICY_NONE=0, SYS_POLICY_PERIODIC_HOLD, SYS_POLICY_PERIODIC_RELEASE, SYS_POLICY_PERIODIC_REMOVE };
+		enum SysPolicyId { SYS_POLICY_NONE=0, SYS_POLICY_PERIODIC_HOLD, SYS_POLICY_PERIODIC_RELEASE, SYS_POLICY_PERIODIC_REMOVE, SYS_POLICY_PERIODIC_VACATE };
 		bool AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname, SysPolicyId sys_policy, int on_true_return, int & retval);
 		bool AnalyzeSinglePeriodicPolicy(ClassAd & ad, ExprTree * expr, int on_true_return, int & retval);
 
@@ -341,6 +339,7 @@ class UserPolicy
 		std::vector<JobPolicyExpr> m_sys_periodic_holds;
 		std::vector<JobPolicyExpr> m_sys_periodic_releases;
 		std::vector<JobPolicyExpr> m_sys_periodic_removes;
+		std::vector<JobPolicyExpr> m_sys_periodic_vacates; // vacations?
 	#else
 		ExprTree * m_sys_periodic_hold;
 		ExprTree * m_sys_periodic_release;
