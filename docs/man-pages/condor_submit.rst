@@ -355,7 +355,7 @@ BASIC COMMANDS
     Notice that in the new syntax, the backslash has no special meaning.
     This is for the convenience of Windows users.
 
-    :index:`setting, for a job<single: setting, for a job; environment variables>`\ 
+    :index:`setting, for a job<single: setting, for a job; environment variables>` 
 
  :subcom-def:`environment` = <parameter_list>
     List of environment variables.
@@ -1268,8 +1268,8 @@ FILE TRANSFER COMMANDS
 
     The list is interpreted like ``transfer_output_files``, but there is
     no corresponding ``remaps`` command.
-
-    .. _checkpoint_destination:
+   
+    .. _checkpoint_destination: 
 
     :index:`checkpoint file(s) specified by URL<single: checkpoint file(s) specified by URL; file transfer mechanism>`
  :subcom-def:`checkpoint_destination` = <destination-URL>
@@ -1357,7 +1357,7 @@ FILE TRANSFER COMMANDS
     ID) used to pre-sign the URLs.  Use only one.
 
     :index:`s3_secret_access_key_file<single: s3_secret_access_key_file; submit commands>`
-:subcom-def:` aws_secret_access_key_file`, :subcom-def:`s3_secret_access_key_file`
+ :subcom-def:`aws_secret_access_key_file`, :subcom-def:`s3_secret_access_key_file`
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the secret access key (and only the secret
     access key) used to pre-sign the URLs.  Use only one.
