@@ -181,7 +181,7 @@ class SubmitDagDeepOptions {
         boolOpts[b::Recurse] = false;
         boolOpts[b::UpdateSubmit] = false;
         boolOpts[b::ImportEnv] = false;
-        boolOpts[b::SuppressNotification] = false;
+        boolOpts[b::SuppressNotification] = true;
     }
 
 
