@@ -40,6 +40,12 @@ Bugs Fixed:
   for **batch** grid jobs submitted to a remote cluster. 
   :jira:`2073`
 
+- Fixed a bug in *condor_transfer_data* where using the ``-addr``
+  flag would automatically apply the ``-all`` flag to transfer
+  all job data back making the use of ``-addr`` with a Job ID
+  constraint fail.
+  :jira:`2105`
+
 - Fixed several small bugs with Trust On First Use (TOFU) for SSL
   authentication.
   Added configuration parameter
