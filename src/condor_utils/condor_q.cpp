@@ -32,6 +32,7 @@
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
+#if 0
 static const char *intKeywords[] =
 {
 	ATTR_CLUSTER_ID,
@@ -39,7 +40,7 @@ static const char *intKeywords[] =
 	ATTR_JOB_STATUS,
 	ATTR_JOB_UNIVERSE
 };
-
+#endif
 
 static const char *strKeywordsOld[] =
 {
@@ -53,10 +54,12 @@ static const char *strKeywordsModern[] =
 	"(" ATTR_ACCOUNTING_GROUP "?:" ATTR_OWNER ")"
 };
 
+#if 0
 static const char *fltKeywords[] = 
 {
 	""	// add one string to avoid compiler error
 };
+#endif
 
 // need this global variable to hold information reqd by the scan function
 // 30-Dec-2001: These no longer seem needed--nothing refers to them, there
@@ -69,6 +72,7 @@ CondorQ::
 CondorQ(void)
 {
 	connect_timeout = 20;
+#if 0
 	query.setNumIntegerCats(CQ_INT_THRESHOLD);
 	query.setNumStringCats(CQ_STR_THRESHOLD);
 	query.setNumFloatCats(CQ_FLT_THRESHOLD);
@@ -86,6 +90,7 @@ CondorQ(void)
 	}
 	numclusters = 0;
 	numprocs = 0;
+#endif
 
 	owner[0] = '\0';
 	schedd[0] = '\0';
@@ -97,11 +102,13 @@ CondorQ(void)
 void CondorQ::useDefaultingOperator(bool enable)
 {
 	defaulting_operator = enable;
+#if 0
 	if (defaulting_operator) {
 		query.setStringKwList(const_cast<char **>(strKeywordsModern));
 	} else {
 		query.setStringKwList(const_cast<char **>(strKeywordsOld));
 	}
+#endif
 }
 
 
@@ -109,8 +116,10 @@ void CondorQ::useDefaultingOperator(bool enable)
 CondorQ::
 ~CondorQ ()
 {
+#if 0
 	free(clusterarray);
 	free(procarray);
+#endif
 }
 
 
@@ -121,7 +130,7 @@ init()
 	return true;
 }
 
-
+#if 0
 int CondorQ::
 addDBConstraint (CondorQIntCategories cat, int value) 
 {
@@ -169,30 +178,46 @@ add (CondorQIntCategories cat, int value)
 	return query.addInteger (cat, value);
 }
 
+#endif
 
 int CondorQ::
 add (CondorQStrCategories cat, const char *value)
-{  
+{
+	const char * attr = nullptr;
 	switch (cat) {
 	case CQ_OWNER:
-		strncpy(owner, value, MAXOWNERLEN - 1);
-		break;
 	case CQ_SUBMITTER:
 		strncpy(owner, value, MAXOWNERLEN - 1);
+		if (defaulting_operator) {
+			attr = strKeywordsModern[cat];
+		} else {
+			attr = strKeywordsOld[cat];
+		}
+		break;
 	default:
 		break;
 	}
+	if (!attr) {
+		return Q_INVALID_CATEGORY;
+	}
 
-	return query.addString (cat, value);
+	// TODO: delay rendering of the expression until we need to know the final query expr
+	// so we can take the version of the schedd into account?  (8.6.0 or later to use modern keywords)
+	std::string expr;
+	QuoteAdStringValue(value, expr);
+	expr.insert(0,"==");
+	expr.insert(0,attr);
+
+	return query.addCustomOR (expr.c_str());
 }
 
-
+#if 0
 int CondorQ::
 add (CondorQFltCategories cat, float value)
 {
 	return query.addFloat (cat, value);
 }
-
+#endif
 
 int CondorQ::
 addOR (const char *value)
@@ -227,7 +252,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 	Qmgr_connection *qmgr;
 	ExprTree		*tree;
 	int     		result;
-	std::string scheddString;
+	std::string scheddString, constraintString;
 	const char 		*constraint;
 
 	int useFastPath = 0;
@@ -235,7 +260,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 	// make the query ad
 	if ((result = query.makeQuery (tree)) != Q_OK)
 		return result;
-	constraint = ExprTreeToString( tree );
+	constraint = ExprTreeToString( tree, constraintString );
 	delete tree;
 
 	// connect to the Q manager
@@ -554,6 +579,7 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	return rval;
 }
 
+#if 0
 int
 CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
 									  char *&lastUpdate,
@@ -575,6 +601,7 @@ CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType)
 	(void) dbconn;
 	(void) qType;
 }
+#endif
 
 int
 CondorQ::getFilterAndProcessAds( const char *constraint,

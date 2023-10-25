@@ -67,6 +67,7 @@ Timeslice CollectorDaemon::view_sock_timeslice;
 vector<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
 ConstraintHolder CollectorDaemon::vc_projection;
 
+#if 0
 ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
 int CollectorDaemon::__resultLimit__;
@@ -81,13 +82,14 @@ int CollectorDaemon::submittorIdleJobs;
 int CollectorDaemon::submittorNumAds;
 
 CollectorUniverseStats CollectorDaemon::ustatsAccum;
-CollectorUniverseStats CollectorDaemon::ustatsMonthly;
 
 int CollectorDaemon::machinesTotal;
 int CollectorDaemon::machinesUnclaimed;
 int CollectorDaemon::machinesClaimed;
 int CollectorDaemon::machinesOwner;
 int CollectorDaemon::startdNumAds;
+#endif
+CollectorUniverseStats CollectorDaemon::ustatsMonthly;
 
 ClassAd* CollectorDaemon::ad = NULL;
 CollectorList* CollectorDaemon::collectorsToUpdate = NULL;
@@ -336,7 +338,11 @@ void CollectorDaemon::Init()
 		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_GENERIC_ADS,"QUERY_GENERIC_ADS",
 		receive_query_cedar,"receive_query_cedar",READ);
-	
+	daemonCore->Register_CommandWithPayload(QUERY_MULTIPLE_ADS,"QUERY_MULTIPLE_ADS",
+		receive_query_cedar,"receive_query_cedar",READ);
+	daemonCore->Register_CommandWithPayload(QUERY_MULTIPLE_PVT_ADS,"QUERY_MULTIPLE_PVT_ADS",
+		receive_query_cedar,"receive_query_cedar",NEGOTIATOR);
+
 	// install command handlers for invalidations
 	daemonCore->Register_CommandWithPayload(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		receive_invalidation,"receive_invalidation",ADVERTISE_STARTD_PERM);
@@ -479,6 +485,204 @@ public:
 	T * runtime;
 };
 
+ExprTree * CollectorDaemon::get_query_filter(ClassAd* query, const std::string & attr, bool & skip_absent)
+{
+	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads
+	// if ATTR_ABSENT is not alrady referenced in the query.
+	// TODO: change this to get an attribute check in the scan function
+	ExprTree * constraint = query->LookupExpr(attr);
+	skip_absent = false;
+	if ( filterAbsentAds ) {	// filterAbsentAds is true if ABSENT_REQUIREMENTS defined
+		skip_absent = true;
+		bool checks_absent = false;
+		if (constraint) {
+			classad::References machine_refs;  // machine attrs referenced by requirements
+			GetReferences(attr.c_str(),*query,NULL,&machine_refs);
+			checks_absent = machine_refs.count( ATTR_ABSENT );
+		}
+		if (checks_absent) {
+			skip_absent = false;
+		} else {
+		#if 0 // this is now handled first class in the query scan callback
+			std::string modified_filter;
+			if (constraint) {
+				formatstr(modified_filter, "(%s) && (%s =!= True)",
+					ExprTreeToString(constraint),ATTR_ABSENT);
+			} else {
+				modified_filter = ATTR_ABSENT;
+				modified_filter += " =!= True";
+			}
+			query->AssignExpr(attr,modified_filter.c_str());
+			constraint = query->LookupExpr(attr);
+			dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.c_str());
+		#endif
+		}
+	}
+	return constraint;
+}
+
+CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
+	AdTypes whichAds,
+	ClassAd * query,
+	bool allow_pvt)
+{
+	pending_query_entry_t *query_entry = nullptr;
+	const char * label = AdTypeToString(whichAds);
+	std::string target; // value of ATTR_TARGET_TYPE, which can be a list if the command is QUERY_MULTIPLE_ADS
+	int num_adtypes = 1;
+	size_t cbq, cbt;
+	char * tagp;
+	bool is_multi_query = false;
+
+	if (whichAds == BOGUS_AD) {
+		// This is a QUERY_MULTIPLE_ADS or QUERY_MULTIPLE_PVT_ADS query. so we look at ATTR_TARGET_TYPE
+		// to determine the actual target type.  For this query type and ONLY this query, the target type can be a list
+		if ( ! query->LookupString(ATTR_TARGET_TYPE, target) || target.empty()) {
+			dprintf(D_ALWAYS,"Failed to find " ATTR_TARGET_TYPE " attribute in query ad of QUERY_MULTIPLE.\n");
+			return nullptr;
+		}
+		label = "Multi";
+		is_multi_query = true;
+		StringTokenIterator it(target);
+		const char * tag = it.first();
+		if (tag) { whichAds = AdTypeStringToWhichAds(tag); }
+		if (whichAds == NO_AD || whichAds == BOGUS_AD || ! collector.getHashTable(whichAds)) {
+			dprintf(D_ALWAYS,"Invalid " ATTR_TARGET_TYPE "=\"%s\" in QUERY_MULTIPLE.\n", target.c_str());
+			return nullptr;
+		}
+		num_adtypes = 0;
+		for (auto &str : it) { ++num_adtypes; }
+	} else if (whichAds == GENERIC_AD) {
+		if ( ! query->LookupString(ATTR_TARGET_TYPE, target) || target.empty()) {
+			dprintf(D_ALWAYS,"Failed to find " ATTR_TARGET_TYPE " attribute in query ad of QUERY_GENERIC_ADS.\n");
+			return nullptr;
+		}
+	} else if (whichAds == STARTD_AD) {
+		// for QUERY_STARTD_ADS, we look at the target type to figure which startd ad table to use
+		// if no target type, assume the slot ad table
+		if (query->LookupString(ATTR_TARGET_TYPE, target)) {
+			whichAds = get_real_startd_ad_type(target.c_str());
+			//?? label = AdTypeToString(whichAds);
+		}
+	} else if (whichAds == STARTD_PVT_AD && ! allow_pvt) {
+		dprintf(D_ALWAYS,"QUERY_STARTD_PVT_ADS not authorized.\n");
+		return nullptr;
+	}
+
+	bool is_locate = query->Lookup(ATTR_LOCATION_QUERY) != NULL;
+	if (is_locate) {
+		// do startd ad locates in the daemon ad table
+		if (whichAds == STARTD_AD) {
+			whichAds = STARTDAEMON_AD;
+			label = STARTD_DAEMON_ADTYPE;
+		}
+	}
+
+	// malloc a query_entry struct.  we must use malloc here, not new, since
+	// DaemonCore::Create_Thread requires a buffer created with malloc(), as it
+	// will insist on calling free().
+	// the pending query will consist of a pending_query_entry_t with an array of size num_adtypes
+	// followed by a char buffer for adtype name strings
+	cbq = pending_query_entry_t::size(num_adtypes);
+	cbt = target.size() + 1;
+	tagp = (char*) malloc(cbq+cbt);
+	query_entry = (pending_query_entry_t *) tagp;
+	tagp += cbq;
+
+	ASSERT(query_entry);
+	memset(query_entry, 0, cbq+cbt);
+
+	query_entry->label = label;
+	query_entry->cad = query;
+	query_entry->is_locate = is_locate;
+	query_entry->is_multi = is_multi_query;
+
+	bool skip_absent = false;
+	ExprTree * constraint = get_query_filter(query, ATTR_REQUIREMENTS, skip_absent);
+
+	int limit = INT_MAX; // no limit
+	if ( ! query->LookupInteger(ATTR_LIMIT_RESULTS, limit) || limit <= 0) {
+		limit = INT_MAX; // no limit
+	}
+	query_entry->limit = limit;
+
+	// for the MULTI query, we allow a separate limit, contraint (and projection)
+	// for each adtype.
+	if (is_multi_query) {
+		query_entry->num_adtypes = 0;
+		for (auto & tag : StringTokenIterator(target)) {
+			int ix = query_entry->num_adtypes;
+			AdTypes adtype = AdTypeStringToWhichAds(tag.c_str());
+			if (adtype == STARTD_PVT_AD) {
+				if ( ! allow_pvt) {
+					dprintf(D_ALWAYS,"Query of STARTD_PVT_ADS not authorized.\n");
+					free(query_entry);
+					return nullptr;
+				}
+			#if 1 // future
+			#else
+				if (ix > 0 && (query_entry->adt[ix].whichAds == STARTD_AD ||
+					           query_entry->adt[ix].whichAds == SLOT_AD)) {
+					// if this is a multi-query and the previous ad was a slot ad
+					// promote that have the private attributes and don't
+					// make an entry in the query for this adtype
+					query_entry->adt[ix].pvt_ad = allow_pvt;
+					continue;
+				}
+			#endif
+			}
+
+			// store the tag in the tags buffer, and set the pointer to it.
+			query_entry->adt[ix].tag = tagp;
+			strncpy(tagp, tag.c_str(), cbt);
+			tagp += tag.size()+1;
+			cbt -= tag.size()+1;
+
+			if (adtype == NO_AD || ! collector.getHashTable(adtype)) {
+				// assume generic if we don't recognise the adtype
+				query_entry->adt[ix].whichAds = GENERIC_AD;
+			} else {
+				query_entry->adt[ix].whichAds = adtype;
+			}
+			query_entry->adt[ix].limit = limit;
+			query_entry->adt[ix].constraint = constraint;
+			query_entry->adt[ix].skip_absent = skip_absent;
+
+			// check for <AdType>Limit
+			std::string attr(tag); tag += ATTR_LIMIT_RESULTS;
+			int taglimit = -1;
+			if (query->LookupInteger(attr, taglimit) && taglimit > 0) {
+				query_entry->adt[ix].limit = taglimit;
+			}
+
+			// check for <AdType>Requirements
+			attr = tag; attr += ATTR_REQUIREMENTS;
+			if (query->Lookup(attr)) {
+				bool tag_skip_absent = skip_absent;
+				query_entry->adt[ix].constraint = get_query_filter(query, attr.c_str(), tag_skip_absent);
+				query_entry->adt[ix].skip_absent = tag_skip_absent;
+			}
+			query_entry->num_adtypes += 1;
+		}
+
+	} else {
+		// regular (non-multi) query
+		query_entry->num_adtypes = 1;
+		query_entry->adt[0].whichAds = whichAds;
+		query_entry->adt[0].limit = limit;
+		query_entry->adt[0].constraint = constraint;
+		query_entry->adt[0].skip_absent = skip_absent;
+		query_entry->adt[0].tag = label;
+		if ( ! target.empty()) {
+			// this needs to be the target when the table is GENERIC
+			query_entry->adt[0].tag = tagp;
+			strncpy(tagp, target.c_str(), cbt);
+		}
+	}
+
+	return query_entry;
+}
+
 
 int CollectorDaemon::receive_query_cedar(int command,
 										 Stream* sock)
@@ -487,6 +691,7 @@ int CollectorDaemon::receive_query_cedar(int command,
 	pending_query_entry_t *query_entry = NULL;
 	bool handle_in_proc;
 	bool is_locate;
+	bool negotiate_auth = false;
 	const unsigned int BIG_TABLE_MASK = (1<<GENERIC_AD) | (1<<ANY_AD) | (1<<MASTER_AD) | (1<<STARTDAEMON_AD)
 	                                  | (1<<STARTD_AD) | (1<<STARTD_PVT_AD) | (1<<SLOT_AD);
 	KnownSubsystemId clientSubsys = SUBSYSTEM_ID_UNKNOWN;
@@ -516,19 +721,16 @@ int CollectorDaemon::receive_query_cedar(int command,
 
 	// Initial query handler
 	whichAds = receive_query_public( command );
-	if (whichAds == STARTD_AD) {
-		// for QUERY_STARTD_ADS, we look at the target type to figure which startd ad table to use
-		std::string target;
-		if (cad->LookupString(ATTR_TARGET_TYPE, target)) {
-			whichAds = get_real_startd_ad_type(target.c_str());
-		}
+	negotiate_auth = (command == QUERY_STARTD_PVT_ADS || command == QUERY_MULTIPLE_PVT_ADS);
+	query_entry = make_query_entry(whichAds, cad, negotiate_auth);
+	if ( ! query_entry) {
+		// expect make_query_entry to log the reason for the failure
+		return_status = FALSE;
+		goto END;
 	}
-	is_locate = cad->Lookup(ATTR_LOCATION_QUERY) != NULL;
-	if (is_locate) {
-		rt.runtime = &HandleLocate_runtime;
-		// do startd ad locates in the daemon ad table
-		if (whichAds == STARTD_AD) { whichAds = STARTDAEMON_AD; }
-	}
+	query_entry->sock = sock;
+	is_locate = query_entry->is_locate;
+	if (is_locate) { rt.runtime = &HandleLocate_runtime; }
 
 	// Figure out whether to handle the query inline or to fork.
 	handle_in_proc = false;
@@ -571,17 +773,6 @@ int CollectorDaemon::receive_query_cedar(int command,
 		sock->set_deadline(new_deadline);
 		// dprintf(D_FULLDEBUG,"QueryWorker old sock_deadline = %d, now new_deadline = %d\n",sock_deadline,new_deadline);
 	}
-
-	// malloc a query_entry struct.  we must use malloc here, not new, since
-	// DaemonCore::Create_Thread requires a buffer created with malloc(), as it 
-	// will insist on calling free().  Sigh.
-	query_entry = (pending_query_entry_t *) malloc( sizeof(pending_query_entry_t) );
-	ASSERT(query_entry);
-	query_entry->cad = cad;
-	query_entry->is_locate = is_locate;
-	query_entry->subsys[0] = 0;
-	query_entry->sock = sock;
-	query_entry->whichAds = whichAds;
 
 #ifdef TRACK_QUERIES_BY_SUBSYS
 	if ( want_track_queries_by_subsys ) {
@@ -837,17 +1028,20 @@ int CollectorDaemon::QueryReaper(int pid, int /* exit_status */ )
 int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Stream* sock)
 {
 	int return_status = TRUE;
-	double begin = condor_gettimestamp_double();
-	List<CollectorRecord> results;
+	_condor_runtime runtime;
+	double tick_time = runtime.begin;
+	double query_time = 0;
+	double send_time = 0;
 
 	// Pull out relavent state from query_entry
 	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
-	ClassAd *cad = query_entry->cad;
+	ClassAd *query = query_entry->cad;
 	bool is_locate = query_entry->is_locate;
-	AdTypes whichAds = query_entry->whichAds;
 	bool wants_pvt_attrs = false;
+	int num_adtypes = (query_entry->num_adtypes > 0) ? query_entry->num_adtypes : 1;
+	std::deque<CollectorRecord*> results;
 
-	cad->LookupBool(ATTR_SEND_PRIVATE_ATTRIBUTES, wants_pvt_attrs);
+	query->LookupBool(ATTR_SEND_PRIVATE_ATTRIBUTES, wants_pvt_attrs);
 
 		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
 		// trust it to handle our capabilities.
@@ -874,104 +1068,162 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		filter_private_attrs = false;
 	}
 
-		// Always send private attributes in private ads.
-	if (whichAds == STARTD_PVT_AD) {
-		filter_private_attrs = false;
-	}
-
-	// Perform the query
-
-	if (whichAds != (AdTypes) -1) {
-		process_query_public (whichAds, cad, &results);
-	}
-
-	double end_query = condor_gettimestamp_double();
-	double end_write = 0.0;
-
-	// send the results via cedar			
-	sock->timeout(QueryTimeout); // set up a network timeout of a longer duration
-	sock->encode();
-	results.Rewind();
-	CollectorRecord* curr_rec = nullptr;
-	int more = 1;
-	
-		// See if query ad asks for server-side projection
+	// See if query ad asks for server-side projection
 	string projection = "";
-		// turn projection string into a set of attributes
-	classad::References proj;
-	bool evaluate_projection = false;
-	if (cad->LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
+	// turn projection string into a set of attributes
+	classad::References proj, tagproj;
+	bool proj_is_expr = false;
+	if (query->LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
 		StringTokenIterator list(projection);
 		const std::string * attr;
 		while ((attr = list.next_string())) { proj.insert(*attr); }
-	} else if (cad->Lookup(ATTR_PROJECTION)) {
+	} else if (query->Lookup(ATTR_PROJECTION)) {
 		// if projection is not a simple string, then assume that evaluating it as a string in the context of the ad will work better
 		// (the negotiator sends this sort of projection)
-		evaluate_projection = true;
+		proj_is_expr = true;
 	}
 
-	while ( (curr_rec=results.Next()) )
-	{
-		ClassAd* ad_to_send = filter_private_attrs ? curr_rec->m_publicAd : curr_rec->m_pvtAd;
-		// if querying collector ads, and the collectors own ad appears in this list.
-		// then we want to shove in current statistics. we do this by chaining a
-		// temporary stats ad into the ad to be returned, and publishing updated
-		// statistics into the stats ad.  we do this because if the verbosity level
-		// is increased we do NOT want to put the high-verbosity attributes into
-		// our persistent collector ad.
-		ClassAd * stats_ad = NULL;
-		if ((whichAds == COLLECTOR_AD) && collector.isSelfAd(curr_rec)) {
-			dprintf(D_ALWAYS,"Query includes collector's self ad\n");
-			// update stats in the collector ad before we return it.
-			std::string stats_config;
-			cad->LookupString("STATISTICS_TO_PUBLISH",stats_config);
-			if (stats_config != "stored") {
-				dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.c_str());
-				stats_ad = new ClassAd();
-				if (!filter_private_attrs) {
-					stats_ad->CopyFrom(*curr_rec->m_pvtAd);
-				}
-				daemonCore->dc_stats.Publish(*stats_ad, stats_config.c_str());
-				daemonCore->monitor_data.ExportData(stats_ad, true);
-				collectorStats.publishGlobal(stats_ad, stats_config.c_str());
-				stats_ad->ChainToAd(curr_rec->m_publicAd);
-				ad_to_send = stats_ad; // send the stats ad instead of the self ad.
+	// Perform the query
+	CollectorDaemon::collect_op op;
+	bool sending = false;
+	int more = 1;
+
+	for (int ix = 0; ix < num_adtypes; ++ix) {
+		const AdTypes whichAds = (AdTypes) query_entry->adt[ix].whichAds;
+
+		op.__filter__ = query_entry->adt[ix].constraint;
+		op.__skip_absent__ = query_entry->adt[ix].skip_absent;
+		op.__mytype__ = (query_entry->adt[ix].match_mytype) ? query_entry->adt[ix].tag : nullptr;
+		op.__resultLimit__ = MIN(query_entry->limit, query_entry->adt[ix].limit) - op.__numAds__;
+		op.__results__ = &results;
+		results.clear();
+
+		CollectorHashTable * table = nullptr;
+		if (whichAds == GENERIC_AD) {
+			table = collector.getGenericHashTable(query_entry->adt[ix].tag);
+		} else if (whichAds != ANY_AD) {
+			table = collector.getHashTable(whichAds);
+		}
+		if (table) {
+			collector.walkHashTable (*table,
+				[&op](CollectorRecord*cr){
+					return op.query_scanFunc(cr);
+				});
+		} else if (ix==0 && whichAds == ANY_AD) {
+			std::vector<CollectorHashTable *> tables = collector.getAnyHashTables(op.__mytype__);
+			for (auto table : tables) {
+				collector.walkHashTable (*table,
+					[&op](CollectorRecord*cr){
+						return op.query_scanFunc(cr);
+					});
+				if (op.__numAds__ >= op.__resultLimit__)
+					break;
 			}
+			num_adtypes = 1; // don't allow Any as part of a multi-table scan.
+		} else {
+			dprintf (D_ALWAYS, "Error no collector table for %s\n", query_entry->adt[ix].tag);
+			continue;
 		}
 
-		if (evaluate_projection) {
-			proj.clear();
-			projection.clear();
-			if (EvalString(ATTR_PROJECTION, cad, curr_rec->m_publicAd, projection) && ! projection.empty()) {
+		query_time += runtime.tick(tick_time);
+
+		if (results.empty())
+			continue;
+
+		// do first time initialization for sending ads
+		if ( ! sending) {
+			// send the results via cedar
+			sock->timeout(QueryTimeout); // set up a network timeout of a longer duration
+			sock->encode();
+			sending = true;
+		}
+		if (whichAds == STARTD_PVT_AD) { filter_private_attrs = false; }
+
+		bool evaluate_projection = proj_is_expr;
+		classad::References * whitelist = proj.empty() ? nullptr : &proj;
+		if (query_entry->is_multi) {
+			std::string tagattr(query_entry->adt[ix].tag); tagattr += ATTR_PROJECTION;
+			if (query->LookupString(tagattr, projection)) {
+				tagproj.clear();
 				StringTokenIterator list(projection);
 				const std::string * attr;
-				while ((attr = list.next_string())) { proj.insert(*attr); }
+				while ((attr = list.next_string())) { tagproj.insert(*attr); }
+				whitelist = tagproj.empty() ? nullptr : &tagproj;
+				evaluate_projection = false;
 			}
 		}
 
-		bool send_failed = (!sock->code(more) || !putClassAd(sock, *ad_to_send, 0, proj.empty() ? NULL : &proj));
-        
-		if (stats_ad) {
-			stats_ad->Unchain();
-			delete stats_ad;
-		}
+		for (CollectorRecord* curr_rec : results)
+		{
+			ClassAd* ad_to_send = filter_private_attrs ? curr_rec->m_publicAd : curr_rec->m_pvtAd;
+			// if querying collector ads, and the collectors own ad appears in this list.
+			// then we want to shove in current statistics. we do this by chaining a
+			// temporary stats ad into the ad to be returned, and publishing updated
+			// statistics into the stats ad.  we do this because if the verbosity level
+			// is increased we do NOT want to put the high-verbosity attributes into
+			// our persistent collector ad.
+			ClassAd * stats_ad = NULL;
+			if ((whichAds == COLLECTOR_AD) && collector.isSelfAd(curr_rec)) {
+				dprintf(D_ALWAYS,"Query includes collector's self ad\n");
+				// update stats in the collector ad before we return it.
+				std::string stats_config;
+				query->LookupString("STATISTICS_TO_PUBLISH",stats_config);
+				if (stats_config != "stored") {
+					dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.c_str());
+					stats_ad = new ClassAd();
+					if (!filter_private_attrs) {
+						stats_ad->CopyFrom(*curr_rec->m_pvtAd);
+					}
+					daemonCore->dc_stats.Publish(*stats_ad, stats_config.c_str());
+					daemonCore->monitor_data.ExportData(stats_ad, true);
+					collectorStats.publishGlobal(stats_ad, stats_config.c_str());
+					stats_ad->ChainToAd(curr_rec->m_publicAd);
+					ad_to_send = stats_ad; // send the stats ad instead of the self ad.
+				}
+			}
 
-		if (send_failed)
-        {
-            dprintf (D_ALWAYS,
-                    "Error sending query result to client -- aborting\n");
-            return_status = 0;
-			goto END;
-        }
+			if (evaluate_projection) {
+				proj.clear();
+				projection.clear();
+				if (EvalString(ATTR_PROJECTION, query, curr_rec->m_publicAd, projection) && ! projection.empty()) {
+					StringTokenIterator list(projection);
+					const std::string * attr;
+					while ((attr = list.next_string())) { proj.insert(*attr); }
+				}
+			}
 
-		if (sock->deadline_expired()) {
-			dprintf( D_ALWAYS,
-				"QueryWorker: max_worktime expired while sending query result to client -- aborting\n");
-			return_status = 0;
-			goto END;
-		}
+			bool send_failed = (!sock->code(more) || !putClassAd(sock, *ad_to_send, 0, whitelist));
 
-	} // end of while loop for next result ad to send
+			if (stats_ad) {
+				stats_ad->Unchain();
+				delete stats_ad;
+			}
+
+			if (send_failed)
+			{
+				dprintf (D_ALWAYS,
+						"Error sending query result to client -- aborting\n");
+				return_status = 0;
+				goto END;
+			}
+
+			if (sock->deadline_expired()) {
+				dprintf( D_ALWAYS,
+					"QueryWorker: max_worktime expired while sending query result to client -- aborting\n");
+				return_status = 0;
+				goto END;
+			}
+
+		} // end of for : results
+
+		send_time += runtime.tick(tick_time);
+		results.clear();
+	}
+
+	if ( ! sending) {
+		sock->encode();
+		sending = true;
+	}
 
 	// end of query response ...
 	more = 0;
@@ -986,18 +1238,18 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		dprintf (D_ALWAYS, "Error flushing CEDAR socket\n");
 	}
 
-	end_write = condor_gettimestamp_double();
+	send_time += runtime.tick(tick_time);
 
 	dprintf (D_ALWAYS,
 			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}; filter_private_attrs=%d\n",
-			 __numAds__,
-			 __failed__,
-			 end_query - begin,
-			 end_write - end_query,
-			 AdTypeToString(whichAds),
-			 ExprTreeToString(__filter__),
+			 op.__numAds__,
+			 op.__failed__ + op.__absent__,
+			 query_time,
+			 send_time,
+			 query_entry->label ? query_entry->label : "?",
+			 op.__filter__ ? ExprTreeToString(op.__filter__) : "",
 			 is_locate,
-			 (__resultLimit__ == INT_MAX) ? 0 : __resultLimit__,
+			 (op.__resultLimit__ == INT_MAX) ? 0 : op.__resultLimit__,
 			 query_entry->subsys,
 			 sock->peer_description(),
 			 projection.c_str(),
@@ -1070,6 +1322,16 @@ CollectorDaemon::receive_query_public( int command )
 	  case QUERY_NEGOTIATOR_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_NEGOTIATOR_ADS\n");
 		whichAds = NEGOTIATOR_AD;
+		break;
+
+	  case QUERY_MULTIPLE_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_MULTIPLE_ADS\n");
+		whichAds = BOGUS_AD;
+		break;
+
+	  case QUERY_MULTIPLE_PVT_ADS:
+		dprintf (D_ALWAYS,"Got QUERY_MULTIPLE_PVT_ADS\n");
+		whichAds = BOGUS_AD;
 		break;
 
 	  case QUERY_HAD_ADS:
@@ -1200,13 +1462,14 @@ int CollectorDaemon::receive_invalidation(int command,
 		whichAds = (AdTypes) -1;
     }
 
+	collect_op op;
     if (whichAds != (AdTypes) -1)
-		process_invalidation (whichAds, cad, sock);
+		op.process_invalidation (whichAds, cad, sock);
 
 	// if the invalidation was for the STARTD ads, also invalidate startd
 	// private ads with the same query ad
 	if (command == INVALIDATE_STARTD_ADS)
-		process_invalidation (STARTD_PVT_AD, cad, sock);
+		op.process_invalidation (STARTD_PVT_AD, cad, sock);
 
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
@@ -1489,40 +1752,43 @@ CollectorDaemon::stashSocket( ReliSock* sock )
 	return KEEP_STREAM;
 }
 
-int CollectorDaemon::query_scanFunc (CollectorRecord *record)
+int CollectorDaemon::collect_op::query_scanFunc (CollectorRecord *record)
 {
 	ClassAd* cad = record->m_publicAd;
 
-	if ( !__adType__.empty() ) {
-		std::string type = "";
-		cad->LookupString( ATTR_MY_TYPE, type );
-		if ( strcasecmp( type.c_str(), __adType__.c_str() ) != 0 ) {
-			return 1;
-		}
+	if (__mytype__ && MATCH != strcasecmp(__mytype__, GetMyTypeName(*cad))) {
+		return 1;
 	}
 
 	int rc = 1;
 	classad::Value result;
 	bool val;
-	if ( EvalExprToBool( __filter__, cad, NULL, result ) &&
-		 result.IsBooleanValueEquiv(val) && val ) {
-		// Found a match 
-        __numAds__++;
-		__ClassAdResultList__->Append(record);
-		if (__numAds__ >= __resultLimit__) {
-			rc = 0; // tell it to stop iterating, we have all the results we want
+	if ( ! __filter__ ||
+		(EvalExprToBool( __filter__, cad, NULL, result ) &&
+		 result.IsBooleanValueEquiv(val) && val)) {
+		bool absent = false;
+		if (__skip_absent__ && cad->LookupBool(ATTR_ABSENT, absent) && absent) {
+			__absent__++;
+		} else {
+			// Found a match
+			__numAds__++;
+			__results__->push_back(record);
+			if (__numAds__ >= __resultLimit__) {
+				rc = 0; // tell it to stop iterating, we have all the results we want
+			}
 		}
-    } else {
+	} else {
 		__failed__++;
 	}
 
     return rc;
 }
 
+#if 0
 
 void CollectorDaemon::process_query_public (AdTypes whichAds,
-											ClassAd *query,
-											List<CollectorRecord>* results)
+	ClassAd *query,
+	List<CollectorRecord>* results)
 {
 	// set up for hashtable scan
 	__query__ = query;
@@ -1581,6 +1847,7 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 
 	dprintf (D_ALWAYS, "(Sending %d ads in response to query)\n", __numAds__);
 }
+#endif
 
 //
 // Setting ATTR_LAST_HEARD_FROM to 0 causes the housekeeper to invalidate
@@ -1589,22 +1856,22 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 // invalidated ads allows the offline plugin to decide if they should go
 // absent, instead.
 //
-int CollectorDaemon::expiration_scanFunc (CollectorRecord *record)
+int CollectorDaemon::collect_op::expiration_scanFunc (CollectorRecord *record)
 {
     return setAttrLastHeardFrom( record->m_publicAd, 1 );
 }
 
-int CollectorDaemon::invalidation_scanFunc (CollectorRecord *record)
+int CollectorDaemon::collect_op::invalidation_scanFunc (CollectorRecord *record)
 {
     return setAttrLastHeardFrom( record->m_publicAd, 0 );
 }
 
-int CollectorDaemon::setAttrLastHeardFrom (ClassAd* cad, unsigned long time)
+int CollectorDaemon::collect_op::setAttrLastHeardFrom (ClassAd* cad, unsigned long time)
 {
-	if ( !__adType__.empty() ) {
+	if (__mytype__) {
 		std::string type = "";
 		cad->LookupString( ATTR_MY_TYPE, type );
-		if ( strcasecmp( type.c_str(), __adType__.c_str() ) != 0 ) {
+		if (MATCH != strcasecmp( type.c_str(), __mytype__)) {
 			return 1;
 		}
 	}
@@ -1621,7 +1888,7 @@ int CollectorDaemon::setAttrLastHeardFrom (ClassAd* cad, unsigned long time)
     return 1;
 }
 
-void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
+void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
 {
 	if (param_boolean("IGNORE_INVALIDATE", false)) {
 		dprintf(D_ALWAYS, "Ignoring invalidate (IGNORE_INVALIDATE=TRUE)\n");
@@ -1632,52 +1899,71 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	sock->timeout(QueryTimeout);
 
 	bool query_contains_hash_key = false;
+	CollectorEngine::HashFunc makeKey = nullptr;
+	CollectorHashTable * hTable = nullptr;
+	bool expireInvalidatedAds = param_boolean( "EXPIRE_INVALIDATED_ADS", false );
 
-    bool expireInvalidatedAds = param_boolean( "EXPIRE_INVALIDATED_ADS", false );
-    if( expireInvalidatedAds ) {
-        __numAds__ = collector.expire( whichAds, query, &query_contains_hash_key );
-    } else {        
-	__numAds__ = collector.remove( whichAds, query, &query_contains_hash_key );
-    }
+	// For commands that specify the ad table type indirectly via the command int
+	// it is not necessary to specify the target type of the ad(s) to be invalidated.
+	// But when the command doesn't indicate a specific table, use the targettype
+	// to figure out the table.
+	std::string target_type;
+	if (whichAds == GENERIC_AD || whichAds == ANY_AD || whichAds == BOGUS_AD) {
+		if (query.LookupString(ATTR_TARGET_TYPE, target_type)) {
+			__mytype__ = target_type.c_str(); // in case we want to constrain an invalidate
+			hTable = collector.getGenericHashTable(target_type);
+			if (hTable) { makeKey = makeGenericAdHashKey; }
+			else if (whichAds != GENERIC_AD) {
+				// maybe a standard table after all?
+				AdTypes adtype = AdTypeStringToWhichAds(__mytype__);
+				if (adtype != NO_AD) {
+					collector.LookupByAdType(adtype, hTable, makeKey);
+				}
+			}
+		} else {
+			dprintf(D_ALWAYS, "Invalidate %s failed - no target MyType specified\n", AdTypeToString(whichAds));
+			return;
+		}
+	} else {
+		collector.LookupByAdType(whichAds, hTable, makeKey);
+		if ( ! hTable) { target_type = AdTypeToString(whichAds); } // for the error message
+	}
+	if ( ! hTable) {
+		dprintf(D_ALWAYS, "Invalidate failed - %s has no table\n", target_type.c_str());
+		return;
+	}
 
-    if ( !query_contains_hash_key )
-	{
+	AdNameHashKey hKey;
+	if (makeKey(hKey, &query)) {
+
+		if( expireInvalidatedAds ) {
+			__numAds__ = collector.expire(hTable, hKey);
+		} else {
+			__numAds__ = collector.remove(hTable, hKey, whichAds);
+		}
+
+	} else {
 		dprintf ( D_ALWAYS, "Walking tables to invalidate... O(n)\n" );
 
 		// set up for hashtable scan
 		__query__ = &query;
+		__mytype__ = nullptr;
 		__filter__ = query.LookupExpr( ATTR_REQUIREMENTS );
-		// An empty adType means don't check the MyType of the ads.
-		// This means either the command indicates we're only checking
-		// one type of ad, or the query's TargetType is "Any" (match
-		// all ad types).
-		__adType__ = "";
-		if ( whichAds == GENERIC_AD || whichAds == ANY_AD ) {
-			query.LookupString( ATTR_TARGET_TYPE, __adType__ );
-			if ( strcasecmp( __adType__.c_str(), "any" ) == 0 ) {
-				__adType__ = "";
-			}
-		}
-
-		if ( __filter__ == NULL ) {
+		if ( ! __filter__) {
 			dprintf (D_ALWAYS, "Invalidation missing %s\n", ATTR_REQUIREMENTS );
 			return;
 		}
 
-        if (expireInvalidatedAds)
-        {
-            collector.walkHashTable (whichAds, expiration_scanFunc);
-            collector.invokeHousekeeper (whichAds);
-        } else if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true)) 
-		{
+		if (expireInvalidatedAds) {
+			collector.walkHashTable (*hTable, [this](CollectorRecord*cr){return this->expiration_scanFunc(cr);});
+			collector.invokeHousekeeper (whichAds);
+		} else if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true))  {
 			// first set all the "LastHeardFrom" attributes to low values ...
-			collector.walkHashTable (whichAds, invalidation_scanFunc);
-
+			collector.walkHashTable (*hTable, [this](CollectorRecord*cr){return this->invalidation_scanFunc(cr);});
 			// ... then invoke the housekeeper
 			collector.invokeHousekeeper (whichAds);
-		} else 
-		{
-			__numAds__ = collector.invalidateAds(whichAds, query);
+		} else {
+			__numAds__ = collector.invalidateAds(hTable, __mytype__, query);
 		}
 	}
 
@@ -1692,6 +1978,8 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 }	
 
 
+#if 1
+#else
 
 int CollectorDaemon::reportStartdScanFunc( CollectorRecord *record )
 {
@@ -1746,6 +2034,8 @@ int CollectorDaemon::reportMiniStartdScanFunc( CollectorRecord *record )
 
     return iRet;
 }
+
+#endif
 
 void CollectorDaemon::Config()
 {
@@ -2049,40 +2339,89 @@ void CollectorDaemon::Shutdown()
 
 void CollectorDaemon::sendCollectorAd(int /* tid */)
 {
-    // compute submitted jobs information
-    submittorRunningJobs = 0;
-    submittorIdleJobs = 0;
-    submittorNumAds = 0;
-    if( !collector.walkHashTable( SUBMITTOR_AD, reportSubmittorScanFunc ) ) {
+
+    struct {
+        // compute submitted jobs information
+        int submittorRunningJobs = 0;
+        int submittorIdleJobs = 0;
+        int submittorNumAds = 0;
+        // compute machine information
+        int machinesTotal = 0;
+        int machinesUnclaimed = 0;
+        int machinesClaimed = 0;
+        int machinesOwner = 0;
+        int startdNumAds = 0;
+        CollectorUniverseStats ustatsAccum;
+        char buf[16];
+    } tstat;
+
+    if( !collector.walkHashTable(*collector.getHashTable(SUBMITTOR_AD),
+        [&tstat](CollectorRecord*record){
+			tstat.submittorNumAds += 1;
+
+			int tmp1, tmp2;
+			if( !record->m_publicAd->LookupInteger( ATTR_RUNNING_JOBS , tmp1 ) ||
+				!record->m_publicAd->LookupInteger( ATTR_IDLE_JOBS, tmp2 ) )
+				return 0;
+
+			tstat.submittorRunningJobs += tmp1;
+			tstat.submittorIdleJobs	 += tmp2;
+
+			return 1;
+        })) {
          dprintf( D_ALWAYS, "Error making collector ad (submittor scan)\n" );
     }
-    collectorStats.global.SubmitterAds = submittorNumAds;
+    collectorStats.global.SubmitterAds = tstat.submittorNumAds;
 
-    // compute machine information
-    machinesTotal = 0;
-    machinesUnclaimed = 0;
-    machinesClaimed = 0;
-    machinesOwner = 0;
-    startdNumAds = 0;
-	ustatsAccum.Reset( );
-    if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
+	tstat.ustatsAccum.Reset( );
+    if (!collector.walkHashTable (*collector.getHashTable(STARTD_AD),
+        [&tstat](CollectorRecord*record){
+			tstat.startdNumAds += 1;
+
+			if ( record->m_publicAd->LookupString( ATTR_STATE, tstat.buf, sizeof(tstat.buf) ) )
+			{
+				tstat.machinesTotal++;
+				switch ( tstat.buf[0] )
+				{
+				case 'C':
+					tstat.machinesClaimed++;
+					break;
+				case 'U':
+					tstat.machinesUnclaimed++;
+					break;
+				case 'O':
+					tstat.machinesOwner++;
+					break;
+				}
+
+				// Count the number of jobs in each universe
+				int universe;
+				if ( record->m_publicAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) )
+				{
+					tstat.ustatsAccum.accumulate( universe );
+				}
+				return 1;
+			}
+
+			return 0;
+        })) {
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
-    collectorStats.global.MachineAds = startdNumAds;
+    collectorStats.global.MachineAds = tstat.startdNumAds;
 
     // insert values into the ad
-    ad->InsertAttr(ATTR_RUNNING_JOBS,submittorRunningJobs);
-    ad->InsertAttr(ATTR_IDLE_JOBS,submittorIdleJobs);
-    ad->InsertAttr(ATTR_NUM_HOSTS_TOTAL,machinesTotal);
-    ad->InsertAttr(ATTR_NUM_HOSTS_CLAIMED,machinesClaimed);
-    ad->InsertAttr(ATTR_NUM_HOSTS_UNCLAIMED,machinesUnclaimed);
-    ad->InsertAttr(ATTR_NUM_HOSTS_OWNER,machinesOwner);
+    ad->InsertAttr(ATTR_RUNNING_JOBS,       tstat.submittorRunningJobs);
+    ad->InsertAttr(ATTR_IDLE_JOBS,          tstat.submittorIdleJobs);
+    ad->InsertAttr(ATTR_NUM_HOSTS_TOTAL,    tstat.machinesTotal);
+    ad->InsertAttr(ATTR_NUM_HOSTS_CLAIMED,  tstat.machinesClaimed);
+    ad->InsertAttr(ATTR_NUM_HOSTS_UNCLAIMED,tstat.machinesUnclaimed);
+    ad->InsertAttr(ATTR_NUM_HOSTS_OWNER,    tstat.machinesOwner);
 
 	// Accumulate for the monthly
-	ustatsMonthly.setMax( ustatsAccum );
+	ustatsMonthly.setMax( tstat.ustatsAccum );
 
 	// If we've got any universe reports, find the maxes
-	ustatsAccum.publish( ATTR_CURRENT_JOBS_RUNNING, ad );
+	tstat.ustatsAccum.publish( ATTR_CURRENT_JOBS_RUNNING, ad );
 	ustatsMonthly.publish( ATTR_MAX_JOBS_RUNNING, ad );
 
 	// Collector engine stats, too

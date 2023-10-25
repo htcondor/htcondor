@@ -2949,11 +2949,34 @@ obtainAdsFromCollector (
 
     cp_resources = false;
 
+    // build a query for Scheduler, Submitter and (constrained) machine ads
+    //
+#if 1
+	CondorQuery publicQuery(QUERY_MULTIPLE_PVT_ADS);
+	publicQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+
+	if (!m_SubmitterConstraintStr.empty()) {
+		publicQuery.addORConstraint(m_SubmitterConstraintStr.c_str());
+	}
+	publicQuery.convertToMulti(SUBMITTER_ADTYPE, true, false, false);
+
+	if (strSlotConstraint && strSlotConstraint[0]) {
+		publicQuery.addORConstraint(strSlotConstraint);
+	}
+	if (!ConsiderPreemption) {
+		const char *projectionString =
+			"ifThenElse((State == \"Claimed\"&&PartitionableSlot=!=true),\"Name MyType State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements SlotWeight ConcurrencyLimits\",\"\") ";
+		publicQuery.setDesiredAttrsExpr(projectionString);
+		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
+	}
+	publicQuery.convertToMulti(STARTD_SLOT_ADTYPE, true, true, false);
+	// TODO: add this to the query and get rid of separate query for private ads?
+	// publicQuery.convertToMulti(STARTD_PVT_ADTYPE, true, true, false);
+
+#else
 	static const char * submitter_ad_constraint = "MyType == \"" SUBMITTER_ADTYPE "\"";
 	static const char * slot_ad_constraint = "MyType == \"" STARTD_SLOT_ADTYPE "\" || MyType == \"" STARTD_OLD_ADTYPE "\"";
 
-    // build a query for Scheduler, Submitter and (constrained) machine ads
-    //
 	CondorQuery publicQuery(ANY_AD);
 	std::string constraint;
 	if (!m_SubmitterConstraintStr.empty()) {
@@ -2982,6 +3005,7 @@ obtainAdsFromCollector (
 
 		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
 	}
+#endif
 
 	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
 	ClassAdList startdPvtAdList;

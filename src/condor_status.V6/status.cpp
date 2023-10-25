@@ -205,6 +205,9 @@ const char* diagnostics_ads_file = NULL; // filename to write diagnostics query 
 char*		direct = NULL;
 char*       statistics = NULL;
 const char*	genericType = NULL;
+const char* multiTag = nullptr;
+bool        multipleAdsTest = false;
+const char* multipleAdsTestOpts = nullptr;
 CondorQuery *query;
 char		buffer[1024];
 char		*myName;
@@ -1181,7 +1184,12 @@ main (int argc, char *argv[])
 	ASSERT(sdo_mode != SDO_NotSet);
 
 	// instantiate query object
-	if (!(query = new CondorQuery (adType))) {
+	if (multiTag) {
+		query = new CondorQuery (QUERY_MULTIPLE_ADS);
+	} else {
+		query = new CondorQuery (adType);
+	}
+	if ( ! query) {
 		dprintf_WriteOnErrorBuffer(stderr, true);
 		fprintf (stderr, "Error:  Out of memory\n");
 		exit (1);
@@ -1486,8 +1494,14 @@ main (int argc, char *argv[])
 		mainPP.pm.dump(style_text, &GlobalFnTable, pheadings);
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
 
+		if (multiTag) {
+			if ( ! projList.empty()) { query->setDesiredAttrs(projList); }
+			query->convertToMulti(multiTag, true, true, true);
+		}
+
 		ClassAd queryAd;
 		q = query->getQueryAd (queryAd);
+		fprintf(fout, "%s\n", getCommandStringSafe(query->getCommand()));
 		fPrintAd (fout, queryAd);
 
 		// print projection
@@ -2818,6 +2832,24 @@ firstPass (int argc, char *argv[])
 				mainPP.setMode (SDO_Other, i, argv[i]);
 			}
 		} else
+		if (is_dash_arg_colon_prefix (argv[i], "multiple", &pcolon, 4)) {
+			i++;
+			if( !argv[i] || *argv[i] == '-') {
+				fprintf( stderr, "%s: -multiple requires another argument\n", myName );
+				exit( 1 );
+			}
+			multiTag = argv[i];
+			if (pcolon) {
+				StringList opts(++pcolon);
+				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+					if (YourString(opt) == "test") {
+						// Note: -attributes quietly disables -long:nosort unless output is long form
+						multipleAdsTest = true;
+						multipleAdsTestOpts = pcolon;
+					}
+				}
+			}
+		} else
 		if (is_dash_arg_prefix (argv[i], "license", 2)) {
 			mainPP.setMode (SDO_License, i, argv[i]);
 		} else
@@ -2919,6 +2951,10 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if( is_dash_arg_prefix(argv[i],"subsystem", 4) ) {
+			i++;
+			continue;
+		}
+		if( is_dash_arg_prefix(argv[i],"multiple", 4) ) {
 			i++;
 			continue;
 		}

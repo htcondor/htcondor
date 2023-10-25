@@ -33,12 +33,6 @@
 // because the caller will normally delete the ad, but in fact has no more use for it.
 typedef bool (*condor_q_process_func)(void*, ClassAd *ad);
 
-/* a list of all types of direct DB query defined here */
-enum CondorQQueryType
-{
-	AVG_TIME_IN_QUEUE
-};
-
 enum
 {
 	Q_NO_SCHEDD_IP_ADDR = 20,
@@ -49,6 +43,16 @@ enum
 	Q_UNSUPPORTED_OPTION_ERROR
 };
 
+enum CondorQStrCategories
+{
+	CQ_OWNER,
+	CQ_SUBMITTER,
+
+	CQ_STR_THRESHOLD
+};
+
+
+#if 0
 enum CondorQIntCategories
 {
 	CQ_CLUSTER_ID,
@@ -59,19 +63,19 @@ enum CondorQIntCategories
 	CQ_INT_THRESHOLD
 };
 
-enum CondorQStrCategories
+/* a list of all types of direct DB query defined here */
+enum CondorQQueryType
 {
-	CQ_OWNER,
-	CQ_SUBMITTER,
-
-	CQ_STR_THRESHOLD
+	AVG_TIME_IN_QUEUE
 };
+
 
 enum CondorQFltCategories
 {
 	CQ_FLT_THRESHOLD
 };
 
+#endif
 
 class CondorQ
 {
@@ -85,12 +89,14 @@ class CondorQ
 	bool init();  
 
 	// add constraints
-	int add (CondorQIntCategories, int);
 	int add (CondorQStrCategories, const char *);
+#if 0
+	int add (CondorQIntCategories, int);
+	int addDBConstraint (CondorQIntCategories, int);
 	int add (CondorQFltCategories, float);
+#endif
 	int addAND (const char *);  // custom
 	int addOR (const char *);  // custom
-	int addDBConstraint (CondorQIntCategories, int);
 
 	int addSchedd (const char *);  // what schedd are we querying?
 	int addScheddBirthdate (time_t value);  // what 
@@ -121,8 +127,10 @@ class CondorQ
 	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, const char * = 0, CondorError* errstack = 0);
 	int fetchQueueFromDBAndProcess ( const char *, char *&lastUpdate, condor_q_process_func process_func, void * process_func_data, CondorError* errstack = 0);
 
+#if 0
 		// return the results from a DB query directly to user
 	void rawDBQuery(const char *, CondorQQueryType);
+#endif
 	// return the effective query constraint directly to the user.
 	// the caller is responsible for deleting the returned ExprTree.
 	int  rawQuery(ExprTree * &tree) { return query.makeQuery(tree); }

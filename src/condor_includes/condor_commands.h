@@ -712,7 +712,7 @@ static_assert(makeCommandTable().back().first == COMMAND_LAST, "Is the size of t
 *** Command ids used by the collector 
 ************/
 constexpr const
-std::array<std::pair<int, const char *>, 61> makeCollectorCommandTable() {
+std::array<std::pair<int, const char *>, 63> makeCollectorCommandTable() {
 	return {{ 
 #define UPDATE_STARTD_AD		0
 		{UPDATE_STARTD_AD, "UPDATE_STARTD_AD"},
@@ -807,6 +807,11 @@ std::array<std::pair<int, const char *>, 61> makeCollectorCommandTable() {
 		{QUERY_NEGOTIATOR_ADS, "QUERY_NEGOTIATOR_ADS"},
 #define INVALIDATE_NEGOTIATOR_ADS 51
 		{INVALIDATE_NEGOTIATOR_ADS, "INVALIDATE_NEGOTIATOR_ADS"},
+
+#define QUERY_MULTIPLE_ADS		53
+		{QUERY_MULTIPLE_ADS, "QUERY_MULTIPLE_ADS"},
+#define QUERY_MULTIPLE_PVT_ADS	54
+		{QUERY_MULTIPLE_PVT_ADS, "QUERY_MULTIPLE_PVT_ADS"},
 
 #define UPDATE_HAD_AD 55
 		{UPDATE_HAD_AD, "UPDATE_HAD_AD"},
