@@ -36,6 +36,10 @@ Bugs Fixed:
   when reading logs with parallel universe jobs in it.
   :jira:`2099`
 
+- Fixed a bug that could result in job sandboxes not being cleaned up 
+  for **batch** grid jobs submitted to a remote cluster. 
+  :jira:`2073`
+
 - Fixed a bug in *condor_transfer_data* where using the ``-addr``
   flag would automatically apply the ``-all`` flag to transfer
   all job data back making the use of ``-addr`` with a Job ID
