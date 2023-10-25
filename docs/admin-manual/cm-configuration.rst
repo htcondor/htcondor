@@ -14,6 +14,11 @@ HTCondor uses priorities to determine machine allocation for jobs. This
 section details the priorities and the allocation of machines
 (negotiation).
 
+.. note::
+    A video describing how user priorities, negotiation and
+    fair share work in HTCondor is available at 
+    https://www.youtube.com/watch?v=NNnrCjFV0tM
+
 For accounting purposes, each user is identified by
 username@uid_domain. Each user is assigned a priority value even if
 submitting jobs from different machines in the same domain, or even if

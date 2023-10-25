@@ -8,12 +8,6 @@ DAGMan Introduction
 :index:`Directed Acyclic Graph Manager (DAGMan)`
 :index:`dependencies within<single: dependencies within; job>`
 
-DAGMan is a HTCondor tool that allows multiple jobs to be organized in
-**workflows**, represented as a directed acyclic graph (DAG). A DAGMan workflow
-automatically submits jobs in a particular order, such that certain jobs need
-to complete before others start running. This allows the outputs of some jobs
-to be used as inputs for others, and makes it easy to replicate a workflow
-multiple times in the future.
 
 :index:`DAG input file<single: DAGMan; DAG input file>`
 
