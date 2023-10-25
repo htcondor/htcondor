@@ -357,12 +357,12 @@ Here is a sample submit description file for an MPICH MPI application:
 
     queue
 
-The **executable** :index:`executable<single: executable; submit commands>` is the
+The :subcom:`executable` is the
 ``mp1script`` script that will have been modified for this MPI
 application. This script is invoked on each slot or core. The script, in
 turn, is expected to invoke the MPI application's executable. To know
 the MPI application's executable, it is the first in the list of
-**arguments** :index:`arguments<single: arguments; submit commands>`. And, since
+:subcom:`arguments`. And, since
 HTCondor must transfer this executable to the machine where it will run,
 it is listed with the
 :subcom:`transfer_input_files` :index:`transfer_input_files<single: transfer_input_files; with parallel universe>`

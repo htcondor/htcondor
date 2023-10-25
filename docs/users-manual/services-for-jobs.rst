@@ -106,7 +106,7 @@ executing job that may be useful.
 -  ``X509_USER_PROXY``
    gives the full path to the X.509 user proxy file if one is associated
    with the job. Typically, a user will specify
-   **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` in
+   :subcom:`x509userproxy` :index:`x509userproxy<single: x509userproxy; environment variable>` in
    the submit description file.
 
 

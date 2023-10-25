@@ -480,7 +480,6 @@ Examine the job history file with the *condor_history* command. If
 there is a log file specified in the submit description file for the
 job, then the job exit status will be recorded there as well, along with
 other information described below.
-:index:`notification<single: notification; submit commands>`
 
 By default, HTCondor does not send an email message when the job
 completes. Modify this behavior with the

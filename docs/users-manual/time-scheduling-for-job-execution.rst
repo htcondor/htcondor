@@ -62,8 +62,7 @@ Deferral Window
 '''''''''''''''
 
 :index:`DeferralWindow<single: DeferralWindow; ClassAd job attribute>`
-:index:`deferral_window<single: deferral_window; submit commands>`
-
+:index:`deferral_window<single: deferral_window; definition>`.
 If a job arrives at its execution machine after the deferral time has
 passed, the job is evicted from the machine and put on hold in the job
 queue. This may occur, for example, because the transfer of needed files
@@ -102,7 +101,7 @@ with a machine.
 Deferral Usage Examples
 '''''''''''''''''''''''
 
-:index:`deferral_time<single: deferral_time; submit commands>`
+:index:`deferral_time<single: deferral_time; example>`
 
 Here are examples of how the job deferral time, deferral window, and the
 preparation time may be used.

@@ -101,7 +101,7 @@ are
 -  :subcom:`vm_macaddr` :index:`vm_macaddr<single: vm_macaddr; definition>`
 -  :subcom:`vm_networking` :index:`vm_networking<single: vm_networking; defintion>`
 -  :subcom:`vm_networking_type` :index:`vm_networking_type<single: vm_networking_type; definition>`
--  :subcom:`vm_disk` :index:`vm_disk<single: vm_disk; submit commands>`
+-  :subcom:`vm_disk` :index:`vm_disk<single: vm_disk; definition>`
 
 HTCondor uses these values when it
 produces the description file.

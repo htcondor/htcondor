@@ -460,7 +460,7 @@ is incorporated into the submit description file.
 Using Conditionals in the Submit Description File
 -------------------------------------------------
 
-:index:`IF/ELSE syntax<single: IF/ELSE syntax; submit commands>`
+:index:`IF/ELSE syntax<single: IF/ELSE syntax; example>`
 :index:`IF/ELSE submit commands syntax`
 
 Conditional if/else semantics are available in a limited form. The
@@ -851,7 +851,6 @@ Rank Expression Examples
 
 :index:`examples<single: examples; rank attribute>`
 :index:`rank examples<single: rank examples; ClassAd attribute>`
-:index:`rank<single: rank; submit commands>`
 
 When considering the match between a job and a machine, rank is used to
 choose a match from among all machines that satisfy the job's
@@ -1198,8 +1197,8 @@ Jobs That Require GPUs
 
 :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
 
-:index:`Request_GPUs<single: Request_GPUS; submit commands>`
-:index:`Require_GPUs<single: Require_GPUS; submit commands>`
+:index:`Request_GPUs<single: Request_GPUS; definition>`
+:index:`Require_GPUs<single: Require_GPUS; definition>`
 
 HTCondor has built-in support for detecting machines with GPUs, and
 matching jobs that need GPUs to machines that have them.  If your
