@@ -36,6 +36,16 @@ Bugs Fixed:
   when reading logs with parallel universe jobs in it.
   :jira:`2099`
 
+- Fixed a bug that could result in job sandboxes not being cleaned up 
+  for **batch** grid jobs submitted to a remote cluster. 
+  :jira:`2073`
+
+- Fixed a bug in *condor_transfer_data* where using the ``-addr``
+  flag would automatically apply the ``-all`` flag to transfer
+  all job data back making the use of ``-addr`` with a Job ID
+  constraint fail.
+  :jira:`2105`
+
 - Fixed several small bugs with Trust On First Use (TOFU) for SSL
   authentication.
   Added configuration parameter
@@ -47,6 +57,10 @@ Bugs Fixed:
 - Fixed warnings about use of deprecated HTCondor python binding methods
   in the `htcondor dag submit` command.
   :jira:`2104`
+
+- Improved cleanup of ssh-agent processes when submitting **batch**
+  grid universe jobs to a remote cluster via ssh.
+  :jira:`2118`
 
 .. _lts-version-history-2301:
 
