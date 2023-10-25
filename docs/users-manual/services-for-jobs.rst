@@ -24,14 +24,12 @@ to run, or machine to machine, and create non reproducible, difficult
 to debug problems.  Rather, HTCondor is deliberate about what environment 
 variables a job sees, and allows the user to set them in the job description file.
 
-The user may define environment variables for the job with the **environment**
-command in the submit file. See within the :doc:`/man-pages/condor_submit` 
-manual page for more details about this command.
+The user may define environment variables for the job with the :subcom:`environment`
+submit command.
 
 Instead of defining environment variables individually, the entire set
 of environment variables in the condor_submit's environment 
-can be copied into the job.  The **getenv** :index:`getenv<single: getenv; submit commands>` 
-command does this, as described on the :doc:`/man-pages/condor_submit` manual page.
+can be copied into the job.  The :subcom:`getenv` command does this.
 
 In general, it is preferable to just declare the minimum set of needed
 environment variables with the **environment** command, as that clearly
