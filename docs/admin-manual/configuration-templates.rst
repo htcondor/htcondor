@@ -92,8 +92,7 @@ incorporates.
        with this configuration. Note that there are security
        implications for use of this configuration, as it potentially
        permits the arbitrary modification of configuration. Variable
-       ``SETTABLE_ATTRS_CONFIG`` :index:`SETTABLE_ATTRS_CONFIG`
-       must also be defined.
+       :macro:`SETTABLE_ATTRS_CONFIG` must also be defined.
 
     -  ``Remote_Config``
 
@@ -101,8 +100,7 @@ incorporates.
        with this configuration. Note that there are security
        implications for use of this configuration, as it potentially
        permits the arbitrary modification of configuration. Variable
-       ``SETTABLE_ATTRS_CONFIG`` :index:`SETTABLE_ATTRS_CONFIG`
-       must also be defined.
+       :macro:`SETTABLE_ATTRS_CONFIG` must also be defined.
 
     -  ``GPUs([discovery_args])``
 

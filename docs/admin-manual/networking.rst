@@ -536,8 +536,8 @@ In the central manager's local configuration file:
 Now, if the cluster is set up so that it is possible for a machine name
 to never have a domain name (for example, there is machine name but no
 fully qualified domain name in ``/etc/hosts``), configure
-``DEFAULT_DOMAIN_NAME`` :index:`DEFAULT_DOMAIN_NAME` to be the
-domain that is to be added on to the end of the host name.
+:macro:`DEFAULT_DOMAIN_NAME` to be the domain that is to be added on
+to the end of the host name.
 
 A Client Machine with Multiple Interfaces
 '''''''''''''''''''''''''''''''''''''''''
@@ -736,18 +736,18 @@ forwarding updates to any *condor_collector* daemons specified in
 :macro:`CONDOR_VIEW_HOST`, where UDP is used. These configuration variables
 control the protocol used:
 
-``UPDATE_COLLECTOR_WITH_TCP`` :index:`UPDATE_COLLECTOR_WITH_TCP`
+:macro:`UPDATE_COLLECTOR_WITH_TCP`
     When set to ``False``, the HTCondor daemons will use UDP to update
     the *condor_collector*, instead of the default TCP. Defaults to
     ``True``.
 
-``UPDATE_VIEW_COLLECTOR_WITH_TCP`` :index:`UPDATE_VIEW_COLLECTOR_WITH_TCP`
+:macro:`UPDATE_VIEW_COLLECTOR_WITH_TCP`
     When set to ``True``, the HTCondor collector will use TCP to forward
     updates to *condor_collector* daemons specified by
     ``CONDOR_VIEW_HOST``, instead of the default UDP. Defaults to
     ``False``.
 
-``TCP_UPDATE_COLLECTORS`` :index:`TCP_UPDATE_COLLECTORS`
+:macro:`TCP_UPDATE_COLLECTORS`
     A list of *condor_collector* daemons which will be updated with TCP
     instead of UDP, when ``UPDATE_COLLECTOR_WITH_TCP`` or
     ``UPDATE_VIEW_COLLECTOR_WITH_TCP`` is set to ``False``.
@@ -871,7 +871,7 @@ brackets. For instance:
 IPv6 without DNS
 ''''''''''''''''
 
-When using the configuration variable ``NO_DNS`` :index:`NO_DNS`,
+When using the configuration variable :macro:`NO_DNS`,
 IPv6 addresses are turned into host names by taking the IPv6 address,
 changing colons to dashes, and appending ``$(DEFAULT_DOMAIN_NAME)``. So,
 

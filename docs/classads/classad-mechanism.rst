@@ -138,8 +138,7 @@ In current versions of HTCondor, New ClassAds will mimic the evaluation
 behavior of Old ClassAds. No configuration variables or submit
 description file contents should need to be changed. To eliminate this
 behavior and use only the semantics of New ClassAds, set the
-configuration variable ``STRICT_CLASSAD_EVALUATION``
-:index:`STRICT_CLASSAD_EVALUATION` to ``True``. This permits
+configuration variable :macro:`STRICT_CLASSAD_EVALUATION` to ``True``. This permits
 testing expressions to see if any adjustment is required, before a
 future version of HTCondor potentially makes New ClassAds evaluation
 behavior the default or the only option.
@@ -1671,9 +1670,8 @@ the following steps on Linux:
        $ cp shared.so `condor_config_val LIBEXEC`
 
 -  Tell HTCondor to load the shared library into all tools and daemons,
-   by setting the ``CLASSAD_USER_LIBS`` :index:`CLASSAD_USER_LIBS`
-   configuration variable to the full name of the shared library. In
-   this case,
+   by setting the :macro:`CLASSAD_USER_LIBS` configuration variable to
+   the full name of the shared library. In this case,
 
    .. code-block:: condor-config
 

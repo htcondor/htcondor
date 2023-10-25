@@ -18,32 +18,32 @@ developers (:ref:`cloud-computing/annex-configuration:developer settings`).
 User Settings
 -------------
 
-``ANNEX_DEFAULT_AWS_REGION`` :index:`ANNEX_DEFAULT_AWS_REGION`
+:macro:`ANNEX_DEFAULT_AWS_REGION`
     The default region when using AWS. Defaults to 'us-east-1'.
 
-``ANNEX_DEFAULT_LEASE_DURATION`` :index:`ANNEX_DEFAULT_LEASE_DURATION`
+:macro:`ANNEX_DEFAULT_LEASE_DURATION`
     The duration of an annex if not specified on the command-line;
     specified in seconds. Defaults to 50 minutes.
 
-``ANNEX_DEFAULT_UNCLAIMED_TIMEOUT`` :index:`ANNEX_DEFAULT_UNCLAIMED_TIMEOUT`
+:macro:`ANNEX_DEFAULT_UNCLAIMED_TIMEOUT`
     How long an annex instances should stay idle before shutting down;
     specified in seconds. Defaults to 15 minutes.
 
-``ANNEX_DEFAULT_ODI_KEY_NAME`` :index:`ANNEX_DEFAULT_ODI_KEY_NAME`
+:macro:`ANNEX_DEFAULT_ODI_KEY_NAME`
     The name of the SSH key pair *condor_annex* should use by default.
     No default.
 
-``ANNEX_DEFAULT_ODI_INSTANCE_TYPE`` :index:`ANNEX_DEFAULT_ODI_INSTANCE_TYPE`
+:macro:`ANNEX_DEFAULT_ODI_INSTANCE_TYPE`
     The AWS instance type to use for on-demand instances if not
     specified. No default, but the *condor_annex* setup procedure sets
     this to 'm4.large'.
 
-``ANNEX_DEFAULT_ODI_IMAGE_ID`` :index:`ANNEX_DEFAULT_ODI_IMAGE_ID`
+:macro:`ANNEX_DEFAULT_ODI_IMAGE_ID`
     The AWS AMI to use for on-demand instance if not specified. No
     default, but the *condor_annex* setup procedure sets this to
     'ami-35b13223'.
 
-``ANNEX_DEFAULT_SFR_CONFIG_FILE`` :index:`ANNEX_DEFAULT_SFR_CONFIG_FILE`
+:macro:`ANNEX_DEFAULT_SFR_CONFIG_FILE`
     The JSON configuration file use by *condor_annex* when creating a
     Spot-based annex. No default.
 
@@ -72,8 +72,8 @@ entries` for details.
 
 The annex audit log records two lines for each invocation of
 *condor_annex*: the command as issued and the results as returned. The
-location of the audit log is set by ``ANNEX_AUDIT_LOG``
-:index:`ANNEX_AUDIT_LOG`, which is the ``AUDIT``-level log for the
+location of the audit log is set by
+:macro:`ANNEX_AUDIT_LOG`, which is the ``AUDIT``-level log for the
 ``ANNEX`` subsystem; see ``<SUBSYS>_<LEVEL>_LOG`` (in
 :ref:`admin-manual/configuration-macros:daemon logging configuration file
 entries`) for details. Because annex creation commands typically make extensive
@@ -84,62 +84,62 @@ includes ``D_AUDIT:2``.
 Expert Settings
 ---------------
 
-``ANNEX_DEFAULT_EC2_URL`` :index:`ANNEX_DEFAULT_EC2_URL`
+:macro:`ANNEX_DEFAULT_EC2_URL`
     The AWS EC2 endpoint that *condor_annex* should use. Defaults to
     'https://ec2.us-east-1.amazonaws.com'.
 
-``ANNEX_DEFAULT_CWE_URL`` :index:`ANNEX_DEFAULT_CWE_URL`
+:macro:`ANNEX_DEFAULT_CWE_URL`
     The AWS CloudWatch Events endpoint that *condor_annex* should use.
     Defaults to 'https://events.us-east-1.amazonaws.com'.
 
-``ANNEX_DEFAULT_LAMBDA_URL`` :index:`ANNEX_DEFAULT_LAMBDA_URL`
+:macro:`ANNEX_DEFAULT_LAMBDA_URL`
     The AWS Lambda endpoint that *condor_annex* should use. Defaults to
     'https://lambda.us-east-1.amazonaws.com'.
 
-``ANNEX_DEFAULT_S3_URL`` :index:`ANNEX_DEFAULT_S3_URL`
+:macro:`ANNEX_DEFAULT_S3_URL`
     The AWS S3 endpoint that *condor_annex* should use. Defaults to
     'https://s3.amazonaws.com'.
 
-``ANNEX_DEFAULT_CF_URL`` :index:`ANNEX_DEFAULT_CF_URL`
+:macro:`ANNEX_DEFAULT_CF_URL`
     The AWS CloudFormation endpoint that *condor_annex* should use.
     Defaults to 'https://cloudformation.us-east-1.amazonaws.com'.
 
-``ANNEX_DEFAULT_ACCESS_KEY_FILE`` :index:`ANNEX_DEFAULT_ACCESS_KEY_FILE`
+:macro:`ANNEX_DEFAULT_ACCESS_KEY_FILE`
     The full path to the AWS access key file *condor_annex* should use.
     No default. If "FROM INSTANCE", *condor_annex* will assume it's
     running on an EC2 instance and try to use that instance's
     credentials.
 
-``ANNEX_DEFAULT_SECRET_KEY_FILE`` :index:`ANNEX_DEFAULT_SECRET_KEY_FILE`
+:macro:`ANNEX_DEFAULT_SECRET_KEY_FILE`
     The full path to the AWS secret key file *condor_annex* should use.
     No default. If "FROM INSTANCE", *condor_annex* will assume it's
     running on an EC2 instance and try to use that instance's
     credentials.
 
-``ANNEX_DEFAULT_S3_BUCKET`` :index:`ANNEX_DEFAULT_S3_BUCKET`
+:macro:`ANNEX_DEFAULT_S3_BUCKET`
     A private S3 bucket that the ``ANNEX_DEFAULT_ACCESS_KEY_FILE`` and
     ``ANNEX_DEFAULT_SECRET_KEY_FILE`` may write to. No default.
 
-``ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS`` :index:`ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS`
+:macro:`ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS`
     The default security group for on-demand annexes. Must permit
     inbound HTCondor (port 9618).
 
 Developer Settings
 ------------------
 
-``ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`` :index:`ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`
+:macro:`ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`
     The name (or ARN) of the Lambda function on AWS which
     *condor_annex* should use to check if the configured collector can
     be contacted from AWS.
 
-``ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN`` :index:`ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN`
+:macro:`ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN`
     The ARN of the instance profile *condor_annex* should use. No
     default.
 
-``ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN`` :index:`ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN`
+:macro:`ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN`
     The Lambda function which implements the lease (duration) for
     on-demand instances. No default.
 
-``ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN`` :index:`ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN`
+:macro:`ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN`
     The Lambda function which implements the lease (duration) for Spot
     instances. No default.

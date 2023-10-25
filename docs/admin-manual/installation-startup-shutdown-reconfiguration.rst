@@ -375,5 +375,3 @@ These arguments and what they do are described below:
 
 \-v
     Causes the daemon to print out version information and exit.
-
-:index:`daemoncore`

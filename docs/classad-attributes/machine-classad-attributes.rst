@@ -82,7 +82,7 @@ Machine ClassAd Attributes
 :classad-attribute:`ConsoleIdle`
     The number of seconds since activity on the system console keyboard
     or console mouse has last been detected. The value can be modified
-    with ``SLOTS_CONNECTED_TO_CONSOLE`` :index:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
+    with :macro:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
     :ref:`admin-manual/configuration-macros:condor_startd configuration
     file macros` section.
 
@@ -115,16 +115,15 @@ Machine ClassAd Attributes
     Set by the value of configuration variable ``DETECTED_CORES``
 
 :classad-attribute:`DetectedMemory`
-    Set by the value of configuration variable ``DETECTED_MEMORY``.
-    :index:`DETECTED_MEMORY` Specified in MiB.
+    Set by the value of configuration variable :macro:`DETECTED_MEMORY`
+    Specified in MiB.
 
 :classad-attribute:`Disk`
     The amount of disk space on this machine available for the job in
     KiB (for example, 23000 = 23 MiB). Specifically, this is the amount
     of disk space available in the directory specified in the HTCondor
-    configuration files by the ``EXECUTE`` :index:`EXECUTE` macro,
-    minus any space reserved with the ``RESERVED_DISK`` :index:`RESERVED_DISK`
-    macro. For static slots, this value
+    configuration files by the :macro:`EXECUTE` macro, minus any space
+    reserved with the :macro:`RESERVED_DISK` macro. For static slots, this value
     will be the same as machine ClassAd attribute ``TotalSlotDisk``. For
     partitionable slots, this value will be the quantity of disk space
     remaining in the partitionable slot.
@@ -238,7 +237,7 @@ Machine ClassAd Attributes
 
 :classad-attribute:`HasFileTransferPluginMethods`
     A string of comma-separated file transfer protocols that the machine
-    can support. The value can be modified with ``FILETRANSFER_PLUGINS`` :index:`FILETRANSFER_PLUGINS` 
+    can support. The value can be modified with :macro:`FILETRANSFER_PLUGINS`
     as defined in :ref:`admin-manual/configuration-macros:condor_starter configuration file
     entries`.
 
@@ -438,7 +437,7 @@ Machine ClassAd Attributes
     keyboard activity from telnet and rlogin sessions. Note that
     ``KeyboardIdle`` will always be equal to or less than
     ``ConsoleIdle``. The value can be modified with
-    ``SLOTS_CONNECTED_TO_KEYBOARD`` :index:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
+    :macro:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
     :ref:`admin-manual/configuration-macros:condor_startd configuration file
     macros` section.
 
@@ -1136,9 +1135,8 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     The accounting group name under which this resource negotiated when
     it was claimed. This attribute will frequently be the same as
     attribute ``RemoteGroup``, but it may differ in cases such as when
-    configuration variable ``GROUP_AUTOREGROUP`` :index:`GROUP_AUTOREGROUP` 
-    is ``True``, in which case it will
-    have the name of the root group, identified as ``<none>``.
+    configuration variable :macro:`GROUP_AUTOREGROUP`  is ``True``, in
+    which case it will have the name of the root group, identified as ``<none>``.
 
 :classad-attribute:`RemoteOwner`
     The name of the user who originally claimed this resource.
@@ -1256,10 +1254,9 @@ configured name given to the resource.
 
 For machines with custom resource specifications that include GPUs, the
 following attributes may be in the ClassAd for each slot, depending on
-the value of configuration variable ``MACHINE_RESOURCE_INVENTORY_GPUs``
-:index:`MACHINE_RESOURCE_INVENTORY_GPUs` and what GPUs are
-detected. In the name of the attribute, ``<name>`` is substituted with
-the *prefix string* assigned for the GPU.
+the value of configuration variable  :macro:`MACHINE_RESOURCE_INVENTORY_GPUs`
+and what GPUs are detected. In the name of the attribute, ``<name>`` is
+substituted with the *prefix string* assigned for the GPU.
 
 :classad-attribute:`<name>BoardTempC`
     For NVIDIA devices, a dynamic attribute representing the temperature

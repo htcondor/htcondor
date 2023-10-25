@@ -89,7 +89,7 @@ Defrag ClassAd Attributes
 :classad-attribute:`Name`
     The name of this daemon; typically the same value as the ``Machine``
     attribute, but could be customized by the site administrator via the
-    configuration variable ``DEFRAG_NAME`` :index:`DEFRAG_NAME`.
+    configuration variable :macro:`DEFRAG_NAME`.
 
 :classad-attribute:`RecentCancelsList`
     A ClassAd list of ClassAds describing the last ten cancel commands sent

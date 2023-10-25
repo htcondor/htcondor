@@ -1637,9 +1637,8 @@ the line
 to the config file on the central manager machine, and *condor_restart* the
 HTCondor system on that machine.  If the *condor_gangliad* daemon is to run on
 a different machine than the one running Ganglia's *gmetad*, modify
-configuration variable :macro:`GANGLIA_GSTAT_COMMAND`
-:index:`GANGLIA_GSTAT_COMMAND` to get the list of monitored hosts from the
-master *gmond* program.
+configuration variable :macro:`GANGLIA_GSTAT_COMMAND` to get the list of
+monitored hosts from the master *gmond* program.
 
 The above steps alone should be sufficient to get a default set of metrics
 about the pool into ganglia.  Additional metrics, tuning and other

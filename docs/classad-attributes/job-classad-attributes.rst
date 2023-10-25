@@ -337,8 +337,7 @@ all attributes.
     proxy. This setting currently only applies to proxies delegated for
     non-grid jobs and HTCondor-C jobs.
     This setting has no effect if the configuration setting
-    ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS` is false, because in
+    :macro:`DELEGATE_JOB_GSI_CREDENTIALS` is false, because in
     that case the job proxy is copied rather than delegated.
 
 :classad-attribute:`DiskUsage`
@@ -727,9 +726,8 @@ all attributes.
     |                                  | encountered when                    |                          |
     |                                  | transferring files.                 |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 19                             | ``<Keyword>_HOOK_PREPARE_JOB``      |                          |
-    | | [HookPrepareJobFailure]        | :index:`<Keyword>_HOOK_PREPARE_JOB` |                          |
-    |                                  | was defined but could               |                          |
+    | | 19                             | :macro:`<Keyword>_HOOK_PREPARE_JOB` |                          |
+    | | [HookPrepareJobFailure]        | was defined but could               |                          |
     |                                  | not be executed or                  |                          |
     |                                  | returned failure.                   |                          |
     +----------------------------------+-------------------------------------+--------------------------+
@@ -739,8 +737,7 @@ all attributes.
     |                                  | run.                                |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 21                             | The job was put on hold             |                          |
-    | | [StartdHeldJob]                | because ``WANT_HOLD``               |                          |
-    |                                  | :index:`WANT_HOLD`                  |                          |
+    | | [StartdHeldJob]                | because :macro:`WANT_HOLD`          |                          |
     |                                  | in the machine policy               |                          |
     |                                  | was true.                           |                          |
     +----------------------------------+-------------------------------------+--------------------------+
@@ -756,9 +753,8 @@ all attributes.
     | | 25                             | Invalid cron settings.              |                          |
     | | [InvalidCronSettings]          |                                     |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 26                             | ``SYSTEM_PERIODIC_HOLD``            |                          |
-    | | [SystemPolicy]                 | :index:`SYSTEM_PERIODIC_HOLD`       |                          |
-    |                                  | evaluated to true.                  |                          |
+    | | 26                             | :macro:`SYSTEM_PERIODIC_HOLD`       |                          |
+    | | [SystemPolicy]                 | evaluated to true.                  |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 27                             | The system periodic job             |                          |
     | | [SystemPolicyUndefined]        | policy evaluated to                 |                          |
@@ -767,14 +763,12 @@ all attributes.
     | | 32                             | The maximum total input             |                          |
     | | [MaxTransferInputSizeExceeded] | file transfer size was              |                          |
     |                                  | exceeded. (See                      |                          |
-    |                                  | ``MAX_TRANSFER_INPUT_MB``           |                          |
-    |                                  | :index:`MAX_TRANSFER_INPUT_MB`      |                          |
+    |                                  | :macro:`MAX_TRANSFER_INPUT_MB`      |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 33                             | The maximum total output            |                          |
     | | [MaxTransferOutputSizeExceeded]| file transfer size was              |                          |
     |                                  | exceeded. (See                      |                          |
-    |                                  | ``MAX_TRANSFER_OUTPUT_MB``          |                          |
-    |                                  | :index:`MAX_TRANSFER_OUTPUT_MB`     |                          |
+    |                                  | :macro:`MAX_TRANSFER_OUTPUT_MB`     |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 34                             | Memory usage exceeds a              |                          |
     | | [JobOutOfResources]            | memory limit.                       |                          |
@@ -890,9 +884,8 @@ all attributes.
     | | 47                             | The job's allowed execution time    |                          |
     | | [JobExecuteExceeded]           | was exceeded.                       |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 48                             | ``<Keyword>_HOOK_SHADOW_PREPARE_JOB`` |                        |
-    | | [HookShadowPrepareJobFailure]  | :index:`<Keyword>_HOOK_SHADOW_PREPARE_JOB` |                   |
-    |                                  | failed when it was executed;        |                          |
+    | | 48                             | Prepare job shadow hook failed      |                          |
+    | | [HookShadowPrepareJobFailure]  | when it was executed;               |                          |
     |                                  | status code indicated job should be |                          |
     |                                  | held.                               |                          |
     +----------------------------------+-------------------------------------+--------------------------+
@@ -1998,8 +1991,7 @@ all attributes.
 :classad-attribute:`TransferQueued`
     A boolean value that indicates whether the job is currently waiting
     to transfer files because of limits placed by
-    ``MAX_CONCURRENT_DOWNLOADS`` :index:`MAX_CONCURRENT_DOWNLOADS`
-    or ``MAX_CONCURRENT_UPLOADS``. :index:`MAX_CONCURRENT_UPLOADS`
+    :macro:`MAX_CONCURRENT_DOWNLOADS` or :macro:`MAX_CONCURRENT_UPLOADS`.
 
 :classad-attribute:`UserLog`
     The full path and file name on the access point of the log file of
