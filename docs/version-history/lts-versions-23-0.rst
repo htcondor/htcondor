@@ -54,6 +54,10 @@ Bugs Fixed:
   SSL certificate.
   :jira:`2080`
 
+- Fixed warnings about use of deprecated HTCondor python binding methods
+  in the `htcondor dag submit` command.
+  :jira:`2104`
+
 - Improved cleanup of ssh-agent processes when submitting **batch**
   grid universe jobs to a remote cluster via ssh.
   :jira:`2118`
