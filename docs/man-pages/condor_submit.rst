@@ -857,7 +857,7 @@ COMMANDS FOR MATCHMAKING
 
     :index:`request_GPUs<single: request_GPUs; submit commands>`
     :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
- request_<name> = <quantity>
+ :subcom-def:`request_<name>` = <quantity>
     The required amount of the custom machine resource identified by
     ``<name>`` that this job needs. The custom machine resource is
     defined in the machine's configuration. Machines that have available
@@ -1351,27 +1351,27 @@ FILE TRANSFER COMMANDS
     specifies a file which does not exist at transfer time.
 
     :index:`s3_access_key_id_file<single: s3_access_key_id_file; submit commands>`
- aws_access_key_id_file, s3_access_key_id_file
+ :subcom-def:`aws_access_key_id_file`, :subcom-def:`s3_access_key_id_file`
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.  Use only one.
 
     :index:`s3_secret_access_key_file<single: s3_secret_access_key_file; submit commands>`
- aws_secret_access_key_file, s3_secret_access_key_file
+:subcom-def:` aws_secret_access_key_file`, :subcom-def:`s3_secret_access_key_file`
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the secret access key (and only the secret
     access key) used to pre-sign the URLs.  Use only one.
 
- aws_region
+ :subcom-def:`aws_region`
     Optional if you specify an S3 URL (and ignored otherwise), this command
     specifies the region to use if one is not specified in the URL.
 
- gs_access_key_id_file
+ :subcom-def:`gs_access_key_id_file`
     Required if you specify a ``gs://`` URLs, this command
     specifies the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.
 
- gs_secret_access_key_file
+ :subcom-def:`gs_secret_access_key_file`
     Required if you specify a ``gs://`` URLs, this command
     specifies the file containing the secret access key (and only the secret
     access key) used to pre-sign the URLs.
@@ -1746,7 +1746,7 @@ COMMANDS FOR THE GRID
     if a tag name case matters. By default the list will be
     automatically generated.
 
- cloud_label_<name> = <value>
+ :subcom-def:`cloud_label_<name>` = <value>
     For grid type **gce** jobs, specifies a label and value to be associated with
     the running instance. The label name will be lower-cased; use
     **cloud_label_names** to change the case.
@@ -1799,7 +1799,7 @@ COMMANDS FOR THE GRID
     identifying which Identity and Access Management (IAM) (instance)
     profile to associate with the instance.
 
- ec2_iam_profile_name= <IAM profile name>
+ :subcom-def:`ec2_iam_profile_name` = <IAM profile name>
     For grid type **ec2** jobs, a name identifying which Identity and
     Access Management (IAM) (instance) profile to associate with the
     instance.
@@ -1827,7 +1827,7 @@ COMMANDS FOR THE GRID
     names of additional parameters to pass when instantiating an
     instance.
 
- ec2_parameter_<name> = <value>
+ :subcom-def:`ec2_parameter_<name>` = <value>
     For grid type **ec2** jobs, specifies the value for the
     correspondingly named (instance instantiation) parameter. **<name>**
     is the parameter name specified in the submit command
@@ -1856,7 +1856,7 @@ COMMANDS FOR THE GRID
     if a tag name case matters. By default the list will be
     automatically generated.
 
- ec2_tag_<name> = <value>
+ :subcom-def:`ec2_tag_<name>` = <value>
     For grid type **ec2** jobs, specifies a tag to be associated with
     the running instance. The tag name will be lower-cased; use
     **ec2_tag_names** to change the case.
