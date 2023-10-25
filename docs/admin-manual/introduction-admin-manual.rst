@@ -73,7 +73,7 @@ Central Manager
       flowchart TD
          condor_master --> condor_collector & condor_negotiator
 
-:index:`execute machine`
+:index:`execute point`
 :index:`execute<single: execute; machine>`
 
 Execution Point

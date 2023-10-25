@@ -652,7 +652,7 @@ with
     +HookKeyword = "JAVA5"
 
 in the submit description file causes the *condor_starter* will run the
-hook specified by :macro:`JAVA5_HOOK_PREPARE_JOB` before running this job. Note that
+hook specified by ``JAVA5_HOOK_PREPARE_JOB`` before running this job. Note that
 the double quote marks are required to correctly define the attribute.
 Any output from this hook is an update to the job ClassAd. Therefore,
 the hook that changes the executable may be
