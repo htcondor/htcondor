@@ -25,7 +25,7 @@ New Features:
 - Added TimeSlotBusy and TimeExecute to the event log terminate events
   to indicate how much wall time a job used total (including file transfer)
   and just for the job execution proper, respectively..
-  :jira:`2302`
+  :jira:`2101`
 
 - The default trusted CAs for OpenSSL are now always used by default 
   in addition to any specified by :macro:`AUTH_SSL_SERVER_CAFILE`, 
