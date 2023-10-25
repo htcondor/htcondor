@@ -25,7 +25,10 @@ def subcom_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]
     indexnode = addnodes.index()
     indexnode['entries'] = entries
     set_role_source_info(inliner, lineno, indexnode)
-    textnode = nodes.Text(" ", " ")
+    if os.environ.get('MANPAGES') == 'True':
+        textnode = nodes.Text(text, " ")
+    else:
+        textnode = nodes.Text(" ", " ")
     return [indexnode, targetnode, textnode], []
 
 
