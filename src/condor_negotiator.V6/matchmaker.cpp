@@ -3777,6 +3777,13 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			dprintf(D_COMMAND, "Matchmaker::negotiate(%s,...) making connection to %s\n", getCommandStringSafe(cmd), scheddAddr.c_str());
 		}
 
+		std::string capability;
+		std::string sess_id;
+		if (submitterAd.LookupString(ATTR_CAPABILITY, capability)) {
+			ClaimIdParser cidp(capability.c_str());
+			sess_id = cidp.secSessionId();
+		}
+
 		Daemon schedd(&submitterAd, DT_SCHEDD, 0);
 		sock = schedd.reliSock(NegotiatorTimeout);
 		if (!sock)
@@ -3784,7 +3791,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			dprintf(D_ALWAYS, "    Failed to connect to %s\n", schedd_id.c_str());
 			return false;
 		}
-		if (!schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout)) {
+		if (!schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout, nullptr, nullptr, false, sess_id.c_str())) {
 			dprintf(D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
 					 schedd_id.c_str());
 			delete sock;
