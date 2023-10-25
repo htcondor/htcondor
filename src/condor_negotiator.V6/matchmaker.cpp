@@ -959,7 +959,7 @@ Matchmaker::SetupMatchSecurity(std::vector<ClassAd *> &submitterAds)
 			}
 		}
 		ClaimIdParser cidp(capability.c_str());
-		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", capability.c_str());
+		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", cidp.publicClaimId());
 		const char *session_info = cidp.secSessionInfo();
 		std::string info_str;
 		if ( old_schedd && session_info ) {
