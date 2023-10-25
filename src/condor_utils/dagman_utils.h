@@ -26,6 +26,7 @@
 #include "condor_string.h"
 #include "env.h"
 
+#include <array>
 
 #define DAG_SUBMIT_FILE_SUFFIX ".condor.sub"
 
