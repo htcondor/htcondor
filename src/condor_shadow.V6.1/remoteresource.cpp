@@ -395,10 +395,11 @@ RemoteResource::dprintfSelf( int debugLevel )
 	if( dc_startd ) {
 		const char* addr = dc_startd->addr();
 		const char* id = dc_startd->getClaimId();
+		ClaimIdParser cid(id ? id : "");
 		dprintf( debugLevel, "\tstartdAddr: %s\n",
 		         addr ? addr : "Unknown" );
 		dprintf( debugLevel, "\tClaimId: %s\n",
-		         id ? id : "Unknown" );
+		         cid.publicClaimId() );
 	}
 	if( machineName ) {
 		dprintf( debugLevel, "\tmachineName: %s\n", machineName );
