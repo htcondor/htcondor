@@ -18,11 +18,11 @@ The Submit Description File
 
 Different than all other universe jobs, the **vm** universe job
 specifies a disk image, not an executable. Therefore, the submit
-commands :subcom:`input` :index:`input<single: input; vm universe>`,
-:subcom:`output` :index:`output<single: output; vm universe>`, and
-:subcom:`error` :index:`error<single: error; vm universe>` do not apply. If
+commands :subcom: `input<vm universe>`,
+:subcom: `output<vm universe>`, and
+:subcom: `error<vm universe>` do not apply. If
 specified, *condor_submit* rejects the job with an error. The
-:subcom:`executable` :index:`executable<single: executable; vm universe>` command
+:subcom: `executable<vm universe>` command
 changes definition within a **vm** universe job. It no longer specifies
 an executable file, but instead provides a string that identifies the
 job for tools such as *condor_q*. Other commands specific to the type
@@ -42,7 +42,7 @@ or
     vm_type = kvm
 
 The job is required to specify its memory needs for the disk image with
-:subcom:`vm_memory` :index:`vm_memory<single: vm_memory; definition>`, which is
+:subcom: `vm_memory<definition>`, which is
 given in Mbytes. HTCondor uses this number to assure a match with a
 machine that can provide the needed memory space.
 
@@ -53,7 +53,7 @@ Virtual machine networking is enabled with the command
     vm_networking = true
 
 And, when networking is enabled, a definition of
-:subcom:`vm_networking_type` :index:`vm_networking_type<single: vm_networking_type; definition>`
+:subcom: `vm_networking_type<definition>`
 as **bridge** matches the job only with a machine that is configured to
 use bridge networking. A definition of
 :subcom:`vm_networking_type`
@@ -97,11 +97,11 @@ Setting values in the submit description file for some commands have
 consequences for the virtual machine description file. These commands
 are
 
--  :subcom:`vm_memory` :index:`vm_memory<single: vm_memory; definition>`
--  :subcom:`vm_macaddr` :index:`vm_macaddr<single: vm_macaddr; definition>`
--  :subcom:`vm_networking` :index:`vm_networking<single: vm_networking; defintion>`
--  :subcom:`vm_networking_type` :index:`vm_networking_type<single: vm_networking_type; definition>`
--  :subcom:`vm_disk` :index:`vm_disk<single: vm_disk; definition>`
+-  :subcom: `vm_memory<definition>`
+-  :subcom: `vm_macaddr<definition>`
+-  :subcom: `vm_networking<defintion>`
+-  :subcom: `vm_networking_type<definition>`
+-  :subcom: `vm_disk<definition>`
 
 HTCondor uses these values when it
 produces the description file.
@@ -129,22 +129,22 @@ Xen-Specific Submit Commands
 :index:`submit commands specific to Xen<single: submit commands specific to Xen; vm universe>`
 
 A Xen **vm** universe job requires specification of the guest kernel.
-The :subcom:`xen_kernel` :index:`xen_kernel<single: xen_kernel; definition>` command
+The :subcom: `xen_kernel<definition>` command
 accomplishes this, utilizing one of the following definitions.
 
 #. ``xen_kernel = included`` implies that the kernel is to be found in
    disk image given by the definition of the single file specified in
-   :subcom:`vm_disk` :index:`vm_disk<single: vm_disk; with xen>`.
+   :subcom: `vm_disk<with xen>`.
 #. ``xen_kernel = path-to-kernel`` gives the file name of the required
    kernel. If this kernel must be transferred to machine on which the
    **vm** universe job will execute, it must also be included in the
-   :subcom:`transfer_input_files` :index:`transfer_input_files<single: transfer_input_files; with xen>`
+   :subcom: `transfer_input_files<with xen>`
    command.
 
    This form of the
    :subcom:`xen_kernel` command
    also requires further definition of the
-   :subcom:`xen_root` :index:`xen_root<single: xen_root; definition>` command.
+   :subcom: `xen_root<definition>` command.
    :subcom:`xen_root` defines the device containing files needed by root.
 
 Checkpoints

@@ -41,7 +41,7 @@ the job's initial current working directory, and this mount point could
 become automatically unmounted by the automounter.
 
 There is a simple work around. When submitting the job, use the submit
-command :subcom:`initialdir` :index:`initialdir<single: initialdir; and NFS>` to
+command :subcom: `initialdir<and NFS>` to
 point to the stable access point. For example, suppose the NFS
 automounter is configured to mount a volume at mount point
 ``/a/myserver.company.com/vol1/johndoe`` whenever the directory
@@ -146,7 +146,7 @@ the *condor_starter* daemon and user job.
 A default value equal to 40 minutes exists for a job's ClassAd attribute
 ``JobLeaseDuration``, or this attribute may be set in the submit
 description file, using
-:subcom:`job_lease_duration` :index:`job_lease_duration<single: job_lease_duration; definition>`,
+:subcom: `job_lease_duration<definition>`,
 to keep a job running in the case that the submit side no longer renews
 the lease. There is a trade off in setting the value of
 :subcom:`job_lease_duration`

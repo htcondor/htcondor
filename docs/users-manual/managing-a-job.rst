@@ -338,7 +338,7 @@ following information:
 This example also shows that the job does not run because the platform
 requested, Mac OS X, is not available on any of the machines in the
 pool. Recall that unless informed otherwise in the
-:subcom:`Requirements` :index:`Requirements<single: Requirements; usage for debugging>`
+:subcom: `Requirements<usage for debugging>`
 expression in the submit description file, the platform requested for an
 execute machine will be the same as the platform where *condor_submit*
 is run to submit the job. And, while Mac OS X is a Unix-type operating
@@ -357,12 +357,12 @@ A second class of problems represents jobs that do or did run, for at
 least a short while, but are no longer running. The first issue is
 identifying whether the job is in this category. The *condor_q* command
 is not enough; it only tells the current state of the job. The needed
-information will be in the :subcom:`log` :index:`log<single: log; usage for debugging>`
-file or the :subcom:`error` :index:`error<single: error; usage for debugging>` file, as
+information will be in the :subcom: `log<usage for debugging>`
+file or the :subcom: `error<usage for debugging>` file, as
 defined in the submit description file for the job. If these files are
 not defined, then there is little hope of determining if the job ran at
 all. For a job that ran, even for the briefest amount of time, the
-:subcom:`log` :index:`log<single: log; usage for debugging>` file will contain an event
+:subcom: `log<usage for debugging>` file will contain an event
 of type 1, which will contain the string Job executing on host.
 
 A job may run for a short time, before failing due to a file permission
@@ -483,7 +483,7 @@ other information described below.
 
 By default, HTCondor does not send an email message when the job
 completes. Modify this behavior with the
-:subcom:`notification` :index:`notification<single: notification; example>` command
+:subcom: `notification<example>` command
 in the submit description file. The message will include the exit status
 of the job, which is the argument that the job passed to the exit system
 call when it completed, or it will be notification that the job was
