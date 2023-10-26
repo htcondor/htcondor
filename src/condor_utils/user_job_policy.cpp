@@ -238,10 +238,10 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 
 			ATTR_ALLOWED_JOB_DURATION
 			ATTR_TIMER_REMOVE_CHECK
+			ATTR_PERIODIC_VACATE_CHECK
 			ATTR_PERIODIC_HOLD_CHECK
 			ATTR_PERIODIC_RELEASE_CHECK
 			ATTR_PERIODIC_REMOVE_CHECK
-			ATTR_PERIODIC_VACATE_CHECK
 			ATTR_ON_EXIT_HOLD_CHECK
 			ATTR_ON_EXIT_REMOVE_CHECK
 	*/
@@ -310,6 +310,14 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 				return HOLD_IN_QUEUE;
 			}
 		}
+
+		/* Should I perform a periodic vacate? */
+		if ((mode == PERIODIC_ONLY) && ((state == RUNNING) || (state == SUSPENDED))) {
+			int retval = 0;
+			if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_VACATE_CHECK, POLICY_SYSTEM_PERIODIC_VACATE, VACATE_FROM_RUNNING, retval)) {
+				return retval;
+			}
+		}
 	}
 
 	/* Should I perform a remove based on the epoch time? */
@@ -357,13 +365,6 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 	/* Should I perform a periodic remove? */
 	if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_REMOVE_CHECK, POLICY_SYSTEM_PERIODIC_REMOVE, REMOVE_FROM_QUEUE, retval)) {
 		return retval;
-	}
-
-	/* Should I perform a periodic remove? */
-	if ((state == RUNNING) || (state == SUSPENDED)) {
-		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_VACATE_CHECK, POLICY_SYSTEM_PERIODIC_VACATE, VACATE_FROM_RUNNING, retval)) {
-			return retval;
-		}
 	}
 
 	if( mode == PERIODIC_ONLY ) {
