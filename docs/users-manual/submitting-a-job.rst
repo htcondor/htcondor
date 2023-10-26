@@ -77,7 +77,7 @@ The corresponding submit description file might look like the following
 
 The standard output for this job will go to the file
 ``outputfile``, as specified by the
-:subcom:`output` :index:`output<single: output; example>` command. Likewise,
+:subcom:`output<example>` command. Likewise,
 the standard error output will go to  :subcom:`errorfile`. 
 
 HTCondor will append events about the job to a log file with the 
@@ -144,7 +144,7 @@ Submitting many similar jobs with one queue command
 ---------------------------------------------------
 
 A wide variety of job submissions can be specified with extra
-information to the :subcom:`queue` :index:`queue<single: queue; example>`
+information to the :subcom:`queue<example>`
 submit command. This flexibility eliminates the need for a job wrapper
 or Perl script for many submissions.
 
@@ -775,7 +775,7 @@ leading to files defined for **input** of ``X.000``, ``X.010``,
 **Example 3**
 
 This example uses both the file globbing of the
-:subcom:`queue` :index:`queue<single: queue; example with glob>` command and a macro
+:subcom:`queue<example with glob>` command and a macro
 function to specify a job input file that is within a subdirectory on
 the submit host, but will be placed into a single, flat directory on the
 execute host.
@@ -824,8 +824,8 @@ Note that the comparison operators (<, >, <=, >=, and ==) compare
 strings case insensitively. The special comparison operators =?= and =!=
 compare strings case sensitively.
 
-A :subcom:`requirements` :index:`requirements<single: requirements; example>` or
-:subcom:`rank` :index:`rank<single: rank; example>` command in the submit
+A :subcom:`requirements<example>` or
+:subcom:`rank<example>` command in the submit
 description file may utilize attributes that appear in a machine or a
 job ClassAd. Within the submit description file (for a job) the prefix
 MY. (on a ClassAd attribute name) causes a reference to the job ClassAd
@@ -1284,12 +1284,12 @@ A submit description file may be specified for this interactive job.
 Within this submit description file, a specification of these 5 commands
 will be either ignored or altered:
 
-#. :subcom:`executable` :index:`executable<single: executable; interactive job>`
-#. :subcom:`transfer_executable` :index:`transfer_executable<single: transfer_executable; interactive job>`
-#. :subcom:`arguments` :index:`arguments<single: arguments; interactive job>`
-#. :subcom:`universe` :index:`universe<single: universe; interactive job>`. The
+#. :subcom:`executable<interactive job>`
+#. :subcom:`transfer_executable<interactive job>`
+#. :subcom:`arguments<interactive job>`
+#. :subcom:`universe<interactive job>`. The
    interactive job is a vanilla universe job.
-#. :subcom:`queue` :index:`queue<single: queue; interactive job>` **<n>**. In this
+#. :subcom:`queue<interactive job>` **<n>**. In this
    case the value of **<n>** is ignored; exactly one interactive job is
    queued.
 
