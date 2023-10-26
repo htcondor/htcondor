@@ -8,6 +8,7 @@ Job Sets
 Multiple jobs that share
 a common set of input files and/or arguments and/or index values, etc.,
 can be organized and submitted as a **job set**.
+:index:`job set<single: job_set; definition>`).
 For example, if you have 10 sets of measurements
 that you are using as input to two different models,
 you might consider submitting a job set
