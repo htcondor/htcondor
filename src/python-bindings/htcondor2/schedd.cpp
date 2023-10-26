@@ -718,6 +718,10 @@ _schedd_submit( PyObject *, PyObject * args ) {
     }
 
 
+    // I probably shouldn't have to do this by hand.
+    sb->setTransferMap(getProtectedURLMap());
+
+
     // Handle itemdata.
     SubmitForeachArgs * itemdata = sb->init_vars( clusterID );
     if( itemdata == NULL ) {

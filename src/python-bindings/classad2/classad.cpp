@@ -191,6 +191,7 @@ convert_classad_value_to_python(classad::Value & v) {
                 if( should_convert_to_python(*i) ) {
                     classad::Value v;
                     if(! (*i)->Evaluate( v )) {
+                        Py_DecRef(list);
                         // This was ClassAdEvaluationError in version 1.
                         PyErr_SetString( PyExc_RuntimeError, "Failed to evaluate convertible expression" );
                         return NULL;
@@ -198,11 +199,21 @@ convert_classad_value_to_python(classad::Value & v) {
 
                     PyObject * py_v = convert_classad_value_to_python(v);
                     if(PyList_Append( list, py_v ) != 0) {
+                        Py_DecRef(py_v);
+                        Py_DecRef(list);
                         // PyList_Append() has already set an exception for us.
                         return NULL;
                     }
+                    Py_DecRef(py_v);
                 } else {
-                    return py_new_classad_exprtree( *i );
+                    PyObject * py_v = py_new_classad_exprtree( *i );
+                    if(PyList_Append( list, py_v ) != 0) {
+                        Py_DecRef(py_v);
+                        Py_DecRef(list);
+                        // PyList_Append() has already set an exception for us.
+                        return NULL;
+                    }
+                    Py_DecRef(py_v);
                 }
             }
 

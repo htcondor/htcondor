@@ -35,6 +35,10 @@ struct SubmitBlob {
         CondorError * error_stack() const;
         const char * expand( const char * key );
 
+        // Makes a copy of the map.
+        void setTransferMap(MapFile * map);
+        void unsetTransferMap();
+
 
         // Given a `QUEUE [count] [in|from|matching ...]` statement, `count`
         // is an optional integer expression.  This function returns 1
@@ -56,6 +60,7 @@ struct SubmitBlob {
         SubmitHash m_hash;
         MACRO_SOURCE m_src_pystring;
         MacroStreamMemoryFile m_ms_inline;
+        MapFile m_protected_url_map;
 
         // We could easily keep these in Python, if that simplifies things.
         std::string m_qargs;
@@ -292,6 +297,19 @@ SubmitBlob::keys( std::string & buffer ) {
         buffer[pos + key.size()] = '\0';
         pos += key.size() + 1;
     }
+}
+
+
+void
+SubmitBlob::setTransferMap( MapFile * map ) {
+    m_protected_url_map = * map;
+    m_hash.attachTransferMap(& m_protected_url_map);
+}
+
+
+void
+SubmitBlob::unsetTransferMap() {
+    m_hash.detachTransferMap();
 }
 
 

@@ -36,6 +36,7 @@
 // htcondor.Submit
 #include "submit_utils.h"
 #include "dagman_utils.h"
+#include "MapFile.h"
 #include "htcondor2/submit.cpp"
 
 // htcondor.Schedd

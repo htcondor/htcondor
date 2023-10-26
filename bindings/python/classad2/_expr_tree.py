@@ -9,7 +9,8 @@ from ._class_ad import ClassAd
 
 class ExprTree:
 
-    # FIXME: This is not a good idea, but Ornithology needs it for now.
+    # FIXME: Allowing the creation of stray ExprTrees from Python is probably
+    # not a good idea, but Ornithology needs it for now.
     def __init__(self, expr=None):
         self._handle = handle_t()
         _exprtree_init(self, self._handle)

@@ -8,7 +8,7 @@ from ._job_event_type import JobEventType
 
 class JobEvent(Mapping):
 
-    def __init__(self, data : classad, event_text : str):
+    def __init__(self, data : classad.ClassAd, event_text : str):
         self._data = data
         self._event_text = event_text
 
@@ -25,7 +25,14 @@ class JobEvent(Mapping):
 
     @property
     def proc(self) -> int:
-        return self._data["proc"]
+        # The event ClassAd doesn't contain a Proc attribute if the original
+        # event's ProcID was less than or equal to 0.  ULogEvent's default
+        # ("invalid") procID is -1, so we'll just assume that's good for now.
+        #
+        # If we ever need/want to expose other "invalid" ProcIDs, we can
+        # adjust _job_event_log_next() to insert `proc` into the ClassAd
+        # as well.
+        return self._data.get("proc", -1)
 
 
     @property
