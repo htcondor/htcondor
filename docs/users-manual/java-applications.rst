@@ -85,7 +85,7 @@ submit description file works:
 The Java universe must be explicitly selected.
 
 The main class of the program is given in the
-:subcom:`executable` :index:`executable<single: executable; java universe>` statement.
+:subcom:`executable<java universe>` statement.
 This is a file name which contains the entry point of the program. The
 name of the main class (not a file name) must be specified as the first
 argument to the program.
@@ -159,9 +159,9 @@ Less Simple Java Specifications
 
     HTCondor must then be told where to find the JAR as well as to use
     the JAR. The JAR file that contains the entry point is specified
-    with the :subcom:`executable` :index:`executable<single: executable; and jar file>`
+    with the :subcom:`executable<and jar file>`
     command. All JAR files are specified with the
-    :subcom:`jar_files` :index:`jar_files<single: jar_files; definition>` command.
+    :subcom:`jar_files<definition>` command.
     For this example that collected all the class files into a single
     JAR file, the submit description file contains:
 
@@ -175,7 +175,7 @@ Less Simple Java Specifications
     pass the information on to the JVM. That is why there is a
     difference in submit description file commands for the two ways of
     specifying files
-    (:subcom:`transfer_input_files` :index:`transfer_input_files<single: transfer_input_files; java universe>`
+    (:subcom:`transfer_input_files<java universe>`
     and :subcom:`jar_files`)
 
     If there are multiple JAR files, the **executable** command
@@ -203,7 +203,7 @@ Less Simple Java Specifications
  An executable JAR file.
     When the JAR file is an executable, specify the program's entry
     point in the
-    :subcom:`arguments` :index:`arguments<single: arguments; and jar file>` command:
+    :subcom:`arguments<and jar file>` command:
 
     .. code-block:: condor-submit
 

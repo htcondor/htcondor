@@ -25,22 +25,22 @@ on each claimed slot.
 
 Each invocation of *condor_submit* assigns a single ``ClusterId`` for
 what is considered the single parallel job submitted. The
-:subcom:`machine_count` :index:`machine_count<single: machine_count; example>`
+:subcom:`machine_count<example>`
 submit command identifies how many machines (slots) are to be allocated.
-Each instance of the :subcom:`queue` :index:`queue<single: queue; with parallel universe>`
+Each instance of the :subcom:`queue<with parallel universe>`
 submit command acquires and claims the number of slots specified by
 :subcom:`machine_count`. Each of these slots shares a common job ClassAd and
 will have the same ``ProcId`` job ClassAd attribute value.
 
 Once the correct number of machines are claimed, the
-:subcom:`executable` :index:`executable<single: executable; with parallel universe>` is started
+:subcom:`executable<with parallel universe>` is started
 at more or less the same time on all machines. If desired, a
 monotonically increasing integer value that starts at 0 may be provided
 to each of these machines. The macro ``$(Node)`` is similar to the MPI
 rank construct. This macro may be used within the submit description
 file in either the
-:subcom:`arguments` :index:`arguments<single: arguments; with parallel universe>` or
-:subcom:`environment` :index:`environment<single: environment; with parallel universe>` command.
+:subcom:`arguments<with parallel universe>` or
+:subcom:`environment<with parallel universe>` command.
 Thus, as the executable runs, it may discover its own ``$(Node)`` value.
 
 Node 0 has special meaning and consequences for the parallel job. The
@@ -130,17 +130,17 @@ that is as simple as possible:
 
 This job specifies the **universe** as **parallel**, letting HTCondor
 know that dedicated resources are required. The
-:subcom:`machine_count` :index:`machine_count<single: machine_count; example>`
+:subcom:`machine_count<example>`
 command identifies that eight machines are required for this job.
 
 Because no
-:subcom:`requirements` :index:`requirements<single: requirements; with parallel universe>` are
+:subcom:`requirements<with parallel universe>` are
 specified, the dedicated scheduler claims eight machines with the same
 architecture and operating system as the access point. When all the
 machines are ready, it invokes the */bin/sleep* command, with a command
 line argument of 30 on each of the eight machines more or less
 simultaneously. Job events are written to the log specified in the
-:subcom:`log` :index:`log<single: log; with parallel universe>` command.
+:subcom:`log<with parallel universe>` command.
 
 The file transfer mechanism is enabled for this parallel job, such that
 if any of the eight claimed execute machines does not share a file
@@ -229,7 +229,7 @@ Differing Requirements for the Machines
 
 Sometimes one machine's part in a parallel job will have specialized
 needs. These can be handled with a
-:subcom:`Requirements` :index:`Requirements<single: Requirements; with parallel universe>` submit
+:subcom:`Requirements<with parallel universe>` submit
 command that also specifies the number of needed machines.
 
 .. code-block:: condor-submit
@@ -255,7 +255,7 @@ command that also specifies the number of needed machines.
 The dedicated scheduler acquires and claims four machines. All four
 share the same value of ``ClusterId``, as this value is associated with
 this single parallel job. The existence of a second
-:subcom:`queue` :index:`queue<single: queue; with parallel universe>` command causes a total
+:subcom:`queue<with parallel universe>` command causes a total
 of two ``ProcId`` values to be assigned for this parallel job. The
 ``ProcId`` values are assigned based on ordering within the submit
 description file. Value 0 will be assigned for the single executable
@@ -365,9 +365,9 @@ the MPI application's executable, it is the first in the list of
 :subcom:`arguments`. And, since
 HTCondor must transfer this executable to the machine where it will run,
 it is listed with the
-:subcom:`transfer_input_files` :index:`transfer_input_files<single: transfer_input_files; with parallel universe>`
+:subcom:`transfer_input_files<with parallel universe>`
 command, and the file transfer mechanism is enabled with the
-:subcom:`should_transfer_files` :index:`should_transfer_files<single: should_transfer_files; with parallel universe>`
+:subcom:`should_transfer_files<with parallel universe>`
 command.
 
 Here is the equivalent sample submit description file, but for an Open
@@ -427,7 +427,7 @@ MPI Applications Within HTCondor's Vanilla Universe
 
 The vanilla universe may be preferred over the parallel universe for
 parallel applications which can run entirely on one machine.  The
-:subcom:`request_cpus` :index:`request_cpus<single: request_cpus; with parallel universe>` command
+:subcom:`request_cpus<with parallel universe>` command
 causes a claimed slot to have the required number of CPUs (cores).
 
 There are two ways to ensure that the MPI job can run on any machine
@@ -462,6 +462,6 @@ using static libraries and a static version of ``mpirun`` is available.
 
 Any additional input files that will be needed for the executable that
 are not already in the tarball should be included in the list in
-:subcom:`transfer_input_files` :index:`transfer_input_files<single: transfer_input_files; with parallel universe>`
+:subcom:`transfer_input_files<with parallel universe>`
 command. The corresponding script should then also be updated to move
 those files into the directory where the executable will be run.
