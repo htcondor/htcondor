@@ -7,13 +7,13 @@ HTCondor provides images on Docker Hub.
 
 Quickstart Instructions
 -----------------------
-If you're just getting started with HTCondor, use ``htcondor/minicondor``,
+If you're just getting started with HTCondor, use ``htcondor/mini``,
 a stand-alone HTCondor configuration.  The following command will work on
 most systems with Docker installed:
 
 .. code-block:: shell
 
-    docker run -it htcondor/minicondor:v8.9.9-el7
+    docker run -it htcondor/mini
 
 From here, you can proceed to the :ref:`quick_start_guide`.
 
@@ -30,6 +30,6 @@ information about the roles and how to configure these images to work together.
 * ``htcondor/execute``, an image configured as an execute node
 * ``htcondor/submit``, an image configured as a submit node
 
-All images are tagged by ``<version>-<os>``, for example, ``8.9.9-el7``.  Not
-all versions are available for all supported operating systems.
+All images include the latest version of HTCondor.
+If you want to use the latest LTS version, use the docker tag ``lts``.
 

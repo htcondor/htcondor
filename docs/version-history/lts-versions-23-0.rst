@@ -79,6 +79,10 @@ New Features:
 
 Bugs Fixed:
 
+- Updated HTCondor binaries that are statically linked to the curl library to use curl version 8.4.0.
+  The update was due to a report of a vulnerability, CVE-2023-38545, which affects earlier versions of curl.
+  :jira:`2084`
+
 - Fixed a bug that prevented USE_PID_NAMESPACES from working.
   :jira:`2088`
 
