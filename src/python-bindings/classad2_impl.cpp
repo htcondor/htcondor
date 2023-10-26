@@ -39,6 +39,8 @@ static PyMethodDef classad2_impl_methods[] = {
 
     {"_exprtree_init", & _exprtree_init, METH_VARARGS, NULL},
     {"_exprtree_eq", & _exprtree_eq, METH_VARARGS, NULL},
+    {"_exprtree_eval", & _exprtree_eval, METH_VARARGS, NULL},
+    {"_exprtree_simplify", & _exprtree_simplify, METH_VARARGS, NULL},
 
 	{NULL, NULL, 0, NULL}
 };

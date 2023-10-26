@@ -1,9 +1,14 @@
 from .classad2_impl import _handle as handle_t
 
-from .classad2_impl import _exprtree_init
-from .classad2_impl import _exprtree_eq
-from .classad2_impl import _classad_to_string
-from .classad2_impl import _classad_to_repr
+from typing import Union
+
+from .classad2_impl import (
+    _exprtree_init,
+    _exprtree_eq,
+    _classad_to_string,
+    _classad_to_repr,
+    _exprtree_eval,
+)
 
 from ._class_ad import ClassAd
 
@@ -11,7 +16,7 @@ class ExprTree:
 
     # FIXME: Allowing the creation of stray ExprTrees from Python is probably
     # not a good idea, but Ornithology needs it for now.
-    def __init__(self, expr=None):
+    def __init__(self, expr : Union[str, "ExprTree"] = None):
         self._handle = handle_t()
         _exprtree_init(self, self._handle)
 
@@ -46,3 +51,15 @@ class ExprTree:
         return _classad_to_repr(self._handle)
 
 
+    def eval(self, scope : ClassAd = None):
+        if scope is not None and not isinstance(scope, ClassAd):
+            raise TypeError("scope must be a ClassAd")
+        return _exprtree_eval(self._handle, scope)
+
+
+    def simplify(self, scope : ClassAd = None, target : ClassAd = None):
+        if scope is not None and not isinstance(scope, ClassAd):
+            raise TypeError("scope must be a ClassAd")
+        if target is not None and not isinstance(target, ClassAd):
+            raise TypeError("target must be a ClassAd")
+        return _exprtree_simplify(self._handle, scope, target)
