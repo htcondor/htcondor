@@ -802,9 +802,8 @@ such that the command line argument for one of the jobs will be
 About Requirements and Rank
 ---------------------------
 
-The :subcom:`requirements` and :subcom:`rank` commands in the submit description
-file are powerful and flexible.
-:index:`rank<single: rank; example>`\ Using them effectively requires
+The :subcom:`requirements` and :subcom:`rank<example>` commands in the submit description
+file are powerful and flexible. Using them effectively requires
 care, and this section presents those details.
 
 Both :subcom:`requirements` and :subcom:`rank` need to be specified as valid
