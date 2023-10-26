@@ -58,6 +58,14 @@ Options: \n \
  REMOTE_CMD can be expressed as argument or option
 "
 
+stop_ssh () {
+    # Remove on-exit call of stop_ssh
+    trap - EXIT
+
+    # Shut down ssh-agent
+    eval `ssh-agent -sk` 1>&2
+}
+
 while [ $# != 0 ] ; do
     case "$1" in
         -h | --help  ) echo -e "$USAGE"
@@ -135,6 +143,9 @@ fi
 
 # if a ssh key is required, start up a ssh-agent and do ssh-add
 if [ -n "$PRIVATE_KEY_LOCATION" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
+	# Run stop_ssh on shell exit
+	trap stop_ssh EXIT
+
 	# start the ssh-agent
 	eval `ssh-agent -s` 1>&2
 
@@ -149,7 +160,6 @@ if [ -n "$PRIVATE_KEY_LOCATION" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 
 	# check if ssh-add failed
 	if [ $ADD_STATUS != 0 ] ; then
-		eval `ssh-agent -sk` 1>&2
 		exit $ADD_STATUS
 	fi
 fi
@@ -212,8 +222,5 @@ else
     echo "Unknown remote command (${REMOTE_CMD})" 1>&2
     SSH_STATUS=1
 fi
-
-# kill the ssh-agent if it exists
-eval `ssh-agent -sk` 1>&2
 
 exit $SSH_STATUS
