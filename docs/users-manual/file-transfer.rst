@@ -77,11 +77,11 @@ takes on one of three possible values:
    resume from where it left off.
 #. ``ON_SUCCESS``: HTCondor transfers files like ``ON_EXIT``, but only if
    the job succeeds, as defined by the ``success_exit_code`` submit command.
-   The :subcom:`success_exit_code`` command must be used, even for the default
+   The :subcom:`success_exit_code` command must be used, even for the default
    exit code of 0.
 
 The default values for these two submit commands make sense as used
-together. If only `should_transfer_files** is set, and set to the
+together. If only :subcom:`should_transfer_files` is set, and set to the
 value ``NO``, then no output files will be transferred, and the value of
 **when_to_transfer_output** is irrelevant. If only
 **when_to_transfer_output** is set, and set to the value

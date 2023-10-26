@@ -68,7 +68,7 @@ Automatically placing a job on hold
 
 Often, if a job is doing something unexpected, it is more useful to hold the job,
 rather than remove it.  If the problem with the job can be fixed, the job can then be
-released and started again.  Much like the :subcom:`*periodic_remove` command, there is a 
+released and started again.  Much like the :subcom:`periodic_remove` command, there is a 
 :subcom:`periodic_hold` command that works in a similar way, but instead of removing the job,
 puts the job on hold.  Unlike :subcom:`periodic_remove`, there are additional attributes
 that help to tell the user why the job was placed on hold.  **periodic_hold_reason**

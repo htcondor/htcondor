@@ -164,11 +164,11 @@ to go, but doesn't turn it on by default.
 
       queue 1
 
-The :subcom:`container_service_names`` submit command accepts a comma- or space-
+The :subcom:`container_service_names` submit command accepts a comma- or space-
 separated list of service names; each service name must have a corresponding
-:subcom:`<service-name>_container_port`` submit command specifying an integer
+:subcom:`<service-name>_container_port` submit command specifying an integer
 between 0 and 65535.  Docker will automatically select a port on the host
 to forward to that port in the container; HTCondor will report that port
-in the job ad attribute :subcom:`<service-name>_HostPort`` after it becomes
+in the job ad attribute :subcom:`<service-name>_HostPort` after it becomes
 available, which will be (several seconds) after the job starts.  HTCondor
 will update the job ad in the sandbox (``.job.ad``) at that time.

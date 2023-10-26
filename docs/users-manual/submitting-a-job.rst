@@ -77,7 +77,7 @@ The corresponding submit description file might look like the following
 
 The standard output for this job will go to the file
 ``outputfile``, as specified by the
-:subcom:`output1 :index:`output<single: output; example>` command. Likewise,
+:subcom:`output` :index:`output<single: output; example>` command. Likewise,
 the standard error output will go to  :subcom:`errorfile`. 
 
 HTCondor will append events about the job to a log file with the 
@@ -858,12 +858,12 @@ requirements and are available to the user, after accounting for the
 user's priority and the machine's rank of the job. The rank expressions,
 simple or complex, define a numerical value that expresses preferences.
 
-The job's :subcom:`Rank` expression evaluates to one of three values. It can
-be UNDEFINED, ERROR, or a floating point value. If :subcom:`Rank` evaluates to
+The job's :subcom:`rank` expression evaluates to one of three values. It can
+be UNDEFINED, ERROR, or a floating point value. If :subcom:`rank` evaluates to
 a floating point value, the best match will be the one with the largest,
-positive value. If no :subcom:`Rank` is given in the submit description file,
+positive value. If no :subcom:`rank` is given in the submit description file,
 then HTCondor substitutes a default value of 0.0 when considering
-machines to match. If the job's :subcom:`Rank` of a given machine evaluates to
+machines to match. If the job's :subcom:`rank` of a given machine evaluates to
 UNDEFINED or ERROR, this same value of 0.0 is used. Therefore, the
 machine is still considered for a match, but has no ranking above any
 other.
@@ -871,7 +871,7 @@ other.
 A boolean expression evaluates to the numerical value of 1.0 if true,
 and 0.0 if false.
 
-The following :subcom:`Rank` expressions provide examples to follow.
+The following :subcom:`rank` expressions provide examples to follow.
 
 For a job that desires the machine with the most available memory:
 
@@ -902,16 +902,16 @@ performance (on Linpack benchmarks):
 
     Rank = kflops
 
-This particular example highlights a difficulty with :subcom:`Rank` expression
+This particular example highlights a difficulty with :subcom:`rank` expression
 evaluation as currently defined. While all machines have floating point
 processing ability, not all machines will have the ``kflops`` attribute
-defined. For machines where this attribute is not defined, :subcom:`Rank` will
+defined. For machines where this attribute is not defined, :subcom:`rank` will
 evaluate to the value UNDEFINED, and HTCondor will use a default rank of
-the machine of 0.0. The :subcom:`Rank` attribute will only rank machines where
+the machine of 0.0. The :subcom:`rank` attribute will only rank machines where
 the attribute is defined. Therefore, the machine with the highest
 floating point performance may not be the one given the highest rank.
 
-So, it is wise when writing a :subcom:`Rank` expression to    check if the
+So, it is wise when writing a :subcom:`rank` expression to    check if the
 expression's evaluation will lead to the expected resulting ranking of
 machines. This can be accomplished using the *condor_status* command
 with the *-constraint* argument. This allows the user to see a list of
@@ -956,7 +956,7 @@ and
 
     (machine == "friend3.cs.wisc.edu")
 
-are false, and give the value 0.0. Therefore, :subcom:`Rank` evaluates to the
+are false, and give the value 0.0. Therefore, :subcom:`rank` evaluates to the
 value 3.0. In this way, machine ``friend1.cs.wisc.edu`` is ranked higher
 than machine ``friend2.cs.wisc.edu``, machine ``friend2.cs.wisc.edu`` is
 ranked higher than machine ``friend3.cs.wisc.edu``, and all three of
@@ -1183,7 +1183,7 @@ the resources that may use the credential.  The full service name
 including an underscore may be used in an :subcom:`oauth_permissions` or
 :subcom:`oauth_resource`.  Avoid using handles that might be confused as
 role names.  For example, the following will result in a conflict
-between two credentials called :subcom:`dune_production.use`:
+between two credentials called ``dune_production.use``:
 
 .. code-block:: condor-submit
 
