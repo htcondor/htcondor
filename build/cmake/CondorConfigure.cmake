@@ -560,7 +560,6 @@ if("${OS_NAME}" STREQUAL "LINUX")
 
     if (HAVE_XSS_H)
 	  find_library(HAVE_XSS Xss)
-	  find_library(HAVE_XEXT Xext)
 	endif()
 
     check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
@@ -585,6 +584,16 @@ if("${OS_NAME}" STREQUAL "LINUX")
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
     option(WITH_BLAHP "Compiling the blahp" ON)
+
+	# Does libcurl use NSS for security?
+	# We need to employ some workarounds for NSS problems.
+	execute_process(COMMAND /usr/bin/curl --version
+		COMMAND grep -q NSS
+		RESULT_VARIABLE CURL_NSS_TEST)
+	if (CURL_NSS_TEST EQUAL 0)
+		set(CURL_USES_NSS TRUE)
+	endif()
+
 elseif(APPLE)
 	add_definitions(-DDarwin)
 	# CRUFT Remove this variable. All cmake files should be using APPLE.
@@ -596,16 +605,6 @@ elseif(APPLE)
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
 
 	set(HAVE_PTHREADS TRUE)
-
-	# Does libcurl use NSS for security?
-	# We need to employ some workarounds for NSS problems.
-	execute_process(COMMAND /usr/bin/curl --version
-		COMMAND grep -q NSS
-		RESULT_VARIABLE CURL_NSS_TEST)
-	if (CURL_NSS_TEST EQUAL 0)
-		set(CURL_USES_NSS TRUE)
-	endif()
-
 endif()
 
 ##################################################
@@ -808,24 +807,7 @@ if (WINDOWS)
     endif()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.82.0)
-  elseif(NOT (MSVC_VERSION LESS 1700))
-	if (MSVC11)
-      if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-        set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
-      else()
-        set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
-	  endif()
-	endif()
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1j)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.33.0)
-  else()
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
   endif()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
@@ -838,23 +820,18 @@ else ()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
   endif()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.0.0)
 
-	# old voms builds on manylinux1 (centos5 docker image)
     if (LINUX)
-        if (${SYSTEM_NAME} MATCHES "centos5.11")
-            add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
-        else()
             add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
-        endif()
     endif()
 
         if (LINUX)
@@ -864,6 +841,18 @@ else ()
 endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
+
+# We'll do the installation ourselves, below
+set (FMT_INSTALL false)
+
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
+
+# But don't try to install the header files anywhere
+set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
+install(TARGETS fmt
+	LIBRARY DESTINATION "${C_LIB}"
+	ARCHIVE DESTINATION "${C_LIB}"
+	RUNTIME DESTINATION "${C_LIB}")
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)

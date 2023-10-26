@@ -41,6 +41,10 @@ GCC_DIAG_OFF(invalid-offsetof)
 #define JOB_QUEUE_PAYLOAD_IS_BASE 1
 #define USE_JOB_QUEUE_USERREC 1 // replace ephemeral OwnerInfo struct with a persistent JobQueueUserRec struct
 
+// until we can remove targettype from the classad log entirely
+// use the legacy "Machine" value as the target adtype
+#define JOB_TARGET_ADTYPE "Machine"
+
 class Service;
 
 class QmgmtPeer {
@@ -57,11 +61,18 @@ class QmgmtPeer {
 		bool set(const condor_sockaddr& raddr, const char *fqOwnerAndDomain);
 		void unset();
 
+		bool initAuthOwner(bool read_only);
+	#ifdef USE_JOB_QUEUE_USERREC
+		bool setEffectiveOwner(const class JobQueueUserRec * urec, bool not_super_effective);
+		// used during submit when a UserRec is created as a side effect of submit
+		void attachNewUserRec(const class JobQueueUserRec * urec) { jquser = urec; }
+	#else
 		bool setEffectiveOwner(char const *o);
+	#endif
 		bool setAllowProtectedAttrChanges(bool val);
 		bool getAllowProtectedAttrChanges() const { return allow_protected_attr_changes_by_superuser; }
-		bool setReadOnly(bool val);
 		bool getReadOnly() const { return readonly; }
+		bool getWriteAuth() const { return !readonly && write_ok; }
 
 		ReliSock *getReliSock() const { return sock; };
 		const CondorVersionInfo *get_peer_version() const { return sock->get_peer_version(); };
@@ -73,24 +84,42 @@ class QmgmtPeer {
 		const char* getRealOwner() const { return sock ? sock->getOwner() : owner; }
 		const char* getRealUser() const { return sock ? sock->getFullyQualifiedUser() : fquser; }
 		const char* getUser() const  { return fquser ? fquser : (sock ? sock->getFullyQualifiedUser() : nullptr); }
+	#ifdef USE_JOB_QUEUE_USERREC
+		const class JobQueueUserRec * UserRec() const { return jquser; } // EffectiveUser as a JobQueueUserRec
+	#endif
 		int isAuthenticated() const;
 		bool isAuthorizationInBoundingSet(const char *authz) const {return sock->isAuthorizationInBoundingSet(authz);}
 
+	#ifdef USE_JOB_QUEUE_USERREC
+		friend inline const char * EffectiveUserName(QmgmtPeer * qsock);
+		friend inline const class JobQueueUserRec * EffectiveUserRec(QmgmtPeer * qsock);
+	#else
 		friend inline const char * EffectiveUser(QmgmtPeer * qsock);
+	#endif
 
 	protected:
 
 		char *owner;  
-		bool allow_protected_attr_changes_by_superuser;
-		bool readonly;
-		char * fquser;  // owner@domain
+		char *fquser;  // owner@domain
+	#ifdef USE_JOB_QUEUE_USERREC
+		const class JobQueueUserRec * jquser = nullptr; // same as 
+	#endif
 		char *myendpoint; 
 		condor_sockaddr addr;
 		ReliSock *sock; 
 
 		Transaction *transaction;
-		int next_proc_num, active_cluster_num;
-		time_t xact_start_time;
+		int next_proc_num{}, active_cluster_num{};
+		time_t xact_start_time{};
+
+		bool readonly{false};
+		bool write_ok = false;
+		bool allow_protected_attr_changes_by_superuser{true};
+	#ifdef USE_JOB_QUEUE_USERREC
+		bool real_auth_is_super = false;	// real auth identifier is a super user
+		bool not_super_effective = false;	// Ignore EffectiveOwner Superuser status
+	#endif
+
 
 	private:
 		// we do not allow deep-copies via copy ctor or assignment op,
@@ -101,6 +130,17 @@ class QmgmtPeer {
 
 extern bool user_is_the_new_owner; // set in schedd.cpp at startup
 extern bool ignore_domain_mismatch_when_setting_owner;
+#ifdef USE_JOB_QUEUE_USERREC
+inline const char * EffectiveUserName(QmgmtPeer * peer) {
+	if (peer) {
+		// with JobQueueUserRec we always want to know the full username
+		// so regardless of the setting for user_is_the_new_owner, we want
+		// return a fully qualified user here
+		return peer->getUser();
+	}
+	return "";
+}
+#else
 inline const char * EffectiveUser(QmgmtPeer * peer) {
 	if (peer) {
 	#ifdef USE_JOB_QUEUE_USERREC
@@ -119,6 +159,7 @@ inline const char * EffectiveUser(QmgmtPeer * peer) {
 	}
 	return "";
 }
+#endif
 
 #define JQJ_CACHE_DIRTY_JOBOBJ        0x00001 // set when an attribute cached in the JobQueueJob that doesn't have it's own flag has changed
 #define JQJ_CACHE_DIRTY_SUBMITTERDATA 0x00002 // set when an attribute that affects the submitter name is changed
@@ -211,12 +252,16 @@ public:
 		return entry_type_unknown;
 	}
 	void CheckJidAndType(const JOB_ID_KEY &key); // called when reloading the job queue
+#ifdef JOB_QUEUE_PAYLOAD_IS_BASE
+	bool IsType(char _type) const { return entry_type == _type; }
+#else
 	bool IsType(char _type) { if (!entry_type) this->PopulateFromAd(); return entry_type == _type; }
-	bool IsJob() { return IsType(entry_type_job); }
-	bool IsHeader() { return IsType(entry_type_header); }
-	bool IsUserRec() { return IsType(entry_type_userrec); }
-	bool IsJobSet() { return IsType(entry_type_jobset); }
-	bool IsCluster() { return IsType(entry_type_cluster); }
+#endif
+	bool IsJob() const { return IsType(entry_type_job); }
+	bool IsHeader() const { return IsType(entry_type_header); }
+	bool IsUserRec() const { return IsType(entry_type_userrec); }
+	bool IsJobSet() const { return IsType(entry_type_jobset); }
+	bool IsCluster() const { return IsType(entry_type_cluster); }
 };
 
 #ifdef USE_JOB_QUEUE_USERREC
@@ -244,11 +289,11 @@ public:
 	};
 
 	//JOB_ID_KEY jid;
-	char        flags=JQU_F_DIRTY;   // dirty on creation
+	unsigned char flags=JQU_F_DIRTY;   // dirty on creation
 protected:
 	bool        enabled=true;
-	//bool        super=false;  // near-term future use
-	//bool        local=false;  // near-term future use
+	bool        local=false;
+	unsigned char super=JQU_F_PENDING; // config stale on creation
 	std::string name;   // the name used in the schedd's map of OwnerInfo records
 	std::string domain; // holds windows NTDomain, this is future use on *nix
 public:
@@ -256,9 +301,9 @@ public:
 	LiveJobCounters live; // job counts that are always up-to-date with the committed job state
 	time_t LastHitTime=0; // records the last time we incremented num.Hit, use to expire OwnerInfo
 
-	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _domain=nullptr)
+	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _domain=nullptr, unsigned char is_super=0)
 		: JobQueueBase(JOB_ID_KEY(USERRECID_qkey1,userrec_id), entry_type_userrec)
-		, name(_name?_name:""), domain(_domain?_domain:"")
+		, super(is_super), name(_name?_name:""), domain(_domain?_domain:"")
 	{}
 	virtual ~JobQueueUserRec() {};
 
@@ -273,8 +318,23 @@ public:
 	void clearPending() { flags &= ~JQU_F_PENDING; }
 	void setPending() { flags |= JQU_F_PENDING; }
 	bool IsEnabled() const { return enabled; }
-	//bool IsSuperUser() const { return super; }
-	//bool IsLocalUser() const { return local; }
+	bool IsLocalUser() const { return local; }
+
+	// The super member has 4 possible values
+	// super == 0 is not super
+	// super == 1 is intrinsic super ( UserRec has SuperUser=true or UserRec is a built-in )
+	// super == 2 is cached config super ( name matched QUEUE_SUPER_USERS when we checked )
+	// super == JQU_F_PENDING is stale config super ( we need to check name against QUEUE_SUPER_USERS )
+	bool IsSuperUser() const { return super == 1 || super == 2; }
+	bool setConfigSuper(bool value) {
+		// clear stale state and set config super state if not inherently super
+		if (super != 1) super = (value?2:0);
+		return IsSuperUser();
+	}
+	bool isStaleConfigSuper() const { return super == JQU_F_PENDING; }
+	void setStaleConfigSuper() { if (super != 1) super = JQU_F_PENDING; } // intrinsic super cant be stale
+	bool IsInherentlySuper() const { return super == 1; }
+	bool IsConfigSuper() const { return super == 2; }
 };
 
 typedef JobQueueUserRec OwnerInfo;
@@ -288,6 +348,18 @@ inline int SetUserAttributeString(JobQueueUserRec & urec, const char * attr_name
 	classad::Value tmp;
 	if (attr_value) tmp.SetStringValue(attr_value);
 	return SetUserAttributeValue(urec, attr_name, tmp);
+}
+int DeleteUserAttribute(JobQueueUserRec & urec, const char * attr_name);
+
+// get the Effect User record from the peer
+// returns NULL if no peer or the peer has not yet had an userrec set.
+inline const class JobQueueUserRec * EffectiveUserRec(QmgmtPeer * peer)
+{
+	if (peer) {
+		return peer->UserRec();
+	}
+	// TODO: return CondorUserRec here?
+	return nullptr;
 }
 
 #else
@@ -449,13 +521,16 @@ public:
 	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
 };
 
+// until we can remove targettype from the classad log entirely
+// use the legacy "Machine" value as the target adtype
+#define JOB_TARGET_ADTYPE "Machine"
 
 class TransactionWatcher;
 
 
 // from qmgmt_factory.cpp
 // make an empty job factory
-class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds);
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds, MapFile* urlMap);
 // make a job factory from submit digest text, used on submit, optional user_ident is who to inpersonate when reading item data file (if any)
 bool LoadJobFactoryDigest(JobFactory *factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
 // attach submitted itemdata to a job factory that is pending submit.
@@ -468,6 +543,7 @@ class JobFactory * MakeJobFactory(
 	const classad::ClassAd * extended_cmds,
 	const char * submit_file,
 	bool spooled_submit_file,
+	MapFile* urlMap,
 	std::string & errmsg);
 void DestroyJobFactory(JobFactory * factory);
 
@@ -521,6 +597,23 @@ int handle_q(int, Stream *sock);
 void dirtyJobQueue( void );
 bool SendDirtyJobAdNotification(const PROC_ID& job_id);
 
+#ifdef USE_JOB_QUEUE_USERREC
+
+bool isQueueSuperUser(const JobQueueUserRec * user);
+
+// Verify that the user issuing a command (test_owner) is authorized
+// to modify the given queue object (job, jobset, userrec, etc).
+// In addition to everything UserCheck2()
+// does, this also calls IPVerify to check for WRITE authorization.
+// This call assumes Q_SOCK is set to a valid QmgmtPeer object.
+bool UserCheck(const JobQueueBase *ad, const JobQueueUserRec * test_owner);
+
+// Verify that the user issuing a command (test_owner) is authorized
+// to modify the given queue object (job, jobset, userrec, etc).
+// when not_super is true, behave as if test_owner is not a superuser even if it is one.
+bool UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_owner, bool not_super=false);
+#else
+
 bool isQueueSuperUser( const char* user );
 
 // Verify that the user issuing a command (test_owner) is authorized
@@ -533,6 +626,7 @@ bool UserCheck( const ClassAd *ad, const char *test_owner );
 // to modify the given job.  Either ad or job_owner should be given
 // but not both.  If job_owner is NULL, the owner is looked up in the ad.
 bool UserCheck2( const ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
+#endif
 
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
@@ -771,7 +865,7 @@ extern int JobsSeenOnQueueWalk;
 void InitQmgmt();
 void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void PostInitJobQueue();
-void CleanJobQueue();
+void CleanJobQueue(int tid = -1);
 bool setQSock( ReliSock* rsock );
 void unsetQSock();
 void MarkJobClean(PROC_ID job_id);

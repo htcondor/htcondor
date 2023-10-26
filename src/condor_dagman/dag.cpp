@@ -479,7 +479,7 @@ Dag::GetCondorLogStatus () {
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessLogEvents (bool recovery) {
 
-	debug_printf( DEBUG_VERBOSE, "Currently monitoring %d HTCondor "
+	debug_printf( DEBUG_VERBOSE, "Currently monitoring %zu HTCondor "
 				"log file(s)\n", _condorLogRdr.activeLogFileCount() );
 
 	bool done = false;  // Keep scanning until ULOG_NO_EVENT
@@ -744,7 +744,10 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// have trouble recovering from aborted jobs using late materialization.
 			if ( job->_queuedNodeJobProcs > 0 ) {
 				// once one job proc fails, remove the whole cluster
-				RemoveBatchJob( job );
+				std::string rm_reason;
+				formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) got %s event.",
+				          job->GetJobName(), event->cluster, event->proc, event->subproc, event->eventName());
+				RemoveBatchJob(job, rm_reason);
 			}
 			if ( job->_scriptPost != NULL) {
 					// let the script know the job's exit status
@@ -819,7 +822,10 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 				if ( job->_queuedNodeJobProcs > 0 ) {
 				  // once one job proc fails, remove
 				  // the whole cluster
-					RemoveBatchJob( job );
+					std::string rm_reason;
+					formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) failed with signal %d.",
+					          job->GetJobName(), termEvent->cluster, termEvent->proc, termEvent->subproc, termEvent->signalNumber);
+					RemoveBatchJob(job, rm_reason);
 				}
 			}
 
@@ -870,7 +876,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 
 //---------------------------------------------------------------------------
 void
-Dag::RemoveBatchJob(Job *node) {
+Dag::RemoveBatchJob(Job *node, const std::string& reason) {
 
 	ArgList args;
 	std::string constraint;
@@ -884,7 +890,10 @@ Dag::RemoveBatchJob(Job *node) {
 		// job.
 	formatstr(constraint, ATTR_DAGMAN_JOB_ID "==%d", _DAGManJobId->_cluster);
 	args.AppendArg( constraint.c_str() );
-	
+
+	args.AppendArg("-reason");
+	args.AppendArg(reason);
+
 	std::string display;
 	args.GetArgsStringForDisplay( display );
 	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", display.c_str() );
@@ -937,7 +946,9 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 						job->GetRetries() );
 			}
 			if ( job->_queuedNodeJobProcs == 0 ) {
-				_numNodesFailed++;
+				if (job->GetType() != NodeType::SERVICE) {
+					_numNodesFailed++;
+				}
 				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -1040,8 +1051,10 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				RestartNode( job, recovery );
 			} else {
 					// no more retries -- node failed
-				_numNodesFutile += job->SetDescendantsToFutile(*this);
-				_numNodesFailed++;
+				if (job->GetType() != NodeType::SERVICE) {
+					_numNodesFutile += job->SetDescendantsToFutile(*this);
+					_numNodesFailed++;
+				}
 				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -1295,7 +1308,8 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 						"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
 						"proc(s) for this node will now be removed\n",
 						event->cluster, job->GetJobName(), _maxJobHolds );
-			RemoveBatchJob( job );
+			std::string rm_reason = "DAG Limit: Max number of held jobs was reached.";
+			RemoveBatchJob( job, rm_reason);
 		}
 	}
 
@@ -1942,8 +1956,10 @@ Dag::PreScriptReaper( Job *job, int status )
 			// None of the above apply -- the node has failed.
 		else {
 			job->TerminateFailure();
-			_numNodesFutile += job->SetDescendantsToFutile(*this);
-			_numNodesFailed++;
+			if (job->GetType() != NodeType::SERVICE) {
+				_numNodesFutile += job->SetDescendantsToFutile(*this);
+				_numNodesFailed++;
+			}
 			_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -2234,7 +2250,7 @@ Dag::NumNodesDone( bool includeFinal ) const
 // Note 2: We need to keep this indefinitely for the ABORT-DAG-ON case,
 // where we need to condor_rm any running node jobs, and the schedd
 // won't do it for us.  wenger 2014-10-29.
-void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
+void Dag::RemoveRunningJobs ( const CondorID &dmJobId, const std::string& reason, bool removeCondorJobs,
 			bool bForce )
 {
 	if ( bForce ) removeCondorJobs = true;
@@ -2257,6 +2273,10 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 		// NOTE: having whitespace in the constraint argument will cause quoting problems on windows
 		formatstr(constraint, ATTR_DAGMAN_JOB_ID "==%d", dmJobId._cluster );
 		args.AppendArg( constraint.c_str() );
+		if (!reason.empty()) {
+			args.AppendArg("-reason");
+			args.AppendArg(reason);
+		}
 		if ( _dagmanUtils.popen( args ) != 0 ) {
 			debug_printf( DEBUG_NORMAL, "Error removing DAGMan jobs\n");
 		}
@@ -2757,7 +2777,9 @@ Dag::RestartNode( Job *node, bool recovery )
         debug_printf( DEBUG_NORMAL, "Aborting further retries of node %s "
                       "%s(last attempt returned %d)\n",
                       node->GetJobName(), finalRun, node->retval);
-        _numNodesFailed++;
+		if (node->GetType() != NodeType::SERVICE) {
+			_numNodesFailed++;
+		}
 		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
 			_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -3450,7 +3472,8 @@ Dag::SetMaxJobsSubmitted(int newMax) {
 				submittedJobsCount++;
 				if (submittedJobsCount > _maxJobsSubmitted) {
 					_job->retry_max++;
-					RemoveBatchJob(_job);
+					std::string rm_reason = "DAG Limit: Max number of submitted jobs was reached.";
+					RemoveBatchJob(_job, rm_reason);
 				}
 			}
 		}
@@ -4325,9 +4348,8 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 		// we see the submit events so that we don't accidentally exceed
 		// maxjobs (now really maxnodes) if it takes a while to see
 		// the submit events.  wenger 2006-02-10.
-	if ( node->GetType() != NodeType::SERVICE ) {
-		UpdateJobCounts( node, 1 );
-	}
+	UpdateJobCounts( node, 1 );
+
 
         // stash the job ID reported by the submit command, to compare
         // with what we see in the userlog later as a sanity-check
@@ -4438,6 +4460,8 @@ Dag::DecrementProcCount( Job *node )
 void
 Dag::UpdateJobCounts( Job *node, int change )
 {
+	// Service nodes are separate from normal jobs
+	if ( node->GetType() == NodeType::SERVICE ) { return; }
 	_numJobsSubmitted += change;
 	ASSERT( _numJobsSubmitted >= 0 );
 

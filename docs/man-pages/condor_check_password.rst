@@ -10,9 +10,9 @@ will not fully read.
 Synopsis
 --------
 
-**condor_check_password** <**-h** | **--help**>
+**condor_check_password** <**-h** | **-\-help**>
 
-**condor_check_password** [**--truncate**] [*key*]
+**condor_check_password** [**-\-truncate**] [*key*]
 
 Description
 -----------
@@ -42,10 +42,10 @@ specific *key* or *key*\ s to check, instead.
 Options
 -------
 
-    **-h**, **--help**
+    **-h**, **-\-help**
         Print a usage reminder.
 
-    **--truncate**
+    **-\-truncate**
         When a potentially insecure key is encountered, truncate it to
         match the behavior prior to version 8.9.12.
 

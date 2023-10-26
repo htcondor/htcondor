@@ -196,9 +196,8 @@ int AnalyzeThisSubExpr(
 	switch(kind) {
 		case classad::ExprTree::LITERAL_NODE: {
 			classad::Value val;
-			classad::Value::NumberFactor factor;
-			((classad::Literal*)expr)->GetComponents(val, factor);
-			unparser.UnparseAux(strLabel, val, factor);
+			((classad::Literal*)expr)->GetComponents(val);
+			unparser.UnparseAux(strLabel, val);
 			if (chatty) {
 				printf("     %d:const : %s\n", kind, strLabel.c_str());
 			}
@@ -669,14 +668,6 @@ void AnalyzeRequirementsForEachTarget(
 	int console_width = fmt.console_width;
 	bool show_work = (fmt.detail_mask & detail_diagnostic) != 0;
 	const bool count_soft_matches = false; // when true, "soft" always and never show  up as counts of machines
-
-	/*
-	bool request_is_machine = false;
-	if (0 == strcmp(GetMyTypeName(*request),STARTD_ADTYPE)) {
-		//attrConstraint = ATTR_START;
-		request_is_machine = true;
-	}
-	*/
 
 	classad::ExprTree* exprReq = request->LookupExpr(attrConstraint);
 	if ( ! exprReq)
@@ -1388,8 +1379,7 @@ size_t AddExprTreeMemoryUse (const classad::ExprTree* expr, QuantizingAccumulato
 	switch(kind) {
 		case classad::ExprTree::LITERAL_NODE: {
 			classad::Value val;
-			classad::Value::NumberFactor factor;
-			((const classad::Literal*)expr)->GetComponents(val, factor);
+			((const classad::Literal*)expr)->GetComponents(val);
 			accum += sizeof(classad::Literal);
 			const char * s = NULL;
 			classad::ExprList * lst = NULL;

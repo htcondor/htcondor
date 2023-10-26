@@ -174,8 +174,7 @@ bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value)
 	}
 
 	if (kind == classad::ExprTree::LITERAL_NODE) {
-		classad::Value::NumberFactor factor;
-		((classad::Literal*)expr)->GetComponents(value, factor);
+		((classad::Literal*)expr)->GetComponents(value);
 		return true;
 	}
 
@@ -265,7 +264,6 @@ bool ExprTreeMayDollarDollarExpand(classad::ExprTree * tree,  std::string & unpa
 	if ( ! tree) return false;
 
 	if (tree->GetKind() == classad::ExprTree::LITERAL_NODE) {
-		classad::Value::NumberFactor factor;
 		const auto non_string_types = classad::Value::ValueType::ERROR_VALUE
 				| classad::Value::ValueType::UNDEFINED_VALUE
 				| classad::Value::ValueType::BOOLEAN_VALUE
@@ -275,7 +273,7 @@ bool ExprTreeMayDollarDollarExpand(classad::ExprTree * tree,  std::string & unpa
 				| classad::Value::ValueType::ABSOLUTE_TIME_VALUE;
 
 		classad::Literal * lit = ((classad::Literal*)tree);
-		if (lit->getValue(factor).GetType() & non_string_types) {
+		if (lit->getValue().GetType() & non_string_types) {
 			return false; // these types cannot have $$() expansions
 		}
 
@@ -458,8 +456,7 @@ int walk_attr_refs (
 		case classad::ExprTree::LITERAL_NODE: {
 			classad::ClassAd * ad;
 			classad::Value val;
-			classad::Value::NumberFactor	factor;
-			((const classad::Literal*)tree)->GetComponents( val, factor );
+			((const classad::Literal*)tree)->GetComponents( val);
 			if (val.IsClassAdValue(ad)) {
 				iret += walk_attr_refs(ad, pfn, pv);
 			}
@@ -593,8 +590,7 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 		case classad::ExprTree::LITERAL_NODE: {
 			classad::ClassAd * ad;
 			classad::Value val;
-			classad::Value::NumberFactor	factor;
-			((classad::Literal*)tree)->GetComponents( val, factor );
+			((classad::Literal*)tree)->GetComponents( val);
 			if (val.IsClassAdValue(ad)) {
 				iret += RewriteAttrRefs(ad, mapping);
 			}
@@ -822,15 +818,15 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 	}
 }
 
-int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
+bool EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
 				  classad::Value::ValueType type_mask,
 				  const std::string & sourceAlias,
 				  const std::string & targetAlias )
 {
-	int rc = TRUE;
+	bool rc = true;
 	if ( !expr || !source ) {
-		return FALSE;
+		return false;
 	}
 
 	const classad::ClassAd *old_scope = expr->GetParentScope();
@@ -841,7 +837,7 @@ int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 		mad = getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
 	if ( !source->EvaluateExpr( expr, result, type_mask ) ) {
-		rc = FALSE;
+		rc = false;
 	}
 
 	if ( mad ) {
@@ -869,8 +865,8 @@ static std::vector<ClassAd*> *matched_ads = NULL;
 bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch)
 {
 	int adCount = candidates.size();
-	static int cpu_count = 0;
-	int current_cpu_count = threads;
+	static size_t cpu_count = 0;
+	size_t current_cpu_count = threads;
 	int iterations = 0;
 	size_t matched = 0;
 
@@ -904,7 +900,7 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 	if(!candidates.size())
 		return false;
 
-	for(int index = 0; index < cpu_count; index++)
+	for(size_t index = 0; index < cpu_count; index++)
 	{
 		target_pool[index].CopyFrom(*ad1);
 		match_pool[index].ReplaceLeftAd(&(target_pool[index]));
@@ -933,27 +929,6 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 				break;
 			ClassAd *ad2 = candidates[offset];
 
-/*
-			if(halfMatch)
-			{
-				char const *my_target_type = target_pool[omp_id].GetTargetTypeName();
-				char const *target_type = ad2->GetMyTypeName();
-				if( !my_target_type ) {
-					my_target_type = "";
-				}
-				if( !target_type ) {
-					target_type = "";
-				}
-				if( strcasecmp(target_type,my_target_type) &&
-					strcasecmp(my_target_type,ANY_ADTYPE) )
-				{
-					result = false;
-					continue;
-				}
-			}
-*/
-
-
 			match_pool[omp_id].ReplaceRightAd(ad2);
 		
 			if(halfMatch)
@@ -970,7 +945,7 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 		}
 	}
 
-	for(int index = 0; index < cpu_count; index++)
+	for(size_t index = 0; index < cpu_count; index++)
 	{
 		match_pool[index].RemoveLeftAd();
 		matched += matched_ads[index].size();
@@ -979,7 +954,7 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 	if(matches.capacity() < matched)
 		matches.reserve(matched);
 
-	for(int index = 0; index < cpu_count; index++)
+	for(size_t index = 0; index < cpu_count; index++)
 	{
 		if(matched_ads[index].size())
 			matches.insert(matches.end(), matched_ads[index].begin(), matched_ads[index].end());
@@ -998,27 +973,22 @@ bool IsAConstraintMatch( ClassAd *query, ClassAd *target )
 	return result;
 }
 
-bool IsAHalfMatch( ClassAd *my, ClassAd *target )
+bool IsATargetMatch( ClassAd *my, ClassAd *target, const char * targetType )
 {
-		// The collector relies on this function to check the target type.
-		// Eventually, we should move that check either into the collector
-		// or into the requirements expression.
-	char const *my_target_type = GetTargetTypeName(*my);
-	char const *target_type = GetMyTypeName(*target);
-	if( !my_target_type ) {
-		my_target_type = "";
-	}
-	if( !target_type ) {
-		target_type = "";
-	}
-	if( strcasecmp(target_type,my_target_type) &&
-		strcasecmp(my_target_type,ANY_ADTYPE) )
-	{
-		return false;
+	// first check to see that the MyType of the target matches the desired targetType
+	if (targetType && targetType[0] && YourStringNoCase(targetType) != ANY_ADTYPE) {
+		char const *mytype_of_target = GetMyTypeName(*target);
+		if( !mytype_of_target ) {
+			mytype_of_target = "";
+		}
+		if (YourStringNoCase(targetType) != mytype_of_target) {
+			return false;
+		}
 	}
 
 	return IsAConstraintMatch(my, target);
 }
+
 
 /**************************************************************************
  *

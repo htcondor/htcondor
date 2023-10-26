@@ -29,7 +29,7 @@
 
 
 // static helper function
-std::string JobSets::makeAlias(const std::string name, const OwnerInfo &owni) {
+std::string JobSets::makeAlias(const std::string& name, const OwnerInfo &owni) {
 	std::string ret = name + "/" + owni.Name();
 	lower_case(ret);
 	return ret;

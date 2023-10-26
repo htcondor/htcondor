@@ -424,7 +424,7 @@ calc_idle_time_cpp(time_t * user_idle, time_t * console_idle)
     
     *user_idle = *console_idle = -1;
     
-    if (IOMasterPort(bootstrap_port, &masterPort) != kIOReturnSuccess) {
+    if (IOMainPort(bootstrap_port, &masterPort) != kIOReturnSuccess) {
         dprintf(D_ALWAYS, "IDLE: Couldn't create a master I/O Kit port.\n");
     } else {
         hidMatchDictionary = IOServiceMatching("IOHIDSystem");
@@ -498,7 +498,7 @@ extract_idle_time(
 			return idle_time;
 		}
 		// Convert from nanoseconds to seconds
-		idle_time = nanoseconds / 1000000000;
+		idle_time = nanoseconds / 1'000'000'000;
     }
 	// CFRelease seems to be hip with taking a null object. This seems
 	// strange to me, but hey, at least I thought about it

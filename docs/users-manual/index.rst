@@ -9,13 +9,11 @@ Users' Manual
    running-a-job-steps
    submitting-a-job
    file-transfer
-   submitting-a-remote-job
    managing-a-job
    automatic-job-management
    when-job-wont-run
    services-for-jobs
    priorities-and-preemption
-   dagman-workflows
    job-sets
    matchmaking-with-classads
    choosing-an-htcondor-universe
@@ -25,5 +23,6 @@ Users' Manual
    docker-universe-applications
    container-universe-jobs
    self-checkpointing-applications
+   submitting-a-remote-job
    time-scheduling-for-job-execution
    special-environment-considerations

@@ -163,22 +163,22 @@ convert_value_to_python(const classad::Value &value)
     {
     case classad::Value::SCLASSAD_VALUE:
     case classad::Value::CLASSAD_VALUE:
-        (void) value.IsClassAdValue(advalue);
+        std::ignore = value.IsClassAdValue(advalue);
         wrap.reset(new ClassAdWrapper());
         wrap->CopyFrom(*advalue);
         result = boost::python::dict(wrap);
         break;
     case classad::Value::BOOLEAN_VALUE:
-        (void) value.IsBooleanValue(boolvalue);
+        std::ignore = value.IsBooleanValue(boolvalue);
         obj = boolvalue ? Py_True : Py_False;
         result = boost::python::object(boost::python::handle<>(boost::python::borrowed(obj)));
         break;
     case classad::Value::STRING_VALUE:
-        (void) value.IsStringValue(strvalue);
+        std::ignore = value.IsStringValue(strvalue);
         result = boost::python::str(strvalue);
         break;
     case classad::Value::ABSOLUTE_TIME_VALUE:
-        (void) value.IsAbsoluteTimeValue(atime);
+        std::ignore = value.IsAbsoluteTimeValue(atime);
         // Note we don't use offset -- atime.secs is always in UTC, which is
         // what python wants for PyDateTime_FromTimestamp
         timestamp = boost::python::long_(atime.secs);
@@ -187,15 +187,15 @@ convert_value_to_python(const classad::Value &value)
         result = boost::python::object(boost::python::handle<>(obj));
         break;
     case classad::Value::INTEGER_VALUE:
-        (void) value.IsIntegerValue(intvalue);
+        std::ignore = value.IsIntegerValue(intvalue);
         result = boost::python::long_(intvalue);
         break;
     case classad::Value::RELATIVE_TIME_VALUE:
-        (void) value.IsRelativeTimeValue(realvalue);
+        std::ignore = value.IsRelativeTimeValue(realvalue);
         result = boost::python::object(realvalue);
         break;
     case classad::Value::REAL_VALUE:
-        (void) value.IsRealValue(realvalue);
+        std::ignore = value.IsRealValue(realvalue);
         result = boost::python::object(realvalue);
         break;
     case classad::Value::ERROR_VALUE:
@@ -690,7 +690,7 @@ literal(boost::python::object value)
         ExprTreeHolder holder(expr, true);
         return holder;
     }
-	//PRAGMA_REMIND("LEAK CHECK! expr is probably a new object, but *might* be the value passed in!")
+    //PRAGMA_REMIND("LEAK CHECK! expr is probably a new object, but *might* be the value passed in!")
     ExprTreeHolder holder(expr, true);
     return holder;
 }
@@ -842,9 +842,9 @@ registerFunction(boost::python::object function, boost::python::object name)
 classad::ExprTree*
 convert_python_to_exprtree(boost::python::object value)
 {
-	if( value.ptr() == Py_None ) {
-		return classad::Literal::MakeUndefined();
-	}
+    if( value.ptr() == Py_None ) {
+        return classad::Literal::MakeUndefined();
+    }
     boost::python::extract<ExprTreeHolder&> expr_obj(value);
     if (expr_obj.check())
     {
@@ -1066,10 +1066,9 @@ bool convert_python_to_constraint(boost::python::object value, std::string & con
 		// to contact the daemon but get no results
 		bool has_constraint = true;
 		if (expr->GetKind() == classad::ExprTree::LITERAL_NODE) {
-			classad::Value::NumberFactor factor;
 			classad::Value lvalue;
 			bool bvalue = false;
-			((classad::Literal*)expr)->GetComponents(lvalue, factor);
+			((classad::Literal*)expr)->GetComponents(lvalue);
 			if (lvalue.IsBooleanValue(bvalue) && bvalue) {
 				has_constraint = false;
 			} else {

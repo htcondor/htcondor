@@ -156,7 +156,7 @@ void ViewServer::Config()
 
 	HistoryInterval=param_integer("POOL_HISTORY_SAMPLING_INTERVAL",60);
 
-	int MaxStorage=param_integer("POOL_HISTORY_MAX_STORAGE",10000000);
+	int MaxStorage=param_integer("POOL_HISTORY_MAX_STORAGE",10'000'000);
 
 	MaxFileSize=MaxStorage/(HistoryLevels*DataSetCount*2);
 
@@ -709,7 +709,7 @@ int ViewServer::ReadTimeChkName(const std::string &line, const std::string& Name
 // Scan function for submittor data
 //---------------------------------------------------------------------
 
-void ViewServer::WriteHistory()
+void ViewServer::WriteHistory(int /* tid */)
 {
 	std::string Key;
 	GeneralRecord* GenRec;

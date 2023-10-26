@@ -87,7 +87,7 @@ check_account_setup( const std::string & publicKeyFile, const std::string & priv
 		commandState, commandID, scratchpad );
 
 	int setupTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		 (void (Service::*)()) & FunctorSequence::operator(),
+		 (void (Service::*)(int)) & FunctorSequence::timer,
 		 "CheckForStacks", fs );
 	cfGahp->setNotificationTimerId( setupTimer );
 	ec2Gahp->setNotificationTimerId( setupTimer );
@@ -165,7 +165,7 @@ check_setup( const char * cloudFormationURL, const char * serviceURL ) {
 			ReliSock * sock = (ReliSock *) daemon->makeConnectedSocket(
 				Stream::reli_sock, 0, 0, & errorStack );
 			if( sock == NULL ) {
-				fprintf( stderr, "Failed to connect to to collector at '%s'.  Make sure COLLECTOR_HOST is set correctly.  If it is, ask your administrator about firewalls.", daemon->addr() );
+				fprintf( stderr, "Failed to connect to collector at '%s'.  Make sure COLLECTOR_HOST is set correctly.  If it is, ask your administrator about firewalls.", daemon->addr() );
 				fprintf( stderr, "  Because firewalls are machine-specific, we will continue to check your set-up.  However, if your instances fail to report to your pool, you may want to address this problem and try again.\n" );
 				fprintf( stderr, "\n" );
 			} else {
@@ -374,7 +374,7 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 
 
 	int setupTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		 (void (Service::*)()) & FunctorSequence::operator(),
+		 (void (Service::*)(int)) & FunctorSequence::timer,
 		 "CreateStack, DescribeStacks, WriteConfigFile", fs );
 	cfGahp->setNotificationTimerId( setupTimer );
 	ec2Gahp->setNotificationTimerId( setupTimer );

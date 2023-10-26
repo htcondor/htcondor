@@ -31,7 +31,7 @@ int
 sendCAReply( Stream* s, const char* cmd_str, ClassAd* reply )
 {
 	SetMyTypeName( *reply, REPLY_ADTYPE );
-	SetTargetTypeName( *reply, COMMAND_ADTYPE );
+	reply->Assign(ATTR_TARGET_TYPE, COMMAND_ADTYPE);
 
 	reply->Assign( ATTR_VERSION, CondorVersion() );
 
@@ -121,9 +121,9 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
 		dprintf( D_COMMAND, "*** End of Command ClassAd***\n" );
 	}
 
-	char* cmd_str = NULL;
+	std::string cmd_str;
 	int cmd;
-	if( ! ad->LookupString(ATTR_COMMAND, &cmd_str) ) {
+	if( ! ad->LookupString(ATTR_COMMAND, cmd_str) ) {
 		dprintf( D_ALWAYS, "Failed to read %s from ClassAd, aborting\n", 
 				 ATTR_COMMAND );
 		sendErrorReply( s, force_auth ? "CA_AUTH_CMD" : "CA_CMD",
@@ -131,12 +131,10 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
 						"Command not specified in request ClassAd" );
 		return FALSE;
 	}		
-	cmd = getCommandNum( cmd_str );
+	cmd = getCommandNum( cmd_str.c_str() );
 	if( cmd < 0 ) {
-		unknownCmd( s, cmd_str );
-		free( cmd_str );
+		unknownCmd( s, cmd_str.c_str() );
 		return FALSE;
 	}
-	free( cmd_str );
 	return cmd;
 }

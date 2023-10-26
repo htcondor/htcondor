@@ -73,6 +73,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_alive_inprogress_sock(NULL)
 	, c_lease_duration(lease_duration)
 	, c_aliveint(-1)
+	, c_lease_endtime(0)
 	, c_starter_handles_alives(false)
 	, c_startd_sends_alives(false)
 	, c_cod_keyword(NULL)
@@ -90,6 +91,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_pledged_machine_max_vacate_time(0)
 	, c_cpus_usage(0)
 	, c_image_size(0)
+	, c_want_matching(true)
 {
 	//dprintf(D_ALWAYS | D_BACKTRACE, "constructing claim %p on resource %p\n", this, res_ip);
 
@@ -113,7 +115,7 @@ Claim::~Claim()
 	if( c_type == CLAIM_COD ) {
 		dprintf( D_FULLDEBUG, "Deleted claim %s (owner '%s')\n",
 				 c_id->id(),
-				 c_client->owner() ? c_client->owner() : "unknown" );
+				 c_client->c_owner.c_str() );
 	}
 
 	// The resources assigned to this claim must have been freed by now.
@@ -183,8 +185,27 @@ Claim::vacate()
 {
 	ASSERT( c_id );
 		// warn the client of this claim that it's being vacated
-	if( c_client && c_client->addr() && !c_schedd_closed_claim ) {
-		c_client->vacate( c_id->id() );
+	if( c_client && !c_client->c_addr.empty() && !c_schedd_closed_claim ) {
+		dprintf(D_FULLDEBUG, "Entered vacate_client %s %s...\n",
+		        c_client->c_addr.c_str(), c_client->c_host.c_str());
+
+		Daemon my_schedd( DT_SCHEDD, c_client->c_addr.c_str(), NULL);
+		Sock* sock = my_schedd.startCommand(RELEASE_CLAIM, Stream::reli_sock,
+		                                    20, nullptr, nullptr, false,
+		                                    c_id->secSessionId());
+		if( ! sock ) {
+			dprintf(D_ERROR, "Can't connect to schedd (%s)\n",
+			        c_client->c_addr.c_str());
+		} else {
+			if( !sock->put_secret(c_id->id()) ) {
+				dprintf(D_ALWAYS, "Can't send ClaimId to client\n");
+			} else if( !sock->end_of_message() ) {
+				dprintf(D_ALWAYS, "Can't send EOM to client\n");
+			}
+
+			sock->close();
+			delete sock;
+		}
 	}
 
 #if HAVE_JOB_HOOKS
@@ -200,8 +221,6 @@ void
 Claim::publish( ClassAd* cad )
 {
 	std::string line;
-	char* tmp;
-	char *remoteUser;
 
 		/*
 		  NOTE: currently, we publish all of the following regardless
@@ -218,49 +237,45 @@ Claim::publish( ClassAd* cad )
 	cad->Assign( ATTR_CURRENT_RANK, c_rank );
 
 	if( c_client ) {
-		remoteUser = c_client->user();
-		if( remoteUser ) {
-			cad->Assign( ATTR_REMOTE_USER, remoteUser );
+		if (!c_client->c_scheddName.empty()) {
+			cad->Assign(ATTR_REMOTE_SCHEDD_NAME, c_client->c_scheddName);
 		}
-		tmp = c_client->owner();
-		if( tmp ) {
-			cad->Assign( ATTR_REMOTE_OWNER, tmp );
+		if( !c_client->c_user.empty() ) {
+			cad->Assign(ATTR_REMOTE_USER, c_client->c_user);
 		}
-		tmp = c_client->accountingGroup();
-		if( tmp ) {
-			char *uidDom = NULL;
+		if( !c_client->c_owner.empty() ) {
+			cad->Assign(ATTR_REMOTE_OWNER, c_client->c_owner);
+		}
+		if( !c_client->c_acctgrp.empty() ) {
+			const char *uidDom = NULL;
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
-			if ( remoteUser ) {
-				uidDom = strchr(remoteUser,'@');
+			if ( !c_client->c_user.empty() ) {
+				uidDom = strchr(c_client->c_user.c_str(), '@');
 			}
-			line = tmp;
+			line = c_client->c_acctgrp;
 			if ( uidDom ) {
 				line += uidDom;
 			}
 			cad->Assign( ATTR_ACCOUNTING_GROUP, line );
 		}
-		tmp = c_client->host();
-		if( tmp ) {
-			cad->Assign( ATTR_CLIENT_MACHINE, tmp );
+		if( !c_client->c_host.empty() ) {
+			cad->Assign(ATTR_CLIENT_MACHINE, c_client->c_host);
 		}
 
-		tmp = c_client->getConcurrencyLimits();
-		if (tmp) {
-			cad->Assign(ATTR_CONCURRENCY_LIMITS, tmp);
+		if ( !c_client->c_concurrencyLimits.empty() ) {
+			cad->Assign(ATTR_CONCURRENCY_LIMITS, c_client->c_concurrencyLimits);
 		}
 
-		int numJobPids = c_client->numPids();
-		
-		cad->Assign( ATTR_NUM_PIDS, numJobPids );
+		cad->Assign(ATTR_NUM_PIDS, c_client->c_numPids);
 
-        if ((tmp = c_client->rmtgrp())) {
-            cad->Assign(ATTR_REMOTE_GROUP, tmp);
-        }
-        if ((tmp = c_client->neggrp())) {
-            cad->Assign(ATTR_REMOTE_NEGOTIATING_GROUP, tmp);
-            cad->Assign(ATTR_REMOTE_AUTOREGROUP, c_client->autorg());
-        }
+		if ( !c_client->c_rmtgrp.empty() ) {
+			cad->Assign(ATTR_REMOTE_GROUP, c_client->c_rmtgrp);
+		}
+		if ( !c_client->c_neggrp.empty() ) {
+			cad->Assign(ATTR_REMOTE_NEGOTIATING_GROUP, c_client->c_neggrp);
+			cad->Assign(ATTR_REMOTE_AUTOREGROUP, c_client->c_autorg);
+		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -295,6 +310,14 @@ Claim::publish( ClassAd* cad )
 		resmgr->m_vmuniverse_mgr.publishVMInfo(c_starter_pid, cad);
 	}
 
+	if (!c_working_cm.empty()) {
+		cad->Assign("WorkingCM", c_working_cm);
+	}
+
+	if (c_rip->is_partitionable_slot() && c_state != CLAIM_UNCLAIMED) {
+		cad->Assign(ATTR_WANT_MATCHING, c_want_matching);
+	}
+
 	publishStateTimes( cad );
 
 }
@@ -303,38 +326,32 @@ void
 Claim::publishPreemptingClaim( ClassAd* cad )
 {
 	std::string line;
-	char* tmp;
-	char *remoteUser;
 
-	if( c_client && c_client->user() ) {
+	if( c_client && !c_client->c_user.empty() ) {
 		cad->Assign( ATTR_PREEMPTING_RANK, c_rank );
 
-		remoteUser = c_client->user();
-		if( remoteUser ) {
-			cad->Assign( ATTR_PREEMPTING_USER, remoteUser );
+		if( !c_client->c_user.empty() ) {
+			cad->Assign(ATTR_PREEMPTING_USER, c_client->c_user);
 		}
-		tmp = c_client->owner();
-		if( tmp ) {
-			cad->Assign( ATTR_PREEMPTING_OWNER, tmp );
+		if( !c_client->c_owner.empty() ) {
+			cad->Assign(ATTR_PREEMPTING_OWNER, c_client->c_owner);
 		}
-		tmp = c_client->accountingGroup();
-		if( tmp ) {
-			char *uidDom = NULL;
+		if( !c_client->c_acctgrp.empty() ) {
+			const char *uidDom = NULL;
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
-			if ( remoteUser ) {
-				uidDom = strchr(remoteUser,'@');
+			if ( !c_client->c_user.empty() ) {
+				uidDom = strchr(c_client->c_user.c_str(), '@');
 			}
-			line = tmp;
+			line = c_client->c_acctgrp;
 			if ( uidDom ) {
 				line += uidDom;
 			}
 			cad->Assign( ATTR_PREEMPTING_ACCOUNTING_GROUP, line );
 		}
 
-		tmp = c_client->getConcurrencyLimits();
-		if (tmp) {
-			cad->Assign( ATTR_PREEMPTING_CONCURRENCY_LIMITS, tmp );
+		if ( !c_client->c_concurrencyLimits.empty() ) {
+			cad->Assign(ATTR_PREEMPTING_CONCURRENCY_LIMITS, c_client->c_concurrencyLimits);
 		}
 	}
 	else {
@@ -369,20 +386,17 @@ Claim::publishCOD( ClassAd* cad )
 	cad->Assign( attrn, c_entered_state );
 
 	if( c_client ) {
-		tmp = c_client->user();
-		if( tmp ) {
+		if( !c_client->c_user.empty() ) {
 			attrn = prefix + ATTR_REMOTE_USER;
-			cad->Assign( attrn, tmp );
+			cad->Assign(attrn, c_client->c_user);
 		}
-		tmp = c_client->accountingGroup();
-		if( tmp ) {
+		if( !c_client->c_acctgrp.empty() ) {
 			attrn = prefix + ATTR_ACCOUNTING_GROUP;
-			cad->Assign( attrn, tmp );
+			cad->Assign(attrn, c_client->c_acctgrp);
 		}
-		tmp = c_client->host();
-		if( tmp ) {
+		if( !c_client->c_host.empty() ) {
 			attrn = prefix + ATTR_CLIENT_MACHINE;
-			cad->Assign( attrn, tmp );
+			cad->Assign( attrn, c_client->c_host);
 		}
 	}
 
@@ -504,7 +518,7 @@ Claim::start_match_timer()
 			  continue. 
 			*/
 		
-	   dprintf( D_FAILURE|D_ALWAYS, "Warning: got matched twice for same ClaimId."
+	   dprintf( D_ERROR, "Warning: got matched twice for same ClaimId."
 				" Canceling old match timer (%d)\n", c_match_tid );
 	   if( daemonCore->Cancel_Timer(c_match_tid) < 0 ) {
 		   dprintf( D_ALWAYS, "Failed to cancel old match timer (%d): "
@@ -548,7 +562,7 @@ Claim::cancel_match_timer()
 
 
 void
-Claim::match_timed_out()
+Claim::match_timed_out( int /* timerID */ )
 {
 	char* my_id = id();
 	if( !my_id ) {
@@ -556,14 +570,14 @@ Claim::match_timed_out()
 			// Don't use our dprintf(), use the "real" version, since
 			// if we're this confused, our rip pointer might be messed
 			// up, too, and we don't want to seg fault.
-		::dprintf( D_FAILURE|D_ALWAYS,
+		::dprintf( D_ERROR,
 				   "ERROR: Match timed out but there's no ClaimId\n" );
 		return;
 	}
 		
 	Resource* res_ip = resmgr->get_by_any_id( my_id );
 	if( !res_ip ) {
-		::dprintf( D_FAILURE|D_ALWAYS,
+		::dprintf( D_ERROR,
 				   "ERROR: Can't find resource of expired match\n" );
 		return;
 	}
@@ -581,7 +595,7 @@ Claim::match_timed_out()
 				  since the ResState code will deal with resetting the
 				  claim objects once we hit the owner state...
 				*/
-			dprintf( D_FAILURE|D_ALWAYS, "WARNING: Match timed out "
+			dprintf( D_ERROR, "WARNING: Match timed out "
 					 "while still in the %s state. This might mean "
 					 "your MATCH_TIMEOUT setting (%d) is too small, "
 					 "or that there's a problem with how quickly your "
@@ -605,7 +619,7 @@ Claim::match_timed_out()
 				   sending email at this point with the last 300 lines
 				   of the log file or something.  -Derek 10/9/00
 				*/
-			dprintf( D_FAILURE|D_FULLDEBUG, 
+			dprintf( D_ERROR | D_VERBOSE,
 					 "WARNING: Current match timed out but in %s state.\n",
 					 state_to_string(res_ip->state()) );
 			return;
@@ -615,7 +629,7 @@ Claim::match_timed_out()
 			// a weird, invalid state.  don't rely on using any member
 			// functions or data until we return.
 		res_ip->r_cur = new Claim( res_ip );
-		res_ip->dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
+		res_ip->dprintf( D_ERROR, "State change: match timed out\n" );
 		res_ip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting claim.
@@ -653,40 +667,31 @@ Claim::loadAccountingInfo()
 {
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in this Claim object
+		// TODO This code appears to update incorrectly if a claim is
+		//   reused for a job with a different owner or accounting group.
 
 		// See if the classad we got includes an ATTR_USER field,
 		// so we know who to charge for our services.  If not, we use
 		// the same user that claimed us.
-	char* tmp = NULL;
-	if( ! c_jobad->LookupString(ATTR_USER, &tmp) ) {
+	if( ! c_jobad->LookupString(ATTR_USER, c_client->c_user) ) {
 		if( c_type != CLAIM_COD ) { 
 			c_rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in "
 						  "request classad!  Using old value (%s)\n", 
-						  ATTR_USER, c_client->user() );
+						  ATTR_USER, c_client->c_user.c_str() );
 		}
 	} else {
-		c_rip->dprintf( D_FULLDEBUG, 
-						"Got RemoteUser (%s) from request classad\n", tmp ); 
-		c_client->setuser( tmp );
-		free( tmp );
-		tmp = NULL;
+		c_rip->dprintf( D_FULLDEBUG,
+		                "Got RemoteUser (%s) from request classad\n",
+		                c_client->c_user.c_str() );
 	}
 
 		// Only stash this if it's in the ad, but don't print anything
 		// if it's not.
-	if( c_jobad->LookupString(ATTR_ACCOUNTING_GROUP, &tmp) ) {
-		c_client->setAccountingGroup( tmp );
-		free( tmp );
-		tmp = NULL;
-	}
+	c_jobad->LookupString(ATTR_ACCOUNTING_GROUP, c_client->c_acctgrp);
 
-	if(!c_client->owner()) {
+	if(c_client->c_owner.empty()) {
 			// Only if Owner has never been initialized, load it now.
-		if(c_jobad->LookupString(ATTR_OWNER, &tmp)) {
-			c_client->setowner( tmp );
-			free( tmp );
-			tmp = NULL;
-		}
+		c_jobad->LookupString(ATTR_OWNER, c_client->c_owner);
 	}
 }
 
@@ -698,21 +703,13 @@ Claim::loadRequestInfo()
 	std::string limits;
 	(void) EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, limits);
 	if (!limits.empty()) {
-		c_client->setConcurrencyLimits(limits.c_str());
+		c_client->c_concurrencyLimits = limits;
 	}
 
-    // stash information about what accounting group match was negotiated under
-    string strval;
-    if (c_jobad->LookupString(ATTR_REMOTE_GROUP, strval)) {
-        c_client->setrmtgrp(strval.c_str());
-    }
-    if (c_jobad->LookupString(ATTR_REMOTE_NEGOTIATING_GROUP, strval)) {
-        c_client->setneggrp(strval.c_str());
-    }
-    bool boolval=false;
-    if (c_jobad->LookupBool(ATTR_REMOTE_AUTOREGROUP, boolval)) {
-        c_client->setautorg(boolval);
-    }
+	// stash information about what accounting group match was negotiated under
+	c_jobad->LookupString(ATTR_REMOTE_GROUP, c_client->c_rmtgrp);
+	c_jobad->LookupString(ATTR_REMOTE_NEGOTIATING_GROUP, c_client->c_neggrp);
+	c_jobad->LookupBool(ATTR_REMOTE_AUTOREGROUP, c_client->c_autorg);
 }
 
 void
@@ -721,9 +718,8 @@ Claim::loadStatistics()
 		// Stash the ATTR_NUM_PIDS, necessary to advertise
 		// them if they exist
 	if ( c_client ) {
-		int numJobPids = 0;
-		c_jobad->LookupInteger(ATTR_NUM_PIDS, numJobPids);
-		c_client->setNumPids(numJobPids);
+		c_client->c_numPids = 0;
+		c_jobad->LookupInteger(ATTR_NUM_PIDS, c_client->c_numPids);
 	}
 }
 
@@ -796,6 +792,13 @@ Claim::setaliveint( int new_alive )
 		// initalized to something reasonable.  once we get the job ad
 		// we'll reset it to the real value if it's defined.
 	c_lease_duration = max_claim_alives_missed * new_alive;
+}
+
+void
+Claim::setLeaseEndtime(time_t end_time)
+{
+	// TODO reset timer if updated after timer start?
+	c_lease_endtime = end_time;
 }
 
 void Claim::cacheJobInfo( ClassAd* job )
@@ -875,8 +878,13 @@ Claim::startLeaseTimer()
 	   EXCEPT( "Claim::startLeaseTimer() called w/ c_lease_tid = %d", 
 			   c_lease_tid );
 	}
+	int when = c_lease_duration;
+	time_t now = time(nullptr);
+	if (c_lease_endtime && (c_lease_endtime < now + c_lease_duration)) {
+		when = (int)(c_lease_endtime - now);
+	}
 	c_lease_tid =
-		daemonCore->Register_Timer( c_lease_duration, 0, 
+		daemonCore->Register_Timer( when, 0,
 				(TimerHandlercpp)&Claim::leaseExpired,
 				"Claim::leaseExpired", this );
 	if( c_lease_tid == -1 ) {
@@ -955,9 +963,19 @@ Claim::cancelLeaseTimer()
 }
 
 void
-Claim::sendAlive()
+Claim::sendAlive( int /* timerID */ )
 {
 	const char* c_addr = NULL;
+
+	if (c_rip->is_partitionable_slot()) {
+		// For a claimed pslot, assume the schedd is alive.
+		// The claim has a limited lifetime, which will eventually
+		// be hit.
+		// TODO We plan to add a variant of the ALIVE command that
+		//   includes the current pslot ad.
+		alive();
+		return;
+	}
 
 	if ( c_starter_handles_alives && isActive() ) {
 			// If the starter is dealing with the alive protocol,
@@ -970,7 +988,7 @@ Claim::sendAlive()
 	}
 
 	if ( c_client ) {
-		c_addr = c_client->addr();
+		c_addr = c_client->c_addr.c_str();
 	}
 
 	if( !c_addr ) {
@@ -991,7 +1009,7 @@ Claim::sendAlive()
 	int connect_timeout = MAX(20, ((c_lease_duration / 3)-3) );
 
 	if (!(sock = matched_schedd.reliSock( connect_timeout, 0, NULL, true ))) {
-		dprintf( D_FAILURE|D_ALWAYS, 
+		dprintf( D_ERROR,
 				"Alive failed - couldn't initiate connection to %s\n",
 		         c_addr );
 		return;
@@ -1030,7 +1048,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 {
 	const char* c_addr = "(unknown)";
 	if ( c_client ) {
-		c_addr = c_client->addr();
+		c_addr = c_client->c_addr.c_str();
 	}
 
 	char *claimId = id();
@@ -1046,7 +1064,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 	dprintf( D_PROTOCOL, "In Claim::sendAliveConnectHandler id %s\n", publicClaimId());
 
 	if (!sock) {
-		dprintf( D_FAILURE|D_ALWAYS, 
+		dprintf( D_ERROR,
 				 "NULL sock when connecting to schedd %s\n",
 				 c_addr );
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
@@ -1055,7 +1073,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 	ASSERT(c_alive_inprogress_sock == sock);
 
 	if (!sock->is_connected()) {
-		dprintf( D_FAILURE|D_ALWAYS, "Failed to connect to schedd %s\n",
+		dprintf( D_ERROR, "Failed to connect to schedd %s\n",
 				 c_addr );
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
 	}
@@ -1064,7 +1082,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 		// the claim id, and schedd responds with an int ack.
 
 	if (!matched_schedd.startCommand(ALIVE, sock, 20, NULL, NULL, false, secSessionId() )) {
-		dprintf( D_FAILURE|D_ALWAYS, 
+		dprintf( D_ERROR,
 				"Couldn't send ALIVE to schedd at %s\n",
 				 c_addr );
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
@@ -1073,7 +1091,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 	sock->encode();
 
 	if ( !sock->put_secret( claimId ) || !sock->end_of_message() ) {
-			dprintf( D_FAILURE|D_ALWAYS, 
+			dprintf( D_ERROR,
 				 "Failed to send Alive to schedd %s for job %d.%d id %s\n",
 				 c_addr, c_cluster, c_proc, publicClaimId() );
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
@@ -1112,7 +1130,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 	const char* c_addr = "(unknown)";
 
 	if ( c_client ) {
-		c_addr = c_client->addr();
+		c_addr = c_client->c_addr.c_str();
 	}
 
 	// Now, we set the timeout on the socket to 1 second.  Since we 
@@ -1135,7 +1153,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 		// If the response is -1, that means the schedd knows nothing
 		// about this claim, so relinquish it.
 	if ( reply == -1 ) {
-		dprintf(D_FAILURE|D_ALWAYS,"State change: claim no longer recognized "
+		dprintf(D_ERROR,"State change: claim no longer recognized "
 			 "by the schedd - removing claim\n" );
 		c_alive_inprogress_sock = NULL;
 		finishKillClaim();	// get rid of the claim
@@ -1152,12 +1170,12 @@ Claim::sendAliveResponseHandler( Stream *sock )
 
 
 void
-Claim::leaseExpired()
+Claim::leaseExpired( int /* timerID */ )
 {
 	cancelLeaseTimer();  // cancel timer(s) in case we are being called directly
 
 	if( c_type == CLAIM_COD ) {
-		dprintf( D_FAILURE|D_ALWAYS, "COD claim %s lease expired "
+		dprintf( D_ERROR, "COD claim %s lease expired "
 				 "(client must not have called 'condor_cod renew' within %d seconds)\n", id(), c_lease_duration );
 		if( removeClaim(false) ) {
 				// There is no starter, so remove immediately.
@@ -1169,7 +1187,7 @@ Claim::leaseExpired()
 		return;
 	}
 
-	dprintf( D_FAILURE|D_ALWAYS, "State change: claim lease expired "
+	dprintf( D_ERROR, "State change: claim lease expired "
 			 "(condor_schedd gone?), evicting claim\n" );
 
 		// Kill the claim.
@@ -1220,7 +1238,11 @@ Claim::alive( bool alive_from_schedd )
 		startLeaseTimer();
 	}
 	else {
-		daemonCore->Reset_Timer( c_lease_tid, c_lease_duration, 0 );
+		int when = c_lease_duration;
+		if (c_lease_endtime && (c_lease_endtime < time(NULL) + c_lease_duration)) {
+			when = (int)(c_lease_endtime - time(NULL));
+		}
+		daemonCore->Reset_Timer( c_lease_tid, when, 0 );
 	}
 
 		// And now push forward our send alives timer.  Plus,
@@ -1874,7 +1896,7 @@ Claim::periodicCheckpoint( void )
 bool
 Claim::ownerMatches( const char* owner )
 {
-	if( ! strcmp(c_client->owner(), owner) ) {
+	if( ! strcmp(c_client->c_owner.c_str(), owner) ) {
 		return true;
 	}
 		// TODO: handle COD_SUPER_USERS
@@ -1951,7 +1973,7 @@ Claim::finishReleaseCmd( void )
 	c_pending_cmd = -1;
 	
 	dprintf( D_ALWAYS, "Finished releasing claim %s (owner: '%s')\n", 
-			 id(), client()->owner() );  
+			 id(), client()->c_owner.c_str() );
 
 	c_rip->removeClaim( this );
 
@@ -1981,7 +2003,7 @@ Claim::finishDeactivateCmd( void )
 	c_pending_cmd = -1;
 
 	dprintf( D_ALWAYS, "Finished deactivating claim %s (owner: '%s')\n", 
-			 id(), client()->owner() );  
+			 id(), client()->c_owner.c_str() );
 
 		// also, we must reset all the attributes we're storing in
 		// this Claim object that are specific to a given activation. 
@@ -2127,179 +2149,6 @@ Claim::writeMachAdAndOverlay( Stream* stream )
 		return false;
 	}
 	return true;
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// Client
-///////////////////////////////////////////////////////////////////////////
-
-Client::Client()
-{
-	c_user = NULL;
-	c_owner = NULL;
-	c_acctgrp = NULL;
-	c_addr = NULL;
-	c_host = NULL;
-	c_concurrencyLimits = NULL;
-    c_rmtgrp = NULL;
-    c_neggrp = NULL;
-    c_autorg = false;
-	c_numPids = 0;
-}
-
-
-Client::~Client() 
-{
-	if( c_user) free( c_user );
-	if( c_owner) free( c_owner );
-	if( c_acctgrp) free( c_acctgrp );
-	if( c_addr) free( c_addr );
-	if( c_host) free( c_host );
-    if (c_rmtgrp) free(c_rmtgrp);
-    if (c_neggrp) free(c_neggrp);
-    if (c_concurrencyLimits) free(c_concurrencyLimits);
-}
-
-
-void
-Client::setuser( const char* updated_user )
-{
-	if( c_user ) {
-		free( c_user);
-	}
-	if( updated_user ) {
-		c_user = strdup( updated_user );
-	} else {
-		c_user = NULL;
-	}
-}
-
-
-void
-Client::setowner( const char* updated_owner )
-{
-	if( c_owner ) {
-		free( c_owner);
-	}
-	if( updated_owner ) {
-		c_owner = strdup( updated_owner );
-	} else {
-		c_owner = NULL;
-	}
-}
-
-
-void
-Client::setAccountingGroup( const char* grp ) 
-{
-	if( c_acctgrp ) {
-		free( c_acctgrp);
-	}
-	if( grp ) {
-		c_acctgrp = strdup( grp );
-	} else {
-		c_acctgrp = NULL;
-	}
-}
-
-void Client::setrmtgrp(const char* rmtgrp_) {
-    if (c_rmtgrp) {
-        free(c_rmtgrp);
-        c_rmtgrp = NULL;
-    }
-    if (rmtgrp_) c_rmtgrp = strdup(rmtgrp_);
-}
-
-void Client::setneggrp(const char* neggrp_) {
-    if (c_neggrp) {
-        free(c_neggrp);
-        c_neggrp = NULL;
-    }
-    if (neggrp_) c_neggrp = strdup(neggrp_);
-}
-
-void Client::setautorg(const bool autorg_) {
-    c_autorg = autorg_;
-}
-
-void
-Client::setaddr( const char* updated_addr )
-{
-	if( c_addr ) {
-		free( c_addr);
-	}
-	if( updated_addr ) {
-		c_addr = strdup( updated_addr );
-	} else {
-		c_addr = NULL;
-	}
-}
-
-
-void
-Client::sethost( const char* updated_host )
-{
-	if( c_host ) {
-		free( c_host);
-	}
-	if( updated_host ) {
-		c_host = strdup( updated_host );
-	} else {
-		c_host = NULL;
-	}
-}
-
-void
-Client::setConcurrencyLimits( const char* limits )
-{
-	if( c_concurrencyLimits ) {
-		free( c_concurrencyLimits );
-	}
-	if ( limits ) {
-		c_concurrencyLimits = strdup( limits );
-	} else {
-		c_concurrencyLimits = NULL;
-	}
-}
-
-void
-Client::setNumPids( int numJobPids )
-{
-	c_numPids = numJobPids;
-}
-
-void
-Client::vacate(char* id)
-{
-	ReliSock* sock;
-
-	if( ! (c_addr || c_host || c_owner ) ) {
-			// Client not really set, nothing to do.
-		return;
-	}
-
-	dprintf(D_FULLDEBUG, "Entered vacate_client %s %s...\n", c_addr, c_host);
-
-	ClaimIdParser cid(id);
-
-	Daemon my_schedd( DT_SCHEDD, c_addr, NULL);
-	sock = (ReliSock*)my_schedd.startCommand( RELEASE_CLAIM,
-											  Stream::reli_sock, 20,
-											  NULL, NULL, false,
-											  cid.secSessionId());
-	if( ! sock ) {
-		dprintf(D_FAILURE|D_ALWAYS, "Can't connect to schedd (%s)\n", c_addr);
-		return;
-	}
-	if( !sock->put_secret( id ) ) {
-		dprintf(D_ALWAYS, "Can't send ClaimId to client\n");
-	} else if( !sock->end_of_message() ) {
-		dprintf(D_ALWAYS, "Can't send EOM to client\n");
-	}
-
-	sock->close();
-	delete sock;
 }
 
 

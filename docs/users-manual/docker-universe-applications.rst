@@ -18,14 +18,14 @@ settings.
 
 The image from which the container is instantiated is defined by
 specifying a Docker image with the submit command
-**docker_image** :index:`docker_image<single: docker_image; submit commands>`. This
+:subcom:`docker_image` :index:`docker_image<single: docker_image; definition>`. This
 image must be pre-staged on a docker hub that the execute machine can
 access.
 
-The submit file command **universe** can either be optionally set to ``docker``
-or not declared at all. If **universe** is declared and set to anything but
+The submit file command :subcom:`universe` can either be optionally set to ``docker``
+or not declared at all. If :subcom:`universe` is declared and set to anything but
 ``docker`` then the job submission will fail. Regardless, the submit file
-command **docker_image** must be declared and set to a docker image.
+command :subcom:`docker_image` must be declared and set to a docker image.
 
 After submission, the job is treated much the same way as a vanilla
 universe job. Details of file transfer are the same as applied to the
@@ -71,7 +71,7 @@ Therefore, the submit description file should contain the submit command
 With this command, all input and output files will be transferred as
 required to and from the scratch directory mounted as a Docker volume.
 
-If no **executable** :index:`executable<single: executable; submit commands>` is
+If no :subcom:`executable` :index:`executable<single: executable; in docker universe>` is
 specified in the submit description file, it is presumed that the Docker
 container has a default command to run.
 
@@ -164,11 +164,11 @@ to go, but doesn't turn it on by default.
 
       queue 1
 
-The ``container_service_names`` submit command accepts a comma- or space-
+The :subcom:`container_service_names` submit command accepts a comma- or space-
 separated list of service names; each service name must have a corresponding
-``<service-name>_container_port`` submit command specifying an integer
+:subcom:`<service-name>_container_port` submit command specifying an integer
 between 0 and 65535.  Docker will automatically select a port on the host
 to forward to that port in the container; HTCondor will report that port
-in the job ad attribute ``<service-name>_HostPort`` after it becomes
+in the job ad attribute :subcom:`<service-name>_HostPort` after it becomes
 available, which will be (several seconds) after the job starts.  HTCondor
 will update the job ad in the sandbox (``.job.ad``) at that time.

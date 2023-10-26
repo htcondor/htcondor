@@ -1,8 +1,0 @@
-Whenever a change is made to the classad library code that would break binary compatibility,
-the version of the classad library needs to be bumped. To do this, open CMakeLists.txt from
-this dirctory, and search for SOVERSION in a line that looks like this:
-
-	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 6 )
-
-The classad library version is the number 6 above. Increment it to indicate that code built
-with earlier versions of the classad header files should not be linked with this version.

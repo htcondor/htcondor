@@ -110,11 +110,6 @@ BaseJob::BaseJob( ClassAd *classad )
 								(TimerHandlercpp)&BaseJob::doEvaluateState,
 								"doEvaluateState", (Service*) this );;
 
-	wantRematch = false;
-	doResubmit = 0;		// set if gridmanager wants to resubmit job
-	wantResubmit = false;	// set if user wants to resubmit job via RESUBMIT_CHECK
-	jobAd->LookupBool(ATTR_GLOBUS_RESUBMIT_CHECK,wantResubmit);
-
 	jobAd->EnableDirtyTracking();
 	jobAd->ClearAllDirtyFlags();
 
@@ -166,7 +161,7 @@ void BaseJob::SetEvaluateState() const
 	daemonCore->Reset_Timer( evaluateStateTid, 0 );
 }
 
-void BaseJob::doEvaluateState()
+void BaseJob::doEvaluateState( int /* timerID */ )
 {
 	JobHeld( "the gridmanager can't handle this job type" );
 	DoneWithJob();
@@ -616,7 +611,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%lld)\n",procID.cluster,proc
 	}
 }
 
-void BaseJob::JobLeaseSentExpired()
+void BaseJob::JobLeaseSentExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseSentExpiredTid != TIMER_UNSET ) {
@@ -626,7 +621,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,pr
 	SetEvaluateState();
 }
 
-void BaseJob::JobLeaseReceivedExpired()
+void BaseJob::JobLeaseReceivedExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {
@@ -733,7 +728,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 }
 
-void BaseJob::EvalAllPeriodicJobExprs()
+void BaseJob::EvalAllPeriodicJobExprs(int /* tid */)
 {
 	dprintf( D_FULLDEBUG, "Evaluating periodic job policy expressions.\n" );
 
@@ -856,7 +851,7 @@ int BaseJob::EvalOnExitJobExpr()
 	return 0;
 }
 
-void BaseJob::CheckAllRemoteStatus()
+void BaseJob::CheckAllRemoteStatus(int /* tid */)
 {
 	dprintf( D_FULLDEBUG, "Evaluating staleness of remote job statuses.\n" );
 

@@ -1,3 +1,3 @@
-version=3
-opts="uversionmangle=s/_/./g,dversionmangle=s/~dfsg.*//,filenamemangle=s/.*\/V(\d)_(\d)_(\d).*/condor-$1.$2.$3\.tar\.gz/" \
-  http://github.com/htcondor/htcondor/tags .*archive/V(\d[\d_]+).tar.gz
+version=4
+opts="repacksuffix=+dfsg,dversionmangle=auto,repack,compression=xz,filenamemangle=s/.*\/v(\d+)\.(\d+)\.(\d+).*/condor-$1.$2.$3\.tar\.gz/" \
+  https://github.com/htcondor/htcondor/tags (?:.*?/)?v?(\d+\.\d+\.\d+)\.tar\.gz

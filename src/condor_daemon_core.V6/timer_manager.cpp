@@ -92,7 +92,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, TimerHandlercpp handl
 						   unsigned period)
 {
 	if ( !s ) {
-		dprintf( D_DAEMONCORE,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
+		dprintf( D_ERROR,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
 		return -1;
 	}
 	return( NewTimer(s,deltawhen,(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
@@ -119,7 +119,6 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 {
 	Timer*		new_timer;
 
-	dprintf( D_DAEMONCORE, "in DaemonCore NewTimer()\n" );
 	new_timer = new Timer;
 	if ( new_timer == NULL ) {
 		dprintf( D_ALWAYS, "DaemonCore: Unable to allocate new timer\n" );
@@ -372,8 +371,6 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		return(result);
 	}
 		
-	dprintf( D_DAEMONCORE, "In DaemonCore Timeout()\n");
-
 	if (timer_list == NULL) {
 		dprintf( D_DAEMONCORE, "Empty timer list, nothing to do\n" );
 	}
@@ -467,10 +464,10 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		// it and pass the service* as a parameter.
 		if ( in_timeout->handlercpp ) {
 			// typedef int (*TimerHandlercpp)()
-			((in_timeout->service)->*(in_timeout->handlercpp))();
+			((in_timeout->service)->*(in_timeout->handlercpp))(in_timeout->id);
 		} else {
 			// typedef int (*TimerHandler)()
-			(*(in_timeout->handler))();
+			(*(in_timeout->handler))(in_timeout->id);
 		}
 
 		if( in_timeout->timeslice ) {
@@ -552,7 +549,6 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 			result = 0;
 	}
 
-	dprintf( D_DAEMONCORE, "DaemonCore Timeout() Complete, returning %d \n",result);
     if (pNumFired) *pNumFired = num_fires;
 	in_timeout = NULL;
 	return(result);
@@ -749,4 +745,20 @@ Timer *TimerManager::GetTimer( int id, Timer **prev )
 	}
 
 	return timer_ptr;
+}
+
+
+int
+TimerManager::countTimersByDescription( const char * description ) {
+    if( description == NULL ) { return -1; }
+    if( timer_list == NULL ) { return 0; }
+
+    int counter = 0;
+	Timer * i = timer_list;
+	for( ; i; i = i->next ) {
+    	if( 0 == strcmp(i->event_descrip, description) ) {
+    	    ++counter;
+    	}
+	}
+	return counter;
 }

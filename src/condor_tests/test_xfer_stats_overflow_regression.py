@@ -13,7 +13,7 @@
 #
 #The attribute 'TransferInputStats' nested attributes were
 #overflowing due to big numbers being shoved into int variables.
-#This test is to make sure that large files tranferred don't
+#This test is to make sure that large files transferred don't
 #result in the nested attributes have byte transfer sizes less
 #than 0.
 #

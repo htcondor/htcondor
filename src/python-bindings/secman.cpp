@@ -103,21 +103,20 @@ public:
             {
                 THROW_EX(HTCondorValueError, "Daemon type not available in location ClassAd.");
             }
-            int ad_type = AdTypeFromString(ad_type_str.c_str());
-            if (ad_type == NO_AD)
-            {
-                THROW_EX(HTCondorEnumError, "Unknown ad type.");
-            }
-            daemon_t d_type;
-            switch (ad_type) {
-                case MASTER_AD: d_type = DT_MASTER; break;
-                case STARTD_AD: d_type = DT_STARTD; break;
-                case SCHEDD_AD: d_type = DT_SCHEDD; break;
-                case NEGOTIATOR_AD: d_type = DT_NEGOTIATOR; break;
-                case COLLECTOR_AD: d_type = DT_COLLECTOR; break;
+            daemon_t d_type = AdTypeStringToDaemonType(ad_type_str.c_str());
+            switch (d_type) {
+                case DT_MASTER:
+                case DT_STARTD:
+                case DT_SCHEDD:
+                case DT_COLLECTOR:
+                case DT_NEGOTIATOR:
+                case DT_CREDD:
+                case DT_GENERIC:
+                case DT_HAD:
+                    break;
                 default:
-                    d_type = DT_NONE;
                     THROW_EX(HTCondorEnumError, "Unknown daemon type.");
+                    break;
             }
 
             ClassAd ad_copy; ad_copy.CopyFrom(ad);
@@ -293,6 +292,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         // for the SecMan::command_map lookups to succeed below.  Note that
         // get_connect_addr() may return a different sinful string than was used to
         // create the socket, due to processing of things like private network interfaces.
+
         addr = sock->get_connect_addr();
 
         // Get the policy stored in the socket.
@@ -313,27 +313,27 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         }
 
         std::string session_id;
-        KeyCacheEntry *k = NULL;
         ClassAd *policy = NULL;
 
-        // IMPORTANT: this hashtable returns 0 on success!
-        if ((SecMan::command_map).lookup(cmd_map_ent, session_id))
-        {
+        auto command_pair = SecMan::command_map.find(cmd_map_ent);
+        if (command_pair == SecMan::command_map.end()) {
             THROW_EX(HTCondorValueError, "No valid entry in command map hash table!");
         }
+        session_id = command_pair->second;
+    
         // Session cache lookup is tag-dependent; hence, we may need to temporarily override
         std::string origTag = SecMan::getTag();
         if (m_tag_set) {SecMan::setTag(tag);}
-        // IMPORTANT: this hashtable returns 1 on success!
-        if (!(SecMan::session_cache)->lookup(session_id.c_str(), k))
+        auto itr = (SecMan::session_cache)->find(session_id);
+        if (itr == (SecMan::session_cache)->end())
         {
             if (m_tag_set) {SecMan::setTag(origTag);}
             THROW_EX(HTCondorValueError, "No valid entry in session map hash table!");
         }
         if (m_tag_set) {SecMan::setTag(origTag);}
-        policy = k->policy();
+        policy = itr->second.policy();
         authz_ad->Update(*policy);
-	authz_ad->Update(sock_policy);
+        authz_ad->Update(sock_policy);
 
         return authz_ad;
 }

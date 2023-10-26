@@ -191,9 +191,9 @@ void ArcResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 	}
 }
 
-void ArcResource::DoJobStatus()
+void ArcResource::DoJobStatus( int /* timerID */ )
 {
-	if ( ( registeredJobs.IsEmpty() || resourceDown ) &&
+	if ( ( registeredJobs.empty() || resourceDown ) &&
 		 m_jobStatusActive == false ) {
 			// No jobs or we can't talk to the resource, so no point
 			// in polling

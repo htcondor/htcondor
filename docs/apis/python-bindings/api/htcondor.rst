@@ -38,6 +38,7 @@ Interacting with Schedulers
    .. automethod:: act
    .. automethod:: edit
    .. automethod:: history
+   .. automethod:: jobEpochHistory
    .. automethod:: submit
    .. automethod:: submitMany
    .. automethod:: spool
@@ -49,6 +50,8 @@ Interacting with Schedulers
    .. automethod:: unexport_jobs
 
 .. autoclass:: JobAction
+
+.. autoclass:: Transaction
 
 .. autoclass:: TransactionFlags
 

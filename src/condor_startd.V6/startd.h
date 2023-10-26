@@ -86,7 +86,7 @@ extern	ResMgr*	resmgr;		// Pointer to the resource manager object
 extern	int		polling_interval;	// Interval for polling when
 									// running a job
 extern	int		update_interval;	// Interval to update CM
-extern	int		update_offset;		// Interval offset to update CM
+extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or "Slot" and "StartDaemon" ads
 
 // String Lists
 extern	StringList* console_devices;
@@ -145,7 +145,7 @@ extern CleanupReminderMap cleanup_reminders;
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
 // Check to see if we're all free
-void	startd_check_free();
+void	startd_check_free(int tid = -1);
 // so we can call this to reconfig on command
 void	main_config();
 

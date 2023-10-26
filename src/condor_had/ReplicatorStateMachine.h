@@ -121,7 +121,7 @@ private:
     int            m_updateInterval;
 
     void initializeClassAd();
-    void updateCollectors();
+    void updateCollectors( int timerID = -1 );
 // Managing stuck transferers
 	void killStuckDownloadingTransferer(time_t currentTime);
 	void killStuckUploadingTransferers (time_t currentTime);
@@ -132,9 +132,9 @@ private:
     void finalize();
     void finalizeDelta();
 // Timers handlers
-    void replicationTimer();
-    void versionRequestingTimer();
-    void versionDownloadingTimer();
+    void replicationTimer( int timerID = -1 );
+    void versionRequestingTimer( int timerID = -1 );
+    void versionDownloadingTimer( int timerID = -1 );
 // End of timers handlers
 // Command handlers
     void onLeaderVersion(Stream* stream);

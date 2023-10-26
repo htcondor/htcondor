@@ -18,60 +18,45 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include <string.h>
 #include "condor_adtypes.h"
-
-struct Lookup {
-	char	str[20];
-	AdTypes		type;
-};
-static const Lookup adtypes [] =
-{
-	{ STARTD_ADTYPE,		STARTD_AD, },
-	{ SCHEDD_ADTYPE,		SCHEDD_AD, },
-	{ MASTER_ADTYPE,		MASTER_AD, },
-	{ GATEWAY_ADTYPE,		GATEWAY_AD, },
-	{ CKPT_SRVR_ADTYPE,		CKPT_SRVR_AD, },
-	{ STARTD_PVT_ADTYPE,	STARTD_PVT_AD, },
-	{ SUBMITTER_ADTYPE,		SUBMITTOR_AD, },
-	{ COLLECTOR_ADTYPE,		COLLECTOR_AD, },
-	{ LICENSE_ADTYPE,		LICENSE_AD, },
-	{ STORAGE_ADTYPE,		STORAGE_AD, },
-	{ ANY_ADTYPE,			ANY_AD, },
-	{ BOGUS_ADTYPE,			BOGUS_AD, },
-	{ CLUSTER_ADTYPE,		CLUSTER_AD, },
-	{ NEGOTIATOR_ADTYPE,	NEGOTIATOR_AD, },
-	{ HAD_ADTYPE,			HAD_AD, },
-	{ GENERIC_ADTYPE,		GENERIC_AD, },
-	{ CREDD_ADTYPE,			CREDD_AD, },
-	{ DATABASE_ADTYPE,		DATABASE_AD, },
-	{ TT_ADTYPE,			TT_AD, },
-	{ GRID_ADTYPE, 			GRID_AD, },
-	{ XFER_SERVICE_ADTYPE,	XFER_SERVICE_AD, },		/* No longer used */
-	{ LEASE_MANAGER_ADTYPE,	LEASE_MANAGER_AD, },	/* No longer used */
-	{ DEFRAG_ADTYPE,		DEFRAG_AD, },
-	{ ACCOUNTING_ADTYPE,	ACCOUNTING_AD, },
-	{ "",		NO_AD, },
-};
-
-AdTypes
-AdTypeFromString(const char* adtype_string) 
-{
-	const Lookup	*v;
-	for( v=adtypes;  v->type != NO_AD;  v++ ) {
-		if( !strcasecmp(v->str, adtype_string) ) {
-			return v->type;
-		}
-	}
-	return NO_AD;
-}
 
 const char*
 AdTypeToString( AdTypes type )
 {
-	if( (type >= (AdTypes)0)  &&  (type < NUM_AD_TYPES) ) {
-		return adtypes[type].str;
+	// ad type names indexed by *_AD enum
+	static const char* const adtypes[NUM_AD_TYPES] = {
+		STARTD_OLD_ADTYPE,	//STARTD_AD
+		SCHEDD_ADTYPE,		//SCHEDD_AD
+		MASTER_ADTYPE,		//MASTER_AD
+		GATEWAY_ADTYPE,		//GATEWAY_AD
+		CKPT_SRVR_ADTYPE,	//CKPT_SRVR_AD
+		"MachinePrivate",	//STARTD_PVT_AD /* no longer used */
+		SUBMITTER_ADTYPE,	//SUBMITTOR_AD
+		COLLECTOR_ADTYPE,	//COLLECTOR_AD
+		LICENSE_ADTYPE,		//LICENSE_AD
+		STORAGE_ADTYPE,		//STORAGE_AD
+		ANY_ADTYPE,			//ANY_AD = 10
+		BOGUS_ADTYPE,		//BOGUS_AD
+		CLUSTER_ADTYPE,		//CLUSTER_AD
+		NEGOTIATOR_ADTYPE,	//NEGOTIATOR_AD
+		HAD_ADTYPE,			//HAD_AD
+		GENERIC_ADTYPE,		//GENERIC_AD
+		CREDD_ADTYPE,		//CREDD_AD
+		DATABASE_ADTYPE,	//DATABASE_AD
+		TT_ADTYPE,			//TT_AD
+		GRID_ADTYPE, 		//GRID_AD
+		XFER_SERVICE_ADTYPE,//XFER_SERVICE_AD	/* No longer used */
+		LEASE_MANAGER_ADTYPE,//LEASE_MANAGER_AD	/* No longer used */
+		DEFRAG_ADTYPE,		//DEFRAG_AD
+		ACCOUNTING_ADTYPE,	//ACCOUNTING_AD = 23
+		STARTD_SLOT_ADTYPE,	//SLOT_AD
+		STARTD_DAEMON_ADTYPE,//STARTDAEMON_AD
+	};
+
+	if (type >= STARTD_AD  &&  type < NUM_AD_TYPES) {
+		return adtypes[type];
 	} else {
 		return "Unknown";
 	}
 }
+

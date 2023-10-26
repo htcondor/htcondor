@@ -37,11 +37,11 @@ private:
 	int check_creds_handler(int, Stream*);
 	int nop_handler(int, Stream*);
 	void initialize_classad();
-	void update_collector();
+	void update_collector( int timerID = -1 );
 	void invalidate_ad();
 
 	int refresh_all_handler(int, Stream*);
-	void sweep_timer_handler( void ) const;
+	void sweep_timer_handler( int timerID = -1 ) const;
 
 	char* m_name;
 

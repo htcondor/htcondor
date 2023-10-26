@@ -41,12 +41,12 @@ that is chosen with a command-line option:
     **-graceful** is chosen by default.
  **-quick**
     ``MaxJobRetirementTime`` is not honored. Eviction of jobs is
-    immediately initiated. Jobs are given time to shut down and produce
-    checkpoints, according to the usual policy, that is, given by
+    immediately initiated. Jobs are given time to shut down
+    according to the usual policy, that is, given by
     ``MachineMaxVacateTime``.
  **-fast**
     Jobs are immediately hard-killed, with no chance to gracefully shut
-    down or produce a checkpoint.
+    down.
 
 If you specify **-graceful**, you may also specify **-start**. On a
 gracefully-draining machine, some jobs may finish retiring before
@@ -56,7 +56,7 @@ draining state (see below). The **-start** expression you supply
 replaces the draining machine's normal ``START`` expression for the
 duration of the draining state, potentially making those resources
 available. See the
-:ref:`admin-manual/policy-configuration:*condor_startd* Policy Configuration`
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* Policy Configuration`
 section for more information.
 
 Once draining is complete, the machine will enter the Drained/Idle

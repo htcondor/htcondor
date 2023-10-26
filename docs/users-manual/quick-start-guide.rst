@@ -3,15 +3,20 @@
 Users' Quick Start Guide
 ========================
 
-To users, `HTCondor <https://htcondor.org>`_ is a batch job scheduler.  You give
-HTCondor a file with commands to tell it how to run your jobs.  HTCondor
-locates an appropriate machine for each job within the pool(s) of machines,
-packages up the job and ships it off to this Execution Point (EP) to run on.
-The jobs run, and output is returned to the machine that submitted the jobs.
+`HTCondor <https://htcondor.org>`_ is a system for dynamically sharing
+computational resources between competing computational tasks.  As an
+HTCondor user, you will describe your computational tasks as a series
+of independent, asynchronous "jobs."  You access computational resources
+managed by HTCondor by submitting (or "placing") job descriptions at an
+HTCondor "access point" (AP), also known as a "submit node."  HTCondor
+locates an appropriate machine for each job,
+packages up the job and ships it off to that machine for execution.
+Machines providing resources to HTCondor are therefore known as execution
+points (EP).
 
-Here is just enough guidance to submit and observe the successful
-completion of a first job.  It then suggests extensions that you can apply
-to your particular jobs.
+This guide covers submitting and observing the successful completion
+of a first, example job.  It then suggests extensions that you can apply to
+your own jobs.
 
 This guide presumes that
 
@@ -27,6 +32,25 @@ This guide presumes that
   interactive input.  Standard input (from the keyboard), standard output
   (seen on the display), and standard error (seen on the display) may still
   be used, but their contents will be redirected from/to files.
+
+What is a Job?
+--------------
+
+"Job" is a very specific term in HTCondor. A job is the atomic unit of work.
+A job may use multiple cores on one machine, but one job may not (in general)
+run across more than one machine.  To effectively use HTCondor, you will
+need to divide your total work (often called a workflow) into a number
+of jobs.  These atomic units of work run asynchronously with respect to each other, but 
+may be connected by input and output files.  Each job is described by a
+Job ClassAd, which is usually created by the system from a submit description file.
+HTCondor is a High Throughput system, which means it has been designed to 
+effectively manage hundreds of thousands of jobs.  Attributes of jobs that
+must be defined include the executable or script to run, the amount of memory, CPU
+and other machine resources it needs, and descriptions of the file inputs it need.
+The set of files used by a job is called the "sandbox".  There is an input sandbox,
+the input files that exist before a job starts; the output sandbox, the set of files
+created by the job; and a scratch sandbox, the set of files made as the job runs.
+
 
 A First HTCondor Job
 --------------------
@@ -169,7 +193,7 @@ units are megabytes and disk kilobytes.
     request_disk            = 1G
 
 
-If this script/batch file were to to be invoked from the command line, and
+If this script/batch file were to be invoked from the command line, and
 outside of HTCondor, its single line of output
 
 .. code-block:: text
@@ -178,10 +202,10 @@ outside of HTCondor, its single line of output
 
 would be sent to standard output (the display).  When submitted as an HTCondor
 job, standard output of the job is on that EP, and thus unavailable.  HTCondor
-captures standard output in a file due to the ``output`` command in the submit
+captures standard output in a file due to the :subcom:`output` command in the submit
 description file.  This example names the redirected standard output file
 ``sleep.out``, and this file is returned to the AP when the job completes.  The
-same structure is specified for standard error, as specified with the ``error``
+same structure is specified for standard error, as specified with the :subcom:`error`
 command.
 
 The commands
@@ -198,13 +222,13 @@ node) access a shared file system.  However, including these commands
 will allow this first sample job to work under a large variety of pool
 configurations.
 
-The ``queue`` command tells HTCondor to run one instance of this job.
+The :subcom:`queue` command tells HTCondor to run one instance of this job.
 
 .. rubric:: Submitting the job
 
 With this submit description file, all that remains is to hand off the job to
-HTCondor.  Note that the ``queue`` command should be the last command in the
-file.  Commands after the ``queue`` are  ignored.  Otherwise, the order of
+HTCondor.  Note that the :subcom:`queue` command should be the last command in the
+file.  Commands after the :subcom:`queue` are  ignored.  Otherwise, the order of
 commands with the file does not matter. Assuming the current working directory
 contains the ``sleep.sub`` submit description file and the executable
 (``sleep.sh`` or ``sleep.bat``), the command line
@@ -313,8 +337,8 @@ job) will be
     science.exe infile-A.txt infile-B.txt outfile.txt
 
 While the name of the executable is specified in the submit description file
-with the ``executable`` command, the remainder of the command line will be
-specified with the ``arguments`` command.
+with the :subcom:`executable` command, the remainder of the command line will be
+specified with the :subcom:`arguments` command.
 
 Here is the submit description file for this job:
 
@@ -340,7 +364,7 @@ The input files ``infile-A.txt`` and ``infile-B.txt`` will need to be
 available on the Execution Point within the pool where the job
 runs.  HTCondor cannot interpret command line arguments, so it cannot know
 that these command line arguments for this job specify input and output
-files.  The submit command ``transfer_input_files`` instructs HTCondor to
+files.  The submit command :subcom:`transfer_input_files` instructs HTCondor to
 transfer these input files from the machine where the job is submitted to the
 machine chosen to execute the job.  The default operation of HTCondor is to
 transfer all files created by the job on the EP back to the
@@ -357,7 +381,7 @@ the transfer of files from AP to EP and back again.
 
 These values are the HTCondor defaults, so are not needed in this example.
 They are included to direct attention to the capabilities of HTCondor.  The
-``should_transfer_files`` command specifies whether HTCondor should assume the
+:subcom:`should_transfer_files` command specifies whether HTCondor should assume the
 existence of a file system shared by the AP and the EP.  Where there is a
 shared file system, a correctly configured pool of machines will not need to
 transfer the files from one machine to the other, as both can access the shared
@@ -366,9 +390,9 @@ the files from one machine to the other.  The specification ``IF_NEEDED`` asks
 HTCondor to use a shared file system when one is detected, but to transfer the
 files when no shared file system is detected.  When files are to be
 transferred, HTCondor automatically sends the executable as well as a file
-representing standard input; this file would be specified by the ``input``
+representing standard input; this file would be specified by the :subcom:`input`
 submit command, and it is not relevant to this example.  Other files are
-specified in a comma separated list with ``transfer_input_files``, as they are
+specified in a comma separated list with :subcom:`transfer_input_files`, as they are
 in this example.
 
 When the job completes, all files created by the executable as it ran are
@@ -378,7 +402,7 @@ HTCondor assumes that if the job exits of its own accord, with an exit code
 of zero, that indicates success, and any non-zero exit code is a failure.
 By default, when the job exits, it will leave the queue.  If you would
 like a job that exits with a non-zero exit code to be restarted some
-number of times until it does, set num_retries in the submit file like
+number of times until it does, set :subcom:`num_retries` in the submit file like
 so:
 
 .. code-block:: condor-submit
@@ -446,7 +470,7 @@ now that there will be 100 instances of the ``science.exe`` job, and each
 instance has distinct input files, and produces a distinct output file.  A
 recommended organization introduces a unique directory for each job
 instance.  The following submit description file facilitates this organization
-by specifying the directory with the ``initialdir`` command.  The directories
+by specifying the directory with the :subcom:`initialdir` command.  The directories
 for this example are named ``run0``, ``run1``, etc. all the way to ``run99``
 for the 100 instances of the following example submit file:
 
@@ -509,7 +533,7 @@ Where to Go from Here
 
 .. What we really want here is a link to a nice page in the user manual
 .. that briefly describes HTCondor's major features and/or what you'd use
-.. them for, as kind of a roadmap to the user manual.
+.. them for, as kind of a road map to the user manual.
 
 * Consider watching our
   `video tutorial <https://www.youtube.com/watch?v=p2X6s_7e51k&list=PLO7gMRGDPNumCuo3pCdRk23GDLNKFVjHn>`_

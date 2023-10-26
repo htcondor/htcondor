@@ -74,7 +74,6 @@ class IOProcess {
 	Worker* createNewWorker(void);
 	Worker* findFreeWorker(void);
 	Worker* findFirstAvailWorker(void);
-	Worker* findWorker(int id);
 	bool removeWorkerFromWorkerList(int id);
 	void LockWorkerList(void);
 	void UnlockWorkerList(void); 
@@ -109,7 +108,7 @@ class IOProcess {
 	StringList m_result_list; // The list of results ready to be output to IO
 
 //	pthread_mutex_t m_worker_list_mutex;
-	HashTable<int, Worker*> m_workers_list;
+	std::map<int, Worker> m_workers_list;
 
 //	pthread_mutex_t m_pending_req_list_mutex;
 	std::vector<Request*> m_pending_req_list;

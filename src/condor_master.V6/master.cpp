@@ -76,7 +76,7 @@ void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
-void	run_preen();	 // timer handler
+void	run_preen(int tid);	 // timer handler
 int		run_preen_now(); // actually start preen if it is not already running.
 void	usage(const char* );
 void	main_shutdown_graceful();
@@ -84,8 +84,6 @@ void	main_shutdown_normal(); // do graceful or peaceful depending on daemonCore 
 void	main_shutdown_fast();
 void	invalidate_ads();
 void	main_config();
-int	agent_starter(ReliSock *, Stream *);
-int	handle_agent_fetch_log(ReliSock *);
 int	admin_command_handler(int, Stream *);
 int	ready_command_handler(int, Stream *);
 int	handle_subsys_command(int, Stream *);
@@ -188,7 +186,7 @@ public:
 		}
 	}
 
-	void status_handler()
+	void status_handler(int /* dummy */)
 	{
 		// assume success
 		const char * status = "All daemons are responding";
@@ -621,7 +619,7 @@ main_init( int argc, char* argv[] )
 			int saved_errno = errno;
 #if defined(EDQUOT)
 			if (saved_errno == EDQUOT) {
-				dprintf(D_ALWAYS | D_FAILURE,
+				dprintf(D_ERROR,
 				   "Error during DISCARD_SESSION_KEYRING_ON_STARTUP, suggest "
 				   "increasing /proc/sys/kernel/keys/root_maxkeys\n");
 			}
@@ -743,12 +741,6 @@ main_init( int argc, char* argv[] )
 	daemonCore->Register_CommandWithPayload( DC_QUERY_READY, "DC_QUERY_READY",
 								  ready_command_handler,
 								  "ready_command_handler", READ );
-
-	/*
-	daemonCore->Register_Command( START_AGENT, "START_AGENT",
-					  admin_command_handler, 
-					  "admin_command_handler", ADMINISTRATOR );
-	*/
 
 	daemonCore->RegisterTimeSkipCallback(time_skip_handler,0);
 
@@ -937,83 +929,12 @@ admin_command_handler(int cmd, Stream* stream )
 	case CHILD_OFF_FAST:
 		return handle_subsys_command( cmd, stream );
 
-			// This function is also special, since it needs to read
-			// off more info.  So, it is handled with a special function.
-	case START_AGENT:
-		if (daemonCore->Create_Thread(
-				(ThreadStartFunc)&agent_starter, (void*)stream, 0 )) {
-			return TRUE;
-		} else {
-			dprintf( D_ALWAYS, "ERROR: unable to create agent thread!\n");
-			return FALSE;
-		}
 	default: 
 		EXCEPT( "Unknown admin command (%d) in handle_admin_commands",
 				cmd );
 	}
 	return FALSE;
 }
-
-int
-agent_starter( ReliSock * s, Stream * )
-{
-	ReliSock* stream = (ReliSock*)s;
-	char *subsys = NULL;
-
-	stream->decode();
-	if( ! stream->code(subsys) ||
-		! stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't read subsystem name\n" );
-		free( subsys );
-		return FALSE;
-	}
-
-	dprintf ( D_ALWAYS, "Starting agent '%s'\n", subsys );
-
-	if( strcasecmp(subsys, "fetch_log") == 0 ) {
-		free (subsys);
-		return handle_agent_fetch_log( stream );
-	}
-
-	// default:
-
-	free (subsys);
-	dprintf( D_ALWAYS, "WARNING: unrecognized agent name\n" );
-	return FALSE;
-}
-
-int
-handle_agent_fetch_log (ReliSock* stream) {
-
-	std::string daemon;
-	int  res = FALSE;
-
-	if( ! stream->code(daemon) ||
-		! stream->end_of_message()) {
-		dprintf( D_ALWAYS, "ERROR: fetch_log can't read daemon name\n" );
-		return FALSE;
-	}
-
-	dprintf( D_ALWAYS, "INFO: daemon_name: %s\n", daemon.c_str() );
-
-	// append _LOG to get the param name of the daemon log file
-	daemon += "_LOG";
-
-	dprintf( D_ALWAYS, "INFO: daemon_paramname: %s\n", daemon.c_str() );
-
-	auto_free_ptr daemon_filename(param(daemon.c_str()));
-	if ( daemon_filename ) {
-		filesize_t	size;
-		dprintf( D_ALWAYS, "INFO: daemon_filename: %s\n", daemon_filename.ptr() );
-		stream->encode();
-		res = (stream->put_file(&size, daemon_filename.ptr()) < 0);
-	} else {
-		dprintf( D_ALWAYS, "ERROR: fetch_log can't param for %s\n", daemon.c_str() );
-	}
-
-	return res;
-}
-
 
 int do_flexible_daemons_command(int cmd, ClassAd & cmdAd, ClassAd * replyAd /* = nullptr */)
 {
@@ -1437,6 +1358,24 @@ init_params()
 	FS_Preen = param( "PREEN" );
 }
 
+// helper function to determin if the executable of a daemon matches the executable of a DC daemon
+static bool same_exe_as_daemon(const char * daemon_name, StringList & dc_names, std::set<std::string> & dc_exes)
+{
+	// first time we call this, build a collection of daemon executables paths
+	if (dc_exes.empty() && ! dc_names.isEmpty()) {
+		for (const char * name = dc_names.first(); name != nullptr; name = dc_names.next()) {
+			auto_free_ptr program(param(name));
+			if (program) { dc_exes.insert(program.ptr()); }
+		}
+	}
+
+	// check to see if the give daemon has the same binary as one of the DC daemons
+	auto_free_ptr program(param(daemon_name));
+	if (program && dc_exes.count(program.ptr())) {
+		return true;
+	}
+	return false;
+}
 
 void
 init_daemon_list()
@@ -1444,6 +1383,7 @@ init_daemon_list()
 	char	*daemon_name;
 	StringList daemon_names, dc_daemon_names;
 	bool have_primary_collector = false; // daemon list has COLLECTOR (just that - VIEW_COLLECTOR or COLLECTOR_B doesn't count)
+	std::set<std::string> dc_daemon_exes; // paths to daemon binaries for the daemon core daemons, used if needed
 
 	daemons.ordered_daemon_names.clearAll();
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
@@ -1592,11 +1532,13 @@ init_daemon_list()
 		daemon_names.rewind();
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.FindDaemon(daemon_name) == NULL) {
-				if( dc_daemon_names.contains(daemon_name) ) {
-					new class daemon(daemon_name);
-				} else {
-					new class daemon(daemon_name, false);
+				bool is_DC = dc_daemon_names.contains(daemon_name);
+				if ( ! is_DC) {
+					// daemon is not in the DC list, check to see if uses the same executable
+					// as on of the DC daemons, if so, we presume it is DC
+					is_DC = same_exe_as_daemon(daemon_name, dc_daemon_names, dc_daemon_exes);
 				}
+				new class daemon(daemon_name, is_DC);
 			}
 		}
 	} else {
@@ -1640,7 +1582,6 @@ init_classad()
 	ad = new ClassAd();
 
 	SetMyTypeName(*ad, MASTER_ADTYPE);
-	SetTargetTypeName(*ad, "");
 
 	if (MasterName) {
 		ad->Assign(ATTR_NAME, MasterName);
@@ -1860,7 +1801,7 @@ void
 invalidate_ads() {
 	ClassAd cmd_ad;
 	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
-	SetTargetTypeName( cmd_ad, MASTER_ADTYPE );
+	cmd_ad.Assign(ATTR_TARGET_TYPE, MASTER_ADTYPE);
 	
 	std::string line;
 	std::string escaped_name;
@@ -2074,7 +2015,7 @@ create_dirs_at_master_startup()
 }
 
 // this is the preen timer callback
-void run_preen() { run_preen_now(); }
+void run_preen(int /* tid */) { run_preen_now(); }
 
 void
 RestartMaster()

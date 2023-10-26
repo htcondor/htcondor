@@ -77,8 +77,9 @@ numerically increasing over time. If the number of machines is less then
 the priority, the priority will improve by numerically decreasing over
 time. The long-term result is fair-share access across all users. The
 speed at which HTCondor adjusts the priorities is controlled with the
-configuration variable ``PRIORITY_HALFLIFE``
-:index:`PRIORITY_HALFLIFE`, an exponential half-life value. The
+configuration variable :macro:`PRIORITY_HALFLIFE`
+:index:`PRIORITY_HALFLIFE<single: PRIORITY_HALFLIFE; definition>` HTCondor
+an exponential half-life value. The
 default is one day. If a user that has user priority of 100 and is
 utilizing 100 machines removes all his/her jobs, one day later that
 user's priority will be 50, and two days later the priority will be 25.

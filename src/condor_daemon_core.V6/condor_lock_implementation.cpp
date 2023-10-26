@@ -299,7 +299,7 @@ CondorLockImpl::HaveLock( void )
 
 // Perform poll cycle
 void
-CondorLockImpl::DoPoll( void )
+CondorLockImpl::DoPoll( int /* timerID */ )
 {
 		// Store the time
 	last_poll = time( NULL );

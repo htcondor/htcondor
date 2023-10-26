@@ -1,6 +1,77 @@
 Command Reference Manual (man pages)
 ====================================
 
+HTCondor ships with many command line tools.  While the number may seem overwhelming at first, they can be divided into a few groups:
+
+.. mermaid::
+   :caption: A map of all the tools
+   :align: center
+
+   mindmap
+     All<br/>Commands
+       ManagingJobs
+         condor_rm
+         condor_submit
+         condor_submit_dag
+         condor_suspend
+         condor_continue
+         condor_hold
+         condor_release
+         condor_transfer_data
+         condor_q condor_qedit
+         condor_history
+       ManagingExecution Points
+           condor_off
+           condor_on
+           condor_restart
+           condor_drain
+           condor_now
+           condor_vacate
+           condor_config_val
+           condor_reconfig
+           condor_status
+       ManagingRunning Jobs
+           condor_ssh_to_job
+           condor_tail
+           condor_evicted_files
+           condor_chirp
+           condor_vacate_job
+       Debugging Testing
+           classad_eval
+           condor_version
+           condor_who
+           condor_top
+           condor_fetchlog
+           condor_transform_ads
+           condor_gpu_discovery
+           condor_power_state
+       Managing Submitters
+           condor_userprio
+           condor_qusers
+
+Commands that manage jobs:
+
+    *condor_rm*, *condor_submit*, *condor_submit_dag*, *condor_suspend*, *condor_continue*, *condor_hold*, *condor_release*, *condor_transfer_data*, *condor_q*
+    *condor_qedit*, *condor_history*
+
+Commands for managing execution points:
+
+    *condor_off*, *condor_on*, *condor_restart*, *condor_drain*, *condor_now*, *condor_vacate*, *condor_config_val*, *condor_reconfig*, *condor_status*
+
+Commands for working with running jobs:
+
+    *condor_ssh_to_job*, *condor_tail*, *condor_evicted_files*, *condor_chirp*, *condor_vacate_job*
+
+Commands for debugging and testing:
+
+    *classad_eval*, *condor_version*, *condor_who*, *condor_top*, *condor_fetchlog*, *condor_transform_ads*, *condor_gpu_discovery*, *condor_power_state*
+
+Commands for managing submitters:
+
+    *condor_userprio*, *condor_qusers*
+
+
+
 .. toctree::
    :maxdepth: 1
    :glob:
@@ -39,6 +110,7 @@ Command Reference Manual (man pages)
    condor_procd
    condor_q
    condor_qedit
+   condor_qusers
    condor_qsub
    condor_reconfig
    condor_release
@@ -63,6 +135,7 @@ Command Reference Manual (man pages)
    condor_submit_dag
    condor_suspend
    condor_tail
+   condor_test_token
    condor_token_create
    condor_token_fetch
    condor_token_list

@@ -138,7 +138,7 @@ JICLocalFile::readClassAdFromFile( char* filename, ClassAd* ad )
 			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.c_str() );
 			continue;
 		}
-		if( ! line[0] ) {
+		if (line.empty()) {
 				// ignore blank lines
 			continue;
 		}

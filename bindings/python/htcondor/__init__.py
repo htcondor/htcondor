@@ -76,7 +76,7 @@ with _add_dll_dir():
 
 # get the version using regexp ideally, and fall back to basic string parsing
 try:
-    __version__ = _re.match("^.*(\d+\.\d+\.\d+)", htcondor.version()).group(1)
+    __version__ = _re.match("^\D*(\d+\.\d+\.\d+)\D", htcondor.version()).group(1)
 except (AttributeError, IndexError):
     __version__ = htcondor.version().split()[1]
 
@@ -87,6 +87,7 @@ from . import _deprecation
 
 # deprecate in-place
 _deprecation.deprecate_8_9_8()
+_deprecation.deprecate_10_7_0()
 
 # re-import htcondor with a splat to get it into our namespace
 # because of import caching, this respects the mutation we did above

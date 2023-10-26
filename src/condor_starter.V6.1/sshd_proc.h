@@ -42,6 +42,7 @@ public:
 	virtual char const *getArgv0();
 
 	virtual bool SupportsPIDNamespace() { return false;}
+	virtual bool ShouldConvertCmdToAbsolutePath() { return false;}
 	virtual std::string CgroupSuffix() { return "/sshd";}
 	std::string session_dir;
 };

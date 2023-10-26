@@ -11,7 +11,7 @@ Checking on the progress of jobs
 --------------------------------
 
 You can check on your jobs with the *condor_q*
-command. :index:`condor_q<single: condor_q; HTCondor commands>`\ This
+command. :index:`condor_q<single: condor_q; example>`\ This
 command has many options, by default, it displays only your jobs
 queued in the local scheduler. An example of the output from *condor_q* is
 
@@ -81,11 +81,10 @@ Another useful method of tracking the progress of jobs is through the
 job event log. The specification of a ``log`` in the submit description
 file causes the progress of the job to be logged in a file. Follow the
 events by viewing the job event log file. Various events such as
-execution commencement, checkpoint, eviction and termination are logged
+execution commencement, file transfer, eviction and termination are logged
 in the file. Also logged is the time at which the event occurred.
 
 When a job begins to run, HTCondor starts up a *condor_shadow* process
-:index:`condor_shadow`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
 on the access point. The shadow process is the mechanism by which the
 remotely executing jobs can access the environment from which it was
 submitted, such as input and output files.
@@ -95,12 +94,11 @@ hundreds of *condor_shadow* processes running on the machine. Since the
 text segments of all these processes is the same, the load on the submit
 machine is usually not significant. If there is degraded performance,
 limit the number of jobs that can run simultaneously by reducing the
-``MAX_JOBS_RUNNING`` :index:`MAX_JOBS_RUNNING` configuration
-variable.
+:macro:`MAX_JOBS_RUNNING` configuration variable.
 
 You can also find all the machines that are running your job through the
 *condor_status* command.
-:index:`condor_status<single: condor_status; HTCondor commands>`\ For example, to find
+:index:`condor_status<single: condor_status; example>`\ For example, to find
 all the machines that are running jobs submitted by
 ``breach@cs.wisc.edu``, type:
 
@@ -183,8 +181,8 @@ Removing a job from the queue
 
 A job can be removed from the queue at any time by using the
 *condor_rm* :index:`condor_rm<single: condor_rm; HTCondor commands>`\ command. If
-the job that is being removed is currently running, the job is killed
-without a checkpoint, and its queue entry is removed. The following
+the job that is being removed is currently running, the job is killed,
+and its queue entry is removed. The following
 example shows the queue of jobs before and after a job is removed.
 
 .. code-block:: console
@@ -340,7 +338,7 @@ following information:
 This example also shows that the job does not run because the platform
 requested, Mac OS X, is not available on any of the machines in the
 pool. Recall that unless informed otherwise in the
-**Requirements** :index:`Requirements<single: Requirements; submit commands>`
+:subcom:`Requirements` :index:`Requirements<single: Requirements; usage for debugging>`
 expression in the submit description file, the platform requested for an
 execute machine will be the same as the platform where *condor_submit*
 is run to submit the job. And, while Mac OS X is a Unix-type operating
@@ -359,12 +357,12 @@ A second class of problems represents jobs that do or did run, for at
 least a short while, but are no longer running. The first issue is
 identifying whether the job is in this category. The *condor_q* command
 is not enough; it only tells the current state of the job. The needed
-information will be in the **log** :index:`log<single: log; submit commands>`
-file or the **error** :index:`error<single: error; submit commands>` file, as
+information will be in the :subcom:`log` :index:`log<single: log; usage for debugging>`
+file or the :subcom:`error` :index:`error<single: error; usage for debugging>` file, as
 defined in the submit description file for the job. If these files are
 not defined, then there is little hope of determining if the job ran at
 all. For a job that ran, even for the briefest amount of time, the
-**log** :index:`log<single: log; submit commands>` file will contain an event
+:subcom:`log` :index:`log<single: log; usage for debugging>` file will contain an event
 of type 1, which will contain the string Job executing on host.
 
 A job may run for a short time, before failing due to a file permission
@@ -454,12 +452,12 @@ includes:
 The relevant log events include a human-readable rendition of the ToE,
 and the job ad is updated with the ToE after the usual delay.
 
-As of version 8.9.4, HTCondor only issues ToE in three cases:
+HTCondor only issues ToE in three cases:
 
 - when the job terminates of its own accord (issued by the starter,
   ``HowCode`` 0);
 - and when the startd terminates the job because it received a
-  ``DEACTIVATE_CLAIM`` commmand (``HowCode`` 1)
+  ``DEACTIVATE_CLAIM`` command (``HowCode`` 1)
 - or a ``DEACTIVATE_CLAIM_FORCIBLY`` command (``HowCode`` 2).
 
 In both cases, HTCondor records the ToE in the job ad.  In the event
@@ -482,11 +480,10 @@ Examine the job history file with the *condor_history* command. If
 there is a log file specified in the submit description file for the
 job, then the job exit status will be recorded there as well, along with
 other information described below.
-:index:`notification<single: notification; submit commands>`
 
 By default, HTCondor does not send an email message when the job
 completes. Modify this behavior with the
-**notification** :index:`notification<single: notification; submit commands>` command
+:subcom:`notification` :index:`notification<single: notification; example>` command
 in the submit description file. The message will include the exit status
 of the job, which is the argument that the job passed to the exit system
 call when it completed, or it will be notification that the job was
@@ -501,7 +498,7 @@ statistics (as appropriate) about the job:
     the elapsed time between when the job was submitted and when it
     completed, given in a form of ``<days> <hours>:<minutes>:<seconds>``
  Virtual Image Size:
-    memory size of the job, computed when the job checkpoints
+    memory size of the job
 
 Statistics about just the last time the job ran:
 
@@ -511,12 +508,12 @@ Statistics about just the last time the job ran:
  Remote User Time:
     total CPU time the job spent executing in user mode on remote
     machines; this does not count time spent on run attempts that were
-    evicted without a checkpoint. Given in the form
+    evicted. Given in the form
     ``<days> <hours>:<minutes>:<seconds>``
  Remote System Time:
     total CPU time the job spent executing in system mode (the time
     spent at system calls); this does not count time spent on run
-    attempts that were evicted without a checkpoint. Given in the form
+    attempts that were evicted. Given in the form
     ``<days> <hours>:<minutes>:<seconds>``
 
 The Run Time accumulated by all run attempts are summarized with the

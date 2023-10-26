@@ -42,6 +42,7 @@
 #include "list.h"
 #include "my_popen.h"
 
+#include <charconv>
 #include <string>
 #include <set>
 
@@ -279,9 +280,9 @@ void XFormHash::setup_macro_defaults()
 	}
 
 	// allocate space for the 'live' macro default string_values and for the strings themselves.
-	LiveProcessString = allocate_live_default_string(LocalMacroSet, UnliveProcessMacroDef, 24)->psz;
-	LiveRowString = allocate_live_default_string(LocalMacroSet, UnliveRowMacroDef, 24)->psz;
-	LiveStepString = allocate_live_default_string(LocalMacroSet, UnliveStepMacroDef, 24)->psz;
+	LiveProcessString = const_cast<char*>(allocate_live_default_string(LocalMacroSet, UnliveProcessMacroDef, 24)->psz);
+	LiveRowString = const_cast<char*>(allocate_live_default_string(LocalMacroSet, UnliveRowMacroDef, 24)->psz);
+	LiveStepString = const_cast<char*>(allocate_live_default_string(LocalMacroSet, UnliveStepMacroDef, 24)->psz);
 	LiveRulesFileMacroDef = allocate_live_default_string(LocalMacroSet, UnliveRulesFileMacroDef, 2);
 	LiveIteratingMacroDef = allocate_live_default_string(LocalMacroSet, UnliveIteratingMacroDef, 2);
 }
@@ -437,20 +438,20 @@ void XFormHash::clear_live_variables() const
 
 void XFormHash::set_factory_vars(int isCluster, bool latMat)
 {
-	if (LiveProcessString) sprintf(LiveProcessString, "%d", latMat?1:0);
-	if (LiveStepString) sprintf(LiveStepString, "%d", isCluster);
+	if (LiveProcessString) { auto [p, ec] = std::to_chars(LiveProcessString, LiveProcessString + 3, latMat ? 1 :0); *p = '\0';}
+	if (LiveStepString)    { auto [p, ec] = std::to_chars(LiveStepString,    LiveStepString + 3, isCluster); *p = '\0';}
 }
 
 void XFormHash::set_iterate_step(int step, int proc)
 {
-	if (LiveProcessString) sprintf(LiveProcessString, "%d", proc);
-	if (LiveStepString) sprintf(LiveStepString, "%d", step);
+	if (LiveProcessString) { auto [p, ec] = std::to_chars(LiveProcessString, LiveProcessString + 12, proc); *p = '\0';}
+	if (LiveStepString)    { auto [p, ec] = std::to_chars(LiveStepString,    LiveStepString + 12, step); *p = '\0';}
 }
 
 void XFormHash::set_iterate_row(int row, bool iterating)
 {
-	if (LiveRowString) sprintf(LiveRowString, "%d", row);
-	if (LiveIteratingMacroDef) LiveIteratingMacroDef->psz = const_cast<char*>(iterating ? "1" : "0");
+	if (LiveRowString) { auto [p, ec] = std::to_chars(LiveRowString,    LiveRowString + 12, row); *p = '\0';}
+	if (LiveIteratingMacroDef) LiveIteratingMacroDef->psz = iterating ? "1" : "0";
 }
 
 void XFormHash::set_local_param_used(const char *name) 
@@ -647,7 +648,7 @@ void XFormHash::insert_source(const char * filename, MACRO_SOURCE & source)
 void XFormHash::set_RulesFile(const char * filename, MACRO_SOURCE & source)
 {
 	this->insert_source(filename, source);
-	if (LiveRulesFileMacroDef) LiveRulesFileMacroDef->psz = const_cast<char*>(filename);
+	if (LiveRulesFileMacroDef) LiveRulesFileMacroDef->psz = filename;
 }
 
 const char* XFormHash::get_RulesFilename()

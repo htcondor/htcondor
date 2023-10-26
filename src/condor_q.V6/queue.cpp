@@ -398,12 +398,12 @@ class CondorQClassAdFileParseHelper : public CondorClassAdFileParseHelper
 int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/)
 {
 	// treat blank lines as delimiters.
-	if (line.size() <= 0) {
+	if (line.size() == 0) {
 		return 2; // end of classad.
 	}
 
 	// standard delimitors are ... and ***
-	if (starts_with(line,"\n") || starts_with(line,"...") || starts_with(line,"***")) {
+	if (starts_with(line,"...") || starts_with(line,"***")) {
 		return 2; // end of classad.
 	}
 
@@ -436,12 +436,12 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd
 	// tell the parser to skip those lines, otherwise tell the parser to
 	// parse the line.
 	for (size_t ix = 0; ix < line.size(); ++ix) {
-		if (line[ix] == '#' || line[ix] == '\n')
+		if (line[ix] == '#')
 			return 0; // skip this line, but don't stop parsing.
 		if (line[ix] != ' ' && line[ix] != '\t')
-			break;
+			return 1; // parse this line
 	}
-	return 1; // parse this line
+	return 0; // skip this line, but don't stop parsing.
 }
 
 // this method is called when the parser encounters an error
@@ -455,6 +455,7 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::Cla
 			ee = 2;
 			break;
 		}
+		chomp(line);
 		ee = this->PreParse(line, ad, file);
 	}
 	return ee;
@@ -494,7 +495,6 @@ int main (int argc, const char **argv)
 {
 	ClassAd		*ad;
 	bool		first;
-	char		*scheddName=NULL;
 	std::string		scheddMachine;
 	int		useFastScheddQuery = 0;
 	const char	*tmp;
@@ -564,12 +564,13 @@ int main (int argc, const char **argv)
 
 		if ( schedd.locate() ) {
 
+			std::string scheddName;
 			scheddAddr = strdup(schedd.addr());
 			if( (tmp = schedd.name()) ) {
-				scheddName = strdup(tmp);
-				Q.addSchedd(scheddName);
+				scheddName = tmp;
+				Q.addSchedd(tmp);
 			} else {
-				scheddName = strdup("Unknown");
+				scheddName = "Unknown";
 			}
 			if( (tmp = schedd.fullHostname()) ) {
 				scheddMachine = tmp;
@@ -588,7 +589,7 @@ int main (int argc, const char **argv)
 			}
 
 			CondorClassAdListWriter writer(dash_long_format);
-			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
+			retval = show_schedd_queue(scheddAddr, scheddName.c_str(), scheddMachine.c_str(), useFastScheddQuery, writer);
 			if (dash_long) {
 				writer.writeFooter(stdout, always_write_xml_footer);
 			}
@@ -686,8 +687,10 @@ int main (int argc, const char **argv)
 		   included in the list of attributes given to scheddQuery.setDesiredAttrs()
 		   and to submittorQuery.setDesiredAttrs() !!! This is done early in main().
 		*/
-		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
-				ad->LookupString(ATTR_NAME, &scheddName) &&
+		std::string scheddName;
+		std::string scheddAddr;
+		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
+				ad->LookupString(ATTR_NAME, scheddName) &&
 				ad->LookupString(ATTR_MACHINE, scheddMachine)
 				)
 			)
@@ -708,9 +711,7 @@ int main (int argc, const char **argv)
 			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 		}
 		Q.useDefaultingOperator(v.built_since_version(8,6,0));
-		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
-		free(scheddName);
-		free(scheddAddr);
+		retval = show_schedd_queue(scheddAddr.c_str(), scheddName.c_str(), scheddMachine.c_str(), useFastScheddQuery, writer);
 	}
 
 	// close list
@@ -3659,7 +3660,7 @@ bool print_jobs_analysis (
 
 				achRunning[0] = 0;
 				if (cRunning) { snprintf(achRunning, sizeof(achRunning), "%d/", cRunning); }
-				sprintf(achRunning+strlen(achRunning), "%d", ac.machinesRunningUsersJobs);
+				snprintf(achRunning+strlen(achRunning), 12, "%d", ac.machinesRunningUsersJobs);
 
 				printf(fmt, achJobId, achAutocluster,
 						ac.totalMachines - ac.fReqConstraint,

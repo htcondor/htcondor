@@ -211,10 +211,10 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 	}
 
 		// now we can grab all the optional stuff that might help...
-	char* ename = NULL;
-	int got_exception = ad->LookupString(ATTR_EXCEPTION_NAME, &ename); 
-	char* reason_str = NULL;
-	ad->LookupString( ATTR_EXIT_REASON, &reason_str );
+	std::string ename;
+	int got_exception = ad->LookupString(ATTR_EXCEPTION_NAME,ename); 
+	std::string reason_str;
+	ad->LookupString( ATTR_EXIT_REASON, reason_str );
 
 		// finally, construct the right string
 	if( exited_by_signal ) {
@@ -222,7 +222,7 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 			str += "died with exception ";
 			str += ename;
 		} else {
-			if( reason_str ) {
+			if( !reason_str.empty() ) {
 				str += reason_str;
 			} else {
 				str += "died on signal ";
@@ -234,12 +234,6 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 		str += std::to_string( exit_value );
 	}
 
-	if( ename ) {
-		free( ename );
-	}
-	if( reason_str ) {
-		free( reason_str );
-	}		
 	return true;
 }
 
@@ -251,7 +245,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	ClassAd *job_ad = new ClassAd();
 
 	SetMyTypeName(*job_ad, JOB_ADTYPE);
-	SetTargetTypeName(*job_ad, STARTD_ADTYPE);
+	job_ad->Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
 
 	if ( owner ) {
 		job_ad->Assign( ATTR_OWNER, owner );
@@ -266,9 +260,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
 	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
 	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
-
-		// This is a magic cookie, see how condor_submit sets it
-	job_ad->Assign( ATTR_CORE_SIZE, -1 );
 
 		// Are these ones really necessary?
 	job_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
@@ -334,12 +325,14 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 
 	job_ad->Assign( ATTR_REQUIREMENTS, true );
 
-	job_ad->Assign( ATTR_PERIODIC_HOLD_CHECK, false );
-	job_ad->Assign( ATTR_PERIODIC_REMOVE_CHECK, false );
-	job_ad->Assign( ATTR_PERIODIC_RELEASE_CHECK, false );
+	if (param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+		job_ad->Assign( ATTR_PERIODIC_HOLD_CHECK, false );
+		job_ad->Assign( ATTR_PERIODIC_REMOVE_CHECK, false );
+		job_ad->Assign( ATTR_PERIODIC_RELEASE_CHECK, false );
 
-	job_ad->Assign( ATTR_ON_EXIT_HOLD_CHECK, false );
-	job_ad->Assign( ATTR_ON_EXIT_REMOVE_CHECK, true );
+		job_ad->Assign( ATTR_ON_EXIT_HOLD_CHECK, false );
+		job_ad->Assign( ATTR_ON_EXIT_REMOVE_CHECK, true );
+	}
 
 	job_ad->Assign( ATTR_JOB_ARGUMENTS1, "" );
 

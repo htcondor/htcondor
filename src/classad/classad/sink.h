@@ -76,8 +76,7 @@ class ClassAdUnParser
 		void SetOldClassAd( bool old_syntax, bool attr_value );
 		bool GetOldClassAd() const;
 
-		virtual void UnparseAux( std::string &buffer,
-								 const Value&,Value::NumberFactor );
+		virtual void UnparseAux( std::string &buffer, const Value &Value);
 		virtual void UnparseAux( std::string &buffer, 
 								 const ExprTree *tree, 
 								 std::string &ref, bool absolute=false );

@@ -32,10 +32,7 @@ the pool for which HTCondor can use the Java Virtual Machine.
 
 If there is no output from the *condor_status* command, then HTCondor
 does not know the location details of the Java Virtual Machine on
-machines in the pool, or no machines have Java correctly installed. In
-this case, contact your system administrator or see the 
-:doc:`/admin-manual/java-support-installation` section
-for more information on getting HTCondor to work together with Java.
+machines in the pool, or no machines have Java correctly installed.
 
 A Simple Example Java Application
 ---------------------------------
@@ -88,7 +85,7 @@ submit description file works:
 The Java universe must be explicitly selected.
 
 The main class of the program is given in the
-**executable** :index:`executable<single: executable; submit commands>` statement.
+:subcom:`executable` :index:`executable<single: executable; java universe>` statement.
 This is a file name which contains the entry point of the program. The
 name of the main class (not a file name) must be specified as the first
 argument to the program.
@@ -146,7 +143,7 @@ Less Simple Java Specifications
         executable = Stooges.class
         transfer_input_files = Larry.class,Curly.class,Moe.class
 
-    The **executable** :index:`executable<single: executable; submit commands>`
+    The :subcom:`executable`
     command does not change. It still identifies the class file that
     contains the program's entry point.
 
@@ -162,9 +159,9 @@ Less Simple Java Specifications
 
     HTCondor must then be told where to find the JAR as well as to use
     the JAR. The JAR file that contains the entry point is specified
-    with the **executable** :index:`executable<single: executable; submit commands>`
+    with the :subcom:`executable` :index:`executable<single: executable; and jar file>`
     command. All JAR files are specified with the
-    **jar_files** :index:`jar_files<single: jar_files; submit commands>` command.
+    :subcom:`jar_files` :index:`jar_files<single: jar_files; definition>` command.
     For this example that collected all the class files into a single
     JAR file, the submit description file contains:
 
@@ -178,8 +175,8 @@ Less Simple Java Specifications
     pass the information on to the JVM. That is why there is a
     difference in submit description file commands for the two ways of
     specifying files
-    (**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
-    and **jar_files** :index:`jar_files<single: jar_files; submit commands>`).
+    (:subcom:`transfer_input_files` :index:`transfer_input_files<single: transfer_input_files; java universe>`
+    and :subcom:`jar_files`)
 
     If there are multiple JAR files, the **executable** command
     specifies the JAR file that contains the program's entry point. This
@@ -206,7 +203,7 @@ Less Simple Java Specifications
  An executable JAR file.
     When the JAR file is an executable, specify the program's entry
     point in the
-    **arguments** :index:`arguments<single: arguments; submit commands>` command:
+    :subcom:`arguments` :index:`arguments<single: arguments; and jar file>` command:
 
     .. code-block:: condor-submit
 
@@ -419,7 +416,7 @@ given test programs:
     executable = TestChirp.class
     arguments = TestChirp
     jar_files = Chirp.jar
-    +WantIOProxy = True
+    want_io_proxy = True
     request_cpus   = 1
     request_memory = 1024M
     request_disk   = 10240K

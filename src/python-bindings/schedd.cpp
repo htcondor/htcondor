@@ -18,6 +18,7 @@
 #include "my_username.h"
 #include "condor_version.h"
 #include "../condor_utils/dagman_utils.h"
+#include "../condor_utils/MapFile.h"
 
 #include <classad/operators.h>
 
@@ -322,7 +323,7 @@ private:
 #endif
 
 boost::shared_ptr<HistoryIterator>
-history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int cmd, const std::string & addr)
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int hrs, int cmd, const std::string & addr)
 {
 	bool want_startd = (cmd == GET_HISTORY);
 
@@ -406,6 +407,20 @@ history_query(boost::python::object requirement, boost::python::list projection,
 	// PRAGMA_REMIND("projection should be a string, not a classad list")
 	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
 	ad.Insert(ATTR_PROJECTION, projTree);
+
+	switch (hrs) {
+		case HRS_SCHEDD_JOB_HIST:
+			break;
+		case HRS_STARTD_JOB_HIST:
+			ad.InsertAttr("HistoryRecordSource","STARTD");
+			break;
+		case HRS_JOB_EPOCH:
+			ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+			break;
+		default:
+			THROW_EX(HTCondorValueError, "Unknown history record source given");
+			break;
+	}
 
 	daemon_t dt = DT_SCHEDD;
 	if (want_startd) {
@@ -923,29 +938,35 @@ struct SubmitJobsIterator {
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, boost::python::object from, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, num, from)
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(false)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 			// copy the input submit hash into our new hash.
 			m_hash.init(JSM_PYTHON_BINDINGS);
+			m_protected_url_map = getProtectedURLMap();
 			copy_hash(h);
 			m_hash.setDisableFileChecks(true);
 			m_hash.init_base_ad(qdate, owner.c_str());
+			m_hash.attachTransferMap(m_protected_url_map);
 	}
 
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, const std::string & qargs, MacroStreamMemoryFile & ms_inline_items, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, 0, boost::python::object())
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(true)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 		// copy the input submit hash into our new hash.
 		m_hash.init(JSM_PYTHON_BINDINGS);
+		m_protected_url_map = getProtectedURLMap();
 		copy_hash(h);
 		m_hash.setDisableFileChecks(true);
 		m_hash.init_base_ad(qdate, owner.c_str());
+		m_hash.attachTransferMap(m_protected_url_map);
 
 		if (qargs.empty()) {
 			m_ssqa.begin(id, num);
@@ -967,7 +988,12 @@ struct SubmitJobsIterator {
 	}
 
 
-	~SubmitJobsIterator() {}
+	~SubmitJobsIterator() {
+		if (m_protected_url_map) {
+			delete m_protected_url_map;
+			m_protected_url_map = nullptr;
+		}
+	}
 
 	void copy_hash(SubmitHash & h)
 	{
@@ -1020,6 +1046,7 @@ struct SubmitJobsIterator {
 		} else {
 			job = m_hash.make_job_ad(jid, item_index, step, false, m_spool, NULL, NULL);
 		}
+		process_submit_errstack(m_hash.error_stack());
 
 		if ( ! job) {
 			THROW_EX(HTCondorInternalError, "Failed to get next job");
@@ -1054,6 +1081,7 @@ private:
 	SubmitHash m_hash;
 	SubmitStepFromPyIter m_sspi;
 	SubmitStepFromQArgs m_ssqa;
+	MapFile* m_protected_url_map;
 	bool m_iter_qargs;
 	bool m_return_proc_ads;
 	bool m_spool;
@@ -1094,6 +1122,7 @@ public:
     std::string owner() const;
     std::string schedd_version();
     const ClassAd* capabilites();
+    MapFile* urlMap();
 
     static boost::shared_ptr<ConnectionSentry> enter(boost::shared_ptr<ConnectionSentry> obj);
     static bool exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object obj2, boost::python::object obj3);
@@ -1395,14 +1424,15 @@ struct Schedd {
 
 
     Schedd()
-     : m_connection(NULL)
+     : m_connection(NULL), m_protected_url_map(nullptr)
     {
         use_local_schedd();
+        m_protected_url_map = getProtectedURLMap();
     }
 
 
     Schedd(boost::python::object loc)
-      : m_connection(NULL), m_addr(), m_name("Unknown"), m_version("")
+      : m_connection(NULL), m_protected_url_map(nullptr), m_addr(), m_name("Unknown"), m_version("")
     {
 		int rv = construct_for_location(loc, DT_SCHEDD, m_addr, m_version, &m_name);
 		if (rv == 0) {
@@ -1411,11 +1441,16 @@ struct Schedd {
 			if (rv == -2) { boost::python::throw_error_already_set(); }
 			THROW_EX(HTCondorValueError, "Unknown type");
 		}
+		m_protected_url_map = getProtectedURLMap();
     }
 
     ~Schedd()
     {
         if (m_connection) { m_connection->abort(); }
+        if (m_protected_url_map) {
+            delete m_protected_url_map;
+            m_protected_url_map = nullptr;
+        }
     }
 
     boost::python::object location() const {
@@ -1549,24 +1584,20 @@ struct Schedd {
         formatstr(cmd_map_ent, "{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
 
         std::string session_id;
-        KeyCacheEntry *k = NULL;
-        int ret = 0;
 
-        // IMPORTANT: this hashtable returns 0 on success!
-        ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
-        if (ret)
+        auto command_pair = SecMan::command_map.find(cmd_map_ent);
+        if (command_pair == SecMan::command_map.end()) {
+            return false;
+        }
+        session_id = command_pair->second;
+
+        auto itr = (SecMan::session_cache)->find(session_id);
+        if (itr == (SecMan::session_cache)->end())
         {
             return false;
         }
 
-        // IMPORTANT: this hashtable returns 1 on success!
-        ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
-        if (!ret)
-        {
-            return false;
-        }
-
-	ClassAd *policy = k->policy();
+        ClassAd *policy = itr->second.policy();
 
         if (!policy->EvaluateAttrString(ATTR_SEC_MY_REMOTE_USER_NAME, result))
         {
@@ -2412,10 +2443,15 @@ struct Schedd {
 		return result;
 	}
 
+    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
+    {
+        return history_query(requirement, projection, match, since, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
+    }
+
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
 #if 1
-		return history_query(requirement, projection, match, since, QUERY_SCHEDD_HISTORY, m_addr);
+		return history_query(requirement, projection, match, since, HRS_SCHEDD_JOB_HIST, QUERY_SCHEDD_HISTORY, m_addr);
 #else
         std::string val_str;
         extract<ExprTreeHolder &> exprtree_extract(requirement);
@@ -2620,10 +2656,13 @@ struct Schedd {
         return iter;
     }
 
+
+    MapFile* getUrlMap() { return m_protected_url_map; }
+
 private:
 
     ConnectionSentry* m_connection;
-
+    MapFile *m_protected_url_map;
     std::string m_addr, m_name, m_version;
 
 };
@@ -2674,6 +2713,11 @@ const ClassAd* ConnectionSentry::capabilites()
 		return &m_capabilities;
 	}
 	return NULL;
+}
+
+MapFile* ConnectionSentry::urlMap()
+{
+    return m_schedd.getUrlMap();
 }
 
 int
@@ -3443,6 +3487,8 @@ public:
 			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
 		}
 
+		m_hash.attachTransferMap(txn->urlMap());
+
 		if (factory_submit) {
 
 			// force re-initialization (and a new cluster) if this hash is used again.
@@ -3481,7 +3527,7 @@ public:
 			if (ssi.has_items()) {
 				std::string items_filename;
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, items_filename, &row_count) < 0 || row_count <= 0) {
-					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
+					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 
 				// PRAGMA_REMIND("fix this when python submit supports foreach, maybe make this common with condor_submit")
@@ -3552,6 +3598,8 @@ public:
 			}
 		}
 
+		m_hash.detachTransferMap();
+
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
             txn->reschedule();
@@ -3610,6 +3658,8 @@ public:
 		int step=0, item_index=0, rval;
 		SubmitStepFromPyIter ssi(m_hash, JOB_ID_KEY(cluster, first_proc_id), count, from);
 
+		m_hash.attachTransferMap(txn->urlMap());
+
 		if (factory_submit) {
 
 			// get the first rowdata, we need that to build the submit digest, etc
@@ -3642,7 +3692,7 @@ public:
 			int row_count = 1;
 			if (ssi.has_items()) {
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, ssi.fea().items_filename, &row_count) < 0 || row_count <= 0) {
-					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
+					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 				num_jobs = row_count * ssi.step_size();
 			}
@@ -3710,6 +3760,8 @@ public:
 			}
 
 		}
+
+		m_hash.detachTransferMap();
 
 		if (rval < 0) { ssi.throw_error(); }
 
@@ -4144,7 +4196,7 @@ void export_schedd()
         .value("DeprovisioningComplete", ProvisionerState::DEPROVISIONING_COMPLETE)
         ;
 
-    class_<ConnectionSentry>("Transaction", "An ongoing transaction in the HTCondor schedd", no_init)
+    class_<ConnectionSentry>("Transaction", "DEPRECATED.  An ongoing transaction in the HTCondor schedd.", no_init)
         .def("__enter__", &ConnectionSentry::enter)
         .def("__exit__", &ConnectionSentry::exit)
         ;
@@ -4161,7 +4213,7 @@ void export_schedd()
         init<boost::python::object>(
             boost::python::args("self", "location_ad"),
             R"C0ND0R(
-            :param location_ad: An Ad describing the location of the remote *condor_schedd*
+            :param location_ad: A :class:`~classad.ClassAd` describing the location of the remote *condor_schedd*
                 daemon, as returned by the :meth:`Collector.locate` method, or a tuple
                 of type DaemonLocation as returned by :meth:`Schedd.location`. If the parameter is omitted,
                 the local *condor_schedd* daemon is used.
@@ -4210,6 +4262,10 @@ void export_schedd()
             ))
         .def("xquery", &Schedd::xquery,
             R"C0ND0R(
+            .. warning::
+
+                This function is deprecated.
+
             Query the *condor_schedd* daemon for job ads.
 
             .. warning::
@@ -4247,6 +4303,44 @@ void export_schedd()
 #else
             (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #endif
+            )
+        .def("jobEpochHistory", &Schedd::jobEpochHistory,
+            R"C0ND0R(
+            Fetch per job run instance (epoch) history records from the *condor_schedd* daemon.
+
+            :param constraint: A query constraint.
+                Only jobs matching this constraint will be returned.
+                ``None`` will return all jobs.
+            :type constraint: str or :class:`~classad.ExprTree`
+            :param projection: Attributes that will be returned for each job
+                in the query.  At least the attributes in this list will be
+                returned, but additional ones may be returned as well.
+                An empty list returns all attributes.
+            :type projection: list[str]
+            :param int match: A limit on the number of jobs to include; the
+                default (``-1``) indicates to return all matching jobs.
+                The schedd may return fewer than ``match`` jobs because of its
+                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 10,000).
+            :param since: A cluster ID, job ID, or expression.  If a cluster ID
+                (passed as an `int`) or job ID (passed a `str` in the format
+                ``{clusterID}.{procID}``), only jobs recorded in the history
+                file after (and not including) the matching ID will be
+                returned.  If an expression (passed as a `str` or
+                :class:`~classad.ExprTree`), jobs will be returned,
+                most-recently-recorded first, until the expression becomes
+                true; the job making the expression become true will not be
+                returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
+                same set of jobs.
+            :type since: int, str, or :class:`~classad.ExprTree`
+            :return: All matching ads in the Schedd history, with attributes according to the
+                ``projection`` keyword.
+            :rtype: :class:`HistoryIterator`
+            )C0ND0R",
+#if BOOST_VERSION >= 103400
+             (boost::python::arg("self"),
+#endif
+             boost::python::arg("constraint"), boost::python::arg("projection"), boost::python::arg("match")=-1,
+             boost::python::arg("since")=boost::python::object())
             )
         .def("history", &Schedd::history,
             R"C0ND0R(
@@ -4313,19 +4407,19 @@ void export_schedd()
             that contains the cluster ID and ClassAd of the submitted jobs.
 
             For backward compatibility, this method will also accept a :class:`~classad.ClassAd`
-            that describes a single job to submit, but use of this form of is deprecated.
-            Use submit_raw to submit raw job ClassAds.  If the deprecated form is used
+            that describes a single job to submit, but use of this form of is DEPRECATED.
+            If the deprecated form is used
             the return value will be the cluster ID, and ad_results will optionally be the
             actual job ClassAds that were submitted.
 
             :param description: The Submit description or ClassAd describing the job cluster.
-            :type description: :class:`~htcondor.Submit` (or deprecated :class:`~class.ClassAd`)
+            :type description: :class:`~htcondor.Submit` (or DEPRECATED :class:`~class.ClassAd`)
             :param int count: The number of jobs to submit to the job cluster. Defaults to ``1``.
             :param bool spool: If ``True``, jobs will be submitted in a spooling hold mode
                so that input files can be spooled to a remote *condor_schedd* daemon before starting the jobs.
                This parameter is necessary for jobs submitted to a remote *condor_schedd* that use HTCondor file transfer.
                When True, job will be left in the HOLD state until the :func:`spool` method is called.
-            :param ad_results: deprecated. If set to a list and a raw job ClassAd is passed as the first argument, the list object will contain the job ads
+            :param ad_results: DEPRECATED.  If set to a list and a raw job ClassAd is passed as the first argument, the list object will contain the job ads
                 that were submitted.
             :type ad_results: list[:class:`~classad.ClassAd`]
             :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
@@ -4402,6 +4496,8 @@ void export_schedd()
             boost::python::args("self", "ad_list"))
         .def("transaction", &Schedd::transaction, transaction_overloads(
             R"C0ND0R(
+            This method is DEPRECATED.  Use :meth:`Schedd.submit` instead.
+
             Start a transaction with the *condor_schedd*.
 
             Starting a new transaction while one is ongoing is an error unless the ``continue_txn``
@@ -4412,7 +4508,7 @@ void export_schedd()
             :param bool continue_txn: Set to ``True`` if you would like this transaction to extend any
                 pre-existing transaction; defaults to ``False``.  If this is not set, starting a transaction
                 inside a pre-existing transaction will cause an exception to be thrown.
-            :return: A transaction context manager object.
+            :return: A :class:`~htcondor.Transaction` object.
             )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
@@ -4598,14 +4694,18 @@ void export_schedd()
 
             The submit description contains ``key = value`` pairs and implements the python
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
-            ``items``, and ``values`` methods.
+            ``items``, and ``values`` methods.  Values in the submit discription language have
+            no data type; they are all stored as strings.
             )C0ND0R", boost::python::no_init)
         .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
             R"C0ND0R(
             :param input: Submit descriptors as
-                ``key = value`` pairs in a dictionary,
-                or as keyword arguments,
-                or as a string containing the text of a submit file.
+                a string containing the text of a submit file
+                or as ``key = value`` pairs in a dictionary,
+                or as keyword arguments.
+
+                Only the single multi-line string form can contain a ``QUEUE`` statement.
+
                 For example, these calls all produce identical
                 submit descriptions:
 
@@ -4615,32 +4715,56 @@ void export_schedd()
                         """
                         executable = /bin/sleep
                         arguments = 5s
+                        log = $(ClusterId).log
                         My.CustomAttribute = "foobar"
                         """
                     )
 
-                    # we need to quote the string "foobar" correctly
-                    from_dict = htcondor.Submit({
+                    # create an empty submit object, then populate it as a dict
+                    # use of classad.quote here insures that the value is properly escaped as a classad string
+                    submit_dict = htcondor.Submit()
+                    submit_dict["executable"] = "/bin/sleep"
+                    submit_dict["arguments"] = "5s"
+                    submit_dict["log"] = "$(ClusterId).log"
+                    submit_dict["My.CustomAttribute"] = classad.quote("foobar")
+
+                    # initialize a submit object from a python dict
+                    # note that values should be strings
+                    mydict = {
                         "executable": "/bin/sleep",
                         "arguments": "5s",
+                        "log": "$(ClusterId).log",
                         "My.CustomAttribute": classad.quote("foobar"),
-                    })
+                    }
+                    from_dict = htcondor.Submit(mydict)
 
+                    # initialize a submit object from keyword arguments
                     # the **{} is a trick to get a keyword argument that contains a .
                     from_kwargs = htcondor.Submit(
-                        executable = "/bin/sleep",
-                        arguments = "5s",
-                        **{
-                            "My.CustomAttribute": classad.quote("foobar"),
-                        }
+                        executable="/bin/sleep",
+                        arguments="5s",
+                        log="$(ClusterId).log",
+                        **{ "My.CustomAttribute": classad.quote("foobar") }
                     )
 
-                If a string is used, it may include a single *condor_submit* ``QUEUE``
-                statement.
+                If a string initalizer is used, it may include a single *condor_submit* ``QUEUE``
+                statement at the end. If omitted, the submit description is initially empty.
+
                 The arguments to the ``QUEUE`` statement will be stored
-                in the ``QArgs`` member of this class and used when :meth:`Submit.queue`
-                or :meth:`Submit.queue_with_itemdata` are called.
-                If omitted, the submit description is initially empty.
+                in the ``QArgs`` member of this class and can be passed to :meth:`schedd.Submit`
+                as the itemdata iterator like this
+
+                .. code-block:: python
+
+                    sub = htcondor.Submit(
+                        """
+                        executable = /bin/sleep
+                        QUEUE arguments in (1s, 10s, 5m)
+                        """
+                    )
+                    schedd.Submit(sub, count=1, itemdata=sub.itemdata())
+
+
             :type input: dict or str
             )C0ND0R")
         .def(init<boost::python::dict>((boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
@@ -4657,7 +4781,9 @@ void export_schedd()
             boost::python::args("self", "attr"))
         .def("queue", &Submit::queue,
             R"C0ND0R(
-            Submit the current object to a remote queue.
+            This method is DEPRECATED.  Use :meth:`Schedd.submit` instead.
+
+	        Submit the current object to a remote queue.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
@@ -4676,6 +4802,8 @@ void export_schedd()
             )
         .def("queue_with_itemdata", &Submit::queue_from_iter,
             R"C0ND0R(
+            This method is DEPRECATED.  Use :meth:`Schedd.submit` instead.
+
             Submit the current object to a remote queue.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
@@ -4742,7 +4870,7 @@ void export_schedd()
             This is the same iterator used by *condor_submit* when processing
             ``QUEUE`` statements.
 
-            :param str queue: a submit queue statement, or the arguments to a submit queue statement.
+            :param str queue: a submit file queue statement, or the arguments to a submit file queue statement.
             :return: An iterator for the resulting items
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("qargs")=std::string())
@@ -4750,16 +4878,14 @@ void export_schedd()
         .def("getQArgs", &Submit::getQArgs,
             R"C0ND0R(
             Returns arguments specified in the ``QUEUE`` statement passed to the constructor.
-            These are the arguments that will be used by the :meth:`Submit.queue`
-            and :meth:`Submit.queue_with_itemdata` methods if not overridden by arguments to those methods.
+            These are the arguments that will be used by the :meth:`Submit.itemdata`
+            method if not overridden.
             )C0ND0R",
             boost::python::args("self"))
         .def("setQArgs", &Submit::setQArgs,
             R"C0ND0R(
             Sets the arguments to be used by
-            subsequent calls to the :meth:`Submit.queue`
-            and :meth:`Submit.queue_with_itemdata` methods
-            if not overridden by arguments to those methods.
+            subsequent calls to the :meth:`Submit.itemdata`.
 
             :param str args: The arguments to pass to the ``QUEUE`` statement.
             )C0ND0R",

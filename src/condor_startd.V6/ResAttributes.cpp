@@ -28,6 +28,7 @@
 #include <set>
 #include <algorithm>
 #include <sstream>
+#include <charconv>
 
 #ifdef WIN32
 #include "winreg.windows.h"
@@ -1227,6 +1228,65 @@ static bool hasUnprivUserNamespace() {
 	return hasNamespace;
 }
 
+enum class rotational_result {
+	ROTATIONAL, NOT_ROTATIONAL, UNKNOWN	
+};
+static rotational_result hasRotationalScratch() {
+
+	std::string executeDir;
+	param(executeDir, "EXECUTE");
+
+	struct stat buf;
+	int r = stat(executeDir.c_str(), &buf);
+
+	if (r != 0) {
+		// Huh.  Just don't know
+		return rotational_result::UNKNOWN;
+	}
+	char maj[8];
+	char min[8];
+	{
+	auto [ptr, ec] = std::to_chars(maj, maj+7, buf.st_dev >> 8);
+	*ptr = '\0';
+	}
+	{
+	auto [ptr, ec] = std::to_chars(min, min+7, buf.st_dev & 0xff);
+	*ptr = '\0';
+	}
+
+	dev_t major_device = buf.st_dev >> 8;
+
+	// major device 0 is memory device, ramdisk or tmpfs
+	if (major_device == 0) {
+		return rotational_result::NOT_ROTATIONAL; 
+	}
+
+
+	// Example path: /sys/dev/block/253:5/queue/rotational -- contains '0' or '1'
+	std::string rotate_path = "/sys/dev/block/";
+	rotate_path += maj;
+	rotate_path += ':';
+	rotate_path += min;
+	rotate_path += "/queue/rotational";
+
+	FILE *f = fopen(rotate_path.c_str(), "r");
+	char c = '\0';
+	if (f) {
+		size_t r = fread(&c, 1, 1, f);
+		fclose(f);
+		if (r != 1) {
+			return rotational_result::UNKNOWN;
+		}
+		if (c == '1') {
+			return rotational_result::ROTATIONAL;
+		} else {
+			return rotational_result::NOT_ROTATIONAL;
+		}
+	} else {
+		return rotational_result::UNKNOWN;
+	}
+}
+
 #endif
 
 void 
@@ -1391,6 +1451,19 @@ MachAttributes::publish_static(ClassAd* cp)
 #ifdef LINUX
 	if (hasUnprivUserNamespace()) {
 		cp->Assign(ATTR_HAS_USER_NAMESPACES, true);
+	}
+
+	switch (hasRotationalScratch()) {
+		case rotational_result::ROTATIONAL:
+		cp->Assign(ATTR_HAS_ROTATIONAL_SCRATCH, true);
+		break;
+		case rotational_result::NOT_ROTATIONAL:
+		cp->Assign(ATTR_HAS_ROTATIONAL_SCRATCH, false);
+		break;
+		case rotational_result::UNKNOWN:
+		dprintf(D_ALWAYS, "Cannot determine rotationality of execute dir, leaving it undefined\n");
+		break;
+
 	}
 #endif
 	// Temporary Hack until this is a fixed path
@@ -1673,7 +1746,7 @@ MachAttributes::credd_test()
 #endif
 
 CpuAttributes::CpuAttributes( MachAttributes* map_arg, 
-							  int slot_type,
+							  unsigned int slot_type,
 							  double num_cpus_arg,
 							  int num_phys_mem,
 							  double virt_mem_fraction,
@@ -1684,7 +1757,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 							  const std::string &execute_partition_id )
 {
 	map = map_arg;
-	c_type = slot_type;
+	c_type_id = slot_type;
 	c_num_slot_cpus = c_num_cpus = num_cpus_arg;
 	c_allow_fractional_cpus = num_cpus_arg > 0 && num_cpus_arg < 0.9;
 	c_slot_mem = c_phys_mem = num_phys_mem;

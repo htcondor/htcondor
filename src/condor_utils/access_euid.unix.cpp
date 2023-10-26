@@ -44,10 +44,11 @@ static int access_euid_dir(char const *path,int mode)
 
 	if ((W_OK == 0) || (mode & W_OK)) {
 		int success = 0;
-		char *pathbuf = (char *)malloc(strlen(path) + 100);
+		size_t len = strlen(path) + 100;
+		char *pathbuf = (char *)malloc(len);
 		ASSERT( pathbuf );
 		for(int cnt=0;cnt<100;cnt++) {
-			sprintf(pathbuf,"%s%caccess-test-%d-%d-%d",path,DIR_DELIM_CHAR,getpid(),(int)time(NULL),cnt);
+			snprintf(pathbuf, len, "%s%caccess-test-%d-%d-%d",path,DIR_DELIM_CHAR,getpid(),(int)time(NULL),cnt);
 			if( mkdir(pathbuf,0700) == 0 ) {
 				rmdir( pathbuf );
 				success = 1;

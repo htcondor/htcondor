@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_classad.h"
-#include "HashTable.h"
 #include "hashkey.h"
 #include "condor_attributes.h"
 #include "internet.h"
@@ -32,15 +31,12 @@
 
 void
 AdNameHashKey::sprint( std::string &s ) const {
-	if (ip_addr.length() )
-		formatstr( s, "< %s , %s >", name.c_str(), ip_addr.c_str() );
-	else
-		formatstr( s, "< %s >", name.c_str() );
+	formatstr( s, "< %s >", name.c_str() );
 }
 
 bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
 {
-    return (  ( lhs.name == rhs.name ) && ( lhs.ip_addr == rhs.ip_addr ) );
+    return (lhs.name == rhs.name);
 }
 
 size_t adNameHashFunction (const AdNameHashKey &key)
@@ -48,7 +44,6 @@ size_t adNameHashFunction (const AdNameHashKey &key)
     size_t bkt = 0;
 
     bkt += hashFunction(key.name);
-    bkt += hashFunction(key.ip_addr);
 
     return bkt;
 }

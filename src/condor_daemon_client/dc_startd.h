@@ -87,7 +87,7 @@ public:
 			in the DCStartdMsg object, which may be obtained from the callback
 			object at callback time.
 		*/
-	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
+	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, bool claim_pslot, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
@@ -219,6 +219,10 @@ public:
 	char const *leftover_claim_id() { return m_leftover_claim_id.c_str(); }
 	ClassAd * leftover_startd_ad() 
 		{ return m_have_leftovers ? &m_leftover_startd_ad : NULL; }
+	bool have_claimed_slot_info() { return m_have_claimed_slot_info; }
+	const char* claimed_slot_claim_id() { return m_claimed_slot_claim_id.c_str(); }
+	ClassAd * claimed_slot_ad()
+		{ return m_have_claimed_slot_info ? &m_claimed_slot_ad : nullptr; }
 
 	const ClassAd *getJobAd() { return &m_job_ad;}
 	bool putExtraClaims(Sock *sock);
@@ -229,7 +233,12 @@ private:
 	std::string m_description;
 	std::string m_scheduler_addr;
 	int m_alive_interval;
+public:
+	int m_num_dslots;
+	int m_pslot_claim_lease;
+	bool m_claim_pslot;
 
+private:
 		// the startd's reply:
 	int m_reply;
 
@@ -237,8 +246,11 @@ private:
 		// may send over the newly created repatitionable slot with
 		// the leftover unclaimed resources.
 	bool m_have_leftovers;
+	bool m_have_claimed_slot_info;
 	std::string m_leftover_claim_id;
 	ClassAd m_leftover_startd_ad;
+	std::string m_claimed_slot_claim_id;
+	ClassAd m_claimed_slot_ad;
 
 	std::string m_startd_ip_addr;
 	std::string m_startd_fqu;

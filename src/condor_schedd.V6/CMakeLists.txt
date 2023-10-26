@@ -27,6 +27,7 @@ set(qmgmtElements
 
 set(scheddElements
 autocluster.cpp
+checkpoint_cleanup.cpp
 dedicated_scheduler.cpp
 grid_universe.cpp
 ickpt_share.cpp

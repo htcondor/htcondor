@@ -1607,7 +1607,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		}
 
 		// We only get here if we are actually switching state. (Not if we
-		// requested to to switch to the current state, or if we requested
+		// requested to switch to the current state, or if we requested
 		// to switch away from a _FINAL state).
 
 #ifdef LINUX
@@ -1645,7 +1645,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			// convert the timeout to a count and only try that many times.
 			int timeout = keyring_session_creation_timeout();
 			const int sleep_amount = 1000; // 1000 usec == 1 millisec
-			int max_attempts = timeout * (1000000/sleep_amount);
+			int max_attempts = timeout * (1'000'000/sleep_amount);
 
 			// attempt creation and loop until success or timeout.
 			while( condor_keyctl_session(NULL) == -1 ) {

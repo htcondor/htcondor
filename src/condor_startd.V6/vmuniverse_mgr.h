@@ -81,6 +81,7 @@ public:
 	bool canCreateVM(ClassAd *jobAd = NULL);
 
 	int numOfRunningVM(void);
+	bool hasVMLimit() { return m_vm_max_num > 0; }
 	void setStarterAbility(bool has_vmcode);
 	bool isStarterForVM(pid_t s_pid);
 	bool getUsageForVM(pid_t s_pid, ProcFamilyUsage &usage);
@@ -100,7 +101,7 @@ private:
 	bool init();
 
 	bool testVMGahp(const char* vmgahppath, const char* vmtype);
-	void docheckVMUniverse(void);
+	void docheckVMUniverse( int timerID = -1 );
 	void killVM(VMStarterInfo *info);
 	VMStarterInfo* findVMStarterInfoWithStarterPid(pid_t s_pid);
 	VMStarterInfo* findVMStarterInfoWithVMPid(pid_t vm_pid);

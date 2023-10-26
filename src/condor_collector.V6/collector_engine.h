@@ -139,8 +139,9 @@ class CollectorEngine : public Service
 	* this seems to be a sloppy encapsulation issue.
 	*/
 
-	CollectorHashTable StartdAds;
+	CollectorHashTable StartdSlotAds;
 	CollectorHashTable StartdPrivateAds;
+	CollectorHashTable StartdDaemonAds;
 	CollectorHashTable ScheddAds;
 	CollectorHashTable SubmittorAds;
 	CollectorHashTable LicenseAds;
@@ -167,7 +168,7 @@ class CollectorEngine : public Service
 	int	clientTimeout;
 	int	machineUpdateInterval;
 
-	void  housekeeper ();
+	void  housekeeper ( int timerID = -1 );
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t, HashFunc) const;
 	CollectorRecord* updateClassAd(CollectorHashTable&,const char*, const char *,
@@ -205,5 +206,6 @@ public: // so that the config code can set it.
 	int  m_get_ad_options; // new for 8.7.0, may be temporary
 };
 
+AdTypes get_real_startd_ad_type(const char * mytype);
 
 #endif // __COLLECTOR_ENGINE_H__

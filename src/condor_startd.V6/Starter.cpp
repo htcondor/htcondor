@@ -518,8 +518,8 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	} else {
 		// Dummy up an ad, assume a boinc type job.
 		int now = (int) time(0);
-		SetMyTypeName(dummyAd, "Job");
-		SetTargetTypeName(dummyAd, "Machine");
+		SetMyTypeName(dummyAd, JOB_ADTYPE);
+		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE); // TODO: remove this once no-one needs TargetType anymore
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");
@@ -573,21 +573,39 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 
 #ifdef LINUX
 	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
+		// Attempt to cleanup of recovery files/directories used by docker/vm universe
+		std::string pid_dir, pid_dir_path;
+		formatstr(pid_dir, "dir_%d", s_pid);
+		formatstr(pid_dir_path, "%s/%s", executeDir(), pid_dir.c_str());
+		check_recovery_file(pid_dir_path.c_str(), abnormal_exit);
+		// Attempt LV cleanup
 		auto &slot_name = claim->rip()->r_id_str;
-		dprintf(D_ALWAYS,"Starter::exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
+		dprintf(D_ALWAYS,"Starter::Exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
 		CondorError err;
-		if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
-			if (abnormal_exit) {
-				dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
-					slot_name, err.getFullText().c_str());
+		// Attempt LV cleanup n times to prevent race condition between
+		// killing of family processes and LV cleanup causing failure
+		int max_attempts = 5;
+		for (int attempt=1; attempt<=max_attempts; attempt++) {
+			// Attempt a cleanup
+			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
+			if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
+				std::string msg = err.getFullText();
+				if (!abnormal_exit && msg.find("Failed to find logical volume") != std::string::npos) {
+					break; // If starter exited normally and we failed to find LV assume it is cleaned up
+				} else if (attempt == max_attempts){
+					// We have failed and this was the last attempt so output error message
+					dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s", slot_name, msg.c_str());
+				}
+				err.clear();
+			} else {
+				dprintf(D_FULLDEBUG, "LVM cleanup succesful.\n");
+				break;
 			}
+			sleep(1);
 		}
-	} else {
-		cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
 	}
-#else
-	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
 #endif // LINUX
+	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
 
 }
 
@@ -711,18 +729,16 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	}
 
 
-	char* hostname = claim->client()->host();
-
 	args.AppendArg("condor_starter");
 	args.AppendArg("-f");
 
 	// If a slot-type is defined, pass it as the local name
 	// so starter params can switch on slot-type
-	if (claim->rip()->type() != 0) {
+	if (claim->rip()->type_id() != 0) {
 		args.AppendArg("-local-name");
 
 		std::string slot_type_name("slot_type_");
-		formatstr_cat(slot_type_name, "%d", abs(claim->rip()->type()));
+		formatstr_cat(slot_type_name, "%d", claim->rip()->type_id());
 		args.AppendArg(slot_type_name);
 	}
 
@@ -750,7 +766,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 		args.AppendArg(claim->rip()->r_id_str);
 	}
 
-	args.AppendArg(hostname);
+	args.AppendArg(claim->client()->c_host);
 	execDCStarter( claim, args, NULL, NULL, s );
 
 	return s_pid;
@@ -868,7 +884,7 @@ int Starter::execDCStarter(
 		formatstr_cat(s_execute_dir,"%cencrypted%lu",
 				DIR_DELIM_CHAR,privdirnum++);
 		if( mkdir(s_execute_dir.c_str(), 0755) < 0 ) {
-			dprintf( D_FAILURE|D_ALWAYS,
+			dprintf( D_ERROR,
 			         "Failed to create encrypted dir %s: %s\n",
 			         s_execute_dir.c_str(),
 			         strerror(errno) );
@@ -1090,20 +1106,18 @@ char const*
 Starter::getIpAddr( void )
 {
 	if( ! s_pid ) {
-		return NULL;
+		return nullptr;
 	}
 	if( !m_starter_addr.empty() ) {
 		return m_starter_addr.c_str();
 	}
 
-	// Fall back on the raw contact string known to daemonCore.
-	// Unfortunately, that doesn't include any of the fancy
-	// stuff like private network info and CCB.
-	dprintf(D_ALWAYS,
-			"Warning: giving raw address in response to starter address query,"
-			"because update from starter not received yet.\n");
-
-	return daemonCore->InfoCommandSinfulString( s_pid );
+	// At this point, we haven't gotten an update from the starter (yet)
+	// so the starter hasn't told us the real, external address with CCB
+	// extensions and other goodness.  We used to return a guess for what
+	// we thought the address to be, but that broke condor_ssh_to_job
+	// so, if we don't know for sure, return that we don't know.
+	return nullptr;
 }
 
 
@@ -1257,7 +1271,7 @@ Starter::cancelKillTimer( void )
 
 
 void
-Starter::sigkillStarter( void )
+Starter::sigkillStarter( int /* timerID */ )
 {
 		// In case the kill fails for some reason, we are on a periodic
 		// timer that will keep trying.
@@ -1274,7 +1288,7 @@ Starter::sigkillStarter( void )
 }
 
 void
-Starter::softkillTimeout( void )
+Starter::softkillTimeout( int /* timerID */ )
 {
 	s_softkill_tid = -1;
 	if( active() ) {
@@ -1291,7 +1305,20 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 		return true;
 	}
 
-	classy_counted_ptr<DCStarter> starter = new DCStarter(getIpAddr());
+	// If we can't find the complete-with-CCB address, use the socket we
+	// handed to the starter when we created it.  Since the startd is always
+	// local to the starter (until further notice), this should always work.
+	//
+	// Arguably, we shouldn't be using TCP/IP to communicated with our
+	// starters anyway, and even if we must, it should almost certainly
+	// be done over the loopback interface where we hopefully don't have to
+	// fight for port numbers or deal with nearly as many attackers.
+	const char * sinful = getIpAddr();
+	if( sinful == NULL ) {
+		sinful = daemonCore->InfoCommandSinfulString( s_pid );
+	}
+
+	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
 	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
 
 	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );

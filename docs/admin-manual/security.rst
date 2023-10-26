@@ -166,7 +166,7 @@ Authenticating using IDTOKENS
 If a user is able to log in to the machine running the *condor_schedd*, and the
 SchedD has been set up with the Token Signing Key (see above for how that is
 created and deployed) then the user can simply run *condor_token_fetch* and
-retreive their own token.  This token can then be (securely) moved to another
+retrieve their own token.  This token can then be (securely) moved to another
 machine and used to interact with the job queue, including submission, edits,
 hold, release, and removing the job.
 
@@ -502,10 +502,6 @@ STARTD:
 ``WRITE``
     All commands that relate to a *condor_schedd* daemon claiming a
     machine, starting jobs there, or stopping those jobs.
-
-    The command that *condor_checkpoint* sends to periodically
-    checkpoint all running jobs.
-
 ``READ``
     The command that *condor_preen* sends to request the current state
     of the *condor_startd* daemon.
@@ -1014,6 +1010,12 @@ certificate authorities. Similarly, :macro:`AUTH_SSL_SERVER_CADIR` and
 :macro:`AUTH_SSL_CLIENT_CADIR` each specify a directory with one or more files,
 each which may contain a single CA certificate. The directories must be
 prepared using the OpenSSL ``c_rehash`` utility.
+These CA certificates are used in addition to the default CA file and
+directory locations given in OpenSSL's configuration.
+If you do not want to use OpenSSL's default trusted CAs, you can set
+the configuration variables :macro:`AUTH_SSL_SERVER_USE_DEFAULT_CAS`
+and :macro:`AUTH_SSL_CLIENT_USE_DEFAULT_CAS` to ``False``.
+
 
 Bootstrapping SSL Authentication
 ''''''''''''''''''''''''''''''''
@@ -1409,7 +1411,7 @@ administrator manages the network and no unprivileged users are currently on
 the network), then the auto-approval mechanism may be used.  When in place, auto-approval
 allows any token authentication request on an approved network to be automatically
 approved by HTCondor on behalf of the pool administrator - even when requests do not come over
-confidential connnections.
+confidential connections.
 
 When a daemon issues a token for a client (e.g. for
 ``condor_token_fetch`` or ``condor_token_request``), the signing key it
@@ -1619,7 +1621,7 @@ mapping that matches.
 For HTCondor version 8.5.8 and later, the authenticated name field will be
 interpreted as a regular expression or as a simple string based on the value of
 the :macro:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS` configuration variable. If
-this configuration varible is true, then the authenticated name field is a
+this configuration variable is true, then the authenticated name field is a
 regular expression only when it begins and ends with the / character. If this
 configuration variable is false, or on HTCondor versions older than 8.5.8, the
 authenticated name field is always a regular expression.
@@ -1689,11 +1691,11 @@ matching line in the map file (the canonical name) should be the text
 ``PLUGIN:`` followed by a comma-separated list of plugin names. Note
 that no spaces should be used within the list.
 
-For each plugin, the configuration paramater
+For each plugin, the configuration parameter
 :macro:`SEC_SCITOKENS_PLUGIN_<name>_COMMAND` gives the executable and optional
 command line arguments needed to invoke the plugin.  The optional configuration
 parameter :macro:`SEC_SCITOKENS_PLUGIN_<name>_MAPPING` specifies the mapped
-identity if the plugin accepts the token. If this paramater isn't set, then the
+identity if the plugin accepts the token. If this parameter isn't set, then the
 plugin must write the mapped identity to its stdout.  If the special value
 ``PLUGIN:*`` is given in the map file, then the configuration parameter
 :macro:`SEC_SCITOKENS_PLUGIN_NAMES` is consulted to determine the names of the
@@ -1873,7 +1875,7 @@ check:
 +---------------------------------------+
 |:macro:`SEC_READ_INTEGRITY`            |
 +---------------------------------------+
-|:macro:`SEC_WRITE_INEGRITY`            |
+|:macro:`SEC_WRITE_INTEGRITY`           |
 +---------------------------------------+
 |:macro:`SEC_ADMINISTRATOR_INTEGRITY`   |
 +---------------------------------------+
@@ -2328,7 +2330,7 @@ Configuration examples and the settings of configuration variables using
 the *condor_config_val* command complete this section.
 
 Inside the HTCondor daemons or tools that use DaemonCore (see the
-:doc:`/admin-manual/daemoncore` section), most
+:ref:`admin-manual/installation-startup-shutdown-reconfiguration:DaemonCore` section), most
 tasks are accomplished by sending commands to another HTCondor daemon.
 These commands are represented by an integer value to specify which
 command is being requested, followed by any optional information that
@@ -2366,15 +2368,7 @@ HTCondor can be registered with:
     daemons. Most important for granting a machine with this access is
     that the machine will be able to join a pool since they are allowed
     to send ClassAd updates to the central manager. The machine can talk
-    to the other machines in a pool in order to submit or run jobs. In
-    addition, any machine with ``WRITE`` access can request the
-    *condor_startd* daemon to perform periodic checkpoints on an
-    executing job. After the checkpoint is completed, the job will
-    continue to execute and the machine will still be claimed by the
-    original *condor_schedd* daemon. This allows users on the machines
-    where they submitted their jobs to use the *condor_checkpoint*
-    command to get their jobs to periodically checkpoint, even if the
-    users do not have an account on the machine where the jobs execute.
+    to the other machines in a pool in order to submit or run jobs.
 
     .. note::
 
@@ -2754,7 +2748,7 @@ password file). If :macro:`SOFT_UID_DOMAIN` is False, and :macro:`UID_DOMAIN`
 matches, and the user is not in the execute machine's password file,
 then the job execution attempt will be aborted.
 
-Jobs that run as nobody are low priviledge, but can still interfere with each other.
+Jobs that run as nobody are low privilege, but can still interfere with each other.
 To avoid this, you can configure :macro:`NOBODY_SLOT_USER` to the value
 ``$(STARTER_SLOT_NAME)`` or configure :macro:`SLOT<N>_USER` for each slot
 to define a different username to use for each slot instead of the user nobody.

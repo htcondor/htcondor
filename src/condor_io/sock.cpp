@@ -417,7 +417,7 @@ int Sock::assign(
   #define SIO_BASE_HANDLE _WSAIOR(IOC_WS2,34)
 #endif
 
-int Sock::set_inheritable( int flag )
+bool Sock::set_inheritable( bool flag )
 {
 	// on unix, all sockets are always inheritable by a child process.
 	// but on Win32, each individual socket has a flag that says if it can
@@ -429,9 +429,6 @@ int Sock::set_inheritable( int flag )
 
 	SOCKET RealKernelSock;
 	SOCKET DuplicateSock;
-
-	if ( (flag != TRUE) && (flag != FALSE) )
-		return FALSE;	// flag must be either TRUE or FALSE...
 
 	DWORD BytesReturned = 0;  // useless pointer needed for winsock call
 
@@ -501,7 +498,7 @@ int Sock::set_inheritable( int flag )
 				dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed "
 								 "in Sock:set_inheritable(%d), error=%d\n"
 					  ,flag,GetLastError());
-				return FALSE;
+				return false;
 		}
 		// if made it here, successful duplication; replace original.
 		// note we close _sock, not RealKernelSock, since _sock is
@@ -511,7 +508,7 @@ int Sock::set_inheritable( int flag )
 		_sock = DuplicateSock;
 	}
 
-	return TRUE;
+	return true;
 }
 #endif	// of WIN32
 
@@ -668,7 +665,7 @@ int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
 	// the default inheritable socket.  Note on Win95, it is the opposite:
 	// i.e. on Win95 sockets are created non-inheritable by default.
 	// note: on UNIX, set_inheritable just always return TRUE.
-	if ( !set_inheritable(FALSE) ) {
+	if ( !set_inheritable(false) ) {
 		::closesocket(_sock);
 		_sock = INVALID_SOCKET;
 		return FALSE;
@@ -719,7 +716,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port)
 #else
 	LARGE_INTEGER li;
 	::QueryPerformanceCounter(&li);
-	randomish_val = li.LowPart % 1000000; // force into range of usec to avoid overflow when we multiply
+	randomish_val = li.LowPart % 1'000'000; // force into range of usec to avoid overflow when we multiply
 #endif
 
 	int range = high_port - low_port + 1;
@@ -1603,7 +1600,7 @@ Sock::reportConnectionFailure(bool timed_out) const
 	char const *reason = connect_state.connect_failure_reason;
 	char timeout_reason_buf[100];
 	if((!reason || !*reason) && timed_out) {
-		sprintf(timeout_reason_buf,
+		snprintf(timeout_reason_buf, sizeof(timeout_reason_buf), 
 		        "timed out after %d seconds",
 		        connect_state.retry_timeout_interval);
 		reason = timeout_reason_buf;

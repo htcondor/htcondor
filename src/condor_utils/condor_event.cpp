@@ -701,17 +701,16 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 	if ( ad->LookupInteger("EventTypeNumber", en) ) {
 		eventNumber = (ULogEventNumber) en;
 	}
-	char* timestr = NULL;
-	if( ad->LookupString("EventTime", &timestr) ) {
+	std::string timestr;
+	if( ad->LookupString("EventTime", timestr) ) {
 		bool is_utc = false;
 		struct tm eventTime;
-		iso8601_to_time(timestr, &eventTime, &event_usec, &is_utc);
+		iso8601_to_time(timestr.c_str(), &eventTime, &event_usec, &is_utc);
 		if (is_utc) {
 			eventclock = timegm(&eventTime);
 		} else {
 			eventclock = mktime(&eventTime);
 		}
-		free(timestr);
 	}
 	ad->LookupInteger("Cluster", cluster);
 	ad->LookupInteger("Proc", proc);
@@ -850,6 +849,8 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 		// have a way of representing a single resource with multiple metrics.
 		else if( label == "Gpus" ) { label += " (Average)"; }
 		else if( label == "GpusMemory" ) { label += " (MB)"; }
+		else if( label == "TimeExecute" ) { label += " (s)"; }
+		else if( label == "TimeSlotBusy" ) { label += " (s)"; }
 		const SlotResTermSumy & psumy = i.second;
 		formatstr_cat( out, fString.c_str(), label.c_str(), psumy.use.c_str(),
 			psumy.req.c_str(), psumy.alloc.c_str(), psumy.assigned.c_str() );
@@ -1760,15 +1761,13 @@ CheckpointedEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char* usageStr = NULL;
-	if( ad->LookupString("RunLocalUsage", &usageStr) ) {
-		strToRusage(usageStr, run_local_rusage);
-		free(usageStr);
+	std::string usageStr;
+	if( ad->LookupString("RunLocalUsage", usageStr) ) {
+		strToRusage(usageStr.c_str(), run_local_rusage);
 	}
-	usageStr = NULL;
-	if( ad->LookupString("RunRemoteUsage", &usageStr) ) {
-		strToRusage(usageStr, run_remote_rusage);
-		free(usageStr);
+	usageStr.clear();
+	if( ad->LookupString("RunRemoteUsage", usageStr) ) {
+		strToRusage(usageStr.c_str(), run_remote_rusage);
 	}
 
 	ad->LookupFloat("SentBytes", sent_bytes);
@@ -2062,15 +2061,13 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 		checkpointed = reallybool ? TRUE : FALSE;
 	}
 
-	char* usageStr = NULL;
-	if( ad->LookupString("RunLocalUsage", &usageStr) ) {
-		strToRusage(usageStr, run_local_rusage);
-		free(usageStr);
+	std::string usageStr;
+	if( ad->LookupString("RunLocalUsage", usageStr) ) {
+		strToRusage(usageStr.c_str(), run_local_rusage);
 	}
-	usageStr = NULL;
-	if( ad->LookupString("RunRemoteUsage", &usageStr) ) {
-		strToRusage(usageStr, run_remote_rusage);
-		free(usageStr);
+	usageStr.clear();
+	if( ad->LookupString("RunRemoteUsage", usageStr) ) {
+		strToRusage(usageStr.c_str(), run_remote_rusage);
 	}
 
 	ad->LookupFloat("SentBytes", sent_bytes);
@@ -2405,7 +2402,8 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 		}
 		else {
 			// no match, we have (probably) just read the banner of the useage ad.
-			if (starts_with(sz, "\tPartitionable ")) {
+			if (starts_with(sz, "\tPartitionable ") ||  
+				starts_with(sz, "\tResources")) {
 				if ( ! pusageAd) { pusageAd = new ClassAd(); }
 				pusageAd->Clear();
 				ulp.init(sz);
@@ -2717,22 +2715,18 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 
 	ad->LookupString("CoreFile", core_file);
 
-	char* multi = NULL;
-	if( ad->LookupString("RunLocalUsage", &multi) ) {
-		strToRusage(multi, run_local_rusage);
-		free(multi);
+	std::string multi;
+	if( ad->LookupString("RunLocalUsage", multi) ) {
+		strToRusage(multi.c_str(), run_local_rusage);
 	}
-	if( ad->LookupString("RunRemoteUsage", &multi) ) {
-		strToRusage(multi, run_remote_rusage);
-		free(multi);
+	if( ad->LookupString("RunRemoteUsage", multi) ) {
+		strToRusage(multi.c_str(), run_remote_rusage);
 	}
-	if( ad->LookupString("TotalLocalUsage", &multi) ) {
-		strToRusage(multi, total_local_rusage);
-		free(multi);
+	if( ad->LookupString("TotalLocalUsage", multi) ) {
+		strToRusage(multi.c_str(), total_local_rusage);
 	}
-	if( ad->LookupString("TotalRemoteUsage", &multi) ) {
-		strToRusage(multi, total_remote_rusage);
-		free(multi);
+	if( ad->LookupString("TotalRemoteUsage", multi) ) {
+		strToRusage(multi.c_str(), total_remote_rusage);
 	}
 
 	ad->LookupFloat("SentBytes", sent_bytes);
@@ -3677,22 +3671,18 @@ NodeTerminatedEvent::initFromClassAd(ClassAd* ad)
 
 	ad->LookupString("CoreFile", core_file);
 
-	char* multi = NULL;
-	if( ad->LookupString("RunLocalUsage", &multi) ) {
-		strToRusage(multi, run_local_rusage);
-		free(multi);
+	std::string multi;
+	if( ad->LookupString("RunLocalUsage", multi) ) {
+		strToRusage(multi.c_str(), run_local_rusage);
 	}
-	if( ad->LookupString("RunRemoteUsage", &multi) ) {
-		strToRusage(multi, run_remote_rusage);
-		free(multi);
+	if( ad->LookupString("RunRemoteUsage", multi) ) {
+		strToRusage(multi.c_str(), run_remote_rusage);
 	}
-	if( ad->LookupString("TotalLocalUsage", &multi) ) {
-		strToRusage(multi, total_local_rusage);
-		free(multi);
+	if( ad->LookupString("TotalLocalUsage", multi) ) {
+		strToRusage(multi.c_str(), total_local_rusage);
 	}
-	if( ad->LookupString("TotalRemoteUsage", &multi) ) {
-		strToRusage(multi, total_remote_rusage);
-		free(multi);
+	if( ad->LookupString("TotalRemoteUsage", multi) ) {
+		strToRusage(multi.c_str(), total_remote_rusage);
 	}
 
 	ad->LookupFloat("SentBytes", sent_bytes);
@@ -3856,17 +3846,17 @@ JobDisconnectedEvent::formatBody( std::string &out )
 {
 	if( disconnect_reason.empty() ) {
 		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
-		        "disconnect_reason");
+		        "disconnect_reason\n");
 		return false;
 	}
 	if( startd_addr.empty() ) {
 		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
-		        "startd_addr");
+		        "startd_addr\n");
 		return false;
 	}
 	if( startd_name.empty() ) {
 		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
-		        "startd_name");
+		        "startd_name\n");
 		return false;
 	}
 
@@ -4583,7 +4573,7 @@ void JobAdInformationEvent::Assign(const char * attr, bool value)
 }
 
 int
-JobAdInformationEvent::LookupString (const char *attributeName, char **value) const
+JobAdInformationEvent::LookupString (const char *attributeName, std::string &value) const
 {
 	if ( !jobad ) return 0;		// 0 = failure
 
@@ -5096,15 +5086,12 @@ ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
 
 // ----- the ClusterRemoveEvent class
 ClusterRemoveEvent::ClusterRemoveEvent(void)
-	: next_proc_id(0), next_row(0), completion(Incomplete), notes(NULL)
+	: next_proc_id(0), next_row(0), completion(Incomplete)
 {
 	eventNumber = ULOG_CLUSTER_REMOVE;
 }
 
-ClusterRemoveEvent::~ClusterRemoveEvent(void)
-{
-	if (notes) { free(notes); } notes = NULL;
-}
+ClusterRemoveEvent::~ClusterRemoveEvent(void) {}
 
 
 #define CLUSTER_REMOVED_BANNER "Cluster removed"
@@ -5128,7 +5115,7 @@ ClusterRemoveEvent::formatBody( std::string &out )
 		out += "\tIncomplete\n";
 	}
 	// and optional notes
-	if (notes) { formatstr_cat(out, "\t%s\n", notes); }
+	if (!notes.empty()) { formatstr_cat(out, "\t%s\n", notes.c_str()); }
 	return true;
 }
 
@@ -5142,7 +5129,7 @@ ClusterRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 
 	next_proc_id = next_row = 0;
 	completion = Incomplete;
-	if (notes) { free(notes); } notes = NULL;
+	notes.clear();
 
 	// get the remainder of the first line (if any)
 	// or rewind so we don't slurp up the next event delimiter
@@ -5198,7 +5185,7 @@ ClusterRemoveEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if (notes) {
+	if (!notes.empty()) {
 		if( !myad->InsertAttr("Notes", notes) ) {
 			delete myad;
 			return NULL;
@@ -5220,7 +5207,7 @@ ClusterRemoveEvent::initFromClassAd(ClassAd* ad)
 {
 	next_proc_id = next_row = 0;
 	completion = Incomplete;
-	if (notes) { free(notes); } notes = NULL;
+	notes.clear();
 
 	ULogEvent::initFromClassAd(ad);
 
@@ -5233,7 +5220,7 @@ ClusterRemoveEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("NextProcId", next_proc_id);
 	ad->LookupInteger("NextRow", next_row);
 
-	ad->LookupString("Notes", &notes);
+	ad->LookupString("Notes", notes);
 }
 
 // ----- the FactoryPausedEvent class
@@ -5250,8 +5237,7 @@ FactoryPausedEvent::readEvent (FILE *file, bool & got_sync_line)
 	}
 
 	pause_code = 0;
-	if (reason) { free(reason); }
-	reason = NULL;
+	reason.clear();
 
 	char buf[BUFSIZ];
 	if ( ! read_optional_line(file, got_sync_line, buf, sizeof(buf))) {
@@ -5308,8 +5294,8 @@ bool
 FactoryPausedEvent::formatBody( std::string &out )
 {
 	out += FACTORY_PAUSED_BANNER "\n";
-	if (reason || pause_code != 0) {
-		formatstr_cat(out, "\t%s\n", reason ? reason : "");
+	if ((!reason.empty()) || pause_code != 0) {
+		formatstr_cat(out, "\t%s\n", reason.c_str());
 	}
 	if (pause_code != 0) {
 		formatstr_cat(out, "\tPauseCode %d\n", pause_code);
@@ -5327,7 +5313,7 @@ FactoryPausedEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if (reason) {
+	if (!reason.empty()) {
 		if( !myad->InsertAttr("Reason", reason) ) {
 			delete myad;
 			return NULL;
@@ -5350,20 +5336,20 @@ void
 FactoryPausedEvent::initFromClassAd(ClassAd* ad)
 {
 	pause_code = 0;
-	if (reason) { free(reason); } reason = NULL;
+	reason.clear();
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
 
-	ad->LookupString("Reason", &reason);
+	ad->LookupString("Reason", reason);
 	ad->LookupInteger("PauseCode", pause_code);
 	ad->LookupInteger("HoldCode", hold_code);
 }
 
 void FactoryPausedEvent::setReason(const char* str)
 {
-	if (reason) { free(reason); } reason = NULL;
-	if (str) reason = strdup(str);
+	reason.clear();
+	if (str) reason = str;
 }
 
 // ----- the FactoryResumedEvent class
@@ -5372,8 +5358,8 @@ bool
 FactoryResumedEvent::formatBody( std::string &out )
 {
 	out += FACTORY_RESUMED_BANNER "\n";
-	if (reason) {
-		formatstr_cat(out, "\t%s\n", reason);
+	if (!reason.empty()) {
+		formatstr_cat(out, "\t%s\n", reason.c_str());
 	}
 	return true;
 }
@@ -5385,8 +5371,7 @@ FactoryResumedEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 
-	if (reason) { free(reason); }
-	reason = NULL;
+	reason.clear();
 
 	char buf[BUFSIZ];
 	if ( ! read_optional_line(file, got_sync_line, buf, sizeof(buf))) {
@@ -5406,7 +5391,7 @@ FactoryResumedEvent::readEvent (FILE *file, bool & got_sync_line)
 	const char * p = buf;
 	// discard leading spaces, and store the result as the reason
 	while (isspace(*p)) ++p;
-	if (*p) { reason = strdup(p); }
+	if (*p) { reason = p;}
 
 	return 1;
 }
@@ -5417,7 +5402,7 @@ FactoryResumedEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if (reason) {
+	if (!reason.empty()) {
 		if( !myad->InsertAttr("Reason", reason) ) {
 			delete myad;
 			return NULL;
@@ -5430,18 +5415,20 @@ FactoryResumedEvent::toClassAd(bool event_time_utc)
 void
 FactoryResumedEvent::initFromClassAd(ClassAd* ad)
 {
-	if (reason) { free(reason); } reason = NULL;
+	reason.clear();
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
 
-	ad->LookupString("Reason", &reason);
+	ad->LookupString("Reason", reason);
 }
 
 void FactoryResumedEvent::setReason(const char* str)
 {
-	if (reason) { free(reason); } reason = NULL;
-	if (str) reason = strdup(str);
+	reason.clear();
+	if (str) {
+		reason = str;
+	}
 }
 
 //

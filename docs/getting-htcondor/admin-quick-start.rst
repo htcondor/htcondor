@@ -180,8 +180,8 @@ enabled by default.  Areas of potentially general interest include:
 
 * :doc:`../admin-manual/setting-up-special-environments` (particularly
   :ref:`enabling_oauth_credentials` and :ref:`resource_limits_with_cgroups`),
-* :doc:`../admin-manual/setting-up-vm-docker-universes`
-* :doc:`../admin-manual/singularity-support`
+* :ref:`admin-manual/ep-policy-configuration:docker universe`
+* :ref:`admin-manual/ep-policy-configuration:Apptainer and Singularity support`
 
 .. rubric:: Implementing Policies
 
@@ -189,22 +189,22 @@ Although your HTCondor pool should be fully functional at this point, it
 may not be behaving precisely as you wish, particularly with respect to
 resource allocation.  You can tune how HTCondor allocates resources to
 users, or groups of users, using the user priority and group quota systems,
-described in :doc:`../admin-manual/user-priorities-negotiation`.  You
+described in :doc:`../admin-manual/cm-configuration`.  You
 can enforce machine-specific policies -- for instance, preferring GPU jobs
 on machines with GPUs -- using the options described in
-:doc:`../admin-manual/policy-configuration`.
+:doc:`../admin-manual/ep-policy-configuration`.
 
 .. rubric:: Further Reading
 
 * It may be helpful to at least skim the :doc:`../users-manual/index` to get
   an idea of what your users might want or expect, particularly the
-  sections on :doc:`../users-manual/dagman-workflows`,
+  sections on :doc:`../automated-workflows/dagman-introduction`,
   :doc:`../users-manual/choosing-an-htcondor-universe`, and
   :doc:`../users-manual/self-checkpointing-applications`.
 * Understanding :doc:`../classads/classad-mechanism` is essential for
   many administrative tasks.
 * The rest of the :doc:`../admin-manual/index`, particularly the section on
-  :doc:`../admin-manual/monitoring`.
+  :ref:`admin-manual/cm-configuration:Monitoring with Ganglia, Elasticsearch, etc.`.
 * Slides from
   `past HTCondor Weeks <https://htcondor.org/past_condor_weeks.html>`_
   -- our annual conference -- include a number of tutorials and talks on

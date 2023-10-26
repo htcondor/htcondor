@@ -172,6 +172,10 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	};
 
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
+	union _param_names_sumy_key { int64_t all; struct { short int iter; short int off; short int line; short int sid; }; };
+	int param_names_for_summary(std::map<int64_t, std::string>& names);
+	const short int summary_env_source_id = 0x7FFE;
+	const short int summary_wire_source_id = 0x7FFF;
 
 	bool param_defined(const char* name);
 	// Does not check if the expanded parameter is nonempty, only that
@@ -210,6 +214,11 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 						bool do_log = true,
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
+
+	// get the raw default value from the param table.
+	// if the param table has a subsys or localname override that is fetched instead.
+	// note that this does *not* return a macro expanded value. it is the raw param table value
+	const char * param_raw_default(const char *name);
 
 	char* param_with_full_path(const char *name);
 
@@ -252,6 +261,15 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	//   it will be valid until the MACRO_SET is cleared (usually a reconfig)
 	//
 	const char * lookup_macro(const char * name, MACRO_SET& set, MACRO_EVAL_CONTEXT &ctx);
+
+	// lookup "name" in the defaults table of the MACRO_SET
+	// using the localname and subsys overrides of MACRO_EVAL_CONTEXT take precedence
+	// returns:
+	//   NULL         if the macro does not exist in the defaults table
+	//   ""           if the macro exists but was not given a value.
+	//   otherwise the return value is a pointer to static const memory in the TEXT segment
+	//   it will be always be valid
+	const char * lookup_macro_default(const char * name, MACRO_SET & macro_set, MACRO_EVAL_CONTEXT & ctx);
 
 	// find an item in the macro_set, but do not look in the defaults table.
 	// if prefix is not NULL, then "prefix.name" is looked up and "name" is NOT
@@ -479,6 +497,7 @@ int write_config_file(const char* pathname, int options);
 	// config source file info
 	typedef struct macro_source { bool is_inside; bool is_command; short int id; int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
 	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
+	void insert_special_sources(MACRO_SET& macro_set);
 	extern const MACRO_SOURCE EnvMacro;
 	extern const MACRO_SOURCE WireMacro;
 	extern const MACRO_SOURCE DetectedMacro;

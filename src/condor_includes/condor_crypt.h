@@ -74,8 +74,8 @@ public:
     StreamCryptoState m_stream_crypto_state;
 
 private:
-    Condor_Crypto_State() {ASSERT("PRIVATE CONSTRUCTOR CALLED\n");} ;
-    Condor_Crypto_State(Condor_Crypto_State&) {ASSERT("PRIVATE COPY CONSTRUCTOR CALLED\n");};
+    Condor_Crypto_State() = delete;
+    Condor_Crypto_State(Condor_Crypto_State&) = delete;
 
 };
 

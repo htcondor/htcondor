@@ -216,7 +216,7 @@ class Dag {
 	/** Remove the batch system job for the given DAG node.
 		@param The node for which to remove the job.
 	*/
-	void RemoveBatchJob(Job *node);
+	void RemoveBatchJob(Job *node, const std::string& reason = "Removed by DAGMan");
 
 	/** Processing common to all "end-of-job proc" events.
 		@param The node the event is associated with.
@@ -367,14 +367,23 @@ class Dag {
 	*/
 	inline int TotalJobsCompleted() const { return _totalJobsCompleted; }
 
-    /** @return the number of nodes ready to submit job to batch system
-     */
-    inline int NumNodesReady() const { return _readyQ->size(); }
+	/** @return the number of nodes ready to submit job to batch system
+	*/
+	inline int NumNodesReady() const { return _readyQ->size() - NumReadyServiceNodes(); }
 
-    /** @param whether to include final node, if any, in the count
-	    @return the number of nodes not ready to submit to batch system
+	/* Return the number of service nodes in the ready state
+	*/
+	inline int NumReadyServiceNodes() const {
+		int num = 0;
+		for (auto node : _service_nodes)
+			if (node->GetStatus() == Job::STATUS_READY) { ++num; }
+		return num;
+	}
+
+	/** @param whether to include final node, if any, in the count
+	@return the number of nodes not ready to submit to batch system
 	 */
-    inline int NumNodesUnready( bool includeFinal ) const {
+	inline int NumNodesUnready( bool includeFinal ) const {
 				return ( NumNodes( includeFinal )  -
 				( NumNodesDone( includeFinal ) + PreRunNodeCount() +
 				NumJobsSubmitted() + PostRunNodeCount() +
@@ -519,7 +528,7 @@ class Dag {
 			read the logs.  Setting bForce to true automatically
 			implies removeCondorJobs.
     */
-    void RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
+    void RemoveRunningJobs ( const CondorID &dmJobId, const std::string& reason, bool removeCondorJobs,
 				bool bForce );
 
     /** Remove all pre- and post-scripts that are currently running.
@@ -1042,9 +1051,9 @@ class Dag {
 			accessing.
 			@return The total number of log files.
 		*/
-	int TotalLogFileCount() { return CondorLogFileCount(); }
-				
-	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
+	size_t TotalLogFileCount() { return CondorLogFileCount(); }
+
+	size_t CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
 
 		/** Write information for the given node to a rescue DAG.
 			@param fp: file pointer to the rescue DAG file
@@ -1104,7 +1113,7 @@ private:
 
 	bool _provisioner_ready = false;
 
-	std::list<Job*> _service_nodes{};
+	std::vector<Job*> _service_nodes{};
 
 	std::map<std::string, Job *>	_nodeNameHash;
 

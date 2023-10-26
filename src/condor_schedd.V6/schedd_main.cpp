@@ -55,9 +55,9 @@ extern "C"
 }
 
 
-char*          Spool = NULL;
-char*          Name = NULL;
-char*          X509Directory = NULL;
+char*          Spool = nullptr;
+char*          Name = nullptr;
+char*          X509Directory = nullptr;
 
 // global objects
 Scheduler	scheduler;
@@ -73,7 +73,7 @@ void usage(char* name)
 void
 main_init(int argc, char* argv[])
 {
-	char**		ptr; 
+	char**		ptr = nullptr; 
 	std::string job_queue_name;
  
 	int argc_count = 1;
@@ -139,7 +139,7 @@ main_init(int argc, char* argv[])
 			hostname = get_local_hostname();
 			std::string		job_queue_backup;
 			formatstr( job_queue_backup, "%s/job_queue.bak.%s.%ld",
-			                            Spool, hostname.c_str(), (long)time(NULL) );
+			                            Spool, hostname.c_str(), (long)time(nullptr) );
 			if ( copy_file( job_queue_name.c_str(), job_queue_backup.c_str() ) ) {
 				dprintf( D_ALWAYS, "Failed to backup spool to '%s'\n",
 						 job_queue_backup.c_str() );

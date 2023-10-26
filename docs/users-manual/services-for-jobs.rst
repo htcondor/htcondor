@@ -24,23 +24,21 @@ to run, or machine to machine, and create non reproducible, difficult
 to debug problems.  Rather, HTCondor is deliberate about what environment 
 variables a job sees, and allows the user to set them in the job description file.
 
-The user may define environment variables for the job with the **environment**
-command in the submit file. See within the :doc:`/man-pages/condor_submit` 
-manual page for more details about this command.
+The user may define environment variables for the job with the :subcom:`environment`
+submit command.
 
 Instead of defining environment variables individually, the entire set
 of environment variables in the condor_submit's environment 
-can be copied into the job.  The **getenv** :index:`getenv<single: getenv; submit commands>` 
-command does this, as described on the :doc:`/man-pages/condor_submit` manual page.
+can be copied into the job.  The :subcom:`getenv` command does this.
 
 In general, it is preferable to just declare the minimum set of needed
 environment variables with the **environment** command, as that clearly
 declares the needed environment variables.  If the needed set is not known,
-the **getenv** command is useful.  If the environment is set with both the
-**environment** :index:`environment<single: environment; submit commands>` command
-and **getenv** is also set to true, values specified with
-**environment** override values in the submitter's environment,
-regardless of the order of the **environment** and **getenv** commands in the submit file.
+the :subcom:`getenv` command is useful.  If the environment is set with both the
+:subcom:`environment` :index:`environment<single: environment; example with getenv>` command
+and :subcom:`getenv` is also set to true, values specified with
+:subcom:`environment` override values in the submitter's environment,
+regardless of the order of the :subcom:`environment` and :subcom:`getenv` commands in the submit file.
 
 Commands within the submit description file may reference the
 environment variables of the submitter. Submit
@@ -63,7 +61,7 @@ executing job that may be useful.
    gives the name of the slot (for multicore machines), on which the job is
    run. On machines with only a single slot, the value of this variable
    will be 1, just like the ``SlotID`` attribute in the machine's
-   ClassAd. See the :doc:`/admin-manual/policy-configuration` section for more 
+   ClassAd. See the :doc:`/admin-manual/ep-policy-configuration` section for more 
    details about configuring multicore machines.
 -  ``_CONDOR_JOB_AD``
    :index:`_CONDOR_JOB_AD environment variable`\ :index:`_CONDOR_JOB_AD<single: _CONDOR_JOB_AD; environment variables>`
@@ -108,7 +106,7 @@ executing job that may be useful.
 -  ``X509_USER_PROXY``
    gives the full path to the X.509 user proxy file if one is associated
    with the job. Typically, a user will specify
-   **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` in
+   :subcom:`x509userproxy` :index:`x509userproxy<single: x509userproxy; environment variable>` in
    the submit description file.
 
 

@@ -36,13 +36,7 @@ import struct
 import htcondor
 import classad
 
-try:
-    from colorama import init
-
-    init()
-    HAS_COLORAMA = True
-except ImportError:
-    HAS_COLORAMA = False
+from htcondor._utils.ansi import Color, colorize, can_color
 
 IS_WINDOWS = os.name == "nt"
 
@@ -90,6 +84,14 @@ def parse_args():
     )
     parser.add_argument(
         "-clusters", nargs="+", metavar="CLUSTER_ID", help="Which cluster IDs to track."
+    )
+    parser.add_argument(
+        "-larger-than",
+        type=int,
+        dest='since',
+        default=None,
+        metavar="CLUSTER_ID",
+        help="Track all jobs with cluster IDs greater than or equal to the specifiec CLUSTER_ID."
     )
     parser.add_argument(
         "-files", nargs="+", metavar="FILE", help="Which event logs to track."
@@ -217,7 +219,7 @@ def parse_args():
         "-no-color",
         action=NegateAction,
         nargs=0,
-        default=sys.stdout.isatty() and (not IS_WINDOWS or HAS_COLORAMA),
+        default=can_color(),
         help="Enable/disable colored output. Enabled by default if connected to a tty. Disabled on Windows if colorama is not available.",
     )
     parser.add_argument(
@@ -362,6 +364,10 @@ class NegateAction(argparse.Action):
 def cli():
     args = parse_args()
 
+    if args.clusters is not None and args.since is not None:
+        error("Use of both -clusters and -larger-than flag is prohibited.")
+        sys.exit(1)
+
     if args.debug:
         warning("Debug mode enabled...")
         htcondor.enable_debug()
@@ -370,6 +376,7 @@ def cli():
         return watch_q(
             users=args.users,
             cluster_ids=args.clusters,
+            since_cid=args.since,
             event_logs=args.files,
             batches=args.batches,
             collector=args.collector,
@@ -423,6 +430,7 @@ GROUPBY_AD_KEY_TO_ATTRIBUTE = {v: k for k, v in GROUPBY_ATTRIBUTE_TO_AD_KEY.item
 def watch_q(
     users=None,
     cluster_ids=None,
+    since_cid=None,
     event_logs=None,
     batches=None,
     collector=None,
@@ -439,6 +447,7 @@ def watch_q(
     refresh=True,
     abbreviate_path_components=False,
 ):
+    filter_ids = None if cluster_ids is None else [int(cid) for cid in cluster_ids]
     if users is None and cluster_ids is None and event_logs is None and batches is None:
         users = [getpass.getuser()]
     if exit_conditions is None:
@@ -453,13 +462,19 @@ def watch_q(
         constraint,
         event_logs,
         batch_names,
+        batch_filter_ids,
         dagman_clusters_to_paths,
         dagman_job_cluster_ids,
     ) = find_job_event_logs(
         users, cluster_ids, event_logs, batches, collector=collector, schedd=schedd,
     )
 
-    tracker = JobStateTracker(event_logs, batch_names)
+    if filter_ids is None:
+        filter_ids = batch_filter_ids if len(batch_filter_ids) > 0 else None
+    else:
+        filter_ids.extend(batch_filter_ids)
+
+    tracker = JobStateTracker(event_logs, batch_names, filter_ids, since_cid)
     if len(event_logs) == 0:
         warning("No jobs found, exiting...")
         sys.exit(0)
@@ -548,6 +563,7 @@ def watch_q(
                         row_fmt=row_fmt,
                         alignment=TABLE_ALIGNMENT,
                         fill="-",
+                        color=color,
                     )
                     msg += [""]
 
@@ -704,13 +720,14 @@ def find_job_event_logs(
         itertools.chain(
             ("Owner == {}".format(classad.quote(u)) for u in users),
             ("ClusterId == {}".format(cid) for cid in cluster_ids),
-            ("JobBatchName == {}".format(b) for b in batches),
+            ('JobBatchName == "{}"'.format(b) for b in batches),
         )
     )
 
     clusters = set()
     event_logs = set()
     batch_names = {}
+    batch_filter_ids = []
     already_warned_missing_log = set()
     dagman_job_cluster_id_to_log_path = {}
     dagman_job_cluster_ids = set()
@@ -723,6 +740,9 @@ def find_job_event_logs(
         clusters.add(cluster_id)
 
         batch_names[cluster_id] = ad.get("JobBatchName")
+
+        if len(batches) > 0:
+            batch_filter_ids.append(int(cluster_id))
 
         if "DAGManNodesLog" in ad:
             log_path = dagman_job_cluster_id_to_log_path[cluster_id] = ad[
@@ -754,6 +774,7 @@ def find_job_event_logs(
         constraint,
         event_logs,
         batch_names,
+        batch_filter_ids,
         dagman_job_cluster_id_to_log_path,
         dagman_job_cluster_ids,
     )
@@ -835,7 +856,7 @@ class JobStateTracker:
     (available as the state attribute).
     """
 
-    def __init__(self, event_log_paths, batch_names):
+    def __init__(self, event_log_paths, batch_names, filter_ids, since_cid):
         event_readers = {}
         for event_log_path in event_log_paths:
             try:
@@ -852,6 +873,8 @@ class JobStateTracker:
         self.state = collections.defaultdict(lambda: collections.defaultdict(dict))
 
         self.batch_names = batch_names
+        self.filter_ids = filter_ids
+        self.since = since_cid
 
         self.cluster_id_to_cluster = {}
 
@@ -875,6 +898,12 @@ class JobStateTracker:
                             )
                         )
                     )
+                    continue
+
+                if self.filter_ids is not None and event.cluster not in self.filter_ids:
+                    continue
+
+                if self.since is not None and event.cluster < self.since:
                     continue
 
                 new_status = JOB_EVENT_STATUS_TRANSITIONS.get(event.type, None)
@@ -958,29 +987,6 @@ def make_rows_from_groups(groups, key, cluster_id_to_nodes_total):
         rows[attribute_value] = row_data
 
     return rows, totals
-
-
-class Color(str, enum.Enum):
-    BLACK = "\033[30m"
-    RED = "\033[31m"
-    BRIGHT_RED = "\033[31;1m"
-    GREEN = "\033[32m"
-    BRIGHT_GREEN = "\033[32;1m"
-    YELLOW = "\033[33m"
-    BRIGHT_YELLOW = "\033[33;1m"
-    BLUE = "\033[34m"
-    BRIGHT_BLUE = "\033[34;1m"
-    MAGENTA = "\033[35m"
-    BRIGHT_MAGENTA = "\033[35;1m"
-    CYAN = "\033[36m"
-    BRIGHT_CYAN = "\033[36;1m"
-    WHITE = "\033[37m"
-    BRIGHT_WHITE = "\033[37;1m"
-    RESET = "\033[0m"
-
-
-def colorize(string, color):
-    return color + string + Color.RESET
 
 
 def determine_row_color(row):

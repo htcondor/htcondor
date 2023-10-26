@@ -143,7 +143,7 @@ This is intended to help you conserve money in case of problems or an
 extended shortage of work. As noted in the example output above, you can
 specify a max idle time (in decimal hours) with the -idle flag.
 *condor_annex* considers an instance idle if it's unclaimed (see
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 for a definition), so it won't get tricked by jobs with long quiescent
 periods.
 
@@ -336,8 +336,8 @@ Using Different or Multiple AWS Regions
 
 It sometimes advantageous to use multiple AWS regions, or convenient to
 use an AWS region other than the default, which is ``us-east-1``. To change
-the default, set the configuration macro ANNEX_DEFAULT_AWS_REGION
-:index:`ANNEX_DEFAULT_AWS_REGION` to the new default. (If you used
+the default, set the configuration macro
+:macro:`ANNEX_DEFAULT_AWS_REGION` to the new default. (If you used
 the *condor_annex* automatic setup, you can edit the ``user_config`` file
 in ``.condor directory`` in your home directory; this file uses the normal
 HTCondor configuration file syntax.  (See
@@ -420,9 +420,8 @@ Spot Fleet request; please do so before running *condor_annex*.
 
 - You must select the instance role profile used by your on-demand
   instances for *condor_annex* to work. This value will have been stored
-  in the configuration macro ``ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN``
-  :index:`ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN` by the setup
-  procedure.
+  in the configuration macro :macro:`ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN`
+  by the setup procedure.
 
 - You must select a security group which allows inbound access on HTCondor's
   port (9618) for *condor_annex* to work.  You may use the value stored in
@@ -437,8 +436,7 @@ Spot Fleet request; please do so before running *condor_annex*.
 
 Specify the JSON configuration file using
 **-aws-spot-fleet-config-file**, or set the configuration macro
-ANNEX_DEFAULT_SFR_CONFIG_FILE
-:index:`ANNEX_DEFAULT_SFR_CONFIG_FILE` to the full path of the
+:macro:`ANNEX_DEFAULT_SFR_CONFIG_FILE` to the full path of the
 file you just downloaded, if you'd like it to become your default
 configuration for Spot annexes. Be aware that *condor_annex* does not
 alter the validity period if one is set in the Spot Fleet configuration
@@ -500,8 +498,7 @@ The :doc:`/man-pages/condor_annex` manual page lists the "expert mode" options.
 Four of the "expert mode" options set the URLs used to access AWS
 services, not including the CloudFormation URL needed by the **-setup**
 flag. You may change the CloudFormation URL by changing the HTCondor
-configuration macro ANNEX_DEFAULT_CF_URL
-:index:`ANNEX_DEFAULT_CF_URL`, or by supplying the URL as the
+configuration macro :macro:`ANNEX_DEFAULT_CF_URL`, or by supplying the URL as the
 third parameter after the **-setup** flag. If you change any of the
 URLs, you may need to change all of the URLs - Lambda functions and
 CloudWatch events in one region don't work with instances in another

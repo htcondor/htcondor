@@ -36,6 +36,7 @@ class VolumeManager;
 #endif // LINUX
 
 #define USE_STARTD_LATCHES 1
+#define DO_BULK_COLLECTOR_UPDATES 1
 
 class SlotType
 {
@@ -46,9 +47,9 @@ public:
 	const char * Shares() { return shares.empty() ? NULL : shares.c_str(); }
 
 	static const char * type_param(CpuAttributes* p_attr, const char * name);
-	static const char * type_param(int type_id, const char * name);
+	static const char * type_param(unsigned int type_id, const char * name);
 	static bool type_param_boolean(CpuAttributes* p_attr, const char * name, bool def_value);
-	static bool type_param_boolean(int type_id, const char * name, bool def_value);
+	static bool type_param_boolean(unsigned int type_id, const char * name, bool def_value);
 	static long long type_param_long(CpuAttributes* p_attr, const char * name, long long def_value);
 	static char * param(CpuAttributes* p_attr, const char * name);
 	static const char * param(std::string& out, CpuAttributes* p_attr, const char * name);
@@ -319,7 +320,7 @@ public:
 	void	publish_slot_config_overrides(ClassAd * cad);
 
 	typedef enum _whyfor {
-		wf_timer,          //0
+		wf_doUpdate,       //0	 the regular periodic update
 		wf_stateChange,    //1
 		wf_vmChange,       //2
 		wf_hiberChange,    //3
@@ -331,9 +332,13 @@ public:
 		wf_refreshRes,     //9
 	} WhyFor;
 	void	update_needed( WhyFor why );// Schedule to update the central manager.
-	void	update_walk_for_timer() { update_needed(wf_timer); } // for use with Walk where arguments are not permitted
-	void	update_walk_for_vm_change() { update_needed(wf_vmChange); } // for use with Walk where arguments are not permitted
-	void	do_update( void );			// Actually update the CM
+	void	update_walk_for_timer() { update_needed(wf_doUpdate); } // for use with Walk where arguments are not permitted
+#ifdef DO_BULK_COLLECTOR_UPDATES
+	void	get_update_ads(ClassAd & public_ad, ClassAd & private_ad);
+	unsigned int update_is_needed() { return r_update_is_for; }
+#else
+	void	do_update( int timerID = -1 );			// Actually update the CM
+#endif
 	void    process_update_ad(ClassAd & ad, int snapshot=0); // change the update ad before we send it 
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK, used when hibernating.
 	void	final_update( void );		// Send a final update to the CM
@@ -371,7 +376,7 @@ public:
 
 #if HAVE_JOB_HOOKS
 	bool	isCurrentlyFetching( void ) { return m_currently_fetching; }
-	void	tryFetchWork( void );
+	void	tryFetchWork( int timerID = -1 );
 	void	createOrUpdateFetchClaim( ClassAd* job_ad, double rank = 0 );
 	bool	spawnFetchedWork( void );
 	void	terminateFetchedWork( void );
@@ -415,6 +420,9 @@ public:
     typedef std::set<Claim*, claimset_less> claims_t;
     claims_t        r_claims;
     bool            r_has_cp;
+	bool            r_backfill_slot;
+	bool            r_suspended_by_command;	// true when the claim was suspended by a SUSPEND_CLAIM command
+	bool            r_no_collector_updates; // true for HIDDEN slots
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	Reqexp*			r_reqexp;   // Object for the requirements expression
@@ -424,15 +432,8 @@ public:
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
-	int             prevLHF;
-	bool			r_backfill_slot;
-	bool 			m_bUserSuspended;
-	bool			r_no_collector_updates;
 
-	std::string		workingCM; // if claimed for another CM, our temporary CM
-	time_t			workingCMStartTime; // when the above started
-
-	int				type( void ) { return r_attr->type(); };
+	unsigned int type_id( void ) { return r_attr->type_id(); };
 
 	char const *executeDir() { return r_attr->executeDir(); }
 
@@ -488,7 +489,15 @@ private:
 
 	IdDispenser* m_id_dispenser;
 
+#ifdef DO_BULK_COLLECTOR_UPDATES
+	// bulk updates use a single timer in the ResMgr for updates
+	// and a timestamp of the oldest requested time for the update
+	// along with a bitmask of the reason for the update
+	time_t r_update_is_due = 0;		// 0 for update is not due, otherwise the oldest time it was requested
+	unsigned int r_update_is_for = 0; // mask of WhyFor bits giving reason for update
+#else
 	int			update_tid;	// DaemonCore timer id for update delay
+#endif
 
 #ifdef USE_STARTD_LATCHES  // more generic mechanism for CpuBusy
 #else
@@ -502,8 +511,8 @@ private:
 	void	beginCODLoadHack( void );
 	double	r_pre_cod_total_load;
 	double	r_pre_cod_condor_load;
-	void 	startTimerToEndCODLoadHack( void );
-	void	endCODLoadHack( void );
+	void 	startTimerToEndCODLoadHack();
+	void	endCODLoadHack( int timerID = -1 );
 	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
 
 	std::string m_execute_dir;
@@ -540,10 +549,6 @@ Arguments
 
 - req_classad - Input: The ClassAd for the job to run
 
-- leftover_claim - Output: If a partitionable slot was carved up,
-  this will hold the claim to the leftovers.  Otherwise, it will be
-  unchanged.
-
 Return
 
 Returns the Resource the job will actually be running on.  It does not need to
@@ -558,6 +563,6 @@ only if rip->can_create_dslot() is true.
 
 The job may be rejected, in which case the returned Resource will be null.
 */
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim);
+Resource * create_dslot(Resource * rip, ClassAd * req_classad);
 
 #endif /* _STARTD_RESOURCE_H */

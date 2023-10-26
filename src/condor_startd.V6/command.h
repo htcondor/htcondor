@@ -109,7 +109,7 @@ int match_info( Resource*, char* );
 int request_claim( Resource*, Claim *, char*, Stream* ); 
 
 // Accept claim from schedd agent
-bool accept_request_claim( Resource* , bool secure_claim_id = true, Claim * = NULL );
+bool accept_request_claim( Resource* , bool secure_claim_id = true, bool send_claimed_ad = false, Claim * = NULL );
 
 // Activate a claim with a given starter
 int activate_claim( Resource*, Stream* ); 

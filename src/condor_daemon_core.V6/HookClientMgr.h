@@ -61,6 +61,7 @@ protected:
 		   for output from.
 		*/
 	std::vector<HookClient*> m_client_list;
+	virtual bool useProcd() const = 0;
 
 private:
 		/// DC reaper ID. @see reaperIgnore()
@@ -83,6 +84,7 @@ public:
 	int getHookTimeout(HookType hook_type, int def_value);
 
 protected:
+	virtual bool useProcd() const = 0;
 	virtual bool reconfig() = 0;
 	virtual const std::string paramPrefix() const = 0;
 	bool getHookPath(HookType hook_type, std::string &path);

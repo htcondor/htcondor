@@ -24,10 +24,12 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "simplelist.h"
+#include <vector>
+
+typedef void (Service::*CallbackType)();
 
 struct Callback {
-	TimerHandlercpp m_func_ptr;
+	CallbackType m_func_ptr;
 	Service *m_data;
 	bool operator==(const Callback &rhs) const {
 		if ( this->m_func_ptr == rhs.m_func_ptr && this->m_data == rhs.m_data ) {
@@ -57,7 +59,7 @@ struct ProxySubject {
 	char *email;
 	bool has_voms_attrs;
 	Proxy *master_proxy;
-	List<Proxy> proxies;
+	std::vector<Proxy*> proxies;
 };
 
 #define PROXY_NEAR_EXPIRED( p ) \
@@ -74,9 +76,9 @@ bool InitializeProxyManager( const char *proxy_dir );
 void ReconfigProxyManager();
 
 Proxy *AcquireProxy( const ClassAd *job_ad, std::string &error,
-					 TimerHandlercpp func_ptr = NULL, Service *data = NULL );
-Proxy *AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );
-void ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );
+					 CallbackType func_ptr = NULL, Service *data = NULL );
+Proxy *AcquireProxy( Proxy *proxy, CallbackType func_ptr = NULL, Service *data = NULL );
+void ReleaseProxy( Proxy *proxy, CallbackType func_ptr = NULL, Service *data = NULL );
 void DeleteProxy (Proxy *& proxy);
 
 void doCheckProxies();

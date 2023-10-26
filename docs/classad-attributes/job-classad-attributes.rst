@@ -23,7 +23,7 @@ all attributes.
     the
     **accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
     command. This attribute is only present if an accounting group was
-    requested by the submission. See the :doc:`/admin-manual/user-priorities-negotiation` section
+    requested by the submission. See the :doc:`/admin-manual/cm-configuration` section
     for more information about accounting groups.
 
 :classad-attribute:`AcctGroupUser`
@@ -160,15 +160,8 @@ all attributes.
 :classad-attribute:`BlockWrites`
     The integer number of blocks written to disk for this job.
 
-:classad-attribute:`CkptArch`
-    String describing the architecture of the machine this job executed
-    on at the time it last produced a checkpoint. If the job has never
-    produced a checkpoint, this attribute is ``undefined``.
-
-:classad-attribute:`CkptOpSys`
-    String describing the operating system of the machine this job
-    executed on at the time it last produced a checkpoint. If the job
-    has never produced a checkpoint, this attribute is ``undefined``.
+:classad-attribute:`CheckpointDestination`
+    A URL, as defined by submit command **checkpoint_destination**.
 
 :classad-attribute:`CloudLabelNames`
     Used for grid type gce jobs; a string taken from the definition of
@@ -189,7 +182,7 @@ all attributes.
 :classad-attribute:`CommittedTime`
     The number of seconds of wall clock time that the job has been
     allocated a machine, excluding the time spent on run attempts that
-    were evicted without a checkpoint. Like ``RemoteWallClockTime``,
+    were evicted. Like ``RemoteWallClockTime``,
     this includes time the job spent in a suspended state, so the total
     committed wall time spent running is
 
@@ -207,9 +200,8 @@ all attributes.
 
 :classad-attribute:`CommittedSuspensionTime`
     A running total of the number of seconds the job has spent in
-    suspension during time in which the job was not evicted without a
-    checkpoint. This number is updated when the job is checkpointed and
-    when it exits.
+    suspension during time in which the job was not evicted.
+    This number is updated when the job exits.
 
 :classad-attribute:`CompletionDate`
     The time when the job completed, or undefined if the job has not
@@ -345,8 +337,7 @@ all attributes.
     proxy. This setting currently only applies to proxies delegated for
     non-grid jobs and HTCondor-C jobs.
     This setting has no effect if the configuration setting
-    ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS` is false, because in
+    :macro:`DELEGATE_JOB_GSI_CREDENTIALS` is false, because in
     that case the job proxy is copied rather than delegated.
 
 :classad-attribute:`DiskUsage`
@@ -707,7 +698,7 @@ all attributes.
     +----------------------------------+-------------------------------------+--------------------------+
     | | 12                             | An error occurred while             | The Unix errno number,   |
     | | [TransferOutputError]          | transferring job output files       | or a plug-in error       |
-    |                                  | or checkpoint files.                | number; see below.       |
+    |                                  | or self-checkpoint files.           | number; see below.       |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 13                             | An error occurred while             | The Unix errno number,   |
     | | [TransferInputError]           | transferring job input files.       | or a plug-in error       |
@@ -735,9 +726,8 @@ all attributes.
     |                                  | encountered when                    |                          |
     |                                  | transferring files.                 |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 19                             | ``<Keyword>_HOOK_PREPARE_JOB``      |                          |
-    | | [HookPrepareJobFailure]        | :index:`<Keyword>_HOOK_PREPARE_JOB` |                          |
-    |                                  | was defined but could               |                          |
+    | | 19                             | :macro:`<Keyword>_HOOK_PREPARE_JOB` |                          |
+    | | [HookPrepareJobFailure]        | was defined but could               |                          |
     |                                  | not be executed or                  |                          |
     |                                  | returned failure.                   |                          |
     +----------------------------------+-------------------------------------+--------------------------+
@@ -747,8 +737,7 @@ all attributes.
     |                                  | run.                                |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 21                             | The job was put on hold             |                          |
-    | | [StartdHeldJob]                | because ``WANT_HOLD``               |                          |
-    |                                  | :index:`WANT_HOLD`                  |                          |
+    | | [StartdHeldJob]                | because :macro:`WANT_HOLD`          |                          |
     |                                  | in the machine policy               |                          |
     |                                  | was true.                           |                          |
     +----------------------------------+-------------------------------------+--------------------------+
@@ -764,9 +753,8 @@ all attributes.
     | | 25                             | Invalid cron settings.              |                          |
     | | [InvalidCronSettings]          |                                     |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 26                             | ``SYSTEM_PERIODIC_HOLD``            |                          |
-    | | [SystemPolicy]                 | :index:`SYSTEM_PERIODIC_HOLD`       |                          |
-    |                                  | evaluated to true.                  |                          |
+    | | 26                             | :macro:`SYSTEM_PERIODIC_HOLD`       |                          |
+    | | [SystemPolicy]                 | evaluated to true.                  |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 27                             | The system periodic job             |                          |
     | | [SystemPolicyUndefined]        | policy evaluated to                 |                          |
@@ -775,14 +763,12 @@ all attributes.
     | | 32                             | The maximum total input             |                          |
     | | [MaxTransferInputSizeExceeded] | file transfer size was              |                          |
     |                                  | exceeded. (See                      |                          |
-    |                                  | ``MAX_TRANSFER_INPUT_MB``           |                          |
-    |                                  | :index:`MAX_TRANSFER_INPUT_MB`      |                          |
+    |                                  | :macro:`MAX_TRANSFER_INPUT_MB`      |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 33                             | The maximum total output            |                          |
     | | [MaxTransferOutputSizeExceeded]| file transfer size was              |                          |
     |                                  | exceeded. (See                      |                          |
-    |                                  | ``MAX_TRANSFER_OUTPUT_MB``          |                          |
-    |                                  | :index:`MAX_TRANSFER_OUTPUT_MB`     |                          |
+    |                                  | :macro:`MAX_TRANSFER_OUTPUT_MB`     |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 34                             | Memory usage exceeds a              |                          |
     | | [JobOutOfResources]            | memory limit.                       |                          |
@@ -898,9 +884,8 @@ all attributes.
     | | 47                             | The job's allowed execution time    |                          |
     | | [JobExecuteExceeded]           | was exceeded.                       |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 48                             | ``<Keyword>_HOOK_SHADOW_PREPARE_JOB`` |                        |
-    | | [HookShadowPrepareJobFailure]  | :index:`<Keyword>_HOOK_SHADOW_PREPARE_JOB` |                   |
-    |                                  | failed when it was executed;        |                          |
+    | | 48                             | Prepare job shadow hook failed      |                          |
+    | | [HookShadowPrepareJobFailure]  | when it was executed;               |                          |
     |                                  | status code indicated job should be |                          |
     |                                  | held.                               |                          |
     +----------------------------------+-------------------------------------+--------------------------+
@@ -923,10 +908,8 @@ all attributes.
 :classad-attribute:`ImageSize`
     Maximum observed memory image size (i.e. virtual memory) of the job
     in KiB. The initial value is equal to the size of the executable for
-    non-vm universe jobs, and 0 for vm universe jobs. When the job
-    writes a checkpoint, the ``ImageSize`` attribute is set to the size
-    of the checkpoint file (since the checkpoint file contains the job's
-    memory image). A vanilla universe job's ``ImageSize`` is recomputed
+    non-vm universe jobs, and 0 for vm universe jobs.
+    A vanilla universe job's ``ImageSize`` is recomputed
     internally every 15 seconds. How quickly this updated information
     becomes visible to *condor_q* is controlled by
     ``SHADOW_QUEUE_UPDATE_INTERVAL`` and ``STARTER_UPDATE_INTERVAL``.
@@ -1288,10 +1271,6 @@ all attributes.
     A string that identifies the NT domain under which a job's owner
     authenticates on a platform running Windows.
 
-:classad-attribute:`NumCkpts`
-    A count of the number of checkpoints written by this job during its
-    lifetime.
-    
 :classad-attribute:`NumHolds`
     An integer value that will increment every time a job is placed on hold.
     It may be undefined until the job has been held at least once.
@@ -1328,7 +1307,7 @@ all attributes.
     *condor_schedd* restart. This attribute is only defined for jobs
     that can reconnected: those in the **vanilla** and **java**
     universes.
-    
+
 :classad-attribute:`NumJobStarts`
     An integer count of the number of times the job started executing.
 
@@ -1337,7 +1316,8 @@ all attributes.
 
 :classad-attribute:`NumRestarts`
     A count of the number of restarts from a checkpoint attempted by
-    this job during its lifetime.
+    this job during its lifetime.  Currently updated only for VM
+    universe jobs.
 
 :classad-attribute:`NumShadowExceptions`
     An integer count of the number of times the *condor_shadow* daemon
@@ -1639,7 +1619,7 @@ all attributes.
 :classad-attribute:`RemoteSysCpu`
     The total number of seconds of system CPU time (the time spent at
     system calls) the job used on remote machines. This does not count
-    time spent on run attempts that were evicted without a checkpoint.
+    time spent on run attempts that were evicted.
 
 :classad-attribute:`CumulativeRemoteSysCpu`
     The total number of seconds of system CPU time the job used on
@@ -1648,7 +1628,7 @@ all attributes.
 :classad-attribute:`RemoteUserCpu`
     The total number of seconds of user CPU time the job used on remote
     machines. This does not count time spent on run attempts that were
-    evicted without a checkpoint. A job in the virtual machine universe
+    evicted. A job in the virtual machine universe
     will only report this attribute if run on a KVM hypervisor.
 
 :classad-attribute:`CumulativeRemoteUserCpu`
@@ -1667,7 +1647,7 @@ all attributes.
     Note that this number does not get reset to zero when a job is
     forced to migrate from one machine to another. ``CommittedTime``, on
     the other hand, is just like ``RemoteWallClockTime`` except it does
-    get reset to 0 whenever the job is evicted without a checkpoint.
+    get reset to 0 whenever the job is evicted.
 
 :classad-attribute:`LastRemoteWallClockTime`
     Number of seconds the job was allocated a machine for its most recent completed
@@ -1862,8 +1842,8 @@ all attributes.
 
 :classad-attribute:`TotalSuspensions`
     A count of the number of times this job has been suspended during
-    its lifetime. 
-    
+    its lifetime.
+
 :classad-attribute:`TransferCheckpoint`
     A string attribute containing a comma separated list of directories
     and/or files that should be transferred from the execute machine to the
@@ -2002,11 +1982,16 @@ all attributes.
     transfer plugins are invoked. A transfer plugin supplied in this will way will be used
     even if the execute node has a file transfer plugin installed that handles that URL prefix.
 
+:classad-attribute:`WantTransferPluginMethods`
+    A string value containing a comma separated list of file transfer plugin URL prefixes
+    that are needed by the job but not supplied via the ``TransferPlugins`` attribute.
+    This attribute is intended to provide a convenient way to match against jobs that need
+    a certain transfer plugin.
+
 :classad-attribute:`TransferQueued`
     A boolean value that indicates whether the job is currently waiting
     to transfer files because of limits placed by
-    ``MAX_CONCURRENT_DOWNLOADS`` :index:`MAX_CONCURRENT_DOWNLOADS`
-    or ``MAX_CONCURRENT_UPLOADS``. :index:`MAX_CONCURRENT_UPLOADS`
+    :macro:`MAX_CONCURRENT_DOWNLOADS` or :macro:`MAX_CONCURRENT_UPLOADS`.
 
 :classad-attribute:`UserLog`
     The full path and file name on the access point of the log file of
@@ -2195,7 +2180,11 @@ information for the DAG.
     | 3                                    | the DAG has been aborted by an       |
     |                                      | ABORT-DAG-ON specification           |
     +--------------------------------------+--------------------------------------+
-	
+
+:classad-attribute:`DAG_AdUpdateTime`
+    A timestamp for when the DAGMan process last sent an update of internal
+    information to its job ad.
+
 The following job ClassAd attributes appear in the job ClassAd only for
 the *condor_dagman* job submitted under DAGMan. They represent job process
 information about the DAG. These values will reset when a DAG is run via

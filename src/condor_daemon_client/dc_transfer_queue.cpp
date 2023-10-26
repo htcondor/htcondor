@@ -218,7 +218,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_si
 
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = TRANSFER_QUEUE_REQUEST;
-		dprintf (D_COMMAND, "DCTransferQueue::RequestTransferQueueSlot(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCTransferQueue::RequestTransferQueueSlot(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool connected = startCommand(

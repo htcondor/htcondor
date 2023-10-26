@@ -72,10 +72,6 @@ const SetAttributeFlags_t SetAttribute_PostSubmitClusterChange = (1<<7); // spec
 // bool setQmgmtConnectionInfo(QmgmtPeer *peer);
 void unsetQmgmtConnection();
 
-
-int InitializeConnection(const char *, const char *);
-int InitializeReadOnlyConnection(const char * );
-
 /** Initiate connection to schedd job queue and begin transaction.
     @param schedd is the schedd to connect to
     @param timeout specifies the maximum time (in seconds) to wait for TCP
@@ -104,7 +100,11 @@ bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true, CondorErr
 	@return the new cluster id on success, < 0 on failure: -1 == "access denied"
 		-2 == "MAX_JOBS_SUBMITTED exceeded", see NEWJOB_ERR_* codes
 */
+int NewCluster(CondorError* errstack);
+#ifdef SCHEDD_EXTERNAL_DECLARATIONS
+// external callers have access to a backward compat NewCluster function
 int NewCluster(void);
+#endif
 
 /** Signal the start of a new job description (a new job process).
 	@param cluster_id cluster id of the active job cluster (from NewCluster())

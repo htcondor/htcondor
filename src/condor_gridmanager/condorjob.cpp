@@ -191,7 +191,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+							 (CallbackType)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL && error_string != "" ) {
 		goto error_exit;
 	}
@@ -313,7 +313,7 @@ CondorJob::CondorJob( ClassAd *classad )
 CondorJob::~CondorJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (CallbackType)&BaseJob::SetEvaluateState, this );
 	}
 	if ( submitterId != NULL ) {
 		free( submitterId );
@@ -344,10 +344,10 @@ void CondorJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-void CondorJob::JobLeaseSentExpired()
+void CondorJob::JobLeaseSentExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
-	BaseJob::JobLeaseSentExpired();
+	BaseJob::JobLeaseSentExpired(-1);
 	SetRemoteJobId( NULL );
 		// We always want to go through GM_INIT. With the remote job id set
 		// to NULL, we'll go to GM_CLEAR_REQUEST afterwards.
@@ -358,7 +358,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,
 	}
 }
 
-void CondorJob::doEvaluateState()
+void CondorJob::doEvaluateState( int /* timerID */ )
 {
 	bool connect_failure = false;
 	int old_gm_state;
@@ -603,35 +603,17 @@ void CondorJob::doEvaluateState()
 					// now check if either call failed w/ -2, which
 					// signifies MAX_JOBS_SUBMITTED was exceeded.
 					if ( jcluster==-2 || jproc==-2 ) {
-						// MAX_JOBS_SUBMITTED error.
-						// For now, we will always put this job back
-						// to idle and tell the schedd to find us
-						// another match.
-						// TODO: this hard-coded logic should be
-						// replaced w/ a WANT_REMATCH expression, like
-						// is currently done in the Globus gridtype.
-						dprintf(D_ALWAYS,"(%d.%d) Requesting schedd to "
-							"rematch job because of MAX_JOBS_SUBMITTED\n",
+						dprintf(D_ALWAYS,"(%d.%d) Job submission failed "
+							"because of MAX_JOBS_SUBMITTED\n",
 							procID.cluster, procID.proc);
-						// Set ad attributes so the schedd finds a new match.
-						bool dummy;
-						if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-							jobAd->Assign( ATTR_JOB_MATCHED, false );
-							jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
-						}
-						// We are rematching,  so forget about this job 
-						// cuz we wanna pull a fresh new job ad, with 
-						// a fresh new match, from the all-singing schedd.
-						gmState = GM_DELETE;
-					} else {
-						// unhandled error
-						if ( !resourcePingComplete /* && connect failure */ ) {
-							connect_failure = true;
-							break;
-						}
-						gmState = GM_UNSUBMITTED;
-						reevaluate_state = true;
 					}
+					// unhandled error
+					if ( !resourcePingComplete /* && connect failure */ ) {
+						connect_failure = true;
+						break;
+					}
+					gmState = GM_UNSUBMITTED;
+					reevaluate_state = true;
 				}
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
@@ -1310,6 +1292,9 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_DISK_USAGE,
 		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
+		"CpusProvisioned",
+		"DiskProvisioned",
+		"MemoryProvisioned",
 		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {
@@ -1470,8 +1455,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
 	submit_ad->Delete( "CondorPlatform" );
 	submit_ad->Delete( ATTR_CONDOR_VERSION );
-	submit_ad->Delete( ATTR_WANT_CLAIMING );
-	submit_ad->Delete( ATTR_WANT_MATCHING );
 	submit_ad->Delete( ATTR_HOLD_REASON );
 	submit_ad->Delete( ATTR_HOLD_REASON_CODE );
 	submit_ad->Delete( ATTR_HOLD_REASON_SUBCODE );

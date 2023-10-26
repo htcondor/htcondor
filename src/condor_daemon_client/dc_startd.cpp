@@ -43,7 +43,7 @@ DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
 	: Daemon( DT_STARTD, tName, tPool )
 {
 	if( tAddr ) {
-		New_addr( strdup(tAddr) );
+		Set_addr(tAddr);
 	}
 		// claim_id isn't initialized by Daemon's constructor, so we
 		// have to treat it slightly differently 
@@ -102,8 +102,12 @@ ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, char const *extra_clai
 	m_description = the_description;
 	m_scheduler_addr = scheduler_addr;
 	m_alive_interval = alive_interval;
+	m_num_dslots = 1;
+	m_pslot_claim_lease = 0;
+	m_claim_pslot = false;
 	m_reply = NOT_OK;
 	m_have_leftovers = false;
+	m_have_claimed_slot_info = false;
 }
 
 void
@@ -130,6 +134,22 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		// the newer protocol where any claim id in the response
 		// is encrypted.
 	m_job_ad.Assign("_condor_SECURE_CLAIM_ID", true);
+
+		// Insert an attribute requesting the startd to send the
+		// claimed slot ad in its response.
+	m_job_ad.Assign("_condor_SEND_CLAIMED_AD", true);
+
+		// Tell the startd whether we want the pslot to become Claimed
+	m_job_ad.Assign("_condor_CLAIM_PARTITIONABLE_SLOT", m_claim_pslot);
+	if (m_claim_pslot) {
+		m_job_ad.Assign("_condor_PARTITIONABLE_SLOT_CLAIM_TIME", m_pslot_claim_lease);
+		m_job_ad.Assign("_condor_WANT_MATCHING", true);
+	}
+
+		// Tell the startd how many dslots we want created off of a pslot
+		// for this request. 0 is a reasonable answer when claiming the
+		// pslot.
+	m_job_ad.Assign("_condor_NUM_DYNAMIC_SLOTS", m_num_dslots);
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
@@ -231,7 +251,21 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		Reply of 5 (REQUEST_CLAIM_LEFTOVERS_2) is the same as 3, but
 		  the claim id is encrypted.
 		Reply of 6 (REQUEST_CLAIM_PAIR_2) is no longer used
+		Reply of 7 (REQUEST_CLAIM_SLOT_AD) means claim accepted, the
+		  claimed slot ad will be sent next, and either OK or p-slot
+		  leftovers will be sent after that.
 	*/
+
+	if (m_reply == REQUEST_CLAIM_SLOT_AD) {
+		if (!sock->get_secret(m_claimed_slot_claim_id) || !getClassAd(sock, m_claimed_slot_ad) || !sock->get(m_reply)) {
+			dprintf(failureDebugLevel(),
+			        "Response problem from startd when requesting claim %s.\n",
+			        description());
+			sockFailed(sock);
+			return false;
+		}
+		m_have_claimed_slot_info = true;
+	}
 
 	if( m_reply == OK ) {
 			// no need to log success, because DCMsg::reportSuccess() will
@@ -275,7 +309,7 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 
 void
-DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, bool claim_pslot, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -287,6 +321,21 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 	ASSERT( msg.get() );
 	msg->setCallback(cb);
+
+	if (claim_pslot) {
+		// TODO Currently, we always request the pslot's max lease time
+		//   (msg->m_pslot_claim_lease=0).
+		//   Consider adding option to let client request shorter lease time.
+		msg->m_claim_pslot = true;
+	}
+
+	// For now, requesting a WorkingCM means we don't want a dslot
+	// (and our req_ad isn't a full job ad)
+	std::string working_cm;
+	req_ad->LookupString("WorkingCM", working_cm);
+	if (!working_cm.empty()) {
+		msg->m_num_dslots = 0;
+	}
 
 	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
 
@@ -324,16 +373,16 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
-		dprintf (D_COMMAND, "DCStartd::deactivateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::deactivateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -455,7 +504,7 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	if( !tmp->code(reply) || !tmp->end_of_message()) {
 		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
-		err += _addr ? _addr : "NULL";
+		err += _addr.c_str();
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		delete tmp;
 		return CONDOR_ERROR;
@@ -818,16 +867,16 @@ DCStartd::vacateClaim( const char* name_vacate )
 
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = VACATE_CLAIM;
-		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::vacateClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -874,16 +923,16 @@ DCStartd::_suspendClaim( )
 	
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = SUSPEND_CLAIM;
-		dprintf (D_COMMAND, "DCStartd::_suspendClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::_suspendClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::_suspendClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -932,16 +981,16 @@ DCStartd::_continueClaim( )
 	
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = CONTINUE_CLAIM;
-		dprintf (D_COMMAND, "DCStartd::_continueClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::_continueClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::_continueClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -983,16 +1032,16 @@ DCStartd::checkpointJob( const char* name_ckpt )
 
 	if (IsDebugLevel(D_COMMAND)) {
 		int cmd = PCKPT_JOB;
-		dprintf (D_COMMAND, "DCStartd::checkpointJob(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+		dprintf (D_COMMAND, "DCStartd::checkpointJob(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::checkpointJob: ";
 		err += "Failed to connect to startd (";
-		err += _addr ? _addr : "NULL";
+		err += _addr;
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -1070,7 +1119,7 @@ DCStartd::checkClaimId( void )
 		return true;
 	}
 	std::string err_msg;
-	if( _cmd_str ) {
+	if( ! _cmd_str.empty() ) {
 		err_msg += _cmd_str;
 		err_msg += ": ";
 	}

@@ -720,15 +720,15 @@ VirshType::Status()
 
 	    setVMStatus(VM_RUNNING);
 	    // libvirt reports cputime in nanoseconds
-	    m_cpu_time = info->cpuTime / 1000000000.0;
+	    m_cpu_time = info->cpuTime / 1'000'000'000.0;
 	    m_result_msg += "Running";
 
 	    if ( (CurrentStamp - LastStamp) > 0 )
 	    {
 	      // Old calc method because of libvirt version mismatches.
 	      // courtesy of http://people.redhat.com/~rjones/virt-top/faq.html#calccpu 
-	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1000000000.0);
-	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1000000000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
+	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1'000'000'000.0);
+	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1'000'000'000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
 	    }
 
 	    formatstr_cat( m_result_msg, " %s=%f",
@@ -1234,8 +1234,17 @@ bool KVMType::checkXenParams(VMGahpConfig * config)
     vmprintf(D_ALWAYS, "\nFile Permission Error: Cannot write /dev/kvm as root\n");
     return false;
   }
-  return true;
 
+	virConnectPtr libvirt_connection = virConnectOpen("qemu:///session");
+	if (libvirt_connection == nullptr) {
+		virErrorPtr err = virGetLastError();
+		vmprintf(D_ALWAYS, "Failed to create libvirt connection: %s\n",
+		         (err ? err->message : "No reason found"));
+		return false;
+	}
+	virConnectClose(libvirt_connection);
+
+	return true;
 }
 
 bool
@@ -1273,6 +1282,16 @@ XenType::checkXenParams(VMGahpConfig* config)
 				fixedvalue.c_str());
 		return false;
 	}
+
+	virConnectPtr libvirt_connection = virConnectOpen("xen:///");
+	if (libvirt_connection == nullptr) {
+		virErrorPtr err = virGetLastError();
+		vmprintf(D_ALWAYS, "Failed to create libvirt connection: %s\n",
+		         (err ? err->message : "No reason found"));
+		return false;
+	}
+	virConnectClose(libvirt_connection);
+
 	return true;
 }
 

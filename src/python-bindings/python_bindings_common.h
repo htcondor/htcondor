@@ -35,6 +35,14 @@
   #endif
 #endif
 
+// Boost 1.78 in the dinkumware.hpp module as a conditional define for BOOST_NO_AUTO_PTR
+// which causes a warning about re-definition, since we *also* define this in our cmake
+// this is an attempt to defeat that warning.
+#ifdef BOOST_NO_AUTO_PTR
+  #undef BOOST_NO_AUTO_PTR
+  #define BOOST_NO_AUTO_PTR
+#endif
+
 // pyconfig.h changes the definition of the PyObject structure if _DEBUG is defined!!!
 // On windows it also generates references to pythonNNN_d.lib library instead of pythonNNN.lib
 // but the python guys don't actually ship a pythonNNN_d.lib,  we avoid this problem by

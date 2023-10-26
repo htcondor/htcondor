@@ -48,6 +48,8 @@ public:
 		 */
 	virtual int StartJob() { return StartJob(NULL, NULL); };
 
+	virtual bool canonicalizeJobPath(std::string &JobName, const char *iwd);
+
 	int StartJob(FamilyInfo*, FilesystemRemap *);
 
 		/** In this function, we determine if pid == our pid, and if so
@@ -104,6 +106,7 @@ public:
 	int *makeCpuAffinityMask(int slotId);
 
 	virtual bool SupportsPIDNamespace() { return true;}
+	virtual bool ShouldConvertCmdToAbsolutePath() { return true;}
 
 protected:
 

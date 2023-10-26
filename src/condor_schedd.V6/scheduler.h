@@ -301,6 +301,7 @@ class match_rec
 	int				num_exceptions;
 	time_t			entered_current_status;
 	ClassAd*		my_match_ad;
+	ClassAd         m_added_attrs;
 	char*			user;
 	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
@@ -316,6 +317,7 @@ class match_rec
 	std::string*	auth_hole_id;
 
 	bool m_startd_sends_alives;
+	bool m_claim_pslot;
 
 	int keep_while_idle; // number of seconds to hold onto an idle claim
 	int idle_timer_deadline; // if the above is nonzero, abstime to hold claim
@@ -333,7 +335,6 @@ class match_rec
 
 	PROC_ID m_now_job;
 
-private:
 	std::string m_pool; // negotiator hostname if flocking; else empty
 };
 
@@ -487,7 +488,7 @@ class Scheduler : public Service
 	void			RegisterTimers();
 
 	// maintainence
-	void			timeout(); 
+	void			timeout( int timerID = -1 );
 	void			reconfig();
 	void			shutdown_fast();
 	void			shutdown_graceful();
@@ -501,7 +502,7 @@ class Scheduler : public Service
 	int				reschedule_negotiator(int, Stream *);
 	void			negotiationFinished( char const *owner, char const *remote_pool, bool satisfied );
 
-	void			reschedule_negotiator_timer() { reschedule_negotiator(0, NULL); }
+	void			reschedule_negotiator_timer( int /* timerID */ ) { reschedule_negotiator(0, NULL); }
 	void			release_claim(int, Stream *);
 	// I think this is actually a serious bug...
 	int				release_claim_command_handler(int i, Stream * s) { release_claim(i, s); return 0; }
@@ -509,7 +510,7 @@ class Scheduler : public Service
 	AutoCluster		autocluster;
 		// send a reschedule command to the negotiatior unless we
 		// have recently sent one and not yet heard from the negotiator
-	void			sendReschedule();
+	void			sendReschedule( int timerID = -1 );
 		// call this when state of job queue has changed in a way that
 		// requires a new round of negotiation
 	void            needReschedule();
@@ -539,7 +540,7 @@ class Scheduler : public Service
 	static int		generalJobFilesWorkerThread(void *, Stream *);
 	int				spoolJobFilesReaper(int,int);	
 	int				transferJobFilesReaper(int,int);
-	void			PeriodicExprHandler( void );
+	void			PeriodicExprHandler( int timerID = -1 );
 	void			addCronTabClassAd( JobQueueJob* );
 	void			addCronTabClusterId( int );
 	void			indexAJob(JobQueueJob* job, bool loading_job_queue=false);
@@ -577,11 +578,11 @@ class Scheduler : public Service
 	int				AlreadyMatched(PROC_ID*);
 	int				AlreadyMatched(JobQueueJob * job, int universe);
 	void			ExpediteStartJobs() const;
-	void			StartJobs();
+	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
-	void			sendAlives();
+	void			sendAlives( int timerID = -1 );
 	void			RecomputeAliveInterval(int cluster, int proc);
-	void			StartJobHandler();
+	void			StartJobHandler( int timerID = -1 );
 	void			addRunnableJob( shadow_rec* );
 	void			spawnShadow( shadow_rec* );
 	void			spawnLocalStarter( shadow_rec* );
@@ -603,7 +604,7 @@ class Scheduler : public Service
 	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
 		// Public startd socket management functions
-	void            checkContactQueue();
+	void            checkContactQueue( int timerID = -1 );
 
 		/** Used to enqueue another set of information we need to use
 			to contact a startd.  This is called by both
@@ -642,7 +643,7 @@ class Scheduler : public Service
 			spawn a shadow to attempt to reconnect to.
 		*/
 	bool			enqueueReconnectJob( PROC_ID job );
-	void			checkReconnectQueue( void );
+	void			checkReconnectQueue( int timerID = -1 );
 	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
 
 	bool	spawnJobHandler( int cluster, int proc, shadow_rec* srec );
@@ -694,7 +695,7 @@ class Scheduler : public Service
 	bool canSpawnShadow();
 	int shadowsSpawnLimit();
 
-	void WriteRestartReport();
+	void WriteRestartReport( int timerID = -1 );
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
@@ -734,7 +735,7 @@ class Scheduler : public Service
 	// there is no persistnt JobQueueUserRec in the job_queue
 	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
 	void clearPendingOwners();
-	bool HasPersistentOwnerInfo() { return EnablePersistentOwnerInfo; }
+	bool HasPersistentOwnerInfo() const { return EnablePersistentOwnerInfo; }
 #endif
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
@@ -747,11 +748,17 @@ class Scheduler : public Service
 	// Class to manage sets of Job 
 	JobSets *jobSets;
 
-	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char *user, const char * new_spool_dir="##");
-	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const char *user);
-	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const char *user);
+	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const OwnerInfo *user, const char * new_spool_dir="##");
+	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const OwnerInfo *user);
+	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const OwnerInfo *user);
 
 	bool forwardMatchToSidecarCM(const char *claim_id, const char *claim_ids, ClassAd &match_ad, const char *slot_name);
+
+	void doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd );
+
+	// Return a pointer to the protected URL map for late materilization factories
+	MapFile* getProtectedUrlMap() { return &m_protected_url_map; }
+
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
@@ -887,6 +894,8 @@ private:
 	SelfDrainingQueue job_is_finished_queue;
 	int jobIsFinishedHandler( ServiceData* job_id );
 
+	int checkpointCleanUpReaper(int, int);
+
 		// variables to implement SCHEDD_VANILLA_START expression
 	ConstraintHolder vanilla_start_expr;
 
@@ -949,7 +958,7 @@ private:
 	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
 	void			clean_shadow_recs();
 	void			preempt( int n, bool force_sched_jobs = false );
-	void			attempt_shutdown();
+	void			attempt_shutdown( int timerID = -1 );
 	static void		refuse( Stream* s );
 	void			tryNextJob();
 	int				jobThrottle( void );
@@ -1097,6 +1106,8 @@ private:
 
 	bool m_include_default_flock_param{true};
 	DCTokenRequester m_token_requester;
+
+	MapFile m_protected_url_map;
 
 	friend class DedicatedScheduler;
 };

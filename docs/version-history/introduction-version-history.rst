@@ -76,6 +76,42 @@ Types of Releases
     release.  These releases have undergone code review and light testing.
     These patch releases are cumulative.
 
+-   By default, a feature release in the same series is compatible with
+    the previous release. That is, release **X.Y+1.x** will be compatible with
+    release **X.Y.x**, such the nodes in a cluster may be upgraded without
+    losing state information. There may be a pause in operation during upgrade.
+    **Check the release notes** for exceptions prior to updating nodes.
+
+.. mermaid::
+
+   %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': 'lts-23'}} }%%
+   gitGraph TB:
+    commit tag:"23.0.0"
+    branch "feature 23.x"
+    checkout "lts-23"
+    commit tag:"23.0.1"
+    checkout "feature 23.x"
+    merge "lts-23"
+    commit tag:"23.1.0"
+    commit tag:"23.1.1"
+    commit tag:"23.1.2"
+    checkout "lts-23"
+    commit tag:"23.0.2"
+    checkout "feature 23.x"
+    merge "lts-23"
+    commit tag:"23.2.0"
+    commit tag:"23.2.1"
+    branch "lts-24"
+    commit tag:"24.0.0"
+    branch "feature 24.x"
+    checkout "lts-24"
+    commit tag:"24.0.1"
+    checkout "feature 24.x"
+    merge "lts-24"
+    commit tag:"24.1.0"
+    commit tag:"24.1.1"
+    commit tag:"24.1.2"
+
 Repositories
 ^^^^^^^^^^^^
 

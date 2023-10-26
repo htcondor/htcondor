@@ -305,6 +305,27 @@ bool stringListSummarize_func( const char *name,
 	return true;
 }
 
+// build a set or case-insensitive set from a string list
+template <class T>
+inline bool insert_items_from_string_tokens(T & items, const std::string & str, const char * delims) {
+	if (str.empty()) return false;
+	StringTokenIterator it(str, delims);
+	const std::string * pstr;
+	std::string item;
+	while ((pstr = it.next_string_trim())) { 
+		if (pstr->empty()) continue;
+		items.insert(*pstr);
+	}
+	return true;
+}
+
+// implements stringListMember, stringListIMember, stringListSubsetMatch, and stringListISubsetMatch
+// all functions return bool or undefined
+// the stringListI functions are case-insensitive
+// Member functions return true when the first arg is a member of the second arg when the second arg is parsed as a stringlist
+// SubsetMatch functions return true when the first arg is parsed as a string list and each item
+//    is a member of the second arg when the second arg is parsed as a string list
+// If there is a third argument, it will be used as the delimiter set for stringlist parsing
 static
 bool stringListMember_func( const char *name,
 							const classad::ArgumentList &arg_list,
@@ -313,7 +334,7 @@ bool stringListMember_func( const char *name,
 	classad::Value arg0, arg1, arg2;
 	std::string item_str;
 	std::string list_str;
-	std::string delim_str = ", ";
+	std::string delim_str = ", \t\r\n";
 
 	// Must have two or three arguments
 	if ( arg_list.size() < 2 || arg_list.size() > 3 ) {
@@ -329,21 +350,73 @@ bool stringListMember_func( const char *name,
 		return false;
 	}
 
-	// If any argument isn't a string, then the result is
+	// If any argument isn't a string or undefined, then the result is
 	// an error.
-	if( !arg0.IsStringValue( item_str) ||
-		!arg1.IsStringValue( list_str) ||
-		( arg_list.size() == 3 && !arg2.IsStringValue( delim_str ) ) ) {
+	if( ( !arg0.IsUndefinedValue() && !arg0.IsStringValue(item_str)) ||
+		( !arg1.IsUndefinedValue() && !arg1.IsStringValue(list_str)) ||
+		( arg_list.size() == 3 && (!arg2.IsUndefinedValue() && !arg2.IsStringValue(delim_str)) ) ) {
 		result.SetErrorValue();
 		return true;
 	}
 
-	StringList sl( list_str.c_str(), delim_str.c_str() );
-	int rc;
-	if ( strcasecmp( name, "stringlistmember" ) == 0 ) {
-		rc = sl.contains( item_str.c_str() );
+	// if both args are undefined, there result is undefined
+	// otherwise, undefined values behave like empty strings
+	if (arg0.IsUndefinedValue() && arg1.IsUndefinedValue()) {
+		result.SetUndefinedValue();
+		return true;
+	}
+
+	// decode function name into case-sensitive and Member vs SubsetMatch
+	const char * op = name + sizeof("stringlist")-1;
+	bool case_sensitive = true;
+	if (toupper(*op) == 'I') {
+		case_sensitive = false;
+		++op;
+	}
+	bool member = toupper(*op) == 'M';
+	bool subset_match = toupper(*op) == 'S';
+
+	int rc = 0;
+	if (member) {
+		StringList sl( list_str.c_str(), delim_str.c_str() );
+		if (case_sensitive) {
+			rc = sl.contains( item_str.c_str() );
+		} else {
+			rc = sl.contains_anycase( item_str.c_str() );
+		}
+	} else if (subset_match) { // SubsetMatch
+
+		// the empty string is always a subset
+		if (item_str.empty()) {
+			result.SetBooleanValue(true);
+			return true;
+		}
+
+		if (case_sensitive) {
+			std::set<std::string> listset;
+			insert_items_from_string_tokens(listset, list_str, delim_str.c_str());
+			StringTokenIterator items(item_str, delim_str.c_str());
+			const std::string * item;
+			while ((item = items.next_string_trim())) {
+				if (item->empty()) continue;
+				rc = listset.count(*item);
+				if ( ! rc) break;
+			}
+		} else {
+			classad::References listset;
+			insert_items_from_string_tokens(listset, list_str, delim_str.c_str());
+			StringTokenIterator items(item_str, delim_str.c_str());
+			const std::string * item;
+			while ((item = items.next_string_trim())) {
+				if (item->empty()) continue;
+				rc = listset.count(*item);
+				if ( ! rc) break;
+			}
+		}
 	} else {
-		rc = sl.contains_anycase( item_str.c_str() );
+		// this should be unreachable
+		result.SetErrorValue();
+		return true;
 	}
 	result.SetBooleanValue( rc ? true : false );
 
@@ -1307,7 +1380,7 @@ bool evalInEachContext_func( const char * name,
 
 		result.SetListValue(lst);
 	} else {
-		// for countMatches - return an integer count of results that evaluate to TRUE
+		// for countMatches - return an integer count of results that evaluate to true
 		// This is useful for matching a job to a heterogenous array of custom resources like GPUs.
 		// the slot ad will have (actual names are longer)
 		//    AvailableGPUs = { GPUs_tag1, GPUs_tag2 }
@@ -1375,6 +1448,12 @@ void registerClassadFunctions()
 	name = "stringListIMember";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListMember_func );
+	name = "stringListSubsetMatch";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListMember_func );
+	name = "stringListISubsetMatch";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListMember_func );
 	name = "stringList_regexpMember";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListRegexpMember_func );
@@ -1435,7 +1514,7 @@ bool CondorClassAdFileParseHelper::line_is_ad_delimitor(const std::string & line
 	if (blank_line_is_ad_delimitor) {
 		const char * p = line.c_str();
 		while (*p && isspace(*p)) ++p;
-		return ( ! *p || *p == '\n');
+		return ( ! *p );
 	}
 	bool is_delim = starts_with(line, ad_delimitor);
 	if (is_delim) { delim_line = line; }
@@ -1455,12 +1534,12 @@ int CondorClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd 
 	// tell the parse to skip those lines, otherwise tell the parser to
 	// parse the line.
 	for (size_t ix = 0; ix < line.size(); ++ix) {
-		if (line[ix] == '#' || line[ix] == '\n')
+		if (line[ix] == '#')
 			return 0; // skip this line, but don't stop parsing.
 		if (line[ix] != ' ' && line[ix] != '\t')
-			break;
+			return 1; // parse this line.
 	}
-	return 1; // parse this line.
+	return 0; // skip this line, but don't stop parsing.
 }
 
 // this method is called when the parser encounters an error
@@ -1484,6 +1563,7 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, classad::Clas
 			break;
 		if ( ! readLine(line, file, false))
 			break;
+		chomp(line);
 	}
 	return -1; // abort
 }
@@ -1583,15 +1663,16 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 				if ( ! readLine(buffer, file, false)) {
 					return feof(file) ? -99 : -1;
 				}
+				chomp(buffer);
 
 				int ee = PreParse(buffer, ad, file);
 				if (ee == 1) {
 					// pre-parser says parse it. can we use it to figure out what type we are?
 					// if we are still scanning to decide what the parse type is, we should be able to figure it out now...
-					if (buffer == "<?xml version=\"1.0\"?>\n") {
+					if (buffer == "<?xml version=\"1.0\"?>") {
 						parse_type = Parse_xml;
 						return NewParser(ad, file, detected_long, errmsg); // skip this line, but don't stop parsing, from now on
-					} else if (buffer == "[\n" || buffer == "{\n") {
+					} else if (buffer == "[" || buffer == "{") {
 						char ch = buffer[0];
 						// could be json or new classads, read character to figure out which.
 						int ch2 = fgetc(file);
@@ -1608,6 +1689,7 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 						} else {
 							buffer = ""; buffer[0] = ch;
 							readLine(buffer, file, true);
+							chomp(buffer);
 						}
 					}
 					// this doesn't look like a new classad prolog, so just parse it
@@ -1671,10 +1753,11 @@ InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ i
 			error = is_eof ? 0 : errno;
 			return cAttrs;
 		}
+		chomp(buffer);
 
 		// if there is a helper, give the helper first crack at the line
 		// otherwise set ee to decide what to do with this line.
-		ee = 1;
+		ee = 0;
 		if (phelp) {
 			ee = phelp->PreParse(buffer, ad, file);
 		} else {
@@ -2217,7 +2300,7 @@ initAdFromString( char const *str, classad::ClassAd &ad )
 
 
 		// output functions
-int
+bool
 fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
 	std::string buffer;
@@ -2316,13 +2399,13 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 	return true;
 }
 
-int
+bool
 sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
 	return _sPrintAd( output, ad, true, attr_include_list, excludeAttrs );
 }
 
-int
+bool
 sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
 	return _sPrintAd( output, ad, false, attr_include_list, excludeAttrs );
@@ -2331,9 +2414,9 @@ sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList
 /** Get a sorted list of attributes that are in the given ad, and also match the given includelist (if any)
 	and privacy criteria.
 	@param attrs the set of attrs to insert into. This is set is NOT cleared first.
-	@return TRUE
+	@return true
 */
-int
+bool
 sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, bool ignore_parent )
 {
 	classad::ClassAd::const_iterator itr;
@@ -2364,14 +2447,14 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 /** Format the given attributes from the ClassAd as an old ClassAd into the given string
 	@param output The std::string to write into
-	@return TRUE
+	@return true
 */
-int
+bool
 sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs, const char * indent /*=NULL*/ )
 {
 	classad::ClassAdUnParser unp;
@@ -2389,7 +2472,7 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 /** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
@@ -2468,26 +2551,6 @@ GetMyTypeName( const classad::ClassAd &ad )
 		return "";
 	}
 	return myTypeStr.c_str( );
-}
-
-void
-SetTargetTypeName( classad::ClassAd &ad, const char *targetType )
-{
-	if( targetType ) {
-		ad.InsertAttr( ATTR_TARGET_TYPE, std::string( targetType ) );
-	}
-
-	return;
-}
-
-const char*
-GetTargetTypeName( const classad::ClassAd &ad )
-{
-	static std::string targetTypeStr;
-	if( !ad.EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
-		return "";
-	}
-	return targetTypeStr.c_str( );
 }
 
 // Determine if a value is valid to be written to the log. The value
@@ -2573,21 +2636,21 @@ CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const
 
 //////////////XML functions///////////
 
-int
+bool
 fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list)
 {
     if(!fp)
     {
-        return FALSE;
+        return false;
     }
 
     std::string out;
     sPrintAdAsXML(out,ad,attr_include_list);
     fprintf(fp, "%s", out.c_str());
-    return TRUE;
+    return true;
 }
 
-int
+bool
 sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list)
 {
 	classad::ClassAdXMLUnParser unparser;
@@ -2610,25 +2673,25 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 		unparser.Unparse( xml, &ad );
 	}
 	output += xml;
-	return TRUE;
+	return true;
 }
 ///////////// end XML functions /////////
 
-int
+bool
 fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
 {
     if(!fp)
     {
-        return FALSE;
+        return false;
     }
 
     std::string out;
     sPrintAdAsJson(out,ad,attr_include_list,oneline);
     fprintf(fp, "%s", out.c_str());
-    return TRUE;
+    return true;
 }
 
-int
+bool
 sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
 {
 	classad::ClassAdJsonUnParser unparser(oneline);
@@ -2648,7 +2711,7 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 	} else {
 		unparser.Unparse( output, &ad );
 	}
-	return TRUE;
+	return true;
 }
 
 char const *

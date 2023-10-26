@@ -35,15 +35,15 @@
 
 
 QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
-	: common_job_queue_attrs(0),
-	hold_job_queue_attrs(0),
-	evict_job_queue_attrs(0),
-	remove_job_queue_attrs(0),
-	requeue_job_queue_attrs(0),
-	terminate_job_queue_attrs(0),
-	checkpoint_job_queue_attrs(0),
-	x509_job_queue_attrs(0),
-	m_pull_attrs(0),
+	: common_job_queue_attrs(nullptr),
+	hold_job_queue_attrs(nullptr),
+	evict_job_queue_attrs(nullptr),
+	remove_job_queue_attrs(nullptr),
+	requeue_job_queue_attrs(nullptr),
+	terminate_job_queue_attrs(nullptr),
+	checkpoint_job_queue_attrs(nullptr),
+	x509_job_queue_attrs(nullptr),
+	m_pull_attrs(nullptr),
 	job_ad(job), // we do *NOT* want to make our own copy of this ad
 	m_schedd_obj(schedd_address),
 	cluster(-1), proc(-1),
@@ -93,7 +93,7 @@ QmgrJobUpdater::~QmgrJobUpdater()
 
 
 void
-QmgrJobUpdater::initJobQueueAttrLists( void )
+QmgrJobUpdater::initJobQueueAttrLists( )
 {
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
 	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
@@ -240,7 +240,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 
 
 void
-QmgrJobUpdater::startUpdateTimer( void )
+QmgrJobUpdater::startUpdateTimer( )
 {
 	if( q_update_tid >= 0 ) {
 		return;
@@ -261,7 +261,7 @@ QmgrJobUpdater::startUpdateTimer( void )
 
 
 void
-QmgrJobUpdater::resetUpdateTimer( void )
+QmgrJobUpdater::resetUpdateTimer( )
 {
 	if ( q_update_tid < 0 ) {
 		startUpdateTimer();
@@ -288,7 +288,7 @@ QmgrJobUpdater::resetUpdateTimer( void )
 bool
 QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster, bool log )
 {
-	bool result;
+	bool result = false;
 	std::string err_msg;
 	SetAttributeFlags_t flags=0;
 
@@ -307,14 +307,14 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 	if (log) {
 		flags = SHOULDLOG;
 	}
-	if( ConnectQ(m_schedd_obj,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.c_str()) ) {
+	if( ConnectQ(m_schedd_obj,SHADOW_QMGMT_TIMEOUT,false,nullptr,m_owner.c_str()) ) {
 		if( SetAttribute(cluster,p,name,expr,flags) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
 		} else {
 			result = TRUE;
 		}
-		DisconnectQ( NULL );
+		DisconnectQ( nullptr );
 	} else {
 		err_msg = "ConnectQ() failed";
 		result = FALSE;
@@ -340,14 +340,14 @@ QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster, bool
 bool
 QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 {
-	ExprTree* tree = NULL;
+	ExprTree* tree = nullptr;
 	bool is_connected = false;
 	bool had_error = false;
-	const char* name;
-	char *value = NULL;
+	const char* name = nullptr;
+	char *value = nullptr;
 	std::list< std::string > undirty_attrs;
 
-	StringList* job_queue_attrs = NULL;
+	StringList* job_queue_attrs = nullptr;
 	switch( type ) {
 	case U_HOLD:
 		job_queue_attrs = hold_job_queue_attrs;
@@ -383,7 +383,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 	}
 
 	if (type == U_HOLD) {
-		if (!ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.c_str()) ) {
+		if (!ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, nullptr, m_owner.c_str()) ) {
 			return false;
 		}
 		is_connected = true;
@@ -399,7 +399,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 	for ( auto itr = job_ad->dirtyBegin(); itr != job_ad->dirtyEnd(); itr++ ) {
 		name = itr->c_str();
 		tree = job_ad->LookupExpr(name);
-		if ( tree == NULL ) {
+		if ( tree == nullptr ) {
 			continue;
 		}
 		// There used to be a check for tree->invisible here,
@@ -417,7 +417,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			 job_queue_attrs->contains_anycase(name)) ) {
 
 			if( ! is_connected ) {
-				if( ! ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.c_str()) ) {
+				if( ! ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, nullptr, m_owner.c_str()) ) {
 					return false;
 				}
 				is_connected = true;
@@ -451,23 +451,21 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 				had_error = true;
 			}
 		}
-		DisconnectQ(NULL,false);
+		DisconnectQ(nullptr,false);
 	} 
 	if( had_error ) {
 		return false;
 	}
-	for(std::list< std::string >::iterator itr = undirty_attrs.begin();
-		itr != undirty_attrs.end();
-		++itr)
+	for(auto & undirty_attr : undirty_attrs)
 	{
-		job_ad->MarkAttributeClean(*itr);
+		job_ad->MarkAttributeClean(undirty_attr);
 	}
 	return true;
 }
 
 
 bool
-QmgrJobUpdater::retrieveJobUpdates( void )
+QmgrJobUpdater::retrieveJobUpdates( )
 {
 	ClassAd updates;
 	CondorError errstack;
@@ -481,16 +479,16 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 		return false;
 	}
 	if ( GetDirtyAttributes( cluster, proc, &updates ) < 0 ) {
-		DisconnectQ(NULL,false);
+		DisconnectQ(nullptr,false);
 		return false;
 	}
-	DisconnectQ( NULL, false );
+	DisconnectQ( nullptr, false );
 
 	dprintf( D_FULLDEBUG, "Retrieved updated attributes from schedd\n" );
 	dPrintAd( D_JOB, updates );
 	MergeClassAds( job_ad, &updates, true );
 
-	if ( m_schedd_obj.clearDirtyAttrs( &job_ids, &errstack ) == NULL ) {
+	if ( m_schedd_obj.clearDirtyAttrs( &job_ids, &errstack ) == nullptr ) {
 		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText().c_str() );
 		return false;
 	}
@@ -499,7 +497,7 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 
 
 void
-QmgrJobUpdater::periodicUpdateQ( void )
+QmgrJobUpdater::periodicUpdateQ( int /* timerID */ )
 {
 		// For performance, use a NONDURABLE transaction.
 	updateJob( U_PERIODIC, NONDURABLE );
@@ -555,7 +553,7 @@ QmgrJobUpdater::watchAttribute( const char* attr, update_t type  )
 {
 		// first, figure out what attribute list to add this to, based
 		// on the type we were given.
-	StringList* job_queue_attrs = NULL;
+	StringList* job_queue_attrs = nullptr;
 	switch( type ) {
 	case U_NONE:
 			// this is the default case for the update_t

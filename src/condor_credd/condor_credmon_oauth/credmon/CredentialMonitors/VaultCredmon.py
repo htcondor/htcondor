@@ -9,6 +9,7 @@ import tempfile
 import re
 import urllib3
 import socket
+import http.client
 
 try:
     import htcondor
@@ -38,7 +39,7 @@ class vaulthost:
         self.cafile = cafile
 
     def getips(self):
-        info = socket.getaddrinfo(self.host, 0, 0, socket.IPPROTO_TCP)
+        info = socket.getaddrinfo(self.host, 0, 0, 0, socket.IPPROTO_TCP)
 
         self.ips = []
         # Use only IPv4 addresses if there are any
@@ -170,16 +171,46 @@ class VaultCredmon(AbstractCredentialMonitor):
             self.log.warning("The file at %s is invalid; could not parse as JSON: %s", top_path, str(ve))
             return False
 
+        vault_token = ''
         if 'vault_token' not in top_data:
-            self.log.error("vault_token missing from %s", top_path)
-            return False
+            # The vault_token may instead be in a '.top' file without the
+            # last portion of the name following an underscore, the handle.
+            # The handle is added for reduced scopes and/or audience but it
+            # doesn't get its own vault token.
+            underscore = token_name.rfind('_')
+            if underscore > 0:
+                parenttop_name = token_name[0:underscore]
+                parenttop_path = os.path.join(self.cred_dir, username, parenttop_name + '.top')
+                try:
+                    with open(parenttop_path, 'r') as f:
+                        parenttop_data = json.load(f)
+                except IOError as ie:
+                    self.log.warning("Could not open %s: %s", parenttop_path, str(ie))
+                    return False
+                except ValueError as ve:
+                    self.log.warning("The file at %s is invalid; could not parse as JSON: %s", parenttop_path, str(ve))
+                    return False
+
+                if 'vault_token' not in parenttop_data:
+                    self.log.error("vault_token missing from %s and %s", top_path, parenttop_path)
+                    return False
+                vault_token = parenttop_data['vault_token']
+            else:
+                self.log.error("vault_token missing from %s", top_path)
+                return False
+        else:
+            vault_token = top_data['vault_token']
 
         if 'vault_url' not in top_data:
             self.log.error("vault_url missing from %s", top_path)
             return False
 
         url = top_data['vault_url']
-        headers = {'X-Vault-Token' : top_data['vault_token']}
+        if not url.startswith('https://'):
+            self.log.error("vault_url does not begin with https://")
+            return False
+
+        headers = {'X-Vault-Token' : vault_token}
         params = {'minimum_seconds' : self.get_minimum_seconds()}
         try:
             response = self.request_url(url, headers, params)

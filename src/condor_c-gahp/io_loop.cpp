@@ -697,7 +697,7 @@ flush_request (int worker_id, const char * request) {
 }
 
 
-void flush_pending_requests() {
+void flush_pending_requests(int /* tid */) {
 	for (int i=0; i<NUMBER_WORKERS; i++) {
 		workers[i].request_buffer.Write();
 

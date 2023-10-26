@@ -232,7 +232,7 @@ CronJobMgr::JobExited( const CronJob & /*job*/ )
 
 // Schedule all jobs
 void
-CronJobMgr::ScheduleJobsFromTimer( void )
+CronJobMgr::ScheduleJobsFromTimer( int /* timerID */ )
 {
 	m_schedule_timer = -1;		// I've fired; reset for next time I'm needed
 	ScheduleAllJobs();

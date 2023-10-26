@@ -1,6 +1,3 @@
-* debconf templates should mention format things: comma-separated list, ...
-* debconf: think about switching away from combinatorial setup to a few
-  hand-polished config scenarios
 * Allow for configurable UID/GID
 * Security: ALLOW_ADVERTISE_SCHEDD
 * Have a test suite that can run at package build time

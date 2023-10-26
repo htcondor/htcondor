@@ -344,8 +344,9 @@ sub create_rpm {
 }
 
 sub check_rpm {
-    # List files in the package
-    return "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
+    # Run rpmlint on the packages.
+    # The ls can be dropped, when the errors are resolved.
+    return "rpmlint *.rpm; ls -lh *.rpm";
 }
 
 sub create_deb {    
@@ -362,16 +363,20 @@ sub create_deb {
 }
 
 sub check_deb {
-    # Print package summary
-    # We would like to run lintian, but it is not available on all NMI machine
-    my $debs;
-    for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
-    if ( ! defined $debs) { $debs = "*.deb"; }
-    if ($ENV{NMI_PLATFORM} =~ /Debian8/) {
-        # Only works with a single deb
-        return "dpkg-deb -I $debs";
-    } else {
-        # return "lintian $debs";
-        return "dpkg-deb -W $debs";
+    # Run lintian on the packages.
+    my $fail_on_error='--fail-on error';
+    if ($ENV{NMI_PLATFORM} =~ /Ubuntu20/) {
+        $fail_on_error='';
     }
+    # Suppress changelog checks, daily builds trigger these
+    my $suppress_tags='--suppress-tags latest-debian-changelog-entry-without-new-date,latest-changelog-entry-without-new-date';
+    if ($ENV{NMI_PLATFORM} =~ /Ubuntu/) {
+        # Ubuntu complains about the "unstable" distro
+        $suppress_tags="$suppress_tags,bad-distribution-in-changes-file";
+    }
+    if ($ENV{NMI_PLATFORM} =~ /Ubuntu|Debian11/) {
+        # Only Debian 12 and newer correctly process the lintian overrides for these
+        $suppress_tags="$suppress_tags,license-problem-json-evil,statically-linked-binary";
+    }
+    return "lintian $fail_on_error $suppress_tags *.changes";
 }

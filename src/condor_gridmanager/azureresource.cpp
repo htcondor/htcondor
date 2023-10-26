@@ -194,9 +194,7 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 	//
 	std::set<AzureJob*> myJobs;
 	AzureJob * nextJob = NULL;
-	BaseJob *nextBaseJob = NULL;
-	registeredJobs.Rewind();
-	while ( (nextBaseJob = registeredJobs.Next()) ) {
+	for (auto nextBaseJob: registeredJobs) {
 		nextJob = dynamic_cast< AzureJob * >( nextBaseJob );
 		ASSERT( nextJob );
 		if ( !nextJob->m_vmName.empty() ) {

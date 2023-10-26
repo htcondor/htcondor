@@ -46,16 +46,10 @@ class MapFile
 	~MapFile();
 
 	int
-	ParseCanonicalizationFile(const std::string& filename, bool assume_hash=false, bool allow_include=true);
+	ParseCanonicalizationFile(const std::string& filename, bool assume_hash=false, bool allow_include=true, bool is_prefix=false);
 
 	int
-	ParseCanonicalization(MyStringSource & src, const char* srcname, bool assume_hash=false, bool allow_include=true);
-
-	int
-	ParseUsermapFile(const std::string& filename, bool assume_hash=true);
-
-	int
-	ParseUsermap(MyStringSource & src, const char * srcname, bool assume_hash=true);
+	ParseCanonicalization(MyStringSource & src, const char* srcname, bool assume_hash=false, bool allow_include=true, bool is_prefix=false);
 
 	int
 	GetCanonicalization(const std::string& method,
@@ -82,7 +76,7 @@ class MapFile
 	CanonicalMapList* GetMapList(const char * method);
 
 	// add CanonicalMapEntry of type regex or hash (if regex_opts==0) to the given list
-	void AddEntry(CanonicalMapList* list, uint32_t regex_opts, const char * principal, const char * canonicalization);
+	void AddEntry(CanonicalMapList* list, uint32_t regex_opts, const char * principal, const char * canonicalization, bool is_prefix=false);
 
 	bool
 	FindMapping(CanonicalMapList* list,       // in: the mapping data set

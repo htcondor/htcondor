@@ -1577,7 +1577,7 @@ DockerAPI::imageCacheUsed() {
 	int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_WRONLY|O_CREAT, 0666);
 
 	if (lockfd < 0) {
-		dprintf(D_ALWAYS, "docker_iamge_cached_usage: Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
+		dprintf(D_ALWAYS, "docker_image_cached_usage: Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
 		return -1;
 	}
 

@@ -69,7 +69,6 @@ GCEResource::GCEResource( const char *resource_name,
 						  const char *auth_file,
 						  const char *account ) :
 		BaseResource( resource_name ),
-		jobsByInstanceID( hashFunction ),
 		m_hadAuthFailure( false )
 {
 	// although no one will use resource_name, we still keep it for base class constructor
@@ -213,9 +212,7 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 	//
 	std::set<GCEJob*> myJobs;
 	GCEJob * nextJob = NULL;
-	BaseJob *nextBaseJob = NULL;
-	registeredJobs.Rewind();
-	while ( (nextBaseJob = registeredJobs.Next()) ) {
+	for (auto nextBaseJob: registeredJobs) {
 		nextJob = dynamic_cast< GCEJob * >( nextBaseJob );
 		ASSERT( nextJob );
 		if ( !nextJob->m_instanceName.empty() ) {

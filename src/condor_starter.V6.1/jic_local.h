@@ -245,7 +245,7 @@ protected:
 		/// If the job ad says so, acquire user credentials
 		// returns 0 if nothing to do, 1 if success < 0 on failure
 	int initUserCredentials();
-	void refreshSandboxCredentials_from_timer() { (void)initUserCredentials(); }
+	void refreshSandboxCredentials_from_timer( int /* timerID */ ) { (void)initUserCredentials(); }
 	int m_refresh_sandbox_creds_tid; /// timer id of the credential refresh timer
 
 };

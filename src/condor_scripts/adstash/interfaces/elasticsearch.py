@@ -23,14 +23,13 @@ from operator import itemgetter
 from collections import defaultdict
 
 import elasticsearch
-from elasticsearch._version import __versionstr__ as ES_VERSIONSTR
+from elasticsearch import VERSION as ES_VERSION
 
 import adstash.convert as convert
 from adstash.utils import get_host_port
 from adstash.interfaces.generic import GenericInterface
 
 
-ES_VERSION = tuple([int(x) for x in ES_VERSIONSTR.split(".")])
 ES8 = (8,0,0)
 if ES_VERSION < (7,0,0) or ES_VERSION >= (9,0,0):
     logging.warning(f"Unsupported Elasticsearch Python library ({ES_VERSIONSTR}), proceeding anyway...")
@@ -87,7 +86,7 @@ class ElasticsearchInterface(GenericInterface):
                 client_options["http_auth"] = auth_tuple
             elif ES_VERSION >= ES8:
                 client_options["basic_auth"] = auth_tuple
-        
+
         if self.ca_certs is not None:
             client_options["ca_certs"] = self.ca_certs
         if self.use_https:
@@ -236,18 +235,18 @@ class ElasticsearchInterface(GenericInterface):
         existing_mappings = self.get_mappings(index)
         for outer_key in mappings:
             if outer_key not in existing_mappings:  # add anything missing
-                updated_mappings[key] = mappings[key]
-                updated_mappings = True
+                updated_mappings[outer_key] = mappings[outer_key]
+                update_mappings = True
             elif isinstance(mappings[outer_key], dict):  # update missing keys in any existing dicts
                 missing_inner_keys = set(mappings[outer_key]) - set(existing_mappings[outer_key])
                 if len(missing_inner_keys) > 0:
-                    update_mappings = True
                     updated_mappings[outer_key] = {}
                     for inner_key in missing_inner_keys:
-                        updated_mappings[inner_key] = mappings[outer_key][inner_key]
+                        updated_mappings[outer_key][inner_key] = mappings[outer_key][inner_key]
+                update_mappings = True
         if update_mappings:
             logging.info(f"Updated mappings for index {index}")
-            logging.debug(f"{pprint.pformat(update_mappings)}")
+            logging.debug(f"{pprint.pformat(updated_mappings)}")
             if ES_VERSION < ES8:
                 client.indices.put_mapping(index=index, body=json.dumps(updated_mappings))
             elif ES_VERSION >= ES8:
@@ -256,7 +255,6 @@ class ElasticsearchInterface(GenericInterface):
                 mappings_file = log_dir / "condor_adstash_elasticsearch_last_mappings.json"
                 logging.debug(f"Writing updated mappings to {mappings_file}.")
                 json.dump(updated_mappings, open(mappings_file, "w"), indent=2)
-            
 
 
     def make_bulk_body(self, ads, metadata={}):

@@ -33,13 +33,15 @@ uint64_t sysapi_get_process_caps_mask(int pid, LinuxCapsMaskType type) {
 	struct __user_cap_header_struct hs;
 	struct __user_cap_data_struct ds[2];
 	TemporaryPrivSentry sentry(PRIV_ROOT);
+	//Set the process id
+	hs.pid = pid;
+	hs.version = 0;
+
 	//syscall to get the machines linux_capabilty_version
 	if (syscall(SYS_capget,&hs,NULL)) {
 		dprintf(D_ERROR,"Error: Linux system call for capget failed to initialize linux_capability_version.\n");
 		return UINT64_MAX;
 	}
-	//Set the process id
-	hs.pid = pid;
 	
 	//Get capability masks (Returns Permitted, Inheritable, and Effective in structure)
 	if (syscall(SYS_capget,&hs,ds)) {

@@ -47,7 +47,7 @@ class INFNBatchJob : public BaseJob
 	~INFNBatchJob();
 
 	void Reconfig();
-	void doEvaluateState();
+	void doEvaluateState(int timerID);
 	BaseResource *GetResource();
 
 	static int submitInterval;
@@ -74,6 +74,7 @@ class INFNBatchJob : public BaseJob
 	char *remoteJobId;
 	time_t lastPollTime;
 	bool pollNow;
+	bool m_remoteIwdSet;
 
 	Proxy *jobProxy;
 	time_t remoteProxyExpireTime;

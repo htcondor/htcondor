@@ -151,6 +151,7 @@
 #define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
+#define SUBMIT_KEY_WantIoProxy "want_io_proxy"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"
@@ -224,6 +225,7 @@
 
 // Self-Checkpointing Parameters
 #define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
+#define SUBMIT_KEY_CheckpointDestination "checkpoint_destination"
 
 // ...
 #define SUBMIT_KEY_EraseOutputAndErrorOnRestart "erase_output_and_error_on_restart"
@@ -360,6 +362,9 @@
 #define SUBMIT_KEY_RmKillSig "remove_kill_sig"
 #define SUBMIT_KEY_HoldKillSig "hold_kill_sig"
 #define SUBMIT_KEY_KillSigTimeout "kill_sig_timeout"
+
+//Temporary function to get a mapfile object point to protected url map
+MapFile* getProtectedURLMap();
 
 // class to parse, hold and manage a python style slice: [x:y:z]
 // used by the condor_submit queue 'foreach' handling
@@ -679,6 +684,11 @@ public:
 		Unknown
 	};
 
+	// Attach and detach Protected URL transfer map object by pointer
+	// Note: SubmitHash does not own this pointer
+	void attachTransferMap(MapFile* map) { protectedUrlMap = map; }
+	void detachTransferMap() { protectedUrlMap = nullptr; }
+
 protected:
 	MACRO_SET SubmitMacroSet;
 	MACRO_EVAL_CONTEXT mctx;
@@ -691,6 +701,7 @@ protected:
 	time_t     submit_time;
 	std::string   submit_username; // username specified to init_cluster_ad
 	ClassAd extendedCmds; // extended submit keywords, from config
+	MapFile *protectedUrlMap{nullptr}; // Map file for protected url separation in job ad
 
 	// these are used with the internal ABORT_AND_RETURN() and RETURN_IF_ABORT() methods
 	mutable int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
@@ -735,6 +746,7 @@ protected:
 	bool already_warned_notification_never;
 	bool already_warned_require_gpus;
 	bool UseDefaultResourceParams;
+	bool InsertDefaultPolicyExprs;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
 	std::string JobGridType;  // set from "GridResource" for grid universe jobs.
@@ -831,7 +843,7 @@ protected:
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
 	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
-	int query_universe(std::string & sub_type); // figure out universe, but DON'T modify the cached members
+	int query_universe(std::string & sub_type, const char * & topping); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
 	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
@@ -849,6 +861,7 @@ private:
 	int SetRequestDisk(const char * key);  /* used by SetRequestResources */
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
 	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
+	int SetProtectedURLTransferLists();    /* used by FixupTransferInputFiles*/
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,
@@ -856,7 +869,7 @@ private:
 
 	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
-	ContainerImageType image_type_from_string(const std::string &image) const;
+	ContainerImageType image_type_from_string(std::string image) const;
 
 	int s_method; //-1 represents undefined job submit method
 };

@@ -138,8 +138,7 @@ In current versions of HTCondor, New ClassAds will mimic the evaluation
 behavior of Old ClassAds. No configuration variables or submit
 description file contents should need to be changed. To eliminate this
 behavior and use only the semantics of New ClassAds, set the
-configuration variable ``STRICT_CLASSAD_EVALUATION``
-:index:`STRICT_CLASSAD_EVALUATION` to ``True``. This permits
+configuration variable :macro:`STRICT_CLASSAD_EVALUATION` to ``True``. This permits
 testing expressions to see if any adjustment is required, before a
 future version of HTCondor potentially makes New ClassAds evaluation
 behavior the default or the only option.
@@ -212,7 +211,7 @@ precedence is shown in the following example:
 .. code-block:: text
 
       - (unary negation)   (high precedence)
-      *   /
+      *  /   %
       +   - (addition, subtraction)
       <   <=   >=   >
       ==  !=  =?=  is  =!=  isnt
@@ -1068,6 +1067,23 @@ string.
     Returns ``ERROR`` if either argument is not a string or if an
     incorrect number of arguments are given.
 
+    :index:`stringListSubsetMatch()<single: stringListSubsetMatch(); ClassAd functions>`
+
+``Boolean stringListSubsetMatch(String list1, String list2 [ , String delimiter ])``
+    Returns ``TRUE`` if all item in the string ``list1`` are also in the string ``list2``, as
+    delimited by the optional ``delimiter`` string.  Returns ``FALSE`` if
+    ``list1`` has any items that are not in ``list2``. Both lists are treated as sets. Empty items
+    and duplicate items are ignored. The return value is ``TRUE`` if ``list1`` is ``UNDEFINED`` or empty
+    and ``list2`` is any string value.  The return value is ``FALSE`` if ``list1`` is any string vlaue and ``list2`` is
+    ``UNDEFINED``.  The return value is ``UNDEFINED`` if both ``list1`` and ``list2`` are ``UNDEFINED``.
+    The return value is ``ERROR``, if any of the arguments are not either strings or ``UNDEFINED``
+
+    :index:`stringListISubsetMatch()<single: stringListISubsetMatch(); ClassAd functions>`
+
+``Boolean stringListISubsetMatch(String list1, String list2 [ , String delimiter ])``
+    Same as ``stringListSubsetMatch()``, but the sets are case-insensitive.
+
+
 The following three functions utilize regular expressions as defined and
 supported by the PCRE library. See
 `http://www.pcre.org <http://www.pcre.org>`_ for complete documentation
@@ -1654,9 +1670,8 @@ the following steps on Linux:
        $ cp shared.so `condor_config_val LIBEXEC`
 
 -  Tell HTCondor to load the shared library into all tools and daemons,
-   by setting the ``CLASSAD_USER_LIBS`` :index:`CLASSAD_USER_LIBS`
-   configuration variable to the full name of the shared library. In
-   this case,
+   by setting the :macro:`CLASSAD_USER_LIBS` configuration variable to
+   the full name of the shared library. In this case,
 
    .. code-block:: condor-config
 
