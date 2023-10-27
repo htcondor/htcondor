@@ -8,6 +8,7 @@ from .classad2_impl import (
     _classad_to_string,
     _classad_to_repr,
     _exprtree_eval,
+    _exprtree_simplify,
 )
 
 from ._class_ad import ClassAd
@@ -86,4 +87,4 @@ class ExprTree:
             raise TypeError("scope must be a ClassAd")
         if target is not None and not isinstance(target, ClassAd):
             raise TypeError("target must be a ClassAd")
-        return _exprtree_simplify(self._handle, scope, target)
+        return _exprtree_simplify(self._handle, scope._handle, target._handle)

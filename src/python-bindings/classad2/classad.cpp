@@ -33,7 +33,7 @@ _classad_init_from_string( PyObject *, PyObject * args ) {
     classad::ClassAd * result = parser.ParseClassAd(from_string);
     if( result == NULL ) {
         // This was ClassAdParseError in version 1.
-        PyErr_SetString( PyExc_RuntimeError, "Unable to parse string into a ClassAd." );
+        PyErr_SetString( PyExc_SyntaxError, "Unable to parse string into a ClassAd." );
         return NULL;
     }
 
