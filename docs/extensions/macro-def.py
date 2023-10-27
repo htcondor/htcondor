@@ -19,11 +19,10 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
     # Create a new linkable target using the macro name
     targetid = text
     targetnode = nodes.target('', text, ids=[targetid], classes=["macro-def"])
-    
+    # TODO: Make Index based on configuration groupings (i.e. schedd, shadow, dagman, etc)
     # Automatically include an index entry for macro definitions
-    entries = process_index_entry(f"single: {text}; configuration definition", targetid)
     indexnode = addnodes.index()
-    indexnode['entries'] = entries
+    indexnode['entries'] = process_index_entry(f"pair: {text}; Configuration definitions", targetid)
     set_role_source_info(inliner, lineno, indexnode)
 
     return [indexnode, targetnode], []

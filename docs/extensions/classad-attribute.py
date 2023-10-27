@@ -40,11 +40,8 @@ def classad_attribute_role(name, rawtext, text, lineno, inliner, options={}, con
         attr_type = match.capitalize() + " "
 
     # Automatically include an index entry for this attribute
-    entries = process_index_entry(f"single: {text} ; {attr_type} ClassAd Attribute", text)
-    # And also build a table in the index of all the attributes for this classad type
-    entries = process_index_entry(f"single: {attr_type} ClassAd Attribute; {text}", text)
     index_node = addnodes.index()
-    index_node['entries'] = entries
+    index_node['entries'] = process_index_entry(f"pair: {text} ; {attr_type} ClassAd Attribute", text)
     set_role_source_info(inliner, lineno, index_node)
 
     return [index_node, anchor_title_node, headerlink_node], []
