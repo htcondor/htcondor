@@ -612,7 +612,7 @@ Scheduler ClassAd Attributes
 
 :classad-attribute:`TotalLocalJobsIdle`
     The total number of **local**
-    :subcom:`universe<and attributes TotalLocalJobsIdle>` jobs from
+    :subcom:`universe<and attribute TotalLocalJobsIdle>` jobs from
     this *condor_schedd* daemon that are currently idle.
 
 :classad-attribute:`TotalLocalJobsRunning`

@@ -30,7 +30,7 @@ these. One submit description may contain specifications for the queuing
 of many HTCondor jobs at once. A single invocation of *condor_submit*
 may cause one or more clusters. A cluster is a set of jobs specified in
 the submit description between
-:subcom:`queue<>` commands for which the
+:subcom:`queue` commands for which the
 executable is not changed. It is advantageous to submit multiple jobs as
 a single cluster because the schedd uses much less memory to hold the jobs.
 
@@ -99,10 +99,10 @@ Options
  **-disable**
     Disable file permission checks when submitting a job for read
     permissions on all input files, such as those defined by commands
-    :subcom:`input<>` and :subcom:`transfer_input_files<>`,
+    :subcom:`input` and :subcom:`transfer_input_files`,
     as well as write permission to output files, such as a log file
-    defined by :subcom:`log<>` and output files defined with
-    :subcom:`output<>` or :subcom:`transfer_output_files<>`.
+    defined by :subcom:`log` and output files defined with
+    :subcom:`output` or :subcom:`transfer_output_files`.
  **-debug**
     Cause debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
@@ -150,11 +150,11 @@ Options
     for the job to run, and then launches *condor_ssh_to_job* to run
     a shell. If the user would like to run the shell on a machine that
     matches a particular
-    :subcom:`requirements<>`
+    :subcom:`requirements`
     expression, the submit description file is specified, and it will
     contain the expression. Note that all policy expressions specified
     in the submit description file are honored, but any
-    :subcom:`executable<>` or :subcom:`universe<>` commands are
+    :subcom:`executable` or :subcom:`universe` commands are
     overwritten to be sleep and vanilla. The job ClassAd attribute
     ``InteractiveJob`` is set to ``True`` to identify interactive jobs
     for *condor_startd* policy usage.
@@ -163,7 +163,7 @@ Options
     consists of a single cluster classad and a digest containing the submit
     commands necessary to describe the differences between jobs.  If the ``Queue``
     statement has itemdata, then the itemdata will be sent.  Using this option
-    is equivalent to using the :subcom:`max_materialize<>` submit command.
+    is equivalent to using the :subcom:`max_materialize` submit command.
  **-allow-crlf-script**
     Changes the check for an invalid line ending on the executable
     script's ``#!`` line from an ERROR to a WARNING. The ``#!`` line
@@ -2906,12 +2906,12 @@ Submit Variables
 
 :index:`condor_submit variables`
 
-While processing the :subcom:`queue<>`
+While processing the :subcom:`queue`
 command in a submit file or from the command line, *condor_submit* will
 set the values of several automatic submit variables so that they can be
 referred to by statements in the submit file. With the exception of
 Cluster and Process, if these variables are set by the submit file, they
-will not be modified during :subcom:`queue<>` processing.
+will not be modified during :subcom:`queue` processing.
 
  ClusterId
     Set to the integer value that the ``ClusterId`` attribute that the

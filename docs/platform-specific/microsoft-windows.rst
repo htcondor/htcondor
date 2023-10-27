@@ -431,7 +431,7 @@ any files which have been created or modified and sends these files back
 to the *condor_shadow* running on the submit machine. The
 *condor_shadow* places these files into the
 :subcom:`initialdir<eviction on Windows>` specified in
-the submit description file; if no :subcom:`initialdir<>` was specified, the
+the submit description file; if no :subcom:`initialdir` was specified, the
 files go into the directory where the user invoked *condor_submit*.
 Once all the output files are safely transferred back, the job is
 removed from the queue. If, however, the *condor_startd* forcibly kills
@@ -446,14 +446,14 @@ The WM_CLOSE message is the preferred way to terminate a process on
 Windows, since this method allows the job to clean up and free any
 resources it may have allocated. When the job exits, the
 *condor_starter* cleans up any processes left behind. At this point, if
-:subcom:`when_to_transfer_output<>`
+:subcom:`when_to_transfer_output`
 is set to ``ON_EXIT`` (the default) in the job's submit description
 file, the job switches states, from Running to Idle, and no files are
-transferred back. If :subcom:`when_to_transfer_output<>` is set to
+transferred back. If :subcom:`when_to_transfer_output` is set to
 ``ON_EXIT_OR_EVICT``, then files in the job's temporary working
 directory which were changed or modified are first sent back to the
 submitting machine. If exactly which files to transfer is specified with
-:subcom:`transfer_output_files<>`,
+:subcom:`transfer_output_files`,
 then this modifies the files transferred and can affect the state of the
 job if the specified files do not exist. On an eviction, the
 *condor_shadow* places these intermediate files into a subdirectory
