@@ -1189,6 +1189,8 @@ rm -rf %{buildroot}
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 /usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
+/usr/lib64/python%{python3_version}/site-packages/classad2/
+/usr/lib64/python%{python3_version}/site-packages/htcondor2/
 %endif
 
 %files credmon-oauth
