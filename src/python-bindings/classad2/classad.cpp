@@ -29,6 +29,8 @@ _classad_init_from_string( PyObject *, PyObject * args ) {
         return NULL;
     }
 
+    handle->f = [](void * & v){ dprintf( D_ALWAYS, "[unconstructed ClassAd]\n" ); if( v != NULL ) { dprintf(D_ALWAYS, "Error!  Unconstructed ClassAd has non-NULL handle %p\n", v); } };
+
     classad::ClassAdParser parser;
     classad::ClassAd * result = parser.ParseClassAd(from_string);
     if( result == NULL ) {

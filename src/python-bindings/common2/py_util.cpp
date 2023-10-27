@@ -134,6 +134,7 @@ py_new_classad_exprtree( ExprTree * original ) {
 	if( handle->t != NULL ) { delete (ClassAd *)handle->t; }
 
 	handle->t = (void *)copy;
+	handle->f = [](void *& v) { dprintf( D_ALWAYS, "[ExprTree]\n" ); delete (classad::ExprTree *)v; v = NULL; };
 	return pyExprTree;
 }
 
