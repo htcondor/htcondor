@@ -14,8 +14,8 @@ from ornithology import (
     Condor,
 )
 
-import htcondor
-from htcondor import (
+import htcondor2 as htcondor
+from htcondor2 import (
     JobEventType,
     FileTransferEventType,
 )

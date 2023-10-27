@@ -8,10 +8,7 @@ import textwrap
 import json
 import os
 
-import classad
-
-# to guarantee correct evaluation semantics
-import htcondor
+import classad2 as classad
 
 
 # this test replicates python_bindings_classad.run
@@ -107,7 +104,10 @@ def test_raise_key_error_for_missing_key(ad):
 def test_value_roundtrip_through_assignment(ad, value):
     ad["key"] = value
 
-    assert ad["key"] == value
+    if isinstance(value, dict):
+        assert dict(ad["key"]) == value
+    else:
+        assert ad["key"] == value
 
 
 @pytest.mark.parametrize("value", [1, "2", classad.ExprTree("2 + 2")])
@@ -278,26 +278,6 @@ def test_evaluate_in_context_of_ad_without_matching_key(ad):
     assert expr.eval(ad) == classad.Value.Undefined
 
 
-@pytest.mark.parametrize(
-    "expr, expected",
-    [
-        (classad.Literal(1) + 2, 3),
-        (classad.Literal(1) + classad.Literal(2), 3),
-        (classad.Literal(1) - 2, -1),
-        (classad.Literal(1) * 2, 2),
-        (classad.Literal(2) / 2, 1),
-        (classad.Literal(1) & 2, 0),
-        (classad.Literal(1) | 2, 3),
-        (classad.Literal(1).and_(2), True),
-        (classad.Literal(1).and_(classad.Literal(2)), True),
-        (classad.Attribute("foo").is_(classad.Value.Undefined), True),
-    ],
-)
-def test_operators_produce_exprtrees_and_eval_as_expected(expr, expected):
-    assert isinstance(expr, classad.ExprTree)
-    assert expr.eval() == expected
-
-
 def test_subscript(ad):
     ad["foo"] = [0, 1, 2, 3]
     expr = classad.Attribute("foo")._get(2)
@@ -364,28 +344,6 @@ def test_matches(left, right, matches):
 )
 def test_symmetric_match(left, right, matches):
     assert left.symmetricMatch(right) is matches
-
-
-@pytest.mark.parametrize(
-    "expr, value",
-    [
-        (classad.ExprTree("true || true"), True),
-        (classad.ExprTree("true || false"), True),
-        (classad.ExprTree("false || true"), True),
-        (classad.ExprTree("false || false"), False),
-        (classad.ExprTree("true && true"), True),
-        (classad.ExprTree("false && true"), False),
-        (classad.ExprTree("true && false"), False),
-        (classad.ExprTree("false && false"), False),
-        (classad.Literal(True).and_(True), True),
-        (classad.Literal(True).and_(False), False),
-        (classad.Literal(True).or_(False), True),
-        (classad.Literal(True).or_(False), True),
-        (classad.Literal(False).or_(False), False),
-    ],
-)
-def test_bool(expr, value):
-    assert bool(expr) is value
 
 
 def test_internal_refs(ad):

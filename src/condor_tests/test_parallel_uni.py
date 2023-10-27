@@ -5,7 +5,6 @@
 # job on multiple pslots
 
 import logging
-import htcondor
 
 from ornithology import *
 

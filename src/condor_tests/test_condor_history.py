@@ -30,7 +30,7 @@ from ornithology import *
 from time import time
 import os
 import sys
-import htcondor
+import htcondor2 as htcondor
 
 #Custom class to help build job ads for history files
 class HistAdsViaCluster():

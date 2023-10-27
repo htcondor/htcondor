@@ -17,8 +17,8 @@ import logging
 import enum
 import functools
 
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

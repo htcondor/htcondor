@@ -1,7 +1,6 @@
 #!/usr/bin/env pytest
 
-import classad
-import htcondor
+import htcondor2 as htcondor
 import logging
 import time
 
@@ -90,7 +89,7 @@ def negotiator_test_job(condor):
 class TestPythonBindingsHtcondor:
 
     def test_remote_param(self, condor, collector_ad):
-        print(f"\n\nLooking for FOO in parameters...{condor.param['FOO']}\n\n")
+        print(f"\n\nLooking for FOO in parameters...{condor.config['FOO']}\n\n")
         print(f"\n\ncollector_ad: {collector_ad}\n\n")
         rparam = htcondor.RemoteParam(collector_ad)
         assert "FOO" in rparam

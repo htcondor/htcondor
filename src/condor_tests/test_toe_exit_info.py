@@ -2,7 +2,7 @@
 
 import os
 import pytest
-import htcondor
+import htcondor2 as htcondor
 import logging
 
 logger = logging.getLogger(__name__)
