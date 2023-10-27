@@ -302,8 +302,10 @@ SubmitBlob::keys( std::string & buffer ) {
 
 void
 SubmitBlob::setTransferMap( MapFile * map ) {
-    m_protected_url_map = * map;
-    m_hash.attachTransferMap(& m_protected_url_map);
+    if( map != NULL ) {
+        m_protected_url_map = * map;
+        m_hash.attachTransferMap(& m_protected_url_map);
+    }
 }
 
 

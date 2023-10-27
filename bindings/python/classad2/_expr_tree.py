@@ -52,12 +52,36 @@ class ExprTree:
 
 
     def eval(self, scope : ClassAd = None):
+        """
+        Evaluate the expression and return the corresponding Python type,
+        either a :class:`classad2.ClassAd`, a boolean, a string, a
+        :class:`datetime.datetime`, a float, an integer, a
+        :class:`classad::Value`, or a list; the list may contain any of
+        the above types, or :class:`classad2.ExprTree`s.
+
+        To evaluate an :class:`classad2.ExprTree` containing attribute
+        references, you must supply a scope.  An :class:`classad2.ExprTree`
+        does not record which :class:`classad2.ClassAd`, if any, it was
+        extracted from.
+        """
         if scope is not None and not isinstance(scope, ClassAd):
             raise TypeError("scope must be a ClassAd")
         return _exprtree_eval(self._handle, scope)
 
 
     def simplify(self, scope : ClassAd = None, target : ClassAd = None):
+        """
+        Evaluate the expression and return an ExprTree.
+
+        To evaluate an :class:`classad2.ExprTree` containing attribute
+        references, you must supply a scope.  An :class:`classad2.ExprTree`
+        does not record which :class:`classad2.ClassAd`, if any, it was
+        extracted from.
+
+        Expressions may contain `TARGET.` references, especially if they
+        were originally intended for match-making.  You may supply an
+        additional ClassAd for resolving such references.
+        """
         if scope is not None and not isinstance(scope, ClassAd):
             raise TypeError("scope must be a ClassAd")
         if target is not None and not isinstance(target, ClassAd):
