@@ -78,7 +78,6 @@ HTCondor Daemons That Do Not Run as root
 
 HTCondor is normally installed such that the HTCondor daemons have root
 permission. This allows HTCondor to run the *condor_shadow*
-:index:`condor_shadow<single: condor_shadow; HTCondor daemon>`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
 daemon and the job with the submitting user's UID and file access
 rights. When HTCondor is started as root, HTCondor jobs can access
 whatever files the user that submits the jobs can.

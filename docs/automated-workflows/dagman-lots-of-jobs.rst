@@ -192,11 +192,9 @@ the same directory as the DAG input file.
 
 One item to care about with this set up is the underlying file system
 for the pool. The transfer of files (or not) when using
-**initialdir** :index:`initialdir<single: initialdir; submit commands>` differs
-based upon the job
-**universe** :index:`universe<single: universe; submit commands>` and whether or
-not there is a shared file system. See the :doc:`/man-pages/condor_submit` 
-manual page for the details on the submit command.
+:subcom:`initialdir<and DAGman>` differs
+based upon the job :subcom:`universe<and DAGman>` and whether or
+not there is a shared file system.
 
 Submission of this set of jobs is no different than the previous
 examples. With the current working directory the same as the one

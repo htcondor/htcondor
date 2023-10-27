@@ -3031,7 +3031,7 @@ There are two current working directories for any HTCondor job: one
 where the job is submitted and a second where the job executes. When a
 user submits a job, the submit-side current working directory is the
 same as for the user when the *condor_submit* command is issued. The
-**initialdir** :index:`initialdir<single: initialdir; submit commands>` submit
+:subcom:`initialdir<and security>` submit
 command may change this, thereby allowing different jobs to have
 different working directories. This is useful when submitting large
 numbers of jobs. This submit-side current working directory remains

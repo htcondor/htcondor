@@ -1,9 +1,6 @@
 Machine ClassAd Attributes
 ==========================
 
-
-:index:`machine attributes<single: machine attributes; ClassAd>`
-
 :classad-attribute:`AcceptedWhileDraining`
     Boolean which indicates if the slot accepted its current job while
     the machine was draining.

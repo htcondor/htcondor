@@ -99,7 +99,7 @@ are
 
 -  :subcom:`vm_memory<definition>`
 -  :subcom:`vm_macaddr<definition>`
--  :subcom:`vm_networking<defintion>`
+-  :subcom:`vm_networking<definition>`
 -  :subcom:`vm_networking_type<definition>`
 -  :subcom:`vm_disk<definition>`
 

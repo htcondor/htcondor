@@ -102,9 +102,9 @@ for routing.
    the set of files transferred back when the job completes. Vanilla
    universe jobs transfer back all files created or modified, while all
    grid universe jobs, except for HTCondor-C, only transfer back the
-   **output** :index:`output<single: output; submit commands>` file, as well as
+   :subcom:`output<and job router>` file, as well as
    those explicitly listed with
-   **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
+   :subcom:`transfer_output_files<and job router>`
    Therefore, when routing jobs to grid universes other than HTCondor-C,
    it is important to explicitly specify all output files that must be
    transferred upon job completion.

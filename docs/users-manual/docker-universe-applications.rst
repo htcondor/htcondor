@@ -1,7 +1,6 @@
+:index:`docker universe` :index:`docker<single: docker; universe>`
 Docker Universe Applications
 ============================
-
-:index:`docker universe` :index:`docker<single: docker; universe>`
 
 A docker universe job instantiates a Docker container from a Docker
 image, and HTCondor manages the running of that container as an HTCondor
@@ -105,11 +104,11 @@ program on the ``/etc/hosts`` file before exiting.
 
 .. _`Docker and Networking`:
 
-Docker and Networking
----------------------
-
 :index:`Docker and Networking`
 :index:`docker<single: docker; networking>`
+
+Docker and Networking
+---------------------
 
 By default, docker universe jobs will be run with a private, NATed
 network interface.
@@ -134,9 +133,6 @@ If an administrator has defined additional, custom docker
 networks, they will be advertised in the slot attribute
 *DockerNetworks*, and any value in that list can be
 a valid argument for this keyword.
-
-:index:`docker universe`
-
 
 If the *host* network type is unavailable, you can ask Docker to forward one
 or more ports on the host into the container.  In the following example, we
