@@ -83,8 +83,12 @@ class ExprTree:
         were originally intended for match-making.  You may supply an
         additional ClassAd for resolving such references.
         """
-        if scope is not None and not isinstance(scope, ClassAd):
-            raise TypeError("scope must be a ClassAd")
-        if target is not None and not isinstance(target, ClassAd):
-            raise TypeError("target must be a ClassAd")
-        return _exprtree_simplify(self._handle, scope._handle, target._handle)
+        if scope is not None:
+            if not isinstance(scope, ClassAd):
+                raise TypeError("scope must be a ClassAd")
+            scope = scope._handle
+        if target is not None:
+            if not isinstance(target, ClassAd):
+                raise TypeError("target must be a ClassAd")
+            target = target._handle
+        return _exprtree_simplify(self._handle, scope, target)
