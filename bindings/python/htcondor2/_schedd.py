@@ -16,10 +16,11 @@ from ._common_imports import (
     DaemonType,
 )
 
-from ._query_opts import QueryOpts
 from ._job_action import JobAction
 from ._transaction_flag import TransactionFlag
 from ._submit import Submit
+# So that the typehints match version 1.
+from ._query_opt import QueryOpt as QueryOpts
 
 from .htcondor2_impl import (
     _schedd_query,
