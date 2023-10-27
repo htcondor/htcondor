@@ -715,6 +715,9 @@ rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
 # htcondor/personal.py only works with Python3
 rm -f %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/personal.py
 
+# classad3 shouldn't be distributed yet
+rm -rf %{buildroot}/usr/lib64/python%{python3_version}/site-packages/classad3
+
 %clean
 rm -rf %{buildroot}
 
