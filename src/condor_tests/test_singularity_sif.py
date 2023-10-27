@@ -21,7 +21,6 @@
 # assume success.
 
 import logging
-import htcondor
 import os,sys
 import pytest
 import subprocess
