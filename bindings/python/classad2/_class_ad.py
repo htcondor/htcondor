@@ -16,7 +16,8 @@ from .classad2_impl import (
     _classad_quote,
 )
 
-from ._parser import Parser
+# So that the typehints match version 1.
+from ._parser import ParserType as Parser
 
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta, timezone
@@ -121,7 +122,7 @@ def _convert_local_datetime_to_utc_ts(dt):
         offset = dt.astimezone().utcoffset() // timedelta(seconds=1)
         return naive_ts - offset
 
-def _parse_ads_generator(input, parser=Parser.Auto):
+def _parse_ads_generator(input, parser : Parser = Parser.Auto):
     total_offset = 0
     if not isinstance(input, str):
         total_offset = input.tell()
