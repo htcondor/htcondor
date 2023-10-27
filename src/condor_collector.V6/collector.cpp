@@ -391,7 +391,7 @@ void CollectorDaemon::Init()
 	daemonCore->Register_CommandWithPayload(UPDATE_CKPT_SRVR_AD,"UPDATE_CKPT_SRVR_AD",
 		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
-		receive_update,"receive_update",ALLOW);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
 		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
