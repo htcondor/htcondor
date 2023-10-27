@@ -2330,7 +2330,7 @@ Configuration examples and the settings of configuration variables using
 the *condor_config_val* command complete this section.
 
 Inside the HTCondor daemons or tools that use DaemonCore (see the
-:doc:`/admin-manual/daemoncore` section), most
+:ref:`admin-manual/installation-startup-shutdown-reconfiguration:DaemonCore` section), most
 tasks are accomplished by sending commands to another HTCondor daemon.
 These commands are represented by an integer value to specify which
 command is being requested, followed by any optional information that
@@ -3031,7 +3031,7 @@ There are two current working directories for any HTCondor job: one
 where the job is submitted and a second where the job executes. When a
 user submits a job, the submit-side current working directory is the
 same as for the user when the *condor_submit* command is issued. The
-**initialdir** :index:`initialdir<single: initialdir; submit commands>` submit
+:subcom:`initialdir<and security>` submit
 command may change this, thereby allowing different jobs to have
 different working directories. This is useful when submitting large
 numbers of jobs. This submit-side current working directory remains

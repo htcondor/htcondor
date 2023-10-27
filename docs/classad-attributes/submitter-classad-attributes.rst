@@ -1,8 +1,6 @@
 Submitter ClassAd Attributes
 ============================
 
-:index:`submitter attributes<single: submitter attributes; ClassAd>`
-
 :classad-attribute:`CondorVersion`
     A string containing the HTCondor version number, the release date,
     and the build identification number.

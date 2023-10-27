@@ -21,7 +21,7 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
     targetnode = nodes.target('', text, ids=[targetid], classes=["macro-def"])
     
     # Automatically include an index entry for macro definitions
-    entries = process_index_entry(text, targetid)
+    entries = process_index_entry(f"single: {text}; configuration definition", targetid)
     indexnode = addnodes.index()
     indexnode['entries'] = entries
     set_role_source_info(inliner, lineno, indexnode)

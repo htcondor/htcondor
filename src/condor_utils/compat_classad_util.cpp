@@ -174,8 +174,7 @@ bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value)
 	}
 
 	if (kind == classad::ExprTree::LITERAL_NODE) {
-		classad::Value::NumberFactor factor;
-		((classad::Literal*)expr)->GetComponents(value, factor);
+		((classad::Literal*)expr)->GetComponents(value);
 		return true;
 	}
 
@@ -265,7 +264,6 @@ bool ExprTreeMayDollarDollarExpand(classad::ExprTree * tree,  std::string & unpa
 	if ( ! tree) return false;
 
 	if (tree->GetKind() == classad::ExprTree::LITERAL_NODE) {
-		classad::Value::NumberFactor factor;
 		const auto non_string_types = classad::Value::ValueType::ERROR_VALUE
 				| classad::Value::ValueType::UNDEFINED_VALUE
 				| classad::Value::ValueType::BOOLEAN_VALUE
@@ -275,7 +273,7 @@ bool ExprTreeMayDollarDollarExpand(classad::ExprTree * tree,  std::string & unpa
 				| classad::Value::ValueType::ABSOLUTE_TIME_VALUE;
 
 		classad::Literal * lit = ((classad::Literal*)tree);
-		if (lit->getValue(factor).GetType() & non_string_types) {
+		if (lit->getValue().GetType() & non_string_types) {
 			return false; // these types cannot have $$() expansions
 		}
 
@@ -458,8 +456,7 @@ int walk_attr_refs (
 		case classad::ExprTree::LITERAL_NODE: {
 			classad::ClassAd * ad;
 			classad::Value val;
-			classad::Value::NumberFactor	factor;
-			((const classad::Literal*)tree)->GetComponents( val, factor );
+			((const classad::Literal*)tree)->GetComponents( val);
 			if (val.IsClassAdValue(ad)) {
 				iret += walk_attr_refs(ad, pfn, pv);
 			}
@@ -593,8 +590,7 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 		case classad::ExprTree::LITERAL_NODE: {
 			classad::ClassAd * ad;
 			classad::Value val;
-			classad::Value::NumberFactor	factor;
-			((classad::Literal*)tree)->GetComponents( val, factor );
+			((classad::Literal*)tree)->GetComponents( val);
 			if (val.IsClassAdValue(ad)) {
 				iret += RewriteAttrRefs(ad, mapping);
 			}

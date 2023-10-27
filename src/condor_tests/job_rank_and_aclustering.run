@@ -51,10 +51,6 @@ my $ClusterId = 0;
 my $jobcount = 5;
 my $runcount = 0;
 
-#Do a job before setting tesing exit codes
-print "First test basic job\n";
-my $result = SimpleJob::RunCheck(); # jobid 1
-
 my $GetClusterId = sub {
 	my $cid = shift;
 	$ClusterId = $cid;
@@ -145,7 +141,7 @@ my $appended_submit_info = "
 	+JobDataSet = \"S0\$(Process)\"
 ";
 
-$result = SimpleJob::RunCheck(
+my $result = SimpleJob::RunCheck(
 	append_submit_commands => $appended_submit_info,
 	queue_sz => $jobcount,
 	duration => 6000,

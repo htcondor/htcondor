@@ -712,9 +712,8 @@ so that while in the Unclaimed state, if the ``START`` expression
 locally evaluates to FALSE, the machine returns to the Owner state by
 transition **2**.
 
-When in the Unclaimed state, the ``RUNBENCHMARKS``
-:index:`RUNBENCHMARKS` expression is relevant. If
-``RUNBENCHMARKS`` evaluates to TRUE while the machine is in the
+When in the Unclaimed state, the :macro:`RUNBENCHMARKS` expression is relevant.
+If ``RUNBENCHMARKS`` evaluates to TRUE while the machine is in the
 Unclaimed state, then the machine will transition from the Idle activity
 to the Benchmarking activity (transition **3**) and perform benchmarks
 to determine ``MIPS`` and ``KFLOPS``. When the benchmarks complete, the
@@ -1133,44 +1132,44 @@ State/Activity Transition Expression Summary
 This section is a summary of the information from the previous sections.
 It serves as a quick reference.
 
-``START`` :index:`START`
+:macro:`START`
     When TRUE, the machine is willing to spawn a remote HTCondor job.
 
-``RUNBENCHMARKS`` :index:`RUNBENCHMARKS`
+:macro:`RUNBENCHMARKS`
     While in the Unclaimed state, the machine will run benchmarks
     whenever TRUE.
 
-``MATCH_TIMEOUT`` :index:`MATCH_TIMEOUT`
+:macro:`MATCH_TIMEOUT`
     If the machine has been in the Matched state longer than this value,
     it will transition to the Owner state.
 
-``WANT_SUSPEND`` :index:`WANT_SUSPEND`
+:macro:`WANT_SUSPEND`
     If ``True``, the machine evaluates the ``SUSPEND`` expression to see
     if it should transition to the Suspended activity. If any value
     other than ``True``, the machine will look at the ``PREEMPT``
     expression.
 
-``SUSPEND`` :index:`SUSPEND`
+:macro:`SUSPEND`
     If ``WANT_SUSPEND`` is ``True``, and the machine is in the
     Claimed/Busy state, it enters the Suspended activity if ``SUSPEND``
     is ``True``.
 
-``CONTINUE`` :index:`CONTINUE`
+:macro:`CONTINUE`
     If the machine is in the Claimed/Suspended state, it enter the Busy
     activity if ``CONTINUE`` is ``True``.
 
-``PREEMPT`` :index:`PREEMPT`
+:macro:`PREEMPT`
     If the machine is either in the Claimed/Suspended activity, or is in
     the Claimed/Busy activity and ``WANT_SUSPEND`` is FALSE, the machine
     enters the Claimed/Retiring state whenever ``PREEMPT`` is TRUE.
 
-``CLAIM_WORKLIFE`` :index:`CLAIM_WORKLIFE`
+:macro:`CLAIM_WORKLIFE`
     This expression specifies the number of seconds after which a claim
     will stop accepting additional jobs. This configuration macro is
     fully documented here: :ref:`admin-manual/configuration-macros:condor_startd
     configuration file macros`.
 
-``MachineMaxVacateTime`` :index:`MachineMaxVacateTime`
+:macro:`MachineMaxVacateTime`
     When the machine enters the Preempting/Vacating state, this
     expression specifies the maximum time in seconds that the
     *condor_startd* will wait for the job to finish. The job may adjust
@@ -1181,10 +1180,10 @@ It serves as a quick reference.
     left than the machine's maximum vacate time setting, then retirement
     time will be converted into vacating time, up to the amount of
     ``JobMaxVacateTime``. Once the vacating time expires, the job is
-    hard-killed. The ``KILL`` :index:`KILL` expression may be used
+    hard-killed. The :macro:`KILL` expression may be used
     to abort the graceful shutdown of the job at any time.
 
-``MAXJOBRETIREMENTTIME`` :index:`MAXJOBRETIREMENTTIME`
+:macro:`MAXJOBRETIREMENTTIME`
     If the machine is in the Claimed/Retiring state, jobs which have run
     for less than the number of seconds specified by this expression
     will not be hard-killed. The *condor_startd* will wait for the job
@@ -1215,38 +1214,37 @@ It serves as a quick reference.
 
     By default the *condor_negotiator* will not match jobs to a slot
     with retirement time remaining. This behavior is controlled by
-    ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION``
-    :index:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
+    :macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
 
-``WANT_VACATE`` :index:`WANT_VACATE`
+:macro:`WANT_VACATE`
     This is checked only when the ``PREEMPT`` expression is ``True`` and
     the machine enters the Preempting state. If ``WANT_VACATE`` is
     ``True``, the machine enters the Vacating activity. If it is
     ``False``, the machine will proceed directly to the Killing
     activity.
 
-``KILL`` :index:`KILL`
+:macro:`KILL`
     If the machine is in the Preempting/Vacating state, it enters
     Preempting/Killing whenever ``KILL`` is ``True``.
 
-``KILLING_TIMEOUT`` :index:`KILLING_TIMEOUT`
+:macro:`KILLING_TIMEOUT`
     If the machine is in the Preempting/Killing state for longer than
     ``KILLING_TIMEOUT`` seconds, the *condor_startd* sends a SIGKILL to
     the *condor_starter* and all its children to try to kill the job as
     quickly as possible.
 
-``RANK`` :index:`RANK`
+:macro:`RANK`
     If this expression evaluates to a higher number for a pending
     resource request than it does for the current request, the machine
     may preempt the current request (enters the Preempting/Vacating
     state). When the preemption is complete, the machine enters the
     Claimed/Idle state with the new resource request claiming it.
 
-``START_BACKFILL`` :index:`START_BACKFILL`
+:macro:`START_BACKFILL`
     When TRUE, if the machine is otherwise idle, it will enter the
     Backfill state and spawn a backfill computation (using BOINC).
 
-``EVICT_BACKFILL`` :index:`EVICT_BACKFILL`
+:macro:`EVICT_BACKFILL`
     When TRUE, if the machine is currently running a backfill
     computation, it will kill the BOINC client and return to the
     Owner/Idle state.
@@ -1672,7 +1670,7 @@ Or, if slot 1 should be reserved for interactive jobs:
     START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 
 Multi-Core Machine Terminology
-''''''''''''''''''''''''''''''
+------------------------------
 
 :index:`configuration<single: configuration; SMP machines>`
 :index:`configuration<single: configuration; multi-core machines>`
@@ -1900,7 +1898,7 @@ Define slot types.
         NUM_SLOTS_TYPE_2 = 2
 
     A job may request these local machine resources using the syntax
-    **request_<name>** :index:`request_<name><single: request_<name>; submit commands>`,
+    :subcom:`request_\<name\><with partitionable slots>`
     as described in :ref:`admin-manual/ep-policy-configuration:*condor_startd*
     policy configuration`. This example shows a portion of a submit description
     file that requests cogs and an actuator:
@@ -1976,18 +1974,15 @@ console activity and currently running jobs would suspend.
 This example policy is controlled with the following configuration
 variables.
 
--  ``SLOTS_CONNECTED_TO_CONSOLE``
-   :index:`SLOTS_CONNECTED_TO_CONSOLE`, with definition at
+-  :macro:`SLOTS_CONNECTED_TO_CONSOLE`, with definition at
    the :ref:`admin-manual/configuration-macros:condor_startd configuration file
    macros` section
 
--  ``SLOTS_CONNECTED_TO_KEYBOARD``
-   :index:`SLOTS_CONNECTED_TO_KEYBOARD`, with definition at
+-  :macro:`SLOTS_CONNECTED_TO_KEYBOARD`, with definition at
    the :ref:`admin-manual/configuration-macros:condor_startd configuration file
    macros` section
 
--  ``DISCONNECTED_KEYBOARD_IDLE_BOOST``
-   :index:`DISCONNECTED_KEYBOARD_IDLE_BOOST`, with definition at
+-  :macro:`DISCONNECTED_KEYBOARD_IDLE_BOOST`, with definition at
    the :ref:`admin-manual/configuration-macros:condor_startd configuration file
    macros` section
 
@@ -2028,104 +2023,8 @@ policy that is different for each of the two slots will be of the form
 where (PolicyForSlot1) and (PolicyForSlot2) are the desired expressions
 for each slot.
 
-Load Average for Multi-core Machines
-''''''''''''''''''''''''''''''''''''
-
-:index:`CondorLoadAvg<single: CondorLoadAvg; ClassAd machine attribute>`
-:index:`LoadAvg<single: LoadAvg; ClassAd machine attribute>`
-:index:`TotalCondorLoadAvg<single: TotalCondorLoadAvg; ClassAd machine attribute>`
-:index:`TotalLoadAvg<single: TotalLoadAvg; ClassAd machine attribute>`
-
-Most operating systems define the load average for a multi-core machine
-as the total load on all cores. For example, a 4-core machine with 3
-CPU-bound processes running at the same time will have a load of 3.0. In
-HTCondor, we maintain this view of the total load average and publish it
-in all resource ClassAds as ``TotalLoadAvg``.
-
-HTCondor also provides a per-core load average for multi-core machines.
-This nicely represents the model that each node on a multi-core machine
-is a slot, separate from the other nodes. All of the default,
-single-core policy expressions can be used directly on multi-core
-machines, without modification, since the ``LoadAvg`` and
-``CondorLoadAvg`` attributes are the per-slot versions, not the total,
-multi-core wide versions.
-
-The per-core load average on multi-core machines is an HTCondor
-invention. No system call exists to ask the operating system for this
-value. HTCondor already computes the load average generated by HTCondor
-on each slot. It does this by close monitoring of all processes spawned
-by any of the HTCondor daemons, even ones that are orphaned and then
-inherited by *init*. This HTCondor load average per slot is reported as
-the attribute ``CondorLoadAvg`` in all resource ClassAds, and the total
-HTCondor load average for the entire machine is reported as
-``TotalCondorLoadAvg``. The total, system-wide load average for the
-entire machine is reported as ``TotalLoadAvg``. Basically, HTCondor
-walks through all the slots and assigns out portions of the total load
-average to each one. First, HTCondor assigns the known HTCondor load
-average to each node that is generating load. If there is any load
-average left in the total system load, it is considered an owner load.
-Any slots HTCondor believes are in the Owner state, such as ones that
-have keyboard activity, are the first to get assigned this owner load.
-HTCondor hands out owner load in increments of at most 1.0, so generally
-speaking, no slot has a load average above 1.0. If HTCondor runs out of
-total load average before it runs out of slots, all the remaining
-machines believe that they have no load average at all. If, instead,
-HTCondor runs out of slots and it still has owner load remaining,
-HTCondor starts assigning that load to HTCondor nodes as well, giving
-individual nodes with a load average higher than 1.0.
-
-Debug Logging in the Multi-Core *condor_startd* Daemon
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-This section describes how the *condor_startd* daemon handles its
-debugging messages for multi-core machines. In general, a given log
-message will either be something that is machine-wide, such as reporting
-the total system load average, or it will be specific to a given slot.
-Any log entries specific to a slot have an extra word printed out in the
-entry with the slot number. So, for example, here's the output about
-system resources that are being gathered (with ``D_FULLDEBUG`` and
-``D_LOAD`` turned on) on a 2-core machine with no HTCondor activity, and
-the keyboard connected to both slots:
-
-.. code-block:: text
-
-    11/25 18:15 Swap space: 131064
-    11/25 18:15 number of Kbytes available for (/home/condor/execute): 1345063
-    11/25 18:15 Looking up RESERVED_DISK parameter
-    11/25 18:15 Reserving 5120 Kbytes for file system
-    11/25 18:15 Disk space: 1339943
-    11/25 18:15 Load avg: 0.340000 0.800000 1.170000
-    11/25 18:15 Idle Time: user= 0 , console= 4 seconds
-    11/25 18:15 SystemLoad: 0.340   TotalCondorLoad: 0.000  TotalOwnerLoad: 0.340
-    11/25 18:15 slot1: Idle time: Keyboard: 0        Console: 4
-    11/25 18:15 slot1: SystemLoad: 0.340  CondorLoad: 0.000  OwnerLoad: 0.340
-    11/25 18:15 slot2: Idle time: Keyboard: 0        Console: 4
-    11/25 18:15 slot2: SystemLoad: 0.000  CondorLoad: 0.000  OwnerLoad: 0.000
-    11/25 18:15 slot1: State: Owner           Activity: Idle
-    11/25 18:15 slot2: State: Owner           Activity: Idle
-
-If, on the other hand, this machine only had one slot connected to the
-keyboard and console, and the other slot was running a job, it might
-look something like this:
-
-.. code-block:: text
-
-    11/25 18:19 Load avg: 1.250000 0.910000 1.090000
-    11/25 18:19 Idle Time: user= 0 , console= 0 seconds
-    11/25 18:19 SystemLoad: 1.250   TotalCondorLoad: 0.996  TotalOwnerLoad: 0.254
-    11/25 18:19 slot1: Idle time: Keyboard: 0        Console: 0
-    11/25 18:19 slot1: SystemLoad: 0.254  CondorLoad: 0.000  OwnerLoad: 0.254
-    11/25 18:19 slot2: Idle time: Keyboard: 1496     Console: 1496
-    11/25 18:19 slot2: SystemLoad: 0.996  CondorLoad: 0.996  OwnerLoad: 0.000
-    11/25 18:19 slot1: State: Owner           Activity: Idle
-    11/25 18:19 slot2: State: Claimed         Activity: Busy
-
-Shared system resources are printed without the header, such as total
-swap space, and slot-specific messages, such as the load average or
-state of each slot, get the slot number appended.
-
 Configuring GPUs
-''''''''''''''''
+----------------
 
 :index:`configuration<single: configuration; GPUs>`
 :index:`to use GPUs<single: to use GPUs; configuration>`
@@ -2214,7 +2113,7 @@ constraint expression may be truncated.
 
 
 Configuring STARTD_ATTRS on a per-slot basis
-'''''''''''''''''''''''''''''''''''''''''''''
+--------------------------------------------
 
 The :macro:`STARTD_ATTRS`  settings can be configured on a per-slot basis. The
 *condor_startd* daemon builds the list of items to advertise by
@@ -2271,7 +2170,7 @@ slot3:
     favorite_season = "summer"
 
 Dynamic Provisioning: Partitionable and Dynamic Slots
-'''''''''''''''''''''''''''''''''''''''''''''''''''''
+-----------------------------------------------------
 
 :index:`dynamic` :index:`dynamic<single: dynamic; slots>`
 :index:`subdividing slots<single: subdividing slots; slots>` :index:`dynamic slots`
@@ -2450,16 +2349,13 @@ If a job does not specify the required number of CPUs, amount of memory,
 or disk space, there are ways for the administrator to set default
 values for all of these parameters.
 
-:index:`JOB_DEFAULT_REQUESTCPUS`
-:index:`JOB_DEFAULT_REQUESTMEMORY`
-:index:`JOB_DEFAULT_REQUESTDISK`
 First, if any of these attributes are not set in the submit description
 file, there are three variables in the configuration file that
 condor_submit will use to fill in default values. These are
 
--  ``JOB_DEFAULT_REQUESTCPUS``
--  ``JOB_DEFAULT_REQUESTMEMORY``
--  ``JOB_DEFAULT_REQUESTDISK``
+-  :macro:`JOB_DEFAULT_REQUESTCPUS`
+-  :macro:`JOB_DEFAULT_REQUESTMEMORY`
+-  :macro:`JOB_DEFAULT_REQUESTDISK`
 
 The value of these variables can be ClassAd expressions. The default
 values for these variables, should they not be set are
@@ -2475,9 +2371,6 @@ Note that these default values are chosen such that jobs matched to
 partitionable slots function similar to static slots.
 These variables do not apply to **batch** grid universe jobs.
 
-:index:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
-:index:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`
-:index:`MODIFY_REQUEST_EXPR_REQUESTDISK`
 Once the job has been matched, and has made it to the execute machine,
 the *condor_startd* has the ability to modify these resource requests
 before using them to size the actual dynamic slots carved out of the
@@ -2490,58 +2383,811 @@ reuse the newly created slot when the initial job is done using it.
 The *condor_startd* configuration variables which control this and
 their defaults are
 
+- :macro:`MODIFY_REQUEST_EXPR_REQUESTCPUS` = quantize(RequestCpus, {1})
+- :macro:`MODIFY_REQUEST_EXPR_REQUESTMEMORY` = quantize(RequestMemory, {128})
+- :macro:`MODIFY_REQUEST_EXPR_REQUESTDISK` = quantize(RequestDisk, {1024})
+
+Startd Cron
+-----------
+
+:index:`Startd Cron`
+:index:`Schedd Cron`
+
+Daemon ClassAd Hooks
+''''''''''''''''''''
+
+:index:`Daemon ClassAd Hooks<single: Daemon ClassAd Hooks; Hooks>`
+:index:`Daemon ClassAd Hooks`
+:index:`Startd Cron`
+:index:`Schedd Cron`
+:index:`see Daemon ClassAd Hooks<single: see Daemon ClassAd Hooks; Startd Cron functionality>`
+:index:`see Daemon ClassAd Hooks<single: see Daemon ClassAd Hooks; Schedd Cron functionality>`
+
+Overview
+''''''''
+
+The Startd Cron and Schedd Cron *Daemon ClassAd Hooks* mechanism are
+used to run executables (called jobs) directly from the *condor_startd* and *condor_schedd* daemons.
+The output from these jobs is incorporated into the machine ClassAd
+generated by the respective daemon. This mechanism and associated jobs
+have been identified by various names, including the Startd Cron,
+dynamic attributes, and a distribution of executables collectively known
+as Hawkeye.
+
+Pool management tasks can be enhanced by using a daemon's ability to
+periodically run executables. The executables are expected to generate
+ClassAd attributes as their output; these ClassAds are then incorporated
+into the machine ClassAd. Policy expressions can then reference dynamic
+attributes (created by the ClassAd hook jobs) in the machine ClassAd.
+
+Job output
+''''''''''
+
+The output of the job is incorporated into one or more ClassAds when the
+job exits. When the job outputs the special line:
+
+.. code-block:: text
+
+      - update:true
+
+the output of the job is merged into all proper ClassAds, and an update
+goes to the *condor_collector* daemon.
+
+As of version 8.3.0, it is possible for a Startd Cron job (but not a
+Schedd Cron job) to define multiple ClassAds, using the mechanism
+defined below:
+
+-  An output line starting with ``'-'`` has always indicated
+   end-of-ClassAd. The ``'-'`` can now be followed by a uniqueness tag
+   to indicate the name of the ad that should be replaced by the new ad.
+   This name is joined to the name of the Startd Cron job to produced a
+   full name for the ad. This allows a single Startd Cron job to return
+   multiple ads by giving each a unique name, and to replace multiple
+   ads by using the same unique name as a previous invocation. The
+   optional uniqueness tag can also be followed by the optional keyword
+   ``update:<bool>``, which can be used to override the Startd Cron
+   configuration and suppress or force immediate updates.
+
+   In other words, the syntax is:
+
+   - [*name* ] [**update:** *bool*]
+
+-  Each ad can contain one of four possible attributes to control what
+   slot ads the ad is merged into when the *condor_startd* sends
+   updates to the collector. These attributes are, in order of highest
+   to lower priority (in other words, if ``SlotMergeConstraint``
+   matches, the other attributes are not considered, and so on):
+
+   -  **SlotMergeConstraint** *expression*: the current ad is merged
+      into all slot ads for which this expression is true. The
+      expression is evaluated with the slot ad as the TARGET ad.
+   -  **SlotName|Name** *string*: the current ad is merged into all
+      slots whose ``Name`` attributes match the value of ``SlotName`` up
+      to the length of ``SlotName``.
+   -  **SlotTypeId** *integer*: the current ad is merged into all ads
+      that have the same value for their ``SlotTypeId`` attribute.
+   -  **SlotId** *integer*: the current ad is merged into all ads that
+      have the same value for their ``SlotId`` attribute.
+
+For example, if the Startd Cron job returns:
+
+.. code-block:: text
+
+      Value=1
+      SlotId=1
+      -s1
+      Value=2
+      SlotId=2
+      -s2
+      Value=10
+      - update:true
+
+it will set ``Value=10`` for all slots except slot1 and slot2. On those
+slots it will set ``Value=1`` and ``Value=2`` respectively. It will also
+send updates to the collector immediately.
+
+Configuration
+'''''''''''''
+
+Configuration variables related to Daemon ClassAd Hooks are defined in
+:ref:`admin-manual/configuration-macros:Configuration File Entries Relating to Daemon ClassAd Hooks: Startd Cron and Schedd Cron`
+
+Here is a complete configuration example. It defines all three of the
+available types of jobs: ones that use the *condor_startd*, benchmark
+jobs, and ones that use the *condor_schedd*.
+
 .. code-block:: condor-config
 
-    MODIFY_REQUEST_EXPR_REQUESTCPUS = quantize(RequestCpus, {1})
-    MODIFY_REQUEST_EXPR_REQUESTMEMORY = quantize(RequestMemory, {128})
-    MODIFY_REQUEST_EXPR_REQUESTDISK = quantize(RequestDisk, {1024})
+    #
+    # Startd Cron Stuff
+    #
+    # auxiliary variable to use in identifying locations of files
+    MODULES = $(ROOT)/modules
 
-Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-:index:`DISK usage`
-:index:`per job scratch filesystem`
+    STARTD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
+    STARTD_CRON_MAX_JOB_LOAD = 0.2
+    STARTD_CRON_JOBLIST =
 
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
+    # Test job
+    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) test
+    STARTD_CRON_TEST_MODE = OneShot
+    STARTD_CRON_TEST_RECONFIG_RERUN = True
+    STARTD_CRON_TEST_PREFIX = test_
+    STARTD_CRON_TEST_EXECUTABLE = $(MODULES)/test
+    STARTD_CRON_TEST_KILL = True
+    STARTD_CRON_TEST_ARGS = abc 123
+    STARTD_CRON_TEST_SLOTS = 1
+    STARTD_CRON_TEST_JOB_LOAD = 0.01
 
+    # job 'date'
+    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) date
+    STARTD_CRON_DATE_MODE = Periodic
+    STARTD_CRON_DATE_EXECUTABLE = $(MODULES)/date
+    STARTD_CRON_DATE_PERIOD = 15s
+    STARTD_CRON_DATE_JOB_LOAD = 0.01
 
-On Linux systems, when HTCondor is started as root, it optionally has the ability to create
-a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
-from using more scratch space than provisioned.  This also requires that the disk is managed
-with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
-this to work, in addition to the above requirements:
+    # Job 'foo'
+    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) foo
+    STARTD_CRON_FOO_EXECUTABLE = $(MODULES)/foo
+    STARTD_CRON_FOO_PREFIX = Foo
+    STARTD_CRON_FOO_MODE = Periodic
+    STARTD_CRON_FOO_PERIOD = 10m
+    STARTD_CRON_FOO_JOB_LOAD = 0.2
 
-.. code-block:: condor-config
+    #
+    # Benchmark Stuff
+    #
+    BENCHMARKS_JOBLIST = mips kflops
 
-    THINPOOL_VOLUME_GROUP_NAME = vgname
-    THINPOOL_NAME = htcondor
-    STARTD_ENFORCE_DISK_LIMITS = true
+    # MIPS benchmark
+    BENCHMARKS_MIPS_EXECUTABLE = $(LIBEXEC)/condor_mips
+    BENCHMARKS_MIPS_JOB_LOAD = 1.0
 
+    # KFLOPS benchmark
+    BENCHMARKS_KFLOPS_EXECUTABLE = $(LIBEXEC)/condor_kflops
+    BENCHMARKS_KFLOPS_JOB_LOAD = 1.0
 
-THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
-disk space to provision all the scratch directories for all running jobs on a worker node.
-THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
-be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_LIMITS is a boolean.  When
-true, if a job fills up the filesystem created for it, the starter will put the job on hold
-with the out of resources hold code (34).  This is the recommended value.  If false, should
-the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors
-and exit with an appropriate code in every part of the job that writes to the filesystem, including
-third party libraries.
+    #
+    # Schedd Cron Stuff. Unlike the Startd,
+    # a restart of the Schedd is required for changes to take effect
+    #
+    SCHEDD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
+    SCHEDD_CRON_JOBLIST =
 
-Note that the ephemeral filesystem created for the job is private to the job, so the contents
-of that filesystem are not visible outside the process hierarchy.  The administrator can use
-the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
-As this filesystem will never live through a system reboot, it is mounted with mount options
-that optimize for performance, not reliability, and may improve performance for I/O heavy
+    # Test job
+    SCHEDD_CRON_JOBLIST = $(SCHEDD_CRON_JOBLIST) test
+    SCHEDD_CRON_TEST_MODE = OneShot
+    SCHEDD_CRON_TEST_RECONFIG_RERUN = True
+    SCHEDD_CRON_TEST_PREFIX = test_
+    SCHEDD_CRON_TEST_EXECUTABLE = $(MODULES)/test
+    SCHEDD_CRON_TEST_PERIOD = 5m
+    SCHEDD_CRON_TEST_KILL = True
+    SCHEDD_CRON_TEST_ARGS = abc 123
+
+:index:`Hooks`
+
+Docker Universe
+---------------
+
+:index:`set up<single: set up; docker universe>`
+:index:`for the docker universe<single: for the docker universe; installation>`
+:index:`docker<single: docker; universe>`
+:index:`set up for the docker universe<single: set up for the docker universe; universe>`
+
+The execution of a docker universe job causes the instantiation of a
+Docker container on an execute host.
+
+The docker universe job is mapped to a vanilla universe job, and the
+submit description file must specify the submit command
+:subcom:`docker_image<definition>` to
+identify the Docker image. The job's ``requirement`` ClassAd attribute
+is automatically appended, such that the job will only match with an
+execute machine that has Docker installed.
+:index:`HasDocker<single: HasDocker; ClassAd machine attribute>`
+
+The Docker service must be pre-installed on each execute machine that
+can execute a docker universe job. Upon start up of the *condor_startd*
+daemon, the capability of the execute machine to run docker universe
+jobs is probed, and the machine ClassAd attribute ``HasDocker`` is
+advertised for a machine that is capable of running Docker universe
 jobs.
 
+When a docker universe job is matched with a Docker-capable execute
+machine, HTCondor invokes the Docker CLI to instantiate the
+image-specific container. The job's scratch directory tree is mounted as
+a Docker volume. When the job completes, is put on hold, or is evicted,
+the container is removed.
+
+An administrator of a machine can optionally make additional directories
+on the host machine readable and writable by a running container. To do
+this, the admin must first give an HTCondor name to each directory with
+the DOCKER_VOLUMES parameter. Then, each volume must be configured with
+the path on the host OS with the DOCKER_VOLUME_DIR_XXX parameter.
+Finally, the parameter DOCKER_MOUNT_VOLUMES tells HTCondor which of
+these directories to always mount onto containers running on this
+machine.
+
+For example,
+
+.. code-block:: condor-config
+
+    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
+    DOCKER_VOLUME_DIR_SOME_DIR = /path1
+    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2
+    DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
+
+The *condor_startd* will advertise which docker volumes it has
+available for mounting with the machine attributes
+HasDockerVolumeSOME_NAME = true so that jobs can match to machines with
+volumes they need.
+
+Optionally, if the directory name is two directories, separated by a
+colon, the first directory is the name on the host machine, and the
+second is the value inside the container. If a ":ro" is specified after
+the second directory name, the volume will be mounted read-only inside
+the container.
+
+These directories will be bind-mounted unconditionally inside the
+container. If an administrator wants to bind mount a directory only for
+some jobs, perhaps only those submitted by some trusted user, the
+setting :macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF` may be used. This is a
+class ad expression, evaluated in the context of the job ad and the
+machine ad. Only when it evaluted to TRUE, is the volume mounted.
+Extending the above example,
+
+.. code-block:: condor-config
+
+    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
+    DOCKER_VOLUME_DIR_SOME_DIR = /path1
+    DOCKER_VOLUME_DIR_SOME_DIR_MOUNT_IF = WantSomeDirMounted && Owner == "smith"
+    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2
+    DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
+
+In this case, the directory /path1 will get mounted inside the container
+only for jobs owned by user "smith", and who set +WantSomeDirMounted =
+true in their submit file.
+
+In addition to installing the Docker service, the single configuration
+variable :macro:`DOCKER` must be set. It defines the
+location of the Docker CLI and can also specify that the
+*condor_starter* daemon has been given a password-less sudo permission
+to start the container as root. Details of the :macro:`DOCKER` configuration
+variable are in the :ref:`admin-manual/configuration-macros:condor_startd
+configuration file macros` section.
+
+Docker must be installed as root by following these steps on an
+Enterprise Linux machine.
+
+#. Acquire and install the docker-engine community edition by following
+   the installations instructions from docker.com
+#. Set up the groups:
+
+   .. code-block:: console
+
+        $ usermod -aG docker condor
+
+#. Invoke the docker software:
+
+   .. code-block:: console
+
+         $ systemctl start docker
+         $ systemctl enable docker
+
+#. Reconfigure the execute machine, such that it can set the machine
+   ClassAd attribute ``HasDocker``:
+
+   .. code-block:: console
+
+         $ condor_reconfig
+
+#. Check that the execute machine properly advertises that it is
+   docker-capable with:
+
+   .. code-block:: console
+
+         $ condor_status -l | grep -i docker
+
+   The output of this command line for a correctly-installed and
+   docker-capable execute host will be similar to
+
+   .. code-block:: condor-classad
+
+        HasDocker = true
+        DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
+
+By default, HTCondor will keep the 8 most recently used Docker images on the
+local machine. This number may be controlled with the configuration variable
+:macro:`DOCKER_IMAGE_CACHE_SIZE`, to increase or decrease the number of images,
+and the corresponding disk space, used by Docker.
+
+By default, Docker containers will be run with all rootly capabilities dropped,
+and with setuid and setgid binaries disabled, for security reasons. If you need
+to run containers with root privilege, you may set the configuration parameter
+:macro:`DOCKER_DROP_ALL_CAPABILITIES` to an expression that evaluates to false.
+This expression is evaluted in the context of the machine ad (my) and the job
+ad (target).
+
+Docker support an enormous number of command line options when creating
+containers. While HTCondor tries to map as many useful options from submit
+files and machine descriptions to command line options, an administrator may
+want additional options passed to the docker container create command. To do
+so, the parameter :macro:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will
+append these to the docker container create command.
+
+Docker universe jobs may fail to start on certain Linux machines when
+SELinux is enabled. The symptom is a permission denied error when
+reading or executing from the condor scratch directory. To fix this
+problem, an administrator will need to run the following command as root
+on the execute directories for all the startd machines:
+
+.. code-block:: console
+
+    $ chcon -Rt svirt_sandbox_file_t /var/lib/condor/execute
+
+
+All docker universe jobs can request either host-based networking
+or no networking at all.  The latter might be for security reasons.
+If the worker node administrator has defined additional custom docker
+networks, perhaps a VPN or other custom type, those networks can be
+defined for HTCondor jobs to opt into with the docker_network_type
+submit command.  Simple set
+
+.. code-block:: condor-config
+
+    DOCKER_NETWORKS = some_virtual_network, another_network
+
+
+And these two networks will be advertised by the startd, and
+jobs that request these network type will only match to machines
+that support it.  Note that HTCondor cannot test the validity
+of these networks, and merely trusts that the administrator has
+correctly configured them.
+
+To deal with a potentially user influencing option, there is an optional knob that
+can be configured to adapt the ``--shm-size`` Docker container create argument
+taking the machine's and job's classAds into account.
+Exemplary, setting the ``/dev/shm`` size to half the requested memory is achieved by:
+
+.. code-block:: condor-config
+
+    DOCKER_SHM_SIZE = Memory * 1024 * 1024 / 2
+
+or, using a user provided value ``DevShmSize`` if available and within the requested
+memory limit:
+
+.. code-block:: condor-config
+
+    DOCKER_SHM_SIZE = ifThenElse(DevShmSize isnt Undefined && isInteger(DevShmSize) && int(DevShmSize) <= (Memory * 1024 * 1024), int(DevShmSize), 2 * 1024 * 1024 * 1024)
+
+    
+Note: ``Memory`` is in MB, thus it needs to be scaled to bytes.
+
+Apptainer and Singularity Support
+---------------------------------
+
+:index:`Singularity<single: Singularity; installation>` :index:`Singularity`
+
+Singularity (https://sylabs.io/singularity/) is a container runtime system
+popular in scientific and HPC communities.  Apptainer (https://apptainer.org)
+is an open source fork of Singularity that is API and CLI compatible with
+singularity. HTCondor can run jobs inside Singularity containers either in a
+transparent way, where the job does not know that it is being contained, or,
+the HTCondor administrator can configure the HTCondor startd so that a job can
+opt into running inside a container.  This allows the operating system that the
+job sees to be different than the one on the host system, and provides more
+isolation between processes running in one job and another.
+
+.. note::
+    Everything in this document that pertains to Singularity is also true for the
+    Apptainer container runtime.
+
+
+The decision to run a job inside Singularity ultimately resides on the worker
+node, although it can delegate that to the job.
+
+By default, jobs will not be run in Singularity.
+
+For Singularity to work, the administrator must install Singularity
+on the worker node.  The HTCondor startd will detect this installation
+at startup.  When it detects a usable installation, it will
+advertise two attributes in the slot ad:
+
+.. code-block:: condor-config
+
+       HasSingularity = true
+       SingularityVersion = "singularity version 3.7.0-1.el7"
+
+If the detected Singularity installation fails to run test containers
+at startd startup, ``HasSingularity`` will be set to ``false``, and
+the slot ad attribute ``SingularityOfflineReason`` will contain an error string.
+
+HTCondor will run a job under Singularity when the startd configuration knob
+:macro:`SINGULARITY_JOB` evaluates to true.  This is evaluated in the context of the
+slot ad and the job ad.  If it evaluates to false or undefined, the job will
+run as normal, without singularity.
+
+When :macro:`SINGULARITY_JOB` evaluates to true, a second HTCondor knob is required
+to name the singularity image that must be run, :macro:`SINGULARITY_IMAGE_EXPR`.
+This also is evaluated in the context of the machine and the job ad, and must
+evaluate to a string.  This image name is passed to the singularity exec
+command, and can be any valid value for a singularity image name.  So, it
+may be a path to file on a local file system that contains an singularity
+image, in any format that singularity supports.  It may be a string that
+begins with ``docker://``, and refer to an image located on docker hub,
+or other repository.  It can begin with ``http://``, and refer to an image
+to be fetched from an HTTP server.  In this case, singularity will fetch
+the image into the job's scratch directory, convert it to a .sif file and
+run it from there.  Note this may require the job to request more disk space
+that it otherwise would need. It can be a relative path, in which
+case it refers to a file in the scratch directory, so that the image
+can be transferred by HTCondor's file transfer mechanism.
+
+Here's the simplest possible configuration file.  It will force all
+jobs on this machine to run under Singularity, and to use an image
+that it located in the file system in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
+
+.. code-block:: condor-config
+
+      # Forces _all_ jobs to run inside singularity.
+      SINGULARITY_JOB = true
+
+      # Forces all jobs to use the CernVM-based image.
+      SINGULARITY_IMAGE_EXPR = "/cvmfs/cernvm-prod.cern.ch/cvm3"
+
+Another common configuration is to allow the job to select whether
+to run under Singularity, and if so, which image to use.  This looks like:
+
+.. code-block:: condor-config
+
+      SINGULARITY_JOB = !isUndefined(TARGET.SingularityImage)
+      SINGULARITY_IMAGE_EXPR = TARGET.SingularityImage
+
+Then, users would add the following to their submit file (note the
+quoting):
+
+.. code-block:: condor-submit
+
+      +SingularityImage = "/cvmfs/cernvm-prod.cern.ch/cvm3"
+
+or maybe
+
+.. code-block:: condor-submit
+
+      +SingularityImage = "docker://ubuntu:20"
+
+By default, singularity will bind mount the scratch directory that
+contains transferred input files, working files, and other per-job
+information into the container, and make this the initial working
+directory of the job.  Thus, file transfer for singularity jobs works
+just like with vanilla universe jobs.  Any new files the job
+writes to this directory will be copied back to the submit node,
+just like any other sandbox, subject to transfer_output_files,
+as in vanilla universe.
+
+Assuming singularity is configured on the startd as described
+above, A complete submit file that uses singularity might look like
+
+.. code-block:: condor-submit
+
+     executable = /usr/bin/sleep
+     arguments = 30
+     +SingularityImage = "docker://ubuntu"
+
+     Requirements = HasSingularity
+
+     Request_Disk = 1024
+     Request_Memory = 1024
+     Request_cpus = 1
+
+     should_transfer_files = yes
+     transfer_input_files = some_input
+     when_to_transfer_output = on_exit
+
+     log = log
+     output = out.$(PROCESS)
+     error = err.$(PROCESS)
+
+     queue 1
+
+
+HTCondor can also transfer the whole singularity image, just like
+any other input file, and use that as the container image.  Given
+a singularity image file in the file named "image" in the submit
+directory, the submit file would look like:
+
+.. code-block:: condor-submit
+
+     executable = /usr/bin/sleep
+     arguments = 30
+     +SingularityImage = "image"
+
+     Requirements = HasSingularity
+
+     Request_Disk = 1024
+     Request_Memory = 1024
+     Request_cpus = 1
+
+     should_transfer_files = yes
+     transfer_input_files = image
+     when_to_transfer_output = on_exit
+
+     log = log
+     output = out.$(PROCESS)
+     error = err.$(PROCESS)
+
+     queue 1
+
+
+The administrator can optionally
+specify additional directories to be bind mounted into the container.
+For example, if there is some common shared input data located on a
+machine, or on a shared file system, this directory can be bind-mounted
+and be visible inside the container. This is controlled by the
+configuration parameter :macro:`SINGULARITY_BIND_EXPR`. This is an expression,
+which is evaluated in the context of the machine and job ads, and which
+should evaluated to a string which contains a space separated list of
+directories to mount.
+
+So, to always bind mount a directory named /nfs into the image, and
+administrator could set
+
+.. code-block:: condor-config
+
+     SINGULARITY_BIND_EXPR = "/nfs"
+
+Or, if a trusted user is allowed to bind mount anything on the host, an
+expression could be
+
+.. code-block:: condor-config
+
+      SINGULARITY_BIND_EXPR = (Target.Owner == "TrustedUser") ? SomeExpressionFromJob : ""
+
+If the source directory for the bind mount is missing on the host machine,
+HTCondor will skip that mount and run the job without it.  If the image is
+an exploded file directory, and the target directory is missing inside
+the image, and the configuration parameter :macro:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
+is set to true (the default is false), then this mount attempt will also
+be skipped.  Otherwise, the job will return an error when run.
+
+In general, HTCondor will try to set as many Singularity command line
+options as possible from settings in the machine ad and job ad, as
+make sense.  For example, if the slot the job runs in is provisioned with GPUs,
+perhaps in response to a ``request_GPUs`` line in the submit file, the
+Singularity flag ``-nv`` will be passed to Singularity, which should make
+the appropriate nvidia devices visible inside the container.
+If the submit file requests environment variables to be set for the job,
+HTCondor passes those through Singularity into the job.
+
+Before the *condor_starter* runs a job with singularity, it first
+runs singularity test on that image.  If no test is defined inside
+the image, it runs ``/bin/sh /bin/true``.  If the test returns non-zero,
+for example if the image is missing, or malformed, the job is put
+on hold.  This is controlled by the condor knob
+:macro:`SINGULARITY_RUN_TEST_BEFORE_JOB`, which defaults to true.
+
+If an administrator wants to pass additional arguments to the singularity exec
+command instead of the defaults used by HTCondor, several parameters exist to
+do this - see the *condor_starter* configuration parameters that begin with the
+prefix SINGULARITY in defined in section
+:ref:`admin-manual/configuration-macros:condor_starter configuration file
+entries`.  There you will find parameters to customize things such as the use
+of PID namespaces, cache directory, and several other options.  However, should
+an administrator need to customize Singularity behavior that HTCondor does not
+currently support, the parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows
+arbitrary additional parameters to be passed to the singularity exec command.
+Note that this can be a classad expression, evaluated in the context of the
+slot ad and the job ad, where the slot ad can be referenced via "MY.", and the
+job ad via the "TARGET." reference.  In this way, the admin could set different
+options for different kinds of jobs.  For example, to pass the ``-w`` argument,
+to make the image writable, an administrator could set
+
+.. code-block:: condor-config
+
+    SINGULARITY_EXTRA_ARGUMENTS = "-w"
+
+There are some rarely-used settings that some administrators may
+need to set. By default, HTCondor looks for the Singularity runtime
+in ``/usr/bin/singularity``, but this can be overridden with the SINGULARITY
+parameter:
+
+.. code-block:: condor-submit
+
+      SINGULARITY = /opt/singularity/bin/singularity
+
+By default, the initial working directory of the job will be the
+scratch directory, just like a vanilla universe job.  This directory
+probably doesn't exist in the image's file system.  Usually,
+Singularity will be able to create this directory in the image, but
+unprivileged versions of singularity with certain image types may
+not be able to do so.  If this is the case, the current directory
+on the inside of the container can be set via a knob.  This will
+still map to the scratch directory outside the container.
+
+.. code-block:: condor-config
+
+      # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
+      SINGULARITY_TARGET_DIR = /srv
+
+If :macro:`SINGULARITY_TARGET_DIR` is not specified by the admin,
+it may be specified in the job submit file via the submit command
+``container_target_dir``.  If both are set, the config knob
+version takes precedence.
+
+When the HTCondor starter runs a job under Singularity, it always
+prints to the log the exact command line used.  This can be helpful
+for debugging or for the curious.  An example command line printed
+to the StarterLog might look like the following:
+
+.. code-block:: text
+
+    About to exec /usr/bin/singularity -s exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/demo 3
+
+In this example, no GPUs have been requested, so there is no ``-nv`` option.
+:macro:`MOUNT_UNDER_SCRATCH` is set to the default of ``/tmp,/var/tmp``, so condor
+translates those into ``-S`` (scratch directory) requests in the command line.
+The ``--pwd`` is set to the scratch directory, ``-B`` bind mounts the scratch
+directory with the same name on the inside of the container, and the
+``-C`` option is set to contain all namespaces.  Then the image is named,
+and the executable, which in this case has been transferred by HTCondor
+into the scratch directory, and the job's argument (3).  Not visible
+in the log are any environment variables that HTCondor is setting for the job.
+
+All of the singularity container runtime's logging, warning and error messages
+are written to the job's stderr.  This is an unfortunate aspect of the runtime
+we hope to fix in the future.  By default, HTCondor passes "-s" (silent) to
+the singularity runtime, so that the only messages it writes to the job's
+stderr are fatal error messages.  If a worker node administrator needs more
+debugging information, they can change the value of the worker node config
+parameter :macro:`SINGULARITY_VERBOSITY` and set it to -d or -v to increase
+the debugging level.
+
+The VM Universe
+---------------
+
+:index:`virtual machines`
+:index:`for the vm universe<single: for the vm universe; installation>`
+:index:`set up for the vm universe<single: set up for the vm universe; universe>`
+
+**vm** universe jobs may be executed on any execution site with
+Xen (via *libvirt*) or KVM. To do this, HTCondor must be informed of
+some details of the virtual machine installation, and the execution
+machines must be configured correctly.
+
+What follows is not a comprehensive list of the options that help set up
+to use the **vm** universe; rather, it is intended to serve as a
+starting point for those users interested in getting **vm** universe
+jobs up and running quickly. Details of configuration variables are in
+the :ref:`admin-manual/configuration-macros:configuration file entries relating
+to virtual machines` section.
+
+Begin by installing the virtualization package on all execute machines,
+according to the vendor's instructions. We have successfully used
+Xen and KVM.
+
+For Xen, there are three things that must exist on an execute machine to
+fully support **vm** universe jobs.
+
+#. A Xen-enabled kernel must be running. This running Xen kernel acts as
+   Dom0, in Xen terminology, under which all VMs are started, called
+   DomUs Xen terminology.
+#. The *libvirtd* daemon must be available, and *Xend* services must be
+   running.
+#. The *pygrub* program must be available, for execution of VMs whose
+   disks contain the kernel they will run.
+
+For KVM, there are two things that must exist on an execute machine to
+fully support **vm** universe jobs.
+
+#. The machine must have the KVM kernel module installed and running.
+#. The *libvirtd* daemon must be installed and running.
+
+Configuration is required to enable the execution of **vm** universe
+jobs. The type of virtual machine that is installed on the execute
+machine must be specified with the :macro:`VM_TYPE`
+variable. For now, only one type can be utilized per machine. For
+instance, the following tells HTCondor to use KVM:
+
+.. code-block:: condor-config
+
+    VM_TYPE = kvm
+
+The location of the *condor_vm-gahp* and its log file must also be
+specified on the execute machine. On a Windows installation, these
+options would look like this:
+
+.. code-block:: condor-config
+
+    VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe
+    VM_GAHP_LOG = $(LOG)/VMGahpLog
+
+Xen-Specific and KVM-Specific Configuration
+'''''''''''''''''''''''''''''''''''''''''''
+
+Once the configuration options have been set, restart the
+*condor_startd* daemon on that host. For example:
+
+.. code-block:: console
+
+    $ condor_restart -startd leovinus
+
+The *condor_startd* daemon takes a few moments to exercise the VM
+capabilities of the *condor_vm-gahp*, query its properties, and then
+advertise the machine to the pool as VM-capable. If the set up
+succeeded, then *condor_status* will reveal that the host is now
+VM-capable by printing the VM type and the version number:
+
+.. code-block:: console
+
+    $ condor_status -vm leovinus
+
+After a suitable amount of time, if this command does not give any
+output, then the *condor_vm-gahp* is having difficulty executing the VM
+software. The exact cause of the problem depends on the details of the
+VM, the local installation, and a variety of other factors. We can offer
+only limited advice on these matters:
+
+For Xen and KVM, the **vm** universe is only available when root starts
+HTCondor. This is a restriction currently imposed because root
+privileges are required to create a virtual machine on top of a
+Xen-enabled kernel. Specifically, root is needed to properly use the
+*libvirt* utility that controls creation and management of Xen and KVM
+guest virtual machines. This restriction may be lifted in future
+versions, depending on features provided by the underlying tool
+*libvirt*.
+
+When a vm Universe Job Fails to Start
+'''''''''''''''''''''''''''''''''''''
+
+If a vm universe job should fail to launch, HTCondor will attempt to
+distinguish between a problem with the user's job description, and a
+problem with the virtual machine infrastructure of the matched machine.
+If the problem is with the job, the job will go on hold with a reason
+explaining the problem. If the problem is with the virtual machine
+infrastructure, HTCondor will reschedule the job, and it will modify the
+machine ClassAd to prevent any other vm universe job from matching. vm
+universe configuration is not slot-specific, so this change is applied
+to all slots.
+
+When the problem is with the virtual machine infrastructure, these
+machine ClassAd attributes are changed:
+
+-  ``HasVM`` will be set to ``False``
+-  ``VMOfflineReason`` will be set to a somewhat explanatory string
+-  ``VMOfflineTime`` will be set to the time of the failure
+-  ``OfflineUniverses`` will be adjusted to include ``"VM"`` and ``13``
+
+Since *condor_submit* adds ``HasVM == True`` to a vm universe job's
+requirements, no further vm universe jobs will match.
+
+Once any problems with the infrastructure are fixed, to change the
+machine ClassAd attributes such that the machine will once again match
+to vm universe jobs, an administrator has three options. All have the
+same effect of setting the machine ClassAd attributes to the correct
+values such that the machine will not reject matches for vm universe
+jobs.
+
+#. Restart the *condor_startd* daemon.
+#. Submit a vm universe job that explicitly matches the machine. When
+   the job runs, the code detects the running job and causes the
+   attributes related to the vm universe to be set indicating that vm
+   universe jobs can match with this machine.
+#. Run the command line tool *condor_update_machine_ad* to set
+   machine ClassAd attribute ``HasVM`` to ``True``, and this will cause
+   the other attributes related to the vm universe to be set indicating
+   that vm universe jobs can match with this machine. See the
+   *condor_update_machine_ad* manual page for examples and details.
 
 
 condor_negotiator-Side Resource Consumption Policies
-''''''''''''''''''''''''''''''''''''''''''''''''''''
+----------------------------------------------------
 
 :index:`consumption policy`
 :index:`negotiator-side resource consumption policy<single: negotiator-side resource consumption policy; partitionable slots>`
+
+.. warning::
+   Consumption policies are an experimental feature and may not work well
+   in combination with other HTCondor features.
+
 
 For partitionable slots, the specification of a consumption policy
 permits matchmaking at the negotiator. A dynamic slot carved from the
@@ -2623,109 +3269,42 @@ Add the consumption policy to incorporate availability of the GPUs:
       SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu
       SLOT_WEIGHT = Cpus
 
-Defragmenting Dynamic Slots
-'''''''''''''''''''''''''''
 
-:index:`condor_defrag daemon`
+Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
+--------------------------------------------------------------------------------------------
+:index:`DISK usage`
+:index:`per job scratch filesystem`
 
-When partitionable slots are used, some attention must be given to the
-problem of the starvation of large jobs due to the fragmentation of
-resources. The problem is that over time the machine resources may
-become partitioned into slots suitable only for running small jobs. If a
-sufficient number of these slots do not happen to become idle at the
-same time on a machine, then a large job will not be able to claim that
-machine, even if the large job has a better priority than the small
+.. warning::
+   The per job filesystem feature is a work in progress and not currently supported.
+
+
+On Linux systems, when HTCondor is started as root, it optionally has the ability to create
+a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
+from using more scratch space than provisioned.  This also requires that the disk is managed
+with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
+this to work, in addition to the above requirements:
+
+.. code-block:: condor-config
+
+    THINPOOL_VOLUME_GROUP_NAME = vgname
+    THINPOOL_NAME = htcondor
+    STARTD_ENFORCE_DISK_LIMITS = true
+
+
+THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
+disk space to provision all the scratch directories for all running jobs on a worker node.
+THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
+be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_LIMITS is a boolean.  When
+true, if a job fills up the filesystem created for it, the starter will put the job on hold
+with the out of resources hold code (34).  This is the recommended value.  If false, should
+the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors
+and exit with an appropriate code in every part of the job that writes to the filesystem, including
+third party libraries.
+
+Note that the ephemeral filesystem created for the job is private to the job, so the contents
+of that filesystem are not visible outside the process hierarchy.  The administrator can use
+the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
+As this filesystem will never live through a system reboot, it is mounted with mount options
+that optimize for performance, not reliability, and may improve performance for I/O heavy
 jobs.
-
-One way of addressing the partitionable slot fragmentation problem is to
-periodically drain all jobs from fragmented machines so that they become
-defragmented. The *condor_defrag* daemon implements a configurable
-policy for doing that. Its implementation is targeted at machines
-configured to run whole-machine jobs and at machines that only have
-partitionable slots. The draining of a machine configured to have both
-partitionable slots and static slots would have a negative impact on
-single slot jobs running in static slots.
-
-To use this daemon, ``DEFRAG`` must be added to :macro:`DAEMON_LIST`, and the
-defragmentation policy must be configured. Typically, only one instance
-of the *condor_defrag* daemon would be run per pool. It is a
-lightweight daemon that should not require a lot of system resources.
-
-Here is an example configuration that puts the *condor_defrag* daemon
-to work:
-
-.. code-block:: text
-
-    DAEMON_LIST = $(DAEMON_LIST) DEFRAG
-    DEFRAG_INTERVAL = 3600
-    DEFRAG_DRAINING_MACHINES_PER_HOUR = 1.0
-    DEFRAG_MAX_WHOLE_MACHINES = 20
-    DEFRAG_MAX_CONCURRENT_DRAINING = 10
-
-This example policy tells *condor_defrag* to initiate draining jobs
-from 1 machine per hour, but to avoid initiating new draining if there
-are 20 completely defragmented machines or 10 machines in a draining
-state. A full description of each configuration variable used by the
-*condor_defrag* daemon may be found in the
-:ref:`admin-manual/configuration-macros:condor_defrag configuration file
-macros` section.
-
-By default, when a machine is drained, existing jobs are gracefully
-evicted. This means that each job will be allowed to use the remaining
-time promised to it by ``MaxJobRetirementTime``. If the job has not
-finished when the retirement time runs out, the job will be killed with
-a soft kill signal, so that it has an opportunity to save a checkpoint
-(if the job supports this).
-
-By default, no new jobs will be allowed to start while the machine is
-draining. To reduce unused time on the machine caused by some jobs
-having longer retirement time than others, the eviction of jobs with
-shorter retirement time is delayed until the job with the longest
-retirement time needs to be evicted.
-
-There is a trade off between reduced starvation and throughput. Frequent
-draining of machines reduces the chance of starvation of large jobs.
-However, frequent draining reduces total throughput. Some of the
-machine's resources may go unused during draining, if some jobs finish
-before others. If jobs that cannot produce checkpoints are killed
-because they run past the end of their retirement time during draining,
-this also adds to the cost of draining.
-
-To reduce these costs, you may set the configuration macro
-:macro:`DEFRAG_DRAINING_START_EXPR`. If draining gracefully, the
-defrag daemon will set the :macro:`START` expression for
-the machine to this value expression. Do not set this to your usual
-``START`` expression; jobs accepted while draining will not be given
-their ``MaxRetirementTime``. Instead, when the last retiring job
-finishes (either terminates or runs out of retirement time), all other
-jobs on machine will be evicted with a retirement time of 0. (Those jobs
-will be given their ``MaxVacateTime``, as usual.) The machine's
-``START`` expression will become ``FALSE`` and stay that way until - as
-usual - the machine exits the draining state.
-
-We recommend that you allow only interruptible jobs to start on draining
-machines. Different pools may have different ways of denoting
-interruptible, but a ``MaxJobRetirementTime`` of 0 is probably a good
-sign. You may also want to restrict the interruptible jobs'
-``MaxVacateTime`` to ensure that the machine will complete draining
-quickly.
-
-To help gauge the costs of draining, the *condor_startd* advertises the
-accumulated time that was unused due to draining and the time spent by
-jobs that were killed due to draining. These are advertised respectively
-in the attributes ``TotalMachineDrainingUnclaimedTime`` and
-``TotalMachineDrainingBadput``. The *condor_defrag* daemon averages
-these values across the pool and advertises the result in its daemon
-ClassAd in the attributes ``AvgDrainingBadput`` and
-``AvgDrainingUnclaimed``. Details of all attributes published by the
-*condor_defrag* daemon are described in the :doc:`/classad-attributes/defrag-classad-attributes` section.
-
-The following command may be used to view the *condor_defrag* daemon
-ClassAd:
-
-.. code-block:: console
-
-    $ condor_status -l -any -constraint 'MyType == "Defrag"'
-
-:index:`configuration<single: configuration; SMP machines>`
-:index:`configuration<single: configuration; multi-core machines>`

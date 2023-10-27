@@ -236,8 +236,9 @@ main(int argc, char *argv[])
 						exit( 1 );
 					}
 					break;
+				} else {
+					All = true;
 				}
-				All = true;
 				break;
 			case 'n': 
 				// use the given name as the schedd name to connect to

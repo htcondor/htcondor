@@ -32,7 +32,35 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug in the *condor_userlog* tool where it would crash
+  when reading logs with parallel universe jobs in it.
+  :jira:`2099`
+
+- Fixed a bug that could result in job sandboxes not being cleaned up 
+  for **batch** grid jobs submitted to a remote cluster. 
+  :jira:`2073`
+
+- Fixed a bug in *condor_transfer_data* where using the ``-addr``
+  flag would automatically apply the ``-all`` flag to transfer
+  all job data back making the use of ``-addr`` with a Job ID
+  constraint fail.
+  :jira:`2105`
+
+- Fixed several small bugs with Trust On First Use (TOFU) for SSL
+  authentication.
+  Added configuration parameter
+  ``BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER``, which can be used to
+  prevent tools from prompting the user about trusting the server's
+  SSL certificate.
+  :jira:`2080`
+
+- Fixed warnings about use of deprecated HTCondor python binding methods
+  in the `htcondor dag submit` command.
+  :jira:`2104`
+
+- Improved cleanup of ssh-agent processes when submitting **batch**
+  grid universe jobs to a remote cluster via ssh.
+  :jira:`2118`
 
 .. _lts-version-history-2301:
 
@@ -50,6 +78,10 @@ New Features:
 - None.
 
 Bugs Fixed:
+
+- Updated HTCondor binaries that are statically linked to the curl library to use curl version 8.4.0.
+  The update was due to a report of a vulnerability, CVE-2023-38545, which affects earlier versions of curl.
+  :jira:`2084`
 
 - Fixed a bug that prevented USE_PID_NAMESPACES from working.
   :jira:`2088`

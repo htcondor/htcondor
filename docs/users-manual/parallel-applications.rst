@@ -25,22 +25,22 @@ on each claimed slot.
 
 Each invocation of *condor_submit* assigns a single ``ClusterId`` for
 what is considered the single parallel job submitted. The
-**machine_count** :index:`machine_count<single: machine_count; submit commands>`
+:subcom:`machine_count<example>`
 submit command identifies how many machines (slots) are to be allocated.
-Each instance of the **queue** :index:`queue<single: queue; submit commands>`
+Each instance of the :subcom:`queue<with parallel universe>`
 submit command acquires and claims the number of slots specified by
-**machine_count**. Each of these slots shares a common job ClassAd and
+:subcom:`machine_count`. Each of these slots shares a common job ClassAd and
 will have the same ``ProcId`` job ClassAd attribute value.
 
 Once the correct number of machines are claimed, the
-**executable** :index:`executable<single: executable; submit commands>` is started
+:subcom:`executable<with parallel universe>` is started
 at more or less the same time on all machines. If desired, a
 monotonically increasing integer value that starts at 0 may be provided
 to each of these machines. The macro ``$(Node)`` is similar to the MPI
 rank construct. This macro may be used within the submit description
 file in either the
-**arguments** :index:`arguments<single: arguments; submit commands>` or
-**environment** :index:`environment<single: environment; submit commands>` command.
+:subcom:`arguments<with parallel universe>` or
+:subcom:`environment<with parallel universe>` command.
 Thus, as the executable runs, it may discover its own ``$(Node)`` value.
 
 Node 0 has special meaning and consequences for the parallel job. The
@@ -130,17 +130,17 @@ that is as simple as possible:
 
 This job specifies the **universe** as **parallel**, letting HTCondor
 know that dedicated resources are required. The
-**machine_count** :index:`machine_count<single: machine_count; submit commands>`
+:subcom:`machine_count<example>`
 command identifies that eight machines are required for this job.
 
 Because no
-**requirements** :index:`requirements<single: requirements; submit commands>` are
+:subcom:`requirements<with parallel universe>` are
 specified, the dedicated scheduler claims eight machines with the same
 architecture and operating system as the access point. When all the
 machines are ready, it invokes the */bin/sleep* command, with a command
 line argument of 30 on each of the eight machines more or less
 simultaneously. Job events are written to the log specified in the
-**log** :index:`log<single: log; submit commands>` command.
+:subcom:`log<with parallel universe>` command.
 
 The file transfer mechanism is enabled for this parallel job, such that
 if any of the eight claimed execute machines does not share a file
@@ -229,7 +229,7 @@ Differing Requirements for the Machines
 
 Sometimes one machine's part in a parallel job will have specialized
 needs. These can be handled with a
-**Requirements** :index:`Requirements<single: Requirements; submit commands>` submit
+:subcom:`Requirements<with parallel universe>` submit
 command that also specifies the number of needed machines.
 
 .. code-block:: condor-submit
@@ -255,7 +255,7 @@ command that also specifies the number of needed machines.
 The dedicated scheduler acquires and claims four machines. All four
 share the same value of ``ClusterId``, as this value is associated with
 this single parallel job. The existence of a second
-**queue** :index:`queue<single: queue; submit commands>` command causes a total
+:subcom:`queue<with parallel universe>` command causes a total
 of two ``ProcId`` values to be assigned for this parallel job. The
 ``ProcId`` values are assigned based on ordering within the submit
 description file. Value 0 will be assigned for the single executable
@@ -357,17 +357,17 @@ Here is a sample submit description file for an MPICH MPI application:
 
     queue
 
-The **executable** :index:`executable<single: executable; submit commands>` is the
+The :subcom:`executable` is the
 ``mp1script`` script that will have been modified for this MPI
 application. This script is invoked on each slot or core. The script, in
 turn, is expected to invoke the MPI application's executable. To know
 the MPI application's executable, it is the first in the list of
-**arguments** :index:`arguments<single: arguments; submit commands>`. And, since
+:subcom:`arguments`. And, since
 HTCondor must transfer this executable to the machine where it will run,
 it is listed with the
-**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+:subcom:`transfer_input_files<with parallel universe>`
 command, and the file transfer mechanism is enabled with the
-**should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
+:subcom:`should_transfer_files<with parallel universe>`
 command.
 
 Here is the equivalent sample submit description file, but for an Open
@@ -401,10 +401,10 @@ further script called ``sshd.sh``. ``sshd.sh`` generates ssh keys to
 enable password-less remote execution and starts an *sshd* daemon. Use
 of the *sshd.sh* script requires the definition of two HTCondor
 configuration variables. Configuration variable ``CONDOR_SSHD``
-:index:`CONDOR_SSHD` is an absolute path to an implementation of
+:macro:`CONDOR_SSHD` is an absolute path to an implementation of
 *sshd*. *sshd.sh* has been tested with *openssh* version 3.9, but should
 work with more recent versions. Configuration variable
-``CONDOR_SSH_KEYGEN`` :index:`CONDOR_SSH_KEYGEN` points to the
+:macro:`CONDOR_SSH_KEYGEN` points to the
 corresponding *ssh-keygen* executable.
 
 *mp1script* and *mp2script* require the ``PATH`` to the MPICH
@@ -415,10 +415,10 @@ scripts to indicate its proper value. This directory contains the MPICH
 *openmpiscript* also requires the ``PATH`` to the Open MPI installation.
 Either the variable ``MPDIR`` can be set manually in the script, or the
 administrator can define ``MPDIR`` using the configuration variable
-``OPENMPI_INSTALL_PATH`` :index:`OPENMPI_INSTALL_PATH`. When using
+:macro:`OPENMPI_INSTALL_PATH`. When using
 Open MPI on a multi-machine HTCondor cluster, the administrator may also
-want to consider tweaking the ``OPENMPI_EXCLUDE_NETWORK_INTERFACES``
-:index:`OPENMPI_EXCLUDE_NETWORK_INTERFACES` configuration variable
+want to consider tweaking the 
+:macro:`OPENMPI_EXCLUDE_NETWORK_INTERFACES` configuration variable
 as well as set ``MOUNT_UNDER_SCRATCH`` = ``/tmp``.
 :index:`parallel universe`
 
@@ -427,7 +427,7 @@ MPI Applications Within HTCondor's Vanilla Universe
 
 The vanilla universe may be preferred over the parallel universe for
 parallel applications which can run entirely on one machine.  The
-**request_cpus** :index:`request_cpus<single: request_cpus; submit commands>` command
+:subcom:`request_cpus<with parallel universe>` command
 causes a claimed slot to have the required number of CPUs (cores).
 
 There are two ways to ensure that the MPI job can run on any machine
@@ -462,6 +462,6 @@ using static libraries and a static version of ``mpirun`` is available.
 
 Any additional input files that will be needed for the executable that
 are not already in the tarball should be included in the list in
-**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+:subcom:`transfer_input_files<with parallel universe>`
 command. The corresponding script should then also be updated to move
 those files into the directory where the executable will be run.

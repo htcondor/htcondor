@@ -1,5 +1,5 @@
-Third Party/Delegated file and credential transfer
-==================================================
+Third Party/Delegated file, credential and checkpoint transfer
+==============================================================
 
 Enabling the Transfer of Files Specified by a URL
 -------------------------------------------------
@@ -19,17 +19,16 @@ local or scheduler.  The execute machine directly retrieves the files from
 their source. Each URL-transferred file, is
 separately listed in the job submit description file with the command
 ``transfer_input_files``;
-:index:`transfer_input_files<single: transfer_input_files; submit commands>`
+:subcom:`transfer_input_files<definition>`
 see :doc:`../users-manual/file-transfer` for details.
 
 For transferring output files, either the entire output sandbox, or a
 subset of these files, as specified by the submit description file
 command ``transfer_output_files``
-:index:`transfer_output_files<single: transfer_output_files; submit commands>`
+:subcom:`transfer_output_files<definition>`
 are transferred to the directory specified by the URL. The URL itself is
 specified in the separate submit description file command
-``output_destination``;
-:index:`output_destination<single: output_destination; submit commands>`
+:subcom:`output_destination<definition>`
 see :doc:`../users-manual/file-transfer` for details.  The plug-in
 is invoked once for each output file to be transferred.
 
@@ -85,9 +84,8 @@ plug-in handles. So, for example
 would identify that the three protocols described by http, ftp, and file
 are supported. These strings will match the protocol specification as
 given within a URL in a
-``transfer_input_files`` :index:`transfer_input_files<single: transfer_input_files; submit commands>`
-command or within a URL in an
-``output_destination`` :index:`output_destination<single: output_destination; submit commands>`
+:subcom:`transfer_input_files<and URLs>`
+command or within a URL in an :subcom:`output_destination<and URLs>`
 command in a submit description file for a job.
 
 When a job specifies a URL transfer, the plug-in is invoked, without the
@@ -284,6 +282,120 @@ curl_plugin is invoked, it checks the environment variable http_proxy
 for a proxy server address; by setting this appropriately on execute
 nodes, a system can dramatically improve transfer speeds for commonly
 used files.
+
+Self-Checkpointing Jobs
+-----------------------
+
+As of HTCondor 23.1, self-checkpointing jobs may set ``checkpoint_destination``
+(see the *condor_submit* :ref:`man page<checkpoint_destination>`),
+which causes HTCondor to store the job's checkpoint(s) at the specific URL
+(rather than in the AP's :macro:`SPOOL` directory).  This can be a major
+improvement in scalability.  Once the job leaves the queue, HTCondor should
+delete its stored checkpoints -- but the plug-in for the checkpoint destination
+wrote the files, so HTCondor doesn't know how to delete them.  You, the
+HTCondor administrator, need to tell HTCondor how to delete checkpoints by
+registering the corresponding clean-up plug-in.
+
+You may also wish to prevent jobs with checkpoint destinations that HTCondor
+doesn't know how to clean up from entering the queue.  To enable this, add
+``use policy:OnlyRegisteredCheckpointDestinations``
+(:ref:`reference<OnlyRegisteredCheckpointDestinations>`)
+to your HTCondor configuration.
+
+Registering a Checkpoint Destination
+''''''''''''''''''''''''''''''''''''
+
+When transferring files to or from a URL, HTCondor assumes that a plug-in
+which handles a particular schema (e.g., ``https``) can read from and write
+to any URL starting with ``https://``.  However, this may not be true for
+a clean-up plug-in (see below).  Therefore, when registering a clean-up
+plug-in, you specify a URL prefix for which that plug-in is responsible,
+using a map file syntax.  A map file is line-oriented; every line has three
+columns, separated by whitespace.  The left column must be ``*``; the
+middle column is a URL prefix; and the right column is the clean-up plug-in
+to invoke, plus any required arguments, separated by commas.  (Presently,
+the columns can not contain spaces.)  Prefixes are checked in order of
+decreasing length, regardless of their order in the file.
+
+The default location of the checkpoint destination mapfile is
+``$(ETC)/checkpoint-destination-mapfile``, but it can be specified by
+the configuration value :macro:`CHECKPOINT_DESTINATION_MAPFILE`.
+
+Checkpoint Destinations with a Filesystem Mounted on the AP
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+HTCondor ships with a clean-up plugin (``cleanup_locally_mounted_checkpoint``) that deletes
+checkpoints from a filesystem mounted on the AP.  This is more useful than
+it sounds, because the mounted filesystem could the remote backing store
+for files available through some other service, perhaps on a different
+machine.  The plug-in needs to be told how to map from the destination URL to
+the corresponding location in the filesystem.  For instance, if you’ve mounted
+a CephFS at ``/ceph/example-fs`` and made that origin available via the OSDF at
+``osdf:///example.vo/example-fs``, your map file would include the line
+
+.. code-block:: text
+
+   *       osdf:///example.vo/example-fs/      cleanup_locally_mounted_checkpoint,-prefix,\0,-path,/ceph/example-fs
+
+because the ``cleanup_locally_mounted_checkpoint`` script that ships with
+HTCondor needs to know the URL and path to the ``example-fs``.  (One could
+replace ``\0`` with ``osdf:///example.vo/example-fs/``, but that could lead
+to accidentally changing one without changing the other.)
+
+Other Checkpoint Destinations
+'''''''''''''''''''''''''''''
+
+You may specify a different executable in the right column.  Executables
+which are not specified with an absolute path are assumed to be in the
+``LIBEXEC`` directory.
+
+The remainder of this section is a detailed explanation of how HTCondor
+launches such an executable.  This may be useful for adminstrators who
+wish to understand the process tree they're seeing, but it is intended
+to aid people trying to write a checkpoint clean-up plug-in for a
+different kind of checkpoint destination.  For the rest of this section,
+assume that "a job" means "a job which specified a checkpoint destination."
+
+When a job exits the queue, the *condor_schedd* will immediately spawn the
+checkpoint clean-up process (*condor_manifest*); that process will call the
+checkpoint clean-up plug-in once per file in each checkpoint the job wrote.
+The *condor_schedd* does not check to see if this process succeeded; that's
+a job for *condor_preen*.  When *condor_preen* runs, if a job's checkpoint
+has not been cleaned up, it will also spawn *condor_manifest*, and do so in
+exactly the same way the *condor_schedd* did.  Failures will be reported via
+the usual channels for *condor_preen*.  You may specify how long
+*condor_manifest* may run with the configuration macro
+:macro:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`.  The
+*condor_manifest* tool removes each MANIFEST file as its contents get cleaned
+up, so this timeout need only be long enough to complete a single checkpoint's
+worth of clean-up in order to make progress.
+
+(On non-Windows platforms, *condor_manifest* is spawned as the ``Owner`` of
+the job whose checkpoints are being cleaned-up; this is both safer and easier,
+since that user may have useful privileges (for example, filesystems may be
+mounted "root-squash").)
+
+The *condor_manifest* command understands the "MANIFEST" file format used
+by HTCondor to record the names and hashes of files in the checkpoint, and
+also how to find every MANIFEST file created by the job.  For each file in
+each MANIFEST, ``condor_manifest`` invokes the command specified in the
+map file, followed by the arguments specified in the map file,
+followed by ``-from <BASE> -file <FILE> -jobad <JOBAD>``, where ``<BASE><FILE>``
+is the complete URL to which ``<FILE>`` was stored and ``<FILE>`` is name
+listed in the MANIFEST.  We use this construction because ``<BASE>`` includes
+path components generated by HTCondor to ensure the uniqueness of checkpoints,
+which permits the user to specify the same checkpoint destination for every
+job in a cluster (or in a DAG, etc).  ``<JOBAD>`` is the full path to a copy
+of the job ad, in case the clean-up plug-in needs to know, for example, which
+credentials were used to upload the checkpoint(s).
+
+The plug-in will *not* be explicitly instructed to remove
+directories, not even the directories the HTCondor created to make sure that
+different checkpoints are written to different places.  The plug-in can
+determine which directories HTCondor created by comparing the registered
+prefix to the ``<BASE>`` argument described above, if it wishes to remove
+them.  If ``<FILE>`` is a relative path, then that relative path is part
+of the checkpoint.
 
 .. _enabling_oauth_credentials:
 

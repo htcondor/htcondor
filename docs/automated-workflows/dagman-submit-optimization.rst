@@ -27,4 +27,4 @@ that claims are not held idle for a running DAG. If a DAG node has no
 children, the value of ``DAGMAN_HOLD_CLAIM_TIME`` will be ignored; the
 ``KeepClaimIdle`` attribute will not be defined in the job ClassAd of
 the node job, unless the job requests it using the submit command
-**keep_claim_idle** :index:`keep_claim_idle<single: keep_claim_idle; submit commands>`.
+:subcom:`keep_claim_idle<and DAGman>`

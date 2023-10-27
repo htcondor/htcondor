@@ -1,8 +1,6 @@
 Collector ClassAd Attributes
 ============================
 
-:index:`Collector attributes<single: Collector attributes; ClassAd>`
-
 :classad-attribute:`ActiveQueryWorkers`
     Current number of forked child processes handling queries.
 

@@ -1106,6 +1106,17 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			attr = "Assigned"; attr += res;
 			CopyAttribute( attr, *puAd, *jobAd );
 		}
+
+		// Hard code a couple of useful time-based attributes that are not "Requested" yet
+		// and shorten their names to display more reasonably
+		int jaed = 0;
+		if (jobAd->LookupInteger(ATTR_JOB_ACTIVATION_EXECUTION_DURATION, jaed)) {
+			puAd->Assign("TimeExecuteUsage", jaed);
+		}
+		int jad = 0;
+		if (jobAd->LookupInteger(ATTR_JOB_ACTIVATION_DURATION, jad)) {
+			puAd->Assign("TimeSlotBusyUsage", jad);
+		}
 		*ppusageAd = puAd;
 	}
 }
