@@ -98,11 +98,10 @@ behalf of a particular user, it uses the securely stored password to do
 so. This implies that a password is stored for every user that will
 submit jobs from the Windows submit machine.
 :index:`condor_credd daemon`
-:index:`run_as_owner<single: run_as_owner; submit commands>`
 
 A further feature permits HTCondor to execute the job itself under the
 security context of its submitting user, specifying the
-**run_as_owner** :index:`run_as_owner<single: run_as_owner; submit commands>`
+:subcom:`run_as_owner<on Windows>`
 command in the job's submit description file. With this feature, it is
 necessary to configure and run a centralized *condor_credd* daemon to
 manage the secure password storage. This makes each user's password
@@ -116,8 +115,6 @@ on the submit machine.
 
 Executing Jobs as the Submitting User
 -------------------------------------
-
-:index:`run_as_owner<single: run_as_owner; submit commands>`
 
 By default, HTCondor executes jobs on Windows using dedicated run
 accounts that have minimal access rights and privileges, and which are
@@ -280,7 +277,7 @@ has done, nor sabotage the registry for future jobs. It also ensures the
 next job has a fresh registry hive.
 
 A job that is to run with a profile uses the
-**load_profile** :index:`load_profile<single: load_profile; submit commands>` command
+:subcom:`load_profile<definition>` command
 in the job's submit description file:
 
 .. code-block:: condor-submit
@@ -288,7 +285,7 @@ in the job's submit description file:
     load_profile = True
 
 This feature is currently not compatible with
-**run_as_owner** :index:`run_as_owner<single: run_as_owner; submit commands>`, and
+:subcom:`run_as_owner<incompatibility with load_profile>`, and
 will be ignored if both are specified.
 
 Using Windows Scripts as Job Executables
@@ -362,8 +359,7 @@ fail. The failure error message appears as:
 
 The fix for this error is to give explicit access to the submitting
 user's registry hive. This can be accomplished with the addition of the
-**load_profile** :index:`load_profile<single: load_profile; submit commands>` command
-in the job's submit description file:
+:subcom:`load_profile<and scripts>` command in the job's submit description file:
 
 .. code-block:: condor-submit
 
@@ -434,8 +430,8 @@ The *condor_starter* examines the job's temporary working directory for
 any files which have been created or modified and sends these files back
 to the *condor_shadow* running on the submit machine. The
 *condor_shadow* places these files into the
-**initialdir** :index:`initialdir<single: initialdir; submit commands>` specified in
-the submit description file; if no **initialdir** was specified, the
+:subcom:`initialdir<eviction on Windows>` specified in
+the submit description file; if no :subcom:`initialdir` was specified, the
 files go into the directory where the user invoked *condor_submit*.
 Once all the output files are safely transferred back, the job is
 removed from the queue. If, however, the *condor_startd* forcibly kills
@@ -450,14 +446,14 @@ The WM_CLOSE message is the preferred way to terminate a process on
 Windows, since this method allows the job to clean up and free any
 resources it may have allocated. When the job exits, the
 *condor_starter* cleans up any processes left behind. At this point, if
-**when_to_transfer_output** :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
+:subcom:`when_to_transfer_output`
 is set to ``ON_EXIT`` (the default) in the job's submit description
 file, the job switches states, from Running to Idle, and no files are
-transferred back. If **when_to_transfer_output** is set to
+transferred back. If :subcom:`when_to_transfer_output` is set to
 ``ON_EXIT_OR_EVICT``, then files in the job's temporary working
 directory which were changed or modified are first sent back to the
 submitting machine. If exactly which files to transfer is specified with
-**transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`,
+:subcom:`transfer_output_files`,
 then this modifies the files transferred and can affect the state of the
 job if the specified files do not exist. On an eviction, the
 *condor_shadow* places these intermediate files into a subdirectory
@@ -692,7 +688,7 @@ Unix machines and Windows machines running HTCondor can happily co-exist
 in the same HTCondor pool without any problems. Jobs submitted on
 Windows can run on Windows or Unix, and jobs submitted on Unix can run
 on Unix or Windows. Without any specification using the
-**Requirements** :index:`Requirements<single: Requirements; submit commands>` command
+:subcom:`requirements<interop with Windows and Unix>` command
 in the submit description file, the default behavior will be to require
 the execute machine to be of the same architecture and operating system
 as the submit machine.

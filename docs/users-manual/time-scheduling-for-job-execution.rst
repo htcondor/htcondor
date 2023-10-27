@@ -56,14 +56,13 @@ immediately suspends it.
 
 The deferral time is specified in the job's submit description file with
 the command
-**deferral_time** :index:`deferral_time<single: deferral_time; submit commands>`.
+:subcom:`deferral_time<definition>`.
 
 Deferral Window
 '''''''''''''''
 
 :index:`DeferralWindow<single: DeferralWindow; ClassAd job attribute>`
-:index:`deferral_window<single: deferral_window; submit commands>`
-
+:index:`deferral_window<single: deferral_window; definition>`.
 If a job arrives at its execution machine after the deferral time has
 passed, the job is evicted from the machine and put on hold in the job
 queue. This may occur, for example, because the transfer of needed files
@@ -82,7 +81,7 @@ queue.
 
 The deferral window is specified in the job's submit description file
 with the command
-**deferral_window** :index:`deferral_window<single: deferral_window; submit commands>`.
+:subcom:`deferral_window<definition>`.
 
 Preparation Time
 ''''''''''''''''
@@ -93,9 +92,8 @@ When a job defines a deferral time far in the future and then is matched
 to an execution machine, potential computation cycles are lost because
 the deferred job has claimed the machine, but is not actually executing.
 Other jobs could execute during the interval when the job waits for its
-deferral time. To make use of the wasted time,
-:index:`deferral_prep_time<single: deferral_prep_time; submit commands>`\ a job defines a
-**deferral_prep_time** :index:`deferral_prep_time<single: deferral_prep_time; submit commands>`
+deferral time. To make use of the wasted time,a job defines a
+:subcom:`deferral_prep_time<definition>`
 with an integer expression that evaluates to a number of seconds. At
 this number of seconds before the deferral time, the job may be matched
 with a machine.
@@ -103,7 +101,7 @@ with a machine.
 Deferral Usage Examples
 '''''''''''''''''''''''
 
-:index:`deferral_time<single: deferral_time; submit commands>`
+:index:`deferral_time<single: deferral_time; example>`
 
 Here are examples of how the job deferral time, deferral window, and the
 preparation time may be used.
@@ -152,7 +150,7 @@ remain in the deferral window:
 
 In this example, a job is scheduled to execute far in the future, on
 January 1st, 2010 at 12:00 pm. The
-**deferral_prep_time** :index:`deferral_prep_time<single: deferral_prep_time; submit commands>`
+:subcom:`deferral_prep_time`
 attribute delays the job from being matched until 60 seconds before the
 job is to begin execution.
 
@@ -167,7 +165,7 @@ Deferral Limitations
 There are some limitations to HTCondor's job deferral feature.
 
 -  Job deferral is not available for scheduler universe jobs. A
-   scheduler universe job defining the ``deferral_time`` produces a
+   scheduler universe job defining the :subcom:`deferral_time` produces a
    fatal error when submitted.
 -  The time that the job begins to execute is based on the execution
    machine's system clock, and not the submission machine's system
@@ -198,7 +196,7 @@ instance of a job at the same time.
 
 The capability for repetitive or periodic execution of the job is
 enabled by specifying an
-**on_exit_remove** :index:`on_exit_remove<single: on_exit_remove; submit commands>`
+:subcom:`on_exit_remove<and crondor>`
 command for the job, such that the job does not leave the queue until
 desired.
 
@@ -214,11 +212,11 @@ values for these commands. At least one of these must be defined in
 order for HTCondor to calculate a ``DeferralTime`` for the job. Once one
 CronTab value is defined, the default for all the others uses all the
 values in the allowed values ranges.
-:index:`cron_minute<single: cron_minute; submit commands>`
-:index:`cron_hour<single: cron_hour; submit commands>`
-:index:`cron_day_of_month<single: cron_day_of_month; submit commands>`
-:index:`cron_month<single: cron_month; submit commands>`
-:index:`cron_day_of_week<single: cron_day_of_week; submit commands>`
+:index:`cron_minute<single: cron_minute; definition>`
+:index:`cron_hour<single: cron_hour; definition>`
+:index:`cron_day_of_month<single: cron_day_of_month; definition>`
+:index:`cron_month<single: cron_month; definition>`
+:index:`cron_day_of_week<single: cron_day_of_week; definition>`
 
 +----------------------------+----------------------------+
 | **cron_minute**            | 0 - 59                     |
@@ -279,8 +277,8 @@ operator, ranges, lists, and steps (strides) within ranges.
               cron_hour   = 0-3,9-12,15
 
 
-    where this **cron_minute** example represents (15,20,25,30) and
-    **cron_hour** represents (0,1,2,3,9,10,11,12,15).
+    where this :subcom:`cron_minute` example represents (15,20,25,30) and
+    :subcom:`cron_hour` represents (0,1,2,3,9,10,11,12,15).
 
  Steps
     Steps select specific numbers from a range, based on an interval. A
@@ -293,18 +291,18 @@ operator, ranges, lists, and steps (strides) within ranges.
               cron_hour = */3
 
 
-    where this **cron_minute** example specifies every five minutes
+    where this :subcom:`cron_minute` example specifies every five minutes
     within the specified range to represent (10,15,20,25,30), and
-    **cron_hour** specifies every three hours of the day to represent
+    :subcom:`cron_hour` specifies every three hours of the day to represent
     (0,3,6,9,12,15,18,21).
 
 Preparation Time and Execution Window
 '''''''''''''''''''''''''''''''''''''
 
 The
-**cron_prep_time** :index:`cron_prep_time<single: cron_prep_time; submit commands>`
+:subcom:`cron_prep_time<definition>`
 command is analogous to the deferral time's
-**deferral_prep_time** :index:`deferral_prep_time<single: deferral_prep_time; submit commands>`
+:subcom:`deferral_prep_time<definition>`
 command. It specifies the number of seconds before the deferral time
 that the job is to be matched and sent to the execution machine. This
 permits HTCondor to make necessary preparations before the deferral time
@@ -329,9 +327,9 @@ the job once it is 9:55am.
 
 As the CronTab scheduling calculates and uses deferral time, jobs may
 also make use of the deferral window. The submit command
-**cron_window** :index:`cron_window<single: cron_window; submit commands>` is
+:subcom:`cron_window<definition>` is
 analogous to the submit command
-**deferral_window** :index:`deferral_window<single: deferral_window; submit commands>`.
+:subcom:`deferral_window<q.v. cron_window>`.
 Consider the submit description file example that includes
 
 .. code-block:: condor-submit
@@ -381,7 +379,7 @@ be matched and sent now.
 Jobs using the CronTab functionality are not automatically re-queued by
 HTCondor after their execution is complete. The submit description file
 for a job must specify an appropriate
-**on_exit_remove** :index:`on_exit_remove<single: on_exit_remove; submit commands>`
+:subcom:`on_exit_remove<and crondor>`
 command to ensure that a job remains in the queue. This job maintains
 its original ``ClusterId`` and ``ProcId``.
 
@@ -437,7 +435,7 @@ deferral times, because the mechanism is based upon deferral times.
 -  It is impossible to schedule vanilla universe jobs at
    intervals that are smaller than the interval at which HTCondor
    evaluates jobs. This interval is determined by the configuration
-   variable ``SCHEDD_INTERVAL`` :index:`SCHEDD_INTERVAL`. As a
+   variable :macro:`SCHEDD_INTERVAL`. As a
    vanilla universe job completes execution and is placed
    back into the job queue, it may not be placed in the idle state in
    time. This problem does not afflict local universe jobs.

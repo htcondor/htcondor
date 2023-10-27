@@ -708,11 +708,10 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 			for (auto item : state_list) {
 				std::string str;
 				classad::Value value;
-				classad::Value::NumberFactor f;
 				if (item->GetKind() != classad::ExprTree::LITERAL_NODE) {
 					continue;
 				}
-				((classad::Literal*)item)->getValue(f).IsStringValue(str);
+				((classad::Literal*)item)->getValue().IsStringValue(str);
 				if (str.compare(0, 8, "arcrest:") == 0) {
 					info_status = str.substr(8);
 					break;

@@ -182,25 +182,19 @@ class Literal : public ExprTree
 		 * 	@param v The encapsulated value
 		 * 	@param f The number factor (invalid if v is non-numeric)
 		 */
-		void GetComponents( Value& v, Value::NumberFactor &f ) const {
+		void GetComponents( Value& v) const {
 			v = value;
-			// TJ: This is wrong, but necessary to preserve the fiction that factor lives in Literal.
-			v.factor = Value::NO_FACTOR;
-			f = value.factor;
 		}
 
-		const Value& getValue(Value::NumberFactor &f) const {
-			// TJ: This is wrong, but necessary to preserve the fiction that factor lives in Literal.
-			f = value.factor;
+		const Value& getValue() const {
 			return value;
 		}
 
-		/** Get the encapsulated value (with the factor applied)
+		/** Get the encapsulated value
 		 * 	@param v The value encapsulated by the literal
 		 */
 		void GetValue( Value& val ) const {
 			val.CopyFrom( value );
-			val.ApplyFactor();
 		}
 
 		/** Special case fetch of the c_str() within a literal string

@@ -467,12 +467,11 @@ bool render_job_cmd_and_args (std::string & val, ClassAd * ad, Formatter & /*fmt
 	if ( ! ad->LookupString(ATTR_JOB_CMD, val))
 		return false;
 
-	char * args;
-	if (ad->LookupString (ATTR_JOB_ARGUMENTS1, &args) || 
-		ad->LookupString (ATTR_JOB_ARGUMENTS2, &args)) {
+	std::string args;
+	if (ad->LookupString (ATTR_JOB_ARGUMENTS1, args) || 
+		ad->LookupString (ATTR_JOB_ARGUMENTS2, args)) {
 		val += " ";
 		val += args;
-		free(args);
 	}
 	return true;
 }

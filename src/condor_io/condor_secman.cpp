@@ -159,7 +159,7 @@ SecMan::getTagAuthenticationMethods(DCpermission perm)
 
 
 SecMan::sec_req
-SecMan::sec_alpha_to_sec_req(char *b) {
+SecMan::sec_alpha_to_sec_req(const char *b) {
 	if (!b || !*b) {  
 		// ... that is the question :)
 		return SEC_REQ_INVALID;
@@ -186,14 +186,11 @@ SecMan::sec_alpha_to_sec_req(char *b) {
 SecMan::sec_feat_act
 SecMan::sec_lookup_feat_act( const ClassAd &ad, const char* pname ) {
 
-	char* res = NULL;
-	ad.LookupString(pname, &res);
-
-	if (res) {
+	std::string res;
+	if (ad.LookupString(pname, res)) {
 		char buf[2];
-		strncpy (buf, res, 1);
+		buf[0] = res[0];
 		buf[1] = 0;
-		free (res);
 
 		return sec_alpha_to_sec_feat_act(buf);
 	}
@@ -269,14 +266,12 @@ SecMan::sec_lookup_act( const ClassAd &ad, const char* pname ) {
 SecMan::sec_req
 SecMan::sec_lookup_req( const ClassAd &ad, const char* pname ) {
 
-	char* res = NULL;
-	ad.LookupString(pname, &res);
+	std::string res;
+	if (ad.LookupString(pname, res)) {
 
-	if (res) {
 		char buf[2];
-		strncpy (buf, res, 1);
+		buf[0] = res[0];
 		buf[1] = 0;
-		free (res);
 
 		return sec_alpha_to_sec_req(buf);
 	}
@@ -726,8 +721,8 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 	// extract the values from the classads
 
 	// pointers to string values
-	char* cli_buf = NULL;
-	char* srv_buf = NULL;
+	std::string cli_buf;
+	std::string srv_buf;
 
 	// enums of the values
 	sec_req cli_req;
@@ -735,32 +730,23 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 
 
 	// get the attribute from each
-	cli_ad.LookupString(attr, &cli_buf);
-	srv_ad.LookupString(attr, &srv_buf);
+	cli_ad.LookupString(attr, cli_buf);
+	srv_ad.LookupString(attr, srv_buf);
 
 		// If some attribute is missing (perhaps because it was part of an old
 		// condor version that doesn't support something),
 		// we assume that it means the other side doesn't support it and we
 		// assume that's equivalent to NEVER.
-	if (!cli_buf) {
-		cli_buf = strdup("NEVER");
+	if (cli_buf.empty()) {
+		cli_buf = "NEVER";
 	}
-	if (!srv_buf) {
-		srv_buf = strdup("NEVER");
+	if (srv_buf.empty()) {
+		srv_buf = "NEVER";
 	}
 
 	// convert it to an enum
-	cli_req = sec_alpha_to_sec_req(cli_buf);
-	srv_req = sec_alpha_to_sec_req(srv_buf);
-
-	// free the buffers
-	if (cli_buf) {
-		free (cli_buf);
-	}
-
-	if (srv_buf) {
-		free (srv_buf);
-	}
+	cli_req = sec_alpha_to_sec_req(cli_buf.c_str());
+	srv_req = sec_alpha_to_sec_req(srv_buf.c_str());
 
 	if( required ) {
 		// if either party requires this feature, indicate that
@@ -889,13 +875,13 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 
 	action_ad->Assign(ATTR_SEC_INTEGRITY, SecMan::sec_feat_act_rev[integrity_action]);
 
-	char* cli_methods = NULL;
-	char* srv_methods = NULL;
-	if (cli_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &cli_methods) &&
-		srv_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &srv_methods)) {
+	std::string cli_methods;
+	std::string srv_methods;
+	if (cli_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, cli_methods) &&
+		srv_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, srv_methods)) {
 
 		// send the list for 6.5.0 and higher
-		std::string the_methods = ReconcileMethodLists( cli_methods, srv_methods );
+		std::string the_methods = ReconcileMethodLists( cli_methods.c_str(), srv_methods.c_str());
 		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
 
 		// send the single method for pre 6.5.0
@@ -905,19 +891,13 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		}
 	}
 
-	if (cli_methods) {
-        free(cli_methods);
-    }
-	if (srv_methods) {
-        free(srv_methods);
-    }
+	cli_methods.clear();
+	srv_methods.clear();
 
-	cli_methods = NULL;
-	srv_methods = NULL;
-	if (cli_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, &cli_methods) &&
-		srv_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, &srv_methods)) {
+	if (cli_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, cli_methods) &&
+		srv_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, srv_methods)) {
 
-		std::string the_methods = ReconcileMethodLists( cli_methods, srv_methods );
+		std::string the_methods = ReconcileMethodLists( cli_methods.c_str(), srv_methods.c_str());
 		action_ad->Assign(ATTR_SEC_CRYPTO_METHODS, the_methods);
 		action_ad->Assign(ATTR_SEC_CRYPTO_METHODS_LIST, the_methods);
 			// AES-GCM will always internally encrypt and do integrity-checking,
@@ -929,31 +909,22 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		}
 	}
 
-	if (cli_methods) {
-        free( cli_methods );
-    }
-	if (srv_methods) {
-        free( srv_methods );
-    }
-
 	// reconcile the session expiration.  it is the SHORTER of
 	// client's and server's value.
 
 	int cli_duration = 0;
 	int srv_duration = 0;
 
-	char *dur = NULL;
-	cli_ad.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
-	if (dur) {
-		cli_duration = atoi(dur);
-		free(dur);
+	std::string dur;
+	cli_ad.LookupString(ATTR_SEC_SESSION_DURATION,dur);
+	if (!dur.empty()) {
+		cli_duration = atoi(dur.c_str());
 	}
 
-	dur = NULL;
-	srv_ad.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
-	if (dur) {
-		srv_duration = atoi(dur);
-		free(dur);
+	dur.clear();
+	srv_ad.LookupString(ATTR_SEC_SESSION_DURATION, dur);
+	if (!dur.empty()) {
+		srv_duration = atoi(dur.c_str());
 	}
 
 	action_ad->Assign(ATTR_SEC_SESSION_DURATION, std::to_string((cli_duration < srv_duration) ? cli_duration : srv_duration));
@@ -2206,37 +2177,33 @@ SecManStartCommand::authenticate_inner()
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf ( D_SECURITY, "SECMAN: authenticating RIGHT NOW.\n");
 			}
-			char * auth_methods = NULL;
-			m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods );
-			if (auth_methods) {
+			std::string auth_methods;
+			m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, auth_methods );
+			if (!auth_methods.empty()) {
 				if (IsDebugVerbose(D_SECURITY)) {
-					dprintf (D_SECURITY, "SECMAN: AuthMethodsList: %s\n", auth_methods);
+					dprintf (D_SECURITY, "SECMAN: AuthMethodsList: %s\n", auth_methods.c_str());
 				}
 			} else {
 				// lookup the 6.4 attribute name
-				m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
+				m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, auth_methods );
 				if (IsDebugVerbose(D_SECURITY)) {
-					dprintf (D_SECURITY, "SECMAN: AuthMethods: %s\n", auth_methods);
+					dprintf (D_SECURITY, "SECMAN: AuthMethods: %s\n", auth_methods.c_str());
 				}
 			}
 
-			if (!auth_methods) {
+			if (auth_methods.empty()) {
 				// there's no auth methods.
 				dprintf ( D_ALWAYS, "SECMAN: no auth method!, failing.\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Error: No auth methods.");
 				return StartCommandFailed;
 			} else {
-				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
+				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods.c_str());
 			}
 
 			m_sock->setPolicyAd(m_auth_info);
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
-			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, NULL);
-
-			if (auth_methods) {
-				free(auth_methods);
-			}
+			int auth_result = m_sock->authenticate(m_private_key, auth_methods.c_str(), m_errstack, auth_timeout, m_nonblocking, NULL);
 
 			if( auth_result == 2 ) {
 				m_state = AuthenticateContinue;
@@ -2566,34 +2533,33 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				dPrintAd(D_SECURITY, m_auth_info);
 			}
 
-			char *sesid = NULL;
-			m_auth_info.LookupString(ATTR_SEC_SID, &sesid);
-			if (sesid == NULL) {
-				dprintf (D_ALWAYS, "SECMAN: session id is NULL, failing\n");
+			std::string sesid;
+			m_auth_info.LookupString(ATTR_SEC_SID, sesid);
+			if (sesid.empty()) {
+				dprintf (D_ALWAYS, "SECMAN: session id is undefined, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Failed to lookup session id.");
 				return StartCommandFailed;
 			}
 
-			char *cmd_list = NULL;
-			m_auth_info.LookupString(ATTR_SEC_VALID_COMMANDS, &cmd_list);
-			if (cmd_list == NULL) {
+			std::string cmd_list;
+			m_auth_info.LookupString(ATTR_SEC_VALID_COMMANDS, cmd_list);
+			if (cmd_list.empty()) {
 				dprintf (D_ALWAYS, "SECMAN: valid commands is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Failure: Unable to lookup valid commands.");
-				free(sesid);
 				return StartCommandFailed;
 			}
 
 
 			// extract the session duration
-			char *dur = NULL;
-			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
+			std::string dur;
+			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, dur);
 
 			time_t expiration_time = 0;
 			time_t now = time(0);
-			if( dur ) {
-				expiration_time = now + atoi(dur);
+			if (!dur.empty()) {
+				expiration_time = now + atoi(dur.c_str());
 			}
 
 			int session_lease = 0;
@@ -2638,12 +2604,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 								m_sock->get_connect_addr(), keyvec,
 								m_auth_info, expiration_time,
 								session_lease));
-			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
-
-            if (dur) {
-                free(dur);
-				dur = NULL;
-            }
+			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid.c_str(), dur.c_str(), session_lease);
 
 			// now add entrys which map all the {<sinful_string>,<command>} pairs
 			// to the same key id (which is in the variable sesid)
@@ -2659,26 +2620,22 @@ SecManStartCommand::receivePostAuthInfo_inner()
 
 				m_sec_man.command_map.insert_or_assign(keybuf, sesid);
 				if (IsDebugVerbose(D_SECURITY)) {
-					dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
+					dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid.c_str());
 				}
 			}
 			
 			m_sock->setSessionID(sesid);
-			free( sesid );
-            free( cmd_list );
-
 		} // if (m_new_session)
 
 	} // if (m_is_tcp)
 
 	if( !m_new_session && m_have_session ) {
-		char *fqu = NULL;
-		if( m_auth_info.LookupString(ATTR_SEC_USER,&fqu) && fqu ) {
+		std::string fqu;
+		if( m_auth_info.LookupString(ATTR_SEC_USER,fqu) && (!fqu.empty())) {
 			if( IsDebugVerbose(D_SECURITY) ) {
-				dprintf( D_SECURITY, "Getting authenticated user from cached session: %s\n", fqu );
+				dprintf( D_SECURITY, "Getting authenticated user from cached session: %s\n", fqu.c_str());
 			}
-			m_sock->setFullyQualifiedUser( fqu );
-			free( fqu );
+			m_sock->setFullyQualifiedUser(fqu.c_str());
 		}
 
 		bool tried_authentication = false;
@@ -3266,7 +3223,7 @@ SecMan::getAuthBitmask ( const char * methods ) {
 
 
 std::string
-SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
+SecMan::ReconcileMethodLists( const char * cli_methods, const char * srv_methods ) {
 
 	// algorithm:
 	// step through the server's methods in order.  if the method is

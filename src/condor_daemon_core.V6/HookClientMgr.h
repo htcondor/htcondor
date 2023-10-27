@@ -88,6 +88,7 @@ protected:
 	virtual bool reconfig() = 0;
 	virtual const std::string paramPrefix() const = 0;
 	bool getHookPath(HookType hook_type, std::string &path);
+	bool getHookArgs(HookType hook_type, ArgList &args, CondorError &err);
 
 	std::string m_hook_keyword;
 };

@@ -258,15 +258,9 @@ Unparse( string &buffer, const ExprTree *tree )
 
 	switch( tree->GetKind( ) ) {
 		case ExprTree::LITERAL_NODE: {
-#if 0
-			Value::NumberFactor factor;
-			const Value & val = ((const Literal*)tree)->getValue(factor);
-#else
 			Value				val;
-			Value::NumberFactor	factor;
-			((Literal*)tree)->GetComponents( val, factor );
-#endif
-			UnparseAux( buffer, val, factor );
+			((Literal*)tree)->GetComponents( val);
+			UnparseAux( buffer, val);
 			return;
 		}
 
@@ -349,17 +343,9 @@ Unparse( string &buffer, const ClassAd *ad, const References &whitelist )
 
 
 void ClassAdUnParser::
-UnparseAux( string &buffer, const Value &val, Value::NumberFactor factor )
+UnparseAux( string &buffer, const Value &val)
 {
 	Unparse( buffer, val );
-	if( ( val.IsIntegerValue() || val.IsRealValue() ) && factor != Value::NO_FACTOR ) {
-		buffer += (factor==Value::B_FACTOR)?"B"  :
-					(factor==Value::K_FACTOR)?"K": 
-					(factor==Value::M_FACTOR)?"M":
-					(factor==Value::G_FACTOR)?"G": 
-					(factor==Value::T_FACTOR)?"T": 
-					"<error:bad factor>";
-	}
 	return;
 }
 

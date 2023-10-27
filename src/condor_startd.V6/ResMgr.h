@@ -593,7 +593,7 @@ namespace classad {
 				if (!OtherSlotEval("SlotEval", args, evs, val)) {
 					attr = "error";
 				} else {
-					ClassAdUnParser::UnparseAux(rhs, val, classad::Value::NumberFactor::NO_FACTOR);
+					ClassAdUnParser::UnparseAux(rhs, val);
 					if (indirect) {
 						classad::Value attrval;
 						if(!OtherSlotEval("*", args, evs, attrval)||!attrval.IsStringValue(attr)) {
