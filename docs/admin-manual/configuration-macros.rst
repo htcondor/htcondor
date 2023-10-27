@@ -3022,8 +3022,8 @@ section.
     on hold for the reason (optionally) specified by the variables
     ``WANT_HOLD_REASON`` and ``WANT_HOLD_SUBCODE``. As usual, the job
     owner may specify
-    :subcom:periodic_release`<and WANT_HOLD>`
-    and/or :subcom:periodic_remove`<and WANT_HOLD>`
+    :subcom:`periodic_release<and WANT_HOLD>`
+    and/or :subcom:`periodic_remove<and WANT_HOLD>`
     expressions to react to specific hold states automatically. The
     attribute ``HoldReasonCode`` in the job ClassAd is set to the value
     21 when ``WANT_HOLD`` is responsible for putting the job on hold.
@@ -6577,7 +6577,7 @@ do not specify their own with:
 
 :macro-def:`SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES`
     Provides a default value for the submit command
-    :subcom:should_transfer_files<and SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES>`
+    :subcom:`should_transfer_files<and SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES>`
     if the submit file does not supply a value and when the value is not
     forced by some other command in the submit file, such as the
     universe. Valid values are YES, TRUE, ALWAYS, NO, FALSE, NEVER and
@@ -9117,7 +9117,7 @@ HTCondor attributes
     be inserted into the ``.condor.sub`` file created by
     *condor_submit_dag*. The specified file is inserted into the
     ``.condor.sub`` file before the
-    :subcom:queue<and DAGMAN_INSERT_SUB_FILE>` command and before
+    :subcom:`queue<and DAGMAN_INSERT_SUB_FILE>` command and before
     any commands specified with the **-append** *condor_submit_dag*
     command line option. Note that the ``DAGMAN_INSERT_SUB_FILE`` value
     can be overridden by the *condor_submit_dag*

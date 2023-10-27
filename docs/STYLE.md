@@ -26,14 +26,18 @@ an indented link under it named `and checkpointing`.  Multiple
 descriptions/usage for a single index entry make it easy for readers to find
 related items that may be located in different places in the manual.
 
-**:macro:** used to reference a condor config macro knob.  It takes one argument, the name of the macro to reference.
-
-Example: **:macro:\`START\`**
-
 **:macro-def:** is used in the coonfiguration macros reference page to define an anchor for the above to target,
 and an index entry.
 
 Example: **:macro-def:\`START\`**
+
+**:macro:** used to reference a condor config macro knob declared with **macro-def** as above. **macro** creates
+a reference (link) from the existing position to the entry in the configuration macros page. If given and argument,
+it will also create and index entry with a subheading under the macro name.
+
+Example: **:macro:\`START\`**
+
+Example: **:macro:\`START[with Preemption]\`**
 
 **:subcom-def:** is used in the condor_submit manual page to define a condor submit command.  **:subcom-def:** 
 takes one argument, the name of the submit command. It creates an index entry
