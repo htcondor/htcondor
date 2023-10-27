@@ -1,7 +1,7 @@
-:index:`docker universe` :index:`docker<single: docker; universe>`
 Docker Universe Applications
 ============================
 
+:index:`docker universe` :index:`docker<single: docker; universe>`
 A docker universe job instantiates a Docker container from a Docker
 image, and HTCondor manages the running of that container as an HTCondor
 job, on an execute machine. This running container can then be managed

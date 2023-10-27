@@ -5096,7 +5096,7 @@ These macros control the *condor_schedd*.
     should be in order of preference. The *condor_schedd* will only
     send a request to a central manager in the list if the local pool
     and pools earlier in the list are not satisfying all the job
-    requests. :macro:`$(ALLOW_NEGOTIATOR_SCHEDD)`
+    requests. :macro:`ALLOW_NEGOTIATOR_SCHEDD`
     must also be configured to allow negotiators from all of the pools to
     contact the *condor_schedd* at the ``NEGOTIATOR`` authorization level.
     Similarly, the central managers of the remote pools must be

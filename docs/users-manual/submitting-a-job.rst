@@ -687,7 +687,7 @@ as given in these definitions.
     specified, "%d" is used as the format specifier.
 
 ``$RANDOM_CHOICE(choice1, choice2, choice3, ...)``
-    :index:`$RANDOM_CHOICE() function macro` A random choice
+    :index:`RANDOM_CHOICE` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
