@@ -81,6 +81,8 @@ override_dh_auto_install:
 	# Remove extranenous files
 	rm debian/tmp/usr/share/doc/condor/LICENSE
 	rm debian/tmp/usr/share/doc/condor/README
+	# This isn't ready for release yet.
+	rm -fr debian/tmp/usr/lib/python3/classad3
 
 
 override_dh_fixperms-arch:
