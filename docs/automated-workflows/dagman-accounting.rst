@@ -3,17 +3,12 @@ DAGMan and Accounting Groups
 
 :index:`accounting groups<single: DAGMan; Accounting groups>`
 
-As of version 8.5.6, *condor_dagman* propagates
-**accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
-and
-**accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
+*condor_dagman* propagates
+:subcom:`accounting_group<and DAGman>` and :subcom:`accounting_group_user<and DAGman>`
 values specified for *condor_dagman* itself to all jobs within the DAG
 (including sub-DAGs).
 
-The
-**accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
-and
-**accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
+The :subcom:`accounting_group<>` and :subcom:`accounting_group_user<>`
 values can be specified using the **-append** flag to
 *condor_submit_dag*, for example:
 

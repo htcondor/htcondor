@@ -30,7 +30,7 @@ these. One submit description may contain specifications for the queuing
 of many HTCondor jobs at once. A single invocation of *condor_submit*
 may cause one or more clusters. A cluster is a set of jobs specified in
 the submit description between
-**queue** :index:`queue<single: queue; submit commands>` commands for which the
+:subcom:`queue` commands for which the
 executable is not changed. It is advantageous to submit multiple jobs as
 a single cluster because the schedd uses much less memory to hold the jobs.
 
@@ -99,13 +99,10 @@ Options
  **-disable**
     Disable file permission checks when submitting a job for read
     permissions on all input files, such as those defined by commands
-    **input** :index:`input<single: input; submit commands>` and
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`,
+    :subcom:`input` and :subcom:`transfer_input_files`,
     as well as write permission to output files, such as a log file
-    defined by **log** :index:`log<single: log; submit commands>` and output
-    files defined with
-    **output** :index:`output<single: output; submit commands>` or
-    **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
+    defined by :subcom:`log` and output files defined with
+    :subcom:`output` or :subcom:`transfer_output_files`.
  **-debug**
     Cause debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
@@ -153,12 +150,11 @@ Options
     for the job to run, and then launches *condor_ssh_to_job* to run
     a shell. If the user would like to run the shell on a machine that
     matches a particular
-    **requirements** :index:`requirements<single: requirements; submit commands>`
+    :subcom:`requirements`
     expression, the submit description file is specified, and it will
     contain the expression. Note that all policy expressions specified
     in the submit description file are honored, but any
-    **executable** :index:`executable<single: executable; submit commands>` or
-    **universe** :index:`universe<single: universe; submit commands>` commands are
+    :subcom:`executable` or :subcom:`universe` commands are
     overwritten to be sleep and vanilla. The job ClassAd attribute
     ``InteractiveJob`` is set to ``True`` to identify interactive jobs
     for *condor_startd* policy usage.
@@ -167,8 +163,7 @@ Options
     consists of a single cluster classad and a digest containing the submit
     commands necessary to describe the differences between jobs.  If the ``Queue``
     statement has itemdata, then the itemdata will be sent.  Using this option
-    is equivalent to using the **max_materialize**
-    :index:`max_materialize<single: max_materialize; submit commands>` submit command.
+    is equivalent to using the :subcom:`max_materialize` submit command.
  **-allow-crlf-script**
     Changes the check for an invalid line ending on the executable
     script's ``#!`` line from an ERROR to a WARNING. The ``#!`` line
@@ -855,7 +850,7 @@ COMMANDS FOR MATCHMAKING
     ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ :sup:`40` numbers of bytes.
 
-    :index:`request_GPUs<single: request_GPUs; submit commands>`
+    :subcom-def:`request_GPUs`
     :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
  :subcom-def:`request_<name>` = <quantity>
     The required amount of the custom machine resource identified by
@@ -1269,7 +1264,7 @@ FILE TRANSFER COMMANDS
     The list is interpreted like ``transfer_output_files``, but there is
     no corresponding ``remaps`` command.
    
-    .. _checkpoint_destination: 
+    .. _checkpoint_destination:
 
     :index:`checkpoint file(s) specified by URL<single: checkpoint file(s) specified by URL; file transfer mechanism>`
  :subcom-def:`checkpoint_destination` = <destination-URL>
@@ -1350,13 +1345,11 @@ FILE TRANSFER COMMANDS
     In all three cases, the job will go on hold if ``transfer_output_files``
     specifies a file which does not exist at transfer time.
 
-    :index:`s3_access_key_id_file<single: s3_access_key_id_file; submit commands>`
  :subcom-def:`aws_access_key_id_file`, :subcom-def:`s3_access_key_id_file`
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.  Use only one.
 
-    :index:`s3_secret_access_key_file<single: s3_secret_access_key_file; submit commands>`
  :subcom-def:`aws_secret_access_key_file`, :subcom-def:`s3_secret_access_key_file`
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the secret access key (and only the secret
@@ -2420,7 +2413,8 @@ ADVANCED COMMANDS
     may be kept. The number of run attempts to store may be extended
     beyond the system-specified history length by using the submit file
     command
-    **job_machine_attrs_history_length** :index:`job_machine_attrs_history_length<single: job_machine_attrs_history_length; submit commands>`.
+
+ :subcom-def:`job_machine_attrs_history_length`
     A machine attribute named ``X`` will be inserted into the job
     ClassAd as an attribute named ``MachineAttrX0``. The previous value
     of this attribute will be named ``MachineAttrX1``, the previous to
@@ -2553,8 +2547,7 @@ ADVANCED COMMANDS
     time granted to the job.
 
     Any jobs running with
-    **nice_user** :index:`nice_user<single: nice_user; submit commands>` priority
-    have a default
+    :subcom:`nice_user<and retirement_time>` priority have a default
     **max_job_retirement_time**
     of 0, so no retirement time is utilized by default. In all other
     cases, no default value is provided, so the maximum amount of
@@ -2870,7 +2863,6 @@ and comments.
         $$(DOLLARDOLLAR)
 
     :index:`in submit description file<single: in submit description file; $ENV>`
-    :index:`$ENV macro<single: $ENV macro; submit commands>`
     :index:`in submit description file<single: in submit description file; environment variables>`
 
     The environment macro, $ENV, allows the evaluation of an environment
@@ -2914,13 +2906,12 @@ Submit Variables
 
 :index:`condor_submit variables`
 
-While processing the **queue** :index:`queue<single: queue; submit commands>`
+While processing the :subcom:`queue`
 command in a submit file or from the command line, *condor_submit* will
 set the values of several automatic submit variables so that they can be
 referred to by statements in the submit file. With the exception of
 Cluster and Process, if these variables are set by the submit file, they
-will not be modified during
-**queue** :index:`queue<single: queue; submit commands>` processing.
+will not be modified during :subcom:`queue` processing.
 
  ClusterId
     Set to the integer value that the ``ClusterId`` attribute that the
@@ -2948,7 +2939,7 @@ will not be modified during
  Step
     Set to the step value as it varies from 0 to N-1 where N is the
     number provided on the
-    **queue** :index:`queue<single: queue; submit commands>` argument. This
+    :subcom:`queue<and step argument>` argument. This
     variable changes at the same rate as ProcId when it changes at all.
     For submit files that don't make use of the queue number option,
     Step will always be 0. For submit files that don't make use of any

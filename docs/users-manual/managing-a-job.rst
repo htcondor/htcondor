@@ -207,12 +207,12 @@ example shows the queue of jobs before and after a job is removed.
 
     1 jobs; 1 idle, 0 running, 0 held
 
-Placing a job on hold
----------------------
-
 :index:`condor_hold<single: condor_hold; HTCondor commands>`
 :index:`condor_release<single: condor_release; HTCondor commands>`
 :index:`state<single: state; job>`
+
+Placing a job on hold
+---------------------
 
 A job in the queue may be placed on hold by running the command
 *condor_hold*. A job in the hold state remains in the hold state until
@@ -268,10 +268,9 @@ do not impact user priorities. They are only a mechanism for the user to
 identify the relative importance of jobs among all the jobs submitted by
 the user to that specific queue.
 
+:index:`analysis<single: analysis; job>` :index:`not running<single: not running; job>`
 Why is the job not running?
 ---------------------------
-
-:index:`analysis<single: analysis; job>` :index:`not running<single: not running; job>`
 
 Users occasionally find that their jobs do not run. There are many
 possible reasons why a specific job is not running. The following prose
@@ -376,10 +375,9 @@ command
 
     $ condor_config_val SHADOW_LOG
 
+:index:`not running, on hold<single: not running, on hold; job>`
 Job in the Hold State
 ---------------------
-
-:index:`not running, on hold<single: not running, on hold; job>`
 
 Should HTCondor detect something about a job that would prevent it
 from ever running successfully, say, because the executable doesn't

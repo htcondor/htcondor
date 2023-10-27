@@ -255,7 +255,7 @@ what output is expected, and, when relevant, the exit status expected.
         the *condor_starter* daemon can write with entries for relevant
         events in the life of a given FetchWork application. It is similar to the
         job event log file specified for regular HTCondor jobs with the
-        **Log** :index:`Log<single: Log; submit commands>` command in a submit
+        :subcom:`log<and StarterUserLog>` command in a submit
         description file. However, certain attributes that are placed in a
         job event log do not make sense in the FetchWork environment, and are
         therefore omitted. The default is not to write this log file. It is
@@ -696,8 +696,8 @@ The submit description file for this example job may be
 
     queue
 
-Note that the
-**requirements** :index:`requirements<single: requirements; submit commands>` command
+Note that the job
+:subcom:`requirements<and hooks>` submit command
 ensures that this job matches with a machine that has
 ``JAVA5_HOOK_PREPARE_JOB`` defined.
 

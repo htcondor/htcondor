@@ -14,6 +14,17 @@ meaningful commands, like **:subcom:** or **:macro:**
 
 ### HTCondor specific markups
 
+**:index:** used to add entries to the index.  Our users do rely on the index, so take care to make good entries.  It
+is encouraged to have multiple meaningful index entries for the same topic. In some cases it may make sense
+to have both an index and inverted index entry for a topic.  For example, we have a primary index entry
+for every classad function, and also an inverted entry, with one top-level entry for "classad functions", with
+a subentry for each function under that. The form of the command is
+
+Example:  **:index:\`executable name\<single; executable name; and checkpointing\>\`** -- This 
+makes a main index entry named `executable`, with
+an indented link under it named `and checkpointing`.  Multiple
+descriptions/usage for a single index entry make it easy for readers to find
+related items that may be located in different places in the manual.
 
 **:macro:** used to reference a condor config macro knob.  It takes one argument, the name of the macro to reference.
 

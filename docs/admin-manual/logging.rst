@@ -16,7 +16,7 @@ job event log
     occur as a job runs. The job event log is written on the submit
     machine. The submit description file for the job requests a job
     event log with the submit command
-    **log** :index:`log<single: log; submit commands>`. The log is created
+    :subcom:`log<definition>`. The log is created
     on and remains on the access point. Contents of the log are detailed
     in the :ref:`users-manual/managing-a-job:in the job event log file` section.
     Examples of events are that the job is running, that the job is placed on

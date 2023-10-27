@@ -1,8 +1,6 @@
 Defrag ClassAd Attributes
 =========================
 
-:index:`Defrag attributes<single: Defrag attributes; ClassAd>`
-
 :classad-attribute:`AvgDrainingBadput`
     Fraction of time CPUs in the pool have spent on jobs that were
     killed during draining of the machine. This is calculated in each

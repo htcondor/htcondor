@@ -1,8 +1,6 @@
 ClassAd Attributes Added by the *condor_collector*
 ===================================================
 
-:index:`ClassAd attribute added by the condor_collector`
-
 :classad-attribute:`AuthenticatedIdentity`
     The authenticated name assigned by the *condor_collector* to the
     daemon that published the ClassAd.
