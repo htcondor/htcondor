@@ -5,7 +5,6 @@ import pytest
 import datetime
 
 from htcondor2 import classad
-# import classad
 
 ## Yes, I know, this is badly written, there's no test cases.
 
