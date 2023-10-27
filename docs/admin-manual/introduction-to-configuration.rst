@@ -857,7 +857,7 @@ as given in these definitions.
 
 
 ``$RANDOM_CHOICE(choice1, choice2, choice3, ...)``
-    :index:`$RANDOM_CHOICE() function macro` A random choice
+    :index:`RANDOM_CHOICE<pair RANDOM_CHOICE; config macros>` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:

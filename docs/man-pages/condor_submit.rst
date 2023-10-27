@@ -2862,7 +2862,7 @@ and comments.
 
         $$(DOLLARDOLLAR)
 
-    :index:`in submit description file<single: in submit description file; $ENV>`
+    :index:`in submit description file<single: in submit description file; ENV>`
     :index:`in submit description file<single: in submit description file; environment variables>`
 
     The environment macro, $ENV, allows the evaluation of an environment
@@ -2883,9 +2883,7 @@ and comments.
 
     The environment variable is evaluated when the submit description
     file is processed.
-    :index:`in submit description file<single: in submit description file; $RANDOM_CHOICE()>`
-    :index:`$RANDOM_CHOICE() macro<single: $RANDOM_CHOICE() macro; submit commands>`
-    :index:`use in submit description file<single: use in submit description file; RANDOM_CHOICE() macro>`
+    :index:`RANDOM_CHOICE<single: RANDOM_CHOICE; in submit file>`
 
     The $RANDOM_CHOICE macro allows a random choice to be made from a
     given list of parameters at submission time. For an expression, if
