@@ -4,7 +4,7 @@ import pytest
 
 import datetime
 
-from htcondor2 import classad
+import classad2 as classad
 
 ## Yes, I know, this is badly written, there's no test cases.
 
