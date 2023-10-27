@@ -29,8 +29,6 @@ import os
 import logging
 from pathlib import Path
 
-import htcondor
-
 from ornithology import (
     config,
     standup,
@@ -46,7 +44,7 @@ logger.setLevel(logging.DEBUG)
 @config
 def condor_config():
     config = {
-        "TEST_HTCONDOR_933": "TRUE",
+        "TEST_HTCONDOR_993": "TRUE",
     }
     raw_config = None
     return {"config": config, "raw_config": raw_config}
