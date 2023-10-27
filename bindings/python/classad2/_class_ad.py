@@ -17,7 +17,7 @@ from .classad2_impl import (
 )
 
 # So that the typehints match version 1.
-from ._parser import ParserType as Parser
+from ._parser_type import ParserType as Parser
 
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta, timezone
