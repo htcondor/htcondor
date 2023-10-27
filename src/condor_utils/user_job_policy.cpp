@@ -312,7 +312,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 		}
 
 		/* Should I perform a periodic vacate? */
-		if ((mode == PERIODIC_ONLY) && ((state == RUNNING) || (state == SUSPENDED))) {
+		if (mode == PERIODIC_ONLY) {
 			int retval = 0;
 			if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_VACATE_CHECK, POLICY_SYSTEM_PERIODIC_VACATE, VACATE_FROM_RUNNING, retval)) {
 				return retval;

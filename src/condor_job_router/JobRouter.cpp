@@ -1037,6 +1037,9 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 			// the job as if it is a new job from the schedd.
 			ret_val = true;
 			break;
+		case VACATE_FROM_RUNNING:
+			SetJobIdle(job);
+			break;
 		default:
 			EXCEPT("Unknown action (%d) in "
 				"JobRouter::EvalSrcJobPeriodicExpr(%s)",
