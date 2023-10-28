@@ -51,20 +51,20 @@ Extra Environment Variables HTCondor sets for Jobs
 HTCondor sets several additional environment variables for each
 executing job that may be useful.
 
--  ``_CONDOR_SCRATCH_DIR``\ :index:`_CONDOR_SCRATCH_DIR environment variable`\ :index:`_CONDOR_SCRATCH_DIR<single: _CONDOR_SCRATCH_DIR; environment variables>`
+-  ``_CONDOR_SCRATCH_DIR``\ :index:`_CONDOR_SCRATCH_DIR environment variable`\ :index:`_CONDOR_SCRATCH_DIR<pair: _CONDOR_SCRATCH_DIR; environment variables for jobs>`
    names the directory where the job may place temporary data files.
    This directory is unique for every job that is run, and its contents
    are deleted by HTCondor when the job stops running on a machine. When
    file transfer is enabled, the job is started in this directory.
 -  ``_CONDOR_SLOT``
-   :index:`_CONDOR_SLOT environment variable`\ :index:`_CONDOR_SLOT<single: _CONDOR_SLOT; environment variables>`
+   :index:`_CONDOR_SLOT environment variable`\ :index:`_CONDOR_SLOT<pair: _CONDOR_SLOT; environment variables for jobs>`
    gives the name of the slot (for multicore machines), on which the job is
    run. On machines with only a single slot, the value of this variable
    will be 1, just like the ``SlotID`` attribute in the machine's
    ClassAd. See the :doc:`/admin-manual/ep-policy-configuration` section for more 
    details about configuring multicore machines.
 -  ``_CONDOR_JOB_AD``
-   :index:`_CONDOR_JOB_AD environment variable`\ :index:`_CONDOR_JOB_AD<single: _CONDOR_JOB_AD; environment variables>`
+   :index:`_CONDOR_JOB_AD environment variable`\ :index:`_CONDOR_JOB_AD<pair: _CONDOR_JOB_AD; environment variables for jobs>`
    is the path to a file in the job's scratch directory which contains
    the job ad for the currently running job. The job ad is current as of
    the start of the job, but is not updated during the running of the
@@ -74,7 +74,7 @@ executing job that may be useful.
    command. This environment variable may be particularly useful in a
    USER_JOB_WRAPPER.
 -  ``_CONDOR_MACHINE_AD``
-   :index:`_CONDOR_MACHINE_AD environment variable`\ :index:`_CONDOR_MACHINE_AD<single: _CONDOR_MACHINE_AD; environment variables>`
+   :index:`_CONDOR_MACHINE_AD environment variable`\ :index:`_CONDOR_MACHINE_AD<pair: _CONDOR_MACHINE_AD; environment variables for jobs>`
    is the path to a file in the job's scratch directory which contains
    the machine ad for the slot the currently running job is using. The
    machine ad is current as of the start of the job, but is not updated
@@ -83,10 +83,10 @@ executing job that may be useful.
    may want to look at from this file include Memory and Cpus, the amount
    of memory and cpus provisioned for this slot.
 -  ``_CONDOR_JOB_IWD``
-   :index:`_CONDOR_JOB_IWD environment variable`\ :index:`_CONDOR_JOB_IWD<single: _CONDOR_JOB_IWD; environment variables>`
+   :index:`_CONDOR_JOB_IWD environment variable`\ :index:`_CONDOR_JOB_IWD<pair: _CONDOR_JOB_IWD; environment variables for jobs>`
    is the path to the initial working directory the job was born with.
 -  ``_CONDOR_WRAPPER_ERROR_FILE``
-   :index:`_CONDOR_WRAPPER_ERROR_FILE environment variable`\ :index:`_CONDOR_WRAPPER_ERROR_FILE<single: _CONDOR_WRAPPER_ERROR_FILE; environment variables>`
+   :index:`_CONDOR_WRAPPER_ERROR_FILE environment variable`\ :index:`_CONDOR_WRAPPER_ERROR_FILE<pair: _CONDOR_WRAPPER_ERROR_FILE; environment variables for jobs>`
    is only set when the administrator has installed a
    USER_JOB_WRAPPER. If this file exists, HTCondor assumes that the
    job wrapper has failed and copies the contents of the file to the
@@ -99,11 +99,12 @@ executing job that may be useful.
    spawn more than this number of cpu-bound threads, or their performance will suffer.
    Many third party libraries like OpenMP obey these environment variables.
 -  ``BATCH_SYSTEM`` 
-   :index:`BATCH_SYSTEM environment variable`\ :index:`BATCH_SYSTEM<single: BATCH_SYSTEM; environment variables>`
+   :index:`BATCH_SYSTEM environment variable`\ :index:`BATCH_SYSTEM<pair: BATCH_SYSTEM; environment variables for jobs>`
    All job running under a HTCondor starter have the environment variable BATCH_SYSTEM 
    set to the string *HTCondor*.  Inspecting this variable allows a job to
    determine if it is running under HTCondor.
 -  ``X509_USER_PROXY``
+   :index:`X509_USER_PROXY environment variable`\ :index:`X509_USER_PROXY<pair: X509_USER_PROXY; environment variables for jobs>`
    gives the full path to the X.509 user proxy file if one is associated
    with the job. Typically, a user will specify
    :subcom:`x509userproxy<environment variable>` in
