@@ -26,7 +26,7 @@ an indented link under it named `and checkpointing`.  Multiple
 descriptions/usage for a single index entry make it easy for readers to find
 related items that may be located in different places in the manual.
 
-**:macro-def:** is used in the coonfiguration macros reference page to define an anchor for the above to target,
+**:macro-def:** is used in the configuration macros reference page to define an anchor for the above to target,
 and an index entry.
 
 Example: **:macro-def:\`START\`**
