@@ -21,7 +21,7 @@ corresponding to ClassAd data types (string, bool, etc.) or :class:`ExprTree`
 objects, which correspond to un-evaluated ClassAd expressions.
 
 .. autoclass:: ClassAd
-
+   :noindex:
    .. automethod:: ClassAd.eval
    .. automethod:: ClassAd.lookup
    .. automethod:: ClassAd.printOld
@@ -36,7 +36,7 @@ objects, which correspond to un-evaluated ClassAd expressions.
 
 
 .. autoclass:: ExprTree
-
+   :noindex:
    .. automethod:: ExprTree.and_
    .. automethod:: ExprTree.or_
    .. automethod:: ExprTree.is_
@@ -46,6 +46,7 @@ objects, which correspond to un-evaluated ClassAd expressions.
    .. automethod:: ExprTree.simplify
 
 .. autoclass:: Value
+   :noindex:
 
 
 Parsing and Creating ClassAds
@@ -79,6 +80,7 @@ can be controlled by giving them different values of the :class:`Parser`
 enumeration.
 
 .. autoclass:: Parser
+   :noindex:
 
 
 Utility Functions
@@ -94,14 +96,22 @@ For backwards-compatibility, the exceptions in this module inherit
 from the built-in exceptions raised in earlier (pre-v8.9.9) versions.
 
 .. autoclass:: ClassAdException
+   :noindex:
 
 .. autoclass:: ClassAdEnumError
+   :noindex:
 .. autoclass:: ClassAdEvaluationError
+   :noindex:
 .. autoclass:: ClassAdInternalError
+   :noindex:
 .. autoclass:: ClassAdOSError
+   :noindex:
 .. autoclass:: ClassAdParseError
+   :noindex:
 .. autoclass:: ClassAdTypeError
+   :noindex:
 .. autoclass:: ClassAdValueError
+   :noindex:
 
 
 Deprecated Functions
