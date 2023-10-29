@@ -62,6 +62,10 @@ Bugs Fixed:
   grid universe jobs to a remote cluster via ssh.
   :jira:`2118`
 
+- Fixed a bug where the *condor_negotiator* could fail to contact a
+  *condor_schedd* that's on the same private network.
+  :jira:`2115`
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
@@ -72,6 +76,9 @@ Release Notes:
 .. HTCondor version 23.0.1 released on Month Date, 2023.
 
 - HTCondor version 23.0.1 not yet released.
+
+- The HTCondor tarballs now contain apptainer version 1.2.4.
+  :jira:`2111`
 
 New Features:
 
