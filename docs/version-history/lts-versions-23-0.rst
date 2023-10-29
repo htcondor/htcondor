@@ -77,6 +77,9 @@ Release Notes:
 
 - HTCondor version 23.0.1 not yet released.
 
+- The HTCondor tarballs now contain apptainer version 1.2.4.
+  :jira:`2111`
+
 New Features:
 
 - None.
