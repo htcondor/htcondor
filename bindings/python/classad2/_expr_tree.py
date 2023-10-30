@@ -65,9 +65,11 @@ class ExprTree:
         does not record which :class:`classad2.ClassAd`, if any, it was
         extracted from.
         """
-        if scope is not None and not isinstance(scope, ClassAd):
-            raise TypeError("scope must be a ClassAd")
-        return _exprtree_eval(self._handle, scope._handle)
+        if scope is not None:
+            if not isinstance(scope, ClassAd):
+                raise TypeError("scope must be a ClassAd")
+            scope = scope._handle
+        return _exprtree_eval(self._handle, scope)
 
 
     def simplify(self, scope : ClassAd = None, target : ClassAd = None):
@@ -91,4 +93,4 @@ class ExprTree:
             if not isinstance(target, ClassAd):
                 raise TypeError("target must be a ClassAd")
             target = target._handle
-        return _exprtree_simplify(self._handle, scope._handle, target._handle)
+        return _exprtree_simplify(self._handle, scope, target)
