@@ -164,9 +164,9 @@ all machines in the pool. The following example settings are in the
 comments contained in the etc\\condor_config.local.credd example file.
 These sample settings rely on the ``PASSWORD`` method for authentication
 among daemons, including communication with the *condor_credd* daemon.
-The ``LOCAL_CREDD`` :index:`LOCAL_CREDD` variable must be
+The :macro:`LOCAL_CREDD` variable must be
 customized to point to the machine hosting the *condor_credd* and the
-``ALLOW_CONFIG`` :index:`ALLOW_CONFIG` variable will be
+:macro:`ALLOW_CONFIG` variable will be
 customized, if needed, to refer to an administrative account that exists
 on all HTCondor nodes.
 
@@ -389,8 +389,7 @@ execute machine spawns a *condor_starter* process. The
    where ``<X>`` is the slot number of the *condor_starter*. This
    account is added to group ``Users`` by default. The default group may
    be changed by setting configuration variable
-   ``DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP``
-   :index:`DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP`. This step is skipped
+   :macro:`DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP`. This step is skipped
    if the job is to be run using the submitting user's account, as
    specified in :ref:`platform-specific/microsoft-windows:executing jobs as
    the submitting user`.
@@ -404,9 +403,8 @@ execute machine spawns a *condor_starter* process. The
    Permissions are set so that only the account that will run the job
    has access rights to this Desktop. Any windows created by this job
    are not seen by anyone; the job is run in the background. Setting
-   ``USE_VISIBLE_DESKTOP`` :index:`USE_VISIBLE_DESKTOP` to
-   ``True`` will allow the job to access the default desktop instead of
-   a newly created one.
+   :macro:`USE_VISIBLE_DESKTOP` to ``True`` will allow the job to access
+   the default desktop instead of a newly created one.
 
 Next, the *condor_starter* daemon contacts the *condor_shadow* daemon,
 which is running on the submitting machine, and the *condor_starter*

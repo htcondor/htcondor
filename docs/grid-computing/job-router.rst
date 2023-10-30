@@ -408,8 +408,7 @@ may appear in a Routing Table entry.
     A boolean expression that, when ``True``, causes the original job to
     be transformed in place rather than creating a new transformed
     version (a routed copy) of the job. In this mode, the Job Router
-    Hook ``<Keyword>_HOOK_TRANSLATE_JOB``
-    :index:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
+    Hook :macro:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
     in the routing table are applied during the job transformation. The
     routing table attribute ``GridResource`` is ignored, and there is no
     default transformation of the job from a vanilla job to a grid

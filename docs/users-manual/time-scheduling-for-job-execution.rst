@@ -62,7 +62,6 @@ Deferral Window
 '''''''''''''''
 
 :index:`DeferralWindow<single: DeferralWindow; ClassAd job attribute>`
-:index:`deferral_window<single: deferral_window; definition>`.
 If a job arrives at its execution machine after the deferral time has
 passed, the job is evicted from the machine and put on hold in the job
 queue. This may occur, for example, because the transfer of needed files
@@ -80,8 +79,7 @@ job is evicted from the execution machine and is put on hold in the job
 queue.
 
 The deferral window is specified in the job's submit description file
-with the command
-:subcom:`deferral_window<definition>`.
+with the command :subcom:`deferral_window<definition>`.
 
 Preparation Time
 ''''''''''''''''
@@ -212,23 +210,18 @@ values for these commands. At least one of these must be defined in
 order for HTCondor to calculate a ``DeferralTime`` for the job. Once one
 CronTab value is defined, the default for all the others uses all the
 values in the allowed values ranges.
-:index:`cron_minute<single: cron_minute; definition>`
-:index:`cron_hour<single: cron_hour; definition>`
-:index:`cron_day_of_month<single: cron_day_of_month; definition>`
-:index:`cron_month<single: cron_month; definition>`
-:index:`cron_day_of_week<single: cron_day_of_week; definition>`
 
-+----------------------------+----------------------------+
-| **cron_minute**            | 0 - 59                     |
-+----------------------------+----------------------------+
-| **cron_hour**              | 0 - 23                     |
-+----------------------------+----------------------------+
-| **cron_day_of_month**      | 1 - 31                     |
-+----------------------------+----------------------------+
-| **cron_month**             | 1 - 12                     |
-+----------------------------+----------------------------+
-| **cron_day_of_week**       | 0 - 7 (Sunday is 0 or 7)   |
-+----------------------------+----------------------------+
++----------------------------------------------+----------------------------+
+| :subcom:`cron_minute<definition>`            | 0 - 59                     |
++----------------------------------------------+----------------------------+
+| :subcom:`cron_hour<definition>`              | 0 - 23                     |
++----------------------------------------------+----------------------------+
+| :subcom:`cron_day_of_month<definition>`      | 1 - 31                     |
++----------------------------------------------+----------------------------+
+| :subcom:`cron_month<definition>`             | 1 - 12                     |
++----------------------------------------------+----------------------------+
+| :subcom:`cron_day_of_week<definition>`       | 0 - 7 (Sunday is 0 or 7)   |
++----------------------------------------------+----------------------------+
 
 Table 2.3: The list of submit commands and their value ranges.
 
