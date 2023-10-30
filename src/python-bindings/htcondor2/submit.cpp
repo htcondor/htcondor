@@ -67,8 +67,6 @@ struct SubmitBlob {
         std::string m_remainder;
 
         // See comment in init_vars().
-        char ClusterString[20];
-        char ProcessString[20];
         char EmptyItemString[1];
 };
 
