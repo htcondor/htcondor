@@ -27,7 +27,7 @@ Deferred Execution Time
 '''''''''''''''''''''''
 
 :index:`of a job<single: of a job; deferral time>`
-:index:`DeferralTime<single: DeferralTime; ClassAd job attribute>`
+:index:`DeferralTime<single: DeferralTime; definition>`
 
 A job's deferral time is the exact time that HTCondor should attempt to
 execute the job. The deferral time attribute is defined as an expression
@@ -61,7 +61,7 @@ the command
 Deferral Window
 '''''''''''''''
 
-:index:`DeferralWindow<single: DeferralWindow; ClassAd job attribute>`
+:index:`DeferralWindow<single: DeferralWindow; definition>` 
 If a job arrives at its execution machine after the deferral time has
 passed, the job is evicted from the machine and put on hold in the job
 queue. This may occur, for example, because the transfer of needed files
@@ -84,7 +84,7 @@ with the command :subcom:`deferral_window<definition>`.
 Preparation Time
 ''''''''''''''''
 
-:index:`DeferralPrepTime<single: DeferralPrepTime; ClassAd job attribute>`
+:index:`DeferralPrepTime<single: DeferralPrepTime; definition>`
 
 When a job defines a deferral time far in the future and then is matched
 to an execution machine, potential computation cycles are lost because

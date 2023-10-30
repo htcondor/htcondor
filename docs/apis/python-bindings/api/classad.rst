@@ -23,27 +23,45 @@ objects, which correspond to un-evaluated ClassAd expressions.
 .. autoclass:: ClassAd
    :noindex:
    .. automethod:: ClassAd.eval
+   :noindex:
    .. automethod:: ClassAd.lookup
+   :noindex:
    .. automethod:: ClassAd.printOld
+   :noindex:
    .. automethod:: ClassAd.printJson
+   :noindex:
    .. automethod:: ClassAd.flatten
+   :noindex:
    .. automethod:: ClassAd.matches
+   :noindex:
    .. automethod:: ClassAd.symmetricMatch
+   :noindex:
    .. automethod:: ClassAd.externalRefs
+   :noindex:
    .. automethod:: ClassAd.internalRefs
+   :noindex:
    .. automethod:: ClassAd.__eq__
+   :noindex:
    .. automethod:: ClassAd.__ne__
+   :noindex:
 
 
 .. autoclass:: ExprTree
    :noindex:
    .. automethod:: ExprTree.and_
+   :noindex:
    .. automethod:: ExprTree.or_
+   :noindex:
    .. automethod:: ExprTree.is_
+   :noindex:
    .. automethod:: ExprTree.isnt_
+   :noindex:
    .. automethod:: ExprTree.sameAs
+   :noindex:
    .. automethod:: ExprTree.eval
+   :noindex:
    .. automethod:: ExprTree.simplify
+   :noindex:
 
 .. autoclass:: Value
    :noindex:
@@ -56,20 +74,31 @@ Parsing and Creating ClassAds
 construct ClassAd expressions and parse string representations of ClassAds.
 
 .. autofunction:: parseAds
+   :noindex:
 .. autofunction:: parseNext
+   :noindex:
 .. autofunction:: parseOne
+   :noindex:
 
 .. autofunction:: quote
+   :noindex:
 .. autofunction:: unquote
+   :noindex:
 
 .. autofunction:: Attribute
+   :noindex:
 .. autofunction:: Function
+   :noindex:
 .. autofunction:: Literal
+   :noindex:
 
 .. autofunction:: lastError
+   :noindex:
 
 .. autofunction:: register
+   :noindex:
 .. autofunction:: registerLibrary
+   :noindex:
 
 
 Parser Control
@@ -87,6 +116,7 @@ Utility Functions
 -----------------
 
 .. autofunction:: version
+   :noindex:
 
 
 Exceptions
@@ -121,4 +151,6 @@ The functions in this section are deprecated; new code should not use them
 and existing code should be rewritten to use their replacements.
 
 .. autofunction:: parse
+   :noindex:
 .. autofunction:: parseOld
+   :noindex:

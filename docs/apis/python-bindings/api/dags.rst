@@ -69,6 +69,7 @@ Writing a DAG to Disk
 +++++++++++++++++++++
 
 .. autofunction:: write_dag
+   :noindex:
 
 .. autoclass:: NodeNameFormatter
    :members:
@@ -93,5 +94,7 @@ it to your DAG as it is being constructed.
 See :ref:`automated-workflows/dagman-resubmit-failed:The Rescue DAG` for more information on Rescue DAGs.
 
 .. autofunction:: rescue
+   :noindex:
 
 .. autofunction:: find_rescue_file
+   :noindex:
