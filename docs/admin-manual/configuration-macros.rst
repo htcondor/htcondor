@@ -8520,13 +8520,13 @@ General
 
 :index:`DAGMan configuration: general`
 
-:macro-def:`DAGMAN_CONFIG_FILE`
+:macro-def:`DAGMAN_CONFIG_FILE[DAGMan]`
     The path and name of the configuration file to be used by
     *condor_dagman*. This configuration variable is set automatically
     by *condor_submit_dag*, and it should not be explicitly set by the
     user. Defaults to the empty string.
 
-:macro-def:`DAGMAN_USE_STRICT`
+:macro-def:`DAGMAN_USE_STRICT[DAGMan]`
     An integer defining the level of strictness *condor_dagman* will
     apply when turning warnings into fatal errors, as follows:
 
@@ -8539,14 +8539,14 @@ General
     a DAG that may otherwise escape notice. The default value if not
     defined is 1.
 
-:macro-def:`DAGMAN_STARTUP_CYCLE_DETECT`
+:macro-def:`DAGMAN_STARTUP_CYCLE_DETECT[DAGMan]`
     A boolean value that defaults to ``False``. When ``True``, causes
     *condor_dagman* to check for cycles in the DAG before submitting
     DAG node jobs, in addition to its run time cycle detection. Note
     that setting this value to ``True`` will impose significant startup
     delays for large DAGs.
 
-:macro-def:`DAGMAN_ABORT_DUPLICATES`
+:macro-def:`DAGMAN_ABORT_DUPLICATES[DAGMan]`
     A boolean value that controls whether to attempt to abort duplicate
     instances of *condor_dagman* running the same DAG on the same
     machine. When *condor_dagman* starts up, if no DAG lock file
@@ -8562,7 +8562,7 @@ General
     ``DAGMAN_ABORT_DUPLICATES`` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
-:macro-def:`DAGMAN_USE_SHARED_PORT`
+:macro-def:`DAGMAN_USE_SHARED_PORT[DAGMan]`
     A boolean value that controls whether *condor_dagman* will attempt
     to connect to the shared port daemon. If not defined,
     ``DAGMAN_USE_SHARED_PORT`` defaults to ``False``. There is no reason
@@ -8570,7 +8570,7 @@ General
     shared port-related error messages from appearing in ``dagman.out``
     files.
 
-:macro-def:`DAGMAN_USE_DIRECT_SUBMIT`
+:macro-def:`DAGMAN_USE_DIRECT_SUBMIT[DAGMan]`
     A boolean value that controls whether *condor_dagman* submits jobs using
     *condor_submit* or by opening a direct connection to the *condor_schedd*.
     ``DAGMAN_USE_DIRECT_SUBMIT`` defaults to ``True``.  When set to ``True``
@@ -8579,7 +8579,7 @@ General
     large DAGs; But this method will ignore some submit file features such as
     ``max_materialize`` and more than one ``QUEUE`` statement.
 
-:macro-def:`DAGMAN_USE_JOIN_NODES`
+:macro-def:`DAGMAN_USE_JOIN_NODES[DAGMan]`
     A boolean value that defaults to ``True``. When ``True``, causes
     *condor_dagman* to break up many-PARENT-many-CHILD relationships with an
     intermediate *join node*. When these sets are large, this significantly
@@ -8587,7 +8587,7 @@ General
     resulting in a significant improvement to the *condor_dagman* memory 
     footprint, parse time, and submit speed.
 
-:macro-def:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD`
+:macro-def:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD[DAGMan]`
     A boolean value that when set to ``True`` causes DAGMan to automatically
     retry a node with its job submitted on hold, if any of the nodes job procs
     fail. This only applies for job failures and not ``PRE``, ``POST``, or
@@ -8595,13 +8595,13 @@ General
     if the node has no more declared ``RETRY`` attempts. The default value is
     ``False``.
 
-:macro-def:`DAGMAN_DEFAULT_APPEND_VARS`
+:macro-def:`DAGMAN_DEFAULT_APPEND_VARS[DAGMan]`
     A boolean value that defaults to ``False``. When ``True``, variables
     parsed in the DAG file *VARS* line will be appended to the given Job
     submit description file unless *VARS* specifies *PREPEND* or *APPEND*.
     When ``False``, the parsed variables will be prepended unless specified.
 
-:macro-def:`DAGMAN_MANAGER_JOB_APPEND_GETENV`
+:macro-def:`DAGMAN_MANAGER_JOB_APPEND_GETENV[DAGMan]`
     A comma separated list of variable names to add to the DAGMan ``.condor.sub``
     file's ``getenv`` option. This will in turn add any found matching environment
     variables to the DAGMan proper jobs **environment**. Setting this value to
@@ -8622,12 +8622,12 @@ General
     |     Misc.     |     PEGASUS_*      |                    |                    |
     +---------------+--------------------+--------------------+--------------------+
 
-:macro-def:`DAGMAN_NODE_RECORD_INFO`
+:macro-def:`DAGMAN_NODE_RECORD_INFO[DAGMan]`
     A string that when set to ``RETRY`` will cause DAGMan to insert a nodes current
     retry attempt number into the nodes job ad as the attribute ``DAGManNodeRetry``
     at submission time. This knob is not set by default.
 
-:macro-def:`DAGMAN_RECORD_MACHINE_ATTRS`
+:macro-def:`DAGMAN_RECORD_MACHINE_ATTRS[DAGMan]`
     A comma separated list of machine attributes that DAGMan will insert into a
     node jobs submit description for ``job_ad_information_attrs`` and ``job_machine_attrs``.
     This will result in the listed machine attributes to be injected into the nodes
@@ -8638,7 +8638,7 @@ Throttling
 
 :index:`DAGMan configuration: throttling`
 
-:macro-def:`DAGMAN_MAX_JOBS_IDLE`
+:macro-def:`DAGMAN_MAX_JOBS_IDLE[DAGMan]`
     An integer value that controls the maximum number of idle procs
     allowed within the DAG before *condor_dagman* temporarily stops
     submitting jobs. *condor_dagman* will resume submitting jobs once
@@ -8657,7 +8657,7 @@ Throttling
     *condor_submit_dag* **-maxidle** command-line argument (see
     :doc:`/man-pages/condor_submit_dag`).
 
-:macro-def:`DAGMAN_MAX_JOBS_SUBMITTED`
+:macro-def:`DAGMAN_MAX_JOBS_SUBMITTED[DAGMan]`
     An integer value that controls the maximum number of node jobs
     (clusters) within the DAG that will be submitted to HTCondor at one
     time. A single invocation of *condor_submit* by *condor_dagman*
@@ -8666,14 +8666,14 @@ Throttling
     option can be overridden by the *condor_submit_dag*
     **-maxjobs** command-line argument (see :doc:`/man-pages/condor_submit_dag`).
 
-:macro-def:`DAGMAN_MAX_PRE_SCRIPTS`
+:macro-def:`DAGMAN_MAX_PRE_SCRIPTS[DAGMan]`
     An integer defining the maximum number of PRE scripts that any given
     *condor_dagman* will run at the same time. The value 0 allows any
     number of PRE scripts to run. The default value if not defined is
     20. Note that the ``DAGMAN_MAX_PRE_SCRIPTS`` value can be overridden
     by the *condor_submit_dag* **-maxpre** command line option.
 
-:macro-def:`DAGMAN_MAX_POST_SCRIPTS`
+:macro-def:`DAGMAN_MAX_POST_SCRIPTS[DAGMan]`
     An integer defining the maximum number of POST scripts that any
     given *condor_dagman* will run at the same time. The value 0 allows
     any number of POST scripts to run. The default value if not defined
@@ -8681,12 +8681,12 @@ Throttling
     overridden by the *condor_submit_dag* **-maxpost** command line
     option.
 
-:macro-def:`DAGMAN_MAX_HOLD_SCRIPTS`
+:macro-def:`DAGMAN_MAX_HOLD_SCRIPTS[DAGMan]`
     An integer defining the maximum number of HOLD scripts that any
     given *condor_dagman* will run at the same time. The default value
     0 allows any number of HOLD scripts to run.
 
-:macro-def:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE`
+:macro-def:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE[DAGMan]`
     A boolean that determines if after changing some of these throttle limits,
     *condor_dagman* should forceably remove jobs to meet the new limit.
     Defaults to ``False``.
@@ -8696,11 +8696,11 @@ Priority, node semantics
 
 :index:`DAGMan configuration: priority, node semantics`
 
-:macro-def:`DAGMAN_DEFAULT_PRIORITY`
+:macro-def:`DAGMAN_DEFAULT_PRIORITY[DAGMan]`
     An integer value defining the minimum priority of node jobs running
     under this *condor_dagman* job. Defaults to 0.
 
-:macro-def:`DAGMAN_SUBMIT_DEPTH_FIRST`
+:macro-def:`DAGMAN_SUBMIT_DEPTH_FIRST[DAGMan]`
     A boolean value that controls whether to submit ready DAG node jobs
     in (more-or-less) depth first order, as opposed to breadth-first
     order. Setting ``DAGMAN_SUBMIT_DEPTH_FIRST`` to ``True`` does not
@@ -8715,7 +8715,7 @@ Priority, node semantics
     :macro:`DAGMAN_RETRY_NODE_FIRST` to ``True``. If not defined,
     ``DAGMAN_SUBMIT_DEPTH_FIRST`` defaults to ``False``.
 
-:macro-def:`DAGMAN_ALWAYS_RUN_POST`
+:macro-def:`DAGMAN_ALWAYS_RUN_POST[DAGMan]`
     A boolean value defining whether *condor_dagman* will ignore the
     return value of a PRE script when deciding whether to run a POST
     script. The default is ``False``, which means that the failure of a
@@ -8740,7 +8740,7 @@ Node job submission/removal
     if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
     this will be noted in the ``dagman.out`` file.
 
-:macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`
+:macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL[DAGMan]`
     An integer that controls how many individual jobs *condor_dagman*
     will submit in a row before servicing other requests (such as a
     *condor_rm*). The legal range of values is 1 to 1000. If defined
@@ -8753,7 +8753,7 @@ Node job submission/removal
     **Note: The maximum rate at which DAGMan can submit jobs is
     DAGMAN_MAX_SUBMITS_PER_INTERVAL / DAGMAN_USER_LOG_SCAN_INTERVAL.**
 
-:macro-def:`DAGMAN_MAX_SUBMIT_ATTEMPTS`
+:macro-def:`DAGMAN_MAX_SUBMIT_ATTEMPTS[DAGMan]`
     An integer that controls how many times in a row *condor_dagman*
     will attempt to execute *condor_submit* for a given job before
     giving up. Note that consecutive attempts use an exponential
@@ -8764,7 +8764,7 @@ Node job submission/removal
     approximately 36 hours before giving up. If not defined, it defaults
     to 6 (approximately two minutes before giving up).
 
-:macro-def:`DAGMAN_MAX_JOB_HOLDS`
+:macro-def:`DAGMAN_MAX_JOB_HOLDS[DAGMan]`
     An integer value defining the maximum number of times a node job is
     allowed to go on hold. As a job goes on hold this number of times,
     it is removed from the queue. For example, if the value is 2, as the
@@ -8776,28 +8776,28 @@ Node job submission/removal
     using a larger value. A value of 0 allows a job to go on hold any
     number of times. The default value if not defined is 100.
 
-:macro-def:`DAGMAN_HOLD_CLAIM_TIME`
+:macro-def:`DAGMAN_HOLD_CLAIM_TIME[DAGMan]`
     An integer defining the number of seconds that *condor_dagman* will
     cause a hold on a claim after a job is finished, using the job
     ClassAd attribute ``KeepClaimIdle``. The default value is 20. A
     value of 0 causes *condor_dagman* not to set the job ClassAd
     attribute.
 
-:macro-def:`DAGMAN_SUBMIT_DELAY`
+:macro-def:`DAGMAN_SUBMIT_DELAY[DAGMan]`
     An integer that controls the number of seconds that *condor_dagman*
     will sleep before submitting consecutive jobs. It can be increased
     to help reduce the load on the *condor_schedd* daemon. The legal
     range of values is any non negative integer. If defined with a value
     less than 0, the value 0 will be used.
 
-:macro-def:`DAGMAN_PROHIBIT_MULTI_JOBS`
+:macro-def:`DAGMAN_PROHIBIT_MULTI_JOBS[DAGMan]`
     A boolean value that controls whether *condor_dagman* prohibits
     node job submit description files that queue multiple job procs
     other than parallel universe. If a DAG references such a submit
     file, the DAG will abort during the initialization process. If not
     defined, ``DAGMAN_PROHIBIT_MULTI_JOBS`` defaults to ``False``.
 
-:macro-def:`DAGMAN_GENERATE_SUBDAG_SUBMITS`
+:macro-def:`DAGMAN_GENERATE_SUBDAG_SUBMITS[DAGMan]`
     A boolean value specifying whether *condor_dagman* itself should
     create the ``.condor.sub`` files for nested DAGs. If set to
     ``False``, nested DAGs will fail unless the ``.condor.sub`` files
@@ -8808,7 +8808,7 @@ Node job submission/removal
     description file names ending in ``.condor.sub`` are considered
     nested DAGs. The default value if not defined is ``True``.
 
-:macro-def:`DAGMAN_REMOVE_NODE_JOBS`
+:macro-def:`DAGMAN_REMOVE_NODE_JOBS[DAGMan]`
     A boolean value that controls whether *condor_dagman* removes its
     node jobs itself when it is removed (in addition to the
     *condor_schedd* removing them). Note that setting
@@ -8822,7 +8822,7 @@ Node job submission/removal
     DAG abort triggered by an *ABORT-DAG-ON* command. Defaults to
     ``True``.
 
-:macro-def:`DAGMAN_MUNGE_NODE_NAMES`
+:macro-def:`DAGMAN_MUNGE_NODE_NAMES[DAGMan]`
     A boolean value that controls whether *condor_dagman* automatically
     renames nodes when running multiple DAGs. The renaming is done to
     avoid possible name conflicts. If this value is set to ``True``, all
@@ -8834,13 +8834,13 @@ Node job submission/removal
     ``DAGMAN_MUNGE_NODE_NAMES`` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
-:macro-def:`DAGMAN_SUPPRESS_JOB_LOGS`
+:macro-def:`DAGMAN_SUPPRESS_JOB_LOGS[DAGMan]`
     A boolean value specifying whether events should be written to a log
     file specified in a node job's submit description file. The default
     value is ``False``, such that events are written to a log file
     specified by a node job.
 
-:macro-def:`DAGMAN_SUPPRESS_NOTIFICATION`
+:macro-def:`DAGMAN_SUPPRESS_NOTIFICATION[DAGMan]`
     A boolean value defining whether jobs submitted by *condor_dagman*
     will use email notification when certain events occur. If ``True``,
     all jobs submitted by *condor_dagman* will have the equivalent of
@@ -8848,17 +8848,17 @@ Node job submission/removal
     affect the notification for events relating to the *condor_dagman*
     job itself. Defaults to ``True``.
 
-:macro-def:`DAGMAN_CONDOR_SUBMIT_EXE`
+:macro-def:`DAGMAN_CONDOR_SUBMIT_EXE[DAGMan]`
     The executable that *condor_dagman* will use to submit HTCondor
     jobs. If not defined, *condor_dagman* looks for *condor_submit* in
     the path. **Note: users should rarely change this setting.**
 
-:macro-def:`DAGMAN_CONDOR_RM_EXE`
+:macro-def:`DAGMAN_CONDOR_RM_EXE[DAGMan]`
     The executable that *condor_dagman* will use to remove HTCondor
     jobs. If not defined, *condor_dagman* looks for *condor_rm* in the
     path. **Note: users should rarely change this setting.**
 
-:macro-def:`DAGMAN_ABORT_ON_SCARY_SUBMIT`
+:macro-def:`DAGMAN_ABORT_ON_SCARY_SUBMIT[DAGMan]`
     A boolean value that controls whether to abort a DAG upon detection
     of a scary submit event. An example of a scary submit event is one
     in which the HTCondor ID does not match the expected value. Note
@@ -8874,7 +8874,7 @@ Rescue/retry
 
 :index:`DAGMan configuration: rescue/retry`
 
-:macro-def:`DAGMAN_AUTO_RESCUE`
+:macro-def:`DAGMAN_AUTO_RESCUE[DAGMan]`
     A boolean value that controls whether *condor_dagman* automatically
     runs Rescue DAGs. If ``DAGMAN_AUTO_RESCUE`` is ``True`` and the DAG
     input file ``my.dag`` is submitted, and if a Rescue DAG such as the
@@ -8882,7 +8882,7 @@ Rescue/retry
     the largest magnitude Rescue DAG will be run. If not defined,
     ``DAGMAN_AUTO_RESCUE`` defaults to ``True``.
 
-:macro-def:`DAGMAN_MAX_RESCUE_NUM`
+:macro-def:`DAGMAN_MAX_RESCUE_NUM[DAGMan]`
     An integer value that controls the maximum Rescue DAG number that
     will be written, in the case that ``DAGMAN_OLD_RESCUE`` is
     ``False``, or run if ``DAGMAN_AUTO_RESCUE`` is ``True``. The maximum
@@ -8890,7 +8890,7 @@ Rescue/retry
     DAG from being written at all, or automatically run. If not defined,
     ``DAGMAN_MAX_RESCUE_NUM`` defaults to 100.
 
-:macro-def:`DAGMAN_RESET_RETRIES_UPON_RESCUE`
+:macro-def:`DAGMAN_RESET_RETRIES_UPON_RESCUE[DAGMan]`
     A boolean value that controls whether node retries are reset in a
     Rescue DAG. If this value is ``False``, the number of node retries
     written in a Rescue DAG is decreased, if any retries were used in
@@ -8898,13 +8898,13 @@ Rescue/retry
     retries is allowed when running the Rescue DAG. If not defined,
     ``DAGMAN_RESET_RETRIES_UPON_RESCUE`` defaults to ``True``.
 
-:macro-def:`DAGMAN_WRITE_PARTIAL_RESCUE`
+:macro-def:`DAGMAN_WRITE_PARTIAL_RESCUE[DAGMan]`
     A boolean value that controls whether *condor_dagman* writes a
     partial or a full DAG file as a Rescue DAG. If not defined,
     ``DAGMAN_WRITE_PARTIAL_RESCUE`` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
-:macro-def:`DAGMAN_RETRY_SUBMIT_FIRST`
+:macro-def:`DAGMAN_RETRY_SUBMIT_FIRST[DAGMan]`
     A boolean value that controls whether a failed submit is retried
     first (before any other submits) or last (after all other ready jobs
     are submitted). If this value is set to ``True``, when a job submit
@@ -8914,7 +8914,7 @@ Rescue/retry
     to ``False``, when a job submit fails, the job is placed at the tail
     of the queue of ready jobs. If not defined, it defaults to ``True``.
 
-:macro-def:`DAGMAN_RETRY_NODE_FIRST`
+:macro-def:`DAGMAN_RETRY_NODE_FIRST[DAGMan]`
     A boolean value that controls whether a failed node with retries is
     retried first (before any other ready nodes) or last (after all
     other ready nodes). If this value is set to ``True``, when a node
@@ -8930,7 +8930,7 @@ Log files
 
 :index:`DAGMan configuration: log files`
 
-:macro-def:`DAGMAN_DEFAULT_NODE_LOG`
+:macro-def:`DAGMAN_DEFAULT_NODE_LOG[DAGMan]`
     The default name of a file to be used as a job event log by all node
     jobs of a DAG.
 
@@ -8989,7 +8989,7 @@ Log files
        will cause failure when more than one DAG is run at the same time
        on a given access point.
 
-:macro-def:`DAGMAN_LOG_ON_NFS_IS_ERROR`
+:macro-def:`DAGMAN_LOG_ON_NFS_IS_ERROR[DAGMan]`
     A boolean value that controls whether *condor_dagman* prohibits a
     DAG workflow log from being on an NFS file system. This value is
     ignored if ``CREATE_LOCKS_ON_LOCAL_DISK`` and
@@ -8999,13 +8999,13 @@ Log files
     initialization process. If not defined,
     ``DAGMAN_LOG_ON_NFS_IS_ERROR`` defaults to ``False``.
 
-:macro-def:`DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS`
+:macro-def:`DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS[DAGMan]`
     Allows any characters to be used in DAGMan node names, even
     characters that are considered illegal because they are used internally
     as separators. Turning this feature on could lead to instability when
     using splices or munged node names. The default value is ``False``.
 
-:macro-def:`DAGMAN_ALLOW_EVENTS`
+:macro-def:`DAGMAN_ALLOW_EVENTS[DAGMan]`
     An integer that controls which bad events are considered fatal
     errors by *condor_dagman*. This macro replaces and expands upon the
     functionality of the ``DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION``
@@ -9045,10 +9045,10 @@ Debug output
 
 :index:`DAGMan configuration: debug output`
 
-:macro-def:`DAGMAN_DEBUG`
+:macro-def:`DAGMAN_DEBUG[DAGMan]`
     This variable is described in :macro:`<SUBSYS>_DEBUG`.
 
-:macro-def:`DAGMAN_VERBOSITY`
+:macro-def:`DAGMAN_VERBOSITY[DAGMan]`
     An integer value defining the verbosity of output to the
     ``dagman.out`` file, as follows (each level includes all output from
     lower debug levels):
@@ -9064,7 +9064,7 @@ Debug output
 
     The default value if not defined is 3.
 
-:macro-def:`DAGMAN_DEBUG_CACHE_ENABLE`
+:macro-def:`DAGMAN_DEBUG_CACHE_ENABLE[DAGMan]`
     A boolean value that determines if log line caching for the
     ``dagman.out`` file should be enabled in the *condor_dagman*
     process to increase performance (potentially by orders of magnitude)
@@ -9072,7 +9072,7 @@ Debug output
     this cache is only utilized in Recovery Mode. If not defined, it
     defaults to ``False``.
 
-:macro-def:`DAGMAN_DEBUG_CACHE_SIZE`
+:macro-def:`DAGMAN_DEBUG_CACHE_SIZE[DAGMan]`
     An integer value representing the number of bytes of log lines to be
     stored in the log line cache. When the cache surpasses this number,
     the entries are written out in one call to the logging subsystem. A
@@ -9082,7 +9082,7 @@ Debug output
     values is 0 to INT_MAX. If defined with a value less than 0, the
     value 0 will be used. If not defined, it defaults to 5 Megabytes.
 
-:macro-def:`DAGMAN_PENDING_REPORT_INTERVAL`
+:macro-def:`DAGMAN_PENDING_REPORT_INTERVAL[DAGMan]`
     An integer value representing the number of seconds that controls
     how often *condor_dagman* will print a report of pending nodes to
     the ``dagman.out`` file. The report will only be printed if
@@ -9094,7 +9094,7 @@ Debug output
     If not defined, ``DAGMAN_PENDING_REPORT_INTERVAL`` defaults to 600
     seconds (10 minutes).
 
-:macro-def:`MAX_DAGMAN_LOG`
+:macro-def:`MAX_DAGMAN_LOG[DAGMan]`
     This variable is described in :macro:`MAX_<SUBSYS>_LOG`. If not defined,
     ``MAX_DAGMAN_LOG`` defaults to 0 (unlimited size).
 
@@ -9103,7 +9103,7 @@ HTCondor attributes
 
 :index:`DAGMan configuration: HTCondor attributes`
 
-:macro-def:`DAGMAN_COPY_TO_SPOOL`
+:macro-def:`DAGMAN_COPY_TO_SPOOL[DAGMan]`
     A boolean value that when ``True`` copies the *condor_dagman*
     binary to the spool directory when a DAG is submitted. Setting this
     variable to ``True`` allows long-running DAGs to survive a DAGMan
@@ -9112,7 +9112,7 @@ HTCondor attributes
     defined is ``False``. **Note: users should rarely change this
     setting.**
 
-:macro-def:`DAGMAN_INSERT_SUB_FILE`
+:macro-def:`DAGMAN_INSERT_SUB_FILE[DAGMan]`
     A file name of a file containing submit description file commands to
     be inserted into the ``.condor.sub`` file created by
     *condor_submit_dag*. The specified file is inserted into the
@@ -9123,7 +9123,7 @@ HTCondor attributes
     can be overridden by the *condor_submit_dag*
     **-insert_sub_file** command line option.
 
-:macro-def:`DAGMAN_ON_EXIT_REMOVE`
+:macro-def:`DAGMAN_ON_EXIT_REMOVE[DAGMan]`
     Defines the ``OnExitRemove`` ClassAd expression placed into the
     *condor_dagman* submit description file by *condor_submit_dag*.
     The default expression is designed to ensure that *condor_dagman*
