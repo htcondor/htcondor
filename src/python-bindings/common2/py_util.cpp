@@ -34,7 +34,7 @@ py_new_htcondor2_classad(void * classAd) {
 		handle->t = (void *)classAd;
 	}
 
-	// handle->f = [](void * & v) { dprintf( D_ALWAYS, "{classad::ClassAd}\n" ); delete (classad::ClassAd *)v; v = NULL; };
+	// handle->f = [](void * & v) { dprintf( D_TRACE, "{classad::ClassAd}\n" ); delete (classad::ClassAd *)v; v = NULL; };
 	return pyClassAd;
 }
 
@@ -134,7 +134,7 @@ py_new_classad_exprtree( ExprTree * original ) {
 	if( handle->t != NULL ) { delete (ClassAd *)handle->t; }
 
 	handle->t = (void *)copy;
-	handle->f = [](void *& v) { dprintf( D_ALWAYS, "[ExprTree]\n" ); delete (classad::ExprTree *)v; v = NULL; };
+	handle->f = [](void *& v) { dprintf( D_TRACE, "[ExprTree]\n" ); delete (classad::ExprTree *)v; v = NULL; };
 	return pyExprTree;
 }
 
