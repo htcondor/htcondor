@@ -1,4 +1,7 @@
-from typing import Union
+from typing import (
+    Union,
+    Dict,
+)
 
 from pathlib import Path
 
@@ -29,7 +32,7 @@ class Submit(MutableMapping):
 
     # This is exceedingly clumsy, but matches the semantics from version 1.
     def __init__(self,
-        input : Union[dict[str, str], str] = None,
+        input : Union[Dict[str, str], str] = None,
         ** kwargs
     ):
         '''
@@ -252,7 +255,7 @@ _NewOptionNames = {
 }
 
 
-def from_dag(filename : str, options : dict[str, Union[int, bool, str]] = {}) -> Submit:
+def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> Submit:
     if not isinstance(options, dict):
         raise TypeError("options must be a dict")
     if not Path(filename).exists():
