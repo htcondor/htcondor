@@ -12,7 +12,7 @@ _classad_init( PyObject *, PyObject * args ) {
     }
 
     handle->t = new classad::ClassAd();
-    handle->f = [](void * & v){ dprintf( D_ALWAYS, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
+    handle->f = [](void * & v){ dprintf( D_TRACE, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
     Py_RETURN_NONE;
 }
 
@@ -29,7 +29,7 @@ _classad_init_from_string( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    handle->f = [](void * & v){ dprintf( D_ALWAYS, "[unconstructed ClassAd]\n" ); if( v != NULL ) { dprintf(D_ALWAYS, "Error!  Unconstructed ClassAd has non-NULL handle %p\n", v); } };
+    handle->f = [](void * & v){ dprintf( D_TRACE, "[unconstructed ClassAd]\n" ); if( v != NULL ) { dprintf(D_ALWAYS, "Error!  Unconstructed ClassAd has non-NULL handle %p\n", v); } };
 
     classad::ClassAdParser parser;
     classad::ClassAd * result = parser.ParseClassAd(from_string);
@@ -40,7 +40,7 @@ _classad_init_from_string( PyObject *, PyObject * args ) {
     }
 
     handle->t = result;
-    handle->f = [](void * & v){ dprintf( D_ALWAYS, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
+    handle->f = [](void * & v){ dprintf( D_TRACE, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
     Py_RETURN_NONE;
 }
 
@@ -58,7 +58,7 @@ _classad_init_from_dict( PyObject *, PyObject * args ) {
     }
 
     handle->t = convert_python_to_classad_exprtree(dict);
-    handle->f = [](void * & v){ dprintf( D_ALWAYS, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
+    handle->f = [](void * & v){ dprintf( D_TRACE, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
     Py_RETURN_NONE;
 }
 
@@ -533,7 +533,6 @@ _classad_keys( PyObject *, PyObject * args ) {
     }
 
     for( auto i = classAd->begin(); i != classAd->end(); ++i ) {
-        // dprintf( D_ALWAYS, "%s\n", i->first.c_str() );
         PyObject * py_str = PyUnicode_FromString(i->first.c_str());
         auto rv = PyList_Append( list, py_str );
         Py_DecRef(py_str);
