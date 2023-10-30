@@ -1,3 +1,5 @@
+from typing import List
+
 from ._common_imports import (
     classad,
     Collector,
@@ -37,7 +39,7 @@ class Negotiator():
         _negotiator_command_user(self._addr, self._DELETE_USER, user)
 
 
-    def getPriorities(self, rollup : bool) -> list[classad.ClassAd]:
+    def getPriorities(self, rollup : bool) -> List[classad.ClassAd]:
         command = self._GET_PRIORITY
         if rollup:
             command = self._GET_PRIORITY_ROLLUP
@@ -45,7 +47,7 @@ class Negotiator():
         return _convert_numbered_attributes_to_list_of_ads(returnAd)
 
 
-    def getResourceUsage(self, user : str) -> list[classad.ClassAd]:
+    def getResourceUsage(self, user : str) -> List[classad.ClassAd]:
         if not isinstance(user, str):
             raise TypeError("user must be a string")
         if '@' not in user:
