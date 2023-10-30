@@ -16,7 +16,9 @@
  # 
  ############################################################### 
 
-set(ANALYSIS_UTIL_SRCS 
+ # This old code hasn't been used in years.  Let's stop building and linking
+ # it in 23.2, and later, when we are sure, git rm the code
+ set(ANALYSIS_UTIL_SRCS_NOT_USED
 	${CMAKE_CURRENT_SOURCE_DIR}/analysis.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/boolExpr.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/boolValue.cpp
@@ -28,7 +30,7 @@ set(ANALYSIS_UTIL_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/profile.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/resourceGroup.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/result.cpp
-PARENT_SCOPE
+	#PARENT_SCOPE
 )
 
 set_source_files_properties(interval.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
