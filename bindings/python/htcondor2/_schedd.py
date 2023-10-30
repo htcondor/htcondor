@@ -3,6 +3,7 @@ from typing import (
     Callable,
     Any,
     Iterator,
+    List,
 )
 
 import re
@@ -41,7 +42,7 @@ from .htcondor2_impl import (
 
 def job_spec_hack(
     addr : str,
-    job_spec : Union[list[str], str, classad.ExprTree],
+    job_spec : Union[List[str], str, classad.ExprTree],
     f_job_ids : callable,
     f_constraint : callable,
     args : list,
@@ -81,11 +82,11 @@ class Schedd():
 
     def query(self,
         constraint : Union[str, classad.ExprTree] = 'true',
-        projection : list[str] = [],
+        projection : List[str] = [],
         callback : Callable[[classad.ClassAd], Any] = None,
         limit : int = -1,
         opts : QueryOpts = QueryOpts.Default
-    ) -> list[classad.ClassAd]:
+    ) -> List[classad.ClassAd]:
         '''
         Query the *condor_schedd* daemon for job ads.
 
@@ -122,7 +123,7 @@ class Schedd():
 
     def act(self,
         action : JobAction,
-        job_spec : Union[list[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree],
         reason : str = None,
     ) -> classad.ClassAd:
         """
@@ -173,7 +174,7 @@ class Schedd():
 
     # Note that edit(ClassAd) and edit_multiple() aren't documented.
     def edit(self,
-        job_spec : Union[list[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree],
         attr : str,
         value : Union[str, classad.ExprTree],
         flags : TransactionFlag = TransactionFlag.Default,
@@ -211,10 +212,10 @@ class Schedd():
     # `match` should be `limit` for consistency with `query()`.
     def history(self,
         constraint : Union[str, classad.ExprTree],
-        projection : list[str] = [],
+        projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
-    ) -> list[classad.ClassAd]:
+    ) -> List[classad.ClassAd]:
         projection_string = ",".join(projection)
 
         if isinstance(since, int):
@@ -246,10 +247,10 @@ class Schedd():
 
     def jobEpochHistory(self,
         constraint : Union[str, classad.ExprTree],
-        projection : list[str] = [],
+        projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
-    ) -> list[classad.ClassAd]:
+    ) -> List[classad.ClassAd]:
         projection_string = ",".join(projection)
 
         if isinstance(since, int):
@@ -383,14 +384,14 @@ class Schedd():
 
 
     def spool(self,
-        ad_list : list[classad.ClassAd],
+        ad_list : List[classad.ClassAd],
     ) -> None:
         # FIXME
         pass
 
 
     def retrieve(self,
-        job_spec : Union[list[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree],
     ) -> None:
         # FIXME
         pass
@@ -408,7 +409,7 @@ class Schedd():
 
 
     def export_jobs(self,
-        job_spec : Union[list[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree],
         export_dir : str,
         new_spool_dir : str,
     ) -> classad.ClassAd:
@@ -428,7 +429,7 @@ class Schedd():
 
 
     def unexport_jobs(self,
-        job_spec : Union[list[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree],
     ) -> classad.ClassAd:
         """
         FIXME

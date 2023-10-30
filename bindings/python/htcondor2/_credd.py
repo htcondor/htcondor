@@ -1,3 +1,5 @@
+from typing import List
+
 from ._common_imports import (
     classad,
     Collector,
@@ -151,7 +153,7 @@ class Credd():
 
     # We should probably change the type of `services`, since they're not
     # defined by ClassAds anywhere else in the Python API.
-    def check_user_service_creds(self, credtype : CredType, serviceAds : list[classad.ClassAd], user : str = None) -> CredCheck:
+    def check_user_service_creds(self, credtype : CredType, serviceAds : List[classad.ClassAd], user : str = None) -> CredCheck:
         mode = self._GENERIC_CONFIG | CredType.OAuth
         if credtype != CredType.OAuth:
             # This was HTCondorEnumError in version 1.

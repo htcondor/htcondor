@@ -1,4 +1,7 @@
-from typing import Union
+from typing import (
+    Union,
+    List,
+)
 
 from ._common_imports import (
     classad,
@@ -55,10 +58,10 @@ class Startd():
     # Totally undocumented in version 1.
     def history(self,
         constraint : Union[str, classad.ExprTree],
-        projection : list[str] = [],
+        projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
-    ) -> list[classad.ClassAd]:
+    ) -> List[classad.ClassAd]:
         projection_string = ",".join(projection)
 
         if isinstance(since, int):

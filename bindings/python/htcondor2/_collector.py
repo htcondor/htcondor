@@ -61,7 +61,7 @@ class Collector():
       # The documentation does not match the implementation in version 1.
       # statistics: Optional[List[str]] = None,
       statistics: Optional[str] = None,
-    ) -> list[classad.ClassAd]:
+    ) -> List[classad.ClassAd]:
         # str(None) is "None", which is a valid ClassAd expression (a bare
         # attribute reference), so convert to the empty string, instead.
         # We don't pass `constraint` through unmodified because we'll want
@@ -115,13 +115,13 @@ class Collector():
 
     def locateAll(self,
         daemon_type: DaemonType,
-    ) -> list[classad.ClassAd]:
+    ) -> List[classad.ClassAd]:
         ad_type = _ad_type_from_daemon_type(daemon_type)
         return self.query(ad_type, projection=Collector._for_location)
 
 
     def advertise(self,
-        ad_list : list[classad.ClassAd],
+        ad_list : List[classad.ClassAd],
         command: str = "UPDATE_AD_GENERIC",
         use_tcp: bool = True,
     ) -> None:
