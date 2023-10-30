@@ -8,6 +8,7 @@
 // warnings the compiler would otherwise generate.
 
 // For module initialization.
+#include "condor_common.h"
 #include "condor_config.h"
 #include "common2/py_handle.cpp"
 
