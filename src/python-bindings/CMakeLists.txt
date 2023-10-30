@@ -382,21 +382,21 @@ else()
 
       add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
       target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_libraries(        py3classad2_impl classad condor_utils ${PYTHON3_LIBRARES} )
+      target_link_libraries(        py3classad2_impl classad condor_utils ${PYTHON3_LIBRARIES} )
       set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
       set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
 
 
       add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
       target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_libraries(        py3htcondor2_impl classad condor_utils ${PYTHON3_LIBRARES} )
+      target_link_libraries(        py3htcondor2_impl classad condor_utils ${PYTHON3_LIBRARIES} )
       set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
       set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
 
 
       add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
       target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_libraries(        py3classad3_impl classad condor_utils ${PYTHON3_LIBRARES} )
+      target_link_libraries(        py3classad3_impl classad condor_utils ${PYTHON3_LIBRARIES} )
       set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
       set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
 
