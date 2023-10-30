@@ -673,7 +673,7 @@ machine. This does not interfere with the streaming of output.
 **Uploading to URLs using output file remaps**
 
 File transfer plugins now support uploads as well as downloads. The
-:subcom:`transfer_output_remaps` :index:`transfer_output_rempas<single: transfer_output_destination; definition>`
+:subcom:`transfer_output_remaps<definition>`
 command can additionally be used to upload
 files to specific URLs when a job completes. To do this, set the
 destination for an output file to a URL instead of a filename. For
@@ -805,10 +805,8 @@ information in the submit file:
 
 See the subsections below for specific examples.
 
-You may (like any other URL) specify an S3 URL in :subcom:`transfer_input_files`
-:index:`transfer_input_files<single: transfer_input_files; with S3>`,
-or as part of a remap in :subcom:`transfer_output_remaps`.
-:index:`transfer_output_remaps<single: transfer_output_remaps; with S3>`,
+You may (like any other URL) specify an S3 URL in :subcom:`transfer_input_files<with S3`,
+or as part of a remap in :subcom:`transfer_output_remaps<with S3`
 However, HTCondor does not currently support transferring entire buckets or directories.  If you
 specify an ``s3://`` URL as the :subcom:`output_destination`, that URL will be
 used a prefix for each output file's location; if you specify a URL ending a

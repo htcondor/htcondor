@@ -322,8 +322,8 @@ The **-analyze** or **-better-analyze** options can be used to determine
 why certain jobs are not running by performing an analysis on a per
 machine basis for each machine in the pool. The reasons can vary among
 failed constraints, insufficient priority, resource owner preferences
-and prevention of preemption by the ``PREEMPTION_REQUIREMENTS``
-:index:`PREEMPTION_REQUIREMENTS` expression. If the analyze option
+and prevention of preemption by the
+:macro:`PREEMPTION_REQUIREMENTS` expression. If the analyze option
 **-verbose** is specified along with the **-analyze** option, the reason
 for failure is displayed on a per machine basis. **-better-analyze**
 differs from **-analyze** in that it will do matchmaking analysis on

@@ -51,13 +51,13 @@ extra configuration variables:
 
 The acronym GAHP stands for Grid ASCII Helper Protocol. A GAHP server
 provides grid-related services for a variety of underlying middle-ware
-systems. The configuration variable ``CONDOR_GAHP``
-:index:`CONDOR_GAHP` gives a full path to the GAHP server utilized
-by HTCondor-C. The configuration variable ``C_GAHP_LOG``
-:index:`C_GAHP_LOG` defines the location of the log that the
+systems. The configuration variable
+:macro:`CONDOR_GAHP` gives a full path to the GAHP server utilized
+by HTCondor-C. The configuration variable
+:macro:`C_GAHP_LOG` defines the location of the log that the
 HTCondor GAHP server writes. The log for the HTCondor GAHP is written as
-the user on whose behalf it is running; thus the ``C_GAHP_LOG``
-:index:`C_GAHP_LOG` configuration variable must point to a
+the user on whose behalf it is running; thus the
+:macro:`C_GAHP_LOG` configuration variable must point to a
 location the end user can write to.
 
 A submit machine must also have a *condor_collector* daemon to which
@@ -723,12 +723,12 @@ attempt fails, the service is marked as down, and normal operation for
 that service is suspended until a subsequent special attempt succeeds.
 The jobs using that service do not go on hold. To place jobs on hold
 when their service becomes unavailable, set configuration variable
-``EC2_RESOURCE_TIMEOUT`` :index:`EC2_RESOURCE_TIMEOUT` to the
+:macro:`EC2_RESOURCE_TIMEOUT` to the
 number of seconds to delay before placing the job on hold. The default
 value of -1 for this variable implements an infinite delay, such that
 the job is never placed on hold. When setting this value, consider the
-value of configuration variable ``GRIDMANAGER_RESOURCE_PROBE_INTERVAL``
-:index:`GRIDMANAGER_RESOURCE_PROBE_INTERVAL`, which sets the
+value of configuration variable
+:macro:`GRIDMANAGER_RESOURCE_PROBE_INTERVAL`, which sets the
 number of seconds that HTCondor will wait after each special contact
 attempt before trying again.
 
@@ -775,8 +775,7 @@ checking these in the following order:
 
 #. The environment variable ``X509_CERT_FILE``, set when the
    *condor_master* starts up.
-#. The HTCondor configuration variable ``GAHP_SSL_CAFILE``
-   :index:`GAHP_SSL_CAFILE`.
+#. The HTCondor configuration variable :macro:`GAHP_SSL_CAFILE`.
 
 The EC2 GAHP supplies no default value, if it does not find a CA file.
 
@@ -785,8 +784,7 @@ variables it finds first, checking in the following order:
 
 #. The environment variable ``X509_CERT_DIR``, set when the
    *condor_master* starts up.
-#. The HTCondor configuration variable ``GAHP_SSL_CADIR``
-   :index:`GAHP_SSL_CADIR`.
+#. The HTCondor configuration variable :macro:`GAHP_SSL_CADIR`.
 
 The EC2 GAHP supplies no default value, if it does not find a CA
 directory.

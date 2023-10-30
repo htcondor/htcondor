@@ -136,7 +136,7 @@ automatically include the following attributes:
  ``UpdatesSequenced``
  ``UpdatesHistory``
 
-    Affected by ``COLLECTOR_DAEMON_HISTORY_SIZE`` :index:`COLLECTOR_DAEMON_HISTORY_SIZE`.
+    Affected by :macro:`COLLECTOR_DAEMON_HISTORY_SIZE`.
 
 Examples
 --------
