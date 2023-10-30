@@ -22,46 +22,48 @@ objects, which correspond to un-evaluated ClassAd expressions.
 
 .. autoclass:: ClassAd
    :noindex:
+
    .. automethod:: ClassAd.eval
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.lookup
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.printOld
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.printJson
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.flatten
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.matches
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.symmetricMatch
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.externalRefs
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.internalRefs
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.__eq__
-   :noindex:
+      :noindex:
    .. automethod:: ClassAd.__ne__
-   :noindex:
+      :noindex:
 
 
 .. autoclass:: ExprTree
    :noindex:
+
    .. automethod:: ExprTree.and_
-   :noindex:
+      :noindex:
    .. automethod:: ExprTree.or_
-   :noindex:
+      :noindex:
    .. automethod:: ExprTree.is_
-   :noindex:
+      :noindex:
    .. automethod:: ExprTree.isnt_
-   :noindex:
+      :noindex:
    .. automethod:: ExprTree.sameAs
-   :noindex:
+      :noindex:
    .. automethod:: ExprTree.eval
-   :noindex:
+      :noindex:
    .. automethod:: ExprTree.simplify
-   :noindex:
+      :noindex:
 
 .. autoclass:: Value
    :noindex:

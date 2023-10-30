@@ -18,15 +18,15 @@ Interacting with Collectors
    :noindex:
 
    .. automethod:: locate
-   :noindex:
+      :noindex:
    .. automethod:: locateAll
-   :noindex:
+      :noindex:
    .. automethod:: query
-   :noindex:
+      :noindex:
    .. automethod:: directQuery
-   :noindex:
+      :noindex:
    .. automethod:: advertise
-   :noindex:
+      :noindex:
 
 .. autoclass:: DaemonTypes
    :noindex:
@@ -42,37 +42,37 @@ Interacting with Schedulers
    :noindex:
 
    .. automethod:: transaction
-   :noindex:
+      :noindex:
    .. automethod:: query
-   :noindex:
+      :noindex:
    .. automethod:: xquery
-   :noindex:
+      :noindex:
    .. automethod:: act
-   :noindex:
+      :noindex:
    .. automethod:: edit
-   :noindex:
+      :noindex:
    .. automethod:: history
-   :noindex:
+      :noindex:
    .. automethod:: jobEpochHistory
-   :noindex:
+      :noindex:
    .. automethod:: submit
-   :noindex:
+      :noindex:
    .. automethod:: submitMany
-   :noindex:
+      :noindex:
    .. automethod:: spool
-   :noindex:
+      :noindex:
    .. automethod:: retrieve
-   :noindex:
+      :noindex:
    .. automethod:: refreshGSIProxy
-   :noindex:
+      :noindex:
    .. automethod:: reschedule
-   :noindex:
+      :noindex:
    .. automethod:: export_jobs
-   :noindex:
+      :noindex:
    .. automethod:: import_exported_job_results
-   :noindex:
+      :noindex:
    .. automethod:: unexport_jobs
-   :noindex:
+      :noindex:
 
 .. autoclass:: JobAction
    :noindex:
@@ -96,13 +96,13 @@ Interacting with Schedulers
    :noindex:
 
    .. automethod:: nextAdsNonBlocking
-   :noindex:
+      :noindex:
    .. automethod:: tag
-   :noindex:
+      :noindex:
    .. automethod:: done
-   :noindex:
+      :noindex:
    .. automethod:: watch
-   :noindex:
+      :noindex:
 
 .. autofunction:: poll
    :noindex:
@@ -120,27 +120,27 @@ Submitting Jobs
    :noindex:
 
    .. automethod:: queue
-   :noindex:
+      :noindex:
    .. automethod:: queue_with_itemdata
-   :noindex:
+      :noindex:
    .. automethod:: expand
-   :noindex:
+      :noindex:
    .. automethod:: jobs
-   :noindex:
+      :noindex:
    .. automethod:: procs
-   :noindex:
+      :noindex:
    .. automethod:: itemdata
-   :noindex:
+      :noindex:
    .. automethod:: getQArgs
-   :noindex:
+      :noindex:
    .. automethod:: setQArgs
-   :noindex:
+      :noindex:
    .. automethod:: from_dag
-   :noindex:
+      :noindex:
    .. automethod:: setSubmitMethod
-   :noindex:
+      :noindex:
    .. automethod:: getSubmitMethod
-   :noindex:
+      :noindex:
 
 .. autoclass:: QueueItemsIterator
    :noindex:
@@ -149,13 +149,13 @@ Submitting Jobs
    :noindex:
 
    .. automethod:: cluster
-   :noindex:
+      :noindex:
    .. automethod:: clusterad
-   :noindex:
+      :noindex:
    .. automethod:: first_proc
-   :noindex:
+      :noindex:
    .. automethod:: num_procs
-   :noindex:
+      :noindex:
 
 
 Interacting with Negotiators
@@ -165,27 +165,27 @@ Interacting with Negotiators
    :noindex:
 
    .. automethod:: deleteUser
-   :noindex:
+      :noindex:
    .. automethod:: getPriorities
-   :noindex:
+      :noindex:
    .. automethod:: getResourceUsage
-   :noindex:
+      :noindex:
    .. automethod:: resetAllUsage
-   :noindex:
+      :noindex:
    .. automethod:: resetUsage
-   :noindex:
+      :noindex:
    .. automethod:: setBeginUsage
-   :noindex:
+      :noindex:
    .. automethod:: setCeiling
-   :noindex:
+      :noindex:
    .. automethod:: setLastUsage
-   :noindex:
+      :noindex:
    .. automethod:: setFactor
-   :noindex:
+      :noindex:
    .. automethod:: setPriority
-   :noindex:
+      :noindex:
    .. automethod:: setUsage
-   :noindex:
+      :noindex:
 
 
 Managing Starters and Claims
@@ -195,9 +195,9 @@ Managing Starters and Claims
    :noindex:
 
    .. automethod:: drainJobs
-   :noindex:
+      :noindex:
    .. automethod:: cancelDrainJobs
-   :noindex:
+      :noindex:
 
 
 .. autoclass:: DrainTypes
@@ -214,25 +214,25 @@ Security Management
    :noindex:
 
     .. automethod:: add_password
-   :noindex:
+      :noindex:
     .. automethod:: delete_password
-   :noindex:
+      :noindex:
     .. automethod:: query_password
-   :noindex:
+      :noindex:
     .. automethod:: add_user_cred
-   :noindex:
+      :noindex:
     .. automethod:: delete_user_cred
-   :noindex:
+      :noindex:
     .. automethod:: query_user_cred
-   :noindex:
+      :noindex:
     .. automethod:: add_user_service_cred
-   :noindex:
+      :noindex:
     .. automethod:: delete_user_service_cred
-   :noindex:
+      :noindex:
     .. automethod:: query_user_service_cred
-   :noindex:
+      :noindex:
     .. automethod:: check_user_service_creds
-   :noindex:
+      :noindex:
 
 .. autoclass:: CredTypes
    :noindex:
@@ -247,25 +247,25 @@ Security Management
    :noindex:
 
    .. automethod:: invalidateAllSessions
-   :noindex:
+      :noindex:
    .. automethod:: ping
-   :noindex:
+      :noindex:
    .. automethod:: getCommandString
-   :noindex:
+      :noindex:
    .. automethod:: setConfig
-   :noindex:
+      :noindex:
    .. automethod:: setPoolPassword
-   :noindex:
+      :noindex:
    .. automethod:: setTag
-   :noindex:
+      :noindex:
    .. automethod:: setToken
-   :noindex:
+      :noindex:
 
 .. autoclass:: Token
    :noindex:
 
    .. automethod:: write
-   :noindex:
+      :noindex:
 
 .. autoclass:: TokenRequest
    :noindex:
@@ -412,25 +412,29 @@ which releases itself from certain hold conditions.
    :noindex:
 
    .. automethod:: events
-   :noindex:
+      :noindex:
    .. automethod:: close
-   :noindex:
+      :noindex:
 
 .. autoclass:: JobEvent
    :noindex:
 
    .. autoattribute:: type
+      :noindex:
    .. autoattribute:: cluster
+      :noindex:
    .. autoattribute:: proc
+      :noindex:
    .. autoattribute:: timestamp
+      :noindex:
    .. automethod:: get
-   :noindex:
+      :noindex:
    .. automethod:: keys
-   :noindex:
+      :noindex:
    .. automethod:: values
-   :noindex:
+      :noindex:
    .. automethod:: items
-   :noindex:
+      :noindex:
 
 .. autoclass:: JobEventType
    :noindex:
@@ -441,6 +445,7 @@ HTCondor Configuration
 ----------------------
 
 .. autodata:: param
+   :noindex:
 .. autofunction:: reload_config
    :noindex:
 .. autoclass:: _Param
@@ -450,7 +455,7 @@ HTCondor Configuration
    :noindex:
 
    .. automethod:: refresh
-   :noindex:
+      :noindex:
 
 .. autofunction:: platform
    :noindex:
