@@ -26,13 +26,17 @@ an indented link under it named `and checkpointing`.  Multiple
 descriptions/usage for a single index entry make it easy for readers to find
 related items that may be located in different places in the manual.
 
-**:macro-def:** is used in the configuration macros reference page to define an anchor for the above to target,
-and an index entry.
+**:macro-def:** is used in the coonfiguration macros reference page to define an anchor for the above to target,
+and an index entry. If given an argument, the index pairing will be the name of the macro and
+**[Arg] Configuration Options**. Any macros without an additional argument will just be paired with
+**Configuration Options**.
 
 Example: **:macro-def:\`START\`**
 
+Example: **:macro-def:\`START[Startd]\`**
+
 **:macro:** used to reference a condor config macro knob declared with **macro-def** as above. **macro** creates
-a reference (link) from the existing position to the entry in the configuration macros page. If given and argument,
+a reference (link) from the existing position to the entry in the configuration macros page. If given an argument,
 it will also create and index entry with a subheading under the macro name.
 
 Example: **:macro:\`START\`**
