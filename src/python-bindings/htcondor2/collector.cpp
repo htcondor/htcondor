@@ -14,7 +14,7 @@ _collector_init( PyObject *, PyObject * args ) {
 		return NULL;
 	}
 
-	handle->f = [](void *& v) { dprintf( D_TRACE, "[unconstructed CollectorList]\n" ); if(v != NULL){ dprintf(D_ALWAYS, "Error!  Unconstructed Collector has non-NULL handle %p\n", v); } };
+	handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[unconstructed CollectorList]\n" ); if(v != NULL){ dprintf(D_ALWAYS, "Error!  Unconstructed Collector has non-NULL handle %p\n", v); } };
 
 	if( pool == NULL || strlen(pool) == 0 ) {
 		handle->t = (void *) CollectorList::create();
@@ -33,7 +33,7 @@ _collector_init( PyObject *, PyObject * args ) {
 	}
 
 
-	handle->f = [](void *& v) { dprintf( D_TRACE, "[CollectorList]\n" ); delete (CollectorList *)v; v = NULL; };
+	handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[CollectorList]\n" ); delete (CollectorList *)v; v = NULL; };
 	Py_RETURN_NONE;
 }
 

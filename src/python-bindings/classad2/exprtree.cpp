@@ -1,4 +1,4 @@
-static PyObject *
+tatic PyObject *
 _exprtree_init(PyObject *, PyObject * args) {
 	// _exprtree_init( self, self._handle )
 
@@ -12,7 +12,7 @@ _exprtree_init(PyObject *, PyObject * args) {
     // We don't know which kind of ExprTree this is going to be yet,
     // so we can't initialize it to anything (ExprTree proper is abstract).
     handle->t = NULL;
-    handle->f = [](void *& v) { dprintf( D_TRACE, "[unconstructed ExprTree]\n" ); if( v != NULL ) { dprintf(D_ALWAYS, "Error!  Unconstructed ExprTree has non-NULL handle %p\n", v); } };
+    handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[unconstructed ExprTree]\n" ); if( v != NULL ) { dprintf(D_ALWAYS, "Error!  Unconstructed ExprTree has non-NULL handle %p\n", v); } };
     Py_RETURN_NONE;
 }
 
