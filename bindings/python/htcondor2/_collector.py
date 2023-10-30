@@ -1,4 +1,5 @@
 from typing import Optional
+from typing import List
 
 from .htcondor2_impl import _handle as handle_t
 
@@ -56,9 +57,9 @@ class Collector():
     def query(self,
       ad_type: AdType = AdType.Any,
       constraint: Optional[str] = None,
-      projection: Optional[list[str]] = None,
+      projection: Optional[List[str]] = None,
       # The documentation does not match the implementation in version 1.
-      # statistics: Optional[list[str]] = None,
+      # statistics: Optional[List[str]] = None,
       statistics: Optional[str] = None,
     ) -> list[classad.ClassAd]:
         # str(None) is "None", which is a valid ClassAd expression (a bare
@@ -84,9 +85,9 @@ class Collector():
     def directQuery(self,
       daemon_type: DaemonType,
       name: Optional[str] = None,
-      projection: Optional[list[str]] = None,
+      projection: Optional[List[str]] = None,
       # The documentation does not match the implementation in version 1.
-      # statistics: Optional[list[str]] = None,
+      # statistics: Optional[List[str]] = None,
       statistics: str = None,
     ) -> classad.ClassAd:
         daemon_ad = self.locate(daemon_type, name)
