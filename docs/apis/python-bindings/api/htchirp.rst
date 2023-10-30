@@ -42,6 +42,7 @@ string containing a :ref:`man-pages/condor_chirp:*condor_chirp*` command (with
 arguments) and returns the value from the relevant :class:`HTChirp` method.
 
 .. autoclass:: HTChirp
+   :noindex:
 
   .. automethod:: connect
   .. automethod:: is_connected
