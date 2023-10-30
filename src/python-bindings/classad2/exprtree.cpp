@@ -1,4 +1,4 @@
-tatic PyObject *
+static PyObject *
 _exprtree_init(PyObject *, PyObject * args) {
 	// _exprtree_init( self, self._handle )
 
