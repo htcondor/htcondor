@@ -45,14 +45,14 @@ typedef DynamicPyType_Handle::python_object_type PyObject_Handle;
 static void
 _handle_dealloc(PyObject * self) {
     auto * handle = (PyObject_Handle *)self;
-    dprintf( D_TRACE, "_handle_dealloc(%p)\n", handle->t );
+    dprintf( D_PERF_TRACE, "_handle_dealloc(%p)\n", handle->t );
     PyTypeObject * tp = Py_TYPE(self);
 
     if(handle->f == NULL) {
         if(handle->t != NULL) {
             dprintf( D_ALWAYS, "_handle_dealloc(%p) has no registered callback\n", handle->t );
         } else {
-            dprintf( D_TRACE, "_handle_dealloc(%p) has no registered callback\n", handle->t );
+            dprintf( D_PERF_TRACE, "_handle_dealloc(%p) has no registered callback\n", handle->t );
         }
     } else {
         handle->f(handle->t);

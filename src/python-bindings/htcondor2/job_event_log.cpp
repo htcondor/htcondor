@@ -9,7 +9,7 @@ _job_event_log_init( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    handle->f = [](void *& v) { dprintf( D_TRACE, "[unconstructed JobEventLog]\n" ); if( v != NULL ) { dprintf(D_ALWAYS, "Error!  Unconstructed JobEventLog has non-NULL handle %p\n", v); } };
+    handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[unconstructed JobEventLog]\n" ); if( v != NULL ) { dprintf(D_ALWAYS, "Error!  Unconstructed JobEventLog has non-NULL handle %p\n", v); } };
 
     auto wful = new WaitForUserLog(file_name);
     if(! wful->isInitialized()) {
@@ -22,7 +22,7 @@ _job_event_log_init( PyObject *, PyObject * args ) {
             "and try again.)" );
         return NULL;
     }
-    handle->f = [](void *& v) { dprintf( D_TRACE, "[WaitForUserLog]\n" ); delete (WaitForUserLog *)v; v = NULL; };
+    handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[WaitForUserLog]\n" ); delete (WaitForUserLog *)v; v = NULL; };
     handle->t = (void *)wful;
 
     Py_RETURN_NONE;
