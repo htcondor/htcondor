@@ -148,7 +148,7 @@ def test_exprtree_eval_with_references(ad,):
     ad["ref"] = 1
     ad["key"] = classad.ExprTree("2 + ref")
 
-    assert ad["key"].eval() == 3
+    assert ad["key"].eval(ad) == 3
 
 
 @pytest.mark.parametrize(
