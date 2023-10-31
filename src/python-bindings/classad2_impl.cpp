@@ -1,7 +1,4 @@
-#include "condor_common.h"
-
-#define Py_LIMITED_API
-#include <Python.h>
+#include "condor_python.h"
 
 // For module initialization.
 #include "condor_config.h"

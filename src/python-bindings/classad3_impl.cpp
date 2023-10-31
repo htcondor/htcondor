@@ -1,7 +1,4 @@
-#include "condor_common.h"
-
-#define Py_LIMITED_API
-#include <Python.h>
+#include "condor_python.h"
 
 #include "classad/source.h"
 #include "classad/classad.h"

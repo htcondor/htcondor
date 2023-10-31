@@ -1,7 +1,4 @@
-#include "condor_common.h"
-
-#define Py_LIMITED_API
-#include <Python.h>
+#include "condor_python.h"
 
 // We include some .cpp files, which is an awful hack, but I think less
 // ugly, overall, than having or avoiding all of the defined-but-not-used
