@@ -52,7 +52,7 @@ New Features:
   :jira:`2065`
 
 - Improved performance of *condor_schedd*, and other daemons, by caching the
-  value in /etc/localtime, so that debugging logs aren't always stat'ing that
+  value in ``/etc/localtime``, so that debugging logs aren't always stat'ing that
   file.
   :jira:`2064`
 
