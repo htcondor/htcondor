@@ -1126,6 +1126,17 @@ JICShadow::registerStarterInfo( void )
 void
 JICShadow::publishStarterInfo( ClassAd* ad )
 {
+	// Note: previously, we groveled through the machine resources
+	// and only published a select few attributes.  However, this is
+	// the only version of the starter ad that goes to the shadow; in the
+	// case of TRANSFER_QUEUE_USER_EXPR, we don't know what attributes the
+	// shadow will be interested in.  Send a copy of the whole thing.
+	if (Starter->jic) {
+		ClassAd * machineAd = Starter->jic->machClassAd();
+		if (machineAd) {
+			ad->Update(*machineAd);
+		}
+	}
 	ad->Assign( ATTR_UID_DOMAIN, uid_domain );
 
 	ad->Assign( ATTR_FILE_SYSTEM_DOMAIN, fs_domain );
@@ -1140,19 +1151,6 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	const char * sandbox_dir = Starter->GetWorkingDir(false);
 	if (sandbox_dir && sandbox_dir[0]) {
 		ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
-	}
-	if (Starter->jic) {
-		ClassAd * machineAd = Starter->jic->machClassAd();
-		if( machineAd ) {
-			CopyMachineResources(*ad, *machineAd, true);
-			//Check for requested machine attrs to return for execution event
-			if (job_ad) {
-				std::string requestAttrs;
-				if (job_ad->LookupString(ATTR_ULOG_EXECUTE_EVENT_ATTRS,requestAttrs)) {
-					CopySelectAttrs(*ad, *machineAd, requestAttrs, false);
-				}
-			}
-		}
 	}
 
 	ad->Assign( ATTR_HAS_RECONNECT, true );
@@ -2492,6 +2490,7 @@ JICShadow::beginFileTransfer( void )
 		job_ad->Delete(ATTR_SPOOLED_OUTPUT_FILES);
 
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
+		filetrans->SetMachineAd(machClassAd());
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->setSyscallSocket(syscall_sock);
 		filetrans->RegisterCallback(

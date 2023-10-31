@@ -7590,6 +7590,11 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 		// dprintf(D_MATCH | D_VERBOSE, "VANILLA_START is disabled\n");
 	}
 #endif
+	if (!scheduler.canStartXfer(*job, *match_ad)) {
+		because = "job's transfer queue is over threshold";
+		dprintf(D_MATCH | D_VERBOSE, "Job %d.%d cannot start because job's transfer queue is over threshold", job->jid.cluster, job->jid.proc);
+		return true;
+	}
 
 	return false;
 }
@@ -9817,6 +9822,10 @@ bool Scheduler::evalVanillaStartExpr(VanillaMatchAd &vad)
 	return true;
 }
 
+bool Scheduler::canStartXfer(ClassAd &job_ad, ClassAd &machine_ad)
+{
+	return m_xfer_queue_mgr.JobCanStart(job_ad, machine_ad);
+}
 
 bool
 Scheduler::isStillRunnable( int cluster, int proc, int &status )

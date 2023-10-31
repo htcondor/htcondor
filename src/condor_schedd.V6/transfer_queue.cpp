@@ -26,13 +26,16 @@
 #include "condor_config.h"
 #include "dc_transfer_queue.h"
 #include "condor_email.h"
+#include "file_transfer.h"
+
 #include "algorithm"
 
 TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age):
 	m_sock(sock),
 	m_queue_user(queue_user),
 	m_jobid(jobid),
-	m_sandbox_size_MB(sandbox_size/1024.0/1024.0),
+	m_sandbox_size_bytes(sandbox_size),
+	m_sandbox_remaining_bytes(sandbox_size),
 	m_fname(fname),
 	m_downloading(downloading),
 	m_gave_go_ahead(false), m_max_queue_age(max_queue_age), m_time_born(time(NULL)), m_time_go_ahead(0)
@@ -57,12 +60,13 @@ TransferQueueRequest::~TransferQueueRequest() {
 
 char const *
 TransferQueueRequest::Description() {
-	formatstr(m_description, "%s %s job %s for %s (sandbox size %g MB, initial file %s)",
+	formatstr(m_description, "%s %s job %s for %s (sandbox size %g MB, %g MB remaining, initial file %s)",
 					m_sock ? m_sock->peer_description() : "",
 					m_downloading ? "downloading" : "uploading",
 					m_jobid.c_str(),
 					m_queue_user.c_str(),
-					m_sandbox_size_MB,
+					((double)m_sandbox_size_bytes) / 1'000'000,
+					((double)m_sandbox_remaining_bytes) / 1'000'000,
 					m_fname.c_str());
 	return m_description.c_str();
 }
@@ -107,6 +111,7 @@ TransferQueueRequest::SendGoAhead(XFER_QUEUE_ENUM go_ahead,char const *reason) {
 	}
 
 	m_gave_go_ahead = true;
+	queued_seconds += stopwatch.reset();
 	m_time_go_ahead = time(nullptr);
 	return true;
 }
@@ -115,7 +120,9 @@ TransferQueueManager::TransferQueueManager() : m_round_robin_garbage_time(time(n
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,&m_max_uploading_stat,nullptr,IF_BASICPUB|m_max_uploading_stat.PubValue);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,&m_max_downloading_stat,nullptr,IF_BASICPUB|m_max_downloading_stat.PubValue);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,&m_uploading_stat,nullptr,IF_BASICPUB|m_uploading_stat.PubDefault);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_UPLOADING_TIME, &m_iostats.uploading_time, nullptr, IF_BASICPUB|m_iostats.uploading_time.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,&m_downloading_stat,nullptr,IF_BASICPUB|m_downloading_stat.PubDefault);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_DOWNLOADING_TIME, &m_iostats.downloading_time, nullptr, IF_BASICPUB|m_iostats.downloading_time.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,&m_waiting_to_upload_stat,nullptr,IF_BASICPUB|m_waiting_to_upload_stat.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD,&m_waiting_to_download_stat,nullptr,IF_BASICPUB|m_waiting_to_download_stat.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,&m_upload_wait_time_stat,nullptr,IF_BASICPUB|m_upload_wait_time_stat.PubDefault);
@@ -281,6 +288,19 @@ TransferQueueManager::InitAndReconfig() {
 	if (param(strWhitelist, "STATISTICS_TO_PUBLISH_LIST")) {
 		m_stat_pool.SetVerbosities(strWhitelist.c_str(), m_publish_flags, true);
 	}
+
+	// Load up tunables for the queue time estimate algorithm
+	param_longlong("FILE_TRANSFER_QUEUE_TIME_ESTIMATE_BANDWIDTH", m_defaultBandwidth, true, 1000000, true, 0);
+	m_minimumLoad = param_double("FILE_TRANSFER_QUEUE_TIME_ESTIMATE_MINIMUM_LOAD", 0.2, 0);
+	m_queue_threshold = param_integer("FILE_TRANSFER_QUEUE_TIME_ESTIMATE_THRESHOLD", 1800, 0);
+
+	std::string user_expr;
+	if (param(user_expr, "TRANSFER_QUEUE_USER_EXPR","strcat(\"Owner_\",Owner)")) {
+		ExprTree *user_tree;
+		// Return value is ignored; on failure, it'll set m_user_expr to nullptr.
+		ParseClassAdRvalExpr(user_expr.c_str(), user_tree);
+		m_user_expr.reset(user_tree);
+	}
 }
 
 void
@@ -429,7 +449,7 @@ TransferQueueManager::HandleReport( Stream *sock )
 }
 
 bool
-TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
+TransferQueueRequest::ReadReport(TransferQueueManager *manager)
 {
 	std::string report;
 	m_sock->decode();
@@ -474,6 +494,29 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 	iostats.file_write = (double)recent_usec_file_write / 1'000'000;
 	iostats.net_read = (double)recent_usec_net_read     / 1'000'000;
 	iostats.net_write = (double)recent_usec_net_write   / 1'000'000;
+	if (m_gave_go_ahead) {
+		if (m_downloading) {
+			iostats.download_io_seconds = io_seconds + stopwatch.reset();
+		} else {
+			iostats.upload_io_seconds = io_seconds + stopwatch.reset();
+		}
+		io_seconds = 0;
+	} else {
+		if (m_downloading) {
+			iostats.download_queued_seconds = queued_seconds + stopwatch.reset();
+		} else {
+			iostats.upload_queued_seconds = queued_seconds + stopwatch.reset();
+		}
+		queued_seconds = 0;
+	}
+
+	uint64_t decrement_value = m_downloading ? recent_bytes_received : recent_bytes_sent;
+
+	if (decrement_value > m_sandbox_remaining_bytes) {
+		m_sandbox_remaining_bytes = 0;
+	} else {
+		m_sandbox_remaining_bytes -= decrement_value;
+	}
 
 	manager->AddRecentIOStats(iostats,m_up_down_queue_user);
 	return true;
@@ -626,6 +669,20 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 		else {
 			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_write,nullptr,ema_flags);
 		}
+		formatstr(attr, "%sFileTransferDownloadSeconds", user_attr.c_str());
+		if (unregister) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.download_io_seconds.Unpublish(*unpublish_ad,attr.c_str());
+		} else {
+			m_stat_pool.AddProbe(attr.c_str(), &iostats.download_io_seconds, nullptr, ema_flags);
+		}
+		formatstr(attr, "%sFileTransferDownloadQueueSeconds", user_attr.c_str());
+		if (unregister) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.download_queued_seconds.Unpublish(*unpublish_ad,attr.c_str());
+		} else {
+			m_stat_pool.AddProbe(attr.c_str(), &iostats.download_queued_seconds, nullptr, ema_flags);
+		}
 		formatstr(attr,"%sFileTransferNetReadSeconds",user_attr.c_str());
 		if( unregister ) {
 			m_stat_pool.RemoveProbe(attr.c_str());
@@ -641,6 +698,20 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 		}
 		else {
 			m_stat_pool.AddProbe(attr.c_str(),&iostats.download_MB_waiting,nullptr,flags|iostats.download_MB_waiting.PubValue);
+		}
+		formatstr(attr, "%s%s", user_attr.c_str(), "FileTransferMBActiveDownloads");
+		if (unregister) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.download_MB_active.Unpublish(*unpublish_ad, attr.c_str());
+		} else {
+			m_stat_pool.AddProbe(attr.c_str(), &iostats.download_MB_active, nullptr, flags|iostats.download_MB_active.PubValue);
+		}
+		formatstr(attr, "%s%s", user_attr.c_str(), ATTR_TRANSFER_QUEUE_DOWNLOADING_TIME);
+		if (unregister) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.downloading_time.Unpublish(*unpublish_ad, attr.c_str());
+		} else {
+			m_stat_pool.AddProbe(attr.c_str(), &iostats.downloading_time, nullptr, IF_BASICPUB|m_iostats.downloading_time.PubDefault);
 		}
 	}
 	if( uploading ) {
@@ -660,6 +731,20 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 		else {
 			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_read,nullptr,ema_flags);
 		}
+		formatstr(attr, "%sFileTransferUploadSeconds", user_attr.c_str());
+		if (unregister) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.upload_io_seconds.Unpublish(*unpublish_ad,attr.c_str());
+		} else {
+			m_stat_pool.AddProbe(attr.c_str(), &iostats.upload_io_seconds, nullptr, ema_flags);
+		}
+		formatstr(attr, "%sFileTransferUploadQueueSeconds", user_attr.c_str());
+		if (unregister) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.upload_queued_seconds.Unpublish(*unpublish_ad,attr.c_str());
+		} else {
+			m_stat_pool.AddProbe(attr.c_str(), &iostats.upload_queued_seconds, nullptr, ema_flags);
+		}
 		formatstr(attr,"%sFileTransferNetWriteSeconds",user_attr.c_str());
 		if( unregister ) {
 			m_stat_pool.RemoveProbe(attr.c_str());
@@ -676,6 +761,20 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 		else {
 			m_stat_pool.AddProbe(attr.c_str(),&iostats.upload_MB_waiting,nullptr,flags|iostats.upload_MB_waiting.PubValue);
 		}
+		formatstr(attr, "%s%s", user_attr.c_str(), "FileTransferMBActiveUploads");
+		if (unregister) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.upload_MB_active.Unpublish(*unpublish_ad, attr.c_str());
+		} else {
+			m_stat_pool.AddProbe(attr.c_str(), &iostats.upload_MB_active, nullptr, flags|iostats.upload_MB_active.PubValue);
+		}
+		formatstr(attr, "%s%s", user_attr.c_str(), ATTR_TRANSFER_QUEUE_UPLOADING_TIME);
+		if (unregister) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.uploading_time.Unpublish(*unpublish_ad, attr.c_str());
+		} else {
+			m_stat_pool.AddProbe(attr.c_str(), &iostats.uploading_time, nullptr, IF_BASICPUB|m_iostats.uploading_time.PubDefault);
+		}
 	}
 }
 
@@ -688,6 +787,10 @@ TransferQueueManager::ClearTransferCounts()
 	m_download_wait_time = 0;
 	m_iostats.upload_MB_waiting = 0;
 	m_iostats.download_MB_waiting = 0;
+	m_iostats.download_MB_active = 0;
+	m_iostats.upload_MB_active = 0;
+	m_iostats.uploading_time = 0;
+	m_iostats.downloading_time = 0;
 
 	for(auto & m_queue_user : m_queue_users)
 	{
@@ -695,6 +798,10 @@ TransferQueueManager::ClearTransferCounts()
 		m_queue_user.second.idle = 0;
 		m_queue_user.second.iostats.upload_MB_waiting = 0;
 		m_queue_user.second.iostats.download_MB_waiting = 0;
+		m_queue_user.second.iostats.download_MB_active = 0;
+		m_queue_user.second.iostats.upload_MB_active = 0;
+		m_queue_user.second.iostats.uploading_time = 0;
+		m_queue_user.second.iostats.downloading_time = 0;
 	}
 }
 
@@ -721,6 +828,7 @@ TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 
 	for (TransferQueueRequest *client : m_xfer_queue) {
 		if( client->m_gave_go_ahead ) {
+			client->io_seconds += client->stopwatch.reset();
 			GetUserRec(client->m_up_down_queue_user).running++;
 			if( client->m_downloading ) {
 				downloading += 1;
@@ -730,6 +838,7 @@ TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 			}
 		}
 		else {
+			client->queued_seconds += client->stopwatch.reset();
 			GetUserRec(client->m_up_down_queue_user).idle++;
 		}
 	}
@@ -877,26 +986,46 @@ TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 		// now that we have finished scheduling new transfers,
 		// examine requests that are still waiting
 	for (TransferQueueRequest *client : m_xfer_queue) {
+		TransferQueueUser &user = GetUserRec(client->m_up_down_queue_user);
+		int age = time(nullptr) - client->m_time_born;
 		if( !client->m_gave_go_ahead ) {
 			clients_waiting = true;
 
-			TransferQueueUser &user = GetUserRec(client->m_up_down_queue_user);
-			int age = time(nullptr) - client->m_time_born;
+			auto new_counts = client->queued_seconds + client->stopwatch.reset();
+			client->queued_seconds = 0;
 			if( client->m_downloading ) {
 				m_waiting_to_download++;
 				if( age > m_download_wait_time ) {
 					m_download_wait_time = age;
 				}
-				m_iostats.download_MB_waiting += client->m_sandbox_size_MB;
-				user.iostats.download_MB_waiting += client->m_sandbox_size_MB;
+				m_iostats.download_MB_waiting += client->m_sandbox_size_bytes / 1'000'000;
+				user.iostats.download_MB_waiting += client->m_sandbox_size_bytes / 1'000'000;
+				m_iostats.download_queued_seconds += new_counts;
+				user.iostats.download_queued_seconds += new_counts;
 			}
 			else {
 				m_waiting_to_upload++;
 				if( age > m_upload_wait_time ) {
 					m_upload_wait_time = age;
 				}
-				m_iostats.upload_MB_waiting += client->m_sandbox_size_MB;
-				user.iostats.upload_MB_waiting += client->m_sandbox_size_MB;
+				m_iostats.upload_MB_waiting += client->m_sandbox_size_bytes / 1'000'000;
+				user.iostats.upload_MB_waiting += client->m_sandbox_size_bytes / 1'000'000;
+				m_iostats.upload_queued_seconds += new_counts;
+				user.iostats.upload_queued_seconds += new_counts;
+			}
+		} else {
+			auto new_counts = client->io_seconds + client->stopwatch.reset();
+			client->io_seconds = 0;
+			if (client->m_downloading) {
+				m_iostats.download_MB_active += client->m_sandbox_remaining_bytes / 1'000'000;
+				user.iostats.download_MB_active += client->m_sandbox_remaining_bytes / 1'000'000;
+				m_iostats.download_io_seconds += new_counts;
+				user.iostats.download_io_seconds += new_counts;
+			} else {
+				m_iostats.upload_MB_active += client->m_sandbox_remaining_bytes / 1'000'000;
+				user.iostats.upload_MB_active += client->m_sandbox_remaining_bytes / 1'000'000;
+				m_iostats.upload_io_seconds += new_counts;
+				user.iostats.upload_io_seconds += new_counts;
 			}
 		}
 	}
@@ -943,6 +1072,38 @@ TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 			it++;
 		}
 	}
+
+	for (auto &user : m_queue_users) {
+		queueTimeEstimate(user.second.iostats);
+	}
+	queueTimeEstimate(m_iostats);
+}
+
+void
+TransferQueueManager::queueTimeEstimate(IOStats &iostats) const
+{
+	uint64_t upload_bandwidth = m_defaultBandwidth;
+	uint64_t download_bandwidth = m_defaultBandwidth;
+	auto ema_horizon = iostats.upload_io_seconds.ShortestHorizonEMAName();
+	if (ema_horizon) {
+		auto upload_load = iostats.upload_io_seconds.EMAValue(ema_horizon) + iostats.upload_queued_seconds.EMAValue(ema_horizon);
+		if (upload_load > m_minimumLoad) {
+			upload_bandwidth = iostats.bytes_sent.EMAValue(ema_horizon);
+		}
+		auto download_load = iostats.download_io_seconds.EMAValue(ema_horizon) + iostats.download_queued_seconds.EMAValue(ema_horizon);
+		if (download_load > m_minimumLoad) {
+			download_bandwidth = iostats.bytes_received.EMAValue(ema_horizon);
+		}
+	}
+	if (upload_bandwidth <= 0) {
+		upload_bandwidth = m_defaultBandwidth;
+	}
+	if (download_bandwidth <= 0) {
+		download_bandwidth = m_defaultBandwidth;
+	}
+
+	iostats.uploading_time.value = (iostats.upload_MB_waiting.value + iostats.upload_MB_active.value) * 1'000'000 / upload_bandwidth;
+	iostats.downloading_time.value = (iostats.download_MB_waiting.value + iostats.download_MB_active.value) * 1'000'000 / download_bandwidth;
 }
 
 void
@@ -1038,6 +1199,10 @@ IOStats::Add(IOStats &s) {
 	file_write += s.file_write.value;
 	net_read += s.net_read.value;
 	net_write += s.net_write.value;
+	upload_io_seconds += s.upload_io_seconds.value;
+	download_io_seconds += s.download_io_seconds.value;
+	upload_queued_seconds += s.upload_queued_seconds.value;
+	download_queued_seconds += s.download_queued_seconds.value;
 }
 
 void
@@ -1048,6 +1213,10 @@ IOStats::Clear() {
 	file_write.Clear();
 	net_read.Clear();
 	net_write.Clear();
+	upload_io_seconds.Clear();
+	download_io_seconds.Clear();
+	upload_queued_seconds.Clear();
+	download_queued_seconds.Clear();
 }
 
 void
@@ -1058,6 +1227,10 @@ IOStats::ConfigureEMAHorizons(const std::shared_ptr<stats_ema_config>& config) {
 	file_write.ConfigureEMAHorizons(config);
 	net_read.ConfigureEMAHorizons(config);
 	net_write.ConfigureEMAHorizons(config);
+	download_io_seconds.ConfigureEMAHorizons(config);
+	upload_io_seconds.ConfigureEMAHorizons(config);
+	download_queued_seconds.ConfigureEMAHorizons(config);
+	upload_queued_seconds.ConfigureEMAHorizons(config);
 }
 
 void
@@ -1160,11 +1333,11 @@ TransferQueueManager::publish(ClassAd *ad,int pubflags)
 			m_download_wait_time);
 
 	if( ema_horizon ) {
-		dprintf(d_level,"TransferQueueManager upload %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
-				ema_horizon, up_bytes_sent, up_file_read, up_net_write);
+		dprintf(d_level,"TransferQueueManager upload %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load  %.3f est. remaining time\n",
+				ema_horizon, up_bytes_sent, up_file_read, up_net_write, m_iostats.uploading_time.value);
 
-		dprintf(d_level,"TransferQueueManager download %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
-				ema_horizon, down_bytes_received, down_file_write, down_net_read);
+		dprintf(d_level,"TransferQueueManager download %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load  %.3f est. remaining time\n",
+				ema_horizon, down_bytes_received, down_file_write, down_net_read, m_iostats.downloading_time.value);
 	}
 
 	if (is_active) {
@@ -1195,14 +1368,22 @@ TransferQueueManager::publish_user_stats(ClassAd * ad, const char *user, int fla
 		dn.iostats.bytes_received.Publish(*ad, "FileTransferDownloadBytes", ema_flags);
 		dn.iostats.file_write.Publish(*ad, "FileTransferFileWriteSeconds", ema_flags);
 		dn.iostats.net_read.Publish(*ad, "FileTransferNetReadSeconds", ema_flags);
+		dn.iostats.download_io_seconds.Publish(*ad, "FileTransferDownloadSeconds", ema_flags);
+		dn.iostats.download_queued_seconds.Publish(*ad, "FileTransferDownloadQueueSeconds", ema_flags);
 		dn.iostats.download_MB_waiting.Publish(*ad, "FileTransferMBWaitingToDownload", flags|dn.iostats.download_MB_waiting.PubValue);
+		dn.iostats.download_MB_active.Publish(*ad, "FileTransferMBActiveDownloads", flags|dn.iostats.download_MB_active.PubValue);
+		dn.iostats.downloading_time.Publish(*ad, ATTR_TRANSFER_QUEUE_DOWNLOADING_TIME, flags|dn.iostats.downloading_time.PubValue);
 	} else {
 		// if there are now counters for this user, then remove the attributes
 		// we can use the overall stats to unpublish, since that have the same EMA config as the per-user stats.
 		m_iostats.bytes_received.Unpublish(*ad, "FileTransferDownloadBytes");
 		m_iostats.file_write.Unpublish(*ad, "FileTransferFileWriteSeconds");
 		m_iostats.net_read.Unpublish(*ad, "FileTransferNetReadSeconds");
+		m_iostats.download_io_seconds.Unpublish(*ad, "FileTransferDownloadSeconds");
+		m_iostats.download_queued_seconds.Unpublish(*ad, "FileTransferDownloadQueueSeconds");
 		m_iostats.download_MB_waiting.Unpublish(*ad, "FileTransferMBWaitingToDownload");
+		m_iostats.download_MB_waiting.Unpublish(*ad, "FileTransferMBActiveDownloads");
+		m_iostats.downloading_time.Unpublish(*ad, ATTR_TRANSFER_QUEUE_DOWNLOADING_TIME);
 	}
 
 	up_down_user[0] = 'U';
@@ -1213,13 +1394,36 @@ TransferQueueManager::publish_user_stats(ClassAd * ad, const char *user, int fla
 		up.iostats.bytes_sent.Publish(*ad,"FileTransferUploadBytes",ema_flags);
 		up.iostats.file_read.Publish(*ad,"FileTransferFileReadSeconds",ema_flags);
 		up.iostats.net_write.Publish(*ad,"FileTransferNetWriteSeconds",ema_flags);
+		up.iostats.upload_io_seconds.Publish(*ad, "FileTransferUploadSeconds", ema_flags);
+		up.iostats.upload_queued_seconds.Publish(*ad, "FileTransferUploadQueueSeconds", ema_flags);
 		up.iostats.upload_MB_waiting.Publish(*ad,"FileTransferMBWaitingToUpload", flags|up.iostats.upload_MB_waiting.PubValue);
+		up.iostats.upload_MB_active.Publish(*ad,"FileTransferMBActiveUploads", flags|up.iostats.upload_MB_active.PubValue);
+		up.iostats.uploading_time.Publish(*ad, ATTR_TRANSFER_QUEUE_UPLOADING_TIME, flags|up.iostats.uploading_time.PubValue);
 	} else {
 		// if there are now counters for this user, then remove the attributes
 		// we can use the overall stats to unpublish, since that have the same EMA config as the per-user stats.
 		m_iostats.bytes_sent.Unpublish(*ad,"FileTransferUploadBytes");
 		m_iostats.file_read.Unpublish(*ad,"FileTransferFileReadSeconds");
 		m_iostats.net_write.Unpublish(*ad,"FileTransferNetWriteSeconds");
+		m_iostats.upload_io_seconds.Unpublish(*ad, "FileTransferUploadSeconds");
+		m_iostats.upload_queued_seconds.Unpublish(*ad, "FileTransferUploadQueueSeconds");
 		m_iostats.upload_MB_waiting.Unpublish(*ad,"FileTransferMBWaitingToUpload");
+		m_iostats.upload_MB_waiting.Unpublish(*ad,"FileTransferMBActiveUploads");
+		m_iostats.uploading_time.Unpublish(*ad, ATTR_TRANSFER_QUEUE_UPLOADING_TIME);
 	}
+}
+
+bool
+TransferQueueManager::JobCanStart(ClassAd &job_ad, ClassAd &machine_ad)
+{
+	if (m_queue_threshold == 0) {return true;}
+	ExprTree *user_expr = m_user_expr.get();
+	if (!user_expr) {return true;}
+	std::string user;
+	if (!FileTransfer::GetTransferQueueUserStatic(job_ad, machine_ad, *user_expr, user)) {
+		return true;
+	}
+	user = std::string("U") + user;
+	auto &xfer_queue = GetUserRec(user);
+	return xfer_queue.iostats.uploading_time.value < static_cast<double>(m_queue_threshold);
 }

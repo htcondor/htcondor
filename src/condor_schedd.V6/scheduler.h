@@ -561,6 +561,7 @@ class Scheduler : public Service
 	bool            jobCanNegotiate(JobQueueJob * job, const char *&because); // returns true when START_VANILLA allows this job to negotiate
 	bool            vanillaStartExprIsConst(VanillaMatchAd &vad, bool &bval);
 	bool            evalVanillaStartExpr(VanillaMatchAd &vad);
+	bool            canStartXfer(ClassAd &job_ad, ClassAd &machine_ad);
 
 	// All deletions of match records _MUST_ go through DelMrec() to ensure
 	// proper cleanup.
