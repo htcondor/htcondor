@@ -400,13 +400,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 
 		if (hdr_flags & D_FDS) {
 			// Print the lowest available fd, as a guess if we're leaking fds.
-
-			int local_fd=dup(0);
-			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(fd:%d) ", local_fd);
+			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(fd:%d) ", safe_open_last_fd);
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
-			close(local_fd);
 		}
 
 		if (hdr_flags & D_PID) {
