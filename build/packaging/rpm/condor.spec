@@ -1274,6 +1274,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Oct 31 2023 Tim Theisen <tim@cs.wisc.edu> - 23.1.0-1
+- Enhanced filtering with 'condor_watch_q'
+- Can specify alternate ssh port with 'condor_remote_cluster'
+- Performance improvement for the 'condor_schedd' and other daemons
+- Jobs running on cgroup v2 systems can subdivide their cgroup
+- The curl plugin can now find CA certificates via an environment variable
+
 * Tue Oct 31 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.1-1
 - Fix 10.6.0 bug that broke PID namespaces
 - Fix bug where execution times for ARC CE jobs were 60 times too large
