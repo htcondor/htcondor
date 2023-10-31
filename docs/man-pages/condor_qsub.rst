@@ -80,16 +80,16 @@ Options
     (Directory option) Specifies the initial directory in which the job
     will run to be the current directory from which the job was
     submitted. This sets
-    :subcom:`initialdir<condor_qsub>` for
+    :subcom:`initialdir[condor_qsub]` for
     *condor_submit*.
  **-d** *path* or **-wd** *path*
     (Directory option) Specifies the initial directory in which the job
     will run to be *path*. This sets
-    :subcom:`initialdir<condor_qsub>` for
+    :subcom:`initialdir[condor_qsub]` for
     *condor_submit*.
  **-e** *filename*
     (File option) Specifies the *condor_submit* command
-    :subcom:`error<condor_qsub>`, the file where
+    :subcom:`error[condor_qsub]`, the file where
     ``stderr`` is written. If not specified, set to the default name of
     ``  <commandfile>.e<ClusterId>``, where ``<commandfile>`` is the
     *condor_qsub* argument, and ``  <ClusterId>`` is the job attribute
@@ -120,7 +120,7 @@ Options
     have completed.
  **-i** *[hostname:]filename*
     (File option) Specifies the *condor_submit* command
-    :subcom:`input<condor_qsub>`, the file from
+    :subcom:`input[condor_qsub]`, the file from
     which ``stdin`` is read.
  **-j** *characters*
     (File option) Acceptable characters for this option are ``e``,
@@ -184,14 +184,14 @@ Options
     e-mail.
  **-o** *filename*
     (File option) Specifies the *condor_submit* command
-    :subcom:`output<condor_qsub>`, the file where
+    :subcom:`output[condor_qsub]`, the file where
     ``stdout`` is written. If not specified, set to the default name of
     ``  <commandfile>.o<ClusterId>``, where ``<commandfile>`` is the
     *condor_qsub* argument, and ``  <ClusterId>`` is the job attribute
     ``ClusterId`` assigned for the job.
  **-p** *integer*
     (Status option) Sets the
-    :subcom:`priority<condor_qsub>` submit
+    :subcom:`priority[condor_qsub]` submit
     command for the job, with 0 being the default. Jobs with higher
     numerical priority will run before jobs with lower numerical
     priority.
@@ -225,7 +225,7 @@ Options
     Never submits the job, even if no errors are encountered.
  **-v** *variable list*
     (Environmental option) Used to set the submit command
-    :subcom:`environment<condor_qsub>` for
+    :subcom:`environment[condor_qsub]` for
     the job. *variable list* is as that defined for the submit command.
     Note that the syntax needed is specialized to deal with quote marks
     and white space characters.

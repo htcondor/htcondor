@@ -35,7 +35,7 @@ In general, it is preferable to just declare the minimum set of needed
 environment variables with the **environment** command, as that clearly
 declares the needed environment variables.  If the needed set is not known,
 the :subcom:`getenv` command is useful.  If the environment is set with both the
-:subcom:`environment<example with getenv>` command
+:subcom:`environment[example with getenv]` command
 and :subcom:`getenv` is also set to true, values specified with
 :subcom:`environment` override values in the submitter's environment,
 regardless of the order of the :subcom:`environment` and :subcom:`getenv` commands in the submit file.
@@ -107,7 +107,7 @@ executing job that may be useful.
    :index:`X509_USER_PROXY environment variable`\ :index:`X509_USER_PROXY<pair: X509_USER_PROXY; environment variables for jobs>`
    gives the full path to the X.509 user proxy file if one is associated
    with the job. Typically, a user will specify
-   :subcom:`x509userproxy<environment variable>` in
+   :subcom:`x509userproxy[environment variable]` in
    the submit description file.
 
 

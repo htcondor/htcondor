@@ -675,7 +675,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`ALLOW_SCRIPTS_TO_RUN_AS_EXECUTABLES[Global]`
     A boolean value that, when ``True``, permits scripts on Windows
     platforms to be used in place of the
-    :subcom:`executable<and Windows scripts>` in a job
+    :subcom:`executable[and Windows scripts]` in a job
     submit description file, in place of a *condor_dagman* pre or post
     script, or in producing the configuration, for example. Allows a
     script to be used in any circumstance previously limited to a
@@ -3022,8 +3022,8 @@ section.
     on hold for the reason (optionally) specified by the variables
     ``WANT_HOLD_REASON`` and ``WANT_HOLD_SUBCODE``. As usual, the job
     owner may specify
-    :subcom:`periodic_release<and WANT_HOLD>`
-    and/or :subcom:`periodic_remove<and WANT_HOLD>`
+    :subcom:`periodic_release[and WANT_HOLD]`
+    and/or :subcom:`periodic_remove[and WANT_HOLD]`
     expressions to react to specific hold states automatically. The
     attribute ``HoldReasonCode`` in the job ClassAd is set to the value
     21 when ``WANT_HOLD`` is responsible for putting the job on hold.
@@ -3072,7 +3072,7 @@ section.
     A boolean expression that, when ``True``, causes HTCondor to
     initiate a checkpoint of the currently running job.  This setting
     applies to vm universe jobs that have set
-    :subcom:`vm_checkpoint<and PERIODIC_CHECKPOINT>`
+    :subcom:`vm_checkpoint[and PERIODIC_CHECKPOINT]`
     to ``True`` in the submit description file.
 
 :macro-def:`RANK[STARTD]`
@@ -5029,7 +5029,7 @@ These macros control the *condor_schedd*.
     length. A history of length 1 means that only ``MachineAttrX0`` will
     be recorded. Additional attributes to record may be specified on a
     per-job basis by using the
-    :subcom:`job_machine_attrs<and SYSTEM_JOB_MACHINE_ATTRS>`
+    :subcom:`job_machine_attrs[and SYSTEM_JOB_MACHINE_ATTRS]`
     submit file command. The value recorded in the job ClassAd is the
     evaluation of the machine attribute in the context of the job
     ClassAd when the *condor_schedd* daemon initiates the start up of
@@ -5043,7 +5043,7 @@ These macros control the *condor_schedd*.
     :macro:`SYSTEM_JOB_MACHINE_ATTRS`. The default is 1. The
     history length may also be extended on a per-job basis by using the
     submit file command
-    :subcom:`job_machine_attrs_history_length<and SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH>`
+    :subcom:`job_machine_attrs_history_length[and SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH]`
     The larger of the system and per-job history lengths will be used. A
     history length of 0 disables recording of machine attributes.
 
@@ -5237,7 +5237,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`SYSTEM_PERIODIC_RELEASE and SYSTEM_PERIODIC_RELEASE_<Name>[SCHEDD]`
     This expression behaves identically to a job's definition of a
-    :subcom:`periodic_release<and SYSTEM_PERIODIC_RELEASE>`
+    :subcom:`periodic_release[and SYSTEM_PERIODIC_RELEASE]`
     expression in a submit description file, but it is evaluated for
     every job in the queue. It defaults to ``False``. When ``True``, it
     causes a Held job to return to the Idle state. Here is an example
@@ -5302,7 +5302,7 @@ These macros control the *condor_schedd*.
     (sent ``SIGKILL``).  Signals are different on Windows, and other
     details differ between universes.
 
-    The submit command :subcom:`want_graceful_removal<and GRACEFULLY_REMOVE_JOBS>`
+    The submit command :subcom:`want_graceful_removal[and GRACEFULLY_REMOVE_JOBS]`
     overrides this configuration variable.
 
     See :macro:`MachineMaxVacateTime` for details on
@@ -6474,14 +6474,14 @@ condor_submit Configuration File Entries
 
 :macro-def:`JOB_DEFAULT_LEASE_DURATION[SUBMIT]`
     The default value for the
-    :subcom:`job_lease_duration<and JOB_DEFAULT_LEASE_DURATION>`
+    :subcom:`job_lease_duration[and JOB_DEFAULT_LEASE_DURATION]`
     submit command when the submit file does not specify a value. The
     default value is 2400, which is 40 minutes.
 
 :macro-def:`JOB_DEFAULT_REQUESTMEMORY[SUBMIT]`
     The amount of memory in MiB to acquire for a job, if the job does
     not specify how much it needs using the
-    :subcom:`request_memory<and JOB_DEFAULT_REQUESTMEMORY>`
+    :subcom:`request_memory[and JOB_DEFAULT_REQUESTMEMORY]`
     submit command. If this variable is not defined, then the default is
     defined by the expression
 
@@ -6492,23 +6492,23 @@ condor_submit Configuration File Entries
 :macro-def:`JOB_DEFAULT_REQUESTDISK[SUBMIT]`
     The amount of disk in KiB to acquire for a job, if the job does not
     specify how much it needs using the
-    :subcom:`request_disk<and JOB_DEFAULT_REQUESTDISK>`
+    :subcom:`request_disk[and JOB_DEFAULT_REQUESTDISK]`
     submit command. If the job defines the value, then that value takes
     precedence. If not set, then then the default is defined as
     ``DiskUsage``.
 
 :macro-def:`JOB_DEFAULT_REQUESTCPUS[SUBMIT]`
     The number of CPUs to acquire for a job, if the job does not specify
-    how many it needs using the :subcom:`request_cpus<and JOB_DEFAULT_REQUESTCPUS>`
+    how many it needs using the :subcom:`request_cpus[and JOB_DEFAULT_REQUESTCPUS]`
     submit command. If the job defines the value, then that value takes
     precedence. If not set, then then the default is 1.
 
 :macro-def:`DEFAULT_JOB_MAX_RETRIES[SUBMIT]`
     The default value for the maximum number of job retries, if the
     *condor_submit* retry feature is used. (Note that this value is
-    only relevant if either :subcom:`retry_until<and DEFAULT_JOB_MAX_RETRIES>`
-    or :subcom:`success_exit_code<and DEFAULT_JOB_MAX_RETRIES>`
-    is defined in the submit file, and :subcom:`max_retries<and DEFAULT_JOB_MAX_RETRIES>`
+    only relevant if either :subcom:`retry_until[and DEFAULT_JOB_MAX_RETRIES]`
+    or :subcom:`success_exit_code[and DEFAULT_JOB_MAX_RETRIES]`
+    is defined in the submit file, and :subcom:`max_retries[and DEFAULT_JOB_MAX_RETRIES]`
     is not.) (See the :doc:`/man-pages/condor_submit` man page.) The default value
     if not defined is 2.
 
@@ -6557,12 +6557,12 @@ do not specify their own with:
     command-line option is used. This tells *condor_submit* to disable
     file permission checks when submitting a job for read permissions on
     all input files, such as those defined by commands
-    :subcom:`input<and SUBMIT_SKIP_FILECHECKS>`
-    :subcom:`transfer_input_files<and SUBMIT_SKIP_FILECHECKS>`
+    :subcom:`input[and SUBMIT_SKIP_FILECHECKS]`
+    :subcom:`transfer_input_files[and SUBMIT_SKIP_FILECHECKS]`
     as well as write permission to output files, such as a log file
-    defined by :subcom:`log<and SUBMIT_SKIP_FILECHECKS>`
-    files defined with :subcom:`output<and SUBMIT_SKIP_FILECHECKS>`
-    :subcom:`transfer_output_files<and SUBMIT_SKIP_FILECHECKS>`
+    defined by :subcom:`log[and SUBMIT_SKIP_FILECHECKS]`
+    files defined with :subcom:`output[and SUBMIT_SKIP_FILECHECKS]`
+    :subcom:`transfer_output_files[and SUBMIT_SKIP_FILECHECKS]`
     This can significantly decrease the amount of time required to
     submit a large group of jobs.  The default value is ``True``.
 
@@ -6577,7 +6577,7 @@ do not specify their own with:
 
 :macro-def:`SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES[SUBMIT]`
     Provides a default value for the submit command
-    :subcom:`should_transfer_files<and SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES>`
+    :subcom:`should_transfer_files[and SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES]`
     if the submit file does not supply a value and when the value is not
     forced by some other command in the submit file, such as the
     universe. Valid values are YES, TRUE, ALWAYS, NO, FALSE, NEVER and
@@ -9117,7 +9117,7 @@ HTCondor attributes
     be inserted into the ``.condor.sub`` file created by
     *condor_submit_dag*. The specified file is inserted into the
     ``.condor.sub`` file before the
-    :subcom:`queue<and DAGMAN_INSERT_SUB_FILE>` command and before
+    :subcom:`queue[and DAGMAN_INSERT_SUB_FILE]` command and before
     any commands specified with the **-append** *condor_submit_dag*
     command line option. Note that the ``DAGMAN_INSERT_SUB_FILE`` value
     can be overridden by the *condor_submit_dag*
@@ -9258,7 +9258,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     day. A value of 0 indicates that the delegated proxy should be valid
     for as long as allowed by the credential used to create the proxy.
     The job may override this configuration setting by using the
-    :subcom:`delegate_job_GSI_credentials_lifetime<and DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME>`
+    :subcom:`delegate_job_GSI_credentials_lifetime[and DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME]`
     submit file command. This configuration variable currently only
     applies to proxies delegated for non-grid jobs and HTCondor-C jobs.
     This variable has no effect if
@@ -9344,7 +9344,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     for jobs on Linux or Windows platforms to be encrypted. Defaults to
     ``False``. Note that even if ``False``, the user can require
     encryption of the execute directory on a per-job basis by setting
-    :subcom:`encrypt_execute_directory<and ENCRYPT_EXECUTE_DIRECTORY>`
+    :subcom:`encrypt_execute_directory[and ENCRYPT_EXECUTE_DIRECTORY]`
     to ``True`` in the job submit description file. Enabling this
     functionality requires that the HTCondor service is run as user root
     on Linux platforms, or as a system service on Windows platforms. On
@@ -9372,7 +9372,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     The default value is ``ecryptfs-add-passphrase``, causing the search
     to be within the safe system path subdirectories. This configuration
     variable is used on Linux platforms when a job sets
-    :subcom:`encrypt_execute_directory<and ECRYPTFS_ADD_PASSPHRASE>`
+    :subcom:`encrypt_execute_directory[and ECRYPTFS_ADD_PASSPHRASE]`
     to ``True`` in the submit description file.
 
 :macro-def:`SEC_TCP_SESSION_TIMEOUT[SECURITY]`
@@ -10324,7 +10324,7 @@ offline machine ClassAds must be enabled. See variable
     A string representing the command line invoked by *condor_rooster*
     that is to wake up a machine. The command and any arguments should
     be enclosed in double quote marks, the same as
-    :subcom:`arguments<>` syntax in
+    :subcom:`arguments` syntax in
     an HTCondor submit description file. The default value is
     "$(BIN)/condor_power -d -i". The command is expected to read from
     its standard input a ClassAd representing the offline machine.

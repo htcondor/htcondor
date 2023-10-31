@@ -612,12 +612,12 @@ Scheduler ClassAd Attributes
 
 :classad-attribute:`TotalLocalJobsIdle`
     The total number of **local**
-    :subcom:`universe<and attribute TotalLocalJobsIdle>` jobs from
+    :subcom:`universe[and attribute TotalLocalJobsIdle]` jobs from
     this *condor_schedd* daemon that are currently idle.
 
 :classad-attribute:`TotalLocalJobsRunning`
     The total number of **local**
-    :subcom:`universe<and attribute TotalLocalJobsRunning>` jobs from
+    :subcom:`universe[and attribute TotalLocalJobsRunning]` jobs from
     this *condor_schedd* daemon that are currently running.
 
 :classad-attribute:`TotalRemovedJobs`
@@ -630,12 +630,12 @@ Scheduler ClassAd Attributes
 
 :classad-attribute:`TotalSchedulerJobsIdle`
     The total number of **scheduler**
-    :subcom:`universe<and attribute TotalSchedulerJobsIdle>` jobs from
+    :subcom:`universe[and attribute TotalSchedulerJobsIdle]` jobs from
     this *condor_schedd* daemon that are currently idle.
 
 :classad-attribute:`TotalSchedulerJobsRunning`
     The total number of **scheduler**
-    :subcom:`universe<and attribute TotalSchedulerJobsRunning>` jobs from
+    :subcom:`universe[and attribute TotalSchedulerJobsRunning]` jobs from
     this *condor_schedd* daemon that are currently running.
 
 :classad-attribute:`TransferQueueUserExpr`
