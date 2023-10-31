@@ -1,3 +1,13 @@
+condor (23.0.1-1) stable; urgency=medium
+
+  * Fix 10.6.0 bug that broke PID namespaces
+  * Fix Debian and Ubuntu install bug when 'condor' user was in LDAP
+  * Fix bug where execution times for ARC CE jobs were 60 times too large
+  * Fix bug where a failed 'Service' node would crash DAGMan
+  * Condor-C and Job Router jobs now get resources provisioned updates
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 30 Oct 2023 16:34:00 -0500
+
 condor (23.0.0-1) stable; urgency=medium
 
   * Absent slot configuration, execution points will use a partitionable slot
