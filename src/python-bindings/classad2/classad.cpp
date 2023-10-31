@@ -587,11 +587,16 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     // must less one which had a newline after its opening left brace.
     //
     // Instead, we add a Python-only parse type, the default, which acts
-    // like the version 1, and otherwise pass the other C++ types through.
+    // like the version 1, and otherwise passes the other C++ types through.
     ClassAdFileParseType::ParseType pType = (ClassAdFileParseType::ParseType)parser_type;
     if( (long)pType == (long)-1 ) {
         pType = isOldAd(from_string) ? ClassAdFileParseType::Parse_long : ClassAdFileParseType::Parse_new;
     }
+
+#if defined(WINDOWS)
+    PyErr_SetString(PyExc_NotImplementedError, "Windows doesn't have fmemopen().");
+    return NULL;
+#endif /* WINDOWS */
 
     size_t from_string_length = strlen(from_string);
     FILE * file = fmemopen( const_cast<char *>(from_string), from_string_length, "r" );
