@@ -47,6 +47,7 @@ machine that is providing that service:
 :index:`central manager<single: central manager; machine>`
 
 .. sidebar::
+   Central Manager (CM) Diagram
 
    .. mermaid::
       :caption: Daemons for Central Manager, both managed by a *condor_master*
@@ -77,6 +78,7 @@ Central Manager
 :index:`execute<single: execute; machine>`
 
 .. sidebar::
+   Execution Point (EP) Diagram
 
    .. mermaid::
       :caption: Daemons for a Execution Point, one *condor_starter* per running job.
@@ -99,11 +101,15 @@ Execution Point
     of swap space, memory, number of CPUs, the larger variety of
     resource requests it can serve.
 
+.. Note: The pipe below is a newline to prevent an awful looking page flow
+
+|
+
 :index:`access point`
 :index:`access<single: submit; machine>`
 
 .. sidebar::
-
+   Access Point (AP) Diagram
 
    .. mermaid::
       :caption: Daemons for an Access Point, one *condor_shadow* per running job.
