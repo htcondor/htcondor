@@ -11,7 +11,7 @@ Release Notes:
 
 - HTCondor version 23.1.0 released on October 31, 2023.
 
-- This version includes all the updates from :ref:`lts-version-history-2300`.
+- This version includes all the updates from :ref:`lts-version-history-2301`.
 
 - Enterprise Linux 7 support is discontinued with this release.
 
