@@ -4,21 +4,19 @@
 #include <Python.h>
 
 // For module initialization.
-#include "condor_common.h"
 #include "condor_config.h"
 #include "common2/py_handle.cpp"
-
 
 // classad.*
 #include "classad/classad.h"
 #include "classad2/loose_functions.cpp"
-
 
 // classad.ClassAd
 #include "classad/classadCache.h"
 #include "common2/py_util.cpp"
 #include "classad2/classad.cpp"
 #include "classad2/exprtree.cpp"
+
 
 static PyMethodDef classad2_impl_methods[] = {
 	{"_version", & _version, METH_VARARGS, R"C0ND0R(
