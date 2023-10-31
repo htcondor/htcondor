@@ -596,10 +596,10 @@ _classad_parse_next( PyObject *, PyObject * args ) {
 #if defined(WINDOWS)
     PyErr_SetString(PyExc_NotImplementedError, "Windows doesn't have fmemopen().");
     return NULL;
-#endif /* WINDOWS */
-
+#else
     size_t from_string_length = strlen(from_string);
     FILE * file = fmemopen( const_cast<char *>(from_string), from_string_length, "r" );
+
     if( file == NULL ) {
         // This was a ClassAdParseError in version 1.
         PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
@@ -630,6 +630,7 @@ _classad_parse_next( PyObject *, PyObject * args ) {
 
     auto py_class_ad = py_new_htcondor2_classad(result);
     return Py_BuildValue("Ol", py_class_ad, offset);
+#endif /* WINDOWS */
 }
 
 
