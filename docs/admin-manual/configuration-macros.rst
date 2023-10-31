@@ -1421,6 +1421,9 @@ subsystem corresponding to the daemon.
         the operating system. This can be helpful in debugging
         HTCondor's use of system file descriptors as it will generally
         track the number of file descriptors that HTCondor has open.
+        Note the use of this flag is relatively expensive, so it 
+        should only be enabled when you suspect there is a file
+        descriptor leak.
 
     ``D_CAT`` or ``D_CATEGORY``
         This flag is different from the other flags, because it is used

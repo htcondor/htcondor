@@ -352,7 +352,6 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 
 	int my_pid;
 	int my_tid;
-	FILE* local_fp = NULL;
 
 	hdr_flags |= (cat_and_flags & ~D_CATEGORY_RESERVED_MASK); // pick up flags passed directly to dprintf call
 	unsigned char cat = (unsigned char)(cat_and_flags & D_CATEGORY_MASK);
@@ -402,23 +401,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 		}
 
 		if (hdr_flags & D_FDS) {
-			//Regardless of whether we're keeping the log file open our not, we open
-			//the NULL file for the FD number.
-			local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644);
-			if(local_fp == NULL )
-			{
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:0) " );
-				if( rc < 0 ) {
-					sprintf_errno = errno;
-				}
-			}
-			else
-			{
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:%d) ", fileno(local_fp) );
-				if( rc < 0 ) {
-					sprintf_errno = errno;
-				}
-				fclose_wrapper(local_fp, FCLOSE_RETRY_MAX);
+			// Print the lowest available fd, as a guess if we're leaking fds.
+			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(fd:%d) ", safe_open_last_fd);
+			if( rc < 0 ) {
+				sprintf_errno = errno;
 			}
 		}
 

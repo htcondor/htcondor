@@ -73,6 +73,10 @@ New Features:
   provided cluster ID.
   :jira:`2046`
 
+- Somewhat improved the performance of the _DEBUG flag D_FDS.  But please
+  don't use this unless absolutely needed.
+  :jira:`2050`
+
 - The Access Point can now be told to use a non-standard ssh port when sending
   jobs to a remote scheduling system (such as Slurm).
   You can now specify an alternate ssh port with *condor_remote_cluster*.
