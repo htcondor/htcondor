@@ -93,7 +93,6 @@ classad/classad_containers.h
 classad/classad_distribution.h
 classad/classadErrno.h
 classad/classad.h
-classad/classadItor.h
 classad/collectionBase.h
 classad/collection.h
 classad/common.h

@@ -521,13 +521,16 @@ public:
 	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
 };
 
+// until we can remove targettype from the classad log entirely
+// use the legacy "Machine" value as the target adtype
+#define JOB_TARGET_ADTYPE "Machine"
 
 class TransactionWatcher;
 
 
 // from qmgmt_factory.cpp
 // make an empty job factory
-class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds);
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds, MapFile* urlMap);
 // make a job factory from submit digest text, used on submit, optional user_ident is who to inpersonate when reading item data file (if any)
 bool LoadJobFactoryDigest(JobFactory *factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
 // attach submitted itemdata to a job factory that is pending submit.
@@ -540,6 +543,7 @@ class JobFactory * MakeJobFactory(
 	const classad::ClassAd * extended_cmds,
 	const char * submit_file,
 	bool spooled_submit_file,
+	MapFile* urlMap,
 	std::string & errmsg);
 void DestroyJobFactory(JobFactory * factory);
 

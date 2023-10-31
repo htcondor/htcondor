@@ -752,6 +752,10 @@ rm -rf %{buildroot}
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
 %_libdir/libcondorapi.so
+%_libdir/condor/libfmt.so
+%_libdir/condor/libfmt.so.10
+%_libdir/condor/libfmt.so.10.1.0
+
 %_libdir/condor/libgetpwnam.so
 %dir %_libexecdir/condor/
 %_libexecdir/condor/cleanup_locally_mounted_checkpoint
@@ -1093,7 +1097,6 @@ rm -rf %{buildroot}
 %_includedir/classad/classad_distribution.h
 %_includedir/classad/classadErrno.h
 %_includedir/classad/classad.h
-%_includedir/classad/classadItor.h
 %_includedir/classad/classadCache.h
 %_includedir/classad/classad_containers.h
 %_includedir/classad/collectionBase.h
@@ -1271,6 +1274,45 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Oct 31 2023 Tim Theisen <tim@cs.wisc.edu> - 23.1.0-1
+- Enhanced filtering with 'condor_watch_q'
+- Can specify alternate ssh port with 'condor_remote_cluster'
+- Performance improvement for the 'condor_schedd' and other daemons
+- Jobs running on cgroup v2 systems can subdivide their cgroup
+- The curl plugin can now find CA certificates via an environment variable
+
+* Tue Oct 31 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.1-1
+- Fix 10.6.0 bug that broke PID namespaces
+- Fix bug where execution times for ARC CE jobs were 60 times too large
+- Fix bug where a failed 'Service' node would crash DAGMan
+- Condor-C and Job Router jobs now get resources provisioned updates
+
+* Fri Sep 29 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.0-1
+- Absent slot configuration, execution points will use a partitionable slot
+- Linux cgroups enforce maximum memory utilization by default
+- Can now define DAGMan save points to be able to rerun DAGs from there
+- Much better control over environment variables when using DAGMan
+- Administrators can enable and disable job submission for a specific user
+- Can set a minimum number of CPUs allocated to a user
+- condor_status -gpus shows nodes with GPUs and the GPU properties
+- condor_status -compact shows a row for each slot type
+- Container images may now be transferred via a file transfer plugin
+- Support for Enterprise Linux 9, Amazon Linux 2023, and Debian 12
+- Can write job information in AP history file for every execution attempt
+- Can run defrag daemons with different policies on distinct sets of nodes
+- Add condor_test_token tool to generate a short lived SciToken for testing
+- The job’s executable is no longer renamed to ‘condor_exec.exe’
+
+* Thu Sep 28 2023 Tim Theisen <tim@cs.wisc.edu> - 10.9.0-1
+- The condor_upgrade_check script now provides guidance on updating to 23.0
+- The htchirp Python binding now properly locates the chirp configuration
+- Fix bug that prevented deletion of HTCondor passwords on Windows
+
+* Thu Sep 28 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.9-1
+- The condor_upgrade_check script now provides guidance on updating to 23.0
+- The htchirp Python binding now properly locates the chirp configuration
+- Fix bug that prevented deletion of HTCondor passwords on Windows
+
 * Thu Sep 14 2023 Tim Theisen <tim@cs.wisc.edu> - 10.8.0-1
 - Fold the classads, blahp, and procd RPMs into the main condor RPM
 - Align the Debian packages and package names with the RPM packaging

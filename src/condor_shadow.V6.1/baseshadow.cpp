@@ -612,6 +612,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 {
 	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
+	writeJobEpochFile(getJobAd());
 
 	// Doing this neither prevents scary network-level error messages in
 	// the starter log, nor actually works: if the shadow doesn't exit
@@ -1104,6 +1105,17 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 
 			attr = "Assigned"; attr += res;
 			CopyAttribute( attr, *puAd, *jobAd );
+		}
+
+		// Hard code a couple of useful time-based attributes that are not "Requested" yet
+		// and shorten their names to display more reasonably
+		int jaed = 0;
+		if (jobAd->LookupInteger(ATTR_JOB_ACTIVATION_EXECUTION_DURATION, jaed)) {
+			puAd->Assign("TimeExecuteUsage", jaed);
+		}
+		int jad = 0;
+		if (jobAd->LookupInteger(ATTR_JOB_ACTIVATION_DURATION, jad)) {
+			puAd->Assign("TimeSlotBusyUsage", jad);
 		}
 		*ppusageAd = puAd;
 	}

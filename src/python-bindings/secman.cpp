@@ -313,7 +313,6 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         }
 
         std::string session_id;
-        KeyCacheEntry *k = NULL;
         ClassAd *policy = NULL;
 
         auto command_pair = SecMan::command_map.find(cmd_map_ent);
@@ -325,14 +324,14 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         // Session cache lookup is tag-dependent; hence, we may need to temporarily override
         std::string origTag = SecMan::getTag();
         if (m_tag_set) {SecMan::setTag(tag);}
-        // IMPORTANT: this hashtable returns 1 on success!
-        if (!(SecMan::session_cache)->lookup(session_id.c_str(), k))
+        auto itr = (SecMan::session_cache)->find(session_id);
+        if (itr == (SecMan::session_cache)->end())
         {
             if (m_tag_set) {SecMan::setTag(origTag);}
             THROW_EX(HTCondorValueError, "No valid entry in session map hash table!");
         }
         if (m_tag_set) {SecMan::setTag(origTag);}
-        policy = k->policy();
+        policy = itr->second.policy();
         authz_ad->Update(*policy);
         authz_ad->Update(sock_policy);
 

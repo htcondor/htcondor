@@ -416,6 +416,29 @@ daemon::DoConfig( bool init )
 	this->env.Clear();
 	this->env.MergeFrom(env_parser);
 
+#ifdef LINUX
+	// dprintf calls localtime() (under the hood) a lot.  if the TZ environment
+	// variable is not set, localtime() is required to stat /etc/localtime on 
+	// every call, to see if it hasn't changed.  On busy schedds, this stat consumes
+	// 5 or more percent of our cpu time(!).  Explicitly setting the TZ env var
+	// to :/etc/localtime causes localtime to cache the results.
+	//
+	
+	if (param_boolean("MASTER_SET_TZ", true)) {
+		// But don't overwrite it, if already set
+		if (!env.HasEnv("TZ") && !getenv("TZ")) {
+
+			// /etc/localtime should always exist, but just
+			// double check to be sure
+			struct stat sb;
+			int r = stat("/etc/localtime", &sb);
+			if (r == 0) {
+				env.SetEnv("TZ", ":/etc/localtime");
+			}
+		}
+	}
+#endif
+
 	if( NULL != controller_name ) {
 		DetachController();
 		free( controller_name );
@@ -3098,7 +3121,7 @@ Daemons::AllReaper(int pid, int status)
 	// and we need to include the daemons that have been removed from the daemon
 	// list but have not yet been reaped.
 	int daemons = 0, startds = 0;
-	for (auto it : removed_daemons) {
+	for (auto & it : removed_daemons) {
 		const auto d = it.second;
 		if (d->runs_here && d->pid && !d->OnlyStopWhenMasterStops()) {
 			++daemons;

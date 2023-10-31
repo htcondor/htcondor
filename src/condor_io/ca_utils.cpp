@@ -588,16 +588,16 @@ bool htcondor::generate_fingerprint(const X509 *cert, std::string &fingerprint, 
 
 bool htcondor::ask_cert_confirmation(const std::string &host_alias, const std::string &fingerprint, const std::string &dn, bool is_ca_cert)
 {
-	printf("The remote host %s presented an untrusted %scertificate with the following fingerprint:\n",
+	fprintf(stderr, "The remote host %s presented an untrusted %scertificate with the following fingerprint:\n",
 		host_alias.c_str(),
 		is_ca_cert ? "CA " : "");
-	printf("SHA-256: %s\n", fingerprint.c_str());
-	printf("Subject: %s\n", dn.c_str());
-	printf("Would you like to trust this server for current and future communications?\n");
+	fprintf(stderr, "SHA-256: %s\n", fingerprint.c_str());
+	fprintf(stderr, "Subject: %s\n", dn.c_str());
+	fprintf(stderr, "Would you like to trust this server for current and future communications?\n");
 
 	std::string response;
 	do {
-		printf("Please type 'yes' or 'no':\n");
+		fprintf(stderr, "Please type 'yes' or 'no':\n");
 		std::getline(std::cin, response);
 	} while (response != "yes" && response != "no");
 

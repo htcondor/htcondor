@@ -81,7 +81,7 @@ public:
 	// The default session cache - used when there are no tags
 	static KeyCache                      m_default_session_cache;
 	// Alternate session caches.
-	static std::map<std::string,KeyCache*> *m_tagged_session_cache;
+	static std::map<std::string,KeyCache> m_tagged_session_cache;
         static std::string m_tag;
 	// Alternate tag methods
 	static std::map<DCpermission, std::string> m_tag_methods;
@@ -212,7 +212,7 @@ public:
 	ClassAd * 				ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, const ClassAd &cli_ad, const ClassAd &srv_ad, bool *required = NULL);
-	std::string			ReconcileMethodLists( char * cli_methods, char * srv_methods );
+	std::string			ReconcileMethodLists( const char * cli_methods, const char * srv_methods );
 
 
 	static  void			key_printf(int debug_levels, KeyInfo *k);
@@ -225,7 +225,7 @@ public:
 		// by this version of HTCondor.  Prevents clients and servers from suggesting
 		// a crypto method that isn't supported by the code.
 	static  std::string		filterCryptoMethods(const std::string &);
-	static	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
+	static	SecMan::sec_req 		sec_alpha_to_sec_req(const char *b);
 	static	SecMan::sec_feat_act 	sec_alpha_to_sec_feat_act(char *b);
 	static	SecMan::sec_req 		sec_lookup_req( const ClassAd &ad, const char* pname );
 	static	SecMan::sec_feat_act 	sec_lookup_feat_act( const ClassAd &ad, const char* pname );

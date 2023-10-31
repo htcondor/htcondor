@@ -105,6 +105,7 @@ CondorQuery (AdTypes qType)
 	queryType = qType;
 	switch (qType)
 	{
+	  case SLOT_AD:
 	  case STARTD_AD:
 		query.setNumStringCats (STARTD_STRING_THRESHOLD);
 		query.setNumIntegerCats(STARTD_INT_THRESHOLD);
@@ -167,6 +168,13 @@ CondorQuery (AdTypes qType)
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
 		command = QUERY_MASTER_ADS;
+		break;
+
+	  case STARTDAEMON_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_STARTD_ADS;
 		break;
 
 	  case CKPT_SRVR_AD:
@@ -506,9 +514,16 @@ getQueryAd (ClassAd &queryAd)
 	  case DEFRAG_AD:
 		queryAd.Assign(ATTR_TARGET_TYPE, DEFRAG_ADTYPE);
 		break;
+
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
-		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
+		break;
+	  case SLOT_AD:
+		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_SLOT_ADTYPE);
+		break;
+	  case STARTDAEMON_AD:
+		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_DAEMON_ADTYPE);
 		break;
 
 	  case SCHEDD_AD:

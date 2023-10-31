@@ -946,7 +946,9 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 						job->GetRetries() );
 			}
 			if ( job->_queuedNodeJobProcs == 0 ) {
-				_numNodesFailed++;
+				if (job->GetType() != NodeType::SERVICE) {
+					_numNodesFailed++;
+				}
 				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -1049,8 +1051,10 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				RestartNode( job, recovery );
 			} else {
 					// no more retries -- node failed
-				_numNodesFutile += job->SetDescendantsToFutile(*this);
-				_numNodesFailed++;
+				if (job->GetType() != NodeType::SERVICE) {
+					_numNodesFutile += job->SetDescendantsToFutile(*this);
+					_numNodesFailed++;
+				}
 				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -1952,8 +1956,10 @@ Dag::PreScriptReaper( Job *job, int status )
 			// None of the above apply -- the node has failed.
 		else {
 			job->TerminateFailure();
-			_numNodesFutile += job->SetDescendantsToFutile(*this);
-			_numNodesFailed++;
+			if (job->GetType() != NodeType::SERVICE) {
+				_numNodesFutile += job->SetDescendantsToFutile(*this);
+				_numNodesFailed++;
+			}
 			_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -2771,7 +2777,9 @@ Dag::RestartNode( Job *node, bool recovery )
         debug_printf( DEBUG_NORMAL, "Aborting further retries of node %s "
                       "%s(last attempt returned %d)\n",
                       node->GetJobName(), finalRun, node->retval);
-        _numNodesFailed++;
+		if (node->GetType() != NodeType::SERVICE) {
+			_numNodesFailed++;
+		}
 		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
 			_dagStatus = DAG_STATUS_NODE_FAILED;

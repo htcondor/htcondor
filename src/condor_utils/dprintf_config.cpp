@@ -42,6 +42,7 @@ extern bool		log_keep_open;
 extern char*	DebugTimeFormat;
 extern int		DebugLockIsMutex;
 extern char*	DebugLogDir;
+extern bool 	should_block_signals;
 
 extern void		_condor_set_debug_flags( const char *strflags, int cat_and_flags );
 
@@ -354,6 +355,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		log_keep_open = param_boolean(pname, log_open_default);//dprintf_param_funcs->param_boolean(pname, log_open_default);
 	}
 
+	should_block_signals = param_boolean("DPRINTF_BLOCK_SIGNALS", true);
 	/*
 	If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 	instead of the standard date format in all the log messages

@@ -42,8 +42,9 @@ int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 
 CollectorEngine::CollectorEngine (CollectorStats *stats ) :
-	StartdAds     (&adNameHashFunction),
+	StartdSlotAds   (&adNameHashFunction),
 	StartdPrivateAds(&adNameHashFunction),
+	StartdDaemonAds (&adNameHashFunction),
 	ScheddAds     (&adNameHashFunction),
 	SubmittorAds  (&adNameHashFunction),
 	LicenseAds    (&adNameHashFunction),
@@ -75,8 +76,9 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 CollectorEngine::
 ~CollectorEngine ()
 {
-	killHashTable (StartdAds);
+	killHashTable (StartdSlotAds);
 	killHashTable (StartdPrivateAds);
+	killHashTable (StartdDaemonAds);
 	killHashTable (ScheddAds);
 	killHashTable (SubmittorAds);
 	killHashTable (LicenseAds);
@@ -280,7 +282,8 @@ walkHashTable (AdTypes adType, int (*scanFunction)(CollectorRecord *))
 			CkptServerAds.walk(scanFunction) &&
 			LicenseAds.walk(scanFunction) &&
 			CollectorAds.walk(scanFunction) &&
-			StartdAds.walk(scanFunction) &&
+			StartdDaemonAds.walk(scanFunction) &&
+			StartdSlotAds.walk(scanFunction) &&
 			ScheddAds.walk(scanFunction) &&
 			MasterAds.walk(scanFunction) &&
 			SubmittorAds.walk(scanFunction) &&
@@ -537,6 +540,46 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	return true;
 }
 
+AdTypes get_real_startd_ad_type(const char * mytype) {
+	if (mytype) {
+		if (MATCH == strcasecmp(mytype, STARTD_DAEMON_ADTYPE)) {
+			return STARTDAEMON_AD;
+		}
+		if (MATCH == strcasecmp(mytype, STARTD_SLOT_ADTYPE)) {
+			return SLOT_AD;
+		}
+	}
+	// ads not known to be daemon ads or Slot ads are presumed to be old startd ads
+	return STARTD_AD;
+}
+AdTypes get_real_startd_ad_type(ClassAd & ad) {
+	return get_real_startd_ad_type(GetMyTypeName(ad));
+}
+
+static bool is_primary_slot_ad(ClassAd & ad) {
+	int slotId = 0;
+	return ad.LookupInteger(ATTR_SLOT_ID, slotId) && slotId == 1 && ! ad.Lookup(ATTR_SLOT_DYNAMIC);
+}
+
+ClassAd * synthesize_startd_daemon_ad(ClassAd & machineAd) {
+	ClassAd * daemonAd = new ClassAd(machineAd);
+	SetMyTypeName(*daemonAd, STARTD_DAEMON_ADTYPE);
+
+	// TODO: tj - flesh this out maybe move to condor_utils? 
+
+	// daemon ads are not suitable for matchmaking
+	daemonAd->Delete(ATTR_REQUIREMENTS);
+	daemonAd->Delete(ATTR_RANK);
+	daemonAd->Delete(ATTR_START);
+	daemonAd->Delete(ATTR_STATE);
+	daemonAd->Delete(ATTR_ACTIVITY);
+	daemonAd->Delete(ATTR_SLOT_ID);
+	daemonAd->Delete(ATTR_SLOT_TYPE);
+	daemonAd->Delete(ATTR_SLOT_TYPE_ID);
+
+	return daemonAd;
+}
+
 bool   last_updateClassAd_was_insert;
 
 CollectorRecord *CollectorEngine::
@@ -547,6 +590,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	int		insPvt;
 	AdNameHashKey		hk;
 	std::string hashString;
+	AdTypes realAdType = NO_AD;
 	static int repeatStartdAds = -1;		// for debugging
 	ClassAd		*clientAdToRepeat = NULL;
 #ifdef PROFILE_RECEIVE_UPDATE
@@ -587,10 +631,25 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 #ifdef PROFILE_RECEIVE_UPDATE
 		CollectorEngine_rucc_makeHashKey_runtime.Add(rt.tick(rt_last));
 #endif
+		realAdType = get_real_startd_ad_type(*clientAd);
+		if (realAdType == STARTDAEMON_AD) {
+			retVal=updateClassAd (StartdDaemonAds, "StartDaemonAd", "StartD",
+				clientAd, hk, hashString, insert, from );
+		} else {
+			retVal=updateClassAd (StartdSlotAds,   "StartdSlotAd ", "Slot",
+								  clientAd, hk, hashString, insert, from );
 
-		retVal=updateClassAd (StartdAds, "StartdAd     ", "Start",
-							  clientAd, hk, hashString, insert, from );
-
+			// For old Startd ads, we want to synthesize a StartDaemon ad from the slot1 ad
+			if (realAdType == STARTD_AD) {
+				if (is_primary_slot_ad(*clientAd)) {
+					ClassAd * daemonAd = synthesize_startd_daemon_ad(*clientAd);
+					if ( ! updateClassAd(StartdDaemonAds, "StartDaemonAd", "StartD",
+						daemonAd, hk, hashString, insert, from)) {
+						delete daemonAd;
+					}
+				}
+			}
+		}
 #ifdef PROFILE_RECEIVE_UPDATE
 		if (last_updateClassAd_was_insert) { CollectorEngine_rucc_insertAd_runtime.Add(rt.tick(rt_last));
 		} else { CollectorEngine_rucc_updateAd_runtime.Add(rt.tick(rt_last)); }
@@ -602,7 +661,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			dprintf (D_ALWAYS, "Want private ads, but no socket given!\n");
 			break;
 		}
-		else
+		else if (realAdType != STARTDAEMON_AD)
 		{
 			if (!(pvtAd = new ClassAd))
 			{
@@ -621,7 +680,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				// the startd could stop bothering to send these attributes.
 
 				// Queries of private ads depend on the following:
-			SetMyTypeName( *pvtAd, STARTD_ADTYPE );
+			CopyAttribute(ATTR_MY_TYPE, *pvtAd, *clientAd);
 
 				// Negotiator matches up private ad with public ad by
 				// using the following.
@@ -661,7 +720,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				fakeAd->Assign(ATTR_NAME, newname);
 				makeStartdAdHashKey (hk, fakeAd);
 				hk.sprint(hashString);
-				if (! updateClassAd (StartdAds, "StartdAd     ", "Start",
+				if (! updateClassAd (StartdSlotAds, "StartdSlotAd ", "Start",
 							  fakeAd, hk, hashString, insert, from ) )
 				{
 					// don't leak memory if there is some failure
@@ -685,7 +744,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=mergeClassAd (StartdAds, "StartdAd     ", "Start",
+		retVal=mergeClassAd (StartdSlotAds, "StartdSlotAd ", "Start",
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -796,7 +855,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=updateClassAd (AccountingAds, "AccountingAd  ", "Accouting",
+		retVal=updateClassAd (AccountingAds, "AccountingAd  ", "Accounting",
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -946,6 +1005,8 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 		*query_contains_hash_key = false;
 	}
 
+	const char * adtype_str = AdTypeToString(t_AddType);
+
 	// making it generic so any would be invalid query can contain these params.
 	if ( LookupByAdType (t_AddType, table, makeKey) )
 	{
@@ -959,7 +1020,23 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 			{
 				hk.sprint( hkString );
 				iRet = !table->remove(hk);
-				dprintf (D_ALWAYS,"\t\t**** Removed(%d) ad(s): \"%s\"\n", iRet, hkString.c_str() );
+				dprintf (D_ALWAYS,"\t\t**** Removed(%d) %s ad(s): \"%s\"\n", iRet, adtype_str, hkString.c_str() );
+
+				// For INVALIDATE_STARTD_ADS, If the mytype is "Machine" and this is the primary slot ad
+				// we should invalidate the StartDaemon ad as well
+				if ((t_AddType == STARTD_AD) && record && record->m_publicAd &&
+					STARTD_AD == get_real_startd_ad_type(*(record->m_publicAd)) &&
+					is_primary_slot_ad(*(record->m_publicAd)))
+				{
+					CollectorRecord* daemon = nullptr;
+					if (StartdDaemonAds.lookup(hk, daemon) != -1) {
+						iRet += (StartdDaemonAds.remove(hk) == 0) ? 1 : 0;
+						dprintf (D_ALWAYS,"\t\t**** Removed(%d) %s ad(s): \"%s\"\n",
+							iRet, STARTD_DAEMON_ADTYPE, hkString.c_str() );
+						delete daemon;
+					}
+				}
+
 				delete record;
 			}
 		}
@@ -978,6 +1055,8 @@ int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * query
         AdNameHashKey hKey;
         if( (* hFunc)( hKey, & query ) ) {
             if( queryContainsHashKey ) { * queryContainsHashKey = true; }
+
+            // TODO fix expiry and offline ads for synthesized StartDaemon ads
 
             CollectorRecord* record = nullptr;
             if( hTable->lookup( hKey, record ) != -1 ) {
@@ -1210,11 +1289,17 @@ housekeeper( int /* timerID */ )
 
 	dprintf (D_ALWAYS, "Housekeeper:  Ready to clean old ads\n");
 
-	dprintf (D_ALWAYS, "\tCleaning StartdAds ...\n");
-	cleanHashTable (StartdAds, now, makeStartdAdHashKey);
+	// TODO: clean StartdSlotAds, StartdPrivateAds and StartdDaemon ads in a single pass
+	// to make sure that the tables stay in sync?
+
+	dprintf (D_ALWAYS, "\tCleaning StartdSlotAds ...\n");
+	cleanHashTable (StartdSlotAds, now, makeStartdAdHashKey);
 
 	dprintf (D_ALWAYS, "\tCleaning StartdPrivateAds ...\n");
 	cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
+
+	dprintf (D_ALWAYS, "\tCleaning StartdDaemonAds ...\n");
+	cleanHashTable (StartdDaemonAds, now, makeStartdAdHashKey);
 
 	dprintf (D_ALWAYS, "\tCleaning ScheddAds ...\n");
 	cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
@@ -1325,7 +1410,12 @@ CollectorEngine::LookupByAdType(AdTypes adType,
 	switch (adType)
 	{
 		case STARTD_AD:
-			table = &StartdAds;
+		case SLOT_AD:
+			table = &StartdSlotAds;
+			func = makeStartdAdHashKey;
+			break;
+		case STARTDAEMON_AD:
+			table = &StartdDaemonAds;
 			func = makeStartdAdHashKey;
 			break;
 		case SCHEDD_AD:

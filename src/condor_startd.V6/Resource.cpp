@@ -51,25 +51,23 @@ const char * SlotType::type_param(const char * name)
 	return NULL;
 }
 
-/*static*/ const char * SlotType::type_param(int type_id, const char * name)
+/*static*/ const char * SlotType::type_param(unsigned int type_id, const char * name)
 {
-	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
-	if (type_id < (int)types.size()) {
+	if (type_id < types.size()) {
 		return types[type_id].type_param(name);
 	}
 	return NULL;
 }
 /*static*/ const char * SlotType::type_param(CpuAttributes* p_attr, const char * name)
 {
-	if (p_attr) { return type_param(p_attr->type(), name); }
+	if (p_attr) { return type_param(p_attr->type_id(), name); }
 	return NULL;
 }
 
-/*static*/ bool SlotType::type_param_boolean(int type_id, const char * name, bool def_value)
+/*static*/ bool SlotType::type_param_boolean(unsigned int type_id, const char * name, bool def_value)
 {
 	bool result = def_value;
-	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
-	if (type_id < (int)types.size()) {
+	if (type_id < types.size()) {
 		const char * str = types[type_id].type_param(name);
 		if ( ! str || ! string_is_boolean_param(str, result))
 			result = def_value;
@@ -79,16 +77,15 @@ const char * SlotType::type_param(const char * name)
 /*static*/ bool SlotType::type_param_boolean(CpuAttributes* p_attr, const char * name, bool def_value)
 {
 	if ( ! p_attr) return def_value;
-	return type_param_boolean(p_attr->type(), name, def_value);
+	return type_param_boolean(p_attr->type_id(), name, def_value);
 }
 /*static*/ long long SlotType::type_param_long(CpuAttributes* p_attr, const char * name, long long def_value)
 {
 	if ( ! p_attr) return def_value;
 
 	long long result = def_value;
-	int type_id = p_attr->type();
-	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
-	if (type_id < (int)types.size()) {
+	unsigned int type_id = p_attr->type_id();
+	if (type_id < types.size()) {
 		const char * str = types[type_id].type_param(name);
 		if ( ! str || ! string_is_long_param(str, result))
 			result = def_value;
@@ -199,6 +196,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	, r_pre(nullptr)
 	, r_pre_pre(nullptr)
 	, r_has_cp(false)
+	, r_backfill_slot(false)
 	, r_cod_mgr(nullptr)
 	, r_reqexp(nullptr)
 	, r_attr(nullptr)
@@ -207,7 +205,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	, r_id(rid)
 	, r_sub_id(0)
 	, r_id_str(NULL)
-	, r_backfill_slot(false)
 	, m_resource_feature(STANDARD_SLOT)
 	, m_parent(nullptr)
 	, m_id_dispenser(nullptr)
@@ -260,7 +257,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	// this will also set feature to DYNAMIC_SLOT if _parent is non-null
 	set_parent( _parent );
 
-	prevLHF = 0;
 	r_state = new ResState( this );
 	r_cod_mgr = new CODMgr( this );
 	r_reqexp = new Reqexp( this );
@@ -292,7 +288,10 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	// check if slot should be hidden from the collector
 	r_no_collector_updates = SlotType::type_param_boolean(cap, "HIDDEN", false);
 
+#ifdef DO_BULK_COLLECTOR_UPDATES
+#else
 	update_tid = -1;
+#endif
 
 #ifdef USE_STARTD_LATCHES  // more generic mechanism for CpuBusy
 #else
@@ -305,7 +304,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	r_cod_load_hack_tid = -1;
 	r_pre_cod_total_load = -1.0;
 	r_pre_cod_condor_load = 0.0;
-	m_bUserSuspended = false;
+	r_suspended_by_command = false;
 
 #if HAVE_JOB_HOOKS
 	m_last_fetch_work_spawned = 0;
@@ -317,9 +316,9 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	m_hook_keyword_initialized = false;
 #endif
 
-	if( r_attr->type() ) {
+	if( r_attr->type_id() ) {
 		dprintf( D_ALWAYS, "New %smachine resource of type %d allocated\n",
-				 r_backfill_slot ? "backfill " : "",  r_attr->type() );
+				 r_backfill_slot ? "backfill " : "",  r_attr->type_id() );
 	} else {
 		dprintf( D_ALWAYS, "New %smachine resource allocated\n", r_backfill_slot ? "backfill " : "");
 	}
@@ -334,6 +333,8 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 
 Resource::~Resource()
 {
+#ifdef DO_BULK_COLLECTOR_UPDATES
+#else
 	if ( update_tid != -1 ) {
 		if( daemonCore->Cancel_Timer(update_tid) < 0 ) {
 			::dprintf( D_ALWAYS, "failed to cancel update timer (%d): "
@@ -341,6 +342,7 @@ Resource::~Resource()
 		}
 		update_tid = -1;
 	}
+#endif
 
 #if HAVE_JOB_HOOKS
 	if (m_next_fetch_work_tid != -1) {
@@ -557,13 +559,15 @@ Resource::periodic_checkpoint( void )
 	return TRUE;
 }
 
+// called by the SUSPEND_CLAIM command
+// when the suspend is by command, only a command can resume it
 int Resource::suspend_claim()
 {
 
 	switch( state() ) {
 	case claimed_state:
 		change_state( suspended_act );
-		m_bUserSuspended = true;
+		r_suspended_by_command = true;
 		return TRUE;
 		break;
 	default:
@@ -576,12 +580,12 @@ int Resource::suspend_claim()
 
 int Resource::continue_claim()
 {
-	if ( suspended_act == r_state->activity() && m_bUserSuspended )
+	if ( suspended_act == r_state->activity() && r_suspended_by_command )
 	{
 		if (r_cur->resumeClaim())
 		{
 			change_state( busy_act );
-			m_bUserSuspended = false;
+			r_suspended_by_command = false;
 			return TRUE;
 		}
 	}
@@ -1340,7 +1344,7 @@ Resource::reconfig( void )
 
 
 void
-Resource::update_needed( WhyFor /*why*/ )
+Resource::update_needed( WhyFor why )
 {
 	if (r_no_collector_updates)
 		return;
@@ -1348,6 +1352,13 @@ Resource::update_needed( WhyFor /*why*/ )
 	//dprintf(D_ZKM, "Resource::update_needed(%d) %s\n",
 	//	why, update_tid < 0 ? "queuing timer" : "timer already queued");
 
+#ifdef DO_BULK_COLLECTOR_UPDATES
+	r_update_is_for |= (1<<why);
+	time_t now = resmgr->rip_update_needed(r_update_is_for);
+	if ( ! r_update_is_due) {
+		r_update_is_due = now;
+	}
+#else
 	// If we haven't already queued an update, queue one.
 	int delay = 0;
 	int updateSpreadTime = param_integer( "UPDATE_SPREAD_TIME", 0 );
@@ -1369,6 +1380,7 @@ Resource::update_needed( WhyFor /*why*/ )
 		// Somehow, the timer could not be set.  Ick!
 		update_tid = -1;
 	}
+#endif
 }
 
 // Process SlotEval and StartdCron aggregation
@@ -1547,12 +1559,18 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 	}
 }
 
+#ifdef DO_BULK_COLLECTOR_UPDATES
+void
+Resource::get_update_ads(ClassAd & public_ad, ClassAd & private_ad)
+{
+#else
 void
 Resource::do_update( int /* timerID */ )
 {
 	int rval;
 	ClassAd private_ad;
 	ClassAd public_ad;
+#endif
 
 	// Get the public and private ads
 	publish_single_slot_ad(public_ad, 0, Resource::Purpose::for_update);
@@ -1566,6 +1584,11 @@ Resource::do_update( int /* timerID */ )
 	StartdPluginManager::Update(&public_ad, &private_ad);
 #endif
 
+#ifdef DO_BULK_COLLECTOR_UPDATES
+	r_update_is_due = 0;
+	r_update_is_for = 0;
+#else
+
 		// Send class ads to owning collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad, true );
@@ -1577,6 +1600,9 @@ Resource::do_update( int /* timerID */ )
 
 	// If we have a temporary CM, send update there, too
 	if (!r_cur->c_working_cm.empty()) {
+		// TODO: create the collectorList when the working_cm is registered.
+		// Recreating the collectorList over and over is broken because
+		// the update sequence numbers will never increment
 		CollectorList *workingCollectors = CollectorList::create(r_cur->c_working_cm.c_str());
 		workingCollectors->sendUpdates(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
 		delete workingCollectors;
@@ -1585,6 +1611,7 @@ Resource::do_update( int /* timerID */ )
 	// We _must_ reset update_tid to -1 before we return so
 	// the class knows there is no pending update.
 	update_tid = -1;
+#endif
 }
 
 // build a slot ad from whole cloth, used for updating the collector, etc
@@ -1636,7 +1663,11 @@ Resource::final_update( void )
 
 		// Set the correct types
 	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
-	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+	if (enable_single_startd_daemon_ad) {
+		invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_SLOT_ADTYPE);
+	} else {
+		invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
+	}
 
 	/*
 	 * NOTE: the collector depends on the data below for performance reasons
@@ -2290,7 +2321,7 @@ Resource::eval_suspend( void )
 int
 Resource::eval_continue( void )
 {
-	return (m_bUserSuspended)?false:eval_expr( "CONTINUE", false, true );
+	return (r_suspended_by_command)?false:eval_expr( "CONTINUE", false, true );
 }
 
 
@@ -2421,7 +2452,11 @@ void Resource::publish_static(ClassAd* cap)
 	}
 
 	// Set the correct types on the ClassAd
-	SetMyTypeName( *cap,STARTD_ADTYPE );
+	if (enable_single_startd_daemon_ad) {
+		SetMyTypeName( *cap,STARTD_SLOT_ADTYPE );
+	} else {
+		SetMyTypeName( *cap,STARTD_OLD_ADTYPE );
+	}
 	cap->Assign(ATTR_TARGET_TYPE, JOB_ADTYPE); // because matchmaking before 23.0 needs this
 
 	// We need these for both public and private ads
@@ -2555,9 +2590,7 @@ void Resource::publish_static(ClassAd* cap)
 		cap->Update(r_attr->get_mach_attr()->machres_attrs());
 
 		// advertise the slot type id number, as in SLOT_TYPE_<N>
-		//cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type());
-		// advertise slot type id, but don't treat negative as a signal for "dynamic"
-		cap->Assign(ATTR_SLOT_TYPE_ID, (r_attr->type() < 0) ? -(r_attr->type()) : r_attr->type() );
+		cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type_id() );
 
 		switch (get_feature()) {
 		case PARTITIONABLE_SLOT:
@@ -2593,7 +2626,7 @@ void Resource::publish_static(ClassAd* cap)
 		std::string expr;
 		// A negative slot type indicates a d-slot, in which case I want to use
 		// the slot-type of its parent for inheriting CP-related configurations:
-		int slot_type = (type() >= 0) ? type() : -type();
+		unsigned int slot_type = type_id();
 
 		if ( ! SlotType::param(expr, r_attr, "SLOT_WEIGHT") &&
 			 ! SlotType::param(expr, r_attr, "SlotWeight")) {
@@ -2843,7 +2876,10 @@ Resource::publish_private( ClassAd *ad )
 {
 		// Needed by the collector to correctly respond to queries
 		// for private ads.  As of 7.2.0, the 
-	SetMyTypeName( *ad, STARTD_ADTYPE );
+	if (enable_single_startd_daemon_ad) {
+		SetMyTypeName( *ad, STARTD_SLOT_ADTYPE );
+	} else {
+		SetMyTypeName( *ad, STARTD_OLD_ADTYPE );
 
 		// For backward compatibility with pre 7.2.0 collectors, send
 		// name and IP address in private ad (needed to match up the
@@ -2856,11 +2892,9 @@ Resource::publish_private( ClassAd *ad )
 		// by the startd before sending this ad for compatibility with
 		// older collectors).
 
-	ad->Assign(ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString() );
-	ad->Assign(ATTR_NAME, r_name );
+		ad->Assign(ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString() );
+		ad->Assign(ATTR_NAME, r_name );
 
-		// Add ClaimId.  If r_pre exists, we need to advertise it's
-		// ClaimId.  Otherwise, we should get the ClaimId from r_cur.
 		// CRUFT: This shouldn't still be called ATTR_CAPABILITY in
 		// the ClassAd, but for backwards compatibility it is.  As of
 		// 7.1.3, the negotiator accepts ATTR_CLAIM_ID or
@@ -2870,17 +2904,18 @@ Resource::publish_private( ClassAd *ad )
 		// ATTR_CLAIM_ID.  That will slightly simplify
 		// claimid-specific logic elsewhere, such as the private
 		// attributes in ClassAds.
-	if( r_pre_pre ) {
-		ad->Assign( ATTR_CLAIM_ID, r_pre_pre->id() );
 		ad->AssignExpr( ATTR_CAPABILITY, ATTR_CLAIM_ID );
 	}
-	else if( r_pre ) {
+
+		// Add ClaimId.  If r_pre exists, we need to advertise it's
+		// ClaimId.  Otherwise, we should get the ClaimId from r_cur.
+	if( r_pre_pre ) {
+		ad->Assign( ATTR_CLAIM_ID, r_pre_pre->id() );
+	} else if( r_pre ) {
 		ad->Assign( ATTR_CLAIM_ID, r_pre->id() );
-		ad->AssignExpr( ATTR_CAPABILITY, ATTR_CLAIM_ID );
 	} else if( r_cur ) {
 		ad->Assign( ATTR_CLAIM_ID, r_cur->id() );
-		ad->AssignExpr( ATTR_CAPABILITY, ATTR_CLAIM_ID );
-	}		
+	}
 
     if (r_has_cp) {
         string claims;
@@ -2892,7 +2927,7 @@ Resource::publish_private( ClassAd *ad )
         ad->Assign(ATTR_NUM_CLAIMS, (long long)r_claims.size());
     }
 
-	if (get_feature() == PARTITIONABLE_SLOT) {
+	if (is_partitionable_slot()) {
 		ad->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
 		ad->Assign(ATTR_NUM_DYNAMIC_SLOTS, (long long)m_children.size());
 	}
@@ -3922,7 +3957,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 				"Match requesting resources: %s\n", reslist.ptr());
 		}
 
-		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, -rip->type(), false );
+		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, rip->type_id(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );

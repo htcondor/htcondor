@@ -21,9 +21,9 @@ all attributes.
 :classad-attribute:`AcctGroup`
     The accounting group name, as set in the submit description file via
     the
-    **accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
+    :subcom:`accounting_group<and attribute AcctGroup>`
     command. This attribute is only present if an accounting group was
-    requested by the submission. See the :doc:`/admin-manual/user-priorities-negotiation` section
+    requested by the submission. See the :doc:`/admin-manual/cm-configuration` section
     for more information about accounting groups.
 
 :classad-attribute:`AcctGroupUser`
@@ -132,7 +132,7 @@ all attributes.
     SCITOKENS) used to submit the job.
 
 :classad-attribute:`BatchExtraSubmitArgs`
-    For **batch** grid universe jobs, additional command-line arguments
+    For :subcom:`batch<and attribute BatchExtraSubmitArgs>` grid universe jobs, additional command-line arguments
     to be given to the target batch system's job submission command.
 
 :classad-attribute:`BatchProject`
@@ -166,7 +166,7 @@ all attributes.
 :classad-attribute:`CloudLabelNames`
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **cloud_label_names** :index:`cloud_label_names<single: cloud_label_names; submit commands>`.
+    :subcom:`cloud_label_names<and attribute CloudLabelNames>`
     Defines the set of labels associated with the GCE instance.
 
 :classad-attribute:`ClusterId`
@@ -337,8 +337,7 @@ all attributes.
     proxy. This setting currently only applies to proxies delegated for
     non-grid jobs and HTCondor-C jobs.
     This setting has no effect if the configuration setting
-    ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS` is false, because in
+    :macro:`DELEGATE_JOB_GSI_CREDENTIALS` is false, because in
     that case the job proxy is copied rather than delegated.
 
 :classad-attribute:`DiskUsage`
@@ -364,40 +363,40 @@ all attributes.
 :classad-attribute:`EC2AccessKeyId`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_access_key_id** :index:`ec2_access_key_id<single: ec2_access_key_id; submit commands>`.
+    :subcom:`ec2_access_key_id<and attribute EC2AccessKeyId>`.
     Defines the path and file name of the file containing the EC2 Query
     API's access key. 
     
 :classad-attribute:`EC2AmiID`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_ami_id** :index:`ec2_ami_id<single: ec2_ami_id; submit commands>`.
+    :subcom:`ec2_ami_id<and attribute EC2AmiID>`.
     Identifies the machine image of the instance.
 
 :classad-attribute:`EC2BlockDeviceMapping`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_block_device_mapping** :index:`ec2_block_device_mapping<single: ec2_block_device_mapping; submit commands>`.
+    :subcom:`ec2_block_device_mapping<and attribute EC2BlockDeviceMapping>`.
     Defines the map from block device names to kernel device names for
     the instance. 
     
 :classad-attribute:`EC2ElasticIp`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_elastic_ip** :index:`ec2_elastic_ip<single: ec2_elastic_ip; submit commands>`.
+    :subcom:`ec2_elastic_ip<and attribute EC2ElasticIp>`.
     Specifies an Elastic IP address to associate with the instance.
 
 :classad-attribute:`EC2IamProfileArn`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_iam_profile_arn** :index:`ec2_iam_profile_arn<single: ec2_iam_profile_arn; submit commands>`.
+    :subcom:`ec2_iam_profile_arn<and attribute EC2IamProfileArn>`.
     Specifies the IAM (instance) profile to associate with this
     instance. 
 
 :classad-attribute:`EC2IamProfileName`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_iam_profile_name** :index:`ec2_iam_profile_name<single: ec2_iam_profile_name; submit commands>`.
+    :subcom:`ec2_iam_profile_name<and attribute EC2IamProfileName>`.
     Specifies the IAM (instance) profile to associate with this
     instance.
 
@@ -410,26 +409,26 @@ all attributes.
 :classad-attribute:`EC2InstanceType`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_instance_type** :index:`ec2_instance_type<single: ec2_instance_type; submit commands>`.
+    :subcom:`ec2_instance_type<and attribute EC2InstanceType>`.
     Specifies a service-specific instance type.
 
 :classad-attribute:`EC2KeyPair`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_keypair** :index:`ec2_keypair<single: ec2_keypair; submit commands>`.
+    :subcom:`ec2_keypair<and attribute EC2KeyPair>`.
     Defines the key pair associated with the EC2 instance.
 
 :classad-attribute:`EC2ParameterNames`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_parameter_names** :index:`ec2_parameter_names<single: ec2_parameter_names; submit commands>`.
+    :subcom:`ec2_parameter_names<and attribute EC2ParameterNames>`.
     Contains a space or comma separated list of the names of additional
     parameters to pass when instantiating an instance.
 
 :classad-attribute:`EC2SpotPrice`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_spot_price** :index:`ec2_spot_price<single: ec2_spot_price; submit commands>`.
+    :subcom:`ec2_spot_price<and attribute EC2SpotPrice>`.
     Defines the maximum amount per hour a job submitter is willing to
     pay to run this job.
 
@@ -445,13 +444,13 @@ all attributes.
 :classad-attribute:`EC2TagNames`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_tag_names** :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`.
+    :subcom:`ec2_tag_names<and attribute EC2TagNames>`.
     Defines the set, and case, of tags associated with the EC2 instance.
 
 :classad-attribute:`EC2KeyPairFile`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_keypair_file** :index:`ec2_keypair_file<single: ec2_keypair_file; submit commands>`.
+    :subcom:`ec2_keypair_file<and attribute EC2KeyPairFile>`.
     Defines the path and file name of the file into which to write the
     SSH key used to access the image, once it is running.
 
@@ -464,34 +463,34 @@ all attributes.
 :classad-attribute:`EC2SecretAccessKey`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_secret_access_key** :index:`ec2_secret_access_key<single: ec2_secret_access_key; submit commands>`.
+    :subcom:`ec2_secret_access_key<and attribute EC2SecretAccessKey>`.
     Defines that path and file name of the file containing the EC2 Query
     API's secret access key.
 
 :classad-attribute:`EC2SecurityGroups`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_security_groups** :index:`ec2_security_groups<single: ec2_security_groups; submit commands>`.
+    :subcom:`ec2_security_groups<and attribute EC2SecurityGroups>`.
     Defines the list of EC2 security groups which should be associated
     with the job.
 
 :classad-attribute:`EC2SecurityIDs`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_security_ids** :index:`ec2_security_ids<single: ec2_security_ids; submit commands>`.
+    :subcom:`ec2_security_ids<and attribute EC2SecurityIDs>`.
     Defines the list of EC2 security group IDs which should be
     associated with the job.
 
 :classad-attribute:`EC2UserData`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_user_data** :index:`ec2_user_data<single: ec2_user_data; submit commands>`.
+    :subcom:`ec2_user_data<and attribute EC2UserData>`.
     Defines a block of data that can be accessed by the virtual machine.
 
 :classad-attribute:`EC2UserDataFile`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2_user_data_file** :index:`ec2_user_data_file<single: ec2_user_data_file; submit commands>`.
+    :subcom:`ec2_user_data_file<and attribute EC2UserDataFile>`.
     Specifies a path and file name of a file containing data that can be
     accessed by the virtual machine.
 
@@ -502,7 +501,7 @@ all attributes.
 
 :classad-attribute:`EncryptExecuteDirectory`
     A boolean value taken from the submit description file command
-    **encrypt_execute_directory** :index:`encrypt_execute_directory<single: encrypt_execute_directory; submit commands>`.
+    :subcom:`encrypt_execute_directory<and attribute EncryptExecuteDirectory>`.
     It specifies if HTCondor should encrypt the remote scratch directory
     on the machine where the job executes.
 
@@ -564,20 +563,20 @@ all attributes.
 :classad-attribute:`GceAuthFile`
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce_auth_file** :index:`gce_auth_file<single: gce_auth_file; submit commands>`.
+    :subcom:`gce_auth_file<and attribute GceAuthFile>`.
     Defines the path and file name of the file containing authorization
     credentials to use the GCE service.
 
 :classad-attribute:`GceImage`
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce_image** :index:`gce_image<single: gce_image; submit commands>`.
+    :subcom:`gce_image<and attribute GceImage>`.
     Identifies the machine image of the instance.
 
 :classad-attribute:`GceJsonFile`
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce_json_file** :index:`gce_json_file<single: gce_json_file; submit commands>`.
+    :subcom:`gce_json_file<and attribute GceJsonFile>`.
     Specifies the path and file name of a file containing a set of JSON
     object members that should be added to the instance description
     submitted to the GCE service.
@@ -585,28 +584,28 @@ all attributes.
 :classad-attribute:`GceMachineType`
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce_machine_type** :index:`gce_machine_type<single: gce_machine_type; submit commands>`.
+    :subcom:`gce_machine_type<and attribute GceMachineType>`.
     Specifies the hardware profile that should be used for a GCE
     instance.
     
 :classad-attribute:`GceMetadata`
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce_metadata** :index:`gce_metadata<single: gce_metadata; submit commands>`.
+    :subcom:`gce_metadata<and attribute GceMetadata>`.
     Defines a set of name/value pairs that can be accessed by the
     virtual machine.
 
 :classad-attribute:`GceMetadataFile`
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce_metadata_file** :index:`gce_metadata_file<single: gce_metadata_file; submit commands>`.
+    :subcom:`gce_metadata_file<and attribute GceMetadataFile>`.
     Specifies a path and file name of a file containing a set of
     name/value pairs that can be accessed by the virtual machine.
 
 :classad-attribute:`GcePreemptible`
     Used for grid type gce jobs; a boolean taken from the definition of
     the submit description file command
-    **gce_preemptible** :index:`gce_preemptible<single: gce_preemptible; submit commands>`.
+    :subcom:`gce_preemptible<and attribute GcePreemptible>`.
     Specifies whether the virtual machine instance created in GCE should
     be preemptible.
 
@@ -627,7 +626,7 @@ all attributes.
 :classad-attribute:`GridResource`
     A string defined by the right hand side of the the submit
     description file command
-    **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`.
+    :subcom:`grid_resource<and attribute GridResource>`.
     It specifies the target grid type, plus additional parameters
     specific to the grid type.
 
@@ -727,9 +726,8 @@ all attributes.
     |                                  | encountered when                    |                          |
     |                                  | transferring files.                 |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 19                             | ``<Keyword>_HOOK_PREPARE_JOB``      |                          |
-    | | [HookPrepareJobFailure]        | :index:`<Keyword>_HOOK_PREPARE_JOB` |                          |
-    |                                  | was defined but could               |                          |
+    | | 19                             | :macro:`<Keyword>_HOOK_PREPARE_JOB` |                          |
+    | | [HookPrepareJobFailure]        | was defined but could               |                          |
     |                                  | not be executed or                  |                          |
     |                                  | returned failure.                   |                          |
     +----------------------------------+-------------------------------------+--------------------------+
@@ -739,8 +737,7 @@ all attributes.
     |                                  | run.                                |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 21                             | The job was put on hold             |                          |
-    | | [StartdHeldJob]                | because ``WANT_HOLD``               |                          |
-    |                                  | :index:`WANT_HOLD`                  |                          |
+    | | [StartdHeldJob]                | because :macro:`WANT_HOLD`          |                          |
     |                                  | in the machine policy               |                          |
     |                                  | was true.                           |                          |
     +----------------------------------+-------------------------------------+--------------------------+
@@ -756,9 +753,8 @@ all attributes.
     | | 25                             | Invalid cron settings.              |                          |
     | | [InvalidCronSettings]          |                                     |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 26                             | ``SYSTEM_PERIODIC_HOLD``            |                          |
-    | | [SystemPolicy]                 | :index:`SYSTEM_PERIODIC_HOLD`       |                          |
-    |                                  | evaluated to true.                  |                          |
+    | | 26                             | :macro:`SYSTEM_PERIODIC_HOLD`       |                          |
+    | | [SystemPolicy]                 | evaluated to true.                  |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 27                             | The system periodic job             |                          |
     | | [SystemPolicyUndefined]        | policy evaluated to                 |                          |
@@ -767,14 +763,12 @@ all attributes.
     | | 32                             | The maximum total input             |                          |
     | | [MaxTransferInputSizeExceeded] | file transfer size was              |                          |
     |                                  | exceeded. (See                      |                          |
-    |                                  | ``MAX_TRANSFER_INPUT_MB``           |                          |
-    |                                  | :index:`MAX_TRANSFER_INPUT_MB`      |                          |
+    |                                  | :macro:`MAX_TRANSFER_INPUT_MB`      |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 33                             | The maximum total output            |                          |
     | | [MaxTransferOutputSizeExceeded]| file transfer size was              |                          |
     |                                  | exceeded. (See                      |                          |
-    |                                  | ``MAX_TRANSFER_OUTPUT_MB``          |                          |
-    |                                  | :index:`MAX_TRANSFER_OUTPUT_MB`     |                          |
+    |                                  | :macro:`MAX_TRANSFER_OUTPUT_MB`     |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 34                             | Memory usage exceeds a              |                          |
     | | [JobOutOfResources]            | memory limit.                       |                          |
@@ -890,9 +884,8 @@ all attributes.
     | | 47                             | The job's allowed execution time    |                          |
     | | [JobExecuteExceeded]           | was exceeded.                       |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 48                             | ``<Keyword>_HOOK_SHADOW_PREPARE_JOB`` |                        |
-    | | [HookShadowPrepareJobFailure]  | :index:`<Keyword>_HOOK_SHADOW_PREPARE_JOB` |                   |
-    |                                  | failed when it was executed;        |                          |
+    | | 48                             | Prepare job shadow hook failed      |                          |
+    | | [HookShadowPrepareJobFailure]  | when it was executed;               |                          |
     |                                  | status code indicated job should be |                          |
     |                                  | held.                               |                          |
     +----------------------------------+-------------------------------------+--------------------------+
@@ -981,7 +974,7 @@ all attributes.
 
 :classad-attribute:`JobDescription`
     A string that may be defined for a job by setting
-    **description** :index:`description<single: description; submit commands>` in the
+    :subcom:`description<and attribute JobDescription>` in the
     submit description file. When set, tools which display the
     executable such as *condor_q* will instead use this string. For
     interactive jobs that do not have a submit description file, this
@@ -1006,7 +999,7 @@ all attributes.
 :classad-attribute:`JobNotification`
     An integer indicating what events should be emailed to the user. The
     integer values correspond to the user choices for the submit command
-    **notification** :index:`notification<single: notification; submit commands>`.
+    :subcom:`notification<and attribute JobNotification>`.
 
     +-------+--------------------+
     | Value | Notification Value |
@@ -1088,22 +1081,20 @@ all attributes.
     +-----------+------------------------+
 
 
-:index:`JobUniverse<single: JobUniverse; ClassAd job attribute>`
-:index:`job ClassAd attribute<single: job ClassAd attribute; JobUniverse>`
 :index:`universe<single: universe; job>`
-:index:`standard = 1 (no longer used)<single: standard = 1; job ClassAd attribute definitions>`
-:index:`pipe = 2 (no longer used)<single: pipe = 2 (no longer used); job ClassAd attribute definitions>`
-:index:`linda = 3 (no longer used)<single: linda = 3 (no longer used); job ClassAd attribute definitions>`
-:index:`pvm = 4 (no longer used)<single: pvm = 4 (no longer used); job ClassAd attribute definitions>`
-:index:`vanilla = 5, docker = 5<single: vanilla = 5, docker = 5; job ClassAd attribute definitions>`
-:index:`pvmd = 6 (no longer used)<single: pvmd = 6 (no longer used); job ClassAd attribute definitions>`
-:index:`scheduler = 7<single: scheduler = 7; job ClassAd attribute definitions>`
-:index:`mpi = 8<single: mpi = 8; job ClassAd attribute definitions>`
-:index:`grid = 9<single: grid = 9; job ClassAd attribute definitions>`
-:index:`parallel = 10<single: parallel = 10; job ClassAd attribute definitions>`
-:index:`java = 11<single: java = 11; job ClassAd attribute definitions>`
-:index:`local = 12<single: local = 12; job ClassAd attribute definitions>`
-:index:`vm = 13<single: vm = 13; job ClassAd attribute definitions>`
+:index:`standard<pair: standard; universe>`
+:index:`pipe<pair: pipe; universe>`
+:index:`linda<pair: linda; universe>`
+:index:`pvm<pair: pvm; universe>`
+:index:`vanilla<pair: vanilla; universe>`
+:index:`pvmd<pair: pvmd; universe>`
+:index:`scheduler<pair: scheduler; universe>`
+:index:`mpi<pair: mpi; universe>`
+:index:`grid<pair: grid; universe>`
+:index:`parallel<pair: parallel; universe>`
+:index:`java<pair: java; universe>`
+:index:`local<pair: local; universe>`
+:index:`vm<pair: vm; universe>`
 
 
 ``JobUniverse``
@@ -1247,7 +1238,7 @@ all attributes.
     An integer expression in units of Mbytes that represents the peak
     memory usage for the job. Its purpose is to be compared with the
     value defined by a job with the
-    **request_memory** :index:`request_memory<single: request_memory; submit commands>`
+    :subcom:`request_memory<and attribute MemoryUsage>`
     submit command, for purposes of policy evaluation.
 
 :classad-attribute:`MinHosts`
@@ -1403,15 +1394,15 @@ all attributes.
 :classad-attribute:`PostCmd`
     A job in the vanilla, Docker, Java, or virtual machine universes may
     specify a command to run after the
-    **Executable** :index:`Executable<single: Executable; submit commands>` has
+    :subcom:`Executable<and attribute PostCmd>` has
     exited, but before file transfer is started. Unlike a DAGMan POST
     script command, this command is run on the execute machine; however,
     it is not run in the same environment as the
-    **Executable** :index:`Executable<single: Executable; submit commands>`.
+    :subcom:`Executable<and attribute PostCmd>`.
     Instead, its environment is set by ``PostEnv`` or
     ``PostEnvironment``. Like the DAGMan POST script command, this
     command is not run in the same universe as the
-    **Executable** :index:`Executable<single: Executable; submit commands>`; in
+    :subcom:`Executable<and attribute PostCmd>`; in
     particular, this command is not run in a Docker container, nor in a
     virtual machine, nor in Java. This command is also not run with any
     of vanilla universe's features active, including (but not limited
@@ -1419,17 +1410,17 @@ all attributes.
     Singularity, or job wrappers. This command is not automatically
     transferred with the job, so if you're using file transfer, you must
     add it to the
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+    :subcom:`transfer_input_files<and attribute PostCmd>`
     list.
 
     If the specified command is in the job's execute directory, or any
     sub-directory, you should not set
-    **vm_no_output_vm** :index:`vm_no_output_vm<single: vm_no_output_vm; submit commands>`,
+    :subcom:`vm_no_output_vm<and attribute PostCmd>`,
     as that will delete all the files in the job's execute directory
     before this command has a chance to run. If you don't want any
     output back from your VM universe job, but you do want to run a post
     command, do not set
-    **vm_no_output_vm** :index:`vm_no_output_vm<single: vm_no_output_vm; submit commands>`
+    :subcom:`vm_no_output_vm<and attribute PostCmd>`
     and instead delete the job's execute directory in your post command.
 
 :classad-attribute:`PostCmdExitBySignal`
@@ -1477,14 +1468,14 @@ all attributes.
     A job in the vanilla, Docker, Java, or virtual machine universes may
     specify a command to run after file transfer (if any) completes but
     before the
-    **Executable** :index:`Executable<single: Executable; submit commands>` is
+    :subcom:`Executable<and attribute PreCmd>` is
     started. Unlike a DAGMan PRE script command, this command is run on
     the execute machine; however, it is not run in the same environment
-    as the **Executable** :index:`Executable<single: Executable; submit commands>`.
+    as the :subcom:`Executable<and attribute PreCmd>`.
     Instead, its environment is set by ``PreEnv`` or ``PreEnvironment``.
     Like the DAGMan POST script command, this command is not run in the
     same universe as the
-    **Executable** :index:`Executable<single: Executable; submit commands>`; in
+    :subcom:`Executable<and attribute PreCmd>`; in
     particular, this command is not run in a Docker container, nor in a
     virtual machine, nor in Java. This command is also not run with any
     of vanilla universe's features active, including (but not limited
@@ -1492,7 +1483,7 @@ all attributes.
     Singularity, or job wrappers. This command is not automatically
     transferred with the job, so if you're using file transfer, you must
     add it to the
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+    :subcom:`transfer_input_files<and attribute PreCmd>`
     list. 
     
 :classad-attribute:`PreCmdExitBySignal`
@@ -1998,8 +1989,7 @@ all attributes.
 :classad-attribute:`TransferQueued`
     A boolean value that indicates whether the job is currently waiting
     to transfer files because of limits placed by
-    ``MAX_CONCURRENT_DOWNLOADS`` :index:`MAX_CONCURRENT_DOWNLOADS`
-    or ``MAX_CONCURRENT_UPLOADS``. :index:`MAX_CONCURRENT_UPLOADS`
+    :macro:`MAX_CONCURRENT_DOWNLOADS` or :macro:`MAX_CONCURRENT_UPLOADS`.
 
 :classad-attribute:`UserLog`
     The full path and file name on the access point of the log file of
@@ -2056,7 +2046,7 @@ all attributes.
 
 :classad-attribute:`X509UserProxyExpiration`
     For a job that defines the submit description file command
-    **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>`,
+    :subcom:`x509userproxy<and attribute X509UserProxyExpiration>`,
     this is the time at which the indicated X.509 proxy credential will
     expire, measured in the number of seconds since the epoch (00:00:00
     UTC, Jan 1, 1970).
@@ -2064,7 +2054,7 @@ all attributes.
 :classad-attribute:`X509UserProxyFirstFQAN`
     For a vanilla or grid universe job that defines the submit
     description file command
-    **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>`,
+    :subcom:`x509userproxy<and attribute X509UserProxyFirstFQAN>`,
     this is the VOMS Fully Qualified Attribute Name (FQAN) of the
     primary role of the credential. A credential may have multiple roles
     defined, but by convention the one listed first is the primary role.
@@ -2072,7 +2062,7 @@ all attributes.
 :classad-attribute:`X509UserProxyFQAN`
     For a vanilla or grid universe job that defines the submit
     description file command
-    **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>`,
+    :subcom:`x509userproxy<and attribute X509UserProxyFQAN>`,
     this is a serialized list of the DN and all FQAN. A comma is used as
     a separator, and any existing commas in the DN or FQAN are replaced
     with the string ``&comma;``. Likewise, any ampersands in the DN or
@@ -2081,14 +2071,14 @@ all attributes.
 :classad-attribute:`X509UserProxySubject`
     For a vanilla or grid universe job that defines the submit
     description file command
-    **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>`,
+    :subcom:`x509userproxy<and attribute X509UserProxySubject>`,
     this attribute contains the Distinguished Name (DN) of the
     credential used to submit the job.
 
 :classad-attribute:`X509UserProxyVOName`
     For a vanilla or grid universe job that defines the submit
     description file command
-    **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>`,
+    :subcom:`x509userproxy<and attribute X509UserProxyVOName>`,
     this is the name of the VOMS virtual organization (VO) that the
     user's credential is part of.
 

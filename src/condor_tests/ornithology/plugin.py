@@ -13,5 +13,10 @@ def path_to_sleep():
 
 
 @pytest.fixture(scope="session")
+def path_to_null_plugin():
+    return SCRIPTS["null_plugin"]
+
+
+@pytest.fixture(scope="session")
 def path_to_python():
     return sys.executable

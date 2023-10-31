@@ -60,6 +60,10 @@ class Dagman {
 			delete _schedd;
 			_schedd = NULL;
 		}
+		if (_protectedUrlMap) {
+			delete _protectedUrlMap;
+			_protectedUrlMap = nullptr;
+		}
 	}
 
 		// Check (based on the version from the .condor.sub file, etc.),
@@ -288,6 +292,9 @@ class Dagman {
 
 		// The schedd we need to talk to to update the classad.
 	DCSchedd *_schedd;
+
+	// Protected URL Mapfile
+	MapFile *_protectedUrlMap;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

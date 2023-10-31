@@ -71,6 +71,21 @@ GCC_DIAG_OFF(float-equal)
 
 #define exit(n)  poison_exit(n)
 
+// TODO: Set up retrieval of map file from schedd for and remove this function
+MapFile* getProtectedURLMap() {
+	MapFile *map = nullptr;
+	std::string urlMapFile;
+	param(urlMapFile, "PROTECTED_URL_TRANSFER_MAPFILE");
+	if (! urlMapFile.empty()) {
+		map = new MapFile();
+		int ret = map->ParseCanonicalizationFile(urlMapFile, true, true, true);
+		if (ret < 0) {
+			delete map;
+			map = nullptr;
+		}
+	}
+	return map;
+}
 // When this class is wrapped around a classad that has a chained parent ad
 // inserts and assignments will check to see if the value being assigned
 // is the same as the value in the chained parent, and if so will NOT do
@@ -131,8 +146,7 @@ const classad::Value * DeltaClassAd::HasParentValue(const std::string & attr, cl
 	ExprTree * expr = HasParentTree(attr, ExprTree::NodeKind::LITERAL_NODE);
 	if ( ! expr)
 		return NULL;
-	classad::Value::NumberFactor f;
-	const classad::Value * pval = &static_cast<classad::Literal*>(expr)->getValue(f);
+	const classad::Value * pval = &static_cast<classad::Literal*>(expr)->getValue();
 	if (!pval || (pval->GetType() != vt))
 		return NULL;
 	return pval;
@@ -561,6 +575,7 @@ SubmitHash::~SubmitHash()
 	delete job; job = nullptr;
 	delete procAd; procAd = nullptr;
 	delete jobsetAd; jobsetAd = nullptr;
+	protectedUrlMap = nullptr; // Submit Hash does not own this object
 
 	// detach but do not delete the cluster ad
 	//PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
@@ -7470,9 +7485,121 @@ int SubmitHash::SetTransferFiles()
 	return 0;
 }
 
+/*
+*   Function to check transfer input/output lists for URL transfers
+*   against an attached protected URL map. This map is a prefix matching
+*   map of various 'scheme://path' to specific transfer queues that an
+*   admin has deemed protected. All transfer files found matching a map
+*   entry will be separated out into a new attribute in the job ad
+*   representing a list of files to transfer in association with a
+*   specified transfer queue.
+*   Example:
+*      - Map: foo:// -> alpha, bar:// -> beta
+*      - TransferInputList=one,foo://two,foo://three,bar://four,baz://five
+*   Reuslt:
+*      - TransferIn=one,baz://five
+*      - TransferInFrom_ALPHA=foo://two,foo://three
+*      - TransferInFrom_BETA=bar://four
+*      - TransferQueueInputList = [ TransferInFrom_ALPHA, TransferInFrom_BETA ]
+*   Author: Cole Bollig - 2023-10-04
+*/
+int SubmitHash::SetProtectedURLTransferLists() {
+	RETURN_IF_ABORT();
+
+	// If we don't have a protected URL map file do nothing
+	if (! protectedUrlMap) { return 0; }
+	if (protectedUrlMap->empty()) { return 0; }
+
+	// Set of queue input lists found in cluster ad to be emptied in job ad
+	std::set<std::string> clusterInputQueues;
+
+	if (clusterAd) {
+		// Check for transfer queue list in the cluster ad
+		ExprTree * tree = clusterAd->Lookup(ATTR_TRANSFER_Q_URL_IN_LIST);
+		if (tree && tree->GetKind() == ClassAd::ExprTree::EXPR_LIST_NODE) {
+			classad::ExprList* list = dynamic_cast<classad::ExprList*>(tree);
+			for(classad::ExprList::iterator it = list->begin() ; it != list->end(); ++it ) {
+				std::string attr;
+				classad::ClassAdUnParser unparser;
+				unparser.SetOldClassAd(true, true);
+				unparser.Unparse(attr, *it);
+				clusterInputQueues.insert(attr);
+			}
+		}
+	}
+
+	// Process Transfer Input Files
+	std::string input_files;
+	if (job->LookupString(ATTR_TRANSFER_INPUT_FILES, input_files)) {
+		std::string new_input_list; // Protected URL trimmed input files list
+		std::map<std::string,std::string> protected_url_lists;
+		StringTokenIterator in_files(input_files, ",");
+
+		for (const auto& file : in_files) {
+			bool is_protected = true;
+			const char* url = IsUrl(file.c_str());
+			if (url) {
+				url += 3; // Skip '://' part of URL
+				std::string queue;
+				std::string scheme = getURLType(file.c_str(), true);
+				if (protectedUrlMap->GetCanonicalization(scheme, url, queue) == 0) {
+					upper_case(queue);
+					if (queue.compare("*") == MATCH) { queue = "LOCAL"; }
+					if (protected_url_lists.contains(queue)) {
+						protected_url_lists[queue] += "," + file;
+					} else {
+						protected_url_lists.insert({queue, file});
+					}
+				} else { is_protected = false; }
+			} else { is_protected = false; }
+			// Not a protected URL then add back to transfer input list
+			if (! is_protected){
+				if (! new_input_list.empty()) { new_input_list += ","; }
+				new_input_list += file;
+			}
+		}
+
+		if (! protected_url_lists.empty()) {
+			AssignJobString(ATTR_TRANSFER_INPUT_FILES, new_input_list.c_str());
+			bool has_diff_queue_list = false;
+
+			std::vector<ExprTree*> queue_xfer_lists;
+			for (const auto& [queue, files] : protected_url_lists) {
+				std::string key = std::string(ATTR_TRANSFER_INPUT_FILES) + "From_" + queue;
+				AssignJobString(key.c_str(), files.c_str());
+				if (! clusterInputQueues.contains(key)) { has_diff_queue_list = true; }
+				clusterInputQueues.erase(key);//Remove queue list attrs that are overwritten from set to empty
+				queue_xfer_lists.push_back(classad::AttributeReference::MakeAttributeReference(nullptr, key));
+			}
+
+			if (has_diff_queue_list || clusterInputQueues.size() > 0) {
+				classad::ExprTree *list = classad::ExprList::MakeExprList(queue_xfer_lists);
+				if (! job->Insert(ATTR_TRANSFER_Q_URL_IN_LIST, list)) {
+					push_error(stderr, "failed to insert list of transfer queue input file attributes to %s\n",
+					           ATTR_TRANSFER_Q_URL_IN_LIST);
+					ABORT_AND_RETURN( 1 );
+				}
+			}
+
+			// Set all cluster ad queue input list attrs not overwritten to empty string
+			for (const auto& attr : clusterInputQueues) { AssignJobString(attr.c_str(), ""); }
+		}
+
+	}
+
+	//TODO: Process Output Remaps to URLS
+	//TODO: Check output destination for URL
+
+	return 0;
+}
+
 int SubmitHash::FixupTransferInputFiles()
 {
+
 	RETURN_IF_ABORT();
+
+	// Check transfer in/out list against protected URL map
+	SetProtectedURLTransferLists();
 
 		// See the comment in the function body of ExpandInputFileList
 		// for an explanation of what is going on here.
@@ -7788,7 +7915,7 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 
 	// set up types of the ad
 	SetMyTypeName (baseJob, JOB_ADTYPE);
-	baseJob.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE); // needed for HTCondor before version 23.0
+	baseJob.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE); // needed for HTCondor before version 23.0
 
 	if (submit_time_in) {
 		submit_time = submit_time_in;

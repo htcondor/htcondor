@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "gahp_common.h"
 #include "condor_vm_universe_types.h"
 
 class VMGahpConfig {

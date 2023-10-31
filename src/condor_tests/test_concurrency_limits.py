@@ -16,7 +16,6 @@ import re
 import time
 import logging
 import datetime
-import htcondor
 
 from ornithology import (
     config,

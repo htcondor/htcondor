@@ -99,14 +99,6 @@ Unparse(
 		
 		switch( tree->GetKind( ) ) {
 		case ExprTree::LITERAL_NODE: {
-#if 1
-			Value::NumberFactor factor;
-			const Value & cval = ((const Literal*)tree)->getValue(factor);
-			if (factor != Value::NumberFactor::NO_FACTOR) {
-				Unparse( buffer, cval, indent );
-				return;
-			}
-#endif
 			Value				val;
 			((Literal*)tree)->GetValue(val);
 			Unparse(buffer, val, indent);

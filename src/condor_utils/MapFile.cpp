@@ -250,9 +250,7 @@ static size_t min_re_size=0, max_re_size=0, num_re=0, num_zero_re=0;
 static size_t re_size(pcre2_code * re) {
 	if ( !re) return 0;
 	size_t cb = 0;
-	uint32_t cb_uint32 = 0;
-	pcre2_pattern_info(re, PCRE2_INFO_SIZE, &cb_uint32);
-	cb = static_cast<size_t>(cb_uint32);
+	pcre2_pattern_info(re, PCRE2_INFO_SIZE, &cb);
 	++num_re;
 	if (cb) { if (!min_re_size || (cb && (cb < min_re_size))) min_re_size = cb; max_re_size = MAX(cb, max_re_size); }
 	else { ++num_zero_re; }

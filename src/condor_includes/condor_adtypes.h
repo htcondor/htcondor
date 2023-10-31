@@ -23,8 +23,11 @@
 #define DATABASE_ADTYPE			"Database"
 #define DEFRAG_ADTYPE			"Defrag"
 #define TT_ADTYPE			"TTProcess"
-#define STARTD_ADTYPE			"Machine"
-#define STARTD_PVT_ADTYPE		"MachinePrivate"
+//#define STARTD_ADTYPE			"Machine"
+#define STARTD_OLD_ADTYPE		"Machine"
+#define STARTD_SLOT_ADTYPE		"Slot"
+#define STARTD_DAEMON_ADTYPE	"StartDaemon"
+//#define STARTD_PVT_ADTYPE		"MachinePrivate"
 #define SCHEDD_ADTYPE			"Scheduler"
 #define MASTER_ADTYPE			"DaemonMaster"
 #define CKPT_SRVR_ADTYPE		"CkptServer"
@@ -59,7 +62,7 @@
 enum AdTypes
 {
 	NO_AD = -1,
-	STARTD_AD,
+	STARTD_AD,		// unspecified Startd ad type, "Machine" or "Slot" or "StartdDaemon" depending on context
 	SCHEDD_AD,
 	MASTER_AD,
 	GATEWAY_AD,
@@ -83,6 +86,8 @@ enum AdTypes
 	LEASE_MANAGER_AD,	// placeholder: this type no longer used
 	DEFRAG_AD,
 	ACCOUNTING_AD,
+	SLOT_AD,
+	STARTDAEMON_AD,
 	// This should *ALWAYS* be at the end of this list
 	NUM_AD_TYPES,
 };

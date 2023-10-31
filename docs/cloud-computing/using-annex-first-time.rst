@@ -290,4 +290,4 @@ URL and delete the 'HTCondorAnnex-KeyPair' key:
    or at any subsequent time, through the AWS web console (or other interfaces
    with which you may be familiar). If you start the instance using HTCondor's
    EC2 universe, you may specify the IAM instance profile with the
-   **ec2_iam_profile_name** or **ec2_iam_profile_arn** submit commands.
+   :subcom:`ec2_iam_profile_name` or :subcom:`ec2_iam_profile_arn` submit commands.

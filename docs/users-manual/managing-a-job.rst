@@ -11,7 +11,7 @@ Checking on the progress of jobs
 --------------------------------
 
 You can check on your jobs with the *condor_q*
-command. :index:`condor_q<single: condor_q; HTCondor commands>`\ This
+command. :index:`condor_q<single: condor_q; example>`\ This
 command has many options, by default, it displays only your jobs
 queued in the local scheduler. An example of the output from *condor_q* is
 
@@ -85,7 +85,6 @@ execution commencement, file transfer, eviction and termination are logged
 in the file. Also logged is the time at which the event occurred.
 
 When a job begins to run, HTCondor starts up a *condor_shadow* process
-:index:`condor_shadow`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
 on the access point. The shadow process is the mechanism by which the
 remotely executing jobs can access the environment from which it was
 submitted, such as input and output files.
@@ -95,12 +94,11 @@ hundreds of *condor_shadow* processes running on the machine. Since the
 text segments of all these processes is the same, the load on the submit
 machine is usually not significant. If there is degraded performance,
 limit the number of jobs that can run simultaneously by reducing the
-``MAX_JOBS_RUNNING`` :index:`MAX_JOBS_RUNNING` configuration
-variable.
+:macro:`MAX_JOBS_RUNNING` configuration variable.
 
 You can also find all the machines that are running your job through the
 *condor_status* command.
-:index:`condor_status<single: condor_status; HTCondor commands>`\ For example, to find
+:index:`condor_status<single: condor_status; example>`\ For example, to find
 all the machines that are running jobs submitted by
 ``breach@cs.wisc.edu``, type:
 
@@ -209,12 +207,12 @@ example shows the queue of jobs before and after a job is removed.
 
     1 jobs; 1 idle, 0 running, 0 held
 
-Placing a job on hold
----------------------
-
 :index:`condor_hold<single: condor_hold; HTCondor commands>`
 :index:`condor_release<single: condor_release; HTCondor commands>`
 :index:`state<single: state; job>`
+
+Placing a job on hold
+---------------------
 
 A job in the queue may be placed on hold by running the command
 *condor_hold*. A job in the hold state remains in the hold state until
@@ -270,10 +268,9 @@ do not impact user priorities. They are only a mechanism for the user to
 identify the relative importance of jobs among all the jobs submitted by
 the user to that specific queue.
 
+:index:`analysis<single: analysis; job>` :index:`not running<single: not running; job>`
 Why is the job not running?
 ---------------------------
-
-:index:`analysis<single: analysis; job>` :index:`not running<single: not running; job>`
 
 Users occasionally find that their jobs do not run. There are many
 possible reasons why a specific job is not running. The following prose
@@ -340,7 +337,7 @@ following information:
 This example also shows that the job does not run because the platform
 requested, Mac OS X, is not available on any of the machines in the
 pool. Recall that unless informed otherwise in the
-**Requirements** :index:`Requirements<single: Requirements; submit commands>`
+:subcom:`Requirements<usage for debugging>`
 expression in the submit description file, the platform requested for an
 execute machine will be the same as the platform where *condor_submit*
 is run to submit the job. And, while Mac OS X is a Unix-type operating
@@ -359,12 +356,12 @@ A second class of problems represents jobs that do or did run, for at
 least a short while, but are no longer running. The first issue is
 identifying whether the job is in this category. The *condor_q* command
 is not enough; it only tells the current state of the job. The needed
-information will be in the **log** :index:`log<single: log; submit commands>`
-file or the **error** :index:`error<single: error; submit commands>` file, as
+information will be in the :subcom:`log<usage for debugging>`
+file or the :subcom:`error<usage for debugging>` file, as
 defined in the submit description file for the job. If these files are
 not defined, then there is little hope of determining if the job ran at
 all. For a job that ran, even for the briefest amount of time, the
-**log** :index:`log<single: log; submit commands>` file will contain an event
+:subcom:`log<usage for debugging>` file will contain an event
 of type 1, which will contain the string Job executing on host.
 
 A job may run for a short time, before failing due to a file permission
@@ -378,10 +375,9 @@ command
 
     $ condor_config_val SHADOW_LOG
 
+:index:`not running, on hold<single: not running, on hold; job>`
 Job in the Hold State
 ---------------------
-
-:index:`not running, on hold<single: not running, on hold; job>`
 
 Should HTCondor detect something about a job that would prevent it
 from ever running successfully, say, because the executable doesn't
@@ -454,7 +450,7 @@ includes:
 The relevant log events include a human-readable rendition of the ToE,
 and the job ad is updated with the ToE after the usual delay.
 
-As of version 8.9.4, HTCondor only issues ToE in three cases:
+HTCondor only issues ToE in three cases:
 
 - when the job terminates of its own accord (issued by the starter,
   ``HowCode`` 0);
@@ -482,11 +478,10 @@ Examine the job history file with the *condor_history* command. If
 there is a log file specified in the submit description file for the
 job, then the job exit status will be recorded there as well, along with
 other information described below.
-:index:`notification<single: notification; submit commands>`
 
 By default, HTCondor does not send an email message when the job
 completes. Modify this behavior with the
-**notification** :index:`notification<single: notification; submit commands>` command
+:subcom:`notification<example>` command
 in the submit description file. The message will include the exit status
 of the job, which is the argument that the job passed to the exit system
 call when it completed, or it will be notification that the job was

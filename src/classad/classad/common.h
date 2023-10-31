@@ -80,7 +80,6 @@ struct IUnknown;
 #define fsync _commit
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
-#define strtoll _strtoi64
 
 // anotations that help the MSVC code analyzer
 #define PREFAST_NORETURN __declspec(noreturn)

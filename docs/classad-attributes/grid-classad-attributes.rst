@@ -1,8 +1,6 @@
 Grid ClassAd Attributes
 =======================
 
-:index:`Grid attributes<single: Grid attributes; ClassAd>`
-
 :classad-attribute:`GahpCommandRuntime`
     A Statistics attribute defining the time it takes for commands
     issued to the GAHP server to complete.

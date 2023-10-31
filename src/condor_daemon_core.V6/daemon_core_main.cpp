@@ -804,22 +804,20 @@ DaemonCore::kill_immediate_children() {
 	// Send each of our children a SIGKILL.  We'd rather kill each child's
 	// whole process tree, but we don't want to block talking to the procd.
 	//
-	PidEntry * pid_entry = NULL;
-	pidTable->startIterations();
-	while( pidTable->iterate(pid_entry) ) {
+	for (const auto& [key, pid_entry] : pidTable) {
 		// Don't try to kill our parent process; it's a bad idea, Send_Signal()
 		// will fail, and we don't want the attempt in the log.
-		if( pid_entry->pid == ppid ) { continue; }
+		if( pid_entry.pid == ppid ) { continue; }
 		// Don't try to kill processes which have already exited; this avoids
 		// a race condition with PID reuse, logging an error in the attempt,
 		// and looking like we're trying to kill the job after noticing it die.
-		if (pid_entry->process_exited) { continue; }
-		if (ProcessExitedButNotReaped(pid_entry->pid)) {
-			dprintf(D_FULLDEBUG, "Daemon exiting before reaping child pid %d\n", pid_entry->pid);
+		if (pid_entry.process_exited) { continue; }
+		if (ProcessExitedButNotReaped(pid_entry.pid)) {
+			dprintf(D_FULLDEBUG, "Daemon exiting before reaping child pid %d\n", pid_entry.pid);
 			continue;
 		}
-		dprintf( D_ALWAYS, "Daemon exiting before all child processes gone; killing %d\n", pid_entry->pid );
-		Send_Signal( pid_entry->pid, SIGKILL );
+		dprintf( D_ALWAYS, "Daemon exiting before all child processes gone; killing %d\n", pid_entry.pid );
+		Send_Signal( pid_entry.pid, SIGKILL );
 	}
 }
 

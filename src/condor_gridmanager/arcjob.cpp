@@ -708,11 +708,10 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 			for (auto item : state_list) {
 				std::string str;
 				classad::Value value;
-				classad::Value::NumberFactor f;
 				if (item->GetKind() != classad::ExprTree::LITERAL_NODE) {
 					continue;
 				}
-				((classad::Literal*)item)->getValue(f).IsStringValue(str);
+				((classad::Literal*)item)->getValue().IsStringValue(str);
 				if (str.compare(0, 8, "arcrest:") == 0) {
 					info_status = str.substr(8);
 					break;
@@ -759,8 +758,8 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 				// Assume it's always a normal exit.
 				jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 				jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
-				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60.0 );
-				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60.0 );
+				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock );
+				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu );
 				gmState = GM_STAGE_OUT;
 			} else {
 				if ( info_ad.LookupString("Error", val) ) {

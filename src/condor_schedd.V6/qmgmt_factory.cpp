@@ -41,7 +41,7 @@
 class JobFactory : public SubmitHash {
 
 public:
-	JobFactory(const char * name, int id, const classad::ClassAd* extended_cmds);
+	JobFactory(const char * name, int id, const classad::ClassAd* extended_cmds, MapFile* url_map);
 	~JobFactory();
 
 	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
@@ -161,6 +161,7 @@ protected:
 		const classad::ClassAd * extended_cmds,
 		const char * submit_digest_filename,
 		bool spooled_submit_file,
+		MapFile* urlMap,
 		std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
@@ -172,19 +173,19 @@ protected:
 		std::string & errmsg);           // OUT: error message if return value is not 0
 };
 
-JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * extended_cmds)
+JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * extended_cmds, MapFile* url_map)
 	: name(nullptr)
 #ifdef HOLDS_DIGEST_FILE_OPEN
 	, fp_digestX(NULL)
 #endif
 	, ident(id)
-	 
 {
 	CheckProxyFile = false;
 	memset(&source, 0, sizeof(source));
 	this->init();
 	setScheddVersion(CondorVersion());
 	if (extended_cmds) { this->addExtendedCommands(*extended_cmds); }
+	protectedUrlMap = url_map;
 	// add digestfile into string pool, and store that pointer in the class
 	insert_source(_name, source);
 	name = macro_source_filename(source, SubmitMacroSet);
@@ -224,9 +225,9 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 	return false;
 }
 
-class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds)
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds, MapFile* urlMap)
 {
-	return new JobFactory(nullptr, cluster_id, extended_cmds);
+	return new JobFactory(nullptr, cluster_id, extended_cmds, urlMap);
 }
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
@@ -286,10 +287,11 @@ JobFactory * MakeJobFactory(
 	const classad::ClassAd * extended_cmds,
 	const char * submit_digest_file,
 	bool spooled_submit_file,
+	MapFile* urlMap,
 	std::string & errmsg)
 {
 
-	auto * factory = new JobFactory(submit_digest_file, job->jid.cluster, extended_cmds);
+	auto * factory = new JobFactory(submit_digest_file, job->jid.cluster, extended_cmds, urlMap);
 
 	// Starting the 8.7.3 The digest file may be in the spool directory and owned by condor
 	// or in the user directory and owned by the user (the 8.7.1 model).

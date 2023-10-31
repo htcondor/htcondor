@@ -157,7 +157,7 @@ public:
 	void	compute_and_refresh(Resource * rip);
 	void	publish_static(ClassAd* cp) { Starter::publish(cp); }
 	// publish statistics, hibernation, STARTD_CRON and TTL
-	void	publish_resmgr_dynamic(ClassAd*);
+	void	publish_resmgr_dynamic(ClassAd* ad, bool daemon_ad=false);
 	void	publishSlotAttrs( ClassAd* cap );
 
 	void	assign_load_and_idle();
@@ -182,6 +182,11 @@ public:
 		// The first one is special, since we already computed
 		// everything and we don't need to recompute anything.
 	void	update_all( int timerID = -1 );
+
+#ifdef DO_BULK_COLLECTOR_UPDATES
+		// Evaluate and send updates for dirty resources, and clear update dirty bits
+	void	send_updates_and_clear_dirty( int timerID = -1 );
+#endif
 
 	void vacate_all(bool fast) {
 		if (fast) { walk( [](Resource* rip) { rip->kill_claim(); } ); }
@@ -282,6 +287,7 @@ public:
 
 	void		init_config_classad( void );
 	void		updateExtrasClassAd( ClassAd * cap );
+	void		publish_daemon_ad(ClassAd & ad);
 
 	void		addResource( Resource* );
 	bool		removeResource( Resource* );
@@ -301,17 +307,7 @@ public:
 	time_t m_lastDirectAttachToSchedd;
 
 	VMUniverseMgr m_vmuniverse_mgr;
-
-	bool AllocVM(pid_t starter_pid, ClassAd & vm_classad, Resource* rip)
-	{
-		if ( ! m_vmuniverse_mgr.allocVM(starter_pid, vm_classad, rip->executeDir())) {
-			return false;
-		}
-		// update VM related info
-		walk(&Resource::update_walk_for_vm_change);
-		return true;
-	}
-
+	bool AllocVM(pid_t starter_pid, ClassAd & vm_classad, Resource* rip);
 
 	AdTransforms m_execution_xfm;
 
@@ -346,6 +342,10 @@ public:
 		walk([now](Resource * rip) { if (rip) rip->r_classad->Assign(ATTR_MY_CURRENT_TIME, now); } );
 	}
 
+	// called by Resource::update_needed the first time a resource is marked dirty after the last update
+	// this function queues a global update timer and returns the time value needed for r_update_is_due.
+	time_t rip_update_needed(unsigned int whyfor_bits);
+
 	StartdStats startd_stats;
 
     class Stats {
@@ -355,6 +355,7 @@ public:
        stats_recent_counter_timer WalkUpdate;
        stats_recent_counter_timer WalkOther;
        stats_recent_counter_timer Drain;
+       stats_recent_counter_timer SendUpdates;
 
        // TJ: for now these stats will be registered in the DC pool.
        void Init(void);
@@ -437,9 +438,11 @@ private:
 	bool 		is_shutting_down;
 
 	int		num_updates;
-	int		up_tid;		// DaemonCore timer id for update timer
+	int		up_tid;		// DaemonCore timer id for update timer (periodic repeating timer to trigger updates)
 	int		poll_tid;	// DaemonCore timer id for polling timer
 	int		m_cred_sweep_tid;	// DaemonCore timer id for polling timer
+	int		send_updates_tid;   // DaemonCore timer for actually sending the updates (one-shot, short period timer)
+	unsigned int send_updates_whyfor_mask;
 	time_t	startTime;		// Time that we started
 	time_t	cur_time;		// current time
 	time_t	deathTime = 0;		// If non-zero, time we will SIGTERM
@@ -590,7 +593,7 @@ namespace classad {
 				if (!OtherSlotEval("SlotEval", args, evs, val)) {
 					attr = "error";
 				} else {
-					ClassAdUnParser::UnparseAux(rhs, val, classad::Value::NumberFactor::NO_FACTOR);
+					ClassAdUnParser::UnparseAux(rhs, val);
 					if (indirect) {
 						classad::Value attrval;
 						if(!OtherSlotEval("*", args, evs, attrval)||!attrval.IsStringValue(attr)) {

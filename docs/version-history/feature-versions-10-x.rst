@@ -4,6 +4,23 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.9.0
+--------------
+
+Release Notes:
+
+- HTCondor version 10.9.0 released on September 28, 2023.
+
+- This version includes all the updates from :ref:`lts-version-history-1009`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 10.8.0
 --------------
 
@@ -879,7 +896,7 @@ New Features:
 
 - The PREPARE_JOB and PREPARE_JOB_BEFORE_TRANSFER job hooks can now return a ``HookStatusCode`` and 
   a ``HookStatusMessage`` to give better feedback to the user.
-  See the :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` manual section.
+  See the :ref:`admin-manual/ep-policy-configuration:Startd Cron` manual section.
   :jira:`1416`
 
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting

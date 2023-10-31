@@ -102,9 +102,9 @@ for routing.
    the set of files transferred back when the job completes. Vanilla
    universe jobs transfer back all files created or modified, while all
    grid universe jobs, except for HTCondor-C, only transfer back the
-   **output** :index:`output<single: output; submit commands>` file, as well as
+   :subcom:`output<and job router>` file, as well as
    those explicitly listed with
-   **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
+   :subcom:`transfer_output_files<and job router>`
    Therefore, when routing jobs to grid universes other than HTCondor-C,
    it is important to explicitly specify all output files that must be
    transferred upon job completion.
@@ -408,8 +408,7 @@ may appear in a Routing Table entry.
     A boolean expression that, when ``True``, causes the original job to
     be transformed in place rather than creating a new transformed
     version (a routed copy) of the job. In this mode, the Job Router
-    Hook ``<Keyword>_HOOK_TRANSLATE_JOB``
-    :index:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
+    Hook :macro:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
     in the routing table are applied during the job transformation. The
     routing table attribute ``GridResource`` is ignored, and there is no
     default transformation of the job from a vanilla job to a grid

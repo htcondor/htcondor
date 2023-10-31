@@ -1641,10 +1641,16 @@ tags=gridmanager
 [STARTD_ATTRS]
 default=
 description=Names of attibutes from config file to insert into STARTD ads
+tags=startd
 
 [STARTD_LATCH_EXPRS]
 default=
 description=STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
+
+[ENABLE_STARTD_DAEMON_AD]
+default=false
+description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
+usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
 
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
@@ -2541,17 +2547,35 @@ description=Disable client host checks for SSL authentication.
 type=bool
 tags=condor_auth_ssl
 
+[AUTH_SSL_SERVER_USE_DEFAULT_CAS]
+default=true
+type=bool
+
+[AUTH_SSL_CLIENT_USE_DEFAULT_CAS]
+default=true
+type=bool
+
 [AUTH_SSL_SERVER_CAFILE]
-default=/etc/pki/tls/certs/ca-bundle.crt
-win32_default=
-description=Default location of the system CA bundle
+default=
+description=Location of additonal CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CADIR]
+default=
+description=Location of additonal CA bundle
 type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_CLIENT_CAFILE]
-default=/etc/pki/tls/certs/ca-bundle.crt
-win32_default=
-description=Default location of the system CA bundle
+default=
+description=Location of additional CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_CLIENT_CADIR]
+default=
+description=Location of additional CA bundle
 type=path
 tags=condor_auth_ssl
 
@@ -2601,6 +2625,10 @@ description=Automatically trust the remote CA over SSL
 type=bool
 tags=io,condor_auth_ssl
 
+[BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER]
+default=true
+type=bool
+
 [COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
 default=true
 win32_default=false
@@ -2608,19 +2636,19 @@ type=bool
 
 [TRUST_DOMAIN_CAFILE]
 default=/etc/condor/trust_domain_ca.pem
-win32_default=$(RELEASE_DIR)\certs\ca.pem
+win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [TRUST_DOMAIN_CAKEY]
 default=/etc/condor/trust_domain_ca_privkey.pem
-win32_default=$(RELEASE_DIR)\certs\ca_privkey.pem
+win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [SEC_SYSTEM_KNOWN_HOSTS]
 default=/etc/condor/known_hosts
-win32_default=$(RELEASE_DIR)\known_hosts
+win32_default=$(LOCAL_DIR)\known_hosts
 type=path
 tags=io
 
@@ -6967,5 +6995,12 @@ default : @fin
 	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination = CheckpointDestination =?= undefined || CheckpointDestinationValid =?= True
 	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination_REASON = "You specified a checkpoint_destination this AP does not know how to clean up.  You may need to add a trailing / to the URL."
 @fin
+
+[$FEATURE.GANGLIA]
+description=Enable condor_gangliad daemon
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
+@end
+
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
