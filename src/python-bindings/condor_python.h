@@ -14,7 +14,7 @@
 
     #include <crtdefs.h>
 
-    #pragma push_macro("PLATORM")
+    #pragma push_macro("PLATFORM")
     #undef PLATFORM
 
     #undef _CONDOR_COMMON_FIRST
