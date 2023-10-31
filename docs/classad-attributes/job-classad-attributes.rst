@@ -1081,22 +1081,20 @@ all attributes.
     +-----------+------------------------+
 
 
-:index:`JobUniverse<single: JobUniverse; ClassAd job attribute>`
-:index:`job ClassAd attribute<single: job ClassAd attribute; JobUniverse>`
 :index:`universe<single: universe; job>`
-:index:`standard = 1 (no longer used)<single: standard = 1; job ClassAd attribute definitions>`
-:index:`pipe = 2 (no longer used)<single: pipe = 2 (no longer used); job ClassAd attribute definitions>`
-:index:`linda = 3 (no longer used)<single: linda = 3 (no longer used); job ClassAd attribute definitions>`
-:index:`pvm = 4 (no longer used)<single: pvm = 4 (no longer used); job ClassAd attribute definitions>`
-:index:`vanilla = 5, docker = 5<single: vanilla = 5, docker = 5; job ClassAd attribute definitions>`
-:index:`pvmd = 6 (no longer used)<single: pvmd = 6 (no longer used); job ClassAd attribute definitions>`
-:index:`scheduler = 7<single: scheduler = 7; job ClassAd attribute definitions>`
-:index:`mpi = 8<single: mpi = 8; job ClassAd attribute definitions>`
-:index:`grid = 9<single: grid = 9; job ClassAd attribute definitions>`
-:index:`parallel = 10<single: parallel = 10; job ClassAd attribute definitions>`
-:index:`java = 11<single: java = 11; job ClassAd attribute definitions>`
-:index:`local = 12<single: local = 12; job ClassAd attribute definitions>`
-:index:`vm = 13<single: vm = 13; job ClassAd attribute definitions>`
+:index:`standard<pair: standard; universe>`
+:index:`pipe<pair: pipe; universe>`
+:index:`linda<pair: linda; universe>`
+:index:`pvm<pair: pvm; universe>`
+:index:`vanilla<pair: vanilla; universe>`
+:index:`pvmd<pair: pvmd; universe>`
+:index:`scheduler<pair: scheduler; universe>`
+:index:`mpi<pair: mpi; universe>`
+:index:`grid<pair: grid; universe>`
+:index:`parallel<pair: parallel; universe>`
+:index:`java<pair: java; universe>`
+:index:`local<pair: local; universe>`
+:index:`vm<pair: vm; universe>`
 
 
 ``JobUniverse``
