@@ -1,3 +1,13 @@
+condor (23.1.0-1) stable; urgency=medium
+
+  * Enhanced filtering with 'condor_watch_q'
+  * Can specify alternate ssh port with 'condor_remote_cluster'
+  * Performance improvement for the 'condor_schedd' and other daemons
+  * Jobs running on cgroup v2 systems can subdivide their cgroup
+  * The curl plugin can now find CA certificates via an environment variable
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 31 Oct 2023 09:03:00 -0500
+
 condor (23.0.1-1) stable; urgency=medium
 
   * Fix 10.6.0 bug that broke PID namespaces
