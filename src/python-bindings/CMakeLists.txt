@@ -192,9 +192,34 @@ if(WINDOWS)
 				set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
 				target_include_directories( py3htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
+
+      add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
+      target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3classad2_impl classad condor_utils ${PYTHON3_LIBRARIES} )
+      set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
+      set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+
+
+      add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
+      target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3htcondor2_impl classad condor_utils ${PYTHON3_LIBRARIES} )
+      set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
+      set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+
+
+      add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
+      target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3classad3_impl classad condor_utils ${PYTHON3_LIBRARIES} )
+      set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
+      set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+
+
 				install ( TARGETS py3classad DESTINATION ${C_LIB} )
 				install ( TARGETS py3htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
+				install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHONARCHLIB}/htcondor2 )
 				install ( TARGETS py3classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
+				install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHONARCHLIB}/classad2 )
+				install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHONARCHLIB}/classad3 )
 
 			endif(DEFINED PYTHON3_VERSION_STRING) # python3x was found
 
@@ -421,6 +446,10 @@ else()
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PY3CLASSAD_LIB_NAME}.dylib)" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/classad${PYTHON3_MODULE_SUFFIX})" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor/htcondor${PYTHON3_MODULE_SUFFIX})" )
+
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/classad2_impl${PYTHON3_MODULE_SUFFIX})" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor/htcondor2_imple${PYTHON3_MODULE_SUFFIX})" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/classad3_impl${PYTHON3_MODULE_SUFFIX})" )
       endif()
     endif()
 
