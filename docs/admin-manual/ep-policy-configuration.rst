@@ -3270,8 +3270,8 @@ Add the consumption policy to incorporate availability of the GPUs:
       SLOT_WEIGHT = Cpus
 
 
-Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
---------------------------------------------------------------------------------------------
+Startd Disk Enforcement With Per Job Scratch Filesystems
+--------------------------------------------------------
 :index:`DISK usage`
 :index:`per job scratch filesystem`
 
@@ -3280,10 +3280,9 @@ Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch 
 
 
 On Linux systems, when HTCondor is started as root, it optionally has the ability to create
-a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
-from using more scratch space than provisioned.  This also requires that the disk is managed
-with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
-this to work, in addition to the above requirements:
+a custom filesystem for the job's scratch directory. This allows HTCondor to prevent the job
+from using more scratch space than provisioned. HTCondor manages this per scratch directory
+filesystem usage with the LVM disk management system.
 
 .. code-block:: condor-config
 
@@ -3292,19 +3291,28 @@ this to work, in addition to the above requirements:
     STARTD_ENFORCE_DISK_LIMITS = true
 
 
-THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
-disk space to provision all the scratch directories for all running jobs on a worker node.
-THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
-be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_LIMITS is a boolean.  When
-true, if a job fills up the filesystem created for it, the starter will put the job on hold
-with the out of resources hold code (34).  This is the recommended value.  If false, should
-the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors
-and exit with an appropriate code in every part of the job that writes to the filesystem, including
-third party libraries.
+#. :macro:`THINPOOL_VOLUME_GROUP_NAME` is the name of an existing LVM volume group for
+   HTCondor to utilize. This volume group should contain enough disk space to provision
+   scratch directories for all running jobs on the worker node.
+#. :macro:`THINPOOL_NAME` is the name of an existing thinly provisioned logical volume
+   for the Startd to utilize. This will act as the total pool of available disk space
+   that per job scratch filesystems and logical volumes will be carved from.
+#. :macro:`STARTD_ENFORCE_DISK_LIMITS` is a boolean to enable per job scratch directory
+   enforcement.
 
-Note that the ephemeral filesystem created for the job is private to the job, so the contents
-of that filesystem are not visible outside the process hierarchy.  The administrator can use
-the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
-As this filesystem will never live through a system reboot, it is mounted with mount options
-that optimize for performance, not reliability, and may improve performance for I/O heavy
-jobs.
+This feature will enable better handling of jobs that utilize more than the disk space
+than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
+created for it, the starter will put the job on hold with the out of resources hold code (34).
+Otherwise, in a full filesystem, writes will fail with ENOSPC, and leave it up to the job
+to handle these errors inernally at all places writed occur. Even in included third party
+libraries.
+
+.. note::
+    The ephemeral filesystem created for the job is private to that job so the contents of
+    the filesystem are not visable outside the process hierarchy. The nsenter command can
+    be used to enter this namespace in order inspect the job's sandbox.
+
+.. note::
+    As this filesystem will never live through a system reboot, it is mounted with mount options
+    that optimize for performance, not reliability, and may improve performance for I/O heavy
+    jobs.
