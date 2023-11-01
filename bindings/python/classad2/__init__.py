@@ -10,6 +10,7 @@ from ._class_ad import _parseAds as parseAds
 from ._class_ad import _parseOne as parseOne
 from ._class_ad import _parseNext as parseNext
 from ._class_ad import _quote as quote
+from ._class_ad import _unquote as unquote
 
 # For compability with version 1.
 from ._parser_type import ParserType as Parser

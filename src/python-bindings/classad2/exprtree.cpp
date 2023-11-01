@@ -80,7 +80,8 @@ _exprtree_eval( PyObject *, PyObject * args ) {
 
     PyObject_Handle * self = NULL;
     PyObject_Handle * scope = NULL;
-    if(! PyArg_ParseTuple( args, "OO", (PyObject **)& self, (PyObject **)& scope)) {
+    PyObject_Handle * target = NULL;
+    if(! PyArg_ParseTuple( args, "OOO", (PyObject **)& self, (PyObject **)& scope, (PyObject **)& target)) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
@@ -92,8 +93,14 @@ _exprtree_eval( PyObject *, PyObject * args ) {
         s = (classad::ClassAd *)scope->t;
     }
 
+    classad::ClassAd * t = NULL;
+    if( target != NULL && target != (PyObject_Handle *)Py_None ) {
+        t = (classad::ClassAd *)target->t;
+    }
+
+
     classad::Value v;
-    if(! evaluate( e, s, NULL, v )) {
+    if(! evaluate( e, s, t, v )) {
         // In version 1, this was ClassAdEvaluationError.
         PyErr_SetString(PyExc_RuntimeError, "failed to evaluate expression");
         return NULL;

@@ -657,3 +657,51 @@ _classad_quote( PyObject *, PyObject * args ) {
 
     return PyUnicode_FromString(result.c_str());
 }
+
+
+static PyObject *
+_classad_unquote( PyObject *, PyObject * args ) {
+    // _classad_unquote(from_string)
+
+    const char * from_string = NULL;
+    if(! PyArg_ParseTuple( args, "z", & from_string )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    classad::ClassAdParser parser;
+    classad::ExprTree * expr = NULL;
+    if(! parser.ParseExpression(from_string, expr, true)) {
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Invalid string to unquote");
+        return NULL;
+    }
+    if( expr == NULL ) {
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "String does not parse to a ClassAd string literal");
+        return NULL;
+    }
+    if( expr->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+        delete expr;
+
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "String does not parse to a ClassAd literal");
+        return NULL;
+    }
+
+    classad::Literal & literal = * static_cast<classad::Literal *>(expr);
+    classad::Value value;
+    literal.GetValue(value);
+    std::string result;
+    if(! value.IsStringValue(result)) {
+        delete expr;
+
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "ClassAd literal is not a string value");
+        return NULL;
+    }
+
+
+    return PyUnicode_FromString(result.c_str());
+}
