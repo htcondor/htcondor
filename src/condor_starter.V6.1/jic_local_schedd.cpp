@@ -198,6 +198,7 @@ JICLocalSchedd::requeueJob( const char *reason ) {
 		// to do the action that we want it to
 		//
 	this->exit_code = JOB_SHOULD_REQUEUE;
+	Starter->Remove();
 	return true;
 }
 

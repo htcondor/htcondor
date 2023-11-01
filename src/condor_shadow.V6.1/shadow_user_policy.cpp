@@ -95,6 +95,9 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 		this->shadow->requeueJob( reason.c_str() );
 		break;
 
+	case VACATE_FROM_RUNNING:
+		this->shadow->evictJob(JOB_SHOULD_REQUEUE, reason);
+		break;
 	default:
 		EXCEPT( "Unknown action (%d) in ShadowUserPolicy::doAction",
 				action );

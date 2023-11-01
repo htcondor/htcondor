@@ -22,6 +22,10 @@ New Features:
   hard disk and false when the kernel reports it to be on SSD, NVME or tmpfs.
   :jira:`2085`
 
+- Added *periodic_vacate* to the submit language and SYSTEM_PERIODIC_VACATE
+  to the config syttem
+  :jira:`2114`
+
 - Added TimeSlotBusy and TimeExecute to the event log terminate events
   to indicate how much wall time a job used total (including file transfer)
   and just for the job execution proper, respectively..

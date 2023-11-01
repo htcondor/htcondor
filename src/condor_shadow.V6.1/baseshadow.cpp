@@ -377,7 +377,7 @@ BaseShadow::shutDown( int reason )
 	else {
 		// if we aren't trying to evaluate the user's policy, we just
 		// want to evict this job.
-		evictJob( reason );
+		evictJob(reason, "");
 	}
 }
 
@@ -894,7 +894,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 
 void
-BaseShadow::evictJob( int reason )
+BaseShadow::evictJob( int reason, const std::string &reasonStr)
 {
 	std::string from_where;
 	std::string machine;
@@ -922,7 +922,7 @@ BaseShadow::evictJob( int reason )
 	cleanUp( jobWantsGracefulRemoval() );
 
 		// write stuff to user log:
-	logEvictEvent( reason );
+	logEvictEvent( reason, reasonStr);
 
 		// record the time we were vacated into the job ad 
 	jobAd->Assign( ATTR_LAST_VACATE_TIME, time(nullptr) );
@@ -1301,7 +1301,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 
 void
-BaseShadow::logEvictEvent( int exitReason )
+BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr )
 {
 	struct rusage run_remote_rusage;
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
@@ -1321,6 +1321,9 @@ BaseShadow::logEvictEvent( int exitReason )
 	}
 
 	JobEvictedEvent event;
+	if (!reasonStr.empty()) {
+		event.reason = reasonStr;
+	}
 	event.checkpointed = (exitReason == JOB_CKPTED);
 	
 		// TODO: fill in local rusage

@@ -4564,6 +4564,10 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void * pvUser)
 				releaseJob(cluster, proc, reason.c_str(), true);
 			}
 			break;
+		case VACATE_FROM_RUNNING:
+			PROC_ID job {cluster, proc};
+			abort_job_myself(job, JA_VACATE_JOBS, true);
+			break;
 	}
 
 	if ( (status == COMPLETED || status == REMOVED) &&
