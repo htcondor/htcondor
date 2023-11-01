@@ -543,7 +543,7 @@ and is currently specified only with a file URL. The configuration
 specifies the shared space (``SPOOL``), and the URL of the lock.
 *condor_preen* is not currently aware of the lock file and will delete
 it if it is placed in the ``SPOOL`` directory, so be sure to add file
-``SCHEDD.lock`` to :macro:`VALID_SPOOL_FILES`.
+``SCHEDD.lock`` to :macro:`VALID_SPOOL_FILES[with HA Schedd]`.
 
 As HTCondor starts on machines that are configured to run the single
 *condor_schedd* daemon, the *condor_master* daemon of the first

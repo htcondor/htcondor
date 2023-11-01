@@ -41,7 +41,7 @@ the job's initial current working directory, and this mount point could
 become automatically unmounted by the automounter.
 
 There is a simple work around. When submitting the job, use the submit
-command **initialdir** :index:`initialdir<single: initialdir; submit commands>` to
+command :subcom:`initialdir[and NFS]` to
 point to the stable access point. For example, suppose the NFS
 automounter is configured to mount a volume at mount point
 ``/a/myserver.company.com/vol1/johndoe`` whenever the directory
@@ -78,7 +78,6 @@ HTCondor Daemons That Do Not Run as root
 
 HTCondor is normally installed such that the HTCondor daemons have root
 permission. This allows HTCondor to run the *condor_shadow*
-:index:`condor_shadow<single: condor_shadow; HTCondor daemon>`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
 daemon and the job with the submitting user's UID and file access
 rights. When HTCondor is started as root, HTCondor jobs can access
 whatever files the user that submits the jobs can.
@@ -146,10 +145,10 @@ the *condor_starter* daemon and user job.
 A default value equal to 40 minutes exists for a job's ClassAd attribute
 ``JobLeaseDuration``, or this attribute may be set in the submit
 description file, using
-**job_lease_duration** :index:`job_lease_duration<single: job_lease_duration; submit commands>`,
+:subcom:`job_lease_duration[definition]`,
 to keep a job running in the case that the submit side no longer renews
 the lease. There is a trade off in setting the value of
-**job_lease_duration** :index:`job_lease_duration<single: job_lease_duration; submit commands>`.
+:subcom:`job_lease_duration`
 Too small a value, and the job might get killed before the submitting
 machine has a chance to recover. Forward progress on the job will be
 lost. Too large a value, and an execute resource will be tied up waiting
@@ -186,7 +185,7 @@ submit description file allow this choice of platforms.
 
 A simplified example is a cross submission. An executable is available
 for one platform, but the submission is done from a different platform.
-Given the correct executable, the ``requirements`` command in the submit
+Given the correct executable, the :subcom:`requirements` command in the submit
 description file specifies the target architecture. For example, an
 executable compiled for a 32-bit Intel processor running Windows Vista,
 submitted from an Intel architecture running Linux would add the
@@ -196,7 +195,7 @@ submitted from an Intel architecture running Linux would add the
 
       requirements = Arch == "INTEL" && OpSys == "WINDOWS"
 
-Without this ``requirement``, *condor_submit* will assume that the
+Without this :subcom:`requirement`, *condor_submit* will assume that the
 program is to be executed on a machine with the same platform as the
 machine where the job is submitted.
 

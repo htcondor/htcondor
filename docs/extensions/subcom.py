@@ -12,14 +12,14 @@ def dump(obj):
     for attr in dir(obj):
         print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
-def macro_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+def subcom_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     app = inliner.document.settings.env.app
     docname = inliner.document.settings.env.docname
-    macro_name, macro_index = custom_ext_parser(text)
-    ref_link = "href=\"../admin-manual/configuration-macros.html#" + str(macro_name) + "\""
-    return make_ref_and_index_nodes(name, macro_name, macro_index,
+    subcom_name, subcom_index = custom_ext_parser(text)
+    ref_link = "href=\"../man-pages/condor_submit.html#" + str(subcom_name) + "\""
+    return make_ref_and_index_nodes(name, subcom_name, subcom_index,
                                     ref_link, rawtext, inliner, lineno, options)
 
 def setup(app):
-    app.add_role("macro", macro_role)
+    app.add_role("subcom", subcom_role)
 

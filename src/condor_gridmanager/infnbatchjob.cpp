@@ -417,8 +417,17 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 				// gahp(s) aren't running.
 			} else if ( remoteJobId != NULL ) {
 				gmState = GM_SUBMITTED;
-			} else if ( remoteSandboxId != NULL ) {
-				gmState = GM_TRANSFER_INPUT;
+			} else {
+				// Due to the preceding checks, we know that
+				// remoteSandboxId is non-null here
+				if (condorState == REMOVED) {
+					// There may be a remote sandbox to clean up
+					gmState = GM_DELETE_SANDBOX;
+				} else {
+					// We don't know if the input sandbox transfer completed
+					// successfully before. Try it now.
+					gmState = GM_TRANSFER_INPUT;
+				}
 			}
 			} break;
 		case GM_UNSUBMITTED: {

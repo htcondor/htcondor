@@ -36,6 +36,10 @@ Bugs Fixed:
   when reading logs with parallel universe jobs in it.
   :jira:`2099`
 
+- Fixed a bug that could result in job sandboxes not being cleaned up 
+  for **batch** grid jobs submitted to a remote cluster. 
+  :jira:`2073`
+
 - Fixed a bug in *condor_transfer_data* where using the ``-addr``
   flag would automatically apply the ``-all`` flag to transfer
   all job data back making the use of ``-addr`` with a Job ID
@@ -50,6 +54,18 @@ Bugs Fixed:
   SSL certificate.
   :jira:`2080`
 
+- Fixed warnings about use of deprecated HTCondor python binding methods
+  in the `htcondor dag submit` command.
+  :jira:`2104`
+
+- Improved cleanup of ssh-agent processes when submitting **batch**
+  grid universe jobs to a remote cluster via ssh.
+  :jira:`2118`
+
+- Fixed a bug where the *condor_negotiator* could fail to contact a
+  *condor_schedd* that's on the same private network.
+  :jira:`2115`
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
@@ -57,9 +73,13 @@ Version 23.0.1
 
 Release Notes:
 
-.. HTCondor version 23.0.1 released on Month Date, 2023.
+- HTCondor version 23.0.1 released on October 31, 2023.
 
-- HTCondor version 23.0.1 not yet released.
+- We added a HTCondor Python wheel for Python 3.12 on Pypi.
+  :jira:`2117`
+
+- The HTCondor tarballs now contain apptainer version 1.2.4.
+  :jira:`2111`
 
 New Features:
 
@@ -67,37 +87,40 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug that prevented USE_PID_NAMESPACES from working.
+- Fixed a bug introduced in HTCondor 10.6.0 that prevented USE_PID_NAMESPACES from working.
   :jira:`2088`
 
-- Fixed a bug on Windows where jobs would be inappropriately put on hold with an out of memory
-  error if they returned an exit code with high bits set
-  :jira:`2061`
+- Fix a bug where HTCondor fails to install on Debian and Ubuntu platforms when the ``condor``
+  user is present and the ``/var/lib/condor`` directory is not.
+  :jira:`2074`
+
+- Fixed a bug where execution times reported for ARC CE jobs were
+  inflated by a factor of 60.
+  :jira:`2068`
 
 - Fixed a bug in DAGMan where ``Service`` nodes that failed caused the DAGMan process to fail
   an assertion check and crash.
   :jira:`2051`
 
-- Fixed a bug where jobs put on hold internally by the shadow were not writing their ad to the
+- The job attributes ``CpusProvisioned``, ``DiskProvisioned``, and
+  ``MemoryProvisioned`` are now updated for Condor-C and Job Router jobs.
+  :jira:`2069`
+
+- Updated HTCondor Windows binaries that are statically linked to the curl library to use curl version 8.4.0.
+  The update was due to a report of a vulnerability, CVE-2023-38545, which affects earlier versions of curl.
+  :jira:`2084`
+
+- Fixed a bug on Windows where jobs would be inappropriately put on hold with an out of memory
+  error if they returned an exit code with high bits set
+  :jira:`2061`
+
+- Fixed a bug where jobs put on hold by the shadow were not writing their ad to the
   job epoch history file.
   :jira:`2060`
 
 - Fixed a rare race condition where *condor_rm*'ing a parallel universe job would not remove
   the job if the rm happened after the job was matched but before it fully started
   :jira:`2070`
-
-- Fix a bug where HTCondor fails to install on Debian and Ubuntu platforms when the ``condor``
-  user is present and the ``/var/lib/condor`` directory is not.
-  :jira:`2074`
-
-- The job attributes ``CpusProvisioned``, ``DiskProvisioned``, and
-  ``MemoryProvisioned`` are now updated for Condor-C and Job Router jobs.
-  :jira:`2069`
-
-- Fixed a bug where execution times reported for ARC CE jobs were
-  inflated by a factor of 60.
-  :jira:`2068`
-
 
 .. _lts-version-history-2300:
 

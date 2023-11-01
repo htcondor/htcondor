@@ -34,8 +34,7 @@ on your machine. In addition, you may advertise a preference (rank) for
 running jobs submitted by you or one of your co-workers.
 
 Likewise, when submitting a job, you specify a ClassAd with your
-requirements and preferences. The ClassAd
-:index:`job<single: job; ClassAd>` includes the type of machine you wish to
+requirements and preferences. The ClassAd includes the type of machine you wish to
 use. For instance, perhaps you are looking for the fastest floating
 point performance available. You want HTCondor to rank available
 machines based upon floating point performance. Or, perhaps you care

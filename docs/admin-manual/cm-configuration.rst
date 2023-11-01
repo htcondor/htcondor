@@ -14,6 +14,11 @@ HTCondor uses priorities to determine machine allocation for jobs. This
 section details the priorities and the allocation of machines
 (negotiation).
 
+.. note::
+    A video describing how user priorities, negotiation and
+    fair share work in HTCondor is available at 
+    https://www.youtube.com/watch?v=NNnrCjFV0tM
+
 For accounting purposes, each user is identified by
 username@uid_domain. Each user is assigned a priority value even if
 submitting jobs from different machines in the same domain, or even if
@@ -123,7 +128,7 @@ EUP may be useful:
 
 Nice users
     A job may be submitted with the submit command
-    **nice_user** :index:`nice_user<single: nice_user; submit commands>` set to
+    :subcom:`nice_user[impact on prio]` set to
     ``True``. This nice user job will have its RUP boosted by the
     :macro:`NICE_USER_PRIO_FACTOR`
     priority factor specified in the configuration, leading to a very
@@ -578,9 +583,8 @@ users from opting into the wrong groups.  Jobs that do not identify
 themselves as a group member are negotiated for as part of the "<none>" 
 group. Note that this requirement is per job, not per user. A given user 
 may be a member of many groups. Jobs identify which group they are in by setting the
-**accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
-and
-**accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
+:subcom:`accounting_group[and negotiation]` and
+:subcom:`accounting_group_user[and negotiation]`
 commands within the submit description file, as specified in the
 :ref:`admin-manual/cm-configuration:group accounting` section.
 For example:
@@ -906,10 +910,8 @@ receive the default limit of 5, as there is no set named ``OTHER``.
 A concurrency limit may be evaluated against the attributes of a matched
 machine. This allows a job to vary what concurrency limits it requires
 based on the machine to which it is matched. To implement this, the job
-uses submit command
-**concurrency_limits_expr** :index:`concurrency_limits_expr<single: concurrency_limits_expr; submit commands>`
-instead of
-**concurrency_limits** :index:`concurrency_limits<single: concurrency_limits; submit commands>`.
+uses submit command :subcom:`concurrency_limits_expr[definition]`
+instead of :subcom:`concurrency_limits[definition]`
 Consider an example in which execute machines are located on one of two
 local networks. The administrator sets a concurrency limit to limit the
 number of network intensive jobs on each network to 10. Configuration of
@@ -963,8 +965,8 @@ command:
 
     concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
 
-Submit command **concurrency_limits_expr** may not be used together
-with submit command **concurrency_limits**.
+Submit command :subcom:`concurrency_limits_expr` may not be used together
+with submit command :subcom:`concurrency_limits`.
 
 Note that it is possible, under unusual circumstances, for more jobs to
 be started than should be allowed by the concurrency limits feature. In
@@ -972,6 +974,7 @@ the presence of preemption and dropped updates from the *condor_startd*
 daemon to the *condor_collector* daemon, it is possible for the limit
 to be exceeded. If the limits are exceeded, HTCondor will not kill any
 job to reduce the number of running jobs to meet the limit.
+
 Defragmenting Dynamic Slots
 ---------------------------
 
@@ -1637,9 +1640,8 @@ the line
 to the config file on the central manager machine, and *condor_restart* the
 HTCondor system on that machine.  If the *condor_gangliad* daemon is to run on
 a different machine than the one running Ganglia's *gmetad*, modify
-configuration variable :macro:`GANGLIA_GSTAT_COMMAND`
-:index:`GANGLIA_GSTAT_COMMAND` to get the list of monitored hosts from the
-master *gmond* program.
+configuration variable :macro:`GANGLIA_GSTAT_COMMAND` to get the list of
+monitored hosts from the master *gmond* program.
 
 The above steps alone should be sufficient to get a default set of metrics
 about the pool into ganglia.  Additional metrics, tuning and other

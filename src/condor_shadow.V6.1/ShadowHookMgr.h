@@ -46,6 +46,8 @@ private:
 	std::string m_hook_keyword;
 
 	std::string m_hook_prepare_job;
+
+	ArgList m_args;
 };
 
 /**

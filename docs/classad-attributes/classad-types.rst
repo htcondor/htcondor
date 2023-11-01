@@ -13,8 +13,6 @@ in the unnumbered subsection labeled ClassAd Attributes Added by the
 Here is a list of defined values for ``MyType``, as well as a reference
 to a list attributes relevant to that type.
 
-:index:`Accounting (ClassAd Types)`
-
 ``Accounting``
     The *condor_negotiator* keeps persistent records for every submitter
     who has every submitted a job to the pool, containing total usage and 

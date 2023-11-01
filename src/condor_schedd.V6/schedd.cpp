@@ -14662,7 +14662,8 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 	} 
 
 	if( matches->insert( id, rec ) != 0 ) {
-		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", id);
+		ClaimIdParser cid(id);
+		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", cid.publicClaimId());
 		delete rec;
 		return NULL;
 	}

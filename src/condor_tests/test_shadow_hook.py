@@ -21,7 +21,6 @@
 import os
 import stat
 from ornithology import *
-import htcondor
 
 #===========================================================================
 #
