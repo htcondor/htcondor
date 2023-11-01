@@ -42,6 +42,10 @@ New Features:
   Files written by jobs are unaffected by this change.
   :jira:`2098`
 
+- Somewhat improved the performance of the _DEBUG flag D_FDS.  But please
+  don't use this unless absolutely needed.
+  :jira:`2050`
+
 Bugs Fixed:
 
 - None.
@@ -57,7 +61,7 @@ Release Notes:
 
 - Enterprise Linux 7 support is discontinued with this release.
 
-- We have added HTCondor Python wheels for the aarch64 CPU architecture on Pypi.
+- We have added HTCondor Python wheels for the aarch64 CPU architecture on PyPI.
   :jira:`2120`
 
 New Features:
@@ -72,10 +76,6 @@ New Features:
   jobs to only include jobs with cluster IDs greater than or equal to the
   provided cluster ID.
   :jira:`2046`
-
-- Somewhat improved the performance of the _DEBUG flag D_FDS.  But please
-  don't use this unless absolutely needed.
-  :jira:`2050`
 
 - The Access Point can now be told to use a non-standard ssh port when sending
   jobs to a remote scheduling system (such as Slurm).
