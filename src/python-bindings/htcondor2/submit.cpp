@@ -327,7 +327,7 @@ _submit_init( PyObject *, PyObject * args ) {
 
     auto sb = new SubmitBlob();
     handle->t = (void *)sb;
-    handle->f = [](void *& v) { dprintf( D_ALWAYS, "[SubmitHash]\n" ); delete (SubmitBlob *)v; v = NULL; };
+    handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[SubmitHash]\n" ); delete (SubmitBlob *)v; v = NULL; };
 
     if( lines == NULL ) {
         Py_RETURN_NONE;
