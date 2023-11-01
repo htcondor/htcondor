@@ -12,11 +12,11 @@ but don't care which runtime is used.
 HTCondor's container universe provides an abstraction where the user
 does not specify exactly which container runtime to use, but just
 aspects of their contained job, and HTCondor will select an appropriate
-runtime.  To do this, set the job submit file command **container_image**
+runtime.  To do this, set the job submit file command :subcom:`container_image`
 to a specified container image.
 
-The submit file command **universe** can either be optionally set to
-``container`` or not declared at all. If **universe** is declared and set
+The submit file command :subcom:`universe` can either be optionally set to
+``container`` or not declared at all. If :subcom:`universe` is declared and set
 to anything but ``container`` then the job submission will fail.
 
 Note that the container may specify the executable to run, either in

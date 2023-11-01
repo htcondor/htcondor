@@ -5,7 +5,6 @@
 # doesn't exist neither crashes nor hangs
 
 import logging
-import htcondor
 
 from ornithology import *
 

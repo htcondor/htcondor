@@ -53,6 +53,7 @@
  * 9) errno is only modified on failure
  */
 
+int safe_open_last_fd;
 
 /* open existing file, if the last component of fn is a symbolic link fail */
 int safe_open_no_create(const char *fn, int flags)
@@ -124,6 +125,10 @@ int safe_open_no_create(const char *fn, int flags)
 
     f = open(fn, flags);
     open_errno = errno;
+
+	if (f >= 0) {
+		safe_open_last_fd = f;
+	}
 
 #ifndef WIN32
     r = lstat(fn, &lstat_buf);
@@ -284,6 +289,10 @@ int safe_create_fail_if_exists(const char *fn, int flags, mode_t mode)
 
     f = open(fn, flags | O_CREAT | O_EXCL, mode);
 
+	if (f >= 0) {
+		safe_open_last_fd = f;
+	}
+
     return f;
 }
 
@@ -443,6 +452,8 @@ int safe_open_no_create_follow(const char *fn, int flags)
     if (f == -1)  {
 	return -1;
     }
+
+	safe_open_last_fd = f;
 
     /* At this point the file was opened successfully */
 

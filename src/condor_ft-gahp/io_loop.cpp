@@ -1062,6 +1062,8 @@ int do_command_download_sandbox(void *arg, Stream*) {
 	// the "true" param to DownloadFiles here means blocking (i.e. "in the foreground")
 	if (!ft.DownloadFiles(true)) {
 		// FAIL
+		std::string ignore_err;
+		destroy_sandbox(sid, ignore_err);
 		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.c_str() );
 		return 1;
 	}

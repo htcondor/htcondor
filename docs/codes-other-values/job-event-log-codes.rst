@@ -137,8 +137,7 @@ These are all of the events that can show up in a job log file:
 | **Event Name:** Job ad information event triggered.
 | **Event Description:** Extra job ClassAd attributes are noted. This
   event is written as a supplement to other events when the configuration
-  parameter ``EVENT_LOG_JOB_AD_INFORMATION_ATTRS``
-  :index:`EVENT_LOG_JOB_AD_INFORMATION_ATTRS` is set.
+  parameter :macro:`EVENT_LOG_JOB_AD_INFORMATION_ATTRS` is set.
 
 | **Event Number:** 029
 | **Event Name:** The job's remote status is unknown

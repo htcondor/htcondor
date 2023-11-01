@@ -258,22 +258,19 @@ for more detail.
     ALLOWREAD
         is a list of names that are allowed to issue READ commands to
         HTCondor daemons. This value should be set in accordance with the
-        ``ALLOW_READ`` :index:`ALLOW_READ` setting in the
-        configuration file, as described in
+        :macro:`ALLOW_READ` setting in the configuration file, as described in
         the :ref:`admin-manual/security:authorization` section.
 
     ALLOWWRITE
         is a list of names that are allowed to issue WRITE commands to
         HTCondor daemons. This value should be set in accordance with the
-        ``ALLOW_WRITE`` :index:`ALLOW_WRITE` setting in the
-        configuration file, as described in
+        :macro:`ALLOW_WRITE` setting in the configuration file, as described in
         the :ref:`admin-manual/security:authorization` section.
 
     ALLOWADMINISTRATOR
         is a list of names that are allowed to issue ADMINISTRATOR commands
         to HTCondor daemons. This value should be set in accordance with the
-        ``ALLOW_ADMINISTRATOR`` :index:`ALLOW_ADMINISTRATOR` setting
-        in the configuration file, as described in
+        :macro:`ALLOW_ADMINISTRATOR` setting in the configuration file, as described in
         the :ref:`admin-manual/security:authorization` section.
 
     INSTALLDIR

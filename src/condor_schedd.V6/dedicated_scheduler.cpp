@@ -3329,11 +3329,13 @@ DedicatedScheduler::DelMrec( char const* id )
 				 "match not deleted\n" );
 		return false;
 	}
+	ClaimIdParser cid(id);
 	// Check pending_matches
 	std::map<std::string,match_rec*>::iterator it;
 	if((it = pending_matches.find(id)) != pending_matches.end()){
 		rec = it->second;	
-		dprintf( D_FULLDEBUG, "Found record for claim %s in pending matches\n",id);
+		dprintf(D_FULLDEBUG, "Found record for claim %s in pending matches\n",
+		        cid.publicClaimId());
 		pending_matches.erase(it);
 		std::map<std::string,ClassAd*>::iterator rit;
 		if((rit = pending_requests.find(rec->claim_id.publicClaimId())) != pending_requests.end()){
@@ -3351,7 +3353,6 @@ DedicatedScheduler::DelMrec( char const* id )
 	}
 		// First, delete it from our table hashed on ClaimId. 
 	if( all_matches_by_id->lookup(id, rec) < 0 ) {
-		ClaimIdParser cid(id);
 		dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- " 
 				 "match not deleted (but perhaps it was deleted previously)\n", cid.publicClaimId() );
 		return false;
@@ -4117,12 +4118,8 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			claim = claimList.next();
 			if( !claim ) {
 				dprintf(D_ALWAYS,"Dedicated Scheduler:: failed to reconnect "
-						"job %d.%d to %s, because claimid is missing: "
-						"(hosts=%s,claims=%s).\n",
-						id.cluster, id.proc,
-						host, 
-						remote_hosts ? remote_hosts : "(null)",
-						claims.c_str());
+				        "job %d.%d to %s, because claimid is missing\n",
+				        id.cluster, id.proc, host);
 				dPrintAd(D_ALWAYS, *job);
 					// we will break out of the loop below
 			}
@@ -4178,7 +4175,8 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 				continue;
 			}
 
-			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, claim);
+			ClaimIdParser cid(claim);
+			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, cid.publicClaimId());
 
 			auto *mrec = 
 				new match_rec(claim, sinful, &id,

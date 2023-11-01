@@ -27,7 +27,7 @@ Additionally, on Linux platforms, if you start the *condor_master* as
 root, it will tune (but never decrease) certain kernel parameters
 important to HTCondor's performance.
 
-The ``DAEMON_LIST`` :index:`DAEMON_LIST` configuration macro is
+The :macro:`DAEMON_LIST` configuration macro is
 used by the *condor_master* to provide a per-machine list of daemons
 that should be started and kept running. For daemons that are specified
 in the ``DC_DAEMON_LIST`` configuration macro, the *condor_master*
@@ -57,6 +57,5 @@ Options
 
  **-n** *name*
     Provides an alternate name for the *condor_master* to override that
-    given by the ``MASTER_NAME`` :index:`MASTER_NAME`
-    configuration variable.
+    given by the :macro:`MASTER_NAME` configuration variable.
 

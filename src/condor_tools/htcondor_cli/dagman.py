@@ -59,12 +59,11 @@ class Submit(Verb):
         # Set s_method to HTC_DAG_SUBMIT
         submit_description.setSubmitMethod(JSM_HTC_DAG_SUBMIT,True)
 
-        with schedd.transaction() as txn:
-            try:
-                cluster_id = submit_description.queue(txn, 1)
-                logger.info(f"DAG {cluster_id} was submitted.")
-            except Exception as e:
-                raise RuntimeError(f"Error submitting DAG:\n{str(e)}")
+        try:
+            cluster_info = schedd.submit(submit_description)
+            logger.info(f"DAG {cluster_info.cluster()} was submitted.")
+        except Exception as e:
+            raise RuntimeError(f"Error submitting DAG:\n{str(e)}")
 
 
 class Status(Verb):

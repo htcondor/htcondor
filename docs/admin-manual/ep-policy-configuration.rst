@@ -712,9 +712,8 @@ so that while in the Unclaimed state, if the ``START`` expression
 locally evaluates to FALSE, the machine returns to the Owner state by
 transition **2**.
 
-When in the Unclaimed state, the ``RUNBENCHMARKS``
-:index:`RUNBENCHMARKS` expression is relevant. If
-``RUNBENCHMARKS`` evaluates to TRUE while the machine is in the
+When in the Unclaimed state, the :macro:`RUNBENCHMARKS` expression is relevant.
+If ``RUNBENCHMARKS`` evaluates to TRUE while the machine is in the
 Unclaimed state, then the machine will transition from the Idle activity
 to the Benchmarking activity (transition **3**) and perform benchmarks
 to determine ``MIPS`` and ``KFLOPS``. When the benchmarks complete, the
@@ -1133,44 +1132,44 @@ State/Activity Transition Expression Summary
 This section is a summary of the information from the previous sections.
 It serves as a quick reference.
 
-``START`` :index:`START`
+:macro:`START`
     When TRUE, the machine is willing to spawn a remote HTCondor job.
 
-``RUNBENCHMARKS`` :index:`RUNBENCHMARKS`
+:macro:`RUNBENCHMARKS`
     While in the Unclaimed state, the machine will run benchmarks
     whenever TRUE.
 
-``MATCH_TIMEOUT`` :index:`MATCH_TIMEOUT`
+:macro:`MATCH_TIMEOUT`
     If the machine has been in the Matched state longer than this value,
     it will transition to the Owner state.
 
-``WANT_SUSPEND`` :index:`WANT_SUSPEND`
+:macro:`WANT_SUSPEND`
     If ``True``, the machine evaluates the ``SUSPEND`` expression to see
     if it should transition to the Suspended activity. If any value
     other than ``True``, the machine will look at the ``PREEMPT``
     expression.
 
-``SUSPEND`` :index:`SUSPEND`
+:macro:`SUSPEND`
     If ``WANT_SUSPEND`` is ``True``, and the machine is in the
     Claimed/Busy state, it enters the Suspended activity if ``SUSPEND``
     is ``True``.
 
-``CONTINUE`` :index:`CONTINUE`
+:macro:`CONTINUE`
     If the machine is in the Claimed/Suspended state, it enter the Busy
     activity if ``CONTINUE`` is ``True``.
 
-``PREEMPT`` :index:`PREEMPT`
+:macro:`PREEMPT`
     If the machine is either in the Claimed/Suspended activity, or is in
     the Claimed/Busy activity and ``WANT_SUSPEND`` is FALSE, the machine
     enters the Claimed/Retiring state whenever ``PREEMPT`` is TRUE.
 
-``CLAIM_WORKLIFE`` :index:`CLAIM_WORKLIFE`
+:macro:`CLAIM_WORKLIFE`
     This expression specifies the number of seconds after which a claim
     will stop accepting additional jobs. This configuration macro is
     fully documented here: :ref:`admin-manual/configuration-macros:condor_startd
     configuration file macros`.
 
-``MachineMaxVacateTime`` :index:`MachineMaxVacateTime`
+:macro:`MachineMaxVacateTime`
     When the machine enters the Preempting/Vacating state, this
     expression specifies the maximum time in seconds that the
     *condor_startd* will wait for the job to finish. The job may adjust
@@ -1181,10 +1180,10 @@ It serves as a quick reference.
     left than the machine's maximum vacate time setting, then retirement
     time will be converted into vacating time, up to the amount of
     ``JobMaxVacateTime``. Once the vacating time expires, the job is
-    hard-killed. The ``KILL`` :index:`KILL` expression may be used
+    hard-killed. The :macro:`KILL` expression may be used
     to abort the graceful shutdown of the job at any time.
 
-``MAXJOBRETIREMENTTIME`` :index:`MAXJOBRETIREMENTTIME`
+:macro:`MAXJOBRETIREMENTTIME`
     If the machine is in the Claimed/Retiring state, jobs which have run
     for less than the number of seconds specified by this expression
     will not be hard-killed. The *condor_startd* will wait for the job
@@ -1215,38 +1214,37 @@ It serves as a quick reference.
 
     By default the *condor_negotiator* will not match jobs to a slot
     with retirement time remaining. This behavior is controlled by
-    ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION``
-    :index:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
+    :macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
 
-``WANT_VACATE`` :index:`WANT_VACATE`
+:macro:`WANT_VACATE`
     This is checked only when the ``PREEMPT`` expression is ``True`` and
     the machine enters the Preempting state. If ``WANT_VACATE`` is
     ``True``, the machine enters the Vacating activity. If it is
     ``False``, the machine will proceed directly to the Killing
     activity.
 
-``KILL`` :index:`KILL`
+:macro:`KILL`
     If the machine is in the Preempting/Vacating state, it enters
     Preempting/Killing whenever ``KILL`` is ``True``.
 
-``KILLING_TIMEOUT`` :index:`KILLING_TIMEOUT`
+:macro:`KILLING_TIMEOUT`
     If the machine is in the Preempting/Killing state for longer than
     ``KILLING_TIMEOUT`` seconds, the *condor_startd* sends a SIGKILL to
     the *condor_starter* and all its children to try to kill the job as
     quickly as possible.
 
-``RANK`` :index:`RANK`
+:macro:`RANK`
     If this expression evaluates to a higher number for a pending
     resource request than it does for the current request, the machine
     may preempt the current request (enters the Preempting/Vacating
     state). When the preemption is complete, the machine enters the
     Claimed/Idle state with the new resource request claiming it.
 
-``START_BACKFILL`` :index:`START_BACKFILL`
+:macro:`START_BACKFILL`
     When TRUE, if the machine is otherwise idle, it will enter the
     Backfill state and spawn a backfill computation (using BOINC).
 
-``EVICT_BACKFILL`` :index:`EVICT_BACKFILL`
+:macro:`EVICT_BACKFILL`
     When TRUE, if the machine is currently running a backfill
     computation, it will kill the BOINC client and return to the
     Owner/Idle state.
@@ -1900,7 +1898,7 @@ Define slot types.
         NUM_SLOTS_TYPE_2 = 2
 
     A job may request these local machine resources using the syntax
-    **request_<name>** :index:`request_<name><single: request_<name>; submit commands>`,
+    :subcom:`request_<name>[with partitionable slots]`
     as described in :ref:`admin-manual/ep-policy-configuration:*condor_startd*
     policy configuration`. This example shows a portion of a submit description
     file that requests cogs and an actuator:
@@ -1976,18 +1974,15 @@ console activity and currently running jobs would suspend.
 This example policy is controlled with the following configuration
 variables.
 
--  ``SLOTS_CONNECTED_TO_CONSOLE``
-   :index:`SLOTS_CONNECTED_TO_CONSOLE`, with definition at
+-  :macro:`SLOTS_CONNECTED_TO_CONSOLE`, with definition at
    the :ref:`admin-manual/configuration-macros:condor_startd configuration file
    macros` section
 
--  ``SLOTS_CONNECTED_TO_KEYBOARD``
-   :index:`SLOTS_CONNECTED_TO_KEYBOARD`, with definition at
+-  :macro:`SLOTS_CONNECTED_TO_KEYBOARD`, with definition at
    the :ref:`admin-manual/configuration-macros:condor_startd configuration file
    macros` section
 
--  ``DISCONNECTED_KEYBOARD_IDLE_BOOST``
-   :index:`DISCONNECTED_KEYBOARD_IDLE_BOOST`, with definition at
+-  :macro:`DISCONNECTED_KEYBOARD_IDLE_BOOST`, with definition at
    the :ref:`admin-manual/configuration-macros:condor_startd configuration file
    macros` section
 
@@ -2354,16 +2349,13 @@ If a job does not specify the required number of CPUs, amount of memory,
 or disk space, there are ways for the administrator to set default
 values for all of these parameters.
 
-:index:`JOB_DEFAULT_REQUESTCPUS`
-:index:`JOB_DEFAULT_REQUESTMEMORY`
-:index:`JOB_DEFAULT_REQUESTDISK`
 First, if any of these attributes are not set in the submit description
 file, there are three variables in the configuration file that
 condor_submit will use to fill in default values. These are
 
--  ``JOB_DEFAULT_REQUESTCPUS``
--  ``JOB_DEFAULT_REQUESTMEMORY``
--  ``JOB_DEFAULT_REQUESTDISK``
+-  :macro:`JOB_DEFAULT_REQUESTCPUS`
+-  :macro:`JOB_DEFAULT_REQUESTMEMORY`
+-  :macro:`JOB_DEFAULT_REQUESTDISK`
 
 The value of these variables can be ClassAd expressions. The default
 values for these variables, should they not be set are
@@ -2379,9 +2371,6 @@ Note that these default values are chosen such that jobs matched to
 partitionable slots function similar to static slots.
 These variables do not apply to **batch** grid universe jobs.
 
-:index:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
-:index:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`
-:index:`MODIFY_REQUEST_EXPR_REQUESTDISK`
 Once the job has been matched, and has made it to the execute machine,
 the *condor_startd* has the ability to modify these resource requests
 before using them to size the actual dynamic slots carved out of the
@@ -2394,11 +2383,9 @@ reuse the newly created slot when the initial job is done using it.
 The *condor_startd* configuration variables which control this and
 their defaults are
 
-.. code-block:: condor-config
-
-    MODIFY_REQUEST_EXPR_REQUESTCPUS = quantize(RequestCpus, {1})
-    MODIFY_REQUEST_EXPR_REQUESTMEMORY = quantize(RequestMemory, {128})
-    MODIFY_REQUEST_EXPR_REQUESTDISK = quantize(RequestDisk, {1024})
+- :macro:`MODIFY_REQUEST_EXPR_REQUESTCPUS` = quantize(RequestCpus, {1})
+- :macro:`MODIFY_REQUEST_EXPR_REQUESTMEMORY` = quantize(RequestMemory, {128})
+- :macro:`MODIFY_REQUEST_EXPR_REQUESTDISK` = quantize(RequestDisk, {1024})
 
 Startd Cron
 -----------
@@ -2592,7 +2579,7 @@ Docker container on an execute host.
 
 The docker universe job is mapped to a vanilla universe job, and the
 submit description file must specify the submit command
-**docker_image** :index:`docker_image<single: docker_image; submit commands>` to
+:subcom:`docker_image[definition]` to
 identify the Docker image. The job's ``requirement`` ClassAd attribute
 is automatically appended, such that the job will only match with an
 execute machine that has Docker installed.
@@ -3283,8 +3270,8 @@ Add the consumption policy to incorporate availability of the GPUs:
       SLOT_WEIGHT = Cpus
 
 
-Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
---------------------------------------------------------------------------------------------
+Startd Disk Enforcement With Per Job Scratch Filesystems
+--------------------------------------------------------
 :index:`DISK usage`
 :index:`per job scratch filesystem`
 
@@ -3293,10 +3280,9 @@ Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch 
 
 
 On Linux systems, when HTCondor is started as root, it optionally has the ability to create
-a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
-from using more scratch space than provisioned.  This also requires that the disk is managed
-with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
-this to work, in addition to the above requirements:
+a custom filesystem for the job's scratch directory. This allows HTCondor to prevent the job
+from using more scratch space than provisioned. HTCondor manages this per scratch directory
+filesystem usage with the LVM disk management system.
 
 .. code-block:: condor-config
 
@@ -3305,19 +3291,28 @@ this to work, in addition to the above requirements:
     STARTD_ENFORCE_DISK_LIMITS = true
 
 
-THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
-disk space to provision all the scratch directories for all running jobs on a worker node.
-THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
-be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_LIMITS is a boolean.  When
-true, if a job fills up the filesystem created for it, the starter will put the job on hold
-with the out of resources hold code (34).  This is the recommended value.  If false, should
-the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors
-and exit with an appropriate code in every part of the job that writes to the filesystem, including
-third party libraries.
+#. :macro:`THINPOOL_VOLUME_GROUP_NAME` is the name of an existing LVM volume group for
+   HTCondor to utilize. This volume group should contain enough disk space to provision
+   scratch directories for all running jobs on the worker node.
+#. :macro:`THINPOOL_NAME` is the name of an existing thinly provisioned logical volume
+   for the Startd to utilize. This will act as the total pool of available disk space
+   that per job scratch filesystems and logical volumes will be carved from.
+#. :macro:`STARTD_ENFORCE_DISK_LIMITS` is a boolean to enable per job scratch directory
+   enforcement.
 
-Note that the ephemeral filesystem created for the job is private to the job, so the contents
-of that filesystem are not visible outside the process hierarchy.  The administrator can use
-the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
-As this filesystem will never live through a system reboot, it is mounted with mount options
-that optimize for performance, not reliability, and may improve performance for I/O heavy
-jobs.
+This feature will enable better handling of jobs that utilize more than the disk space
+than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
+created for it, the starter will put the job on hold with the out of resources hold code (34).
+Otherwise, in a full filesystem, writes will fail with ENOSPC, and leave it up to the job
+to handle these errors inernally at all places writed occur. Even in included third party
+libraries.
+
+.. note::
+    The ephemeral filesystem created for the job is private to that job so the contents of
+    the filesystem are not visable outside the process hierarchy. The nsenter command can
+    be used to enter this namespace in order inspect the job's sandbox.
+
+.. note::
+    As this filesystem will never live through a system reboot, it is mounted with mount options
+    that optimize for performance, not reliability, and may improve performance for I/O heavy
+    jobs.

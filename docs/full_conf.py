@@ -34,6 +34,8 @@ extensions = [
     'ticket',
     'macro',
     'macro-def',
+    'subcom',
+    'subcom-def',
     'index',
     'jira',
     'classad-attribute',
