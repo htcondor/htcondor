@@ -2540,7 +2540,7 @@ ADVANCED COMMANDS
     time granted to the job.
 
     Any jobs running with
-    :subcom:`nice_user<and retirement_time>` priority have a default
+    :subcom:`nice_user[and retirement_time]` priority have a default
     **max_job_retirement_time**
     of 0, so no retirement time is utilized by default. In all other
     cases, no default value is provided, so the maximum amount of
@@ -2930,7 +2930,7 @@ will not be modified during :subcom:`queue` processing.
  Step
     Set to the step value as it varies from 0 to N-1 where N is the
     number provided on the
-    :subcom:`queue<and step argument>` argument. This
+    :subcom:`queue[and step argument]` argument. This
     variable changes at the same rate as ProcId when it changes at all.
     For submit files that don't make use of the queue number option,
     Step will always be 0. For submit files that don't make use of any

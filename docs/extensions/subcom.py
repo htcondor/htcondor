@@ -15,7 +15,7 @@ def dump(obj):
 def subcom_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     app = inliner.document.settings.env.app
     docname = inliner.document.settings.env.docname
-    subcom_name, subcom_index = custom_ext_parser(text, "<", ">")
+    subcom_name, subcom_index = custom_ext_parser(text)
     ref_link = "href=\"../man-pages/condor_submit.html#" + str(subcom_name) + "\""
     return make_ref_and_index_nodes(name, subcom_name, subcom_index,
                                     ref_link, rawtext, inliner, lineno, options)

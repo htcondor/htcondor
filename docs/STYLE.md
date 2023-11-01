@@ -55,4 +55,4 @@ also create an index entry with a subheading under the main one.
 
 Example:  **:subcom:\`environment\`** -- makes a reference from here to the condor_submit man page
 
-Example:  **:subcom:\`environment\<container universe\>\`** -- does the above plus add index entry under *environment*
+Example:  **:subcom:\`environment[container universe]\`** -- does the above plus add index entry under *environment*

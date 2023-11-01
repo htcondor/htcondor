@@ -16,7 +16,7 @@ universes:
 -  container
 -  docker
 
-The :subcom:`universe<choosing>` under which
+The :subcom:`universe[choosing]` under which
 a job runs is specified in the submit description file. If a universe is
 not specified, the default is vanilla.
 

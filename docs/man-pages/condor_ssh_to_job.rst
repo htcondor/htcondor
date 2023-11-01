@@ -107,7 +107,7 @@ used by the *condor_starter* to set up *sshd*.
 For jobs in the grid universe which use EC2 resources, a request that
 HTCondor have the EC2 service create a new key pair for the job by
 specifying
-:subcom:`ec2_keypair_file<and condor_ssh_to_job>`
+:subcom:`ec2_keypair_file[and condor_ssh_to_job]`
 causes *condor_ssh_to_job* to attempt to connect to the corresponding
 instance via *ssh*. This attempts invokes *ssh* directly, bypassing the
 HTCondor networking layer. It supplies *ssh* with the public DNS name of

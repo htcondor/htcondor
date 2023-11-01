@@ -128,7 +128,7 @@ EUP may be useful:
 
 Nice users
     A job may be submitted with the submit command
-    :subcom:`nice_user<impact on prio>` set to
+    :subcom:`nice_user[impact on prio]` set to
     ``True``. This nice user job will have its RUP boosted by the
     :macro:`NICE_USER_PRIO_FACTOR`
     priority factor specified in the configuration, leading to a very
@@ -583,8 +583,8 @@ users from opting into the wrong groups.  Jobs that do not identify
 themselves as a group member are negotiated for as part of the "<none>" 
 group. Note that this requirement is per job, not per user. A given user 
 may be a member of many groups. Jobs identify which group they are in by setting the
-:subcom:`accounting_group<and negotiation>` and
-:subcom:`accounting_group_user<and negotiation>`
+:subcom:`accounting_group[and negotiation]` and
+:subcom:`accounting_group_user[and negotiation]`
 commands within the submit description file, as specified in the
 :ref:`admin-manual/cm-configuration:group accounting` section.
 For example:
@@ -910,8 +910,8 @@ receive the default limit of 5, as there is no set named ``OTHER``.
 A concurrency limit may be evaluated against the attributes of a matched
 machine. This allows a job to vary what concurrency limits it requires
 based on the machine to which it is matched. To implement this, the job
-uses submit command :subcom:`concurrency_limits_expr<definition>`
-instead of :subcom:`concurrency_limits<definition>`
+uses submit command :subcom:`concurrency_limits_expr[definition]`
+instead of :subcom:`concurrency_limits[definition]`
 Consider an example in which execute machines are located on one of two
 local networks. The administrator sets a concurrency limit to limit the
 number of network intensive jobs on each network to 10. Configuration of

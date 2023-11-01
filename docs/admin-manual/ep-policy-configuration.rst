@@ -1898,7 +1898,7 @@ Define slot types.
         NUM_SLOTS_TYPE_2 = 2
 
     A job may request these local machine resources using the syntax
-    :subcom:`request_\<name\><with partitionable slots>`
+    :subcom:`request_<name>[with partitionable slots]`
     as described in :ref:`admin-manual/ep-policy-configuration:*condor_startd*
     policy configuration`. This example shows a portion of a submit description
     file that requests cogs and an actuator:
@@ -2579,7 +2579,7 @@ Docker container on an execute host.
 
 The docker universe job is mapped to a vanilla universe job, and the
 submit description file must specify the submit command
-:subcom:`docker_image<definition>` to
+:subcom:`docker_image[definition]` to
 identify the Docker image. The job's ``requirement`` ClassAd attribute
 is automatically appended, such that the job will only match with an
 execute machine that has Docker installed.
