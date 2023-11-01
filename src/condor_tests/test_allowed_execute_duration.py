@@ -491,7 +491,7 @@ def sleep_job_description(path_to_sleep):
 @action
 def path_to_sleep_transfer_plugin(test_dir):
     script="""
-    #!/usr/bin/env python3
+    #!/usr/bin/python3
 
     import classad2 as classad
     import sys

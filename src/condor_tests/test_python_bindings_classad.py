@@ -211,10 +211,12 @@ def test_update_overwrites_existing_values(ad):
 
 
 def test_abstime_evals_to_datetime():
+    # In version 1, this was incorrectly assumed to be in local time.
     assert classad.ExprTree(
-        'absTime("2013-11-12T07:50:23")'
+        'absTime("2013-11-12T07:50:23+0000")'
     ).eval() == datetime.datetime(
-        year=2013, month=11, day=12, hour=7, minute=50, second=23
+        year=2013, month=11, day=12, hour=7, minute=50, second=23,
+        tzinfo=datetime.timezone.utc
     )
 
 
