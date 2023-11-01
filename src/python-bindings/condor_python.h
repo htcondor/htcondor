@@ -17,6 +17,9 @@
     #pragma push_macro("PLATFORM")
     #undef PLATFORM
 
+    #pragma push_macro("_DEBUG")
+    #undef _DEBUG
+
     #undef _CONDOR_COMMON_FIRST
 #endif /* _MSC_VER */
 
@@ -40,6 +43,7 @@
 
 // Cargo-culted over from python_bindings_common.h in version 1.
 #if defined(_MSC_VER)
+    #pragma pop_macro("_DEBUG")
     #pragma pop_macro("PLATFORM")
 
     #undef snprintf
