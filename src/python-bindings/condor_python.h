@@ -35,7 +35,9 @@
 
 #if defined(_CONDOR_COMMON_FIRST)
     #include "condor_common.h"
-    // It's possible that this #define is confusing linking on Windows?
+    // This #define confuses linking on Windows.
+    // (It links the non-minor-version-specific
+    // python3.lib, which doesn't exist.)
     #define Py_LIMITED_API
 #endif /* _CONDOR_COMMON_FIRST */
 
