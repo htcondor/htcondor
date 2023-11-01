@@ -35,9 +35,11 @@
 
 #if defined(_CONDOR_COMMON_FIRST)
     #include "condor_common.h"
+    // It's possible that this #define is confusing linking on Windows?
+    #define Py_LIMITED_API
 #endif /* _CONDOR_COMMON_FIRST */
 
-#define Py_LIMITED_API
+
 #include <Python.h>
 
 
