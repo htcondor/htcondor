@@ -75,7 +75,7 @@ Release Notes:
 
 - HTCondor version 23.0.1 released on October 31, 2023.
 
-- We added a HTCondor Python wheel for Python 3.12 on Pypi.
+- We added a HTCondor Python wheel for Python 3.12 on PyPI.
   :jira:`2117`
 
 - The HTCondor tarballs now contain apptainer version 1.2.4.
