@@ -598,6 +598,17 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     return NULL;
 #else
     size_t from_string_length = strlen(from_string);
+
+    // On Mac, fmemopen() returns NULL if the buffer is 0 bytes long.  Since
+    // there's clearly not another ad in a 0-byte buffer, we're done iterating.
+    //
+    // This looks silly -- we could certainly check if the returned offset
+    // was the whole buffer -- but doing it this way simplifies the generator.
+    if( from_string_length == 0 ) {
+        Py_INCREF(Py_None);
+        return Py_BuildValue("Oi", Py_None, 0);
+    }
+
     FILE * file = fmemopen( const_cast<char *>(from_string), from_string_length, "r" );
 
     if( file == NULL ) {
