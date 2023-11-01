@@ -1020,6 +1020,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 			ret_val = SetJobHeld(job->src_ad, reason.c_str(), reason_code, reason_subcode);
 			break;
 		case STAYS_IN_QUEUE:
+		case VACATE_FROM_RUNNING:
 			// do nothing
 			ret_val = true;
 			break;
@@ -1036,9 +1037,6 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 			// from hold will cause the job router to claim
 			// the job as if it is a new job from the schedd.
 			ret_val = true;
-			break;
-		case VACATE_FROM_RUNNING:
-			SetJobIdle(job);
 			break;
 		default:
 			EXCEPT("Unknown action (%d) in "
