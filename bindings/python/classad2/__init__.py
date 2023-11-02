@@ -7,6 +7,7 @@ def _add_dll_dir():
 
     if _platform.system() in ["Windows"]:
         import sys as _sys
+        import os as _os
         from os import path as _path
 
         if _sys.version_info >= (3,8):
