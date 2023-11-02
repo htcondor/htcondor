@@ -7,7 +7,7 @@ def _add_dll_dir():
 
     if _platform.system() in ["Windows"]:
         import sys as _sys
-        import path as _path
+        from os import path as _path
 
         if _sys.version_info >= (3,8):
             bin_path = _path.realpath(_path.join(__file__, r'..\..\..\..\bin'))
