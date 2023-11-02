@@ -13,6 +13,7 @@ from .classad2_impl import (
     _classad_size,
     _classad_keys,
     _classad_parse_next,
+    _classad_parse_next_fd,
     _classad_quote,
     _classad_unquote,
 )
@@ -27,6 +28,7 @@ from datetime import datetime, timedelta, timezone
 
 from typing import Iterator
 from typing import Union
+from typing import IO
 
 #
 # MutableMapping provides generic implementations for all mutable mapping
@@ -176,7 +178,7 @@ def _parse_ads_generator(input, parser : Parser = Parser.Auto):
         yield ad
 
 
-def _parseAds(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) -> Iterator[ClassAd]:
+def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator[ClassAd]:
     '''
     Parses all of the ads in the input and returns a iterator over them.
 
@@ -216,23 +218,37 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
 # In version 1, this never actually returned an iterator, and it only
 # advanced `input` if it was not a string.  Not sure why we bothered
 # to allow strings here at all, actually.
-def _parseNext(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) -> ClassAd:
+def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
     '''
     Parses the first ad in the input and returns it.
 
     Ads in the input may be separated by blank lines.
+
+    You must specify the parser type if ``input`` is not a string and
+    can not be rewound.
     '''
-    original = 0
-    if not isinstance(input, str):
-        original = input.tell()
+    if isinstance(input, str):
+        (firstAd, offset) = _classad_parse_next(input, int(parser))
+        return firstAd
+    else:
+        if parser is Parser.Auto:
+            if hasattr(input, "tell") and hasattr(input, "read") and hasattr(input, "seek"):
+                parser = Parser.New
 
-    input_string = "".join(input)
-    (firstAd, offset) = _classad_parse_next(input_string, int(parser))
-
-    if not isinstance(input, str):
-        input.seek(original + offset)
-
-    return firstAd
+                location = input.tell()
+                while True:
+                    c = input.read(1)
+                    if c == "/" or c == "[":
+                        break
+                    if not c.isspace():
+                        parser = Parser.Old
+                        break
+                    if len(c) == 0:
+                        break
+                input.seek(location)
+            else:
+                raise ValueError("Stream cannot rewind; you must explicitly specify a parser.")
+        return _classad_parse_next_fd(input.fileno(), int(parser))
 
 
 def _quote(input : str) -> str:
