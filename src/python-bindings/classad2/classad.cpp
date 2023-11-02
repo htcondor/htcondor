@@ -580,14 +580,30 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     // must less one which had a newline after its opening left brace.
     //
     // Instead, we add a Python-only parse type, the default, which acts
-    // like the version 1, and otherwise pass the other C++ types through.
+    // like the version 1, and otherwise passes the other C++ types through.
     ClassAdFileParseType::ParseType pType = (ClassAdFileParseType::ParseType)parser_type;
     if( (long)pType == (long)-1 ) {
         pType = isOldAd(from_string) ? ClassAdFileParseType::Parse_long : ClassAdFileParseType::Parse_new;
     }
 
+#if defined(WINDOWS)
+    PyErr_SetString(PyExc_NotImplementedError, "Windows doesn't have fmemopen().");
+    return NULL;
+#else
     size_t from_string_length = strlen(from_string);
+
+    // On Mac, fmemopen() returns NULL if the buffer is 0 bytes long.  Since
+    // there's clearly not another ad in a 0-byte buffer, we're done iterating.
+    //
+    // This looks silly -- we could certainly check if the returned offset
+    // was the whole buffer -- but doing it this way simplifies the generator.
+    if( from_string_length == 0 ) {
+        Py_INCREF(Py_None);
+        return Py_BuildValue("Oi", Py_None, 0);
+    }
+
     FILE * file = fmemopen( const_cast<char *>(from_string), from_string_length, "r" );
+
     if( file == NULL ) {
         // This was a ClassAdParseError in version 1.
         PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
@@ -618,6 +634,7 @@ _classad_parse_next( PyObject *, PyObject * args ) {
 
     auto py_class_ad = py_new_htcondor2_classad(result);
     return Py_BuildValue("Ol", py_class_ad, offset);
+#endif /* WINDOWS */
 }
 
 
@@ -640,6 +657,54 @@ _classad_quote( PyObject *, PyObject * args ) {
     std::string result;
     sink.Unparse(result, expr);
     delete expr;
+
+
+    return PyUnicode_FromString(result.c_str());
+}
+
+
+static PyObject *
+_classad_unquote( PyObject *, PyObject * args ) {
+    // _classad_unquote(from_string)
+
+    const char * from_string = NULL;
+    if(! PyArg_ParseTuple( args, "z", & from_string )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    classad::ClassAdParser parser;
+    classad::ExprTree * expr = NULL;
+    if(! parser.ParseExpression(from_string, expr, true)) {
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Invalid string to unquote");
+        return NULL;
+    }
+    if( expr == NULL ) {
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "String does not parse to a ClassAd string literal");
+        return NULL;
+    }
+    if( expr->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+        delete expr;
+
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "String does not parse to a ClassAd literal");
+        return NULL;
+    }
+
+    classad::Literal & literal = * static_cast<classad::Literal *>(expr);
+    classad::Value value;
+    literal.GetValue(value);
+    std::string result;
+    if(! value.IsStringValue(result)) {
+        delete expr;
+
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "ClassAd literal is not a string value");
+        return NULL;
+    }
 
 
     return PyUnicode_FromString(result.c_str());

@@ -14,10 +14,13 @@ from .classad2_impl import (
     _classad_keys,
     _classad_parse_next,
     _classad_quote,
+    _classad_unquote,
 )
 
 # So that the typehints match version 1.
 from ._parser_type import ParserType as Parser
+
+from ._value import Value
 
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta, timezone
@@ -62,8 +65,38 @@ class ClassAd(MutableMapping):
 
     def lookup(self, attr : str) -> "ExprTree":
         if not isinstance(attr, str):
-            raise KeyError("ClassAd keys are strings")
+            raise TypeError("ClassAd keys are strings")
         return _classad_get_item(self._handle, attr, False)
+
+
+    def matches(self, ad : "ClassAd") -> bool:
+        if not isinstance(ad, ClassAd):
+            raise TypeError("ad must be a ClassAd")
+
+        try:
+            requirements = ad.lookup("requirements")
+        except KeyError:
+            return False
+
+        result = requirements.eval(scope=ad, target=self)
+        if isinstance(result, Value):
+            # Neither `undefined` nor `error` are `true`.
+            return False;
+        if isinstance(result, bool):
+            return result
+        if isinstance(result, int):
+            return result != 0
+        if isinstance(result, float):
+            return bool(result)
+
+        return False;
+
+
+    def symmetricMatch(self, ad : "ClassAd") -> bool:
+        '''
+        Equivalent to ``self.matches(ad) and ad.matches(self)``.
+        '''
+        return self.matches(ad) and ad.matches(self)
 
 
     # In version 1, we didn't allow Python to check it other knew how
@@ -207,3 +240,10 @@ def _quote(input : str) -> str:
     Quote the Python string so it can be used for building ClassAd expressions.
     '''
     return _classad_quote(input)
+
+
+def _unquote(input : str) -> str:
+    '''
+    The reverse of `meth:quote`.  You should never need to call this.
+    '''
+    return _classad_unquote(input)
