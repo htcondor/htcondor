@@ -2749,8 +2749,7 @@ These macros control the *condor_master*.
     ensure that this cannot be used in such a way as to violate system
     integrity.
 
-:macro-def:`MASTER_BACKOFF_CONSTANT[MASTER]`
-:macro-def:`MASTER_<name>_BACKOFF_CONSTANT[MASTER]`
+:macro-def:`MASTER_BACKOFF_CONSTANT[MASTER]` and :macro-def:`MASTER_<name>_BACKOFF_CONSTANT[MASTER]`
     When a daemon crashes, *condor_master* uses an exponential back off
     delay before restarting it; see the discussion at the end of this
     section for a detailed discussion on how these parameters work
@@ -2764,8 +2763,7 @@ These macros control the *condor_master*.
     defined for a specific daemon, the non-daemon-specific value will
     used.
 
-:macro-def:`MASTER_BACKOFF_FACTOR[MASTER]`
-:macro-def:`MASTER_<name>_BACKOFF_FACTOR[MASTER]`
+:macro-def:`MASTER_BACKOFF_FACTOR[MASTER]` and :macro-def:`MASTER_<name>_BACKOFF_FACTOR[MASTER]`
     When a daemon crashes, *condor_master* uses an exponential back off
     delay before restarting it; see the discussion at the end of this
     section for a detailed discussion on how these parameters work
@@ -2778,8 +2776,7 @@ These macros control the *condor_master*.
     defined for a specific daemon, the non-daemon-specific value will
     used.
 
-:macro-def:`MASTER_BACKOFF_CEILING[MASTER]`
-:macro-def:`MASTER_<name>_BACKOFF_CEILING[MASTER]`
+:macro-def:`MASTER_BACKOFF_CEILING[MASTER]` and :macro-def:`MASTER_<name>_BACKOFF_CEILING[MASTER]`
     When a daemon crashes, *condor_master* uses an exponential back off
     delay before restarting it; see the discussion at the end of this
     section for a detailed discussion on how these parameters work
@@ -2794,8 +2791,7 @@ These macros control the *condor_master*.
     defined for a specific daemon, the non-daemon-specific value will
     used.
 
-:macro-def:`MASTER_RECOVER_FACTOR[MASTER]`
-:macro-def:`MASTER_<name>_RECOVER_FACTOR[MASTER]`
+:macro-def:`MASTER_RECOVER_FACTOR[MASTER]` and :macro-def:`MASTER_<name>_RECOVER_FACTOR[MASTER]`
     A macro to set how long a daemon needs to run without crashing
     before it is considered recovered. Once a daemon has recovered, the
     number of restarts is reset, so the exponential back off returns to
@@ -5191,8 +5187,7 @@ These macros control the *condor_schedd*.
     ``SYSTEM_PERIODIC_HOLD``
     There is no default value.
 
-:macro-def:`SYSTEM_PERIODIC_HOLD[SCHED]`
-:macro-def:`SYSTEM_PERIODIC_HOLD_<Name>[SCHEDD]`
+:macro-def:`SYSTEM_PERIODIC_HOLD[SCHED]` and :macro-def:`SYSTEM_PERIODIC_HOLD_<Name>[SCHEDD]`
     This expression behaves identically to the job expression
     ``periodic_hold``, but it is evaluated for every job in the queue.
     It defaults to ``False``. When ``True``, it causes the job to stop
@@ -5215,15 +5210,13 @@ These macros control the *condor_schedd*.
           (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
         endif
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_REASON[SCHEDD]`
-:macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_REASON[SCHEDD]`
+:macro-def:`SYSTEM_PERIODIC_HOLD_REASON[SCHEDD]` and :macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_REASON[SCHEDD]`
     This string expression is evaluated when the job is placed on hold
     due to ``SYSTEM_PERIODIC_HOLD`` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
     evaluates to a non-empty string, this value is used to set the job
     attribute ``HoldReason``. Otherwise, a default description is used.
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE[SCHEDD]`
-:macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_SUBCODE[SCHEDD]`
+:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE[SCHEDD]` and :macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_SUBCODE[SCHEDD]`
     This integer expression is evaluated when the job is placed on hold
     due to ``SYSTEM_PERIODIC_HOLD`` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
     evaluates to a valid integer, this value is used to set the job
@@ -5245,8 +5238,7 @@ These macros control the *condor_schedd*.
     ``SYSTEM_PERIODIC_RELEASE``
     There is no default value.
 
-:macro-def:`SYSTEM_PERIODIC_RELEASE[SCHEDD]`
-:macro-def:`SYSTEM_PERIODIC_RELEASE_<Name>[SCHEDD]`
+:macro-def:`SYSTEM_PERIODIC_RELEASE[SCHEDD]` and :macro-def:`SYSTEM_PERIODIC_RELEASE_<Name>[SCHEDD]`
     This expression behaves identically to a job's definition of a
     :subcom:`periodic_release[and SYSTEM_PERIODIC_RELEASE]`
     expression in a submit description file, but it is evaluated for
@@ -5277,8 +5269,7 @@ These macros control the *condor_schedd*.
     ``SYSTEM_PERIODIC_REMOVE``
     There is no default value.
 
-:macro-def:`SYSTEM_PERIODIC_REMOVE[SCHEDD]`
-:macro-def:`SYSTEM_PERIODIC_REMOVE_<Name>[SCHEDD]`
+:macro-def:`SYSTEM_PERIODIC_REMOVE[SCHEDD]` and :macro-def:`SYSTEM_PERIODIC_REMOVE_<Name>[SCHEDD]`
     This expression behaves identically to the job expression
     ``periodic_remove``, but it is evaluated for every job in the queue.
     As it is in the configuration file, it is easy for an administrator
@@ -5305,8 +5296,7 @@ These macros control the *condor_schedd*.
     from the machine it is running on, and returned to the queue as Idle.  See also
     ``SYSTEM_PERIODIC_VACATE`` There is no default value.
 
-:macro-def:`SYSTEM_PERIODIC_VACATE[SCHEDD]`
-:macro-def:`SYSTEM_PERIODIC_VACATE_<Name>[SCHEDD]`
+:macro-def:`SYSTEM_PERIODIC_VACATE[SCHEDD]` and :macro-def:`SYSTEM_PERIODIC_VACATE_<Name>[SCHEDD]`
     This expression behaves identically to the job expression
     ``periodic_vacate``, but it is evaluated for every running job in the queue.
     As it is in the configuration file, it is easy for an administrator
@@ -10526,7 +10516,7 @@ details. The other set replace functionality of the
     For the fetch work hooks, the keyword used to define which set of
     hooks a particular compute slot should invoke. The value of <N> is
     replaced by the slot identification number. For example, on slot 1,
-    the variable name will be called `[SLOT1_JOB_HOOK_KEYWORD``. There
+    the variable name will be called ``SLOT1_JOB_HOOK_KEYWORD``. There
     is no default keyword. Sites that wish to use these job hooks must
     explicitly define the keyword and the corresponding hook paths.
 
@@ -10709,18 +10699,14 @@ are probably the most common.
         last ran. It is ignored when ``STARTD_CRON_AUTOPUBLISH`` is set
         to ``If_Changed``.
 
-:macro-def:`STARTD_CRON_CONFIG_VAL[HOOKS]`
-:macro-def:`SCHEDD_CRON_CONFIG_VAL[HOOKS]`
-:macro-def:`BENCHMARKS_CONFIG_VAL[HOOKS]`
+:macro-def:`STARTD_CRON_CONFIG_VAL[HOOKS]`, :macro-def:`SCHEDD_CRON_CONFIG_VAL[HOOKS]`, and :macro-def:`BENCHMARKS_CONFIG_VAL[HOOKS]`
     This configuration variable can be used to specify the path and
     executable name of the *condor_config_val* program which the jobs
     (hooks) should use to get configuration information from the daemon.
     If defined, an environment variable by the same name with the same
     value will be passed to all jobs.
 
-:macro-def:`STARTD_CRON_JOBLIST[HOOKS]`
-:macro-def:`SCHEDD_CRON_JOBLIST[HOOKS]`
-:macro-def:`BENCHMARKS_JOBLIST[HOOKS]`
+:macro-def:`STARTD_CRON_JOBLIST[HOOKS]`, :macro-def:`SCHEDD_CRON_JOBLIST[HOOKS]`, and :macro-def:`BENCHMARKS_JOBLIST[HOOKS]`
     These configuration variables are defined by a comma and/or white
     space separated list of job names to run. Each is the logical name
     of a job. This name must be unique; no two jobs may have the same
@@ -10728,9 +10714,7 @@ are probably the most common.
     and on reconfig.  The *condor_schedd* reads this variable and other 
     ``SCHEDD_CRON_*`` variables only on startup.
 
-:macro-def:`STARTD_CRON_MAX_JOB_LOAD[HOOKS]`
-:macro-def:`SCHEDD_CRON_MAX_JOB_LOAD[HOOKS]`
-:macro-def:`BENCHMARKS_MAX_JOB_LOAD[HOOKS]`
+:macro-def:`STARTD_CRON_MAX_JOB_LOAD[HOOKS]`, :macro-def:`SCHEDD_CRON_MAX_JOB_LOAD[HOOKS]`, and :macro-def:`BENCHMARKS_MAX_JOB_LOAD[HOOKS]`
     A floating point value representing a threshold for CPU load, such
     that if starting another job would cause the sum of assumed loads
     for all running jobs to exceed this value, no further jobs will be
@@ -10741,15 +10725,12 @@ are probably the most common.
     implies that only 1 ``BENCHMARKS`` job (at the default, assumed
     load) may be running.
 
-:macro-def:`STARTD_CRON_LOG_NON_ZERO_EXIT[HOOKS]`
-:macro-def:`SCHEDD_CRON_LOG_NON_ZERO_EXIT[HOOKS]`
+:macro-def:`STARTD_CRON_LOG_NON_ZERO_EXIT[HOOKS]` and :macro-def:`SCHEDD_CRON_LOG_NON_ZERO_EXIT[HOOKS]`
     If true, each time a cron job returns a non-zero exit code, the
     corresponding daemon will log the cron job's exit code and output.  There
     is no default value, so no logging will occur by default.
 
-:macro-def:`STARTD_CRON_<JobName>_ARGS[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_ARGS[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_ARGS[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_ARGS[HOOKS]`, :macro-def:`SCHEDD_CRON_<JobName>_ARGS[HOOKS]`, and :macro-def:`BENCHMARKS_<JobName>_ARGS[HOOKS]`
     The command line arguments to pass to the job as it is invoked. The
     first argument will be ``<JobName>``.
 
@@ -10766,18 +10747,14 @@ are probably the most common.
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable ``STARTD_CRON_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_CWD[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_CWD[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_CWD[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_CWD[HOOKS]`, :macro-def:`SCHEDD_CRON_<JobName>_CWD[HOOKS]`, and :macro-def:`BENCHMARKS_<JobName>_CWD[HOOKS]`
     The working directory in which to start the job.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_ENV[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_ENV[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_ENV[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_ENV[HOOKS]`, :macro-def:`SCHEDD_CRON_<JobName>_ENV[HOOKS]`, and :macro-def:`BENCHMARKS_<JobName>_ENV[HOOKS]`
     The environment string to pass to the job. The syntax is the same as
     that of ``<DaemonName>_ENVIRONMENT`` as defined at
     :ref:`admin-manual/configuration-macros:condor_master configuration file macros`.
@@ -10786,9 +10763,7 @@ are probably the most common.
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_EXECUTABLE[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_EXECUTABLE[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_EXECUTABLE[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_EXECUTABLE[HOOKS]`, :macro-def:`SCHEDD_CRON_<JobName>_EXECUTABLE[HOOKS]`, and :macro-def:`BENCHMARKS_<JobName>_EXECUTABLE[HOOKS]`
     The full path and executable to run for this job. Note that multiple
     jobs may specify the same executable, although the jobs need to have
     different logical names.
@@ -10797,9 +10772,7 @@ are probably the most common.
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_JOB_LOAD[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_JOB_LOAD[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_JOB_LOAD[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_JOB_LOAD[HOOKS]`, :macro-def:`SCHEDD_CRON_<JobName>_JOB_LOAD[HOOKS]`, and :macro-def:`BENCHMARKS_<JobName>_JOB_LOAD[HOOKS]`
     A floating point value that represents the assumed and therefore
     expected CPU load that a job induces on the system. This job load is
     then used to limit the total number of jobs that run concurrently,
@@ -10812,9 +10785,7 @@ are probably the most common.
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_KILL[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_KILL[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_KILL[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_KILL[HOOKS]`, :macro-def:`SCHEDD_CRON_<JobName>_KILL[HOOKS]`, and :macro-def:`BENCHMARKS_<JobName>_KILL[HOOKS]`
     A boolean value applicable only for jobs with a ``MODE`` of anything
     other than ``WaitForExit``. The default value is ``False``.
 
@@ -10897,9 +10868,7 @@ are probably the most common.
         STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE = /usr/local/bin/cmr-squid-monitor
         STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs, PEAK:SQUIDsMemory
 
-:macro-def:`STARTD_CRON_<JobName>_MODE[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_MODE[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_MODE[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_MODE[HOOKS]`, :macro-def:`SCHEDD_CRON_<JobName>_MODE[HOOKS]`, and :macro-def:`BENCHMARKS_<JobName>_MODE[HOOKS]`
     A string that specifies a mode within which the job operates. Legal
     values are
 
@@ -10938,9 +10907,7 @@ are probably the most common.
     specified as ``OnDemand`` will never run. Additional future features
     may allow for other ``OnDemand`` job uses.
 
-:macro-def:`STARTD_CRON_<JobName>_PERIOD[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_PERIOD[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_PERIOD[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_PERIOD[HOOKS]`, :macro-def:`SCHEDD_CRON_<JobName>_PERIOD[HOOKS]`, and :macro-def:`BENCHMARKS_<JobName>_PERIOD[HOOKS]`
     The period specifies time intervals at which the job should be run.
     For periodic jobs, this is the time interval that passes between
     starting the execution of the job. The value may be specified in
@@ -10957,9 +10924,7 @@ are probably the most common.
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_PREFIX[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_PREFIX[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_PREFIX[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_PREFIX[HOOKS]`, :macro-def:`SCHEDD_CRON_<JobName>_PREFIX[HOOKS]`, and :macro-def:`BENCHMARKS_<JobName>_PREFIX[HOOKS]`
     Specifies a string which is prepended by HTCondor to all attribute
     names that the job generates. The use of prefixes avoids the
     conflicts that would be caused by attributes of the same name
@@ -10973,8 +10938,7 @@ are probably the most common.
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_RECONFIG[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_RECONFIG[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_RECONFIG[HOOKS]` and :macro-def:`SCHEDD_CRON_<JobName>_RECONFIG[HOOKS]`
     A boolean value that when ``True``, causes the daemon to send an HUP
     signal to the job when the daemon is reconfigured. The job is
     expected to reread its configuration at that time.
@@ -10983,8 +10947,7 @@ are probably the most common.
     configuration variable ``STARTD_CRON_JOBLIST`` or
     ``SCHEDD_CRON_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_RECONFIG_RERUN[HOOKS]`
-:macro-def:`SCHEDD_CRON_<JobName>_RECONFIG_RERUN[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_RECONFIG_RERUN[HOOKS]` and :macro-def:`SCHEDD_CRON_<JobName>_RECONFIG_RERUN[HOOKS]`
     A boolean value that when ``True``, causes the daemon ClassAd hook
     mechanism to re-run the specified job when the daemon is
     reconfigured via *condor_reconfig*. The default value is ``False``.
@@ -10993,8 +10956,7 @@ are probably the most common.
     configuration variable ``STARTD_CRON_JOBLIST`` or
     ``SCHEDD_CRON_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_SLOTS[HOOKS]`
-:macro-def:`BENCHMARKS_<JobName>_SLOTS[HOOKS]`
+:macro-def:`STARTD_CRON_<JobName>_SLOTS[HOOKS]` and :macro-def:`BENCHMARKS_<JobName>_SLOTS[HOOKS]`
     Only the slots specified in this comma-separated list may
     incorporate the output of the job specified by ``<JobName>``. If the
     list is not specified, any slot may. Whether or not a specific slot

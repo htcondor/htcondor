@@ -17,9 +17,9 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
     docname = inliner.document.settings.env.docname
 
     # Create a new linkable target using the macro name
-    targetid = text
-    targetnode = nodes.target('', text, ids=[targetid], classes=["macro-def"])
     knob, grouping = custom_ext_parser(text)
+    targetid = knob
+    targetnode = nodes.target('', knob, ids=[targetid], classes=["macro-def"])
     if grouping != "":
         grouping = grouping + " "
     # Automatically include an index entry for macro definitions
