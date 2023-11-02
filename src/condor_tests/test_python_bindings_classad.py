@@ -110,7 +110,7 @@ def test_value_roundtrip_through_assignment(ad, value):
         assert ad["key"] == value
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[ClassAd pickling] Not currently implemented in version 2.")
 @pytest.mark.parametrize("value", [1, "2", classad.ExprTree("2 + 2")])
 def test_round_trip_through_pickle(ad, value):
     ad["key"] = value
@@ -235,7 +235,7 @@ def test_quote_unquote_is_symmetric(input):
     assert classad.unquote(classad.quote(input)) == input
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[classad.register()] Not currently implemented in version 2.")
 def test_register_custom_function():
     def concatenateLists(list1, list2):
         return list1 + list2
@@ -245,7 +245,7 @@ def test_register_custom_function():
     assert classad.ExprTree("concatenateLists({1, 2}, {3, 4})").eval() == [1, 2, 3, 4]
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[classad.register()] Not currently implemented in version 2.")
 def test_register_with_exception():
     def bad(a, b):
         raise Exception("oops")
@@ -258,7 +258,7 @@ def test_register_with_exception():
     assert str(e.value) == "oops"
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[classad.register()] Not currently implemented in version 2.")
 def test_custom_function_can_see_python_values():
     local = 1
 
@@ -284,7 +284,7 @@ def test_evaluate_in_context_of_ad_without_matching_key(ad):
     assert expr.eval(ad) == classad.Value.Undefined
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[classad.Attribute] Not currently implemented in version 2.")
 def test_subscript(ad):
     ad["foo"] = [0, 1, 2, 3]
     expr = classad.Attribute("foo")._get(2)
@@ -292,14 +292,14 @@ def test_subscript(ad):
     assert expr.eval(ad) == 2
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[classad.Function] Not currently implemented in version 2.")
 def test_function():
     expr = classad.Function("strcat", "hello", " ", "world")
 
     assert expr.eval() == "hello world"
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[classad.Attribute] Not currently implemented in version 2.")
 def test_flatten(ad):
     ad["bar"] = 1
     expr = classad.Attribute("foo") == classad.Attribute("bar")
@@ -355,7 +355,7 @@ def test_symmetric_match(left, right, matches):
     assert left.symmetricMatch(right) is matches
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[ClassAd.internalRefs()] Not currently implemented in version 2.")
 def test_internal_refs(ad):
     ad["bar"] = 2
     expr = classad.ExprTree("foo =?= bar")
@@ -363,7 +363,7 @@ def test_internal_refs(ad):
     assert ad.internalRefs(expr) == ["bar"]
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[ClassAd.externalRefs()] Not currently implemented in version 2.")
 def test_external_refs(ad):
     ad["bar"] = 2
     expr = classad.ExprTree("foo =?= bar")
@@ -371,7 +371,7 @@ def test_external_refs(ad):
     assert ad.externalRefs(expr) == ["foo"]
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[ExprTree.__int__()] Not currently implemented in version 2.")
 @pytest.mark.parametrize(
     "expr, value",
     [
@@ -386,7 +386,7 @@ def test_int(expr, value):
     assert int(expr) == value
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[ExprTree.__int__()] Not currently implemented in version 2.")
 @pytest.mark.parametrize(
     "expr",
     [
@@ -401,7 +401,7 @@ def test_int_with_bad_values(expr):
         print(int(expr))
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[ExprTree.__float__()] Not currently implemented in version 2.")
 @pytest.mark.parametrize(
     "expr, value",
     [(classad.ExprTree("1.0 + 3.5"), 4.5), (classad.ExprTree("35.5"), 35.5)],
@@ -410,7 +410,7 @@ def test_float(expr, value):
     assert float(expr) == value
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[ExprTree.__float__()] Not currently implemented in version 2.")
 @pytest.mark.parametrize(
     "expr",
     [
@@ -522,7 +522,7 @@ def test_can_parse_ads_across_pipes(ad_string, parser):
     assert ad["foo"] == 1
 
 
-@pytest.mark.xfail(reason="Not currently implemented in version 2.")
+@pytest.mark.xfail(reason="[ClassAd.printJson()] Not currently implemented in version 2.")
 def test_output_of_printJson_can_be_parsed(ad):
     ad["int"] = 5
     ad["float"] = 6.5
