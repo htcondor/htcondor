@@ -2791,7 +2791,7 @@ These macros control the *condor_master*.
 
     ``$(MASTER_<name>_BACKOFF_CEILING)`` is the daemon-specific form of
     ``MASTER_BACKOFF_CEILING``; if this daemon-specific macro is not
-    defined for a specific daemon, the non-daemonw-specific value will
+    defined for a specific daemon, the non-daemon-specific value will
     used.
 
 :macro-def:`MASTER_RECOVER_FACTOR[MASTER]`
