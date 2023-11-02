@@ -66,6 +66,11 @@ Bugs Fixed:
   *condor_schedd* that's on the same private network.
   :jira:`2115`
 
+- Fixed a but that could cause jobs be created incorrectly when a submit
+  filed used :macro:`initialdir` and :macro:`max_idle` or :macro:`max_materialize`
+  in the same submit file.
+  :jira:`2092`
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
