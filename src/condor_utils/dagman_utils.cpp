@@ -32,6 +32,8 @@
 #include "tokener.h"
 #include "which.h"
 
+namespace shallow = DagmanShallowOptions;
+namespace deep = DagmanDeepOptions;
 
 static void
 AppendError(std::string &errMsg, const std::string &newError)
@@ -58,7 +60,8 @@ dag_tokener::dag_tokener(const char * line_in)
 	}
 }
 
-bool 
+
+bool
 DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 			/* const */ SubmitDagShallowOptions &shallowOpts,
 			/* const */ std::list<std::string> &dagFileAttrLines ) const
@@ -73,7 +76,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 
 	const char *executable = NULL;
 	std::string valgrindPath; // outside if so executable is valid!
-	if ( shallowOpts.runValgrind ) {
+	if ( shallowOpts[shallow::b::RunValgrind] ) {
 		valgrindPath = which( valgrind_exe );
 		if ( valgrindPath.empty()) {
 			fprintf( stderr, "ERROR: can't find %s in PATH, aborting.\n",
@@ -84,7 +87,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 			executable = valgrindPath.c_str();
 		}
 	} else {
-		executable = deepOpts.strDagmanPath.c_str();
+		executable = deepOpts[deep::str::DagmanPath].c_str();
 	}
 
 	/*	Set up DAGMan proper jobs getenv filter
@@ -99,7 +102,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		//Scitoken related variables
 		getEnv += ",BEARER_TOKEN,BEARER_TOKEN_FILE,XDG_RUNTIME_DIR";
 		//Add user defined via flag vars to getenv
-		if (!deepOpts.getFromEnv.empty()) { getEnv += ","; getEnv += deepOpts.getFromEnv; }
+		if (!deepOpts[deep::str::GetFromEnv].empty()) { getEnv += ","; getEnv += deepOpts[deep::str::GetFromEnv]; }
 		//Add config defined vars to add getenv
 		if (conf_getenvVars) { getEnv += ","; getEnv += conf_getenvVars.ptr(); }
 	}
@@ -157,11 +160,11 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ArgList args;
 
-	if ( shallowOpts.runValgrind ) {
+	if ( shallowOpts[shallow::b::RunValgrind] ) {
 		args.AppendArg("--tool=memcheck");
 		args.AppendArg("--leak-check=yes");
 		args.AppendArg("--show-reachable=yes");
-		args.AppendArg(deepOpts.strDagmanPath.c_str());
+		args.AppendArg(deepOpts[deep::str::DagmanPath].c_str());
 	}
 
 		// -p 0 causes DAGMan to run w/o a command socket (see gittrac #4987).
@@ -170,14 +173,14 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg("-f");
 	args.AppendArg("-l");
 	args.AppendArg(".");
-	if ( shallowOpts.iDebugLevel != DEBUG_UNSET ) {
+	if ( shallowOpts[shallow::i::DebugLevel] != DEBUG_UNSET ) {
 		args.AppendArg("-Debug");
-		args.AppendArg(std::to_string(shallowOpts.iDebugLevel));
+		args.AppendArg(std::to_string(shallowOpts[shallow::i::DebugLevel]));
 	}
 	args.AppendArg("-Lockfile");
 	args.AppendArg(shallowOpts.strLockFile.c_str());
 	args.AppendArg("-AutoRescue");
-	args.AppendArg(std::to_string(deepOpts.autoRescue));
+	args.AppendArg(std::to_string(deepOpts[deep::b::AutoRescue]));
 	args.AppendArg("-DoRescueFrom");
 	args.AppendArg(std::to_string(deepOpts.doRescueFrom));
 
@@ -186,44 +189,44 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(dagFile.c_str());
 	}
 
-	if(shallowOpts.iMaxIdle != 0) 
+	if(shallowOpts[shallow::i::MaxIdle] != 0) 
 	{
 		args.AppendArg("-MaxIdle");
-		args.AppendArg(std::to_string(shallowOpts.iMaxIdle));
+		args.AppendArg(std::to_string(shallowOpts[shallow::i::MaxIdle]));
 	}
 
-	if(shallowOpts.iMaxJobs != 0) 
+	if(shallowOpts[shallow::i::MaxJobs] != 0) 
 	{
 		args.AppendArg("-MaxJobs");
-		args.AppendArg(std::to_string(shallowOpts.iMaxJobs));
+		args.AppendArg(std::to_string(shallowOpts[shallow::i::MaxJobs]));
 	}
 
-	if(shallowOpts.iMaxPre != 0) 
+	if(shallowOpts[shallow::i::MaxPre] != 0) 
 	{
 		args.AppendArg("-MaxPre");
-		args.AppendArg(std::to_string(shallowOpts.iMaxPre));
+		args.AppendArg(std::to_string(shallowOpts[shallow::i::MaxPre]));
 	}
 
-	if(shallowOpts.iMaxPost != 0) 
+	if(shallowOpts[shallow::i::MaxPost] != 0) 
 	{
 		args.AppendArg("-MaxPost");
-		args.AppendArg(std::to_string(shallowOpts.iMaxPost));
+		args.AppendArg(std::to_string(shallowOpts[shallow::i::MaxPost]));
 	}
 
 	if ( shallowOpts.bPostRunSet ) {
-		if (shallowOpts.bPostRun) {
+		if (shallowOpts[shallow::b::PostRun]) {
 			args.AppendArg("-AlwaysRunPost");
 		} else {
 			args.AppendArg("-DontAlwaysRunPost");
 		}
 	}
 
-	if(deepOpts.useDagDir)
+	if(deepOpts[deep::b::UseDagDir])
 	{
 		args.AppendArg("-UseDagDir");
 	}
 
-	if(deepOpts.suppress_notification)
+	if(deepOpts[deep::b::SuppressNotification])
 	{
 		args.AppendArg("-Suppress_notification");
 	}
@@ -239,11 +242,11 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg("-CsdVersion");
 	args.AppendArg(CondorVersion());
 
-	if(deepOpts.allowVerMismatch) {
+	if(deepOpts[deep::b::AllowVersionMismatch]) {
 		args.AppendArg("-AllowVersionMismatch");
 	}
 
-	if(shallowOpts.dumpRescueDag) {
+	if(shallowOpts[shallow::b::DumpRescueDag]) {
 		args.AppendArg("-DumpRescue");
 	}
 
@@ -251,7 +254,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg("-Verbose");
 	}
 
-	if(deepOpts.bForce) {
+	if(deepOpts[deep::b::Force]) {
 		args.AppendArg("-Force");
 	}
 
@@ -260,27 +263,27 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(deepOpts.strNotification);
 	}
 
-	if(!deepOpts.strDagmanPath.empty()) {
+	if(!deepOpts[deep::str::DagmanPath].empty()) {
 		args.AppendArg("-Dagman");
-		args.AppendArg(deepOpts.strDagmanPath);
+		args.AppendArg(deepOpts[deep::str::DagmanPath]);
 	}
 
-	if(deepOpts.strOutfileDir != "") {
+	if(deepOpts[deep::str::OutfileDir] != "") {
 		args.AppendArg("-Outfile_dir");
-		args.AppendArg(deepOpts.strOutfileDir);
+		args.AppendArg(deepOpts[deep::str::OutfileDir]);
 	}
 
-	if(deepOpts.updateSubmit) {
+	if(deepOpts[deep::b::UpdateSubmit]) {
 		args.AppendArg("-Update_submit");
 	}
 
-	if(deepOpts.importEnv) {
+	if(deepOpts[deep::b::ImportEnv]) {
 		args.AppendArg("-Import_env");
 	}
 
-	if(!deepOpts.getFromEnv.empty()) {
+	if(!deepOpts[deep::str::GetFromEnv].empty()) {
 		args.AppendArg("-Include_env");
-		args.AppendArg(deepOpts.getFromEnv);
+		args.AppendArg(deepOpts[deep::str::GetFromEnv]);
 	}
 
 	for (auto &kv_pairs : deepOpts.addToEnv) {
@@ -288,14 +291,14 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(kv_pairs);
 	}
 
-	if( shallowOpts.priority != 0 ) {
+	if( shallowOpts[shallow::i::Priority] != 0 ) {
 		args.AppendArg("-Priority");
-		args.AppendArg(std::to_string(shallowOpts.priority));
+		args.AppendArg(std::to_string(shallowOpts[shallow::i::Priority]));
 	}
 
-	if (!shallowOpts.saveFile.empty()) {
+	if (!shallowOpts[shallow::str::SaveFile].empty()) {
 		args.AppendArg("-load_save");
-		args.AppendArg(shallowOpts.saveFile);
+		args.AppendArg(shallowOpts[shallow::str::SaveFile]);
 	}
 
 	std::string arg_str,args_error;
@@ -311,7 +314,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	// incompatible way!!
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Env env;
-	if ( deepOpts.importEnv ) {
+	if ( deepOpts[deep::b::ImportEnv] ) {
 		env.Import(ImportFilter);
 	}
 
@@ -325,23 +328,23 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	}
 	env.SetEnv("_CONDOR_DAGMAN_LOG", shallowOpts.strDebugLog.c_str());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
-	if ( shallowOpts.strScheddDaemonAdFile != "" ) {
+	if ( shallowOpts[shallow::str::ScheddDaemonAdFile] != "" ) {
 		env.SetEnv("_CONDOR_SCHEDD_DAEMON_AD_FILE",
-				   shallowOpts.strScheddDaemonAdFile.c_str());
+				   shallowOpts[shallow::str::ScheddDaemonAdFile].c_str());
 	}
-	if ( shallowOpts.strScheddAddressFile != "" ) {
+	if ( shallowOpts[shallow::str::ScheddAddressFile] != "" ) {
 		env.SetEnv("_CONDOR_SCHEDD_ADDRESS_FILE",
-				   shallowOpts.strScheddAddressFile.c_str());
+				   shallowOpts[shallow::str::ScheddAddressFile].c_str());
 	}
-	if ( shallowOpts.strConfigFile != "" ) {
-		if ( access( shallowOpts.strConfigFile.c_str(), F_OK ) != 0 ) {
+	if ( shallowOpts[shallow::str::ConfigFile] != "" ) {
+		if ( access( shallowOpts[shallow::str::ConfigFile].c_str(), F_OK ) != 0 ) {
 			fprintf( stderr, "ERROR: unable to read config file %s "
 						"(error %d, %s)\n",
-						shallowOpts.strConfigFile.c_str(), errno, strerror(errno) );
+						shallowOpts[shallow::str::ConfigFile].c_str(), errno, strerror(errno) );
 			fclose(pSubFile);
 			return false;
 		}
-		env.SetEnv("_CONDOR_DAGMAN_CONFIG_FILE", shallowOpts.strConfigFile.c_str());
+		env.SetEnv("_CONDOR_DAGMAN_CONFIG_FILE", shallowOpts[shallow::str::ConfigFile].c_str());
 	}
 
 	std::string env_str;
@@ -437,52 +440,52 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( "-verbose" );
 	}
 
-	if ( deepOpts.bForce && !isRetry ) {
+	if ( deepOpts[deep::b::Force] && !isRetry ) {
 		args.AppendArg( "-force" );
 	}
 
 	if (deepOpts.strNotification != "" ) {
 		args.AppendArg( "-notification" );
-		if(deepOpts.suppress_notification) {
+		if(deepOpts[deep::b::SuppressNotification]) {
 			args.AppendArg( "never" );
 		} else { 
 			args.AppendArg( deepOpts.strNotification.c_str() );
 		}
 	}
 
-	if ( !deepOpts.strDagmanPath.empty() ) {
+	if ( !deepOpts[deep::str::DagmanPath].empty() ) {
 		args.AppendArg( "-dagman" );
-		args.AppendArg( deepOpts.strDagmanPath.c_str() );
+		args.AppendArg( deepOpts[deep::str::DagmanPath].c_str() );
 	}
 
-	if ( deepOpts.useDagDir ) {
+	if ( deepOpts[deep::b::UseDagDir] ) {
 		args.AppendArg( "-usedagdir" );
 	}
 
-	if ( deepOpts.strOutfileDir != "" ) {
+	if ( deepOpts[deep::str::OutfileDir] != "" ) {
 		args.AppendArg( "-outfile_dir" );
-		args.AppendArg( deepOpts.strOutfileDir.c_str() );
+		args.AppendArg( deepOpts[deep::str::OutfileDir].c_str() );
 	}
 
 	args.AppendArg( "-autorescue" );
-	args.AppendArg( std::to_string(deepOpts.autoRescue) );
+	args.AppendArg( std::to_string(deepOpts[deep::b::AutoRescue]) );
 
 	if ( deepOpts.doRescueFrom != 0 ) {
 		args.AppendArg( "-dorescuefrom" );
 		args.AppendArg( std::to_string(deepOpts.doRescueFrom) );
 	}
 
-	if ( deepOpts.allowVerMismatch ) {
+	if ( deepOpts[deep::b::AllowVersionMismatch] ) {
 		args.AppendArg( "-allowver" );
 	}
 
-	if ( deepOpts.importEnv ) {
+	if ( deepOpts[deep::b::ImportEnv] ) {
 		args.AppendArg( "-import_env" );
 	}
 
-	if ( !deepOpts.getFromEnv.empty() ) {
+	if ( !deepOpts[deep::str::GetFromEnv].empty() ) {
 		args.AppendArg( "-include_env" );
-		args.AppendArg( deepOpts.getFromEnv );
+		args.AppendArg( deepOpts[deep::str::GetFromEnv] );
 	}
 
 	for (auto &kv_pairs : deepOpts.addToEnv) {
@@ -490,11 +493,11 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(kv_pairs.c_str());
 	}
 
-	if ( deepOpts.recurse ) {
+	if ( deepOpts[deep::b::Recurse] ) {
 		args.AppendArg( "-do_recurse" );
 	}
 
-	if ( deepOpts.updateSubmit ) {
+	if ( deepOpts[deep::b::UpdateSubmit] ) {
 		args.AppendArg( "-update_submit" );
 	}
 
@@ -503,7 +506,7 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( std::to_string(priority) );
 	}
 
-	if( deepOpts.suppress_notification ) {
+	if( deepOpts[deep::b::SuppressNotification] ) {
 		args.AppendArg( "-suppress_notification" );
 	} else {
 		args.AppendArg( "-dont_suppress_notification" );
@@ -548,8 +551,8 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 	shallowOpts.strLibOut = shallowOpts.primaryDagFile + ".lib.out";
 	shallowOpts.strLibErr = shallowOpts.primaryDagFile + ".lib.err";
 
-	if ( deepOpts.strOutfileDir != "" ) {
-		shallowOpts.strDebugLog = deepOpts.strOutfileDir + DIR_DELIM_STRING +
+	if ( deepOpts[deep::str::OutfileDir] != "" ) {
+		shallowOpts.strDebugLog = deepOpts[deep::str::OutfileDir] + DIR_DELIM_STRING +
 					condor_basename( shallowOpts.primaryDagFile.c_str() );
 	} else {
 		shallowOpts.strDebugLog = shallowOpts.primaryDagFile;
@@ -563,7 +566,7 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 		// If we're running each DAG in its own directory, write any rescue
 		// DAG to the current directory, to avoid confusion (since the
 		// rescue DAG must be run from the current directory).
-	if ( deepOpts.useDagDir ) {
+	if ( deepOpts[deep::b::UseDagDir] ) {
 		if ( !condor_getcwd( rescueDagBase ) ) {
 			fprintf( stderr, "ERROR: unable to get cwd: %d, %s\n",
 					errno, strerror(errno) );
@@ -585,11 +588,11 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 
 	shallowOpts.strLockFile = shallowOpts.primaryDagFile + ".lock";
 
-	if (deepOpts.strDagmanPath.empty()) {
-		deepOpts.strDagmanPath = which( dagman_exe );
+	if (deepOpts[deep::str::DagmanPath].empty()) {
+		deepOpts[deep::str::DagmanPath] = which( dagman_exe );
 	}
 
-	if (deepOpts.strDagmanPath.empty())
+	if (deepOpts[deep::str::DagmanPath].empty())
 	{
 		fprintf( stderr, "ERROR: can't find %s in PATH, aborting.\n",
 				 dagman_exe );
@@ -625,7 +628,7 @@ DagmanUtils::processDagCommands( SubmitDagDeepOptions& deepOpts, SubmitDagShallo
 	for (auto & dagFile : shallowOpts.dagFiles) {
 		std::string newDagFile;
 		// Switch to DAG Dir if needed
-		if (deepOpts.useDagDir) {
+		if (deepOpts[deep::b::UseDagDir]) {
 			std::string	tmpErrMsg;
 			if ( !dagDir.Cd2TmpDirFile( dagFile.c_str(), tmpErrMsg ) ) {
 				errMsg = "Unable to change to DAG directory " + tmpErrMsg;
@@ -689,8 +692,8 @@ DagmanUtils::processDagCommands( SubmitDagDeepOptions& deepOpts, SubmitDagShallo
 						} else {
 							StringTokenIterator vars(remain);
 							for (auto& var : vars) {
-								if (!deepOpts.getFromEnv.empty()) { deepOpts.getFromEnv += ","; }
-								deepOpts.getFromEnv += var;
+								if (!deepOpts[deep::str::GetFromEnv].empty()) { deepOpts[deep::str::GetFromEnv] += ","; }
+								deepOpts[deep::str::GetFromEnv] += var;
 							}
 						}
 					// Parse SET option
@@ -716,11 +719,11 @@ DagmanUtils::processDagCommands( SubmitDagDeepOptions& deepOpts, SubmitDagShallo
 			std::string cfgFileMS = configfile_it.c_str();
 			std::string tmpErrMsg;
 			if ( MakePathAbsolute( cfgFileMS, tmpErrMsg ) ) {
-				if (shallowOpts.strConfigFile.empty()) {
-					shallowOpts.strConfigFile = cfgFileMS;
-				} else if ( shallowOpts.strConfigFile != cfgFileMS ) {
+				if (shallowOpts[shallow::str::ConfigFile].empty()) {
+					shallowOpts[shallow::str::ConfigFile] = cfgFileMS;
+				} else if ( shallowOpts[shallow::str::ConfigFile] != cfgFileMS ) {
 					AppendError( errMsg, "Conflicting DAGMan config files specified: " +
-					                     shallowOpts.strConfigFile + " and " + cfgFileMS );
+					                     shallowOpts[shallow::str::ConfigFile] + " and " + cfgFileMS );
 					result = false;
 				}
 			} else {
@@ -935,7 +938,7 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 		// Get rid of the halt file (if one exists).
 	tolerant_unlink( HaltFileName( shallowOpts.primaryDagFile ).c_str() );
 
-	if (deepOpts.bForce)
+	if (deepOpts[deep::b::Force])
 	{
 		tolerant_unlink(shallowOpts.strSubFile.c_str());
 		tolerant_unlink(shallowOpts.strSchedLog.c_str());
@@ -949,7 +952,7 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 		// so, allow things to continue even if the files generated
 		// by condor_submit_dag already exist.
 	bool autoRunningRescue = false;
-	if (deepOpts.autoRescue) {
+	if (deepOpts[deep::b::AutoRescue]) {
 		int rescueDagNum = FindLastRescueDagNum(shallowOpts.primaryDagFile.c_str(),
 					shallowOpts.dagFiles.size() > 1, maxRescueDagNum);
 		if (rescueDagNum > 0) {
@@ -962,7 +965,7 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 		// If not running a rescue DAG, check for existing files
 		// generated by condor_submit_dag...
 	if (!autoRunningRescue && deepOpts.doRescueFrom < 1 &&
-				!deepOpts.updateSubmit && shallowOpts.saveFile.empty()) {
+				!deepOpts[deep::b::UpdateSubmit] && shallowOpts[shallow::str::SaveFile].empty()) {
 		if (fileExists(shallowOpts.strSubFile))
 		{
 			fprintf( stderr, "ERROR: \"%s\" already exists.\n",
@@ -991,7 +994,7 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 
 		// This is checking for the existance of an "old-style" rescue
 		// DAG file.
-	if (!deepOpts.autoRescue && deepOpts.doRescueFrom < 1 &&
+	if (!deepOpts[deep::b::AutoRescue] && deepOpts.doRescueFrom < 1 &&
 				fileExists(shallowOpts.strRescueFile))
 	{
 		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
@@ -1203,4 +1206,88 @@ DagmanUtils::check_lock_file(const char *lockFileName) {
 	}
 
 	return result;
+}
+
+
+const std::string &
+SubmitDagShallowOptions::operator[]( shallow::str opt ) const {
+    return stringOpts[opt._to_integral()];
+}
+
+bool
+SubmitDagShallowOptions::operator[]( shallow::b opt ) const {
+    return boolOpts[opt._to_integral()];
+}
+
+int
+SubmitDagShallowOptions::operator[]( shallow::i opt ) const {
+    return intOpts[opt._to_integral()];
+}
+
+std::string &
+SubmitDagShallowOptions::operator[]( shallow::str opt ) {
+    return stringOpts[opt._to_integral()];
+}
+
+bool &
+SubmitDagShallowOptions::operator[]( shallow::b opt ) {
+    return boolOpts[opt._to_integral()];
+}
+
+int &
+SubmitDagShallowOptions::operator[]( shallow::i opt ) {
+    return intOpts[opt._to_integral()];
+}
+
+/*
+
+//
+// We don't need these, because the Python bindings have to do type-
+// conversion for the values, but in case we ever do, here they are.
+// You can do the same thing for the deep options.
+//
+
+bool
+SubmitDagShallowOptions::set( const char * key, const std::string & value ) {
+    auto maybe = shallow::str::_from_string_nocase_nothrow(key);
+    if(! maybe) { return false; }
+    stringOpts[*maybe] = value;
+    return true;
+}
+
+bool
+SubmitDagShallowOptions::set( const char * key, bool value ) {
+    auto maybe = shallow::b::_from_string_nocase_nothrow(key);
+    if(! maybe) { return false; }
+    boolOpts[*maybe] = value;
+    return true;
+}
+
+bool
+SubmitDagShallowOptions::set( const char * key, int value ) {
+    auto maybe = shallow::i::_from_string_nocase_nothrow(key);
+    if(! maybe) { return false; }
+    intOpts[*maybe] = value;
+    return true;
+}
+*/
+
+const std::string &
+SubmitDagDeepOptions::operator[]( deep::str opt ) const {
+    return stringOpts[opt._to_integral()];
+}
+
+bool
+SubmitDagDeepOptions::operator[]( deep::b opt ) const {
+    return boolOpts[opt._to_integral()];
+}
+
+std::string &
+SubmitDagDeepOptions::operator[]( deep::str opt ) {
+    return stringOpts[opt._to_integral()];
+}
+
+bool &
+SubmitDagDeepOptions::operator[]( deep::b opt ) {
+    return boolOpts[opt._to_integral()];
 }
