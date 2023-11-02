@@ -71,6 +71,11 @@ Bugs Fixed:
   in the same submit file.
   :jira:`2092`
 
+- Fixed bug in DAGMan where held jobs that were removed would cause a
+  warning about the internal count of held job procs being incorrect.
+  :jira:`2102`
+
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
