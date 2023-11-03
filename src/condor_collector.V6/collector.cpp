@@ -1069,15 +1069,16 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	}
 
 	// See if query ad asks for server-side projection
-	string projection = "";
+	std::string projection;
+	std::string attr_projection(ATTR_PROJECTION);
 	// turn projection string into a set of attributes
 	classad::References proj, tagproj;
 	bool proj_is_expr = false;
-	if (query->LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
+	if (query->LookupString(attr_projection, projection) && ! projection.empty()) {
 		StringTokenIterator list(projection);
 		const std::string * attr;
 		while ((attr = list.next_string())) { proj.insert(*attr); }
-	} else if (query->Lookup(ATTR_PROJECTION)) {
+	} else if (query->Lookup(attr_projection)) {
 		// if projection is not a simple string, then assume that evaluating it as a string in the context of the ad will work better
 		// (the negotiator sends this sort of projection)
 		proj_is_expr = true;
@@ -1139,7 +1140,9 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		}
 		if (whichAds == STARTD_PVT_AD) { filter_private_attrs = false; }
 
+		attr_projection = ATTR_PROJECTION;
 		bool evaluate_projection = proj_is_expr;
+		classad::References * active_proj = &proj;
 		classad::References * whitelist = proj.empty() ? nullptr : &proj;
 		if (query_entry->is_multi) {
 			std::string tagattr(query_entry->adt[ix].tag); tagattr += ATTR_PROJECTION;
@@ -1150,6 +1153,10 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 				while ((attr = list.next_string())) { tagproj.insert(*attr); }
 				whitelist = tagproj.empty() ? nullptr : &tagproj;
 				evaluate_projection = false;
+			} else if (query->Lookup(tagattr)) {
+				attr_projection = tagattr;
+				active_proj = &tagproj;
+				evaluate_projection = true;
 			}
 		}
 
@@ -1183,13 +1190,14 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			}
 
 			if (evaluate_projection) {
-				proj.clear();
+				active_proj->clear();
 				projection.clear();
-				if (EvalString(ATTR_PROJECTION, query, curr_rec->m_publicAd, projection) && ! projection.empty()) {
+				if (EvalString(attr_projection.c_str(), query, curr_rec->m_publicAd, projection) && ! projection.empty()) {
 					StringTokenIterator list(projection);
 					const std::string * attr;
-					while ((attr = list.next_string())) { proj.insert(*attr); }
+					while ((attr = list.next_string())) { active_proj->insert(*attr); }
 				}
+				whitelist = active_proj->empty() ? nullptr : active_proj;
 			}
 
 			bool send_failed = (!sock->code(more) || !putClassAd(sock, *ad_to_send, 0, whitelist));
