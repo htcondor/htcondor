@@ -22,6 +22,10 @@ New Features:
   hard disk and false when the kernel reports it to be on SSD, NVME or tmpfs.
   :jira:`2085`
 
+- HTCondor daemons on Linux no longer run very slowly when the ulimit
+  for the maximum number of open files is very high.
+  :jira:`2128`
+
 - Added *periodic_vacate* to the submit language and SYSTEM_PERIODIC_VACATE
   to the config syttem
   :jira:`2114`

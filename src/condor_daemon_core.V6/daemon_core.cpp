@@ -96,6 +96,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_sockfunc.h"
 #include "condor_auth_passwd.h"
 #include "exit.h"
+#include "largestOpenFD.h"
 
 #include <algorithm>
 
@@ -6356,9 +6357,7 @@ void CreateProcessForkit::exec() {
 		// This _must_ be called before calling exec().
 	writeTrackingGid(tracking_gid);
 
-		// Create new filesystem namespace if wanted
-
-	int openfds = getdtablesize();
+	int openfds = largestOpenFD();
 
 		// Here we have to handle re-mapping of std(in|out|err)
 	if ( m_std ) {
