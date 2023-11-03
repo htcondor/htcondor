@@ -96,12 +96,9 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_sockfunc.h"
 #include "condor_auth_passwd.h"
 #include "exit.h"
+#include "largestOpenFD.h"
 
 #include <algorithm>
-#include <charconv>
-#include <filesystem>
-
-namespace stdfs = std::filesystem;
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -6075,24 +6072,6 @@ void writeExecError(CreateProcessForkit *forkit,int exec_errno,int failed_op)
 {
 	forkit->writeExecError(exec_errno,failed_op);
 }
-
-int largestOpenFD() {
-#ifdef LINUX
-	stdfs::path fds {"/proc/self/fd"};
-	int max_fd = 0;
-	for (const auto &d : stdfs::directory_iterator(fds)) {
-		std::string basename = d.path().filename().string();
-		int fd = 0;
-		std::ignore =  // should never fail, so don't bother to test if invalid
-			std::from_chars(basename.data(), basename.data() + basename.size(), fd);
-		max_fd = std::max(max_fd, fd);
-	}
-	return max_fd + 1;
-#else
-	return getdtablesize();
-#endif
-}
-
 
 void CreateProcessForkit::exec() {
 	gid_t  tracking_gid = 0;

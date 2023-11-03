@@ -100,6 +100,7 @@ if (NOT WINDOWS)
 	list(APPEND CONDOR_API_AND_UTILS_SRC
 		dprintf_syslog.cpp
 		dprintf_syslog.h
+		largestOpenFD.cpp
 	)
 endif(NOT WINDOWS)
 
