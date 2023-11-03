@@ -550,8 +550,7 @@ CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
 			dprintf(D_ALWAYS,"Invalid " ATTR_TARGET_TYPE "=\"%s\" in QUERY_MULTIPLE.\n", target.c_str());
 			return nullptr;
 		}
-		num_adtypes = 0;
-		for (auto &str : it) { ++num_adtypes; }
+		num_adtypes = (int) std::distance(it.begin(), it.end());
 	} else if (whichAds == GENERIC_AD) {
 		if ( ! query->LookupString(ATTR_TARGET_TYPE, target) || target.empty()) {
 			dprintf(D_ALWAYS,"Failed to find " ATTR_TARGET_TYPE " attribute in query ad of QUERY_GENERIC_ADS.\n");
@@ -1906,7 +1905,6 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 	// here we set up a network timeout of a longer duration
 	sock->timeout(QueryTimeout);
 
-	bool query_contains_hash_key = false;
 	CollectorEngine::HashFunc makeKey = nullptr;
 	CollectorHashTable * hTable = nullptr;
 	bool expireInvalidatedAds = param_boolean( "EXPIRE_INVALIDATED_ADS", false );
