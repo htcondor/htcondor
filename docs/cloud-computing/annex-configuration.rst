@@ -78,7 +78,7 @@ location of the audit log is set by
 :ref:`admin-manual/configuration-macros:daemon logging configuration file
 entries`) for details. Because annex creation commands typically make extensive
 use of values set in configuration, *condor_annex* will write the configuration
-it used for annex creation commands into the audit log if ``ANNEX_DEBUG`[ANNEX]`
+it used for annex creation commands into the audit log if ``ANNEX_DEBUG``
 includes ``D_AUDIT:2``.
 
 Expert Settings
