@@ -1,21 +1,113 @@
 import os
 import json
-import logging
-import logging.handlers
-import pwd
 import stat
 import sys
 import tempfile
 import errno
+import argparse
+import traceback
+import htcondor
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
 
-try:
-    import htcondor
-except ImportError:
-    htcondor = None
+
+def camelize(snake):
+    """
+    Convert a SNAKE_CASE string (e.g. DAEMON_NAME) to CamelCase (e.g. DaemonName).
+    Useful for getting an appropriate log file name for a daemon.
+
+    :param snake: snake_cased string
+    :return: CamelCased string"""
+    return "".join([x.capitalize() for x in snake.split("_")])
+
+
+def parse_args(daemon_name="CREDMON_OAUTH"):
+    """
+    Parse commandline arguments
+
+    :return: argparse.Namespace object containing arugment values
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name", "-n", dest="daemon_name", default=daemon_name, help="Credmon daemon name (default: %(default)s)")
+    parser.add_argument("--cred-dir", "-c", help="Path to credential directory")
+    parser.add_argument("--log-file", "-l", help="Path to log file")
+    parser.add_argument("--debug", "-d", action="store_true", help="Set log level to DEBUG")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Print log to stderr. Equivalent to the -debug flag in other HTCondor tools.")
+    args = parser.parse_args()
+
+    # Daemon name should be all uppercase to match other daemons
+    args.daemon_name = args.daemon_name.upper()
+
+    return parser.parse_args()
+
+
+class HTCondorLogger:
+    """
+    Class that mimics the Python logging module but logs using htcondor.log
+    """
+
+    def debug(self, msg, *mvars):
+        htcondor.log(htcondor.LogLevel.Always | htcondor.LogLevel.Verbose, msg % mvars)
+
+    def info(self, msg, *mvars):
+        htcondor.log(htcondor.LogLevel.Always, msg % mvars)
+
+    def warning(self, msg, *mvars):
+        htcondor.log(htcondor.LogLevel.Always, "WARNING: {0}".format(msg % mvars))
+
+    def error(self, msg, *mvars):
+        htcondor.log(htcondor.LogLevel.Error, msg % mvars)
+
+    def exception(self, msg, *mvars):
+        htcondor.log(htcondor.LogLevel.Error, "{0}\n{1}".format(msg % mvars, traceback.format_exc()))
+
+
+def setup_logging(daemon_name, log_file=None, debug=False, verbose=False, **kwargs):
+    """
+    Set up logging
+
+    :param daemon_name: Credmon daemon name
+    :param log_file: Path to custom log file
+    :param debug: Bool for setting debug log level
+    :param verbose: Bool for logging to stderr
+
+    :return: HTCondorLogger object
+    """
+
+    # Setting debug level first so all messages are emitted
+    if debug:
+        daemon_debug = "{0}_DEBUG".format(daemon_name)
+        htcondor.param[daemon_debug] = "$({0}) D_FULLDEBUG".format(daemon_debug)
+
+    if verbose:
+        htcondor.enable_debug()
+
+    if log_file is None:
+        log_file = htcondor.param.get("{0}_LOG".format(daemon_name),
+            os.path.join(htcondor.param["LOG"], "{0}Log".format(camelize(daemon_name))))
+
+    # Explicitly set the log path so HTCondor doesn't write to ToolLog
+    htcondor.param["{0}_LOG".format(daemon_name)] = log_file
+
+    # Check writability to prevent htcondor.enable_log() from killing the script
+    # before we can write a useful error message to stderr.
+    try:
+        with open(log_file, "ab"):
+            pass
+    except Exception as err:
+        # Exit and notify the condor_master if not running with -verbose
+        if not verbose:
+            htcondor.enable_debug()
+            htcondor.log(htcondor.LogLevel.Error, "Could not open log file: {0}".format(str(err)))
+            sys.exit(44)  # 44 is the magic number to tell condor_master about logging errors
+        htcondor.log(htcondor.LogLevel.Always, "WARNING: Could not open log file: {0}".format(str(err)))
+    else:
+        htcondor.enable_log()
+
+    return HTCondorLogger()
+
 
 def atomic_output(file_contents, output_fname, mode=stat.S_IRUSR):
     """
@@ -39,14 +131,13 @@ def atomic_output(file_contents, output_fname, mode=stat.S_IRUSR):
             pass
 
 
-def create_credentials():
+def create_credentials(args):
     """
     Auto-create the credentials for the condor_credmon; if there are already
     credentials present, leave them alone.
     """
-    if not htcondor:
-        return
-    logger = logging.getLogger(os.path.basename(sys.argv[0]))
+
+    logger = setup_logging(**vars(args))
 
     private_keyfile = htcondor.param.get("LOCAL_CREDMON_PRIVATE_KEY", "/etc/condor/scitokens-private.pem")
     public_keyfile = htcondor.param.get("LOCAL_CREDMON_PUBLIC_KEY", "/etc/condor/scitokens.pem")
@@ -86,67 +177,7 @@ def create_credentials():
     finally:
         os.close(fd)
 
-def setup_logging(log_path = None, log_level = None):
-    '''
-    Detects the path and level for the log file from the condor_config and sets 
-    up a logger. Instead of detecting the path and/or level from the 
-    condor_config, a custom path and/or level for the log file can be passed as
-    optional arguments.
 
-    :param log_path: Path to custom log file
-    :param log_level: Custom log level
-    :return: logging.Logger object with handler WatchedFileHandler(log_path)
-    '''
-
-    # Get the log path
-    if (log_path is None) and (htcondor is not None) and (
-            ('CREDMON_OAUTH_LOG' in htcondor.param) or
-            ('SEC_CREDENTIAL_MONITOR_LOG' in htcondor.param) or
-            ('SEC_CREDENTIAL_MONITOR_OAUTH_LOG' in htcondor.param)
-            ):
-        log_path = htcondor.param.get('CREDMON_OAUTH_LOG',
-                        htcondor.param.get('SEC_CREDENTIAL_MONITOR_OAUTH_LOG',
-                                htcondor.param.get('SEC_CREDENTIAL_MONITOR_LOG')))
-    elif (log_path is None):
-        if sys.platform in ("win32", "cygwin"):
-            raise RuntimeError('The log file path must be specified in condor_config as CREDMON_OAUTH_LOG or passed as an argument')
-        else:
-            # Fall back to a default path on *nix(like) systems
-            log_path = "/var/log/condor/CredMonOAuthLog"
-
-    # Get the log level
-    if (log_level is None) and (htcondor is not None) and ('CREDMON_OAUTH_LOG_LEVEL' in htcondor.param):
-        log_level = logging.getLevelName(htcondor.param['CREDMON_OAUTH_LOG_LEVEL'])
-    if log_level is None:
-        log_level = logging.INFO
-
-    # Set up the root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(log_level)
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-
-    old_euid = os.geteuid()
-    try:
-        condor_euid = pwd.getpwnam("condor").pw_uid
-        os.seteuid(condor_euid)
-    except:
-        pass
-
-    try:
-        log_handler = logging.handlers.WatchedFileHandler(log_path)
-        log_handler.setFormatter(logging.Formatter(log_format))
-        root_logger.addHandler(log_handler)
-
-        # Return a child logger with the same name as the script that called it
-        child_logger = logging.getLogger(os.path.basename(sys.argv[0]))
-    finally:
-        try:
-            os.seteuid(old_euid)
-        except:
-            pass
-    
-    return child_logger
-    
 def get_cred_dir(cred_dir = None):
     '''
     Detects the path for the credential directory from the condor_config,
@@ -264,11 +295,6 @@ def generate_secret_key():
     """
     Return a secret key that is common across all sessions
     """
-    logger = logging.getLogger(os.path.basename(sys.argv[0]))
-
-    if not htcondor:
-        logger.warning("HTCondor module is missing will use a non-persistent WSGI session key")
-        return os.urandom(16)
 
     cred_dir = htcondor.param.get("SEC_CREDENTIAL_DIRECTORY_OAUTH",
                     htcondor.param.get("SEC_CREDENTIAL_DIRECTORY",
@@ -280,8 +306,8 @@ def generate_secret_key():
         os.close(os.open(keyfile, os.O_CREAT | os.O_EXCL | os.O_RDWR, stat.S_IRUSR))
     except OSError as os_error:
         # An exception will be thrown if the file already exists, and that's fine and good.
-        if not (os_error.errno == errno.EEXIST):
-            logger.warning("Unable to access WSGI session key at %s (%s);  will use a non-persistent key.", keyfile, str(os_error))
+        if os_error.errno != errno.EEXIST:
+            sys.stderr.write("Unable to access WSGI session key at {0} ({1}); will use a non-persistent key.\n".format(keyfile, str(os_error)))
             return os.urandom(16)
 
     # Open the secret key file.
@@ -289,12 +315,12 @@ def generate_secret_key():
         with open(keyfile, 'rb') as f:
             current_key = f.read(24)
     except IOError as e:
-        logger.warning("Unable to access WSGI session key at %s (%s); will use a non-persistent key.", keyfile, str(e))
+        sys.stderr.write("Unable to access WSGI session key at {0} ({1}); will use a non-persistent key.\n".format(keyfile, str(e)))
         return os.urandom(16)
 
     # Make sure the key string isn't empty or truncated.
     if len(current_key) >= 16:
-        logger.debug("Using the persistent WSGI session key")
+        sys.stderr.write("Using the persistent WSGI session key.\n")
         return current_key
 
     # We are responsible for generating the keyfile for this webapp to use.
@@ -302,8 +328,8 @@ def generate_secret_key():
     try:
         # Use atomic output so the file is only ever read-only
         atomic_output(new_key, keyfile, stat.S_IRUSR)
-        logger.info("Successfully created a new persistent WSGI session key for scitokens-credmon application at %s.", keyfile)
+        sys.stderr.write("Successfully created a new persistent WSGI session key for scitokens-credmon application at {0}.\n".format(keyfile))
     except Exception as e:
-        logger.exception("Failed to atomically create a new persistent WSGI session key at %s (%s); will use a transient one.", keyfile, str(e))
+        sys.stderr.write("Failed to atomically create a new persistent WSGI session key at {0} ({1}); will use a transient one.\n".format(keyfile, str(e)))
         return new_key
     return new_key
