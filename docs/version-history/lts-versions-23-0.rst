@@ -36,6 +36,9 @@ Bugs Fixed:
   when reading logs with parallel universe jobs in it.
   :jira:`2099`
 
+- Implemented DISABLE_SWAP_FOR_JOB support for cgroup v2 systems.
+  :jira:`2127`
+
 - Fixed a bug that could result in job sandboxes not being cleaned up 
   for **batch** grid jobs submitted to a remote cluster. 
   :jira:`2073`
