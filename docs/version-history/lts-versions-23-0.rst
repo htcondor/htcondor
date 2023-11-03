@@ -66,6 +66,10 @@ Bugs Fixed:
   *condor_schedd* that's on the same private network.
   :jira:`2115`
 
+- Fixed bug in DAGMan where held jobs that were removed would cause a
+  warning about the internal count of held job procs being incorrect.
+  :jira:`2102`
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
@@ -75,7 +79,7 @@ Release Notes:
 
 - HTCondor version 23.0.1 released on October 31, 2023.
 
-- We added a HTCondor Python wheel for Python 3.12 on Pypi.
+- We added a HTCondor Python wheel for Python 3.12 on PyPI.
   :jira:`2117`
 
 - The HTCondor tarballs now contain apptainer version 1.2.4.

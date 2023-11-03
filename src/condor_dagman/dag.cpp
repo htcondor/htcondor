@@ -718,8 +718,6 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 
 		job->SetProcEvent( event->proc, ABORT_TERM_MASK );
 
-		DecrementProcCount( job );
-
 			// This code is here because if a held job is removed, we
 			// don't get a released event for that job.  This may not
 			// work exactly right if some procs of a cluster are held
@@ -727,6 +725,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		if ( job->_jobProcsOnHold > 0 ) {
 			job->Release( event->proc );
 		}
+
+		DecrementProcCount( job );
 
 			// Only change the node status, error info,
 			// etc., if we haven't already gotten an error
