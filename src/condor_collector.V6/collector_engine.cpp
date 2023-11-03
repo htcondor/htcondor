@@ -28,11 +28,69 @@
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"
 #include "classad_merge.h"
-
+#include <algorithm>
 //-------------------------------------------------------------
 
 #include "collector.h"
 #include "collector_engine.h"
+
+// Map of *_ADTYPE string to a whichAds (i.e. which collector table enum value)
+// This returns return a std::array at compile time that other
+// consteval functions can use as a lookup table
+constexpr
+std::array<std::pair<const char *, AdTypes>,24>
+makeAdTypeToWhichAdsTable() {
+	return {{ // yes, there needs to be 2 open braces here...
+		{ ANY_ADTYPE,			ANY_AD },
+		{ STARTD_SLOT_ADTYPE,	SLOT_AD },
+		{ STARTD_DAEMON_ADTYPE, STARTDAEMON_AD },
+		{ STARTD_OLD_ADTYPE,	STARTD_AD },
+		{ SCHEDD_ADTYPE,		SCHEDD_AD },
+		{ SUBMITTER_ADTYPE,		SUBMITTOR_AD },
+		{ MASTER_ADTYPE,		MASTER_AD },
+		{ CKPT_SRVR_ADTYPE,		CKPT_SRVR_AD },
+		{ STARTD_PVT_ADTYPE,	STARTD_PVT_AD }, // soon to be obsolete?
+		{ COLLECTOR_ADTYPE,		COLLECTOR_AD },
+		{ STORAGE_ADTYPE,		STORAGE_AD },
+		{ NEGOTIATOR_ADTYPE,	NEGOTIATOR_AD },
+		{ ACCOUNTING_ADTYPE,	ACCOUNTING_AD },
+		{ LICENSE_ADTYPE,		LICENSE_AD },
+		{ HAD_ADTYPE,			HAD_AD },
+		{ REPLICATION_ADTYPE,	GENERIC_AD },	// Replocation ads go into the generic table in the collector
+		{ CLUSTER_ADTYPE,		CLUSTER_AD },
+		{ GENERIC_ADTYPE,		GENERIC_AD },
+		{ CREDD_ADTYPE,			CREDD_AD },
+		{ XFER_SERVICE_ADTYPE,	XFER_SERVICE_AD },
+		{ LEASE_MANAGER_ADTYPE,	LEASE_MANAGER_AD },
+		{ GRID_ADTYPE,			GRID_AD },
+		{ DEFRAG_ADTYPE,		DEFRAG_AD },    // Defrag ads go into the generic table in the collector
+		{ JOB_ROUTER_ADTYPE,	GENERIC_AD },	// Job_Router ads go into the generic table in the collector
+		}};
+}
+
+template<size_t N> constexpr
+auto sortByFirst(const std::array<std::pair<const char *, AdTypes>, N> &table) {
+	auto sorted = table;
+	std::sort(sorted.begin(), sorted.end(),
+		[](const std::pair<const char *, AdTypes> &lhs,
+			const std::pair<const char *, AdTypes> &rhs) {
+				return istring_view(lhs.first) < istring_view(rhs.first);
+		});
+	return sorted;
+}
+
+AdTypes
+AdTypeStringToWhichAds(const char* adtype_string)
+{
+	constexpr static const auto table = sortByFirst(makeAdTypeToWhichAdsTable());
+	auto it = std::lower_bound(table.begin(), table.end(), adtype_string,
+		[](const std::pair<const char *, AdTypes> &p, const char * name) {
+			return istring_view(p.first) < istring_view(name);
+		});;
+	if ((it != table.end()) && (istring_view(it->first) == istring_view(adtype_string))) return it->second;
+	return NO_AD;
+}
+
 
 static void killHashTable (CollectorHashTable &);
 static int killGenericHashTable(CollectorHashTable *);
@@ -207,20 +265,10 @@ invokeHousekeeper (AdTypes adType)
 }
 
 int
-CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
+CollectorEngine::invalidateAds(CollectorHashTable *table, const char *targetType, ClassAd &query)
 {
-	CollectorHashTable *table=0;
-	CollectorEngine::HashFunc func;
-	if (!LookupByAdType(adType, table, func)) {
-		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
+	if (!table) {
 		return 0;
-	}
-
-	// the query target type constrains what ads should be returned
-	const char * targetType = nullptr;
-	std::string targetTypeStr;
-	if (query.LookupString(ATTR_TARGET_TYPE, targetTypeStr) && ! targetTypeStr.empty()) {
-		targetType = targetTypeStr.c_str();
 	}
 
 	int count = 0;
@@ -268,6 +316,50 @@ walkGenericTables(int (*scanFunction)(CollectorRecord *))
 	return ret;
 }
 
+#if 1
+std::vector<CollectorHashTable *>
+CollectorEngine::getAnyHashTables(const char * mytype)
+{
+	std::vector<CollectorHashTable*> tables;
+	if (mytype) {
+		// return any tables associated with the given adtype
+		AdTypes adtype = AdTypeStringToWhichAds(mytype);
+		CollectorHashTable * table = getHashTable(adtype);
+		if (table) { tables.push_back(table); }
+		if (adtype == STARTD_AD) {
+			table = getHashTable(STARTDAEMON_AD);
+			if (table) { tables.push_back(table); }
+		} else if (adtype == SCHEDD_AD) {
+			table = getHashTable(SUBMITTOR_AD);
+			if (table) { tables.push_back(table); }
+		}
+		table = getGenericHashTable(mytype);
+		if (table) { tables.push_back(table); }
+	} else {
+		// return all tables in the same order that the old walkHashTable would iterate them
+		tables.reserve(GenericAds.getTableSize() + 13);
+		tables.push_back(&AccountingAds);
+		tables.push_back(&StorageAds);
+		tables.push_back(&CkptServerAds);
+		tables.push_back(&LicenseAds);
+		tables.push_back(&CollectorAds);
+		tables.push_back(&StartdDaemonAds);
+		tables.push_back(&StartdSlotAds);
+		tables.push_back(&ScheddAds);
+		tables.push_back(&MasterAds);
+		tables.push_back(&SubmittorAds);
+		tables.push_back(&NegotiatorAds);
+		tables.push_back(&HadAds);
+		tables.push_back(&GridAds);
+
+		CollectorHashTable * table;
+		GenericAds.startIterations();
+		while (GenericAds.iterate(table)) { tables.push_back(table); }
+	}
+	return tables;
+}
+
+#else
 int CollectorEngine::
 walkHashTable (AdTypes adType, int (*scanFunction)(CollectorRecord *))
 {
@@ -315,7 +407,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(CollectorRecord *))
 
 	return 1;
 }
-
+#endif
 
 CollectorHashTable *CollectorEngine::findOrCreateTable(const std::string &type)
 {
@@ -993,58 +1085,94 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 	return val;
 }
 
+int CollectorEngine::remove(CollectorHashTable * table, AdNameHashKey &hk, AdTypes t_AddType)
+{
+	int iRet = 0;
+	CollectorRecord* record = nullptr;
+	if( table->lookup(hk, record) != -1 )
+	{
+		iRet = table->remove(hk)==0;
+
+		std::string hkString;
+		hk.sprint( hkString );
+		const char * adtype_str = AdTypeToString(t_AddType);
+		dprintf (D_ALWAYS,"\t\t**** Removed(%d) %s ad(s): \"%s\"\n", iRet, adtype_str, hkString.c_str() );
+
+		// For INVALIDATE_STARTD_ADS, If the mytype is "Machine" and this is the primary slot ad
+		// we should invalidate the StartDaemon ad as well
+		if ((t_AddType == STARTD_AD) && record && record->m_publicAd &&
+			STARTD_AD == get_real_startd_ad_type(*(record->m_publicAd)) &&
+			is_primary_slot_ad(*(record->m_publicAd)))
+		{
+			CollectorRecord* daemon = nullptr;
+			if (StartdDaemonAds.lookup(hk, daemon) != -1) {
+				iRet += (StartdDaemonAds.remove(hk) == 0) ? 1 : 0;
+				dprintf (D_ALWAYS,"\t\t**** Removed(%d) %s ad(s): \"%s\"\n",
+					iRet, STARTD_DAEMON_ADTYPE, hkString.c_str() );
+				delete daemon;
+			}
+		}
+
+		delete record;
+	}
+	return iRet;
+}
+
+#if 0  // not currently used
 int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *query_contains_hash_key)
 {
 	int iRet = 0;
 	AdNameHashKey hk;
 	CollectorHashTable * table;
 	HashFunc makeKey;
-	std::string hkString;
 
 	if( query_contains_hash_key ) {
 		*query_contains_hash_key = false;
 	}
 
-	const char * adtype_str = AdTypeToString(t_AddType);
-
 	// making it generic so any would be invalid query can contain these params.
 	if ( LookupByAdType (t_AddType, table, makeKey) )
 	{
-		CollectorRecord* record = nullptr;
 		// try to create a hk from the query ad if it is possible.
 		if ( (*makeKey) (hk, &c_query) ) {
 			if( query_contains_hash_key ) {
 				*query_contains_hash_key = true;
 			}
-			if( table->lookup(hk, record) != -1 )
-			{
-				hk.sprint( hkString );
-				iRet = !table->remove(hk);
-				dprintf (D_ALWAYS,"\t\t**** Removed(%d) %s ad(s): \"%s\"\n", iRet, adtype_str, hkString.c_str() );
-
-				// For INVALIDATE_STARTD_ADS, If the mytype is "Machine" and this is the primary slot ad
-				// we should invalidate the StartDaemon ad as well
-				if ((t_AddType == STARTD_AD) && record && record->m_publicAd &&
-					STARTD_AD == get_real_startd_ad_type(*(record->m_publicAd)) &&
-					is_primary_slot_ad(*(record->m_publicAd)))
-				{
-					CollectorRecord* daemon = nullptr;
-					if (StartdDaemonAds.lookup(hk, daemon) != -1) {
-						iRet += (StartdDaemonAds.remove(hk) == 0) ? 1 : 0;
-						dprintf (D_ALWAYS,"\t\t**** Removed(%d) %s ad(s): \"%s\"\n",
-							iRet, STARTD_DAEMON_ADTYPE, hkString.c_str() );
-						delete daemon;
-					}
-				}
-
-				delete record;
-			}
+			iRet = remove(table, hk);
 		}
 	}
 
 	return ( iRet );
 }
+#endif
 
+int CollectorEngine::expire(CollectorHashTable * hTable, AdNameHashKey & hKey) {
+	int rVal = 0;
+	CollectorRecord* record = nullptr;
+	if( hTable->lookup( hKey, record ) != -1 ) {
+		record->m_publicAd->Assign( ATTR_LAST_HEARD_FROM, 1 );
+
+		if( CollectorDaemon::offline_plugin_.expire( * record->m_publicAd ) == true ) {
+			return rVal;
+		}
+
+		rVal = hTable->remove( hKey );
+		if( rVal == -1 ) {
+			dprintf( D_ALWAYS, "\t\t Error removing ad\n" );
+			return 0;
+		}
+		rVal = 1;
+
+		std::string hkString;
+		hKey.sprint( hkString );
+		dprintf( D_ALWAYS, "\t\t**** Removed(%d) stale ad(s): \"%s\"\n", rVal, hkString.c_str() );
+
+		delete record;
+	}
+	return rVal;
+}
+
+#if 0   // not currently used
 int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * queryContainsHashKey ) {
     int rVal = 0;
     if( queryContainsHashKey ) { * queryContainsHashKey = false; }
@@ -1056,34 +1184,13 @@ int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * query
         if( (* hFunc)( hKey, & query ) ) {
             if( queryContainsHashKey ) { * queryContainsHashKey = true; }
 
-            // TODO fix expiry and offline ads for synthesized StartDaemon ads
-
-            CollectorRecord* record = nullptr;
-            if( hTable->lookup( hKey, record ) != -1 ) {
-                record->m_publicAd->Assign( ATTR_LAST_HEARD_FROM, 1 );
-
-                if( CollectorDaemon::offline_plugin_.expire( * record->m_publicAd ) == true ) {
-                    return rVal;
-                }
-
-                rVal = hTable->remove( hKey );
-                if( rVal == -1 ) {
-                    dprintf( D_ALWAYS, "\t\t Error removing ad\n" );
-                    return 0;
-                }
-                rVal = (! rVal);
-
-                std::string hkString;
-                hKey.sprint( hkString );
-                dprintf( D_ALWAYS, "\t\t**** Removed(%d) stale ad(s): \"%s\"\n", rVal, hkString.c_str() );
-
-                delete record;
-            }
+            rVal = expire(hTable, hKey);
         }
     }
 
 	return rVal;
 }
+#endif
 
 int CollectorEngine::
 remove (AdTypes adType, AdNameHashKey &hk)

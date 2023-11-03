@@ -30,6 +30,7 @@ static char *new_strdup (const char *);
 GenericQuery::
 GenericQuery ()
 {
+#if 0
 	// initialize category counts
 	integerThreshold = 0;
 	stringThreshold = 0;
@@ -43,12 +44,13 @@ GenericQuery ()
 	floatKeywordList = NULL;
 	integerKeywordList = NULL;
 	stringKeywordList = NULL;
+#endif
 }
-
 
 GenericQuery::
 GenericQuery (const GenericQuery &gq)
 {
+#if 0
 	// initialize category counts
 	integerThreshold = 0;
 	stringThreshold = 0;
@@ -62,7 +64,7 @@ GenericQuery (const GenericQuery &gq)
 	floatKeywordList = NULL;
 	integerKeywordList = NULL;
 	stringKeywordList = NULL;
-
+#endif
 	copyQueryObject(gq);
 }
 
@@ -71,14 +73,15 @@ GenericQuery::
 ~GenericQuery ()
 {
 	clearQueryObject ();
-	
+#if 0
 	// release memory
 	if (stringConstraints) delete [] stringConstraints;
 	if (floatConstraints)  delete [] floatConstraints;
 	if (integerConstraints)delete [] integerConstraints;
+#endif
 }
 
-
+#if 0
 int GenericQuery::
 setNumIntegerCats (const int numCats)
 {
@@ -182,7 +185,7 @@ hasStringNoCase(const int cat, const char * value)
 	}
 	return false;
 }
-
+#endif
 
 int GenericQuery::
 addCustomOR (const char *value)
@@ -204,7 +207,7 @@ addCustomAND (const char *value)
 	return Q_OK;
 }
 
-
+#if 0
 // clear functions
 int GenericQuery::
 clearInteger (const int cat)
@@ -277,20 +280,17 @@ setFloatKwList (char **value)
 {
 	floatKeywordList = value;
 }
-
+#endif
 
 // make query
 int GenericQuery::
 makeQuery (std::string &req)
 {
-	int		i;
-	char	*item;
-
-	req = "";
+	req.clear();
 
 	// construct query requirement expression
 	bool firstCategory = true;
-
+#if 0
 	// add string constraints
 	for (i = 0; i < stringThreshold; i++)
 	{
@@ -344,11 +344,13 @@ makeQuery (std::string &req)
 			req += ')';
 		}
 	}
+#endif
 
 	// add custom AND constraints
 	customANDConstraints.Rewind ();
 	if (!customANDConstraints.AtEnd ())
 	{
+		const char * item;
 		bool firstTime = true;
 		req += firstCategory ? "(" : " && (";
 		while ((item = customANDConstraints.Next ()))
@@ -364,6 +366,7 @@ makeQuery (std::string &req)
 	customORConstraints.Rewind ();
 	if (!customORConstraints.AtEnd ())
 	{
+		const char * item;
 		bool firstTime = true;
 		req += firstCategory ? "(" : " && (";
 		while ((item = customORConstraints.Next ()))
@@ -379,14 +382,20 @@ makeQuery (std::string &req)
 }
 
 int GenericQuery::
-makeQuery (ExprTree *&tree)
+makeQuery (ExprTree *&tree, const char * expr_if_empty)
 {
 	std::string req;
 	int status = makeQuery(req);
 	if (status != Q_OK) return status;
 
 	// If there are no constraints, then we match everything.
-	if (req.empty()) req = "TRUE";
+	if (req.empty()) {
+		if ( ! expr_if_empty) {
+			tree = nullptr;
+			return Q_OK;
+		}
+		req = expr_if_empty;
+	}
 
 	// parse constraints and insert into query ad
 	if (ParseClassAdRvalExpr (req.c_str(), tree) > 0) return Q_PARSE_ERROR;
@@ -398,6 +407,7 @@ makeQuery (ExprTree *&tree)
 void GenericQuery::
 clearQueryObject (void)
 {
+#if 0
 	int i;
 	for (i = 0; i < stringThreshold; i++)
 		if (stringConstraints) clearStringCategory (stringConstraints[i]);
@@ -407,7 +417,7 @@ clearQueryObject (void)
 
 	for (i = 0; i < floatThreshold; i++)
 		if (integerConstraints) clearFloatCategory (floatConstraints[i]);
-
+#endif
 	clearStringCategory (customANDConstraints);
 	clearStringCategory (customORConstraints);
 }
@@ -424,6 +434,7 @@ clearStringCategory (List<char> &str_category)
     }
 }
 
+#if 0
 void GenericQuery::
 clearIntegerCategory (std::vector<int> &int_category)
 {
@@ -435,12 +446,13 @@ clearFloatCategory (std::vector<float> &float_category)
 {
 	float_category.clear();
 }
-
+#endif
 
 // helper functions --- copy
 void GenericQuery::
 copyQueryObject (const GenericQuery &from)
 {
+#if 0
 	int i;
 
 	// copy string constraints
@@ -450,11 +462,12 @@ copyQueryObject (const GenericQuery &from)
 	// copy integer constraints
 	for (i = 0; i < from.integerThreshold; i++)
 		if (integerConstraints) copyIntegerCategory (integerConstraints[i],from.integerConstraints[i]);
-
+#endif
 	// copy custom constraints
 	copyStringCategory (customANDConstraints, const_cast<List<char> &>(from.customANDConstraints));
 	copyStringCategory (customORConstraints, const_cast<List<char> &>(from.customORConstraints));
 
+#if 0
 	// copy misc fields
 	stringThreshold = from.stringThreshold;
 	integerThreshold = from.integerThreshold;
@@ -467,6 +480,7 @@ copyQueryObject (const GenericQuery &from)
 	floatConstraints = from.floatConstraints;
 	integerConstraints = from.integerConstraints;
 	stringConstraints = from.stringConstraints;
+#endif
 }
 
 void GenericQuery::
@@ -480,6 +494,7 @@ copyStringCategory (List<char> &to, List<char> &from)
 		to.Append (new_strdup (item));
 }
 
+#if 0
 void GenericQuery::
 copyIntegerCategory (std::vector<int> &to, std::vector<int> &from)
 {
@@ -493,6 +508,7 @@ copyFloatCategory (std::vector<float> &to, std::vector<float> &from)
 	clearFloatCategory (to);
 	std::copy(from.begin(), from.end(), std::back_inserter(to));
 }
+#endif
 
 // strdup() which uses new
 static char *new_strdup (const char *str)

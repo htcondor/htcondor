@@ -27,7 +27,7 @@
 #define STARTD_OLD_ADTYPE		"Machine"
 #define STARTD_SLOT_ADTYPE		"Slot"
 #define STARTD_DAEMON_ADTYPE	"StartDaemon"
-//#define STARTD_PVT_ADTYPE		"MachinePrivate"
+#define STARTD_PVT_ADTYPE		"MachinePrivate"
 #define SCHEDD_ADTYPE			"Scheduler"
 #define MASTER_ADTYPE			"DaemonMaster"
 #define CKPT_SRVR_ADTYPE		"CkptServer"

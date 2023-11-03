@@ -1411,7 +1411,9 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "hold", 2) || is_dash_arg_prefix(dash_arg, "held", 2)) {
-			Q.add (CQ_STATUS, HELD);
+			std::string expr;
+			formatstr(expr, ATTR_JOB_STATUS "==%d", HELD);
+			Q.addAND (expr.c_str());
 			show_held = true;
 			querying_partial_clusters = true;
 			if (dash_run || dash_idle) {
@@ -1422,7 +1424,9 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "idle", 3)) {
-			Q.add (CQ_STATUS, IDLE);
+			std::string expr;
+			formatstr(expr, ATTR_JOB_STATUS "==%d", IDLE);
+			Q.addAND (expr.c_str());
 			dash_idle = true;
 			querying_partial_clusters = true;
 			if (dash_run || show_held) {
@@ -1717,10 +1721,6 @@ processCommandLineArguments (int argc, const char *argv[])
 		default_fetch_opts &= ~CondorQ::fetch_MyJobs;
 
 		for (std::vector<CondorID>::const_iterator it = constrID.begin(); it != constrID.end(); ++it) {
-
-			// if we aren't doing db queries, do we need to do this?
-			Q.addDBConstraint(CQ_CLUSTER_ID, it->_cluster);
-			if (it->_proc >= 0) { Q.addDBConstraint(CQ_PROC_ID, it->_proc); }
 
 			// add a constraint to match the jobid.
 			if (it->_proc >= 0) {

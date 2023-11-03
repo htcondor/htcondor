@@ -32,6 +32,7 @@ class GenericQuery
 	GenericQuery (const GenericQuery &);
 	~GenericQuery ();
 
+#if 0
 	// set number of categories
 	int setNumIntegerCats (const int);
 	int setNumStringCats (const int);
@@ -41,13 +42,15 @@ class GenericQuery
 	int addInteger (const int, int);
 	int addString (const int, const char *);
 	int addFloat (const int, float);
+#endif
 	int addCustomOR (const char *);
 	int addCustomAND( const char * );
 
-	bool hasString(const int cat, const char * value);
-	bool hasStringNoCase(const int cat, const char * value);
 	bool hasCustomOR(const char * value) { return hasItem(customORConstraints, value); }
 	bool hasCustomAND(const char * value) { return hasItem(customANDConstraints, value); }
+#if 0
+	bool hasString(const int cat, const char * value);
+	bool hasStringNoCase(const int cat, const char * value);
 
 	// clear constraints
 	int clearInteger (const int);
@@ -60,16 +63,19 @@ class GenericQuery
 	void setIntegerKwList (char **);
 	void setStringKwList (char **);
 	void setFloatKwList (char **);
-	
+#endif
 	// make the query expression
-	int makeQuery (ExprTree *&tree);
+	int makeQuery (ExprTree *&tree, const char * expr_if_empty="TRUE");
 	int makeQuery (std::string &expr);
+
+	void clear() { clearQueryObject(); }
 
 	// overloaded operators
     // friend ostream &operator<< (ostream &, GenericQuery &);  // display
     // GenericQuery   &operator=  (GenericQuery &);             // assignment
 
   private:
+#if 0
 	// to store the number of categories of each type
 	int integerThreshold;
 	int stringThreshold;
@@ -84,30 +90,33 @@ class GenericQuery
 	std::vector<int>   *integerConstraints;
 	std::vector<float> *floatConstraints;
 	List<char> 		  *stringConstraints;
+#endif
 	List<char> 		  customORConstraints;
 	List<char> 		  customANDConstraints;
 
 	// helper functions
 	void clearQueryObject     (void);
-    void clearStringCategory  (List<char> &);
-    void clearIntegerCategory (std::vector<int> &);
-    void clearFloatCategory   (std::vector<float> &);
-    void copyQueryObject      (const GenericQuery &);
-    void copyStringCategory   (List<char> &, List<char> &);
-    void copyIntegerCategory  (std::vector<int> &, std::vector<int> &);
-    void copyFloatCategory    (std::vector<float>&, std::vector<float>&);
+	void copyQueryObject      (const GenericQuery &);
 	bool hasItem(List<char>& lst, const char * value) {
 		for (YourString item = lst.First(); ! item.empty(); item = lst.Next()) {
 			if (item == value) return true;
 		}
 		return false;
 	}
+	void clearStringCategory  (List<char> &);
+	void copyStringCategory   (List<char> &, List<char> &);
+#if 0
+    void clearIntegerCategory (std::vector<int> &);
+    void clearFloatCategory   (std::vector<float> &);
+    void copyIntegerCategory  (std::vector<int> &, std::vector<int> &);
+    void copyFloatCategory    (std::vector<float>&, std::vector<float>&);
 	bool hasItemNoCase(List<char>& lst, const char * value) {
 		for (YourStringNoCase item = lst.First(); ! item.empty(); item = lst.Next()) {
 			if (item == value) return true;
 		}
 		return false;
 	}
+#endif
 };
 
 #endif
