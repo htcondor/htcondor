@@ -98,6 +98,10 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "exit.h"
 
 #include <algorithm>
+#include <charconv>
+#include <filesystem>
+
+namespace stdfs = std::filesystem;
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -6072,6 +6076,24 @@ void writeExecError(CreateProcessForkit *forkit,int exec_errno,int failed_op)
 	forkit->writeExecError(exec_errno,failed_op);
 }
 
+int largestOpenFD() {
+#ifdef LINUX
+	stdfs::path fds {"/proc/self/fd"};
+	int max_fd = 0;
+	for (const auto &d : stdfs::directory_iterator(fds)) {
+		std::string basename = d.path().filename().string();
+		int fd = 0;
+		std::ignore =  // should never fail, so don't bother to test if invalid
+			std::from_chars(basename.data(), basename.data() + basename.size(), fd);
+		max_fd = std::max(max_fd, fd);
+	}
+	return max_fd + 1;
+#else
+	return getdtablesize();
+#endif
+}
+
+
 void CreateProcessForkit::exec() {
 	gid_t  tracking_gid = 0;
 
@@ -6356,9 +6378,7 @@ void CreateProcessForkit::exec() {
 		// This _must_ be called before calling exec().
 	writeTrackingGid(tracking_gid);
 
-		// Create new filesystem namespace if wanted
-
-	int openfds = getdtablesize();
+	int openfds = largestOpenFD();
 
 		// Here we have to handle re-mapping of std(in|out|err)
 	if ( m_std ) {
