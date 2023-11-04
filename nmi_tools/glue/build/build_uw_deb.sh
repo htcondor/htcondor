@@ -97,6 +97,10 @@ dpkg-buildpackage -uc -us
 
 cd ..
 
-mv ./*.buildinfo ./*.changes ./*.deb ./*.debian.tar.* ./*.dsc ./*.orig.tar.* "$dest_dir"
+files="[a-z]*.buildinfo [a-z]*.changes [a-z]*.deb [a-z]*.debian.tar.* [a-z]*.dsc [a-z]*.orig.tar.*"
+# shellcheck disable=SC2086 # Intended splitting of files
+mv $files "$dest_dir"
 rm -rf "$tmpd"
-ls -lh "$dest_dir"
+cd "$dest_dir"
+# shellcheck disable=SC2086 # Intended splitting of files
+ls -lh $files
