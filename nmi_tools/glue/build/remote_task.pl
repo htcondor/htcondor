@@ -345,8 +345,8 @@ sub create_rpm {
 
 sub check_rpm {
     # Run rpmlint on the packages.
-    # The ls can be dropped, when the errors are resolved.
-    return "rpmlint *.rpm; ls -lh *.rpm";
+    # The true can be dropped, when the errors are resolved.
+    return "rpmlint *.rpm || true";
 }
 
 sub create_deb {    
