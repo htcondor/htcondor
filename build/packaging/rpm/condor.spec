@@ -705,7 +705,7 @@ sed -i 's;/usr/bin/python3;/usr/bin/python2;' %{buildroot}%{_libexecdir}/blahp/*
 install -m 0755 -d -p %{buildroot}%{_sysconfdir}/blahp
 for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
     mv %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh %{buildroot}%{_sysconfdir}/blahp
-    ln -s %{_sysconfdir}/blahp/${batch_system}_local_submit_attributes.sh \
+    ln -s ../../../etc/blahp/${batch_system}_local_submit_attributes.sh \
         %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
 done
 
@@ -1072,7 +1072,6 @@ rm -rf %{buildroot}
 
 ####### classads files #######
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_libdir/libclassad.so.*
 
 #################
@@ -1087,7 +1086,6 @@ rm -rf %{buildroot}
 
 ####### classads-devel files #######
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_bindir/classad_functional_tester
 %_bindir/classad_version
 %_libdir/libclassad.so
@@ -1139,14 +1137,12 @@ rm -rf %{buildroot}
 #################
 %files kbdd
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_sbindir/condor_kbdd
 
 #################
 %if ! 0%{?amzn}
 %files vm-gahp
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_sbindir/condor_vm-gahp
 %_libexecdir/condor/libvirt_simple_script.awk
 
