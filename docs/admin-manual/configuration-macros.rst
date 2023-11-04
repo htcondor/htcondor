@@ -4139,8 +4139,8 @@ advertisement.
 
 These macros control the power management capabilities of the
 *condor_startd* to optionally put the machine in to a low power state
-and wake it up later. See :doc:`/admin-manual/power-management` for more
-details.
+and wake it up later. 
+See (:ref:`admin-manual/ep-policy-configuration:power management`). for more details
 
 :macro-def:`HIBERNATE_CHECK_INTERVAL[STARTD]`
     An integer number of seconds that determines how often the
