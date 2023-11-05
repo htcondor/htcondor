@@ -279,6 +279,7 @@ main( int argc, const char *argv[] )
 	const char *pcolon = nullptr;
 	const char *digest_file = nullptr;
 	const char *clusterad_file = nullptr;
+	const char *items_file = nullptr;
 	const char *output_file = nullptr;
 	ClassAdFileParseType::ParseType clusterad_format = ClassAdFileParseType::Parse_long;
 	std::string errmsg;
@@ -313,6 +314,12 @@ main( int argc, const char *argv[] )
 					exit(1);
 				}
 				digest_file = *ptr;
+			} else if (is_dash_arg_prefix(ptr[0], "items", 1)) {
+				if (!(--argc) || !(*(++ptr))) {
+					fprintf(stderr, "%s: -items requires another argument\n", MyName);
+					exit(1);
+				}
+				items_file = *ptr;
 			} else if (is_dash_arg_colon_prefix(ptr[0], "out", &pcolon, 1)) {
 				bool needs_file_arg = true;
 				if (pcolon) { 
@@ -392,13 +399,37 @@ main( int argc, const char *argv[] )
 	ClusterObj = new JobQueueCluster(cluster_jid);
 	ClusterObj->Update(*ad); delete ad; ad = nullptr;
 
-	JobFactory * factory = new JobFactory(digest_file, cluster_id, &extendedSubmitCmds);
-	AttachJobFactoryToCluster(factory, ClusterObj);
-
 	if (! digest_file) {
 		fprintf(stderr, "\nERROR: no digest filename provided\n");
 		exit(1);
 	}
+
+	JobFactory * factory = new JobFactory(digest_file, cluster_id, &extendedSubmitCmds);
+
+	if (items_file) {
+		file = safe_fopen_wrapper_follow(items_file, "rb");
+		if (! file) {
+			fprintf(stderr, "could not open %s: error %d - %s\n", items_file, errno, strerror(errno));
+			exit(1);
+		}
+
+		// read the items and append them in 64k (ish) chunks to replicate the way the data is sent to the schedd by submit
+		const size_t cbAlloc = 0x10000;
+		char buf[cbAlloc];
+		std::string remainder;
+		size_t cbread;
+		size_t off = 0;
+		while ((cbread = fread(buf, 1, sizeof(buf), file)) > 0) {
+			if (AppendRowsToJobFactory(factory, buf, cbread, remainder) < 0) {
+				fprintf(stderr, "ERROR: could not append %d bytes of itemdata to factory at offset %d\n", (int)cbread, (int)off);
+				exit(1);
+			}
+			off += cbread;
+		}
+
+		fclose(file);
+	}
+
 	file = safe_fopen_wrapper_follow(digest_file, "rb");
 	if (! file) {
 		fprintf(stderr, "could not open %s: error %d - %s\n", digest_file, errno, strerror(errno));
@@ -406,9 +437,8 @@ main( int argc, const char *argv[] )
 	}
 	close_file = true;
 
-	MacroStreamYourFile ms(file, factory->source);
-
 	// the SetJobFactory RPC does this
+	MacroStreamYourFile ms(file, factory->source);
 	if (factory->LoadDigest(ms, nullptr, cluster_id, errmsg) != 0) {
 		fprintf(stderr, "\nERROR: failed to parse submit digest for factory %d : %s\n", factory->getClusterId(), errmsg.c_str());
 		exit(1);
@@ -419,10 +449,10 @@ main( int argc, const char *argv[] )
 		ClusterObj->Assign(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, first_proc_id);
 	}
 
-	// now that the digest is loaded, set the cluster ad into the factory again
+	// now that the digest is loaded, attach the cluster ad to the factory
 	// this will populate some stuff in the factory from the cluster ad
 	// and recompute the IDW from the digest and the cluster ad.
-	factory->set_cluster_ad(ClusterObj);
+	AttachJobFactoryToCluster(factory, ClusterObj);
 
 	FILE* out = stdout;
 	bool free_out = false;

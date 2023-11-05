@@ -183,12 +183,17 @@ foreach my $sub (@subs) {
 		}
 	}
 
-	TLOG "$tag: test_job_factory.exe $logarg -cl $cad $digest -out:proc -\n";
+	my $itemsarg = "";
+	if (-f "$digest.items") {
+		$itemsarg = "-item $digest.items";
+	}
+
+	TLOG "$tag: test_job_factory.exe $logarg -cl $cad $digest $itemsarg -out:proc -\n";
 	
 	# now materialize the proc ads from the cluster ad and digest
 	#
 	#
-	$hashref = runcmd( "test_job_factory.exe $logarg -cl $cad $digest -out:proc -", \%opts );
+	$hashref = runcmd( "test_job_factory.exe $logarg -cl $cad $digest $itemsarg -out:proc -", \%opts );
 	@output =  @{${$hashref}{"stdout"}};
 	@error =  @{${$hashref}{"stderr"}};
 	$exitcode = ${$hashref}{"exitcode"};
