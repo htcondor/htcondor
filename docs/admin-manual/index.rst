@@ -17,7 +17,6 @@ Administrators' Manual
    networking
    logging
    file-and-cred-transfer 
-   power-management
    hooks
    directories
    setting-up-special-environments
