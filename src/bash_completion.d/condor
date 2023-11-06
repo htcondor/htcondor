@@ -364,6 +364,37 @@ _condor_q()
   esac
 }
 
+_htcondor_completions() {
+  local cur_word prev_word
+  cur_word="${COMP_WORDS[COMP_CWORD]}"
+  prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+  if [ "$prev_word" == "htcondor" ] ; then
+      COMPREPLY=( $(compgen -W "dag job jobset eventlog annex" -- "$cur_word") )
+      return
+  fi
+  if [ "$prev_word" == "dag" ] ; then
+      COMPREPLY=( $(compgen -W "submit status" -- "$cur_word") )
+      return
+  fi
+  if [ "$prev_word" == "job" ] ; then
+      COMPREPLY=( $(compgen -W "submit status resources" -- "$cur_word") )
+      return
+  fi
+  if [ "$prev_word" == "jobset" ] ; then
+      COMPREPLY=( $(compgen -W "submit list status remove" -- "$cur_word") )
+      return
+  fi
+  if [ "$prev_word" == "eventlog" ] ; then
+      COMPREPLY=( $(compgen -W "read follow" -- "$cur_word") )
+      return
+  fi
+  if [ "$prev_word" == "annex" ] ; then
+      COMPREPLY=( $(compgen -W "create add status shutdown systems" -- "$cur_word") )
+      return
+  fi
+}
+
+complete -F _htcondor_completions htcondor 
 complete -F _condor_q condor_q
 complete -F _condor_status condor_status
 complete -F _condor_history condor_history
