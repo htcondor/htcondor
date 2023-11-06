@@ -340,7 +340,7 @@ VanillaProc::StartJob()
 
 		int64_t memory = 0;
 		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
-			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aboring\n");
+			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aborting\n");
 			ASSERT(false);
 		}
 		fi.cgroup_memory_limit = 0;
@@ -348,10 +348,17 @@ VanillaProc::StartJob()
 		// Need to set this in the unlikely case that we get OOM killed without
 		// setting cgroup memory limits
 		m_memory_limit = memory * 1024 * 1024;
+
 		std::string policy;
 		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "hard");
 		if (policy == "hard") {
 			fi.cgroup_memory_limit = (uint64_t) memory * 1024 * 1024;
+		}
+
+		// if DISABLE_SWAP_FOR_JOB is true, set swap limit to memory (meaning no swap) 
+		bool disable_swap = param_boolean("DISABLE_SWAP_FOR_JOB", false);
+		if (disable_swap && fi.cgroup_memory_limit > 0) {
+			fi.cgroup_memory_and_swap_limit = fi.cgroup_memory_limit;
 		}
 
 		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job with %d cpu weight and memory limit of %lu (slot memory is %ld).\n", cgroup, fi.cgroup_cpu_shares, fi.cgroup_memory_limit, memory);

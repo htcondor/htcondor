@@ -218,6 +218,9 @@ struct FamilyInfo {
 	bool want_pid_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
+	uint64_t cgroup_memory_and_swap_limit{0}; // limit of swap INclusive of memory. i.e.  
+											 // if same as cgroup_memory_limit, then
+											 // use memory but no swap
 	int cgroup_cpu_shares{0};
 
 	FamilyInfo() = default;
