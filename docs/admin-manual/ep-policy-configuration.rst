@@ -269,11 +269,11 @@ point in the negotiations has been reached. The possible states are
     have been divided in a partitionable slot. Consolidating the
     resources gives large jobs a chance to run.
 
-.. mermaid:: 
+.. mermaid::
    :caption: Machine states and the possible transitions between the states
    :align: center
 
-   stateDiagram-v2
+    stateDiagram-v2
      direction LR
      [*]--> Owner
      Owner --> Unclaimed: A
@@ -565,16 +565,79 @@ The following diagram gives the overall view of all machine states and
 activities and shows the possible transitions from one to another within the
 HTCondor system. Each transition is labeled with a number on the diagram, and
 transition numbers referred to in this manual will be **bold**.
+
+Note the "Matched" state and the "Suspended" activity have been removed from
+this diagram in order to simplify the number of shown transitions.  The
+Matched state is not entered by default, and Suspended is rarely used.
+
 :index:`machine state and activities figure`
 :index:`state and activities figure`
 :index:`activities and state figure`
 
-.. figure:: /_images/machine-states-activities.png
-  :width: 700
-  :alt: Machine States and Activities
-  :align: center
+.. mermaid::
+   :caption: States and Activites of the condor_startd
+   :align: center
 
-  Machine States and Activities
+   flowchart TD
+      start((start)) ----> oidle
+      isOwner -- false (1) ------> uidle
+
+      subgraph OwnerState
+      oidle[Idle\nActivity]
+      isOwner{IS_OWNER\nexpression} -- true --> oidle
+      oidle -- periodic\nrecheck --> isOwner
+      end
+      uidle -- periodic recheck (2) --> isOwner
+      uidle -- drain command --> retiring
+
+      subgraph UnclaimedState
+      uidle[Idle] -- periodic check --> runBenchmarks
+      runBenchmarks{RunBenchmarks\nexpression} -- true (3) --> benchmarking
+      runBenchmarks -- false --> uidle
+      benchmarking -- when completed (4) --> uidle
+      uidle -- claim by schedd --> isStart
+      isStart -- false --> uidle    
+      end
+
+      didle -- all slots drained\n34 --> isOwner
+      retiring -- draining\ncancelled\n35 --> isOwner
+
+      subgraph DrainedState
+      retiring -- one slot drained\n33 --> didle[Idle]
+      end
+
+      isStart{START\nExpression} -- true\nclaim from schedd ----> cidle
+
+      subgraph ClaimedState
+      cidle[Idle] -- Activate\nby shadow\n11 --> busy
+      busy -- job exit\n12 --> cidle
+      busy -- RANK preemption\nfrom negotiator\n13 --> cretiring
+      busy -- periodic\ncheck --> isPreempt
+      isPreempt{PREEMPT\nexpression} -- true\n13 --> cretiring
+      isPreempt -- false --> busy
+      cretiring[retiring] -- \n\n\nRANK preempt\ncancel\n19 --> busy
+      end
+
+      cretiring -- MaxJobRetirementTime exceeded\n18 --> wantVacate
+      cidle -- condor_vacate\nor\nSTART == false\n10 --> wantVacate
+
+      subgraph VacatingState
+      direction TB
+      wantVacate{WANT_VACATE\nexpression} -- true --> vacating
+      vacating -- periodic check --> wantKill
+      wantKill{Kill\nexpression} -- true\n21 --> killing
+      wantKill -- false --> vacating
+      vacating -- MachineMaxVacateTime expires --> killing
+      wantVacate -- false --> killing
+      end
+
+      killing -- IS_OWNER = true \n22 --> oidle
+      killing -- job exit\n23 --> cidle
+      vacating -- OWNER true\n25 --> isOwner
+      vacating -- better rank\nstarts\n24 --> cidle
+
+
+Machine States and Activities
 
 
 Various expressions are used to determine when and if many of these
