@@ -93,7 +93,6 @@ classad/classad_containers.h
 classad/classad_distribution.h
 classad/classadErrno.h
 classad/classad.h
-classad/classadItor.h
 classad/collectionBase.h
 classad/collection.h
 classad/common.h
@@ -181,7 +180,7 @@ set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 if (UNIX)  
   add_library( classad SHARED $<TARGET_OBJECTS:classads_objects>)   # for distribution at this point may swap to depend at a future date.
   target_link_libraries(classad pcre2-8)
-  set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 16 )
+  set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} )
   target_link_libraries( classad ${CMAKE_DL_LIBS})
   install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
 endif()

@@ -35,7 +35,7 @@ class Rooster: public Service {
 	void config();
 	void stop();
 
-	void poll(); // do the periodic checks of offline startds
+	void poll( int timerID = -1 ); // do the periodic checks of offline startds
 	bool wakeUp(ClassAd *startd_ad);
 
  private:

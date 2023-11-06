@@ -85,17 +85,8 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
-AVERSION=(${version//./ })
-MAJOR_VER=${AVERSION[0]}
-MINOR_VER=${AVERSION[1]}
-if [ "$MINOR_VER" -eq 0 ]; then
-    REPO_VERSION=$MAJOR_VER.0
-else
-    REPO_VERSION=$MAJOR_VER.x
-fi
-
 # Extract external RPMs
-for path in /usr/local/condor/externals/$REPO_VERSION/*.rpm; do
+for path in /usr/local/condor/externals/*.rpm; do
     file=${path##*/}
     echo ======= $file =======
     echo $file >> tarball/Manifest.txt
@@ -107,7 +98,7 @@ if [ $? -ne 0 ];then
     echo 'ERROR: tarball link script failed'
     exit 1
 fi
-$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
+$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64:$ORIGIN/../lib64/condor'
 if [ $? -ne 0 ];then
     echo 'ERROR: set rpath script failed'
     exit 1
@@ -121,9 +112,9 @@ chmod 755 tarball/var/lib/condor/oauth_credentials
 chmod g-s tarball/var/lib/condor/oauth_credentials
 
 # Add in apptainer if available
-if [ -d /usr/local/condor/externals/$REPO_VERSION/apptainer ]; then
-    /usr/local/condor/externals/$REPO_VERSION/apptainer/bin/apptainer --version
-    cp -a /usr/local/condor/externals/$REPO_VERSION/apptainer/* tarball/usr
+if [ -d /usr/local/condor/externals/apptainer ]; then
+    /usr/local/condor/externals/apptainer/bin/apptainer --version
+    cp -a /usr/local/condor/externals/apptainer/* tarball/usr
     tarball/bin/apptainer --version >> tarball/Manifest.txt
 fi
 
@@ -135,5 +126,5 @@ mv tarball condor-$version-$release-$arch_dist-stripped
 tar --create --gzip --owner=0 --group=0 --numeric-owner --file=condor-$version-$release-$arch_dist-stripped.tar.gz condor-$version-$release-$arch_dist-stripped
 rm -r condor-$version-$release-$arch_dist-stripped
 
-ls -lh condor*.tar.gz
+ls -lh condor*stripped.tar.gz
 exit 0

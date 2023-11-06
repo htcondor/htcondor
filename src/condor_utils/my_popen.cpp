@@ -27,10 +27,11 @@
 #include "env.h"
 #include "setenv.h"
 
-#ifdef WIN32
-#else
+#ifndef WIN32
 #include <poll.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include "largestOpenFD.h"
 #endif
 
 #ifdef WIN32
@@ -454,7 +455,7 @@ my_popenv_impl( const char *const args[],
 		 * Of course, do not close stdin/out/err or the fds to
 		 * the pipes we just created above.
 		 */
-		int limit = getdtablesize();
+		int limit = largestOpenFD();
 		for (int jj=3; jj < limit; jj++) {
 			if (jj != pipe_d[0] &&
 				jj != pipe_d[1] &&
@@ -706,10 +707,10 @@ static bool waitpid_with_timeout(pid_t pid, int *pstatus, time_t timeout)
 			return true;
 		}
 		time_t now = time(NULL);
-		if ((now - begin_time) > timeout) {
+		if ((now - begin_time) >= timeout) {
 			return false;
 		}
-		sleep(1);
+		usleep(10);
 	}
 	return false;
 }
@@ -959,7 +960,7 @@ int MyPopenTimer::start_program (
 	bool drop_privs /*=true*/,
 	const char * stdin_data /*=NULL*/)
 {
-	if (fp) return -1;
+	if (fp) { return ALREADY_RUNNING; }
 
 	//src.clear();
 	status = 0;

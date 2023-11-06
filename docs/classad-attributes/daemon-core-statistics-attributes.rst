@@ -1,8 +1,6 @@
 DaemonCore Statistics Attributes
 ================================
 
-:index:`DaemonCore statistics attributes<single: DaemonCore statistics attributes; ClassAd>`
-
 Every HTCondor daemon keeps a set of operational statistics, some of
 which are common to all daemons, others are specific to the running of a
 particular daemon. In some cases, the statistics can reveal buggy or

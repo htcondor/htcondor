@@ -30,8 +30,7 @@
 StartdHookMgr::StartdHookMgr()
 	: HookClientMgr(),
 	  NUM_HOOKS(3),
-	  UNDEFINED((char*)1),
-	  m_keyword_hook_paths(hashFunction)
+	  UNDEFINED((char*)1)
 {
 	dprintf( D_FULLDEBUG, "Instantiating a StartdHookMgr\n" );
 }
@@ -50,12 +49,8 @@ StartdHookMgr::~StartdHookMgr()
 void
 StartdHookMgr::clearHookPaths()
 {
-	int i;
-	std::string key;
-	char** hook_paths;
-	m_keyword_hook_paths.startIterations();
-	while (m_keyword_hook_paths.iterate(key, hook_paths)) {
-		for (i=0; i<NUM_HOOKS; i++) {
+	for (auto& [key, hook_paths]: m_keyword_hook_paths) {
+		for (int i=0; i<NUM_HOOKS; i++) {
 			if (hook_paths[i] && hook_paths[i] != UNDEFINED) {
 				free(hook_paths[i]);
 			}
@@ -97,13 +92,16 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 	int i;
 	std::string key(keyword);
 	char** hook_paths;
-	if (m_keyword_hook_paths.lookup(key, hook_paths) < 0) {
+	auto itr = m_keyword_hook_paths.find(key);
+	if (itr == m_keyword_hook_paths.end()) {
 			// No entry, initialize it.
 		hook_paths = new char*[NUM_HOOKS];
 		for (i=0; i<NUM_HOOKS; i++) {
 			hook_paths[i] = NULL;
 		}
-		m_keyword_hook_paths.insert(key, hook_paths);
+		m_keyword_hook_paths[key] = hook_paths;
+	} else {
+		hook_paths = itr->second;
 	}
 
 	char* path = hook_paths[(int)hook_type];

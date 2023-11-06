@@ -219,6 +219,8 @@ int		LockFd = -1;
 
 bool	log_keep_open = false;
 
+bool 	should_block_signals = false;
+
 static bool DebugRotateLog = true;
 
 static	int DprintfBroken = 0;
@@ -350,7 +352,6 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 
 	int my_pid;
 	int my_tid;
-	FILE* local_fp = NULL;
 
 	hdr_flags |= (cat_and_flags & ~D_CATEGORY_RESERVED_MASK); // pick up flags passed directly to dprintf call
 	unsigned char cat = (unsigned char)(cat_and_flags & D_CATEGORY_MASK);
@@ -400,23 +401,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 		}
 
 		if (hdr_flags & D_FDS) {
-			//Regardless of whether we're keeping the log file open our not, we open
-			//the NULL file for the FD number.
-			local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644);
-			if(local_fp == NULL )
-			{
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:0) " );
-				if( rc < 0 ) {
-					sprintf_errno = errno;
-				}
-			}
-			else
-			{
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:%d) ", fileno(local_fp) );
-				if( rc < 0 ) {
-					sprintf_errno = errno;
-				}
-				fclose_wrapper(local_fp, FCLOSE_RETRY_MAX);
+			// Print the lowest available fd, as a guess if we're leaking fds.
+			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(fd:%d) ", safe_open_last_fd);
+			if( rc < 0 ) {
+				sprintf_errno = errno;
 			}
 		}
 
@@ -467,11 +455,11 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
 				}
 			}
-			// If the D_FAILURE flag was or'd to the category, then this is both a category message (i.e. D_AUDIT)
+			// If the D_ERROR_ALSO or D_EXCEPT flag was or'd to the category, then this is both a category message (i.e. D_AUDIT)
 			// and should also show up in the primary log as a D_ERROR category message. we print this as |D_FAILURE for
 			// most categories, but just as D_ERROR for D_ALWAYS and D_ERROR categories.
 			const char * orfail = "";
-			if (cat_and_flags & D_FAILURE) {
+			if (cat_and_flags & D_ERROR_MASK) {
 				if (cat > D_ERROR) { orfail = "|D_FAILURE"; }
 				else { cat = D_ERROR; }
 			}
@@ -668,7 +656,9 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, DebugHeaderInfo &info, De
 }
 
 // forward ref to the function that helps use remove dprintf calls from the call stack
+#ifdef HAVE_BACKTRACE
 static bool is_dprintf_function_addr(const void * pfn);
+#endif
 
 /* _condor_dprintf_getbacktrace
  * fill in backtrace in the DebugHeaderInfo structure, paying attention to dprintf flags
@@ -866,7 +856,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	} 
 
 		/* See if this is one of the messages we are logging */
-	if ( ! IsDebugCatAndVerbosity(cat_and_flags) && ! (cat_and_flags & D_FAILURE))
+	if ( ! IsDebugCatAndVerbosity(cat_and_flags) && ! (cat_and_flags & D_ERROR_MASK))
 		return;
 
 	// if this dprintf is enabled, switch runtime accumulation into the enabled counters
@@ -878,14 +868,22 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 
 	/* Block any signal handlers which might try to print something */
 	/* Note: do this BEFORE grabbing the _condor_dprintf_critsec mutex */
-	sigfillset( &mask );
-	sigdelset( &mask, SIGABRT );
-	sigdelset( &mask, SIGBUS );
-	sigdelset( &mask, SIGFPE );
-	sigdelset( &mask, SIGILL );
-	sigdelset( &mask, SIGSEGV );
-	sigdelset( &mask, SIGTRAP );
-	sigprocmask( SIG_BLOCK, &mask, &omask );
+
+	// Do we really need this?  Not sure.  Cowardly conditionalizing
+	// this with a knob  Profiling shows the sigprocmask is more
+	// expensive that you might think, especially with D_FULLDEBUG
+	// or code that dprintfs a lot..
+
+	if (should_block_signals) {
+		sigfillset( &mask );
+		sigdelset( &mask, SIGABRT );
+		sigdelset( &mask, SIGBUS );
+		sigdelset( &mask, SIGFPE );
+		sigdelset( &mask, SIGILL );
+		sigdelset( &mask, SIGSEGV );
+		sigdelset( &mask, SIGTRAP );
+		sigprocmask( SIG_BLOCK, &mask, &omask );
+	}
 #endif
 
 	/* We want dprintf to be thread safe.  For now, we achieve this
@@ -981,9 +979,9 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		unsigned int verbose_flag = 1<<(cat_and_flags&D_CATEGORY_MASK);
 		int ixOutput = 0;
 
-		// if the message is tagged as a failure message, then it is always in the D_ERROR category
-		// as well as whatever category it's currently in.
-		if (cat_and_flags & D_FAILURE) { basic_flag |= 1<<D_ERROR; }
+		// if the message is tagged as a D_EXCEPT or D_ERROR_ALSO message it is
+		// always in the D_ERROR category as well is its normal category
+		if (cat_and_flags & D_ERROR_MASK) { basic_flag |= 1<<D_ERROR; }
 
 		//PRAGMA_REMIND("TJ: fix this to distinguish between verbose:2 and verbose:3")
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++, ++ixOutput)
@@ -1036,7 +1034,9 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 
 #if !defined(WIN32) // signals don't exist in WIN32
 		/* Let them signal handlers go!! */
-	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
+	if (should_block_signals) {
+		std::ignore = sigprocmask( SIG_SETMASK, &omask, 0 );
+	}	
 #endif
 }
 
@@ -2592,6 +2592,7 @@ static const DPRINTF_CPP_FN dprintf_cpp_addr = &dprintf;
 /*
  * this should be the last function in the dprintf module so that it can see all of the statics
  */
+#ifdef HAVE_BACKTRACE
 static bool is_dprintf_function_addr(const void * pfn)
 {
 	static const struct {
@@ -2614,4 +2615,5 @@ static bool is_dprintf_function_addr(const void * pfn)
 	}
 	return false;
 }
+#endif
 

@@ -198,6 +198,7 @@ JICLocalSchedd::requeueJob( const char *reason ) {
 		// to do the action that we want it to
 		//
 	this->exit_code = JOB_SHOULD_REQUEUE;
+	Starter->Remove();
 	return true;
 }
 
@@ -532,7 +533,7 @@ JICLocalSchedd::retryJobCleanup( void )
 
 
 void
-JICLocalSchedd::retryJobCleanupHandler( void )
+JICLocalSchedd::retryJobCleanupHandler( int /* timerID */ )
 {
     m_cleanup_retry_tid = -1;
     dprintf(D_ALWAYS, "Retrying job cleanup, calling allJobsDone()\n");

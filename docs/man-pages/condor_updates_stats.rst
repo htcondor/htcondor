@@ -1,5 +1,3 @@
-      
-
 *condor_updates_stats*
 ========================
 
@@ -26,8 +24,7 @@ the most recent update is numbered with the smallest value.
 
 The number of historic points that represent updates is configurable on
 a per-source basis by configuration variable
-``COLLECTOR_DAEMON_HISTORY_SIZE``
-:index:`COLLECTOR_DAEMON_HISTORY_SIZE`.
+:macro:`COLLECTOR_DAEMON_HISTORY_SIZE`.
 
 Options
 -------
@@ -86,7 +83,7 @@ interval is 5 minutes, *condor_updates_stats* displays:
 
 .. code-block:: console
 
-    $ condor_status -l host1 | condor_updates_stats --interval=300 
+    $ condor_status -l host1 | condor_updates_stats -\-interval=300 
     (Reading from stdin) 
     *** Name/Machine = 'HOST1.cs.wisc.edu' MyType = 'Machine' *** 
      Type: Main 

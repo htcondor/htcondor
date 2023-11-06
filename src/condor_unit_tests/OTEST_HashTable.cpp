@@ -376,8 +376,8 @@ static bool test_auto_resize_normal() {
 	for(i = 0; i <= 500; i++) {
 		insert_result = table->insert(i, i);
 	}
-	int value500;
-	int value237;
+	int value500 = 0;
+	int value237 = 0;
 	int lookup_result500 = table->lookup(500, value500);
 	int lookup_result237 = table->lookup(237, value237);
 	emit_output_expected_header();

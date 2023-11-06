@@ -102,9 +102,9 @@ for routing.
    the set of files transferred back when the job completes. Vanilla
    universe jobs transfer back all files created or modified, while all
    grid universe jobs, except for HTCondor-C, only transfer back the
-   **output** :index:`output<single: output; submit commands>` file, as well as
+   :subcom:`output[and job router]` file, as well as
    those explicitly listed with
-   **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
+   :subcom:`transfer_output_files[and job router]`
    Therefore, when routing jobs to grid universes other than HTCondor-C,
    it is important to explicitly specify all output files that must be
    transferred upon job completion.
@@ -408,8 +408,7 @@ may appear in a Routing Table entry.
     A boolean expression that, when ``True``, causes the original job to
     be transformed in place rather than creating a new transformed
     version (a routed copy) of the job. In this mode, the Job Router
-    Hook ``<Keyword>_HOOK_TRANSLATE_JOB``
-    :index:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
+    Hook :macro:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
     in the routing table are applied during the job transformation. The
     routing table attribute ``GridResource`` is ignored, and there is no
     default transformation of the job from a vanilla job to a grid
@@ -498,6 +497,10 @@ may appear in a Routing Table entry.
 
 Deprecated router configuration
 ---------------------------------------
+.. warning::
+    The deprecated job router configuration macro JOB_ROUTER_DEFAULTS will
+    be removed during the lifetime of the HTCondor V23 feature series in
+    preparation of HTCondor V24.
 
 Prior to version 8.9.7 the *condor_job_router* used a list of ClassAds
 to configure the routes. This form of configuration is still supported.
@@ -575,6 +578,11 @@ so routes were normally given mutually exclusive requirements.
 
 Deprecated Routing Table Entry ClassAd Attributes
 ------------------------------------------------------
+.. warning::
+    The deprecated job router configuration macros JOB_ROUTER_ENTRIES,
+    JOB_ROUTER_ENTRIES_FILE, and JOB_ROUTER_ENTRIES_CMD will be removed
+    during the lifetime of the HTCondor V23 feature series in preparation
+    of HTCondor V24.
 
 In the deprecated *condor_job_router* configuration, each route is the
 result of merging the `JOB_ROUTER_DEFAULTS` ClassAd with one of the

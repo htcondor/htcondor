@@ -37,6 +37,8 @@
 #include "subsystem_info.h"
 #include "dagman_metrics.h"
 
+namespace deep = DagmanDeepOptions;
+
 void ExitSuccess();
 
 static std::string lockFileName;
@@ -146,7 +148,8 @@ Dagman::Dagman() :
 	_batchId(""),
 	_dagmanClassad(NULL),
 	_removeNodeJobs(true),
-	_schedd(nullptr)
+	_schedd(nullptr),
+	_protectedUrlMap(nullptr)
 {
 	debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -256,11 +259,11 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_priority );
 
-	_submitDagDeepOpts.suppress_notification = param_boolean(
+	_submitDagDeepOpts[deep::b::SuppressNotification] = param_boolean(
 		"DAGMAN_SUPPRESS_NOTIFICATION",
-		_submitDagDeepOpts.suppress_notification);
+		_submitDagDeepOpts[deep::b::SuppressNotification]);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_NOTIFICATION setting: %s\n",
-		_submitDagDeepOpts.suppress_notification ? "True" : "False" );
+		_submitDagDeepOpts[deep::b::SuppressNotification] ? "True" : "False" );
 
 		// Event checking setup...
 
@@ -638,7 +641,7 @@ void ExitSuccess() {
 	DC_Exit( EXIT_OKAY );
 }
 
-void condor_event_timer();
+void condor_event_timer(int tid);
 
 /****** FOR TESTING *******
 int main_testing_stub( Service *, int ) {
@@ -670,6 +673,8 @@ void main_init (int argc, char ** const argv) {
 	dagman.Config();
 
 	dagman.LocateSchedd();
+
+	dagman._protectedUrlMap = getProtectedURLMap();
 
 	// The DCpermission (last parm) should probably be PARENT, if it existed
 	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
@@ -884,7 +889,7 @@ void main_init (int argc, char ** const argv) {
 			dagman._submitDagDeepOpts.bVerbose = true;
 
 		} else if( !strcasecmp( "-force", argv[i] ) ) {
-			dagman._submitDagDeepOpts.bForce = true;
+			dagman._submitDagDeepOpts[deep::b::Force] = true;
 		
 		} else if( !strcasecmp( "-notification", argv[i] ) ) {
 			i++;
@@ -895,10 +900,10 @@ void main_init (int argc, char ** const argv) {
 			dagman._submitDagDeepOpts.strNotification = argv[i];
 
 		} else if( !strcasecmp( "-suppress_notification",argv[i] ) ) {
-			dagman._submitDagDeepOpts.suppress_notification = true;
+			dagman._submitDagDeepOpts[deep::b::SuppressNotification] = true;
 
 		} else if( !strcasecmp( "-dont_suppress_notification",argv[i] ) ) {
-			dagman._submitDagDeepOpts.suppress_notification = false;
+			dagman._submitDagDeepOpts[deep::b::SuppressNotification] = false;
 
 		} else if( !strcasecmp( "-dagman", argv[i] ) ) {
 			i++;
@@ -906,7 +911,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No dagman value specified\n" );
 				Usage();
 			}
-			dagman._submitDagDeepOpts.strDagmanPath = argv[i];
+			dagman._submitDagDeepOpts[deep::str::DagmanPath] = argv[i];
 
 		} else if( !strcasecmp( "-outfile_dir", argv[i] ) ) {
 			i++;
@@ -914,23 +919,23 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No outfile_dir value specified\n" );
 				Usage();
 			}
-			dagman._submitDagDeepOpts.strOutfileDir = argv[i];
+			dagman._submitDagDeepOpts[deep::str::OutfileDir] = argv[i];
 
 		} else if( !strcasecmp( "-update_submit", argv[i] ) ) {
-			dagman._submitDagDeepOpts.updateSubmit = true;
+			dagman._submitDagDeepOpts[deep::b::UpdateSubmit] = true;
 
 		} else if( !strcasecmp( "-import_env", argv[i] ) ) {
-			dagman._submitDagDeepOpts.importEnv = true;
+			dagman._submitDagDeepOpts[deep::b::ImportEnv] = true;
 
 		} else if( !strcasecmp( "-include_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {
 				debug_printf(DEBUG_SILENT, "No environment variables passed for -include_env\n");
 				Usage();
 			}
-			if (!dagman._submitDagDeepOpts.getFromEnv.empty()) {
-				dagman._submitDagDeepOpts.getFromEnv += ",";
+			if (!dagman._submitDagDeepOpts[deep::str::GetFromEnv].empty()) {
+				dagman._submitDagDeepOpts[deep::str::GetFromEnv] += ",";
 			}
-			dagman._submitDagDeepOpts.getFromEnv += argv[i];
+			dagman._submitDagDeepOpts[deep::str::GetFromEnv] += argv[i];
 
 		} else if( !strcasecmp( "-insert_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {
@@ -1216,11 +1221,11 @@ void main_init (int argc, char ** const argv) {
 		// Fill in values in the deep submit options that we haven't
 		// already set.
 		//
-	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
-	dagman._submitDagDeepOpts.autoRescue = dagman.autoRescue;
+	dagman._submitDagDeepOpts[deep::b::UseDagDir] = dagman.useDagDir;
+	dagman._submitDagDeepOpts[deep::b::AutoRescue] = dagman.autoRescue;
 	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
-	dagman._submitDagDeepOpts.allowVerMismatch = allowVerMismatch;
-	dagman._submitDagDeepOpts.recurse = false;
+	dagman._submitDagDeepOpts[deep::b::AllowVersionMismatch] = allowVerMismatch;
+	dagman._submitDagDeepOpts[deep::b::Recurse] = false;
 
 	//
 	// Create the DAG
@@ -1706,7 +1711,7 @@ jobad_update() {
 
 }
 
-void condor_event_timer () {
+void condor_event_timer (int /* tid */) {
 
 	ASSERT( dagman.dag != NULL );
 

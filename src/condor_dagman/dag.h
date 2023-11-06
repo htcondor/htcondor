@@ -1051,9 +1051,9 @@ class Dag {
 			accessing.
 			@return The total number of log files.
 		*/
-	int TotalLogFileCount() { return CondorLogFileCount(); }
-				
-	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
+	size_t TotalLogFileCount() { return CondorLogFileCount(); }
+
+	size_t CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
 
 		/** Write information for the given node to a rescue DAG.
 			@param fp: file pointer to the rescue DAG file

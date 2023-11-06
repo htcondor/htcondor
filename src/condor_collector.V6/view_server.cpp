@@ -709,7 +709,7 @@ int ViewServer::ReadTimeChkName(const std::string &line, const std::string& Name
 // Scan function for submittor data
 //---------------------------------------------------------------------
 
-void ViewServer::WriteHistory()
+void ViewServer::WriteHistory(int /* tid */)
 {
 	std::string Key;
 	GeneralRecord* GenRec;
@@ -723,18 +723,18 @@ void ViewServer::WriteHistory()
 
 	dprintf(D_ALWAYS,"Accumulating data: Time=%d\n",TimeStamp);
 
-	if (!collector.walkHashTable(SUBMITTOR_AD, SubmittorScanFunc)) {
+	if (!collector.walkHashTable(*collector.getHashTable(SUBMITTOR_AD), SubmittorScanFunc)) {
 		dprintf (D_ALWAYS, "Error accumulating data\n");
 		return;
 	}
 	SubmittorTotalFunc();
 
-	if (!collector.walkHashTable(STARTD_AD, StartdScanFunc)) {
+	if (!collector.walkHashTable(*collector.getHashTable(STARTD_AD), StartdScanFunc)) {
 		dprintf (D_ALWAYS, "Error accumulating data\n");
 		return;
 	}
 	StartdTotalFunc();
-	if (!collector.walkHashTable(CKPT_SRVR_AD, CkptScanFunc)) {
+	if (!collector.walkHashTable(*collector.getHashTable(CKPT_SRVR_AD), CkptScanFunc)) {
 		dprintf (D_ALWAYS, "Error accumulating data\n");
 		return;
 	}

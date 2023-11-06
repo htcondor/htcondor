@@ -188,7 +188,7 @@ CollectorList::create(const char * pool, DCCollectorAdSequences * adseq)
 		// Read the new names from config file or use the given parameter
 	StringList collector_name_list;
 	char * collector_name_param = NULL;
-	collector_name_param = pool ? strdup(pool) : getCmHostFromConfig( "COLLECTOR" );
+	collector_name_param = (pool && *pool) ? strdup(pool) : getCmHostFromConfig( "COLLECTOR" );
 	if( collector_name_param ) {
 		collector_name_list.initializeFromString(collector_name_param);
 	

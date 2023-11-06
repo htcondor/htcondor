@@ -1034,12 +1034,6 @@ int store_cred_password(const char *user, const char *pw, int mode)
 				delete[] pw_wc;
 			}
 
-			if (!isValidCredential(user, pw)) {
-				dprintf(D_FULLDEBUG, "store_cred: invalid credential given for delete\n");
-				answer = FAILURE_BAD_PASSWORD;
-				break;
-			}
-
 			// call lsa_mgr api
 			// answer = return code
 			if (!lsa_man.remove(userbuf)) {
@@ -1425,7 +1419,7 @@ bail_out:
 
 
 // forward declare the non-blocking continuation function.
-void store_cred_handler_continue();
+void store_cred_handler_continue(int tid);
 
 // declare a simple data structure for holding the info needed
 // across non-blocking retries
@@ -1694,7 +1688,7 @@ cleanup_and_exit:
 }
 
 
-void store_cred_handler_continue()
+void store_cred_handler_continue(int /* tid */)
 {
 	// can only be called when daemonCore is non-null since otherwise
 	// there's no data

@@ -94,7 +94,7 @@ VMGahpRequest::clearPending()
 }
 
 void
-VMGahpRequest::pending_timer_fn()
+VMGahpRequest::pending_timer_fn( int /* timerID */ )
 {
 	if( m_user_timer_id != -1 ) {
 		daemonCore->Reset_Timer(m_user_timer_id, 0);

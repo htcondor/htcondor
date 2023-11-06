@@ -83,21 +83,21 @@ class BaseResource : public Service
     bool didFirstPing() const { return firstPingDone; }
 
  protected:
-	void DeleteMe();
+	void DeleteMe( int timerID = -1 );
 
-	void Ping();
+	void Ping( int timerID = -1 );
 	virtual void DoPing( unsigned& ping_delay, bool& ping_complete,
 						 bool& ping_succeeded );
 
-	void UpdateLeases();
+	void UpdateLeases( int timerID = -1 );
 	virtual void DoUpdateLeases( unsigned& update_delay, bool& update_complete,
 	                             std::vector<PROC_ID>& update_succeeded );
 	virtual void DoUpdateSharedLease( unsigned& update_delay,
 									  bool& update_complete,
 									  bool& update_succeeded );
 	bool Invalidate ();
-    bool SendUpdate ();	
-	void UpdateCollector ();
+    bool SendUpdate ();
+	void UpdateCollector(int timerID);
 
 	char *resourceName;
 	int deleteMeTid;
@@ -201,7 +201,7 @@ protected:
 	// Only called if WatchBatchStatusTimer()
 	// Implements the batch status probe, calling out to
 	// StartBatchStatus and FinishBatchStatus to implement.
-	void DoBatchStatus();
+	void DoBatchStatus(int timerID);
 };
 
 #endif // define BASERESOURCE_H

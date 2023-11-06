@@ -161,7 +161,7 @@ void BaseJob::SetEvaluateState() const
 	daemonCore->Reset_Timer( evaluateStateTid, 0 );
 }
 
-void BaseJob::doEvaluateState()
+void BaseJob::doEvaluateState( int /* timerID */ )
 {
 	JobHeld( "the gridmanager can't handle this job type" );
 	DoneWithJob();
@@ -611,7 +611,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%lld)\n",procID.cluster,proc
 	}
 }
 
-void BaseJob::JobLeaseSentExpired()
+void BaseJob::JobLeaseSentExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseSentExpiredTid != TIMER_UNSET ) {
@@ -621,7 +621,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,pr
 	SetEvaluateState();
 }
 
-void BaseJob::JobLeaseReceivedExpired()
+void BaseJob::JobLeaseReceivedExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {
@@ -728,7 +728,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 }
 
-void BaseJob::EvalAllPeriodicJobExprs()
+void BaseJob::EvalAllPeriodicJobExprs(int /* tid */)
 {
 	dprintf( D_FULLDEBUG, "Evaluating periodic job policy expressions.\n" );
 
@@ -779,6 +779,10 @@ int BaseJob::EvalPeriodicJobExpr()
 			// local data for the job (canceling the remote submission if
 			// possible), then picks it up as a new job from the schedd.
 			// So ignore release-from-hold and let the schedd deal with it.
+		break;
+	case VACATE_FROM_RUNNING:
+			// ignore this case, as we can't really handle it in the general
+			// case
 		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalPeriodicJobExpr", 
@@ -843,6 +847,10 @@ int BaseJob::EvalOnExitJobExpr()
 	case REMOVE_FROM_QUEUE:
 		JobCompleted();
 		break;
+	case VACATE_FROM_RUNNING:
+			// ignore this case, as we can't really handle it in the general
+			// case
+		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalAtExitJobExpr", 
 				action );
@@ -851,7 +859,7 @@ int BaseJob::EvalOnExitJobExpr()
 	return 0;
 }
 
-void BaseJob::CheckAllRemoteStatus()
+void BaseJob::CheckAllRemoteStatus(int /* tid */)
 {
 	dprintf( D_FULLDEBUG, "Evaluating staleness of remote job statuses.\n" );
 

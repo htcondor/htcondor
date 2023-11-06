@@ -260,7 +260,7 @@ type=int
 description=Max number of seconds to serve a Collector query, 0=no limit
 
 [SOCKET_LISTEN_BACKLOG]
-default=500
+default=4096
 range=1,
 type=int
 restart=true
@@ -1641,10 +1641,16 @@ tags=gridmanager
 [STARTD_ATTRS]
 default=
 description=Names of attibutes from config file to insert into STARTD ads
+tags=startd
 
 [STARTD_LATCH_EXPRS]
 default=
 description=STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
+
+[ENABLE_STARTD_DAEMON_AD]
+default=false
+description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
+usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
 
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
@@ -2541,17 +2547,35 @@ description=Disable client host checks for SSL authentication.
 type=bool
 tags=condor_auth_ssl
 
+[AUTH_SSL_SERVER_USE_DEFAULT_CAS]
+default=true
+type=bool
+
+[AUTH_SSL_CLIENT_USE_DEFAULT_CAS]
+default=true
+type=bool
+
 [AUTH_SSL_SERVER_CAFILE]
-default=/etc/pki/tls/certs/ca-bundle.crt
-win32_default=
-description=Default location of the system CA bundle
+default=
+description=Location of additonal CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CADIR]
+default=
+description=Location of additonal CA bundle
 type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_CLIENT_CAFILE]
-default=/etc/pki/tls/certs/ca-bundle.crt
-win32_default=
-description=Default location of the system CA bundle
+default=
+description=Location of additional CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_CLIENT_CADIR]
+default=
+description=Location of additional CA bundle
 type=path
 tags=condor_auth_ssl
 
@@ -2601,6 +2625,10 @@ description=Automatically trust the remote CA over SSL
 type=bool
 tags=io,condor_auth_ssl
 
+[BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER]
+default=true
+type=bool
+
 [COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
 default=true
 win32_default=false
@@ -2608,19 +2636,19 @@ type=bool
 
 [TRUST_DOMAIN_CAFILE]
 default=/etc/condor/trust_domain_ca.pem
-win32_default=$(RELEASE_DIR)\certs\ca.pem
+win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [TRUST_DOMAIN_CAKEY]
 default=/etc/condor/trust_domain_ca_privkey.pem
-win32_default=$(RELEASE_DIR)\certs\ca_privkey.pem
+win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [SEC_SYSTEM_KNOWN_HOSTS]
 default=/etc/condor/known_hosts
-win32_default=$(RELEASE_DIR)\known_hosts
+win32_default=$(LOCAL_DIR)\known_hosts
 type=path
 tags=io
 
@@ -3006,7 +3034,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img, checkpoint-cleanup
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor
@@ -3289,7 +3317,7 @@ type=int
 tags=schedd
 
 [CURB_MATCHMAKING]
-default=RecentDaemonCoreDutyCycle > 0.98
+default=(RecentDaemonCoreDutyCycle > 0.98) || (TransferQueueNumWaitingToUpload > TransferQueueMaxUploading)
 type=string
 description=Curb Expression for Matchmaking
 tags=schedd
@@ -4967,7 +4995,7 @@ tags=collector
 restart=true
 
 [SCHEDD_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for the scheduler.
@@ -4986,7 +5014,7 @@ usage=
 default=
 
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for condor_shared_port.
@@ -5742,6 +5770,13 @@ default=0
 type=int
 customization=const
 
+[SEC_DEFAULT_AUTHENTICATION_METHODS]
+# the c++ macro value is expected to win here
+macro=SEC_STD_AUTH_METHOD_NAMES
+default=FS,TOKEN
+type=string
+customization=const
+
 [MINUTE]
 default=60
 customization=const
@@ -5912,6 +5947,11 @@ type=bool
 description=Hidden knob.  If true, all daemon core daemons will kill all of their children on exit.
 type=bool
 default=true
+
+[CHECKPOINT_DESTINATION_MAPFILE]
+description=Location of the checkpoint destination map file
+default=$(LOCAL_DIR)/checkpoint-destination-mapfile
+type=path
 
 ######
 ## add metaknobs below this banner
@@ -6421,6 +6461,15 @@ default : @end
 	SLOT_TYPE_$(1:1)=$(2+:100%)
 @end
 
+[$FEATURE.StaticSlots]
+description=Configure a set of Static slots, args:([type# [num [, allocation]]])  default: 1, $(NUM_CPUS), 1/$(NUM_CPUS)
+default : @end
+	NUM_SLOTS_TYPE_$(1:1)=$(2:$(NUM_CPUS))
+	SLOT_TYPE_$(1:1)_PARTITIONABLE=false
+	SLOT_TYPE_$(1:1)=$(3+:1/$(NUM_SLOTS_TYPE_$(1:1)))
+	SLOT_TYPE_$(1:1)=$(3+)
+@end
+
 [$FEATURE.OneShotCronHook]
 description=Configure a OneShot Cron Hook, args:(STARTD_CRON | SCHEDD_CRON, tag, hook_exe [,hook_args])
 default : @end
@@ -6926,5 +6975,32 @@ default : @fin
 		@end
 	endif
 @fin
+
+[$POLICY.OnlyRegisteredCheckpointDestinations]
+description=Use submit requirement to reject jobs whose checkpoint destination is not registered.
+default : @fin
+	TOOL_CLASSAD_USER_MAP_NAMES = $(TOOL_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	SCHEDD_CLASSAD_USER_MAP_NAMES = $(SCHEDD_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	CLASSAD_USER_MAPFILE_checkpoint_destination_map = $(CHECKPOINT_DESTINATION_MAPFILE)
+	CLASSAD_USER_MAP_PREFIX_checkpoint_destination_map = TRUE
+
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) ValidateCheckpointDestination
+	JOB_TRANSFORM_ValidateCheckpointDestination @=end
+		EVALSET CheckpointDestinationValid = ifthenelse(undefined =?= userMap("checkpoint_destination_map", CheckpointDestination), undefined, True)
+	@end
+
+	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) CheckpointDestinationValid
+
+	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) RejectInvalidCheckpointDestination
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination = CheckpointDestination =?= undefined || CheckpointDestinationValid =?= True
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination_REASON = "You specified a checkpoint_destination this AP does not know how to clean up.  You may need to add a trailing / to the URL."
+@fin
+
+[$FEATURE.GANGLIA]
+description=Enable condor_gangliad daemon
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
+@end
+
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

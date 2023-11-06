@@ -1337,8 +1337,7 @@ bool ClassAdParser::shouldEvaluateAtParseTime(
 		|| strcasecmp(c_function_name, "relTime") == 0) {
 		if (argList.size() == 1 && argList[0]->GetKind() == ExprTree::LITERAL_NODE) {
 			Value val;
-			Value::NumberFactor factor;
-			((Literal *)argList[0])->GetComponents(val, factor);
+			((Literal *)argList[0])->GetComponents(val);
 			if (val.IsStringValue()) {
 				should_eval = true;
 			}
@@ -1352,11 +1351,10 @@ ExprTree *ClassAdParser::evaluateFunction(
 	vector<ExprTree*> 	&argList)
 {
 	Value                val;
-	Value::NumberFactor  factor;
 	ExprTree             *tree;
 	const char           *c_function_name;
 
-	((Literal *)argList[0])->GetComponents(val, factor);
+	((Literal *)argList[0])->GetComponents(val);
 	c_function_name = functionName.c_str();
 	tree = NULL;
 

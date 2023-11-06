@@ -8,6 +8,7 @@
 
 from ornithology import *
 import os
+import htcondor
 from pathlib import Path
 from time import sleep
 from time import time
@@ -230,6 +231,16 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
     #Return if the test has passed or not
     return test_passed
 
+#--------------------------------------------------------------------------------------------
+#Test getting epoch ads from the python bindings
+@action
+def runPyBindings(condor):
+    proj = ["ClusterId", "ProcId"]
+    hist_itr = None
+    with condor.use_config():
+        hist_itr = htcondor.Schedd().jobEpochHistory("ClusterId==1", proj)
+    return hist_itr
+
 #============================================================================================
 #This test must run in order of test_run_jobs then test_condor_history_reads_epochs
 class TestHistoryReadsEpochs:
@@ -237,7 +248,25 @@ class TestHistoryReadsEpochs:
     #We expect the jobs to finish successfully
     def test_run_jobs(self,run_crondor_jobs):
         assert run_crondor_jobs is True
+
     #Test the various condor_history options that should pass 
     def test_condor_history_reads_epochs(self,read_epochs):
         assert read_epochs is True
+
+    #Test the python bindings ability to query epoch history
+    def test_python_bindings(self, runPyBindings):
+        epoch_counts = {
+            "total" : 0,
+            "proc-0" : 0,
+            "proc-1" : 0,
+        }
+        for ad in runPyBindings:
+            assert ad.get("ClusterId", -1) == 1
+            proc_id = ad.get("ProcId", -1)
+            assert proc_id == 0 or proc_id == 1
+            epoch_counts["total"] += 1
+            epoch_counts[f"proc-{proc_id}"] += 1
+        assert epoch_counts["total"] == 4
+        assert epoch_counts["proc-0"] == 2
+        assert epoch_counts["proc-1"] == 2
 

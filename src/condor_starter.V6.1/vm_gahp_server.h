@@ -25,8 +25,6 @@
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
 #include "condor_distribution.h"
-#include "gahp_common.h"
-#include "HashTable.h"
 #include "condor_arglist.h"
 #include "vm_gahp_request.h"
 
@@ -51,8 +49,6 @@ class VMGahpServer : public Service {
 
 		bool nowPending(const char *command, const char *args, 
 				VMGahpRequest *req);
-
-		int numOfPendingRequests(void);
 
 		// Result will be stored in m_pending_result of VMGahpRequest
 		void getPendingResult(int req_id, bool is_blocking);
@@ -84,10 +80,10 @@ class VMGahpServer : public Service {
 		int pipe_ready(int pipe_end);
 		int err_pipe_ready(void);
 		int err_pipe_ready_from_pipe(int) { return err_pipe_ready(); }
-		void err_pipe_ready_from_timer(void) { (void)err_pipe_ready(); }
+		void err_pipe_ready_from_timer(int /* timerID */) { (void)err_pipe_ready(); }
 		int poll();
-		void poll_from_timer() { (void)poll(); }
-		void poll_now();
+		void poll_from_timer(int /* timerID */) { (void)poll(); }
+		void poll_now( int /* timerID */);
 		void poll_real_soon();
 
 		int new_reqid(void);
@@ -119,7 +115,7 @@ class VMGahpServer : public Service {
 		int m_vmgahp_writefd;
 		int m_vmgahp_errorfd;
 
-		HashTable<int,VMGahpRequest*> m_request_table;
+		std::map<int,VMGahpRequest*> m_request_table;
 
 		unsigned int m_pollInterval;
 		int m_poll_tid;
@@ -131,8 +127,8 @@ class VMGahpServer : public Service {
 
 		std::string m_vmgahp_version;
 		std::string m_vmgahp_error_buffer;
-		StringList m_commands_supported;
-		StringList m_vms_supported;
+		std::vector<std::string> m_commands_supported;
+		std::vector<std::string> m_vms_supported;
 
 		void killVM(void);
 };

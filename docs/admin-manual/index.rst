@@ -10,20 +10,13 @@ Administrators' Manual
    introduction-to-configuration
    configuration-templates
    configuration-macros
-   user-priorities-negotiation
-   policy-configuration
-   daemon-cron
+   ep-policy-configuration
+   ap-policy-configuration
+   cm-configuration
    security
    networking
-   daemoncore
    logging
-   monitoring
-   high-availability
    file-and-cred-transfer 
-   setting-up-vm-docker-universes
-   singularity-support
-   power-management
    hooks
-   windows-installer
    directories
    setting-up-special-environments

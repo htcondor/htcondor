@@ -1356,7 +1356,7 @@ ReadUserLog::synchronize ( void )
 		return false;
 	}
 
-	const int ixN = sizeof(SynchDelimiter)-2; // back up to to point at the \n (assuming size includes a trailing \0)
+	const int ixN = sizeof(SynchDelimiter)-2; // back up to point at the \n (assuming size includes a trailing \0)
 	const int bufSize = 512;
     char buffer[bufSize];
     while( fgets( buffer, bufSize, m_fp ) != NULL ) {
@@ -1657,10 +1657,3 @@ ReadUserLogMatch::MatchStr( ReadUserLogMatch::MatchResult value ) const
 	};
 
 }
-
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/

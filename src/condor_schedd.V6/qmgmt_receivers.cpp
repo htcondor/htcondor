@@ -339,7 +339,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		int cluster_id = -1;
 		int proc_id = -1;
 		std::string attr_name;
-		char *attr_value=nullptr;
+		std::string attr_value;
 		int terrno = 0;
 		SetAttributeFlags_t flags = 0;
 
@@ -356,8 +356,8 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		}
 		if (!attr_name.empty()) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		neg_on_error( syscall_sock->end_of_message() );;
-		if (attr_value) { 
-			dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
+		if (!attr_value.empty()) { 
+			dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value.c_str());		
 		} else {
 			// This shouldn't happen...
 			dprintf(D_ALWAYS, "SetAttribute got NULL value for %s\n", attr_name.c_str());
@@ -400,7 +400,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		else {
 			errno = 0;
 
-			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value, flags, g_transaction_error.get() );
+			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value.c_str(), flags, g_transaction_error.get() );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 				// If we're modifying a previously-submitted job AND either
@@ -416,11 +416,9 @@ do_Q_request(QmgmtPeer &Q_PEER)
 				dprintf( D_AUDIT, *syscall_sock, 
 						 "Set Attribute for job %d.%d, "
 						 "%s = %s\n",
-						 cluster_id, proc_id, attr_name.c_str(), attr_value);
+						 cluster_id, proc_id, attr_name.c_str(), attr_value.c_str());
 			}
 		}
-
-		free( (char *)attr_value );
 
 		if( flags & SetAttribute_NoAck ) {
 			if( rval < 0 ) {
@@ -1031,7 +1029,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 
 	case CONDOR_GetJobByConstraint:
 	  {
-		char *constraint=nullptr;
+		std::string constraint;
 		ClassAd *ad = nullptr;
 		int terrno = 0;
 
@@ -1039,7 +1037,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		ad = GetJobByConstraint_as_ClassAd( constraint );
+		ad = GetJobByConstraint_as_ClassAd(constraint.c_str());
 		terrno = errno;
 		rval = ad ? 0 : -1;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
@@ -1053,7 +1051,6 @@ do_Q_request(QmgmtPeer &Q_PEER)
 			neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
-		free( (char *)constraint );
 		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
@@ -1089,7 +1086,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 
 	case CONDOR_GetNextJobByConstraint:
 	  {
-		char *constraint=nullptr;
+		std::string constraint;
 		ClassAd *ad = nullptr;
 		int initScan = 0;
 		int terrno = 0;
@@ -1097,16 +1094,12 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		neg_on_error( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "	initScan = %d\n", initScan );
 		if ( !(syscall_sock->code(constraint)) ) {
-			if (constraint != nullptr) {
-				free(constraint);
-				constraint = nullptr;
-			}
 			return -1;
 		}
 		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		ad = GetNextJobByConstraint( constraint, initScan );
+		ad = GetNextJobByConstraint( constraint.c_str(), initScan );
 		terrno = errno;
 		rval = ad ? 0 : -1;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
@@ -1120,13 +1113,12 @@ do_Q_request(QmgmtPeer &Q_PEER)
 			neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
-		free( (char *)constraint );
 		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 	case CONDOR_GetNextDirtyJobByConstraint:
 	{
-		char *constraint=nullptr;
+		std::string constraint;
 		ClassAd *ad = nullptr;
 		int initScan = 0;
 		int terrno = 0;
@@ -1134,16 +1126,12 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		neg_on_error( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "  initScan = %d\n", initScan );
 		if ( !(syscall_sock->code(constraint)) ) {
-			if (constraint != nullptr) {
-				free(constraint);
-				constraint = nullptr;
-			}
 			return -1;
 		}
 		neg_on_error( syscall_sock->end_of_message() );
 
 		errno = 0;
-		ad = GetNextDirtyJobByConstraint( constraint, initScan );
+		ad = GetNextDirtyJobByConstraint(constraint.c_str(), initScan );
 		terrno = errno;
 		rval = ad ? 0 : -1;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
@@ -1157,21 +1145,20 @@ do_Q_request(QmgmtPeer &Q_PEER)
 			neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
-		free( (char *)constraint );
 		neg_on_error( syscall_sock->end_of_message() );
 		return 0;
 	}
 
 	case CONDOR_SendSpoolFile:
 	  {
-		char *filename=nullptr;
+		std::string filename;
 		int terrno = 0;
 
 		neg_on_error( syscall_sock->code(filename) );
 		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = SendSpoolFile( filename );
+		rval = SendSpoolFile(filename.c_str());
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 #if 0
@@ -1183,7 +1170,6 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		}
 		neg_on_error( syscall_sock->end_of_message() );;
 #endif
-		free( (char *)filename );
 		return 0;
 	}
 
@@ -1205,35 +1191,26 @@ do_Q_request(QmgmtPeer &Q_PEER)
 
 	case CONDOR_GetAllJobsByConstraint:
 	  {
-		char *constraint=nullptr;
-		char *projection=nullptr;
+		std::string constraint;
+		std::string projection;
 		ClassAd *ad = nullptr;
 		int terrno = 0;
 		int initScan = 1;
 		classad::References proj;
 
 		if ( !(syscall_sock->code(constraint)) ) {
-			if (constraint != nullptr) {
-				free(constraint);
-				constraint = nullptr;
-			}
 			return -1;
 		}
 		if ( !(syscall_sock->code(projection)) ) {
-			if (projection != nullptr) {
-				free(constraint);
-				free(projection);
-				projection = nullptr;
-			}
 			return -1;
 		}
-		dprintf( D_SYSCALLS, "	constraint = %s\n", constraint );
-		dprintf( D_SYSCALLS, "	projection = %s\n", projection ? projection : "");
+		dprintf( D_SYSCALLS, "	constraint = %s\n", constraint.c_str());
+		dprintf( D_SYSCALLS, "	projection = %s\n", projection.c_str());
 
 		neg_on_error( syscall_sock->end_of_message() );;
 
 		// if there is a projection, convert it into a set of attribute names
-		if (projection) {
+		if (!projection.empty()) {
 			StringTokenIterator list(projection);
 			const std::string * attr = nullptr;
 			while ((attr = list.next_string())) { proj.insert(*attr); }
@@ -1244,7 +1221,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		do {
 			errno = 0;
 
-			ad = GetNextJobByConstraint( constraint, initScan );
+			ad = GetNextJobByConstraint(constraint.c_str(), initScan );
 			initScan=0; // one first time through, otherwise 0
 
 			terrno = errno;
@@ -1265,8 +1242,6 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		} while (rval >= 0);
 		neg_on_error( syscall_sock->end_of_message() );;
 
-		free( (char *)constraint );
-		free( (char *)projection );
 		return 0; 
 	}
 

@@ -191,7 +191,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+							 (CallbackType)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL && error_string != "" ) {
 		goto error_exit;
 	}
@@ -313,7 +313,7 @@ CondorJob::CondorJob( ClassAd *classad )
 CondorJob::~CondorJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (CallbackType)&BaseJob::SetEvaluateState, this );
 	}
 	if ( submitterId != NULL ) {
 		free( submitterId );
@@ -344,10 +344,10 @@ void CondorJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-void CondorJob::JobLeaseSentExpired()
+void CondorJob::JobLeaseSentExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
-	BaseJob::JobLeaseSentExpired();
+	BaseJob::JobLeaseSentExpired(-1);
 	SetRemoteJobId( NULL );
 		// We always want to go through GM_INIT. With the remote job id set
 		// to NULL, we'll go to GM_CLEAR_REQUEST afterwards.
@@ -358,7 +358,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,
 	}
 }
 
-void CondorJob::doEvaluateState()
+void CondorJob::doEvaluateState( int /* timerID */ )
 {
 	bool connect_failure = false;
 	int old_gm_state;
@@ -1292,6 +1292,9 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_DISK_USAGE,
 		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
+		"CpusProvisioned",
+		"DiskProvisioned",
+		"MemoryProvisioned",
 		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {
@@ -1445,6 +1448,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_PERIODIC_HOLD_CHECK );
 	submit_ad->Delete( ATTR_PERIODIC_RELEASE_CHECK );
 	submit_ad->Delete( ATTR_PERIODIC_REMOVE_CHECK );
+	submit_ad->Delete( ATTR_PERIODIC_VACATE_CHECK );
 	submit_ad->Delete( ATTR_JOB_ALLOWED_JOB_DURATION );
 	submit_ad->Delete( ATTR_JOB_ALLOWED_EXECUTE_DURATION );
 	submit_ad->Delete( ATTR_SERVER_TIME );

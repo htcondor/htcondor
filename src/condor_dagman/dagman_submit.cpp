@@ -40,6 +40,8 @@
 #include "tmp_dir.h"
 #include "write_user_log.h"
 
+namespace deep = DagmanDeepOptions;
+
 typedef bool (* parse_submit_fnc)( const char *buffer, int &jobProcCount,
 			int &cluster );
 
@@ -380,7 +382,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	}
 	
 		//****Always append this variable to avoid overwriting
-	if (dm._submitDagDeepOpts.suppress_notification) {
+	if (dm._submitDagDeepOpts[deep::b::SuppressNotification]) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		std::string notify = std::string("notification=never");
 		args.AppendArg( notify.c_str() );
@@ -500,7 +502,7 @@ static void init_dag_vars(SubmitHash * submitHash,
 			submitHash->set_arg_variable(SUBMIT_KEY_UserLogFile, "");
 		}
 		
-		if (dm._submitDagDeepOpts.suppress_notification) {
+		if (dm._submitDagDeepOpts[deep::b::SuppressNotification]) {
 			submitHash->set_arg_variable(SUBMIT_KEY_Notification, "NEVER");
 		}
 		
@@ -685,6 +687,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	// set submit keywords defined by dagman and VARS
 	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, false);
 
+	submitHash->attachTransferMap(dm._protectedUrlMap);
 	submitHash->init_base_ad(time(NULL), owner);
 
 	qmgr = ConnectQ(schedd);
@@ -767,6 +770,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	}
 
 finis:
+	submitHash->detachTransferMap();
 	if (qmgr) {
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.
 		DisconnectQ(qmgr, false); qmgr = NULL;
@@ -965,6 +969,7 @@ getEventMask()
 			ULOG_JOB_EVICTED,
 			ULOG_JOB_TERMINATED,
 			ULOG_SHADOW_EXCEPTION,
+			ULOG_GENERIC,
 			ULOG_JOB_ABORTED,
 			ULOG_JOB_SUSPENDED,
 			ULOG_JOB_UNSUSPENDED,

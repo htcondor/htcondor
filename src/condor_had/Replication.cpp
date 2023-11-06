@@ -39,7 +39,7 @@ main_init( int , char *[] )
         stateMachine->initialize( );
     }
     catch(char* exceptionString) {
-        dprintf( D_FAILURE, "main_init exception thrown %s\n",
+        dprintf( D_ERROR | D_EXCEPT, "main_init exception thrown %s\n",
                    exceptionString );
     }
 }

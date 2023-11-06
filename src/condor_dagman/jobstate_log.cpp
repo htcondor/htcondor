@@ -311,15 +311,15 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 
 	const char *prefix = "ULOG_";
 	const char *eventName = event->eventName();
-	if ( strstr( eventName, prefix ) != eventName ) {
-       	debug_printf( DEBUG_QUIET, "Warning: didn't find expected prefix "
+	if ( eventName != nullptr ) {
+		if ( strstr( eventName, prefix ) != eventName ) {
+			debug_printf( DEBUG_QUIET, "Warning: didn't find expected prefix "
 					"%s in event name %s\n", prefix, eventName );
-		check_warning_strictness( DAG_STRICT_1 );
-	} else {
-		eventName = eventName + strlen( prefix );
-	}
+			check_warning_strictness( DAG_STRICT_1 );
+		} else {
+			eventName = eventName + strlen( prefix );
+		}
 
-	if ( eventName != NULL ) {
 		std::string condorID;
 		CondorID2Str( event->cluster, event->proc, condorID );
 		time_t eventTime = event->GetEventclock();

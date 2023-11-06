@@ -132,7 +132,7 @@ HADStateMachine::~HADStateMachine(void)
     freeResources();
 
     SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
-    SetTargetTypeName( invalidate_ad, HAD_ADTYPE );
+    invalidate_ad.Assign(ATTR_TARGET_TYPE, HAD_ADTYPE );
     formatstr( line, "TARGET.%s == \"%s\"", ATTR_NAME, m_name.c_str( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str( ) );
 	invalidate_ad.Assign( ATTR_NAME, m_name );
@@ -282,7 +282,6 @@ HADStateMachine::initializeClassAd(void)
 	m_classAd.Clear();
 
     SetMyTypeName(m_classAd, HAD_ADTYPE);
-    SetTargetTypeName(m_classAd, "");
 
     // ATTR_NAME is mandatory in order to be accepted by collector
     m_classAd.Assign( ATTR_NAME, m_name );
@@ -400,7 +399,7 @@ HADStateMachine::reinitialize(void)
     once in m_hadInterval call step() functions - step of HAD state machine
 */
 void
-HADStateMachine::cycle(void)
+HADStateMachine::cycle( int /* timerID */ )
 {
     dprintf( D_FULLDEBUG, "-------------- > Timer m_stateMachineTimerID"
         " is called\n");
@@ -1122,7 +1121,7 @@ HADStateMachine::printParamsInformation(void)
  *                      for later updates
  */
 void
-HADStateMachine::updateCollectors(void)
+HADStateMachine::updateCollectors( int /* timerID */ )
 {
     dprintf(D_FULLDEBUG, "HADStateMachine::updateCollectors started\n");
 

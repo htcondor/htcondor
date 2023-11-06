@@ -328,7 +328,7 @@ CronJob::StartJob( void )
 
 // Handle the kill timer
 void
-CronJob::KillHandler( void )
+CronJob::KillHandler( int /* timerID */ )
 {
 
 	// Log that we're here

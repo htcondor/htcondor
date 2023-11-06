@@ -30,8 +30,8 @@ DCMsg::DCMsg(int cmd):
 	m_cmd( cmd ),
 	m_cmd_str( NULL ),
 	m_msg_success_debug_level( D_FULLDEBUG ),
-	m_msg_failure_debug_level( D_ALWAYS|D_FAILURE ),
-	m_msg_cancel_debug_level( D_ALWAYS|D_FAILURE ),
+	m_msg_failure_debug_level( D_ERROR ),
+	m_msg_cancel_debug_level( D_ERROR ),
 	m_delivery_status( DELIVERY_PENDING ),
 	m_stream_type( Stream::reli_sock ),
 	m_timeout( DEFAULT_CEDAR_TIMEOUT ),
@@ -659,7 +659,7 @@ DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMs
 	daemonCore->Register_DataPtr( qc );
 }
 
-void DCMessenger::startCommandAfterDelay_alarm()
+void DCMessenger::startCommandAfterDelay_alarm(int /* timerID */)
 {
 	QueuedCommand *qc = (QueuedCommand *)daemonCore->GetDataPtr();
 	ASSERT(qc);

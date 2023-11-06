@@ -48,6 +48,7 @@
 #include "credmon_interface.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"
+#include <filesystem>
 #include "manifest.h"
 #include "checksum.h"
 
@@ -107,7 +108,7 @@ ShadowCredDirCreator::GetCreds(CondorError &err)
 	dprintf(D_FULLDEBUG, "Starter is retrieving credentials from the shadow.\n");
 	if (REMOTE_CONDOR_getcreds(CredDir().c_str(), m_creds) <= 0) {
 		err.push("GetCreds", 1, "Failed to receive user credentials");
-		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		dprintf(D_ERROR, "%s\n", err.message());
 		return false;
 	}
 	return true;
@@ -122,7 +123,7 @@ ShadowCredDirCreator::GetOAuth2Credential(const std::string &service_name, const
 	if (iter == m_creds.end()) {
 		err.pushf("GetOAuth2Credential", 1, "Shadow failed to provide credential for service %s",
 			service_name.c_str());
-		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		dprintf(D_ERROR, "%s\n", err.message());
 		return false;
 	}
 	cred = *iter->second;
@@ -199,11 +200,15 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 
 JICShadow::~JICShadow()
 {
-	if( m_refresh_sandbox_creds_tid != -1 ){
-		daemonCore->Cancel_Timer(m_refresh_sandbox_creds_tid);
-	}
-	if( m_proxy_expiration_tid != -1 ){
-		daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+	// On exit, the global daemonCore object may have been
+	// destructed before us
+	if (daemonCore) {
+		if( m_refresh_sandbox_creds_tid != -1 ){
+			daemonCore->Cancel_Timer(m_refresh_sandbox_creds_tid);
+		}
+		if( m_proxy_expiration_tid != -1 ){
+			daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+		}
 	}
 	if( shadow ) {
 		delete shadow;
@@ -235,7 +240,7 @@ JICShadow::init( void )
 		// shadow.  This is totally independent of the shadow version,
 		// etc, and is the first step to everything else. 
 	if( ! getJobAdFromShadow() ) {
-		dprintf( D_ALWAYS|D_FAILURE,
+		dprintf( D_ERROR,
 				 "Failed to get job ad from shadow!\n" );
 		return false;
 	}
@@ -289,7 +294,7 @@ JICShadow::init( void )
 		// to know about the job itself, like are we doing file
 		// transfer, what should the std files be called, etc.
 	if( ! initJobInfo() ) { 
-		dprintf( D_ALWAYS|D_FAILURE,
+		dprintf( D_ERROR,
 				 "Failed to initialize job info from ClassAd!\n" );
 		return false;
 	}
@@ -1198,9 +1203,17 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 
 	if( !rval ) {
 		// Failed to transfer.
-		dprintf( D_ALWAYS, "JICShadow::uploadCheckpointFiles() failed.\n" );
-		holdJob( "Starter failed to upload checkpoint",
-		         CONDOR_HOLD_CODE::FailedToCheckpoint, -1 );
+		m_ft_info = filetrans->GetInfo();
+		if (m_ft_info.try_again) {
+			dprintf(D_ALWAYS, "JICShadow::uploadCheckpointFiles() failed: %s\n", m_ft_info.error_desc.c_str());
+			dprintf(D_ALWAYS, "JICShadow::uploadCheckpointFiles() will retry checkpoint upload later.\n");
+			return false;
+		} else {
+			dprintf(D_ALWAYS, "JICShadow::uploadCheckpointFiles() putting job on hold, checkpoint failure was: %s\n", m_ft_info.error_desc.c_str());
+			holdJob("Starter failed to upload checkpoint", CONDOR_HOLD_CODE::FailedToCheckpoint, -1);
+			return false;
+		}
+
 		return false;
 	}
 	dprintf( D_FULLDEBUG, "JICShadow::uploadCheckpointFiles() succeeded.\n" );
@@ -1706,7 +1719,7 @@ JICShadow::getJobStdFile( const char* attr_name )
 		filename += base;
 	}
 	free( tmp );
-	if( filename[0] ) { 
+	if (!filename.empty()) { 
 		return strdup( filename.c_str() );
 	}
 	return NULL;
@@ -2421,7 +2434,7 @@ JICShadow::syscall_sock_handler(Stream *)
 
 
 void
-JICShadow::job_lease_expired() const
+JICShadow::job_lease_expired( int /* timerID */ ) const
 {
 	/* 
 	  This method is invoked by a daemoncore timer, which is set
@@ -2549,14 +2562,21 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 				                   ft_info.hold_code,ft_info.hold_subcode);
 			}
 
-			EXCEPT( "Failed to transfer files" );
+			std::string message {"Failed to transfer files: "};
+			if (ft_info.error_desc.empty()) {
+				message += " reason unknown.";
+			} else {
+				message += ft_info.error_desc;
+			}
+
+			EXCEPT("%s", message.c_str());
 		}
 
 		// It's not enought to for the FTO to believe that the transfer
 		// of a checkpoint succeeded if that checkpoint wasn't transferred
 		// by CEDAR (because our file-transfer plugins don't do integrity).
 		std::string checkpointDestination;
-		if( job_ad->LookupString( "CheckpointDestination", checkpointDestination ) ) {
+		if( job_ad->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
 			// We only generate MANIFEST files if the checkpoint wasn't
 			// stored to the spool, which is exactly the case in which
 			// we want to do this manual integrity check.
@@ -2666,7 +2686,7 @@ JICShadow::getJobAdFromShadow( void )
     job_ad = new ClassAd;
 
 	if( REMOTE_CONDOR_get_job_info(job_ad) < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS, 
+		dprintf( D_ERROR,
 				 "Failed to get job info from Shadow!\n" );
 		return false;
 	}
@@ -2790,7 +2810,7 @@ JICShadow::initIOProxy( void )
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.c_str());
 		if( !io_proxy.init(this, io_proxy_config_file.c_str(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
-			dprintf( D_FAILURE|D_ALWAYS, 
+			dprintf( D_ERROR,
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;
 		}

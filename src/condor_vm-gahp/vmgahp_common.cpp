@@ -24,7 +24,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
-#include "gahp_common.h"
 #include "my_popen.h"
 #include "vmgahp_common.h"
 #include "vm_request.h"
@@ -56,27 +55,26 @@ NULL
 };
 
 // parse raw string into args
-bool parse_vmgahp_command(const char* raw, Gahp_Args& args) 
+bool parse_vmgahp_command(const char* raw, std::vector<std::string>& args)
 {
 	if (!raw) {
 		vmprintf(D_ALWAYS,"ERROR parse_vmgahp_command: empty command\n");
 		return false;
 	}
 
-	args.reset();
+	args.clear();
 
-	int len=strlen(raw);
+	size_t len=strlen(raw);
 
-	char * buff = (char*)malloc(len+1);
-	ASSERT( buff != NULL );
-	int buff_len = 0;
+	size_t j = 0;
+	args.resize(j + 1);
 
-	for (int i = 0; i<len; i++) {
+	for (size_t i = 0; i<len; i++) {
 
 		if ( raw[i] == '\\' ) {
 			i++; 			//skip this char
 			if (i<(len-1)) {
-				buff[buff_len++] = raw[i];
+				args[j] += raw[i];
 			}
 			continue;
 		}
@@ -87,21 +85,15 @@ bool parse_vmgahp_command(const char* raw, Gahp_Args& args)
 			/* Handle Transparency: we would only see these chars
 			if they WEREN'T escaped, so treat them as arg separators
 			*/
-			buff[buff_len++] = '\0';
-			args.add_arg( strdup(buff) );
-			buff_len = 0;	// re-set temporary buffer
+			j++;
+			args.resize(j + 1);
 
 		} else {
 			// It's just a regular character, save it
-			buff[buff_len++] = raw[i];
+			args[j] += raw[i];
 		}
 	}
 
-	/* Copy the last portion */
-	buff[buff_len++] = '\0';
-	args.add_arg(strdup(buff) );
-
-	free (buff);
 	return true;
 }
 
@@ -264,41 +256,6 @@ bool verify_number_args(const int is, const int should_be)
 	return true;
 }
 
-// Validate a result string
-bool validate_vmgahp_result_string(const char *result_string)
-{
-	StringList result_list(result_string, " ");
-	if( result_list.isEmpty() ) {
-		return false;
-	}
-
-	// Format: <req_id> 0 <result1> ..
-	// Format: <req_id> 1 <result1> ..
-
-	if(result_list.number() < 3 ) {
-		return false;
-	}
-
-	char *arg = NULL;
-	result_list.rewind();
-
-	// first arg must be digit
-	arg = result_list.next();
-	if( !arg || !verify_digit_arg(arg)) {
-		vmprintf(D_ALWAYS, "First arg in result must be digit: %s\n", result_string);
-		return false;
-	}
-
-	// second arg must be either 0 or 1
-	arg = result_list.next();
-	if( !arg || ( strcmp(arg, "0") && strcmp(arg, "1") ) ) {
-		vmprintf(D_ALWAYS, "Second arg in result must be either 0 or 1: %s\n", result_string);
-		return false;
-	}
-
-	return true;
-}
-
 void
 write_to_daemoncore_pipe(int pipefd, const char* str, int len)
 {
@@ -327,7 +284,7 @@ write_to_daemoncore_pipe(const char* fmt, ... )
 }
 
 void
-write_stderr_to_pipe()
+write_stderr_to_pipe(int /* tid */)
 {
 	if( vmgahp_stderr_pipe == -1 ) {
 		return;

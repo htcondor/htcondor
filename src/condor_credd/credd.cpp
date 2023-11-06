@@ -135,7 +135,7 @@ CredDaemon::reconfig()
 }
 
 void
-CredDaemon::sweep_timer_handler( void ) const
+CredDaemon::sweep_timer_handler( int /* timerID */ ) const
 {
 	dprintf(D_FULLDEBUG, "CREDD: calling and resetting sweep_timer_handler()\n");
 
@@ -154,7 +154,6 @@ CredDaemon::initialize_classad()
 	m_classad.Clear();
 
 	SetMyTypeName(m_classad, CREDD_ADTYPE);
-	SetTargetTypeName(m_classad, "");
 
 	m_classad.Assign(ATTR_NAME, m_name);
 
@@ -167,7 +166,7 @@ CredDaemon::initialize_classad()
 }
 
 void
-CredDaemon::update_collector()
+CredDaemon::update_collector( int /* timerID */ )
 {
 	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_classad, NULL, true);
 }
@@ -177,7 +176,7 @@ CredDaemon::invalidate_ad()
 {
 	ClassAd query_ad;
 	SetMyTypeName(query_ad, QUERY_ADTYPE);
-	SetTargetTypeName(query_ad, CREDD_ADTYPE);
+	query_ad.Assign(ATTR_TARGET_TYPE, CREDD_ADTYPE);
 
 	std::string line;
 	formatstr(line, "TARGET.%s == \"%s\"", ATTR_NAME, m_name);

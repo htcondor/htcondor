@@ -6,9 +6,6 @@ import os
 import tempfile
 import subprocess
 
-import classad
-import htcondor
-
 import logging
 
 logger = logging.getLogger(__name__)

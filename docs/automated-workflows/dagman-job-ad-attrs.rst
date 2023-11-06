@@ -2,7 +2,7 @@ DAG Manager Job Specifications
 ==============================
 
 Some DAG file commands can be used to alter information about the
-DAG manager job itself such as adding custom classad attrbutes and
+DAG manager job itself such as adding custom classad attributes and
 setting information in the job environment.
 
 :index:`SET_JOB_ATTR command<single: DAG input file; SET_JOB_ATTR command>`

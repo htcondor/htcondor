@@ -51,9 +51,9 @@ Manual built on |release_date|
    :glob:
    :caption: Additional Docs 
 
-   grid-computing/index
-   cloud-computing/index
    apis/chirp.rst
+   cloud-computing/index
+   grid-computing/index
    platform-specific/index
    faq/index
    version-history/index
@@ -61,7 +61,7 @@ Manual built on |release_date|
 .. toctree::
    :maxdepth: 2
    :glob:
-   :caption: Appendix and Tables
+   :caption: Reference, Glossary and Index
 
    man-pages/index
    classad-attributes/index

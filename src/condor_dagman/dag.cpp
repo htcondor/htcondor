@@ -479,7 +479,7 @@ Dag::GetCondorLogStatus () {
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessLogEvents (bool recovery) {
 
-	debug_printf( DEBUG_VERBOSE, "Currently monitoring %d HTCondor "
+	debug_printf( DEBUG_VERBOSE, "Currently monitoring %zu HTCondor "
 				"log file(s)\n", _condorLogRdr.activeLogFileCount() );
 
 	bool done = false;  // Keep scanning until ULOG_NO_EVENT
@@ -718,8 +718,6 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 
 		job->SetProcEvent( event->proc, ABORT_TERM_MASK );
 
-		DecrementProcCount( job );
-
 			// This code is here because if a held job is removed, we
 			// don't get a released event for that job.  This may not
 			// work exactly right if some procs of a cluster are held
@@ -727,6 +725,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		if ( job->_jobProcsOnHold > 0 ) {
 			job->Release( event->proc );
 		}
+
+		DecrementProcCount( job );
 
 			// Only change the node status, error info,
 			// etc., if we haven't already gotten an error
@@ -946,7 +946,9 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 						job->GetRetries() );
 			}
 			if ( job->_queuedNodeJobProcs == 0 ) {
-				_numNodesFailed++;
+				if (job->GetType() != NodeType::SERVICE) {
+					_numNodesFailed++;
+				}
 				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -1049,8 +1051,10 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				RestartNode( job, recovery );
 			} else {
 					// no more retries -- node failed
-				_numNodesFutile += job->SetDescendantsToFutile(*this);
-				_numNodesFailed++;
+				if (job->GetType() != NodeType::SERVICE) {
+					_numNodesFutile += job->SetDescendantsToFutile(*this);
+					_numNodesFailed++;
+				}
 				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -1952,8 +1956,10 @@ Dag::PreScriptReaper( Job *job, int status )
 			// None of the above apply -- the node has failed.
 		else {
 			job->TerminateFailure();
-			_numNodesFutile += job->SetDescendantsToFutile(*this);
-			_numNodesFailed++;
+			if (job->GetType() != NodeType::SERVICE) {
+				_numNodesFutile += job->SetDescendantsToFutile(*this);
+				_numNodesFailed++;
+			}
 			_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -2771,7 +2777,9 @@ Dag::RestartNode( Job *node, bool recovery )
         debug_printf( DEBUG_NORMAL, "Aborting further retries of node %s "
                       "%s(last attempt returned %d)\n",
                       node->GetJobName(), finalRun, node->retval);
-        _numNodesFailed++;
+		if (node->GetType() != NodeType::SERVICE) {
+			_numNodesFailed++;
+		}
 		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
 			_dagStatus = DAG_STATUS_NODE_FAILED;

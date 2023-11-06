@@ -50,6 +50,16 @@ Otherwise, we recommend using our download script, as follows.
     cd
     curl -fsSL https://get.htcondor.org | /bin/bash -s -- --download
 
+If you use a web browser to download a tarball from our web site, then
+the OS will mark the file as quarantined. All binaries extracted from
+the tarball will be similarly marked. The OS will refuse to run any
+binaries that are quarantined. You can remove the quarantine marking
+from the tarball before extracting it, like so:
+
+.. code-block:: shell
+
+    xattr -d com.apple.quarantine condor-10.7.1-x86_64_macOS13-stripped.tar.gz
+
 Install
 -------
 

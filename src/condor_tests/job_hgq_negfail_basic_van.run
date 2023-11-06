@@ -48,6 +48,7 @@ NEGOTIATOR_CONSIDER_PREEMPTION = False
 NEGOTIATOR_USE_SLOT_WEIGHTS = FALSE
 
 NUM_CPUS = 40
+use FEATURE : StaticSlots
 
 # turn on round-robin for this test, since we are testing
 # an overlapping-effective-pool scenario

@@ -72,7 +72,7 @@ Transform a set of ads
 
 // declare enough of the condor_params structure definitions so that we can define hashtable defaults
 namespace condor_params {
-	typedef struct string_value { char * psz; int flags; } string_value;
+	typedef struct string_value { const char * psz; int flags; } string_value;
 	struct key_value_pair { const char * key; const string_value * def; };
 }
 

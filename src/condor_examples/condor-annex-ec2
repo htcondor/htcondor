@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # condor-annex-ec2	Boot-time configuration for an HTCondor annex instance.
 #

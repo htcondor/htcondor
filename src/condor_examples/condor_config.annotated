@@ -1885,7 +1885,7 @@ CREDD_ADDRESS_FILE	= $(LOG)/.credd_address
 #CREDD_HOST  = $(CONDOR_HOST):$(CREDD_PORT)
 
 ## CredD startup arguments
-## Start the CredD on a well-known port.  Uncomment to to simplify
+## Start the CredD on a well-known port.  Uncomment to simplify
 ## connecting to a remote CredD.  Note: that this interface may change
 ## in a future release.
 CREDD_PORT			= 9620

@@ -959,7 +959,7 @@ Matchmaker::SetupMatchSecurity(std::vector<ClassAd *> &submitterAds)
 			}
 		}
 		ClaimIdParser cidp(capability.c_str());
-		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", capability.c_str());
+		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", cidp.publicClaimId());
 		const char *session_info = cidp.secSessionInfo();
 		std::string info_str;
 		if ( old_schedd && session_info ) {
@@ -1643,8 +1643,8 @@ int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* cons
 }
 
 
-void Matchmaker::
-negotiationTime ()
+void
+Matchmaker::negotiationTime( int /* timerID */ )
 {
 	ClassAdList_DeleteAdsAndMatchList allAds(this); //contains ads from collector
 	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
@@ -1984,9 +1984,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 				updateAd.Assign(ATTR_LAST_UPDATE, accountant.GetLastUpdateTime());
 
-				updateAd.Assign("MyType", "Accounting");
-				SetMyTypeName(updateAd, "Accounting");
-				SetTargetTypeName(updateAd, "none");
+				SetMyTypeName(updateAd, ACCOUNTING_ADTYPE);
 
 				DCCollectorAdSequences seq; // Don't need them, interface requires them
 				int resUsed = -1;
@@ -2007,9 +2005,7 @@ void
 Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	ClassAd accountingAd;
-	accountingAd.Assign("MyType", "Accounting");
-	SetMyTypeName(accountingAd, "Accounting");
-	SetTargetTypeName(accountingAd, "none");
+	SetMyTypeName(accountingAd, ACCOUNTING_ADTYPE);
 	accountingAd.Assign(ATTR_LAST_UPDATE, accountant.GetLastUpdateTime());
 	accountingAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 
@@ -2955,20 +2951,45 @@ obtainAdsFromCollector (
 
     // build a query for Scheduler, Submitter and (constrained) machine ads
     //
+#if 1
+	CondorQuery publicQuery(QUERY_MULTIPLE_PVT_ADS);
+	publicQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+
+	if (!m_SubmitterConstraintStr.empty()) {
+		publicQuery.addORConstraint(m_SubmitterConstraintStr.c_str());
+	}
+	publicQuery.convertToMulti(SUBMITTER_ADTYPE, true, false, false);
+
+	if (strSlotConstraint && strSlotConstraint[0]) {
+		publicQuery.addORConstraint(strSlotConstraint);
+	}
+	if (!ConsiderPreemption) {
+		const char *projectionString =
+			"ifThenElse((State == \"Claimed\"&&PartitionableSlot=!=true),\"Name MyType State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements SlotWeight ConcurrencyLimits\",\"\") ";
+		publicQuery.setDesiredAttrsExpr(projectionString);
+		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
+	}
+	publicQuery.convertToMulti(STARTD_SLOT_ADTYPE, true, true, false);
+	// TODO: add this to the query and get rid of separate query for private ads?
+	// publicQuery.convertToMulti(STARTD_PVT_ADTYPE, true, true, false);
+
+#else
+	static const char * submitter_ad_constraint = "MyType == \"" SUBMITTER_ADTYPE "\"";
+	static const char * slot_ad_constraint = "MyType == \"" STARTD_SLOT_ADTYPE "\" || MyType == \"" STARTD_OLD_ADTYPE "\"";
+
 	CondorQuery publicQuery(ANY_AD);
 	std::string constraint;
 	if (!m_SubmitterConstraintStr.empty()) {
-		formatstr(constraint, "((MyType == \"Submitter\") && (%s))",
-		          m_SubmitterConstraintStr.c_str());
+		formatstr(constraint, "(%s) && (%s)", submitter_ad_constraint, m_SubmitterConstraintStr.c_str());
 		publicQuery.addORConstraint(constraint.c_str());
 	} else {
-		publicQuery.addORConstraint("(MyType == \"Submitter\")");
+		publicQuery.addORConstraint(submitter_ad_constraint);
 	}
     if (strSlotConstraint && strSlotConstraint[0]) {
-        formatstr(constraint, "((MyType == \"Machine\") && (%s))", strSlotConstraint);
+        formatstr(constraint, "(%s) && (%s)", slot_ad_constraint, strSlotConstraint);
         publicQuery.addORConstraint(constraint.c_str());
     } else {
-        publicQuery.addORConstraint("(MyType == \"Machine\")");
+        publicQuery.addORConstraint(slot_ad_constraint);
     }
 
 	privateQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
@@ -2984,6 +3005,7 @@ obtainAdsFromCollector (
 
 		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
 	}
+#endif
 
 	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
 	ClassAdList startdPvtAdList;
@@ -3018,7 +3040,8 @@ obtainAdsFromCollector (
 		// let's see if we've already got it - first lookup the sequence
 		// number from the new ad, then let's look and see if we've already
 		// got something for this one.		
-		if(!strcmp(GetMyTypeName(*ad),STARTD_ADTYPE)) {
+		const char * mytype = GetMyTypeName(*ad);
+		if(MATCH == strcmp(mytype,STARTD_SLOT_ADTYPE) || MATCH == strcmp(mytype,STARTD_OLD_ADTYPE)) {
 
 			// first, let's make sure that will want to actually use this
 			// ad, and if we can use it (old startds had no seq. number)
@@ -3781,6 +3804,13 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			dprintf(D_COMMAND, "Matchmaker::negotiate(%s,...) making connection to %s\n", getCommandStringSafe(cmd), scheddAddr.c_str());
 		}
 
+		std::string capability;
+		std::string sess_id;
+		if (submitterAd.LookupString(ATTR_CAPABILITY, capability)) {
+			ClaimIdParser cidp(capability.c_str());
+			sess_id = cidp.secSessionId();
+		}
+
 		Daemon schedd(&submitterAd, DT_SCHEDD, 0);
 		sock = schedd.reliSock(NegotiatorTimeout);
 		if (!sock)
@@ -3788,7 +3818,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			dprintf(D_ALWAYS, "    Failed to connect to %s\n", schedd_id.c_str());
 			return false;
 		}
-		if (!schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout)) {
+		if (!schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout, nullptr, nullptr, false, sess_id.c_str())) {
 			dprintf(D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
 					 schedd_id.c_str());
 			delete sock;
@@ -5952,7 +5982,6 @@ init_public_ad()
 	publicAd = new ClassAd();
 
 	SetMyTypeName(*publicAd, NEGOTIATOR_ADTYPE);
-	SetTargetTypeName(*publicAd, "");
 
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
@@ -5968,7 +5997,7 @@ init_public_ad()
 }
 
 void
-Matchmaker::updateCollector() {
+Matchmaker::updateCollector( int /* timerID */ ) {
 	dprintf(D_FULLDEBUG, "enter Matchmaker::updateCollector\n");
 
 		// in case our address changes, re-initialize public ad every time
@@ -6005,7 +6034,7 @@ Matchmaker::invalidateNegotiatorAd( void )
 
 		// Set the correct types
 	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
-	SetTargetTypeName( cmd_ad, NEGOTIATOR_ADTYPE );
+	cmd_ad.Assign(ATTR_TARGET_TYPE, NEGOTIATOR_ADTYPE);
 
 	formatstr( line, "TARGET.%s == \"%s\"",
 				  ATTR_NAME,

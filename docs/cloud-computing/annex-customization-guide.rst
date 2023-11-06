@@ -90,18 +90,15 @@ unimplemented, will disable the **-idle** command-line option.
 The default disk image implements the above as follows:
 
 -  with a configuration script (/etc/condor/49ec2-instance.sh);
--  with a single configuration item (``STARTD_NOCLAIM_SHUTDOWN``
-   :index:`STARTD_NOCLAIM_SHUTDOWN`);
--  with a configuration item (``DEFAULT_MASTER_SHUTDOWN_SCRIPT``
-   :index:`DEFAULT_MASTER_SHUTDOWN_SCRIPT`) and the corresponding
-   script (/etc/condor/master_shutdown.sh), which just turns around and
-   runs shutdown -h now.
+-  with a single configuration item (:macro:`STARTD_NOCLAIM_SHUTDOWN`);
+-  with a configuration item (:macro:`DEFAULT_MASTER_SHUTDOWN_SCRIPT`)
+   and the corresponding script (/etc/condor/master_shutdown.sh),
+   which just turns around and runs shutdown -h now.
 
 We also strongly recommend that every *condor_annex* disk image:
 
 -  Advertise, in the master and startd, the instance ID.
--  Use the instance's public IP, by setting ``TCP_FORWARDING_HOST``
-   :index:`TCP_FORWARDING_HOST`.
+-  Use the instance's public IP, by setting :macro:`TCP_FORWARDING_HOST`.
 -  Turn on communications integrity and encryption.
 -  Encrypt the run directories.
 -  Restrict access to the EC2 meta-data server to root.

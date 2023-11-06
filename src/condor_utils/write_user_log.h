@@ -383,9 +383,3 @@ private:
 };
 
 #endif /* _CONDOR_USER_LOG_CPP_H */
-
-/*
-### Local Variables: ***
-### mode:C++ ***
-### End: **
-*/

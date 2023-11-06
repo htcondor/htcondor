@@ -88,14 +88,12 @@ class Value
 		Value()
 			: classadValue(NULL)
 			, valueType(UNDEFINED_VALUE)
-			, factor(NO_FACTOR)
 		{}
 
 		/// Copy Constructor
 		Value(const Value &value)
 			: classadValue(NULL)
 			, valueType(UNDEFINED_VALUE)
-			, factor(NO_FACTOR)
 		{
 			CopyFrom(value);
 			return;
@@ -117,7 +115,6 @@ class Value
 			if (valueType & VALUE_OWNS_POINTER) { _Clear(); }
 			classadValue = NULL; // This clears the entire union.
 			valueType 	= UNDEFINED_VALUE;
-			factor = NO_FACTOR;
 		}
 
 		/** Copies the value of another value object.
@@ -449,7 +446,6 @@ class Value
 			}
 
 			classadValue = NULL; // this clears the entire union
-			factor = NO_FACTOR;
 		}
 
 		friend class Literal;
@@ -471,8 +467,7 @@ class Value
 		};
 
 		ValueType 		valueType;	// the type of the value
-		NumberFactor	factor;		// the type of the value
-		void ApplyFactor();
+		void ApplyFactor(NumberFactor factor);
 };
 
 bool convertValueToRealValue(const Value value, Value &realValue);

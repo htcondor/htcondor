@@ -668,7 +668,6 @@ WriteUserLog::openFile(
 		flags |= O_APPEND;
 	}
 #if defined(WIN32)
-	flags |= _O_TEXT;
 
 	// if we want lock-free append, we have to open the handle in a diffent file mode than what the
 	// c-runtime uses.  FILE_APPEND_DATA but NOT FILE_WRITE_DATA or GENERIC_WRITE.
@@ -1512,13 +1511,10 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 					// The following should match ATTR_JOB_AD_INFORMATION_ATTRS
 					// but cannot reference it directly because of what gets
 					// linked in libcondorapi
-				char *attrsToWrite = NULL;
-				param_jobad->LookupString("JobAdInformationAttrs",&attrsToWrite);
-				if (attrsToWrite) {
-					if (*attrsToWrite) {
-						writeJobAdInfoEvent(attrsToWrite, **p, event, param_jobad, false, fmt_opts);
-					}
-				free( attrsToWrite );
+				std::string attrsToWrite;
+				param_jobad->LookupString("JobAdInformationAttrs",attrsToWrite);
+				if (attrsToWrite.size() > 0) {
+					writeJobAdInfoEvent(attrsToWrite.c_str(), **p, event, param_jobad, false, fmt_opts);
 				}
 			}
 		}
@@ -1639,12 +1635,6 @@ WriteUserLog::GenerateGlobalId( std::string &id )
 	formatstr_cat( id, "%s%d.%ld.%ld", GetGlobalIdBase(), m_global_sequence,
 	               (long)now.tv_sec, (long)now.tv_usec );
 }
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/
 
 FileLockBase *
 WriteUserLog::getLock(CondorError &err) {

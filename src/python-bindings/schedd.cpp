@@ -18,6 +18,7 @@
 #include "my_username.h"
 #include "condor_version.h"
 #include "../condor_utils/dagman_utils.h"
+#include "../condor_utils/MapFile.h"
 
 #include <classad/operators.h>
 
@@ -322,7 +323,7 @@ private:
 #endif
 
 boost::shared_ptr<HistoryIterator>
-history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int cmd, const std::string & addr)
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int hrs, int cmd, const std::string & addr)
 {
 	bool want_startd = (cmd == GET_HISTORY);
 
@@ -406,6 +407,20 @@ history_query(boost::python::object requirement, boost::python::list projection,
 	// PRAGMA_REMIND("projection should be a string, not a classad list")
 	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
 	ad.Insert(ATTR_PROJECTION, projTree);
+
+	switch (hrs) {
+		case HRS_SCHEDD_JOB_HIST:
+			break;
+		case HRS_STARTD_JOB_HIST:
+			ad.InsertAttr("HistoryRecordSource","STARTD");
+			break;
+		case HRS_JOB_EPOCH:
+			ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+			break;
+		default:
+			THROW_EX(HTCondorValueError, "Unknown history record source given");
+			break;
+	}
 
 	daemon_t dt = DT_SCHEDD;
 	if (want_startd) {
@@ -923,29 +938,35 @@ struct SubmitJobsIterator {
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, boost::python::object from, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, num, from)
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(false)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 			// copy the input submit hash into our new hash.
 			m_hash.init(JSM_PYTHON_BINDINGS);
+			m_protected_url_map = getProtectedURLMap();
 			copy_hash(h);
 			m_hash.setDisableFileChecks(true);
 			m_hash.init_base_ad(qdate, owner.c_str());
+			m_hash.attachTransferMap(m_protected_url_map);
 	}
 
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, const std::string & qargs, MacroStreamMemoryFile & ms_inline_items, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, 0, boost::python::object())
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(true)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 		// copy the input submit hash into our new hash.
 		m_hash.init(JSM_PYTHON_BINDINGS);
+		m_protected_url_map = getProtectedURLMap();
 		copy_hash(h);
 		m_hash.setDisableFileChecks(true);
 		m_hash.init_base_ad(qdate, owner.c_str());
+		m_hash.attachTransferMap(m_protected_url_map);
 
 		if (qargs.empty()) {
 			m_ssqa.begin(id, num);
@@ -967,7 +988,12 @@ struct SubmitJobsIterator {
 	}
 
 
-	~SubmitJobsIterator() {}
+	~SubmitJobsIterator() {
+		if (m_protected_url_map) {
+			delete m_protected_url_map;
+			m_protected_url_map = nullptr;
+		}
+	}
 
 	void copy_hash(SubmitHash & h)
 	{
@@ -1055,6 +1081,7 @@ private:
 	SubmitHash m_hash;
 	SubmitStepFromPyIter m_sspi;
 	SubmitStepFromQArgs m_ssqa;
+	MapFile* m_protected_url_map;
 	bool m_iter_qargs;
 	bool m_return_proc_ads;
 	bool m_spool;
@@ -1095,6 +1122,7 @@ public:
     std::string owner() const;
     std::string schedd_version();
     const ClassAd* capabilites();
+    MapFile* urlMap();
 
     static boost::shared_ptr<ConnectionSentry> enter(boost::shared_ptr<ConnectionSentry> obj);
     static bool exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object obj2, boost::python::object obj3);
@@ -1396,14 +1424,15 @@ struct Schedd {
 
 
     Schedd()
-     : m_connection(NULL)
+     : m_connection(NULL), m_protected_url_map(nullptr)
     {
         use_local_schedd();
+        m_protected_url_map = getProtectedURLMap();
     }
 
 
     Schedd(boost::python::object loc)
-      : m_connection(NULL), m_addr(), m_name("Unknown"), m_version("")
+      : m_connection(NULL), m_protected_url_map(nullptr), m_addr(), m_name("Unknown"), m_version("")
     {
 		int rv = construct_for_location(loc, DT_SCHEDD, m_addr, m_version, &m_name);
 		if (rv == 0) {
@@ -1412,11 +1441,16 @@ struct Schedd {
 			if (rv == -2) { boost::python::throw_error_already_set(); }
 			THROW_EX(HTCondorValueError, "Unknown type");
 		}
+		m_protected_url_map = getProtectedURLMap();
     }
 
     ~Schedd()
     {
         if (m_connection) { m_connection->abort(); }
+        if (m_protected_url_map) {
+            delete m_protected_url_map;
+            m_protected_url_map = nullptr;
+        }
     }
 
     boost::python::object location() const {
@@ -1550,24 +1584,20 @@ struct Schedd {
         formatstr(cmd_map_ent, "{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
 
         std::string session_id;
-        KeyCacheEntry *k = NULL;
-        int ret = 0;
 
-        // IMPORTANT: this hashtable returns 0 on success!
-        ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
-        if (ret)
+        auto command_pair = SecMan::command_map.find(cmd_map_ent);
+        if (command_pair == SecMan::command_map.end()) {
+            return false;
+        }
+        session_id = command_pair->second;
+
+        auto itr = (SecMan::session_cache)->find(session_id);
+        if (itr == (SecMan::session_cache)->end())
         {
             return false;
         }
 
-        // IMPORTANT: this hashtable returns 1 on success!
-        ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
-        if (!ret)
-        {
-            return false;
-        }
-
-	ClassAd *policy = k->policy();
+        ClassAd *policy = itr->second.policy();
 
         if (!policy->EvaluateAttrString(ATTR_SEC_MY_REMOTE_USER_NAME, result))
         {
@@ -2413,10 +2443,15 @@ struct Schedd {
 		return result;
 	}
 
+    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
+    {
+        return history_query(requirement, projection, match, since, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
+    }
+
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
 #if 1
-		return history_query(requirement, projection, match, since, QUERY_SCHEDD_HISTORY, m_addr);
+		return history_query(requirement, projection, match, since, HRS_SCHEDD_JOB_HIST, QUERY_SCHEDD_HISTORY, m_addr);
 #else
         std::string val_str;
         extract<ExprTreeHolder &> exprtree_extract(requirement);
@@ -2621,10 +2656,13 @@ struct Schedd {
         return iter;
     }
 
+
+    MapFile* getUrlMap() { return m_protected_url_map; }
+
 private:
 
     ConnectionSentry* m_connection;
-
+    MapFile *m_protected_url_map;
     std::string m_addr, m_name, m_version;
 
 };
@@ -2675,6 +2713,11 @@ const ClassAd* ConnectionSentry::capabilites()
 		return &m_capabilities;
 	}
 	return NULL;
+}
+
+MapFile* ConnectionSentry::urlMap()
+{
+    return m_schedd.getUrlMap();
 }
 
 int
@@ -2835,7 +2878,7 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
     shallow_opts.strLibOut = shallow_opts.primaryDagFile + ".lib.out";
     shallow_opts.strLibErr = shallow_opts.primaryDagFile + ".lib.err";
     deep_opts.doRescueFrom = 0;
-    deep_opts.updateSubmit = false;
+    deep_opts[DagmanDeepOptions::b::UpdateSubmit] = false;
 
     // Iterate over the list of arguments passed in and set the appropriate
     // values in m_shallowOpts and m_deepOpts
@@ -2872,63 +2915,65 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
         std::string key_lc = key;
         std::transform(key_lc.begin(), key_lc.end(), key_lc.begin(), ::tolower);
         if (key_lc == "dagman")
-            deep_opts.strDagmanPath = value.c_str();
+            deep_opts[DagmanDeepOptions::str::DagmanPath] = value.c_str();
         else if (key_lc == "force")
-            deep_opts.bForce = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::Force] = (value == "true") ? true : false;
         else if (key_lc == "schedd-daemon-ad-file")
-            shallow_opts.strScheddDaemonAdFile = value.c_str();
+            shallow_opts[DagmanShallowOptions::str::ScheddDaemonAdFile] = value.c_str();
         else if (key_lc == "schedd-address-file")
-            shallow_opts.strScheddAddressFile = value.c_str();
+            shallow_opts[DagmanShallowOptions::str::ScheddAddressFile] = value.c_str();
         else if (key_lc == "alwaysrunpost")
-            shallow_opts.bPostRun = (value == "true") ? true : false;
-        else if (key_lc == "maxidle") 
-            shallow_opts.iMaxIdle = atoi(value.c_str());
-        else if (key_lc == "maxjobs") 
-            shallow_opts.iMaxJobs = atoi(value.c_str());
+            shallow_opts[DagmanShallowOptions::b::PostRun] = (value == "true") ? true : false;
+        else if (key_lc == "maxidle")
+            shallow_opts[DagmanShallowOptions::i::MaxIdle] = atoi(value.c_str());
+        else if (key_lc == "maxjobs")
+            shallow_opts[DagmanShallowOptions::i::MaxJobs] = atoi(value.c_str());
         else if (key_lc == "maxpre")
-            shallow_opts.iMaxPre = atoi(value.c_str());
+            shallow_opts[DagmanShallowOptions::i::MaxPre] = atoi(value.c_str());
         else if (key_lc == "maxpost")
-            shallow_opts.iMaxPre = atoi(value.c_str());
+            // Bug!
+            shallow_opts[DagmanShallowOptions::i::MaxPre] = atoi(value.c_str());
         else if (key_lc == "usedagdir")
-            deep_opts.useDagDir = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::UseDagDir] = (value == "true") ? true : false;
         else if (key_lc == "debug")
-            shallow_opts.iDebugLevel = atoi(value.c_str());
+            shallow_opts[DagmanShallowOptions::i::DebugLevel] = atoi(value.c_str());
         else if (key_lc == "outfile_dir")
-            deep_opts.strOutfileDir = value.c_str();
+            deep_opts[DagmanDeepOptions::str::OutfileDir] = value.c_str();
         else if (key_lc == "config")
-            shallow_opts.strConfigFile = value.c_str();
+            shallow_opts[DagmanShallowOptions::str::ConfigFile] = value.c_str();
         else if (key_lc == "batch-name")
             deep_opts.batchName = value.c_str();
         else if (key_lc == "autorescue")
-            deep_opts.autoRescue = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::AutoRescue] = (value == "true") ? true : false;
         else if (key_lc == "dorescuefrom")
             deep_opts.doRescueFrom = atoi(value.c_str());
         else if (key_lc == "load_save")
-            shallow_opts.saveFile = value;
+            shallow_opts[DagmanShallowOptions::str::SaveFile] = value;
         else if (key_lc == "allowversionmismatch")
-            deep_opts.allowVerMismatch = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::AllowVersionMismatch] = (value == "true") ? true : false;
         else if (key_lc == "do_recurse")
-            deep_opts.recurse = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::Recurse] = (value == "true") ? true : false;
         else if (key_lc == "update_submit")
-            deep_opts.updateSubmit = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::UpdateSubmit] = (value == "true") ? true : false;
         else if (key_lc == "import_env")
-            deep_opts.importEnv = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::ImportEnv] = (value == "true") ? true : false;
         else if (key_lc == "include_env")
-            deep_opts.getFromEnv += value;
+            deep_opts[DagmanDeepOptions::str::GetFromEnv] += value;
         else if (key_lc == "insert_env") {
             trim(value);
             deep_opts.addToEnv.push_back(value);
             }
         else if (key_lc == "dumprescue")
-            shallow_opts.dumpRescueDag = (value == "true") ? true : false;
+            shallow_opts[DagmanShallowOptions::b::DumpRescueDag] = (value == "true") ? true : false;
         else if (key_lc == "valgrind")
-            shallow_opts.runValgrind = (value == "true") ? true : false;
+            shallow_opts[DagmanShallowOptions::b::RunValgrind] = (value == "true") ? true : false;
         else if (key_lc == "priority")
-            shallow_opts.priority = atoi(value.c_str());
+            shallow_opts[DagmanShallowOptions::i::Priority] = atoi(value.c_str());
         else if (key_lc == "suppress_notification")
-            deep_opts.suppress_notification = (value == "true") ? true : false;
+            deep_opts[DagmanDeepOptions::b::SuppressNotification] = (value == "true") ? true : false;
         else if (key_lc == "dorecov")
-            deep_opts.suppress_notification = (value == "true") ? true : false;
+            // Bug!
+            deep_opts[DagmanDeepOptions::b::SuppressNotification] = (value == "true") ? true : false;
         else
             printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
     }
@@ -3444,6 +3489,8 @@ public:
 			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
 		}
 
+		m_hash.attachTransferMap(txn->urlMap());
+
 		if (factory_submit) {
 
 			// force re-initialization (and a new cluster) if this hash is used again.
@@ -3482,7 +3529,7 @@ public:
 			if (ssi.has_items()) {
 				std::string items_filename;
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, items_filename, &row_count) < 0 || row_count <= 0) {
-					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
+					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 
 				// PRAGMA_REMIND("fix this when python submit supports foreach, maybe make this common with condor_submit")
@@ -3553,6 +3600,8 @@ public:
 			}
 		}
 
+		m_hash.detachTransferMap();
+
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
             txn->reschedule();
@@ -3611,6 +3660,8 @@ public:
 		int step=0, item_index=0, rval;
 		SubmitStepFromPyIter ssi(m_hash, JOB_ID_KEY(cluster, first_proc_id), count, from);
 
+		m_hash.attachTransferMap(txn->urlMap());
+
 		if (factory_submit) {
 
 			// get the first rowdata, we need that to build the submit digest, etc
@@ -3643,7 +3694,7 @@ public:
 			int row_count = 1;
 			if (ssi.has_items()) {
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, ssi.fea().items_filename, &row_count) < 0 || row_count <= 0) {
-					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
+					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 				num_jobs = row_count * ssi.step_size();
 			}
@@ -3711,6 +3762,8 @@ public:
 			}
 
 		}
+
+		m_hash.detachTransferMap();
 
 		if (rval < 0) { ssi.throw_error(); }
 
@@ -4252,6 +4305,44 @@ void export_schedd()
 #else
             (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #endif
+            )
+        .def("jobEpochHistory", &Schedd::jobEpochHistory,
+            R"C0ND0R(
+            Fetch per job run instance (epoch) history records from the *condor_schedd* daemon.
+
+            :param constraint: A query constraint.
+                Only jobs matching this constraint will be returned.
+                ``None`` will return all jobs.
+            :type constraint: str or :class:`~classad.ExprTree`
+            :param projection: Attributes that will be returned for each job
+                in the query.  At least the attributes in this list will be
+                returned, but additional ones may be returned as well.
+                An empty list returns all attributes.
+            :type projection: list[str]
+            :param int match: A limit on the number of jobs to include; the
+                default (``-1``) indicates to return all matching jobs.
+                The schedd may return fewer than ``match`` jobs because of its
+                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 10,000).
+            :param since: A cluster ID, job ID, or expression.  If a cluster ID
+                (passed as an `int`) or job ID (passed a `str` in the format
+                ``{clusterID}.{procID}``), only jobs recorded in the history
+                file after (and not including) the matching ID will be
+                returned.  If an expression (passed as a `str` or
+                :class:`~classad.ExprTree`), jobs will be returned,
+                most-recently-recorded first, until the expression becomes
+                true; the job making the expression become true will not be
+                returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
+                same set of jobs.
+            :type since: int, str, or :class:`~classad.ExprTree`
+            :return: All matching ads in the Schedd history, with attributes according to the
+                ``projection`` keyword.
+            :rtype: :class:`HistoryIterator`
+            )C0ND0R",
+#if BOOST_VERSION >= 103400
+             (boost::python::arg("self"),
+#endif
+             boost::python::arg("constraint"), boost::python::arg("projection"), boost::python::arg("match")=-1,
+             boost::python::arg("since")=boost::python::object())
             )
         .def("history", &Schedd::history,
             R"C0ND0R(

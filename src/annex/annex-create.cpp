@@ -365,7 +365,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
 		// GAHP client needs to fire it.
 		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-			(void (Service::*)()) & FunctorSequence::operator(),
+			(void (Service::*)(int)) & FunctorSequence::timer,
 			"GetFunction, PutRule, PutTarget, BulkRequest", fs );
 		gahp->setNotificationTimerId( functorSequenceTimer );
 		eventsGahp->setNotificationTimerId( functorSequenceTimer );
@@ -440,7 +440,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		}
 
 		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-			(void (Service::*)()) & FunctorSequence::operator(),
+			(void (Service::*)(int)) & FunctorSequence::timer,
 			"GetFunction, PutRule, PutTarget, OnDemandRequest", fs );
 		gahp->setNotificationTimerId( functorSequenceTimer );
 		eventsGahp->setNotificationTimerId( functorSequenceTimer );
@@ -472,7 +472,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 }
 
 void
-callCreateOneAnnex() {
+callCreateOneAnnex(int /* tid */) {
 	Stream * s = NULL;
 	ClassAd * reply = new ClassAd();
 

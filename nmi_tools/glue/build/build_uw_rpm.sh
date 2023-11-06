@@ -68,7 +68,7 @@ tar xvfpz "SOURCES/condor-${condor_version}.tar.gz" "condor-${condor_version}/bu
 cp -p condor-"${condor_version}"/build/packaging/rpm/* SOURCES
 
 # Extract prerelease value from top level CMake file
-PRE_RELEASE=$(grep '^set(PRE_RELEASE' condor-${condor_version}/CMakeLists.txt)
+PRE_RELEASE=$(grep '^set(PRE_RELEASE' "condor-${condor_version}/CMakeLists.txt")
 PRE_RELEASE=${PRE_RELEASE#* } # Trim up to and including space
 PRE_RELEASE=${PRE_RELEASE%\)*} # Trim off the closing parenthesis
 rm -rf "condor-${condor_version}"
@@ -93,9 +93,10 @@ fi
 # Use as many CPUs as are in the condor slot we are in, 1 if undefined
 export RPM_BUILD_NCPUS=${OMP_NUM_THREADS-1}
 
-rpmbuild -v "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
+rpmbuild "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
-readarray -t rpm_files < <(find ./*RPMS -name \*.rpm)
-mv "${rpm_files[@]}" "$dest_dir"
+# shellcheck disable=SC2046 # Intended splitting of find output
+mv $(find ./*RPMS -name \*.rpm) "$dest_dir"
 rm -rf "$tmpd"
-ls -lh "$dest_dir"
+cd "$dest_dir"
+ls -lh [a-z]*.rpm

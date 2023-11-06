@@ -58,7 +58,6 @@ DaemonCommandProtocol::DaemonCommandProtocol( Stream * sock, bool is_command_soc
 	m_allow_empty(false),
 	m_policy(NULL),
 	m_key(NULL),
-	m_sid(NULL),
 	m_prev_sock_ent(NULL),
 	m_async_waiting_time(0),
 	m_comTable(daemonCore->comTable),
@@ -106,9 +105,6 @@ DaemonCommandProtocol::~DaemonCommandProtocol()
 	if (m_key) {
 		delete m_key;
 	}
-	if (m_sid) {
-		free(m_sid);
-	}
 }
 
 int DaemonCommandProtocol::doProtocol()
@@ -118,7 +114,7 @@ int DaemonCommandProtocol::doProtocol()
 
 	if( m_sock ) {
 		if( m_sock->deadline_expired() ) {
-			dprintf(D_ALWAYS,"DaemonCommandProtocol: deadline for security handshake with %s has expired.\n",
+			dprintf(D_ERROR,"DaemonCommandProtocol: deadline for security handshake with %s has expired.\n",
 					m_sock->peer_description());
 
 			m_result = FALSE;
@@ -129,7 +125,7 @@ int DaemonCommandProtocol::doProtocol()
 			what_next = WaitForSocketData();
 		}
 		else if( m_is_tcp && !m_sock->is_connected()) {
-			dprintf(D_ALWAYS,"DaemonCommandProtocol: TCP connection to %s failed.\n",
+			dprintf(D_ERROR,"DaemonCommandProtocol: TCP connection to %s failed.\n",
 					m_sock->peer_description());
 
 			m_result = FALSE;
@@ -198,7 +194,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 			&m_prev_sock_ent);
 
 	if(reg_rc < 0) {
-		dprintf(D_ALWAYS, "DaemonCommandProtocol failed to process command from %s because "
+		dprintf(D_ERROR, "DaemonCommandProtocol failed to process command from %s because "
 				"Register_Socket returned %d.\n",
 				m_sock->get_sinful_peer(),
 				reg_rc);
@@ -299,10 +295,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 
 		if (sess_id) {
 			KeyCacheEntry *session = NULL;
-			bool found_sess = m_sec_man->session_cache->lookup(sess_id, session);
-
-			if (!found_sess) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
+			auto sess_itr = m_sec_man->session_cache->find(sess_id);
+			if (sess_itr == m_sec_man->session_cache->end()) {
+				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
 				// but first, we should be nice and send a message back to
@@ -317,12 +312,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				sess_id = NULL;
 				m_result = FALSE;
 				return CommandProtocolFinished;
+			} else {
+				session = &sess_itr->second;
 			}
 
 			session->renewLease();
 
 			if (!session->key()) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key! This session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
+				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s is missing the key! This session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -335,7 +332,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			}
 
 			if (!m_sock->set_MD_mode(MD_ALWAYS_ON, session->key())) {
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator for session %s, failing; this session was requested by %s with return address %s\n",sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
+				dprintf (D_ERROR, "DC_AUTHENTICATE: unable to turn on message authenticator for session %s, failing; this session was requested by %s with return address %s\n",sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				if( return_address_ss ) {
 					free( return_address_ss );
 					return_address_ss = NULL;
@@ -393,10 +390,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 
 		if (sess_id) {
 			KeyCacheEntry *session = NULL;
-			bool found_sess = m_sec_man->session_cache->lookup(sess_id, session);
-
-			if (!found_sess) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
+			auto sess_itr = m_sec_man->session_cache->find(sess_id);
+			if (sess_itr == m_sec_man->session_cache->end()) {
+				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
 				// but first, send a message to whoever provided us with incorrect session id
@@ -410,12 +406,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				sess_id = NULL;
 				m_result = FALSE;
 				return CommandProtocolFinished;
+			} else {
+				session = &sess_itr->second;
 			}
 
 			session->renewLease();
 
 			if (!session->key()) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key! This session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
+				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s is missing the key! This session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -469,7 +467,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			}
 
 			if (!m_sock->set_crypto_key(turn_encryption_on, key_to_use)) {
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption for session %s, failing; this session was requested by %s with return address %s\n",sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
+				dprintf (D_ERROR, "DC_AUTHENTICATE: unable to turn on encryption for session %s, failing; this session was requested by %s with return address %s\n",sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				if( return_address_ss ) {
 					free( return_address_ss );
 					return_address_ss = NULL;
@@ -611,7 +609,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		if(!ip) {
 			ip = "unknown address";
 		}
-		dprintf(D_ALWAYS,
+		dprintf(D_ERROR,
 			"DaemonCore: Can't receive command request from %s (perhaps a timeout?)\n", ip);
 		m_result = FALSE;
 		return CommandProtocolFinished;
@@ -628,14 +626,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", m_sock->peer_description());
 
 		if( !getClassAd(m_sock, m_auth_info)) {
-			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
+			dprintf (D_ERROR, "ERROR: DC_AUTHENTICATE unable to "
 					 "receive auth_info from %s!\n", m_sock->peer_description());
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		}
 
 		if ( m_is_tcp && !m_sock->end_of_message()) {
-			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE is TCP, unable to "
+			dprintf (D_ERROR, "ERROR: DC_AUTHENTICATE is TCP, unable to "
 					   "receive eom!\n");
 			m_result = FALSE;
 			return CommandProtocolFinished;
@@ -673,7 +671,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 			// we have no idea what command they want to send.
 			// too bad, bye bye
 
-			dprintf(D_ALWAYS,
+			dprintf(D_ERROR,
 					"Received %s command (%d) (%s) from %s %s\n",
 					(m_is_tcp) ? "TCP" : "UDP",
 					m_auth_cmd,
@@ -690,19 +688,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		bool valid_cookie		= false;
 
 		// check if we are using a cookie
-		char *incoming_cookie   = NULL;
-		if( m_auth_info.LookupString(ATTR_SEC_COOKIE, &incoming_cookie)) {
+		std::string incoming_cookie;
+		if( m_auth_info.LookupString(ATTR_SEC_COOKIE, incoming_cookie)) {
 			// compare it to the one we have internally
 
-			valid_cookie = daemonCore->cookie_is_valid((unsigned char*)incoming_cookie);
-			free (incoming_cookie);
+			valid_cookie = daemonCore->cookie_is_valid((const unsigned char *)incoming_cookie.c_str());
 
 			if ( valid_cookie ) {
 				// we have a match... trust this command.
 				using_cookie = true;
 			} else {
 				// bad cookie!!!
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: received invalid cookie from %s!!!\n", m_sock->peer_description());
+				dprintf ( D_ERROR, "DC_AUTHENTICATE: received invalid cookie from %s!!!\n", m_sock->peer_description());
 				m_result = FALSE;
 				return CommandProtocolFinished;
 			}
@@ -716,8 +713,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				KeyCacheEntry *session = NULL;
 
-				if( ! m_auth_info.LookupString(ATTR_SEC_SID, &m_sid)) {
-					dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
+				if( ! m_auth_info.LookupString(ATTR_SEC_SID, m_sid)) {
+					dprintf (D_ERROR, "ERROR: DC_AUTHENTICATE unable to "
 							 "extract auth_info.%s from %s!\n", ATTR_SEC_SID,
 							 m_sock->peer_description());
 					m_result = FALSE;
@@ -726,18 +723,19 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				m_auth_info.Delete(ATTR_SEC_NONCE);
 
 				// lookup the suggested key
-				if (!m_sec_man->session_cache->lookup(m_sid, session)) {
+				auto sess_itr = m_sec_man->session_cache->find(m_sid);
+				if (sess_itr == m_sec_man->session_cache->end()) {
 
 					// the key id they sent was not in our cache.  this is a
 					// problem.
 
 					std::string return_addr;
 					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, return_addr);
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
-					         "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr.empty() ? "(none)" : return_addr.c_str());
-					if( !strncmp( m_sid, "family:", strlen("family:") ) ) {
-						dprintf(D_ALWAYS, "  The remote daemon thinks that we are in the same family of Condor daemon processes as it, but I don't recognize its family security session.\n");
-						dprintf(D_ALWAYS, "  If we are in the same family of processes, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+					dprintf (D_ERROR, "DC_AUTHENTICATE: attempt to open "
+					         "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid.c_str(), m_sock->peer_description(), return_addr.empty() ? "(none)" : return_addr.c_str());
+					if( !strncmp( m_sid.c_str(), "family:", strlen("family:") ) ) {
+						dprintf(D_ERROR, "  The remote daemon thinks that we are in the same family of Condor daemon processes as it, but I don't recognize its family security session.\n");
+						dprintf(D_ERROR, "  If we are in the same family of processes, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
 					}
 
 					bool want_resume_response = false;
@@ -750,7 +748,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 						m_sock->encode();
 						if (!putClassAd(m_sock, resp_ad) || !m_sock->end_of_message()) {
-							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to send unknown session reply to peer at %s.\n", m_sock->peer_description());
+							dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to send unknown session reply to peer at %s.\n", m_sock->peer_description());
 						}
 					} else {
 						// Old client (pre-9.9.0), send out-of-band
@@ -767,7 +765,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						}
 
 						if( !return_addr.empty() ) {
-							daemonCore->send_invalidate_session( return_addr.c_str(), m_sid, &info_ad );
+							daemonCore->send_invalidate_session( return_addr.c_str(), m_sid.c_str(), &info_ad );
 						}
 
 						// consume the rejected message
@@ -781,17 +779,17 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				} else {
 					// the session->id() and the_sid strings should be identical.
+					session = &sess_itr->second;
 
 					if (IsDebugLevel(D_SECURITY)) {
-						char *return_addr = NULL;
+						std::string return_addr;
 						if(session->policy()) {
-							session->policy()->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK,&return_addr);
+							session->policy()->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK,return_addr);
 						}
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s%s%s:\n",
 								 session->id().c_str(),
-								 return_addr ? " with return address " : "",
-								 return_addr ? return_addr : "");
-						free(return_addr);
+								 !return_addr.empty() ? " with return address " : "",
+								 return_addr.c_str());
 					}
 				}
 
@@ -857,27 +855,24 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				// grab some attributes out of the policy.
 				if (m_policy) {
-					char *tmp  = NULL;
-					m_policy->LookupString( ATTR_SEC_USER, &tmp);
-					if (tmp) {
+					std::string tmp;
+					m_policy->LookupString( ATTR_SEC_USER, tmp);
+					if (!tmp.empty()) {
 						// copy this to the HandleReq() scope
 						m_user = tmp;
-						free( tmp );
-						tmp = NULL;
+						tmp.clear();
 					}
-					m_policy->LookupString( ATTR_SEC_AUTHENTICATED_NAME, &tmp);
-					if (tmp) {
+					m_policy->LookupString( ATTR_SEC_AUTHENTICATED_NAME, tmp);
+					if (!tmp.empty()) {
 						// copy this to the HandleReq() scope
-						m_sock->setAuthenticatedName(tmp);
-						free( tmp );
-						tmp = NULL;
+						m_sock->setAuthenticatedName(tmp.c_str());
+						tmp.clear();
 					}
-					m_policy->LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &tmp);
-					if (tmp) {
+					m_policy->LookupString( ATTR_SEC_AUTHENTICATION_METHODS, tmp);
+					if (!tmp.empty()) {
 						// copy this to the HandleReq() scope
-						m_sock->setAuthenticationMethodUsed(tmp);
-						free( tmp );
-						tmp = NULL;
+						m_sock->setAuthenticationMethodUsed(tmp.c_str());
+						tmp.clear();
 					}
 
 					m_policy->LookupString( ATTR_SEC_REMOTE_VERSION, peer_version );
@@ -914,7 +909,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				{
 						// our policy is invalid even without the other
 						// side getting involved.
-					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
+					dprintf( D_ERROR, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );
 					m_result = FALSE;
 					return CommandProtocolFinished;
@@ -930,7 +925,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 																  *our_policy );
 
 				if (!m_policy) {
-					dprintf(D_ALWAYS, "DC_AUTHENTICATE: Unable to reconcile!\n");
+					dprintf(D_ERROR, "DC_AUTHENTICATE: Unable to reconcile!\n");
 					m_result = FALSE;
 					return CommandProtocolFinished;
 				} else {
@@ -953,17 +948,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// generate a new session
 
 					// generate a unique ID.
-					std::string tmpStr;
-					formatstr( tmpStr, "%s:%i:%lld:%i",
+					formatstr( m_sid, "%s:%i:%lld:%i",
 									get_local_hostname().c_str(), daemonCore->mypid,
 							   (long long)time(0), ZZZ_always_increase() );
-					assert (m_sid == NULL);
-					m_sid = strdup(tmpStr.c_str());
 
 					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
 						std::string crypto_method;
 						if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
-							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption for request from %s, but we have none!\n", m_sock->peer_description() );
+							dprintf ( D_ERROR, "DC_AUTHENTICATE: tried to enable encryption for request from %s, but we have none!\n", m_sock->peer_description() );
 							m_result = false;
 							return CommandProtocolFinished;
 						}
@@ -974,16 +966,16 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						if (m_auth_info.EvaluateAttrString(ATTR_SEC_ECDH_PUBLIC_KEY, peer_ec)) {
 							m_peer_pubkey_encoded = peer_ec;
 							if (!(m_keyexchange = SecMan::GenerateKeyExchange(m_errstack))) {
-								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Error in generating key: %s\n", m_errstack->getFullText().c_str());
+								dprintf(D_ERROR, "DC_AUTHENTICATE: Error in generating key: %s\n", m_errstack->getFullText().c_str());
 								return CommandProtocolFinished;
 							}
 							std::string encoded_pubkey;
 							if (!SecMan::EncodePubkey(m_keyexchange.get(), encoded_pubkey, m_errstack)) {
-								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Error in encoded key: %s\n", m_errstack->getFullText().c_str());
+								dprintf(D_ERROR, "DC_AUTHENTICATE: Error in encoded key: %s\n", m_errstack->getFullText().c_str());
 								return CommandProtocolFinished;
 							}
 							if (!m_policy->InsertAttr(ATTR_SEC_ECDH_PUBLIC_KEY, encoded_pubkey)) {
-								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to add pubkey to policy ad.\n");
+								dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to add pubkey to policy ad.\n");
 								return CommandProtocolFinished;
 							}
 
@@ -1001,26 +993,26 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 								free (rkey);
 							} else {
 								memset (rbuf, 0, SEC_SESSION_KEY_LENGTH_V9);
-								dprintf ( D_ALWAYS, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", m_sock->peer_description() );
+								dprintf ( D_ERROR, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", m_sock->peer_description() );
 								m_result = FALSE;
 								return CommandProtocolFinished;
 							}
 							switch (method) {
 								case CONDOR_BLOWFISH:
-									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid);
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid.c_str());
 									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_OLD, CONDOR_BLOWFISH, 0);
 									break;
 								case CONDOR_3DES:
-									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid.c_str());
 									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_OLD, CONDOR_3DES, 0);
 									break;
 								case CONDOR_AESGCM: {
-									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid.c_str());
 									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_V9, CONDOR_AESGCM, 0);
 									}
 									break;
 								default:
-									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid.c_str());
 									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_OLD, CONDOR_NO_PROTOCOL, 0);
 									break;
 							}
@@ -1052,8 +1044,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_sock->encode();
 					if (!putClassAd(m_sock, *m_policy) ||
 						!m_sock->end_of_message()) {
-						dprintf (D_ALWAYS, "SECMAN: Error sending response classad to %s!\n", m_sock->peer_description());
-						dPrintAd (D_ALWAYS, m_auth_info);
+						dprintf (D_ERROR, "SECMAN: Error sending response classad to %s!\n", m_sock->peer_description());
+						dPrintAd (D_ERROR, m_auth_info);
 						m_result = FALSE;
 						return CommandProtocolFinished;
 					}
@@ -1083,7 +1075,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					&& m_key )
 				{
 					m_sock->set_crypto_key(false, m_key);
-					dprintf(D_SECURITY, "DC_AUTHENTICATE: encryption enabled with session key id %s (but encryption mode is off by default for this packet).\n", m_sid ? m_sid : "(null)");
+					dprintf(D_SECURITY, "DC_AUTHENTICATE: encryption enabled with session key id %s (but encryption mode is off by default for this packet).\n", m_sid.c_str());
 				}
 			}
 
@@ -1125,13 +1117,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						ad.Assign(ATTR_SEC_RETURN_CODE, "AUTHORIZED");
 						ad.Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
 						if (!ad.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get())) {
-							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate nonce to send for session resumption.\n");
+							dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to generate nonce to send for session resumption.\n");
 							m_result = false;
 							return CommandProtocolFinished;
 						}
 						m_sock->encode();
 						if (!putClassAd(m_sock, ad) || !m_sock->end_of_message()) {
-							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to send nonce to peer at %s.\n", m_sock->peer_description());
+							dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to send nonce to peer at %s.\n", m_sock->peer_description());
 							m_result = false;
 							return CommandProtocolFinished;
 						}
@@ -1178,10 +1170,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	// we know the ..METHODS_LIST attribute exists since it was put
 	// in by us.  pre 6.5.0 protocol does not put it in.
-	char * auth_methods = NULL;
-	m_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods);
+	std::string auth_methods;
+	m_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, auth_methods);
 
-	if (!auth_methods) {
+	if (auth_methods.empty()) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad from %s, failing!\n", m_sock->peer_description());
 		m_result = FALSE;
 		return CommandProtocolFinished;
@@ -1193,13 +1185,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	int auth_timeout = daemonCore->getSecMan()->getSecTimeout( m_comTable[m_cmd_index].perm );
 
-	m_sock->setAuthenticationMethodsTried(auth_methods);
+	m_sock->setAuthenticationMethodsTried(auth_methods.c_str());
 
 	char *method_used = NULL;
 	m_sock->setPolicyAd(*m_policy);
-	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, &method_used);
+	int auth_success = m_sock->authenticate(m_key, auth_methods.c_str(), m_errstack, auth_timeout, m_nonblocking, &method_used);
 	m_sock->getPolicyAd(*m_policy);
-	free( auth_methods );
 
 	if (auth_success == 2) {
 		m_state = CommandProtocolAuthenticateContinue;
@@ -1262,12 +1253,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	if( m_comTable[m_cmd_index].force_authentication &&
 		!m_sock->isMappedFQU() )
 	{
-		dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
+		dprintf(D_ERROR, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
 				m_sock->peer_description(),
 				m_auth_cmd,
 				m_comTable[m_cmd_index].command_descrip );
 		if( !auth_success ) {
-			dprintf( D_ALWAYS,
+			dprintf( D_ERROR,
 					 "DC_AUTHENTICATE: reason for authentication failure: %s\n",
 					 m_errstack->getFullText().c_str() );
 		}
@@ -1282,7 +1273,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		if (m_keyexchange) {
 			std::string crypto_method;
 			if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: No crypto methods enabled for request from %s.\n", m_sock->peer_description() );
+				dprintf ( D_ERROR, "DC_AUTHENTICATE: No crypto methods enabled for request from %s.\n", m_sock->peer_description() );
 				m_result = false;
 				return CommandProtocolFinished;
 			}
@@ -1293,12 +1284,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 				static_cast<unsigned char *>(malloc(keylen)),
 				&free);
 			if (!SecMan::FinishKeyExchange(std::move(m_keyexchange), m_peer_pubkey_encoded.c_str(), rbuf.get(), keylen, m_errstack)) {
-				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate a symmetric key for session with %s: %s.\n", m_sock->peer_description(), m_errstack->getFullText().c_str());
+				dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to generate a symmetric key for session with %s: %s.\n", m_sock->peer_description(), m_errstack->getFullText().c_str());
 				m_result = false;
 				return CommandProtocolFinished;
 			}
 
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: generating %s key for session %s...\n", crypto_method.c_str(), m_sid);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: generating %s key for session %s...\n", crypto_method.c_str(), m_sid.c_str());
 			m_key = new KeyInfo(rbuf.get(), keylen, method, 0);
 		}
 	}
@@ -1317,7 +1308,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 			}
 		}
 		else {
-			dprintf( D_ALWAYS,
+			dprintf( D_ERROR,
 					 "DC_AUTHENTICATE: required authentication of %s failed: %s\n",
 					 m_sock->peer_ip_str(),
 					 m_errstack->getFullText().c_str() );
@@ -1348,11 +1339,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 
 		m_sock->decode();
 		if (!m_sock->set_crypto_key(true, m_key) ) {
-			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing request from %s.\n", m_sock->peer_description());
+			dprintf (D_ERROR, "DC_AUTHENTICATE: unable to turn on encryption, failing request from %s.\n", m_sock->peer_description());
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", m_sid);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", m_sid.c_str());
 		}
 	} else {
 		m_sock->set_crypto_key(false, m_key);
@@ -1379,11 +1370,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 		}
 
 		if (!result) {
-			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing request from %s.\n", m_sock->peer_description());
+			dprintf (D_ERROR, "DC_AUTHENTICATE: unable to turn on message authenticator, failing request from %s.\n", m_sock->peer_description());
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", m_sid);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", m_sid.c_str());
 			m_sec_man->key_printf (D_SECURITY, m_key);
 		}
 	} else {
@@ -1476,7 +1467,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					false,
 					m_comTable[m_cmd_index].force_authentication ) )
 				{
-					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
+					dprintf( D_ERROR, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );
 					m_result = FALSE;
 					return CommandProtocolFinished;
@@ -1541,7 +1532,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 		if( m_comTable[m_cmd_index].force_authentication &&
 			!m_sock->isMappedFQU() )
 		{
-			dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
+			dprintf(D_ERROR, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
 					m_sock->peer_description(),
 					m_req,
 					m_comTable[m_cmd_index].command_descrip );
@@ -1710,12 +1701,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		m_sock->encode();
 		if (! putClassAd(m_sock, pa_ad) ||
 			! m_sock->end_of_message() ) {
-			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", m_sid, m_sock->peer_description());
+			dprintf (D_ERROR, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", m_sid.c_str(), m_sock->peer_description());
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		} else {
 			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", m_sid);
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", m_sid.c_str());
 			}
 		}
 
@@ -1743,18 +1734,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		m_sock->setSessionID(m_sid);
 
 		// extract the session duration
-		char *dur = NULL;
-		m_policy->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
+		std::string dur;
+		m_policy->LookupString(ATTR_SEC_SESSION_DURATION, dur);
 
-		char *return_addr = NULL;
-		m_policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
+		std::string return_addr;
+		m_policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, return_addr);
 
 		// we add 20 seconds for "slop".  the idea is that if the client were
 		// to start a session just as it was expiring, the server will allow a
 		// window of 20 seconds to receive the command before throwing out the
 		// cached session.
 		int slop = param_integer("SEC_SESSION_DURATION_SLOP", 20);
-		int durint = atoi(dur) + slop;
+		int durint = atoi(dur.c_str()) + slop;
 		time_t now = time(0);
 		time_t expiration_time = now + durint;
 
@@ -1783,11 +1774,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		}
 		dprintf(D_SECURITY|D_VERBOSE, "SESSION: fallback crypto method would be %s.\n", fallback_method_str.c_str());
 
-		std::vector<KeyInfo*> keyvec;
+		std::vector<KeyInfo> keyvec;
 		dprintf(D_SECURITY|D_VERBOSE, "SESSION: server checking key type: %i\n", (m_key ? m_key->getProtocol() : -1));
 		if (m_key) {
 			// put the normal key into the vector
-			keyvec.push_back(new KeyInfo(*m_key));
+			keyvec.emplace_back(*m_key);
 
 			// now see if we want to (and are allowed) to add a fallback key in addition to AES
 			if (m_key->getProtocol() == CONDOR_AESGCM) {
@@ -1796,7 +1787,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 					dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
 					StringList sl(all_methods.c_str());
 					if (sl.contains_anycase(fallback_method_str.c_str())) {
-						keyvec.push_back(new KeyInfo(m_key->getKeyData(), 24, fallback_method, 0));
+						keyvec.emplace_back(m_key->getKeyData(), 24, fallback_method, 0);
 						dprintf(D_SECURITY, "SESSION: server duplicated AES to %s key for UDP.\n",
 							fallback_method_str.c_str());
 					} else {
@@ -1804,7 +1795,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 							fallback_method_str.c_str());
 					}
 				} else {
-					dprintf(D_ALWAYS, "SESSION: no crypto methods list\n");
+					dprintf(D_ERROR, "SESSION: no crypto methods list\n");
 				}
 			}
 		}
@@ -1814,17 +1805,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		// because then this key would get confused for an
 		// outgoing session to a daemon with that IP and
 		// port as its command socket.
-		KeyCacheEntry tmp_key(m_sid, "", keyvec, m_policy, expiration_time, session_lease );
-		m_sec_man->session_cache->insert(tmp_key);
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
+		m_sec_man->session_cache->emplace(m_sid, KeyCacheEntry(m_sid, "", keyvec, *m_policy, expiration_time, session_lease));
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid.c_str(), durint, session_lease, return_addr.c_str());
 		if (IsDebugVerbose(D_SECURITY)) {
 			dPrintAd(D_SECURITY, *m_policy);
 		}
 
-		free( dur );
-		dur = NULL;
-		free( return_addr );
-		return_addr = NULL;
+		dur.clear();
+		return_addr.clear();
 	} else {
 		dprintf( D_DAEMONCORE, "DAEMONCORE: SendResponse() : NOT m_new_session\n");
 
@@ -1887,14 +1875,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 
 		if (!putClassAd(m_sock, q_response) ||
 			!m_sock->end_of_message()) {
-			dprintf (D_ALWAYS, "SECMAN: Error sending DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
-			dPrintAd (D_ALWAYS, q_response);
+			dprintf (D_ERROR, "SECMAN: Error sending DC_SEC_QUERY reply to %s!\n", m_sock->peer_description());
+			dPrintAd (D_ERROR, q_response);
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		}
 
-		dprintf (D_ALWAYS, "SECMAN: Succesfully sent DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
-		dPrintAd (D_ALWAYS, q_response);
+		dprintf (D_COMMAND, "SECMAN: Succesfully sent DC_SEC_QUERY reply to %s!\n", m_sock->peer_description());
+		dPrintAd (D_COMMAND, q_response);
 
 		// now, having informed the client about the authorization status,
 		// successfully abort before actually calling any command handler.

@@ -208,10 +208,10 @@ class BaseShadow : public Service
 		/** Set a timer to call terminateJob() so we retry
 		    our attempts to update the job queue etc.
 		*/
-	void retryJobCleanup( void );
+	void retryJobCleanup();
 
 		/// DaemonCore timer handler to actually do the retry.
-	void retryJobCleanupHandler( void );
+	void retryJobCleanupHandler( int timerID = -1 );
 
 		/** The job exited but it's not ready to leave the queue.  
 			We still want to log an evict event, possibly email the
@@ -220,7 +220,7 @@ class BaseShadow : public Service
 			This uses the virtual cleanUp() method to take care of any
 			universe-specific code before we exit.
 		*/
-	void evictJob( int reason );
+	void evictJob( int reason, const std::string &reasonStr );
 		/** It's possible to the shadow to initiate eviction, and in
 			some cases that means we need to wait around for the starter
 			to tell us what happened.
@@ -442,7 +442,7 @@ class BaseShadow : public Service
 
 	void logTerminateEvent( int exitReason, update_style_t kind = US_NORMAL );
 
-	void logEvictEvent( int exitReason );
+	void logEvictEvent( int exitReason, const std::string &reasonStr );
 
 	virtual void logReconnectedEvent( void ) = 0;
 

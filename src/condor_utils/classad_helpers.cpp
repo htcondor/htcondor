@@ -211,10 +211,10 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 	}
 
 		// now we can grab all the optional stuff that might help...
-	char* ename = NULL;
-	int got_exception = ad->LookupString(ATTR_EXCEPTION_NAME, &ename); 
-	char* reason_str = NULL;
-	ad->LookupString( ATTR_EXIT_REASON, &reason_str );
+	std::string ename;
+	int got_exception = ad->LookupString(ATTR_EXCEPTION_NAME,ename); 
+	std::string reason_str;
+	ad->LookupString( ATTR_EXIT_REASON, reason_str );
 
 		// finally, construct the right string
 	if( exited_by_signal ) {
@@ -222,7 +222,7 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 			str += "died with exception ";
 			str += ename;
 		} else {
-			if( reason_str ) {
+			if( !reason_str.empty() ) {
 				str += reason_str;
 			} else {
 				str += "died on signal ";
@@ -234,12 +234,6 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 		str += std::to_string( exit_value );
 	}
 
-	if( ename ) {
-		free( ename );
-	}
-	if( reason_str ) {
-		free( reason_str );
-	}		
 	return true;
 }
 
@@ -251,7 +245,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	ClassAd *job_ad = new ClassAd();
 
 	SetMyTypeName(*job_ad, JOB_ADTYPE);
-	SetTargetTypeName(*job_ad, STARTD_ADTYPE);
+	job_ad->Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
 
 	if ( owner ) {
 		job_ad->Assign( ATTR_OWNER, owner );

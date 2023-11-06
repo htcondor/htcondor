@@ -31,6 +31,8 @@ public:
 
 	virtual bool reconfig() override;
 
+	virtual bool useProcd() const override {return false;}
+
 	virtual const std::string paramPrefix() const override {return "SHADOW";}
 
 	/**
@@ -44,6 +46,8 @@ private:
 	std::string m_hook_keyword;
 
 	std::string m_hook_prepare_job;
+
+	ArgList m_args;
 };
 
 /**

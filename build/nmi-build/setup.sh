@@ -174,11 +174,13 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
+# Matcb the current version. Consult:
+# https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    wget https://github.com/apptainer/apptainer/releases/download/v1.2.0/apptainer_1.2.0_amd64.deb
-    $INSTALL ./apptainer_1.2.0_amd64.deb
-    rm ./apptainer_1.2.0_amd64.deb
+    wget https://github.com/apptainer/apptainer/releases/download/v1.2.3/apptainer_1.2.3_amd64.deb
+    $INSTALL ./apptainer_1.2.3_amd64.deb
+    rm ./apptainer_1.2.3_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
@@ -190,15 +192,12 @@ fi
 
 
 # Include packages for tarball in the image.
-externals_dir="/usr/local/condor/externals/$REPO_VERSION"
+externals_dir="/usr/local/condor/externals"
 mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
     apt download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5
-    if [ $VERSION_CODENAME != 'bookworm' ]; then
-        apt download libcgroup1
-    fi
     if [ $VERSION_CODENAME = 'bullseye' ]; then
         apt download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
@@ -224,9 +223,6 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
             boost169-python3 python36-chardet python36-idna python36-pysocks python36-requests python36-six python36-urllib3
     else
         yumdownloader --downloadonly --destdir="$externals_dir" boost-python3
-    fi
-    if [ $VERSION_ID -lt 9 ]; then
-        yumdownloader --downloadonly --destdir="$externals_dir" libcgroup
     fi
     # Remove 32-bit x86 packages if any
     rm -f "$externals_dir"/*.i686.rpm
@@ -260,10 +256,11 @@ if [ $ID != 'amzn' ]; then
 fi
 
 # Install pytest for BaTLab testing
+# Install sphinx-mermaid so docs can have images
 if [ "$VERSION_CODENAME" = 'bookworm' ]; then
-    pip3 install --break-system-packages pytest pytest-httpserver
+    pip3 install --break-system-packages pytest pytest-httpserver sphinxcontrib-mermaid
 else
-    pip3 install pytest pytest-httpserver
+    pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
 fi
 
 if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then

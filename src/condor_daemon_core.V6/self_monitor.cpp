@@ -36,7 +36,7 @@ int configured_statistics_window_quantum() {
     return quantum;
 }
 
-static void self_monitor()
+static void self_monitor(int /* tid */)
 {
     daemonCore->monitor_data.CollectData();
     daemonCore->dc_stats.Tick(daemonCore->monitor_data.last_sample_time);
@@ -116,7 +116,7 @@ void SelfMonitorData::CollectData(void)
 
 	registered_socket_count = daemonCore->RegisteredSocketCount();
 
-	cached_security_sessions = daemonCore->getSecMan()->session_cache->count();
+	cached_security_sessions = daemonCore->getSecMan()->session_cache->size();
 
 	// collect data on the udp port depth
 	if (daemonCore->wants_dc_udp_self()) {

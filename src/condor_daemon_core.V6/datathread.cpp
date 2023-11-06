@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
-#include "HashTable.h"
 
 
 /// Support object for Create_Thread_With_Data
@@ -58,27 +57,23 @@ static int Create_Thread_With_Data_Start(void * data, Stream *)
 	return tmp->worker(tmp->data_n1, tmp->data_n2, tmp->data_vp);
 }
 
-static HashTable<int, Create_Thread_With_Data_Data *> tid_to_data(hashFuncInt);
+static std::map<int, Create_Thread_With_Data_Data *> tid_to_data;
 
 /// Support function for Create_Thread_With_Data
 static int Create_Thread_With_Data_Reaper(int tid, int exit_status)
 {
-	Create_Thread_With_Data_Data * tmp = 0;
-	if( tid_to_data.lookup(tid, tmp) != 0 )
-	{
+	auto itr = tid_to_data.find(tid);
+	if (itr == tid_to_data.end()) {
 		// This tid didn't get inserted.
 		ASSERT(0);  
 	}
+	Create_Thread_With_Data_Data * tmp = itr->second;
 	ASSERT(tmp);
 	int ret = 0;
 	if( tmp->reaper) {
 		ret = tmp->reaper(tmp->data_n1, tmp->data_n2, tmp->data_vp, exit_status);
 	}
-	if( tid_to_data.remove(tid) != 0 )
-	{
-		// Index/key wasn't found?  Can't happen.
-		ASSERT(0);
-	}
+	tid_to_data.erase(tid);
 	free(tmp);
 	return ret;
 }
@@ -115,7 +110,8 @@ int Create_Thread_With_Data(DataThreadWorkerFunc Worker, DataThreadReaperFunc Re
 	// Keep a tid->data map.
 	tmp = malloc_Create_Thread_With_Data_Data(data_n1, data_n2, data_vp, 
 		0, Reaper);
-	if( tid_to_data.insert(tid, tmp) != 0 )
+	auto [itr, inserted] = tid_to_data.emplace(tid, tmp);
+	if (!inserted)
 	{
 		// This tid already exists!
 		ASSERT(0);

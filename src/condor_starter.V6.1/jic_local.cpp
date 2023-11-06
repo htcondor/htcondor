@@ -60,7 +60,7 @@ JICLocal::init( void )
 	dprintf( D_ALWAYS, "Starter running a local job with no shadow\n" );
 
 	if( ! getLocalJobAd() ) {
-		dprintf( D_ALWAYS|D_FAILURE,
+		dprintf( D_ERROR,
 				 "Failed to get local job ClassAd!\n" );
 		return false;
 	}
@@ -77,7 +77,7 @@ JICLocal::init( void )
 		// Grab all the interesting stuff out of the ClassAd we need
 		// to know about the job itself.
 	if( ! initJobInfo() ) { 
-		dprintf( D_ALWAYS|D_FAILURE,
+		dprintf( D_ERROR,
 				 "Failed to initialize job info from ClassAd!\n" );
 		return false;
 	}
@@ -510,8 +510,8 @@ JICLocal::getJobStdFile( const char* attr_name )
 		filename += tmp;
 	}
 	free( tmp );
-	if( filename[0] ) { 
-		return strdup( filename.c_str() );
+	if (!filename.empty()) { 
+		return strdup(filename.c_str());
 	}
 	return NULL;
 }

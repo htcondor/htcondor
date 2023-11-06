@@ -35,14 +35,13 @@ def classad_attribute_role(name, rawtext, text, lineno, inliner, options={}, con
 
     # Determine the classad type (job, submitted, collector, etc.) by ripping it out of the document title
     attr_type = ""
-    type_matches = re.findall(r"/([\w]*)-classad-attributes", docname)
+    type_matches = re.findall(r"/([-\w]*)-classad-attributes", docname)
     for match in type_matches:
         attr_type = match.capitalize() + " "
 
-    # Automatically include an index entry
-    entries = process_index_entry(f"{text} ({attr_type}ClassAd Attribute)", text)
+    # Automatically include an index entry for this attribute
     index_node = addnodes.index()
-    index_node['entries'] = entries
+    index_node['entries'] = process_index_entry(f"pair: {text} ; {attr_type} ClassAd Attribute", text)
     set_role_source_info(inliner, lineno, index_node)
 
     return [index_node, anchor_title_node, headerlink_node], []

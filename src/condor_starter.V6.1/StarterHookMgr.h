@@ -41,6 +41,7 @@ public:
 
 	virtual bool reconfig() override;
 
+	virtual bool useProcd() const override {return true;}
 
 	virtual const std::string paramPrefix() const override {return "STARTER";}
 
@@ -98,6 +99,9 @@ private:
 	std::string m_hook_update_job_info;
 		/// The path to HOOK_JOB_EXIT, if defined.
 	std::string m_hook_job_exit;
+
+		// Arguments to pass to the HOOK_PREPARE_JOB
+	ArgList m_hook_prepare_jobs_args;
 
 	int m_hook_job_exit_timeout;
 

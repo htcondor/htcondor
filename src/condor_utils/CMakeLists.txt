@@ -100,6 +100,7 @@ if (NOT WINDOWS)
 	list(APPEND CONDOR_API_AND_UTILS_SRC
 		dprintf_syslog.cpp
 		dprintf_syslog.h
+		largestOpenFD.cpp
 	)
 endif(NOT WINDOWS)
 
@@ -155,6 +156,7 @@ build_job_env.cpp
 build_job_env.h
 check_events.cpp
 check_events.h
+checkpoint_cleanup_utils.cpp
 checksum.cpp
 checksum.h
 classad_collection.cpp
@@ -260,6 +262,8 @@ data_reuse.cpp
 data_reuse.h
 date_util.cpp
 date_util.h
+dc_coroutines.cpp
+dc_coroutines.h
 dc_service.cpp
 dc_service.h
 DelegationInterface.cpp
@@ -570,7 +574,7 @@ set_source_files_properties(config.cpp condor_config.cpp param_info.cpp param_in
 
 # These are source files that reside in other directories that we want to
 # include in libcondor_utils. They used to be in separate libraries.
-set( EXTRA_SRCS "${SAFE_OPEN_SRC};${ANALYSIS_UTIL_SRCS};${CCB_UTIL_SRCS};${CEDAR_UTIL_SRCS};${DAEMON_CLIENT_UTIL_SRCS};${DAEMON_CORE_UTIL_SRCS};${PROCAPI_UTIL_SRCS};${PROCD_CLIENT_UTIL_SRCS};${QMGMT_UTIL_SRCS};${SYSAPI_UTIL_SRCS}" )
+set( EXTRA_SRCS "${SAFE_OPEN_SRC};${CCB_UTIL_SRCS};${CEDAR_UTIL_SRCS};${DAEMON_CLIENT_UTIL_SRCS};${DAEMON_CORE_UTIL_SRCS};${PROCAPI_UTIL_SRCS};${PROCD_CLIENT_UTIL_SRCS};${QMGMT_UTIL_SRCS};${SYSAPI_UTIL_SRCS}" )
 if (UNIX)
 set_source_files_properties(../condor_sysapi/clinpack.cpp PROPERTIES COMPILE_FLAGS -w)
 set_source_files_properties(../condor_daemon_core.V6/self_monitor.cpp ../classad_analysis/analysis.cpp ../classad_analysis/interval.cpp generic_stats.cpp generic_query.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)

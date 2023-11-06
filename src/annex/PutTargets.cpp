@@ -30,7 +30,7 @@ PutTargets::operator() () {
 	ClassAd input;
 	input.Assign( "AnnexID", annexID );
 
-	ClassAd * commandAd;
+	ClassAd * commandAd = nullptr;
 	commandState->Lookup( commandID, commandAd );
 	std::string uploadTo;
 	commandAd->LookupString( "UploadTo", uploadTo );

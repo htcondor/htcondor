@@ -103,6 +103,8 @@ public:
 
 	bool GoAheadAlways( bool downloading ) const;
 
+	inline bool HasTransferPermission() const { return m_xfer_queue_sock && m_xfer_queue_go_ahead; }
+
 	void AddBytesSent(long v)     { if( v>0 ) m_recent_bytes_sent      += v; }
 	void AddBytesReceived(long v) { if( v>0 ) m_recent_bytes_received  += v; }
 	void AddUsecFileRead(long v)  { if( v>0 ) m_recent_usec_file_read  += v; }

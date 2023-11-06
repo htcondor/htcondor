@@ -421,7 +421,7 @@ CCBServer::EpollRemove(CCBTarget *target)
 }
 
 void
-CCBServer::PollSockets()
+CCBServer::PollSockets(int /* timerID */)
 {
 		// Find out if any of our registered target daemons have
 		// disconnected or sent us a response to a request.

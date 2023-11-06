@@ -160,7 +160,7 @@ MpiResource::reconnect( void )
 
 
 void
-MpiResource::attemptReconnect( void )
+MpiResource::attemptReconnect( int /* timerID */ )
 {
 	RemoteResource::attemptReconnect();
 }

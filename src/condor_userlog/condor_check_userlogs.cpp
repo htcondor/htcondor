@@ -24,9 +24,6 @@
 #include "check_events.h"
 #include "condor_config.h"
 
-MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
-CHECK_EVENTS_HASH_INSTANCE; // For the event checking code...
-
 int main(int argc, char **argv)
 {
 	int		result = 0;

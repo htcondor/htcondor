@@ -20,7 +20,7 @@ read the other configuration-related sections:
    configuration macros.
 -  The settings that control the policy under which HTCondor will start,
    suspend, resume, vacate or kill jobs are described in
-   the :doc:`/admin-manual/policy-configuration` section on Policy
+   the :doc:`/admin-manual/ep-policy-configuration` section on Policy
    Configuration for the *condor_startd*.
 
 HTCondor Configuration Files
@@ -76,13 +76,11 @@ is:
    files have historically been known as local configuration files);
 #. if HTCondor daemons are not running as root on Unix platforms, the
    file ``$(HOME)/.condor/user_config`` if it exists, or the file
-   defined by configuration variable ``USER_CONFIG_FILE``
-   :index:`USER_CONFIG_FILE`;
+   defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
    if HTCondor daemons are not running as Local System on Windows
    platforms, the file %USERPROFILE\\.condor\\user_config if it exists,
-   or the file defined by configuration variable ``USER_CONFIG_FILE``
-   :index:`USER_CONFIG_FILE`;
+   or the file defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
 #. specific environment variables whose names are prefixed with
    ``_CONDOR_`` (note that these environment variables directly define
@@ -124,14 +122,14 @@ of the same variable, and since the last definition of a variable sets
 the value, the parse order of these local configuration files is fully
 specified here. In order:
 
-#. The value of configuration variable ``LOCAL_CONFIG_DIR``
-   :index:`LOCAL_CONFIG_DIR` lists one or more directories which
+#. The value of configuration variable
+   :macro:`LOCAL_CONFIG_DIR` lists one or more directories which
    contain configuration files. The list is parsed from left to right.
    The leftmost (first) in the list is parsed first. Within each
    directory, a lexicographical ordering by file name determines the
    ordering of file consideration.
-#. The value of configuration variable ``LOCAL_CONFIG_FILE``
-   :index:`LOCAL_CONFIG_FILE` lists one or more configuration
+#. The value of configuration variable
+   :macro:`LOCAL_CONFIG_FILE` lists one or more configuration
    files. These listed files are parsed from left to right. The leftmost
    (first) in the list is parsed first.
 #. If one of these steps changes the value (right hand side) of
@@ -480,8 +478,7 @@ configuration macros. The vertical bar character (``|``) as the last
 character defining a file name provides the syntax necessary to tell
 HTCondor to run a program. This syntax may only be used in the
 definition of the ``CONDOR_CONFIG`` environment variable, or the
-``LOCAL_CONFIG_FILE`` :index:`LOCAL_CONFIG_FILE` configuration
-variable.
+:macro:`LOCAL_CONFIG_FILE` configuration variable.
 
 The command line for the program is formed by the characters preceding
 the vertical bar character. The standard output of the program is parsed
@@ -825,7 +822,7 @@ as given in these definitions.
 
     -  ``x`` refers to a file name extension, with the associated period
        (``.``). As an example, the return value from
-       ``$Fn(/tmp/simulate.exe)`` will be ``.exe``.
+       ``$Fx(/tmp/simulate.exe)`` will be ``.exe``.
 
     -  ``b`` when combined with the d option, causes the trailing slash
        or backslash to be omitted. When combined with the x option,
@@ -860,7 +857,7 @@ as given in these definitions.
 
 
 ``$RANDOM_CHOICE(choice1, choice2, choice3, ...)``
-    :index:`$RANDOM_CHOICE() function macro` A random choice
+    :index:`RANDOM_CHOICE<pair RANDOM_CHOICE; config macros>` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:

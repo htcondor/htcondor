@@ -22,6 +22,7 @@
 #include "condor_state.h"
 #include "condor_environ.h"
 #include "startd.h"
+#include "ipv6_hostname.h" // for get_local_fqdn
 #include "startd_hibernator.h"
 #include "startd_named_classad_list.h"
 #include "classad_merge.h"
@@ -64,9 +65,11 @@ ResMgr::ResMgr() :
 {
 	totals_classad = NULL;
 	config_classad = NULL;
-	up_tid = -1;
+	up_tid = -1;		   // periodic timer for triggering updates
 	poll_tid = -1;
 	m_cred_sweep_tid = -1;
+	send_updates_tid = -1; // one shot, short period timer for actually talking to the collector
+	send_updates_whyfor_mask = (1<<Resource::WhyFor::wf_doUpdate); // initial update should be a full update
 
 	draining = false;
 	draining_is_graceful = false;
@@ -147,6 +150,7 @@ void ResMgr::Stats::Init()
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkUpdate, IF_VERBOSEPUB);
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkOther, IF_VERBOSEPUB);
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", Drain, IF_VERBOSEPUB);
+   STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", SendUpdates, IF_VERBOSEPUB);
 }
 
 double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer &  /*probe*/)
@@ -169,7 +173,7 @@ double ResMgr::Stats::BeginWalk(VoidResourceMember  /*memberfunc*/)
 double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 {
     stats_recent_counter_timer * probe = &WalkOther;
-    if (memberfunc == &Resource::update_walk_for_timer || memberfunc == &Resource::update_walk_for_vm_change)
+    if (memberfunc == &Resource::update_walk_for_timer)
        probe = &WalkUpdate;
     else if (memberfunc == &Resource::eval_state)
        probe = &WalkEvalState;
@@ -304,6 +308,44 @@ ResMgr::init_config_classad( void )
 	daemonCore->publish(config_classad);
 }
 
+void
+ResMgr::publish_daemon_ad(ClassAd & ad)
+{
+	SetMyTypeName(ad, STARTD_DAEMON_ADTYPE);
+	daemonCore->publish(&ad);
+	if (Name) { ad.Assign(ATTR_NAME, Name); }
+	else { ad.Assign(ATTR_NAME, get_local_fqdn()); }
+
+
+	// cribbed from Resource::publish_static
+	ad.Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
+	publish_static(&ad); // publish stuff we learned from the Starter
+
+	m_attr->publish_static(&ad);
+	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
+	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
+
+	// static information about custom resources
+	ad.Update(m_attr->machres_attrs());
+
+	// gloal dynamic information. offline resources, WINREG values
+	m_attr->publish_common_dynamic(&ad);
+
+	//PRAGMA_REMIND("TJ: write this")
+	// m_attr->publish_EP_dynamic(&ad);
+
+	publish_resmgr_dynamic(&ad, true);
+
+	publish_draining_attrs(nullptr, &ad);
+
+	// Publish the supplemental Class Ads IS_UPDATE
+	extra_ads.Publish(&ad, 0, "daemon");
+
+	// Publish the monitoring information ALWAYS
+	daemonCore->dc_stats.Publish(ad);
+	daemonCore->monitor_data.ExportData(&ad);
+
+}
 
 #if HAVE_BACKFILL
 
@@ -606,6 +648,9 @@ ResMgr::reconfig_resources( void )
 		m_reuse_dir.reset();
 	}
 
+		// mark all resources as dirty (i.e. needing update)
+		// TODO: change to update walk for reconfig?
+	walk(&Resource::update_walk_for_timer);
 }
 
 
@@ -927,9 +972,11 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 
 
 void
-ResMgr::update_all( void )
+ResMgr::update_all( int /* timerID */ )
 {
 	num_updates = 0;
+	// make sure that the send_updates timer is queued
+	rip_update_needed(1<<Resource::WhyFor::wf_doUpdate);
 
 		// NOTE: We do *NOT* eval_state and update in the same walk
 		// over the resources. The reason we do not is the eval_state
@@ -962,9 +1009,60 @@ ResMgr::update_all( void )
 	check_use();
 }
 
+#ifdef DO_BULK_COLLECTOR_UPDATES
+// Evaluate and send updates for dirty resources, and clear update dirty bits
+void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
+{
+	const unsigned int whyfor_mask = send_updates_whyfor_mask;
+	send_updates_tid = -1;
+	send_updates_whyfor_mask = 0;
+
+	double currenttime = stats.BeginRuntime(stats.SendUpdates);
+
+	ClassAd public_ad, private_ad;
+
+	// TODO: figure out collector version and implement ENABLE_STARTD_DAEMON_AD=auto
+
+	const unsigned send_daemon_ad_mask = (1<<Resource::WhyFor::wf_doUpdate) | (1<<Resource::WhyFor::wf_hiberChange);
+	if (enable_single_startd_daemon_ad && (whyfor_mask & send_daemon_ad_mask)) {
+		publish_daemon_ad(public_ad);
+		send_update(UPDATE_STARTD_AD, &public_ad, nullptr, true);
+	}
+
+	for(Resource* rip : slots) {
+		if ( ! rip) continue;
+		if (rip->update_is_needed()) {
+			public_ad.Clear(); private_ad.Clear();
+			rip->get_update_ads(public_ad, private_ad); // this clears update_is_needed
+			send_update(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
+		}
+	}
+
+	stats.EndRuntime(stats.SendUpdates, currenttime);
+}
+
+// called when Resource::update_needed is called
+time_t ResMgr::rip_update_needed(unsigned int whyfor_bits)
+{
+	dprintf(D_ZKM, "ResMgr::rip_update_needed(%x) %s\n",
+		whyfor_bits, send_updates_tid < 0 ? "queuing timer" : "timer already queued");
+
+	send_updates_whyfor_mask |= whyfor_bits;
+	if (send_updates_tid < 0) {
+		send_updates_tid = daemonCore->Register_Timer(1,0,
+			(TimerHandlercpp)&ResMgr::send_updates_and_clear_dirty,
+			"send_updates_and_clear_dirty",
+			this );
+	}
+
+	return cur_time;
+}
+
+#endif
+
 
 void
-ResMgr::eval_and_update_all( void )
+ResMgr::eval_and_update_all( int /* timerID */ )
 {
 #if HAVE_HIBERNATION
 	if ( !hibernating () ) {
@@ -978,7 +1076,7 @@ ResMgr::eval_and_update_all( void )
 
 
 void
-ResMgr::eval_all( void )
+ResMgr::eval_all( int /* timerID */ )
 {
 #if HAVE_HIBERNATION
 	if ( !hibernating () ) {
@@ -1100,6 +1198,29 @@ ResMgr::directAttachToSchedd()
 	}
 
 	delete sock;
+}
+
+bool
+ResMgr::AllocVM(pid_t starter_pid, ClassAd & vm_classad, Resource* rip)
+{
+	if ( ! m_vmuniverse_mgr.allocVM(starter_pid, vm_classad, rip->executeDir())) {
+		return false;
+	}
+	// update VM related info in our slot and our parent slot (if any)
+	Resource* parent = rip->get_parent();
+	if (parent) { parent->update_needed(Resource::WhyFor::wf_vmChange); }
+	rip->update_needed(Resource::WhyFor::wf_vmChange);
+
+	// if the number of VMs allowed is limited,  then we need to update other static slots and p-slots
+	// so that the negotiator knows the new limit.. TJ sez, um why the hurry?
+	if (m_vmuniverse_mgr.hasVMLimit()) {
+		walk([rip](Resource * itr) {
+			if (itr && itr != rip && ! itr->is_dynamic_slot() && ! itr->is_broken_slot()) {
+				itr->update_needed(Resource::WhyFor::wf_vmChange);
+			}
+			});
+	}
+	return true;
 }
 
 
@@ -1275,10 +1396,10 @@ ResMgr::compute_dynamic(bool for_update)
 
 
 void
-ResMgr::publish_resmgr_dynamic(ClassAd* cp)
+ResMgr::publish_resmgr_dynamic(ClassAd* cp, bool daemon_ad /*=false*/)
 {
 	cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
-	if (m_reuse_dir) {
+	if (m_reuse_dir && ! daemon_ad) {
 		m_reuse_dir->Publish(*cp);
 	}
 	m_vmuniverse_mgr.publish(cp);
@@ -1509,7 +1630,7 @@ ResMgr::check_polling( void )
 
 
 void
-ResMgr::sweep_timer_handler( void ) const
+ResMgr::sweep_timer_handler( int /* timerID */ ) const
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
@@ -1539,16 +1660,19 @@ ResMgr::start_sweep_timer( void )
 int
 ResMgr::start_update_timer( void )
 {
-	int		initial_interval;
+	int initial_interval;
 
-	if ( update_offset ) {
+	int update_offset =  param_integer("UPDATE_OFFSET",0,0); // knob to delay initial update
+	if (update_offset) {
 		initial_interval = update_offset;
-		dprintf( D_FULLDEBUG, "Delaying initial update by %d seconds\n",
-				 update_offset );
+		dprintf(D_FULLDEBUG, "Delaying initial update by %d seconds\n", update_offset);
 	} else {
+		// if we are not delaying the initial update, trigger an update now
+		// and then schedule the timer to do updates periodically from now on
 		initial_interval = update_interval;
 		update_all( );
 	}
+
 	up_tid = daemonCore->Register_Timer(
 		initial_interval,
 		update_interval,
@@ -1603,18 +1727,12 @@ ResMgr::cancel_poll_timer( void )
 void
 ResMgr::reset_timers( void )
 {
-	if ( update_offset ) {
-		dprintf( D_FULLDEBUG,
-				 "Delaying update after reconfig by %d seconds\n",
-				 update_offset );
-	}
 	if( poll_tid != -1 ) {
 		daemonCore->Reset_Timer( poll_tid, polling_interval,
 								 polling_interval );
 	}
 	if( up_tid != -1 ) {
-		daemonCore->Reset_Timer( up_tid, update_offset,
-								 update_interval );
+		daemonCore->Reset_Timer_Period( up_tid, update_interval );
 	}
 
 	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
@@ -1844,6 +1962,8 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		compute_dynamic(true);
 	}
 
+	// TODO: use ATTR_TARGET_TYPE of the queryAd to restrict what ads are created here?
+
 	// we will put the Machine ads we intend to return here temporarily
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> ads;
 	// these get filled in with Resource and Job(Claim) ads only when snapshot == true
@@ -1885,7 +2005,7 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		ClassAd * ad = new ClassAd;
 		rip->publish_single_slot_ad(*ad, cur_time, purp);
 
-		if (IsAHalfMatch(&queryAd, ad) /* || (claim_ad && IsAHalfMatch(&queryAd, claim_ad))*/) {
+		if (IsAConstraintMatch(&queryAd, ad) /* || (claim_ad && IsAConstraintMatch(&queryAd, claim_ad))*/) {
 			ads[rip->r_name] = ad;
 			if (res_ad) { res_ads[rip->r_name] = res_ad; }
 			if (cfg_ad) { cfg_ads[rip->r_name] = cfg_ad; }
@@ -2023,7 +2143,7 @@ ResMgr::allHibernating( std::string &target ) const
 
 
 void
-ResMgr::checkHibernate( void )
+ResMgr::checkHibernate( int /* timerID */ )
 {
 
 		// If we have already issued the command to hibernate, then
@@ -2504,6 +2624,7 @@ ResMgr::cancelDraining(std::string request_id,bool reconfig,std::string &error_m
 bool
 ResMgr::isSlotDraining(Resource * /*rip*/) const
 {
+	// NOTE: passed in rip will be NULL when building the daemon ad
 	return draining;
 }
 
@@ -2769,11 +2890,9 @@ void
 ResMgr::token_request_callback(bool success, void *miscdata)
 {
 	auto self = reinterpret_cast<ResMgr *>(miscdata);
-		// In the successful case, instantly re-fire the timer
-		// that will send an update to the collector.
-	if (success && (self->up_tid != -1)) {
-		daemonCore->Reset_Timer( self->up_tid, update_offset,
-			update_interval );
+		// In the successful case, trigger an update to the collector for all ads
+	if (success) {
+		self->eval_and_update_all();
 	}
 }
 

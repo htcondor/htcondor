@@ -76,11 +76,11 @@ public:
 
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
-	void	sigkillStarter( void );
+	void	sigkillStarter( int timerID = -1 );
 
 		// Escalate to a fast shutdown of the job.
 		// Called by our softkill timer
-	void softkillTimeout( void );
+	void softkillTimeout( int timerID = -1 );
 	
 	static void	publish( ClassAd* ad );
 

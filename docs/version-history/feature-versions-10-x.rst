@@ -4,14 +4,48 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.9.0
+--------------
+
+Release Notes:
+
+- HTCondor version 10.9.0 released on September 28, 2023.
+
+- This version includes all the updates from :ref:`lts-version-history-1009`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 10.8.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.8.0 released on Month Date, 2023.
+- HTCondor version 10.8.0 released on September 14, 2023.
 
-- HTCondor version 10.8.0 not yet released.
+- The packaged builds (RPMs and debs) have been reorganized.
+  We no longer wish to support the ClassAd library and it has been folded into
+  the main ``condor`` package. The ``condor-blahp`` and ``condor-procd`` packages
+  have also been folded into the ``condor`` package.
+  :jira:`1981`
+
+- On Debian based systems, the HTCondor's ``libexec`` directory has moved to
+  the more standard ``/usr/libexec/condor``.
+  :jira:`1981`
+
+- The Debian packaging has been aligned with the RPM packaging.
+  The package names are now ``condor`` and ``minicondor``.
+  The ``condor-kbdd`` package has been split out, since many installations
+  are server based and do not require the keyboard daemon and all of its
+  dependencies on the X Window system. Also, the ``condor-vm-gahp`` package
+  has been split out for sites that do not want to support VM Universe and
+  the ``libvirt`` dependencies that come along with it.
+  :jira:`1987`
 
 - This version includes all the updates from :ref:`lts-version-history-1008`.
 
@@ -25,31 +59,6 @@ New Features:
   :macro:`CGROUP_MEMORY_LIMIT_POLICY` = none on the Execution points.
   :jira:`1974`
 
-- Partitionable slots can now be directly claimed by a *condor_schedd*
-  (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
-  While a slot is claimed, no other *condor_schedd* is able to create
-  new dynamic slots to run jobs.
-  This is controlled by the new configuration parameter
-  :macro:`ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS` and is disabled by
-  default.
-  :jira:`1824`
-
-- By default, the user event logs are no longer fsync'd by the schedd.  This
-  should improve the performance of the schedd, especially when the user's event
-  logs are on non-solid state disks.  There is a knob to revert to the old
-  semantics, ENABLE_USERLOG_FSYNC, which defaults to false.
-  :jira:`1934`
-
-- A new configuration variable :macro:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY` was
-  added to allow administrators to restrict job submission to users that have
-  already been added to the *condor_schedd* using the *condor_qusers* tool.
-  :jira:`1934`
-
-- When the file transfer queue is growing too big, HTCondor sends email to the
-  administrator.  Prior versions of HTCondor would send an arbitrarily large number
-  of emails.  Now HTCondor will only send one email per day.
-  :jira:`1937`
-
 - Added a ``-gpus`` option to *condor_status*. With this option *condor_status*
   will show only machines that have GPUs provisioned; and it will show information
   about the GPU properties.
@@ -61,27 +70,42 @@ New Features:
   attribute under the ``Backfill`` or ``BkIdle`` columns.
   :jira:`1957`
 
-- Improved output for ``htcondor dag status`` command to include more information
-  about the specified DAG.
-  :jira:`1951`
-
-- Preen now preserves all files in the spool directory matching `*OfflineLog*`
-  so that central managers with multiple active collectors can have offline
-  ads.
-  :jira:`1933`
-
-- Updated DAGMan to utilize the ``-reason`` flag to add a meassage about why
-  a job was removed when DAGMan removes managed jobs via *condor_rm* for some
-  reason.
-  :jira:`1950`
-
 - Added new DAG command ``ENV`` for DAGMan. This command allows users to specify
-  environment variables to be added into the DAGMan job propers environment either
+  environment variables to be added into the DAGMan job proper's environment either
   by setting values explicitly or getting them from the environment the job is
   submitted from.
   :jira:`1955`
 
-- Updated *condor_upgrade_check* script to check and warn about known incompatibilites
+- Improved output for ``htcondor dag status`` command to include more information
+  about the specified DAG.
+  :jira:`1951`
+
+- Updated DAGMan to utilize the ``-reason`` flag to add a message about why
+  a job was removed when DAGMan removes managed jobs via *condor_rm* for some
+  reason.
+  :jira:`1950`
+
+- Partitionable slots can now be directly claimed by a *condor_schedd*
+  (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
+  While a slot is claimed, no other *condor_schedd* is able to create
+  new dynamic slots to run jobs.
+  This is controlled by the new configuration parameter
+  :macro:`ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS` and is disabled by
+  default.
+  :jira:`1824`
+
+- By default, the user event logs are no longer fsync'd by the *condor_schedd*.  This
+  should improve the performance of the *condor_schedd*, especially when the user's event
+  logs are on non-solid state disks.  There is a knob to revert to the old
+  semantics, ENABLE_USERLOG_FSYNC, which defaults to false.
+  :jira:`1550`
+
+- A new configuration variable :macro:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY` was
+  added to allow administrators to restrict job submission to users that have
+  already been added to the *condor_schedd* using the *condor_qusers* tool.
+  :jira:`1934`
+
+- Updated *condor_upgrade_check* script to check and warn about known incompatibilities
   introduced in the feature series for HTCondor ``V10`` that can cause issues when
   upgrading to a newer version (i.e. HTCondor ``V23``).
   :jira:`1960`
@@ -93,9 +117,10 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug in parallel universe that would cause the *condor_schedd* to
-  assert when running with partitionable slots.
-  :jira:`1952`
+- Fixed a bug introduced in 10.5.0 that caused jobs to fail to start
+  if they requested an OAuth credential whose service name included
+  an asterisk.
+  :jira:`1966`
 
 - Fixed bugs in *condor_store_cred* that could cause it to crash or
   write incorrect data for the pool password.
@@ -106,10 +131,13 @@ Bugs Fixed:
   started.
   :jira:`1979`
 
-- Fixed a bug introduced in 10.5.0 that caused jobs to fail to start
-  if they requested an OAuth credential whose service name included
-  an asterisk.
-  :jira:`1966`
+- Some support scripts for the ``htcondor annex`` command are now
+  properly installed as executable.
+  :jira:`1984`
+
+- Fixed a bug where *condor_remote_cluster* could get stuck in a loop
+  while installing files into an NFS directory.
+  :jira:`2023`
 
 Version 10.7.1
 --------------
@@ -598,7 +626,7 @@ New Features:
 - The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
   now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
   to 128k, if it was below this.  This improves the scalability of the
-  schedd when running more than 16k jobs from any one user.
+  *condor_schedd* when running more than 16k jobs from any one user.
   :jira:`1556`
 
 - The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
@@ -868,7 +896,7 @@ New Features:
 
 - The PREPARE_JOB and PREPARE_JOB_BEFORE_TRANSFER job hooks can now return a ``HookStatusCode`` and 
   a ``HookStatusMessage`` to give better feedback to the user.
-  See the :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` manual section.
+  See the :ref:`admin-manual/ep-policy-configuration:Startd Cron` manual section.
   :jira:`1416`
 
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting

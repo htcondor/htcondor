@@ -88,7 +88,7 @@ int RemoteProc::StartJob()
 		& fi, NULL, childFDs );
 
 	if( pid == 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to launch remote worker\n" );
+		dprintf( D_ERROR, "Failed to launch remote worker\n" );
 		return FALSE;
 	}
 	JobPid = pid;
@@ -292,7 +292,7 @@ bool RemoteProc::ShutdownFast() {
 
 
 void
-RemoteProc::getStats() {
+RemoteProc::getStats( int /* timerID */ ) {
 	// TODO read .status.ad file and update in-memory data
 }
 

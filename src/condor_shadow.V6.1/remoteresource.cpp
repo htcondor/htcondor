@@ -33,9 +33,12 @@
 #include "authentication.h"
 #include "globus_utils.h"
 #include "limit_directory_access.h"
+#include <filesystem>
 #include "manifest.h"
 
 #include <fstream>
+#include <algorithm>
+
 #include "spooled_job_files.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -395,10 +398,11 @@ RemoteResource::dprintfSelf( int debugLevel )
 	if( dc_startd ) {
 		const char* addr = dc_startd->addr();
 		const char* id = dc_startd->getClaimId();
+		ClaimIdParser cid(id ? id : "");
 		dprintf( debugLevel, "\tstartdAddr: %s\n",
 		         addr ? addr : "Unknown" );
 		dprintf( debugLevel, "\tClaimId: %s\n",
-		         id ? id : "Unknown" );
+		         cid.publicClaimId() );
 	}
 	if( machineName ) {
 		dprintf( debugLevel, "\tmachineName: %s\n", machineName );
@@ -419,7 +423,7 @@ RemoteResource::dprintfSelf( int debugLevel )
 }
 
 void
-RemoteResource::attemptShutdownTimeout()
+RemoteResource::attemptShutdownTimeout( int /* timerID */ )
 {
 	m_attempt_shutdown_tid = -1;
 	attemptShutdown();
@@ -1086,7 +1090,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 }
 
 void
-RemoteResource::updateFromStarterTimeout()
+RemoteResource::updateFromStarterTimeout( int /* timerID */ )
 {
 	// If we landed here, then we expected to receive an update from the starter,
 	// but it didn't arrive yet.  Even if the remote syscall sock is still connected,
@@ -2001,7 +2005,7 @@ RemoteResource::reconnect( void )
 
 
 void
-RemoteResource::attemptReconnect( void )
+RemoteResource::attemptReconnect( int /* timerID */ )
 {
 		// now that the timer went off, clear out this variable so we
 		// don't get confused later.
@@ -2227,7 +2231,7 @@ RemoteResource::initFileTransfer()
 	//
 
 	std::string checkpointDestination;
-	if(! jobAd->LookupString( "CheckpointDestination", checkpointDestination )) {
+	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination )) {
 		return;
 	}
 
@@ -2291,6 +2295,7 @@ RemoteResource::initFileTransfer()
 	std::string globalJobID;
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
 	ASSERT(! globalJobID.empty());
+	std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
 
 	std::string manifestLine;
 	std::string nextManifestLine;
@@ -2556,7 +2561,7 @@ RemoteResource::updateX509Proxy(const char * filename)
 }
 
 void 
-RemoteResource::checkX509Proxy( void )
+RemoteResource::checkX509Proxy( int /* timerID */ )
 {
 	if( state != RR_EXECUTING ) {
 		dprintf(D_FULLDEBUG,"checkX509Proxy() doing nothing, because resource is not in EXECUTING state.\n");
