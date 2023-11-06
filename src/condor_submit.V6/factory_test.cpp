@@ -524,7 +524,7 @@ void usage(FILE* out)
 	fprintf(out, "  -clusterad[:<form>] <adfile>\tRead The ClusterAd <classad-file> as format <form>\n");
 	fprintf(out, "  -digest <subfile>\t\tRead Submit digest commands from <subfile>\n");
 	fprintf(out, "    [options] are\n");
-	//fprintf(out, "\t-items <items-file>\tRead Submit itemdata from <items-file>\n");
+	fprintf(out, "  -items <items-file>\tRead Submit itemdata from <items-file>\n");
 	fprintf(out, "  -out[:full] <outfile>\t\tWrite materialized job attributes to <outfile>\n");
 	fprintf(out, "  -verbose\t\tDisplay verbose output, jobid and materialization steps\n");
 	fprintf(out, "  -debug  \t\tDisplay debugging output\n");
