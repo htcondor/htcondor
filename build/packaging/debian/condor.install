@@ -20,6 +20,7 @@ usr/bin/condor_gather_info
 usr/bin/condor_history
 usr/bin/condor_hold
 usr/bin/condor_job_router_info
+usr/bin/condor_manifest
 usr/bin/condor_now
 usr/bin/condor_nsenter
 usr/bin/condor_ping

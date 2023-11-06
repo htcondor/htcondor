@@ -989,6 +989,7 @@ rm -rf %{buildroot}
 %_bindir/bosco_cluster
 %_bindir/condor_ssh_start
 %_bindir/condor_test_token
+%_bindir/condor_manifest
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1153,7 +1154,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
-%_bindir/condor_manifest
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
