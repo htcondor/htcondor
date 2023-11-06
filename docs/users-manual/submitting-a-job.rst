@@ -667,7 +667,7 @@ as given in these definitions.
        ``.exe`` extension).
     -  ``x`` refers to a file name extension, with the associated period
        (``.``). As an example, the return value from
-       ``$Fn(/tmp/simulate.exe)`` will be ``.exe``.
+       ``$Fx(/tmp/simulate.exe)`` will be ``.exe``.
     -  ``b`` when combined with the d option, causes the trailing slash
        or backslash to be omitted. When combined with the x option,
        causes the leading period (``.``) to be omitted.
