@@ -42,8 +42,6 @@
 #include "metric_units.h" // for readable mem mb
 
 #include <vector>
-#include <sstream>
-#include <iostream>
 
 // if enabled, use natural_cmp for numerical sorting of hosts/slots
 #define STRVCMP (naturalSort ? natural_cmp : strcmp)

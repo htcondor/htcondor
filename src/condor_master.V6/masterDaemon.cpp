@@ -47,10 +47,6 @@
 #include "MasterPlugin.h"
 #endif
 
-#ifdef WIN32
-#include <sstream>
-#endif
-
 #ifndef WIN32
 #include "largestOpenFD.h"
 #endif 

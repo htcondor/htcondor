@@ -53,7 +53,6 @@ extern int load_master_mgmt(void);
 #endif
 
 #include "systemd_manager.h"
-#include <sstream>
 
 #ifdef WIN32
 
