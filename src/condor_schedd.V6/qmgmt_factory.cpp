@@ -164,6 +164,9 @@ protected:
 		std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
+#ifdef FACTORY_TEST
+	friend int main(int argc, const char *argv[]);
+#endif
 
 	// we override this so that we can use an async foreach implementation.
 	int  load_q_foreach_items(
@@ -745,6 +748,9 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 						restore_priv = true;
 						priv = set_user_priv_from_ad(*user_ident);
 					} else {
+					#ifdef FACTORY_TEST
+						// when we invoke this ouside of the schedd, the itemdata file will not be in spool
+					#else
 						// if we are not impersonating a user, then the items filename MUST be in spool
 						extern char* Spool; // in schedd_main.cpp. 
 						std::string spooled_filename;
@@ -754,6 +760,7 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 							formatstr(errmsg, "invalid filename '%s' for foreach from. File must be in Spool.", fea.items_filename.c_str());
 							rval = -1;
 						}
+					#endif
 					}
 
 					if (rval == 0) {
