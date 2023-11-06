@@ -741,6 +741,7 @@ protected:
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
 	bool SubmitOnHold;
 	int  SubmitOnHoldCode;
+	int  s_method; //-1 represents undefined job submit method
 	bool already_warned_requirements_disk;
 	bool already_warned_requirements_mem;
 	bool already_warned_job_lease_too_small;
@@ -871,8 +872,6 @@ private:
 	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
 	ContainerImageType image_type_from_string(std::string image) const;
-
-	int s_method; //-1 represents undefined job submit method
 };
 
 struct SubmitStepFromQArgs {

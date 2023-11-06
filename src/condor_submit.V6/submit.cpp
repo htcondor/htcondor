@@ -1212,7 +1212,7 @@ main( int argc, const char *argv[] )
 			if (idx > 0) { out = "\n"; }
 			// for testing...
 			//formatstr_cat(out, "-- %d %p chainedto %p\n", (int)idx, JobAdsArray[idx], JobAdsArray[idx]->GetChainedParentAd());
-			formatAd(out, *JobAdsArray[idx]);
+			formatAd(out, *JobAdsArray[idx], nullptr, nullptr, false);
 			fputs(out.c_str(), dryfile);
 		}
 		if (close_it) { fclose(dryfile); }
