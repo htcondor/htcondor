@@ -53,6 +53,7 @@
 #include "limit_directory_access.h"
 #include "checksum.h"
 #include "shortfile.h"
+#include "fcloser.h"
 
 #include <fstream>
 #include <algorithm>
@@ -4074,8 +4075,7 @@ FileTransfer::ParseDataManifest()
 	{
 		return true;
 	}
-	std::unique_ptr<FILE, decltype(&fclose)>
-	manifest(safe_fopen_wrapper_follow(checksum_info.c_str(), "r"), fclose);
+	std::unique_ptr<FILE, fcloser> manifest(safe_fopen_wrapper_follow(checksum_info.c_str(), "r"));
 	if (!manifest.get()) {
 		dprintf(D_ALWAYS, "ParseDataManifest: Failed to open SHA256 manifest %s: %s.\n", checksum_info.c_str(), strerror(errno));
 		err.pushf("ParseDataManifest", 1, "Failed to open SHA256 manifest %s: %s.", checksum_info.c_str(), strerror(errno));

@@ -548,6 +548,7 @@ SubmitHash::SubmitHash()
 	, JobDisableFileChecks(false)
 	, SubmitOnHold(false)
 	, SubmitOnHoldCode(0)
+	, s_method(1)
 	, already_warned_requirements_disk(false)
 	, already_warned_requirements_mem(false)
 	, already_warned_job_lease_too_small(false)
@@ -555,7 +556,6 @@ SubmitHash::SubmitHash()
 	, already_warned_require_gpus(false)
 	, UseDefaultResourceParams(true)
 	, InsertDefaultPolicyExprs(false)
-	, s_method(1)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();

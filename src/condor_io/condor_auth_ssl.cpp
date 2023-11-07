@@ -32,6 +32,7 @@
 #include "condor_secman.h"
 #include "condor_scitokens.h"
 #include "ca_utils.h"
+#include "fcloser.h"
 
 #if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
@@ -424,9 +425,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 					m_auth_state->m_client_status = AUTH_SSL_ERROR;
 				}
 			} else {
-				std::unique_ptr<FILE,decltype(&::fclose)> f(
-					safe_fopen_no_create( m_scitokens_file.c_str(), "r" ), 
-					&::fclose);
+				std::unique_ptr<FILE,fcloser> f(
+					safe_fopen_no_create( m_scitokens_file.c_str(), "r" ));
 
 				if (f.get() == nullptr) {
 					dprintf(D_ALWAYS, "Failed to open scitoken file '%s': %d (%s)\n",

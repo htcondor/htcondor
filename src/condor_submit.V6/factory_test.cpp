@@ -120,7 +120,7 @@ static bool output_proc_ads_only = false;
 
 // This is a modified copy-pasta of NewProcFromAd in qmgmt.cpp
 // this function is called by MaterializeNextFactoryJob
-int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * ClusterAd, SetAttributeFlags_t flags)
+int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * ClusterAd, SetAttributeFlags_t /*flags*/)
 {
 	int ClusterId = ClusterAd->jid.cluster;
 	ClassAd effective_proc_ad;
@@ -212,7 +212,7 @@ int TransactionWatcher::BeginOrContinue(int id) {
 }
 
 // commit if we started a transaction
-int TransactionWatcher::CommitIfAny(SetAttributeFlags_t flags, CondorError * errorStack)
+int TransactionWatcher::CommitIfAny(SetAttributeFlags_t /*flags*/, CondorError * /*errorStack*/)
 {
 
 	int rval = 0;
@@ -251,7 +251,7 @@ JobQueueCluster::~JobQueueCluster() {
 }
 
 
-bool setJobFactoryPauseAndLog(JobQueueCluster * cad, int pause_mode, int hold_code, const std::string& reason)
+bool setJobFactoryPauseAndLog(JobQueueCluster * cad, int pause_mode, int /*hold_code*/, const std::string& reason)
 {
 	if ( ! cad) return false;
 
