@@ -177,8 +177,9 @@ foreach my $sub (@subs) {
 		$logarg = "-verbose";
 		if ( ! CondorUtils::is_windows()) {
 			# for some reason, turning on -debug on Windows causes this test to never exit...
-			$logarg = "-verbose -debug";
-			$ENV{'_CONDOR_TOOL_DEBUG'} = 'D_MATERIALIZE D_FULLDEBUG';
+			$logarg = "-verbose -debug:D_SUB_SECOND,D_CAT,D_FULLDEBUG,D_MATERIALIZE:2";
+			$ENV{'_CONDOR_SUBMIT_DEBUG'} = "D_SUB_SECOND D_CAT D_FULLDEBUG D_MATERIALIZE:2";
+			$ENV{'_CONDOR_TOOL_DEBUG'} = "D_SUB_SECOND D_CAT D_FULLDEBUG D_MATERIALIZE:2";
 		}
 	}
 
@@ -187,12 +188,12 @@ foreach my $sub (@subs) {
 		$itemsarg = "-item $digest.items";
 	}
 
-	TLOG "$tag: test_job_factory.exe $logarg -cl $cad $digest $itemsarg\n";
+	TLOG "$tag: test_job_factory.exe $logarg -cl $cad $digest $itemsarg -out:proc -\n";
 	
 	# now materialize the proc ads from the cluster ad and digest
 	#
 	#
-	$hashref = runcmd( "test_job_factory.exe $logarg -cl $cad $digest $itemsarg", \%opts );
+	$hashref = runcmd( "test_job_factory.exe $logarg -cl $cad $digest $itemsarg -out:proc -", \%opts );
 	@output =  @{${$hashref}{"stdout"}};
 	@error =  @{${$hashref}{"stderr"}};
 	$exitcode = ${$hashref}{"exitcode"};
@@ -385,7 +386,7 @@ sub load_ad {
 
 	open (FHI, "<$fn");
 	for (<FHI>) {
-		if ($_ =~ /^([a-zA-Z_0-9]+)=(.*)/) {
+		if ($_ =~ /^([a-zA-Z_0-9]+)\s*=\s*(.*)/) {
 			$ad{$1}=$2;
 			#print "\t\t$1=$2\n";
 			next;
@@ -409,7 +410,7 @@ sub get_ads {
 	
 	foreach (@{$out}) {
 		s/\s*$//;
-		if ($_ =~ /^([a-zA-Z_0-9]+)=(.*)/) {
+		if ($_ =~ /^([a-zA-Z_0-9]+)\s*=\s*(.*)/) {
 			$pad->{$1}=$2;
 			#print "\t\t$1=$2\n";
 			next;

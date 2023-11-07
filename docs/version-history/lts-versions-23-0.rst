@@ -36,6 +36,9 @@ Bugs Fixed:
   when reading logs with parallel universe jobs in it.
   :jira:`2099`
 
+- Implemented DISABLE_SWAP_FOR_JOB support for cgroup v2 systems.
+  :jira:`2127`
+
 - Fixed a bug that could result in job sandboxes not being cleaned up 
   for **batch** grid jobs submitted to a remote cluster. 
   :jira:`2073`
@@ -65,6 +68,10 @@ Bugs Fixed:
 - Fixed a bug where the *condor_negotiator* could fail to contact a
   *condor_schedd* that's on the same private network.
   :jira:`2115`
+
+- Fixed a bug that could cause jobs to be created incorrectly when a using
+  ``initialdir`` and ``max_idle`` or ``max_materialize`` in the same submit file.
+  :jira:`2092`
 
 - Fixed bug in DAGMan where held jobs that were removed would cause a
   warning about the internal count of held job procs being incorrect.
