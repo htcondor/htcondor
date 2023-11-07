@@ -405,8 +405,8 @@ main( int argc, const char *argv[] )
 		exit(1);
 	}
 
-	JobFactory * factory = new JobFactory(digest_file, cluster_id, &extendedSubmitCmds);
 	MapFile* protected_url_map = getProtectedURLMap();
+	JobFactory * factory = new JobFactory(digest_file, cluster_id, &extendedSubmitCmds, protected_url_map);
 
 	if (items_file) {
 		file = safe_fopen_wrapper_follow(items_file, "rb");
