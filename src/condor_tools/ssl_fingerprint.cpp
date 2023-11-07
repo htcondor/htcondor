@@ -24,6 +24,7 @@
 #include "ca_utils.h"
 #include "CondorError.h"
 #include "string_list.h"
+#include "fcloser.h"
 
 #include <openssl/err.h>
 #include <openssl/pem.h>
@@ -50,7 +51,7 @@ int print_known_hosts_file(std::string desired_fname = "")
 {
 	auto fname = desired_fname.empty() ? htcondor::get_known_hosts_filename() : desired_fname;
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(fopen(fname.c_str(), "r"), &fclose);
+	std::unique_ptr<FILE, fcloser> fp(fopen(fname.c_str(), "r"));
 	if (!fp) {
 		fprintf(stderr, "Failed to open %s for reading: %s (errno=%d)\n",
 			fname.c_str(), strerror(errno), errno);
@@ -130,7 +131,7 @@ int main(int argc, const char *argv[]) {
 		exit(1);
 	}
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(fopen(argv[1], "r"), &fclose);
+	std::unique_ptr<FILE, fcloser> fp(fopen(argv[1], "r"));
 	if (!fp) {
 		fprintf(stderr, "Failed to open %s for reading: %s (errno=%d)\n",
 			argv[1], strerror(errno), errno);

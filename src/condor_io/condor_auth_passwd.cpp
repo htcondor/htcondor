@@ -45,6 +45,7 @@
 #include "condor_secman.h"
 #include "compat_classad_util.h"
 #include "classad/exprTree.h"
+#include "fcloser.h"
 
 #include "condor_auth_passwd.h"
 
@@ -152,8 +153,7 @@ bool findToken(const std::string &tokenfilename,
 {
 	dprintf(D_SECURITY, "IDTOKENS: Examining %s for valid tokens from issuer %s.\n", tokenfilename.c_str(), issuer.c_str());
 
-	std::unique_ptr<FILE,decltype(&fclose)> 
-		f(safe_fopen_no_create( tokenfilename.c_str(), "r" ), fclose);
+	std::unique_ptr<FILE,fcloser> f(safe_fopen_no_create( tokenfilename.c_str(), "r" ));
 
 	if( f.get() == NULL ) {
 		dprintf(D_ALWAYS, "Failed to open token file '%s': %d (%s)\n",
