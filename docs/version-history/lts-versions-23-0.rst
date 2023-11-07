@@ -77,6 +77,9 @@ Bugs Fixed:
   warning about the internal count of held job procs being incorrect.
   :jira:`2102`
 
+- Fixed a bug in the OAuth and Vault credmons where log files would not
+  rotate according to the config.
+  :jira:`2013`
 
 .. _lts-version-history-2301:
 
