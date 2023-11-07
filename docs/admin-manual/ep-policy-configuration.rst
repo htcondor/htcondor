@@ -568,7 +568,7 @@ transition numbers referred to in this manual will be **bold**.
 
 .. note::
 
-   Note the "Matched" state and the "Suspended" activity have been removed from
+   The "Matched" state and the "Suspended" activity have been removed from
    this diagram in order to simplify the number of shown transitions.  The
    Matched state is not entered by default, and Suspended is rarely used.
 
