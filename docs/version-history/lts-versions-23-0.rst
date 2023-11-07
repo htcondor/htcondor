@@ -81,6 +81,12 @@ Bugs Fixed:
   rotate according to the config.
   :jira:`2013`
 
+- Fixed a bug in the *condor_schedd* where it would not create a permanent User
+  record when a queue super user submitted a job for a different owner.  This 
+  bug would sometimes cause the *condor_schedd* to crash after a job for a new
+  user was submitted.
+  :jira:`2131`
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
