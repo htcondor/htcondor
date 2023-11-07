@@ -73,21 +73,96 @@ protected:
 
 
 #include "enum.h"
+typedef std::list<std::string> str_list;
+
+// Enum to represent booleans passed by command line
+enum class CLI_BOOL {
+	UNSET = 0,   // Boolean not set
+	TRUE,        // Boolean was set to True
+	FALSE        // Boolean was set to False
+};
+
+// Wrapper Struct around CLI_BOOL enum to overload various operators
+// for setting and checking values.
+// Note: For comparison/boolean evaluation the value CLI_BOOL::UNSET is
+//       considered False. Use notSet() to distinguish between UNSET & FALSE
+struct CLI_BOOL_FLAG {
+
+	// CLI_BOOL enum value held in struct
+	CLI_BOOL value;
+
+	// Default struct constructors
+	CLI_BOOL_FLAG() { value = CLI_BOOL::UNSET; }
+	CLI_BOOL_FLAG(CLI_BOOL val) : value(val) {}
+
+	// Function to display the current value as a string
+	const char* display() {
+		if (value == CLI_BOOL::UNSET)
+			return "UNSET";
+		else if (value == CLI_BOOL::TRUE)
+			return "TRUE";
+		else if (value == CLI_BOOL::FALSE)
+			return "FALSE";
+		else
+			return "UNKNOWN";
+	}
+
+	// Function to declare if value is UNSET
+	bool notSet() const { return value == CLI_BOOL::UNSET; }
+
+	// Overload set (=) operator for member = bool
+	CLI_BOOL_FLAG& operator=(const bool& b_val) {
+		if (b_val) { value = CLI_BOOL::TRUE; }
+		else { value = CLI_BOOL::FALSE; }
+		return *this;
+	}
+	// Overload set (=) operator for member = enum
+	CLI_BOOL_FLAG& operator=(const CLI_BOOL& val) {
+		value = val;
+		return *this;
+	}
+
+	// Overload == comparison operator for member == bool
+	bool operator==(const bool& std_bool) const {
+		if (std_bool) { return value == CLI_BOOL::TRUE; }
+		else { return value != CLI_BOOL::TRUE; }
+	}
+	// Overload == comparison operator for member == enum
+	bool operator==(const CLI_BOOL& other) const {
+		return value == other;
+	}
+
+	// Overload != comparison operator for member != bool
+	bool operator!=(const bool& std_bool) const {
+		if (std_bool) { return value != CLI_BOOL::TRUE; }
+		else { return value == CLI_BOOL::TRUE; }
+	}
+	// Overload != comparison operator for member != eunm
+	bool operator!=(const CLI_BOOL& other) const {
+		return value != other;
+	}
+
+	// Overload raw boolean evaluation for if(member)/if(!member)
+	operator bool() const { return value == CLI_BOOL::TRUE; }
+};
 
 namespace DagmanShallowOptions {
+	BETTER_ENUM(str, long,
+		ScheddDaemonAdFile = 0, ScheddAddressFile, ConfigFile, SaveFile, RemoteSchedd, AppendFile,
+		PrimaryDagFile, LibOut, LibErr, DebugLog, SchedLog, SubFile, RescueFile, LockFile
+	);
 
-  BETTER_ENUM(str, long,
-    ScheddDaemonAdFile = 0, ScheddAddressFile, ConfigFile, SaveFile
-  );
+	BETTER_ENUM(i, long,
+		MaxIdle = 0, MaxJobs, MaxPre, MaxPost, DebugLevel, Priority
+	);
 
-  BETTER_ENUM(b, long,
-    PostRun = 0, DumpRescueDag, RunValgrind
-  );
+	BETTER_ENUM(b, long,
+		PostRun = 0, DumpRescueDag, RunValgrind, DoSubmit, DoRecovery, CopyToSpool
+	);
 
-  BETTER_ENUM(i, long,
-    MaxIdle = 0, MaxJobs, MaxPre, MaxPost, DebugLevel, Priority
-  );
-
+	BETTER_ENUM(slist, long,
+		AppendLines = 0, DagFiles
+	);
 }
 
 
@@ -153,18 +228,24 @@ class SubmitDagShallowOptions {
 
 
 namespace DagmanDeepOptions {
+	BETTER_ENUM(str, long,
+		DagmanPath = 0, OutfileDir, BatchName, GetFromEnv, Notification,
+		BatchId, AcctGroup, AcctGroupUser
+	);
 
-  BETTER_ENUM(str, long,
-    DagmanPath = 0, OutfileDir, BatchName, GetFromEnv
-  );
+	BETTER_ENUM(i, long,
+		DoRescueFrom = 0
+	);
 
-  BETTER_ENUM(b, long,
-    Force = 0, ImportEnv, UseDagDir, AutoRescue, AllowVersionMismatch,
-    Recurse, UpdateSubmit, SuppressNotification
-  );
+	BETTER_ENUM(b, long,
+		Force = 0, ImportEnv, UseDagDir, AutoRescue/*Fix to be int*/, AllowVersionMismatch,
+		Recurse, UpdateSubmit, SuppressNotification, Verbose
+	);
 
+	BETTER_ENUM(slist, long,
+		AddToEnv = 0
+	);
 }
-
 
 class SubmitDagDeepOptions {
 
@@ -215,6 +296,97 @@ class SubmitDagDeepOptions {
     // std::array<int, DagmanDeepOptions::i::_size()> intOpts;
 };
 
+struct DSO {
+	typedef DagmanDeepOptions::str str;
+	typedef DagmanDeepOptions::slist slist;
+	typedef DagmanDeepOptions::b b;
+	typedef DagmanDeepOptions::i i;
+};
+
+struct SSO {
+	typedef DagmanShallowOptions::str str;
+	typedef DagmanShallowOptions::slist slist;
+	typedef DagmanShallowOptions::b b;
+	typedef DagmanShallowOptions::i i;
+};
+
+template<typename T>
+struct DagOptionData {
+	std::array<str_list, T::slist::_size()> slistOpts;
+	std::array<std::string, T::str::_size()> stringOpts;
+	std::array<int, T::i::_size()> intOpts;
+	std::array<CLI_BOOL_FLAG, T::b::_size()> boolOpts;
+};
+
+class DagmanOptions {
+public:
+	DagmanOptions() {
+		{ //Initialize Shallow Options
+			using namespace DagmanShallowOptions;
+			std::string appendFile;
+			param(appendFile, "DAGMAN_INSERT_SUB_FILE");
+			shallow.stringOpts[str::AppendFile] = appendFile;
+			shallow.boolOpts[b::CopyToSpool] = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
+			shallow.intOpts[i::MaxIdle] = 0;
+			shallow.intOpts[i::MaxJobs] = 0;
+			shallow.intOpts[i::MaxPre] = 0;
+			shallow.intOpts[i::MaxPost] = 0;
+			shallow.intOpts[i::DebugLevel] = DEBUG_UNSET;
+			shallow.intOpts[i::Priority] = 0;
+		} //End Shallow Option Initialization
+
+		{ //Initialize Deep Options
+			using namespace DagmanDeepOptions;
+			deep.intOpts[i::DoRescueFrom] = 0;
+			deep.intOpts[b::AutoRescue] = param_boolean( "DAGMAN_AUTO_RESCUE", true );
+		} //End Deep Option Initialization
+	}
+
+	// Set a DAGMan option to given value
+	// Return 0 = Set
+	//        1 = Option not found
+	//        2 = Error occurred
+	//        3 = invalid args
+	int set(const char* opt, const std::string& value);
+	int set(const char* opt, bool value);
+	int set(const char* opt, int value);
+
+	// Append a string to a delimited string list of items: "foo,bar,barz"
+	// Returns same as set()
+	int append(const char* opt, const std::string& value, const char delim = ',');
+
+	void addDeepArgs(ArgList& args, bool inWriteSubmit) const;
+
+	// Const shallow options access operator declarations
+	const str_list & operator[]( SSO::slist opt ) const { return shallow.slistOpts[opt._to_integral()]; }
+	const std::string & operator[]( SSO::str opt ) const { return shallow.stringOpts[opt._to_integral()]; }
+	CLI_BOOL_FLAG operator[]( SSO::b opt ) const { return shallow.boolOpts[opt._to_integral()]; }
+	int operator[]( SSO::i opt ) const { return shallow.intOpts[opt._to_integral()]; }
+
+	// Shallow options access operator declarations
+	str_list & operator[]( SSO::slist opt ) { return shallow.slistOpts[opt._to_integral()]; }
+	std::string & operator[]( SSO::str opt ) { return shallow.stringOpts[opt._to_integral()]; }
+	CLI_BOOL_FLAG & operator[]( SSO::b opt ) { return shallow.boolOpts[opt._to_integral()]; }
+	int & operator[]( SSO::i opt ) { return shallow.intOpts[opt._to_integral()]; }
+
+	// Const deep option access operator declarations
+	const str_list & operator[]( DSO::slist opt ) const { return deep.slistOpts[opt._to_integral()]; }
+	const std::string & operator[]( DSO::str opt ) const { return deep.stringOpts[opt._to_integral()]; }
+	CLI_BOOL_FLAG operator[]( DSO::b opt ) const { return deep.boolOpts[opt._to_integral()]; }
+	int operator[]( DSO::i opt ) const { return deep.intOpts[opt._to_integral()]; }
+
+	// Deep option access operator declarations
+	str_list & operator[]( DSO::slist opt ) { return deep.slistOpts[opt._to_integral()]; }
+	std::string & operator[]( DSO::str opt ) { return deep.stringOpts[opt._to_integral()]; }
+	CLI_BOOL_FLAG & operator[]( DSO::b opt ) { return deep.boolOpts[opt._to_integral()]; }
+	int & operator[]( DSO::i opt ) { return deep.intOpts[opt._to_integral()]; }
+
+private:
+	//Shallow options used only by this DAG
+	DagOptionData<SSO> shallow;
+	//Deep options passed down to subdags
+	DagOptionData<DSO> deep;
+};
 
 class DagmanUtils {
 
@@ -226,7 +398,7 @@ public:
         /* const */ SubmitDagShallowOptions &shallowOpts,
         /* const */ std::list<std::string> &dagFileAttrLines ) const;
     
-    int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
+    int runSubmitDag( const DagmanOptions &options,
         const char *dagFile, const char *directory, int priority,
         bool isRetry );
 

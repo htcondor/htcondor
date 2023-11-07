@@ -406,7 +406,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 @return 0 if successful, 1 if failed
 */
 int
-DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
+DagmanUtils::runSubmitDag( const DagmanOptions &options,
 			const char *dagFile, const char *directory, int priority,
 			bool isRetry )
 {
@@ -435,82 +435,16 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 	args.AppendArg( "-no_submit" );
 	args.AppendArg( "-update_submit" );
 
-		// Add in arguments we're passing along.
-	if ( deepOpts.bVerbose ) {
-		args.AppendArg( "-verbose" );
-	}
-
-	if ( deepOpts[deep::b::Force] && !isRetry ) {
+	if ( options[deep::b::Force] && !isRetry ) {
 		args.AppendArg( "-force" );
 	}
 
-	if (deepOpts.strNotification != "" ) {
-		args.AppendArg( "-notification" );
-		if(deepOpts[deep::b::SuppressNotification]) {
-			args.AppendArg( "never" );
-		} else { 
-			args.AppendArg( deepOpts.strNotification.c_str() );
-		}
-	}
-
-	if ( !deepOpts[deep::str::DagmanPath].empty() ) {
-		args.AppendArg( "-dagman" );
-		args.AppendArg( deepOpts[deep::str::DagmanPath].c_str() );
-	}
-
-	if ( deepOpts[deep::b::UseDagDir] ) {
-		args.AppendArg( "-usedagdir" );
-	}
-
-	if ( deepOpts[deep::str::OutfileDir] != "" ) {
-		args.AppendArg( "-outfile_dir" );
-		args.AppendArg( deepOpts[deep::str::OutfileDir].c_str() );
-	}
-
-	args.AppendArg( "-autorescue" );
-	args.AppendArg( std::to_string(deepOpts[deep::b::AutoRescue]) );
-
-	if ( deepOpts.doRescueFrom != 0 ) {
-		args.AppendArg( "-dorescuefrom" );
-		args.AppendArg( std::to_string(deepOpts.doRescueFrom) );
-	}
-
-	if ( deepOpts[deep::b::AllowVersionMismatch] ) {
-		args.AppendArg( "-allowver" );
-	}
-
-	if ( deepOpts[deep::b::ImportEnv] ) {
-		args.AppendArg( "-import_env" );
-	}
-
-	if ( !deepOpts[deep::str::GetFromEnv].empty() ) {
-		args.AppendArg( "-include_env" );
-		args.AppendArg( deepOpts[deep::str::GetFromEnv] );
-	}
-
-	for (auto &kv_pairs : deepOpts.addToEnv) {
-		args.AppendArg( "-insert_env" );
-		args.AppendArg(kv_pairs.c_str());
-	}
-
-	if ( deepOpts[deep::b::Recurse] ) {
-		args.AppendArg( "-do_recurse" );
-	}
-
-	if ( deepOpts[deep::b::UpdateSubmit] ) {
-		args.AppendArg( "-update_submit" );
-	}
-
-	if( priority != 0) {
+	if (priority != 0) {
 		args.AppendArg( "-Priority" );
 		args.AppendArg( std::to_string(priority) );
 	}
 
-	if( deepOpts[deep::b::SuppressNotification] ) {
-		args.AppendArg( "-suppress_notification" );
-	} else {
-		args.AppendArg( "-dont_suppress_notification" );
-	}
+	options.addDeepArgs(args, false);
 
 	args.AppendArg( dagFile );
 
@@ -1208,7 +1142,7 @@ DagmanUtils::check_lock_file(const char *lockFileName) {
 	return result;
 }
 
-
+// TODO: Delete ####################################################
 const std::string &
 SubmitDagShallowOptions::operator[]( shallow::str opt ) const {
     return stringOpts[opt._to_integral()];
@@ -1239,39 +1173,6 @@ SubmitDagShallowOptions::operator[]( shallow::i opt ) {
     return intOpts[opt._to_integral()];
 }
 
-/*
-
-//
-// We don't need these, because the Python bindings have to do type-
-// conversion for the values, but in case we ever do, here they are.
-// You can do the same thing for the deep options.
-//
-
-bool
-SubmitDagShallowOptions::set( const char * key, const std::string & value ) {
-    auto maybe = shallow::str::_from_string_nocase_nothrow(key);
-    if(! maybe) { return false; }
-    stringOpts[*maybe] = value;
-    return true;
-}
-
-bool
-SubmitDagShallowOptions::set( const char * key, bool value ) {
-    auto maybe = shallow::b::_from_string_nocase_nothrow(key);
-    if(! maybe) { return false; }
-    boolOpts[*maybe] = value;
-    return true;
-}
-
-bool
-SubmitDagShallowOptions::set( const char * key, int value ) {
-    auto maybe = shallow::i::_from_string_nocase_nothrow(key);
-    if(! maybe) { return false; }
-    intOpts[*maybe] = value;
-    return true;
-}
-*/
-
 const std::string &
 SubmitDagDeepOptions::operator[]( deep::str opt ) const {
     return stringOpts[opt._to_integral()];
@@ -1290,4 +1191,207 @@ SubmitDagDeepOptions::operator[]( deep::str opt ) {
 bool &
 SubmitDagDeepOptions::operator[]( deep::b opt ) {
     return boolOpts[opt._to_integral()];
+}
+//#######################################################
+
+void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit = true) const {
+	if (deep.boolOpts[deep::b::Verbose]) {
+		args.AppendArg("-verbose");
+	}
+
+	if ( ! deep.stringOpts[deep::str::Notification].empty()) {
+		args.AppendArg( "-notification" );
+		if(deep.boolOpts[deep::b::SuppressNotification]) {
+			args.AppendArg("never");
+		} else {
+			args.AppendArg(deep.stringOpts[deep::str::Notification]);
+		}
+	}
+
+	if ( ! deep.stringOpts[deep::str::DagmanPath].empty()) {
+		args.AppendArg("-dagman");
+		args.AppendArg(deep.stringOpts[deep::str::DagmanPath]);
+	}
+
+	if (deep.boolOpts[deep::b::UseDagDir]) {
+		args.AppendArg("-UseDagDir");
+	}
+
+	if ( ! deep.stringOpts[deep::str::OutfileDir].empty()) {
+		args.AppendArg("-outfile_dir");
+		args.AppendArg(deep.stringOpts[deep::str::OutfileDir]);
+	}
+
+	args.AppendArg("-AutoRescue");
+	args.AppendArg(std::to_string(deep.boolOpts[deep::b::AutoRescue]));
+
+	if (deep.intOpts[deep::i::DoRescueFrom]) {
+		args.AppendArg("-DoRescueFrom");
+		args.AppendArg(std::to_string(deep.intOpts[deep::i::DoRescueFrom]));
+	}
+
+	if (deep.boolOpts[deep::b::AllowVersionMismatch]) {
+		args.AppendArg("-AllowVersionMismatch");
+	}
+
+	if (deep.boolOpts[deep::b::ImportEnv]) {
+		args.AppendArg("-import_env");
+	}
+
+	if ( ! deep.stringOpts[deep::str::GetFromEnv].empty()) {
+		args.AppendArg("-include_env");
+		args.AppendArg(deep.stringOpts[deep::str::GetFromEnv]);
+	}
+
+	dprintf(D_ALWAYS, "DEBUGGING########################\n");
+	int i = 0;
+	for (auto &kv_pair : deep.slistOpts[deep::slist::AddToEnv]) {
+		dprintf(D_ALWAYS, "\t%d: %s\n", ++i, kv_pair.c_str());
+		args.AppendArg("-insert_env");
+		args.AppendArg(kv_pair);
+	}
+	dprintf(D_ALWAYS, "DEBUGGING########################\n");
+
+	if (deep.boolOpts[deep::b::Recurse]) {
+		args.AppendArg("-do_recurse");
+	}
+
+	if(deep.boolOpts[deep::b::SuppressNotification]) {
+		args.AppendArg("-suppress_notification");
+	} else if( ! deep.boolOpts[deep::b::SuppressNotification].notSet()) {
+		args.AppendArg("-dont_suppress_notification");
+	}
+
+	if (inWriteSubmit) {
+		if (deep.boolOpts[deep::b::Force]) {
+			args.AppendArg("-force");
+		}
+
+		if (deep.boolOpts[deep::b::UpdateSubmit]) {
+			args.AppendArg("-update_submit");
+		}
+	}
+
+}
+
+int DagmanOptions::set(const char* opt, bool value) {
+	if (!opt) { return 3; }
+	auto s_bool_key = shallow::b::_from_string_nocase_nothrow(opt);
+	if (s_bool_key) {
+		shallow.boolOpts[*s_bool_key] = value;
+		return 0;
+	}
+	auto d_bool_key = deep::b::_from_string_nocase_nothrow(opt);
+	if (d_bool_key) {
+		deep.boolOpts[*d_bool_key] = value;
+		return 0;
+	}
+	return 1;
+}
+
+int DagmanOptions::set(const char* opt, int value){
+	if (!opt) { return 3; }
+	auto s_int_key = shallow::i::_from_string_nocase_nothrow(opt);
+	if (s_int_key) {
+		shallow.intOpts[*s_int_key] = value;
+		return 0;
+	}
+	auto d_int_key = deep::i::_from_string_nocase_nothrow(opt);
+	if (d_int_key) {
+		deep.intOpts[*d_int_key] = value;
+		return 0;
+	}
+	return 1;
+}
+
+static bool str2bool(const std::string& value) {
+	std::string check = value;
+	lower_case(check);
+	if (check == "false") { return false; }
+	if (check == "true") { return true; }
+	return std::stoi(check) > 0;
+}
+
+int DagmanOptions::set(const char* opt, const std::string& value) {
+	if (!opt) { return 3; }
+
+	// Check option in shallow option enums
+	auto s_str_key = shallow::str::_from_string_nocase_nothrow(opt);
+	if (s_str_key) {
+		shallow.stringOpts[*s_str_key] = value;
+		return 0;
+	}
+	auto s_slist_key = shallow::slist::_from_string_nocase_nothrow(opt);
+	if (s_slist_key) {
+		shallow.slistOpts[*s_slist_key].push_back(value);
+		return 0;
+	}
+	auto s_bool_key = shallow::b::_from_string_nocase_nothrow(opt);
+	if (s_bool_key) {
+		try {
+			shallow.boolOpts[*s_bool_key] = str2bool(value);
+			return 0;
+		} catch (...) { return 2; }
+	}
+	auto s_int_key = shallow::i::_from_string_nocase_nothrow(opt);
+	if (s_int_key) {
+		try {
+			shallow.intOpts[*s_int_key] = std::stoi(value);
+			return 0;
+		} catch(...) { return 2; }
+	}
+
+	// Check option in deep option enums
+	auto d_str_key = deep::str::_from_string_nocase_nothrow(opt);
+	if (d_str_key) {
+		deep.stringOpts[*d_str_key] = value;
+		return 0;
+	}
+	auto d_slist_key = deep::slist::_from_string_nocase_nothrow(opt);
+	if (d_slist_key) {
+		deep.slistOpts[*d_slist_key].push_back(value);
+		return 0;
+	}
+	auto d_bool_key = deep::b::_from_string_nocase_nothrow(opt);
+	if (d_bool_key) {
+		try {
+			deep.boolOpts[*d_bool_key] = str2bool(value);
+			return 0;
+		} catch(...) { return 2; }
+	}
+	auto d_int_key = deep::i::_from_string_nocase_nothrow(opt);
+	if (d_int_key) {
+		try {
+			deep.intOpts[*d_int_key] = std::stoi(value);
+		} catch(...) { return 2; }
+	}
+	return 1;
+}
+
+int DagmanOptions::append(const char* opt, const std::string& value, const char delim) {
+	if (!opt) { return 3; }
+
+	auto s_str_key = shallow::str::_from_string_nocase_nothrow(opt);
+	if (s_str_key) {
+		if ( ! shallow.stringOpts[*s_str_key].empty()) {
+			shallow.stringOpts[*s_str_key] += std::to_string(delim);
+			shallow.stringOpts[*s_str_key] += value;
+		} else {
+			shallow.stringOpts[*s_str_key] = value;
+		}
+		return 0;
+	}
+
+	auto d_str_key = deep::str::_from_string_nocase_nothrow(opt);
+	if (d_str_key) {
+		if ( ! deep.stringOpts[*d_str_key].empty()) {
+			deep.stringOpts[*d_str_key] += std::to_string(delim);
+			deep.stringOpts[*d_str_key] += value;
+		} else {
+			deep.stringOpts[*d_str_key] = value;
+		}
+		return 0;
+	}
+
+	return 1;
 }
