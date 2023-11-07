@@ -18,5 +18,4 @@ Administrators' Manual
    logging
    file-and-cred-transfer 
    hooks
-   directories
    setting-up-special-environments
