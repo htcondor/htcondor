@@ -5159,12 +5159,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner);
 		}
 
+		#if defined(WIN32)
+		bool not_sock_owner = (strcasecmp(owner,sock_owner) != 0);
+		#else
+		bool not_sock_owner = (strcmp(owner,sock_owner) != 0);
+		#endif
+
 		if (!qmgmt_all_users_trusted
-#if defined(WIN32)
-			&& (strcasecmp(owner,sock_owner) != 0)
-#else
-			&& (strcmp(owner,sock_owner) != 0)
-#endif
+			&& not_sock_owner
 			&& (!isQueueSuperUser(EffectiveUserRec(Q_SOCK)) || !SuperUserAllowedToSetOwnerTo(owner)) ) {
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when active owner is \"%s\"\n",
@@ -5188,9 +5190,37 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 #endif
-
 		if (query_can_change_only) {
 			return 0;
+		}
+
+		// The code that creates a UserRec on submit makes one for the sock owner
+		// In the case of a submit portal, we might also need to create a user rec for
+		// the +Owner identifier.  In the future, we may move this to set effective owner
+		// and not allow user creation as a side-effect of setting the Owner attribute.
+		if (not_sock_owner) {
+			auto urec = scheduler.lookup_owner_const(owner);
+			if ( ! urec) {
+				if (allow_submit_from_known_users_only) {
+					dprintf(D_ALWAYS, "SetAttribute(Owner): fail because no User record for %s\n", owner);
+					if (err) {
+						err->pushf("QMGMT",EACCES,"Unknown User %s. Use condor_qusers to add user before submitting jobs.", owner);
+					}
+					errno = EACCES;
+					return -1;
+				} else {
+					// create user a user record for a new submitter
+					// the insert_owner_const will make a pending user record
+					// which we then add to the current transaction by calling MakeUserRec
+					// TODO: set the NTDomain to a reasonable value for this new User rec
+					urec = scheduler.insert_owner_const(owner);
+					if ( ! MakeUserRec(urec, true)) {
+						dprintf(D_ALWAYS, "SetAttribute(Owner): failed to create new User record for %s\n", owner);
+						errno = EACCES;
+						return -1;
+					}
+				}
+			}
 		}
 
 		if (user_is_the_new_owner) {
