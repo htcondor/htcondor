@@ -50,6 +50,11 @@ New Features:
   Files written by jobs are unaffected by this change.
   :jira:`2098`
 
+- Using *condor_store_cred* to set a pool password on Windows now
+  requires ADMINISTRATOR authorization with the *condor_master* (instead
+  of CONFIG authorization).
+  :jira:`2106`
+
 - Somewhat improved the performance of the _DEBUG flag D_FDS.  But please
   don't use this unless absolutely needed.
   :jira:`2050`

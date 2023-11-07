@@ -4206,11 +4206,11 @@ int dc_main( int argc, char** argv )
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
 								  handle_reconfig,
-								  "handle_reconfig()", WRITE );
+								  "handle_reconfig()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_RECONFIG_FULL, "DC_RECONFIG_FULL",
 								  handle_reconfig,
-								  "handle_reconfig()", WRITE );
+								  "handle_reconfig()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_CONFIG_VAL, "DC_CONFIG_VAL",
 								  handle_config_val,
