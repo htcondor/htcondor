@@ -566,9 +566,11 @@ activities and shows the possible transitions from one to another within the
 HTCondor system. Each transition is labeled with a number on the diagram, and
 transition numbers referred to in this manual will be **bold**.
 
-Note the "Matched" state and the "Suspended" activity have been removed from
-this diagram in order to simplify the number of shown transitions.  The
-Matched state is not entered by default, and Suspended is rarely used.
+.. note::
+
+   Note the "Matched" state and the "Suspended" activity have been removed from
+   this diagram in order to simplify the number of shown transitions.  The
+   Matched state is not entered by default, and Suspended is rarely used.
 
 :index:`machine state and activities figure`
 :index:`state and activities figure`
@@ -635,9 +637,6 @@ Matched state is not entered by default, and Suspended is rarely used.
       killing -- job exit\n23 --> cidle
       vacating -- OWNER true\n25 --> isOwner
       vacating -- better rank\nstarts\n24 --> cidle
-
-
-Machine States and Activities
 
 
 Various expressions are used to determine when and if many of these
