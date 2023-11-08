@@ -6157,22 +6157,16 @@ These settings affect the *condor_starter*.
                 cmd = /bin/sleep
 
 :macro-def:`CGROUP_MEMORY_LIMIT_POLICY`
-    A string with possible values of ``hard``, ``soft``, ``custom`` and ``none``.
+    A string with possible values of ``hard``, ``custom`` and ``none``.
     The default value is ``hard``. If set to ``hard``, when the job tries
     to use more memory than the slot size, it will be put on hold with
     an appropriate message.  Also, the cgroup soft limit will set to
     90% of the hard limit to encourage the kernel to lower 
-    cacheable memory the job is using.
-    If set to ``soft``, cgroup soft limit will be set to the slot size,
-    and the hard limit will be set to the total memory allocated to the startd,
-    (by default the total memory on the system minus RESERVED_MEMORY), or 
-    the value of MEMORY, if set.  If set to ``none``, no limit will be enforced, 
+    cacheable memory the job is using.  If set to ``none``, no limit will be enforced, 
     but the memory usage of the job will be accurately measured by a cgroup.
-    When set to custom, the two additional knobs CGROUP_HARD_MEMORY_LIMIT and
-    CGROUP_SOFT_MEMORY_LIMIT must be set, which are classad expressions evaluated
-    in the context of the machine and the job which determine the hard and soft limits.
-    Note that "soft" is only meaningful on a cgroup v1 Linux system, and should not be
-    set on a cgroup v2 system.
+    When set to custom, the additional knob CGROUP_HARD_MEMORY_LIMIT_EXPR and
+    must be set, which is a classad expression evaluated
+    in the context of the machine and the job, respectively, to determine the hard limits.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
