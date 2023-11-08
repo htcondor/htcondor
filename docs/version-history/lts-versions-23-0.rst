@@ -36,6 +36,9 @@ Bugs Fixed:
   when reading logs with parallel universe jobs in it.
   :jira:`2099`
 
+- Fixed CGROUP_MEMORY_LIMIT_POLICY=custom for cgroup v2 systems.
+  :jira:`2133`
+
 - Implemented DISABLE_SWAP_FOR_JOB support for cgroup v2 systems.
   :jira:`2127`
 

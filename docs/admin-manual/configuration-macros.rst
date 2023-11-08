@@ -6168,8 +6168,8 @@ These settings affect the *condor_starter*.
     (by default the total memory on the system minus RESERVED_MEMORY), or 
     the value of MEMORY, if set.  If set to ``none``, no limit will be enforced, 
     but the memory usage of the job will be accurately measured by a cgroup.
-    When set to custom, the two additional knobs CGROUP_HARD_MEMORY_LIMIT and
-    CGROUP_SOFT_MEMORY_LIMIT must be set, which are classad expressions evaluated
+    When set to custom, the two additional knobs CGROUP_HARD_MEMORY_LIMIT_EXPR and
+    CGROUP_SOFT_MEMORY_LIMIT_EXPR must be set, which are classad expressions evaluated
     in the context of the machine and the job which determine the hard and soft limits.
     Note that "soft" is only meaningful on a cgroup v1 Linux system, and should not be
     set on a cgroup v2 system.
