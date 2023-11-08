@@ -29,7 +29,7 @@ UploadFile::operator() () {
 	}
 
 	int tryCount = 0;
-	ClassAd * commandAd;
+	ClassAd * commandAd = nullptr;
 	commandState->Lookup( commandID, commandAd );
 	commandAd->LookupInteger( "State_TryCount", tryCount );
 	if( incrementTryCount ) {

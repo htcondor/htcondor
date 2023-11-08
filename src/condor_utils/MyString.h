@@ -140,6 +140,8 @@ public:
 	size_t offset() { return (m_str && m_p) ? (m_p - m_str) : 0; }
 	// return the current deserialization pointer into the string.
 	const char * next_pos() { if ( ! m_str) return NULL; if ( ! m_p) { m_p = m_str; } return m_p; }
+	// return true if the current position is at the end of the string
+	bool at_end() { const char * p = next_pos(); return ! p || ! *p; }
 
 protected:
 	const char * m_p;

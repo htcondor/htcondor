@@ -1,20 +1,19 @@
-Singularity Support
-===================
+Apptainer/Singularity Support
+=============================
 
 :index:`Singularity<single: Singularity; installation>` :index:`Singularity`
 
 Singularity (https://sylabs.io/singularity/) is a container runtime system
-popular in scientific and HPC communities.  Apptainer is an open
-source fork of Singularity that is API and CLI compatible with
-singularity.  Everything in this document that pertains to
-Singularity also is true for the Apptainer container runtime.
-HTCondor can run jobs
-inside Singularity containers either in a transparent way, where the
-job does not know that it is being contained, or, the HTCondor
-administrator can configure the HTCondor startd so that a job can
-opt into running inside a container.  This allows the operating
-system that the job sees to be different than the one on the host system,
-and provides more isolation between processes running in one job and another.
+popular in scientific and HPC communities.  Apptainer (https://apptainer.org)
+is an open source fork of Singularity that is API and CLI compatible with
+singularity.  Everything in this document that pertains to Singularity also is
+true for the Apptainer container runtime.  HTCondor can run jobs inside
+Singularity containers either in a transparent way, where the job does not know
+that it is being contained, or, the HTCondor administrator can configure the
+HTCondor startd so that a job can opt into running inside a container.  This
+allows the operating system that the job sees to be different than the one on
+the host system, and provides more isolation between processes running in one
+job and another.
 
 The decision to run a job inside Singularity
 ultimately resides on the worker node, although it can delegate that to the job.
@@ -23,7 +22,7 @@ By default, jobs will not be run in Singularity.
 
 For Singularity to work, the administrator must install Singularity
 on the worker node.  The HTCondor startd will detect this installation
-at startup.  When it detects a useable installation, it will
+at startup.  When it detects a usable installation, it will
 advertise two attributes in the slot ad:
 
 .. code-block:: condor-config
@@ -114,7 +113,7 @@ above, A complete submit file that uses singularity might look like
      Request_cpus = 1
 
      should_transfer_files = yes
-     tranfer_input_files = some_input
+     transfer_input_files = some_input
      when_to_transfer_output = on_exit
 
      log = log
@@ -142,7 +141,7 @@ directory, the submit file would look like:
      Request_cpus = 1
 
      should_transfer_files = yes
-     tranfer_input_files = image
+     transfer_input_files = image
      when_to_transfer_output = on_exit
 
      log = log
@@ -174,12 +173,12 @@ expression could be
 
 .. code-block:: condor-config
 
-      SINGULARITY_BIND_EXPR = (Owner == "TrustedUser") ? SomeExpressionFromJob : ""
+      SINGULARITY_BIND_EXPR = (Target.Owner == "TrustedUser") ? SomeExpressionFromJob : ""
 
 If the source directory for the bind mount is missing on the host machine,
 HTCondor will skip that mount and run the job without it.  If the image is
 an exploded file directory, and the target directory is missing inside
-the image, and the configuration parameter :macro:`SINGULRITY_IGNORE_MISSING_BIND_TARGET`
+the image, and the configuration parameter :macro:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
 is set to true (the default is false), then this mount attempt will also
 be skipped.  Otherwise, the job will return an error when run.
 
@@ -199,20 +198,21 @@ for example if the image is missing, or malformed, the job is put
 on hold.  This is controlled by the condor knob
 :macro:`SINGULARITY_RUN_TEST_BEFORE_JOB`, which defaults to true.
 
-If an administrator wants to pass additional arguments to the
-singularity exec command instead of the defaults used ht HTCondor, several parameters exist to do this - see
-the *condor_starter* configuration parameters that begin with the prefix
-SINGULARITY in defined in section :ref:`admin-manual/configuration-macros:condor_starter configuration file entries`.
-There you will find parameters to customize things such as the use of PID namespaces,
-cache directory, and several other options.  However, should an administrator
-need to customize Singularity behavior that HTCondor does not currently support, the
-parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows arbitrary additional
-parameters to be passed to the singularity exec command. Note that this
-can be a classad expression, evaluated in the context of the job ad
-and the machine, so the admin could set different options for different
-kinds of jobs.  For example, to
-pass the ``-w`` argument, to make the image writeable, an administrator
-could set
+If an administrator wants to pass additional arguments to the singularity exec
+command instead of the defaults used by HTCondor, several parameters exist to
+do this - see the *condor_starter* configuration parameters that begin with the
+prefix SINGULARITY in defined in section
+:ref:`admin-manual/configuration-macros:condor_starter configuration file
+entries`.  There you will find parameters to customize things such as the use
+of PID namespaces, cache directory, and several other options.  However, should
+an administrator need to customize Singularity behavior that HTCondor does not
+currently support, the parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows
+arbitrary additional parameters to be passed to the singularity exec command.
+Note that this can be a classad expression, evaluated in the context of the
+slot ad and the job ad, where the slot ad can be referenced via "MY.", and the
+job ad via the "TARGET." reference.  In this way, the admin could set different
+options for different kinds of jobs.  For example, to pass the ``-w`` argument,
+to make the image writable, an administrator could set
 
 .. code-block:: condor-config
 

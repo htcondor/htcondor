@@ -612,6 +612,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 {
 	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
+	writeJobEpochFile(getJobAd());
 
 	// Doing this neither prevents scary network-level error messages in
 	// the starter log, nor actually works: if the shadow doesn't exit
@@ -700,7 +701,7 @@ void BaseShadow::removeJob( const char* reason )
 }
 
 void
-BaseShadow::retryJobCleanup( void )
+BaseShadow::retryJobCleanup()
 {
 	m_num_cleanup_retries++;
 	if (m_num_cleanup_retries > m_max_cleanup_retries) {
@@ -722,7 +723,7 @@ BaseShadow::retryJobCleanup( void )
 
 
 void
-BaseShadow::retryJobCleanupHandler( void )
+BaseShadow::retryJobCleanupHandler( int /* timerID */ )
 {
 	m_cleanup_retry_tid = -1;
 	dprintf(D_ALWAYS, "Retrying job cleanup, calling terminateJob()\n");

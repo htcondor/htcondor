@@ -131,7 +131,7 @@ static int StartdSortFunc(ClassAd *ad1,ClassAd *ad2,void *data)
 }
 
 
-void Rooster::poll()
+void Rooster::poll( int /* timerID */ )
 {
 	dprintf(D_FULLDEBUG,"Cock-a-doodle-doo! (Time to look for machines to wake up.)\n");
 

@@ -98,6 +98,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_auth_passwd.h"
 #include "exit.h"
 
+#include <algorithm>
+
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
 #endif
@@ -107,6 +109,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #endif
 
 #include "systemd_manager.h"
+
+#include <algorithm>
 
 static const char* EMPTY_DESCRIP = "<NULL>";
 
@@ -818,7 +822,7 @@ int DaemonCore::Register_PumpWork_TS(PumpWorkCallback handler, void* cls, void* 
 	return 1;
 #else
 	// implement for non-windows?
-	dprintf(D_ALWAYS|D_FAILURE, "Register_PumpWork_TS(%p, %p, %p) called, but has not (yet) been implemented on this platform\n",
+	dprintf(D_ERROR, "Register_PumpWork_TS(%p, %p, %p) called, but has not (yet) been implemented on this platform\n",
 			handler, cls, data);
 	return -1;
 #endif
@@ -2693,6 +2697,12 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 	return res;
 }
 
+int
+DaemonCore::numRegisteredReapers() {
+	return std::count_if(reapTable.begin(), reapTable.end(),
+			[](const auto &entry) { return entry.handler || entry.handlercpp; });
+}
+
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
 	const char *descrip1;
@@ -2797,7 +2807,7 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 }
 
 void
-DaemonCore::refreshDNS() {
+DaemonCore::refreshDNS( int /* timerID */ ) {
 #if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
 		// re-initialize dns info (e.g. IP addresses of nameservers)
 	res_init();
@@ -3438,10 +3448,6 @@ void DaemonCore::Driver()
 
 		num_timers_fired += num_pumpwork_fired;
 		dc_stats.TimersFired = num_timers_fired;
-		if (num_timers_fired > 0) {
-			dprintf(D_DAEMONCORE, "Timers fired num=%d runtime=%f\n",
-				num_timers_fired, runtime);
-		}
 
 		if ( sent_signal == TRUE ) {
 			timeout = 0;
@@ -4927,7 +4933,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 		pidinfo = NULL;
 		target_has_dcpm = false;
 	}
-	if ( pidinfo && pidinfo->sinful_string[0] == '\0' ) {
+	if ( pidinfo && pidinfo->sinful_string.empty()) {
 		// process pid found in our table, but does not
 		// our table says it does _not_ have a command socket
 		target_has_dcpm = false;
@@ -6425,7 +6431,13 @@ void CreateProcessForkit::exec() {
 				msg += ' ';
 			}
 		}
-		dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
+
+		// This causes the child to exit with an indecipherable error
+		// message if the log file is only available because of an
+		// environment variable over-ride, and/or maybe just because
+		// we're a daemon core process running in -t mode, and we
+		// just closed the FD that dprintf() was using.
+		// dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
 
 			// Re-open 'em to point at /dev/null as place holders
 		if ( num_closed ) {
@@ -6928,7 +6940,7 @@ int DaemonCore::Create_Process(
                 inheritFds[numInheritFds] = tempSock->get_file_desc();
                 numInheritFds++;
                     // make certain that this socket is inheritable
-                if ( !(tempSock->set_inheritable(TRUE)) ) {
+                if ( !(tempSock->set_inheritable(true)) ) {
 					goto wrapup;
                 }
             }
@@ -6995,8 +7007,8 @@ int DaemonCore::Create_Process(
 		for(SockPairVec::iterator it = socks.begin(); it != socks.end(); it++) {
 			// now duplicate the underlying SOCKET to make it inheritable
 			ASSERT(it->has_relisock()); // No relisock(TCP)? We expected one.
-			if ( (!it->rsock()->set_inheritable(TRUE)) ||
-				 (want_udp && !it->ssock()->set_inheritable(TRUE)) ) {
+			if ( (!it->rsock()->set_inheritable(true)) ||
+				 (want_udp && !it->ssock()->set_inheritable(true)) ) {
 				dprintf(D_ALWAYS,"Create_Process:Failed to set command "
 						"socks inheritable\n");
 				goto wrapup;
@@ -7132,7 +7144,7 @@ int DaemonCore::Create_Process(
 		if (std && std[i] == DC_STD_FD_PIPE) {
 			if (i == 0) {
 				if (!Create_Pipe(dc_pipe_fds[i], false, false, false, true)) {
-					dprintf(D_ALWAYS|D_FAILURE, "ERROR: Create_Process: "
+					dprintf(D_ERROR, "ERROR: Create_Process: "
 							"Can't create DC pipe for stdin.\n");
 					goto wrapup;
 				}
@@ -7141,7 +7153,7 @@ int DaemonCore::Create_Process(
 			}
 			else {
 				if (!Create_Pipe(dc_pipe_fds[i], true, false, true)) {
-					dprintf(D_ALWAYS|D_FAILURE, "ERROR: Create_Process: "
+					dprintf(D_ERROR, "ERROR: Create_Process: "
 							"Can't create DC pipe for %s.\n",
 							i == 1 ? "stdout" : "stderr");
 					goto wrapup;
@@ -7728,7 +7740,7 @@ int DaemonCore::Create_Process(
 			 (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS) ;
 			 i++)
         {
-			((Sock *)sock_inherit_list[i])->set_inheritable(FALSE);
+			((Sock *)sock_inherit_list[i])->set_inheritable(false);
 		}
 	}
 #else
@@ -8337,7 +8349,7 @@ class FakeCreateThreadReaperCaller: public Service {
 public:
 	FakeCreateThreadReaperCaller(int exit_status,int reaper_id);
 
-	void CallReaper();
+	void CallReaper(int timerID = -1);
 
 	int FakeThreadID() const { return m_tid; }
 
@@ -8363,7 +8375,7 @@ FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int r
 }
 
 void
-FakeCreateThreadReaperCaller::CallReaper() {
+FakeCreateThreadReaperCaller::CallReaper( int /* timerID */ ) {
 	daemonCore->CallReaper( m_reaper_id, "fake thread", m_tid, m_exit_status );
 	delete this;
 }
@@ -8723,7 +8735,7 @@ int extractInheritedSocks (
 				ReliSock * rsock = new ReliSock();
 				ptmp = list.next();
 				rsock->deserialize(ptmp);
-				rsock->set_inheritable(FALSE);
+				rsock->set_inheritable(false);
 				dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
 				// place into array...
 				socks[cSocks++] = (Stream *)rsock;
@@ -8733,7 +8745,7 @@ int extractInheritedSocks (
 				SafeSock * ssock = new SafeSock();
 				ptmp = list.next();
 				ssock->deserialize(ptmp);
-				ssock->set_inheritable(FALSE);
+				ssock->set_inheritable(false);
 				dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
 				// place into array...
 				socks[cSocks++] = (Stream *)ssock;
@@ -8890,7 +8902,7 @@ DaemonCore::Inherit( void )
 					ReliSock * rsock = new ReliSock();
 					ptmp=inherit_list.next();
 					rsock->deserialize(ptmp);
-					rsock->set_inheritable(FALSE);
+					rsock->set_inheritable(false);
 					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
 					// place into array...
 					inheritedSocks[numInheritedSocks++] = (Stream *)rsock;
@@ -8900,7 +8912,7 @@ DaemonCore::Inherit( void )
 					SafeSock * ssock = new SafeSock();
 					ptmp=inherit_list.next();
 					ssock->deserialize(ptmp);
-					ssock->set_inheritable(FALSE);
+					ssock->set_inheritable(false);
 					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
 					// place into array...
 					inheritedSocks[numInheritedSocks++] = (Stream *)ssock;
@@ -8942,7 +8954,7 @@ DaemonCore::Inherit( void )
 					}
 					dc_socks.back().has_relisock(true);
 					dc_socks.back().rsock()->deserialize(ptmp);
-					dc_socks.back().rsock()->set_inheritable(FALSE);
+					dc_socks.back().rsock()->set_inheritable(false);
 					break;
 				}
 
@@ -8960,7 +8972,7 @@ DaemonCore::Inherit( void )
 						}
 						dc_socks.back().has_safesock(true);
 						dc_socks.back().ssock()->deserialize(ptmp);
-						dc_socks.back().ssock()->set_inheritable(FALSE);
+						dc_socks.back().ssock()->set_inheritable(false);
 					}
 					break;
 				}
@@ -9230,8 +9242,8 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		}
 		daemonCore->Register_Command_Socket( (Stream*)super_dc_rsock );
 		daemonCore->Register_Command_Socket( (Stream*)super_dc_ssock );
-		super_dc_rsock->set_inheritable(FALSE);
-		super_dc_ssock->set_inheritable(FALSE);
+		super_dc_rsock->set_inheritable(false);
+		super_dc_ssock->set_inheritable(false);
 		m_super_dc_port = super_dc_rsock->get_port();
 
 		free(superAddrFN);
@@ -10016,7 +10028,7 @@ static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 		EXCEPT("%s", msg.c_str());
 	}
 
-	dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.c_str());
+	dprintf(D_ERROR, "%s\n", msg.c_str());
 	return false;
 }
 
@@ -10030,7 +10042,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 	// we statically bound the TCP port.  Note that we never required that
 	// the port numbers are the same.
 	if( tcp_port > 1 && (want_udp && udp_port <= 1) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "If TCP port is well-known, then UDP port must also be well-known.\n" );
+		dprintf( D_ERROR, "If TCP port is well-known, then UDP port must also be well-known.\n" );
 		return false;
 	}
 
@@ -10083,7 +10095,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 			if( fatal ) {
 				EXCEPT( "%s", msg.c_str() );
 			} else {
-				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.c_str());
+				dprintf(D_ERROR, "%s\n", msg.c_str());
 				return false;
 			}
 		}
@@ -10092,7 +10104,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 			if( fatal ) {
 				EXCEPT( "Failed to listen() on command ReliSock." );
 			} else {
-				dprintf( D_ALWAYS | D_FAILURE, "Failed to listen() on command ReliSock.\n" );
+				dprintf( D_ERROR, "Failed to listen() on command ReliSock.\n" );
 				return false;
 			}
 		}
@@ -10101,7 +10113,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 
 		// setsockopt() won't work without a socket.
 		if(! assign_sock( proto, rsock, fatal ) ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to assign_sock() on command ReliSock.\n" );
+			dprintf( D_ERROR, "Failed to assign_sock() on command ReliSock.\n" );
 			return false;
 		}
 
@@ -10115,7 +10127,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 			if( fatal ) {
 				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on TCP command port." );
 			} else {
-				dprintf( D_ALWAYS | D_FAILURE, "Failed to setsockopt(SO_REUSEADDR) on TCP command port.\n" );
+				dprintf( D_ERROR, "Failed to setsockopt(SO_REUSEADDR) on TCP command port.\n" );
 				return false;
 			}
 		}
@@ -10138,7 +10150,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 			if( fatal ) {
 				EXCEPT( "%s", msg.c_str() );
 			} else {
-				dprintf( D_ALWAYS | D_FAILURE, "%s\n", msg.c_str() );
+				dprintf( D_ERROR, "%s\n", msg.c_str() );
 				return false;
 			}
 		}
@@ -10150,7 +10162,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 	if( ssock != NULL && dynamicUDPSocket == NULL ) {
 		// setsockopt() won't work without a socket.
 		if(! assign_sock( proto, ssock, fatal ) ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to assign_sock() on command SafeSock.\n" );
+			dprintf( D_ERROR, "Failed to assign_sock() on command SafeSock.\n" );
 			return false;
 		}
 
@@ -10160,7 +10172,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 			if( fatal ) {
 				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on UDP command port." );
 			} else {
-				dprintf( D_ALWAYS | D_FAILURE, "Failed to setsockopt(SO_REUSEADDR) on UDP command port.\n" );
+				dprintf( D_ERROR, "Failed to setsockopt(SO_REUSEADDR) on UDP command port.\n" );
 				return false;
 			}
 		}
@@ -10169,7 +10181,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 			if( fatal ) {
 				EXCEPT( "Failed to bind to UDP command port %d.", udp_port );
 			} else {
-				dprintf( D_ALWAYS | D_FAILURE, "Failed to bind to UDP command port %d.\n", udp_port );
+				dprintf( D_ERROR, "Failed to bind to UDP command port %d.\n", udp_port );
 				return false;
 			}
 		}
@@ -10236,7 +10248,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 		if( tryIPv4 ) {
 			DaemonCore::SockPair sock_pair;
 			if( ! InitCommandSocket(CP_IPV4, tcp_port, udp_port, sock_pair, want_udp, fatal)) {
-				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket for ports %d/%d%s.\n", tcp_port, udp_port, want_udp?"":"no UDP");
+				dprintf(D_ERROR, "Warning: Failed to create IPv4 command socket for ports %d/%d%s.\n", tcp_port, udp_port, want_udp?"":"no UDP");
 				return false;
 			}
 			new_socks.push_back(sock_pair);
@@ -10293,7 +10305,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 					std::string message;
 					formatstr( message, "Warning: Failed to create IPv6 command socket for ports %d/%d%s", tcp_port, udp_port, want_udp ? "" : "no UDP" );
 					if( fatal ) { EXCEPT( "%s", message.c_str() ); }
-					dprintf(D_ALWAYS | D_FAILURE, "%s\n", message.c_str() );
+					dprintf(D_ERROR, "%s\n", message.c_str() );
 					return false;
 				}
 			}
@@ -10305,7 +10317,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 	}
 
 	if( tries > MAX_RETRIES) {
-		dprintf(D_ALWAYS | D_FAILURE, "Failed to bind to the same port on IPv4 and IPv6 after %d tries.\n", MAX_RETRIES);
+		dprintf(D_ERROR, "Failed to bind to the same port on IPv4 and IPv6 after %d tries.\n", MAX_RETRIES);
 		return false;
 	}
 
@@ -10963,7 +10975,7 @@ DaemonCore::evalExpr( ClassAd* ad, const char* param_name,
 	}
 	if (expr) {
 		if (!ad->AssignExpr(attr_name, expr)) {
-			dprintf( D_ALWAYS|D_FAILURE,
+			dprintf( D_ERROR,
 					 "ERROR: Failed to parse %s expression \"%s\"\n",
 					 attr_name, expr );
 			free(expr);
@@ -10997,7 +11009,7 @@ DaemonCore::PidEntry::PidEntry() : pid(0),
 	}
 	penvid.num = PIDENVID_MAX;
 	for (int i = 0;i<PIDENVID_MAX; ++i) {
-		penvid.ancestors[i].active=0;
+		penvid.ancestors[i].active=false;
 		for (unsigned int j=0;j<PIDENVID_ENVID_SIZE;++j)
 			penvid.ancestors[i].envid[j]='\0';
 	}
@@ -11085,7 +11097,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 	else if ((bytes < 0) && ((EWOULDBLOCK != errno) && (EAGAIN != errno))) {
 		// Negative is an error; If not EWOULDBLOCK or EAGAIN then:
 		// Something bad	
-		dprintf(D_ALWAYS|D_FAILURE, "DC pipeHandler: "
+		dprintf(D_ERROR, "DC pipeHandler: "
 				"read %s failed for pid %d: '%s' (errno: %d)\n",
 				pipe_desc, (int)pid, strerror(errno), errno);
 		return FALSE;

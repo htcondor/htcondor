@@ -161,7 +161,7 @@ void BaseJob::SetEvaluateState() const
 	daemonCore->Reset_Timer( evaluateStateTid, 0 );
 }
 
-void BaseJob::doEvaluateState()
+void BaseJob::doEvaluateState( int /* timerID */ )
 {
 	JobHeld( "the gridmanager can't handle this job type" );
 	DoneWithJob();
@@ -611,7 +611,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%lld)\n",procID.cluster,proc
 	}
 }
 
-void BaseJob::JobLeaseSentExpired()
+void BaseJob::JobLeaseSentExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseSentExpiredTid != TIMER_UNSET ) {
@@ -621,7 +621,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,pr
 	SetEvaluateState();
 }
 
-void BaseJob::JobLeaseReceivedExpired()
+void BaseJob::JobLeaseReceivedExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {

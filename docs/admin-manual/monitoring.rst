@@ -204,7 +204,7 @@ Recognized metric attribute names and their use:
     ``Machine`` in order to make the IP value unique to each instance of
     HTCondor running on the same host.
  Lifetime
-    A postive integer value representing the max number of seconds
+    A positive integer value representing the max number of seconds
     without updating a metric will be kept before deletion. This is
     represented in ganglia as DMAX. If no Lifetime is defined for a
     metric then the default value will be set to a calculated value
@@ -241,8 +241,7 @@ invalidate the absent machine ClassAd.
 Absent ClassAds, like offline ClassAds, are stored to disk to ensure
 that they are remembered, even across *condor_collector* crashes. The
 configuration variable :macro:`COLLECTOR_PERSISTENT_AD_LOG` defines the file in which the
-ClassAds are stored, and replaces the no longer used variable
-``OFFLINE_LOG``. Absent ClassAds are retained on disk as maintained by
+ClassAds are stored. Absent ClassAds are retained on disk as maintained by
 the *condor_collector* for a length of time in seconds defined by the
 configuration variable :macro:`ABSENT_EXPIRE_ADS_AFTER`. A value of 0 for this variable
 means that the ClassAds are never discarded, and the default value is

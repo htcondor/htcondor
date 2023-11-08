@@ -1870,7 +1870,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     restart of a daemon.
 
 :macro-def:`SOCKET_LISTEN_BACKLOG`
-    An integer value that defaults to 500, which defines the backlog
+    An integer value that defaults to 4096, which defines the backlog
     value for the listen() network call when a daemon creates a socket
     for incoming connections. It limits the number of new incoming
     network connections the operating system will accept for a daemon
@@ -3268,7 +3268,7 @@ section.
     ``CLAIM_WORKLIFE`` expires, any existing job may continue to run as
     usual, but once it finishes or is preempted, the claim is closed.
     When ``CLAIM_WORKLIFE`` is -1, this is treated as an infinite claim
-    worklife, so claims may be held indefinitely (as long as they are
+    work life, so claims may be held indefinitely (as long as they are
     not preempted and the user does not run out of jobs, of course). A
     value of 0 has the effect of not allowing more than one job to run
     per claim, since it immediately expires after the first job starts
@@ -3349,7 +3349,7 @@ section.
         into the machine ClassAd.
 
 :macro-def:`STARTD_LATCH_EXPRS`
-    Each time a slot is created, activated, or when periodicy STARTD policy
+    Each time a slot is created, activated, or when periodic STARTD policy
     is evaluated HTCondor will evaluate expressions whose names are listed
     in this configuration variable.  If the evaluated value can be converted
     to an integer, and the value of the integer changes, the time of the change
@@ -3664,7 +3664,7 @@ from using more scratch space than provisioned.
     This string-valued parameter has no default, and should be set to the
     name of the Linux LVM volume group to be used for logical volumes
     for ephemeral execute directories.
-    ``"htcondor_vg"`` might be a good choice.  This seeting only matters when 
+    ``"htcondor_vg"`` might be a good choice.  This setting only matters when 
     :macro:`STARTD_ENFORCE_DISK_LIMITS` is True, and HTCondor has root
     privilege.
 
@@ -4292,10 +4292,6 @@ details.
     To override this ordered search behavior, and force the use of one
     particular method, set ``LINUX_HIBERNATION_METHOD`` to one of the
     defined strings.
-
-:macro-def:`OFFLINE_LOG`
-    This configuration variable is no longer used. It has been replaced
-    by ``COLLECTOR_PERSISTENT_AD_LOG``.
 
 :macro-def:`OFFLINE_EXPIRE_ADS_AFTER`
     An integer number of seconds specifying the lifetime of the
@@ -5627,7 +5623,7 @@ These macros control the *condor_schedd*.
     -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. 
        this provides a way for admins to disable existing submit commands.
     -  *undefined* - the literal ``undefined`` will be treated by *condor_submit* as if that
-       attribute is not in this ad. This is intended to aid composability of this ad across multiple
+       attribute is not in this ad. This is intended to aid composibility of this ad across multiple
        configuration files.
 
     The following example will add four new submit commands and disable the use of the
@@ -5640,7 +5636,7 @@ These macros control the *condor_schedd*.
              Project = "string"
              FavoriteFruit = "a,b"
              SomeFile = "filename"
-             acounting_group_user = error
+             accounting_group_user = error
           @end
 
 :macro-def:`EXTENDED_SUBMIT_HELPFILE`
@@ -5665,7 +5661,7 @@ These macros control the *condor_schedd*.
     a value from 0 thru 9.  ``$(0)`` expands to all of the arguments,
     ``$(1)`` to the first argument, ``$(2)`` to the second argument, and so on.
     The argument number can be followed by ``?`` to test if the argument
-    was specfied, or by ``+`` to expand to that argument and all subsequent
+    was specified, or by ``+`` to expand to that argument and all subsequent
     arguments.  Thus ``$(0)`` and ``$(1+)`` will expand to the same thing.
 
     For example:
@@ -5981,7 +5977,7 @@ These settings affect the *condor_shadow*.
     HTCondor does not automatically  delete these files, so unchecked the
     directory can grow very large. Either an external entity needs to clean
     up or *condor_history* can use the -epochs options optional ``:d``
-    extention to read and delete the files.
+    extension to read and delete the files.
 
     .. code-block:: console
 
@@ -6161,22 +6157,16 @@ These settings affect the *condor_starter*.
                 cmd = /bin/sleep
 
 :macro-def:`CGROUP_MEMORY_LIMIT_POLICY`
-    A string with possible values of ``hard``, ``soft``, ``custom`` and ``none``.
+    A string with possible values of ``hard``, ``custom`` and ``none``.
     The default value is ``hard``. If set to ``hard``, when the job tries
     to use more memory than the slot size, it will be put on hold with
     an appropriate message.  Also, the cgroup soft limit will set to
     90% of the hard limit to encourage the kernel to lower 
-    cacheable memory the job is using.
-    If set to ``soft``, cgroup soft limit will be set to the slot size,
-    and the hard limit will be set to the total memory allocated to the startd,
-    (by default the total memory on the system minus RESERVED_MEMORY), or 
-    the value of MEMORY, if set.  If set to ``none``, no limit will be enforced, 
+    cacheable memory the job is using.  If set to ``none``, no limit will be enforced, 
     but the memory usage of the job will be accurately measured by a cgroup.
-    When set to custom, the two additional knobs CGROUP_HARD_MEMORY_LIMIT and
-    CGROUP_SOFT_MEMORY_LIMIT must be set, which are classad expressions evaluated
-    in the context of the machine and the job which determine the hard and soft limits.
-    Note that "soft" is only meaningful on a cgroup v1 Linux system, and should not be
-    set on a cgroup v2 system.
+    When set to custom, the additional knob CGROUP_HARD_MEMORY_LIMIT_EXPR and
+    must be set, which is a classad expression evaluated
+    in the context of the machine and the job, respectively, to determine the hard limits.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
@@ -6215,7 +6205,7 @@ These settings affect the *condor_starter*.
     character which matches anything at that position.  Members can have two ``*`` characters if one of them
     is at the end. Members can be prefixed with ``!``
     to force a matching environment variable to not be imported.  The order of members in the Matchlist
-    has no effect on the result.  For backward compatiblity a single value of ``True`` behaves as if the value
+    has no effect on the result.  For backward compatibility a single value of ``True`` behaves as if the value
     was set to ``*``.  Prior to HTCondor version 10.1.0 all values other than ``True`` are treated as ``False``.
 
 :macro-def:`NAMED_CHROOT`
@@ -6442,10 +6432,14 @@ These settings affect the *condor_starter*.
 
 :macro-def:`SINGULARITY_JOB`
     A boolean value specifying whether this startd should run jobs under
-    Singularity. The default value is ``False``.
+    Singularity.  This can be an expression evaluted in the context of the slot
+    ad and the job ad, where the slot ad is the "MY.", and the job ad is the
+    "TARGET.". The default value is ``False``.
 
 :macro-def:`SINGULARITY_IMAGE_EXPR`
-    The path to the Singularity container image file. The default value
+    The path to the Singularity container image file.  This can be an
+    expression evaluted in the context of the slot ad and the job ad, where the
+    slot ad is the "MY.", and the job ad is the "TARGET.".  The default value
     is ``"SingularityImage"``.
 
 :macro-def:`SINGULARITY_TARGET_DIR`
@@ -6454,8 +6448,10 @@ These settings affect the *condor_starter*.
     value is ``""``.
 
 :macro-def:`SINGULARITY_BIND_EXPR`
-    A string value containing a list of bind mount specifications to be
-    passed to Singularity. The default value is ``"SingularityBind"``.
+    A string value containing a list of bind mount specifications to be passed
+    to Singularity.  This can be an expression evaluted in the context of the
+    slot ad and the job ad, where the slot ad is the "MY.", and the job ad is
+    the "TARGET.". The default value is ``"SingularityBind"``.
 
 :macro-def:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
     A boolean value defaulting to false.  If true, and the singularity
@@ -6473,7 +6469,7 @@ These settings affect the *condor_starter*.
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value or classad expression containing a list of extra arguments to be appended
     to the Singularity command line. This can be an expression evaluted in the context of the
-    job ad and the machine ad.
+    slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
 
 condor_submit Configuration File Entries
 -----------------------------------------
@@ -7107,9 +7103,6 @@ section :ref:`admin-manual/monitoring:absent classads` for more details.
     other than the directory defined by ``$(SPOOL)``. Alternatively, if
     this log file is to go in the directory defined by ``$(SPOOL)``, add
     the file to the list given by ``VALID_SPOOL_FILES``.
-
-    This configuration variable replaces ``OFFLINE_LOG``, which is no
-    longer used.
 
 :macro-def:`EXPIRE_INVALIDATED_ADS`
     A boolean value that defaults to ``False``. When ``True``, causes
@@ -8171,14 +8164,24 @@ These macros affect the *condor_job_router* daemon.
     The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
 :macro-def:`JOB_ROUTER_DEFAULTS`
-    Deprecated, use ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES` instead.
     Defined by a single ClassAd in New ClassAd syntax, used to provide
     default values for routes in the *condor_job_router* daemon's
     routing table that are specified by the also deprecated ``JOB_ROUTER_ENTRIES*``.
     The enclosing square brackets are optional.
 
 :macro-def:`JOB_ROUTER_ENTRIES`
-    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     Specification of the job routing table. It is a list of ClassAds, in
     New ClassAd syntax, where each individual ClassAd is surrounded by
     square brackets, and the ClassAds are separated from each other by
@@ -8201,14 +8204,24 @@ These macros affect the *condor_job_router* daemon.
     with the ``JOB_ROUTER_DEFAULTS`` before being used.
 
 :macro-def:`JOB_ROUTER_ENTRIES_FILE`
-    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     A path and file name of a file that contains the ClassAds, in New
     ClassAd syntax, describing the routing table. The specified file is
     periodically reread to check for new information. This occurs every
     ``$(JOB_ROUTER_ENTRIES_REFRESH)`` seconds.
 
 :macro-def:`JOB_ROUTER_ENTRIES_CMD`
-    Deprecated, use ``JOB_ROUTER_ENTRIES_<NAME)`` instead.
+    .. warning::
+        This macro is deprecated and will be removed for V24 of HTCondor.
+        The actual removal of this configuration macro will occur during the
+        lifetime of the HTCondor V23 feature series.
+
+    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
     Specifies the command line of an external program to run. The output
     of the program defines or updates the routing table, and the output
     must be given in New ClassAd syntax. The specified command is
@@ -8645,7 +8658,7 @@ General
 :macro-def:`DAGMAN_RECORD_MACHINE_ATTRS`
     A comma separated list of machine attributes that DAGMan will insert into a
     node jobs submit description for ``job_ad_information_attrs`` and ``job_machine_attrs``.
-    This will reuslt in the listed machine attributes to be injected into the nodes
+    This will result in the listed machine attributes to be injected into the nodes
     produced job ads and userlog. This knob is not set by default.
 
 Throttling
@@ -9309,7 +9322,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     shared secret key. The session expires to reduce the window of
     opportunity where the key may be compromised by attack. A short
     session duration increases the frequency with which daemons have to
-    reauthenticate with each other, which may impact performance.
+    re-authenticate with each other, which may impact performance.
 
     If the client and server are configured with different durations,
     the shorter of the two will be used. The default for daemons is
@@ -9544,7 +9557,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 
 :macro-def:`AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR`
     A boolean value that controls whether a client checks environment
-    varaible `X509_USER_PROXY` for the location the X.509 credential
+    variable `X509_USER_PROXY` for the location the X.509 credential
     to use for SSL authentication with a daemon.
     If this parameter is ``True`` and `X509_USER_PROXY` is set, then
     that file is used instead of the files specified by
@@ -9589,10 +9602,16 @@ macros are described in the :doc:`/admin-manual/security` section.
     A boolean variable controlling whether tools and daemons automatically trust
     the SSL host certificate presented on first authentication.  When the
     default of ``false`` is set, daemons only trust host certificates from known
-    CAs and tools prompt the user for confirmation if the certificate is not trusted.
+    CAs and tools may prompt the user for confirmation if the
+    certificate is not trusted (see ``BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER``).
     After the first authentication, the method and certificate are persisted to a
     ``known_hosts`` file; subsequent authentications will succeed only if the certificate
     is unchanged from the one in the ``known_hosts`` file.
+
+:macro-def:`BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER`
+    A boolean variable that controls if tools will prompt the user about
+    whether to trust an SSL host certificate from an unknown CA.
+    The default value is ``True``.
 
 :macro-def:`SEC_SYSTEM_KNOWN_HOSTS`
     The location of the ``known_hosts`` file for daemon authentication.  This defaults

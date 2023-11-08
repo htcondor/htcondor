@@ -337,7 +337,8 @@ class TestCheckpointCommittedTime:
         # There are three intervals of nominally 5 seconds and one interval
         # of nominally 4 seconds.  Because of rounding, each interval
         # can be recorded as a full second shorter or longer.
-        assert(15 <= committed_time and committed_time <= 23)
+        # And on our slower platforms, there is even more slop
+        assert(15 <= committed_time and committed_time <= 27)
 
         # We also look at the job queue log, which will not have been rotated
         # because with the default_condor as a parameter, it can't be garbage-

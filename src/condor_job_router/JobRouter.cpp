@@ -200,9 +200,16 @@ static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
 	bool valid_defaults = true;
 	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
 
+	bool using_defaults = param_defined("JOB_ROUTER_DEFAULTS");
+	if (using_defaults) {
+		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is deprecated and will be removed for V24 of HTCondor. New configuration\n");
+		dprintf(D_ALWAYS, "                   syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.\n");
+		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series\n");
+	}
+
 	// NOTE: for htcondor 9.0 we should change the default of this knob to false
 	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
-	if ( ! use_entries && param_defined("JOB_ROUTER_DEFAULTS")) {
+	if ( ! use_entries && using_defaults) {
 		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is defined, but will be ignored because JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES is false\n");
 		return true;
 	}
@@ -268,7 +275,7 @@ static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
 }
 
 void
-JobRouter::config() {
+JobRouter::config( int /* timerID */ ) {
 	bool allow_empty_requirements = false;
 	m_enable_job_routing = true;
 
@@ -380,6 +387,23 @@ JobRouter::config() {
 	auto_free_ptr routing_file(param("JOB_ROUTER_ENTRIES_FILE"));
 	auto_free_ptr routing_cmd(param("JOB_ROUTER_ENTRIES_CMD"));
 	auto_free_ptr routing_entries(param("JOB_ROUTER_ENTRIES"));
+
+	std::string used_deprecated = "";
+	if (routing_file) used_deprecated += "JOB_ROUTER_ENTRIES_FILE";
+	if (routing_cmd) {
+		if (! used_deprecated.empty()) used_deprecated += ", ";
+		used_deprecated += "JOB_ROUTER_ENTRIES_CMD";
+	}
+	if (routing_entries) {
+		if (! used_deprecated.empty()) used_deprecated += ", ";
+		used_deprecated += "JOB_ROUTER_ENTRIES";
+	}
+
+	if (! used_deprecated.empty()) {
+		dprintf(D_ALWAYS, "JobRouter WARNING: %s are deprecated and will be removed for V24 of HTCondor. New configuration\n", used_deprecated.c_str());
+		dprintf(D_ALWAYS, "                   syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.\n");
+		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series.\n");
+	}
 
 	// NOTE: for htcondor 9.0 we should change the default of this knob to false
 	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
@@ -655,7 +679,7 @@ JobRouter::config() {
 }
 
 void
-JobRouter::refreshIDTokens() {
+JobRouter::refreshIDTokens( int /* timerID */ ) {
 	StringList items;
 	param_and_insert_unique_items("JOB_ROUTER_CREATE_IDTOKEN_NAMES", items);
 	items.remove_anycase("NAMES");
@@ -897,8 +921,7 @@ JobRouter::InitPublicAd()
 
 	m_public_ad = ClassAd();
 
-	SetMyTypeName(m_public_ad, "Job_Router");
-	SetTargetTypeName(m_public_ad, "");
+	SetMyTypeName(m_public_ad, JOB_ROUTER_ADTYPE);
 
 	m_public_ad.Assign(ATTR_NAME,daemonName);
 
@@ -906,7 +929,7 @@ JobRouter::InitPublicAd()
 }
 
 void
-JobRouter::EvalAllSrcJobPeriodicExprs()
+JobRouter::EvalAllSrcJobPeriodicExprs( int /* timerID */ )
 {
 	RoutedJob *job;
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
@@ -1494,7 +1517,7 @@ JobRouter::NumManagedJobs() {
 }
 
 void
-JobRouter::Poll() {
+JobRouter::Poll( int /* timerID */ ) {
 	dprintf(D_FULLDEBUG,"JobRouter: polling state of (%d) managed jobs.\n",NumManagedJobs());
 
 	// Update our mirror(s) of the job queue(s).
@@ -2973,7 +2996,7 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 }
 
 void
-JobRouter::TimerHandler_UpdateCollector() {
+JobRouter::TimerHandler_UpdateCollector( int /* timerID */ ) {
 	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
 }
 
@@ -2985,7 +3008,7 @@ JobRouter::InvalidatePublicAd() {
 	ASSERT( ! m_operate_as_tool);
 
 	SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
-	SetTargetTypeName(invalidate_ad, "Job_Router");
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, JOB_ROUTER_ADTYPE);
 
 	formatstr(line, "%s == \"%s\"", ATTR_NAME, daemonName.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());

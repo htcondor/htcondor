@@ -150,12 +150,12 @@ class KnownVersions:
     def __init__(self):
 
         ret = subprocess.run(
-            ["git", "tag", "--list", "V*_*_*"],
+            ["git", "tag", "--list", "[vV]*[._]*[._]*"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             check=True,
         )
-        version_regex = re.compile(r"^V([0-9]+)_([0-9]+)_([0-9]+)$")
+        version_regex = re.compile(r"^[vV]([0-9]+)[._]([0-9]+)[._]([0-9]+)$")
 
         versions_set = set()
         feature_series_set = set()

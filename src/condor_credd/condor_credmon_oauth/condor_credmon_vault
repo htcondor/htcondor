@@ -10,8 +10,6 @@ try:
     import queue as Queue
 except ImportError:
     import Queue
-from optparse import OptionParser, OptionGroup
-import logging
 
 # credmon library in libexec
 import htcondor
@@ -19,16 +17,8 @@ import sys
 sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
 
 from credmon.CredentialMonitors.VaultCredmon import VaultCredmon
-from credmon.utils import setup_logging, get_cred_dir, drop_pid, credmon_incomplete, credmon_complete
+from credmon.utils import parse_args, setup_logging, get_cred_dir, drop_pid, credmon_incomplete, credmon_complete
 
-parser = OptionParser()
-parser.add_option('-c', '--cred-dir', action='store', type='string', dest='cred_dir',
-                      help='Path to credential directory')
-parser.add_option('-l', '--log-file', action='store', type='string',
-                      dest='log_file', help='Path to log file')
-parser.add_option('-d', '--debug', action='store_const', dest='log_level',
-                      const=logging.DEBUG, default=logging.INFO,
-                      help='Set log level to DEBUG')
 
 def signal_handler(logger, send_queue, signum, frame):
     """
@@ -46,11 +36,11 @@ def signal_handler(logger, send_queue, signum, frame):
 
 def main():
 
-    htcondor.set_subsystem("CREDMON_OAUTH", htcondor.SubsystemType.Daemon)
-    (options, args) = parser.parse_args()
-
-    cred_dir = get_cred_dir(cred_dir = options.cred_dir)
-    logger = setup_logging(log_path = options.log_file, log_level = options.log_level)
+    # Set up logging and the credential directory
+    args = parse_args()
+    htcondor.set_subsystem(args.daemon_name, htcondor.SubsystemType.Daemon)
+    logger = setup_logging(**vars(args))
+    cred_dir = get_cred_dir(cred_dir = args.cred_dir)
     logger.info('Starting condor_credmon and registering signals')
 
     # create queue to end alerts to child to renew
@@ -64,7 +54,7 @@ def main():
     drop_pid(cred_dir)
 
     # start the scan tokens loop
-    cred_process = Process(target=start_credmon_process, args=(send_queue,cred_dir,logger,))
+    cred_process = Process(target=start_credmon_process, args=(send_queue,cred_dir,args,))
     cred_process.start()
 
     # wait for CREDMON_COMPLETE and signal the condor_master
@@ -81,12 +71,13 @@ def main():
     # join scan tokens loop
     cred_process.join()
 
-def start_credmon_process(q, cred_dir, logger):
+def start_credmon_process(q, cred_dir, args):
 
     credmon_incomplete(cred_dir)
+    logger = setup_logging(**vars(args))
 
     credmons = [
-        VaultCredmon(cred_dir),
+        VaultCredmon(cred_dir, args),
     ]
 
     # set up scan tokens loop
@@ -102,7 +93,7 @@ def start_credmon_process(q, cred_dir, logger):
             credmon_quit = q.get(block=True, timeout=60)
             if credmon_quit:
                 return
-        except Queue.Empty as eq:
+        except Queue.Empty:
             pass
 
 if __name__ == '__main__':

@@ -1,0 +1,5 @@
+usr/include/condor/*.h usr/include/condor
+usr/lib/condor/*.a usr/lib/
+usr/include/classad usr/include/
+usr/lib/libclass*.a
+usr/lib/libclass*.so

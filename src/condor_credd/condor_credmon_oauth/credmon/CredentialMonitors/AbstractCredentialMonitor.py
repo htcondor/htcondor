@@ -1,10 +1,8 @@
 import six
-import sys
-import os
 from abc import ABCMeta, abstractmethod
-from credmon.utils import get_cred_dir
-import logging
-import warnings
+from argparse import Namespace
+from credmon.utils import setup_logging, get_cred_dir
+
 
 @six.add_metaclass(ABCMeta)
 class AbstractCredentialMonitor:
@@ -15,14 +13,9 @@ class AbstractCredentialMonitor:
     :type cred_dir: str
     """
 
-    def __init__(self, cred_dir = None):
+    def __init__(self, cred_dir = None, args = Namespace()):
+        self.log = setup_logging(**vars(args))
         self.cred_dir = get_cred_dir(cred_dir)
-        self.log = self.get_logger()
-
-    def get_logger(self):
-        """Returns a child logger object specific to its class"""
-        logger = logging.getLogger(os.path.basename(sys.argv[0]) + '.' + self.__class__.__name__)
-        return logger
 
     @abstractmethod
     def should_renew(self):

@@ -87,7 +87,7 @@ class CondorLockImpl : public CondorLockBase
 	int Init( time_t		poll_period,
 			  time_t		lock_hold_time,
 			  bool			auto_refresh );
-	void DoPoll( void );
+	void DoPoll( int timerID = -1 );
 	int SetupTimer( void );
 
 	// Update state & invoke callback

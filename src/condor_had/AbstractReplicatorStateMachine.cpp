@@ -208,7 +208,7 @@ AbstractReplicatorStateMachine::downloadReplicaTransfererReaper(
     // the function ended due to the operating system signal, the numeric
     // value of which is stored in exitStatus
     if( WIFSIGNALED( exitStatus ) ) {
-        dprintf( D_PROC,
+        dprintf( D_ERROR,
             "AbstractReplicatorStateMachine::downloadReplicaTransfererReaper "
             "process %d failed by signal number %d\n",
             pid, WTERMSIG( exitStatus ) );
@@ -217,7 +217,7 @@ AbstractReplicatorStateMachine::downloadReplicaTransfererReaper(
     // exit function real return value can be retrieved by dividing the
     // exit status by 256
     else if( WEXITSTATUS( exitStatus ) != 0 ) {
-        dprintf( D_PROC,
+        dprintf( D_ERROR,
             "AbstractReplicatorStateMachine::downloadReplicaTransfererReaper "
             "process %d ended unsuccessfully "
             "with exit status %d\n",
@@ -288,7 +288,7 @@ AbstractReplicatorStateMachine::uploadReplicaTransfererReaper(
     // the function ended due to the operating system signal, the numeric
     // value of which is stored in exitStatus
     if( WIFSIGNALED( exitStatus ) ) {
-        dprintf( D_PROC,
+        dprintf( D_ERROR,
             "AbstractReplicatorStateMachine::uploadReplicaTransfererReaper "
             "process %d failed by signal number %d\n",
             pid, WTERMSIG( exitStatus ) );
@@ -297,7 +297,7 @@ AbstractReplicatorStateMachine::uploadReplicaTransfererReaper(
     // exit function real return value can be retrieved by dividing the
     // exit status by 256
     else if( WEXITSTATUS( exitStatus ) != 0 ) {
-        dprintf( D_PROC,
+        dprintf( D_ERROR,
             "AbstractReplicatorStateMachine::uploadReplicaTransfererReaper "
             "process %d ended unsuccessfully "
             "with exit status %d\n",
@@ -461,7 +461,7 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
         NULL                          // process family info
         );
     if ( transfererPid == FALSE ) {
-		dprintf( D_PROC,
+		dprintf( D_ERROR,
             "AbstractReplicatorStateMachine::upload unable to create "
             "uploading condor_transferer process\n");
         return false;
@@ -533,7 +533,7 @@ AbstractReplicatorStateMachine::uploadNew( Stream *stream )
 		inherit_list                  // inherited socks
 		);
 	if ( transfererPid == FALSE ) {
-		dprintf( D_PROC,
+		dprintf( D_ERROR,
 			"AbstractReplicatorStateMachine::uploadNew unable to create "
 			"uploading condor_transferer process\n");
 		return false;

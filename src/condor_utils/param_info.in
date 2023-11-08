@@ -260,7 +260,7 @@ type=int
 description=Max number of seconds to serve a Collector query, 0=no limit
 
 [SOCKET_LISTEN_BACKLOG]
-default=500
+default=4096
 range=1,
 type=int
 restart=true
@@ -2601,6 +2601,10 @@ description=Automatically trust the remote CA over SSL
 type=bool
 tags=io,condor_auth_ssl
 
+[BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER]
+default=true
+type=bool
+
 [COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
 default=true
 win32_default=false
@@ -2608,19 +2612,19 @@ type=bool
 
 [TRUST_DOMAIN_CAFILE]
 default=/etc/condor/trust_domain_ca.pem
-win32_default=$(RELEASE_DIR)\certs\ca.pem
+win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [TRUST_DOMAIN_CAKEY]
 default=/etc/condor/trust_domain_ca_privkey.pem
-win32_default=$(RELEASE_DIR)\certs\ca_privkey.pem
+win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [SEC_SYSTEM_KNOWN_HOSTS]
 default=/etc/condor/known_hosts
-win32_default=$(RELEASE_DIR)\known_hosts
+win32_default=$(LOCAL_DIR)\known_hosts
 type=path
 tags=io
 
@@ -3289,7 +3293,7 @@ type=int
 tags=schedd
 
 [CURB_MATCHMAKING]
-default=RecentDaemonCoreDutyCycle > 0.98
+default=(RecentDaemonCoreDutyCycle > 0.98) || (TransferQueueNumWaitingToUpload > TransferQueueMaxUploading)
 type=string
 description=Curb Expression for Matchmaking
 tags=schedd
@@ -4967,7 +4971,7 @@ tags=collector
 restart=true
 
 [SCHEDD_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for the scheduler.
@@ -4986,7 +4990,7 @@ usage=
 default=
 
 [SHARED_PORT_MAX_FILE_DESCRIPTORS]
-default=4096
+default=20000
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for condor_shared_port.
@@ -5742,6 +5746,13 @@ default=0
 type=int
 customization=const
 
+[SEC_DEFAULT_AUTHENTICATION_METHODS]
+# the c++ macro value is expected to win here
+macro=SEC_STD_AUTH_METHOD_NAMES
+default=FS,TOKEN
+type=string
+customization=const
+
 [MINUTE]
 default=60
 customization=const
@@ -6419,6 +6430,15 @@ default : @end
 	NUM_SLOTS_TYPE_$(1:1)=1
 	SLOT_TYPE_$(1:1)_PARTITIONABLE=true
 	SLOT_TYPE_$(1:1)=$(2+:100%)
+@end
+
+[$FEATURE.StaticSlots]
+description=Configure a set of Static slots, args:([type# [num [, allocation]]])  default: 1, $(NUM_CPUS), 1/$(NUM_CPUS)
+default : @end
+	NUM_SLOTS_TYPE_$(1:1)=$(2:$(NUM_CPUS))
+	SLOT_TYPE_$(1:1)_PARTITIONABLE=false
+	SLOT_TYPE_$(1:1)=$(3+:1/$(NUM_SLOTS_TYPE_$(1:1)))
+	SLOT_TYPE_$(1:1)=$(3+)
 @end
 
 [$FEATURE.OneShotCronHook]

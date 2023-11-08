@@ -1,0 +1,2 @@
+# Small statically linked binary to test whether container is functional
+condor: statically-linked-binary [usr/libexec/condor/singularity_test_sandbox/exit_37]

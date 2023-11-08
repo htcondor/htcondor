@@ -191,7 +191,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+							 (CallbackType)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL && error_string != "" ) {
 		goto error_exit;
 	}
@@ -313,7 +313,7 @@ CondorJob::CondorJob( ClassAd *classad )
 CondorJob::~CondorJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (CallbackType)&BaseJob::SetEvaluateState, this );
 	}
 	if ( submitterId != NULL ) {
 		free( submitterId );
@@ -344,7 +344,7 @@ void CondorJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-void CondorJob::JobLeaseSentExpired()
+void CondorJob::JobLeaseSentExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	BaseJob::JobLeaseSentExpired();
@@ -358,7 +358,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,
 	}
 }
 
-void CondorJob::doEvaluateState()
+void CondorJob::doEvaluateState( int /* timerID */ )
 {
 	bool connect_failure = false;
 	int old_gm_state;
@@ -1292,6 +1292,9 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_DISK_USAGE,
 		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
+		"CpusProvisioned",
+		"DiskProvisioned",
+		"MemoryProvisioned",
 		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {

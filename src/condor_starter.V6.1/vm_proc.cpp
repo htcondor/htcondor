@@ -173,7 +173,7 @@ bool handleFTL( const char * reason ) {
 	const char *nullString = nullptr;
 	DCStartd startd( nullString);
 	if( ! startd.locate() ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
+		dprintf( D_ERROR, "Unable to locate startd: %s\n", startd.error() );
 		return false;
 	}
 
@@ -190,7 +190,7 @@ bool handleFTL( const char * reason ) {
 
 	ClassAd reply;
 	if( ! startd.updateMachineAd( & update, & reply ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to update machine ad: %s\n", startd.error() );
+		dprintf( D_ERROR, "Unable to update machine ad: %s\n", startd.error() );
 		return false;
 	}
 
@@ -778,10 +778,10 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 	}
 
 	if( vm_mac.empty() == false ) {
-		setVMMAC(vm_mac.c_str());
+		setVMMAC(vm_mac);
 	}
 	if( vm_ip.empty() == false ) {
-		setVMIP(vm_ip.c_str());
+		setVMIP(vm_ip);
 	}
 
 	int old_status_error_count = m_status_error_count;
@@ -842,7 +842,7 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 }
 
 void
-VMProc::notify_status_fn()
+VMProc::notify_status_fn( int /* timerID */ )
 {
 	// this function will be called from timer function
 	bool has_error = false;
@@ -891,7 +891,7 @@ VMProc::notify_status_fn()
 }
 
 void
-VMProc::CheckStatus()
+VMProc::CheckStatus( int /* timerID */ )
 {
 	if( !m_vm_id || !m_vmgahp ) {
 		return;
@@ -1616,15 +1616,15 @@ VMProc::setVMPID(int vm_pid)
 }
 
 void
-VMProc::setVMMAC(const char* mac)
+VMProc::setVMMAC(const std::string &mac)
 {
-	if( !strcasecmp(m_vm_mac.c_str(), mac) ) {
+	if( !strcasecmp(m_vm_mac.c_str(), mac.c_str())) {
 		// MAC for VM doesn't change
 		return;
 	}
 
 	dprintf(D_FULLDEBUG,"MAC for VM is changed from [%s] to [%s]\n", 
-			m_vm_mac.c_str(), mac);
+			m_vm_mac.c_str(), mac.c_str());
 
 	m_vm_mac = mac;
 
@@ -1633,15 +1633,15 @@ VMProc::setVMMAC(const char* mac)
 }
 
 void
-VMProc::setVMIP(const char* ip)
+VMProc::setVMIP(const std::string &ip)
 {
-	if( !strcasecmp(m_vm_ip.c_str(), ip) ) {
+	if( !strcasecmp(m_vm_ip.c_str(), ip.c_str())) {
 		// IP for VM doesn't change
 		return;
 	}
 
 	dprintf(D_FULLDEBUG,"IP for VM is changed from [%s] to [%s]\n", 
-			m_vm_ip.c_str(), ip);
+			m_vm_ip.c_str(), ip.c_str());
 
 	m_vm_ip = ip;
 

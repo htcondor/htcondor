@@ -822,15 +822,15 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 	}
 }
 
-int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
+bool EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
 				  classad::Value::ValueType type_mask,
 				  const std::string & sourceAlias,
 				  const std::string & targetAlias )
 {
-	int rc = TRUE;
+	bool rc = true;
 	if ( !expr || !source ) {
-		return FALSE;
+		return false;
 	}
 
 	const classad::ClassAd *old_scope = expr->GetParentScope();
@@ -841,7 +841,7 @@ int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 		mad = getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
 	if ( !source->EvaluateExpr( expr, result, type_mask ) ) {
-		rc = FALSE;
+		rc = false;
 	}
 
 	if ( mad ) {
@@ -933,27 +933,6 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 				break;
 			ClassAd *ad2 = candidates[offset];
 
-/*
-			if(halfMatch)
-			{
-				char const *my_target_type = target_pool[omp_id].GetTargetTypeName();
-				char const *target_type = ad2->GetMyTypeName();
-				if( !my_target_type ) {
-					my_target_type = "";
-				}
-				if( !target_type ) {
-					target_type = "";
-				}
-				if( strcasecmp(target_type,my_target_type) &&
-					strcasecmp(my_target_type,ANY_ADTYPE) )
-				{
-					result = false;
-					continue;
-				}
-			}
-*/
-
-
 			match_pool[omp_id].ReplaceRightAd(ad2);
 		
 			if(halfMatch)
@@ -998,27 +977,22 @@ bool IsAConstraintMatch( ClassAd *query, ClassAd *target )
 	return result;
 }
 
-bool IsAHalfMatch( ClassAd *my, ClassAd *target )
+bool IsATargetMatch( ClassAd *my, ClassAd *target, const char * targetType )
 {
-		// The collector relies on this function to check the target type.
-		// Eventually, we should move that check either into the collector
-		// or into the requirements expression.
-	char const *my_target_type = GetTargetTypeName(*my);
-	char const *target_type = GetMyTypeName(*target);
-	if( !my_target_type ) {
-		my_target_type = "";
-	}
-	if( !target_type ) {
-		target_type = "";
-	}
-	if( strcasecmp(target_type,my_target_type) &&
-		strcasecmp(my_target_type,ANY_ADTYPE) )
-	{
-		return false;
+	// first check to see that the MyType of the target matches the desired targetType
+	if (targetType && targetType[0] && YourStringNoCase(targetType) != ANY_ADTYPE) {
+		char const *mytype_of_target = GetMyTypeName(*target);
+		if( !mytype_of_target ) {
+			mytype_of_target = "";
+		}
+		if (YourStringNoCase(targetType) != mytype_of_target) {
+			return false;
+		}
 	}
 
 	return IsAConstraintMatch(my, target);
 }
+
 
 /**************************************************************************
  *

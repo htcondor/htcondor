@@ -518,8 +518,8 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	} else {
 		// Dummy up an ad, assume a boinc type job.
 		int now = (int) time(0);
-		SetMyTypeName(dummyAd, "Job");
-		SetTargetTypeName(dummyAd, "Machine");
+		SetMyTypeName(dummyAd, JOB_ADTYPE);
+		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");
@@ -884,7 +884,7 @@ int Starter::execDCStarter(
 		formatstr_cat(s_execute_dir,"%cencrypted%lu",
 				DIR_DELIM_CHAR,privdirnum++);
 		if( mkdir(s_execute_dir.c_str(), 0755) < 0 ) {
-			dprintf( D_FAILURE|D_ALWAYS,
+			dprintf( D_ERROR,
 			         "Failed to create encrypted dir %s: %s\n",
 			         s_execute_dir.c_str(),
 			         strerror(errno) );
@@ -1271,7 +1271,7 @@ Starter::cancelKillTimer( void )
 
 
 void
-Starter::sigkillStarter( void )
+Starter::sigkillStarter( int /* timerID */ )
 {
 		// In case the kill fails for some reason, we are on a periodic
 		// timer that will keep trying.
@@ -1288,7 +1288,7 @@ Starter::sigkillStarter( void )
 }
 
 void
-Starter::softkillTimeout( void )
+Starter::softkillTimeout( int /* timerID */ )
 {
 	s_softkill_tid = -1;
 	if( active() ) {
@@ -1305,7 +1305,20 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 		return true;
 	}
 
-	classy_counted_ptr<DCStarter> starter = new DCStarter(getIpAddr());
+	// If we can't find the complete-with-CCB address, use the socket we
+	// handed to the starter when we created it.  Since the startd is always
+	// local to the starter (until further notice), this should always work.
+	//
+	// Arguably, we shouldn't be using TCP/IP to communicated with our
+	// starters anyway, and even if we must, it should almost certainly
+	// be done over the loopback interface where we hopefully don't have to
+	// fight for port numbers or deal with nearly as many attackers.
+	const char * sinful = getIpAddr();
+	if( sinful == NULL ) {
+		sinful = daemonCore->InfoCommandSinfulString( s_pid );
+	}
+
+	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
 	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
 
 	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );

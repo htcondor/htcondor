@@ -511,10 +511,8 @@ def warn_dagman_env():
     """Warn about DAGMan cleansing its environment"""
     if "SCHEDD" not in htcondor.param["DAEMON_LIST"].upper():
         return 0
-    htc_version = htcondor.param["CONDOR_VERSION"].split(".")
-    if int(htc_version[0]) < 10 or (
-        int(htc_version[0]) == 10 and int(htc_version[1]) < 4
-    ):
+    htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
+    if htc_version < (10, 4, 0):
         format_print("Warning:", newline=True)
         format_print("DAGMan no longer copies the entire environment from", offset=4)
         format_print("which it was submitted. This will affect any DAG items", offset=4)
@@ -528,10 +526,8 @@ def warn_user_records():
     """Warn about AP user records backporting issue"""
     if "SCHEDD" not in htcondor.param["DAEMON_LIST"].upper():
         return 0
-    htc_version = htcondor.param["CONDOR_VERSION"].split(".")
-    if int(htc_version[0]) < 10 or (
-        int(htc_version[0]) == 10 and int(htc_version[1]) < 5
-    ):
+    htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
+    if htc_version < (10, 5, 0):
         format_print("Warning:", newline=True)
         format_print("The AP job queue log has new additional information", offset=4)
         format_print("written into it. HTCondor versions older than V10.6.0", offset=4)
@@ -550,6 +546,214 @@ def warn_user_records():
     return 0
 
 
+def warn_job_router_syntax_deprecation():
+    """Warn about old job router configuration syntax becoming deprecated."""
+    if "JOB_ROUTER" not in htcondor.param["DAEMON_LIST"].upper():
+        return 0
+    deprecated_knobs = ["DEFAULTS", "ENTRIES", "ENTRIES_CMD", "ENTRIES_FILE"]
+    found_knobs = []
+
+    for knob in deprecated_knobs:
+        full_name = "JOB_ROUTER_" + knob
+        if full_name in htcondor.param:
+            found_knobs.append(full_name)
+
+    if len(found_knobs) > 0:
+        format_print("Warning:", newline=True)
+        format_print("The following configuration macro(s):", offset=4)
+        for knob in found_knobs:
+            format_print(f"- {knob}", offset=6)
+        format_print(
+            "Are deprecated and will be removed for V24 of HTCondor.", offset=4
+        )
+        format_print(
+            "The new configuration syntax for the job router is defined", offset=4
+        )
+        format_print(
+            "using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.", offset=4
+        )
+        format_print(
+            """For more information visit:
+  https://htcondor.readthedocs.io/en/latest/grid-computing/job-router.html#the-htcondor-job-router""",
+            offset=4,
+        )
+        format_print(
+            "Note: The removal will occur during the lifetime of the",
+            offset=4,
+            newline=True,
+        )
+        format_print("      HTCondor V23 feature series.", offset=4)
+        return 1
+    return 0
+
+
+def check_desktop_policy():
+    """Check for use of desktop policy configuration knobs that became hidden in V10.4.0"""
+    htc_version = htcondor.param["CONDOR_VERSION"].split(".")
+    htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
+    if htc_version < (10, 4, 0):
+        # Config items formerly available 100% of the time
+        attrs = [
+            "ActivationTimer",
+            "ConsoleBusy",
+            "CpuBusy",
+            "CpuIdle",
+            "JustCPU",
+            "KeyboardBusy",
+            "KeyboardNotBusy",
+            "LastCkpt",
+            "MachineBusy",
+            "NonCondorLoadAvg",
+        ]
+        default_suspend_line = "SUSPEND = ($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))"
+        found_attrs = set()
+        has_cpu_busy_time = []
+
+        p = subprocess.run(["condor_config_val", "-dump"], stdout=subprocess.PIPE)
+        cmd_output = p.stdout.rstrip().decode()
+        has_problem = False
+        for line in cmd_output.split("\n"):
+            line = line.strip()
+            check = line.lower()
+            parts = check.split("=", 1)
+            if len(parts) < 2:
+                continue
+            for attr in attrs:
+                if attr.lower() in parts[1]:
+                    if attr == "CpuBusy":
+                        pos = check.find("cpubusy")
+                        false_positive = True
+                        while pos != -1:
+                            if check.find("cpubusytime", pos) != pos:
+                                false_positive = False
+                                break
+                            pos = check.find("cpubusy", pos + 1)
+                        if false_positive:
+                            continue
+                    not_in_other_def = True
+                    for other in attrs:
+                        if other.lower() == parts[0].strip():
+                            not_in_other_def = False
+                            break
+                    if not_in_other_def:
+                        found_attrs.add(attr)
+            if "cpubusytime" in check and line != default_suspend_line:
+                has_cpu_busy_time.append(line)
+                has_problem = True
+
+        knobs = [
+            "IS_OWNER",
+            "KILL",
+            "PREEMPT",
+            "SLOTS_CONNECTED_TO_KEYBOARD",
+            "SUSPEND",
+        ]
+        count_using_policy = 0
+        for knob in knobs:
+            p = subprocess.run(["condor_config_val", "-v", knob], stdout=subprocess.PIPE)
+            cmd_output = p.stdout.rstrip().decode()
+            for line in cmd_output.split("\n"):
+                line = line.upper()
+                if "POLICY:DESKTOP" in line or "POLICY:UWCS_DESKTOP" in line:
+                    count_using_policy += 1
+        if count_using_policy >= 3:
+            found_attrs.clear()
+
+        custom_set = []
+        for attr in found_attrs:
+            p = subprocess.run(["condor_config_val", "-v", attr], stdout=subprocess.PIPE)
+            cmd_output = p.stdout.rstrip().decode()
+            is_default = False
+            for line in cmd_output.split("\n"):
+                if "<default>" in line.lower():
+                    has_problem = True
+                    is_default = True
+                    break
+            if not is_default:
+                custom_set.append(attr)
+
+        for attr in custom_set:
+            found_attrs.remove(attr)
+
+        if has_problem:
+            format_print(
+                "Error checking for desktop policy configuration macros:", newline=True
+            )
+            need_newline = False
+            if len(found_attrs) > 0:
+                found_attrs = sorted(found_attrs)
+                format_print("The following configuration macros:", offset=4)
+                for attr in found_attrs:
+                    format_print(f"- {attr}", offset=6)
+                format_print(
+                    "Are no longer added to the configuration table by default.",
+                    offset=4,
+                )
+                format_print(
+                    "To re-enable these macros add one of the following to the",
+                    offset=4,
+                )
+                format_print("configuration:", offset=4)
+                format_print("- use FEATURE:POLICY_EXPR_FRAGMENTS", offset=6)
+                format_print("- use POLICY:DESKTOP", offset=6)
+                format_print("- use POLICY:UWCS_DESKTOP", offset=6)
+                need_newline = True
+            if len(has_cpu_busy_time) > 0:
+                format_print(
+                    "The attribute CpuBusyTime no longer represents a delta time",
+                    newline=need_newline,
+                    offset=4,
+                )
+                format_print(
+                    "in V10.4.0+ of HTCondor, but rather a time stamp of when", offset=4
+                )
+                format_print(
+                    "the CPU became busy. This should be replaced with 'CpuBusyTimer'.",
+                    offset=4,
+                )
+                format_print("The following lines are effected:", offset=4)
+                for line in has_cpu_busy_time:
+                    format_print(line, offset=6)
+            return 1
+    return 0
+
+
+def check_pslot_default():
+    """Check for use of RANK in startd config due to incompatibility with
+    P-Slots on by default in V23.0.0"""
+    htc_version = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
+    if htc_version >= (23, 0, 0):
+        return 0
+    for key in htcondor.param.keys():
+        if key.lower().startswith("slot_type_"):
+            return 0
+    rank = htcondor.param.get("RANK")
+    if rank is None:
+        pass
+    else:
+        try:
+            temp = float(rank)
+        except ValueError:
+            format_print("Issue found with StartD Rank:", newline=True)
+            format_print(
+                "Partitionable Slot is turned on by default in V23.0.0 of", offset=4
+            )
+            format_print(
+                f"HTCondor. This makes the configuration 'RANK = {rank}'", offset=4
+            )
+            format_print(
+                "inconsequential. To continue having RANK be applied to jobs", offset=4
+            )
+            format_print(
+                "ran on this EP configure the use of static slots by adding", offset=4
+            )
+            format_print(
+                "either custom slot types or 'use FEATURE:StaticSlots'.", offset=4
+            )
+            return 1
+    return 0
+
+
 def usage():
     """Print Script Usage"""
     format_print("HTCondor Upgrade Incompatabilities Script", newline=True)
@@ -560,7 +764,7 @@ def usage():
     )
     format_print("Options:", newline=True, offset=8)
     format_print("-h/-help         Display Usage", offset=12)
-    format_print("-p/-previous     Check previous incomatabilites between V9 & V10")
+    format_print("-p/-previous     Check previous incomatabilites between V9 & V10", offset=12)
     format_print("-ce              This host is an HTCondor-CE", offset=12)
     format_print("-ignore-pcre2    Skip checking PCRE2 incompatability", offset=12)
     format_print("-ignore-token    Skip checking IDTokens incompatability", offset=12)
@@ -571,16 +775,15 @@ def usage():
 
 
 def main():
-    # Systems with config to check: Base condor and condor-ce
-    ecosystems = []
     do_check = {"token": True, "pcre2": True, "gpu": True}
     do_prev = False
+    is_ce = False
     # Check if passed -ce flag to indicate this host is a CE
     for arg in sys.argv[1:]:
         arg = arg.lower().strip()
         arg = arg.strip("-")
-        if arg == "ce" and "HTCondor-CE" not in ecosystems:
-            ecosystems.append("HTCondor-CE")
+        if arg == "ce":
+            is_ce = True
         elif arg == "ignore-gpu":
             do_check["gpu"] = False
         elif arg == "ignore-pcre2":
@@ -591,35 +794,35 @@ def main():
             do_prev = True
         elif arg == "h" or arg == "help":
             usage()
-    num_warnings = warn_dagman_env()
-    num_warnings += warn_user_records()
-    if not do_prev and num_warnings == 0:
+    # If CE then digest CE configuration
+    if is_ce:
+        os.environ["CONDOR_CONFIG"] = "/etc/condor-ce/condor_config"
+        htcondor.reload_config()
+    num_gotchas = warn_dagman_env()
+    num_gotchas += warn_user_records()
+    num_gotchas += warn_job_router_syntax_deprecation()
+    num_gotchas += check_desktop_policy()
+    num_gotchas += check_pslot_default()
+    if not do_prev and num_gotchas == 0:
         format_print("*** No incompatibilites found ***", newline=True, offset=8)
     if do_prev:
-        if len(ecosystems) == 0:
-            ecosystems = ["HTCondor"]
         # Make sure script is running as root because we need to run 'condor_token_list'
         if os.geteuid() != 0:
             format_print("Error: Script not ran as root", err=True)
             sys.exit(1)
         # Check for incompatibilities
-        for system in ecosystems:
-            format_print(
-                f"----- Checking V9 to V10 incompatibilities for {system} -----",
-                offset=16,
-                newline=True,
-            )
-            # If CE then digest CE configuration
-            if system == "HTCondor-CE":
-                os.environ["CONDOR_CONFIG"] = "/etc/condor-ce/condor_config"
-                htcondor.reload_config()
-            if do_check["token"]:
-                check_idtokens(system == "HTCondor-CE")
-            if do_check["pcre2"]:
-                check_pcre2()
-            # Only worry about GPU incompatibility if not CE
-            if system != "HTCondor-CE" and do_check["gpu"]:
-                check_gpu_requirements()
+        format_print(
+            f"----- Checking V9 to V10 incompatibilities for {system} -----",
+            offset=16,
+            newline=True,
+        )
+        if do_check["token"]:
+            check_idtokens(is_ce)
+        if do_check["pcre2"]:
+            check_pcre2()
+        # Only worry about GPU incompatibility if not CE
+        if not is_ce and do_check["gpu"]:
+            check_gpu_requirements()
     # Final information to direct people to help
     format_print(
         """To ask any questions regarding incompatibilities email:

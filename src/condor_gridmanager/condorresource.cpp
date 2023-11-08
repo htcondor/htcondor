@@ -266,7 +266,7 @@ bool CondorResource::GahpErrorResourceDown( const char *errmsg )
 	}
 }
 
-void CondorResource::DoScheddPoll()
+void CondorResource::DoScheddPoll( int /* timerID */ )
 {
 	int rc;
 	ScheddPollInfo *poll_info = NULL;

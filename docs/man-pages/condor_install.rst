@@ -15,14 +15,14 @@ Synopsis
 **condor_configure** or **condor_install** [--**help**] [--**usage**]
 
 **condor_configure** or **condor_install**
-[--**install[=<path/to/release>]**] [--**install-dir=<path>**]
-[--**prefix=<path>**] [--**local-dir=<path>**]
-[--**make-personal-condor**] [--**bosco**] [--**type = < submit,
-execute, manager >**] [--**central-manager = < hostname>**] [--**owner =
-< ownername >**] [--**maybe-daemon-owner**] [--**install-log = < file
->**] [--**overwrite**] [--**ignore-missing-libs**] [--**force**]
-[--**no-env-scripts**] [--**env-scripts-dir = < directory >**]
-[--**backup**] [--**credd**] [--**verbose**]
+[-\-**install[=<path/to/release>]**] [-\-**install-dir=<path>**]
+[-\-**prefix=<path>**] [-\-**local-dir=<path>**]
+[-\-**make-personal-condor**] [-\-**bosco**] [-\-**type = < submit,
+execute, manager >**] [-\-**central-manager = < hostname>**] [-\-**owner =
+< ownername >**] [-\-**maybe-daemon-owner**] [-\-**install-log = < file
+>**] [-\-**overwrite**] [-\-**ignore-missing-libs**] [-\-**force**]
+[-\-**no-env-scripts**] [-\-**env-scripts-dir = < directory >**]
+[-\-**backup**] [-\-**credd**] [-\-**verbose**]
 
 Description
 -----------

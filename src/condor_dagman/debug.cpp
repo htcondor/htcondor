@@ -121,7 +121,7 @@ debug_error( int error, debug_level_t level, const char *fmt, ... ) {
     if( DEBUG_LEVEL( level ) ) {
         va_list args;
         va_start( args, fmt );
-        _condor_dprintf_va( D_ALWAYS | D_FAILURE, ident, fmt, args );
+        _condor_dprintf_va( D_ERROR, ident, fmt, args );
         va_end( args );
     }
 	DC_Exit( error );

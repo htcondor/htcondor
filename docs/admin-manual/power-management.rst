@@ -113,7 +113,7 @@ evaluate the :macro:`UNHIBERNATE` expression of
 the offline machines.
 
 To do this, define a log file using the
-:macro:`OFFLINE_LOG` configuration variable. See
+:macro:`COLLECTOR_PERSISTENT_AD_LOG` configuration variable. See
 the :ref:`admin-manual/configuration-macros:condor_startd configuration file
 macros` section for the definition. An optional expiration time for each
 ClassAd can be specified with

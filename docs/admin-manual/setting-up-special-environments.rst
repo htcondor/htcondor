@@ -68,7 +68,7 @@ Platform-Specific Configuration File Settings
 The configuration variables that are truly platform-specific are:
 
 :macro:`RELEASE_DIR`
-    Full path to to the installed HTCondor binaries. While the
+    Full path to the installed HTCondor binaries. While the
     configuration files may be shared among different platforms, the
     binaries certainly cannot. Therefore, maintain separate release
     directories for each platform in the pool.
@@ -1416,6 +1416,142 @@ the presence of preemption and dropped updates from the *condor_startd*
 daemon to the *condor_collector* daemon, it is possible for the limit
 to be exceeded. If the limits are exceeded, HTCondor will not kill any
 job to reduce the number of running jobs to meet the limit.
+
+The VM Universe
+---------------
+
+:index:`virtual machines`
+:index:`for the vm universe<single: for the vm universe; installation>`
+:index:`set up for the vm universe<single: set up for the vm universe; universe>`
+
+**vm** universe jobs may be executed on any execution site with
+Xen (via *libvirt*) or KVM. To do this, HTCondor must be informed of
+some details of the virtual machine installation, and the execution
+machines must be configured correctly.
+
+What follows is not a comprehensive list of the options that help set up
+to use the **vm** universe; rather, it is intended to serve as a
+starting point for those users interested in getting **vm** universe
+jobs up and running quickly. Details of configuration variables are in
+the :ref:`admin-manual/configuration-macros:configuration file entries relating
+to virtual machines` section.
+
+Begin by installing the virtualization package on all execute machines,
+according to the vendor's instructions. We have successfully used
+Xen and KVM.
+
+For Xen, there are three things that must exist on an execute machine to
+fully support **vm** universe jobs.
+
+#. A Xen-enabled kernel must be running. This running Xen kernel acts as
+   Dom0, in Xen terminology, under which all VMs are started, called
+   DomUs Xen terminology.
+#. The *libvirtd* daemon must be available, and *Xend* services must be
+   running.
+#. The *pygrub* program must be available, for execution of VMs whose
+   disks contain the kernel they will run.
+
+For KVM, there are two things that must exist on an execute machine to
+fully support **vm** universe jobs.
+
+#. The machine must have the KVM kernel module installed and running.
+#. The *libvirtd* daemon must be installed and running.
+
+Configuration is required to enable the execution of **vm** universe
+jobs. The type of virtual machine that is installed on the execute
+machine must be specified with the :macro:`VM_TYPE`
+variable. For now, only one type can be utilized per machine. For
+instance, the following tells HTCondor to use KVM:
+
+.. code-block:: condor-config
+
+    VM_TYPE = kvm
+
+The location of the *condor_vm-gahp* and its log file must also be
+specified on the execute machine. On a Windows installation, these
+options would look like this:
+
+.. code-block:: condor-config
+
+    VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe
+    VM_GAHP_LOG = $(LOG)/VMGahpLog
+
+Xen-Specific and KVM-Specific Configuration
+'''''''''''''''''''''''''''''''''''''''''''
+
+Once the configuration options have been set, restart the
+*condor_startd* daemon on that host. For example:
+
+.. code-block:: console
+
+    $ condor_restart -startd leovinus
+
+The *condor_startd* daemon takes a few moments to exercise the VM
+capabilities of the *condor_vm-gahp*, query its properties, and then
+advertise the machine to the pool as VM-capable. If the set up
+succeeded, then *condor_status* will reveal that the host is now
+VM-capable by printing the VM type and the version number:
+
+.. code-block:: console
+
+    $ condor_status -vm leovinus
+
+After a suitable amount of time, if this command does not give any
+output, then the *condor_vm-gahp* is having difficulty executing the VM
+software. The exact cause of the problem depends on the details of the
+VM, the local installation, and a variety of other factors. We can offer
+only limited advice on these matters:
+
+For Xen and KVM, the **vm** universe is only available when root starts
+HTCondor. This is a restriction currently imposed because root
+privileges are required to create a virtual machine on top of a
+Xen-enabled kernel. Specifically, root is needed to properly use the
+*libvirt* utility that controls creation and management of Xen and KVM
+guest virtual machines. This restriction may be lifted in future
+versions, depending on features provided by the underlying tool
+*libvirt*.
+
+When a vm Universe Job Fails to Start
+'''''''''''''''''''''''''''''''''''''
+
+If a vm universe job should fail to launch, HTCondor will attempt to
+distinguish between a problem with the user's job description, and a
+problem with the virtual machine infrastructure of the matched machine.
+If the problem is with the job, the job will go on hold with a reason
+explaining the problem. If the problem is with the virtual machine
+infrastructure, HTCondor will reschedule the job, and it will modify the
+machine ClassAd to prevent any other vm universe job from matching. vm
+universe configuration is not slot-specific, so this change is applied
+to all slots.
+
+When the problem is with the virtual machine infrastructure, these
+machine ClassAd attributes are changed:
+
+-  ``HasVM`` will be set to ``False``
+-  ``VMOfflineReason`` will be set to a somewhat explanatory string
+-  ``VMOfflineTime`` will be set to the time of the failure
+-  ``OfflineUniverses`` will be adjusted to include ``"VM"`` and ``13``
+
+Since *condor_submit* adds ``HasVM == True`` to a vm universe job's
+requirements, no further vm universe jobs will match.
+
+Once any problems with the infrastructure are fixed, to change the
+machine ClassAd attributes such that the machine will once again match
+to vm universe jobs, an administrator has three options. All have the
+same effect of setting the machine ClassAd attributes to the correct
+values such that the machine will not reject matches for vm universe
+jobs.
+
+#. Restart the *condor_startd* daemon.
+#. Submit a vm universe job that explicitly matches the machine. When
+   the job runs, the code detects the running job and causes the
+   attributes related to the vm universe to be set indicating that vm
+   universe jobs can match with this machine.
+#. Run the command line tool *condor_update_machine_ad* to set
+   machine ClassAd attribute ``HasVM`` to ``True``, and this will cause
+   the other attributes related to the vm universe to be set indicating
+   that vm universe jobs can match with this machine. See the
+   *condor_update_machine_ad* manual page for examples and details.
 
 Using HTCondor with AFS
 -----------------------

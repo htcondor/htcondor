@@ -129,7 +129,7 @@ CpuAttributes** buildCpuAttrs(
 					cap->cat_totals(logbuf);
 					logbuf += "\n\tAvailable:  ";
 					avail.cat_totals(logbuf, cap->executePartitionID());
-					dprintf( D_ALWAYS | D_FAILURE,
+					dprintf( D_ERROR | (except ? D_EXCEPT : 0),
 							 "ERROR: Can't allocate %s slot of type %d\n%s\n",
 							 num_string(j+1), i, logbuf.c_str() );
 					delete cap;	// This isn't in our array yet.
@@ -190,7 +190,7 @@ CpuAttributes** buildCpuAttrs(
 				avail.cat_totals(logbuf, cap->executePartitionID());
 			}
 
-			dprintf(D_ALWAYS | D_FAILURE,
+			dprintf(D_ERROR,
 					"ERROR: Can't allocate slot id %d (slot type %d) during auto allocation of resources\n%s\n",
 					i+1, cap->type(), logbuf.c_str() );
 
@@ -295,7 +295,7 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool** bkfill_ptr,
 			// we're evenly dividing things, so we only have to figure
 			// out how many nodes to advertise.  If the type0 slot is partitionable
 			// we make 1 p-slot, otherwise we make as many slots as there are cpus
-		bool pslot = param_boolean("SLOT_TYPE_0_PARTITIONABLE", false);
+		bool pslot = param_boolean("SLOT_TYPE_0_PARTITIONABLE", true);
 		my_type_nums[0] = param_integer("NUM_SLOTS", pslot ? 1 : num_cpus);
 		num = my_type_nums[0];
 		my_bkfill_bools[0] = param_boolean("SLOT_TYPE_0_BACKFILL", false);

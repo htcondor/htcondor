@@ -93,7 +93,7 @@ fi
 # Use as many CPUs as are in the condor slot we are in, 1 if undefined
 export RPM_BUILD_NCPUS=${OMP_NUM_THREADS-1}
 
-rpmbuild -v "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
+rpmbuild "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
 readarray -t rpm_files < <(find ./*RPMS -name \*.rpm)
 mv "${rpm_files[@]}" "$dest_dir"

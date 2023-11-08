@@ -41,6 +41,10 @@ GCC_DIAG_OFF(invalid-offsetof)
 #define JOB_QUEUE_PAYLOAD_IS_BASE 1
 #define USE_JOB_QUEUE_USERREC 1 // replace ephemeral OwnerInfo struct with a persistent JobQueueUserRec struct
 
+// until we can remove targettype from the classad log entirely
+// use the legacy "Machine" value as the target adtype
+#define JOB_TARGET_ADTYPE "Machine"
+
 class Service;
 
 class QmgmtPeer {

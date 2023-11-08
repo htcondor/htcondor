@@ -432,7 +432,7 @@ elseif( "${OS_NAME}" STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_ETC_EXAMPLES	usr/share/doc/condor/etc/examples )
 		set( C_SHARE_EXAMPLES usr/share/doc/condor)
 		set( C_DOC			usr/share/doc/condor )
-		set( C_LIBEXEC		usr/lib/condor/libexec )
+		set( C_LIBEXEC		usr/libexec/condor )
 		set( C_LIBEXEC_BLAHP	usr/libexec/blahp )
 		set( C_SYSCONFIG	etc/default )
 

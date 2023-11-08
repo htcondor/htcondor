@@ -10,21 +10,21 @@ search engine or file interface.
 Synopsis
 --------
 
-**condor_adstash** [**--help** ]
+**condor_adstash** [**-\-help** ]
 
-**condor_adstash** [**--process_name** *NAME*] [**--standalone** ]
-[**--sample_interval** *SECONDS*] [**--checkpoint_file** *PATH*]
-[**--log_file** *PATH*] [**--log_level** *LEVEL*]
-[**--threads** *THREADS*] [**--interface** *{null,elasticsearch,jsonfile}*]
-[**--collectors** *COLLECTORS*] [**--schedds** *SCHEDDS*] [**--startds** *STARTDS*]
-[**--schedd_history** ] [**--startd_history** ] [**--ad_file** *PATH*]
-[**--schedd_history_max_ads** *NUM_ADS*] [**--startd_history_max_ads** *NUM_ADS*]
-[**--schedd_history_timeout** *SECONDS*] [**--startd_history_timeout** *SECONDS*]
-[**--se_host** *HOST[:PORT]*] [**--se_url_prefix** *PREFIX*]
-[**--se_username** *USERNAME*] [**--se_use_https** ] [**--se_timeout** SECONDS]
-[**--se_bunch_size** *NUM_DOCS*] [**--es_index_name** *INDEX_NAME*]
-[**--se_no_log_mappings**] [**--se_ca_certs** *PATH*]
-[**--json_dir** *PATH*]
+**condor_adstash** [**-\-process_name** *NAME*] [**-\-standalone** ]
+[**-\-sample_interval** *SECONDS*] [**-\-checkpoint_file** *PATH*]
+[**-\-log_file** *PATH*] [**-\-log_level** *LEVEL*]
+[**-\-threads** *THREADS*] [**-\-interface** *{null,elasticsearch,jsonfile}*]
+[**-\-collectors** *COLLECTORS*] [**-\-schedds** *SCHEDDS*] [**-\-startds** *STARTDS*]
+[**-\-schedd_history** ] [**-\-startd_history** ] [**-\-ad_file** *PATH*]
+[**-\-schedd_history_max_ads** *NUM_ADS*] [**-\-startd_history_max_ads** *NUM_ADS*]
+[**-\-schedd_history_timeout** *SECONDS*] [**-\-startd_history_timeout** *SECONDS*]
+[**-\-se_host** *HOST[:PORT]*] [**-\-se_url_prefix** *PREFIX*]
+[**-\-se_username** *USERNAME*] [**-\-se_use_https** ] [**-\-se_timeout** SECONDS]
+[**-\-se_bunch_size** *NUM_DOCS*] [**-\-es_index_name** *INDEX_NAME*]
+[**-\-se_no_log_mappings**] [**-\-se_ca_certs** *PATH*]
+[**-\-json_dir** *PATH*]
 
 Description
 -----------
@@ -54,86 +54,86 @@ policies (e.g. ILM) on the named index and/or to set up the index as an alias.
 Options
 -------
 
- **-h**, **--help**
+ **-h**, **-\-help**
     Display the help message and exit.
- **--process_name** *PREFIX*
+ **-\-process_name** *PREFIX*
     Give *condor_adstash* a different name for looking up HTCondor
     configuration and environment variable values (see examples).
- **--standalone**
+ **-\-standalone**
     Run condor_adstash in standalone mode (runs once, does not attempt to
     contact *condor_master*)
- **--sample_interval** *SECONDS*
+ **-\-sample_interval** *SECONDS*
     Number of seconds between polling the list(s) of daemons (ignored in
     standalone mode)
- **--checkpoint_file** *PATH*
+ **-\-checkpoint_file** *PATH*
     Location of checkpoint file (will be created if missing)
- **--log_file** *PATH*
+ **-\-log_file** *PATH*
     Location of log file
- **--log_level** *LEVEL*
+ **-\-log_level** *LEVEL*
     Log level (uses Python logging library levels:
     CRITICAL/ERROR/WARNING/INFO/DEBUG)
- **--threads** *THREADS*
+ **-\-threads** *THREADS*
     Number of parallel threads to use when polling for job ClassAds and when
     pushing documents to Elasticsearch
- **--interface** *{null,elasticsearch,opensearch,jsonfile}*
+ **-\-interface** *{null,elasticsearch,opensearch,jsonfile}*
     Push ads via the chosen interface
 
 ClassAd source options
 ----------------------
 
- **--schedd_history**
+ **-\-schedd_history**
     Poll and push *condor_schedd* job histories
- **--startd_history**
+ **-\-startd_history**
     Poll and push *condor_startd* job histories
- **--ad_file** *PATH*
+ **-\-ad_file** *PATH*
     Load Job ClassAds from a file instead of querying daemons (Ignores
-    *--schedd_history* and *--startd_history*.)
+    *-\-schedd_history* and *-\-startd_history*.)
 
 Options for HTCondor daemon (Schedd, Startd, etc.) history sources
 ------------------------------------------------------------------
 
- **--collectors** *COLLECTORS*
+ **-\-collectors** *COLLECTORS*
     Comma-separated list of *condor_collector* addresses to contact to locate
     *condor_schedd* and *condor_startd* daemons
- **--schedds** *SCHEDDS*
+ **-\-schedds** *SCHEDDS*
     Comma-separated list of *condor_schedd* names to poll job histories from
- **--startds** *STARTDS*
+ **-\-startds** *STARTDS*
     Comma-separated list of *condor_startd* machines to poll job histories from
- **--schedd_history_max_ads** *NUM_ADS*
+ **-\-schedd_history_max_ads** *NUM_ADS*
     Abort after reading NUM_ADS from a *condor_schedd*
- **--startd_history_max_ads** *NUM_ADS*
+ **-\-startd_history_max_ads** *NUM_ADS*
     Abort after reading NUM_ADS from a *condor_startd*
- **--schedd_history_timeout** *SECONDS*
+ **-\-schedd_history_timeout** *SECONDS*
     Abort if reading from a *condor_schedd* takes more than this many seconds
- **--startd_history_timeout** *SECONDS*
+ **-\-startd_history_timeout** *SECONDS*
     Abort if reading from a *condor_startd* takes more than this many seconds
 
 Search engine (Elasticsearch, OpenSearch, etc.) interface options
 -----------------------------------------------------------------
 
- **--se_host** *HOST[:PORT]*
+ **-\-se_host** *HOST[:PORT]*
     Search engine host:port
- **--se_url_prefix** *PREFIX*
+ **-\-se_url_prefix** *PREFIX*
     Search engine URL prefix
- **--se_username** *USERNAME*
+ **-\-se_username** *USERNAME*
     Search engine username
- **--se_use_https**
+ **-\-se_use_https**
     Use HTTPS when connecting to search engine
- **--se_timeout** *SECONDS*
+ **-\-se_timeout** *SECONDS*
     Max time to wait for search engine queries
- **--se_bunch_size** *NUM_DOCS*
+ **-\-se_bunch_size** *NUM_DOCS*
     Group ads in bunches of this size to send to search engine
- **--se_index_name** *INDEX_NAME*
+ **-\-se_index_name** *INDEX_NAME*
     Push ads to this search engine index or alias
- **--se_no_log_mappings**
+ **-\-se_no_log_mappings**
     Don't write a JSON file with mappings to the log directory
- **--se_ca_certs** *PATH*
+ **-\-se_ca_certs** *PATH*
     Path to root certificate authority file (will use certifi's CA if not set)
 
 JSON file interface options
 ---------------------------
 
- **--json_dir** *PATH*
+ **-\-json_dir** *PATH*
     Directory to store JSON files, which are named by timestamp
 
 Examples
@@ -156,7 +156,7 @@ These values can be overridden on the command-line:
       $ condor_adstash --standalone --schedds=myschedd.localdomain
 
 *condor_adstash* configuration variables can be also be named using custom
-prefixes, with the prefix passed in using ``--process_name=PREFIX``.
+prefixes, with the prefix passed in using ``-\-process_name=PREFIX``.
 For example, if the HTCondor configuration contained
 ``FOO_SCHEDD_HISTORY = False`` and ``FOO_STARTD_HISTORY = True``,
 *condor_adstash* can be invoked to read these instead of

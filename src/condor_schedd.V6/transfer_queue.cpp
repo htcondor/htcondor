@@ -710,7 +710,7 @@ TransferQueueManager::IOStatsChanged() {
 }
 
 void
-TransferQueueManager::CheckTransferQueue() {
+TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 	int downloading = 0;
 	int uploading = 0;
 	bool clients_waiting = false;
@@ -925,7 +925,7 @@ TransferQueueManager::CheckTransferQueue() {
 							"MAX_TRANSFER_QUEUE_AGE=%ds.\n",
 							age,
 							client->Description(),
-							max_queue_age);
+							(int)max_queue_age);
 
 
 					notifyAboutTransfersTakingTooLong();
@@ -971,7 +971,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 					}
 					fprintf( email,
 							 "Below is a list of file transfers that took longer than\n"
-							 "MAX_TRANSFER_QUEUE_AGE=%lds.  When other transfers are waiting\n"
+							 "MAX_TRANSFER_QUEUE_AGE=%ds.  When other transfers are waiting\n"
 							 "to start, these old transfer attempts will be aborted.\n"
 							 "To avoid this timeout, MAX_TRANSFER_QUEUE_AGE may be increased,\n"
 							 "but be aware that transfers which take a long time will delay other\n"
@@ -982,7 +982,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 							 "The transfer queue currently has %d/%d uploads,\n"
 							 "%d/%d downloads, %d transfers waiting %ds to upload,\n"
 							 "and %d transfers waiting %ds to download.\n",
-							 max_queue_age,
+							 (int)max_queue_age,
 							 m_uploading,
 							 m_max_uploads,
 							 m_downloading,
@@ -1008,7 +1008,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 								m_iostats.file_write.EMAValue(ema_horizon),
 								m_iostats.net_read.EMAValue(ema_horizon));
 					}
-					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%lds:\n\n",max_queue_age);
+					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%ds:\n\n",(int)max_queue_age);
 				}
 
 				fprintf( email, "%s\n", client->SinlessDescription() );
@@ -1068,7 +1068,7 @@ TransferQueueManager::AddRecentIOStats(IOStats &s,const std::string &up_down_que
 }
 
 void
-TransferQueueManager::UpdateIOStats()
+TransferQueueManager::UpdateIOStats( int /* timerID */ )
 {
 	m_max_uploading_stat = m_max_uploads;
 	m_max_downloading_stat = m_max_downloads;

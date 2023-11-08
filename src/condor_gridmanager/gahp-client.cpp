@@ -203,7 +203,7 @@ GahpServer::~GahpServer()
 		daemonCore->Cancel_Timer( poll_tid );
 	}
 	if ( master_proxy != NULL ) {
-		ReleaseProxy( master_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
+		ReleaseProxy( master_proxy->proxy, (CallbackType)&GahpServer::ProxyCallback,
 					  this );
 		delete master_proxy;
 	}
@@ -216,7 +216,7 @@ GahpServer::~GahpServer()
 		ProxiesByFilename->startIterations();
 		while ( ProxiesByFilename->iterate( gahp_proxy ) != 0 ) {
 			ReleaseProxy( gahp_proxy->proxy,
-						  (TimerHandlercpp)&GahpServer::ProxyCallback, this );
+						  (CallbackType)&GahpServer::ProxyCallback, this );
 			delete gahp_proxy;
 		}
 
@@ -228,7 +228,7 @@ GahpServer::~GahpServer()
 }
 
 void
-GahpServer::DeleteMe()
+GahpServer::DeleteMe( int /* timerID */ )
 {
 	m_deleteMeTid = TIMER_UNSET;
 
@@ -988,7 +988,7 @@ GahpServer::Initialize( Proxy *proxy )
 
 	master_proxy = new GahpProxyInfo;
 	master_proxy->proxy = proxy->subject->master_proxy;
-	AcquireProxy( master_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
+	AcquireProxy( master_proxy->proxy, (CallbackType)&GahpServer::ProxyCallback,
 				  this );
 	master_proxy->cached_expiration = 0;
 
@@ -1287,7 +1287,7 @@ GahpServer::ProxyCallback()
 }
 
 void
-GahpServer::doProxyCheck()
+GahpServer::doProxyCheck( int /* timerID */ )
 {
 	proxy_check_tid = TIMER_UNSET;
 
@@ -1361,7 +1361,7 @@ GahpServer::RegisterProxy( Proxy *proxy )
 		gahp_proxy = new GahpProxyInfo;
 		ASSERT(gahp_proxy);
 		gahp_proxy->proxy = AcquireProxy( proxy,
-										  (TimerHandlercpp)&GahpServer::ProxyCallback,
+										  (CallbackType)&GahpServer::ProxyCallback,
 										  this );
 		gahp_proxy->cached_expiration = 0;
 		gahp_proxy->num_references = 1;
@@ -1407,7 +1407,7 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 	if ( gahp_proxy->num_references == 0 ) {
 		ProxiesByFilename->remove( gahp_proxy->proxy->proxy_filename );
 		uncacheProxy( gahp_proxy );
-		ReleaseProxy( gahp_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
+		ReleaseProxy( gahp_proxy->proxy, (CallbackType)&GahpServer::ProxyCallback,
 					  this );
 		delete gahp_proxy;
 	}
@@ -1906,7 +1906,7 @@ GenericGahpClient::clear_pending()
 }
 
 void
-GenericGahpClient::reset_user_timer_alarm()
+GenericGahpClient::reset_user_timer_alarm( int /* timerID */ )
 {
 	reset_user_timer(pending_timeout_tid);
 }
@@ -2056,11 +2056,10 @@ GenericGahpClient::get_pending_result(const char *,const char *)
 }
 
 void
-GahpServer::poll()
+GahpServer::poll( int /* timerID */ )
 {
 	Gahp_Args* result = NULL;
 	int num_results = 0;
-	int result_reqid;
 	GenericGahpClient* entry;
 	std::vector<Gahp_Args*> result_lines;
 
@@ -2122,7 +2121,7 @@ GahpServer::poll()
 		if ( result ) delete result;
 		result = result_line;
 
-		result_reqid = 0;
+		int result_reqid = 0;
 		if ( result->argc > 0 ) {
 			result_reqid = atoi(result->argv[0]);
 		}
@@ -2193,7 +2192,7 @@ GahpServer::poll()
 				// it is dequeued from the waitingHigh/Medium/Low queues.
 				// So now remove the entry from the hash table
 				// so the reqid can be reused.
-			requestTable->remove(result_reqid);
+			requestTable->remove(waiting_reqid);
 		}
 	}
 }

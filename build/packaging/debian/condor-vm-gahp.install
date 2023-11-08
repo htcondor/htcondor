@@ -1,0 +1,2 @@
+usr/sbin/condor_vm-gahp
+usr/libexec/condor/libvirt_simple_script.awk

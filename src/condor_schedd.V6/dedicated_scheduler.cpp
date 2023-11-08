@@ -545,7 +545,7 @@ DedicatedScheduler::initialize( void )
 		// Next, fill in the dummy job ad we're going to send to 
 		// startds for claiming them.
 	SetMyTypeName( dummy_job, JOB_ADTYPE );
-	SetTargetTypeName( dummy_job, STARTD_ADTYPE );
+	dummy_job.Assign( ATTR_TARGET_TYPE, STARTD_ADTYPE );
 	dummy_job.Assign( ATTR_REQUIREMENTS, true );
 	dummy_job.Assign( ATTR_OWNER, ds_owner );
 	dummy_job.Assign( ATTR_USER, ds_name );
@@ -838,7 +838,7 @@ DedicatedScheduler::handleDedicatedJobTimer( int seconds )
 
 
 void
-DedicatedScheduler::callHandleDedicatedJobs( void )
+DedicatedScheduler::callHandleDedicatedJobs( int /* timerID */ )
 {
 	hdjt_tid = -1;
 	handleDedicatedJobs();
@@ -3308,18 +3308,17 @@ DedicatedScheduler::AddMrec(
     // not to store just one 'dynamic' slot per host into all_matches 
     // and leave behind all extra created dynamic slots 
     // we need to use/fill pending_matches. Try checking for
-    // SlotTypeID == PARTITIONABLE_SLOT, as this is left unchanged by
+    // SlotType == "Static", as this is left unchanged by
     // ScheddNegotiate::fixupPartitionableSlot.
-    // if (is_partitionable(match_ad)) {
-    int slot_type_id = 0;
-    match_ad->LookupInteger(ATTR_SLOT_TYPE_ID, slot_type_id);
-    if (slot_type_id == 1) { // Cannot include Resource.h from here.
+	std::string slot_type;
+    match_ad->LookupString(ATTR_SLOT_TYPE, slot_type);
+    if (slot_type == "Static") {
+        ASSERT( all_matches->insert(slot_name, mrec) == 0 );
+        ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
+    } else {
         update_negotiator_attrs_for_partitionable_slots(mrec->my_match_ad);
         pending_matches[claim_id] = mrec;
         pending_claims[mrec->claim_id.publicClaimId()] = claim_id;
-    } else {
-        ASSERT( all_matches->insert(slot_name, mrec) == 0 );
-        ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
     }
 
 	removeRequest( job_id );
@@ -3353,11 +3352,13 @@ DedicatedScheduler::DelMrec( char const* id )
 				 "match not deleted\n" );
 		return false;
 	}
+	ClaimIdParser cid(id);
 	// Check pending_matches
 	std::map<std::string,match_rec*>::iterator it;
 	if((it = pending_matches.find(id)) != pending_matches.end()){
 		rec = it->second;	
-		dprintf( D_FULLDEBUG, "Found record for claim %s in pending matches\n",id);
+		dprintf(D_FULLDEBUG, "Found record for claim %s in pending matches\n",
+		        cid.publicClaimId());
 		pending_matches.erase(it);
 		std::map<std::string,ClassAd*>::iterator rit;
 		if((rit = pending_requests.find(rec->claim_id.publicClaimId())) != pending_requests.end()){
@@ -3375,7 +3376,6 @@ DedicatedScheduler::DelMrec( char const* id )
 	}
 		// First, delete it from our table hashed on ClaimId. 
 	if( all_matches_by_id->lookup(id, rec) < 0 ) {
-		ClaimIdParser cid(id);
 		dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- " 
 				 "match not deleted (but perhaps it was deleted previously)\n", cid.publicClaimId() );
 		return false;
@@ -3477,7 +3477,6 @@ DedicatedScheduler::publishRequestAd( void )
 	dprintf( D_FULLDEBUG, "In DedicatedScheduler::publishRequestAd()\n" );
 
 	SetMyTypeName(ad, SUBMITTER_ADTYPE);
-	SetTargetTypeName(ad, STARTD_ADTYPE);
 
         // Publish all DaemonCore-specific attributes, which also handles
         // SCHEDD_ATTRS for us.
@@ -3744,7 +3743,7 @@ DedicatedScheduler::setScheduler( ClassAd* job_ad )
 // Make sure we're not holding onto any resources we're not using for
 // longer than the unused_timeout.
 void
-DedicatedScheduler::checkSanity( void )
+DedicatedScheduler::checkSanity( int /* timerID */ )
 {
 	if( ! unused_timeout ) {
 			// Without a value for the timeout, there's nothing to
@@ -4000,7 +3999,7 @@ DedicatedScheduler::enqueueReconnectJob( PROC_ID job) {
  */
 
 void
-DedicatedScheduler::checkReconnectQueue( void ) {
+DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 	dprintf(D_FULLDEBUG, "In DedicatedScheduler::checkReconnectQueue\n");
 
 	CondorQuery query(STARTD_AD);
@@ -4142,12 +4141,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			claim = claimList.next();
 			if( !claim ) {
 				dprintf(D_ALWAYS,"Dedicated Scheduler:: failed to reconnect "
-						"job %d.%d to %s, because claimid is missing: "
-						"(hosts=%s,claims=%s).\n",
-						id.cluster, id.proc,
-						host, 
-						remote_hosts ? remote_hosts : "(null)",
-						claims.c_str());
+				        "job %d.%d to %s, because claimid is missing\n",
+				        id.cluster, id.proc, host);
 				dPrintAd(D_ALWAYS, *job);
 					// we will break out of the loop below
 			}
@@ -4203,7 +4198,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 				continue;
 			}
 
-			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, claim);
+			ClaimIdParser cid(claim);
+			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, cid.publicClaimId());
 
 			match_rec *mrec = 
 				new match_rec(claim, sinful, &id,

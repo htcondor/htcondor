@@ -448,7 +448,7 @@ private:
 			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
 			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		if (!req.m_daemon) {
-			dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
+			dprintf(D_ERROR, "Logic error!  Token request without associated daemon.\n");
 			req.m_client_id = "";
 			(*req.m_callback_fn)(false, req.m_callback_data);
 			return false;
@@ -2135,12 +2135,12 @@ handle_dc_finish_token_request(int, Stream* stream)
 		if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str)) {
 			error_code = 2;
 			error_string = "No request ID provided.";
-		}
-		try {
-			request_id = std::stol(request_id_str);
-		} catch (...) {
-			error_code = 2;
-			error_string = "Unable to convert request ID to integer.";
+		} else {
+			YourStringDeserializer des(request_id_str);
+			if ( ! des.deserialize_int(&request_id) || ! des.at_end()) {
+				error_code = 2;
+				error_string = "Unable to convert request ID to integer.";
+			}
 		}
 	}
 
@@ -2226,9 +2226,9 @@ handle_dc_list_token_request(int, Stream* stream)
 	// The filter is optional; if it's absent, we'll list all pending requests.
 	std::string request_filter_str;
 	if (!error_code && (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_filter_str) && !request_filter_str.empty())) {
-		try {
-			std::stol(request_filter_str);
-		} catch (...) {
+		int request_id=-1;
+		YourStringDeserializer des(request_filter_str);
+		if ( ! des.deserialize_int(&request_id) || ! des.at_end()) {
 			error_code = 2;
 			error_string = "Unable to convert request ID to integer.";
 		}
@@ -2335,17 +2335,15 @@ handle_dc_approve_token_request(int, Stream* stream)
 		static_cast<Sock*>(stream)->getFullyQualifiedUser());
 
 	// See comment in handle_dc_list_token_request().
+	int request_id = -1;
 	std::string request_id_str;
 	if (!error_code && (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str) || request_id_str.empty()))
 	{
 		error_code = 1;
 		error_string = "Request ID not provided.";
-	}
-	int request_id = -1;
-	try {
-		request_id = std::stol(request_id_str);
-	} catch (...) {
-		if (!error_code) {
+	} else {
+		YourStringDeserializer des(request_id_str);
+		if ( ! des.deserialize_int(&request_id) || ! des.at_end()) {
 			error_code = 2;
 			error_string = "Unable to convert request ID to integer.";
 		}
@@ -3369,44 +3367,6 @@ handle_dc_sigquit(int )
 	dprintf(D_ALWAYS, "Got SIGQUIT.  Performing fast shutdown.\n");
 	dc_main_shutdown_fast();
 	return TRUE;
-}
-
-const size_t OOM_RESERVE = 2048;
-static char *oom_reserve_buf;
-static void OutOfMemoryHandler()
-{
-	std::set_new_handler(NULL);
-
-		// free up some memory to improve our chances of
-		// successfully logging
-	delete [] oom_reserve_buf;
-
-	int monitor_age = 0;
-	unsigned long vsize = 0;
-	unsigned long rss = 0;
-
-	if( daemonCore && daemonCore->monitor_data.last_sample_time != -1 ) {
-		monitor_age = (int)(time(NULL)-daemonCore->monitor_data.last_sample_time);
-		vsize = daemonCore->monitor_data.image_size;
-		rss = daemonCore->monitor_data.rs_size;
-	}
-
-	dprintf_dump_stack();
-
-	EXCEPT("Out of memory!  %ds ago: vsize=%lu KB, rss=%lu KB",
-		   monitor_age,
-		   vsize,
-		   rss);
-}
-
-static void InstallOutOfMemoryHandler()
-{
-	if( !oom_reserve_buf ) {
-		oom_reserve_buf = new char[OOM_RESERVE];
-		memset(oom_reserve_buf,0,OOM_RESERVE);
-	}
-
-	std::set_new_handler(OutOfMemoryHandler);
 }
 
 #ifndef WIN32
@@ -4464,11 +4424,6 @@ int dc_main( int argc, char** argv )
 	// now re-set the identity so that any children we spawn will have it
 	// in their environment
 	SetEnv( envName, daemonCore->sec_man->my_unique_id() );
-
-	// create a database connection object
-	//DBObj = createConnection();
-
-	InstallOutOfMemoryHandler();
 
 	// call the daemon's main_init()
 	dc_main_init( argc, argv );

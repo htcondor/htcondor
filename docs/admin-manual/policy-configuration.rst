@@ -269,12 +269,29 @@ point in the negotiations has been reached. The possible states are
     have been divided in a partitionable slot. Consolidating the
     resources gives large jobs a chance to run.
 
-.. figure:: /_images/machine-states-transitions.png
-  :width: 600
-  :alt: Machine states and the possible transitions between the states
-  :align: center
-  
-  Machine states and the possible transitions between the states.
+.. mermaid:: 
+   :caption: Machine states and the possible transitions between the states
+   :align: center
+
+   stateDiagram-v2
+     direction LR
+     [*]--> Owner
+     Owner --> Unclaimed: A
+     Unclaimed --> Matched: C
+     Unclaimed --> Owner: B
+     Unclaimed --> Drained: P
+     Unclaimed --> Backfill: E
+     Unclaimed --> Claimed: D
+     Backfill  --> Owner: K
+     Backfill  --> Matched: L
+     Backfill  --> Claimed: M
+     Matched --> Claimed: G
+     Matched --> Owner: F
+     Claimed --> Preempting: H
+     Preempting --> Owner: J
+     Preempting --> Claimed: I
+     Owner --> Drained: N
+     Drained --> Owner: O
 
 
 Each transition is labeled with a letter. The cause of each transition
@@ -1688,7 +1705,7 @@ is to create a representative slot ClassAd, to be used for matchmaking
 with jobs.
 
 HTCondor does not directly enforce slot shared resource allocations, and
-jobs are free to oversubscribe to shared resources. Consider an example
+jobs are free to over subscribe to shared resources. Consider an example
 where two slots are each defined with 50% of available RAM. The
 resultant ClassAd for each slot will advertise one half the available
 RAM. Users may submit jobs with RAM requirements that match these slots.
@@ -1696,7 +1713,7 @@ However, jobs run on either slot are free to consume more than 50% of
 available RAM. HTCondor will not directly enforce a RAM utilization
 limit on either slot. If a shared resource enforcement capability is
 needed, it is possible to write a policy that will evict a job that
-oversubscribes to shared resources, as described in
+over subscribes to shared resources, as described in
 :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
 
 Dividing System Resources in Multi-core Machines
@@ -1707,22 +1724,23 @@ and disk space will be divided for use by the slots. There are two main
 ways to go about dividing the resources of a multi-core machine:
 
 Evenly divide all resources.
-    By default, the *condor_startd* will automatically divide the
-    machine into slots, placing one core in each slot, and evenly
-    dividing all shared resources among the slots. The only
-    specification may be how many slots are reported at a time. By
-    default, all slots are reported to HTCondor.
+    Prior to HTCondor 23.0 the *condor_startd* will automatically divide the
+    machine into multiple slots by default, placing one core in each slot, and evenly
+    dividing all shared resources among the slots. Beginning with HTCondor 23.0
+    the *condor_startd* will create a single partitionable slot by default.
 
-    How many slots are reported at a time is accomplished by setting the
-    configuration variable :macro:`NUM_SLOTS` to the
-    integer number of slots desired. If variable ``NUM_SLOTS`` is not
-    defined, it defaults to the number of cores within the machine.
-    Variable ``NUM_SLOTS`` may not be used to make HTCondor advertise
+    In HTCondor 23.0 you can use the configuration template ``use FEATURE : StaticSlots``
+    to configure a number of static slots. If used without arguments this
+    configuration template will define a number of single core static slots equal to
+    the number of detected cpu cores.
+
+    To simply configure static slots in any version, configure :macro:`NUM_SLOTS` to the
+    integer number of slots desired. ``NUM_SLOTS`` may not be used to make HTCondor advertise
     more slots than there are cores on the machine. The number of cores
     is defined by :macro:`NUM_CPUS`.
 
 Define slot types.
-    Instead of an even division of resources per slot, the machine may
+    Instead of the default slot configuration, the machine may
     have definitions of slot types, where each type is provided with a
     fraction of shared system resources. Given the slot type definition,
     control how many of each type are reported at any given time with
@@ -2147,12 +2165,12 @@ Prior to HTCondor version 9.11 *condor_gpu_discovery* would publish GPU
 properties using attributes with a name prefix that indicated which GPU
 the property referred to.  Beginning with version 9.11, discovery would
 default to using nested ClassAds for GPU properties.  The administrator
-can be explict about which form to use for properties by adding either the
+can be explicit about which form to use for properties by adding either the
 ``-nested`` or ``-not-nested`` option to :macro:`GPU_DISCOVERY_EXTRA`. 
 
 The format -- nested or not -- of GPU properties in the slot ad is the same as published
 by *condor_gpu_discovery*.  The use of nested GPU property ads is necessary
-to do GPU matchmaking and to properly support heterogenous GPUs.  
+to do GPU matchmaking and to properly support heterogeneous GPUs.  
 For pools that have execute nodes running older versions of HTCondor,
 you may want to config ``-not-nested`` on newer machines for consistency with older
 machines. However jobs that use the ``require_gpus`` keyword will never match machines
@@ -2491,7 +2509,7 @@ their defaults are
 Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 :index:`DISK usage`
-:index:`per job scratch fileystem`
+:index:`per job scratch filesystem`
 
 .. warning::
    The per job filesystem feature is a work in progress and not currently supported.
@@ -2521,9 +2539,9 @@ and exit with an appropriate code in every part of the job that writes to the fi
 third party libraries.
 
 Note that the ephemeral filesystem created for the job is private to the job, so the contents
-of that filesytem are not visible outside the process hierarchy.  The administrator can use
+of that filesystem are not visible outside the process hierarchy.  The administrator can use
 the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
-As this filesytem will never live through a system reboot, it is mounted with mount options
+As this filesystem will never live through a system reboot, it is mounted with mount options
 that optimize for performance, not reliability, and may improve performance for I/O heavy
 jobs.
 

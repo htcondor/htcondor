@@ -26,6 +26,18 @@ set(CMAKE_CXX_STANDARD 20) # when changing this, also change classad CMake
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+
+# Turn on coroutines on all platforms.  Not sure why this isn't included
+# in the C++20 standard.
+if(${CMAKE_COMPILER_IS_GNUCXX})
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
+endif()
+
+if(${MSVC})
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /await:strict")
+endif()
+
+
 # Remove warnings in cmake 3.24+.  This setting 
 # forces cmake to not update the timestamps on downloaded
 # tarballs.  The autoconf-built externals need this old setting
@@ -47,7 +59,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "10.8.0")
+set(VERSION "23.0.3")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for

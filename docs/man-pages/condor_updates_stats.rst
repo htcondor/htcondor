@@ -86,7 +86,7 @@ interval is 5 minutes, *condor_updates_stats* displays:
 
 .. code-block:: console
 
-    $ condor_status -l host1 | condor_updates_stats --interval=300 
+    $ condor_status -l host1 | condor_updates_stats -\-interval=300 
     (Reading from stdin) 
     *** Name/Machine = 'HOST1.cs.wisc.edu' MyType = 'Machine' *** 
      Type: Main 

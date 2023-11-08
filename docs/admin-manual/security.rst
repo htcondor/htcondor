@@ -166,7 +166,7 @@ Authenticating using IDTOKENS
 If a user is able to log in to the machine running the *condor_schedd*, and the
 SchedD has been set up with the Token Signing Key (see above for how that is
 created and deployed) then the user can simply run *condor_token_fetch* and
-retreive their own token.  This token can then be (securely) moved to another
+retrieve their own token.  This token can then be (securely) moved to another
 machine and used to interact with the job queue, including submission, edits,
 hold, release, and removing the job.
 
@@ -1405,7 +1405,7 @@ administrator manages the network and no unprivileged users are currently on
 the network), then the auto-approval mechanism may be used.  When in place, auto-approval
 allows any token authentication request on an approved network to be automatically
 approved by HTCondor on behalf of the pool administrator - even when requests do not come over
-confidential connnections.
+confidential connections.
 
 When a daemon issues a token for a client (e.g. for
 ``condor_token_fetch`` or ``condor_token_request``), the signing key it
@@ -1615,7 +1615,7 @@ mapping that matches.
 For HTCondor version 8.5.8 and later, the authenticated name field will be
 interpreted as a regular expression or as a simple string based on the value of
 the :macro:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS` configuration variable. If
-this configuration varible is true, then the authenticated name field is a
+this configuration variable is true, then the authenticated name field is a
 regular expression only when it begins and ends with the / character. If this
 configuration variable is false, or on HTCondor versions older than 8.5.8, the
 authenticated name field is always a regular expression.
@@ -1685,11 +1685,11 @@ matching line in the map file (the canonical name) should be the text
 ``PLUGIN:`` followed by a comma-separated list of plugin names. Note
 that no spaces should be used within the list.
 
-For each plugin, the configuration paramater
+For each plugin, the configuration parameter
 :macro:`SEC_SCITOKENS_PLUGIN_<name>_COMMAND` gives the executable and optional
 command line arguments needed to invoke the plugin.  The optional configuration
 parameter :macro:`SEC_SCITOKENS_PLUGIN_<name>_MAPPING` specifies the mapped
-identity if the plugin accepts the token. If this paramater isn't set, then the
+identity if the plugin accepts the token. If this parameter isn't set, then the
 plugin must write the mapped identity to its stdout.  If the special value
 ``PLUGIN:*`` is given in the map file, then the configuration parameter
 :macro:`SEC_SCITOKENS_PLUGIN_NAMES` is consulted to determine the names of the
@@ -1869,7 +1869,7 @@ check:
 +---------------------------------------+
 |:macro:`SEC_READ_INTEGRITY`            |
 +---------------------------------------+
-|:macro:`SEC_WRITE_INEGRITY`            |
+|:macro:`SEC_WRITE_INTEGRITY`           |
 +---------------------------------------+
 |:macro:`SEC_ADMINISTRATOR_INTEGRITY`   |
 +---------------------------------------+
@@ -2742,7 +2742,7 @@ password file). If :macro:`SOFT_UID_DOMAIN` is False, and :macro:`UID_DOMAIN`
 matches, and the user is not in the execute machine's password file,
 then the job execution attempt will be aborted.
 
-Jobs that run as nobody are low priviledge, but can still interfere with each other.
+Jobs that run as nobody are low privilege, but can still interfere with each other.
 To avoid this, you can configure :macro:`NOBODY_SLOT_USER` to the value
 ``$(STARTER_SLOT_NAME)`` or configure :macro:`SLOT<N>_USER` for each slot
 to define a different username to use for each slot instead of the user nobody.

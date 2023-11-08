@@ -959,7 +959,7 @@ Matchmaker::SetupMatchSecurity(std::vector<ClassAd *> &submitterAds)
 			}
 		}
 		ClaimIdParser cidp(capability.c_str());
-		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", capability.c_str());
+		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", cidp.publicClaimId());
 		const char *session_info = cidp.secSessionInfo();
 		std::string info_str;
 		if ( old_schedd && session_info ) {
@@ -1643,8 +1643,8 @@ int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* cons
 }
 
 
-void Matchmaker::
-negotiationTime ()
+void
+Matchmaker::negotiationTime( int /* timerID */ )
 {
 	ClassAdList_DeleteAdsAndMatchList allAds(this); //contains ads from collector
 	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
@@ -1984,9 +1984,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 				updateAd.Assign(ATTR_LAST_UPDATE, accountant.GetLastUpdateTime());
 
-				updateAd.Assign("MyType", "Accounting");
-				SetMyTypeName(updateAd, "Accounting");
-				SetTargetTypeName(updateAd, "none");
+				SetMyTypeName(updateAd, ACCOUNTING_ADTYPE);
 
 				DCCollectorAdSequences seq; // Don't need them, interface requires them
 				int resUsed = -1;
@@ -2007,9 +2005,7 @@ void
 Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	ClassAd accountingAd;
-	accountingAd.Assign("MyType", "Accounting");
-	SetMyTypeName(accountingAd, "Accounting");
-	SetTargetTypeName(accountingAd, "none");
+	SetMyTypeName(accountingAd, ACCOUNTING_ADTYPE);
 	accountingAd.Assign(ATTR_LAST_UPDATE, accountant.GetLastUpdateTime());
 	accountingAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 
@@ -3781,6 +3777,13 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			dprintf(D_COMMAND, "Matchmaker::negotiate(%s,...) making connection to %s\n", getCommandStringSafe(cmd), scheddAddr.c_str());
 		}
 
+		std::string capability;
+		std::string sess_id;
+		if (submitterAd.LookupString(ATTR_CAPABILITY, capability)) {
+			ClaimIdParser cidp(capability.c_str());
+			sess_id = cidp.secSessionId();
+		}
+
 		Daemon schedd(&submitterAd, DT_SCHEDD, 0);
 		sock = schedd.reliSock(NegotiatorTimeout);
 		if (!sock)
@@ -3788,7 +3791,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			dprintf(D_ALWAYS, "    Failed to connect to %s\n", schedd_id.c_str());
 			return false;
 		}
-		if (!schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout)) {
+		if (!schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout, nullptr, nullptr, false, sess_id.c_str())) {
 			dprintf(D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
 					 schedd_id.c_str());
 			delete sock;
@@ -5952,7 +5955,6 @@ init_public_ad()
 	publicAd = new ClassAd();
 
 	SetMyTypeName(*publicAd, NEGOTIATOR_ADTYPE);
-	SetTargetTypeName(*publicAd, "");
 
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
@@ -5968,7 +5970,7 @@ init_public_ad()
 }
 
 void
-Matchmaker::updateCollector() {
+Matchmaker::updateCollector( int /* timerID */ ) {
 	dprintf(D_FULLDEBUG, "enter Matchmaker::updateCollector\n");
 
 		// in case our address changes, re-initialize public ad every time
@@ -6005,7 +6007,7 @@ Matchmaker::invalidateNegotiatorAd( void )
 
 		// Set the correct types
 	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
-	SetTargetTypeName( cmd_ad, NEGOTIATOR_ADTYPE );
+	cmd_ad.Assign(ATTR_TARGET_TYPE, NEGOTIATOR_ADTYPE);
 
 	formatstr( line, "TARGET.%s == \"%s\"",
 				  ATTR_NAME,

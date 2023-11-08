@@ -188,9 +188,9 @@ UniShadow::spawn()
 
 
 void
-UniShadow::hookTimeout()
+UniShadow::hookTimeout( int /* timerID */ )
 {
-	dprintf(D_ALWAYS|D_FAILURE, "Timed out waiting for a hook to exit\n");
+	dprintf(D_ERROR, "Timed out waiting for a hook to exit\n");
 	BaseShadow::log_except("Submit-side job hook execution timed out");
 	shutDown(JOB_NOT_STARTED);
 }
@@ -672,7 +672,7 @@ UniShadow::exitDelayed( int &reason ) {
 }
 
 void
-UniShadow::exitLeaseHandler() const {
+UniShadow::exitLeaseHandler( int /* timerID */ ) const {
 	DC_Exit( delayedExitReason );
 }
 

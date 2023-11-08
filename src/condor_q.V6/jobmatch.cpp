@@ -546,7 +546,7 @@ static bool checkOffer(
 	const char * slotname)
 {
 	// 1. Request satisfied? 
-	if( !IsAHalfMatch( request, offer ) ) {
+	if ( ! IsAConstraintMatch(request, offer)) {
 		ac.fReqConstraint++;
 		if (pmat) pmat->append_to_fail_list(anaMachines::ReqConstraint, slotname);
 		return false;
@@ -554,7 +554,7 @@ static bool checkOffer(
 	ac.job_matches_slot++;
 
 	// 2. Offer satisfied? 
-	if ( !IsAHalfMatch( offer, request ) ) {
+	if ( ! IsAConstraintMatch(offer, request)) {
 		ac.fOffConstraint++;
 		if (pmat) pmat->append_to_fail_list(anaMachines::OffConstraint, slotname);
 		return false;
@@ -842,7 +842,6 @@ bool doJobRunAnalysis (
 	for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
 		ClassAd	*offer = it->second.get();
 
-	#if 1
 		bool is_pslot = false;
 		bool is_dslot = false;
 		if ( ! offer->LookupBool("PartitionableSlot", is_pslot)) {
@@ -882,78 +881,12 @@ bool doJobRunAnalysis (
 			match_analysis_needed += ac.fReqConstraint - fReqConstraint;
 			continue;
 		}
-	#else
-
-		// 0.  info from machine
-		ac.totalMachines++;
-
-		slotname = "undefined";
-		offer->LookupString(ATTR_NAME, slotname);
-
-		// 1. Request satisfied? 
-		if( !IsAHalfMatch( request, offer ) ) {
-			//if( verbose ) strcat(return_buff, "Failed request constraint\n");
-			if (countExhaustedPartionable && is_exhausted_partionable_slot(offer, request)) {
-				ac.exhausted_partionable++;
-				if (pmat) pmat->append_to_fail_list(anaMachines::Exhausted, slotname.c_str(), verb_width);
-			} else {
-				++match_analysis_needed;
-				ac.fReqConstraint++;
-				if (pmat) pmat->append_to_fail_list(anaMachines::ReqConstraint, slotname.c_str(), verb_width);
-			}
-			continue;
-		}
-		ac.job_matches_slot++;
-
-		// 2. Offer satisfied? 
-		if ( !IsAHalfMatch( offer, request ) ) {
-			//if( verbose ) strcat( return_buff, "Failed offer constraint\n");
-			if (countExhaustedPartionable && is_exhausted_partionable_slot(offer, request)) {
-				ac.exhausted_partionable++;
-				if (pmat) pmat->append_to_fail_list(anaMachines::Exhausted, slotname.c_str(), verb_width);
-			} else {
-				ac.fOffConstraint++;
-				if (pmat) pmat->append_to_fail_list(anaMachines::OffConstraint, slotname.c_str(), verb_width);
-			}
-			continue;
-		}
-		ac.both_match++;
-
-		bool offline = false;
-		if (offer->LookupBool(ATTR_OFFLINE, offline) && offline) {
-			ac.fOffline++;
-			if (pmat) pmat->append_to_fail_list(anaMachines::Offline, slotname.c_str(), verb_width);
-			continue;
-		}
-	#endif
 
 		// 3. Is there a remote user?
 		std::string remoteUser;
 		if ( ! offer->LookupString(ATTR_REMOTE_USER, remoteUser)) {
-#if 1
 			ac.available++; // tj: is this correct?
 			continue;
-#else  // i think this is bogus
-			// no remote user
-			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
-				eval_result.IsBooleanValue(val) && val) {
-				// both sides satisfied and no remote user
-				//if( verbose ) strcat(return_buff, "Available\n");
-				ac.available++;
-				continue;
-			} else {
-				// no remote user and std rank condition failed
-			  if (last_rej_match_time != 0) {
-				ac.fRankCond++;
-				if (pmat) pmat->append_to_fail_list(anaMachines::RankCond, slotname.c_str());
-				//if( verbose ) strcat( return_buff, "Failed rank condition: MY.Rank > MY.CurrentRank\n");
-				continue;
-			  } else {
-				ac.available++; // tj: is this correct?
-				continue;
-			  }
-			}
-#endif
 		}
 
 		// if we get to here, there is a remote user, if we don't have access to user priorities
@@ -976,18 +909,7 @@ bool doJobRunAnalysis (
 		} else if (EvalExprToBool(preemptPrioCondition, offer, request, eval_result) &&
 			eval_result.IsBooleanValue(val) && val) {
 
-#if 1
 			{
-#else		// this test is bogus
-			// 5. Satisfies standard rank condition?
-			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
-				eval_result.IsBooleanValue(val) && val )  
-			{
-				//if( verbose ) strcat( return_buff, "Available\n");
-				ac.available++;
-				continue;
-			} else {
-#endif
 				// 6.  Satisfies preemption rank condition?
 				if (EvalExprToBool(preemptRankCondition, offer, request, eval_result) &&
 					eval_result.IsBooleanValue(val) && val)
@@ -1019,18 +941,7 @@ bool doJobRunAnalysis (
 						ac.available++;
 					}
 				} else {
-#if 1
 					ac.available++;
-#else
-					// failed 6 and 5, but satisfies 4; so have priority
-					// but not better or equally preferred than current
-					// customer
-					// NOTE: In practice this often indicates some
-					// unknown problem.
-				  if (last_rej_match_time != 0) {
-					ac.fRankCond++;
-				  }
-#endif
 				}
 			}
 		} else {
@@ -1418,13 +1329,13 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 			cUniqueJobs += 1;
 
 			// 2. Offer satisfied?
-			bool offer_match = IsAHalfMatch(slot, job);
+			bool offer_match = IsAConstraintMatch(slot, job);
 			if (offer_match) {
 				cOffConstraint += cJobsToInc;
 			}
 
 			// 1. Request satisfied?
-			if (IsAHalfMatch(job, slot)) {
+			if (IsAConstraintMatch(job, slot)) {
 				cReqConstraint += cJobsToInc;
 				if (offer_match) {
 					cBothMatch += cJobsToInc;

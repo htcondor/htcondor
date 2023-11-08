@@ -1885,6 +1885,12 @@ void JobQueueJob::PopulateFromAd()
 	// First have our base class fill in whatever it can
 	JobQueueBase::PopulateFromAd();
 
+	if ( ! this->Lookup(ATTR_TARGET_TYPE)) {
+		// For backward compat matchmaking with pre 23.0 HTCondor Execute nodes and Negotiators
+		// TODO: move this into the the code that creates resource requests?
+		this->Assign(ATTR_TARGET_TYPE, JOB_TARGET_ADTYPE);
+	}
+
 	if ( ! universe) {
 		int uni = 0;
 		if (this->LookupInteger(ATTR_JOB_UNIVERSE, uni)) {
@@ -2229,7 +2235,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	if (!JobQueue->Lookup(HeaderKey, bad)) {
 		// we failed to find header ad, so create one
-		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE, STARTD_ADTYPE);
+		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE);
 		CreatedAd = true;
 	}
 
@@ -3315,12 +3321,28 @@ QmgmtSetEffectiveOwner(char const *o)
 	if (o) {
 		urec = scheduler.lookup_owner_const(o);
 		if ( ! urec) {
-			dprintf(D_ALWAYS, "SetEffectiveOwner security violation: No User record named %s\n", o);
-		} else if (urec == real_urec) {
+			if (allow_submit_from_known_users_only || Q_SOCK->getReadOnly()) {
+				dprintf(D_ALWAYS, "SetEffectiveOwner(): fail because no User record for %s\n", o);
+				errno = EACCES;
+				return -1;
+			} else {
+				// create user a user record for a new submitter
+				// the insert_owner_const will make a pending user record
+				// which we then add to the current transaction by calling MakeUserRec
+				urec = scheduler.insert_owner_const(o);
+				if ( ! MakeUserRec(urec, true)) {
+					dprintf(D_ALWAYS, "SetEffectiveOwner(): failed to create new User record for %s\n", o);
+					errno = EACCES;
+					return -1;
+				}
+			}
+		}
+		if (urec == real_urec) {
 			// myself, but without superuser perms. I'll allow it.
 		} else {
+			std::string buf;
 			bool is_super = real_urec && real_urec->IsSuperUser();
-			bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(o);
+			bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(name_of_user(o, buf));
 			if( !is_super || !is_allowed_owner)
 			{
 				if ( ! is_allowed_owner) {
@@ -3887,7 +3909,7 @@ NewCluster(CondorError* errstack)
 	// put a new classad in the transaction log to serve as the cluster ad
 	JobQueueKeyBuf cluster_key;
 	IdToKey(active_cluster_num,-1,cluster_key);
-	JobQueue->NewClassAd(cluster_key, JOB_ADTYPE, STARTD_ADTYPE);
+	JobQueue->NewClassAd(cluster_key, JOB_ADTYPE);
 
 	return active_cluster_num;
 }
@@ -3990,7 +4012,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
-	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
+	JobQueue->NewClassAd(key, JOB_ADTYPE);
 
 	job_queued_count += 1;
 
@@ -5137,12 +5159,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner);
 		}
 
+		#if defined(WIN32)
+		bool not_sock_owner = (strcasecmp(owner,sock_owner) != 0);
+		#else
+		bool not_sock_owner = (strcmp(owner,sock_owner) != 0);
+		#endif
+
 		if (!qmgmt_all_users_trusted
-#if defined(WIN32)
-			&& (strcasecmp(owner,sock_owner) != 0)
-#else
-			&& (strcmp(owner,sock_owner) != 0)
-#endif
+			&& not_sock_owner
 			&& (!isQueueSuperUser(EffectiveUserRec(Q_SOCK)) || !SuperUserAllowedToSetOwnerTo(owner)) ) {
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when active owner is \"%s\"\n",
@@ -5166,9 +5190,37 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 #endif
-
 		if (query_can_change_only) {
 			return 0;
+		}
+
+		// The code that creates a UserRec on submit makes one for the sock owner
+		// In the case of a submit portal, we might also need to create a user rec for
+		// the +Owner identifier.  In the future, we may move this to set effective owner
+		// and not allow user creation as a side-effect of setting the Owner attribute.
+		if (not_sock_owner) {
+			auto urec = scheduler.lookup_owner_const(owner);
+			if ( ! urec) {
+				if (allow_submit_from_known_users_only) {
+					dprintf(D_ALWAYS, "SetAttribute(Owner): fail because no User record for %s\n", owner);
+					if (err) {
+						err->pushf("QMGMT",EACCES,"Unknown User %s. Use condor_qusers to add user before submitting jobs.", owner);
+					}
+					errno = EACCES;
+					return -1;
+				} else {
+					// create user a user record for a new submitter
+					// the insert_owner_const will make a pending user record
+					// which we then add to the current transaction by calling MakeUserRec
+					// TODO: set the NTDomain to a reasonable value for this new User rec
+					urec = scheduler.insert_owner_const(owner);
+					if ( ! MakeUserRec(urec, true)) {
+						dprintf(D_ALWAYS, "SetAttribute(Owner): failed to create new User record for %s\n", owner);
+						errno = EACCES;
+						return -1;
+					}
+				}
+			}
 		}
 
 		if (user_is_the_new_owner) {
@@ -6215,7 +6267,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	TemporaryPrivSentry tps( owner != nullptr );
 	if ( owner != nullptr ) {
 		if ( !init_user_ids( owner, nullptr ) ) {
-			dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
+			dprintf( D_ERROR, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
 			return false;
 		}
 		set_user_priv();
@@ -6231,7 +6283,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	X509Credential* proxy_handle = x509_proxy_read( file );
 
 	if ( proxy_handle == nullptr ) {
-		dprintf( D_FAILURE, "Failed to read job proxy: %s\n",
+		dprintf( D_ERROR, "Failed to read job proxy: %s\n",
 				 x509_error_string() );
 		return false;
 	}
@@ -6277,7 +6329,7 @@ static bool MakeUserRec(JobQueueKey & key,
 	const char * ntdomain=nullptr,
 	bool enabled=true)
 {
-	bool rval = JobQueue->NewClassAd(key, OWNER_ADTYPE, "") &&
+	bool rval = JobQueue->NewClassAd(key, OWNER_ADTYPE) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_USER, user) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_OWNER, owner) &&
 		( ! ntdomain || 0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_NT_DOMAIN, ntdomain)) &&
@@ -9707,7 +9759,7 @@ bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName)
 		BeginTransaction();
 	}
 
-	bool rval = JobQueue->NewClassAd(key, JOB_SET_ADTYPE, JOB_SET_ADTYPE) &&
+	bool rval = JobQueue->NewClassAd(key, JOB_SET_ADTYPE) &&
 		0 == SetSecureAttributeInt(key.cluster, key.proc, ATTR_JOB_SET_ID, setId) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_JOB_SET_NAME, setName) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, attr_JobUser.c_str(), ownerinfoName)

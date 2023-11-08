@@ -340,18 +340,47 @@ VanillaProc::StartJob()
 
 		int64_t memory = 0;
 		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
-			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aboring\n");
+			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aborting\n");
 			ASSERT(false);
 		}
-		fi.cgroup_memory_limit = 0;
+		fi.cgroup_memory_limit = 0; // meaning no limit
 
 		// Need to set this in the unlikely case that we get OOM killed without
 		// setting cgroup memory limits
 		m_memory_limit = memory * 1024 * 1024;
+
 		std::string policy;
 		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "hard");
 		if (policy == "hard") {
 			fi.cgroup_memory_limit = (uint64_t) memory * 1024 * 1024;
+		}
+
+		if (policy == "custom") {
+			long long hard_value = 0;
+			const bool use_default = false;
+			const long long default_value = 0;
+			const bool check_ranges = false;
+			const long long min_value = std::numeric_limits<long long>::min();
+			const long long max_value = std::numeric_limits<long long>::max();
+
+			if  (param_longlong( "CGROUP_HARD_MEMORY_LIMIT_EXPR", hard_value,
+					use_default, 
+					default_value,
+					check_ranges,
+					min_value,
+					max_value,
+					Starter->jic->machClassAd(),
+					JobAd)) {
+				fi.cgroup_memory_limit = (uint64_t) hard_value * 1024 * 1024;
+			} else {
+				dprintf(D_ALWAYS, "CGROUP_HARD_MEMORY_LIMIT_EXPR did not evalute to numeric, ignoring\n");
+			}
+		}
+
+		// if DISABLE_SWAP_FOR_JOB is true, set swap limit to memory (meaning no swap) 
+		bool disable_swap = param_boolean("DISABLE_SWAP_FOR_JOB", false);
+		if (disable_swap && fi.cgroup_memory_limit > 0) {
+			fi.cgroup_memory_and_swap_limit = fi.cgroup_memory_limit;
 		}
 
 		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job with %d cpu weight and memory limit of %lu (slot memory is %ld).\n", cgroup, fi.cgroup_cpu_shares, fi.cgroup_memory_limit, memory);
@@ -413,7 +442,7 @@ VanillaProc::StartJob()
                        {
                            TemporaryPrivSentry sentry(PRIV_ROOT);
                            if( mkdir(full_dir_str.c_str(), S_IRWXU) < 0 ) {
-                               dprintf( D_FAILURE|D_ALWAYS,
+                               dprintf( D_ERROR,
                                    "Failed to create sandbox directory in chroot (%s): %s\n",
                                    full_dir_str.c_str(),
                                    strerror(errno) );
@@ -592,7 +621,6 @@ VanillaProc::StartJob()
 			}
 
 			Starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
-			this->m_pid_ns_status_filename = filename;
 			
 			// Now, set the job's CMD to the wrapper, and shift
 			// over the arguments by one
@@ -601,6 +629,12 @@ VanillaProc::StartJob()
 			std::string cmd;
 
 			JobAd->LookupString(ATTR_JOB_CMD, cmd);
+
+			this->canonicalizeJobPath(cmd, Starter->jic->jobRemoteIWD());
+
+			// Must set this *after* calling canonicalizeJobPath!
+			this->m_pid_ns_status_filename = filename;
+
 			args.AppendArg(cmd);
 			if (!args.AppendArgsFromClassAd(JobAd, arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
@@ -921,11 +955,13 @@ VanillaProc::JobReaper(int pid, int status)
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
 	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
+#ifdef LINUX
 	if (status & DC_STATUS_OOM_KILLED) {
 		// Will put the job on hold
 		this->outOfMemoryEvent();
 		status &= ~DC_STATUS_OOM_KILLED;
 	} 
+#endif
 	
 	//
 	//

@@ -177,7 +177,7 @@ int cleanUpOldLogFiles(int maxNum) {
 			// and don't try and delete more files than we initially thought there were.
 			delete_attempts += 1;
 			if (delete_attempts > MIN(initial_count, 10)) {
-				dprintf(D_ALWAYS | D_FAILURE, "Giving up on rotation cleanup of old files after %d attempts. Something is very wrong!\n", delete_attempts);
+				dprintf(D_ERROR, "Giving up on rotation cleanup of old files after %d attempts. Something is very wrong!\n", delete_attempts);
 				break;
 			}
 		}

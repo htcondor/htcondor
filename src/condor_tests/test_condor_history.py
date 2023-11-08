@@ -30,6 +30,7 @@ from ornithology import *
 from time import time
 import os
 import sys
+import htcondor
 
 #Custom class to help build job ads for history files
 class HistAdsViaCluster():
@@ -129,7 +130,7 @@ def reconfig(condor, test_name, test_dir, config={}):
     p = condor.run_command(reconfig_cmd)
 #-----------------------------------------------------------------------------------------------
 #Write cluster(s) job history to specified file
-def writeAdToHistory(filename, clusters, ad):
+def writeAdToHistory(filename, clusters, ad, is_schedd=True):
     #If the file exists already then remove it
     if os.path.exists(filename):
         os.remove(filename)
@@ -137,6 +138,7 @@ def writeAdToHistory(filename, clusters, ad):
     changed_attrs = []
     offset = 0
     fd = open(filename, "a")
+    ad["HistoryType"] = '"SCHEDD"' if is_schedd else '"STARTD"'
     for clust in clusters:
         #Make sure the desired clusters id has not been used yet (per file for now)
         while clust.clusterId in used_clusters:
@@ -249,7 +251,7 @@ def writeHistoryFile(default_condor, test_dir, jobAd):
     #Write clusters info to history files
     for hist in std_hist:
         p = default_condor.run_command(["condor_config_val",hist])
-        writeAdToHistory(p.stdout, clusters, jobAd)
+        writeAdToHistory(p.stdout, clusters, jobAd, hist=="HISTORY")
     return ""
 
 #-----------------------------------------------------------------------------------------------
@@ -411,6 +413,17 @@ def testOutputFile(runTests):
     return runTests[2]
 #===============================================================================================
 @action
+def runPyBindings(default_condor):
+    query = {}
+    proj = ["ClusterId", "ProcId", "HistoryType"]
+    const = "ClusterId==4"
+    with default_condor.use_config():
+        #cluster id == 4
+        query["Startd"] = htcondor.Startd().history(const, proj)
+        query["Schedd"] = htcondor.Schedd().history(const, proj)
+    return query
+#===============================================================================================
+@action
 def runErrorCmds(default_condor, test_dir):
     #Creat path to output directory
     out_dir = os.path.join(str(test_dir),OUTPUT_DIR)
@@ -505,6 +518,18 @@ class TestCondorHistory:
                     print(f"\nERROR: {testName} output from '{testInfo.cmd}' is missing job ids ({missing}).")
                     passed = False
         assert passed == True
+
+    def test_python_bindings(self, runPyBindings):
+        for test,ads in runPyBindings.items():
+            proc_count = 0
+            type_match = "SCHEDD" if test.startswith("Schedd") else "STARTD"
+            for ad in ads:
+                assert ad.get("HistoryType", "UNKNOWN") == type_match
+                assert ad.get("ClusterId", -1) == 4
+                assert ad.get("ProcId") is not None
+                proc_count += 1
+            assert proc_count == 2
+
     def test_history_errors(self, runFailed):
         error_found = False
         #Open output file and check for given error message

@@ -215,7 +215,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+							 (CallbackType)&BaseJob::SetEvaluateState, this );
 
 	jobAd->LookupString( ATTR_SCITOKENS_FILE, m_tokenFile );
 
@@ -313,7 +313,7 @@ ArcJob::ArcJob( ClassAd *classad )
 ArcJob::~ArcJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (CallbackType)&BaseJob::SetEvaluateState, this );
 	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
@@ -338,7 +338,7 @@ void ArcJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-void ArcJob::doEvaluateState()
+void ArcJob::doEvaluateState( int /* timerID */ )
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
@@ -759,8 +759,8 @@ void ArcJob::doEvaluateState()
 				// Assume it's always a normal exit.
 				jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 				jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
-				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60.0 );
-				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60.0 );
+				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock );
+				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu );
 				gmState = GM_STAGE_OUT;
 			} else {
 				if ( info_ad.LookupString("Error", val) ) {
