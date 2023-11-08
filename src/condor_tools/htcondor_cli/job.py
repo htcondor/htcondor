@@ -77,8 +77,7 @@ class Submit(Verb):
                 if htcondor.param.get("HPC_ANNEX_ENABLED", False):
                     submit_description["MY.TargetAnnexName"] = f'"{annex_name}"'
                 else:
-                    raise ValueError(
-                        "HPC Annex functionality has not been enabled by your HTCondor administrator.")
+                    raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
 
             # The Job class can only submit a single job at a time
             submit_qargs = submit_description.getQArgs()
@@ -91,16 +90,14 @@ class Submit(Verb):
                 if annex_name is None:
                     logger.info(f"Job {cluster_id} was submitted.")
                 else:
-                    logger.info(
-                        f"Job {cluster_id} was submitted and will only run on the annex named '{annex_name}'.")
+                    logger.info(f"Job {cluster_id} was submitted and will only run on the annex named '{annex_name}'.")
             except Exception as e:
                 raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
         elif options["resource"].casefold() == "slurm":
 
             if options["runtime"] is None:
-                raise TypeError(
-                    "Slurm resources must specify a runtime argument")
+                raise TypeError("Slurm resources must specify a runtime argument")
 
             # Check if bosco is setup to provide Slurm access
             is_bosco_setup = False
@@ -113,33 +110,24 @@ class Submit(Verb):
                 logger.info(
                     f"Your CHTC Slurm account needs to be configured before you can run jobs on it.")
             except Exception as e:
-                raise RuntimeError(
-                    f"Could not execute {check_bosco_cmd}:\n{str(e)}")
+                raise RuntimeError(f"Could not execute {check_bosco_cmd}:\n{str(e)}")
 
             if is_bosco_setup is False:
                 try:
-                    logger.info(
-                        f"Please enter your Slurm account password when prompted.")
+                    logger.info(f"Please enter your Slurm account password when prompted.")
                     setup_bosco_cmd = "condor_remote_cluster --add hpclogin1.chtc.wisc.edu slurm"
-                    subprocess.check_output(
-                        shlex.split(setup_bosco_cmd), timeout=60)
+                    subprocess.check_output(shlex.split(setup_bosco_cmd), timeout=60)
                 except Exception as e:
                     logger.info(f"Failed to configure Slurm account access.")
-                    logger.info(
-                        f"If you do not already have a CHTC Slurm account, please request this at htcondor-inf@cs.wisc.edu")
-                    logger.info(
-                        f"\nYou can also try to configure your account manually using the following command:")
-                    logger.info(
-                        f"\ncondor_remote_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
-                    raise RuntimeError(
-                        f"Unable to setup Slurm execution environment")
+                    logger.info(f"If you do not already have a CHTC Slurm account, please request this at htcondor-inf@cs.wisc.edu")
+                    logger.info(f"\nYou can also try to configure your account manually using the following command:")
+                    logger.info(f"\ncondor_remote_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
+                    raise RuntimeError(f"Unable to setup Slurm execution environment")
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
-            DAGMan.write_slurm_dag(
-                submit_file, options["runtime"], options["email"])
+            DAGMan.write_slurm_dag(submit_file, options["runtime"], options["email"])
             os.chdir(TMP_DIR)  # DAG must be submitted from TMP_DIR
-            submit_description = htcondor.Submit.from_dag(
-                str(TMP_DIR / "slurm_submit.dag"))
+            submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
             submit_description["+ResourceType"] = "\"Slurm\""
 
             # The Job class can only submit a single job at a time
@@ -158,8 +146,7 @@ class Submit(Verb):
         elif options["resource"] == "ec2":
 
             if options["runtime"] is None:
-                raise TypeError(
-                    "Error: EC2 resources must specify a --runtime argument")
+                raise TypeError("Error: EC2 resources must specify a --runtime argument")
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
             DAGMan.write_ec2_dag(file, options["runtime"], options["email"])
@@ -222,7 +209,9 @@ class Status(Verb):
                       "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime"]
         try:
             job = schedd.query(constraint=constraint,
-                               projection=projection, limit=1)
+                               projection=projection,
+                               limit=1,
+                               )
         except IndexError:
             raise RuntimeError(f"No job found for ID {job_id}.")
         except Exception as e:
@@ -231,11 +220,9 @@ class Status(Verb):
         # Check the history if no jobs found
         if len(job) == 0 and not options["skip_history"]:
             try:
-                logger.info(
-                    f"Job {job_id} was not found in the active queue, checking history...")
+                logger.info(f"Job {job_id} was not found in the active queue, checking history...")
                 logger.info("(This may take a while, Ctrl-C to cancel.)")
-                job = list(schedd.history(constraint=constraint,
-                           projection=projection, match=1))
+                job = list(schedd.history(constraint=constraint, projection=projection, match=1))
             except KeyboardInterrupt:
                 logger.warning("History check cancelled.")
                 job = []
@@ -264,8 +251,7 @@ class Status(Verb):
                 annex_info = f" on the annex named '{target_annex_name}'"
 
             # Get some common numbers
-            job_queue_time = datetime.now(
-            ) - datetime.fromtimestamp(job_ad["QDate"])
+            job_queue_time = datetime.now() - datetime.fromtimestamp(job_ad["QDate"])
             job_atts = job_ad.get("NumShadowStarts", 0)
             job_execs = job_ad.get("NumJobStarts", 0)
             job_holds = job_ad.get("NumHolds", 0)
@@ -291,60 +277,42 @@ class Status(Verb):
             # Print information relevant to each job status
             if job_status == htcondor.JobStatus.IDLE:
                 logger.info(f"Job {job_id} is currently idle.")
-                logger.info(
-                    f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
-                logger.info(
-                    f"It requested {readable_size(job_ad.eval('RequestMemory')*10**6)} of memory.")
-                logger.info(
-                    f"It requested {readable_size(job_ad.eval('RequestDisk')*10**3)} of disk space.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It requested {readable_size(job_ad.eval('RequestMemory')*10**6)} of memory.")
+                logger.info(f"It requested {readable_size(job_ad.eval('RequestDisk')*10**3)} of disk space.")
                 if job_holds > 0:
-                    logger.info(
-                        f"It has been held {job_holds} time{s(job_holds)}.")
+                    logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
                 if job_atts > 0:
-                    logger.info(
-                        f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
-                    logger.info(
-                        f"The job has started {job_execs} time{s(job_execs)}.")
+                    logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
+                    logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
                 if goodput is not None:
                     logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.RUNNING:
-                job_running_time = datetime.now(
-                ) - datetime.fromtimestamp(job_ad["JobStartDate"])
+                job_running_time = datetime.now() - datetime.fromtimestamp(job_ad["JobStartDate"])
                 logger.info(f"Job {job_id} is currently running{annex_info}.")
-                logger.info(
-                    f"It started running {readable_time(job_running_time.seconds)} ago.")
-                logger.info(
-                    f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It started running {readable_time(job_running_time.seconds)} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
                 if memory_usage:
                     logger.info(f"Its current memory usage is {memory_usage}.")
                 if disk_usage:
                     logger.info(f"Its current disk usage is {disk_usage}.")
                 if job_suspends > 0:
-                    logger.info(
-                        f"It has been suspended {job_suspends} time{s(job_suspends)}.")
+                    logger.info(f"It has been suspended {job_suspends} time{s(job_suspends)}.")
                 if job_holds > 0:
-                    logger.info(
-                        f"It has been held {job_holds} time{s(job_holds)}.")
+                    logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
                 if job_atts > 1:
-                    logger.info(
-                        f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
-                    logger.info(
-                        f"The job has started {job_execs} time{s(job_execs)}.")
+                    logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
+                    logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
                 if goodput is not None:
                     logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.SUSPENDED:
-                job_suspended_time = datetime.now(
-                ) - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
-                logger.info(
-                    f"Job {job_id} is currently suspended{annex_info}.")
-                logger.info(
-                    f"It has been suspended for {readable_time(job_suspended_time.seconds)}.")
-                logger.info(
-                    f"It has been suspended {job_suspends} time{s(job_suspends)}.")
-                logger.info(
-                    f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                job_suspended_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
+                logger.info(f"Job {job_id} is currently suspended{annex_info}.")
+                logger.info(f"It has been suspended for {readable_time(job_suspended_time.seconds)}.")
+                logger.info(f"It has been suspended {job_suspends} time{s(job_suspends)}.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
                 if memory_usage:
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
@@ -353,12 +321,9 @@ class Status(Verb):
                     logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.TRANSFERRING_OUTPUT:
-                job_transfer_time = datetime.now(
-                ) - datetime.fromtimestamp(job_ad["JobCurrentStartTransferOutputDate"])
-                logger.info(
-                    f"Job {job_id} is currently transferring output{annex_info}.")
-                logger.info(
-                    f"It started transferring output {readable_time(job_transfer_time.seconds)} ago.")
+                job_transfer_time = datetime.now() - datetime.fromtimestamp(job_ad["JobCurrentStartTransferOutputDate"])
+                logger.info(f"Job {job_id} is currently transferring output{annex_info}.")
+                logger.info(f"It started transferring output {readable_time(job_transfer_time.seconds)} ago.")
                 if memory_usage:
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
@@ -367,21 +332,15 @@ class Status(Verb):
                     logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.HELD:
-                job_held_time = datetime.now(
-                ) - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
+                job_held_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
                 logger.info(f"Job {job_id} is currently held.")
-                logger.info(
-                    f"It has been held for {readable_time(job_held_time.seconds)}.")
-                logger.info(
-                    f"""It was held because "{job_ad['HoldReason']}".""")
-                logger.info(
-                    f"It has been held {job_holds} time{s(job_holds)}.")
-                logger.info(
-                    f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It has been held for {readable_time(job_held_time.seconds)}.")
+                logger.info(f"""It was held because "{job_ad['HoldReason']}".""")
+                logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
                 if job_execs >= 1:
                     if memory_usage:
-                        logger.info(
-                            f"Its last memory usage was {memory_usage}.")
+                        logger.info(f"Its last memory usage was {memory_usage}.")
                     if disk_usage:
                         logger.info(f"Its last disk usage was {disk_usage}.")
                 if job_atts >= 1:
@@ -393,13 +352,10 @@ class Status(Verb):
                     logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.REMOVED:
-                job_removed_time = datetime.now(
-                ) - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
+                job_removed_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
                 logger.info(f"Job {job_id} was removed.")
-                logger.info(
-                    f"It was removed {readable_time(job_removed_time.seconds)} ago.")
-                logger.info(
-                    f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It was removed {readable_time(job_removed_time.seconds)} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
                 if memory_usage:
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
@@ -408,13 +364,10 @@ class Status(Verb):
                     logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.COMPLETED:
-                job_completed_time = datetime.now(
-                ) - datetime.fromtimestamp(job_ad["CompletionDate"])
+                job_completed_time = datetime.now() - datetime.fromtimestamp(job_ad["CompletionDate"])
                 logger.info(f"Job {job_id} has completed.")
-                logger.info(
-                    f"It completed {readable_time(job_completed_time.seconds)} ago.")
-                logger.info(
-                    f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It completed {readable_time(job_completed_time.seconds)} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
                 if memory_usage:
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
@@ -423,8 +376,7 @@ class Status(Verb):
                     logger.info(f"Goodput is {goodput:.1f} hours.")
 
             else:
-                logger.info(
-                    f"Job {job_id} is in an unknown state (JobStatus = {job_status}).")
+                logger.info(f"Job {job_id} is in an unknown state (JobStatus = {job_status}).")
 
         # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log
@@ -442,8 +394,7 @@ class Status(Verb):
             dagman_dag, dagman_out, dagman_log = DAGMan.get_files(job_id)
 
             if dagman_dag is None:
-                raise RuntimeError(
-                    f"No {resource_type} job found for ID {job_id}.")
+                raise RuntimeError(f"No {resource_type} job found for ID {job_id}.")
 
             # Parse the .dag file to retrieve some user input values
             with open(dagman_dag, "r") as dagman_dag_file:
@@ -456,8 +407,7 @@ class Status(Verb):
             for event in dagman_events.events(0):
                 if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: B":
                     provisioner_cluster_id = event.cluster
-                    provisioner_job_submitted_time = datetime.fromtimestamp(
-                        event.timestamp)
+                    provisioner_job_submitted_time = datetime.fromtimestamp(event.timestamp)
                     job_status = "PROVISIONING REQUEST PENDING"
                 elif "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: C":
                     slurm_cluster_id = event.cluster
@@ -465,8 +415,7 @@ class Status(Verb):
                     job_status = "RUNNING"
                     jobs_running += 1
                     if job_started_time is None:
-                        job_started_time = datetime.fromtimestamp(
-                            event.timestamp)
+                        job_started_time = datetime.fromtimestamp(event.timestamp)
                 elif event.cluster == slurm_cluster_id and event.type == htcondor.JobEventType.JOB_TERMINATED:
                     jobs_running -= 1
                     if jobs_running == 0:
@@ -487,8 +436,7 @@ class Status(Verb):
                 logger.info("Job has completed")
             else:
                 if job_status == "PROVISIONING REQUEST PENDING":
-                    logger.info(
-                        f"Job is waiting for {resource_type.upper()} to provision pending request", end='')
+                    logger.info(f"Job is waiting for {resource_type.upper()} to provision pending request", end='')
                 else:
                     info_str = f"Job is {job_status}"
                     if time_diff is not None:
@@ -496,8 +444,7 @@ class Status(Verb):
                     logger.info(info_str)
 
         else:
-            raise ValueError(
-                f"Error: The 'job status' command does not support {resource_type} resources.")
+            raise ValueError(f"Error: The 'job status' command does not support {resource_type} resources.")
 
 
 class Resources(Verb):
@@ -527,8 +474,7 @@ class Resources(Verb):
             try:
                 job = schedd.query(
                     constraint=f"ClusterId == {job_id}",
-                    projection=["RemoteHost", "TargetAnnexName",
-                                "MachineAttrAnnexName0"]
+                    projection=["RemoteHost", "TargetAnnexName", "MachineAttrAnnexName0"]
                 )
             except IndexError:
                 raise RuntimeError(f"No jobs found for ID {job_id}.")
@@ -547,8 +493,7 @@ class Resources(Verb):
             machine_annex = job[0].get("MachineAttrAnnexName0", None)
             if target_annex is not None and machine_annex is not None and target_annex == machine_annex:
                 pretty_job_host = job_host.split('@')[1]
-                logger.info(
-                    f"Job is using annex '{target_annex}', node {pretty_job_host}.")
+                logger.info(f"Job is using annex '{target_annex}', node {pretty_job_host}.")
             else:
                 logger.info(f"Job is using resource {job_host}")
 
@@ -586,16 +531,12 @@ class Resources(Verb):
             for event in dagman_events.events(0):
                 if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: B":
                     provisioner_cluster_id = event.cluster
-                    provisioner_job_submitted_time = datetime.fromtimestamp(
-                        event.timestamp)
-                    provisioner_job_scheduled_end_time = datetime.fromtimestamp(
-                        event.timestamp + slurm_runtime)
+                    provisioner_job_submitted_time = datetime.fromtimestamp(event.timestamp)
+                    provisioner_job_scheduled_end_time = datetime.fromtimestamp(event.timestamp + slurm_runtime)
                     job_status = "PROVISIONING REQUEST PENDING"
                 if event.cluster == provisioner_cluster_id and event.type == htcondor.JobEventType.EXECUTE:
-                    provisioner_job_started_time = datetime.fromtimestamp(
-                        event.timestamp)
-                    provisioner_job_scheduled_end_time = datetime.fromtimestamp(
-                        event.timestamp + slurm_runtime)
+                    provisioner_job_started_time = datetime.fromtimestamp(event.timestamp)
+                    provisioner_job_scheduled_end_time = datetime.fromtimestamp(event.timestamp + slurm_runtime)
                 if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: C":
                     slurm_cluster_id = event.cluster
                     job_started_time = datetime.fromtimestamp(event.timestamp)
@@ -611,11 +552,9 @@ class Resources(Verb):
 
             # Now that we have all the information we want, display it
             if job_status == "PROVISIONING REQUEST PENDING":
-                logger.info(
-                    f"Job is still waiting for {slurm_nodes_requested} Slurm nodes to provision")
+                logger.info(f"Job is still waiting for {slurm_nodes_requested} Slurm nodes to provision")
             elif job_status == "RUNNING":
-                logger.info(
-                    f"Job is running on {jobs_running}/{slurm_nodes_requested} requested Slurm nodes")
+                logger.info(f"Job is running on {jobs_running}/{slurm_nodes_requested} requested Slurm nodes")
             elif job_status == "ERROR":
                 logger.info(f"An error occurred provisioning Slurm resources")
 
@@ -624,12 +563,10 @@ class Resources(Verb):
                 current_time = datetime.now()
                 if current_time < provisioner_job_scheduled_end_time:
                     time_diff = provisioner_job_scheduled_end_time - current_time
-                    logger.info(
-                        f"Slurm resources are reserved for another {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+                    logger.info(f"Slurm resources are reserved for another {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
                 else:
                     time_diff = current_time - provisioner_job_scheduled_end_time
-                    logger.info(
-                        f"Slurm resources were terminated since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+                    logger.info(f"Slurm resources were terminated since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
 
 
 class Job(Noun):
