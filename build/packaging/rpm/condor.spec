@@ -194,7 +194,7 @@ Requires: systemd-libs
 Requires: rsync
 
 # Support OSDF client
-Requires: condor-stash-plugin
+Requires: pelican-osdf-compat >= 7.1.4
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
