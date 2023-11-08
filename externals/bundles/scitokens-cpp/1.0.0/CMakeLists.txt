@@ -48,8 +48,8 @@ if (WITH_SCITOKENS)
 		# This runs the wget at cmake time, runs the cmake in the tarball, and sets a bunch of scitokens_ variables
 		FetchContent_declare(
 			scitokens
-			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-1.0.2.tar.gz
-			URL_HASH MD5=46169eaaade449afb97f9e7c6a950191
+			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-1.1.0.tar.gz
+			URL_HASH MD5=1a100245a9df405f34dea9e40401229e
 		)
 
 		# Check if population has already been performed
