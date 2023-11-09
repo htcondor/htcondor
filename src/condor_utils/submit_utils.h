@@ -503,7 +503,19 @@ public:
 	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL) const;
 	std::string submit_param_string( const char * name, const char * alt_name ) const;
 	char * expand_macro(const char* value) const { return ::expand_macro(value, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
-	const char * lookup(const char* name) const { return lookup_macro(name, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
+
+	const char * lookup(const char* name) const {
+		return lookup_macro( name,
+		    const_cast<MACRO_SET&>(SubmitMacroSet),
+		    const_cast<MACRO_EVAL_CONTEXT&>(mctx)
+		);
+	}
+
+	const char * lookup_no_default(const char * name) const {
+		return lookup_macro_exact_no_default_impl( name,
+		    const_cast<MACRO_SET&>(SubmitMacroSet)
+		);
+	}
 
 	void set_submit_param( const char* name, const char* value);
 	void set_submit_param_used( const char* name);
