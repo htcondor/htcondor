@@ -161,7 +161,7 @@ class Sinful {
 
 
 	// You must delete the return if it's not NULL.
-	std::vector< condor_sockaddr > * getAddrs() const;
+	const std::vector< condor_sockaddr > & getAddrs() const;
 	void addAddrToAddrs( const condor_sockaddr & sa );
 	void clearAddrs();
 	bool hasAddrs();
