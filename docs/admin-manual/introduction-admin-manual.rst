@@ -46,6 +46,16 @@ machine that is providing that service:
 :index:`central manager`
 :index:`central manager<single: central manager; machine>`
 
+.. sidebar::
+   Central Manager (CM) Diagram
+
+   .. mermaid::
+      :caption: Daemons for Central Manager, both managed by a *condor_master*
+      :align: center
+
+      flowchart TD
+         condor_master --> condor_collector & condor_negotiator
+
 Central Manager
     There can be only one central manager for the pool. This machine is
     the collector of information, and the negotiator between resources
@@ -64,29 +74,11 @@ Central Manager
     the pool, since these pool machines all send updates over the
     network to the central manager.
 
-.. note::
-
-   .. mermaid::
-      :caption: Daemons for Central Manager, both managed by a *condor_master*
-      :align: center
-
-      flowchart TD
-         condor_master --> condor_collector & condor_negotiator
-
 :index:`execute point`
 :index:`execute<single: execute; machine>`
 
-Execution Point
-    Any machine in the pool, including the central manager, can be
-    configured as to whether or not it should execute HTCondor jobs.
-    Obviously, some of the machines will have to serve this function, or
-    the pool will not be useful. Being an execute machine does not
-    require lots of resources. About the only resource that might matter
-    is disk space. In general the more resources a machine has in terms
-    of swap space, memory, number of CPUs, the larger variety of
-    resource requests it can serve.
-
-.. note::
+.. sidebar::
+   Execution Point (EP) Diagram
 
    .. mermaid::
       :caption: Daemons for a Execution Point, one *condor_starter* per running job.
@@ -99,8 +91,34 @@ Execution Point
          condor_starter_for_slot1 --> job_in_slot1
          condor_starter_for_slot2 --> job_in_slot2
 
+Execution Point
+    Any machine in the pool, including the central manager, can be
+    configured as to whether or not it should execute HTCondor jobs.
+    Obviously, some of the machines will have to serve this function, or
+    the pool will not be useful. Being an execute machine does not
+    require lots of resources. About the only resource that might matter
+    is disk space. In general the more resources a machine has in terms
+    of swap space, memory, number of CPUs, the larger variety of
+    resource requests it can serve.
+
+.. Note: The pipe below is a newline to prevent an awful looking page flow
+
+|
+
 :index:`access point`
 :index:`access<single: submit; machine>`
+
+.. sidebar::
+   Access Point (AP) Diagram
+
+   .. mermaid::
+      :caption: Daemons for an Access Point, one *condor_shadow* per running job.
+      :align: center
+
+      flowchart TD
+         condor_master --> condor_schedd
+         condor_schedd --> condor_shadow_for_job1
+         condor_schedd --> condor_shadow_for_job2
 
 Access Point
     Any machine in the pool, including the central manager, can be
@@ -113,18 +131,6 @@ Access Point
     real memory.  HTCondor pools can scale out horizontally by adding
     additional access points.  Older terminology called these submit
     machines or scheduler machine.
-
-.. note::
-
-
-   .. mermaid::
-      :caption: Daemons for an Access Point, one *condor_shadow* per running job.
-      :align: center
-
-      flowchart TD
-         condor_master --> condor_schedd
-         condor_schedd --> condor_shadow_for_job1
-         condor_schedd --> condor_shadow_for_job2
 
 
 The HTCondor Daemons

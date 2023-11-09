@@ -548,6 +548,7 @@ SubmitHash::SubmitHash()
 	, JobDisableFileChecks(false)
 	, SubmitOnHold(false)
 	, SubmitOnHoldCode(0)
+	, s_method(1)
 	, already_warned_requirements_disk(false)
 	, already_warned_requirements_mem(false)
 	, already_warned_job_lease_too_small(false)
@@ -555,7 +556,6 @@ SubmitHash::SubmitHash()
 	, already_warned_require_gpus(false)
 	, UseDefaultResourceParams(true)
 	, InsertDefaultPolicyExprs(false)
-	, s_method(1)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
@@ -2118,7 +2118,6 @@ int SubmitHash::SetPeriodicExpressions()
 	RETURN_IF_ABORT();
 
 	pec.set(submit_param(SUBMIT_KEY_PeriodicRemoveCheck, ATTR_PERIODIC_REMOVE_CHECK));
-
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
@@ -2131,6 +2130,22 @@ int SubmitHash::SetPeriodicExpressions()
 		/* user had a value for it, leave it alone */
 		AssignJobExpr(ATTR_PERIODIC_REMOVE_CHECK, pec);
 	}
+
+	pec.set(submit_param(SUBMIT_KEY_PeriodicVacateCheck, ATTR_PERIODIC_VACATE_CHECK));
+
+	if ( ! pec)
+	{
+		/* user didn't have one, so add one */
+		if ( ! clusterAd && InsertDefaultPolicyExprs  && ! job->Lookup(ATTR_PERIODIC_VACATE_CHECK)) {
+			AssignJobVal(ATTR_PERIODIC_VACATE_CHECK, false);
+		}
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		AssignJobExpr(ATTR_PERIODIC_VACATE_CHECK, pec);
+	}
+
 
 	// OnExitHoldCheck is now handled by SetJobRetries
 
@@ -2264,7 +2279,7 @@ int SubmitHash::ComputeIWD()
 				} else {
 					condor_getcwd( cwd );
 				}
-				formatstr( iwd, "%s%c%s", cwd.c_str(), DIR_DELIM_CHAR, shortname );
+				dircat(cwd.c_str(), shortname, iwd);
 			}
 	} 
 	else {
@@ -5021,6 +5036,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_PeriodicHoldSubCode, ATTR_PERIODIC_HOLD_SUBCODE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
 	{SUBMIT_KEY_PeriodicReleaseCheck, ATTR_PERIODIC_RELEASE_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
 	{SUBMIT_KEY_PeriodicRemoveCheck, ATTR_PERIODIC_REMOVE_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
+	{SUBMIT_KEY_PeriodicVacateCheck, ATTR_PERIODIC_VACATE_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
 	{SUBMIT_KEY_OnExitHoldReason, ATTR_ON_EXIT_HOLD_REASON, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
 	{SUBMIT_KEY_OnExitHoldSubCode, ATTR_ON_EXIT_HOLD_SUBCODE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
 	// invoke SetLeaveInQueue
@@ -7894,7 +7910,13 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	ad->LookupInteger(ATTR_Q_DATE, submit_time);
 	if (ad->LookupString(ATTR_JOB_IWD, JobIwd) && ! JobIwd.empty()) {
 		JobIwdInitialized = true;
-		insert_macro("FACTORY.Iwd", JobIwd.c_str(), SubmitMacroSet, DetectedMacro, ctx);
+		if ( ! this->lookup_exact("FACTORY.Iwd")) {
+			// the submit digest *should* always have a FACTORY.Iwd. but in case it does not
+			// inject the IWD of the cluster ad as the factory IWD.
+			// That this will only work correctly in cases where the submit file is not
+			// varying the IWD per-job, but it's better than using the CWD of the schedd...
+			insert_macro("FACTORY.Iwd", JobIwd.c_str(), SubmitMacroSet, DetectedMacro, ctx);
+		}
 	}
 
 	this->clusterAd = ad;

@@ -70,8 +70,7 @@ Options
     As a default, causes no warnings to be issued about user-defined
     macros not being used within the submit description file. The
     meaning reverses (toggles) when the configuration variable
-    ``WARN_ON_UNUSED_SUBMIT_FILE_MACROS``
-    :index:`WARN_ON_UNUSED_SUBMIT_FILE_MACROS` is set to the non
+    :macro:`WARN_ON_UNUSED_SUBMIT_FILE_MACROS` is set to the non
     default value of ``False``. Printing the warnings can help identify
     spelling errors of submit description file commands. The warnings
     are sent to stderr.
@@ -572,9 +571,8 @@ BASIC COMMANDS
 
         job-owner@UID_DOMAIN
 
-    where the configuration variable ``UID_DOMAIN``
-    :index:`UID_DOMAIN` is specified by the HTCondor site
-    administrator. If ``UID_DOMAIN`` :index:`UID_DOMAIN` has not
+    where the configuration variable  :macro:`UID_DOMAIN` is specified by
+    the HTCondor site administrator. If :macro:`UID_DOMAIN` has not
     been specified, HTCondor sends the e-mail to:
 
     .. code-block:: text
@@ -695,8 +693,7 @@ BASIC COMMANDS
     HTCondor universe specifies an HTCondor execution environment.
 
     The **vanilla** universe is the default (except where the
-    configuration variable ``DEFAULT_UNIVERSE``
-    :index:`DEFAULT_UNIVERSE` defines it otherwise).
+    configuration variable :macro:`DEFAULT_UNIVERSE` defines it otherwise).
 
     The **scheduler** universe is for a job that is to run on the
     machine where the job is submitted. This universe is intended for a
@@ -998,7 +995,7 @@ FILE TRANSFER COMMANDS
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not defined, the value set by configuration variable
-    ``MAX_TRANSFER_INPUT_MB`` :index:`MAX_TRANSFER_INPUT_MB` is
+    :macro:`MAX_TRANSFER_INPUT_MB` is
     used. If the observed size of all input files at submit time is
     larger than the limit, the job will be immediately placed on hold
     with a ``HoldReasonCode`` value of 32. If the job passes this
@@ -1013,7 +1010,7 @@ FILE TRANSFER COMMANDS
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the value set by configuration variable
-    ``MAX_TRANSFER_OUTPUT_MB`` :index:`MAX_TRANSFER_OUTPUT_MB` is
+    :macro:`MAX_TRANSFER_OUTPUT_MB` is
     used. If the total size of the job's output files to be transferred
     is larger than the limit, the job will be placed on hold with a
     ``HoldReasonCode`` value of 33. The output will be transferred up to
@@ -1494,8 +1491,7 @@ POLICY COMMANDS
     This expression specifies the number of seconds to delay after
     starting up this job before the next job is started. The maximum
     allowed delay is specified by the HTCondor configuration variable
-    ``MAX_NEXT_JOB_START_DELAY``
-    :index:`MAX_NEXT_JOB_START_DELAY`, which defaults to 10
+    :macro:`MAX_NEXT_JOB_START_DELAY`, which defaults to 10
     minutes. This command does not apply to **scheduler** or **local**
     universe jobs.
 
@@ -1658,6 +1654,19 @@ POLICY COMMANDS
     ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
     configuration macros.
 
+    :index:`periodic_vacate<single: periodic_vacate; submit commands>`
+ periodic_vacate = <ClassAd Boolean Expression>
+    This expression is checked periodically for running jobs. If it becomes ``True``, 
+    job is evicted from the machine it is running on, and return to the queue,
+    in an Idle state. If unspecified, the default value is ``False``.
+
+    Only job ClassAd attributes will be defined for use by this ClassAd
+    expression. Note that, by default, this expression is only checked
+    once every 60 seconds. The period of these evaluations can be
+    adjusted by setting the ``PERIODIC_EXPR_INTERVAL``,
+    ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
+    configuration macros.
+
 COMMANDS FOR THE GRID
 
  :subcom-def:`arc_application` = <XML-string>
@@ -1748,15 +1757,13 @@ COMMANDS FOR THE GRID
     Specifies the maximum number of seconds for which delegated proxies
     should be valid. The default behavior when this command is not
     specified is determined by the configuration variable
-    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`, which defaults
+    :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`, which defaults
     to one day. A value of 0 indicates that the delegated proxy should
     be valid for as long as allowed by the credential used to create the
     proxy. This setting currently only applies to proxies delegated for
     non-grid jobs and for HTCondor-C jobs.
     This variable has no effect if the configuration variable
-    ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False``, because in
+    :macro:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False``, because in
     that case the job proxy is copied rather than delegated.
 
  :subcom-def:`ec2_access_key_id` = <pathname>
@@ -2407,8 +2414,7 @@ ADVANCED COMMANDS
     A comma and/or space separated list of machine attribute names that
     should be recorded in the job ClassAd in addition to the ones
     specified by the *condor_schedd* daemon's system configuration
-    variable ``SYSTEM_JOB_MACHINE_ATTRS``
-    :index:`SYSTEM_JOB_MACHINE_ATTRS`. When there are multiple run
+    variable :macro:`SYSTEM_JOB_MACHINE_ATTRS`. When there are multiple run
     attempts, history of machine attributes from previous run attempts
     may be kept. The number of run attempts to store may be extended
     beyond the system-specified history length by using the submit file
@@ -2434,7 +2440,7 @@ ADVANCED COMMANDS
     removed.  The job will be given as much time as the administrator
     of the execute resource allows, which may be none.  The default is
     ``false``.  For details, see the configuration setting
-    :ref:`GRACEFULLY_REMOVE_JOBS<GRACEFULLY_REMOVE_JOBS>`.
+    :macro:`GRACEFULLY_REMOVE_JOBS`.
 
  :subcom-def:`kill_sig` = <signal-number>
     When HTCondor needs to kick a job off of a machine, it will send the
@@ -2547,7 +2553,7 @@ ADVANCED COMMANDS
     time granted to the job.
 
     Any jobs running with
-    :subcom:`nice_user<and retirement_time>` priority have a default
+    :subcom:`nice_user[and retirement_time]` priority have a default
     **max_job_retirement_time**
     of 0, so no retirement time is utilized by default. In all other
     cases, no default value is provided, so the maximum amount of
@@ -2862,7 +2868,7 @@ and comments.
 
         $$(DOLLARDOLLAR)
 
-    :index:`in submit description file<single: in submit description file; $ENV>`
+    :index:`in submit description file<single: in submit description file; ENV>`
     :index:`in submit description file<single: in submit description file; environment variables>`
 
     The environment macro, $ENV, allows the evaluation of an environment
@@ -2883,9 +2889,7 @@ and comments.
 
     The environment variable is evaluated when the submit description
     file is processed.
-    :index:`in submit description file<single: in submit description file; $RANDOM_CHOICE()>`
-    :index:`$RANDOM_CHOICE() macro<single: $RANDOM_CHOICE() macro; submit commands>`
-    :index:`use in submit description file<single: use in submit description file; RANDOM_CHOICE() macro>`
+    :index:`RANDOM_CHOICE<single: RANDOM_CHOICE; in submit file>`
 
     The $RANDOM_CHOICE macro allows a random choice to be made from a
     given list of parameters at submission time. For an expression, if
@@ -2939,7 +2943,7 @@ will not be modified during :subcom:`queue` processing.
  Step
     Set to the step value as it varies from 0 to N-1 where N is the
     number provided on the
-    :subcom:`queue<and step argument>` argument. This
+    :subcom:`queue[and step argument]` argument. This
     variable changes at the same rate as ProcId when it changes at all.
     For submit files that don't make use of the queue number option,
     Step will always be 0. For submit files that don't make use of any

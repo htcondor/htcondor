@@ -4,6 +4,7 @@
 #include "../condor_utils/condor_url.h"
 #include "multifile_curl_plugin.h"
 #include "utc_time.h"
+#include "fcloser.h"
 #include <algorithm>
 #include <exception>
 #include <sstream>
@@ -979,7 +980,7 @@ MultiFileCurlPlugin::ParseAds() {
         // default limits; machine ad is optional.
     const char *machine_ad_env = getenv("_CONDOR_MACHINE_AD");
 
-    std::unique_ptr<FILE,decltype(&fclose)> fp(nullptr, fclose);
+    std::unique_ptr<FILE,fcloser> fp(nullptr);
     fp.reset(safe_fopen_wrapper(job_ad_env, "r"));
     if (!fp) {
         return;

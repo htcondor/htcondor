@@ -77,7 +77,7 @@ The corresponding submit description file might look like the following
 
 The standard output for this job will go to the file
 ``outputfile``, as specified by the
-:subcom:`output<example>` command. Likewise,
+:subcom:`output[example]` command. Likewise,
 the standard error output will go to  :subcom:`errorfile`. 
 
 HTCondor will append events about the job to a log file with the 
@@ -144,7 +144,7 @@ Submitting many similar jobs with one queue command
 ---------------------------------------------------
 
 A wide variety of job submissions can be specified with extra
-information to the :subcom:`queue<example>`
+information to the :subcom:`queue[example]`
 submit command. This flexibility eliminates the need for a job wrapper
 or Perl script for many submissions.
 
@@ -667,7 +667,7 @@ as given in these definitions.
        ``.exe`` extension).
     -  ``x`` refers to a file name extension, with the associated period
        (``.``). As an example, the return value from
-       ``$Fn(/tmp/simulate.exe)`` will be ``.exe``.
+       ``$Fx(/tmp/simulate.exe)`` will be ``.exe``.
     -  ``b`` when combined with the d option, causes the trailing slash
        or backslash to be omitted. When combined with the x option,
        causes the leading period (``.``) to be omitted.
@@ -687,7 +687,7 @@ as given in these definitions.
     specified, "%d" is used as the format specifier.
 
 ``$RANDOM_CHOICE(choice1, choice2, choice3, ...)``
-    :index:`$RANDOM_CHOICE() function macro` A random choice
+    :index:`RANDOM_CHOICE` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
@@ -775,7 +775,7 @@ leading to files defined for **input** of ``X.000``, ``X.010``,
 **Example 3**
 
 This example uses both the file globbing of the
-:subcom:`queue<example with glob>` command and a macro
+:subcom:`queue[example with glob]` command and a macro
 function to specify a job input file that is within a subdirectory on
 the submit host, but will be placed into a single, flat directory on the
 execute host.
@@ -802,7 +802,7 @@ such that the command line argument for one of the jobs will be
 About Requirements and Rank
 ---------------------------
 
-The :subcom:`requirements` and :subcom:`rank<example>` commands in the submit description
+The :subcom:`requirements` and :subcom:`rank[example]` commands in the submit description
 file are powerful and flexible. Using them effectively requires
 care, and this section presents those details.
 
@@ -824,8 +824,8 @@ Note that the comparison operators (<, >, <=, >=, and ==) compare
 strings case insensitively. The special comparison operators =?= and =!=
 compare strings case sensitively.
 
-A :subcom:`requirements<example>` or
-:subcom:`rank<example>` command in the submit
+A :subcom:`requirements[example]` or
+:subcom:`rank[example]` command in the submit
 description file may utilize attributes that appear in a machine or a
 job ClassAd. Within the submit description file (for a job) the prefix
 MY. (on a ClassAd attribute name) causes a reference to the job ClassAd
@@ -1284,12 +1284,12 @@ A submit description file may be specified for this interactive job.
 Within this submit description file, a specification of these 5 commands
 will be either ignored or altered:
 
-#. :subcom:`executable<interactive job>`
-#. :subcom:`transfer_executable<interactive job>`
-#. :subcom:`arguments<interactive job>`
-#. :subcom:`universe<interactive job>`. The
+#. :subcom:`executable[interactive job]`
+#. :subcom:`transfer_executable[interactive job]`
+#. :subcom:`arguments[interactive job]`
+#. :subcom:`universe[interactive job]`. The
    interactive job is a vanilla universe job.
-#. :subcom:`queue<interactive job>` **<n>**. In this
+#. :subcom:`queue[interactive job]` **<n>**. In this
    case the value of **<n>** is ignored; exactly one interactive job is
    queued.
 

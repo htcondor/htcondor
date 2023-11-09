@@ -855,14 +855,25 @@ if [ -z "${release_url}" ]; then
             echo "Failed to detect remote host's platform."
             exit 1;
         fi
+        # EL7 support was dropped for 23.x. Use 23.0 binaries instead
+        if [ "${platform}" == "x86_64_CentOS7" ] ; then
+            use_lts=1
+        fi
     fi
 
-    release_url="${url_base}${series}/${version}/release/condor-${version}-${platform}-stripped.tar.gz"
-    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" -e "UW_development" ; then
-        daily_url="${url_base}${series}/${version}/daily/condor-${version}-${platform}-stripped.tar.gz"
-    fi
-    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " -e "UW_development" ; then
-        rc_url="${url_base}${series}/${version}/rc/condor-${version}-${platform}-stripped.tar.gz"
+    if [ -z "${use_lts}" ] ; then
+        # Use binaries that match our exact HTCondor version
+        release_url="${url_base}${series}/${version}/release/condor-${version}-${platform}-stripped.tar.gz"
+        if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" -e "UW_development" ; then
+            daily_url="${url_base}${series}/${version}/daily/condor-${version}-${platform}-stripped.tar.gz"
+        fi
+        if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " -e "UW_development" ; then
+            rc_url="${url_base}${series}/${version}/rc/condor-${version}-${platform}-stripped.tar.gz"
+        fi
+    else
+        # This platform is no longer supported in the feature series.
+        # Use the latest LTS release instead.
+        release_url="${url_base}23.0/current/condor-${platform}-stripped.tar.gz"
     fi
 fi
 

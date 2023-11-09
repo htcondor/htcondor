@@ -16,15 +16,15 @@ universes:
 -  container
 -  docker
 
-The :subcom:`universe<choosing>` under which
+The :subcom:`universe[choosing]` under which
 a job runs is specified in the submit description file. If a universe is
 not specified, the default is vanilla.
 
 :index:`vanilla<single: vanilla; universe>` The vanilla universe is a good
 default, for it has the fewest restrictions on the job.
-:index:`Grid<single: Grid; universe>` The grid universe allows users to submit
+:index:`grid<single: Grid; universe>` The grid universe allows users to submit
 jobs using HTCondor's interface. These jobs are submitted for execution
-on grid resources. :index:`java<single: java; universe>` :index:`Java`
+on grid resources. :index:`java<single: java; universe>`
 :index:`Java Virtual Machine` :index:`JVM` The java
 universe allows users to run jobs written for the Java Virtual Machine
 (JVM). The scheduler universe allows users to submit lightweight jobs to
@@ -58,7 +58,7 @@ and transfer the output back to the submitting machine.
 Grid Universe
 '''''''''''''
 
-:index:`Grid<single: Grid; universe>`
+:index:`Grid<single: grid; universe>`
 
 The Grid universe in HTCondor is intended to provide the standard
 HTCondor interface to users who wish to start jobs intended for remote
@@ -69,7 +69,7 @@ has detailed descriptions of the grid-related attributes.
 Java Universe
 '''''''''''''
 
-:index:`Java<single: Java; universe>`
+:index:`Java<single: java; universe>`
 
 A program submitted to the Java universe may run on any sort of machine
 with a JVM regardless of its location, owner, or JVM version. HTCondor

@@ -76,8 +76,8 @@ Commands for managing submitters:
    :maxdepth: 1
    :glob:
 
-   classad_eval
    classads
+   classad_eval
    condor_adstash
    condor_advertise
    condor_annex

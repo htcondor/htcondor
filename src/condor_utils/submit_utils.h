@@ -184,6 +184,7 @@
 #define SUBMIT_KEY_PeriodicHoldSubCode "periodic_hold_subcode"
 #define SUBMIT_KEY_PeriodicReleaseCheck "periodic_release"
 #define SUBMIT_KEY_PeriodicRemoveCheck "periodic_remove"
+#define SUBMIT_KEY_PeriodicVacateCheck "periodic_vacate"
 #define SUBMIT_KEY_OnExitHoldCheck "on_exit_hold"
 #define SUBMIT_KEY_OnExitHoldReason "on_exit_hold_reason"
 #define SUBMIT_KEY_OnExitHoldSubCode "on_exit_hold_subcode"
@@ -752,6 +753,7 @@ protected:
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
 	bool SubmitOnHold;
 	int  SubmitOnHoldCode;
+	int  s_method; //-1 represents undefined job submit method
 	bool already_warned_requirements_disk;
 	bool already_warned_requirements_mem;
 	bool already_warned_job_lease_too_small;
@@ -882,8 +884,6 @@ private:
 	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
 	ContainerImageType image_type_from_string(std::string image) const;
-
-	int s_method; //-1 represents undefined job submit method
 };
 
 struct SubmitStepFromQArgs {

@@ -14,12 +14,10 @@ up to you or your software provider.
 How To Run Self-Checkpointing Jobs
 ----------------------------------
 
-The best way to run self-checkpointing code is to set :subcom:`checkpoint_exit_code`
-:index:`checkpoint_exit_code<single: checkpoint_exit_code; definition>` HTCondor
-in your submit file.  (Any exit code will work, but if you can choose,
+The best way to run self-checkpointing code is to set :subcom:`checkpoint_exit_code[definition]`
+HTCondor in your submit file.  (Any exit code will work, but if you can choose,
 consider error code ``85``.  On Linux systems, this is ``ERESTART``, which
-seems appropriate.)  If the :subcom:`executable` exits
-:index:`executable<single: executable; and self-checkpointing>` HTCondor
+seems appropriate.)  If the :subcom:`executable[and self-checkpointing]` exits HTCondor
 with ``checkpoint_exit_code``, HTCondor will transfer the checkpoint to
 the submit node, and then immediately restart the :subcom:`executable` in the
 same sandbox on the same machine, with the same :subcom:`arguments`.  This
@@ -300,10 +298,8 @@ normal case). If your code has long start-up delays, you'll naturally
 not want it to exit after it writes a checkpoint; otherwise, the wrapper
 script could restart the code as necessary.
 
-:index:`when_to_transfer_output<single: when_to_transfer_output; delayed>`
-:index:`checkpoint_exit_code<single: checkpoint_exit_code; delayed>`
-To use this method, set :subcom:`when_to_transfer_output` to
-``ON_EXIT_OR_EVICT`` instead of setting :subcom:`checkpoint_exit_code`. This
+To use this method, set :subcom:`when_to_transfer_output[delayed]` to
+``ON_EXIT_OR_EVICT`` instead of setting :subcom:`checkpoint_exit_code[delayed]`. This
 will cause HTCondor to transfer your checkpoint file(s) (which you
 listed in :subcom:`transfer_output_files`, as noted above) when the job is
 evicted. Of course, since this is the only time your checkpoint file(s)

@@ -59,14 +59,8 @@ default. Administrators have more fine-grained control over which access
 levels can modify which settings. See
 the :doc:`/admin-manual/security` section for more details on
 security settings. Further, security considerations require proper
-settings of configuration variables
-``SETTABLE_ATTRS_<PERMISSION-LEVEL>``
-:index:`SETTABLE_ATTRS_<PERMISSION-LEVEL>` 
-(see :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`),
-``ENABLE_PERSISTENT_CONFIG`` :index:`ENABLE_PERSISTENT_CONFIG`
-(see :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`)
-and ``ALLOW...`` :index:`ALLOW`
-(see :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`)
+settings of configuration variables :macro:`SETTABLE_ATTRS_<PERMISSION-LEVEL>`,
+:macro:`ENABLE_PERSISTENT_CONFIG`, and :macro:`ALLOW`
 in order to use *condor_config_val* to change any configuration variable.
 
 It is generally wise to test a new configuration on a single machine to
@@ -187,7 +181,7 @@ Options
     (location option) The specific daemon to query.
  **use** *category* [*:set name* ] [**-expand** ]
     Display information about configuration templates (see
-    :doc:`/admin-manual/configuration-templates`).
+    :ref:`admin-manual/introduction-to-configuration:configuration templates`).
     Specifying only a *category* will list the *template_names*
     available for that category. Specifying a *category* and a
     *template_name* will display the definition of that configuration

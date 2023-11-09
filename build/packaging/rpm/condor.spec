@@ -194,7 +194,7 @@ Requires: systemd-libs
 Requires: rsync
 
 # Support OSDF client
-Requires: condor-stash-plugin
+Requires: pelican-osdf-compat >= 7.1.4
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
@@ -705,7 +705,7 @@ sed -i 's;/usr/bin/python3;/usr/bin/python2;' %{buildroot}%{_libexecdir}/blahp/*
 install -m 0755 -d -p %{buildroot}%{_sysconfdir}/blahp
 for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
     mv %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh %{buildroot}%{_sysconfdir}/blahp
-    ln -s %{_sysconfdir}/blahp/${batch_system}_local_submit_attributes.sh \
+    ln -s ../../../etc/blahp/${batch_system}_local_submit_attributes.sh \
         %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
 done
 
@@ -992,6 +992,7 @@ rm -rf %{buildroot}
 %_bindir/bosco_cluster
 %_bindir/condor_ssh_start
 %_bindir/condor_test_token
+%_bindir/condor_manifest
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1075,7 +1076,6 @@ rm -rf %{buildroot}
 
 ####### classads files #######
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_libdir/libclassad.so.*
 
 #################
@@ -1090,7 +1090,6 @@ rm -rf %{buildroot}
 
 ####### classads-devel files #######
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_bindir/classad_functional_tester
 %_bindir/classad_version
 %_libdir/libclassad.so
@@ -1142,14 +1141,12 @@ rm -rf %{buildroot}
 #################
 %files kbdd
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_sbindir/condor_kbdd
 
 #################
 %if ! 0%{?amzn}
 %files vm-gahp
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_sbindir/condor_vm-gahp
 %_libexecdir/condor/libvirt_simple_script.awk
 
@@ -1160,7 +1157,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
-%_bindir/condor_manifest
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
@@ -1279,6 +1275,19 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Oct 31 2023 Tim Theisen <tim@cs.wisc.edu> - 23.1.0-1
+- Enhanced filtering with 'condor_watch_q'
+- Can specify alternate ssh port with 'condor_remote_cluster'
+- Performance improvement for the 'condor_schedd' and other daemons
+- Jobs running on cgroup v2 systems can subdivide their cgroup
+- The curl plugin can now find CA certificates via an environment variable
+
+* Tue Oct 31 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.1-1
+- Fix 10.6.0 bug that broke PID namespaces
+- Fix bug where execution times for ARC CE jobs were 60 times too large
+- Fix bug where a failed 'Service' node would crash DAGMan
+- Condor-C and Job Router jobs now get resources provisioned updates
+
 * Fri Sep 29 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.0-1
 - Absent slot configuration, execution points will use a partitionable slot
 - Linux cgroups enforce maximum memory utilization by default

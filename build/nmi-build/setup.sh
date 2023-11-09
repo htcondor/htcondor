@@ -197,7 +197,7 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5
+    apt download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5 pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
         apt download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
@@ -214,7 +214,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
-        condor-stash-plugin libgomp munge-libs pcre2 scitokens-cpp
+        libgomp munge-libs pelican-osdf-compat pcre2 scitokens-cpp
     if [ $ID != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi

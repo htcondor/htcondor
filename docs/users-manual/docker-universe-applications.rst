@@ -1,7 +1,7 @@
-:index:`docker universe` :index:`docker<single: docker; universe>`
 Docker Universe Applications
 ============================
 
+:index:`docker universe` :index:`docker<single: docker; universe>`
 A docker universe job instantiates a Docker container from a Docker
 image, and HTCondor manages the running of that container as an HTCondor
 job, on an execute machine. This running container can then be managed
@@ -17,7 +17,7 @@ settings.
 
 The image from which the container is instantiated is defined by
 specifying a Docker image with the submit command
-:subcom:`docker_image<definition>`. This
+:subcom:`docker_image[definition]`. This
 image must be pre-staged on a docker hub that the execute machine can
 access.
 
@@ -70,7 +70,7 @@ Therefore, the submit description file should contain the submit command
 With this command, all input and output files will be transferred as
 required to and from the scratch directory mounted as a Docker volume.
 
-If no :subcom:`executable<in docker universe>` is
+If no :subcom:`executable[in docker universe]` is
 specified in the submit description file, it is presumed that the Docker
 container has a default command to run.
 

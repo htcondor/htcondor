@@ -58,7 +58,7 @@ There are two separate uses of the password actions of
 
 #. In order to submit a job from a Windows platform machine, or to
    execute a job on a Windows platform machine utilizing the
-   :subcom:`run_as_owner<and condor_store_cred>`
+   :subcom:`run_as_owner[and condor_store_cred]`
    functionality, *condor_store_cred add[-pwd]* stores the password of a
    user/domain pair securely in the Windows registry. Using this stored
    password, HTCondor may act on behalf of the submitting user to access

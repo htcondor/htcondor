@@ -780,6 +780,10 @@ int BaseJob::EvalPeriodicJobExpr()
 			// possible), then picks it up as a new job from the schedd.
 			// So ignore release-from-hold and let the schedd deal with it.
 		break;
+	case VACATE_FROM_RUNNING:
+			// ignore this case, as we can't really handle it in the general
+			// case
+		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalPeriodicJobExpr", 
 				action );
@@ -842,6 +846,10 @@ int BaseJob::EvalOnExitJobExpr()
 		break;
 	case REMOVE_FROM_QUEUE:
 		JobCompleted();
+		break;
+	case VACATE_FROM_RUNNING:
+			// ignore this case, as we can't really handle it in the general
+			// case
 		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalAtExitJobExpr", 

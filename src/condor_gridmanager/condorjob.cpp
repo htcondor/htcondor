@@ -1448,6 +1448,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_PERIODIC_HOLD_CHECK );
 	submit_ad->Delete( ATTR_PERIODIC_RELEASE_CHECK );
 	submit_ad->Delete( ATTR_PERIODIC_REMOVE_CHECK );
+	submit_ad->Delete( ATTR_PERIODIC_VACATE_CHECK );
 	submit_ad->Delete( ATTR_JOB_ALLOWED_JOB_DURATION );
 	submit_ad->Delete( ATTR_JOB_ALLOWED_EXECUTE_DURATION );
 	submit_ad->Delete( ATTR_SERVER_TIME );

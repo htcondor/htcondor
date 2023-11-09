@@ -192,8 +192,8 @@ the same directory as the DAG input file.
 
 One item to care about with this set up is the underlying file system
 for the pool. The transfer of files (or not) when using
-:subcom:`initialdir<and DAGman>` differs
-based upon the job :subcom:`universe<and DAGman>` and whether or
+:subcom:`initialdir[and DAGman]` differs
+based upon the job :subcom:`universe[and DAGman]` and whether or
 not there is a shared file system.
 
 Submission of this set of jobs is no different than the previous

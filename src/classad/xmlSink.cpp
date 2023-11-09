@@ -99,7 +99,6 @@ Unparse(
 		
 		switch( tree->GetKind( ) ) {
 		case ExprTree::LITERAL_NODE: {
-			const Value & cval = ((const Literal*)tree)->getValue();
 			Value				val;
 			((Literal*)tree)->GetValue(val);
 			Unparse(buffer, val, indent);

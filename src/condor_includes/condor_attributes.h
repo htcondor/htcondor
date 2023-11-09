@@ -896,8 +896,10 @@
 #define ATTR_PERIODIC_HOLD_SUBCODE  "PeriodicHoldSubCode"
 #define ATTR_PERIODIC_RELEASE_REASON  "PeriodicReleaseReason"
 #define ATTR_PERIODIC_REMOVE_REASON  "PeriodicRemoveReason"
+#define ATTR_PERIODIC_VACATE_REASON  "PeriodicVacateReason"
 #define ATTR_PERIODIC_RELEASE_CHECK  "PeriodicRelease"
 #define ATTR_PERIODIC_REMOVE_CHECK  "PeriodicRemove"
+#define ATTR_PERIODIC_VACATE_CHECK  "PeriodicVacate"
 #define ATTR_TIMER_REMOVE_CHECK  "TimerRemove"
 #define ATTR_TIMER_REMOVE_CHECK_SENT  "TimerRemoveSent"
 

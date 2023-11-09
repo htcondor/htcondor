@@ -8,7 +8,6 @@ import htcondor
 import classad
 import json
 import re
-import logging
 
 from requests_oauthlib import __version__ as _requests_oauthlib_version
 _requests_oauthlib_version = tuple([int(x) for x in _requests_oauthlib_version.split('.')])
@@ -22,25 +21,6 @@ from cryptography.hazmat.primitives.asymmetric import rsa, ec
 
 from scitokens.utils import string_from_long
 
-logger = logging.getLogger('OAuthCredmonWebserver')
-
-class LoggerWriter:
-    '''Used to override sys.stdout and sys.stderr so that
-    all messages are sent to the logger'''
-
-    def __init__(self, level):
-        self.level = level
-
-    def write(self, message):
-        if message != '\n':
-            self.level(message.rstrip())
-
-    def flush(self):
-        return
-
-# send stdout and stderr to the log
-sys.stdout = LoggerWriter(logger.debug)
-sys.stderr = LoggerWriter(logger.warning)
 
 # initialize Flask
 app = Flask(__name__)

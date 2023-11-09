@@ -29,6 +29,7 @@
 #include "dc_schedd.h"
 #include "directory.h"
 #include "token_utils.h"
+#include "fcloser.h"
 
 void print_usage(const char *argv0) {
 	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] -scitoken FILENAME [-token NAME]\n\n"
@@ -49,9 +50,8 @@ int
 exchange_scitoken(const std::string &pool, const std::string &name, daemon_t dtype,
 	const std::string &scitoken_filename, const std::string &token_name)
 {
-	std::unique_ptr<FILE, decltype(&::fclose)> f(
-		safe_fopen_no_create(scitoken_filename.c_str(), "r"),
-		&::fclose);
+	std::unique_ptr<FILE, fcloser> f(
+		safe_fopen_no_create(scitoken_filename.c_str(), "r"));
 
 	if (!f.get()) {
 		fprintf(stderr, "Failed to open file '%s' for reading: '%s' (%d).\n",

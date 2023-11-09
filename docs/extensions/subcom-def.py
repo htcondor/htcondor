@@ -21,12 +21,8 @@ def subcom_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]
     targetnode = nodes.target('', text, ids=[targetid], classes=["subcom-def"])
     
     # Automatically include an index entry for subcom definitions
-    entries = process_index_entry('single: ' + text + '; submit command', targetid);
-
-    #
-    entries = process_index_entry('single: Submit commands; ' + text, targetid);
     indexnode = addnodes.index()
-    indexnode['entries'] = entries
+    indexnode['entries'] = process_index_entry('pair: ' + text + '; Submit commands', targetid)
     set_role_source_info(inliner, lineno, indexnode)
     if os.environ.get('MANPAGES') == 'True':
         textnode = nodes.Text(text, " ")

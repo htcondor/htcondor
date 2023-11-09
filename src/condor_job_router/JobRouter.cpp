@@ -1020,6 +1020,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 			ret_val = SetJobHeld(job->src_ad, reason.c_str(), reason_code, reason_subcode);
 			break;
 		case STAYS_IN_QUEUE:
+		case VACATE_FROM_RUNNING:
 			// do nothing
 			ret_val = true;
 			break;

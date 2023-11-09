@@ -4,7 +4,7 @@ Configuration for Execution Points
 .. note::
     Configuration templates make it easier to implement certain
     policies; see information on policy templates here:
-    :ref:`admin-manual/configuration-templates:available configuration templates`.
+    :ref:`admin-manual/introduction-to-configuration:available configuration templates`.
 
 *condor_startd* Policy Configuration
 ------------------------------------
@@ -269,11 +269,11 @@ point in the negotiations has been reached. The possible states are
     have been divided in a partitionable slot. Consolidating the
     resources gives large jobs a chance to run.
 
-.. mermaid:: 
+.. mermaid::
    :caption: Machine states and the possible transitions between the states
    :align: center
 
-   stateDiagram-v2
+    stateDiagram-v2
      direction LR
      [*]--> Owner
      Owner --> Unclaimed: A
@@ -565,16 +565,78 @@ The following diagram gives the overall view of all machine states and
 activities and shows the possible transitions from one to another within the
 HTCondor system. Each transition is labeled with a number on the diagram, and
 transition numbers referred to in this manual will be **bold**.
+
+.. note::
+
+   The "Matched" state and the "Suspended" activity have been removed from
+   this diagram in order to simplify the number of shown transitions.  The
+   Matched state is not entered by default, and Suspended is rarely used.
+
 :index:`machine state and activities figure`
 :index:`state and activities figure`
 :index:`activities and state figure`
 
-.. figure:: /_images/machine-states-activities.png
-  :width: 700
-  :alt: Machine States and Activities
-  :align: center
+.. mermaid::
+   :caption: States and Activites of the condor_startd
+   :align: center
 
-  Machine States and Activities
+   flowchart TD
+      start((start)) ----> oidle
+      isOwner -- false (1) ------> uidle
+
+      subgraph OwnerState
+      oidle[Idle\nActivity]
+      isOwner{IS_OWNER\nexpression} -- true --> oidle
+      oidle -- periodic\nrecheck --> isOwner
+      end
+      uidle -- periodic recheck (2) --> isOwner
+      uidle -- drain command --> retiring
+
+      subgraph UnclaimedState
+      uidle[Idle] -- periodic check --> runBenchmarks
+      runBenchmarks{RunBenchmarks\nexpression} -- true (3) --> benchmarking
+      runBenchmarks -- false --> uidle
+      benchmarking -- when completed (4) --> uidle
+      uidle -- claim by schedd --> isStart
+      isStart -- false --> uidle    
+      end
+
+      didle -- all slots drained\n34 --> isOwner
+      retiring -- draining\ncancelled\n35 --> isOwner
+
+      subgraph DrainedState
+      retiring -- one slot drained\n33 --> didle[Idle]
+      end
+
+      isStart{START\nExpression} -- true\nclaim from schedd ----> cidle
+
+      subgraph ClaimedState
+      cidle[Idle] -- Activate\nby shadow\n11 --> busy
+      busy -- job exit\n12 --> cidle
+      busy -- RANK preemption\nfrom negotiator\n13 --> cretiring
+      busy -- periodic\ncheck --> isPreempt
+      isPreempt{PREEMPT\nexpression} -- true\n13 --> cretiring
+      isPreempt -- false --> busy
+      cretiring[retiring] -- \n\n\nRANK preempt\ncancel\n19 --> busy
+      end
+
+      cretiring -- MaxJobRetirementTime exceeded\n18 --> wantVacate
+      cidle -- condor_vacate\nor\nSTART == false\n10 --> wantVacate
+
+      subgraph VacatingState
+      direction TB
+      wantVacate{WANT_VACATE\nexpression} -- true --> vacating
+      vacating -- periodic check --> wantKill
+      wantKill{Kill\nexpression} -- true\n21 --> killing
+      wantKill -- false --> vacating
+      vacating -- MachineMaxVacateTime expires --> killing
+      wantVacate -- false --> killing
+      end
+
+      killing -- IS_OWNER = true \n22 --> oidle
+      killing -- job exit\n23 --> cidle
+      vacating -- OWNER true\n25 --> isOwner
+      vacating -- better rank\nstarts\n24 --> cidle
 
 
 Various expressions are used to determine when and if many of these
@@ -1898,7 +1960,7 @@ Define slot types.
         NUM_SLOTS_TYPE_2 = 2
 
     A job may request these local machine resources using the syntax
-    :subcom:`request_\<name\><with partitionable slots>`
+    :subcom:`request_<name>[with partitionable slots]`
     as described in :ref:`admin-manual/ep-policy-configuration:*condor_startd*
     policy configuration`. This example shows a portion of a submit description
     file that requests cogs and an actuator:
@@ -2579,7 +2641,7 @@ Docker container on an execute host.
 
 The docker universe job is mapped to a vanilla universe job, and the
 submit description file must specify the submit command
-:subcom:`docker_image<definition>` to
+:subcom:`docker_image[definition]` to
 identify the Docker image. The job's ``requirement`` ClassAd attribute
 is automatically appended, such that the job will only match with an
 execute machine that has Docker installed.
@@ -3270,8 +3332,8 @@ Add the consumption policy to incorporate availability of the GPUs:
       SLOT_WEIGHT = Cpus
 
 
-Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
---------------------------------------------------------------------------------------------
+Startd Disk Enforcement With Per Job Scratch Filesystems
+--------------------------------------------------------
 :index:`DISK usage`
 :index:`per job scratch filesystem`
 
@@ -3280,10 +3342,9 @@ Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch 
 
 
 On Linux systems, when HTCondor is started as root, it optionally has the ability to create
-a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
-from using more scratch space than provisioned.  This also requires that the disk is managed
-with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
-this to work, in addition to the above requirements:
+a custom filesystem for the job's scratch directory. This allows HTCondor to prevent the job
+from using more scratch space than provisioned. HTCondor manages this per scratch directory
+filesystem usage with the LVM disk management system.
 
 .. code-block:: condor-config
 
@@ -3292,19 +3353,935 @@ this to work, in addition to the above requirements:
     STARTD_ENFORCE_DISK_LIMITS = true
 
 
-THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
-disk space to provision all the scratch directories for all running jobs on a worker node.
-THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
-be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_LIMITS is a boolean.  When
-true, if a job fills up the filesystem created for it, the starter will put the job on hold
-with the out of resources hold code (34).  This is the recommended value.  If false, should
-the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors
-and exit with an appropriate code in every part of the job that writes to the filesystem, including
-third party libraries.
+#. :macro:`THINPOOL_VOLUME_GROUP_NAME` is the name of an existing LVM volume group for
+   HTCondor to utilize. This volume group should contain enough disk space to provision
+   scratch directories for all running jobs on the worker node.
+#. :macro:`THINPOOL_NAME` is the name of an existing thinly provisioned logical volume
+   for the Startd to utilize. This will act as the total pool of available disk space
+   that per job scratch filesystems and logical volumes will be carved from.
+#. :macro:`STARTD_ENFORCE_DISK_LIMITS` is a boolean to enable per job scratch directory
+   enforcement.
 
-Note that the ephemeral filesystem created for the job is private to the job, so the contents
-of that filesystem are not visible outside the process hierarchy.  The administrator can use
-the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
-As this filesystem will never live through a system reboot, it is mounted with mount options
-that optimize for performance, not reliability, and may improve performance for I/O heavy
-jobs.
+This feature will enable better handling of jobs that utilize more than the disk space
+than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
+created for it, the starter will put the job on hold with the out of resources hold code (34).
+Otherwise, in a full filesystem, writes will fail with ENOSPC, and leave it up to the job
+to handle these errors inernally at all places writed occur. Even in included third party
+libraries.
+
+.. note::
+    The ephemeral filesystem created for the job is private to that job so the contents of
+    the filesystem are not visable outside the process hierarchy. The nsenter command can
+    be used to enter this namespace in order inspect the job's sandbox.
+
+.. note::
+    As this filesystem will never live through a system reboot, it is mounted with mount options
+    that optimize for performance, not reliability, and may improve performance for I/O heavy
+    jobs.
+
+
+Power Management
+----------------
+
+:index:`power management` :index:`green computing`
+:index:`offline machine`
+
+HTCondor supports placing machines in low power states. A machine in the
+low power state is identified as being offline. Power setting decisions
+are based upon HTCondor configuration.
+
+Power conservation is relevant when machines are not in heavy use, or
+when there are known periods of low activity within the pool.
+
+Entering a Low Power State
+''''''''''''''''''''''''''
+
+:index:`entering a low power state<single: entering a low power state; power management>`
+
+By default, HTCondor does not do power management. When desired, the
+ability to place a machine into a low power state is accomplished
+through configuration. This occurs when all slots on a machine agree
+that a low power state is desired.
+
+A slot's readiness to hibernate is determined by the evaluating the
+:macro:`HIBERNATE` configuration variable (see
+the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+macros` section) within the context of the slot. Readiness is evaluated at
+fixed intervals, as determined by the
+:macro:`HIBERNATE_CHECK_INTERVAL` configuration variable. A
+non-zero value of this variable enables the power management facility.
+It is an integer value representing seconds, and it need not be a small
+value. There is a trade off between the extra time not at a low power
+state and the unnecessary computation of readiness.
+
+To put the machine in a low power state rapidly after it has become
+idle, consider checking each slot's state frequently, as in the example
+configuration:
+
+.. code-block:: condor-config
+
+    HIBERNATE_CHECK_INTERVAL = 20
+
+This checks each slot's readiness every 20 seconds. A more common value
+for frequency of checks is 300 (5 minutes). A value of 300 loses some
+degree of granularity, but it is more reasonable as machines are likely
+to be put in to a low power state after a few hours, rather than
+minutes.
+
+A slot's readiness or willingness to enter a low power state is
+determined by the ``HIBERNATE`` expression. Because this expression is
+evaluated in the context of each slot, and not on the machine as a
+whole, any one slot can veto a change of power state. The ``HIBERNATE``
+expression may reference a wide array of variables. Possibilities
+include the change in power state if none of the slots are claimed, or
+if the slots are not in the Owner state.
+
+Here is a concrete example. Assume that the ``START`` expression is not
+set to always be ``True``. This permits an easy determination whether or
+not the machine is in an Unclaimed state through the use of an auxiliary
+macro called ``ShouldHibernate``.
+
+.. code-block:: condor-config
+
+    TimeToWait  = (2 * $(HOUR))
+    ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \
+                        && $(CPUIdle) \
+                        && ($(StateTimer) > $(TimeToWait)) )
+
+This macro evaluates to ``True`` if the following are all ``True``:
+
+-  The keyboard has been idle long enough.
+-  The CPU is idle.
+-  The slot has been Unclaimed for more than 2 hours.
+
+The sample ``HIBERNATE`` expression that enters the power state called
+"RAM", if ``ShouldHibernate`` evaluates to ``True``, and remains in its
+current state otherwise is
+
+.. code-block:: condor-config
+
+    HibernateState  = "RAM"
+    HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateState), "NONE" )
+
+If any slot returns "NONE", that slot vetoes the decision to enter a low
+power state. Only when values returned by all slots are all non-zero is
+there a decision to enter a low power state. If all agree to enter the
+low power state, but differ in which state to enter, then the largest
+magnitude value is chosen.
+
+Returning From a Low Power State
+''''''''''''''''''''''''''''''''
+
+:index:`leaving a low power state<single: leaving a low power state; power management>`
+
+The HTCondor command line tool *condor_power* may wake a machine from a
+low power state by sending a UDP Wake On LAN (WOL) packet. See the
+:doc:`/man-pages/condor_power` manual page.
+:index:`condor_rooster daemon`
+
+To automatically call *condor_power* under specific conditions,
+*condor_rooster* may be used. The configuration options for
+*condor_rooster* are described in the 
+:ref:`admin-manual/configuration-macros:condor_rooster configuration file
+macros` section.
+
+Keeping a ClassAd for a Hibernating Machine
+'''''''''''''''''''''''''''''''''''''''''''
+
+A pool's *condor_collector* daemon can be configured to keep a
+persistent ClassAd entry for each machine, once it has entered
+hibernation. This is required by *condor_rooster* so that it can
+evaluate the :macro:`UNHIBERNATE` expression of
+the offline machines.
+
+To do this, define a log file using the
+:macro:`COLLECTOR_PERSISTENT_AD_LOG` configuration variable. See
+the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+macros` section for the definition. An optional expiration time for each
+ClassAd can be specified with
+:macro:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
+the hibernating machine's ClassAd enters the *condor_collector* daemon.
+See the :ref:`admin-manual/configuration-macros:condor_startd configuration
+file macros` section for the definition.
+
+Linux Platform Details
+''''''''''''''''''''''
+
+:index:`Linux platform details<single: Linux platform details; power management>`
+
+Depending on the Linux distribution and version, there are three methods
+for controlling a machine's power state. The methods:
+
+#. *pm-utils* is a set of command line tools which can be used to detect
+   and switch power states. In HTCondor, this is defined by the string
+   "pm-utils".
+#. The directory in the virtual file system ``/sys/power`` contains
+   virtual files that can be used to detect and set the power states. In
+   HTCondor, this is defined by the string "/sys".
+#. The directory in the virtual file system ``/proc/acpi`` contains
+   virtual files that can be used to detect and set the power states. In
+   HTCondor, this is defined by the string "/proc".
+
+By default, the HTCondor attempts to detect the method to use in the
+order shown. The first method detected as usable on the system is
+chosen.
+
+This ordered detection may be bypassed, to use a specified method
+instead by setting the configuration variable
+:macro:`LINUX_HIBERNATION_METHOD` with one of the defined strings. This
+variable is defined in the :ref:`admin-manual/configuration-macros:condor_startd
+configuration file macros` section. If no usable methods are detected or the
+method specified by :macro:`LINUX_HIBERNATION_METHOD` is either not detected or
+invalid, hibernation is disabled.
+
+The details of this selection process, and the final method selected can
+be logged via enabling ``D_FULLDEBUG`` in the relevant subsystem's log
+configuration.
+
+Windows Platform Details
+''''''''''''''''''''''''
+
+:index:`Windows platform troubleshooting<single: Windows platform troubleshooting; power management>`
+
+If after a suitable amount of time, a Windows machine has not entered
+the expected power state, then HTCondor is having difficulty exercising
+the operating system's low power capabilities. While the cause will be
+specific to the machine's hardware, it may also be due to improperly
+configured software. For hardware difficulties, the likely culprit is
+the configuration within the machine's BIOS, for which HTCondor can
+offer little guidance. For operating system difficulties, the *powercfg*
+tool can be used to discover the available power states on the machine.
+The following command demonstrates how to list all of the supported
+power states of the machine:
+
+.. code-block:: doscon
+
+    > powercfg -A
+    The following sleep states are available on this system:
+    Standby (S3) Hibernate Hybrid Sleep
+    The following sleep states are not available on this system:
+    Standby (S1)
+            The system firmware does not support this standby state.
+    Standby (S2)
+            The system firmware does not support this standby state.
+
+Note that the ``HIBERNATE`` expression is written in terms of the Sn
+state, where n is the value evaluated from the expression.
+
+This tool can also be used to enable and disable other sleep states.
+This example turns hibernation on.
+
+.. code-block:: doscon
+
+    > powercfg -h on
+
+If this tool is insufficient for configuring the machine in the manner
+required, the *Power Options* control panel application offers the full
+extent of the machine's power management abilities.
+:index:`green computing` :index:`power management`
+:index:`administrators manual`
+
+Hooks
+-----
+
+:index:`Hooks`
+
+A hook is an external program or script invoked by an HTCondor
+daemon to change its behavior or implement some policy.
+There are three kinds of Job hooks in HTCondor: Fetch work job hooks,
+Prepare Job hooks, and Job Router hooks.
+
+Job Hooks That Fetch Work
+'''''''''''''''''''''''''
+
+:index:`Job hooks`
+:index:`job hooks that fetch work<single: job hooks that fetch work; Hooks>`
+
+In the past, HTCondor has always sent work to the execute machines by
+pushing jobs to the *condor_startd* daemon from the
+*condor_schedd* daemon. Beginning with the
+HTCondor version 7.1.0, the *condor_startd* daemon now has the ability
+to pull work by fetching jobs via a system of plug-ins or hooks. Any
+site can configure a set of hooks to fetch work, completely outside of
+the usual HTCondor matchmaking system.
+
+A projected use of the hook mechanism implements what might be termed a
+glide-in factory, especially where the factory is behind a firewall.
+Without using the hook mechanism to fetch work, a glide-in
+*condor_startd* daemon behind a firewall depends on CCB to help it
+listen and eventually receive work pushed from elsewhere. With the hook
+mechanism, a glide-in *condor_startd* daemon behind a firewall uses the
+hook to pull work. The hook needs only an outbound network connection to
+complete its task, thereby being able to operate from behind the
+firewall, without the intervention of CCB.
+
+Periodically, each execution slot managed by a *condor_startd* will
+invoke a hook to see if there is any work that can be fetched. Whenever
+this hook returns a valid job, the *condor_startd* will evaluate the
+current state of the slot and decide if it should start executing the
+fetched work. If the slot is unclaimed and the ``Start`` expression
+evaluates to ``True``, a new claim will be created for the fetched job.
+If the slot is claimed, the *condor_startd* will evaluate the ``Rank``
+expression relative to the fetched job, compare it to the value of
+``Rank`` for the currently running job, and decide if the existing job
+should be preempted due to the fetched job having a higher rank. If the
+slot is unavailable for whatever reason, the *condor_startd* will
+refuse the fetched job and ignore it. Either way, once the
+*condor_startd* decides what it should do with the fetched job, it will
+invoke another hook to reply to the attempt to fetch work, so that the
+external system knows what happened to that work unit.
+
+If the job is accepted, a claim is created for it and the slot moves
+into the Claimed state. As soon as this happens, the *condor_startd*
+will spawn a *condor_starter* to manage the execution of the job. At
+this point, from the perspective of the *condor_startd*, this claim is
+just like any other. The usual policy expressions are evaluated, and if
+the job needs to be suspended or evicted, it will be. If a higher-ranked
+job being managed by a *condor_schedd* is matched with the slot, that
+job will preempt the fetched work.
+
+The *condor_starter* itself can optionally invoke additional hooks to
+help manage the execution of the specific job. There are hooks to
+prepare or validate the execution environment for the job, periodically update
+information about the job as it runs, notify when the job exits, and to
+take special actions when the job is being evicted.
+
+Assuming there are no interruptions, the job completes, and the
+*condor_starter* exits, the *condor_startd* will invoke the hook to
+fetch work again. If another job is available, the existing claim will
+be reused and a new *condor_starter* is spawned. If the hook returns
+that there is no more work to perform, the claim will be evicted, and
+the slot will return to the Owner state.
+
+To aid with the development and debugging of hooks, output sent to stderr
+by the hooks will be preserved in daemon logs of either the *condor_starter* or
+*condor_startd* as appropriate.
+
+Work Fetching Hooks Invoked by HTCondor
+'''''''''''''''''''''''''''''''''''''''
+
+:index:`Hooks invoked by HTCondor<single: Hooks invoked by HTCondor; Job hooks>`
+
+There are a handful of hooks invoked by HTCondor related to fetching
+work, some of which are called by the *condor_startd* and others by the
+*condor_starter*. Each hook is described, including when it is invoked,
+what task it is supposed to accomplish, what data is passed to the hook,
+what output is expected, and, when relevant, the exit status expected.
+:index:`Fetch work<single: Fetch work; Fetch Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_FETCH_WORK` is invoked whenever the
+   *condor_startd* wants to see if there is any work to fetch.
+   There is a related configuration variable called
+   :macro:`FetchWorkDelay` which determines how long the
+   *condor_startd* will wait between attempts to fetch work, which is
+   described in detail in :ref:`admin-manual/ep-policy-configuration:job hooks that fetch work`.
+   ``<Keyword>_HOOK_FETCH_WORK`` is the most important hook in the whole system,
+   and is the only hook that must be defined for any of the other
+   *condor_startd* hooks to operate.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       ClassAd of the slot that is looking for work.
+    Expected standard output from the hook
+       ClassAd of a job that can be run. If there is no work, the hook
+       should return no output.
+    User id that the hook runs as
+       :macro:`<Keyword>_HOOK_FETCH_WORK` hook runs with the same
+       privileges as the *condor_startd*. When Condor was started as
+       root, this is usually the condor user, or the user specified in
+       the :macro:`CONDOR_IDS` configuration variable.
+    Exit status of the hook
+       Ignored.
+
+   The job ClassAd returned by the hook needs to contain enough
+   information for the *condor_starter* to eventually spawn the work.
+   The required and optional attributes in this ClassAd are listed here:
+
+    :index:`attributes<single: attributes; FetchWork>`
+    :index:`Required attributes<single: Required attributes; Defining Applications>`
+
+    Attributes for a FetchWork application are either required or optional. The
+    following attributes are required:
+    :index:`required attributes<single: required attributes; FetchWork>`
+
+    ``Cmd``
+        This attribute :index:`Cmd<single: Cmd; required attributes>`\ defines the
+        full path to the executable program to be run as a FetchWork application.
+        Since HTCondor does not currently provide any mechanism to transfer
+        files on behalf of FetchWork applications, this path should be a valid
+        path on the machine where the application will be run. It is a
+        string attribute, and must therefore be enclosed in quotation marks
+        ("). There is no default.
+
+    ``Owner``
+        If the *condor_startd* daemon is executing as root on
+        :index:`Owner<single: Owner; required attributes>`\ the resource where a FetchWork
+        application will run, the user must also define ``Owner`` to specify
+        what user name the application will run as. On Windows, the
+        *condor_startd* daemon always runs as an Administrator service,
+        which is equivalent to running as root on Unix platforms.
+        ``Owner`` must contain a valid user name on the given FetchWork resource.
+        It is a string attribute, and must therefore be enclosed in
+        quotation marks (").
+
+    ``RequestCpus``
+        Required when running on a *condor_startd*
+        :index:`RequestCpus<single: RequestCpus; required attributes>`\ that uses
+        partitionable slots. It specifies the number of CPU cores from the
+        partitionable slot allocated for this job.
+
+    ``RequestDisk``
+        Required when running on a *condor_startd*
+        :index:`RequestDisk<single: RequestDisk; required attributes>`\ that uses
+        partitionable slots. It specifies the disk space, in Megabytes, from
+        the partitionable slot allocated for this job.
+
+    ``RequestMemory``
+        Required when running on a *condor_startd*
+        :index:`RequestMemory<single: RequestMemory; required attributes>`\ that uses
+        partitionable slots. It specifies the memory, in Megabytes, from the
+        partitionable slot allocated for this job.
+
+    :index:`optional attributes<single: optional attributes; FetchWork>`
+    :index:`Optional attributes<single: Optional attributes; Defining Applications>`
+
+    The following list of attributes are optional:
+
+    ``JobUniverse``
+        This attribute defines what HTCondor job
+        :index:`JobUniverse<single: JobUniverse; optional attributes>`\ universe to use
+        for the given FetchWork application. The only tested universes are vanilla
+        and java. This attribute must be an integer, with vanilla using the
+        value 5, and java using the value 10.
+
+    ``IWD``
+        IWD is an acronym for Initial Working Directory.
+        :index:`IWD<single: IWD; optional attributes>`\ It defines the full path
+        to the directory where a given FetchWork application are to be run. Unless
+        the application changes its current working directory, any relative
+        path names used by the application will be relative to the IWD. If
+        any other attributes that define file names (for example, ``In``,
+        ``Out``, and so on) do not contain a full path, the ``IWD`` will
+        automatically be pre-pended to those file names. It is a string
+        attribute, and must therefore be enclosed in quotation marks ("). If
+        the ``IWD`` is not specified, the temporary execution sandbox
+        created by the *condor_starter* will be used as the initial working
+        directory.
+
+    ``In``
+        This string defines the path to the file on the
+        :index:`In<single: In; optional attributes>`\ FetchWork resource that should be
+        used as standard input (``stdin``) for the FetchWork application. This
+        file (and all parent directories) must be readable by whatever user
+        the FetchWork application will run as. If not specified, the default is
+        ``/dev/null``. It is a string attribute, and must therefore be
+        enclosed in quotation marks (").
+
+    ``Out``
+        This string defines the path to the file on the
+        :index:`Out<single: Out; optional attributes>`\ FetchWork resource that should
+        be used as standard output (``stdout``) for the FetchWork application.
+        This file must be writable (and all parent directories readable) by
+        whatever user the FetchWork application will run as. If not specified, the
+        default is ``/dev/null``. It is a string attribute, and must
+        therefore be enclosed in quotation marks (").
+
+    ``Err``
+        This string defines the path to the file on the
+        :index:`Err<single: Err; optional attributes>`\ FetchWork resource that should
+        be used as standard error (``stderr``) for the FetchWork application. This
+        file must be writable (and all parent directories readable) by
+        whatever user the FetchWork application will run as. If not specified, the
+        default is ``/dev/null``. It is a string attribute, and must
+        therefore be enclosed in quotation marks (").
+
+    ``Env``
+        This string defines environment variables to
+        :index:`Env<single: Env; optional attributes>`\ set for a given FetchWork
+        application. Each environment variable has the form NAME=value.
+        Multiple variables are delimited with a semicolon. An example:
+        Env = "PATH=/usr/local/bin:/usr/bin;TERM=vt100" It is a string
+        attribute, and must therefore be enclosed in quotation marks (").
+
+    ``Args``
+        This string attribute defines the list of
+        :index:`Args<single: Args; optional attributes>`\ arguments to be supplied
+        to the program on the command-line. The arguments are delimited
+        (separated) by space characters. There is no default. If the
+        ``JobUniverse`` corresponds to the Java universe, the first argument
+        must be the name of the class containing ``main``. It is a string
+        attribute, and must therefore be enclosed in quotation marks (").
+
+    ``JarFiles``
+        This string attribute is only used if
+        :index:`JarFiles<single: JarFiles; optional attributes>`\ ``JobUniverse`` is 10
+        (the Java universe). If a given FetchWork application is a Java program,
+        specify the JAR files that the program requires with this attribute.
+        There is no default. It is a string attribute, and must therefore be
+        enclosed in quotation marks ("). Multiple file names may be
+        delimited with either commas or white space characters, and
+        therefore, file names can not contain spaces.
+
+    ``KillSig``
+        This attribute specifies what signal should be
+        :index:`KillSig<single: KillSig; optional attributes>`\ sent whenever the
+        HTCondor system needs to gracefully shutdown the FetchWork application. It
+        can either be specified as a string containing the signal name (for
+        example KillSig = "SIGQUIT"), or as an integer (KillSig = 3) The
+        default is to use SIGTERM.
+
+    ``StarterUserLog``
+        This string specifies a file name for a
+        :index:`StarterUserLog<single: StarterUserLog; optional attributes>`\ log file that
+        the *condor_starter* daemon can write with entries for relevant
+        events in the life of a given FetchWork application. It is similar to the
+        job event log file specified for regular HTCondor jobs with the
+        :subcom:`log[and StarterUserLog]` command in a submit
+        description file. However, certain attributes that are placed in a
+        job event log do not make sense in the FetchWork environment, and are
+        therefore omitted. The default is not to write this log file. It is
+        a string attribute, and must therefore be enclosed in quotation
+        marks (").
+
+    ``StarterUserLogUseXML``
+        If the ``StarterUserLog``
+        :index:`StarterUserLogUseXML<single: StarterUserLogUseXML; optional attributes>`\ attribute
+        is defined, the default format is a human-readable format. However,
+        HTCondor can write out this log in an XML representation, instead.
+        To enable the XML format for this job event log, the
+        ``StarterUserLogUseXML`` boolean is set to TRUE. The default if not
+        specified is FALSE.
+
+    If any attribute that specifies a path (``Cmd``, ``In``,
+    ``Out``,\ ``Err``, ``StarterUserLog``) is not a full path name, HTCondor
+    automatically prepends the value of ``IWD``.
+
+   :index:`Reply to fetched work<single: Reply to fetched work; Fetch Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_REPLY_FETCH` is invoked whenever
+   :macro:`<Keyword>_HOOK_FETCH_WORK` returns data and the
+   *condor_startd* decides if it is going to accept the fetched job or
+   not.
+
+   The *condor_startd* will not wait for this hook to return before
+   taking other actions, and it ignores all output. The hook is simply
+   advisory, and it has no impact on the behavior of the
+   *condor_startd*.
+
+    Command-line arguments passed to the hook
+       Either the string accept or reject.
+    Standard input given to the hook
+       A copy of the job ClassAd and the slot ClassAd (separated by the
+       string ----- and a new line).
+    Expected standard output from the hook
+       None.
+    User id that the hook runs as
+       The :macro:`<Keyword>_HOOK_REPLY_FETCH` hook runs with the same
+       privileges as the *condor_startd*. When Condor was started as
+       root, this is usually the condor user, or the user specified in
+       the :macro:`CONDOR_IDS` configuration variable.
+    Exit status of the hook
+       Ignored.
+
+   :index:`Evict a claim<single: Evict a claim; Fetch Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_EVICT_CLAIM` is invoked whenever the
+   *condor_startd* needs to evict a claim representing fetched work.
+
+   The *condor_startd* will not wait for this hook to return before
+   taking other actions, and ignores all output. The hook is simply
+   advisory, and has no impact on the behavior of the *condor_startd*.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       A copy of the job ClassAd and the slot ClassAd (separated by the
+       string ----- and a new line).
+    Expected standard output from the hook
+       None.
+    User id that the hook runs as
+       The :macro:`<Keyword>_HOOK_EVICT_CLAIM` hook runs with the same
+       privileges as the *condor_startd*. When Condor was started as
+       root, this is usually the condor user, or the user specified in
+       the :macro:`CONDOR_IDS` configuration variable.
+    Exit status of the hook
+       Ignored.
+
+
+Keywords to Define Job Fetch Hooks in the HTCondor Configuration files
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`keywords<single: keywords; Job hooks>`
+
+Hooks are defined in the HTCondor configuration files by prefixing the
+name of the hook with a keyword. This way, a given machine can have
+multiple sets of hooks, each set identified by a specific keyword.
+
+Each slot on the machine can define a separate keyword for the set of
+hooks that should be used with :macro:`SLOT<N>_JOB_HOOK_KEYWORD`. For
+example, on slot 1, the variable name will be called ``SLOT1_JOB_HOOK_KEYWORD``.
+If the slot-specific keyword is not defined, the *condor_startd* will
+use a global keyword as defined by :macro:`STARTD_JOB_HOOK_KEYWORD`.
+
+Once a job is fetched via :macro:`<Keyword>_HOOK_FETCH_WORK`, the
+*condor_startd* will insert the keyword used to fetch that job into
+the job ClassAd as ``HookKeyword``. This way, the same keyword will
+be used to select the hooks invoked by the *condor_starter* during
+the actual execution of the job.
+The :macro:`STARTER_DEFAULT_JOB_HOOK_KEYWORD` config knob can define a default
+hook keyword to use in the event that keyword defined by the job is invalid
+or not specified.
+Alternatively, the :macro:`STARTER_JOB_HOOK_KEYWORD` can be defined to force the
+*condor_starter* to always use a given keyword for its own hooks,
+regardless of the value in the job ClassAd for the ``HookKeyword`` attribute.
+
+For example, the following configuration defines two sets of hooks, and
+on a machine with 4 slots, 3 of the slots use the global keyword for
+running work from a database-driven system, and one of the slots uses a
+custom keyword to handle work fetched from a web service.
+
+.. code-block:: condor-config
+
+      # Most slots fetch and run work from the database system.
+      STARTD_JOB_HOOK_KEYWORD = DATABASE
+
+      # Slot4 fetches and runs work from a web service.
+      SLOT4_JOB_HOOK_KEYWORD = WEB
+
+      # The database system needs to both provide work and know the reply
+      # for each attempted claim.
+      DATABASE_HOOK_DIR = /usr/local/condor/fetch/database
+      DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php
+      DATABASE_HOOK_REPLY_FETCH = $(DATABASE_HOOK_DIR)/reply_fetch.php
+
+      # The web system only needs to fetch work.
+      WEB_HOOK_DIR = /usr/local/condor/fetch/web
+      WEB_HOOK_FETCH_WORK = $(WEB_HOOK_DIR)/fetch_work.php
+
+The keywords ``"DATABASE"`` and ``"WEB"`` are completely arbitrary, so
+each site is encouraged to use different (more specific) names as
+appropriate for their own needs.
+
+Defining the FetchWorkDelay Expression
+''''''''''''''''''''''''''''''''''''''
+
+:index:`FetchWorkDelay<single: FetchWorkDelay; Job hooks>`
+
+There are two events that trigger the *condor_startd* to attempt to
+fetch new work:
+
+-  the *condor_startd* evaluates its own state
+-  the *condor_starter* exits after completing some fetched work
+
+Even if a given compute slot is already busy running other work, it is
+possible that if it fetched new work, the *condor_startd* would prefer
+this newly fetched work (via the ``Rank`` expression) over the work it
+is currently running. However, the *condor_startd* frequently evaluates
+its own state, especially when a slot is claimed. Therefore,
+administrators can define a configuration variable which controls how
+long the *condor_startd* will wait between attempts to fetch new work.
+This variable is called ``FetchWorkDelay``
+:index:`FetchWorkDelay`.
+
+The ``FetchWorkDelay`` expression must evaluate to an integer, which
+defines the number of seconds since the last fetch attempt completed
+before the *condor_startd* will attempt to fetch more work. However, as
+a ClassAd expression (evaluated in the context of the ClassAd of the
+slot considering if it should fetch more work, and the ClassAd of the
+currently running job, if any), the length of the delay can be based on
+the current state the slot and even the currently running job.
+
+For example, a common configuration would be to always wait 5 minutes
+(300 seconds) between attempts to fetch work, unless the slot is
+Claimed/Idle, in which case the *condor_startd* should fetch
+immediately:
+
+.. code-block:: condor-config
+
+    FetchWorkDelay = ifThenElse(State == "Claimed" && Activity == "Idle", 0, 300)
+
+If the *condor_startd* wants to fetch work, but the time since the last
+attempted fetch is shorter than the current value of the delay
+expression, the *condor_startd* will set a timer to fetch as soon as
+the delay expires.
+
+If this expression is not defined, the *condor_startd* will default to
+a five minute (300 second) delay between all attempts to fetch work.
+
+Job Hooks That Modify and Monitor Execution
+'''''''''''''''''''''''''''''''''''''''''''
+
+The Job ClassAd can be modified before execution, and the progress of the job can be modified
+using hooks. These hooks are executed by the *condor_starter* and can be used with or without
+using Fetch Work hooks.
+
+
+   :index:`Prepare job before file transfer<single: Prepare job before file transfer; Fetch Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_PREPARE_JOB_BEFORE_TRANSFER` is invoked by the
+   *condor_starter* immediately before transferring the job's input files. This hook provides
+   a chance to execute commands to set up or validate the job environment,
+   and/or edit the job classad that is used by the *condor_starter*. 
+
+   The *condor_starter* waits until this hook returns before attempting
+   to transfer the input files for the job. If the hook returns a non-zero exit status, the
+   *condor_starter* will assume an error was reached while attempting
+   to set up the job environment and abort the job.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       A copy of the job ClassAd.
+    Expected standard output from the hook
+       A set of attributes to insert or update into the job ad. For
+       example, changing the ``Cmd`` attribute to a quoted string
+       changes the executable to be run.
+       Two special attributes can also 
+       be specified: ``HookStatusCode`` and ``HookStatusMessage``.
+       ``HookStatusCode``, if specified and is not a negative number, will be used instead of the
+       exit status of the hook unless the hook process exited due to a signal.  A status code of
+       0 is success, and a positive integer indicates failure.  A status code between 1 and 299 (inclusive)
+       will result in the job going on hold; 300 or greater will result in the job going back to the Idle state.
+       The ``HookStatusMessage`` will be echoed into the job's event log file, and also be used as the
+       Hold Reason string if the job is placed on hold.
+    User id that the hook runs as
+       The :macro:`<Keyword>_HOOK_PREPARE_JOB` hook runs with the same
+       privileges as the job itself. If slot users are defined, the hook
+       runs as the slot user, just as the job does.
+    Exit status of the hook
+       0 for success preparing the job, any non-zero value on failure.
+
+   :index:`Prepare job<single: Prepare job; Fetch Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_PREPARE_JOB` is invoked by the
+   *condor_starter* before a job is going to be run but after the job's input files
+   have been transferred. This hook provides
+   a chance to execute commands to set up or validate the job environment,
+   and/or edit the job classad that is used by the *condor_starter*. 
+
+   The *condor_starter* waits until this hook returns before attempting
+   to execute the job. If the hook returns a non-zero exit status, the
+   *condor_starter* will assume an error was reached while attempting
+   to set up the job environment and abort the job.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       A copy of the job ClassAd.
+    Expected standard output from the hook
+       A set of attributes to insert or update into the job ad. For
+       example, changing the ``Cmd`` attribute to a quoted string
+       changes the executable to be run.
+       Two special attributes can also 
+       be specified: ``HookStatusCode`` and ``HookStatusMessage``.
+       ``HookStatusCode``, if specified and is not a negative number, will be used instead of the
+       exit status of the hook unless the hook process exited due to a signal.  A status code of
+       0 is success, and a positive integer indicates failure.  A status code between 1 and 299 (inclusive)
+       will result in the job going on hold; 300 or greater will result in the job going back to the Idle state.
+       The ``HookStatusMessage`` will be echoed into the job's event log file, and also be used as the
+       Hold Reason string if the job is placed on hold.
+    User id that the hook runs as
+       The :macro:`<Keyword>_HOOK_PREPARE_JOB` hook runs with the same
+       privileges as the job itself. If slot users are defined, the hook
+       runs as the slot user, just as the job does.
+    Exit status of the hook
+       0 for success preparing the job, any non-zero value on failure.
+
+   :index:`Update job info<single: Update job info; Fetch Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_UPDATE_JOB_INFO` is invoked periodically
+   during the life of the job to update information about the status of
+   the job. When the job is first spawned, the *condor_starter* will
+   invoke this hook after :macro:`STARTER_INITIAL_UPDATE_INTERVAL`
+   seconds (defaults to 8). Thereafter, the *condor_starter* will
+   invoke the hook every :macro:`STARTER_UPDATE_INTERVAL`
+   seconds (defaults to 300, which is 5 minutes).
+
+   The *condor_starter* will not wait for this hook to return before
+   taking other actions, and ignores all output. The hook is simply
+   advisory, and has no impact on the behavior of the *condor_starter*.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       A copy of the job ClassAd that has been augmented with additional
+       attributes describing the current status and execution behavior
+       of the job.
+
+       The additional attributes included inside the job ClassAd are:
+
+       ``JobState``
+           The current state of the job. Can be either ``"Running"`` or
+           ``"Suspended"``.
+       ``JobPid``
+           The process identifier for the initial job directly spawned
+           by the *condor_starter*.
+       ``NumPids``
+           The number of processes that the job has currently spawned.
+       ``JobStartDate``
+           The epoch time when the job was first spawned by the
+           *condor_starter*.
+       ``RemoteSysCpu``
+           The total number of seconds of system CPU time (the time
+           spent at system calls) the job has used.
+       ``RemoteUserCpu``
+           The total number of seconds of user CPU time the job has
+           used.
+       ``ImageSize``
+           The memory image size of the job in Kbytes.
+
+    Expected standard output from the hook
+       None.
+    User id that the hook runs as
+       The :macro:`<Keyword>_HOOK_UPDATE_JOB_INFO` hook runs with the
+       same privileges as the job itself.
+    Exit status of the hook
+       Ignored.
+
+   :index:`Job exit<single: Job exit; Fetch Hooks>`
+
+-  The hook defined by the configuration variable :macro:`<Keyword>_HOOK_JOB_EXIT` is
+   invoked by the *condor_starter* whenever a job exits, either on its
+   own or when being evicted from an execution slot.
+
+   The *condor_starter* will wait for this hook to return before taking
+   any other actions. In the case of jobs that are being managed by a
+   *condor_shadow*, this hook is invoked before the *condor_starter*
+   does its own optional file transfer back to the submission machine,
+   writes to the local job event log file, or notifies the
+   *condor_shadow* that the job has exited.
+
+    Command-line arguments passed to the hook
+       A string describing how the job exited:
+
+       -  exit The job exited or died with a signal on its own.
+       -  remove The job was removed with *condor_rm* or as the result
+          of user job policy expressions (for example,
+          ``PeriodicRemove``).
+       -  hold The job was held with *condor_hold* or the user job
+          policy expressions (for example, ``PeriodicHold``).
+       -  evict The job was evicted from the execution slot for any
+          other reason (:macro:`PREEMPT` evaluated to TRUE in the
+          *condor_startd*, *condor_vacate*, *condor_off*, etc).
+
+    Standard input given to the hook
+       A copy of the job ClassAd that has been augmented with additional
+       attributes describing the execution behavior of the job and its
+       final results.
+
+       The job ClassAd passed to this hook contains all of the extra
+       attributes described above for :macro:`<Keyword>_HOOK_UPDATE_JOB_INFO`,
+       and the following additional attributes that are only present
+       once a job exits:
+
+       ``ExitReason``
+           A human-readable string describing why the job exited.
+       ``ExitBySignal``
+           A boolean indicating if the job exited due to being killed by
+           a signal, or if it exited with an exit status.
+       ``ExitSignal``
+           If ``ExitBySignal`` is true, the signal number that killed
+           the job.
+       ``ExitCode``
+           If ``ExitBySignal`` is false, the integer exit code of the
+           job.
+       ``JobDuration``
+           The number of seconds that the job ran during this
+           invocation.
+
+    Expected standard output from the hook
+       None.
+    User id that the hook runs as
+       The :macro:`<Keyword>_HOOK_JOB_EXIT` hook runs with the same
+       privileges as the job itself.
+    Exit status of the hook
+       Ignored.
+
+
+Example Hook: Specifying the Executable at Execution Time
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`Java example<single: Java example; Job hooks>`
+
+The availability of multiple versions of an application leads to the
+need to specify one of the versions. As an example, consider that the
+java universe utilizes a single, fixed JVM. There may be multiple JVMs
+available, and the HTCondor job may need to make the choice of JVM
+version. The use of a job hook solves this problem. The job does not use
+the java universe, and instead uses the vanilla universe in combination
+with a prepare job hook to overwrite the ``Cmd`` attribute of the job
+ClassAd. This attribute is the name of the executable the
+*condor_starter* daemon will invoke, thereby selecting the specific JVM
+installation.
+
+In the configuration of the execute machine:
+
+.. code-block:: condor-config
+
+    JAVA5_HOOK_PREPARE_JOB = $(LIBEXEC)/java5_prepare_hook
+
+With this configuration, a job that sets the ``HookKeyword`` attribute
+with
+
+.. code-block:: condor-submit
+
+    +HookKeyword = "JAVA5"
+
+in the submit description file causes the *condor_starter* will run the
+hook specified by ``JAVA5_HOOK_PREPARE_JOB`` before running this job. Note that
+the double quote marks are required to correctly define the attribute.
+Any output from this hook is an update to the job ClassAd. Therefore,
+the hook that changes the executable may be
+
+.. code-block:: bash
+
+    #!/bin/sh
+
+    # Read and discard the job ClassAd
+    cat > /dev/null
+    echo 'Cmd = "/usr/java/java5/bin/java"'
+
+If some machines in your pool have this hook and others do not, this
+fact should be advertised. Add to the configuration of every execute
+machine that has the hook:
+
+.. code-block:: condor-config
+
+    HasJava5PrepareHook = True
+    STARTD_ATTRS = HasJava5PrepareHook $(STARTD_ATTRS)
+
+The submit description file for this example job may be
+
+.. code-block:: condor-submit
+
+    universe = vanilla
+    executable = /usr/bin/java
+    arguments = Hello
+    # match with a machine that has the hook
+    requirements = HasJava5PrepareHook
+
+    should_transfer_files = always
+    when_to_transfer_output = on_exit
+    transfer_input_files = Hello.class
+
+    output = hello.out
+    error  = hello.err
+    log    = hello.log
+
+    +HookKeyword="JAVA5"
+
+    queue
+
+Note that the job
+:subcom:`requirements[and hooks]` submit command
+ensures that this job matches with a machine that has
+``JAVA5_HOOK_PREPARE_JOB`` defined.
+
+:index:`Hooks`

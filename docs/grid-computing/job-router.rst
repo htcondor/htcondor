@@ -102,9 +102,9 @@ for routing.
    the set of files transferred back when the job completes. Vanilla
    universe jobs transfer back all files created or modified, while all
    grid universe jobs, except for HTCondor-C, only transfer back the
-   :subcom:`output<and job router>` file, as well as
+   :subcom:`output[and job router]` file, as well as
    those explicitly listed with
-   :subcom:`transfer_output_files<and job router>`
+   :subcom:`transfer_output_files[and job router]`
    Therefore, when routing jobs to grid universes other than HTCondor-C,
    it is important to explicitly specify all output files that must be
    transferred upon job completion.
@@ -293,7 +293,7 @@ possible routes and it may specify specific modifications that should be
 made to the job when it is sent along a specific route. In addition to
 this mechanism for transforming the job, external programs may be
 invoked to transform the job. For more information, see
-the :ref:`admin-manual/hooks:hooks for the job router` section.
+below: ref:`grid-computing/job-router:hooks for the job router`
 
 The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.
@@ -408,8 +408,7 @@ may appear in a Routing Table entry.
     A boolean expression that, when ``True``, causes the original job to
     be transformed in place rather than creating a new transformed
     version (a routed copy) of the job. In this mode, the Job Router
-    Hook ``<Keyword>_HOOK_TRANSLATE_JOB``
-    :index:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
+    Hook :macro:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
     in the routing table are applied during the job transformation. The
     routing table attribute ``GridResource`` is ignored, and there is no
     default transformation of the job from a vanilla job to a grid
@@ -645,3 +644,150 @@ overriding those specified in `JOB_ROUTER_DEFAULTS`.
 ``Delete_<ATTR>``
     Deletes ``<ATTR>`` from the routed copy ClassAd. A value assigned to
     this attribute in the routing table entry is ignored.
+
+
+Hooks for the Job Router
+------------------------
+
+:index:`Job Router hooks<single: Job Router hooks; Hooks>`
+
+Job Router Hooks allow for an alternate transformation and/or monitoring
+than the *condor_job_router* daemon implements. Routing is still
+managed by the *condor_job_router* daemon, but if the Job Router Hooks
+are specified, then these hooks will be used to transform and monitor
+the job instead.
+
+Job Router Hooks are similar in concept to Fetch Work Hooks, but they
+are limited in their scope. A hook is an external program or script
+invoked by the *condor_job_router* daemon at various points during the
+life cycle of a routed job.
+
+The following sections describe how and when these hooks are used, what
+hooks are invoked at various stages of the job's life, and how to
+configure HTCondor to use these Hooks.
+
+Hooks Invoked for Job Routing
+'''''''''''''''''''''''''''''
+
+:index:`Job Router`
+
+The Job Router Hooks allow for replacement of the transformation engine
+used by HTCondor for routing a job. Since the external transformation
+engine is not controlled by HTCondor, additional hooks provide a means
+to update the job's status in HTCondor, and to clean up upon exit or
+failure cases. This allows one job to be transformed to just about any
+other type of job that HTCondor supports, as well as to use execution
+nodes not normally available to HTCondor.
+
+It is important to note that if the Job Router Hooks are utilized, then
+HTCondor will not ignore or work around a failure in any hook execution.
+If a hook is configured, then HTCondor assumes its invocation is
+required and will not continue by falling back to a part of its internal
+engine. For example, if there is a problem transforming the job using
+the hooks, HTCondor will not fall back on its transformation
+accomplished without the hook to process the job.
+
+There are 2 ways in which the Job Router Hooks may be enabled. A job's
+submit description file may cause the hooks to be invoked with
+
+.. code-block:: condor-submit
+
+    +HookKeyword = "HOOKNAME"
+
+Adding this attribute to the job's ClassAd causes the
+*condor_job_router* daemon on the access point to invoke hooks
+prefixed with the defined keyword. ``HOOKNAME`` is a string chosen as an
+example; any string may be used.
+
+The job's ClassAd attribute definition of ``HookKeyword`` takes
+precedence, but if not present, hooks may be enabled by defining on the
+access point the configuration variable
+
+.. code-block:: condor-config
+
+     JOB_ROUTER_HOOK_KEYWORD = HOOKNAME
+
+Like the example attribute above, ``HOOKNAME`` represents a chosen name
+for the hook, replaced as desired or appropriate.
+
+There are 4 hooks that the Job Router can be configured to use. Each
+hook will be described below along with data passed to the hook and
+expected output. All hooks must exit successfully.
+:index:`Translate Job<single: Translate Job; Job Router Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_TRANSLATE_JOB` is invoked when the Job
+   Router has determined that a job meets the definition for a route.
+   This hook is responsible for doing the transformation of the job and
+   configuring any resources that are external to HTCondor if
+   applicable.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       The first line will be the information on route that the job matched
+       including the route name. This information will be formatted as a classad.
+       If the route has a  ``TargetUniverse`` or ``GridResource`` they will be
+       included in the classad. The route information classad will be followed
+       by a separator line of dashes like ``------`` followed by a newline.
+       The remainder of the input will be the job ClassAd.
+    Expected standard output from the hook
+       The transformed job.
+    Exit status of the hook
+       0 for success, any non-zero value on failure.
+
+   :index:`Update Job Info<single: Update Job Info; Job Router Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_UPDATE_JOB_INFO` is invoked to provide
+   status on the specified routed job when the Job Router polls the
+   status of routed jobs at intervals set by
+   :macro:`JOB_ROUTER_POLLING_PERIOD`.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       The routed job ClassAd that is to be updated.
+    Expected standard output from the hook
+       The job attributes to be updated in the routed job, or nothing,
+       if there was no update. To prevent clashing with HTCondor's
+       management of job attributes, only attributes that are not
+       managed by HTCondor should be output from this hook.
+    Exit status of the hook
+       0 for success, any non-zero value on failure.
+
+   :index:`Job Finalize<single: Job Finalize; Job Router Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_JOB_FINALIZE` is invoked when the Job
+   Router has found that the job has completed. Any output from the hook
+   is treated as an update to the source job.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       The source job ClassAd, followed by the routed copy Classad that
+       completed, separated by the string "------" and a new line.
+    Expected standard output from the hook
+       An updated source job ClassAd, or nothing if there was no update.
+    Exit status of the hook
+       0 for success, any non-zero value on failure.
+
+   :index:`Job Cleanup<single: Job Cleanup; Job Router Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_JOB_CLEANUP` is invoked when the Job
+   Router finishes managing the job. This hook will be invoked
+   regardless of whether the job completes successfully or not, and must
+   exit successfully.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       The job ClassAd that the Job Router is done managing.
+    Expected standard output from the hook
+       None.
+    Exit status of the hook
+       0 for success, any non-zero value on failure.
+
+

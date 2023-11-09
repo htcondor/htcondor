@@ -19,16 +19,16 @@ local or scheduler.  The execute machine directly retrieves the files from
 their source. Each URL-transferred file, is
 separately listed in the job submit description file with the command
 ``transfer_input_files``;
-:subcom:`transfer_input_files<definition>`
+:subcom:`transfer_input_files[definition]`
 see :doc:`../users-manual/file-transfer` for details.
 
 For transferring output files, either the entire output sandbox, or a
 subset of these files, as specified by the submit description file
 command ``transfer_output_files``
-:subcom:`transfer_output_files<definition>`
+:subcom:`transfer_output_files[definition]`
 are transferred to the directory specified by the URL. The URL itself is
 specified in the separate submit description file command
-:subcom:`output_destination<definition>`
+:subcom:`output_destination[definition]`
 see :doc:`../users-manual/file-transfer` for details.  The plug-in
 is invoked once for each output file to be transferred.
 
@@ -84,8 +84,8 @@ plug-in handles. So, for example
 would identify that the three protocols described by http, ftp, and file
 are supported. These strings will match the protocol specification as
 given within a URL in a
-:subcom:`transfer_input_files<and URLs>`
-command or within a URL in an :subcom:`output_destination<and URLs>`
+:subcom:`transfer_input_files[and URLs]`
+command or within a URL in an :subcom:`output_destination[and URLs]`
 command in a submit description file for a job.
 
 When a job specifies a URL transfer, the plug-in is invoked, without the

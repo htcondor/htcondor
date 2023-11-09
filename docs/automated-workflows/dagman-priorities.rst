@@ -123,7 +123,7 @@ node SB will be 120.
 The effective priorities listed above are assigned by DAGMan. There is
 no way to change the priority in the submit description file for a job,
 as DAGMan will override any
-:subcom:`priority<and DAGMan>` command placed
+:subcom:`priority[and DAGMan]` command placed
 in a submit description file (unless the effective node priority is 0;
 in this case, any priority specified in the submit file will take
 effect).

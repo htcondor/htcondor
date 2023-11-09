@@ -53,7 +53,6 @@ extern int load_master_mgmt(void);
 #endif
 
 #include "systemd_manager.h"
-#include <sstream>
 
 #ifdef WIN32
 
@@ -732,12 +731,12 @@ main_init( int argc, char* argv[] )
 	// Command handler for stashing the pool password
 	daemonCore->Register_Command( STORE_POOL_CRED, "STORE_POOL_CRED",
 								&store_pool_cred_handler,
-								"store_pool_cred_handler", CONFIG_PERM );
+								"store_pool_cred_handler", ADMINISTRATOR );
 
 	// Command handler for handling the ready state
 	daemonCore->Register_CommandWithPayload( DC_SET_READY, "DC_SET_READY",
 								  ready_command_handler,
-								  "ready_command_handler", WRITE );
+								  "ready_command_handler", DAEMON );
 	daemonCore->Register_CommandWithPayload( DC_QUERY_READY, "DC_QUERY_READY",
 								  ready_command_handler,
 								  "ready_command_handler", READ );

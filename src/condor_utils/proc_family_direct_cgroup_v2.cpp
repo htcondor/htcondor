@@ -223,21 +223,47 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		close(fd);
 	}
 
-	// Set limits, if any
+	// Set memory limits, if any
 	if (cgroup_memory_limit > 0) {
 		// write memory limits
 		stdfs::path memory_limits_path = leaf / "memory.max";
 		int fd = open(memory_limits_path.c_str(), O_WRONLY, 0666);
 		if (fd >= 0) {
-			char buf[16];
-			sprintf(buf, "%lu", cgroup_memory_limit);
-			int r = write(fd, buf, strlen(buf));
+			std::string buf;
+			formatstr(buf, "%lu", cgroup_memory_limit);
+			int r = write(fd, buf.data(), buf.size());
 			if (r < 0) {
-				dprintf(D_ALWAYS, "Error setting cgroup memory limit of %s in cgroup %s: %s\n", buf, leaf.c_str(), strerror(errno));
+				dprintf(D_ALWAYS, "Error setting cgroup memory limit of %s in cgroup %s: %s\n", buf.c_str(), leaf.c_str(), strerror(errno));
 			}
 			close(fd);
 		} else {
 			dprintf(D_ALWAYS, "Error setting cgroup memory limit of %lu in cgroup %s: %s\n", cgroup_memory_limit, leaf.c_str(), strerror(errno));
+		}
+	}
+	//
+	// Set swap limits, if any
+	if (cgroup_memory_and_swap_limit > 0) {
+		// write memory limits
+		stdfs::path memory_swap_limits_path = leaf / "memory.swap.max";
+		int fd = open(memory_swap_limits_path.c_str(), O_WRONLY, 0666);
+		if (fd >= 0) {
+			std::string buf;
+			// cgroup.v2 memory.swap.max is swap EXclusive of ram usage, our interface
+			// is INclusive
+			uint64_t swap_limit;
+			if (cgroup_memory_and_swap_limit < cgroup_memory_limit) {
+				swap_limit = 0;
+			} else {
+				swap_limit = cgroup_memory_and_swap_limit - cgroup_memory_limit;
+			}
+			formatstr(buf, "%lu", swap_limit);
+			int r = write(fd, buf.data(), buf.size());
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error setting cgroup swap limit of %s in cgroup %s: %s\n", buf.c_str(), leaf.c_str(), strerror(errno));
+			}
+			close(fd);
+		} else {
+			dprintf(D_ALWAYS, "Error setting cgroup swap limit of %lu in cgroup %s: %s\n", cgroup_memory_and_swap_limit, leaf.c_str(), strerror(errno));
 		}
 	}
 
@@ -313,6 +339,7 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, const FamilyInfo *f
 
 	std::string cgroup_name = fi->cgroup;
 	this->cgroup_memory_limit = fi->cgroup_memory_limit;
+	this->cgroup_memory_and_swap_limit = fi->cgroup_memory_and_swap_limit;
 	this->cgroup_cpu_shares = fi->cgroup_cpu_shares;
 
 	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));

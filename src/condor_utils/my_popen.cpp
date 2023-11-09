@@ -31,6 +31,7 @@
 #include <poll.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include "largestOpenFD.h"
 #endif
 
 #ifdef WIN32
@@ -454,7 +455,7 @@ my_popenv_impl( const char *const args[],
 		 * Of course, do not close stdin/out/err or the fds to
 		 * the pipes we just created above.
 		 */
-		int limit = getdtablesize();
+		int limit = largestOpenFD();
 		for (int jj=3; jj < limit; jj++) {
 			if (jj != pipe_d[0] &&
 				jj != pipe_d[1] &&

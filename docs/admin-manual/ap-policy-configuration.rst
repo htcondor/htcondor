@@ -282,7 +282,7 @@ access point, choose a machine that all users can log into, as well as
 one that is likely to be up and running all the time. All of HTCondor's
 other resource requirements for a access point apply to this machine,
 such as having enough disk space in the spool directory to hold jobs.
-See :doc:`directories` for more information.
+See :ref:`admin-manual/logging:directories` for more information.
 
 Configuration Examples for Dedicated Resources
 ''''''''''''''''''''''''''''''''''''''''''''''
@@ -543,7 +543,7 @@ and is currently specified only with a file URL. The configuration
 specifies the shared space (``SPOOL``), and the URL of the lock.
 *condor_preen* is not currently aware of the lock file and will delete
 it if it is placed in the ``SPOOL`` directory, so be sure to add file
-``SCHEDD.lock`` to :macro:`VALID_SPOOL_FILES`.
+``SCHEDD.lock`` to :macro:`VALID_SPOOL_FILES[with HA Schedd]`.
 
 As HTCondor starts on machines that are configured to run the single
 *condor_schedd* daemon, the *condor_master* daemon of the first
