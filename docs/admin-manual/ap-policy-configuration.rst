@@ -282,7 +282,7 @@ access point, choose a machine that all users can log into, as well as
 one that is likely to be up and running all the time. All of HTCondor's
 other resource requirements for a access point apply to this machine,
 such as having enough disk space in the spool directory to hold jobs.
-See :doc:`directories` for more information.
+See :ref:`admin-manual/logging:directories` for more information.
 
 Configuration Examples for Dedicated Resources
 ''''''''''''''''''''''''''''''''''''''''''''''

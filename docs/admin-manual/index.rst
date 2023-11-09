@@ -8,7 +8,6 @@ Administrators' Manual
    introduction-admin-manual
    installation-startup-shutdown-reconfiguration
    introduction-to-configuration
-   configuration-templates
    configuration-macros
    ep-policy-configuration
    ap-policy-configuration
@@ -17,5 +16,4 @@ Administrators' Manual
    networking
    logging
    file-and-cred-transfer 
-   hooks
    setting-up-special-environments

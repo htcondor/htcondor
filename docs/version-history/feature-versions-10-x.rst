@@ -934,7 +934,7 @@ New Features:
 - Improvements to job hooks, including configuration knob STARTER_DEFAULT_JOB_HOOK_KEYWORD,
   the new hook PREPARE_JOB_BEFORE_TRANSFER,
   and the ability to preserve stderr from job hooks into the StarterLog or StartdLog.
-  See the :ref:`admin-manual/hooks:Hooks` manual section.
+  See the :ref:`admin-manual/ep-policy-configuration:Hooks` manual section.
   :jira:`1400`
 
 Bugs Fixed:
