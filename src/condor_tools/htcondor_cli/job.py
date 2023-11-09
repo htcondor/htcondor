@@ -190,6 +190,10 @@ class Status(Verb):
         job = None
         job_status = "IDLE"
         resource_type = "htcondor"
+        ACTIVE_STATES = [ htcondor.JobStatus.RUNNING,
+                          htcondor.JobStatus.SUSPENDED,
+                          htcondor.JobStatus.TRANSFERRING_OUTPUT,
+                        ]
 
         # Split job id into cluster and proc
         if "." in job_id:
@@ -206,12 +210,13 @@ class Status(Verb):
         projection = ["JobStartDate", "JobStatus", "QDate", "CompletionDate", "EnteredCurrentStatus",
                       "RequestMemory", "MemoryUsage", "RequestDisk", "DiskUsage", "HoldReason",
                       "ResourceType", "TargetAnnexName", "NumShadowStarts", "NumJobStarts", "NumHolds",
-                      "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime"]
+                      "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime",
+                      "RemoteWallClockTime"]
         try:
             job = schedd.query(constraint=constraint,
                                projection=projection,
                                limit=1,
-                               )
+                              )
         except IndexError:
             raise RuntimeError(f"No job found for ID {job_id}.")
         except Exception as e:
@@ -256,10 +261,15 @@ class Status(Verb):
             job_execs = job_ad.get("NumJobStarts", 0)
             job_holds = job_ad.get("NumHolds", 0)
             job_suspends = job_ad.get("TotalSuspensions", 0)
-            job_committed_time = job_ad.get("CommittedTime")
-            goodput = None
-            if job_committed_time is not None:
-                goodput = job_committed_time / 3600
+            # Calculate job goodput
+            job_committed_time = job_ad.get("CommittedTime", 0)
+            job_wall_clock_time = job_ad.get("RemoteWallClockTime", 0)
+            job_curr_run_time = 0;
+            if job_status in ACTIVE_STATES:
+                job_curr_run_time = time.time() - job_ad["JobStartDate"]
+                job_committed_time = job_curr_run_time
+                job_wall_clock_time += job_curr_run_time
+            goodput = (job_committed_time / job_wall_clock_time) if job_wall_clock_time > 0 else 0.0
 
             # Compute memory and disk usage if available
             memory_usage, disk_usage = None, None
@@ -285,8 +295,6 @@ class Status(Verb):
                 if job_atts > 0:
                     logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
                     logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
-                if goodput is not None:
-                    logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.RUNNING:
                 job_running_time = datetime.now() - datetime.fromtimestamp(job_ad["JobStartDate"])
@@ -304,8 +312,6 @@ class Status(Verb):
                 if job_atts > 1:
                     logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
                     logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
-                if goodput is not None:
-                    logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.SUSPENDED:
                 job_suspended_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
@@ -317,8 +323,6 @@ class Status(Verb):
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
                     logger.info(f"Its last disk usage was {disk_usage}.")
-                if goodput is not None:
-                    logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.TRANSFERRING_OUTPUT:
                 job_transfer_time = datetime.now() - datetime.fromtimestamp(job_ad["JobCurrentStartTransferOutputDate"])
@@ -328,8 +332,6 @@ class Status(Verb):
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
                     logger.info(f"Its last disk usage was {disk_usage}.")
-                if goodput is not None:
-                    logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.HELD:
                 job_held_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
@@ -344,12 +346,8 @@ class Status(Verb):
                     if disk_usage:
                         logger.info(f"Its last disk usage was {disk_usage}.")
                 if job_atts >= 1:
-                    logger.info(
-                        f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
-                    logger.info(
-                        f"The job has started {job_execs} time{s(job_execs)}.")
-                if goodput is not None:
-                    logger.info(f"Goodput is {goodput:.1f} hours.")
+                    logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
+                    logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
 
             elif job_status == htcondor.JobStatus.REMOVED:
                 job_removed_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
@@ -360,8 +358,6 @@ class Status(Verb):
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
                     logger.info(f"Its last disk usage was {disk_usage}.")
-                if goodput is not None:
-                    logger.info(f"Goodput is {goodput:.1f} hours.")
 
             elif job_status == htcondor.JobStatus.COMPLETED:
                 job_completed_time = datetime.now() - datetime.fromtimestamp(job_ad["CompletionDate"])
@@ -372,11 +368,16 @@ class Status(Verb):
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
                     logger.info(f"Its last disk usage was {disk_usage}.")
-                if goodput is not None:
-                    logger.info(f"Goodput is {goodput:.1f} hours.")
 
             else:
+                goodput = None
                 logger.info(f"Job {job_id} is in an unknown state (JobStatus = {job_status}).")
+
+            # Display Good put for all job states
+            if goodput is not None:
+                goodput = goodput * 100
+                tense = "had" if job_status == htcondor.JobStatus.COMPLETED else "has"
+                logger.info(f"Job {tense} {goodput:.1f}% goodput.")
 
         # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log

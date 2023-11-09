@@ -28,7 +28,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improve ``htcondor job status`` command to display information about
+  a jobs goodput.
+  :jira:`1982`
 
 Bugs Fixed:
 
@@ -80,7 +82,7 @@ Bugs Fixed:
   :jira:`2080`
 
 - Fixed warnings about use of deprecated HTCondor python binding methods
-  in the `htcondor dag submit` command.
+  in the ``htcondor dag submit`` command.
   :jira:`2104`
 
 - Improved cleanup of ssh-agent processes when submitting **batch**
