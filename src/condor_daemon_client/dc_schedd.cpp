@@ -31,8 +31,6 @@
 #include "file_transfer.h"
 #include "condor_version.h"
 
-#include <sstream>
-
 // // // // //
 // DCSchedd
 // // // // //
@@ -2027,14 +2025,10 @@ ImpersonationTokenContinuation::startCommandCallback(bool success, Sock *sock, C
 		return;
 	}
 	if (!callback_data.m_authz_bounding_set.empty()) {
-		std::stringstream ss;
-		bool first = true;
-		for (const auto &authz : callback_data.m_authz_bounding_set) {
-			if (first) {first = false;}
-			else {ss << ",";}
-			ss << authz;
-		}
-		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str()))
+		std::string authz_bounding_set_str =
+			join(callback_data.m_authz_bounding_set, ",");
+
+		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_bounding_set_str))
 		{
 			errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
 			callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);

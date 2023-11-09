@@ -1128,24 +1128,14 @@ Condor_Auth_SSL::server_verify_scitoken(CondorError* errstack)
 	}
 	classad::ClassAd ad;
 	if (!groups.empty()) {
-		std::stringstream ss;
-		bool first = true;
-		for (const auto &grp : groups) {
-			ss << (first ? "" : ",") << grp;
-			first = false;
-		}
-		ad.InsertAttr(ATTR_TOKEN_GROUPS, ss.str());
+		std::string ss = join(groups, ",");
+		ad.InsertAttr(ATTR_TOKEN_GROUPS, ss);
 	}
 		// These are *not* the same as authz; the authz are filtered (and stripped)
 		// for the prefix condor:/
 	if (!scopes.empty()) {
-		std::stringstream ss;
-		bool first = true;
-		for (const auto &scope : scopes) {
-			ss << (first ? "" : ",") << scope;
-			first = false;
-		}
-		ad.InsertAttr(ATTR_TOKEN_SCOPES, ss.str());
+		std::string ss = join(scopes, ",");
+		ad.InsertAttr(ATTR_TOKEN_SCOPES, ss);
 	}
 	if (!jti.empty()) {
 		ad.InsertAttr(ATTR_TOKEN_ID, jti);
@@ -1153,14 +1143,13 @@ Condor_Auth_SSL::server_verify_scitoken(CondorError* errstack)
 	ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
 	ad.InsertAttr(ATTR_TOKEN_SUBJECT, subject);
 	if (!bounding_set.empty()) {
-		std::stringstream ss;
+		std::string ss = join(bounding_set, ",");
 		for (const auto &auth : bounding_set) {
 			dprintf(D_SECURITY|D_FULLDEBUG,
 				"Found SciToken condor authorization: %s\n",
 				auth.c_str());
-			ss << auth << ",";
 		}
-		ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
+		ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss);
 	}
 	mySock_->setPolicyAd(ad);
 	m_scitokens_auth_name = issuer + "," + subject;
