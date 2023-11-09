@@ -288,7 +288,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     macros that would otherwise reside in one or more files as described
     here. If ``LOCAL_CONFIG_FILE`` is not defined, no local
     configuration files are processed. For more information on this, see
-    :ref:`admin-manual/setting-up-special-environments:configuring htcondor for multiple platforms`.
+    :ref:`admin-manual/introduction-to-configuration:configuring htcondor for multiple platforms`.
 
     If all files in a directory are local configuration files to be
     processed, then consider using :macro:`LOCAL_CONFIG_DIR`.
@@ -10500,7 +10500,7 @@ These macros control the various hooks that interact with HTCondor.
 Currently, there are two independent sets of hooks. One is a set of
 fetch work hooks, some of which are invoked by the *condor_startd* to
 optionally fetch work, and some are invoked by the *condor_starter*.
-See :ref:`admin-manual/hooks:job hooks that fetch work` for more
+See :ref:`admin-manual/ep-policy-configuration:job hooks that fetch work` for more
 details. The other set replace functionality of the
 *condor_job_router* daemon. Documentation for the
 *condor_job_router* daemon is in
@@ -10557,7 +10557,7 @@ details. The other set replace functionality of the
     For the fetch work hooks, the full path to the program invoked by
     the *condor_starter* periodically as the job runs, allowing the
     *condor_starter* to present an updated and augmented job ClassAd to
-    the program. See :ref:`admin-manual/hooks:job hooks that fetch work` for
+    the program. See :ref:`admin-manual/ep-policy-configuration:job hooks that fetch work` for
     the list of additional attributes included. When the job is first invoked,
     the *condor_starter* will invoke the program after
     ``$(STARTER_INITIAL_UPDATE_INTERVAL)`` seconds. Thereafter, the
@@ -10598,7 +10598,7 @@ details. The other set replace functionality of the
     (if any). The expression must evaluate to an integer. If not
     defined, the *condor_startd* will wait 300 seconds (five minutes)
     between attempts to fetch work. For more information about this
-    expression, see :ref:`admin-manual/hooks:job hooks that fetch work`.
+    expression, see :ref:`admin-manual/ep-policy-configuration:job hooks that fetch work`.
 
 :macro-def:`JOB_ROUTER_HOOK_KEYWORD[HOOKS]`
     For the Job Router hooks, the keyword used to define the set of
