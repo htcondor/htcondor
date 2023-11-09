@@ -48,7 +48,6 @@
 #include "condor_scitokens.h"
 
 #include <chrono>
-#include <sstream>
 #include <algorithm>
 
 #ifdef LINUX
@@ -174,24 +173,21 @@ public:
 	}
 
 	std::string getPublicString() const {
-		std::stringstream ss;
 		std::string bounding_set_info = "<none>";
 		if (!m_authz_bounding_set.empty()) {
-			std::stringstream ss2;
-			bool first = true;
-			for (const auto &authz : m_authz_bounding_set) {
-				if (first) {first = false;}
-				else {ss2 << ",";}
-				ss2 << authz;
-			}
-			bounding_set_info = ss2.str();
+			bounding_set_info = join(m_authz_bounding_set, ",");
 		}
-		ss << "[requested_id = " << m_requested_identity
-			<< "; requester_id = " << m_requester_identity
-			<< "; peer_location = " << m_peer_location
-			<< "; m_authz_bounding_set = " << bounding_set_info
-			<< "]";
-		return ss.str();
+		std::string public_str = 
+			"[requested_id = " +
+		   	m_requested_identity +
+			"; requester_id = " +
+		   	m_requester_identity +
+			"; peer_location = " +
+		   	m_peer_location +
+			"; m_authz_bounding_set = " +
+		   	bounding_set_info +
+			"]";
+		return public_str;
 	}
 
 	void setToken(const std::string &token) {
@@ -292,10 +288,7 @@ public:
 				continue;
 			}
 			std::unique_ptr<char> netblock(rule.m_approval_netblock->print_to_string());
-			std::stringstream ss;
-			ss << "[netblock = " << netblock.get() << "; lifetime_left = "
-				<< (rule.m_expiry_time - now) << "]";
-			rule_text = ss.str();
+			formatstr(rule_text, "[netblock = %s; lifetime_left = %ld]", netblock.get(),  rule.m_expiry_time - now);
 			return true;
 		}
 		return false;
@@ -2245,17 +2238,7 @@ handle_dc_list_token_request(int, Stream* stream)
 		const auto &request_id_str = iter.second->getRequestId();
 		if (!request_filter_str.empty() && (request_filter_str != request_id_str)) {continue;}
 
-		std::stringstream ss;
-		auto bound_set = token_request->getBoundingSet();
-		for (const auto &authz : bound_set) {
-			ss << authz << ",";
-		}
-		std::string bounds = ss.str();
-		if (bounds.size() == 1) {
-			bounds = "";
-		} else {
-			bounds = bounds.substr(0, bounds.size()-1);
-		}
+		std::string bounds = join(token_request->getBoundingSet(), ",");
 
 			// If we do not have ADMINISTRATOR privileges, the requested identity
 			// and the authenticated identity must match!
@@ -2580,15 +2563,9 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 			} else {
 				auto peer_location = static_cast<Sock*>(stream)->peer_ip_str();
 				auto peer_identity = static_cast<Sock*>(stream)->getFullyQualifiedUser();
-				std::stringstream ss;
 				std::string bounding_set_str;
 				if (!bounding_set.empty()) {
-					bool wrote_first = false;
-					for (const auto &entry : bounding_set) {
-						ss << (wrote_first ? "," : "") << entry;
-						wrote_first = true;
-					}
-					bounding_set_str = ss.str();
+					bounding_set_str = join(bounding_set, ",");
 				} else {
 					bounding_set_str = "(none)";
 				}

@@ -27,7 +27,6 @@
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 
-#include <sstream>
 #include <algorithm>
 
 std::map< std::string, Timeslice > DCCollector::blacklist;
@@ -128,13 +127,7 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 
 	if (!authz_bounding_set.empty())
 	{
-		std::stringstream ss;
-		for (auto & authz : authz_bounding_set) {
-			ss << "," << authz;
-		}
-		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION,
-			ss.str().substr(1)))
-		{
+		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, join(authz_bounding_set, ","))) {
 			err.push("DCCollector", 1, "Failed to insert authorization bound.");
 			return false;
 		}

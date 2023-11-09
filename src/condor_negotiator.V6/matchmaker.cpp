@@ -46,7 +46,6 @@
 
 #include <vector>
 #include <string>
-#include <sstream>
 #include <deque>
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
@@ -3456,19 +3455,20 @@ bool getSubmitter(const ClassAd &ad, std::string &submitter)
 static
 bool makeSubmitterScheddHash(const ClassAd &ad, std::string &hash)
 {
-	std::stringstream ss;
 	std::string scheddAddr, submitterName;
 	if (!getScheddAddr(ad, scheddAddr) || !getSubmitter(ad, submitterName))
 	{
 		return false;
 	}
-	ss << submitterName << "," << scheddAddr;
+	std::string ss {submitterName};
+    ss += ',';
+	ss += scheddAddr;
 	int jobprio = 0;
 	ad.EvaluateAttrInt("JOBPRIO_MIN", jobprio);
-	ss << "," << jobprio;
+	formatstr_cat(ss, ", %d", jobprio);
 	ad.EvaluateAttrInt("JOBPRIO_MAX", jobprio);
-	ss << "," << jobprio;
-	hash = ss.str();
+	formatstr_cat(ss, ", %d", jobprio);
+	hash = ss;
 	return true;
 }
 
