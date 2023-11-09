@@ -107,8 +107,7 @@ class Submit(Verb):
                 subprocess.check_output(shlex.split(check_bosco_cmd))
                 is_bosco_setup = True
             except (FileNotFoundError, subprocess.CalledProcessError):
-                logger.info(
-                    f"Your CHTC Slurm account needs to be configured before you can run jobs on it.")
+                logger.info(f"Your CHTC Slurm account needs to be configured before you can run jobs on it.")
             except Exception as e:
                 raise RuntimeError(f"Could not execute {check_bosco_cmd}:\n{str(e)}")
 
