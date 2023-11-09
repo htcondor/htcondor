@@ -1195,79 +1195,78 @@ SubmitDagDeepOptions::operator[]( deep::b opt ) {
 //#######################################################
 
 void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit = true) const {
-	if (deep.boolOpts[deep::b::Verbose]) {
+	const auto &self = *this;
+	if (self[deep::b::Verbose]) {
 		args.AppendArg("-verbose");
 	}
 
-	if ( ! deep.stringOpts[deep::str::Notification].empty()) {
+	if ( ! self[deep::str::Notification].empty()) {
 		args.AppendArg( "-notification" );
-		if(deep.boolOpts[deep::b::SuppressNotification]) {
+		if(self[deep::b::SuppressNotification]) {
 			args.AppendArg("never");
 		} else {
-			args.AppendArg(deep.stringOpts[deep::str::Notification]);
+			args.AppendArg(self[deep::str::Notification]);
 		}
 	}
 
-	if ( ! deep.stringOpts[deep::str::DagmanPath].empty()) {
+	if ( ! self[deep::str::DagmanPath].empty()) {
 		args.AppendArg("-dagman");
-		args.AppendArg(deep.stringOpts[deep::str::DagmanPath]);
+		args.AppendArg(self[deep::str::DagmanPath]);
 	}
 
-	if (deep.boolOpts[deep::b::UseDagDir]) {
+	if (self[deep::b::UseDagDir]) {
 		args.AppendArg("-UseDagDir");
 	}
 
-	if ( ! deep.stringOpts[deep::str::OutfileDir].empty()) {
+	if ( ! self[deep::str::OutfileDir].empty()) {
 		args.AppendArg("-outfile_dir");
-		args.AppendArg(deep.stringOpts[deep::str::OutfileDir]);
+		args.AppendArg(self[deep::str::OutfileDir]);
 	}
 
 	args.AppendArg("-AutoRescue");
-	args.AppendArg(std::to_string(deep.boolOpts[deep::b::AutoRescue]));
+	args.AppendArg(std::to_string(self[deep::b::AutoRescue]));
 
-	if (deep.intOpts[deep::i::DoRescueFrom]) {
+	if (self[deep::i::DoRescueFrom]) {
 		args.AppendArg("-DoRescueFrom");
-		args.AppendArg(std::to_string(deep.intOpts[deep::i::DoRescueFrom]));
+		args.AppendArg(std::to_string(self[deep::i::DoRescueFrom]));
 	}
 
-	if (deep.boolOpts[deep::b::AllowVersionMismatch]) {
+	if (self[deep::b::AllowVersionMismatch]) {
 		args.AppendArg("-AllowVersionMismatch");
 	}
 
-	if (deep.boolOpts[deep::b::ImportEnv]) {
+	if (self[deep::b::ImportEnv]) {
 		args.AppendArg("-import_env");
 	}
 
-	if ( ! deep.stringOpts[deep::str::GetFromEnv].empty()) {
+	if ( ! self[deep::str::GetFromEnv].empty()) {
 		args.AppendArg("-include_env");
-		args.AppendArg(deep.stringOpts[deep::str::GetFromEnv]);
+		args.AppendArg(self[deep::str::GetFromEnv]);
 	}
 
-	dprintf(D_ALWAYS, "DEBUGGING########################\n");
 	int i = 0;
-	for (auto &kv_pair : deep.slistOpts[deep::slist::AddToEnv]) {
+	for (auto &kv_pair : self[deep::slist::AddToEnv]) {
 		dprintf(D_ALWAYS, "\t%d: %s\n", ++i, kv_pair.c_str());
 		args.AppendArg("-insert_env");
 		args.AppendArg(kv_pair);
 	}
-	dprintf(D_ALWAYS, "DEBUGGING########################\n");
 
-	if (deep.boolOpts[deep::b::Recurse]) {
+	if (self[deep::b::Recurse]) {
 		args.AppendArg("-do_recurse");
 	}
 
-	if(deep.boolOpts[deep::b::SuppressNotification]) {
+	if(self[deep::b::SuppressNotification]) {
 		args.AppendArg("-suppress_notification");
-	} else if( ! deep.boolOpts[deep::b::SuppressNotification].notSet()) {
+	} else if( ! self[deep::b::SuppressNotification].notSet()) {
 		args.AppendArg("-dont_suppress_notification");
 	}
 
 	if (inWriteSubmit) {
-		if (deep.boolOpts[deep::b::Force]) {
+		if (self[deep::b::Force]) {
 			args.AppendArg("-force");
 		}
 
-		if (deep.boolOpts[deep::b::UpdateSubmit]) {
+		if (self[deep::b::UpdateSubmit]) {
 			args.AppendArg("-update_submit");
 		}
 	}

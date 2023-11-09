@@ -77,9 +77,9 @@ typedef std::list<std::string> str_list;
 
 // Enum to represent booleans passed by command line
 enum class CLI_BOOL {
-	UNSET = 0,   // Boolean not set
+	UNSET = -1,  // Boolean not set
+	FALSE,       // Boolean was set to False
 	TRUE,        // Boolean was set to True
-	FALSE        // Boolean was set to False
 };
 
 // Wrapper Struct around CLI_BOOL enum to overload various operators

@@ -652,12 +652,12 @@ parseCommandLine(DagmanOptions &dagOpts, SubmitDagDeepOptions &deepOpts,
 			else if (strArg.find("-updat") != std::string::npos) // -update_submit
 			{
 				deepOpts[deep::b::UpdateSubmit] = true;
-				dagOpts.set("UpdateSubmit", false);
+				dagOpts.set("UpdateSubmit", true);
 			}
 			else if (strArg.find("-import_env") != std::string::npos) // -import_env
 			{
 				deepOpts[deep::b::ImportEnv] = true;
-				dagOpts.set("ImportEnv", false);
+				dagOpts.set("ImportEnv", true);
 			}
 			else if (strArg.find("-include_env") != std::string::npos)
 			{
