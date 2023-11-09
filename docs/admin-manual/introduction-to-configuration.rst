@@ -9,7 +9,7 @@ configuration, relating to all parts of the HTCondor system. If you're
 setting up an HTCondor pool, you should read this section before you
 read the other configuration-related sections:
 
--  The :doc:`/admin-manual/configuration-templates` section contains
+-  The :ref:`admin-manual/introduction-to-configuration:configuration templates` section contains
    information about configuration templates, which are now the
    preferred way to set many configuration macros.
 -  The :doc:`/admin-manual/configuration-macros` section contains
@@ -1134,7 +1134,7 @@ correct values, we recommend that you do not overwrite them.
 Configuration Templates
 -----------------------
 
-:index:`configuration-templates<single: configuration-templates; HTCondor>`
+:index:`configuration templates<single: configuration templates; HTCondor>`
 :index:`configuration: templates`
 
 Achieving certain behaviors in an HTCondor pool often requires setting

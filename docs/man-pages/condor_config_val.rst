@@ -181,7 +181,7 @@ Options
     (location option) The specific daemon to query.
  **use** *category* [*:set name* ] [**-expand** ]
     Display information about configuration templates (see
-    :doc:`/admin-manual/configuration-templates`).
+    :ref:`admin-manual/introduction-to-configuration:configuration templates`).
     Specifying only a *category* will list the *template_names*
     available for that category. Specifying a *category* and a
     *template_name* will display the definition of that configuration

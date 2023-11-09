@@ -7,7 +7,9 @@ Configuration Macros
 The section contains a list of the individual configuration macros for
 HTCondor. Before attempting to set up HTCondor configuration, you should
 probably read the :doc:`/admin-manual/introduction-to-configuration` section
-and possibly the :doc:`/admin-manual/configuration-templates` section.
+and possibly the 
+:ref:`admin-manual/introduction-to-configuration:configuration templates`
+section.
 
 The settings that control the policy under which HTCondor will start,
 suspend, resume, vacate or kill jobs are described in
