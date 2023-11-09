@@ -189,10 +189,6 @@ class Status(Verb):
         job = None
         job_status = "IDLE"
         resource_type = "htcondor"
-        ACTIVE_STATES = [ htcondor.JobStatus.RUNNING,
-                          htcondor.JobStatus.SUSPENDED,
-                          htcondor.JobStatus.TRANSFERRING_OUTPUT,
-                        ]
 
         # Split job id into cluster and proc
         if "." in job_id:
@@ -263,11 +259,6 @@ class Status(Verb):
             # Calculate job goodput
             job_committed_time = job_ad.get("CommittedTime", 0)
             job_wall_clock_time = job_ad.get("RemoteWallClockTime", 0)
-            job_curr_run_time = 0;
-            if job_status in ACTIVE_STATES:
-                job_curr_run_time = time.time() - job_ad["JobStartDate"]
-                job_committed_time = job_curr_run_time
-                job_wall_clock_time += job_curr_run_time
             goodput = (job_committed_time / job_wall_clock_time) if job_wall_clock_time > 0 else 0.0
 
             # Compute memory and disk usage if available
@@ -376,7 +367,9 @@ class Status(Verb):
             if goodput is not None:
                 goodput = goodput * 100
                 tense = "had" if job_status == htcondor.JobStatus.COMPLETED else "has"
-                logger.info(f"Job {tense} {goodput:.1f}% goodput.")
+                logger.info(
+                    f"Job {tense} {goodput:.1f}% goodput for {readable_time(job_wall_clock_time)} of wall clock time."
+                )
 
         # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log
