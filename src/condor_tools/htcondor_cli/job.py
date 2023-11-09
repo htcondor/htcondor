@@ -208,10 +208,7 @@ class Status(Verb):
                       "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime",
                       "RemoteWallClockTime"]
         try:
-            job = schedd.query(constraint=constraint,
-                               projection=projection,
-                               limit=1,
-                              )
+            job = schedd.query(constraint=constraint, projection=projection, limit=1)
         except IndexError:
             raise RuntimeError(f"No job found for ID {job_id}.")
         except Exception as e:
