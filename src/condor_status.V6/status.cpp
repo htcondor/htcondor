@@ -2275,7 +2275,7 @@ static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseT
 {
 	bool success = false;
 	if (ads_file_format < ClassAdFileParseType::Parse_long || ads_file_format > ClassAdFileParseType::Parse_auto) {
-		fprintf(stderr, "unsupported ClassAd input format %d\n", ads_file_format);
+		fprintf(stderr, "unsupported ClassAd input format %ld\n", (long)ads_file_format);
 		return false;
 	}
 

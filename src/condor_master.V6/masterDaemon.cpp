@@ -3082,7 +3082,7 @@ int Daemons::ChildrenOfType(daemon_t type, StringList * names /*=nullptr*/)
 			result++;
 		}
 	}
-	dprintf(D_FULLDEBUG,"ChildrenOfType(%d) returning %d\n",type,result);
+	dprintf(D_FULLDEBUG,"ChildrenOfType(%ld) returning %d\n",type,result);
 	return result;
 }
 

@@ -26,7 +26,14 @@
 
 #include "pool_allocator.h"
 class CanonicalMapList;
-typedef std::map<const YourString, CanonicalMapList*, CaseIgnLTYourString> METHOD_MAP;
+#ifdef    DARWIN
+	// I don't pretend to understand why, but on Mac, adding `const`
+	// to the YourString here causes the build to fail because clang
+	// can't figure out how to write the default assignment operator.
+	typedef std::map<YourString, CanonicalMapList*, CaseIgnLTYourString> METHOD_MAP;
+#else
+	typedef std::map<const YourString, CanonicalMapList*, CaseIgnLTYourString> METHOD_MAP;
+#endif /* DARWIN */
 
 typedef struct _MapFileUsage {
 	int cMethods;
