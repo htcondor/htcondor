@@ -58,7 +58,7 @@ specification:
 
 ``PrivNet``
     Provides the name of the daemon's private network. This value is
-    specified in the configuration with ``PRIVATE_NETWORK_NAME``.
+    specified in the configuration with :macro:`PRIVATE_NETWORK_NAME`.
 
 ``sock``
     Provides the name of *condor_shared_port* daemon named socket.
@@ -86,7 +86,7 @@ daemon. However, this port number can be changed (see below).
 As an optimization for daemons and tools communicating with another
 daemon that is running on the same host, each HTCondor daemon can be
 configured to write its IP address and port number into a well-known
-file. The file names are controlled using the ``<SUBSYS>_ADDRESS_FILE``
+file. The file names are controlled using the :macro:`<SUBSYS>_ADDRESS_FILE`
 configuration variables, as described in the
 :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
 section.
@@ -169,7 +169,7 @@ example:
 
 Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in the
 :ref:`admin-manual/configuration-macros:Daemoncore configuration file entries`
-section and ``COLLECTOR_HOST`` is in the
+section and :macro:`COLLECTOR_HOST` is in the
 :ref:`admin-manual/configuration-macros:HTCondor-wide configuration file entries`
 section.
 
@@ -196,12 +196,12 @@ configuration file macros` section for more information.
 The configuration variables :macro:`HIGHPORT` and
 :macro:`LOWPORT` facilitate setting a restricted range
 of ports that HTCondor will use. This may be useful when some machines
-are behind a firewall. The configuration macros ``HIGHPORT`` and
+are behind a firewall. The configuration macros :macro:`HIGHPORT` and
 ``LOWPORT`` will restrict dynamic ports to the range specified. The
 configuration variables are fully defined in the 
 :ref:`admin-manual/configuration-macros:network-related configuration file
 entries` section. All of these ports must be greater than 0 and less than 65,536.
-Note that both ``HIGHPORT`` and ``LOWPORT`` must be at least 1024 for HTCondor
+Note that both :macro:`HIGHPORT` and :macro:`LOWPORT` must be at least 1024 for HTCondor
 version 6.6.8. In general, use ports greater than 1024, in order to avoid port
 conflicts with standard services on the machine. Another reason for
 using ports greater than 1024 is that daemons and tools are often not
@@ -220,7 +220,7 @@ incoming ports, but not for outgoing ports. The use of ports below 1024
 (versus above 1024) has security implications; therefore, it is inappropriate to
 assign a range that crosses the 1024 boundary.
 
-NOTE: Setting ``HIGHPORT`` and ``LOWPORT`` will not automatically force
+NOTE: Setting :macro:`HIGHPORT` and :macro:`LOWPORT` will not automatically force
 the *condor_collector* to bind to a port within the range. The only way
 to control what port the *condor_collector* uses is by setting the
 ``COLLECTOR_HOST`` (as described above).
@@ -249,16 +249,16 @@ this configuration macro, the maximum number of jobs that could be
 simultaneously executing at one time is a function of the number of
 reachable execute machines.
 
-Also be aware that ``HIGHPORT`` and ``LOWPORT`` only impact dynamic port
+Also be aware that :macro:`HIGHPORT` and :macro:`LOWPORT` only impact dynamic port
 selection used by the HTCondor system, and they do not impact port
 selection used by jobs submitted to HTCondor. Thus, jobs submitted to
 HTCondor that may create network connections may not work in a port
-restricted environment. For this reason, specifying ``HIGHPORT`` and
+restricted environment. For this reason, specifying :macro:`HIGHPORT` and
 ``LOWPORT`` is not going to produce the expected results if a user
 submits MPI applications to be executed under the parallel universe.
 
 Where desired, a local configuration for machines not behind a firewall
-can override the usage of ``HIGHPORT`` and ``LOWPORT``, such that the
+can override the usage of :macro:`HIGHPORT` and :macro:`LOWPORT`, such that the
 ports used for these machines are not restricted. This can be
 accomplished by adding the following to the local configuration file of
 those machines not behind a firewall:
@@ -268,7 +268,7 @@ those machines not behind a firewall:
     HIGHPORT = UNDEFINED
     LOWPORT  = UNDEFINED
 
-If the maximum number of ports allocated using ``HIGHPORT`` and
+If the maximum number of ports allocated using :macro:`HIGHPORT` and
 ``LOWPORT`` is too few, socket binding errors of the form
 
 .. code-block:: text
@@ -437,13 +437,13 @@ Using all network interfaces does not work with Kerberos.
     Every Kerberos ticket contains a specific IP address within it.
     Authentication over a socket (using Kerberos) requires the socket to
     also specify that same specific IP address. Use of
-    ``BIND_ALL_INTERFACES`` causes outbound connections from a
+    :macro:`BIND_ALL_INTERFACES` causes outbound connections from a
     multi-homed machine to originate over any of the interfaces.
     Therefore, the IP address of the outbound connection and the IP
     address in the Kerberos ticket will not necessarily match, causing
     the authentication to fail. Sites using Kerberos authentication on
     multi-homed machines are strongly encouraged not to enable
-    ``BIND_ALL_INTERFACES``, at least until HTCondor's Kerberos
+    :macro:`BIND_ALL_INTERFACES`, at least until HTCondor's Kerberos
     functionality supports using multiple Kerberos tickets together with
     finding the right one to match the IP address a given socket is
     bound to.
@@ -454,7 +454,7 @@ There is a potential security risk.
     Internet, while the other connects to a private network. Both the
     multi-homed machine and the private network machines comprise an
     HTCondor pool. If the multi-homed machine enables
-    ``BIND_ALL_INTERFACES``, then it is at risk from hackers trying to
+    :macro:`BIND_ALL_INTERFACES`, then it is at risk from hackers trying to
     compromise the security of the pool. Should this multi-homed machine
     be compromised, the entire pool is vulnerable. Most sites in this
     situation would run an *sshd* on the multi-homed machine so that
@@ -472,7 +472,7 @@ Up to two IP addresses will be advertised.
     possible IP addresses where it can be contacted. Therefore, HTCondor
     clients (other HTCondor daemons or tools) will not necessarily able
     to locate and communicate with a given daemon running on a
-    multi-homed machine where ``BIND_ALL_INTERFACES`` has been enabled.
+    multi-homed machine where :macro:`BIND_ALL_INTERFACES` has been enabled.
 
     Currently, HTCondor daemons can only advertise two IP addresses in
     the ClassAd they send to their *condor_collector*. One is the
@@ -627,10 +627,10 @@ network causes registration with the CCB server as in the example:
       CCB_ADDRESS = $(COLLECTOR_HOST)
       PRIVATE_NETWORK_NAME = cs.wisc.edu
 
-The definition of ``PRIVATE_NETWORK_NAME`` ensures that all
+The definition of :macro:`PRIVATE_NETWORK_NAME` ensures that all
 communication between nodes within the private network continues to
 happen as normal, and without going through the CCB server. The name
-chosen for ``PRIVATE_NETWORK_NAME`` should be different from the private
+chosen for :macro:`PRIVATE_NETWORK_NAME` should be different from the private
 network name chosen for any HTCondor installations that will be
 communicating with this pool.
 
@@ -687,7 +687,7 @@ identified by searching for "CCB" in the log message. Command-line tools
 require the argument **-debug** for this information to be visible. To
 see details of the CCB protocol add ``D_FULLDEBUG`` to the debugging
 options for the particular HTCondor subsystem of interest. Or, add
-``D_FULLDEBUG`` to ``ALL_DEBUG`` to get extra debugging from all
+``D_FULLDEBUG`` to :macro:`ALL_DEBUG` to get extra debugging from all
 HTCondor components.
 
 A daemon that has successfully registered itself with CCB will advertise
@@ -744,13 +744,13 @@ control the protocol used:
 :macro:`UPDATE_VIEW_COLLECTOR_WITH_TCP`
     When set to ``True``, the HTCondor collector will use TCP to forward
     updates to *condor_collector* daemons specified by
-    ``CONDOR_VIEW_HOST``, instead of the default UDP. Defaults to
+    :macro:`CONDOR_VIEW_HOST`, instead of the default UDP. Defaults to
     ``False``.
 
 :macro:`TCP_UPDATE_COLLECTORS`
     A list of *condor_collector* daemons which will be updated with TCP
-    instead of UDP, when ``UPDATE_COLLECTOR_WITH_TCP`` or
-    ``UPDATE_VIEW_COLLECTOR_WITH_TCP`` is set to ``False``.
+    instead of UDP, when :macro:`UPDATE_COLLECTOR_WITH_TCP` or
+    :macro:`UPDATE_VIEW_COLLECTOR_WITH_TCP` is set to ``False``.
 
 When there are sufficient file descriptors, the *condor_collector*
 leaves established TCP sockets open, facilitating better performance.
@@ -788,7 +788,7 @@ HTCondor will not start. Likewise, to require IPv6, you may set
 :macro:`ENABLE_IPV6` to true.
 
 If you set :macro:`ENABLE_IPV4` to false, HTCondor
-will not use IPv4, even if it is available; likewise for ``ENABLE_IPV6``
+will not use IPv4, even if it is available; likewise for :macro:`ENABLE_IPV6`
 :macro:`ENABLE_IPV6` and IPv6.
 
 The default setting for :macro:`ENABLE_IPV4` and

@@ -308,7 +308,7 @@ New Features:
   :ref:`automated-workflows/dagman-save-files:dag save point files`.
   :jira:`1636`
 
-- The admin knob ``SUBMIT_ALLOW_GETENV`` when set to false, now allows
+- The admin knob :macro:`SUBMIT_ALLOW_GETENV` when set to false, now allows
   submit files to use any value but *true* for their ``getenv = ...``
   commands.
   :jira:`1671`
@@ -661,10 +661,10 @@ Bugs Fixed:
 
 - Fixed bugs in how the *condor_collector* generated its own CA and host
   certificate files.
-  Configuration parameter ``COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE`` now
+  Configuration parameter :macro:`COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE` now
   defaults to ``True`` on Unix platforms.
-  Configuration parameters ``AUTH_SSL_SERVER_CERTFILE`` and 
-  ``AUTH_SSL_SERVER_KEYFILE`` can now be a list of files. The first pair of
+  Configuration parameters :macro:`AUTH_SSL_SERVER_CERTFILE` and 
+  :macro:`AUTH_SSL_SERVER_KEYFILE` can now be a list of files. The first pair of
   files with valid credentials is used.
   :jira:`1455`
 
@@ -734,7 +734,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bugs with configuration knob ``SINGULARITY_USE_PID_NAMESPACES``.
+- Fixed bugs with configuration knob :macro:`SINGULARITY_USE_PID_NAMESPACES`.
   :jira:`1574`
 
 Version 10.2.1
@@ -839,7 +839,7 @@ New Features:
   ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
   :jira:`1402`
 
-- The ``JOB_INHERITS_STARTER_ENVIRONMENT`` configuration variable now accepts a list
+- The :macro:`JOB_INHERITS_STARTER_ENVIRONMENT` configuration variable now accepts a list
   of match patterns just like the submit command ``getenv`` does.
   :jira:`1339`
 

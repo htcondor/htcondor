@@ -54,7 +54,7 @@ There are two separate uses of the password actions of
    On a Unix machine, *condor_store_cred add[-pwd]* with the **-f** option
    is used to set the pool password, as needed when used with the
    ``PASSWORD`` authentication method. The pool password is placed in a
-   file specified by the ``SEC_PASSWORD_FILE`` configuration variable.
+   file specified by the :macro:`SEC_PASSWORD_FILE` configuration variable.
 
 #. In order to submit a job from a Windows platform machine, or to
    execute a job on a Windows platform machine utilizing the

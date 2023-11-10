@@ -23,7 +23,7 @@ Negotiator ClassAd Attributes
 
 :classad-attribute:`LastNegotiationCycleCandidateSlots`
     The number of slot ClassAds after filtering by
-    ``NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT``. This is the
+    :macro:`NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT`. This is the
     number of slots actually considered for matching. The number ``<X>``
     appended to the attribute name indicates how many negotiation cycles
     ago this cycle happened.
@@ -115,7 +115,7 @@ Negotiator ClassAd Attributes
     accounting groups, as defined by the implementation of hierarchical
     group quotas, together with the negotiation for those slots. The
     maximum number of iterations is limited by the configuration
-    variable ``GROUP_QUOTA_MAX_ALLOCATION_ROUNDS``. The number ``<X>``
+    variable :macro:`GROUP_QUOTA_MAX_ALLOCATION_ROUNDS`. The number ``<X>``
     appended to the attribute name indicates how many negotiation cycles
     ago this cycle happened.
 
@@ -126,7 +126,7 @@ Negotiator ClassAd Attributes
     all submitters who failed to negotiate in the negotiation cycle. One
     possible cause of failure is a communication timeout. This list does
     not include submitters who ran out of time due to
-    ``NEGOTIATOR_MAX_TIME_PER_SUBMITTER``. Those are listed
+    :macro:`NEGOTIATOR_MAX_TIME_PER_SUBMITTER`. Those are listed
     separately in ``LastNegotiationCycleSubmittersOutOfTime<X>``. The
     number ``<X>`` appended to the attribute name indicates how many
     negotiation cycles ago this cycle happened.
@@ -136,7 +136,7 @@ Negotiator ClassAd Attributes
 :classad-attribute:`LastNegotiationCycleSubmittersOutOfTime<X>`
     A string containing a space and comma separated list of the names of
     all submitters who ran out of time due to
-    ``NEGOTIATOR_MAX_TIME_PER_SUBMITTER`` in the negotiation
+    :macro:`NEGOTIATOR_MAX_TIME_PER_SUBMITTER` in the negotiation
     cycle. The number ``<X>`` appended to the attribute name indicates
     how many negotiation cycles ago this cycle happened.
 

@@ -65,7 +65,7 @@ Options
     Query the named *condor_schedd* daemon. If used with **-startd**, query the named *condor_startd* daemon
  **-pool** *centralmanagerhostname[:portnumber]*
     Use the *centralmanagerhostname* as the central manager to locate
-    *condor_schedd* daemons. The default is the ``COLLECTOR_HOST``, as
+    *condor_schedd* daemons. The default is the :macro:`COLLECTOR_HOST`, as
     specified in the configuration.
  **-backwards**
     List jobs in reverse chronological order. The job most recently

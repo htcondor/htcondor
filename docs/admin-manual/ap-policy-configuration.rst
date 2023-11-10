@@ -98,7 +98,7 @@ a descriptive name. For the three example submit requirements described:
 The criterion for each submit requirement is then specified in
 configuration variable 
 :macro:`SUBMIT_REQUIREMENT_<Name>`, where ``<Name>`` matches the
-chosen name listed in ``SUBMIT_REQUIREMENT_NAMES``. The value is a
+chosen name listed in :macro:`SUBMIT_REQUIREMENT_NAMES`. The value is a
 boolean ClassAd expression. The three example criterion result in these
 configuration variable definitions:
 
@@ -219,12 +219,12 @@ a time is acting as the single submission point. To make remote
 submission of jobs work properly, set the configuration variable
 :macro:`SCHEDD_NAME` in the local configuration to
 have the same value for each potentially running *condor_schedd*
-daemon. In addition, the value chosen for the variable ``SCHEDD_NAME``
+daemon. In addition, the value chosen for the variable :macro:`SCHEDD_NAME`
 will need to include the at symbol (@), such that HTCondor will not
 modify the value set for this variable. See the description of
 ``MASTER_NAME`` in the :ref:`admin-manual/configuration-macros:condor_master
 configuration file macros` section for defaults and composition of valid values
-for ``SCHEDD_NAME``. As an example, include in each local configuration a value
+for :macro:`SCHEDD_NAME`. As an example, include in each local configuration a value
 similar to:
 
 .. code-block:: condor-config
@@ -353,7 +353,7 @@ Policy Scenario: Machine Runs Only Jobs That Require Dedicated Resources
 
     The :macro:`START` expression specifies that a job
     with the ``Scheduler`` attribute must match the string corresponding
-    ``DedicatedScheduler`` attribute in the machine ClassAd. The
+    :macro:`DedicatedScheduler` attribute in the machine ClassAd. The
     :macro:`RANK` expression specifies that this same job
     (with the ``Scheduler`` attribute) has the highest rank. This
     prevents other jobs from preempting it based on user priorities. The
@@ -465,7 +465,7 @@ Each *condor_startd* must define which group it belongs to by setting the
 advertising it into the machine ClassAd. The value of this variable is a
 string, which should be the same for all *condor_startd* daemons within a given
 group. The property must be advertised in the *condor_startd* ClassAd by
-appending ``ParallelSchedulingGroup`` to the :macro:`STARTD_ATTRS`
+appending :macro:`ParallelSchedulingGroup` to the :macro:`STARTD_ATTRS`
 configuration variable.
 
 The submit description file for a parallel universe job which must not
@@ -540,9 +540,9 @@ configuration must have access to the lock (the job queue) which
 synchronizes which single machine does run the *condor_schedd* daemon.
 This lock and the job queue must both be located in a shared file space,
 and is currently specified only with a file URL. The configuration
-specifies the shared space (``SPOOL``), and the URL of the lock.
+specifies the shared space (:macro:`SPOOL`), and the URL of the lock.
 *condor_preen* is not currently aware of the lock file and will delete
-it if it is placed in the ``SPOOL`` directory, so be sure to add file
+it if it is placed in the :macro:`SPOOL` directory, so be sure to add file
 ``SCHEDD.lock`` to :macro:`VALID_SPOOL_FILES[with HA Schedd]`.
 
 As HTCondor starts on machines that are configured to run the single

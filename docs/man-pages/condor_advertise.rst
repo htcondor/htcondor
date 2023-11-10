@@ -102,11 +102,11 @@ Options
     one or more blank lines.
  **-pool** *centralmanagerhostname[:portname]*
     Specify a pool by giving the central manager's host name and an
-    optional port number. The default is the ``COLLECTOR_HOST``
+    optional port number. The default is the :macro:`COLLECTOR_HOST`
     specified in the configuration file.
  **-tcp**
     Use TCP for communication. Used by default if
-    ``UPDATE_COLLECTOR_WITH_TCP`` is true.
+    :macro:`UPDATE_COLLECTOR_WITH_TCP` is true.
  **-udp**
     Use UDP for communication.
 

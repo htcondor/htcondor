@@ -1309,7 +1309,7 @@ the *condor_replication* daemon must transfer state files. When it
 needs to transfer a file, the *condor_replication* daemons at both the
 sending and receiving ends of the transfer invoke the
 *condor_transferer* daemon. These short lived daemons do the task of
-file transfer and then exit. Do not place ``TRANSFERER`` into
+file transfer and then exit. Do not place :macro:`TRANSFERER` into
 ``DAEMON_LIST``, as it is not a daemon that the *condor_master* should
 invoke or watch over.
 
@@ -1343,8 +1343,8 @@ may be computed using the following formula:
                               $(HAD_CONNECTION_TIMEOUT)
 
 To disable the high availability of central managers mechanism, it is
-sufficient to remove ``HAD``, ``REPLICATION``, and ``NEGOTIATOR`` from
-the ``DAEMON_LIST`` configuration variable on all machines, leaving only
+sufficient to remove :macro:`HAD`, :macro:`REPLICATION`, and ``NEGOTIATOR`` from
+the :macro:`DAEMON_LIST` configuration variable on all machines, leaving only
 one *condor_negotiator* in the pool.
 
 To shut down a currently operating high availability mechanism, follow
@@ -1379,8 +1379,8 @@ following operations:
 #. Set the :macro:`HAD_USE_REPLICATION`
    configuration variable to ``False``, and thus disable the replication
    on configuration level.
-#. Remove ``REPLICATION`` from both ``DAEMON_LIST`` and
-   ``DC_DAEMON_LIST`` in the configuration file.
+#. Remove :macro:`REPLICATION` from both :macro:`DAEMON_LIST` and
+   :macro:`DC_DAEMON_LIST` in the configuration file.
 
 Sample Configuration
 ''''''''''''''''''''
@@ -2012,4 +2012,4 @@ Note that the value of :macro:`CONDOR_VIEW_HOST` for VIEWSERV01 and VIEWSERV02
 is unset, to prevent them from inheriting the global value of
 ``CONDOR_VIEW_HOST`` and attempting to report to themselves or each other. If
 the HTCondorView servers are running on different machines where there is no
-global value for ``CONDOR_VIEW_HOST``, this precaution is not required.
+global value for :macro:`CONDOR_VIEW_HOST`, this precaution is not required.

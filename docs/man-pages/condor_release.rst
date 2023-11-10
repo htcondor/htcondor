@@ -30,7 +30,7 @@ the named *condor_schedd* is targeted for processing. Otherwise, the
 local *condor_schedd* is targeted. The jobs to be released are
 identified by one or more job identifiers, as described below. For any
 given job, only the owner of the job or one of the queue super users
-(defined by the ``QUEUE_SUPER_USERS`` macro) can release the job.
+(defined by the :macro:`QUEUE_SUPER_USERS` macro) can release the job.
 
 Options
 -------
@@ -48,7 +48,7 @@ Options
     Send the command to a machine located at *"<a.b.c.d:port>"*
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  *cluster*
     Release all jobs in the specified cluster
  *cluster.process*

@@ -16,12 +16,12 @@ Grid ClassAd Attributes
 :classad-attribute:`GahpCommandsQueued`
     A Statistics attribute defining the number of commands the
     *condor_gridmanager* is refraining from issuing to the GAHP server
-    due to configuration parameter ``GRIDMANAGER_MAX_PENDING_REQUESTS``.
+    due to configuration parameter :macro:`GRIDMANAGER_MAX_PENDING_REQUESTS`.
 
 :classad-attribute:`GahpCommandsTimedOut`
     A Statistics attribute defining the number of commands issued to
     the GAHP server that didn't complete within the timeout period
-    set by configuration parameter ``GRIDMANAGER_GAHP_RESPONSE_TIMEOUT``.
+    set by configuration parameter :macro:`GRIDMANAGER_GAHP_RESPONSE_TIMEOUT`.
 
 :classad-attribute:`GahpPid`
     The process id of the GAHP server used to interact with the grid
@@ -56,7 +56,7 @@ Grid ClassAd Attributes
     The maximum number of jobs this *condor_gridmanager* will submit
     to the grid service at a time.
     This is controlled by configuration parameter
-    ``GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE``.
+    :macro:`GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE`.
 
 :classad-attribute:`NumJobs`
     The number of jobs this *condor_gridmanager* is managing that are

@@ -133,7 +133,7 @@ specified here. In order:
    files. These listed files are parsed from left to right. The leftmost
    (first) in the list is parsed first.
 #. If one of these steps changes the value (right hand side) of
-   ``LOCAL_CONFIG_DIR``, then ``LOCAL_CONFIG_DIR`` is processed for a
+   :macro:`LOCAL_CONFIG_DIR`, then :macro:`LOCAL_CONFIG_DIR` is processed for a
    second time, using the changed list of directories.
 
 The parsing and use of configuration files may be bypassed by setting
@@ -275,7 +275,7 @@ prefixed by a subsystem (see the ``$(SUBSYSTEM)`` macro in
 list of subsystems) and the period (.) character. For configuration variables
 defined this way, the value is applied to the specific subsystem. For example,
 the ports that HTCondor may use can be restricted to a range using the
-``HIGHPORT`` and ``LOWPORT`` configuration variables.
+``HIGHPORT`` and :macro:`LOWPORT` configuration variables.
 
 .. code-block:: condor-config
 
@@ -373,7 +373,7 @@ those specified separately.
     SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG)
     SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
 
-Note that the example ``SCHEDD_NAME`` and ``SPOOL`` are specific to the
+Note that the example :macro:`SCHEDD_NAME` and :macro:`SPOOL` are specific to the
 *condor_schedd* daemon, as opposed to a different daemon such as the
 *condor_startd*. Other HTCondor daemons using this feature will have
 different requirements for which parameters need to be specified
@@ -956,18 +956,18 @@ Macros That Will Require a Restart When Changed
 
 The HTCondor daemons will generally not undo any work they have already done when the configuration changes
 so any change that would require undoing of work will require a restart before it takes effect.  There a very
-few exceptions to this rule.  The *condor_master* will pick up changes to ``DAEMON_LIST`` on a reconfig.
+few exceptions to this rule.  The *condor_master* will pick up changes to :macro:`DAEMON_LIST` on a reconfig.
 Although it may take hours for a *condor_startd* to drain and exit when it is removed from the daemon list.
 
 Examples of changes requiring a restart would any change to how HTCondor uses the network. A configuration change 
-to ``NETWORK_INTERFACE``, ``NETWORK_HOSTNAME``, ``ENABLE_IPV4`` and ``ENABLE_IPV6`` require a restart. A change in the
-way daemons locate each other, such as ``PROCD_ADDRESS``, ``BIND_ALL_INTERFACES``, ``USE_SHARED_PORT`` or ``SHARED_PORT_PORT``
+to :macro:`NETWORK_INTERFACE`, :macro:`NETWORK_HOSTNAME`, :macro:`ENABLE_IPV4` and :macro:`ENABLE_IPV6` require a restart. A change in the
+way daemons locate each other, such as :macro:`PROCD_ADDRESS`, :macro:`BIND_ALL_INTERFACES`, :macro:`USE_SHARED_PORT` or :macro:`SHARED_PORT_PORT`
 require a restart of the *condor_master* and all of the daemons under it.
 
-The *condor_startd* requires a restart to make any change to the slot resource configuration, This would include ``MEMORY``,
+The *condor_startd* requires a restart to make any change to the slot resource configuration, This would include :macro:`MEMORY`,
 ``NUM_CPUS`` and ``NUM_SLOTS_TYPE_<n>``.  It would also include resource detection like GPUs and Docker support.
 A general rule of thumb is that changes to the *condor_startd* require a restart, but there are a few exceptions.
-``STARTD_ATTRS`` as well as ``START``, ``PREEMPT``, and other policy expressions take effect on reconfig.
+``STARTD_ATTRS`` as well as :macro:`START`, :macro:`PREEMPT`, and other policy expressions take effect on reconfig.
 
 For more information about specific configuration variables and whether a restart is required, refer to the documentation
 of the individual variables.
@@ -1037,9 +1037,9 @@ restart of HTCondor in order to use the changed value.
 
 ``$(DETECTED_CPUS)`` :index:`DETECTED_CPUS`
     The integer number of hyper-threaded CPUs, as given by
-    ``$(DETECTED_CORES)``, when ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
+    ``$(DETECTED_CORES)``, when :macro:`COUNT_HYPERTHREAD_CPUS` is ``True``.
     The integer number of physical (non hyper-threaded) CPUs, as given
-    by ``$(DETECTED_PHYSICAL_CPUS)``, when ``COUNT_HYPERTHREAD_CPUS``
+    by ``$(DETECTED_PHYSICAL_CPUS)``, when :macro:`COUNT_HYPERTHREAD_CPUS`
     :index:`COUNT_HYPERTHREAD_CPUS` is ``False``. 
 
 ``$(DETECTED_PHYSICAL_CPUS)`` :index:`DETECTED_PHYSICAL_CPUS`
@@ -1050,7 +1050,7 @@ restart of HTCondor in order to use the changed value.
     An integer value which is set to the minimum of ``$(DETECTED_CPUS)`` 
     and values from the environment variables ``OMP_THREAD_LIMIT`` and
     ``SLURM_CPUS_ON_NODE``.  It intended for use as the value of
-    ``NUM_CPUS`` to insure that the number of CPUS that a *condor_startd* will
+    :macro:`NUM_CPUS` to insure that the number of CPUS that a *condor_startd* will
     provision does not exceed the limits indicated by the environment.
     Defaults to ``$(DETECTED_CPUS)`` when there is no environment variable that sets a lower value.
 
@@ -1501,9 +1501,9 @@ incorporates.
 
     -  ``Want_Hold_If( policy_variable, subcode, reason_text )``
 
-       Add the given policy to the ``WANT_HOLD`` expression; if the
-       ``WANT_HOLD`` expression is defined, ``policy_variable`` is
-       prepended to the existing expression; otherwise ``WANT_HOLD`` is
+       Add the given policy to the :macro:`WANT_HOLD` expression; if the
+       :macro:`WANT_HOLD` expression is defined, ``policy_variable`` is
+       prepended to the existing expression; otherwise :macro:`WANT_HOLD` is
        simply set to the value of the policy_variable macro.
 
        See an example here:

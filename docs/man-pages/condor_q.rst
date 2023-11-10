@@ -367,7 +367,7 @@ Options
 
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-batch**
     (output option) Show a single line of progress information for a
     batch of jobs, where a batch is defined as follows:
@@ -383,7 +383,7 @@ Options
     Also change the output columns as noted above.
 
     Note that, as of version 8.5.6, **-batch** is the default, unless
-    the ``CONDOR_Q_DASH_BATCH_IS_DEFAULT`` configuration variable is set
+    the :macro:`CONDOR_Q_DASH_BATCH_IS_DEFAULT` configuration variable is set
     to ``False``.
 
  **-nobatch**
@@ -400,7 +400,7 @@ Options
  **-pool** *centralmanagerhostname[:portnumber]*
     (general option) Use the *centralmanagerhostname* as the central
     manager to locate *condor_schedd* daemons. The default is the
-    ``COLLECTOR_HOST``, as specified in the configuration.
+    :macro:`COLLECTOR_HOST`, as specified in the configuration.
  **-jobads** *file*
     (general option) Display jobs from a list of ClassAds from a file,
     instead of the real ClassAds from the *condor_schedd* daemon. This

@@ -44,7 +44,7 @@ Options
     from the configuration of the *condor_master*.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number

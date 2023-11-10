@@ -203,7 +203,7 @@ Here are details that affect SUBDAGs:
    It is possible to combine more than one method of generating the
    ``<DAG file name>.condor.sub`` files. For example, one might pass the
    *-do_recurse* flag to *condor_submit_dag*, but leave the
-   ``DAGMAN_GENERATE_SUBDAG_SUBMITS`` configuration variable set to the
+   :macro:`DAGMAN_GENERATE_SUBDAG_SUBMITS` configuration variable set to the
    default of ``True``. Doing this would provide the benefit of an
    immediate error message at submit time, if there is a syntax error in
    one of the inner DAG input files, but the lower-level

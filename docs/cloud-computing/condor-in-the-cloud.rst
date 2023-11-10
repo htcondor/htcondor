@@ -91,7 +91,7 @@ A seed image is simply an image with:
   * be a submit node
   * allow *condor_annex* can add nodes
 
-* a small script to set ``TCP_FORWARDING_HOST`` to the instance's public
+* a small script to set :macro:`TCP_FORWARDING_HOST` to the instance's public
   IP adress when the instance starts up.
 
 More-detailed `instructions <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=CondorInTheCloudSeedConstruction>`_

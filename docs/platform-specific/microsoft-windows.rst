@@ -543,10 +543,10 @@ job entry in the queue are:
 #. the user who originally submitted that job (i.e. HTCondor allows
    users to remove or edit their own jobs)
 #. users listed in the ``condor_config`` file parameter
-   ``QUEUE_SUPER_USERS``. In the default configuration, only the
+   :macro:`QUEUE_SUPER_USERS`. In the default configuration, only the
    "SYSTEM" (LocalSystem) account is listed here.
 
-WARNING: Do not remove "SYSTEM" from ``QUEUE_SUPER_USERS``, or HTCondor
+WARNING: Do not remove "SYSTEM" from :macro:`QUEUE_SUPER_USERS`, or HTCondor
 itself will not be able to access the job queue when needed. If the
 LocalSystem account on your machine is compromised, you have all sorts
 of problems!

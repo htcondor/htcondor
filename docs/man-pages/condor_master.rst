@@ -30,9 +30,9 @@ important to HTCondor's performance.
 The :macro:`DAEMON_LIST` configuration macro is
 used by the *condor_master* to provide a per-machine list of daemons
 that should be started and kept running. For daemons that are specified
-in the ``DC_DAEMON_LIST`` configuration macro, the *condor_master*
+in the :macro:`DC_DAEMON_LIST` configuration macro, the *condor_master*
 daemon will spawn them automatically appending a *-f* argument. For
-those listed in ``DAEMON_LIST``, but not in ``DC_DAEMON_LIST``, there
+those listed in :macro:`DAEMON_LIST`, but not in :macro:`DC_DAEMON_LIST`, there
 will be no *-f* argument.
 
 The *condor_master* creates certain directories necessary for its proper

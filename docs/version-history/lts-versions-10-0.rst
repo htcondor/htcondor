@@ -280,11 +280,11 @@ Bugs Fixed:
 
 - Fixed a bug where the *condor_schedd* falsely believed there were
   too many jobs in the queue and rejected new job submissions based on
-  ``MAX_JOBS_SUBMITTED``.
+  :macro:`MAX_JOBS_SUBMITTED`.
   :jira:`1688`
 
 - Fix a bug where SSL authentication would fail when using a daemon's
-  private network address when ``PRIVATE_NETWORK_NAME`` was configured.
+  private network address when :macro:`PRIVATE_NETWORK_NAME` was configured.
   :jira:`1713`
 
 - Fixed a bug that could cause a daemon or tool to crash when
@@ -627,9 +627,9 @@ Release Notes:
 
 New Features:
 
-- The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication
+- The default for :macro:`TRUST_DOMAIN`, which is used by with IDTOKEN authentication
   has been changed to ``$(UID_DOMAIN)``.  If you have already created IDTOKENs for 
-  use in your pool, you should configure ``TRUST_DOMAIN`` to the issuer value of a valid token.
+  use in your pool, you should configure :macro:`TRUST_DOMAIN` to the issuer value of a valid token.
   :jira:`1381`
 
 - The *condor_transform_ads* tool now has a ``-jobtransforms`` argument that reads
@@ -683,7 +683,7 @@ Bugs Fixed:
   when connecting to a daemon over IPv6.
   The peers would do a full round of authentication and authorization,
   which may fail.
-  This primarily happened with both peers had ``PREFER_IPV4`` set to
+  This primarily happened with both peers had :macro:`PREFER_IPV4` set to
   ``False``.
   :jira:`1341`
 
@@ -705,7 +705,7 @@ Bugs Fixed:
 
 - Fixed a bug where some administrator client tools did not properly
   use the remote administrator capability (configuration parameter
-  ``SEC_ENABLE_REMOTE_ADMINISTRATION``).
+  :macro:`SEC_ENABLE_REMOTE_ADMINISTRATION`).
   :jira:`1371`
 
 - When a ``JOB_TRANSFORM_*`` transform changes an attribute at submit time in a late

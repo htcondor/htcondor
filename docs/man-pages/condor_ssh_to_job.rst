@@ -58,7 +58,7 @@ job processes have exited until all *ssh* sessions are closed. Multiple
 *ssh* sessions may be created to the same job at the same time. Resource
 consumption of the *sshd* process and all processes spawned by it are
 monitored by the *condor_starter* as though these processes belong to
-the job, so any policies such as ``PREEMPT`` that enforce a limit on
+the job, so any policies such as :macro:`PREEMPT` that enforce a limit on
 resource consumption also take into account resources consumed by the
 *ssh* session.
 
@@ -129,7 +129,7 @@ Options
     Display brief usage information and exit.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-name** *schedd-name*
     Specify an alternate *condor_schedd*, if the default (local) one is
     not desired.

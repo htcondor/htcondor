@@ -307,7 +307,7 @@ These arguments and what they do are described below:
     the original *condor_schedd* daemon that were stored in the old
     spool directory will not be noticed by the new *condor_schedd*
     daemon, unless you manually specify the old, dynamically-generated
-    ``SPOOL`` directory path in the configuration of the new
+    :macro:`SPOOL` directory path in the configuration of the new
     *condor_schedd* daemon.
 
 \-f
@@ -332,7 +332,7 @@ These arguments and what they do are described below:
     *condor_kbdd* when it needs to run as the individual user logged
     into the machine, instead of running as root. Regular users would
     not normally have permission to write files into HTCondor's log
-    directory. Using this option, they can override the value of ``LOG``
+    directory. Using this option, they can override the value of :macro:`LOG`
     and have the *condor_kbdd* write its log file into a directory that
     the user has permission to write to.
 
@@ -356,9 +356,9 @@ These arguments and what they do are described below:
     command.
 
     Since daemons run with their current working directory set to the
-    value of ``LOG``, if a full path (one that begins with a slash
+    value of :macro:`LOG`, if a full path (one that begins with a slash
     character, ``/``) is not specified, the file will be placed in the
-    ``LOG`` directory.
+    :macro:`LOG` directory.
 
 \-q
     Quiet output; write less verbose error messages to ``stderr`` when

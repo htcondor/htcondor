@@ -196,7 +196,7 @@ Options
     ``True``. This command line option is independent of the **-notification**
     command line option, which controls notification for the *condor_dagman*
     job itself. This flag is generally superfluous, as
-    ``DAGMAN_SUPPRESS_NOTIFICATION`` defaults to ``True``.
+    :macro:`DAGMAN_SUPPRESS_NOTIFICATION` defaults to ``True``.
  **-dont_suppress_notification**
     Causes jobs submitted by *condor_dagman* to defer to content within
     the submit description file when deciding to send email notification

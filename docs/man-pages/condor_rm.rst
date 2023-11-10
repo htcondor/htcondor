@@ -56,7 +56,7 @@ Options
     Send the command to a machine located at *"<a.b.c.d:port>"*
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-forcex**
     Force the immediate local removal of jobs in the 'X' state (only
     affects jobs already being removed)
