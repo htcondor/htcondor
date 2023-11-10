@@ -282,11 +282,8 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 					}
 					std::string key_str;
 					if (policy->EvaluateAttrString(ATTR_SEC_ISSUER_KEYS, key_str)) {
-						StringList key_list(key_str.c_str());
-						const char *key;
-						key_list.rewind();
 						std::vector<std::string> keys;
-						while ( (key = key_list.next()) ) {
+						for (const auto& key : StringTokenIterator(key_str)) {
 							keys.push_back(key);
 						}
 						tmp_auth->set_remote_keys(keys);
@@ -419,12 +416,9 @@ authenticate:
 				// better way to do this...  anyways, 'firm' is equal to the bit value
 				// of a particular method, so we'll just convert each item in the list
 				// and keep it if it's not that particular bit.
-				StringList meth_iter( m_methods_to_try );
-				meth_iter.rewind();
 				std::string new_list;
-				char *tmp = NULL;
-				while( (tmp = meth_iter.next()) ) {
-					int that_bit = SecMan::getAuthBitmask( tmp );
+				for (const auto& tmp : StringTokenIterator(m_methods_to_try)) {
+					int that_bit = SecMan::getAuthBitmask(tmp.c_str());
 
 					// keep if this isn't the failed method.
 					if (firm != that_bit) {
@@ -1115,13 +1109,8 @@ int Authentication::selectAuthenticationType( const std::string& method_order, i
 	// the first one in the list that is also in the bitmask is the one
 	// that we pick.  so, iterate the list.
 
-	StringList method_list( method_order );
-
-	char * tmp = NULL;
-	method_list.rewind();
-
-	while (	(tmp = method_list.next()) ) {
-		int that_bit = SecMan::getAuthBitmask( tmp );
+	for (const auto& tmp : StringTokenIterator(method_order)) {
+		int that_bit = SecMan::getAuthBitmask( tmp.c_str() );
 		if ( remote_methods & that_bit ) {
 			// we have a match.
 			return that_bit;

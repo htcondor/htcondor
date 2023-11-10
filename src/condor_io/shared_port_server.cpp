@@ -136,14 +136,13 @@ SharedPortServer::PublishAddress(int /* timerID */)
 	{
 		commandAddresses.insert(it->getSinful());
 	}
-	StringList commandAddressesSL;
+	std::string commandAddressesStr;
 	for (std::set<std::string>::const_iterator it=commandAddresses.begin(); it!=commandAddresses.end(); it++)
 	{
-		commandAddressesSL.insert(it->c_str());
+		if (!commandAddressesStr.empty()) { commandAddressesStr += ','; }
+		commandAddressesStr += *it;
 	}
-	char *adAddresses = commandAddressesSL.print_to_string();
-	if (adAddresses) {ad.InsertAttr(ATTR_SHARED_PORT_COMMAND_SINFULS, adAddresses);}
-	free( adAddresses );
+	if (!commandAddressesStr.empty()) {ad.InsertAttr(ATTR_SHARED_PORT_COMMAND_SINFULS, commandAddressesStr);}
 
 	// Place some operational metrics into the daemon ad
 	ad.Assign("RequestsPendingCurrent",m_shared_port_client.get_currentPendingPassSocketCalls());

@@ -2095,16 +2095,12 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 				if (decoded_jwt.has_payload_claim("scope")) {
 						// throws std::bad_cast if this isn't a string; caught below.
 					const std::string &scopes_str = decoded_jwt.get_payload_claim("scope").as_string();
-					StringList scope_list(scopes_str.c_str());
-					scope_list.rewind();
-					const char *scope;
-					while ( (scope = scope_list.next()) ) {
+					for (const auto& scope : StringTokenIterator(scopes_str)) {
 						scopes.emplace_back(scope);
-						if (strncmp(scope, "condor:/", 8)) {
+						if (strncmp(scope.c_str(), "condor:/", 8)) {
 							continue;
 						}
-						scope += 8;
-						authz.emplace_back(scope);
+						authz.emplace_back(&scope[8]);
 					}
 				}
 				if (decoded_jwt.has_expires_at()) {

@@ -282,14 +282,7 @@ bool check_known_hosts_any_match(const std::string &hostname, bool permitted, st
 		trim(line);
 		if (line.empty() || line[0] == '#') continue;
 
-		StringList splitter(line, " ");
-		splitter.rewind();
-		char *token;
-		std::vector<std::string> tokens;
-		tokens.reserve(3);
-		while ( (token = splitter.next()) ) {
-			tokens.emplace_back(token);
-		}
+		std::vector<std::string> tokens = split(line, " ");
 		if (tokens.size() < 3) {
 			dprintf(D_SECURITY, "Incorrect format in known host file.\n");
 			continue;
@@ -501,14 +494,7 @@ bool htcondor::get_known_hosts_first_match(const std::string &hostname, bool &pe
 		trim(line);
 		if (line.empty() || line[0] == '#') continue;
 
-		StringList splitter(line, " ");
-		splitter.rewind();
-		char *token;
-		std::vector<std::string> tokens;
-		tokens.reserve(3);
-		while ( (token = splitter.next()) ) {
-			tokens.emplace_back(token);
-		}
+		std::vector<std::string> tokens = split(line, " ");
 		if (tokens.size() < 3) {
 			dprintf(D_SECURITY, "Incorrect format in known host file.\n");
 			continue;

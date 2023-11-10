@@ -68,7 +68,6 @@ IpVerify::IpVerify()
 	DCpermission perm;
 	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
 		PermTypeArray[perm] = NULL;
-		PunchedHoleArray[perm] = NULL;
 	}
 
 	PermHashTable = new PermHashTable_t(compute_perm_hash);
@@ -98,8 +97,6 @@ IpVerify::~IpVerify()
 	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
 		if ( PermTypeArray[perm] )
 			delete PermTypeArray[perm];
-		if ( PunchedHoleArray[perm] )
-			delete PunchedHoleArray[perm];
 	}	
 }
 
@@ -728,23 +725,22 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		// This is important, because we do not want holes to find
 		// there way into the authorization cache.
 		//
-	if ( PunchedHoleArray[perm] != NULL ) {
-		HolePunchTable_t* hpt = PunchedHoleArray[perm];
+	if ( !PunchedHoleArray[perm].empty() ) {
+		HolePunchTable_t& hpt = PunchedHoleArray[perm];
 		std::string ip_str_buf = addr.to_ip_string();
 		const char* ip_str = ip_str_buf.c_str();
 		std::string id_with_ip;
 		std::string id;
-		int count;
 		if ( who != TotallyWild ) {
 			formatstr(id_with_ip, "%s/%s", who, ip_str);
 			id = who;
-			if ( hpt->lookup(id, count) != -1 )	{
+			if ( hpt.find(id) != hpt.end() ) {
 				formatstr( allow_reason, 
 						"%s authorization has been made automatic for %s",
 						PermString(perm), id.c_str() );
 				return USER_AUTH_SUCCESS;
 			}
-			if ( hpt->lookup(id_with_ip, count) != -1 ) {
+			if ( hpt.find(id_with_ip) != hpt.end() ) {
 				formatstr( allow_reason,
 						"%s authorization has been made automatic for %s",
 						PermString(perm), id_with_ip.c_str() );
@@ -752,7 +748,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			}
 		}
 		id = ip_str;
-		if ( hpt->lookup(id, count) != -1 ) {
+		if ( hpt.find(id) != hpt.end() ) {
 			formatstr( allow_reason,
 					"%s authorization has been made automatic for %s",
 					PermString(perm), id.c_str() );
@@ -1026,28 +1022,7 @@ IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, netgroup_list_t& 
 bool
 IpVerify::PunchHole(DCpermission perm, const std::string& id)
 {
-	int count = 0;
-	if (PunchedHoleArray[perm] == NULL) {
-		PunchedHoleArray[perm] =
-			new HolePunchTable_t(hashFunction);
-		ASSERT(PunchedHoleArray[perm] != NULL);
-	}
-	else {
-		int c;
-		if (PunchedHoleArray[perm]->lookup(id, c) != -1) {
-			count = c;
-			if (PunchedHoleArray[perm]->remove(id) == -1) {
-				EXCEPT("IpVerify::PunchHole: "
-				           "table entry removal error");
-			}
-		}
-	}
-
-	count++;
-	if (PunchedHoleArray[perm]->insert(id, count) == -1) {
-		EXCEPT("IpVerify::PunchHole: table entry insertion error");
-	}
-
+	int count = ++PunchedHoleArray[perm][id];
 	if (count == 1) {
 		dprintf(D_SECURITY,
 		        "IpVerify::PunchHole: opened %s level to %s\n",
@@ -1079,34 +1054,22 @@ IpVerify::PunchHole(DCpermission perm, const std::string& id)
 bool
 IpVerify::FillHole(DCpermission perm, const std::string& id)
 {
-	HolePunchTable_t* table = PunchedHoleArray[perm];
-	if (table == NULL) {
+	auto itr = PunchedHoleArray[perm].find(id);
+	if (itr == PunchedHoleArray[perm].end()) {
 		return false;
 	}
 
-	int count;
-	if (table->lookup(id, count) == -1) {
-		return false;
-	}
-	if (table->remove(id) == -1) {
-		EXCEPT("IpVerify::FillHole: table entry removal error");
+	if (itr->second > 0) {
+		itr->second--;
 	}
 
-	count--;
-
-	if (count != 0) {
-		if (table->insert(id, count) == -1) {
-			EXCEPT("IpVerify::FillHole: "
-			           "table entry insertion error");
-		}
-	}
-
-	if (count == 0) {
+	if (itr->second <= 0) {
 		dprintf(D_SECURITY,
 		        "IpVerify::FillHole: "
 		            "removed %s-level opening for %s\n",
 		        PermString(perm),
 		        id.c_str());
+		PunchedHoleArray[perm].erase(itr);
 	}
 	else {
 		dprintf(D_SECURITY,
@@ -1114,7 +1077,7 @@ IpVerify::FillHole(DCpermission perm, const std::string& id)
 		            "open count at level %s for %s now %d\n",
 		        PermString(perm),
 		        id.c_str(),
-		        count);
+		        itr->second);
 	}
 
 	DCpermissionHierarchy hierarchy( perm );

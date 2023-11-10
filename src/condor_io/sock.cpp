@@ -329,10 +329,7 @@ Sock::isAuthorizationInBoundingSet(const std::string &authz) const
 			std::string authz_policy;
 			if (_policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy))
 			{
-				StringList authz_policy_list(authz_policy.c_str());
-				authz_policy_list.rewind();
-				const char *authz_name;
-				while ( (authz_name = authz_policy_list.next()) ) {
+				for (const auto& authz_name : StringTokenIterator(authz_policy)) {
 					if (authz_name[0]) {
 						const_cast<Sock*>(this)->m_authz_bound.insert(authz_name);
 					}
