@@ -508,7 +508,7 @@ SubsystemInfo::getString( void ) const
 		type_name = m_Info->getTypeName();
 	}
 	snprintf( buf, sizeof(buf),
-			  "SubsystemInfo: name=%s type=%s(%d) class=%s(%d)",
+			  "SubsystemInfo: name=%s type=%s(%ld) class=%s(%d)",
 			  m_Name, type_name, m_Type, m_ClassName, m_Class );
 	return buf;
 }

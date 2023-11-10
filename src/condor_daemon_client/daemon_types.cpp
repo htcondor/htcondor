@@ -128,3 +128,36 @@ stringToDaemonType( const char* name )
 	}
 	return DT_NONE;
 }
+
+
+bool
+convert_daemon_type_to_ad_type(daemon_t daemon_type, AdTypes & ad_type) {
+	switch(daemon_type) {
+		case DT_MASTER:
+			ad_type = MASTER_AD;
+			return true;
+		case DT_STARTD:
+			ad_type = STARTD_AD;
+			return true;
+		case DT_SCHEDD:
+			ad_type = SCHEDD_AD;
+			return true;
+		case DT_NEGOTIATOR:
+			ad_type = NEGOTIATOR_AD;
+			return true;
+		case DT_COLLECTOR:
+			ad_type = COLLECTOR_AD;
+			return true;
+		case DT_GENERIC:
+			ad_type = GENERIC_AD;
+			return true;
+		case DT_HAD:
+			ad_type = HAD_AD;
+			return true;
+		case DT_CREDD:
+			ad_type = CREDD_AD;
+			return true;
+		default:
+			return false;
+	}
+}

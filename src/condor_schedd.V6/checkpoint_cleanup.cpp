@@ -42,8 +42,6 @@ spawnCheckpointCleanupProcessWithTimeout( int cluster, int proc, ClassAd * jobAd
 	} else {
 		dprintf( D_TEST, "checkpoint clean-up proc %d returned %d\n", pid, status );
 	}
-
-	co_return /* true */;
 }
 
 

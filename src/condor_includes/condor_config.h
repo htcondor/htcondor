@@ -261,6 +261,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	//   it will be valid until the MACRO_SET is cleared (usually a reconfig)
 	//
 	const char * lookup_macro(const char * name, MACRO_SET& set, MACRO_EVAL_CONTEXT &ctx);
+	const char * lookup_macro_exact_no_default_impl(const char *name, MACRO_SET & set, int use = 3);
 
 	// lookup "name" in the defaults table of the MACRO_SET
 	// using the localname and subsys overrides of MACRO_EVAL_CONTEXT take precedence

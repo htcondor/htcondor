@@ -4999,6 +4999,10 @@ const char * hash_iter_key(HASHITER& it) {
 	if (it.is_def) {
 		return it.pdef ? it.pdef->key : it.set.defaults->table[it.id].key;
 	}
+	if (it.set.table == NULL) {
+	    if(! hash_iter_next(it)) { return NULL; }
+	    return hash_iter_key(it);
+	}
 	return it.set.table[it.ix].key;
 }
 const char * hash_iter_value(HASHITER& it) {

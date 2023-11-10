@@ -152,6 +152,12 @@ public:
 		/// Methods for getting information about the daemon.
 		// //////////////////////////////////////////////////////////
 
+	// The caller DOES NOT own the returned pointer.  If we found
+	// the daemon via the configuration file or the address file, the
+	// ad will be synthetic.  Returns NULL instead of an incomplete
+	// location ad.
+	virtual ClassAd * locationAd();
+
 		/** Return the daemon's name.  This will return the name of
 		  the daemon, which is usually the fully qualified hostname,
 		  but might be something else.  For schedds (submit-only
@@ -931,6 +937,8 @@ private:
 	// unless they use DaemonAllowLocateFull::locate().
 
 	ClassAd *m_daemon_ad_ptr;
+
+	ClassAd * m_location_ad_ptr = NULL;
 
 	std::string m_trust_domain;
 

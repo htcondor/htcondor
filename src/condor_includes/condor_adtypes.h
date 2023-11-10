@@ -59,7 +59,7 @@
 #define BOGUS_ADTYPE		"Bogus"
 
 // Enumerated list of ad types (for the query object)
-enum AdTypes
+typedef enum : long
 {
 	NO_AD = -1,
 	STARTD_AD,		// unspecified Startd ad type, "Machine" or "Slot" or "StartdDaemon" depending on context
@@ -90,7 +90,7 @@ enum AdTypes
 	STARTDAEMON_AD,
 	// This should *ALWAYS* be at the end of this list
 	NUM_AD_TYPES,
-};
+} AdTypes;
 
 const char*
 AdTypeToString( AdTypes type );

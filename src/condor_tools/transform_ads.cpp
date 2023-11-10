@@ -643,7 +643,7 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 	// if we have not yet picked and output format, do that now.
 	if (DashOutFormat == ClassAdFileParseType::Parse_auto) {
 		if (xform_args.input_helper) {
-			fprintf(stderr, "input file format is %d\n", xform_args.input_helper->getParseType());
+			fprintf(stderr, "input file format is %ld\n", (long)xform_args.input_helper->getParseType());
 			DashOutFormat = xform_args.writer.autoSetFormat(*xform_args.input_helper);
 		}
 	}
