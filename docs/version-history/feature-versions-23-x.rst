@@ -81,6 +81,7 @@ New Features:
 - When *condor_remote_cluster* installs binaries on an EL7 machine, it
   now uses the latest 23.0.X release. Before, it would fail, as
   current versions of HTCondor are not available on EL7.
+  :jira:`2125`
 
 Bugs Fixed:
 
