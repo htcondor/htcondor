@@ -161,12 +161,14 @@ ReplicatorStateMachine::reinitialize()
     char* buffer = param( "HAD_LIST" );
 
     if ( buffer ) {
-        StringList hadList;
+        int count = 0;
+        for (const auto& item : StringTokenIterator(buffer)) {
+            count++; (void)item;
+        }
 
-        hadList.initializeFromString( buffer );
         free( buffer );
         m_hadAliveTolerance = HAD_ALIVE_TOLERANCE_FACTOR *
-                            ( 2 * hadConnectionTimeout * hadList.number() + 1 );
+                            ( 2 * hadConnectionTimeout * count + 1 );
 
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::reinitialize %s=%d\n",
                 "HAD_LIST", m_hadAliveTolerance );
@@ -235,15 +237,10 @@ ReplicatorStateMachine::initializeClassAd()
 	if ( NULL == buffer ) {
 		EXCEPT( "ReplicatorStateMachine: No replication list!!" );
 	}
-    char* replAddress = NULL;
-    StringList replList;
     std::string attrReplList;
     std::string comma;
 
-    replList.initializeFromString( buffer );
-    replList.rewind( );
-
-    while( ( replAddress = replList.next() ) ) {
+    for (const auto& replAddress : StringTokenIterator(buffer)) {
         attrReplList += comma;
         attrReplList += replAddress;
         comma = ",";

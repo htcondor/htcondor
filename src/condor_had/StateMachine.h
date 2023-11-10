@@ -122,8 +122,8 @@ protected:
     int m_selfId;
     bool m_isPrimary;
     bool m_usePrimary;
-    StringList m_otherHadIps;
-	StringList m_allHadIps;
+    std::vector<std::string> m_otherHadIps;
+	std::vector<std::string> m_allHadIps;
     Daemon* m_masterDaemon;
 	char *m_controlleeName;
 
@@ -132,8 +132,8 @@ protected:
 
     static bool getHadList(const char* s,
 						   bool use_primary,
-						   StringList &other,
-						   StringList &all,
+						   std::vector<std::string> &other,
+						   std::vector<std::string> &all,
 						   int &selfId );
     bool  checkList(List<int>*) const;
     static void removeAllFromList(List<int>*);
@@ -157,7 +157,6 @@ protected:
 
     // debug information
     bool m_standAloneMode;
-    static void my_debug_print_list(StringList* str);
     void my_debug_print_buffers(void);
 
 	// usage of replication, controlled by configuration parameter 
