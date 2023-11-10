@@ -31,7 +31,7 @@ Options
     Print the version and then exit.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-name** *schedd-name*
     Modify job attributes in the queue of the specified schedd
  **-pool** *pool-name*

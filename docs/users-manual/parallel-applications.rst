@@ -419,7 +419,7 @@ administrator can define ``MPDIR`` using the configuration variable
 Open MPI on a multi-machine HTCondor cluster, the administrator may also
 want to consider tweaking the 
 :macro:`OPENMPI_EXCLUDE_NETWORK_INTERFACES` configuration variable
-as well as set ``MOUNT_UNDER_SCRATCH`` = ``/tmp``.
+as well as set :macro:`MOUNT_UNDER_SCRATCH` = ``/tmp``.
 :index:`parallel universe`
 
 MPI Applications Within HTCondor's Vanilla Universe

@@ -26,7 +26,7 @@ daemon logs
     Each daemon configured to have a log writes events relevant to that
     daemon. Each event written consists of a timestamp and message. The
     name of the log file is set by the value of configuration variable
-    :macro:`<SUBSYS>_LOG`, where ``<SUBSYS>`` is
+    :macro:`<SUBSYS>_LOG`, where :macro:`<SUBSYS>` is
     replaced by the name of the daemon. The log is not permitted to grow
     without bound; log rotation takes place after a configurable maximum
     size or length of time is encountered. This maximum is specified by
@@ -34,7 +34,7 @@ daemon logs
 
     Which events are logged for a particular daemon are determined by
     the value of configuration variable :macro:`<SUBSYS>_DEBUG`. The
-    possible values for ``<SUBSYS>_DEBUG`` categorize events, such
+    possible values for :macro:`<SUBSYS>_DEBUG` categorize events, such
     that it is possible to control the level and quantity of events
     written to the daemon's log.
 
@@ -244,7 +244,7 @@ will not normally need to change these.
 Directories used by More than One Role
 ``````````````````````````````````````
 
- ``LOG``
+ :macro:`LOG`
     Each HTCondor daemon writes its own log file, and each log file
     is placed in the :macro:`LOG` directory.  You can configure the name
     of each daemon's log by setting :macro:`<SUBSYS>_LOG`,
@@ -252,23 +252,23 @@ Directories used by More than One Role
     of the log files or how often they rotate; see
     :ref:`admin-manual/configuration-macros:Daemon Logging Configuration File Entries`
     for details.  If you want to write your logs to a shared filesystem,
-    we recommend including ``$(HOSTNAME)`` in the value of ``LOG`` rather
+    we recommend including ``$(HOSTNAME)`` in the value of :macro:`LOG` rather
     than changing the names of each individual log to not collide.  If you
-    set ``LOG`` to a shared filesystem, you should set ``LOCK`` to a local
+    set :macro:`LOG` to a shared filesystem, you should set :macro:`LOCK` to a local
     filesystem; see below.
 
- ``LOCK``
+ :macro:`LOCK`
     HTCondor uses a small number of lock files to synchronize access
     to certain files that are shared between multiple daemons.
     Because of problems encountered with file locking and network
     file systems (particularly NFS), these lock files should be
     placed on a local filesystem on each machine.  By default, they
-    are placed in the ``LOG`` directory.
+    are placed in the :macro:`LOG` directory.
 
 Directories use by the Submit Role
 ``````````````````````````````````
 
- ``SPOOL``
+ :macro:`SPOOL`
     The :macro:`SPOOL` directory holds two types of files: system
     data and (user) job data.  The former includes the job queue and
     history files.  The latter includes:
@@ -292,21 +292,21 @@ Directories use by the Submit Role
 Directories use by the Execute Role
 ```````````````````````````````````
 
- ``EXECUTE``
+ :macro:`EXECUTE`
     The :macro:`EXECUTE` directory is the parent directory of the
     current working directory for any HTCondor job that runs on a given
     execute-role machine.  HTCondor copies the executable and input files
     for a job to its subdirectory; the job's standard output and standard
     error streams are also logged here.  Jobs will also almost always
-    generate their output here as well, so the ``EXECUTE`` directory should
-    provide a plenty of space.  ``EXECUTE`` should not be placed under /tmp
+    generate their output here as well, so the :macro:`EXECUTE` directory should
+    provide a plenty of space.  :macro:`EXECUTE` should not be placed under /tmp
     or /var/tmp if possible, as HTCondor loses the ability to make /tmp and
-    /var/tmp private to the job.  While not a requirement, ideally ``EXECUTE``
+    /var/tmp private to the job.  While not a requirement, ideally :macro:`EXECUTE`
     should be on a distinct filesystem, so that it is impossible for a rogue job
     to fill up non-HTCondor related partitions.
 
     Usually, the per-job scratch execute directory is created by the startd
-    as a directory under ``EXECUTE``.  However, on Linux machines where HTCondor
+    as a directory under :macro:`EXECUTE`.  However, on Linux machines where HTCondor
     has root privilege, it can be configured to make an ephemeral, per-job scratch filesystem
     backed either by LVM, if it is configured, or a large existing file on the filesystem.
 

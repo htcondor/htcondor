@@ -44,7 +44,7 @@ Options
 
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-help**
     Display brief usage information and exit.
  **-lifetime** *value*

@@ -495,7 +495,7 @@ Scheduler ClassAd Attributes
     daemons and successfully reconnected in the previous time interval
     defined by attribute ``RecentStatsLifetime``. This statistic only
     appears in the Scheduler ClassAd if the level of verbosity set by
-    the configuration variable ``STATISTICS_TO_PUBLISH`` is set to 2 or
+    the configuration variable :macro:`STATISTICS_TO_PUBLISH` is set to 2 or
     higher.
 
 :classad-attribute:`RecentShadowsRecycled`
@@ -504,7 +504,7 @@ Scheduler ClassAd Attributes
     time interval defined by attribute ``RecentStatsLifetime``. This
     statistic only appears in the Scheduler ClassAd if the level of
     verbosity set by the configuration variable
-    ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
+    :macro:`STATISTICS_TO_PUBLISH` is set to 2 or higher.
 
 :classad-attribute:`RecentShadowsStarted`
     A Statistics attribute defining the number of *condor_shadow*
@@ -524,7 +524,7 @@ Scheduler ClassAd Attributes
     number of seconds elapsed since the Unix epoch (00:00:00 UTC, Jan 1,
     1970). This statistic only appears in the Scheduler ClassAd if the
     level of verbosity set by the configuration variable
-    ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
+    :macro:`STATISTICS_TO_PUBLISH` is set to 2 or higher.
 
 :classad-attribute:`RecentWindowMax`
     A Statistics attribute defining the maximum time in seconds over
@@ -533,7 +533,7 @@ Scheduler ClassAd Attributes
     :macro:`STATISTICS_WINDOW_SECONDS`, which defaults to 1200
     seconds (20 minutes). This statistic only appears in the Scheduler
     ClassAd if the level of verbosity set by the configuration variable
-    ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
+    :macro:`STATISTICS_TO_PUBLISH` is set to 2 or higher.
 
 :classad-attribute:`ScheddIpAddr`
     String with the IP and port address of the *condor_schedd* daemon
@@ -545,14 +545,14 @@ Scheduler ClassAd Attributes
     and successfully reconnected in the previous ``StatsLifetime``
     seconds. This statistic only appears in the Scheduler ClassAd if the
     level of verbosity set by the configuration variable
-    ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
+    :macro:`STATISTICS_TO_PUBLISH` is set to 2 or higher.
 
 :classad-attribute:`ShadowsRecycled`
     A Statistics attribute defining the number of times *condor_shadow*
     processes have been recycled for use with a new job in the previous
     ``StatsLifetime`` seconds. This statistic only appears in the
     Scheduler ClassAd if the level of verbosity set by the configuration
-    variable ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
+    variable :macro:`STATISTICS_TO_PUBLISH` is set to 2 or higher.
 
 :classad-attribute:`ShadowsRunning`
     A Statistics attribute defining the number of *condor_shadow*
@@ -584,7 +584,7 @@ Scheduler ClassAd Attributes
     were last updated, represented as the number of seconds elapsed
     since the Unix epoch (00:00:00 UTC, Jan 1, 1970). This statistic
     only appears in the Scheduler ClassAd if the level of verbosity set
-    by the configuration variable ``STATISTICS_TO_PUBLISH`` is set to 2
+    by the configuration variable :macro:`STATISTICS_TO_PUBLISH` is set to 2
     or higher.
 
 :classad-attribute:`StatsLifetime`
@@ -592,7 +592,7 @@ Scheduler ClassAd Attributes
     statistics have been collected for attributes with names that do not
     begin with ``Recent``. This statistic only appears in the Scheduler
     ClassAd if the level of verbosity set by the configuration variable
-    ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
+    :macro:`STATISTICS_TO_PUBLISH` is set to 2 or higher.
 
 :classad-attribute:`TotalFlockedJobs`
     The total number of jobs from this *condor_schedd* daemon that are
@@ -682,24 +682,24 @@ once a full time span has accumulated.
     upper limit set for the disk load throttle. Periods of time in which
     there is no excess and no waiting transfers do not contribute to the
     average. This attribute is published only if configuration variable
-    ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
+    :macro:`FILE_TRANSFER_DISK_LOAD_THROTTLE` is defined.
 
 :classad-attribute:`FileTransferDiskThrottleHigh`
     The desired upper limit for the disk load from file transfers, as
     configured by :macro:`FILE_TRANSFER_DISK_LOAD_THROTTLE`
     This attribute is published only if configuration variable
-    ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
+    :macro:`FILE_TRANSFER_DISK_LOAD_THROTTLE` is defined.
 
 :classad-attribute:`FileTransferDiskThrottleLevel`
     The current concurrency limit set by the disk load throttle. The
     limit is applied to the sum of uploads and downloads. This attribute
     is published only if configuration variable
-    ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
+    :macro:`FILE_TRANSFER_DISK_LOAD_THROTTLE` is defined.
 
 :classad-attribute:`FileTransferDiskThrottleLow`
     The lower limit for the disk load from file transfers, as configured
     by :macro:`FILE_TRANSFER_DISK_LOAD_THROTTLE` This attribute is published
-    only if configuration variable ``FILE_TRANSFER_DISK_LOAD_THROTTLE``
+    only if configuration variable :macro:`FILE_TRANSFER_DISK_LOAD_THROTTLE`
     is defined.
 
 :classad-attribute:`FileTransferDiskThrottleShortfall_<timespan>`
@@ -707,7 +707,7 @@ once a full time span has accumulated.
     upper limit set for the disk load throttle. Periods of time in which
     there is no excess and no waiting transfers do not contribute to the
     average. This attribute is published only if configuration variable
-    ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
+    :macro:`FILE_TRANSFER_DISK_LOAD_THROTTLE` is defined.
 
 :index:`TRANSFER_QUEUE_USER_EXPR`
 
@@ -718,7 +718,7 @@ once a full time span has accumulated.
     is also published prefixed by the user name, with the name
     ``Owner_<username>_FileTransferDownloadBytes``. The published user
     name is actually the file transfer queue name, as defined by
-    configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferDownloadBytesPerSecond_<timespan>`
     Exponential moving average over the specified time span of the rate
@@ -731,7 +731,7 @@ once a full time span has accumulated.
     user name, with the name
     ``Owner_<username>_FileTransferDownloadBytesPerSecond_<timespan>``.
     The published user name is actually the file transfer queue name, as
-    defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    defined by configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferFileReadLoad_<timespan>`
     Exponential moving average over the specified time span of the rate
@@ -746,7 +746,7 @@ once a full time span has accumulated.
     also published prefixed by the user name, with the name
     ``Owner_<username>_FileTransferFileReadLoad_<timespan>``. The
     published user name is actually the file transfer queue name, as
-    defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    defined by configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferFileReadSeconds`
     Total number of submit-side transfer process seconds spent reading
@@ -756,7 +756,7 @@ once a full time span has accumulated.
     user name, with the name
     ``Owner_<username>_FileTransferFileReadSeconds``. The published user
     name is actually the file transfer queue name, as defined by
-    configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferFileWriteLoad_<timespan>`
     Exponential moving average over the specified time span of the rate
@@ -771,7 +771,7 @@ once a full time span has accumulated.
     also published prefixed by the user name, with the name
     ``Owner_<username>_FileTransferFileWriteLoad_<timespan>``. The
     published user name is actually the file transfer queue name, as
-    defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    defined by configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferFileWriteSeconds`
     Total number of submit-side transfer process seconds spent writing
@@ -781,7 +781,7 @@ once a full time span has accumulated.
     the user name, with the name
     ``Owner_<username>_FileTransferFileWriteSeconds``. The published
     user name is actually the file transfer queue name, as defined by
-    configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferNetReadLoad_<timespan>`
     Exponential moving average over the specified time span of the rate
@@ -800,7 +800,7 @@ once a full time span has accumulated.
     also published prefixed by the user name, with the name
     ``Owner_<username>_FileTransferNetReadLoad_<timespan>``. The
     published user name is actually the file transfer queue name, as
-    defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    defined by configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferNetReadSeconds`
     Total number of submit-side transfer process seconds spent reading
@@ -814,7 +814,7 @@ once a full time span has accumulated.
     user name, with the name
     ``Owner_<username>_FileTransferNetReadSeconds``. The published user
     name is actually the file transfer queue name, as defined by
-    configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferNetWriteLoad_<timespan>`
     Exponential moving average over the specified time span of the rate
@@ -833,7 +833,7 @@ once a full time span has accumulated.
     also published prefixed by the user name, with the name
     ``Owner_<username>_FileTransferNetWriteLoad_<timespan>``. The
     published user name is actually the file transfer queue name, as
-    defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    defined by configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferNetWriteSeconds`
     Total number of submit-side transfer process seconds spent writing
@@ -850,7 +850,7 @@ once a full time span has accumulated.
     prefixed by the user name, with the name
     ``Owner_<username>_FileTransferNetWriteSeconds``. The published user
     name is actually the file transfer queue name, as defined by
-    configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferUploadBytes`
     Total number of bytes uploaded as input to jobs since this
@@ -859,7 +859,7 @@ once a full time span has accumulated.
     is also published prefixed by the user name, with the name
     ``Owner_<username>_FileTransferUploadBytes``. The published user
     name is actually the file transfer queue name, as defined by
-    configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferUploadBytesPerSecond_<timespan>`
     Exponential moving average over the specified time span of the rate
@@ -871,7 +871,7 @@ once a full time span has accumulated.
     user, this attribute is also published prefixed by the user name, with the name
     ``Owner_<username>_FileTransferUploadBytesPerSecond_<timespan>``.
     The published user name is actually the file transfer queue name, as
-    defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+    defined by configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`TransferQueueMBWaitingToDownload`
     Number of megabytes of output files waiting to be downloaded.

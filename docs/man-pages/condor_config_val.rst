@@ -122,7 +122,7 @@ Options
     values of the variable.
  **-debug[:<opts>]**
     (view option) Send output to ``stderr``, overriding a set value of
-    ``TOOL_DEBUG``.
+    :macro:`TOOL_DEBUG`.
  **-evaluate**
     (view option) Applied only when a **location option** specifies a
     daemon. The value of the requested parameter will be evaluated with
@@ -202,7 +202,7 @@ Examples
 
 Here is a set of examples to show a sequence of operations using
 *condor_config_val*. To request the *condor_schedd* daemon on host
-perdita to display the value of the ``MAX_JOBS_RUNNING`` configuration
+perdita to display the value of the :macro:`MAX_JOBS_RUNNING` configuration
 variable:
 
 .. code-block:: console
@@ -211,7 +211,7 @@ variable:
        500
 
 To request the *condor_schedd* daemon on host perdita to set the value
-of the ``MAX_JOBS_RUNNING`` configuration variable to the value 10.
+of the :macro:`MAX_JOBS_RUNNING` configuration variable to the value 10.
 
 .. code-block:: console
 
@@ -235,7 +235,7 @@ implemented:
        $ condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
        10
 
-To set the configuration variable ``MAX_JOBS_RUNNING`` back to what it
+To set the configuration variable :macro:`MAX_JOBS_RUNNING` back to what it
 was before the command to set it to 10:
 
 .. code-block:: console

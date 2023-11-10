@@ -27,7 +27,7 @@ load on the machine. If the **-name** option is specified, the named
 *condor_schedd* is targeted. The job(s) to be suspended are identified
 by one of the job identifiers, as described below. For any given job,
 only the owner of the job or one of the queue super users (defined by
-the ``QUEUE_SUPER_USERS`` macro) can suspend the job.
+the :macro:`QUEUE_SUPER_USERS` macro) can suspend the job.
 
 Options
 -------
@@ -45,7 +45,7 @@ Options
     Send the command to a machine located at *"<a.b.c.d:port>"*
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  *cluster*
     Suspend all jobs in the specified cluster
  *cluster.process*

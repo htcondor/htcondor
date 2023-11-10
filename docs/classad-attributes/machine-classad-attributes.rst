@@ -177,7 +177,7 @@ Machine ClassAd Attributes
     will not suspend jobs during draining while the machine is waiting
     for the job to use up its retirement time. If suspension happens,
     the upper bound on how long draining could take is unlimited. To
-    avoid suspension during draining, the ``SUSPEND`` and ``CONTINUE``
+    avoid suspension during draining, the :macro:`SUSPEND` and :macro:`CONTINUE`
     expressions could be configured to pay attention to the ``Draining``
     attribute.
 
@@ -1066,7 +1066,7 @@ Machine ClassAd Attributes
 :classad-attribute:`VM_AvailNum`
     The maximum number of vm universe jobs that can be started on this
     machine. This maximum is set by the configuration variable
-    ``VM_MAX_NUMBER``.
+    :macro:`VM_MAX_NUMBER`.
 
 :classad-attribute:`VM_Guest_Mem`
     An attribute defined if a vm universe job is running on this slot.
@@ -1078,7 +1078,7 @@ Machine ClassAd Attributes
 :classad-attribute:`VM_Memory`
     Gives the amount of memory available for starting additional VM jobs
     on this machine, given in Mbytes. The maximum value is set by the
-    configuration variable ``VM_MEMORY``.
+    configuration variable :macro:`VM_MEMORY`.
     
 :classad-attribute:`VM_Networking`
     A boolean value indicating whether networking is allowed for virtual
@@ -1086,7 +1086,7 @@ Machine ClassAd Attributes
 
 :classad-attribute:`VM_Type`
     The type of virtual machine software that can run on this machine.
-    The value is set by the configuration variable ``VM_TYPE``
+    The value is set by the configuration variable :macro:`VM_TYPE`
 
 :classad-attribute:`VMOfflineReason`
     The reason the VM universe went offline (usually because a VM
@@ -1122,7 +1122,7 @@ into the machine ClassAd whenever a resource is in the Claimed state:
 :classad-attribute:`RemoteAutoregroup`
     A boolean attribute which is ``True`` if this resource was claimed
     via negotiation when the configuration variable
-    ``GROUP_AUTOREGROUP`` is ``True``. It is ``False`` otherwise.
+    :macro:`GROUP_AUTOREGROUP` is ``True``. It is ``False`` otherwise.
 
 :classad-attribute:`RemoteGroup`
     The accounting group name corresponding to the submitter that
@@ -1366,7 +1366,7 @@ partitionable slot preemption is enabled.
 :classad-attribute:`PslotRollupInformation`
     A boolean value set to ``True`` in both the partitionable and
     dynamic slots, when configuration variable
-    ``ADVERTISE_PSLOT_ROLLUP_INFORMATION`` is ``True``, such that the
+    :macro:`ADVERTISE_PSLOT_ROLLUP_INFORMATION` is ``True``, such that the
     *condor_negotiator* knows when partitionable slot preemption is
     possible and can directly preempt a dynamic slot when appropriate.
 

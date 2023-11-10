@@ -12,7 +12,7 @@ Collector ClassAd Attributes
 
 :classad-attribute:`DroppedQueries`
     Total number of queries aborted since collector startup (or
-    statistics reset) because ``COLLECTOR_QUERY_WORKERS_PENDING``
+    statistics reset) because :macro:`COLLECTOR_QUERY_WORKERS_PENDING`
     exceeded, or :macro:`COLLECTOR_QUERY_MAX_WORKTIME` exceeded, or client
     closed TCP socket while request was pending. This statistic is also
     available as ``RecentDroppedQueries`` which represents a count of

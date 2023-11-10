@@ -196,7 +196,7 @@ all attributes.
     This attribute is identical to ``CommittedTime`` except that the
     time is multiplied by the ``SlotWeight`` of the machine(s) that ran
     the job. This relies on ``SlotWeight`` being listed in
-    ``SYSTEM_JOB_MACHINE_ATTRS``
+    :macro:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute:`CommittedSuspensionTime`
     A running total of the number of seconds the job has spent in
@@ -242,7 +242,7 @@ all attributes.
     This attribute is identical to ``RemoteWallClockTime`` except that
     the time is multiplied by the ``SlotWeight`` of the machine(s) that
     ran the job. This relies on ``SlotWeight`` being listed in
-    ``SYSTEM_JOB_MACHINE_ATTRS``
+    :macro:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute:`CumulativeSuspensionTime`
     A running total of the number of seconds the job has spent in
@@ -331,7 +331,7 @@ all attributes.
     An integer that specifies the maximum number of seconds for which
     delegated proxies should be valid. The default behavior is
     determined by the configuration setting
-    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`` which defaults
+    :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME` which defaults
     to one day. A value of 0 indicates that the delegated proxy should
     be valid for as long as allowed by the credential used to create the
     proxy. This setting currently only applies to proxies delegated for
@@ -912,7 +912,7 @@ all attributes.
     A vanilla universe job's ``ImageSize`` is recomputed
     internally every 15 seconds. How quickly this updated information
     becomes visible to *condor_q* is controlled by
-    ``SHADOW_QUEUE_UPDATE_INTERVAL`` and ``STARTER_UPDATE_INTERVAL``.
+    :macro:`SHADOW_QUEUE_UPDATE_INTERVAL` and :macro:`STARTER_UPDATE_INTERVAL`.
 
     Under Linux, ``ProportionalSetSize`` is a better indicator of memory
     usage for jobs with significant sharing of memory between processes,
@@ -1144,7 +1144,7 @@ all attributes.
     *condor_starter* wait after sending the signal defined as
     ``KillSig`` and before forcibly removing the job. The actual amount
     of time will be the minimum of this value and the execute machine's
-    configuration variable ``KILLING_TIMEOUT``
+    configuration variable :macro:`KILLING_TIMEOUT`
 
 :classad-attribute:`LastMatchTime`
     An integer containing the epoch time when the job was last
@@ -1184,7 +1184,7 @@ all attributes.
 :classad-attribute:`MachineAttr<X><N>`
     Machine attribute of name ``<X>`` that is placed into this job
     ClassAd, as specified by the configuration variable
-    ``SYSTEM_JOB_MACHINE_ATTRS``. With the potential for multiple run
+    :macro:`SYSTEM_JOB_MACHINE_ATTRS`. With the potential for multiple run
     attempts, ``<N>`` represents an integer value providing historical
     values of this machine attribute for multiple runs. The most recent
     run will have a value of ``<N>`` equal to ``0``. The next most
@@ -1209,7 +1209,7 @@ all attributes.
     expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
-    limit. If not set, the system setting ``MAX_TRANSFER_INPUT_MB``
+    limit. If not set, the system setting :macro:`MAX_TRANSFER_INPUT_MB`
     is used. If the observed size
     of all input files at submit time is larger than the limit, the job
     will be immediately placed on hold with a ``HoldReasonCode`` value
@@ -1226,7 +1226,7 @@ all attributes.
     expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
-    limit. If not set, the system setting ``MAX_TRANSFER_OUTPUT_MB``
+    limit. If not set, the system setting :macro:`MAX_TRANSFER_OUTPUT_MB`
     is used. If the total size of
     the job's output files to be transferred is larger than the limit,
     the job will be placed on hold with a ``HoldReasonCode`` value of
@@ -1250,7 +1250,7 @@ all attributes.
 :classad-attribute:`NextJobStartDelay`
     An integer number of seconds delay time after this job starts until
     the next job is started. The value is limited by the configuration
-    variable ``MAX_NEXT_JOB_START_DELAY``
+    variable :macro:`MAX_NEXT_JOB_START_DELAY`
 
 :classad-attribute:`NiceUser`
     Boolean value which when ``True`` indicates that this job is a nice
@@ -1550,7 +1550,7 @@ all attributes.
     ``Cmd``, when ``Cmd`` is a relative path name and
     ``TransferExecutable`` is ``False``. The default value is ``False``.
     This attribute is primarily of interest for users of
-    ``USER_JOB_WRAPPER`` for the purpose of allowing an executable's
+    :macro:`USER_JOB_WRAPPER` for the purpose of allowing an executable's
     location to be resolved by the user's path in the job wrapper.
 
 :classad-attribute:`PreserveRelativePaths`
@@ -1584,22 +1584,22 @@ all attributes.
 :classad-attribute:`RecentBlockReadKbytes`.
     The integer number of KiB read from disk for this job over the
     previous time interval defined by configuration variable
-    ``STATISTICS_WINDOW_SECONDS``.
+    :macro:`STATISTICS_WINDOW_SECONDS`.
 
 :classad-attribute:`RecentBlockReads`.
     The integer number of disk blocks read for this job over the
     previous time interval defined by configuration variable
-    ``STATISTICS_WINDOW_SECONDS``.
+    :macro:`STATISTICS_WINDOW_SECONDS`.
 
 :classad-attribute:`RecentBlockWriteKbytes`.
     The integer number of KiB written to disk for this job over the
     previous time interval defined by configuration variable
-    ``STATISTICS_WINDOW_SECONDS``.
+    :macro:`STATISTICS_WINDOW_SECONDS`.
 
 :classad-attribute:`RecentBlockWrites`.
     The integer number of blocks written to disk for this job over the
     previous time interval defined by configuration variable
-    ``STATISTICS_WINDOW_SECONDS``.
+    :macro:`STATISTICS_WINDOW_SECONDS`.
 
 :classad-attribute:`ReleaseReason`
     A string containing a human-readable message about why the job was
@@ -1691,7 +1691,7 @@ all attributes.
     *condor_startd* provisioning is enabled, it is the minimum amount
     of memory needed in the created dynamic slot. If not set by the job,
     its definition is specified by configuration variable
-    ``JOB_DEFAULT_REQUESTMEMORY``
+    :macro:`JOB_DEFAULT_REQUESTMEMORY`
 
 :index:`APPEND_REQUIREMENTES`
 
@@ -1703,7 +1703,7 @@ all attributes.
     the schedd will append a clause to Requirements forcing the job to
     match the same ``OPSYS`` as the access point. :index:`OPSYS`
     The schedd appends a simliar clause to match the ``ARCH``. :index:`ARCH`
-    The schedd parameter ``APPEND_REQUIREMENTS``, will, if set, append that
+    The schedd parameter :macro:`APPEND_REQUIREMENTS`, will, if set, append that
     value to every job's requirements expression.
     
 :classad-attribute:`ResidentSetSize`
@@ -1767,7 +1767,7 @@ all attributes.
 :classad-attribute:`SubmitterAutoregroup`
     A boolean attribute defined by the *condor_negotiator* when it
     makes a match. It will be ``True`` if the resource was claimed via
-    negotiation when the configuration variable ``GROUP_AUTOREGROUP``
+    negotiation when the configuration variable :macro:`GROUP_AUTOREGROUP`
     was ``True``. It will be ``False`` otherwise.
 
 :classad-attribute:`SubmitterGlobalJobId`
