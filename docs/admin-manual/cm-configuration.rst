@@ -1343,7 +1343,7 @@ may be computed using the following formula:
                               $(HAD_CONNECTION_TIMEOUT)
 
 To disable the high availability of central managers mechanism, it is
-sufficient to remove :macro:`HAD`, :macro:`REPLICATION`, and ``NEGOTIATOR`` from
+sufficient to remove :macro:`HAD`, :macro:`REPLICATION`, and :macro:`NEGOTIATOR` from
 the :macro:`DAEMON_LIST` configuration variable on all machines, leaving only
 one *condor_negotiator* in the pool.
 

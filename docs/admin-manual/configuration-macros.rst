@@ -5214,13 +5214,13 @@ These macros control the *condor_schedd*.
 
 :macro-def:`SYSTEM_PERIODIC_HOLD_REASON[SCHEDD]` and :macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_REASON[SCHEDD]`
     This string expression is evaluated when the job is placed on hold
-    due to :macro:`SYSTEM_PERIODIC_HOLD` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
+    due to :macro:`SYSTEM_PERIODIC_HOLD` or :macro:`SYSTEM_PERIODIC_HOLD_<Name>` evaluating to ``True``. If it
     evaluates to a non-empty string, this value is used to set the job
     attribute ``HoldReason``. Otherwise, a default description is used.
 
 :macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE[SCHEDD]` and :macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_SUBCODE[SCHEDD]`
     This integer expression is evaluated when the job is placed on hold
-    due to :macro:`SYSTEM_PERIODIC_HOLD` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
+    due to :macro:`SYSTEM_PERIODIC_HOLD` or :macro:`SYSTEM_PERIODIC_HOLD_<Name>` evaluating to ``True``. If it
     evaluates to a valid integer, this value is used to set the job
     attribute ``HoldReasonSubCode``. Otherwise, a default of 0 is used.
     The attribute ``HoldReasonCode`` is set to 26, which indicates that
@@ -7121,6 +7121,9 @@ configuration variables; configuration>`
 
 These macros affect the *condor_negotiator*.
 
+:macro-def:`NEGOTIATOR[NEGOTIATOR]`
+    The full path to the *condor_negotiator* binary.
+
 :macro-def:`NEGOTIATOR_NAME[NEGOTIATOR]`
     Used to give an alternative value to the ``Name`` attribute in the
     *condor_negotiator* 's ClassAd and the ``NegotiatorName``
@@ -8489,7 +8492,7 @@ in configuration. This allows multiple instances of the
 
     Note that leases can be renewed, and thus can be extended beyond
     this limit. To provide a limit on the total duration of a lease, use
-    :macro:`LeaseManager.MAX_TOTAL_LEASE_DURATION`.
+    ``LeaseManager.MAX_TOTAL_LEASE_DURATION``.
 
 :macro-def:`LeaseManager.MAX_TOTAL_LEASE_DURATION[LEASE MANAGER]`
     An integer value representing seconds used to limit the total
