@@ -735,7 +735,7 @@ attempt before trying again.
 By default, the EC2 GAHP enforces a 100 millisecond interval between
 requests to the same service. This helps ensure reliable service. You
 may configure this interval with the configuration variable
-``EC2_GAHP_RATE_LIMIT``, which must be an integer number of
+:macro:`EC2_GAHP_RATE_LIMIT`, which must be an integer number of
 milliseconds. Adjusting the interval may result in higher or lower
 throughput, depending on the service. Too short of an interval may
 trigger rate-limiting by the service; while HTCondor will react

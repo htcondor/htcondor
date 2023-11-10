@@ -347,7 +347,7 @@ Other Checkpoint Destinations
 
 You may specify a different executable in the right column.  Executables
 which are not specified with an absolute path are assumed to be in the
-``LIBEXEC`` directory.
+:macro:`LIBEXEC` directory.
 
 The remainder of this section is a detailed explanation of how HTCondor
 launches such an executable.  This may be useful for adminstrators who

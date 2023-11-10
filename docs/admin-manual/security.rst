@@ -953,7 +953,7 @@ especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
 other methods of authentication between the submit and execute
 daemons. See the description of
-``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` in
+:macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` in
 :ref:`admin-manual/configuration-macros:configuration file entries relating to
 security` for details.
 
@@ -1125,7 +1125,7 @@ The configuration variable :macro:`KERBEROS_SERVER_SERVICE` defines a Kerberos
 service to override the default ``host``. HTCondor prefixes this to
 ``/<hostname>@<realm>`` to obtain the default Kerberos principal.
 Configuration variable :macro:`KERBEROS_SERVER_PRINCIPAL` overrides
-``KERBEROS_SERVER_SERVICE``.
+:macro:`KERBEROS_SERVER_SERVICE`.
 
 For example, the configuration
 
@@ -1319,7 +1319,7 @@ then all derived tokens are immediately invalid.  Most simple installs will
 utilize a single signing key, named ``POOL``.
 
 While most token signing keys are placed in the directory specified by
-``SEC_PASSWORD_DIRECTORY``, with the filename within the directory determining
+:macro:`SEC_PASSWORD_DIRECTORY`, with the filename within the directory determining
 the key's name, the ``POOL`` token signing key can be located elsewhere by
 setting :macro:`SEC_TOKEN_POOL_SIGNING_KEY_FILE` to the full pathname of the
 desired file.  On Linux the same file can be both the pool signing key and the

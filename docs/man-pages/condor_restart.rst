@@ -31,7 +31,7 @@ then invoked anew.
 
 If, for example, the *condor_master* needs to be restarted again with a
 fresh state, this is the command that should be used to do so. If the
-``DAEMON_LIST`` variable in the configuration file has been changed,
+:macro:`DAEMON_LIST` variable in the configuration file has been changed,
 this command is used to restart the *condor_master* in order to see
 this change. The *condor_reconfigure* command cannot be used in the
 case where the :macro:`DAEMON_LIST` expression changes.

@@ -275,7 +275,7 @@ prefixed by a subsystem (see the ``$(SUBSYSTEM)`` macro in
 list of subsystems) and the period (.) character. For configuration variables
 defined this way, the value is applied to the specific subsystem. For example,
 the ports that HTCondor may use can be restricted to a range using the
-``HIGHPORT`` and :macro:`LOWPORT` configuration variables.
+:macro:`HIGHPORT` and :macro:`LOWPORT` configuration variables.
 
 .. code-block:: condor-config
 
@@ -291,7 +291,7 @@ sense to define
     NEGOTIATOR.MASTER_UPDATE_INTERVAL = 60
 
 since the *condor_negotiator* daemon does not use the
-``MASTER_UPDATE_INTERVAL`` variable.
+:macro:`MASTER_UPDATE_INTERVAL` variable.
 
 It makes little sense to do so, but HTCondor will configure correctly
 with a definition such as
@@ -558,7 +558,7 @@ Consider the example
       include : $(LOCAL_DIR)/$(FILE)
 
 Values are acquired for configuration variables ``FILE``, and
-``LOCAL_DIR`` by immediate evaluation, causing variable
+:macro:`LOCAL_DIR` by immediate evaluation, causing variable
 ``FULL_HOSTNAME`` to also be immediately evaluated. The resulting value
 forms a full path and file name. This file is read and parsed. The
 resulting configuration is incorporated into the current configuration.
@@ -965,9 +965,9 @@ way daemons locate each other, such as :macro:`PROCD_ADDRESS`, :macro:`BIND_ALL_
 require a restart of the *condor_master* and all of the daemons under it.
 
 The *condor_startd* requires a restart to make any change to the slot resource configuration, This would include :macro:`MEMORY`,
-``NUM_CPUS`` and ``NUM_SLOTS_TYPE_<n>``.  It would also include resource detection like GPUs and Docker support.
+:macro:`NUM_CPUS` and ``NUM_SLOTS_TYPE_<n>``.  It would also include resource detection like GPUs and Docker support.
 A general rule of thumb is that changes to the *condor_startd* require a restart, but there are a few exceptions.
-``STARTD_ATTRS`` as well as :macro:`START`, :macro:`PREEMPT`, and other policy expressions take effect on reconfig.
+:macro:`STARTD_ATTRS` as well as :macro:`START`, :macro:`PREEMPT`, and other policy expressions take effect on reconfig.
 
 For more information about specific configuration variables and whether a restart is required, refer to the documentation
 of the individual variables.

@@ -24,7 +24,7 @@ when the *condor_master* daemon shuts down. The
 **-exec** *programname* argument is required, and specifies the
 program to run. The string *programname* must match the string that
 defines ``Name`` in the configuration variable
-``MASTER_SHUTDOWN_<Name>`` in the *condor_master* daemon's
+:macro:`MASTER_SHUTDOWN_<Name>` in the *condor_master* daemon's
 configuration. If it does not match, the *condor_master* will log an
 error and ignore the request.
 

@@ -32,7 +32,7 @@ is targeted for processing. Otherwise, the local *condor_schedd* is
 targeted. The jobs to be held are identified by one or more job
 identifiers, as described below. For any given job, only the owner of
 the job or one of the queue super users (defined by the
-``QUEUE_SUPER_USERS`` macro) can place the job on hold.
+:macro:`QUEUE_SUPER_USERS` macro) can place the job on hold.
 
 A job in the hold state remains in the job queue, but the job will not
 run until released with *condor_release*.

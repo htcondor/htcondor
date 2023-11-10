@@ -38,19 +38,19 @@ will be no *-f* argument.
 The *condor_master* creates certain directories necessary for its proper
 functioning on start-up if they don't already exist, using the values of
 the configuration settings
-``EXECUTE``,
-``LOCAL_DIR``,
+:macro:`EXECUTE`,
+:macro:`LOCAL_DIR`,
 ``LOCAL_DISK_LOCK_DIR``,
-``LOCAL_UNIV_EXECUTE``,
-``LOCK``,
-``LOG``,
-``RUN``,
-``SEC_CREDENTIAL_DIRECTORY_KRB``,
-``SEC_CREDENTIAL_DIRECTORY_OAUTH``,
-``SEC_PASSWORD_DIRECTORY``,
-``SEC_TOKEN_SYSTEM_DIRECTORY``,
+:macro:`LOCAL_UNIV_EXECUTE`,
+:macro:`LOCK`,
+:macro:`LOG`,
+:macro:`RUN`,
+:macro:`SEC_CREDENTIAL_DIRECTORY_KRB`,
+:macro:`SEC_CREDENTIAL_DIRECTORY_OAUTH`,
+:macro:`SEC_PASSWORD_DIRECTORY`,
+:macro:`SEC_TOKEN_SYSTEM_DIRECTORY`,
 and
-``SPOOL``.
+:macro:`SPOOL`.
 
 Options
 -------

@@ -222,7 +222,7 @@ have the same value for each potentially running *condor_schedd*
 daemon. In addition, the value chosen for the variable :macro:`SCHEDD_NAME`
 will need to include the at symbol (@), such that HTCondor will not
 modify the value set for this variable. See the description of
-``MASTER_NAME`` in the :ref:`admin-manual/configuration-macros:condor_master
+:macro:`MASTER_NAME` in the :ref:`admin-manual/configuration-macros:condor_master
 configuration file macros` section for defaults and composition of valid values
 for :macro:`SCHEDD_NAME`. As an example, include in each local configuration a value
 similar to:

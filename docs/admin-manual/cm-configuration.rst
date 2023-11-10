@@ -1047,12 +1047,12 @@ To reduce these costs, you may set the configuration macro
 :macro:`DEFRAG_DRAINING_START_EXPR`. If draining gracefully, the
 defrag daemon will set the :macro:`START` expression for
 the machine to this value expression. Do not set this to your usual
-``START`` expression; jobs accepted while draining will not be given
+:macro:`START` expression; jobs accepted while draining will not be given
 their ``MaxRetirementTime``. Instead, when the last retiring job
 finishes (either terminates or runs out of retirement time), all other
 jobs on machine will be evicted with a retirement time of 0. (Those jobs
 will be given their ``MaxVacateTime``, as usual.) The machine's
-``START`` expression will become ``FALSE`` and stay that way until - as
+:macro:`START` expression will become ``FALSE`` and stay that way until - as
 usual - the machine exits the draining state.
 
 We recommend that you allow only interruptible jobs to start on draining
@@ -1310,7 +1310,7 @@ needs to transfer a file, the *condor_replication* daemons at both the
 sending and receiving ends of the transfer invoke the
 *condor_transferer* daemon. These short lived daemons do the task of
 file transfer and then exit. Do not place :macro:`TRANSFERER` into
-``DAEMON_LIST``, as it is not a daemon that the *condor_master* should
+:macro:`DAEMON_LIST`, as it is not a daemon that the *condor_master* should
 invoke or watch over.
 
 Configuration
@@ -2010,6 +2010,6 @@ are running on the same machine, localhost.localdomain:
 
 Note that the value of :macro:`CONDOR_VIEW_HOST` for VIEWSERV01 and VIEWSERV02
 is unset, to prevent them from inheriting the global value of
-``CONDOR_VIEW_HOST`` and attempting to report to themselves or each other. If
+:macro:`CONDOR_VIEW_HOST` and attempting to report to themselves or each other. If
 the HTCondorView servers are running on different machines where there is no
 global value for :macro:`CONDOR_VIEW_HOST`, this precaution is not required.

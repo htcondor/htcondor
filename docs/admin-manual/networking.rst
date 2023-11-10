@@ -197,7 +197,7 @@ The configuration variables :macro:`HIGHPORT` and
 :macro:`LOWPORT` facilitate setting a restricted range
 of ports that HTCondor will use. This may be useful when some machines
 are behind a firewall. The configuration macros :macro:`HIGHPORT` and
-``LOWPORT`` will restrict dynamic ports to the range specified. The
+:macro:`LOWPORT` will restrict dynamic ports to the range specified. The
 configuration variables are fully defined in the 
 :ref:`admin-manual/configuration-macros:network-related configuration file
 entries` section. All of these ports must be greater than 0 and less than 65,536.
@@ -223,7 +223,7 @@ assign a range that crosses the 1024 boundary.
 NOTE: Setting :macro:`HIGHPORT` and :macro:`LOWPORT` will not automatically force
 the *condor_collector* to bind to a port within the range. The only way
 to control what port the *condor_collector* uses is by setting the
-``COLLECTOR_HOST`` (as described above).
+:macro:`COLLECTOR_HOST` (as described above).
 
 The total number of ports needed depends on the size of the pool, the
 usage of the machines within the pool (which machines run which
@@ -254,7 +254,7 @@ selection used by the HTCondor system, and they do not impact port
 selection used by jobs submitted to HTCondor. Thus, jobs submitted to
 HTCondor that may create network connections may not work in a port
 restricted environment. For this reason, specifying :macro:`HIGHPORT` and
-``LOWPORT`` is not going to produce the expected results if a user
+:macro:`LOWPORT` is not going to produce the expected results if a user
 submits MPI applications to be executed under the parallel universe.
 
 Where desired, a local configuration for machines not behind a firewall
@@ -269,7 +269,7 @@ those machines not behind a firewall:
     LOWPORT  = UNDEFINED
 
 If the maximum number of ports allocated using :macro:`HIGHPORT` and
-``LOWPORT`` is too few, socket binding errors of the form
+:macro:`LOWPORT` is too few, socket binding errors of the form
 
 .. code-block:: text
 
@@ -607,7 +607,7 @@ opening port ranges. Also note that CCB works nicely with
 Any *condor_collector* may be used as a CCB server. There is no
 requirement that the *condor_collector* acting as the CCB server be the
 same *condor_collector* that a daemon advertises itself to (as with
-``COLLECTOR_HOST``). However, this is often a convenient choice.
+:macro:`COLLECTOR_HOST`). However, this is often a convenient choice.
 
 Example Configuration
 '''''''''''''''''''''
@@ -639,7 +639,7 @@ the *condor_collector* acting as the CCB server a large enough limit of
 file descriptors. This may be accomplished with the configuration
 variable :macro:`MAX_FILE_DESCRIPTORS` or
 an equivalent. Each HTCondor process configured to use CCB with
-``CCB_ADDRESS`` requires one persistent TCP connection to the CCB
+:macro:`CCB_ADDRESS` requires one persistent TCP connection to the CCB
 server. A typical execute node requires one connection for the
 *condor_master*, one for the *condor_startd*, and one for each running
 job, as represented by a *condor_starter*. A typical access point
@@ -848,7 +848,7 @@ is entirely equivalent to the former, except that it only allows you to
 The HTCondor security subsystem resolves names in the ALLOW and DENY
 lists and uses all of the resulting IP addresses. Thus, to allow or deny
 IPv6 addresses, the names must have IPv6 DNS entries (AAAA records), or
-``NO_DNS`` must be enabled.
+:macro:`NO_DNS` must be enabled.
 
 IPv6 Address Literals
 '''''''''''''''''''''

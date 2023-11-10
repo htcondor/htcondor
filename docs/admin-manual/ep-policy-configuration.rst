@@ -92,7 +92,7 @@ how undefined terms are handled in ClassAd expression evaluation.
 A note of caution is in order when modifying the :macro:`START` expression to
 reference job ClassAd attributes. When using the ``POLICY : Desktop``
 configuration template, the :macro:`IS_OWNER` expression is a function of the
-``START`` expression:
+:macro:`START` expression:
 
 .. code-block:: condor-classad-expr
 
@@ -133,7 +133,7 @@ The RANK Expression
 '''''''''''''''''''
 
 A machine may be configured to prefer certain jobs over others using the
-``RANK`` expression. It is an expression, like any other in a machine
+:macro:`RANK` expression. It is an expression, like any other in a machine
 ClassAd. It can reference any attribute found in either the machine
 ClassAd or a job ClassAd. The most common use of this expression is
 likely to configure a machine to prefer to run jobs from the owner of
@@ -668,7 +668,7 @@ Owner State
 When the startd is first spawned, the machine it represents enters the
 Owner state. The machine remains in the Owner state while the expression
 :macro:`IS_OWNER` evaluates to TRUE. If the
-``IS_OWNER`` expression evaluates to FALSE, then the machine transitions
+:macro:`IS_OWNER` expression evaluates to FALSE, then the machine transitions
 to the Unclaimed state. The default value of :macro:`IS_OWNER` is FALSE,
 which is intended for dedicated resources. But when the
 ``POLICY : Desktop`` configuration template is used, the :macro:`IS_OWNER`
@@ -682,10 +682,10 @@ So, the machine will remain in the Owner state as long as the :macro:`START`
 expression locally evaluates to FALSE.
 The :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 section provides more detail on the
-``START`` expression. If the :macro:`START` locally evaluates to TRUE or
+:macro:`START` expression. If the :macro:`START` locally evaluates to TRUE or
 cannot be locally evaluated (it evaluates to UNDEFINED), transition
 **1** occurs and the machine enters the Unclaimed state. The
-``IS_OWNER`` expression is locally evaluated by the machine, and should
+:macro:`IS_OWNER` expression is locally evaluated by the machine, and should
 not reference job ClassAd attributes, which would be UNDEFINED.
 
 The Owner state represents a resource that is in use by its interactive
@@ -762,9 +762,9 @@ Unclaimed State
 If the :macro:`IS_OWNER` expression becomes TRUE, then the machine returns to
 the Owner state. If the :macro:`IS_OWNER` expression becomes FALSE, then the
 machine remains in the Unclaimed state. The default value of
-``IS_OWNER`` is FALSE (never enter Owner state). If the
+:macro:`IS_OWNER` is FALSE (never enter Owner state). If the
 ``POLICY : Desktop`` configuration template is used, then the
-``IS_OWNER`` expression is changed to
+:macro:`IS_OWNER` expression is changed to
 
 .. code-block:: condor-config
 
@@ -824,7 +824,7 @@ state (transition **6**), even if it is only for a brief period of time.
 If the machine has been configured to perform backfill jobs (see the
 :doc:`/admin-manual/setting-up-special-environments` section), while it is in
 Unclaimed/Idle it will evaluate the :macro:`START_BACKFILL` expression. Once
-``START_BACKFILL`` evaluates to TRUE, the machine will enter the Backfill/Idle
+:macro:`START_BACKFILL` evaluates to TRUE, the machine will enter the Backfill/Idle
 state (transition **7**) to begin the process of running backfill jobs.
 
 If draining of the machine is initiated while in the Unclaimed state,
@@ -939,14 +939,14 @@ proceed directly to the more drastic stages.
 When the machine first enters the Claimed state, it goes to the Idle
 activity. From there, it has two options. It can enter the Preempting
 state via transition **10** (if a *condor_vacate* arrives, or if the
-``START`` expression locally evaluates to FALSE), or it can enter the
+:macro:`START` expression locally evaluates to FALSE), or it can enter the
 Busy activity (transition **11**) if the schedd that has claimed the
 machine decides to activate the claim and start a job.
 
 From Claimed/Busy, the machine can transition to three other
 state/activity pairs. The startd evaluates the :macro:`WANT_SUSPEND`
 expression to decide which other expressions to evaluate. If
-``WANT_SUSPEND`` is TRUE, then the startd evaluates the :macro:`SUSPEND`
+:macro:`WANT_SUSPEND` is TRUE, then the startd evaluates the :macro:`SUSPEND`
 expression. If :macro:`WANT_SUSPEND` is any value other than TRUE, then the
 startd will evaluate the :macro:`PREEMPT` expression and skip the Suspended
 activity entirely. By transition, the possible state/activity
@@ -1050,7 +1050,7 @@ opportunity to do a graceful shutdown, by intercepting the soft kill
 signal.
 
 If the machine is in the Vacating activity, it keeps evaluating the
-``KILL`` expression. As soon as this expression evaluates to TRUE, the
+:macro:`KILL` expression. As soon as this expression evaluates to TRUE, the
 machine enters the Killing activity (transition **21**). If the Vacating
 activity lasts for as long as the maximum vacating time, then the
 machine also enters the Killing activity. The maximum vacating time is
@@ -1069,7 +1069,7 @@ the Claimed/Idle state by transition **23** (if the job was preempted
 because a better match was found).
 
 If the machine enters the Killing activity, (because either
-``WANT_VACATE`` was ``False`` or the :macro:`KILL` expression evaluated to
+:macro:`WANT_VACATE` was ``False`` or the :macro:`KILL` expression evaluated to
 ``True``), it attempts to force the *condor_starter* to immediately
 kill the underlying HTCondor job. Once the machine has begun to hard
 kill the HTCondor job, the *condor_startd* starts a timer, the length
@@ -1087,7 +1087,7 @@ machine is notified that the claim is broken, the machine will leave the
 Preempting/Killing state. If the job was preempted because a better
 match was found, the machine will enter Claimed/Idle (transition
 **24**). If the preemption was caused by the machine owner (the
-``PREEMPT`` expression evaluated to TRUE, *condor_vacate* was used,
+:macro:`PREEMPT` expression evaluated to TRUE, *condor_vacate* was used,
 etc), the machine will enter the Owner state (transition **25**).
 
 Backfill State
@@ -1449,9 +1449,9 @@ adding the following 5 expressions to the existing configuration:
       KILL       = $(KILL)
 
 Notice that there is nothing special in either the :macro:`CONTINUE` or
-``KILL`` expressions. If Coltrane's jobs never suspend, they never look
+:macro:`KILL` expressions. If Coltrane's jobs never suspend, they never look
 at :macro:`CONTINUE`. Similarly, if they never preempt, they never look at
-``KILL``. :index:`time of day<single: time of day; policy>`
+:macro:`KILL`. :index:`time of day<single: time of day; policy>`
 
 **Time of Day Policy**
 
@@ -1500,7 +1500,7 @@ To force HTCondor jobs to stay off of your machines during work hours:
     MachineBusy = ( $(WorkHours) || $(CPUBusy) || $(KeyboardBusy) )
 
 This ``MachineBusy`` macro is convenient if other than the default
-``SUSPEND`` and :macro:`PREEMPT` expressions are used.
+:macro:`SUSPEND` and :macro:`PREEMPT` expressions are used.
 :index:`desktop/non-desktop<single: desktop/non-desktop; policy>`
 :index:`desktop/non-desktop<single: desktop/non-desktop; preemption>`
 
@@ -2391,7 +2391,7 @@ ignored.
 
 Dynamic slots that have retirement time remaining are not considered
 eligible for preemption, regardless of how configuration variable
-``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`` is set.
+:macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION` is set.
 
 When pslot preemption is enabled, the negotiator will not preempt
 dynamic slots directly. It will preempt them only as part of a match to

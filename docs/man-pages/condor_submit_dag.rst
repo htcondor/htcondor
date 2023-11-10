@@ -54,7 +54,7 @@ configuration variable  :macro:`DAGMAN_SUPPRESS_NOTIFICATION` is its default val
       notification = Complete
 
 e-mail will not be sent upon completion, as the value of
-``DAGMAN_SUPPRESS_NOTIFICATION`` is enforced.
+:macro:`DAGMAN_SUPPRESS_NOTIFICATION` is enforced.
 
 Options
 -------

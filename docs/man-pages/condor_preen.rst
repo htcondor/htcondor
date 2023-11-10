@@ -17,7 +17,7 @@ Description
 removes extraneous files and directories which may be left over from
 HTCondor processes which terminated abnormally either due to internal
 errors or a system crash. The directories checked are the :macro:`LOG`,
-``EXECUTE``, and :macro:`SPOOL` directories as defined in the HTCondor
+:macro:`EXECUTE`, and :macro:`SPOOL` directories as defined in the HTCondor
 configuration files. *condor_preen* is intended to be run as user root
 or user condor periodically as a backup method to ensure reasonable file
 system cleanliness in the face of errors. This is done automatically by
