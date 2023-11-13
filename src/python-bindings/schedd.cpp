@@ -4229,16 +4229,11 @@ void export_schedd()
             )C0ND0R")
         .def("query", &Schedd::query, query_overloads(
             R"C0ND0R(
-            Query the *condor_schedd* daemon for job ads.
-
-            .. warning::
-
-                This returns a *list* of :class:`~classad.ClassAd` objects,
-                meaning all results must be held in memory simultaneously.
-                This may be memory-intensive for queries that return
-                many and/or large jobs ads.
-                If you are retrieving many large ads, consider using
-                :meth:`xquery` instead to reduce memory requirements.
+            Query the *condor_schedd* daemon for job ads.  Job ads may be
+            quite large and there may be tens of thousands of them, so you
+            may want to specify a projection.  In memory-constrained
+            environments, you may also need to impose a strict constraint
+            and make more than one query.
 
             :param constraint: A query constraint.
                 Only jobs matching this constraint will be returned.
