@@ -17,7 +17,8 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improve hold message when jobs on cgroup system exceed their memory limits.
+  :jira:`1533`
 
 Bugs Fixed:
 
