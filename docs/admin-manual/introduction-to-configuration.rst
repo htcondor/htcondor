@@ -965,7 +965,7 @@ way daemons locate each other, such as :macro:`PROCD_ADDRESS`, :macro:`BIND_ALL_
 require a restart of the *condor_master* and all of the daemons under it.
 
 The *condor_startd* requires a restart to make any change to the slot resource configuration, This would include :macro:`MEMORY`,
-:macro:`NUM_CPUS` and ``NUM_SLOTS_TYPE_<n>``.  It would also include resource detection like GPUs and Docker support.
+:macro:`NUM_CPUS` and :macro:`NUM_SLOTS_TYPE_<N>`.  It would also include resource detection like GPUs and Docker support.
 A general rule of thumb is that changes to the *condor_startd* require a restart, but there are a few exceptions.
 :macro:`STARTD_ATTRS` as well as :macro:`START`, :macro:`PREEMPT`, and other policy expressions take effect on reconfig.
 

@@ -3365,6 +3365,9 @@ section.
 :macro-def:`STARTD_ATTRS[STARTD]`
     This macro is described in :macro:`<SUBSYS>_ATTRS`.
 
+:macro-def:`SLOT<N>_STARTD_ATTRS[STARTD]`
+    Like the above, but only applies to the numbered slot.
+
 :macro-def:`STARTD_DEBUG[STARTD]`
     This macro (and other settings related to debug logging in the
     *condor_startd*) is described in :macro:`<SUBSYS>_DEBUG`.
@@ -7740,7 +7743,7 @@ condor_procd Configuration File Macros
     own. Use of the *condor_procd* results in improved scalability
     because only one instance of this logic is required. The
     *condor_procd* is required when using group ID-based process
-    tracking (see :ref:`admin-manual/setting-up-special-environments:group
+    tracking (see :ref:`admin-manual/ep-policy-configuration:group
     id-based process tracking`.
     In this case, the :macro:`USE_PROCD` setting will be ignored and a
     *condor_procd* will always be used. By default, the
@@ -7787,21 +7790,21 @@ condor_procd Configuration File Macros
     the *condor_procd* to reliably track all processes associated with
     a job. When ``True``, values for :macro:`MIN_TRACKING_GID` and
     :macro:`MAX_TRACKING_GID` must also be set, or HTCondor will abort,
-    logging an error message. See :ref:`admin-manual/setting-up-special-environments:group
+    logging an error message. See :ref:`admin-manual/ep-policy-configuration:group
     id-based process tracking` for a detailed description.
 
 :macro-def:`MIN_TRACKING_GID[PROCD]`
     An integer value, that together with :macro:`MAX_TRACKING_GID` specify a
     range of GIDs to be assigned on a per slot basis for use by the
     *condor_procd* in tracking processes associated with a job. See
-    :ref:`admin-manual/setting-up-special-environments:group id-based
+    :ref:`admin-manual/ep-policy-configuration:group id-based
     process tracking` for a detailed description.
 
 :macro-def:`MAX_TRACKING_GID[PROCD]`
     An integer value, that together with :macro:`MIN_TRACKING_GID` specify a
     range of GIDs to be assigned on a per slot basis for use by the
     *condor_procd* in tracking processes associated with a job. See
-    :ref:`admin-manual/setting-up-special-environments:group id-based process
+    :ref:`admin-manual/ep-policy-configuration:group id-based process
     tracking` for a detailed description.
 
 :macro-def:`BASE_CGROUP[PROCD]`
@@ -7809,7 +7812,7 @@ condor_procd Configuration File Macros
     implementation of Linux kernel cgroups. This variable defaults to
     the string ``htcondor``, and is only used on Linux systems. To
     disable cgroup tracking, define this to an empty string. See
-    :ref:`admin-manual/setting-up-special-environments:cgroup-based process
+    :ref:`admin-manual/ep-policy-configuration:cgroup-based process
     tracking` for a description of cgroup-based process tracking.
     An administrator can configure distinct cgroup roots for 
     different slot types within the same startd by prefixing
