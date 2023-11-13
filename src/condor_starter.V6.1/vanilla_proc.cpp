@@ -931,20 +931,21 @@ VanillaProc::outOfMemoryEvent() {
 		return 0;
 	}
 
-	std::stringstream ss;
+	std::string ss;
 	if (m_memory_limit >= 0) {
-		ss << "Job has gone over memory limit of " << (m_memory_limit / (1024 * 1024))  << " megabytes. Peak usage: " << usageMB << " megabytes.";
+		formatstr(ss, "Job has gone over cgroup memory limit of %ld megabytes. Peak usage: %ld megabytes.  Consider resubmitting with a higher request_memory.", 
+				(m_memory_limit / (1024 * 1024)), usageMB);
 	} else {
-		ss << "Job has encountered an out-of-memory event.";
+		ss = "Job has encountered an out-of-memory event.";
 	}
 	if( isCheckpointing ) {
-		ss << "  This occurred while the job was checkpointing.";
+		ss += "  This occurred while the job was checkpointing.";
 	}
 
-	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
+	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.c_str());
 
 	// This ulogs the hold event and KILLS the shadow
-	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+	Starter->jic->holdJob(ss.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 
 	return 0;
 }
