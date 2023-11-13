@@ -22,6 +22,12 @@ New Features:
   hard disk and false when the kernel reports it to be on SSD, NVME or tmpfs.
   :jira:`2085`
 
+- Added support for cgroup v2 delegation in jobs.  This allows
+  pilot and glidein jobs running inside a rootly HTCondor with
+  cgroup v2 to divide the memory/cpu cgroup resources into
+  sub-jobs.
+  :jira:`2180`
+
 - HTCondor daemons on Linux no longer run very slowly when the ulimit
   for the maximum number of open files is very high.
   :jira:`2128`
