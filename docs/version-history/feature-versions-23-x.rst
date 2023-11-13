@@ -64,6 +64,10 @@ New Features:
   current versions of HTCondor are not available on EL7.
   :jira:`2125`
 
+- Added new configuration option :macro:`<Keyword>_HOOK_PREPARE_JOB_ARGS`
+  to allow the passing of arguments to specified prepare job hooks.
+  :jira:`1851`
+
 Bugs Fixed:
 
 - None.
