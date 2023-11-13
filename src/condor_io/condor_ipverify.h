@@ -131,7 +131,7 @@ private:
     /* This is for listing users per host */
     typedef HashTable <std::string, StringList *>    UserHash_t;
 
-    typedef HashTable <std::string, int> HolePunchTable_t;
+    typedef std::map <std::string, int> HolePunchTable_t;
 
     typedef std::vector<std::string> netgroup_list_t;
 
@@ -187,7 +187,7 @@ private:
 
 	PermTypeEntry* PermTypeArray[LAST_PERM];
 
-	HolePunchTable_t* PunchedHoleArray[LAST_PERM];
+	HolePunchTable_t PunchedHoleArray[LAST_PERM];
 
 	typedef HashTable <struct in6_addr, UserPerm_t *> PermHashTable_t;
 	PermHashTable_t* PermHashTable;

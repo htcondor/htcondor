@@ -30,20 +30,14 @@
 BaseReplicaTransferer::BaseReplicaTransferer(
 								 const std::string&  pDaemonSinfulString,
 								 const std::string&  pVersionFilePath,
-								 const StringList& pStateFilePathsList ):
+								 const std::vector<std::string>& pStateFilePathsList ):
    m_daemonSinfulString( pDaemonSinfulString ),
    m_versionFilePath( pVersionFilePath ),
+   m_stateFilePathsList( pStateFilePathsList ),
    m_socket( 0 ),
    m_connectionTimeout( DEFAULT_SEND_COMMAND_TIMEOUT ),
    m_maxTransferLifetime( DEFAULT_MAX_TRANSFER_LIFETIME )
 {
-	// 'malloc'-allocated string
-	char* stateFilePathsAsString = pStateFilePathsList.print_to_string();
-	// copying the string lists
-	if ( stateFilePathsAsString ) {
-		m_stateFilePathsList.initializeFromString( stateFilePathsAsString );
-	}
-	free( stateFilePathsAsString );
 }
 
 BaseReplicaTransferer::~BaseReplicaTransferer()
@@ -67,19 +61,15 @@ BaseReplicaTransferer::reinitialize( )
 
 void
 BaseReplicaTransferer::safeUnlinkStateAndVersionFiles(
-	StringList& stateFilePathsList,
+    const std::vector<std::string>& stateFilePathsList,
     const std::string& versionFilePath,
     const std::string& extension)
 {
 	FilesOperations::safeUnlinkFile( versionFilePath.c_str( ),
 	                                 extension.c_str( ) );
-	stateFilePathsList.rewind();
 
-	char* stateFilePath = NULL;
-
-	while( ( stateFilePath = stateFilePathsList.next( ) ) ) {
-		FilesOperations::safeUnlinkFile( stateFilePath,
+	for (auto& stateFilePath : stateFilePathsList) {
+		FilesOperations::safeUnlinkFile( stateFilePath.c_str(),
 		                                 extension.c_str( ) );
 	}
-	stateFilePathsList.rewind();
 }

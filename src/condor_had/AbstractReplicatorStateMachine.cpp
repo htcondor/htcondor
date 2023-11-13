@@ -54,7 +54,7 @@ AbstractReplicatorStateMachine::finalize()
    	m_state             = VERSION_REQUESTING;
    	m_connectionTimeout = DEFAULT_SEND_COMMAND_TIMEOUT;
 
-    utilClearList( m_replicationDaemonsList );
+    m_replicationDaemonsList.clear();
     m_transfererPath = "";
 
     //utilCancelReaper(m_downloadReaperId);
@@ -70,28 +70,22 @@ AbstractReplicatorStateMachine::finalize()
 void
 AbstractReplicatorStateMachine::initializeReplicationList( char* buffer )
 {
-    StringList replicationAddressList;
-    char*      replicationAddress    = NULL;
     bool       isMyAddressPresent    = false;
 	Sinful     my_addr( daemonCore->InfoCommandSinfulString( ) );
 
-    replicationAddressList.initializeFromString( buffer );
-    // initializing a list unrolls it, that's why the rewind is needed to bring
-    // it to the beginning
-    replicationAddressList.rewind( );
     /* Passing through the REPLICATION_LIST configuration parameter, stripping
      * the optional <> brackets off, and extracting the host name out of
      * either ip:port or hostName:port entries
      */
-    while( (replicationAddress = replicationAddressList.next( )) ) {
-        char* sinfulAddress = utilToSinful( replicationAddress );
+    for (const auto& replicationAddress : StringTokenIterator(buffer)) {
+        char* sinfulAddress = utilToSinful( replicationAddress.c_str() );
 
         if( sinfulAddress == NULL ) {
             char bufArray[BUFSIZ];
 
 			snprintf( bufArray, sizeof(bufArray),
 					"AbstractReplicatorStateMachine::initializeReplicationList"
-                    " invalid address %s\n", replicationAddress );
+					" invalid address %s\n", replicationAddress.c_str() );
             utilCrucialError( bufArray );
 
             continue;
@@ -108,7 +102,7 @@ dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
             isMyAddressPresent = true;
         }
         else {
-            m_replicationDaemonsList.insert( s.getSinful() );
+            m_replicationDaemonsList.emplace_back( s.getSinful() );
         }
     }
 
@@ -560,28 +554,18 @@ AbstractReplicatorStateMachine::uploadNew( Stream *stream )
 void
 AbstractReplicatorStateMachine::broadcastVersion( int command )
 {
-    char* replicationDaemon = NULL;
-
-    m_replicationDaemonsList.rewind( );
-
-    while( (replicationDaemon = m_replicationDaemonsList.next( )) ) {
-        sendVersionAndStateCommand( command,  replicationDaemon );
-    }
-    m_replicationDaemonsList.rewind( );
+	for (const auto& replicationDaemon : m_replicationDaemonsList) {
+		sendVersionAndStateCommand(command,  replicationDaemon.c_str());
+	}
 }
 
 void
 AbstractReplicatorStateMachine::requestVersions( )
 {
-    char* replicationDaemon = NULL;
-
-    m_replicationDaemonsList.rewind( );
-
-    while( (replicationDaemon = m_replicationDaemonsList.next( )) ) {
-        sendCommand( REPLICATION_SOLICIT_VERSION,  replicationDaemon,
-                                &AbstractReplicatorStateMachine::noCommand);
-    }
-    m_replicationDaemonsList.rewind( );
+	for (const auto& replicationDaemon : m_replicationDaemonsList) {
+		sendCommand( REPLICATION_SOLICIT_VERSION,  replicationDaemon.c_str(),
+		             &AbstractReplicatorStateMachine::noCommand);
+	}
 }
 
 // inserting/replacing version from specific remote replication daemon
@@ -626,7 +610,7 @@ AbstractReplicatorStateMachine::cancelVersionsListLeader( )
 // allows to specify which data is to be sent to the remote daemon
 void
 AbstractReplicatorStateMachine::sendCommand(
-    int command, char* daemonSinfulString, CommandFunction function )
+    int command, const char* daemonSinfulString, CommandFunction function )
 {
     dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand %s to %s\n",
                getCommandStringSafe( command ), daemonSinfulString );

@@ -186,7 +186,7 @@ protected:
 	 *				function the 'function' must be able to encode the local
 	 *				version to the socket
      */
-    void sendCommand(int command, char* daemonSinfulString,
+    void sendCommand(int command, const char* daemonSinfulString,
                      CommandFunction function);
 	/* Function   : sendVersionAndStateCommand
 	 * Arguments  : command            - id
@@ -195,7 +195,7 @@ protected:
 	 *				'sendCommand'; it sends to the remote daemon the local
 	 *				version and the state of this replication daemon
      */
-    void sendVersionAndStateCommand(int command, char* daemonSinfulString) {
+    void sendVersionAndStateCommand(int command, const char* daemonSinfulString) {
         sendCommand( command, daemonSinfulString,
             &AbstractReplicatorStateMachine::versionAndStateCommand );
     };
@@ -283,7 +283,7 @@ protected:
     ReplicatorState          m_state;
 
 	// list of remote replication daemons
-    StringList               m_replicationDaemonsList;
+    std::vector<std::string> m_replicationDaemonsList;
 	// socket connection timeout
     int                      m_connectionTimeout;
 

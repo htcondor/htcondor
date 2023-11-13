@@ -329,10 +329,7 @@ Sock::isAuthorizationInBoundingSet(const std::string &authz) const
 			std::string authz_policy;
 			if (_policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy))
 			{
-				StringList authz_policy_list(authz_policy.c_str());
-				authz_policy_list.rewind();
-				const char *authz_name;
-				while ( (authz_name = authz_policy_list.next()) ) {
+				for (const auto& authz_name : StringTokenIterator(authz_policy)) {
 					if (authz_name[0]) {
 						const_cast<Sock*>(this)->m_authz_bound.insert(authz_name);
 					}
@@ -1223,7 +1220,7 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 	if(! (s.valid() && s.hasAddrs()) ) { return false; }
 
 	condor_sockaddr candidate;
-	std::vector< condor_sockaddr > * v = s.getAddrs();
+	const std::vector< condor_sockaddr > & v = s.getAddrs();
 
 	// In practice, all C++03 implementations are stable with respect
 	// to insertion order; the  C++11 standard requires that they are.
@@ -1233,9 +1230,8 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 	// If we don't multiply by -1 and instead use rbegin()/rend(),
 	// then addresses of the same desirability will be checked in
 	// the reverse order.
-	dprintf( D_HOSTNAME, "Found address %zu candidates:\n", v->size() );
-	for( unsigned i = 0; i < v->size(); ++i ) {
-		condor_sockaddr c = (*v)[i];
+	dprintf( D_HOSTNAME, "Found address %zu candidates:\n", v.size() );
+	for (const auto& c : v) {
 		int d = -1 * c.desirability();
 		if( ignoreTargetProtocolPreference ) {
 			// This would work with d *= 2 and d -= 1.  10 and 1 may be
@@ -1276,7 +1272,6 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 			break;
 		}
 	}
-	delete v;
 
 	if(! foundAddress) {
 		dprintf( D_ALWAYS, "Sock::do_connect() unable to locate address of a compatible protocol in Sinful string '%s'.\n", host );

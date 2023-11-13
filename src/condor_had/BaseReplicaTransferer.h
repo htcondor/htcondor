@@ -56,7 +56,7 @@ public:
      */
     BaseReplicaTransferer(const std::string&  pDaemonSinfulString,
                           const std::string&  pVersionFilePath,
-						  const StringList& pStateFilePathsList);
+                          const std::vector<std::string>& pStateFilePathsList);
     ~BaseReplicaTransferer();                        
     /* Function    : initialize
      * Return value: TRANSFERER_TRUE   - upon success
@@ -74,7 +74,7 @@ public:
     virtual int initialize() = 0;
 // Inspectors
 	std::string getVersionFilePath() { return m_versionFilePath; };
-	StringList& getStateFilePathsList() { return m_stateFilePathsList; };
+	std::vector<std::string>& getStateFilePathsList() { return m_stateFilePathsList; };
 // End of inspectors
 protected:
 	
@@ -86,16 +86,16 @@ protected:
 	 *				 according to the specified extension
 	 */
 	static void
-	safeUnlinkStateAndVersionFiles(StringList& stateFilePathsList,
+	safeUnlinkStateAndVersionFiles(const std::vector<std::string>& stateFilePathsList,
 	                               const std::string& versionFilePath,
-			                       const std::string& extension);
+	                               const std::string& extension);
 	// address of the downloading/uploading counterpart	
 	std::string  m_daemonSinfulString;
 	// path to the file where local version is stored
 	std::string  m_versionFilePath;
 	// path to the list of files where the state, protected by the replication 
 	// is stored
-	StringList m_stateFilePathsList;
+	std::vector<std::string> m_stateFilePathsList;
 
     // TCP socket, over which all the communication is done
     ReliSock* m_socket;

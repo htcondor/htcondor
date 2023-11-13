@@ -99,15 +99,12 @@ UploadReplicaTransferer::upload( )
 										 extension.c_str() );
 		return TRANSFERER_FALSE;
 	}
-	char* stateFilePath = NULL;
 
-	m_stateFilePathsList.rewind( );
-
-	while( ( stateFilePath = m_stateFilePathsList.next( ) ) ) {
-		if( ! FilesOperations::safeCopyFile( stateFilePath,
+	for (const auto& stateFilePath : m_stateFilePathsList) {
+		if( ! FilesOperations::safeCopyFile( stateFilePath.c_str(),
 		                                     extension.c_str() ) ) {
 			dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to copy "
-							   "state file %s\n", stateFilePath );
+			         "state file %s\n", stateFilePath.c_str() );
 			// we return anyway, so that we should not worry that we operate
 			// on 'm_stateFilePathsList' while iterating on it in the outer loop
 			safeUnlinkStateAndVersionFiles( m_stateFilePathsList,
@@ -116,7 +113,6 @@ UploadReplicaTransferer::upload( )
 			return TRANSFERER_FALSE;
 		}
 	}
-	m_stateFilePathsList.rewind( );
 	
     // upload version file
     if( uploadFile( m_versionFilePath, extension ) == TRANSFERER_FALSE){
@@ -132,12 +128,9 @@ UploadReplicaTransferer::upload( )
     // that the files were uploaded successfully
 	//FilesOperations::safeUnlinkFile( m_versionFilePath.c_str(),
 	//								 extension.c_str() );
-    m_stateFilePathsList.rewind( );
-	
-	while( ( stateFilePath = m_stateFilePathsList.next( ) ) ) {
-		std::string stateFilePathString = stateFilePath;
+	for (const auto& stateFilePath : m_stateFilePathsList) {
 
-		if( uploadFile( stateFilePathString , extension ) ==
+		if( uploadFile( stateFilePath, extension ) ==
 				TRANSFERER_FALSE ) {
 			safeUnlinkStateAndVersionFiles( m_stateFilePathsList,
 			                                m_versionFilePath,
@@ -145,7 +138,6 @@ UploadReplicaTransferer::upload( )
 			return TRANSFERER_FALSE;
 		}
 	}
-	m_stateFilePathsList.rewind( );
 	safeUnlinkStateAndVersionFiles( m_stateFilePathsList,
 	                                m_versionFilePath,
 									extension );

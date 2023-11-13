@@ -847,12 +847,8 @@ SharedPortEndpoint::InitRemoteAddress()
 	if (ad->EvaluateAttrString(ATTR_SHARED_PORT_COMMAND_SINFULS, commandStrings))
 	{
 		m_remote_addrs.clear();
-		StringList sl(commandStrings.c_str());
-		sl.rewind();
-		const char *commandSinfulStr;
-		while ((commandSinfulStr = sl.next()))
-		{
-			Sinful altsinful(commandSinfulStr);
+		for (const auto& commandSinfulStr : StringTokenIterator(commandStrings)) {
+			Sinful altsinful(commandSinfulStr.c_str());
 			altsinful.setSharedPortID(m_local_id.c_str());
 			char const *private_addr = sinful.getPrivateAddr();
 			if (private_addr)
