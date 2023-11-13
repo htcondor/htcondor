@@ -42,6 +42,12 @@ New Features:
   hard disk and false when the kernel reports it to be on SSD, NVME or tmpfs.
   :jira:`2085`
 
+- Added support for cgroup v2 delegation in jobs.  This allows
+  pilot and glidein jobs running inside a rootly HTCondor with
+  cgroup v2 to divide the memory/cpu cgroup resources into
+  sub-jobs.
+  :jira:`2180`
+
 - HTCondor daemons on Linux no longer run very slowly when the ulimit
   for the maximum number of open files is very high.
   :jira:`2128`
@@ -83,6 +89,10 @@ New Features:
   now uses the latest 23.0.X release. Before, it would fail, as
   current versions of HTCondor are not available on EL7.
   :jira:`2125`
+
+- Added new configuration option :macro:`<Keyword>_HOOK_PREPARE_JOB_ARGS`
+  to allow the passing of arguments to specified prepare job hooks.
+  :jira:`1851`
 
 Bugs Fixed:
 
