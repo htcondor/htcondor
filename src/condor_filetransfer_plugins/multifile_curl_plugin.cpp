@@ -1031,12 +1031,23 @@ main( int argc, char **argv ) {
     // Check if this is a -classad request
     if ( argc == 2 ) {
         if ( strcmp( argv[1], "-classad" ) == 0 ) {
+            const char * SupportedMethods = "http,https,ftp,file,dav,davs";
+
             printf( "%s",
                 "MultipleFileSupport = true\n"
                 "PluginVersion = \"0.2\"\n"
                 "PluginType = \"FileTransfer\"\n"
-                "SupportedMethods = \"http,https,ftp,file,dav,davs\"\n"
             );
+            printf( "SupportedMethods = \"%s\"\n", SupportedMethods );
+
+            for( auto method : StringTokenIterator(SupportedMethods) ) {
+                std::string envVarName = method + "_proxy";
+                char * proxy = getenv(envVarName.c_str());
+                if( proxy != NULL ) {
+                    printf( "%s = \"%s\"\n", envVarName.c_str(), proxy );
+                }
+            }
+
             return (int)TransferPluginResult::Success;
         }
     }
