@@ -1231,7 +1231,7 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 	// then addresses of the same desirability will be checked in
 	// the reverse order.
 	dprintf( D_HOSTNAME, "Found address %zu candidates:\n", v.size() );
-	for( unsigned i = 0; i < v.size(); ++i ) {
+	for (const auto& c : v) {
 		condor_sockaddr c = v[i];
 		int d = -1 * c.desirability();
 		if( ignoreTargetProtocolPreference ) {
