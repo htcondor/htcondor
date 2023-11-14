@@ -37,7 +37,7 @@ if (WITH_LOTMAN)
 		FetchContent_declare(
 			lotman
 			GIT_REPOSITORY https://github.com/PelicanPlatform/lotman.git
-			GIT_TAG        20c6bfe73a14c5b9f2db9973530ae9c55c1033eb # release-0.0.1
+			GIT_TAG        f420248b1401fce3ece1ad86c37287321834c61e # release-0.0.2
 		)
 
 		# Check if population has already been performed
