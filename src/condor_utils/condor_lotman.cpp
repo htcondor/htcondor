@@ -107,6 +107,9 @@ condor_lotman::init_lotman()
 #ifdef WIN32
     dprintf( D_ALWAYS, "LotMan is not supported on Windows.\n" );
 	g_init_success = false;
+#elif defined(__APPLE__)
+    dprintf( D_ALWAYS, "LotMan is not supported on .\n" );
+	g_init_success = false;
 #elif defined(DLOPEN_LOTMAN)
     dlerror();
     void *dl_hdl = nullptr;
