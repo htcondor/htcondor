@@ -209,6 +209,8 @@ condor_getcwd.h
 condor_holdcodes.h
 condor_id.cpp
 condor_id.h
+condor_lotman.cpp
+condor_lotman.h
 condor_md.cpp
 condor_mkstemp.cpp
 condor_netaddr.cpp
@@ -516,8 +518,6 @@ if(NOT WINDOWS)
 		passwd_cache.unix.h
 		sig_install.unix.cpp
 		sleep.unix.cpp
-		condor_lotman.cpp
-		condor_lotman.h
 	)
 endif(NOT WINDOWS)
 
