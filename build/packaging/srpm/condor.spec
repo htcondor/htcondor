@@ -1698,6 +1698,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Jun 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.19-1
+- Remove limit on certificate chain length in SSL authentication
+
+* Thu Jun 22 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.18-1
+- Can configure clients to present an X.509 proxy during SSL authentication
+- Provides script to assist updating from HTCondor version 9 to version 10
+
 * Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-3
 - Improved upgrade9to10checks.py script
 

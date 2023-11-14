@@ -1,3 +1,16 @@
+condor (9.0.19-1) stable; urgency=medium
+
+  * Remove limit on certificate chain length in SSL authentication
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 30 Jun 2023 06:18:00 -0500
+
+condor (9.0.18-1) stable; urgency=medium
+
+  * Can configure clients to present an X.509 proxy during SSL authentication
+  * Provides script to assist updating from HTCondor version 9 to version 10
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 22 Jun 2023 10:28:00 -0500
+
 condor (9.0.17-3) stable; urgency=medium
 
   * Improved upgrade9to10checks.py script

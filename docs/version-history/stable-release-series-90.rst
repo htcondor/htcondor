@@ -7,6 +7,26 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9019:
+
+Version 9.0.19
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.19 released on Month Date, 2022.
+
+- HTCondor version 9.0.19 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Remove limit on certificate chain length in SSL authentication.
+  :jira:`1904`
+
 .. _lts-version-history-9018:
 
 Version 9.0.18
@@ -14,13 +34,7 @@ Version 9.0.18
 
 Release Notes:
 
-.. HTCondor version 9.0.18 released on Month Date, 2022.
-
-- HTCondor version 9.0.18 not yet released.
-
-- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``
-  to match standard HTCSS naming scheme.
-  :jira:`1828`
+- HTCondor version 9.0.18 released on June 22, 2022.
 
 New Features:
 
@@ -36,14 +50,17 @@ New Features:
   authentication with a daemon.
   :jira:`1841`
 
+- Added new script called ``condor_upgrade_check`` to help administrators check
+  for known issues that exist and changes needed for an HTCondor system when
+  upgrading from ``V9`` to ``V10``. This script checks for three well known
+  breaking changes: changing of the default value for :macro:`TRUST_DOMAIN`,
+  changing to using ``PCRE2`` for regular expression matching, and changes
+  to how users request GPUs.
+  :jira:`1658`
+
 Bugs Fixed:
 
-- Fix spurious warning from ``condor_upgrade_check`` for regular expressions that contain a space.
-  :jira:`1840`
-
-- The ``condor_upgrade_check`` script no longer attempts to check for problems
-  for an HTCondor pool when requesting checks for an HTCondor-CE.
-  :jira:`1840`
+- None.
 
 .. _lts-version-history-9017:
 
