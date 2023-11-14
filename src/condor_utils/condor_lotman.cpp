@@ -104,28 +104,29 @@ condor_lotman::init_lotman()
 		return g_init_success;
 	}
 
-#ifndef WIN32
-#if defined(DLOPEN_LOTMAN)
-	dlerror();
-	void *dl_hdl = nullptr;
-	if (
-		!(dl_hdl = dlopen(LIBLOTMAN_SO, RTLD_LAZY)) ||
-		!(lotman_lot_exists_ptr = (int (*)(const char *lot_name, char **err_msg))dlsym(dl_hdl, "lotman_lot_exists")) ||
-		!(lotman_set_context_str_ptr = (int (*)(const char *key, const char *value, char **err_msg))dlsym(dl_hdl, "lotman_set_context_str")) ||
-		!(lotman_set_context_int_ptr = (int (*)(const char *key, const int value, char **err_msg))dlsym(dl_hdl, "lotman_set_context_int")) ||
-		!(lotman_add_lot_ptr = (int (*)(const char *lotman_JSON_str, char **err_msg))dlsym(dl_hdl, "lotman_add_lot")) ||
-		!(lotman_add_to_lot_ptr = (int (*)(const char *lotman_JSON_str, char **err_msg))dlsym(dl_hdl, "lotman_add_to_lot")) ||
-		!(lotman_rm_paths_from_lots_ptr = (int (*)(const char *remove_dirs_JSON_str, char **err_msg))dlsym(dl_hdl, "lotman_rm_paths_from_lots")) ||
-		!(lotman_update_lot_usage_by_dir_ptr = (int (*)(const char *update_JSON_str, bool deltaMode, char **err_msg))dlsym(dl_hdl, "lotman_update_lot_usage_by_dir")) 
-	) {
-		const char *err_msg = dlerror();
-		dprintf( D_ALWAYS, "Failed to dynamically open LotMan library: %s\n", err_msg ? err_msg : "(no error message available)" );
-		g_init_success = false;
-	} else {
-		g_init_success = true;
-	}
-#else
-#if defined(HAVE_EXT_LOTMAN)
+#ifdef WIN32
+    dprintf( D_ALWAYS, "LotMan is not supported on Windows.\n" );
+	g_init_success = false;
+#elif defined(DLOPEN_LOTMAN)
+    dlerror();
+    void *dl_hdl = nullptr;
+    if (
+        !(dl_hdl = dlopen(LIBLOTMAN_SO, RTLD_LAZY)) ||
+        !(lotman_lot_exists_ptr = (int (*)(const char *lot_name, char **err_msg))dlsym(dl_hdl, "lotman_lot_exists")) ||
+        !(lotman_set_context_str_ptr = (int (*)(const char *key, const char *value, char **err_msg))dlsym(dl_hdl, "lotman_set_context_str")) ||
+        !(lotman_set_context_int_ptr = (int (*)(const char *key, const int value, char **err_msg))dlsym(dl_hdl, "lotman_set_context_int")) ||
+        !(lotman_add_lot_ptr = (int (*)(const char *lotman_JSON_str, char **err_msg))dlsym(dl_hdl, "lotman_add_lot")) ||
+        !(lotman_add_to_lot_ptr = (int (*)(const char *lotman_JSON_str, char **err_msg))dlsym(dl_hdl, "lotman_add_to_lot")) ||
+        !(lotman_rm_paths_from_lots_ptr = (int (*)(const char *remove_dirs_JSON_str, char **err_msg))dlsym(dl_hdl, "lotman_rm_paths_from_lots")) ||
+        !(lotman_update_lot_usage_by_dir_ptr = (int (*)(const char *update_JSON_str, bool deltaMode, char **err_msg))dlsym(dl_hdl, "lotman_update_lot_usage_by_dir")) 
+    ) {
+        const char *err_msg = dlerror();
+        dprintf( D_ALWAYS, "Failed to dynamically open LotMan library: %s\n", err_msg ? err_msg : "(no error message available)" );
+        g_init_success = false;
+    } else {
+        g_init_success = true;
+    }
+#elif defined(HAVE_EXT_LOTMAN)
     dprintf( D_FULLDEBUG, "Loading external lotman..." );
 
     lotman_lot_exists_ptr = lotman_lot_exists;
@@ -136,14 +137,9 @@ condor_lotman::init_lotman()
     lotman_rm_paths_from_lots_ptr = lotman_rm_paths_from_lots;
     lotman_update_lot_usage_by_dir_ptr = lotman_update_lot_usage_by_dir;
 
-	g_init_success = true;
+    g_init_success = true;
 #else
 	dprintf( D_ALWAYS, "LotMan support is not compiled in.\n" );
-	g_init_success = false;
-#endif
-#endif
-#else
-	dprintf( D_ALWAYS, "LotMan is not supported on Windows.\n" );
 	g_init_success = false;
 #endif
 	g_init_tried = true;

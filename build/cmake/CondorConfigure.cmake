@@ -796,8 +796,6 @@ else ()
 	set( MAKE make -j${NUM_PROCESSORS} )
 endif()
 
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/lotman/0.0.1)
-
 if (WINDOWS)
 
   if(NOT (MSVC_VERSION LESS 1900))
