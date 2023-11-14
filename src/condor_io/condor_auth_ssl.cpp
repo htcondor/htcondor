@@ -1116,50 +1116,20 @@ Condor_Auth_SSL::server_verify_scitoken()
 Condor_Auth_SSL::CondorAuthSSLRetval
 Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_blocking*/)
 {
-	char subjectname[1024];
 	Condor_Auth_SSL::CondorAuthSSLRetval retval = CondorAuthSSLRetval::Success;
 	setRemoteDomain( UNMAPPED_DOMAIN );
 	if (m_scitokens_mode) {
 		setRemoteUser("scitokens");
 		setAuthenticatedName( m_scitokens_auth_name.c_str() );
 	} else {
-		X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
-		if (peer) {
-			BASIC_CONSTRAINTS *bs = nullptr;
-			PROXY_CERT_INFO_EXTENSION *pci = (PROXY_CERT_INFO_EXTENSION *)X509_get_ext_d2i(peer, NID_proxyCertInfo, NULL, NULL);
-			if (pci) {
-				PROXY_CERT_INFO_EXTENSION_free(pci);
-				STACK_OF(X509)* chain = nullptr;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-				chain = (*SSL_get_peer_cert_chain_ptr)(m_auth_state->m_ssl);
-#else
-				chain = (*SSL_get0_verified_chain_ptr)(m_auth_state->m_ssl);
-#endif
-				for (int n = 0; n < sk_X509_num(chain); n++) {
-					X509* cert = sk_X509_value(chain, n);
-					bs = (BASIC_CONSTRAINTS *)X509_get_ext_d2i(cert, NID_basic_constraints, NULL, NULL);
-					pci = (PROXY_CERT_INFO_EXTENSION *)X509_get_ext_d2i(cert, NID_proxyCertInfo, NULL, NULL);
-					if (!pci && !(bs && bs->ca)) {
-						X509_NAME_oneline(X509_get_subject_name(cert), subjectname, 1024);
-					}
-					if (bs) {
-						BASIC_CONSTRAINTS_free(bs);
-					}
-					if (pci) {
-						PROXY_CERT_INFO_EXTENSION_free(pci);
-					}
-				}
-				dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy. Using identity '%s'\n", subjectname);
-			} else {
-				X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
-			}
-			X509_free(peer);
-			setRemoteUser( "ssl" );
+		MyString subjectname = get_peer_identity(m_auth_state->m_ssl);
+		if (subjectname.empty()) {
+			setRemoteUser("unauthenticated");
+			setAuthenticatedName("unauthenticated");
 		} else {
-			strcpy(subjectname, "unauthenticated");
-			setRemoteUser( "unauthenticated" );
+			setRemoteUser("ssl");
+			setAuthenticatedName(subjectname.c_str());
 		}
-		setAuthenticatedName( subjectname );
 	}
 
 	dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", getAuthenticatedName());
@@ -1591,8 +1561,27 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
        
 	if(role == AUTH_SSL_ROLE_SERVER) {
 		X509_free( cert );
+		long rc = (*SSL_get_verify_result_ptr)( ssl );
+		if (rc == X509_V_OK && param_boolean("AUTH_SSL_REQUIRE_CLIENT_MAPPING", false)) {
+			MyString peer_dn = get_peer_identity(m_auth_state->m_ssl);
+			if (peer_dn.empty()) {
+				dprintf(D_SECURITY, "Client has no SSL authenticated identity, failing authentication to give another authentication method a go.\n");
+				return X509_V_ERR_APPLICATION_VERIFICATION;
+			}
+			MyString canonical_user;
+			Authentication::load_map_file();
+			auto global_map_file = Authentication::getGlobalMapFile();
+			bool mapFailed = true;
+			if (global_map_file != nullptr) {
+				mapFailed = global_map_file->GetCanonicalization("SSL", peer_dn, canonical_user);
+			}
+			if (mapFailed) {
+				dprintf(D_SECURITY, "Failed to map SSL authenticated identity '%s', failing authentication to give another authentication method a go.\n", peer_dn.c_str());
+				return X509_V_ERR_APPLICATION_VERIFICATION;
+			}
+		}
 		ouch("Server role: returning from post connection check.\n");
-		return (*SSL_get_verify_result_ptr)( ssl );
+		return rc;
 	} // else ROLE_CLIENT: check dns (arg 2) against CN and the SAN
 
 	if (param_boolean("SSL_SKIP_HOST_CHECK", false)) {
@@ -1712,6 +1701,44 @@ err_occured:
     if (cert)
         X509_free(cert);
     return X509_V_ERR_APPLICATION_VERIFICATION;
+}
+
+std::string Condor_Auth_SSL::get_peer_identity(SSL *ssl)
+{
+	char subjectname[1024];
+	X509 *peer = (*SSL_get_peer_certificate_ptr)(ssl);
+	if (peer) {
+		BASIC_CONSTRAINTS *bs = nullptr;
+		PROXY_CERT_INFO_EXTENSION *pci = (PROXY_CERT_INFO_EXTENSION *)X509_get_ext_d2i(peer, NID_proxyCertInfo, NULL, NULL);
+		if (pci) {
+			PROXY_CERT_INFO_EXTENSION_free(pci);
+			STACK_OF(X509)* chain = nullptr;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+			chain = (*SSL_get_peer_cert_chain_ptr)(ssl);
+#else
+			chain = (*SSL_get0_verified_chain_ptr)(ssl);
+#endif
+			for (int n = 0; n < sk_X509_num(chain); n++) {
+				X509* cert = sk_X509_value(chain, n);
+				bs = (BASIC_CONSTRAINTS *)X509_get_ext_d2i(cert, NID_basic_constraints, NULL, NULL);
+				pci = (PROXY_CERT_INFO_EXTENSION *)X509_get_ext_d2i(cert, NID_proxyCertInfo, NULL, NULL);
+				if (!pci && !(bs && bs->ca)) {
+					X509_NAME_oneline(X509_get_subject_name(cert), subjectname, sizeof(subjectname));
+				}
+				if (bs) {
+					BASIC_CONSTRAINTS_free(bs);
+				}
+				if (pci) {
+					PROXY_CERT_INFO_EXTENSION_free(pci);
+				}
+			}
+			dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy. Using identity '%s'\n", subjectname);
+		} else {
+			X509_NAME_oneline(X509_get_subject_name(peer), subjectname, sizeof(subjectname));
+		}
+		X509_free(peer);
+	}
+	return subjectname;
 }
 
 SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )

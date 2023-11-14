@@ -20,7 +20,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added configuration parameter :macro:`AUTH_SSL_REQUIRE_CLIENT_MAPPING`,
+  which allows other authentication methods to be attemped if a
+  client's SSL certificate can't be mapped in the daemon's map file.
+  :jira:`2145`
 
 Bugs Fixed:
 
