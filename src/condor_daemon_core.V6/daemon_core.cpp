@@ -8050,7 +8050,7 @@ int DaemonCore::Create_Process(
 // to be Linux-specific.  Just in case we mislead folks, limit this logic.
 #if defined(LINUX)
 				}
-				else if (errno == ENOENT)
+				else if ((errno == ENOENT) && (priv == PRIV_USER_FINAL))
 				{
 					TemporaryPrivSentry tps(PRIV_USER);
 					struct stat statbuf;
