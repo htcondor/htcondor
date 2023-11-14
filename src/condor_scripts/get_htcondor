@@ -643,7 +643,11 @@ do_download() {
 			OS_VERSION=$dist_version_number
 			;;
 		scientific|centos|rhel)
-			OS_NAME="CentOS"
+			if [ "$dist_version" = "7" ]; then
+				OS_NAME="CentOS"
+			else
+				OS_NAME="AlmaLinux"
+			fi
 			;;
 		almalinux)
 			OS_NAME="AlmaLinux"
@@ -656,8 +660,8 @@ do_download() {
 			;;
 		*)
 			if is_darwin; then
-				OS_NAME=MacOSX
-				OS_VERSION=
+				OS_NAME=macOS
+				OS_VERSION=13
 			else
 				echo
 				echo "Error: Unsupported distribution '$lsb_dist'"
