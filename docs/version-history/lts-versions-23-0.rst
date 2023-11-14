@@ -32,7 +32,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Linux jobs with a invalid #! interpreter now get a better error
+  message when the EP is running as root.  This was enhanced in 10.0,
+  but a bug prevented the enhancement from fully working with a rootly EP.
+  :jira:`1698`
 
 .. _lts-version-history-2302:
 

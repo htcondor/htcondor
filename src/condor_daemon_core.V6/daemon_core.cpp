@@ -8052,6 +8052,7 @@ int DaemonCore::Create_Process(
 				}
 				else if (errno == ENOENT)
 				{
+					TemporaryPrivSentry tps(PRIV_USER);
 					struct stat statbuf;
 					int script_fd = -1;
 					const static size_t buflen = 1024;
