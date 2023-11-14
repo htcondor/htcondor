@@ -5,6 +5,7 @@ use Cwd;
 use IPC::Open3;
 use Time::HiRes qw(tv_interval gettimeofday);
 use Archive::Tar;
+use IO::File;
 use IO::Socket;
 use IO::Socket::INET;
 use IO::Handle;
@@ -145,7 +146,7 @@ sub runcmd {
 	my $t1 = 0.1;
 	my $signal = 0;
 	my %returnthings;
-	local(*IN,*OUT,*ERR);
+	local(*IN,*OUT);
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my @abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
         use POSIX qw/strftime/; # putting this at the top of the script doesn't work oddly
@@ -217,118 +218,39 @@ sub runcmd {
 		$rc = system("$args");
 		$t1 = [Time::HiRes::gettimeofday];
 	} else {
+		local *ERR = IO::File->new_tmpfile;
 		if( defined( ${$options}{arguments} ) ) {
-			$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, @{${$options}{arguments}} );
+			$childpid = IPC::Open3::open3(\*IN, \*OUT, ">&ERR", @{${$options}{arguments}} );
 		} else {
-			$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, $args);
+			$childpid = IPC::Open3::open3(\*IN, \*OUT, ">&ERR", $args);
 		}
 
 		my $bulkout = "";
 		my $bulkerror = "";
 
- 		# ActiveState perl on Windows doesn't support select for files/pipes, but threaded IO works great
-		if ($^O =~ /MSWin32/) {
-			my $outQ = async_reader(\*OUT);
-			my $errQ = async_reader(\*ERR);
+		while (my $outline = <OUT>) {
+			$bulkout .= $outline;
+		}
 
-			my $oe = 0; # set to 1 when OUT is EOF
-			my $ee = 0; # set to 1 when ERR ie EOF
-
-			while (1) {
-				my $wait = 1;
-
-				while ( ! $oe && $outQ->pending) {
-					my $line = $outQ->dequeue or $oe = 1;
-					if ($line) { $bulkout .= $line; }
-					$wait = 0;
-				}
-				while ( ! $ee && $errQ->pending) {
-					my $line = $errQ->dequeue or $ee = 1;
-					if ($line) { $bulkerror .= $line; }
-					$wait = 0;
-				}
-
-				if ($oe && $ee) { last; }
-				if ($wait) { sleep(.1); }
-			}
-
-		} else {  # use select for Linux and Cygwin perl
-
-		my $tmpout = "";
-		my $tmperr = "";
-		my $rin = '';
-		my $rout = '';
-		my $readstdout = TRUE;
-		my $readstderr = TRUE;
-		my $readsize = 1024;
-		my $bytesread = 0;
-
-		while( $readstdout == TRUE || $readstderr == TRUE) {
-			$rin = '';
-			$rout = '';
-			# drain data slowly
-			if($readstderr == TRUE) {
-				vec($rin, fileno(ERR), 1) = 1;
-			}
-			if($readstdout == TRUE) {
-				vec($rin, fileno(OUT), 1) = 1;
-			}
-			my $nfound = select($rout=$rin, undef, undef, 0.5);
-			if( $nfound != -1) {
-				#print "select triggered $nfound\n";
-				if($readstderr == TRUE) {
-					if( vec($rout, fileno(ERR), 1)) {
-						#print "Read err\n";
-						$bytesread = sysread(ERR, $tmperr, $readsize);
-						#print "Read $bytesread from stderr\n";
-						if($bytesread == 0) {
-							$readstderr = FALSE;
-							close(ERR);
-						} else {
-							$bulkerror .= $tmperr;
-						}
-						#print "$tmperr\n";
-					} 
-				}
-				if($readstdout == TRUE) {
-					if( vec($rout, fileno(OUT), 1)) {
-						#print "Read out\n";
-						$bytesread = sysread(OUT, $tmpout, $readsize);
-						#print "Read $bytesread from stdout\n";
-						if($bytesread == 0) {
-							$readstdout = FALSE;
-							close(OUT);
-						} else {
-							$bulkout .= $tmpout;
-						}
-						#print "$tmpout\n";
-					}
-				}
-			} else {
-				print "Select error in runcmd:$!\n";
-			}
-		} # end while
-		} # use select for Linux and cygwin perl
-
-		#print "$bulkout\n";
-		#print "\n++++++++++++++++++++++++++\n";
-		#$bulkout =~ s/\\r\\n/\n/g;
-		#print "$bulkout\n";
-		#print "\n++++++++++++++++++++++++++\n";
 		@outlines = split /\n/, $bulkout;
 		map {$_ =~ s/^\\r//} @outlines;
 		map {$_ =~ s/\\r$//} @outlines;
 		map {$_.= "\n"} @outlines;
 
-		#$bulkerror =~ s/\\r\\n/\n/g;
+		die "ERROR: waitpid failed to reap pid $childpid!" 
+			if ($childpid != waitpid($childpid, 0));
+		$rc = $?;
+
+		seek ERR, 0, 0;
+
+		while (my $errline = <ERR>) {
+			$bulkerror .= $errline;
+		}
+
 		@errlines = split /\n/, $bulkerror;
 		map {$_ =~ s/^\\r//} @errlines;
 		map {$_ =~ s/\\r$//} @errlines;
 		map {$_.= "\n"} @errlines;
-
-		die "ERROR: waitpid failed to reap pid $childpid!" 
-			if ($childpid != waitpid($childpid, 0));
-		$rc = $?;
 
 		$t1 = [Time::HiRes::gettimeofday];
 	}
