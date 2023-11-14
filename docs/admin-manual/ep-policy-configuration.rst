@@ -117,7 +117,7 @@ is to create a representative slot ClassAd, to be used for matchmaking
 with jobs.
 
 HTCondor does not directly enforce slot shared resource allocations, and
-jobs are free to over subscribe to shared resources. Consider an example
+jobs are free to oversubscribe to shared resources. Consider an example
 where two slots are each defined with 50% of available RAM. The
 resultant ClassAd for each slot will advertise one half the available
 RAM. Users may submit jobs with RAM requirements that match these slots.
@@ -125,7 +125,7 @@ However, jobs run on either slot are free to consume more than 50% of
 available RAM. HTCondor will not directly enforce a RAM utilization
 limit on either slot. If a shared resource enforcement capability is
 needed, it is possible to write a policy that will evict a job that
-over subscribes to shared resources, as described in
+oversubscribes to shared resources, as described in
 :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 
 Dividing System Resources in Multi-core Machines
@@ -166,7 +166,7 @@ Define slot types.
     multiple slots of each type. The number of slots created of a given type is
     configured with :macro:`NUM_SLOTS_TYPE_<N>`.
 
-    The type can be defined by:
+    The resources configured for the slot type can be defined by:
 
     -  A simple fraction, such as 1/4
     -  A simple percentage, such as 25%
@@ -898,7 +898,7 @@ that HTCondor measures virtual memory in kbytes, and physical memory in
 megabytes. To prevent jobs with high memory usage from thrashing and
 excessive paging, and force HTCondor to put them on hold instead, you
 can tell condor that a job should never use swap, by setting
-DISABLE_SWAP_FOR_JOB to true (the default is false).
+:macro:`DISABLE_SWAP_FOR_JOB` to true (the default is false).
 
 In addition to memory, the *condor_starter* can also control the total
 amount of CPU used by all processes within a job. To do this, it writes
