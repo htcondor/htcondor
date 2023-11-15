@@ -554,13 +554,13 @@ void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 	}
 	inShutdownRescue = true;
 
-		// If is here in case we get an error during parsing...
-	if ( dagman.dag ) dagman.dag->_dagStatus = dagStatus;
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 		// Avoid writing two different rescue DAGs if the "main" DAG and
 		// the final node (if any) both fail.
 	static bool wroteRescue = false;
+	// If statement here in case failure occurred during parsing
 	if( dagman.dag ) {
+		dagman.dag->_dagStatus = dagStatus;
 			// We write the rescue DAG *before* removing jobs because
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
@@ -609,8 +609,9 @@ void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 		bool removed = ( dagStatus == DagStatus::DAG_STATUS_RM );
 		dagman.dag->DumpNodeStatus( false, removed );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
+		dagman.dag->ReportMetrics( exitVal );
 	}
-	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
+
 	dagman.PublishStats();
 	dagmanUtils.tolerant_unlink( lockFileName.c_str() ); 
 	dagman.CleanUp();
@@ -1863,6 +1864,17 @@ void condor_event_timer (int /* tid */) {
 				  "ERROR: the following job(s) failed:\n" );
 		dagman.dag->PrintJobList( Job::STATUS_ERROR );
 		main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );
+		return;
+	}
+
+	// If Final node has exited but DAGMan is still waiting on jobs
+	// something is wrong (likely missed job events)
+	if (dagman.dag->FinalNodeFinished()) {
+		// Replace with a world view check to hopefully exit with above paths
+		debug_printf(DEBUG_QUIET,
+		             "ERROR: DAGMan FINAL node has terminated but DAGMan thinks %d job(s) are still running.\n",
+		             dagman.dag->NumJobsSubmitted());
+		main_shutdown_rescue(EXIT_ABORT, dagman.dag->_dagStatus);
 		return;
 	}
 
