@@ -23,7 +23,7 @@ def make_headerlink_node(attribute_name, options):
     return node
 
 
-def classad_attribute_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+def classad_attribute_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     app = inliner.document.settings.env.app
     docname = inliner.document.settings.env.docname
 
@@ -48,5 +48,5 @@ def classad_attribute_role(name, rawtext, text, lineno, inliner, options={}, con
 
 
 def setup(app):
-    app.add_role('classad-attribute', classad_attribute_role)
+    app.add_role('classad-attribute-def', classad_attribute_def_role)
 

@@ -38,7 +38,7 @@ extensions = [
     'subcom-def',
     'index',
     'jira',
-    'classad-attribute',
+    'classad-attribute-def',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
@@ -62,7 +62,10 @@ html_theme = 'sphinx_rtd_theme'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-# html_theme_options = {}
+html_theme_options = {
+        'display_version': False
+}
+ 
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
