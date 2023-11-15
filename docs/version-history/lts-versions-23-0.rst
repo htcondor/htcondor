@@ -37,6 +37,10 @@ Bugs Fixed:
   but a bug prevented the enhancement from fully working with a rootly EP.
   :jira:`1698`
 
+- Fixed a bug where the DAGMan job proper for a DAG with a final
+  node could stay stuck in the removed job state.
+  :jira:`2147`
+
 .. _lts-version-history-2302:
 
 Version 23.0.2
