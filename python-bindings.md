@@ -1,5 +1,5 @@
 - For some awful reason, the Python parts of the implementations are in
-  bindings/python/, but the C/C++ parts in src/python-bindings.
+  bindings/python/, but the C/C++ parts in src/python-bindings/.
 
 - The `htcondor` and `classad` modules each have two versions: the original
   version that depends on Boost and the `htcondor2` and `classad2` versions
@@ -10,11 +10,12 @@
   maintainabililty -- as well as a substantial improvement to the API.
   It is intended that there be a corresponding `htcondor3` module.
 
-- The `htcondor2` and `classad2` modules are currently implemented as
-  Python monkey-patches on top of the `htcondor` and `classad` modules;
-  they will eventually become the only implementation, although we
-  may not ever actually rename them even after the last of the original
-  implementations are swept away.
+- The `htcondor2` and `classad2` modules should be drop-in replacements
+  for their predecessors: `import htcondor as htcondor` and
+  `import classad2 as classad`.  For various reasons, including necessary
+  deprecations, that's not 100% true.  For this reason, the version of
+  the test suite that runs using those two modules is kept in a separate
+  branch.
 
 - For classad2._class_ad, the invariant is that handle->t is always pointing
   to an owned (and valid) ClassAd on the heap.  When Python deallocates a
