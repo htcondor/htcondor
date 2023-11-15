@@ -32,6 +32,11 @@ New Features:
 
 Bugs Fixed:
 
+- Linux jobs with a invalid #! interpreter now get a better error
+  message when the EP is running as root.  This was enhanced in 10.0,
+  but a bug prevented the enhancement from fully working with a rootly EP.
+  :jira:`1698`
+
 - Fixed a bug where the DAGMan job proper for a DAG with a final
   node could stay stuck in the removed job state.
   :jira:`2147`
