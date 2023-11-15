@@ -51,7 +51,6 @@ Manual built on |release_date|
    :glob:
    :caption: Additional Docs 
 
-   apis/chirp.rst
    cloud-computing/index
    grid-computing/index
    platform-specific/index

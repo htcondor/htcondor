@@ -24,5 +24,6 @@ Users' Manual
    container-universe-jobs
    self-checkpointing-applications
    submitting-a-remote-job
+   chirp
    time-scheduling-for-job-execution
    special-environment-considerations
