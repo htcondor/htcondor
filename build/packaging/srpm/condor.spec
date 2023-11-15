@@ -1698,6 +1698,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Nov 16 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.20-1
+- Other authentication methods are tried if mapping fails using SSL
+
 * Fri Jun 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.19-1
 - Remove limit on certificate chain length in SSL authentication
 

@@ -14,9 +14,7 @@ Version 9.0.20
 
 Release Notes:
 
-.. HTCondor version 9.0.20 released on Month Date, 2022.
-
-- HTCondor version 9.0.20 not yet released.
+- HTCondor version 9.0.20 released on November 20, 2023.
 
 New Features:
 
@@ -36,7 +34,7 @@ Version 9.0.19
 
 Release Notes:
 
-- HTCondor version 9.0.19 released on June 30, 2022.
+- HTCondor version 9.0.19 released on June 30, 2023.
 
 New Features:
 
@@ -54,7 +52,7 @@ Version 9.0.18
 
 Release Notes:
 
-- HTCondor version 9.0.18 released on June 22, 2022.
+- HTCondor version 9.0.18 released on June 22, 2023.
 
 New Features:
 

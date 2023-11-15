@@ -1,3 +1,9 @@
+condor (9.0.20-1) stable; urgency=medium
+
+  * Other authentication methods are tried if mapping fails using SSL
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 15 Nov 2023 17:23:00 -0600
+
 condor (9.0.19-1) stable; urgency=medium
 
   * Remove limit on certificate chain length in SSL authentication
