@@ -74,6 +74,11 @@ New Features:
   to allow the passing of arguments to specified prepare job hooks.
   :jira:`1851`
 
+- HTCondor now uses the `Pelican Platform <https://pelicanplatform.org/>`_
+  to do file transfers with the
+  `Open Science Data Federation (OSDF) <https://osg-htc.org/services/osdf.html>`_.
+  :jira:`2100`
+
 Bugs Fixed:
 
 - None.
