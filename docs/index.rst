@@ -17,7 +17,7 @@ is here: :ref:`users-manual/index:Users' Manual`, and a similar complete referen
 administrators of HTCondor can be found here: :ref:`admin-manual/index:Administrators' Manual`
 
 HTCondor contains many command line tools, each with a traditional Unix "man-page". These
-may be found here: :ref:`man-pages/index:Command Reference Manual (man pages)`
+may be found here: :ref:`man-pages/index:Commands Reference (man pages)`
 
 Finally, for users writing Python interfaces to HTCondor, our Python API documentation
 is here: :ref:`apis/python-bindings/index:Python Bindings`
