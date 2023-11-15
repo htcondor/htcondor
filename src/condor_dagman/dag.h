@@ -131,7 +131,7 @@ class Dag {
 		 const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
-		 SubmitDagDeepOptions *submitDagDeepOpts,
+		 DagmanOptions *dagDeepOpts,
 		 bool isSplice = false, DCSchedd *schedd = NULL,
 		 const std::string &spliceScope = "root" );
 
@@ -1311,7 +1311,7 @@ private:
 	bool	_generateSubdagSubmits;
 
 		// Options for running condor_submit_dag on nested DAGs.
-	SubmitDagDeepOptions *_submitDagDeepOpts;
+	DagmanOptions *_submitDagDeepOpts;
 
 		// Dag objects are used to parse splice files, which are like include
 		// files that ultimately result in a larger in memory dag. To toplevel
