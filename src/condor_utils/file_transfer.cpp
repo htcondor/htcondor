@@ -329,7 +329,6 @@ FileTransfer::~FileTransfer()
 	if (UserLogFile) free(UserLogFile);
 	if (X509UserProxy) free(X509UserProxy);
 	if (SpoolSpace) free(SpoolSpace);
-	if (ExceptionFiles) delete ExceptionFiles;
 	if (InputFiles) delete InputFiles;
 	if (OutputFiles) delete OutputFiles;
 	if (EncryptInputFiles) delete EncryptInputFiles;
@@ -1319,13 +1318,7 @@ FileTransfer::FindChangedFiles()
 
 		filesize_t filesize;
 		time_t modification_time;
-		if ( ExceptionFiles && ExceptionFiles->file_contains(f) ) {
-			dprintf (
-				D_FULLDEBUG,
-				"Skipping file in exception list: %s\n",
-				f );
-			continue;
-		} else if ( !LookupInFileCatalog(f, &modification_time, &filesize) ) {
+		if ( !LookupInFileCatalog(f, &modification_time, &filesize) ) {
 			// file was not found.  send it.
 			dprintf( D_FULLDEBUG,
 					"Sending new file %s, time==%ld, size==%ld\n",
@@ -4427,16 +4420,16 @@ FileTransfer::computeFileList(
 	}
 
 	// Remove any files from the catalog that are in the ExceptionList
-	if (ExceptionFiles) {
-		auto enditer =
-			std::remove_if(
-					filelist.begin(),
-					filelist.end(),
-					[&](FileTransferItem &fti)
-					{return ExceptionFiles->contains(condor_basename(fti.srcName().c_str()));});
+	auto enditer =
+		std::remove_if(
+				filelist.begin(),
+				filelist.end(),
+				[&](FileTransferItem &fti)
+				{return ExceptionFiles.end() != 
+					std::find(ExceptionFiles.begin(),ExceptionFiles.end(),
+							decltype(ExceptionFiles)::value_type(condor_basename(fti.srcName().c_str())));});
 
-		filelist.erase(enditer, filelist.end());
-	}
+	filelist.erase(enditer, filelist.end());
 
 		// Calculate the sandbox size as the sum of the known file transfer items
 		// (only those that are transferred via CEDAR).
@@ -6003,13 +5996,11 @@ FileTransfer::addOutputFile( const char* filename )
 bool
 FileTransfer::addFileToExceptionList( const char* filename )
 {
-	if ( !ExceptionFiles ) {
-		ExceptionFiles = new StringList;
-		ASSERT ( NULL != ExceptionFiles );
-	} else if ( ExceptionFiles->file_contains ( filename ) ) {
+	if (ExceptionFiles.end() != 
+			std::find(ExceptionFiles.begin(), ExceptionFiles.end(), decltype(ExceptionFiles)::value_type(filename))) {
 		return true;
 	}
-	ExceptionFiles->append ( filename );
+	ExceptionFiles.emplace_back(filename);
 	return true;
 }
 
