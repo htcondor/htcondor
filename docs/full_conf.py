@@ -38,7 +38,7 @@ extensions = [
     'subcom-def',
     'index',
     'jira',
-    'classad-attribute',
+    'classad-attribute-def',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
