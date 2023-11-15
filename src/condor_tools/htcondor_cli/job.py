@@ -21,6 +21,7 @@ from htcondor_cli.utils import readable_time, readable_size, s
 
 JSM_HTC_JOB_SUBMIT = 3
 
+
 class Submit(Verb):
     """
     Submits a job when given a submit file
@@ -69,7 +70,7 @@ class Submit(Verb):
                 submit_data = f.read()
             submit_description = htcondor.Submit(submit_data)
             # Set s_method to HTC_JOB_SUBMIT
-            submit_description.setSubmitMethod(JSM_HTC_JOB_SUBMIT,True)
+            submit_description.setSubmitMethod(JSM_HTC_JOB_SUBMIT, True)
 
             annex_name = options["annex_name"]
             if annex_name is not None:
@@ -124,7 +125,7 @@ class Submit(Verb):
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
             DAGMan.write_slurm_dag(submit_file, options["runtime"], options["email"])
-            os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
+            os.chdir(TMP_DIR)  # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
             submit_description["+ResourceType"] = "\"Slurm\""
 
@@ -132,7 +133,7 @@ class Submit(Verb):
             submit_qargs = submit_description.getQArgs()
             if submit_qargs != "" and submit_qargs != "1":
                 raise ValueError("Can only submit one job at a time. "
-                    "See the job-set syntax for submitting multiple jobs.")
+                                 "See the job-set syntax for submitting multiple jobs.")
 
             try:
                 result = schedd.submit(submit_description, count=1)
@@ -148,7 +149,7 @@ class Submit(Verb):
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
             DAGMan.write_ec2_dag(file, options["runtime"], options["email"])
-            os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
+            os.chdir(TMP_DIR)  # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag("ec2_submit.dag")
             submit_description["+ResourceType"] = "\"EC2\""
 
@@ -156,7 +157,7 @@ class Submit(Verb):
             submit_qargs = submit_description.getQArgs()
             if submit_qargs != "" and submit_qargs != "1":
                 raise ValueError("Can only submit one job at a time. "
-                    "See the job-set syntax for submitting multiple jobs.")
+                                 "See the job-set syntax for submitting multiple jobs.")
 
             try:
                 result = schedd.submit(submit_description, count=1)
@@ -184,7 +185,6 @@ class Status(Verb):
         },
     }
 
-
     def __init__(self, logger, job_id, **options):
         job = None
         job_status = "IDLE"
@@ -203,9 +203,10 @@ class Status(Verb):
         # Query schedd
         constraint = f"ClusterId == {cluster_id} && ProcId == {proc_id}"
         projection = ["JobStartDate", "JobStatus", "QDate", "CompletionDate", "EnteredCurrentStatus",
-            "RequestMemory", "MemoryUsage", "RequestDisk", "DiskUsage", "HoldReason",
-            "ResourceType", "TargetAnnexName", "NumShadowStarts", "NumJobStarts", "NumHolds",
-            "JobCurrentStartTransferOutputDate", "TotalSuspensions"]
+                      "RequestMemory", "MemoryUsage", "RequestDisk", "DiskUsage", "HoldReason",
+                      "ResourceType", "TargetAnnexName", "NumShadowStarts", "NumJobStarts", "NumHolds",
+                      "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime",
+                      "RemoteWallClockTime"]
         try:
             job = schedd.query(constraint=constraint, projection=projection, limit=1)
         except IndexError:
@@ -252,19 +253,23 @@ class Status(Verb):
             job_execs = job_ad.get("NumJobStarts", 0)
             job_holds = job_ad.get("NumHolds", 0)
             job_suspends = job_ad.get("TotalSuspensions", 0)
+            # Calculate job goodput
+            job_committed_time = job_ad.get("CommittedTime", 0)
+            job_wall_clock_time = job_ad.get("RemoteWallClockTime", 0)
+            goodput = (job_committed_time / job_wall_clock_time) if job_wall_clock_time > 0 else 0.0
 
             # Compute memory and disk usage if available
             memory_usage, disk_usage = None, None
             if "MemoryUsage" in job_ad:
                 memory_usage = (
-                        f"{readable_size(job_ad.eval('MemoryUsage')*10**6)} out of "
-                        f"{readable_size(job_ad.eval('RequestMemory')*10**6)} requested"
-                    )
+                    f"{readable_size(job_ad.eval('MemoryUsage')*10**6)} out of "
+                    f"{readable_size(job_ad.eval('RequestMemory')*10**6)} requested"
+                )
             if "DiskUsage" in job_ad:
                 disk_usage = (
-                        f"{readable_size(job_ad.eval('DiskUsage')*10**3)} out of "
-                        f"{readable_size(job_ad.eval('RequestDisk')*10**3)} requested"
-                    )
+                    f"{readable_size(job_ad.eval('DiskUsage')*10**3)} out of "
+                    f"{readable_size(job_ad.eval('RequestDisk')*10**3)} requested"
+                )
 
             # Print information relevant to each job status
             if job_status == htcondor.JobStatus.IDLE:
@@ -352,7 +357,16 @@ class Status(Verb):
                     logger.info(f"Its last disk usage was {disk_usage}.")
 
             else:
+                goodput = None
                 logger.info(f"Job {job_id} is in an unknown state (JobStatus = {job_status}).")
+
+            # Display Good put for all job states
+            if goodput is not None:
+                goodput = goodput * 100
+                tense = "had" if job_status == htcondor.JobStatus.COMPLETED else "has"
+                logger.info(
+                    f"Job {tense} {goodput:.1f}% goodput for {readable_time(job_wall_clock_time)} of wall clock time."
+                )
 
         # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log
@@ -450,7 +464,7 @@ class Resources(Verb):
             try:
                 job = schedd.query(
                     constraint=f"ClusterId == {job_id}",
-                    projection=["RemoteHost","TargetAnnexName","MachineAttrAnnexName0"]
+                    projection=["RemoteHost", "TargetAnnexName", "MachineAttrAnnexName0"]
                 )
             except IndexError:
                 raise RuntimeError(f"No jobs found for ID {job_id}.")
@@ -545,7 +559,6 @@ class Resources(Verb):
                     logger.info(f"Slurm resources were terminated since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
 
 
-
 class Job(Noun):
     """
     Run operations on HTCondor jobs
@@ -563,4 +576,3 @@ class Job(Noun):
     @classmethod
     def verbs(cls):
         return [cls.submit, cls.status, cls.resources]
-

@@ -28,6 +28,10 @@ Release Notes:
 
 New Features:
 
+- Improve ``htcondor job status`` command to display information about
+  a jobs goodput.
+  :jira:`1982`
+
 - Added ``ROOT_MAX_THREADS`` to :macro:`STARTER_NUM_THREADS_ENV_VARS` default value.
   :jira:`2137`
 
@@ -88,7 +92,7 @@ Bugs Fixed:
   :jira:`2080`
 
 - Fixed warnings about use of deprecated HTCondor python binding methods
-  in the `htcondor dag submit` command.
+  in the ``htcondor dag submit`` command.
   :jira:`2104`
 
 - Improved cleanup of ssh-agent processes when submitting **batch**
