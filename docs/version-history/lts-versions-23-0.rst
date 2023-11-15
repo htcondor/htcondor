@@ -32,7 +32,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where the DAGMan job proper for a DAG with a final
+  node could stay stuck in the removed job state.
+  :jira:`2147`
 
 .. _lts-version-history-2302:
 

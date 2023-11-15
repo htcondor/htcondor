@@ -854,6 +854,15 @@ class Dag {
 	*/
 	inline bool FinalNodeRun() const { return _finalNodeRun; }
 
+	/*	Determine whether the final node has finished running
+		regardless of failure, success, or error
+	*/
+	inline bool FinalNodeFinished() const {
+		return _final_job && _finalNodeRun &&
+		       ( _final_job->GetStatus() == Job::STATUS_DONE ||
+		         _final_job->GetStatus() == Job::STATUS_ERROR );
+	}
+
 	/** Determine whether this DAG has a provisioner node.
 		@return true iff the DAG has a provisioner node.
 	*/
