@@ -338,7 +338,7 @@ public:
 		{ //Initialize Deep Options
 			using namespace DagmanDeepOptions;
 			deep.intOpts[i::DoRescueFrom] = 0;
-			deep.intOpts[b::AutoRescue] = param_boolean( "DAGMAN_AUTO_RESCUE", true );
+			deep.boolOpts[b::AutoRescue] = param_boolean( "DAGMAN_AUTO_RESCUE", true );
 		} //End Deep Option Initialization
 	}
 
