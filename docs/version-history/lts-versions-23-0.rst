@@ -28,7 +28,7 @@ Release Notes:
 
 New Features:
 
-- Added ``ROOT_MAX_THREADS`` to :macro:`STARTER_NUM_THREADS_ENV_VARS`.
+- Added ``ROOT_MAX_THREADS`` to :macro:`STARTER_NUM_THREADS_ENV_VARS` default value.
   :jira:`2137`
 
 Bugs Fixed:
