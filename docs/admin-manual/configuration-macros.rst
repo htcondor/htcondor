@@ -960,7 +960,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     second field is a regex that we will match against the input, and
     the third field will be the output if the regex matches, the 3 and 4
     argument form of the ClassAd userMap() function (see
-    :ref:`ClassAd Syntax`) expect
+    :ref:`classads/classad-mechanism:ClassAd Syntax`) expect
     that the third field will be a comma separated list of values. For
     example:
 
