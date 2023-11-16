@@ -30,11 +30,12 @@ py_new_htcondor2_classad(void * classAd) {
 	// should call _classad_init(), which should have made sure that the
 	// Python ClassAd object is valid by creating a new ClassAd for it.
 	if( classAd != NULL ) {
+		// Arguably, for tracing purposes, we should call handle->f() here.
 		if( handle->t != NULL ) { delete (ClassAd *)handle->t; }
 		handle->t = (void *)classAd;
 	}
 
-	// handle->f = [](void * & v) { dprintf( D_PERF_TRACE, "{classad::ClassAd}\n" ); delete (classad::ClassAd *)v; v = NULL; };
+	// _classad_init() correctly set handle->f already.
 	return pyClassAd;
 }
 
