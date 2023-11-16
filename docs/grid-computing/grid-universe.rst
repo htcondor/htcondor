@@ -69,7 +69,7 @@ collector that the local *condor_schedd* daemon reports to.
 
 The machine upon which jobs are executed must also be configured
 correctly. This machine must be running a *condor_schedd* daemon.
-Unless specified explicitly in a submit file, ``CONDOR_HOST`` must point
+Unless specified explicitly in a submit file, :macro:`CONDOR_HOST` must point
 to a *condor_collector* daemon that it can write to, and the machine
 upon which jobs are submitted can read from. This facilitates
 communication between the two machines.
@@ -331,7 +331,7 @@ Submission to a batch system on a remote machine using SSH is also
 possible. This is described below.
 
 The batch GAHP server is a piece of software called the blahp.
-The configuration parameters ``BATCH_GAHP`` and ``BLAHPD_LOCATION``
+The configuration parameters :macro:`BATCH_GAHP` and :macro:`BLAHPD_LOCATION`
 specify the locations of the main blahp binary and its dependent
 files, respectively.
 The blahp has its own configuration file, located at /etc/blah.config
@@ -735,7 +735,7 @@ attempt before trying again.
 By default, the EC2 GAHP enforces a 100 millisecond interval between
 requests to the same service. This helps ensure reliable service. You
 may configure this interval with the configuration variable
-``EC2_GAHP_RATE_LIMIT``, which must be an integer number of
+:macro:`EC2_GAHP_RATE_LIMIT`, which must be an integer number of
 milliseconds. Adjusting the interval may result in higher or lower
 throughput, depending on the service. Too short of an interval may
 trigger rate-limiting by the service; while HTCondor will react

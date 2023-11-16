@@ -84,13 +84,7 @@ utilCancelReaper(int& reaperId);
  * Description : represents the given address in canonical '<ip:port>' format
  */
 char* 
-utilToSinful( char* address );
-/* Function   : utilClearList
- * Arguments  : list - string list to be cleared
- * Description: clears list of strings
- */
-void
-utilClearList( StringList& list );
+utilToSinful( const char* address );
 
 /* Function    : utilSafePutFile
  * Arguments   : socket   - socket, through which the file will be transferred

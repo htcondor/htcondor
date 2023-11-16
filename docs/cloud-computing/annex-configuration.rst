@@ -54,7 +54,7 @@ By default, running *condor_annex* creates three logs: the
 *condor_annex* log, the annex GAHP log, and the annex audit log. The
 default location for these logs is the same directory as the
 user-specific HTCondor configuration file (usually
-~/.condor/user_config). *condor_annex* sets the ``LOG``
+~/.condor/user_config). *condor_annex* sets the :macro:`LOG`
 :index:`LOG` macro to this directory when reading its
 configuration.
 
@@ -74,7 +74,7 @@ The annex audit log records two lines for each invocation of
 *condor_annex*: the command as issued and the results as returned. The
 location of the audit log is set by
 :macro-def:`ANNEX_AUDIT_LOG[ANNEX]`, which is the ``AUDIT``-level log for the
-``ANNEX`` subsystem; see ``<SUBSYS>_<LEVEL>_LOG`` (in
+``ANNEX`` subsystem; see :macro:`<SUBSYS>_<LEVEL>_LOG` (in
 :ref:`admin-manual/configuration-macros:daemon logging configuration file
 entries`) for details. Because annex creation commands typically make extensive
 use of values set in configuration, *condor_annex* will write the configuration

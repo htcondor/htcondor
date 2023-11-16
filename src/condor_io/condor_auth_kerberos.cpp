@@ -50,7 +50,7 @@ const char STR_DEFAULT_CONDOR_SERVICE[] = "host";
 #define KERBEROS_MUTUAL  3
 #define KERBEROS_PROCEED 4
 
-HashTable<std::string, std::string> * Condor_Auth_Kerberos::RealmMap = 0;
+std::map<std::string, std::string> * Condor_Auth_Kerberos::RealmMap = 0;
 //----------------------------------------------------------------------
 // Kerberos Implementation
 //----------------------------------------------------------------------
@@ -1277,13 +1277,13 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
     // two cases, if domain is the same as the current uid domain,
     // then we are okay, other wise, see if we have a map
     if (RealmMap) {
-        std::string from(domain), to;
-        if (RealmMap->lookup(from, to) != -1) {
+		auto itr = RealmMap->find(domain);
+		if (itr != RealmMap->end()) {
 			if (IsFulldebug(D_SECURITY)) {
 				dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
-					from.c_str(), to.c_str());
+					domain, itr->second.c_str());
 			}
-            setRemoteDomain(to.c_str());
+            setRemoteDomain(itr->second.c_str());
             return TRUE;
         } else {
 			// if the map exists, they must be listed.  and they're NOT!
@@ -1306,7 +1306,6 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
     FILE *fd;
     char * buffer;
     char * filename = param( "KERBEROS_MAP_FILE" );
-    StringList from, to;
 
     if (RealmMap) {
         delete RealmMap;
@@ -1320,41 +1319,30 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
         RealmMap = NULL;
 		return FALSE;
     } else {
-    
+
+		RealmMap = new std::map<std::string, std::string>();
+
 		int lineno = 0;
 		while ((buffer = getline_trim(fd, lineno, GETLINE_TRIM_SIMPLE_CONTINUATION))) {
         	char * token;
         	token = strtok(buffer, "= ");
         	if(token) {
-				char *tmpf = strdup(token);
+				std::string from = token;
 
 				token = strtok(NULL, "= ");
 				if(token) {
-					to.append(token);
-					from.append(tmpf);
+					(*RealmMap)[from] = token;
 				} else {
 					dprintf (D_ALWAYS, "KERBEROS: bad map (%s), no domain after '=': %s\n",
 						filename, buffer);
 				}
 
-				free (tmpf);
 			} else {
 				dprintf (D_ALWAYS, "KERBEROS: bad map (%s), missing '=' separator: %s\n",
 					filename, buffer);
 			}
 		}
 
-		assert (RealmMap == NULL);
-		RealmMap = new Realm_Map_t(hashFunction);
-		from.rewind();
-		to.rewind();
-		char *f, * t;
-		while ( (f = from.next()) ) {
-			t = to.next();
-			RealmMap->insert(std::string(f), std::string(t));
-			from.deleteCurrent();
-			to.deleteCurrent();
-		}
 		fclose(fd);
 
 		free(filename);

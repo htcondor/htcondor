@@ -1,52 +1,80 @@
 Configuration for Execution Points
 ==================================
 
-.. note::
-    Configuration templates make it easier to implement certain
-    policies; see information on policy templates here:
-    :ref:`admin-manual/introduction-to-configuration:available configuration templates`.
+Introduction
+------------
 
-*condor_startd* Policy Configuration
-------------------------------------
+HTCondor Execution Points, or EP's, are the machines where jobs run.  Every
+Execution Point has an implied human owner who can control the policy of these
+machines in very fine detail.  The configuration of an EP is responsible for:
 
-:index:`condor_startd policy<single: condor_startd policy; configuration>`
-:index:`of machines, to implement a given policy<single: of machines, to implement a given policy; configuration>`
-:index:`configuration<single: configuration; startd>`
+.. sidebar::
+   Execution Point (EP) Diagram
 
-This section describes the configuration of machines, such that they,
-through the *condor_startd* daemon, implement a desired policy for when
-remote jobs should start, be suspended, (possibly) resumed, vacate
-or be killed. This policy is the heart of HTCondor's
-balancing act between the needs and wishes of resource owners (machine
-owners) and resource users (people submitting their jobs to HTCondor).
-Please read this section carefully before changing any of the settings
-described here, as a wrong setting can have a severe impact on either
-the owners of machines in the pool or the users of the pool.
+   .. mermaid::
+      :caption: Daemons for a Execution Point, one *condor_starter* per running job.
+      :align: center
 
-*condor_startd* Terminology
-''''''''''''''''''''''''''''
+      flowchart TD
+         condor_master --> condor_startd
+         condor_startd --> condor_starter_for_slot1
+         condor_startd --> condor_starter_for_slot2
+         condor_starter_for_slot1 --> job_in_slot1
+         condor_starter_for_slot2 --> job_in_slot2
 
-Understanding the configuration requires an understanding of ClassAd
-expressions, which are detailed in the :doc:`/classads/classad-mechanism`
-section.
+
+#. Dividing a single machine one or more *slots*, each of which can run at most
+   one job at a time. These slots can protect the machine and other slots
+   by limiting the amount of resources used by the job in the slot.  Different
+   slots can support different policies.
+
+#. Deciding *when jobs run*, and when they should not run.  More specifically,
+   the EP can decide *which* jobs run when, (and when they stop running).  This
+   is covered in section
+   :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy
+   configuration` below.
+
+#. Partially in service of the above, the EP *detects* and *advertises* aspects
+   about the machine.  These are placed in attributes in a machine or slot
+   *Classad*, and sent to the *condor_collector* for global querying.  (See
+   :ref:`classad-attributes/machine-classad-attributes:machine classad
+   attributes`) Some of these attributes may be about the hardware, such as how
+   much memory the machine has, or what kind of GPU it has. Other attributes
+   may be about the software, such as what Operating System it is running.
+   Some are predefined and automatically advertised by the system, others may
+   be custom attributes created and defined by the administrator.  These custom
+   attributes may be statically defined (e.g. this machine is on the 3rd floor,
+   and belongs to the Astronomy department), or they may be dynamically
+   discovered by scripts (e.g.  The temperature of the CPU is currently 40
+   degrees C) This is covered in section
+   :ref:`admin-manual/ep-policy-configuration:custom and system EP classad attributes` below.
+
+#. Providing *services for running jobs*. These services may include the ability to
+   run in a container or VM environment, such as Docker, Apptainer or Xen;
+   providing the capability for the job to read or update information on the AP;
+   and setting environment variables for the job to read.
+
+
+The execution point is mainly managed by the *condor_startd* daemon, which itself
+is managed by a *condor_master* daemon.  Each running job in a slot is then
+managed by an instance of the *condor_starter* daemon, which was spawned from
+the *condor_startd* when the job was started.
+
+Slots: where jobs run
+---------------------
+
 :index:`condor_startd`
 
-Each machine runs one *condor_startd* daemon. Each machine may contain
-one or more cores (or CPUs). The HTCondor construct of a slot describes
-the unit which is matched to a job. Each slot may contain one or more
-integer number of cores. Each slot is represented by its own machine
-ClassAd, distinguished by the machine ClassAd attribute ``Name``, which
-is of the form ``slot<N>@hostname``. The value for ``<N>`` will also be
-defined with machine ClassAd attribute ``SlotID``.
+Each EP runs one *condor_startd* daemon. The HTCondor *"slot"* describes a set
+of resources (e.g. Memory, Cpus, Disk) where a job may run.  Each slot is
+represented by its own machine ClassAd, distinguished by the machine ClassAd
+attribute ``Name``, which is of the form ``slot<N>@hostname``, or
+``slot<M_N>@hostname``.  The value for ``<N>`` will also be defined with
+machine ClassAd attribute ``SlotID``.
 
-Each slot has its own machine ClassAd, and within that ClassAd, its own
-state and activity. Other policy expressions are propagated or inherited
-from the machine configuration by the *condor_startd* daemon, such that
-all slots have the same policy from the machine configuration. This
-requires configuration expressions to incorporate the ``SlotID``
-attribute when policy is intended to be individualized based on a slot.
-So, in this discussion of policy expressions, where a machine is
-referenced, the policy can equally be applied to a slot.
+Each slot has its own machine ClassAd, with its own state and activity
+attributes. Most other attributes are inherited from the
+machine configuration by the *condor_startd* daemon
 
 The *condor_startd* daemon represents the machine on which it is
 running to the HTCondor pool. The daemon publishes characteristics about
@@ -58,8 +86,905 @@ command:
 
     $ condor_status -l hostname
 
-The ``START`` Expression
-''''''''''''''''''''''''
+Multi-Core Machine Terminology
+''''''''''''''''''''''''''''''
+
+:index:`configuration<single: configuration; SMP machines>`
+:index:`configuration<single: configuration; multi-core machines>`
+
+Machines with more than one CPU or core may be configured to run more
+than one job at a time. As always, owners of the resources have great
+flexibility in defining the policy under which multiple jobs may run,
+suspend, vacate, etc.
+
+Multi-core machines are represented to the HTCondor system as shared
+resources broken up into individual slots. Each slot can be matched and
+claimed by users for jobs. Each slot is represented by an individual
+machine ClassAd. In this way, each multi-core machine will appear to the
+HTCondor system as a collection of separate slots. As an example, a
+multi-core machine named ``vulture.cs.wisc.edu`` would appear to
+HTCondor as the multiple machines, named ``slot1@vulture.cs.wisc.edu``,
+``slot2@vulture.cs.wisc.edu``, ``slot3@vulture.cs.wisc.edu``, and so on.
+:index:`dividing resources in multi-core machines`
+
+The way that the *condor_startd* breaks up the shared system resources
+into the different slots is configurable. All shared system resources,
+such as RAM, disk space, and swap space, can be divided evenly among all
+the slots, with each slot assigned one core. Alternatively, slot types
+are defined by configuration, so that resources can be unevenly divided.
+Regardless of the scheme used, it is important to remember that the goal
+is to create a representative slot ClassAd, to be used for matchmaking
+with jobs.
+
+HTCondor does not directly enforce slot shared resource allocations, and
+jobs are free to oversubscribe to shared resources. Consider an example
+where two slots are each defined with 50% of available RAM. The
+resultant ClassAd for each slot will advertise one half the available
+RAM. Users may submit jobs with RAM requirements that match these slots.
+However, jobs run on either slot are free to consume more than 50% of
+available RAM. HTCondor will not directly enforce a RAM utilization
+limit on either slot. If a shared resource enforcement capability is
+needed, it is possible to write a policy that will evict a job that
+oversubscribes to shared resources, as described in
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
+
+Dividing System Resources in Multi-core Machines
+''''''''''''''''''''''''''''''''''''''''''''''''
+
+Within a machine the shared system resources of cores, RAM, swap space
+and disk space will be divided for use by the slots. There are two main
+ways to go about dividing the resources of a multi-core machine:
+
+Evenly divide all resources.
+    Prior to HTCondor 23.0 the *condor_startd* will automatically divide the
+    machine into multiple slots by default, placing one core in each slot, and evenly
+    dividing all shared resources among the slots. Beginning with HTCondor 23.0
+    the *condor_startd* will create a single partitionable slot by default.
+
+    In HTCondor 23.0 you can use the configuration template ``use FEATURE : StaticSlots``
+    to configure a number of static slots. If used without arguments this
+    configuration template will define a number of single core static slots equal to
+    the number of detected cpu cores.
+
+    To simply configure static slots in any version, configure :macro:`NUM_SLOTS` to the
+    integer number of slots desired. :macro:`NUM_SLOTS` may not be used to make HTCondor advertise
+    more slots than there are cores on the machine. The number of cores
+    is defined by :macro:`NUM_CPUS`.
+
+Define slot types.
+    Instead of the default slot configuration, the machine may
+    have definitions of slot types, where each type is provided with a
+    fraction of shared system resources. Given the slot type definition,
+    control how many of each type are reported at any given time with
+    further configuration.
+
+    Configuration variables define the slot types, as well as variables
+    that list how much of each system resource goes to each slot type.
+
+    Configuration variable :macro:`SLOT_TYPE_<N>`, where <N> is an integer (for
+    example, ``SLOT_TYPE_1``) defines the slot type. Note that there may be
+    multiple slots of each type. The number of slots created of a given type is
+    configured with :macro:`NUM_SLOTS_TYPE_<N>`.
+
+    The resources configured for the slot type can be defined by:
+
+    -  A simple fraction, such as 1/4
+    -  A simple percentage, such as 25%
+    -  A comma-separated list of attributes, with a percentage,
+       fraction, numerical value, or ``auto`` for each one.
+    -  A comma-separated list that includes a blanket value that serves
+       as a default for any resources not explicitly specified in the
+       list.
+
+    A simple fraction or percentage describes the allocation of the
+    total system resources, including the number of CPUS or cores. A
+    comma separated list allows a fine tuning of the amounts for
+    specific resources.
+
+    The number of CPUs and the total amount of RAM in the machine do not
+    change over time. For these attributes, specify either absolute
+    values or percentages of the total available amount (or ``auto``).
+    For example, in a machine with 128 Mbytes of RAM, all the following
+    definitions result in the same allocation amount.
+
+    .. code-block:: condor-config
+
+        SLOT_TYPE_1 = mem=64
+
+        SLOT_TYPE_1 = mem=1/2
+
+        SLOT_TYPE_1 = mem=50%
+
+        SLOT_TYPE_1 = mem=auto
+
+    Amounts of disk space and swap space are dynamic, as they change
+    over time. For these, specify a percentage or fraction of the total
+    value that is allocated to each slot, instead of specifying absolute
+    values. As the total values of these resources change on the
+    machine, each slot will take its fraction of the total and report
+    that as its available amount.
+
+    The disk space allocated to each slot is taken from the disk
+    partition containing the slot's :macro:`EXECUTE` or 
+    :macro:`SLOT<N>_EXECUTE` directory. If every slot is in a
+    different partition, then each one may be defined with up to
+    100% for its disk share. If some slots are in the same partition,
+    then their total is not allowed to exceed 100%.
+
+    The four predefined attribute names are case insensitive when
+    defining slot types. The first letter of the attribute name
+    distinguishes between these attributes. The four attributes, with
+    several examples of acceptable names for each:
+
+    -  Cpus, C, c, cpu
+    -  ram, RAM, MEMORY, memory, Mem, R, r, M, m
+    -  disk, Disk, D, d
+    -  swap, SWAP, S, s, VirtualMemory, V, v
+
+    As an example, consider a machine with 4 cores and 256 Mbytes of
+    RAM. Here are valid example slot type definitions. Types 1-3 are all
+    equivalent to each other, as are types 4-6. Note that in a real
+    configuration, all of these slot types would not be used together,
+    because they add up to more than 100% of the various system
+    resources. This configuration example also omits definitions of
+    :macro:`NUM_SLOTS_TYPE_<N>`, to define the number of each slot type.
+
+    .. code-block:: condor-config
+
+          SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
+
+          SLOT_TYPE_2 = cpus=1/2, memory=128, virt=25%, disk=50%
+
+          SLOT_TYPE_3 = c=1/2, m=50%, v=1/4, disk=1/2
+
+          SLOT_TYPE_4 = c=25%, m=64, v=1/4, d=25%
+
+          SLOT_TYPE_5 = 25%
+
+          SLOT_TYPE_6 = 1/4
+
+    The default value for each resource share is ``auto``. The share may
+    also be explicitly set to ``auto``. All slots with the value
+    ``auto`` for a given type of resource will evenly divide whatever
+    remains, after subtracting out explicitly allocated resources given
+    in other slot definitions. For example, if one slot is defined to
+    use 10% of the memory and the rest define it as ``auto`` (or leave
+    it undefined), then the rest of the slots will evenly divide 90% of
+    the memory between themselves.
+
+    In both of the following examples, the disk share is set to
+    ``auto``, number of cores is 1, and everything else is 50%:
+
+    .. code-block:: condor-config
+
+        SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
+
+        SLOT_TYPE_1 = cpus=1, disk=auto, 50%
+
+    Note that it is possible to set the configuration variables such
+    that they specify an impossible configuration. If this occurs, the
+    *condor_startd* daemon fails after writing a message to its log
+    attempting to indicate the configuration requirements that it could
+    not implement.
+
+    In addition to the standard resources of CPUs, memory, disk, and
+    swap, the administrator may also define custom resources on a
+    localized per-machine basis.
+    In addition to GPUs (see :ref:`admin-manual/ep-policy-configuration:Configuring GPUs`.)
+    the administrator can define other types of custom resources.
+
+    The resource names and quantities of available resources are defined
+    using configuration variables of the form
+    :macro:`MACHINE_RESOURCE_<name>`,
+    as shown in this example:
+
+    .. code-block:: condor-config
+
+        MACHINE_RESOURCE_Cogs = 16
+        MACHINE_RESOURCE_actuator = 8
+
+    If the configuration uses the optional configuration variable
+    :macro:`MACHINE_RESOURCE_NAMES` to
+    enable and disable local machine resources, also add the resource
+    names to this variable. For example:
+
+    .. code-block:: condor-config
+
+        if defined MACHINE_RESOURCE_NAMES
+          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) Cogs actuator
+        endif
+
+    Local machine resource names defined in this way may now be used in
+    conjunction with :macro:`SLOT_TYPE_<N>`,
+    using all the same syntax described earlier in this section. The
+    following example demonstrates the definition of static and
+    partitionable slot types with local machine resources:
+
+    .. code-block:: condor-config
+
+        # declare one partitionable slot with half of the Cogs, 6 actuators, and
+        # 50% of all other resources:
+        SLOT_TYPE_1 = cogs=50%,actuator=6,50%
+        SLOT_TYPE_1_PARTITIONABLE = TRUE
+        NUM_SLOTS_TYPE_1 = 1
+
+        # declare two static slots, each with 25% of the Cogs, 1 actuator, and
+        # 25% of all other resources:
+        SLOT_TYPE_2 = cogs=25%,actuator=1,25%
+        SLOT_TYPE_2_PARTITIONABLE = FALSE
+        NUM_SLOTS_TYPE_2 = 2
+
+    A job may request these local machine resources using the syntax
+    :subcom:`request_<name>[with partitionable slots]`
+    as described in :ref:`admin-manual/ep-policy-configuration:*condor_startd*
+    policy configuration`. This example shows a portion of a submit description
+    file that requests cogs and an actuator:
+
+    .. code-block:: condor-submit
+
+        universe = vanilla
+
+        # request two cogs and one actuator:
+        request_cogs = 2
+        request_actuator = 1
+
+        queue
+
+    The slot ClassAd will represent each local machine resource with the
+    following attributes:
+
+        ``Total<name>``: the total quantity of the resource identified
+        by ``<name>``
+        ``Detected<name>``: the quantity detected of the resource
+        identified by ``<name>``; this attribute is currently equivalent
+        to ``Total<name>``
+        ``TotalSlot<name>``: the quantity of the resource identified by
+        ``<name>`` allocated to this slot
+        ``<name>``: the amount of the resource identified by ``<name>``
+        available to be used on this slot
+
+    From the example given, the ``Cogs`` resource would be represented by
+    the ClassAd attributes ``TotalCogs``, ``DetectedCogs``,
+    ``TotalSlotCogs``, and ``Cogs``. In the job ClassAd, the amount of the
+    requested machine resource appears in a job ClassAd attribute named
+    ``Request<name>``. For this example, the two attributes will be
+    ``RequestCogs`` and ``RequestActuator``.
+
+    The number of each type and the
+    definitions for the types themselves cannot be changed with
+    reconfiguration. To change any slot type definitions, use
+    *condor_restart*
+
+    .. code-block:: console
+
+        $ condor_restart -startd
+
+    for that change to take effect.
+
+Configuration Specific to Multi-core Machines
+'''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`SMP machines<single: SMP machines; configuration>`
+:index:`multi-core machines<single: multi-core machines; configuration>`
+
+Each slot within a multi-core machine is treated as an independent
+machine, each with its own view of its state as represented by the
+machine ClassAd attribute ``State``. The policy expressions for the
+multi-core machine as a whole are propagated from the *condor_startd*
+to the slot's machine ClassAd. This policy may consider a slot state(s)
+in its expressions. This makes some policies easy to set, but it makes
+other policies difficult or impossible to set.
+
+An easy policy to set configures how many of the slots notice console or
+tty activity on the multi-core machine as a whole. Slots that are not
+configured to notice any activity will report ``ConsoleIdle`` and
+``KeyboardIdle`` times from when the *condor_startd* daemon was
+started, plus a configurable number of seconds. A multi-core machine
+with the default policy settings can add the keyboard and console to be
+noticed by only one slot. Assuming a reasonable load average, only the
+one slot will suspend or vacate its job when the owner starts typing at
+their machine again. The rest of the slots could be matched with jobs
+and continue running them, even while the user was interactively using
+the machine. If the default policy is used, all slots notice tty and
+console activity and currently running jobs would suspend.
+
+This example policy is controlled with the following configuration
+variables.
+
+-  :macro:`SLOTS_CONNECTED_TO_CONSOLE`, with definition at
+   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+   macros` section
+
+-  :macro:`SLOTS_CONNECTED_TO_KEYBOARD`, with definition at
+   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+   macros` section
+
+-  :macro:`DISCONNECTED_KEYBOARD_IDLE_BOOST`, with definition at
+   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+   macros` section
+
+Each slot has its own machine ClassAd. Yet, the policy expressions for
+the multi-core machine are propagated and inherited from configuration
+of the *condor_startd*. Therefore, the policy expressions for each slot
+are the same. This makes the implementation of certain types of policies
+impossible, because while evaluating the state of one slot within the
+multi-core machine, the state of other slots are not available.
+Decisions for one slot cannot be based on what other slots are doing.
+
+Specifically, the evaluation of a slot policy expression works in the
+following way.
+
+#. The configuration file specifies policy expressions that are shared
+   by all of the slots on the machine.
+#. Each slot reads the configuration file and sets up its own machine
+   ClassAd.
+#. Each slot is now separate from the others. It has a different ClassAd
+   attribute ``State``, a different machine ClassAd, and if there is a
+   job running, a separate job ClassAd. Each slot periodically evaluates
+   the policy expressions, changing its own state as necessary. This
+   occurs independently of the other slots on the machine. So, if the
+   *condor_startd* daemon is evaluating a policy expression on a
+   specific slot, and the policy expression refers to ``ProcID``,
+   ``Owner``, or any attribute from a job ClassAd, it always refers to
+   the ClassAd of the job running on the specific slot.
+
+To set a different policy for the slots within a machine, incorporate
+the slot-specific machine ClassAd attribute ``SlotID``. A :macro:`SUSPEND`
+policy that is different for each of the two slots will be of the form
+
+.. code-block:: condor-config
+
+    SUSPEND = ( (SlotID == 1) && (PolicyForSlot1) ) || \
+              ( (SlotID == 2) && (PolicyForSlot2) )
+
+where (PolicyForSlot1) and (PolicyForSlot2) are the desired expressions
+for each slot.
+
+Dynamic Provisioning: Partitionable and Dynamic Slots
+'''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`dynamic` :index:`dynamic<single: dynamic; slots>`
+:index:`subdividing slots<single: subdividing slots; slots>` :index:`dynamic slots`
+:index:`partitionable slots`
+
+Dynamic provisioning, also referred to as partitionable or dynamic
+slots, allows HTCondor to use the resources of a slot in a dynamic way;
+these slots may be partitioned. This means that more than one job can
+occupy a single slot at any one time. Slots have a fixed set of
+resources which include the cores, memory and disk space. By
+partitioning the slot, the use of these resources becomes more flexible.
+
+Here is an example that demonstrates how resources are divided as more
+than one job is or can be matched to a single slot. In this example,
+Slot1 is identified as a partitionable slot and has the following
+resources:
+
+.. code-block:: text
+
+    cpu = 10
+    memory = 10240
+    disk = BIG
+
+Assume that JobA is allocated to this slot. JobA includes the following
+requirements:
+
+.. code-block:: text
+
+    cpu = 3
+    memory = 1024
+    disk = 10240
+
+The portion of the slot that is carved out is now known as a dynamic
+slot. This dynamic slot has its own machine ClassAd, and its ``Name``
+attribute distinguishes itself as a dynamic slot with incorporating the
+substring ``Slot1_1``.
+
+After allocation, the partitionable Slot1 advertises that it has the
+following resources still available:
+
+.. code-block:: text
+
+    cpu = 7
+    memory = 9216
+    disk = BIG-10240
+
+As each new job is allocated to Slot1, it breaks into ``Slot1_1``,
+``Slot1_2``, ``Slot1_3`` etc., until the entire set of Slot1's available
+resources have been consumed by jobs.
+
+To enable dynamic provisioning, define a slot type. and declare at least
+one slot of that type. Then, identify that slot type as partitionable by
+setting configuration variable
+:macro:`SLOT_TYPE_<N>_PARTITIONABLE` to ``True``. The value of
+``<N>`` within the configuration variable name is the same value as in
+slot type definition configuration variable :macro:`SLOT_TYPE_<N>`. For the
+most common cases the machine should be configured for one slot,
+managing all the resources on the machine. To do so, set the following
+configuration variables:
+
+.. code-block:: text
+
+    NUM_SLOTS = 1
+    NUM_SLOTS_TYPE_1 = 1
+    SLOT_TYPE_1 = 100%
+    SLOT_TYPE_1_PARTITIONABLE = TRUE
+
+In a pool using dynamic provisioning, jobs can have extra, and desired,
+resources specified in the submit description file:
+
+.. code-block:: text
+
+    request_cpus
+    request_memory
+    request_disk (in kilobytes)
+
+This example shows a portion of the job submit description file for use
+when submitting a job to a pool with dynamic provisioning.
+
+.. code-block:: text
+
+    universe = vanilla
+
+    request_cpus = 3
+    request_memory = 1024
+    request_disk = 10240
+
+    queue
+
+Each partitionable slot will have the ClassAd attributes
+
+.. code-block:: text
+
+      PartitionableSlot = True
+      SlotType = "Partitionable"
+
+Each dynamic slot will have the ClassAd attributes
+
+.. code-block:: text
+
+      DynamicSlot = True
+      SlotType = "Dynamic"
+
+These attributes may be used in a :macro:`START` expression for the purposes
+of creating detailed policies.
+
+A partitionable slot will always appear as though it is not running a
+job. If matched jobs consume all its resources, the partitionable slot
+will eventually show as having no available resources; this will prevent
+further matching of new jobs. The dynamic slots will show as running
+jobs. The dynamic slots can be preempted in the same way as all other
+slots.
+
+Dynamic provisioning provides powerful configuration possibilities, and
+so should be used with care. Specifically, while preemption occurs for
+each individual dynamic slot, it cannot occur directly for the
+partitionable slot, or for groups of dynamic slots. For example, for a
+large number of jobs requiring 1GB of memory, a pool might be split up
+into 1GB dynamic slots. In this instance a job requiring 2GB of memory
+will be starved and unable to run. A partial solution to this problem is
+provided by defragmentation accomplished by the *condor_defrag* daemon,
+as discussed in
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
+:index:`partitionable slot preemption`
+:index:`pslot preemption`
+
+Another partial solution is a new matchmaking algorithm in the
+negotiator, referred to as partitionable slot preemption, or pslot
+preemption. Without pslot preemption, when the negotiator searches for a
+match for a job, it looks at each slot ClassAd individually. With pslot
+preemption, the negotiator looks at a partitionable slot and all of its
+dynamic slots as a group. If the partitionable slot does not have
+sufficient resources (memory, cpu, and disk) to be matched with the
+candidate job, then the negotiator looks at all of the related dynamic
+slots that the candidate job might preempt (following the normal
+preemption rules described elsewhere). The resources of each dynamic
+slot are added to those of the partitionable slot, one dynamic slot at a
+time. Once this partial sum of resources is sufficient to enable a
+match, the negotiator sends the match information to the
+*condor_schedd*. When the *condor_schedd* claims the partitionable
+slot, the dynamic slots are preempted, such that their resources are
+returned to the partitionable slot for use by the new job.
+
+To enable pslot preemption, the following configuration variable must be
+set for the *condor_negotiator*:
+
+.. code-block:: text
+
+      ALLOW_PSLOT_PREEMPTION = True
+
+When the negotiator examines the resources of dynamic slots, it sorts
+the slots by their ``CurrentRank`` attribute, such that slots with lower
+values are considered first. The negotiator only examines the cpu,
+memory and disk resources of the dynamic slots; custom resources are
+ignored.
+
+Dynamic slots that have retirement time remaining are not considered
+eligible for preemption, regardless of how configuration variable
+:macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION` is set.
+
+When pslot preemption is enabled, the negotiator will not preempt
+dynamic slots directly. It will preempt them only as part of a match to
+a partitionable slot.
+
+When multiple partitionable slots match a candidate job and the various
+job rank expressions are evaluated to sort the matching slots, the
+ClassAd of the partitionable slot is used for evaluation. This may cause
+unexpected results for some expressions, as attributes such as
+``RemoteOwner`` will not be present in a partitionable slot that matches
+with preemption of some of its dynamic slots.
+
+Defaults for Partitionable Slot Sizes
+'''''''''''''''''''''''''''''''''''''
+
+If a job does not specify the required number of CPUs, amount of memory,
+or disk space, there are ways for the administrator to set default
+values for all of these parameters.
+
+First, if any of these attributes are not set in the submit description
+file, there are three variables in the configuration file that
+condor_submit will use to fill in default values. These are
+
+-  :macro:`JOB_DEFAULT_REQUESTCPUS`
+-  :macro:`JOB_DEFAULT_REQUESTMEMORY`
+-  :macro:`JOB_DEFAULT_REQUESTDISK`
+
+The value of these variables can be ClassAd expressions. The default
+values for these variables, should they not be set are
+
+.. code-block:: condor-config
+
+    JOB_DEFAULT_REQUESTCPUS = 1
+    JOB_DEFAULT_REQUESTMEMORY = \
+        ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)
+    JOB_DEFAULT_REQUESTDISK = DiskUsage
+
+Note that these default values are chosen such that jobs matched to
+partitionable slots function similar to static slots.
+These variables do not apply to **batch** grid universe jobs.
+
+Once the job has been matched, and has made it to the execute machine,
+the *condor_startd* has the ability to modify these resource requests
+before using them to size the actual dynamic slots carved out of the
+partitionable slot. Clearly, for the job to work, the *condor_startd*
+daemon must create slots with at least as many resources as the job
+needs. However, it may be valuable to create dynamic slots somewhat
+bigger than the job's request, as subsequent jobs may be more likely to
+reuse the newly created slot when the initial job is done using it.
+
+The *condor_startd* configuration variables which control this and
+their defaults are
+
+- :macro:`MODIFY_REQUEST_EXPR_REQUESTCPUS` = quantize(RequestCpus, {1})
+- :macro:`MODIFY_REQUEST_EXPR_REQUESTMEMORY` = quantize(RequestMemory, {128})
+- :macro:`MODIFY_REQUEST_EXPR_REQUESTDISK` = quantize(RequestDisk, {1024})
+
+Per Job PID Namespaces
+''''''''''''''''''''''
+
+:index:`per job<single: per job; PID namespaces>`
+:index:`per job PID namespaces<single: per job PID namespaces; namespaces>`
+:index:`per job PID namespaces<single: per job PID namespaces; Linux kernel>`
+
+Per job PID namespaces provide enhanced isolation of one process tree
+from another through kernel level process ID namespaces. HTCondor may
+enable the use of per job PID namespaces for Linux RHEL 6, Debian 6, and
+more recent kernels.
+
+Read about per job PID namespaces
+`http://lwn.net/Articles/531419/ <http://lwn.net/Articles/531419/>`_.
+
+The needed isolation of jobs from the same user that execute on the same
+machine as each other is already provided by the implementation of slot
+users as described in
+:ref:`admin-manual/security:user accounts in htcondor on unix platforms`. This
+is the recommended way to implement the prevention of interference between more
+than one job submitted by a single user. However, the use of a shared
+file system by slot users presents issues in the ownership of files
+written by the jobs.
+
+The per job PID namespace provides a way to handle the ownership of
+files produced by jobs within a shared file system. It also isolates the
+processes of a job within its PID namespace. As a side effect and
+benefit, the clean up of processes for a job within a PID namespace is
+enhanced. When the process with PID = 1 is killed, the operating system
+takes care of killing all child processes.
+
+To enable the use of per job PID namespaces, set the configuration to
+include
+
+.. code-block:: text
+
+      USE_PID_NAMESPACES = True
+
+This configuration variable defaults to ``False``, thus the use of per
+job PID namespaces is disabled by default.
+
+Group ID-Based Process Tracking
+'''''''''''''''''''''''''''''''
+
+One function that HTCondor often must perform is keeping track of all
+processes created by a job. This is done so that HTCondor can provide
+resource usage statistics about jobs, and also so that HTCondor can
+properly clean up any processes that jobs leave behind when they exit.
+
+.. note::
+
+   Group ID based process tracking has generally been replaced by
+   cgroup based tracking, which is more powerful and more general,
+   and requires less setup.  Group ID based process tracking may
+   be removed from HTCondor in the future.
+
+
+In general, tracking process families is difficult to do reliably. By
+default HTCondor uses a combination of process parent-child
+relationships, process groups, and information that HTCondor places in a
+job's environment to track process families on a best-effort basis. This
+usually works well, but it can falter for certain applications or for
+jobs that try to evade detection.
+
+Jobs that run with a user account dedicated for HTCondor's use can be
+reliably tracked, since all HTCondor needs to do is look for all
+processes running using the given account. Administrators must specify
+in HTCondor's configuration what accounts can be considered dedicated
+via the :macro:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` setting. See
+:ref:`admin-manual/security:user accounts in htcondor on unix platforms` for
+further details.
+
+Ideally, jobs can be reliably tracked regardless of the user account
+they execute under. This can be accomplished with group ID-based
+tracking. This method of tracking requires that a range of dedicated
+group IDs (GID) be set aside for HTCondor's use. The number of GIDs that
+must be set aside for an execute machine is equal to its number of
+execution slots. GID-based tracking is only available on Linux, and it
+requires that HTCondor daemons run as root.
+
+GID-based tracking works by placing a dedicated GID in the supplementary
+group list of a job's initial process. Since modifying the supplementary
+group ID list requires root privilege, the job will not be able to
+create processes that go unnoticed by HTCondor.
+
+Once a suitable GID range has been set aside for process tracking,
+GID-based tracking can be enabled via the
+:macro:`USE_GID_PROCESS_TRACKING` parameter. The minimum and
+maximum GIDs included in the range are specified with the
+:macro:`MIN_TRACKING_GID` and :macro:`MAX_TRACKING_GID` settings. For
+example, the following would enable GID-based tracking for an execute
+machine with 8 slots.
+
+.. code-block:: text
+
+    USE_GID_PROCESS_TRACKING = True
+    MIN_TRACKING_GID = 750
+    MAX_TRACKING_GID = 757
+
+If the defined range is too small, such that there is not a GID
+available when starting a job, then the *condor_starter* will fail as
+it tries to start the job. An error message will be logged stating that
+there are no more tracking GIDs.
+
+GID-based process tracking requires use of the *condor_procd*. If
+:macro:`USE_GID_PROCESS_TRACKING` is true, the *condor_procd* will be used
+regardless of the :macro:`USE_PROCD` setting.
+Changes to :macro:`MIN_TRACKING_GID` and :macro:`MAX_TRACKING_GID` require a full
+restart of HTCondor.
+
+.. _resource_limits_with_cgroups:
+
+Cgroup-Based Process Tracking
+'''''''''''''''''''''''''''''
+
+:index:`cgroup based process tracking`
+
+A new feature in Linux version 2.6.24 allows HTCondor to more accurately
+and safely manage jobs composed of sets of processes. This Linux feature
+is called Control Groups, or cgroups for short, and it is available
+starting with RHEL 6, Debian 6, and related distributions. Documentation
+about Linux kernel support for cgroups can be found in the Documentation
+directory in the kernel source code distribution. Another good reference
+is
+`http://docs.redhat.com/docs/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/index.html <http://docs.redhat.com/docs/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/index.html>`_
+
+The interface between the kernel cgroup functionality is via a (virtual)
+file system, usually mounted at ``/sys/fs/cgroup``.
+
+If your Linux distribution uses *systemd*, it will mount the cgroup file
+system, and the only remaining item is to set configuration variable
+:macro:`BASE_CGROUP`, as described below.
+
+When cgroups are correctly configured and running, the virtual file
+system mounted on ``/sys/fs/cgroup`` should have several subdirectories under
+it, and there should an ``htcondor`` subdirectory under the directory
+``/sys/fs/cgroup/cpu``, ``/sys/fs/cgroup/memory`` and some others.
+
+The *condor_starter* daemon uses cgroups by default on Linux systems to
+accurately track all the processes started by a job, even when
+quickly-exiting parent processes spawn many child processes. As with the
+GID-based tracking, this is only implemented when a *condor_procd*
+daemon is running.
+
+Kernel cgroups are named in a virtual file system hierarchy. HTCondor
+will put each running job on the execute node in a distinct cgroup. The
+name of this cgroup is the name of the execute directory for that
+*condor_starter*, with slashes replaced by underscores, followed by the
+name and number of the slot. So, for the memory controller, a job
+running on slot1 would have its cgroup located at
+``/sys/fs/cgroup/memory/htcondor/condor_var_lib_condor_execute_slot1/``. The
+``tasks`` file in this directory will contain a list of all the
+processes in this cgroup, and many other files in this directory have
+useful information about resource usage of this cgroup. See the kernel
+documentation for full details.
+
+Once cgroup-based tracking is configured, usage should be invisible to
+the user and administrator. The *condor_procd* log, as defined by
+configuration variable :macro:`PROCD_LOG`, will mention that it is using this
+method, but no user visible changes should occur, other than the
+impossibility of a quickly-forking process escaping from the control of
+the *condor_starter*, and the more accurate reporting of memory usage.
+
+A cgroup-enabled HTCondor will install and handle a per-job (not per-process)
+Linux Out of Memory killer (OOM-Killer).  When a job exceeds the memory
+provisioned by the *condor_startd*, the Linux kernel will send an OOM
+message to the *condor_starter*, and HTCondor will evict the job, and
+put it on hold.  Sometimes, even when the job's memory usage is below
+the provisioned amount, if other, non-HTCondor processes, on the system
+are using too much memory, the linux kernel may choose to OOM-kill the
+job.  In this case, HTCondor will log a message and evict the job, mark
+it as idle, so it can start again somewhere else.
+
+Limiting Resource Usage Using Cgroups
+'''''''''''''''''''''''''''''''''''''
+
+:index:`resource limits with cgroups`
+:index:`on resource usage with cgroup<single: on resource usage with cgroup; limits>`
+:index:`resource limits<single: resource limits; cgroups>`
+
+While the method described to limit a job's resource usage is portable,
+and it should run on any Linux or BSD or Unix system, it suffers from
+one large flaw. The flaw is that resource limits imposed are per
+process, not per job. An HTCondor job is often composed of many Unix
+processes. If the method of limiting resource usage with a user job
+wrapper is used to impose a 2 Gigabyte memory limit, that limit applies
+to each process in the job individually. If a job created 100 processes,
+each using just under 2 Gigabytes, the job would continue without the
+resource limits kicking in. Clearly, this is not what the machine owner
+intends. Moreover, the memory limit only applies to the virtual memory
+size, not the physical memory size, or the resident set size. This can
+be a problem for jobs that use the ``mmap`` system call to map in a
+large chunk of virtual memory, but only need a small amount of memory at
+one time. Typically, the resource the administrator would like to
+control is physical memory, because when that is in short supply, the
+machine starts paging, and can become unresponsive very quickly.
+
+The *condor_starter* can, using the Linux cgroup capability, apply
+resource limits collectively to sets of jobs, and apply limits to the
+physical memory used by a set of processes. The main downside of this
+technique is that it is only available on relatively new Unix
+distributions such as RHEL 6 and Debian 6. This technique also may
+require editing of system configuration files.
+
+To enable cgroup-based limits, first ensure that cgroup-based tracking
+is enabled, as it is by default on supported systems, as described in
+section  `3.14.13 <#x42-3790003.14.13>`_. Once set, the
+*condor_starter* will create a cgroup for each job, and set
+attributes in that cgroup to control memory and cpu usage. These
+attributes are the cpu.shares attribute in the cpu controller, and
+two attributes in the memory controller, both
+memory.limit_in_bytes, and memory.soft_limit_in_bytes. The
+configuration variable :macro:`CGROUP_MEMORY_LIMIT_POLICY` controls this.
+If :macro:`CGROUP_MEMORY_LIMIT_POLICY` is set to the string ``hard``, the hard
+limit will be set to the slot size, and the soft limit to 90% of the
+slot size.. If set to ``soft``, the soft limit will be set to the slot
+size and the hard limit will be set to the memory size of the whole startd.
+By default, this whole size is the detected memory the size, minus
+RESERVED_MEMORY.  Or, if :macro:`MEMORY` is defined, that value is used..
+
+No limits will be set if the value is ``none``. The default is
+``none``. If the hard limit is in force, then the total amount of
+physical memory used by the sum of all processes in this job will not be
+allowed to exceed the limit. If the process goes above the hard
+limit, the job will be put on hold.
+
+The memory size used in both cases is the machine ClassAd
+attribute ``Memory``. Note that ``Memory`` is a static amount when using
+static slots, but it is dynamic when partitionable slots are used. That
+is, the limit is whatever the "Mem" column of condor_status reports for
+that slot.
+
+If :macro:`CGROUP_MEMORY_LIMIT_POLICY` is set, HTCondor will also also use
+cgroups to limit the amount of swap space used by each job. By default,
+the maximum amount of swap space used by each slot is the total amount
+of Virtual Memory in the slot, minus the amount of physical memory. Note
+that HTCondor measures virtual memory in kbytes, and physical memory in
+megabytes. To prevent jobs with high memory usage from thrashing and
+excessive paging, and force HTCondor to put them on hold instead, you
+can tell condor that a job should never use swap, by setting
+:macro:`DISABLE_SWAP_FOR_JOB` to true (the default is false).
+
+In addition to memory, the *condor_starter* can also control the total
+amount of CPU used by all processes within a job. To do this, it writes
+a value to the cpu.shares attribute of the cgroup cpu controller. The
+value it writes is copied from the ``Cpus`` attribute of the machine
+slot ClassAd multiplied by 100. Again, like the ``Memory`` attribute,
+this value is fixed for static slots, but dynamic under partitionable
+slots. This tells the operating system to assign cpu usage
+proportionally to the number of cpus in the slot. Unlike memory, there
+is no concept of ``soft`` or ``hard``, so this limit only applies when
+there is contention for the cpu. That is, on an eight core machine, with
+only a single, one-core slot running, and otherwise idle, the job
+running in the one slot could consume all eight cpus concurrently with
+this limit in play, if it is the only thing running. If, however, all
+eight slots where running jobs, with each configured for one cpu, the
+cpu usage would be assigned equally to each job, regardless of the
+number of processes or threads in each job.
+
+
+Startd Disk Enforcement With Per Job Scratch Filesystems
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`DISK usage`
+:index:`per job scratch filesystem`
+
+.. warning::
+   The per job filesystem feature is a work in progress and not currently supported.
+
+
+On Linux systems, when HTCondor is started as root, it optionally has the ability to create
+a custom filesystem for the job's scratch directory. This allows HTCondor to prevent the job
+from using more scratch space than provisioned. HTCondor manages this per scratch directory
+filesystem usage with the LVM disk management system.
+
+.. code-block:: condor-config
+
+    THINPOOL_VOLUME_GROUP_NAME = vgname
+    THINPOOL_NAME = htcondor
+    STARTD_ENFORCE_DISK_LIMITS = true
+
+
+#. :macro:`THINPOOL_VOLUME_GROUP_NAME` is the name of an existing LVM volume group for
+   HTCondor to utilize. This volume group should contain enough disk space to provision
+   scratch directories for all running jobs on the worker node.
+#. :macro:`THINPOOL_NAME` is the name of an existing thinly provisioned logical volume
+   for the Startd to utilize. This will act as the total pool of available disk space
+   that per job scratch filesystems and logical volumes will be carved from.
+#. :macro:`STARTD_ENFORCE_DISK_LIMITS` is a boolean to enable per job scratch directory
+   enforcement.
+
+This feature will enable better handling of jobs that utilize more than the disk space
+than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
+created for it, the starter will put the job on hold with the out of resources hold code (34).
+Otherwise, in a full filesystem, writes will fail with ENOSPC, and leave it up to the job
+to handle these errors inernally at all places writed occur. Even in included third party
+libraries.
+
+.. note::
+    The ephemeral filesystem created for the job is private to that job so the contents of
+    the filesystem are not visable outside the process hierarchy. The nsenter command can
+    be used to enter this namespace in order inspect the job's sandbox.
+
+.. note::
+    As this filesystem will never live through a system reboot, it is mounted with mount options
+    that optimize for performance, not reliability, and may improve performance for I/O heavy
+    jobs.
+
+
+
+*condor_startd* Policy Configuration
+------------------------------------
+
+:index:`condor_startd policy<single: condor_startd policy; configuration>`
+:index:`of machines, to implement a given policy<single: of machines, to implement a given policy; configuration>`
+:index:`configuration<single: configuration; startd>`
+
+This section describes the configuration of machines, via the *condor_startd*
+daemon, and policies to start, suspend, resume, vacate or to kill jobs. These
+polices are at the heart of HTCondor's balancing act between the needs and
+wishes of resource owners (machine owners) and resource users (people
+submitting their jobs to HTCondor).  Understanding the configuration requires
+an understanding of ClassAd expressions, which are detailed in the
+:doc:`/classads/classad-mechanism` section.
+
+The START Expression
+''''''''''''''''''''
 
 The most important expression to the *condor_startd* is the
 :macro:`START` expression. This expression describes the
@@ -67,16 +992,22 @@ conditions that must be met for a machine or slot to run a job. This
 expression can reference attributes in the machine's ClassAd (such as
 ``KeyboardIdle`` and ``LoadAvg``) and attributes in a job ClassAd (such
 as ``Owner``, ``Imagesize``, and ``Cmd``, the name of the executable the
-job will run). The value of the ``START`` expression plays a crucial
+job will run). The value of the :macro:`START` expression plays a crucial
 role in determining the state and activity of a machine.
+
+.. note::
+    Configuration templates make it easier to implement certain
+    policies; see information on policy templates here:
+    :ref:`admin-manual/introduction-to-configuration:available configuration templates`.
+
 
 The ``Requirements`` expression is used for matching machines with jobs.
 
 In situations where a machine wants to make itself unavailable for
 further matches, the ``Requirements`` expression is set to ``False``.
-When the ``START`` expression locally evaluates to ``True``, the machine
+When the :macro:`START` expression locally evaluates to ``True``, the machine
 advertises the ``Requirements`` expression as ``True`` and does not
-publish the ``START`` expression.
+publish the :macro:`START` expression.
 
 Normally, the expressions in the machine ClassAd are evaluated against
 certain request ClassAds in the *condor_negotiator* to see if there is
@@ -86,26 +1017,26 @@ evaluates the expression against its own ClassAd. If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ClassAd, such as ``Owner`` or
 ``Imagesize``), the expression is (usually) undefined. See
-theh :doc:`/classads/classad-mechanism` section for specifics on
+the :doc:`/classads/classad-mechanism` section for specifics on
 how undefined terms are handled in ClassAd expression evaluation.
 
-A note of caution is in order when modifying the ``START`` expression to
+A note of caution is in order when modifying the :macro:`START` expression to
 reference job ClassAd attributes. When using the ``POLICY : Desktop``
-configuration template, the ``IS_OWNER`` expression is a function of the
-``START`` expression:
+configuration template, the :macro:`IS_OWNER` expression is a function of the
+:macro:`START` expression:
 
 .. code-block:: condor-classad-expr
 
     START =?= FALSE
 
-See a detailed discussion of the ``IS_OWNER`` expression in
+See a detailed discussion of the :macro:`IS_OWNER` expression in
 :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
-However, the machine locally evaluates the ``IS_OWNER`` expression to determine
+However, the machine locally evaluates the :macro:`IS_OWNER` expression to determine
 if it is capable of running jobs for HTCondor. Any job ClassAd attributes
-appearing in the ``START`` expression, and hence in the ``IS_OWNER`` expression,
+appearing in the :macro:`START` expression, and hence in the :macro:`IS_OWNER` expression,
 are undefined in this context, and may lead to unexpected behavior. Whenever
-the ``START`` expression is modified to reference job ClassAd
-attributes, the ``IS_OWNER`` expression should also be modified to
+the :macro:`START` expression is modified to reference job ClassAd
+attributes, the :macro:`IS_OWNER` expression should also be modified to
 reference only machine ClassAd attributes.
 
 .. note::
@@ -129,11 +1060,11 @@ machine user probably would not notice that HTCondor was running the
 jobs, assuming you had enough free memory for the HTCondor jobs such
 that there was little swapping.
 
-The ``RANK`` Expression
-'''''''''''''''''''''''
+The RANK Expression
+'''''''''''''''''''
 
 A machine may be configured to prefer certain jobs over others using the
-``RANK`` expression. It is an expression, like any other in a machine
+:macro:`RANK` expression. It is an expression, like any other in a machine
 ClassAd. It can reference any attribute found in either the machine
 ClassAd or a job ClassAd. The most common use of this expression is
 likely to configure a machine to prefer to run jobs from the owner of
@@ -148,7 +1079,7 @@ Assume that there is a large HTCondor pool in the department, and this
 small research group has spent a lot of money on really fast machines
 for the group. As part of the larger pool, but to implement a policy
 that gives priority on the fast machines to anyone in the small research
-group, set the ``RANK`` expression on the machines to reference the
+group, set the :macro:`RANK` expression on the machines to reference the
 ``Owner`` attribute and prefer requests where that attribute matches one
 of the people in the group as in
 
@@ -157,14 +1088,14 @@ of the people in the group as in
     RANK = Owner == "coltrane" || Owner == "tyner" \
         || Owner == "garrison" || Owner == "jones"
 
-The ``RANK`` expression is evaluated as a floating point number.
+The :macro:`RANK` expression is evaluated as a floating point number.
 However, like in C, boolean expressions evaluate to either 1 or 0
 depending on if they are ``True`` or ``False``. So, if this expression
 evaluated to 1, because the remote job was owned by one of the preferred
 users, it would be a larger value than any other user for whom the
 expression would evaluate to 0.
 
-A more complex ``RANK`` expression has the same basic set up, where
+A more complex :macro:`RANK` expression has the same basic set up, where
 anyone from the group has priority on their fast machines. Its
 difference is that the machine owner has better priority on their own
 machine. To set this up for Garrison's machine (``bass``), place the
@@ -180,20 +1111,20 @@ Note that the parentheses in this expression are important, because the
 
 The use of ``+`` instead of ``||`` allows us to distinguish which terms
 matched and which ones did not. If anyone not in the research group
-quartet was running a job on the machine called ``bass``, the ``RANK``
+quartet was running a job on the machine called ``bass``, the :macro:`RANK`
 would evaluate numerically to 0, since none of the boolean terms
 evaluates to 1, and 0+0+0+0 still equals 0.
 
 Suppose Elvin Jones submits a job. His job would match the ``bass``
-machine, assuming ``START`` evaluated to ``True`` for him at that time.
-The ``RANK`` would numerically evaluate to 1. Therefore, the Elvin Jones
+machine, assuming :macro:`START` evaluated to ``True`` for him at that time.
+The :macro:`RANK` would numerically evaluate to 1. Therefore, the Elvin Jones
 job could preempt the HTCondor job currently running. Further assume
-that later Jimmy Garrison submits a job. The ``RANK`` evaluates to 10 on
+that later Jimmy Garrison submits a job. The :macro:`RANK` evaluates to 10 on
 machine ``bass``, since the boolean that matches gets multiplied by 10.
 Due to this, Jimmy Garrison's job could preempt Elvin Jones' job on the
 ``bass`` machine where Jimmy Garrison's jobs are preferred.
 
-The ``RANK`` expression is not required to reference the ``Owner`` of
+The :macro:`RANK` expression is not required to reference the ``Owner`` of
 the jobs. Perhaps there is one machine with an enormous amount of
 memory, and others with not much at all. Perhaps configure this
 large-memory machine to prefer to run jobs with larger memory
@@ -206,15 +1137,15 @@ requirements:
 That's all there is to it. The bigger the job, the more this machine
 wants to run it. It is an altruistic preference, always servicing the
 largest of jobs, no matter who submitted them. A little less altruistic
-is the ``RANK`` on Coltrane's machine that prefers John Coltrane's jobs
+is the :macro:`RANK` on Coltrane's machine that prefers John Coltrane's jobs
 over those with the largest ``Imagesize``:
 
 .. code-block:: condor-config
 
     RANK = (Owner == "coltrane" * 1000000000000) + Imagesize
 
-This ``RANK`` does not work if a job is submitted with an image size of
-more 10\ :sup:`12` Kbytes. However, with that size, this ``RANK``
+This :macro:`RANK` does not work if a job is submitted with an image size of
+more 10\ :sup:`12` Kbytes. However, with that size, this :macro:`RANK`
 expression preferring that job would not be HTCondor's only problem!
 
 Machine States
@@ -301,7 +1232,7 @@ is described below.
 
     A
        The machine switches from Owner to Unclaimed whenever the
-       ``START`` expression no longer locally evaluates to FALSE. This
+       :macro:`START` expression no longer locally evaluates to FALSE. This
        indicates that the machine is potentially available to run an
        HTCondor job.
     N
@@ -313,7 +1244,7 @@ is described below.
 
     B
        The machine switches from Unclaimed back to Owner whenever the
-       ``START`` expression locally evaluates to FALSE. This indicates
+       :macro:`START` expression locally evaluates to FALSE. This indicates
        that the machine is unavailable to run an HTCondor job and is in
        use by the resource owner.
     C
@@ -330,7 +1261,7 @@ is described below.
        The transition from Unclaimed to Backfill happens if the machine
        is configured to run backfill computations (see
        the :doc:`/admin-manual/setting-up-special-environments` section)
-       and the ``START_BACKFILL`` expression evaluates to TRUE.
+       and the :macro:`START_BACKFILL` expression evaluates to TRUE.
     P
        The transition from Unclaimed to Drained happens if draining of
        the machine is initiated, for example by *condor_drain* or by
@@ -339,14 +1270,14 @@ is described below.
 - Transitions out of the Matched state
 
     F
-       The machine moves from Matched to Owner if either the ``START``
+       The machine moves from Matched to Owner if either the :macro:`START`
        expression locally evaluates to FALSE, or if the
        :macro:`MATCH_TIMEOUT` timer expires.
        This timeout is used to ensure that if a machine is matched with
        a given *condor_schedd*, but that *condor_schedd* does not
        contact the *condor_startd* to claim it, that the machine will
        give up on the match and become available to be matched again. In
-       this case, since the ``START`` expression does not locally
+       this case, since the :macro:`START` expression does not locally
        evaluate to FALSE, as soon as transition **F** is complete, the
        machine will immediately enter the Unclaimed state again (via
        transition **A**). The machine might also go from Matched to
@@ -384,8 +1315,8 @@ is described below.
        resource was matched to a job with a better priority.
     J
        The resource will move from Preempting to Owner if the
-       ``PREEMPT`` expression had evaluated to TRUE, if *condor_vacate*
-       was used, or if the ``START`` expression locally evaluates to
+       :macro:`PREEMPT` expression had evaluated to TRUE, if *condor_vacate*
+       was used, or if the :macro:`START` expression locally evaluates to
        FALSE when the *condor_startd* has finished evicting whatever
        job it was running when it entered the Preempting state.
 
@@ -443,7 +1374,7 @@ The job's ClassAd attribute ``JobLeaseDuration`` is checked. If the
 value of ``JobLeaseDuration/3`` is less than the current alive interval,
 then the alive interval is set to either this lower value or the imposed
 lowest limit on the alive interval of 10 seconds. Thus, the alive
-interval starts at ``ALIVE_INTERVAL`` and goes down, never up.
+interval starts at :macro:`ALIVE_INTERVAL` and goes down, never up.
 
 If a claim lease expires, the *condor_startd* will drop the claim. The
 length of the claim lease is the job's ClassAd attribute
@@ -577,7 +1508,7 @@ transition numbers referred to in this manual will be **bold**.
 :index:`activities and state figure`
 
 .. mermaid::
-   :caption: States and Activites of the condor_startd
+   :caption: States and Activities of the condor_startd
    :align: center
 
    flowchart TD
@@ -668,24 +1599,24 @@ Owner State
 When the startd is first spawned, the machine it represents enters the
 Owner state. The machine remains in the Owner state while the expression
 :macro:`IS_OWNER` evaluates to TRUE. If the
-``IS_OWNER`` expression evaluates to FALSE, then the machine transitions
-to the Unclaimed state. The default value of ``IS_OWNER`` is FALSE,
+:macro:`IS_OWNER` expression evaluates to FALSE, then the machine transitions
+to the Unclaimed state. The default value of :macro:`IS_OWNER` is FALSE,
 which is intended for dedicated resources. But when the
-``POLICY : Desktop`` configuration template is used, the ``IS_OWNER``
+``POLICY : Desktop`` configuration template is used, the :macro:`IS_OWNER`
 expression is optimized for a shared resource
 
 .. code-block:: condor-classad-expr
 
     START =?= FALSE
 
-So, the machine will remain in the Owner state as long as the ``START``
+So, the machine will remain in the Owner state as long as the :macro:`START`
 expression locally evaluates to FALSE.
 The :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 section provides more detail on the
-``START`` expression. If the ``START`` locally evaluates to TRUE or
+:macro:`START` expression. If the :macro:`START` locally evaluates to TRUE or
 cannot be locally evaluated (it evaluates to UNDEFINED), transition
 **1** occurs and the machine enters the Unclaimed state. The
-``IS_OWNER`` expression is locally evaluated by the machine, and should
+:macro:`IS_OWNER` expression is locally evaluated by the machine, and should
 not reference job ClassAd attributes, which would be UNDEFINED.
 
 The Owner state represents a resource that is in use by its interactive
@@ -694,17 +1625,17 @@ represents a resource that is neither in use by its interactive user,
 nor the HTCondor system. From HTCondor's point of view, there is little
 difference between the Owner and Unclaimed states. In both cases, the
 resource is not currently in use by the HTCondor system. However, if a
-job matches the resource's ``START`` expression, the resource is
+job matches the resource's :macro:`START` expression, the resource is
 available to run a job, regardless of if it is in the Owner or Unclaimed
 state. The only differences between the two states are how the resource
 shows up in *condor_status* and other reporting tools, and the fact
 that HTCondor will not run benchmarking on a resource in the Owner
-state. As long as the ``IS_OWNER`` expression is TRUE, the machine is in
-the Owner State. When the ``IS_OWNER`` expression is FALSE, the machine
+state. As long as the :macro:`IS_OWNER` expression is TRUE, the machine is in
+the Owner State. When the :macro:`IS_OWNER` expression is FALSE, the machine
 goes into the Unclaimed State.
 
 Here is an example that assumes that the ``POLICY : Desktop``
-configuration template is in use. If the ``START`` expression is
+configuration template is in use. If the :macro:`START` expression is
 
 .. code-block:: condor-config
 
@@ -713,7 +1644,7 @@ configuration template is in use. If the ``START`` expression is
 and if ``KeyboardIdle`` is 34 seconds, then the machine would remain in
 the Owner state. Owner is undefined, and anything && FALSE is FALSE.
 
-If, however, the ``START`` expression is
+If, however, the :macro:`START` expression is
 
 .. code-block:: condor-config
 
@@ -734,18 +1665,18 @@ minimizes the impact on the Owner while the Owner is using the machine.
 Frequently waking up, computing load averages, checking the access times
 on files, computing free swap space take time, and there is nothing time
 critical that the startd needs to be sure to notice as soon as it
-happens. If the ``START`` expression evaluates to TRUE and five minutes
+happens. If the :macro:`START` expression evaluates to TRUE and five minutes
 pass before the startd notices, that's a drop in the bucket of
 high-throughput computing.
 
 The machine can only transition to the Unclaimed state from the Owner
-state. It does so when the ``IS_OWNER`` expression no longer evaluates
+state. It does so when the :macro:`IS_OWNER` expression no longer evaluates
 to TRUE. With the ``POLICY : Desktop`` configuration template, that
-happens when ``START`` no longer locally evaluates to FALSE.
+happens when :macro:`START` no longer locally evaluates to FALSE.
 
 Whenever the machine is not actively running a job, it will transition
-back to the Owner state if ``IS_OWNER`` evaluates to TRUE. Once a job is
-started, the value of ``IS_OWNER`` does not matter; the job either runs
+back to the Owner state if :macro:`IS_OWNER` evaluates to TRUE. Once a job is
+started, the value of :macro:`IS_OWNER` does not matter; the job either runs
 to completion or is preempted. Therefore, you must configure the
 preemption policy if you want to transition back to the Owner state from
 Claimed Busy.
@@ -759,23 +1690,23 @@ Unclaimed State
 :index:`Unclaimed<single: Unclaimed; machine state>`
 :index:`unclaimed state`
 
-If the ``IS_OWNER`` expression becomes TRUE, then the machine returns to
-the Owner state. If the ``IS_OWNER`` expression becomes FALSE, then the
+If the :macro:`IS_OWNER` expression becomes TRUE, then the machine returns to
+the Owner state. If the :macro:`IS_OWNER` expression becomes FALSE, then the
 machine remains in the Unclaimed state. The default value of
-``IS_OWNER`` is FALSE (never enter Owner state). If the
+:macro:`IS_OWNER` is FALSE (never enter Owner state). If the
 ``POLICY : Desktop`` configuration template is used, then the
-``IS_OWNER`` expression is changed to
+:macro:`IS_OWNER` expression is changed to
 
 .. code-block:: condor-config
 
     START =?= FALSE
 
-so that while in the Unclaimed state, if the ``START`` expression
+so that while in the Unclaimed state, if the :macro:`START` expression
 locally evaluates to FALSE, the machine returns to the Owner state by
 transition **2**.
 
 When in the Unclaimed state, the :macro:`RUNBENCHMARKS` expression is relevant.
-If ``RUNBENCHMARKS`` evaluates to TRUE while the machine is in the
+If :macro:`RUNBENCHMARKS` evaluates to TRUE while the machine is in the
 Unclaimed state, then the machine will transition from the Idle activity
 to the Benchmarking activity (transition **3**) and perform benchmarks
 to determine ``MIPS`` and ``KFLOPS``. When the benchmarks complete, the
@@ -802,10 +1733,10 @@ run them more than once in its lifetime.
     using ``LastBenchmark`` as in the example above.
 
 .. note::
-    If ``RUNBENCHMARKS`` is defined and set to something other than
+    If :macro:`RUNBENCHMARKS` is defined and set to something other than
     FALSE, the startd will automatically run one set of benchmarks when it
     first starts up. To disable benchmarks, both at startup and at any time
-    thereafter, set ``RUNBENCHMARKS`` to FALSE or comment it out of the
+    thereafter, set :macro:`RUNBENCHMARKS` to FALSE or comment it out of the
     configuration file.
 
 From the Unclaimed state, the machine can go to four other possible
@@ -824,7 +1755,7 @@ state (transition **6**), even if it is only for a brief period of time.
 If the machine has been configured to perform backfill jobs (see the
 :doc:`/admin-manual/setting-up-special-environments` section), while it is in
 Unclaimed/Idle it will evaluate the :macro:`START_BACKFILL` expression. Once
-``START_BACKFILL`` evaluates to TRUE, the machine will enter the Backfill/Idle
+:macro:`START_BACKFILL` evaluates to TRUE, the machine will enter the Backfill/Idle
 state (transition **7**) to begin the process of running backfill jobs.
 
 If draining of the machine is initiated while in the Unclaimed state,
@@ -836,7 +1767,7 @@ Matched State
 :index:`Matched<single: Matched; machine state>` :index:`matched state`
 
 The Matched state is not very interesting to HTCondor. Noteworthy in
-this state is that the machine lies about its ``START`` expression while
+this state is that the machine lies about its :macro:`START` expression while
 in this state and says that ``Requirements`` are ``False`` to prevent
 being matched again before it has been claimed. Also interesting is that
 the startd starts a timer to make sure it does not stay in the Matched
@@ -848,7 +1779,7 @@ the machine gives up, and goes back into the Owner state via transition
 **8**. It will probably leave the Owner state right away for the
 Unclaimed state again and wait for another match.
 
-At any time while the machine is in the Matched state, if the ``START``
+At any time while the machine is in the Matched state, if the :macro:`START`
 expression locally evaluates to FALSE, the machine enters the Owner
 state directly (transition **8**).
 
@@ -928,9 +1859,9 @@ a quick death to the job, using a hard-kill signal that cannot be
 intercepted by the application. For vanilla jobs that do no special
 signal handling, vacating and killing are equivalent.
 
-The ``WANT_SUSPEND`` expression determines if the machine will evaluate
-the ``SUSPEND`` expression to consider entering the Suspended activity.
-The ``WANT_VACATE`` expression determines what happens when the machine
+The :macro:`WANT_SUSPEND` expression determines if the machine will evaluate
+the :macro:`SUSPEND` expression to consider entering the Suspended activity.
+The :macro:`WANT_VACATE` expression determines what happens when the machine
 enters the Preempting state. It will go to the Vacating activity or
 directly to Killing. If one or both of these expressions evaluates to
 FALSE, the machine will skip that stage of getting rid of the job and
@@ -939,16 +1870,16 @@ proceed directly to the more drastic stages.
 When the machine first enters the Claimed state, it goes to the Idle
 activity. From there, it has two options. It can enter the Preempting
 state via transition **10** (if a *condor_vacate* arrives, or if the
-``START`` expression locally evaluates to FALSE), or it can enter the
+:macro:`START` expression locally evaluates to FALSE), or it can enter the
 Busy activity (transition **11**) if the schedd that has claimed the
 machine decides to activate the claim and start a job.
 
 From Claimed/Busy, the machine can transition to three other
-state/activity pairs. The startd evaluates the ``WANT_SUSPEND``
+state/activity pairs. The startd evaluates the :macro:`WANT_SUSPEND`
 expression to decide which other expressions to evaluate. If
-``WANT_SUSPEND`` is TRUE, then the startd evaluates the ``SUSPEND``
-expression. If ``WANT_SUSPEND`` is any value other than TRUE, then the
-startd will evaluate the ``PREEMPT`` expression and skip the Suspended
+:macro:`WANT_SUSPEND` is TRUE, then the startd evaluates the :macro:`SUSPEND`
+expression. If :macro:`WANT_SUSPEND` is any value other than TRUE, then the
+startd will evaluate the :macro:`PREEMPT` expression and skip the Suspended
 activity entirely. By transition, the possible state/activity
 destinations from Claimed/Busy:
 
@@ -957,7 +1888,7 @@ Claimed/Idle
     because the jobs completes), the machine will go to Claimed/Idle
     (transition **12**).
     Claimed/Retiring
-    If ``WANT_SUSPEND`` is FALSE and the ``PREEMPT`` expression is
+    If :macro:`WANT_SUSPEND` is FALSE and the :macro:`PREEMPT` expression is
     ``True``, the machine enters the Retiring activity (transition
     **13**). From there, it waits for a configurable amount of time for
     the job to finish before moving on to preemption.
@@ -965,7 +1896,7 @@ Claimed/Idle
     Another reason the machine would go from Claimed/Busy to
     Claimed/Retiring is if the *condor_negotiator* matched the machine
     with a "better" match. This better match could either be from the
-    machine's perspective using the startd ``RANK`` expression, or it
+    machine's perspective using the startd :macro:`RANK` expression, or it
     could be from the negotiator's perspective due to a job with a
     higher user priority.
 
@@ -974,19 +1905,19 @@ Claimed/Idle
     shutdown, which bypasses retirement completely.
 
 Claimed/Suspended
-    If both the ``WANT_SUSPEND`` and ``SUSPEND`` expressions evaluate to
+    If both the :macro:`WANT_SUSPEND` and :macro:`SUSPEND` expressions evaluate to
     TRUE, the machine suspends the job (transition **14**).
 
 From the Claimed/Suspended state, the following transitions may occur:
 
 Claimed/Busy
-    If the ``CONTINUE`` expression evaluates to TRUE, the machine
+    If the :macro:`CONTINUE` expression evaluates to TRUE, the machine
     resumes the job and enters the Claimed/Busy state (transition
     **15**) or the Claimed/Retiring state (transition **16**), depending
     on whether the claim has been preempted.
 
 Claimed/Retiring
-    If the ``PREEMPT`` expression is TRUE, the machine will enter the
+    If the :macro:`PREEMPT` expression is TRUE, the machine will enter the
     Claimed/Retiring activity (transition **16**).
 
 Preempting
@@ -1013,7 +1944,7 @@ Claimed/Busy
     If the startd was retiring because of a preempting claim only and
     the preempting claim goes away, the normal Claimed/Busy state is
     resumed (transition **19**). If instead the retirement is due to
-    owner activity (``PREEMPT``) or the startd is being shut down, no
+    owner activity (:macro:`PREEMPT`) or the startd is being shut down, no
     unretirement is possible.
 
 Claimed/Suspended
@@ -1030,7 +1961,7 @@ Preempting State
 :index:`preempting state`
 
 The Preempting state is less complex than the Claimed state. There are
-two activities. Depending on the value of ``WANT_VACATE``, a machine
+two activities. Depending on the value of :macro:`WANT_VACATE`, a machine
 will be in the Vacating activity (if ``True``) or the Killing activity
 (if ``False``).
 
@@ -1050,7 +1981,7 @@ opportunity to do a graceful shutdown, by intercepting the soft kill
 signal.
 
 If the machine is in the Vacating activity, it keeps evaluating the
-``KILL`` expression. As soon as this expression evaluates to TRUE, the
+:macro:`KILL` expression. As soon as this expression evaluates to TRUE, the
 machine enters the Killing activity (transition **21**). If the Vacating
 activity lasts for as long as the maximum vacating time, then the
 machine also enters the Killing activity. The maximum vacating time is
@@ -1069,7 +2000,7 @@ the Claimed/Idle state by transition **23** (if the job was preempted
 because a better match was found).
 
 If the machine enters the Killing activity, (because either
-``WANT_VACATE`` was ``False`` or the ``KILL`` expression evaluated to
+:macro:`WANT_VACATE` was ``False`` or the :macro:`KILL` expression evaluated to
 ``True``), it attempts to force the *condor_starter* to immediately
 kill the underlying HTCondor job. Once the machine has begun to hard
 kill the HTCondor job, the *condor_startd* starts a timer, the length
@@ -1087,7 +2018,7 @@ machine is notified that the claim is broken, the machine will leave the
 Preempting/Killing state. If the job was preempted because a better
 match was found, the machine will enter Claimed/Idle (transition
 **24**). If the preemption was caused by the machine owner (the
-``PREEMPT`` expression evaluated to TRUE, *condor_vacate* was used,
+:macro:`PREEMPT` expression evaluated to TRUE, *condor_vacate* was used,
 etc), the machine will enter the Owner state (transition **25**).
 
 Backfill State
@@ -1103,7 +2034,7 @@ running backfill jobs` section. This state is only used if the machine has been
 configured to enable backfill computation, if a specific backfill manager has
 been installed and configured, and if the machine is otherwise idle (not being
 used interactively or for regular HTCondor computations). If the machine
-meets all these requirements, and the ``START_BACKFILL`` expression
+meets all these requirements, and the :macro:`START_BACKFILL` expression
 evaluates to TRUE, the machine will move from the Unclaimed/Idle state
 to Backfill/Idle (transition **7**).
 
@@ -1145,7 +2076,7 @@ Backfill/Idle after the BOINC client exits, the machine will go into
 another state, depending on what caused the BOINC client to be killed in
 the first place.
 
-If the ``EVICT_BACKFILL`` expression evaluates to TRUE while a machine
+If the :macro:`EVICT_BACKFILL` expression evaluates to TRUE while a machine
 is in Backfill/Busy, after the BOINC client is gone, the machine will go
 back into the Owner/Idle state (transition **30**). The machine will
 also return to the Owner/Idle state after the BOINC client exits if
@@ -1206,24 +2137,24 @@ It serves as a quick reference.
     it will transition to the Owner state.
 
 :macro:`WANT_SUSPEND`
-    If ``True``, the machine evaluates the ``SUSPEND`` expression to see
+    If ``True``, the machine evaluates the :macro:`SUSPEND` expression to see
     if it should transition to the Suspended activity. If any value
-    other than ``True``, the machine will look at the ``PREEMPT``
+    other than ``True``, the machine will look at the :macro:`PREEMPT`
     expression.
 
 :macro:`SUSPEND`
-    If ``WANT_SUSPEND`` is ``True``, and the machine is in the
-    Claimed/Busy state, it enters the Suspended activity if ``SUSPEND``
+    If :macro:`WANT_SUSPEND` is ``True``, and the machine is in the
+    Claimed/Busy state, it enters the Suspended activity if :macro:`SUSPEND`
     is ``True``.
 
 :macro:`CONTINUE`
     If the machine is in the Claimed/Suspended state, it enter the Busy
-    activity if ``CONTINUE`` is ``True``.
+    activity if :macro:`CONTINUE` is ``True``.
 
 :macro:`PREEMPT`
     If the machine is either in the Claimed/Suspended activity, or is in
-    the Claimed/Busy activity and ``WANT_SUSPEND`` is FALSE, the machine
-    enters the Claimed/Retiring state whenever ``PREEMPT`` is TRUE.
+    the Claimed/Busy activity and :macro:`WANT_SUSPEND` is FALSE, the machine
+    enters the Claimed/Retiring state whenever :macro:`PREEMPT` is TRUE.
 
 :macro:`CLAIM_WORKLIFE`
     This expression specifies the number of seconds after which a claim
@@ -1279,19 +2210,19 @@ It serves as a quick reference.
     :macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
 
 :macro:`WANT_VACATE`
-    This is checked only when the ``PREEMPT`` expression is ``True`` and
-    the machine enters the Preempting state. If ``WANT_VACATE`` is
+    This is checked only when the :macro:`PREEMPT` expression is ``True`` and
+    the machine enters the Preempting state. If :macro:`WANT_VACATE` is
     ``True``, the machine enters the Vacating activity. If it is
     ``False``, the machine will proceed directly to the Killing
     activity.
 
 :macro:`KILL`
     If the machine is in the Preempting/Vacating state, it enters
-    Preempting/Killing whenever ``KILL`` is ``True``.
+    Preempting/Killing whenever :macro:`KILL` is ``True``.
 
 :macro:`KILLING_TIMEOUT`
     If the machine is in the Preempting/Killing state for longer than
-    ``KILLING_TIMEOUT`` seconds, the *condor_startd* sends a SIGKILL to
+    :macro:`KILLING_TIMEOUT` seconds, the *condor_startd* sends a SIGKILL to
     the *condor_starter* and all its children to try to kill the job as
     quickly as possible.
 
@@ -1448,10 +2379,10 @@ adding the following 5 expressions to the existing configuration:
       PREEMPT    = ($(PREEMPT)) && Owner != "coltrane"
       KILL       = $(KILL)
 
-Notice that there is nothing special in either the ``CONTINUE`` or
-``KILL`` expressions. If Coltrane's jobs never suspend, they never look
-at ``CONTINUE``. Similarly, if they never preempt, they never look at
-``KILL``. :index:`time of day<single: time of day; policy>`
+Notice that there is nothing special in either the :macro:`CONTINUE` or
+:macro:`KILL` expressions. If Coltrane's jobs never suspend, they never look
+at :macro:`CONTINUE`. Similarly, if they never preempt, they never look at
+:macro:`KILL`. :index:`time of day<single: time of day; policy>`
 
 **Time of Day Policy**
 
@@ -1500,7 +2431,7 @@ To force HTCondor jobs to stay off of your machines during work hours:
     MachineBusy = ( $(WorkHours) || $(CPUBusy) || $(KeyboardBusy) )
 
 This ``MachineBusy`` macro is convenient if other than the default
-``SUSPEND`` and ``PREEMPT`` expressions are used.
+:macro:`SUSPEND` and :macro:`PREEMPT` expressions are used.
 :index:`desktop/non-desktop<single: desktop/non-desktop; policy>`
 :index:`desktop/non-desktop<single: desktop/non-desktop; preemption>`
 
@@ -1719,7 +2650,7 @@ and this may be used to identify interactive jobs, distinguishing them
 from all other jobs.
 
 As an example, presume that slot 1 prefers interactive jobs. Set the
-machine's ``RANK`` to show the preference:
+machine's :macro:`RANK` to show the preference:
 
 .. code-block:: condor-config
 
@@ -1731,458 +2662,97 @@ Or, if slot 1 should be reserved for interactive jobs:
 
     START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 
-Multi-Core Machine Terminology
-------------------------------
-
-:index:`configuration<single: configuration; SMP machines>`
-:index:`configuration<single: configuration; multi-core machines>`
-
-Machines with more than one CPU or core may be configured to run more
-than one job at a time. As always, owners of the resources have great
-flexibility in defining the policy under which multiple jobs may run,
-suspend, vacate, etc.
-
-Multi-core machines are represented to the HTCondor system as shared
-resources broken up into individual slots. Each slot can be matched and
-claimed by users for jobs. Each slot is represented by an individual
-machine ClassAd. In this way, each multi-core machine will appear to the
-HTCondor system as a collection of separate slots. As an example, a
-multi-core machine named ``vulture.cs.wisc.edu`` would appear to
-HTCondor as the multiple machines, named ``slot1@vulture.cs.wisc.edu``,
-``slot2@vulture.cs.wisc.edu``, ``slot3@vulture.cs.wisc.edu``, and so on.
-:index:`dividing resources in multi-core machines`
-
-The way that the *condor_startd* breaks up the shared system resources
-into the different slots is configurable. All shared system resources,
-such as RAM, disk space, and swap space, can be divided evenly among all
-the slots, with each slot assigned one core. Alternatively, slot types
-are defined by configuration, so that resources can be unevenly divided.
-Regardless of the scheme used, it is important to remember that the goal
-is to create a representative slot ClassAd, to be used for matchmaking
-with jobs.
-
-HTCondor does not directly enforce slot shared resource allocations, and
-jobs are free to over subscribe to shared resources. Consider an example
-where two slots are each defined with 50% of available RAM. The
-resultant ClassAd for each slot will advertise one half the available
-RAM. Users may submit jobs with RAM requirements that match these slots.
-However, jobs run on either slot are free to consume more than 50% of
-available RAM. HTCondor will not directly enforce a RAM utilization
-limit on either slot. If a shared resource enforcement capability is
-needed, it is possible to write a policy that will evict a job that
-over subscribes to shared resources, as described in
-:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
-
-Dividing System Resources in Multi-core Machines
-''''''''''''''''''''''''''''''''''''''''''''''''
-
-Within a machine the shared system resources of cores, RAM, swap space
-and disk space will be divided for use by the slots. There are two main
-ways to go about dividing the resources of a multi-core machine:
-
-Evenly divide all resources.
-    Prior to HTCondor 23.0 the *condor_startd* will automatically divide the
-    machine into multiple slots by default, placing one core in each slot, and evenly
-    dividing all shared resources among the slots. Beginning with HTCondor 23.0
-    the *condor_startd* will create a single partitionable slot by default.
-
-    In HTCondor 23.0 you can use the configuration template ``use FEATURE : StaticSlots``
-    to configure a number of static slots. If used without arguments this
-    configuration template will define a number of single core static slots equal to
-    the number of detected cpu cores.
-
-    To simply configure static slots in any version, configure :macro:`NUM_SLOTS` to the
-    integer number of slots desired. ``NUM_SLOTS`` may not be used to make HTCondor advertise
-    more slots than there are cores on the machine. The number of cores
-    is defined by :macro:`NUM_CPUS`.
-
-Define slot types.
-    Instead of the default slot configuration, the machine may
-    have definitions of slot types, where each type is provided with a
-    fraction of shared system resources. Given the slot type definition,
-    control how many of each type are reported at any given time with
-    further configuration.
-
-    Configuration variables define the slot types, as well as variables
-    that list how much of each system resource goes to each slot type.
-
-    Configuration variable :macro:`SLOT_TYPE_<N>`, where <N> is an integer (for
-    example, ``SLOT_TYPE_1``) defines the slot type. Note that there may be
-    multiple slots of each type. The number of slots created of a given type is
-    configured with ``NUM_SLOTS_TYPE_<N>``.
-
-    The type can be defined by:
-
-    -  A simple fraction, such as 1/4
-    -  A simple percentage, such as 25%
-    -  A comma-separated list of attributes, with a percentage,
-       fraction, numerical value, or ``auto`` for each one.
-    -  A comma-separated list that includes a blanket value that serves
-       as a default for any resources not explicitly specified in the
-       list.
-
-    A simple fraction or percentage describes the allocation of the
-    total system resources, including the number of CPUS or cores. A
-    comma separated list allows a fine tuning of the amounts for
-    specific resources.
-
-    The number of CPUs and the total amount of RAM in the machine do not
-    change over time. For these attributes, specify either absolute
-    values or percentages of the total available amount (or ``auto``).
-    For example, in a machine with 128 Mbytes of RAM, all the following
-    definitions result in the same allocation amount.
-
-    .. code-block:: condor-config
-
-        SLOT_TYPE_1 = mem=64
-
-        SLOT_TYPE_1 = mem=1/2
-
-        SLOT_TYPE_1 = mem=50%
-
-        SLOT_TYPE_1 = mem=auto
-
-    Amounts of disk space and swap space are dynamic, as they change
-    over time. For these, specify a percentage or fraction of the total
-    value that is allocated to each slot, instead of specifying absolute
-    values. As the total values of these resources change on the
-    machine, each slot will take its fraction of the total and report
-    that as its available amount.
-
-    The disk space allocated to each slot is taken from the disk
-    partition containing the slot's :macro:`EXECUTE` or 
-    :macro:`SLOT<N>_EXECUTE` directory. If every slot is in a
-    different partition, then each one may be defined with up to
-    100% for its disk share. If some slots are in the same partition,
-    then their total is not allowed to exceed 100%.
-
-    The four predefined attribute names are case insensitive when
-    defining slot types. The first letter of the attribute name
-    distinguishes between these attributes. The four attributes, with
-    several examples of acceptable names for each:
-
-    -  Cpus, C, c, cpu
-    -  ram, RAM, MEMORY, memory, Mem, R, r, M, m
-    -  disk, Disk, D, d
-    -  swap, SWAP, S, s, VirtualMemory, V, v
-
-    As an example, consider a machine with 4 cores and 256 Mbytes of
-    RAM. Here are valid example slot type definitions. Types 1-3 are all
-    equivalent to each other, as are types 4-6. Note that in a real
-    configuration, all of these slot types would not be used together,
-    because they add up to more than 100% of the various system
-    resources. This configuration example also omits definitions of
-    ``NUM_SLOTS_TYPE_<N>``, to define the number of each slot type.
-
-    .. code-block:: condor-config
-
-          SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
-
-          SLOT_TYPE_2 = cpus=1/2, memory=128, virt=25%, disk=50%
-
-          SLOT_TYPE_3 = c=1/2, m=50%, v=1/4, disk=1/2
-
-          SLOT_TYPE_4 = c=25%, m=64, v=1/4, d=25%
-
-          SLOT_TYPE_5 = 25%
-
-          SLOT_TYPE_6 = 1/4
-
-    The default value for each resource share is ``auto``. The share may
-    also be explicitly set to ``auto``. All slots with the value
-    ``auto`` for a given type of resource will evenly divide whatever
-    remains, after subtracting out explicitly allocated resources given
-    in other slot definitions. For example, if one slot is defined to
-    use 10% of the memory and the rest define it as ``auto`` (or leave
-    it undefined), then the rest of the slots will evenly divide 90% of
-    the memory between themselves.
-
-    In both of the following examples, the disk share is set to
-    ``auto``, number of cores is 1, and everything else is 50%:
-
-    .. code-block:: condor-config
-
-        SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
-
-        SLOT_TYPE_1 = cpus=1, disk=auto, 50%
-
-    Note that it is possible to set the configuration variables such
-    that they specify an impossible configuration. If this occurs, the
-    *condor_startd* daemon fails after writing a message to its log
-    attempting to indicate the configuration requirements that it could
-    not implement.
-
-    In addition to the standard resources of CPUs, memory, disk, and
-    swap, the administrator may also define custom resources on a
-    localized per-machine basis.
-    In addition to GPUs (see :ref:`admin-manual/ep-policy-configuration:Configuring GPUs`.)
-    the administrator can define other types of custom resources.
-
-    The resource names and quantities of available resources are defined
-    using configuration variables of the form
-    :macro:`MACHINE_RESOURCE_<name>`,
-    as shown in this example:
-
-    .. code-block:: condor-config
-
-        MACHINE_RESOURCE_Cogs = 16
-        MACHINE_RESOURCE_actuator = 8
-
-    If the configuration uses the optional configuration variable
-    :macro:`MACHINE_RESOURCE_NAMES` to
-    enable and disable local machine resources, also add the resource
-    names to this variable. For example:
-
-    .. code-block:: condor-config
-
-        if defined MACHINE_RESOURCE_NAMES
-          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) Cogs actuator
-        endif
-
-    Local machine resource names defined in this way may now be used in
-    conjunction with :macro:`SLOT_TYPE_<N>`,
-    using all the same syntax described earlier in this section. The
-    following example demonstrates the definition of static and
-    partitionable slot types with local machine resources:
-
-    .. code-block:: condor-config
-
-        # declare one partitionable slot with half of the Cogs, 6 actuators, and
-        # 50% of all other resources:
-        SLOT_TYPE_1 = cogs=50%,actuator=6,50%
-        SLOT_TYPE_1_PARTITIONABLE = TRUE
-        NUM_SLOTS_TYPE_1 = 1
-
-        # declare two static slots, each with 25% of the Cogs, 1 actuator, and
-        # 25% of all other resources:
-        SLOT_TYPE_2 = cogs=25%,actuator=1,25%
-        SLOT_TYPE_2_PARTITIONABLE = FALSE
-        NUM_SLOTS_TYPE_2 = 2
-
-    A job may request these local machine resources using the syntax
-    :subcom:`request_<name>[with partitionable slots]`
-    as described in :ref:`admin-manual/ep-policy-configuration:*condor_startd*
-    policy configuration`. This example shows a portion of a submit description
-    file that requests cogs and an actuator:
-
-    .. code-block:: condor-submit
-
-        universe = vanilla
-
-        # request two cogs and one actuator:
-        request_cogs = 2
-        request_actuator = 1
-
-        queue
-
-    The slot ClassAd will represent each local machine resource with the
-    following attributes:
-
-        ``Total<name>``: the total quantity of the resource identified
-        by ``<name>``
-        ``Detected<name>``: the quantity detected of the resource
-        identified by ``<name>``; this attribute is currently equivalent
-        to ``Total<name>``
-        ``TotalSlot<name>``: the quantity of the resource identified by
-        ``<name>`` allocated to this slot
-        ``<name>``: the amount of the resource identified by ``<name>``
-        available to be used on this slot
-
-    From the example given, the ``Cogs`` resource would be represented by
-    the ClassAd attributes ``TotalCogs``, ``DetectedCogs``,
-    ``TotalSlotCogs``, and ``Cogs``. In the job ClassAd, the amount of the
-    requested machine resource appears in a job ClassAd attribute named
-    ``Request<name>``. For this example, the two attributes will be
-    ``RequestCogs`` and ``RequestActuator``.
-
-    The number of each type and the
-    definitions for the types themselves cannot be changed with
-    reconfiguration. To change any slot type definitions, use
-    *condor_restart*
-
-    .. code-block:: console
-
-        $ condor_restart -startd
-
-    for that change to take effect.
-
-Configuration Specific to Multi-core Machines
-'''''''''''''''''''''''''''''''''''''''''''''
-
-:index:`SMP machines<single: SMP machines; configuration>`
-:index:`multi-core machines<single: multi-core machines; configuration>`
-
-Each slot within a multi-core machine is treated as an independent
-machine, each with its own view of its state as represented by the
-machine ClassAd attribute ``State``. The policy expressions for the
-multi-core machine as a whole are propagated from the *condor_startd*
-to the slot's machine ClassAd. This policy may consider a slot state(s)
-in its expressions. This makes some policies easy to set, but it makes
-other policies difficult or impossible to set.
-
-An easy policy to set configures how many of the slots notice console or
-tty activity on the multi-core machine as a whole. Slots that are not
-configured to notice any activity will report ``ConsoleIdle`` and
-``KeyboardIdle`` times from when the *condor_startd* daemon was
-started, plus a configurable number of seconds. A multi-core machine
-with the default policy settings can add the keyboard and console to be
-noticed by only one slot. Assuming a reasonable load average, only the
-one slot will suspend or vacate its job when the owner starts typing at
-their machine again. The rest of the slots could be matched with jobs
-and continue running them, even while the user was interactively using
-the machine. If the default policy is used, all slots notice tty and
-console activity and currently running jobs would suspend.
-
-This example policy is controlled with the following configuration
-variables.
-
--  :macro:`SLOTS_CONNECTED_TO_CONSOLE`, with definition at
-   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-   macros` section
-
--  :macro:`SLOTS_CONNECTED_TO_KEYBOARD`, with definition at
-   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-   macros` section
-
--  :macro:`DISCONNECTED_KEYBOARD_IDLE_BOOST`, with definition at
-   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-   macros` section
-
-Each slot has its own machine ClassAd. Yet, the policy expressions for
-the multi-core machine are propagated and inherited from configuration
-of the *condor_startd*. Therefore, the policy expressions for each slot
-are the same. This makes the implementation of certain types of policies
-impossible, because while evaluating the state of one slot within the
-multi-core machine, the state of other slots are not available.
-Decisions for one slot cannot be based on what other slots are doing.
-
-Specifically, the evaluation of a slot policy expression works in the
-following way.
-
-#. The configuration file specifies policy expressions that are shared
-   by all of the slots on the machine.
-#. Each slot reads the configuration file and sets up its own machine
-   ClassAd.
-#. Each slot is now separate from the others. It has a different ClassAd
-   attribute ``State``, a different machine ClassAd, and if there is a
-   job running, a separate job ClassAd. Each slot periodically evaluates
-   the policy expressions, changing its own state as necessary. This
-   occurs independently of the other slots on the machine. So, if the
-   *condor_startd* daemon is evaluating a policy expression on a
-   specific slot, and the policy expression refers to ``ProcID``,
-   ``Owner``, or any attribute from a job ClassAd, it always refers to
-   the ClassAd of the job running on the specific slot.
-
-To set a different policy for the slots within a machine, incorporate
-the slot-specific machine ClassAd attribute ``SlotID``. A ``SUSPEND``
-policy that is different for each of the two slots will be of the form
+Custom and system EP classad attributes
+---------------------------------------
+
+The *condor_startd* advertises one classad per slot to the *condor_collector*.  Each of
+these ads has many attributes. See :ref:`classad-attributes/machine-classad-attributes:machine classad attributes`
+for the complete list of the attributes defined and used by the system.  These attributes,
+and the custom attributes describe below, which can be used exactly as the predefined ones,
+have many uses.  Let's consider the machine classad attribute ``OpsysAndVer``. This is
+a more specific version of the attribute ``Opsys``, which will just be "Linux" on any
+Linux system, whereas ``OpsysAndVer`` might be ``CentOS8`` on such a system.
+
+First, we might use this attribute to examine one particular machine.  We can use
+*condor_status* to query this attribute on a machine named "vulture" by running:
+
+.. code-block:: console
+
+   $ condor_status vulture -af OpSysAndVer
+   CentOS8
+
+Or, we can use this attribute in job submit file to request that a job only run
+on machines with this OS version:
+
+.. code-block:: condor-submit
+
+   executable = my_program
+   Requirements = Target.OpSysAndVer == "CentOS8"
+   request_memory = 1G
+   request_disk   = 100M
+   request_cpus   = 1
+   should_transfer_files = yes
+   when_to_transfer_output = on_exit
+   queue
+
+Or, we can expand the *value* of this slot attribute into our job.  Let's say
+that we have two different programs compiled, one for CentOS8, named
+my_program.CentOS8, and another, compiled for CentOS9, named
+my_program.CentOS9. We can use $$ expansion in our submit file to
+select the correct program when the job is matched to a particular machine:
+
+.. code-block:: condor-submit
+
+   executable = my_program.$$(OpSysAndVer)
+   request_memory = 1G
+   request_disk   = 100M
+   request_cpus   = 1
+   should_transfer_files = yes
+   when_to_transfer_output = on_exit
+   queue
+
+
+Adding custom static attributes with STARTD_ATTRS
+'''''''''''''''''''''''''''''''''''''''''''''''''
+
+Administrators can add custom attributes to the slot classad that can be used
+exactly as the built-in ones, as demonstrated above.  Let's say that 
+many jobs need an enormous genomic database, that has been pre-staged
+on a particular directory on some EPs.  The EP administrator can advertise
+a custom slot classad attribute that names the file path to this database
+for jobs to use.  This requires setting two EP configuration variables:
+:macro:`STARTD_ATTRS`, and a variable which defines the attributes itself.
+Let's call the custom attribute we want to add ``GenomeDBPath``.  To set
+this to the string value of "/path/to/db", we would first put ``GenomeDBPath``
+into STARTD_ATTRS, then define ``GenomeDBPath`` *itself* as a configuration macro,
+like this in the EP configuration:
 
 .. code-block:: condor-config
 
-    SUSPEND = ( (SlotID == 1) && (PolicyForSlot1) ) || \
-              ( (SlotID == 2) && (PolicyForSlot2) )
+   GenomeDBPath = "/path/to/db"
+   STARTD_ATTRS = GenomeDBPath $(STARTD_ATTRS)
 
-where (PolicyForSlot1) and (PolicyForSlot2) are the desired expressions
-for each slot.
+Note the convention to always append to any existing :macro:`STARTD_ATTRS`, so
+that multiple configuration files can compose together.  Once this is done,
+and the *condor_startd* reconfigured, all slots on this EP will advertise
+this new attribute.  
 
-Configuring GPUs
-----------------
-
-:index:`configuration<single: configuration; GPUs>`
-:index:`to use GPUs<single: to use GPUs; configuration>`
-
-HTCondor supports incorporating GPU resources and making them available
-for jobs. First, GPUs must be detected as available resources. Then,
-machine ClassAd attributes advertise this availability. Both detection
-and advertisement are accomplished by having this configuration for each
-execute machine that has GPUs:
-
-.. code-block:: text
-
-      use feature : GPUs
-
-Use of this configuration template invokes the *condor_gpu_discovery*
-tool to create a custom resource, with a custom resource name of
-``GPUs``, and it generates the ClassAd attributes needed to advertise
-the GPUs. *condor_gpu_discovery* is invoked in a mode that discovers
-and advertises both CUDA and OpenCL GPUs.
-
-This configuration template refers to macro :macro:`GPU_DISCOVERY_EXTRA`,
-which can be used to define additional command line arguments for the
-*condor_gpu_discovery* tool. For example, setting
-
-.. code-block:: text
-
-      use feature : GPUs
-      GPU_DISCOVERY_EXTRA = -extra
-
-causes the *condor_gpu_discovery* tool to output more attributes that
-describe the detected GPUs on the machine.
-
-*condor_gpu_discovery* defaults to using nested ClassAds for GPU properties.  The administrator
-can be explicit about which form to use for properties by adding either the
-``-nested`` or ``-not-nested`` option to :macro:`GPU_DISCOVERY_EXTRA`. 
-
-The format -- nested or not -- of GPU properties in the slot ad is the same as published
-by *condor_gpu_discovery*.  The use of nested GPU property ads is necessary
-to do GPU matchmaking and to properly support heterogeneous GPUs.  
-
-For resources like GPUs that have individual properties, when configuring slots
-the slot configuration can specify a constraint on those properties
-for the purpose of choosing which GPUs are assigned to which slots.  This serves
-the same purpose as the ``require_gpus`` submit keyword, but in this case
-it controls the slot configuration on startup.
-
-The resource constraint can be specified by following the resource quantity 
-with a colon and then a constraint expression.  The constraint expression can
-refer to resource property attributes like the GPU properties from
-*condor_gpu_discovery* ``-nested`` output.  If the constraint expression is 
-a string literal, it will be matched automatically against the resource id,
-otherwise it will be evaluated against each of the resource property ads.
-
-When using resource constraints, it is recommended that you put each
-resource quantity on a separate line as in the following example, otherwise the
-constraint expression may be truncated.
-
-    .. code-block:: condor-config
-
-        # Assuming a machine that has two types of GPUs, 2 of which have Capability 8.0
-        # and the remaining GPUs are less powerful
-
-        # declare a partitionable slot that has the 2 powerful GPUs
-        # and 90% of the other resources:
-        SLOT_TYPE_1 @=slot
-           GPUs = 2 : Capability >= 8.0
-           90%
-        @slot
-        SLOT_TYPE_1_PARTITIONABLE = TRUE
-        NUM_SLOTS_TYPE_1 = 1
-
-        # declare a small static slot and assign it a specific GPU by id
-        SLOT_TYPE_2 @=slot
-           GPUs = 1 : "GPU-6a96bd13"
-           CPUs = 1
-		   Memory = 10
-        @slot
-        SLOT_TYPE_2_PARTITIONABLE = FALSE
-        NUM_SLOTS_TYPE_2 = 1
-
-        # declare two static slots that split up the remaining resources which may or may not include GPUs
-        SLOT_TYPE_3 = auto
-        SLOT_TYPE_3_PARTITIONABLE = FALSE
-        NUM_SLOTS_TYPE_3 = 2
-
-
+Beginning users may be tempted to hard-code, or assume the knowledge that
+certain well-known machines in their poool might have this database installed
+at some path.  But, by advertisting this value as a custom EP attribute,
+administrators have gained a level of indirection, and are free to move
+the database to a different path, or perhaps add machines to the pool without
+such database.
 
 Configuring STARTD_ATTRS on a per-slot basis
---------------------------------------------
+''''''''''''''''''''''''''''''''''''''''''''
 
-The :macro:`STARTD_ATTRS`  settings can be configured on a per-slot basis. The
+The :macro:`STARTD_ATTRS` can be also configured on a per-slot basis. The
 *condor_startd* daemon builds the list of items to advertise by
 combining the lists in this order:
 
-#. ``STARTD_ATTRS``
-#. ``SLOT<N>_STARTD_ATTRS``
+#. :macro:`STARTD_ATTRS`
+#. :macro:`SLOT<N>_STARTD_ATTRS`
 
 For example, consider the following configuration:
 
@@ -2197,7 +2767,7 @@ values for ``favorite_color``, ``favorite_season``, and
 ``favorite_movie``. Slot2 will have values for ``favorite_color``,
 ``favorite_season``, and ``favorite_song``.
 
-Attributes themselves in the ``STARTD_ATTRS`` list can also be defined
+Attributes themselves in the :macro:`STARTD_ATTRS` list can also be defined
 on a per-slot basis. Here is another example:
 
 .. code-block:: text
@@ -2231,232 +2801,14 @@ slot3:
     favorite_color = "blue"
     favorite_season = "summer"
 
-Dynamic Provisioning: Partitionable and Dynamic Slots
------------------------------------------------------
-
-:index:`dynamic` :index:`dynamic<single: dynamic; slots>`
-:index:`subdividing slots<single: subdividing slots; slots>` :index:`dynamic slots`
-:index:`partitionable slots`
-
-Dynamic provisioning, also referred to as partitionable or dynamic
-slots, allows HTCondor to use the resources of a slot in a dynamic way;
-these slots may be partitioned. This means that more than one job can
-occupy a single slot at any one time. Slots have a fixed set of
-resources which include the cores, memory and disk space. By
-partitioning the slot, the use of these resources becomes more flexible.
-
-Here is an example that demonstrates how resources are divided as more
-than one job is or can be matched to a single slot. In this example,
-Slot1 is identified as a partitionable slot and has the following
-resources:
-
-.. code-block:: text
-
-    cpu = 10
-    memory = 10240
-    disk = BIG
-
-Assume that JobA is allocated to this slot. JobA includes the following
-requirements:
-
-.. code-block:: text
-
-    cpu = 3
-    memory = 1024
-    disk = 10240
-
-The portion of the slot that is carved out is now known as a dynamic
-slot. This dynamic slot has its own machine ClassAd, and its ``Name``
-attribute distinguishes itself as a dynamic slot with incorporating the
-substring ``Slot1_1``.
-
-After allocation, the partitionable Slot1 advertises that it has the
-following resources still available:
-
-.. code-block:: text
-
-    cpu = 7
-    memory = 9216
-    disk = BIG-10240
-
-As each new job is allocated to Slot1, it breaks into ``Slot1_1``,
-``Slot1_2``, ``Slot1_3`` etc., until the entire set of Slot1's available
-resources have been consumed by jobs.
-
-To enable dynamic provisioning, define a slot type. and declare at least
-one slot of that type. Then, identify that slot type as partitionable by
-setting configuration variable
-:macro:`SLOT_TYPE_<N>_PARTITIONABLE` to ``True``. The value of
-``<N>`` within the configuration variable name is the same value as in
-slot type definition configuration variable ``SLOT_TYPE_<N>``. For the
-most common cases the machine should be configured for one slot,
-managing all the resources on the machine. To do so, set the following
-configuration variables:
-
-.. code-block:: text
-
-    NUM_SLOTS = 1
-    NUM_SLOTS_TYPE_1 = 1
-    SLOT_TYPE_1 = 100%
-    SLOT_TYPE_1_PARTITIONABLE = TRUE
-
-In a pool using dynamic provisioning, jobs can have extra, and desired,
-resources specified in the submit description file:
-
-.. code-block:: text
-
-    request_cpus
-    request_memory
-    request_disk (in kilobytes)
-
-This example shows a portion of the job submit description file for use
-when submitting a job to a pool with dynamic provisioning.
-
-.. code-block:: text
-
-    universe = vanilla
-
-    request_cpus = 3
-    request_memory = 1024
-    request_disk = 10240
-
-    queue
-
-Each partitionable slot will have the ClassAd attributes
-
-.. code-block:: text
-
-      PartitionableSlot = True
-      SlotType = "Partitionable"
-
-Each dynamic slot will have the ClassAd attributes
-
-.. code-block:: text
-
-      DynamicSlot = True
-      SlotType = "Dynamic"
-
-These attributes may be used in a ``START`` expression for the purposes
-of creating detailed policies.
-
-A partitionable slot will always appear as though it is not running a
-job. If matched jobs consume all its resources, the partitionable slot
-will eventually show as having no available resources; this will prevent
-further matching of new jobs. The dynamic slots will show as running
-jobs. The dynamic slots can be preempted in the same way as all other
-slots.
-
-Dynamic provisioning provides powerful configuration possibilities, and
-so should be used with care. Specifically, while preemption occurs for
-each individual dynamic slot, it cannot occur directly for the
-partitionable slot, or for groups of dynamic slots. For example, for a
-large number of jobs requiring 1GB of memory, a pool might be split up
-into 1GB dynamic slots. In this instance a job requiring 2GB of memory
-will be starved and unable to run. A partial solution to this problem is
-provided by defragmentation accomplished by the *condor_defrag* daemon,
-as discussed in
-:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
-:index:`partitionable slot preemption`
-:index:`pslot preemption`
-
-Another partial solution is a new matchmaking algorithm in the
-negotiator, referred to as partitionable slot preemption, or pslot
-preemption. Without pslot preemption, when the negotiator searches for a
-match for a job, it looks at each slot ClassAd individually. With pslot
-preemption, the negotiator looks at a partitionable slot and all of its
-dynamic slots as a group. If the partitionable slot does not have
-sufficient resources (memory, cpu, and disk) to be matched with the
-candidate job, then the negotiator looks at all of the related dynamic
-slots that the candidate job might preempt (following the normal
-preemption rules described elsewhere). The resources of each dynamic
-slot are added to those of the partitionable slot, one dynamic slot at a
-time. Once this partial sum of resources is sufficient to enable a
-match, the negotiator sends the match information to the
-*condor_schedd*. When the *condor_schedd* claims the partitionable
-slot, the dynamic slots are preempted, such that their resources are
-returned to the partitionable slot for use by the new job.
-
-To enable pslot preemption, the following configuration variable must be
-set for the *condor_negotiator*:
-
-.. code-block:: text
-
-      ALLOW_PSLOT_PREEMPTION = True
-
-When the negotiator examines the resources of dynamic slots, it sorts
-the slots by their ``CurrentRank`` attribute, such that slots with lower
-values are considered first. The negotiator only examines the cpu,
-memory and disk resources of the dynamic slots; custom resources are
-ignored.
-
-Dynamic slots that have retirement time remaining are not considered
-eligible for preemption, regardless of how configuration variable
-``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`` is set.
-
-When pslot preemption is enabled, the negotiator will not preempt
-dynamic slots directly. It will preempt them only as part of a match to
-a partitionable slot.
-
-When multiple partitionable slots match a candidate job and the various
-job rank expressions are evaluated to sort the matching slots, the
-ClassAd of the partitionable slot is used for evaluation. This may cause
-unexpected results for some expressions, as attributes such as
-``RemoteOwner`` will not be present in a partitionable slot that matches
-with preemption of some of its dynamic slots.
-
-Defaults for Partitionable Slot Sizes
-'''''''''''''''''''''''''''''''''''''
-
-If a job does not specify the required number of CPUs, amount of memory,
-or disk space, there are ways for the administrator to set default
-values for all of these parameters.
-
-First, if any of these attributes are not set in the submit description
-file, there are three variables in the configuration file that
-condor_submit will use to fill in default values. These are
-
--  :macro:`JOB_DEFAULT_REQUESTCPUS`
--  :macro:`JOB_DEFAULT_REQUESTMEMORY`
--  :macro:`JOB_DEFAULT_REQUESTDISK`
-
-The value of these variables can be ClassAd expressions. The default
-values for these variables, should they not be set are
-
-.. code-block:: condor-config
-
-    JOB_DEFAULT_REQUESTCPUS = 1
-    JOB_DEFAULT_REQUESTMEMORY = \
-        ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)
-    JOB_DEFAULT_REQUESTDISK = DiskUsage
-
-Note that these default values are chosen such that jobs matched to
-partitionable slots function similar to static slots.
-These variables do not apply to **batch** grid universe jobs.
-
-Once the job has been matched, and has made it to the execute machine,
-the *condor_startd* has the ability to modify these resource requests
-before using them to size the actual dynamic slots carved out of the
-partitionable slot. Clearly, for the job to work, the *condor_startd*
-daemon must create slots with at least as many resources as the job
-needs. However, it may be valuable to create dynamic slots somewhat
-bigger than the job's request, as subsequent jobs may be more likely to
-reuse the newly created slot when the initial job is done using it.
-
-The *condor_startd* configuration variables which control this and
-their defaults are
-
-- :macro:`MODIFY_REQUEST_EXPR_REQUESTCPUS` = quantize(RequestCpus, {1})
-- :macro:`MODIFY_REQUEST_EXPR_REQUESTMEMORY` = quantize(RequestMemory, {128})
-- :macro:`MODIFY_REQUEST_EXPR_REQUESTDISK` = quantize(RequestDisk, {1024})
-
 Startd Cron
------------
+'''''''''''
 
 :index:`Startd Cron`
 :index:`Schedd Cron`
 
 Daemon ClassAd Hooks
-''''''''''''''''''''
+""""""""""""""""""""
 
 :index:`Daemon ClassAd Hooks<single: Daemon ClassAd Hooks; Hooks>`
 :index:`Daemon ClassAd Hooks`
@@ -2466,7 +2818,7 @@ Daemon ClassAd Hooks
 :index:`see Daemon ClassAd Hooks<single: see Daemon ClassAd Hooks; Schedd Cron functionality>`
 
 Overview
-''''''''
+""""""""
 
 The Startd Cron and Schedd Cron *Daemon ClassAd Hooks* mechanism are
 used to run executables (called jobs) directly from the *condor_startd* and *condor_schedd* daemons.
@@ -2483,7 +2835,7 @@ into the machine ClassAd. Policy expressions can then reference dynamic
 attributes (created by the ClassAd hook jobs) in the machine ClassAd.
 
 Job output
-''''''''''
+""""""""""
 
 The output of the job is incorporated into one or more ClassAds when the
 job exits. When the job outputs the special line:
@@ -2549,7 +2901,7 @@ slots it will set ``Value=1`` and ``Value=2`` respectively. It will also
 send updates to the collector immediately.
 
 Configuration
-'''''''''''''
+"""""""""""""
 
 Configuration variables related to Daemon ClassAd Hooks are defined in
 :ref:`admin-manual/configuration-macros:Configuration File Entries Relating to Daemon ClassAd Hooks: Startd Cron and Schedd Cron`
@@ -2628,8 +2980,11 @@ jobs, and ones that use the *condor_schedd*.
 
 :index:`Hooks`
 
+Container/VM support: Docker, Apptainer, Singularity and Xen/VMware
+-------------------------------------------------------------------
+
 Docker Universe
----------------
+'''''''''''''''
 
 :index:`set up<single: set up; docker universe>`
 :index:`for the docker universe<single: for the docker universe; installation>`
@@ -2663,9 +3018,9 @@ the container is removed.
 An administrator of a machine can optionally make additional directories
 on the host machine readable and writable by a running container. To do
 this, the admin must first give an HTCondor name to each directory with
-the DOCKER_VOLUMES parameter. Then, each volume must be configured with
+the :macro:`DOCKER_VOLUMES` parameter. Then, each volume must be configured with
 the path on the host OS with the DOCKER_VOLUME_DIR_XXX parameter.
-Finally, the parameter DOCKER_MOUNT_VOLUMES tells HTCondor which of
+Finally, the parameter :macro:`DOCKER_MOUNT_VOLUMES` tells HTCondor which of
 these directories to always mount onto containers running on this
 machine.
 
@@ -2825,7 +3180,7 @@ memory limit:
 Note: ``Memory`` is in MB, thus it needs to be scaled to bytes.
 
 Apptainer and Singularity Support
----------------------------------
+'''''''''''''''''''''''''''''''''
 
 :index:`Singularity<single: Singularity; installation>` :index:`Singularity`
 
@@ -3104,7 +3459,7 @@ parameter :macro:`SINGULARITY_VERBOSITY` and set it to -d or -v to increase
 the debugging level.
 
 The VM Universe
----------------
+'''''''''''''''
 
 :index:`virtual machines`
 :index:`for the vm universe<single: for the vm universe; installation>`
@@ -3163,7 +3518,7 @@ options would look like this:
     VM_GAHP_LOG = $(LOG)/VMGahpLog
 
 Xen-Specific and KVM-Specific Configuration
-'''''''''''''''''''''''''''''''''''''''''''
+"""""""""""""""""""""""""""""""""""""""""""
 
 Once the configuration options have been set, restart the
 *condor_startd* daemon on that host. For example:
@@ -3198,7 +3553,7 @@ versions, depending on features provided by the underlying tool
 *libvirt*.
 
 When a vm Universe Job Fails to Start
-'''''''''''''''''''''''''''''''''''''
+"""""""""""""""""""""""""""""""""""""
 
 If a vm universe job should fail to launch, HTCondor will attempt to
 distinguish between a problem with the user's job description, and a
@@ -3238,6 +3593,93 @@ jobs.
    the other attributes related to the vm universe to be set indicating
    that vm universe jobs can match with this machine. See the
    *condor_update_machine_ad* manual page for examples and details.
+
+Configuring GPUs
+----------------
+
+:index:`configuration<single: configuration; GPUs>`
+:index:`to use GPUs<single: to use GPUs; configuration>`
+
+HTCondor supports incorporating GPU resources and making them available
+for jobs. First, GPUs must be detected as available resources. Then,
+machine ClassAd attributes advertise this availability. Both detection
+and advertisement are accomplished by having this configuration for each
+execute machine that has GPUs:
+
+.. code-block:: text
+
+      use feature : GPUs
+
+Use of this configuration template invokes the *condor_gpu_discovery*
+tool to create a custom resource, with a custom resource name of
+``GPUs``, and it generates the ClassAd attributes needed to advertise
+the GPUs. *condor_gpu_discovery* is invoked in a mode that discovers
+and advertises both CUDA and OpenCL GPUs.
+
+This configuration template refers to macro :macro:`GPU_DISCOVERY_EXTRA`,
+which can be used to define additional command line arguments for the
+*condor_gpu_discovery* tool. For example, setting
+
+.. code-block:: text
+
+      use feature : GPUs
+      GPU_DISCOVERY_EXTRA = -extra
+
+causes the *condor_gpu_discovery* tool to output more attributes that
+describe the detected GPUs on the machine.
+
+*condor_gpu_discovery* defaults to using nested ClassAds for GPU properties.  The administrator
+can be explicit about which form to use for properties by adding either the
+``-nested`` or ``-not-nested`` option to :macro:`GPU_DISCOVERY_EXTRA`. 
+
+The format -- nested or not -- of GPU properties in the slot ad is the same as published
+by *condor_gpu_discovery*.  The use of nested GPU property ads is necessary
+to do GPU matchmaking and to properly support heterogeneous GPUs.  
+
+For resources like GPUs that have individual properties, when configuring slots
+the slot configuration can specify a constraint on those properties
+for the purpose of choosing which GPUs are assigned to which slots.  This serves
+the same purpose as the :subcom:`require_gpus` submit keyword, but in this case
+it controls the slot configuration on startup.
+
+The resource constraint can be specified by following the resource quantity 
+with a colon and then a constraint expression.  The constraint expression can
+refer to resource property attributes like the GPU properties from
+*condor_gpu_discovery* ``-nested`` output.  If the constraint expression is 
+a string literal, it will be matched automatically against the resource id,
+otherwise it will be evaluated against each of the resource property ads.
+
+When using resource constraints, it is recommended that you put each
+resource quantity on a separate line as in the following example, otherwise the
+constraint expression may be truncated.
+
+    .. code-block:: condor-config
+
+        # Assuming a machine that has two types of GPUs, 2 of which have Capability 8.0
+        # and the remaining GPUs are less powerful
+
+        # declare a partitionable slot that has the 2 powerful GPUs
+        # and 90% of the other resources:
+        SLOT_TYPE_1 @=slot
+           GPUs = 2 : Capability >= 8.0
+           90%
+        @slot
+        SLOT_TYPE_1_PARTITIONABLE = TRUE
+        NUM_SLOTS_TYPE_1 = 1
+
+        # declare a small static slot and assign it a specific GPU by id
+        SLOT_TYPE_2 @=slot
+           GPUs = 1 : "GPU-6a96bd13"
+           CPUs = 1
+		   Memory = 10
+        @slot
+        SLOT_TYPE_2_PARTITIONABLE = FALSE
+        NUM_SLOTS_TYPE_2 = 1
+
+        # declare two static slots that split up the remaining resources which may or may not include GPUs
+        SLOT_TYPE_3 = auto
+        SLOT_TYPE_3_PARTITIONABLE = FALSE
+        NUM_SLOTS_TYPE_3 = 2
 
 
 condor_negotiator-Side Resource Consumption Policies
@@ -3331,55 +3773,6 @@ Add the consumption policy to incorporate availability of the GPUs:
       SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu
       SLOT_WEIGHT = Cpus
 
-
-Startd Disk Enforcement With Per Job Scratch Filesystems
---------------------------------------------------------
-:index:`DISK usage`
-:index:`per job scratch filesystem`
-
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
-
-
-On Linux systems, when HTCondor is started as root, it optionally has the ability to create
-a custom filesystem for the job's scratch directory. This allows HTCondor to prevent the job
-from using more scratch space than provisioned. HTCondor manages this per scratch directory
-filesystem usage with the LVM disk management system.
-
-.. code-block:: condor-config
-
-    THINPOOL_VOLUME_GROUP_NAME = vgname
-    THINPOOL_NAME = htcondor
-    STARTD_ENFORCE_DISK_LIMITS = true
-
-
-#. :macro:`THINPOOL_VOLUME_GROUP_NAME` is the name of an existing LVM volume group for
-   HTCondor to utilize. This volume group should contain enough disk space to provision
-   scratch directories for all running jobs on the worker node.
-#. :macro:`THINPOOL_NAME` is the name of an existing thinly provisioned logical volume
-   for the Startd to utilize. This will act as the total pool of available disk space
-   that per job scratch filesystems and logical volumes will be carved from.
-#. :macro:`STARTD_ENFORCE_DISK_LIMITS` is a boolean to enable per job scratch directory
-   enforcement.
-
-This feature will enable better handling of jobs that utilize more than the disk space
-than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
-created for it, the starter will put the job on hold with the out of resources hold code (34).
-Otherwise, in a full filesystem, writes will fail with ENOSPC, and leave it up to the job
-to handle these errors inernally at all places writed occur. Even in included third party
-libraries.
-
-.. note::
-    The ephemeral filesystem created for the job is private to that job so the contents of
-    the filesystem are not visable outside the process hierarchy. The nsenter command can
-    be used to enter this namespace in order inspect the job's sandbox.
-
-.. note::
-    As this filesystem will never live through a system reboot, it is mounted with mount options
-    that optimize for performance, not reliability, and may improve performance for I/O heavy
-    jobs.
-
-
 Power Management
 ----------------
 
@@ -3429,14 +3822,14 @@ to be put in to a low power state after a few hours, rather than
 minutes.
 
 A slot's readiness or willingness to enter a low power state is
-determined by the ``HIBERNATE`` expression. Because this expression is
+determined by the :macro:`HIBERNATE` expression. Because this expression is
 evaluated in the context of each slot, and not on the machine as a
-whole, any one slot can veto a change of power state. The ``HIBERNATE``
+whole, any one slot can veto a change of power state. The :macro:`HIBERNATE`
 expression may reference a wide array of variables. Possibilities
 include the change in power state if none of the slots are claimed, or
 if the slots are not in the Owner state.
 
-Here is a concrete example. Assume that the ``START`` expression is not
+Here is a concrete example. Assume that the :macro:`START` expression is not
 set to always be ``True``. This permits an easy determination whether or
 not the machine is in an Unclaimed state through the use of an auxiliary
 macro called ``ShouldHibernate``.
@@ -3454,7 +3847,7 @@ This macro evaluates to ``True`` if the following are all ``True``:
 -  The CPU is idle.
 -  The slot has been Unclaimed for more than 2 hours.
 
-The sample ``HIBERNATE`` expression that enters the power state called
+The sample :macro:`HIBERNATE` expression that enters the power state called
 "RAM", if ``ShouldHibernate`` evaluates to ``True``, and remains in its
 current state otherwise is
 
@@ -3565,7 +3958,7 @@ power states of the machine:
     Standby (S2)
             The system firmware does not support this standby state.
 
-Note that the ``HIBERNATE`` expression is written in terms of the Sn
+Note that the :macro:`HIBERNATE` expression is written in terms of the Sn
 state, where n is the value evaluated from the expression.
 
 This tool can also be used to enable and disable other sleep states.
@@ -3676,7 +4069,7 @@ what output is expected, and, when relevant, the exit status expected.
    :macro:`FetchWorkDelay` which determines how long the
    *condor_startd* will wait between attempts to fetch work, which is
    described in detail in :ref:`admin-manual/ep-policy-configuration:job hooks that fetch work`.
-   ``<Keyword>_HOOK_FETCH_WORK`` is the most important hook in the whole system,
+   :macro:`<Keyword>_HOOK_FETCH_WORK` is the most important hook in the whole system,
    and is the only hook that must be defined for any of the other
    *condor_startd* hooks to operate.
 
@@ -3984,10 +4377,10 @@ is currently running. However, the *condor_startd* frequently evaluates
 its own state, especially when a slot is claimed. Therefore,
 administrators can define a configuration variable which controls how
 long the *condor_startd* will wait between attempts to fetch new work.
-This variable is called ``FetchWorkDelay``
+This variable is called :macro:`FetchWorkDelay`
 :index:`FetchWorkDelay`.
 
-The ``FetchWorkDelay`` expression must evaluate to an integer, which
+The :macro:`FetchWorkDelay` expression must evaluate to an integer, which
 defines the number of seconds since the last fetch attempt completed
 before the *condor_startd* will attempt to fetch more work. However, as
 a ClassAd expression (evaluated in the context of the ClassAd of the

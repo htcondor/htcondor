@@ -44,8 +44,6 @@
 
 #include "ipv6_hostname.h"
 
-#include <sstream>
-
 void
 Daemon::common_init() {
 	_type = DT_NONE;
@@ -2426,12 +2424,9 @@ Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, i
 	}
 
 	classad::ClassAd ad;
-	std::stringstream ss;
-	for (const auto &authz : authz_bounding_limit) {
-		ss << authz << ",";
-	}
-	const std::string &authz_limit_str = ss.str();
-	if (!authz_limit_str.empty() && !ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_limit_str.substr(0, authz_limit_str.size()-1))) {
+
+	const std::string authz_limit_str = join(authz_bounding_limit, ",");
+	if (!authz_limit_str.empty() && !ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_limit_str)) {
 		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
 		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
 		return false;
@@ -2622,14 +2617,10 @@ Daemon::startTokenRequest( const std::string &identity,
 	}
 
 	classad::ClassAd ad;
-	std::stringstream ss;
-	for (const auto &authz : authz_bounding_set) {
-		ss << authz << ",";
-	}
-	const std::string &authz_limit_str = ss.str();
+	const std::string authz_limit_str = join(authz_bounding_set, ",");
+
 	if (!authz_limit_str.empty() &&
-		!ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION,
-			authz_limit_str.substr(0, authz_limit_str.size()-1)))
+		!ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_limit_str))
 	{
 		if (err) { err->pushf("DAEMON", 1, "Failed to create token request ClassAd"); }
 		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");

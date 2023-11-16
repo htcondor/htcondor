@@ -1128,24 +1128,14 @@ Condor_Auth_SSL::server_verify_scitoken(CondorError* errstack)
 	}
 	classad::ClassAd ad;
 	if (!groups.empty()) {
-		std::stringstream ss;
-		bool first = true;
-		for (const auto &grp : groups) {
-			ss << (first ? "" : ",") << grp;
-			first = false;
-		}
-		ad.InsertAttr(ATTR_TOKEN_GROUPS, ss.str());
+		std::string ss = join(groups, ",");
+		ad.InsertAttr(ATTR_TOKEN_GROUPS, ss);
 	}
 		// These are *not* the same as authz; the authz are filtered (and stripped)
 		// for the prefix condor:/
 	if (!scopes.empty()) {
-		std::stringstream ss;
-		bool first = true;
-		for (const auto &scope : scopes) {
-			ss << (first ? "" : ",") << scope;
-			first = false;
-		}
-		ad.InsertAttr(ATTR_TOKEN_SCOPES, ss.str());
+		std::string ss = join(scopes, ",");
+		ad.InsertAttr(ATTR_TOKEN_SCOPES, ss);
 	}
 	if (!jti.empty()) {
 		ad.InsertAttr(ATTR_TOKEN_ID, jti);
@@ -1153,14 +1143,13 @@ Condor_Auth_SSL::server_verify_scitoken(CondorError* errstack)
 	ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
 	ad.InsertAttr(ATTR_TOKEN_SUBJECT, subject);
 	if (!bounding_set.empty()) {
-		std::stringstream ss;
+		std::string ss = join(bounding_set, ",");
 		for (const auto &auth : bounding_set) {
 			dprintf(D_SECURITY|D_FULLDEBUG,
 				"Found SciToken condor authorization: %s\n",
 				auth.c_str());
-			ss << auth << ",";
 		}
-		ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
+		ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss);
 	}
 	mySock_->setPolicyAd(ad);
 	m_scitokens_auth_name = issuer + "," + subject;
@@ -1973,18 +1962,13 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 	// otherwise, we will use the system default.
 
     if (cafile) {
-        StringList cafile_list(cafile, ",");
-        cafile_list.rewind();
-        char *ca;
-        while ((ca = cafile_list.next())) {
-            std::string ca_str(ca);
-            trim(ca_str);
+        for (const auto& ca_str : StringTokenIterator(cafile, ",", true)) {
             int fd = open(ca_str.c_str(), O_RDONLY);
             if (fd < 0) {
                 continue;
             }
             close(fd);
-            cafile_preferred_str = std::string(ca);
+            cafile_preferred_str = ca_str;
             cafile_preferred = cafile_preferred_str.c_str();
         }
     }
@@ -2002,37 +1986,31 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
         goto setup_server_ctx_err;
     }
     {
-        StringList certfile_list(certfile ? certfile : "", ",");
-        certfile_list.rewind();
-        StringList keyfile_list(keyfile ? keyfile : "", ",");
-        keyfile_list.rewind();
-        char *cert, *key;
+        StringTokenIterator certfile_list(certfile ? certfile : "", ",", true);
+        StringTokenIterator keyfile_list(keyfile ? keyfile : "", ",", true);
+        const char *cert, *key;
         while ((cert = certfile_list.next()))
         {
             if ((key = keyfile_list.next()) == nullptr) {
                 break;
             }
-            std::string cert_str(cert);
-            trim(cert_str);
-            std::string key_str(key);
-            trim(key_str);
             TemporaryPrivSentry sentry(PRIV_ROOT);
-            int fd = open(cert_str.c_str(), O_RDONLY);
+            int fd = open(cert, O_RDONLY);
             if (fd < 0) {
                 continue;
             }
             close(fd);
-            fd = open(key_str.c_str(), O_RDONLY);
+            fd = open(key, O_RDONLY);
             if (fd < 0) {
                 continue;
             }
             close(fd);
 
-            if( SSL_CTX_use_certificate_chain_file_ptr( ctx, cert_str.c_str() ) != 1 ) {
+            if( SSL_CTX_use_certificate_chain_file_ptr( ctx, cert ) != 1 ) {
                 ouch( "Error loading certificate from file\n" );
                 goto setup_server_ctx_err;
             }
-            if( SSL_CTX_use_PrivateKey_file_ptr( ctx, key_str.c_str(), SSL_FILETYPE_PEM) != 1 ) {
+            if( SSL_CTX_use_PrivateKey_file_ptr( ctx, key, SSL_FILETYPE_PEM) != 1 ) {
                 ouch( "Error loading private key from file\n" );
                 goto setup_server_ctx_err;
             }
@@ -2094,11 +2072,10 @@ Condor_Auth_SSL::should_try_auth()
 		return false;
 	}
 
-	StringList certfile_list(certfile, ",");
-	certfile_list.rewind();
-	StringList keyfile_list(keyfile, ",");
+	StringTokenIterator certfile_list(certfile, ",", true);
+	StringTokenIterator keyfile_list(keyfile, ",", true);
 	keyfile_list.rewind();
-	char *cert, *key;
+	const char *cert, *key;
 	std::string last_error;
 	while ((cert = certfile_list.next())) {
 		key = keyfile_list.next();
@@ -2106,20 +2083,18 @@ Condor_Auth_SSL::should_try_auth()
 			last_error = formatstr(last_error, "No key to match the certificate %s", cert);
 			break;
 		}
-		std::string cert_str(cert);
-		std::string key_str(key);
 		TemporaryPrivSentry sentry(PRIV_ROOT);
-		int fd = open(cert_str.c_str(), O_RDONLY);
+		int fd = open(cert, O_RDONLY);
 		if (fd < 0) {
 			formatstr(last_error, "Not trying SSL auth because server certificate"
-				" (%s) is not readable by HTCondor: %s.\n", cert_str.c_str(), strerror(errno));
+				" (%s) is not readable by HTCondor: %s.\n", cert, strerror(errno));
 			continue;
 		}
 		close(fd);
-		fd = open(key_str.c_str(), O_RDONLY);
+		fd = open(key, O_RDONLY);
 		if (fd < 0) {
 			formatstr(last_error, "Not trying SSL auth because server key"
-				" (%s) is not readable by HTCondor: %s.\n", key_str.c_str(), strerror(errno));
+			          " (%s) is not readable by HTCondor: %s.\n", key, strerror(errno));
 			continue;
 		}
 		close(fd);

@@ -329,7 +329,7 @@ are no unprivileged users logged in to the submit hosts:
 
 1. Start HTCondor on your central manager host (containing the *condor_collector* daemon) first.
    For a fresh install, this will automatically generate a random key in
-   the file specified by ``SEC_TOKEN_POOL_SIGNING_KEY_FILE``
+   the file specified by :macro:`SEC_TOKEN_POOL_SIGNING_KEY_FILE`
    (defaulting to ``/etc/condor/passwords.d/POOL`` on Linux and ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows).
 2. Install an auto-approval rule on the central manager using ``condor_token_request_auto_approve``.
    This automatically approves any daemons starting on a specified network for
@@ -953,7 +953,7 @@ especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
 other methods of authentication between the submit and execute
 daemons. See the description of
-``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` in
+:macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` in
 :ref:`admin-manual/configuration-macros:configuration file entries relating to
 security` for details.
 
@@ -1124,8 +1124,8 @@ assigned.
 The configuration variable :macro:`KERBEROS_SERVER_SERVICE` defines a Kerberos
 service to override the default ``host``. HTCondor prefixes this to
 ``/<hostname>@<realm>`` to obtain the default Kerberos principal.
-Configuration variable ``KERBEROS_SERVER_PRINCIPAL`` overrides
-``KERBEROS_SERVER_SERVICE``.
+Configuration variable :macro:`KERBEROS_SERVER_PRINCIPAL` overrides
+:macro:`KERBEROS_SERVER_SERVICE`.
 
 For example, the configuration
 
@@ -1319,11 +1319,11 @@ then all derived tokens are immediately invalid.  Most simple installs will
 utilize a single signing key, named ``POOL``.
 
 While most token signing keys are placed in the directory specified by
-``SEC_PASSWORD_DIRECTORY``, with the filename within the directory determining
+:macro:`SEC_PASSWORD_DIRECTORY`, with the filename within the directory determining
 the key's name, the ``POOL`` token signing key can be located elsewhere by
 setting :macro:`SEC_TOKEN_POOL_SIGNING_KEY_FILE` to the full pathname of the
 desired file.  On Linux the same file can be both the pool signing key and the
-pool password if :macro:`SEC_PASSWORD_FILE` and ``SEC_TOKEN_POOL_SIGNING_KEY_FILE``
+pool password if :macro:`SEC_PASSWORD_FILE` and :macro:`SEC_TOKEN_POOL_SIGNING_KEY_FILE`
 refer to the same file.  However this is not preferred because in order to
 properly interoperate with older versions of HTCondor the pool password will be
 read as a text file and truncated at the first NUL character.  This differs
@@ -1423,7 +1423,7 @@ The default for both of these configuration parameters is ``POOL``.
 If there are multiple tokens in files in the :macro:`SEC_TOKEN_SYSTEM_DIRECTORY`, then
 the daemon will search for tokens in that directory based on lexicographical order;
 the exception is that the file ``$(SUBSYS)_auto_generated_token`` will be searched first for
-daemons of type ``$(SUBSYS)``.  For example, if ``SEC_TOKEN_SYSTEM_DIRECTORY`` is set to
+daemons of type ``$(SUBSYS)``.  For example, if :macro:`SEC_TOKEN_SYSTEM_DIRECTORY` is set to
 ``/etc/condor/tokens.d``, then the *condor_schedd* will search at
 ``/etc/condor/tokens.d/SCHEDD_auto_generated_token`` by default.
 
@@ -1471,7 +1471,7 @@ When printed using ``condor_token_list``, the human-readable form is as follows
     }
 
 If we would like to revoke this token, we could utilize any of the following
-values for ``SEC_TOKEN_REVOCATION_EXPR``, depending on the desired breadth of
+values for :macro:`SEC_TOKEN_REVOCATION_EXPR`, depending on the desired breadth of
 the revocation:
 
 .. code-block:: condor-config
@@ -2524,7 +2524,7 @@ different read access for the *condor_schedd*:
     ALLOW_READ_SCHEDD = <list of machines>
 
 Here are more examples of configuration settings. Notice that
-``ADMINISTRATOR`` access is only granted through an ``ALLOW`` setting to
+``ADMINISTRATOR`` access is only granted through an :macro:`ALLOW` setting to
 explicitly grant access to a small number of machines. We recommend
 this.
 
@@ -2714,7 +2714,7 @@ files.
 
 If there is no condor user and group on the system, an administrator can
 specify which UID and GID the HTCondor daemons should use when they do
-not need root privileges in two ways: either with the ``CONDOR_IDS``
+not need root privileges in two ways: either with the :macro:`CONDOR_IDS`
 environment variable or the :macro:`CONDOR_IDS`
 configuration variable. In either case, the value should be the UID
 integer, followed by a period, followed by the GID integer. For example,
@@ -2752,7 +2752,7 @@ Jobs that run as nobody are low privilege, but can still interfere with each oth
 To avoid this, you can configure :macro:`NOBODY_SLOT_USER` to the value
 ``$(STARTER_SLOT_NAME)`` or configure :macro:`SLOT<N>_USER` for each slot
 to define a different username to use for each slot instead of the user nobody.
-If ``NOBODY_SLOT_USER`` is configured to be ``$(STARTER_SLOT_NAME)``
+If :macro:`NOBODY_SLOT_USER` is configured to be ``$(STARTER_SLOT_NAME)``
 usernames such as ``slot1``, ``slot2`` and ``slot1_2`` will be used instead of
 nobody and each slot will use a different name than every other slot.
 

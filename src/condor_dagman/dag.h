@@ -131,7 +131,7 @@ class Dag {
 		 const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
-		 SubmitDagDeepOptions *submitDagDeepOpts,
+		 DagmanOptions *dagDeepOpts,
 		 bool isSplice = false, DCSchedd *schedd = NULL,
 		 const std::string &spliceScope = "root" );
 
@@ -854,6 +854,15 @@ class Dag {
 	*/
 	inline bool FinalNodeRun() const { return _finalNodeRun; }
 
+	/*	Determine whether the final node has finished running
+		regardless of failure, success, or error
+	*/
+	inline bool FinalNodeFinished() const {
+		return _final_job && _finalNodeRun &&
+		       ( _final_job->GetStatus() == Job::STATUS_DONE ||
+		         _final_job->GetStatus() == Job::STATUS_ERROR );
+	}
+
 	/** Determine whether this DAG has a provisioner node.
 		@return true iff the DAG has a provisioner node.
 	*/
@@ -1302,7 +1311,7 @@ private:
 	bool	_generateSubdagSubmits;
 
 		// Options for running condor_submit_dag on nested DAGs.
-	SubmitDagDeepOptions *_submitDagDeepOpts;
+	DagmanOptions *_submitDagDeepOpts;
 
 		// Dag objects are used to parse splice files, which are like include
 		// files that ultimately result in a larger in memory dag. To toplevel

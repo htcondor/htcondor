@@ -382,7 +382,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	}
 	
 		//****Always append this variable to avoid overwriting
-	if (dm._submitDagDeepOpts[deep::b::SuppressNotification]) {
+	if (dm.options[deep::b::SuppressNotification]) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		std::string notify = std::string("notification=never");
 		args.AppendArg( notify.c_str() );
@@ -391,15 +391,15 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		//
 		// Add accounting group and user if we have them.
 		//
-	if ( dm._submitDagDeepOpts.acctGroup != "" ) {
+	if ( ! dm.options[deep::str::AcctGroup].empty()) {
 		std::string arg = "accounting_group=";
-		arg += dm._submitDagDeepOpts.acctGroup;
+		arg += dm.options[deep::str::AcctGroup];
 		args.AppendArg( arg );
 	}
 
-	if ( dm._submitDagDeepOpts.acctGroupUser != "" ) {
+	if ( ! dm.options[deep::str::AcctGroupUser].empty()) {
 		std::string arg = "accounting_group_user=";
-		arg += dm._submitDagDeepOpts.acctGroupUser;
+		arg += dm.options[deep::str::AcctGroupUser];
 		args.AppendArg( arg );
 	}
 
@@ -502,7 +502,7 @@ static void init_dag_vars(SubmitHash * submitHash,
 			submitHash->set_arg_variable(SUBMIT_KEY_UserLogFile, "");
 		}
 		
-		if (dm._submitDagDeepOpts[deep::b::SuppressNotification]) {
+		if (dm.options[deep::b::SuppressNotification]) {
 			submitHash->set_arg_variable(SUBMIT_KEY_Notification, "NEVER");
 		}
 		
@@ -553,12 +553,12 @@ static void init_dag_vars(SubmitHash * submitHash,
 		//
 		// Add accounting group and user if we have them.
 		//
-		if (!dm._submitDagDeepOpts.acctGroup.empty()) {
-			submitHash->set_arg_variable(SUBMIT_KEY_AcctGroup, dm._submitDagDeepOpts.acctGroup.c_str());
+		if (!dm.options[deep::str::AcctGroup].empty()) {
+			submitHash->set_arg_variable(SUBMIT_KEY_AcctGroup, dm.options[deep::str::AcctGroup].c_str());
 		}
 
-		if (!dm._submitDagDeepOpts.acctGroupUser.empty()) {
-			submitHash->set_arg_variable(SUBMIT_KEY_AcctGroupUser, dm._submitDagDeepOpts.acctGroupUser.c_str());
+		if (!dm.options[deep::str::AcctGroupUser].empty()) {
+			submitHash->set_arg_variable(SUBMIT_KEY_AcctGroupUser, dm.options[deep::str::AcctGroupUser].c_str());
 		}
 
 		// Machine attrs to record in userlog and job ad

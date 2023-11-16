@@ -259,11 +259,11 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_priority );
 
-	_submitDagDeepOpts[deep::b::SuppressNotification] = param_boolean(
+	options[deep::b::SuppressNotification] = param_boolean(
 		"DAGMAN_SUPPRESS_NOTIFICATION",
-		_submitDagDeepOpts[deep::b::SuppressNotification]);
+		options[deep::b::SuppressNotification]);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_NOTIFICATION setting: %s\n",
-		_submitDagDeepOpts[deep::b::SuppressNotification] ? "True" : "False" );
+		options[deep::b::SuppressNotification] ? "True" : "False" );
 
 		// Event checking setup...
 
@@ -554,13 +554,13 @@ void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 	}
 	inShutdownRescue = true;
 
-		// If is here in case we get an error during parsing...
-	if ( dagman.dag ) dagman.dag->_dagStatus = dagStatus;
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 		// Avoid writing two different rescue DAGs if the "main" DAG and
 		// the final node (if any) both fail.
 	static bool wroteRescue = false;
+	// If statement here in case failure occurred during parsing
 	if( dagman.dag ) {
+		dagman.dag->_dagStatus = dagStatus;
 			// We write the rescue DAG *before* removing jobs because
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
@@ -609,8 +609,9 @@ void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 		bool removed = ( dagStatus == DagStatus::DAG_STATUS_RM );
 		dagman.dag->DumpNodeStatus( false, removed );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
+		dagman.dag->ReportMetrics( exitVal );
 	}
-	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
+
 	dagman.PublishStats();
 	dagmanUtils.tolerant_unlink( lockFileName.c_str() ); 
 	dagman.CleanUp();
@@ -886,10 +887,10 @@ void main_init (int argc, char ** const argv) {
 			onlyDumpDot = true;
 
 		} else if( !strcasecmp( "-verbose", argv[i] ) ) {
-			dagman._submitDagDeepOpts.bVerbose = true;
+			dagman.options[deep::b::Verbose] = true;
 
 		} else if( !strcasecmp( "-force", argv[i] ) ) {
-			dagman._submitDagDeepOpts[deep::b::Force] = true;
+			dagman.options[deep::b::Force] = true;
 		
 		} else if( !strcasecmp( "-notification", argv[i] ) ) {
 			i++;
@@ -897,13 +898,13 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No notification value specified\n" );
 				Usage();
 			}
-			dagman._submitDagDeepOpts.strNotification = argv[i];
+			dagman.options[deep::str::Notification] = argv[i];
 
 		} else if( !strcasecmp( "-suppress_notification",argv[i] ) ) {
-			dagman._submitDagDeepOpts[deep::b::SuppressNotification] = true;
+			dagman.options[deep::b::SuppressNotification] = true;
 
 		} else if( !strcasecmp( "-dont_suppress_notification",argv[i] ) ) {
-			dagman._submitDagDeepOpts[deep::b::SuppressNotification] = false;
+			dagman.options[deep::b::SuppressNotification] = false;
 
 		} else if( !strcasecmp( "-dagman", argv[i] ) ) {
 			i++;
@@ -911,7 +912,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No dagman value specified\n" );
 				Usage();
 			}
-			dagman._submitDagDeepOpts[deep::str::DagmanPath] = argv[i];
+			dagman.options[deep::str::DagmanPath] = argv[i];
 
 		} else if( !strcasecmp( "-outfile_dir", argv[i] ) ) {
 			i++;
@@ -919,30 +920,30 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No outfile_dir value specified\n" );
 				Usage();
 			}
-			dagman._submitDagDeepOpts[deep::str::OutfileDir] = argv[i];
+			dagman.options[deep::str::OutfileDir] = argv[i];
 
 		} else if( !strcasecmp( "-update_submit", argv[i] ) ) {
-			dagman._submitDagDeepOpts[deep::b::UpdateSubmit] = true;
+			dagman.options[deep::b::UpdateSubmit] = true;
 
 		} else if( !strcasecmp( "-import_env", argv[i] ) ) {
-			dagman._submitDagDeepOpts[deep::b::ImportEnv] = true;
+			dagman.options[deep::b::ImportEnv] = true;
 
 		} else if( !strcasecmp( "-include_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {
 				debug_printf(DEBUG_SILENT, "No environment variables passed for -include_env\n");
 				Usage();
 			}
-			if (!dagman._submitDagDeepOpts[deep::str::GetFromEnv].empty()) {
-				dagman._submitDagDeepOpts[deep::str::GetFromEnv] += ",";
+			if (!dagman.options[deep::str::GetFromEnv].empty()) {
+				dagman.options[deep::str::GetFromEnv] += ",";
 			}
-			dagman._submitDagDeepOpts[deep::str::GetFromEnv] += argv[i];
+			dagman.options[deep::str::GetFromEnv] += argv[i];
 
 		} else if( !strcasecmp( "-insert_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {
 				debug_printf(DEBUG_SILENT, "No key=value pairs passed for -insert_env\n");
 				Usage();
 			}
-			dagman._submitDagDeepOpts.addToEnv.push_back(argv[i]);
+			dagman.options[deep::slist::AddToEnv].push_back(argv[i]);
 
 		} else if( !strcasecmp( "-priority", argv[i] ) ) {
 			++i;
@@ -989,8 +990,8 @@ void main_init (int argc, char ** const argv) {
 				dagman._batchName );
 
 	dagman._dagmanClassad->GetAcctInfo(
-				dagman._submitDagDeepOpts.acctGroup,
-				dagman._submitDagDeepOpts.acctGroupUser );
+				dagman.options[deep::str::AcctGroup],
+				dagman.options[deep::str::AcctGroupUser] );
 
 	dagman.ResolveDefaultLog();
 
@@ -1221,11 +1222,11 @@ void main_init (int argc, char ** const argv) {
 		// Fill in values in the deep submit options that we haven't
 		// already set.
 		//
-	dagman._submitDagDeepOpts[deep::b::UseDagDir] = dagman.useDagDir;
-	dagman._submitDagDeepOpts[deep::b::AutoRescue] = dagman.autoRescue;
-	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
-	dagman._submitDagDeepOpts[deep::b::AllowVersionMismatch] = allowVerMismatch;
-	dagman._submitDagDeepOpts[deep::b::Recurse] = false;
+	dagman.options[deep::b::UseDagDir] = dagman.useDagDir;
+	dagman.options[deep::b::AutoRescue] = dagman.autoRescue;
+	dagman.options[deep::i::DoRescueFrom] = dagman.doRescueFrom;
+	dagman.options[deep::b::AllowVersionMismatch] = allowVerMismatch;
+	dagman.options[deep::b::Recurse] = false;
 
 	//
 	// Create the DAG
@@ -1244,7 +1245,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
 						  dagman._defaultNodeLog.c_str(),
 						  dagman._generateSubdagSubmits,
-						  &dagman._submitDagDeepOpts,
+						  &dagman.options,
 						  false, dagman._schedd ); /* toplevel dag! */
 
 	if( dagman.dag == NULL ) {
@@ -1863,6 +1864,17 @@ void condor_event_timer (int /* tid */) {
 				  "ERROR: the following job(s) failed:\n" );
 		dagman.dag->PrintJobList( Job::STATUS_ERROR );
 		main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );
+		return;
+	}
+
+	// If Final node has exited but DAGMan is still waiting on jobs
+	// something is wrong (likely missed job events)
+	if (dagman.dag->FinalNodeFinished()) {
+		// Replace with a world view check to hopefully exit with above paths
+		debug_printf(DEBUG_QUIET,
+		             "ERROR: DAGMan FINAL node has terminated but DAGMan thinks %d job(s) are still running.\n",
+		             dagman.dag->NumJobsSubmitted());
+		main_shutdown_rescue(EXIT_ABORT, dagman.dag->_dagStatus);
 		return;
 	}
 

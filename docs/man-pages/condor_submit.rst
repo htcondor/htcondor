@@ -104,7 +104,7 @@ Options
     :subcom:`output` or :subcom:`transfer_output_files`.
  **-debug**
     Cause debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-append** *command*
     Augment the commands in the submit description file with the given
     *command*. This command will be considered to immediately precede
@@ -1325,7 +1325,7 @@ FILE TRANSFER COMMANDS
     HTCondor to transfer the job's output files when the job completes
     (exits on its own) and when the job is evicted.  When the job is evicted,
     HTCondor will transfer the output files to a temporary directory on the
-    submit node (determined by the ``SPOOL`` configuration variable).  When
+    submit node (determined by the :macro:`SPOOL` configuration variable).  When
     the job restarts, these files will be transferred instead of the input
     files.  If ``transfer_output_files`` is not set, HTCondor considers all
     files in the sandbox's top-level directory to be the output;
@@ -1392,7 +1392,7 @@ POLICY COMMANDS
     **max_retries** times (unless retries are ceased because of the
     **retry_until** command). If **max_retries** is not defined, and
     either **retry_until** or **success_exit_code** is, the value of
-    ``DEFAULT_JOB_MAX_RETRIES`` will be used for the maximum number of
+    :macro:`DEFAULT_JOB_MAX_RETRIES` will be used for the maximum number of
     retries.
 
     The combination of the **max_retries**, **retry_until**, and
@@ -1602,8 +1602,8 @@ POLICY COMMANDS
     Only job ClassAd attributes will be defined for use by this ClassAd
     expression. Note that, by default, this expression is only checked
     once every 60 seconds. The period of these evaluations can be
-    adjusted by setting the ``PERIODIC_EXPR_INTERVAL``,
-    ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
+    adjusted by setting the :macro:`PERIODIC_EXPR_INTERVAL`,
+    :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
  :subcom-def:`periodic_hold_reason` = <ClassAd String Expression>
@@ -1629,8 +1629,8 @@ POLICY COMMANDS
     Only job ClassAd attributes will be defined for use by this ClassAd
     expression. Note that, by default, this expression is only checked
     once every 60 seconds. The period of these evaluations can be
-    adjusted by setting the ``PERIODIC_EXPR_INTERVAL``,
-    ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
+    adjusted by setting the :macro:`PERIODIC_EXPR_INTERVAL`,
+    :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
  :subcom-def:`periodic_remove` = <ClassAd Boolean Expression>
@@ -1650,8 +1650,8 @@ POLICY COMMANDS
     Only job ClassAd attributes will be defined for use by this ClassAd
     expression. Note that, by default, this expression is only checked
     once every 60 seconds. The period of these evaluations can be
-    adjusted by setting the ``PERIODIC_EXPR_INTERVAL``,
-    ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
+    adjusted by setting the :macro:`PERIODIC_EXPR_INTERVAL`,
+    :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
     :index:`periodic_vacate<single: periodic_vacate; submit commands>`
@@ -1663,8 +1663,8 @@ POLICY COMMANDS
     Only job ClassAd attributes will be defined for use by this ClassAd
     expression. Note that, by default, this expression is only checked
     once every 60 seconds. The period of these evaluations can be
-    adjusted by setting the ``PERIODIC_EXPR_INTERVAL``,
-    ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
+    adjusted by setting the :macro:`PERIODIC_EXPR_INTERVAL`,
+    :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
 COMMANDS FOR THE GRID
@@ -2456,7 +2456,7 @@ ADVANCED COMMANDS
     should wait following the sending of the kill signal defined by
     **kill_sig** and forcibly killing the job. The actual amount of time between sending
     the signal and forcibly killing the job is the smallest of this
-    value and the configuration variable ``KILLING_TIMEOUT``
+    value and the configuration variable :macro:`KILLING_TIMEOUT`
     :index:`KILLING_TIMEOUT`, as defined on the execute machine.
 
  :subcom-def:`load_profile` = <True | False>
@@ -2508,7 +2508,7 @@ ADVANCED COMMANDS
 
     Setting this expression does not affect the job's resource
     requirements or preferences. For a job to only run on a machine with
-    a minimum ``MachineMaxVacateTime``, or to preferentially run on such
+    a minimum :macro:`MachineMaxVacateTime`, or to preferentially run on such
     machines, explicitly specify this in the requirements and/or rank
     expressions.
 
@@ -2576,7 +2576,7 @@ ADVANCED COMMANDS
     wish to run, but do not wish to use resources that could instead be
     used to run other people's HTCondor jobs. Jobs submitted in this
     fashion have an accounting group.  The accounting group is configurable
-    by setting ``NICE_USER_ACCOUNTING_GROUP_NAME`` which defaults to ``nice-user``
+    by setting :macro:`NICE_USER_ACCOUNTING_GROUP_NAME` which defaults to ``nice-user``
     The default value is ``False``. 
 
  :subcom-def:`noop_job` = <ClassAd Boolean Expression>

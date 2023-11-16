@@ -95,8 +95,6 @@ GCC_DIAG_OFF(cast-qual)
 GCC_DIAG_ON(float-equal)
 GCC_DIAG_ON(cast-qual)
 
-#include <sstream>
-#include <fstream>
 #include <stdio.h>
 
 namespace {
@@ -1610,13 +1608,8 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		.set_key_id(key_id.empty() ? "POOL" : key_id);
 
 	if (!authz_list.empty()) {
-		std::stringstream ss;
-		for (const auto &authz : authz_list) {
-			std::string authz_full = "condor:/" + authz;
-			ss << authz_full << " ";
-		}
-		const std::string &authz_set = ss.str();
-		jwt_builder.set_payload_claim("scope", jwt::claim(authz_set.substr(0, authz_set.size()-1)));
+		const std::string authz_set = std::string("condor:/") + join(authz_list, " condor:/");
+		jwt_builder.set_payload_claim("scope", jwt::claim(authz_set));
 	}
 	if (lifetime >= 0) {
 		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
@@ -2095,16 +2088,12 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 				if (decoded_jwt.has_payload_claim("scope")) {
 						// throws std::bad_cast if this isn't a string; caught below.
 					const std::string &scopes_str = decoded_jwt.get_payload_claim("scope").as_string();
-					StringList scope_list(scopes_str.c_str());
-					scope_list.rewind();
-					const char *scope;
-					while ( (scope = scope_list.next()) ) {
+					for (const auto& scope : StringTokenIterator(scopes_str)) {
 						scopes.emplace_back(scope);
-						if (strncmp(scope, "condor:/", 8)) {
+						if (strncmp(scope.c_str(), "condor:/", 8)) {
 							continue;
 						}
-						scope += 8;
-						authz.emplace_back(scope);
+						authz.emplace_back(&scope[8]);
 					}
 				}
 				if (decoded_jwt.has_expires_at()) {
@@ -2125,20 +2114,10 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 			}
 			classad::ClassAd ad;
 			if (!authz.empty()) {
-				std::stringstream ss;
-				for (const auto &auth : authz) {
-					ss << auth << ",";
-				}
-				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
+				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, join(authz, ","));
 			}
 			if (!scopes.empty()) {
-				std::stringstream ss;
-				bool first = true;
-				for (const auto &scope : scopes) {
-					ss << (first ? "" : ",") << scope;
-					first = false;
-				}
-				ad.InsertAttr(ATTR_TOKEN_SCOPES, ss.str());
+				ad.InsertAttr(ATTR_TOKEN_SCOPES, join(scopes, ","));
 			}
 			if (username.empty()) {
 				// This should not be possible: the SciTokens library should fail such a token.

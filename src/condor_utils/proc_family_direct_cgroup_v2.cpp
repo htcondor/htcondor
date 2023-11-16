@@ -586,7 +586,6 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	stdfs::path leaf            = cgroup_root_dir / cgroup_name;
 	stdfs::path memory_events   = leaf / "memory.events"; // includes children, if any
 
-	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::checking if pid %u was oom killed... \n", pid);
 	FILE *f = fopen(memory_events.c_str(), "r");
 	if (!f) {
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::has_been_oom_killed cannot open %s: %d %s\n", memory_events.c_str(), errno, strerror(errno));
@@ -608,6 +607,7 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 		}
 	}
 	fclose(f);
+	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::checking if pid %d was oom killed... oom_count was %zu\n", pid, oom_count);
 
 	killed = oom_count > 0;
 

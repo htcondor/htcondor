@@ -37,7 +37,7 @@ class PipeEnd {
 
 public:
 	PipeEnd(HANDLE handle, bool overlapped, bool nonblocking, int pipe_size);
-	~PipeEnd();
+	virtual ~PipeEnd();
 
 	// retrieve the underlying pipe handle
 	HANDLE get_handle() const { return m_handle; }
@@ -104,6 +104,8 @@ public:
 	ReadPipeEnd(HANDLE h, bool o, bool n, int sz) :
 	  PipeEnd(h, o, n, sz), m_async_io_state(IO_UNSTARTED), m_async_io_error(0) { }
 
+	virtual ~ReadPipeEnd() = default;
+
 	HANDLE pre_wait();
 	bool post_wait();
 
@@ -127,6 +129,7 @@ public:
 	WritePipeEnd(HANDLE h, bool o, bool n, int sz) :
 	  PipeEnd(h, o, n, sz), m_async_io_buf(NULL), m_async_io_error(0) { }
 
+	virtual ~WritePipeEnd() = default;
 	HANDLE pre_wait();
 	bool post_wait();
 

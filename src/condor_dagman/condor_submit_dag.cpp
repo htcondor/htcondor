@@ -37,13 +37,12 @@ namespace shallow = DagmanShallowOptions;
 namespace deep = DagmanDeepOptions;
 
 int printUsage(int iExitCode=1); // NOTE: printUsage calls exit(1), so it doesn't return
-void parseCommandLine(SubmitDagDeepOptions &deepOpts,
+void parseCommandLine(DagmanOptions &dagOpts, SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts, size_t argc,
 			const char * const argv[]);
 bool parsePreservedArgs(const std::string &strArg, size_t &argNum, size_t argc,
 			const char * const argv[], SubmitDagShallowOptions &shallowOpts);
-int doRecursionNew( SubmitDagDeepOptions &deepOpts,
-			SubmitDagShallowOptions &shallowOpts );
+int doRecursionNew(DagmanOptions &dagOpts, int priority);
 int parseJobOrDagLine( const char *dagLine, dag_tokener &tokens,
 			const char *fileType, const char *&submitOrDagFile,
 			const char *&directory );
@@ -74,6 +73,7 @@ int main(int argc, char *argv[])
 		// structures.
 	SubmitDagDeepOptions deepOpts;
 	SubmitDagShallowOptions shallowOpts;
+	DagmanOptions dagOpts;
 
 		// We're setting strScheddDaemonAdFile and strScheddAddressFile
 		// here so that the classad updating feature (see gittrac #1782)
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 		shallowOpts[shallow::str::ScheddAddressFile] = param_val;
 	}
 
-	parseCommandLine(deepOpts, shallowOpts, argc, argv);
+	parseCommandLine(dagOpts, deepOpts, shallowOpts, argc, argv);
 
 	int tmpResult;
 
@@ -100,14 +100,14 @@ int main(int argc, char *argv[])
 		// depth-first so all of the lower-level .condor.sub files already
 		// exist when we check for log files.
 	if ( deepOpts[deep::b::Recurse] ) {
-		tmpResult = doRecursionNew( deepOpts, shallowOpts );
+		tmpResult = doRecursionNew(dagOpts, shallowOpts[shallow::i::Priority]);
 		if ( tmpResult != 0) {
 			fprintf( stderr, "Recursive submit(s) failed; exiting without "
 						"attempting top-level submit\n" );
 			return tmpResult;
 		}
 	}
-	
+
 		// Further work to get the shallowOpts structure set up properly.
 	tmpResult = dagmanUtils.setUpOptions( deepOpts, shallowOpts, dagFileAttrLines );
 	if ( tmpResult != 0 ) return tmpResult;
@@ -155,17 +155,16 @@ int main(int argc, char *argv[])
 	@return 0 if successful, 1 if failed
 */
 int
-doRecursionNew( SubmitDagDeepOptions &deepOpts,
-			SubmitDagShallowOptions &shallowOpts )
+doRecursionNew(DagmanOptions &dagOpts, int priority)
 {
 	int result = 0;
 
 		// Go through all DAG files specified on the command line...
-	for (auto dagfile_it = shallowOpts.dagFiles.begin(); dagfile_it != shallowOpts.dagFiles.end(); ++dagfile_it) {
+	for (const auto &dagfile : dagOpts[shallow::slist::DagFiles]) {
 
 			// Get logical lines from this DAG file.
 		MultiLogFiles::FileReader reader;
-		std::string errMsg = reader.Open( *dagfile_it );
+		std::string errMsg = reader.Open( dagfile.c_str() );
 		if ( errMsg != "" ) {
 			fprintf( stderr, "Error reading DAG file: %s\n",
 						errMsg.c_str() );
@@ -205,9 +204,8 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 					submitFile.replace( submitFile.find(DAG_SUBMIT_FILE_SUFFIX), strlen(DAG_SUBMIT_FILE_SUFFIX), "" );
 
 						// Now run condor_submit_dag on the DAG file.
-					if ( dagmanUtils.runSubmitDag( deepOpts, submitFile.c_str(),
-								directory, shallowOpts[shallow::i::Priority],
-								false ) != 0 ) {
+					if ( dagmanUtils.runSubmitDag( dagOpts, submitFile.c_str(),
+								directory, priority,false ) != 0 ) {
 						result = 1;
 					}
 				}
@@ -231,8 +229,8 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 				}
 
 					// Now run condor_submit_dag on the DAG file.
-				if ( dagmanUtils.runSubmitDag( deepOpts, nestedDagFile, directory,
-							shallowOpts[shallow::i::Priority], false ) != 0 ) {
+				if ( dagmanUtils.runSubmitDag( dagOpts, nestedDagFile, directory,
+							priority, false ) != 0 ) {
 					result = 1;
 				}
 			}
@@ -445,7 +443,7 @@ parseArgumentsLine( const std::string &subLine,
 
 //---------------------------------------------------------------------------
 void
-parseCommandLine(SubmitDagDeepOptions &deepOpts,
+parseCommandLine(DagmanOptions &dagOpts, SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts, size_t argc,
 			const char * const argv[])
 {
@@ -458,8 +456,10 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				// We assume an argument without a leading hyphen is
 				// a DAG file name.
 			shallowOpts.dagFiles.emplace_back(strArg.c_str());
+			dagOpts.set("DagFiles", strArg);
 			if ( shallowOpts.primaryDagFile == "" ) {
 				shallowOpts.primaryDagFile = strArg;
+				dagOpts.set("PrimaryDagFile", strArg);
 			}
 		}
 		else if (shallowOpts.primaryDagFile != "")
@@ -509,6 +509,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			else if (strArg.find("-f") != std::string::npos) // -force
 			{
 				deepOpts[deep::b::Force] = true;
+				dagOpts.set("Force", true);
 			}
 			else if (strArg.find("-not") != std::string::npos) // -notification
 			{
@@ -517,6 +518,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					printUsage();
 				}
 				deepOpts.strNotification = argv[++iArg];
+				dagOpts.set("Notification", argv[iArg]);
 			}
 			else if (strArg.find("-r") != std::string::npos) // submit to remote schedd
 			{
@@ -533,6 +535,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					printUsage();
 				}
 				deepOpts[deep::str::DagmanPath] = argv[++iArg];
+				dagOpts.set("DagmanPath", argv[iArg]);
 			}
 			else if (strArg.find("-de") != std::string::npos) // -debug
 			{
@@ -545,6 +548,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			else if (strArg.find("-use") != std::string::npos) // -usedagdir
 			{
 				deepOpts[deep::b::UseDagDir] = true;
+				dagOpts.set("UseDagDir", true);
 			}
 			else if (strArg.find("-out") != std::string::npos) // -outfile_dir
 			{
@@ -553,6 +557,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					printUsage();
 				}
 				deepOpts[deep::str::OutfileDir] = argv[++iArg];
+				dagOpts.set("OutfileDir", argv[iArg]);
 			}
 			else if (strArg.find("-con") != std::string::npos) // -config
 			{
@@ -584,8 +589,10 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-batch-name argument needs a value\n");
 					printUsage();
 				}
-				deepOpts.batchName = argv[++iArg];
-				trim_quotes(deepOpts.batchName, "\""); // trim "" if any
+				std::string batchName = argv[++iArg];
+				trim_quotes(batchName, "\""); // trim "" if any
+				deepOpts.batchName = batchName;
+				dagOpts.set("BatchName", batchName);
 			}
 			else if (strArg.find("-insert") != std::string::npos && strArg.find("_env") == std::string::npos) // -insert_sub_file
 			{
@@ -608,6 +615,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					printUsage();
 				}
 				deepOpts[deep::b::AutoRescue] = (atoi(argv[++iArg]) != 0);
+				dagOpts.set("AutoRescue", argv[iArg]);
 			}
 			else if (strArg.find("-dores") != std::string::npos) // -dorescuefrom
 			{
@@ -616,6 +624,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					printUsage();
 				}
 				deepOpts.doRescueFrom = atoi(argv[++iArg]);
+				dagOpts.set("DoRecueFrom", argv[iArg]);
 			}
 			else if (strArg.find("-load") != std::string::npos) //-load_save
 			{
@@ -628,22 +637,27 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			else if (strArg.find("-allowver") != std::string::npos) // -AllowVersionMismatch
 			{
 				deepOpts[deep::b::AllowVersionMismatch] = true;
+				dagOpts.set("AllowVersionMismatch", true);
 			}
 			else if (strArg.find("-no_rec") != std::string::npos) // -no_recurse
 			{
 				deepOpts[deep::b::Recurse] = false;
+				dagOpts.set("Recurse", false);
 			}
 			else if (strArg.find("-do_rec") != std::string::npos) // -do_recurse
 			{
 				deepOpts[deep::b::Recurse] = true;
+				dagOpts.set("Recurse", true);
 			}
 			else if (strArg.find("-updat") != std::string::npos) // -update_submit
 			{
 				deepOpts[deep::b::UpdateSubmit] = true;
+				dagOpts.set("UpdateSubmit", true);
 			}
 			else if (strArg.find("-import_env") != std::string::npos) // -import_env
 			{
 				deepOpts[deep::b::ImportEnv] = true;
+				dagOpts.set("ImportEnv", true);
 			}
 			else if (strArg.find("-include_env") != std::string::npos)
 			{
@@ -653,6 +667,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				if (!deepOpts[deep::str::GetFromEnv].empty()) { deepOpts[deep::str::GetFromEnv] += ","; }
 				deepOpts[deep::str::GetFromEnv] += argv[++iArg];
+				dagOpts.append("GetFromEnv", argv[iArg]);
 			}
 			else if (strArg.find("-insert_env") != std::string::npos)
 			{
@@ -663,6 +678,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				std::string kv_pairs(argv[++iArg]);
 				trim(kv_pairs);
 				deepOpts.addToEnv.push_back(kv_pairs);
+				dagOpts.set("AddToEnv", kv_pairs);
 			}
 			else if (strArg.find("-dumpr") != std::string::npos) // -DumpRescue
 			{
@@ -677,6 +693,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			else if ( (strArg.find("-v") != std::string::npos) ) // -verbose
 			{
 				deepOpts.bVerbose = true;
+				dagOpts.set("Verbose", true);
 			}
 			else if ( (strArg.find("-dontalwaysrun") != std::string::npos) ) // DontAlwaysRunPost
 			{
@@ -699,10 +716,12 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			else if ( (strArg.find("-suppress_notification") != std::string::npos) )
 			{
 				deepOpts[deep::b::SuppressNotification] = true;
+				dagOpts.set("suppressNotification", true);
 			}
 			else if ( (strArg.find("-dont_suppress_notification") != std::string::npos) )
 			{
 				deepOpts[deep::b::SuppressNotification] = false;
+				dagOpts.set("suppressNotification", false);
 			}
 			else if( (strArg.find("-prio") != std::string::npos) ) // -priority
 			{

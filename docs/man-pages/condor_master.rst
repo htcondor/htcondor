@@ -30,27 +30,27 @@ important to HTCondor's performance.
 The :macro:`DAEMON_LIST` configuration macro is
 used by the *condor_master* to provide a per-machine list of daemons
 that should be started and kept running. For daemons that are specified
-in the ``DC_DAEMON_LIST`` configuration macro, the *condor_master*
+in the :macro:`DC_DAEMON_LIST` configuration macro, the *condor_master*
 daemon will spawn them automatically appending a *-f* argument. For
-those listed in ``DAEMON_LIST``, but not in ``DC_DAEMON_LIST``, there
+those listed in :macro:`DAEMON_LIST`, but not in :macro:`DC_DAEMON_LIST`, there
 will be no *-f* argument.
 
 The *condor_master* creates certain directories necessary for its proper
 functioning on start-up if they don't already exist, using the values of
 the configuration settings
-``EXECUTE``,
-``LOCAL_DIR``,
+:macro:`EXECUTE`,
+:macro:`LOCAL_DIR`,
 ``LOCAL_DISK_LOCK_DIR``,
-``LOCAL_UNIV_EXECUTE``,
-``LOCK``,
-``LOG``,
-``RUN``,
-``SEC_CREDENTIAL_DIRECTORY_KRB``,
-``SEC_CREDENTIAL_DIRECTORY_OAUTH``,
-``SEC_PASSWORD_DIRECTORY``,
-``SEC_TOKEN_SYSTEM_DIRECTORY``,
+:macro:`LOCAL_UNIV_EXECUTE`,
+:macro:`LOCK`,
+:macro:`LOG`,
+:macro:`RUN`,
+:macro:`SEC_CREDENTIAL_DIRECTORY_KRB`,
+:macro:`SEC_CREDENTIAL_DIRECTORY_OAUTH`,
+:macro:`SEC_PASSWORD_DIRECTORY`,
+:macro:`SEC_TOKEN_SYSTEM_DIRECTORY`,
 and
-``SPOOL``.
+:macro:`SPOOL`.
 
 Options
 -------

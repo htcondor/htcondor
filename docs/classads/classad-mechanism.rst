@@ -1048,7 +1048,7 @@ Optional parameters are given within square brackets.
     is that information about the evaluation is logged to the evaluating
     program's log file, at the ``D_FULLDEBUG`` debug level. This is
     useful for determining why a given ClassAd expression is evaluating
-    the way it does. For example, if a *condor_startd* ``START``
+    the way it does. For example, if a *condor_startd* :macro:`START`
     expression is unexpectedly evaluating to ``UNDEFINED``, then
     wrapping the expression in this debug() function will log
     information about each component of the expression to the log file,
@@ -1326,8 +1326,8 @@ characters other than these as options are ignored.
     the user belongs to no groups.
 
     The maps for the ``userMap()`` function are defined by the following
-    configuration macros: ``<SUBSYS>_CLASSAD_USER_MAP_NAMES``,
-    ``CLASSAD_USER_MAPFILE_<name>`` and ``CLASSAD_USER_MAPDATA_<name>``
+    configuration macros: :macro:`<SUBSYS>_CLASSAD_USER_MAP_NAMES`,
+    :macro:`CLASSAD_USER_MAPFILE_<name>` and :macro:`CLASSAD_USER_MAPDATA_<name>`
     (see the :ref:`admin-manual/configuration-macros:htcondor-wide
     configuration file entries` section).
 

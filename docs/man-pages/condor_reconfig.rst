@@ -24,7 +24,7 @@ Description
 accordance with the current status of the HTCondor configuration
 file(s). Once reconfiguration is complete, the daemons will behave
 according to the policies stated in the configuration file(s). The main
-exception is with the ``DAEMON_LIST`` variable, which will only be
+exception is with the :macro:`DAEMON_LIST` variable, which will only be
 updated if the *condor_restart* command is used. Other configuration
 variables that can only be changed if the HTCondor daemons are restarted
 are listed in the HTCondor manual in the section on configuration. In
@@ -49,7 +49,7 @@ Options
     Display version information
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number

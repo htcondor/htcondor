@@ -28,11 +28,23 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improve ``htcondor job status`` command to display information about
+  a jobs goodput.
+  :jira:`1982`
+
+- Added ``ROOT_MAX_THREADS`` to :macro:`STARTER_NUM_THREADS_ENV_VARS` default value.
+  :jira:`2137`
 
 Bugs Fixed:
 
-- None.
+- Linux jobs with a invalid #! interpreter now get a better error
+  message when the EP is running as root.  This was enhanced in 10.0,
+  but a bug prevented the enhancement from fully working with a rootly EP.
+  :jira:`1698`
+
+- Fixed a bug where the DAGMan job proper for a DAG with a final
+  node could stay stuck in the removed job state.
+  :jira:`2147`
 
 .. _lts-version-history-2302:
 
@@ -74,13 +86,13 @@ Bugs Fixed:
 - Fixed several small bugs with Trust On First Use (TOFU) for SSL
   authentication.
   Added configuration parameter
-  ``BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER``, which can be used to
+  :macro:`BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER`, which can be used to
   prevent tools from prompting the user about trusting the server's
   SSL certificate.
   :jira:`2080`
 
 - Fixed warnings about use of deprecated HTCondor python binding methods
-  in the `htcondor dag submit` command.
+  in the ``htcondor dag submit`` command.
   :jira:`2104`
 
 - Improved cleanup of ssh-agent processes when submitting **batch**
@@ -186,7 +198,7 @@ New Features:
   of older versions of HTCondor require it to be present.
   :jira:`1997`
 
-- The ``-dry-run`` option of *condor_submit* will now print the output of a ``SEC_CREDENTIAL_STORER`` script.
+- The ``-dry-run`` option of *condor_submit* will now print the output of a :macro:`SEC_CREDENTIAL_STORER` script.
   This can be useful when developing such a script.
   :jira:`2014`
 
