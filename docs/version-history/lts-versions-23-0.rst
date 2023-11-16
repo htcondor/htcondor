@@ -90,6 +90,12 @@ Bugs Fixed:
   user was submitted.
   :jira:`2131`
 
+- Fixed a bug where *condor_submit* did not pass back output from the
+  ``SEC_CREDENTIAL_STORER``, which broke OIDC flow. This bugfix reverts the
+  improvement to the ``-dry-run`` option of *condor_submit* which printed
+  the output of a ``SEC_CREDENTIAL_STORER`` script.
+  :jira:`2078`
+
 .. _lts-version-history-2301:
 
 Version 23.0.1
