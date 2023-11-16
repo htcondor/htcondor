@@ -16,6 +16,11 @@ from sphinx import addnodes
 from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
 
+def make_headerlink_node(attribute_name, options):
+    ref = '#' + attribute_name
+    node = nodes.reference('', '¶', refuri=ref, reftitle="Permalink to this headline", classes=['headerlink'], **options)
+    return node
+
 def custom_ext_parser(text, info_start="[", info_end="]"):
     # Attempt to find detail section in text: INFO[DETAILS]
     index_start = text.find(info_start)

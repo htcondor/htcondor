@@ -8,18 +8,13 @@ from docutils.parsers.rst import Directive
 from sphinx import addnodes
 from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
+from htc_helpers import make_headerlink_node
 
 
 def make_anchor_title_node(attribute_name):
     html_parser = html.parser.HTMLParser()
     html_markup = f"""<code class="docutils literal notranslate"><span id="{attribute_name}" class="pre">{html.escape(attribute_name)}</span></code>"""
     node = nodes.raw("", html_markup, format="html")
-    return node
-
-
-def make_headerlink_node(attribute_name, options):
-    ref = '#' + attribute_name
-    node = nodes.reference('', '¶', refuri=ref, reftitle="Permalink to this headline", classes=['headerlink'], **options)
     return node
 
 

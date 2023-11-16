@@ -143,8 +143,6 @@ testing expressions to see if any adjustment is required, before a
 future version of HTCondor potentially makes New ClassAds evaluation
 behavior the default or the only option.
 
-.. _ClassAd Syntax:
-
 ClassAd Syntax
 --------------
 
@@ -1753,8 +1751,6 @@ example where they are permitted.
 .. code-block:: doscon
 
     > condor_status -constraint " OpSys == ""WINDOWS"" "
-
-.. _extending-classads:
 
 Extending ClassAds with User-written Functions
 ----------------------------------------------
