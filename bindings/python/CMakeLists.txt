@@ -167,8 +167,7 @@ if (WITH_PYTHON_BINDINGS)
             OUTPUT ${TIMESTAMP3_FILE}
             COMMAND ${PYTHON3_EXECUTABLE} ${SETUP_PY} build
             COMMAND ${CMAKE_COMMAND} ARGS -E touch ${TIMESTAMP3_FILE}
-            DEPENDS ${DEPS} py3classad_module py3htcondor
-            # py3classad3_impl py3htcondor2_impl py3classad2_impl
+            DEPENDS ${DEPS} py3classad_module py3htcondor py3classad3_impl py3htcondor2_impl py3classad2_impl
         )
 
         add_custom_target(python3_bindings ALL DEPENDS ${TIMESTAMP3_FILE})
