@@ -1182,7 +1182,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 		setRemoteUser("scitokens");
 		setAuthenticatedName( m_scitokens_auth_name.c_str() );
 	} else {
-		MyString subjectname = get_peer_identity(m_auth_state->m_ssl);
+		std::string subjectname = get_peer_identity(m_auth_state->m_ssl);
 		if (subjectname.empty()) {
 			setRemoteUser("unauthenticated");
 			setAuthenticatedName("unauthenticated");
@@ -1723,12 +1723,12 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 		X509_free( cert );
 		long rc = (*SSL_get_verify_result_ptr)( ssl );
 		if (rc == X509_V_OK && param_boolean("AUTH_SSL_REQUIRE_CLIENT_MAPPING", false)) {
-			MyString peer_dn = get_peer_identity(m_auth_state->m_ssl);
+			std::string peer_dn = get_peer_identity(m_auth_state->m_ssl);
 			if (peer_dn.empty()) {
 				dprintf(D_SECURITY, "Client has no SSL authenticated identity, failing authentication to give another authentication method a go.\n");
 				return X509_V_ERR_APPLICATION_VERIFICATION;
 			}
-			MyString canonical_user;
+			std::string canonical_user;
 			Authentication::load_map_file();
 			auto global_map_file = Authentication::getGlobalMapFile();
 			bool mapFailed = true;
