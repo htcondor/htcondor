@@ -90,6 +90,10 @@ Bugs Fixed:
   user was submitted.
   :jira:`2131`
 
+- Reverted a change to *condor_submit* that disconnected the output stream of
+  ``SEC_CREDENTIAL_STORER`` to the user's console, which broke OIDC flow.
+  :jira:`2078`
+
 .. _lts-version-history-2301:
 
 Version 23.0.1

@@ -6159,7 +6159,7 @@ These settings affect the *condor_starter*.
     90% of the hard limit to encourage the kernel to lower 
     cacheable memory the job is using.  If set to ``none``, no limit will be enforced, 
     but the memory usage of the job will be accurately measured by a cgroup.
-    When set to custom, the additional knob CGROUP_HARD_MEMORY_LIMIT_EXPR and
+    When set to custom, the additional knob CGROUP_HARD_MEMORY_LIMIT_EXPR
     must be set, which is a classad expression evaluated
     in the context of the machine and the job, respectively, to determine the hard limits.
 

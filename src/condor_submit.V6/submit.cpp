@@ -2702,42 +2702,8 @@ int process_job_credentials()
 			for (const char * request = request_list.first(); request != NULL; request = request_list.next()) {
 				args.AppendArg(request);
 			}
-
-			if (DashDryRun & (2|4)) { // bits 2 and 4 dry run the OAuth stuff
-				std::string buf;
-				args.GetArgsStringForLogging(buf);
-				fprintf(stdout, "::SEC_CREDENTIAL_STORER(%s)\n", buf.c_str());
-				if ( ! (DashDryRun & 4)) { 
-					// simulate failure
-					fprintf(stderr, "\nERROR: (dry-run) invoking %s\n", storer.c_str());
-					exit(1);
-				}
-				sent_credential_to_credd = true;
-				return 0; // simulated success
-			}
-
-			const bool want_stderr = true;
-			MyPopenTimer pgm;
-			if (pgm.start_program(args, want_stderr) < 0) {
-				fprintf(stderr, "\nERROR: (%i) invoking SEC_CREDENIAL_STORER=%s\n", pgm.error_code(), storer.c_str());
-				exit(1);
-			}
-			int timeout = 20*60;
-			int exit_status = 0;
-			bool exited = pgm.wait_for_exit(timeout, &exit_status);
-			pgm.close_program(1); // close fp, wait 1 sec, then SIGKILL (does nothing if program already exited)
-			if ( ! exited) {
-				fprintf(stderr, "\nWARNING: SEC_CREDENIAL_STORER=%s did not exit\n", storer.c_str());
-			}
-			if (DashDryRun && pgm.output_size()) {
-				fprintf(stdout, "::SEC_CREDENTIAL_STORER=%s exit=%d, output:\n", storer.c_str(), exit_status);
-				std::string line;
-				while (pgm.output().readLine(line)) { fputs(line.c_str(), stdout); }
-				fprintf(stdout, "::end of SEC_CREDENTIAL_STORER output\n");
-			}
-			if (exit_status != 0) {
-				fprintf(stderr, "\nERROR: SEC_CREDENTIAL_STORER=%s exited with status=%d\n",
-					storer.c_str(), exit_status);
+			if (my_system(args) != 0) {
+				fprintf(stderr, "\nERROR: (%i) invoking %s\n", errno, storer.c_str());
 				exit(1);
 			}
 			sent_credential_to_credd = true;
