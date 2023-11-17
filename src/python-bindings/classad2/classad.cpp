@@ -356,7 +356,7 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         }
 
         PyObject * py_ts = PyObject_CallMethod(
-            py_classad2_classad_module,
+            py_classad2_module,
             "_convert_local_datetime_to_utc_ts",
             "O", py_v
         );
