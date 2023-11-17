@@ -2587,6 +2587,10 @@ tags=condor_auth_ssl
 default=false
 type=bool
 
+[AUTH_SSL_REQUIRE_CLIENT_MAPPING]
+default=false
+type=bool
+
 [AUTH_SSL_ALLOW_CLIENT_PROXY]
 default=false
 type=bool
