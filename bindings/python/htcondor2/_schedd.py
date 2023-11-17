@@ -343,7 +343,7 @@ class Schedd():
 
         # A better API would be to permit at submit-time the specification
         # of a list[str] that is the variable names (in order), and a
-        # list[str] or list list[list[str]] that is the values (in order),
+        # list[str] or a list[list[str]] that is the values (in order),
         # either as a space-separated string or a list of strings.  The
         # Submit object would permit the specification of either or both
         # ahead of time.  You could make use of QUEUE FROM FILES (etc) by

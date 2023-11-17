@@ -62,7 +62,7 @@ class Submit(MutableMapping):
                     raise TypeError("key must be a string")
                 # This was an undocumented feature in version 1, and it's
                 # likely to be useless.  This implementation assumes that
-                # str(classad.ExprTree) is always valid as a submit-file.
+                # str(classad.ExprTree) is always valid in a submit-file.
                 if isinstance(value, classad.ClassAd):
                     pairs.append(f"{key} = {repr(value)}")
                 else:
@@ -137,8 +137,8 @@ class Submit(MutableMapping):
     # values as well (in C++, or less efficiently in Python), but that
     # doesn't seem helpful.
     #
-    # It actually turns out to be necessary to correctly regenerate submit
-    # files from submit hashes.
+    # Ignoring default values actually turns out to be necessary to correctly
+    # (re)generate submit files from submit hashes.
     #
     def __iter__(self):
         keys = _submit_keys(self, self._handle)
