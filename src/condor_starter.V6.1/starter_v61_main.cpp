@@ -236,8 +236,8 @@ printClassAd( void )
 
     // Advertise the proxy/cache used by each file transfer plug-in.
     auto proxy_by_method = ft.GetProxyByMethodMap();
-    for( auto i : proxy_by_method ) {
-        printf( "%s_proxy = \"%s\"\n", i.first.c_str(), i.second.c_str() );
+    for( auto & [method, proxy] : proxy_by_method ) {
+        printf( "%s_proxy = \"%s\"\n", method.c_str(), proxy.c_str() );
     }
 
 
