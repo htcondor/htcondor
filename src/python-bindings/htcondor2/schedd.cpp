@@ -121,7 +121,7 @@ _schedd_query(PyObject *, PyObject * args) {
     for( auto & classAd : results ) {
         // We could probably dispense with the copy by clearing the
         // `results` vector after this loop.
-        PyObject * pyClassAd = py_new_htcondor2_classad(classAd->Copy());
+        PyObject * pyClassAd = py_new_classad2_classad(classAd->Copy());
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
@@ -200,7 +200,7 @@ _schedd_act_on_job_ids(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_htcondor2_classad(result->Copy());
+    return py_new_classad2_classad(result->Copy());
 }
 
 
@@ -271,7 +271,7 @@ _schedd_act_on_job_constraint(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_htcondor2_classad(result->Copy());
+    return py_new_classad2_classad(result->Copy());
 }
 
 
@@ -447,7 +447,7 @@ _schedd_export_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    return py_new_htcondor2_classad(result->Copy());
+    return py_new_classad2_classad(result->Copy());
 }
 
 
@@ -488,7 +488,7 @@ _schedd_export_job_constraint(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_htcondor2_classad(result->Copy());
+    return py_new_classad2_classad(result->Copy());
 }
 
 
@@ -520,7 +520,7 @@ _schedd_import_exported_job_results(PyObject *, PyObject * args) {
     // Check for `Error` attribute in result?
 
 
-    return py_new_htcondor2_classad(result->Copy());
+    return py_new_classad2_classad(result->Copy());
 }
 
 
@@ -555,7 +555,7 @@ _schedd_unexport_job_ids(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_htcondor2_classad(result->Copy());
+    return py_new_classad2_classad(result->Copy());
 }
 
 
@@ -592,7 +592,7 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_htcondor2_classad(result->Copy());
+    return py_new_classad2_classad(result->Copy());
 }
 
 
@@ -776,7 +776,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
     }
 
 
-    PyObject * pyClusterAd = py_new_htcondor2_classad(clusterAd->Copy());
+    PyObject * pyClusterAd = py_new_classad2_classad(clusterAd->Copy());
     return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd );
 }
 
@@ -936,7 +936,7 @@ _history_query(PyObject *, PyObject * args) {
         // We could probably dispense with the copy by allocating the
         // result ads on the heap in the first place, but that would
         // require more attention to clean-up in the preceeding loop.
-        PyObject * pyClassAd = py_new_htcondor2_classad(classAd.Copy());
+        PyObject * pyClassAd = py_new_classad2_classad(classAd.Copy());
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
