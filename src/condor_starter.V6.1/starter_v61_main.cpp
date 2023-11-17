@@ -233,6 +233,14 @@ printClassAd( void )
 		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
 	}
 
+
+    // Advertise the proxy/cache used by each file transfer plug-in.
+    auto proxy_by_method = ft.GetProxyByMethodMap();
+    for( auto & [method, proxy] : proxy_by_method ) {
+        printf( "%s_proxy = \"%s\"\n", method.c_str(), proxy.c_str() );
+    }
+
+
 #if defined(WIN32)
 		// Advertise our ability to run jobs as the submitting user
 	printf("%s = True\n", ATTR_HAS_WIN_RUN_AS_OWNER);

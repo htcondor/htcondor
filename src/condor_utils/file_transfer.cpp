@@ -7052,6 +7052,17 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
 		if (ad->LookupString( "SupportedMethods", methods)) {
 			InsertPluginMappings( methods, path, enable_testing );
+
+			// Additionally, if the plug-in report a proxy for any of its
+			// supported methods, record that, too.
+			for( const auto & method : StringTokenIterator(methods) ) {
+			    std::string attr = method + "_proxy";
+
+			    std::string proxy;
+			    if( ad->LookupString( attr, proxy ) ) {
+			        proxy_by_method[method] = proxy;
+			    }
+			}
 		}
 	}
 

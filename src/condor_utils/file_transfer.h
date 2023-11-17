@@ -408,6 +408,8 @@ class FileTransfer final: public Service {
 
 	bool transferIsInProgress() const { return ActiveTransferTid != -1; }
 
+    const std::unordered_map< std::string, std::string > & GetProxyByMethodMap() { return proxy_by_method; }
+
   protected:
 
 	// Because FileTransferItem doesn't store the destination file name
@@ -726,6 +728,8 @@ class FileTransfer final: public Service {
     FileTransferList checkpointList;
 
     FileTransferList inputList;
+
+    std::unordered_map< std::string, std::string > proxy_by_method;
 };
 
 class UploadExitInfo {
