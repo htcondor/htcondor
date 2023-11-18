@@ -223,6 +223,7 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 //    int verify_callback(int ok, X509_STORE_CTX *store);
     long post_connection_check(SSL *ssl, int role);
 	bool server_verify_scitoken(CondorError* errstack);
+	std::string get_peer_identity(SSL *ssl);
 
 		/** This stores the shared session key produced as output of
 			the protocol. 
