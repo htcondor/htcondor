@@ -396,6 +396,13 @@ Singularity::setup(ClassAd &machineAd,
 		return Singularity::FAILURE;
 	}
 
+	if (job_iwd != execute_dir) {
+		// File xfer off, if image was a relative path, prepend iwd
+		if (image[0] != '/') {
+			image = job_iwd + '/' + image;
+		}
+	}
+
 	sing_args.AppendArg(image.c_str());
 
 	if (orig_exec_val.length() > 0) {
