@@ -719,7 +719,6 @@ sub InstallPersonalCondor
 	my $condorq = "";
 	my $sbinloc = "";
 	my $configline = "";
-	my @configfiles;
 	my $condordistribution;
 	my $tmpconfig = $ENV{CONDOR_CONFIG};
 	my $configdir = "";
@@ -748,36 +747,14 @@ sub InstallPersonalCondor
 	}
 
 	if( $condordistribution eq "install" ) {
-	if($iswindows == 1) {
-		#print "condor distribution = install\n";
-	}
 		# where is the hosting condor_config file? The one assumed to be based
 		# on a setup with condor_configure.
 
 		my @config = ();
 		debug("InstallPersonalCondor getting ccv -config\n",$debuglevel);
 		CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>0});
-		debug("InstallPersonalCondor BACK FROM ccv -config\n",$debuglevel);
-		open(CONFIG,"condor_config_val -config 2>&1 | ") || die "Can not find config file: $!\n";
-		while(<CONFIG>)
-		{
-			next if ($_ =~ /figuration source/);
-			CondorUtils::fullchomp($_);
-			$configline = $_;
-			push @configfiles, $configline;
-		}
-		close(CONFIG);
 		$personal_condor_params{"condortemplate"} = shift @config;
 		fullchomp($personal_condor_params{"condortemplate"});
-
-		#print " ****** Condortemplate set to <$personal_condor_params{condortemplate}>\n";
-
-		if(exists $personal_condor_params{fresh_local}) {
-		} else {
-			# Always start with a freshly constructed local config file
-			# so we know what we get  bt 5/13
-			#$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
-		}
 
 		debug("condor_q: $condorq\n",$debuglevel);
 		debug("topleveldir: $topleveldir\n",$debuglevel);
@@ -916,8 +893,6 @@ sub InstallPersonalCondor
 			system("cd $topleveldir && mkdir -p execute spool log log/tmp");
 		}
 	} elsif( -e $condordistribution ) {
-		if($iswindows == 1) {
-		}
 		# in this option we ought to run condor_configure
 		# to get a current config files but we'll do this
 		# after getting the current condor_config from
