@@ -584,9 +584,8 @@ CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
 	// followed by a char buffer for adtype name strings
 	cbq = pending_query_entry_t::size(num_adtypes);
 	cbt = target.size() + 1;
-	tagp = (char*) malloc(cbq+cbt);
-	query_entry = (pending_query_entry_t *) tagp;
-	tagp += cbq;
+	query_entry = (pending_query_entry_t *) malloc(cbq + cbt);
+	tagp = ((char *) query_entry) + cbq;
 
 	ASSERT(query_entry);
 	memset(query_entry, 0, cbq+cbt);
