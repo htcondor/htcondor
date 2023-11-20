@@ -1270,6 +1270,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Nov 20 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.2-1
+- Fix bug where OIDC login information was missing when submitting jobs
+- Improved sandbox and ssh-agent clean up for batch grid universe jobs
+- Fix bug where daemons with a private network address couldn't communicate
+- Fix cgroup v2 memory enforcement for custom configurations
+- Add DISABLE_SWAP_FOR_JOB support on cgroup v2 systems
+- Fix log rotation for OAuth and Vault credmon daemons
+
 * Tue Oct 31 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.1-1
 - Fix 10.6.0 bug that broke PID namespaces
 - Fix bug where execution times for ARC CE jobs were 60 times too large

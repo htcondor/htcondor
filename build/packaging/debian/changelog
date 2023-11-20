@@ -1,3 +1,14 @@
+condor (23.0.2-1) stable; urgency=medium
+
+  * Fix bug where OIDC login information was missing when submitting jobs
+  * Improved sandbox and ssh-agent clean up for batch grid universe jobs
+  * Fix bug where daemons with a private network address couldn't communicate
+  * Fix cgroup v2 memory enforcement for custom configurations
+  * Add DISABLE_SWAP_FOR_JOB support on cgroup v2 systems
+  * Fix log rotation for OAuth and Vault credmon daemons
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 20 Nov 2023 07:28:00 -0600
+
 condor (23.0.1-1) stable; urgency=medium
 
   * Fix 10.6.0 bug that broke PID namespaces

@@ -53,9 +53,7 @@ Version 23.0.2
 
 Release Notes:
 
-.. HTCondor version 23.0.2 released on Month Date, 2023.
-
-- HTCondor version 23.0.2 not yet released.
+- HTCondor version 23.0.2 released on November 20, 2023.
 
 New Features:
 
@@ -63,37 +61,15 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug in the *condor_userlog* tool where it would crash
-  when reading logs with parallel universe jobs in it.
-  :jira:`2099`
-
-- Fixed CGROUP_MEMORY_LIMIT_POLICY=custom for cgroup v2 systems.
-  :jira:`2133`
-
-- Implemented DISABLE_SWAP_FOR_JOB support for cgroup v2 systems.
-  :jira:`2127`
+- Fixed a bug when Hashicorp Vault is configured to issue data transfer tokens
+  (which is not the default), job submission could hang and then fail.
+  Reverted a change to *condor_submit* that disconnected the output stream of
+  :macro:`SEC_CREDENTIAL_STORER` to the user's console, which broke OIDC flow.
+  :jira:`2078`
 
 - Fixed a bug that could result in job sandboxes not being cleaned up 
   for **batch** grid jobs submitted to a remote cluster. 
   :jira:`2073`
-
-- Fixed a bug in *condor_transfer_data* where using the ``-addr``
-  flag would automatically apply the ``-all`` flag to transfer
-  all job data back making the use of ``-addr`` with a Job ID
-  constraint fail.
-  :jira:`2105`
-
-- Fixed several small bugs with Trust On First Use (TOFU) for SSL
-  authentication.
-  Added configuration parameter
-  ``BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER``, which can be used to
-  prevent tools from prompting the user about trusting the server's
-  SSL certificate.
-  :jira:`2080`
-
-- Fixed warnings about use of deprecated HTCondor python binding methods
-  in the ``htcondor dag submit`` command.
-  :jira:`2104`
 
 - Improved cleanup of ssh-agent processes when submitting **batch**
   grid universe jobs to a remote cluster via ssh.
@@ -103,16 +79,14 @@ Bugs Fixed:
   *condor_schedd* that's on the same private network.
   :jira:`2115`
 
-- Fixed a bug that could cause jobs to be created incorrectly when a using
-  ``initialdir`` and ``max_idle`` or ``max_materialize`` in the same submit file.
-  :jira:`2092`
+- Fixed :macro:`CGROUP_MEMORY_LIMIT_POLICY` = ``custom`` for cgroup v2 systems.
+  :jira:`2133`
 
-- Fixed bug in DAGMan where held jobs that were removed would cause a
-  warning about the internal count of held job procs being incorrect.
-  :jira:`2102`
+- Implemented :macro:`DISABLE_SWAP_FOR_JOB` support for cgroup v2 systems.
+  :jira:`2127`
 
 - Fixed a bug in the OAuth and Vault credmons where log files would not
-  rotate according to the config.
+  rotate according to the configuration.
   :jira:`2013`
 
 - Fixed a bug in the *condor_schedd* where it would not create a permanent User
@@ -121,9 +95,35 @@ Bugs Fixed:
   user was submitted.
   :jira:`2131`
 
-- Reverted a change to *condor_submit* that disconnected the output stream of
-  ``SEC_CREDENTIAL_STORER`` to the user's console, which broke OIDC flow.
-  :jira:`2078`
+- Fixed a bug that could cause jobs to be created incorrectly when a using
+  ``initialdir`` and ``max_idle`` or ``max_materialize`` in the same submit file.
+  :jira:`2092`
+
+- Fixed bug in DAGMan where held jobs that were removed would cause a
+  warning about the internal count of held job procs being incorrect.
+  :jira:`2102`
+
+- Fixed a bug in *condor_transfer_data* where using the ``-addr``
+  flag would automatically apply the ``-all`` flag to transfer
+  all job data back making the use of ``-addr`` with a Job ID
+  constraint fail.
+  :jira:`2105`
+
+- Fixed warnings about use of deprecated HTCondor python binding methods
+  in the `htcondor dag submit` command.
+  :jira:`2104`
+
+- Fixed several small bugs with Trust On First Use (TOFU) for SSL
+  authentication.
+  Added configuration parameter
+  :macro:`BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER`, which can be used to
+  prevent tools from prompting the user about trusting the server's
+  SSL certificate.
+  :jira:`2080`
+
+- Fixed bug in the *condor_userlog* tool where it would crash
+  when reading logs with parallel universe jobs in it.
+  :jira:`2099`
 
 .. _lts-version-history-2301:
 
