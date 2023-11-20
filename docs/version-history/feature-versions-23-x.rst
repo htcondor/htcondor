@@ -20,6 +20,9 @@ New Features:
 - Improve hold message when jobs on cgroup system exceed their memory limits.
   :jira:`1533`
 
+- Container universe now works when file transfer is disabled or not used.
+  :jira:`1329`
+
 Bugs Fixed:
 
 - None.
