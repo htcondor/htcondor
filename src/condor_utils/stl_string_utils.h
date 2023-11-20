@@ -252,6 +252,7 @@ struct case_char_traits : public std::char_traits<char>
 };
 
 using istring_view = std::basic_string_view<char, case_char_traits>;
+using istring      = std::basic_string<char, case_char_traits>;
 
 // Some strings contain sensitive data that we want to clear out as soon
 // as we are done with them, like credentials.  This allocator is intended

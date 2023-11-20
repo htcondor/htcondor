@@ -506,7 +506,11 @@ class FileTransfer final: public Service {
 	bool PeerKnowsProtectedURLs{false};
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
-	StringList* ExceptionFiles{nullptr};
+#ifdef WIN32
+	std::vector<istring> ExceptionFiles;
+#else
+	std::vector<std::string> ExceptionFiles;
+#endif
 	StringList* OutputFiles{nullptr};
 	StringList* EncryptInputFiles{nullptr};
 	StringList* EncryptOutputFiles{nullptr};
