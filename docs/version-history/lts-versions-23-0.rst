@@ -56,6 +56,9 @@ Bugs Fixed:
   plugin were not reported to the *condor_starter*.
   :jira:`2464`
 
+- Container universe now works when file transfer is disabled or not used.
+  :jira:`1329`
+
 .. _lts-version-history-23010:
 
 Version 23.0.10
