@@ -33,7 +33,6 @@
 #include "directory.h"
 #include "env.h"
 #include "subsystem_info.h"
-#include "cgroup_limits.h"
 #include "selector.h"
 #include "singularity.h"
 #include "has_sysadmin_cap.h"
