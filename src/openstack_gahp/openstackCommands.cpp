@@ -1076,8 +1076,8 @@ bool NovaServerCreate::workerFunction( char ** argv, int argc, string & resultLi
 		return false;
 	}
 
-	StringList resultList;
-	resultList.append( serverID->value.GetString() );
+	std::vector<std::string> resultList;
+	resultList.emplace_back( serverID->value.GetString() );
 	resultLine = create_success_result( requestID, & resultList );
 	return true;
 }
@@ -1251,7 +1251,9 @@ bool NovaServerList::workerFunction( char ** argv, int argc, string & resultLine
 		return false;
 	}
 
-	StringList reply;
+	std::vector<std::string> reply;
+	// Save room for the count of results, to be filled in at the end
+	reply.emplace_back("");
 	// If we ever care, we can replace the continues with warnings.
 	for( rapidjson::SizeType i = 0; i < serverList->value.Size(); ++i ) {
 		const rapidjson::Value & server = serverList->value[i];
@@ -1265,14 +1267,11 @@ bool NovaServerList::workerFunction( char ** argv, int argc, string & resultLine
 		if( ! serverName->value.IsString() ) { continue; }
 
 		// Only create a reply-list entry if we've got both halves.
-		reply.append( serverID->value.GetString() );
-		reply.append( serverName->value.GetString() );
+		reply.emplace_back( serverID->value.GetString() );
+		reply.emplace_back( serverName->value.GetString() );
 	}
 
-	string count;
-	formatstr( count, "%d", reply.number() / 2 );
-	reply.first();
-	reply.insert( count.c_str() );
+	reply[0] = std::to_string((reply.size() - 1) / 2);
 
 	resultLine = create_success_result( requestID, & reply );
 	return true;
@@ -1378,7 +1377,9 @@ bool NovaServerListDetail::workerFunction( char ** argv, int argc, string & resu
 		return false;
 	}
 
-	StringList reply;
+	std::vector<std::string> reply;
+	// Save room for the count of results, to be filled in at the end
+	reply.emplace_back("");
 	// If we ever care, we can replace the continues with warnings.
 	for( rapidjson::SizeType i = 0; i < serverList->value.Size(); ++i ) {
 		const rapidjson::Value & server = serverList->value[i];
@@ -1410,16 +1411,13 @@ bool NovaServerListDetail::workerFunction( char ** argv, int argc, string & resu
 		serverAddresses->value.Accept( w );
 
 		// Only create a reply-list entry if we've got every value.
-		reply.append( serverID->value.GetString() );
-		reply.append( serverName->value.GetString() );
-		reply.append( serverStatus->value.GetString() );
-		reply.append( sb.GetString() );
+		reply.emplace_back( serverID->value.GetString() );
+		reply.emplace_back( serverName->value.GetString() );
+		reply.emplace_back( serverStatus->value.GetString() );
+		reply.emplace_back( sb.GetString() );
 	}
 
-	string count;
-	formatstr( count, "%d", reply.number() / 4 );
-	reply.first();
-	reply.insert( count.c_str() );
+	reply[0] = std::to_string((reply.size() - 1) / 4);
 
 	resultLine = create_success_result( requestID, & reply );
 	return true;

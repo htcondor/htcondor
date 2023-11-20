@@ -54,7 +54,7 @@ int destroy_sandbox_reaper_id = -1;
 int ChildErrorPipe = -1;
 
 // The list of results ready to be output to IO
-StringList result_list;
+std::vector<std::string> result_list;
 
 // pipe buffers
 PipeBuffer stdin_buffer; 
@@ -295,21 +295,19 @@ stdin_pipe_handler(int) {
 			if (strcasecmp (args.argv[0], GAHP_COMMAND_RESULTS) == 0) {
 					// Print number of results
 				std::string rn_buff;
-				formatstr( rn_buff, "%d", result_list.number() );
+				formatstr( rn_buff, "%zu", result_list.size() );
 				const char * commands [] = {
 					GAHP_RESULT_SUCCESS,
 					rn_buff.c_str() };
 				gahp_output_return (commands, 2);
 
 					// Print each result line
-				char * next;
-				result_list.rewind();
-				while ((next = result_list.next()) != NULL) {
-					printf ("%s\n", next);
+				for (const auto& next : result_list) {
+					printf ("%s\n", next.c_str());
 					fflush(stdout);
-					dprintf(D_FULLDEBUG,"put stdout: %s\n",next);
-					result_list.deleteCurrent();
+					dprintf(D_FULLDEBUG,"put stdout: %s\n",next.c_str());
 				}
+				result_list.clear();
 
 				new_results_signaled = FALSE;
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
@@ -547,7 +545,7 @@ stdin_pipe_handler(int) {
 void
 handle_results( std::string line ) {
 		// Add this to the list
-	result_list.append (line.c_str());
+	result_list.emplace_back (line);
 
 	if (async_mode) {
 		if (!new_results_signaled) {
