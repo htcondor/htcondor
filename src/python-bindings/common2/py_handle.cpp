@@ -62,7 +62,9 @@ _handle_dealloc(PyObject * self) {
     // can't do that because we set Py_LIMITED_API.  However, if we
     // don't set Py_TPFLAGS_BASETYPE, we can call the deallocator
     // directly.  Since Py_TPFLAGS_HAVE_GC isn't set, that's going
-    // to be PyObject_Del().
+    // to be PyObject_Del().  See the following URL:
+    //
+    // https://docs.python.org/3/c-api/typeobj.html?highlight=py_tpflags_basetype#c.PyTypeObject.tp_dealloc
     PyObject_Del(self);
 
     // Required because DynamicPyType<> sets Py_TPFLAGS_HEAPTYPE.
