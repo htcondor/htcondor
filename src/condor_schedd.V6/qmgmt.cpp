@@ -3974,9 +3974,9 @@ NewProc(int cluster_id)
 			int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
 			if( ownerJobCount >= maxJobsPerOwner ) {
 				dprintf( D_ALWAYS,
-					"NewProc(): MAX_JOBS_PER_OWNER exceeded, submit failed.  "
+					"NewProc(): MAX_JOBS_PER_OWNER exceeded for %s, submit failed.  "
 					"Current total is %d.  Limit is %d.\n",
-					ownerJobCount, maxJobsPerOwner );
+					owner, ownerJobCount, maxJobsPerOwner );
 				errno = EINVAL;
 				return NEWJOB_ERR_MAX_JOBS_PER_OWNER;
 			}
