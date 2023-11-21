@@ -1033,7 +1033,8 @@ private:
 	HashTable <int, std::vector<PROC_ID> *> *spoolJobFileWorkers;
 	int				numMatches;
 	int				numShadows;
-	DaemonList		*FlockCollectors, *FlockNegotiators;
+	std::vector<DCCollector> FlockCollectors;
+	std::vector<Daemon> FlockNegotiators;
 	std::unordered_set<std::string> FlockPools; // Names of all "default" flocked collectors.
 	std::unordered_map<std::string, std::unique_ptr<DCCollector>> FlockExtra; // User-provided flock targets.
 

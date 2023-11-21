@@ -47,9 +47,9 @@
 
 
 void computeRealAction( void );
-bool resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unresolved_names_list );
-void doCommand( Daemon* d );
-int doCommands(int argc,const char *argv[],const char *MyName, StringList & unresolved_names);
+bool resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_list, std::vector<std::string>* unresolved_names_list );
+void doCommand( Daemon& d );
+int doCommands(int argc,const char *argv[],const char *MyName, std::vector<std::string> & unresolved_names);
 void version();
 void handleAll();
 void doSquawk( const char *addr );
@@ -373,7 +373,7 @@ main( int argc, const char *argv[] )
 {
 	int rc;
 	int got_name_or_addr = 0;
-	StringList unresolved_names;
+	std::vector<std::string> unresolved_names;
 	const char * pcolon;
 
 #ifndef WIN32
@@ -869,9 +869,9 @@ main( int argc, const char *argv[] )
 
 	rc = doCommands(got_name_or_addr,&names_and_addrs[0],MyName,unresolved_names);
 
-	if ( ! unresolved_names.isEmpty()) {
-		for (const char * name = unresolved_names.first(); name; name = unresolved_names.next()) {
-			fprintf( stderr, "Can't find address for %s\n", name);
+	if ( ! unresolved_names.empty()) {
+		for (const auto& name: unresolved_names) {
+			fprintf( stderr, "Can't find address for %s\n", name.c_str());
 		}
 		fprintf( stderr, "Perhaps you need to query another pool.\n" );
 		if ( ! rc) rc = 1;
@@ -881,11 +881,11 @@ main( int argc, const char *argv[] )
 }
 
 int
-doCommands(int /*argc*/,const char * argv[],const char *MyName,StringList & unresolved_names)
+doCommands(int /*argc*/, const char * argv[], const char *MyName, std::vector<std::string> & unresolved_names)
 {
-	StringList names;
-	StringList addrs;
-	DaemonList daemons;
+	std::vector<std::string> names;
+	std::vector<std::string> addrs;
+	std::vector<Daemon> daemons;
 	char *daemonname;
 	bool found_one = false;
 
@@ -906,7 +906,7 @@ doCommands(int /*argc*/,const char * argv[],const char *MyName,StringList & unre
 				// This is probably a sinful string, use it
 			found_one = true;
 			if( is_valid_sinful(*argv) ) {
-				addrs.append( *argv );
+				addrs.emplace_back( *argv );
 			} else {
 				fprintf( stderr, "Address %s is not valid.\n", *argv );
 				fprintf( stderr, "Should be of the form <ip.address.here:port>.\n" );
@@ -932,9 +932,9 @@ doCommands(int /*argc*/,const char * argv[],const char *MyName,StringList & unre
 			// resolve to a hostname (definitely possible with NAT'd nodes, in
 			// EC2, or a number of other scenarios.)
 			if (*daemonname) {
-				names.append( daemonname );
+				names.emplace_back( daemonname );
 			} else {
-				names.append( *argv );
+				names.emplace_back( *argv );
 			}
 			free( daemonname );
 			daemonname = NULL;
@@ -966,37 +966,30 @@ doCommands(int /*argc*/,const char * argv[],const char *MyName,StringList & unre
 			fprintf( stderr, "Perhaps you need to query another pool.\n" ); 
 			return 1;
 		}
-		doCommand( &local_d );
+		doCommand( local_d );
 		return all_good ? 0 : 1;
 	}
 
 		// If we got here, there were some targets specified on the
 		// command line.  that we know all the targets, resolve any
 		// names, with a single query to the collector...
-	if( ! resolveNames(&daemons, &names, &unresolved_names) ) {
+	if( ! resolveNames(daemons, &names, &unresolved_names) ) {
 		fprintf( stderr, "ERROR: Failed to resolve daemon names, aborting\n" );
 		exit( 1 );
 	}
 
-	Daemon* d;
-	char* addr = NULL;
-	if( ! addrs.isEmpty() ) {
-		addrs.rewind();
-		while( (addr = addrs.next()) ) {
-			if( subsys ) {
-				d = new Daemon( dt, addr, NULL );
-			} else {
-				d = new Daemon( DT_ANY, addr, NULL );
-			}
-			daemons.append( d );
+	for (const auto& addr : addrs) {
+		if( subsys ) {
+			daemons.emplace_back( dt, addr.c_str(), nullptr );
+		} else {
+			daemons.emplace_back( DT_ANY, addr.c_str(), nullptr );
 		}
 	}
 
 		// Now, send commands to all the daemons we know about.
-	daemons.rewind();	
-	while( daemons.next(d) ) {
+	for (auto& d : daemons) {
 		if( real_dt == DT_GENERIC ) {
-			d->setSubsystem( subsys );
+			d.setSubsystem( subsys );
 		}
 		doCommand( d );
 	}
@@ -1099,21 +1092,16 @@ computeRealAction( void )
 
 
 bool
-resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unresolved_names )
+resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_list, std::vector<std::string>* unresolved_names )
 {
-	Daemon* d = NULL;
-	char* name = NULL;
 	char* tmp = NULL;
 	const char* host = NULL;
 	bool had_error = false;
 
-	if( ! daemon_list ) {
-		EXCEPT( "resolveNames() called with NULL daemon_list" );
-	}
 		// NULL name_list means we want to do -all and query for
 		// everything.  However, if there's a name_list, but it's
 		// empty, it means we have no work to do.
-	if( name_list && name_list->isEmpty() ) {
+	if( name_list && name_list->empty() ) {
 		return true;
 	}
 
@@ -1200,10 +1188,9 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 			     real_dt ? daemonString(real_dt) : "daemon" );
 		  }
 		} else {
-			name_list->rewind();
-			while( (name = name_list->next()) ) {
+			for (const auto& name: *name_list) {
 				fprintf( stderr, "Can't find address for %s %s\n", 
-						 real_dt ? daemonString(real_dt) : "daemon", name );
+						 real_dt ? daemonString(real_dt) : "daemon", name.c_str() );
 			}
 		}
 		fprintf( stderr, "Perhaps you need to query another pool.\n" );
@@ -1215,8 +1202,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 			// no list of names to check, just store everything.
 		ads.Rewind();
 		while( (ad = ads.Next()) ) {
-			d = new Daemon( ad, real_dt, pool_addr );
-			daemon_list->append( d );
+			daemon_list.emplace_back(ad, real_dt, pool_addr);
 		}
 		return true;
 	}
@@ -1229,22 +1215,22 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 		// this smarter.  For now, we do it the slow way since we're
 		// looking for a specific list of names and we need to make
 		// sure we find them all.
-	name_list->rewind();
-	while( (name = name_list->next()) ) {
-		if (unresolved_names && unresolved_names->contains(name))
+	for (const auto& name : *name_list) {
+		bool found_it = false;
+		if (unresolved_names && contains(*unresolved_names, name))
 			continue;
 		ads.Rewind();
-		while( !d && (ad = ads.Next()) ) {
+		while( !found_it && (ad = ads.Next()) ) {
 				// we only want to use the special ATTR_MACHINE hack
 				// to locate a startd if the query string we were
 				// given (which we're holding in the variable "name")
 				// does NOT contain an '@' character... if it does, it
 				// means the end user is trying to find a specific
 				// startd (e.g. glide-in, a certain slot, etc).
-			if( real_dt == DT_STARTD && ! strchr(name, '@') ) {
-				host = get_host_part( name );
+			if( real_dt == DT_STARTD && ! strchr(name.c_str(), '@') ) {
+				host = get_host_part( name.c_str() );
 				ad->LookupString( ATTR_MACHINE, &tmp );
-				dprintf (D_FULLDEBUG, "TOOL: checking startd (%s,%s,%s)\n", name,host,tmp);
+				dprintf (D_FULLDEBUG, "TOOL: checking startd (%s,%s,%s)\n", name.c_str(),host,tmp);
 				if( ! tmp ) {
 						// weird, malformed ad.
 						// should we print a warning?
@@ -1274,7 +1260,8 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 					  obviously be the same for all slots)
 					*/
 				ad->Assign( ATTR_NAME, name);
-				d = new Daemon( ad, real_dt, pool_addr );
+				daemon_list.emplace_back( ad, real_dt, pool_addr );
+				found_it = true;
 				free( tmp );
 				tmp = NULL;
 
@@ -1294,28 +1281,25 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 					host = tmp;
 				}
 				dprintf (D_FULLDEBUG, "TOOL: checking %s (%s,%s,%s)\n",
-						real_dt ? daemonString(real_dt) : "daemon", name, host, tmp);
+				         real_dt ? daemonString(real_dt) : "daemon", name.c_str(), host, tmp);
 
 					/* look for a couple variations */
-				if( ! strcasecmp(name, host) || ! strcasecmp(name, tmp) ) {
+				if( ! strcasecmp(name.c_str(), host) || ! strcasecmp(name.c_str(), tmp) ) {
 						/* See comment above, "Because we need..." */
 					ad->Assign( ATTR_NAME, name);
-					d = new Daemon( ad, real_dt, pool_addr );
+					daemon_list.emplace_back( ad, real_dt, pool_addr );
+					found_it = true;
 				}
 				free( tmp );
 				tmp = NULL;
 			} // daemon type
 		} // while( each ad from the collector )
 
-		if( d ) {
-				// we found it, so append it to our list and go on
-			daemon_list->append( d );
-			d = NULL;
-		} else {
+		if( !found_it ) {
 			fprintf( stderr, "Can't find address for %s %s\n",
-					 daemonString(real_dt), name );
+					 daemonString(real_dt), name.c_str() );
 			if (unresolved_names) {
-				unresolved_names->append(name);
+				unresolved_names->emplace_back(name);
 			} else {
 				had_error = true;
 			}
@@ -1332,7 +1316,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 
 
 void
-doCommand( Daemon* d ) 
+doCommand( Daemon& d )
 {
 	bool done = false;
 	int	my_cmd = real_cmd;
@@ -1345,7 +1329,7 @@ doCommand( Daemon* d )
 
 	ClassAd cmdAd;
 	if (real_cmd == DAEMONS_OFF_FLEX) {
-		if ( ! d->version() || ! CondorVersionInfo(d->version()).built_since_version(9,11,0)) {
+		if ( ! d.version() || ! CondorVersionInfo(d.version()).built_since_version(9,11,0)) {
 			fprintf(stderr, "condor_master must be version 9.12 or later for this command\n");
 			all_good = false;
 			return;
@@ -1380,9 +1364,9 @@ doCommand( Daemon* d )
 
 	do {
 		// Grab some info about the daemon which is frequently used.
-		name = d->name();
-		d_type = d->type();
-		is_local = d->isLocal();
+		name = d.name();
+		d_type = d.type();
+		is_local = d.isLocal();
 		ReliSock sock;
 		done = false;
 		my_cmd = real_cmd;
@@ -1414,14 +1398,14 @@ doCommand( Daemon* d )
 		if( ! is_per_claim_startd_cmd ) {
 			// If we fail to insert the address, then it's already present
 			// in the set, which means we've already contacted the daemon.
-			auto [it, success] = addresses_sent.insert(d->addr());
+			auto [it, success] = addresses_sent.insert(d.addr());
 			if (!success) {
 				return;
 			}
 		}
 
 		/* Connect to the daemon */
-		if( sock.connect(d->addr()) ) {
+		if( sock.connect(d.addr()) ) {
 			error = false;
 //			break;
 		} else {
@@ -1436,12 +1420,12 @@ doCommand( Daemon* d )
 				if( fast ) {
 					my_cmd = VACATE_CLAIM_FAST;
 				}
-				if (!d->startCommand(my_cmd, &sock, 0, &errstack)) {
+				if (!d.startCommand(my_cmd, &sock, 0, &errstack)) {
 					fprintf(stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str());
 				}
 				if( !sock.put(name) || !sock.end_of_message() ) {
 					fprintf( stderr, "Can't send %s command to %s\n", 
-								 cmdToStr(my_cmd), d->idStr() );
+								 cmdToStr(my_cmd), d.idStr() );
 					all_good = false;
 					return;
 				} else {
@@ -1460,12 +1444,12 @@ doCommand( Daemon* d )
 			if( is_per_claim_startd_cmd ) {
 					// we've got a specific slot, so send the claim after
 					// the command.
-				if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
+				if( !d.startCommand(my_cmd, &sock, 0, &errstack) ) {
 					fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str());
 				}
 				if( !sock.put(name) || !sock.end_of_message() ) {
 					fprintf( stderr, "Can't send %s command to %s\n",
-								 cmdToStr(my_cmd), d->idStr() );
+								 cmdToStr(my_cmd), d.idStr() );
 					all_good = false;
 					return;
 				} else {
@@ -1483,12 +1467,12 @@ doCommand( Daemon* d )
 			} else if( peaceful_shutdown ) {
 				my_cmd = DAEMON_OFF_PEACEFUL;
 			}
-			if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
+			if( !d.startCommand( my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
 			if( !sock.put( subsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
-							cmdToStr(my_cmd), d->idStr() );
+							cmdToStr(my_cmd), d.idStr() );
 				all_good = false;
 				return;
 			} else {
@@ -1497,12 +1481,12 @@ doCommand( Daemon* d )
 			break;
 
 		case DAEMON_ON:
-			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
+			if( !d.startCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
 			if( !sock.put( subsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
-						 cmdToStr(my_cmd), d->idStr() );
+						 cmdToStr(my_cmd), d.idStr() );
 				all_good = false;
 				return;
 			} else {
@@ -1518,12 +1502,12 @@ doCommand( Daemon* d )
 
 		case DAEMONS_OFF_FLEX: {
 			ClassAd replyAd;
-			if (!d->startCommand(my_cmd, &sock, 0, &errstack)) {
+			if (!d.startCommand(my_cmd, &sock, 0, &errstack)) {
 				fprintf(stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str());
 			}
 			if (!putClassAd(&sock, cmdAd) || !sock.end_of_message()) {
 				fprintf(stderr, "Can't send %s command to %s\n",
-					cmdToStr(my_cmd), d->idStr());
+					cmdToStr(my_cmd), d.idStr());
 				all_good = false;
 				return;
 			} else {
@@ -1534,12 +1518,12 @@ doCommand( Daemon* d )
 				sock.decode();
 				if ( ! getClassAd(&sock, replyAd) || ! sock.end_of_message()) {
 					fprintf(stderr, "No response for %s command to %s\n",
-						cmdToStr(cmd), d->idStr());
+						cmdToStr(cmd), d.idStr());
 				} else {
 					// got a reply, what do we do with it?
 					std::string buf;
 					fprintf(stdout, "Response to %s command from %s\n%s\n",
-						cmdToStr(cmd), d->idStr(), formatAd(buf, replyAd, "\t"));
+						cmdToStr(cmd), d.idStr(), formatAd(buf, replyAd, "\t"));
 				}
 			}
 
@@ -1583,12 +1567,12 @@ doCommand( Daemon* d )
 			break;
 		case SET_SHUTDOWN_PROGRAM:
 		{
-			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
+			if( !d.startCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
 			if( !sock.put( exec_program ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
-						 cmdToStr(my_cmd), d->idStr() );
+						 cmdToStr(my_cmd), d.idStr() );
 				all_good = false;
 				return;
 			} else {
@@ -1602,10 +1586,10 @@ doCommand( Daemon* d )
 		}
 
 		if( !done ) {
-			if( !d->sendCommand(my_cmd, &sock, 0, &errstack) ) {
+			if( !d.sendCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 				fprintf( stderr, "Can't send %s command to %s\n",
-							 cmdToStr(my_cmd), d->idStr() );
+							 cmdToStr(my_cmd), d.idStr() );
 				all_good = false;
 				return;
 			}
@@ -1625,27 +1609,27 @@ doCommand( Daemon* d )
 				real_dt == DT_MASTER) ) {
 			if( d_type == DT_ANY ) {
 				printf( "Sent \"%s\" command to %s\n",
-						cmdToStr(my_cmd), d->idStr() );
+						cmdToStr(my_cmd), d.idStr() );
 			} else {
 				printf( "Sent \"%s\" command for \"%s\" to %s\n",
 						cmdToStr(my_cmd), 
 						subsys_arg ? subsys_arg : daemonString(dt),
-						d->idStr() );
+						d.idStr() );
 			}
 		} else if( d_type == DT_STARTD && all ) {
 				// we want to special case printing about this, since
 				// we're doing a machine-wide command...
 			printf( "Sent \"%s\" command to startd %s\n", cmdToStr(my_cmd),
-					d->fullHostname() );
+					d.fullHostname() );
 		} else if( cmd_set ) {
-			printf( "Sent command \"%d\" to %s\n", my_cmd, d->idStr() );
+			printf( "Sent command \"%d\" to %s\n", my_cmd, d.idStr() );
 		} else {
-			printf( "Sent \"%s\" command to %s\n", cmdToStr(my_cmd), d->idStr() );
+			printf( "Sent \"%s\" command to %s\n", cmdToStr(my_cmd), d.idStr() );
 		}
 		sock.close();
-	} while( d->nextValidCm() );
+	} while( d.nextValidCm() );
 	if( error ) {
-		fprintf( stderr, "Can't connect to %s\n", d->idStr() );
+		fprintf( stderr, "Can't connect to %s\n", d.idStr() );
 		all_good = false;
 		return;
 	}
@@ -1664,9 +1648,9 @@ version()
 void
 handleAll()
 {
-	DaemonList daemons;
+	std::vector<Daemon> daemons;
 
-	if( ! resolveNames(&daemons, NULL, NULL) ) {
+	if( ! resolveNames(daemons, NULL, NULL) ) {
 	  if ( constraint!=NULL ) {
 	    fprintf( stderr, "ERROR: Failed to find daemons matching the constraint\n" );
 	  } else {
@@ -1676,11 +1660,9 @@ handleAll()
 	}
 
 		// Now, send commands to all the daemons we know about.
-	Daemon* d;
-	daemons.rewind();	
-	while( daemons.next(d) ) {
+	for (auto& d : daemons) {
 		if( real_dt == DT_GENERIC ) {
-			d->setSubsystem( subsys );
+			d.setSubsystem( subsys );
 		}
 		doCommand( d );
 	}

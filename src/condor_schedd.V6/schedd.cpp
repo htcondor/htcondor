@@ -764,8 +764,6 @@ Scheduler::Scheduler() :
 	resourcesByProcID = NULL;
 	numMatches = 0;
 	numShadows = 0;
-	FlockCollectors = NULL;
-	FlockNegotiators = NULL;
 	MinFlockLevel = 0;
 	MaxFlockLevel = 0;
 	FlockLevel = 0;
@@ -912,14 +910,6 @@ Scheduler::~Scheduler()
 			if (jobAd) delete jobAd;
 		}
 		delete resourcesByProcID;
-	}
-	if( FlockCollectors ) {
-		delete FlockCollectors;
-		FlockCollectors = NULL;
-	}
-	if( FlockNegotiators ) {
-		delete FlockNegotiators;
-		FlockNegotiators = NULL;
 	}
 	if ( checkContactQueue_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
@@ -1543,24 +1533,20 @@ Scheduler::count_jobs()
 	}
 
 	FlockPools.clear();
-	if (FlockCollectors) {
-		FlockCollectors->rewind();
-		Daemon *daemon;
-		StringList effectFlockList;
+	if (FlockCollectors.size()) {
+		std::vector<std::string> effectFlockList;
 		int currLevel = 0;
-		while (FlockCollectors->next(daemon)) {
-			auto col = static_cast<DCCollector*>(daemon);
-			FlockPools.insert(col->name());
-			const char* col_addr = col->addr();
+		for (auto& col : FlockCollectors) {
+			FlockPools.insert(col.name());
+			const char* col_addr = col.addr();
 			if (!col_addr) { continue; }
 			if (currLevel < FlockLevel)
-				effectFlockList.append(col_addr);
+				effectFlockList.emplace_back(col_addr);
 			++currLevel;
 		}
 
-		if (!effectFlockList.isEmpty()) {
-			auto_free_ptr flockList(effectFlockList.print_to_string());
-			cad->Assign(ATTR_EFFECTIVE_FLOCK_LIST, flockList.ptr());
+		if (!effectFlockList.empty()) {
+			cad->Assign(ATTR_EFFECTIVE_FLOCK_LIST, join(effectFlockList, ","));
 		} else { cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST); }
 	}
 
@@ -1852,20 +1838,14 @@ Scheduler::count_jobs()
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
-	if( FlockCollectors ) {
-		FlockCollectors->rewind();
+	if( FlockCollectors.size() ) {
 		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
-		Daemon* d;
-		DCCollector* col;
-		FlockCollectors->next(d);
-		for(int ii=0; d && ii < FlockLevel; ii++ ) {
-			col = (DCCollector*)d;
-			auto data = col->name() ?
-					m_token_requester.createCallbackData(col->name(),
+		for (auto& col : FlockCollectors) {
+			auto data = col.name() ?
+					m_token_requester.createCallbackData(col.name(),
 					DCTokenRequester::default_identity, "ADVERTISE_SCHEDD")
 				: nullptr;
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, data );
-			FlockCollectors->next( d );
+			col.sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, data );
 		}
 	}
 
@@ -1915,21 +1895,15 @@ Scheduler::count_jobs()
 
 	// update collector of any pools we flock to 
 	DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
-	Daemon* d;
-	Daemon* flock_neg;
 	DCCollector* flock_col;
-	if( FlockCollectors && FlockNegotiators ) {
-		FlockCollectors->rewind();
-		FlockNegotiators->rewind();
+	if( FlockCollectors.size() && FlockNegotiators.size() ) {
 
 		for( int flock_level = 1;
 			 flock_level <= MaxFlockLevel; flock_level++) {
-			FlockNegotiators->next( flock_neg );
-			FlockCollectors->next( d );
-			flock_col = (DCCollector*)d;
-			if( ! (flock_col && flock_neg) ) { 
-				continue;
+			if (flock_level > (int)FlockCollectors.size() || flock_level > (int)FlockNegotiators.size()) {
+				break;
 			}
+			flock_col = &FlockCollectors[flock_level-1];
 
 				// Same comment about potentially creating hundreds of sessions applies
 				// here as above for the primary collector...
@@ -2106,13 +2080,12 @@ Scheduler::count_jobs()
 		SubDat.lastUpdateTime = update_time;
 
 	  // also update all of the flock hosts
-	  Daemon *da;
-	  if( FlockCollectors ) {
+	  if( FlockCollectors.size() ) {
 		  int flock_level;
-		  for( flock_level=1, FlockCollectors->rewind();
+		  for( flock_level=1;
 			   flock_level <= old_flock_level &&
-				   FlockCollectors->next(da); flock_level++ ) {
-			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
+				   flock_level <= (int)FlockCollectors.size(); flock_level++ ) {
+			  FlockCollectors[flock_level-1].sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 		  }
 	  }
 	}
@@ -7848,20 +7821,15 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 		return;
 	}
 
-	Daemon *flock_col = NULL;
-	int n,flock_level = 0;
+	int n = 1;
+	int flock_level = 0;
 	if( remote_pool && *remote_pool ) {
-		for( n=1, FlockCollectors->rewind();
-			 FlockCollectors->next(flock_col);
-			 n++)
-		{
-			if( !flock_col->name() ) {
-				continue;
-			}
-			if( !strcmp(remote_pool,flock_col->name()) ) {
+		for (auto& flock_col : FlockCollectors) {
+			if( flock_col.name() && !strcmp(remote_pool, flock_col.name()) ) {
 				flock_level = n;
 				break;
 			}
+			n++;
 		}
 		if( flock_level != n ) {
 			dprintf(D_ALWAYS,
@@ -7939,7 +7907,6 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	int		which_negotiator = 0; 		// >0 implies flocking
 	std::string remote_pool_buf;
 	char const *remote_pool = NULL;
-	Daemon*	neg_host = NULL;	
 	Sock*	sock = (Sock*)s;
 	bool skip_negotiation = false;
 
@@ -8069,26 +8036,23 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		return (!(KEEP_STREAM));
 	}
 
-	if( FlockCollectors ) {
+	if( FlockCollectors.size() ) {
 			// Use the submitter tag to figure out which negotiator we
 			// are talking to.  We insert a different submitter tag
 			// into the submitter ad that we send to each CM.  In fact,
 			// the tag is just equal to the collector address for the CM.
 		if( submitter_tag != HOME_POOL_SUBMITTER_TAG ) {
-			int n;
+			int n = 1;
 			bool match = false;
-			Daemon *flock_col = NULL;
-			for( n=1, FlockCollectors->rewind();
-				 FlockCollectors->next(flock_col);
-				 n++)
-			{
-				if( submitter_tag == flock_col->name() ){
+			for (auto& flock_col : FlockCollectors) {
+				if( submitter_tag == flock_col.name() ){
 					which_negotiator = n;
-					remote_pool_buf = flock_col->name();
+					remote_pool_buf = flock_col.name();
 					remote_pool = remote_pool_buf.c_str();
 					match = true;
 					break;
 				}
+				n++;
 			}
 			if( !match ) {
 				dprintf(D_ALWAYS, "Unknown negotiator (host=%s,tag=%s).  "
@@ -13393,20 +13357,22 @@ Scheduler::Init()
 	flock_negotiator_hosts = param( "FLOCK_NEGOTIATOR_HOSTS" );
 
 	if( flock_collector_hosts ) {
-		if( FlockCollectors ) {
-			delete FlockCollectors;
+		FlockCollectors.clear();
+		for (const auto& name : StringTokenIterator(flock_collector_hosts)) {
+			FlockCollectors.emplace_back(name.c_str());
 		}
-		FlockCollectors = new DaemonList();
-		FlockCollectors->init( DT_COLLECTOR, flock_collector_hosts );
-		MaxFlockLevel = FlockCollectors->number();
+		MaxFlockLevel = FlockCollectors.size();
 		MinFlockLevel = param_integer("MIN_FLOCK_LEVEL", 0, 0, MaxFlockLevel);
 
-		if( FlockNegotiators ) {
-			delete FlockNegotiators;
+		FlockNegotiators.clear();
+		size_t idx = 0;
+		for (const auto& name : StringTokenIterator(flock_negotiator_hosts)) {
+			if (idx > FlockCollectors.size()) {
+				break;
+			}
+			FlockNegotiators.emplace_back(DT_NEGOTIATOR, name.c_str(), FlockCollectors[idx].name());
 		}
-		FlockNegotiators = new DaemonList();
-		FlockNegotiators->init( DT_NEGOTIATOR, flock_negotiator_hosts, flock_collector_hosts );
-		if( FlockCollectors->number() != FlockNegotiators->number() ) {
+		if( FlockCollectors.size() != FlockNegotiators.size() ) {
 			dprintf(D_ALWAYS, "FLOCK_COLLECTOR_HOSTS and "
 					"FLOCK_NEGOTIATOR_HOSTS lists are not the same size."
 					"Flocking disabled.\n");
@@ -13868,10 +13834,6 @@ void
 Scheduler::Register()
 {
 	 // message handlers for schedd commands
-	 daemonCore->Register_CommandWithPayload( NEGOTIATE_WITH_SIGATTRS, 
-		 "NEGOTIATE_WITH_SIGATTRS", 
-		 (CommandHandlercpp)&Scheduler::negotiate, "negotiate", 
-		 this, NEGOTIATOR );
 	 daemonCore->Register_CommandWithPayload( NEGOTIATE, 
 		 "NEGOTIATE", 
 		 (CommandHandlercpp)&Scheduler::negotiate, "negotiate", 
@@ -14404,12 +14366,11 @@ Scheduler::invalidate_ads()
 		cad->AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 
 		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
-		Daemon* d;
-		if( FlockCollectors && FlockLevel > 0 ) {
+		if( FlockCollectors.size() && FlockLevel > 0 ) {
 			int level;
-			for( level=1, FlockCollectors->rewind();
-				 level <= FlockLevel && FlockCollectors->next(d); level++ ) {
-				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, adSeq, NULL, false );
+			for( level=1;
+				 level <= FlockLevel && level <= (int)FlockCollectors.size(); level++ ) {
+				FlockCollectors[level-1].sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, adSeq, NULL, false );
 			}
 		}
 	}
@@ -14502,13 +14463,10 @@ Scheduler::sendReschedule( int /* timerID */ )
 
 	negotiator->sendMsg( msg.get() );
 
-	Daemon* d;
-	if( FlockNegotiators ) {
-		FlockNegotiators->rewind();
-		FlockNegotiators->next( d );
-		for( int i=0; d && i<FlockLevel; FlockNegotiators->next(d), i++ ) {
-			st = d->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-			negotiator = new Daemon( *d );
+	if( FlockNegotiators.size() ) {
+		for( int i=0; i<FlockLevel && i < (int)FlockNegotiators.size(); i++ ) {
+			st = FlockNegotiators[i].hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+			negotiator = new Daemon( FlockNegotiators[i] );
 			msg = new DCCommandOnlyMsg(RESCHEDULE);
 			msg->setStreamType(st);
 			msg->setTimeout(NEGOTIATOR_CONTACT_TIMEOUT);
