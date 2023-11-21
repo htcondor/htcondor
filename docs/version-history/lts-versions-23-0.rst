@@ -46,6 +46,12 @@ Bugs Fixed:
   node could stay stuck in the removed job state.
   :jira:`2147`
 
+- Fixed a bug where the Python-based HTChirp client had its max line length set
+  much shorter than is allowed by the HTCondor Chirp server. The client now
+  also throws a relevant error when this max limit is hit while sending commands
+  to the server.
+  :jira:`2157`
+
 .. _lts-version-history-2302:
 
 Version 23.0.2
