@@ -1214,11 +1214,12 @@ extern bool   last_updateClassAd_was_insert;
 void
 movePrivateAttrs(ClassAd& dest, ClassAd& src)
 {
-	for (auto itr = src.begin(); itr != src.end(); /* no increment */ ) {
+	auto itr = src.begin();
+	while (itr != src.end()) {
 		if (ClassAdAttributeIsPrivateAny(itr->first)) {
-			const std::string name = itr->first;
-			ExprTree* expr = src.Remove((itr++)->first);
-			dest.Insert(name, expr);
+			const std::string &name = itr->first;
+			dest.Insert(name, itr->second);
+			itr = src.erase(itr);
 		} else {
 			itr++;
 		}

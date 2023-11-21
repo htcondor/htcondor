@@ -1569,6 +1569,7 @@ ClassAd *CondorJob::buildSubmitAd()
 		// Otherwise, the remote schedd will erroneously think it has
 		// already rewritten file paths in the ad to refer to its own
 		// SPOOL directory.
+	std::vector<std::string> victims;
 	auto itr = submit_ad->begin();
 	while ( itr != submit_ad->end() ) {
 		// This convoluted setup is an attempt to avoid invalidating
@@ -1578,11 +1579,12 @@ ClassAd *CondorJob::buildSubmitAd()
 		     itr->first.size() > 7 ) {
 
 			std::string name = itr->first;
-			itr++;
-			submit_ad->Delete( name );
-		} else {
-			itr++;
+			victims.push_back(name);
 		}
+		itr++;
+	}
+	for (auto &name : victims) {
+		submit_ad->Delete(name);
 	}
 
 	const char *next_name;
