@@ -34,16 +34,10 @@ VMGahpConfig::VMGahpConfig()
 VMGahpConfig& VMGahpConfig::
 operator=(const VMGahpConfig& old)
 {
-	VMGahpConfig *oldp = NULL;
-	oldp = const_cast<VMGahpConfig *>(&old);
-
 	m_vm_type = old.m_vm_type;
 	m_vm_max_memory = old.m_vm_max_memory;
 	m_vm_networking = old.m_vm_networking;
-	m_vm_networking_types.clearAll();
-	if( old.m_vm_networking_types.isEmpty() == false ) { 
-		m_vm_networking_types.create_union(oldp->m_vm_networking_types, false);
-	}
+	m_vm_networking_types = old.m_vm_networking_types;
 
 	m_vm_hardware_vt = old.m_vm_hardware_vt;
 	m_vm_script = old.m_vm_script;
@@ -98,10 +92,9 @@ VMGahpConfig::init(const char* vmtype)
 			lower_case(networking_type);
 			free(config_value);
 
-			StringList networking_types(networking_type.c_str(), ", ");
-			m_vm_networking_types.create_union(networking_types, false);
+			m_vm_networking_types = split(networking_type, ", ");
 
-			if( m_vm_networking_types.isEmpty() ) {
+			if( m_vm_networking_types.empty() ) {
 				vmprintf( D_ALWAYS,
 				          "\nERROR: 'VM_NETWORKING' is true but "
 				              "'VM_NETWORKING_TYPE' is empty "

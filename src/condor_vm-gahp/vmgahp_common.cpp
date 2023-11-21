@@ -442,8 +442,8 @@ bool canSwitchUid(void)
  * that wish to have the old behavior, where stderr and stdout were
  * both added to the same StringList.
  */
-int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringList * cmd_in,
-		   StringList *cmd_err, bool merge_stderr_with_stdout)
+int systemCommand( ArgList &args, priv_state priv, std::vector<std::string> *cmd_out, std::vector<std::string> * cmd_in,
+		std::vector<std::string> *cmd_err, bool merge_stderr_with_stdout)
 {
 	int result = 0;
 	FILE *fp = NULL;
@@ -451,7 +451,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	FILE * childerr = NULL;
 	std::string line;
 	char buff[1024];
-	StringList *my_cmd_out = cmd_out;
+	std::vector<std::string> *my_cmd_out = cmd_out;
 
 	priv_state prev = get_priv_state();
 
@@ -624,13 +624,10 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	}
 
 	if(cmd_in != NULL) {
-	  cmd_in->rewind();
-	  char * tmp;
-	  while((tmp = cmd_in->next()) != NULL)
-	    {
-	      fprintf(fp_for_stdin, "%s\n", tmp);
-	      fflush(fp_for_stdin);
-	    }
+		for (const auto& tmp : *cmd_in) {
+			fprintf(fp_for_stdin, "%s\n", tmp.c_str());
+			fflush(fp_for_stdin);
+		}
 	}
 	if (fp_for_stdin) {
 	  // So that we will not be waiting for output while the
@@ -639,13 +636,13 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	}
 
 	if ( my_cmd_out == NULL ) {
-		my_cmd_out = new StringList();
+		my_cmd_out = new std::vector<std::string>();
 	}
 
 	while ( fgets( buff, sizeof(buff), fp ) != NULL ) {
 		line += buff;
 		if ( chomp(line) ) {
-			my_cmd_out->append( line.c_str() );
+			my_cmd_out->emplace_back( line );
 			line = "";
 		}
 	}
@@ -657,7 +654,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		line += buff;
 		if(chomp(line))
 		  {
-		    cmd_err->append(line.c_str());
+		    cmd_err->emplace_back(line);
 		    line = "";
 		  }
 	      }
@@ -686,10 +683,8 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		vmprintf(D_ALWAYS,
 		         "Command returned non-zero: %s\n",
 		         args_string.c_str());
-		my_cmd_out->rewind();
-		const char *next_line;
-		while ( (next_line = my_cmd_out->next()) ) {
-			vmprintf( D_ALWAYS, "  %s\n", next_line );
+		for (const auto& next_line: *my_cmd_out) {
+			vmprintf( D_ALWAYS, "  %s\n", next_line.c_str() );
 		}
 	}
 	if ( cmd_out == NULL ) {

@@ -25,7 +25,6 @@
 
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "PipeBuffer.h"
 #include "my_getopt.h"
 #include "io_loop_pthread.h"
@@ -53,7 +52,7 @@ static IOProcess *ioprocess = NULL;
 // forwarding declaration
 static void gahp_output_return_error();
 static void gahp_output_return_success();
-static void gahp_output_return (const char ** results, const int count);
+static void gahp_output_return (const char ** results, size_t count);
 static int verify_gahp_command(char ** argv, int argc);
 static void *worker_function( void *ptr );
 
@@ -318,13 +317,13 @@ verify_gahp_command(char ** argv, int argc) {
 }
 
 void
-gahp_output_return (const char ** results, const int count) {
-	int i=0;
+gahp_output_return (const char ** results, size_t count) {
+	size_t i=0;
 	for (i=0; i<count; i++) {
-		printf ("%s", results[i]);
-		if (i < (count - 1 )) {
+		if (i > 0) {
 			printf (" ");
 		}
+		printf ("%s", results[i]);
 	}
 
 	printf ("\n");
@@ -445,17 +444,14 @@ IOProcess::stdinPipeHandler()
 				// Print each result line
 
 				// Print number of results
-				printf("%s %d\n", GAHP_RESULT_SUCCESS, numOfResult());
+				printf("%s %zu\n", GAHP_RESULT_SUCCESS, m_result_list.size());
 				fflush(stdout);
 
-				startResultIteration();
-
-				char* next = NULL;
-				while ((next = NextResult()) != NULL) {
-					printf ("%s", next);
+				for (const auto& next : m_result_list) {
+					printf ("%s", next.c_str());
 					fflush(stdout);
-					deleteCurrentResult();
 				}
+				m_result_list.clear();
 				m_new_results_signaled = false;
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
 				printf ("S %s\n", version);
@@ -477,14 +473,14 @@ IOProcess::stdinPipeHandler()
 				);
 				fflush( stdout );
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
-				StringList amazon_commands;
-				int num_commands = 0;
+				std::vector<std::string> amazon_commands;
+				size_t num_commands = 0;
 
 				num_commands = allAmazonCommands(amazon_commands);
 				num_commands += 7;
 
 				const char *commands[num_commands];
-				int i = 0;
+				size_t i = 0;
 				commands[i++] = GAHP_RESULT_SUCCESS;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_ON;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_OFF;
@@ -493,11 +489,8 @@ IOProcess::stdinPipeHandler()
 				commands[i++] = GAHP_COMMAND_VERSION;
 				commands[i++] = GAHP_COMMAND_COMMANDS;
 
-				amazon_commands.rewind();
-				char *one_amazon_command = NULL;
-
-				while( (one_amazon_command = amazon_commands.next() ) != NULL ) {
-					commands[i++] = one_amazon_command;
+				for (const auto& one_command : amazon_commands) {
+					commands[i++] = one_command.c_str();
 				}
 
 				gahp_output_return (commands, i);
@@ -630,7 +623,7 @@ IOProcess::addResult(const char *result)
 	}
 
 	// Put this result into result buffer
-	m_result_list.append(result);
+	m_result_list.emplace_back(result);
 
 	if (m_async_mode) {
 		if (!m_new_results_signaled) {

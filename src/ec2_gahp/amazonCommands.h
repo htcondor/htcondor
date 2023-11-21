@@ -502,7 +502,7 @@ class AmazonBulkQuery : public AmazonRequest {
 		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 	protected:
-		StringList resultList;
+		std::vector<std::string> resultList;
 };
 
 class AmazonMetadataQuery : private AmazonRequest {

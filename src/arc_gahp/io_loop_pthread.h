@@ -23,7 +23,6 @@
 #include <pthread.h>
 #include "condor_common.h"
 #include "gahp_common.h"
-#include "simplelist.h"
 #include "PipeBuffer.h"
 #include "arcgahp_common.h"
 
@@ -82,10 +81,6 @@ class IOProcess {
 	GahpRequest* addNewRequest(const char* cmd);
 	void addResult(const char* result);
 
-	int numOfResult(void) { return m_result_list.number(); }
-	void startResultIteration(void) { m_result_list.rewind(); }
-	char* NextResult(void) { return m_result_list.next(); }
-	void deleteCurrentResult(void) { m_result_list.deleteCurrent(); }
 	GahpRequest* popPendingRequest(void);
 	int numOfPendingRequest(void);
 
@@ -105,7 +100,7 @@ class IOProcess {
 
 	PipeBuffer m_stdin_buffer;
 
-	StringList m_result_list; // The list of results ready to be output to IO
+	std::vector<std::string> m_result_list; // The list of results ready to be output to IO
 
 	std::map<int, Worker> m_workers_list;
 

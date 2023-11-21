@@ -22,7 +22,7 @@
 
 #include "gahp_common.h"
 #include <string>
-#include "string_list.h"
+#include <vector>
 #include "openstackCommands.h"
 
 #define OPENSTACK_COMMAND_SUCCESS_OUTPUT	"NULL"
@@ -42,8 +42,8 @@ class OpenstackGahpCommand
 };
 
 void registerOpenstackGahpCommand(const char* command, ioCheckfn iofunc, workerfn workerfunc);
-int numofOpenstackCommands(void);
-int allOpenstackCommands(StringList &output);
+size_t numofOpenstackCommands(void);
+size_t allOpenstackCommands(std::vector<std::string> &output);
 bool executeIOCheckFunc(const char* cmd, char **argv, int argc);
 bool executeWorkerFunc(const char* cmd, char **argv, int argc, std::string &output_string);
 
@@ -62,7 +62,7 @@ int verify_number_args(const int, const int);
 int verify_min_number_args(const int, const int);
 
 std::string create_failure_result(int req_id, const char *err_msg, const char* err_code = NULL);
-std::string create_success_result(int req_id, StringList *result_list);
+std::string create_success_result(int req_id, std::vector<std::string> *result_list);
 
 void set_openstack_proxy_server(const char* url);
 bool get_openstack_proxy_server(const char* &host_name, int& port, const char* &user_name, const char* &passwd);
