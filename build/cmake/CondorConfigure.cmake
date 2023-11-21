@@ -24,6 +24,10 @@ if("${OS_NAME}" MATCHES "^WIN")
 	# lowest common denominator is Vista (0x600), except when building with vc9, then we can't count on sdk support.
 	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WIN7)
 	add_definitions(-DWINVER=_WIN32_WINNT_WIN7)
+
+	# Turn on coroutine support
+	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/await:strict>)
+
 	if (MSVC90)
 	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	else()
@@ -650,8 +654,7 @@ set(CMAKE_MACOSX_RPATH OFF)
 if (WITH_ADDRESS_SANITIZER)
 	# Condor daemons dup stderr to /dev/null, so to see output need to run with
 	# ASAN_OPTIONS="log_path=/tmp/asan" condor_master 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 endif()
@@ -659,8 +662,7 @@ endif()
 if (WITH_UB_SANITIZER)
 	# Condor daemons dup stderr to /dev/null, so to see output need to run with
 	# UBSAN_OPTIONS="log_path=/tmp/asan print_stacktrace=true" condor_master 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
 endif()
@@ -769,8 +771,7 @@ endif()
 
 if (NOT WINDOWS)
     # compiling everything with -fPIC is needed to dynamically load libraries
-    # linked against libstdc++
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+	add_compile_options(-fPIC)
 endif()
 
 #####################################
@@ -954,39 +955,37 @@ message(STATUS "----- Begin compiler options/flags check -----")
 if (CONDOR_C_FLAGS)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONDOR_C_FLAGS}")
 endif()
-if (CONDOR_CXX_FLAGS)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONDOR_CXX_FLAGS}")
-endif()
 
 if (OPENMP_FOUND)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>)
+	add_compile_options($<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>)
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
 if(MSVC)
 	#disable autolink settings
 	add_definitions(-DBOOST_ALL_NO_LIB)
 
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FC")      # use full paths names in errors and warnings
+	add_compile_options(/FC)      # use full paths names in errors and warnings
 	if(MSVC_ANALYZE)
 		# turn on code analysis.
 		# also disable 6211 (leak because of exception). we use new but not catch so this warning is just noise
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /analyze /wd6211") # turn on code analysis (level 6 warnings)
+		add_compile_options(/analyze /wd6211) # turn on code analysis (level 6 warnings)
 	endif(MSVC_ANALYZE)
 
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4251")  #
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4275")  #
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4996")  # deprecation warnings
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4273")  # inconsistent dll linkage
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd6334") # inclusion warning from boost.
+	add_compile_options(/wd6334) # turn on code analysis (level 6 warnings)
 
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
 
 	check_c_compiler_flag(-Wall c_Wall)
 	if (c_Wall)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+		add_compile_options(-Wall)
 	endif(c_Wall)
 
 	# This generates a million warnings, some of which represent
@@ -994,73 +993,64 @@ else(MSVC)
 	# of them.
 	#check_c_compiler_flag(-Wconversion c_Wconversion)
 	#if (c_Wconversion)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion")
+	#	add_compile_options(-Wconversion)
 	#endif(c_Wconversion)
-
-	# GGT tested compiling  condor_history with -flto, it ran less than one tenth of one percent faster
-    # and took more than 3 times longer to compile.  Try again later.
-
-	#  check_c_compiler_flag(-flto c_lto)
-	#  if (c_lto)
-	#	  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto")
-	#	  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
-	#  endif(c_lto)
 
 	check_c_compiler_flag(-W c_W)
 	if (c_W)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W")
+		add_compile_options(-W)
 	endif(c_W)
 
 	check_c_compiler_flag(-Wextra c_Wextra)
 	if (c_Wextra)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wextra")
+		add_compile_options(-Wextra)
 	endif(c_Wextra)
 
 	check_c_compiler_flag(-Wfloat-equal c_Wfloat_equal)
 	if (c_Wfloat_equal)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wfloat-equal")
+		add_compile_options(-Wfloat-equal)
 	endif(c_Wfloat_equal)
 
 	#check_c_compiler_flag(-Wshadow c_Wshadow)
 	#if (c_Wshadow)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wshadow")
+	#	add_compile_options(-Wshadow)
 	#endif(c_Wshadow)
 
 	# someone else can enable this, as it overshadows all other warnings and can be wrong.
 	# check_c_compiler_flag(-Wunreachable-code c_Wunreachable_code)
 	# if (c_Wunreachable_code)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wunreachable-code")
+	#	add_compile_options(-Wunreachable-code)
 	# endif(c_Wunreachable_code)
 
 	check_c_compiler_flag(-Wendif-labels c_Wendif_labels)
 	if (c_Wendif_labels)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wendif-labels")
+		add_compile_options(-Wendif-labels)
 	endif(c_Wendif_labels)
 
 	check_c_compiler_flag(-Wpointer-arith c_Wpointer_arith)
 	if (c_Wpointer_arith)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
+		add_compile_options(-Wpointer-arith)
 	endif(c_Wpointer_arith)
 
 	check_c_compiler_flag(-Wcast-qual c_Wcast_qual)
 	if (c_Wcast_qual)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wcast-qual")
+		add_compile_options(-Wcast-qual)
 	endif(c_Wcast_qual)
 
 	check_c_compiler_flag(-Wcast-align c_Wcast_align)
 	if (c_Wcast_align)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wcast-align")
+		add_compile_options(-Wcast-align)
 	endif(c_Wcast_align)
 
 	check_c_compiler_flag(-Wvolatile-register-var c_Wvolatile_register_var)
 	if (c_Wvolatile_register_var)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wvolatile-register-var")
+		add_compile_options(-Wvolatile-register-var)
 	endif(c_Wvolatile_register_var)
 
 	check_c_compiler_flag(-Wunused-local-typedefs c_Wunused_local_typedefs)
 	if (c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang" )
 		# we don't ever want the 'unused local typedefs' warning treated as an error.
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=unused-local-typedefs")
+		add_compile_options(-Wno-error=unused-local-typedefs)
 	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 
 	# check compiler flag not working for this flag.
@@ -1068,17 +1058,17 @@ else(MSVC)
 	if (c_Wdeprecated_declarations)
 		# we use deprecated declarations ourselves during refactoring,
 		# so we always want them treated as warnings and not errors
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdeprecated-declarations -Wno-error=deprecated-declarations")
+		add_compile_options(-Wdeprecated-declarations -Wno-error=deprecated-declarations)
 	endif(c_Wdeprecated_declarations)
 
 	check_c_compiler_flag(-Wnonnull-compare c_Wnonnull_compare)
 	if (c_Wnonnull_compare)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nonnull-compare -Wno-error=nonnull-compare")
+		add_compile_options(-Wno-nonnull-compare -Wno-error=nonnull-compare)
 	endif(c_Wnonnull_compare)
 
 	check_c_compiler_flag(-fstack-protector c_fstack_protector)
 	if (c_fstack_protector)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
+		add_compile_options(-fstack-protector)
 	endif(c_fstack_protector)
 
 	# Clang on Mac OS X doesn't support -rdynamic, but the
@@ -1110,6 +1100,19 @@ else(MSVC)
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
+
+	check_include_file_cxx("coroutine" HAVE_NOFLAG_NEEDED_CORO)
+	check_include_file_cxx("coroutine" HAVE_FLAG_NEEDED_CORO "-fcoroutines")
+
+	if (HAVE_NOFLAG_NEEDED_CORO)
+		message(STATUS "No additional flags needed for coroutines")
+	else()
+		if (HAVE_FLAG_NEEDED_CORO)
+			add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
+		else()
+			message(STATUS "Cannot find proper coroutine compiler flags")
+		endif()
+	endif()
 
 	# Append C flags list to C++ flags list.
 	# Currently, there are no flags that are only valid for C files.

@@ -26,18 +26,6 @@ set(CMAKE_CXX_STANDARD 20) # when changing this, also change classad CMake
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-
-# Turn on coroutines on all platforms.  Not sure why this isn't included
-# in the C++20 standard.
-if(${CMAKE_COMPILER_IS_GNUCXX})
-	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
-endif()
-
-if(${MSVC})
-	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/await:strict>)
-endif()
-
-
 # Remove warnings in cmake 3.24+.  This setting 
 # forces cmake to not update the timestamps on downloaded
 # tarballs.  The autoconf-built externals need this old setting
@@ -107,6 +95,7 @@ include (FindMultiple)
 include (FindSoName)
 include (ExternalProject)
 include (CheckIncludeFiles)
+include (CheckIncludeFileCXX)
 include (CheckFunctionExists)
 include (CheckSymbolExists)
 include (CheckStructHasMember)
