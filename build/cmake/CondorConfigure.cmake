@@ -24,6 +24,10 @@ if("${OS_NAME}" MATCHES "^WIN")
 	# lowest common denominator is Vista (0x600), except when building with vc9, then we can't count on sdk support.
 	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WIN7)
 	add_definitions(-DWINVER=_WIN32_WINNT_WIN7)
+
+	# Turn on coroutine support
+	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/await:strict>)
+
 	if (MSVC90)
 	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	else()
@@ -954,9 +958,6 @@ message(STATUS "----- Begin compiler options/flags check -----")
 if (CONDOR_C_FLAGS)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONDOR_C_FLAGS}")
 endif()
-if (CONDOR_CXX_FLAGS)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONDOR_CXX_FLAGS}")
-endif()
 
 if (OPENMP_FOUND)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -1110,6 +1111,19 @@ else(MSVC)
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
+
+	check_include_file_cxx("coroutine" HAVE_NOFLAG_NEEDED_CORO)
+	check_include_file_cxx("coroutine" HAVE_FLAG_NEEDED_CORO "-fcoroutines")
+
+	if (HAVE_NOFLAG_NEEDED_CORO)
+		message(STATUS "No additional flags needed for coroutines")
+	else()
+		if (HAVE_FLAGS_NEEDED_CORO)
+			add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
+		else()
+			message(STATUS "Cannot find proper coroutine compiler flags")
+		endif()
+	endif()
 
 	# Append C flags list to C++ flags list.
 	# Currently, there are no flags that are only valid for C files.
