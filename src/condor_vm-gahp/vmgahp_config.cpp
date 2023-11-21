@@ -34,9 +34,6 @@ VMGahpConfig::VMGahpConfig()
 VMGahpConfig& VMGahpConfig::
 operator=(const VMGahpConfig& old)
 {
-	VMGahpConfig *oldp = NULL;
-	oldp = const_cast<VMGahpConfig *>(&old);
-
 	m_vm_type = old.m_vm_type;
 	m_vm_max_memory = old.m_vm_max_memory;
 	m_vm_networking = old.m_vm_networking;
