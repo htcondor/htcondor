@@ -3747,14 +3747,6 @@ Matchmaker::startNegotiate(const std::string &submitter, const ClassAd &submitte
 bool
 Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &submitterAd, ReliSock *&sock, RRLPtr &request_list)
 {
-	std::string submitter_tag;
-	int negotiate_cmd = NEGOTIATE; // 7.5.4+
-	if (!submitterAd.EvaluateAttrString(ATTR_SUBMITTER_TAG, submitter_tag))
-	{
-			// schedd must be older than 7.5.4
-		negotiate_cmd = NEGOTIATE_WITH_SIGATTRS;
-	}
-
 	// fetch the verison of the schedd, so we can take advantage of
 	// protocol improvements in newer versions while still being
 	// backwards compatible.
@@ -3788,6 +3780,15 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 	std::string schedd_id;
 	formatstr(schedd_id, "%s (%s)", submitter.c_str(), scheddAddr.c_str());
 
+	std::string submitter_tag;
+	int negotiate_cmd = NEGOTIATE; // 7.5.4+
+	if (!submitterAd.EvaluateAttrString(ATTR_SUBMITTER_TAG, submitter_tag))
+	{
+		dprintf(D_ERROR, "Matchmaker::negotiate: Submitter ad for %s is missing %s",
+		        schedd_id.c_str(), ATTR_SUBMITTER_TAG);
+		return false;
+	}
+
 	// 0.  connect to the schedd --- ask the cache for a connection
 	sock = sockCache->findReliSock(scheddAddr);
 	if (!sock)
@@ -3800,8 +3801,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 
 		if (IsDebugLevel(D_COMMAND))
 		{
-			int cmd = negotiate_cmd;
-			dprintf(D_COMMAND, "Matchmaker::negotiate(%s,...) making connection to %s\n", getCommandStringSafe(cmd), scheddAddr.c_str());
+			dprintf(D_COMMAND, "Matchmaker::negotiate(%s,...) making connection to %s\n", getCommandStringSafe(negotiate_cmd), scheddAddr.c_str());
 		}
 
 		std::string capability;
@@ -3846,7 +3846,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 	}
 
 	sock->encode();
-	if (negotiate_cmd == NEGOTIATE)
+	// Keeping body of old if-statement to avoid re-indenting
 	{
 		// Here we create a negotiation ClassAd to pass parameters to the
 		// schedd's negotiation method.
@@ -3891,29 +3891,6 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			sockCache->invalidateSock(scheddAddr);
 			return false;
 		}
-	}
-	else if (negotiate_cmd == NEGOTIATE_WITH_SIGATTRS)
-	{
-			// old protocol prior to 7.5.4
-		if (!sock->put(submitter))
-		{
-			dprintf(D_ALWAYS, "    Failed to send submitterName to %s\n",
-					 schedd_id.c_str());
-			sockCache->invalidateSock(scheddAddr);
-			return false;
-		}
-			// send the significant attributes
-		if (!sock->put(job_attr_references))
-		{
-			dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
-					 schedd_id.c_str());
-			sockCache->invalidateSock(scheddAddr);
-			return false;
-		}
-	}
-	else
-	{
-		EXCEPT("Unexpected negotiate_cmd=%d", negotiate_cmd);
 	}
 
 	if (!sock->end_of_message())

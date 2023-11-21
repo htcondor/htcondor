@@ -7933,7 +7933,7 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
      -Derek 2/7/01
 */
 int
-Scheduler::negotiate(int command, Stream* s)
+Scheduler::negotiate(int /*command*/, Stream* s)
 {
 	int		job_index;
 	int		which_negotiator = 0; 		// >0 implies flocking
@@ -7945,17 +7945,6 @@ Scheduler::negotiate(int command, Stream* s)
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
-
-		// Prior to 7.5.4, the negotiator sent NEGOTIATE_WITH_SIGATTRS
-		// As of 7.5.4, since we are putting ATTR_SUBMITTER_TAG into
-		// the submitter ads, the negotiator sends NEGOTIATE
-	if (command != NEGOTIATE_WITH_SIGATTRS && command != NEGOTIATE)
-	{
-		dprintf(D_ALWAYS,
-				"Negotiator command was %d (not NEGOTIATE_WITH_SIGATTRS or NEGOTIATE) "
-				"--- aborting\n", command);
-		return (!(KEEP_STREAM));
-	}
 
 	// Set timeout on socket
 	s->timeout( param_integer("NEGOTIATOR_TIMEOUT",20) );
@@ -7980,12 +7969,6 @@ Scheduler::negotiate(int command, Stream* s)
 	this->calculateCronTabSchedules();		
 
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
-
-	// SubmitterAds with different attributes can elicit a
-	// change of the command int for each submitter ad conversation, so
-	// we explicit print it out to help us debug.
-	dprintf(D_ALWAYS, "Using negotiation protocol: %s\n", 
-		getCommandString(command));
 
 		// reset this flag so the next time we bump into a limit
 		// we issue a log message
@@ -8031,7 +8014,8 @@ Scheduler::negotiate(int command, Stream* s)
 	bool willMatchClaimedPslots = false;
 
 	s->decode();
-	if( command == NEGOTIATE ) {
+	// Keeping body of old if-statement to avoid re-indenting
+	{
 		if( !getClassAd( s, negotiate_ad ) ) {
 			dprintf( D_ALWAYS, "Can't receive negotiation header\n" );
 			return (!(KEEP_STREAM));
@@ -8061,17 +8045,6 @@ Scheduler::negotiate(int command, Stream* s)
 			scheddsAreSubmitters = true;
 		}
 	}
-	else {
-			// old NEGOTIATE_WITH_SIGATTRS protocol
-		if (!s->get(ownerptr,sizeof(owner))) {
-			dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
-			return (!(KEEP_STREAM));
-		}
-		if (!s->code(sig_attrs_from_cm)) {	
-			dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
-			return (!(KEEP_STREAM));
-		}
-	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
 		return (!(KEEP_STREAM));
@@ -8096,7 +8069,7 @@ Scheduler::negotiate(int command, Stream* s)
 		return (!(KEEP_STREAM));
 	}
 
-	if( FlockCollectors && command == NEGOTIATE ) {
+	if( FlockCollectors ) {
 			// Use the submitter tag to figure out which negotiator we
 			// are talking to.  We insert a different submitter tag
 			// into the submitter ad that we send to each CM.  In fact,
@@ -8125,66 +8098,6 @@ Scheduler::negotiate(int command, Stream* s)
 			}
 		}
 	}
-	else if( FlockNegotiators && command == NEGOTIATE_WITH_SIGATTRS ) {
-			// This is the old (pre 7.5.4) method for determining
-			// which negotiator we are talking to.  It is brittle
-			// because it depends on a DNS lookup of the negotiator
-			// name matching the peer address.  This is the only place
-			// in the schedd where we really depend on NEGOTIATOR_HOST
-			// and FLOCK_NEGOTIATOR_HOSTS.
-
-		// first, check if this is our local negotiator
-		condor_sockaddr endpoint_addr = sock->peer_addr();
-		std::vector<condor_sockaddr> addrs;
-		std::vector<condor_sockaddr>::iterator iter;
-		bool match = false;
-		Daemon negotiator (DT_NEGOTIATOR);
-		const char *negotiator_hostname = negotiator.fullHostname();
-		if (!negotiator_hostname) {
-			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
-			return (!(KEEP_STREAM));
-		}
-		addrs = resolve_hostname(negotiator_hostname);
-		if (addrs.empty()) {
-			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
-					"  Aborting negotiation.\n", negotiator_hostname);
-			return (!(KEEP_STREAM));
-		}
-		for (iter = addrs.begin(); iter != addrs.end(); ++iter) {
-			const condor_sockaddr& addr = *iter;
-			if (addr.compare_address(endpoint_addr)) {
-					match = true;
-				break;
-				}
-			}
-		// if it isn't our local negotiator, check the FlockNegotiators list.
-		if (!match) {
-			int n;
-			for( n=1, FlockNegotiators->rewind();
-				 !match && FlockNegotiators->next(neg_host); n++) {
-				addrs = resolve_hostname(neg_host->fullHostname());
-				for (iter = addrs.begin(); iter != addrs.end(); ++iter) {
-					const condor_sockaddr& addr = *iter;
-					if (addr.compare_address(endpoint_addr)) {
-						match = true;
-						which_negotiator = n;
-						remote_pool_buf = neg_host->pool() ? neg_host->pool() : "";
-						remote_pool = remote_pool_buf.c_str();
-						break;
-					}
-				}
-			}
-		}
-		if (!match) {
-			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
-					"Aborting negotiation.\n", sock->peer_ip_str());
-			return (!(KEEP_STREAM));
-		}
-	}
-	else if( FlockCollectors ) {
-		EXCEPT("Unexpected negotiation command %d", command);
-	}
-
 
 	if( remote_pool ) {
 		dprintf (D_ALWAYS, "Negotiating for owner: %s (flock level %d, pool %s)\n",
@@ -8204,7 +8117,7 @@ Scheduler::negotiate(int command, Stream* s)
 		// scheduler
 
 	if( ! strcmp(owner, dedicated_scheduler.name()) ) {
-		return dedicated_scheduler.negotiate( command, sock, remote_pool );
+		return dedicated_scheduler.negotiate( NEGOTIATE, sock, remote_pool );
 	}
 
 		// If we got this far, we're negotiating for a regular user,
@@ -8309,7 +8222,7 @@ Scheduler::negotiate(int command, Stream* s)
 
 	classy_counted_ptr<MainScheddNegotiate> sn =
 		new MainScheddNegotiate(
-			command,
+			NEGOTIATE,
 			resource_requests,
 			owner,
 			remote_pool
