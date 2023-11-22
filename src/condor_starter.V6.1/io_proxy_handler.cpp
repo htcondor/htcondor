@@ -72,11 +72,11 @@ Returns KEEP_STREAM if the stream is still valid, ~KEEP_STREAM otherwise.
 
 int IOProxyHandler::handle_request( Stream *s )
 {
-	char line[CHIRP_LINE_MAX];
+	char line[CHIRP_LINE_MAX+1];
 	ReliSock *r = (ReliSock *) s;
 
-	int bytes = r->get_line_raw(line, CHIRP_LINE_MAX);
-	if (bytes >= CHIRP_LINE_MAX) {
+	int bytes = r->get_line_raw(line, CHIRP_LINE_MAX+1);
+	if (bytes > CHIRP_LINE_MAX) {
 		// request too big
 		dprintf(D_ALWAYS, "IOProxyHandler: rejecting chirp request because it is too large\n");
 		snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_TOO_BIG);
