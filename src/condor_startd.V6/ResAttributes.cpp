@@ -472,7 +472,7 @@ MachAttributes::compute_for_update()
 			m_docker_cached_image_size_time = now;
 			int64_t size_in_bytes = DockerAPI::imageCacheUsed();
 			if (size_in_bytes >= 0) {
-				const int64_t ONEMB =  1024 * 1024;
+				const int64_t ONEMB =  (int64_t)1024 * 1024;
 				m_docker_cached_image_size = (DockerAPI::imageCacheUsed() + ONEMB/2) / ONEMB;
 			} else {
 				// negative values returned above indicate failure to fetch the imageSize
@@ -659,7 +659,7 @@ static int d_log_devids = D_FULLDEBUG;
 
 const char * MachAttributes::DumpDevIds(std::string & buf, const char * tag, const char * sep)
 {
-	for (auto f : m_machres_nft_map) {
+	for (auto & f : m_machres_nft_map) {
 		// if a tag was provided, ignore entries that don't match it.
 		if (tag && strcasecmp(tag, f.first.c_str())) continue;
 
@@ -866,7 +866,7 @@ bool MachAttributes::ComputeDevProps(
 	// so just add a nested ad for each assigned id that is a full copy of
 	// the device props ad plus an attribute that is the id itself
 	if (verbose_nested_props) {
-		for (auto id : ids) {
+		for (auto & id : ids) {
 			auto ip = nftprops.find(id);
 			if (ip == nftprops.end()) {
 				continue;
@@ -910,7 +910,7 @@ bool MachAttributes::ComputeDevProps(
 		}
 	} else {
 		for (auto & propit : props) {
-			for (auto id : ids) {
+			for (auto & id : ids) {
 				ip = nftprops.find(id);
 				if (ip == nftprops.end()) {
 					continue;
@@ -1939,7 +1939,7 @@ CpuAttributes::reconfig_DevIds(int slot_id, int slot_sub_id) // release non-fung
 
 	// make sure that the assigned devid's matches the global assigment
 	// which may have changed based on reconfig
-	for (auto j : c_slotres_map) {
+	for (auto & j : c_slotres_map) {
 		auto ids = c_slotres_ids_map.find(j.first);
 		if (ids == c_slotres_ids_map.end())
 			continue;
@@ -1964,7 +1964,7 @@ CpuAttributes::reconfig_DevIds(int slot_id, int slot_sub_id) // release non-fung
 }
 
 void
-CpuAttributes::publish_dynamic(ClassAd* cp) const
+CpuAttributes::publish_dynamic(ClassAd* cp, const ResBag *) const
 {
 		cp->Assign( ATTR_TOTAL_DISK, c_total_disk );
 		cp->Assign( ATTR_DISK, c_disk );
@@ -1980,29 +1980,37 @@ CpuAttributes::publish_dynamic(ClassAd* cp) const
 }
 
 void
-CpuAttributes::publish_static(ClassAd* cp)
+CpuAttributes::publish_static(ClassAd* cp, const ResBag * deduct) const
 {
 		string ids;
 
+		int mem = c_phys_mem;
+		if (deduct) { mem = MAX(0, mem - deduct->mem); }
 		cp->Assign( ATTR_MEMORY, c_phys_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
 
+		double cpus = c_num_cpus;
+		if (deduct) { cpus = MAX(0, cpus - deduct->cpus); }
 		if (c_allow_fractional_cpus) {
-			cp->Assign( ATTR_CPUS, c_num_cpus );
+			cp->Assign( ATTR_CPUS, cpus );
 			cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
 		} else {
-			cp->Assign( ATTR_CPUS, (int)(c_num_cpus + 0.1) );
+			cp->Assign( ATTR_CPUS, (int)(cpus + 0.1) );
 			cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)(c_num_slot_cpus + 0.1) );
 		}
 		
 		cp->Assign( ATTR_VIRTUAL_MEMORY, c_virt_mem );
 
 		// publish local resource quantities for this slot
-		for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
+		for (auto j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
 			cp->Assign(j->first, int(j->second));                    // example: set GPUs = 1
+
 			string attr = ATTR_TOTAL_SLOT_PREFIX; attr += j->first;
-			cp->Assign(attr, int(c_slottot_map[j->first]));          // example: set TotalSlotGPUs = 2
+			long long tot = 0;
+			auto tt = c_slottot_map.find(j->first);
+			if (tt != c_slottot_map.end()) { tot = (long long)tt->second; }
+			cp->Assign(attr, tot);          // example: set TotalSlotGPUs = 2
 			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
 			if (k != c_slotres_ids_map.end()) {
 				attr = "Assigned";
@@ -2010,13 +2018,19 @@ CpuAttributes::publish_static(ClassAd* cp)
 				ids = join(k->second, ",");  // k->second is type slotres_assigned_ids_t which is vector<string>
 				cp->Assign(attr, ids);   // example: AssignedGPUs = "GPU-01abcdef,GPU-02bcdefa"
 			} else {
+				if (deduct) {
+					double quan = j->second;
+					auto dk = deduct->resmap.find(j->first);
+					if (dk != deduct->resmap.end()) { quan -= dk->second; }
+					cp->Assign(j->first, int(quan));        // example: set Bandwidth = 100
+				}
 				continue;
 			}
 
 			// publish properties of assigned local resources
-			auto it = c_slotres_props_map.find(j->first);
+			slotres_props_t::const_iterator it = c_slotres_props_map.find(j->first);
 			if (it != c_slotres_props_map.end()) {
-				for (auto kvp : it->second) {
+				for (auto & kvp : it->second) {
 					attr = j->first; attr += "_"; attr += kvp.first;
 					cp->Insert(attr, kvp.second->Copy());
 				}
@@ -2179,7 +2193,7 @@ ResBag::operator+=(const CpuAttributes& rhs)
 	disk += rhs.c_slot_disk;
 	mem += rhs.c_slot_mem;
 	slots += 1;
-	for (auto res : rhs.c_slottot_map) { resmap[res.first] += res.second; }
+	for (auto & res : rhs.c_slottot_map) { resmap[res.first] += res.second; }
 	return *this;
 }
 
@@ -2190,8 +2204,14 @@ ResBag::operator-=(const CpuAttributes& rhs)
 	disk -= rhs.c_slot_disk;
 	mem -= rhs.c_slot_mem;
 	slots -= 1;
-	for (auto res : rhs.c_slottot_map) { resmap[res.first] -= res.second; }
+	for (auto & res : rhs.c_slottot_map) { resmap[res.first] -= res.second; }
 	return *this;
+}
+
+void ResBag::reset()
+{
+	cpus = 0; disk = 0; mem = 0; slots = 0;
+	for (auto res : resmap) { resmap[res.first] = 0; }
 }
 
 bool ResBag::underrun(std::string * names)
@@ -2221,12 +2241,31 @@ const char * ResBag::dump(std::string & buf) const
 {
 	buf.clear();
 	formatstr(buf, "Cpus=%f, Memory=%d, Disk=%lld", cpus, mem, disk);
-	for (auto res : resmap) {
+	for (auto & res : resmap) {
 		formatstr_cat(buf, " ,%s=%f", res.first.c_str(), res.second);
 	}
 	return buf.c_str();
 }
 
+void ResBag::Publish(ClassAd& ad, const char * prefix) const
+{
+	std::string attr(prefix ? prefix : "");
+	size_t off = attr.size();
+
+	attr.erase(off); attr.append(ATTR_MEMORY);
+	ad.Assign(attr, mem);
+
+	attr.erase(off); attr.append(ATTR_CPUS);
+	ad.Assign(attr, cpus);
+
+	attr.erase(off); attr.append(ATTR_DISK);
+	ad.Assign(attr, disk);
+
+	for (auto & res : resmap) {
+		attr.erase(off); attr.append(res.first);
+		ad.Assign(attr, res.second);
+	}
+}
 
 AvailAttributes::AvailAttributes( MachAttributes* map ):
 	m_execute_partitions(hashFunction)

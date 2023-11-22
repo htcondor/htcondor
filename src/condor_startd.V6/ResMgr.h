@@ -409,6 +409,8 @@ public:
 	}
 
 	bool compute_resource_conflicts();
+	const ResBag & resourcesInUse() { return primary_res_in_use; }
+	const ResBag & bk_resourcesInUse() { return backfill_res_in_use; }
 	void printSlotAds(const char * slot_types) const;
 
 	template <typename Func>
@@ -433,6 +435,12 @@ private:
 	// The main slot collection, this should normally be sorted by slot id / slot sub-id
 	// but may not be for brief periods during slot creation
 	std::vector<Resource*> slots;
+
+	// The resources-in-use collections. this is recalculated each time
+	// compute_resource_conflicts is called and is used by both the daemon-ad and by the
+	// backfill slot advertising code
+	ResBag primary_res_in_use;
+	ResBag backfill_res_in_use;
 
 	IdDispenser* id_disp;
 	bool 		is_shutting_down;

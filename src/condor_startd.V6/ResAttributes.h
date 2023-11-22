@@ -415,8 +415,8 @@ public:
 	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
 	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
-	void publish_static(ClassAd*);  // Publish desired info to given CA
-	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
+	void publish_static(ClassAd*, const ResBag * deduct) const;  // Publish desired info to given CA
+	void publish_dynamic(ClassAd*, const ResBag * deduct) const;  // Publish desired info to given CA
 	void compute_virt_mem();
 	void compute_disk();
 	void set_condor_load(double load) { c_condor_load = load; }
@@ -527,8 +527,10 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
+	void reset();
 	bool underrun(std::string * names);
 	const char * dump(std::string & buf) const;
+	void Publish(ClassAd& ad, const char * prefix) const;
 
 protected:
 	double     cpus = 0;
@@ -536,7 +538,7 @@ protected:
 	int        mem = 0;
 	int        slots = 0;
 	MachAttributes::slotres_map_t resmap;
-
+	friend class CpuAttributes;
 };
 
 class AvailDiskPartition

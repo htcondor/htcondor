@@ -402,7 +402,7 @@ Resource::clear_parent()
 		r_attr->unbind_DevIds(r_id, r_sub_id);
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
-		m_parent->refresh_classad_resources();
+		m_parent->refresh_classad_resources(resmgr->resourcesInUse());
 		m_parent->update_needed(wf_dslotDelete);
 		// TODO: fold this code in to update_needed ?
 		resmgr->res_conflict_change(m_parent, true);
@@ -418,11 +418,10 @@ Resource::set_parent( Resource* rip )
 
 		// If we have a parent, we consume its resources
 	if( m_parent ) {
-		*(m_parent->r_attr) -= *(r_attr);
-		m_parent->refresh_classad_resources();
-
-			// If we have a parent, we are dynamic
+		// If we have a parent, we are dynamic
 		set_feature( DYNAMIC_SLOT );
+		*(m_parent->r_attr) -= *(r_attr);
+		m_parent->refresh_classad_resources(resmgr->resourcesInUse());
 	}
 }
 
@@ -2499,7 +2498,8 @@ void Resource::publish_static(ClassAd* cap)
 		//if (cap == r_config_classad) { cap->Delete(ATTR_MY_CURRENT_TIME); }
 
 		// Put in cpu-specific attributes that can only change on reconfig
-		r_attr->publish_static(cap);
+		const ResBag * deduct = r_backfill_slot ? &resmgr->resourcesInUse() : nullptr;
+		r_attr->publish_static(cap, deduct);
 
 		// Put in machine-wide attributes that can only change on reconfig
 		resmgr->m_attr->publish_static(cap);
@@ -2703,7 +2703,7 @@ Resource::publish_dynamic(ClassAd* cap)
 	}
 
 	// Put in cpu-specific attributes (TotalDisk, LoadAverage)
-	r_attr->publish_dynamic(cap);
+	r_attr->publish_dynamic(cap, nullptr);
 
 	// Put in machine-wide dynamic attributes (Mips, OfflineGPUs)
 	resmgr->m_attr->publish_common_dynamic(cap);
@@ -3139,7 +3139,7 @@ void Resource::reconfig_latches()
 			}
 			// optimism was unfounded, save off the remaining latch values and truncate
 			// we will have to rebuild from the saved latch data from here on
-			for (auto jt = it; jt != latches.end(); ++jt) { saved[attr] = *jt; }
+			for (auto & jt = it; jt != latches.end(); ++jt) { saved[attr] = *jt; }
 			latches.erase(it, latches.end());
 			it = latches.end();
 		}

@@ -1063,13 +1063,15 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					if (pslot != parent) {
 						// we *intend* to have all of these d-slots share a parent, but in case they don't
 						// we need to make sure that the parent refreshes it's classad
-						pslot->refresh_classad_resources();
+						// TODO: should we call resmgr->compute_resource_conflicts(); here?
+						pslot->refresh_classad_resources(resmgr->resourcesInUse());
 					}
 				}
 				// TODO Do we need to call refresh_classad() on either slot?
 			}
 			if (parent) {
-				parent->refresh_classad_resources();
+				// TODO: should we call resmgr->compute_resource_conflicts(); here?
+				parent->refresh_classad_resources(resmgr->resourcesInUse());
 			}
 		}
 	}
@@ -2506,7 +2508,8 @@ command_coalesce_slots(int, Stream * stream ) {
 	}
 
 	// We just updated the partitionable slot's resources...
-	parent->refresh_classad_resources();
+	// TODO: should we call resmgr->compute_resource_conflicts(); here?
+	parent->refresh_classad_resources(resmgr->resourcesInUse());
 
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
 	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
@@ -2553,8 +2556,9 @@ command_coalesce_slots(int, Stream * stream ) {
 
 	// The coalesced slot is born claimed.
 	coalescedSlot->change_state( claimed_state );
-	coalescedSlot->refresh_classad_resources();
-	parent->refresh_classad_resources();
+	resmgr->compute_resource_conflicts();
+	coalescedSlot->refresh_classad_resources(resmgr->resourcesInUse());
+	parent->refresh_classad_resources(resmgr->resourcesInUse());
 
 	dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing complete, sending reply\n" );
 
