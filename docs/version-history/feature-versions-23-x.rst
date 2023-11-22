@@ -23,6 +23,10 @@ New Features:
 - Container universe now works when file transfer is disabled or not used.
   :jira:`1329`
 
+- Startd now advertises when jobs are running with cgroup enforcement in
+  the slot attribute ``CgroupEnforced``
+  :jira:`1532`
+
 Bugs Fixed:
 
 - None.
