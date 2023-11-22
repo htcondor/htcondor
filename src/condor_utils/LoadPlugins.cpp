@@ -20,7 +20,6 @@
 
 #include "condor_config.h"
 #include "directory.h"
-#include "simplelist.h"
 
 #ifndef WIN32
 	#include <dlfcn.h>

@@ -2105,23 +2105,15 @@ void CollectorDaemon::Config()
 	// shared port without an assigned port number).
 	//
 
-	DCCollector * daemon = NULL;
-	collectorsToUpdate->rewind();
 	const char * myself = daemonCore->InfoCommandSinfulString();
 	if( myself == NULL ) {
 		EXCEPT( "Unable to determine my own address, aborting rather than hang.  You may need to make sure the shared port daemon is running first." );
 	}
 	Sinful mySinful( myself );
-	while( collectorsToUpdate->next( daemon ) ) {
-		const char * current = daemon->addr();
-		if( current == NULL ) { continue; }
-
-		Sinful currentSinful( current );
-		if( mySinful.addressPointsToMe( currentSinful ) ) {
-			collectorsToUpdate->deleteCurrent();
-			continue;
-		}
-	}
+	std::erase_if(collectorsToUpdate->getList(),
+			[&](DCCollector* curr) {
+				return curr->addr() && mySinful.addressPointsToMe(Sinful(curr->addr()));
+			} );
 
 	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
 	if( UpdateTimerId < 0 ) {
@@ -2470,7 +2462,7 @@ void CollectorDaemon::sendCollectorAd(int /* tid */)
 
 	// Send the ad
 	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
-	if ( num_updated != collectorsToUpdate->number() ) {
+	if ( num_updated != (int)collectorsToUpdate->getList().size() ) {
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
 

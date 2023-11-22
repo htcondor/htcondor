@@ -193,7 +193,6 @@ int main( int argc, char *argv[] )
 
 	FILE *file;
 	ClassAdList ads;
-	Daemon *collector;
 	Sock *sock;
 
 	switch( command ) {
@@ -278,19 +277,11 @@ int main( int argc, char *argv[] )
 		command = commandInt;
 	}
 
-	CollectorList * collectors;
-	if ( pool ) {
-		collector = new Daemon( DT_COLLECTOR, pool, 0 );
-		collectors = new CollectorList();
-		collectors->append (collector);
-	} else {
-		collectors = CollectorList::create();
-	}
+	CollectorList * collectors = CollectorList::create(pool);
 
 	bool had_error = false;
 
-	collectors->rewind();
-	while (collectors->next(collector)) {
+	for (auto& collector : collectors->getList()) {
 
 		dprintf(D_FULLDEBUG,"locating collector %s...\n", collector->name());
 

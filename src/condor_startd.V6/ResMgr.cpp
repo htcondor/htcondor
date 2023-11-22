@@ -1234,9 +1234,7 @@ ResMgr::report_updates( void ) const
 	CollectorList* collectors = daemonCore->getCollectorList();
 	if( collectors ) {
 		std::string list;
-		Daemon * collector;
-		collectors->rewind();
-		while (collectors->next (collector)) {
+		for (auto& collector : collectors->getList()) {
 			const char* host = collector->fullHostname();
 			list += host ? host : "";
 			list += " ";

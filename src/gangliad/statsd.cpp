@@ -976,9 +976,7 @@ StatsD::mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors) {
 
 	m_default_aggregate_host = "";
 
-	DCCollector *collector=NULL;
-	collectors.rewind();
-	while( (collectors.next(collector)) ) {
+	for (auto& collector : collectors.getList()) {
 		char const *collector_host = collector->fullHostname();
 		char const *collector_addr = collector->addr();
 		if( collector_host && m_default_aggregate_host.empty() ) {

@@ -27,7 +27,6 @@
 #ifndef _CONDOR_RESMGR_H
 #define _CONDOR_RESMGR_H
 
-#include "simplelist.h"
 #include "startd_named_classad_list.h"
 
 #include "IdDispenser.h"

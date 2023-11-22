@@ -283,8 +283,6 @@ struct Collector {
     // TODO: this has crappy error handling when there are multiple collectors.
     void advertise(list ads, const std::string &command_str="UPDATE_AD_GENERIC", bool use_tcp=true)
     {
-        m_collectors->rewind();
-        Daemon *collector;
         std::unique_ptr<Sock> sock;
 
         int command = getCollectorCommandNum(command_str.c_str());
@@ -303,7 +301,7 @@ struct Collector {
             return;
 
         ClassAd ad;
-        while (m_collectors->next(collector))
+        for (auto& collector : m_collectors->getList())
         {
             if(!collector->locate()) {
                 THROW_EX(HTCondorLocateError, "Unable to locate collector.");
