@@ -7970,7 +7970,7 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	//-----------------------------------------------
 	// Get Owner name from negotiator
 	//-----------------------------------------------
-	char owner[200], *ownerptr = owner;
+	char owner[200];
 	std::string sig_attrs_from_cm;
 	int consider_jobprio_min = INT_MIN;
 	int consider_jobprio_max = INT_MAX;
