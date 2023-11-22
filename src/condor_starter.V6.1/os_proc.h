@@ -130,6 +130,7 @@ protected:
 private:
 
 	bool m_using_priv_sep;
+	bool cgroupActive;
 	int singReaperId;
 
 };

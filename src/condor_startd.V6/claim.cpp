@@ -276,6 +276,9 @@ Claim::publish( ClassAd* cad )
 			cad->Assign(ATTR_REMOTE_NEGOTIATING_GROUP, c_client->c_neggrp);
 			cad->Assign(ATTR_REMOTE_AUTOREGROUP, c_client->c_autorg);
 		}
+		if (c_client->c_cgroupActive) {
+			cad->Assign(ATTR_CGROUP_ENFORCED, true);
+		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -720,6 +723,7 @@ Claim::loadStatistics()
 	if ( c_client ) {
 		c_client->c_numPids = 0;
 		c_jobad->LookupInteger(ATTR_NUM_PIDS, c_client->c_numPids);
+		c_jobad->LookupBool(ATTR_CGROUP_ENFORCED, c_client->c_cgroupActive);
 	}
 }
 
@@ -838,29 +842,6 @@ void Claim::cacheJobInfo( ClassAd* job )
 				 c_aliveint, max_claim_alives_missed );
 	}
 }
-
-#if 0 // no-one uses this
-void
-Claim::saveJobInfo( ClassAd* request_ad )
-{
-		// This does not make a copy, so we assume we have control
-		// over the ClassAd once this method has been called.
-		// However, don't clobber our ad if the caller passes NULL.
-	if (request_ad) {
-		setjobad(request_ad);
-	}
-	ASSERT(c_ad);
-
-	cacheJobInfo(c_ad);
-
-		/* 
-		   This resets the timers for us, and also, we should consider
-		   a request to activate a claim (which is what just happened
-		   if we're in this function) as another keep-alive...
-		*/
-	alive();  
-}
-#endif
 
 void
 Claim::startLeaseTimer()
