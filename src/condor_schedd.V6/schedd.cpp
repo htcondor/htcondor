@@ -13371,6 +13371,7 @@ Scheduler::Init()
 				break;
 			}
 			FlockNegotiators.emplace_back(DT_NEGOTIATOR, name.c_str(), FlockCollectors[idx].name());
+			idx++;
 		}
 		if( FlockCollectors.size() != FlockNegotiators.size() ) {
 			dprintf(D_ALWAYS, "FLOCK_COLLECTOR_HOSTS and "
