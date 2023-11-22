@@ -28,6 +28,7 @@
 #include "condor_daemon_core.h"
 
 #include <vector>
+#include <algorithm>
 
 
 CollectorList::CollectorList(DCCollectorAdSequences * adseq /*=NULL*/)
