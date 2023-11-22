@@ -37,6 +37,12 @@ New Features:
 
 Bugs Fixed:
 
+- There is a fixed size limit of 5120 bytes for chip commands.  The
+  starter now returns an error, and the chirp_client prints out
+  an error when requested to send a chirp command over this limit.
+  Previously, these were silently ignored.
+  :jira:`2157`
+
 - Linux jobs with a invalid #! interpreter now get a better error
   message when the EP is running as root.  This was enhanced in 10.0,
   but a bug prevented the enhancement from fully working with a rootly EP.
