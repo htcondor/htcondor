@@ -49,7 +49,6 @@
 #include "internet.h"
 #include "condor_distribution.h"
 #include "string_list.h"
-#include "simplelist.h"
 #include "subsystem_info.h"
 #include "condor_regex.h"
 #ifdef WIN32

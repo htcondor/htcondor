@@ -23,7 +23,6 @@
 #include <pthread.h>
 #include "condor_common.h"
 #include "gahp_common.h"
-#include "simplelist.h"
 #include "PipeBuffer.h"
 
 #define GAHP_COMMAND_ASYNC_MODE_ON "ASYNC_MODE_ON"

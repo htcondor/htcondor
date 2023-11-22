@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "simplelist.h"
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 

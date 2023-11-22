@@ -26,8 +26,6 @@
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
-#include "HashTable.h"
-#include "simplelist.h"
 #include "pbuffer.h"
 #include "condor_vm_universe_types.h"
 #include "vmgahp_common.h"

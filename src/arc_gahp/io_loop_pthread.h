@@ -23,7 +23,6 @@
 #include <pthread.h>
 #include "condor_common.h"
 #include "gahp_common.h"
-#include "simplelist.h"
 #include "PipeBuffer.h"
 #include "arcgahp_common.h"
 

@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
-#include "simplelist.h"
 #include "openstackgahp_common.h"
 #include "openstackCommands.h"
 
