@@ -948,7 +948,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				// Add a copy of our DCCollector object, because
 				// CollectorList() takes ownership and may even delete
 				// this object before we are done.
-			Collectors->append ( new DCCollector( *pool ) );
+			Collectors->getList().emplace_back( new DCCollector( *pool ) );
 		} 
 		else
 		if (is_arg_prefix (dash_arg+1, "D", 1)) {
