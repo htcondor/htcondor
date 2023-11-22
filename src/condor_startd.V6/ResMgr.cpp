@@ -325,8 +325,8 @@ ResMgr::publish_daemon_ad(ClassAd & ad)
 	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
 	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
 
-	primary_res_in_use.Publish(ad, "TotalClaimed");
-	backfill_res_in_use.Publish(ad, "TotalBackfillClaimed");
+	primary_res_in_use.Publish(ad, "TotalInUse");
+	backfill_res_in_use.Publish(ad, "TotalBackfillInUse");
 
 	// static information about custom resources
 	ad.Update(m_attr->machres_attrs());
