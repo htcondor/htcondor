@@ -1488,7 +1488,7 @@ MachAttributes::has_nft_conflicts(int slot_id, int slot_subid)
 }
 
 void
-MachAttributes::publish_common_dynamic(ClassAd* cp)
+MachAttributes::publish_common_dynamic(ClassAd* cp, bool global /*=false*/)
 {
 	// things that need to be refreshed periodially
 
@@ -1507,7 +1507,7 @@ MachAttributes::publish_common_dynamic(ClassAd* cp)
 	}
 	// publish offline ids for any of the resources
 	for (auto j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
-		string ids;
+		std::string ids;
 		auto & offline_ids(m_machres_runtime_offline_ids_map[j->first]);
 		slotres_devIds_map_t::const_iterator k = m_machres_offline_devIds_map.find(j->first);
 		if ( ! offline_ids.empty()) {
@@ -1542,6 +1542,37 @@ MachAttributes::publish_common_dynamic(ClassAd* cp)
 			}
 		} else {
 			cp->Assign(attr, ids);
+		}
+	}
+
+	// for the daemon ad, we also want to publish the detected GPUs properties and other nft properties
+	if (global) {
+		for (auto f(m_machres_nft_map.begin()); f != m_machres_nft_map.end(); ++f) {
+			if ( ! f->second.props.size()) continue;
+
+			auto & offline_ids(m_machres_runtime_offline_ids_map[f->first]);
+
+			std::string attr; attr.reserve(18);
+			std::string ids; ids.reserve(2 + (f->second.ids.size() * 18));
+
+			ids = "{";
+			for (const auto & nfr : f->second.props) {
+				attr = f->first; attr += "_";
+				attr += nfr.first;
+				cleanStringForUseAsAttr(attr, '_');
+				if (ids.size() > 1) { ids += ", "; }
+				ids += attr;
+
+				// copy the properties ad into and insert the resource id into it
+				// then store that into the output ad
+				ClassAd * propAd = dynamic_cast<ClassAd*>(nfr.second.Copy());
+				propAd->Assign("Id", nfr.first);
+				cp->Insert(attr, propAd);
+			}
+			ids += "}";
+
+			attr = "Detected"; attr += f->first;
+			cp->AssignExpr(attr, ids.c_str());
 		}
 	}
 

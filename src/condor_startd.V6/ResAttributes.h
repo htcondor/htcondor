@@ -252,7 +252,7 @@ public:
     void init_machine_resources();
 
 	void publish_static(ClassAd*);     // things that can only change on reconfig
-	void publish_common_dynamic(ClassAd*); // things that can change at runtime
+	void publish_common_dynamic(ClassAd*, bool global=false); // things that can change at runtime
 	void publish_slot_dynamic(ClassAd*, int slotid, int slotsubid, bool backfill, const std::string & res_conflict); // things that can change at runtime
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
 	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector

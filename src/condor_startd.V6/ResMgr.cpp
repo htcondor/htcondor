@@ -329,10 +329,12 @@ ResMgr::publish_daemon_ad(ClassAd & ad)
 	backfill_res_in_use.Publish(ad, "TotalBackfillInUse");
 
 	// static information about custom resources
+	// this does not include the non fungible resource properties
 	ad.Update(m_attr->machres_attrs());
 
 	// gloal dynamic information. offline resources, WINREG values
-	m_attr->publish_common_dynamic(&ad);
+	m_attr->publish_common_dynamic(&ad, true);
+	
 
 	//PRAGMA_REMIND("TJ: write this")
 	// m_attr->publish_EP_dynamic(&ad);
