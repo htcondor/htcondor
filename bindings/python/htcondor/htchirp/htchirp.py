@@ -79,7 +79,10 @@ class HTChirp:
 
     # static reference variables
 
-    CHIRP_LINE_MAX = 1024
+    # These parameters should match src/condor_chirp/chirp_protocol.h
+    CHIRP_LINE_MAX = 5120
+    CHIRP_VERSION = 2
+
     CHIRP_AUTH_METHODS = ["cookie"]
     DEFAULT_MODE = (
         (stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
@@ -210,6 +213,10 @@ class HTChirp:
             raise self.InvalidRequest("The form of the request is invalid.")
         cmd = cmd.encode()
 
+        # check the command length
+        if len(cmd) > self.__class__.CHIRP_LINE_MAX:
+            raise self.TooBig("That request is too big to execute.")
+
         # send the command
         bytes_sent = 0
         while bytes_sent < len(cmd):
@@ -260,6 +267,8 @@ class HTChirp:
 
         """
 
+        # These error codes should match src/condor_chirp/chirp_protocol.h
+        # and the error messages should match src/condor_chirp/chirp_client.h
         chirp_errors = {
             -1: self.NotAuthenticated("The client has not authenticated its identity."),
             -2: self.NotAuthorized(
