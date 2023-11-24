@@ -49,20 +49,28 @@ BuildRequires: libvirt-devel
 BuildRequires: bind-utils
 BuildRequires: libX11-devel
 BuildRequires: libXScrnSaver-devel
+%if 0%{?suse_version}
+BuildRequires: openldap2-devel
+%else
 BuildRequires: openldap-devel
+%endif
 %if 0%{?rhel} == 7
 BuildRequires: cmake3
 BuildRequires: python-devel
 BuildRequires: python-setuptools
 %else
-BuildRequires: cmake >= 3.8
+BuildRequires: cmake >= 3.16
 %endif
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
 %if 0%{?rhel} >= 8
 BuildRequires: boost-devel
 %endif
+%if 0%{?suse_version}
+BuildRequires: rpm-config-SUSE
+%else
 BuildRequires: redhat-rpm-config
+%endif
 BuildRequires: sqlite-devel
 BuildRequires: perl(Data::Dumper)
 
@@ -71,14 +79,22 @@ BuildRequires: gcc-c++
 BuildRequires: libuuid-devel
 BuildRequires: patch
 BuildRequires: pam-devel
+%if 0%{?suse_version}
+BuildRequires: mozilla-nss-devel
+%else
 BuildRequires: nss-devel
+%endif
 BuildRequires: openssl-devel
 BuildRequires: libxml2-devel
+%if 0%{?suse_version}
+BuildRequires: libexpat-devel
+%else
 BuildRequires: expat-devel
+%endif
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
-%if 0%{?rhel} >= 8 || 0%{?fedora}
+%if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{suse_version}
 BuildRequires: python3-devel
 %else
 BuildRequires: python-devel
@@ -112,18 +128,26 @@ BuildRequires: boost169-static
 BuildRequires: boost-static
 %endif
 
-%if 0%{?rhel} >= 8 || 0%{?fedora}
-BuildRequires: boost-python3-devel
-%else
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 BuildRequires: python3-devel
 BuildRequires: boost169-python2-devel
 BuildRequires: boost169-python3-devel
+%else
+%if  0%{?suse_version}
+BuildRequires: libboost_python-py3-1_75_0-devel
+%else
+BuildRequires: boost-python3-devel
+%endif
 %endif
 BuildRequires: libuuid-devel
 Requires: libuuid
 
 BuildRequires: systemd-devel
+%if 0%{suse_version}
+BuildRequires: systemd
+%else
 BuildRequires: systemd-units
+%endif
 Requires: systemd
 
 %if 0%{?rhel} == 7
@@ -132,6 +156,10 @@ BuildRequires: python-sphinx python-sphinx_rtd_theme
 
 %if 0%{?rhel} >= 8 || 0%{?amzn} || 0%{?fedora}
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
+%endif
+
+%if 0%{suse_version}
+BuildRequires: python3-Sphinx python3-sphinx_rtd_theme
 %endif
 
 # openssh-server needed for condor_ssh_to_job
@@ -165,9 +193,15 @@ Requires(postun): /sbin/ldconfig
 
 Requires(pre): shadow-utils
 
+%if 0%{suse_version}
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
+%else
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
+%endif
 Requires(post): systemd-sysv
 
 %if 0%{?rhel} == 7
@@ -175,7 +209,7 @@ Requires(post): policycoreutils-python
 Requires(post): selinux-policy-targeted >= 3.13.1-102
 %endif
 
-%if 0%{?rhel} >= 8 || 0%{?fedora}
+%if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{suse_version}
 Requires(post): python3-policycoreutils
 Requires(post): selinux-policy-targeted
 %endif
@@ -250,6 +284,10 @@ Provides: %{name}-classads = %{version}-%{release}
 # classads-devel package discontinued as of 10.8.0
 Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
+
+%if 0%{?suse_version}
+%debug_package
+%endif
 
 %description
 HTCondor is a specialized workload management system for
@@ -337,7 +375,7 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{suse_version}
 #######################
 %package -n python3-condor
 Summary: Python bindings for HTCondor
@@ -415,7 +453,7 @@ htgettoken and to use those credentials securely inside running jobs.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{suse_version}
 Requires: python3-condor = %version-%release
 %endif
 
@@ -487,6 +525,11 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
+%if 0%{?suse_version}
+export CC=/usr/bin/gcc-11
+export CXX=/usr/bin/g++-11
+%endif
+
 %if 0%{?rhel} == 7 && 0%{?devtoolset}
 . /opt/rh/devtoolset-%{devtoolset}/enable
 export CC=$(which cc)
@@ -516,7 +559,11 @@ make -C docs man
 # Any changes here should be synchronized with
 # ../debian/rules 
 
+%if 0%{?suse_version}
+%cmake \
+%else
 %cmake3 \
+%endif
 %if %uw_build
        -DBUILDID:STRING=%condor_build_id \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
@@ -564,7 +611,15 @@ function populate {
 
 rm -rf %{buildroot}
 echo ---------------------------- makefile ---------------------------------
+%if 0%{?suse_version}
+cd build
+%endif
 make install DESTDIR=%{buildroot}
+
+%if 0%{?suse_version}
+mv %{buildroot}/usr/libexec/condor %{buildroot}/%{_libexecdir}
+mv %{buildroot}/usr/libexec/blahp %{buildroot}/%{_libexecdir}
+%endif
 
 %if %uw_build
 make tests-tar-pkg
@@ -575,7 +630,11 @@ cp -p %{_builddir}/%{name}-%{version}/amazon-linux-build/condor_tests-*.tar.gz %
 %if 0%{?rhel} == 9 || 0%{?fedora}
 cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %else
+%if 0%{?suse_version}
+cp -p %{_builddir}/%{name}-%{version}/build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%else
 cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%endif
 %endif
 %endif
 %endif
@@ -789,7 +848,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/onedrive_plugin.py
 # TODO: get rid of these
 # Not sure where these are getting built
-%if 0%{?rhel} <= 7 && ! 0%{?fedora}
+%if 0%{?rhel} <= 7 && ! 0%{?fedora} && ! 0%{?suse_version}
 %_libexecdir/condor/box_plugin.pyc
 %_libexecdir/condor/box_plugin.pyo
 %_libexecdir/condor/gdrive_plugin.pyc
@@ -1067,7 +1126,6 @@ rm -rf %{buildroot}
 
 ####### classads files #######
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_libdir/libclassad.so.*
 
 #################
@@ -1082,7 +1140,6 @@ rm -rf %{buildroot}
 
 ####### classads-devel files #######
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_bindir/classad_functional_tester
 %_bindir/classad_version
 %_libdir/libclassad.so
@@ -1135,14 +1192,12 @@ rm -rf %{buildroot}
 #################
 %files kbdd
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_sbindir/condor_kbdd
 
 #################
 %if ! 0%{?amzn}
 %files vm-gahp
 %defattr(-,root,root,-)
-%doc LICENSE NOTICE.txt
 %_sbindir/condor_vm-gahp
 %_libexecdir/condor/libvirt_simple_script.awk
 
@@ -1158,7 +1213,7 @@ rm -rf %{buildroot}
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
 
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31 && ! 0%{?suse_version}
 %files -n python2-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
@@ -1171,7 +1226,7 @@ rm -rf %{buildroot}
 %{python_sitearch}/htcondor-*.egg-info/
 %endif
 
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{suse_version}
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
