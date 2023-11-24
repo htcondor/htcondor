@@ -22,6 +22,9 @@
 #include "classad/exprTree.h"
 #include "classad/util.h"
 
+#include <charconv>
+#include <algorithm>
+
 using std::string;
 using std::vector;
 using std::pair;
@@ -31,7 +34,7 @@ namespace classad {
 
 static inline void nextDigitChar(const string &Str, int &index);
 static inline void prevNonSpaceChar(const string &Str, int &index);
-static int revInt(const string &revNumStr);
+static int revInt(std::string revNumStr);
 static double revDouble(const string &revNumStr);
 static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin);
 
@@ -339,17 +342,13 @@ static inline void prevNonSpaceChar(const string &Str, int &index)
  * order of the digits & returns the corresponding number as an
  * integer.
  */
-static int revInt(const string &revNumStr) 
+static int revInt(std::string revNumStr) // by value, as we mutate the parameter
 {
-	string numStr = "";
     int number;
 
-	int len = (int)revNumStr.length();
-	for(int i=len-1; i>=0 ; i--) {
-		numStr += revNumStr[i];
-	}
+	std::reverse(revNumStr.begin(), revNumStr.end());
+	std::ignore = std::from_chars(revNumStr.data(), revNumStr.data() + revNumStr.size(), number, 10);
 
-    number = atoi(numStr.c_str());
 	return number;
 }
 

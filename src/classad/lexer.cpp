@@ -23,6 +23,7 @@
 #include "classad/lexer.h"
 #include "classad/util.h"
 #include "classad/classad.h"
+#include <charconv>
 
 using std::string;
 using std::vector;
@@ -442,11 +443,7 @@ tokenizeNumber (void)
 				return( tokenType );
 			}
 		}
-#ifdef WIN32
-		l = _strtoi64( lexBuffer.c_str(), NULL, base );
-#else
-		l = strtoll( lexBuffer.c_str(), NULL, base );
-#endif
+		std::ignore = std::from_chars(lexBuffer.data(), lexBuffer.data() + lexBuffer.size(), l, 10);
 		integer = l;
 	} else if( numberType == REAL ) {
 		cut( );
