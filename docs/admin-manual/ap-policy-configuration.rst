@@ -253,8 +253,8 @@ the machine the schedd is running on for further monitoring.
 See the section in :ref:`admin-manual/ep-policy-configuration:Startd Cron`
 for examples and information about this.
 
-HTCondor's Dedicated Scheduling
--------------------------------
+Dedicated Scheduling
+--------------------
 
 :index:`dedicated scheduling`
 :index:`under the dedicated scheduler<single: under the dedicated scheduler; MPI application>`

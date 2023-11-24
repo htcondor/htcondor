@@ -16,4 +16,3 @@ Administrators' Manual
    networking
    logging
    file-and-cred-transfer 
-   setting-up-special-environments

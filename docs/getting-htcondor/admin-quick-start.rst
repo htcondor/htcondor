@@ -178,7 +178,7 @@ them, a warning.
 Some features of HTCondor, for one reason or another, aren't (or can't be)
 enabled by default.  Areas of potentially general interest include:
 
-* :doc:`../admin-manual/setting-up-special-environments` (particularly
+* :doc:`/admin-manual/ep-policy-configuration` (particularly
   :ref:`enabling_oauth_credentials` and :ref:`resource_limits_with_cgroups`),
 * :ref:`admin-manual/ep-policy-configuration:docker universe`
 * :ref:`admin-manual/ep-policy-configuration:Apptainer and Singularity support`

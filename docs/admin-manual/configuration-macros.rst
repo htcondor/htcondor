@@ -2306,7 +2306,7 @@ Shared File System Configuration File Macros
 
 These macros control how HTCondor interacts with various shared and
 network file systems. If you are using AFS as your shared file system,
-be sure to read :ref:`admin-manual/setting-up-special-environments:using
+be sure to read :ref:`admin-manual/file-and-cred-transfer:using
 htcondor with afs`. For information on submitting jobs under
 shared file systems, see :ref:`users-manual/submitting-a-job:submitting jobs
 using a shared file system`.
@@ -3501,8 +3501,8 @@ section.
 :macro-def:`DedicatedScheduler[STARTD]`
     A string that identifies the dedicated scheduler this machine is
     managed by.
-    :ref:`admin-manual/ap-policy-configuration:htcondor's dedicated
-    scheduling` details the use of a dedicated scheduler.
+    :ref:`admin-manual/ap-policy-configuration:dedicated scheduling`
+    details the use of a dedicated scheduler.
 
 :macro-def:`STARTD_NOCLAIM_SHUTDOWN[STARTD]`
     The number of seconds to run without receiving a claim before
@@ -3674,7 +3674,7 @@ from using more scratch space than provisioned.
 
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
-idle. See :ref:`admin-manual/setting-up-special-environments:configuring
+idle. See :ref:`admin-manual/ep-policy-configuration:configuring
 htcondor for running backfill jobs` for details.
 
 :macro-def:`ENABLE_BACKFILL[STARTD]`
