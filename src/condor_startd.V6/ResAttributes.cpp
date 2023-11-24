@@ -1550,8 +1550,6 @@ MachAttributes::publish_common_dynamic(ClassAd* cp, bool global /*=false*/)
 		for (auto f(m_machres_nft_map.begin()); f != m_machres_nft_map.end(); ++f) {
 			if ( ! f->second.props.size()) continue;
 
-			auto & offline_ids(m_machres_runtime_offline_ids_map[f->first]);
-
 			std::string attr; attr.reserve(18);
 			std::string ids; ids.reserve(2 + (f->second.ids.size() * 18));
 
