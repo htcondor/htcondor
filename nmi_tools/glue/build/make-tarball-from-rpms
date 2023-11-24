@@ -62,7 +62,7 @@ elif [[ $dist == el9 ]]; then
 elif [[ $dist == fc38 ]]; then
     arch_dist="${arch}_Fedora38"
 else
-    echo 'Platform not defined'
+    echo "Platform not defined for $dist"
     exit 1
 fi
 

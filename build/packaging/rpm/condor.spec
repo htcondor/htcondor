@@ -22,6 +22,12 @@ Name: condor
 Version: %{condor_version}
 %global version_ %(tr . _ <<< %{version})
 
+%if 0%{?suse_version}
+%if %{suse_version} == 1500
+%global dist .leap15
+%endif
+%endif
+
 # Edit the %condor_release to set the release number
 %define condor_release 1
 Release: %{condor_release}%{?dist}
