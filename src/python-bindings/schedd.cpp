@@ -2842,7 +2842,19 @@ ConnectionSentry::disconnect()
 ConnectionSentry::~ConnectionSentry()
 {
     if (PyErr_Occurred()) {abort();}
-    disconnect();
+
+	// As of C++11, all destructors are implicitly 
+	// noexcept(true).  This means that throwing an exception
+	// from one is UB (i.e. crash or termination).  In theory,
+	// we could mark this dtor as noexcept(false), but then we'd
+	// also need to do the same to the parent class, but that's
+	// part of boost.  Catch the exception for now, so at least
+	// trying to submit jobs where SUBMIT_REQUIREMENTS fails
+	// doesn't crash the whole process python is in.
+	try {
+		disconnect();
+	} catch (boost::python::error_already_set &) {
+	}
 }
 
 void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_opts, SubmitDagDeepOptions &deep_opts)
