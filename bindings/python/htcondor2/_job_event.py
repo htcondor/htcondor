@@ -26,7 +26,7 @@ class JobEvent(Mapping):
     @property
     def proc(self) -> int:
         # The event ClassAd doesn't contain a Proc attribute if the original
-        # event's ProcID was less than or equal to 0.  ULogEvent's default
+        # event's ProcID was less than 0.  ULogEvent's default
         # ("invalid") procID is -1, so we'll just assume that's good for now.
         #
         # If we ever need/want to expose other "invalid" ProcIDs, we can
