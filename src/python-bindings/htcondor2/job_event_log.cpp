@@ -125,9 +125,6 @@ _job_event_log_next( PyObject *, PyObject * args ) {
                 return NULL;
             }
 
-            // FIXME: ditto
-            eventAd->Assign("timestamp", event->GetEventclock());
-
 
             // Return the event serialization and event data.
             PyObject * pyEventAd = py_new_classad2_classad(eventAd->Copy());

@@ -37,7 +37,8 @@ class JobEvent(Mapping):
 
     @property
     def timestamp(self) -> str:
-        return self._data["timestamp"]
+        iso8601 = self._data["EventTime"]
+        return datetime.datetime.fromisoformat(iso8601)
 
 
     def __getitem__(self, key):
