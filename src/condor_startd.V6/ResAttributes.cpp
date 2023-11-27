@@ -593,8 +593,10 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, const char *
 
 	auto & offline_ids(m_machres_runtime_offline_ids_map[tag]);
 
-	auto f(m_machres_nft_map.find(tag));
-	if (f != m_machres_nft_map.end()) {
+	auto found(m_machres_nft_map.find(tag));
+	if (found != m_machres_nft_map.end()) {
+		auto &[restag, nft] = *found;
+
 		ConstraintHolder require;
 		if (request) { require.set(strdup(request)); }
 
@@ -605,23 +607,23 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, const char *
 		int cur_id = (assign_to_sub > 0) ? assign_to : 0;
 		if (backfill) {
 			// bind backfill resources in reverse order to minimize the conflicts with primary slot usage
-			for (int ixid = (int)f->second.ids.size()-1; ixid >= 0; --ixid) {
-				NonFungibleRes & nfr = f->second.ids[ixid];
+			for (int ixid = (int)nft.ids.size()-1; ixid >= 0; --ixid) {
+				NonFungibleRes & nfr = nft.ids[ixid];
 				if (offline_ids.count(nfr.id) > 0) continue; // don't bind offline ids
 				// don't bind to a backfill d-slot an id that a primary d-slot is using
 				// TODO: handle the case of a static primary slot that is claimed
 				if (assign_to_sub > 0 && nfr.owner.dyn_id > 0) continue;
-				if (nfr.bkowner.id == cur_id && nfr.bkowner.dyn_id == 0 && DevIdMatches(f->second, ixid, require)) {
+				if (nfr.bkowner.id == cur_id && nfr.bkowner.dyn_id == 0 && DevIdMatches(nft, ixid, require)) {
 					nfr.bkowner.id = assign_to;
 					nfr.bkowner.dyn_id = assign_to_sub;
 					return nfr.id.c_str();
 				}
 			}
 		} else {
-			for (int ixid = 0; ixid < (int)f->second.ids.size(); ++ixid) {
-				NonFungibleRes & nfr = f->second.ids[ixid];
+			for (int ixid = 0; ixid < (int)nft.ids.size(); ++ixid) {
+				NonFungibleRes & nfr = nft.ids[ixid];
 				if (offline_ids.count(nfr.id) > 0) continue;  // don't bind offline ids
-				if (nfr.owner.id == cur_id && nfr.owner.dyn_id == 0 && DevIdMatches(f->second, ixid, require)) {
+				if (nfr.owner.id == cur_id && nfr.owner.dyn_id == 0 && DevIdMatches(nft, ixid, require)) {
 					nfr.owner.id = assign_to;
 					nfr.owner.dyn_id = assign_to_sub;
 					return nfr.id.c_str();
@@ -634,10 +636,12 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, const char *
 
 bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assigned_to, int was_assign_to_sub)
 {
-	auto f(m_machres_nft_map.find(tag));
-	if (f != m_machres_nft_map.end()) {
-		for (int ixid = 0; ixid < (int)f->second.ids.size(); ++ixid) {
-			NonFungibleRes & nfr = f->second.ids[ixid];
+	auto found(m_machres_nft_map.find(tag));
+	if (found != m_machres_nft_map.end()) {
+		auto &[restag, nft] = *found;
+
+		for (int ixid = 0; ixid < (int)nft.ids.size(); ++ixid) {
+			NonFungibleRes & nfr = nft.ids[ixid];
 			if (nfr.id == id) {
 				if (nfr.owner.id == was_assigned_to && nfr.owner.dyn_id == was_assign_to_sub) {
 					nfr.owner.dyn_id = 0;
@@ -659,14 +663,14 @@ static int d_log_devids = D_FULLDEBUG;
 
 const char * MachAttributes::DumpDevIds(std::string & buf, const char * tag, const char * sep)
 {
-	for (auto & f : m_machres_nft_map) {
+	for (auto &[restag, nft] : m_machres_nft_map) {
 		// if a tag was provided, ignore entries that don't match it.
-		if (tag && strcasecmp(tag, f.first.c_str())) continue;
+		if (tag && strcasecmp(tag, restag.c_str())) continue;
 
-		const std::set<std::string> & offline_ids = m_machres_runtime_offline_ids_map[f.first];
-		buf += f.first;
+		const std::set<std::string> & offline_ids = m_machres_runtime_offline_ids_map[restag];
+		buf += restag;
 		buf += ":{";
-		for (auto & nfr : f.second.ids) {
+		for (auto & nfr : nft.ids) {
 			if (offline_ids.count(nfr.id)) buf += "!";
 			buf += nfr.id;
 			formatstr_cat(buf, "=%d", nfr.owner.id);
@@ -716,19 +720,18 @@ void MachAttributes::ReconfigOfflineDevIds()
 
 	std::string knob;
 	StringList offline_ids;
-	for (auto f : m_machres_nft_map) {
-		const char * tag = f.first.c_str();
-		knob = "OFFLINE_MACHINE_RESOURCE_"; knob += f.first;
+	for (auto &[restag, nft] : m_machres_nft_map) {
+		const char * tag = restag.c_str();
+		knob = "OFFLINE_MACHINE_RESOURCE_"; knob += restag;
 		param_and_insert_unique_items(knob.c_str(), offline_ids);
 
 		// we've got offline resources, check to see if any of them are assigned
-		auto & ids(f.second.ids);
 
 		int offline = 0;
 		// look through assigned resource list and see if we have offlined any of them.
-		for (int ii = (int)ids.size()-1; ii >= 0; --ii) {
-			const char * id = ids[ii].id.c_str();
-			const FullSlotId & owner = ids[ii].owner;
+		for (int ii = (int)nft.ids.size()-1; ii >= 0; --ii) {
+			const char * id = nft.ids[ii].id.c_str();
+			const FullSlotId & owner = nft.ids[ii].owner;
 			if (offline_ids.contains(id)) {
 				dprintf(D_ALWAYS, "%s %s is now marked offline\n", tag, id);
 				if (owner.dyn_id) {
@@ -743,12 +746,12 @@ void MachAttributes::ReconfigOfflineDevIds()
 
 				// we found an Assignd<Tag> devid that should be offline,
 				// so it needs to be in the dynamic_offline_ids collecton so we can check at runtime
-				m_machres_runtime_offline_ids_map[f.first].emplace(id);
+				m_machres_runtime_offline_ids_map[restag].emplace(id);
 				++offline;
 			}
 
 			// update quantites to count only assigned, non-offline devids
-			m_machres_map[f.first] = ids.size() - offline;
+			m_machres_map[restag] = nft.ids.size() - offline;
 		}
 	}
 }
@@ -763,8 +766,8 @@ int MachAttributes::RefreshDevIds(
 {
 	devids.clear();
 
-	auto ids = machres_devIds().find(tag);
-	if (ids == machres_devIds().end()) {
+	auto found = machres_devIds().find(tag);
+	if (found == machres_devIds().end()) {
 		return 0;
 	}
 	auto & offline_ids(m_machres_runtime_offline_ids_map[tag]);
@@ -780,7 +783,7 @@ int MachAttributes::RefreshDevIds(
 	//   Gpus = 1
 
 	int num_res = 0;
-	for (const auto & nfr : ids->second.ids) {
+	for (const auto & nfr : found->second.ids) {
 		if (nfr.owner.id == assign_to && (assign_to_sub == 0 || nfr.owner.dyn_id == assign_to_sub)) {
 			devids.emplace_back(nfr.id);
 			if (offline_ids.count(nfr.id)) {
@@ -798,7 +801,7 @@ int MachAttributes::RefreshDevIds(
 // We do this to allow negotiator matchmaking against the properties of assigned custom resources
 bool MachAttributes::ComputeDevProps(
 	ClassAd & ad,
-	std::string tag,
+	const std::string & tag,
 	const slotres_assigned_ids_t & ids)
 {
 	std::string attr;
@@ -806,22 +809,22 @@ bool MachAttributes::ComputeDevProps(
 	if (ids.empty()) {
 		return false;
 	}
-	auto f = m_machres_nft_map.find(tag);
-	if (f == m_machres_nft_map.end()) {
+	auto found = m_machres_nft_map.find(tag);
+	if (found == m_machres_nft_map.end()) {
 		return false;
 	}
-	if (f->second.props.empty()) {
+	auto &[restag, nft] = *found;
+	if (nft.props.empty()) {
 		return false;
 	}
-	auto & nftprops = f->second.props;
 
 	// TODO: move knobs out of this function
 	bool nested_props = param_boolean("USE_NESTED_CUSTOM_RESOURCE_PROPS", true);
 	bool verbose_nested_props = param_boolean("VERBOSE_NESTED_CUSTOM_RESOURCE_PROPS", nested_props);
 
 	// we begin by assuming that the device 0 props are common to all
-	auto ip = nftprops.find(ids.front());
-	if (ip != nftprops.end()) {
+	auto ip = nft.props.find(ids.front());
+	if (ip != nft.props.end()) {
 		ad.Update(ip->second);
 		if ( ! verbose_nested_props && ids.size() == 1) {
 			return true;
@@ -838,8 +841,8 @@ bool MachAttributes::ComputeDevProps(
 	// this map does not own the exptrees it holds
 	std::map<std::string, std::vector<classad::ExprTree*>, classad::CaseIgnLTStr> props;
 	for (size_t ix = 1; ix < ids.size(); ++ix) {
-		ip = nftprops.find(ids[ix]);
-		if (ip == nftprops.end()) continue;
+		ip = nft.props.find(ids[ix]);
+		if (ip == nft.props.end()) continue;
 
 		// walk the remaining common props, looking for mis-matches
 		// if we find a mismatch, remove it from the common list
@@ -867,8 +870,8 @@ bool MachAttributes::ComputeDevProps(
 	// the device props ad plus an attribute that is the id itself
 	if (verbose_nested_props) {
 		for (auto & id : ids) {
-			auto ip = nftprops.find(id);
-			if (ip == nftprops.end()) {
+			auto ip = nft.props.find(id);
+			if (ip == nft.props.end()) {
 				continue;
 			}
 			ClassAd * props_ad = (ClassAd*)ip->second.Copy();
@@ -886,8 +889,8 @@ bool MachAttributes::ComputeDevProps(
 	// and stuff them into the output classad
 	if (nested_props) {
 		for (auto id : ids) {
-			ip = nftprops.find(id);
-			if (ip == nftprops.end()) {
+			ip = nft.props.find(id);
+			if (ip == nft.props.end()) {
 				continue;
 			}
 			if ( ! props.empty()) {
@@ -911,8 +914,8 @@ bool MachAttributes::ComputeDevProps(
 	} else {
 		for (auto & propit : props) {
 			for (auto & id : ids) {
-				ip = nftprops.find(id);
-				if (ip == nftprops.end()) {
+				ip = nft.props.find(id);
+				if (ip == nft.props.end()) {
 					continue;
 				}
 				ClassAd & ad1 = ip->second;
@@ -1477,8 +1480,8 @@ MachAttributes::publish_static(ClassAd* cp)
 bool
 MachAttributes::has_nft_conflicts(int slot_id, int slot_subid)
 {
-	for (auto f(m_machres_nft_map.begin()); f != m_machres_nft_map.end(); ++f) {
-		for (const auto & nfr : f->second.ids) {
+	for (auto &[restag, nft] : m_machres_nft_map) {
+		for (const auto & nfr : nft.ids) {
 			if (nfr.is_owned(slot_id, slot_subid) == 3) {
 				return true;
 			}
@@ -1547,31 +1550,31 @@ MachAttributes::publish_common_dynamic(ClassAd* cp, bool global /*=false*/)
 
 	// for the daemon ad, we also want to publish the detected GPUs properties and other nft properties
 	if (global) {
-		for (auto f(m_machres_nft_map.begin()); f != m_machres_nft_map.end(); ++f) {
-			if ( ! f->second.props.size()) continue;
+		for (auto &[restag, nft] : m_machres_nft_map) {
+			if ( ! nft.props.size()) continue;
 
-			auto & offline_ids(m_machres_runtime_offline_ids_map[f->first]);
+			auto & offline_ids(m_machres_runtime_offline_ids_map[restag]);
 
 			std::string attr; attr.reserve(18);
-			std::string ids; ids.reserve(2 + (f->second.ids.size() * 18));
+			std::string ids; ids.reserve(2 + (nft.ids.size() * 18));
 
 			ids = "{";
-			for (const auto & nfr : f->second.props) {
-				attr = f->first; attr += "_";
-				attr += nfr.first;
+			for (const auto &[nfrId, nfrAd] : nft.props) {
+				attr = restag; attr += "_";
+				attr += nfrId;
 				cleanStringForUseAsAttr(attr, '_');
 				if (ids.size() > 1) { ids += ", "; }
 				ids += attr;
 
 				// copy the properties ad into and insert the resource id into it
 				// then store that into the output ad
-				ClassAd * propAd = dynamic_cast<ClassAd*>(nfr.second.Copy());
-				propAd->Assign("Id", nfr.first);
+				ClassAd * propAd = dynamic_cast<ClassAd*>(nfrAd.Copy());
+				propAd->Assign("Id", nfrId);
 				cp->Insert(attr, propAd);
 			}
 			ids += "}";
 
-			attr = "Detected"; attr += f->first;
+			attr = "Detected"; attr += restag;
 			cp->AssignExpr(attr, ids.c_str());
 		}
 	}
@@ -1599,17 +1602,17 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 	// publish "Available" custom resources and resource properties
 	// for use by the evalInEachContext matchmaking function
 	// this loop also detects primary/backfill resource conflcits for non-fungible resources
-	for (auto f(m_machres_nft_map.begin()); f != m_machres_nft_map.end(); ++f) {
-		auto & offline_ids(m_machres_runtime_offline_ids_map[f->first]);
+	for (auto &[restag, nft] : m_machres_nft_map) {
+		auto & offline_ids(m_machres_runtime_offline_ids_map[restag]);
 
 		std::string tmp;
 		std::string attr; attr.reserve(18);
-		std::string avail; avail.reserve(2 + (f->second.ids.size() * 18));
+		std::string avail; avail.reserve(2 + (nft.ids.size() * 18));
 		avail = "{";
 
 		int num_avail = 0;
 		const int owntype = (slot_is_bk ? 2 : 1);
-		for (const auto & nfr : f->second.ids) {
+		for (const auto & nfr : nft.ids) {
 			if (slot_id >= 0) {
 				int ot = nfr.is_owned(slot_id, slot_subid);
 				if (IsDebugCategory(D_ZKM)) { formatstr_cat(tmp, "%d(%d.%d)", ot,nfr.owner.id,nfr.owner.dyn_id); }
@@ -1622,7 +1625,7 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 				}
 			}
 			if (offline_ids.count(nfr.id)) continue; // offline ids are not Available
-			attr = f->first; attr += "_";
+			attr = restag; attr += "_";
 			attr += nfr.id;
 			cleanStringForUseAsAttr(attr, '_');
 			if (avail.size() > 1) { avail += ", "; }
@@ -1631,7 +1634,7 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 		}
 
 		avail += "}";
-		attr = "Available"; attr += f->first;
+		attr = "Available"; attr += restag;
 		dprintf(D_ZKM | D_VERBOSE, "publish_dyn %d.%d.%d setting %s=%s%s\n",
 			slot_id, slot_subid, slot_is_bk,
 			attr.c_str(), avail.c_str(), tmp.c_str());
@@ -1639,11 +1642,11 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 
 		// if the number of AvailableXX is less than the value of XX in the ad, reduce the value in the ad
 		int num_in_ad = num_avail;
-		if (cp->LookupInteger(f->first, num_in_ad)) {
+		if (cp->LookupInteger(restag, num_in_ad)) {
 			dprintf(D_ZKM | D_VERBOSE, "publish_dyn %d.%d.%d %s=%d was %d\n",
 				slot_id, slot_subid, slot_is_bk,
-				f->first.c_str(), num_avail, num_in_ad);
-			cp->Assign(f->first, num_avail);
+				restag.c_str(), num_avail, num_in_ad);
+			cp->Assign(restag, num_avail);
 		}
 	}
 
