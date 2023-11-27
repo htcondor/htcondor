@@ -26,9 +26,10 @@ py_new_htcondor2_classad(void * classAd) {
 	PyObject * pyClassAd = PyObject_CallObject(py_ClassAd_class, NULL);
 	auto * handle = get_handle_from(pyClassAd);
 
-	// PyObject_CallObject() should have called __init__() for us, which
-	// should call _classad_init(), which should have made sure that the
-	// Python ClassAd object is valid by creating a new ClassAd for it.
+	// If we were given a C++ ClassAd object to create a Python ClassAd object
+	// for, set handle->t appropriately.  We expect handle->t to be set (to
+	// a heap-allocated empty ClassAd) by the Python ClassAd constructor; it
+	// should never be NULL.
 	if( classAd != NULL ) {
 		// Arguably, for tracing purposes, we should call handle->f() here.
 		if( handle->t != NULL ) { delete (ClassAd *)handle->t; }

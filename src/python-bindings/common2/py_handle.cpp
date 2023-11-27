@@ -5,6 +5,9 @@
 //
 //
 
+static PyObject * _handle_new(
+    PyTypeObject * type, PyObject * args, PyObject * kwds
+);
 static void _handle_dealloc(PyObject * self);
 
 
@@ -15,11 +18,17 @@ struct DynamicPyType {
     }
 
     typedef struct {
+        // All Python objects begin within PyObject_HEAD (a macro; no semicolon
+        // is required or some compilers, permitted); it defines the fields the
+        // Python interpreter uses for its own purposes.
+        //
+        // For more details, see https://docs.python.org/3/extending/newtypes_tutorial.html#the-basics
         PyObject_HEAD
+        // Although the compiler would allow us to specify initial values
+        // for these fields, there's no mechanism by which Python could
+        // know about them when it allocates the object, so let's not tempt
+        // people to make bad assumptions.
         T t;
-        // There's no mechanism by which Python could know to use the
-        // initializer we put here when it allocates space for this object,
-        // so let's not tempt people to make bad assumptions.
         void (* f)(T & t);
     } python_object_type;
 
@@ -32,6 +41,7 @@ struct DynamicPyType {
     };
 
     PyType_Slot dynamic_slots[3] = {
+        {Py_tp_new, (void *) & _handle_new},
         {Py_tp_dealloc, (void *) & _handle_dealloc},
         {0, NULL},
     };
@@ -40,6 +50,19 @@ struct DynamicPyType {
 
 typedef DynamicPyType<void *> DynamicPyType_Handle;
 typedef DynamicPyType_Handle::python_object_type PyObject_Handle;
+
+
+static PyObject *
+_handle_new(
+    PyTypeObject * type, PyObject * /* args */, PyObject * /* kwds */
+) {
+    PyObject_Handle * self = PyObject_New(PyObject_Handle, type);
+    if( self != NULL ) {
+        self->t = NULL;
+        self->f = NULL;
+    }
+    return (PyObject *) self;
+}
 
 
 static void
