@@ -28,8 +28,7 @@ class JobEventLog():
         if stop_after is None:
             self._deadline = 0
         elif isinstance(stop_after, int):
-            now = datetime.datetime.now(datetime.timezone.utc).timestamp()
-            self._deadline = int(now) + stop_after
+            self._deadline = int(time.time()) + stop_after
         else:
             # This was HTCondorTypeError in version 1.
             raise TypeError("deadline must be an integer")
