@@ -124,6 +124,11 @@ BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
 
+%if  0%{?suse_version}
+BuildRequires: gcc11
+BuildRequires: gcc11-c++
+%endif
+
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
 BuildRequires: python36-devel
 BuildRequires: boost169-devel
@@ -576,6 +581,9 @@ make -C docs man
        -DBUILD_TESTING:BOOL=TRUE \
 %else
        -DBUILD_TESTING:BOOL=FALSE \
+%endif
+%if 0%{?suse_version}
+       -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
