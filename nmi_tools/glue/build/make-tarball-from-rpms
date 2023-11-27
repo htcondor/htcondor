@@ -61,6 +61,8 @@ elif [[ $dist == el9 ]]; then
     arch_dist="${arch}_AlmaLinux9"
 elif [[ $dist == fc38 ]]; then
     arch_dist="${arch}_Fedora38"
+elif [[ $dist == leap15 ]]; then
+    arch_dist="${arch}_openSUSE15"
 else
     echo "Platform not defined for $dist"
     exit 1
@@ -82,9 +84,6 @@ fi
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
 rm -r condor_tests-$version-$release-$arch_dist
 
-# Move configuration files back to example directory
-mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
-
 # Extract external RPMs
 for path in /usr/local/condor/externals/*.rpm; do
     file=${path##*/}
@@ -103,6 +102,9 @@ if [ $? -ne 0 ];then
     echo 'ERROR: set rpath script failed'
     exit 1
 fi
+
+# Move configuration files back to example directory
+mv tarball/etc/condor/config.d/* tarball/examples/
 
 # Fixup directory permissions for the tarball
 chmod 755 tarball/etc/condor/passwords.d
