@@ -126,7 +126,7 @@ However, the number of static slots in a *condor_startd*, and their size is
 fixed by configuration at boot time of the *condor_startd*, and cannot be
 changed without restarting the *condor_startd*.  By default, no static slots
 are created.  Static slots are named slotN@startd_name, where N starts at 1 and
-continues to the number of static slots.  The configuration settting ``use
+continues to the number of static slots.  The configuration setting ``use
 FEATURE : StaticSlots`` will configure a startd to advertise zero partitionable
 slots, and one static slot per detected core, with 1 cpu core in each slot, and
 each slot evenly dividing the detected memory and execution disk space.
