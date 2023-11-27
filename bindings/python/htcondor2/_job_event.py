@@ -15,7 +15,7 @@ class JobEvent(Mapping):
 
     @property
     def type(self) -> JobEventType:
-        return JobEventType(self._data["type"])
+        return JobEventType(self._data["EventTypeNumber"])
 
 
     @property

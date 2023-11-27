@@ -125,9 +125,6 @@ _job_event_log_next( PyObject *, PyObject * args ) {
                 return NULL;
             }
 
-            // FIXME: Is this necessary, or does the Python side just need
-            // to use key other than `type`?
-            eventAd->Assign("type", event->eventNumber);
             // FIXME: ditto
             eventAd->Assign("timestamp", event->GetEventclock());
 
