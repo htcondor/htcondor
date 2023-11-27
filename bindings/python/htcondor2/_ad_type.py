@@ -11,6 +11,7 @@ class AdType(enum.IntEnum):
     An enumeration of known ad types.
 
     .. attribute:: Any
+
         Matches any type of ad.
 
     .. attribute:: Generic
@@ -37,7 +38,7 @@ class AdType(enum.IntEnum):
 
     .. attribute:: Credd
 
-    .. attribute:: Debug
+    .. attribute:: Defrag
 
     .. attribute:: Accounting
 
@@ -66,7 +67,7 @@ class AdType(enum.IntEnum):
     Grid = 19
     # XferService = 20
     # LeaseManager = 21
-    # Defrag = 22
+    Defrag = 22
     Accounting = 23
 
 

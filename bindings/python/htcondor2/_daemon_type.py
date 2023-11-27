@@ -8,12 +8,7 @@ else:
 
 class DaemonType(enum.IntEnum):
     """
-    An enumeration of known daemon types.
-
-    .. attribute:: none
-
-        Any type of daemon; useful when specifying queries where all matching
-        daemons should be returned.
+    An enumeration of known daemons types.
 
     .. attribute:: Any
 
@@ -22,17 +17,31 @@ class DaemonType(enum.IntEnum):
 
     .. attribute:: Master
 
+        A *condor_master* daemon.
+
     .. attribute:: Schedd
+
+        A *condor_schedd* daemon.
 
     .. attribute:: Startd
 
+        A *condor_startd* daemon.
+
     .. attribute:: Collector
+
+        A *condor_collector* daemon.
 
     .. attribute:: Negotiator
 
+        A *condor_negotiator* daemon.
+
     .. attribute:: Credd
 
+        A *condor_credd* daemon.
+
     .. attribute:: HAD
+
+        A *condor_had* daemon.
 
     .. attribute:: Generic
 
