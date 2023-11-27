@@ -1552,9 +1552,7 @@ MachAttributes::publish_common_dynamic(ClassAd* cp, bool global /*=false*/)
 	if (global) {
 		for (auto &[restag, nft] : m_machres_nft_map) {
 			if ( ! nft.props.size()) continue;
-
-			auto & offline_ids(m_machres_runtime_offline_ids_map[restag]);
-
+			// auto & offline_ids(m_machres_runtime_offline_ids_map[restag]);
 			std::string attr; attr.reserve(18);
 			std::string ids; ids.reserve(2 + (nft.ids.size() * 18));
 
