@@ -34,7 +34,9 @@ FUNCTION(CONDOR_DAEMON)
 	# Should check ${CONDOR_DAEMON_UNPARSED_ARGS} for anything
 
 	#Add the executable target.
-	condor_exe( "${CONDOR_DAEMON_EXE}" "${CONDOR_DAEMON_SOURCES}" "${CONDOR_DAEMON_INSTALL}" "${CONDOR_DAEMON_LIBRARIES}" ON)
+	if (BUILD_DAEMONS) 
+		condor_exe( "${CONDOR_DAEMON_EXE}" "${CONDOR_DAEMON_SOURCES}" "${CONDOR_DAEMON_INSTALL}" "${CONDOR_DAEMON_LIBRARIES}" ON)
+	endif()
 
 	# full relro and PIE for daemons/setuid/setgid applications
     if (cxx_full_relro_and_pie)
