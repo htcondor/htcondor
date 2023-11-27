@@ -1,5 +1,7 @@
 from collections.abc import Mapping
 
+import datetime
+
 from ._common_imports import (
     classad,
 )
@@ -36,9 +38,23 @@ class JobEvent(Mapping):
 
 
     @property
-    def timestamp(self) -> str:
-        iso8601 = self._data["EventTime"]
-        return datetime.datetime.fromisoformat(iso8601)
+    def timestamp(self) -> int:
+        '''
+        The Unix timestamp of the event.
+        '''
+        iso = self._data["EventTime"]
+        dt = datetime.datetime.fromisoformat(iso)
+        # We return an int here for backwards-compatibility with the
+        # actual implementation (the documentation says `str`, but the
+        # code never did that).  If this causes somebody grief, we can
+        # easily just return the dt itself; note that the `EventTime`
+        # may be in UTC and/or include sub-second timing, if those
+        # format options were turned on in config when the log was written.
+        # (A datetime.datetime object return from fromisoformat() should
+        # be "naive" -- see the documentation -- if the string did not
+        # include a timezone, and otherwise set the timezone correctly,
+        # which is exactly the behavior Python programmers will be expecting.)
+        return int(dt.timestamp())
 
 
     def __getitem__(self, key):
