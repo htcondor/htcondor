@@ -436,7 +436,8 @@ resources:
 Assume that JobA is allocated to this slot. JobA includes the following
 resource requests:
 
-.. code-block:: text
+.. code-block:: condor-submit
+``
 
     request_cpu = 3
     request_memory = 1024
@@ -463,7 +464,7 @@ As each new job is allocated to Slot1, it breaks into ``Slot1_1``,
 resources have been consumed by jobs.
 
 Dynamic provisioning is enabled by default, as of HTCondor version 23.0 In
-older versions, to enable dynamic provisioning, define a slot type. and declare
+older versions, to enable dynamic provisioning, define a slot type, and declare
 at least one slot of that type. Then, identify that slot type as partitionable
 by setting configuration variable :macro:`SLOT_TYPE_<N>_PARTITIONABLE` to
 ``True``. The value of ``<N>`` within the configuration variable name is the
@@ -622,7 +623,7 @@ Slot Isolation and Protection
 -----------------------------
 
 When multiple jobs, one in each slots, are running on the same machine,
-one job might negatively impact another.  This might happe by using too much
+one job might negatively impact another.  This might happen by using too much
 cpu, or disk, or even sending a signal to a process in another job.  HTCondor
 provides several mechanism to protect jobs in slots from each other.
 
@@ -2303,7 +2304,7 @@ section briefly lists these expressions. More detail can be found in
 
 The following example shows a possible configuration to enable backfill:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # Turn on backfill functionality, and use BOINC
     ENABLE_BACKFILL = TRUE
@@ -2475,7 +2476,7 @@ Optional configuration variables:
     is to use the **-attach_project** argument to specify a project URL
     and account key. For example:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         BOINC_Arguments = --attach_project http://einstein.phys.uwm.edu [account_key]
 
@@ -2494,7 +2495,7 @@ Optional configuration variables:
 
 The following example shows one possible usage of these settings:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # Define a shared macro that can be used to define other settings.
     # This directory must be manually created before attempting to run
