@@ -40,29 +40,44 @@ Release Notes:
 
 New Features:
 
-- Linux EPs now advertise the startd attribute HasRotationalScratch to be
-  true when HTCondor detects that the execute directory is on a rotational
-  hard disk and false when the kernel reports it to be on SSD, NVME or tmpfs.
-  :jira:`2085`
-
-- Added support for cgroup v2 delegation in jobs.  This allows
-  pilot and glidein jobs running inside a rootly HTCondor with
-  cgroup v2 to divide the memory/cpu cgroup resources into
-  sub-jobs.
-  :jira:`2180`
-
-- HTCondor daemons on Linux no longer run very slowly when the ulimit
-  for the maximum number of open files is very high.
-  :jira:`2128`
-
 - Added *periodic_vacate* to the submit language and SYSTEM_PERIODIC_VACATE
-  to the config syttem
+  to the configuration system.
+  Historically, users used periodic_hold/release to evict “stuck” jobs,
+  that is jobs that should finish in some amount of time,
+  but sometimes run for an arbitrarily long time. Now with this new feature,
+  for improved usability, users may use this single ``periodic_vacate`` submit
+  command instead.
   :jira:`2114`
 
-- Added TimeSlotBusy and TimeExecute to the event log terminate events
+- Linux EPs now advertise the startd attribute HasRotationalScratch to be
+  ``true`` when HTCondor detects that the execute directory is on a rotational
+  hard disk and false when the kernel reports it to be on SSD, NVME, or tmpfs.
+  :jira:`2085`
+
+- Added ``TimeSlotBusy`` and ``TimeExecute`` to the event log terminate events
   to indicate how much wall time a job used total (including file transfer)
-  and just for the job execution proper, respectively..
+  and just for the job execution proper, respectively.
   :jira:`2101`
+
+- Added support for cgroup v2 delegation in jobs.  This allows
+  pilot and glidein jobs running inside an HTCondor with root privilege and
+  cgroup v2 to divide the memory/CPU cgroup resources into sub-jobs.
+  :jira:`2081`
+
+- Most files that HTCondor generates are now written in binary mode on
+  Windows. As a result, each line in these files will end in just a
+  line feed character, without a preceding carriage return character.
+  Files written by jobs are unaffected by this change.
+  :jira:`2098`
+
+- HTCondor now uses the `Pelican Platform <https://pelicanplatform.org/>`_
+  to do file transfers with the
+  `Open Science Data Federation (OSDF) <https://osg-htc.org/services/osdf.html>`_.
+  :jira:`2100`
+
+- Added new configuration option :macro:`<Keyword>_HOOK_PREPARE_JOB_ARGS`
+  to allow the passing of arguments to specified prepare job hooks.
+  :jira:`1851`
 
 - The default trusted CAs for OpenSSL are now always used by default 
   in addition to any specified by :macro:`AUTH_SSL_SERVER_CAFILE`, 
@@ -73,34 +88,23 @@ New Features:
   use of the default CAs for OpenSSL. 
   :jira:`2090`
 
-- Most files that HTCondor generates are now written in binary mode on
-  Windows. As a result, each line in these files will end in just a
-  line feed character, without a preceding carriage return character.
-  Files written by jobs are unaffected by this change.
-  :jira:`2098`
-
 - Using *condor_store_cred* to set a pool password on Windows now
-  requires ADMINISTRATOR authorization with the *condor_master* (instead
-  of CONFIG authorization).
+  requires ``ADMINISTRATOR`` authorization with the *condor_master* (instead
+  of ``CONFIG`` authorization).
   :jira:`2106`
 
-- Somewhat improved the performance of the _DEBUG flag D_FDS.  But please
-  don't use this unless absolutely needed.
-  :jira:`2050`
-
 - When *condor_remote_cluster* installs binaries on an EL7 machine, it
-  now uses the latest 23.0.X release. Before, it would fail, as
-  current versions of HTCondor are not available on EL7.
+  now uses the latest 23.0.x release. Before, it would fail, as
+  current feature versions of HTCondor are not available on EL7.
   :jira:`2125`
 
-- Added new configuration option :macro:`<Keyword>_HOOK_PREPARE_JOB_ARGS`
-  to allow the passing of arguments to specified prepare job hooks.
-  :jira:`1851`
+- HTCondor daemons on Linux no longer run very slowly when the ulimit
+  for the maximum number of open files is very high.
+  :jira:`2128`
 
-- HTCondor now uses the `Pelican Platform <https://pelicanplatform.org/>`_
-  to do file transfers with the
-  `Open Science Data Federation (OSDF) <https://osg-htc.org/services/osdf.html>`_.
-  :jira:`2100`
+- Somewhat improved the performance of the ``_DEBUG`` flag ``D_FDS``.  But please
+  don't use this unless absolutely needed.
+  :jira:`2050`
 
 Bugs Fixed:
 
