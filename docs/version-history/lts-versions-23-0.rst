@@ -32,6 +32,11 @@ New Features:
   a jobs goodput.
   :jira:`1982`
 
+- Improved the ``-convertoldroutes`` option of *condor_transform_ads*
+  and added a new ``-help convert`` option. These changes are meant to assist
+  in the conversion of CE's away from the deprecated transform syntax.
+  :jira:`2146`
+
 - Added ``ROOT_MAX_THREADS`` to :macro:`STARTER_NUM_THREADS_ENV_VARS` default value.
   :jira:`2137`
 

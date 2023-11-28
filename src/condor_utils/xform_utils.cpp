@@ -1982,10 +1982,11 @@ typedef std::map<std::string, std::string, classad::CaseIgnLTStr> STRING_MAP;
 
 #define XForm_ConvertJobRouter_Remove_InputRSL 0x00001
 #define XForm_ConvertJobRouter_Fix_EvalSet     0x00002
+#define XForm_ConvertJobRouter_Old_CE          0x00004
 
 int ConvertClassadJobRouterRouteToXForm (
 	StringList & statements,
-	const char * config_name, // name from config
+	std::string & name, // name from config on input, overwritten with name from route ad if it has one
 	const std::string & routing_string,
 	int & offset,
 	const classad::ClassAd & base_route_ad,
@@ -2009,7 +2010,7 @@ int ConvertClassadJobRouterRouteToXForm (
 		route_ad.Update(ad);
 	}
 
-	std::string name, grid_resource, requirements;
+	std::string grid_resource, requirements;
 	int target_universe = 0;
 
 	STRING_MAP assignments;
@@ -2020,10 +2021,6 @@ int ConvertClassadJobRouterRouteToXForm (
 	STRING_MAP evalset_cmds;
 	classad::References evalset_myrefs;
 	classad::References string_assignments;
-
-	// Initialize name with name for this xform; note it may be overwritten below
-	// if ClassAd includes a Name attribute.
-	if (config_name) { name = config_name; }
 
 	for (ClassAd::iterator it = route_ad.begin(); it != route_ad.end(); ++it) {
 		std::string rhs;
@@ -2187,11 +2184,16 @@ int ConvertClassadJobRouterRouteToXForm (
 	}
 
 	std::string buf;
-	formatstr(buf, "# autoconversion of route '%s' from new-classad syntax", name.empty() ? "" : name.c_str());
+	formatstr(buf, "# autoconversion of route '%s' from old route syntax", name.c_str());
 	statements.append(buf.c_str());
-	if ( ! name.empty()) { 
-		formatstr(buf, "NAME %s", name.c_str());
-		statements.append(buf.c_str());
+	if ( ! name.empty()) {
+		if ((options & XForm_ConvertJobRouter_Old_CE) && IsValidAttrName(name.c_str())) {
+			// no need to add this to the route text
+			// formatstr(buf, "# NAME %s", name.c_str());
+		} else {
+			formatstr(buf, "NAME %s", name.c_str());
+			statements.append(buf.c_str());
+		}
 	}
 	if (target_universe) { formatstr(buf, "UNIVERSE %d", target_universe); statements.append(buf.c_str()); }
 	if (!requirements.empty()) {
@@ -2210,25 +2212,31 @@ int ConvertClassadJobRouterRouteToXForm (
 //2. delete_* 
 //3. set_* 
 //4. eval_set_* 
-	statements.append("");
-	statements.append("# copy_* rules");
-	for (STRING_MAP::iterator it = copy_cmds.begin(); it != copy_cmds.end(); ++it) {
-		formatstr(buf, "COPY %s %s", it->first.c_str(), it->second.c_str());
-		statements.append(buf.c_str());
+	if ( ! copy_cmds.empty()) {
+		statements.append("");
+		statements.append("# copy_* rules");
+		for (STRING_MAP::iterator it = copy_cmds.begin(); it != copy_cmds.end(); ++it) {
+			formatstr(buf, "COPY %s %s", it->first.c_str(), it->second.c_str());
+			statements.append(buf.c_str());
+		}
 	}
 
-	statements.append("");
-	statements.append("# delete_* rules");
-	for (STRING_MAP::iterator it = delete_cmds.begin(); it != delete_cmds.end(); ++it) {
-		formatstr(buf, "DELETE %s", it->first.c_str());
-		statements.append(buf.c_str());
+	if ( ! delete_cmds.empty()) {
+		statements.append("");
+		statements.append("# delete_* rules");
+		for (STRING_MAP::iterator it = delete_cmds.begin(); it != delete_cmds.end(); ++it) {
+			formatstr(buf, "DELETE %s", it->first.c_str());
+			statements.append(buf.c_str());
+		}
 	}
 
-	statements.append("");
-	statements.append("# set_* rules");
-	for (STRING_MAP::iterator it = set_cmds.begin(); it != set_cmds.end(); ++it) {
-		formatstr(buf, "SET %s %s", it->first.c_str(), it->second.c_str());
-		statements.append(buf.c_str());
+	if ( ! set_cmds.empty()) {
+		statements.append("");
+		statements.append("# set_* rules");
+		for (STRING_MAP::iterator it = set_cmds.begin(); it != set_cmds.end(); ++it) {
+			formatstr(buf, "SET %s %s", it->first.c_str(), it->second.c_str());
+			statements.append(buf.c_str());
+		}
 	}
 
 	if (has_def_onexithold && (options & XForm_ConvertJobRouter_Fix_EvalSet)) {
@@ -2272,11 +2280,13 @@ int ConvertClassadJobRouterRouteToXForm (
 		}
 	}
 
-	statements.append("");
-	statements.append("# eval_set_* rules");
-	for (STRING_MAP::iterator it = evalset_cmds.begin(); it != evalset_cmds.end(); ++it) {
-		formatstr(buf, "EVALSET %s %s", it->first.c_str(), it->second.c_str());
-		statements.append(buf.c_str());
+	if ( ! evalset_cmds.empty()) {
+		statements.append("");
+		statements.append("# eval_set_* rules");
+		for (STRING_MAP::iterator it = evalset_cmds.begin(); it != evalset_cmds.end(); ++it) {
+			formatstr(buf, "EVALSET %s %s", it->first.c_str(), it->second.c_str());
+			statements.append(buf.c_str());
+		}
 	}
 
 	if (cSpecial) {
@@ -2301,11 +2311,13 @@ int XFormLoadFromClassadJobRouterRoute (
 	int options)
 {
 	StringList statements;
-	int rval = ConvertClassadJobRouterRouteToXForm(statements, xform.getName(), routing_string, offset, base_route_ad, options);
+	std::string name(xform.getName());
+	int rval = ConvertClassadJobRouterRouteToXForm(statements, name, routing_string, offset, base_route_ad, options);
 	if (rval == 1) {
 		std::string errmsg;
 		auto_free_ptr xform_text(statements.print_to_delimed_string("\n"));
 		int offset = 0;
+		xform.setName(name.c_str());
 		rval = xform.open(xform_text, offset, errmsg);
 	}
 	return rval;

@@ -258,7 +258,7 @@ int XFormLoadFromClassadJobRouterRoute (
 // returns 0 if the routing_string does not parse, 1 if it does
 int ConvertClassadJobRouterRouteToXForm (
 	StringList & statements,
-	const char * config_name, // name from config
+	std::string & name, // name from config on input, overwritten with name from route ad if it has one
 	const std::string & routing_string,
 	int & offset,
 	const classad::ClassAd & base_route_ad,

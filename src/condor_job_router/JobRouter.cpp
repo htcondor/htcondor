@@ -3233,11 +3233,13 @@ JobRoute::ParseNext(
 		// parse as new classad, use an empty defaults ad if none was provided
 		ClassAd dummy;
 		StringList statements;
+		std::string route_name(config_name?config_name:"");
 		if ( ! router_defaults_ad) router_defaults_ad = &dummy;
-		int rval = ConvertClassadJobRouterRouteToXForm(statements, config_name, routing_string, offset, *router_defaults_ad, 0);
+		int rval = ConvertClassadJobRouterRouteToXForm(statements, route_name, routing_string, offset, *router_defaults_ad, 0);
 		if (rval < 0 || statements.isEmpty()) {
 			return false;
 		}
+		m_route.setName(route_name.c_str()); // probably unncessary because m_route.open will set this also...
 		m_route_from_classad = true;
 		m_use_pre_route_transform = single_route_knob;
 		auto_free_ptr route_str(statements.print_to_delimed_string("\n"));
