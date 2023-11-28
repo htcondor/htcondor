@@ -5,8 +5,8 @@ docker://htcondor/nmi-build:aarch64_AlmaLinux8-23020002
 docker://htcondor/nmi-build:aarch64_AlmaLinux9-23020002
 docker://htcondor/nmi-build:ppc64le_AlmaLinux8-23020002
 docker://htcondor/nmi-build:ppc64le_Ubuntu20-23020002
-docker://htcondor/nmi-build:x86_64_AlmaLinux8-23020002
-docker://htcondor/nmi-build:x86_64_AlmaLinux9-23020002
+docker://jhiemstra/nmi-build:x86_64_AlmaLinux9-23020000
+docker://jhiemstra/nmi-build:x86_64_AlmaLinux8-23020000
 docker://htcondor/nmi-build:x86_64_AmazonLinux2023-23020002
 docker://htcondor/nmi-build:x86_64_Debian11-23020002
 docker://htcondor/nmi-build:x86_64_Debian12-23020002
