@@ -76,8 +76,9 @@ class Schedd():
             raise TypeError("location must be a ClassAd")
 
         self._addr = location['MyAddress']
-        # We never actually use this for anything.
-        # self._version = location['CondorVersion']
+        # We never actually use this for anything, but we'll carry it
+        # around in case somebody else does.
+        self._version = location['CondorVersion']
 
 
     def query(self,
