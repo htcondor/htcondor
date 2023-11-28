@@ -252,7 +252,7 @@ public:
     void init_machine_resources();
 
 	void publish_static(ClassAd*);     // things that can only change on reconfig
-	void publish_common_dynamic(ClassAd*); // things that can change at runtime
+	void publish_common_dynamic(ClassAd*, bool global=false); // things that can change at runtime
 	void publish_slot_dynamic(ClassAd*, int slotid, int slotsubid, bool backfill, const std::string & res_conflict); // things that can change at runtime
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
 	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector
@@ -302,7 +302,7 @@ public:
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	void         ReconfigOfflineDevIds();
 	int          RefreshDevIds(const std::string & tag, slotres_assigned_ids_t & slot_res_devids, int assign_to, int assign_to_sub);
-	bool         ComputeDevProps(ClassAd & ad, std::string tag, const slotres_assigned_ids_t & ids);
+	bool         ComputeDevProps(ClassAd & ad, const std::string & tag, const slotres_assigned_ids_t & ids);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:
@@ -415,8 +415,8 @@ public:
 	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
 	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
-	void publish_static(ClassAd*);  // Publish desired info to given CA
-	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
+	void publish_static(ClassAd*, const ResBag * deduct) const;  // Publish desired info to given CA
+	void publish_dynamic(ClassAd*, const ResBag * deduct) const;  // Publish desired info to given CA
 	void compute_virt_mem();
 	void compute_disk();
 	void set_condor_load(double load) { c_condor_load = load; }
@@ -527,8 +527,10 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
+	void reset();
 	bool underrun(std::string * names);
 	const char * dump(std::string & buf) const;
+	void Publish(ClassAd& ad, const char * prefix) const;
 
 protected:
 	double     cpus = 0;
@@ -536,7 +538,7 @@ protected:
 	int        mem = 0;
 	int        slots = 0;
 	MachAttributes::slotres_map_t resmap;
-
+	friend class CpuAttributes;
 };
 
 class AvailDiskPartition
