@@ -315,6 +315,7 @@ usage( const char *str )
 	fprintf( stderr, "-resume-on-completion    When done draining, resume normal operation.\n" );
 	fprintf( stderr, "-exit-on-completion      When done draining, STARTD should exit and not restart.\n" );
 	fprintf( stderr, "-restart-on-completion   When done draining, STARTD should restart.\n" );
+	fprintf( stderr, "-reconfig-on-completion  When done draining, STARTD should reconfig and resume.\n" );
 	fprintf( stderr, "-request-id <id>  Specific request id to cancel (optional).\n" );
 	fprintf( stderr, "-check <expr>     Must be true for all slots to be drained or request is aborted.\n" );
 	fprintf( stderr, "-start <expr>     Change START expression to this while draining.\n" );
