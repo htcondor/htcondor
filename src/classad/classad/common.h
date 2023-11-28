@@ -27,10 +27,6 @@
 #include <strings.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE /* to get definition for strptime on Linux */
-#endif
-
 #ifdef WIN32
 	// These must be defined before any of the
 	// other headers are pulled in.

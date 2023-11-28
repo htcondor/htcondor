@@ -27,6 +27,8 @@
 #include "classad/lexer.h"
 #include "classad/util.h"
 #include <assert.h>
+#include <charconv>
+#include <system_error>
 
 using std::string;
 using std::vector;
@@ -309,11 +311,9 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		lexer.ConsumeToken(&token);
 		Value value;
 		if (tag_id == XMLLexer::tagID_Integer) {
-			long long number;
-			char * pend;
-			const char * pnum = token.text.c_str();
-			number = strtoll(pnum, &pend, 10);
-			if ( ! number && (pend == pnum)) {
+			int64_t number;
+			auto [pend, ec] = std::from_chars(token.text.data(), token.text.data() + token.text.size(), number, 10);
+			if ( ec != std::errc()) {
 				value.SetErrorValue();
 			} else {
 				value.SetIntegerValue(number);
