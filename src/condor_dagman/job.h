@@ -180,8 +180,7 @@ class Job {
 	//remove event. Otherwise if queued nodes is 0 then all job procs are done
 	inline bool AllProcsDone() const { return !is_factory && _queuedNodeJobProcs == 0; }
 
-	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
-				time_t defer_time, std::string &whynot );
+	bool AddScript(Script* script);
 	bool AddPreSkip( int exitCode, std::string &whynot );
 
 	void SetType( NodeType type ) { _type = type; }

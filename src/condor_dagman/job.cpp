@@ -840,54 +840,38 @@ Job::TerminateFailure()
 } 
 
 bool
-Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_t defer_time, std::string &whynot )
+Job::AddScript(Script* script)
 {
-	if( !cmd || strcmp( cmd, "" ) == 0 ) {
-		whynot = "missing script name";
-		return false;
-	}
+	if(! script) { return false; }
+
+	script->SetNode(this);
 
 	// Check if a script of the same type has already been assigned to this node
 	const char *old_script_name = NULL;
 	const char *type_name;
-	switch( script_type ) {
+	switch(script->GetType()) {
 		case ScriptType::PRE:
 			old_script_name = GetPreScriptName();
 			type_name = "PRE";
+			_scriptPre = script;
 			break;
 		case ScriptType::POST:
 			old_script_name = GetPostScriptName();
 			type_name = "POST";
+			_scriptPost = script;
 			break;
 		case ScriptType::HOLD:
 			old_script_name = GetHoldScriptName();
 			type_name = "HOLD";
+			_scriptHold = script;
 			break;
 	}
 	if( old_script_name ) {
 		debug_printf( DEBUG_NORMAL,
 			"Warning: node %s already has %s script <%s> assigned; changing "
-			"to <%s>\n", GetJobName(), type_name, old_script_name, cmd );
+			"to <%s>\n", GetJobName(), type_name, old_script_name, script->_cmd);
 	}
 
-	Script* script = new Script( script_type, cmd, defer_status, defer_time, this );
-	if( !script ) {
-		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
-			// we already know we're out of memory, so filling in
-			// whynot will likely fail, but give it a shot...
-		whynot = "out of memory!";
-		return false;
-	}
-	if( script_type == ScriptType::POST ) {
-		_scriptPost = script;
-	}
-	else if( script_type == ScriptType::PRE ) {
-		_scriptPre = script;
-	}
-	else if( script_type == ScriptType::HOLD ) {
-		_scriptHold = script;
-	}
-	whynot = "n/a";
 	return true;
 }
 
