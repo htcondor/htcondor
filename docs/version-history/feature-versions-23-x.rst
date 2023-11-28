@@ -36,11 +36,6 @@ New Features:
   and just for the job execution proper, respectively.
   :jira:`2101`
 
-- Added support for cgroup v2 delegation in jobs.  This allows
-  pilot and glidein jobs running inside an HTCondor with root privilege and
-  cgroup v2 to divide the memory/CPU cgroup resources into sub-jobs.
-  :jira:`2081`
-
 - Most files that HTCondor generates are now written in binary mode on
   Windows. As a result, each line in these files will end in just a
   line feed character, without a preceding carriage return character.
@@ -51,6 +46,10 @@ New Features:
   to do file transfers with the
   `Open Science Data Federation (OSDF) <https://osg-htc.org/services/osdf.html>`_.
   :jira:`2100`
+
+- HTCondor now does a better job of cleaning up inner cgroups left behind
+  by glidein pilots.
+  :jira:`2081`
 
 - Added new configuration option :macro:`<Keyword>_HOOK_PREPARE_JOB_ARGS`
   to allow the passing of arguments to specified prepare job hooks.
