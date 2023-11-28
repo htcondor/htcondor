@@ -678,10 +678,11 @@ CronJob::StderrHandler ( int   /*pipe*/ )
 		m_stdErr = -1;
 	}
 
-	// Positve value is byte count
+	// Positive value is byte count
 	else if ( bytes > 0 )
 	{
-		m_stdErrBuf->m_content += buf;
+		std::string line{buf, (std::string::size_type)bytes};
+		m_stdErrBuf->m_content += line;
 	}
 
 	// Negative is an error; check for EWOULDBLOCK
