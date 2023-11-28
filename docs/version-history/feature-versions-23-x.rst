@@ -23,6 +23,10 @@ New Features:
 - Container universe now works when file transfer is disabled or not used.
   :jira:`1329`
 
+- START_CRON_LOG_NON_ZERO_EXIT now also logs the stderr of the startd cron
+  job to the StartLog.
+  :jira:`1138`
+
 Bugs Fixed:
 
 - None.
