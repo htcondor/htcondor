@@ -171,7 +171,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     if [ $ID != 'amzn' ]; then
         $INSTALL apptainer
     fi
-    if [ $ID = 'almalinux' ]; then
+    if [ $ID = 'almalinux' ] && [ "$ARCH" = 'x86_64' ]; then
         $INSTALL json-schema-validator-devel lotman
     fi
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
