@@ -1,3 +1,6 @@
+#define COMMIT_TRANSACTION true
+#define ABORT_TRANSACTION false
+
 static bool
 _schedd_query_callback( void * r, ClassAd * ad ) {
     auto * results = static_cast<std::vector<ClassAd *> *>(r);
@@ -78,7 +81,7 @@ _schedd_query(PyObject *, PyObject * args) {
     int rv = q.fetchQueueFromHostAndProcess(
         addr, slAttributes, opts, limit,
         _schedd_query_callback, & results,
-        2 /* E_VERY_MAGICAL */, & errStack,
+        2 /* use fetchQueueFromHostAndProcess2() */, & errStack,
         opts == CondorQ::fetch_SummaryOnly ? & summaryAd : NULL
     );
 
@@ -300,7 +303,8 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
     // And yes, I know, the ConnectQ()/SetAttribute()/DisconnectQ() interface
     // is brokenly stupid.
     DCSchedd schedd(addr);
-    if( ConnectQ(schedd) == NULL ) {
+    auto * q = ConnectQ(schedd);
+    if( q == NULL ) {
         // This was HTCondorIOError, in version 1.
         PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
         return NULL;
@@ -315,7 +319,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
         JOB_ID_KEY jobIDKey;
         if(! jobIDKey.set(id)) {
             // FIXME: Check error return and use error stack.
-            DisconnectQ(NULL);
+            DisconnectQ(q, ABORT_TRANSACTION);
 
             // This was HTCondorValueError, in version 1.
             PyErr_SetString(PyExc_ValueError, "Invalid ID");
@@ -325,7 +329,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
         int rv = SetAttribute(jobIDKey.cluster, jobIDKey.proc, attr, value, flags);
         if( rv == -1 ) {
             // FIXME: Check error return and use error stack.
-            DisconnectQ(NULL);
+            DisconnectQ(q, ABORT_TRANSACTION);
 
             // This was HTCondorIOError, in version 1.
             PyErr_SetString(PyExc_RuntimeError, "Unable to edit job");
@@ -337,7 +341,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
 
 
     // FIXME: Check error return and use error stack.
-    DisconnectQ(NULL);
+    DisconnectQ(q, COMMIT_TRANSACTION);
 
     return PyLong_FromLong(matchCount);
 }
