@@ -25,10 +25,10 @@ cook_user(const char * user, int mode, std::string & cooked_user) {
             formatstr_cat( local, "@%s", dname );
             free(dname);
         } else {
-            // Is param() actually returning an allocated string here?
             dname = param("UID_DOMAIN");
             if( dname != NULL ) {
                 formatstr_cat( local, "@%s", dname );
+                free( dname );
             } else {
                 local += "@";
             }
@@ -128,7 +128,7 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
 
 static PyObject *
 _credd_do_check_oauth_creds(PyObject *, PyObject * args) {
-    // _credd_do_check_oauth_creds(addr, user, serviceAds)
+    // _credd_do_check_oauth_creds(addr, user, mode, serviceAds)
 
     const char * addr = NULL;
     const char * user = NULL;
