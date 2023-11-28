@@ -56,6 +56,7 @@
 #include "iso_dates.h"
 #include "jobsets.h"
 #include "exit.h"
+#include "condor_lotman.h"
 #include <algorithm>
 #include <math.h>
 #include <param_info.h>
@@ -6355,6 +6356,17 @@ static bool MakeUserRec(const OwnerInfo * owni, bool enabled)
 	} else {
 		obuf = std::string(owner) + "@" + scheduler.uidDomain();
 		user = obuf.c_str();
+	}
+
+	bool use_lotman = param_true("LOTMAN_TRACK_SPOOL");
+	if (use_lotman) {
+		bool created = condor_lotman::create_lot( user );
+		if (created) {
+			dprintf( D_FULLDEBUG, "Lot created for user %s.\n", user);
+		}
+		else {
+			dprintf( D_ERROR, "Unable to create lot for user %s.\n", user);
+		}
 	}
 
 	return MakeUserRec(key, user, owner, ntdomain, enabled);

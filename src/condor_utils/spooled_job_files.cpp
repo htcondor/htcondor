@@ -29,6 +29,8 @@
 #include "condor_uid.h"
 #include "basename.h"
 
+#include "condor_lotman.h"
+
 char *
 gen_ckpt_name( char const *directory, int cluster, int proc, int subproc )
 {
@@ -436,6 +438,24 @@ SpooledJobFiles::removeJobSpoolDirectory(classad::ClassAd * ad)
 	// a job with a checkpoint destination.
 
 	chownSpoolDirectoryToCondor(ad);
+
+	bool use_lotman = param_true("LOTMAN_TRACK_SPOOL");
+	if (use_lotman) {
+		// Before deleting the dir, get some stats for LotMan to update the new lot usage
+		// We know we're not tracking the log file, so we need to exclude it
+		std::vector<std::string> excluded_files;
+		std::string logFileName;
+		if (ad->LookupString(ATTR_ULOG_FILE, logFileName)) {
+			excluded_files.push_back(logFileName);
+		} else {
+			dprintf( D_ERROR, "Could not determine name of the log file from the classad.\n" );
+		}
+		
+		bool lot_removed = condor_lotman::rm_dir(spool_path.c_str(), excluded_files);
+			dprintf( D_FULLDEBUG, lot_removed ? "Successfully removed path %s from lot db\n":"Failed to remove path %s from lot db\n",
+					spool_path.c_str() );
+	}
+
 	remove_spool_directory(spool_path.c_str());
 
 	std::string tmp_spool_path = spool_path;

@@ -834,6 +834,7 @@ else ()
 
     if (LINUX)
             add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/lotman/0.0.1)
     endif()
 
         if (LINUX)

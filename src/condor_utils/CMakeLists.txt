@@ -209,6 +209,8 @@ condor_getcwd.h
 condor_holdcodes.h
 condor_id.cpp
 condor_id.h
+condor_lotman.cpp
+condor_lotman.h
 condor_md.cpp
 condor_mkstemp.cpp
 condor_netaddr.cpp
@@ -678,6 +680,14 @@ if (LINUX OR APPLE)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
 endif(LINUX OR APPLE)
 
+if(WITH_LOTMAN)
+	message("Compiling with LotMan support")
+	target_link_libraries(condor_utils_s PRIVATE LotMan)
+	target_link_libraries(condor_utils PRIVATE LotMan)
+	target_link_libraries(condor_utils_objects PRIVATE LotMan)
+else()
+	message("Not compiling with LotMan support")
+endif()
 
 # Brain twister:
 #

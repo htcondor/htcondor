@@ -39,6 +39,7 @@
 #include "globus_utils.h"
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
+#include "condor_lotman.h"
 #include "mk_cache_links.h"
 #include "subsystem_info.h"
 #include "condor_url.h"
@@ -3402,6 +3403,24 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		if (elapsed) {}
 	}
 	// End of the main download loop
+
+	// Report statistics of file transfer to LotMan
+	bool use_lotman = param_true("LOTMAN_TRACK_SPOOL");
+	if (use_lotman) {
+		std::string spool_path;
+		SpooledJobFiles::getJobSpoolPath(&jobAd, spool_path);
+		if (outputDirectory == spool_path) {
+			dprintf( D_ALWAYS, "Updating usage for lot with path %s\n", spool_path.c_str() );
+			bool update_is_delta = true;
+			bool create_lots_dynamically = false;
+			bool assign_dir_to_lot = true;
+			bool lot_updated = condor_lotman::update_usage(&jobAd, spool_path.c_str(), numFiles, *total_bytes_ptr,
+				update_is_delta, create_lots_dynamically, assign_dir_to_lot, errstack);
+			if (!lot_updated) {
+				dprintf( D_ERROR, "Failed to update lot usage for path %s...\n", spool_path.c_str() );
+			}
+		}
+	}
 
 	// Release transfer queue slot after file has been put but before the
 	// final transfer ACKs are done.  In the future where multifile transfers

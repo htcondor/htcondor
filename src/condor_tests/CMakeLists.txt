@@ -330,6 +330,9 @@ endif ()
 				condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
 			endif( NOT EMULATED_PLATFORM )
 
+			if(WITH_LOTMAN)
+				condor_pl_test(test_condor_lotman "Tests LotMan tracking for spool directory" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			endif()
 		endif()
 	endif()
 

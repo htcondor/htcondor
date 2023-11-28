@@ -130,6 +130,9 @@
 /* Do we have the scitokens external (USED)*/
 #cmakedefine HAVE_EXT_SCITOKENS 1
 
+/* Do we have the lotman external (USED)*/
+#cmakedefine HAVE_EXT_LOTMAN 1
+
 /* Do we have the voms external (USED)*/
 #cmakedefine HAVE_EXT_VOMS 1
 
@@ -309,6 +312,9 @@
 
 /* Define to 1 if libssl and the kerberos libraries need to dlopen()d */
 #cmakedefine DLOPEN_SECURITY_LIBS
+
+/* Define to 1 if LotMan needs to dlopen() */
+#cmakedefine DLOPEN_LOTMAN 
 
 /* Define to 1 if the X screen saver extension header file is available */
 #cmakedefine HAVE_XSS
