@@ -23,6 +23,11 @@ New Features:
 - Container universe now works when file transfer is disabled or not used.
   :jira:`1329`
 
+- Added ability for DAGMan node script **STDOUT** and/or **STDERR** streams
+  be captured in a user defined debug file. For more information visit
+  DAGMan script :ref:`automated-workflows/dagman-scripts:Debug File`
+  :jira:`2159`
+
 Bugs Fixed:
 
 - None.

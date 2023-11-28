@@ -27,11 +27,11 @@ The syntax used for *PRE* or *POST* commands is
 
 .. code-block:: condor-dagman
 
-    SCRIPT [DEFER status time] PRE <JobName | ALL_NODES> ExecutableName [arguments]
+    SCRIPT [DEFER status time] [DEBUG filename type] PRE <JobName | ALL_NODES> ExecutableName [arguments]
 
 .. code-block:: condor-dagman
 
-    SCRIPT [DEFER status time] POST <JobName | ALL_NODES> ExecutableName [arguments]
+    SCRIPT [DEFER status time] [DEBUG filename type] POST <JobName | ALL_NODES> ExecutableName [arguments]
 
 The *SCRIPT* command can use the *PRE* or *POST* keyword, which specifies
 the relative timing of when the script is to be run. The *JobName*
@@ -65,7 +65,7 @@ The syntax used for a *HOLD* command is
 
 .. code-block:: condor-dagman
 
-    SCRIPT [DEFER status time] HOLD <JobName | ALL_NODES> ExecutableName [arguments]
+    SCRIPT [DEFER status time] [DEBUG filename type] HOLD <JobName | ALL_NODES> ExecutableName [arguments]
 
 Unlike *PRE* and *POST* scripts, *HOLD* scripts are not considered part of the
 DAG workflow and are run on a best-effort basis. If one does not complete
@@ -83,6 +83,22 @@ failed. While waiting for the retry, the script does not count against a
 the *SCRIPT* specification is fixed. It must come directly after the
 *SCRIPT* keyword; this is done to avoid backward compatibility issues
 for any DAG with a *JobName* of DEFER.
+
+DEBUG file
+----------
+
+The optional *DEBUG* keyword will capture a scripts specified standard
+output streams (**STDOUT** and/or **STDERR**) and write them to a specified
+debug file. This keyword is followed by two pieces of information:
+
+  #. *Filename*: File to write captured output into.
+  #. *Type*: Type of output to capture. Takes the following options:
+      #. **STDOUT**
+      #. **STDERR**
+      #. **ALL** (Both STDOUT & STDERR)
+
+This keyword is fixed to appear prior to the script type (PRE, POST, HOLD)
+and after any declared *DEFER* retries.
 
 Scripts as part of a DAG workflow
 ---------------------------------
