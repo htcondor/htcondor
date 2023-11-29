@@ -84,6 +84,7 @@ the *SCRIPT* specification is fixed. It must come directly after the
 *SCRIPT* keyword; this is done to avoid backward compatibility issues
 for any DAG with a *JobName* of DEFER.
 
+
 DEBUG file
 ----------
 
@@ -92,13 +93,20 @@ output streams (**STDOUT** and/or **STDERR**) and write them to a specified
 debug file. This keyword is followed by two pieces of information:
 
   #. *Filename*: File to write captured output into.
-  #. *Type*: Type of output to capture. Takes the following options:
+  #. *Type*: Type of output to capture. Takes one the following options:
       #. **STDOUT**
       #. **STDERR**
       #. **ALL** (Both STDOUT & STDERR)
 
 This keyword is fixed to appear prior to the script type (PRE, POST, HOLD)
 and after any declared *DEFER* retries.
+
+.. note::
+
+    It is safe to have multiple scripts write to the same file as
+    DAGMan captures all of the scripts output and writes everything
+    at one time. This write also includes a dividing banner with
+    useful information regarding that scripts execution.
 
 Scripts as part of a DAG workflow
 ---------------------------------

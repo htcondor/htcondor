@@ -526,7 +526,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
         ] + DAGMAN_COMMON,
         "script": [
             (
-                r"([\s\[])(defer|pre|post)([\s\]])",
+                r"([\s\[])(defer|debug|pre|post|hold)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
         ] + DAGMAN_COMMON,
