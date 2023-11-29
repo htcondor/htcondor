@@ -91,7 +91,9 @@ class Collector():
       statistics: str = None,
     ) -> classad.ClassAd:
         daemon_ad = self.locate(daemon_type, name)
-        return _collector_query(self._handle, int(daemon_type), daemon_ad, projection, statistics, None)
+        daemon = Collector(daemon_ad)
+        ad_type = _ad_type_from_daemon_type(daemon_type)
+        return daemon.query(ad_type, name, projection, statistics)
 
 
     _for_location = ["MyAddress", "AddressV1", "CondorVersion", "CondorPlatform", "Name", "Machine"]
@@ -104,11 +106,17 @@ class Collector():
         ad_type = _ad_type_from_daemon_type(daemon_type)
         if name is not None:
             constraint = f'stricmp(Name, "{name}") == 0'
-            return _collector_query(self._handle, int(ad_type), constraint, self._for_location, None, name)[0]
+            list = _collector_query(self._handle, int(ad_type), constraint, Collector._for_location, None, name)
+            if len(list) == 0:
+                return None
+            return list[0]
 
         if self.default is False:
             constraint = True
-            return self.query(ad_type, constraint, self._for_location)[0]
+            list = self.query(ad_type, constraint, Collector._for_location)
+            if len(list) == 0:
+                return None
+            return list[0]
 
         return _collector_locate_local(self, self._handle, int(daemon_type))
 

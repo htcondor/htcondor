@@ -213,8 +213,11 @@ _collector_advertise( PyObject *, PyObject * args ) {
 
 	int command = getCollectorCommandNum(command_str);
 	if( command == -1 ) {
+		std::string exception_text = "invalid command ";
+		exception_text += command_str;
+
 		// This was HTCondorEnumError in version 1.
-		PyErr_SetString( PyExc_ValueError, "invalid command" );
+		PyErr_SetString( PyExc_ValueError, exception_text.c_str() );
 		return NULL;
 	}
 	if( command == UPDATE_STARTD_AD_WITH_ACK ) {
