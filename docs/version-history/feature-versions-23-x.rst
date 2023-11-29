@@ -9,9 +9,7 @@ Version 23.2.0
 
 Release Notes:
 
-.. HTCondor version 23.2.0 released on Month Date, 2023.
-
-- HTCondor version 23.2.0 not yet released.
+- HTCondor version 23.2.0 released on November 29, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-2302`.
 

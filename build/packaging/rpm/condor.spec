@@ -1270,6 +1270,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Nov 29 2023 Tim Theisen <tim@cs.wisc.edu> - 23.2.0-1
+- Add 'periodic_vacate' submit command to restart jobs that are stuck
+- EPs now advertises whether the execute directory is on rotational storage
+- Add two log events for the time a job was running and occupied a slot
+- Files written by HTCondor are now written in binary mode on Windows
+- HTCondor now uses the Pelican Platform for OSDF file transfers
+
 * Mon Nov 20 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.2-1
 - Fix bug where OIDC login information was missing when submitting jobs
 - Improved sandbox and ssh-agent clean up for batch grid universe jobs
