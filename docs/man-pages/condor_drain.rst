@@ -11,7 +11,7 @@ Synopsis
 
 **condor_drain** [**-debug** ] [**-pool** *pool-name*]
 [**-graceful | -quick | -fast**] [**-reason** *reason-text*]
-[**-resume-on-completion | -restart-on-completion | -exit-on-completion**]
+[**-resume-on-completion | -restart-on-completion | -reconfig-on-completion | -exit-on-completion**]
 [**-check** *expr*] [**-start** *expr*] *machine-name*
 
 **condor_drain** [**-debug** ] [**-pool** *pool-name*] **-cancel**
@@ -96,6 +96,11 @@ Options
  **-restart-on-completion**
     When done draining, restart the *condor_startd* daemon so that
     configuration changes will take effect.
+ **-reconfig-on-completion**
+    When done draining, reconfig and then resume normal operation. A reconfig
+    will not change the resources assigned to slots, but most other configuration
+    changes will be applied, including changes to the :macro:`START` expression
+    and to offline GPUs and universes.
  **-exit-on-completion**
     When done draining, shut down the *condor_startd* daemon and tell
     the *condor_master* not to restart it automatically.
