@@ -180,6 +180,7 @@ class ClassAd(UserDict):
             raise KeyError("Key must be str.")
 
         # Permit only "old" ClassAd attribute names for now.
+        # This should be compile()d for efficiency.
         match = re.match('^[a-zA-Z_][a-zA-Z_0-9]*$', key)
         if match is None:
             raise KeyError(f"Key '{key}' invalid.")

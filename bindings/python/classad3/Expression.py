@@ -7,7 +7,6 @@ from .classad3_impl import _external_refs
 from .classad3_impl import _internal_refs
 
 import classad3
-from classad3 import ClassAd
 
 
 class Expression:
