@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 199> makeCommandTable() {
+std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -281,8 +281,8 @@ std::array<std::pair<int, const char *>, 199> makeCommandTable() {
 		{CHILD_OFF, "CHILD_OFF"},
 #define CHILD_OFF_FAST      (SCHED_VERS+92) // Turn my child OFF/Fast (HAD)
 		{CHILD_OFF_FAST, "CHILD_OFF_FAST"},
-#define NEGOTIATE_WITH_SIGATTRS	(SCHED_VERS+93)	// pre 7.5.4 NEGOTIATE
-		{NEGOTIATE_WITH_SIGATTRS, "NEGOTIATE_WITH_SIGATTRS"},
+//#define NEGOTIATE_WITH_SIGATTRS	(SCHED_VERS+93)	// pre 7.5.4 NEGOTIATE (unused)
+//		{NEGOTIATE_WITH_SIGATTRS, "NEGOTIATE_WITH_SIGATTRS"},
 #define SET_ACCUMUSAGE	(SCHED_VERS+94)		// negotiator
 		{SET_ACCUMUSAGE, "SET_ACCUMUSAGE"},
 #define SET_BEGINTIME	(SCHED_VERS+95)		// negotiator

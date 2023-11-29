@@ -527,3 +527,93 @@ the oauth services that are defined on the Vault server.  See the
 htvault-config
 (`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
 documentation to see how to set up and configure the Vault server.
+
+Using HTCondor with AFS
+-----------------------
+
+:index:`AFS<single: AFS; file system>`
+
+Configuration variables that allow machines to interact with and use a
+shared file system are given at the 
+:ref:`admin-manual/configuration-macros:shared file system configuration file
+macros` section.
+
+Limitations with AFS occur because HTCondor does not currently have a
+way to authenticate itself to AFS. This is true of the HTCondor daemons
+that would like to authenticate as the AFS user condor, and of the
+*condor_shadow* which would like to authenticate as the user who
+submitted the job it is serving. Since neither of these things can
+happen yet, there are special things to do when interacting with AFS.
+Some of this must be done by the administrator(s) installing HTCondor.
+Other things must be done by HTCondor users who submit jobs.
+
+AFS and HTCondor for Users
+''''''''''''''''''''''''''
+
+The *condor_shadow* daemon runs on the machine where jobs are
+submitted. It performs all file system access on behalf of the jobs.
+Because the *condor_shadow* daemon is not authenticated to AFS as the
+user who submitted the job, the *condor_shadow* daemon will not
+normally be able to write any output. Therefore the directories in which
+the job will be creating output files will need to be world writable;
+they need to be writable by non-authenticated AFS users. In addition,
+the program's ``stdout``, ``stderr``, log file, and any file the program
+explicitly opens will need to be in a directory that is world-writable.
+
+An administrator may be able to set up special AFS groups that can make
+unauthenticated access to the program's files less scary. For example,
+there is supposed to be a way for AFS to grant access to any
+unauthenticated process on a given host. If set up, write access need
+only be granted to unauthenticated processes on the access point, as
+opposed to any unauthenticated process on the Internet. Similarly,
+unauthenticated read access could be granted only to processes running
+on the access point.
+
+A solution to this problem is to not use AFS for output files. If disk
+space on the access point is available in a partition not on AFS,
+submit the jobs from there. While the *condor_shadow* daemon is not
+authenticated to AFS, it does run with the effective UID of the user who
+submitted the jobs. So, on a local (or NFS) file system, the
+*condor_shadow* daemon will be able to access the files, and no special
+permissions need be granted to anyone other than the job submitter. If
+the HTCondor daemons are not invoked as root however, the
+*condor_shadow* daemon will not be able to run with the submitter's
+effective UID, leading to a similar problem as with files on AFS.
+
+AFS and HTCondor for Administrators
+'''''''''''''''''''''''''''''''''''
+
+The largest result from the lack of authentication with AFS is that the
+directory defined by the configuration variable :macro:`LOCAL_DIR` and its
+subdirectories ``log`` and ``spool`` on each machine must be either
+writable to unauthenticated users, or must not be on AFS. Making these
+directories writable a very bad security hole, so it is not a viable
+solution. Placing :macro:`LOCAL_DIR` onto NFS is acceptable. To avoid AFS,
+place the directory defined for :macro:`LOCAL_DIR` on a local partition on
+each machine in the pool. This implies running *condor_configure* to
+install the release directory and configure the pool, setting the
+:macro:`LOCAL_DIR` variable to a local partition. When that is complete, log
+into each machine in the pool, and run *condor_init* to set up the
+local HTCondor directory.
+
+The directory defined by :macro:`RELEASE_DIR`, which holds all the HTCondor
+binaries, libraries, and scripts, can be on AFS. None of the HTCondor
+daemons need to write to these files. They only need to read them. So,
+the directory defined by :macro:`RELEASE_DIR` only needs to be world readable
+in order to let HTCondor function. This makes it easier to upgrade the
+binaries to a newer version at a later date, and means that users can
+find the HTCondor tools in a consistent location on all the machines in
+the pool. Also, the HTCondor configuration files may be placed in a
+centralized location.
+
+Finally, consider setting up some targeted AFS groups to help users deal
+with HTCondor and AFS better. This is discussed in the following manual
+subsection. In short, create an AFS group that contains all users,
+authenticated or not, but which is restricted to a given host or subnet.
+These should be made as host-based ACLs with AFS, but here at
+UW-Madison, we have had some trouble getting that working. Instead, we
+have a special group for all machines in our department. The users here
+are required to make their output directories on AFS writable to any
+process running on any of our machines, instead of any process on any
+machine with AFS on the Internet.
+

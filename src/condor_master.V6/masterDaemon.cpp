@@ -704,9 +704,7 @@ int daemon::RealStart( )
 		if ((collectors = daemonCore->getCollectorList())) {
 			std::string my_fqdn_str = get_local_fqdn();
 			const char * my_hostname = my_fqdn_str.c_str();
-			Daemon * my_daemon;
-			collectors->rewind();
-			while (collectors->next (my_daemon)) {
+			for (auto& my_daemon : collectors->getList()) {
 
 				dprintf ( 
 					D_FULLDEBUG, 

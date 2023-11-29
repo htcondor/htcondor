@@ -24,7 +24,6 @@
 #include "condor_config.h"
 #include "analysis.h"
 #include "list.h"
-#include "simplelist.h"
 #include "condor_classad.h"
 
 #include <sstream>

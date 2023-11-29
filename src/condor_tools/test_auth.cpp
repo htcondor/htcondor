@@ -38,7 +38,6 @@
 #include "internet.h"
 #include "condor_distribution.h"
 #include "string_list.h"
-#include "simplelist.h"
 #include "subsystem_info.h"
 
 char	*MyName;

@@ -300,11 +300,12 @@ public:
 	void	init_classad();
 
 	// called when the resource bag of a slot has changed (p-slot or coalesced slot)
-	void	refresh_classad_resources() {
+	void	refresh_classad_resources(const ResBag & inUse) {
 		if (r_classad) {
+			const ResBag * deduct = r_backfill_slot ? &inUse : nullptr;
 			// Put in cpu-specific attributes (A_STATIC, A_UPDATE, A_TIMEOUT)
-			r_attr->publish_static(r_config_classad);
-			r_attr->publish_dynamic(r_classad);
+			r_attr->publish_static(r_config_classad, deduct);
+			r_attr->publish_dynamic(r_classad, deduct);
 		}
 	}
 

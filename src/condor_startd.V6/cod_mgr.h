@@ -22,7 +22,6 @@
 #ifndef _CONDOR_COD_MGR_H
 #define _CONDOR_COD_MGR_H
 
-#include "simplelist.h"
 
 class Resource;
 class Claim;

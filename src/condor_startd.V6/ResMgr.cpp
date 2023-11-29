@@ -325,11 +325,16 @@ ResMgr::publish_daemon_ad(ClassAd & ad)
 	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
 	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
 
+	primary_res_in_use.Publish(ad, "TotalInUse");
+	backfill_res_in_use.Publish(ad, "TotalBackfillInUse");
+
 	// static information about custom resources
+	// this does not include the non fungible resource properties
 	ad.Update(m_attr->machres_attrs());
 
 	// gloal dynamic information. offline resources, WINREG values
-	m_attr->publish_common_dynamic(&ad);
+	m_attr->publish_common_dynamic(&ad, true);
+	
 
 	//PRAGMA_REMIND("TJ: write this")
 	// m_attr->publish_EP_dynamic(&ad);
@@ -1023,15 +1028,32 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 
 	// TODO: figure out collector version and implement ENABLE_STARTD_DAEMON_AD=auto
 
-	const unsigned send_daemon_ad_mask = (1<<Resource::WhyFor::wf_doUpdate) | (1<<Resource::WhyFor::wf_hiberChange);
+	const unsigned int send_daemon_ad_mask = (1<<Resource::WhyFor::wf_doUpdate) | (1<<Resource::WhyFor::wf_hiberChange);
 	if (enable_single_startd_daemon_ad && (whyfor_mask & send_daemon_ad_mask)) {
 		publish_daemon_ad(public_ad);
 		send_update(UPDATE_STARTD_AD, &public_ad, nullptr, true);
 	}
 
+	// force update of backfill p-slot whenever a non-backfill d-slot is created or deleted
+	// TODO: maybe update this to handle the case of claiming a non-backfill static slot?
+	const unsigned int dslot_mask = (1<<Resource::WhyFor::wf_dslotCreate) | (1<<Resource::WhyFor::wf_dslotDelete);
+	bool send_backfill_slots = false;
+	if (whyfor_mask & dslot_mask) {
+		for (Resource * rip : slots) {
+			// if we have created or deleted a primary d-slot, then we want to always update the backfill
+			// p-slots because primary d-slot resources are deducted from the backfill p-slots advertised values
+			if (rip->is_partitionable_slot() && ! rip->r_backfill_slot && 
+				(rip->update_is_needed() & dslot_mask) != 0) {
+				send_backfill_slots = true;
+				break;
+			}
+		}
+	}
+
 	for(Resource* rip : slots) {
 		if ( ! rip) continue;
-		if (rip->update_is_needed()) {
+		if (rip->update_is_needed() ||
+			(send_backfill_slots && rip->is_partitionable_slot() && rip->r_backfill_slot)) {
 			public_ad.Clear(); private_ad.Clear();
 			rip->get_update_ads(public_ad, private_ad); // this clears update_is_needed
 			send_update(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
@@ -1044,7 +1066,7 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 // called when Resource::update_needed is called
 time_t ResMgr::rip_update_needed(unsigned int whyfor_bits)
 {
-	dprintf(D_ZKM, "ResMgr::rip_update_needed(%x) %s\n",
+	dprintf(D_ZKM | (send_updates_tid < 0 ? 0 : D_VERBOSE), "ResMgr::rip_update_needed(%x) %s\n",
 		whyfor_bits, send_updates_tid < 0 ? "queuing timer" : "timer already queued");
 
 	send_updates_whyfor_mask |= whyfor_bits;
@@ -1234,9 +1256,7 @@ ResMgr::report_updates( void ) const
 	CollectorList* collectors = daemonCore->getCollectorList();
 	if( collectors ) {
 		std::string list;
-		Daemon * collector;
-		collectors->rewind();
-		while (collectors->next (collector)) {
+		for (auto& collector : collectors->getList()) {
 			const char* host = collector->fullHostname();
 			list += host ? host : "";
 			list += " ";
@@ -2408,13 +2428,17 @@ ResMgr::compute_resource_conflicts()
 	std::deque<Resource*> active;
 	int num_nft_conflict = 0; // number of active backfill slots that already have non-fungible resource conflicts
 
+	primary_res_in_use.reset();
+	backfill_res_in_use.reset();
+
 	// Build up a bag of unclaimed resources
 	// and a list of active backfill slots
 	// TODO: fix for claimed p-slots when that changes
 	for (Resource * rip : slots) {
 		if ( ! rip) continue;
 		State state = rip->state();
-		if (state == claimed_state || state == preempting_state || rip->r_sub_id > 0) {
+		bool is_claimed = state == claimed_state || state == preempting_state;
+		if (rip->r_sub_id > 0 || (is_claimed && ! rip->is_partitionable_slot())) {
 			if (rip->r_backfill_slot) {
 				if (rip->has_nft_conflicts(resmgr->m_attr)) {
 					++num_nft_conflict;
@@ -2422,8 +2446,11 @@ ResMgr::compute_resource_conflicts()
 				} else {
 					active.push_back(rip);
 				}
+				backfill_res_in_use += *rip->r_attr;
+			} else {
+				primary_res_in_use += *rip->r_attr;
 			}
-			// subtract active backfill slots from the resource bag
+			// subtract active slots from the resource bag
 			totbag -= *rip->r_attr;
 			dprintf(D_ZKM | D_VERBOSE, "conflicts SUB %s %s\n", rip->r_id_str, totbag.dump(dumptmp));
 		} else if ( ! rip->r_backfill_slot && rip->r_sub_id == 0) {
@@ -2437,7 +2464,7 @@ ResMgr::compute_resource_conflicts()
 	// we need to start kicking off backfill slots.  For now, we do that by
 	// assigning the resource conflicts to specific backfill slots and trusting PREEMPT to kick off the jobs
 
-	// If there were fungible resource conflicts, totbag will be in and underflow state
+	// If there were fungible resource conflicts, totbag will be in an underflow state
 	std::string conflicts;
 	bool has_conflicts = totbag.underrun(&conflicts);
 

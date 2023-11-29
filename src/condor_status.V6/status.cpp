@@ -1184,6 +1184,7 @@ main (int argc, char *argv[])
 	// instantiate query object
 	if (multiTag) {
 		query = new CondorQuery (QUERY_MULTIPLE_ADS);
+		query->convertToMulti(multiTag,false,false,false);
 	} else {
 		query = new CondorQuery (adType);
 	}
@@ -1491,11 +1492,6 @@ main (int argc, char *argv[])
 		}
 		mainPP.pm.dump(style_text, &GlobalFnTable, pheadings);
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
-
-		if (multiTag) {
-			if ( ! projList.empty()) { query->setDesiredAttrs(projList); }
-			query->convertToMulti(multiTag, true, true, true);
-		}
 
 		ClassAd queryAd;
 		q = query->getQueryAd (queryAd);
