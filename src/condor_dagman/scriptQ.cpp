@@ -186,6 +186,8 @@ ScriptQ::ScriptReaper( int pid, int status )
 					pid, script->_pid );
 	}
 
+	script->WriteDebug(status);
+
 	// Check to see if we should re-run this later.
 	if ( script->_deferStatus != SCRIPT_DEFER_STATUS_NONE &&
 				WEXITSTATUS( status ) == script->_deferStatus ) {

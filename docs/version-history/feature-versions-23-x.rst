@@ -23,6 +23,11 @@ New Features:
 - Container universe now works when file transfer is disabled or not used.
   :jira:`1329`
 
+- Added ability for DAGMan node script **STDOUT** and/or **STDERR** streams
+  be captured in a user defined debug file. For more information visit
+  DAGMan script :ref:`automated-workflows/dagman-scripts:Debug File`
+  :jira:`2159`
+
 - Startd now advertises when jobs are running with cgroup enforcement in
   the slot attribute ``CgroupEnforced``
   :jira:`1532`
@@ -30,7 +35,6 @@ New Features:
 - START_CRON_LOG_NON_ZERO_EXIT now also logs the stderr of the startd cron
   job to the StartLog.
   :jira:`1138`
-
 
 Bugs Fixed:
 

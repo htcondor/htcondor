@@ -1072,7 +1072,7 @@ parse_script(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "SCRIPT [DEFER status time] (PRE|POST|HOLD) JobName Script Args ...";
+	const char * example = "SCRIPT [DEFER status time] [DEBUG file (STDOUT|STDERR|ALL)] (PRE|POST|HOLD) JobName Script Args ...";
 
 	//
 	// Second keyword is either PRE, POST or DEFER
@@ -1129,9 +1129,48 @@ parse_script(
 		type_name = strtok( NULL, DELIMITERS );
 		if ( !type_name ) {
 			debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d): Missing PRE, POST or HOLD\n",
+						"ERROR: %s (line %d): Missing PRE, POST, HOLD or optional DEBUG\n",
 						filename, lineNumber );
 			exampleSyntax( example );
+			return false;
+		}
+	}
+
+	DagScriptOutput debugType = DagScriptOutput::NONE;
+	std::string debugFile;
+	if (strcasecmp(type_name, "DEBUG") == MATCH) {
+		const char* token = strtok(NULL, DELIMITERS);
+		if ( ! token) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Script DEBUG missing filename\n",
+			             filename, lineNumber);
+			exampleSyntax(example);
+			return false;
+		}
+		debugFile = token;
+		token = strtok(NULL, DELIMITERS);
+		if ( ! token) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Script DEBUG missing output stream type (STDOUT,STDERR,ALL)\n",
+			             filename, lineNumber);
+			exampleSyntax(example);
+			return false;
+		}
+		if (strcasecmp(token, "STDOUT") == MATCH) {
+			debugType = DagScriptOutput::STDOUT;
+		} else if (strcasecmp(token, "STDERR") == MATCH) {
+			debugType = DagScriptOutput::STDERR;
+		} else if (strcasecmp(token, "ALL") == MATCH) {
+			debugType = DagScriptOutput::ALL;
+		} else {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown Script output stream type (%s) expected STDOUT, STDERR, or ALL\n",
+			            filename, lineNumber, token);
+			exampleSyntax(example);
+			return false;
+		}
+		type_name = strtok(NULL, DELIMITERS);
+		if ( ! type_name) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing PRE, POST or HOLD\n",
+						filename, lineNumber);
+			exampleSyntax(example);
 			return false;
 		}
 	}
@@ -1225,13 +1264,16 @@ parse_script(
 				filename, lineNumber ) ) ) {
 		jobName = NULL;
 
-		std::string whynot;
-			// This fails if the node already has a script.
-		if( !job->AddScript( scriptType, rest, defer_status, defer_time, whynot ) ) {
-			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
-					  	"failed to add %s script to node %s: %s\n",
-					  	filename, lineNumber, type_name,
-					  	job->GetJobName(), whynot.c_str() );
+		Script* script = new Script(scriptType, rest, defer_status, defer_time);
+		if(! script) {
+			debug_printf(DEBUG_SILENT, "ERROR: Failed to make script object: out of memory!\n");
+			return false;
+		}
+		if (debugType != DagScriptOutput::NONE)
+			script->SetDebug(debugFile, debugType);
+		if(! job->AddScript(script)) {
+			debug_printf(DEBUG_SILENT, "ERROR: %s (line %d): failed to add %s script to node %s\n",
+			             filename, lineNumber, type_name, job->GetJobName());
 			return false;
 		}
 	}

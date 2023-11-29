@@ -29,12 +29,22 @@ enum ScriptType {
     HOLD
 };
 
+enum class DagScriptOutput {
+	NONE = 0,
+	STDOUT,
+	STDERR,
+	ALL,
+};
+
 class Job;
 
 class Script {
   public:
     // Type of script: PRE, POST or HOLD
     ScriptType _type;
+
+    // Script output stream level to catch: None, stdout, stderr, all
+    DagScriptOutput _output;
 
     // Return value of the PRE script; it is only valid in the POST script.
     int  _retValScript;
@@ -58,9 +68,14 @@ class Script {
     time_t _nextRunTime;
 
     int BackgroundRun( int reaperId, int dagStatus, int failedCount );
+
+    void WriteDebug(int status);
+    inline void SetDebug(std::string& file, DagScriptOutput type) { _debugFile = file; _output = type; }
+
     const char* GetNodeName();
     Job *GetNode() { return _node; }
-    
+    inline void SetNode(Job* node) { _node = node; }
+    inline ScriptType GetType() const { return _type; }
     const char* GetScriptName() {
         switch( _type ) {
             case ScriptType::PRE: return "PRE";
@@ -71,11 +86,16 @@ class Script {
     }
 
     inline const char* GetCmd() const { return _cmd; }
-    Script( ScriptType type, const char* cmd, int deferStatus, time_t deferTime,
-    			Job* node );
+    Script( ScriptType type, const char* cmd, int deferStatus, time_t deferTime);
     ~Script();
 
     char * _cmd;
+
+    // (Path)/Name of file to write stdout/stderr from script to
+    // (relative to node working dir)
+    std::string _debugFile;
+
+    std::string _executedCMD;
 
   protected:
     // the DAG node with which this script is associated.
