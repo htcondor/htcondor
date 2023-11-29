@@ -170,29 +170,31 @@ OnDemandRequest::operator() () {
 		std::string user_data, user_data_file;
 		std::string availability_zone, vpc_subnet, vpc_id;
 		std::string block_device_mapping, iam_profile_name;
-		StringList group_names, group_ids( securityGroupIDs.c_str() ), parameters_and_values;
+		std::vector<std::string> group_names, group_ids, parameters_and_values;
+
+		group_ids = split(securityGroupIDs);
 
 		// Specify the htcondor:AnnexName = ${annexName} tag.
-		parameters_and_values.append( "TagSpecification.1.ResourceType" );
-		parameters_and_values.append( "instance" );
-		parameters_and_values.append( "TagSpecification.1.Tag.1.Key" );
-		parameters_and_values.append( "htcondor:AnnexName" );
-		parameters_and_values.append( "TagSpecification.1.Tag.1.Value" );
-		parameters_and_values.append( annexID.c_str() );
+		parameters_and_values.emplace_back( "TagSpecification.1.ResourceType" );
+		parameters_and_values.emplace_back( "instance" );
+		parameters_and_values.emplace_back( "TagSpecification.1.Tag.1.Key" );
+		parameters_and_values.emplace_back( "htcondor:AnnexName" );
+		parameters_and_values.emplace_back( "TagSpecification.1.Tag.1.Value" );
+		parameters_and_values.emplace_back( annexID.c_str() );
 
         std::string buffer;
         for( unsigned i = 0; i < tags.size(); ++i ) {
             formatstr( buffer, "TagSpecification.1.Tag.%u.Key", i + 2 );
-            parameters_and_values.append( buffer.c_str() );
-            parameters_and_values.append( tags[i].first.c_str() );
+            parameters_and_values.emplace_back( buffer );
+            parameters_and_values.emplace_back( tags[i].first );
             formatstr( buffer, "TagSpecification.1.Tag.%u.Value", i + 2 );
-            parameters_and_values.append( buffer.c_str() );
-            parameters_and_values.append( tags[i].second.c_str() );
+            parameters_and_values.emplace_back( buffer );
+            parameters_and_values.emplace_back( tags[i].second );
         }
 
 		// Earlier versions of the API don't know about TagSpecification.
-		parameters_and_values.append( "Version" );
-		parameters_and_values.append( "2016-11-15" );
+		parameters_and_values.emplace_back( "Version" );
+		parameters_and_values.emplace_back( "2016-11-15" );
 
 		rc = gahp->ec2_vm_start( service_url, public_key_file, secret_key_file,
 					imageID, keyName, user_data, user_data_file,

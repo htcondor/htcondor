@@ -232,23 +232,20 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	// There's no reason not to build the list of group names here, as well.
 	{
 		std::string securityIDs;
-		m_group_ids = new StringList();
+		m_group_ids = new std::vector<std::string>;
 		jobAd->LookupString( ATTR_EC2_SECURITY_IDS, securityIDs );
 		if( ! securityIDs.empty() ) {
-			m_group_ids->initializeFromString( securityIDs.c_str() );
+			*m_group_ids = split(securityIDs);
 		}
 	}
 
 	{
 		std::string paramNames;
-		m_parameters_and_values = new StringList();
+		m_parameters_and_values = new std::vector<std::string>;
 		jobAd->LookupString( ATTR_EC2_PARAM_NAMES, paramNames );
 		if( ! paramNames.empty() ) {
-			StringList paramNameList( paramNames.c_str() );
 
-			const char * paramName = NULL;
-			paramNameList.rewind();
-			while( (paramName = paramNameList.next()) ) {
+			for (const auto& paramName : StringTokenIterator(paramNames)) {
 				std::string paramValue;
 				std::string jobAdName = paramName;
 				std::replace( jobAdName.begin(), jobAdName.end(), '.', '_' );
@@ -256,11 +253,11 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 				jobAd->LookupString( jobAdName, paramValue );
 				if( paramValue.empty() ) {
-					dprintf( D_ALWAYS, "EC2 parameter '%s' had no corresponding value, ignoring.\n", paramName );
+					dprintf( D_ALWAYS, "EC2 parameter '%s' had no corresponding value, ignoring.\n", paramName.c_str() );
 					continue;
 				}
-				m_parameters_and_values->append( paramName );
-				m_parameters_and_values->append( paramValue.c_str() );
+				m_parameters_and_values->emplace_back( paramName );
+				m_parameters_and_values->emplace_back( paramValue );
 			}
 		}
 	}
@@ -2047,13 +2044,13 @@ std::string EC2Job::build_keypair()
 	// get condor pool name
 	// In case there are multiple collectors, strip out the spaces
 	// If there's no collector, insert a dummy name
-	char* pool_name = param( "COLLECTOR_HOST" );
-	if ( pool_name ) {
-		StringList collectors( pool_name );
-		free( pool_name );
-		pool_name = collectors.print_to_string();
+	std::string pool_name;
+	param(pool_name, "COLLECTOR_HOST");
+	if ( !pool_name.empty() ) {
+		std::vector<std::string> collectors = split(pool_name);
+		pool_name = join(collectors, ",");
 	} else {
-		pool_name = strdup( "NoPool" );
+		pool_name = "NoPool";
 	}
 
 	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
@@ -2061,8 +2058,7 @@ std::string EC2Job::build_keypair()
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
 
 	std::string key_pair;
-	formatstr( key_pair, "SSH_%s_%s", pool_name, job_id.c_str() );
-	free( pool_name );
+	formatstr( key_pair, "SSH_%s_%s", pool_name.c_str(), job_id.c_str() );
 
 	// Some EC2 implementations (OpenStack) restrict the keypair name to
 	// "alphanumeric character, spaces, dashes, and underscore."  Convert
@@ -2078,9 +2074,9 @@ std::string EC2Job::build_keypair()
 	return key_pair;
 }
 
-StringList* EC2Job::build_groupnames()
+std::vector<std::string>* EC2Job::build_groupnames()
 {
-	StringList* group_names = NULL;
+	std::vector<std::string>* group_names = new std::vector<std::string>;
 	char* buffer = NULL;
 
 	// Notice:
@@ -2091,9 +2087,7 @@ StringList* EC2Job::build_groupnames()
 	//    the default security group (by just keeping group_names is empty).
 
 	if ( jobAd->LookupString( ATTR_EC2_SECURITY_GROUPS, &buffer ) ) {
-		group_names = new StringList( buffer, ", " );
-	} else {
-		group_names = new StringList();
+		*group_names = split(buffer, ", ");
 	}
 
 	free (buffer);
@@ -2137,33 +2131,29 @@ void EC2Job::associate_n_attach()
 {
 
 	std::string gahp_error_code;
-	StringList returnStatus;
+	std::vector<std::string> returnStatus;
 	int rc;
 
 	char *buffer = NULL;
 	if (jobAd->LookupString(ATTR_EC2_TAG_NAMES, &buffer)) {
-		StringList tags;
-		StringList tagNames(buffer);
-		char *tagName;
-		tagNames.rewind();
-		while ((tagName = tagNames.next())) {
+		std::vector<std::string> tags;
+		std::string value;
+		for (const auto& tagName : StringTokenIterator(buffer)) {
 				// XXX: Check that tagName does not contain an equal sign (=)
 			std::string tag;
 			std::string tagAttr(ATTR_EC2_TAG_PREFIX);
 			tagAttr.append(tagName);
-			char *value = NULL;
-			if (!jobAd->LookupString(tagAttr, &value)) {
+			if (!jobAd->LookupString(tagAttr, value)) {
 				dprintf(D_ALWAYS, "(%d.%d) Error: %s not defined, no value for tag, skipping\n",
 						procID.cluster, procID.proc,
 						tagAttr.c_str());
 				continue;
 			}
 			tag.append(tagName).append("=").append(value);
-			tags.append(tag.c_str());
+			tags.emplace_back(tag);
 			dprintf(D_FULLDEBUG, "(%d.%d) Tag found: %s\n",
 					procID.cluster, procID.proc,
 					tag.c_str());
-			free(value);
 		}
 
 		rc = gahp->ec2_create_tags(m_serviceUrl.c_str(),
@@ -2230,19 +2220,14 @@ void EC2Job::associate_n_attach()
 	if (!m_ebs_volumes.empty())
 	{
 		bool bcontinue=true;
-		StringList vols(m_ebs_volumes.c_str(), ",");
 		// Need to loop through here parsing the volumes which we will send to the gahp
-		vols.rewind();
 
-		const char *volume_str = NULL;
-		while( bcontinue && (volume_str = vols.next() ) != NULL )
-		{
-			StringList ebs_volume_params(volume_str, ":");
-			ebs_volume_params.rewind();
+		for (const auto& volume_str : StringTokenIterator(m_ebs_volumes)) {
+			std::vector<std::string> ebs_volume_params = split(volume_str, ":");
 
 			// Volumes consist of volume_id:device_id similar to vm_disks
-			char * volume_id = ebs_volume_params.next();
-			char * device_id = ebs_volume_params.next();
+			const char * volume_id = ebs_volume_params[0].c_str();
+			const char * device_id = ebs_volume_params[1].c_str();
 
 			rc = gahp->ec2_attach_volume(m_serviceUrl,
 										 m_public_key_file,
@@ -2271,6 +2256,9 @@ void EC2Job::associate_n_attach()
 							"Failed ec2_attach_volume returned %s continuing w/job\n",
 							gahp_error_code.c_str());
 					break;
+			}
+			if (!bcontinue) {
+				break;
 			}
 			gahp_error_code = "";
 		}

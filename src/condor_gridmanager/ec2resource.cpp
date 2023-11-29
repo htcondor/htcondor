@@ -190,7 +190,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     ASSERT( status_gahp );
 
     // First, fetch the GAHP's statistics.
-    StringList statistics;
+    std::vector<std::string> statistics;
     int rc = status_gahp->ec2_gahp_statistics( statistics );
 
     if( rc == GAHPCLIENT_COMMAND_PENDING ) { return BSR_PENDING; }
@@ -205,16 +205,15 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     gs.Advance();
 
     // Update the statistics with the numbers from the GAHP.
-    statistics.rewind();
-    ASSERT( statistics.number() == 4 );
-    gs.NumRequests = atoi( statistics.next() );
-    gs.NumDistinctRequests = atoi( statistics.next() );
-    gs.NumRequestsExceedingLimit = atoi( statistics.next() );
-    gs.NumExpiredSignatures = atoi( statistics.next() );
+    ASSERT( statistics.size() == 4 );
+    gs.NumRequests = atoi( statistics[0].c_str() );
+    gs.NumDistinctRequests = atoi( statistics[1].c_str() );
+    gs.NumRequestsExceedingLimit = atoi( statistics[2].c_str() );
+    gs.NumExpiredSignatures = atoi( statistics[3].c_str() );
 
     // m_checkSpotNext starts out false
     if( ! m_checkSpotNext ) {
-        StringList returnStatus;
+        std::vector<std::string> returnStatus;
         std::string errorCode;
         int rc = status_gahp->ec2_vm_status_all( resourceName,
                     m_public_key_file, m_private_key_file,
@@ -242,17 +241,16 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 			}
 		}
 
-        returnStatus.rewind();
-        ASSERT( returnStatus.number() % 8 == 0 );
-        for( int i = 0; i < returnStatus.number(); i += 8 ) {
-            std::string instanceID = returnStatus.next();
-            std::string status = returnStatus.next();
-            std::string clientToken = returnStatus.next();
-            std::string keyName = returnStatus.next();
-            std::string stateReasonCode = returnStatus.next();
-            std::string publicDNSName = returnStatus.next();
-            /* std::string spotFleetRequestID = */ returnStatus.next();
-            /* std::string annexName = */ returnStatus.next();
+        ASSERT( returnStatus.size() % 8 == 0 );
+        for( size_t i = 0; i < returnStatus.size(); i += 8 ) {
+            std::string instanceID = returnStatus[i];
+            std::string status = returnStatus[i + 1];
+            std::string clientToken = returnStatus[i + 2];
+            std::string keyName = returnStatus[i + 3];
+            std::string stateReasonCode = returnStatus[i + 4];
+            std::string publicDNSName = returnStatus[i + 5];
+            /* std::string spotFleetRequestID = returnStatus[i + 6]; */
+            /* std::string annexName = returnStatus[i + 7]; */
 
             // Efficiency suggests we look via the instance ID first,
             // and then try to look things up via the client token
@@ -368,7 +366,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     }
 
     if( m_checkSpotNext ) {
-        StringList spotReturnStatus;
+        std::vector<std::string> spotReturnStatus;
         std::string spotErrorCode;
         int spotRC = status_gahp->ec2_spot_status_all( resourceName,
                         m_public_key_file, m_private_key_file,
@@ -388,14 +386,13 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 			mySpotJobs.push_back(it.second);
 		}
 
-        spotReturnStatus.rewind();
-        ASSERT( spotReturnStatus.number() % 5 == 0 );
-        for( int i = 0; i < spotReturnStatus.number(); i += 5 ) {
-            std::string requestID = spotReturnStatus.next();
-            std::string state = spotReturnStatus.next();
-            std::string launchGroup = spotReturnStatus.next();
-            std::string instanceID = spotReturnStatus.next();
-            std::string statusCode = spotReturnStatus.next();
+        ASSERT( spotReturnStatus.size() % 5 == 0 );
+        for( size_t i = 0; i < spotReturnStatus.size(); i += 5 ) {
+            std::string requestID = spotReturnStatus[i];
+            std::string state = spotReturnStatus[i + 1];
+            std::string launchGroup = spotReturnStatus[i + 2];
+            std::string instanceID = spotReturnStatus[i + 3];
+            std::string statusCode = spotReturnStatus[i + 4];
 
 			EC2Job * spotJob = NULL;
 			auto spot_it = spotJobsByRequestID.find(requestID);

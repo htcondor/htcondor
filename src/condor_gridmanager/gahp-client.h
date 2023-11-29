@@ -667,7 +667,7 @@ class EC2GahpClient : public GahpClient {
 						const std::string & publickeyfile,
 						const std::string & privatekeyfile,
 
-						StringList & returnStatus,
+						std::vector<std::string> & returnStatus,
 						std::string & error_code );
 
 		int ec2_vm_start( const std::string & service_url,
@@ -686,9 +686,9 @@ class EC2GahpClient : public GahpClient {
 						  const std::string & iam_profile_arn,
 						  const std::string & iam_profile_name,
 						  unsigned int maxCount,
-						  StringList & groupnames,
-						  StringList & groupids,
-						  StringList & parametersAndValues,
+						  const std::vector<std::string> & groupnames,
+						  const std::vector<std::string> & groupids,
+						  const std::vector<std::string> & parametersAndValues,
 						  std::vector< std::string > & instance_ids,
 						  std::string & error_code );
 
@@ -707,7 +707,7 @@ class EC2GahpClient : public GahpClient {
 		int ec2_vm_status_all( const std::string & service_url,
 							   const std::string & publickeyfile,
 							   const std::string & privatekeyfile,
-							   StringList & returnStatus,
+							   std::vector<std::string> & returnStatus,
 							   std::string & error_code );
 
 		int ec2_vm_status_all( const std::string & service_url,
@@ -715,10 +715,10 @@ class EC2GahpClient : public GahpClient {
 							   const std::string & privatekeyfile,
 							   const std::string & filterName,
 							   const std::string & filterValue,
-							   StringList & returnStatus,
+							   std::vector<std::string> & returnStatus,
 							   std::string & error_code );
 
-		int ec2_gahp_statistics( StringList & returnStatistics );
+		int ec2_gahp_statistics( std::vector<std::string> & returnStatistics );
 
 		int ec2_vm_server_type( const std::string & service_url,
 								const std::string & publickeyfile,
@@ -747,7 +747,7 @@ class EC2GahpClient : public GahpClient {
                                    const std::string & privatekeyfile,
                                    const std::string & instance_id,
                                    const std::string & elastic_ip,
-                                   StringList & returnStatus,
+                                   std::vector<std::string> & returnStatus,
                                    std::string & error_code );
 
 		// Used to associate a tag with an resource, like a running instance
@@ -755,8 +755,8 @@ class EC2GahpClient : public GahpClient {
 							 const std::string & publickeyfile,
 							 const std::string & privatekeyfile,
 							 const std::string & instance_id,
-							 StringList & tags,
-							 StringList & returnStatus,
+							 const std::vector<std::string> & tags,
+							 std::vector<std::string> & returnStatus,
 							 std::string & error_code );
 
 		/**
@@ -768,7 +768,7 @@ class EC2GahpClient : public GahpClient {
                                const std::string & volume_id,
 							   const std::string & instance_id,
                                const std::string & device_id,
-                               StringList & returnStatus,
+                               std::vector<std::string> & returnStatus,
                                std::string & error_code );
 
         // Is there a particular reason these aren't const references?
@@ -787,8 +787,8 @@ class EC2GahpClient : public GahpClient {
                             const std::string & client_token,
                             const std::string & iam_profile_arn,
                             const std::string & iam_profile_name,
-                            StringList & groupnames,
-                            StringList & groupids,
+                            const std::vector<std::string> & groupnames,
+                            const std::vector<std::string> & groupids,
                             std::string & request_id,
                             std::string & error_code );
 
@@ -801,7 +801,7 @@ class EC2GahpClient : public GahpClient {
         int ec2_spot_status_all( const std::string & service_url,
                                  const std::string & publickeyfile,
                                  const std::string & privatekeyfile,
-                                 StringList & returnStatus,
+                                 std::vector<std::string> & returnStatus,
                                  std::string & error_code );
 };
 
