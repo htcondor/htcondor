@@ -80,10 +80,7 @@ class ClassAd(UserDict):
         :type attribute: str
         :return: The corresponding ClassAd value.
         '''
-        try:
-            a = self[attribute]
-        except KeyError:
-            return None
+        a = self.get(attribute, None)
 
         if isinstance(a, Expression):
             return a.evaluate(my=self)
@@ -133,20 +130,21 @@ class ClassAd(UserDict):
         :param ClassAd ad: The ad to match.
         :return: If *ad* matched this ad.
         '''
-        try:
-            r = self["requirements"]
-        except KeyError:
+        r = ad.get("requirements")
+
+        if not isinstance(r, Expression):
             return False
 
-        # FIXME: Not sure of the semantics here, see below.
-        if not isinstance(r, Expression):
-            return bool(r)
+        e = r.evaluate(my=self)
 
-        # FIXME: check the semantics here.  The docstring implies
-        # that this shold be `is`, but in practice matches() may have
-        # always returned `True` if the requirements expression was
-        # considered true (for example, a nonzero integer), as well.
-        return bool(r.evaluate(my=self))
+        if isinstance(e, bool):
+            return e
+
+        # In version 1, non-zero numeric values were also true.
+        if isinstance(e, int) or isinstance(e, float):
+            return bool(e)
+
+        return False
 
 
     def symmetricMatch(self, ad : 'ClassAd') -> bool:
