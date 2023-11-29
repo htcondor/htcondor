@@ -29,6 +29,8 @@
 #include "condor_daemon_core.h"
 
 extern DLL_IMPORT_MAGIC char **environ;
+constexpr int STDOUT = 1;
+constexpr int STDERR = 2;
 
 //-----------------------------------------------------------------------------
 Script::Script(ScriptType type, const char* cmd, int deferStatus, time_t deferTime) :
@@ -79,9 +81,9 @@ Script::WriteDebug(int status) {
 		          _node->GetJobName(), GetScriptName(), status, (long long)now,
 		          _executedCMD.c_str());
 
-		buffer = daemonCore->Read_Std_Pipe(_pid, STDOUT_FILENO);
+		buffer = daemonCore->Read_Std_Pipe(_pid, STDOUT);
 		if (buffer) { output += *buffer; }
-		buffer = daemonCore->Read_Std_Pipe(_pid, STDERR_FILENO);
+		buffer = daemonCore->Read_Std_Pipe(_pid, STDERR);
 		if (buffer) { output += *buffer; }
 
 		FILE* debug_fp = safe_fopen_wrapper(_debugFile.c_str(), "a");
@@ -202,10 +204,10 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 		bool unknown = FALSE;
 		switch (_output) {
 			case DagScriptOutput::STDOUT: // Want stdout
-				std_fds[STDERR_FILENO] = -1;
+				std_fds[STDERR] = -1;
 				break;
 			case DagScriptOutput::STDERR: // Want stderr
-				std_fds[STDOUT_FILENO] = -1;
+				std_fds[STDOUT] = -1;
 				break;
 			case DagScriptOutput::ALL: // Want both stdout & stderr
 				break;
