@@ -25,7 +25,6 @@
 
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "string_list.h"
 #include "PipeBuffer.h"
 #include "my_getopt.h"
 #include "io_loop_pthread.h"
@@ -394,17 +393,14 @@ IOProcess::stdinPipeHandler()
 				// Print each result line
 
 				// Print number of results
-				printf("%s %d\n", GAHP_RESULT_SUCCESS, numOfResult());
+				printf("%s %zu\n", GAHP_RESULT_SUCCESS, m_result_list.size());
 				fflush(stdout);
 
-				startResultIteration();
-
-				char* next = NULL;
-				while ((next = NextResult()) != NULL) {
-					printf ("%s", next);
+				for (const auto& next : m_result_list) {
+					printf ("%s", next.c_str());
 					fflush(stdout);
-					deleteCurrentResult();
 				}
+				m_result_list.clear();
 				m_new_results_signaled = false;
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
@@ -423,14 +419,14 @@ IOProcess::stdinPipeHandler()
 				m_async_mode = false;
 				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
-				StringList gce_commands;
-				int num_commands = 0;
+				std::vector<std::string> gce_commands;
+				size_t num_commands = 0;
 
 				num_commands = allGceCommands(gce_commands);
 				num_commands += 7;
 
 				const char *commands[num_commands];
-				int i = 0;
+				size_t i = 0;
 				commands[i++] = GAHP_RESULT_SUCCESS;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_ON;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_OFF;
@@ -439,11 +435,8 @@ IOProcess::stdinPipeHandler()
 				commands[i++] = GAHP_COMMAND_VERSION;
 				commands[i++] = GAHP_COMMAND_COMMANDS;
 
-				gce_commands.rewind();
-				char *one_gce_command = NULL;
-
-				while( (one_gce_command = gce_commands.next() ) != NULL ) {
-					commands[i++] = one_gce_command;
+				for(const auto& one_gce_command : gce_commands) {
+					commands[i++] = one_gce_command.c_str();
 				}
 
 				gahp_output_return (commands, i);
@@ -551,7 +544,7 @@ IOProcess::addResult(const char *result)
 	}
 
 	// Put this result into result buffer
-	m_result_list.append(result);
+	m_result_list.emplace_back(result);
 
 	if (m_async_mode) {
 		if (!m_new_results_signaled) {

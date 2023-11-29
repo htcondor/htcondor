@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
-#include "simplelist.h"
 #include "openstackgahp_common.h"
 #include "openstackCommands.h"
 
@@ -120,20 +119,20 @@ registerOpenstackGahpCommand(const char* command, ioCheckfn iofunc, workerfn wor
 	openstack_gahp_commands.push_back(newcommand);
 }
 
-int
+size_t
 numofOpenstackCommands(void)
 {
-	return (int) openstack_gahp_commands.size();
+	return openstack_gahp_commands.size();
 }
 
-int
-allOpenstackCommands(StringList &output)
+size_t
+allOpenstackCommands(std::vector<std::string> &output)
 {
 	for (auto one_cmd : openstack_gahp_commands) {
-		output.append(one_cmd->command.c_str());
+		output.emplace_back(one_cmd->command);
 	}
 
-	return (int) openstack_gahp_commands.size();
+	return openstack_gahp_commands.size();
 }
 
 bool
@@ -332,18 +331,18 @@ get_ulong(const char * blah, unsigned long * s) {
 }
 
 std::string
-create_output_string(int req_id, const char ** results, const int argc)
+create_output_string(int req_id, const char ** results, size_t argc)
 {
 	std::string buffer;
 
 	formatstr( buffer, "%d", req_id );
 
-	for ( int i = 0; i < argc; i++ ) {
+	for ( size_t i = 0; i < argc; i++ ) {
 		buffer += ' ';
 		if ( results[i] == NULL ) {
 			buffer += "NULL";
 		} else {
-			for ( int j = 0; results[i][j] != '\0'; j++ ) {
+			for ( size_t j = 0; results[i][j] != '\0'; j++ ) {
 				switch ( results[i][j] ) {
 				case ' ':
 				case '\\':
@@ -364,25 +363,23 @@ create_output_string(int req_id, const char ** results, const int argc)
 }
 
 std::string
-create_success_result( int req_id, StringList *result_list)
+create_success_result( int req_id, std::vector<std::string> *result_list)
 {
-	int index_count = 1;
-	if( !result_list || (result_list->number() == 0) ) {
+	size_t index_count = 1;
+	if( !result_list || (result_list->size() == 0) ) {
 		index_count = 1;
 	}else {
-		index_count = result_list->number();
+		index_count = result_list->size();
 	}
 
 	const char *tmp_result[index_count + 1];
 
 	tmp_result[0] = OPENSTACK_COMMAND_SUCCESS_OUTPUT;
 
-	int i = 1;
-	if( result_list && (result_list->number() > 0) ) {
-		char *one_result = NULL;
-		result_list->rewind();
-		while((one_result = result_list->next()) != NULL ) {
-			tmp_result[i] = one_result;
+	size_t i = 1;
+	if( result_list && (result_list->size() > 0) ) {
+		for (const auto& one_result : *result_list) {
+			tmp_result[i] = one_result.c_str();
 			i++;
 		}
 	}

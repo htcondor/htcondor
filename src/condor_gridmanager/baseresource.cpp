@@ -277,7 +277,7 @@ void BaseResource::UpdateCollector( int /* timerID */ ) {
 	}
 
 	/* Update the the Collector as to this resource's state */
-    if ( !SendUpdate () && !daemonCore->getCollectorList()->IsEmpty() ) {
+    if ( !SendUpdate () && !daemonCore->getCollectorList()->getList().empty() ) {
 		dprintf (
 			D_FULLDEBUG,
 			"BaseResource::UpdateCollector: Updating Collector(s) "

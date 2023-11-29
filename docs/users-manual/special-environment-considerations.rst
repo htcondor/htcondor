@@ -25,7 +25,7 @@ you have the following choices:
 The Center for High Throughput Computing hopes to improve upon how
 HTCondor deals with AFS authentication in a subsequent release.
 
-Please see the :ref:`admin-manual/setting-up-special-environments:using
+Please see the :ref:`admin-manual/file-and-cred-transfer:using
 htcondor with afs` section for further discussion of this problem.
 
 NFS

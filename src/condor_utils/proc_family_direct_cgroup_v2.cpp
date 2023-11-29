@@ -333,7 +333,7 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 }
 
 bool 
-ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, const FamilyInfo *fi) {
+ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	ASSERT(fi->cgroup);
 
@@ -347,9 +347,9 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, const FamilyInfo *f
 		ASSERT("Couldn't insert into cgroup map, duplicate?");
 	}
 
-	return cgroupify_process(cgroup_name, pid);
+	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
+	return fi->cgroup_active;
 
-	return true;
 }
 
 	bool

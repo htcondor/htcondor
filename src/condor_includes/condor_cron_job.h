@@ -38,9 +38,6 @@ typedef enum
 	CRON_DEAD				// Job is dead
 } CronJobState;
 
-// Enable pipe I/O debugging
-#define CRONJOB_PIPEIO_DEBUG	0
-
 // Define a Condor 'Cron' job
 class CronJobMgr;
 class CronJob : public Service
@@ -182,18 +179,6 @@ class CronJob : public Service
 	double			 m_run_load;		// Run load of the job
 	bool			 m_marked;			// Is this one marked?
 	unsigned		 m_old_period;		// Period before reconfig
-
-	// Debugging
-# if CRONJOB_PIPEIO_DEBUG
-  private:
-	char			*TodoBuffer;
-	int				 TodoBufSize;
-	int				 TodoBufWrap;
-	int				 TodoBufOffset;
-	int				 TodoWriteNum;
-  public:
-	void			 TodoWrite( void );
-# endif
 };
 
 #endif /* _CONDOR_CRON_JOB_H */

@@ -22,7 +22,6 @@
 
 #include "condor_classad.h"
 #include "string_list.h"
-#include "simplelist.h"
 
 #include <vector>
 #include <string>

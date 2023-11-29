@@ -37,6 +37,12 @@ New Features:
 
 Bugs Fixed:
 
+- There is a fixed size limit of 5120 bytes for chip commands.  The
+  starter now returns an error, and the chirp_client prints out
+  an error when requested to send a chirp command over this limit.
+  Previously, these were silently ignored.
+  :jira:`2157`
+
 - Linux jobs with a invalid #! interpreter now get a better error
   message when the EP is running as root.  This was enhanced in 10.0,
   but a bug prevented the enhancement from fully working with a rootly EP.
@@ -45,6 +51,12 @@ Bugs Fixed:
 - Fixed a bug where the DAGMan job proper for a DAG with a final
   node could stay stuck in the removed job state.
   :jira:`2147`
+
+- Fixed a bug where the Python-based HTChirp client had its max line length set
+  much shorter than is allowed by the HTCondor Chirp server. The client now
+  also throws a relevant error when this max limit is hit while sending commands
+  to the server.
+  :jira:`2157`
 
 .. _lts-version-history-2302:
 

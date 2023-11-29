@@ -72,7 +72,7 @@ the difference between parallel and serial jobs. While any scheduler in
 a pool can send serial jobs to any machine, only the designated
 dedicated scheduler may send parallel universe jobs to a dedicated
 machine. Dedicated machines must be specially configured. See
-the :doc:`/admin-manual/setting-up-special-environments` section
+the :ref:`admin-manual/ap-policy-configuration:dedicated scheduling` section
 for a description of the necessary configuration, as well as examples.
 Usually, a single dedicated scheduler is configured for a pool which can
 run parallel universe jobs, and this *condor_schedd* daemon becomes the

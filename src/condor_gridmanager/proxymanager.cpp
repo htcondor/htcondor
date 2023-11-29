@@ -29,7 +29,6 @@
 #include "directory.h"
 #include "daemon.h"
 #include "internet.h"
-#include "simplelist.h"
 #include "my_username.h"
 #include "globus_utils.h"
 

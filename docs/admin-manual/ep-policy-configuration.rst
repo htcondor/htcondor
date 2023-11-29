@@ -47,12 +47,13 @@ machines in very fine detail.  The configuration of an EP is responsible for:
    and belongs to the Astronomy department), or they may be dynamically
    discovered by scripts (e.g.  The temperature of the CPU is currently 40
    degrees C) This is covered in section
-   :ref:`admin-manual/ep-policy-configuration:custom and system EP classad attributes` below.
+   :ref:`admin-manual/ep-policy-configuration:custom and system EP attributes` below.
 
-#. Providing *services for running jobs*. These services may include the ability to
-   run in a container or VM environment, such as Docker, Apptainer or Xen;
-   providing the capability for the job to read or update information on the AP;
-   and setting environment variables for the job to read.
+#. Providing *an environment, and services for running jobs*. These services
+   may include the ability to run in a container or VM environment, such as
+   Docker, Apptainer or Xen; providing the capability for the job to read or
+   update information on the AP; and setting environment variables for the job
+   to read.
 
 
 The execution point is mainly managed by the *condor_startd* daemon, which itself
@@ -70,63 +71,67 @@ of resources (e.g. Memory, Cpus, Disk) where a job may run.  Each slot is
 represented by its own machine ClassAd, distinguished by the machine ClassAd
 attribute ``Name``, which is of the form ``slot<N>@hostname``, or
 ``slot<M_N>@hostname``.  The value for ``<N>`` will also be defined with
-machine ClassAd attribute ``SlotID``.
+machine ClassAd attribute ``SlotID``.  Every *condor_startd* contains
+one or more slots, depending on configuration, and the hardware it runs on.
+There are three types of slots: Partitionable, Dynamic, and Static.
 
-Each slot has its own machine ClassAd, with its own state and activity
-attributes. Most other attributes are inherited from the
-machine configuration by the *condor_startd* daemon
+Partitionable Slots
+'''''''''''''''''''
+:index:`Slot Types<single; Slot Type; Partionable>`
 
-The *condor_startd* daemon represents the machine on which it is
-running to the HTCondor pool. The daemon publishes characteristics about
-the machine in the machine's ClassAd to aid matchmaking with resource
-requests. The values of these attributes may be listed by using the
-command:
+By default, each EP starts out with one partitionable slot, which represents
+all the detected resources on the machine.  Attributes like ``Memory``,
+``Disk`` and ``Cpus`` describe how much is available.  However, no jobs run
+directly in Partionable slots.  Rather, partitionable slots serve as a parent
+for Dynamic slots.  Partionable slots have the attribute ``SlotType`` set to
+``Partitionable``, and ``PartionableSlot`` set to ``True``, and are sometimes
+called p-slots for convenience.  p-slots are named slotN@startd_name, where N
+is usually 1.  Although possible, it is rare to have multiple p-slots on one
+machine.
 
-.. code-block:: console
+Dynamic Slots
+'''''''''''''
+:index:`Slot Types<single; Slot Type; Dynamic>`
 
-    $ condor_status -l hostname
+Dynamic slots actually run jobs.  They are created dynamically, from the
+resources of their parent Partitionable Slot.  For example, assume a
+partitionable slot on a machine has 3 cpu cores, 10 Gb of Memory, and 100 Gb of
+disk. Then, when a job which is allocated 1 cpu core, 2 Gb of Memory and 20 Gb
+of disk is started under that partitionable slot, the partionable slot is left
+with 2 cores, 8 Gb of memory and 80 Gb of disk.  A new dynamic slot is created
+with the allocated resources.  When the job exits, if the AP has another job
+that fits in the dynamic slot (or d-slot), the AP can reuse the d-slot for
+another job.  At such time as it cannot reused the slot the d-slot is
+destroyed, and the resources allocated to it are returned to the parent p-slot.
+Depending on the configuration, the privilege level of HTCondor, and the OS,
+these slot may or may not enforce the resources limits they have allocated.
+dslots are named slotN_M@startd_name, where N is the number of the parent
+partitionable slot (often "1"). Dynamic slots have the attribute
+``DynamicSlot`` set to ``True``, and the attribute ``SlotType`` set to
+``Dynamic``.
 
-Multi-Core Machine Terminology
-''''''''''''''''''''''''''''''
+.. sidebar::
+    The values of attributes in all slots on a machine may be listed by using the command:
 
-:index:`configuration<single: configuration; SMP machines>`
-:index:`configuration<single: configuration; multi-core machines>`
+    .. code-block:: console
 
-Machines with more than one CPU or core may be configured to run more
-than one job at a time. As always, owners of the resources have great
-flexibility in defining the policy under which multiple jobs may run,
-suspend, vacate, etc.
+        $ condor_status -l hostname
 
-Multi-core machines are represented to the HTCondor system as shared
-resources broken up into individual slots. Each slot can be matched and
-claimed by users for jobs. Each slot is represented by an individual
-machine ClassAd. In this way, each multi-core machine will appear to the
-HTCondor system as a collection of separate slots. As an example, a
-multi-core machine named ``vulture.cs.wisc.edu`` would appear to
-HTCondor as the multiple machines, named ``slot1@vulture.cs.wisc.edu``,
-``slot2@vulture.cs.wisc.edu``, ``slot3@vulture.cs.wisc.edu``, and so on.
-:index:`dividing resources in multi-core machines`
+Static Slots
+''''''''''''
+:index:`Slot Types<single; Slot Type; Static>`
 
-The way that the *condor_startd* breaks up the shared system resources
-into the different slots is configurable. All shared system resources,
-such as RAM, disk space, and swap space, can be divided evenly among all
-the slots, with each slot assigned one core. Alternatively, slot types
-are defined by configuration, so that resources can be unevenly divided.
-Regardless of the scheme used, it is important to remember that the goal
-is to create a representative slot ClassAd, to be used for matchmaking
-with jobs.
-
-HTCondor does not directly enforce slot shared resource allocations, and
-jobs are free to oversubscribe to shared resources. Consider an example
-where two slots are each defined with 50% of available RAM. The
-resultant ClassAd for each slot will advertise one half the available
-RAM. Users may submit jobs with RAM requirements that match these slots.
-However, jobs run on either slot are free to consume more than 50% of
-available RAM. HTCondor will not directly enforce a RAM utilization
-limit on either slot. If a shared resource enforcement capability is
-needed, it is possible to write a policy that will evict a job that
-oversubscribes to shared resources, as described in
-:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
+Jobs run in static slots, in much they same way they do for dynamic slots.
+However, the number of static slots in a *condor_startd*, and their size is
+fixed by configuration at boot time of the *condor_startd*, and cannot be
+changed without restarting the *condor_startd*.  By default, no static slots
+are created.  Static slots are named slotN@startd_name, where N starts at 1 and
+continues to the number of static slots.  The configuration setting ``use
+FEATURE : StaticSlots`` will configure a startd to advertise zero partitionable
+slots, and one static slot per detected core, with 1 cpu core in each slot, and
+each slot evenly dividing the detected memory and execution disk space.
+However, an administrator can configure the various static slots to
+have any amount of resources.  See following section for details.
 
 Dividing System Resources in Multi-core Machines
 ''''''''''''''''''''''''''''''''''''''''''''''''
@@ -372,44 +377,7 @@ machine, each with its own view of its state as represented by the
 machine ClassAd attribute ``State``. The policy expressions for the
 multi-core machine as a whole are propagated from the *condor_startd*
 to the slot's machine ClassAd. This policy may consider a slot state(s)
-in its expressions. This makes some policies easy to set, but it makes
-other policies difficult or impossible to set.
-
-An easy policy to set configures how many of the slots notice console or
-tty activity on the multi-core machine as a whole. Slots that are not
-configured to notice any activity will report ``ConsoleIdle`` and
-``KeyboardIdle`` times from when the *condor_startd* daemon was
-started, plus a configurable number of seconds. A multi-core machine
-with the default policy settings can add the keyboard and console to be
-noticed by only one slot. Assuming a reasonable load average, only the
-one slot will suspend or vacate its job when the owner starts typing at
-their machine again. The rest of the slots could be matched with jobs
-and continue running them, even while the user was interactively using
-the machine. If the default policy is used, all slots notice tty and
-console activity and currently running jobs would suspend.
-
-This example policy is controlled with the following configuration
-variables.
-
--  :macro:`SLOTS_CONNECTED_TO_CONSOLE`, with definition at
-   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-   macros` section
-
--  :macro:`SLOTS_CONNECTED_TO_KEYBOARD`, with definition at
-   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-   macros` section
-
--  :macro:`DISCONNECTED_KEYBOARD_IDLE_BOOST`, with definition at
-   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-   macros` section
-
-Each slot has its own machine ClassAd. Yet, the policy expressions for
-the multi-core machine are propagated and inherited from configuration
-of the *condor_startd*. Therefore, the policy expressions for each slot
-are the same. This makes the implementation of certain types of policies
-impossible, because while evaluating the state of one slot within the
-multi-core machine, the state of other slots are not available.
-Decisions for one slot cannot be based on what other slots are doing.
+in its expressions.
 
 Specifically, the evaluation of a slot policy expression works in the
 following way.
@@ -466,21 +434,24 @@ resources:
     disk = BIG
 
 Assume that JobA is allocated to this slot. JobA includes the following
-requirements:
+resource requests:
 
-.. code-block:: text
+.. code-block:: condor-submit
+``
 
-    cpu = 3
-    memory = 1024
-    disk = 10240
+    request_cpu = 3
+    request_memory = 1024
+    request_disk = 10240
 
 The portion of the slot that is carved out is now known as a dynamic
 slot. This dynamic slot has its own machine ClassAd, and its ``Name``
 attribute distinguishes itself as a dynamic slot with incorporating the
-substring ``Slot1_1``.
+substring ``Slot1_1``.  Note that the startd may round up the resource
+requests, so that subsequent jobs may also match this slot, but it
+will never run a job in a slot that won't fit the job.
 
 After allocation, the partitionable Slot1 advertises that it has the
-following resources still available:
+following resources still available, which might look like:
 
 .. code-block:: text
 
@@ -492,15 +463,15 @@ As each new job is allocated to Slot1, it breaks into ``Slot1_1``,
 ``Slot1_2``, ``Slot1_3`` etc., until the entire set of Slot1's available
 resources have been consumed by jobs.
 
-To enable dynamic provisioning, define a slot type. and declare at least
-one slot of that type. Then, identify that slot type as partitionable by
-setting configuration variable
-:macro:`SLOT_TYPE_<N>_PARTITIONABLE` to ``True``. The value of
-``<N>`` within the configuration variable name is the same value as in
-slot type definition configuration variable :macro:`SLOT_TYPE_<N>`. For the
-most common cases the machine should be configured for one slot,
-managing all the resources on the machine. To do so, set the following
-configuration variables:
+Dynamic provisioning is enabled by default, as of HTCondor version 23.0 In
+older versions, to enable dynamic provisioning, define a slot type, and declare
+at least one slot of that type. Then, identify that slot type as partitionable
+by setting configuration variable :macro:`SLOT_TYPE_<N>_PARTITIONABLE` to
+``True``. The value of ``<N>`` within the configuration variable name is the
+same value as in slot type definition configuration variable
+:macro:`SLOT_TYPE_<N>`. For the most common cases the machine should be
+configured for one slot, managing all the resources on the machine. To do so,
+set the following configuration variables:
 
 .. code-block:: text
 
@@ -509,8 +480,8 @@ configuration variables:
     SLOT_TYPE_1 = 100%
     SLOT_TYPE_1_PARTITIONABLE = TRUE
 
-In a pool using dynamic provisioning, jobs can have extra, and desired,
-resources specified in the submit description file:
+In a pool using dynamic provisioning, jobs must express resources they need in
+the submit description file:
 
 .. code-block:: text
 
@@ -531,23 +502,6 @@ when submitting a job to a pool with dynamic provisioning.
 
     queue
 
-Each partitionable slot will have the ClassAd attributes
-
-.. code-block:: text
-
-      PartitionableSlot = True
-      SlotType = "Partitionable"
-
-Each dynamic slot will have the ClassAd attributes
-
-.. code-block:: text
-
-      DynamicSlot = True
-      SlotType = "Dynamic"
-
-These attributes may be used in a :macro:`START` expression for the purposes
-of creating detailed policies.
-
 A partitionable slot will always appear as though it is not running a
 job. If matched jobs consume all its resources, the partitionable slot
 will eventually show as having no available resources; this will prevent
@@ -567,6 +521,13 @@ as discussed in
 :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 :index:`partitionable slot preemption`
 :index:`pslot preemption`
+
+Preemption of Partionable Slots
+"""""""""""""""""""""""""""""""
+
+.. warning::
+   Partionable slot preemption is an experimental feature, and may not
+   work as expected with all other HTCondor features.
 
 Another partial solution is a new matchmaking algorithm in the
 negotiator, referred to as partitionable slot preemption, or pslot
@@ -657,6 +618,14 @@ their defaults are
 - :macro:`MODIFY_REQUEST_EXPR_REQUESTCPUS` = quantize(RequestCpus, {1})
 - :macro:`MODIFY_REQUEST_EXPR_REQUESTMEMORY` = quantize(RequestMemory, {128})
 - :macro:`MODIFY_REQUEST_EXPR_REQUESTDISK` = quantize(RequestDisk, {1024})
+
+Slot Isolation and Protection
+-----------------------------
+
+When multiple jobs, one in each slots, are running on the same machine,
+one job might negatively impact another.  This might happen by using too much
+cpu, or disk, or even sending a signal to a process in another job.  HTCondor
+provides several mechanism to protect jobs in slots from each other.
 
 Per Job PID Namespaces
 ''''''''''''''''''''''
@@ -873,7 +842,7 @@ memory.limit_in_bytes, and memory.soft_limit_in_bytes. The
 configuration variable :macro:`CGROUP_MEMORY_LIMIT_POLICY` controls this.
 If :macro:`CGROUP_MEMORY_LIMIT_POLICY` is set to the string ``hard``, the hard
 limit will be set to the slot size, and the soft limit to 90% of the
-slot size.. If set to ``soft``, the soft limit will be set to the slot
+slot size. If set to ``soft``, the soft limit will be set to the slot
 size and the hard limit will be set to the memory size of the whole startd.
 By default, this whole size is the detected memory the size, minus
 RESERVED_MEMORY.  Or, if :macro:`MEMORY` is defined, that value is used..
@@ -1260,7 +1229,7 @@ is described below.
     E
        The transition from Unclaimed to Backfill happens if the machine
        is configured to run backfill computations (see
-       the :doc:`/admin-manual/setting-up-special-environments` section)
+       the :ref:`admin-manual/ep-policy-configuration:configuring htcondor for running backfill jobs` section)
        and the :macro:`START_BACKFILL` expression evaluates to TRUE.
     P
        The transition from Unclaimed to Drained happens if draining of
@@ -1753,10 +1722,11 @@ skipped, and the machine goes directly to the Claimed/Idle state
 state (transition **6**), even if it is only for a brief period of time.
 
 If the machine has been configured to perform backfill jobs (see the
-:doc:`/admin-manual/setting-up-special-environments` section), while it is in
-Unclaimed/Idle it will evaluate the :macro:`START_BACKFILL` expression. Once
-:macro:`START_BACKFILL` evaluates to TRUE, the machine will enter the Backfill/Idle
-state (transition **7**) to begin the process of running backfill jobs.
+:ref:`admin-manual/ep-policy-configuration:configuring htcondor for running backfill jobs`
+section), while it is in Unclaimed/Idle it will evaluate the
+:macro:`START_BACKFILL` expression. Once :macro:`START_BACKFILL` evaluates to
+TRUE, the machine will enter the Backfill/Idle state (transition **7**) to
+begin the process of running backfill jobs.
 
 If draining of the machine is initiated while in the Unclaimed state,
 the slot transitions to Drained/Retiring (transition **37**).
@@ -2029,7 +1999,7 @@ Backfill State
 The Backfill state is used whenever the machine is performing low
 priority background tasks to keep itself busy. For more information
 about backfill support in HTCondor, see the
-:ref:`admin-manual/setting-up-special-environments:configuring htcondor for
+:ref:`admin-manual/ep-policy-configuration:configuring htcondor for
 running backfill jobs` section. This state is only used if the machine has been
 configured to enable backfill computation, if a specific backfill manager has
 been installed and configured, and if the machine is otherwise idle (not being
@@ -2245,6 +2215,452 @@ It serves as a quick reference.
 :index:`transitions<single: transitions; machine state>`
 :index:`transitions<single: transitions; machine activity>`
 :index:`transitions<single: transitions; state>` :index:`transitions<single: transitions; activity>`
+
+Configuring HTCondor for Running Backfill Jobs
+----------------------------------------------
+
+:index:`Backfill`
+
+HTCondor can be configured to run backfill jobs whenever the
+*condor_startd* has no other work to perform. These jobs are considered
+the lowest possible priority, but when machines would otherwise be idle,
+the resources can be put to good use.
+
+Currently, HTCondor only supports using the Berkeley Open Infrastructure
+for Network Computing (BOINC) to provide the backfill jobs. More
+information about BOINC is available at
+`http://boinc.berkeley.edu <http://boinc.berkeley.edu>`_.
+
+The rest of this section provides an overview of how backfill jobs work
+in HTCondor, details for configuring the policy for when backfill jobs
+are started or killed, and details on how to configure HTCondor to spawn
+the BOINC client to perform the work.
+
+Overview of Backfill jobs in HTCondor
+'''''''''''''''''''''''''''''''''''''
+
+:index:`Overview<single: Overview; Backfill>`
+
+Whenever a resource controlled by HTCondor is in the Unclaimed/Idle
+state, it is totally idle; neither the interactive user nor an HTCondor
+job is performing any work. Machines in this state can be configured to
+enter the Backfill state, which allows the resource to attempt a
+background computation to keep itself busy until other work arrives
+(either a user returning to use the machine interactively, or a normal
+HTCondor job). Once a resource enters the Backfill state, the
+*condor_startd* will attempt to spawn another program, called a
+backfill client, to launch and manage the backfill computation. When
+other work arrives, the *condor_startd* will kill the backfill client
+and clean up any processes it has spawned, freeing the machine resources
+for the new, higher priority task. More details about the different
+states an HTCondor resource can enter and all of the possible
+transitions between them are described in
+:doc:`/admin-manual/ep-policy-configuration/`, especially the
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
+and
+:ref:`admin-manual/ap-policy-configuration:*condor_schedd* policy configuration`
+sections.
+
+At this point, the only backfill system supported by HTCondor is BOINC.
+The *condor_startd* has the ability to start and stop the BOINC client
+program at the appropriate times, but otherwise provides no additional
+services to configure the BOINC computations themselves. Future versions
+of HTCondor might provide additional functionality to make it easier to
+manage BOINC computations from within HTCondor. For now, the BOINC
+client must be manually installed and configured outside of HTCondor on
+each backfill-enabled machine.
+
+Defining the Backfill Policy
+''''''''''''''''''''''''''''
+
+:index:`Defining HTCondor policy<single: Defining HTCondor policy; Backfill>`
+
+There are a small set of policy expressions that determine if a
+*condor_startd* will attempt to spawn a backfill client at all, and if
+so, to control the transitions in to and out of the Backfill state. This
+section briefly lists these expressions. More detail can be found in
+:ref:`admin-manual/configuration-macros:condor_startd configuration file macros`.
+
+:macro:`ENABLE_BACKFILL`
+    A boolean value to determine if any backfill functionality should be
+    used. The default value is ``False``.
+
+:macro:`BACKFILL_SYSTEM`
+    A string that defines what backfill system to use for spawning and
+    managing backfill computations. Currently, the only supported string
+    is ``"BOINC"``.
+
+:macro:`START_BACKFILL`
+    A boolean expression to control if an HTCondor resource should start
+    a backfill client. This expression is only evaluated when the
+    machine is in the Unclaimed/Idle state and the :macro:`ENABLE_BACKFILL`
+    expression is ``True``.
+
+:macro:`EVICT_BACKFILL`
+    A boolean expression that is evaluated whenever an HTCondor resource
+    is in the Backfill state. A value of ``True`` indicates the machine
+    should immediately kill the currently running backfill client and
+    any other spawned processes, and return to the Owner state.
+
+The following example shows a possible configuration to enable backfill:
+
+.. code-block:: condor-config
+
+    # Turn on backfill functionality, and use BOINC
+    ENABLE_BACKFILL = TRUE
+    BACKFILL_SYSTEM = BOINC
+
+    # Spawn a backfill job if we've been Unclaimed for more than 5
+    # minutes
+    START_BACKFILL = $(StateTimer) > (5 * $(MINUTE))
+
+    # Evict a backfill job if the machine is busy (based on keyboard
+    # activity or cpu load)
+    EVICT_BACKFILL = $(MachineBusy)
+
+Overview of the BOINC system
+''''''''''''''''''''''''''''
+
+:index:`BOINC Overview<single: BOINC Overview; Backfill>`
+
+The BOINC system is a distributed computing environment for solving
+large scale scientific problems. A detailed explanation of this system
+is beyond the scope of this manual. Thorough documentation about BOINC
+is available at their website:
+`http://boinc.berkeley.edu <http://boinc.berkeley.edu>`_. However, a
+brief overview is provided here for sites interested in using BOINC with
+HTCondor to manage backfill jobs.
+
+BOINC grew out of the relatively famous SETI@home computation, where
+volunteers installed special client software, in the form of a screen
+saver, that contacted a centralized server to download work units. Each
+work unit contained a set of radio telescope data and the computation
+tried to find patterns in the data, a sign of intelligent life elsewhere
+in the universe, hence the name: "Search for Extra Terrestrial
+Intelligence at home". BOINC is developed by the Space Sciences Lab at
+the University of California, Berkeley, by the same people who created
+SETI@home. However, instead of being tied to the specific radio
+telescope application, BOINC is a generic infrastructure by which many
+different kinds of scientific computations can be solved. The current
+generation of SETI@home now runs on top of BOINC, along with various
+physics, biology, climatology, and other applications.
+
+The basic computational model for BOINC and the original SETI@home is
+the same: volunteers install BOINC client software, called the
+*boinc_client*, which runs whenever the machine would otherwise be
+idle. However, the BOINC installation on any given machine must be
+configured so that it knows what computations to work for instead of
+always working on a hard coded computation. The BOINC terminology for a
+computation is a project. A given BOINC client can be configured to
+donate all of its cycles to a single project, or to split the cycles
+between projects so that, on average, the desired percentage of the
+computational power is allocated to each project. Once the
+*boinc_client* starts running, it attempts to contact a centralized
+server for each project it has been configured to work for. The BOINC
+software downloads the appropriate platform-specific application binary
+and some work units from the central server for each project. Whenever
+the client software completes a given work unit, it once again attempts
+to connect to that project's central server to upload the results and
+download more work.
+
+BOINC participants must register at the centralized server for each
+project they wish to donate cycles to. The process produces a unique
+identifier so that the work performed by a given client can be credited
+to a specific user. BOINC keeps track of the work units completed by
+each user, so that users providing the most cycles get the highest
+rankings, and therefore, bragging rights.
+
+Because BOINC already handles the problems of distributing the
+application binaries for each scientific computation, the work units,
+and compiling the results, it is a perfect system for managing backfill
+computations in HTCondor. Many of the applications that run on top of
+BOINC produce their own application-specific checkpoints, so even if the
+*boinc_client* is killed, for example, when an HTCondor job arrives at
+a machine, or if the interactive user returns, an entire work unit will
+not necessarily be lost.
+
+Installing the BOINC client software
+''''''''''''''''''''''''''''''''''''
+
+:index:`BOINC Installation<single: BOINC Installation; Backfill>`
+
+In HTCondor Version |release|, the *boinc_client* must be manually
+downloaded, installed and configured outside of HTCondor. Download the
+*boinc_client* executables at
+`http://boinc.berkeley.edu/download.php <http://boinc.berkeley.edu/download.php>`_.
+
+Once the BOINC client software has been downloaded, the *boinc_client*
+binary should be placed in a location where the HTCondor daemons can use
+it. The path will be specified with the HTCondor configuration variable
+:macro:`BOINC_Executable`.
+
+Additionally, a local directory on each machine should be created where
+the BOINC system can write files it needs. This directory must not be
+shared by multiple instances of the BOINC software. This is the same
+restriction as placed on the ``spool`` or ``execute`` directories used
+by HTCondor. The location of this directory is defined by
+:macro:`BOINC_InitialDir`. The directory must
+be writable by whatever user the *boinc_client* will run as. This user
+is either the same as the user the HTCondor daemons are running as, if
+HTCondor is not running as root, or a user defined via the
+:macro:`BOINC_Owner` configuration variable.
+
+Finally, HTCondor administrators wishing to use BOINC for backfill jobs
+must create accounts at the various BOINC projects they want to donate
+cycles to. The details of this process vary from project to project.
+Beware that this step must be done manually, as the *boinc_client* can
+not automatically register a user at a given project, unlike the more
+fancy GUI version of the BOINC client software which many users run as a
+screen saver. For example, to configure machines to perform work for the
+Einstein@home project (a physics experiment run by the University of
+Wisconsin at Milwaukee), HTCondor administrators should go to
+`http://einstein.phys.uwm.edu/create_account_form.php <http://einstein.phys.uwm.edu/create_account_form.php>`_,
+fill in the web form, and generate a new Einstein@home identity. This
+identity takes the form of a project URL (such as
+http://einstein.phys.uwm.edu) followed by an account key, which is a
+long string of letters and numbers that is used as a unique identifier.
+This URL and account key will be needed when configuring HTCondor to use
+BOINC for backfill computations.
+
+Configuring the BOINC client under HTCondor
+'''''''''''''''''''''''''''''''''''''''''''
+
+:index:`BOINC Configuration in HTCondor<single: BOINC Configuration in HTCondor; Backfill>`
+
+After the *boinc_client* has been installed on a given machine, the
+BOINC projects to join have been selected, and a unique project account
+key has been created for each project, the HTCondor configuration needs
+to be modified.
+
+Whenever the *condor_startd* decides to spawn the *boinc_client* to
+perform backfill computations, it will spawn a *condor_starter* to
+directly launch and monitor the *boinc_client* program. This
+*condor_starter* is just like the one used to invoke any other HTCondor
+jobs.
+
+This *condor_starter* reads values out of the HTCondor configuration
+files to define the job it should run, as opposed to getting these
+values from a job ClassAd in the case of a normal HTCondor job. All of
+the configuration variables names for variables to control things such
+as the path to the *boinc_client* binary to use, the command-line
+arguments, and the initial working directory, are prefixed with the
+string ``"BOINC_"``. Each of these variables is described as either a
+required or an optional configuration variable.
+
+Required configuration variables:
+
+:macro:`BOINC_Executable`
+    The full path and executable name of the *boinc_client* binary to
+    use.
+
+:macro:`BOINC_InitialDir`
+    The full path to the local directory where BOINC should run.
+
+:macro:`BOINC_Universe`
+    The HTCondor universe used for running the *boinc_client* program.
+    This must be set to ``vanilla`` for BOINC to work under HTCondor.
+
+:macro:`BOINC_Owner`
+    What user the *boinc_client* program should be run as. This
+    variable is only used if the HTCondor daemons are running as root.
+    In this case, the *condor_starter* must be told what user identity
+    to switch to before invoking the *boinc_client*. This can be any
+    valid user on the local system, but it must have write permission in
+    whatever directory is specified by ``BOINC_InitialDir``.
+
+Optional configuration variables:
+
+:macro:`BOINC_Arguments`
+    Command-line arguments that should be passed to the *boinc_client*
+    program. For example, one way to specify the BOINC project to join
+    is to use the **-attach_project** argument to specify a project URL
+    and account key. For example:
+
+    .. code-block:: condor-config
+
+        BOINC_Arguments = --attach_project http://einstein.phys.uwm.edu [account_key]
+
+:macro:`BOINC_Environment`
+    Environment variables that should be set for the *boinc_client*.
+
+:macro:`BOINC_Output`
+    Full path to the file where ``stdout`` from the *boinc_client*
+    should be written. If this variable is not defined, ``stdout`` will
+    be discarded.
+
+:macro:`BOINC_Error`
+    Full path to the file where ``stderr`` from the *boinc_client*
+    should be written. If this macro is not defined, ``stderr`` will be
+    discarded.
+
+The following example shows one possible usage of these settings:
+
+.. code-block:: condor-config
+
+    # Define a shared macro that can be used to define other settings.
+    # This directory must be manually created before attempting to run
+    # any backfill jobs.
+    BOINC_HOME = $(LOCAL_DIR)/boinc
+
+    # Path to the boinc_client to use, and required universe setting
+    BOINC_Executable = /usr/local/bin/boinc_client
+    BOINC_Universe = vanilla
+
+    # What initial working directory should BOINC use?
+    BOINC_InitialDir = $(BOINC_HOME)
+
+    # Where to place stdout and stderr
+    BOINC_Output = $(BOINC_HOME)/boinc.out
+    BOINC_Error = $(BOINC_HOME)/boinc.err
+
+If the HTCondor daemons reading this configuration are running as root,
+an additional variable must be defined:
+
+.. code-block:: text
+
+    # Specify the user that the boinc_client should run as:
+    BOINC_Owner = nobody
+
+In this case, HTCondor would spawn the *boinc_client* as nobody, so the
+directory specified in ``$(BOINC_HOME)`` would have to be writable by
+the nobody user.
+
+A better choice would probably be to create a separate user account just
+for running BOINC jobs, so that the local BOINC installation is not
+writable by other processes running as nobody. Alternatively, the
+``BOINC_Owner`` could be set to daemon.
+
+**Attaching to a specific BOINC project**
+
+There are a few ways to attach an HTCondor/BOINC installation to a given
+BOINC project:
+
+-  Use the **-attach_project** argument to the *boinc_client* program,
+   defined via the ``BOINC_Arguments`` variable. The *boinc_client*
+   will only accept a single **-attach_project** argument, so this
+   method can only be used to attach to one project.
+-  The *boinc_cmd* command-line tool can perform various BOINC
+   administrative tasks, including attaching to a BOINC project. Using
+   *boinc_cmd*, the appropriate argument to use is called
+   **-project_attach**. Unfortunately, the *boinc_client* must be
+   running for *boinc_cmd* to work, so this method can only be used
+   once the HTCondor resource has entered the Backfill state and has
+   spawned the *boinc_client*.
+-  Manually create account files in the local BOINC directory. Upon
+   start up, the *boinc_client* will scan its local directory (the
+   directory specified with ``BOINC_InitialDir``) for files of the form
+   ``account_[URL].xml``, for example,
+   ``account_einstein.phys.uwm.edu.xml``. Any files with a name that
+   matches this convention will be read and processed. The contents of
+   the file define the project URL and the authentication key. The
+   format is:
+
+   .. code-block:: text
+
+       <account>
+         <master_url>[URL]</master_url>
+         <authenticator>[key]</authenticator>
+       </account>
+
+   For example:
+
+   .. code-block:: text
+
+       <account>
+         <master_url>http://einstein.phys.uwm.edu</master_url>
+         <authenticator>aaaa1111bbbb2222cccc3333</authenticator>
+       </account>
+
+   Of course, the <authenticator> tag would use the real authentication
+   key returned when the account was created at a given project.
+
+   These account files can be copied to the local BOINC directory on all
+   machines in an HTCondor pool, so administrators can either distribute
+   them manually, or use symbolic links to point to a shared file
+   system.
+
+In the two cases of using command-line arguments for *boinc_client* or
+running the *boinc_cmd* tool, BOINC will write out the resulting
+account file to the local BOINC directory on the machine, and then
+future invocations of the *boinc_client* will already be attached to
+the appropriate project(s).
+
+BOINC on Windows
+''''''''''''''''
+
+The Windows version of BOINC has multiple installation methods. The
+preferred method of installation for use with HTCondor is the Shared
+Installation method. Using this method gives all users access to the
+executables. During the installation process
+
+#. Deselect the option which makes BOINC the default screen saver
+#. Deselect the option which runs BOINC on start up.
+#. Do not launch BOINC at the conclusion of the installation.
+
+There are three major differences from the Unix version to keep in mind
+when dealing with the Windows installation:
+
+#. The Windows executables have different names from the Unix versions.
+   The Windows client is called *boinc.exe*. Therefore, the
+   configuration variable :macro:`BOINC_Executable` is written:
+
+   .. code-block:: text
+
+       BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
+
+   The Unix administrative tool *boinc_cmd* is called *boinccmd.exe* on
+   Windows.
+
+#. When using BOINC on Windows, the configuration variable
+   :macro:`BOINC_InitialDir` will not be
+   respected fully. To work around this difficulty, pass the BOINC home
+   directory directly to the BOINC application via the
+   :macro:`BOINC_Arguments` configuration
+   variable. For Windows, rewrite the argument line as:
+
+   .. code-block:: text
+
+       BOINC_Arguments = --dir $(BOINC_HOME) \
+                 --attach_project http://einstein.phys.uwm.edu [account_key]
+
+   As a consequence of setting the BOINC home directory, some projects
+   may fail with the authentication error:
+
+   .. code-block:: text
+
+       Scheduler request failed: Peer
+       certificate cannot be authenticated
+       with known CA certificates.
+
+   To resolve this issue, copy the ``ca-bundle.crt`` file from the BOINC
+   installation directory to ``$(BOINC_HOME)``. This file appears to be
+   project and machine independent, and it can therefore be distributed
+   as part of an automated HTCondor installation.
+
+#. The :macro:`BOINC_Owner` configuration variable
+   behaves differently on Windows than it does on Unix. Its value may
+   take one of two forms:
+
+   -  domain\\user
+   -  user This form assumes that the user exists in the local domain
+      (that is, on the computer itself).
+
+   Setting this option causes the addition of the job attribute
+
+   .. code-block:: text
+
+       RunAsUser = True
+
+   to the backfill client. This further implies that the configuration
+   variable 
+   :macro:`STARTER_ALLOW_RUNAS_OWNER` be set to ``True`` to insure
+   that the local *condor_starter* be able to run jobs in this manner.
+   For more information on the ``RunAsUser`` attribute, see
+   :ref:`platform-specific/microsoft-windows:executing jobs as the submitting
+   user`. For more information on the the :macro:`STARTER_ALLOW_RUNAS_OWNER`
+   configuration variable, see
+   :ref:`admin-manual/configuration-macros:shared file system configuration
+   file macros`.
 
 Examples of Policy Configuration
 ''''''''''''''''''''''''''''''''
@@ -2662,8 +3078,8 @@ Or, if slot 1 should be reserved for interactive jobs:
 
     START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 
-Custom and system EP classad attributes
----------------------------------------
+Custom and system EP attributes
+-------------------------------
 
 The *condor_startd* advertises one classad per slot to the *condor_collector*.  Each of
 these ads has many attributes. See :ref:`classad-attributes/machine-classad-attributes:machine classad attributes`
@@ -2824,9 +3240,8 @@ The Startd Cron and Schedd Cron *Daemon ClassAd Hooks* mechanism are
 used to run executables (called jobs) directly from the *condor_startd* and *condor_schedd* daemons.
 The output from these jobs is incorporated into the machine ClassAd
 generated by the respective daemon. This mechanism and associated jobs
-have been identified by various names, including the Startd Cron,
-dynamic attributes, and a distribution of executables collectively known
-as Hawkeye.
+have been identified by various names, including Startd Cron,
+dynamic attributes, and daemon hooks.
 
 Pool management tasks can be enhanced by using a daemon's ability to
 periodically run executables. The executables are expected to generate
@@ -2847,9 +3262,13 @@ job exits. When the job outputs the special line:
 the output of the job is merged into all proper ClassAds, and an update
 goes to the *condor_collector* daemon.
 
-As of version 8.3.0, it is possible for a Startd Cron job (but not a
-Schedd Cron job) to define multiple ClassAds, using the mechanism
-defined below:
+If the job exits with a non-zero exit code, and the config knob
+:macro:`STARTD_CRON_LOG_NON_ZERO_EXIT` is true, any unparsed stdout and all
+of the standard error of the cron job will be logged in the StartLog
+file.  This can be very useful for debugging.
+
+It is possible for a Startd Cron job (but not a Schedd Cron job) to define
+multiple ClassAds, using the mechanism defined below:
 
 -  An output line starting with ``'-'`` has always indicated
    end-of-ClassAd. The ``'-'`` can now be followed by a uniqueness tag
@@ -2915,12 +3334,17 @@ jobs, and ones that use the *condor_schedd*.
     #
     # Startd Cron Stuff
     #
-    # auxiliary variable to use in identifying locations of files
+    # helper variable to use in identifying locations of files
     MODULES = $(ROOT)/modules
 
     STARTD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
     STARTD_CRON_MAX_JOB_LOAD = 0.2
     STARTD_CRON_JOBLIST =
+
+    # If something goes wrong, and a start cron exits with non-zero
+    # log the stdout/stderr to the StartLog
+
+    STARTD_CRON_LOG_NON_ZERO_EXIT = true
 
     # Test job
     STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) test

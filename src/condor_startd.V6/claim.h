@@ -89,6 +89,7 @@ struct Client
 	std::string c_neggrp;     // the negotiating accounting group
 	std::string c_scheddName; // name of the schedd
 	bool        c_autorg{false}; // true if negotiated via autoregroup policy
+	bool        c_cgroupActive{false}; // true if starter put the job in a cgroup
 	int         c_numPids{0};
 };
 

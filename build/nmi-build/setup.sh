@@ -178,9 +178,9 @@ fi
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    wget https://github.com/apptainer/apptainer/releases/download/v1.2.3/apptainer_1.2.3_amd64.deb
-    $INSTALL ./apptainer_1.2.3_amd64.deb
-    rm ./apptainer_1.2.3_amd64.deb
+    wget https://github.com/apptainer/apptainer/releases/download/v1.2.5/apptainer_1.2.5_amd64.deb
+    $INSTALL ./apptainer_1.2.5_amd64.deb
+    rm ./apptainer_1.2.5_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
@@ -197,7 +197,7 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5 pelican-osdf-compat
+    apt download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5 pelican pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
         apt download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
@@ -214,7 +214,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
-        libgomp munge-libs pelican-osdf-compat pcre2 scitokens-cpp
+        libgomp munge-libs pelican pelican-osdf-compat pcre2 scitokens-cpp
     if [ $ID != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi

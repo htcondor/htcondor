@@ -412,6 +412,17 @@ std::vector<std::string> split(const std::string& str, const char* delim, bool t
 	return list;
 }
 
+std::vector<std::string> split(const char* str, const char* delim, bool trim)
+{
+	int start, len;
+	std::vector<std::string> list;
+	StringTokenIterator sti(str, delim, trim);
+	while ((start = sti.next_token(len)) >= 0) {
+		list.emplace_back(&str[start], len);
+	}
+	return list;
+}
+
 std::string join(const std::vector<std::string> &list, const char* delim)
 {
 	std::string str;

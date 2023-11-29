@@ -54,6 +54,10 @@ Machine ClassAd Attributes
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
 
+:classad-attribute-def:`CgroupEnforced`
+	If a job is running inside a per-job cgroup, this boolean attribute
+    is ``True``
+
 :classad-attribute-def:`ClaimEndTime`
     The time at which the slot will leave the ``Claimed`` state.
     Currently, this only applies to partitionable slots.

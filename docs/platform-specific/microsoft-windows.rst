@@ -679,6 +679,35 @@ Tell HTCondor to use the condor-guest user as the owner of jobs, when
 required. Details for this are in
 the :doc:`/admin-manual/security` section.
 
+The *condor_kbdd* on Windows Platforms
+'''''''''''''''''''''''''''''''''''''''
+
+Windows platforms need to use the *condor_kbdd* to monitor the idle
+time of both the keyboard and mouse. By adding ``KBDD`` to configuration
+variable :macro:`DAEMON_LIST`, the *condor_master* daemon invokes the
+*condor_kbdd*, which then does the right thing to monitor activity
+given the version of Windows running.
+
+With Windows Vista and more recent version of Windows, user sessions are
+moved out of session 0. Therefore, the *condor_startd* service is no
+longer able to listen to keyboard and mouse events. The *condor_kbdd*
+will run in an invisible window and should not be noticeable by the
+user, except for a listing in the task manager. When the user logs out,
+the program is terminated by Windows. This implementation also appears
+in versions of Windows that predate Vista, because it adds the
+capability of monitoring keyboard activity from multiple users.
+
+To achieve the auto-start with user login, the HTCondor installer adds a
+*condor_kbdd* entry to the registry key at
+HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run. On 64-bit
+versions of Vista and more recent Windows versions, the entry is
+actually placed in
+HKLM\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Run.
+
+In instances where the *condor_kbdd* is unable to connect to the
+*condor_startd*, it is likely because an exception was not properly
+added to the Windows firewall.
+
 Interoperability between HTCondor for Unix and HTCondor for Windows
 -------------------------------------------------------------------
 
