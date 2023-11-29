@@ -39,7 +39,7 @@ class Negotiator():
         _negotiator_command_user(self._addr, self._DELETE_USER, user)
 
 
-    def getPriorities(self, rollup : bool) -> List[classad.ClassAd]:
+    def getPriorities(self, rollup : bool = False) -> List[classad.ClassAd]:
         command = self._GET_PRIORITY
         if rollup:
             command = self._GET_PRIORITY_ROLLUP
