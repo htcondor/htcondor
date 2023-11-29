@@ -847,11 +847,19 @@ condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- 
   #condor_pl_test(condor_urlfetch_test "Tests tool condor_urlfetch" "quick;ctest")
 
 if (WINDOWS)
+
 add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp)
 add_custom_target(timed_cmd_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.exe tests)
 set_target_properties(timed_cmd_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.exe
+			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp
+			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp)
+add_custom_target(appendmsg_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.exe tests)
+set_target_properties(appendmsg_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
+
 endif()
 
 endif(BUILD_TESTING)
