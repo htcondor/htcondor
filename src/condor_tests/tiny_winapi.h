@@ -34,11 +34,17 @@
 #pragma comment(linker, "/nodefaultlib:msvcrt")
 #pragma comment(linker, "/defaultlib:kernel32.lib")
 
+#ifdef NOCONSOLE
+#pragma message("building NOCONSOLE")
+#pragma comment(linker, "/subsystem:windows")
+#pragma comment(linker, "/defaultlib:user32.lib")
+#else
 #pragma comment(linker, "/subsystem:console")
+#endif
 //  build programs that use this header with one of the following commands
 // cl /O1 /GS- program.cpp /link /subsystem:console kernel32.lib
 //   or
-// cl /O1 /GS- program.cpp /link /subsystem:windows /out:programw.exe kernel32.lib
+// cl /O1 /GS- /DNOCONSOLE=1 program.cpp /link /subsystem:windows /out:programw.exe kernel32.lib user32.lib
 
 // msvc PREDEFINED MACROS (as of vs2012)
 // _M_AMD64  target x64 instruction set
@@ -112,6 +118,7 @@ extern "C" void _fastcall __security_check_cookie(int cookie) { }
 
 typedef struct _HINST { int dummy; } * HMODULE;
 typedef void* HANDLE;
+typedef void* HWND;
 typedef void* HLOCAL;
 typedef int   BOOL;
 typedef unsigned int UINT;
@@ -225,6 +232,7 @@ extern "C" unsigned int __stdcall GetCurrentProcessId(void);
 extern "C" unsigned int __stdcall GetLastError(void);
 extern "C" unsigned int __stdcall FormatMessageW(unsigned int flags, const void* source, unsigned int msgId, unsigned int langid, wchar_t* buf, int cbBuf, char* args);
 extern "C" unsigned int __stdcall Sleep(unsigned int millisec);
+extern "C" unsigned __int64 __stdcall GetTickCount64();
 extern "C" HANDLE __stdcall GetStdHandle(int idHandle);
 extern "C" const wchar_t * __stdcall GetCommandLineW(void);
 extern "C" wchar_t * __stdcall GetEnvironmentStringsW(void);
@@ -261,6 +269,7 @@ enum {
 };
 extern "C" BOOL __stdcall SetConsoleCtrlHandler(BOOL (__stdcall *fn)(unsigned int eEvent), BOOL add_handler);
 extern "C" BOOL __stdcall GenerateConsoleCtrlEvent(unsigned int eEvent, unsigned int pidProcessGroup);
+
 
 //
 // Process dwCreationFlag values
@@ -342,9 +351,94 @@ typedef struct _SECURITY_ATTRIBUTES {
 	int bInherit;	   // 8 +4	  c +4
 } SECURITY_ATTRIBUTES; // c		  0x10
 
+
+extern "C" BOOL __stdcall DuplicateHandle(HANDLE hSrcProc, HANDLE hi, HANDLE hDstProc, HANDLE *ho, UINT access, BOOL inherit, UINT options);
+#define DUPLICATE_CLOSE_SOURCE 1
+#define DUPLICATE_SAME_ACCESS 2
+
+#define QS_ALLEVENTS 0x04BF
+#define QS_ALLINPUT  0x04FF
+extern "C" unsigned int __stdcall MsgWaitForMultipleObjects(unsigned int count, const HANDLE* phandles, int bWaitAll, unsigned int millisec, unsigned int mask);
 extern "C" unsigned int __stdcall WaitForMultipleObjects(unsigned int count, const HANDLE* phandles, int bWaitAll, unsigned int millisec);
 #define WAIT_TIMEOUT 258
 #define WAIT_FAILED (unsigned int)-1;
+
+#ifndef NO_MESSAGE_BOX
+ #define MB_OK                0
+ #define MB_OKCANCEL          1
+ #define MB_ABORTRETRYIGNORE  2
+ #define MB_YESNOCANCEL       3
+ #define MB_YESNO             4
+ #define MB_RETRYCANCEL       5
+ #define MB_CANCELTRYCONTINUE 6
+ #define MB_ICONERROR       0x10 // stop icon
+ #define MB_ICONQUESTION    0x20 // ?
+ #define MB_ICONEXCLAMATION 0x30 // !
+ #define MB_ICONINFORMATION 0x40 // (i) icon
+ #define MB_DEFBUTTON2      0x100
+ #define MB_DEFBUTTON3      0x200
+ #define MB_DEFBUTTON4      0x300
+ #define MB_SYSTEMMODAL     0x1000 // topmost
+ #define MB_TASKMODAL       0x2000 // disables all app toplevel windows, even when passed hwnd is NULL
+ #define MB_SERVICENOTIFICATION 0x00200000 // display on current active desktop, hwnd MUST BE NULL
+ extern "C" int __stdcall MessageBoxExA(HWND hwnd, const char * text, const char * caption, UINT mb_flags, unsigned short wLangId);
+ // return values
+ #define IDOK     1
+ #define IDCANCEL 2
+ #define IDABORT  3
+ #define IDRETRY  4
+ #define IDIGNORE 5
+ #define IDYES    6
+ #define IDNO     7
+ #define IDTRYAGAIN 10
+ #define IDCONTINUE 11
+#endif
+
+#ifdef NOCONSOLE
+typedef unsigned short ATOM;
+typedef void* LRESULT;
+typedef void* WPARAM;
+typedef void* LPARAM;
+#pragma pack(push,4)
+typedef struct _WNDCLASSEXW {
+    UINT   cb;
+    UINT   style;
+    LRESULT (__stdcall * pfnWndProc)(HWND, UINT, WPARAM, LPARAM);
+    int     cbClassExtra;
+    int     cbWndExtra;
+    HMODULE hInstance;
+    void*   hIcon;
+    void*   hCursor;
+    void*   hbrBackground;
+    wchar_t* pszMenuName;
+    wchar_t* pszClassName;
+    void *  hIconSm;
+} WNDCLASSEXW;
+#pragma pack(pop)
+extern "C" ATOM __stdcall RegisterClassExW(WNDCLASSEXW * pcls);
+#define CS_GLOBALCLASS 0x4000
+#define WM_CLOSE 0x0010
+#define WM_QUIT  0x0012
+#define HWND_MESSAGE     ((HWND)-3)
+extern "C" HWND __stdcall CreateWindowExW(UINT dwExStyle, wchar_t* pszClass, wchar_t* pszWindow, UINT dwStyle, int x, int y, int cx, int cy, HWND hwndParent, void* hmenu, HMODULE hInst, void* lParam);
+extern "C" LRESULT __stdcall DefWindowProcW(HWND hwnd, UINT, WPARAM, LPARAM);
+
+typedef struct _MSG {
+    HWND hwnd;
+    UINT id;
+    void * wparam;
+    void * lparam;
+    UINT   time;
+    int    x;
+    int    y;
+} MSG;
+extern "C" int __stdcall PeekMessageW(MSG * msg, HWND, UINT idMin, UINT idMax, UINT uRemove);
+extern "C" LRESULT __stdcall DispatchMessageW(MSG * msg);
+#define PM_NOREMOVE 0
+#define PM_REMOVE   1
+#define PM_NOYIELD  2
+#endif
+
 
 #ifdef ENABLE_JOB_OBJECTS
 extern "C" HANDLE __stdcall CreateJobObjectW(void* sec, const wchar_t* name);
