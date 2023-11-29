@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include <algorithm>
 #include <limits.h>
 #include <string.h>
 #include "condor_config.h"
@@ -60,12 +61,6 @@ CronJob::CronJob( CronJobParams *params, CronJobMgr &mgr )
 	// Build my output buffers
 	m_stdOutBuf = new CronJobOut( *this );
 	m_stdErrBuf = new CronJobErr( *this );
-
-# if CRONJOB_PIPEIO_DEBUG
-	TodoBufSize = 20 * 1024;
-	TodoWriteNum = TodoBufWrap = TodoBufOffset = 0;
-	TodoBuffer = (char *) malloc( TodoBufSize );
-# endif
 
 	// Register my reaper
 	m_reaperId = daemonCore->Register_Reaper( 
@@ -443,18 +438,26 @@ CronJob::Reaper( int exitPid, int exitStatus )
 	// probably a good thing for the devel series...
 	if( failed ) {
 		int linecount = m_stdOutBuf->GetQueueSize();
-		if( linecount == 0 ) {
+		if ((linecount == 0 ) && m_stdErrBuf->m_content.empty()) {
 			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced no output\n",
 			         GetName(), exitPid );
 		} else {
-			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %d lines of output, which follow.\n",
-			         GetName(), exitPid, linecount );
+			if (linecount != 0) {
+				dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %d lines of standard output, which follow.\n",
+						GetName(), exitPid, linecount );
+
+				// Process the output
+				ProcessOutputQueue( failed, exitPid );
+			}
+			if (!m_stdErrBuf->m_content.empty()) {
+				size_t errLines = std::count(m_stdErrBuf->m_content.begin(), m_stdErrBuf->m_content.end(), '\n');
+				dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %zu lines of standard error, which follow.\n",
+						GetName(), exitPid, errLines );
+				dprintf(D_ALWAYS, "%s", m_stdErrBuf->m_content.c_str());
+				m_stdErrBuf->m_content.clear();
+			}
 		}
 	}
-
-	// Process the output
-	ProcessOutputQueue( failed, exitPid );
-
 	// Finally, notify my manager
 	m_mgr.JobExited( *this );
 
@@ -599,32 +602,6 @@ CronJob::StartJobProcess( void )
 	return 0;
 }
 
-// Debugging
-# if CRONJOB_PIPEIO_DEBUG
-void
-CronJob::TodoWrite( void )
-{
-	char	fname[1024];
-	FILE	*fp;
-	snprintf( fname, 1024,
-			  "todo.%s.%06d.%02d", name, getpid(), TodoWriteNum++ );
-	dprintf( D_ALWAYS, "%s: Writing input log '%s'\n", GetName(), fname );
-
-	if ( ( fp = safe_fopen_wrapper_follow( fname, "w" ) ) != NULL ) {
-		if ( TodoBufWrap ) {
-			fwrite( TodoBuffer + TodoBufOffset,
-					TodoBufSize - TodoBufOffset,
-					1,
-					fp );
-		}
-		fwrite( TodoBuffer, TodoBufOffset, 1, fp );
-		fclose( fp );
-	}
-	TodoBufOffset = 0;
-	TodoBufWrap = 0;
-}
-# endif
-
 // Data is available on Standard Out.  Read it!
 //  Note that we set the pipe to be non-blocking when we created it
 int
@@ -651,24 +628,6 @@ CronJob::StdoutHandler ( int   /*pipe*/ )
 		// Positve value is byte count
 		else if ( bytes > 0 ) {
 			const char	*bptr = buf;
-
-			// TODO
-# 		  if CRONJOB_PIPEIO_DEBUG
-			if ( TodoBuffer ) {
-				char	*OutPtr = TodoBuffer + TodoBufOffset;
-				int		Count = bytes;
-				char	*InPtr = buf;
-				while( Count-- ) {
-					*OutPtr++ = *InPtr++;
-					if ( ++TodoBufOffset >= TodoBufSize ) {
-						TodoBufOffset = 0;
-						TodoBufWrap++;
-						OutPtr = TodoBuffer;
-					}
-				}
-			}
-#		  endif
-			// End TODO
 
 			// stdOutBuf->Output() returns 1 if it finds '-', otherwise 0,
 			// so that's what Buffer returns, too...
@@ -719,14 +678,11 @@ CronJob::StderrHandler ( int   /*pipe*/ )
 		m_stdErr = -1;
 	}
 
-	// Positve value is byte count
+	// Positive value is byte count
 	else if ( bytes > 0 )
 	{
-		const char	*bptr = buf;
-
-		while( m_stdErrBuf->Buffer( &bptr, &bytes ) > 0 ) {
-			// Do nothing for now
-		}
+		std::string line{buf, (std::string::size_type)bytes};
+		m_stdErrBuf->m_content += line;
 	}
 
 	// Negative is an error; check for EWOULDBLOCK
@@ -738,9 +694,6 @@ CronJob::StderrHandler ( int   /*pipe*/ )
 		return -1;
 	}
 
-
-	// Flush the buffers
-	m_stdErrBuf->Flush();
 	return 0;
 }
 

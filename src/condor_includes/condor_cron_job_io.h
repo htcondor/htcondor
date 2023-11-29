@@ -62,6 +62,7 @@ class CronJobErr : public CronJobIO
 	CronJobErr( CronJob &job );
 	virtual ~CronJobErr( void ) {};
 	virtual int Output( const char *buf, int len );
+	std::string m_content;
 };
 
 #endif /* _CONDOR_CRON_JOB_IO_H */

@@ -1,0 +1,73 @@
+#!/usr/bin/env pytest
+
+#
+# Test startd cron and STARTD_CRON_LOG_NON_ZERO_EXIT
+
+import pytest
+import logging
+import time
+
+import htcondor
+
+from ornithology import (
+    config,
+    standup,
+    action,
+    Condor,
+    write_file,
+    JobID,
+    SetJobStatus,
+    JobStatus,
+)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+goodcronscript = """#!/usr/bin/env python3
+import sys
+print("GoodCron = 123\\n")
+sys.stderr.write("GoodCron writes to stderr\\n")
+sys.exit(0)
+"""
+
+badcronscript = """#!/usr/bin/env python3
+import sys
+print("BadCron = 123\\n")
+sys.stderr.write("BadCron writes to stderr\\n")
+sys.exit(37)
+"""
+
+@standup
+def cronscripts(test_dir):
+    write_file(test_dir / "goodcron.py", goodcronscript)
+    write_file(test_dir / "badcron.py",  badcronscript)
+
+
+@standup
+def condor(test_dir, cronscripts):
+    with Condor(
+        local_dir=test_dir / "condor",
+        config={
+            "STARTD_CRON_LOG_NON_ZERO_EXIT": True,
+            "STARTD_CRON_JOBLIST": "GOODCRON BADCRON",
+            "STARTD_CRON_GOODCRON_EXECUTABLE": f"{test_dir}/goodcron.py",
+            "STARTD_CRON_GOODCRON_MODE": "Oneshot",
+            "STARTD_CRON_BADCRON_EXECUTABLE": f"{test_dir}/badcron.py",
+            "STARTD_CRON_BADCRON_MODE": "Oneshot",
+        },
+    ) as condor:
+        yield condor
+
+@action
+def check_logs(condor, test_dir):
+    with open(test_dir / "condor/log/StartLog") as f:
+        found_bad_cron = False
+        for line in f:
+            assert("GoodCron writes to stderr" not in line)
+            if ("BadCron writes to stderr" in line):
+                found_bad_cron = True
+    return found_bad_cron
+
+class TestStartdCron:
+    def test_startd_cron(self, check_logs):
+        assert check_logs
