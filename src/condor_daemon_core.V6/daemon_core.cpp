@@ -5544,7 +5544,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             PidEnvID*   penvid,
                             const char* login,
                             gid_t*      group,
-                            const FamilyInfo* fi)
+                            FamilyInfo* fi)
 {
 	double begintime = _condor_debug_get_time_double();
 	double runtime = begintime;
@@ -5653,7 +5653,7 @@ public:
 		pid_t the_forker_pid,
 		time_t the_time_of_fork,
 		unsigned int the_mii,
-		const FamilyInfo *the_family_info,
+		      FamilyInfo *the_family_info,
 		const char *the_cwd,
 		const char *the_executable,
 		const char *the_executable_fullpath,
@@ -5725,7 +5725,7 @@ private:
 	const pid_t m_forker_pid;
 	const time_t m_time_of_fork;
 	const unsigned int m_mii;
-	const FamilyInfo *m_family_info;
+	      FamilyInfo *m_family_info;
 	const char *m_cwd;
 	const char *m_executable;
 	const char *m_executable_fullpath;
