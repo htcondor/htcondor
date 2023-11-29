@@ -166,14 +166,8 @@ class ClassAd(UserDict):
         if len(self.data) == 0:
             return '[ ]'
 
-        newClassAd = '[ '
-        # It might actually be faster to write this as `"\n".join([...])`
-        # where [...] is a list comprehension because that will only
-        # allocate the final string once.
-        for key, value in self.data.items():
-            value_str = _valueAsNewClassAd(value)
-            newClassAd += (f"{key} = {value_str}; ")
-        newClassAd = newClassAd[0:-2] + " ]"
+        newClassAd = '[ ' + "; ".join([f"{key} = {_valueAsNewClassAd(value)}" for key, value in self.data.items()]) + '; ]';
+
         return newClassAd
 
 
