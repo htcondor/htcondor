@@ -137,7 +137,7 @@ _flatten( PyObject * /* self */, PyObject * args ) {
 
 	classad::ExprTree * expr = NULL;
 	if(! parser.ParseExpression( expr_str, expr, true )) {
-		PyErr_SetString( PyExc_AssertionError, "_evaluate() passed invalid expr_str" );
+		PyErr_SetString( PyExc_AssertionError, "_flatten() passed invalid expr_str" );
 		return NULL;
 	}
 	// FIXME: assign expr to a classad_shared_ptr now?
@@ -148,7 +148,7 @@ _flatten( PyObject * /* self */, PyObject * args ) {
 		if( scope == NULL ) {
 			delete( expr );  // FIXME?
 
-			PyErr_SetString( PyExc_AssertionError, "_evaluate() passed invalid scope_str" );
+			PyErr_SetString( PyExc_AssertionError, "_flatten() passed invalid scope_str" );
 			return NULL;
 		}
 	}
@@ -251,7 +251,13 @@ _evaluate( PyObject * /* self */, PyObject * args ) {
 		classad::EvalState state;
 		rv = expr->Evaluate( state, value );
 	}
-	if( PyErr_Occurred() ) { return NULL; }
+	if( PyErr_Occurred() ) {
+		delete( expr ); // FIXME?
+		delete( scope ); // FIXME?
+		delete( target ); // FIXME?
+
+		return NULL;
+	}
 	if(! rv) {
 		delete( expr ); // FIXME?
 		delete( scope ); // FIXME?
@@ -262,6 +268,10 @@ _evaluate( PyObject * /* self */, PyObject * args ) {
 		PyErr_SetString( PyExc_ValueError, "Expression failed to evaluate" );
 		return NULL;
 	}
+
+	delete( expr ); // FIXME?
+	delete( scope ); // FIXME?
+	delete( target ); // FIXME?
 
 	// FIXME: if value is classad::Value::ERROR_VALUE, raise ClassAdErrorValue,
 	// or depend on the Python layer to do that instead?
