@@ -16,7 +16,7 @@ GetInstances::operator() () {
 	scratchpad->LookupString( "AnnexID", annexID );
 
 	std::string errorCode;
-	StringList returnStatus;
+	std::vector<std::string> returnStatus;
 	int rc = gahp->ec2_vm_status_all(
 		service_url, public_key_file, secret_key_file,
 		"tag-key", "htcondor:AnnexName",
@@ -31,17 +31,16 @@ GetInstances::operator() () {
 		unsigned count = 0;
 		std::string iName;
 
-		returnStatus.rewind();
-		ASSERT( returnStatus.number() % 8 == 0 );
-		for( int i = 0; i < returnStatus.number(); i += 8 ) {
-			std::string instanceID = returnStatus.next();
-			std::string status = returnStatus.next();
-			std::string clientToken = returnStatus.next();
-			std::string keyName = returnStatus.next();
-			std::string stateReasonCode = returnStatus.next();
-			std::string publicDNSName = returnStatus.next();
-			std::string spotFleetRequestID = emptyStringIfNull( returnStatus.next() );
-			std::string annexName = emptyStringIfNull( returnStatus.next() );
+		ASSERT( returnStatus.size() % 8 == 0 );
+		for( size_t i = 0; i < returnStatus.size(); i += 8 ) {
+			std::string instanceID = returnStatus[i];
+			std::string status = returnStatus[i + 1];
+			std::string clientToken = returnStatus[i + 2];
+			std::string keyName = returnStatus[i + 3];
+			std::string stateReasonCode = returnStatus[i + 4];
+			std::string publicDNSName = returnStatus[i + 5];
+			std::string spotFleetRequestID = emptyStringIfNull( returnStatus[i + 6].c_str() );
+			std::string annexName = emptyStringIfNull( returnStatus[i + 7].c_str() );
 
 			// If it doesn't have an annex name, it isn't an annex.
 			if( annexName.empty()) {

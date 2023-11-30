@@ -173,11 +173,7 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	// get labels
 	std::string buffer;
 	if( jobAd->LookupString( ATTR_CLOUD_LABEL_NAMES, buffer ) ) {
-		char * labelName = NULL;
-		StringList labelNames( buffer.c_str() );
-
-		labelNames.rewind();
-		while( (labelName = labelNames.next()) ) {
+		for (const auto& labelName : StringTokenIterator(buffer)) {
 			std::string labelAttr(ATTR_CLOUD_LABEL_PREFIX);
 			labelAttr += labelName;
 

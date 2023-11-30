@@ -11,23 +11,6 @@ EC2GahpClient::~EC2GahpClient() { }
 
 // Utility function.
 void
-pushStringListBack( std::vector< YourString > & v, StringList & sl ) {
-	const char * text = NULL;
-
-	sl.rewind();
-	int count = 0;
-	if( sl.number() > 0 ) {
-		while( (text = sl.next()) ) {
-			v.emplace_back(text );
-			++count;
-		}
-	}
-	ASSERT( count == sl.number() );
-
-	v.emplace_back(NULLSTRING );
-}
-
-void
 pushVectorBack( std::vector< YourString > & arguments, const std::vector< std::string > & v ) {
 	for(const auto &item: v) {
 		arguments.emplace_back(item);
@@ -54,9 +37,9 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 								 const std::string & iam_profile_arn,
 								 const std::string & iam_profile_name,
 								 unsigned int maxCount,
-								 StringList & groupnames,
-								 StringList & groupids,
-								 StringList & parametersAndValues,
+								 const std::vector<std::string> & groupnames,
+								 const std::vector<std::string> & groupids,
+								 const std::vector<std::string> & parametersAndValues,
 								 std::vector< std::string > &instance_ids,
 								 std::string &error_code)
 {
@@ -90,9 +73,9 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 	formatstr( maxCountString, "%u", maxCount );
 	arguments.emplace_back(maxCountString );
 
-	pushStringListBack( arguments, groupnames );
-	pushStringListBack( arguments, groupids );
-	pushStringListBack( arguments, parametersAndValues );
+	pushVectorBack( arguments, groupnames );
+	pushVectorBack( arguments, groupids );
+	pushVectorBack( arguments, parametersAndValues );
 	int cgf = callGahpFunction( command, arguments, result, low_prio );
 	if( cgf != 0 ) { return cgf; }
 
@@ -230,7 +213,7 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 	}
 }
 
-int EC2GahpClient::ec2_gahp_statistics( StringList & returnStatistics ) {
+int EC2GahpClient::ec2_gahp_statistics( std::vector<std::string> & returnStatistics ) {
 	server->write_line( "STATISTICS" );
 	Gahp_Args result;
 	server->read_argv( result );
@@ -242,7 +225,7 @@ int EC2GahpClient::ec2_gahp_statistics( StringList & returnStatistics ) {
 
 	// For now, don't bother to check how many statistics came back.
 	for( int i = 1; i < result.argc; ++i ) {
-		returnStatistics.append( result.argv[i] );
+		returnStatistics.emplace_back( result.argv[i] );
 	}
 
 	return 0;
@@ -251,7 +234,7 @@ int EC2GahpClient::ec2_gahp_statistics( StringList & returnStatistics ) {
 int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
                                       const std::string & publickeyfile,
                                       const std::string & privatekeyfile,
-                                      StringList & returnStatus,
+                                      std::vector<std::string> & returnStatus,
                                       std::string & error_code )
 {
     static const char * command = "EC2_VM_STATUS_ALL";
@@ -282,9 +265,8 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
             default:
                 if( (result->argc - 2) % 8 != 0 ) { EXCEPT( "Bad %s result", command ); }
                 for( int i = 2; i < result->argc; ++i ) {
-                    returnStatus.append( result->argv[i] );
+                    returnStatus.emplace_back( result->argv[i] );
                 }
-                returnStatus.rewind();
                 break;
         }
 
@@ -300,7 +282,7 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
                                       const std::string & privatekeyfile,
                                       const std::string & filterName,
                                       const std::string & filerValue,
-                                      StringList & returnStatus,
+                                      std::vector<std::string> & returnStatus,
                                       std::string & error_code )
 {
     static const char * command = "EC2_VM_STATUS_ALL";
@@ -333,43 +315,10 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
             default:
                 if( (result->argc - 2) % 8 != 0 ) { EXCEPT( "Bad %s result", command ); }
                 for( int i = 2; i < result->argc; ++i ) {
-                    returnStatus.append( result->argv[i] );
+                    returnStatus.emplace_back( result->argv[i] );
                 }
-                returnStatus.rewind();
                 break;
         }
-
-		delete result;
-		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
-	}
-}
-
-int EC2GahpClient::ec2_ping(	const std::string & service_url,
-								const std::string & publickeyfile,
-								const std::string & privatekeyfile,
-								std::string & error_code )
-{
-	// we can use "Status All" command to make sure EC2 Server is alive.
-	static const char* command = "EC2_VM_STATUS_ALL";
-
-	// callGahpFunction() checks if this command is supported.
-	CHECK_COMMON_ARGUMENTS;
-
-	Gahp_Args * result = NULL;
-	std::vector< YourString > arguments;
-	PUSH_COMMON_ARGUMENTS;
-	int cgf = callGahpFunction( command, arguments, result, high_prio );
-	if( cgf != 0 ) { return cgf; }
-
-	if ( result ) {
-		int rc = atoi(result->argv[1]);
-
-		if( result->argc == 4 ) {
-		    error_code = result->argv[2];
-		    error_string = result->argv[3];
-		}
 
 		delete result;
 		return rc;
@@ -547,7 +496,7 @@ int EC2GahpClient::ec2_associate_address( const std::string & service_url,
                                           const std::string & privatekeyfile,
                                           const std::string & instance_id,
                                           const std::string & elastic_ip,
-                                          StringList & returnStatus,
+                                          std::vector<std::string> & returnStatus,
                                           std::string & error_code )
 {
 
@@ -589,9 +538,8 @@ int EC2GahpClient::ec2_associate_address( const std::string & service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append( result->argv[i] );
+                    returnStatus.emplace_back( result->argv[i] );
                 }
-                returnStatus.rewind();
             }
         }
 
@@ -607,8 +555,8 @@ int EC2GahpClient::ec2_create_tags(	const std::string & service_url,
 									const std::string & publickeyfile,
 									const std::string & privatekeyfile,
 									const std::string & instance_id,
-									StringList &tags,
-									StringList &returnStatus,
+									const std::vector<std::string> &tags,
+									std::vector<std::string> &returnStatus,
 									std::string &error_code)
 {
     static const char* command = "EC2_VM_CREATE_TAGS";
@@ -623,7 +571,7 @@ int EC2GahpClient::ec2_create_tags(	const std::string & service_url,
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
 	arguments.emplace_back(instance_id );
-	pushStringListBack( arguments, tags );
+	pushVectorBack( arguments, tags );
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return 0; }
 
@@ -646,9 +594,8 @@ int EC2GahpClient::ec2_create_tags(	const std::string & service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append(result->argv[i]);
+                    returnStatus.emplace_back(result->argv[i]);
                 }
-                returnStatus.rewind();
             }
         }
         delete result;
@@ -665,7 +612,7 @@ int EC2GahpClient::ec2_attach_volume( const std::string & service_url,
                                       const std::string & volume_id,
                                       const std::string & instance_id,
                                       const std::string & device_id,
-                                      StringList & returnStatus,
+                                      std::vector<std::string> & returnStatus,
                                       std::string & error_code )
 {
     static const char* command = "EC2_VM_ATTACH_VOLUME";
@@ -707,9 +654,8 @@ int EC2GahpClient::ec2_attach_volume( const std::string & service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append( result->argv[i] );
+                    returnStatus.emplace_back( result->argv[i] );
                 }
-                returnStatus.rewind();
             }
         }
 
@@ -738,8 +684,8 @@ int EC2GahpClient::ec2_spot_start( const std::string & service_url,
                                    const std::string & client_token,
                                    const std::string & iam_profile_arn,
                                    const std::string & iam_profile_name,
-                                   StringList & groupnames,
-                                   StringList & groupids,
+                                   const std::vector<std::string> & groupnames,
+                                   const std::vector<std::string> & groupids,
                                    std::string & request_id,
                                    std::string & error_code )
 {
@@ -766,8 +712,8 @@ int EC2GahpClient::ec2_spot_start( const std::string & service_url,
 	arguments.emplace_back(client_token );
 	arguments.emplace_back(iam_profile_arn );
 	arguments.emplace_back(iam_profile_name );
-	pushStringListBack( arguments, groupnames );
-	pushStringListBack( arguments, groupids );
+	pushVectorBack( arguments, groupnames );
+	pushVectorBack( arguments, groupids );
 	int cgf = callGahpFunction( command, arguments, result, low_prio );
 	if( cgf != 0 ) { return cgf; }
 
@@ -861,7 +807,7 @@ int EC2GahpClient::ec2_spot_stop( const std::string & service_url,
 int EC2GahpClient::ec2_spot_status_all( const std::string & service_url,
                                         const std::string & publickeyfile,
                                         const std::string & privatekeyfile,
-                                        StringList & returnStatus,
+                                        std::vector<std::string> & returnStatus,
                                         std::string & error_code )
 {
     static const char * command = "EC2_VM_STATUS_ALL_SPOT";
@@ -893,9 +839,9 @@ int EC2GahpClient::ec2_spot_status_all( const std::string & service_url,
         } else if( (result->argc - 2) % 5 == 0 ) {
             for( int i = 2; i < result->argc; ++i ) {
                 if( strcmp( result->argv[i], NULLSTRING ) ) {
-                    returnStatus.append( result->argv[i] );
+                    returnStatus.emplace_back( result->argv[i] );
                 } else {
-                    returnStatus.append( "" );
+                    returnStatus.emplace_back( "" );
                 }
             }
         } else {
@@ -909,93 +855,6 @@ int EC2GahpClient::ec2_spot_status_all( const std::string & service_url,
 	}
 }
 
-
-void
-setAttribute(	std::string & s,
-				const YourString & attribute,
-				const YourString & value,
-				bool addTrailingComma = true  ) {
-	if( attribute.ptr() == NULL || value.ptr() == NULL ) { return; }
-	s.append( "\"" ).append( attribute ).append( "\" : " );
-	s.append( "\"" ).append( value ).append( "\"" );
-	if( addTrailingComma ) {
-		s.append( ", " );
-	}
-}
-
-void
-setLastAttribute(	std::string & s,
-					const YourString & attribute,
-					const YourString & value ) {
-	setAttribute( s, attribute, value, false );
-}
-
-void EC2GahpClient::LaunchConfiguration::convertToJSON( std::string & s ) const {
-	s.append( "{ " );
-	setAttribute( s, "ImageId", ami_id );
-	setAttribute( s, "SpotPrice", spot_price );
-	setAttribute( s, "KeyName", keypair );
-
-	// The GAHP will base64-encode the user data.
-	setAttribute( s, "UserData", user_data );
-	setAttribute( s, "InstanceType", instance_type );
-	setAttribute( s, "SubnetId", vpc_subnet );
-
-	// Actually part of the 'Placement' subhash.
-	setAttribute( s, "AvailabilityZone", availability_zone );
-
-	// Actually part of the 'BlockDeviceMappings' subhash.
-	setAttribute( s, "BlockDeviceMapping", block_device_mapping );
-
-	// Actually part of the 'IamInstanceProfile' subhash.
-	setAttribute( s, "IAMProfileARN", iam_profile_arn );
-	setAttribute( s, "IAMProfileName", iam_profile_name );
-
-	// Actually part of the 'SecurityGroup's subhash.
-	char * tmp = groupnames->print_to_delimed_string( ", " );
-	setAttribute( s, "SecurityGroupNames", tmp );
-	free( tmp );
-	tmp = groupids->print_to_delimed_string( ", " );
-	setAttribute( s, "SecurityGroupIDs", tmp );
-	free( tmp );
-
-	setLastAttribute( s, "WeightedCapacity", weighted_capacity );
-	s.append( " }" );
-}
-
-int EC2GahpClient::bulk_start(	const std::string & service_url,
-								const std::string & publickeyfile,
-								const std::string & privatekeyfile,
-
-								const std::string & client_token,
-								const std::string & spot_price,
-								const std::string & target_capacity,
-								const std::string & iam_fleet_role,
-								const std::string & allocation_strategy,
-								const std::string & valid_until,
-
-								const std::vector< LaunchConfiguration > & launch_configurations,
-
-								std::string & bulkRequestID,
-								std::string & error_code ) {
-	// One big copy is cheaper than a bunch of small reallocations,
-	// so convert the launch configuration(s) to JSON in the large buffer
-	// and copy it over to the vector (since YourString doesn't own the
-	// JSON, some local in this function must instead).
-	std::string buffer( 1024, '\0' );
-	std::vector< std::string > lcStrings( launch_configurations.size() );
-	if( launch_configurations.size() <= 0 ) { return GAHPCLIENT_COMMAND_NOT_SUPPORTED; }
-	for( unsigned i = 0; i < launch_configurations.size(); ++i ) {
-		buffer.clear();
-		launch_configurations[i].convertToJSON( buffer );
-		lcStrings[i] = buffer;
-	}
-
-	return bulk_start(	service_url, publickeyfile, privatekeyfile,
-						client_token, spot_price, target_capacity,
-						iam_fleet_role, allocation_strategy, valid_until,
-						lcStrings, bulkRequestID, error_code );
-}
 
 int EC2GahpClient::bulk_start(	const std::string & service_url,
 								const std::string & publickeyfile,
@@ -1102,7 +961,7 @@ int EC2GahpClient::bulk_stop(	const std::string & service_url,
 int EC2GahpClient::bulk_query(	const std::string & service_url,
 								const std::string & publickeyfile,
 								const std::string & privatekeyfile,
-								StringList & returnStatus,
+								std::vector<std::string> & returnStatus,
 								std::string & error_code ) {
 	static const char * command = "EC2_BULK_QUERY";
 
@@ -1131,9 +990,8 @@ int EC2GahpClient::bulk_query(	const std::string & service_url,
 
 			rc = atoi( result->argv[1] );
 			for( int i = 2; i < result->argc; ++i ) {
-				returnStatus.append( result->argv[i] );
+				returnStatus.emplace_back( result->argv[i] );
 			}
-			returnStatus.rewind();
 		}
 
 		delete result;

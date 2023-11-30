@@ -629,41 +629,6 @@ class EC2GahpClient : public GahpClient {
 
 							std::string & error_code );
 
-		struct LaunchConfiguration {
-			YourString ami_id;
-			YourString spot_price;
-			YourString keypair;
-			YourString user_data;
-			YourString instance_type;
-			YourString availability_zone;
-			YourString vpc_subnet;
-			YourString block_device_mapping;
-			YourString iam_profile_arn;
-			YourString iam_profile_name;
-			StringList * groupnames;
-			StringList * groupids;
-
-			YourString weighted_capacity;
-
-			LaunchConfiguration() : groupnames( NULL ), groupids( NULL ) { }
-			LaunchConfiguration(	YourString a, YourString b, YourString c,
-									YourString d, YourString f,
-									YourString g, YourString h,
-									YourString j, YourString k,
-									YourString l,
-									StringList * m, StringList * n,
-									YourString o ) :
-					ami_id( a ), spot_price( b ), keypair( c ),
-					user_data( d ), instance_type( f ),
-					availability_zone( g ), vpc_subnet( h ),
-					block_device_mapping( j ), iam_profile_arn( k ),
-					iam_profile_name( l ),
-					groupnames( m ), groupids( n ),
-					weighted_capacity( o ) { }
-
-			void convertToJSON( std::string & s ) const;
-		};
-
 		int s3_upload(	const std::string & service_url,
 						const std::string & publickeyfile,
 						const std::string & privatekeyfile,
@@ -672,22 +637,6 @@ class EC2GahpClient : public GahpClient {
 						const std::string & fileName,
 						const std::string & path,
 
-						std::string & error_code );
-
-		int bulk_start(	const std::string & service_url,
-						const std::string & publickeyfile,
-						const std::string & privatekeyfile,
-
-						const std::string & client_token,
-						const std::string & spot_price,
-						const std::string & target_capacity,
-						const std::string & iam_fleet_role,
-						const std::string & allocation_strategy,
-						const std::string & valid_until,
-
-						const std::vector< LaunchConfiguration > & launch_configurations,
-
-						std::string & bulkRequestID,
 						std::string & error_code );
 
 		int bulk_start(	const std::string & service_url,
@@ -718,7 +667,7 @@ class EC2GahpClient : public GahpClient {
 						const std::string & publickeyfile,
 						const std::string & privatekeyfile,
 
-						StringList & returnStatus,
+						std::vector<std::string> & returnStatus,
 						std::string & error_code );
 
 		int ec2_vm_start( const std::string & service_url,
@@ -737,9 +686,9 @@ class EC2GahpClient : public GahpClient {
 						  const std::string & iam_profile_arn,
 						  const std::string & iam_profile_name,
 						  unsigned int maxCount,
-						  StringList & groupnames,
-						  StringList & groupids,
-						  StringList & parametersAndValues,
+						  const std::vector<std::string> & groupnames,
+						  const std::vector<std::string> & groupids,
+						  const std::vector<std::string> & parametersAndValues,
 						  std::vector< std::string > & instance_ids,
 						  std::string & error_code );
 
@@ -758,7 +707,7 @@ class EC2GahpClient : public GahpClient {
 		int ec2_vm_status_all( const std::string & service_url,
 							   const std::string & publickeyfile,
 							   const std::string & privatekeyfile,
-							   StringList & returnStatus,
+							   std::vector<std::string> & returnStatus,
 							   std::string & error_code );
 
 		int ec2_vm_status_all( const std::string & service_url,
@@ -766,15 +715,10 @@ class EC2GahpClient : public GahpClient {
 							   const std::string & privatekeyfile,
 							   const std::string & filterName,
 							   const std::string & filterValue,
-							   StringList & returnStatus,
+							   std::vector<std::string> & returnStatus,
 							   std::string & error_code );
 
-		int ec2_gahp_statistics( StringList & returnStatistics );
-
-		int ec2_ping( const std::string & service_url,
-					  const std::string & publickeyfile,
-					  const std::string & privatekeyfile,
-					  std::string & error_code );
+		int ec2_gahp_statistics( std::vector<std::string> & returnStatistics );
 
 		int ec2_vm_server_type( const std::string & service_url,
 								const std::string & publickeyfile,
@@ -803,7 +747,7 @@ class EC2GahpClient : public GahpClient {
                                    const std::string & privatekeyfile,
                                    const std::string & instance_id,
                                    const std::string & elastic_ip,
-                                   StringList & returnStatus,
+                                   std::vector<std::string> & returnStatus,
                                    std::string & error_code );
 
 		// Used to associate a tag with an resource, like a running instance
@@ -811,8 +755,8 @@ class EC2GahpClient : public GahpClient {
 							 const std::string & publickeyfile,
 							 const std::string & privatekeyfile,
 							 const std::string & instance_id,
-							 StringList & tags,
-							 StringList & returnStatus,
+							 const std::vector<std::string> & tags,
+							 std::vector<std::string> & returnStatus,
 							 std::string & error_code );
 
 		/**
@@ -824,7 +768,7 @@ class EC2GahpClient : public GahpClient {
                                const std::string & volume_id,
 							   const std::string & instance_id,
                                const std::string & device_id,
-                               StringList & returnStatus,
+                               std::vector<std::string> & returnStatus,
                                std::string & error_code );
 
         // Is there a particular reason these aren't const references?
@@ -843,8 +787,8 @@ class EC2GahpClient : public GahpClient {
                             const std::string & client_token,
                             const std::string & iam_profile_arn,
                             const std::string & iam_profile_name,
-                            StringList & groupnames,
-                            StringList & groupids,
+                            const std::vector<std::string> & groupnames,
+                            const std::vector<std::string> & groupids,
                             std::string & request_id,
                             std::string & error_code );
 
@@ -857,7 +801,7 @@ class EC2GahpClient : public GahpClient {
         int ec2_spot_status_all( const std::string & service_url,
                                  const std::string & publickeyfile,
                                  const std::string & privatekeyfile,
-                                 StringList & returnStatus,
+                                 std::vector<std::string> & returnStatus,
                                  std::string & error_code );
 };
 
