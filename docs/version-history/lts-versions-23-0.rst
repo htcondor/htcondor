@@ -37,6 +37,11 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a crash in the python bindings when job submit fails due to
+  any reason.  A common reason might be when :macro:`SUBMIT_REQUIREMENT_NAMES`
+  fails.
+  :jira:`1931`
+
 - There is a fixed size limit of 5120 bytes for chip commands.  The
   starter now returns an error, and the chirp_client prints out
   an error when requested to send a chirp command over this limit.
