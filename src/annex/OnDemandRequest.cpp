@@ -170,9 +170,9 @@ OnDemandRequest::operator() () {
 		std::string user_data, user_data_file;
 		std::string availability_zone, vpc_subnet, vpc_id;
 		std::string block_device_mapping, iam_profile_name;
-		std::vector<std::string> group_names, group_ids, parameters_and_values;
-
-		group_ids = split(securityGroupIDs);
+		std::vector<std::string> group_names;
+		std::vector<std::string> parameters_and_values;
+		std::vector<std::string> group_ids = split(securityGroupIDs);
 
 		// Specify the htcondor:AnnexName = ${annexName} tag.
 		parameters_and_values.emplace_back( "TagSpecification.1.ResourceType" );
