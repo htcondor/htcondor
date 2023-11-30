@@ -130,19 +130,18 @@ class ClassAd(UserDict):
         :param ClassAd ad: The ad to match.
         :return: If *ad* matched this ad.
         '''
-        r = ad.get("requirements")
+        result = ad.get("requirements")
 
-        if not isinstance(r, Expression):
-            return False
+        # Allow `requirements = True` to work.
+        if isinstance(result, Expression):
+            result = result.evaluate(my=self)
 
-        e = r.evaluate(my=self)
-
-        if isinstance(e, bool):
-            return e
+        if isinstance(result, bool):
+            return result
 
         # In version 1, non-zero numeric values were also true.
-        if isinstance(e, int) or isinstance(e, float):
-            return bool(e)
+        if isinstance(result, int) or isinstance(result, float):
+            return bool(result)
 
         return False
 
