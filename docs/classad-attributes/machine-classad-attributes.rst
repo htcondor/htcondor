@@ -55,7 +55,7 @@ Machine ClassAd Attributes
     attribute will be ``True``. By default, it is ``False``.
 
 :classad-attribute-def:`CgroupEnforced`
-	If a job is running inside a per-job cgroup, this boolean attribute
+    If a job is running inside a per-job cgroup, this boolean attribute
     is ``True``
 
 :classad-attribute-def:`ClaimEndTime`

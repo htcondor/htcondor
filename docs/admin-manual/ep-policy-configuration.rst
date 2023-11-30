@@ -8,8 +8,7 @@ HTCondor Execution Points, or EP's, are the machines where jobs run.  Every
 Execution Point has an implied human owner who can control the policy of these
 machines in very fine detail.  The configuration of an EP is responsible for:
 
-.. sidebar::
-   Execution Point (EP) Diagram
+.. sidebar:: Execution Point (EP) Diagram
 
    .. mermaid::
       :caption: Daemons for a Execution Point, one *condor_starter* per running job.
@@ -47,7 +46,7 @@ machines in very fine detail.  The configuration of an EP is responsible for:
    and belongs to the Astronomy department), or they may be dynamically
    discovered by scripts (e.g.  The temperature of the CPU is currently 40
    degrees C) This is covered in section
-   :ref:`admin-manual/ep-policy-configuration:custom and system EP attributes` below.
+   :ref:`admin-manual/ep-policy-configuration:custom and system slot attributes` below.
 
 #. Providing *an environment, and services for running jobs*. These services
    may include the ability to run in a container or VM environment, such as
@@ -110,7 +109,8 @@ partitionable slot (often "1"). Dynamic slots have the attribute
 ``DynamicSlot`` set to ``True``, and the attribute ``SlotType`` set to
 ``Dynamic``.
 
-.. sidebar::
+.. sidebar:: Discovering classad attribute values
+
     The values of attributes in all slots on a machine may be listed by using the command:
 
     .. code-block:: console
@@ -437,7 +437,7 @@ Assume that JobA is allocated to this slot. JobA includes the following
 resource requests:
 
 .. code-block:: condor-submit
-``
+
 
     request_cpu = 3
     request_memory = 1024
@@ -3078,8 +3078,8 @@ Or, if slot 1 should be reserved for interactive jobs:
 
     START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 
-Custom and system EP attributes
--------------------------------
+Custom and system slot attributes
+---------------------------------
 
 The *condor_startd* advertises one classad per slot to the *condor_collector*.  Each of
 these ads has many attributes. See :ref:`classad-attributes/machine-classad-attributes:machine classad attributes`
@@ -3130,6 +3130,34 @@ select the correct program when the job is matched to a particular machine:
 
 Adding custom static attributes with STARTD_ATTRS
 '''''''''''''''''''''''''''''''''''''''''''''''''
+
+.. sidebar:: Note on classad types in slot ad attributes.
+
+   .. _quoting_custom_attributes:
+
+   Note that the right hand side of the "GenomeDBPath" variable (in this case)
+   takes the form of a classad expression.  A common mistake is to not quote
+   this properly for the type of this expression.  In particular, strings
+   are quoted with double-quotes, numeric and boolean values are not quoted,
+   and neither are expressions.  Not quoting a value that should be a string
+   results in it be treated as an expression, which likely will evalute to
+   undefined, and lead to unexpected outcomes. However, expressions
+   can be useful when used properly.  Examples of each type:
+
+   .. code-block:: condor-config
+
+      # A string value, quoted
+      GenomeDBName = "FruitFlies"
+      # Probably a mistake, because not quoted, and gets evaluated.
+      # Tries to lookup an attributes named FruitFlies.
+      # if this does not exist, returns undefined, but is
+      # NOT AN ERROR.  
+      WRONGGenomeDBName = FruitFlies
+      # A numeric value, not quoted
+      GenomeDBSizeGB = 1729
+      # An expression, not quoted (happens to evaluate to a boolean)
+      HasLargeGenomeDB = GenomeDBSizeGB > 100
+      STARTD_ATTRS = GenomeDBName GenomeDBSizeGB HasLargeGenomeDB $(STARTD_ATTRS)
 
 Administrators can add custom attributes to the slot classad that can be used
 exactly as the built-in ones, as demonstrated above.  Let's say that 
