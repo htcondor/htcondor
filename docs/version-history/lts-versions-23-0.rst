@@ -58,6 +58,10 @@ Bugs Fixed:
   to the server.
   :jira:`2157`
 
+- Updated the usage and man page of the *condor_drain* tool to include information
+  about the ``-reconfig-on-completion`` option.
+  :jira:`2164`
+
 .. _lts-version-history-2302:
 
 Version 23.0.2
