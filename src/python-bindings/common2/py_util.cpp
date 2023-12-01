@@ -7,7 +7,7 @@ get_handle_from(PyObject * py) {
 
 
 PyObject *
-py_new_htcondor2_classad(void * classAd) {
+py_new_classad2_classad(void * classAd) {
 	static PyObject * py_htcondor2_module = NULL;
 	if( py_htcondor2_module == NULL ) {
 		 py_htcondor2_module = PyImport_ImportModule( "htcondor2" );
@@ -75,19 +75,14 @@ py_new_datetime_datetime(long secs) {
 
 PyObject *
 py_new_classad_value( classad::Value::ValueType vt ) {
-	static PyObject * py_htcondor_module = NULL;
-	if( py_htcondor_module == NULL ) {
-		py_htcondor_module = PyImport_ImportModule( "htcondor2" );
-	}
-
-	static PyObject * py_htcondor_classad_module = NULL;
-	if( py_htcondor_classad_module == NULL ) {
-		py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+	static PyObject * py_classad2_module = NULL;
+	if( py_classad2_module == NULL ) {
+		py_classad2_module = PyImport_ImportModule( "classad2" );
 	}
 
 	static PyObject * py_value_class = NULL;
 	if( py_value_class == NULL ) {
-		py_value_class = PyObject_GetAttrString( py_htcondor_classad_module, "Value" );
+		py_value_class = PyObject_GetAttrString( py_classad2_module, "Value" );
 	}
 
 	return PyObject_CallFunction(py_value_class, "l", vt);
@@ -106,23 +101,17 @@ py_new_classad_value( classad::Value::ValueType vt ) {
 
 PyObject *
 py_new_classad_exprtree( ExprTree * original ) {
-	static PyObject * py_htcondor_module = NULL;
-	if( py_htcondor_module == NULL ) {
-		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
-	}
-
-	static PyObject * py_htcondor_classad_module = NULL;
-	if( py_htcondor_classad_module == NULL ) {
-		py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+	static PyObject * py_classad2_module = NULL;
+	if( py_classad2_module == NULL ) {
+		 py_classad2_module = PyImport_ImportModule( "classad2" );
 	}
 
 	static PyObject * py_exprtree_class = NULL;
 	if( py_exprtree_class == NULL ) {
-		py_exprtree_class = PyObject_GetAttrString( py_htcondor_classad_module, "ExprTree" );
+		py_exprtree_class = PyObject_GetAttrString( py_classad2_module, "ExprTree" );
 	}
 
 	ExprTree * copy = original->Copy();
-	// ClassAd * parentScope = copy->GetParentScope();
 	copy->SetParentScope(NULL);
 
 	PyObject * pyExprTree = PyObject_CallObject(py_exprtree_class, NULL);
@@ -143,19 +132,14 @@ py_new_classad_exprtree( ExprTree * original ) {
 
 int
 py_is_classad_exprtree(PyObject * py) {
-	static PyObject * py_htcondor_module = NULL;
-	if( py_htcondor_module == NULL ) {
-		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
-	}
-
-	static PyObject * py_htcondor_classad_module = NULL;
-	if( py_htcondor_classad_module == NULL ) {
-		py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+	static PyObject * py_classad2_module = NULL;
+	if( py_classad2_module == NULL ) {
+		 py_classad2_module = PyImport_ImportModule( "classad2" );
 	}
 
 	static PyObject * py_exprtree_class = NULL;
 	if( py_exprtree_class == NULL ) {
-		py_exprtree_class = PyObject_GetAttrString( py_htcondor_classad_module, "ExprTree" );
+		py_exprtree_class = PyObject_GetAttrString( py_classad2_module, "ExprTree" );
 	}
 
 	// The above should probably be factored out into its own function,
@@ -186,19 +170,14 @@ py_str_to_std_string(PyObject * py, std::string & str) {
 
 int
 py_is_classad_value(PyObject * py) {
-	static PyObject * py_htcondor_module = NULL;
-	if( py_htcondor_module == NULL ) {
-		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
-	}
-
-	static PyObject * py_htcondor_classad_module = NULL;
-	if( py_htcondor_classad_module == NULL ) {
-		py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+	static PyObject * py_classad2_module = NULL;
+	if( py_classad2_module == NULL ) {
+		 py_classad2_module = PyImport_ImportModule( "classad2" );
 	}
 
 	static PyObject * py_value_class = NULL;
 	if( py_value_class == NULL ) {
-		py_value_class = PyObject_GetAttrString( py_htcondor_classad_module, "Value" );
+		py_value_class = PyObject_GetAttrString( py_classad2_module, "Value" );
 	}
 
 	// The above should probably be factored out into its own function,
@@ -226,24 +205,19 @@ py_is_datetime_datetime(PyObject * py) {
 
 
 int
-py_is_htcondor2_classad(PyObject * py) {
-	static PyObject * py_htcondor2_module = NULL;
-	if( py_htcondor2_module == NULL ) {
-		 py_htcondor2_module = PyImport_ImportModule( "htcondor2" );
-	}
-
-	static PyObject * py_htcondor2_classad_module = NULL;
-	if( py_htcondor2_classad_module == NULL ) {
-		py_htcondor2_classad_module = PyObject_GetAttrString( py_htcondor2_module, "classad" );
+py_is_classad2_classad(PyObject * py) {
+	static PyObject * py_classad2_module = NULL;
+	if( py_classad2_module == NULL ) {
+		py_classad2_module = PyImport_ImportModule( "classad2" );
 	}
 
 	static PyObject * py_ClassAd_class = NULL;
 	if( py_ClassAd_class == NULL ) {
-		py_ClassAd_class = PyObject_GetAttrString( py_htcondor2_classad_module, "ClassAd" );
+		py_ClassAd_class = PyObject_GetAttrString( py_classad2_module, "ClassAd" );
 	}
 
 	// The above should probably be factored out into its own function,
-	// since it's identical in this one and in py_new_htcondor2_classad
+	// since it's identical in this one and in py_new_classad2_classad
 	return PyObject_IsInstance( py, py_ClassAd_class );
 }
 
