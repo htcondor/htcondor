@@ -252,6 +252,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 		//
 
 		bool resetStartOfJob = false;
+		std::vector<std::string> attrsToCopy;
 		if( to->LookupBool( "ResetStartOfJob", resetStartOfJob ) && resetStartOfJob ) {
 			// dprintf( D_FULLDEBUG, "AggregateFrom(): resetting StartOfJob* attributes...\n" );
 
@@ -261,10 +262,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 				std::string uptimeName = name.substr( 10 );
 				if( StartdCronJobParams::attributeIsSumMetric( uptimeName ) ) {
-					CopyAttribute( name, *to, uptimeName );
-
-					std::string firstUpdateName = "FirstUpdate" + uptimeName;
-					CopyAttribute( firstUpdateName, *to, "LastUpdate" );
+					attrsToCopy.emplace_back(name);
 				} else if( StartdCronJobParams::attributeIsPeakMetric( uptimeName ) ) {
 					// PEAK metrics don't use the StartOfJob* attributes.  If
 					// the current job peak isn't set when a new sample comes
@@ -277,6 +275,12 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 			}
 
 			to->Delete( "ResetStartOfJob" );
+			for (std::string &name : attrsToCopy) {
+				std::string uptimeName = name.substr( 10 );
+				CopyAttribute(name, *to, uptimeName);
+				std::string firstUpdateName = "FirstUpdate" + uptimeName;
+				CopyAttribute( firstUpdateName, *to, "LastUpdate" );
+			}
 		}
 
 		// The per-job value for PEAK metrics can only be calculated here,

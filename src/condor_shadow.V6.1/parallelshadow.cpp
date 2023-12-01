@@ -602,7 +602,7 @@ ParallelShadow::handleJobRemoval( int sig ) {
 	return 0;
 }
 
-/* This is basically a search-and-replace "#MpInOdE#" with a number 
+/* This is basically a search-and-replace "#pArAlLeLnOdE#" with a number 
    for that node...so we can address each mpi node in the submit file. */
 void
 ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {

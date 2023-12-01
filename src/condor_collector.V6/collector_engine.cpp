@@ -1218,8 +1218,7 @@ movePrivateAttrs(ClassAd& dest, ClassAd& src)
 	while (itr != src.end()) {
 		if (ClassAdAttributeIsPrivateAny(itr->first)) {
 			const std::string &name = itr->first;
-			dest.Insert(name, itr->second);
-			itr->second = nullptr; // so erase doesn't delete it;
+			dest.Insert(name, itr->second->Copy());
 			itr = src.erase(itr);
 		} else {
 			itr++;
