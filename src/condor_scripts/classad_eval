@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
 import sys
-import classad
-import htcondor
+import classad2 as classad
+import htcondor2 as htcondor
 
 
 def makeClassAd(adString, from_file=False):

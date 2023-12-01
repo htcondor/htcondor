@@ -10,7 +10,7 @@
 import time
 import logging
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     config, standup, action,

@@ -613,8 +613,6 @@ _classad_parse_next( PyObject *, PyObject * args ) {
 
     CondorClassAdFileIterator ccafi;
     if(! ccafi.begin( file, false, pType )) {
-        fclose(file);
-
         // This was a ClassAdParseError in version 1.
         PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
         return NULL;
@@ -623,7 +621,6 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     ClassAd * result = new ClassAd();
     int numAttrs = ccafi.next( * result );
     long offset = ftell( file );
-    fclose(file);
 
     if( numAttrs <= 0 ) {
         if( offset == (long)from_string_length ) {
@@ -640,6 +637,60 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     auto py_class_ad = py_new_classad2_classad(result);
     return Py_BuildValue("Ol", py_class_ad, offset);
 #endif /* WINDOWS */
+}
+
+
+static PyObject *
+_classad_parse_next_fd( PyObject *, PyObject * args ) {
+    // _classad_parse_next_fd(input_fd, int(parser))
+
+    long py_fd = -1;
+    long parser_type = -1;
+    if(! PyArg_ParseTuple( args, "ll", & py_fd, & parser_type )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    ClassAdFileParseType::ParseType pType = (ClassAdFileParseType::ParseType)parser_type;
+
+    FILE * file = fdopen( py_fd, "r" );
+    if( file == NULL ) {
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "fdopen() failed");
+        return NULL;
+    }
+
+    // We _must_ use unbuffered reads; otherwise the underyling FD's
+    // position will be wrong when it returns to Python.
+    if(setvbuf( file, NULL, _IONBF, 0 ) != 0) {
+        PyErr_SetString(PyExc_RuntimeError, "setvbuf() failed");
+        return NULL;
+    }
+
+
+
+    CondorClassAdFileIterator ccafi;
+    if(! ccafi.begin( file, false, pType )) {
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
+        return NULL;
+    }
+
+    ClassAd * result = new ClassAd();
+    int numAttrs = ccafi.next( * result );
+    if( numAttrs <= 0 ) {
+        if( feof(file) ) {
+            Py_RETURN_NONE;
+        }
+
+        // This was a ClassAdParseError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
+        return NULL;
+    }
+
+
+    return py_new_classad2_classad(result);
 }
 
 

@@ -31,6 +31,7 @@ static PyMethodDef classad2_impl_methods[] = {
     {"_classad_size", & _classad_size, METH_VARARGS, NULL},
     {"_classad_keys", & _classad_keys, METH_VARARGS, NULL},
     {"_classad_parse_next", & _classad_parse_next, METH_VARARGS, NULL},
+    {"_classad_parse_next_fd", & _classad_parse_next_fd, METH_VARARGS, NULL},
     {"_classad_quote", & _classad_quote, METH_VARARGS, NULL},
     {"_classad_unquote", & _classad_unquote, METH_VARARGS, NULL},
 

@@ -15,7 +15,7 @@
 #endtestreq
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 import os
 from shutil import copy
 from time import time

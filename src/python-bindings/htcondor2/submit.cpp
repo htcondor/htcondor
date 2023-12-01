@@ -619,11 +619,6 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     shallow.dagFiles.push_back(filename);
     shallow.primaryDagFile = filename;
 
-    // I shouldn't have to set these defaults.
-    shallow.strSubFile = shallow.primaryDagFile + ".condor.sub";
-    shallow.strSchedLog = shallow.primaryDagFile + ".nodes.log";
-    shallow.strLibOut = shallow.primaryDagFile + ".lib.out";
-    shallow.strLibErr = shallow.primaryDagFile + ".lib.err";
 
     SubmitDagDeepOptions deep;
     if(! set_dag_options( options, shallow, deep )) {
@@ -631,7 +626,12 @@ _submit_from_dag( PyObject *, PyObject * args ) {
         return NULL;
     }
 
+
     DagmanUtils du;
+    // Why not a vector?
+    std::list<std::string> lines;
+    du.setUpOptions( deep, shallow, lines );
+
     // This is almost certainly an indication of a broken design.
     du.usingPythonBindings = true;
     if(! du.ensureOutputFilesExist( deep, shallow )) {
@@ -640,17 +640,12 @@ _submit_from_dag( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    // How does ensureOutputFilesExist() work without the options being set up?
-    // Why not a vector?
-    std::list<std::string> lines;
-    du.setUpOptions( deep, shallow, lines );
-    if(! du.writeSubmitFile(deep, shallow, lines)) {
+    if(! du.writeSubmitFile( deep, shallow, lines )) {
         // This was HTCondorIOError in version 1.
         PyErr_SetString(PyExc_IOError, "Unable to write condor_dagman submit file");
         return NULL;
     }
 
-    // Why isn't this a method on DagmanUtils?
-    std::string submitFileName = filename + std::string(".condor.sub");
-    return PyUnicode_FromString(submitFileName.c_str());
+
+    return PyUnicode_FromString( shallow.strSubFile.c_str() );
 }

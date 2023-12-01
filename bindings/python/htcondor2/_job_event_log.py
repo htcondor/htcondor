@@ -1,4 +1,4 @@
-import datetime
+import time
 
 from .htcondor2_impl import _handle as handle_t
 

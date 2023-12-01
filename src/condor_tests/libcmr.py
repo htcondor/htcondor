@@ -1,7 +1,7 @@
 import logging
 import textwrap
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     write_file,
