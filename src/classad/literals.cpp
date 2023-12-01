@@ -344,7 +344,7 @@ static inline void prevNonSpaceChar(const string &Str, int &index)
  */
 static int revInt(std::string revNumStr) // by value, as we mutate the parameter
 {
-    int number;
+    int number = 0;
 
 	std::reverse(revNumStr.begin(), revNumStr.end());
 	std::ignore = std::from_chars(revNumStr.data(), revNumStr.data() + revNumStr.size(), number, 10);

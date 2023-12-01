@@ -432,12 +432,10 @@ tokenizeNumber (void)
 
 	if( numberType == INTEGER ) {
 		cut( );
-		long long l;
-		int base = 0;
+		long long l = 0;
 		if ( _useOldClassAdSemantics || jsonLex ) {
 			// Old ClassAds and JSON don't support octal or hexidecimal
 			// representations for integers.
-			base = 10;
 			if ( lexBuffer[0] == '0' && lexBuffer.length() > 1 ) {
 				tokenType = LEX_TOKEN_ERROR;
 				return( tokenType );
