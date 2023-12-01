@@ -8,7 +8,7 @@ else:
 
 class DaemonType(enum.IntEnum):
     """
-    An enumeration of known daemons types.
+    An enumeration of known daemon types.
 
     .. attribute:: Any
 
