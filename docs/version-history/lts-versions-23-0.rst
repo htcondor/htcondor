@@ -67,6 +67,9 @@ Bugs Fixed:
   about the ``-reconfig-on-completion`` option.
   :jira:`2164`
 
+- Fixed a bug where *condor_adstash* would get wedged due to a logging failure.
+  :jira:`2166`
+
 .. _lts-version-history-2302:
 
 Version 23.0.2
