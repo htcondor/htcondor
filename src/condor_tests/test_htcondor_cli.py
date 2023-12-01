@@ -39,12 +39,15 @@ queue""")
     p = default_condor.run_command(["htcondor", "job", "submit", test_dir / "helloworld.sub"])
     return p
 
-
 @action
 def resource_missing_args(default_condor, test_dir, submit_success):
     p = default_condor.run_command(["htcondor", "job", "submit", test_dir / "helloworld.sub", "--resource", "ec2"])
     return p
 
+@action
+def eventlog_read(default_condor, test_dir, submit_success):
+    p = default_condor.run_command(["htcondor", "eventlog", "read", test_dir / "helloworld.log"])
+    return p
 
 class TestHtcondorCli:
     def test_invoke_no_args(self, invoke_no_args):
@@ -66,3 +69,12 @@ class TestHtcondorCli:
 
     def test_resource_missing_args(self, test_dir, resource_missing_args):
         assert resource_missing_args.stderr == "Error while trying to run job submit:\nError: EC2 resources must specify a --runtime argument"
+
+    def test_eventlog_read(self, test_dir, submit_success, eventlog_read):
+        assert eventlog_read.stderr == ""
+        assert eventlog_read.returncode == 0 
+        lines = eventlog_read.stdout.split('\n')
+        assert len(lines) == 2
+        assert lines[0].startswith("Job ")
+        assert lines[1].startswith("1.0 ")
+
