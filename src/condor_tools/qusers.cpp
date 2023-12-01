@@ -394,7 +394,7 @@ main( int argc, const char *argv[] )
 			is_dash_arg_colon_prefix(argv[i], "af", &pcolon, 2)) {
 			// make sure we have at least one more argument
 			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
-				fprintf( stderr, "Error: -autoformat requires at last one attribute parameter\n" );
+				fprintf( stderr, "Error: -autoformat requires at least one attribute parameter\n" );
 				exit(1);
 			}
 			int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, prmask, attrs, false);
