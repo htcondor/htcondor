@@ -16,15 +16,14 @@
 
 import os
 import sys
-import time
 import signal
 import logging
-import multiprocessing
 import pprint
 import queue
 
 from functools import partial
 from pathlib import Path
+from multiprocessing import set_start_method, get_start_method
 
 import htcondor
 
@@ -82,6 +81,13 @@ def main():
     logging.warning(f"** PID: {os.getpid()}")
     logging.warning( "******************************************************")
 
+    # use multiprocessing spawn method to prevent logging deadlocks
+    try:
+        set_start_method("spawn")
+        logging.debug("Multiprocessing start method set to spawn")
+    except RuntimeError:
+        logging.debug(f"Multiprocessing start method already set to {get_start_method()}")
+
     # pretty print a list of args (but no passwords) if debugging
     safe_args = vars(args).copy()
     if "es_password" in safe_args:
@@ -131,7 +137,7 @@ def main():
             logging.warning(
                 f"{got_signal['signal_msg']}: Refreshing config and running next loop."
             )
-            args = config.get_config(sys.argv[1:])
+            args = get_config(sys.argv[1:])
         else:
             logging.warning(f"{got_signal['signal_msg']}: Exiting.")
             break
