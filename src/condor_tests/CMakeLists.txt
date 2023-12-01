@@ -860,6 +860,12 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.exe
 add_custom_target(appendmsg_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.exe tests)
 set_target_properties(appendmsg_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/sleep.exe
+			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp
+			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
+add_custom_target(sleep_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_SOURCE_DIR}/sleep.exe tests)
+set_target_properties(sleep_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
+
 endif()
 
 endif(BUILD_TESTING)
