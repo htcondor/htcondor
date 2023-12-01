@@ -462,7 +462,7 @@ main(int argc, const char* argv[])
              IsArgColon(argv[i],"autoformat", &pcolon, 5)) {
         // make sure we have at least one argument to autoformat
         if (argc <= i+1 || *(argv[i+1]) == '-') {
-            fprintf (stderr, "Error: Argument %s requires at last one attribute parameter\n", argv[i]);
+            fprintf (stderr, "Error: Argument %s requires at least one attribute parameter\n", argv[i]);
             fprintf(stderr, "\t\te.g. condor_prio %s Name\n", argv[i]);
             usage(argv[0]);
         }

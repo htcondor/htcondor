@@ -1231,7 +1231,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			is_dash_arg_colon_prefix(dash_arg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
 			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
-				fprintf( stderr, "Error: -autoformat requires at last one attribute parameter\n" );
+				fprintf( stderr, "Error: -autoformat requires at least one attribute parameter\n" );
 				exit( 1 );
 			}
 			qdo_mode = QDO_AutoFormat | QDO_Custom;

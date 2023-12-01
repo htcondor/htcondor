@@ -2519,7 +2519,7 @@ firstPass (int argc, char *argv[])
 				// make sure we have at least one more argument
 			if ( !argv[i+1] || *(argv[i+1]) == '-') {
 				fprintf( stderr, "Error: Argument %s requires "
-						 "at last one attribute parameter\n", argv[i] );
+						 "at least one attribute parameter\n", argv[i] );
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
@@ -2981,7 +2981,7 @@ secondPass (int argc, char *argv[])
 				// make sure we have at least one more argument
 			if ( !argv[i+1] || *(argv[i+1]) == '-') {
 				fprintf( stderr, "Error: Argument %s requires "
-						 "at last one attribute parameter\n", argv[i] );
+						 "at least one attribute parameter\n", argv[i] );
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}

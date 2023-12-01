@@ -1149,7 +1149,7 @@ void parse_args(int /*argc*/, char *argv[])
 				// make sure we have at least one more argument
 				if ( !argv[ixArg+1] || *(argv[ixArg+1]) == '-') {
 					fprintf (stderr, "Error: Argument %s requires "
-					         "at last one attribute parameter\n", argv[ixArg]);
+					         "at least one attribute parameter\n", argv[ixArg]);
 					fprintf (stderr, "Use \"%s -help\" for details\n", App.Name);
 					exit(1);
 				}
