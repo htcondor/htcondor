@@ -848,6 +848,10 @@ condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- 
 
 if (WINDOWS)
 
+# These helper binaries for the tests are built a bit different 
+# than our daemon/tool executables, so we don't want the compiler flags
+# for our other binaries to infect them.  Therefore, we build them
+# in this usual way.
 add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp)
@@ -865,6 +869,16 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/sleep.exe
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
 add_custom_target(sleep_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_SOURCE_DIR}/sleep.exe tests)
 set_target_properties(sleep_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
+
+# Note the additional dependency on sleep.exe [sic] below -- as both executables
+# share the same source file, if we build them in parallel, we collide on
+# the sleep.obj file, so add this otherwise unused dependency to serialize 
+# the builds and avoid the collision
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/sleepw.exe
+			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp
+			COMMAND cl /O1 /GS- /DNOCONSOLE=1 ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
+add_custom_target(sleepw_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_SOURCE_DIR}/sleepw.exe sleep_exe tests)
+set_target_properties(sleepw_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
 endif()
 
