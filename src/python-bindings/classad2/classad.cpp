@@ -409,10 +409,9 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
     }
 
     if( PyLong_Check(py_v) ) {
-        // This should almost certainly be ...AsLongLong(), but the
-        // error is in the original version and in the classad3 module,
-        // this function won't exist anyway.
-        v.SetIntegerValue(PyLong_AsLong(py_v));
+        // This was ...AsLong() in version 1, but we'll assume nobody
+        // was depending on that truncation.
+        v.SetIntegerValue(PyLong_AsLongLong(py_v));
         return classad::Literal::MakeLiteral(v);
     }
 
@@ -614,6 +613,8 @@ _classad_parse_next( PyObject *, PyObject * args ) {
 
     CondorClassAdFileIterator ccafi;
     if(! ccafi.begin( file, false, pType )) {
+        fclose(file);
+
         // This was a ClassAdParseError in version 1.
         PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
         return NULL;
@@ -622,6 +623,8 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     ClassAd * result = new ClassAd();
     int numAttrs = ccafi.next( * result );
     long offset = ftell( file );
+    fclose(file);
+
     if( numAttrs <= 0 ) {
         if( offset == (long)from_string_length ) {
             Py_INCREF(Py_None);
