@@ -56,6 +56,10 @@ Bugs Fixed:
   plugin were not reported to the *condor_starter*.
   :jira:`2464`
 
+- Removed confusing message in StartLog at shutdown about trying to
+  kill illegal pid.
+  :jira:`1012`
+
 .. _lts-version-history-23010:
 
 Version 23.0.10
