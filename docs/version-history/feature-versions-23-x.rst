@@ -38,7 +38,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Removed confusing message in StartLog at shutdown about trying to
+  kill illegal pid.
+  :jira:`1012`
 
 Version 23.2.0
 --------------
