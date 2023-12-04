@@ -496,12 +496,9 @@ Options
     of the output would cause the output to extend beyond 80 columns,
     display beyond the 80 columns.
  **-xml**
-    (output option) Display entire job ClassAds in XML format. The XML
-    format is fully defined in the reference manual, obtained from the
-    ClassAds web page, with a link at
-    `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`_.
+    (output option) Display entire job `ClassAds <https://htcondor.readthedocs.io/en/latest/classads/classad-mechanism.html>`_ in XML format.
  **-json**
-    (output option) Display entire job ClassAds in JSON format.
+    (output option) Display entire job `ClassAds <https://htcondor.readthedocs.io/en/latest/classads/classad-mechanism.html>`_ in JSON format.
  **-attributes** *Attr1[,Attr2 ...]*
     (output option) Explicitly list the attributes, by name in a comma
     separated list, which should be displayed when using the **-xml**,
