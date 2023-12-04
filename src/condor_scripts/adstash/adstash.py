@@ -16,10 +16,40 @@
 import time
 import logging
 import multiprocessing
+import queue
 
 from adstash.utils import get_schedds, get_startds, collect_process_metadata
 from adstash.ad_sources.registry import ADSTASH_AD_SOURCE_REGISTRY
 from adstash.interfaces.registry import ADSTASH_INTERFACE_REGISTRY
+
+
+def _schedd_ckpt_updater(args, checkpoint_queue, ad_source):
+    while True:
+        try:
+            checkpoint = checkpoint_queue.get(timeout=args.schedd_history_timeout)
+        except queue.Empty:
+            logging.warning(f"Nothing to consume in schedd checkpoint queue in last {args.schedd_history_timeout} seconds, exiting early.")
+            break
+        else:
+            if checkpoint is None:
+                break
+            logging.debug(f"Got schedd checkpoint {checkpoint}")
+            ad_source.update_checkpoint(checkpoint)
+
+
+def _startd_ckpt_updater(args, checkpoint_queue, ad_source):
+    while True:
+        try:
+            checkpoint = checkpoint_queue.get(timeout=args.startd_history_timeout)
+        except queue.Empty:
+            logging.warning(f"Nothing to consume in startd checkpoint queue in last {args.schedd_history_timeout} seconds, exiting early.")
+            break
+        else:
+            if checkpoint is None:
+                break
+            logging.debug(f"Got startd checkpoint {checkpoint}")
+            ad_source.update_checkpoint(checkpoint)
+
 
 def adstash(args):
     starttime = time.time()
@@ -54,10 +84,10 @@ def adstash(args):
         metadata = collect_process_metadata()
         metadata["condor_adstash_source"] = "ad_file"
         if args.read_schedd_history:
-            logging.warning(f"Skipping querying schedds since --read_ad_file was set.")
+            logging.warning("Skipping querying schedds since --read_ad_file was set.")
             args.read_schedd_history = False
         if args.read_startd_history:
-            logging.warning(f"Skipping querying startds since --read_ad_file was set.")
+            logging.warning("Skipping querying startds since --read_ad_file was set.")
             args.read_startd_history = False
         ad_source = ADSTASH_AD_SOURCE_REGISTRY["ad_file"]()()
         ads = ad_source.fetch_ads(args.read_ad_file)
@@ -71,18 +101,18 @@ def adstash(args):
         schedd_ads = []
         schedd_ads = get_schedds(args)
         logging.warning(f"There are {len(schedd_ads)} schedds to query")
-        
+
         metadata = collect_process_metadata()
         metadata["condor_adstash_source"] = "schedd_history"
 
         ad_source = ADSTASH_AD_SOURCE_REGISTRY["schedd_history"]()(checkpoint_file=args.checkpoint_file)
-        
+
         futures = []
         manager = multiprocessing.Manager()
         checkpoint_queue = manager.Queue()
 
         with multiprocessing.Pool(processes=args.threads, maxtasksperchild=1) as pool:
-        
+
             if len(schedd_ads) > 0:
                 for schedd_ad in schedd_ads:
                     name = schedd_ad["Name"]
@@ -93,31 +123,26 @@ def adstash(args):
                     )
                     futures.append((name, future))
 
-            def _schedd_ckpt_updater():
-                while True:
-                    try:
-                        checkpoint = checkpoint_queue.get()
-                        if checkpoint is None:
-                            break
-                    except EOFError as e:
-                        logging.warning(f"EOFError: Nothing to consume in checkpoint queue {str(e)}")
-                        break
-                    ad_source.update_checkpoint(checkpoint)
-
-            ckpt_updater = multiprocessing.Process(target=_schedd_ckpt_updater)
+            ckpt_updater = multiprocessing.Process(target=_schedd_ckpt_updater, args=(args, checkpoint_queue, ad_source))
             ckpt_updater.start()
 
             # Report processes if they timeout or error
             for name, future in futures:
                 try:
+                    logging.warning(f"Waiting for Schedd {name} to finish.")
                     future.get(args.schedd_history_timeout)
                 except multiprocessing.TimeoutError:
-                    logging.warning(f"Schedd {name} history timed out; ignoring progress.")
+                    logging.warning(f"Waited too long for Schedd {name}; it may still complete in the background.")
                 except Exception:
-                    logging.exception(f"Error getting progress from {name}.")
+                    logging.exception(f"Error getting progress from Schedd {name}.")
 
             checkpoint_queue.put(None)
-            ckpt_updater.join()
+            logging.warning("Joining the schedd checkpoint queue.")
+            ckpt_updater.join(timeout=(len(schedd_ads) * args.schedd_history_timeout * len(schedd_ads)))
+            logging.warning("Shutting down the schedd checkpoint queue.")
+            ckpt_updater.terminate()
+            manager.shutdown()
+            logging.warning("Shutting down the schedd multiprocessing pool.")
 
         logging.warning(f"Processing time for schedd history: {(time.time()-schedd_starttime)/60:.2f} mins")
 
@@ -139,7 +164,7 @@ def adstash(args):
         checkpoint_queue = manager.Queue()
 
         with multiprocessing.Pool(processes=args.threads, maxtasksperchild=1) as pool:
-        
+
             if len(startd_ads) > 0:
                 for startd_ad in startd_ads:
                     name = startd_ad["Machine"]
@@ -150,31 +175,26 @@ def adstash(args):
                     )
                     futures.append((name, future))
 
-            def _startd_ckpt_updater():
-                while True:
-                    try:
-                        checkpoint = checkpoint_queue.get()
-                        if checkpoint is None:
-                            break
-                    except EOFError as e:
-                        logging.warning(f"EOFError: Nothing to consume in checkpoint queue {str(e)}")
-                        break
-                    ad_source.update_checkpoint(checkpoint)
-
-            ckpt_updater = multiprocessing.Process(target=_startd_ckpt_updater)
+            ckpt_updater = multiprocessing.Process(target=_startd_ckpt_updater, args=(args, checkpoint_queue, ad_source))
             ckpt_updater.start()
 
             # Report processes if they timeout or error
             for name, future in futures:
                 try:
+                    logging.warning(f"Waiting for Startd {name} to finish.")
                     future.get(args.startd_history_timeout)
                 except multiprocessing.TimeoutError:
-                    logging.warning(f"Startd {name} history timed out; ignoring progress.")
+                    logging.warning(f"Waited too long for Startd {name}; it may still complete in the background.")
                 except Exception:
-                    logging.exception(f"Error getting progress from {name}.")
+                    logging.exception(f"Error getting progress from Startd {name}.")
 
             checkpoint_queue.put(None)
-            ckpt_updater.join()
+            logging.warning("Joining the startd checkpoint queue.")
+            ckpt_updater.join(timeout=(len(startd_ads) * args.startd_history_timeout * len(startd_ads)))
+            logging.warning("Shutting down the startd checkpoint queue.")
+            ckpt_updater.terminate()
+            manager.shutdown()
+            logging.warning("Shutting down the startd multiprocessing pool.")
 
         logging.warning(f"Processing time for startd history: {(time.time()-startd_starttime)/60:.2f} mins")
 
@@ -188,14 +208,34 @@ def schedd_history_processor(src, schedd_ad, ckpt_queue, iface, metadata, args, 
     metadata["condor_history_host_platform"] = schedd_ad.get("CondorPlatform", "UNKNOWN")
     metadata["condor_history_host_machine"] = schedd_ad.get("Machine", "UNKNOWN")
     metadata["condor_history_host_name"] = schedd_ad.get("Name", "UNKNOWN")
-    ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads)
-    for ckpt in src.process_ads(iface, ads, schedd_ad, metadata=metadata, **src_kwargs):
-        if ckpt is not None:
-            ckpt_queue.put({schedd_ad["Name"]: ckpt})
+    try:
+        ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads)
+    except Exception as e:
+        logging.error(f"Could not fetch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
+        return
+    else:
+        if ads is None:
+            return
+    try:
+        for ckpt in src.process_ads(iface, ads, schedd_ad, metadata=metadata, **src_kwargs):
+            if ckpt is not None:
+                ckpt_queue.put({schedd_ad["Name"]: ckpt})
+    except Exception as e:
+        logging.error(f"Could not push ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
 
 
 def startd_history_processor(src, startd_ad, ckpt_queue, iface, metadata, args, src_kwargs):
-    ads = src.fetch_ads(startd_ad, max_ads=args.startd_history_max_ads)
-    for ckpt in src.process_ads(iface, ads, startd_ad, metadata=metadata, **src_kwargs):
-        if ckpt is not None:
-            ckpt_queue.put({startd_ad["Machine"]: ckpt})
+    try:
+        ads = src.fetch_ads(startd_ad, max_ads=args.startd_history_max_ads)
+    except Exception as e:
+        logging.error(f"Could not fetch ads from {startd_ad['Machine']}: {e.__class__.__name__}: {str(e)}")
+        return
+    else:
+        if ads is None:
+            return
+    try:
+        for ckpt in src.process_ads(iface, ads, startd_ad, metadata=metadata, **src_kwargs):
+            if ckpt is not None:
+                ckpt_queue.put({startd_ad["Machine"]: ckpt})
+    except Exception as e:
+        logging.error(f"Could not push ads from {startd_ad['Machine']}: {e.__class__.__name__}: {str(e)}")
