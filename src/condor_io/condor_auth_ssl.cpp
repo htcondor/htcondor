@@ -1429,14 +1429,6 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 					}
 				}
 			} else if (!encoded_cert.empty()) {
-				bool disable_tofu = param_boolean("DISABLE_SSL_TOFU", false);
-				if (disable_tofu) {
-					dprintf(D_ALWAYS, "Ignoring SSL validation error %d because don't care.\n", err);
-					verify_ptr->m_skip_error = err;
-					verify_ptr->m_used_known_host = true;
-					return 1;
-				}
-
 				bool permitted = param_boolean("BOOTSTRAP_SSL_SERVER_TRUST", false);
 				bool prompt_user = param_boolean("BOOTSTRAP_SSL_SERVER_TRUST_PROMPT_USER", true);
 				dprintf(D_SECURITY, "Adding remote host as known host with trust set to %s"

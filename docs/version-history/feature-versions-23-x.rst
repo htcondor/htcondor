@@ -20,6 +20,11 @@ New Features:
 - Improve hold message when jobs on cgroup system exceed their memory limits.
   :jira:`1533`
 
+- Improved the ``-convertoldroutes`` option of *condor_transform_ads*
+  and added a new ``-help convert`` option. These changes are meant to assist
+  in the conversion of CE's away from the deprecated transform syntax.
+  :jira:`2146`
+
 - Container universe now works when file transfer is disabled or not used.
   :jira:`1329`
 
