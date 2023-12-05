@@ -438,7 +438,6 @@ resource requests:
 
 .. code-block:: condor-submit
 
-
     request_cpu = 3
     request_memory = 1024
     request_disk = 10240

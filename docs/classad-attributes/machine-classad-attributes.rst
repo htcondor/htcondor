@@ -56,7 +56,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`CgroupEnforced`
     If a job is running inside a per-job cgroup, this boolean attribute
-    is ``True``
+    is ``True``.
 
 :classad-attribute-def:`ClaimEndTime`
     The time at which the slot will leave the ``Claimed`` state.
