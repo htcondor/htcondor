@@ -53,15 +53,14 @@ typedef DynamicPyType_Handle::python_object_type PyObject_Handle;
 
 
 static PyObject *
-_handle_new(
-    PyTypeObject * type, PyObject * /* args */, PyObject * /* kwds */
-) {
-    PyObject_Handle * self = PyObject_New(PyObject_Handle, type);
-    if( self != NULL ) {
-        self->t = NULL;
-        self->f = NULL;
-    }
-    return (PyObject *) self;
+_handle_new( PyTypeObject * type, PyObject * args, PyObject * kwargs ) {
+       PyObject * self = PyType_GenericNew(type, args, kwargs);
+       if( self != NULL ) {
+               PyObject_Handle * h = (PyObject_Handle *)self;
+               h->t = NULL;
+               h->f = NULL;
+       }
+       return self;
 }
 
 
