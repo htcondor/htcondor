@@ -1285,6 +1285,9 @@ fi
 - Add DISABLE_SWAP_FOR_JOB support on cgroup v2 systems
 - Fix log rotation for OAuth and Vault credmon daemons
 
+* Thu Nov 16 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.20-1
+- Other authentication methods are tried if mapping fails using SSL
+
 * Tue Oct 31 2023 Tim Theisen <tim@cs.wisc.edu> - 23.1.0-1
 - Enhanced filtering with 'condor_watch_q'
 - Can specify alternate ssh port with 'condor_remote_cluster'
