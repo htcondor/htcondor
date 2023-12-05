@@ -1234,6 +1234,13 @@ static bool add_docker_arg(ArgList &runArgs) {
 		dprintf( D_ALWAYS, "DOCKER is undefined.\n" );
 		return false;
 	}
+
+	struct stat buf;
+	int r = stat(docker.c_str(), &buf);
+	if ((r < 0) && (errno == ENOENT)) {
+		return false;
+	}
+
 	const char * pdocker = docker.c_str();
 	if (starts_with(docker, "sudo ")) {
 		runArgs.AppendArg("/usr/bin/sudo");
