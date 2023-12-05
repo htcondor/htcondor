@@ -1,5 +1,3 @@
-.. _condor_upgrade_check:
-
 *condor_upgrade_check*
 ======================
 
