@@ -1,17 +1,17 @@
 # One platform per line. Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-build:aarch64_AlmaLinux8-23020005
-docker://htcondor/nmi-build:aarch64_AlmaLinux9-23020005
-docker://htcondor/nmi-build:ppc64le_AlmaLinux8-23020005
-docker://htcondor/nmi-build:ppc64le_Ubuntu20-23020005
-docker://htcondor/nmi-build:x86_64_AlmaLinux8-23020005
-docker://htcondor/nmi-build:x86_64_AlmaLinux9-23020005
-docker://htcondor/nmi-build:x86_64_AmazonLinux2023-23020005
-docker://htcondor/nmi-build:x86_64_Debian11-23020005
-docker://htcondor/nmi-build:x86_64_Debian12-23020005
-docker://htcondor/nmi-build:x86_64_Ubuntu20-23020005
-docker://htcondor/nmi-build:x86_64_Ubuntu22-23020005
+docker://htcondor/nmi-build:aarch64_AlmaLinux8-23030005
+docker://htcondor/nmi-build:aarch64_AlmaLinux9-23030005
+docker://htcondor/nmi-build:ppc64le_AlmaLinux8-23030005
+docker://htcondor/nmi-build:ppc64le_Ubuntu20-23030005
+docker://htcondor/nmi-build:x86_64_AlmaLinux8-23030005
+docker://htcondor/nmi-build:x86_64_AlmaLinux9-23030005
+docker://htcondor/nmi-build:x86_64_AmazonLinux2023-23030005
+docker://htcondor/nmi-build:x86_64_Debian11-23030005
+docker://htcondor/nmi-build:x86_64_Debian12-23030005
+docker://htcondor/nmi-build:x86_64_Ubuntu20-23030005
+docker://htcondor/nmi-build:x86_64_Ubuntu22-23030005
 x86_64_macOS13
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9
@@ -20,4 +20,4 @@ x86_64_Windows10
 # Using 64-bit CentOS hardware for IPv6 tests
 
 # We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-build:x86_64_Fedora38-23020005
+docker://htcondor/nmi-build:x86_64_Fedora38-23030005
