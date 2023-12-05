@@ -15,6 +15,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-2304:
+
+Version 23.0.4
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.0.4 released on Month Date, 2023.
+
+- HTCondor version 23.0.4 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-2303:
 
 Version 23.0.3
@@ -66,6 +85,13 @@ Bugs Fixed:
 - Updated the usage and man page of the *condor_drain* tool to include information
   about the ``-reconfig-on-completion`` option.
   :jira:`2164`
+
+- Correctly identify ``GPUsAverageUsage`` and ``GPUsMemoryUsage`` as floating point
+  values for *condor_adstash*.
+  :jira:`2170`
+
+- Fixed a bug where *condor_adstash* would get wedged due to a logging failure.
+  :jira:`2166`
 
 .. _lts-version-history-2302:
 

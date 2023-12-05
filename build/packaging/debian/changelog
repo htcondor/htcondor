@@ -9,6 +9,12 @@ condor (23.0.2-1) stable; urgency=medium
 
  -- Tim Theisen <tim@cs.wisc.edu>  Mon, 20 Nov 2023 07:28:00 -0600
 
+condor (9.0.20-1) stable; urgency=medium
+
+  * Other authentication methods are tried if mapping fails using SSL
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 15 Nov 2023 17:23:00 -0600
+
 condor (23.0.1-1) stable; urgency=medium
 
   * Fix 10.6.0 bug that broke PID namespaces
