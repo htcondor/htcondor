@@ -1,3 +1,9 @@
+condor (9.0.20-1) stable; urgency=medium
+
+  * Other authentication methods are tried if mapping fails using SSL
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 15 Nov 2023 17:23:00 -0600
+
 condor (10.0.9-1) stable; urgency=medium
 
   * The condor_upgrade_check script now provides guidance on updating to 23.0
