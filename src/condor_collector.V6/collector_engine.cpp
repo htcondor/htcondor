@@ -388,7 +388,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(CollectorRecord *))
 	CollectorHashTable *table;
 	CollectorEngine::HashFunc func;
 	if (!LookupByAdType(adType, table, func)) {
-		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
+		dprintf (D_ALWAYS, "Unknown type %ld\n", adType);
 		return 0;
 	}
 
