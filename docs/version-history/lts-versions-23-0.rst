@@ -67,6 +67,10 @@ Bugs Fixed:
   about the ``-reconfig-on-completion`` option.
   :jira:`2164`
 
+- Correctly identify ``GPUsAverageUsage`` and ``GPUsMemoryUsage`` as floating point
+  values for *condor_adstash*.
+  :jira:`2170`
+
 - Fixed a bug where *condor_adstash* would get wedged due to a logging failure.
   :jira:`2166`
 

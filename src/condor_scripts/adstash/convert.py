@@ -164,6 +164,8 @@ NOINDEX_KEYWORD_ATTRS = {
 
 FLOAT_ATTRS = {
     "CPUsUsage",
+    "GPUsAverageUsage",
+    "GPUsMemoryUsage",
     "JobBatchId",
     "JobDuration",
     "NetworkInputMb",
