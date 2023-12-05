@@ -1278,6 +1278,9 @@ fi
 - Add DISABLE_SWAP_FOR_JOB support on cgroup v2 systems
 - Fix log rotation for OAuth and Vault credmon daemons
 
+* Thu Nov 16 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.20-1
+- Other authentication methods are tried if mapping fails using SSL
+
 * Tue Oct 31 2023 Tim Theisen <tim@cs.wisc.edu> - 23.0.1-1
 - Fix 10.6.0 bug that broke PID namespaces
 - Fix bug where execution times for ARC CE jobs were 60 times too large
