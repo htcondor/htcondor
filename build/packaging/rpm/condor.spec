@@ -230,7 +230,11 @@ Requires(post): selinux-policy-targeted
 %if ! 0%{?amzn}
 Requires: voms
 %endif
+%if 0%{suse_version}
+Requires: krb5
+%else
 Requires: krb5-libs
+%endif
 Requires: libcom_err
 Requires: munge-libs
 Requires: openssl-libs
