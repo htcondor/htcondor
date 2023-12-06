@@ -27,7 +27,6 @@
 #include "Version.h"
 #include "reli_sock.h"
 #include "dc_service.h"
-#include "list.h"
 
 /* Class      : AbstractReplicatorStateMachine
  * Description: base abstract class for replication service state machine,
@@ -310,7 +309,7 @@ protected:
     // starting times of uploading/downloading 'condor_transferer' processes
 	// for handling the problem of stuck transferer processes
 	ProcessMetadata          m_downloadTransfererMetadata;
-	List<ProcessMetadata>    m_uploadTransfererMetadataList;
+	std::list<ProcessMetadata> m_uploadTransfererMetadataList;
 };
 
 #endif // ABSTRACT_REPLICATOR_STATE_MACHINE_H

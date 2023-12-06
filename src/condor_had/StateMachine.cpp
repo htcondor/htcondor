@@ -32,7 +32,6 @@
 #include "daemon.h"
 #include "daemon_types.h"
 #include "internet.h"
-#include "list.h"
 // for 'my_username'
 #include "my_username.h"
 #include "StateMachine.h"

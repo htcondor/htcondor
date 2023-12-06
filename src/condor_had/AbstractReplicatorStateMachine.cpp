@@ -242,36 +242,9 @@ AbstractReplicatorStateMachine::uploadReplicaTransfererReaper(
     dprintf( D_ALWAYS,
         "AbstractReplicatorStateMachine::uploadReplicaTransfererReaper "
         "called for process no. %d\n", pid );
-    AbstractReplicatorStateMachine* replicatorStateMachine =
-        static_cast<AbstractReplicatorStateMachine*>( this );
-// TODO: Atomic operation
-	replicatorStateMachine->m_uploadTransfererMetadataList.Rewind( );
 
-	ProcessMetadata* uploadTransfererMetadata = NULL;
-
-	// Scanning the list of uploading transferers to remove the pid of the
-    // process that has just finished
-    while( replicatorStateMachine->m_uploadTransfererMetadataList.Next( 
-										uploadTransfererMetadata ) ) {
-        // deleting the finished uploading transferer process pid from the list
-        if( pid == uploadTransfererMetadata->m_pid ) { 
-            dprintf( D_FULLDEBUG,
-                "AbstractReplicatorStateMachine::uploadReplicaTransfererReaper"
-                " removing process no. %d from the uploading "
-                "condor_transferers list\n",
-                uploadTransfererMetadata->m_pid );
-			delete uploadTransfererMetadata;
-        	replicatorStateMachine->
-				  m_uploadTransfererMetadataList.DeleteCurrent( );
-		}
-		// for debugging purposes only
-		//dprintf( D_FULLDEBUG, 
-		//		"AbstractReplicatorStateMachine::uploadReplicaTransfererReaper"
-    	//		" uploading condor_transferers list size = %d\n", 
-		//		replicatorStateMachine->m_uploadTransfererMetadataList.Number() );
-	}
-	replicatorStateMachine->m_uploadTransfererMetadataList.Rewind( );
-// End of TODO: Atomic operation
+	std::erase_if(m_uploadTransfererMetadataList,
+	              [&](auto item) { return pid == item.m_pid; });
 
     // the function ended due to the operating system signal, the numeric
     // value of which is stored in exitStatus
@@ -469,9 +442,7 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
     	// be inserted into Condor's list which stores the pointers to the data,
     	// rather than the data itself, that's why it is impossible to pass a 
 		// local integer variable to append to this list
-		ProcessMetadata* uploadTransfererMetadata = 
-				new ProcessMetadata( transfererPid, time( NULL ) );
-		m_uploadTransfererMetadataList.Append( uploadTransfererMetadata );
+		m_uploadTransfererMetadataList.emplace_back( transfererPid, time( NULL ) );
 // End of TODO: Atomic operation
     }
 
@@ -541,9 +512,7 @@ AbstractReplicatorStateMachine::uploadNew( Stream *stream )
 		// be inserted into Condor's list which stores the pointers to the data,
 		// rather than the data itself, that's why it is impossible to pass a
 		// local integer variable to append to this list
-		ProcessMetadata* uploadTransfererMetadata =
-				new ProcessMetadata( transfererPid, time( NULL ) );
-		m_uploadTransfererMetadataList.Append( uploadTransfererMetadata );
+		m_uploadTransfererMetadataList.emplace_back( transfererPid, time( NULL ) );
 // End of TODO: Atomic operation
 	}
 
@@ -730,18 +699,14 @@ AbstractReplicatorStateMachine::killTransferers()
 		m_downloadTransfererMetadata.set();
     }
 
-	m_uploadTransfererMetadataList.Rewind( );
-
-	ProcessMetadata* uploadTransfererMetadata = NULL;    
-
-    while( m_uploadTransfererMetadataList.Next( uploadTransfererMetadata ) ) {
-        if( uploadTransfererMetadata->isValid( ) ) {
+	for (auto& uploadTransfererMetadata : m_uploadTransfererMetadataList) {
+        if( uploadTransfererMetadata.isValid( ) ) {
             dprintf( D_FULLDEBUG,
                 "AbstractReplicatorStateMachine::killTransferers "
                 "killing uploading condor_transferer pid = %d\n",
-                uploadTransfererMetadata->m_pid );
+                uploadTransfererMetadata.m_pid );
             //kill( uploadTransfererMetadata->m_pid, SIGKILL );
-			daemonCore->Send_Signal( uploadTransfererMetadata->m_pid, SIGKILL );
+			daemonCore->Send_Signal( uploadTransfererMetadata.m_pid, SIGKILL );
 			
 			            // when the process is killed, it could have not yet
 			            // erased its
@@ -750,19 +715,14 @@ AbstractReplicatorStateMachine::killTransferers()
             std::string extension;
             // the .up ending is needed in order not to confuse between
             // upload and download processes temporary files
-            formatstr( extension, "%d.%s", uploadTransfererMetadata->m_pid,
+            formatstr( extension, "%d.%s", uploadTransfererMetadata.m_pid,
                        UPLOADING_TEMPORARY_FILES_EXTENSION );
 
             FilesOperations::safeUnlinkFile( m_versionFilePath.c_str( ),
                                              extension.c_str( ) );
             FilesOperations::safeUnlinkFile( m_stateFilePath.c_str( ),
                                              extension.c_str( ) );
-			delete uploadTransfererMetadata;
-			// after deletion the iterator is moved to the previous member
-			// so advancing the iterator twice and missing one entry does not
-			// happen
-        	m_uploadTransfererMetadataList.DeleteCurrent( );
 		}
     }
-	m_uploadTransfererMetadataList.Rewind( );
+	m_uploadTransfererMetadataList.clear();
 }

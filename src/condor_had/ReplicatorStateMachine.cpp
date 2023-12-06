@@ -761,23 +761,19 @@ ReplicatorStateMachine::killStuckDownloadingTransferer( time_t currentTime )
 void 
 ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
 {
-	m_uploadTransfererMetadataList.Rewind( );
-
-	ProcessMetadata* uploadTransfererMetadata = NULL;    
-
 	// killing stuck uploading 'condor_transferers'
-    while( m_uploadTransfererMetadataList.Next( uploadTransfererMetadata ) ) {
-        if( uploadTransfererMetadata->isValid( ) &&
-			currentTime - uploadTransfererMetadata->m_lastTimeCreated >
+	auto stuck_check = [&](const ProcessMetadata& uploadTransfererMetadata) {
+		if( uploadTransfererMetadata.isValid( ) &&
+			currentTime - uploadTransfererMetadata.m_lastTimeCreated >
               m_maxTransfererLifeTime ) {
             dprintf( D_FULLDEBUG, 
 					"ReplicatorStateMachine::killStuckUploadingTransferers "
                     "killing uploading condor_transferer pid = %d\n",
-                    uploadTransfererMetadata->m_pid );
+                    uploadTransfererMetadata.m_pid );
 			// sending SIGKILL signal, wrapped in daemon core function for
         	// portability
 			if( !daemonCore->Send_Signal( 
-				uploadTransfererMetadata->m_pid, SIGKILL ) ) {
+				uploadTransfererMetadata.m_pid, SIGKILL ) ) {
 				dprintf( D_ALWAYS, 
 						 "ReplicatorStateMachine::killStuckUploadingTransferers"
 						 " kill signal failed, reason = %s\n", strerror(errno));
@@ -788,18 +784,19 @@ ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
 			std::string extension;
             // the .up ending is needed in order not to confuse between
             // upload and download processes temporary files
-			formatstr( extension, "%d.%s", uploadTransfererMetadata->m_pid,
+			formatstr( extension, "%d.%s", uploadTransfererMetadata.m_pid,
 			           UPLOADING_TEMPORARY_FILES_EXTENSION );
 
             FilesOperations::safeUnlinkFile( m_versionFilePath.c_str( ),
                                              extension.c_str( ) );
             FilesOperations::safeUnlinkFile( m_stateFilePath.c_str( ),
                                              extension.c_str( ) );
-			delete uploadTransfererMetadata;
-			m_uploadTransfererMetadataList.DeleteCurrent( );
+			return true;
+		} else {
+			return false;
 		}
-    }
-	m_uploadTransfererMetadataList.Rewind( );
+    };
+	std::erase_if(m_uploadTransfererMetadataList, stuck_check);
 }
 /* Function   : replicationTimer 
  * Description: replication daemon life cycle handler
@@ -836,9 +833,9 @@ ReplicatorStateMachine::replicationTimer( int /* timerID */ )
 // End of TODO: Atomic operation
     dprintf( D_FULLDEBUG, "ReplicatorStateMachine::replicationTimer "
 						  "# downloading condor_transferer = %d, "
-						  "# uploading condor_transferer = %d\n",
+						  "# uploading condor_transferer = %zu\n",
              downloadTransferersNumber( ), 
-			 m_uploadTransfererMetadataList.Number( ) );
+			 m_uploadTransfererMetadataList.size( ) );
     if( m_state == BACKUP ) {
 		checkVersionSynchronization( );
 
