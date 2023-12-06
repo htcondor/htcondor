@@ -495,7 +495,6 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 {
     assert(pentry);
 
-	NetStringList * whichHostList = new NetStringList();
     UserHash_t * whichUserHash = new UserHash_t(hashFunction);
 
     StringList slist(list);
@@ -539,7 +538,6 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 				// add user to user hash, host to host list
 			if (whichUserHash->lookup(hostString, userList) == -1) {
 				whichUserHash->insert(hostString, new StringList(user)); 
-				whichHostList->append(hostString.c_str());
 			}
 			else {
 				userList->append(user);
@@ -551,11 +549,9 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 	}
 
     if (allow) {
-        pentry->allow_hosts = whichHostList;
         pentry->allow_users  = whichUserHash;
     }
     else {
-        pentry->deny_hosts = whichHostList;
         pentry->deny_users = whichUserHash;
     }
 }
@@ -937,34 +933,34 @@ bool
 IpVerify::lookup_user_ip_allow(DCpermission perm, char const *user, char const *ip)
 {
 	PermTypeEntry *permentry = PermTypeArray[perm];
-	return lookup_user(permentry->allow_hosts,permentry->allow_users,permentry->allow_netgroups,user,ip,NULL,true);
+	return lookup_user(permentry->allow_users,permentry->allow_netgroups,user,ip,NULL,true);
 }
 
 bool
 IpVerify::lookup_user_ip_deny(DCpermission perm, char const *user, char const *ip)
 {
 	PermTypeEntry *permentry = PermTypeArray[perm];
-	return lookup_user(permentry->deny_hosts,permentry->deny_users,permentry->deny_netgroups,user,ip,NULL,false);
+	return lookup_user(permentry->deny_users,permentry->deny_netgroups,user,ip,NULL,false);
 }
 
 bool
 IpVerify::lookup_user_host_allow(DCpermission perm, char const *user, char const *hostname)
 {
 	PermTypeEntry *permentry = PermTypeArray[perm];
-	return lookup_user(permentry->allow_hosts,permentry->allow_users,permentry->allow_netgroups,user,NULL,hostname,true);
+	return lookup_user(permentry->allow_users,permentry->allow_netgroups,user,NULL,hostname,true);
 }
 
 bool
 IpVerify::lookup_user_host_deny(DCpermission perm, char const *user, char const *hostname)
 {
 	PermTypeEntry *permentry = PermTypeArray[perm];
-	return lookup_user(permentry->deny_hosts,permentry->deny_users,permentry->deny_netgroups,user,NULL,hostname,false);
+	return lookup_user(permentry->deny_users,permentry->deny_netgroups,user,NULL,hostname,false);
 }
 
 bool
-IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list)
+IpVerify::lookup_user(UserHash_t *users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list)
 {
-	if( !hosts || !users ) {
+	if( !users ) {
 		return false;
 	}
 	ASSERT( user );
@@ -973,23 +969,20 @@ IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, netgroup_list_t& 
 	ASSERT( !ip || !hostname );
 	ASSERT( ip || hostname);
 
-	StringList hostmatches;
-	if( ip ) {
-		hosts->find_matches_withnetwork(ip,&hostmatches);
-	}
-	else if( hostname ) {
-		hosts->find_matches_anycase_withwildcard(hostname,&hostmatches);
-	}
+	std::string host_key;
+	StringList* userlist;
+	users->startIterations();
+	while (users->iterate(host_key, userlist)) {
+		bool host_matches = false;
+		if (ip) {
+			host_matches = matches_withnetwork(host_key.c_str(), ip);
+		} else {
+			host_matches = matches_anycase_withwildcard(host_key.c_str(), hostname);
+		}
 
-	char const * hostmatch;
-	hostmatches.rewind();
-	while( (hostmatch=hostmatches.next()) ) {
-		StringList *userlist;
-		ASSERT( users->lookup(hostmatch,userlist) != -1 );
-
-		if (userlist->contains_anycase_withwildcard(user)) {
+		if (host_matches && userlist->contains_anycase_withwildcard(user)) {
 			dprintf ( D_SECURITY, "IPVERIFY: matched user %s from %s to %s list\n",
-					  user, hostmatch, is_allow_list ? "allow" : "deny" );
+					  user, host_key.c_str(), is_allow_list ? "allow" : "deny" );
 			return true;
 		}
 	}
@@ -1092,10 +1085,6 @@ IpVerify::FillHole(DCpermission perm, const std::string& id)
 }
 
 IpVerify::PermTypeEntry::~PermTypeEntry() {
-	if (allow_hosts)
-		delete allow_hosts;
-	if (deny_hosts)
-		delete deny_hosts;
 	if (allow_users) {
 		std::string    key;
 		StringList* value;

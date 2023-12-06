@@ -45,6 +45,20 @@ condor_protocol str_to_condor_protocol( const std::string & str ) {
 	else { return CP_PARSE_INVALID; }
 }
 
+bool matches_withnetwork(const std::string &pattern, const char* ip_address)
+{
+	condor_sockaddr target;
+	if (!target.from_ip_string(ip_address)) {
+		return false;
+	}
+
+	condor_netaddr netaddr;
+	if (!netaddr.from_net_string(pattern.c_str())) {
+		return false;
+	}
+
+	return netaddr.match(target);
+}
 
 typedef union sockaddr_storage_ptr_u {
         const struct sockaddr     *raw;

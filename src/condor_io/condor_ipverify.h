@@ -38,7 +38,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "string_list.h"
-#include "net_string_list.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
 
@@ -138,8 +137,6 @@ private:
 	class PermTypeEntry {
 	public:
 		int behavior;
-		NetStringList* allow_hosts;
-		NetStringList* deny_hosts;
 		UserHash_t* allow_users;
 		UserHash_t* deny_users;
 //		HolePunchTable_t* hole_punch_table;
@@ -149,8 +146,6 @@ private:
         netgroup_list_t deny_netgroups;
 
 		PermTypeEntry() {
-			allow_hosts = NULL;
-			deny_hosts  = NULL;
 			allow_users = NULL;
 			deny_users  = NULL;
 			behavior = USERVERIFY_USE_TABLE;
@@ -180,7 +175,7 @@ private:
 	bool lookup_user_host_deny(DCpermission perm, char const *user, char const *hostname);
 
 		// This is the low-level function called by the other lookup_user functions.
-	bool lookup_user(NetStringList *hosts, UserHash_t *users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list);
+	bool lookup_user(UserHash_t *users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list);
 
 	char * merge(char * newPerm, char * oldPerm);
 	bool did_init;
