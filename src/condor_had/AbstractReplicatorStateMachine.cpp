@@ -571,39 +571,24 @@ AbstractReplicatorStateMachine::requestVersions( )
 // inserting/replacing version from specific remote replication daemon
 // into/in 'm_versionsList'
 void
-AbstractReplicatorStateMachine::updateVersionsList( Version& newVersion )
+AbstractReplicatorStateMachine::updateVersionsList(const Version& newVersion)
 {
-    Version* oldVersion;
-// TODO: Atomic operation
-    m_versionsList.Rewind( );
-
-    while( m_versionsList.Next( oldVersion ) ) {
-        // deleting all occurences of replica belonging to the same host name
-        if( oldVersion->getHostName( ) == newVersion.getHostName( ) ) {
-            delete oldVersion;
-            m_versionsList.DeleteCurrent( );
+    for (auto& oldVersion : m_versionsList) {
+        if( oldVersion.getHostName( ) == newVersion.getHostName( ) ) {
+            oldVersion = newVersion;
         }
     }
     dprintf( D_FULLDEBUG,
         "AbstractReplicatorStateMachine::updateVersionsList appending %s\n",
          newVersion.toString( ).c_str( ) );
-    m_versionsList.Append( &newVersion );
-    m_versionsList.Rewind( );
-// End of TODO: Atomic operation
 }
 
 void
 AbstractReplicatorStateMachine::cancelVersionsListLeader( )
 {
-    Version* version;
-    
-    m_versionsList.Rewind( );
-
-    while( m_versionsList.Next( version ) ) {
-        version->setState( BACKUP );
-    }
-    
-    m_versionsList.Rewind( );
+	for (auto& version : m_versionsList) {
+		version.setState( BACKUP );
+	}
 }
 
 // sending command to remote replication daemon; specified command function

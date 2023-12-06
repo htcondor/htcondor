@@ -169,7 +169,7 @@ protected:
 	 * Arguments  : newVersion - the version to update the versions' list
 	 * Description: updates list of versions with new version
 	 */
-    void updateVersionsList(Version& newVersion);
+    void updateVersionsList(const Version& newVersion);
 	/* Function   : cancelVersionsListLeader 
      * Description: sets the state of all versions in the list to BACKUP
      */
@@ -273,7 +273,7 @@ protected:
 	// local version
     Version                  m_myVersion;
     // list of versions sent to the daemon during JOINING state
-	List<Version>            m_versionsList;
+	std::list<Version>       m_versionsList;
 	// configuration variables	
     std::string              m_stateFilePath;
     std::string              m_versionFilePath;
