@@ -1235,12 +1235,6 @@ static bool add_docker_arg(ArgList &runArgs) {
 		return false;
 	}
 
-	struct stat buf;
-	int r = stat(docker.c_str(), &buf);
-	if ((r < 0) && (errno == ENOENT)) {
-		return false;
-	}
-
 	const char * pdocker = docker.c_str();
 	if (starts_with(docker, "sudo ")) {
 		runArgs.AppendArg("/usr/bin/sudo");
@@ -1251,6 +1245,16 @@ static bool add_docker_arg(ArgList &runArgs) {
 			return false;
 		}
 	}
+
+	// Avoid startd log spam by checking if the docker binary
+	// exists, and not try to run docker info, etc. if the binary
+	// isn't there.
+	struct stat buf;
+	int r = stat(pdocker, &buf);
+	if ((r < 0) && (errno == ENOENT)) {
+		return false;
+	}
+
 	runArgs.AppendArg(pdocker);
 	return true;
 }
