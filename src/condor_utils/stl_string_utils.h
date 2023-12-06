@@ -112,6 +112,11 @@ bool contains_prefix_withwildcard(const std::vector<std::string> &list, const ch
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str);
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str);
 
+bool matches_withwildcard(const char* pattern, const char* str);
+bool matches_anycase_withwildcard(const char* pattern, const char* str);
+bool matches_prefix_withwildcard(const char* pattern, const char* str);
+bool matches_prefix_anycase_withwildcard(const char* pattern, const char* str);
+
 // scan an input string for path separators, returning a pointer into the input string that is
 // the first charactter after the last input separator. (i.e. the filename part). if the input
 // string contains no path separater, the return is the same as the input, if the input string

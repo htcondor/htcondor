@@ -513,23 +513,23 @@ bool contains_prefix_anycase(const std::vector<std::string> &list, const std::st
 }
 
 bool
-contains_withwildcard_impl(const std::vector<std::string>& list, const char* str, bool anycase, bool prefix)
+matches_withwildcard_impl(const char* pattern, const char* str, bool anycase, bool prefix)
 {
 	const char *x;
 	std::string matchstart;
 	std::string matchend;
 	const char *asterisk = NULL;
 	const char *ending_asterisk = NULL;
-	bool result;
+	bool result = true;
 	int temp;
 	const char *pos;
 
-	if ( !str ) {
+	if ( !pattern || !str ) {
 		return false;
 	}
 
-	for (auto& item : list) {
-		x = item.c_str();
+	{ // keeping old loop block to avoid re-indenting
+		x = pattern;
 
 		if ( (asterisk = strchr(x,'*')) == NULL ) {
 			// There is no wildcard in this entry; just compare
@@ -538,10 +538,7 @@ contains_withwildcard_impl(const std::vector<std::string>& list, const char* str
 			} else {
 				temp = strcmp(x, str);
 			}
-			if ( temp == MATCH ) {
-				return true;
-			}
-			continue;
+			return (temp == MATCH);
 		}
 
 		// If we made it here, we know there is an asterisk in the pattern, and
@@ -612,53 +609,108 @@ contains_withwildcard_impl(const std::vector<std::string>& list, const char* str
 				}
 			}
 		}
-		if ( result == true ) {
-			return true;
-		}
-
-	}	// end of while loop
-
-	return false;
+	}
+	return result;
 }
 
 bool contains_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	return contains_withwildcard_impl(list, str, false, false);
+	for (const auto& item : list) {
+		if (matches_withwildcard_impl(item.c_str(), str, false, false)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool contains_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	return contains_withwildcard_impl(list, str.c_str(), false, false);
+	for (const auto& item : list) {
+		if (matches_withwildcard_impl(item.c_str(), str.c_str(), false, false)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	return contains_withwildcard_impl(list, str, true, false);
+	for (const auto& item : list) {
+		if (matches_withwildcard_impl(item.c_str(), str, true, false)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	return contains_withwildcard_impl(list, str.c_str(), true, false);
+	for (const auto& item : list) {
+		if (matches_withwildcard_impl(item.c_str(), str.c_str(), true, false)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	return contains_withwildcard_impl(list, str, false, true);
+	for (const auto& item : list) {
+		if (matches_withwildcard_impl(item.c_str(), str, false, true)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	return contains_withwildcard_impl(list, str.c_str(), false, true);
+	for (const auto& item : list) {
+		if (matches_withwildcard_impl(item.c_str(), str.c_str(), false, true)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	return contains_withwildcard_impl(list, str, true, true);
+	for (const auto& item : list) {
+		if (matches_withwildcard_impl(item.c_str(), str, true, true)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	return contains_withwildcard_impl(list, str.c_str(), true, true);
+	for (const auto& item : list) {
+		if (matches_withwildcard_impl(item.c_str(), str.c_str(), true, true)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool matches_withwildcard(const char* pattern, const char* str)
+{
+	return matches_withwildcard_impl(pattern, str, false, false);
+}
+
+bool matches_anycase_withwildcard(const char* pattern, const char* str)
+{
+	return matches_withwildcard_impl(pattern, str, true, false);
+}
+
+bool matches_prefix_withwildcard(const char* pattern, const char* str)
+{
+	return matches_withwildcard_impl(pattern, str, false, true);
+}
+
+bool matches_prefix_anycase_withwildcard(const char* pattern, const char* str)
+{
+	return matches_withwildcard_impl(pattern, str, true, true);
 }
 
 // scan an input string for path separators, returning a pointer into the input string that is
