@@ -434,7 +434,7 @@ HADStateMachine::step(void)
             break;
 
         case PASSIVE_STATE:
-            if( receivedAliveList.IsEmpty() || m_isPrimary ) {
+            if( receivedAliveList.empty() || m_isPrimary ) {
                 m_state = ELECTION_STATE;
                 printStep( "PASSIVE_STATE","ELECTION_STATE" );
                 // we don't want to delete elections buffers
@@ -446,14 +446,14 @@ HADStateMachine::step(void)
             break;
         case ELECTION_STATE:
         {
-			if( !receivedAliveList.IsEmpty() && !m_isPrimary ) {
+            if( !receivedAliveList.empty() && !m_isPrimary ) {
                 m_state = PASSIVE_STATE;
                 printStep("ELECTION_STATE","PASSIVE_STATE");
                 break;
             }
 
             // command ALIVE isn't received
-            if( checkList(&receivedIdList) == false ) {
+            if( checkList(receivedIdList) == false ) {
                 // id bigger than m_selfId is received
                 m_state = PASSIVE_STATE;
                 printStep("ELECTION_STATE","PASSIVE_STATE");
@@ -495,8 +495,8 @@ HADStateMachine::step(void)
             break;
 		}
         case LEADER_STATE:
-    		if( ! receivedAliveList.IsEmpty() &&
-                  checkList(&receivedAliveList) == false ) {
+            if( ! receivedAliveList.empty() &&
+                  checkList(receivedAliveList) == false ) {
                 // send to master "child_off"
                 printStep( "LEADER_STATE","PASSIVE_STATE" );
                 m_state = PASSIVE_STATE;
@@ -773,28 +773,6 @@ HADStateMachine::sendControlCmdToMaster( int comm )
 }
 
 /***********************************************************
-  Function :
-*/
-int
-HADStateMachine::pushReceivedAlive( int id )
-{
-    int* alloc_id = new int[1];
-    *alloc_id = id;
-    return (receivedAliveList.Append( alloc_id ));
-}
-
-/***********************************************************
-  Function :
-*/
-int
-HADStateMachine::pushReceivedId( int id )
-{
-	int* alloc_id = new int[1];
-	*alloc_id = id;
-	return (receivedIdList.Append( alloc_id ));
-}
-
-/***********************************************************
  *  Function :
  * Sets selfId's referent according to my index in the HAD_LIST
  *  ( in reverse order )
@@ -884,23 +862,20 @@ dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
 
 
 /***********************************************************
-  Function :  checkList( List<int>* list )
+  Function :  checkList( std::set<int> list )
     check if "list" contains ID bigger than mine.
     Note that in this implementation Primary always has
     the highest id of all and therefore will always
     win in checkList election process
 */
 bool
-HADStateMachine::checkList( List<int>* list ) const
+HADStateMachine::checkList( std::set<int> list ) const
 {
-    int id;
-
-    list->Rewind();
-    while(list->Next( id ) ) {
-        if(id > m_selfId){
-            return false;
-        }
-    }
+	for (auto id : list) {
+		if (id > m_selfId) {
+			return false;
+		}
+	}
     return true;
 }
 
@@ -926,8 +901,8 @@ HADStateMachine::removeAllFromList( List<int>* list )
 void
 HADStateMachine::clearBuffers(void)
 {
-    removeAllFromList( &receivedAliveList );
-    removeAllFromList( &receivedIdList );
+    receivedAliveList.clear();
+    receivedIdList.clear();
 }
 
 /***********************************************************
@@ -993,14 +968,14 @@ HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
 		dprintf( D_FULLDEBUG,
 				 "commandHandler received HAD_ALIVE_CMD with id %d\n",
 				 new_id);
-		pushReceivedAlive( new_id );
+		receivedAliveList.emplace(new_id);
 		break;
 
 	case HAD_SEND_ID_CMD:
 		dprintf( D_FULLDEBUG,
 				 "commandHandler received HAD_SEND_ID_CMD with id %d\n",
 				 new_id);
-		pushReceivedId( new_id );
+		receivedIdList.emplace(new_id);
 		break;
     }
 	return TRUE;
@@ -1028,18 +1003,14 @@ HADStateMachine::printStep( const char *curState, const char *nextState ) const
 void
 HADStateMachine::my_debug_print_buffers()
 {
-    int id;
     dprintf( D_FULLDEBUG, "ALIVE IDs list : \n" );
-    receivedAliveList.Rewind();
-    while( receivedAliveList.Next( id ) ) {
-        dprintf( D_FULLDEBUG, "<%d>\n",id );
+    for (auto id : receivedAliveList) {
+        dprintf( D_FULLDEBUG, "<%d>\n", id );
     }
 
-    int id2;
     dprintf( D_FULLDEBUG, "ELECTION IDs list : \n" );
-    receivedIdList.Rewind();
-    while( receivedIdList.Next( id2 ) ) {
-        dprintf( D_FULLDEBUG, "<%d>\n",id2 );
+    for (auto id : receivedIdList) {
+        dprintf( D_FULLDEBUG, "<%d>\n", id );
     }
 }
 
