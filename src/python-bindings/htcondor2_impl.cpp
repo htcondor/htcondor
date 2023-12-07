@@ -15,6 +15,7 @@
 
 // htcondor.Collector
 #include "daemon_list.h"
+#include "dc_collector.h"
 #include "common2/py_util.cpp"
 #include "htcondor2/collector.cpp"
 
