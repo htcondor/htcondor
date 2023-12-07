@@ -434,30 +434,33 @@ CronJob::Reaper( int exitPid, int exitStatus )
 
 	}
 
-	// If we dump the output to the log here, it won't get processed.  That's
-	// probably a good thing for the devel series...
+
 	if( failed ) {
 		int linecount = m_stdOutBuf->GetQueueSize();
-		if ((linecount == 0 ) && m_stdErrBuf->m_content.empty()) {
+		if( (linecount == 0) && m_stdErrBuf->m_content.empty() ) {
 			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced no output\n",
-			         GetName(), exitPid );
-		} else {
-			if (linecount != 0) {
-				dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %d lines of standard output, which follow.\n",
-						GetName(), exitPid, linecount );
-
-				// Process the output
-				ProcessOutputQueue( failed, exitPid );
-			}
-			if (!m_stdErrBuf->m_content.empty()) {
-				size_t errLines = std::count(m_stdErrBuf->m_content.begin(), m_stdErrBuf->m_content.end(), '\n');
-				dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %zu lines of standard error, which follow.\n",
-						GetName(), exitPid, errLines );
-				dprintf(D_ALWAYS, "%s", m_stdErrBuf->m_content.c_str());
-				m_stdErrBuf->m_content.clear();
-			}
+				GetName(), exitPid );
+		} else if( linecount != 0 ) {
+			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %d lines of standard output, which follow.\n",
+				GetName(), exitPid, linecount );
 		}
 	}
+
+	// Process the output
+	// Also logs stdout if `failed` is true.
+	ProcessOutputQueue( failed, exitPid );
+
+	if( failed ) {
+		if (!m_stdErrBuf->m_content.empty()) {
+			size_t errLines = std::count(m_stdErrBuf->m_content.begin(), m_stdErrBuf->m_content.end(), '\n');
+			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %zu lines of standard error, which follow.\n",
+					GetName(), exitPid, errLines );
+			dprintf(D_ALWAYS, "%s", m_stdErrBuf->m_content.c_str());
+			m_stdErrBuf->m_content.clear();
+		}
+	}
+
+
 	// Finally, notify my manager
 	m_mgr.JobExited( *this );
 
