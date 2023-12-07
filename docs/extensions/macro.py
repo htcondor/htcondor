@@ -13,8 +13,6 @@ def dump(obj):
         print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
 def macro_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
-    app = inliner.document.settings.env.app
-    docname = inliner.document.settings.env.docname
     macro_name, macro_index = custom_ext_parser(text)
     ref_link = "href=\"../admin-manual/configuration-macros.html#" + str(macro_name) + "\""
     return make_ref_and_index_nodes(name, macro_name, macro_index,
