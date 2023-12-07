@@ -151,7 +151,11 @@ BuildRequires: boost-python3-devel
 %endif
 %endif
 BuildRequires: libuuid-devel
+%if 0%{suse_version}
+Requires: libuuid1
+%else
 Requires: libuuid
+%endif
 
 BuildRequires: systemd-devel
 %if 0%{suse_version}
@@ -202,44 +206,55 @@ Requires: python-requests
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 
-Requires(pre): shadow-utils
-
 %if 0%{suse_version}
+Requires(pre): shadow
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
 %else
+Requires(pre): shadow-utils
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
 %endif
-Requires(post): systemd-sysv
 
 %if 0%{?rhel} == 7
+Requires(post): systemd-sysv
 Requires(post): policycoreutils-python
 Requires(post): selinux-policy-targeted >= 3.13.1-102
 %endif
 
 %if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{suse_version}
 Requires(post): python3-policycoreutils
+%if ! 0%{suse_version}
 Requires(post): selinux-policy-targeted
+%endif
 %endif
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
 %if ! 0%{?amzn}
+%if 0%{suse_version}
+Requires: libvomsapi1
+%else
 Requires: voms
+%endif
 %endif
 %if 0%{suse_version}
 Requires: krb5
+Requires: libcom_err2
+Requires: libmunge2
+Requires: libopenssl1_1
+Requires: libSciTokens0
+Requires: libsystemd0
 %else
 Requires: krb5-libs
-%endif
 Requires: libcom_err
 Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
+%endif
 Requires: rsync
 
 # Support OSDF client
@@ -399,7 +414,11 @@ Requires: %name = %version-%release
 %if 0%{?rhel} == 7
 Requires: boost169-python3
 %else
+%if 0%{?suse_version}
+Requires: libboost_python-py3-1_75_0
+%else
 Requires: boost-python3
+%endif
 %endif
 Requires: python3
 
