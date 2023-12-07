@@ -15,13 +15,11 @@ from ornithology import (
     action,
     Condor,
     write_file,
-    JobID,
-    SetJobStatus,
-    JobStatus,
 )
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 goodcronscript = """#!/usr/bin/env python3
 import sys
@@ -30,12 +28,14 @@ sys.stderr.write("GoodCron writes to stderr\\n")
 sys.exit(0)
 """
 
+
 badcronscript = """#!/usr/bin/env python3
 import sys
 print("BadCron = 123\\n")
 sys.stderr.write("BadCron writes to stderr\\n")
 sys.exit(37)
 """
+
 
 @standup
 def cronscripts(test_dir):
@@ -58,6 +58,7 @@ def condor(test_dir, cronscripts):
     ) as condor:
         yield condor
 
+
 @action
 def check_logs(condor, test_dir):
     with open(test_dir / "condor/log/StartLog") as f:
@@ -68,6 +69,20 @@ def check_logs(condor, test_dir):
                 found_bad_cron = True
     return found_bad_cron
 
+
+@action
+def startd_ads(condor):
+    cp = condor.run_command(['condor_who', '-snapshot', '-long'])
+    assert cp.returncode == 0
+    return cp.stdout
+
+
 class TestStartdCron:
-    def test_startd_cron(self, check_logs):
+
+    def test_startd_cron_logs(self, check_logs):
         assert check_logs
+
+    def test_startd_cron_ads(self, startd_ads):
+        assert 'GoodCron = 123' in startd_ads
+        # This is counter-intuitive, but we don't have a knob to fix it.
+        assert 'BadCron = 123' in startd_ads
