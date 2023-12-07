@@ -8,7 +8,7 @@
 #   Author: Cole Bollig - 2023/07/21
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 import os
 
 @action

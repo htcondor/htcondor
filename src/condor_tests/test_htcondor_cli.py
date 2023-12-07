@@ -1,6 +1,6 @@
 #!/usr/bin/env pytest
 
-import htcondor
+import htcondor2 as htcondor
 import logging
 import os
 from pathlib import Path

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import htcondor
+import htcondor2 as htcondor
 import random
 import string
 from operator import itemgetter
@@ -120,8 +120,8 @@ for q in queues.keys():
     for i in range(n_submits):
         submit_description = base_submit_description + '\n' + q
         sub = htcondor.Submit(submit_description)
-        with schedd.transaction() as txn:
-            clusters[(q, i)] = sub.queue(txn)
+        result = schedd.submit(sub)
+        clusters[(q, i)] = result.cluster()
         sys.stdout.write('{0} '.format(i))
         sys.stdout.flush()
         if (i % 20 == 0) and (i > 0):

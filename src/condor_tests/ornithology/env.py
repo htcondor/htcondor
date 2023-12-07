@@ -19,7 +19,7 @@ from typing import Mapping, Optional
 import os
 from pathlib import Path
 
-import htcondor
+import htcondor2 as htcondor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
