@@ -891,7 +891,7 @@ void main_init (int argc, char ** const argv) {
 
 		} else if( !strcasecmp( "-force", argv[i] ) ) {
 			dagman.options[deep::b::Force] = true;
-		
+
 		} else if( !strcasecmp( "-notification", argv[i] ) ) {
 			i++;
 			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
