@@ -42,18 +42,28 @@ class JobEvent(Mapping):
         '''
         The Unix timestamp of the event.
         '''
+
         iso = self._data["EventTime"]
-        dt = datetime.datetime.fromisoformat(iso)
+
+        # Python 3.6 doesn't have fromisoformat().  In additon,
+        # its implementation of %z doesn't recognize 'Z' as UTC.
+        format = "%Y-%m-%dT%H:%M:%S"
+
+        if '.' in iso:
+            format += ".%f"
+
+        if iso.endswith("Z"):
+            format += "Z"
+
+        dt = datetime.datetime.strptime(iso ,format)
+
+        if iso.endswith("Z"):
+            dt.replace(tzinfo=datetime.timezone.utc)
+
         # We return an int here for backwards-compatibility with the
         # actual implementation (the documentation says `str`, but the
         # code never did that).  If this causes somebody grief, we can
-        # easily just return the dt itself; note that the `EventTime`
-        # may be in UTC and/or include sub-second timing, if those
-        # format options were turned on in config when the log was written.
-        # (A datetime.datetime object return from fromisoformat() should
-        # be "naive" -- see the documentation -- if the string did not
-        # include a timezone, and otherwise set the timezone correctly,
-        # which is exactly the behavior Python programmers will be expecting.)
+        # easily just return the dt itself.
         return int(dt.timestamp())
 
 

@@ -531,6 +531,9 @@ main(int argc, const char * argv[])
 	// subproc ID is always (and must be) zero.
 	WriteUserLog logFile;
 	logFile.initialize(logname, 14, 55, 0);
+	// FIXME: at some point we'll have to actually test all the various
+	// options and make sure that they work.
+	// logFile.initialize(logname, 14, 55, 0, ULogEvent::formatOpt::ISO_DATE | ULogEvent::formatOpt::UTC | ULogEvent::formatOpt::SUB_SECOND );
 
 	writeSubmitEvent(logFile);
 	writeExecuteEvent(logFile);
