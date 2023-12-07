@@ -228,10 +228,8 @@ _collector_advertise( PyObject *, PyObject * args ) {
 
 	ClassAd ad;
 	std::unique_ptr<Sock> sock;
-	Daemon * collector = NULL;
-	collectorList->rewind();
 
-	while( collectorList->next(collector) ) {
+    for( auto & collector : collectorList->getList() ) {
 		if(! collector->locate()) {
 			// This was HTCondorLocateError in version 1.
 			PyErr_SetString( PyExc_RuntimeError, "Unable to locate collector." );
