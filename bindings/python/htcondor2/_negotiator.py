@@ -15,6 +15,14 @@ from .htcondor2_impl import (
 )
 
 
+def _validate_user(user):
+    if not isinstance(user, str):
+        raise TypeError("user must be a string")
+    if '@' not in user:
+        # This was HTCondorValueError in version 1.
+        raise ValueError("You must specify the submitter (user@uid.domain)")
+
+
 class Negotiator():
 
     def __init__(self, location : classad.ClassAd = None):
@@ -31,11 +39,7 @@ class Negotiator():
 
 
     def deleteUser(self, user : str) -> None:
-        if not isinstance(user, str):
-            raise TypeError("user must be a string")
-        if '@' not in user:
-            # This was HTCondorValueError in version 1.
-            raise ValueError("You must specify the submitter (user@uid.domain)")
+        _validate_user(user)
         _negotiator_command_user(self._addr, self._DELETE_USER, user)
 
 
@@ -48,11 +52,7 @@ class Negotiator():
 
 
     def getResourceUsage(self, user : str) -> List[classad.ClassAd]:
-        if not isinstance(user, str):
-            raise TypeError("user must be a string")
-        if '@' not in user:
-            # This was HTCondorValueError in version 1.
-            raise ValueError("You must specify the submitter (user@uid.domain)")
+        _validate_user(user)
         returnAd = _negotiator_command_user_return(self._addr, self._GET_RESLIST, user)
         return _convert_numbered_attributes_to_list_of_ads(returnAd)
 
@@ -62,30 +62,20 @@ class Negotiator():
 
 
     def resetUsage(self, user : str) -> None:
-        if not isinstance(user, str):
-            raise TypeError("user must be a string")
-        if '@' not in user:
-            # This was HTCondorValueError in version 1.
-            raise ValueError("You must specify the submitter (user@uid.domain)")
+        _validate_user(user)
         _negotiator_command_user(self._addr, self._RESET_USAGE, user)
 
 
     def setBeginUsage(self, user : str, when : int) -> None:
-        if not isinstance(user, str):
-            raise TypeError("user must be a string")
-        if '@' not in user:
-            # This was HTCondorValueError in version 1.
-            raise ValueError("You must specify the submitter (user@uid.domain)")
+        _validate_user(user)
+        # if isinstance(when, float):
         _negotiator_command_user_value(self._addr, self._SET_BEGINTIME, user, int(when))
 
 
     # This incorrectly -- and brokenly -- takes a float in version 1.
     def setCeiling(self, user : str, ceiling : int) -> None:
-        if not isinstance(user, str):
-            raise TypeError("user must be a string")
-        if '@' not in user:
-            # This was HTCondorValueError in version 1.
-            raise ValueError("You must specify the submitter (user@uid.domain)")
+        _validate_user(user)
+        # if isinstance(ceiling, float):
         if ceiling <= -1:
             # This was HTCondorValueError in version 1.
             raise ValueError("Ceiling must be greater than -1.")
@@ -93,44 +83,28 @@ class Negotiator():
 
 
     def setLastUsage(self, user : str, when : int) -> None:
-        if not isinstance(user, str):
-            raise TypeError("user must be a string")
-        if '@' not in user:
-            # This was HTCondorValueError in version 1.
-            raise ValueError("You must specify the submitter (user@uid.domain)")
+        _validate_user(user)
         _negotiator_command_user_value(self._addr, self._SET_LASTTIME, user, int(when))
 
 
     # This works exactly the same way it did version 1, including the ugly
     # error message from not waiting for the reply.
     def setFactor(self, user : str, factor : float) -> None:
-        if not isinstance(user, str):
-            raise TypeError("user must be a string")
-        if '@' not in user:
-            # This was HTCondorValueError in version 1.
-            raise ValueError("You must specify the submitter (user@uid.domain)")
+        _validate_user(user)
         if factor < 1:
             raise ValueError("Priority factors must be >= 1")
         _negotiator_command_user_value(self._addr, self._SET_PRIORITYFACTOR, user, float(factor))
 
 
     def setPriority(self, user : str, priority : float) -> None:
-        if not isinstance(user, str):
-            raise TypeError("user must be a string")
-        if '@' not in user:
-            # This was HTCondorValueError in version 1.
-            raise ValueError("You must specify the submitter (user@uid.domain)")
+        _validate_user(user)
         if priority < 0:
             raise ValueError("User priority must be non-negative")
         _negotiator_command_user_value(self._addr, self._SET_PRIORITY, user, float(priority))
 
 
     def setUsage(self, user : str, usage : float) -> None:
-        if not isinstance(user, str):
-            raise TypeError("user must be a string")
-        if '@' not in user:
-            # This was HTCondorValueError in version 1.
-            raise ValueError("You must specify the submitter (user@uid.domain)")
+        _validate_user(user)
         if usage < 0:
             raise ValueError("Usage must be non-negative")
         _negotiator_command_user_value(self._addr, self._SET_ACCUMUSAGE, user, float(usage))
