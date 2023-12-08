@@ -1,6 +1,7 @@
 from typing import (
     Union,
     List,
+    Optional,
 )
 
 from ._common_imports import (
@@ -38,13 +39,13 @@ class Startd():
     def drainJobs(self,
       drain_type : DrainType = DrainType.Graceful,
       on_completion : CompletionType = CompletionType.Nothing,
-      check_expr : str = "True",
-      start_expr : str = "False",
+      check_expr : Optional[str] = None,
+      start_expr : Optional[str] = None,
       reason : str = None,
     ) -> str:
-        if check_expr is None:
+        if check_expr is not None and not isinstance(check_expr, str):
             raise TypeError("check_expr must be a string")
-        if start_expr is None:
+        if start_expr is not None and not isinstance(start_expr, str):
             raise TypeError("start_expr must be a string")
         return _startd_drain_jobs(self._addr,
           int(drain_type), int(on_completion), check_expr, start_expr, reason
