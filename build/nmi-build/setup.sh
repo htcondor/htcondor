@@ -194,7 +194,11 @@ fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL condor hostname java openssh-clients openssh-server openssl
     if [ $ID = 'opensuse-leap' ]; then
-        $INSTALL procps
+        $INSTALL procps wget
+        # Install better patchelf
+        wget https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz
+        (cd /usr; tar xfpz /patchelf-0.18.0-x86_64.tar.gz ./bin/patchelf)
+        rm patchelf-0.18.0-x86_64.tar.gz
     else
         $INSTALL procps-ng
     fi
