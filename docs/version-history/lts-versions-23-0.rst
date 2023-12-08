@@ -28,7 +28,7 @@ Release Notes:
 
 New Features:
 
-- Improve ``htcondor job status`` command to display information about
+- Improve :tool:`htcondor job status` command to display information about
   a jobs goodput.
   :jira:`1982`
 

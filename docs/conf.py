@@ -40,6 +40,7 @@ extensions = [
     'subcom-def',
     'index',
     'jira',
+    'tool',
 ]
 
 # When we drop el7, just put classad-attribute unconditionally

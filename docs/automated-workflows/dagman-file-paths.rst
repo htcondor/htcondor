@@ -69,7 +69,7 @@ DAG in ``dag1``. Assume that the directory contents are
         └── two.dag
 
 
-The goal is to use a single invocation of *condor_submit_dag* to run
+The goal is to use a single invocation of :tool:`condor_submit_dag` to run
 both dag1 and dag2. The invocation
 
 .. code-block:: console
