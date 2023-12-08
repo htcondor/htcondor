@@ -23,6 +23,7 @@ Version: %{condor_version}
 %global version_ %(tr . _ <<< %{version})
 
 %if 0%{?suse_version}
+%global _libexecdir %{_exec_prefix}/libexec
 %if %{suse_version} == 1500
 %global dist .leap15
 %endif
@@ -652,11 +653,6 @@ echo ---------------------------- makefile ---------------------------------
 cd build
 %endif
 make install DESTDIR=%{buildroot}
-
-%if 0%{?suse_version}
-mv %{buildroot}/usr/libexec/condor %{buildroot}/%{_libexecdir}
-mv %{buildroot}/usr/libexec/blahp %{buildroot}/%{_libexecdir}
-%endif
 
 %if %uw_build
 make tests-tar-pkg
