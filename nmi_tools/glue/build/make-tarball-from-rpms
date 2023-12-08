@@ -85,7 +85,7 @@ tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$
 rm -r condor_tests-$version-$release-$arch_dist
 
 # Extract external RPMs
-for path in /usr/local/condor/externals/*.rpm; do
+for path in $(find /usr/local/condor/externals -name \*.rpm); do
     file=${path##*/}
     echo ======= $file =======
     echo $file >> tarball/Manifest.txt
