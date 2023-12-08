@@ -40,24 +40,9 @@ const char TotallyWild[] = "*";
 const std::string netgroup_detected = "***";
 #endif
 
-// Hash function for Permission hash table
-static size_t
-compute_perm_hash(const in6_addr &in_addr)
-{
-		// the hash function copied from MyString::Hash()
-	int Len = sizeof(in6_addr);
-	const unsigned char* Data = (const unsigned char*)&in_addr;
-	int i;
-	size_t result = 0;
-	for(i = 0; i < Len; i++) {
-		result = (result<<5) + result + Data[i];
-	}
-	return result;
-}
-
-// == operator for struct in_addr, also needed for hash table template
-bool operator==(const in6_addr& a, const in6_addr& b) {
-	return IN6_ARE_ADDR_EQUAL(&a, &b);
+// < operator for struct in6_addr, needed for std::map key
+bool operator<(const struct in6_addr& a, const struct in6_addr& b) {
+	return memcmp(&a, &b, sizeof(a)) < 0;
 }
 
 // Constructor
@@ -69,29 +54,12 @@ IpVerify::IpVerify()
 	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
 		PermTypeArray[perm] = NULL;
 	}
-
-	PermHashTable = new PermHashTable_t(compute_perm_hash);
 }
 
 
 // Destructor
 IpVerify::~IpVerify()
 {
-
-	// Clear the Permission Hash Table
-	if (PermHashTable) {
-		// iterate through the table and delete the entries
-		in6_addr key;
-		UserPerm_t * value;
-		PermHashTable->startIterations();
-
-		while (PermHashTable->iterate(key, value)) {
-			delete value;
-		}
-
-		delete PermHashTable;
-	}
-
 	// Clear the Permission Type Array and Punched Hole Array
 	DCpermission perm;
 	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
@@ -118,18 +86,7 @@ IpVerify::Init()
 	ASSERT( sizeof(perm_mask_t)*8 - 2 > LAST_PERM );
 
 	// Clear the Permission Hash Table in case re-initializing
-	if (PermHashTable) {
-		// iterate through the table and delete the entries
-		struct in6_addr key;
-		UserPerm_t * value;
-		PermHashTable->startIterations();
-
-		while (PermHashTable->iterate(key, value)) {
-			delete value;
-		}
-
-		PermHashTable->clear();
-	}
+	PermHashTable.clear();
 
 	// and Clear the Permission Type Array
 	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
@@ -209,36 +166,21 @@ IpVerify::Init()
 		}
 	}
 	dprintf(D_FULLDEBUG|D_SECURITY,"Initialized the following authorization table:\n");
-	if(PermHashTable)	
-		PrintAuthTable(D_FULLDEBUG|D_SECURITY);
+	PrintAuthTable(D_FULLDEBUG|D_SECURITY);
 	return TRUE;
 }
-
-bool IpVerify :: has_user(UserPerm_t * perm, const char * user, perm_mask_t & mask )
-{
-    // Now, let's see if the user is there
-    std::string user_key;
-    assert(perm);
-
-    if( !user || !*user ) {
-		user_key = TotallyWild;
-	}
-	else {
-		user_key = user;
-	}
-
-    return perm->lookup(user_key, mask) != -1;
-}   
-
 
 bool
 IpVerify::LookupCachedVerifyResult( DCpermission perm, const struct in6_addr &sin6, const char * user, perm_mask_t & mask)
 {
-    UserPerm_t * ptable = NULL;
+	ASSERT(user && *user);
 
-	if( PermHashTable->lookup(sin6, ptable) != -1 ) {
+	auto host_itr = PermHashTable.find(sin6);
+	if (host_itr != PermHashTable.end()) {
 
-		if (has_user(ptable, user, mask)) {
+		auto user_itr = host_itr->second.find(user);
+		if (user_itr != host_itr->second.end()) {
+			mask = user_itr->second;
 
 				// We do not want to return true unless there is
 				// a cached result for this specific perm level.
@@ -251,32 +193,12 @@ IpVerify::LookupCachedVerifyResult( DCpermission perm, const struct in6_addr &si
 	return false;
 }
 
-int
+void
 IpVerify::add_hash_entry(const struct in6_addr & sin6_addr, const char * user, perm_mask_t new_mask)
 {
-    UserPerm_t * perm = NULL;
-    perm_mask_t old_mask = 0;  // must init old_mask to zero!!!
-    std::string user_key = user;
+	ASSERT(user && *user);
 
-	// assert(PermHashTable);
-	if ( PermHashTable->lookup(sin6_addr, perm) != -1 ) {
-		// found an existing entry.  
-
-		if (has_user(perm, user, old_mask)) {
-			// remove it because we are going to edit the mask below
-			// and re-insert it.
-			perm->remove(user_key);
-        }
-	}
-    else {
-        perm = new UserPerm_t(hashFunction);
-        if (PermHashTable->insert(sin6_addr, perm) != 0) {
-            delete perm;
-            return FALSE;
-        }
-    }
-
-    perm->insert(user_key, old_mask | new_mask);
+	PermHashTable[sin6_addr][user] |= new_mask;
 
 	if( IsFulldebug(D_FULLDEBUG) || IsDebugLevel(D_SECURITY) ) {
 		std::string auth_str;
@@ -285,8 +207,6 @@ IpVerify::add_hash_entry(const struct in6_addr & sin6_addr, const char * user, p
 				"Adding to resolved authorization table: %s\n",
 				auth_str.c_str());
 	}
-
-    return TRUE;
 }
 
 perm_mask_t 
@@ -364,18 +284,10 @@ IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_
 
 void
 IpVerify::PrintAuthTable(int dprintf_level) {
-	struct in6_addr host;
-	UserPerm_t * ptable;
-	PermHashTable->startIterations();
 
-	while (PermHashTable->iterate(host, ptable)) {
-		std::string userid;
-		perm_mask_t mask;
+	for (auto& [host, ptable] : PermHashTable) {
 
-		ptable->startIterations();
-		while( ptable->iterate(userid,mask) ) {
-				// Call has_user() to get the full mask
-			has_user(ptable, userid.c_str(), mask);
+		for (auto& [userid, mask] : ptable) {
 
 			std::string auth_entry_str;
 			AuthEntryToString(host,userid.c_str(),mask, auth_entry_str);

@@ -125,7 +125,7 @@ public:
 
 private:
 
-    typedef HashTable <std::string, perm_mask_t> UserPerm_t;     // <userid, mask> pair
+    typedef std::map<std::string, perm_mask_t> UserPerm_t;     // <userid, mask> pair
     /* This is for listing users per host */
     typedef std::map<std::string, std::vector<std::string>> UserHash_t;
 
@@ -148,9 +148,8 @@ private:
 		}
 	};
 
-    bool has_user(UserPerm_t * , const char *, perm_mask_t &);
 	bool LookupCachedVerifyResult( DCpermission perm, const struct in6_addr &sin6, const char * user, perm_mask_t & mask);
-	int add_hash_entry(const struct in6_addr & sin6_addr, const char * user, perm_mask_t new_mask);
+	void add_hash_entry(const struct in6_addr & sin6_addr, const char * user, perm_mask_t new_mask);
 	void fill_table( PermTypeEntry * pentry, char * list, bool allow);
     void split_entry(const char * entry, std::string& host, std::string& user);
 	perm_mask_t allow_mask(DCpermission perm);
@@ -178,8 +177,8 @@ private:
 
 	HolePunchTable_t PunchedHoleArray[LAST_PERM];
 
-	typedef HashTable <struct in6_addr, UserPerm_t *> PermHashTable_t;
-	PermHashTable_t* PermHashTable;
+	typedef std::map<struct in6_addr, UserPerm_t> PermHashTable_t;
+	PermHashTable_t PermHashTable;
 };
 	
 
