@@ -37,7 +37,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "string_list.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
 
@@ -128,7 +127,7 @@ private:
 
     typedef HashTable <std::string, perm_mask_t> UserPerm_t;     // <userid, mask> pair
     /* This is for listing users per host */
-    typedef HashTable <std::string, StringList *>    UserHash_t;
+    typedef std::map<std::string, std::vector<std::string>> UserHash_t;
 
     typedef std::map <std::string, int> HolePunchTable_t;
 
@@ -137,33 +136,28 @@ private:
 	class PermTypeEntry {
 	public:
 		int behavior;
-		UserHash_t* allow_users;
-		UserHash_t* deny_users;
-//		HolePunchTable_t* hole_punch_table;
+		UserHash_t allow_users;
+		UserHash_t deny_users;
 
         // used if netgroups are supported
         netgroup_list_t allow_netgroups;
         netgroup_list_t deny_netgroups;
 
 		PermTypeEntry() {
-			allow_users = NULL;
-			deny_users  = NULL;
 			behavior = USERVERIFY_USE_TABLE;
-//			hole_punch_table = NULL;
 		}
-		~PermTypeEntry(); 
 	};
 
     bool has_user(UserPerm_t * , const char *, perm_mask_t &);
 	bool LookupCachedVerifyResult( DCpermission perm, const struct in6_addr &sin6, const char * user, perm_mask_t & mask);
 	int add_hash_entry(const struct in6_addr & sin6_addr, const char * user, perm_mask_t new_mask);
 	void fill_table( PermTypeEntry * pentry, char * list, bool allow);
-    void split_entry(const char * entry, char ** host, char ** user);
+    void split_entry(const char * entry, std::string& host, std::string& user);
 	perm_mask_t allow_mask(DCpermission perm);
 	perm_mask_t deny_mask(DCpermission perm);
 
 	void PermMaskToString(perm_mask_t mask, std::string &mask_str);
-	void UserHashToString(UserHash_t *user_hash, std::string &result);
+	void UserHashToString(UserHash_t& user_hash, std::string &result);
 	void AuthEntryToString(const struct in6_addr & host, const char * user, perm_mask_t mask, std::string &result);
 	void PrintAuthTable(int dprintf_level);
 
@@ -175,7 +169,7 @@ private:
 	bool lookup_user_host_deny(DCpermission perm, char const *user, char const *hostname);
 
 		// This is the low-level function called by the other lookup_user functions.
-	bool lookup_user(UserHash_t *users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list);
+	bool lookup_user(UserHash_t& users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list);
 
 	char * merge(char * newPerm, char * oldPerm);
 	bool did_init;

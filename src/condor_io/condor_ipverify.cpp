@@ -321,21 +321,11 @@ IpVerify::PermMaskToString(perm_mask_t mask, std::string &mask_str)
 }
 
 void
-IpVerify::UserHashToString(UserHash_t *user_hash, std::string &result)
+IpVerify::UserHashToString(UserHash_t &user_hash, std::string &result)
 {
-	ASSERT( user_hash );
-	user_hash->startIterations();
-	std::string host;
-	StringList *users;
-	char const *user;
-	while( user_hash->iterate(host,users) ) {
-		if( users ) {
-			users->rewind();
-			while( (user=users->next()) ) {
-				formatstr_cat(result, " %s/%s",
-								   user,
-								   host.c_str());
-			}
+	for (auto& [host, users] : user_hash) {
+		for (auto& user : users) {
+			formatstr_cat(result, " %s/%s", user.c_str(), host.c_str());
 		}
 	}
 }
@@ -402,13 +392,9 @@ IpVerify::PrintAuthTable(int dprintf_level) {
 
 		std::string allow_users,deny_users;
 
-		if( pentry->allow_users ) {
-			UserHashToString(pentry->allow_users,allow_users);
-		}
+		UserHashToString(pentry->allow_users,allow_users);
 
-		if( pentry->deny_users ) {
-			UserHashToString(pentry->deny_users,deny_users);
-		}
+		UserHashToString(pentry->deny_users,deny_users);
 
 		if( allow_users.length() ) {
 			dprintf(dprintf_level,"allow %s: %s\n",
@@ -425,7 +411,7 @@ IpVerify::PrintAuthTable(int dprintf_level) {
 }
 
 static void
-ExpandHostAddresses( char const * entry, StringList * list )
+ExpandHostAddresses( char const * entry, std::vector<std::string>& list )
 {
 	//
 	// What we're actually passed are entries in a security list.  An entry
@@ -438,10 +424,10 @@ ExpandHostAddresses( char const * entry, StringList * list )
 	// <host|ip>:<port> semi-sinful strings.
 	//
 	// It's not all clear that it's wise to include entries that we don't
-	// recognize in the StringList, but for backwards-compatibility, we'll
+	// recognize in the list, but for backwards-compatibility, we'll
 	// try it.
 	//
-	list->append( entry );
+	list.emplace_back( entry );
 
 	//
 	// Because we allow hostnames in sinfuls, and allow unbracketed sinfuls,
@@ -482,11 +468,8 @@ ExpandHostAddresses( char const * entry, StringList * list )
 	}
 
 	std::vector<condor_sockaddr> addrs = resolve_hostname(entry);
-	for (std::vector<condor_sockaddr>::iterator iter = addrs.begin();
-		 iter != addrs.end();
-		 ++iter) {
-		const condor_sockaddr& addr = *iter;
-		list->append(addr.to_ip_string().c_str());
+	for (auto& addr : addrs) {
+		list.emplace_back(addr.to_ip_string());
 	}
 }
 
@@ -495,20 +478,14 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 {
     assert(pentry);
 
-    UserHash_t * whichUserHash = new UserHash_t(hashFunction);
-
-    StringList slist(list);
-	char *entry, * host, * user;
-	slist.rewind();
-	while ( (entry=slist.next()) ) {
-		if (!*entry) {
+	std::string host;
+	std::string user;
+	for (auto& entry : StringTokenIterator(list)) {
+		if (entry.empty()) {
 			// empty string?
-			slist.deleteCurrent();
 			continue;
 		}
-		split_entry(entry, &host, &user);
-		ASSERT( host );
-		ASSERT( user );
+		split_entry(entry.c_str(), host, user);
 
 #if defined(HAVE_INNETGR)
         if (netgroup_detected == user) {
@@ -517,8 +494,6 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
             } else {
                 pentry->deny_netgroups.push_back(host);
             }
-            free(host);
-            free(user);
             continue;
         }
 #endif
@@ -527,36 +502,21 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 			// add them to the list.  This ensures that if we are given
 			// a cname, we do the right thing later when trying to match
 			// this record with the official hostname.
-		StringList host_addrs;
-		ExpandHostAddresses(host,&host_addrs);
-		host_addrs.rewind();
+		std::vector<std::string> host_addrs;
+		ExpandHostAddresses(host.c_str(), host_addrs);
 
-		char const *host_addr;
-		while( (host_addr=host_addrs.next()) ) {
-			std::string hostString(host_addr);
-			StringList * userList = 0;
-				// add user to user hash, host to host list
-			if (whichUserHash->lookup(hostString, userList) == -1) {
-				whichUserHash->insert(hostString, new StringList(user)); 
-			}
-			else {
-				userList->append(user);
+		for (auto& host_addr : host_addrs) {
+				// add user to user hash under host key
+			if (allow) {
+				pentry->allow_users[host_addr].emplace_back(user);
+			} else {
+				pentry->deny_users[host_addr].emplace_back(user);
 			}
 		}
-
-		free(host);
-		free(user);
 	}
-
-    if (allow) {
-        pentry->allow_users  = whichUserHash;
-    }
-    else {
-        pentry->deny_users = whichUserHash;
-    }
 }
 
-void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
+void IpVerify :: split_entry(const char * perm_entry, std::string& host, std::string& user)
 {
     char * slash0;
     char * slash1;
@@ -590,8 +550,8 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
     // netgroup entries are of the form '+<groupname>', and may embody
     // information about both hosts and users
     if (permbuf[0] == '+') {
-        *user = strdup(netgroup_detected.c_str());
-        *host = strdup(1+permbuf);
+        user = netgroup_detected;
+        host = (1+permbuf);
         free(permbuf);
         return;
     }
@@ -601,10 +561,10 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 	if (!slash0) {
 		at = strchr(permbuf, '@');
 		if (at) {
-			*user = strdup(permbuf);
-			*host = strdup("*");
+			user = permbuf;
+			host = '*';
 		} else {
-			*user = strdup("*");
+			user = '*';
 
 			// [IPV6] WHY DOES IT LOOK FOR COLON?
 			// COLON IS ESSENTIAL PART OF IPV6 ADDRESS
@@ -621,7 +581,7 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 //			}
 
 			// now dup it
-			*host = strdup(permbuf);
+			host = permbuf;
 		}
 	} else {
 		// okay, there was one slash... look for another
@@ -629,26 +589,26 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 		if (slash1) {
 			// form is user/net/mask
 			*slash0++ = 0;
-			*user = strdup(permbuf);
-			*host = strdup(slash0);
+			user = permbuf;
+			host = slash0;
 		} else {
 			// could be either user/host or net/mask
 			// handle */x case now too
 			at = strchr(permbuf, '@');
 			if ((at && at < slash0) || permbuf[0] == '*') {
 				*slash0++ = 0;
-				*user = strdup(permbuf);
-				*host = strdup(slash0);
+				user = permbuf;
+				host = slash0;
 			} else {
 				condor_netaddr netaddr;
 				if (netaddr.from_net_string(permbuf)) {
-					*user = strdup("*");
-					*host = strdup(permbuf);
+					user = '*';
+					host = permbuf;
 				} else {
 					dprintf (D_SECURITY, "IPVERIFY: warning, strange entry %s\n", permbuf);
 					*slash0++ = 0;
-					*user = strdup(permbuf);
-					*host = strdup(slash0);
+					user = permbuf;
+					host = slash0;
 				}
 			}
 		}
@@ -958,9 +918,9 @@ IpVerify::lookup_user_host_deny(DCpermission perm, char const *user, char const 
 }
 
 bool
-IpVerify::lookup_user(UserHash_t *users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list)
+IpVerify::lookup_user(UserHash_t& users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list)
 {
-	if( !users ) {
+	if( users.empty() && netgroups.empty() ) {
 		return false;
 	}
 	ASSERT( user );
@@ -969,10 +929,7 @@ IpVerify::lookup_user(UserHash_t *users, netgroup_list_t& netgroups, char const 
 	ASSERT( !ip || !hostname );
 	ASSERT( ip || hostname);
 
-	std::string host_key;
-	StringList* userlist;
-	users->startIterations();
-	while (users->iterate(host_key, userlist)) {
+	for (auto& [host_key, userlist] : users) {
 		bool host_matches = false;
 		if (ip) {
 			host_matches = matches_withnetwork(host_key.c_str(), ip);
@@ -980,7 +937,7 @@ IpVerify::lookup_user(UserHash_t *users, netgroup_list_t& netgroups, char const 
 			host_matches = matches_anycase_withwildcard(host_key.c_str(), hostname);
 		}
 
-		if (host_matches && userlist->contains_anycase_withwildcard(user)) {
+		if (host_matches && contains_anycase_withwildcard(userlist, user)) {
 			dprintf ( D_SECURITY, "IPVERIFY: matched user %s from %s to %s list\n",
 					  user, host_key.c_str(), is_allow_list ? "allow" : "deny" );
 			return true;
@@ -1082,26 +1039,5 @@ IpVerify::FillHole(DCpermission perm, const std::string& id)
 	}
 
 	return true;
-}
-
-IpVerify::PermTypeEntry::~PermTypeEntry() {
-	if (allow_users) {
-		std::string    key;
-		StringList* value;
-		allow_users->startIterations();
-		while (allow_users->iterate(key, value)) {
-			delete value;
-		}
-		delete allow_users;
-	}
-	if (deny_users) {
-		std::string    key;
-		StringList* value;
-		deny_users->startIterations();
-		while (deny_users->iterate(key, value)) {
-			delete value;
-		}
-		delete deny_users;
-	}
 }
 
