@@ -7542,7 +7542,7 @@ bool SubmitHash::NeedsOAuthServices(
 
 	int errcode;
 	PCRE2_SIZE erroffset;
-	pcre2_code * re = pcre2_compile(reinterpret_cast<const unsigned char*>("_oauth_(permissions|resource)"),
+	pcre2_code * re = pcre2_compile(reinterpret_cast<const unsigned char*>("_oauth_(permissions|resource|options)"),
 		PCRE2_ZERO_TERMINATED, PCRE2_CASELESS, &errcode, &erroffset, NULL);
 	if ( ! re) {
 		dprintf(D_ALWAYS, "could not compile Oauth key regex!\n");
@@ -7682,6 +7682,26 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 		}
 		if ( ! param_val.empty()) { request_ad->Assign("Audience", param_val); }
+
+		// get options from submit file or config file if needed
+		formatstr(param_name, "%s_OAUTH_OPTIONS", service_name.c_str());
+		if (handle.length()) {
+			param_name += "_";
+			param_name += handle;
+		}
+		param_val = submit_param_string(param_name.c_str(), NULL);
+		if (param_val.length() == 0) {
+			// not specified: is this required?
+			formatstr(config_param_name, "%s_USER_DEFINE_OPTIONS", service_name.c_str());
+			param(param_val, config_param_name.c_str());
+			if (param_val[0] == 'R') {
+				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
+				return -1;
+			}
+			formatstr(config_param_name, "%s_DEFAULT_OPTIONS", service_name.c_str());
+			param(param_val, config_param_name.c_str());
+		}
+		if ( ! param_val.empty()) { request_ad->Assign("Options", param_val); }
 
 		// right now, we only ever want to obtain creds for the user
 		// principal as determined by the CredD.  omitting username
