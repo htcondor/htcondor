@@ -11,12 +11,12 @@
 // htcondor.*
 #include "condor_version.h"
 #include "subsystem_info.h"
+#include "common2/py_util.cpp"
 #include "htcondor2/loose_functions.cpp"
 
 // htcondor.Collector
 #include "daemon_list.h"
 #include "dc_collector.h"
-#include "common2/py_util.cpp"
 #include "htcondor2/collector.cpp"
 
 // htcondor.Negotiator

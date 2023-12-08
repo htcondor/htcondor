@@ -26,7 +26,7 @@ _set_subsystem( PyObject *, PyObject * args ) {
 	if( py_subsystem_type ) {
 		static PyObject * py_htcondor_module = NULL;
 		if( py_htcondor_module == NULL ) {
-			py_htcondor_module = PyImport_ImportModule( "htcondor2" );
+			py_htcondor_module = PyImport_ImportModule( HTCONDOR2_MODULE_NAME );
 		}
 
 		static PyObject * py_subsystemtype_class = NULL;

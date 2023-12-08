@@ -6,11 +6,11 @@
 
 // classad.*
 #include "classad/classad.h"
+#include "common2/py_util.cpp"
 #include "classad2/loose_functions.cpp"
 
 // classad.ClassAd
 #include "classad/classadCache.h"
-#include "common2/py_util.cpp"
 #include "classad2/classad.cpp"
 #include "classad2/exprtree.cpp"
 
