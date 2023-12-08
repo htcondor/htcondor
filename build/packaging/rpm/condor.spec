@@ -100,7 +100,7 @@ BuildRequires: expat-devel
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
-%if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{suse_version}
+%if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{?suse_version}
 BuildRequires: python3-devel
 %else
 BuildRequires: python-devel
@@ -151,14 +151,14 @@ BuildRequires: boost-python3-devel
 %endif
 %endif
 BuildRequires: libuuid-devel
-%if 0%{suse_version}
+%if 0%{?suse_version}
 Requires: libuuid1
 %else
 Requires: libuuid
 %endif
 
 BuildRequires: systemd-devel
-%if 0%{suse_version}
+%if 0%{?suse_version}
 BuildRequires: systemd
 %else
 BuildRequires: systemd-units
@@ -173,7 +173,7 @@ BuildRequires: python-sphinx python-sphinx_rtd_theme
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
 
-%if 0%{suse_version}
+%if 0%{?suse_version}
 BuildRequires: python3-Sphinx python3-sphinx_rtd_theme
 %endif
 
@@ -206,7 +206,7 @@ Requires: python-requests
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 
-%if 0%{suse_version}
+%if 0%{?suse_version}
 Requires(pre): shadow
 Requires(post): systemd
 Requires(preun): systemd
@@ -224,9 +224,9 @@ Requires(post): policycoreutils-python
 Requires(post): selinux-policy-targeted >= 3.13.1-102
 %endif
 
-%if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{suse_version}
+%if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{?suse_version}
 Requires(post): python3-policycoreutils
-%if ! 0%{suse_version}
+%if ! 0%{?suse_version}
 Requires(post): selinux-policy-targeted
 %endif
 %endif
@@ -234,13 +234,13 @@ Requires(post): selinux-policy-targeted
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
 %if ! 0%{?amzn}
-%if 0%{suse_version}
+%if 0%{?suse_version}
 Requires: libvomsapi1
 %else
 Requires: voms
 %endif
 %endif
-%if 0%{suse_version}
+%if 0%{?suse_version}
 Requires: krb5
 Requires: libcom_err2
 Requires: libmunge2
@@ -405,7 +405,7 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{suse_version}
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
 #######################
 %package -n python3-condor
 Summary: Python bindings for HTCondor
@@ -487,7 +487,7 @@ htgettoken and to use those credentials securely inside running jobs.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{suse_version}
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
 Requires: python3-condor = %version-%release
 %endif
 
@@ -1263,7 +1263,7 @@ rm -rf %{buildroot}
 %{python_sitearch}/htcondor-*.egg-info/
 %endif
 
-%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{suse_version}
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
