@@ -598,6 +598,26 @@ sysapi_get_linux_info(void)
 	}
 	}
 	
+    // For now get the pretty name for the info string from /etc/os-release
+    // This is a minimal change for LTS
+    // In the future, just process /etc/os-release
+    if (!info_str) {
+        my_fp = safe_fopen_wrapper_follow("/etc/os-release", "r");
+        if ( my_fp != NULL ) {
+            char tmp_str[200] = {0};
+            while (fgets(tmp_str, sizeof(tmp_str), my_fp)) {
+                dprintf(D_FULLDEBUG, "Result of reading /etc/os-release:  %s \n", tmp_str);
+                if (strstr(tmp_str, "PRETTY_NAME")) {
+                    if (char *equal = strchr(tmp_str, '=')) {
+                        info_str = strdup( equal+1 );
+                        break;
+                    }
+                }
+            }
+            fclose(my_fp);
+        }
+    }
+
 	if (!info_str) {
 		info_str = strdup( "Unknown" );
 	}
