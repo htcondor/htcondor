@@ -606,10 +606,14 @@ sysapi_get_linux_info(void)
         if ( my_fp != NULL ) {
             char tmp_str[200] = {0};
             while (fgets(tmp_str, sizeof(tmp_str), my_fp)) {
-                dprintf(D_FULLDEBUG, "Result of reading /etc/os-release:  %s \n", tmp_str);
                 if (strstr(tmp_str, "PRETTY_NAME")) {
-                    if (char *equal = strchr(tmp_str, '=')) {
-                        info_str = strdup( equal+1 );
+                    dprintf(D_FULLDEBUG, "Pretty name /etc/os-release:  %s \n", tmp_str);
+                    if (char *open_quote = strchr(tmp_str, '"')) {
+                        char *pretty_name = open_quote + 1;
+                        if (char* close_quote = strchr(pretty_name, '"')) {
+                            *close_quote = 0;
+                        }
+                        info_str = strdup( pretty_name );
                         break;
                     }
                 }

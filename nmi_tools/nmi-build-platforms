@@ -11,7 +11,7 @@ docker://htcondor/nmi-build:x86_64_AmazonLinux2023-23000202
 docker://htcondor/nmi-build:x86_64_CentOS7-23000202
 docker://htcondor/nmi-build:x86_64_Debian11-23000202
 docker://htcondor/nmi-build:x86_64_Debian12-23000202
-docker://htcondor/nmi-build:x86_64_openSUSE15-23000302
+docker://htcondor/nmi-build:x86_64_openSUSE15-23000303
 docker://htcondor/nmi-build:x86_64_Ubuntu20-23000202
 docker://htcondor/nmi-build:x86_64_Ubuntu22-23000202
 x86_64_macOS13
