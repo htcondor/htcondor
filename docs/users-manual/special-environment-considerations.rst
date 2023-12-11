@@ -36,7 +36,7 @@ NFS
 If the current working directory when a job is submitted is accessed via
 an NFS automounter, HTCondor may have problems if the automounter later
 decides to unmount the volume before the job has completed. This is
-because *condor_submit* likely has stored the dynamic mount point as
+because :tool:`condor_submit` likely has stored the dynamic mount point as
 the job's initial current working directory, and this mount point could
 become automatically unmounted by the automounter.
 
@@ -164,7 +164,7 @@ As a special case, a submit description file setting of
 
      job_lease_duration = 0
 
-as well as utilizing submission other than *condor_submit* that do not
+as well as utilizing submission other than :tool:`condor_submit` that do not
 set ``JobLeaseDuration`` (such as using the web services interface)
 results in the corresponding job ClassAd attribute to be explicitly
 undefined. This has the further effect of changing the duration of a
@@ -195,7 +195,7 @@ submitted from an Intel architecture running Linux would add the
 
       requirements = Arch == "INTEL" && OpSys == "WINDOWS"
 
-Without this :subcom:`requirement`, *condor_submit* will assume that the
+Without this :subcom:`requirement`, :tool:`condor_submit` will assume that the
 program is to be executed on a machine with the same platform as the
 machine where the job is submitted.
 

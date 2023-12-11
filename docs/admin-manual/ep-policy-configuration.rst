@@ -56,7 +56,7 @@ machines in very fine detail.  The configuration of an EP is responsible for:
 
 
 The execution point is mainly managed by the *condor_startd* daemon, which itself
-is managed by a *condor_master* daemon.  Each running job in a slot is then
+is managed by a :tool:`condor_master` daemon.  Each running job in a slot is then
 managed by an instance of the *condor_starter* daemon, which was spawned from
 the *condor_startd* when the job was started.
 
@@ -358,7 +358,7 @@ Define slot types.
     The number of each type and the
     definitions for the types themselves cannot be changed with
     reconfiguration. To change any slot type definitions, use
-    *condor_restart*
+    :tool:`condor_restart`
 
     .. code-block:: console
 
@@ -730,8 +730,8 @@ available when starting a job, then the *condor_starter* will fail as
 it tries to start the job. An error message will be logged stating that
 there are no more tracking GIDs.
 
-GID-based process tracking requires use of the *condor_procd*. If
-:macro:`USE_GID_PROCESS_TRACKING` is true, the *condor_procd* will be used
+GID-based process tracking requires use of the :tool:`condor_procd`. If
+:macro:`USE_GID_PROCESS_TRACKING` is true, the :tool:`condor_procd` will be used
 regardless of the :macro:`USE_PROCD` setting.
 Changes to :macro:`MIN_TRACKING_GID` and :macro:`MAX_TRACKING_GID` require a full
 restart of HTCondor.
@@ -767,7 +767,7 @@ it, and there should an ``htcondor`` subdirectory under the directory
 The *condor_starter* daemon uses cgroups by default on Linux systems to
 accurately track all the processes started by a job, even when
 quickly-exiting parent processes spawn many child processes. As with the
-GID-based tracking, this is only implemented when a *condor_procd*
+GID-based tracking, this is only implemented when a :tool:`condor_procd`
 daemon is running.
 
 Kernel cgroups are named in a virtual file system hierarchy. HTCondor
@@ -783,7 +783,7 @@ useful information about resource usage of this cgroup. See the kernel
 documentation for full details.
 
 Once cgroup-based tracking is configured, usage should be invisible to
-the user and administrator. The *condor_procd* log, as defined by
+the user and administrator. The :tool:`condor_procd` log, as defined by
 configuration variable :macro:`PROCD_LOG`, will mention that it is using this
 method, but no user visible changes should occur, other than the
 impossibility of a quickly-forking process escaping from the control of
@@ -1206,7 +1206,7 @@ is described below.
     N
        The machine switches from the Owner to the Drained state whenever
        draining of the machine is initiated, for example by
-       *condor_drain* or by the *condor_defrag* daemon.
+       :tool:`condor_drain` or by the *condor_defrag* daemon.
 
 - Transitions out of the Unclaimed state
 
@@ -1232,7 +1232,7 @@ is described below.
        and the :macro:`START_BACKFILL` expression evaluates to TRUE.
     P
        The transition from Unclaimed to Drained happens if draining of
-       the machine is initiated, for example by *condor_drain* or by
+       the machine is initiated, for example by :tool:`condor_drain` or by
        the *condor_defrag* daemon.
 
 - Transitions out of the Matched state
@@ -1252,7 +1252,7 @@ is described below.
        Owner if the *condor_schedd* attempts to perform the claiming
        protocol but encounters some sort of error. Finally, the machine
        will move into the Owner state if the *condor_startd* receives a
-       *condor_vacate* command while it is in the Matched state.
+       :tool:`condor_vacate` command while it is in the Matched state.
     G
        The transition from Matched to Claimed occurs when the
        *condor_schedd* successfully completes the claiming protocol
@@ -1269,9 +1269,9 @@ is described below.
        -  The :macro:`PREEMPT` expression evaluates to ``True`` (which
           usually means the resource owner has started using the machine
           again and is now using the keyboard, mouse, CPU, etc.)
-       -  The *condor_startd* receives a *condor_vacate* command
+       -  The *condor_startd* receives a :tool:`condor_vacate` command
        -  The *condor_startd* is told to shutdown (either via a signal
-          or a *condor_off* command)
+          or a :tool:`condor_off` command)
        -  The resource is matched to a job with a better priority
           (either a better user priority, or one where the machine rank
           is higher)
@@ -1283,7 +1283,7 @@ is described below.
        resource was matched to a job with a better priority.
     J
        The resource will move from Preempting to Owner if the
-       :macro:`PREEMPT` expression had evaluated to TRUE, if *condor_vacate*
+       :macro:`PREEMPT` expression had evaluated to TRUE, if :tool:`condor_vacate`
        was used, or if the :macro:`START` expression locally evaluates to
        FALSE when the *condor_startd* has finished evicting whatever
        job it was running when it entered the Preempting state.
@@ -1295,7 +1295,7 @@ is described below.
        reasons:
 
        -  The :macro:`EVICT_BACKFILL` expression evaluates to TRUE
-       -  The *condor_startd* receives a *condor_vacate* command
+       -  The *condor_startd* receives a :tool:`condor_vacate` command
        -  The *condor_startd* is being shutdown
 
     L
@@ -1596,7 +1596,7 @@ resource is not currently in use by the HTCondor system. However, if a
 job matches the resource's :macro:`START` expression, the resource is
 available to run a job, regardless of if it is in the Owner or Unclaimed
 state. The only differences between the two states are how the resource
-shows up in *condor_status* and other reporting tools, and the fact
+shows up in :tool:`condor_status` and other reporting tools, and the fact
 that HTCondor will not run benchmarking on a resource in the Owner
 state. As long as the :macro:`IS_OWNER` expression is TRUE, the machine is in
 the Owner State. When the :macro:`IS_OWNER` expression is FALSE, the machine
@@ -1763,7 +1763,7 @@ Claimed State
 
 The Claimed state is certainly the most complex state. It has the most
 possible activities and the most expressions that determine its next
-activities. In addition, the *condor_vacate*
+activities. In addition, the :tool:`condor_vacate`
 command affects the machine when it is in the Claimed state.
 
 In general, there are two sets of expressions that might take effect,
@@ -1838,7 +1838,7 @@ proceed directly to the more drastic stages.
 
 When the machine first enters the Claimed state, it goes to the Idle
 activity. From there, it has two options. It can enter the Preempting
-state via transition **10** (if a *condor_vacate* arrives, or if the
+state via transition **10** (if a :tool:`condor_vacate` arrives, or if the
 :macro:`START` expression locally evaluates to FALSE), or it can enter the
 Busy activity (transition **11**) if the schedd that has claimed the
 machine decides to activate the claim and start a job.
@@ -1987,7 +1987,7 @@ machine is notified that the claim is broken, the machine will leave the
 Preempting/Killing state. If the job was preempted because a better
 match was found, the machine will enter Claimed/Idle (transition
 **24**). If the preemption was caused by the machine owner (the
-:macro:`PREEMPT` expression evaluated to TRUE, *condor_vacate* was used,
+:macro:`PREEMPT` expression evaluated to TRUE, :tool:`condor_vacate` was used,
 etc), the machine will enter the Owner state (transition **25**).
 
 Backfill State
@@ -2033,7 +2033,7 @@ As the BOINC client is running a backfill computation, a number of
 events can occur that will drive the machine out of the Backfill state.
 The machine can get matched or claimed for an HTCondor job, interactive
 users can start using the machine again, the machine might be evicted
-with *condor_vacate*, or the *condor_startd* might be shutdown. All of
+with :tool:`condor_vacate`, or the *condor_startd* might be shutdown. All of
 these events cause the *condor_startd* to kill the BOINC client and all
 its descendants, and enter the Backfill/Killing state (transition
 **28**).
@@ -2049,7 +2049,7 @@ If the :macro:`EVICT_BACKFILL` expression evaluates to TRUE while a machine
 is in Backfill/Busy, after the BOINC client is gone, the machine will go
 back into the Owner/Idle state (transition **30**). The machine will
 also return to the Owner/Idle state after the BOINC client exits if
-*condor_vacate* was used, or if the *condor_startd* is being shutdown.
+:tool:`condor_vacate` was used, or if the *condor_startd* is being shutdown.
 
 When a machine running backfill jobs is matched with a requester that
 wants to run an HTCondor job, the machine will either enter the Matched
@@ -2073,7 +2073,7 @@ Drained State
 :index:`Drained<single: Drained; machine state>` :index:`drained state`
 
 The Drained state is used when the machine is being drained, for example
-by *condor_drain* or by the *condor_defrag* daemon, and the slot has
+by :tool:`condor_drain` or by the *condor_defrag* daemon, and the slot has
 finished running jobs and is no longer willing to run new jobs.
 
 Slots initially enter the Drained/Retiring state. Once all slots have
@@ -3089,7 +3089,7 @@ a more specific version of the attribute ``Opsys``, which will just be "Linux" o
 Linux system, whereas ``OpsysAndVer`` might be ``CentOS8`` on such a system.
 
 First, we might use this attribute to examine one particular machine.  We can use
-*condor_status* to query this attribute on a machine named "vulture" by running:
+:tool:`condor_status` to query this attribute on a machine named "vulture" by running:
 
 .. code-block:: console
 
@@ -3981,7 +3981,7 @@ Once the configuration options have been set, restart the
 The *condor_startd* daemon takes a few moments to exercise the VM
 capabilities of the *condor_vm-gahp*, query its properties, and then
 advertise the machine to the pool as VM-capable. If the set up
-succeeded, then *condor_status* will reveal that the host is now
+succeeded, then :tool:`condor_status` will reveal that the host is now
 VM-capable by printing the VM type and the version number:
 
 .. code-block:: console
@@ -4024,7 +4024,7 @@ machine ClassAd attributes are changed:
 -  ``VMOfflineTime`` will be set to the time of the failure
 -  ``OfflineUniverses`` will be adjusted to include ``"VM"`` and ``13``
 
-Since *condor_submit* adds ``HasVM == True`` to a vm universe job's
+Since :tool:`condor_submit` adds ``HasVM == True`` to a vm universe job's
 requirements, no further vm universe jobs will match.
 
 Once any problems with the infrastructure are fixed, to change the
@@ -4039,11 +4039,11 @@ jobs.
    the job runs, the code detects the running job and causes the
    attributes related to the vm universe to be set indicating that vm
    universe jobs can match with this machine.
-#. Run the command line tool *condor_update_machine_ad* to set
+#. Run the command line tool :tool:`condor_update_machine_ad` to set
    machine ClassAd attribute ``HasVM`` to ``True``, and this will cause
    the other attributes related to the vm universe to be set indicating
    that vm universe jobs can match with this machine. See the
-   *condor_update_machine_ad* manual page for examples and details.
+   :tool:`condor_update_machine_ad` manual page for examples and details.
 
 Configuring GPUs
 ----------------
@@ -4061,30 +4061,30 @@ execute machine that has GPUs:
 
       use feature : GPUs
 
-Use of this configuration template invokes the *condor_gpu_discovery*
+Use of this configuration template invokes the :tool:`condor_gpu_discovery`
 tool to create a custom resource, with a custom resource name of
 ``GPUs``, and it generates the ClassAd attributes needed to advertise
-the GPUs. *condor_gpu_discovery* is invoked in a mode that discovers
+the GPUs. :tool:`condor_gpu_discovery` is invoked in a mode that discovers
 and advertises both CUDA and OpenCL GPUs.
 
 This configuration template refers to macro :macro:`GPU_DISCOVERY_EXTRA`,
 which can be used to define additional command line arguments for the
-*condor_gpu_discovery* tool. For example, setting
+:tool:`condor_gpu_discovery` tool. For example, setting
 
 .. code-block:: text
 
       use feature : GPUs
       GPU_DISCOVERY_EXTRA = -extra
 
-causes the *condor_gpu_discovery* tool to output more attributes that
+causes the :tool:`condor_gpu_discovery` tool to output more attributes that
 describe the detected GPUs on the machine.
 
-*condor_gpu_discovery* defaults to using nested ClassAds for GPU properties.  The administrator
+:tool:`condor_gpu_discovery` defaults to using nested ClassAds for GPU properties.  The administrator
 can be explicit about which form to use for properties by adding either the
 ``-nested`` or ``-not-nested`` option to :macro:`GPU_DISCOVERY_EXTRA`. 
 
 The format -- nested or not -- of GPU properties in the slot ad is the same as published
-by *condor_gpu_discovery*.  The use of nested GPU property ads is necessary
+by :tool:`condor_gpu_discovery`.  The use of nested GPU property ads is necessary
 to do GPU matchmaking and to properly support heterogeneous GPUs.  
 
 For resources like GPUs that have individual properties, when configuring slots
@@ -4096,7 +4096,7 @@ it controls the slot configuration on startup.
 The resource constraint can be specified by following the resource quantity 
 with a colon and then a constraint expression.  The constraint expression can
 refer to resource property attributes like the GPU properties from
-*condor_gpu_discovery* ``-nested`` output.  If the constraint expression is 
+:tool:`condor_gpu_discovery` ``-nested`` output.  If the constraint expression is 
 a string literal, it will be matched automatically against the resource id,
 otherwise it will be evaluated against each of the resource property ads.
 
@@ -4318,12 +4318,12 @@ Returning From a Low Power State
 
 :index:`leaving a low power state<single: leaving a low power state; power management>`
 
-The HTCondor command line tool *condor_power* may wake a machine from a
+The HTCondor command line tool :tool:`condor_power` may wake a machine from a
 low power state by sending a UDP Wake On LAN (WOL) packet. See the
 :doc:`/man-pages/condor_power` manual page.
 :index:`condor_rooster daemon`
 
-To automatically call *condor_power* under specific conditions,
+To automatically call :tool:`condor_power` under specific conditions,
 *condor_rooster* may be used. The configuration options for
 *condor_rooster* are described in the 
 :ref:`admin-manual/configuration-macros:condor_rooster configuration file
@@ -5006,14 +5006,14 @@ using Fetch Work hooks.
        A string describing how the job exited:
 
        -  exit The job exited or died with a signal on its own.
-       -  remove The job was removed with *condor_rm* or as the result
+       -  remove The job was removed with :tool:`condor_rm` or as the result
           of user job policy expressions (for example,
           ``PeriodicRemove``).
-       -  hold The job was held with *condor_hold* or the user job
+       -  hold The job was held with :tool:`condor_hold` or the user job
           policy expressions (for example, ``PeriodicHold``).
        -  evict The job was evicted from the execution slot for any
           other reason (:macro:`PREEMPT` evaluated to TRUE in the
-          *condor_startd*, *condor_vacate*, *condor_off*, etc).
+          *condor_startd*, :tool:`condor_vacate`, :tool:`condor_off`, etc).
 
     Standard input given to the hook
        A copy of the job ClassAd that has been augmented with additional

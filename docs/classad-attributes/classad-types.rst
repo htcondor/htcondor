@@ -19,8 +19,8 @@ to a list attributes relevant to that type.
     priority information.  Attributes in the accounting ad are listed
     and described in :doc:`/classad-attributes/accounting-classad-attributes`
     The accounting ads for active users can be queried with the
-    *condor_userprio* command, or the accounting ads for all users, including
-    historical ones can be queried with *condor_userprio* -negotiator.
+    :tool:`condor_userprio` command, or the accounting ads for all users, including
+    historical ones can be queried with :tool:`condor_userprio` -negotiator.
     Accounting ads hold information about total usage over the user's
     HTCondor lifetime, but submitter ads hold instantaneous information.
 
@@ -36,7 +36,7 @@ to a list attributes relevant to that type.
 :index:`DaemonMaster (ClassAd Types)`
 
 ``DaemonMaster``
-    Each *condor_master* daemon describes its state. ClassAd attributes
+    Each :tool:`condor_master` daemon describes its state. ClassAd attributes
     that appear in a DaemonMaster ClassAd are listed and described in
     the unnumbered subsection labeled DaemonMaster ClassAd Attributes on
     the :doc:`/classad-attributes/daemon-master-classad-attributes`.

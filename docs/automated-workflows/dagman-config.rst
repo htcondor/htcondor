@@ -7,7 +7,7 @@ Configuration Specific to a DAG
 All configuration variables and their definitions that relate to DAGMan
 may be found in :ref:`admin-manual/configuration-macros:configuration file entries for dagman`.
 
-Configuration variables for *condor_dagman* can be specified in several
+Configuration variables for :tool:`condor_dagman` can be specified in several
 ways, as given within the ordered list:
 
 #. In an HTCondor configuration file.
@@ -15,23 +15,23 @@ ways, as given within the ordered list:
    configuration variable's name.
 #. With a line in the DAG input file using the keyword *CONFIG*, such
    that there is a configuration file specified that is specific to an
-   instance of *condor_dagman*. The configuration file specification
-   may instead be specified on the *condor_submit_dag* command line
+   instance of :tool:`condor_dagman`. The configuration file specification
+   may instead be specified on the :tool:`condor_submit_dag` command line
    using the **-config** option.
-#. For some configuration variables, *condor_submit_dag* command line
+#. For some configuration variables, :tool:`condor_submit_dag` command line
    argument specifies a configuration variable. For example, the
    configuration variable :macro:`DAGMAN_MAX_JOBS_SUBMITTED` has the
    corresponding command line argument *-maxjobs*.
 
 For this ordered list, configuration values specified or parsed later in
 the list override ones specified earlier. For example, a value specified
-on the *condor_submit_dag* command line overrides corresponding values
+on the :tool:`condor_submit_dag` command line overrides corresponding values
 in any configuration file. And, a value specified in a DAGMan-specific
 configuration file overrides values specified in a general HTCondor
 configuration file.
 
 The *CONFIG* command within the DAG input file specifies a configuration
-file to be used to set configuration variables related to *condor_dagman*
+file to be used to set configuration variables related to :tool:`condor_dagman`
 when running this DAG. The syntax for *CONFIG* is
 
 .. code-block:: condor-dagman
@@ -48,18 +48,18 @@ this DAG. If the contents of file ``dagman.config`` is
 then this configuration is defined for this DAG.
 
 Only a single configuration file can be specified for a given
-*condor_dagman* run. For example, if one file is specified within a DAG
+:tool:`condor_dagman` run. For example, if one file is specified within a DAG
 input file, and a different file is specified on the
-*condor_submit_dag* command line, this is a fatal error at submit
+:tool:`condor_submit_dag` command line, this is a fatal error at submit
 time. The same is true if different configuration files are specified in
 multiple DAG input files and referenced in a single
-*condor_submit_dag* command.
+:tool:`condor_submit_dag` command.
 
-If multiple DAGs are run in a single *condor_dagman* run, the
-configuration options specified in the *condor_dagman* configuration
+If multiple DAGs are run in a single :tool:`condor_dagman` run, the
+configuration options specified in the :tool:`condor_dagman` configuration
 file, if any, apply to all DAGs, even if some of the DAGs specify no
 configuration file.
 
-Configuration variables that are not for *condor_dagman* and not
-utilized by DaemonCore, yet are specified in a *condor_dagman*-specific
+Configuration variables that are not for :tool:`condor_dagman` and not
+utilized by DaemonCore, yet are specified in a :tool:`condor_dagman`-specific
 configuration file are ignored.

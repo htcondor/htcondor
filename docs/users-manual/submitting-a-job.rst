@@ -3,13 +3,13 @@ Submitting a Job
 
 :index:`submitting<single: submitting; job>`
 
-The *condor_submit* command takes a job description file as input
+The :tool:`condor_submit` command takes a job description file as input
 and submits the job to HTCondor.
 :index:`submit description file`\ :index:`submit description<single: submit description; file>`
 In the submit description file, HTCondor finds everything it needs to
 know about the job. Items such as the name of the executable to run, the
 initial working directory, and command-line arguments to the program all
-go into the submit description file. *condor_submit* creates a job
+go into the submit description file. :tool:`condor_submit` creates a job
 ClassAd based upon the information, and HTCondor works toward running
 the job. :index:`contents of<single: contents of; submit description file>`
 
@@ -22,7 +22,7 @@ directory, files mapped for ``stdin``, ``stdout``, ``stderr``,
 command-line arguments, and shell environment.
 
 The :doc:`/man-pages/condor_submit` manual page contains a complete and full
-description of how to use *condor_submit*. It also includes descriptions of
+description of how to use :tool:`condor_submit`. It also includes descriptions of
 all of the many commands that may be placed into a submit description
 file. In addition, the index lists entries for each command under the
 heading of Submit Commands.
@@ -576,7 +576,7 @@ syntax to define command line arguments in one of two ways:
       arguments = -n 1 -debug
     endif
 
-Submit variable ``X`` is defined on the *condor_submit* command line
+Submit variable ``X`` is defined on the :tool:`condor_submit` command line
 with
 
 .. code-block:: console
@@ -644,7 +644,7 @@ as given in these definitions.
 
     -  ``f`` convert relative path to full path by prefixing the current
        working directory to it. This option works only in
-       *condor_submit* files.
+       :tool:`condor_submit` files.
     -  ``p`` refers to the entire directory portion of ``filename``,
        with a trailing slash or backslash character. Whether a slash or
        backslash is used depends on the platform of the machine. The
@@ -808,8 +808,8 @@ care, and this section presents those details.
 
 Both :subcom:`requirements` and :subcom:`rank` need to be specified as valid
 HTCondor ClassAd expressions, however, default values are set by the
-*condor_submit* program if these are not defined in the submit
-description file. From the *condor_submit* manual page and the above
+:tool:`condor_submit` program if these are not defined in the submit
+description file. From the :tool:`condor_submit` manual page and the above
 examples, you see that writing ClassAd expressions is intuitive,
 especially if you are familiar with the programming language C. There
 are some pretty nifty expressions you can write with ClassAds. A
@@ -832,7 +832,7 @@ MY. (on a ClassAd attribute name) causes a reference to the job ClassAd
 attribute, and the prefix TARGET. causes a reference to a potential
 machine or matched machine ClassAd attribute.
 
-The *condor_status* command displays
+The :tool:`condor_status` command displays
 :index:`condor_status<single: condor_status; HTCondor commands>`\ statistics about
 machines within the pool. The **-l** option displays the machine ClassAd
 attributes for all machines in the HTCondor pool. The job ClassAds, if
@@ -912,7 +912,7 @@ floating point performance may not be the one given the highest rank.
 
 So, it is wise when writing a :subcom:`rank` expression to    check if the
 expression's evaluation will lead to the expected resulting ranking of
-machines. This can be accomplished using the *condor_status* command
+machines. This can be accomplished using the :tool:`condor_status` command
 with the *-constraint* argument. This allows the user to see a list of
 machines that fit a constraint. To see which machines in the pool have
 ``kflops`` defined, use
@@ -1278,7 +1278,7 @@ Each interactive job will have a job ClassAd attribute of
     InteractiveJob = True
 
 Submission of an interactive job specifies the option **-interactive**
-on the *condor_submit* command line.
+on the :tool:`condor_submit` command line.
 
 A submit description file may be specified for this interactive job.
 Within this submit description file, a specification of these 5 commands
@@ -1427,7 +1427,7 @@ The following limitations apply:
 Displaying the Factory
 ''''''''''''''''''''''
 
-*condor_q* can be use to show late materialization job factories in the *condor_schedd* by
+:tool:`condor_q` can be use to show late materialization job factories in the *condor_schedd* by
 using the ``-factory`` option.
 
 .. code-block:: console
@@ -1456,12 +1456,12 @@ Removing a Factory
 
 The Late materialization job factory will be remove from the schedd automatically once all of the
 jobs have materialized and completed.  To remove the factory without first completing all of the jobs
-use *condor_rm* with the ClusterId of the factory as the argument.
+use :tool:`condor_rm` with the ClusterId of the factory as the argument.
 
 Editing a Factory
 '''''''''''''''''
 
 The *submit digest* for a Late Materialization job factory cannot be changed after submission, but the Cluster ad
-for the factory can be edited using *condor_qedit*.  Any *condor_qedit* command that has the ClusterId as a edit
+for the factory can be edited using :tool:`condor_qedit`.  Any :tool:`condor_qedit` command that has the ClusterId as a edit
 target will edit all currently materialized jobs, as well as editing the Cluster ad so that all jobs that materialize
 in the future will also be edited.

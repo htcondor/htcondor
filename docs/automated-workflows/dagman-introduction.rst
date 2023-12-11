@@ -105,7 +105,7 @@ and/or *POST* script will be run. If a relative directory is specified,
 it is relative to the current working directory as the DAG is submitted.
 Note that a DAG containing *DIR* specifications cannot be run in
 conjunction with the *-usedagdir* command-line argument to
-*condor_submit_dag*. 
+:tool:`condor_submit_dag`. 
 
 The optional *NOOP* keyword identifies that the HTCondor job within the
 node is not to be submitted to HTCondor. This is useful for 

@@ -63,7 +63,7 @@ applied whenever a job is routed.
 The routing table is given as a set of configuration macros.  Each configuration macro
 is given in the job transform language. This is the same transform language used by the
 *condor_schedd* for job transforms.  This language is similar to the
-*condor_submit* language, but has commands to describe the
+:tool:`condor_submit` language, but has commands to describe the
 transform steps and optional macro values such as ``MaxJobs`` that can control the way
 the route is used.
 
@@ -162,9 +162,9 @@ where ``job1.sub`` might contain:
 
 The status of the job may be observed as with any other HTCondor job,
 for example by looking in the job's log file. Before the job completes,
-*condor_q* shows the job's status. Should the job become routed, a
+:tool:`condor_q` shows the job's status. Should the job become routed, a
 second job will enter the job queue. This is the routed copy of the
-original job. The command *condor_router_q* shows a more specialized
+original job. The command :tool:`condor_router_q` shows a more specialized
 view of routed jobs, as this example shows:
 
 .. code-block:: console
@@ -175,7 +175,7 @@ view of routed jobs, as this example shows:
          10  I Site2      site2.edu/jobmanager-pbs
           2  R Site3      condor submit.site3.edu condor.site3.edu
 
-*condor_router_history* summarizes the history of routed jobs, as this
+:tool:`condor_router_history` summarizes the history of routed jobs, as this
 example shows:
 
 .. code-block:: console

@@ -63,15 +63,15 @@ Bugs Fixed:
   to the server.
   :jira:`2157`
 
-- Updated the usage and man page of the *condor_drain* tool to include information
+- Updated the usage and man page of the :tool:`condor_drain` tool to include information
   about the ``-reconfig-on-completion`` option.
   :jira:`2164`
 
 - Correctly identify ``GPUsAverageUsage`` and ``GPUsMemoryUsage`` as floating point
-  values for *condor_adstash*.
+  values for :tool:`condor_adstash`.
   :jira:`2170`
 
-- Fixed a bug where *condor_adstash* would get wedged due to a logging failure.
+- Fixed a bug where :tool:`condor_adstash` would get wedged due to a logging failure.
   :jira:`2166`
 
 .. _lts-version-history-2302:
@@ -91,7 +91,7 @@ Bugs Fixed:
 
 - Fixed a bug when Hashicorp Vault is configured to issue data transfer tokens
   (which is not the default), job submission could hang and then fail.
-  Reverted a change to *condor_submit* that disconnected the output stream of
+  Reverted a change to :tool:`condor_submit` that disconnected the output stream of
   :macro:`SEC_CREDENTIAL_STORER` to the user's console, which broke OIDC flow.
   :jira:`2078`
 
@@ -131,7 +131,7 @@ Bugs Fixed:
   warning about the internal count of held job procs being incorrect.
   :jira:`2102`
 
-- Fixed a bug in *condor_transfer_data* where using the ``-addr``
+- Fixed a bug in :tool:`condor_transfer_data` where using the ``-addr``
   flag would automatically apply the ``-all`` flag to transfer
   all job data back making the use of ``-addr`` with a Job ID
   constraint fail.
@@ -149,7 +149,7 @@ Bugs Fixed:
   SSL certificate.
   :jira:`2080`
 
-- Fixed bug in the *condor_userlog* tool where it would crash
+- Fixed bug in the :tool:`condor_userlog` tool where it would crash
   when reading logs with parallel universe jobs in it.
   :jira:`2099`
 
@@ -205,7 +205,7 @@ Bugs Fixed:
   job epoch history file.
   :jira:`2060`
 
-- Fixed a rare race condition where *condor_rm*'ing a parallel universe job would not remove
+- Fixed a rare race condition where :tool:`condor_rm`'ing a parallel universe job would not remove
   the job if the rm happened after the job was matched but before it fully started
   :jira:`2070`
 
@@ -230,7 +230,7 @@ New Features:
   of older versions of HTCondor require it to be present.
   :jira:`1997`
 
-- The ``-dry-run`` option of *condor_submit* will now print the output of a :macro:`SEC_CREDENTIAL_STORER` script.
+- The ``-dry-run`` option of :tool:`condor_submit` will now print the output of a :macro:`SEC_CREDENTIAL_STORER` script.
   This can be useful when developing such a script.
   :jira:`2014`
 
@@ -238,12 +238,12 @@ New Features:
   :jira:`2036`
 
 - The default value of :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS` will now be visible
-  in *condor_config_val*. The default for :macro:`SEC_*_AUTHENTICATION_METHODS`
+  in :tool:`condor_config_val`. The default for :macro:`SEC_*_AUTHENTICATION_METHODS`
   will inherit from this value, and thus no ``READ`` and ``CLIENT`` will no longer
   automatically have ``CLAIMTOBE``.
   :jira:`2047`
 
-- Added new tool *condor_test_token*, which will create a SciToken
+- Added new tool :tool:`condor_test_token`, which will create a SciToken
   with configurable contents (including issuer) which will be accepted
   for a short period of time by the local HTCondor daemons.
   :jira:`1115`
@@ -263,7 +263,7 @@ Bugs Fixed:
   for Docker Universe jobs doing user level check-pointing.
   :jira:`2014`
 
-- Fixed a bug where *condor_preen* was deleting files named '*OfflineAds*'
+- Fixed a bug where :tool:`condor_preen` was deleting files named '*OfflineAds*'
   in the spool directory.
   :jira:`2019`
 

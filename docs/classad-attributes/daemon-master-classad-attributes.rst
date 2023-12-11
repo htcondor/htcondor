@@ -22,7 +22,7 @@ DaemonMaster ClassAd Attributes
     A string with the machine's fully qualified host name.
 
 :classad-attribute-def:`MasterIpAddr`
-    String with the IP and port address of the *condor_master* daemon
+    String with the IP and port address of the :tool:`condor_master` daemon
     which is publishing this DaemonMaster ClassAd.
 
 :classad-attribute-def:`MonitorSelfAge`
@@ -50,12 +50,12 @@ DaemonMaster ClassAd Attributes
     ``MonitorSelf``.
 
 :classad-attribute-def:`MyAddress`
-    String with the IP and port address of the *condor_master* daemon
+    String with the IP and port address of the :tool:`condor_master` daemon
     which is publishing this ClassAd.
 
 :classad-attribute-def:`MyCurrentTime`
     The time, represented as the number of second elapsed since the Unix
-    epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_master*
+    epoch (00:00:00 UTC, Jan 1, 1970), at which the :tool:`condor_master`
     daemon last sent a ClassAd update to the *condor_collector*.
 
 :classad-attribute-def:`Name`
@@ -71,7 +71,7 @@ DaemonMaster ClassAd Attributes
     Description is not yet written.
 
 :classad-attribute-def:`RealUid`
-    The UID under which the *condor_master* is started.
+    The UID under which the :tool:`condor_master` is started.
 
 :classad-attribute-def:`UpdateSequenceNumber`
     An integer, starting at zero, and incremented with each ClassAd

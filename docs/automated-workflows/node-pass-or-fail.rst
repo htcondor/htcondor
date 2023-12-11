@@ -173,7 +173,7 @@ keyword along with specifying the desired *DAGReturnValue*. The DAG
 abort return value can be used for DAGs within DAGs, allowing an inner
 DAG to cause an abort of an outer DAG.
 
-A DAG return value other than 0, 1, or 2 will cause the *condor_dagman*
+A DAG return value other than 0, 1, or 2 will cause the :tool:`condor_dagman`
 job to stay in the queue after it exits and get retried, unless the
 ``on_exit_remove`` expression in the ``.condor.sub`` file is manually
 modified.

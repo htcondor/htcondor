@@ -48,9 +48,9 @@ from the execution machine and put on hold in the queue.
 
 The specification of a deferral time does not interfere with HTCondor's
 behavior. For example, if a job is waiting to begin execution when a
-*condor_hold* command is issued, the job is removed from the execution
+:tool:`condor_hold` command is issued, the job is removed from the execution
 machine and is put on hold. If a job is waiting to begin execution when
-a *condor_suspend* command is issued, the job continues to wait. When
+a :tool:`condor_suspend` command is issued, the job continues to wait. When
 the deferral time arrives, HTCondor begins execution for the job, but
 immediately suspends it.
 
@@ -349,7 +349,7 @@ job's ``DeferralTime`` attribute. A new deferral time is calculated when
 the job first enters the job queue, when the job is re-queued, or when
 the job is released from the hold state. New deferral times for all jobs
 in the job queue using the CronTab functionality are recalculated when a
-*condor_reconfig* or a *condor_restart* command that affects the job
+:tool:`condor_reconfig` or a :tool:`condor_restart` command that affects the job
 queue is issued.
 
 A job's deferral time is not always the same time that a job will

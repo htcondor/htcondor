@@ -12,7 +12,7 @@ read ClassAds from a file or pipe, transform them, and write the
 resulting ClassAds to a file or pipe.
 
 The transform language is build on the same basic macro expansion
-engine use by HTCondor configuration and by *condor_submit* and
+engine use by HTCondor configuration and by :tool:`condor_submit` and
 shares many of the same features such as ``$()`` macro expansion
 and if statements.
 

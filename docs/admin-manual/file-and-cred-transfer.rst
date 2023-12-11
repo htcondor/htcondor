@@ -287,7 +287,7 @@ Self-Checkpointing Jobs
 -----------------------
 
 As of HTCondor 23.1, self-checkpointing jobs may set ``checkpoint_destination``
-(see the *condor_submit* :ref:`man page<checkpoint_destination>`),
+(see the :tool:`condor_submit` :ref:`man page<checkpoint_destination>`),
 which causes HTCondor to store the job's checkpoint(s) at the specific URL
 (rather than in the AP's :macro:`SPOOL` directory).  This can be a major
 improvement in scalability.  Once the job leaves the queue, HTCondor should
@@ -360,10 +360,10 @@ When a job exits the queue, the *condor_schedd* will immediately spawn the
 checkpoint clean-up process (*condor_manifest*); that process will call the
 checkpoint clean-up plug-in once per file in each checkpoint the job wrote.
 The *condor_schedd* does not check to see if this process succeeded; that's
-a job for *condor_preen*.  When *condor_preen* runs, if a job's checkpoint
+a job for :tool:`condor_preen`.  When :tool:`condor_preen` runs, if a job's checkpoint
 has not been cleaned up, it will also spawn *condor_manifest*, and do so in
 exactly the same way the *condor_schedd* did.  Failures will be reported via
-the usual channels for *condor_preen*.  You may specify how long
+the usual channels for :tool:`condor_preen`.  You may specify how long
 *condor_manifest* may run with the configuration macro
 :macro:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`.  The
 *condor_manifest* tool removes each MANIFEST file as its contents get cleaned
@@ -522,7 +522,7 @@ install the ``condor-credmon-vault`` rpm.  Also install the htgettoken
 rpm on the access point.  Additionally, on the access point
 set the :macro:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
 ``-a <vault.name>`` where <vault.name> is the fully qualified domain name
-of the Vault machine.  *condor_submit* users will then be able to select
+of the Vault machine.  :tool:`condor_submit` users will then be able to select
 the oauth services that are defined on the Vault server.  See the
 htvault-config
 (`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
@@ -590,7 +590,7 @@ writable to unauthenticated users, or must not be on AFS. Making these
 directories writable a very bad security hole, so it is not a viable
 solution. Placing :macro:`LOCAL_DIR` onto NFS is acceptable. To avoid AFS,
 place the directory defined for :macro:`LOCAL_DIR` on a local partition on
-each machine in the pool. This implies running *condor_configure* to
+each machine in the pool. This implies running :tool:`condor_configure` to
 install the release directory and configure the pool, setting the
 :macro:`LOCAL_DIR` variable to a local partition. When that is complete, log
 into each machine in the pool, and run *condor_init* to set up the

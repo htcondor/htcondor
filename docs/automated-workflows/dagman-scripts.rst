@@ -122,7 +122,7 @@ POST script, the POST script is always run once the job finishes. (The
 behavior when the PRE script fails may be changed to run the POST
 script by setting configuration variable :macro:`DAGMAN_ALWAYS_RUN_POST` to
 ``True`` or by passing the **-AlwaysRunPost** argument to
-*condor_submit_dag*.)
+:tool:`condor_submit_dag`.)
 
 Examples that use PRE or POST scripts
 -------------------------------------
@@ -230,7 +230,7 @@ The special macros are as follows:
    consider. In the first case, all jobs within the cluster are
    successful; the value of ``$RETURN`` will be 0, indicating success.
    In the second case, one or more jobs from the cluster fail. When
-   *condor_dagman* sees the first terminated event for a job that
+   :tool:`condor_dagman` sees the first terminated event for a job that
    failed, it assigns that job's return value as the value of
    ``$RETURN``, and it attempts to remove all remaining jobs within the
    cluster. Therefore, if multiple jobs in the cluster fail with
@@ -242,7 +242,7 @@ The special macros are as follows:
    SIGKILL (signal 9) is reported as -9. A job whose batch system
    submission fails is reported as -1001. A job that is externally
    removed from the batch system queue (by something other than
-   *condor_dagman*) is reported as -1002.
+   :tool:`condor_dagman`) is reported as -1002.
 -  ``$PRE_SCRIPT_RETURN`` (for POST scripts only) variable evaluates to
    the return value of the PRE script of a node, if there is one. If
    there is no PRE script, this value will be -1. If the node job was
@@ -255,14 +255,14 @@ The special macros are as follows:
    value and definition is unrelated to the attribute named
    ``DagStatus`` as defined for use in a node status file. This macro's
    value is the same as the job ClassAd attribute ``DAG_Status`` that is
-   defined within the *condor_dagman* job's ClassAd. This macro may
+   defined within the :tool:`condor_dagman` job's ClassAd. This macro may
    have the following values:
 
    -  0: OK
    -  1: error; an error condition different than those listed here
    -  2: one or more nodes in the DAG have failed
    -  3: the DAG has been aborted by an ABORT-DAG-ON specification
-   -  4: removed; the DAG has been removed by *condor_rm*
+   -  4: removed; the DAG has been removed by :tool:`condor_rm`
    -  5: cycle; a cycle was found in the DAG
    -  6: halted; the DAG has been halted
       (see :ref:`automated-workflows/dagman-interaction:suspending a running dag`)

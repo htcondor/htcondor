@@ -72,7 +72,7 @@ These are all of the events that can show up in a job log file:
 | **Event Number:** 012
 | **Event Name:** Job was held
 | **Event Description:** The job has transitioned to the hold state.
-  This might happen if the user applies the *condor_hold* command to the
+  This might happen if the user applies the :tool:`condor_hold` command to the
   job.
 
 | **Event Number:** 013
@@ -163,7 +163,7 @@ These are all of the events that can show up in a job log file:
 | **Event Name:** Job ClassAd attribute update
 | **Event Description:** A Job ClassAd attribute is changed due to
   action by the *condor_schedd* daemon. This includes changes by
-  *condor_prio*.
+  :tool:`condor_prio`.
 
 | **Event Number:** 034
 | **Event Name:** Pre Skip event
@@ -182,7 +182,7 @@ These are all of the events that can show up in a job log file:
 | **Event Number:** 036
 | **Event Name:** Cluster Remove
 | **Event Description:** This event occurs after all the jobs in a multi-proc 
-  cluster have completed, or when the cluster is removed (by *condor_rm*).
+  cluster have completed, or when the cluster is removed (by :tool:`condor_rm`).
 
 | **Event Number:** 037
 | **Event Name:** Factory Paused

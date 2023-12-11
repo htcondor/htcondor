@@ -4,7 +4,7 @@ DAGMan Throttling
 Submit machines with limited resources are supported by command line
 options that place limits on the submission and handling of HTCondor
 jobs and PRE and POST scripts. Presented here are descriptions of the
-command line options to *condor_submit_dag*. These same limits can be
+command line options to :tool:`condor_submit_dag`. These same limits can be
 set in configuration. Each limit is applied within a single DAG.
 
 :index:`throttling<single: DAGMan; Throttling>`
@@ -13,7 +13,7 @@ Throttling at DAG Submission
 ----------------------------
 
 *   **Total nodes/clusters:** The **-maxjobs** option specifies the maximum
-    number of clusters that *condor_dagman* can submit at one time. Since
+    number of clusters that :tool:`condor_dagman` can submit at one time. Since
     each node corresponds to a single cluster, this limit restricts the
     number of nodes that can be submitted (in the HTCondor queue) at a time.
     It is commonly used when there is a limited amount of input file staging
@@ -28,12 +28,12 @@ Throttling at DAG Submission
 
 *   **Idle procs:** The number of idle procs within a given DAG can be
     limited with the optional command line argument **-maxidle**.
-    *condor_dagman* will not submit any more node jobs until the number of
+    :tool:`condor_dagman` will not submit any more node jobs until the number of
     idle procs in the DAG goes below this specified value, even if there are
-    ready nodes in the DAG. This allows *condor_dagman* to submit jobs in a
+    ready nodes in the DAG. This allows :tool:`condor_dagman` to submit jobs in a
     way that adapts to the load on the HTCondor pool at any given time. If
-    the pool is lightly loaded, *condor_dagman* will end up submitting more
-    jobs; if the pool is heavily loaded, *condor_dagman* will submit fewer
+    the pool is lightly loaded, :tool:`condor_dagman` will end up submitting more
+    jobs; if the pool is heavily loaded, :tool:`condor_dagman` will submit fewer
     jobs. (See the :doc:`/man-pages/condor_submit_dag` manual page for more
     information.) Also see the equivalent :macro:`DAGMAN_MAX_JOBS_IDLE`
     configuration option.
@@ -81,12 +81,12 @@ other job clusters within the category terminate. If MAXJOBS is not set
 for a defined category, then there is no limit placed on the number of
 submissions within that category.
 
-Note that a single invocation of *condor_submit* results in one job
+Note that a single invocation of :tool:`condor_submit` results in one job
 cluster. The number of HTCondor jobs within a cluster may be greater
 than 1.
 
 The configuration variable :macro:`DAGMAN_MAX_JOBS_SUBMITTED` and the
-*condor_submit_dag* *-maxjobs* command-line option are still enforced
+:tool:`condor_submit_dag` *-maxjobs* command-line option are still enforced
 if these *CATEGORY* and *MAXJOBS* throttles are used.
 
 Please see :ref:`automated-workflows/dagman-using-other-dags:Splice Limitations`

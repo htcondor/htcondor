@@ -64,7 +64,7 @@ library for all use of ClassAds within HTCondor. The library is placed
 into a compatibility mode so that HTCondor 7.5.1 is still able to
 exchange ClassAds with older versions of HTCondor.
 
-All user interaction with tools (such as *condor_q*) as well as output
+All user interaction with tools (such as :tool:`condor_q`) as well as output
 of tools is still compatible with Old ClassAds. Before HTCondor version
 7.5.1, New ClassAds were used only in the Job Router. There are some
 syntax and behavior differences between Old and New ClassAds, all of
@@ -1649,7 +1649,7 @@ Querying with ClassAd Expressions
 '''''''''''''''''''''''''''''''''
 
 The flexibility of this system may also be used when querying ClassAds
-through the *condor_status* and *condor_q* tools which allow users to
+through the :tool:`condor_status` and :tool:`condor_q` tools which allow users to
 supply ClassAd constraint expressions from the command line.
 
 Needed syntax is different on Unix and Windows platforms, due to the
@@ -1696,8 +1696,8 @@ The Windows equivalent command is
 
 Here is an example for a Unix platform that utilizes a regular
 expression ClassAd function to list specific information. A file
-contains ClassAd information. *condor_advertise* is used to inject this
-information, and *condor_status* constrains the search with an
+contains ClassAd information. :tool:`condor_advertise` is used to inject this
+information, and :tool:`condor_status` constrains the search with an
 expression that contains a ClassAd function.
 
 .. code-block:: console
