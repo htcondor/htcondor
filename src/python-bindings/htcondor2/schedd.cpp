@@ -122,9 +122,7 @@ _schedd_query(PyObject *, PyObject * args) {
     }
 
     for( auto & classAd : results ) {
-        // We could probably dispense with the copy by clearing the
-        // `results` vector after this loop.
-        PyObject * pyClassAd = py_new_classad2_classad(classAd->Copy());
+        PyObject * pyClassAd = py_new_classad2_classad(classAd);
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
