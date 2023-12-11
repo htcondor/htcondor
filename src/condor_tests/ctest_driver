@@ -27,6 +27,7 @@ MAIL=/bin/true
 SENDMAIL=/bin/true
 LOCAL_CONFIG_FILE={pwd}/condor_config.local
 DOCKER_PERFORM_TEST=false
+FILETRANSFER_PLUGINS = $(LIBEXEC)/curl_plugin
 
 # ctest allows tests to run for up to 1500 seconds; after that, we are
 # potentially a runaway personal condor instance.
