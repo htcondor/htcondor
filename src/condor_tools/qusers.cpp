@@ -683,7 +683,10 @@ int actOnUsers (
 	// send the ads
 	for (int  ii = 0; ii < num_usernames; ++ii) {
 		cmd_ad.Assign(ATTR_USER, usernames[ii]);
-		if (dash_add) { cmd_ad.Assign("Create", true); }
+		if (dash_add) {
+			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE, true);
+			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE_DEPRECATED, true); // TODO: remove in late 23.x ?
+		}
 		if (reason) {
 			if (cmd == DISABLE_USERREC) cmd_ad.Assign(ATTR_DISABLE_REASON, reason);
 		}
