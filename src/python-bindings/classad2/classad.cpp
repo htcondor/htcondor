@@ -39,15 +39,8 @@ _classad_init_from_string( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    // I _really_ hope the parser doesn't think it owns the result,
-    // but the CopyFrom() here was in version 1, and removing changes
-    // the output order from the pretty-printer.  That's probably two
-    // bugs (CopyFrom() inserting in the wrong order and the pretty-
-    // printer not sorting), but I really don't feel like fixing either.
-    handle->t = new ClassAd();
-    ((ClassAd *)handle->t)->CopyFrom(* result);
-    delete result;
 
+    handle->t = result;
     handle->f = [](void * & v){ dprintf( D_PERF_TRACE, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
     Py_RETURN_NONE;
 }
@@ -91,7 +84,7 @@ _classad_to_string( PyObject *, PyObject * args ) {
 
 static PyObject *
 _classad_to_repr( PyObject *, PyObject * args ) {
-    // _classad_to_string( self._handle )
+    // _classad_to_repr( self._handle )
 
     PyObject_Handle * handle = NULL;
     if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
