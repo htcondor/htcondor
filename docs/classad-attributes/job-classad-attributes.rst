@@ -257,17 +257,17 @@ all attributes.
 
 :classad-attribute-def:`DAGManJobId`
     For a DAGMan node job only, the ``ClusterId`` job ClassAd attribute
-    of the *condor_dagman* job which is the parent of this node job.
+    of the :tool:`condor_dagman` job which is the parent of this node job.
     For nested DAGs, this attribute holds only the ``ClusterId`` of the
     job's immediate parent.
 
 :classad-attribute-def:`DAGParentNodeNames`
     For a DAGMan node job only, a comma separated list of each *JobName*
     which is a parent node of this job's node. This attribute is passed
-    through to the job via the *condor_submit* command line, if it does
+    through to the job via the :tool:`condor_submit` command line, if it does
     not exceed the line length defined with ``_POSIX_ARG_MAX``. For
     example, if a node job has two parents with *JobName* s B and C,
-    the *condor_submit* command line will contain
+    the :tool:`condor_submit` command line will contain
 
     .. code-block:: text
 
@@ -285,7 +285,7 @@ all attributes.
     ``DAGManNodesLog``, known as the auxiliary log. All events not
     specified in the ``DAGManNodesMask`` string are not written to the
     auxiliary event log. The value of this attribute is determined by
-    DAGMan, and it is passed to the job via the *condor_submit* command
+    DAGMan, and it is passed to the job via the :tool:`condor_submit` command
     line. By default, the following events are written to the auxiliary
     job log:
 
@@ -656,7 +656,7 @@ all attributes.
     | | [NumHoldsByReason Label]       |                                     |                          |
     +==================================+=====================================+==========================+
     | | 1                              | The user put the job on             |                          |
-    | | [UserRequest]                  | hold with *condor_hold*.            |                          |
+    | | [UserRequest]                  | hold with :tool:`condor_hold`.      |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 3                              | The ``PERIODIC_HOLD``               | User Specified           |
     | | [JobPolicy]                    | expression evaluated to             |                          |
@@ -911,7 +911,7 @@ all attributes.
     non-vm universe jobs, and 0 for vm universe jobs.
     A vanilla universe job's ``ImageSize`` is recomputed
     internally every 15 seconds. How quickly this updated information
-    becomes visible to *condor_q* is controlled by
+    becomes visible to :tool:`condor_q` is controlled by
     :macro:`SHADOW_QUEUE_UPDATE_INTERVAL` and :macro:`STARTER_UPDATE_INTERVAL`.
 
     Under Linux, ``ProportionalSetSize`` is a better indicator of memory
@@ -976,7 +976,7 @@ all attributes.
     A string that may be defined for a job by setting
     :subcom:`description[and attribute JobDescription]` in the
     submit description file. When set, tools which display the
-    executable such as *condor_q* will instead use this string. For
+    executable such as :tool:`condor_q` will instead use this string. For
     interactive jobs that do not have a submit description file, this
     string will default to ``"Interactive job"``.
 
@@ -1015,8 +1015,8 @@ all attributes.
 
 
 :classad-attribute-def:`JobPrio`
-    Integer priority for this job, set by *condor_submit* or
-    *condor_prio*. The default value is 0. The higher the number, the
+    Integer priority for this job, set by :tool:`condor_submit` or
+    :tool:`condor_prio`. The default value is 0. The higher the number, the
     greater (better) the priority.
 
 :classad-attribute-def:`JobRunCount`
@@ -1065,7 +1065,7 @@ all attributes.
     +===========+========================+
     | Undefined | Unknown                |
     +-----------+------------------------+
-    | 0         | *condor_submit*        |
+    | 0         | :tool:`condor_submit`  |
     +-----------+------------------------+
     | 1         | DAGMan-Direct          |
     +-----------+------------------------+
@@ -1261,7 +1261,7 @@ all attributes.
     A boolean value only relevant to grid universe jobs, which when
     ``True`` tells HTCondor to simply abort (remove) any problematic
     job, instead of putting the job on hold. It is the equivalent of
-    doing *condor_rm* followed by *condor_rm* **-forcex** any time the
+    doing :tool:`condor_rm` followed by :tool:`condor_rm` **-forcex** any time the
     job would have otherwise gone on hold. If not explicitly set to
     ``True``, the default value will be ``False``.
 
@@ -1340,7 +1340,7 @@ all attributes.
     hold due to some sort of error condition. This counter is useful,
     since HTCondor-G will always place a job on hold when it gives up on
     some error condition. Note that if the user places the job on hold
-    using the *condor_hold* command, this attribute is not incremented.
+    using the :tool:`condor_hold` command, this attribute is not incremented.
 
 :classad-attribute-def:`OtherJobRemoveRequirements`
     A string that defines a list of jobs. When the job with this
@@ -1352,9 +1352,9 @@ all attributes.
 
           $ condor_rm -constraint <constraint>
 
-    This attribute is used for jobs managed with *condor_dagman* to
+    This attribute is used for jobs managed with :tool:`condor_dagman` to
     ensure that node jobs of the DAG are removed when the
-    *condor_dagman* job itself is removed. Note that the list of jobs
+    :tool:`condor_dagman` job itself is removed. Note that the list of jobs
     defined by this attribute must not form a cyclic removal of jobs, or
     the *condor_schedd* will go into an infinite loop when any of the
     jobs is removed.
@@ -1720,7 +1720,7 @@ all attributes.
 :classad-attribute-def:`ServerTime`
     This is the current time, in Unix epoch seconds.
     It is added by the *condor_schedd* to the job ads that it sends in
-    reply to a query (e.g. sent to *condor_q*).
+    reply to a query (e.g. sent to :tool:`condor_q`).
     Since it it not present in the job ad in the *condor_schedd*, it
     should not be used in any expressions that will be evaluated by the
     *condor_schedd*.
@@ -1902,7 +1902,7 @@ all attributes.
 :classad-attribute-def:`TransferInputSizeMB`
     The total size in Mbytes of input files to be transferred for the
     job. Files transferred via file transfer plug-ins are not included.
-    This attribute is automatically set by *condor_submit*; jobs
+    This attribute is automatically set by :tool:`condor_submit`; jobs
     submitted via other submission methods, such as SOAP, may not define
     this attribute. 
 
@@ -2122,7 +2122,7 @@ universe jobs.
 
 
 The following job ClassAd attributes appear in the job ClassAd only for
-the *condor_dagman* job submitted under DAGMan. They represent status
+the :tool:`condor_dagman` job submitted under DAGMan. They represent status
 information for the DAG.
 
 :classad-attribute-def:`DAG_InRecovery`
@@ -2184,7 +2184,7 @@ information for the DAG.
     information to its job ad.
 
 The following job ClassAd attributes appear in the job ClassAd only for
-the *condor_dagman* job submitted under DAGMan. They represent job process
+the :tool:`condor_dagman` job submitted under DAGMan. They represent job process
 information about the DAG. These values will reset when a DAG is run via
 rescue and be retained when a DAG is run via recovery mode.
 

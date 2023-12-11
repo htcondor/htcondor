@@ -50,7 +50,7 @@ machine that is providing that service:
    Central Manager (CM) Diagram
 
    .. mermaid::
-      :caption: Daemons for Central Manager, both managed by a *condor_master*
+      :caption: Daemons for Central Manager, both managed by a :tool:`condor_master`
       :align: center
 
       flowchart TD
@@ -143,17 +143,17 @@ The following list describes all the daemons and programs that could be
 started under HTCondor and what they do:
 :index:`condor_master daemon`
 
-*condor_master*
+:tool:`condor_master`
     This daemon is responsible for keeping all the rest of the HTCondor
     daemons running on each machine in the pool. It spawns the other
     daemons, and it periodically checks to see if there are new binaries
-    installed for any of them. If there are, the *condor_master* daemon
+    installed for any of them. If there are, the :tool:`condor_master` daemon
     will restart the affected daemons. In addition, if any daemon
-    crashes, the *condor_master* will send e-mail to the HTCondor
+    crashes, the :tool:`condor_master` will send e-mail to the HTCondor
     administrator of the pool and restart the daemon. The
-    *condor_master* also supports various administrative commands that
+    :tool:`condor_master` also supports various administrative commands that
     enable the administrator to start, stop or reconfigure daemons
-    remotely. The *condor_master* will run on every machine in the
+    remotely. The :tool:`condor_master` will run on every machine in the
     pool, regardless of the functions that each machine is performing.
     :index:`condor_startd daemon`
 
@@ -182,8 +182,8 @@ started under HTCondor and what they do:
     *condor_schedd* running. When users submit jobs, the jobs go to the
     *condor_schedd*, where they are stored in the job queue. The
     *condor_schedd* manages the job queue. Various tools to view and
-    manipulate the job queue, such as *condor_submit*, *condor_q*, and
-    *condor_rm*, all must connect to the *condor_schedd* to do their
+    manipulate the job queue, such as :tool:`condor_submit`, :tool:`condor_q`, and
+    :tool:`condor_rm`, all must connect to the *condor_schedd* to do their
     work. If the *condor_schedd* is not running on a given machine,
     none of these commands will work.
 
@@ -204,7 +204,7 @@ started under HTCondor and what they do:
     ClassAd updates to the *condor_collector*. These ClassAds contain
     all the information about the state of the daemons, the resources
     they represent or resource requests in the pool. The
-    *condor_status* command can be used to query the
+    :tool:`condor_status` command can be used to query the
     *condor_collector* for specific information about various parts of
     HTCondor. In addition, the HTCondor daemons themselves query the
     *condor_collector* for important information, such as what address
@@ -278,7 +278,7 @@ started under HTCondor and what they do:
     daemon to accomplish the task of transferring a state file before
     exiting. :index:`condor_procd daemon`
 
-*condor_procd*
+:tool:`condor_procd`
     This daemon controls and monitors process families within HTCondor.
     Its use is optional in general.
     :index:`condor_job_router daemon`

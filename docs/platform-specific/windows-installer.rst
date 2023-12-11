@@ -314,7 +314,7 @@ for more detail.
         defines the location of the local configuration file. The value can
         be the path to a file on the local machine, or it can be a URL
         beginning with ``http``. If the value is a URL, then the
-        *condor_urlfetch* tool is invoked to fetch configuration whenever
+        :tool:`condor_urlfetch` tool is invoked to fetch configuration whenever
         the configuration is read.
 
     PERLLOCATION
@@ -394,7 +394,7 @@ using the provided GUI-based setup program:
     The files that are needed for HTCondor to operate are identical to
     the Unix version of HTCondor, except that executable files end in
     ``.exe``. For example the on Unix one of the files is
-    *condor_master* and on HTCondor the corresponding file is
+    :tool:`condor_master` and on HTCondor the corresponding file is
     ``condor_master.exe``.
 
     These files currently must reside on the local disk for a variety of

@@ -46,7 +46,7 @@ can be overridden by specifying
 
     -append 'My.<attribute> = <value>'
 
-on the *condor_submit_dag* command line.
+on the :tool:`condor_submit_dag` command line.
 
 :index:`ENV command<single: DAG input file; ENV command>`
 :index:`Setting DAGMan job environment variables<single: DAGMan; Setting DAGMan job environment variables>`

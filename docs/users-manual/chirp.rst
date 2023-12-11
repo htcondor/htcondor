@@ -24,7 +24,7 @@ ad, in the state that it existed at job startup is dropped into the job's
 scratch directory. You can find this file by inspecting the environment
 variable $_CONDOR_JOB_AD.  But to see attributes which have been updated on the
 AP after the job has started, including attributes which may have been changed
-with the *condor_qedit* command, you will need to use chirp:
+with the :tool:`condor_qedit` command, you will need to use chirp:
 
 .. code-block:: shell
 

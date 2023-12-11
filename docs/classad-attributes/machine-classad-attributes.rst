@@ -294,7 +294,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`HasSshd`
     A boolean value set to ``True`` if the machine has a
-    /usr/sbin/sshd installed.  If ``False``, *condor_ssh_to_job* 
+    /usr/sbin/sshd installed.  If ``False``, :tool:`condor_ssh_to_job` 
     is unlikely to function.
 
 :classad-attribute-def:`HasVM`
@@ -448,7 +448,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`LastDrainStartTime`
     Time when draining of this *condor_startd* was last initiated (e.g.
-    due to *condor_defrag* or *condor_drain*).
+    due to *condor_defrag* or :tool:`condor_drain`).
 
 :classad-attribute-def:`LastDrainStopTime`
     Time when draining of this *condor_startd* was last stopped (e.g.
@@ -1196,7 +1196,7 @@ ClassAd if a job is currently executing. If the resource is claimed but
 no job are running, none of these attributes will be defined.
 
 :classad-attribute-def:`JobId`
-    The job's identifier (for example, 152.3), as seen from *condor_q*
+    The job's identifier (for example, 152.3), as seen from :tool:`condor_q`
     on the submitting machine.
 
 :classad-attribute-def:`JobStart`

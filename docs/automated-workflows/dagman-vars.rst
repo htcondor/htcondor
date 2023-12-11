@@ -202,7 +202,7 @@ quote marks depend on whether the New Syntax or Old Syntax format is
 used for the **arguments** submit command. Note that in both syntaxes,
 double quote marks require two levels of escaping: one level is for the
 parsing of the DAG input file, and the other level is for passing the
-resulting value through *condor_submit*.
+resulting value through :tool:`condor_submit`.
 
 As of HTCondor version 8.3.7, single quotes are permitted within the
 value specification. For the specification of command line
@@ -214,7 +214,7 @@ value specification. For the specification of command line
 
 There are examples of all three cases below. In New Syntax, to pass a
 single quote as part of an argument, escape it with another single quote
-for *condor_submit* parsing as in the example's NodeA ``fourth`` macro.
+for :tool:`condor_submit` parsing as in the example's NodeA ``fourth`` macro.
 
 As an example that shows uses of all special characters, here are only
 the relevant parts of a DAG input file. Note that the NodeA value for

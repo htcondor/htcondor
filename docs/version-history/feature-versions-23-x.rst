@@ -39,7 +39,7 @@ New Features:
 - Improve hold message when jobs on cgroup system exceed their memory limits.
   :jira:`1533`
 
-- Improved the ``-convertoldroutes`` option of *condor_transform_ads*
+- Improved the ``-convertoldroutes`` option of :tool:`condor_transform_ads`
   and added a new ``-help convert`` option. These changes are meant to assist
   in the conversion of CE's away from the deprecated transform syntax.
   :jira:`2146`
@@ -124,12 +124,12 @@ New Features:
   use of the default CAs for OpenSSL. 
   :jira:`2090`
 
-- Using *condor_store_cred* to set a pool password on Windows now
-  requires ``ADMINISTRATOR`` authorization with the *condor_master* (instead
+- Using :tool:`condor_store_cred` to set a pool password on Windows now
+  requires ``ADMINISTRATOR`` authorization with the :tool:`condor_master` (instead
   of ``CONFIG`` authorization).
   :jira:`2106`
 
-- When *condor_remote_cluster* installs binaries on an EL7 machine, it
+- When :tool:`condor_remote_cluster` installs binaries on an EL7 machine, it
   now uses the latest 23.0.x release. Before, it would fail, as
   current feature versions of HTCondor are not available on EL7.
   :jira:`2125`
@@ -162,20 +162,20 @@ Release Notes:
 
 New Features:
 
-- Improved *condor_watch_q* to filter tracked jobs based on cluster IDs
+- Improved :tool:`condor_watch_q` to filter tracked jobs based on cluster IDs
   either provided by the ``-clusters`` option or found in association
   to batch names provided by the ``-batches`` option. This helps limit
   the amount of output lines when using an aggregate/shared log file.
   :jira:`2046`
 
-- Added new ``-larger-than`` flag to *condor_watch_q* that filters tracked
+- Added new ``-larger-than`` flag to :tool:`condor_watch_q` that filters tracked
   jobs to only include jobs with cluster IDs greater than or equal to the
   provided cluster ID.
   :jira:`2046`
 
 - The Access Point can now be told to use a non-standard ssh port when sending
   jobs to a remote scheduling system (such as Slurm).
-  You can now specify an alternate ssh port with *condor_remote_cluster*.
+  You can now specify an alternate ssh port with :tool:`condor_remote_cluster`.
   :jira:`2002`
 
 - Laid groundwork to allow an Execution Point running without root access to

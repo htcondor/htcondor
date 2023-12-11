@@ -46,7 +46,7 @@ As of HTCondor 9.4.0, only the *table* iterator type is available.
 
 The *table* iterator type works similar
 to the ``queue <list of varnames> from <file name or list of items>`` syntax
-used by *condor_submit* description files.
+used by :tool:`condor_submit` description files.
 A table contains comma-separated columns (one per named variable)
 and line-separated rows.
 The table data can either be stored in a separate file
@@ -97,7 +97,7 @@ Or you could put this table directly inside in the job set description file:
     }
 
 Each **job** in a job set is a HTCondor job
-and is described using the *condor_submit* submit description syntax.
+and is described using the :tool:`condor_submit` submit description syntax.
 A job description can reference one or more
 of the variables described by the job set iterator.
 Furthermore, each job description in a job set

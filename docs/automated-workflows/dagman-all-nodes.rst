@@ -31,7 +31,7 @@ or sub-DAG; also, an *ALL_NODES* option in a parent DAG will PRIORITY DAG (again
 except any FINAL node).
 
 As of version 8.5.8, the *ALL_NODES* option cannot be used when
-multiple DAG files are specified on the *condor_submit_dag* command
+multiple DAG files are specified on the :tool:`condor_submit_dag` command
 line. Hopefully this limitation will be fixed in a future release.
 
 When multiple commands (whether using the *ALL_NODES* option or not)

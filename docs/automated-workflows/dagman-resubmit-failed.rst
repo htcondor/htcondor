@@ -15,10 +15,10 @@ file. If there is a line similar to
 
     (condor_DAGMAN) pid 445 EXITING WITH STATUS 0
 
-then the DAG completed. This line explains that the *condor_dagman* job
+then the DAG completed. This line explains that the :tool:`condor_dagman` job
 finished normally. If there is no line similar to this at the end of the
-``.dagman.out`` file, and output from *condor_q* shows that the
-*condor_dagman* job for the DAG being debugged is not in the queue,
+``.dagman.out`` file, and output from :tool:`condor_q` shows that the
+:tool:`condor_dagman` job for the DAG being debugged is not in the queue,
 then recovery is indicated.
 
 :index:`Rescue DAG<single: DAGMan; Rescue DAG>`
@@ -37,8 +37,8 @@ generated. If a node in the DAG fails, the DAG does not exit
 immediately; the remainder of the DAG is continued until no more forward
 progress can be made based on the DAG's dependencies. At this point,
 DAGMan produces the Rescue DAG and exits. A Rescue DAG is produced on
-Unix platforms if the *condor_dagman* job itself is removed with
-*condor_rm*. On Windows, a Rescue DAG is not generated in this
+Unix platforms if the :tool:`condor_dagman` job itself is removed with
+:tool:`condor_rm`. On Windows, a Rescue DAG is not generated in this
 situation, but re-submitting the original DAG will invoke a lower-level
 recovery functionality, and it will produce similar behavior to using a
 Rescue DAG. A Rescue DAG is produced when a node sets and triggers an
@@ -109,7 +109,7 @@ Using an Older Rescue DAG
 '''''''''''''''''''''''''
 
 To explicitly specify a particular Rescue DAG, use the optional
-command-line argument *-dorescuefrom* with *condor_submit_dag*. Note
+command-line argument *-dorescuefrom* with :tool:`condor_submit_dag`. Note
 that this will have the side effect of renaming existing Rescue DAG
 files with larger magnitude values of <XXX>. Each renamed file has its
 existing name appended with the string ``.old``. For example, assume
@@ -131,7 +131,7 @@ Special Cases
 '''''''''''''
 
 Note that if multiple DAG input files are specified on the
-*condor_submit_dag* command line, a single Rescue DAG encompassing all
+:tool:`condor_submit_dag` command line, a single Rescue DAG encompassing all
 of the input DAGs is generated. A DAG file containing splices also
 produces a single Rescue DAG file. On the other hand, a DAG containing
 sub-DAGs will produce a separate Rescue DAG for each sub-DAG that is
@@ -161,7 +161,7 @@ job, will take effect when running the partial Rescue DAG. In other
 words, you can fix mistakes in the original DAG file while still gaining
 the benefit of using the Rescue DAG.
 
-To use a partial Rescue DAG, you must re-run *condor_submit_dag* on
+To use a partial Rescue DAG, you must re-run :tool:`condor_submit_dag` on
 the original DAG file, not the Rescue DAG file.
 
 Note that the existence of a DONE specification in a partial Rescue DAG
@@ -193,9 +193,9 @@ Rescue for Parse Failure
 ''''''''''''''''''''''''
 
 Starting in HTCondor version 7.5.5, passing the **-DumpRescue** option
-to either *condor_dagman* or *condor_submit_dag* causes
-*condor_dagman* to output a Rescue DAG file, even if the parsing of a
-DAG input file fails. In this parse failure case, *condor_dagman*
+to either :tool:`condor_dagman` or :tool:`condor_submit_dag` causes
+:tool:`condor_dagman` to output a Rescue DAG file, even if the parsing of a
+DAG input file fails. In this parse failure case, :tool:`condor_dagman`
 produces a specially named Rescue DAG containing whatever it had
 successfully parsed up until the point of the parse error. This Rescue
 DAG may be useful in debugging parse errors in complex DAGs, especially
@@ -221,7 +221,7 @@ has a parse failure, the resulting incomplete Rescue DAG will be named
 
 To further prevent one of these incomplete Rescue DAG files from being
 used, a line within the file contains the single command *REJECT*. This
-causes *condor_dagman* to reject the DAG, if used as a DAG input file.
+causes :tool:`condor_dagman` to reject the DAG, if used as a DAG input file.
 This is done because the incomplete Rescue DAG may be a syntactically
 correct DAG input file. It will be incomplete relative to the original
 DAG, such that if the incomplete Rescue DAG could be run, it could
@@ -241,9 +241,9 @@ completion.
 
 Recovery is different than a Rescue DAG. Recovery is appropriate when no
 Rescue DAG has been created. There will be no Rescue DAG if the machine
-running the *condor_dagman* job crashes, or if the *condor_schedd*
-daemon crashes, or if the *condor_dagman* job crashes, or if the
-*condor_dagman* job is placed on hold.
+running the :tool:`condor_dagman` job crashes, or if the *condor_schedd*
+daemon crashes, or if the :tool:`condor_dagman` job crashes, or if the
+:tool:`condor_dagman` job is placed on hold.
 
 Much of the time, when a not-completed DAG is re-submitted, it will
 automatically be placed into recovery mode due to the existence and

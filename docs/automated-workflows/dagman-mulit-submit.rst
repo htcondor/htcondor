@@ -3,9 +3,9 @@ Single Submission of Multiple, Independent DAGs
 
 :index:`single submission of multiple, independent DAGs<single: DAGMan; Single submission of multiple, independent DAGs>`
 
-A single use of *condor_submit_dag* may execute multiple, independent
+A single use of :tool:`condor_submit_dag` may execute multiple, independent
 DAGs. Each independent DAG has its own, distinct DAG input file. These
-DAG input files are command-line arguments to *condor_submit_dag*.
+DAG input files are command-line arguments to :tool:`condor_submit_dag`.
 
 Internally, all of the independent DAGs are combined into a single,
 larger DAG, with no dependencies between the original independent DAGs.

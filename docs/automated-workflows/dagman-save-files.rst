@@ -19,7 +19,7 @@ where the DAG filename is the DAG file that the save file declaration was
 read from.
 
 If the specified save point filename includes a path then DAGMan will attempt
-to write the file to that location. If the *condor_submit_dag* ``useDagDir``
+to write the file to that location. If the :tool:`condor_submit_dag` ``useDagDir``
 flag is used and a path is specified for a save point then the file will be
 written to that path relative to a DAG's working directory. Any save point
 files without a specified path will be written to a sub-directory called
@@ -64,11 +64,11 @@ directory tree as follows:
                   └─ Node-B_custom.save
 
 Once a DAG has ran and produce save point files, the DAG can then be re-run from
-a save file by passing a filename via the ``-load_save`` flag for *condor_submit_dag*.
+a save file by passing a filename via the ``-load_save`` flag for :tool:`condor_submit_dag`.
 If the save point file is passed with a specified path then DAGMan will attempt to
 read the file from that path. If just a save point filename is given then DAGMan will
 assume the file is located in the``save_files`` directory. The path to save point
-files will be checked relative to the current working directory that *condor_submit_dag*
+files will be checked relative to the current working directory that :tool:`condor_submit_dag`
 was ran from.
 
 When DAGMan writes save point files, if a save file with the same name already exists

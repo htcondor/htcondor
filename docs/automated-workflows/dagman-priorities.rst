@@ -87,7 +87,7 @@ is the sum of the explicit priority (specified in the DAG file) and the
 priority of the DAG itself.** DAG priorities also default to 0, so they
 are most relevant for sub-DAGs (although a top-level DAG can be submitted
 with a non-zero priority by specifying a **-priority** value on the
-*condor_submit_dag* command line). **This algorithm for calculating
+:tool:`condor_submit_dag` command line). **This algorithm for calculating
 effective priorities is a simplification introduced in version 8.5.7 (a
 node's effective priority is no longer dependent on the priorities of
 its parents).**
