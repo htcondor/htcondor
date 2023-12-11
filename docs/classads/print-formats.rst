@@ -212,8 +212,8 @@ This print format file shows the use of ``SELECT UNIQUE``
    GROUP BY
       Owner
 
-PRINTAS functions for :tool:`condor_q`
---------------------------------------
+PRINTAS functions for condor_q
+------------------------------
 
 Some of the tools that interpret a print format file have specialized formatting functions for certain
 ClassAd attributes.  These are selected by using the ``PRINTAS`` keyword followed
@@ -337,8 +337,8 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
    This function renders a Megabytes per second goodput value from the
    ``BytesSent``, ``BytesRecvd`` job attributes and total job execution time as calculated by the ``STDU_GOODPUT`` output.
 
-PRINTAS functions for :tool:`condor_status`
--------------------------------------------
+PRINTAS functions for condor_status
+-----------------------------------
 
 ``ACTIVITY_CODE``
    Render a two character machine state and activity code from the ``State`` and ``Activity`` attributes of the machine ad.

@@ -191,7 +191,7 @@ This section is a brief description of DaemonCore. DaemonCore is a
 library that is shared among most of the HTCondor daemons which provides
 common functionality. Currently, the following daemons use DaemonCore:
 
--  :tool:`condor_master`
+-  *condor_master*
 -  *condor_startd*
 -  *condor_schedd*
 -  *condor_collector*
@@ -209,7 +209,7 @@ common functionality. Currently, the following daemons use DaemonCore:
 -  *condor_defrag*
 -  *condor_c-gahp*
 -  *condor_c-gahp_worker_thread*
--  :tool:`condor_dagman`
+-  *condor_dagman*
 -  *condor_ft-gahp*
 -  *condor_rooster*
 -  *condor_shadow*

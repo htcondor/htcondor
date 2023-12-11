@@ -1,5 +1,5 @@
-Using :tool:`condor_annex` for the First Time
-=============================================
+Using condor_annex for the First Time
+=====================================
 
 This guide assumes that you already have an AWS account, as well as a
 log-in account on a Linux machine with a public address and a system
@@ -229,8 +229,8 @@ The 'annex-user' now has full privileges to your account.
 
 .. _configure_condor_annex:
 
-Configure :tool:`condor_annex`
-------------------------------
+Configure condor_annex
+----------------------
 
 The following command will setup your AWS account. It will create a
 number of persistent components, none of which will cost you anything to
