@@ -421,7 +421,7 @@ def list_checks(is_ce, ignore_list, only_list):
     i = 0
     total = len(INCOMPATIBILITY_CHECKS)
     cnt_fmt = len(str(total))
-    info_fmt = (2 * cnt_fmt) + 4
+    pad_len = (2 * cnt_fmt) + 4
 
     for check in INCOMPATIBILITY_CHECKS:
         i += 1
@@ -445,7 +445,7 @@ def list_checks(is_ce, ignore_list, only_list):
 
         root = "Requires ROOT" if check.needs_root else ""
         ver = make_version_str(check.version)
-        padding = " " * info_fmt
+        padding = " " * pad_len
 
         format_print(
             f"""
@@ -459,7 +459,7 @@ def list_checks(is_ce, ignore_list, only_list):
         )
 
         format_print(
-            check.desc, offset=(4 + info_fmt), newline=True, debug=Debug.DETAILED
+            check.desc, offset=(4 + pad_len), newline=True, debug=Debug.DETAILED
         )
         format_print("", newline=True, debug=Debug.DETAILED)
 
@@ -650,11 +650,12 @@ def main():
         system = "HTCondor"
 
         if args.ce:
+            system += "-CE"
             global CURRENT_VERSION
             config = "/etc/condor-ce/condor_config"
-            if not os.path.exists("/etc/condor-ce/condor_config"):
+            if not os.path.exists(config):
                 format_print(
-                    f"""Error: CE Spcified but failed to locate {config}""",
+                    f"""Error: {system} Specified but failed to locate {config}""",
                     err=True,
                     newline=True,
                 )
@@ -664,7 +665,6 @@ def main():
             CURRENT_VERSION = tuple(
                 int(x) for x in htcondor.param["CONDOR_VERSION"].split(".")
             )
-            system += "-CE"
 
         format_print(
             f"Checking {system} for possible issues with known incompatibilities upgrading to V{NEXT_MAJOR_VERSION[0]}",
