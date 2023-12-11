@@ -81,7 +81,7 @@ END {
 
     print "<cpu mode='host-passthrough'/>" ;
 
-    print "<os><type>" os_type "</type>" ;
+    print "<os><type>" os_type "</type>"
     if(kernel != "")
     {
 	print "<kernel>" kernel "</kernel>"
@@ -109,7 +109,8 @@ END {
     print "<on_poweroff>destroy</on_poweroff><on_reboot>restart</on_reboot><on_crash>restart</on_crash>" ;
 
     print "<devices>" ;
-    print "<console type='pty'><source path='/dev/ptmx'/></console>" ;
+    print "<video><model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/></video>" ;
+    print "<graphics type='spice' autoport='yes'><listen type='address'/></graphics>" ;
 
     # Check VNC settings 
     if(attrs["JobVMVNCConsole"] == "true")
@@ -131,14 +132,14 @@ END {
 	}
 	else
 	{
-	    print "<interface type='bridge'>" ;
+	    print "<interface type='direct'>" ;
             if(attrs["JobVM_MACADDR"] != "")
             {
 		print"<mac address='" attrs["JobVM_MACADDR"] "'/>" ;
             }
 	    if(attrs["VMPARAM_Bridge_Interface"] != "")
 	    {
-		print "<source bridge='" attrs["VMPARAM_Bridge_Interface"] "'/>" ;
+		print "<source dev='" attrs["VMPARAM_Bridge_Interface"] "' mode='bridge' type='virtio'/>" ;
 	    }
 	    print "</interface>" ;
 	}
@@ -157,7 +158,7 @@ END {
         }
         else
         {
-            print "<disk type='file'>" ;
+            print "<disk type='file' device='disk'>" ;
         }
         
         if ( p == 4 )
@@ -177,7 +178,7 @@ END {
         {
             print "<source file='" attrs["VM_WORKING_DIR"] "/" disk_string[1] "'/>" ;
         }
-        print "<target dev='" disk_string[2] "'/>" ;
+        print "<target dev='" disk_string[2] "' bus='virtio' />" ;
         
         if ( disk_string[3] == "r" )
         {
