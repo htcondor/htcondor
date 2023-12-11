@@ -2380,7 +2380,8 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 			DeleteUserAttribute(*urec, ATTR_DISABLE_REASON);
 		} else { // user does not exist,  we must add
 			bool add_if_not = false;
-			if (cmdAd.LookupBool("Create", add_if_not) && add_if_not) {
+			if ((cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE, add_if_not) ||
+				 cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE_DEPRECATED, add_if_not)) && add_if_not) {
 				int userrec_id = scheduler.nextUnusedUserRecId();
 				txn.BeginOrContinue(userrec_id);
 				UserRecCreate(userrec_id, username.c_str(), true);
