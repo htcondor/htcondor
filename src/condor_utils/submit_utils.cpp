@@ -5001,10 +5001,10 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 							return std::isdigit(c) || std::isspace(c);
 							})) {
 					if (0 == strcasecmp("error", missingUnitsIs)) {
-						push_error(stderr, "\nERROR: RequestDisk=%s defaults to kilobytes, must contain a units suffix (i.e K, M, or B)\n", disk.ptr());
+						push_error(stderr, "\nERROR: request_disk=%s defaults to kilobytes, must contain a units suffix (i.e K, M, or B)\n", disk.ptr());
 						ABORT_AND_RETURN(1);
 					}
-					push_warning(stderr, "\nWARNING: RequestDisk=%s defaults to kilobytes, should contain a units suffix (i.e K, M, or B)\n", disk.ptr());
+					push_warning(stderr, "\nWARNING: request_disk=%s defaults to kilobytes, should contain a units suffix (i.e K, M, or B)\n", disk.ptr());
 				}
 			}
 			AssignJobVal(ATTR_REQUEST_DISK, req_disk_kb);
