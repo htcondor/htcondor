@@ -4582,6 +4582,10 @@ enum {
 	idATTR_HOLD_REASON_CODE,
 	idATTR_JOB_SET_ID,
 	idATTR_JOB_SET_NAME,
+	idATTR_NT_DOMAIN,
+	idATTR_ENABLED,
+	idATTR_DISABLE_REASON,
+	idATTR_USERREC_OPT_CREATE_DEPRECATED,
 };
 
 enum {
@@ -6323,6 +6327,40 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 
 #ifdef USE_JOB_QUEUE_USERREC
 
+// category values for aSpecialUserRecAttrs
+enum {
+	catUserRecForbidden = -2,
+	catUserRecRequiredKey = -1, // immutable/secure attributes that are part of the key
+	catUserRecDisable = 2,      // attributes related to enable/disable
+};
+
+#define FILL(attr,cat) { attr, id##attr, cat }
+// negative value in the category field indicates that the attribute secure/immutable
+static const ATTR_IDENT_PAIR aSpecialUserRecAttrs[] = {
+	FILL(ATTR_USERREC_OPT_CREATE_DEPRECATED, catUserRecForbidden), // backward compat hack for 10.x and early 23.0.x
+	FILL(ATTR_DISABLE_REASON,     catUserRecDisable),
+	FILL(ATTR_ENABLED,            catUserRecDisable),
+	FILL(ATTR_NT_DOMAIN,          catUserRecRequiredKey),
+	FILL(ATTR_OWNER,              catUserRecRequiredKey),
+	FILL(ATTR_USER,               catUserRecRequiredKey),
+};
+#undef FILL
+
+static bool IsSpecialUserRecAttrName(const char * attr, int& cat)
+{
+	const ATTR_IDENT_PAIR* found = nullptr;
+	found = BinaryLookup<ATTR_IDENT_PAIR>(
+		aSpecialUserRecAttrs,
+		COUNTOF(aSpecialUserRecAttrs),
+		attr, strcasecmp);
+	if (found) {
+		cat = found->category;
+		return found->id;
+	}
+	cat = 0;
+	return 0;
+}
+
 static bool MakeUserRec(JobQueueKey & key,
 	const char * user,
 	const char * owner,
@@ -6409,7 +6447,7 @@ bool UserRecDestroy(int userrec_id)
 	return JobQueue->DestroyClassAd(key);
 }
 
-bool UserRecCreate(int userrec_id, const char * username, bool enabled)
+bool UserRecCreate(int userrec_id, const char * username, const ClassAd & cmdAd, bool enabled)
 {
 	if (userrec_id <= 0 || userrec_id >= INT_MAX) { return false; }
 	JobQueueKeyBuf key;
@@ -6428,20 +6466,47 @@ bool UserRecCreate(int userrec_id, const char * username, bool enabled)
 		obuf = std::string(owner) + "@" + scheduler.uidDomain();
 		user = obuf.c_str();
 	}
-#ifdef WIN32
-	// TODO: should we pass NTDomain explicitly?
-	// of the supplied username has a domain value that does not match uidDomain
-	// treat it as an NTDomain value, and rewrite the user value to be owner@uid_domain
 	std::string nbuf;
-	YourStringNoCase domain(domain_of_user(username, scheduler.uidDomain()));
-	if (domain != scheduler.uidDomain()) {
-		ntdomain = domain.ptr();
-		nbuf = std::string(owner) + "@" + scheduler.uidDomain();
-		user = nbuf.c_str();
+	if (cmdAd.LookupString(ATTR_NT_DOMAIN, nbuf) && ! nbuf.empty()) {
+		ntdomain = nbuf.c_str();
+	}
+#ifdef WIN32
+	else {
+		// if the supplied username has a domain value that does not match uidDomain
+		// treat it as an NTDomain value, and rewrite the user value to be owner@uid_domain
+		// this is not ideal, but it is consistent with the way things have always worked.
+		YourStringNoCase domain(domain_of_user(username, scheduler.uidDomain()));
+		if (domain != scheduler.uidDomain()) {
+			ntdomain = domain.ptr();
+			nbuf = std::string(owner) + "@" + scheduler.uidDomain();
+			user = nbuf.c_str();
+		}
 	}
 #endif
 
 	bool rval = MakeUserRec(key, user, owner, ntdomain, enabled);
+	if (rval) {
+		// do quoting using oldclassad syntax
+		classad::Value tmpValue;
+		classad::ClassAdUnParser unparse;
+		unparse.SetOldClassAd( true, true );
+		std::string buf;
+
+		// populate the new userrec with attributes from the command ad
+		for (auto &[attr, tree] : cmdAd) {
+			if (starts_with_ignore_case(attr, ATTR_USERREC_OPT_prefix)) continue;
+
+			// don't allow most special attributes to be set from the command ad
+			// the exception is the DisableReason when creating a disabled user
+			int cat=0, idAttr = IsSpecialUserRecAttrName(attr.c_str(), cat);
+			if (cat < 0 || idAttr == idATTR_ENABLED) continue;
+			if (enabled && idAttr == idATTR_DISABLE_REASON) continue;
+
+			buf.clear();
+			unparse.Unparse(buf, tree);
+			JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0);
+		}
+	}
 
 	if ( ! already_in_transaction) {
 		if ( ! rval) {

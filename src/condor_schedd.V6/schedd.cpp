@@ -2335,6 +2335,7 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 
 	ClassAd summaryAd;
 	summaryAd.Assign(ATTR_MY_TYPE, "Summary");
+	summaryAd.Assign("TotalUserAds", OwnersInfo.size());
 
 	int limit = INT_MAX;
 	queryAd.LookupInteger(ATTR_LIMIT_RESULTS, limit);
@@ -2343,12 +2344,12 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 
 	// Now, find the ClassAds that match.
 	stream->encode();
-	for (const auto & it : OwnersInfo) {
+	for (const auto &[name, urec] : OwnersInfo) {
 		if (num_ads >= limit) break;
-		if (!has_constraint || IsAConstraintMatch(&queryAd, it.second)) {
-			JobQueueUserRec * urec = it.second;
-			ClassAd ad(*urec);
+		if ( ! has_constraint || IsAConstraintMatch(&queryAd, urec)) {
+			ClassAd ad;
 			urec->live.publish(ad,"Num");
+			ad.ChainToAd(urec);
 			if ( !putClassAd(stream, ad)) {
 				dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 				return FALSE;
@@ -2382,9 +2383,11 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 			bool add_if_not = false;
 			if ((cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE, add_if_not) ||
 				 cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE_DEPRECATED, add_if_not)) && add_if_not) {
+				bool enabled = true;
+				cmdAd.EvaluateAttrBoolEquiv(ATTR_ENABLED, enabled);
 				int userrec_id = scheduler.nextUnusedUserRecId();
 				txn.BeginOrContinue(userrec_id);
-				UserRecCreate(userrec_id, username.c_str(), true);
+				UserRecCreate(userrec_id, username.c_str(), cmdAd, enabled);
 			} else {
 				rval = 2;
 			}

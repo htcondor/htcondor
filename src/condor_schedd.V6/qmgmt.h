@@ -884,7 +884,7 @@ bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName);
 
 #ifdef USE_JOB_QUEUE_USERREC
 bool UserRecDestroy(int userrec_id);
-bool UserRecCreate(int userrec_id, const char * ownerinfoName, bool enabled);
+bool UserRecCreate(int userrec_id, const char * ownerinfoName, const ClassAd & cmdAd, bool enabled);
 #endif
 
 // priority records

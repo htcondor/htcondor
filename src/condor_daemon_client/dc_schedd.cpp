@@ -2104,3 +2104,277 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	}
 	return true;
 }
+
+// TODO: how do we make this global??
+enum
+{
+	Q_NO_SCHEDD_IP_ADDR = 20,
+	Q_SCHEDD_COMMUNICATION_ERROR,
+	Q_INVALID_REQUIREMENTS,
+	Q_INTERNAL_ERROR,
+	Q_REMOTE_ERROR,
+	Q_UNSUPPORTED_OPTION_ERROR
+};
+
+/*static*/ int DCSchedd::makeUsersQueryAd (
+	classad::ClassAd & request_ad,
+	const char * constraint,
+	const char * projection,
+	bool send_server_time /*= false*/,
+	int match_limit /*= -1*/)
+{
+	if (constraint && constraint[0]) {
+		classad::ClassAdParser parser;
+		classad::ExprTree *expr = NULL;
+		parser.ParseExpression(constraint, expr);
+		if (!expr) return Q_PARSE_ERROR;
+
+		request_ad.Insert(ATTR_REQUIREMENTS, expr);
+	}
+
+	if (projection) {
+		request_ad.InsertAttr(ATTR_PROJECTION, projection);
+	}
+
+	if (send_server_time) {
+		request_ad.Assign(ATTR_SEND_SERVER_TIME, true);
+	}
+
+	if (match_limit >= 0) {
+		request_ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
+	}
+	return 0;
+
+}
+
+/*static*/ int DCSchedd::makeUsersQueryAd (
+	classad::ClassAd & request_ad,
+	const char * constraint,
+	classad::References & attrs,
+	int match_limit /* = -1 */)
+{
+	bool send_server_time = false;
+	std::string projlist;
+	const char * projection = nullptr;
+
+	if ( ! attrs.empty()) {
+		for (auto attr : attrs) {
+			if (projlist.empty()) projlist += "\n";
+			projlist += attr;
+		}
+		send_server_time = attrs.count(ATTR_SERVER_TIME) > 0;
+		projection = projlist.c_str();
+	}
+
+	return makeUsersQueryAd(request_ad, constraint, projection, send_server_time, match_limit);
+}
+
+int DCSchedd::queryUsers(
+	const classad::ClassAd & query_ad,
+	// return 0 to take ownership of the ad, non-zero to allow the ad to be deleted after, -1 aborts the loop
+	int (*process_func)(void*, ClassAd *ad),
+	void * process_func_data,
+	int connect_timeout,
+	CondorError *errstack,
+	ClassAd ** psummary_ad)
+{
+	ClassAd *ad = NULL;	// user ad result
+
+	int cmd = QUERY_USERREC_ADS;
+
+	Sock* sock;
+	if (!(sock = startCommand(cmd, Stream::reli_sock, connect_timeout, errstack))) return Q_SCHEDD_COMMUNICATION_ERROR;
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	if (!putClassAd(sock, query_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
+	dprintf(D_FULLDEBUG, "Sent Users request classad to schedd\n");
+
+	int rval = 0;
+	do {
+		ad = new ClassAd();
+		if ( ! getClassAd(sock, *ad)) {
+			rval = Q_SCHEDD_COMMUNICATION_ERROR;
+			break;
+		}
+		dprintf(D_FULLDEBUG, "Got classad from schedd.\n");
+		std::string mytype;
+		if (ad->EvaluateAttrString(ATTR_MY_TYPE, mytype) && mytype == "Summary")
+		{ // Last ad.
+			dprintf(D_FULLDEBUG, "Ad was last one from schedd.\n");
+			std::string errorMsg;
+			int error_val;
+			if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, error_val) && error_val && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+			{
+				if (errstack) errstack->push("TOOL", error_val, errorMsg.c_str());
+				rval = Q_REMOTE_ERROR;
+			} else if ( ! sock->end_of_message()) {
+				rval = Q_SCHEDD_COMMUNICATION_ERROR;
+			}
+			sock->close();
+
+			if (psummary_ad && rval == 0) {
+				*psummary_ad = ad; // return the final ad, because it has summary information
+				ad = NULL; // so we don't delete it below.
+			}
+			break;
+		}
+
+		// Note: process_func() will return 0 if taking
+		// ownership of ad, so only delete if it returns non-zero, else set to NULL
+		// so we don't delete it here.  Either way, next set ad to NULL since either
+		// it has been deleted or will be deleted later by process_func().
+		// if process_func returns a negative value, we want to break out of the loop
+		int delit = process_func(process_func_data, ad);
+		if (delit) { delete ad; }
+		ad = NULL;
+		if (delit < 0) {
+			rval = -delit; // TODO: better error code here?
+			break;
+		}
+	} while (true);
+
+	// Make sure ad is not leaked no matter how we break out of the above loop.
+	delete ad;
+
+	return rval;
+}
+
+ClassAd* DCSchedd::actOnUsers (
+	int cmd, // ENABLE_USERREC or DISABLE_USERREC
+	const ClassAd * userads[], // either pass array of ad pointers
+	const char * usernames[], // or pass array of username pointers
+	int num_usernames,
+	bool create_if, // if true, treat ENABLE into as a CREATE
+	const char * reason,
+	CondorError *errstack,
+	int connect_timeout /*= 20*/)
+{
+	Sock* sock;
+	if (!(sock = startCommand(cmd, Stream::reli_sock, connect_timeout, errstack))) {
+		//return Q_SCHEDD_COMMUNICATION_ERROR;
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::actOnOnUsers", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return nullptr;
+	}
+
+	//int rval = 0;
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	// send the number of ads
+	sock->put(num_usernames);
+
+	// send the ads
+	for (int  ii = 0; ii < num_usernames; ++ii) {
+		ClassAd cmd_ad;
+		std::string name;
+		if (userads) {
+			const ClassAd * ad = userads[ii];
+			if ( ! ad->LookupString(ATTR_USER, name)) {
+				if (errstack) { errstack->pushf("DCSchedd::actOnUsers", Q_PARSE_ERROR, "ad %d does not have a User attribute", ii); }
+				return nullptr;
+			}
+			cmd_ad.ChainToAd(const_cast<ClassAd*>(ad));
+		} else {
+			name = usernames[ii];
+			cmd_ad.Assign(ATTR_USER, name);
+		}
+		if (create_if) {
+			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE, true);
+			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE_DEPRECATED, true);
+		}
+		if (reason) {
+			if (cmd == DISABLE_USERREC) cmd_ad.Assign(ATTR_DISABLE_REASON, reason);
+		}
+
+		if ( ! putClassAd(sock, cmd_ad)) {
+			//return Q_SCHEDD_COMMUNICATION_ERROR;
+			if (errstack && errstack->empty()) {
+				errstack->pushf("DCSchedd::actOnOnUsers", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+			}
+			return nullptr;
+		}
+		dprintf(D_FULLDEBUG, "Sent %s %s to schedd\n", getCommandString(cmd), name.c_str());
+	}
+
+	if ( ! sock->end_of_message()) {
+		//return Q_SCHEDD_COMMUNICATION_ERROR;
+		if (errstack) errstack->pushf("DCSchedd::actOnOnUsers", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		return nullptr;
+	}
+
+	ClassAd * result_ad = new ClassAd();
+	if ( ! getClassAd(sock, *result_ad) || ! sock->end_of_message()) {
+		// rval = Q_SCHEDD_COMMUNICATION_ERROR;
+		if (errstack) errstack->push("DCSchedd::actOnOnUsers", Q_SCHEDD_COMMUNICATION_ERROR, "no result ad");
+		return nullptr;
+	}
+
+	return result_ad;
+}
+
+ClassAd * DCSchedd::addUsers(
+	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+	int num_usernames,
+	CondorError *errstack)
+{
+	int connect_timeout = 20;
+	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, true, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::enableUsers(
+	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+	int num_usernames,
+	bool create_if,           // true if we want to create users that don't already exist
+	CondorError *errstack)
+{
+	int connect_timeout = 20;
+	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, false, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::enableUsers(
+	const char * constraint, // expression
+	CondorError *errstack)
+{
+	int connect_timeout = 20;
+	if ( ! constraint) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::enableusers", Q_PARSE_ERROR, "constraint expression is required");
+		}
+		return nullptr;
+	}
+	ClassAd cmd_ad;
+	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
+	const ClassAd * ads[] = { &cmd_ad };
+	return actOnUsers (ENABLE_USERREC, ads, nullptr, 1, false, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::addOrEnableUsers(
+	const ClassAd * userads[], // ads must have ATTR_USER attribute, may have ATTR_USERREC_OPT_CREATE=true to add, otherwise it is enable
+	int num_usernames,
+	bool create_if,           // true if we want to force ATTR_USERREC_OPT_CREATE=true in all ads that are sent
+	CondorError *errstack)
+{
+	int connect_timeout = 20;
+	return actOnUsers (ENABLE_USERREC, userads, nullptr, num_usernames, create_if, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::disableUsers(
+	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+	int num_usernames,
+	const char * reason,
+	CondorError *errstack)
+{
+	int connect_timeout = 20;
+	return actOnUsers (DISABLE_USERREC, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::updateUserAds(
+	ClassAdList & user_ads,	 // ads must have ATTR_USER attribute at a minimum
+	CondorError *errstack)
+{
+	// TODO: write this
+	return nullptr; 
+}
+
