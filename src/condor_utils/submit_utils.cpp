@@ -4953,10 +4953,10 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 							return std::isdigit(c) || std::isspace(c);
 							})) {
 					if (0 == strcasecmp("error", missingUnitsIs)) {
-						push_error(stderr, "\nERROR: RequestMemory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", mem.ptr());
+						push_error(stderr, "\nERROR: request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", mem.ptr());
 						ABORT_AND_RETURN(1);
 					}
-					push_warning(stderr, "\nWARNING: RequestMemory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", mem.ptr());
+					push_warning(stderr, "\nWARNING: request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", mem.ptr());
 				}
 			}
 			AssignJobVal(ATTR_REQUEST_MEMORY, req_memory_mb);
