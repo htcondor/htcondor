@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added config parameter :macro:`SUBMIT_REQUEST_MISSING_UNITS`, to warn or prevent submitting
+  with RequestDisk or RequestMemory without a units suffix.
+  :jira:`1837`
 
 Bugs Fixed:
 

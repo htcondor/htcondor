@@ -2030,50 +2030,6 @@ int SubmitHash::SetJobStatus()
 }
 
 
-#if 0 // obsolete code kept temporarily for reference.
-
-int SubmitHash::SetPriority()
-{
-	RETURN_IF_ABORT();
-
-	int prioval = submit_param_int( SUBMIT_KEY_Priority, "prio", 0 );
-	RETURN_IF_ABORT();
-
-	AssignJobVal(ATTR_JOB_PRIO, prioval);
-	return 0;
-}
-
-int SubmitHash::SetNiceUser()
-{
-
-	bool is_nice = submit_param_bool( SUBMIT_KEY_NiceUser, ATTR_NICE_USER, false );
-	RETURN_IF_ABORT();
-
-	AssignJobVal(ATTR_NICE_USER, is_nice);
-
-	// Nice users get a default MaxJobRetirementTime of 0
-	if (is_nice && ! job->Lookup(ATTR_MAX_JOB_RETIREMENT_TIME)) {
-		// we assign a default of 0 here, but a user-specified value will overwrite this
-		// when SetMaxJobRetirementTime is called.
-		AssignJobVal(ATTR_MAX_JOB_RETIREMENT_TIME, 0);
-	}
-
-	return 0;
-}
-
-int SubmitHash::SetMaxJobRetirementTime()
-{
-	RETURN_IF_ABORT();
-
-	auto_free_ptr value(submit_param(SUBMIT_KEY_MaxJobRetirementTime, ATTR_MAX_JOB_RETIREMENT_TIME));
-	if (value) {
-		AssignJobExpr(ATTR_MAX_JOB_RETIREMENT_TIME, value.ptr());
-	}
-	return 0;
-}
-
-#endif // above code is obsolete, kept temporarily for reference
-
 int SubmitHash::SetPeriodicExpressions()
 {
 	RETURN_IF_ABORT();
@@ -2207,36 +2163,6 @@ int SubmitHash::SetLeaveInQueue()
 
 	return 0;
 }
-
-#if 0 // obsolete code kept for reference
-
-int SubmitHash::SetNoopJob()
-{
-	RETURN_IF_ABORT();
-
-	auto_free_ptr noop(submit_param(SUBMIT_KEY_Noop, ATTR_JOB_NOOP));
-	if (noop) {
-		/* user had a value for it, leave it alone */
-		AssignJobExpr(ATTR_JOB_NOOP, noop.ptr());
-		RETURN_IF_ABORT();
-	}
-
-	noop.set(submit_param(SUBMIT_KEY_NoopExitSignal, ATTR_JOB_NOOP_EXIT_SIGNAL));
-	if (noop) {
-		AssignJobExpr(ATTR_JOB_NOOP_EXIT_SIGNAL, noop.ptr());
-		RETURN_IF_ABORT();
-	}
-
-	noop.set(submit_param(SUBMIT_KEY_NoopExitCode, ATTR_JOB_NOOP_EXIT_CODE));
-	if (noop) {
-		AssignJobExpr(ATTR_JOB_NOOP_EXIT_CODE, noop.ptr());
-		RETURN_IF_ABORT();
-	}
-
-	return 0;
-}
-
-#endif // above code is obsolete, kept temporarily for reference
 
 const char * SubmitHash::getIWD()
 {
@@ -3612,128 +3538,6 @@ int SubmitHash::ReportCommonMistakes()
 	return abort_code;
 }
 
-#if 0 // obsolete code kept for reference
-
-int SubmitHash::SetNotifyUser()
-{
-	RETURN_IF_ABORT();
-	bool needs_warning = false;
-
-	char *who = submit_param( SUBMIT_KEY_NotifyUser, ATTR_NOTIFY_USER );
-
-	if (who) {
-		if( ! already_warned_notification_never ) {
-			if( !strcasecmp(who, "false") ) {
-				needs_warning = true;
-			}
-			if( !strcasecmp(who, "never") ) {
-				needs_warning = true;
-			}
-		}
-		if( needs_warning && ! already_warned_notification_never ) {
-			auto_free_ptr tmp(param("UID_DOMAIN"));
-
-			push_warning( stderr, "You used  notify_user=%s  in your submit file.\n"
-					"This means notification email will go to user \"%s@%s\".\n"
-					"This is probably not what you expect!\n"
-					"If you do not want notification email, put \"notification = never\"\n"
-					"into your submit file, instead.\n",
-					who, who, tmp.ptr() );
-			already_warned_notification_never = true;
-		}
-		AssignJobString(ATTR_NOTIFY_USER, who);
-		free(who);
-	}
-	return 0;
-}
-
-int SubmitHash::SetEmailAttributes()
-{
-	RETURN_IF_ABORT();
-	char *attrs = submit_param( SUBMIT_KEY_EmailAttributes, ATTR_EMAIL_ATTRIBUTES );
-
-	if ( attrs ) {
-		StringList attr_list( attrs );
-
-		if ( !attr_list.isEmpty() ) {
-			char *tmp;
-
-			tmp = attr_list.print_to_string();
-			AssignJobString(ATTR_EMAIL_ATTRIBUTES, tmp);
-			free( tmp );
-		}
-
-		free( attrs );
-	}
-	return 0;
-}
-
-/**
- * We search to see if the ad has any CronTab attributes defined
- * If so, then we will check to make sure they are using the 
- * proper syntax and then stuff them in the ad
- **/
-int SubmitHash::SetCronTab()
-{
-	RETURN_IF_ABORT();
-		//
-		// For convienence I put all the attributes in array
-		// and just run through the ad looking for them
-		//
-
-	static const SimpleExprInfo fields[] = {
-		/*submit_param*/ {SUBMIT_KEY_CronMinute, ATTR_CRON_MINUTES,
-				ATTR_CRON_MINUTES, NULL, true, false},
-		/*submit_param*/ {SUBMIT_KEY_CronHour, ATTR_CRON_HOURS,
-				ATTR_CRON_HOURS, NULL, true, false},
-		/*submit_param*/ {SUBMIT_KEY_CronDayOfMonth, ATTR_CRON_DAYS_OF_MONTH,
-				ATTR_CRON_DAYS_OF_MONTH, NULL, true, false},
-		/*submit_param*/ {SUBMIT_KEY_CronMonth, ATTR_CRON_MONTHS,
-				ATTR_CRON_MONTHS, NULL, true, false},
-		/*submit_param*/ {SUBMIT_KEY_CronDayOfWeek, ATTR_CRON_DAYS_OF_WEEK,
-				ATTR_CRON_DAYS_OF_WEEK, NULL, true, false},
-		{NULL,NULL,NULL,NULL,false,false}
-	};
-
-	bool has_cron = false;
-
-	CronTab::initRegexObject();
-	for (int ctr = 0; fields[ctr].key != NULL; ctr++ ) {
-		char *param = submit_param( fields[ctr].key, fields[ctr].alt );
-		if (param) {
-				//
-				// We'll try to be nice and validate it first
-				//
-			std::string error;
-			if ( ! CronTab::validateParameter( param, fields[ctr].attr, error ) ) {
-				push_error( stderr, "%s\n", error.c_str() );
-				ABORT_AND_RETURN( 1 );
-			}
-				//
-				// Go ahead and stuff it in the job ad now
-				// The parameters all all strings
-				//
-			has_cron = true;
-			AssignJobString(fields[ctr].attr, param);
-			free( param );
-		}
-	} // for
-		//
-		// Validation
-		// Because the scheduler universe doesn't use a Starter,
-		// we can't let them use the CronTab scheduling which needs 
-		// to be able to use the job deferral feature
-		//
-	if ( has_cron && JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
-		push_error( stderr, "CronTab scheduling does not work for scheduler universe jobs.\n"
-						"Consider submitting this job using the local universe, instead\n");
-		ABORT_AND_RETURN( 1 );
-	} // validation
-	return 0;
-}
-
-#endif // above code is obsolete, kept temporarily for reference
-
 int SubmitHash::SetArguments()
 {
 	RETURN_IF_ABORT();
@@ -4103,120 +3907,6 @@ static int CondorUniverseNumberEx(const char * univ)
 
 	return CondorUniverseNumber(univ);
 }
-
-#if 0 // obsolete code kept temporarily for reference.
-
-/*
-	Walk the list of submit commands (as stored in the
-	insert() table) looking for a handful of Remote_FOO
-	attributes we want to special case.  Translate them (if necessary)
-	and stuff them into the ClassAd.
-*/
-int SubmitHash::SetRemoteAttrs()
-{
-	RETURN_IF_ABORT();
-	const int REMOTE_PREFIX_LEN = (int)strlen(SUBMIT_KEY_REMOTE_PREFIX);
-
-	struct ExprItem {
-		const char * submit_expr;
-		const char * special_expr;
-		const char * attr;
-	};
-
-	ExprItem tostringize[] = {
-		{ SUBMIT_KEY_GridResource, 0, ATTR_GRID_RESOURCE },
-	};
-	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
-
-
-	HASHITER it = hash_iter_begin(SubmitMacroSet);
-	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
-
-		const char * key = hash_iter_key(it);
-		int remote_depth = 0;
-		while(strncasecmp(key, SUBMIT_KEY_REMOTE_PREFIX, REMOTE_PREFIX_LEN) == 0) {
-			remote_depth++;
-			key += REMOTE_PREFIX_LEN;
-		}
-
-		if(remote_depth == 0) {
-			continue;
-		}
-
-		std::string preremote = "";
-		for(int i = 0; i < remote_depth; ++i) {
-			preremote += SUBMIT_KEY_REMOTE_PREFIX;
-		}
-
-		if(strcasecmp(key, SUBMIT_KEY_Universe) == 0 || strcasecmp(key, ATTR_JOB_UNIVERSE) == 0) {
-			std::string Univ1 = preremote + SUBMIT_KEY_Universe;
-			std::string Univ2 = preremote + ATTR_JOB_UNIVERSE;
-			std::string val = submit_param_string(Univ1.c_str(), Univ2.c_str());
-			int univ = CondorUniverseNumberEx(val.c_str());
-			if(univ == 0) {
-				push_error(stderr, "Unknown universe of '%s' specified\n", val.c_str());
-				ABORT_AND_RETURN( 1 );
-			}
-			std::string attr = preremote + ATTR_JOB_UNIVERSE;
-			dprintf(D_FULLDEBUG, "Adding %s = %d\n", attr.c_str(), univ);
-			AssignJobVal(attr.c_str(), univ);
-
-		} else {
-
-			for(int i = 0; i < tostringizesz; ++i) {
-				ExprItem & item = tostringize[i];
-
-				if(	strcasecmp(key, item.submit_expr) &&
-					(item.special_expr == NULL || strcasecmp(key, item.special_expr)) &&
-					strcasecmp(key, item.job_expr)) {
-					continue;
-				}
-				std::string key1 = preremote + item.submit_expr;
-				std::string key2 = preremote + item.special_expr;
-				std::string key3 = preremote + item.job_expr;
-				const char * ckey1 = key1.c_str();
-				const char * ckey2 = key2.c_str();
-				if(item.special_expr == NULL) { ckey2 = NULL; }
-				const char * ckey3 = key3.c_str();
-				char * val = submit_param(ckey1, ckey2);
-				if( val == NULL ) {
-					val = submit_param(ckey3);
-				}
-				ASSERT(val); // Shouldn't have gotten here if it's missing.
-				dprintf(D_FULLDEBUG, "Adding %s = %s\n", ckey3, val);
-				AssignJobString(ckey3, val);
-				free(val);
-				break;
-			}
-		}
-	}
-	hash_iter_delete(&it);
-
-	return 0;
-}
-
-int SubmitHash::SetJobMachineAttrs()
-{
-	RETURN_IF_ABORT();
-	std::string job_machine_attrs = submit_param_string( SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS );
-	std::string history_len_str = submit_param_string( SUBMIT_KEY_JobMachineAttrsHistoryLength, ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH );
-
-	if( job_machine_attrs.length() ) {
-		AssignJobString(ATTR_JOB_MACHINE_ATTRS,job_machine_attrs.c_str());
-	}
-	if( history_len_str.length() ) {
-		char *endptr=NULL;
-		long history_len = strtol(history_len_str.c_str(),&endptr,10);
-		if( history_len > INT_MAX || history_len < 0 || *endptr) {
-			push_error(stderr, SUBMIT_KEY_JobMachineAttrsHistoryLength "=%s is out of bounds 0 to %d\n",history_len_str.c_str(),INT_MAX);
-			ABORT_AND_RETURN( 1 );
-		}
-		AssignJobVal(ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH, history_len);
-	}
-	return 0;
-}
-
-#endif // above code is obsolete, kept temporarily for reference.
 
 static const char * check_docker_image(char * docker_image)
 {
@@ -5255,6 +4945,20 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 		// and insert it as text into the jobAd.
 		int64_t req_memory_mb = 0;
 		if (parse_int64_bytes(mem, req_memory_mb, 1024 * 1024)) {
+
+			auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
+			if (missingUnitsIs) {
+				// If all characters in string are numeric (with no unit suffix)
+				if (std::all_of(mem.ptr(), mem.ptr() + strlen(mem.ptr()), [](const char c) {
+							return std::isdigit(c) || std::isspace(c);
+							})) {
+					if (0 == strcasecmp("error", missingUnitsIs)) {
+						push_error(stderr, "\nERROR: request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", mem.ptr());
+						ABORT_AND_RETURN(1);
+					}
+					push_warning(stderr, "\nWARNING: request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", mem.ptr());
+				}
+			}
 			AssignJobVal(ATTR_REQUEST_MEMORY, req_memory_mb);
 		} else if (YourStringNoCase("undefined") == mem) {
 			// no value of request memory is desired
@@ -5290,6 +4994,19 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 		// and insert it as text into the jobAd.
 		int64_t req_disk_kb = 0;
 		if (parse_int64_bytes(disk, req_disk_kb, 1024)) {
+			auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
+			if (missingUnitsIs) {
+				// If all characters in string are numeric (with no unit suffix)
+				if (std::all_of(disk.ptr(), disk.ptr() + strlen(disk.ptr()), [](const char c) {
+							return std::isdigit(c) || std::isspace(c);
+							})) {
+					if (0 == strcasecmp("error", missingUnitsIs)) {
+						push_error(stderr, "\nERROR: request_disk=%s defaults to kilobytes, must contain a units suffix (i.e K, M, or B)\n", disk.ptr());
+						ABORT_AND_RETURN(1);
+					}
+					push_warning(stderr, "\nWARNING: request_disk=%s defaults to kilobytes, should contain a units suffix (i.e K, M, or B)\n", disk.ptr());
+				}
+			}
 			AssignJobVal(ATTR_REQUEST_DISK, req_disk_kb);
 		} else if (YourStringNoCase("undefined") == disk) {
 		} else {
@@ -5430,189 +5147,6 @@ int SubmitHash::SetImageSize()
 
 	return 0;
 }
-
-#if 0 // obsolete, kept for reference
-
-// Note: you must call SetTransferFiles() *before* calling SetImageSize().
-int SubmitHash::SetImageSize()
-{
-	RETURN_IF_ABORT();
-
-	char	*tmp;
-	std::string buffer;
-
-	int64_t exe_disk_size_kb = 0; // disk needed for the exe or vm memory
-	int64_t executable_size_kb = 0; // calculated size of the exe
-	int64_t image_size_kb = 0;      // same as exe size unless user specified.
-
-	if (JobUniverse == CONDOR_UNIVERSE_VM) {
-		// In vm universe, when a VM is suspended, 
-		// memory being used by the VM will be saved into a file. 
-		// So we need as much disk space as the memory.
-		// We call this the 'executable_size' for VM jobs, otherwise
-		// ExecutableSize is the size of the cmd
-		exe_disk_size_kb = ExecutableSizeKb;
-	} else {
-		// we should only call calc_image_size_kb on the first
-		// proc in the cluster, since the executable cannot change.
-		if (jid.proc < 1 || ExecutableSizeKb <= 0) {
-			ASSERT(job->LookupString(ATTR_JOB_CMD, buffer));
-			ExecutableSizeKb = calc_image_size_kb(buffer.c_str());
-		}
-		executable_size_kb = ExecutableSizeKb;
-		image_size_kb = ExecutableSizeKb;
-		exe_disk_size_kb = ExecutableSizeKb;
-	}
-
-
-	// if the user specifies an initial image size, use that instead 
-	// of the calculated 
-	tmp = submit_param(SUBMIT_KEY_ImageSize, ATTR_IMAGE_SIZE);
-	if (tmp) {
-		if (! parse_int64_bytes(tmp, image_size_kb, 1024)) {
-			push_error(stderr, "'%s' is not valid for Image Size\n", tmp);
-			image_size_kb = 0;
-		}
-		free(tmp);
-		if (image_size_kb < 1) {
-			push_error(stderr, "Image Size must be positive\n");
-			ABORT_AND_RETURN(1);
-		}
-	}
-
-	/* It's reasonable to expect the image size will be at least the
-		physical memory requirement, so make sure it is. */
-
-		// At one time there was some stuff to attempt to gleen this from
-		// the requirements line, but that caused many problems.
-		// Jeff Ballard 11/4/98
-
-	AssignJobVal(ATTR_IMAGE_SIZE, image_size_kb);
-	AssignJobVal(ATTR_EXECUTABLE_SIZE, executable_size_kb);
-
-	// set an initial value for memory usage
-	//
-	tmp = submit_param(SUBMIT_KEY_MemoryUsage, ATTR_MEMORY_USAGE);
-	if (tmp) {
-		int64_t memory_usage_mb = 0;
-		if (! parse_int64_bytes(tmp, memory_usage_mb, 1024 * 1024) ||
-			memory_usage_mb < 0) {
-			push_error(stderr, "'%s' is not valid for Memory Usage\n", tmp);
-			ABORT_AND_RETURN(1);
-		}
-		free(tmp);
-		AssignJobVal(ATTR_MEMORY_USAGE, memory_usage_mb);
-	}
-
-	// set an initial value for disk usage based on the size of the input sandbox.
-	//
-	int64_t disk_usage_kb = 0;
-	tmp = submit_param(SUBMIT_KEY_DiskUsage, ATTR_DISK_USAGE);
-	if (tmp) {
-		if (! parse_int64_bytes(tmp, disk_usage_kb, 1024) || disk_usage_kb < 1) {
-			push_error(stderr, "'%s' is not valid for disk_usage. It must be >= 1\n", tmp);
-			ABORT_AND_RETURN(1);
-		}
-		free(tmp);
-	} else {
-		disk_usage_kb = exe_disk_size_kb + TransferInputSizeKb;
-	}
-	AssignJobVal(ATTR_DISK_USAGE, disk_usage_kb);
-
-	AssignJobVal(ATTR_TRANSFER_INPUT_SIZE_MB, (executable_size_kb + TransferInputSizeKb) / 1024);
-
-	// set an intial value for RequestMemory
-	tmp = submit_param(SUBMIT_KEY_RequestMemory, ATTR_REQUEST_MEMORY);
-	if (tmp) {
-		// if input is an integer followed by K,M,G or T, scale it MB and 
-		// insert it into the jobAd, otherwise assume it is an expression
-		// and insert it as text into the jobAd.
-		int64_t req_memory_mb = 0;
-		if (parse_int64_bytes(tmp, req_memory_mb, 1024 * 1024)) {
-			AssignJobVal(ATTR_REQUEST_MEMORY, req_memory_mb);
-		} else if (MATCH == strcasecmp(tmp, "undefined")) {
-		} else {
-			AssignJobExpr(ATTR_REQUEST_MEMORY, tmp);
-		}
-		free(tmp);
-	} else if ((tmp = submit_param(SUBMIT_KEY_VM_Memory)) || (tmp = submit_param(ATTR_JOB_VM_MEMORY))) {
-		push_warning(stderr, "'%s' was NOT specified.  Using %s = %s. \n", ATTR_REQUEST_MEMORY, ATTR_JOB_VM_MEMORY, tmp);
-		AssignJobExpr(ATTR_REQUEST_MEMORY, "MY." ATTR_JOB_VM_MEMORY);
-		free(tmp);
-	} else if ((tmp = param("JOB_DEFAULT_REQUESTMEMORY"))) {
-		if (MATCH == strcasecmp(tmp, "undefined")) {
-		} else {
-			AssignJobExpr(ATTR_REQUEST_MEMORY, tmp);
-		}
-		free(tmp);
-	}
-
-	// set an initial value for RequestDisk
-	if ((tmp = submit_param(SUBMIT_KEY_RequestDisk, ATTR_REQUEST_DISK))) {
-		// if input is an integer followed by K,M,G or T, scale it MB and 
-		// insert it into the jobAd, otherwise assume it is an expression
-		// and insert it as text into the jobAd.
-		int64_t req_disk_kb = 0;
-		if (parse_int64_bytes(tmp, req_disk_kb, 1024)) {
-			AssignJobVal(ATTR_REQUEST_DISK, req_disk_kb);
-		} else if (MATCH == strcasecmp(tmp, "undefined")) {
-		} else {
-			AssignJobExpr(ATTR_REQUEST_DISK, tmp);
-		}
-		free(tmp);
-	} else if ((tmp = param("JOB_DEFAULT_REQUESTDISK"))) {
-		if (MATCH == strcasecmp(tmp, "undefined")) {
-		} else {
-			AssignJobExpr(ATTR_REQUEST_DISK, tmp);
-		}
-		free(tmp);
-	}
-	return 0;
-}
-
-int SubmitHash::SetFileOptions()
-{
-	RETURN_IF_ABORT();
-	char *tmp;
-
-	tmp = submit_param( SUBMIT_KEY_FileRemaps, ATTR_FILE_REMAPS );
-	if(tmp) {
-		AssignJobExpr(ATTR_FILE_REMAPS,tmp);
-		free(tmp);
-	}
-
-	tmp = submit_param( SUBMIT_KEY_BufferFiles, ATTR_BUFFER_FILES );
-	if(tmp) {
-		AssignJobExpr(ATTR_BUFFER_FILES,tmp);
-		free(tmp);
-	}
-
-	/* If no buffer size is given, use 512 KB */
-
-	tmp = submit_param( SUBMIT_KEY_BufferSize, ATTR_BUFFER_SIZE );
-	if(!tmp) {
-		tmp = param("DEFAULT_IO_BUFFER_SIZE");
-		if (!tmp) {
-			tmp = strdup("524288");
-		}
-	}
-	AssignJobExpr(ATTR_BUFFER_SIZE,tmp);
-	free(tmp);
-
-	/* If not buffer block size is given, use 32 KB */
-
-	tmp = submit_param( SUBMIT_KEY_BufferBlockSize, ATTR_BUFFER_BLOCK_SIZE );
-	if(!tmp) {
-		tmp = param("DEFAULT_IO_BUFFER_BLOCK_SIZE");
-		if (!tmp) {
-			tmp = strdup("32768");
-		}
-	}
-	AssignJobExpr(ATTR_BUFFER_BLOCK_SIZE,tmp);
-	free(tmp);
-	return 0;
-}
-#endif // above code is obsolete
 
 int SubmitHash::SetRequestResources()
 {
@@ -7803,39 +7337,6 @@ void SubmitHash::delete_job_ad()
 	delete procAd;
 	procAd = NULL;
 }
-
-#ifdef WIN32
-#if 0 // We documented in 8.5 that we don't do this anymore and no-one complained. so in 8.9 we remove it.
-void publishWindowsOSVersionInfo(ClassAd & ad)
-{
-	// Publish the version of Windows we are running
-	OSVERSIONINFOEX os_version_info;
-	ZeroMemory ( &os_version_info, sizeof ( OSVERSIONINFOEX ) );
-	os_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFOEX );
-	BOOL ok = GetVersionEx ( (OSVERSIONINFO*) &os_version_info );
-	if ( !ok ) {
-		os_version_info.dwOSVersionInfoSize =
-			sizeof ( OSVERSIONINFO );
-		ok = GetVersionEx ( (OSVERSIONINFO*) &os_version_info );
-		if ( !ok ) {
-			dprintf ( D_FULLDEBUG, "Submit: failed to get Windows version information\n" );
-		}
-	}
-
-	if ( ok ) {
-		ad.Assign(ATTR_WINDOWS_MAJOR_VERSION, os_version_info.dwMajorVersion);
-		ad.Assign(ATTR_WINDOWS_MINOR_VERSION, os_version_info.dwMinorVersion);
-		ad.Assign(ATTR_WINDOWS_BUILD_NUMBER, os_version_info.dwBuildNumber);
-		// publish the extended Windows version information if we have it at our disposal
-		if (sizeof(OSVERSIONINFOEX) == os_version_info.dwOSVersionInfoSize) {
-			ad.Assign(ATTR_WINDOWS_SERVICE_PACK_MAJOR, os_version_info.wServicePackMajor);
-			ad.Assign(ATTR_WINDOWS_SERVICE_PACK_MINOR, os_version_info.wServicePackMinor);
-			ad.Assign(ATTR_WINDOWS_PRODUCT_TYPE, os_version_info.wProductType);
-		}
-	}
-}
-#endif
-#endif
 
 int SubmitHash::set_cluster_ad(ClassAd * ad)
 {
