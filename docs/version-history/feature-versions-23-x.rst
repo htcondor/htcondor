@@ -19,7 +19,7 @@ New Features:
 
 - Docker universe now passes --log-driver none by default when running jobs,
   but can be disabled with :macro:`DOCKER_LOG_DRIVER_NONE` knob.
-  :jira:`xxxx`
+  :jira:`2190`
 
 Bugs Fixed:
 
