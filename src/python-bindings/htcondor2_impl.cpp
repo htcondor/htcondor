@@ -65,6 +65,12 @@ static PyMethodDef htcondor2_impl_methods[] = {
         Returns the platform of HTCondor this module was compiled for.
 	)C0ND0R"},
 
+	{"_enable_debug", & _enable_debug, METH_VARARGS, R"C0ND0R(
+        Enable debugging output from HTCondor, where output is sent to
+        ``stderr``.  The logging level is controlled by the ``TOOL_DEBUG``
+        parameter.
+	)C0ND0R"},
+
 	{"_set_subsystem", & _set_subsystem, METH_VARARGS, R"C0ND0R(
 	    Set the subsystem name for the object.
 

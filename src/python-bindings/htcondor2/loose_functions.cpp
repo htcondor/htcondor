@@ -77,3 +77,12 @@ _reload_config( PyObject *, PyObject * ) {
 
 	Py_RETURN_NONE;
 }
+
+
+static PyObject *
+_enable_debug( PyObject *, PyObject * ) {
+	dprintf_make_thread_safe();
+	dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
+
+	Py_RETURN_NONE;
+}
