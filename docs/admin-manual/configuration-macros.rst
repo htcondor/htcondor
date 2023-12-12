@@ -4353,7 +4353,7 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     defaults to 1200 (seconds), controls how often the start
     polls the docker daemon for this information.
 
-:macro-def:`DOCKER_LOG_DRIVER_NONE[TARTD]`
+:macro-def:`DOCKER_LOG_DRIVER_NONE[STARTD]`
     When this knob is true (the default), condor passes the command line
     option --log-driver none to the docker container it creates.  This
     prevents the docker daemon from duplicating the job's stdout and saving
