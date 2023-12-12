@@ -12,6 +12,7 @@ from .htcondor2_impl import (
     _negotiator_command_user,
     _negotiator_command_user_return,
     _negotiator_command_user_value,
+    _dprintf_dfulldebug,
 )
 
 
@@ -68,14 +69,16 @@ class Negotiator():
 
     def setBeginUsage(self, user : str, when : int) -> None:
         _validate_user(user)
-        # if isinstance(when, float):
+        if isinstance(when, float):
+            _dprintf_dfulldebug("setBeginUsage(): `when` specified as float, ignoring fractional part\n")
         _negotiator_command_user_value(self._addr, self._SET_BEGINTIME, user, int(when))
 
 
     # This incorrectly -- and brokenly -- takes a float in version 1.
     def setCeiling(self, user : str, ceiling : int) -> None:
         _validate_user(user)
-        # if isinstance(ceiling, float):
+        if isinstance(ceiling, float):
+            _dprintf_dfulldebug("setCeiling(): `ceiling` specified as float, ignoring fractional part\n")
         if ceiling <= -1:
             # This was HTCondorValueError in version 1.
             raise ValueError("Ceiling must be greater than -1.")

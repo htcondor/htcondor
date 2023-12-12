@@ -86,3 +86,18 @@ _enable_debug( PyObject *, PyObject * ) {
 
 	Py_RETURN_NONE;
 }
+
+
+static PyObject *
+_dprintf_dfulldebug( PyObject *, PyObject * args ) {
+    const char * str = NULL;
+
+	if(! PyArg_ParseTuple( args, "s", & str )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+    dprintf( D_FULLDEBUG, "%s", str );
+
+    Py_RETURN_NONE;
+}

@@ -85,6 +85,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	    Reload the HTCondor configuration from disk.
 	)C0ND0R"},
 
+	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
+
 
 	{"_collector_init", &_collector_init, METH_VARARGS, NULL},
 	{"_collector_query", &_collector_query, METH_VARARGS, NULL},
