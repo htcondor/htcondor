@@ -4353,6 +4353,13 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     defaults to 1200 (seconds), controls how often the start
     polls the docker daemon for this information.
 
+:macro-def:`DOCKER_LOG_DRIVER_NONE[TARTD]`
+    When this knob is true (the default), condor passes the command line
+    option --log-driver none to the docker container it creates.  This
+    prevents the docker daemon from duplicating the job's stdout and saving
+    it in a docker-specific place on disk to be viewed with the docker logs
+    command, saving space on disk for jobs with large stdout.
+
 :macro-def:`OPENMPI_INSTALL_PATH[STARTD]`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running
