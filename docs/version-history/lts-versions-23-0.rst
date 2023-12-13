@@ -35,6 +35,9 @@ New Features:
 - Added ``ROOT_MAX_THREADS`` to :macro:`STARTER_NUM_THREADS_ENV_VARS` default value.
   :jira:`2137`
 
+- Preliminary support for openSUSE LEAP 15.
+  :jira:`2156`
+
 Bugs Fixed:
 
 - Fixed a crash in the python bindings when job submit fails due to

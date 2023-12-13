@@ -55,7 +55,7 @@ my %defines = (
 $| = 1;
 
 # Streamlined Linux builds do not need remote_pre
-if ($platform =~ m/AlmaLinux|AmazonLinux|CentOS|Debian|Fedora|Rocky|Ubuntu/) {
+if ($platform =~ m/AlmaLinux|AmazonLinux|CentOS|Debian|Fedora|openSUSE|Rocky|Ubuntu/) {
     print "remote_pre not needed for $platform, create_native does this.\n";
     exit 0; # cmake configuration is run as part of create_native
 }

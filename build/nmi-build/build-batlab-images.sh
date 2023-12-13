@@ -54,6 +54,7 @@ buildimage x86_64_AmazonLinux2023 amazonlinux:2023 &
 buildimage x86_64_Debian11 debian:bullseye &
 buildimage x86_64_Debian12 debian:bookworm &
 buildimage x86_64_Fedora38 fedora:38 &
+buildimage x86_64_openSUSE15 opensuse/leap:15 &
 buildimage x86_64_Ubuntu20 ubuntu:focal &
 buildimage x86_64_Ubuntu22 ubuntu:jammy &
 wait
