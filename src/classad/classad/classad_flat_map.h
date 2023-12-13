@@ -18,6 +18,7 @@
  ***************************************************************/
 
 
+#include "classad/exprTree.h"
 #include <vector>
 #include <algorithm>
 #include <string>
@@ -101,7 +102,12 @@ class ClassAdFlatMap {
 		// This is named rehash for comptibility with the earlier hashtable based implementation
 		void rehash(int capacity) { _theVector.reserve(capacity); return;}
 
-		void clear() { _theVector.clear();}
+		void clear() { 
+			for (auto &it: _theVector) {
+				delete it.second;
+			}
+			_theVector.clear();
+		}
 
 		template <typename StringLike>
 		iterator find(const StringLike &key) {
@@ -135,12 +141,16 @@ class ClassAdFlatMap {
 		}
 
 		// This allows clients to safely erase as they iterate
-		iterator erase(const iterator &it) { return _theVector.erase(it);}
+		iterator erase(const iterator &it) { 
+			delete it->second;
+			return _theVector.erase(it);
+		}
 
 		template <typename StringLike>
 		iterator erase(const StringLike &key) { 
 			iterator it = find(key);
 			if (it != _theVector.end()) {
+				delete it->second;
 				return _theVector.erase(it);
 			}
 			return _theVector.end();

@@ -252,10 +252,6 @@ void ClassAd::
 Clear( )
 {
 	Unchain();
-	AttrList::iterator	itr;
-	for( itr = attrList.begin( ); itr != attrList.end( ); itr++ ) {
-		if( itr->second ) delete itr->second;
-	}
 	attrList.clear( );
 }
 
@@ -794,7 +790,6 @@ Delete( const string &name )
     deleted_attribute = false;
 	AttrList::iterator itr = attrList.find( name );
 	if( itr != attrList.end( ) ) {
-		delete itr->second;
 		attrList.erase( itr );
 		deleted_attribute = true;
 	}
@@ -843,6 +838,7 @@ Remove( const string &name )
 	AttrList::iterator itr = attrList.find( name );
 	if( itr != attrList.end( ) ) {
 		tree = itr->second;
+		itr->second = nullptr;
 		attrList.erase( itr );
 		tree->SetParentScope( NULL );
 	}
@@ -2141,7 +2137,6 @@ bool ClassAd::PruneChildAttr(const std::string & attrName, bool if_child_matches
 	}
 
 	if (prune_it) {
-		delete itr->second;
 		attrList.erase(itr);
 		return true;
 	}
@@ -2176,7 +2171,6 @@ int ClassAd::PruneChildAd()
 		for (auto &s: victims) {
 			AttrList::iterator itr = attrList.find(s);
 			if( itr != attrList.end( ) ) {
-				delete itr->second;
 				attrList.erase( itr );
 			}
 		}
