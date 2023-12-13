@@ -262,7 +262,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     rm -f "$externals_dir"/*.i686.rpm
 fi
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --pkg-cache-dir "$externals_dir" download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0
+    zypper --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
 fi
 
 # Clean up package caches
