@@ -167,7 +167,7 @@ BuildRequires: systemd-units
 Requires: systemd
 
 %if 0%{?rhel} == 7
-BuildRequires: python-sphinx python-sphinx_rtd_theme
+BuildRequires: python36-sphinx python36-sphinx_rtd_theme
 %endif
 
 %if 0%{?rhel} >= 8 || 0%{?amzn} || 0%{?fedora}
@@ -584,7 +584,11 @@ export CXX=$(which c++)
 # if this environment variable is set, sphinx-build cannot import markupsafe
 env -u RPM_BUILD_ROOT make -C docs man
 %else
+%if 0%{?rhel} == 7
+make -C docs SPHINXBUILD=sphinx-build-3.6 man
+%else
 make -C docs man
+%endif
 %endif
 
 %if %uw_build
@@ -806,6 +810,11 @@ rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
 
 # htcondor/personal.py only works with Python3
 rm -f %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/personal.py
+
+# New fangled stuff does not work with Python2
+rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad2
+rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad3
+rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor2
 
 %clean
 rm -rf %{buildroot}
