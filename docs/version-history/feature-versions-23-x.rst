@@ -13,6 +13,12 @@ Release Notes:
 
 - HTCondor version 23.3.0 not yet released.
 
+- Limited support for Enterprise Linux 7 in the 23.x feature versions.
+  Since we are developing new features, the Enterprise Linux 7 build may
+  drop features or be dropped entirely. In particular, Python 2 support
+  will be removed during the 23.x development cycle.
+  :jira:`2194`
+
 - This version includes all the updates from :ref:`lts-version-history-2303`.
 
 New Features:
