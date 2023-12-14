@@ -43,13 +43,6 @@ extensions = [
     'tool',
 ]
 
-# When we drop el7, just put classad-attribute unconditionally
-# into extensions. It requires python3, so it doesn't 
-# work on python2 sphinxes, as found on el7.
-
-if (sys.version_info.major >= 3):
-	extensions.append('classad-attribute-def')
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
