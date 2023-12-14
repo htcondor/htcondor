@@ -36,6 +36,7 @@ extensions = [
     'ticket',
     'macro',
     'subcom',
+    'subcom-def',
     'index',
     'jira',
 ]
