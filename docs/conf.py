@@ -35,6 +35,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 extensions = [
     'ticket',
     'macro',
+    'macro-def',
     'subcom',
     'subcom-def',
     'index',
