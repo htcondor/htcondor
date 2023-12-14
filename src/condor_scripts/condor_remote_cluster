@@ -228,6 +228,8 @@ ssh_detect_linux_distro () {
         else
             echo "AlmaLinux${major_ver}"
         fi
+    elif [[ $dist_id_like =~ suse ]]; then
+            echo "openSUSE${major_ver}"
     else
         case "$dist_id" in
             debian)

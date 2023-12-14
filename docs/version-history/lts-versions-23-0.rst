@@ -54,9 +54,12 @@ New Features:
 - Added ``ROOT_MAX_THREADS`` to :macro:`STARTER_NUM_THREADS_ENV_VARS` default value.
   :jira:`2137`
 
+- Preliminary support for openSUSE LEAP 15.
+  :jira:`2156`
+
 Bugs Fixed:
 
-- Fixed a crash in the python bindings when job submit fails due to
+- Fixed a crash in the Python bindings when job submit fails due to
   any reason.  A common reason might be when :macro:`SUBMIT_REQUIREMENT_NAMES`
   fails.
   :jira:`1931`
@@ -67,7 +70,7 @@ Bugs Fixed:
   Previously, these were silently ignored.
   :jira:`2157`
 
-- Linux jobs with a invalid #! interpreter now get a better error
+- Linux jobs with a invalid ``#!`` interpreter now get a better error
   message when the EP is running as root.  This was enhanced in 10.0,
   but a bug prevented the enhancement from fully working with a rootly EP.
   :jira:`1698`
@@ -80,7 +83,7 @@ Bugs Fixed:
   much shorter than is allowed by the HTCondor Chirp server. The client now
   also throws a relevant error when this max limit is hit while sending commands
   to the server.
-  :jira:`2157`
+  :jira:`2142`
 
 - Updated the usage and man page of the *condor_drain* tool to include information
   about the ``-reconfig-on-completion`` option.
@@ -156,7 +159,7 @@ Bugs Fixed:
   constraint fail.
   :jira:`2105`
 
-- Fixed warnings about use of deprecated HTCondor python binding methods
+- Fixed warnings about use of deprecated HTCondor Python binding methods
   in the `htcondor dag submit` command.
   :jira:`2104`
 
@@ -253,7 +256,7 @@ New Features:
   This can be useful when developing such a script.
   :jira:`2014`
 
-- Added ability to query epoch history records from the python bindings.
+- Added ability to query epoch history records from the Python bindings.
   :jira:`2036`
 
 - The default value of :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS` will now be visible
