@@ -34,7 +34,6 @@
 // memory/buffer safe.
 int formatstr(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr(std::string& s, const char* format, va_list pargs);
-int vformatstr_impl(std::string& s, bool concat, const char* format, va_list pargs);
 
 // Returns number of replacements actually performed, or -1 if from is empty.
 int replace_str( std::string & str, const std::string & from, const std::string & to, size_t start = 0 );

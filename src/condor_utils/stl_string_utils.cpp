@@ -27,6 +27,7 @@
 
 #include "stl_string_utils.h"
 
+static
 int vformatstr_impl(std::string& s, bool concat, const char* format, va_list pargs) {
     char fixbuf[STL_STRING_UTILS_FIXBUF];
     const int fixlen = sizeof(fixbuf)/sizeof(fixbuf[0]);
@@ -512,6 +513,7 @@ bool contains_prefix_anycase(const std::vector<std::string> &list, const std::st
 	return contains_prefix_anycase(list, str.c_str());
 }
 
+static
 bool
 matches_withwildcard_impl(const char* pattern, const char* str, bool anycase, bool prefix)
 {
@@ -615,82 +617,42 @@ matches_withwildcard_impl(const char* pattern, const char* str, bool anycase, bo
 
 bool contains_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	for (const auto& item : list) {
-		if (matches_withwildcard_impl(item.c_str(), str, false, false)) {
-			return true;
-		}
-	}
-	return false;
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, false, false);});
 }
 
 bool contains_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	for (const auto& item : list) {
-		if (matches_withwildcard_impl(item.c_str(), str.c_str(), false, false)) {
-			return true;
-		}
-	}
-	return false;
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), false, false);});
 }
 
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	for (const auto& item : list) {
-		if (matches_withwildcard_impl(item.c_str(), str, true, false)) {
-			return true;
-		}
-	}
-	return false;
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, true, false);});
 }
 
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	for (const auto& item : list) {
-		if (matches_withwildcard_impl(item.c_str(), str.c_str(), true, false)) {
-			return true;
-		}
-	}
-	return false;
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), true, false);});
 }
 
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	for (const auto& item : list) {
-		if (matches_withwildcard_impl(item.c_str(), str, false, true)) {
-			return true;
-		}
-	}
-	return false;
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, false, true);});
 }
 
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	for (const auto& item : list) {
-		if (matches_withwildcard_impl(item.c_str(), str.c_str(), false, true)) {
-			return true;
-		}
-	}
-	return false;
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), false, true);});
 }
 
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	for (const auto& item : list) {
-		if (matches_withwildcard_impl(item.c_str(), str, true, true)) {
-			return true;
-		}
-	}
-	return false;
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, true, true);});
 }
 
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	for (const auto& item : list) {
-		if (matches_withwildcard_impl(item.c_str(), str.c_str(), true, true)) {
-			return true;
-		}
-	}
-	return false;
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), true, true);});
 }
 
 bool matches_withwildcard(const char* pattern, const char* str)
