@@ -385,8 +385,6 @@ named_classad.cpp
 named_classad_list.cpp
 NegotiationUtils.cpp
 NegotiationUtils.h
-net_string_list.cpp
-net_string_list.h
 network_adapter.cpp
 network_adapter.h
 nullfile.cpp

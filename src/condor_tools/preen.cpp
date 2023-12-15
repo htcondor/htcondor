@@ -922,8 +922,8 @@ check_log_dir()
 						// If this core file is stale, flag it for removal
 						if( abs((int)( time(NULL) - statinfo.GetModifyTime() )) > coreFileStaleAge ) {
 							std::string coreFileDetails;
-							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zu",
-								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), statinfo.GetFileSize()
+							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
+								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
 							);
 							bad_file( Log, f, dir, coreFileDetails.c_str() );
 							continue;
@@ -939,8 +939,8 @@ check_log_dir()
 															std::pair<std::string,filesize_t>(std::string(f),statinfo.GetFileSize())));
 							} else {
 								std::string coreFileDetails;
-								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zu",
-									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), statinfo.GetFileSize()
+								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
+									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
 								);
 								bad_file( Log, f, dir, coreFileDetails.c_str() );
 							}
