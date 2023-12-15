@@ -244,6 +244,8 @@ ssh_detect_linux_distro () {
         else
             echo "AlmaLinux${major_ver}"
         fi
+    elif [[ $dist_id_like =~ suse ]]; then
+            echo "openSUSE${major_ver}"
     else
         case "$dist_id" in
             debian)
@@ -857,7 +859,8 @@ if [ -z "${release_url}" ]; then
         fi
         # EL7 support was dropped for 23.x. Use 23.0 binaries instead
         if [ "${platform}" == "x86_64_CentOS7" ] ; then
-            use_lts=1
+            # EL7 limited support back temporarily
+            use_lts=0
         fi
     fi
 

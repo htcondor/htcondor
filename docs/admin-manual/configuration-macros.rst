@@ -6615,6 +6615,13 @@ do not specify their own with:
     IF_NEEDED. If the value is not one of these, then IF_NEEDED will
     be used.
 
+:macro-def:`SUBMIT_REQUEST_MISSING_UNITS`
+    If set to the string ``error``, it is an error to submit a job with a 
+    :subcom:`RequestMemory` or :subcom:`RequestDisk` with a unitless
+    value.  If set to ``warn``, a warning is printed to the screen, but
+    submit continues. Default value is unset (neither warn or error).
+    :jira:`1837`
+    
 :macro-def:`SUBMIT_SEND_RESCHEDULE[SUBMIT]`
     A boolean expression that when False, prevents :tool:`condor_submit` from
     automatically sending a :tool:`condor_reschedule` command as it

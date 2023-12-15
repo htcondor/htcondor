@@ -49,6 +49,11 @@ elif [ -d usr/share/doc/condor/examples ]; then
     ln -s usr/share/doc/condor/examples examples
     ln -s usr/share/doc/condor/LICENSE LICENSE
     ln -s usr/share/doc/condor/NOTICE.txt NOTICE.txt
+elif [ -d usr/share/doc/packages/condor/examples ]; then
+    # openSUSE
+    ln -s usr/share/doc/packages/condor/examples examples
+    ln -s usr/share/doc/packages/condor/LICENSE LICENSE
+    ln -s usr/share/doc/packages/condor/NOTICE.txt NOTICE.txt
 else
     # Old RPM
     ln -s usr/share/doc/condor-[0-9]*/examples examples

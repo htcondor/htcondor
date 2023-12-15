@@ -21,6 +21,11 @@ New Features:
   but can be disabled with :macro:`DOCKER_LOG_DRIVER_NONE` knob.
   :jira:`2190`
 
+- Added config parameter :macro:`SUBMIT_REQUEST_MISSING_UNITS`, to warn or prevent submitting
+  with RequestDisk or RequestMemory without a units suffix.
+  :jira:`1837`
+
+
 Bugs Fixed:
 
 - None.
@@ -33,6 +38,12 @@ Release Notes:
 .. HTCondor version 23.3.0 released on Month Date, 2023.
 
 - HTCondor version 23.3.0 not yet released.
+
+- Limited support for Enterprise Linux 7 in the 23.x feature versions.
+  Since we are developing new features, the Enterprise Linux 7 build may
+  drop features or be dropped entirely. In particular, Python 2 support
+  will be removed during the 23.x development cycle.
+  :jira:`2194`
 
 - This version includes all the updates from :ref:`lts-version-history-2303`.
 
