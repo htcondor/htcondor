@@ -37,6 +37,9 @@ License: ASL 2.0
 Group: Applications/System
 URL: https://htcondor.org/
 
+# Do not check .so files in condor's library directory
+%global __provides_exclude_from ^%{_libdir}/%{name}/.*\\.so.*$
+
 Source0: %{name}-%{condor_version}.tar.gz
 
 Source8: htcondor.pp
