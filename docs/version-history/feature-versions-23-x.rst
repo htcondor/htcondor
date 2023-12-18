@@ -17,9 +17,14 @@ Release Notes:
 
 New Features:
 
+- Docker universe now passes --log-driver none by default when running jobs,
+  but can be disabled with :macro:`DOCKER_LOG_DRIVER_NONE` knob.
+  :jira:`2190`
+
 - Added config parameter :macro:`SUBMIT_REQUEST_MISSING_UNITS`, to warn or prevent submitting
   with RequestDisk or RequestMemory without a units suffix.
   :jira:`1837`
+
 
 Bugs Fixed:
 
