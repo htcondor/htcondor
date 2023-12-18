@@ -362,9 +362,9 @@ class FileTransfer final: public Service {
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const;
 	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
+	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
 	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
-    int RecordFileTransferStats( ClassAd &stats );
+	int RecordFileTransferStats( ClassAd &stats );
 	std::string GetSupportedMethods(CondorError &err);
 	void DoPluginConfiguration();
 
@@ -408,7 +408,9 @@ class FileTransfer final: public Service {
 
 	bool transferIsInProgress() const { return ActiveTransferTid != -1; }
 
-    const std::unordered_map< std::string, std::string > & GetProxyByMethodMap() { return proxy_by_method; }
+	const std::unordered_map< std::string, std::string > & GetProxyByMethodMap() { return proxy_by_method; }
+
+	const std::vector< ClassAd > & getPluginResultList();
 
   protected:
 
@@ -430,6 +432,8 @@ class FileTransfer final: public Service {
 	int TransferPipeHandler(int p);
 	bool ReadTransferPipeMsg();
 	void UpdateXferStatus(FileTransferStatus status);
+	bool SendPluginOutputAd( const ClassAd & plugin_output_ad );
+
 
 		/** Actually download the files.
 			@return -1 on failure, bytes transferred otherwise
@@ -490,10 +494,12 @@ class FileTransfer final: public Service {
 
   private:
 
+	std::vector< ClassAd > pluginResultList;
+
 	int checkpointNumber{-1};
 	bool uploadCheckpointFiles{false};
 	bool uploadFailureFiles{false};
-    bool inHandleCommands{false};
+	bool inHandleCommands{false};
 	bool TransferFilePermissions{false};
 	bool DelegateX509Credentials{false};
 	bool PeerDoesTransferAck{false};
