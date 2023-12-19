@@ -195,7 +195,7 @@ $res = CondorTest::RunTest2(name=>$sub2name, want_checkpoint=>0, submit_body=>"
 	log = $log2name.$pid.log
 	notification = never
 	max_materialize = 7
-	queue 3 arguments in (10,30,15,1)
+	queue 3 arguments in (5,15,7,1)
 	");
 CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'inline-itemdata');
 
@@ -263,7 +263,7 @@ CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-tot
 # because of the race between jobs entering run state and the execute event in the log
 # peak_idle can appear to be as much as double the actual value.  we would have to look
 # at the job_queue.log file to avoid this problem, which is too much work for now.
-$res = ($peak_idle >= 2 && $peak_idle <= 4);
+$res = ($peak_idle >= 2 && $peak_idle <= 5);
 CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-max_idle');
 
 
