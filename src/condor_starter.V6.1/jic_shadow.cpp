@@ -632,7 +632,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
 
 
-		updateShadowWithPluginResults();
+		updateShadowWithPluginResults("Output");
 
 
 		const char *stats = m_ft_info.tcp_stats.c_str();
@@ -1204,6 +1204,8 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	// this will block
 	bool rval = filetrans->UploadCheckpointFiles( checkpointNumber, true );
 	set_priv( saved_priv );
+
+	updateShadowWithPluginResults("Checkpoint");
 
 	if( !rval ) {
 		// Failed to transfer.
@@ -2550,7 +2552,7 @@ JICShadow::beginFileTransfer( void )
 
 
 void
-JICShadow::updateShadowWithPluginResults() {
+JICShadow::updateShadowWithPluginResults( const char * which ) {
 	if(! filetrans) { return; }
 
 	ClassAd updateAd;
@@ -2563,7 +2565,9 @@ JICShadow::updateShadowWithPluginResults() {
 		// This is absurd, but classad::ExprList expects to own its entries.
 		e->push_back( ad.Copy() );
 	}
-	updateAd.Insert( "PluginResultResultList", e );
+	std::string attributeName;
+	formatstr( attributeName, "%sPluginResultList", which );
+	updateAd.Insert( attributeName.c_str(), e );
 
 	const bool dont_ensure_update = false;
 	updateShadow( & updateAd, dont_ensure_update );
@@ -2598,7 +2602,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		}
 
 
-		updateShadowWithPluginResults();
+		updateShadowWithPluginResults("Input");
 
 
 		// It's not enought to for the FTO to believe that the transfer

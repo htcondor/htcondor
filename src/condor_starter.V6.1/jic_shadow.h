@@ -258,7 +258,7 @@ public:
 
 private:
 
-	void updateShadowWithPluginResults();
+	void updateShadowWithPluginResults( const char * which );
 
 	void recordSandboxContents( const char * filename );
 
