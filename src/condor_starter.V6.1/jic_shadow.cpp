@@ -2554,14 +2554,12 @@ JICShadow::beginFileTransfer( void )
 void
 JICShadow::updateShadowWithPluginResults( const char * which ) {
 	if(! filetrans) { return; }
+	if( filetrans->getPluginResultList().size() <= 0 ) { return; }
 
 	ClassAd updateAd;
-	// Let's not confuse things.
-	// publishUpdateAd(& updateAd);
 
 	classad::ExprList * e = new classad::ExprList();
-	const auto & pluginResultList = filetrans->getPluginResultList();
-	for( const auto & ad : pluginResultList ) {
+	for( const auto & ad : filetrans->getPluginResultList() ) {
 		// This is absurd, but classad::ExprList expects to own its entries.
 		e->push_back( ad.Copy() );
 	}
