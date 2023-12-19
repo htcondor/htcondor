@@ -121,20 +121,20 @@ are directly related to the release dates.
      - End of Regular Support
      - End of Security Suport
    * - 23.x
-     - September 2023
+     - September 29, 2023
      - August 2024
      - August 2024
    * - 23.0
-     - September 2023
+     - September 29, 2023
      - August 2024
      - August 2025
    * - 10.x
-     - November 2022
-     - September 2023
-     - September 2023
+     - November 10, 2022
+     - September 29, 2023
+     - September 29, 2023
    * - 10.0
-     - November 2022
-     - September 2023
+     - November 10, 2022
+     - September 29, 2023
      - August 2024
 
 Repositories
