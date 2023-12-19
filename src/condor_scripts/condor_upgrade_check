@@ -33,7 +33,7 @@ class Debug(Enum):
     WARNING = 0
     BASE = 1
     DETAILED = 2
-    MAX = 4
+    MAX = 3
 
     def __gt__(self, other):
         if self.__class__ is other.__class__:
@@ -57,8 +57,6 @@ MAX_TAG_LEN = 8
 
 class Check:
     def __init__(self, **kwargs):
-        keys = kwargs.keys()
-
         self.version = kwargs["version"]
         self.test = kwargs["test"]
         self.name = kwargs["name"]
@@ -566,13 +564,14 @@ def parse_args():
         "-a",
         "--all",
         action="store_true",
-        help="Run all available checks (Ignores version check).",
+        help="Run all available checks including ones for issues introduced in versions older than the installed system.",
     )
 
     parser.add_argument(
         "-i",
         "--ignore",
         nargs="+",
+        action="extend",
         metavar="TAG",
         default=[],
         help="Skip the provided TAGs. This option takes precedence over the --only option.",
@@ -582,6 +581,7 @@ def parse_args():
         "-o",
         "--only",
         nargs="+",
+        action="extend",
         metavar="TAG",
         default=[],
         help="Check only the provided TAGs. Use the tag WARNINGS to only check warnings",
