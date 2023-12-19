@@ -21,6 +21,11 @@ New Features:
   but can be disabled with :macro:`DOCKER_LOG_DRIVER_NONE` knob.
   :jira:`2190`
 
+- Jobs that are assigned nvidia GPUs now have the environment variable
+  NVIDIA_VISIBLE_DEVICES set in addition to, and with the same value as
+  CUDA_VISIBLE_DEVICES, as newer nvidia runtimes prefer the former.
+  :jira:`2189`
+
 - Added config parameter :macro:`SUBMIT_REQUEST_MISSING_UNITS`, to warn or prevent submitting
   with RequestDisk or RequestMemory without a units suffix.
   :jira:`1837`

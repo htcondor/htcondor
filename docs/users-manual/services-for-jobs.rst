@@ -111,6 +111,15 @@ executing job that may be useful.
    :subcom:`x509userproxy[environment variable]` in
    the submit description file.
 
+If the job has been assigned GPUs, the system will also set the following environment
+variables for the GPU runtime to use.
+
+- ``CUDA_VISIBLE_DEVICES`` ``NVIDIA_VISIBLE_DEVICES``
+  :index:`CUDA_VISIBLE_DEVICES<pair: CUDA_VISIBLE_DEVICES; environment variables for jobs>`
+  :index:`NVIDIA_VISIBLE_DEVICES<pair: NVIDIA_VISIBLE_DEVICES; environment variables for jobs>`
+  are set to the names of the GPUs assigned to this job.  The job should NEVER change these,
+  but they may be useful for debuggging or logging
+
 
 Communicating with the Submit machine via Chirp
 -----------------------------------------------
