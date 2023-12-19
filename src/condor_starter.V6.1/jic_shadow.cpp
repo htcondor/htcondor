@@ -631,6 +631,10 @@ JICShadow::transferOutput( bool &transient_failure )
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
 
+
+		updateShadowWithPluginResults();
+
+
 		const char *stats = m_ft_info.tcp_stats.c_str();
 		if (strlen(stats) != 0) {
 			std::string full_stats = "(peer stats from starter): ";
@@ -644,7 +648,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		set_priv(saved_priv);
 
 		if( m_ft_rval ) {
-			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES, 
+			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,
 							m_ft_info.spooled_files.c_str());
 		} else {
 			dprintf( D_FULLDEBUG, "Sandbox transfer failed.\n");
@@ -2545,6 +2549,27 @@ JICShadow::beginFileTransfer( void )
 }
 
 
+void
+JICShadow::updateShadowWithPluginResults() {
+	if(! filetrans) { return; }
+
+	ClassAd updateAd;
+	// Let's not confuse things.
+	// publishUpdateAd(& updateAd);
+
+	classad::ExprList * e = new classad::ExprList();
+	const auto & pluginResultList = filetrans->getPluginResultList();
+	for( const auto & ad : pluginResultList ) {
+		// This is absurd, but classad::ExprList expects to own its entries.
+		e->push_back( ad.Copy() );
+	}
+	updateAd.Insert( "PluginResultResultList", e );
+
+	const bool dont_ensure_update = false;
+	updateShadow( & updateAd, dont_ensure_update );
+}
+
+
 int
 JICShadow::transferCompleted( FileTransfer *ftrans )
 {
@@ -2571,6 +2596,10 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			EXCEPT("%s", message.c_str());
 		}
+
+
+		updateShadowWithPluginResults();
+
 
 		// It's not enought to for the FTO to believe that the transfer
 		// of a checkpoint succeeded if that checkpoint wasn't transferred
