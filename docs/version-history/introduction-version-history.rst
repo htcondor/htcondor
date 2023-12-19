@@ -20,18 +20,19 @@ ideas from `Semantic Versioning <https://semver.org/>`_.
 
 -   The MAJOR number increments for each new Long Term Support (LTS) release.
     A new LTS release may have backward-incompatible changes and may require
-    updates to configuration files.  If the current LTS release is 9.0.6,
-    the next one will be 10.0.0.  A new LTS release is expected every twelve
-    to eighteen months.
+    updates to configuration files.  If the current LTS release is 23.0.6,
+    the next one will be 24.0.0.  A new LTS release is expected about every
+    twelve months in August. The LTS major version number matches the year
+    of initial release.
 
 -   The MINOR number increments each feature release.
     This number stays at 0 for LTS releases. If the current feature release
-    is 9.2.0, the next one will be 9.3.0.
-    A new feature release is expected every one to two months.
+    is 23.2.0, the next one will be 23.3.0.
+    A new feature release is expected every month.
 
 -   The PATCH number increments when we have targeted fixes.  For the LTS
-    releases, a patch release is expected every one to two
-    months and may occur more frequently if a serious problem is
+    releases, a patch release is expected every
+    month and may occur more frequently if a serious problem is
     discovered. For the feature releases, the frequency of patch releases
     depends on the demand for quick updates.
 
@@ -72,7 +73,7 @@ Types of Releases
 -   A **feature patch** release is numbered **X.Y.Z** and contains targeted
     patches to address a specific issue with a feature release.
     specific issue with a feature release.  If there is a specific need to be
-    addressed before 9.3.0 is tested and ready, we would issue a 9.2.1 patch
+    addressed before 23.3.0 is tested and ready, we would issue a 23.2.1 patch
     release.  These releases have undergone code review and light testing.
     These patch releases are cumulative.
 
@@ -106,6 +107,37 @@ Types of Releases
     commit tag:"24.1.1"
     commit tag:"24.1.2"
 
+Support Life Cycle
+^^^^^^^^^^^^^^^^^^
+
+We plan to release a new LTS version every August. The support life cycles
+are directly related to the release dates.
+
+.. list-table:: HTCondor Support Life Cycle
+   :widths: 10 30 30 30
+   :header-rows: 1
+
+   * - Version
+     - Release
+     - End of Regular Support
+     - End of Security Suport
+   * - 23.x
+     - September 29, 2023
+     - August 2024
+     - August 2024
+   * - 23.0
+     - September 29, 2023
+     - August 2024
+     - August 2025
+   * - 10.x
+     - November 10, 2022
+     - September 29, 2023
+     - September 29, 2023
+   * - 10.0
+     - November 10, 2022
+     - September 29, 2023
+     - August 2024
+
 Repositories
 ^^^^^^^^^^^^
 
@@ -120,7 +152,7 @@ Recommendations
 
 If you are new to HTCondor or require maximum stability in your environment,
 use an LTS release.  Updates to the latest LTS release should be seamless.
-A new LTS release will appear every twelve to eighteen months with clear
+A new LTS release will appear about every twelve months with clear
 directions on issues to address when upgrading to the new LTS release.
 
 If you want to take advantage of the latest features, use the feature
