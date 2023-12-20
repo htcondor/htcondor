@@ -6574,8 +6574,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		plugin_args.AppendArg( "-upload" );
 	}
 
-#if 1
-	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", false);
+	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", true);
 	MyPopenTimer p_timer;
 	p_timer.start_program(
 		plugin_args,
@@ -6657,57 +6656,6 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// TODO: forward the transfer plugin output to the shadow
 	outbuf.clear();
 
-#else
-	// Invoke the plugin
-	dprintf( D_ALWAYS, "FILETRANSFER: invoking: %s \n", plugin_path.c_str() );
-	dprintf( D_FULLDEBUG, "FILETRANSFER: INPUT FILE: %s\n", transfer_files_string.c_str() );
-	FILE* plugin_pipe = my_popen( plugin_args, "r", FALSE, &plugin_env, drop_privs );
-	if( !plugin_pipe ) {
-		dprintf ( D_ALWAYS, "FILETRANSFER: failed to invoke multifile transfer "
-			"plugin %s, aborting\n", plugin_path.c_str() );
-		return TransferPluginResult::Error;
-	}
-
-	// Close the plugin
-	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	int rc = my_pclose_ex(plugin_pipe, (unsigned int)timeout, true);
-
-	int exit_status;
-	bool exit_by_signal;
-	TransferPluginResult result;
-
-	bool timed_out = false;
-	ASSERT(rc != MYPCLOSE_EX_NO_SUCH_FP);
-	if( rc == MYPCLOSE_EX_I_KILLED_IT ) {
-		timed_out = true;
-
-		exit_status    = ETIME;
-		exit_by_signal = TRUE;
-
-		result = TransferPluginResult::TimedOut;
-
-		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin_path.c_str(), timeout );
-	} else if( rc == MYPCLOSE_EX_STATUS_UNKNOWN ) {
-		// The backwards-compatible my_pclose() returned -1 in this case.
-		int macos_dummy = -1;
-		exit_status    = WEXITSTATUS(macos_dummy);
-		exit_by_signal = WIFSIGNALED(macos_dummy);
-
-		result = TransferPluginResult::Error;
-
-		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", plugin_path.c_str() );
-	} else {
-		exit_status    = WEXITSTATUS(rc);
-		exit_by_signal = WIFSIGNALED(rc);
-
-		result = static_cast<TransferPluginResult>(exit_status);
-		if (exit_by_signal) {
-			result = TransferPluginResult::Error;
-		}
-
-		dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
-	}
-#endif
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
