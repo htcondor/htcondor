@@ -28,7 +28,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- The *condor_starter* can now be configured to capture the stdout and stderr
+  of file transfer plugins and write that output into the StarterLog.
+  :jira:`1459`
 
 Bugs Fixed:
 

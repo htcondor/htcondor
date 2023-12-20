@@ -237,6 +237,33 @@ _condor_parse_merge_debug_flags(
 	}
 }
 
+bool parse_debug_cat_and_verbosity(const char * strFlags, int & cat_and_verb, unsigned int * hdr_flags)
+{
+	if ( ! strFlags || ! strFlags[0])
+		return false;
+
+	cat_and_verb = 0;
+	unsigned int hdr = 0;
+	DebugOutputChoice basic=0, verbose=0;
+	_condor_parse_merge_debug_flags(strFlags, 0, hdr, basic, verbose);
+	// bits that are set in the verbose mask are always set in basic also
+	// so we only need to look at the basic mask to know if any bits were set
+	// we will return the category code of the *lowest* set bit
+	if (basic) {
+		for (unsigned int cat = D_ALWAYS; cat < D_CATEGORY_COUNT; ++cat) {
+			if (basic & (1<<cat)) {
+				if (hdr_flags) *hdr_flags = hdr;
+				cat_and_verb = cat;
+				if (verbose & (1<<cat)) cat_and_verb |= D_VERBOSE;
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+
 // convert old style flags to DebugOutputChoice
 //
 void

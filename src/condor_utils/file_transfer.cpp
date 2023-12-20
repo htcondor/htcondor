@@ -6389,10 +6389,8 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 
 	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	p_timer.wait_for_exit( timeout, & rc );
-
-	if( p_timer.is_closed() ) {
-		p_timer.close_program( 1 );
+	if ( ! p_timer.wait_for_exit(timeout, & rc)) {
+		p_timer.close_program(1); // send TERM, wait 1 second, then KILL
 		rc = p_timer.exit_status();
 	}
 
@@ -6576,6 +6574,90 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		plugin_args.AppendArg( "-upload" );
 	}
 
+#if 1
+	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", false);
+	MyPopenTimer p_timer;
+	p_timer.start_program(
+		plugin_args,
+		want_stderr,
+		& plugin_env,
+		drop_privs
+	);
+
+	int rc = 0;
+	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
+	if ( ! p_timer.wait_for_exit( timeout, & rc )) {
+		p_timer.close_program( 1 );
+		rc = p_timer.exit_status();
+	}
+
+	int exit_status;
+	bool exit_by_signal;
+	TransferPluginResult result;
+
+	bool timed_out = false;
+	if( p_timer.was_timeout() ) {
+		timed_out = true;
+		exit_status = ETIME;
+		exit_by_signal = TRUE;
+
+		result = TransferPluginResult::TimedOut;
+
+		dprintf( D_ERROR, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin_path.c_str(), timeout );
+	} else if( p_timer.exit_status() == MYPCLOSE_EX_STATUS_UNKNOWN ) {
+		// The backwards-compatible my_pclose() returned -1 in this case.
+		int macos_dummy = -1;
+		exit_status    = WEXITSTATUS(macos_dummy);
+		exit_by_signal = WIFSIGNALED(macos_dummy);
+
+		result = TransferPluginResult::Error;
+
+		dprintf( D_ERROR, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", plugin_path.c_str() );
+	} else {
+		exit_status    = WEXITSTATUS(rc);
+		exit_by_signal = WIFSIGNALED(rc);
+
+		result = static_cast<TransferPluginResult>(exit_status);
+		if (exit_by_signal) {
+			result = TransferPluginResult::Error;
+		}
+
+		dprintf (D_ERROR, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", plugin_path.c_str(), exit_status, exit_by_signal);
+	}
+
+	// load and parse a config knob that tells us with what cat and verbosity we should log the plugin output
+	int log_output = -1; // < 0 is don't log
+	auto_free_ptr log_level;
+	if (result == TransferPluginResult::Success) {
+		log_level.set(param("LOG_FILETRANSFER_PLUGIN_STDOUT_ON_SUCCESS"));
+	} else {
+		log_level.set(param("LOG_FILETRANSFER_PLUGIN_STDOUT_ON_FAILURE"));
+	}
+	if (log_level) {
+		int cat_and_verb = 0;
+		if (parse_debug_cat_and_verbosity(log_level, cat_and_verb)) {
+			log_output = cat_and_verb;
+		}
+	}
+
+	// if the transfer plugin had any output, and we are configured to log that output, do so now
+	auto_free_ptr outbuf(p_timer.output().Detach());
+	if (outbuf && log_output >= 0) {
+		const int trunate_output_to = 1024*16; // the max we are willing to put in a single dprintf message
+		if (p_timer.output_size() > trunate_output_to) {
+			// if output is excessive, just show the last  16k
+			char * p = outbuf.ptr() + (p_timer.output_size() - trunate_output_to);
+			dprintf (log_output, "FILETRANSFER: plugin %s result=%d had %d bytes of stdout. last 16KB : %s\n",
+				plugin_path.c_str(), result, p_timer.output_size(), p);
+		} else {
+			dprintf (log_output, "FILETRANSFER: plugin %s result=%d stdout: %s\n",
+				plugin_path.c_str(), result, outbuf.ptr());
+		}
+	}
+	// TODO: forward the transfer plugin output to the shadow
+	outbuf.clear();
+
+#else
 	// Invoke the plugin
 	dprintf( D_ALWAYS, "FILETRANSFER: invoking: %s \n", plugin_path.c_str() );
 	dprintf( D_FULLDEBUG, "FILETRANSFER: INPUT FILE: %s\n", transfer_files_string.c_str() );
@@ -6625,6 +6707,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 		dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
 	}
+#endif
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
