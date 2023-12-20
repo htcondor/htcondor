@@ -25,6 +25,10 @@ New Features:
   with RequestDisk or RequestMemory without a units suffix.
   :jira:`1837`
 
+- If PER_JOB_HISTORY_DIR is set, it is now a fatal error to write a historical job
+  to the history file, just like the normal history file.
+  :jira:`2027`
+
 
 Bugs Fixed:
 
