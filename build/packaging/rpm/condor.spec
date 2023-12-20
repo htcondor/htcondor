@@ -41,7 +41,7 @@ URL: https://htcondor.org/
 %global __provides_exclude_from ^%{_libdir}/%{name}/.*\\.so.*$
 
 # Do not provide libfmt
-%global __provides_exclude ^libfmt\\.so.*$
+%global __requires_exclude ^libfmt\\.so.*$
 
 Source0: %{name}-%{condor_version}.tar.gz
 
