@@ -205,11 +205,9 @@ public:
 		   Send a periodic update ClassAd to the shadow.
 
 		   @param update_ad Update ad to use if you've already got the info
-		   @param insure_update Should we insure the update gets there?
 		   @return true if success, false if failure
 		*/
-	virtual bool periodicJobUpdate(ClassAd* update_ad = NULL,
-								   bool insure_update = false);
+	virtual bool periodicJobUpdate(ClassAd* update_ad = NULL);
 
 
 		// // // // // // // // // // // //
@@ -278,14 +276,11 @@ private:
 	// Should only be called from publish[Update|JobExit]Ad().
 	bool publishStartdUpdates( ClassAd* ad );
 
-		/** Send an update ClassAd to the shadow.  The "insure_update"
-			just means do we make sure the update gets there.  It has
-			nothing to do with the "insure" memory analysis tool.
+		/** Send an update ClassAd to the shadow.
 			@param update_ad Update ad to use if you've already got the info 
-			@param insure_update Should we insure the update gets there?
 			@return true if success, false if failure
 		*/
-	bool updateShadow( ClassAd* update_ad, bool insure_update = false );
+	bool updateShadow( ClassAd* update_ad );
 
 		/** Send an update ClassAd to the startd.
 			@param ad Update ad

@@ -2783,7 +2783,7 @@ Starter::Reaper(int pid, int exit_status)
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
 			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PreExitCode", updateAd );
-			jic->periodicJobUpdate( & updateAd, true );
+			jic->periodicJobUpdate( & updateAd );
 
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
@@ -2821,7 +2821,7 @@ Starter::Reaper(int pid, int exit_status)
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
 			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PostExitCode", updateAd );
-			jic->periodicJobUpdate( & updateAd, true );
+			jic->periodicJobUpdate( & updateAd );
 
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
@@ -3920,7 +3920,7 @@ Starter::WriteAdFiles() const
 
 		dprintf( D_FULLDEBUG, "Updating *Provisioned and Assigned* attributes:\n" );
 		dPrintAd( D_FULLDEBUG, updateAd );
-		jic->periodicJobUpdate( & updateAd, true );
+		jic->periodicJobUpdate( & updateAd );
 	}
 
 	return ret_val;

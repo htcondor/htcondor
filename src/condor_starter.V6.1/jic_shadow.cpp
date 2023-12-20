@@ -476,7 +476,7 @@ JICShadow::Suspend( void )
 		// update to the shadow to let it know the job state.  We want
 		// to confirm the update gets there on this important state
 		// change, to pass in "true" to updateShadow() for that.
-	updateShadow( &update_ad, true );
+	updateShadow( &update_ad );
 
 }
 
@@ -503,7 +503,7 @@ JICShadow::Continue( void )
 		// another update to the shadow to let it know the job state.
 		// We want to confirm the update gets there on this important
 		// state change, to pass in "true" to updateShadow() for that.
-	updateShadow( &update_ad, true );
+	updateShadow( &update_ad );
 }
 
 
@@ -517,7 +517,7 @@ bool JICShadow::allJobsDone( void )
 	if (!m_did_transfer) {
 		publishJobExitAd( &update_ad );
 		// Note if updateShadow() fails, it will dprintf into the log.
-		updateShadow( &update_ad, true );
+		updateShadow( &update_ad );
 	}
 
 	// only report success if our parent class is also done
@@ -1286,7 +1286,7 @@ JICShadow::updateCkptInfo(void)
 
 	// Now we want to send another update to the shadow.
 	// To confirm this update, we pass in "true" to updateShadow() for that.
-	updateShadow( &update_ad, true );
+	updateShadow( &update_ad );
 }
 
 bool
@@ -2254,22 +2254,21 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 
 
 bool
-JICShadow::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
+JICShadow::periodicJobUpdate( ClassAd* update_ad )
 {
 	bool r1, r2;
 	// call updateShadow first, because this may have the side effect of clearing
 	// the m_delayed_update_attrs and we want to make sure that the shadow gets to see them.
-	r1 = updateShadow(update_ad, insure_update);
-	r2 = JobInfoCommunicator::periodicJobUpdate(update_ad, insure_update);
+	r1 = updateShadow(update_ad);
+	r2 = JobInfoCommunicator::periodicJobUpdate(update_ad);
 	return (r1 && r2);
 }
 
 
 bool
-JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
+JICShadow::updateShadow( ClassAd* update_ad )
 {
 	dprintf( D_FULLDEBUG, "Entering JICShadow::updateShadow()\n" );
-	static bool first_time = true;
 
 	ClassAd local_ad;
 	ClassAd* ad;
@@ -2288,35 +2287,15 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 
 	bool rval;
 
-		// Try to send it to the shadow
-	if (shadow_version && shadow_version->built_since_version(6,9,5)) {
-			// Newer shadows understand the CONDOR_register_job_info
-			// RSC, so we should just always use that, regardless of
-			// insure_update, since we already have the socket open,
-			// and we want to use it (e.g. to prevent firewalls from
-			// closing it due to non-activity).
+	// Add an attribute that says when the shadow can expect to receive
+	// another update.  We do this because the shadow uses these updates
+	// as a heartbeat; if the shadow does not receive an expected update from
+	// us, it assumes the connection is dead (even if the syscall sock is still alive,
+	// since that may be the doing of a misbehaving NAT box).
+	ad->Assign(ATTR_JOBINFO_MAXINTERVAL, periodicJobUpdateTimerMaxInterval());
 
-			// Add an attribute that says when the shadow can expect to receive
-			// another update.  We do this because the shadow uses these updates
-			// as a heartbeat; if the shadow does not receive an expected update from
-			// us, it assumes the connection is dead (even if the syscall sock is still alive,
-			// since that may be the doing of a misbehaving NAT box).
-		ad->Assign(ATTR_JOBINFO_MAXINTERVAL, periodicJobUpdateTimerMaxInterval());
-
-			// Invoke the remote syscall
-		rval = (REMOTE_CONDOR_register_job_info(*ad) == 0);
-	}
-	else {
-			// If it's an older shadow, the RSC would cause it to
-			// EXCEPT(), so we just use the out-of-band DC message to
-			// its command port, handled via the DCShadow object.
-		if (first_time) {
-			dprintf(D_FULLDEBUG, "Communicating with a shadow older than "
-					"version 6.9.5, using command port to send job info "
-					"instead of CONDOR_register_job_info RSC\n");
-		}
-		rval = shadow->updateJobInfo(ad, insure_update);
-	}
+	// Invoke the remote syscall
+	rval = (REMOTE_CONDOR_register_job_info(*ad) == 0);
 
 	if (syscall_sock && !rval) {
 		// Failed to send update to the shadow.  Since the shadow
@@ -2335,7 +2314,6 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 
 	updateStartd(ad, false);
 
-	first_time = false;
 	if (rval) {
 		dprintf(D_FULLDEBUG, "Leaving JICShadow::updateShadow(): success\n");
 		return true;
