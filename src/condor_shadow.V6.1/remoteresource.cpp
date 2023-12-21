@@ -40,6 +40,7 @@
 #include <algorithm>
 
 #include "spooled_job_files.h"
+#include "job_ad_instance_recording.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
@@ -1361,6 +1362,35 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	if( update_ad->LookupBool(ATTR_JOB_CORE_DUMPED, bool_value) ) {
 		jobAd->Assign(ATTR_JOB_CORE_DUMPED, bool_value);
 	}
+
+
+	ExprTree * inputResultList = update_ad->LookupExpr("InputPluginResultList");
+	if( inputResultList != NULL ) {
+		classad::ClassAd c;
+		c.Insert("InputResultList", inputResultList);
+		writeJobEpochFile(jobAd, & c, "INPUT");
+		c.Remove("InputResultList");
+		writeJobEpochFile(jobAd, starterAd, "STARTER");
+	}
+
+	ExprTree * checkpointResultList = update_ad->LookupExpr("CheckpointPluginResultList");
+	if( checkpointResultList != NULL ) {
+		classad::ClassAd c;
+		c.Insert("CheckpointResultList", checkpointResultList);
+		writeJobEpochFile(jobAd, & c, "CHECKPOINT");
+		c.Remove("CheckpointResultList");
+		writeJobEpochFile(jobAd, starterAd, "STARTER");
+	}
+
+	ExprTree * outputResultList = update_ad->LookupExpr("OutputPluginResultList");
+	if( outputResultList != NULL ) {
+		classad::ClassAd c;
+		c.Insert("OutputResultList", outputResultList);
+		writeJobEpochFile(jobAd, & c, "OUTPUT");
+		c.Remove("OutputResultList");
+		writeJobEpochFile(jobAd, starterAd, "STARTER");
+	}
+
 
 		// The starter sends this attribute whether or not we are spooling
 		// output (because it doesn't know if we are).  Technically, we

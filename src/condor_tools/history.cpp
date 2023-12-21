@@ -1448,6 +1448,12 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	//fprintf(stdout,"Ad type: %s\n",info.ad_type.c_str());
 	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %ld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
 
+	// For now, ignore the ad types.
+	if( info.ad_type != "JOB" && info.ad_type != "EPOCH" ) {
+		// fprintf( stderr, "%s\n", info.ad_type.c_str() );
+		return false;
+	}
+
 	if(jobIdFilterInfo.empty() && ownersList.empty()) { return true; } //If no searches were specified then return true to print job ad
 	else if (info.jid.cluster <= 0 && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true
 	else if (info.owner.empty() && !ownersList.empty()) { return true; }//If failed to parse owner and we are searching for an owner return true

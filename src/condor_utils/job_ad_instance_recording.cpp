@@ -111,7 +111,7 @@ initJobEpochHistoryFiles(){
 *	and print ad to a buffer to write to various files
 */
 static bool
-extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info){
+extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classad::ClassAd * other_ad, const char * banner_name){
 	//Get various information needed for writing epoch file and banner
 	std::string owner, missingAttrs;
 
@@ -136,19 +136,21 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info){
 	//TODO:Until better Job Attribute is added, decrement numShadow to start RunInstanceId at 0
 	info.runId--;
 
-	sPrintAd(info.buffer,*job_ad,nullptr,nullptr);
 	//If any attributes are set to -1 write to shadow log and return
 	if (info.jid.cluster < 0 || info.jid.proc < 0 || info.runId < 0){
 		dprintf(D_FULLDEBUG,"Missing attribute(s) [%s]: Not writing to job run instance file. Printing current Job Ad:\n%s",missingAttrs.c_str(),info.buffer.c_str());
 		return false;
 	}
-	
-	//Buffer contains just the job ad at this point
+
+    if(other_ad == NULL) { other_ad = job_ad; }
+	sPrintAd(info.buffer,*other_ad,nullptr,nullptr);
+
+	//Buffer contains just the ad at this point
 	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
 	std::string banner;
 	time_t currentTime = time(NULL); //Get current time to print in banner
-	formatstr(banner,"*** EPOCH ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
-					 info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
+	formatstr(banner,"*** %s ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
+					 banner_name, info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
 	if (info.buffer.back() != '\n') { info.buffer += '\n'; }
 	info.buffer += banner;
 	if (info.buffer.empty())
@@ -228,7 +230,7 @@ writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, 
 *		2. File per cluster.proc in a specified directory
 */
 void
-writeJobEpochFile(const classad::ClassAd *job_ad) {
+writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other_ad, const char * banner_name) {
 	//If not initialized then call init function
 	if (!isInitialized) { initJobEpochHistoryFiles(); }
 	// If not specified to write epoch files then return
@@ -241,7 +243,7 @@ writeJobEpochFile(const classad::ClassAd *job_ad) {
 	}
 
 	EpochAdInfo info;
-	if (extractEpochInfo(job_ad, info)) {
+	if (extractEpochInfo(job_ad, info, other_ad, banner_name)) {
 		//For every ad recording location check/try to write.
 		if (efi.EpochHistoryFilename.ptr()) {
 			info.file_path = efi.EpochHistoryFilename.ptr();
