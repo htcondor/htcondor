@@ -130,9 +130,8 @@ HTCondor also expects the plugin to exit with one of the following standardized
 exit codes:
 
     - **0**: Transfer successful
-    - **1**: Transfer failed
-    - **2**: Transfer needs a refreshed authentication token, should be retried
-      (slated for development, not implemented yet)
+    - **Any other value**: Transfer failed
+
 
 Custom File Transfer Plugins
 ''''''''''''''''''''''''''''
