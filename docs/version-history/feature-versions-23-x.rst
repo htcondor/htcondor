@@ -34,6 +34,12 @@ New Features:
   to the history file, just like the normal history file.
   :jira:`2027`
 
+- :tool:`condor_submit` now generates requirements expressions for
+  **condor** grid universe jobs like it does for vanilla universe
+  jobs.
+  This can be disabled by setting the new configuration parameter
+  :macro:`SUBMIT_GENERATE_CONDOR_C_REQUIREMENTS` to ``False``.
+  :jira:`2204`
 
 Bugs Fixed:
 
