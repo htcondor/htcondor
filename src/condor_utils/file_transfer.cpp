@@ -6562,8 +6562,22 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			input_filename.c_str(), strerror(errno), errno );
 		return TransferPluginResult::Error;
 	}
-	fputs( transfer_files_string.c_str(), input_file );
-	fclose( input_file );
+	int fputs_error  = fputs(transfer_files_string.c_str(), input_file);
+	if (fputs_error == EOF) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+			"Could not write to file %s (%s, errno=%d), aborting file transfer\n",
+			input_filename.c_str(), strerror(errno), errno);
+		std::ignore = fclose(input_file);
+		return TransferPluginResult::Error;
+	}
+
+	int fclose_error = fclose(input_file);
+	if (fclose_error == EOF) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+			"Could not close file %s (%s, errno=%d), aborting file transfer\n",
+			input_filename.c_str(), strerror(errno), errno);
+		return TransferPluginResult::Error;
+	}
 
 	// Prepare args for the plugin
 	output_filename = iwd + "/." + plugin_name + ".out";
