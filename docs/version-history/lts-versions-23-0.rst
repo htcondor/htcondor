@@ -40,6 +40,13 @@ New Features:
 
 Bugs Fixed:
 
+- The file transfer plugin documents that an exit code of 0
+  is success, 1 is failure, and 2 is reserved for future work to
+  handle the need to refresh credentials.  The definition has now
+  changed so that any non-zero exit codes are treated as an error
+  putting the job on hold.
+  :jira:`2205`
+
 - Fixed a bug where any file I/O error (such as disk full) was
   ignored by the *condor_starter* when writing the classad file
   that controlled file transfer plugins.  As a result, in rare
