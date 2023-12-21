@@ -40,6 +40,13 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where any file I/O error (such as disk full) was
+  ignored by the *condor_starter* when writing the classad file
+  that controlled file transfer plugins.  As a result, in rare
+  cases, file transfer plugins could be unknowingly given
+  incomplete sets of files to transfer.
+  :jira:`2203`
+
 - Fixed a crash in the Python bindings when job submit fails due to
   any reason.  A common reason might be when :macro:`SUBMIT_REQUIREMENT_NAMES`
   fails.
