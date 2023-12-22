@@ -1254,7 +1254,7 @@ RemoteErrorEvent::formatBody( std::string &out )
 	char const *error_type = "Error";
 	int retval;
 
-	if(!critical_error) error_type = "Warning";
+	if(!critical_error) error_type = "Message";
 
 	retval = formatstr_cat(
 	  out,
