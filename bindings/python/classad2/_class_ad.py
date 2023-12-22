@@ -26,9 +26,12 @@ from ._value import Value
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta, timezone
 
-from typing import Iterator
-from typing import Union
-from typing import IO
+from typing import (
+    Iterator,
+    Union,
+    IO,
+    Optional,
+)
 
 #
 # MutableMapping provides generic implementations for all mutable mapping
@@ -41,8 +44,38 @@ from typing import IO
 #
 
 class ClassAd(MutableMapping):
+    """
+    A :class:`ClassAd` is a :class:`collections.abc.MutableMapping` from
+    :class:`str`\ings to :class:`ExprTree`\s.  The values are returned as the
+    corresponding Python type (see below), unless using :meth:`lookup`,
+    which always returns the native :class:`ExprTree`.
 
-    def __init__(self, input=None):
+    In the ClassAd language an ExprTree may be (but is returned as):
+
+      * undefined (:data:`classad2.Value.Undefined`)
+      * a boolean (:class:`bool`)
+      * an integer (:class:`int`)
+      * a float (:class:`float`)
+      * a string (:class:`str`)
+      * an absolute time value (:class:`datetime.datetime`)
+      * a relative time value (:class:`float`)
+      * a list (:class:`list`)
+      * a ClassAd (:class:`ClassAd`)
+      * evaluated but return an error (:data:`classad2.Value.Error`)
+
+    Additionally, if found while traversing a :class:`list` or :class:`dict`,
+    :class:`dict`\s are converted to :class:`ClassAd`\s and :py:obj:`None`
+    is converted to :data:`classad2.Value.Undefined`.
+    """
+
+    def __init__(self, input : Optional[Union[str, dict]] = None):
+        """
+        :param input:
+            * If :py:obj:`None`, create an empty ClassAd.
+            * If a :class:`str`, parse the 'new ClassAd' format string
+              and create the corresponding ClassAd.
+            * If a :class:`dict`, convert the dictionary to a ClassAd.
+        """
         self._handle = handle_t()
 
         if input is None:
@@ -66,12 +99,23 @@ class ClassAd(MutableMapping):
 
 
     def lookup(self, attr : str) -> "ExprTree":
+        """
+        :param attr:
+        """
         if not isinstance(attr, str):
             raise TypeError("ClassAd keys are strings")
         return _classad_get_item(self._handle, attr, False)
 
 
     def matches(self, ad : "ClassAd") -> bool:
+        """
+        Evaluate the ``requirements`` attribute of the given ``ad`` in the
+        context of this one.
+
+        :param ad:
+
+        :return:  ``True`` if and only if the evaluation returned ``True``.
+        """
         if not isinstance(ad, ClassAd):
             raise TypeError("ad must be a ClassAd")
 
@@ -97,6 +141,8 @@ class ClassAd(MutableMapping):
     def symmetricMatch(self, ad : "ClassAd") -> bool:
         '''
         Equivalent to ``self.matches(ad) and ad.matches(self)``.
+
+        :param ad:
         '''
         return self.matches(ad) and ad.matches(self)
 
@@ -184,6 +230,9 @@ def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator
     Parses all of the ads in the input and returns a iterator over them.
 
     Ads in the input may be separated by blank lines.
+
+    :param input:
+    :param parser:
     '''
     return _parse_ads_generator(input, parser)
 
@@ -193,6 +242,9 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
     Parses all of the ads in the input, merges them into one, and returns it.
 
     Ads in the input may be separated by blank lines.
+
+    :param input:
+    :param parser:
     '''
     total_offset = 0
     if not isinstance(input, str):
@@ -227,6 +279,9 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
 
     You must specify the parser type if ``input`` is not a string and
     can not be rewound.
+
+    :param input:
+    :param parser:
     '''
     if isinstance(input, str):
         (firstAd, offset) = _classad_parse_next(input, int(parser))
@@ -255,12 +310,20 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
 def _quote(input : str) -> str:
     '''
     Quote the Python string so it can be used for building ClassAd expressions.
+
+    :param input:
     '''
     return _classad_quote(input)
 
 
 def _unquote(input : str) -> str:
     '''
-    The reverse of `meth:quote`.  You should never need to call this.
+    The reverse of :func:`quote`.  You should never need to call this.
+
+    :param input:
     '''
     return _classad_unquote(input)
+
+
+# Sphinx whines about forward references in the type hints if this isn't here.
+from ._expr_tree import ExprTree

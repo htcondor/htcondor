@@ -9,7 +9,13 @@ from ._common_imports import (
 from ._job_event_type import JobEventType
 
 class JobEvent(Mapping):
+    """
+    FIXME
+    """
 
+    # It would be nice if this signature didn't appear in the docs,
+    # since instantiating these objects shouldn't be in the API.
+    # ... there's probably a standard Pythonic way ot indicating that.
     def __init__(self, data : classad.ClassAd, event_text : str):
         self._data = data
         self._event_text = event_text
@@ -17,16 +23,26 @@ class JobEvent(Mapping):
 
     @property
     def type(self) -> JobEventType:
+        """
+        FIXME: the @property methods' docstrings aren't making it to the
+        HTML via Sphinx, so just be explicit in the class docstring.
+        """
         return JobEventType(self._data["EventTypeNumber"])
 
 
     @property
     def cluster(self) -> int:
+        """
+        FIXME
+        """
         return self._data["cluster"]
 
 
     @property
     def proc(self) -> int:
+        """
+        FIXME
+        """
         # The event ClassAd doesn't contain a Proc attribute if the original
         # event's ProcID was less than 0.  ULogEvent's default
         # ("invalid") procID is -1, so we'll just assume that's good for now.
@@ -39,6 +55,9 @@ class JobEvent(Mapping):
 
     @property
     def timestamp(self) -> int:
+        """
+        FIXME
+        """
         '''
         The Unix timestamp of the event.
         '''

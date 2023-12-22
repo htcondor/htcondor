@@ -8,7 +8,7 @@ else:
 
 class FileTransferEventType(enum.IntEnum):
     """
-    The event type for file transfer events.
+    An enumeration of file transfer event types.
 
     .. attribute:: IN_QUEUED
     .. attribute:: IN_STARTED

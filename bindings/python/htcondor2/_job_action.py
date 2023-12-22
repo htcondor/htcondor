@@ -11,8 +11,6 @@ class JobAction(enum.IntEnum):
     An enumeration describing the actions that may be performed on a job
     in the queue.
 
-    The values of the enumeration are:
-
     .. attribute:: Hold
 
         Put a job on hold, vacating a running job if necessary.  A job will

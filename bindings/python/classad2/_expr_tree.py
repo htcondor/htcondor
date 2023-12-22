@@ -1,6 +1,7 @@
 from .classad2_impl import _handle as handle_t
 
 from typing import Union
+from typing import Optional
 
 from .classad2_impl import (
     _exprtree_init,
@@ -14,10 +15,20 @@ from .classad2_impl import (
 from ._class_ad import ClassAd
 
 class ExprTree:
+    """
+    An expression in the ClassAd language.
+    """
 
     # FIXME: Allowing the creation of stray ExprTrees from Python is probably
     # not a good idea, but Ornithology needs it for now.
-    def __init__(self, expr : Union[str, "ExprTree"] = None):
+    def __init__(self, expr : Optional[Union[str, "ExprTree"]] = None):
+        """
+        :param expr:
+           * If :py:obj:`None`, create an empty :class:`ExprTree`.
+           * If a :class:`str`, parse the string in the ClassAd language
+             and create the corresponding :class:`ExprTree`.
+           * If an :class:`ExprTree`, create a deep copy of ``expr``.
+        """
         self._handle = handle_t()
         _exprtree_init(self, self._handle)
 
@@ -54,16 +65,23 @@ class ExprTree:
 
     def eval(self, scope : ClassAd = None, target : ClassAd = None):
         """
-        Evaluate the expression and return the corresponding Python type,
+        Evaluate the expression and return the corresponding Python type;
         either a :class:`classad2.ClassAd`, a boolean, a string, a
         :class:`datetime.datetime`, a float, an integer, a
         :class:`classad::Value`, or a list; the list may contain any of
-        the above types, or :class:`classad2.ExprTree`s.
+        the above types, or :class:`classad2.ExprTree`\s.
 
         To evaluate an :class:`classad2.ExprTree` containing attribute
         references, you must supply a scope.  An :class:`classad2.ExprTree`
         does not record which :class:`classad2.ClassAd`, if any, it was
         extracted from.
+
+        Expressions may contain ``TARGET.`` references, especially if they
+        were originally intended for match-making.  You may supply an
+        additional ClassAd for resolving such references.
+
+        :param scope:
+        :param target:
         """
         if scope is not None:
             if not isinstance(scope, ClassAd):
@@ -78,16 +96,19 @@ class ExprTree:
 
     def simplify(self, scope : ClassAd = None, target : ClassAd = None):
         """
-        Evaluate the expression and return an ExprTree.
+        Evaluate the expression and return an :class:`ExprTree`.
 
         To evaluate an :class:`classad2.ExprTree` containing attribute
         references, you must supply a scope.  An :class:`classad2.ExprTree`
         does not record which :class:`classad2.ClassAd`, if any, it was
         extracted from.
 
-        Expressions may contain `TARGET.` references, especially if they
+        Expressions may contain ``TARGET.`` references, especially if they
         were originally intended for match-making.  You may supply an
         additional ClassAd for resolving such references.
+
+        :param scope:
+        :param target:
         """
         if scope is not None:
             if not isinstance(scope, ClassAd):

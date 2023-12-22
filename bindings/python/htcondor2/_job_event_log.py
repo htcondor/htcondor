@@ -11,8 +11,16 @@ from .htcondor2_impl import (
 )
 
 class JobEventLog():
+    """
+    FIXME
+    """
 
     def __init__(self, filename : str):
+        """
+        FIXME
+
+        :param filename:
+        """
         self._deadline = 0
         self._filename = filename
         self._handle = handle_t()
@@ -25,6 +33,11 @@ class JobEventLog():
 
 
     def events(self, stop_after : int = None) -> 'JobEventLog':
+        """
+        FIXME
+
+        :param stop_after:
+        """
         if stop_after is None:
             self._deadline = 0
         elif isinstance(stop_after, int):
@@ -37,6 +50,9 @@ class JobEventLog():
 
 
     def close(self) -> None:
+        """
+        FIXME
+        """
         return _job_event_log_close(self, self._handle)
 
 

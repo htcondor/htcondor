@@ -8,6 +8,9 @@ class SubmitResult():
     FIXME
     """
 
+    # It would be nice if this signature didn't appear in the docs,
+    # since instantiating these objects shouldn't be in the API.
+    # ... there's probably a standard Pythonic way ot indicating that.
     def __init__(self, clusterID, procID, num_procs, clusterAd):
         self._cluster = clusterID
         self._first_proc = procID
