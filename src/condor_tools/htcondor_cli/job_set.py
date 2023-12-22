@@ -42,6 +42,11 @@ class Submit(Verb):
         if len(self.jobs) == 0:
             logger.warning(f"Warning: No jobs found in {job_set_file}")
 
+        # Schedd *should* advertise if job sets are enabled, but doesn't
+        # fix this when it does
+        if not htcondor.param.get("USE_JOBSETS", False):
+            raise ValueError(f"""Job sets not enabled on this schedd by an administrator, because USE_JOBSETS is false in the configuration.  Skipping submit.""")
+
         # Submit the jobs
         submit_results = []
         for i, job in enumerate(self.jobs):
