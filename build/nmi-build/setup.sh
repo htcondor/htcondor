@@ -108,7 +108,6 @@ fi
 # Let's use that in the future. This works for now.
 if [ $ID = 'opensuse-leap' ]; then
     zypper --non-interactive --no-gpg-checks install "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.noarch.rpm"
-    sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor.repo
     for key in /etc/pki/rpm-gpg/*; do
         rpmkeys --import "$key"
     done
@@ -150,7 +149,7 @@ fi
 # Install the build dependencies
 if [ $ID = 'opensuse-leap' ]; then
     $INSTALL make rpm-build
-    zypper --non-interactive source-install -d condor
+    $INSTALL $(rpmspec --parse /tmp/rpm/condor.spec | grep '^BuildRequires:' | sed -e 's/^BuildRequires://' | sed -e 's/,/ /')
 fi
 
 # Need newer cmake on bionic
@@ -262,7 +261,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     rm -f "$externals_dir"/*.i686.rpm
 fi
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
 fi
 
 # Clean up package caches
