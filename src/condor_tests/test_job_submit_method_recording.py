@@ -15,6 +15,12 @@ from shutil import move
 from time import sleep
 from time import time
 
+# Setup a personal condor 
+@standup
+def condor(test_dir):
+    with Condor(test_dir / "condor", config={"USE_JOBSETS": True}) as condor:
+        yield condor
+
 #-----------------------------------------------------------------------------------------
 #Function to wait until schedd has no jobs
 def wait(schedd):
@@ -60,7 +66,7 @@ PARENT A CHILD B
 #-----------------------------------------------------------------------------------------
 #Fixture to test if an unknown submission doesn't add JobSubmitMethod Attribute
 @action
-def test_unknown_submission(default_condor,test_dir,path_to_sleep):
+def test_unknown_submission(condor,test_dir,path_to_sleep):
      #This test works by making a fake unknown job submission via python bindings
      #To do this the python file uses the non-documented _setSubmitMethod()
      #for internal use to set the submit method value to -1 thus indicating 
@@ -82,9 +88,9 @@ submit_result = schedd.submit(job)
      #^^^Make python file for submission^^^
 
      #Submit file to run job
-     p = default_condor.run_command(["python3",test_dir / "test_unknown.py"])
+     p = condor.run_command(["python3",test_dir / "test_unknown.py"])
      #Get the job ad for completed job
-     schedd = default_condor.get_local_schedd()
+     schedd = condor.get_local_schedd()
      t_end = time() + 180 #Give a 2 minute maximum for waiting
      while any(schedd.query(constraint='true',projection=["JobStatus"])) == True:
           sleep(0.1)
@@ -101,11 +107,11 @@ submit_result = schedd.submit(job)
 #-----------------------------------------------------------------------------------------
 #Fixture to run condor_submit and check the JobSubmitMethod attr
 @action
-def run_condor_submit(default_condor,write_sub_file):
+def run_condor_submit(condor,write_sub_file):
      #Submit job
-     p = default_condor.run_command(["condor_submit", write_sub_file])
+     p = condor.run_command(["condor_submit", write_sub_file])
      #Get the job ad for completed job
-     schedd = default_condor.get_local_schedd()
+     schedd = condor.get_local_schedd()
      wait(schedd)
      job_ad = schedd.history(
           constraint=None,
@@ -117,11 +123,11 @@ def run_condor_submit(default_condor,write_sub_file):
 #-----------------------------------------------------------------------------------------
 #Fixture to run condor_submit_dag and check the JobSubmitMethod attr
 @action
-def run_dagman_submission(default_condor,test_dir,write_dag_file):
+def run_dagman_submission(condor,test_dir,write_dag_file):
      #Submit job 
-     p = default_condor.run_command(["condor_submit_dag",write_dag_file])
+     p = condor.run_command(["condor_submit_dag",write_dag_file])
      #Get the job ad for completed job
-     schedd = default_condor.get_local_schedd()
+     schedd = condor.get_local_schedd()
      wait(schedd)
      job_ad = schedd.history(
           constraint=None,
@@ -166,7 +172,7 @@ subTestNum = 0
 "user_set(4)":"job.setSubmitMethod(100)",
 "user_set(5)":"job.setSubmitMethod(666)",
 })#Parameter tests: Standard, User-set(-3), User-set(53), User-set(100), and User-set(666)
-def run_python_bindings(default_condor,test_dir,path_to_sleep,request):
+def run_python_bindings(condor,test_dir,path_to_sleep,request):
      global subTestNum
      filename = "test{}.py".format(subTestNum)
      python_file = open(test_dir / filename, "w")
@@ -188,16 +194,16 @@ print(job.getSubmitMethod())
      #^^^Make python file for submission^^^
 
      #Submit file to run job
-     p = default_condor.run_command(["python3",test_dir / filename])
+     p = condor.run_command(["python3",test_dir / filename])
 
      return p
 #-----------------------------------------------------------------------------------------
 #Fixture to run 'htcondor job submit' and check the JobSubmitMethod attr
 @action
-def run_htcondor_job_submit(default_condor,write_sub_file):
-     p = default_condor.run_command(["htcondor","job","submit",write_sub_file])
+def run_htcondor_job_submit(condor,write_sub_file):
+     p = condor.run_command(["htcondor","job","submit",write_sub_file])
      #Get the job ad for completed job
-     schedd = default_condor.get_local_schedd()
+     schedd = condor.get_local_schedd()
      wait(schedd)
      job_ad = schedd.history(
           constraint=None,
@@ -209,7 +215,7 @@ def run_htcondor_job_submit(default_condor,write_sub_file):
 #-----------------------------------------------------------------------------------------
 #Fixture to run 'htcondor jobset submit' and check the JobSubmitMethod attr
 @action
-def run_htcondor_jobset_submit(default_condor,test_dir,path_to_sleep):
+def run_htcondor_jobset_submit(condor,test_dir,path_to_sleep):
      jobset_file = open(test_dir / "job.set", "w")
      jobset_file.write(
      """name = JobSubmitMethodTest
@@ -226,9 +232,9 @@ job {{
 """.format(path_to_sleep))
      jobset_file.close()
 
-     p = default_condor.run_command(["htcondor","jobset","submit",test_dir / "job.set"])
+     p = condor.run_command(["htcondor","jobset","submit",test_dir / "job.set"])
      #Get the job ad for completed job
-     schedd = default_condor.get_local_schedd()
+     schedd = condor.get_local_schedd()
      wait(schedd)
      job_ad = schedd.history(
           constraint=f"JobSetName == \"JobSubmitMethodTest\"",
@@ -240,13 +246,13 @@ job {{
 #-----------------------------------------------------------------------------------------
 #Fixture to run 'htcondor dag submit' and check the JobSubmitMethod attr
 @action
-def run_htcondor_dag_submit(default_condor,write_dag_file,test_dir):
+def run_htcondor_dag_submit(condor,write_dag_file,test_dir):
 
      #run second dag submission test 
-     p = default_condor.run_command(["htcondor","dag","submit", write_dag_file])
+     p = condor.run_command(["htcondor","dag","submit", write_dag_file])
 
      #Get the job ad for completed job
-     schedd = default_condor.get_local_schedd()
+     schedd = condor.get_local_schedd()
      wait(schedd)
      job_ad = schedd.history(
           constraint=None,
