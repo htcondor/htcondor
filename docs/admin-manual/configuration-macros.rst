@@ -4911,11 +4911,8 @@ These macros control the *condor_schedd*.
     value that defaults to ``True``, causing keep alive messages to be
     sent from the *condor_startd* to the *condor_schedd* by TCP during
     a claim. When ``False``, the *condor_schedd* daemon sends keep
-    alive signals to the *condor_startd*, reversing the direction. If
-    both *condor_startd* and *condor_schedd* daemons are HTCondor
-    version 7.5.4 or more recent, this variable is only used by the
-    *condor_schedd* daemon. For earlier HTCondor versions, the variable
-    must be set to the same value, and it must be set for both daemons.
+    alive signals to the *condor_startd*, reversing the direction.
+    This variable is only used by the *condor_schedd* daemon.
 
 :macro-def:`REQUEST_CLAIM_TIMEOUT[SCHEDD]`
     This macro sets the time (in seconds) that the *condor_schedd* will
@@ -5836,6 +5833,10 @@ These macros control the *condor_schedd*.
     There's only so long that the *condor_schedd* is willing to let clean-up
     for a single job (including all of its checkpoints) take.  This macro
     defines that duration (as an integer number of seconds).
+
+:macro-def:`USE_JOBSETS[SCHEDD]`
+    Boolean to enable the use of job sets with the `htcondor jobset` command.
+    Defaults to false.
 
 condor_shadow Configuration File Entries
 -----------------------------------------
