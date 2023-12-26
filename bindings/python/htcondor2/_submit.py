@@ -243,12 +243,13 @@ _NewOptionNames = {
     "debug":                    "DebugLevel",
     "outfile_dir":              "OutfileDir",
     "config":                   "ConfigFile",
-#   "batch-name":               "BatchName",
+    "batch-name":               "BatchName",
     "load_save":                "SaveFile",
     "do_recurse":               "Recurse",
     "update_submit":            "UpdateSubmit",
     "import_env":               "ImportEnv",
     "include_env":              "GetFromEnv",
+    "insert_env":               "AddToEnv",
     "dumprescue":               "DumpRescueDag",
     "valgrind":                 "RunValgrind",
     "suppress_notification":    "SuppressNotification",
@@ -264,8 +265,14 @@ def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) ->
     # Convert from version 1 names to the proper internal names.
     internal_options = {}
     for key, value in options.items():
-        internal_key = _NewOptionNames.get(key, key)
-        internal_options[internal_key] = value
+        if not isinstance(key, str):
+            raise TypeError("options keys must by strings")
+        elif len(key) == 0:
+            raise KeyError("options key is empty")
+        internal_key = _NewOptionNames.get(key.lower(), key)
+        if not isinstance(value, (int, bool, str)):
+            raise TypeError("options values must be int, bool, or str")
+        internal_options[internal_key] = str(value)
 
     subfile = _submit_from_dag(filename, internal_options)
     subfile_text = Path(subfile).read_text()
