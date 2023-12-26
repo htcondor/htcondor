@@ -30,6 +30,17 @@ Glossary
      *condor_startd* daemon, which is responsible for dividing all of the resources the machine into
      slot. 
 
+   Glidein
+
+     The HTCondor Software Suite does not provide glideins as a first class entity itself, but implements
+     tools that users can build glideins from.  A glidein is a set of scripts which creates a short-lived,
+     usually unprivileged EP that runs as a job under HTCondor or some other batch system.  This glidein EP
+     then reports to a different batch pool that end users can submit jobs to.  Glideins are one way to
+     build a larger HTCondor pool from different sets of resources that a user or group may have access to.
+     One advantage of glideins is that they provide *late binding*, that is, glideins may sit idle in a foreign
+     queue for a very long time, but an idle user job does not select an EP to run on until it is ready to
+     accept work.  One example glidein system is GlideinWMS, though there are many others.
+
    Job
 
      Job has a very specific meaning in the HTCSS.  It is the atomic unit of work in HTCSS.  A job is
