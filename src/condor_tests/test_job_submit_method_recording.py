@@ -142,27 +142,27 @@ def run_dagman_submission(condor,test_dir,write_dag_file):
 #-----------------------------------------------------------------------------------------
 #Fixture to run condor_submit_dag on inline submit description dag and check the JobSubmitMethod attr
 @action
-def run_dagman_inline_submission(default_condor,test_dir,path_to_sleep):
+def run_dagman_inline_submission(condor,test_dir,path_to_sleep):
      #Submit job
      dag_filename = "inline.dag"
      with open(dag_filename, "w") as f:
          f.write(f"""
-         SUBMIT-DESCRIPTION sleep {{
-             executable = {path_to_sleep}
-             arguments  = 0
-             log        = $(JOB).log
-         }}
+SUBMIT-DESCRIPTION sleep {{
+    executable = {path_to_sleep}
+    arguments  = 0
+    log        = $(JOB).log
+}}
 
-         JOB DESC sleep
-         JOB INLINE {{
-             executable = {path_to_sleep}
-             arguments  = 0
-             log        = $(JOB).log
-         }}
-         """)
-     p = default_condor.run_command(["condor_submit_dag",dag_filename])
+JOB DESC sleep
+JOB INLINE {{
+    executable = {path_to_sleep}
+    arguments  = 0
+    log        = $(JOB).log
+}}
+""")
+     p = condor.run_command(["condor_submit_dag",dag_filename])
      #Get the job ad for completed job
-     schedd = default_condor.get_local_schedd()
+     schedd = condor.get_local_schedd()
      wait(schedd)
      job_ad = schedd.history(
           constraint=None,
@@ -175,25 +175,29 @@ def run_dagman_inline_submission(default_condor,test_dir,path_to_sleep):
      return job_ad
 
 #-----------------------------------------------------------------------------------------
-@standup
-def dag_no_direct_condor(test_dir):
-     with Condor(test_dir / "condor_dag",{"DAGMAN_USE_DIRECT_SUBMIT":"False"}) as condor:
-          yield condor
-#-----------------------------------------------------------------------------------------
 #Fixture to run condor_submit_dag with direct submission off and check the JobSubmitMethod attr
 @action
-def run_dagman_direct_false_submission(dag_no_direct_condor,test_dir,write_dag_file):
-     #Submit job 
-     p = dag_no_direct_condor.run_command(["condor_submit_dag",write_dag_file])
+def run_dagman_direct_false_submission(condor,test_dir,write_dag_file):
+     # Write custom DAG config to turn of direct submit
+     config = "custom.conf"
+     with open(config, "w") as f:
+         f.write("DAGMAN_USE_DIRECT_SUBMIT = False\n")
+     # Add custom config file to DAG description
+     with open(str(write_dag_file), "a") as f:
+         f.write(f"CONFIG {config}\n")
+     #Submit job
+     p = condor.run_command(["condor_submit_dag",write_dag_file])
      #Get the job ad for completed job
-     schedd = dag_no_direct_condor.get_local_schedd()
+     schedd = condor.get_local_schedd()
      wait(schedd)
      job_ad = schedd.history(
           constraint=None,
           projection=["JobSubmitMethod"],
           match=3,
      )
-     
+     # Stop gap: Empty config to not effect other tests
+     with open(config, "w") as f:
+         f.write("")
      clean_up(test_dir,"no_direct_submit")
 
      return job_ad
