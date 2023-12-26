@@ -1015,16 +1015,10 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 			submitFileOrSubmitDesc = dagSubmitFile.c_str();
 
 		} else if ( strstr( submitFileOrSubmitDesc, DAG_SUBMIT_FILE_SUFFIX) ) {
-				// If the submit file name ends in ".condor.sub", we assume
-				// that this node is a nested DAG, and set the DAG filename
-				// accordingly.
-			nestedDagFile = submitFileOrSubmitDesc;
-			nestedDagFile.replace( nestedDagFile.find(DAG_SUBMIT_FILE_SUFFIX), 
-				sizeof(DAG_SUBMIT_FILE_SUFFIX) - 1, "" );
-			debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
-						"keyword for nested DAGs is deprecated; please "
-						"use SUBDAG EXTERNAL instead\n" );
-			check_warning_strictness( DAG_STRICT_3 );
+			// Assume JOB commands submit file ending with '.condor.sub' is a DAG
+			// submit file. This is no longer allowed for subdags
+			debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
+			return false;
 		}
 	}
 
