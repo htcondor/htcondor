@@ -34,7 +34,7 @@ Glossary
 
      The HTCondor Software Suite does not provide glideins as a first class entity itself, but implements
      tools that users can build glideins from.  A glidein is a set of scripts which creates a short-lived,
-     usually unprivileged EP that runs a a job under HTCondor or some other batch system.  This glidein EP
+     usually unprivileged EP that runs as a job under HTCondor or some other batch system.  This glidein EP
      then reports to a different batch pool that end users can submit jobs to.  Glideins are one way to
      build a larger HTCondor pool from different sets of resources that a user or group may have access to.
      One advantage of glideins is that they provide *late binding*, that is, glideins may sit idle in a foreign
