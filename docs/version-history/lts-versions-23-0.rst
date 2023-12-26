@@ -32,7 +32,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug where DAG node jobs declared inline inside a DAG file
+  would fail to set the Job classad attribute ``JobSubmitMethod``.
+  :jira:`2184`
 
 .. _lts-version-history-2303:
 
