@@ -32,12 +32,13 @@ def wait(schedd):
                break
 #-----------------------------------------------------------------------------------------
 #Function to clean up files created by dags
-def clean_up(t_dir, dir_name):
+def clean_up(t_dir, dir_name, dag_fname="simple.dag."):
+     regex = dag_fname + "*"
      dir_path = os.path.join(str(t_dir),dir_name)
      #make directory dag submission tests to avoid errors
      os.mkdir(dir_path)
      #move test files into dag_test# directory
-     for file_name in find(os.path.join(str(t_dir),"simple.dag.*")):
+     for file_name in find(os.path.join(str(t_dir),regex)):
           move(os.path.join(str(t_dir),file_name),dir_path)
 #-----------------------------------------------------------------------------------------
 #Fixture to write simple .sub file for general use
@@ -138,6 +139,41 @@ def run_dagman_submission(condor,test_dir,write_dag_file):
      clean_up(test_dir,"submit_command")
 
      return job_ad
+#-----------------------------------------------------------------------------------------
+#Fixture to run condor_submit_dag on inline submit description dag and check the JobSubmitMethod attr
+@action
+def run_dagman_inline_submission(default_condor,test_dir,path_to_sleep):
+     #Submit job
+     dag_filename = "inline.dag"
+     with open(dag_filename, "w") as f:
+         f.write(f"""
+         SUBMIT-DESCRIPTION sleep {{
+             executable = {path_to_sleep}
+             arguments  = 0
+             log        = $(JOB).log
+         }}
+
+         JOB DESC sleep
+         JOB INLINE {{
+             executable = {path_to_sleep}
+             arguments  = 0
+             log        = $(JOB).log
+         }}
+         """)
+     p = default_condor.run_command(["condor_submit_dag",dag_filename])
+     #Get the job ad for completed job
+     schedd = default_condor.get_local_schedd()
+     wait(schedd)
+     job_ad = schedd.history(
+          constraint=None,
+          projection=["JobSubmitMethod"],
+          match=3,
+     )
+
+     clean_up(test_dir,"dagman_inline",dag_filename)
+
+     return job_ad
+
 #-----------------------------------------------------------------------------------------
 @standup
 def dag_no_direct_condor(test_dir):
@@ -307,6 +343,19 @@ class TestJobSubmitMethod:
 
           #If made it this far then the test passed
           assert passed
+#-----------------------------------------------------------------------------------------
+     #Test condor_submit yields 0 for dag and 1 for dag submitted jobs test inline submit descriptions
+     def test_dagman_inline_submit_job_value(self,run_dagman_inline_submission):
+          countDAG = 0
+          countJobs = 0
+          #Check that returned job ads
+          for ad in run_dagman_inline_submission:
+               if ad["JobSubmitMethod"] == 0:
+                    countDAG += 1
+               if ad["JobSubmitMethod"] == 1:
+                    countJobs += 1
+          assert countDAG == 1 and countJobs == 2
+
 #-----------------------------------------------------------------------------------------
      #Test condor_submit with direct submit false yields 0 for all jobs in dag
      def test_dagman_direct_false_job_value(self,run_dagman_direct_false_submission):
