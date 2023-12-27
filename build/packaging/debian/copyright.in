@@ -1,7 +1,28 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: condor
 Upstream-Contact: HTCondor Team <htcondor-admin@cs.wisc.edu>
-Source: http://htcondor.org/
+Source: https://github.com/htcondor/htcondor
+#if defined(SID)
+Files-Excluded: */*.class
+                */*.exe*
+                */*.dll
+                */*.jar
+                */*.pdf
+                */*.bat
+                */*.cmd
+                msconfig
+                src/blahp/project
+                src/blahp/tests
+                src/blahp/vendor
+                src/safefile/build-aux
+                src/safefile/configure
+                src/vendor/fmt-0.10.0/doc
+                src/vendor/fmt-0.10.0/test
+                src/vendor/rapidjson.src/bin/jsonschema
+                src/vendor/rapidjson.src/doc
+                src/vendor/rapidjson.src/test
+                */.gitignore
+#endif
 
 Files: *
 Copyright: 1990-2023, Center for High Throughput Computing,
@@ -128,9 +149,11 @@ Files: build/cmake/macros/JoinPaths.cmake
 Copyright: 2020, Jan Tojnar
 License: Expat or CC0-1.0
 
+#if !defined(SID)
 Files: msconfig/UUIDTiny.pm
 Copyright: 2009, 2010 Christian Augustin
 License: GPL-1+ or Artistic
+#endif
 
 Files: src/condor_daemon_core.V6/valgrind.h
 Copyright: 2000-2006, Julian Seward
