@@ -1324,7 +1324,7 @@ get_config_dir_file_list( char const *dirpath, StringList &files )
 
 	Directory dir(dirpath);
 	if(!dir.Rewind()) {
-		dprintf(D_ALWAYS, "Cannot open %s: %s\n", dirpath, strerror(errno));
+		// Don't bother dprintf'ing here, it just causes pre-banner log spam
 		return false;
 	}
 
