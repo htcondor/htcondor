@@ -6,8 +6,8 @@ Security
 Security Overview
 -----------------
 
-Beginning in HTCondor version 9, a main goal is to make all condor
-installations easier to secure.  In previous versions, a default installation
+One main goal of HTCondor is to make all condor
+installations easier to secure.  In older versions, a default installation
 typically required additional steps after setup to enable end-to-end security
 for all users and daemons in the system.  Configuring various different types
 of authentication and security policy could also involve setting quite a number
@@ -101,7 +101,7 @@ authentication` section.
 Introducing: AES
 """"""""""""""""
 
-In version 9.0.0 we have also added support for AES, a widely-used encryption
+We also support for AES, a widely-used encryption
 method that has hardware support in most modern CPUS.  Because the overhead of
 encryption is so much lower, we have turned it on by default.  We use AES in
 such a way (called AESGCM mode) that it provides integrity checks (checksums)
@@ -233,13 +233,7 @@ Because of this, you do not necessarily need to have authentication from one to
 the other configured; it is enough to have secure channels from the SchedD to
 the Collector and from the StartD to the collector.  Likewise, a Negotiator can
 establish trust with a SchedD in the same way: the SchedD trusts the Collector
-to tell only trustworthy Negotiators its secret.  However, some features such
-as :tool:`condor_ssh_to_job` and :tool:`condor_tail` will not work unless the access point
-can authenticate directly to the execute point, which is why we mentioned
-needing to distribute the signing key earlier -- if the server does not have
-the signing key, it cannot directly validate the incoming ``IDTOKEN`` used for
-authentication.
-
+to tell only trustworthy Negotiators its secret. 
 
 Security Terms
 --------------
