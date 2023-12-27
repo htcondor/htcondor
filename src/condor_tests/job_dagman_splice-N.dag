@@ -9,11 +9,8 @@ SPLICE N_SD1_S2 job_dagman_splice-N-subdir1/job_dagman_splice-N-splice.dag
 SPLICE N_SD2_S1 job_dagman_splice-N-subdir2/job_dagman_splice-N-splice.dag
 SPLICE N_SD2_S2 job_dagman_splice-N-subdir2/job_dagman_splice-N-splice.dag
 
-# The nodes of splice 
-PARENT N_A CHILD N_SD1_S1
-PARENT N_SD1_S1 CHILD N_SD1_S2
-PARENT N_SD1_S2 CHILD N_SD2_S1
-PARENT N_SD2_S1 CHILD N_SD2_S2
-PARENT N_SD2_S2 CHILD N_B
+# The nodes of splice
+PARENT N_A CHILD N_SD1_S1 N_SD1_S2 N_SD2_S1 N_SD2_S2
+PARENT N_SD1_S1 N_SD1_S2 N_SD2_S1 N_SD2_S2 CHILD N_B
 
 DOT job_dagman_splice-N.dot
