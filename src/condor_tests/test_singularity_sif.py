@@ -26,6 +26,7 @@ import pytest
 import subprocess
 import time
 from pathlib import Path
+import shutil
 
 from ornithology import *
 
@@ -36,6 +37,8 @@ logger.setLevel(logging.DEBUG)
 @standup
 def sif_file(test_dir):
     os.mkdir("image_root")
+    os.mkdir("image_root/etc")
+    shutil.copyfile("/etc/passwd", "image_root/etc/passwd")
 
     # some singularities need mksquashfs in path
     # which some linuxes have in /usr/sbin
