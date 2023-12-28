@@ -191,6 +191,7 @@ man_pages = [
     ('man-pages/condor_transform_ads', 'condor_transform_ads', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_update_machine_ad', 'condor_update_machine_ad', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_updates_stats', 'condor_updates_stats', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_upgrade_check', 'condor_upgrade_check', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_urlfetch', 'condor_urlfetch', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_userlog', 'condor_userlog', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_userprio', 'condor_userprio', u'HTCondor Manual', [u'HTCondor Team'], 1),
