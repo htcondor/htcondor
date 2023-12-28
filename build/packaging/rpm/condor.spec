@@ -981,6 +981,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
 %_mandir/man1/condor_updates_stats.1.gz
+%_mandir/man1/condor_upgrade_check.1.gz
 %_mandir/man1/condor_urlfetch.1.gz
 %_mandir/man1/condor_userlog.1.gz
 %_mandir/man1/condor_userprio.1.gz
