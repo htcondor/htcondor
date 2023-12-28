@@ -16,6 +16,7 @@ from .classad2_impl import (
     _classad_parse_next_fd,
     _classad_quote,
     _classad_unquote,
+    _classad_flatten,
 )
 
 # So that the typehints match version 1.
@@ -109,6 +110,12 @@ class ClassAd(MutableMapping):
         """
         expression = self.lookup(attr)
         return expression.eval(self)
+
+
+    def flatten(self, expr : "ExprTree") -> "ExprTree":
+        if not isinstance(expr, ExprTree):
+            raise TypeError("expr must be an ExprTree")
+        return _classad_flatten(self._handle, expr._handle)
 
 
     def lookup(self, attr : str) -> "ExprTree":
