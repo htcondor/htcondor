@@ -101,9 +101,21 @@ class ClassAd(MutableMapping):
         return _classad_to_string(self._handle)
 
 
+    def eval(self, attr : str):
+        """
+        Evaluate the attribute named by attr in the context of this ClassAd.
+
+        :param attr: The attribute to evaluate.
+        """
+        expression = self.lookup(attr)
+        return expression.eval(self)
+
+
     def lookup(self, attr : str) -> "ExprTree":
         """
-        :param attr: FIXME
+        Return the :class:`ExprTree` named by attr.
+
+        :param attr: The attribute to look up.
         """
         if not isinstance(attr, str):
             raise TypeError("ClassAd keys are strings")
