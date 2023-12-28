@@ -18,10 +18,10 @@ that used by the Unix *cron* daemon. As such, HTCondor developers are
 fond of referring to CronTab :index:`Crondor`\ scheduling as
 Crondor. 
 
-.. sidebar::
+.. sidebar:: Example Crondor Submit File
 
    .. code-block:: condor-submit
-     :caption: Crondor submit file example -- a job that runs every 15 minutes
+     :caption: A job that runs every 15 minutes
 
      Executable = /bin/sleep
      Arguments = 15

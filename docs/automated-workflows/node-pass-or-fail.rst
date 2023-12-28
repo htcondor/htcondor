@@ -1,6 +1,43 @@
 Node Success/Failure
 ====================
 
+.. sidebar:: Node Success/Failure (Table 2.1)
+
+    Node **S**\ uccess or **F**\ ailure definition with
+    :macro:`DAGMAN_ALWAYS_RUN_POST` = False (the default).
+
+    +-----+-----------+-----------+-------+
+    | PRE | JOB       | POST      | Node  |
+    +=====+===========+===========+=======+
+    | \-  | S         | \-        | **S** |
+    +-----+-----------+-----------+-------+
+    | \-  | F         | \-        | **F** |
+    +-----+-----------+-----------+-------+
+    | \-  | S         | S         | **S** |
+    +-----+-----------+-----------+-------+
+    | \-  | S         | F         | **F** |
+    +-----+-----------+-----------+-------+
+    | \-  | F         | S         | **S** |
+    +-----+-----------+-----------+-------+
+    | \-  | F         | F         | **F** |
+    +-----+-----------+-----------+-------+
+    | S   | S         | \-        | **S** |
+    +-----+-----------+-----------+-------+
+    | S   | F         | \-        | **F** |
+    +-----+-----------+-----------+-------+
+    | S   | S         | S         | **S** |
+    +-----+-----------+-----------+-------+
+    | S   | S         | F         | **F** |
+    +-----+-----------+-----------+-------+
+    | S   | F         | S         | **S** |
+    +-----+-----------+-----------+-------+
+    | S   | F         | F         | **F** |
+    +-----+-----------+-----------+-------+
+    | F   | not run   | \-        | **F** |
+    +-----+-----------+-----------+-------+
+    | F   | not run   | not run   | **F** |
+    +-----+-----------+-----------+-------+
+
 Progress towards completion of the DAG is based upon the success of the
 nodes within the DAG. The success of a node is based upon the success of
 the job(s), PRE script, and POST script. A job, PRE script, or POST
@@ -14,59 +51,28 @@ to ``False``. In this table, a dash (``-``) represents the case where a script
 does not exist for the DAG, **S** represents success, and **F** represents
 failure.
 
-+-----+-----------+-----------+-------+
-| PRE | JOB       | POST      | Node  |
-+=====+===========+===========+=======+
-| \-  | S         | \-        | **S** |
-+-----+-----------+-----------+-------+
-| \-  | F         | \-        | **F** |
-+-----+-----------+-----------+-------+
-| \-  | S         | S         | **S** |
-+-----+-----------+-----------+-------+
-| \-  | S         | F         | **F** |
-+-----+-----------+-----------+-------+
-| \-  | F         | S         | **S** |
-+-----+-----------+-----------+-------+
-| \-  | F         | F         | **F** |
-+-----+-----------+-----------+-------+
-| S   | S         | \-        | **S** |
-+-----+-----------+-----------+-------+
-| S   | F         | \-        | **F** |
-+-----+-----------+-----------+-------+
-| S   | S         | S         | **S** |
-+-----+-----------+-----------+-------+
-| S   | S         | F         | **F** |
-+-----+-----------+-----------+-------+
-| S   | F         | S         | **S** |
-+-----+-----------+-----------+-------+
-| S   | F         | F         | **F** |
-+-----+-----------+-----------+-------+
-| F   | not run   | \-        | **F** |
-+-----+-----------+-----------+-------+
-| F   | not run   | not run   | **F** |
-+-----+-----------+-----------+-------+
+.. sidebar:: Table 2.2
 
-Table 2.1: Node **S**\ uccess or **F**\ ailure definition with
-``DAGMAN_ALWAYS_RUN_POST = False`` (the default).
+    Node **S**\ uccess or **F**\ ailure definition with
+    :macro:`DAGMAN_ALWAYS_RUN_POST` = True
+
+    +-----+-----------+--------+-------+
+    | PRE | JOB       | POST   | Node  |
+    +=====+===========+========+=======+
+    | F   | not run   | \-     | **F** |
+    +-----+-----------+--------+-------+
+    | F   | not run   | S      | **S** |
+    +-----+-----------+--------+-------+
+    | F   | not run   | F      | **F** |
+    +-----+-----------+--------+-------+
 
 Table 2.2 lists the definition of node success and failure only for the cases
-where the PRE script fails, when :macro:`DAGMAN_ALWAYS_RUN_POST` is set to ``True``.
-
-+-----+-----------+--------+-------+
-| PRE | JOB       | POST   | Node  |
-+=====+===========+========+=======+
-| F   | not run   | \-     | **F** |
-+-----+-----------+--------+-------+
-| F   | not run   | S      | **S** |
-+-----+-----------+--------+-------+
-| F   | not run   | F      | **F** |
-+-----+-----------+--------+-------+
-
-Table 2.2: Node **S**\ uccess or **F**\ ailure definition with
-``DAGMAN_ALWAYS_RUN_POST = True``.
+where the PRE script fails, when DAGMan is configured to always run POST scripts.
 
 :index:`PRE_SKIP command<single: DAG input file; PRE_SKIP command>`
 :index:`skipping node execution<single: DAGMan; Skipping node execution>`
+
+|
 
 PRE_SKIP
 --------
@@ -94,6 +100,23 @@ DAGMan can retry any failed node in a DAG by specifying the node in the
 DAG input file with the *RETRY* command. The use of retry is optional.
 The syntax for retry is
 
+.. sidebar:: Example Diamond DAG Using RETRY
+
+    .. code-block:: condor-dagman
+
+            # File name: diamond.dag
+
+            JOB  A  A.condor
+            JOB  B  B.condor
+            JOB  C  C.condor
+            JOB  D  D.condor
+            PARENT A CHILD B C
+            PARENT B C CHILD D
+            RETRY  C 3
+
+    If marked as failed, node C will retry execution until either
+    success or the maximum number of retries (3) are attempted.
+
 .. code-block:: condor-dagman
 
     RETRY <JobName | ALL_NODES> NumberOfRetries [UNLESS-EXIT value]
@@ -101,37 +124,17 @@ The syntax for retry is
 where *JobName* identifies the node. *NumberOfRetries* is an integer
 number of times to retry the node after failure. The implied number of
 retries for any node is 0, the same as not having a retry line in the
-file. Retry is implemented on nodes, not parts of a node.
-
-The diamond-shaped DAG example may be modified to retry node C:
-
-.. code-block:: condor-dagman
-
-        # File name: diamond.dag
-    
-        JOB  A  A.condor
-        JOB  B  B.condor
-        JOB  C  C.condor
-        JOB  D  D.condor
-        PARENT A CHILD B C
-        PARENT B C CHILD D
-        RETRY  C 3
-
-If node C is marked as failed for any reason, then it is started over as
-a first retry. The node will be tried a second and third time, if it
-continues to fail. If the node is marked as successful, then further
-retries do not occur.
+file. Retry causes the whole node to be reran (i.e. PRE Script, job,
+and POST Script).
 
 Retry of a node may be short circuited using the optional keyword
 *UNLESS-EXIT*, followed by an integer exit value. If the node exits with
 the specified integer exit value, then no further processing will be
 done on the node.
 
-The macro ``$(RETRY)`` evaluates to an integer value, set to 0 first time
-a node is run, and is incremented each time for each time the node is
-retried. The macro ``$(MAX_RETRIES)`` is the value set for
-*NumberOfRetries*. These macros may be used as arguments passed to a PRE
-or POST script.
+The value of the current retry attempt and the maximum number of retires
+a node can attempt are available to PRE and POST scripts via the ``$RETRY``
+and ``$MAX_RETRIES`` macros.
 
 .. _abort-dag-on:
 
@@ -145,17 +148,38 @@ The *ABORT-DAG-ON* command provides a way to abort the entire DAG if a
 given node returns a specific exit code. The syntax for *ABORT-DAG-ON*
 is
 
+.. sidebar:: Example Diamond DAG Using ABORT-DAG-ON
+
+    .. code-block:: condor-dagman
+
+            # File name: diamond.dag
+
+            JOB  A  A.condor
+            JOB  B  B.condor
+            JOB  C  C.condor
+            JOB  D  D.condor
+            PARENT A CHILD B C
+            PARENT B C CHILD D
+            RETRY  C 3
+            ABORT-DAG-ON C 10 RETURN 1
+
+    If node C exits with return value 10 then the DAG is aborted with
+    an exit value of 1.
+
 .. code-block:: condor-dagman
 
     ABORT-DAG-ON <JobName | ALL_NODES> AbortExitValue [RETURN DAGReturnValue]
 
-If the return value of the node specified by *JobName* matches
-*AbortExitValue*, the DAG is immediately aborted. A DAG abort differs
-from a node failure, in that a DAG abort causes all nodes within the DAG
-to be stopped immediately. This includes removing the jobs in nodes that
-are currently running. A node failure differs, as it would allow the DAG
-to continue running, until no more progress can be made due to
-dependencies.
+If the return value for the specified node matches *AbortExitValue*, the DAG
+is immediately aborted. Meaning the DAG stops all currently running nodes,
+cleans up, writes a rescue DAG, and exits with the optional specified return value.
+If no DAG return value is specified then DAGMan exits with the node return
+value that caused the abort.
+
+A DAG return value other than 0, 1, or 2 will cause the :tool:`condor_dagman`
+job to stay in the queue after it exits and get retried, unless the
+``on_exit_remove`` expression in the ``.condor.sub`` file is manually
+modified.
 
 The behavior differs based on the existence of PRE and/or POST scripts.
 If a PRE script returns the *AbortExitValue* value, the DAG is
@@ -167,33 +191,3 @@ is aborted.
 An abort overrides node retries. If a node returns the abort exit value,
 the DAG is aborted, even if the node has retry specified.
 
-When a DAG aborts, by default it exits with the node return value that
-caused the abort. This can be changed by using the optional *RETURN*
-keyword along with specifying the desired *DAGReturnValue*. The DAG
-abort return value can be used for DAGs within DAGs, allowing an inner
-DAG to cause an abort of an outer DAG.
-
-A DAG return value other than 0, 1, or 2 will cause the :tool:`condor_dagman`
-job to stay in the queue after it exits and get retried, unless the
-``on_exit_remove`` expression in the ``.condor.sub`` file is manually
-modified.
-
-Adding *ABORT-DAG-ON* for node C in the diamond-shaped DAG
-
-.. code-block:: condor-dagman
-
-        # File name: diamond.dag
-    
-        JOB  A  A.condor
-        JOB  B  B.condor
-        JOB  C  C.condor
-        JOB  D  D.condor
-        PARENT A CHILD B C
-        PARENT B C CHILD D
-        RETRY  C 3
-        ABORT-DAG-ON C 10 RETURN 1
-
-causes the DAG to be aborted, if node C exits with a return value of 10.
-Any other currently running nodes, of which only node B is a possibility
-for this particular example, are stopped and removed. If this abort
-occurs, the return value for the DAG is 1.

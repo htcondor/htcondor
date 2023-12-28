@@ -13,9 +13,8 @@ all the various jobs and scripts defined in the workflow.
 DAG Submission
 --------------
 
-A DAG is submitted using the tool :tool:`condor_submit_dag`. The manual
-page for :doc:`/man-pages/condor_submit_dag` details the
-command. The simplest of DAG submissions has the syntax
+A DAG is submitted using the tool :tool:`condor_submit_dag`.The simplest of
+DAG submissions has the syntax
 
 .. code-block:: console
 
@@ -35,12 +34,11 @@ the same time. It will fail in an unpredictable manner, as each instance
 of this same DAG will attempt to use the same file to enforce
 dependencies.
 
-To increase robustness and guarantee recoverability, the
-:tool:`condor_dagman` process is run as an HTCondor job. As such, it needs a
-submit description file. :tool:`condor_submit_dag` generates this needed
-submit description file, naming it by appending ``.condor.sub`` to the
-name of the DAG input file. This submit description file may be edited
-if the DAG is submitted with
+To increase robustness and guarantee recoverability, the :tool:`condor_dagman`
+process is run as an HTCondor job. As such, it needs a submit description file.
+:tool:`condor_submit_dag` generates this needed submit description file, naming
+it by appending ``.condor.sub`` to the name of the DAG input file. This submit
+description file may be edited if the DAG is submitted with
 
 .. code-block:: console
 
@@ -117,6 +115,33 @@ The :tool:`condor_dagman` job places information about the status of the DAG
 into its own job ClassAd. The attributes are fully described in
 :doc:`/classad-attributes/job-classad-attributes`. The attributes are
 
+.. note::
+    Most of this information is also available in the ``dagman.out`` file.
+    Also, This information is updated every 2 minutes. Meaning information
+    may be outdated when looking at a live DAGMan workflow.
+
+.. sidebar:: View DAG Progress
+
+    Get a detailed DAG status report via :tool:`htcondor dag status`:
+
+    .. code-block:: console
+
+        $ htcondor dag status <dagman-job-id>
+
+    .. code-block:: text
+
+        DAG 1024 [diamond.dag] has been running for 00:00:49
+        DAG has submitted 3 job(s), of which:
+                1 is submitted and waiting for resources.
+                1 is running.
+                1 has completed.
+        DAG contains 4 node(s) total, of which:
+            [#] 1 has completed.
+            [=] 2 are running: 2 jobs.
+            [-] 1 is waiting on other nodes to finish.
+        DAG is running normally.
+        [#########===================----------] DAG is 25.00% complete.
+
 +-----------------+------------------+------------------+
 |                 | DAG_Status       | DAG_InRecovery   |
 | DAG Info        +------------------+------------------+
@@ -139,8 +164,6 @@ into its own job ClassAd. The attributes are fully described in
 |                 | DAG_JobsHeld     |                  |
 +-----------------+------------------+------------------+
 
-Note that most of this information is also available in the
-``dagman.out`` file.
 
 :index:`editing a running DAG<single: DAGMan; Editing a running DAG>`
 
@@ -203,11 +226,9 @@ running :tool:`condor_rm`. For example,
 
 When a :tool:`condor_dagman` job is removed, all node jobs (including
 sub-DAGs) of that :tool:`condor_dagman` will be removed by the
-*condor_schedd*. As of version 8.5.8, the default is that
-:tool:`condor_dagman` itself also removes the node jobs (to fix a race
-condition that could result in "orphaned" node jobs). (The
-*condor_schedd* has to remove the node jobs to deal with the case of
-removing a :tool:`condor_dagman` job that has been held.)
+*condor_schedd*. :tool:`condor_dagman` itself will remove node jobs
+to prevent if able. In the case of the DAGMan proper job being held,
+the *condor_schedd* will deal with removing node jobs.
 
 The previous behavior of :tool:`condor_dagman` itself not removing the node
 jobs can be restored by setting the :macro:`DAGMAN_REMOVE_NODE_JOBS`
@@ -268,11 +289,13 @@ There are two ways to suspend (and resume) a running DAG.
    As any DAG is first submitted with :tool:`condor_submit_dag`, a check is
    made for a halt file. If one exists, it is removed.
 
-**Note that neither condor_hold nor a DAG halt is propagated to sub-DAGs.**
-In other words, if you :tool:`condor_hold` or create a halt file for a
-DAG that has sub-DAGs, any sub-DAGs that are already in the queue will
-continue to submit node jobs.
+.. note::
 
-A :tool:`condor_hold` or DAG halt does, however, apply to splices, because
-they are merged into the parent DAG and controlled by a single
-:tool:`condor_dagman` instance.
+    Neither :tool:`condor_hold` nor a DAG halt is propagated to sub-DAGS. In
+    other word if a parent DAG is held or halted, any sub-DAGs will continue
+    to submit node jobs.
+
+    However, these effects are applied to DAG splices since they are merged
+    into the parent DAG and are controlled by a single :tool:`condor_dagman`
+    instance.
+

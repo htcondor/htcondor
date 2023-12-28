@@ -1,25 +1,22 @@
 Resubmitting a Failed DAG
 =========================
 
-When debugging a DAG in which something has gone wrong, a first
-determination is whether a resubmission will use a Rescue DAG or benefit
-from recovery. The existence of a Rescue DAG means that recovery would
-be inappropriate. A Rescue DAG is has a file name ending in
-``.rescue<XXX>``, where ``<XXX>`` is replaced by a 3-digit number.
+DAGMan has two ways of restarting a DAG that has failed, Rescue and Recovery.
+Rescue mode is most comman for resubmitting a DAG manually while recovery
+mode is most likely to occur automatically if a crash or something occurs.
 
-Determine if a DAG ever completed (independent of whether it was
-successful or not) by looking at the last lines of the ``.dagman.out``
-file. If there is a line similar to
+If a DAG has left the queue and the ``.dagman.out`` file doesn't end
+with a successful exit line similar to
 
 .. code-block:: text
 
     (condor_DAGMAN) pid 445 EXITING WITH STATUS 0
 
-then the DAG completed. This line explains that the :tool:`condor_dagman` job
-finished normally. If there is no line similar to this at the end of the
-``.dagman.out`` file, and output from :tool:`condor_q` shows that the
-:tool:`condor_dagman` job for the DAG being debugged is not in the queue,
-then recovery is indicated.
+Then the DAG has failed and needs to be restarted. Resubmission should
+be done via a Rescue DAG unless none exist, then the use of Recovery
+can be used. To determine if Rescue mode is possible check the DAG
+working directory for a Rescue DAG. A Rescue DAG is has a file name ending in
+``.rescue<XXX>``, where ``<XXX>`` is replaced by a 3-digit number.
 
 :index:`Rescue DAG<single: DAGMan; Rescue DAG>`
 
@@ -46,14 +43,6 @@ Rescue DAG. A Rescue DAG is produced when a node sets and triggers an
 constitutes successful DAG completion, and therefore a Rescue DAG is not
 generated.
 
-By default, if a Rescue DAG exists, it will be used when the DAG is
-submitted specifying the original DAG input file. If more than one
-Rescue DAG exists, the newest one will be used. By using the Rescue DAG,
-DAGMan will avoid re-running nodes that completed successfully in the
-previous run. **Note that passing the -force option to condor_submit_dag
-or condor_dagman will cause condor_dagman to not use any existing rescue
-DAG. This means that previously-completed node jobs will be re-run.**
-
 The granularity defining success or failure in the Rescue DAG is the
 node. For a node that fails, all parts of the node will be re-run, even
 if some parts were successful the first time. For example, if a node's
@@ -67,13 +56,24 @@ jobs, not just the one(s) that failed.
 Statistics about the failed DAG execution are presented as comments at
 the beginning of the Rescue DAG input file.
 
+By default, if a Rescue DAG exists, it will be used when the DAG is
+submitted specifying the original DAG input file. If more than one
+Rescue DAG exists, the newest one will be used. By using the Rescue DAG,
+DAGMan will avoid re-running nodes that completed successfully in the
+previous run.
+
+.. note::
+    Passing the **-force** option to :tool:`condor_submit_dag` or
+    :tool:`condor_dagman` will cause DAGMman to not use any existing
+    rescue DAG. This means that previously-completed node jobs will be re-run.
+
 Rescue DAG Naming
 '''''''''''''''''
 
 The file name of the Rescue DAG is obtained by appending the string
-.rescue<XXX> to the original DAG input file name. Values for <XXX> start
-at 001 and continue to 002, 003, and beyond. The configuration variable
-:macro:`DAGMAN_MAX_RESCUE_NUM` sets a maximum value for <XXX>. If you hit the
+``.rescue<XXX>`` to the original DAG input file name. Values for ``<XXX>`` start
+at ``001`` and continue to ``002``, ``003``, and beyond. The configuration variable
+:macro:`DAGMAN_MAX_RESCUE_NUM` sets a maximum value for ``<XXX>``. If you hit the
 :macro:`DAGMAN_MAX_RESCUE_NUM` limit, the last Rescue DAG file is overwritten
 if the DAG fails again.
 
@@ -245,7 +245,7 @@ running the :tool:`condor_dagman` job crashes, or if the *condor_schedd*
 daemon crashes, or if the :tool:`condor_dagman` job crashes, or if the
 :tool:`condor_dagman` job is placed on hold.
 
-Much of the time, when a not-completed DAG is re-submitted, it will
+Most of the time, when a not-completed DAG is re-submitted, it will
 automatically be placed into recovery mode due to the existence and
 contents of a lock file created as the DAG is first run. In recovery
 mode, the ``.nodes.log`` is used to identify nodes that have completed
