@@ -330,11 +330,14 @@ class Schedd():
 
         [FIXME]
 
+        :param description: FIXME
         :param count:  Every valid queue statement in the submit language
             has an associated count, which is implicitly 1, but may be
             set explicitly, e.g., ``queue 3 dat_file matching *.dat`` has
             a count of 3.  If specified, this parameter overrides the count
             in ``description``.
+        :param spool: FIXME
+        :param itemdata: FIXME
         '''
 
         if itemdata is None:

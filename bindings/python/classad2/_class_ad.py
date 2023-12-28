@@ -45,12 +45,15 @@ from typing import (
 
 class ClassAd(MutableMapping):
     """
-    A :class:`ClassAd` is a :class:`collections.abc.MutableMapping` from
-    :class:`str`\ings to :class:`ExprTree`\s.  The values are returned as the
-    corresponding Python type (see below), unless using :meth:`lookup`,
-    which always returns the native :class:`ExprTree`.
+    The `ClassAd language <https://htcondor.org/classad/refman/>`_
+    defines a ClassAd as a mapping from attribute names to expressions.  A
+    :class:`ClassAd` is a :class:`collections.abc.MutableMapping` from
+    :class:`str`\ing keys to :class:`ExprTree` values.  Expressions are
+    always evaluated before being returned, and unless you call
+    :meth:`lookup`, converted into the corresponding Python type.
 
-    In the ClassAd language an ExprTree may be (but is returned as):
+    A ClassAd expression may evaluate to (but is returned by
+    :class:`ClassAd` as):
 
       * undefined (:data:`classad2.Value.Undefined`)
       * a boolean (:class:`bool`)
@@ -61,11 +64,11 @@ class ClassAd(MutableMapping):
       * a relative time value (:class:`float`)
       * a list (:class:`list`)
       * a ClassAd (:class:`ClassAd`)
-      * evaluated but return an error (:data:`classad2.Value.Error`)
+      * error (:data:`classad2.Value.Error`)
 
-    Additionally, if found while traversing a :class:`list` or :class:`dict`,
-    :class:`dict`\s are converted to :class:`ClassAd`\s and :py:obj:`None`
-    is converted to :data:`classad2.Value.Undefined`.
+    When setting a value, reverse is true.  Additionally, :py:obj:`None`
+    is converted to :data:`classad2.Value.Undefined` and :class:`dict`\s
+    are converted to :class:`ClassAd`\s.
     """
 
     def __init__(self, input : Optional[Union[str, dict]] = None):
@@ -100,7 +103,7 @@ class ClassAd(MutableMapping):
 
     def lookup(self, attr : str) -> "ExprTree":
         """
-        :param attr:
+        :param attr: FIXME
         """
         if not isinstance(attr, str):
             raise TypeError("ClassAd keys are strings")

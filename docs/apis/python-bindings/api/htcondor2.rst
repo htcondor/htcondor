@@ -40,7 +40,7 @@ is not intended as a tutorial for new users.
 .. autoclass:: Negotiator
    :members:
 
-# This is amazingly stupid, but .. autoattribute:: doesn't work.
+.. This is amazingly stupid, but .. autoattribute:: doesn't work.
 .. attribute:: param
 
    FIXME
