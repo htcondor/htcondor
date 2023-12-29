@@ -2833,16 +2833,10 @@ ConnectionSentry::~ConnectionSentry()
 	}
 }
 
-void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_opts, SubmitDagDeepOptions &deep_opts)
+void SetDagOptions(boost::python::dict opts, DagmanOptions &dag_opts)
 {
-    // Start by setting some default options. These must be set for everything to work correctly.
-    // Some of these might be changed later if different values are specified in opts.
-    shallow_opts.strSubFile = shallow_opts.primaryDagFile + ".condor.sub";
-    shallow_opts.strSchedLog = shallow_opts.primaryDagFile + ".nodes.log";
-    shallow_opts.strLibOut = shallow_opts.primaryDagFile + ".lib.out";
-    shallow_opts.strLibErr = shallow_opts.primaryDagFile + ".lib.err";
-    deep_opts.doRescueFrom = 0;
-    deep_opts[DagmanDeepOptions::b::UpdateSubmit] = false;
+    dag_opts.set("DoRescueFrom", 0);
+    dag_opts.set("UpdateSubmit", false);
 
     // Iterate over the list of arguments passed in and set the appropriate
     // values in m_shallowOpts and m_deepOpts
@@ -2878,68 +2872,85 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
         // Set shallowOpts or deepOpts variables as appropriate
         std::string key_lc = key;
         std::transform(key_lc.begin(), key_lc.end(), key_lc.begin(), ::tolower);
+        SetDagOpt ret;
         if (key_lc == "dagman")
-            deep_opts[DagmanDeepOptions::str::DagmanPath] = value.c_str();
+            ret = dag_opts.set("DagmanPath", value);
         else if (key_lc == "force")
-            deep_opts[DagmanDeepOptions::b::Force] = (value == "true") ? true : false;
+            ret = dag_opts.set("Force", value);
         else if (key_lc == "schedd-daemon-ad-file")
-            shallow_opts[DagmanShallowOptions::str::ScheddDaemonAdFile] = value.c_str();
+            ret = dag_opts.set("ScheddDeamonAdFile", value);
         else if (key_lc == "schedd-address-file")
-            shallow_opts[DagmanShallowOptions::str::ScheddAddressFile] = value.c_str();
+            ret = dag_opts.set("ScheddAddressFile", value);
         else if (key_lc == "alwaysrunpost")
-            shallow_opts[DagmanShallowOptions::b::PostRun] = (value == "true") ? true : false;
+            ret = dag_opts.set("PostRun", value);
         else if (key_lc == "maxidle")
-            shallow_opts[DagmanShallowOptions::i::MaxIdle] = atoi(value.c_str());
+            ret = dag_opts.set("MaxIdle", value);
         else if (key_lc == "maxjobs")
-            shallow_opts[DagmanShallowOptions::i::MaxJobs] = atoi(value.c_str());
+            ret = dag_opts.set("MaxJobs", value);
         else if (key_lc == "maxpre")
-            shallow_opts[DagmanShallowOptions::i::MaxPre] = atoi(value.c_str());
+            ret = dag_opts.set("MaxPre", value);
         else if (key_lc == "maxpost")
-            // Bug!
-            shallow_opts[DagmanShallowOptions::i::MaxPre] = atoi(value.c_str());
+            ret = dag_opts.set("MaxPost", value);
         else if (key_lc == "usedagdir")
-            deep_opts[DagmanDeepOptions::b::UseDagDir] = (value == "true") ? true : false;
+            ret = dag_opts.set("UseDagDir", value);
         else if (key_lc == "debug")
-            shallow_opts[DagmanShallowOptions::i::DebugLevel] = atoi(value.c_str());
+            ret = dag_opts.set("DebugLevel", value);
         else if (key_lc == "outfile_dir")
-            deep_opts[DagmanDeepOptions::str::OutfileDir] = value.c_str();
+            ret = dag_opts.set("OutfileDir", value);
         else if (key_lc == "config")
-            shallow_opts[DagmanShallowOptions::str::ConfigFile] = value.c_str();
+            ret = dag_opts.set("ConfigFile", value);
         else if (key_lc == "batch-name")
-            deep_opts.batchName = value.c_str();
+            ret = dag_opts.set("BatchName", value);
         else if (key_lc == "autorescue")
-            deep_opts[DagmanDeepOptions::b::AutoRescue] = (value == "true") ? true : false;
+            ret = dag_opts.set("AutoRescue", value);
         else if (key_lc == "dorescuefrom")
-            deep_opts.doRescueFrom = atoi(value.c_str());
+            ret = dag_opts.set("DoRescueFrom", value);
         else if (key_lc == "load_save")
-            shallow_opts[DagmanShallowOptions::str::SaveFile] = value;
+            ret = dag_opts.set("SaveFile", value);
         else if (key_lc == "allowversionmismatch")
-            deep_opts[DagmanDeepOptions::b::AllowVersionMismatch] = (value == "true") ? true : false;
+            ret = dag_opts.set("AllowVersionMismatch", value);
         else if (key_lc == "do_recurse")
-            deep_opts[DagmanDeepOptions::b::Recurse] = (value == "true") ? true : false;
+            ret = dag_opts.set("Recurse", value);
         else if (key_lc == "update_submit")
-            deep_opts[DagmanDeepOptions::b::UpdateSubmit] = (value == "true") ? true : false;
+            ret = dag_opts.set("UpdateSubmit", value);
         else if (key_lc == "import_env")
-            deep_opts[DagmanDeepOptions::b::ImportEnv] = (value == "true") ? true : false;
+            ret = dag_opts.set("ImportEnv", value);
         else if (key_lc == "include_env")
-            deep_opts[DagmanDeepOptions::str::GetFromEnv] += value;
+            ret = dag_opts.append("GetFromEnv", value);
         else if (key_lc == "insert_env") {
             trim(value);
-            deep_opts.addToEnv.push_back(value);
-            }
-        else if (key_lc == "dumprescue")
-            shallow_opts[DagmanShallowOptions::b::DumpRescueDag] = (value == "true") ? true : false;
+            ret = dag_opts.set("AddToEnv", value);
+        } else if (key_lc == "dumprescue")
+            ret = dag_opts.set("DumpRescueDag", value);
         else if (key_lc == "valgrind")
-            shallow_opts[DagmanShallowOptions::b::RunValgrind] = (value == "true") ? true : false;
+            ret = dag_opts.set("RunValgrind", value);
         else if (key_lc == "priority")
-            shallow_opts[DagmanShallowOptions::i::Priority] = atoi(value.c_str());
+            ret = dag_opts.set("Priority", value);
         else if (key_lc == "suppress_notification")
-            deep_opts[DagmanDeepOptions::b::SuppressNotification] = (value == "true") ? true : false;
+            ret = dag_opts.set("SuppressNotification", value);
         else if (key_lc == "dorecov")
-            // Bug!
-            deep_opts[DagmanDeepOptions::b::SuppressNotification] = (value == "true") ? true : false;
+            ret = dag_opts.set("DoRecovery", value);
         else
-            printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
+            ret = SetDagOpt::KEY_DNE;
+
+        std::string msg, type;
+        switch(ret) {
+            case SetDagOpt::SUCCESS:
+                break;
+            case SetDagOpt::KEY_DNE:
+                printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
+                break;
+            case SetDagOpt::INVALID_VALUE:
+                type = dag_opts.OptValueType(key);
+                formatstr(msg, "DAGMan option '%s' needs to be a %s.",
+                          key.c_str(), type.c_str());
+                THROW_EX(HTCondorTypeError, msg.c_str());
+            case SetDagOpt::NO_KEY:
+                THROW_EX(HTCondorInternalError, "Developer Error: DAGMan option key was empty.");
+            case SetDagOpt::NO_VALUE:
+                formatstr(msg, "empty value provided for DAGMan option %s", key.c_str());
+                THROW_EX(HTCondorInternalError, msg.c_str());
+        }
     }
 }
 
@@ -3195,10 +3206,8 @@ public:
     {
         DagmanUtils dagman_utils;
         FILE* sub_fp = NULL;
-        std::string sub_filename = dag_filename + std::string(".condor.sub");
         std::list<std::string> dag_file_attr_lines;
-        SubmitDagDeepOptions deep_opts;
-        SubmitDagShallowOptions shallow_opts;
+        DagmanOptions dag_opts;
 
         dagman_utils.usingPythonBindings = true;
 
@@ -3209,25 +3218,24 @@ public:
             THROW_EX(HTCondorIOError, "Could not read DAG file" );
         }
 
-        // Setting any submit options that may have been passed in (ie. max idle, max post)
-        shallow_opts.dagFiles.push_back(dag_filename.c_str());
-        shallow_opts.primaryDagFile = dag_filename;
-        SetDagOptions(opts, shallow_opts, deep_opts);
+        dag_opts.addDAGFile(dag_filename);
+        SetDagOptions(opts, dag_opts);
+        dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines);
 
         // Make sure we can actually submit this DAG with the given options.
         // If we can't, throw an exception and exit.
-        if ( !dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts) ) {
+        if ( !dagman_utils.ensureOutputFilesExist(dag_opts) ) {
             THROW_EX(HTCondorIOError, "Unable to write condor_dagman output files");
         }
 
         // Write out the .condor.sub file we need to submit the DAG
-        dagman_utils.setUpOptions(deep_opts, shallow_opts, dag_file_attr_lines);
-        if ( !dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines) ) {
+        if ( !dagman_utils.writeSubmitFile(dag_opts, dag_file_attr_lines) ) {
             // FIXME: include errno.
             THROW_EX(HTCondorIOError, "Unable to write condor_dagman submit file");
         }
 
         // Now write the submit file and open it
+        std::string sub_filename = dag_opts[DagmanShallowOptions::str::SubFile];
         sub_fp = safe_fopen_wrapper_follow(sub_filename.c_str(), "r");
         if(sub_fp == NULL) {
             // FIXME: include errno, sub_filename.c_str().

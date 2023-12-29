@@ -887,10 +887,10 @@ void main_init (int argc, char ** const argv) {
 			onlyDumpDot = true;
 
 		} else if( !strcasecmp( "-verbose", argv[i] ) ) {
-			dagman.options[deep::b::Verbose] = true;
+			dagman.options.set("Verbose", true);
 
 		} else if( !strcasecmp( "-force", argv[i] ) ) {
-			dagman.options[deep::b::Force] = true;
+			dagman.options.set("Force", true);
 
 		} else if( !strcasecmp( "-notification", argv[i] ) ) {
 			i++;
@@ -898,13 +898,13 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No notification value specified\n" );
 				Usage();
 			}
-			dagman.options[deep::str::Notification] = argv[i];
+			dagman.options.set("Notification", argv[i]);
 
 		} else if( !strcasecmp( "-suppress_notification",argv[i] ) ) {
-			dagman.options[deep::b::SuppressNotification] = true;
+			dagman.options.set("SuppressNotification", true);
 
 		} else if( !strcasecmp( "-dont_suppress_notification",argv[i] ) ) {
-			dagman.options[deep::b::SuppressNotification] = false;
+			dagman.options.set("SuppressNotification", false);
 
 		} else if( !strcasecmp( "-dagman", argv[i] ) ) {
 			i++;
@@ -912,7 +912,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No dagman value specified\n" );
 				Usage();
 			}
-			dagman.options[deep::str::DagmanPath] = argv[i];
+			dagman.options.set("DagmanPath", argv[i]);
 
 		} else if( !strcasecmp( "-outfile_dir", argv[i] ) ) {
 			i++;
@@ -920,30 +920,29 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No outfile_dir value specified\n" );
 				Usage();
 			}
-			dagman.options[deep::str::OutfileDir] = argv[i];
+			dagman.options.set("OutfileDir", argv[i]);
 
 		} else if( !strcasecmp( "-update_submit", argv[i] ) ) {
-			dagman.options[deep::b::UpdateSubmit] = true;
+			dagman.options.set("UpdateSubmit", true);
 
 		} else if( !strcasecmp( "-import_env", argv[i] ) ) {
-			dagman.options[deep::b::ImportEnv] = true;
+			dagman.options.set("ImportEnv", true);
 
 		} else if( !strcasecmp( "-include_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {
 				debug_printf(DEBUG_SILENT, "No environment variables passed for -include_env\n");
 				Usage();
 			}
-			if (!dagman.options[deep::str::GetFromEnv].empty()) {
-				dagman.options[deep::str::GetFromEnv] += ",";
-			}
-			dagman.options[deep::str::GetFromEnv] += argv[i];
+			dagman.options.append("GetFromEnv", argv[i]);
 
 		} else if( !strcasecmp( "-insert_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {
 				debug_printf(DEBUG_SILENT, "No key=value pairs passed for -insert_env\n");
 				Usage();
 			}
-			dagman.options[deep::slist::AddToEnv].push_back(argv[i]);
+			std::string kv_pairs(argv[i]);
+			trim(kv_pairs);
+			dagman.options.extend("AddToEnv", kv_pairs);
 
 		} else if( !strcasecmp( "-priority", argv[i] ) ) {
 			++i;
