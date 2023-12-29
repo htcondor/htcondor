@@ -44,9 +44,9 @@ the arguments. Both *ExecutableName* and optional *arguments* are case
 sensitive.
 
 A PRE script is commonly used to verify inputs for a node job that are produced
-by a parent node, and POST scripts are commonly used to cleanup temporary files
-produced by a node job or to turn a job execution failure into a successful node
-completion.
+by a parent node, and POST scripts can be used to turn a job execution failure
+into a successful node completion so the DAG doesn't fail given a specific node
+job failure.
 
 :index:`HOLD script<single: DAGMan; HOLD script>`
 
@@ -204,7 +204,7 @@ arguments surrounded by spaces:
 
 :index:`Defined special node macros<single: DAGMan; Defined special node macros>`
 
-The special macros are as follows:
+The special macros for all scripts:
 
 -  ``$JOB`` evaluates to the (case sensitive) string defined for *JobName*.
 -  ``$RETRY`` evaluates to an integer value set to 0 the first time a
@@ -231,11 +231,14 @@ The special macros are as follows:
       (see :ref:`automated-workflows/dagman-interaction:suspending a running dag`)
 -  ``$FAILED_COUNT`` is defined by the number of nodes that have failed
    in the DAG.
--  ``$JOBID`` (for POST scripts only) evaluates to a representation of
+
+Macros for POST Scripts only:
+
+-  ``$JOBID`` evaluates to a representation of
    the HTCondor job ID [ClusterId.ProcId] of the node job. For nodes
    with multiple jobs in the same cluster, the ``ProcId`` value is the
    one of the last job within the cluster.
--  ``$RETURN`` (for POST scripts only) variable evaluates to the return
+-  ``$RETURN`` variable evaluates to the return
    value of the HTCondor job, if there is a single job within a cluster.
    With multiple jobs within the same cluster, there are two cases to
    consider. In the first case, all jobs within the cluster are
@@ -254,7 +257,7 @@ The special macros are as follows:
    submission fails is reported as -1001. A job that is externally
    removed from the batch system queue (by something other than
    :tool:`condor_dagman`) is reported as -1002.
--  ``$PRE_SCRIPT_RETURN`` (for POST scripts only) variable evaluates to
+-  ``$PRE_SCRIPT_RETURN`` variable evaluates to
    the return value of the PRE script of a node, if there is one. If
    there is no PRE script, this value will be -1. If the node job was
    skipped because of failure of the PRE script, the value of

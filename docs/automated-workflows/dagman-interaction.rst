@@ -4,9 +4,10 @@ Running and Managing DAGMan
 Once once a workflow has been setup in a ``.dag`` file, all that
 is left is to submit the prepared workflow. A key concept to understand
 regarding the submission and management of a DAGMan workflow is
-that the DAGMan process itself is ran as a HTCondor job (often referred
-to as the DAGMan proper job) that will in turn manage and submit
-all the various jobs and scripts defined in the workflow.
+that the DAGMan process itself is ran as a HTCondor Scheduler universe
+job that runs under the schedd on the AP (often referred to as the
+DAGMan proper job) that will in turn manage and submit all the various
+jobs and scripts defined in the workflow.
 
 :index:`DAG submission<single: DAGMan; DAG submission>`
 
@@ -117,8 +118,7 @@ into its own job ClassAd. The attributes are fully described in
 
 .. note::
     Most of this information is also available in the ``dagman.out`` file.
-    Also, This information is updated every 2 minutes. Meaning information
-    may be outdated when looking at a live DAGMan workflow.
+    DAGMan updates these classad attributes every 2 minutes.
 
 .. sidebar:: View DAG Progress
 
@@ -227,8 +227,8 @@ running :tool:`condor_rm`. For example,
 When a :tool:`condor_dagman` job is removed, all node jobs (including
 sub-DAGs) of that :tool:`condor_dagman` will be removed by the
 *condor_schedd*. :tool:`condor_dagman` itself will remove node jobs
-to prevent if able. In the case of the DAGMan proper job being held,
-the *condor_schedd* will deal with removing node jobs.
+if able. In the case of the DAGMan proper job being held,
+the *condor_schedd* will remove node jobs.
 
 The previous behavior of :tool:`condor_dagman` itself not removing the node
 jobs can be restored by setting the :macro:`DAGMAN_REMOVE_NODE_JOBS`

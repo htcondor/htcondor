@@ -1,8 +1,8 @@
 Resubmitting a Failed DAG
 =========================
 
-DAGMan has two ways of restarting a DAG that has failed, Rescue and Recovery.
-Rescue mode is most comman for resubmitting a DAG manually while recovery
+DAGMan has two ways of restarting a failed DAG: Rescue and Recovery.
+Rescue mode is most common for resubmitting a DAG manually while recovery
 mode is most likely to occur automatically if a crash or something occurs.
 
 If a DAG has left the queue and the ``.dagman.out`` file doesn't end
@@ -13,8 +13,8 @@ with a successful exit line similar to
     (condor_DAGMAN) pid 445 EXITING WITH STATUS 0
 
 Then the DAG has failed and needs to be restarted. Resubmission should
-be done via a Rescue DAG unless none exist, then the use of Recovery
-can be used. To determine if Rescue mode is possible check the DAG
+be done via a Rescue DAG if the file exists, otherwise DAGMan will use
+Recover mode. To determine if Rescue mode is possible check the DAG
 working directory for a Rescue DAG. A Rescue DAG is has a file name ending in
 ``.rescue<XXX>``, where ``<XXX>`` is replaced by a 3-digit number.
 

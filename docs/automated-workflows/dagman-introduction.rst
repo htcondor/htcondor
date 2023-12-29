@@ -342,14 +342,6 @@ submit description file, this implies that each node within the DAG runs
 the same job. The ``$(Cluster)`` macro produces unique file names for each
 job's output.
 
-DAGMan supports jobs with queues of multiple procs, so for example:
-
-.. code-block:: condor-submit
-
-    queue 500
-
-will queue 500 procs as expected.
-
 :index:`DAGParentNodeNames<single: DAGParentNodeNames; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; DAGParentNodeNames>`
 

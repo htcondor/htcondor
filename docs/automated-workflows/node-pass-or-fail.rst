@@ -122,7 +122,7 @@ number of times to retry the node after failure.
     success or the maximum number of retries (3) are attempted.
 
 The implied number of retries for any node is 0, the same as not having a
-retry line in the file. Retry causes the whole node to be reran (i.e. PRE
+retry line in the file. Retry causes the whole node to be rerun (i.e. PRE
 Script, job, and POST Script).
 
 Retry of a node may be short circuited using the optional keyword
