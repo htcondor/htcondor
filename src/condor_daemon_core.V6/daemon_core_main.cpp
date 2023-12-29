@@ -104,6 +104,7 @@ static	char*	logDir = NULL;
 static	char*	pidFile = NULL;
 static	char*	addrFile[2] = { NULL, NULL };
 static	char*	logAppend = NULL;
+static	char*	log2Arg = nullptr;
 
 static int Termlog = 0;	//Replacing the Termlog in dprintf for daemons that use it
 
@@ -3206,7 +3207,7 @@ dc_reconfig()
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(get_mySubSystem()->getName());
+	dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
@@ -3500,10 +3501,14 @@ int dc_main( int argc, char** argv )
 			  Derek Wright <wright@cs.wisc.edu> 11/11/99
 			*/
 		switch(ptr[0][1]) {
-		case 'a':		// Append to the log file name.
+		case 'a':		// Append to the log file name, or if "a2" capture the 2nd log argument
 			ptr++;
 			if( ptr && *ptr ) {
-				logAppend = *ptr;
+				if (ptr[-1][2] == '2') { // was it -append? or -a2 ?
+					log2Arg = *ptr;
+				} else {
+					logAppend = *ptr;
+				}
 				dcargs += 2;
 			} else {
 				fprintf( stderr, 
@@ -3749,7 +3754,7 @@ int dc_main( int argc, char** argv )
 		if(Termlog)
 			dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
 		else
-			dprintf_config(get_mySubSystem()->getName());
+			dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -3911,7 +3916,7 @@ int dc_main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName());
+		dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	}
 
 		// Now that we have the daemonCore object, we can finally

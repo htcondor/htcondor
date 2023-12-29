@@ -124,6 +124,8 @@
 #define SUBMIT_KEY_LocalFiles "local_files"
 
 #define SUBMIT_KEY_EncryptExecuteDir "encrypt_execute_directory"
+#define SUBMIT_KEY_StarterDebug "starter_debug"
+#define SUBMIT_KEY_StarterLog "starter_log"
 
 #define SUBMIT_KEY_ToolDaemonCmd "tool_daemon_cmd"
 #define SUBMIT_KEY_ToolDaemonArgs "tool_daemon_args" // for backward compatibility

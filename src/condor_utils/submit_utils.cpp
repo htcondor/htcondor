@@ -3442,6 +3442,12 @@ int SubmitHash::SetAutoAttributes()
 		AssignJobVal(ATTR_JOB_PRIO, 0);
 	}
 
+	// if JobStarterLog is assigned, but JobStarterDebug is not, set JobStarterDebug=true
+	// which means create a .starter.log file using the same flags as STARTER_DEBUG
+	if (job->Lookup(ATTR_JOB_STARTER_LOG) && ! job->Lookup(ATTR_JOB_STARTER_DEBUG)) {
+		AssignJobVal(ATTR_JOB_STARTER_DEBUG, true);
+	}
+
 #if 1 // hacks to make it easier to see unintentional differences
 	#ifdef NO_DEPRECATE_NICE_USER
 	// formerly SetNiceUser
@@ -4406,6 +4412,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_WantIoProxy, ATTR_WANT_IO_PROXY, SimpleSubmitKeyword::f_as_bool},
+	{SUBMIT_KEY_StarterDebug, ATTR_JOB_STARTER_DEBUG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
+	{SUBMIT_KEY_StarterLog, ATTR_JOB_STARTER_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_logfile},
 
 	// formerly SetJobMachineAttrs
 	{SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS, SimpleSubmitKeyword::f_as_string},

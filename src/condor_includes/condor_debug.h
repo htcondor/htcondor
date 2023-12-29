@@ -161,7 +161,8 @@ void dprintf ( int flags, DPF_IDENT ident, const char *fmt, ... ) CHECK_PRINTF_F
 int dprintf_config( 
 	const char *subsys,  // in: subsystem name to use for param lookups
 	struct dprintf_output_settings *p_info = NULL, // in,out: if != NULL results of config parsing returned here
-	int c_info = 0); // in: number of entries in p_info array on input.                  
+	int c_info = 0,
+	const char* log2arg = nullptr); // in: number of entries in p_info array on input.
 
 int dprintf_config_tool(const char* subsys, const char * flags, const char * logfile = nullptr);
 int dprintf_config_tool_on_error(const char * flags);
@@ -230,6 +231,10 @@ void dprintf_dump_stack(void);
  * output until they are configured.
  */
 void dprintf_pause_buffering();
+
+/* close any dprintf logs in the given directory
+*/
+int dprintf_close_logs_in_directory(const char * dir, bool permanent=true);
 
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);

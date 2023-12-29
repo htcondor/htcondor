@@ -3780,10 +3780,14 @@ Starter::removeTempExecuteDir( void )
 				continue;
 			}
 		}
+
 		Directory execute_dir( full_exec_dir.c_str(), PRIV_ROOT );
 		if ( execute_dir.Find_Named_Entry( dir_name.c_str() ) ) {
 
-			dprintf( D_FULLDEBUG, "Removing %s%c%s\n", full_exec_dir.c_str(), DIR_DELIM_CHAR, dir_name.c_str() );
+			int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
+			if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
+
+			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
 			if (!execute_dir.Remove_Current_File()) {
 				has_failed = true;
 			}

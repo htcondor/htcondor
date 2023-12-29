@@ -534,6 +534,11 @@ JICShadow::transferOutput( bool &transient_failure )
 		return true;
 	}
 
+	// if we are writing a sandbox starter log, flush and temporarily close it before we make the manifest
+	if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
+		dprintf_close_logs_in_directory(Starter->GetWorkingDir(false), false);
+	}
+
 	std::string dummy;
 	bool want_manifest = false;
 	if( job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dummy ) ||
@@ -594,6 +599,16 @@ JICShadow::transferOutput( bool &transient_failure )
 		filetrans->addFileToExceptionList(".update.ad.tmp");
 		if (m_wrote_chirp_config) {
 			filetrans->addFileToExceptionList(CHIRP_CONFIG_FILENAME);
+		}
+
+		// remove the sandbox starter log from transfer list unless the job has requested it be transferred.
+		if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
+			if ( ! job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
+				filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME);
+			} else {
+				filetrans->addOutputFile(SANDBOX_STARTER_LOG_FILENAME);
+			}
+			filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME ".old");
 		}
 
 			// true if job exited on its own or if we are set to not spool
