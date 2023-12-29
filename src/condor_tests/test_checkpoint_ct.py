@@ -229,16 +229,8 @@ def the_completed_job_stdout(test_dir, the_job_name, the_completed_job):
     cluster = the_completed_job.clusterid
     output_log_path = test_dir / f"test_job_{cluster}.out"
 
-    for count in [0, 1, 2, 3, 4]:
-        # rarely we see this failing in batlab with "File Not Found"
-        # so, just retry.
-        try:
-            with open(test_dir / output_log_path) as output:
-                return output.readlines()
-        except FileNotFoundError:
-            pass
-        time.sleep(5 * count)
-    assert(False, "Cannot open test_job.out")
+    with open(test_dir / output_log_path) as output:
+        return output.readlines()
 
 
 @action
