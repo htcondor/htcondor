@@ -765,6 +765,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 
 			// translate the job ad by replacing the 
 			// saved SUBMIT_ attributes
+		std::vector<std::pair<std::string, ExprTree *>> replacements;
 		for ( auto itr = job.begin(); itr != job.end(); itr++ ) {
 			lhstr = itr->first.c_str();
 			tree = itr->second;
@@ -772,13 +773,12 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 					// this attr name starts with SUBMIT_
 					// compute new lhs (strip off the SUBMIT_)
 				const char *new_attr_name = strchr(lhstr,'_');
-				ExprTree * pTree;
-				ASSERT(new_attr_name);
 				new_attr_name++;
-					// insert attribute
-				pTree = tree->Copy();
-				job.Insert(new_attr_name, pTree);
+				replacements.emplace_back(new_attr_name, tree->Copy());
 			}
+		}
+		for (const auto &[name, et]: replacements) {
+			job.Insert(name, et);
 		}
 
 		if ( !ftrans.SimpleInit(&job,false,false,&rsock) ) {
