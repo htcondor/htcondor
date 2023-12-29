@@ -28,12 +28,19 @@ def _ad_type_from_daemon_type(daemon_type: DaemonType):
 
 
 class Collector():
+    """
+    FIXME
+    """
 
     #
     # In version 1, there was a distinct DaemonLocation type (a named tuple)
     # that `pool` could also be, but that functionality was never documented.
     #
     def __init__(self, pool = None):
+        """
+
+        :param pool:
+        """
         self._handle = handle_t()
 
         if pool is None or isinstance(pool, str):
@@ -62,6 +69,14 @@ class Collector():
       # statistics: Optional[List[str]] = None,
       statistics: Optional[str] = None,
     ) -> List[classad.ClassAd]:
+        """
+        FIXME
+
+        :param ad_type:
+        :param constraint:
+        :param projection:
+        :param statistics:
+        """
         # str(None) is "None", which is a valid ClassAd expression (a bare
         # attribute reference), so convert to the empty string, instead.
         # We don't pass `constraint` through unmodified because we'll want
@@ -90,6 +105,14 @@ class Collector():
       # statistics: Optional[List[str]] = None,
       statistics: str = None,
     ) -> classad.ClassAd:
+        """
+        FIXME
+
+        :param daemon_type:
+        :param name:
+        :param projection:
+        :param statistics:
+        """
         daemon_ad = self.locate(daemon_type, name)
         daemon = Collector(daemon_ad)
         ad_type = _ad_type_from_daemon_type(daemon_type)
@@ -103,6 +126,12 @@ class Collector():
         daemon_type: DaemonType,
         name: Optional[str] = None,
     ) -> classad.ClassAd:
+        """
+        FIXME
+
+        :param daemon_type:
+        :param name:
+        """
         ad_type = _ad_type_from_daemon_type(daemon_type)
         if name is not None:
             constraint = f'stricmp(Name, "{name}") == 0'
@@ -124,6 +153,11 @@ class Collector():
     def locateAll(self,
         daemon_type: DaemonType,
     ) -> List[classad.ClassAd]:
+        """
+        FIXME
+
+        :param daemon_type:
+        """
         ad_type = _ad_type_from_daemon_type(daemon_type)
         return self.query(ad_type, projection=Collector._for_location)
 
@@ -133,4 +167,11 @@ class Collector():
         command: str = "UPDATE_AD_GENERIC",
         use_tcp: bool = True,
     ) -> None:
+        """
+        FIXME
+
+        :param ad_list:
+        :param command:
+        :param use_tcp:
+        """
         _collector_advertise(self._handle, ad_list, command, use_tcp)

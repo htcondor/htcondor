@@ -8,9 +8,7 @@ else:
 
 class DrainType(enum.IntEnum):
     """
-    Draining policies that can be set to a *condor_startd*.
-
-    The values of the enumeration are:
+    An enumeration of draining policies that can be set to a *condor_startd*.
 
     .. attribute:: Fast
     .. attribute:: Graceful

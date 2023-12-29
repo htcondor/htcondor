@@ -1,6 +1,7 @@
 from typing import (
     Union,
     List,
+    Optional,
 )
 
 from ._common_imports import (
@@ -20,8 +21,16 @@ from .htcondor2_impl import (
 
 
 class Startd():
+    """
+    FIXME
+    """
 
     def __init__(self, location : classad.ClassAd = None):
+        """
+        FIXME
+
+        :param location:
+        """
         if location is None:
             c = Collector()
             location = c.locate(DaemonType.Startd)
@@ -38,13 +47,22 @@ class Startd():
     def drainJobs(self,
       drain_type : DrainType = DrainType.Graceful,
       on_completion : CompletionType = CompletionType.Nothing,
-      check_expr : str = "True",
-      start_expr : str = "False",
+      check_expr : Optional[str] = None,
+      start_expr : Optional[str] = None,
       reason : str = None,
     ) -> str:
-        if check_expr is None:
+        """
+        FIXME
+
+        :param drain_type:
+        :param on_completion:
+        :param check_expr:
+        :param start_expr:
+        :param reason:
+        """
+        if check_expr is not None and not isinstance(check_expr, str):
             raise TypeError("check_expr must be a string")
-        if start_expr is None:
+        if start_expr is not None and not isinstance(start_expr, str):
             raise TypeError("start_expr must be a string")
         return _startd_drain_jobs(self._addr,
           int(drain_type), int(on_completion), check_expr, start_expr, reason
@@ -52,6 +70,11 @@ class Startd():
 
 
     def cancelDrainJobs(self, request_id : str = None) -> None:
+        """
+        FIXME
+
+        :param request_id:
+        """
         _startd_cancel_drain_jobs(self._addr, request_id)
 
 
@@ -62,6 +85,14 @@ class Startd():
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
     ) -> List[classad.ClassAd]:
+        """
+        FIXME
+
+        :param constraint:
+        :param projection:
+        :param match:
+        :param since:
+        """
         projection_string = ",".join(projection)
 
         if isinstance(since, int):

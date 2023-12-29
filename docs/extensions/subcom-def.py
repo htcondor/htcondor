@@ -13,9 +13,6 @@ def dump(obj):
         print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
 def subcom_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
-    app = inliner.document.settings.env.app
-    docname = inliner.document.settings.env.docname
-
     # Create a new linkable target using the subcom name
     targetid = text
     targetnode = nodes.target('', text, ids=[targetid], classes=["subcom-def"])

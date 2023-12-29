@@ -11,12 +11,12 @@
 // htcondor.*
 #include "condor_version.h"
 #include "subsystem_info.h"
+#include "common2/py_util.cpp"
 #include "htcondor2/loose_functions.cpp"
 
 // htcondor.Collector
 #include "daemon_list.h"
 #include "dc_collector.h"
-#include "common2/py_util.cpp"
 #include "htcondor2/collector.cpp"
 
 // htcondor.Negotiator
@@ -29,6 +29,8 @@
 // htcondor.Credd
 #include "store_cred.h"
 #include "my_username.h"
+#include "condor_arglist.h"
+#include "my_popen.h"
 #include "htcondor2/credd.cpp"
 
 // htcondor.Submit
@@ -63,6 +65,12 @@ static PyMethodDef htcondor2_impl_methods[] = {
         Returns the platform of HTCondor this module was compiled for.
 	)C0ND0R"},
 
+	{"_enable_debug", & _enable_debug, METH_VARARGS, R"C0ND0R(
+        Enable debugging output from HTCondor, where output is sent to
+        ``stderr``.  The logging level is controlled by the ``TOOL_DEBUG``
+        parameter.
+	)C0ND0R"},
+
 	{"_set_subsystem", & _set_subsystem, METH_VARARGS, R"C0ND0R(
 	    Set the subsystem name for the object.
 
@@ -76,6 +84,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_reload_config", & _reload_config, METH_VARARGS, R"C0ND0R(
 	    Reload the HTCondor configuration from disk.
 	)C0ND0R"},
+
+	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
 
 
 	{"_collector_init", &_collector_init, METH_VARARGS, NULL},
@@ -97,6 +107,9 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},
 	{"_credd_do_check_oauth_creds", &_credd_do_check_oauth_creds, METH_VARARGS, NULL},
+	{"_credd_run_credential_producer", &_credd_run_credential_producer, METH_VARARGS, NULL},
+
+
 	{"_schedd_query", &_schedd_query, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_ids", &_schedd_act_on_job_ids, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_constraint", &_schedd_act_on_job_constraint, METH_VARARGS, NULL},

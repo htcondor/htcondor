@@ -1616,11 +1616,14 @@ Dagman::ResolveDefaultLog()
 		DC_Exit( EXIT_ERROR );
 	}
 
-	if ( _defaultNodeLog.find( "/tmp" ) == 0 ) {
-		debug_printf( DEBUG_QUIET, "Warning: "
-					"default node log file %s is in /tmp\n",
-					_defaultNodeLog.c_str() );
-		check_warning_strictness( DAG_STRICT_1 );
+	// DO NOT DOCUMENT this testing-only knob.
+	if( param_boolean( "DAGMAN_AVOID_SLASH_TMP", true ) ) {
+		if ( _defaultNodeLog.find( "/tmp" ) == 0 ) {
+			debug_printf( DEBUG_QUIET, "Warning: "
+						"default node log file %s is in /tmp\n",
+						_defaultNodeLog.c_str() );
+			check_warning_strictness( DAG_STRICT_1 );
+		}
 	}
 
 	bool nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", false );

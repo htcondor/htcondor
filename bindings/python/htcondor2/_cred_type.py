@@ -8,7 +8,20 @@ else:
 
 class CredType(enum.IntEnum):
     """
-    The types of credentials that can be managed by a *condor_credd*.
+    An enumeration of the types of credentials that a *condor_credd*
+    can manage.
+
+    .. attribute:: Password
+
+        FIXME
+
+    .. attribute:: Kerberos
+
+        FIXME
+
+    .. attribute:: OAuth
+
+        FIXME
     """
 
     Password = 0x24

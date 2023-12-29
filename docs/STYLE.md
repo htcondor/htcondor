@@ -12,6 +12,15 @@ new consistent form as a long term background task, but please use this new synt
 cleaning up old.  In general, we are replacing all explicit formatting commands (like bold or italic) with semantically
 meaningful commands, like **:subcom:** or **:macro:**
 
+###Built in sphinx markups
+
+Section not yet written
+
+- Warning
+- Note
+- Sidebar
+- Mermaid graph
+
 ### HTCondor specific markups
 
 **:index:** used to add entries to the index.  Our users do rely on the index, so take care to make good entries.  It
@@ -26,7 +35,7 @@ an indented link under it named `and checkpointing`.  Multiple
 descriptions/usage for a single index entry make it easy for readers to find
 related items that may be located in different places in the manual.
 
-**:macro-def:** is used in the coonfiguration macros reference page to define an anchor for the above to target,
+**:macro-def:** is used in the configuration macros reference page to define an anchor for the above to target,
 and an index entry. If given an argument, the index pairing will be the name of the macro and
 **[Arg] Configuration Options**. Any macros without an additional argument will just be paired with
 **Configuration Options**.
@@ -56,3 +65,14 @@ also create an index entry with a subheading under the main one.
 Example:  **:subcom:\`environment\`** -- makes a reference from here to the condor_submit man page
 
 Example:  **:subcom:\`environment[container universe]\`** -- does the above plus add index entry under *environment*
+
+**:tool:** is used to make a reference link to an HTCondor command line tools manual page in the
+documentation. If given optional information in brackets, it will also create an index option
+under the tools name.
+
+Example: **:tool:\`condor_q\`** -- makes a reference from here to the condor\_q manual page.
+
+Example: **:tool:\`condor_q[using Autoformatting]\`** -- does the above plus makes an index entry under condor\_q.
+
+Example: **:tool:\`htcondor job status\`** -- will make a reference link as *htcondor job status* that links to the htcondor tool man page.
+

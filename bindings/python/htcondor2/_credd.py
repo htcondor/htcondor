@@ -10,6 +10,8 @@ from ._common_imports import (
 
 from .htcondor2_impl import (
     _credd_do_store_cred,
+    _credd_do_check_oauth_creds,
+    _credd_run_credential_producer,
 )
 
 
@@ -83,9 +85,12 @@ class Credd():
             raise RuntimeError("invalid credtype")
 
         if credential is None:
-            credential = _credd_run_credential_producer(
-                "SEC_CREDENTIAL_PRODUCER"
-            )
+            producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
+            if producer is "CREDENTIAL_ALREADY_STORED":
+                # This was HTCondorIOError in version 1.
+                raise IOError(producer)
+
+            credential = _credd_run_credential_producer(producer)
 
         if credential is None:
             # This was HTCondorValueError in version 1
@@ -119,9 +124,12 @@ class Credd():
             raise RuntimeError("invalid credtype")
 
         if credential is None:
-            credential = _credd_run_credential_producer(
-                "SEC_CREDENTIAL_PRODUCER_OAUTH_" + service
-            )
+            producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
+            if producer is "CREDENTIAL_ALREADY_STORED":
+                # This was HTCondorIOError in version 1.
+                raise IOError(producer)
+
+            credential = _credd_run_credential_producer(producer)
 
         if credential is None:
             # This was HTCondorValueError in version 1

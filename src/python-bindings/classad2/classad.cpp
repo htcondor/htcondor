@@ -580,10 +580,7 @@ _classad_parse_next( PyObject *, PyObject * args ) {
         pType = isOldAd(from_string) ? ClassAdFileParseType::Parse_long : ClassAdFileParseType::Parse_new;
     }
 
-#if defined(WINDOWS)
-    PyErr_SetString(PyExc_NotImplementedError, "Windows doesn't have fmemopen().");
-    return NULL;
-#else
+
     size_t from_string_length = strlen(from_string);
 
     // On Mac, fmemopen() returns NULL if the buffer is 0 bytes long.  Since
@@ -596,6 +593,21 @@ _classad_parse_next( PyObject *, PyObject * args ) {
         return Py_BuildValue("Oi", Py_None, 0);
     }
 
+
+#if defined(WINDOWS)
+    FILE * file = NULL;
+    // The Windows C API does not appear to have a race-free way to create
+    // temporary files that aren't in the root directory, which is insane.
+    auto e = tmpfile_s(& file);
+
+    if( e != 0 || file == NULL ) {
+        PyErr_SetString(PyExc_RuntimeError, "Unable to open temporary file.");
+        return NULL;
+    }
+
+    fprintf( file, "%s\0", from_string );
+    rewind( file );
+#else
     FILE * file = fmemopen( const_cast<char *>(from_string), from_string_length, "r" );
 
     if( file == NULL ) {
@@ -603,9 +615,12 @@ _classad_parse_next( PyObject *, PyObject * args ) {
         PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
         return NULL;
     }
+#endif /* WINDOWS */
 
     CondorClassAdFileIterator ccafi;
     if(! ccafi.begin( file, false, pType )) {
+        fclose( file );
+
         // This was a ClassAdParseError in version 1.
         PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
         return NULL;
@@ -614,6 +629,7 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     ClassAd * result = new ClassAd();
     int numAttrs = ccafi.next( * result );
     long offset = ftell( file );
+    fclose( file );
 
     if( numAttrs <= 0 ) {
         if( offset == (long)from_string_length ) {
@@ -629,7 +645,6 @@ _classad_parse_next( PyObject *, PyObject * args ) {
 
     auto py_class_ad = py_new_classad2_classad(result);
     return Py_BuildValue("Ol", py_class_ad, offset);
-#endif /* WINDOWS */
 }
 
 
@@ -756,5 +771,106 @@ _classad_unquote( PyObject *, PyObject * args ) {
     }
 
 
+    return PyUnicode_FromString(result.c_str());
+}
+
+
+static PyObject *
+_classad_flatten( PyObject *, PyObject * args ) {
+    // _classad_flatten( self._handle, expr._handle )
+
+    PyObject_Handle * self = NULL;
+    PyObject_Handle * expr = NULL;
+    if(! PyArg_ParseTuple( args, "OO", (PyObject **)& self, (PyObject **)& expr )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * classAd = (ClassAd *)self->t;
+    auto * in = (ExprTree *)expr->t;
+
+    ExprTree * out = NULL;
+    classad::Value value;
+    // Why does this take an allocate classad::Value as one output parameter
+    // and a pointer reference as the second one?  Why doesn't it specify who
+    // owns the new pointer, or how it was allocated?
+    if(! classAd->Flatten( in, value, out )) {
+        // This was a ClassAdValueError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to flatten expression.");
+        return NULL;
+    }
+    if( out == NULL ) {
+        return convert_classad_value_to_python(value);
+    }
+
+    auto * rv = py_new_classad_exprtree(out);
+    delete out;
+    return rv;
+}
+
+
+static PyObject *
+_classad_external_refs( PyObject *, PyObject * args ) {
+    // _classad_external_refs( self._handle, expr._handle )
+
+    PyObject_Handle * self = NULL;
+    PyObject_Handle * expr = NULL;
+    if(! PyArg_ParseTuple( args, "OO", (PyObject **)& self, (PyObject **)& expr )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * classAd = (ClassAd *)self->t;
+    auto * expression = (ExprTree *)expr->t;
+
+
+    const bool full_names = true;
+    classad::References references;
+    if(! classAd->GetExternalReferences(expression, references, full_names)) {
+        // This was a ClassAdValueError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to determine external references.");
+        return NULL;
+    }
+
+
+    StringList sl;
+    for( const auto & ref : references ) {
+        sl.append(ref.c_str());
+    }
+
+    std::string result = sl.to_string();
+    return PyUnicode_FromString(result.c_str());
+}
+
+
+static PyObject *
+_classad_internal_refs( PyObject *, PyObject * args ) {
+    // _classad_internal_refs( self._handle, expr._handle )
+
+    PyObject_Handle * self = NULL;
+    PyObject_Handle * expr = NULL;
+    if(! PyArg_ParseTuple( args, "OO", (PyObject **)& self, (PyObject **)& expr )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * classAd = (ClassAd *)self->t;
+    auto * expression = (ExprTree *)expr->t;
+
+    const bool full_names = true;
+    classad::References references;
+    if(! classAd->GetInternalReferences(expression, references, full_names)) {
+        // This was a ClassAdValueError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to determine external references.");
+        return NULL;
+    }
+
+
+    StringList sl;
+    for( const auto & ref : references ) {
+        sl.append(ref.c_str());
+    }
+
+    std::string result = sl.to_string();
     return PyUnicode_FromString(result.c_str());
 }

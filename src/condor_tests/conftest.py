@@ -36,6 +36,9 @@ import htcondor2 as htcondor
 from ornithology import Condor, CONFIG_IDS
 
 
+os.environ["_CONDOR_DAGMAN_AVOID_SLASH_TMP"] = "FALSE"
+
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 

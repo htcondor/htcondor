@@ -182,6 +182,11 @@ class Schedd():
     ) -> classad.ClassAd:
         """
         FIXME
+
+        :param job_spec:
+        :param attr:
+        :param value:
+        :param flags:
         """
         if not isinstance(flags, TransactionFlag):
             raise TypeError("flags must be a TransactionFlag")
@@ -217,6 +222,14 @@ class Schedd():
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
     ) -> List[classad.ClassAd]:
+        """
+        FIXME
+
+        :param constraint:
+        :param projection:
+        :param match:
+        :param since:
+        """
         projection_string = ",".join(projection)
 
         if isinstance(since, int):
@@ -252,6 +265,14 @@ class Schedd():
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
     ) -> List[classad.ClassAd]:
+        """
+        FIXME
+
+        :param constraint:
+        :param projection:
+        :param match:
+        :param since:
+        """
         projection_string = ",".join(projection)
 
         if isinstance(since, int):
@@ -309,11 +330,14 @@ class Schedd():
 
         [FIXME]
 
+        :param description: FIXME
         :param count:  Every valid queue statement in the submit language
             has an associated count, which is implicitly 1, but may be
             set explicitly, e.g., ``queue 3 dat_file matching *.dat`` has
             a count of 3.  If specified, this parameter overrides the count
-            in :param:`description`.``.
+            in ``description``.
+        :param spool: FIXME
+        :param itemdata: FIXME
         '''
 
         if itemdata is None:
@@ -416,6 +440,10 @@ class Schedd():
     ) -> classad.ClassAd:
         """
         FIXME
+
+        :param job_spec:
+        :param export_dir:
+        :param new_spool_dir:
         """
         return job_spec_hack(self._addr, job_spec,
             _schedd_export_job_ids, _schedd_export_job_constraint,
@@ -426,6 +454,11 @@ class Schedd():
     def import_exported_job_results(self,
         import_dir : str
     ) -> classad.ClassAd:
+        """
+        FIXME
+
+        :param import_dir:
+        """
         return _schedd_import_exported_job_results(self._addr, import_dir)
 
 
@@ -434,6 +467,8 @@ class Schedd():
     ) -> classad.ClassAd:
         """
         FIXME
+
+        :param job_spec:
         """
         return job_spec_hack(self._addr, job_spec,
             _schedd_unexport_job_ids, _schedd_unexport_job_constraint,
@@ -451,3 +486,7 @@ def _add_line_from_itemdata(submit_file, item):
             raise ValueError("itemdata strings must not contain newlines")
         submit_file = submit_file + " ".join(item.values()) + "\n"
     return submit_file
+
+
+# Sphinx whines about forward references in the type hints if this isn't here.
+from ._submit_result import SubmitResult

@@ -47,11 +47,12 @@ class Submit(MutableMapping):
         after the submit-language string, if any, is parsed.
 
         This object implements the Python dictionary protocol, except
-        that attempts to `del()` entries will raise a `NotImplementedError`
+        that attempts to ``del()`` entries will raise a
+        :class:`NotImplementedError`
         because the underlying logic does not distinguish between a
         missing key and a key whose value is the empty string.  (This seems
-        better than allowing you to `del(s[key])` but having `key` still
-        appear in s.keys().)
+        better than allowing you to ``del(s[key])`` but having ``key`` still
+        appear in ``s.keys()``.)
         '''
         self._handle = handle_t()
 
@@ -189,6 +190,16 @@ class Submit(MutableMapping):
         qdate : int = 0,
         owner : str = "",
     ):
+        """
+        FIXME (unimplemented)
+
+        :param count:
+        :param itemdata:
+        :param clusterid:
+        :param procid:
+        :param qdate:
+        :param owner:
+        """
         # FIXME
         pass
 
@@ -203,11 +214,24 @@ class Submit(MutableMapping):
         qdate : int = 0,
         owner : str = "",
     ):
+        """
+        FIXME (unimplemented)
+
+        :param count:
+        :param itemdata:
+        :param clusterid:
+        :param procid:
+        :param qdate:
+        :param owner:
+        """
         # FIXME
         pass
 
 
     def getQArgs(self) -> str:
+        """
+        FIXME
+        """
         return _submit_getqargs(self, self._handle)
 
 
@@ -215,6 +239,8 @@ class Submit(MutableMapping):
         '''
         Set the queue statement.  This statement replaces the queue statement,
         if any, passed to the original constructor.
+
+        :param args:
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
@@ -225,13 +251,46 @@ class Submit(MutableMapping):
         method_value : int = -1,
         allow_reserved_values : bool = False
     ):
+        """
+        FIXME (unimplemented)
+
+        :param method_value:
+        :param allowed_reserved_values:
+        """
         # FIXME
         pass
 
 
     def getSubmitMethod(self) -> int:
+        """
+        FIXME (unimplemented)
+        """
         # FIXME
         pass
+
+
+    @staticmethod
+    def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> "Submit":
+        """
+        FIXME
+
+        :param filename:
+        :param options:
+        """
+        if not isinstance(options, dict):
+            raise TypeError("options must be a dict")
+        if not Path(filename).exists():
+            raise IOError(f"{filename} does not exist")
+
+        # Convert from version 1 names to the proper internal names.
+        internal_options = {}
+        for key, value in options.items():
+            internal_key = _NewOptionNames.get(key, key)
+            internal_options[internal_key] = value
+
+        subfile = _submit_from_dag(filename, internal_options)
+        subfile_text = Path(subfile).read_text()
+        return Submit(subfile_text)
 
 
 # List does not include options which vary only in capitalization.
@@ -253,23 +312,3 @@ _NewOptionNames = {
     "valgrind":                 "RunValgrind",
     "suppress_notification":    "SuppressNotification",
 }
-
-
-def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> Submit:
-    if not isinstance(options, dict):
-        raise TypeError("options must be a dict")
-    if not Path(filename).exists():
-        raise IOError(f"{filename} does not exist")
-
-    # Convert from version 1 names to the proper internal names.
-    internal_options = {}
-    for key, value in options.items():
-        internal_key = _NewOptionNames.get(key, key)
-        internal_options[internal_key] = value
-
-    subfile = _submit_from_dag(filename, internal_options)
-    subfile_text = Path(subfile).read_text()
-    return Submit(subfile_text)
-
-
-Submit.from_dag = from_dag
