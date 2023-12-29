@@ -3,8 +3,8 @@ Node Success/Failure
 
 .. sidebar:: Node Success/Failure (Table 2.1)
 
-    Node **S**\ uccess or **F**\ ailure definition with
-    :macro:`DAGMAN_ALWAYS_RUN_POST` = False (the default).
+    **Table 2.1** Node **S**\ uccess or **F**\ ailure definition
+    with :macro:`DAGMAN_ALWAYS_RUN_POST` = False (the default).
 
     +-----+-----------+-----------+-------+
     | PRE | JOB       | POST      | Node  |
@@ -38,6 +38,19 @@ Node Success/Failure
     | F   | not run   | not run   | **F** |
     +-----+-----------+-----------+-------+
 
+    **Table 2.2** Node **S**\ uccess or **F**\ ailure definition
+    with :macro:`DAGMAN_ALWAYS_RUN_POST` = True
+
+    +-----+-----------+--------+-------+
+    | PRE | JOB       | POST   | Node  |
+    +=====+===========+========+=======+
+    | F   | not run   | \-     | **F** |
+    +-----+-----------+--------+-------+
+    | F   | not run   | S      | **S** |
+    +-----+-----------+--------+-------+
+    | F   | not run   | F      | **F** |
+    +-----+-----------+--------+-------+
+
 Progress towards completion of the DAG is based upon the success of the
 nodes within the DAG. The success of a node is based upon the success of
 the job(s), PRE script, and POST script. A job, PRE script, or POST
@@ -51,28 +64,12 @@ to ``False``. In this table, a dash (``-``) represents the case where a script
 does not exist for the DAG, **S** represents success, and **F** represents
 failure.
 
-.. sidebar:: Table 2.2
-
-    Node **S**\ uccess or **F**\ ailure definition with
-    :macro:`DAGMAN_ALWAYS_RUN_POST` = True
-
-    +-----+-----------+--------+-------+
-    | PRE | JOB       | POST   | Node  |
-    +=====+===========+========+=======+
-    | F   | not run   | \-     | **F** |
-    +-----+-----------+--------+-------+
-    | F   | not run   | S      | **S** |
-    +-----+-----------+--------+-------+
-    | F   | not run   | F      | **F** |
-    +-----+-----------+--------+-------+
-
 Table 2.2 lists the definition of node success and failure only for the cases
 where the PRE script fails, when DAGMan is configured to always run POST scripts.
 
 :index:`PRE_SKIP command<single: DAG input file; PRE_SKIP command>`
 :index:`skipping node execution<single: DAGMan; Skipping node execution>`
 
-|
 
 PRE_SKIP
 --------
@@ -100,6 +97,13 @@ DAGMan can retry any failed node in a DAG by specifying the node in the
 DAG input file with the *RETRY* command. The use of retry is optional.
 The syntax for retry is
 
+.. code-block:: condor-dagman
+
+    RETRY <JobName | ALL_NODES> NumberOfRetries [UNLESS-EXIT value]
+
+where *JobName* identifies the node. *NumberOfRetries* is an integer
+number of times to retry the node after failure.
+
 .. sidebar:: Example Diamond DAG Using RETRY
 
     .. code-block:: condor-dagman
@@ -117,15 +121,9 @@ The syntax for retry is
     If marked as failed, node C will retry execution until either
     success or the maximum number of retries (3) are attempted.
 
-.. code-block:: condor-dagman
-
-    RETRY <JobName | ALL_NODES> NumberOfRetries [UNLESS-EXIT value]
-
-where *JobName* identifies the node. *NumberOfRetries* is an integer
-number of times to retry the node after failure. The implied number of
-retries for any node is 0, the same as not having a retry line in the
-file. Retry causes the whole node to be reran (i.e. PRE Script, job,
-and POST Script).
+The implied number of retries for any node is 0, the same as not having a
+retry line in the file. Retry causes the whole node to be reran (i.e. PRE
+Script, job, and POST Script).
 
 Retry of a node may be short circuited using the optional keyword
 *UNLESS-EXIT*, followed by an integer exit value. If the node exits with
