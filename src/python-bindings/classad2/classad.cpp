@@ -874,3 +874,40 @@ _classad_internal_refs( PyObject *, PyObject * args ) {
     std::string result = sl.to_string();
     return PyUnicode_FromString(result.c_str());
 }
+
+
+static PyObject *
+_classad_print_json( PyObject *, PyObject * args ) {
+    // _classad_print_json( self._handle )
+
+    PyObject_Handle * handle = NULL;
+    if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    std::string str;
+    classad::ClassAdJsonUnParser json_up;
+    json_up.Unparse( str, (ClassAd *)handle->t );
+
+    return PyUnicode_FromString(str.c_str());
+}
+
+
+static PyObject *
+_classad_print_old( PyObject *, PyObject * args ) {
+    // _classad_print_json( self._handle )
+
+    PyObject_Handle * handle = NULL;
+    if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    std::string str;
+    classad::ClassAdUnParser up;
+    up.SetOldClassAd( true );
+    up.Unparse( str, (ClassAd *)handle->t );
+
+    return PyUnicode_FromString(str.c_str());
+}
