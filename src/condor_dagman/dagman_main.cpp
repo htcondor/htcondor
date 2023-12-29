@@ -942,7 +942,7 @@ void main_init (int argc, char ** const argv) {
 			}
 			std::string kv_pairs(argv[i]);
 			trim(kv_pairs);
-			dagman.options.set("AddToEnv", kv_pairs);
+			dagman.options.extend("AddToEnv", kv_pairs);
 
 		} else if( !strcasecmp( "-priority", argv[i] ) ) {
 			++i;

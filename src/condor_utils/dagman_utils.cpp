@@ -61,19 +61,18 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		return false;
 	}
 
-	const char *executable = nullptr;
-	std::string valgrindPath; // outside if so executable is valid!
+	std::string executable;
 	if (options[shallow::b::RunValgrind]) {
-		valgrindPath = which(valgrind_exe);
+		std::string valgrindPath = which(valgrind_exe);
 		if (valgrindPath.empty()) {
 			fprintf(stderr, "ERROR: can't find %s in PATH, aborting.\n", valgrind_exe);
 			fclose(pSubFile);
 			return false;
 		} else {
-			executable = valgrindPath.c_str();
+			executable = valgrindPath;
 		}
 	} else {
-		executable = options[deep::str::DagmanPath].c_str();
+		executable = options[deep::str::DagmanPath];
 	}
 
 	/*	Set up DAGMan proper jobs getenv filter
@@ -105,7 +104,7 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	fprintf(pSubFile, "\n");
 
 	fprintf(pSubFile, "universe    = scheduler\n");
-	fprintf(pSubFile, "executable  = %s\n", executable);
+	fprintf(pSubFile, "executable  = %s\n", executable.c_str());
 	fprintf(pSubFile, "getenv      = %s\n", getEnv.c_str());
 	fprintf(pSubFile, "output      = %s\n", options[shallow::str::LibOut].c_str());
 	fprintf(pSubFile, "error       = %s\n", options[shallow::str::LibErr].c_str());
@@ -557,7 +556,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 						} else {
 							std::string kv_pairs(info);
 							trim(kv_pairs);
-							options.set("AddToEnv", kv_pairs);
+							options.extend("AddToEnv", kv_pairs);
 						}
 					// Else error
 					} else {
@@ -1183,7 +1182,7 @@ SetDagOpt DagmanOptions::set(const char* opt, const std::string& value) {
 
 
 /*
-*	The DagmanOption::append() function takes an string DAGMan
+*	The DagmanOption::append() function takes a string DAGMan
 *	option and appends the provided value to it to create or add
 *	to a delimited list. Base delimiter is a comma
 */
@@ -1212,6 +1211,37 @@ SetDagOpt DagmanOptions::append(const char* opt, const std::string& value, const
 			deep.stringOpts[*d_str_key] += delim;
 		}
 		deep.stringOpts[*d_str_key] += value;
+		return SetDagOpt::SUCCESS;
+	}
+
+	return SetDagOpt::KEY_DNE;
+}
+
+/*
+*	The DagmanOptions::extend() takes a string value to append to a
+*	list of strings associated with the specified DAGMan option.
+*	Note: DagmanOptions::set() for an slist option does the same
+*	behavior, but this is here to be explicit and reduce confusion.
+*	- Cole Bollig: 2023-12-29
+*/
+SetDagOpt DagmanOptions::extend(const char* opt, const char* value) {
+	if ( ! value || *value == '\0') { return SetDagOpt::NO_VALUE; }
+	std::string v(value);
+	return extend(opt, v);
+}
+
+SetDagOpt DagmanOptions::extend(const char* opt, const std::string& value) {
+	if ( ! opt || *opt == '\0') { return SetDagOpt::NO_KEY; }
+	if (value.empty()) { return SetDagOpt::NO_VALUE; }
+
+	auto s_slist_key = shallow::slist::_from_string_nocase_nothrow(opt);
+	if (s_slist_key) {
+		shallow.slistOpts[*s_slist_key].push_back(value);
+		return SetDagOpt::SUCCESS;
+	}
+	auto d_slist_key = deep::slist::_from_string_nocase_nothrow(opt);
+	if (d_slist_key) {
+		deep.slistOpts[*d_slist_key].push_back(value);
 		return SetDagOpt::SUCCESS;
 	}
 

@@ -92,7 +92,7 @@ struct CLI_BOOL_FLAG {
 			return "UNKNOWN";
 	}
 
-	// Function to declare if value is UNSET
+	// Function to declare if value is not UNSET
 	bool set() const { return value != CLI_BOOL::UNSET; }
 
 	// Overload set (=) operator for member = bool
@@ -238,6 +238,10 @@ public:
 	SetDagOpt append(const char* opt, const std::string& value, const char delim = ',');
 	SetDagOpt append(const char* opt, const char* value, const char delim = ',');
 
+	// Extend (push_back) value to list option
+	SetDagOpt extend(const char* opt, const std::string& value);
+	SetDagOpt extend(const char* opt, const char* value);
+
 	void addDeepArgs(ArgList& args, bool inWriteSubmit = true) const;
 	void addDAGFile(std::string& dagFile);
 
@@ -305,7 +309,7 @@ public:
 
 	void RenameRescueDagsAfter(const std::string &primaryDagFile, bool multiDags, int rescueDagNum, int maxRescueDagNum);
 
-	inline std::string HaltFileName(const std::string &primaryDagFile) { return primaryDagFile + ".halt"; }
+	static inline std::string HaltFileName(const std::string &primaryDagFile) { return primaryDagFile + ".halt"; }
 
 	void tolerant_unlink(const std::string &pathname);
 

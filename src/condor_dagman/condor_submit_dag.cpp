@@ -540,7 +540,7 @@ parseCommandLine(DagmanOptions &dagOpts, size_t argc, const char * const argv[])
 				}
 				std::string kv_pairs(argv[++iArg]);
 				trim(kv_pairs);
-				dagOpts.set("AddToEnv", kv_pairs);
+				dagOpts.extend("AddToEnv", kv_pairs);
 
 			} else if (strArg.find("-dumpr") != std::string::npos) { // -DumpRescue
 				dagOpts.set("DumpRescueDag", true);
