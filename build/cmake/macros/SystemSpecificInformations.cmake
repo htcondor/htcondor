@@ -272,16 +272,15 @@ if(UNIX)
 	
 	#Find Codename for Debian system 
 	if ((LINUX_NAME STREQUAL "Debian") OR (LINUX_NAME STREQUAL "Ubuntu"))
-	  # $ lsb_release -cs
-	  FIND_PROGRAM(LSB_CMD lsb_release)
-	  IF(NOT LSB_CMD)
-		 # Cannot find lsb_release in your path, default to none
-		 SET(DEBIAN_CODENAME "")
-	  ENDIF(NOT LSB_CMD)
-	  EXECUTE_PROCESS(COMMAND "${LSB_CMD}" -cs
-		 OUTPUT_VARIABLE DEBIAN_CODENAME
-		 OUTPUT_STRIP_TRAILING_WHITESPACE
-		 )
+		file(STRINGS "/etc/os-release" VERSION_CODENAME_LINE REGEX "^VERSION_CODENAME=(.*)$")
+		if("${VERSION_CODENAME_LINE}" MATCHES "^VERSION_CODENAME=(.*)$")
+			set(DEBIAN_CODENAME ${CMAKE_MATCH_1})
+			if("${DEBIAN_CODENAME}" MATCHES "\"(.*)\"")
+				set(DEBIAN_CODENAME ${CMAKE_MATCH_1})
+			endif()
+		else()
+			set(DEBIAN_CODENAME "unknown")
+		endif()
 	endif ()
 
       if(LINUX_NAME) 
