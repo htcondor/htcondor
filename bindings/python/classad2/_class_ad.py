@@ -17,6 +17,8 @@ from .classad2_impl import (
     _classad_quote,
     _classad_unquote,
     _classad_flatten,
+    _classad_internal_refs,
+    _classad_external_refs,
 )
 
 # So that the typehints match version 1.
@@ -32,6 +34,7 @@ from typing import (
     Union,
     IO,
     Optional,
+    List,
 )
 
 #
@@ -112,10 +115,26 @@ class ClassAd(MutableMapping):
         return expression.eval(self)
 
 
+    def externalRefs(self, expr: "ExprTree") -> List[str]:
+        if not isinstance(expr, ExprTree):
+            raise TypeError("expr must be an ExprTree")
+
+        string_list = _classad_external_refs(self._handle, expr._handle)
+        return string_list.split(",")
+
+
     def flatten(self, expr : "ExprTree") -> "ExprTree":
         if not isinstance(expr, ExprTree):
             raise TypeError("expr must be an ExprTree")
         return _classad_flatten(self._handle, expr._handle)
+
+
+    def internalRefs(self, expr: "ExprTree") -> List[str]:
+        if not isinstance(expr, ExprTree):
+            raise TypeError("expr must be an ExprTree")
+
+        string_list = _classad_internal_refs(self._handle, expr._handle)
+        return string_list.split(",")
 
 
     def lookup(self, attr : str) -> "ExprTree":

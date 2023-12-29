@@ -35,6 +35,8 @@ static PyMethodDef classad2_impl_methods[] = {
     {"_classad_quote", & _classad_quote, METH_VARARGS, NULL},
     {"_classad_unquote", & _classad_unquote, METH_VARARGS, NULL},
     {"_classad_flatten", & _classad_flatten, METH_VARARGS, NULL},
+    {"_classad_external_refs", &_classad_external_refs, METH_VARARGS, NULL},
+    {"_classad_internal_refs", &_classad_internal_refs, METH_VARARGS, NULL},
 
     {"_exprtree_init", & _exprtree_init, METH_VARARGS, NULL},
     {"_exprtree_eq", & _exprtree_eq, METH_VARARGS, NULL},

@@ -807,3 +807,70 @@ _classad_flatten( PyObject *, PyObject * args ) {
     delete out;
     return rv;
 }
+
+
+static PyObject *
+_classad_external_refs( PyObject *, PyObject * args ) {
+    // _classad_external_refs( self._handle, expr._handle )
+
+    PyObject_Handle * self = NULL;
+    PyObject_Handle * expr = NULL;
+    if(! PyArg_ParseTuple( args, "OO", (PyObject **)& self, (PyObject **)& expr )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * classAd = (ClassAd *)self->t;
+    auto * expression = (ExprTree *)expr->t;
+
+
+    const bool full_names = true;
+    classad::References references;
+    if(! classAd->GetExternalReferences(expression, references, full_names)) {
+        // This was a ClassAdValueError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to determine external references.");
+        return NULL;
+    }
+
+
+    StringList sl;
+    for( const auto & ref : references ) {
+        sl.append(ref.c_str());
+    }
+
+    std::string result = sl.to_string();
+    return PyUnicode_FromString(result.c_str());
+}
+
+
+static PyObject *
+_classad_internal_refs( PyObject *, PyObject * args ) {
+    // _classad_internal_refs( self._handle, expr._handle )
+
+    PyObject_Handle * self = NULL;
+    PyObject_Handle * expr = NULL;
+    if(! PyArg_ParseTuple( args, "OO", (PyObject **)& self, (PyObject **)& expr )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * classAd = (ClassAd *)self->t;
+    auto * expression = (ExprTree *)expr->t;
+
+    const bool full_names = true;
+    classad::References references;
+    if(! classAd->GetInternalReferences(expression, references, full_names)) {
+        // This was a ClassAdValueError in version 1.
+        PyErr_SetString(PyExc_ValueError, "Unable to determine external references.");
+        return NULL;
+    }
+
+
+    StringList sl;
+    for( const auto & ref : references ) {
+        sl.append(ref.c_str());
+    }
+
+    std::string result = sl.to_string();
+    return PyUnicode_FromString(result.c_str());
+}
