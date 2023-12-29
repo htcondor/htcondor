@@ -28,7 +28,7 @@ Release Notes:
 
 New Features:
 
-- Updated **condor_upgrade_check** script for better support and
+- Updated :tool:`condor_upgrade_check` script for better support and
   maintainability. This update includes new flags/functionality
   and removal of old checks for upgrading between V9 and V10 of
   HTCondor.
