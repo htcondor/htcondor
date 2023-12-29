@@ -19,6 +19,8 @@ from .classad2_impl import (
     _classad_flatten,
     _classad_internal_refs,
     _classad_external_refs,
+    _classad_print_json,
+    _classad_print_old,
 )
 
 # So that the typehints match version 1.
@@ -116,6 +118,11 @@ class ClassAd(MutableMapping):
 
 
     def externalRefs(self, expr: "ExprTree") -> List[str]:
+        """
+        FIXME
+
+        :param expr:
+        """
         if not isinstance(expr, ExprTree):
             raise TypeError("expr must be an ExprTree")
 
@@ -124,12 +131,22 @@ class ClassAd(MutableMapping):
 
 
     def flatten(self, expr : "ExprTree") -> "ExprTree":
+        """
+        FIXME
+
+        :param expr:
+        """
         if not isinstance(expr, ExprTree):
             raise TypeError("expr must be an ExprTree")
         return _classad_flatten(self._handle, expr._handle)
 
 
     def internalRefs(self, expr: "ExprTree") -> List[str]:
+        """
+        FIXME
+
+        :param expr:
+        """
         if not isinstance(expr, ExprTree):
             raise TypeError("expr must be an ExprTree")
 
@@ -177,6 +194,20 @@ class ClassAd(MutableMapping):
             return bool(result)
 
         return False;
+
+
+    def printJson(self) -> str:
+        """
+        Serialize this ClassAd in the JSON format.
+        """
+        return _classad_print_json(self._handle)
+
+
+    def printOld(self) -> str:
+        """
+        Serialize this ClassAd in the "old" format.
+        """
+        return _classad_print_old(self._handle)
 
 
     def symmetricMatch(self, ad : "ClassAd") -> bool:
