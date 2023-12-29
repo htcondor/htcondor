@@ -30,6 +30,10 @@ New Features:
   with RequestDisk or RequestMemory without a units suffix.
   :jira:`1837`
 
+- Added job classad attribute ``ContainerImageTransferred``, a boolean which is
+  true when condor itself transfers the container image to the job.
+  :jira:`1797`
+
 - If PER_JOB_HISTORY_DIR is set, it is now a fatal error to write a historical job
   to the history file, just like the normal history file.
   :jira:`2027`

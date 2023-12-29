@@ -6379,6 +6379,7 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 			container_tmp = container_tmp.substr(0, container_tmp.size() - 1);
 		}
 		job->Assign(ATTR_CONTAINER_IMAGE, condor_basename(container_tmp.c_str()));
+		job->Assign(ATTR_CONTAINER_IMAGE_TRANSFERRED, true);
 		return 1;
 	}
 

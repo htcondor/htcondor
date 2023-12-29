@@ -232,6 +232,10 @@ all attributes.
     For Container universe jobs, the string that names the container image to be run
     the job in.
 
+:classad-attribute-def:`ContainerImageTransferred`
+    For Container universe jobs, true if the container image is being transferred
+    by condor itself, not via a plugin or docker repo.
+
 :classad-attribute-def:`ContainerTargetDir`
     For Container universe jobs, a filename that becomes the working directory of
     the job.  Mapped to the scratch directory.
