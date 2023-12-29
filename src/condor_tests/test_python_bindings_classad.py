@@ -355,7 +355,6 @@ def test_symmetric_match(left, right, matches):
     assert left.symmetricMatch(right) is matches
 
 
-@pytest.mark.xfail(reason="[ClassAd.internalRefs()] Not currently implemented in version 2.")
 def test_internal_refs(ad):
     ad["bar"] = 2
     expr = classad.ExprTree("foo =?= bar")
@@ -363,7 +362,6 @@ def test_internal_refs(ad):
     assert ad.internalRefs(expr) == ["bar"]
 
 
-@pytest.mark.xfail(reason="[ClassAd.externalRefs()] Not currently implemented in version 2.")
 def test_external_refs(ad):
     ad["bar"] = 2
     expr = classad.ExprTree("foo =?= bar")
