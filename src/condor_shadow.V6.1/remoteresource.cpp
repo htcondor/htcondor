@@ -1364,31 +1364,20 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 
-	ExprTree * inputResultList = update_ad->LookupExpr("InputPluginResultList");
-	if( inputResultList != NULL ) {
-		classad::ClassAd c;
-		c.Insert("InputResultList", inputResultList);
-		writeJobEpochFile(jobAd, & c, "INPUT");
-		c.Remove("InputResultList");
-		writeJobEpochFile(jobAd, starterAd, "STARTER");
-	}
-
-	ExprTree * checkpointResultList = update_ad->LookupExpr("CheckpointPluginResultList");
-	if( checkpointResultList != NULL ) {
-		classad::ClassAd c;
-		c.Insert("CheckpointResultList", checkpointResultList);
-		writeJobEpochFile(jobAd, & c, "CHECKPOINT");
-		c.Remove("CheckpointResultList");
-		writeJobEpochFile(jobAd, starterAd, "STARTER");
-	}
-
-	ExprTree * outputResultList = update_ad->LookupExpr("OutputPluginResultList");
-	if( outputResultList != NULL ) {
-		classad::ClassAd c;
-		c.Insert("OutputResultList", outputResultList);
-		writeJobEpochFile(jobAd, & c, "OUTPUT");
-		c.Remove("OutputResultList");
-		writeJobEpochFile(jobAd, starterAd, "STARTER");
+	std::string PluginResultList = "PluginResultList";
+	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
+	for( const auto & prefix : prefixes ) {
+		std::string attributeName = prefix + PluginResultList;
+		ExprTree * resultList = update_ad->LookupExpr( attributeName );
+		if( resultList != NULL ) {
+			classad::ClassAd c;
+			// Arguably, the epoch log would be easier to parse if the
+			// attribute name were always PluginResultList.
+			c.Insert( attributeName, resultList );
+			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
+			c.Remove( attributeName );
+			writeJobEpochFile( jobAd, starterAd, "STARTER" );
+		}
 	}
 
 
