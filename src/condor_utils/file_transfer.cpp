@@ -6574,6 +6574,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		plugin_args.AppendArg( "-upload" );
 	}
 
+	if (IsFulldebug(D_ALWAYS)) {
+		std::string arglog;
+		plugin_args.GetArgsStringForLogging(arglog);
+		// note - test_curl_plugin.py depends on seeing the word 'invoking' in the starter log.
+		dprintf( D_FULLDEBUG, "FILETRANSFER: invoking: %s \n", arglog.c_str() );
+	}
+
 	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", true);
 	MyPopenTimer p_timer;
 	p_timer.start_program(

@@ -7,6 +7,8 @@
 	FILETRANSFER_PLUGINS = $(LIBEXEC)/curl_plugin $(LIBEXEC)/data_plugin
 	# test expects at least 2 different SlotIds
 	use FEATURE : StaticSlots
+	# make sure invoking line is printed
+	STARTER_DEBUG = $(STARTER_DEBUG) D_ALWAYS:2
 """
 #endtestreq
 
