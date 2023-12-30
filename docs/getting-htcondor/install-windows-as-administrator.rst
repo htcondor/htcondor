@@ -93,7 +93,6 @@ Follow the instructions above through Step 1. Then, customize the
 installation as follows:
 
 STEP 2: HTCondor Pool Configuration.
-
     Create a new pool
     only on the machine you've chosen as their central manager.  See
     the :doc:`admin-quick-start`.  Otherwise, choose the option to
@@ -101,7 +100,6 @@ STEP 2: HTCondor Pool Configuration.
     central manager.
 
 STEP 3: This Machine's Roles.
-
     Check the "submit jobs"
     box to select the submit role, or choose "always run jobs" to select
     the execute role.
