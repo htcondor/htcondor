@@ -87,34 +87,31 @@ STEP 6: Java Settings.
     path. To disable use of the **java** universe, leave the field
     blank.
 
-STEP 7: Host Permission Settings.
+STEP 7: Access Permission Settings.
     Machines within the HTCondor pool will need various types of access
-    permission. The three categories of permission are read, write, and
-    administrator. Enter the machines or domain to be given access
-    permissions, or use the defaults provided. Wild cards and macros are
-    permitted.
+    permission. The three categories of permission that can be set here 
+    are read, write, and administrator.  The values can be usernames, hostnames
+    or IP address ranges, Wild cards and macros are permitted.
+    It is recommended that you accept the defaults here and change the
+    values later as needed by modifying the HTCondor configuration files.
 
      Read
         Read access allows a machine to obtain information about
         HTCondor such as the status of machines in the pool and the job
-        queues. All machines in the pool should be given read access. In
-        addition, giving read access to \*.cs.wisc.edu will allow the
-        HTCondor team to obtain information about the HTCondor pool, in
-        the event that debugging is needed.
+        queues.  If all of your HTCondor machines and users are in
+        a single DNS domain or IP Address range, setting this to *.domain
+        an IP address range with wildcards is a good choice.
+        See ``ALLOW_READ`` :index:`ALLOW_READ`
      Write
-        All machines in the pool should be given write access. It allows
-        the machines you specify to send information to your local
-        HTCondor daemons, for example, to start an HTCondor job. Note
-        that for a machine to join the HTCondor pool, it must have both
-        read and write access to all of the machines in the pool.
+        Write access is for submitting jobs to the Schedd.   Setting this
+        to ``*`` will allow any user that can login to the machine submit jobs.
+        See ``ALLOW_WRITE`` :index:`ALLOW_WRITE`
      Administrator
-        A machine with administrator access will be allowed more
-        extended permission to do things such as change other user's
-        priorities, modify the job queue, turn HTCondor services on and
-        off, and restart HTCondor. The central manager should be given
-        administrator access and is the default listed. This setting is
-        granted to the entire machine, so care should be taken not to
-        make this too open.
+        Administrator access is for starting and stopping the daemons
+        and sending administrative commands such as reconfig and drain.
+        By default the installer will give this permission to the Windows
+        user that runs the installer and to the Windows ``Adminstrator`` account.
+        See ``ALLOW_ADMINISTRATOR`` :index:`ALLOW_ADMINISTRATOR`
 
     For more details on these access permissions, and others that can be
     manually changed in your configuration file, please see the section
