@@ -21,6 +21,7 @@ include_directories(${CONDOR_SCHEDD_SRC_DIR})
 set( starterElements
 starter.cpp
 docker_proc.cpp
+filter.cpp
 find_child_proc.cpp
 has_sysadmin_cap.cpp
 io_proxy.cpp

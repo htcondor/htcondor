@@ -55,6 +55,8 @@
 #include <fstream>
 #include <algorithm>
 
+#include "filter.h"
+
 extern Starter *Starter;
 ReliSock *syscall_sock = NULL;
 time_t syscall_last_rpc_time = 0;
@@ -2560,8 +2562,10 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 
 	classad::ExprList * e = new classad::ExprList();
 	for( const auto & ad : filetrans->getPluginResultList() ) {
-		// This is absurd, but classad::ExprList expects to own its entries.
-		e->push_back( ad.Copy() );
+		ClassAd * filteredAd = filterPluginResults( ad );
+		if( filteredAd != NULL ) {
+			e->push_back( filteredAd );
+		}
 	}
 	std::string attributeName;
 	formatstr( attributeName, "%sPluginResultList", which );
