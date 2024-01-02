@@ -28,15 +28,15 @@ Release Notes:
 
 New Features:
 
+- Preliminary support for openSUSE LEAP 15.
+  :jira:`2156`
+
 - Improve ``htcondor job status`` command to display information about
   a jobs goodput.
   :jira:`1982`
 
 - Added ``ROOT_MAX_THREADS`` to :macro:`STARTER_NUM_THREADS_ENV_VARS` default value.
   :jira:`2137`
-
-- Preliminary support for openSUSE LEAP 15.
-  :jira:`2156`
 
 Bugs Fixed:
 
@@ -48,7 +48,7 @@ Bugs Fixed:
   :jira:`2205`
 
 - Fixed a bug where any file I/O error (such as disk full) was
-  ignored by the *condor_starter* when writing the classad file
+  ignored by the *condor_starter* when writing the ClassAd file
   that controlled file transfer plugins.  As a result, in rare
   cases, file transfer plugins could be unknowingly given
   incomplete sets of files to transfer.
@@ -65,24 +65,21 @@ Bugs Fixed:
   Previously, these were silently ignored.
   :jira:`2157`
 
-- Linux jobs with a invalid ``#!`` interpreter now get a better error
-  message when the EP is running as root.  This was enhanced in 10.0,
-  but a bug prevented the enhancement from fully working with a rootly EP.
-  :jira:`1698`
-
-- Fixed a bug where the DAGMan job proper for a DAG with a final
-  node could stay stuck in the removed job state.
-  :jira:`2147`
-
 - Fixed a bug where the Python-based HTChirp client had its max line length set
   much shorter than is allowed by the HTCondor Chirp server. The client now
   also throws a relevant error when this max limit is hit while sending commands
   to the server.
   :jira:`2142`
 
-- Updated the usage and man page of the *condor_drain* tool to include information
-  about the ``-reconfig-on-completion`` option.
-  :jira:`2164`
+- Linux jobs with a invalid ``#!`` interpreter now get a better error
+  message when the Execution Point is running as root.  This was enhanced in 10.0,
+  but a bug prevented the enhancement from fully working on a system
+  installed Execution Point.
+  :jira:`1698`
+
+- Fixed a bug where the DAGMan job proper for a DAG with a final
+  node could stay stuck in the removed job state.
+  :jira:`2147`
 
 - Correctly identify ``GPUsAverageUsage`` and ``GPUsMemoryUsage`` as floating point
   values for *condor_adstash*.
@@ -90,6 +87,10 @@ Bugs Fixed:
 
 - Fixed a bug where *condor_adstash* would get wedged due to a logging failure.
   :jira:`2166`
+
+- Updated the usage and man page of the *condor_drain* tool to include information
+  about the ``-reconfig-on-completion`` option.
+  :jira:`2164`
 
 .. _lts-version-history-2302:
 
