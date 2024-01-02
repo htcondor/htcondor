@@ -9,29 +9,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-
-
-template<typename I>
-class FirstIterator {
-  public:
-    FirstIterator( const I & iter ) { i = iter; }
-
-    FirstIterator & operator++() { ++i; return * this; }
-
-    FirstIterator   operator++(int)  {
-        FirstIterator rv = *this;
-        ++i;
-        return rv;
-    }
-
-    I::value_type::first_type operator*() { return i->first; }
-
-    bool operator == (const FirstIterator & o) { return i == o.i; }
-    bool operator != (const FirstIterator & o) { return i != o.i; }
-
-  private:
-    I i;
-};
+#include <ranges>
 
 
 // The caller is responsible for delete'ing the return ClassAd.
@@ -55,16 +33,14 @@ filterPluginResults( const classad::ClassAd & ad ) {
     };
 
 
-    // Although FirstIterator() _works_ on ad.begin() and ad.end(),
-    // the algorithm fails because the ClassAd iterator isn't sorted.
+    // The ClassAd iterator isn't sorted, which set_intersection() requires.
     classad::References attributes;
     sGetAdAttrs( attributes, ad );
 
     std::vector<std::string> intersection;
-    std::set_intersection(
-        attributes.begin(), attributes.end(),
-        FirstIterator(LegalTransferStats.begin()),
-        FirstIterator(LegalTransferStats.end()),
+    std::ranges::set_intersection(
+        attributes,
+        LegalTransferStats | std::ranges::views::keys,
         std::back_inserter( intersection ),
         CaseIgnLTStr()
     );
@@ -79,15 +55,15 @@ filterPluginResults( const classad::ClassAd & ad ) {
         if( e->Evaluate(v) ) {
                 // FIXME: Filter the internal structure of 'TransferErrorData'.
                 if( v.GetType() == LegalTransferStats[attribute] ) {
-                filteredAd->Insert( attribute, e->Copy() );
-            } else {
-                dprintf( D_NEVER, "illegal type %d for attribute %s\n", (int)v.GetType(), attribute.c_str() );
+                    filteredAd->Insert( attribute, e->Copy() );
+                } else {
+                    dprintf( D_NEVER, "illegal type %d for attribute %s\n", (int)v.GetType(), attribute.c_str() );
 
-                std::string buffer;
-                classad::ClassAdUnParser caup;
-                caup.Unparse(buffer, e);
-                dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
-            }
+                    std::string buffer;
+                    classad::ClassAdUnParser caup;
+                    caup.Unparse(buffer, e);
+                    dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
+                }
         } else {
             dprintf( D_NEVER, "failed to evaluate attribute %s\n", attribute.c_str() );
 
