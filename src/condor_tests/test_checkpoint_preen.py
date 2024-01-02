@@ -691,7 +691,7 @@ def the_removed_job(the_condor, the_completed_job):
             # Job has hit the history file, now we can continue
             return the_completed_job
         # but assert if the job is held, so we don't go into an infinite loop 
-        assert the_completed_job.state != ClusterState.any_held
+        assert not the_completed_job.state.any_held()
     return False
 
 
