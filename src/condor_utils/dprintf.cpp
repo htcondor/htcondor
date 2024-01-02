@@ -2511,6 +2511,35 @@ void dprintf_pause_buffering()
 	}
 }
 
+/* open any logs in the given directory as whatever priv is currently set
+*  caller is responsible for init_user_ids() and set_user_priv() if user_priv is desired
+*  or set_condor_priv() is condor_priv is desired
+*/
+int dprintf_open_logs_in_directory(const char * dir, bool fTruncate /*=false*/)
+{
+	if ( ! DebugLogs) return 0;
+	int opened = 0;
+	auto_free_ptr realdir(realpath(dir, nullptr));
+	const char* flags = fTruncate ? "wN" : "aN";
+	for (auto & it : *DebugLogs) {
+		// TODO: do a better job with directory matching here?
+		if (it.outputTarget == FILE_OUT && ! it.debugFP && starts_with(it.logPath, realdir.ptr())) {
+			it.debugFP = safe_fopen_wrapper_follow(it.logPath.c_str(), flags, 0644);
+			if (it.debugFP) {
+				// TODO: flush buffered messages into the newly opened log
+				++opened;
+			} else {
+				dprintf(D_ALWAYS, "Failed to open log %s\n", it.logPath.c_str());
+			}
+		}
+	}
+	return opened;
+}
+
+/* close any dprintf logs in the given directory
+*  a non-permanent close is basically a flush unless the log needs to be opened as user priv
+*  if close is permanent, 
+*/
 int dprintf_close_logs_in_directory(const char * dir, bool permanent /*=true*/)
 {
 	if ( ! DebugLogs) return 0;
@@ -2526,11 +2555,11 @@ int dprintf_close_logs_in_directory(const char * dir, bool permanent /*=true*/)
 				dprintf(D_FULLDEBUG, "Flushing/Closing log %s\n", it.logPath.c_str());
 			}
 			fflush(it.debugFP);
-			// not using debug_close_file because we don't want to abort on failure here...
-			// debug_close_file(&it);
-			fclose_wrapper(it.debugFP, FCLOSE_RETRY_MAX);
-			it.debugFP = nullptr;
 			if (permanent) {
+				// not using debug_close_file because we don't want to abort on failure here...
+				// debug_close_file(&it);
+				fclose_wrapper(it.debugFP, FCLOSE_RETRY_MAX);
+				it.debugFP = nullptr;
 				it.outputTarget = OUTPUT_DEBUG_STR; // to prevent attempts to reopen
 				it.dprintfFunc = _dprintf_to_nowhere;
 			}

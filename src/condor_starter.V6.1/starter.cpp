@@ -1978,6 +1978,8 @@ Starter::createTempExecuteDir( void )
 	}
 #endif // LINUX
 
+	dprintf_open_logs_in_directory(WorkingDir.c_str());
+
 	// now we can finally write .machine.ad and .job.ad into the sandbox
 	WriteAdFiles();
 

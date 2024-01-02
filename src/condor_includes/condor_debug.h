@@ -232,6 +232,11 @@ void dprintf_dump_stack(void);
  */
 void dprintf_pause_buffering();
 
+/* open any logs in the given directory as whatever priv is currently set
+*  caller is responsible for init_user_ids() and set_user_priv() if user_priv is desired
+*/
+int dprintf_open_logs_in_directory(const char * dir, bool fTruncate=false);
+
 /* close any dprintf logs in the given directory
 */
 int dprintf_close_logs_in_directory(const char * dir, bool permanent=true);
