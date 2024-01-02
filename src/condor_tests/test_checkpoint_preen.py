@@ -690,6 +690,8 @@ def the_removed_job(the_condor, the_completed_job):
         if sum(1 for _ in history_iter) > 0:
             # Job has hit the history file, now we can continue
             return the_completed_job
+        # but assert if the job is held, so we don't go into an infinite loop 
+        assert the_completed_job.state != ClusterState.any_held
     return False
 
 
