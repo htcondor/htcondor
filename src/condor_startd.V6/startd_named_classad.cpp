@@ -293,7 +293,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 			StartdCronJobParams::Metric metric;
 			if( params.getMetric( name, metric ) ) {
-				double sampleValue;
+				double sampleValue = 0.0;
 				classad::Value v;
 				expr->Evaluate( v );
 				if(! v.IsNumber( sampleValue )) {
@@ -313,9 +313,12 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 					to->InsertAttr( usageName, sampleValue );
 					// dprintf( D_ALWAYS, "First %s sample for current job set to %.2f\n", GetName(), sampleValue );
 				} else {
-					double currentUsage;
-					to->EvaluateAttrNumber( usageName, currentUsage );
-					to->InsertAttr( usageName, metric( sampleValue, currentUsage ) );
+					double currentUsage = 0.0;
+					if (to->EvaluateAttrNumber( usageName, currentUsage)) {
+						to->InsertAttr( usageName, metric( sampleValue, currentUsage ) );
+					} else { // might be undefined in update ad
+						to->InsertAttr( usageName, sampleValue);
+					}
 					// dprintf( D_ALWAYS, "%s sample was %.2f, current job peak now %.2f\n", GetName(), sampleValue, metric( sampleValue, currentUsage ) );
 				}
 
