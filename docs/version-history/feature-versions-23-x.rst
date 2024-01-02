@@ -15,29 +15,26 @@ Release Notes:
 
 - Limited support for Enterprise Linux 7 in the 23.x feature versions.
   Since we are developing new features, the Enterprise Linux 7 build may
-  drop features or be dropped entirely. In particular, Python 2 support
-  will be removed during the 23.x development cycle.
+  drop features or be dropped entirely. In particular, Python 2 and
+  OATH credmon support will be removed during the 23.x development cycle.
   :jira:`2194`
 
 - This version includes all the updates from :ref:`lts-version-history-2303`.
 
 New Features:
 
-- Improve hold message when jobs on cgroup system exceed their memory limits.
-  :jira:`1533`
-
 - Improved the ``-convertoldroutes`` option of *condor_transform_ads*
   and added a new ``-help convert`` option. These changes are meant to assist
   in the conversion of CE's away from the deprecated transform syntax.
   :jira:`2146`
 
-- Container universe now works when file transfer is disabled or not used.
-  :jira:`1329`
-
 - Added ability for DAGMan node script **STDOUT** and/or **STDERR** streams
   be captured in a user defined debug file. For more information visit
   DAGMan script :ref:`automated-workflows/dagman-scripts:Debug File`
   :jira:`2159`
+
+- Improve hold message when jobs on cgroup system exceed their memory limits.
+  :jira:`1533`
 
 - Startd now advertises when jobs are running with cgroup enforcement in
   the slot attribute ``CgroupEnforced``
@@ -48,6 +45,9 @@ New Features:
   :jira:`1138`
 
 Bugs Fixed:
+
+- Container universe now works when file transfer is disabled or not used.
+  :jira:`1329`
 
 - Removed confusing message in StartLog at shutdown about trying to
   kill illegal pid.
