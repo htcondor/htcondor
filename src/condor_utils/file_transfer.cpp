@@ -6370,7 +6370,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	plugin_args.AppendArg(plugin);
 	plugin_args.AppendArg(source);
 	plugin_args.AppendArg(dest);
-	dprintf(D_FULLDEBUG, "FileTransfer::InvokeFileTransferPlugin invoking: %s %s %s\n", plugin.c_str(), UrlSafePrint(source), UrlSafePrint(dest));
+	dprintf(D_FULLDEBUG, "FileTransfer::InvokeFileTransferPlugin: %s %s %s\n", plugin.c_str(), UrlSafePrint(source), UrlSafePrint(dest));
 
 	// determine if we want to run the plugin with root priv (if available).
 	// if so, drop_privs should be false.  the default is to drop privs.
