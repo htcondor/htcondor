@@ -101,7 +101,7 @@ authentication` section.
 Introducing: AES
 """"""""""""""""
 
-We also support for AES, a widely-used encryption
+We also support AES, a widely-used encryption
 method that has hardware support in most modern CPUS.  Because the overhead of
 encryption is so much lower, we have turned it on by default.  We use AES in
 such a way (called AESGCM mode) that it provides integrity checks (checksums)
