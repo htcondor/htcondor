@@ -91,16 +91,9 @@ configuration variables, as described in the
 :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
 section.
 
-NOTE: In the 6.6 stable series, and HTCondor versions earlier than
-6.7.5, the *condor_negotiator* also listened on a fixed, well-known
-port (the default was 9614). However, beginning with version 6.7.5, the
-*condor_negotiator* behaves like all other HTCondor daemons, and
-publishes its own ClassAd to the *condor_collector* which includes the
-dynamically assigned port the *condor_negotiator* is listening on. All
-HTCondor tools and daemons that need to communicate with the
-*condor_negotiator* will either use the
-:macro:`NEGOTIATOR_ADDRESS_FILE` or will query the
-*condor_collector* for the *condor_negotiator* 's ClassAd.
+All HTCondor tools and daemons that need to communicate with the
+*condor_negotiator* will either use the :macro:`NEGOTIATOR_ADDRESS_FILE` or
+will query the *condor_collector* for the *condor_negotiator* 's ClassAd.
 
 Using a Non Standard, Fixed Port for the *condor_collector*
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

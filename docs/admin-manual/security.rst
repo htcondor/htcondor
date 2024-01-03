@@ -135,9 +135,9 @@ commands).
 Authenticating using FS
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-On a Linux system this is typically done by logging into the machine that is
+On Linux or a Mac system this is typically done by logging into the machine that is
 running the *condor_schedd* daemon and authentication using a method called
-``FS`` (on Linux see Windows note below this paragraph).  ``FS`` stands for
+``FS``.  ``FS`` stands for
 "File System" and the method works by having the user create a file in /tmp
 that the *condor_schedd* can then examine to determine who the owner is.
 Because this operates in /tmp, this only works for connections to daemons on
@@ -146,9 +146,11 @@ need to do anything to allow users to interact with the job queue this way.
 (There are other methods, mentioned below, that can work over a network
 connection.)
 
-[Windows note:  HTCondor on Windows does not use ``FS``, but rather a method
-specific to Windows called NTSSPI.  See the section on
-:ref:`admin-manual/security:authentication` for more more info. ]
+.. note::
+
+   HTCondor on Windows does not use ``FS``, but rather a method
+   specific to Windows called NTSSPI.  See the section on
+   :ref:`admin-manual/security:authentication` for more more info.
 
 If it is necessary to do a "remote submit" -- that is, run :tool:`condor_submit` on a
 different machine than is running the *condor_schedd* -- then the administrator
@@ -308,7 +310,10 @@ Integrity
 Quick Configuration of Security
 -------------------------------
 
-**Note:** This method of configuring security is experimental.
+.. warning:: 
+
+   This method of configuring security is experimental.
+
 Many tools and daemons that send administrative commands between machines
 (e.g. :tool:`condor_off`, :tool:`condor_drain`, or *condor_defrag*)
 won't work without further setup.
