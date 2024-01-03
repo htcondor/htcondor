@@ -72,6 +72,7 @@ The corresponding submit description file might look like the following
     request_disk   = 10240K
 
     should_transfer_files = yes
+    when_to_transfer_output = on_exit
 
     queue
 
@@ -134,6 +135,11 @@ we tell HTCondor which input file to send to each instance of the program.
 
     should_transfer_files = yes
     transfer_input_files = input_file.$(Process)
+    when_to_transfer_output = on_exit
+
+    # Help with debugging jobs by creating
+    # manifest directory describing sandbox before and after
+    manifest = true
 
     # submit 150 instances of this job
     queue 150

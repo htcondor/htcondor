@@ -27,8 +27,53 @@ command line.
    to use remotely, you may be able to use the :tool:`condor_on` and :tool:`condor_off`
    tools instead.
 
-Using HTCondor's Remote Management Features
--------------------------------------------
+Daemons That Do Not Run as root
+-------------------------------
+
+:index:`running as root`
+:index:`running as root<single: running as root; daemon>`
+
+HTCondor is normally installed such that the HTCondor daemons have root
+permission. This allows HTCondor to run the *condor_shadow*
+daemon and the job with the submitting user's UID and file access
+rights. When HTCondor is started as root, HTCondor jobs can access
+whatever files the user that submits the jobs can.
+
+However, it is possible that the HTCondor installation does not have
+root access, or has decided not to run the daemons as root. That is
+unfortunate, since HTCondor is designed to be run as root. To see if
+HTCondor is running as root on a specific machine, use the command
+
+.. code-block:: console
+
+      $ condor_status -master -l <machine-name>
+
+where <machine-name> is the name of the specified machine. This command
+displays the full condor_master ClassAd; if the attribute ``RealUid``
+equals zero, then the HTCondor daemons are indeed running with root
+access. If the ``RealUid`` attribute is not zero, then the HTCondor
+daemons do not have root access.
+
+.. note::
+
+   The Unix program *ps* is not an effective method of determining if HTCondor is
+   running with root access. When using *ps*, it may often appear that the daemons
+   are running as the condor user instead of root.  However, note that the *ps*
+   command shows the current effective owner of the process, not the real owner.
+   (See the *getuid* (2) and *geteuid* (2) Unix man pages for details.) In Unix, a
+   process running under the real UID of root may switch its effective UID. (See
+   the *seteuid* (2) man page.) For security reasons, the daemons only set the
+   effective UID to root when absolutely necessary, as it will be to perform a
+   privileged operation.
+
+If daemons are not running with root access, make any and all files
+and/or directories that the job will touch readable and/or writable by
+the UID (user id) specified by the ``RealUid`` attribute. Often this may
+mean using the Unix command chmod 777 on the directory from which the
+HTCondor job is submitted.
+
+Remote Management Features
+--------------------------
 
 :index:`shutting down HTCondor<single: shutting down HTCondor; pool management>`
 :index:`restarting HTCondor<single: restarting HTCondor; pool management>`
@@ -314,11 +359,6 @@ These arguments and what they do are described below:
     Causes the daemon to start up in the foreground. Instead of forking,
     the daemon runs in the foreground. Since 8.9.7, this has been the default
     for all daemons other than the :tool:`condor_master`.
-
-    NOTE: Before 8.9.7, When the :tool:`condor_master` started up daemons, it would do so with
-    the **-f** option, as it has already forked a process for the new
-    daemon. There will be a **-f** in the argument list for all HTCondor
-    daemons that the :tool:`condor_master` spawns.
 
 \-k filename
     For non-Windows operating systems, causes the daemon to read out a

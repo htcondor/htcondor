@@ -1176,7 +1176,7 @@ In such a scenario, each *condor_negotiator* is responsible for some
 non-overlapping partition of the slots in the pool.  This might be for
 performance -- if you have more than 100,000 slots in the pool, you may need to
 shard this pool into several smaller sections in order to lower the time each
-negotiator spends.  Because accounting is done at the the negotiator level, you
+negotiator spends.  Because accounting is done at the negotiator level, you
 may want to do this to have separate accounting and distinct fair share between
 different kinds of machines in your pool.  For example, let's say you have some
 GPU machines and non-GPU machines, and you want usage of the non-GPU machine to
@@ -1188,7 +1188,7 @@ for these few machines, we can speed up the time to match these machines to
 interactive users who submit with *condor_submit -i*.
 
 Sharding the negotiator is straightforward.  Simply add the NEGOTIATOR entry to
-the :macro:`DAEMON_LIST` on an additional machine.  While is is possible to run
+the :macro:`DAEMON_LIST` on an additional machine.  While it is possible to run
 multiple negotiators on one machine, we may not want to, if we are trying to
 improve performance.  Then, in each negotiator, set
 :macro:`NEGOTIATOR_SLOT_CONSTRAINT` to only match those slots this negotiator
@@ -1209,7 +1209,7 @@ Interaction with Flocking
 
 The HTCondor high availability mechanisms discussed in this section
 currently do not work well in configurations involving flocking. The
-individual problems listed listed below interact to make the situation
+individual problems listed below interact to make the situation
 worse. Because of these problems, we advise against the use of flocking
 to pools with high availability mechanisms enabled.
 
