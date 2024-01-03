@@ -1862,7 +1862,7 @@ void JobQueueBase::PopulateFromAd()
 
 #ifdef USE_JOB_QUEUE_USERREC
 
-static bool MakeUserRec(const OwnerInfo * owni, bool enabled);
+static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * defaults);
 
 void JobQueueUserRec::PopulateFromAd()
 {
@@ -3330,7 +3330,7 @@ QmgmtSetEffectiveOwner(char const *o)
 				// the insert_owner_const will make a pending user record
 				// which we then add to the current transaction by calling MakeUserRec
 				urec = scheduler.insert_owner_const(o);
-				if ( ! MakeUserRec(urec, true)) {
+				if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 					dprintf(D_ALWAYS, "SetEffectiveOwner(): failed to create new User record for %s\n", o);
 					errno = EACCES;
 					return -1;
@@ -3853,7 +3853,7 @@ NewCluster(CondorError* errstack)
 					// the insert_owner_const will make a pending user record
 					// which we then add to the current transaction by calling MakeUserRec
 					urec = scheduler.insert_owner_const(user);
-					if ( ! MakeUserRec(urec, true)) {
+					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
 						errno = EACCES;
 						return -1;
@@ -5218,7 +5218,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					// which we then add to the current transaction by calling MakeUserRec
 					// TODO: set the NTDomain to a reasonable value for this new User rec
 					urec = scheduler.insert_owner_const(owner);
-					if ( ! MakeUserRec(urec, true)) {
+					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "SetAttribute(Owner): failed to create new User record for %s\n", owner);
 						errno = EACCES;
 						return -1;
@@ -6361,11 +6361,39 @@ static bool IsSpecialUserRecAttrName(const char * attr, int& cat)
 	return 0;
 }
 
+
+// merge and update command ad into a UserRec ad
+int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled)
+{
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd(true, true);
+	std::string buf;
+
+	for (auto &[attr, tree] : cmdAd) {
+		if (starts_with_ignore_case(attr, ATTR_USERREC_OPT_prefix)) continue;
+
+		// don't allow most special attributes to be set from the command ad
+		// the exception is the DisableReason when creating a disabled user
+		int cat=0, idAttr = IsSpecialUserRecAttrName(attr.c_str(), cat);
+		if (cat < 0 || idAttr == idATTR_ENABLED) continue;
+		if (enabled && idAttr == idATTR_DISABLE_REASON) continue;
+
+		buf.clear();
+		unparse.Unparse(buf, tree);
+		JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0);
+		JobQueue->SetTransactionTriggers(catSetUserRec);
+	}
+
+	return 0;
+}
+
+
 static bool MakeUserRec(JobQueueKey & key,
 	const char * user,
 	const char * owner,
-	const char * ntdomain=nullptr,
-	bool enabled=true)
+	const char * ntdomain,
+	bool enabled,
+	const ClassAd * defaults)
 {
 	bool rval = JobQueue->NewClassAd(key, OWNER_ADTYPE) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_USER, user) &&
@@ -6374,13 +6402,25 @@ static bool MakeUserRec(JobQueueKey & key,
 		0 == SetSecureAttributeInt(key.cluster, key.proc, ATTR_ENABLED, enabled?1:0)
 		;
 	if (rval) {
+		// if there is a defaults ad, store those attributes as well
+		if (defaults) {
+			classad::ClassAdUnParser unparse;
+			unparse.SetOldClassAd( true, true );
+			std::string buf;
+
+			for (auto &[attr, tree] : *defaults) {
+				buf.clear();
+				unparse.Unparse(buf, tree);
+				JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0);
+			}
+		}
 		JobQueue->SetTransactionTriggers(catNewUser);
 	}
 	return rval;
 }
 
 // make a JobQueueUserRec from a (presumably pending) OwnerInfo
-static bool MakeUserRec(const OwnerInfo * owni, bool enabled)
+static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * defaults)
 {
 	const char * user = owni->Name();
 	const char * owner = owni->Name();
@@ -6395,7 +6435,7 @@ static bool MakeUserRec(const OwnerInfo * owni, bool enabled)
 		user = obuf.c_str();
 	}
 
-	return MakeUserRec(key, user, owner, ntdomain, enabled);
+	return MakeUserRec(key, user, owner, ntdomain, enabled, defaults);
 }
 
 // called during InitJobQueue to create UserRec ads that were determined to be needed by the queue
@@ -6418,7 +6458,7 @@ CreateNeededUserRecs(const std::map<int, OwnerInfo*> &needed_owners)
 	// create the needed UserRecs
 	const bool enabled = true;
 	for (auto it : needed_owners) {
-		if ( ! MakeUserRec(it.second, enabled)) {
+		if ( ! MakeUserRec(it.second, enabled, &scheduler.getUserRecDefaultsAd())) {
 			++fail_count;
 			break;
 		}
@@ -6447,7 +6487,30 @@ bool UserRecDestroy(int userrec_id)
 	return JobQueue->DestroyClassAd(key);
 }
 
-bool UserRecCreate(int userrec_id, const char * username, const ClassAd & cmdAd, bool enabled)
+void UserRecFixupDefaultsAd(ClassAd & defaultsAd)
+{
+	classad::References badattrs;
+	for (auto &[attr, tree] : defaultsAd) {
+		int cat=0, idAttr = IsSpecialUserRecAttrName(attr.c_str(), cat);
+		if (idAttr || starts_with_ignore_case(attr, ATTR_USERREC_OPT_prefix)) {
+			badattrs.insert(attr);
+		}
+	}
+
+	if (badattrs.empty())
+		return;
+
+	std::string attrs;
+	for (auto & attr : badattrs) {
+		defaultsAd.Delete(attr);
+		if (!attrs.empty()) attrs += ", ";
+		attrs += attr;
+	}
+
+	dprintf(D_ERROR, "Warning: SCHEDD_USER_DEFAULT_PROPERTIES may not have attributes %s. They will be removed.\n", attrs.c_str());
+}
+
+bool UserRecCreate(int userrec_id, const char * username, const ClassAd & cmdAd, const ClassAd & defaultsAd, bool enabled)
 {
 	if (userrec_id <= 0 || userrec_id >= INT_MAX) { return false; }
 	JobQueueKeyBuf key;
@@ -6484,28 +6547,25 @@ bool UserRecCreate(int userrec_id, const char * username, const ClassAd & cmdAd,
 	}
 #endif
 
-	bool rval = MakeUserRec(key, user, owner, ntdomain, enabled);
+	bool rval = MakeUserRec(key, user, owner, ntdomain, enabled, nullptr);
 	if (rval) {
 		// do quoting using oldclassad syntax
-		classad::Value tmpValue;
 		classad::ClassAdUnParser unparse;
 		unparse.SetOldClassAd( true, true );
 		std::string buf;
 
-		// populate the new userrec with attributes from the command ad
-		for (auto &[attr, tree] : cmdAd) {
-			if (starts_with_ignore_case(attr, ATTR_USERREC_OPT_prefix)) continue;
-
-			// don't allow most special attributes to be set from the command ad
-			// the exception is the DisableReason when creating a disabled user
-			int cat=0, idAttr = IsSpecialUserRecAttrName(attr.c_str(), cat);
-			if (cat < 0 || idAttr == idATTR_ENABLED) continue;
-			if (enabled && idAttr == idATTR_DISABLE_REASON) continue;
+		// set attributes from the defaults ad if they will not just be overridden
+		// by the command ad
+		for (auto &[attr, tree] : defaultsAd) {
+			if (cmdAd.Lookup(attr)) continue;
 
 			buf.clear();
 			unparse.Unparse(buf, tree);
 			JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0);
 		}
+
+		// populate the new userrec with attributes from the command ad
+		rval = UpdateUserAttributes(key, cmdAd, enabled) == 0;
 	}
 
 	if ( ! already_in_transaction) {

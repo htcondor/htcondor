@@ -1802,6 +1802,67 @@ struct Schedd {
         return result_obj;
     }
 
+    object enableUsersByConstraint(boost::python::object constraint_obj)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        const char * constraint = nullptr;
+        std::string constraint_str;
+        if ( ! convert_python_to_constraint(constraint_obj, constraint_str, true, NULL)) {
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
+        }
+        if ( ! constraint_str.empty()) { constraint = constraint_str.c_str(); }
+
+        CondorError errstack;
+        ClassAd* result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.enableUsers(constraint, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to send enable User command to schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
+    object disableUsersByConstraint(boost::python::object constraint_obj, boost::python::object reason_obj)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        const char * constraint = nullptr;
+        std::string constraint_str;
+        if ( ! convert_python_to_constraint(constraint_obj, constraint_str, true, NULL)) {
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
+        }
+        if ( ! constraint_str.empty()) { constraint = constraint_str.c_str(); }
+
+        std::string reason_str;
+        boost::python::extract<std::string> extract_str(reason_obj);
+        if (extract_str.check()) { reason_str = extract_str(); }
+        const char * reason = reason_str.empty() ? nullptr : reason_str.c_str();
+
+        CondorError errstack;
+        ClassAd* result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.disableUsers(constraint, reason, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to send disable User command to schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
     boost::python::list queryUsers(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), int match_limit=-1)
     {
         boost::python::list result;
@@ -4764,6 +4825,17 @@ void export_schedd()
                 :rtype: :class:`~classad.ClassAd`
                 )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("users"), boost::python::arg("add")=false))
+        .def("enable_users_matching", &Schedd::enableUsersByConstraint,
+            R"C0ND0R(
+                Enable one or more User records in the queue.
+
+                :param constraint: A query constraint.
+                    Only users matching this constraint will be enabled
+                :type constraint: str or :class:`~classad.ExprTree`
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("constraint")))
         .def("disable_users", &Schedd::disableUsers,
             R"C0ND0R(
                 Disable one or more User records in the queue.  Disabled users cannot submit new jobs, but existing jobs will be allowed to run
@@ -4775,6 +4847,18 @@ void export_schedd()
                 :rtype: :class:`~classad.ClassAd`
                 )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("users"), boost::python::arg("reason")=boost::python::object()))
+        .def("disable_users_matching", &Schedd::disableUsersByConstraint,
+            R"C0ND0R(
+                Disable one or more User records in the queue.  Disabled users cannot submit new jobs, but existing jobs will be allowed to run
+
+                :param constraint: A selection constraint.
+                    Only users matching this constraint will be disabled
+                :type constraint: str or :class:`~classad.ExprTree`
+                :param string reason: The reason that the user is being disabled.
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("constraint"), boost::python::arg("reason")=boost::python::object()))
         .def("query_users", &Schedd::queryUsers,
             R"C0ND0R(
                 Query the *condor_schedd* daemon for user ads.

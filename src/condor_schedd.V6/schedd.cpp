@@ -2376,9 +2376,32 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 	switch (cmd) {
 	case ENABLE_USERREC:
 		if (urec) { // enable, not add
-			txn.BeginOrContinue(urec->jid.proc);
-			SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
-			DeleteUserAttribute(*urec, ATTR_DISABLE_REASON);
+			int userrec_id = urec->jid.proc;
+			bool enable = urec->IsEnabled();
+			bool do_update = false;
+			if (cmdAd.LookupBool(ATTR_USERREC_OPT_UPDATE, do_update) && do_update) {
+				bool has_enable = cmdAd.LookupBool(ATTR_ENABLED, enable);
+				txn.BeginOrContinue(userrec_id);
+				UpdateUserAttributes(urec->jid, cmdAd, enable);
+				// if the update is setting enabled to false, make sure that DisableReason is also set to a string
+				if (has_enable && ! enable) {
+					SetUserAttributeInt(*urec, ATTR_ENABLED, 0); // update will have filtered this
+					std::string reason;
+					if ( ! cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
+						SetUserAttributeString(*urec, ATTR_DISABLE_REASON, "by update command");
+					}
+				}
+			} else {
+				// if opt_update is not set, and the record exists, then we want to enable it
+				// unless the command ad says to disable it, in which case we leave it alone
+				enable = true;
+				cmdAd.EvaluateAttrBoolEquiv(ATTR_ENABLED, enable);
+			}
+			if (enable && ! urec->IsEnabled()) {
+				txn.BeginOrContinue(userrec_id);
+				SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
+				DeleteUserAttribute(*urec, ATTR_DISABLE_REASON);
+			}
 		} else { // user does not exist,  we must add
 			bool add_if_not = false;
 			if ((cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE, add_if_not) ||
@@ -2387,7 +2410,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 				cmdAd.EvaluateAttrBoolEquiv(ATTR_ENABLED, enabled);
 				int userrec_id = scheduler.nextUnusedUserRecId();
 				txn.BeginOrContinue(userrec_id);
-				UserRecCreate(userrec_id, username.c_str(), cmdAd, enabled);
+				UserRecCreate(userrec_id, username.c_str(), cmdAd, getUserRecDefaultsAd(), enabled);
 			} else {
 				rval = 2;
 			}
@@ -2400,12 +2423,20 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 			std::string reason;
 			if (cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
 				SetUserAttributeString(*urec, ATTR_DISABLE_REASON, reason.c_str());
+			} else {
+				// TODO set default reason string
 			}
-		} else { // user does not exist,  we must add
+		} else { // user does not exist, cannot be disabled
 			rval = 2;
 		}
 		break;
 	case EDIT_USERREC:
+		if (urec) {
+			txn.BeginOrContinue(urec->jid.proc);
+			UpdateUserAttributes(urec->jid, cmdAd, urec->IsEnabled());
+		} else { // user does not exist, cannot be edited
+			rval = 2;
+		}
 		break;
 	case RESET_USERREC:
 		if (urec) {
@@ -2498,9 +2529,11 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 			}
 			if (rval) break;
 		} else if (act.LookupString(ATTR_USER, username) && ! username.empty()) {
-			if (username == "me") {
-				username = rsock->getFullyQualifiedUser();
-			}
+			rval = act_on_user(cmd, username, act, txn, errstack);
+			if (rval) break;
+			++num_ads;
+		} else if (act.Lookup(ATTR_USERREC_OPT_ME)) {
+			username = rsock->getFullyQualifiedUser();
 			rval = act_on_user(cmd, username, act, txn, errstack);
 			if (rval) break;
 			++num_ads;
@@ -13217,6 +13250,17 @@ Scheduler::Init()
 	AllowLateMaterialize = param_boolean("SCHEDD_ALLOW_LATE_MATERIALIZE", false);
 	MaxMaterializedJobsPerCluster = param_integer("MAX_MATERIALIZED_JOBS_PER_CLUSTER", MaxMaterializedJobsPerCluster);
 	NonDurableLateMaterialize = param_boolean("SCHEDD_NON_DURABLE_LATE_MATERIALIZE", true);
+
+	m_userRecDefaultsAd.Clear();
+	auto_free_ptr user_def_props(param("SCHEDD_USER_DEFAULT_PROPERTIES"));
+	if (user_def_props) {
+		if ( ! initAdFromString(user_def_props, m_userRecDefaultsAd)) {
+			dprintf(D_ERROR, "Warning: SCHEDD_USER_DEFAULT_PROPERTIES value has errors.\n");
+		}
+		UserRecFixupDefaultsAd(m_userRecDefaultsAd);
+		user_def_props.clear();
+	}
+	// TODO: add SCHEDD_USER_CREATION_TRANSFORM ?
 
 	m_extendedSubmitCommands.Clear();
 	auto_free_ptr extended_cmds(param("EXTENDED_SUBMIT_COMMANDS"));

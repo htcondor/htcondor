@@ -2242,10 +2242,10 @@ int DCSchedd::queryUsers(
 
 ClassAd* DCSchedd::actOnUsers (
 	int cmd, // ENABLE_USERREC or DISABLE_USERREC
-	const ClassAd * userads[], // either pass array of ad pointers
+	const ClassAd * userads[], // either pass array of ad pointers, (constraints go here)
 	const char * usernames[], // or pass array of username pointers
 	int num_usernames,
-	bool create_if, // if true, treat ENABLE into as a CREATE
+	bool create_if, // if true, treat ENABLE as CREATE
 	const char * reason,
 	CondorError *errstack,
 	int connect_timeout /*= 20*/)
@@ -2271,7 +2271,11 @@ ClassAd* DCSchedd::actOnUsers (
 		std::string name;
 		if (userads) {
 			const ClassAd * ad = userads[ii];
-			if ( ! ad->LookupString(ATTR_USER, name)) {
+			if (ad->Lookup(ATTR_REQUIREMENTS)) {
+				// if there is a Requirements expression, it take precedence over a USER attribute
+				// but you can't create new records from a requrements expression so just enable/disable/edit is implied
+				create_if = false;
+			} else if ( ! ad->LookupString(ATTR_USER, name)) {
 				if (errstack) { errstack->pushf("DCSchedd::actOnUsers", Q_PARSE_ERROR, "ad %d does not have a User attribute", ii); }
 				return nullptr;
 			}
@@ -2368,6 +2372,24 @@ ClassAd * DCSchedd::disableUsers(
 {
 	int connect_timeout = 20;
 	return actOnUsers (DISABLE_USERREC, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::disableUsers(
+	const char * constraint, // expression
+	const char * reason,
+	CondorError *errstack)
+{
+	int connect_timeout = 20;
+	if ( ! constraint) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::enableusers", Q_PARSE_ERROR, "constraint expression is required");
+		}
+		return nullptr;
+	}
+	ClassAd cmd_ad;
+	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
+	const ClassAd * ads[] = { &cmd_ad };
+	return actOnUsers (DISABLE_USERREC, ads, nullptr, 1, false, reason, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::updateUserAds(
