@@ -28,13 +28,21 @@ Release Notes:
 
 New Features:
 
-- The *condor_starter* can now be configured to capture the stdout and stderr
+- The **condor_starter** can now be configured to capture the stdout and stderr
   of file transfer plugins and write that output into the StarterLog.
   :jira:`1459`
+  
+- Updated **condor_upgrade_check** script for better support and
+  maintainability. This update includes new flags/functionality
+  and removal of old checks for upgrading between V9 and V10 of
+  HTCondor.
+  :jira:`2168`
 
 Bugs Fixed:
 
-- None.
+- Fixed bug where DAG node jobs declared inline inside a DAG file
+  would fail to set the Job classad attribute ``JobSubmitMethod``.
+  :jira:`2184`
 
 .. _lts-version-history-2303:
 
@@ -49,6 +57,9 @@ Release Notes:
 
 New Features:
 
+- Preliminary support for openSUSE LEAP 15.
+  :jira:`2156`
+
 - Improve ``htcondor job status`` command to display information about
   a jobs goodput.
   :jira:`1982`
@@ -56,10 +67,21 @@ New Features:
 - Added ``ROOT_MAX_THREADS`` to :macro:`STARTER_NUM_THREADS_ENV_VARS` default value.
   :jira:`2137`
 
-- Preliminary support for openSUSE LEAP 15.
-  :jira:`2156`
-
 Bugs Fixed:
+
+- The file transfer plugin documents that an exit code of 0
+  is success, 1 is failure, and 2 is reserved for future work to
+  handle the need to refresh credentials.  The definition has now
+  changed so that any non-zero exit codes are treated as an error
+  putting the job on hold.
+  :jira:`2205`
+
+- Fixed a bug where any file I/O error (such as disk full) was
+  ignored by the *condor_starter* when writing the ClassAd file
+  that controlled file transfer plugins.  As a result, in rare
+  cases, file transfer plugins could be unknowingly given
+  incomplete sets of files to transfer.
+  :jira:`2203`
 
 - Fixed a crash in the Python bindings when job submit fails due to
   any reason.  A common reason might be when :macro:`SUBMIT_REQUIREMENT_NAMES`
@@ -72,24 +94,21 @@ Bugs Fixed:
   Previously, these were silently ignored.
   :jira:`2157`
 
-- Linux jobs with a invalid ``#!`` interpreter now get a better error
-  message when the EP is running as root.  This was enhanced in 10.0,
-  but a bug prevented the enhancement from fully working with a rootly EP.
-  :jira:`1698`
-
-- Fixed a bug where the DAGMan job proper for a DAG with a final
-  node could stay stuck in the removed job state.
-  :jira:`2147`
-
 - Fixed a bug where the Python-based HTChirp client had its max line length set
   much shorter than is allowed by the HTCondor Chirp server. The client now
   also throws a relevant error when this max limit is hit while sending commands
   to the server.
   :jira:`2142`
 
-- Updated the usage and man page of the *condor_drain* tool to include information
-  about the ``-reconfig-on-completion`` option.
-  :jira:`2164`
+- Linux jobs with a invalid ``#!`` interpreter now get a better error
+  message when the Execution Point is running as root.  This was enhanced in 10.0,
+  but a bug prevented the enhancement from fully working on a system
+  installed Execution Point.
+  :jira:`1698`
+
+- Fixed a bug where the DAGMan job proper for a DAG with a final
+  node could stay stuck in the removed job state.
+  :jira:`2147`
 
 - Correctly identify ``GPUsAverageUsage`` and ``GPUsMemoryUsage`` as floating point
   values for *condor_adstash*.
@@ -97,6 +116,10 @@ Bugs Fixed:
 
 - Fixed a bug where *condor_adstash* would get wedged due to a logging failure.
   :jira:`2166`
+
+- Updated the usage and man page of the *condor_drain* tool to include information
+  about the ``-reconfig-on-completion`` option.
+  :jira:`2164`
 
 .. _lts-version-history-2302:
 

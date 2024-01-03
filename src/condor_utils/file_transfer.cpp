@@ -6396,13 +6396,13 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 
 	int exit_status;
 	bool exit_by_signal;
-	TransferPluginResult result;
+	TransferPluginResult plugin_result;
 
 	if( p_timer.was_timeout() ) {
 		exit_status = ETIME;
 		exit_by_signal = TRUE;
 
-		result = TransferPluginResult::TimedOut;
+		plugin_result = TransferPluginResult::TimedOut;
 
 		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin.c_str(), timeout );
 	} else if( p_timer.exit_status() == MYPCLOSE_EX_STATUS_UNKNOWN ) {
@@ -6411,16 +6411,25 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		exit_status    = WEXITSTATUS(macos_dummy);
 		exit_by_signal = WIFSIGNALED(macos_dummy);
 
-		result = TransferPluginResult::Error;
+		plugin_result = TransferPluginResult::Error;
 
 		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", plugin.c_str() );
 	} else {
 		exit_status    = WEXITSTATUS(rc);
 		exit_by_signal = WIFSIGNALED(rc);
 
-		result = static_cast<TransferPluginResult>(exit_status);
+		// We document that exit code 2 might mean something in the future
+		// but for now, treat non-zero codes as errors.
+		switch (exit_status) {
+			case 0:
+				plugin_result = TransferPluginResult::Success;
+				break;
+			default:
+				plugin_result = TransferPluginResult::Error;
+				break;
+		}
 		if (exit_by_signal) {
-			result = TransferPluginResult::Error;
+			plugin_result = TransferPluginResult::Error;
 		}
 
 		dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
@@ -6430,13 +6439,13 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	char * output = p_timer.output().Detach();
 
 	char * token = strtok( output, "\r\n" );
-	while( token != NULL ) {
+	while( token != nullptr ) {
 		// Does this need a newline?  It used to get one.
 		if( !plugin_stats->Insert( token ) ) {
 			dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", token);
 		}
 
-		token = strtok(NULL, "\r\n" );
+		token = strtok(nullptr, "\r\n" );
 	}
 
 	free(output);
@@ -6463,7 +6472,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	}
 
 	// If the plugin did not return successfully, report the error and return
-	if (exit_by_signal || (result != TransferPluginResult::Success)) {
+	if (exit_by_signal || (plugin_result != TransferPluginResult::Success)) {
 		if( p_timer.was_timeout() ) {
 			e.pushf( "FILETRANSFER", 1,
 				"File transfer plugin %s timed out after %d seconds.",
@@ -6490,7 +6499,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		return TransferPluginResult::Error;
 	}
 
-	return result;
+	return plugin_result;
 }
 
 // Similar to FileTransfer::InvokeFileTransferPlugin, modified to transfer
@@ -6560,8 +6569,22 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			input_filename.c_str(), strerror(errno), errno );
 		return TransferPluginResult::Error;
 	}
-	fputs( transfer_files_string.c_str(), input_file );
-	fclose( input_file );
+	int fputs_error  = fputs(transfer_files_string.c_str(), input_file);
+	if (fputs_error == EOF) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+			"Could not write to file %s (%s, errno=%d), aborting file transfer\n",
+			input_filename.c_str(), strerror(errno), errno);
+		std::ignore = fclose(input_file);
+		return TransferPluginResult::Error;
+	}
+
+	int fclose_error = fclose(input_file);
+	if (fclose_error == EOF) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+			"Could not close file %s (%s, errno=%d), aborting file transfer\n",
+			input_filename.c_str(), strerror(errno), errno);
+		return TransferPluginResult::Error;
+	}
 
 	// Prepare args for the plugin
 	output_filename = iwd + "/." + plugin_name + ".out";
@@ -6599,7 +6622,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	int exit_status;
 	bool exit_by_signal;
-	TransferPluginResult result;
+	TransferPluginResult plugin_result;
 
 	bool timed_out = false;
 	if( p_timer.was_timeout() ) {
@@ -6607,7 +6630,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		exit_status = ETIME;
 		exit_by_signal = TRUE;
 
-		result = TransferPluginResult::TimedOut;
+		plugin_result = TransferPluginResult::TimedOut;
 
 		dprintf( D_ERROR, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin_path.c_str(), timeout );
 	} else if( p_timer.exit_status() == MYPCLOSE_EX_STATUS_UNKNOWN ) {
@@ -6616,16 +6639,26 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		exit_status    = WEXITSTATUS(macos_dummy);
 		exit_by_signal = WIFSIGNALED(macos_dummy);
 
-		result = TransferPluginResult::Error;
+		plugin_result = TransferPluginResult::Error;
 
 		dprintf( D_ERROR, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", plugin_path.c_str() );
 	} else {
 		exit_status    = WEXITSTATUS(rc);
 		exit_by_signal = WIFSIGNALED(rc);
 
-		result = static_cast<TransferPluginResult>(exit_status);
+		// We document that exit code 2 might mean something in the future
+		// but for now, treat non-zero codes as errors.
+		switch (exit_status) {
+			case 0:
+				plugin_result = TransferPluginResult::Success;
+				break;
+			default:
+				plugin_result = TransferPluginResult::Error;
+				break;
+		}
+
 		if (exit_by_signal) {
-			result = TransferPluginResult::Error;
+			plugin_result = TransferPluginResult::Error;
 		}
 
 		dprintf (D_ERROR, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", plugin_path.c_str(), exit_status, exit_by_signal);
@@ -6683,7 +6716,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	// Output stats regardless of success or failure
 	output_file = safe_fopen_wrapper( output_filename.c_str(), "r" );
-	if ( output_file == NULL ) {
+	if ( output_file == nullptr ) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open %s output file "
 			"%s.\n", plugin_path.c_str(), output_filename.c_str() );
 		e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited with code %i, "
@@ -6740,7 +6773,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	fclose(output_file);
 
-	if( exit_by_signal || (result != TransferPluginResult::Success && e.getFullText().empty()) ) {
+	if( exit_by_signal || (plugin_result != TransferPluginResult::Success && e.getFullText().empty()) ) {
 		if( timed_out ) {
 			e.pushf( "FILETRANSFER", 1,
 				"File transfer plugin %s timed out after %d seconds.",
@@ -6752,7 +6785,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		}
 	}
 
-	return result;
+	return plugin_result;
 }
 
 int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {

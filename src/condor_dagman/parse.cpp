@@ -294,7 +294,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					}
 					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename.c_str()), new SubmitHash()));
 					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename.c_str()));
-					submitDesc->init();
+					submitDesc->init(JSM_DAGMAN);
 					submitDesc->setDisableFileChecks(true);
 					std::string errmsg;
 					char * stopline = NULL;
@@ -354,7 +354,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					}
 					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename.c_str()), new SubmitHash()));
 					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename.c_str()));
-					submitDesc->init();
+					submitDesc->init(JSM_DAGMAN);
 					submitDesc->setDisableFileChecks(true);
 					std::string errmsg;
 					char * stopline = NULL;
@@ -431,7 +431,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					}
 					dag->SubmitDescriptions.insert(std::make_pair(std::string(descName.c_str()), new SubmitHash()));
 					SubmitHash* submitDesc = dag->SubmitDescriptions.at(descName.c_str());
-					submitDesc->init();
+					submitDesc->init(JSM_DAGMAN);
 					submitDesc->setDisableFileChecks(true);
 					std::string errmsg;
 					char * stopline = NULL;
