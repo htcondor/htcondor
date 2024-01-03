@@ -119,7 +119,7 @@ public:
 			@return "" if okay, error message otherwise
 		*/
 	static std::string fileNameToLogicalLines(const std::string &filename,
-				StringList &logicalLines);
+			std::vector<std::string> &logicalLines);
 
 private:
 	    /** Read the entire contents of the given file into a string.
@@ -148,8 +148,8 @@ private:
 		 * @param Output string list of "logical" lines.
 		 * @return "" if okay, or else an error message.
 		 */
-	static std::string CombineLines(StringList &listIn, char continuation,
-			const std::string &filename, StringList &listOut);
+	static std::string CombineLines(const std::string &dataIn, char continuation,
+			const std::string &filename, std::vector<std::string> &listOut);
 };
 
 class ReadMultipleUserLogs
