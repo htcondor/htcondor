@@ -314,20 +314,20 @@ ppOption PrettyPrinter::prettyPrintHeadings (bool any_ads)
 	return pps;
 }
 
-void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, StringList * whitelist, bool fHashOrder)
+void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, classad::References * includelist, bool fHashOrder)
 {
 	if ( ! ad) return;
 
 	if (!wantOnlyTotals) {
 
 		// as a special case to aid in some bug repro scenarios, honor the fHashOrder flag for
-		// -long form classads even when there is a whitelist.
-		if (pps == PP_LONG && fHashOrder && whitelist && ! whitelist->isEmpty()) {
+		// -long form classads even when there is an include list.
+		if (pps == PP_LONG && fHashOrder && includelist && ! includelist->empty()) {
 			classad::ClassAdUnParser unp;
 			unp.SetOldClassAd( true, true );
 			std::string line;
 			for (classad::ClassAd::const_iterator itr = ad->begin(); itr != ad->end(); ++itr) {
-				if (whitelist->contains_anycase(itr->first.c_str())) {
+				if (includelist->contains(itr->first)) {
 					line = itr->first.c_str();
 					line += " = ";
 					unp.Unparse(line, itr->second);
@@ -339,11 +339,11 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, S
 			return;
 		}
 
-		// get a sorted list of attributes to print for long form output or when there is a whitelist
+		// get a sorted list of attributes to print for long form output or when there is an include list
 		classad::References attrs;
 		classad::References *proj = NULL;
-		if (PP_IS_LONGish(pps) && ( ! fHashOrder || whitelist)) {
-			sGetAdAttrs(attrs, *ad, true, whitelist);
+		if (PP_IS_LONGish(pps) && ( ! fHashOrder || includelist)) {
+			sGetAdAttrs(attrs, *ad, true, includelist);
 			proj = &attrs;
 		}
 

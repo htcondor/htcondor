@@ -415,22 +415,18 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 
 std::vector<std::string> split(const std::string& str, const char* delim, bool trim)
 {
-	int start, len;
 	std::vector<std::string> list;
-	StringTokenIterator sti(str, delim, trim);
-	while ((start = sti.next_token(len)) >= 0) {
-		list.emplace_back(&str[start], len);
+	for (const auto& item: StringTokenIterator(str, delim, trim)) {
+		list.emplace_back(item);
 	}
 	return list;
 }
 
 std::vector<std::string> split(const char* str, const char* delim, bool trim)
 {
-	int start, len;
 	std::vector<std::string> list;
-	StringTokenIterator sti(str, delim, trim);
-	while ((start = sti.next_token(len)) >= 0) {
-		list.emplace_back(&str[start], len);
+	for (const auto& item: StringTokenIterator(str, delim, trim)) {
+		list.emplace_back(item);
 	}
 	return list;
 }

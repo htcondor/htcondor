@@ -128,6 +128,36 @@ void ClassAdReconfig()
 	}
 }
 
+classad::References SplitAttrNames(const std::string& str)
+{
+	classad::References names;
+	for (const auto& name : StringTokenIterator(str)) {
+		names.emplace(name);
+	}
+	return names;
+}
+
+classad::References SplitAttrNames(const char* str)
+{
+	classad::References names;
+	for (const auto& name : StringTokenIterator(str)) {
+		names.emplace(name);
+	}
+	return names;
+}
+
+std::string JoinAttrNames(const classad::References &names, const char* delim)
+{
+	std::string str;
+	for (const auto& name : names) {
+		if (!str.empty()) {
+			str += delim;
+		}
+		str += name;
+	}
+	return str;
+}
+
 static classad::MatchClassAd the_match_ad;
 static bool the_match_ad_in_use = false;
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
@@ -1923,7 +1953,7 @@ CondorClassAdFileParseHelper::ParseType CondorClassAdListWriter::autoSetFormat(C
 //    < 0 failure,
 //    0   nothing written
 //    1   non-empty ad appended
-int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, StringList * includelist, bool hash_order)
+int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, classad::References * includelist, bool hash_order)
 {
 	if (ad.size() == 0) return 0;
 	size_t cchBegin = output.size();
@@ -2053,7 +2083,7 @@ int CondorClassAdListWriter::appendFooter(std::string & buf, bool xml_always_wri
 //    0   nothing written
 //    1   non-empty ad written
 static const int cchReserveForPrintingAds = 16384;
-int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, StringList * includelist, bool hash_order)
+int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, classad::References * includelist, bool hash_order)
 {
 	buffer.clear();
 	if ( ! cNonEmptyOutputAds) buffer.reserve(cchReserveForPrintingAds);
@@ -2417,12 +2447,12 @@ sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList
 	@return true
 */
 bool
-sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, bool ignore_parent )
+sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, classad::References *attr_include_list, bool ignore_parent )
 {
 	classad::ClassAd::const_iterator itr;
 
 	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+		if ( attr_include_list && !attr_include_list->contains(itr->first)) {
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
@@ -2437,7 +2467,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			if ( attrs.find(itr->first) != attrs.end() ) {
 				continue; // we already inserted this into the attrs list.
 			}
-			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+			if ( attr_include_list && !attr_include_list->contains(itr->first) ) {
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
@@ -2483,7 +2513,7 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 	@param output The std::string to write into
 	@return std::string.c_str()
 */
-const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, StringList *attr_include_list /*= NULL*/, bool exclude_private /*= false*/)
+const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, classad::References *attr_include_list /*= NULL*/, bool exclude_private /*= false*/)
 {
 	classad::References attrs;
 	sGetAdAttrs(attrs, ad, exclude_private, attr_include_list);
