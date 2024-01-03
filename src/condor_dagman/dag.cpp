@@ -3354,13 +3354,14 @@ Dag::DumpNodeStatus( bool held, bool removed )
 
 	fclose( outfile );
 
-		//
-		// Now rename the temporary file to the "real" file.
-		// Note:  we do tolerant_unlink because renaming over an
-		// existing file fails on Windows.
-		//
+	// Now rename the temporary file to the "real" file.
 	std::string statusFileName( _statusFileName );
-	_dagmanUtils.tolerant_unlink( statusFileName.c_str() );
+
+#ifdef WIN32
+	//Note: We do tolerant_unlink because renaming over an existing file fails on Windows.
+	_dagmanUtils.tolerant_unlink(statusFileName.c_str());
+#endif
+
 	if ( rename( tmpStatusFile.c_str(), statusFileName.c_str() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
