@@ -133,7 +133,7 @@ STEP 7: Access Permission Settings.
         Read access allows a machine to obtain information about
         HTCondor such as the status of machines in the pool and the job
         queues.  If all of your HTCondor machines and users are in
-        a single DNS domain or IP Address range, setting this to *.domain
+        a single DNS domain or IP Address range, setting this to \*.domain
         an IP address range with wildcards is a good choice.
         See ``ALLOW_READ`` :index:`ALLOW_READ`
      Write
