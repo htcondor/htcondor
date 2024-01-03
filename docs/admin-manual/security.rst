@@ -150,7 +150,7 @@ connection.)
 
    HTCondor on Windows does not use ``FS``, but rather a method
    specific to Windows called NTSSPI.  See the section on
-   :ref:`admin-manual/security:authentication` for more more info.
+   :ref:`admin-manual/security:authentication` for more info.
 
 If it is necessary to do a "remote submit" -- that is, run :tool:`condor_submit` on a
 different machine than is running the *condor_schedd* -- then the administrator
