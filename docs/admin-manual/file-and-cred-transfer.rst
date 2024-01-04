@@ -524,6 +524,8 @@ htvault-config
 (`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
 documentation to see how to set up and configure the Vault server.
 
+.. _installing_credmon_local:
+
 Automatic Issuance of SciTokens Credentials
 -------------------------------------------
 
