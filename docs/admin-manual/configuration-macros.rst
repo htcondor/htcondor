@@ -6580,8 +6580,14 @@ do not specify their own with:
 :macro-def:`SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS[SUBMIT]`
     If ``True``, :tool:`condor_submit` will treat any attribute in the job
     ClassAd that begins with ``Request`` as a request for a custom resource
-    and will ad a clause to the Requirements expression insuring that
+    and will ad a clause to the Requirements expression ensuring that
     on slots that have that resource will match the job.
+    The default value is ``True``.
+
+:macro-def:`SUBMIT_GENERATE_CONDOR_C_REQUIREMENTS[SUBMIT]`
+    If ``True``, :tool:`condor_submit` will add clauses to the job's
+    Requirements expression for **condor** grid universe jobs like it
+    does for vanilla universe jobs.
     The default value is ``True``.
 
 :macro-def:`SUBMIT_SKIP_FILECHECKS[SUBMIT]`

@@ -2074,6 +2074,10 @@ default=true
 type=bool
 tags=submit
 
+[SUBMIT_GENERATE_CONDOR_C_REQUIREMENTS]
+default=true
+type=bool
+
 [SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES]
 description=Set the default value submit should use for should_transfer_files for jobs that don't specify
 default=
