@@ -557,7 +557,9 @@ for SciTokens. Start by generating a private key, for example:
 
     $ scitokens-admin-create-key --ec --create-keys --pem-private > my-private-key.pem
 
-Next, generate a corresponding public key in JWKS format, for example:
+In this example, ``my-private-key.pem`` contains a private key that can
+be used to sign tokens. Next, generate a corresponding public key in JWKS
+format, for example:
 
 .. code-block:: console
 
