@@ -102,6 +102,8 @@ filterPluginResults( const classad::ClassAd & ad ) {
         { "ConnectionTimeSeconds",  Value::REAL_VALUE },
         { "TransferURL",            Value::STRING_VALUE },
         { "TransferErrorData",      Value::CLASSAD_VALUE },
+        { "DeveloperData",          Value::CLASSAD_VALUE },
+        { "TransferData",           Value::CLASSAD_VALUE },
     };
 
 
