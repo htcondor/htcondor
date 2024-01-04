@@ -330,6 +330,12 @@ class Schedd():
 
         [FIXME]
 
+        .. note::
+            This function presently uses :mod:`warnings` to pass along
+            the warnings generated about the submit.  Python by default
+            suppresses the second and subsequent reports of a warning
+            for the same line of code.
+
         :param description: FIXME
         :param count:  Every valid queue statement in the submit language
             has an associated count, which is implicitly 1, but may be
