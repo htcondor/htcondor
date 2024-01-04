@@ -1216,8 +1216,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 					fPrintAdAsJson(stdout, *ad, projection.empty() ? NULL : &projection, true);
 				}
 				else {
-					StringList proj_sl(JoinAttrNames(projection, ","));
-					fPrintAd(stdout, *ad, false, proj_sl.isEmpty() ? NULL : &proj_sl);
+					fPrintAd(stdout, *ad, false, projection.empty() ? NULL : &projection);
 				}
 				printf("\n"); 
             } else {
@@ -1315,8 +1314,7 @@ static void printJob(ClassAd & ad)
 		} else if ( use_json_lines ) {
 			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, true);
 		} else {
-			StringList proj_sl(JoinAttrNames(projection, ","));
-			fPrintAd(stdout, ad, false, proj_sl.isEmpty() ? NULL : &proj_sl);
+			fPrintAd(stdout, ad, false, projection.empty() ? NULL : &projection);
 		}
 		printf("\n");
 	} else {
