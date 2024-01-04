@@ -6647,8 +6647,38 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	fputs( transfer_files_string.c_str(), input_file );
 	fclose( input_file );
 
-	// Prepare args for the plugin
+
 	output_filename = iwd + "/." + plugin_name + ".out";
+
+	// Pre-allocate the output file.  Filling it with spaces avoids
+	// both potential cross-platform fallocate() issues and potential
+	// sparse allocation.
+	output_file = safe_fopen_wrapper( output_filename.c_str(), "w" );
+	if( output_file == nullptr ) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+			"Could not open %s for writing (%s, errno=%d), aborting\n",
+			output_filename.c_str(), strerror(errno), errno );
+		return TransferPluginResult::Error;
+	}
+	const char sixty_four_spaces[] =
+		"                                                                ";
+	for( unsigned i = 0; i < ((16 * 1204)/64); ++i ) {
+		if( fputs( sixty_four_spaces, output_file ) == EOF ) {
+			dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+				"Failed to preallocate output file (fputs() failed), aborting\n" );
+			return TransferPluginResult::Error;
+		}
+	}
+	int rv = fclose(output_file);
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+			"Failed to preallocate output file (fclose() failed), aborting\n" );
+		return TransferPluginResult::Error;
+	}
+	output_file = nullptr;
+
+
+	// Prepare args for the plugin
 	plugin_args.AppendArg( plugin_path.c_str() );
 	plugin_args.AppendArg( "-infile" );
 	plugin_args.AppendArg( input_filename.c_str() );
