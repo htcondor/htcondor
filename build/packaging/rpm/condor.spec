@@ -1377,6 +1377,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jan 04 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.3-1
+- Preliminary support for openSUSE LEAP 15
+- All non-zero exit values from file transfer plugins are now errors
+- Fix crash in Python bindings when job submission fails
+- Chirp uses a 5120 byte buffer and errors out for bigger messages
+- condor_adstash now recognizes GPU usage values as floating point numbers
+
 * Wed Nov 29 2023 Tim Theisen <tim@cs.wisc.edu> - 23.2.0-1
 - Add 'periodic_vacate' submit command to restart jobs that are stuck
 - EPs now advertises whether the execute directory is on rotational storage

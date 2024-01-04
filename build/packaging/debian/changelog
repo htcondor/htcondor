@@ -1,3 +1,13 @@
+condor (23.0.3-1) stable; urgency=medium
+
+  * Preliminary support for openSUSE LEAP 15
+  * All non-zero exit values from file transfer plugins are now errors
+  * Fix crash in Python bindings when job submission fails
+  * Chirp uses a 5120 byte buffer and errors out for bigger messages
+  * condor_adstash now recognizes GPU usage values as floating point numbers
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 04 Jan 2024 20:07:00 -0600
+
 condor (23.2.0-1) stable; urgency=medium
 
   * Add 'periodic_vacate' submit command to restart jobs that are stuck
