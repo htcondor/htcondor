@@ -858,7 +858,7 @@ static slots, but it is dynamic when partitionable slots are used. That
 is, the limit is whatever the "Mem" column of condor_status reports for
 that slot.
 
-If :macro:`CGROUP_MEMORY_LIMIT_POLICY` is set, HTCondor will also also use
+If :macro:`CGROUP_MEMORY_LIMIT_POLICY` is set, HTCondor will also use
 cgroups to limit the amount of swap space used by each job. By default,
 the maximum amount of swap space used by each slot is the total amount
 of Virtual Memory in the slot, minus the amount of physical memory. Note

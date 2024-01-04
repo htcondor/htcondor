@@ -522,7 +522,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     may be up to two history files (the previous one, which was rotated
     out of use, and the current one that is being written to). When the
     job queue file is rotated, and this rotation would cause the number
-    of backups to be larger the the maximum specified, the oldest file
+    of backups to be larger than the maximum specified, the oldest file
     is removed.
 
 :macro-def:`CLASSAD_LOG_STRICT_PARSING[Global]`
@@ -1476,7 +1476,7 @@ Log files may optionally be specified per debug level as follows:
     :macro:`<SUBSYS>_DEBUG` for the list of debug levels.
     If the debug level is included in ``$(<SUBSYS>_DEBUG)``, then all
     messages of this debug level will be written both to the log file
-    defined by :macro:`<SUBSYS>_LOG` and the the log file defined by
+    defined by :macro:`<SUBSYS>_LOG` and the log file defined by
     :macro:`<SUBSYS>_<LEVEL>_LOG`. As examples, ``SHADOW_SYSCALLS_LOG``
     specifies a log file for all remote system call debug messages, and
     :macro:`NEGOTIATOR_MATCH_LOG` specifies a log file that only captures
@@ -3590,7 +3590,7 @@ section.
     ``/tmp`` and ``/var/tmp`` directories, but when accessing files via
     these paths, the system will redirect the access. The resultant
     files will actually end up in directories named ``tmp`` or
-    ``var/tmp`` under the the job's temporary scratch directory. This is
+    ``var/tmp`` under the job's temporary scratch directory. This is
     useful, because the job's scratch directory will be cleaned up after
     the job completes, two concurrent jobs will not interfere with each
     other, and because jobs will not be able to fill up the real
@@ -3924,7 +3924,7 @@ needs.
     may be statically divided or partitioned. A script may be a
     convenient way to specify a calculated or detected quantity of the
     resource, instead of specifying a fixed quantity or list of the
-    resource in the the configuration when set by
+    resource in the configuration when set by
     :macro:`MACHINE_RESOURCE_<name>`.
 
     The script may also output an attribute of the form
@@ -6580,8 +6580,14 @@ do not specify their own with:
 :macro-def:`SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS[SUBMIT]`
     If ``True``, :tool:`condor_submit` will treat any attribute in the job
     ClassAd that begins with ``Request`` as a request for a custom resource
-    and will ad a clause to the Requirements expression insuring that
+    and will ad a clause to the Requirements expression ensuring that
     on slots that have that resource will match the job.
+    The default value is ``True``.
+
+:macro-def:`SUBMIT_GENERATE_CONDOR_C_REQUIREMENTS[SUBMIT]`
+    If ``True``, :tool:`condor_submit` will add clauses to the job's
+    Requirements expression for **condor** grid universe jobs like it
+    does for vanilla universe jobs.
     The default value is ``True``.
 
 :macro-def:`SUBMIT_SKIP_FILECHECKS[SUBMIT]`
@@ -6718,7 +6724,7 @@ These macros affect :tool:`condor_preen`.
     considers valid files to find in the ``$(SPOOL)`` directory. The
     default value is all files known by HTCondor to be valid. This
     variable exists such that it can be queried; it should not be
-    changed. :tool:`condor_preen` use it to initialize the the list files and
+    changed. :tool:`condor_preen` use it to initialize the list files and
     directories that are normally present in the ``$(SPOOL)`` directory.
     A single asterisk (\*) wild card character is permitted in each file
     item within the list.
@@ -8409,7 +8415,7 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_CREATE_IDTOKEN_NAMES[JOB ROUTER]`
     An list of the names of IDTOKENs that the JobRouter should create and refresh.
     IDTOKENS whose names are listed here should each have a :macro:`JOB_ROUTER_CREATE_IDTOKEN_<NAME>`
-    configuration variable that specifies the the filename, ownership and properties of the IDTOKEN.
+    configuration variable that specifies the filename, ownership and properties of the IDTOKEN.
 
 :macro-def:`JOB_ROUTER_IDTOKEN_REFRESH[JOB ROUTER]`
     An integer value of secounds that controls the rate at which the JobRouter will refresh
@@ -10555,7 +10561,7 @@ details. The other set replace functionality of the
 :macro-def:`<Keyword>_HOOK_REPLY_FETCH[HOOKS]`
     For the fetch work hooks, the full path to the program to invoke
     when the hook defined by :macro:`<Keyword>_HOOK_FETCH_WORK` returns data
-    and the the *condor_startd* decides if it is going to accept the
+    and then the *condor_startd* decides if it is going to accept the
     fetched job or not. ``<Keyword>`` is the hook keyword defined to
     distinguish between sets of hooks.
 
@@ -10844,7 +10850,7 @@ are probably the most common.
 
     Each value should be the value of the metric since the last time the
     job reported. The reported value may therefore go up or down;
-    HTCondor will record either the the sum or the peak value, as
+    HTCondor will record either the sum or the peak value, as
     appropriate, for the duration of the job running in a slot assigned
     resources of the corresponding type.
 

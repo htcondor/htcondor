@@ -33,6 +33,10 @@ License: Apache-2.0
 Comment: Condor Team, HTCondor Team, Center for High Throughput Computing
          can all be considered to be different names for the same entity
 
+Files: src/safefile/*
+Copyright: 2007-2011, James A. Kupsch
+License: Apache-2.0
+
 Files:  build/cmake/CondorConfigure.cmake
         build/cmake/CondorPackageConfig.cmake
         build/cmake/macros/AppendVar.cmake
@@ -202,10 +206,6 @@ Files: src/condor_rmdir/bprint.h
        src/condor_tests/timed_cmd.cpp
        src/condor_tests/tiny_winapi.h
 Copyright: 2010-2023 John M. Knoeller
-License: Apache-2.0
-
-Files: src/safefile/*
-Copyright: 2007-2011, James A. Kupsch
 License: Apache-2.0
 
 Files: src/rvgahp/*

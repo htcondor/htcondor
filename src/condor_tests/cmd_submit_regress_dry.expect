@@ -132,7 +132,6 @@ Err=/"err.[0-9]+.0"/
 GridResource="condor jfrey@here 127.0.0.1"
 JobUniverse=9
 Out=/"out.\d+.0"/
-Requirements=true
 ShouldTransferFiles="YES"
 StreamErr=false
 StreamOut=false

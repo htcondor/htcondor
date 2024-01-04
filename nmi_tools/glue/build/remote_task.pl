@@ -374,9 +374,5 @@ sub check_deb {
         # Ubuntu complains about the "unstable" distro
         $suppress_tags="$suppress_tags,bad-distribution-in-changes-file";
     }
-    if ($ENV{NMI_PLATFORM} =~ /Ubuntu|Debian11/) {
-        # Only Debian 12 and newer correctly process the lintian overrides for these
-        $suppress_tags="$suppress_tags,license-problem-json-evil,statically-linked-binary";
-    }
     return "lintian $fail_on_error $suppress_tags *.changes";
 }

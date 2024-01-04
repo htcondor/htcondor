@@ -1,33 +1,6 @@
 Special Environment Considerations
 ==================================
 
-AFS
----
-
-:index:`AFS<single: AFS; file system>` :index:`interaction with<single: interaction with; AFS>`
-
-The HTCondor daemons do not run authenticated to AFS; they do not
-possess AFS tokens. Therefore, no child process of HTCondor will be AFS
-authenticated. The implication of this is that you must set file
-permissions so that your job can access any necessary files residing on
-an AFS volume without relying on having your AFS permissions.
-
-If a job you submit to HTCondor needs to access files residing in AFS,
-you have the following choices:
-
-#. If the files must be kept on AFS, then set a host ACL (using the AFS
-   *fs setacl* command) on the subdirectory to serve as the current
-   working directory for the job. Set the ACL such that any host in 
-   the pool can access the files without being authenticated. If you 
-   do not know how to use an AFS host ACL, ask the person at your site 
-   responsible for the AFS configuration.
-
-The Center for High Throughput Computing hopes to improve upon how
-HTCondor deals with AFS authentication in a subsequent release.
-
-Please see the :ref:`admin-manual/file-and-cred-transfer:using
-htcondor with afs` section for further discussion of this problem.
-
 NFS
 ---
 
@@ -69,50 +42,6 @@ job may disable the flushing by setting
 in the job's submit description file. See the 
 :doc:`/classad-attributes/job-classad-attributes` page for a definition of the
 job ClassAd attribute.
-
-HTCondor Daemons That Do Not Run as root
-----------------------------------------
-
-:index:`running as root`
-:index:`running as root<single: running as root; daemon>`
-
-HTCondor is normally installed such that the HTCondor daemons have root
-permission. This allows HTCondor to run the *condor_shadow*
-daemon and the job with the submitting user's UID and file access
-rights. When HTCondor is started as root, HTCondor jobs can access
-whatever files the user that submits the jobs can.
-
-However, it is possible that the HTCondor installation does not have
-root access, or has decided not to run the daemons as root. That is
-unfortunate, since HTCondor is designed to be run as root. To see if
-HTCondor is running as root on a specific machine, use the command
-
-.. code-block:: console
-
-      $ condor_status -master -l <machine-name>
-
-where <machine-name> is the name of the specified machine. This command
-displays the full condor_master ClassAd; if the attribute ``RealUid``
-equals zero, then the HTCondor daemons are indeed running with root
-access. If the ``RealUid`` attribute is not zero, then the HTCondor
-daemons do not have root access.
-
-NOTE: The Unix program *ps* is not an effective method of determining if
-HTCondor is running with root access. When using *ps*, it may often
-appear that the daemons are running as the condor user instead of root.
-However, note that the *ps* command shows the current effective owner of
-the process, not the real owner. (See the *getuid* (2) and
-*geteuid* (2) Unix man pages for details.) In Unix, a process running
-under the real UID of root may switch its effective UID. (See the
-*seteuid* (2) man page.) For security reasons, the daemons only set the
-effective UID to root when absolutely necessary, as it will be to
-perform a privileged operation.
-
-If daemons are not running with root access, make any and all files
-and/or directories that the job will touch readable and/or writable by
-the UID (user id) specified by the ``RealUid`` attribute. Often this may
-mean using the Unix command chmod 777 on the directory from which the
-HTCondor job is submitted.
 
 Job Leases
 ----------

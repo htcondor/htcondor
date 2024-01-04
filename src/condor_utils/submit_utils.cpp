@@ -5287,8 +5287,10 @@ int SubmitHash::SetRequirements()
 		}
 	}
 
-	if ( JobUniverse == CONDOR_UNIVERSE_GRID ) {
-		// We don't want any defaults at all w/ Globus...
+	YourStringNoCase gridType(JobGridType.c_str());
+	if ( JobUniverse == CONDOR_UNIVERSE_GRID &&
+		 (gridType != "condor" || !param_boolean("SUBMIT_GENERATE_CONDOR_C_REQUIREMENTS", true)) ) {
+		// We don't want any defaults at all w/ non-Condor-C grid universe...
 		// If we don't have a req yet, set to TRUE
 		if ( answer.empty() ) {
 			answer = "TRUE";

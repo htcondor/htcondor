@@ -240,3 +240,30 @@ class TestGetHTCondor:
             for line_number in postscript_lines:
                 logger.info(lines[line_number])
         assert(results_from_container.returncode == 0)
+
+
+if __name__ == "__main__":
+    import subprocess
+
+    # The easiest way to run the tests concurrently is by invoking PyTest
+    # concurrently.  For now, we'll run one PyTest instance per image.
+    images = { x : None for x in ( *IMAGES_BY_CHANNEL["stable"], *IMAGES_BY_CHANNEL["current"] ) }
+    # images = { "debian:11" : None, "debian:12" : None }
+
+    for image in images.keys():
+        command = [ "python3", "-m", "pytest", __file__, "-k", image ]
+
+        print( f"Spawning {' '.join(command)}" )
+        images[image] = subprocess.Popen( command )
+
+    for proc in images.values():
+        print( f"Waiting for '{' '.join(proc.args)}'..." )
+        proc.wait()
+
+    failure_count = 0
+    for image, proc in images.items():
+        if proc.returncode != 0:
+            failure_count = failure_count + 1
+            print(f"{image} failed!")
+    if failure_count == 0:
+        print("All tests passed!")
