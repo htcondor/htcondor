@@ -2667,7 +2667,7 @@ CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const
 //////////////XML functions///////////
 
 bool
-fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list)
+fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, const classad::References *attr_include_list)
 {
     if(!fp)
     {
@@ -2681,24 +2681,14 @@ fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_lis
 }
 
 bool
-sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list)
+sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list)
 {
 	classad::ClassAdXMLUnParser unparser;
 	std::string xml;
 
 	unparser.SetCompactSpacing(false);
 	if ( attr_include_list ) {
-		classad::ClassAd tmp_ad;
-		classad::ExprTree *expr;
-		const char *attr;
-		attr_include_list->rewind();
-		while( (attr = attr_include_list->next()) ) {
-			if ( (expr = ad.Lookup( attr )) ) {
-				classad::ExprTree *new_expr = expr->Copy();
-				tmp_ad.Insert( attr, new_expr );
-			}
-		}
-		unparser.Unparse( xml, &tmp_ad );
+		unparser.Unparse( xml, &ad, *attr_include_list );
 	} else {
 		unparser.Unparse( xml, &ad );
 	}
@@ -2708,7 +2698,7 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 ///////////// end XML functions /////////
 
 bool
-fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
+fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, const classad::References *attr_include_list, bool oneline)
 {
     if(!fp)
     {
@@ -2722,22 +2712,12 @@ fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_li
 }
 
 bool
-sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
+sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, bool oneline)
 {
 	classad::ClassAdJsonUnParser unparser(oneline);
 
 	if ( attr_include_list ) {
-		classad::ClassAd tmp_ad;
-		classad::ExprTree *expr;
-		const char *attr;
-		attr_include_list->rewind();
-		while( (attr = attr_include_list->next()) ) {
-			if ( (expr = ad.Lookup( attr )) ) {
-				classad::ExprTree *new_expr = expr->Copy();
-				tmp_ad.Insert( attr, new_expr );
-			}
-		}
-		unparser.Unparse( output, &tmp_ad );
+		unparser.Unparse( output, &ad, *attr_include_list );
 	} else {
 		unparser.Unparse( output, &ad );
 	}

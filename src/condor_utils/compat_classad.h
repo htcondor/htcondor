@@ -347,7 +347,7 @@ bool IsValidAttrName(const char *name);
  * @returntrue as long as the file existed.
  */
 bool fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad,
-				  StringList *attr_white_list = NULL);
+                   const classad::References *attr_white_list = NULL);
 
 /* Prints the classad as XML to a string. fPrintAdAsXML calls this.
  * @param output The string to have filled with the XML-ified classad.
@@ -357,7 +357,7 @@ bool fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad,
  * @returntrue
  */
 bool sPrintAdAsXML(std::string &output, const classad::ClassAd &ad,
-				  StringList *attr_white_list = NULL);
+                   const classad::References *attr_white_list = NULL);
 
 /* Prints out the classad as json to a file.
  * @param fp The file to be printed to.
@@ -367,8 +367,8 @@ bool sPrintAdAsXML(std::string &output, const classad::ClassAd &ad,
  * @returntrue as long as the file existed.
  */
 bool fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad,
-				   StringList *attr_white_list = NULL,
-				   bool oneline = false);
+                    const classad::References *attr_white_list = NULL,
+                    bool oneline = false);
 
 /* Prints the classad as JSON to a string. fPrintAdAsJson calls this.
  * @param output The string to have filled with the JSON-ified classad.
@@ -379,8 +379,8 @@ bool fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad,
  * @returntrue
  */
 bool sPrintAdAsJson(std::string &output, const classad::ClassAd &ad,
-				   StringList *attr_white_list = NULL,
-				   bool oneline = false);
+                    const classad::References *attr_white_list = NULL,
+                    bool oneline = false);
 
 /** Given an attribute name, return a buffer containing the name
  *  and it's unevaluated value, like so:
