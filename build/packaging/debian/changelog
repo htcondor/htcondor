@@ -6,7 +6,7 @@ condor (23.0.3-1) stable; urgency=medium
   * Chirp uses a 5120 byte buffer and errors out for bigger messages
   * condor_adstash now recognizes GPU usage values as floating point numbers
 
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 04 Jan 2024 20:07:00 -0600
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 03 Jan 2024 20:07:00 -0600
 
 condor (23.2.0-1) stable; urgency=medium
 
