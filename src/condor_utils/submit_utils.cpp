@@ -6334,8 +6334,10 @@ int SubmitHash::SetVMParams()
 int SubmitHash::process_container_input_files(StringList & input_files, long long * accumulate_size_kb) {
 	auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 
-	// User said don't transfer the container
-	if (!submit_param_bool(SUBMIT_KEY_TransferContainer, nullptr, true)) {
+	// Did user ask for container transfer?
+	bool userRequestedContainerTransfer = true;
+	job->LookupBool(ATTR_TRANSFER_CONTAINER, userRequestedContainerTransfer);
+	if (!userRequestedContainerTransfer) {
 		job->Assign(ATTR_CONTAINER_IMAGE_SOURCE, "local");
 		return 0;
 	}
