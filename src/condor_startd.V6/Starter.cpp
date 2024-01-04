@@ -754,7 +754,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 				a2arg.clear();
 			} else if ( ! a2arg.empty()) {
 				// validate the a2arg characters.  should have only space,tab, and +-|,~:[A-Za-Z0-9]
-				size_t off = strspn(a2arg.c_str(), "abcdefghijklmnopqrstuvwxyxABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_:+-~, \t");
+				size_t off = strspn(a2arg.c_str(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_:+-~, \t");
 				add_a2_arg = a2arg.size() == off;
 				if ( ! add_a2_arg) {
 					dprintf(D_ERROR, "Ignoring invalid JobStarterDebug value (off=%d): %s\n", off, a2arg.c_str());
