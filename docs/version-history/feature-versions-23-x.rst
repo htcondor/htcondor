@@ -9,9 +9,7 @@ Version 23.3.0
 
 Release Notes:
 
-.. HTCondor version 23.3.0 released on Month Date, 2023.
-
-- HTCondor version 23.3.0 not yet released.
+- HTCondor version 23.3.0 released on January 4, 2023.
 
 - Limited support for Enterprise Linux 7 in the 23.x feature versions.
   Since we are developing new features, the Enterprise Linux 7 build may

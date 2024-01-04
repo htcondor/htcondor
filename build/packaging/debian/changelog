@@ -1,3 +1,12 @@
+condor (23.3.0-1) stable; urgency=medium
+
+  * Restore limited support for Enterprise Linux 7 systems
+  * Additional assistance converting old syntax job routes to new syntax
+  * Able to capture output to debug DAGMan PRE and POST scripts
+  * Execution Points advertise when jobs are running with cgroup enforcement
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 03 Jan 2024 20:28:00 -0600
+
 condor (23.0.3-1) stable; urgency=medium
 
   * Preliminary support for openSUSE LEAP 15

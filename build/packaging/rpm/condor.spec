@@ -1377,6 +1377,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jan 04 2024 Tim Theisen <tim@cs.wisc.edu> - 23.3.0-1
+- Restore limited support for Enterprise Linux 7 systems
+- Additional assistance converting old syntax job routes to new syntax
+- Able to capture output to debug DAGMan PRE and POST scripts
+- Execution Points advertise when jobs are running with cgroup enforcement
+
 * Thu Jan 04 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.3-1
 - Preliminary support for openSUSE LEAP 15
 - All non-zero exit values from file transfer plugins are now errors
