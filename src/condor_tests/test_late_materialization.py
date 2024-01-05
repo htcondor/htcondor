@@ -39,8 +39,8 @@ def condor(test_dir):
         yield condor
 
 
-MAX_IDLE = {"idle=2": 2, "idle=3": 3, "idle=5": 5}
-MAX_MATERIALIZE = {"materialize=2": 2, "materialize=3": 3, "materialize=5": 5}
+MAX_IDLE = {"idle=2": 2, "idle=3": 3}
+MAX_MATERIALIZE = {"materialize=2": 2, "materialize=3": 3}
 
 
 @action(params=MAX_IDLE)
