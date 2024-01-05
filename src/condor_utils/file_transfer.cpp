@@ -2030,7 +2030,7 @@ FileTransfer::ReadTransferPipeMsg()
 			total_read += n;
 		}
 		if( total_read > size_of_ad ) {
-			delete plugin_output_ad_string;
+			delete [] plugin_output_ad_string;
 			goto read_failed;
 		}
 
