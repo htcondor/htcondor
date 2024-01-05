@@ -25,7 +25,7 @@ _logger.setLevel(_logging.DEBUG)
 _logger.addHandler(_logging.NullHandler())
 
 def _add_dll_dir():
-    """
+    r"""
     On windows for Python 3.8 or later, we have to add the bin directory to the search path
     for DLLs because python will no longer use the PATH environment variable to find DLLs.
     We assume here that this file is in $(RELEASE_DIR)\lib\python\classd and that the
