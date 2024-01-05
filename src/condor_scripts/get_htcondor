@@ -216,7 +216,7 @@ get_distribution() {
 			esac
 		;;
 
-		scientific|centos|rhel|almalinux|rocky)
+		scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
 			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
 				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
 			fi
@@ -329,6 +329,18 @@ do_install() {
 		fi
 	fi
 
+    case $lsb_dist in
+    scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+        repo_cmd="dnf --assumeyes"
+        case $lsb_dist in
+        centos|scientific)
+            repo_cmd="yum --assumeyes"
+            ;;
+        suse|opensuse-leap)
+            repo_cmd="zypper --non-interactive"
+            ;;
+        esac
+    esac
 	#
 	# Check for a previous installation.  The instructions below remove
 	# the HTCondor package(s) and whatever packages they depended on but
@@ -344,9 +356,9 @@ do_install() {
 		EOF
 		case $lsb_dist in
 		ubuntu|debian)
-			PACKAGE="htcondor"
+			PACKAGE="condor"
 			if [[ ! $ROLE ]]; then
-				PACKAGE="minihtcondor"
+				PACKAGE="minicondor"
 			fi
 
 			cat >&2 <<-EOF
@@ -354,15 +366,15 @@ do_install() {
 				To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
 			EOF
 			;;
-		scientific|centos|rhel|almalinux|rocky|amzn)
+		scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
 			PACKAGE="condor"
 			if [[ ! $ROLE ]]; then
 				PACKAGE="minicondor"
 			fi
 
 			cat >&2 <<-EOF
-				To update: $sh_c "yum update ${PACKAGE}"
-				To remove: $sh_c "yum -y autoremove ${PACKAGE} && rm -fr /etc/condor"
+				To update: $sh_c "${repo_cmd} update ${PACKAGE}"
+				To remove: $sh_c "${repo_cmd} remove ${PACKAGE} && rm -fr /etc/condor"
 			EOF
 			;;
 		esac
@@ -446,13 +458,13 @@ do_install() {
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
 				if [[ ! $ROLE ]]; then
-					$sh_c "apt-get install -y minihtcondor"
+					$sh_c "apt-get install -y minicondor"
 				else
-					$sh_c "apt-get install -y htcondor"
+					$sh_c "apt-get install -y condor"
 				fi
 			)
 			;;
-		scientific|centos|rhel|almalinux|rocky|amzn)
+		scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
 			(
 			if ! is_dry_run; then
 				set -x
@@ -462,7 +474,11 @@ do_install() {
 			case $lsb_dist in
 			amzn|almalinux|rocky)
 				echo -e "\n# Installing ps"
-				$sh_c "yum install -y procps-ng"
+				$sh_c "${repo_cmd} install procps-ng"
+				;;
+			suse|opensuse-leap)
+				echo -e "\n# Installing ps"
+				$sh_c "${repo_cmd} install procps"
 				;;
 			esac
 
@@ -470,15 +486,16 @@ do_install() {
 			case $lsb_dist in
 				scientific|centos|rhel|almalinux|rocky)
 					repo_dist="el"
+                    echo -e "\n# Installing EPEL"
+                    epel_version=$dist_version
+                    $sh_c "${repo_cmd} install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || ${repo_cmd} reinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
+                    ;;
+				suse|opensuse-leap)
+					repo_dist="leap"
+                    ;;
 			esac
 			repo_suffix="${repo_dist}${dist_version}"
 			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.noarch.rpm"
-
-			if [ $lsb_dist != 'amzn' ]; then
-				echo -e "\n# Installing EPEL"
-				epel_version=$dist_version
-				$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || yum reinstall -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
-			fi
 
 			# Just to make our lives harder, the packages we need from
 			# EPEL depend on repositories which are disabled by default,
@@ -505,13 +522,28 @@ do_install() {
 			esac
 
 			echo -e "\n# Installing the HTCondor repo"
-			$sh_c "yum install -y ${yum_repo_rpm} || yum reinstall -y ${yum_repo_rpm}"
+            case $lsb_dist in
+                suse|opensuse-leap)
+                    # There is a way to setup SUSE repos where you can install the repo
+                    # with a single zypper command. But, I don't know how to do that (yet)
+                    $sh_c "${repo_cmd} --no-gpg-checks install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    ;;
+                *)
+                    $sh_c "${repo_cmd} install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    ;;
+            esac
+
+            # Needed for SUSE, limits chattyness for other RPM distros
+			echo -e "\n# Importing RPM keys"
+            for key in /etc/pki/rpm-gpg/RPM-GPG-KEY-HTCondor-*; do
+                $sh_c "rpmkeys --import $key"
+            done
 
 			echo -e "\n# Installing HTCondor"
 			if [[ ! $ROLE ]]; then
-				$sh_c "yum install ${YUM_REPO} -y minicondor"
+				$sh_c "${repo_cmd} install ${YUM_REPO} minicondor"
 			else
-				$sh_c "yum install ${YUM_REPO} -y condor"
+				$sh_c "${repo_cmd} install ${YUM_REPO} condor"
 			fi
 			)
 			;;
@@ -656,6 +688,9 @@ do_download() {
 			;;
 		amzn)
 			OS_NAME="AmazonLinux"
+			;;
+		suse|opensuse-leap)
+			OS_NAME="openSUSE"
 			;;
 		*)
 			if is_darwin; then
