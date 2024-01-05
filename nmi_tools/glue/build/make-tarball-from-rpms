@@ -61,6 +61,8 @@ elif [[ $dist == el9 ]]; then
     arch_dist="${arch}_AlmaLinux9"
 elif [[ $dist == fc38 ]]; then
     arch_dist="${arch}_Fedora38"
+elif [[ $dist == fc39 ]]; then
+    arch_dist="${arch}_Fedora39"
 elif [[ $dist == leap15 ]]; then
     arch_dist="${arch}_openSUSE15"
 else
