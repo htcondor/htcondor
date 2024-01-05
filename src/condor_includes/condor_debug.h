@@ -184,6 +184,11 @@ void _condor_parse_merge_debug_flags(
 	DebugOutputChoice & basic, // in,out: basic output choice
 	DebugOutputChoice & verbose); // in,out: verbose output choice, expect this to get folded into basic someday.
 
+// parse a string containing dprintf category and optional verbosity e.g  D_SECURITY:2
+// returns true if the string had at least one category, and returns the cat and verbosity value as cat_and_verb
+// if a hdr_flags pointer is passed, any header flag bits like D_SUB_SECOND are returned there
+bool parse_debug_cat_and_verbosity(const char * strFlags, int & cat_and_verb, unsigned int * hdr_flags=nullptr);
+
 bool dprintf_to_term_check();
 
 void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );

@@ -28,6 +28,10 @@ Release Notes:
 
 New Features:
 
+- The **condor_starter** can now be configured to capture the stdout and stderr
+  of file transfer plugins and write that output into the StarterLog.
+  :jira:`1459`
+  
 - Updated **condor_upgrade_check** script for better support and
   maintainability. This update includes new flags/functionality
   and removal of old checks for upgrading between V9 and V10 of
