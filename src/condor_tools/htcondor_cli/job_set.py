@@ -263,7 +263,7 @@ class Submit(Verb):
             if "$(" in submit_obj[submit_key]:
                 for map_from, map_to in mappings.items():
                     submit_obj[submit_key] = re.sub(
-                        f"\$\({map_from}\)",
+                        fr"\$\({map_from}\)",
                         f"$({map_to})",
                         submit_obj[submit_key],
                         flags = re.IGNORECASE

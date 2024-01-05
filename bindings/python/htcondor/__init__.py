@@ -50,7 +50,7 @@ def _check_for_config():
             _os.environ["CONDOR_CONFIG"] = "/dev/null"
 
 def _add_dll_dir():
-    """
+    r"""
     On windows for Python 3.8 or later, we have to add the bin directory to the search path for DLLs
     Because python will no longer use the PATH environment variable to find dlls.
     We assume here that this file is in $(RELEASE_DIR)\lib\python\htcondor and that the
@@ -76,7 +76,7 @@ with _add_dll_dir():
 
 # get the version using regexp ideally, and fall back to basic string parsing
 try:
-    __version__ = _re.match("^\D*(\d+\.\d+\.\d+)\D", htcondor.version()).group(1)
+    __version__ = _re.match(r"^\D*(\d+\.\d+\.\d+)\D", htcondor.version()).group(1)
 except (AttributeError, IndexError):
     __version__ = htcondor.version().split()[1]
 

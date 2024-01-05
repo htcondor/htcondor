@@ -40,6 +40,10 @@ Bugs Fixed:
   would fail to set the Job classad attribute ``JobSubmitMethod``.
   :jira:`2184`
 
+- Fixed ``SyntaxWarning``s raised by Python 3.12 in scripts packaged
+  with the Python bindings.
+  :jira:`2212`
+
 .. _lts-version-history-2303:
 
 Version 23.0.3
