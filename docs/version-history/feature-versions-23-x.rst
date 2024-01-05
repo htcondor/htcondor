@@ -36,7 +36,7 @@ New Features:
 
 - On RPM-based distributions, a new package ``condor-credmon-local`` is now
   available which provides the
-  :ref:`local SciTokens issuer credmon <enabling_oauth_credentials>` without
+  :ref:`local SciTokens issuer credmon <installing_credmon_local>` without
   installing extra packages required by the OAuth credmon.
   The ``condor-credmon-local`` package is now a dependency of the
   ``condor-credmon-oauth`` package.

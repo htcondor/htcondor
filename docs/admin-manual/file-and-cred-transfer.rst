@@ -540,10 +540,8 @@ There are three (or four) steps to setting up the SciTokens local issuer:
 
 1. Generate a SciTokens private/public key pair.
 2. Upload the generated public key to a public HTTPS address.
-3. Modify the HTCondor configuration to generate valid tokens with desired
-    claims using the generated private key.
-4. (Optional) Modify the HTCondor configuration to automatically generate
-    tokens on submit.
+3. Modify the HTCondor configuration to generate valid tokens with desired claims using the generated private key.
+4. (Optional) Modify the HTCondor configuration to automatically generate tokens on submit.
 
 Generating a SciTokens key pair
 '''''''''''''''''''''''''''''''
@@ -668,7 +666,7 @@ locations.
     LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE = read:/groups/{groupname} write:/groups/{groupname}
     LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE = /etc/condor/local_credmon_group_map
 
-For example, supposed that user "bob" should have access to
+For example, suppose that user "bob" should have access to
 ``/groups/projectA`` and ``/group/projectB`` and "alice" should have access to
 ``/groups/projectB``, the mapfile (``/etc/condor/local_credmon_group_map``)
 might look like:
