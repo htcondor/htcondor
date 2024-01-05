@@ -344,9 +344,9 @@ do_install() {
 		EOF
 		case $lsb_dist in
 		ubuntu|debian)
-			PACKAGE="htcondor"
+			PACKAGE="condor"
 			if [[ ! $ROLE ]]; then
-				PACKAGE="minihtcondor"
+				PACKAGE="minicondor"
 			fi
 
 			cat >&2 <<-EOF
@@ -446,9 +446,9 @@ do_install() {
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
 				if [[ ! $ROLE ]]; then
-					$sh_c "apt-get install -y minihtcondor"
+					$sh_c "apt-get install -y minicondor"
 				else
-					$sh_c "apt-get install -y htcondor"
+					$sh_c "apt-get install -y condor"
 				fi
 			)
 			;;
