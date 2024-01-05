@@ -69,6 +69,8 @@ IMAGES_BY_CHANNEL = {
         "rockylinux:9",
         "almalinux:8",
         "almalinux:9",
+        "amazonlinux:2023",
+        "opensuse/leap:15",
         "arm64v8/almalinux:8",
         "arm64v8/almalinux:9",
         "ppc64le/almalinux:8",
@@ -79,10 +81,14 @@ IMAGES_BY_CHANNEL = {
         "debian:12",
         "ubuntu:20.04",
         "ubuntu:22.04",
+        "centos:7",
+        "scientificlinux/sl:7",
         "rockylinux:8",
         "rockylinux:9",
         "almalinux:8",
         "almalinux:9",
+        "amazonlinux:2023",
+        "opensuse/leap:15",
         "arm64v8/almalinux:8",
         "arm64v8/almalinux:9",
         "ppc64le/almalinux:8",
@@ -108,7 +114,9 @@ TESTS = {
         # Using 'head' screws up the exit code, so we can't just use
         # the name of the directory (that's printed on the first line).
         "postscript": "if command -v yum > /dev/null 2>&1; then " +
-                          "yum install -y tar && yum install -y gzip; " +
+                          "yum install -y tar gzip; " +
+                      "elif command -v zypper > /dev/null 2>&1; then " +
+                          "zypper --non-interactive install tar gzip; " +
                       "fi && " +
                       "tar -z -t -f condor.tar.gz | tail -1 | cut -d / -f 1",
         "postscript-lines": [-1],
@@ -225,7 +233,7 @@ def results_from_container(channel, cached_container_image, flag, postscript):
     return subprocess.run(args,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        timeout=360)
+        timeout=600)
 
 
 # We can parameterize further to string(s) required to be in the log,
