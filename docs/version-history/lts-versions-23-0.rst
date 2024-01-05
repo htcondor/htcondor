@@ -47,14 +47,12 @@ Version 23.0.3
 
 Release Notes:
 
-.. HTCondor version 23.0.3 released on Month Date, 2023.
-
-- HTCondor version 23.0.3 not yet released.
-
-New Features:
+- HTCondor version 23.0.3 released on January 4, 2024.
 
 - Preliminary support for openSUSE LEAP 15.
   :jira:`2156`
+
+New Features:
 
 - Improve ``htcondor job status`` command to display information about
   a jobs goodput.

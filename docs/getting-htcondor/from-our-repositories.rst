@@ -18,11 +18,13 @@ recent releases than the distributions.
 RPM-based Distributions
 -----------------------
 
-We support several RPM-based platforms: Enterprise Linux 7, including Red Hat, CentOS, and Scientific Linux;
-Enterprise Linux 8, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux; Enterprise Linux 9,
-including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux.  Binaries are available
-for x86-64 for all these platforms.  For Enterprise Linux 8,
-HTCondor also supports ARM ("aarch64") and Power ("ppc64le").
+We support several RPM-based platforms:
+Enterprise Linux 7, including Red Hat, CentOS, and Scientific Linux;
+Enterprise Linux 8, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
+Enterprise Linux 9, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
+openSUSE LEAP 15 including SUSE Linux Enterprise Server (SLES) 15.
+Binaries are available for x86_64 for all these platforms.
+For Enterprise Linux 8, HTCondor also supports ARM ("aarch64") and Power ("ppc64le").
 For Enterprise Linux 9, HTCondor also supports ARM ("aarch64").
 
 Repository packages are available for each platform:
@@ -31,6 +33,7 @@ Repository packages are available for each platform:
 * `Enterprise Linux 7 <https://research.cs.wisc.edu/htcondor/repo/23.0/htcondor-release-current.el7.noarch.rpm>`_
 * `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/23.0/htcondor-release-current.el8.noarch.rpm>`_
 * `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/23.0/htcondor-release-current.el9.noarch.rpm>`_
+* `openSUSE LEAP 15 <https://research.cs.wisc.edu/htcondor/repo/23.0/htcondor-release-current.leap15.noarch.rpm>`_
 
 Except for Amazon Linux, the HTCondor packages on these platforms depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -48,7 +51,8 @@ deb-based Distributions
 
 We support four deb-based platforms: Debian 11 (Bullseye) and Debian 12 (Bookworm); and
 Ubuntu 20.04 (Focal Fossa) and 22.04 (Jammy Jellyfish).
-Binaries are only available for x86-64.
+Binaries are available for x86_64 for all these platforms.
+For Unbuntu 20.04 (Focal Fossa) HTCondor also supports Power PC (ppc64el).
 These repositories also include the source packages.
 
 Debian 11, and 12
@@ -57,8 +61,8 @@ Debian 11, and 12
 Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-23.0-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Debian 11: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/23.0 bullseye main``
-* Debian 12: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/23.0 bookworm main``
+* Debian 11: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/23.0 bullseye main``
+* Debian 12: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/23.0 bookworm main``
 
 Ubuntu 20.04, and 22.04
 #######################
@@ -66,5 +70,5 @@ Ubuntu 20.04, and 22.04
 Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-23.0-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Ubuntu 20.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/23.0 focal main``
-* Ubuntu 22.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/23.0 jammy main``
+* Ubuntu 20.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/23.0 focal main``
+* Ubuntu 22.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/23.0 jammy main``
