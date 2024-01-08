@@ -4960,6 +4960,11 @@ default=false
 type=bool
 description=Whether to invoke file transfer plugins as user or as root
 
+[LOG_FILETRANSFER_PLUGIN_STDOUT_ON_FAILURE]
+default=D_ALWAYS
+type=string
+description=What log level to use to write the stdout/err of a failed file transfer plugin into the StaterLog
+
 [ENABLE_MULTIFILE_TRANSFER_PLUGINS]
 default=true
 type=bool
