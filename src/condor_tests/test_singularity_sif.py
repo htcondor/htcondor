@@ -114,7 +114,20 @@ def SingularityIsWorthy():
 
     return False
 
+# For the test to work, we need user namespaces to be working
+# and enough of them.  This is a race, but better to try
+# to test first.
+def UserNamespacesFunctional():
+    result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    if result.returncode == 7:
+        print("unshare seems to work correctly, proceeding with test\n")
+        return True
+    else:
+        print("unshare command failed, test cannot work, skipping test\n")
+        return False
+
 class TestContainerUni:
     @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
+    @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
     def test_container_uni(self, sif_file, completed_test_job):
             assert completed_test_job['ExitCode'] == 0
