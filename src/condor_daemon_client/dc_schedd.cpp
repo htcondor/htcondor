@@ -2105,7 +2105,8 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	return true;
 }
 
-// TODO: how do we make this global??
+// TODO: this belongs in a header file, but would conflict with the query object.
+// figure out how to rationalize the two.
 enum
 {
 	Q_NO_SCHEDD_IP_ADDR = 20,
@@ -2159,7 +2160,7 @@ enum
 
 	if ( ! attrs.empty()) {
 		for (auto attr : attrs) {
-			if (projlist.empty()) projlist += "\n";
+			if ( ! projlist.empty()) projlist += "\n";
 			projlist += attr;
 		}
 		send_server_time = attrs.count(ATTR_SERVER_TIME) > 0;
@@ -2197,11 +2198,10 @@ int DCSchedd::queryUsers(
 			rval = Q_SCHEDD_COMMUNICATION_ERROR;
 			break;
 		}
-		dprintf(D_FULLDEBUG, "Got classad from schedd.\n");
+
 		std::string mytype;
 		if (ad->EvaluateAttrString(ATTR_MY_TYPE, mytype) && mytype == "Summary")
 		{ // Last ad.
-			dprintf(D_FULLDEBUG, "Ad was last one from schedd.\n");
 			std::string errorMsg;
 			int error_val;
 			if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, error_val) && error_val && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))

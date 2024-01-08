@@ -2342,6 +2342,17 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 
 	bool has_constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
 
+	const classad::References * proj=nullptr;
+	classad::References projection;
+	int has_proj = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, projection);
+	if (has_proj > 0) { proj = &projection; } // has valid non-empty projection
+
+	int put_opts = 0;
+	bool want_server_time = false;
+	if (queryAd.LookupBool(ATTR_SEND_SERVER_TIME, want_server_time) && want_server_time) {
+		put_opts |= PUT_CLASSAD_SERVER_TIME;
+	}
+
 	// Now, find the ClassAds that match.
 	stream->encode();
 	for (const auto &[name, urec] : OwnersInfo) {
@@ -2350,7 +2361,7 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 			ClassAd ad;
 			urec->live.publish(ad,"Num");
 			ad.ChainToAd(urec);
-			if ( !putClassAd(stream, ad)) {
+			if ( !putClassAd(stream, ad, put_opts, proj)) {
 				dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 				return FALSE;
 			}
