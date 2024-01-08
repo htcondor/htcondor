@@ -34,8 +34,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Make a tiny sif file
-@standup
-def sif_file(test_dir):
+def sif_file():
     os.mkdir("image_root")
     os.mkdir("image_root/etc")
     shutil.copyfile("/etc/passwd", "image_root/etc/passwd")
@@ -58,6 +57,10 @@ def sif_file(test_dir):
         time.sleep(5)
 
     assert(False)
+
+@standup
+def sif_file_fixture():
+    return sif_file()
 
 # Setup a personal condor 
 @standup
@@ -114,6 +117,18 @@ def SingularityIsWorthy():
 
     return False
 
+def SingularityIsWorking():
+    sif_file()
+    result = subprocess.run("singularity exec -B/bin:/bin -B/lib:/lib -B/lib64:/lib64 -B/usr:/usr empty.sif /bin/ls /", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = result.stdout.decode('utf-8')
+
+    logger.debug(output)
+
+    if result.returncode == 0:
+        return True
+    else:
+        return False
+
 # For the test to work, we need user namespaces to be working
 # and enough of them.  This is a race, but better to try
 # to test first.
@@ -129,5 +144,6 @@ def UserNamespacesFunctional():
 class TestContainerUni:
     @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
     @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
-    def test_container_uni(self, sif_file, completed_test_job):
+    @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
+    def test_container_uni(self, sif_file_fixture, completed_test_job):
             assert completed_test_job['ExitCode'] == 0
