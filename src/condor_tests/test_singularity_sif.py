@@ -56,7 +56,7 @@ def sif_file():
             return "empty.sif"
         time.sleep(5)
 
-    assert(False)
+    return False
 
 @standup
 def sif_file_fixture():
@@ -118,7 +118,9 @@ def SingularityIsWorthy():
     return False
 
 def SingularityIsWorking():
-    sif_file()
+    if not sif_file():
+        return False
+
     result = subprocess.run("singularity exec -B/bin:/bin -B/lib:/lib -B/lib64:/lib64 -B/usr:/usr empty.sif /bin/ls /", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = result.stdout.decode('utf-8')
 
