@@ -2024,8 +2024,8 @@ FileTransfer::ReadTransferPipeMsg()
 		int total_read = 0;
 		while( total_read < size_of_ad ) {
 			n = daemonCore->Read_Pipe( TransferPipe[0],
-									   plugin_output_ad_string + total_read,
-									   size_of_ad );
+			                              plugin_output_ad_string + total_read,
+			                              size_of_ad );
 			if( n <= 0 ) { goto read_failed; }
 			total_read += n;
 		}
