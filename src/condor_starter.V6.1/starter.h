@@ -462,6 +462,8 @@ private:
 #endif // LINUX
 };
 
+#define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
+
 #endif
 
 

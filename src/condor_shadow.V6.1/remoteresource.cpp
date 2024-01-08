@@ -41,6 +41,7 @@
 
 #include "spooled_job_files.h"
 
+#define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
 // for remote syscalls, this is currently in NTreceivers.C.
@@ -2220,6 +2221,11 @@ RemoteResource::initFileTransfer()
 		 strcmp( file.c_str(), StderrRemapName ) ) {
 
 		filetrans.AddDownloadFilenameRemap( StderrRemapName, file.c_str() );
+	}
+	if ( jobAd->LookupString( ATTR_JOB_STARTER_LOG, file ) && 
+		 strcmp(file.c_str(), SANDBOX_STARTER_LOG_FILENAME )) {
+
+		filetrans.AddDownloadFilenameRemap(SANDBOX_STARTER_LOG_FILENAME, file.c_str());
 	}
 
 	//

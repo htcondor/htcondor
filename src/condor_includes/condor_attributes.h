@@ -439,6 +439,8 @@
 #define ATTR_JOB_STATE  "JobState"
 #define ATTR_JOB_STATUS  "JobStatus"
 #define ATTR_LAST_JOB_STATUS  "LastJobStatus"
+#define ATTR_JOB_STARTER_DEBUG "JobStarterDebug"
+#define ATTR_JOB_STARTER_LOG "JobStarterLog"
 #define ATTR_JOB_TOE "ToE"  // termination of execution ad
 #define ATTR_JOB_STATUS_ON_RELEASE  "JobStatusOnRelease"
 #define ATTR_JOB_SUBMIT_METHOD "JobSubmitMethod"
