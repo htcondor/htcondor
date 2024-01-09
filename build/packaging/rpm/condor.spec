@@ -436,25 +436,41 @@ the ClassAd library and HTCondor from python
 
 
 #######################
-%package credmon-oauth
-Summary: OAuth2 credmon for HTCondor
+%package credmon-local
+Summary: Local issuer credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
 Requires: python2-condor = %{version}-%{release}
-Requires: python2-requests-oauthlib
 Requires: python-six
-Requires: python-flask
 Requires: python2-cryptography
 Requires: python2-scitokens
-Requires: mod_wsgi
 %else
 Requires: python3-condor = %{version}-%{release}
-Requires: python3-requests-oauthlib
 Requires: python3-six
-Requires: python3-flask
 Requires: python3-cryptography
 Requires: python3-scitokens
+%endif
+
+%description credmon-local
+The local issuer credmon allows users to obtain credentials from an
+admin-configured private SciToken key on the access point and to use those
+credentials securely inside running jobs.
+
+
+#######################
+%package credmon-oauth
+Summary: OAuth2 credmon for HTCondor
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: condor-credmon-local = %{version}-%{release}
+%if 0%{?rhel} == 7
+Requires: python2-requests-oauthlib
+Requires: python-flask
+Requires: mod_wsgi
+%else
+Requires: python3-requests-oauthlib
+Requires: python3-flask
 Requires: python3-mod_wsgi
 %endif
 Requires: httpd
@@ -483,7 +499,7 @@ Requires: python3-cryptography
 #  htgettoken is small so it doesn't hurt to require it in both places.
 Requires: htgettoken >= 1.1
 %endif
-Conflicts: %name-credmon-oauth
+Conflicts: %name-credmon-local
 
 %description credmon-vault
 The Vault credmon allows users to obtain credentials from Vault using
@@ -1301,16 +1317,13 @@ rm -rf %{buildroot}
 /usr/lib64/python%{python3_version}/site-packages/htcondor2/
 %endif
 
-%files credmon-oauth
+%files credmon-local
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_oauth
 %_sbindir/scitokens_credential_producer
-%_var/www/wsgi-scripts/condor_credmon_oauth
 %_libexecdir/condor/credmon
 %_var/lib/condor/oauth_credentials/README.credentials
 %config(noreplace) %_sysconfdir/condor/config.d/40-oauth-credmon.conf
-%config(noreplace) %_sysconfdir/condor/config.d/40-oauth-tokens.conf
-%ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
 %if 0%{?rhel} == 7
@@ -1318,6 +1331,16 @@ rm -rf %{buildroot}
 # Backwards compatibility with the previous versions and configs of scitokens-credmon
 %_bindir/condor_credmon_oauth
 %_bindir/scitokens_credential_producer
+###
+%endif
+
+%files credmon-oauth
+%_var/www/wsgi-scripts/condor_credmon_oauth
+%config(noreplace) %_sysconfdir/condor/config.d/40-oauth-tokens.conf
+%ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
+%if 0%{?rhel} == 7
+###
+# Backwards compatibility with the previous versions and configs of scitokens-credmon
 %_var/www/wsgi-scripts/scitokens-credmon
 ###
 %endif

@@ -34,6 +34,14 @@ New Features:
   to the history file, just like the normal history file.
   :jira:`2027`
 
+- On RPM-based distributions, a new package ``condor-credmon-local`` is now
+  available which provides the
+  :ref:`local SciTokens issuer credmon <installing_credmon_local>` without
+  installing extra packages required by the OAuth credmon.
+  The ``condor-credmon-local`` package is now a dependency of the
+  ``condor-credmon-oauth`` package.
+  :jira:`2197`
+
 - :tool:`condor_submit` now generates requirements expressions for
   **condor** grid universe jobs like it does for vanilla universe
   jobs.
