@@ -39,6 +39,9 @@ class WaitForUserLog {
         size_t getOffset() const;
         void setOffset( size_t offset );
 
+		void getErrorInfo(ReadUserLog::ErrorType &error, const char *& error_str,
+					   unsigned &line_num) { reader.getErrorInfo(error, error_str, line_num);}
+
 	private:
 		std::string filename;
 		ReadUserLog reader;
