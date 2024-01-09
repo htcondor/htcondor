@@ -184,6 +184,10 @@ Requires: openssh-server
 # net-tools needed to provide netstat for condor_who
 Requires: net-tools
 
+# Perl modules required for condor_gather_info
+Requires: perl(Date::Manip)
+Requires: perl(FindBin)
+
 Requires: /usr/sbin/sendmail
 
 # Useful tools are using the Python bindings
