@@ -55,6 +55,8 @@
 #include <fstream>
 #include <algorithm>
 
+#include "filter.h"
+
 extern Starter *Starter;
 ReliSock *syscall_sock = NULL;
 time_t syscall_last_rpc_time = 0;
@@ -646,6 +648,10 @@ JICShadow::transferOutput( bool &transient_failure )
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
 
+
+		updateShadowWithPluginResults("Output");
+
+
 		const char *stats = m_ft_info.tcp_stats.c_str();
 		if (strlen(stats) != 0) {
 			std::string full_stats = "(peer stats from starter): ";
@@ -659,7 +665,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		set_priv(saved_priv);
 
 		if( m_ft_rval ) {
-			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES, 
+			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,
 							m_ft_info.spooled_files.c_str());
 		} else {
 			dprintf( D_FULLDEBUG, "Sandbox transfer failed.\n");
@@ -1215,6 +1221,8 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	// this will block
 	bool rval = filetrans->UploadCheckpointFiles( checkpointNumber, true );
 	set_priv( saved_priv );
+
+	updateShadowWithPluginResults("Checkpoint");
 
 	if( !rval ) {
 		// Failed to transfer.
@@ -2560,6 +2568,29 @@ JICShadow::beginFileTransfer( void )
 }
 
 
+void
+JICShadow::updateShadowWithPluginResults( const char * which ) {
+	if(! filetrans) { return; }
+	if( filetrans->getPluginResultList().size() <= 0 ) { return; }
+
+	ClassAd updateAd;
+
+	classad::ExprList * e = new classad::ExprList();
+	for( const auto & ad : filetrans->getPluginResultList() ) {
+		ClassAd * filteredAd = filterPluginResults( ad );
+		if( filteredAd != NULL ) {
+			e->push_back( filteredAd );
+		}
+	}
+	std::string attributeName;
+	formatstr( attributeName, "%sPluginResultList", which );
+	updateAd.Insert( attributeName.c_str(), e );
+
+	const bool dont_ensure_update = false;
+	updateShadow( & updateAd, dont_ensure_update );
+}
+
+
 int
 JICShadow::transferCompleted( FileTransfer *ftrans )
 {
@@ -2586,6 +2617,10 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			EXCEPT("%s", message.c_str());
 		}
+
+
+		updateShadowWithPluginResults("Input");
+
 
 		// It's not enought to for the FTO to believe that the transfer
 		// of a checkpoint succeeded if that checkpoint wasn't transferred

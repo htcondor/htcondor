@@ -126,8 +126,9 @@ int FileTransfer::SequenceNum = 0;
 int FileTransfer::ReaperId = -1;
 bool FileTransfer::ServerShouldBlock = true;
 
-const int FINAL_UPDATE_XFER_PIPE_CMD = 1;
-const int IN_PROGRESS_UPDATE_XFER_PIPE_CMD = 0;
+const char PLUGIN_OUTPUT_AD = 2;
+const char FINAL_UPDATE_XFER_PIPE_CMD = 1;
+const char IN_PROGRESS_UPDATE_XFER_PIPE_CMD = 0;
 
 /**
  * The `FileTransferItem` represents a single work item for the DoUpload
@@ -1894,8 +1895,7 @@ FileTransfer::ReadTransferPipeMsg()
 		if( ClientCallbackWantsStatusUpdates ) {
 			callClientCallback();
 		}
-	}
-	else if( cmd == FINAL_UPDATE_XFER_PIPE_CMD ) {
+	} else if( cmd == FINAL_UPDATE_XFER_PIPE_CMD ) {
 		Info.xfer_status = XFER_STATUS_DONE;
 
 		n = daemonCore->Read_Pipe( TransferPipe[0],
@@ -2001,8 +2001,49 @@ FileTransfer::ReadTransferPipeMsg()
 			registered_xfer_pipe = false;
 			daemonCore->Cancel_Pipe(TransferPipe[0]);
 		}
-	}
-	else {
+	} else if( cmd == PLUGIN_OUTPUT_AD ) {
+		// Read the length of the serialization of the pipe.
+		int size_of_ad = 0;
+		n = daemonCore->Read_Pipe( TransferPipe[0],
+		                           &size_of_ad,
+		                           sizeof( int ) );
+		if( n != sizeof(int) ) {
+			goto read_failed;
+		}
+
+		// Allocate the buffer, make sure it will be zero-terminated.
+		char * plugin_output_ad_string = new char[size_of_ad + 1];
+		ASSERT( plugin_output_ad_string );
+		plugin_output_ad_string[size_of_ad] = '\0';
+
+		// Fill the buffer.  It may take more than one read.  The
+		// second read should only block very briefly -- at most long
+		// enough for the child process to be rescheduled and reenter
+		// the kernel.  If that's not brief enough, we'll need to
+		// start managing state or more likely use a coroutine.
+		int total_read = 0;
+		while( total_read < size_of_ad ) {
+			n = daemonCore->Read_Pipe( TransferPipe[0],
+			                           plugin_output_ad_string + total_read,
+			                           size_of_ad );
+			if( n <= 0 ) { goto read_failed; }
+			total_read += n;
+		}
+		if( total_read > size_of_ad ) {
+			delete [] plugin_output_ad_string;
+			goto read_failed;
+		}
+
+		classad::ClassAdParser cap;
+		pluginResultList.emplace_back();
+		const bool parse_full_string = true;
+		bool parsed_plugin_output_ad = cap.ParseClassAd(
+			plugin_output_ad_string, pluginResultList.back(), parse_full_string
+		);
+		ASSERT(parsed_plugin_output_ad);
+
+		delete [] plugin_output_ad_string;
+	} else {
 		EXCEPT("Invalid file transfer pipe command %d",cmd);
 	}
 
@@ -2022,6 +2063,41 @@ FileTransfer::ReadTransferPipeMsg()
 
 	return false;
 }
+
+bool
+FileTransfer::SendPluginOutputAd( const ClassAd & plugin_output_ad ) {
+	// Do we have a pipe to which to write?
+	if( TransferPipe[1] == -1 ) { return false; }
+
+	// Write the command.
+	char cmd = PLUGIN_OUTPUT_AD;
+	int n = daemonCore->Write_Pipe( TransferPipe[1], & cmd, sizeof(cmd) );
+	if( n != sizeof(cmd) ) { return false; }
+
+	// Serialize the ClassAd.
+	std::string plugin_output_ad_string;
+	classad::ClassAdUnParser caup;
+	caup.Unparse( plugin_output_ad_string, & plugin_output_ad );
+
+	// Write the size of the serialization.
+	int size_of_ad = plugin_output_ad_string.size();
+	n = daemonCore->Write_Pipe(
+		TransferPipe[1], & size_of_ad, sizeof(size_of_ad)
+	);
+	if( n != sizeof(size_of_ad) ) { return false; }
+
+	// Write the serialization.
+	n = daemonCore->Write_Pipe(
+		TransferPipe[1],
+		plugin_output_ad_string.c_str(),
+		plugin_output_ad_string.size()
+	);
+	// I'm also asserting that our ads aren't >= 2GB.
+	ASSERT( n == (int)plugin_output_ad_string.size() );
+
+	return true;
+}
+
 
 void
 FileTransfer::UpdateXferStatus(FileTransferStatus status)
@@ -2315,6 +2391,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	int numFiles = 0;
 	ClassAd pluginStatsAd;
 	int plugin_exit_code = 0;
+
+	// At the beginning of every download and every upload.
+	pluginResultList.clear();
 
 	// Variable for deferred transfers, used to transfer multiple files at once
 	// by certain filte transfer plugins. These need to be scoped to the full
@@ -3415,9 +3494,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// of deferred transfers, and invoke each set with the appopriate plugin.
 	if ( hold_code == 0 ) {
 		for ( auto it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
-			std::vector<std::unique_ptr<ClassAd>> result_ads;
-			TransferPluginResult result = InvokeMultipleFileTransferPlugin( errstack, it->first, it->second,
-				LocalProxyName.c_str(), false, &result_ads );
+			TransferPluginResult result = InvokeMultipleFileTransferPlugin( errstack, it->first, it->second, LocalProxyName.c_str(), false);
 			if (result == TransferPluginResult::Success) {
 				/*  TODO: handle deferred files.  We may need to unparse the deferredTransfers files. */
 			} else {
@@ -3528,7 +3605,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			cluster, proc, numFiles, (long long)*total_bytes_ptr, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
 		dprintf(D_STATS, "%s", Info.tcp_stats.c_str());
 	}
-
 
 	return_and_resetpriv( 0 );
 }
@@ -3950,15 +4026,14 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 TransferPluginResult
 FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err, long long &upload_bytes)
 {
-	std::vector<std::unique_ptr<ClassAd>> result_ads;
 	auto result = InvokeMultipleFileTransferPlugin(err, pluginPath, input,
-		LocalProxyName.c_str(), true, &result_ads);
+		LocalProxyName.c_str(), true);
 
 	int count = 0;
 	bool classad_contents_good = true;
-	for (const auto &xfer_result: result_ads) {
+	for (const auto & xfer_result: pluginResultList) {
 		std::string filename;
-		if (!xfer_result->EvaluateAttrString("TransferFileName", filename)) {
+		if (!xfer_result.EvaluateAttrString("TransferFileName", filename)) {
 			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferFileName.\n", pluginPath.c_str());
 			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferFileName", pluginPath.c_str());
 			classad_contents_good = false;
@@ -4005,14 +4080,14 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 			// directory and flag it as illegal.
 		file_info.InsertAttr("Filename", condor_basename(filename.c_str()));
 		std::string output_url;
-		if (!xfer_result->EvaluateAttrString("TransferUrl", output_url)) {
+		if (!xfer_result.EvaluateAttrString("TransferUrl", output_url)) {
 			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferUrl.\n", pluginPath.c_str());
 			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferUrl", pluginPath.c_str());
 			classad_contents_good = false;
 		}
 		file_info.InsertAttr("OutputDestination", output_url);
 		bool xfer_success;
-		if (!xfer_result->EvaluateAttrBool("TransferSuccess", xfer_success)) {
+		if (!xfer_result.EvaluateAttrBool("TransferSuccess", xfer_success)) {
 			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferSuccess.\n", pluginPath.c_str());
 			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferSuccess", pluginPath.c_str());
 			classad_contents_good = false;
@@ -4020,7 +4095,7 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 		file_info.InsertAttr("Result", xfer_success ? 0 : 1);
 		if (!xfer_success) {
 			std::string transfer_error;
-			if (!xfer_result->EvaluateAttrString("TransferError", transfer_error)) {
+			if (!xfer_result.EvaluateAttrString("TransferError", transfer_error)) {
 				dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferError for failed transfer.\n", pluginPath.c_str());
 				err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferError for failed transfer", pluginPath.c_str());
 				classad_contents_good = false;
@@ -4032,7 +4107,7 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 			return TransferPluginResult::Error;
 		}
 		long long bytes = 0;
-		if (xfer_result->EvaluateAttrInt("TransferTotalBytes", bytes)) {
+		if (xfer_result.EvaluateAttrInt("TransferTotalBytes", bytes)) {
 			upload_bytes += bytes;
 		}
 	}
@@ -4130,6 +4205,9 @@ FileTransfer::ParseDataManifest()
 int
 FileTransfer::DoUpload( filesize_t * total_bytes_ptr, ReliSock * s )
 {
+	// At the beginning of every download and every upload.
+	pluginResultList.clear();
+
 	//
 	// It would be better if the checkpoint-specific function's body
 	// were instead in UploadCheckpointFiles(), but that would involve
@@ -6498,15 +6576,21 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	return result;
 }
 
+
+const std::vector< ClassAd > &
+FileTransfer::getPluginResultList() {
+    return pluginResultList;
+}
+
+
 // Similar to FileTransfer::InvokeFileTransferPlugin, modified to transfer
 // multiple files in a single plugin invocation.
 // Returns 0 on success, error code >= 1 on failure.
 TransferPluginResult
 FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			const std::string &plugin_path, const std::string &transfer_files_string,
-			const char* proxy_filename, bool do_upload,
-			std::vector<std::unique_ptr<ClassAd>> *result_ads ) {
-	
+			const char* proxy_filename, bool do_upload ) {
+
 	ArgList plugin_args;
 	CondorClassAdFileIterator adFileIter;
 	FILE* input_file;
@@ -6582,8 +6666,38 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		return TransferPluginResult::Error;
 	}
 
-	// Prepare args for the plugin
+
 	output_filename = iwd + "/." + plugin_name + ".out";
+
+	// Pre-allocate the output file.  Filling it with spaces avoids
+	// both potential cross-platform fallocate() issues and potential
+	// sparse allocation.
+	output_file = safe_fopen_wrapper( output_filename.c_str(), "w" );
+	if( output_file == nullptr ) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+			"Could not open %s for writing (%s, errno=%d), aborting\n",
+			output_filename.c_str(), strerror(errno), errno );
+		return TransferPluginResult::Error;
+	}
+	const char sixty_four_spaces[] =
+		"                                                                ";
+	for( unsigned i = 0; i < ((16 * 1204)/64); ++i ) {
+		if( fputs( sixty_four_spaces, output_file ) == EOF ) {
+			dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+				"Failed to preallocate output file (fputs() failed), aborting\n" );
+			return TransferPluginResult::Error;
+		}
+	}
+	int rv = fclose(output_file);
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+			"Failed to preallocate output file (fclose() failed), aborting\n" );
+		return TransferPluginResult::Error;
+	}
+	output_file = nullptr;
+
+
+	// Prepare args for the plugin
 	plugin_args.AppendArg( plugin_path.c_str() );
 	plugin_args.AppendArg( "-infile" );
 	plugin_args.AppendArg( input_filename.c_str() );
@@ -6723,13 +6837,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		return TransferPluginResult::Error;
 	}
 	else {
-		// Iterate over the classads in the file, and output each one
-		// to our transfer_history log file.
-		ClassAd this_file_stats_ad;
 		int num_ads = 0;
-		while ( adFileIter.next( this_file_stats_ad ) > 0 ) {
+		pluginResultList.emplace_back();
+		for( ;
+				adFileIter.next( pluginResultList[num_ads] ) > 0;
+				++num_ads, pluginResultList.emplace_back() ) {
+			ClassAd & this_file_stats_ad = pluginResultList[num_ads];
 
-			num_ads++;
 			this_file_stats_ad.InsertAttr( "PluginExitCode", exit_status );
 			RecordFileTransferStats( this_file_stats_ad );
 
@@ -6743,8 +6857,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 					" exited without producing a TransferSuccess result ";
 				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s (%s)|",
 					exit_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
-			}
-			else if ( !transfer_success ) {
+			} else if ( !transfer_success ) {
 				if (!this_file_stats_ad.LookupString("TransferError", error_message)) {
 					error_message = "File transfer plugin " + plugin_path +
 						" exited unexpectedly without producing an error message ";
@@ -6753,11 +6866,10 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 					exit_status, plugin_path.c_str(), error_message.c_str(), UrlSafePrint(transfer_url) );
 			}
 
-			if (result_ads) {
-				result_ads->emplace_back(new ClassAd());
-				result_ads->back()->CopyFrom(this_file_stats_ad);
-			}
+			SendPluginOutputAd( this_file_stats_ad );
 		}
+		// The loop terminates when next() doesn't fill in the new ad.
+		pluginResultList.resize(num_ads);
 
 		if ( num_ads == 0 && result != TransferPluginResult::TimedOut ) {
 			dprintf( D_ALWAYS, "FILETRANSFER: No valid classads in file transfer output.\n" );
@@ -6765,6 +6877,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 				"no valid classads in output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
 			return TransferPluginResult::Error;
 		}
+
 	}
 	fclose(output_file);
 
@@ -7231,9 +7344,8 @@ FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
 	classad::ClassAdUnParser unparser;
 	unparser.Unparse(testAdString, &testAd);
 
-	std::vector<std::unique_ptr<ClassAd>> result_ads;
 	CondorError err;
-	auto result = InvokeMultipleFileTransferPlugin(err, plugin, testAdString, nullptr, false, &result_ads );
+	auto result = InvokeMultipleFileTransferPlugin(err, plugin, testAdString, nullptr, false);
 	if (result != TransferPluginResult::Success) {
 		dprintf(D_ALWAYS, "FILETRANSFER: Test URL %s download failed by plugin %s: %s\n",
 			test_url.c_str(), plugin.c_str(), err.getFullText().c_str());

@@ -258,6 +258,8 @@ public:
 
 private:
 
+	void updateShadowWithPluginResults( const char * which );
+
 	void recordSandboxContents( const char * filename );
 
 		// // // // // // // // // // // //

@@ -63,6 +63,7 @@ void trim(std::string &str);
 void trim_quotes(std::string &str, std::string quotes);
 void lower_case(std::string &str);
 void upper_case(std::string &str);
+std::string as_upper_case(const std::string & str);
 void title_case(std::string &str); // capitalize each word
 
 const char * empty_if_null(const char * c_str);

@@ -202,6 +202,17 @@ void trim_quotes (std::string &str, std::string quotes)
 #define _toupper(c) ((c) + 'A' - 'a')
 #endif
 
+std::string
+as_upper_case( const std::string & str ) {
+	std::string rv = str;
+	for ( unsigned int i = 0; i<str.length(); i++ ) {
+		if ( str[i] >= 'a' && str[i] <= 'z' ) {
+			rv[i] = _toupper( str[i] );
+		}
+	}
+	return rv;
+}
+
 void upper_case( std::string &str )
 {
 	for ( unsigned int i = 0; i<str.length(); i++ ) {

@@ -40,6 +40,7 @@
 #include <algorithm>
 
 #include "spooled_job_files.h"
+#include "job_ad_instance_recording.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -1362,6 +1363,24 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	if( update_ad->LookupBool(ATTR_JOB_CORE_DUMPED, bool_value) ) {
 		jobAd->Assign(ATTR_JOB_CORE_DUMPED, bool_value);
 	}
+
+
+	std::string PluginResultList = "PluginResultList";
+	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
+	for( const auto & prefix : prefixes ) {
+		std::string attributeName = prefix + PluginResultList;
+		ExprTree * resultList = update_ad->LookupExpr( attributeName );
+		if( resultList != NULL ) {
+			classad::ClassAd c;
+			// Arguably, the epoch log would be easier to parse if the
+			// attribute name were always PluginResultList.
+			c.Insert( attributeName, resultList );
+			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
+			c.Remove( attributeName );
+			writeJobEpochFile( jobAd, starterAd, "STARTER" );
+		}
+	}
+
 
 		// The starter sends this attribute whether or not we are spooling
 		// output (because it doesn't know if we are).  Technically, we
