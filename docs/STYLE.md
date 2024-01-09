@@ -38,7 +38,7 @@ makes a main index entry named `executable`, with
 an indented link under it named `and checkpointing`.  Multiple
 descriptions/usage for a single index entry make it easy for readers to find
 related items that may be located in different places in the manual.
-|
+
 **:macro-def:** is used in the configuration macros reference page to define an anchor for the above to target,
 and an index entry. If given an argument, the index pairing will be the name of the macro and
 **[Arg] Configuration Options**. Any macros without an additional argument will just be paired with
