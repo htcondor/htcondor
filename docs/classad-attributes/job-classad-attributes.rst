@@ -233,10 +233,6 @@ all attributes.
     Is "local" for non-transfered images or "cedar" for transfered files.  "docker"
     or "http" might be other common values.
 
-:classad-attribute-def:`ContainerImageTransferred`
-    For Container universe jobs, true if the container image is being transferred
-    by condor itself, not via a plugin or docker repo.
-
 :classad-attribute-def:`ContainerTargetDir`
     For Container universe jobs, a filename that becomes the working directory of
     the job.  Mapped to the scratch directory.
