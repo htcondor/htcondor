@@ -49,7 +49,7 @@ Bugs Fixed:
   :jira:`2212`
 
 - Ensure Perl dependencies are present for the **condor_gather_info** script.
-  The **condor)gather_info** script now properly reports the User login name.
+  The **condor_gather_info** script now properly reports the User login name.
   Also, report the contents of ``/etc/os-release```.
   :jira:`2094`
 
