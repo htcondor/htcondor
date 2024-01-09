@@ -23,7 +23,7 @@ Synopsis
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
 
-| **htcondor** **eventlog** *read* [ **-csv** | **-json**] [ **-\-groupby attribute** ] eventlog
+| **htcondor** **eventlog** *read* [ **-csv** | **-json**] [ **-\-groupby attribute** ] eventlog [ eventlog2 [ eventlog3 ...  ] ]
 | **htcondor** **eventlog** *follow* [ **-csv** | **-json**] [ **-\-groupby attribute** ] eventlog 
 
 Description
@@ -138,15 +138,15 @@ Jobset Verbs
 Eventlog Verbs
 --------------
 
- **htcondor eventlog read** *logfile*
-     Takes as an argument an event log to process.  It may be the per-job or
+ **htcondor eventlog read** *logfile* *optional-other-logfile*
+     Takes one or more arguments, which are event log files to process.  It may be the per-job or
      per-jobset eventlog, which was specified by the *log = some_file* in the
      submit description language.  For a dag, it may also be the *nodes.log*
      file that all dags generate.  Or, if the global event log is enabled by an
      administrator with the *EVENT_LOG* configuration knob, it may be the global
      event log, containing information about all jobs on the Access point.
 
-     Given this file, `htcondor eventlog read` returns information about all
+     Given this, `htcondor eventlog read` returns information about all
      the contained jobs, and their status. It runs much faster than
      *condor_history*, because these logs are more concise than the history
      files.  Unlike *condor_history*, it will also show information about
