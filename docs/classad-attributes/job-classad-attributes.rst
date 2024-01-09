@@ -228,9 +228,10 @@ all attributes.
     command that created this job.  Note this may be different than the
     version of the HTCondor daemon that runs the job.
 
-:classad-attribute-def:`ContainerImage`
-    For Container universe jobs, the string that names the container image to be run
-    the job in.
+:classad-attribute-def:`ContainerImageSource`
+    For Container universe jobs, the string that names the container image source
+    Is "local" for non-transfered images or "cedar" for transfered files.  "docker"
+    or "http" might be other common values.
 
 :classad-attribute-def:`ContainerTargetDir`
     For Container universe jobs, a filename that becomes the working directory of

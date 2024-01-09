@@ -30,6 +30,10 @@ New Features:
   with RequestDisk or RequestMemory without a units suffix.
   :jira:`1837`
 
+- Added job classad attribute ``ContainerImageSource``, a string which is
+  is set to the source of the image transfer.
+  :jira:`1797`
+
 - If PER_JOB_HISTORY_DIR is set, it is now a fatal error to write a historical job
   to the history file, just like the normal history file.
   :jira:`2027`

@@ -113,6 +113,7 @@
 #define ATTR_CONDOR_ADMIN				"CondorAdmin"
 #define ATTR_CONSOLE_IDLE  "ConsoleIdle"
 #define ATTR_CONTAINER_IMAGE "ContainerImage"
+#define ATTR_CONTAINER_IMAGE_SOURCE "ContainerImageSource"
 #define ATTR_CONTINUE  "Continue"
 #define ATTR_CONTINUE_REASON  "ContinueReason"
 #define ATTR_CORE_SIZE  "CoreSize"

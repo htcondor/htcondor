@@ -6344,8 +6344,11 @@ int SubmitHash::SetVMParams()
 int SubmitHash::process_container_input_files(StringList & input_files, long long * accumulate_size_kb) {
 	auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 
-	// User said don't transfer the container
-	if (!submit_param_bool(SUBMIT_KEY_TransferContainer, nullptr, true)) {
+	// Did user ask for container transfer?
+	bool userRequestedContainerTransfer = true;
+	job->LookupBool(ATTR_TRANSFER_CONTAINER, userRequestedContainerTransfer);
+	if (!userRequestedContainerTransfer) {
+		job->Assign(ATTR_CONTAINER_IMAGE_SOURCE, "local");
 		return 0;
 	}
 
@@ -6355,6 +6358,7 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 		StringList roots(sharedfs.ptr(), ",");
 		for (const char * base = roots.first(); base != NULL; base = roots.next()) {
 			if (starts_with(container_image.ptr(), base)) {
+				job->Assign(ATTR_CONTAINER_IMAGE_SOURCE, "local");
 				return 0;
 			}
 		}
@@ -6364,9 +6368,11 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 
 	// don't xfer if URL proto is on known never xfer list
 	std::array<std::string, 2> neverTransferPrefixes {"docker://", "oras://" };
-	for (auto &prefix : neverTransferPrefixes) {
+	for (const auto &prefix : neverTransferPrefixes) {
 		std::string container_image_str = container_image.ptr();
 		if (container_image_str.starts_with(prefix)) {
+			//                                       remove the trailing ://
+			job->Assign(ATTR_CONTAINER_IMAGE_SOURCE, prefix.substr(0, prefix.length() - 3).c_str());
 			return 0;
 		}
 	}
@@ -6389,6 +6395,13 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 			container_tmp = container_tmp.substr(0, container_tmp.size() - 1);
 		}
 		job->Assign(ATTR_CONTAINER_IMAGE, condor_basename(container_tmp.c_str()));
+
+		size_t pos = container_tmp.find(':');
+		if (pos == std::string::npos) {
+			job->Assign(ATTR_CONTAINER_IMAGE_SOURCE, "cedar");
+		} else {
+			job->Assign(ATTR_CONTAINER_IMAGE_SOURCE, container_tmp.substr(0, pos).c_str());
+		}
 		return 1;
 	}
 
