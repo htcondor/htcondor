@@ -4568,6 +4568,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_RequestDisk, ATTR_REQUEST_DISK, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_RequestMemory, ATTR_REQUEST_MEMORY, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_RequestGpus, ATTR_REQUEST_GPUS, SimpleSubmitKeyword::f_as_expr},
+	// disallow some custom resource tags that are likely to be mistaken attempts to constrain GPU properties
+	{"request_gpu_memory", NULL, SimpleSubmitKeyword::f_error | SimpleSubmitKeyword::f_special},
+	{"request_gpus_memory", NULL, SimpleSubmitKeyword::f_error | SimpleSubmitKeyword::f_special},
 	// invoke SetGridParams
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
 	{SUBMIT_KEY_ArcRte, ATTR_ARC_RTE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
@@ -5156,6 +5159,16 @@ int SubmitHash::SetImageSize()
 	return 0;
 }
 
+
+// return true for "request_*" submit keys that are disallowed submit keywords
+static bool is_disallowed_request_resource(const char * key) {
+	auto it = is_prunable_keyword(key);
+	if (it && it->val && (it->val->opts & SimpleSubmitKeyword::f_alt_err) == SimpleSubmitKeyword::f_error) {
+		return true;
+	}
+	return false;
+}
+
 int SubmitHash::SetRequestResources()
 {
 	RETURN_IF_ABORT();
@@ -5179,7 +5192,10 @@ int SubmitHash::SetRequestResources()
 		const char * rname = key + strlen(SUBMIT_KEY_RequestPrefix);
 		const size_t min_tag_len = 2;
 		// resource name should be nonempty at least 2 characters long and not start with _
-		if ((strlen(rname) < min_tag_len) || *rname == '_') continue;
+		// it should also not be any disallowed submit keyword, such as request_gpus_memory
+		if ((strlen(rname) < min_tag_len) || *rname == '_' || is_disallowed_request_resource(key)) {
+			continue;
+		}
 		// could get this from 'it', but this prevents unused-line warnings:
 		char * val = submit_param(key);
 		if (val[0] == '\"')

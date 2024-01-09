@@ -40,13 +40,22 @@ New Features:
 
 Bugs Fixed:
 
+- The submit language will no longer treat ``request_gpu_memory`` and ``request_gpus_memory``
+  as requests for a custom resource of type ``gpu_memory`` or ``gpus_memory`` respectively.
+  :jira:`2201`
+
 - Fixed bug where DAG node jobs declared inline inside a DAG file
-  would fail to set the Job classad attribute ``JobSubmitMethod``.
+  would fail to set the Job ClassAd attribute ``JobSubmitMethod``.
   :jira:`2184`
 
-- Fixed ``SyntaxWarning`` s raised by Python 3.12 in scripts packaged
+- Fixed ``SyntaxWarning`` raised by Python 3.12 in scripts packaged
   with the Python bindings.
   :jira:`2212`
+
+- Ensure Perl dependencies are present for the **condor_gather_info** script.
+  The **condor_gather_info** script now properly reports the User login name.
+  Also, report the contents of ``/etc/os-release```.
+  :jira:`2094`
 
 .. _lts-version-history-2303:
 
