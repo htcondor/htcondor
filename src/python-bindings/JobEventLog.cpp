@@ -141,7 +141,7 @@ JobEventLog::next() {
 
 		case ULOG_RD_ERROR:
 		{
-			std::string message {"ULOG_RD_ERROR: "};;
+			std::string message {"ULOG_RD_ERROR: "};
 			ReadUserLog::ErrorType et;
 			const char *estring = nullptr;
 			unsigned int lineno = 0;
