@@ -160,16 +160,12 @@ _credd_do_check_oauth_creds(PyObject *, PyObject * args) {
         auto * handle = get_handle_from( py_classad );
         ClassAd * classad = (ClassAd *)handle->t;
 
-        ClassAd * copy = new ClassAd();
-        copy->CopyFrom(* classad);
-
-        requests.push_back(copy);
+        requests.push_back(classad);
     }
 
     std::string url;
     int rv = do_check_oauth_creds(&requests[0], (int)requests.size(), url, d);
     if( d != NULL ) { delete d; }
-    for( int i = 0; i < size; ++i ) { delete requests[i]; }
 
     return Py_BuildValue("iz", rv, url.c_str());
 }
