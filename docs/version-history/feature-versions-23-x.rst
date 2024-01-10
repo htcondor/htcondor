@@ -30,6 +30,10 @@ New Features:
   with RequestDisk or RequestMemory without a units suffix.
   :jira:`1837`
 
+- The :tool:`htcondor` command line tools eventlog read command now
+  optionally takes more than one eventlog to process at once.
+  :jira:`2220`
+
 - Added job classad attribute ``ContainerImageSource``, a string which is
   is set to the source of the image transfer.
   :jira:`1797`
