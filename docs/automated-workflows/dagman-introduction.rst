@@ -342,10 +342,9 @@ submit description file, this implies that each node within the DAG runs
 the same job. The ``$(Cluster)`` macro produces unique file names for each
 job's output.
 
-:index:`DAGParentNodeNames<single: DAGParentNodeNames; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; DAGParentNodeNames>`
 
-The job ClassAd attribute ``DAGParentNodeNames`` is also available for
+The job ClassAd attribute :ad-attr:`DAGParentNodeNames` is also available for
 use within the submit description file. It defines a comma separated
 list of each *JobName* which is a parent node of this job's node. This
 attribute may be used in the :subcom:`arguments[and DAGman]`

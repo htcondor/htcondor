@@ -12,14 +12,18 @@ new consistent form as a long term background task, but please use this new synt
 cleaning up old.  In general, we are replacing all explicit formatting commands (like bold or italic) with semantically
 meaningful commands, like **:subcom:** or **:macro:**
 
-###Built in sphinx markups
+### Built in sphinx markups
 
-Section not yet written
+Sphinx comes equipped with some useful pre-built roles (extentions) and directives usable in our documentation to
+automatically html formating and stylizing. A full list of [roles](https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html)
+and [directives](https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html) can be found in the sphinx
+documentation. Some notable ones are listed below:
 
-- Warning
-- Note
-- Sidebar
-- Mermaid graph
+- Code Block -- **.. code-block::\<language\>**
+- Warning -- **.. warning::**
+- Note -- **.. note::**
+- Sidebar -- **.. sidebar::**
+- Mermaid graph -- **.. mermaid::**
 
 ### HTCondor specific markups
 
@@ -75,4 +79,35 @@ Example: **:tool:\`condor_q\`** -- makes a reference from here to the condor\_q 
 Example: **:tool:\`condor_q[using Autoformatting]\`** -- does the above plus makes an index entry under condor\_q.
 
 Example: **:tool:\`htcondor job status\`** -- will make a reference link as *htcondor job status* that links to the htcondor tool man page.
+
+**:ad-attr:** references Classad attributes to the that have been defined by **:classad-attribute-def:**. **:ad-attr:**
+creates a refence (link) from the existing position to the appropriate Classad Type documentation page. This extension
+can be given addition details via *key=value* information separated by semi-colons in brackets.
+
+Extra **:ad-attr:** detail keywords:
+- **Index** -- Creates an index entry with the value name under the attribute
+- **Type** -- Specifies file to link to based on explicit Classad type. See Option to file mapping below
+
+|    **Type**    |               **File**               |
+|:---------------|:------------------------------------:|
+| ACCOUNTING     | accounting-classad-attributes        |
+| ADDED_COLLECTOR| classad-attributes-added-by-collector|
+| COLLECTOR      | collector-classad-attributes         |
+| DAEMONCORE     | daemon-core-statistics-attributes    |
+| DEFRAG         | defrag-classad-attributes            |
+| GRID           | grid-classad-attributes              |
+| JOB            | job-classad-attributes               |
+| MACHINE        | machine-classad-attributes           |
+| MASTER         | daemon-master-classad-attributes     |
+| NEGOTIATOR     | negotiator-classad-attributes        |
+| SCHEDD         | scheduler-classad-attributes         |
+| SUBMITTER      | submitter-classad-attributes         |
+
+Example: **:ad-attr:**\`DAGManJobId\` -- Makes a reference link for *Job Classad Attributes*
+
+Example: **:ad-attr**\`DAGManJobId[index="within Node Job"]` -- does as above plus makes an index entry under *DAGManJobId*
+
+Example: **:ad-attr:**\`Machine[type=Master]\` -- Makes reference for *Machine* attribute to correct documentation page (daemon-master-classad-attributes)
+
+Example: **:ad-attr:**\`Machine[type=Master;index="on EPs"]\` -- does as above plus makes an index entry under *Machine*
 

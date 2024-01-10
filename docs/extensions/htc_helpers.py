@@ -21,6 +21,15 @@ def make_headerlink_node(attribute_name, options):
     node = nodes.reference('', '¶', refuri=ref, reftitle="Permalink to this headline", classes=['headerlink'], **options)
     return node
 
+def extra_info_parser(details, delim=";"):
+    info = {}
+    for detail in details.split(delim):
+        key, value = tuple(detail.strip().split("="))
+        info.update({
+            key.upper().strip() : value.strip(' "\'')
+        })
+    return info
+
 def custom_ext_parser(text, info_start="[", info_end="]"):
     # Attempt to find detail section in text: INFO[DETAILS]
     index_start = text.find(info_start)
