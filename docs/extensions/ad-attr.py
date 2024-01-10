@@ -5,9 +5,13 @@ from docutils import nodes
 from docutils.parsers.rst import Directive
 from sphinx import addnodes
 from sphinx.errors import SphinxError
-from sphinx.util import logging
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
 from htc_helpers import custom_ext_parser, make_ref_and_index_nodes, extra_info_parser
+# Remove once Centos7 support is dropped (Requires Sphinx V2.0.0)
+try:
+    from sphinx.util import logging
+except ImportError:
+    logging = None
 
 ATTRIBUTE_FILES = {}
 AD_TYPE_FILES = {
@@ -48,8 +52,12 @@ def dump(obj):
     for attr in dir(obj):
         print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
+def warn(msg: str):
+    logger = logging.getLogger(__name__) if logging is not None else None
+    if logger is not None:
+        logger.warning(msg)
+
 def classad_attr_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
-    logger = logging.getLogger(__name__)
     attr_name, attr_info = custom_ext_parser(text)
     details = extra_info_parser(attr_info) if attr_info != "" else None
 
@@ -58,13 +66,13 @@ def classad_attr_role(name, rawtext, text, lineno, inliner, options={}, content=
     filename = AD_TYPE_FILES.get(ad_type) if ad_type in AD_TYPE_FILES else None
 
     if attr_name not in ATTRIBUTE_FILES:
-        logger.error(f"Classad Attribute '{attr_name}' not defined in any Classad Documentation files")
+        warn(f"Classad Attribute '{attr_name}' not defined in any Classad Documentation files")
         filename = "classad-types.html"
     else:
         if filename is None:
             filename = ATTRIBUTE_FILES[attr_name][0]
             if len(ATTRIBUTE_FILES[attr_name]) > 1:
-                logger.warning(f"Classad Attribute '{attr_name}' is defined in multiple files. Defaulting to {filename}")
+                warn(f"Classad Attribute '{attr_name}' is defined in multiple files. Defaulting to {filename}")
 
     ref_link = f"href=\"../classad-attributes/{filename}#{attr_name}\""
     return make_ref_and_index_nodes(name, attr_name, attr_index,
