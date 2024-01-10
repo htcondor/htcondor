@@ -57,6 +57,10 @@ Bugs Fixed:
   Also, report the contents of ``/etc/os-release```.
   :jira:`2094`
 
+- Search engine timeout settings for **condor_adstash** now apply to all search
+  engine operations, not just the intial request to the search engine.
+  :jira:`2167`
+
 .. _lts-version-history-2303:
 
 Version 23.0.3

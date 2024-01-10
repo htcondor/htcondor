@@ -92,7 +92,7 @@ class ElasticsearchInterface(GenericInterface):
         if self.use_https:
             client_options["verify_certs"] = True
 
-        client_options["request_timeout"] = self.timeout
+        client_options["timeout"] = self.timeout
 
         self.handle = elasticsearch.Elasticsearch(**client_options)
         return self.handle
