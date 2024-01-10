@@ -1108,7 +1108,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 	// rewind to this location
 	if (!m_fp || ((filepos = ftell(m_fp)) == -1L))
 	{
-		dprintf( D_FULLDEBUG,
+		dprintf( D_ALWAYS,
 				 "ReadUserLog: invalid m_fp, or ftell() failed\n" );
 		Unlock(lock, true);
 		return ULOG_UNK_ERROR;
@@ -1118,6 +1118,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 
 	// so we don't dump core if the above fscanf failed
 	if (retval1 != 1) {
+		int save_errno = errno;
 		eventnumber = 1;
 		// check for end of file -- why this is needed has been
 		// lost, but it was removed once and everything went to
@@ -1135,14 +1136,13 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 			Unlock(lock, true);
 			return ULOG_NO_EVENT;
 		}
-		dprintf( D_FULLDEBUG, "ReadUserLog: error (not EOF) reading "
-					"event number\n" );
+		dprintf( D_ALWAYS, "ReadUserLog: error %d (not EOF) reading event number\n", save_errno);
 	}
 
 	// allocate event object; check if allocated successfully
 	event = instantiateEvent ((ULogEventNumber) eventnumber);
 	if (!event) {
-		dprintf( D_FULLDEBUG, "ReadUserLog: unable to instantiate event\n" );
+		dprintf( D_ALWAYS, "ReadUserLog: unable to instantiate event\n" );
 		Unlock(lock, true);
 		return ULOG_UNK_ERROR;
 	}
@@ -1154,7 +1154,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 	// check if error in reading event
 	if (!retval1 || !retval2)
 	{
-		dprintf( D_FULLDEBUG,
+		dprintf( D_ALWAYS,
 				 "ReadUserLog: error reading event; re-trying\n" );
 
 		// we could end up here if file locking did not work for
@@ -1214,7 +1214,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 			// if failed again, we have a parse error
 			if (retval1 != 1 || !retval2)
 			{
-				dprintf( D_FULLDEBUG, "ReadUserLog: error reading event "
+				dprintf( D_ALWAYS, "ReadUserLog: error reading event "
 							"on second try\n");
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
@@ -1234,7 +1234,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 				{
 					// got the event, but could not synchronize!!
 					// treat as incomplete event
-					dprintf( D_FULLDEBUG,
+					dprintf( D_ALWAYS,
 							 "ReadUserLog: got event on second try "
 							 "but synchronize() failed\n");
 					delete event;
@@ -1249,7 +1249,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 		{
 			// if we could not synchronize the log, we don't have the full
 			// event in the stream yet; restore file position and return
-			dprintf( D_FULLDEBUG, "ReadUserLog: syncronize() failed\n");
+			dprintf( D_ALWAYS, "ReadUserLog: synchronize() failed\n");
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent\n");
@@ -1275,7 +1275,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 		{
 			// got the event, but could not synchronize!!  treat as incomplete
 			// event
-			dprintf( D_FULLDEBUG, "ReadUserLog: got event on first try "
+			dprintf( D_ALWAYS, "ReadUserLog: got event on first try "
 					"but synchronize() failed\n");
 
 			delete event;
