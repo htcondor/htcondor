@@ -34,7 +34,6 @@
 // memory/buffer safe.
 int formatstr(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr(std::string& s, const char* format, va_list pargs);
-int vformatstr_impl(std::string& s, bool concat, const char* format, va_list pargs);
 
 // Returns number of replacements actually performed, or -1 if from is empty.
 int replace_str( std::string & str, const std::string & from, const std::string & to, size_t start = 0 );
@@ -64,6 +63,7 @@ void trim(std::string &str);
 void trim_quotes(std::string &str, std::string quotes);
 void lower_case(std::string &str);
 void upper_case(std::string &str);
+std::string as_upper_case(const std::string & str);
 void title_case(std::string &str); // capitalize each word
 
 const char * empty_if_null(const char * c_str);
@@ -111,6 +111,11 @@ bool contains_prefix_withwildcard(const std::vector<std::string> &list, const st
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str);
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str);
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str);
+
+bool matches_withwildcard(const char* pattern, const char* str);
+bool matches_anycase_withwildcard(const char* pattern, const char* str);
+bool matches_prefix_withwildcard(const char* pattern, const char* str);
+bool matches_prefix_anycase_withwildcard(const char* pattern, const char* str);
 
 // scan an input string for path separators, returning a pointer into the input string that is
 // the first charactter after the last input separator. (i.e. the filename part). if the input

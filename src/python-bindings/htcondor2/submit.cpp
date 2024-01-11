@@ -469,7 +469,7 @@ _submit_getqargs( PyObject *, PyObject * args ) {
 
 
 bool
-set_dag_options( PyObject * options, SubmitDagShallowOptions & shallow, SubmitDagDeepOptions & deep ) {
+set_dag_options( PyObject * options, DagmanOptions& dag_opts) {
     PyObject * key = NULL;
     PyObject * value = NULL;
     Py_ssize_t cursor = 0;
@@ -487,122 +487,46 @@ set_dag_options( PyObject * options, SubmitDagShallowOptions & shallow, SubmitDa
             return false;
         }
 
-
-        // Special case(s) to handle options that aren't string, bool, or int.
-        if( k == "insert_env" ) {
-            if(! PyUnicode_Check(value)) {
-                PyErr_SetString(PyExc_TypeError, "this option's value must be a string");
-                return false;
-            }
-
-            std::string v;
-            if( py_str_to_std_string(value, v) == -1 ) {
-                // py_str_to_std_string() has already set an exception for us.
-                return false;
-            }
-
-            std::string t(v); trim(t);
-            deep.addToEnv.push_back(t);
-            continue;
+        std::string v;
+        if( py_str_to_std_string(value, v) == -1 ) {
+            // py_str_to_std_string() has already set an exception for us.
+            return false;
         }
 
 
-        auto isStringOpt =
-            DagmanShallowOptions::str::_from_string_nocase_nothrow(k.c_str());
-        if( isStringOpt ) {
-            if(! PyUnicode_Check(value)) {
-                PyErr_SetString(PyExc_TypeError, "this option's value must be a string");
-                return false;
-            }
+        // Special case:
+        //      - AddToEnv trims the value string
+        if( k == "AddToEnv" ) { trim(v); }
 
-            std::string v;
-            if( py_str_to_std_string(value, v) == -1 ) {
-                // py_str_to_std_string() has already set an exception for us.
-                return false;
-            }
+        SetDagOpt ret = dag_opts.set( k.c_str(), v );
 
-            shallow[*isStringOpt] = v;
-            continue;
+        std::string msg, type;
+        switch (ret) {
+            case SetDagOpt::SUCCESS:
+                break;
+            case SetDagOpt::KEY_DNE:
+                formatstr( msg, "%s is not a recognized DAGMan option", k.c_str() );
+                PyErr_SetString(PyExc_KeyError, msg.c_str());
+                return false;
+            case SetDagOpt::INVALID_VALUE:
+                type = dag_opts.OptValueType( k );
+                formatstr( msg, "option %s value needs to be a %s", k.c_str(), type.c_str() );
+                PyErr_SetString(PyExc_TypeError, msg.c_str());
+                return false;
+            case SetDagOpt::NO_KEY:
+                PyErr_SetString(PyExc_RuntimeError, "Developer Error: empty key provided to DAGMan options set()");
+                return false;
+            case SetDagOpt::NO_VALUE:
+                formatstr( msg, "empty value provided for DAGMan option %s", k.c_str() );
+                PyErr_SetString(PyExc_RuntimeError, msg.c_str());
+                return false;
         }
-
-        auto isBoolOpt =
-            DagmanShallowOptions::b::_from_string_nocase_nothrow(k.c_str());
-        if( isBoolOpt ) {
-            if(! PyBool_Check(value)) {
-                PyErr_SetString(PyExc_TypeError, "this option's value must be a bool");
-                return false;
-            }
-
-            shallow[*isBoolOpt] = value == Py_True;
-            continue;
-        }
-
-        auto isIntOpt =
-            DagmanShallowOptions::i::_from_string_nocase_nothrow(k.c_str());
-        if( isIntOpt ) {
-            if(! PyLong_Check(value)) {
-                PyErr_SetString(PyExc_TypeError, "this option's value must be an integer");
-                return false;
-            }
-
-            shallow[*isIntOpt] = PyLong_AsLong(value);
-            continue;
-        }
-
-
-        auto isDeepStringOpt =
-            DagmanDeepOptions::str::_from_string_nocase_nothrow(k.c_str());
-        if( isDeepStringOpt ) {
-            if(! PyUnicode_Check(value)) {
-                PyErr_SetString(PyExc_TypeError, "this option's value must be a string");
-                return false;
-            }
-
-            std::string v;
-            if( py_str_to_std_string(value, v) == -1 ) {
-                // py_str_to_std_string() has already set an exception for us.
-                return false;
-            }
-
-            deep[*isDeepStringOpt] = v;
-            continue;
-        }
-
-        auto isDeepBoolOpt =
-            DagmanDeepOptions::b::_from_string_nocase_nothrow(k.c_str());
-        if( isDeepBoolOpt ) {
-            if(! PyBool_Check(value)) {
-                PyErr_SetString(PyExc_TypeError, "this option's value must be a bool");
-                return false;
-            }
-
-            deep[*isDeepBoolOpt] = value == Py_True;
-            continue;
-        }
-
-/*
-        // There aren't any integer deep options at the moment.
-        auto isDeepIntOpt =
-            DagmanDeepOptions::i::_from_string_nocase_nothrow(k.c_str());
-        if( isDeepIntOpt ) {
-            if(! PyLong_Check(value)) {
-                PyErr_SetString(PyExc_TypeError, "this option's value must be an integer");
-                return false;
-            }
-            deep[*isDeepIntOpt] = PyLong_AsLong(value);
-            continue;
-        }
-*/
-
-
-        std::string msg;
-        formatstr( msg, "%s is not a recognized DagMan option", k.c_str() );
-        PyErr_SetString(PyExc_KeyError, msg.c_str());
-        return false;
     }
 
     return true;
 }
+
+namespace shallow = DagmanShallowOptions;
 
 static PyObject *
 _submit_from_dag( PyObject *, PyObject * args ) {
@@ -615,13 +539,11 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     }
 
 
-    SubmitDagShallowOptions shallow;
-    shallow.dagFiles.push_back(filename);
-    shallow.primaryDagFile = filename;
+    DagmanOptions dag_opts;
+    std::string dag_file(filename);
+    dag_opts.addDAGFile(dag_file);
 
-
-    SubmitDagDeepOptions deep;
-    if(! set_dag_options( options, shallow, deep )) {
+    if( ! set_dag_options( options, dag_opts )) {
         // set_dag_options() has already set an exception for us.
         return NULL;
     }
@@ -630,22 +552,21 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     DagmanUtils du;
     // Why not a vector?
     std::list<std::string> lines;
-    du.setUpOptions( deep, shallow, lines );
+    du.setUpOptions( dag_opts, lines );
 
     // This is almost certainly an indication of a broken design.
     du.usingPythonBindings = true;
-    if(! du.ensureOutputFilesExist( deep, shallow )) {
+    if(! du.ensureOutputFilesExist( dag_opts )) {
         // This was HTCondorIOError in version 1.
         PyErr_SetString(PyExc_IOError, "Unable to write condor_dagman output files");
         return NULL;
     }
 
-    if(! du.writeSubmitFile( deep, shallow, lines )) {
+    if(! du.writeSubmitFile( dag_opts, lines )) {
         // This was HTCondorIOError in version 1.
         PyErr_SetString(PyExc_IOError, "Unable to write condor_dagman submit file");
         return NULL;
     }
 
-
-    return PyUnicode_FromString( shallow.strSubFile.c_str() );
+    return PyUnicode_FromString( dag_opts[shallow::str::SubFile].c_str() );
 }

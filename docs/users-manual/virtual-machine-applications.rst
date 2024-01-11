@@ -21,11 +21,11 @@ specifies a disk image, not an executable. Therefore, the submit
 commands :subcom:`input[vm universe]`,
 :subcom:`output[vm universe]`, and
 :subcom:`error[vm universe]` do not apply. If
-specified, *condor_submit* rejects the job with an error. The
+specified, :tool:`condor_submit` rejects the job with an error. The
 :subcom:`executable[vm universe]` command
 changes definition within a **vm** universe job. It no longer specifies
 an executable file, but instead provides a string that identifies the
-job for tools such as *condor_q*. Other commands specific to the type
+job for tools such as :tool:`condor_q`. Other commands specific to the type
 of virtual machine software identify the disk image.
 
 Xen and KVM virtual machine software are supported. As these
@@ -172,7 +172,7 @@ Periodic creation of checkpoints is not supported at this time.
 
 Enabling both networking and checkpointing for a **vm** universe job can
 cause networking problems when the job restarts, particularly if the job
-migrates to a different machine. *condor_submit* will normally reject
+migrates to a different machine. :tool:`condor_submit` will normally reject
 such jobs. To enable both, then add the command
 
 .. code-block:: condor-submit

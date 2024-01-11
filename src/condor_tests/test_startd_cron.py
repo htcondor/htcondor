@@ -49,7 +49,7 @@ def condor(test_dir, cronscripts):
         local_dir=test_dir / "condor",
         config={
             "STARTD_CRON_LOG_NON_ZERO_EXIT": True,
-            "STARTD_CRON_JOBLIST": "GOODCRON BADCRON",
+            "STARTD_CRON_JOBLIST": "BADCRON GOODCRON",
             "STARTD_CRON_GOODCRON_EXECUTABLE": f"{test_dir}/goodcron.py",
             "STARTD_CRON_GOODCRON_MODE": "Oneshot",
             "STARTD_CRON_BADCRON_EXECUTABLE": f"{test_dir}/badcron.py",
@@ -61,6 +61,15 @@ def condor(test_dir, cronscripts):
 
 @action
 def check_logs(condor, test_dir):
+    # Wait until we see the cron job in the collector, to avoid races
+    ready = False
+    while not ready:
+        results = condor.status(ad_type=htcondor.AdTypes.Startd, projection=["GoodCron", "BadCron"])
+        if "BadCron" in results[0]:
+            ready = True
+        else:
+            time.sleep(2)
+
     with open(test_dir / "condor/log/StartLog") as f:
         found_bad_cron = False
         for line in f:

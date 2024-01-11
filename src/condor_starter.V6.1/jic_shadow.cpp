@@ -55,6 +55,8 @@
 #include <fstream>
 #include <algorithm>
 
+#include "filter.h"
+
 extern Starter *Starter;
 ReliSock *syscall_sock = NULL;
 time_t syscall_last_rpc_time = 0;
@@ -534,6 +536,11 @@ JICShadow::transferOutput( bool &transient_failure )
 		return true;
 	}
 
+	// if we are writing a sandbox starter log, flush and temporarily close it before we make the manifest
+	if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
+		dprintf_close_logs_in_directory(Starter->GetWorkingDir(false), false);
+	}
+
 	std::string dummy;
 	bool want_manifest = false;
 	if( job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dummy ) ||
@@ -596,6 +603,16 @@ JICShadow::transferOutput( bool &transient_failure )
 			filetrans->addFileToExceptionList(CHIRP_CONFIG_FILENAME);
 		}
 
+		// remove the sandbox starter log from transfer list unless the job has requested it be transferred.
+		if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
+			if ( ! job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
+				filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME);
+			} else {
+				filetrans->addOutputFile(SANDBOX_STARTER_LOG_FILENAME);
+			}
+			filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME ".old");
+		}
+
 			// true if job exited on its own or if we are set to not spool
 			// on eviction.
 		bool final_transfer = !spool_on_evict || (requested_exit == false);
@@ -631,6 +648,10 @@ JICShadow::transferOutput( bool &transient_failure )
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
 
+
+		updateShadowWithPluginResults("Output");
+
+
 		const char *stats = m_ft_info.tcp_stats.c_str();
 		if (strlen(stats) != 0) {
 			std::string full_stats = "(peer stats from starter): ";
@@ -644,7 +665,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		set_priv(saved_priv);
 
 		if( m_ft_rval ) {
-			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES, 
+			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,
 							m_ft_info.spooled_files.c_str());
 		} else {
 			dprintf( D_FULLDEBUG, "Sandbox transfer failed.\n");
@@ -1200,6 +1221,8 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	// this will block
 	bool rval = filetrans->UploadCheckpointFiles( checkpointNumber, true );
 	set_priv( saved_priv );
+
+	updateShadowWithPluginResults("Checkpoint");
 
 	if( !rval ) {
 		// Failed to transfer.
@@ -2545,6 +2568,29 @@ JICShadow::beginFileTransfer( void )
 }
 
 
+void
+JICShadow::updateShadowWithPluginResults( const char * which ) {
+	if(! filetrans) { return; }
+	if( filetrans->getPluginResultList().size() <= 0 ) { return; }
+
+	ClassAd updateAd;
+
+	classad::ExprList * e = new classad::ExprList();
+	for( const auto & ad : filetrans->getPluginResultList() ) {
+		ClassAd * filteredAd = filterPluginResults( ad );
+		if( filteredAd != NULL ) {
+			e->push_back( filteredAd );
+		}
+	}
+	std::string attributeName;
+	formatstr( attributeName, "%sPluginResultList", which );
+	updateAd.Insert( attributeName.c_str(), e );
+
+	const bool dont_ensure_update = false;
+	updateShadow( & updateAd, dont_ensure_update );
+}
+
+
 int
 JICShadow::transferCompleted( FileTransfer *ftrans )
 {
@@ -2571,6 +2617,10 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			EXCEPT("%s", message.c_str());
 		}
+
+
+		updateShadowWithPluginResults("Input");
+
 
 		// It's not enought to for the FTO to believe that the transfer
 		// of a checkpoint succeeded if that checkpoint wasn't transferred

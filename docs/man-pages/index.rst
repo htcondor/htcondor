@@ -148,6 +148,7 @@ Commands for managing submitters:
    condor_transform_ads
    condor_update_machine_ad
    condor_updates_stats
+   condor_upgrade_check
    condor_urlfetch
    condor_userlog
    condor_userprio

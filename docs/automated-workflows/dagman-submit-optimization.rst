@@ -3,7 +3,7 @@ Optimization of Submission Time
 
 :index:`optimization of submit time<single: DAGMan; Optimization of submit time>`
 
-*condor_dagman* works by watching log files for events, such as
+:tool:`condor_dagman` works by watching log files for events, such as
 submission, termination, and going on hold. When a new job is ready to
 be run, it is submitted to the *condor_schedd*, which needs to acquire
 a computing resource. Acquisition requires the *condor_schedd* to

@@ -114,7 +114,7 @@ sub parse_command_line
 	# there is a colon in the archive name.
 	$tmp = `date +%F-%I_%M_%S%p-%Z`;
 	chomp $tmp;
-	$tmp = getlogin() . "-jid$args{'jobid'}-$tmp";
+	$tmp = getpwuid($<) . "-jid$args{'jobid'}-$tmp";
 
 	# The _scratch for is the parent of the inner scratch directory.
 	if (!exists($args{'scratch'})) {
@@ -223,7 +223,7 @@ sub acquire_identity
 ################################
 # User who created this report #
 ################################
- ${\(getlogin() . "\n")}
+ ${\(getpwuid($<) . "\n")}
 ####################################################
 # Script invocation and on what machine was it run #
 ####################################################
@@ -237,6 +237,10 @@ sub acquire_identity
 # uname -a #
 ############
  @{[`/bin/uname -a 2>&1`]}
+##############
+# /etc/os-release #
+##############
+ @{[`/bin/cat /etc/os-release 2>&1`]}
 ##############
 # /etc/issue #
 ##############

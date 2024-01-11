@@ -14,14 +14,15 @@ is likely to run.
 PRE and POST scripts
 --------------------
 
-:index:`PRE script<single: DAGMan; PRE script>` Processing
-done before a job is submitted is called a *PRE* script. Processing done
-after a job completes its execution is
-:index:`POST script<single: DAGMan; POST script>` called a *POST* script. Note that
-the executable specified does not necessarily have to be a shell script
-(Unix) or batch file (Windows); but it should be relatively light weight
-because it will be run directly on the access point, not submitted as
-an HTCondor job.
+:index:`PRE script<single: DAGMan; PRE script>`
+:index:`POST script<single: DAGMan; POST script>`
+Processing done before a job is submitted is called a *PRE* script. Processing
+done after a job completes its execution is called a *POST* script.
+
+.. note::
+
+    The script executable does not have to be a shell script (Unix) or batch file
+    (Windows); but should be light weight since it runs directly on the AP.
 
 The syntax used for *PRE* or *POST* commands is
 
@@ -42,15 +43,10 @@ file) to be executed, and may not contain spaces. The optional
 the arguments. Both *ExecutableName* and optional *arguments* are case
 sensitive.
 
-A PRE script is commonly used to place files in a staging area for the
-jobs to use. A POST script is commonly used to clean up or remove files
-once jobs are finished running. An example uses PRE and POST scripts to
-stage files that are stored on tape. The PRE script reads compressed
-input files from the tape drive, uncompresses them, and places the
-resulting files in the current directory. The HTCondor jobs can then use
-these files, producing output files. The POST script compresses the
-output files, writes them out to the tape, and then removes both the
-staged files and the output files.
+A PRE script is commonly used to verify inputs for a node job that are produced
+by a parent node, and POST scripts can be used to turn a job execution failure
+into a successful node completion so the DAG doesn't fail given a specific node
+job failure.
 
 :index:`HOLD script<single: DAGMan; HOLD script>`
 
@@ -116,13 +112,12 @@ necessarily the same machine upon which the node's job is run. Further,
 a single cluster of HTCondor jobs may be spread across several machines.
 
 If the PRE script fails, then the HTCondor job associated with the node
-is not submitted, and (as of version 8.5.4) the POST script is not run
-either (by default). However, if the job is submitted, and there is a
-POST script, the POST script is always run once the job finishes. (The
-behavior when the PRE script fails may be changed to run the POST
-script by setting configuration variable :macro:`DAGMAN_ALWAYS_RUN_POST` to
-``True`` or by passing the **-AlwaysRunPost** argument to
-*condor_submit_dag*.)
+is not submitted, and the POST script is not run either (by default). However,
+if the job is submitted, and there is a POST script, the POST script is always
+run once the job finishes. (The behavior when the PRE script fails may be
+changed to run the POST script by setting configuration variable
+:macro:`DAGMAN_ALWAYS_RUN_POST` to ``True`` or by passing the **-AlwaysRunPost**
+argument to :tool:`condor_submit_dag`.)
 
 Examples that use PRE or POST scripts
 -------------------------------------
@@ -194,43 +189,62 @@ value.
 Special script argument macros
 ------------------------------
 
-The five macros ``$JOB``, ``$RETRY``, ``$MAX_RETRIES``, ``$DAG_STATUS``
-and ``$FAILED_COUNT`` can be used within the DAG input file as arguments
-passed to a PRE or POST script. An additional three macros ``$JOBID``,
-``$RETURN``, and ``$PRE_SCRIPT_RETURN`` can be used as arguments to POST
-scripts. The use of these variables is limited to being used as an
-individual command line *argument* to the script, surrounded by spaces,
-in order to cause the substitution of the variable's value.
+DAGMan provides the following macros to be used for node script arguments.
+The use of these macros are limited to being used as individual command line
+arguments surrounded by spaces:
+
++---------------+---------------+---------------+--------------------+
+|               | $JOB          | $RETRY        | $DAG_STATUS        |
+|  All Scripts  +---------------+---------------+--------------------+
+|               | $FAILED_COUNT | $MAX_RETRIES  |                    |
++---------------+---------------+---------------+--------------------+
+|  POST Scripts | $JOBID        | $RETURN       | $PRE_SCRIPT_RETURN |
++---------------+---------------+---------------+--------------------+
+
 
 :index:`Defined special node macros<single: DAGMan; Defined special node macros>`
 
-The special macros are as follows:
+The special macros for all scripts:
 
--  ``$JOB`` evaluates to the (case sensitive) string defined for
-   *JobName*.
+-  ``$JOB`` evaluates to the (case sensitive) string defined for *JobName*.
 -  ``$RETRY`` evaluates to an integer value set to 0 the first time a
    node is run, and is incremented each time the node is retried. See
    :ref:`automated-workflows/node-pass-or-fail:retrying failed nodes` for
    the description of how to cause nodes to be retried.
 -  ``$MAX_RETRIES`` evaluates to an integer value set to the maximum
-   number of retries for the node. See
-   :ref:`automated-workflows/node-pass-or-fail:retrying failed nodes` for the
-   description of how to cause nodes to be retried. If no retries are set for
-   the node, ``$MAX_RETRIES`` will be set to 0.
--  ``$JOBID`` (for POST scripts only) evaluates to a representation of
-   the HTCondor job ID of the node job. It is the value of the job
-   ClassAd attribute ``ClusterId``, followed by a period, and then
-   followed by the value of the job ClassAd attribute ``ProcId``. An
-   example of a job ID might be 1234.0. For nodes with multiple jobs in
-   the same cluster, the ``ProcId`` value is the one of the last job
-   within the cluster.
--  ``$RETURN`` (for POST scripts only) variable evaluates to the return
+   number of retries for the node. Defaults to 0 if retries aren't
+   specified for a node.
+-  ``$DAG_STATUS`` is the status of the DAG. Note that this macro's
+   value and definition is unrelated to the attribute named
+   ``DagStatus`` as defined for use in a node status file. This macro's
+   value is the same as the job ClassAd attribute ``DAG_Status`` that is
+   defined within the :tool:`condor_dagman` job's ClassAd. This macro may
+   have the following values:
+
+   -  0: OK
+   -  1: error; an error condition different than those listed here
+   -  2: one or more nodes in the DAG have failed
+   -  3: the DAG has been aborted by an ABORT-DAG-ON specification
+   -  4: removed; the DAG has been removed by :tool:`condor_rm`
+   -  5: cycle; a cycle was found in the DAG
+   -  6: halted; the DAG has been halted
+      (see :ref:`automated-workflows/dagman-interaction:suspending a running dag`)
+-  ``$FAILED_COUNT`` is defined by the number of nodes that have failed
+   in the DAG.
+
+Macros for POST Scripts only:
+
+-  ``$JOBID`` evaluates to a representation of
+   the HTCondor job ID [ClusterId.ProcId] of the node job. For nodes
+   with multiple jobs in the same cluster, the ``ProcId`` value is the
+   one of the last job within the cluster.
+-  ``$RETURN`` variable evaluates to the return
    value of the HTCondor job, if there is a single job within a cluster.
    With multiple jobs within the same cluster, there are two cases to
    consider. In the first case, all jobs within the cluster are
    successful; the value of ``$RETURN`` will be 0, indicating success.
    In the second case, one or more jobs from the cluster fail. When
-   *condor_dagman* sees the first terminated event for a job that
+   :tool:`condor_dagman` sees the first terminated event for a job that
    failed, it assigns that job's return value as the value of
    ``$RETURN``, and it attempts to remove all remaining jobs within the
    cluster. Therefore, if multiple jobs in the cluster fail with
@@ -242,8 +256,8 @@ The special macros are as follows:
    SIGKILL (signal 9) is reported as -9. A job whose batch system
    submission fails is reported as -1001. A job that is externally
    removed from the batch system queue (by something other than
-   *condor_dagman*) is reported as -1002.
--  ``$PRE_SCRIPT_RETURN`` (for POST scripts only) variable evaluates to
+   :tool:`condor_dagman`) is reported as -1002.
+-  ``$PRE_SCRIPT_RETURN`` variable evaluates to
    the return value of the PRE script of a node, if there is one. If
    there is no PRE script, this value will be -1. If the node job was
    skipped because of failure of the PRE script, the value of
@@ -251,21 +265,3 @@ The special macros are as follows:
    will be the exit value of the PRE script; the POST script can use
    this to see if the PRE script exited with an error condition, and
    assign success or failure to the node, as appropriate.
--  ``$DAG_STATUS`` is the status of the DAG. Note that this macro's
-   value and definition is unrelated to the attribute named
-   ``DagStatus`` as defined for use in a node status file. This macro's
-   value is the same as the job ClassAd attribute ``DAG_Status`` that is
-   defined within the *condor_dagman* job's ClassAd. This macro may
-   have the following values:
-
-   -  0: OK
-   -  1: error; an error condition different than those listed here
-   -  2: one or more nodes in the DAG have failed
-   -  3: the DAG has been aborted by an ABORT-DAG-ON specification
-   -  4: removed; the DAG has been removed by *condor_rm*
-   -  5: cycle; a cycle was found in the DAG
-   -  6: halted; the DAG has been halted
-      (see :ref:`automated-workflows/dagman-interaction:suspending a running dag`)
-
--  ``$FAILED_COUNT`` is defined by the number of nodes that have failed
-   in the DAG.

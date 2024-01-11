@@ -96,7 +96,7 @@ Note that the combination of
       when_to_transfer_output = ON_EXIT_OR_EVICT
 
 would produce undefined file access semantics. Therefore, this
-combination is prohibited by *condor_submit*.
+combination is prohibited by :tool:`condor_submit`.
 
 Specifying What Files to Transfer
 '''''''''''''''''''''''''''''''''
@@ -573,7 +573,7 @@ the files specified in
 :subcom:`public_input_files[example]`
 can be relative to the submit directory, or absolute paths. You can also
 specify an :subcom:`initialDir[and public input files]`,
-and *condor_submit* will look for files relative to that directory. The
+and :tool:`condor_submit` will look for files relative to that directory. The
 files must be world-readable on the file system (files with permissions
 set to 0644, directories with permissions set to 0755).
 

@@ -37,6 +37,8 @@
 #include "ipv6_hostname.h"
 #include "shared_port_endpoint.h"
 
+#define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
+
 ClassAd* Starter::s_ad = nullptr; // starter capabilities ad, (not the job ad!)
 char* Starter::s_path = nullptr;
 
@@ -741,6 +743,35 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 		formatstr_cat(slot_type_name, "%d", claim->rip()->type_id());
 		args.AppendArg(slot_type_name);
 	}
+
+	ClassAd * jobAd = claim->ad();
+	if (jobAd) {
+		bool add_a2_arg = false;
+		std::string a2arg;
+		if (jobAd->LookupBool(ATTR_JOB_STARTER_DEBUG, add_a2_arg) ||
+			jobAd->LookupString(ATTR_JOB_STARTER_DEBUG, a2arg)) {
+			if (string_is_boolean_param(a2arg.c_str(), add_a2_arg)) {
+				a2arg.clear();
+			} else if ( ! a2arg.empty()) {
+				// validate the a2arg characters.  should have only space,tab, and +-|,~:[A-Za-Z0-9]
+				size_t off = strspn(a2arg.c_str(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_:+-~, \t");
+				add_a2_arg = a2arg.size() == off;
+				if ( ! add_a2_arg) {
+					dprintf(D_ERROR, "Ignoring invalid JobStarterDebug value (off=%d): %s\n", off, a2arg.c_str());
+				} else {
+					replace_str(a2arg,"default", "$(ALL_DEBUG),$(STARTER_DEBUG)");
+				}
+				trim(a2arg);
+			}
+		}
+		if (add_a2_arg) {
+			if ( ! a2arg.empty()) a2arg += ",";
+			formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/" SANDBOX_STARTER_LOG_FILENAME);
+			args.AppendArg("-a2");
+			args.AppendArg(a2arg);
+		}
+	}
+
 
 	// Note: the "-a" option is a daemon core option, so it
 	// must come first on the command line.

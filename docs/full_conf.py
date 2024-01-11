@@ -40,6 +40,7 @@ extensions = [
     'jira',
     'classad-attribute-def',
     'tool',
+    'ad-attr',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load

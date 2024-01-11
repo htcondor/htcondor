@@ -18,5 +18,5 @@ if ($ARGV[1]) {
 	print "  Saving $infile to $outfile\n";
 	system("cp $infile $outfile");
 } else {
-	sleep(10);
+	sleep(1);
 }

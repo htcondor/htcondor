@@ -258,8 +258,9 @@ class Read(Verb):
 
     options = {
         "log_file": {
-            "args": ("log_file",),
-            "help": "Log file",
+            "args": ("log_files",),
+            "nargs": "*",
+            "help": "Log file or space separated list of log files",
         },
         "json": {
             "args": ("-json",),
@@ -279,19 +280,33 @@ class Read(Verb):
         },
     }
 
-    def __init__(self, logger, log_file, groupby=None, **options):
-        # make sure the specified log file exists and is readable
-        log_file = Path(log_file)
-        if not log_file.exists():
-            raise FileNotFoundError(f"Could not find file: {str(log_file)}")
-        if os.access(log_file, os.R_OK) is False:
-            raise PermissionError(f"Could not access file: {str(log_file)}")
+    def __init__(self, logger, log_files, groupby=None, **options):
+        all_log_files = {}
+        for log_file in log_files:
+            log_file = Path(log_file)
+            # make sure the specified log file exists and is readable
+            if not log_file.exists():
+                raise FileNotFoundError(
+                    f"Could not find file: {str(log_file)}")
+            if os.access(log_file, os.R_OK) is False:
+                raise PermissionError(
+                    f"Could not access file: {str(log_file)}")
 
-        # dictionary to store summary of events for each job
-        job_summaries = get_job_summaries(log_file, groupby)
-
+            # dictionary to store summary of events for each job
+            try:
+                job_summaries = get_job_summaries(log_file, groupby)
+                # add job summaries to dictionary of all job summaries
+                for job_id, job_summary in job_summaries.items():
+                    if job_id not in all_log_files:
+                        all_log_files[job_id] = job_summary
+                    else:
+                        # update job summary with new information
+                        all_log_files[job_id].update(job_summary)
+            except Exception as e:
+                traceback.print_exc()
+                return
         # output job summaries
-        output_job_summaries(job_summaries, groupby, options)
+        output_job_summaries(all_log_files, groupby, options)
 
 
 class Follow(Verb):

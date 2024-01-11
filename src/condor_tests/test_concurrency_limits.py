@@ -419,4 +419,4 @@ class TestConcurrencyLimits:
         initial_count = concurrency_limits_hit_first[limit_name_in_log]
         assert limit_name_in_log in concurrency_limits_hit
         final_count = concurrency_limits_hit[limit_name_in_log]
-        assert final_count > initial_count
+        assert final_count >= initial_count

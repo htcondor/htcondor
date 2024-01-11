@@ -61,11 +61,11 @@ Here is an explanation of each of the items in the file:
    millisecond precision
 -  ``duration``: the duration of the client, in seconds, with
    millisecond precision
--  ``exitcode``: the *condor_dagman* exit code
+-  ``exitcode``: the :tool:`condor_dagman` exit code
 -  ``dagman_id``: the value of the ``ClusterId`` attribute of the
-   *condor_dagman* instance
+   :tool:`condor_dagman` instance
 -  ``parent_dagman_id``: the value of the ``ClusterId`` attribute of the
-   parent *condor_dagman* instance of this DAG; empty if this DAG is
+   parent :tool:`condor_dagman` instance of this DAG; empty if this DAG is
    not a SUBDAG
 -  ``rescue_dag_number``: the number of the Rescue DAG being run, or 0
    if not running a Rescue DAG
@@ -91,7 +91,7 @@ Here is an explanation of each of the items in the file:
    -  ``1``: error; an error condition different than those listed here
    -  ``2``: one or more nodes in the DAG have failed
    -  ``3``: the DAG has been aborted by an ABORT-DAG-ON specification
-   -  ``4``: removed; the DAG has been removed by *condor_rm*
+   -  ``4``: removed; the DAG has been removed by :tool:`condor_rm`
    -  ``5``: a cycle was found in the DAG
    -  ``6``: the DAG has been halted; see the
       :ref:`automated-workflows/dagman-interaction:suspending a running dag` section.

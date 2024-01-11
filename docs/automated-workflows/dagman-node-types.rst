@@ -35,11 +35,11 @@ If both *DIR* and *NOOP* are used, they must appear in the order shown within
 the syntax specification.
 
 There may only be one FINAL node in a DAG. A parse error will be logged
-by the *condor_dagman* job in the ``dagman.out`` file, if more than one
+by the :tool:`condor_dagman` job in the ``dagman.out`` file, if more than one
 FINAL node is specified.
 
 The FINAL node is virtually always run. It is run if the
-*condor_dagman* job is removed with *condor_rm*. The only case in
+:tool:`condor_dagman` job is removed with :tool:`condor_rm`. The only case in
 which a FINAL node is not run is if the configuration variable
 :macro:`DAGMAN_STARTUP_CYCLE_DETECT` is set to ``True``, and a
 cycle is detected at start up time. If :macro:`DAGMAN_STARTUP_CYCLE_DETECT`
@@ -73,7 +73,7 @@ If there is a FINAL node specified for a DAG, it will be run at the end
 of the workflow. If this FINAL node must not do anything in certain
 cases, use the ``$DAG_STATUS`` and ``$FAILED_COUNT`` macros to take
 appropriate actions. Here is an example of that behavior. It uses a PRE
-script that aborts if the DAG has been removed with *condor_rm*, which,
+script that aborts if the DAG has been removed with :tool:`condor_rm`, which,
 in turn, causes the FINAL node to be considered failed without actually
 submitting the HTCondor job specified for the node. Partial contents of
 the DAG input file:
@@ -105,7 +105,7 @@ any of the following specifications:
 
 As of HTCondor version 8.3.7, DAGMan allows at most two submit attempts
 of a FINAL node, if the DAG has been removed from the queue with
-*condor_rm*.
+:tool:`condor_rm`.
 
 :index:`PROVISIONER command<single: DAG input file; PROVISIONER command>`
 :index:`PROVISIONER node<single: DAGMan; PROVISIONER node>`

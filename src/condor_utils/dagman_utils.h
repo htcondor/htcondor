@@ -57,21 +57,6 @@ enum DagStatus {
     DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
 };
 
-// this is a simple tokenizer class for parsing keywords out of a line of text
-// token separator defaults to whitespace, "" or '' can be used to have tokens
-// containing whitespace, but there is no way to escape " inside a "" string or
-// ' inside a '' string. outer "" and '' are not considered part of the token.
-
-class dag_tokener {
-public:
-	dag_tokener(const char * line_in);
-	void rewind() { tokens.Rewind(); }
-	const char * next() { return tokens.AtEnd() ? NULL : tokens.Next()->c_str(); }
-protected:
-	List<std::string> tokens; // parsed tokens
-};
-
-
 #include "enum.h"
 typedef std::list<std::string> str_list;
 
@@ -85,7 +70,7 @@ enum class CLI_BOOL {
 // Wrapper Struct around CLI_BOOL enum to overload various operators
 // for setting and checking values.
 // Note: For comparison/boolean evaluation the value CLI_BOOL::UNSET is
-//       considered False. Use notSet() to distinguish between UNSET & FALSE
+//       considered False. Use set() to distinguish between UNSET & FALSE
 struct CLI_BOOL_FLAG {
 
 	// CLI_BOOL enum value held in struct
@@ -96,7 +81,7 @@ struct CLI_BOOL_FLAG {
 	CLI_BOOL_FLAG(CLI_BOOL val) : value(val) {}
 
 	// Function to display the current value as a string
-	const char* display() {
+	const char* display() const {
 		if (value == CLI_BOOL::UNSET)
 			return "UNSET";
 		else if (value == CLI_BOOL::TRUE)
@@ -107,8 +92,8 @@ struct CLI_BOOL_FLAG {
 			return "UNKNOWN";
 	}
 
-	// Function to declare if value is UNSET
-	bool notSet() const { return value == CLI_BOOL::UNSET; }
+	// Function to declare if value is not UNSET
+	bool set() const { return value != CLI_BOOL::UNSET; }
 
 	// Overload set (=) operator for member = bool
 	CLI_BOOL_FLAG& operator=(const bool& b_val) {
@@ -165,68 +150,6 @@ namespace DagmanShallowOptions {
 	);
 }
 
-
-class SubmitDagShallowOptions {
-
-  public:
-
-    SubmitDagShallowOptions()
-    {
-        using namespace DagmanShallowOptions;
-
-        param(appendFile, "DAGMAN_INSERT_SUB_FILE");
-        copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
-
-        boolOpts[b::PostRun] = false;
-        boolOpts[b::DumpRescueDag] = false;
-        boolOpts[b::RunValgrind] = false;
-
-        intOpts[i::MaxIdle] = 0;
-        intOpts[i::MaxJobs] = 0;
-        intOpts[i::MaxPre] = 0;
-        intOpts[i::MaxPost] = 0;
-        intOpts[i::DebugLevel] = DEBUG_UNSET;
-        intOpts[i::Priority] = 0;
-    }
-
-
-    // Options offered by the Python bindings in version 1.
-    const std::string & operator[]( DagmanShallowOptions::str opt ) const;
-    bool operator[]( DagmanShallowOptions::b opt ) const;
-    int operator[]( DagmanShallowOptions::i opt ) const;
-
-    std::string & operator[]( DagmanShallowOptions::str opt );
-    bool & operator[]( DagmanShallowOptions::b opt );
-    int & operator[]( DagmanShallowOptions::i opt );
-
-    // Command-line options.
-    bool bSubmit = true;
-    std::string strRemoteSchedd;
-    std::string appendFile; // append to .condor.sub file before queue
-    std::list<std::string> appendLines; // append to .condor.sub file before queue
-    std::string primaryDagFile;
-    std::list<std::string> dagFiles;
-    bool doRecovery = false;
-    bool bPostRunSet = false; // whether this was actually set on the command line
-
-    // Non-command-line options.
-    std::string strLibOut;
-    std::string strLibErr;
-    std::string strDebugLog; // the dagman.out file
-    std::string strSchedLog; // the user log of condor_dagman's events
-    std::string strSubFile;
-    std::string strRescueFile;
-    std::string strLockFile;
-    bool copyToSpool;
-
-  private:
-
-    std::array<std::string, DagmanShallowOptions::str::_size()> stringOpts;
-    std::array<bool, DagmanShallowOptions::b::_size()> boolOpts;
-    std::array<int, DagmanShallowOptions::i::_size()> intOpts;
-};
-
-
 namespace DagmanDeepOptions {
 	BETTER_ENUM(str, long,
 		DagmanPath = 0, OutfileDir, BatchName, GetFromEnv, Notification,
@@ -247,53 +170,12 @@ namespace DagmanDeepOptions {
 	);
 }
 
-class SubmitDagDeepOptions {
-
-  public:
-
-    SubmitDagDeepOptions()
-    {
-        using namespace DagmanDeepOptions;
-
-        boolOpts[b::Force] = false;
-        boolOpts[b::UseDagDir] = false;
-        boolOpts[b::AutoRescue] = param_boolean( "DAGMAN_AUTO_RESCUE", true );
-        boolOpts[b::AllowVersionMismatch] = false;
-        boolOpts[b::Recurse] = false;
-        boolOpts[b::UpdateSubmit] = false;
-        boolOpts[b::ImportEnv] = false;
-        boolOpts[b::SuppressNotification] = true;
-    }
-
-
-    // Options offered by the Python bindings in version 1.
-    const std::string & operator[]( DagmanDeepOptions::str opt ) const;
-    bool operator[]( DagmanDeepOptions::b opt ) const;
-    // int operator[]( DagmanDeepOptions::i opt ) const;
-
-    std::string & operator[]( DagmanDeepOptions::str opt );
-    bool & operator[]( DagmanDeepOptions::b opt );
-    // int & operator[]( DagmanDeepOptions::i opt );
-
-
-    // Command-line options.
-    std::string strNotification;
-    std::string batchName; // optional value from -batch-name argument, will be double quoted if it exists.
-    std::string batchId;
-    std::string acctGroup;
-    std::string acctGroupUser;
-
-    bool bVerbose = false;
-
-    int doRescueFrom = 0; // 0 means no rescue DAG specified
-
-    std::vector<std::string> addToEnv; // explicitly add var=value envrionment info into .condor.sub file
-
-  private:
-
-    std::array<std::string, DagmanDeepOptions::str::_size()> stringOpts;
-    std::array<bool, DagmanDeepOptions::b::_size()> boolOpts;
-    // std::array<int, DagmanDeepOptions::i::_size()> intOpts;
+enum class SetDagOpt {
+	SUCCESS = 0,
+	NO_KEY = 1,
+	NO_VALUE = 2,
+	INVALID_VALUE = 3,
+	KEY_DNE = 4,
 };
 
 struct DSO {
@@ -326,6 +208,7 @@ public:
 			std::string appendFile;
 			param(appendFile, "DAGMAN_INSERT_SUB_FILE");
 			shallow.stringOpts[str::AppendFile] = appendFile;
+			shallow.boolOpts[b::DoSubmit] = true;
 			shallow.boolOpts[b::CopyToSpool] = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 			shallow.intOpts[i::MaxIdle] = 0;
 			shallow.intOpts[i::MaxJobs] = 0;
@@ -342,20 +225,30 @@ public:
 		} //End Deep Option Initialization
 	}
 
+	// Get value type needed to set to option (int, bool, str)
+	std::string OptValueType(std::string& opt);
+
 	// Set a DAGMan option to given value
-	// Return 0 = Set
-	//        1 = Option not found
-	//        2 = Error occurred
-	//        3 = invalid args
-	int set(const char* opt, const std::string& value);
-	int set(const char* opt, bool value);
-	int set(const char* opt, int value);
+	SetDagOpt set(const char* opt, const std::string& value);
+	SetDagOpt set(const char* opt, const char* value);
+	SetDagOpt set(const char* opt, bool value);
+	SetDagOpt set(const char* opt, int value);
 
 	// Append a string to a delimited string list of items: "foo,bar,barz"
-	// Returns same as set()
-	int append(const char* opt, const std::string& value, const char delim = ',');
+	SetDagOpt append(const char* opt, const std::string& value, const char delim = ',');
+	SetDagOpt append(const char* opt, const char* value, const char delim = ',');
 
-	void addDeepArgs(ArgList& args, bool inWriteSubmit) const;
+	// Extend (push_back) value to list option
+	SetDagOpt extend(const char* opt, const std::string& value);
+	SetDagOpt extend(const char* opt, const char* value);
+
+	void addDeepArgs(ArgList& args, bool inWriteSubmit = true) const;
+	void addDAGFile(std::string& dagFile);
+
+	inline std::string primaryDag() const { return shallow.stringOpts[DagmanShallowOptions::str::PrimaryDagFile]; }
+	inline str_list dagFiles() const { return shallow.slistOpts[DagmanShallowOptions::slist::DagFiles]; }
+	inline bool isMultiDag() const { return is_MultiDag; }
+
 
 	// Const shallow options access operator declarations
 	const str_list & operator[]( SSO::slist opt ) const { return shallow.slistOpts[opt._to_integral()]; }
@@ -386,78 +279,68 @@ private:
 	DagOptionData<SSO> shallow;
 	//Deep options passed down to subdags
 	DagOptionData<DSO> deep;
+	bool is_MultiDag{false};
 };
 
 class DagmanUtils {
 
 public:
 
-    bool usingPythonBindings = false;
+	bool usingPythonBindings = false;
 
-    bool writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
-        /* const */ SubmitDagShallowOptions &shallowOpts,
-        /* const */ std::list<std::string> &dagFileAttrLines ) const;
-    
-    int runSubmitDag( const DagmanOptions &options,
-        const char *dagFile, const char *directory, int priority,
-        bool isRetry );
+	bool writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines) const;
 
-    int setUpOptions( SubmitDagDeepOptions &deepOpts,
-        SubmitDagShallowOptions &shallowOpts,
-        std::list<std::string> &dagFileAttrLines );
+	int runSubmitDag(const DagmanOptions &options, const char *dagFile,
+	                 const char *directory, int priority, bool isRetry);
 
-    bool processDagCommands( SubmitDagDeepOptions& deepOpts, SubmitDagShallowOptions& shallowOpts,
-                             std::list<std::string> &attrLines, std::string &errMsg );
+	bool setUpOptions(DagmanOptions &options, str_list &dagFileAttrLines);
 
-    bool MakePathAbsolute(std::string &filePath, std::string &errMsg);
+	bool processDagCommands(DagmanOptions &options, str_list &attrLines, std::string &errMsg);
 
-    int FindLastRescueDagNum(const char *primaryDagFile,
-        bool multiDags, int maxRescueDagNum);
+	bool MakePathAbsolute(std::string &filePath, std::string &errMsg);
 
-    bool fileExists(const std::string &strFile);
+	int FindLastRescueDagNum(const std::string &primaryDagFile, bool multiDags, int maxRescueDagNum);
 
-    bool ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
-        SubmitDagShallowOptions &shallowOpts);
+	bool fileExists(const std::string &strFile);
 
-    std::string RescueDagName(const char *primaryDagFile,
-        bool multiDags, int rescueDagNum);
+	bool ensureOutputFilesExist(const DagmanOptions &options);
 
-    void RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags, 
-        int rescueDagNum, int maxRescueDagNum);
+	std::string RescueDagName(const std::string &primaryDagFile, bool multiDags, int rescueDagNum);
 
-    std::string HaltFileName( const std::string &primaryDagFile );
+	void RenameRescueDagsAfter(const std::string &primaryDagFile, bool multiDags, int rescueDagNum, int maxRescueDagNum);
 
-    void tolerant_unlink( const char *pathname );
+	static inline std::string HaltFileName(const std::string &primaryDagFile) { return primaryDagFile + ".halt"; }
 
-    /** Determine whether the strictness setting turns a warning into a fatal
-    error.
-    @param strictness: The strictness level of the warning.
-    @param quit_if_error: Whether to exit immediately if the warning is
-        treated as an error
-    @return true iff the warning is treated as an error
-    */
-    bool check_warning_strictness( strict_level_t strictness,
-                bool quit_if_error = true );
+	void tolerant_unlink(const std::string &pathname);
 
-    /** Execute a command, printing verbose messages and failure warnings.
-        @param cmd The command or script to execute
-        @return The return status of the command
-    */
-    int popen (ArgList &args);
+	/** Determine whether the strictness setting turns a warning into a fatal
+	error.
+	@param strictness: The strictness level of the warning.
+	@param quit_if_error: Whether to exit immediately if the warning is
+	       treated as an error
+	@return true iff the warning is treated as an error
+	*/
+	bool check_warning_strictness(strict_level_t strictness, bool quit_if_error = true);
 
-    /** Create the given lock file, containing the PID of this process.
-        @param lockFileName: the name of the lock file to create
-        @return: 0 if successful, -1 if not
-    */
-    int create_lock_file(const char *lockFileName, bool abortDuplicates);
+	/** Execute a command, printing verbose messages and failure warnings.
+	    @param cmd The command or script to execute
+	    @return The return status of the command
+	*/
+	int popen (ArgList &args);
 
-    /** Check the given lock file and see whether the PID given in it
-        does, in fact, exist.
-        @param lockFileName: the name of the lock file to check
-        @return: 0 if successful, -1 if there was an error, 1 if the
-            relevant PID does exist and this DAGMan should abort
-    */
-    int check_lock_file(const char *lockFileName);
+	/** Create the given lock file, containing the PID of this process.
+	    @param lockFileName: the name of the lock file to create
+	    @return: 0 if successful, -1 if not
+	*/
+	int create_lock_file(const char *lockFileName, bool abortDuplicates);
+
+	/** Check the given lock file and see whether the PID given in it
+	    does, in fact, exist.
+	    @param lockFileName: the name of the lock file to check
+	    @return: 0 if successful, -1 if there was an error, 1 if the
+	             relevant PID does exist and this DAGMan should abort
+	*/
+	int check_lock_file(const char *lockFileName);
 
 };
 

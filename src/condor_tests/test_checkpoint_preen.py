@@ -683,9 +683,16 @@ def the_completed_job(the_condor, the_job_handle):
 def the_removed_job(the_condor, the_completed_job):
     the_condor.run_command(['condor_qedit', the_completed_job.clusterid, 'LeaveJobInQueue', 'False'])
     the_completed_job.remove()
-    # Crass empiricism.
-    time.sleep(1)
-    return the_completed_job
+
+    while True:
+        time.sleep(1)
+        history_iter = the_condor.get_local_schedd().history(f"ClusterID == {the_completed_job.clusterid}", ["ClusterID"])
+        if sum(1 for _ in history_iter) > 0:
+            # Job has hit the history file, now we can continue
+            return the_completed_job
+        # but assert if the job is held, so we don't go into an infinite loop 
+        assert not the_completed_job.state.any_held()
+    return False
 
 
 class TestCheckpointDestination:

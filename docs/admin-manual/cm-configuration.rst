@@ -89,7 +89,7 @@ a user should receive. The EUP is simply the RUP multiplied by a priority
 factor the administrator can set per-user.  The default initial priority factor
 for all new users as they first submit jobs is set by the configuration
 variable :macro:`DEFAULT_PRIO_FACTOR`, and defaults to 1000.0. An administrator
-can change this priority factor using the *condor_userprio* command.  For
+can change this priority factor using the :tool:`condor_userprio` command.  For
 example, setting the priority factor of some user to 2,000 will grant that user
 twice as many cores as a user with the default priority factor of 1,000,
 assuming they both have the same historical usage.
@@ -147,7 +147,7 @@ Remote Users
     in the configuration, thereby lowering their priority for resources.
 
 The priority boost factors for individual users can be set with the
-**setfactor** option of *condor_userprio*. Details may be found in the
+**setfactor** option of :tool:`condor_userprio`. Details may be found in the
 :doc:`/man-pages/condor_userprio` manual page.
 
 Priorities in Negotiation and Preemption
@@ -440,7 +440,7 @@ using the ratios of the user priorities, it calculates the number of
 cores each user could get. This is their pie slice.
 (See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
 
-If any users have a floor defined via *condor_userprio* -set-floor
+If any users have a floor defined via :tool:`condor_userprio` -set-floor
 , and their current allocation of cores is below the floor, a 
 special round of the below-floor users goes first, attempting to 
 allocate up to the defined number of cores for their floor level.  
@@ -463,7 +463,7 @@ the running job for the new job.
 
 This matchmaking cycle continues until the user has received all of the
 machines in their pie slice. If there is a per-user ceiling defined
-with the *condor_userprio* -setceil command, and this ceiling is smaller
+with the :tool:`condor_userprio` -setceil command, and this ceiling is smaller
 than the pie slice, the user gets only up to their ceiling number of
 cores.  The matchmaker then contacts the next
 highest priority user and offers that user their pie slice worth of
@@ -558,7 +558,7 @@ subgroup name, etc. Group names are case-insensitive for negotiation.
 At the root of the tree that defines the hierarchical groups is the
 "<none>" group. The implied quota of the "<none>" group will be
 all available slots. This string will appear in the output of
-*condor_status*.
+:tool:`condor_status`.
 
 If the sum of the child quotas exceeds the parent, then the child quotas
 are scaled down in proportion to their relative sizes. For the given
@@ -741,7 +741,7 @@ chemistry jobs then run. If the chemistry quota is set to a value
 smaller than physics, but still larger than the pool, this policy can
 support a third, even lower priority group, and so on.
 
-The *condor_userprio* command can show the current quotas in effect,
+The :tool:`condor_userprio` command can show the current quotas in effect,
 and the current usage by group. For example:
 
 .. code-block:: console
@@ -758,7 +758,7 @@ and the current usage by group. For example:
 
 This shows that there are two groups, each with 60 jobs in the queue.
 group_physics.hep has a quota of 15 machines, and group_physics.lep
-has 5 machines. Other options to *condor_userprio*, such as **-most**
+has 5 machines. Other options to :tool:`condor_userprio`, such as **-most**
 will also show the number of resources in use.
 
 Setting Accounting Group automatically per user
@@ -797,7 +797,7 @@ The second field can be a regular expression, if
 enclosed in ``//``.  Note that this is on the submit side, and the
 administrator will still need to create these group names and give them
 a quota on the central manager machine.  This file is re-read on a
-*condor_reconfig*.  The third field can also be a comma-separated list.
+:tool:`condor_reconfig`.  The third field can also be a comma-separated list.
 If so, it represents the set of valid accounting groups a user can
 opt into.  If the user does not set an accounting group in the submit file
 the first entry in the list will be used.
@@ -1150,7 +1150,7 @@ host. To run the HTCondorView collector on the same host as another
 *condor_collector*, ensure that the two *condor_collector* daemons use
 different network ports. Here is an example configuration in which the main
 *condor_collector* and the HTCondorView collector are started up by the same
-*condor_master* daemon on the same machine. In this example, the HTCondorView
+:tool:`condor_master` daemon on the same machine. In this example, the HTCondorView
 collector uses port 12345.
 
 .. code-block:: condor-config
@@ -1160,8 +1160,8 @@ collector uses port 12345.
       VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog"
       DAEMON_LIST = MASTER, NEGOTIATOR, COLLECTOR, VIEW_SERVER
 
-For this change to take effect, restart the *condor_master* on this
-host. This may be accomplished with the *condor_restart* command, if
+For this change to take effect, restart the :tool:`condor_master` on this
+host. This may be accomplished with the :tool:`condor_restart` command, if
 the command is run with administrator access to the pool.
 
 Running Multiple Negotiators in One Pool
@@ -1176,7 +1176,7 @@ In such a scenario, each *condor_negotiator* is responsible for some
 non-overlapping partition of the slots in the pool.  This might be for
 performance -- if you have more than 100,000 slots in the pool, you may need to
 shard this pool into several smaller sections in order to lower the time each
-negotiator spends.  Because accounting is done at the the negotiator level, you
+negotiator spends.  Because accounting is done at the negotiator level, you
 may want to do this to have separate accounting and distinct fair share between
 different kinds of machines in your pool.  For example, let's say you have some
 GPU machines and non-GPU machines, and you want usage of the non-GPU machine to
@@ -1188,15 +1188,15 @@ for these few machines, we can speed up the time to match these machines to
 interactive users who submit with *condor_submit -i*.
 
 Sharding the negotiator is straightforward.  Simply add the NEGOTIATOR entry to
-the :macro:`DAEMON_LIST` on an additional machine.  While is is possible to run
+the :macro:`DAEMON_LIST` on an additional machine.  While it is possible to run
 multiple negotiators on one machine, we may not want to, if we are trying to
 improve performance.  Then, in each negotiator, set
 :macro:`NEGOTIATOR_SLOT_CONSTRAINT` to only match those slots this negotiator
 should use.
 
 Running with multiple negotiators also means you need to be careful with the
-*condor_userprio* command.  As there is no default negotiator, you should
-always name the specific negotiator you want to *condor_userprio* to talk to
+:tool:`condor_userprio` command.  As there is no default negotiator, you should
+always name the specific negotiator you want to :tool:`condor_userprio` to talk to
 with the `-name` option.
 
 High Availability of the Central Manager
@@ -1209,7 +1209,7 @@ Interaction with Flocking
 
 The HTCondor high availability mechanisms discussed in this section
 currently do not work well in configurations involving flocking. The
-individual problems listed listed below interact to make the situation
+individual problems listed below interact to make the situation
 worse. Because of these problems, we advise against the use of flocking
 to pools with high availability mechanisms enabled.
 
@@ -1310,7 +1310,7 @@ needs to transfer a file, the *condor_replication* daemons at both the
 sending and receiving ends of the transfer invoke the
 *condor_transferer* daemon. These short lived daemons do the task of
 file transfer and then exit. Do not place :macro:`TRANSFERER` into
-:macro:`DAEMON_LIST`, as it is not a daemon that the *condor_master* should
+:macro:`DAEMON_LIST`, as it is not a daemon that the :tool:`condor_master` should
 invoke or watch over.
 
 Configuration
@@ -1363,7 +1363,7 @@ When configuring *condor_had* to control the *condor_negotiator*, if
 the default backoff constant value is too small, it can result in a
 churning of the *condor_negotiator*, especially in cases in which the
 primary negotiator is unable to run due to misconfiguration. In these
-cases, the *condor_master* will kill the *condor_had* after the
+cases, the :tool:`condor_master` will kill the *condor_had* after the
 *condor_negotiator* exists, wait a short period, then restart
 *condor_had*. The *condor_had* will then win the election, so the
 secondary *condor_negotiator* will be killed, and the primary will be
@@ -1594,12 +1594,12 @@ different places: The *condor_collector* stores current data about all the
 slots and all the daemons in the system.  If absent ads are enabled, the
 *condor_collector* also stores information about slots that are no longer in
 the system, for a fixed amount of time.  All this data may be queried with
-appropriate options to the *condor_status* command. The AP's job history file
+appropriate options to the :tool:`condor_status` command. The AP's job history file
 stores data about recent completed and removed jobs, similarly, each EP stores
 a startd_history file with information about jobs that have only run on that
-EP. Both of these may be queried with the *condor_history* command.
+EP. Both of these may be queried with the :tool:`condor_history` command.
 
-While using *condor_status* or *condor_history* works well for one-off or
+While using :tool:`condor_status` or :tool:`condor_history` works well for one-off or
 ad-hoc queries, both tend to be slow, because none of the data is indexed or
 stored in a proper database.  Furthermore, all these data sources age old data
 out quickly.  Also, there is no graphical UI provided to visualize or analyze
@@ -1611,7 +1611,7 @@ formats and into third party monitoring, database and visualization systems.
 
 The *condor_gangliad* is an HTCSS daemon that periodically copies data out of
 the *condor_collector* and into the ganglia monitoring system.  It can also be
-used to populate grafana.  *condor_adstash* is a HTCSS daemon which can copy
+used to populate grafana.  :tool:`condor_adstash` is a HTCSS daemon which can copy
 job history information out of the AP's history file and into the Elasticsearch
 database for further querying.
 
@@ -1637,7 +1637,7 @@ the line
 
       use FEATURE: ganglia
 
-to the config file on the central manager machine, and *condor_restart* the
+to the config file on the central manager machine, and :tool:`condor_restart` the
 HTCondor system on that machine.  If the *condor_gangliad* daemon is to run on
 a different machine than the one running Ganglia's *gmetad*, modify
 configuration variable :macro:`GANGLIA_GSTAT_COMMAND` to get the list of
@@ -1842,8 +1842,8 @@ for a length of time in seconds defined by the configuration variable
 ClassAds are never discarded, and the default value is thirty days.
 
 Absent ClassAds are only returned by the *condor_collector* and displayed when
-the **-absent** option to *condor_status* is specified, or when the absent
-machine ClassAd attribute is mentioned on the *condor_status* command line.
+the **-absent** option to :tool:`condor_status` is specified, or when the absent
+machine ClassAd attribute is mentioned on the :tool:`condor_status` command line.
 This renders absent ClassAds invisible to the rest of the HTCondor
 infrastructure.
 
@@ -1904,8 +1904,8 @@ Elasticsearch
 
 HTCondor supports pushing *condor_schedd* and *condor_startd* job
 history ClassAds to Elasticsearch (and other targets) via the
-*condor_adstash* tool/daemon.
-*condor_adstash* collects job history ClassAds as specified by its
+:tool:`condor_adstash` tool/daemon.
+:tool:`condor_adstash` collects job history ClassAds as specified by its
 configuration, either querying specified daemons' histories
 or reading job history ClassAds from a specified file,
 converts each ClassAd to a JSON document,
@@ -1914,17 +1914,17 @@ The index is automatically created if it does not exist, and fields
 are added and configured based on well known job ClassAd attributes.
 (Custom attributes are also pushed, though always as keyword fields.)
 
-*condor_adstash* is a Python 3.6+ script that uses the
+:tool:`condor_adstash` is a Python 3.6+ script that uses the
 HTCondor :ref:`apis/python-bindings/index:Python Bindings`
 and the
 `Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`_,
 both of which must be available to the system Python 3 installation
-if using the daemonized version of *condor_adstash*.
-*condor_adstash* can also be run as a standalone tool (e.g. in a
+if using the daemonized version of :tool:`condor_adstash`.
+:tool:`condor_adstash` can also be run as a standalone tool (e.g. in a
 Python 3 virtual environment containing the necessary libraries).
 
-Running *condor_adstash* as a daemon (i.e. under the watch of the
-*condor_master*) can be enabled by adding
+Running :tool:`condor_adstash` as a daemon (i.e. under the watch of the
+:tool:`condor_master`) can be enabled by adding
 ``use feature : adstash``
 to your HTCondor configuration.
 By default, this configuration will poll all *condor_schedds* that
@@ -1937,7 +1937,7 @@ See the ``condor_config.local.adstash`` example configuration file in
 the ``examples/`` directory for detailed information on how to modify
 your configuration.
 
-If you prefer to run *condor_adstash* in standalone mode, or are
+If you prefer to run :tool:`condor_adstash` in standalone mode, or are
 curious about other ClassAd sources or targets, see the
 :doc:`../man-pages/condor_adstash` man page for more
 details.
@@ -1971,7 +1971,7 @@ configuration file. The HTCondorView collector will ignore this setting
 to itself.
 
 Once the HTCondorView server is running with this change, send a
-*condor_reconfig* command to the main *condor_collector* for the
+:tool:`condor_reconfig` command to the main *condor_collector* for the
 change to take effect, so it will begin forwarding updates. A query to
 the HTCondorView collector will verify that it is working. A query
 example:

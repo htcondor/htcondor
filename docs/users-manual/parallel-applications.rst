@@ -23,7 +23,7 @@ number of machines (slots) for the parallel universe job, and when a
 sufficient number of machines are claimed, the parallel job is started
 on each claimed slot.
 
-Each invocation of *condor_submit* assigns a single ``ClusterId`` for
+Each invocation of :tool:`condor_submit` assigns a single ``ClusterId`` for
 what is considered the single parallel job submitted. The
 :subcom:`machine_count[example]`
 submit command identifies how many machines (slots) are to be allocated.

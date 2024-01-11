@@ -27,7 +27,7 @@ will be run.
 
 This container image may describe an image in a docker-style repo if it
 is prefixed with ``docker://``, or a Singularity ``.sif`` image on disk, or a
-Singularity sandbox image (an exploded directory).  *condor_submit*
+Singularity sandbox image (an exploded directory).  :tool:`condor_submit`
 will parse this image and advertise what type of container image it
 is, and match with startds that can support that image.
 

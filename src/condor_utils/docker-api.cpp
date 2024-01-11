@@ -178,6 +178,12 @@ int DockerAPI::createContainer(
 		// Add a label to mark this container as htcondor-managed
 	runArgs.AppendArg(HTCondorLabel);
 
+	// We never need stdout/err to go to the docker logs, we will write our own stdout
+	if (param_boolean("DOCKER_LOG_DRIVER_NONE", true)) {
+		runArgs.AppendArg("--log-driver");
+		runArgs.AppendArg("none");
+	}
+
 	if ( ! add_env_to_args_for_docker(runArgs, env)) {
 		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
 		return -8;

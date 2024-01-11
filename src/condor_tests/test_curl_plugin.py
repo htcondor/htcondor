@@ -7,6 +7,8 @@
 	FILETRANSFER_PLUGINS = $(LIBEXEC)/curl_plugin $(LIBEXEC)/data_plugin
 	# test expects at least 2 different SlotIds
 	use FEATURE : StaticSlots
+	# make sure invoking line is printed
+	STARTER_DEBUG = $(STARTER_DEBUG) D_ALWAYS:2
 """
 #endtestreq
 
@@ -194,7 +196,7 @@ class TestCurlPlugin:
     def test_job_with_multiple_good_urls_invokes_plugin_once(self, job_with_multiple_good_urls, slot2_starter_log):
         plugin_invocations = 0
         for line in slot2_starter_log:
-            if "invoking" in line:
+            if "FILETRANSFER: invoking:" in line:
                 plugin_invocations += 1
         assert plugin_invocations == 1
 

@@ -53,9 +53,9 @@ Inspecting Machine ClassAds with condor_status
 :index:`condor_status<single: condor_status; HTCondor commands>`
 
 Once HTCondor is installed, you will get a feel for what a machine
-ClassAd does by trying the *condor_status* command. Try the
-*condor_status* command to get a summary of information from ClassAds
-about the resources available in your pool. Type *condor_status* and
+ClassAd does by trying the :tool:`condor_status` command. Try the
+:tool:`condor_status` command to get a summary of information from ClassAds
+about the resources available in your pool. Type :tool:`condor_status` and
 hit enter to see a summary similar to the following:
 
 .. code-block:: text
@@ -73,7 +73,7 @@ hit enter to see a summary similar to the following:
     ...
 
 
-The *condor_status* command has options that summarize machine ads in a
+The :tool:`condor_status` command has options that summarize machine ads in a
 variety of ways. For example,
 
  *condor_status -available*
@@ -84,7 +84,7 @@ variety of ways. For example,
     lists the machine ClassAds for all machines in the pool.
 
 Refer to the :doc:`/man-pages/condor_status` command reference page for a
-complete description of the *condor_status* command.
+complete description of the :tool:`condor_status` command.
 
 The following shows a portion of a machine ClassAd
 :index:`machine example<single: machine example; ClassAd>` :index:`machine ClassAd`

@@ -14,20 +14,20 @@ There are two ways that DAGs can be nested within other DAGs:
   #. Sub-DAGs
   #. Splices.
 
-With Sub-DAGs, each DAG has its own *condor_dagman* job, which then
+With Sub-DAGs, each DAG has its own :tool:`condor_dagman` job, which then
 becomes a node job within the higher-level DAG. With splices, on the
 other hand, the nodes of the spliced DAG are directly incorporated into
 the higher-level DAG. Therefore, splices do not result in additional
-*condor_dagman* instances.
+:tool:`condor_dagman` instances.
 
 A weakness in scalability exists when submitting external Sub-DAGs,
 because each executing independent DAG requires its own instance of
-*condor_dagman* to be running. The outer DAG has an instance of
-*condor_dagman*, and each named SUBDAG has an instance of
-*condor_dagman* while it is in the HTCondor queue. The scaling issue
+:tool:`condor_dagman` to be running. The outer DAG has an instance of
+:tool:`condor_dagman`, and each named SUBDAG has an instance of
+:tool:`condor_dagman` while it is in the HTCondor queue. The scaling issue
 presents itself when a workflow contains hundreds or thousands of
 Sub-DAGs that are queued at the same time. (In this case, the resources
-(especially memory) consumed by the multiple *condor_dagman* instances
+(especially memory) consumed by the multiple :tool:`condor_dagman` instances
 can be a problem.) Further, there may be many Rescue DAGs created if a
 problem occurs. (Note that the scaling issue depends only on how many
 Sub-DAGs are queued at any given time, not the total number of Sub-DAGs
@@ -55,8 +55,8 @@ A DAG Within a DAG Is a SUBDAG
 ------------------------------
 
 As stated above, the SUBDAG EXTERNAL command causes the specified DAG
-file to be run by a separate instance of *condor_dagman*, with the
-*condor_dagman* job becoming a node job within the higher-level DAG.
+file to be run by a separate instance of :tool:`condor_dagman`, with the
+:tool:`condor_dagman` job becoming a node job within the higher-level DAG.
 
 The syntax for the SUBDAG command is
 
@@ -71,7 +71,7 @@ must appear in this order within the entry. **NOOP** and **DONE** for
 A **SUBDAG** node is essentially the same as any other node, except that
 the DAG input file for the inner DAG is specified, instead of the
 HTCondor submit file. The keyword **EXTERNAL** means that the SUBDAG is
-run within its own instance of *condor_dagman*.
+run within its own instance of :tool:`condor_dagman`.
 
 Since more than one DAG is being discussed, here is terminology
 introduced to clarify which DAG is which. Reuse the example
@@ -93,12 +93,12 @@ used as an example of the inner DAG.
     PARENT X CHILD Y
     PARENT Y CHILD Z
 
-The HTCondor submit description file, used by *condor_dagman*,
+The HTCondor submit description file, used by :tool:`condor_dagman`,
 corresponding to ``inner.dag`` will be named ``inner.dag.condor.sub``.
 The DAGMan submit description file is always named
 ``<DAG file name>.condor.sub``. Each DAG or SUBDAG results in the
-submission of *condor_dagman* as an HTCondor job, and
-*condor_submit_dag* creates this submit description file.
+submission of :tool:`condor_dagman` as an HTCondor job, and
+:tool:`condor_submit_dag` creates this submit description file.
 
 The preferred specification of the DAG input file for the outer DAG is
 
@@ -120,7 +120,7 @@ One of the benefits of using the SUBDAG feature is that portions of the
 overall workflow can be constructed and modified during the execution of
 the DAG (a SUBDAG file doesn't have to exist until just before it is
 submitted). A drawback can be that each SUBDAG causes its own distinct
-job submission of *condor_dagman*, leading to a larger number of jobs,
+job submission of :tool:`condor_dagman`, leading to a larger number of jobs,
 together with their potential need of carefully constructed policy
 configuration to throttle node submission or execution (because each
 SUBDAG has its own throttles).
@@ -156,21 +156,21 @@ Here are details that affect SUBDAGs:
       containing the SUBDAG.
    -  It is now possible to have SUBDAGs within splices. That is not
       possible with eager submit description file creation, because
-      *condor_submit_dag* does not understand splices.
+      :tool:`condor_submit_dag` does not understand splices.
 
    The main disadvantage of lazy submit file generation is that a syntax
    error in the DAG input file of a SUBDAG will not be discovered until
    the outer DAG tries to run the inner DAG.
 
    When ``<DAG file name>.condor.sub`` files are generated **eagerly**,
-   *condor_submit_dag* runs itself recursively (with the *-no_submit*
+   :tool:`condor_submit_dag` runs itself recursively (with the *-no_submit*
    option) on each SUBDAG, so all of the ``<DAG file name>.condor.sub``
    files are generated before the top-level DAG is actually submitted.
    To generate the ``<DAG filename>.condor.sub`` files eagerly,
-   pass the *-do_recurse* flag to *condor_submit_dag*; also set the
+   pass the *-do_recurse* flag to :tool:`condor_submit_dag`; also set the
    :macro:`DAGMAN_GENERATE_SUBDAG_SUBMITS` configuration variable to
-   ``False``, so that *condor_dagman* does not re-run
-   *condor_submit_dag* at run time thereby regenerating the submit
+   ``False``, so that :tool:`condor_dagman` does not re-run
+   :tool:`condor_submit_dag` at run time thereby regenerating the submit
    description files.
 
    To generate the ``.condor.sub`` files **manually**, run
@@ -179,10 +179,10 @@ Here are details that affect SUBDAGs:
 
        $ condor_submit_dag -no_submit
 
-   on each lower-level DAG file, before running *condor_submit_dag* on
+   on each lower-level DAG file, before running :tool:`condor_submit_dag` on
    the top-level DAG file; also set the :macro:`DAGMAN_GENERATE_SUBDAG_SUBMITS`
-   configuration variable to ``False``, so that *condor_dagman* does not
-   re-run *condor_submit_dag* at run time. The main reason for generating
+   configuration variable to ``False``, so that :tool:`condor_dagman` does not
+   re-run :tool:`condor_submit_dag` at run time. The main reason for generating
    the ``<DAG file name>.condor.sub`` files manually is to set options for
    the lower-level DAG that one would not otherwise be able to set An
    example of this is the *-insert_sub_file* option. For instance,
@@ -194,7 +194,7 @@ Here are details that affect SUBDAGs:
          $ condor_submit_dag -no_submit -insert_sub_file fragment.sub inner.dag
          $ condor_submit_dag diamond.dag
 
-   Note that most *condor_submit_dag* command-line flags have
+   Note that most :tool:`condor_submit_dag` command-line flags have
    corresponding configuration variables, so we encourage the use of
    per-DAG configuration files, especially in the case of nested DAGs.
    This is the easiest way to set different options for different DAGs
@@ -202,7 +202,7 @@ Here are details that affect SUBDAGs:
 
    It is possible to combine more than one method of generating the
    ``<DAG file name>.condor.sub`` files. For example, one might pass the
-   *-do_recurse* flag to *condor_submit_dag*, but leave the
+   *-do_recurse* flag to :tool:`condor_submit_dag`, but leave the
    :macro:`DAGMAN_GENERATE_SUBDAG_SUBMITS` configuration variable set to the
    default of ``True``. Doing this would provide the benefit of an
    immediate error message at submit time, if there is a syntax error in
@@ -211,8 +211,8 @@ Here are details that affect SUBDAGs:
    before each nested DAG is submitted.
 
    The values of the following command-line flags are passed from the
-   top-level *condor_submit_dag* instance to any lower-level
-   *condor_submit_dag* instances. This occurs whether the lower-level
+   top-level :tool:`condor_submit_dag` instance to any lower-level
+   :tool:`condor_submit_dag` instances. This occurs whether the lower-level
    submit description files are generated lazily or eagerly:
 
    -  **-verbose**
@@ -245,7 +245,7 @@ Here are details that affect SUBDAGs:
    -  **-debug**
 
    Other command-line arguments are set to their defaults in any
-   lower-level invocations of *condor_submit_dag*.
+   lower-level invocations of :tool:`condor_submit_dag`.
 
    The **-force** option will cause existing DAG submit description
    files to be overwritten without preserving any existing values.
@@ -582,7 +582,7 @@ directory separator character. Jobs in included splices with an absolute
 path for their *DIR* specification will have their *DIR* specification
 untouched. Note that a DAG containing *DIR* specifications cannot be run
 in conjunction with the *-usedagdir* command-line argument to
-*condor_submit_dag*.
+:tool:`condor_submit_dag`.
 
 A "full" rescue DAG generated by a DAG run with the *-usedagdir*
 argument will contain DIR specifications, so such a rescue DAG must be

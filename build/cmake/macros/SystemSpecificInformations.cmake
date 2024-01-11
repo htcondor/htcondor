@@ -272,16 +272,15 @@ if(UNIX)
 	
 	#Find Codename for Debian system 
 	if ((LINUX_NAME STREQUAL "Debian") OR (LINUX_NAME STREQUAL "Ubuntu"))
-	  # $ lsb_release -cs
-	  FIND_PROGRAM(LSB_CMD lsb_release)
-	  IF(NOT LSB_CMD)
-		 # Cannot find lsb_release in your path, default to none
-		 SET(DEBIAN_CODENAME "")
-	  ENDIF(NOT LSB_CMD)
-	  EXECUTE_PROCESS(COMMAND "${LSB_CMD}" -cs
-		 OUTPUT_VARIABLE DEBIAN_CODENAME
-		 OUTPUT_STRIP_TRAILING_WHITESPACE
-		 )
+		file(STRINGS "/etc/os-release" VERSION_CODENAME_LINE REGEX "^VERSION_CODENAME=(.*)$")
+		if("${VERSION_CODENAME_LINE}" MATCHES "^VERSION_CODENAME=(.*)$")
+			set(DEBIAN_CODENAME ${CMAKE_MATCH_1})
+			if("${DEBIAN_CODENAME}" MATCHES "\"(.*)\"")
+				set(DEBIAN_CODENAME ${CMAKE_MATCH_1})
+			endif()
+		else()
+			set(DEBIAN_CODENAME "unknown")
+		endif()
 	endif ()
 
       if(LINUX_NAME) 
@@ -289,7 +288,55 @@ if(UNIX)
       else()
 	set(LINUX_NAME "NOT-FOUND")
       endif(LINUX_NAME)
+    elseif(EXISTS "/etc/os-release")
+
+      # As of CMake 3.20 this could be written as
+      # cmake_host_system_information(RESULT LINUX_PRETTY_NAME QUERY DISTRO_PRETTY_NAME)
+      # cmake_host_system_information(RESULT LINUX_NAME  DISTRO_NAME)
+      # cmake_host_system_information(RESULT LINUX_VER QUERY DISTRO_VERSION_ID)
+      file(STRINGS "/etc/os-release" OS_RELEASE_LIST REGEX "^(PRETTY_NAME|NAME|VERSION_ID)=.*$")
+      foreach(VAR ${OS_RELEASE_LIST})
+        if("${VAR}" MATCHES "^PRETTY_NAME=(.*)$")
+          set(PRETTY_NAME ${CMAKE_MATCH_1})
+          if("${PRETTY_NAME}" MATCHES "\"(.*)\"")
+            set(PRETTY_NAME ${CMAKE_MATCH_1})
+          endif()
+          message(STATUS "Configuring for ${CMAKE_MATCH_1}" )
+        elseif("${VAR}" MATCHES "^NAME=(.*)$")
+          set(LINUX_NAME ${CMAKE_MATCH_1})
+          if("${LINUX_NAME}" MATCHES "\"(.*)\"")
+            set(LINUX_NAME ${CMAKE_MATCH_1})
+          endif()
+        elseif("${VAR}" MATCHES "^VERSION_ID=(.*)$")
+          set(LINUX_VER ${CMAKE_MATCH_1})
+          if("${LINUX_VER}" MATCHES "\"(.*)\"")
+            set(LINUX_VER ${CMAKE_MATCH_1})
+          endif()
+        endif()
+      endforeach()
+
+      set(SYSTEM_NAME "${LINUX_NAME}${LINUX_VER}")
+      if(${LINUX_NAME} MATCHES "Debian" OR ${LINUX_NAME} MATCHES "Ubuntu")
+        set(DEB_SYSTEM_NAME "${SYSTEM_NAME}")
+      else()
+        set(RPM_SYSTEM_NAME "${SYSTEM_NAME}")
+      endif()
+
+      #Find CPU Arch
+      if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")
+        set ( BIT_MODE "64")
+      else()
+        set ( BIT_MODE "32")
+      endif ()
+
+      if(LINUX_NAME)
+         set(SPECIFIC_SYSTEM_VERSION_NAME "${CMAKE_SYSTEM_NAME}-${LINUX_NAME}-${LINUX_VER}")
+      else()
+        set(LINUX_NAME "NOT-FOUND")
+      endif(LINUX_NAME)
+
     endif(EXISTS "/etc/issue")
+    message(STATUS "LINUX_NAME=${LINUX_NAME}, LINUX_VER=${LINUX_VER}, SYSTEM_NAME=${SYSTEM_NAME}")
 
   elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     # Match x.x-RELEASE, x.x-BETA1, etc.

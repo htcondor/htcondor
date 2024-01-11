@@ -11,7 +11,7 @@ which you might want to run :doc:`../man-pages/condor_master`,
 command line.
 
 #. If you installed HTCondor without administrative privileges, you'll
-   have to run *condor_master* from the command line to turn on HTCondor:
+   have to run :tool:`condor_master` from the command line to turn on HTCondor:
 
     .. code-block:: console
 
@@ -24,11 +24,56 @@ command line.
         $ condor_off -master
 
 #. If the usual OS-specific method of controlling HTCondor is inconvenient
-   to use remotely, you may be able to use the *condor_on* and *condor_off*
+   to use remotely, you may be able to use the :tool:`condor_on` and :tool:`condor_off`
    tools instead.
 
-Using HTCondor's Remote Management Features
--------------------------------------------
+Daemons That Do Not Run as root
+-------------------------------
+
+:index:`running as root`
+:index:`running as root<single: running as root; daemon>`
+
+HTCondor is normally installed such that the HTCondor daemons have root
+permission. This allows HTCondor to run the *condor_shadow*
+daemon and the job with the submitting user's UID and file access
+rights. When HTCondor is started as root, HTCondor jobs can access
+whatever files the user that submits the jobs can.
+
+However, it is possible that the HTCondor installation does not have
+root access, or has decided not to run the daemons as root. That is
+unfortunate, since HTCondor is designed to be run as root. To see if
+HTCondor is running as root on a specific machine, use the command
+
+.. code-block:: console
+
+      $ condor_status -master -l <machine-name>
+
+where <machine-name> is the name of the specified machine. This command
+displays the full condor_master ClassAd; if the attribute ``RealUid``
+equals zero, then the HTCondor daemons are indeed running with root
+access. If the ``RealUid`` attribute is not zero, then the HTCondor
+daemons do not have root access.
+
+.. note::
+
+   The Unix program *ps* is not an effective method of determining if HTCondor is
+   running with root access. When using *ps*, it may often appear that the daemons
+   are running as the condor user instead of root.  However, note that the *ps*
+   command shows the current effective owner of the process, not the real owner.
+   (See the *getuid* (2) and *geteuid* (2) Unix man pages for details.) In Unix, a
+   process running under the real UID of root may switch its effective UID. (See
+   the *seteuid* (2) man page.) For security reasons, the daemons only set the
+   effective UID to root when absolutely necessary, as it will be to perform a
+   privileged operation.
+
+If daemons are not running with root access, make any and all files
+and/or directories that the job will touch readable and/or writable by
+the UID (user id) specified by the ``RealUid`` attribute. Often this may
+mean using the Unix command chmod 777 on the directory from which the
+HTCondor job is submitted.
+
+Remote Management Features
+--------------------------
 
 :index:`shutting down HTCondor<single: shutting down HTCondor; pool management>`
 :index:`restarting HTCondor<single: restarting HTCondor; pool management>`
@@ -42,10 +87,10 @@ implementation of security in HTCondor.
 
  Shutting Down HTCondor
     There are a variety of ways to shut down all or parts of an HTCondor
-    pool. All utilize the *condor_off* tool.
+    pool. All utilize the :tool:`condor_off` tool.
 
     To stop a single execute machine from running jobs, the
-    *condor_off* command specifies the machine by host name.
+    :tool:`condor_off` command specifies the machine by host name.
 
     .. code-block:: console
 
@@ -104,18 +149,18 @@ implementation of security in HTCondor.
     machines in the pool are to be shut down.
 
  Restarting HTCondor, If HTCondor Daemons Are Not Running
-    If HTCondor is not running, perhaps because one of the *condor_off*
+    If HTCondor is not running, perhaps because one of the :tool:`condor_off`
     commands was used, then starting HTCondor daemons back up depends on
     which part of HTCondor is currently not running.
 
     If no HTCondor daemons are running, then starting HTCondor is a
-    matter of executing the *condor_master* daemon. The
-    *condor_master* daemon will then invoke all other specified daemons
-    on that machine. The *condor_master* daemon executes on every
+    matter of executing the :tool:`condor_master` daemon. The
+    :tool:`condor_master` daemon will then invoke all other specified daemons
+    on that machine. The :tool:`condor_master` daemon executes on every
     machine that is to run HTCondor.
 
     If a specific daemon needs to be started up, and the
-    *condor_master* daemon is already running, then issue the command
+    :tool:`condor_master` daemon is already running, then issue the command
     on the specific machine with
 
     .. code-block:: console
@@ -132,13 +177,13 @@ implementation of security in HTCondor.
 
     where <subsystemname> is replaced by the daemon's subsystem name,
     and <hostname> is replaced by the host name of the machine where
-    this *condor_on* command is to be directed.
+    this :tool:`condor_on` command is to be directed.
 
  Restarting HTCondor, If HTCondor Daemons Are Running
     If HTCondor daemons are currently running, but need to be killed and
-    newly invoked, the *condor_restart* tool does this. This would be
+    newly invoked, the :tool:`condor_restart` tool does this. This would be
     the case for a new value of a configuration variable for which using
-    *condor_reconfig* is inadequate.
+    :tool:`condor_reconfig` is inadequate.
 
     To restart all daemons on all machines in the pool,
 
@@ -162,7 +207,7 @@ implementation of security in HTCondor.
 
     To change a global configuration variable and have all the machines
     start to use the new setting, change the value within the file, and send
-    a *condor_reconfig* command to each host. Do this with a single
+    a :tool:`condor_reconfig` command to each host. Do this with a single
     command,
 
     .. code-block:: console
@@ -172,9 +217,9 @@ implementation of security in HTCondor.
     If the global configuration file is not shared among all the machines,
     as it will be if using a shared file system, the change must be made to
     each copy of the global configuration file before issuing the
-    *condor_reconfig* command.
+    :tool:`condor_reconfig` command.
 
-    Issuing a *condor_reconfig* command is inadequate for some
+    Issuing a :tool:`condor_reconfig` command is inadequate for some
     configuration variables. For those, a restart of HTCondor is required.
     Those configuration variables that require a restart are listed in
     the :ref:`admin-manual/introduction-to-configuration:macros that will require a
@@ -243,11 +288,11 @@ Exactly what gracefully and quickly means varies from daemon to daemon.
 For daemons with little or no state (the *condor_kbdd*,
 *condor_collector* and *condor_negotiator*) there is no difference,
 and both ``SIGTERM`` and ``SIGQUIT`` signals result in the daemon
-shutting itself down quickly. For the *condor_master*, a graceful
-shutdown causes the *condor_master* to ask all of its children to
+shutting itself down quickly. For the :tool:`condor_master`, a graceful
+shutdown causes the :tool:`condor_master` to ask all of its children to
 perform their own graceful shutdown methods. The quick shutdown causes
-the *condor_master* to ask all of its children to perform their own
-quick shutdown methods. In both cases, the *condor_master* exits after
+the :tool:`condor_master` to ask all of its children to perform their own
+quick shutdown methods. In both cases, the :tool:`condor_master` exits after
 all its children have exited. In the *condor_startd*, if the machine is
 not claimed and running a job, both the ``SIGTERM`` and ``SIGQUIT``
 signals result in an immediate exit. In the *condor_schedd*, if
@@ -281,7 +326,7 @@ These arguments and what they do are described below:
     Causes the daemon to start up in the background. When a DaemonCore
     process starts up with this option, it disassociates itself from the
     terminal and forks itself, so that it runs in the background. This
-    is the default behavior for the *condor_master*. Prior to 8.9.7 it
+    is the default behavior for the :tool:`condor_master`. Prior to 8.9.7 it
     was the default for all HTCondor daemons.
 
 \-c filename
@@ -296,7 +341,7 @@ These arguments and what they do are described below:
     time, and they are named by appending the parent's IP address and
     PID to the value in the configuration file. These values are then
     inherited by all children of the daemon invoked with this **-d**
-    argument. For the *condor_master*, all HTCondor processes will use
+    argument. For the :tool:`condor_master`, all HTCondor processes will use
     the new directories. If a *condor_schedd* is invoked with the *-d*
     argument, then only the *condor_schedd* daemon and any
     *condor_shadow* daemons it spawns will use the dynamic directories
@@ -313,12 +358,7 @@ These arguments and what they do are described below:
 \-f
     Causes the daemon to start up in the foreground. Instead of forking,
     the daemon runs in the foreground. Since 8.9.7, this has been the default
-    for all daemons other than the *condor_master*.
-
-    NOTE: Before 8.9.7, When the *condor_master* started up daemons, it would do so with
-    the **-f** option, as it has already forked a process for the new
-    daemon. There will be a **-f** in the argument list for all HTCondor
-    daemons that the *condor_master* spawns.
+    for all daemons other than the :tool:`condor_master`.
 
 \-k filename
     For non-Windows operating systems, causes the daemon to read out a
@@ -345,7 +385,7 @@ These arguments and what they do are described below:
 
 \-p port
     Causes the daemon to bind to the specified port as its command
-    socket. The *condor_master* daemon uses this option to ensure that
+    socket. The :tool:`condor_master` daemon uses this option to ensure that
     the *condor_collector* and *condor_negotiator* start up using
     well-known ports that the rest of HTCondor depends upon them using.
 

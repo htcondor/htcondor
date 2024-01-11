@@ -143,6 +143,6 @@ because the **PARENT** to **CHILD** relationships appear as ``A & B -> D -> F ->
 
 
 A *NODE_STATUS_FILE* command inside any splice is ignored. If multiple
-DAG files are specified on the *condor_submit_dag* command line, and
+DAG files are specified on the :tool:`condor_submit_dag` command line, and
 more than one specifies a node status file, the first specification
 takes precedence.

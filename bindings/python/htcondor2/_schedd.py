@@ -50,7 +50,7 @@ def job_spec_hack(
     if isinstance(job_spec, list):
         job_spec_string = ", ".join(job_spec)
         return f_job_ids(addr, job_spec_string, *args)
-    elif re.fullmatch('\d+(\.\d+)?', job_spec):
+    elif re.fullmatch(r'\d+(\.\d+)?', job_spec):
         return f_job_ids(addr, job_spec, *args)
     else:
         job_constraint = str(job_spec)

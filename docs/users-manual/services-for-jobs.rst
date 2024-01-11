@@ -70,7 +70,7 @@ executing job that may be useful.
    the start of the job, but is not updated during the running of the
    job. The job may read attributes and their values out of this file as
    it runs, but any changes will not be acted on in any way by HTCondor.
-   The format is the same as the output of the *condor_q* **-l**
+   The format is the same as the output of the :tool:`condor_q` **-l**
    command. This environment variable may be particularly useful in a
    USER_JOB_WRAPPER.
 -  ``_CONDOR_MACHINE_AD``
@@ -79,7 +79,7 @@ executing job that may be useful.
    the machine ad for the slot the currently running job is using. The
    machine ad is current as of the start of the job, but is not updated
    during the running of the job. The format is the same as the output
-   of the *condor_status* **-l** command.  Interesting attributes jobs
+   of the :tool:`condor_status` **-l** command.  Interesting attributes jobs
    may want to look at from this file include Memory and Cpus, the amount
    of memory and cpus provisioned for this slot.
 -  ``_CONDOR_JOB_IWD``
@@ -111,6 +111,15 @@ executing job that may be useful.
    :subcom:`x509userproxy[environment variable]` in
    the submit description file.
 
+If the job has been assigned GPUs, the system will also set the following environment
+variables for the GPU runtime to use.
+
+- ``CUDA_VISIBLE_DEVICES`` ``NVIDIA_VISIBLE_DEVICES``
+  :index:`CUDA_VISIBLE_DEVICES<pair: CUDA_VISIBLE_DEVICES; environment variables for jobs>`
+  :index:`NVIDIA_VISIBLE_DEVICES<pair: NVIDIA_VISIBLE_DEVICES; environment variables for jobs>`
+  are set to the names of the GPUs assigned to this job.  The job should NEVER change these,
+  but they may be useful for debuggging or logging
+
 
 Communicating with the Submit machine via Chirp
 -----------------------------------------------
@@ -120,7 +129,7 @@ to or from the access point, called "chirp".  Chirp allows jobs to
 
 - Write to the job ad in the schedd.
   This can be used for long-running jobs to write progress information
-  back to the access point, so that a *condor_q* query will reveal
+  back to the access point, so that a :tool:`condor_q` query will reveal
   how far along a running job is.  Or, if a job is listening on a network
   port, chirp can write the port number to the job ad, so that others
   can connect to this job.
@@ -144,14 +153,14 @@ to or from the access point, called "chirp".  Chirp allows jobs to
   Again, while file transfer is usually the better choice, with chirp, a job
   can write intermediate results back to the access point before the job exits.
 
-HTCondor ships a command-line tool, called *condor_chirp* that can do these
+HTCondor ships a command-line tool, called :tool:`condor_chirp` that can do these
 actions, and provides python bindings so that they can be done natively in 
 Python.
 
 When changes to a job made by chirp take effect
 -----------------------------------------------
 
-When *condor_chirp* successfully updates a job ad attribute, that change
+When :tool:`condor_chirp` successfully updates a job ad attribute, that change
 will be reflected in the copy of the job ad in the *condor_schedd* on 
 the access point.  However, most job ad attributes are read by the *condor_starter*
 or *condor_startd* at job start up time, and should chirp change these
