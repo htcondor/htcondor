@@ -2518,7 +2518,7 @@ ADVANCED COMMANDS
     is directory containing three files: the list of files and directories
     at the top level of the sandbox when file transfer in completes
     (``in``), the same when file transfer out begins (``out``), and a dump
-    of the environment set for the job (``environment``).
+    of the environment set for the job (:ad-attr:`Environment`).
 
     This feature is not presently available for Windows.
 

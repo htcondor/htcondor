@@ -392,7 +392,7 @@ following way.
    the policy expressions, changing its own state as necessary. This
    occurs independently of the other slots on the machine. So, if the
    *condor_startd* daemon is evaluating a policy expression on a
-   specific slot, and the policy expression refers to ``ProcID``,
+   specific slot, and the policy expression refers to :ad-attr:`ProcId`,
    :ad-attr:`Owner`, or any attribute from a job ClassAd, it always refers to
    the ClassAd of the job running on the specific slot.
 
@@ -959,7 +959,7 @@ The most important expression to the *condor_startd* is the
 conditions that must be met for a machine or slot to run a job. This
 expression can reference attributes in the machine's ClassAd (such as
 :ad-attr:`KeyboardIdle` and :ad-attr:`LoadAvg`) and attributes in a job ClassAd (such
-as :ad-attr:`Owner`, ``Imagesize``, and :ad-attr:`Cmd`, the name of the executable the
+as :ad-attr:`Owner`, :ad-attr:`ImageSize`, and :ad-attr:`Cmd`, the name of the executable the
 job will run). The value of the :macro:`START` expression plays a crucial
 role in determining the state and activity of a machine.
 
@@ -984,7 +984,7 @@ machine. However, by locally evaluating an expression, the machine only
 evaluates the expression against its own ClassAd. If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ClassAd, such as :ad-attr:`Owner` or
-``Imagesize``), the expression is (usually) undefined. See
+:ad-attr:`ImageSize`), the expression is (usually) undefined. See
 the :doc:`/classads/classad-mechanism` section for specifics on
 how undefined terms are handled in ClassAd expression evaluation.
 
@@ -1106,7 +1106,7 @@ That's all there is to it. The bigger the job, the more this machine
 wants to run it. It is an altruistic preference, always servicing the
 largest of jobs, no matter who submitted them. A little less altruistic
 is the :macro:`RANK` on Coltrane's machine that prefers John Coltrane's jobs
-over those with the largest ``Imagesize``:
+over those with the largest :ad-attr:`ImageSize`:
 
 .. code-block:: condor-config
 
@@ -1677,7 +1677,7 @@ When in the Unclaimed state, the :macro:`RUNBENCHMARKS` expression is relevant.
 If :macro:`RUNBENCHMARKS` evaluates to TRUE while the machine is in the
 Unclaimed state, then the machine will transition from the Idle activity
 to the Benchmarking activity (transition **3**) and perform benchmarks
-to determine ``MIPS`` and ``KFLOPS``. When the benchmarks complete, the
+to determine :ad-attr:`Mips` and :ad-attr:`KFlops`. When the benchmarks complete, the
 machine returns to the Idle activity (transition **4**).
 
 The startd automatically inserts an attribute, ``LastBenchmark``,
@@ -3084,9 +3084,9 @@ The *condor_startd* advertises one classad per slot to the *condor_collector*.  
 these ads has many attributes. See :ref:`classad-attributes/machine-classad-attributes:machine classad attributes`
 for the complete list of the attributes defined and used by the system.  These attributes,
 and the custom attributes describe below, which can be used exactly as the predefined ones,
-have many uses.  Let's consider the machine classad attribute ``OpsysAndVer``. This is
-a more specific version of the attribute ``Opsys``, which will just be "Linux" on any
-Linux system, whereas ``OpsysAndVer`` might be ``CentOS8`` on such a system.
+have many uses.  Let's consider the machine classad attribute :ad-attr:`OpSysAndVer`. This is
+a more specific version of the attribute :ad-attr:`OpSys`, which will just be "Linux" on any
+Linux system, whereas :ad-attr:`OpSysAndVer` might be ``CentOS8`` on such a system.
 
 First, we might use this attribute to examine one particular machine.  We can use
 :tool:`condor_status` to query this attribute on a machine named "vulture" by running:
@@ -3327,7 +3327,7 @@ multiple ClassAds, using the mechanism defined below:
    -  **SlotTypeId** *integer*: the current ad is merged into all ads
       that have the same value for their ``SlotTypeId`` attribute.
    -  **SlotId** *integer*: the current ad is merged into all ads that
-      have the same value for their ``SlotId`` attribute.
+      have the same value for their :ad-attr:`SlotID` attribute.
 
 For example, if the Startd Cron job returns:
 

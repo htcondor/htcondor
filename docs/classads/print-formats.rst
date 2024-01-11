@@ -248,7 +248,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
    The result is then formatted using the ``%.1f`` format.
 
 ``DAG_OWNER``
-   Used for the ``OWNER`` column of default :tool:`condor_q` output.
+   Used for the :ad-attr:`Owner` column of default :tool:`condor_q` output.
    This function returns the value of the :ad-attr:`Owner` attribute when the ``-dag`` option is
    not passed to :tool:`condor_q`.  When the ``-dag`` option is passed,
    it returns the value of  ``DAGNodeName`` for jobs that have a :ad-attr:`DAGManJobId` defined, and :ad-attr:`Owner` for all other jobs.
@@ -270,7 +270,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
    and converted to a string.
 
 ``JOB_DESCRIPTION``
-   Used for the ``CMD`` column of the default output of :tool:`condor_q`.
+   Used for the :ad-attr:`Cmd` column of the default output of :tool:`condor_q`.
    This function renders a job description from the ``MATCH_EXP_JobDescription``,
    :ad-attr:`JobDescription` or :ad-attr:`Cmd` and :ad-attr:`Args` or :ad-attr:`Arguments` job attributes.
 
@@ -299,12 +299,12 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
    Used for the ``SIZE`` column of the default output of :tool:`condor_q`.
    This function renders a memory usage value in megabytes the :ad-attr:`MemoryUsage` or :ad-attr:`ImageSize` attributes of the job.
 
-``OWNER``
-   Used for the ``OWNER`` column of the default output of :tool:`condor_q`.
+:ad-attr:`Owner`
+   Used for the :ad-attr:`Owner` column of the default output of :tool:`condor_q`.
    This function renders an Owner string from the :ad-attr:`Owner` attribute of the job. Prior to 8.9.9, this function would
    modify the result based on the :ad-attr:`NiceUser` attribute of the job, but it no longer does so.
 
-``QDATE``
+:ad-attr:`QDate`
    Used for the ``SUBMITTED`` column of the default output of :tool:`condor_q`.
    This function converts a Unix timestamp to a string date and time with 2 digit month, day, hour and minute values.
 

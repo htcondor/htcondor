@@ -909,7 +909,7 @@ performance (on Linpack benchmarks):
 
 This particular example highlights a difficulty with :subcom:`rank` expression
 evaluation as currently defined. While all machines have floating point
-processing ability, not all machines will have the ``kflops`` attribute
+processing ability, not all machines will have the :ad-attr:`KFlops` attribute
 defined. For machines where this attribute is not defined, :subcom:`rank` will
 evaluate to the value UNDEFINED, and HTCondor will use a default rank of
 the machine of 0.0. The :subcom:`rank` attribute will only rank machines where
@@ -921,13 +921,13 @@ expression's evaluation will lead to the expected resulting ranking of
 machines. This can be accomplished using the :tool:`condor_status` command
 with the *-constraint* argument. This allows the user to see a list of
 machines that fit a constraint. To see which machines in the pool have
-``kflops`` defined, use
+:ad-attr:`KFlops` defined, use
 
 .. code-block:: console
 
     $ condor_status -constraint kflops
 
-Alternatively, to see a list of machines where ``kflops`` is not
+Alternatively, to see a list of machines where :ad-attr:`KFlops` is not
 defined, use
 
 .. code-block:: console

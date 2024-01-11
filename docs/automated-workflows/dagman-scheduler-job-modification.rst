@@ -72,6 +72,6 @@ The *GET* keyword takes a list of environment variables names to be added
 to the DAGMan jobs ``getenv`` command in the ``.condor.sub`` file for the DAG.
 
 The *SET* keyword takes a semi-colon delimited list of **key=value** pairs of
-information to add into DAGMan jobs ``environment`` command in the ``.condor.sub``
+information to add into DAGMan jobs :subcom:`Environment` command in the ``.condor.sub``
 file for the DAG. These added **key=value** must follow the normal HTCondor
 job environment rules.

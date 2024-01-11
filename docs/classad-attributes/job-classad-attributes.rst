@@ -1700,10 +1700,10 @@ all attributes.
     A classad expression evaluated by the *condor_negotiator*,
     *condor_schedd*, and *condor_startd* in the context of slot ad.  If
     true, this job is eligible to run on that slot.  If the job
-    requirements does not mention the (startd) attribute ``OPSYS``,
+    requirements does not mention the (startd) attribute :ad-attr:`OpSys`,
     the schedd will append a clause to Requirements forcing the job to
-    match the same ``OPSYS`` as the access point. :index:`OPSYS`
-    The schedd appends a simliar clause to match the ``ARCH``. :index:`ARCH`
+    match the same :ad-attr:`OpSys` as the access point. :index:`OPSYS`
+    The schedd appends a simliar clause to match the :ad-attr:`Arch`. :index:`ARCH`
     The schedd parameter :macro:`APPEND_REQUIREMENTS`, will, if set, append that
     value to every job's requirements expression.
     

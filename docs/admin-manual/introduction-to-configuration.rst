@@ -1064,9 +1064,9 @@ determined automatically at run time but which can be overwritten.
     this attribute so that users can submit binaries compiled for a
     given platform and force them to run on the correct machines.
     :tool:`condor_submit` will append a requirement to the job ClassAd that
-    it must run on the same ``ARCH`` and ``OPSYS`` of the machine where
-    it was submitted, unless the user specifies ``ARCH`` and/or
-    ``OPSYS`` explicitly in their submit file. See the :tool:`condor_submit`
+    it must run on the same :ad-attr:`Arch` and :ad-attr:`OpSys` of the machine where
+    it was submitted, unless the user specifies :ad-attr:`Arch` and/or
+    :ad-attr:`OpSys` explicitly in their submit file. See the :tool:`condor_submit`
     manual page (doc:`/man-pages/condor_submit`) for details.
 
 ``$(OPSYS)`` :index:`OPSYS`
@@ -1085,11 +1085,11 @@ determined automatically at run time but which can be overwritten.
 
 ``$(UNAME_ARCH)`` :index:`UNAME_ARCH`
     The architecture as reported by *uname* (2)'s ``machine`` field.
-    Always the same as ``ARCH`` on Windows.
+    Always the same as :ad-attr:`Arch` on Windows.
 
 ``$(UNAME_OPSYS)`` :index:`UNAME_OPSYS`
     The operating system as reported by *uname* (2)'s ``sysname``
-    field. Always the same as ``OPSYS`` on Windows.
+    field. Always the same as :ad-attr:`OpSys` on Windows.
 
 ``$(DETECTED_MEMORY)`` :index:`DETECTED_MEMORY`
     The amount of detected physical memory (RAM) in MiB.
