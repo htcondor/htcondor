@@ -620,6 +620,31 @@ all attributes.
     guaratees this string will be globally unique, the contents are subject
     to change, and users should not parse out components of this string.
 
+:classad-attribute-def:`GPUsMaxCapability`
+    A floating point value indicating the maximum ``Capability`` value of a GPU
+    permitted by this job.  This attribute is referenced by the ``RequireGPUs``
+    job attribute in order to constrain which slots containing GPUs a job is matched to.
+    Set this attribute in a job by using the submit command :subcom:`gpus_maximum_capability`
+
+:classad-attribute-def:`GPUsMinCapability`
+    A floating point value indicating the minimum ``Capability`` value of a GPU
+    needed by this job.  This attribute is referenced by the ``RequireGPUs``
+    job attribute in order to constrain which slots containing GPUs a job is matched to.
+    Set this attribute in a job by using the submit command :subcom:`gpus_minimum_capability`
+
+:classad-attribute-def:`GPUsMinMemory`
+    A integer value in megabytes indicating the minimum ``GlobalMemoryMB`` amount a GPU
+    must have to run this job.  This attribute is referenced by the ``RequireGPUs``
+    job attribute in order to constrain which slots containing GPUs a job is matched to.
+    Set this attribute in a job by using the submit description file command :subcom:`gpus_minimum_memory`
+
+:classad-attribute-def:`GPUsMinRuntime`
+    A integer encoded version value which is compared to the ``MaxSupportedVersion`` value of a GPU
+    to determine if the runtime needed by the job is supported.  The value should be encoded as
+    MajorVersion*1000 + MinorVersion*10.  This attribute is referenced by the ``RequireGPUs``
+    job attribute in order to constrain which slots containing GPUs a job is matched to.
+    Set this attribute in a job by using the submit description file command :subcom:`gpus_minimum_runtime`
+
 :classad-attribute-def:`GridJobStatus`
     A string containing the job's status as reported by the remote job
     management system.
