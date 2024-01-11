@@ -76,6 +76,11 @@
 #define SUBMIT_KEY_RequireGpus "require_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
 #define SUBMIT_KEY_RequirePrefix "require_"
+// GPU property constraint values
+#define SUBMIT_KEY_GpusMinMemory "gpus_minimum_memory"
+#define SUBMIT_KEY_GpusMinCapability "gpus_minimum_capability"
+#define SUBMIT_KEY_GpusMaxCapability "gpus_maximum_capability"
+#define SUBMIT_KEY_GpusMinRuntime "gpus_minimum_runtime"
 
 #define SUBMIT_KEY_Universe "universe"
 #define SUBMIT_KEY_MachineCount "machine_count"
@@ -836,6 +841,7 @@ protected:
 	int SetTransferFiles();
 	int FixupTransferInputFiles();
 	int SetRequirements(); // after SetTransferFiles
+	int SetResourceRequirements(); // after SetRequestResources
 
 	int SetForcedSubmitAttrs(); // set +Attrib (MY.Attrib) values from SUBMIT_ATTRS directly into the job ad. this should be called second to last
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.

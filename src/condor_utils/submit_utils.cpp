@@ -4564,13 +4564,18 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_Arguments2, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_err | SimpleSubmitKeyword::f_special_args },
 	{SUBMIT_CMD_AllowArgumentsV1, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_args},
 	// invoke SetRequestResources
-	{SUBMIT_KEY_RequestCpus, ATTR_REQUEST_CPUS, SimpleSubmitKeyword::f_as_expr},
-	{SUBMIT_KEY_RequestDisk, ATTR_REQUEST_DISK, SimpleSubmitKeyword::f_as_expr},
-	{SUBMIT_KEY_RequestMemory, ATTR_REQUEST_MEMORY, SimpleSubmitKeyword::f_as_expr},
-	{SUBMIT_KEY_RequestGpus, ATTR_REQUEST_GPUS, SimpleSubmitKeyword::f_as_expr},
+	{SUBMIT_KEY_RequestCpus, ATTR_REQUEST_CPUS, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special},
+	{SUBMIT_KEY_RequestDisk, ATTR_REQUEST_DISK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special},
+	{SUBMIT_KEY_RequestMemory, ATTR_REQUEST_MEMORY, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special},
+	{SUBMIT_KEY_RequestGpus, ATTR_REQUEST_GPUS, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special},
+	{SUBMIT_KEY_GpusMinCapability, ATTR_GPUS_MIN_CAPABILITY, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special},
+	{SUBMIT_KEY_GpusMaxCapability, ATTR_GPUS_MAX_CAPABILITY, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special},
+	{SUBMIT_KEY_GpusMinMemory, ATTR_GPUS_MIN_MEMORY, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special},
+	{SUBMIT_KEY_GpusMinRuntime, ATTR_GPUS_MIN_RUNTIME, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special},
 	// disallow some custom resource tags that are likely to be mistaken attempts to constrain GPU properties
 	{"request_gpu_memory", NULL, SimpleSubmitKeyword::f_error | SimpleSubmitKeyword::f_special},
 	{"request_gpus_memory", NULL, SimpleSubmitKeyword::f_error | SimpleSubmitKeyword::f_special},
+
 	// invoke SetGridParams
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
 	{SUBMIT_KEY_ArcRte, ATTR_ARC_RTE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
@@ -4955,20 +4960,16 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 		// insert it into the jobAd, otherwise assume it is an expression
 		// and insert it as text into the jobAd.
 		int64_t req_memory_mb = 0;
-		if (parse_int64_bytes(mem, req_memory_mb, 1024 * 1024)) {
-
+		char unit = 0;
+		if (parse_int64_bytes(mem, req_memory_mb, 1024 * 1024, &unit)) {
 			auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
-			if (missingUnitsIs) {
+			if (missingUnitsIs && ! unit) {
 				// If all characters in string are numeric (with no unit suffix)
-				if (std::all_of(mem.ptr(), mem.ptr() + strlen(mem.ptr()), [](const char c) {
-							return std::isdigit(c) || std::isspace(c);
-							})) {
 					if (0 == strcasecmp("error", missingUnitsIs)) {
 						push_error(stderr, "\nERROR: request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", mem.ptr());
 						ABORT_AND_RETURN(1);
 					}
 					push_warning(stderr, "\nWARNING: request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", mem.ptr());
-				}
 			}
 			AssignJobVal(ATTR_REQUEST_MEMORY, req_memory_mb);
 		} else if (YourStringNoCase("undefined") == mem) {
@@ -5003,20 +5004,17 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 		// if input is an integer followed by K,M,G or T, scale it KiB and
 		// insert it into the jobAd, otherwise assume it is an expression
 		// and insert it as text into the jobAd.
+		char unit=0;
 		int64_t req_disk_kb = 0;
-		if (parse_int64_bytes(disk, req_disk_kb, 1024)) {
+		if (parse_int64_bytes(disk, req_disk_kb, 1024, &unit)) {
 			auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
-			if (missingUnitsIs) {
+			if (missingUnitsIs && ! unit) {
 				// If all characters in string are numeric (with no unit suffix)
-				if (std::all_of(disk.ptr(), disk.ptr() + strlen(disk.ptr()), [](const char c) {
-							return std::isdigit(c) || std::isspace(c);
-							})) {
 					if (0 == strcasecmp("error", missingUnitsIs)) {
 						push_error(stderr, "\nERROR: request_disk=%s defaults to kilobytes, must contain a units suffix (i.e K, M, or B)\n", disk.ptr());
 						ABORT_AND_RETURN(1);
 					}
 					push_warning(stderr, "\nWARNING: request_disk=%s defaults to kilobytes, should contain a units suffix (i.e K, M, or B)\n", disk.ptr());
-				}
 			}
 			AssignJobVal(ATTR_REQUEST_DISK, req_disk_kb);
 		} else if (YourStringNoCase("undefined") == disk) {
@@ -5088,15 +5086,75 @@ int SubmitHash::SetRequestGpus(const char * key)
 			// they want it to be undefined
 		} else {
 			AssignJobExpr(ATTR_REQUEST_GPUS, req_gpus);
-
-			// now check for "require_gpus"
-			req_gpus.set(submit_param(SUBMIT_KEY_RequireGpus, ATTR_REQUIRE_GPUS));
-			if (req_gpus) {
-				AssignJobExpr(ATTR_REQUIRE_GPUS, req_gpus);
-			}
 		}
 	}
 
+	// if there is a GPU request, then we should also look for require_gpus and for
+	// GPU property constraints. none of these are needed, but if they are set, we want to pick them up
+	if (job->Lookup(ATTR_REQUEST_GPUS)) {
+
+		// now check for "require_gpus"
+		req_gpus.set(submit_param(SUBMIT_KEY_RequireGpus, ATTR_REQUIRE_GPUS));
+		if (req_gpus) {
+			AssignJobExpr(ATTR_REQUIRE_GPUS, req_gpus);
+		}
+
+		// check for GPU property constraints
+		// 
+		// capability constraints are simple integer checks
+		auto_free_ptr gpu_limit(submit_param(SUBMIT_KEY_GpusMinCapability, ATTR_GPUS_MIN_CAPABILITY));
+		if (gpu_limit) { AssignJobExpr(ATTR_GPUS_MIN_CAPABILITY, gpu_limit); }
+		gpu_limit.set(submit_param(SUBMIT_KEY_GpusMaxCapability, ATTR_GPUS_MAX_CAPABILITY));
+		if (gpu_limit) { AssignJobExpr(ATTR_GPUS_MAX_CAPABILITY, gpu_limit); }
+
+		// gpus_minimum_memory should be a MB quantity
+		gpu_limit.set(submit_param(SUBMIT_KEY_GpusMinMemory, ATTR_GPUS_MIN_MEMORY));
+		if (gpu_limit) {
+			char unit = 0;
+			int64_t memory_mb = 0;
+			if (parse_int64_bytes(gpu_limit, memory_mb, 1024 * 1024, &unit)) {
+				auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
+				if (missingUnitsIs && ! unit) {
+					// If all characters in string are numeric (with no unit suffix)
+					if (0 == strcasecmp("error", missingUnitsIs)) {
+						push_error(stderr, "\nERROR: " SUBMIT_KEY_GpusMinMemory "=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", gpu_limit.ptr());
+						ABORT_AND_RETURN(1);
+					}
+					push_warning(stderr, "\nWARNING: " SUBMIT_KEY_GpusMinMemory "=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", gpu_limit.ptr());
+				}
+				AssignJobVal(ATTR_GPUS_MIN_MEMORY, memory_mb);
+			} else {
+				AssignJobExpr(ATTR_GPUS_MIN_MEMORY, gpu_limit);
+			}
+		} else {
+			gpu_limit.set(submit_param("request_gpu_memory", "request_gpus_memory"));
+			if (gpu_limit) {
+				push_warning(stderr, "\nWARNING: request_gpu_memory is not a submit command, did you mean gpus_minimum_memory?");
+			}
+		}
+
+		// gpus_minimum_runtime should be a version in form x.y or in form x*1000 + y*10 i.e. 12010 for version 12.1
+		gpu_limit.set(submit_param(SUBMIT_KEY_GpusMinRuntime, ATTR_GPUS_MIN_RUNTIME));
+		if (gpu_limit) {
+			// canonical form is ver = (major * 1000) + (minor*10)
+			int major=0, minor=0;
+			const char * pend = nullptr;
+			// if it of the form x or x.y so we can parse it as a job id to get the two integers back
+			if (StrIsProcId(gpu_limit, major, minor, &pend) && !*pend && minor >= -1 && minor < 100) {
+				long long ver;
+				if (minor == -1 && major > 1000) {
+					ver = major; // seems to already be in canonical form
+				} else {
+					ver = (long long)major * 1000;
+					if (minor > 0) ver += minor*10;
+				}
+				AssignJobVal(ATTR_GPUS_MIN_RUNTIME, ver);
+			} else {
+				AssignJobExpr(ATTR_GPUS_MIN_RUNTIME, gpu_limit);
+			}
+		}
+
+	}
 
 	RETURN_IF_ABORT();
 	return 0;
@@ -5219,6 +5277,68 @@ int SubmitHash::SetRequestResources()
 	if ( ! lookup(SUBMIT_KEY_RequestMemory)) { SetRequestMem(SUBMIT_KEY_RequestMemory); }
 
 	RETURN_IF_ABORT();
+	return 0;
+}
+
+// generate effective Require<tag> expression(s).  currently only for RequireGPUs
+int SubmitHash::SetResourceRequirements()
+{
+	RETURN_IF_ABORT();
+
+	// In order to handle both the submit case and the late materialization case
+	// this function should be called after SetRequestResources and SetForcedSubmitAttrs
+	// and it should not look at any submit commands, only at job attributes
+
+	if (job->Lookup(ATTR_REQUEST_GPUS)) {
+
+		// get GPU property attribute references of the existing require_gpus expression (if any)
+		classad::References prop_refs;  // property ad references
+		classad::ExprTree * require_gpus = job->Lookup(ATTR_REQUIRE_GPUS);
+		if (require_gpus) {
+			// Insert dummy values for GPU property references so we can refs to them
+			// want to detect references.  Otherwise, unqualified references
+			// get classified as external references.
+			ClassAd props_ad;
+			props_ad.Assign("Capability", 7.5);
+			props_ad.Assign("GlobalMemoryMb", 11012);
+			props_ad.Assign("DriverVersion", 12.1);
+			props_ad.Assign("MaxSupportedVersion", 12010);
+
+			GetExprReferences(require_gpus,props_ad,&prop_refs,nullptr);
+		}
+
+		std::string clauses;
+		if (job->Lookup(ATTR_GPUS_MIN_CAPABILITY) && ! prop_refs.count("Capability")) {
+			if ( ! clauses.empty()) clauses += " && ";
+			clauses += "Capability >= " ATTR_GPUS_MIN_CAPABILITY;
+		}
+		if (job->Lookup(ATTR_GPUS_MAX_CAPABILITY) && ! prop_refs.count("Capability")) {
+			if ( ! clauses.empty()) clauses += " && ";
+			clauses +=  "Capability <= " ATTR_GPUS_MAX_CAPABILITY;
+		}
+		if (job->Lookup(ATTR_GPUS_MIN_MEMORY) && ! prop_refs.count("GlobalMemoryMb")) {
+			if ( ! clauses.empty()) clauses += " && ";
+			clauses +=  "GlobalMemoryMb >= " ATTR_GPUS_MIN_MEMORY;
+		}
+		if (job->Lookup(ATTR_GPUS_MIN_RUNTIME) && ! prop_refs.count("MaxSupportedVersion")) {
+			if ( ! clauses.empty()) clauses += " && ";
+			clauses +=  "MaxSupportedVersion >= " ATTR_GPUS_MIN_RUNTIME;
+		}
+
+		if ( ! clauses.empty()) {
+			if (require_gpus) {
+				std::string expr_str;
+				ExprTreeToString(require_gpus, expr_str);
+				check_expr_and_wrap_for_op(expr_str, classad::Operation::LOGICAL_AND_OP);
+				expr_str += " && ";
+				expr_str += clauses;
+				AssignJobExpr(ATTR_REQUIRE_GPUS, expr_str.c_str());
+			} else {
+				AssignJobExpr(ATTR_REQUIRE_GPUS, clauses.c_str());
+			}
+		}
+	}
+
 	return 0;
 }
 
@@ -7730,6 +7850,10 @@ ClassAd* SubmitHash::make_job_ad (
 		// process and validate JOBSET.* attributes
 		// and verify that the jobset membership request is valid (i.e. jobset memebership is a cluster attribute, not a job attribute)
 	ProcessJobsetAttributes();
+
+		// auto-generate/complete require_gpus and like expressions.
+		// must be called before SetRequirements and after SetRequestResources and SetForcedAttributes
+	SetResourceRequirements();
 
 	// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
 	// SetCronTab(), SetPerFileEncryption(), SetAutoAttributes().
