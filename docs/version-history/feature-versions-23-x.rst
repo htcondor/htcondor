@@ -17,7 +17,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added new submit commands for constraining GPU properties. When these commands
+  are use the ``RequireGPUs`` expression is generated automatically by submit and
+  desired values are stored as job attributes. The new submit commands are ``gpus_minimum_memory``,
+  ``gpus_minimum_runtime``, ``gpus_minimum_capability`` and ``gpus_maximum_capability``.
+  :jira:`2201`
 
 Bugs Fixed:
 
