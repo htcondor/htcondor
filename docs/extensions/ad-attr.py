@@ -33,6 +33,8 @@ def map_attrs(dir: str):
     attrs = {}
     files_dir = os.path.join(dir, "classad-attributes")
     for ad_file in os.listdir(files_dir):
+        if ad_file[-4:] != ".rst":
+            continue
         path = os.path.join(files_dir, ad_file)
         with open(path, "r") as f:
             for line in f:
