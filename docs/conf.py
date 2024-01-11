@@ -41,7 +41,6 @@ extensions = [
     'index',
     'jira',
     'tool',
-    'classad-attribute-def',
     'ad-attr',
 ]
 
