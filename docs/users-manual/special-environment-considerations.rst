@@ -72,7 +72,7 @@ the *condor_starter* daemon and user job.
 :index:`job ClassAd attribute<single: job ClassAd attribute; JobLeaseDuration>`
 
 A default value equal to 40 minutes exists for a job's ClassAd attribute
-``JobLeaseDuration``, or this attribute may be set in the submit
+:ad-attr:`JobLeaseDuration`, or this attribute may be set in the submit
 description file, using
 :subcom:`job_lease_duration[definition]`,
 to keep a job running in the case that the submit side no longer renews
@@ -94,7 +94,7 @@ As a special case, a submit description file setting of
      job_lease_duration = 0
 
 as well as utilizing submission other than :tool:`condor_submit` that do not
-set ``JobLeaseDuration`` (such as using the web services interface)
+set :ad-attr:`JobLeaseDuration` (such as using the web services interface)
 results in the corresponding job ClassAd attribute to be explicitly
 undefined. This has the further effect of changing the duration of a
 claim lease, the amount of time that the execution machine waits before

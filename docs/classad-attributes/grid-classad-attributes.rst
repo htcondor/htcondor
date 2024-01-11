@@ -68,4 +68,4 @@ Grid ClassAd Attributes
 
 :classad-attribute-def:`SubmitsWanted`
     The number of jobs this *condor_gridmanager* has refrained from
-    submitting to the grid resource due to ``JobLimit``.
+    submitting to the grid resource due to :ad-attr:`JobLimit`.

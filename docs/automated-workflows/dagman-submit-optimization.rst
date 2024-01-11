@@ -25,6 +25,6 @@ idle for 20 seconds, during which time a new job can be submitted
 directly to the already-claimed *condor_startd*. A value of 0 means
 that claims are not held idle for a running DAG. If a DAG node has no
 children, the value of :macro:`DAGMAN_HOLD_CLAIM_TIME` will be ignored; the
-``KeepClaimIdle`` attribute will not be defined in the job ClassAd of
+:ad-attr:`KeepClaimIdle` attribute will not be defined in the job ClassAd of
 the node job, unless the job requests it using the submit command
 :subcom:`keep_claim_idle[and DAGman]`

@@ -60,7 +60,7 @@ executing job that may be useful.
    :index:`_CONDOR_SLOT environment variable`\ :index:`_CONDOR_SLOT<pair: _CONDOR_SLOT; environment variables for jobs>`
    gives the name of the slot (for multicore machines), on which the job is
    run. On machines with only a single slot, the value of this variable
-   will be 1, just like the ``SlotID`` attribute in the machine's
+   will be 1, just like the :ad-attr:`SlotID` attribute in the machine's
    ClassAd. See the :doc:`/admin-manual/ep-policy-configuration` section for more 
    details about configuring multicore machines.
 -  ``_CONDOR_JOB_AD``

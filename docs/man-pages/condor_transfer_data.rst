@@ -36,7 +36,7 @@ the machine where the *condor_schedd* daemon is running. After spooling
 these files, the machine from which the job is submitted may disconnect
 from the network or modify its local copies of the spooled files.
 
-When the job finishes, the job has ``JobStatus`` = 4, meaning that the
+When the job finishes, the job has :ad-attr:`JobStatus` = 4, meaning that the
 job has completed. The output of the job is spooled, and
 *condor_transfer_data* retrieves the output of the completed job.
 

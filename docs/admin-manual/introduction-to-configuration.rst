@@ -1449,8 +1449,8 @@ incorporates.
        exceed the number of cores in the slot by more than 0.8 on
        average over the past minute, immediately place the job on hold
        ignoring any job retirement time. The job will go on hold with a
-       reasonable hold reason in job attribute ``HoldReason`` and a
-       value of 101 in job attribute ``HoldReasonCode``. The hold reason
+       reasonable hold reason in job attribute :ad-attr:`HoldReason` and a
+       value of 101 in job attribute :ad-attr:`HoldReasonCode`. The hold reason
        and code can be customized by specifying
        ``HOLD_REASON_CPU_EXCEEDED`` and ``HOLD_SUBCODE_CPU_EXCEEDED``
        respectively.
@@ -1466,8 +1466,8 @@ incorporates.
        If the startd observes the amount of disk space used by the job
        exceed the disk in the slot, immediately place the job on hold
        ignoring any job retirement time. The job will go on hold with a
-       reasonable hold reason in job attribute ``HoldReason`` and a
-       value of 104 in job attribute ``HoldReasonCode``. The hold reason
+       reasonable hold reason in job attribute :ad-attr:`HoldReason` and a
+       value of 104 in job attribute :ad-attr:`HoldReasonCode`. The hold reason
        and code can be customized by specifying
        ``HOLD_REASON_DISK_EXCEEDED`` and ``HOLD_SUBCODE_DISK_EXCEEDED``
        respectively.
@@ -1483,8 +1483,8 @@ incorporates.
        If the startd observes the memory usage of the job exceed the
        memory provisioned in the slot, immediately place the job on hold
        ignoring any job retirement time. The job will go on hold with a
-       reasonable hold reason in job attribute ``HoldReason`` and a
-       value of 102 in job attribute ``HoldReasonCode``. The hold reason
+       reasonable hold reason in job attribute :ad-attr:`HoldReason` and a
+       value of 102 in job attribute :ad-attr:`HoldReasonCode`. The hold reason
        and code can be customized by specifying
        ``HOLD_REASON_MEMORY_EXCEEDED`` and
        ``HOLD_SUBCODE_MEMORY_EXCEEDED`` respectively.
@@ -1512,7 +1512,7 @@ incorporates.
     -  ``Startd_Publish_CpusUsage``
 
        Publish the number of CPU cores being used by the job into the
-       slot ad as attribute ``CpusUsage``. This value will be the
+       slot ad as attribute :ad-attr:`CpusUsage`. This value will be the
        average number of cores used by the job over the past minute,
        sampling every 5 seconds.
 

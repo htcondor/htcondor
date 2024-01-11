@@ -150,9 +150,9 @@ The submit description file appears as
      log          = job.log
      queue
 
-For a DAG such as this one, ``Arguments`` will become "A was prepended" and the
+For a DAG such as this one, :ad-attr:`Arguments` will become "A was prepended" and the
 output file will be named ``results-B.out``. If instead var1 used *APPEND*
-and var2 used *PREPEND* then ``Arguments`` will become "No variables prepended"
+and var2 used *PREPEND* then :ad-attr:`Arguments` will become "No variables prepended"
 and the output file will be named ``results-C.out``.
 
 If neither *PREPEND* nor *APPEND* is used in the *VARS* line then the variable

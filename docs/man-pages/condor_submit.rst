@@ -37,7 +37,7 @@ a single cluster because the schedd uses much less memory to hold the jobs.
 Multiple clusters may be specified within a single submit description.
 Each cluster must specify a single executable.
 
-The job ClassAd attribute ``ClusterId`` identifies a cluster.
+The job ClassAd attribute :ad-attr:`ClusterId` identifies a cluster.
 
 The *submit description file* argument is the path and file name of the
 submit description file. If this optional argument is the dash character
@@ -253,10 +253,10 @@ BASIC COMMANDS
     identified as the old syntax and the new syntax. The old syntax
     supports white space characters within arguments only in special
     circumstances; when used, the command line arguments are represented
-    in the job ClassAd attribute ``Args``. The new syntax supports
+    in the job ClassAd attribute :ad-attr:`Args`. The new syntax supports
     uniform quoting of white space characters within arguments; when
     used, the command line arguments are represented in the job ClassAd
-    attribute ``Arguments``.
+    attribute :ad-attr:`Arguments`.
 
     **Old Syntax**
 
@@ -772,7 +772,7 @@ COMMANDS FOR MATCHMAKING
  :subcom-def:`request_disk` = <quantity>
     The requested amount of disk space in KiB requested for this job. If
     not specified, it will be set to the job ClassAd attribute
-    ``DiskUsage``. The expression
+    :ad-attr:`DiskUsage`. The expression
 
     .. code-block:: condor-classad-expr
 
@@ -828,7 +828,7 @@ COMMANDS FOR MATCHMAKING
     nor **vm_memory** is specified, the value is set by the configuration variable
     :macro:`JOB_DEFAULT_REQUESTMEMORY` The actual amount of
     memory used by a job is represented by the job ClassAd attribute
-    ``MemoryUsage``.
+    :ad-attr:`MemoryUsage`.
 
     For pools that enable dynamic *condor_startd* provisioning, a
     dynamic slot will be created with at least this much RAM.
@@ -885,22 +885,22 @@ COMMANDS FOR MATCHMAKING
        machine. In other words: unless you request otherwise, HTCondor
        will give your job machines with the same architecture and
        operating system version as the machine running *condor_submit*.
-    #. Cpus >= RequestCpus, if the job ClassAd attribute ``RequestCpus``
+    #. Cpus >= RequestCpus, if the job ClassAd attribute :ad-attr:`RequestCpus`
        is defined.
-    #. Disk >= RequestDisk, if the job ClassAd attribute ``RequestDisk``
+    #. Disk >= RequestDisk, if the job ClassAd attribute :ad-attr:`RequestDisk`
        is defined. Otherwise, Disk >= DiskUsage is appended to the
-       requirements. The ``DiskUsage`` attribute is initialized to the
+       requirements. The :ad-attr:`DiskUsage` attribute is initialized to the
        size of the executable plus the size of any files specified in a
        **transfer_input_files**
        command. It exists to ensure there is enough disk space on the
        target machine for HTCondor to copy over both the executable and
-       needed input files. The ``DiskUsage`` attribute represents the
+       needed input files. The :ad-attr:`DiskUsage` attribute represents the
        maximum amount of total disk space required by the job in
-       kilobytes. HTCondor automatically updates the ``DiskUsage``
+       kilobytes. HTCondor automatically updates the :ad-attr:`DiskUsage`
        attribute approximately every 20 minutes while the job runs with
        the amount of space being used by the job on the execute machine.
     #. Memory >= RequestMemory, if the job ClassAd attribute
-       ``RequestMemory`` is defined.
+       :ad-attr:`RequestMemory` is defined.
     #. If Universe is set to Vanilla, FileSystemDomain is set equal to
        the access point's FileSystemDomain.
 
@@ -998,7 +998,7 @@ FILE TRANSFER COMMANDS
     :macro:`MAX_TRANSFER_INPUT_MB` is
     used. If the observed size of all input files at submit time is
     larger than the limit, the job will be immediately placed on hold
-    with a ``HoldReasonCode`` value of 32. If the job passes this
+    with a :ad-attr:`HoldReasonCode` value of 32. If the job passes this
     initial test, but the size of the input files increases or the limit
     decreases so that the limit is violated, the job will be placed on
     hold at the time when the file transfer is attempted.
@@ -1013,7 +1013,7 @@ FILE TRANSFER COMMANDS
     :macro:`MAX_TRANSFER_OUTPUT_MB` is
     used. If the total size of the job's output files to be transferred
     is larger than the limit, the job will be placed on hold with a
-    ``HoldReasonCode`` value of 33. The output will be transferred up to
+    :ad-attr:`HoldReasonCode` value of 33. The output will be transferred up to
     the point when the limit is hit, so some files may be fully
     transferred, some partially, and some not at all.
 
@@ -1036,10 +1036,10 @@ FILE TRANSFER COMMANDS
     **should_transfer_files** equal to *YES* will cause HTCondor to always transfer files for the
     job. *NO* disables HTCondor's file transfer mechanism. *IF_NEEDED*
     will not transfer files for the job if it is matched with a resource
-    in the same ``FileSystemDomain`` as the access point (and
+    in the same :ad-attr:`FileSystemDomain` as the access point (and
     therefore, on a machine with the same shared file system). If the
     job is matched with a remote resource in a different
-    ``FileSystemDomain``, HTCondor will transfer the necessary files.
+    :ad-attr:`FileSystemDomain`, HTCondor will transfer the necessary files.
 
     For more information about this and other settings related to
     transferring files, see the HTCondor User's manual section on the
@@ -1063,7 +1063,7 @@ FILE TRANSFER COMMANDS
     If ``True``, then ``stderr`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stderr`` is stored
     locally and transferred back when the job completes. This command is
-    ignored if the job ClassAd attribute ``TransferErr`` is ``False``.
+    ignored if the job ClassAd attribute :ad-attr:`TransferErr` is ``False``.
     The default value is ``False``. This command must be used in
     conjunction with **error**, otherwise ``stderr`` will sent 
     to ``/dev/null`` on Unix machines and ignored on Windows machines.
@@ -1081,7 +1081,7 @@ FILE TRANSFER COMMANDS
     If ``True``, then ``stdout`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stdout`` is stored
     locally and transferred back when the job completes. This command is
-    ignored if the job ClassAd attribute ``TransferOut`` is ``False``.
+    ignored if the job ClassAd attribute :ad-attr:`TransferOut` is ``False``.
     The default value is ``False``. This command must be used in
     conjunction with **output**, otherwise
     ``stdout`` will sent to ``/dev/null`` on Unix machines and ignored
@@ -1535,7 +1535,7 @@ POLICY COMMANDS
  :subcom-def:`on_exit_hold_reason` = <ClassAd String Expression>
     When the job is placed on hold due to the
     **on_exit_hold** expression becoming ``True``, this expression is evaluated to set
-    the value of ``HoldReason`` in the job ClassAd. If this expression
+    the value of :ad-attr:`HoldReason` in the job ClassAd. If this expression
     is ``UNDEFINED`` or produces an empty or invalid string, a default
     description is used.
 
@@ -1543,8 +1543,8 @@ POLICY COMMANDS
     When the job is placed on hold due to the
     **on_exit_hold**
     expression becoming ``True``, this expression is evaluated to set
-    the value of ``HoldReasonSubCode`` in the job ClassAd. The default
-    subcode is 0. The ``HoldReasonCode`` will be set to 3, which
+    the value of :ad-attr:`HoldReasonSubCode` in the job ClassAd. The default
+    subcode is 0. The :ad-attr:`HoldReasonCode` will be set to 3, which
     indicates that the job went on hold due to a job policy expression.
 
  :subcom-def:`on_exit_remove` = <ClassAd Boolean Expression>
@@ -1609,21 +1609,21 @@ POLICY COMMANDS
  :subcom-def:`periodic_hold_reason` = <ClassAd String Expression>
     When the job is placed on hold due to the
     **periodic_hold** expression becoming ``True``, this expression is evaluated to set
-    the value of ``HoldReason`` in the job ClassAd. If this expression
+    the value of :ad-attr:`HoldReason` in the job ClassAd. If this expression
     is ``UNDEFINED`` or produces an empty or invalid string, a default
     description is used.
 
  :subcom-def:`periodic_hold_subcode` = <ClassAd Integer Expression>
     When the job is placed on hold due to the
     **periodic_hold** expression becoming true, this expression is evaluated to set the
-    value of ``HoldReasonSubCode`` in the job ClassAd. The default
-    subcode is 0. The ``HoldReasonCode`` will be set to 3, which
+    value of :ad-attr:`HoldReasonSubCode` in the job ClassAd. The default
+    subcode is 0. The :ad-attr:`HoldReasonCode` will be set to 3, which
     indicates that the job went on hold due to a job policy expression.
 
  :subcom-def:`periodic_release` = <ClassAd Boolean Expression>
     This expression is checked periodically when the job is in the Held
     state. If the expression becomes ``True``, the job will be released.
-    If the job was held via *condor_hold* (i.e. ``HoldReasonCode`` is
+    If the job was held via *condor_hold* (i.e. :ad-attr:`HoldReasonCode` is
     ``1``), then this expression is ignored.
 
     Only job ClassAd attributes will be defined for use by this ClassAd
@@ -2220,7 +2220,7 @@ ADVANCED COMMANDS
 
  :subcom-def:`accounting_group` = <accounting-group-name>
     Causes jobs to negotiate under the given accounting group. This
-    value is advertised in the job ClassAd as ``AcctGroup``. The
+    value is advertised in the job ClassAd as :ad-attr:`AcctGroup`. The
     HTCondor Administrator's manual contains more information about
     accounting groups.
 
@@ -2228,7 +2228,7 @@ ADVANCED COMMANDS
     Sets the name associated with this job to be used for resource usage accounting purposes, such as
     computation of fair-share priority and reporting via ``condor_userprio``.  If not set, defaults to the
     value of the job ClassAd attribute ``User``. This value is
-    advertised in the job ClassAd as ``AcctGroupUser``. 
+    advertised in the job ClassAd as :ad-attr:`AcctGroupUser`. 
 
  :subcom-def:`concurrency_limits` = <string-list>
     A list of resources that this job needs. The resources are presumed
@@ -2346,7 +2346,7 @@ ADVANCED COMMANDS
 
  :subcom-def:`description` = <string>
     A string that sets the value of the job ClassAd attribute
-    ``JobDescription``. When set, tools which display the executable
+    :ad-attr:`JobDescription`. When set, tools which display the executable
     such as *condor_q* will instead use this string.
 
  :subcom-def:`email_attributes` = <list-of-job-ad-attributes>
@@ -2688,9 +2688,9 @@ and comments.
     parser. The ``$(Cluster)`` or ``$(ClusterId)`` macro supplies the
     value of the
     :index:`ClusterId<single: ClusterId; ClassAd job attribute>`\ :index:`job ClassAd attribute<single: job ClassAd attribute; ClusterId>`
-    :index:`cluster identifier<single: cluster identifier; job ID>`\ ``ClusterId`` job
+    :index:`cluster identifier<single: cluster identifier; job ID>`\ :ad-attr:`ClusterId` job
     ClassAd attribute, and the ``$(Process)`` or ``$(ProcId)`` macro
-    supplies the value of the ``ProcId`` job ClassAd attribute. 
+    supplies the value of the :ad-attr:`ProcId` job ClassAd attribute. 
     The ``$(JobId)`` macro supplies the full job id. It is equivalent to ``$(ClusterId).$(ProcId)``.
     These macros are intended to aid in the specification of input/output
     files, arguments, etc., for clusters with lots of jobs, and/or could
@@ -2800,7 +2800,7 @@ and comments.
 
         executable = povray.$$(OpSys).$$(Arch)
 
-    Values for the ``OpSys`` and ``Arch`` attributes are substituted at
+    Values for the :ad-attr:`OpSys` and :ad-attr:`Arch` attributes are substituted at
     match time for any given resource. This example allows HTCondor to
     automatically choose the correct executable for the matched machine.
 
@@ -2918,16 +2918,16 @@ Cluster and Process, if these variables are set by the submit file, they
 will not be modified during :subcom:`queue` processing.
 
  ClusterId
-    Set to the integer value that the ``ClusterId`` attribute that the
+    Set to the integer value that the :ad-attr:`ClusterId` attribute that the
     job ClassAd will have when the job is submitted. All jobs in a
     single submit will normally have the same value for the
-    ``ClusterId``. If the **-dry-run** argument is specified, The value
+    :ad-attr:`ClusterId`. If the **-dry-run** argument is specified, The value
     will be 1.
  Cluster
     Alternate name for the ClusterId submit variable. Before HTCondor
     version 8.4 this was the only name.
  ProcId
-    Set to the integer value that the ``ProcId`` attribute of the job
+    Set to the integer value that the :ad-attr:`ProcId` attribute of the job
     ClassAd will have when the job is submitted. The value will start at
     0 and increment by 1 for each job submitted.
  Process

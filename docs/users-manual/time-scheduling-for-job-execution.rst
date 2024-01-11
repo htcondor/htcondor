@@ -53,11 +53,11 @@ Semantics for CronTab Specification
 
 A job's execution schedule is defined by a set of specifications within
 the submit description file. HTCondor uses these to calculate a
-``DeferralTime`` for the job.
+:ad-attr:`DeferralTime` for the job.
 
 Table 2.3 lists the submit commands and acceptable
 values for these commands. At least one of these must be defined in
-order for HTCondor to calculate a ``DeferralTime`` for the job. Once one
+order for HTCondor to calculate a :ad-attr:`DeferralTime` for the job. Once one
 CronTab value is defined, the default for all the others uses all the
 values in the allowed values ranges.
 
@@ -195,7 +195,7 @@ of at least one of the submit description file commands beginning with
 **cron_** causes HTCondor to calculate and set a deferral time for when
 the job should run. A deferral time is determined based on the current
 time rounded later in time to the next minute. The deferral time is the
-job's ``DeferralTime`` attribute. A new deferral time is calculated when
+job's :ad-attr:`DeferralTime` attribute. A new deferral time is calculated when
 the job first enters the job queue, when the job is re-queued, or when
 the job is released from the hold state. New deferral times for all jobs
 in the job queue using the CronTab functionality are recalculated when a
@@ -224,7 +224,7 @@ HTCondor after their execution is complete. The submit description file
 for a job must specify an appropriate
 :subcom:`on_exit_remove[and crondor]`
 command to ensure that a job remains in the queue. This job maintains
-its original ``ClusterId`` and ``ProcId``.
+its original :ad-attr:`ClusterId` and :ad-attr:`ProcId`.
 
 Submit Commands Usage Examples
 ''''''''''''''''''''''''''''''
@@ -302,7 +302,7 @@ Job Deferral
 :index:`of a job<single: of a job; deferral time>`
 
 The scheduling of jobs using HTCondor's CronTab feature
-calculates and utilizes the ``DeferralTime`` ClassAd attribute.
+calculates and utilizes the :ad-attr:`DeferralTime` ClassAd attribute.
 Job deferral allows the specification of the exact date and time at
 which a job is to begin executing. HTCondor attempts to match the job to
 an execution machine just like any other job, however, the job will wait
@@ -328,7 +328,7 @@ a deferral time. If it does, HTCondor calculates the number of seconds
 between the execution machine's current system time and the job's
 deferral time. If the deferral time is in the future, the job waits to
 begin execution. While a job waits, its job ClassAd attribute
-``JobStatus`` indicates the job is in the Running state. As the deferral
+:ad-attr:`JobStatus` indicates the job is in the Running state. As the deferral
 time arrives, the job begins to execute. If a job misses its execution
 time, that is, if the deferral time is in the past, the job is evicted
 from the execution machine and put on hold in the queue.
@@ -456,7 +456,7 @@ There are some limitations to HTCondor's job deferral feature.
    machine's system clock, and not the submission machine's system
    clock. Be mindful of the ramifications when the two clocks show
    dramatically different times.
--  A job's ``JobStatus`` attribute is always in the Running state when
+-  A job's :ad-attr:`JobStatus` attribute is always in the Running state when
    job deferral is used. There is currently no way to distinguish
    between a job that is executing and a job that is waiting for its
    deferral time.

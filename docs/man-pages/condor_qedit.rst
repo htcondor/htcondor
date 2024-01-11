@@ -36,17 +36,17 @@ ClassAd constraint expression. The *edit-list* can take one of 3 forms
 To ensure security and correctness, *condor_qedit* will not allow
 modification of the following ClassAd attributes:
 
--  ``Owner``
--  ``ClusterId``
--  ``ProcId``
--  ``MyType``
--  ``TargetType``
--  ``JobStatus``
+-  :ad-attr:`Owner`
+-  :ad-attr:`ClusterId`
+-  :ad-attr:`ProcId`
+-  :ad-attr:`MyType`
+-  :ad-attr:`TargetType`
+-  :ad-attr:`JobStatus`
 
-Since ``JobStatus`` may not be changed with *condor_qedit*, use
+Since :ad-attr:`JobStatus` may not be changed with *condor_qedit*, use
 *condor_hold* to place a job in the hold state, and use
 *condor_release* to release a held job, instead of attempting to modify
-``JobStatus`` directly.
+:ad-attr:`JobStatus` directly.
 
 If a job is currently running, modified attributes for that job will not
 affect the job until it restarts. As an example, for ``PeriodicRemove``

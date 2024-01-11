@@ -344,11 +344,11 @@ The following table summarizes how job ClassAd attributes will be translated int
 +-------------------+---------------------+
 | Job ClassAd       | Slurm               |
 +===================+=====================+
-| ``RequestMemory`` | ``--mem``           |
+| RequestMemory`    | ``--mem``           |
 +-------------------+---------------------+
-| ``BatchRuntime``  | ``--time``          |
+| BatchRuntime`     | ``--time``          |
 +-------------------+---------------------+
-| ``BatchProject``  | ``--account``       |
+| BatchProject`     | ``--account``       |
 +-------------------+---------------------+
 | ``Queue``         | ``--partition``     |
 +-------------------+---------------------+

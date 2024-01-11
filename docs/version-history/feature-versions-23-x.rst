@@ -53,7 +53,7 @@ New Features:
   optionally takes more than one eventlog to process at once.
   :jira:`2220`
 
-- Added job classad attribute ``ContainerImageSource``, a string which is
+- Added job classad attribute :ad-attr:`ContainerImageSource`, a string which is
   is set to the source of the image transfer.
   :jira:`1797`
 
@@ -111,7 +111,7 @@ New Features:
   :jira:`1533`
 
 - Startd now advertises when jobs are running with cgroup enforcement in
-  the slot attribute ``CgroupEnforced``
+  the slot attribute :ad-attr:`CgroupEnforced`
   :jira:`1532`
 
 - START_CRON_LOG_NON_ZERO_EXIT now also logs the stderr of the startd cron

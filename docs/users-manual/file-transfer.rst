@@ -45,10 +45,10 @@ command takes on one of three possible values:
    it is stored in.
 
 #. IF_NEEDED: HTCondor only transfers sandboxes when the job is matched with
-   a machine in a different ``FileSystemDomain`` than
+   a machine in a different :ad-attr:`FileSystemDomain` than
    the one the access point belongs to, as if
    should_transfer_files = YES. If the job is matched with a machine
-   in the same ``FileSystemDomain`` as the submitting machine, HTCondor 
+   in the same :ad-attr:`FileSystemDomain` as the submitting machine, HTCondor 
    will not transfer files and relies on the shared file system.
 #. NO: HTCondor's file transfer mechanism is disabled.  In this case is
    is the responsibility of the user to ensure that all data used by the

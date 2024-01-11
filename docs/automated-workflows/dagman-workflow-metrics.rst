@@ -62,9 +62,9 @@ Here is an explanation of each of the items in the file:
 -  ``duration``: the duration of the client, in seconds, with
    millisecond precision
 -  ``exitcode``: the :tool:`condor_dagman` exit code
--  ``dagman_id``: the value of the ``ClusterId`` attribute of the
+-  ``dagman_id``: the value of the :ad-attr:`ClusterId` attribute of the
    :tool:`condor_dagman` instance
--  ``parent_dagman_id``: the value of the ``ClusterId`` attribute of the
+-  ``parent_dagman_id``: the value of the :ad-attr:`ClusterId` attribute of the
    parent :tool:`condor_dagman` instance of this DAG; empty if this DAG is
    not a SUBDAG
 -  ``rescue_dag_number``: the number of the Rescue DAG being run, or 0

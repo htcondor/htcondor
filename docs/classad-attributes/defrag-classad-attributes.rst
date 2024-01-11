@@ -4,7 +4,7 @@ Defrag ClassAd Attributes
 :classad-attribute-def:`AvgDrainingBadput`
     Fraction of time CPUs in the pool have spent on jobs that were
     killed during draining of the machine. This is calculated in each
-    polling interval by looking at ``TotalMachineDrainingBadput``.
+    polling interval by looking at :ad-attr:`TotalMachineDrainingBadput`.
     Therefore, it treats evictions of jobs that do and do not produce
     checkpoints the same. When the *condor_startd* restarts, its
     counters start over from 0, so the average is only over the time
@@ -13,7 +13,7 @@ Defrag ClassAd Attributes
 :classad-attribute-def:`AvgDrainingUnclaimedTime`
     Fraction of time CPUs in the pool have spent unclaimed by a user
     during draining of the machine. This is calculated in each polling
-    interval by looking at ``TotalMachineDrainingUnclaimedTime``. When
+    interval by looking at :ad-attr:`TotalMachineDrainingUnclaimedTime`. When
     the *condor_startd* restarts, its counters start over from 0, so
     the average is only over the time since the daemons have been alive.
 

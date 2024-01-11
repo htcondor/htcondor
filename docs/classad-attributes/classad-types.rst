@@ -2,7 +2,7 @@ ClassAd Types
 =============
 
 ClassAd attributes vary, depending on the entity producing the ClassAd.
-Therefore, each ClassAd has an attribute named ``MyType``, which
+Therefore, each ClassAd has an attribute named :ad-attr:`MyType`, which
 describes the type of ClassAd. In addition, the *condor_collector*
 appends attributes to any daemon's ClassAd, whenever the
 *condor_collector* is queried. These additional attributes are listed
@@ -10,7 +10,7 @@ in the unnumbered subsection labeled ClassAd Attributes Added by the
 *condor_collector* on the
 :doc:`/classad-attributes/classad-attributes-added-by-collector` page.
 
-Here is a list of defined values for ``MyType``, as well as a reference
+Here is a list of defined values for :ad-attr:`MyType`, as well as a reference
 to a list attributes relevant to that type.
 
 ``Accounting``

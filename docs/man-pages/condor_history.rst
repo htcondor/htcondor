@@ -42,7 +42,7 @@ single line, and contains the following items:
  RUN_TIME
     Remote wall clock time accumulated by the job to date in days,
     hours, minutes, and seconds, given as the job ClassAd attribute
-    ``RemoteWallClockTime``.
+    :ad-attr:`RemoteWallClockTime`.
  ST
     Completion status of the job (C = completed and X = removed).
  COMPLETED
