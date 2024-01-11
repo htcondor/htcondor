@@ -41,9 +41,12 @@ extensions = [
     'index',
     'jira',
     'tool',
-    'classad-attribute-def',
     'ad-attr',
 ]
+
+# Remove once el7 support is dropped
+if (sys.version_info.major >= 3):
+    extensions.append('classad-attribute-def')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
