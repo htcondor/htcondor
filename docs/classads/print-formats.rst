@@ -229,8 +229,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
 ``BUFFER_IO_MISC``
    Used for the ``MISC`` column of the ``-io`` output of :tool:`condor_q`.
    This function constructs an IO string that varies by :ad-attr:`JobUniverse`.
-   The output for Standard universe jobs refers to ``FileSeekCount``, ``BufferSize`` and ``BufferBlockSize``.
-   For all other jobs it refers to :ad-attr:`TransferringInput`, :ad-attr:`TransferringOutput` and :ad-attr:`TransferQueued`.
+   It refers to :ad-attr:`TransferringInput`, :ad-attr:`TransferringOutput` and :ad-attr:`TransferQueued`.
 
 ``CPU_TIME``
    Used for the ``RUN_TIME`` or ``CPU_TIME`` column of the default :tool:`condor_q` output.
