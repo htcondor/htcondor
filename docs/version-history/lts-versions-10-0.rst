@@ -482,7 +482,7 @@ New Features:
 
 Bugs Fixed:
 
-- In the python bindings, the attribute ``ServerTime`` is now included
+- In the python bindings, the attribute :ad-attr:`ServerTime` is now included
   in job ads returned by ``Schedd.query()`` to support Fifemon.
   :jira:`1531`
 
@@ -538,7 +538,7 @@ New Features:
   OpenCL drivers are present on the host in directory ``/etc/OpenCL/vendors``.
   :jira:`1410`
 
-- The ``CompletionDate`` attribute of jobs is now undefined until such time as the job completes
+- The :ad-attr:`CompletionDate` attribute of jobs is now undefined until such time as the job completes
   previously it was 0.
   :jira:`1393`
 

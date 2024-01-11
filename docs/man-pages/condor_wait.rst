@@ -53,9 +53,9 @@ Options
  job ID
     A specific job or set of jobs to watch.
     :index:`use in<single: use in; job ID>`\ If the **job ID** is only the job
-    ClassAd attribute ``ClusterId``, then *condor_wait* waits for all
-    jobs with the given ``ClusterId``. If the **job ID** is a pair of
-    the job ClassAd attributes, given by ``ClusterId``.\ ``ProcId``,
+    ClassAd attribute :ad-attr:`ClusterId`, then *condor_wait* waits for all
+    jobs with the given :ad-attr:`ClusterId`. If the **job ID** is a pair of
+    the job ClassAd attributes, given by :ad-attr:`ClusterId`.\ :ad-attr:`ProcId`,
     then *condor_wait* waits for the specific job with this **job ID**.
     If this option is not specified, all jobs that exist in the log file
     when *condor_wait* is invoked will be watched.
@@ -84,7 +84,7 @@ This command waits for all jobs that exist in ``logfile`` to complete.
     $ condor_wait logfile 40
 
 This command waits for all jobs that exist in ``logfile`` with a job
-ClassAd attribute ``ClusterId`` of 40 to complete.
+ClassAd attribute :ad-attr:`ClusterId` of 40 to complete.
 
 .. code-block:: console
 

@@ -86,7 +86,7 @@ New Features:
   :jira:`1950`
 
 - Partitionable slots can now be directly claimed by a *condor_schedd*
-  (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
+  (i.e. the :ad-attr:`State` of the partitionable slot changes to ``Claimed``).
   While a slot is claimed, no other *condor_schedd* is able to create
   new dynamic slots to run jobs.
   This is controlled by the new configuration parameter
@@ -510,8 +510,8 @@ New Features:
   putting the affected jobs on hold. This matches the behavior for
   other grid universe job types.
   Grid ads in the collector now contain attributes
-  ``GridResourceUnavailableTimeReason`` and
-  ``GridResourceUnavailableTimeReasonCode``, which give details about
+  :ad-attr:`GridResourceUnavailableTimeReason` and
+  :ad-attr:`GridResourceUnavailableTimeReasonCode`, which give details about
   why the remote scheduling system is considered unavailable.
   :jira:`1582`
 
@@ -755,7 +755,7 @@ New Features:
 
 Bugs Fixed:
 
-- In the Python bindings, the attribute ``ServerTime`` is now included
+- In the Python bindings, the attribute :ad-attr:`ServerTime` is now included
   in job ads returned by ``Schedd.query()``.
   :jira:`1531`
 
@@ -806,7 +806,7 @@ New Features:
   :jira:`557`
 
 - Improved the validity testing of the Singularity / Apptainer container runtime software
-  at *condor_startd* startup.  If this testing fails, slot attribute ``HasSingularity`` will be
+  at *condor_startd* startup.  If this testing fails, slot attribute :ad-attr:`HasSingularity` will be
   set to ``false``, and attribute ``SingularityOfflineReason`` will contain error information.
   Also in the event of Singularity errors, more information is recorded into the *condor_starter*
   log file.
@@ -848,14 +848,14 @@ New Features:
   image type.
   :jira:`1401`
 
-- Added new Scheduler ClassAd attribute ``EffectiveFlockList`` that represents the
+- Added new Scheduler ClassAd attribute :ad-attr:`EffectiveFlockList` that represents the
   *condor_collector* addresses that a *condor_schedd* is actively sending flocked jobs.
   :jira:`1389`
 
 - Added new DAGMan node status called *Futile* that represents a node that will never run
   due to the failure of a node that the *Futile* node depends on either directly or
   indirectly through a chain of **PARENT/CHILD** relationships. Also, added a new ClassAd
-  attribute ``DAG_NodesFutile`` to count the number of *Futile* nodes in a **DAG**.
+  attribute :ad-attr:`DAG_NodesFutile` to count the number of *Futile* nodes in a **DAG**.
   :jira:`1456`
 
 - Improved error handling in the *condor_shadow* and *condor_starter*
@@ -875,7 +875,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug where ``HasSingularity`` would be advertised as true in cases
+- Fixed bug where :ad-attr:`HasSingularity` would be advertised as true in cases
   where it wouldn't work.
   :jira:`1274`
 

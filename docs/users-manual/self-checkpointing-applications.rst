@@ -384,5 +384,5 @@ checkpoints quickly takes a long time to start up. However, this method
 will work even with very old version of HTCondor.
 
 To use this method, set :subcom:`when_to_transfer_output` to
-``ON_EXIT_OR_EVICT`` and ``KillSig`` to the particular signal that
+``ON_EXIT_OR_EVICT`` and :ad-attr:`KillSig` to the particular signal that
 causes your job to checkpoint.

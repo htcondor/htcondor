@@ -244,7 +244,7 @@ is unlikely to be directly useful to you as an HTCondor user, but may
 help your HTCondor administrator understand the problem.
 
 If the VM fails to launch for other reasons, the job will be placed on
-hold and the reason placed in the job ClassAd's ``HoldReason``
+hold and the reason placed in the job ClassAd's :ad-attr:`HoldReason`
 attribute. The following table may help in understanding such reasons.
 
 VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM

@@ -100,8 +100,8 @@ the directory and file name at the destination.
 The plug-in is expected to do the transfer, exiting with status 0 if the
 transfer was successful, and a non-zero status if the transfer was not
 successful. When not successful, the job is placed on hold, and the job
-ClassAd attribute ``HoldReason`` will be set as appropriate for the job.
-The job ClassAd attribute ``HoldReasonSubCode`` will be set to the exit
+ClassAd attribute :ad-attr:`HoldReason` will be set as appropriate for the job.
+The job ClassAd attribute :ad-attr:`HoldReasonSubCode` will be set to the exit
 status of the plug-in.
 
 As an example of the transfer of a subset of output files, assume that
@@ -369,7 +369,7 @@ the usual channels for :tool:`condor_preen`.  You may specify how long
 up, so this timeout need only be long enough to complete a single checkpoint's
 worth of clean-up in order to make progress.
 
-(On non-Windows platforms, *condor_manifest* is spawned as the ``Owner`` of
+(On non-Windows platforms, *condor_manifest* is spawned as the :ad-attr:`Owner` of
 the job whose checkpoints are being cleaned-up; this is both safer and easier,
 since that user may have useful privileges (for example, filesystems may be
 mounted "root-squash").)

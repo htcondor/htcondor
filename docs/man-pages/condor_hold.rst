@@ -58,11 +58,11 @@ Options
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable :macro:`TOOL_DEBUG`.
  **-reason** *reasonstring*
-    Sets the job ClassAd attribute ``HoldReason`` to the value given by
+    Sets the job ClassAd attribute :ad-attr:`HoldReason` to the value given by
     *reasonstring*. *reasonstring* will be delimited by double quote
     marks on the command line, if it contains space characters.
  **-subcode** *number*
-    Sets the job ClassAd attribute ``HoldReasonSubCode`` to the integer
+    Sets the job ClassAd attribute :ad-attr:`HoldReasonSubCode` to the integer
     value given by *number*.
  *cluster*
     Hold all jobs in the specified cluster

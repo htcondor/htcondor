@@ -20,12 +20,12 @@ numerical priority is better. The default priority is 0.
 The node priority affects the order in which nodes that are ready (all
 of their parent nodes have finished successfully) at the same time will
 be submitted. The node priority also sets the node job's priority in the
-queue (that is, its ``JobPrio`` attribute), which affects the order in
+queue (that is, its :ad-attr:`JobPrio` attribute), which affects the order in
 which jobs will be run once they are submitted (see
 :ref:`users-manual/priorities-and-preemption:job priority` for more
 information). The node priority only affects the
 order of job submission within a given DAG; but once jobs are submitted,
-their ``JobPrio`` value affects the order in which they will be run
+their :ad-attr:`JobPrio` value affects the order in which they will be run
 relative to all jobs submitted by the same user.
 
 Sub-DAGs can have priorities, just as "regular" nodes can. (The priority

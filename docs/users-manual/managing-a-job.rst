@@ -398,7 +398,7 @@ use:
       $ condor_q  -hold  16.0
 
 This command prints information about the job, including the job ClassAd
-attribute ``HoldReason``.
+attribute :ad-attr:`HoldReason`.
 
 In the Job Event Log File
 -------------------------
@@ -416,7 +416,7 @@ event.
 The first field in an event is the numeric value assigned as the event
 type in a 3-digit format. The second field identifies the job which
 generated the event. Within parentheses are the job ClassAd attributes
-of ``ClusterId`` value, ``ProcId`` value, and the node number for
+of :ad-attr:`ClusterId` value, :ad-attr:`ProcId` value, and the node number for
 parallel universe jobs or a set of zeros (for jobs run under all other
 universes), separated by periods. The third field is the date and time
 of the event logging. The fourth field is a string that briefly

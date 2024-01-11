@@ -107,7 +107,7 @@ Machine ClassAd Attributes
 :classad-attribute-def:`CurrentRank`
     A float which represents this machine owner's affinity for running
     the HTCondor job which it is currently hosting. If not currently
-    hosting an HTCondor job, ``CurrentRank`` is 0.0. When a machine is
+    hosting an HTCondor job, :ad-attr:`CurrentRank` is 0.0. When a machine is
     claimed, the attribute's value is computed by evaluating the
     machine's ``Rank`` expression with respect to the current job's
     ClassAd.
@@ -125,7 +125,7 @@ Machine ClassAd Attributes
     of disk space available in the directory specified in the HTCondor
     configuration files by the :macro:`EXECUTE` macro, minus any space
     reserved with the :macro:`RESERVED_DISK` macro. For static slots, this value
-    will be the same as machine ClassAd attribute ``TotalSlotDisk``. For
+    will be the same as machine ClassAd attribute :ad-attr:`TotalSlotDisk`. For
     partitionable slots, this value will be the quantity of disk space
     remaining in the partitionable slot.
 
@@ -162,7 +162,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`EnteredCurrentActivity`
     Time at which the machine entered the current Activity (see
-    ``Activity`` entry above). On all platforms (including NT), this is
+    :ad-attr:`Activity` entry above). On all platforms (including NT), this is
     measured in the number of integer seconds since the Unix epoch
     (00:00:00 UTC, Jan 1, 1970).
 
@@ -182,7 +182,7 @@ Machine ClassAd Attributes
     for the job to use up its retirement time. If suspension happens,
     the upper bound on how long draining could take is unlimited. To
     avoid suspension during draining, the :macro:`SUSPEND` and :macro:`CONTINUE`
-    expressions could be configured to pay attention to the ``Draining``
+    expressions could be configured to pay attention to the :ad-attr:`Draining`
     attribute.
 
 :classad-attribute-def:`ExpectedMachineQuickDrainingBadput`
@@ -352,7 +352,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`RecentJobBusyTimeCount`
     The total number of jobs used to calulate the
-    ``RecentJobBusyTimeAvg`` attribute. This is also the the total
+    :ad-attr:`RecentJobBusyTimeAvg` attribute. This is also the the total
     number times a *condor_starter* has exited in the last 20 minutes.
 
 :classad-attribute-def:`RecentJobBusyTimeMax`
@@ -395,7 +395,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`RecentJobDurationCount`
     The total number of jobs used to calulate the
-    ``RecentJobDurationAvg`` attribute. This is the total number of jobs
+    :ad-attr:`RecentJobDurationAvg` attribute. This is the total number of jobs
     that began execution and have exited in the last 20 minutes.
 
 :classad-attribute-def:`RecentJobDurationMax`
@@ -433,11 +433,11 @@ Machine ClassAd Attributes
 :classad-attribute-def:`KeyboardIdle`
     The number of seconds since activity on any keyboard or mouse
     associated with this machine has last been detected. Unlike
-    ``ConsoleIdle``, ``KeyboardIdle`` also takes activity on
+    :ad-attr:`ConsoleIdle`, :ad-attr:`KeyboardIdle` also takes activity on
     pseudo-terminals into account. Pseudo-terminals have virtual
     keyboard activity from telnet and rlogin sessions. Note that
-    ``KeyboardIdle`` will always be equal to or less than
-    ``ConsoleIdle``. The value can be modified with
+    :ad-attr:`KeyboardIdle` will always be equal to or less than
+    :ad-attr:`ConsoleIdle`. The value can be modified with
     :macro:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
     :ref:`admin-manual/configuration-macros:condor_startd configuration file
     macros` section.
@@ -493,7 +493,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`Memory`
     The amount of RAM in MiB in this slot. For static slots, this value
-    will be the same as in ``TotalSlotMemory``. For a partitionable
+    will be the same as in :ad-attr:`TotalSlotMemory`. For a partitionable
     slot, this value will be the quantity remaining in the partitionable
     slot. 
     
@@ -586,9 +586,9 @@ Machine ClassAd Attributes
 :classad-attribute-def:`OpSysAndVer`
     A string indicating an operating system and a version number.
 
-    For Linux operating systems, it is the value of the ``OpSysName``
+    For Linux operating systems, it is the value of the :ad-attr:`OpSysName`
     attribute concatenated with the string version of the
-    ``OpSysMajorVer`` attribute:
+    :ad-attr:`OpSysMajorVer` attribute:
 
      ``"RedHat5"``
         for RedHat Linux version 5
@@ -622,26 +622,26 @@ Machine ClassAd Attributes
         for CERN's Scientific Linux version 6
 
     For MacOS operating systems, it is the value of the
-    ``OpSysShortName`` attribute concatenated with the string version of
-    the ``OpSysVer`` attribute:
+    :ad-attr:`OpSysShortName` attribute concatenated with the string version of
+    the :ad-attr:`OpSysVer` attribute:
 
      ``"MacOSX605"``
         for MacOS version 10.6.5 (Snow Leopard)
      ``"MacOSX703"``
         for MacOS version 10.7.3 (Lion)
 
-    For BSD operating systems, it is the value of the ``OpSysName``
+    For BSD operating systems, it is the value of the :ad-attr:`OpSysName`
     attribute concatenated with the string version of the
-    ``OpSysMajorVer`` attribute:
+    :ad-attr:`OpSysMajorVer` attribute:
 
      ``"FREEBSD7"``
         for FreeBSD version 7
      ``"FREEBSD8"``
         for FreeBSD version 8
 
-    For Windows operating systems, it is the value of the ``OpSys``
+    For Windows operating systems, it is the value of the :ad-attr:`OpSys`
     attribute concatenated with the string version of the
-    ``OpSysMajorVer`` attribute:
+    :ad-attr:`OpSysMajorVer` attribute:
 
      ``"WINDOWS500"``
         for Windows 2000
@@ -655,7 +655,7 @@ Machine ClassAd Attributes
         for Windows 7
 
 :classad-attribute-def:`OpSysLegacy`
-    A string that holds the long-standing values for the ``OpSys``
+    A string that holds the long-standing values for the :ad-attr:`OpSys`
     attribute. Currently supported operating systems have the following
     string definitions:
 
@@ -854,7 +854,7 @@ Machine ClassAd Attributes
 :classad-attribute-def:`RetirementTimeRemaining` when the
     running job can be evicted. ``MaxJobRetirementTime`` is the
     expression of how much retirement time the machine offers to new
-    jobs, whereas ``RetirementTimeRemaining`` is the negotiated amount
+    jobs, whereas :ad-attr:`RetirementTimeRemaining` is the negotiated amount
     of time remaining for the current running job. This may be less than
     the amount offered by the machine's ``MaxJobRetirementTime``
     expression, because the job may ask for less.
@@ -862,7 +862,7 @@ Machine ClassAd Attributes
 :classad-attribute-def:`SingularityVersion`
     A string containing the version of Singularity available, if the
     machine being advertised supports running jobs within a Singularity
-    container (see ``HasSingularity``).
+    container (see :ad-attr:`HasSingularity`).
 
 :classad-attribute-def:`SlotID`
     For SMP machines, the integer that identifies the slot. The value
@@ -883,7 +883,7 @@ Machine ClassAd Attributes
     This specifies the weight of the slot when calculating usage,
     computing fair shares, and enforcing group quotas. For example,
     claiming a slot with ``SlotWeight = 2`` is equivalent to claiming
-    two ``SlotWeight = 1`` slots. See the description of ``SlotWeight``
+    two ``SlotWeight = 1`` slots. See the description of :ad-attr:`SlotWeight`
     in :ref:`admin-manual/configuration-macros:condor_startd configuration
     file macros`.
 
@@ -927,13 +927,13 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`TotalCpus`
     The number of CPUs (cores) that are on the machine. This is in
-    contrast with ``Cpus``, which is the number of CPUs in the slot.
+    contrast with :ad-attr:`Cpus`, which is the number of CPUs in the slot.
 
 :classad-attribute-def:`TotalDisk`
     The quantity of disk space in KiB available across the machine (not
     the slot). For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
-    attribute ``TotalSlotDisk``.
+    attribute :ad-attr:`TotalSlotDisk`.
 
 :classad-attribute-def:`TotalLoadAvg`
     A floating point number representing the current load average summed
@@ -954,25 +954,25 @@ Machine ClassAd Attributes
     The quantity of RAM in MiB available across the machine (not the
     slot). For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
-    attribute ``TotalSlotMemory``.
+    attribute :ad-attr:`TotalSlotMemory`.
 
 :classad-attribute-def:`TotalSlotCpus`
     The number of CPUs (cores) in this slot. For static slots, this
-    value will be the same as in ``Cpus``.
+    value will be the same as in :ad-attr:`Cpus`.
 
 :classad-attribute-def:`TotalSlotDisk`
     The quantity of disk space in KiB given to this slot. For static
     slots, this value will be the same as machine ClassAd attribute
-    ``Disk``. For partitionable slots, where there is one partitionable
+    :ad-attr:`Disk`. For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
-    attribute ``TotalDisk``.
+    attribute :ad-attr:`TotalDisk`.
 
 :classad-attribute-def:`TotalSlotMemory`
     The quantity of RAM in MiB given to this slot. For static slots,
-    this value will be the same as machine ClassAd attribute ``Memory``.
+    this value will be the same as machine ClassAd attribute :ad-attr:`Memory`.
     For partitionable slots, where there is one partitionable slot per
     machine, this value will be the same as machine ClassAd attribute
-    ``TotalMemory``.
+    :ad-attr:`TotalMemory`.
 
 :classad-attribute-def:`TotalSlots`
     A sum of the static slots, partitionable slots, and dynamic slots on
@@ -1135,7 +1135,7 @@ into the machine ClassAd whenever a resource is in the Claimed state:
 :classad-attribute-def:`RemoteNegotiatingGroup`
     The accounting group name under which this resource negotiated when
     it was claimed. This attribute will frequently be the same as
-    attribute ``RemoteGroup``, but it may differ in cases such as when
+    attribute :ad-attr:`RemoteGroup`, but it may differ in cases such as when
     configuration variable :macro:`GROUP_AUTOREGROUP`  is ``True``, in
     which case it will have the name of the root group, identified as ``<none>``.
 
@@ -1144,11 +1144,11 @@ into the machine ClassAd whenever a resource is in the Claimed state:
 
 :classad-attribute-def:`RemoteUser`
     The name of the user who is currently using this resource. In
-    general, this will always be the same as the ``RemoteOwner``, but in
+    general, this will always be the same as the :ad-attr:`RemoteOwner`, but in
     some cases, a resource can be claimed by one entity that hands off
     the resource to another entity which uses it. In that case,
-    ``RemoteUser`` would hold the name of the entity currently using the
-    resource, while ``RemoteOwner`` would hold the name of the entity
+    :ad-attr:`RemoteUser` would hold the name of the entity currently using the
+    resource, while :ad-attr:`RemoteOwner` would hold the name of the entity
     that claimed the resource.
 
 :classad-attribute-def:`RemoteScheddName`
@@ -1161,14 +1161,14 @@ into the machine ClassAd whenever a resource is in the Claimed state:
 :classad-attribute-def:`PreemptingUser`
     The name of the user who is preempting the job that is currently
     running on this resource. The relationship between
-    ``PreemptingUser`` and ``PreemptingOwner`` is the same as the
-    relationship between ``RemoteUser`` and ``RemoteOwner``.
+    :ad-attr:`PreemptingUser` and :ad-attr:`PreemptingOwner` is the same as the
+    relationship between :ad-attr:`RemoteUser` and :ad-attr:`RemoteOwner`.
 
 :classad-attribute-def:`PreemptingRank`
     A float which represents this machine owner's affinity for running
     the HTCondor job which is waiting for the current job to finish or
     be preempted. If not currently hosting an HTCondor job,
-    ``PreemptingRank`` is undefined. When a machine is claimed and there
+    :ad-attr:`PreemptingRank` is undefined. When a machine is claimed and there
     is already a job running, the attribute's value is computed by
     evaluating the machine's ``Rank`` expression with respect to the
     preempting job's ClassAd.
@@ -1209,7 +1209,7 @@ no job are running, none of these attributes will be defined.
     be defined and will hold the time stamp of when the last periodic
     checkpoint was begun. If the job has yet to perform a periodic
     checkpoint, or cannot checkpoint at all, the
-    ``LastPeriodicCheckpoint`` attribute will not be defined.
+    :ad-attr:`LastPeriodicCheckpoint` attribute will not be defined.
 
 
 :index:`offline ClassAd`
@@ -1222,7 +1222,7 @@ offline, that is, hibernating.
     matched to a job, if the machine were online. In addition, the slot1
     ClassAd of a multi-slot machine will have
     ``slot<X>_MachineLastMatchTime`` defined, where ``<X>`` is replaced
-    by the slot id of each of the slots with ``MachineLastMatchTime``
+    by the slot id of each of the slots with :ad-attr:`MachineLastMatchTime`
     defined.
 
 :classad-attribute-def:`Offline`
@@ -1323,19 +1323,19 @@ The following attributes are advertised for a machine in which
 partitionable slot preemption is enabled.
 
 :classad-attribute-def:`ChildAccountingGroup`
-    A ClassAd list containing the values of the ``AccountingGroup``
+    A ClassAd list containing the values of the :ad-attr:`AccountingGroup`
     attribute for each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`ChildActivity`
-    A ClassAd list containing the values of the ``Activity`` attribute
+    A ClassAd list containing the values of the :ad-attr:`Activity` attribute
     for each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`ChildCpus`
-    A ClassAd list containing the values of the ``Cpus`` attribute for
+    A ClassAd list containing the values of the :ad-attr:`Cpus` attribute for
     each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`ChildCurrentRank`
-    A ClassAd list containing the values of the ``CurrentRank``
+    A ClassAd list containing the values of the :ad-attr:`CurrentRank`
     attribute for each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`ChildEnteredCurrentState`
@@ -1343,7 +1343,7 @@ partitionable slot preemption is enabled.
     attribute for each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`ChildMemory`
-    A ClassAd list containing the values of the ``Memory`` attribute for
+    A ClassAd list containing the values of the :ad-attr:`Memory` attribute for
     each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`ChildName`
@@ -1351,20 +1351,20 @@ partitionable slot preemption is enabled.
     each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`ChildRemoteOwner`
-    A ClassAd list containing the values of the ``RemoteOwner``
+    A ClassAd list containing the values of the :ad-attr:`RemoteOwner`
     attribute for each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`ChildRemoteUser`
-    A ClassAd list containing the values of the ``RemoteUser`` attribute
+    A ClassAd list containing the values of the :ad-attr:`RemoteUser` attribute
     for each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`ChildRetirementTimeRemaining`
     A ClassAd list containing the values of the
-    ``RetirementTimeRemaining`` attribute for each dynamic slot of the
+    :ad-attr:`RetirementTimeRemaining` attribute for each dynamic slot of the
     partitionable slot.
 
 :classad-attribute-def:`ChildState`
-    A ClassAd list containing the values of the ``State`` attribute for
+    A ClassAd list containing the values of the :ad-attr:`State` attribute for
     each dynamic slot of the partitionable slot.
 
 :classad-attribute-def:`PslotRollupInformation`
@@ -1374,7 +1374,7 @@ partitionable slot preemption is enabled.
     *condor_negotiator* knows when partitionable slot preemption is
     possible and can directly preempt a dynamic slot when appropriate.
 
-The single attribute, ``CurrentTime``, is defined by the
+The single attribute, :ad-attr:`CurrentTime`, is defined by the
 ClassAd environment.
 
 :classad-attribute-def:`CurrentTime`

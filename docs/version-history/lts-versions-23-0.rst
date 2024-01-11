@@ -45,7 +45,7 @@ Bugs Fixed:
   :jira:`2201`
 
 - Fixed bug where DAG node jobs declared inline inside a DAG file
-  would fail to set the Job ClassAd attribute ``JobSubmitMethod``.
+  would fail to set the Job ClassAd attribute :ad-attr:`JobSubmitMethod`.
   :jira:`2184`
 
 - Fixed ``SyntaxWarning`` raised by Python 3.12 in scripts packaged
@@ -251,8 +251,8 @@ Bugs Fixed:
   an assertion check and crash.
   :jira:`2051`
 
-- The job attributes ``CpusProvisioned``, ``DiskProvisioned``, and
-  ``MemoryProvisioned`` are now updated for Condor-C and Job Router jobs.
+- The job attributes :ad-attr:`CpusProvisioned`, :ad-attr:`DiskProvisioned`, and
+  :ad-attr:`MemoryProvisioned` are now updated for Condor-C and Job Router jobs.
   :jira:`2069`
 
 - Updated HTCondor Windows binaries that are statically linked to the curl library to use curl version 8.4.0.
@@ -287,7 +287,7 @@ New Features:
   The configuration template ``use FEATURE : StaticSlots`` was added for admins wanting the old behavior.
   :jira:`2026`
 
-- The ``TargetType`` attribute is no longer a required attribute in most Classads.  It is still used for
+- The :ad-attr:`TargetType` attribute is no longer a required attribute in most Classads.  It is still used for
   queries to the *condor_collector* and it remains in the Job ClassAd and the Machine ClassAd because
   of older versions of HTCondor require it to be present.
   :jira:`1997`

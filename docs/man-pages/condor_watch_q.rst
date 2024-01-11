@@ -56,7 +56,7 @@ use the ``-clusters`` option, passing the cluster ID:
 
 To track jobs from a specific user,
 use the ``-users`` option, passing the user's name
-the actual query will be the for the ``Owner`` job ad attribute):
+the actual query will be the for the :ad-attr:`Owner` job ad attribute):
 
 .. code-block:: bash
 

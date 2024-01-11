@@ -172,7 +172,7 @@ Options
     displayed by *condor_q*. If omitted DAGMan will set the batch
     name to ``DagFile+ClusterId`` where *DagFile* is the name of
     the primary DAG submitted DAGMan and *ClusterId* is the DAGMan
-    proper jobs ``ClusterId``. The batch name is set in all jobs
+    proper jobs :ad-attr:`ClusterId`. The batch name is set in all jobs
     submitted by DAGMan and propagated down into sub-DAGs. Note:
     set the batch name to ' ' (space) to avoid overriding batch
     names specified in node job submit files.
@@ -222,7 +222,7 @@ Options
      the DAGMan manager jobs **environment**.
  **-insert_env** *Key=Value*
      This optional argument takes a delimited string of *Key=Value* pairs
-     to explicitly set into the ``.condor.sub`` files ``environment`` macro.
+     to explicitly set into the ``.condor.sub`` files :ad-attr:`Environment` macro.
      The base delimiter is a semicolon that can be overriden by setting
      the first character in the string to a valid delimiting character.
      If multiple **-insert_env** flags contain the same *Key* then the last

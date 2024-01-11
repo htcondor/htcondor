@@ -221,8 +221,8 @@ The available output data are as follows:
     (Non-batch mode only) The peak amount of memory in Mbytes consumed
     by the job; note this value is only refreshed periodically. The
     actual value reported is taken from the job ClassAd attribute
-    ``MemoryUsage`` if this attribute is defined, and from job attribute
-    ``ImageSize`` otherwise.
+    :ad-attr:`MemoryUsage` if this attribute is defined, and from job attribute
+    :ad-attr:`ImageSize` otherwise.
  CMD
     (Non-batch mode only) The name of the executable. For EC2 jobs, this
     field is arbitrary.
@@ -514,8 +514,8 @@ Options
     an expression, then the format option will be silently skipped. %r
     prints the unevaluated, or raw values. The conversion specifier must
     match the type of the attribute or expression. %s is suitable for
-    strings such as ``Owner``, %d for integers such as ``ClusterId``,
-    and %f for floating point numbers such as ``RemoteWallClockTime``.
+    strings such as :ad-attr:`Owner`, %d for integers such as :ad-attr:`ClusterId`,
+    and %f for floating point numbers such as :ad-attr:`RemoteWallClockTime`.
     %v identifies the type of the attribute, and then prints the value
     in an appropriate format. %V identifies the type of the attribute,
     and then prints the value in an appropriate format as it would

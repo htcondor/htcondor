@@ -114,7 +114,7 @@ terminates further evaluation of other submit requirements, and is the
 only requirement reported. Each submit requirement is evaluated in the
 context of the *condor_schedd* ClassAd, which is the ``MY.`` name space
 and the job ClassAd, which is the ``TARGET.`` name space. Note that
-``JobUniverse`` and ``RequestMemory`` are both job ClassAd attributes.
+:ad-attr:`JobUniverse` and :ad-attr:`RequestMemory` are both job ClassAd attributes.
 
 Further configuration may associate a rejection reason with a submit
 requirement with the :macro:`SUBMIT_REQUIREMENT_<Name>_REASON`.
@@ -172,7 +172,7 @@ the minimum request memory, you could use the following configuration.
     SUBMIT_REQUIREMENT_OneGig_REASON = "As of <date>, the minimum requested memory will be 1024."
     SUBMIT_REQUIREMENT_OneGig_IS_WARNING = TRUE
 
-When a user runs :tool:`condor_submit` to submit a job with ``RequestMemory``
+When a user runs :tool:`condor_submit` to submit a job with :ad-attr:`RequestMemory`
 between 512 and 1024, they will see (something like) the following,
 assuming that the job meets all the other requirements.
 

@@ -26,9 +26,9 @@ Options
  **-help**
     Print usage information
  **-arch**
-    Print this machine's ClassAd value for ``Arch``
+    Print this machine's ClassAd value for :ad-attr:`Arch`
  **-opsys**
-    Print this machine's ClassAd value for ``OpSys``
+    Print this machine's ClassAd value for :ad-attr:`OpSys`
  **-syscall**
     Get any requested version and/or platform information from the
     ``libcondorsyscall.a`` that this HTCondor pool is configured to use,

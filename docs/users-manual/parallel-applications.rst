@@ -23,14 +23,14 @@ number of machines (slots) for the parallel universe job, and when a
 sufficient number of machines are claimed, the parallel job is started
 on each claimed slot.
 
-Each invocation of :tool:`condor_submit` assigns a single ``ClusterId`` for
+Each invocation of :tool:`condor_submit` assigns a single :ad-attr:`ClusterId` for
 what is considered the single parallel job submitted. The
 :subcom:`machine_count[example]`
 submit command identifies how many machines (slots) are to be allocated.
 Each instance of the :subcom:`queue[with parallel universe]`
 submit command acquires and claims the number of slots specified by
 :subcom:`machine_count`. Each of these slots shares a common job ClassAd and
-will have the same ``ProcId`` job ClassAd attribute value.
+will have the same :ad-attr:`ProcId` job ClassAd attribute value.
 
 Once the correct number of machines are claimed, the
 :subcom:`executable[with parallel universe]` is started
@@ -178,7 +178,7 @@ RedHat platforms, the requirements expression may specify this:
     queue
 
 The machine selection may be further narrowed, instead using the
-``OpSysAndVer`` attribute.
+:ad-attr:`OpSysAndVer` attribute.
 
 .. code-block:: condor-submit
 
@@ -253,11 +253,11 @@ command that also specifies the number of needed machines.
     queue
 
 The dedicated scheduler acquires and claims four machines. All four
-share the same value of ``ClusterId``, as this value is associated with
+share the same value of :ad-attr:`ClusterId`, as this value is associated with
 this single parallel job. The existence of a second
 :subcom:`queue[with parallel universe]` command causes a total
-of two ``ProcId`` values to be assigned for this parallel job. The
-``ProcId`` values are assigned based on ordering within the submit
+of two :ad-attr:`ProcId` values to be assigned for this parallel job. The
+:ad-attr:`ProcId` values are assigned based on ordering within the submit
 description file. Value 0 will be assigned for the single executable
 that must be executed on machine1@example.com, and the value 1 will be
 assigned for the other three that must be executed elsewhere.
@@ -292,7 +292,7 @@ multiple cores within the same slot, multi-core slots may be specified.
 
 This parallel job causes the scheduler to match and claim two machines,
 where each of the machines (slots) has eight cores. The parallel job is
-assigned a single ``ClusterId`` and a single ``ProcId``, meaning that
+assigned a single :ad-attr:`ClusterId` and a single :ad-attr:`ProcId`, meaning that
 there is a single job ClassAd for this job.
 
 The executable, ``foo.sh``, is started at the same time on a single core
