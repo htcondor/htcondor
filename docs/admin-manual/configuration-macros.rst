@@ -3628,45 +3628,67 @@ section.
 .. warning::
    The per job filesystem feature is a work in progress and not currently supported.
 
-The following macros control if the *condor_startd* daemon should
-create a custom filesystem for the job's scratch directory.
-This allows HTCondor to prevent the job
-from using more scratch space than provisioned.
+The following macros control if the *condor_startd* daemon should create a
+custom filesystem for the job's scratch directory. This allows HTCondor to
+prevent the job from using more scratch space than provisioned.
 
 :macro-def:`STARTD_ENFORCE_DISK_LIMITS[STARTD]`
     This boolean value, which is only evaluated on Linux systems, tells
     the *condor_startd* whether to make an ephemeral filesystem for the
     scratch execute directory for jobs.  The default is ``False``. This
     should only be set to true on HTCondor installations that have root
-    privilege.
-    When ``true``, you must set :macro:`THINPOOL_NAME` and
-    :macro:`THINPOOL_VOLUME_GROUP_NAME`,
-    or alternatively set :macro:`THINPOOL_BACKING_FILE`.
+    privilege. When ``true``, you must set :macro:`LVM_VOLUME_GROUP_NAME`
+    and :macro:`LVM_THINPOOL_NAME`, or alternatively set :macro:`LVM_BACKING_FILE`.
+    If ``true`` and required pre-made LVM components are not defined
+    then HTCondor will default to using the :macro:`LVM_BACKING_FILE`.
 
-:macro-def:`THINPOOL_NAME[STARTD]`
-    This string-valued parameter has no default, and should be set to the
-    Linux LVM logical volume to be used for ephemeral execute directories.
-    ``"htcondor_lv"`` might be a good choice.  This setting only matters when 
-    :macro:`STARTD_ENFORCE_DISK_LIMITS` is ``True``, and HTCondor has root
-    privilege.
+.. note::
+    :macro:`LVM_THINPOOL_NAME` only needs to be set if Startd disk enforcement
+    is using thin provisioning for logical volumes. This behavior is dictated
+    by :macro:`LVM_USE_THIN_PROVISIONING`.
 
-:macro-def:`THINPOOL_VOLUME_GROUP_NAME[STARTD]`
-    This string-valued parameter has no default, and should be set to the
-    name of the Linux LVM volume group to be used for logical volumes
-    for ephemeral execute directories.
-    ``"htcondor_vg"`` might be a good choice.  This setting only matters when 
-    :macro:`STARTD_ENFORCE_DISK_LIMITS` is True, and HTCondor has root
-    privilege.
+:macro-def:`LVM_USE_THIN_PROVISIONING[STARTD]`
+    A boolean value that defaults to ``True``. When ``True`` HTCondor will create
+    thin provisioned logical volumes from a backing thin pool logical volume for
+    ephemeral execute directories. If ``False`` then HTCondor will create linear
+    logical volumes for ephemeral execute directories.
 
-:macro-def:`THINPOOL_BACKING_FILE[STARTD]`
-    This string-valued parameter has no default.  If a rootly HTCondor
-    does not have a Linux LVM configured, a single large file can be used
-    as the backing store for ephemeral file systems for execute directories.
-    This parameter should be set to the path of a large, pre-created file
-    to hold the blocks these filesystems are created from.
+:macro-def:`LVM_THINPOOL_NAME[STARTD]`
+    A string value that represents an external pre-made Linux LVM thin-pool
+    type logical volume to be used as a backing pool for ephemeral execute
+    directories. This setting only matters when :macro:`STARTD_ENFORCE_DISK_LIMITS`
+    is ``True``, and HTCondor has root privilege. This option does not have
+    a default value.
 
-:macro-def:`THINPOOL_HIDE_MOUNT[STARTD]`
-    A boolean value that defaults to ``false``.  When thinpool ephemeral
+:macro-def:`LVM_VOLUME_GROUP_NAME[STARTD]`
+    A string value that represents an external pre-made Linux LVM volume
+    group to be used to create logical volumes for ephemeral execute
+    directories. This setting only matters when :macro:`STARTD_ENFORCE_DISK_LIMITS`
+    is True, and HTCondor has root privilege. This option does not have a
+    default value.
+
+:macro-def:`LVM_BACKING_FILE[STARTD]`
+    A string valued parameter that defaults to ``$(SPOOL)/startd_disk.img``.
+    If a rootly HTCondor does not have pre-made Linux LVM components configured,
+    a single large file will be used as the backing store for ephemeral file
+    systems for execute directories. This parameter should be set to the path of
+    a large, pre-created file to hold the blocks these filesystems are created from.
+
+:macro-def:`LVM_BACKING_FILE_SIZE_MB[STARTD]`
+    An integer value that represents the size in Megabytes to allocate for
+    the ephemeral backing file described by :macro:`LVM_BACKING_FILE`. This
+    option default to 10240 (10GB).
+
+:macro-def:`LVM_THIN_LV_EXTRA_SIZE_MB[STARTD]`
+    An integer value that represents size in Megabytes to be added onto the size
+    of a thinly provisioned logical volume for an ephemeral execute directory.
+    This option only applies when :macro:`LVM_USE_THIN_PROVISIONING` is ``True``.
+    This extra space over will over provision the backing thin pool while providing
+    a buffer to better catch over use of disk before a job gets ``ENOSPC`` errors.
+    The default value is 2000 (2GB).
+
+:macro-def:`LVM_HIDE_MOUNT[STARTD]`
+    A boolean value that defaults to ``false``.  When LVM ephemeral
     filesystems are enabled (as described above), if this knob is
     set to ``true``, the mount will only be visible to the job and the
     starter.  Any process in any other process tree will not be able

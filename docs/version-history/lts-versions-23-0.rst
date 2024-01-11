@@ -9,7 +9,7 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
     The configuration macros JOB_ROUTER_DEFAULTS, JOB_ROUTER_ENTRIES, JOB_ROUTER_ENTRIES_CMD,
     and JOB_ROUTER_ENTRIES_FILE are deprecated and will be removed for V24 of HTCondor. New
     configuration syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and
-    JOB_ROUTER_ROUTE_<name>. Note: The removal will occur during the lifetime of the
+    JOB_ROUTER_ROUTE_<Name>. Note: The removal will occur during the lifetime of the
     HTCondor V23 feature series.
     :jira:`1968`
 

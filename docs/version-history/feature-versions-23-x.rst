@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added ability for administrators to specify whether Startd disk enforcement creates
+  thin or thick provisioned logical volumes for a jobs emphemeral execute directory.
+  This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.
+  :jira:`1783`
 
 Bugs Fixed:
 
