@@ -224,11 +224,11 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
    Used for the ``BATCH_NAME`` column of the default output of :tool:`condor_q`.
    This function constructs a batch name string using value of the :ad-attr:`JobBatchName`
    attribute if it exists, otherwise it constructs a batch name from
-   ``JobUniverse``, :ad-attr:`ClusterId`, :ad-attr:`DAGManJobId`, and ``DAGNodeName``.
+   :ad-attr:`JobUniverse`, :ad-attr:`ClusterId`, :ad-attr:`DAGManJobId`, and ``DAGNodeName``.
 
 ``BUFFER_IO_MISC``
    Used for the ``MISC`` column of the ``-io`` output of :tool:`condor_q`.
-   This function constructs an IO string that varies by ``JobUniverse``.
+   This function constructs an IO string that varies by :ad-attr:`JobUniverse`.
    The output for Standard universe jobs refers to ``FileSeekCount``, ``BufferSize`` and ``BufferBlockSize``.
    For all other jobs it refers to ``TransferrringInput``, :ad-attr:`TransferringOutput` and :ad-attr:`TransferQueued`.
 
@@ -292,7 +292,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
 
 ``JOB_UNIVERSE``
    Used for the ``UNIVERSE`` column of the ``-idle`` and ``-autocluster`` output of :tool:`condor_q`.
-   This function converts an integer to a string using the conversion for ``JobUniverse`` values.
+   This function converts an integer to a string using the conversion for :ad-attr:`JobUniverse` values.
    Values that are outside the range of valid universes are rendered as ``Unknown``.
 
 ``MEMORY_USAGE``
@@ -322,7 +322,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
 
 ``REMOTE_HOST``
    Used for the ``HOST(S)`` column of the ``-run`` output of :tool:`condor_q`.
-   This function extracts the host name from a job attribute appropriate to the ``JobUniverse`` value of the job.
+   This function extracts the host name from a job attribute appropriate to the :ad-attr:`JobUniverse` value of the job.
    For Local and Scheduler universe jobs, the Schedd that was queried is used using a variable internal to :tool:`condor_q`.
    For grid universe jobs, the :ad-attr:`EC2RemoteVirtualMachineName` or ``GridResources`` attributes are used.
    for all other universes the ``RemoteHost`` job attribute is used.

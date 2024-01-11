@@ -114,7 +114,7 @@ terminates further evaluation of other submit requirements, and is the
 only requirement reported. Each submit requirement is evaluated in the
 context of the *condor_schedd* ClassAd, which is the ``MY.`` name space
 and the job ClassAd, which is the ``TARGET.`` name space. Note that
-``JobUniverse`` and :ad-attr:`RequestMemory` are both job ClassAd attributes.
+:ad-attr:`JobUniverse` and :ad-attr:`RequestMemory` are both job ClassAd attributes.
 
 Further configuration may associate a rejection reason with a submit
 requirement with the :macro:`SUBMIT_REQUIREMENT_<Name>_REASON`.

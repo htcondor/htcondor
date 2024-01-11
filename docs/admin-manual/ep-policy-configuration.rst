@@ -4593,7 +4593,7 @@ what output is expected, and, when relevant, the exit status expected.
 
     The following list of attributes are optional:
 
-    ``JobUniverse``
+    :ad-attr:`JobUniverse`
         This attribute defines what HTCondor job
         :index:`JobUniverse<single: JobUniverse; optional attributes>`\ universe to use
         for the given FetchWork application. The only tested universes are vanilla
@@ -4654,13 +4654,13 @@ what output is expected, and, when relevant, the exit status expected.
         :index:`Args<single: Args; optional attributes>`\ arguments to be supplied
         to the program on the command-line. The arguments are delimited
         (separated) by space characters. There is no default. If the
-        ``JobUniverse`` corresponds to the Java universe, the first argument
+        :ad-attr:`JobUniverse` corresponds to the Java universe, the first argument
         must be the name of the class containing ``main``. It is a string
         attribute, and must therefore be enclosed in quotation marks (").
 
     ``JarFiles``
         This string attribute is only used if
-        :index:`JarFiles<single: JarFiles; optional attributes>`\ ``JobUniverse`` is 10
+        :index:`JarFiles<single: JarFiles; optional attributes>`\ :ad-attr:`JobUniverse` is 10
         (the Java universe). If a given FetchWork application is a Java program,
         specify the JAR files that the program requires with this attribute.
         There is no default. It is a string attribute, and must therefore be

@@ -1098,7 +1098,7 @@ all attributes.
 :index:`vm<pair: vm; universe>`
 
 
-``JobUniverse``
+:classad-attribute-def:`JobUniverse`
     Integer which indicates the job universe.
 
     +-------+-----------------+
