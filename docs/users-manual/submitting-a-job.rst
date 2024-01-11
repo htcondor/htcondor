@@ -1223,29 +1223,30 @@ the job. For example, a job that needs 1 GPU uses
 
 Because there are different capabilities among GPUs, your job might need
 to further qualify which GPU is required. The submit command
-:subcom:`require_gpus` does this.  For example, to request  a CUDA GPU whose
-CUDA Capability is at least 8, add the following to your submit file:
+:subcom:`require_gpus` does this, or in newer versions of HTCondor, there are
+special commands for some of the GPU properties like :subcom:`gpus_minimum_capability`
+and :subcom:`gpus_minimum_memory`.
+For example, to request a CUDA GPU whose CUDA Capability is at least 8, add one
+of the following to your submit file:
 
 .. code-block:: condor-submit
 
     request_GPUs = 1
     require_gpus = Capability >= 8.0
 
-To see which CUDA capabilities are available in your HTCondor pool,
-you can run the command
+.. code-block:: condor-submit
+
+    request_GPUs = 1
+    # works in HTCondor 23.5 or later
+    gpus_minimum_capability = 8.0
+    gpus_minimum_memory = 4GB
+
+To see a summary of the GPU devices HTCondor has detected on your pool,
+including the device names, Capability and Memory, run the following command.
 
 .. code-block:: console
 
-      $ condor_status -af Name GPUS_Capability
-
-
-To see which GPU devices HTCondor has detected on your pool,
-you can run the command
-
-.. code-block:: console
-
-      $ condor_status -af Name GPUS_DeviceName
-
+      $ condor_status -gpus -compact
 
 Access to GPU resources by an HTCondor job needs special configuration
 of the machines that offer GPUs. Details of how to set up the
