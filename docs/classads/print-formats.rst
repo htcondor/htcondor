@@ -324,7 +324,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
    Used for the ``HOST(S)`` column of the ``-run`` output of :tool:`condor_q`.
    This function extracts the host name from a job attribute appropriate to the :ad-attr:`JobUniverse` value of the job.
    For Local and Scheduler universe jobs, the Schedd that was queried is used using a variable internal to :tool:`condor_q`.
-   For grid universe jobs, the :ad-attr:`EC2RemoteVirtualMachineName` or ``GridResources`` attributes are used.
+   For grid universe jobs, the :ad-attr:`EC2RemoteVirtualMachineName` or :ad-attr:`GridResource` attributes are used.
    for all other universes the ``RemoteHost`` job attribute is used.
 
 ``STDU_GOODPUT``
