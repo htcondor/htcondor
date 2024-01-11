@@ -864,8 +864,7 @@ COMMANDS FOR MATCHMAKING
     ``<name>`` must be at least two characters, and must not begin with ``_``.
     If ``<name>`` is either ``Cpu`` or ``Gpu`` a warning will be printed since these are common typos.
 
- :subcom-def:`gpus_minimum_capability` = <version>
- :subcom-def:`gpus_maximum_capability` = <version>
+ :subcom-def:`gpus_minimum_capability` = <version> :subcom-def:`gpus_maximum_capability` = <version>
     The mininum or maximum required Capability value of the GPU, inclusive. Specified
     as a floating point value (for example ``8.5``).
     Use of one or more of these commands will create or modify the :subcom:`require_gpus` expression
