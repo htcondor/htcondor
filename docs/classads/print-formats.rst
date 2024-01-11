@@ -61,7 +61,7 @@ or after the classad output.
   Shorthand for ``NOTITLE`` ``NOHEADER`` ``NOSUMMARY``
 
 In the descriptions below ``<string>`` is text.  If the text starts with a single quote, then it continues to
-the next single quote.  If it starts with a doublequote, it continues to the next doublequote.  If it
+the next single quote.  If it starts with a double quote, it continues to the next double quote.  If it
 starts with neither, then it continues until the next space or tab.  a \n, \r or \t inside the string will
 be converted into a newline, carriage return or tab character respectively.
 
@@ -115,7 +115,7 @@ The prototype for each formatting line is:
    Left align the data to the given width
 
 ``RIGHT``
-   Rigth align the data to the given width
+   Right align the data to the given width
 
 ``NOPREFIX``
    Do not include the ``FIELDPREFIX`` string for this field
@@ -234,7 +234,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
 
 ``CPU_TIME``
    Used for the ``RUN_TIME`` or ``CPU_TIME`` column of the default :tool:`condor_q` output.
-   The result of the function depends on wether the ``-currentrun`` argument is used with :tool:`condor_q`.
+   The result of the function depends on whether the ``-currentrun`` argument is used with :tool:`condor_q`.
    If :ad-attr:`RemoteUserCpu` is undefined, this function returns undefined. It returns the value of :ad-attr:`RemoteUserCpu`
    if it is non-zero.  Otherwise it reports the amount of time that the *condor_shadow* has been alive.
    If the ``-currentrun`` argument is used with :tool:`condor_q`, this will be the shadow lifetime for the current run only.
@@ -259,7 +259,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
 
 ``GRID_RESOURCE``
    Used for the ``GRID->MANAGER    HOST`` column of the ``-grid`` output of :tool:`condor_q`.
-   This funciton extracts and returns the manager and host from the :ad-attr:`GridResource` attribute.
+   This function extracts and returns the manager and host from the :ad-attr:`GridResource` attribute.
    For ec2 jobs the host will be the value of :ad-attr:`EC2RemoteVirtualMachineName` attribute.
 
 ``GRID_STATUS``
@@ -292,7 +292,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
 
 ``JOB_UNIVERSE``
    Used for the ``UNIVERSE`` column of the ``-idle`` and ``-autocluster`` output of :tool:`condor_q`.
-   This funciton converts an integer to a string using the conversion for ``JobUniverse`` values.
+   This function converts an integer to a string using the conversion for ``JobUniverse`` values.
    Values that are outside the range of valid universes are rendered as ``Unknown``.
 
 ``MEMORY_USAGE``
@@ -324,7 +324,7 @@ value of certain attributes, often multiple attributes. The list for :tool:`cond
    Used for the ``HOST(S)`` column of the ``-run`` output of :tool:`condor_q`.
    This function extracts the host name from a job attribute appropriate to the ``JobUniverse`` value of the job.
    For Local and Scheduler universe jobs, the Schedd that was queried is used using a variable internal to :tool:`condor_q`.
-   For grid uiniverse jobs, the :ad-attr:`EC2RemoteVirtualMachineName` or ``GridResources`` attributes are used.
+   For grid universe jobs, the :ad-attr:`EC2RemoteVirtualMachineName` or ``GridResources`` attributes are used.
    for all other universes the ``RemoteHost`` job attribute is used.
 
 ``STDU_GOODPUT``
@@ -378,7 +378,7 @@ PRINTAS functions for condor_status
 
 ``ACTIVITY_TIME``
    Used for the ``ActvtyTime`` column of the default output of :tool:`condor_status`.
-   The funciton renders the given Unix timestamp as an elapsed time since the ``MyCurrentTime`` or ``LastHeardFrom`` attribute.
+   The function renders the given Unix timestamp as an elapsed time since the ``MyCurrentTime`` or ``LastHeardFrom`` attribute.
 
 ``CONDOR_PLATFORM``
    Used for the optional ``Platform`` column of the ``-master`` output of :tool:`condor_status`.
@@ -396,7 +396,7 @@ PRINTAS functions for condor_status
    converts it to a string date and time with 2 digit month, day, hour and minute values.
 
 ``ELAPSED_TIME``
-   Used in multiple places, for insance the ``Uptime`` column of the ``-master`` output of :tool:`condor_status`.
+   Used in multiple places, for instance the ``Uptime`` column of the ``-master`` output of :tool:`condor_status`.
    This function converts a Unix timestamp to an elapsed time by subtracting it from the ``LastHeardFrom`` attribute,
    then formats it as a human readable elapsed time.
 

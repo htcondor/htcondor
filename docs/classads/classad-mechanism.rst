@@ -1176,7 +1176,7 @@ string.
     delimited by the optional ``delimiter`` string.  Returns ``FALSE`` if
     ``list1`` has any items that are not in ``list2``. Both lists are treated as sets. Empty items
     and duplicate items are ignored. The return value is ``TRUE`` if ``list1`` is ``UNDEFINED`` or empty
-    and ``list2`` is any string value.  The return value is ``FALSE`` if ``list1`` is any string vlaue and ``list2`` is
+    and ``list2`` is any string value.  The return value is ``FALSE`` if ``list1`` is any string value and ``list2`` is
     ``UNDEFINED``.  The return value is ``UNDEFINED`` if both ``list1`` and ``list2`` are ``UNDEFINED``.
     The return value is ``ERROR``, if any of the arguments are not either strings or ``UNDEFINED``
 
