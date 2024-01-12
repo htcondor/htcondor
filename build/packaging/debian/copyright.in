@@ -194,17 +194,17 @@ License: BSD-4-clause
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Files: src/condor_includes/pool_allocator.h
-Copyright: 2013 John Knoeller
-           2013 Condor Team, Computer Sciences Department, Univesity of Wisconsin-Madison, WI
+       src/condor_tests/appendmsg.cpp
+       src/condor_tests/sleep.cpp
+       src/condor_tests/timed_cmd.cpp
+       src/condor_tests/tiny_winapi.h
+Copyright: 2013-2023 John Knoeller
+           2013-2023 Condor Team, Computer Sciences Department, Univesity of Wisconsin-Madison, WI
 License: Apache-2.0
 
 Files: src/condor_rmdir/bprint.h
        src/condor_rmdir/harylist.h
        src/condor_rmdir/tokenize.cpp
-       src/condor_tests/appendmsg.cpp
-       src/condor_tests/sleep.cpp
-       src/condor_tests/timed_cmd.cpp
-       src/condor_tests/tiny_winapi.h
 Copyright: 2010-2023 John M. Knoeller
 License: Apache-2.0
 
