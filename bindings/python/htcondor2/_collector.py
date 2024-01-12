@@ -1,3 +1,4 @@
+from typing import Union
 from typing import Optional
 from typing import List
 
@@ -36,10 +37,13 @@ class Collector():
     # In version 1, there was a distinct DaemonLocation type (a named tuple)
     # that `pool` could also be, but that functionality was never documented.
     #
-    def __init__(self, pool = None):
+    def __init__(self, pool : Optional[Union[str, classad.ClassAd, List[str]]] = None):
         """
-
-        :param pool:
+        :param pool:  A ``host:port`` string, or a list of such strings,
+                      specifying the remote collector, or a :class:`ClassAd`
+                      with a ``MyAddress`` attribute, such as might be returned
+                      by :meth:`locate`.  If omitted, the value of the
+                      configuration parameter ``COLLECTOR_HOST``.
         """
         self._handle = handle_t()
 

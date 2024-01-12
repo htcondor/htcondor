@@ -896,7 +896,7 @@ _classad_print_json( PyObject *, PyObject * args ) {
 
 static PyObject *
 _classad_print_old( PyObject *, PyObject * args ) {
-    // _classad_print_json( self._handle )
+    // _classad_print_old( self._handle )
 
     PyObject_Handle * handle = NULL;
     if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
