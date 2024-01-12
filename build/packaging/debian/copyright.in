@@ -4,23 +4,11 @@ Upstream-Contact: HTCondor Team <htcondor-admin@cs.wisc.edu>
 Source: https://github.com/htcondor/htcondor
 #if defined(SID)
 Files-Excluded: */*.class
-                */*.exe*
-                */*.dll
                 */*.jar
                 */*.pdf
                 */*.bat
                 */*.cmd
                 msconfig
-                src/blahp/project
-                src/blahp/tests
-                src/blahp/vendor
-                src/safefile/build-aux
-                src/safefile/configure
-                src/vendor/fmt-0.10.0/doc
-                src/vendor/fmt-0.10.0/test
-                src/vendor/rapidjson.src/bin/jsonschema
-                src/vendor/rapidjson.src/doc
-                src/vendor/rapidjson.src/test
                 */.gitignore
 #endif
 
