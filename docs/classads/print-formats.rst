@@ -133,7 +133,7 @@ and the summary line.  These sections can be multiple lines, but must begin with
 ``WHERE <constraint-expr>``
    Display only ClassAds where the expression ``<constraint-expr>`` evaluates to true.
 
-``GROUP BY <sort-expr> [ASCENDING | DECENDING]``
+``GROUP BY <sort-expr> [ASCENDING | DESCENDING]``
    Sort the ClassAds by evaluating ``<sort-expr>``.  If multiple sort keys are desired, the ``GROUP BY`` line
    can be followed by lines containing additional expressions, for example
 
@@ -141,7 +141,7 @@ and the summary line.  These sections can be multiple lines, but must begin with
 
      GROUP BY
        Owner
-       ClusterId  DECENDING
+       ClusterId  DESCENDING
 
 
 ``SUMMARY [STANDARD | NONE]``
