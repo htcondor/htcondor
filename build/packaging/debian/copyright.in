@@ -4,23 +4,11 @@ Upstream-Contact: HTCondor Team <htcondor-admin@cs.wisc.edu>
 Source: https://github.com/htcondor/htcondor
 #if defined(SID)
 Files-Excluded: */*.class
-                */*.exe*
-                */*.dll
                 */*.jar
                 */*.pdf
                 */*.bat
                 */*.cmd
                 msconfig
-                src/blahp/project
-                src/blahp/tests
-                src/blahp/vendor
-                src/safefile/build-aux
-                src/safefile/configure
-                src/vendor/fmt-0.10.0/doc
-                src/vendor/fmt-0.10.0/test
-                src/vendor/rapidjson.src/bin/jsonschema
-                src/vendor/rapidjson.src/doc
-                src/vendor/rapidjson.src/test
                 */.gitignore
 #endif
 
@@ -194,17 +182,17 @@ License: BSD-4-clause
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Files: src/condor_includes/pool_allocator.h
-Copyright: 2013 John Knoeller
-           2013 Condor Team, Computer Sciences Department, Univesity of Wisconsin-Madison, WI
+       src/condor_tests/appendmsg.cpp
+       src/condor_tests/sleep.cpp
+       src/condor_tests/timed_cmd.cpp
+       src/condor_tests/tiny_winapi.h
+Copyright: 2013-2023 John Knoeller
+           2013-2023 Condor Team, Computer Sciences Department, Univesity of Wisconsin-Madison, WI
 License: Apache-2.0
 
 Files: src/condor_rmdir/bprint.h
        src/condor_rmdir/harylist.h
        src/condor_rmdir/tokenize.cpp
-       src/condor_tests/appendmsg.cpp
-       src/condor_tests/sleep.cpp
-       src/condor_tests/timed_cmd.cpp
-       src/condor_tests/tiny_winapi.h
 Copyright: 2010-2023 John M. Knoeller
 License: Apache-2.0
 
