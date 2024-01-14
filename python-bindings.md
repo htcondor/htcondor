@@ -5,6 +5,12 @@
   version that depends on Boost and the `htcondor2` and `classad2` versions
   that strive to be bug-for-bug compatible but use only the Python C API.
 
+- When writing docstrings, be aware that the `htcondor` and `classad`
+  module documentation *does not* automatically pick up new docstrings.
+  The `htcondor2` and `classad2` documentation is written so that new
+  methods are generally picked up automatically, but new classes are
+  not.
+
 - The `classad3` module is intended to be API breaking but a major leap
   forward in terms of implementation simplicity -- and therefore
   maintainabililty -- as well as a substantial improvement to the API.
