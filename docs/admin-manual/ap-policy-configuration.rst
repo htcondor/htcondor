@@ -486,7 +486,7 @@ High Availability of the Job Queue
     This High Availability configuration depends entirely on using
     an extremely reliably shared file server.  In our experience, only
     expensive, proprietary file servers are suitable for this role.
-    Frequently, casual configuation of a Highly Available HTCondor
+    Frequently, casual configuration of a Highly Available HTCondor
     job queue will result in lowered reliability.
 
 For a pool where all jobs are submitted through a single machine in the

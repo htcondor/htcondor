@@ -1259,7 +1259,7 @@ subsystem corresponding to the daemon.
     ``D_ALWAYS:1``, unless ``D_ALWAYS:0`` is added to this list.  Category and option names are:
 
     ``D_ANY``
-        This flag turns on all cagetories of messages Be
+        This flag turns on all categories of messages Be
         warned: this will generate about a HUGE amount of output. To
         obtain a higher level of output than the default, consider using
         ``D_FULLDEBUG`` before using this option.
@@ -8418,7 +8418,7 @@ These macros affect the *condor_job_router* daemon.
     configuration variable that specifies the filename, ownership and properties of the IDTOKEN.
 
 :macro-def:`JOB_ROUTER_IDTOKEN_REFRESH[JOB ROUTER]`
-    An integer value of secounds that controls the rate at which the JobRouter will refresh
+    An integer value of seconds that controls the rate at which the JobRouter will refresh
     the IDTOKENS listed by the :macro:`JOB_ROUTER_CREATE_IDTOKEN_NAMES` configuration variable.
 
 :macro-def:`JOB_ROUTER_CREATE_IDTOKEN_<NAME>[JOB ROUTER]`

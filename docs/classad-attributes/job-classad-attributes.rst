@@ -95,7 +95,7 @@ all attributes.
     This attribute is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
-:classad-attribute-def:`AllRemoteHosts`
+:classad-attribute-def:`i`
     String containing a comma-separated list of all the remote machines
     running a parallel or mpi universe job.
 
@@ -207,18 +207,18 @@ all attributes.
     The time when the job completed, or undefined if the job has not
     yet completed. Measured in the number of seconds since the epoch
     (00:00:00 UTC, Jan 1, 1970). Note that older versions of HTCondor
-    initialzed :ad-attr:`CompletionDate` to the integer 0, so job ads from
+    initialized :ad-attr:`CompletionDate` to the integer 0, so job ads from
     older versions of HTCondor might have a 0 CompletionDate for
     jobs which haven't completed.
 
-:classad-attribute-def:`ConcurrencyLimits`
+:classad-attribute-def:`Concurrency Limits`
     A string list, delimited by commas and space characters. The items
     in the list identify named resources that the job requires. The
     value can be a ClassAd expression which, when evaluated in the
     context of the job ClassAd and a matching machine ClassAd, results
     in a string list.
 
-:classad-attribute-def:`CondorPlatform`
+:classad-attribute-def:`Condor Platform`
     A string that describes the operating system version that the 
     `condor_submit` command that submitted this job was built for.  Note
     this may be different that the operating system that is actually running.
@@ -617,7 +617,7 @@ all attributes.
     separated by a period, and the job's submission time in seconds
     since 1970-01-01 00:00:00 UTC, separated by # characters. The value
     submit.example.com#152.3#1358363336 is an example.  While HTCondor
-    guaratees this string will be globally unique, the contents are subject
+    guarantees this string will be globally unique, the contents are subject
     to change, and users should not parse out components of this string.
 
 :classad-attribute-def:`GPUsMaxCapability`
@@ -650,7 +650,7 @@ all attributes.
     management system.
 
 :classad-attribute-def:`GridResource`
-    A string defined by the right hand side of the the submit
+    A string defined by the right hand side of the submit
     description file command
     :subcom:`grid_resource[and attribute GridResource]`.
     It specifies the target grid type, plus additional parameters
@@ -843,7 +843,7 @@ all attributes.
     |                                  | Unexpected remote job               | 21                       |
     |                                  | status.                             |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 39                             | Adminstrator error in               |                          |
+    | | 39                             | Administrator error in              |                          |
     | | [EC2AdminError]                | the EC2 universe:                   |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     |                                  | EC2_GAHP not defined.               | 6                        |
@@ -1008,7 +1008,7 @@ all attributes.
 
 :classad-attribute-def:`JobDisconnectedDate`
     Time at which the *condor_shadow* and *condor_starter* become disconnected.
-    Set to ``Undefined`` when a succcessful reconnect occurs. Measured in the
+    Set to ``Undefined`` when a successful reconnect occurs. Measured in the
     number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 
 :classad-attribute-def:`JobLeaseDuration`
@@ -1451,7 +1451,7 @@ all attributes.
 
 :classad-attribute-def:`PostCmdExitBySignal`
     If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
-    and the post command has run, this attribute will true if the the
+    and the post command has run, this attribute will true if the
     post command exited on a signal and false if it did not. It is
     otherwise unset.
 
@@ -1514,7 +1514,7 @@ all attributes.
     
 :classad-attribute-def:`PreCmdExitBySignal`
     If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, and
-    the pre command has run, this attribute will true if the the pre
+    the pre command has run, this attribute will true if the pre
     command exited on a signal and false if it did not. It is otherwise
     unset.
     
@@ -1701,7 +1701,7 @@ all attributes.
     of GPUs that are needed in the created dynamic slot.
 
 :classad-attribute-def:`RequireGPUs`
-    Constraint on the properites of GPUs requested for this job. If dynamic
+    Constraint on the properties of GPUs requested for this job. If dynamic
     *condor_startd* provisioning is enabled, This constraint will be tested
     against the property attributes of the `AvailableGPUs` attribute of the
     partitionable slot when choosing which GPUs for the dynamic slot.
@@ -1728,7 +1728,7 @@ all attributes.
     requirements does not mention the (startd) attribute :ad-attr:`OpSys`,
     the schedd will append a clause to Requirements forcing the job to
     match the same :ad-attr:`OpSys` as the access point. :index:`OPSYS`
-    The schedd appends a simliar clause to match the :ad-attr:`Arch`. :index:`ARCH`
+    The schedd appends a similar clause to match the :ad-attr:`Arch`. :index:`ARCH`
     The schedd parameter :macro:`APPEND_REQUIREMENTS`, will, if set, append that
     value to every job's requirements expression.
     
@@ -1747,7 +1747,7 @@ all attributes.
     This is the current time, in Unix epoch seconds.
     It is added by the *condor_schedd* to the job ads that it sends in
     reply to a query (e.g. sent to :tool:`condor_q`).
-    Since it it not present in the job ad in the *condor_schedd*, it
+    Since it not present in the job ad in the *condor_schedd*, it
     should not be used in any expressions that will be evaluated by the
     *condor_schedd*.
 
@@ -1822,7 +1822,7 @@ all attributes.
     a successful self-checkpoint.
 
 :classad-attribute-def:`SuccessPreExitBySignal`
-    Specifies if a succesful pre command must exit with a signal.
+    Specifies if a successful pre command must exit with a signal.
 
 :classad-attribute-def:`SuccessPreExitCode`
     Specifies the code with which the pre command must exit to be
@@ -1841,7 +1841,7 @@ all attributes.
     ignored.
 
 :classad-attribute-def:`SuccessPostExitBySignal`
-    Specifies if a succesful post command must exit with a signal.
+    Specifies if a successful post command must exit with a signal.
 
 :classad-attribute-def:`SuccessPostExitCode`
     Specifies the code with which the post command must exit to be
@@ -1874,7 +1874,7 @@ all attributes.
     access point's spool when the job successfully checkpoints.
 
 :classad-attribute-def:`TransferContainer`
-    A boolean expresion that controls whether the HTCondor should transfer the
+    A boolean expression that controls whether the HTCondor should transfer the
     container image from the submit node to the worker node.
 
 :classad-attribute-def:`TransferErr`
@@ -1910,7 +1910,7 @@ all attributes.
     input file transfer is enabled.
 
 :classad-attribute-def:`TransferInFinished`
-    When the job finished the most recent recent transfer of its input
+    When the job finished the most recent transfer of its input
     sandbox, measured in seconds from the epoch. (00:00:00 UTC Jan 1,
     1970). 
 
@@ -1963,7 +1963,7 @@ all attributes.
     from the remote machine to the access point when output file transfer is enabled.
 
 :classad-attribute-def:`TransferOutFinished`
-    When the job finished the most recent recent transfer of its
+    When the job finished the most recent transfer of its
     output sandbox, measured in seconds from the epoch. (00:00:00 UTC
     Jan 1, 1970).
 

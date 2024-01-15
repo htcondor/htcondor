@@ -328,7 +328,7 @@ Machine ClassAd Attributes
     *condor_starter* has exited.
 
 :classad-attribute-def:`JobBusyTimeCount`
-    attribute. This is also the the total number times a
+    attribute. This is also the total number times a
     *condor_starter* has exited.
 
 :classad-attribute-def:`JobBusyTimeMax`
@@ -351,8 +351,8 @@ Machine ClassAd Attributes
     has exited in the last 20 minutes.
 
 :classad-attribute-def:`RecentJobBusyTimeCount`
-    The total number of jobs used to calulate the
-    :ad-attr:`RecentJobBusyTimeAvg` attribute. This is also the the total
+    The total number of jobs used to calculate the
+    :ad-attr:`RecentJobBusyTimeAvg` attribute. This is also the total
     number times a *condor_starter* has exited in the last 20 minutes.
 
 :classad-attribute-def:`RecentJobBusyTimeMax`
@@ -375,7 +375,7 @@ Machine ClassAd Attributes
     transfer input, for instance) will not be included in the average.
 
 :classad-attribute-def:`JobDurationCount`
-    attribute. This is also the the total number times a job has exited.
+    attribute. This is also the total number times a job has exited.
     Jobs that never start (because input transfer fails, for instance)
     are not included in the count.
 
@@ -394,7 +394,7 @@ Machine ClassAd Attributes
     minutes.
 
 :classad-attribute-def:`RecentJobDurationCount`
-    The total number of jobs used to calulate the
+    The total number of jobs used to calculate the
     :ad-attr:`RecentJobDurationAvg` attribute. This is the total number of jobs
     that began execution and have exited in the last 20 minutes.
 
@@ -543,7 +543,7 @@ Machine ClassAd Attributes
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
-    CPUs up into separate slots, each with with a unique name. These
+    CPUs up into separate slots, each with a unique name. These
     names will be of the form "slot#@full.hostname", for example,
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
@@ -556,7 +556,7 @@ Machine ClassAd Attributes
 :classad-attribute-def:`OfflineUniverses`
     A ClassAd list that specifies which job universes are presently
     offline, both as strings and as the corresponding job universe
-    number. Could be used the the startd to refuse to start jobs in
+    number. Could be used the startd to refuse to start jobs in
     offline universes:
 
     .. code-block:: condor-config
@@ -1378,7 +1378,7 @@ The single attribute, :ad-attr:`CurrentTime`, is defined by the
 ClassAd environment.
 
 :classad-attribute-def:`CurrentTime`
-    Evaluates to the the number of integer seconds since the Unix epoch
+    Evaluates to the number of integer seconds since the Unix epoch
     (00:00:00 UTC, Jan 1, 1970).
 
 

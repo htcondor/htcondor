@@ -92,7 +92,7 @@ A seed image is simply an image with:
   * allow :tool:`condor_annex` can add nodes
 
 * a small script to set :macro:`TCP_FORWARDING_HOST` to the instance's public
-  IP adress when the instance starts up.
+  IP address when the instance starts up.
 
 More-detailed `instructions <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=CondorInTheCloudSeedConstruction>`_
 for constructing a seed node on AWS are available.  A RHEL 7.6 image built

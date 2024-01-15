@@ -1472,7 +1472,7 @@ Expression Examples
 :index:`expression examples<single: expression examples; ClassAd>`
 
 The ``=?=`` operator is similar to the ``==`` operator. It checks if the
-left hand side operand is identical in both type and value to the the
+left hand side operand is identical in both type and value to the
 right hand side operand, returning ``TRUE`` when they are identical.
 
 .. caution::
