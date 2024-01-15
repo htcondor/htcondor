@@ -211,14 +211,14 @@ all attributes.
     older versions of HTCondor might have a 0 CompletionDate for
     jobs which haven't completed.
 
-:classad-attribute-def:`Concurrency Limits`
+:classad-attribute-def:`ConcurrencyLimits`
     A string list, delimited by commas and space characters. The items
     in the list identify named resources that the job requires. The
     value can be a ClassAd expression which, when evaluated in the
     context of the job ClassAd and a matching machine ClassAd, results
     in a string list.
 
-:classad-attribute-def:`Condor Platform`
+:classad-attribute-def:`CondorPlatform`
     A string that describes the operating system version that the 
     `condor_submit` command that submitted this job was built for.  Note
     this may be different that the operating system that is actually running.
