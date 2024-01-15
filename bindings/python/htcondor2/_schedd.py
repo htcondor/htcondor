@@ -82,7 +82,7 @@ class Schedd():
 
 
     def query(self,
-        constraint : Union[str, classad.ExprTree] = 'true',
+        constraint : Union[str, classad.ExprTree] = 'True',
         projection : List[str] = [],
         callback : Callable[[classad.ClassAd], Any] = None,
         limit : int = -1,
@@ -102,7 +102,7 @@ class Schedd():
             list returned by this method unless that value is `None`, which
             will instead be omitted.
         :param limit:  The maximum number of ads to return.  The default
-            (-1) is to return all ads.
+            (``-1``) is to return all ads.
         '''
         results = _schedd_query(self._addr, str(constraint), projection, int(limit), int(opts))
         if callback is None:

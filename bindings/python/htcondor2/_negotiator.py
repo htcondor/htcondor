@@ -63,7 +63,7 @@ class Negotiator():
     def getPriorities(self, rollup : bool = False) -> List[classad.ClassAd]:
         """
         Retrieve the pool accounting information as a list of
-        `accounting ClassAds <http://azaphrael.org/indexed/html/classad-attributes/accounting-classad-attributes.html>`_.
+        `accounting ClassAds <http://htcondor.readthedocs.io/en/latest/classad-attributes/accounting-classad-attributes.html>`_.
 
         :param rollup:  It :py:obj:`True`, the accounting information
             that applies to heirarchical group quotas will be summed for

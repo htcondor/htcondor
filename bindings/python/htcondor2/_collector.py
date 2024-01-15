@@ -24,7 +24,7 @@ def _ad_type_from_daemon_type(daemon_type: DaemonType):
         DaemonType.HAD: AdType.HAD,
         DaemonType.Credd: AdType.Credd,
     }
-    # FIXME: Should raise HTCondorEnumError.
+    # Should raise HTCondorEnumError.
     return map.get(daemon_type, None)
 
 
@@ -66,7 +66,9 @@ class Collector():
             return
 
 
-    # FIXME: In version 1, `constraint` could also be an ExprTree.
+    # In version 1, `constraint` could also be an ExprTree.  It wouldn't
+    # be hard to support, but since we don't want you creating ExprTrees
+    # in Python, we're deprecating it and seeing it anyone notices.
     def query(self,
       ad_type: AdType = AdType.Any,
       constraint: Optional[str] = None,

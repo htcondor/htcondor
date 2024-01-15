@@ -42,7 +42,7 @@ class ExprTree:
             ## We can't return `expression` (by the language spec), and
             ## assigning `expression` to `self` does nothing outside of
             ## this function.  FIXME: So for now, we hack!
-            # keeps expresison's handle alive, so it won't be delete'd.
+            # Keeps expression's handle alive, so it won't be delete'd.
             self.expression = expression
             self._handle = expression._handle
 
