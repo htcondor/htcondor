@@ -41,10 +41,12 @@ is not intended as a tutorial for new users.
 .. autoclass:: Negotiator
    :members:
 
-.. This is amazingly stupid, but .. autoattribute:: doesn't work.
 .. attribute:: param
 
-   FIXME
+   A :class:`collections.abc.MutableMapping` of the HTCondor
+   configuration.  Changes are reflected in the current process's memory
+   immediately, but are never written to disk.  To change another process's
+   configuration (e.g., a running daemon's), use :class:`RemoteParam`.
 
 .. autofunction:: platform
 
