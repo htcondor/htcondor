@@ -95,7 +95,7 @@ all attributes.
     This attribute is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
-:classad-attribute-def:`i`
+:classad-attribute-def:`AllRemoteHosts`
     String containing a comma-separated list of all the remote machines
     running a parallel or mpi universe job.
 
