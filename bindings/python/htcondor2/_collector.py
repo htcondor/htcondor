@@ -44,7 +44,7 @@ class Collector():
         :param pool:  A ``host:port`` string, or a list of such strings,
                       specifying the remote collector, or a ClassAd
                       with a ``MyAddress`` attribute, such as might be returned
-                      by :meth:`locate`.  If omitted, the value of the
+                      by :meth:`locate`.  :py:obj:`None` means the value of the
                       configuration parameter ``COLLECTOR_HOST``.
         """
         self._handle = handle_t()

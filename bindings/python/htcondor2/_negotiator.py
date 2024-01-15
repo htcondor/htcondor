@@ -26,14 +26,16 @@ def _validate_user(user):
 
 class Negotiator():
     """
-    FIXME
+    The negotiator client.  Query and manage resource usage.
+
+    Consult `User Priorities and Negotiation <https://htcondor.readthedocs.io/en/latest/admin-manual/cm-configuration.html#configuration-for-central-managers>`_ before using these functions.
     """
 
     def __init__(self, location : classad.ClassAd = None):
         """
-        FIXME
-
-        :param location:
+        :param location:  A ClassAd with a ``MyAddress`` attribute, such as
+            might be returned by :meth:`htcondor2.Collector.locate`.  :py:obj:`None` means the
+            default pool negotiator.
         """
         if location is None:
             c = Collector()
@@ -49,9 +51,10 @@ class Negotiator():
 
     def deleteUser(self, user : str) -> None:
         """
-        FIXME
+        Delete all records of an accounting principal from the negotiator’s
+        accounting.
 
-        :param user:
+        :param user:  A fully-qualifed (``user@domain``) accounting principal.
         """
         _validate_user(user)
         _negotiator_command_user(self._addr, self._DELETE_USER, user)
@@ -59,9 +62,12 @@ class Negotiator():
 
     def getPriorities(self, rollup : bool = False) -> List[classad.ClassAd]:
         """
-        FIXME
+        Retrieve the pool accounting information as a list of
+        `accounting ClassAds <http://azaphrael.org/indexed/html/classad-attributes/accounting-classad-attributes.html>`_.
 
-        :param rollup:
+        :param rollup:  It :py:obj:`True`, the accounting information
+            that applies to heirarchical group quotas will be summed for
+            groups and subgroups.
         """
         command = self._GET_PRIORITY
         if rollup:
@@ -72,9 +78,11 @@ class Negotiator():
 
     def getResourceUsage(self, user : str) -> List[classad.ClassAd]:
         """
-        FIXME
+        Retrieve the resources (slots) assigned to the specificied
+        accounting princiapl as a list of ClassAds.  The names of the
+        attributes and their types are currently undocumented.
 
-        :param user:
+        :param user:  A fully-qualifed (``user@domain``) accounting principal.
         """
         _validate_user(user)
         returnAd = _negotiator_command_user_return(self._addr, self._GET_RESLIST, user)
@@ -83,16 +91,16 @@ class Negotiator():
 
     def resetAllUsage(self):
         """
-        FIXME
+        Set the accumulated usage of all accounting principals to zero.
         """
         _negotiator_command(self._addr, self._RESET_ALL_USAGE)
 
 
     def resetUsage(self, user : str) -> None:
         """
-        FIXME
+        Set the accumulated usage of the specified accounting principal to zero.
 
-        :param user:
+        :param user:  A fully-qualifed (``user@domain``) accounting principal.
         """
         _validate_user(user)
         _negotiator_command_user(self._addr, self._RESET_USAGE, user)
@@ -100,10 +108,10 @@ class Negotiator():
 
     def setBeginUsage(self, user : str, when : int) -> None:
         """
-        FIXME
+        Set the beginning of the specified accounting principal's usage.
 
-        :param user:
-        :param when:
+        :param user:  A fully-qualifed (``user@domain``) accounting principal.
+        :param when:  A Unix timestamp.
         """
         _validate_user(user)
         if isinstance(when, float):
@@ -114,10 +122,10 @@ class Negotiator():
     # This incorrectly -- and brokenly -- takes a float in version 1.
     def setCeiling(self, user : str, ceiling : int) -> None:
         """
-        FIXME
+        Set the submitter ceiling for the specific accounting principal.
 
-        :param user:
-        :param ceiling:
+        :param user:  A fully-qualifed (``user@domain``) accounting principal.
+        :param ceiling:  A value greater than or equal to ``-1``.
         """
         _validate_user(user)
         if isinstance(ceiling, float):
@@ -130,10 +138,10 @@ class Negotiator():
 
     def setLastUsage(self, user : str, when : int) -> None:
         """
-        FIXME
+        Set the end of the specified accounting principal's usage.
 
-        :param user:
-        :param when:
+        :param user:  A fully-qualifed (``user@domain``) accounting principal.
+        :param when:  A Unix timestamp.
         """
         _validate_user(user)
         _negotiator_command_user_value(self._addr, self._SET_LASTTIME, user, int(when))
@@ -143,10 +151,10 @@ class Negotiator():
     # error message from not waiting for the reply.
     def setFactor(self, user : str, factor : float) -> None:
         """
-        FIXME
+        Set the priority factor of the specified accounting principal.
 
-        :param user:
-        :param factor:
+        :param user:  A fully-qualifed (``user@domain``) accounting principal.
+        :param factor:  A value greater than or equal to ``1.0``.
         """
         _validate_user(user)
         if factor < 1:
@@ -156,10 +164,10 @@ class Negotiator():
 
     def setPriority(self, user : str, priority : float) -> None:
         """
-        FIXME
+        Set the priority of the specified accounting principal.
 
-        :param user:
-        :param priority:
+        :param user:  A fully-qualifed (``user@domain``) accounting principal.
+        :param priority:  A value greater than or equal to ``0.0``.
         """
         _validate_user(user)
         if priority < 0:
@@ -169,10 +177,10 @@ class Negotiator():
 
     def setUsage(self, user : str, usage : float) -> None:
         """
-        FIXME
+        Set the usage of the specified accounting principal.
 
-        :param user:
-        :param usage:
+        :param user:  A fully-qualifed (``user@domain``) accounting principal.
+        :param usage:  The usage in hours.
         """
         _validate_user(user)
         if usage < 0:
