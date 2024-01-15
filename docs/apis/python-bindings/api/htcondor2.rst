@@ -31,6 +31,7 @@ is not intended as a tutorial for new users.
 .. autoclass:: JobAction
 
 .. autoclass:: JobEvent
+   :members:
 
 .. autoclass:: JobEventLog
    :members:
