@@ -2598,7 +2598,7 @@ void _dprintf_to_buffer(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info
 }
 
 // for use when an dprintf output is muted during shutdown or error
-void _dprintf_to_nowhere(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo)
+void _dprintf_to_nowhere(int /*cat_and_flags*/, int /*hdr_flags*/, DebugHeaderInfo & /*info*/, const char* /*message*/, DebugFileInfo* /*dbgInfo*/)
 {
 }
 
