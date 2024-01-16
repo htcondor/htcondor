@@ -32,7 +32,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug in the event log reader that would rarely cause DAGMan
+  to lose track of a job, and wait forever for a job that had
+  really finished, with dagman not realizing that said job had
+  indeed finished.
+  :jira:`2236`
 
 .. _lts-version-history-2304:
 
