@@ -847,9 +847,7 @@ Remove( const string &name )
 	AttrList::iterator itr = attrList.find( name );
 	if( itr != attrList.end( ) ) {
 		tree = itr->second;
-#ifndef USE_CLASSAD_FLAT_MAP
 		itr->second = nullptr;
-#endif
 		attrList.erase( itr );
 		tree->SetParentScope( NULL );
 	}
