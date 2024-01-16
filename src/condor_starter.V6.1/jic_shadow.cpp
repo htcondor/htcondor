@@ -2564,8 +2564,7 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 	formatstr( attributeName, "%sPluginResultList", which );
 	updateAd.Insert( attributeName.c_str(), e );
 
-	const bool dont_ensure_update = false;
-	updateShadow( & updateAd, dont_ensure_update );
+	updateShadow( & updateAd );
 }
 
 
