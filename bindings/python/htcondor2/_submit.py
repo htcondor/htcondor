@@ -200,7 +200,6 @@ class Submit(MutableMapping):
         :param qdate:
         :param owner:
         """
-        # FIXME
         pass
 
 
@@ -224,13 +223,12 @@ class Submit(MutableMapping):
         :param qdate:
         :param owner:
         """
-        # FIXME
         pass
 
 
     def getQArgs(self) -> str:
         """
-        FIXME
+        Return the arguments to the queue statement.
         """
         return _submit_getqargs(self, self._handle)
 
@@ -257,7 +255,6 @@ class Submit(MutableMapping):
         :param method_value:
         :param allowed_reserved_values:
         """
-        # FIXME
         pass
 
 
@@ -265,17 +262,19 @@ class Submit(MutableMapping):
         """
         FIXME (unimplemented)
         """
-        # FIXME
         pass
 
 
     @staticmethod
     def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> "Submit":
         """
-        FIXME
+        Creates a submit file on disk that will submit the given DAG.  Returns
+        a :class:`Submit` object that can be used to submit it.
 
-        :param filename:
-        :param options:
+        :param filename:  The DAG description file.
+        :param options:  A dictionary of *condor_submit_dag* command-line
+            options and their values.  [FIXME: add a condor_submit_dag
+            command-line flag to print them and their types out?]
         """
         if not isinstance(options, dict):
             raise TypeError("options must be a dict")

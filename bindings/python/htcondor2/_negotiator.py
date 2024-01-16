@@ -79,7 +79,7 @@ class Negotiator():
     def getResourceUsage(self, user : str) -> List[classad.ClassAd]:
         """
         Retrieve the resources (slots) assigned to the specificied
-        accounting princiapl as a list of ClassAds.  The names of the
+        accounting principal as a list of ClassAds.  The names of the
         attributes and their types are currently undocumented.
 
         :param user:  A fully-qualifed (``user@domain``) accounting principal.

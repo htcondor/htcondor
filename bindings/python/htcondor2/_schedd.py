@@ -4,6 +4,7 @@ from typing import (
     Any,
     Iterator,
     List,
+    Optional,
 )
 
 import re
@@ -20,6 +21,7 @@ from ._common_imports import (
 from ._job_action import JobAction
 from ._transaction_flag import TransactionFlag
 from ._submit import Submit
+from ._submit_result import SubmitResult
 # So that the typehints match version 1.
 from ._query_opt import QueryOpt as QueryOpts
 
@@ -173,20 +175,25 @@ class Schedd():
         return pyResult
 
 
-    # Note that edit(ClassAd) and edit_multiple() aren't documented.
+    # In version 1, edit(ClassAd) and edit_multiple() weren't documented,
+    # so they're not implemented in version 2.
     def edit(self,
         job_spec : Union[List[str], str, classad.ExprTree],
         attr : str,
         value : Union[str, classad.ExprTree],
         flags : TransactionFlag = TransactionFlag.Default,
-    ) -> classad.ClassAd:
+    ) -> int:
         """
-        FIXME
+        Change the value of an attribute in zero or more jobs.
 
-        :param job_spec:
-        :param attr:
-        :param value:
-        :param flags:
+        :param job_spec: Which job(s) to edit.  Either a :class:`str`
+             of the form ``clusterID.procID``, a :class:`list` of such
+             strings, or a :class:`classad.ExprTree` constraint, or
+             the string form of such a constraint.
+        :param attr:  Which attribute to change.
+        :param value:  The new value for the attribute.
+        :param flags:  Optional flags specifying alternate transaction behavior.
+        :return:  The number of jobs that were edited.
         """
         if not isinstance(flags, TransactionFlag):
             raise TypeError("flags must be a TransactionFlag")
@@ -203,7 +210,7 @@ class Schedd():
             (attr, str(value), flags),
         )
 
-        # FIXME: Does this really need to be an undocumented object?
+        # In version 1, this was an undocumented and mostly pointless object.
         return match_count
 
 
@@ -217,18 +224,32 @@ class Schedd():
 
     # `match` should be `limit` for consistency with `query()`.
     def history(self,
-        constraint : Union[str, classad.ExprTree],
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
         projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
     ) -> List[classad.ClassAd]:
         """
-        FIXME
+        Query this schedd's job history.
 
-        :param constraint:
-        :param projection:
-        :param match:
-        :param since:
+        :param constraint:  A query constraint.  Only jobs matching this
+            constraint will be returned.  :py:obj:`None` will match all jobs.
+        :param projection:  A list of job attributes.  These attributes will
+            be returned for each job in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param match:  The maximum number of ads to return.  The default
+            (``-1``) is to return all ads.
+        :param since:  A cluster ID, job ID, or expression.  If a cluster ID
+            (passed as an integer) or job ID (passed as a string in the format
+            ``{clusterID}.{procID}``), only jobs recorded in the history
+            file after (and not including) the matching ID will be
+            returned.  If an expression (including strings that aren't
+            job IDs), jobs will be returned, most-recently-recorded first,
+            until the expression becomes true; the job making the expression
+            become true will not be returned.  Thus, ``1038`` and
+            ``"clusterID == 1038"`` return the same set of jobs.
+
+            If :py:obj:`None`, return all (matching) jobs.
         """
         projection_string = ",".join(projection)
 
@@ -266,12 +287,28 @@ class Schedd():
         since : Union[int, str, classad.ExprTree] = None,
     ) -> List[classad.ClassAd]:
         """
-        FIXME
+        Query this schedd's
+        `job epoch <https://htcondor.readthedocs.io/en/latest/admin-manual/configuration-macros.html#JOB_EPOCH_HISTORY>`_
+        history.
 
-        :param constraint:
-        :param projection:
-        :param match:
-        :param since:
+        :param constraint:  A query constraint.  Only jobs matching this
+            constraint will be returned.  :py:obj:`None` will match all jobs.
+        :param projection:  A list of job attributes.  These attributes will
+            be returned for each job in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param match:  The maximum number of ads to return.  The default
+            (``-1``) is to return all ads.
+        :param since:  A cluster ID, job ID, or expression.  If a cluster ID
+            (passed as an integer) or job ID (passed as a string in the format
+            ``{clusterID}.{procID}``), only jobs recorded in the history
+            file after (and not including) the matching ID will be
+            returned.  If an expression (including strings that aren't
+            job IDs), jobs will be returned, most-recently-recorded first,
+            until the expression becomes true; the job making the expression
+            become true will not be returned.  Thus, ``1038`` and
+            ``"clusterID == 1038"`` return the same set of jobs.
+
+            If :py:obj:`None`, return all (matching) jobs.
         """
         projection_string = ",".join(projection)
 
@@ -323,12 +360,10 @@ class Schedd():
         spool : bool = False,
         # This was undocumented in version 1, but it became necessary when
         # we removed Submit.queue_with_itemdata().
-        itemdata : Union[ Iterator[str], Iterator[dict] ] = None,
-    ) -> "SubmitResult": # FIXME: remove quotes
+        itemdata : Optional[ Union[ Iterator[str], Iterator[dict] ] ] = None,
+    ) -> SubmitResult:
         '''
         Submit one or more jobs.
-
-        [FIXME]
 
         .. note::
             This function presently uses :mod:`warnings` to pass along
@@ -336,14 +371,22 @@ class Schedd():
             suppresses the second and subsequent reports of a warning
             for the same line of code.
 
-        :param description: FIXME
+        :param description:  The job(s) to submit.
         :param count:  Every valid queue statement in the submit language
             has an associated count, which is implicitly 1, but may be
             set explicitly, e.g., ``queue 3 dat_file matching *.dat`` has
             a count of 3.  If specified, this parameter overrides the count
             in ``description``.
-        :param spool: FIXME
-        :param itemdata: FIXME
+        :param spool:  If :py:obj:`True`, submit the job(s) on hold and in
+            such a way that its input files can later be uploaded to this
+            schedd's `SPOOL <https://htcondor.readthedocs.io/en/latest/admin-manual/configuration-macros.html#SPOOL>`_ directory, using :meth:`spool`.
+        :param itemdata:  If your submit description includes a queue statement
+            which requires item data, you may supply (or override) that item
+            data with this parameter.  If you provide an iterator over strings,
+            each string will be parsed as its own item data line.  If you
+            provide an iterator over dictionaries, the dictionary's key-value
+            pairs will become submit variable name-value pairs; only the first
+            dictionary's keys will be used.
         '''
 
         if itemdata is None:
@@ -417,14 +460,36 @@ class Schedd():
     def spool(self,
         ad_list : List[classad.ClassAd],
     ) -> None:
-        # FIXME
+        #
+        # In version, the documentation for this function claims that
+        # SubmitResult has a jobs() method.  It never did, and I'm not
+        # at all sure if the author meant Submit.jobs(), which shouldn't
+        # work because that can't generate job ads with the correct
+        # cluster ID.
+        #
+        # At any rate, the better API is probably just to accept the
+        # SubmitResult object directly.
+        #
+        """
+        FIXME: Unimplemented.
+
+        Upload the input files corresponding to a given :meth:`submit`.
+        """
         pass
 
 
     def retrieve(self,
         job_spec : Union[List[str], str, classad.ExprTree],
     ) -> None:
-        # FIXME
+        #
+        # The description is what this function ought to do, but it's
+        # probably not hard to permit both.
+        #
+        """
+        FIXME: Unimplemented.
+
+        Retrieve the output files from the job(s) in a given :meth:`submit`.
+        """
         pass
 
 
@@ -434,7 +499,10 @@ class Schedd():
 
     def reschedule(self) -> None:
         """
-        FIXME
+        Sends the reschedule command to this schedd, which asks the schedd
+        to ask the negotiator to consider starting the next negotiation
+        cycle.  Frequently has no effect, because the negotiator is either
+        already busy or waiting out the minimum cycle time.
         """
         _schedd_reschedule(self._addr)
 
@@ -445,11 +513,17 @@ class Schedd():
         new_spool_dir : str,
     ) -> classad.ClassAd:
         """
-        FIXME
+        Export one or more job clusters from the queue to put those jobs
+        into the externally managed state.
 
-        :param job_spec:
-        :param export_dir:
-        :param new_spool_dir:
+        :param job_spec: Which job(s) to export.  Either a :class:`str`
+             of the form ``clusterID.procID``, a :class:`list` of such
+             strings, or a :class:`classad.ExprTree` constraint, or
+             the string form of such a constraint.
+        :param export_dir:  Write the exported job(s) into this directory.
+        :param new_spool_dir:  The IWD of the export job(s).
+        :return:  A ClassAd containing information about the export operation.
+            This type of ClassAd is currently undocumented.
         """
         return job_spec_hack(self._addr, job_spec,
             _schedd_export_job_ids, _schedd_export_job_constraint,
@@ -461,9 +535,12 @@ class Schedd():
         import_dir : str
     ) -> classad.ClassAd:
         """
-        FIXME
+        Import results from previously exported jobs, and take those jobs
+        back out of the externally managed state.
 
-        :param import_dir:
+        :param import_dir:  Read the imported jobs from this directory.
+        :return:  A ClassAd containing information about the import operation.
+            This type of ClassAd is currently undocumented.
         """
         return _schedd_import_exported_job_results(self._addr, import_dir)
 
@@ -472,9 +549,15 @@ class Schedd():
         job_spec : Union[List[str], str, classad.ExprTree],
     ) -> classad.ClassAd:
         """
-        FIXME
+        Unexport one or more job clusters that were previously exported
+        from the queue.
 
-        :param job_spec:
+        :param job_spec: Which job(s) to unexport.  Either a :class:`str`
+             of the form ``clusterID.procID``, a :class:`list` of such
+             strings, or a :class:`classad.ExprTree` constraint, or
+             the string form of such a constraint.
+        :return:  A ClassAd containing information about the unexport operation.
+            This type of ClassAd is currently undocumented.
         """
         return job_spec_hack(self._addr, job_spec,
             _schedd_unexport_job_ids, _schedd_unexport_job_constraint,

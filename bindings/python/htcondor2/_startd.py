@@ -92,7 +92,7 @@ class Startd():
 
     # Totally undocumented in version 1.
     def history(self,
-        constraint : Union[str, classad.ExprTree] = 'True',
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
         projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
@@ -101,7 +101,7 @@ class Startd():
         Query this startd's job history.
 
         :param constraint:  A query constraint.  Only jobs matching this
-            constraint will be returned.  The default will match all jobs.
+            constraint will be returned.  :py:obj:`None` will match all jobs.
         :param projection:  A list of job attributes.  These attributes will
             be returned for each job in the list.  (Others may be as well.)
             The default (an empty list) returns all attributes.
