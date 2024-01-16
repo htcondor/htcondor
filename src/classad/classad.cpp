@@ -252,6 +252,12 @@ void ClassAd::
 Clear( )
 {
 	Unchain();
+#ifndef USE_CLASSAD_FLAT_MAP
+	AttrList::iterator      itr;
+    for( itr = attrList.begin( ); itr != attrList.end( ); itr++ ) {
+          if( itr->second ) delete itr->second;
+    }
+#endif
 	attrList.clear( );
 }
 
@@ -790,6 +796,9 @@ Delete( const string &name )
     deleted_attribute = false;
 	AttrList::iterator itr = attrList.find( name );
 	if( itr != attrList.end( ) ) {
+#ifndef USE_CLASSAD_FLAT_MAP
+		delete itr->second;
+#endif
 		attrList.erase( itr );
 		deleted_attribute = true;
 	}
@@ -838,7 +847,9 @@ Remove( const string &name )
 	AttrList::iterator itr = attrList.find( name );
 	if( itr != attrList.end( ) ) {
 		tree = itr->second;
+#ifndef USE_CLASSAD_FLAT_MAP
 		itr->second = nullptr;
+#endif
 		attrList.erase( itr );
 		tree->SetParentScope( NULL );
 	}
@@ -2137,6 +2148,9 @@ bool ClassAd::PruneChildAttr(const std::string & attrName, bool if_child_matches
 	}
 
 	if (prune_it) {
+#ifndef USE_CLASSAD_FLAT_MAP
+		delete itr->second;
+#endif
 		attrList.erase(itr);
 		return true;
 	}
@@ -2171,6 +2185,9 @@ int ClassAd::PruneChildAd()
 		for (auto &s: victims) {
 			AttrList::iterator itr = attrList.find(s);
 			if( itr != attrList.end( ) ) {
+#ifndef USE_CLASSAD_FLAT_MAP
+				delete itr->second;
+#endif
 				attrList.erase( itr );
 			}
 		}
