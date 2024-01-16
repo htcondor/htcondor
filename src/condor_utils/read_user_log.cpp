@@ -1097,7 +1097,8 @@ ReadUserLog::readEventClassad( ULogEvent *& event, int log_type, FileLockBase *l
 /*
  *  This is the heart of the user log reader.  The precondition on entry is
  *  that the fp in the class is pointing at the very start of a "native" user
- *  log event, or at end of file.  The writers must guarantee that events are
+ *  log event, or at end of file (assuming the end of file is immediately after
+ *  a completely written event).  The writers must guarantee that events are
  *  not interleaved.  They do this by gathering up all the bytes in a single
  *  event, and writing them in one write(2) call, to an fd opened in O_APPEND
  *  mode.  If somehow the fp is pointing in the middle of an event, we don't go
