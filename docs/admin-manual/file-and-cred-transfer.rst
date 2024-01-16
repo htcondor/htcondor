@@ -349,7 +349,7 @@ which are not specified with an absolute path are assumed to be in the
 :macro:`LIBEXEC` directory.
 
 The remainder of this section is a detailed explanation of how HTCondor
-launches such an executable.  This may be useful for adminstrators who
+launches such an executable.  This may be useful for administrators who
 wish to understand the process tree they're seeing, but it is intended
 to aid people trying to write a checkpoint clean-up plug-in for a
 different kind of checkpoint destination.  For the rest of this section,

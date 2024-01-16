@@ -199,7 +199,7 @@ where the -setup command will store the rest of the data it needs.
 
 The last command ensures that only you can read or write to those files.
 
-To donwload a new pair of security tokens for :tool:`condor_annex` to use,
+To download a new pair of security tokens for :tool:`condor_annex` to use,
 go to the IAM console at the following URL; log in if you need to:
 
 `https://console.aws.amazon.com/iam/home?region=us-east-1#/users <https://console.aws.amazon.com/iam/home?region=us-east-1#/users>`_
@@ -286,7 +286,7 @@ URL and delete the 'HTCondorAnnex-KeyPair' key:
 
 .. rubric:: Footnotes
 
-.. [1] You may assign an intance profile to an EC2 instance when you launch it,
+.. [1] You may assign an instance profile to an EC2 instance when you launch it,
    or at any subsequent time, through the AWS web console (or other interfaces
    with which you may be familiar). If you start the instance using HTCondor's
    EC2 universe, you may specify the IAM instance profile with the

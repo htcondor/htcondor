@@ -75,7 +75,7 @@ to a list attributes relevant to that type.
 :index:`Machine (ClassAd Types)`
 
 ``Slot`` or ``Machine``
-    Each slot of a *condor_startd* dameon describes its state.
+    Each slot of a *condor_startd* daemon describes its state.
     For HTCondor version 23.2 and later these are ``Slot`` ClassAds
     and describe only the slot state; and there is a separate ``StartDaemon`` ClassAd that
     describes the overall state of the *condor_startd*. These ClassAds are

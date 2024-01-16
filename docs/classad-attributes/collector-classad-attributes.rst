@@ -16,7 +16,7 @@ Collector ClassAd Attributes
     exceeded, or :macro:`COLLECTOR_QUERY_MAX_WORKTIME` exceeded, or client
     closed TCP socket while request was pending. This statistic is also
     available as ``RecentDroppedQueries`` which represents a count of
-    recently dropped queries that occured within a recent time window
+    recently dropped queries that occurred within a recent time window
     (default of 20 minutes).
 
 :classad-attribute-def:`CollectorIpAddr`
@@ -82,13 +82,13 @@ Collector ClassAd Attributes
     and will not have this statistic.
 
 :classad-attribute-def:`HandleLocateMissedFork`
-    Number of locate queries the Collector recieved since the Collector
+    Number of locate queries the Collector received since the Collector
     started that could not be handled immediately because there were
     already too many forked child processes. The Windows operating
     system does not fork and will not have this statistic.
 
 :classad-attribute-def:`HandleLocateMissedForkRuntimeAvg`
-    Total time spent queueing pending locate queries that could not be
+    Total time spent queuing pending locate queries that could not be
     immediately handled by forking since the Collector started. This
     attribute also has minimum, maximum, average and standard deviation
     statistics with Min, Max, Avg and Std suffixes respectively. The
@@ -118,14 +118,14 @@ Collector ClassAd Attributes
     system does not fork and will not have this statistic.
 
 :classad-attribute-def:`HandleQueryMissedFork`
-    Number of queries that are not locate queries the Collector recieved
+    Number of queries that are not locate queries the Collector received
     since the Collector started that could not be handled immediately
     because there were already too many forked child processes. The
     Windows operating system does not fork and will not have this
     statistic.
 
 :classad-attribute-def:`HandleQueryMissedForkRuntimeAvg`
-    Total time spent queueing pending non-locate queries that could not
+    Total time spent queuing pending non-locate queries that could not
     be immediately handled by forking since the Collector started. This
     attribute also has minimum, maximum, average and standard deviation
     statistics with Min, Max, Avg and Std suffixes respectively. The
@@ -184,7 +184,7 @@ Collector ClassAd Attributes
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
-    CPUs up into separate slots, each with with a unique name. These
+    CPUs up into separate slots, each with a unique name. These
     names will be of the form "slot#@full.hostname", for example,
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.

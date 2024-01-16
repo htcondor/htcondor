@@ -1920,7 +1920,7 @@ and the
 `Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`_,
 both of which must be available to the system Python 3 installation
 if using the daemonized version of :tool:`condor_adstash`.
-:tool:`condor_adstash` can also be run as a standalone tool (e.g. in a
+:tool:`condor_adstash` can also be run as a stand alone tool (e.g. in a
 Python 3 virtual environment containing the necessary libraries).
 
 Running :tool:`condor_adstash` as a daemon (i.e. under the watch of the

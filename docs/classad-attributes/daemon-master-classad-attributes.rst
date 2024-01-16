@@ -14,7 +14,7 @@ DaemonMaster ClassAd Attributes
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
 :classad-attribute-def:`LinuxCapabilities`
-    A hexidecimal formatted string that holds all set effective linux
+    A hexadecimal formatted string that holds all set effective Linux
     capabilities bit mask. This hex string can be decoded using ``capsh``.
     Only exists if running on a Linux OS.
  
@@ -62,7 +62,7 @@ DaemonMaster ClassAd Attributes
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
-    CPUs up into separate slots, each with with a unique name. These
+    CPUs up into separate slots, each with a unique name. These
     names will be of the form "slot#@full.hostname", for example,
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.

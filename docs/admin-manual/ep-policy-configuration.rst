@@ -921,12 +921,12 @@ This feature will enable better handling of jobs that utilize more than the disk
 than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
 created for it, the starter will put the job on hold with the out of resources hold code (34).
 Otherwise, in a full filesystem, writes will fail with ENOSPC, and leave it up to the job
-to handle these errors inernally at all places writed occur. Even in included third party
+to handle these errors internally at all places writes occur. Even in included third party
 libraries.
 
 .. note::
     The ephemeral filesystem created for the job is private to that job so the contents of
-    the filesystem are not visable outside the process hierarchy. The nsenter command can
+    the filesystem are not visible outside the process hierarchy. The nsenter command can
     be used to enter this namespace in order inspect the job's sandbox.
 
 .. note::
@@ -3182,7 +3182,7 @@ this new attribute.
 
 Beginning users may be tempted to hard-code, or assume the knowledge that
 certain well-known machines in their poool might have this database installed
-at some path.  But, by advertisting this value as a custom EP attribute,
+at some path.  But, by advertising this value as a custom EP attribute,
 administrators have gained a level of indirection, and are free to move
 the database to a different path, or perhaps add machines to the pool without
 such database.
