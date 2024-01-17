@@ -117,7 +117,9 @@ static const struct Translation MyCommandTranslation[] = {
 	{ "", 0 }
 };
 
+#if 0
 static const char * cmd_to_str(int cmd) { return getNameFromNum(cmd, MyCommandTranslation); }
+#endif
 static int str_to_cmd(const char * str) { return getNumFromName(str, MyCommandTranslation); }
 static void print_results(ClassAd * ad, const char * op);
 
