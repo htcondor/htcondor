@@ -347,13 +347,10 @@ ReplicatorStateMachine::replicaSelectionHandler( Version& newVersion )
 {
     REPLICATION_ASSERT( m_state == VERSION_DOWNLOADING || m_state == BACKUP );
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler "
-			"started with my version = %s, #versions = %d\n",
-             m_myVersion.toString( ).c_str( ), m_versionsList.Number( ) );
-    List<Version> actualVersionsList;
+             "started with my version = %s, #versions = %zu\n",
+             m_myVersion.toString( ).c_str( ), m_versionsList.size( ) );
     Version myVersionCopy = m_myVersion;
     
-    utilCopyList( actualVersionsList, m_versionsList );
-
 	// in BACKUP state compares the received version with the local one
     if( m_state == BACKUP ) {        
 		// compares the versions, taking only 'gid' and 'logicalClock' into
@@ -368,26 +365,21 @@ ReplicatorStateMachine::replicaSelectionHandler( Version& newVersion )
 	 * 'replicaSelectionHandler', i.e. selecting the version with greatest
 	 * 'logicalClock' value amongst a group of versions with the same gid
 	 */
-    actualVersionsList.Rewind( );
-    
-    if( actualVersionsList.IsEmpty( ) ) {
+    if( m_versionsList.empty( ) ) {
         return false;
     }
-    Version version;
-    Version bestVersion;
     // taking the first actual version as the best version in the meantime
-    actualVersionsList.Next( bestVersion );
+    Version bestVersion = *m_versionsList.begin();
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler best "
 			"version = %s\n", bestVersion.toString( ).c_str( ) );
-    
-    while( actualVersionsList.Next( version ) ) {
+
+    for (const auto& version : m_versionsList) {
         dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler "
 				"actual version = %s\n", version.toString( ).c_str( ) );
         if( version.isComparable( bestVersion ) && version > bestVersion ) {
             bestVersion = version;
         }
     }
-    actualVersionsList.Rewind( );
     
 	// compares the versions, taking only 'gid' and 'logicalClock' into
     // account - this is the reason for making the states equal
@@ -413,19 +405,14 @@ ReplicatorStateMachine::gidSelectionHandler( )
     dprintf( D_ALWAYS, "ReplicatorStateMachine::gidSelectionHandler started\n");
     
     bool          areVersionsComparable = true;
-    List<Version> actualVersionsList;
-    Version       actualVersion;
 
-    utilCopyList( actualVersionsList, m_versionsList );
-
-    while( actualVersionsList.Next( actualVersion ) ) {
+    for (const auto& actualVersion : m_versionsList) {
         if( ! m_myVersion.isComparable( actualVersion ) ) {
             areVersionsComparable = false;
             
             break;
         }    
     }
-    actualVersionsList.Rewind( );
 
     if( areVersionsComparable ) {
         dprintf( D_ALWAYS, "ReplicatorStateMachine::gidSelectionHandler no "
@@ -446,33 +433,29 @@ ReplicatorStateMachine::gidSelectionHandler( )
  * Description: receives remote replication daemon version and state from the
  *				given socket
  */
-Version*
-ReplicatorStateMachine::decodeVersionAndState( Stream* stream )
+bool
+ReplicatorStateMachine::decodeVersionAndState( Stream* stream, Version& newVersion )
 {
-	Version* newVersion = new Version;
 	// decode remote replication daemon version
-   	if( ! newVersion->decode( stream ) ) {
-    	dprintf( D_ALWAYS, "ReplicatorStateMachine::decodeVersionAndState "
-                           "cannot read remote daemon version\n" );
-       	delete newVersion;
-       
-       	return 0;
-   	}
-   	int remoteReplicatorState;
+	if( ! newVersion.decode( stream ) ) {
+		dprintf( D_ALWAYS, "ReplicatorStateMachine::decodeVersionAndState "
+		         "cannot read remote daemon version\n" );
 
-   	stream->decode( );
+		return false;
+	}
+	int remoteReplicatorState;
+
+	stream->decode( );
 	// decode remore replication daemon state
-   	if( ! stream->code( remoteReplicatorState ) ) {
-    	dprintf( D_ALWAYS, "ReplicatorStateMachine::decodeVersionAndState "
-                           "unable to decode the state\n" );
-       	delete newVersion;
-       
-       	return 0;
-   	}
-   	newVersion->setState( ReplicatorState( remoteReplicatorState ) );
+	if( ! stream->code( remoteReplicatorState ) ) {
+		dprintf( D_ALWAYS, "ReplicatorStateMachine::decodeVersionAndState "
+		         "unable to decode the state\n" );
 
-   	return newVersion;
-   	//updateVersionsList( *newVersion );
+		return false;
+	}
+	newVersion.setState( ReplicatorState( remoteReplicatorState ) );
+
+	return true;
 }
 /* Function   : becomeLeader
  * Description: passes to leader state, sets the last time, that HAD sent its
@@ -506,26 +489,26 @@ ReplicatorStateMachine::onLeaderVersion( Stream* stream )
     }
 	checkVersionSynchronization( );
 
-    Version* newVersion = decodeVersionAndState( stream );
+    Version newVersion;
+    bool rc = decodeVersionAndState( stream, newVersion );
 	// comparing the received version to the local one
-    bool downloadNeeded = replicaSelectionHandler( *newVersion );
+    bool downloadNeeded = replicaSelectionHandler( newVersion );
     // downloading the replica from the remote replication daemon, when the
 	// received version is better and there is no running downloading
 	// 'condor_transferers'  
-    if( downloadTransferersNumber( ) == 0 && newVersion && downloadNeeded ) {
+    if( downloadTransferersNumber( ) == 0 && rc && downloadNeeded ) {
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::onLeaderVersion "
 				"downloading from %s\n", 
-				newVersion->getSinfulString( ).c_str( ) );
-		if ( newVersion->knowsNewTransferProtocol() ) {
-			downloadNew( newVersion->getSinfulString( ).c_str( ) );
+				newVersion.getSinfulString( ).c_str( ) );
+		if ( newVersion.knowsNewTransferProtocol() ) {
+			downloadNew( newVersion.getSinfulString( ).c_str( ) );
 		} else {
-			download( newVersion->getSinfulString( ).c_str( ) );
+			download( newVersion.getSinfulString( ).c_str( ) );
 		}
     }
     // replication leader must not send a version which hasn't been updated
     //assert(downloadNeeded);
     //REPLICATION_ASSERT(downloadNeeded);
-	delete newVersion;
 }
 /* Function   : onTransferFile
  * Arguments  : daemonSinfulString - the address of remote replication daemon,
@@ -577,11 +560,11 @@ ReplicatorStateMachine::onSolicitVersionReply( Stream* stream )
 {
     dprintf( D_ALWAYS, "ReplicatorStateMachine::onSolicitVersionReply "
 					   "started\n" );
-    Version* newVersion = 0;
+    Version newVersion;
     
     if( m_state == VERSION_REQUESTING && 
-	  ( newVersion = decodeVersionAndState( stream ) ) ) {
-        updateVersionsList( *newVersion );
+	    decodeVersionAndState( stream, newVersion ) ) {
+        updateVersionsList( newVersion );
     }
 }
 /* Function   : onNewlyJoinedVersion 
@@ -778,23 +761,19 @@ ReplicatorStateMachine::killStuckDownloadingTransferer( time_t currentTime )
 void 
 ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
 {
-	m_uploadTransfererMetadataList.Rewind( );
-
-	ProcessMetadata* uploadTransfererMetadata = NULL;    
-
 	// killing stuck uploading 'condor_transferers'
-    while( m_uploadTransfererMetadataList.Next( uploadTransfererMetadata ) ) {
-        if( uploadTransfererMetadata->isValid( ) &&
-			currentTime - uploadTransfererMetadata->m_lastTimeCreated >
+	auto stuck_check = [&](const ProcessMetadata& uploadTransfererMetadata) {
+		if( uploadTransfererMetadata.isValid( ) &&
+			currentTime - uploadTransfererMetadata.m_lastTimeCreated >
               m_maxTransfererLifeTime ) {
             dprintf( D_FULLDEBUG, 
 					"ReplicatorStateMachine::killStuckUploadingTransferers "
                     "killing uploading condor_transferer pid = %d\n",
-                    uploadTransfererMetadata->m_pid );
+                    uploadTransfererMetadata.m_pid );
 			// sending SIGKILL signal, wrapped in daemon core function for
         	// portability
 			if( !daemonCore->Send_Signal( 
-				uploadTransfererMetadata->m_pid, SIGKILL ) ) {
+				uploadTransfererMetadata.m_pid, SIGKILL ) ) {
 				dprintf( D_ALWAYS, 
 						 "ReplicatorStateMachine::killStuckUploadingTransferers"
 						 " kill signal failed, reason = %s\n", strerror(errno));
@@ -805,18 +784,19 @@ ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
 			std::string extension;
             // the .up ending is needed in order not to confuse between
             // upload and download processes temporary files
-			formatstr( extension, "%d.%s", uploadTransfererMetadata->m_pid,
+			formatstr( extension, "%d.%s", uploadTransfererMetadata.m_pid,
 			           UPLOADING_TEMPORARY_FILES_EXTENSION );
 
             FilesOperations::safeUnlinkFile( m_versionFilePath.c_str( ),
                                              extension.c_str( ) );
             FilesOperations::safeUnlinkFile( m_stateFilePath.c_str( ),
                                              extension.c_str( ) );
-			delete uploadTransfererMetadata;
-			m_uploadTransfererMetadataList.DeleteCurrent( );
+			return true;
+		} else {
+			return false;
 		}
-    }
-	m_uploadTransfererMetadataList.Rewind( );
+    };
+	std::erase_if(m_uploadTransfererMetadataList, stuck_check);
 }
 /* Function   : replicationTimer 
  * Description: replication daemon life cycle handler
@@ -853,9 +833,9 @@ ReplicatorStateMachine::replicationTimer( int /* timerID */ )
 // End of TODO: Atomic operation
     dprintf( D_FULLDEBUG, "ReplicatorStateMachine::replicationTimer "
 						  "# downloading condor_transferer = %d, "
-						  "# uploading condor_transferer = %d\n",
+						  "# uploading condor_transferer = %zu\n",
              downloadTransferersNumber( ), 
-			 m_uploadTransfererMetadataList.Number( ) );
+			 m_uploadTransfererMetadataList.size( ) );
     if( m_state == BACKUP ) {
 		checkVersionSynchronization( );
 
@@ -927,7 +907,7 @@ ReplicatorStateMachine::versionDownloadingTimer( int /* timerID */ )
     utilCancelTimer(m_versionDownloadingTimerId);
     dprintf( D_FULLDEBUG, "ReplicatorStateMachine::versionDownloadingTimer "
 			"cancelling version downloading timer\n" );
-    utilClearList( m_versionsList );
+	m_versionsList.clear();
     
 	checkVersionSynchronization( );	
 

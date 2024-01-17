@@ -118,22 +118,6 @@ utilSafePutFile( ReliSock& socket, const std::string& filePath, int fips_mode );
 bool
 utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode );
 
-/* Function   : utilClearList
- * Arguments  : list - the list to be cleared
- * Description: function to clear generic lists
- */
-template <class T>
-void 
-utilClearList( List<T>& list )
-{
-    T* element = NULL;
-    list.Rewind ();
-
-    while ( list.Next( element ) ) {
-        delete element;
-        list.DeleteCurrent( );
-    }
-}
 /* Function   : utilCopyList
  * Arguments  : lhs - the list to be assigned to
  *              rhs - the list to be copied
