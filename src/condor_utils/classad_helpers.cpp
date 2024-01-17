@@ -368,14 +368,6 @@ bool add_attrs_from_string_tokens(classad::References & attrs, const char * str,
 	return false;
 }
 
-void add_attrs_from_StringList(const StringList & list, classad::References & attrs)
-{
-	StringList &constList = const_cast<StringList &>(list);
-	for (const char * p = constList.first(); p != NULL; p = constList.next()) {
-		attrs.insert(p);
-	}
-}
-
 // print attributes to a std::string, returning the result as a const char *
 const char *print_attrs(std::string &out, bool append, const classad::References & attrs, const char * delim)
 {
