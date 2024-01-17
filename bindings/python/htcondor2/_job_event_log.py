@@ -12,14 +12,17 @@ from .htcondor2_impl import (
 
 class JobEventLog():
     """
-    FIXME
+    Produce an iterator over job events in a user job event log.  You may
+    block or poll for new events.
+
+    A pickled :class:`JobEventLog` resumes generating events if and only if,
+    after being unpickled, the job event log file is identical except for
+    appended events.
     """
 
     def __init__(self, filename : str):
         """
-        FIXME
-
-        :param filename:
+        :param filename:  A file containing a job event log.
         """
         self._deadline = 0
         self._filename = filename
@@ -34,9 +37,19 @@ class JobEventLog():
 
     def events(self, stop_after : int = None) -> 'JobEventLog':
         """
-        FIXME
+        Returns an iterator over events in the log.
 
-        :param stop_after:
+        :param stop_after:  After how many seconds should the iterator
+            stop waiting for events?
+
+            If :py:obj:`None`, the iterator waits forever (blocks).
+
+            If ``0``, the iterator never waits (does not block;
+            a pure polling iterator).
+
+            For any other value, wait (block) for that many seconds for
+            a new event, raising :class:`StopIteration` if one does not
+            appear.  (This does not invalidate the iterator.)
         """
         if stop_after is None:
             self._deadline = 0
@@ -51,7 +64,8 @@ class JobEventLog():
 
     def close(self) -> None:
         """
-        FIXME
+        Close any open underlying file.  This object's iterators will no
+        longer produce new events.
         """
         return _job_event_log_close(self, self._handle)
 
