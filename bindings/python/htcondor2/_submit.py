@@ -273,8 +273,7 @@ class Submit(MutableMapping):
 
         :param filename:  The DAG description file.
         :param options:  A dictionary of *condor_submit_dag* command-line
-            options and their values.  [FIXME: add a condor_submit_dag
-            command-line flag to print them and their types out?]
+            options and their values.  See :meth:`from_dag_options`.
         """
         if not isinstance(options, dict):
             raise TypeError("options must be a dict")
@@ -296,6 +295,21 @@ class Submit(MutableMapping):
         subfile = _submit_from_dag(filename, internal_options)
         subfile_text = Path(subfile).read_text()
         return Submit(subfile_text)
+
+
+    @staticmethod
+    def from_dag_options():
+        """
+        Prints a table of valid keys for the ``options`` dictionary
+        passed to :meth:`from_dag`, the type of each key, and the
+        short description from *condor_submit_dag*'s ``-help`` output.
+
+        This function is useful if you don't have an installed copy of
+        *condor_submit_dag* or if this module and that command-line
+        tool could be from different versions.
+
+        FIXME: Unimplemented.
+        """
 
 
 # List does not include options which vary only in capitalization.
