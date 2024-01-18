@@ -38,6 +38,10 @@ Bugs Fixed:
   indeed finished.
   :jira:`2236`
 
+- Fixed bug in DAGMan where nodes that had retries would incorrectly
+  set its descendants to the Futile state if the node job got removed.
+  :jira:`2240`
+
 .. _lts-version-history-2304:
 
 Version 23.0.4
