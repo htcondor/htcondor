@@ -432,6 +432,9 @@ Requires: boost-python3
 %endif
 %endif
 Requires: python3
+%if 0%{?rhel} <= 9 && ! 0%{?fedora}
+Requires: python3-importlib-metadata
+%endif
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of

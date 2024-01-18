@@ -4,6 +4,7 @@ _logger = _logging.getLogger(__name__)
 _logger.setLevel(_logging.DEBUG)
 
 # Set the TMPDIR
+import warnings
 from pathlib import Path as _Path
 from os import environ as _environ
 from tempfile import gettempdir as _gettempdir
@@ -60,6 +61,7 @@ DagStatus = [
 # create an OrderedDict of nouns, mapping the name to be used on the
 # command line to the name of the class containing the noun's verbs.
 from collections import OrderedDict as _OrderedDict
+from htcondor_cli.plugins import load_entry_points
 from htcondor_cli.dagman import DAG
 from htcondor_cli.job import Job
 from htcondor_cli.job_set import JobSet
@@ -73,3 +75,12 @@ NOUNS["eventlog"] = EventLog
 # Should we knob these lines?
 from htcondor_cli.annex import Annex
 NOUNS["annex"] = Annex
+
+# Load third-party nouns
+for key, val in load_entry_points().items():
+    if key in NOUNS:
+        warnings.warn(
+            f"Duplicate htcondor_cli noun '{key}' ({val}) will be ignored",
+        )
+        continue
+    NOUNS[key] = val
