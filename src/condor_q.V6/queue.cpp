@@ -83,7 +83,7 @@ enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4, usage_AllOther
 //
 static bool show_file_queue(const char* jobads, const char* userlog);
 static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath, CondorClassAdListWriter &writer);
-static int dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess);
+static int dryFetchQueue(const char * file, const classad::References & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess);
 
 static void initOutputMask(AttrListPrintMask & pqmask, int qdo_mode, bool wide_mode);
 static void init_standard_summary_mask(ClassAd * summary_ad);
@@ -257,7 +257,7 @@ typedef std::map<long long, JobRowOfData> ROD_MAP_BY_ID;
 #define JROD_ISDAGNODE 0x0020  // this is a node in a dag (i.e. it has a DAGManJobId)
 
 
-static int set_print_mask_from_stream(AttrListPrintMask & prmask, const char * streamid, bool is_filename, StringList & attrs, AttrListPrintMask & sumymask);
+static int set_print_mask_from_stream(AttrListPrintMask & prmask, const char * streamid, bool is_filename, classad::References & attrs, AttrListPrintMask & sumymask);
 static void dump_print_mask(std::string & tmp);
 
 
@@ -363,7 +363,7 @@ void LiveJobCounters::publish(ClassAd & ad, const char * prefix) const
 }
 
 static struct {
-	StringList attrs;
+	classad::References attrs;
 	AttrListPrintMask prmask;
 	printmask_headerfooter_t HeadFoot;
 	StringList sumyattrs;         // attribute references in summary printmask
@@ -805,7 +805,6 @@ enum {
 	QDO_AutoFormat  = 0x300000, // Format + PrintFormat == AutoFormat
 	QDO_Attribs     = 0x800000,
 };
-//void initProjection(StringList & proj, int qdo_mode);
 
 static void 
 processCommandLineArguments (int argc, const char *argv[])
@@ -1206,10 +1205,8 @@ processCommandLineArguments (int argc, const char *argv[])
 				exit( 1 );
 			}
 			qdo_mode |= QDO_Attribs;
-			StringTokenIterator more_attrs(argv[i+1]);
-			const char * s;
-			while ( (s = more_attrs.next()) ) {
-				app.attrs.append(s);
+			for (const auto& s: StringTokenIterator(argv[i+1])) {
+				app.attrs.emplace(s);
 			}
 			i++;
 		}
@@ -1657,7 +1654,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				refs.insert(ATTR_CLUSTER_ID);
 				refs.insert(ATTR_PROC_ID);
 			}
-			initStringListFromAttrs(app.attrs, true, refs, true);
+			app.attrs.insert(refs.begin(), refs.end());
 		}
 		if (app.prmask.has_headings()) {
 			customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_NOHEADER);
@@ -2904,7 +2901,7 @@ static void append_long_ad(std::string & out, CondorClassAdListWriter & writer, 
 {
 	size_t start = out.size();
 
-	StringList * proj = (dash_autocluster || app.attrs.isEmpty()) ? NULL : &app.attrs;
+	classad::References * proj = (dash_autocluster || app.attrs.empty()) ? NULL : &app.attrs;
 	if (proj && print_attrs_in_hash_order
 		&& (dash_long_format <= ClassAdFileParseType::Parse_long || dash_long_format >= ClassAdFileParseType::Parse_auto)) {
 		// special case for debugging, if we have a projection, but also a request not to sort the attributes
@@ -2912,7 +2909,7 @@ static void append_long_ad(std::string & out, CondorClassAdListWriter & writer, 
 		classad::ClassAdUnParser unp;
 		unp.SetOldClassAd( true, true );
 		for (classad::ClassAd::const_iterator itr = ad.begin(); itr != ad.end(); ++itr) {
-			if (proj->contains_anycase(itr->first.c_str())) {
+			if (proj->contains(itr->first)) {
 				out += itr->first.c_str();
 				out += " = ";
 				unp.Unparse(out, itr->second);
@@ -3792,7 +3789,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			// when the ProdId is missing. This means that -factory -job will potentially generate
 			// errors when the files being read have no ProcId attribute.
 			// we call that user error, not a bug.
-			assume_cluster_ad_if_no_proc_id = app.attrs.isEmpty() || app.attrs.contains_anycase(ATTR_PROC_ID);
+			assume_cluster_ad_if_no_proc_id = app.attrs.empty() || app.attrs.contains(ATTR_PROC_ID);
 		}
 		pfnProcess = AddJobToClassAdCollection;
 		pvProcess = &ads;
@@ -3829,20 +3826,21 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			fetch_opts |= CondorQ::fetch_IncludeJobsetAds;
 		}
 	}
-	StringList no_attrs;
-	StringList *pattrs = &app.attrs;
+	classad::References no_attrs;
+	classad::References *pattrs = &app.attrs;
 	if (dash_unmatchable) pattrs = &no_attrs; // we need all of the attrs to do matchmaking.
 	int fetchResult;
 	if (dash_dry_run) {
 		fetchResult = dryFetchQueue(dry_run_file, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess);
 	} else {
-		if (dash_long || pattrs->contains_anycase(ATTR_SERVER_TIME)) {
+		if (dash_long || pattrs->contains(ATTR_SERVER_TIME)) {
 			// Ask the schedd to add the ServerTime attribute to the each of the job ads.
 			// this was the default before 9.10.0 (see HTCONDOR-1125)
 			// we do this so that a subsequent "condor_q -jobs <file> -nobatch" will show the correct job times.
 			Q.requestServerTime(true);
 		}
-		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
+		StringList attrs_sl(JoinAttrNames(*pattrs,","));
+		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs_sl, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
 		// In support of HTCONDOR-1125, grab queue time from summary ad if it is there.
 		if (summary_ad) { summary_ad->LookupInteger(ATTR_SERVER_TIME, queue_time); }
 	}
@@ -3971,7 +3969,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 }
 
 static int
-dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess)
+dryFetchQueue(const char * file, const classad::References & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess)
 {
 	// print header
 	int ver = 2;
@@ -3998,12 +3996,11 @@ dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, b
 	fprintf(stderr, "Opts: fetch=%d limit=%d HF=%x\n", fetch_opts, limit, customHeadFoot);
 
 	// print projection
-	proj.qsort();
-	auto_free_ptr projection(proj.print_to_delimed_string("\n  "));
+	std::string projection = JoinAttrNames(proj, "\n  ");
 	if (projection.empty()) {
 		fprintf(stderr, "Projection: <NULL>\n");
 	} else {
-		fprintf(stderr, "Projection:\n  %s\n",  projection.ptr());
+		fprintf(stderr, "Projection:\n  %s\n",  projection.c_str());
 	}
 
 	// print the sort keys
@@ -4363,7 +4360,7 @@ static int set_print_mask_from_stream(
 	AttrListPrintMask & prmask,
 	const char * streamid,
 	bool is_filename,
-	StringList & attrs,
+	classad::References & attrs,
 	AttrListPrintMask & sumymask)
 {
 	PrintMaskMakeSettings propt;
@@ -4407,7 +4404,7 @@ static int set_print_mask_from_stream(
 		if (propt.aggregate) {
 			if (propt.aggregate == PR_COUNT_UNIQUE) {
 				dash_autocluster = CondorQ::fetch_GroupBy;
-				initStringListFromAttrs(attrs, true, propt.attrs, true);
+				attrs.insert(propt.attrs.begin(), propt.attrs.end());
 			} else if (propt.aggregate == PR_FROM_AUTOCLUSTER) {
 				dash_autocluster = CondorQ::fetch_DefaultAutoCluster;
 			}
@@ -4420,7 +4417,7 @@ static int set_print_mask_from_stream(
 				propt.attrs.insert(ATTR_JOB_STATUS);
 				propt.attrs.insert(ATTR_JOB_UNIVERSE);
 			}
-			initStringListFromAttrs(attrs, true, propt.attrs, true);
+			attrs.insert(propt.attrs.begin(), propt.attrs.end());
 
 			// if using the standard summary, we need to set that up now.
 			if ((propt.headfoot & (HF_NOSUMMARY | HF_CUSTOM)) == 0) {

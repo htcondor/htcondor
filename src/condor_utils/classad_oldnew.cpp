@@ -34,7 +34,6 @@ int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
 	const classad::References *encrypted_attrs);
 int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
 	const classad::References &whitelist, const classad::References *encrypted_attrs);
-int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & whitelist_out);
 
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
@@ -446,18 +445,6 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	delete upd;
 
 	return true;
-}
-
-//
-//
-int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & whitelist_out)
-{
-	const char * attr;
-	list_in.rewind();
-	while ((attr = list_in.next())) {
-		whitelist_out.insert(attr);
-	}
-	return (int)whitelist_out.size();
 }
 
 // read an attribute from a query ad, and turn it into a classad projection (i.e. a set of attributes)
