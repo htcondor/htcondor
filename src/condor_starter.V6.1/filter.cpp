@@ -11,35 +11,12 @@
 #include <algorithm>
 #include <ranges>
 
-//
-// Excepting the special case, these two function are identical, so
-// they should be refactored together.  Maybe by having a callback
-// for each CLASSAD_VALUE (with the extracted ClassAd and holding
-// attribute name as arguments)?
-//
 
+typedef std::map<std::string, classad::Value::ValueType, classad::CaseIgnLTStr> Filter;
 
 // The caller owns (is responsible for delete'ing) the returned ClassAd.
 classad::ClassAd *
-filterTransferErrorData( const classad::ClassAd & ad ) {
-    using namespace classad;
-
-    std::map<std::string, classad::Value::ValueType, CaseIgnLTStr> LegalAttributes {
-        { "DeveloperData",                  Value::CLASSAD_VALUE },
-        { "IntermediateServerErrorType",    Value::STRING_VALUE },
-        { "IntermediateServer",             Value::STRING_VALUE },
-        { "ErrorType",                      Value::STRING_VALUE },
-        { "PluginVersion",                  Value::STRING_VALUE },
-        { "PluginLaunched",                 Value::BOOLEAN_VALUE },
-        { "FailedName",                     Value::STRING_VALUE },
-        { "FailureType",                    Value::STRING_VALUE },
-        { "FailedServer",                   Value::STRING_VALUE },
-        { "ShouldRefresh" ,                 Value::BOOLEAN_VALUE },
-        { "ErrorCode",                      Value::INTEGER_VALUE },
-        { "ErrorSrring",                    Value::STRING_VALUE },
-    };
-
-
+filterClassAd( const classad::ClassAd & ad, const Filter & filter ) {
     // The ClassAd iterator isn't sorted, which set_intersection() requires.
     classad::References attributes;
     sGetAdAttrs( attributes, ad );
@@ -47,9 +24,9 @@ filterTransferErrorData( const classad::ClassAd & ad ) {
     std::vector<std::string> intersection;
     std::ranges::set_intersection(
         attributes,
-        LegalAttributes | std::ranges::views::keys,
+        filter | std::ranges::views::keys,
         std::back_inserter( intersection ),
-        CaseIgnLTStr()
+        classad::CaseIgnLTStr()
     );
 
 
@@ -59,8 +36,13 @@ filterTransferErrorData( const classad::ClassAd & ad ) {
     for( const auto & attribute : intersection ) {
         classad::Value v;
         ExprTree * e = ad.Lookup( attribute );
+// We can do this without evaluating if follow the example of compat classad's
+// ExprTreeIsLiteral*(); if e->GetKind() is CLASSAD_NODE or EXPR_LIST_NODE,
+// that's the type as far as we're presently concerned.  If it's LITERAL_NODE,
+// ExprTreeIsLiteral() actually returns the classad::Value without evaluating,
+// which we can of course then look up directly.
         if( e->Evaluate(v) ) {
-                if( v.GetType() == LegalAttributes[attribute] ) {
+                if( v.GetType() == filter.at(attribute) ) {
                     filteredAd->Insert( attribute, e->Copy() );
                 } else {
                     dprintf( D_NEVER, "illegal type %d for attribute %s\n", (int)v.GetType(), attribute.c_str() );
@@ -86,10 +68,34 @@ filterTransferErrorData( const classad::ClassAd & ad ) {
 
 // The caller owns (is responsible for delete'ing) the returned ClassAd.
 classad::ClassAd *
+filterTransferErrorData( const classad::ClassAd & ad ) {
+    using namespace classad;
+
+    Filter LegalAttributes {
+        { "DeveloperData",                  Value::CLASSAD_VALUE },
+        { "IntermediateServerErrorType",    Value::STRING_VALUE },
+        { "IntermediateServer",             Value::STRING_VALUE },
+        { "ErrorType",                      Value::STRING_VALUE },
+        { "PluginVersion",                  Value::STRING_VALUE },
+        { "PluginLaunched",                 Value::BOOLEAN_VALUE },
+        { "FailedName",                     Value::STRING_VALUE },
+        { "FailureType",                    Value::STRING_VALUE },
+        { "FailedServer",                   Value::STRING_VALUE },
+        { "ShouldRefresh" ,                 Value::BOOLEAN_VALUE },
+        { "ErrorCode",                      Value::INTEGER_VALUE },
+        { "ErrorSrring",                    Value::STRING_VALUE },
+    };
+
+    return filterClassAd( ad, LegalAttributes );
+}
+
+
+// The caller owns (is responsible for delete'ing) the returned ClassAd.
+classad::ClassAd *
 filterPluginResults( const classad::ClassAd & ad ) {
     using namespace classad;
 
-    std::map<std::string, classad::Value::ValueType, CaseIgnLTStr> LegalAttributes {
+    Filter LegalAttributes {
         { "TransferSuccess",        Value::BOOLEAN_VALUE },
         { "TransferError",          Value::STRING_VALUE },
         { "TransferProtocol",       Value::STRING_VALUE },
@@ -106,54 +112,15 @@ filterPluginResults( const classad::ClassAd & ad ) {
         { "TransferData",           Value::CLASSAD_VALUE },
     };
 
+    classad::ClassAd * filteredAd = filterClassAd( ad, LegalAttributes );
 
-    // The ClassAd iterator isn't sorted, which set_intersection() requires.
-    classad::References attributes;
-    sGetAdAttrs( attributes, ad );
-
-    std::vector<std::string> intersection;
-    std::ranges::set_intersection(
-        attributes,
-        LegalAttributes | std::ranges::views::keys,
-        std::back_inserter( intersection ),
-        CaseIgnLTStr()
-    );
-
-
-    if( intersection.empty() ) { return NULL; }
-
-    classad::ClassAd * filteredAd = new classad::ClassAd();
-    for( const auto & attribute : intersection ) {
-        classad::Value v;
-        ExprTree * e = ad.Lookup( attribute );
-        if( e->Evaluate(v) ) {
-                if( v.GetType() == LegalAttributes[attribute] ) {
-                    if( attribute == "TransferErrorData" ) {
-                        ClassAd * tedAd = NULL;
-                        ASSERT(v.IsClassAdValue(tedAd));
-                        ClassAd * filteredTEDAd = filterTransferErrorData(* tedAd);
-                        if( filteredTEDAd != NULL ) {
-                            filteredAd->Insert( attribute, filteredTEDAd );
-                        }
-                    } else {
-                        filteredAd->Insert( attribute, e->Copy() );
-                    }
-                } else {
-                    dprintf( D_NEVER, "illegal type %d for attribute %s\n", (int)v.GetType(), attribute.c_str() );
-
-                    std::string buffer;
-                    classad::ClassAdUnParser caup;
-                    caup.Unparse(buffer, e);
-                    dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
-                }
-        } else {
-            dprintf( D_NEVER, "failed to evaluate attribute %s\n", attribute.c_str() );
-
-            std::string buffer;
-            classad::ClassAdUnParser caup;
-            caup.Unparse(buffer, e);
-            dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
-        }
+    // Additionally, filter the TransferErrorData attribute.
+    ExprTree * e = filteredAd->Lookup(" TransferErrorData" );
+    if( e != NULL ) {
+        classad::ClassAd * transferErrorDataAd = NULL;
+        assert( e->isClassad( & transferErrorDataAd ) );
+        classad::ClassAd * filteredTEDAd = filterTransferErrorData( * transferErrorDataAd );
+        filteredAd->Insert( "TransferErrorData", filteredTEDAd );
     }
 
     return filteredAd;
