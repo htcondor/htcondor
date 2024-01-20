@@ -4,6 +4,7 @@
 #include "classad/classad.h"
 #include "filter.h"
 #include "compat_classad.h"
+#include "compat_classad_util.h"
 
 #include <map>
 #include <string>
@@ -36,29 +37,20 @@ filterClassAd( const classad::ClassAd & ad, const Filter & filter ) {
     for( const auto & attribute : intersection ) {
         classad::Value v;
         ExprTree * e = ad.Lookup( attribute );
-// We can do this without evaluating if follow the example of compat classad's
-// ExprTreeIsLiteral*(); if e->GetKind() is CLASSAD_NODE or EXPR_LIST_NODE,
-// that's the type as far as we're presently concerned.  If it's LITERAL_NODE,
-// ExprTreeIsLiteral() actually returns the classad::Value without evaluating,
-// which we can of course then look up directly.
-        if( e->Evaluate(v) ) {
-                if( v.GetType() == filter.at(attribute) ) {
-                    filteredAd->Insert( attribute, e->Copy() );
-                } else {
-                    dprintf( D_NEVER, "illegal type %d for attribute %s\n", (int)v.GetType(), attribute.c_str() );
-
-                    std::string buffer;
-                    classad::ClassAdUnParser caup;
-                    caup.Unparse(buffer, e);
-                    dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
-                }
+        if( ExprTreeIsLiteral(e, v) && v.GetType() == filter.at(attribute) ) {
+            filteredAd->Insert( attribute, e->Copy() );
+        } else if( e->isClassad() &&
+                   classad::Value::CLASSAD_VALUE == filter.at(attribute) ) {
+            filteredAd->Insert( attribute, e->Copy() );
+        } else if( e->GetKind() == ExprTree::EXPR_LIST_NODE &&
+                   classad::Value::LIST_VALUE == filter.at(attribute) ) {
+            filteredAd->Insert( attribute, e->Copy() );
         } else {
-            dprintf( D_NEVER, "failed to evaluate attribute %s\n", attribute.c_str() );
-
             std::string buffer;
             classad::ClassAdUnParser caup;
             caup.Unparse(buffer, e);
-            dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
+
+            dprintf( D_NEVER, "Attribute '%s' had value '%s' with wrong type, filtering.\n", attribute.c_str(), buffer.c_str() );
         }
     }
 
