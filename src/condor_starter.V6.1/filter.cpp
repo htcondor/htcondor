@@ -8,19 +8,14 @@
 #include <map>
 #include <string>
 #include <vector>
-#if defined(CXX_TWENTY_IS_REAL_TO_ME)
 #include <algorithm>
 #include <ranges>
-#endif   /* CXX_TWENTY_IS_REAL_TO_ME */
 
 //
 // Excepting the special case, these two function are identical, so
 // they should be refactored together.  Maybe by having a callback
 // for each CLASSAD_VALUE (with the extracted ClassAd and holding
 // attribute name as arguments)?
-//
-// ... would probably be less ugly as a two-pass algorithm in the
-// top-level wrapper.
 //
 
 
@@ -50,20 +45,12 @@ filterTransferErrorData( const classad::ClassAd & ad ) {
     sGetAdAttrs( attributes, ad );
 
     std::vector<std::string> intersection;
-#if defined(CXX_TWENTY_IS_REAL_TO_ME)
     std::ranges::set_intersection(
         attributes,
         LegalAttributes | std::ranges::views::keys,
         std::back_inserter( intersection ),
         CaseIgnLTStr()
     );
-#else
-    for( const auto & attribute : attributes ) {
-        if( LegalAttributes.count(attribute) != 0 ) {
-            intersection.push_back( attribute );
-        }
-    }
-#endif
 
 
     if( intersection.empty() ) { return NULL; }
@@ -125,20 +112,12 @@ filterPluginResults( const classad::ClassAd & ad ) {
     sGetAdAttrs( attributes, ad );
 
     std::vector<std::string> intersection;
-#if defined(CXX_TWENTY_IS_REAL_TO_ME)
     std::ranges::set_intersection(
         attributes,
         LegalAttributes | std::ranges::views::keys,
         std::back_inserter( intersection ),
         CaseIgnLTStr()
     );
-#else
-    for( const auto & attribute : attributes ) {
-        if( LegalAttributes.count(attribute) != 0 ) {
-            intersection.push_back( attribute );
-        }
-    }
-#endif
 
 
     if( intersection.empty() ) { return NULL; }
