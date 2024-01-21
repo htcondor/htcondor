@@ -107,11 +107,14 @@ filterPluginResults( const classad::ClassAd & ad ) {
     classad::ClassAd * filteredAd = filterClassAd( ad, LegalAttributes );
 
     // Additionally, filter the TransferErrorData attribute.
-    ExprTree * e = filteredAd->Lookup(" TransferErrorData" );
+    ExprTree * e = filteredAd->Lookup( "TransferErrorData" );
     if( e != NULL ) {
         classad::ClassAd * transferErrorDataAd = NULL;
         assert( e->isClassad( & transferErrorDataAd ) );
         classad::ClassAd * filteredTEDAd = filterTransferErrorData( * transferErrorDataAd );
+        if( filteredTEDAd == NULL ) {
+            filteredTEDAd = new ClassAd();
+        }
         filteredAd->Insert( "TransferErrorData", filteredTEDAd );
     }
 
