@@ -85,6 +85,7 @@ if (BUILD_TESTING)
 
 	##########################################################
 	# exe test targets
+	condor_exe_test(test_filter.exe "test_filter.cpp;../condor_starter.V6.1/filter.cpp" "condor_utils")
 	condor_exe_test(x_return-n.exe "x_return-n.cpp;x_waste_second.c" "")
 	condor_exe_test(x_dumpcore.exe "x_dumpcore.cpp" "")
 	condor_exe_test(x_tightloop.exe "x_tightloop.cpp" "")
@@ -182,6 +183,11 @@ endif ()
 	#condor_pl_test (job_test_urlfetch "Test condor_urlfetch" "quick;ctest")
 	condor_pl_test (lib_meta_knob  "Test meta knobs" "quick;ctest" CTEST)
 	condor_pl_test (lib_include_cmd_config  "Test meta knobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_include_cmd_config1.txt;src/condor_tests/lib_include_cmd_config3.txt;src/condor_tests/lib_include_cmd_config.pl;src/condor_tests/lib_include_cmd_config2.txt;src/condor_tests/lib_include_cmd_config4.txt")
+
+
+    # Fail.  ctest -R always runs PyTest with an Ornithology-only argument.
+	condor_pl_test(test_filter "Test plug-in output ad filtering" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/test_filter.exe;src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 
 	# an example of a test writen in python rather than in perl
 	# condor_pl_test (python_example "Sample python test" "quick;ctest")
