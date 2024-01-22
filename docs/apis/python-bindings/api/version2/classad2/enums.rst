@@ -1,5 +1,5 @@
-:mod:`classad2` Enumerations Reference
-======================================
+:mod:`classad2` Enumerations
+============================
 
 .. currentmodule:: classad2
 

@@ -1,5 +1,5 @@
-:mod:`classad2` Namespace Reference
-====================================
+:mod:`classad2` Members
+=======================
 
 .. currentmodule:: classad2
 

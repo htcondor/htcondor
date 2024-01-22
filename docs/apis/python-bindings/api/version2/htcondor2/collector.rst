@@ -1,5 +1,5 @@
-:class:`Collector` Class Reference
-==================================
+:class:`Collector` Class
+========================
 
 .. currentmodule:: htcondor2
 

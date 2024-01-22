@@ -1,5 +1,5 @@
-:class:`Submit` Class Reference
-===============================
+:class:`Submit` Class
+=====================
 
 .. currentmodule:: htcondor2
 

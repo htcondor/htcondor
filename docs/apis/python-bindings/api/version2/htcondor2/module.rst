@@ -1,5 +1,5 @@
-:mod:`htcondor2` Namespace Reference
-====================================
+:mod:`htcondor2` Members
+========================
 
 .. currentmodule:: htcondor2
 

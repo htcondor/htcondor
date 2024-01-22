@@ -1,5 +1,5 @@
-:class:`CredCheck` Class Reference
-==================================
+:class:`CredCheck` Class
+========================
 
 .. currentmodule:: htcondor2
 

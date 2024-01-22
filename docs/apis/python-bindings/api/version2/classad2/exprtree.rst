@@ -1,5 +1,5 @@
-:class:`ExprTree` Class Reference
-=================================
+:class:`ExprTree` Class
+=======================
 
 .. currentmodule:: classad2
 

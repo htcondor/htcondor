@@ -1,5 +1,5 @@
-:class:`Startd` Class Reference
-===============================
+:class:`Startd` Class
+=====================
 
 .. currentmodule:: htcondor2
 

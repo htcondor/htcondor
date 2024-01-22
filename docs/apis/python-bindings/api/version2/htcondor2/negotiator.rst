@@ -1,5 +1,5 @@
-:class:`Negotiator` Class Reference
-===================================
+:class:`Negotiator` Class
+=========================
 
 .. currentmodule:: htcondor2
 

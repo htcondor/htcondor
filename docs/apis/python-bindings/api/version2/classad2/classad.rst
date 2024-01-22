@@ -1,5 +1,5 @@
-:class:`ClassAd` Class Reference
-================================
+:class:`ClassAd` Class
+======================
 
 .. currentmodule:: classad2
 

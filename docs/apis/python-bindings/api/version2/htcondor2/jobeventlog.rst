@@ -1,5 +1,5 @@
-:class:`JobEventLog` Class Reference
-====================================
+:class:`JobEventLog` Class
+==========================
 
 .. currentmodule:: htcondor2
 

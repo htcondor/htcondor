@@ -1,5 +1,5 @@
-:class:`Credd` Class Reference
-==============================
+:class:`Credd` Class
+====================
 
 .. currentmodule:: htcondor2
 

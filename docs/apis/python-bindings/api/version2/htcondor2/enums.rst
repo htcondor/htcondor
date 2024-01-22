@@ -1,5 +1,5 @@
-:mod:`htcondor2` Enumerations Reference
-=======================================
+:mod:`htcondor2` Enumerations
+=============================
 
 .. currentmodule:: htcondor2
 

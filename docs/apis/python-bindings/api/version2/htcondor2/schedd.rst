@@ -1,5 +1,5 @@
-:class:`Schedd` Class Reference
-===============================
+:class:`Schedd` Class
+=====================
 
 .. currentmodule:: htcondor2
 
