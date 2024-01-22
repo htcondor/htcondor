@@ -3,6 +3,7 @@
 
 #include "classad/classad.h"
 #include "../condor_starter.V6.1/filter.h"
+#include "compat_classad_util.h"
 
 #include <map>
 #include <string>
@@ -30,7 +31,7 @@ main( int, char ** ) {
     };
 
 
-    // Does filterPluginResults() filter-in correctly?
+    // Does filterClassAd() filter-in correctly?
     ClassAd sourceAd;
     sourceAd.InsertAttr( "int-value", 7 );
     sourceAd.InsertAttr( "bool-value", true );
@@ -53,7 +54,7 @@ main( int, char ** ) {
     filteredAd = NULL;
 
 
-    // Does filterPluginResults() filter-out correctly?
+    // Does filterClassAd() filter-out correctly?
     sourceAd.Clear();
     sourceAd.InsertAttr( "int-value", 3.141 );
     sourceAd.InsertAttr( "bool-value", "maybe" );
@@ -70,7 +71,7 @@ main( int, char ** ) {
     delete filteredAd;
 
 
-    // Does filterPluginResults() filter in and out simultaneously?
+    // Does filterClassAd() filter in and out simultaneously?
     sourceAd.Clear();
     sourceAd.InsertAttr( "int-value", 3.141 );
     sourceAd.InsertAttr( "bool-value", true );
@@ -109,11 +110,9 @@ main( int, char ** ) {
     // make sure that filterPluginResults() calls filterTransferErrorData()
     // properly and call it a day.
     sourceAd.Clear();
-    subAd = new ClassAd();
-    subAd->InsertAttr( "not-in-the-list", "void" );
-    sourceAd.Insert( "TransferErrorData", subAd );
-    subAd = NULL; // sourceAd owns this now, don't re-use it.
-
+    sourceAd.AssignExpr( "TransferErrorData",
+        "{ [ ErrorType = \"Contact\"; ], [ BadAttr = \"Transfer\"; ] }"
+    );
     filteredAd = filterPluginResults( sourceAd );
     if( filteredAd->size() != 1 ) {
         fprintf( stderr, "FAILURE: wrong attribute count (#2)\n" );
@@ -124,13 +123,20 @@ main( int, char ** ) {
         fprintf( stderr, "'TransferErrorData' incorrectly filtered out.\n" );
         return 1;
     }
-    if(! e->isClassad(& subAd)) {
-        fprintf( stderr, "'TransferErrorData' not a ClassAd!\n" );
+    if( e->GetKind() != ExprTree::EXPR_LIST_NODE ) {
+        fprintf( stderr, "'TransferErrorData' not a list.\n" );
         return 1;
     }
-    if( subAd->size() != 0 ) {
-        fprintf( stderr, "'TransferErrorData' incorrectly filtered.\n" );
-        return 1;
+    ExprList * list = dynamic_cast<ExprList *>(e);
+    std::vector<ExprTree *> ads;
+    list->GetComponents(ads);
+    ClassAd * first = dynamic_cast<ClassAd *>(ads[0]);
+    if(! (first != NULL && first->size() == 1)) {
+        fprintf( stderr, "TransferErrorData[0] wrong size.\n" );
+    }
+    ClassAd * second = dynamic_cast<ClassAd *>(ads[1]);
+    if(! (second != NULL && second->size() == 0)) {
+        fprintf( stderr, "TransferErrorData[1] wrong size.\n" );
     }
 
     return 0;

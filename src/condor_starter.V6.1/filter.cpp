@@ -31,8 +31,6 @@ filterClassAd( const classad::ClassAd & ad, const Filter & filter ) {
     );
 
 
-    if( intersection.empty() ) { return NULL; }
-
     classad::ClassAd * filteredAd = new classad::ClassAd();
     for( const auto & attribute : intersection ) {
         classad::Value v;
@@ -64,7 +62,6 @@ filterTransferErrorData( const classad::ClassAd & ad ) {
     using namespace classad;
 
     Filter LegalAttributes {
-        { "DeveloperData",                  Value::CLASSAD_VALUE },
         { "IntermediateServerErrorType",    Value::STRING_VALUE },
         { "IntermediateServer",             Value::STRING_VALUE },
         { "ErrorType",                      Value::STRING_VALUE },
@@ -76,6 +73,8 @@ filterTransferErrorData( const classad::ClassAd & ad ) {
         { "ShouldRefresh" ,                 Value::BOOLEAN_VALUE },
         { "ErrorCode",                      Value::INTEGER_VALUE },
         { "ErrorSrring",                    Value::STRING_VALUE },
+        // Reserved for plug-in developers.
+        { "DeveloperData",                  Value::CLASSAD_VALUE },
     };
 
     return filterClassAd( ad, LegalAttributes );
@@ -99,9 +98,12 @@ filterPluginResults( const classad::ClassAd & ad ) {
         { "TransferEndTime",        Value::INTEGER_VALUE },
         { "ConnectionTimeSeconds",  Value::REAL_VALUE },
         { "TransferURL",            Value::STRING_VALUE },
-        { "TransferErrorData",      Value::CLASSAD_VALUE },
+        // A list of ClassAds, one per transfer attempt.
+        { "TransferErrorData",      Value::LIST_VALUE },
+        // Reserved for plug-in developers.
         { "DeveloperData",          Value::CLASSAD_VALUE },
-        { "TransferData",           Value::CLASSAD_VALUE },
+        // Reserved for future expansion.
+        { "TransferData",           Value::LIST_VALUE },
     };
 
     classad::ClassAd * filteredAd = filterClassAd( ad, LegalAttributes );
@@ -109,13 +111,29 @@ filterPluginResults( const classad::ClassAd & ad ) {
     // Additionally, filter the TransferErrorData attribute.
     ExprTree * e = filteredAd->Lookup( "TransferErrorData" );
     if( e != NULL ) {
-        classad::ClassAd * transferErrorDataAd = NULL;
-        assert( e->isClassad( & transferErrorDataAd ) );
-        classad::ClassAd * filteredTEDAd = filterTransferErrorData( * transferErrorDataAd );
-        if( filteredTEDAd == NULL ) {
-            filteredTEDAd = new ClassAd();
+        if( e->GetKind() != ExprTree::EXPR_LIST_NODE ) {
+            EXCEPT("TransferErrorData filtered in but not a list");
         }
-        filteredAd->Insert( "TransferErrorData", filteredTEDAd );
+
+        ExprList * list = dynamic_cast<ExprList *>(e);
+        if( list == NULL ) {
+            EXCEPT("Failed to cast EXPR_LIST_NODE to ExprList");
+        }
+
+
+        std::vector<ExprTree *> exprs;
+        list->GetComponents(exprs);
+
+        std::vector<ExprTree *> filteredExprs;
+        for( ExprTree * expr : exprs ) {
+            classad::ClassAd * transferErrorDataAd = NULL;
+            if(! expr->isClassad( & transferErrorDataAd )) { continue; }
+            classad::ClassAd * filteredTEDAd = filterTransferErrorData( * transferErrorDataAd );
+            filteredExprs.push_back(filteredTEDAd);
+        }
+
+        ExprList * filteredList = new ExprList( filteredExprs );
+        filteredAd->Insert( "TransferErrorData", filteredList );
     }
 
     return filteredAd;
