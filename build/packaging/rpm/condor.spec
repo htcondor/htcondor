@@ -394,6 +394,7 @@ A collection of tests to verify that HTCondor is operating properly.
 Summary: Python bindings for HTCondor
 Group: Applications/System
 Requires: python >= 2.2
+Requires: python2-cryptography
 Requires: %name = %version-%release
 %{?python_provide:%python_provide python2-condor}
 %if 0%{?rhel} >= 7
@@ -426,6 +427,7 @@ Requires: boost-python3
 %endif
 %endif
 Requires: python3
+Requires: python3-cryptography
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
