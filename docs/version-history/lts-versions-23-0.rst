@@ -58,7 +58,11 @@ New Features:
 - The **condor_starter** can now be configured to capture the stdout and stderr
   of file transfer plugins and write that output into the StarterLog.
   :jira:`1459`
-  
+
+- The **condor_starter** will now set the environment variable ``NVIDIA_VISIBLE_DEVICES`` either
+  to ``none`` or to a list of the full uuid of each GPU device assigned to the slot.
+  :jira:`2242`
+
 - Updated **condor_upgrade_check** script for better support and
   maintainability. This update includes new flags/functionality
   and removal of old checks for upgrading between V9 and V10 of
