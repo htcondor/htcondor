@@ -31,9 +31,9 @@ else
 fi
 
 if [ $ID = debian ] || [ $ID = 'ubuntu' ]; then
-    apt update
+    apt-get update
     export DEBIAN_FRONTEND='noninteractive'
-    INSTALL='apt install --yes'
+    INSTALL='apt-get install --yes'
 elif [ $ID = 'centos' ]; then
     INSTALL='yum install --assumeyes'
 elif [ $ID = 'opensuse-leap' ]; then
@@ -116,16 +116,17 @@ fi
 # Setup Debian based repositories
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL apt-transport-https curl gnupg
-    curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${REPO_VERSION}-Key" | apt-key add -
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${REPO_VERSION}-Key" -o /etc/apt/keyrings/htcondor.asc
     curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/$ID/htcondor-${REPO_VERSION}-${VERSION_CODENAME}.list" -o /etc/apt/sources.list.d/htcondor.list
-    apt update
+    apt-get update
 fi
 
 # Use the testing repositories for unreleased software
 if [ "$VERSION_CODENAME" = 'future' ] && [ "$ARCH" = 'x86_64' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
-    apt update
+    apt-get update
 fi
 if [ $ID = 'future' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
@@ -156,7 +157,7 @@ fi
 if [ "$VERSION_CODENAME" = 'bionic' ]; then
     curl -dsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
     echo 'deb https://apt.kitware.com/ubuntu/ bionic main' > /etc/apt/sources.list.d/cmake.list
-    apt update
+    apt-get update
 fi
 
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
@@ -219,7 +220,7 @@ fi
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL software-properties-common
     add-apt-repository -y ppa:apptainer/ppa
-    apt update
+    apt-get update
     $INSTALL apptainer
 fi
 
@@ -230,15 +231,15 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5 pelican pelican-osdf-compat
+    apt-get download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5 pelican pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        apt download libboost-python1.74.0
+        apt-get download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        apt download libboost-python1.74.0
+        apt-get download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        apt download libboost-python1.71.0
+        apt-get download libboost-python1.71.0
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        apt download libboost-python1.74.0
+        apt-get download libboost-python1.74.0
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
@@ -274,8 +275,8 @@ if [ $ID = 'amzn' ] || [ $ID = 'almalinux' ] || [ $ID = 'fedora' ]; then
     rm -rf /var/cache/yum/*
 fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-    apt -y autoremove
-    apt -y clean
+    apt-get -y autoremove
+    apt-get -y clean
 fi
 
 # Install apptainer into externals directory
