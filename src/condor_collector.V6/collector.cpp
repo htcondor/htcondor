@@ -647,7 +647,7 @@ CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
 			query_entry->adt[ix].skip_absent = skip_absent;
 
 			// check for <AdType>Limit
-			std::string attr(tag); tag += ATTR_LIMIT_RESULTS;
+			std::string attr(tag); attr += ATTR_LIMIT_RESULTS;
 			int taglimit = -1;
 			if (query->LookupInteger(attr, taglimit) && taglimit > 0) {
 				query_entry->adt[ix].limit = taglimit;
