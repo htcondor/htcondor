@@ -4,6 +4,23 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.3.1
+--------------
+
+Release Notes:
+
+- HTCondor version 23.3.1 released on January 23, 2023.
+
+- HTCondor tarballs now contain `Pelican 7.4.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.4.0>`_
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 23.3.0
 --------------
 
