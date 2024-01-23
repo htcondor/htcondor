@@ -42,6 +42,10 @@ Bugs Fixed:
   set its descendants to the Futile state if the node job got removed.
   :jira:`2240`
 
+- Fixed *condor_test_token* to access the SciTokens cache as the correct
+  user when run as root.
+  :jira:`2241`
+
 .. _lts-version-history-2304:
 
 Version 23.0.4
