@@ -3290,6 +3290,19 @@ Starter::PublishToEnv( Env* proc_env )
 					proc_env->SetEnv(env_name.c_str(), assigned.c_str());
 				}
 			}
+
+			// NVIDIA_VISIBLE_DEVICES needs to be set to an expression evaluated against the machine ad
+			// which may not be the same exact value as what we set CUDA_VISIBLE_DEVICES to
+			if (tags.contains_anycase("GPUs") && param_boolean("AUTO_SET_NVIDIA_VISIBLE_DEVICES",true)) {
+				classad::Value val;
+				const char * env_value = nullptr;
+				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
+					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
+					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
+				} else {
+					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
+				}
+			}
 		}
 	}
 
