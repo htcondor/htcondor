@@ -43,19 +43,24 @@ from typing import Dict, List, Set, Union
 
 # fmt:off
 SUPPORTED_DISTROS = [
-         "el7",
          "el8",
-    "ubu20.04",
+         "el9",
+    "ubu22.04",
 ]
 SUPPORTED_DAILY_DISTROS = [
-    "el7",
     "el8",
-    "ubu20.04",
+    "el9",
+    "ubu22.04",
 ]
-DISTRO_IMAGE = {
-         "el7": "centos:7",
+X86_64_DISTRO_IMAGE = {
          "el8": "almalinux:8",
-    "ubu20.04": "ubuntu:20.04",
+         "el9": "almalinux:9",
+    "ubu22.04": "ubuntu:22.04",
+}
+ARM64_DISTRO_IMAGE = {
+         "el8": "arm64v8/almalinux:8",
+         "el9": "arm64v8/almalinux:9",
+    "ubu22.04": "arm64v8/ubuntu:22.04",
 }
 # fmt:on
 
@@ -439,7 +444,7 @@ org.htcondor.version="%s"
 
         return tags
 
-    def build_base(self, distro: str) -> List[str]:
+    def build_base(self, distro: str, image: str) -> List[str]:
         """Build a base HTCondor image
 
         - distro: the distribution to build images for e.g. `el7`
@@ -453,7 +458,7 @@ org.htcondor.version="%s"
         `tags_to_make_release()` for daily or non-daily builds, respectively.
         See those methods for the list.
         """
-        args = [f"--build-arg=BASE_IMAGE={DISTRO_IMAGE[distro]}"]
+        args = [f"--build-arg=BASE_IMAGE={image}"]
         if self.want_latest_version:
             args.extend(
                 [f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=latest"]
@@ -717,7 +722,19 @@ def main(argv) -> Union[int,str]:
 
     images_to_push = []
     for distro in distros:
-        base_images = builder.build_base(distro)
+        base_images = builder.build_base(distro, X86_64_DISTRO_IMAGE[distro])
+        images_to_push.extend(base_images)
+        if not args.base_only:
+            for image in images:
+                new_tags = [re.sub(r"base:", f"{image}:", x) for x in base_images]
+                builder.build_derived(
+                    image=image,
+                    base_image=base_images[0],
+                    new_tags=new_tags,
+                    distro=distro,
+                )
+                images_to_push.extend(new_tags)
+        base_images = builder.build_base(distro, ARM64_DISTRO_IMAGE[distro])
         images_to_push.extend(base_images)
         if not args.base_only:
             for image in images:
