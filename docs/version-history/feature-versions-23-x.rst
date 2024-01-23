@@ -38,7 +38,7 @@ New Features:
   is set to the source of the image transfer.
   :jira:`1797`
 
-- If PER_JOB_HISTORY_DIR is set, it is now a fatal error to write a historical job
+- If :macro:`PER_JOB_HISTORY_DIR` is set, it is now a fatal error to write a historical job
   to the history file, just like the normal history file.
   :jira:`2027`
 
@@ -59,7 +59,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug introduced in 23.3.0 wherein 
+  :macro:`NEGOTIATOR_SLOT_CONSTRAINT` was completely ignored.
+  :jira:`2245`
 
 Version 23.3.0
 --------------
