@@ -10,11 +10,17 @@ Using :class:`htcondor2.JobEventLog`
 The following is a complete example of submitting a job and waiting (forever)
 for it to finish.  The next example implements a time-out.
 
+.. note::
+    Both examples were originally written for the version 1 API.  Both
+    examples ``import htcondor2 as htcondor`` to help show that the
+    version 1 and version 2 APIs are mostly compatible, but are otherwise
+    identical to the version 1 examples at the time of writing.
+
 .. code-block:: python
 
     #!/usr/bin/env python3
 
-    import htcondor
+    import htcondor2 as htcondor
 
     # Create a job description.  It _must_ set `log` to create a job event log.
     logFileName = "sleep.log"
@@ -82,7 +88,7 @@ appropriate on shared resources; every five minutes is better.
 
     #!/usr/bin/env python3
     import time
-    import htcondor
+    import htcondor2 as htcondor
 
     # Create a job description.  It _must_ set `log` to create a job event log.
     logFileName = "sleep.log"
