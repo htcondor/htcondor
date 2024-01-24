@@ -488,7 +488,7 @@ check_spool_dir()
 	};
 	//Param the knobs for the file name and add to data structure
 	std::deque<std::string> config_defined_files;
-	for(auto &knob : valid_knobs) {
+	for(const auto &knob : valid_knobs) {
 		auto_free_ptr option(param(knob.c_str()));
 		if (option) { config_defined_files.push_back(condor_basename(option)); }
 	}
@@ -546,7 +546,7 @@ check_spool_dir()
 
 		//Check to see if file is a valid config defined file
 		bool isValidCondorFile = false;
-		for (auto &file : config_defined_files) {
+		for (const auto &file : config_defined_files) {
 			if (strncmp(f, file.c_str(), file.length()) == MATCH) {
 				isValidCondorFile = true;
 				break;

@@ -872,7 +872,7 @@ getTotalUsedBytes(const std::string &lv_size, const std::string &data_percent, u
     return true;
 }
 
-}
+} // End namespace
 
 
 bool
