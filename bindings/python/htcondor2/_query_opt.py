@@ -8,10 +8,8 @@ else:
 
 class QueryOpt(enum.IntEnum):
     """
-    Enumerated flags sent to the *condor_schedd* during a query to alter its
-    behavior.
-
-    The values of the enumeration are:
+    An enumeration of the flags that may be sent to the *condor_schedd*
+    during a query to alter its behavior.
 
     .. attribute:: Default
 
@@ -25,7 +23,7 @@ class QueryOpt(enum.IntEnum):
 
         Instead of returning job ads, return an ad for each unique combination
         of values for the attributes in the projection.  Similar to
-        AutoCluster, but using the projection as the significant attributes
+        ``AutoCluster``, but using the projection as the significant attributes
         for auto-clustering.
 
     .. attribute:: DefaultMyJobsOnly

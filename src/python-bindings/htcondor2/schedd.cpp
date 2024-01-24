@@ -1,5 +1,5 @@
-#define COMMIT_TRANSACTION true
-#define ABORT_TRANSACTION false
+#include "queue_connection.cpp"
+
 
 static bool
 _schedd_query_callback( void * r, ClassAd * ad ) {
@@ -122,9 +122,7 @@ _schedd_query(PyObject *, PyObject * args) {
     }
 
     for( auto & classAd : results ) {
-        // We could probably dispense with the copy by clearing the
-        // `results` vector after this loop.
-        PyObject * pyClassAd = py_new_classad2_classad(classAd->Copy());
+        PyObject * pyClassAd = py_new_classad2_classad(classAd);
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
@@ -296,15 +294,8 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
     flags = flags | SetAttribute_NoAck;
 
 
-    // FIXME: It was not at all clear that ConnectionSentry opened the (?!)
-    // global connection to the schedd, but having it disconnect when it
-    // goes out of scope is really kind of nice.
-    //
-    // And yes, I know, the ConnectQ()/SetAttribute()/DisconnectQ() interface
-    // is brokenly stupid.
-    DCSchedd schedd(addr);
-    auto * q = ConnectQ(schedd);
-    if( q == NULL ) {
+    QueueConnection qc;
+    if(! qc.connect(addr)) {
         // This was HTCondorIOError, in version 1.
         PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
         return NULL;
@@ -318,8 +309,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
     for( ids.rewind(); (id = ids.next()) != NULL; ) {
         JOB_ID_KEY jobIDKey;
         if(! jobIDKey.set(id)) {
-            // FIXME: Check error return and use error stack.
-            DisconnectQ(q, ABORT_TRANSACTION);
+            qc.abort();
 
             // This was HTCondorValueError, in version 1.
             PyErr_SetString(PyExc_ValueError, "Invalid ID");
@@ -328,8 +318,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
 
         int rv = SetAttribute(jobIDKey.cluster, jobIDKey.proc, attr, value, flags);
         if( rv == -1 ) {
-            // FIXME: Check error return and use error stack.
-            DisconnectQ(q, ABORT_TRANSACTION);
+            qc.abort();
 
             // This was HTCondorIOError, in version 1.
             PyErr_SetString(PyExc_RuntimeError, "Unable to edit job");
@@ -340,8 +329,12 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
     }
 
 
-    // FIXME: Check error return and use error stack.
-    DisconnectQ(q, COMMIT_TRANSACTION);
+    std::string message;
+    if(! qc.commit(message)) {
+        // This was HTCondorIOError, in version 1.
+        PyErr_SetString(PyExc_RuntimeError, ("Unable to commit transaction:" + message).c_str());
+        return NULL;
+    }
 
     return PyLong_FromLong(matchCount);
 }
@@ -372,8 +365,8 @@ _schedd_edit_job_constraint(PyObject *, PyObject * args) {
     flags = flags | SetAttribute_NoAck;
 
 
-    DCSchedd schedd(addr);
-    if( ConnectQ(schedd) == NULL ) {
+    QueueConnection qc;
+    if(! qc.connect(addr)) {
         // This was HTCondorIOError, in version 1.
         PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
         return NULL;
@@ -381,15 +374,20 @@ _schedd_edit_job_constraint(PyObject *, PyObject * args) {
 
     int rval = SetAttributeByConstraint( constraint, attr, value, flags );
     if( rval == -1 ) {
-        // FIXME: Check error return and use error stack.
-        DisconnectQ(NULL);
+        qc.abort();
+
         // This was HTCondorIOError, in version 1.
         PyErr_SetString(PyExc_IOError, "Unable to edit jobs matching constraint");
         return NULL;
     }
 
-    // FIXME: Check error return and use error stack.
-    DisconnectQ(NULL);
+
+    std::string message;
+    if(! qc.commit(message)) {
+        // This was HTCondorIOError, in version 1.
+        PyErr_SetString(PyExc_RuntimeError, ("Unable to commit transaction: " + message).c_str());
+        return NULL;
+    }
 
     return PyLong_FromLong(rval);
 }
@@ -674,8 +672,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
     SubmitBlob * sb = (SubmitBlob *)handle->t;
 
 
+    QueueConnection qc;
     DCSchedd schedd(addr);
-    if( ConnectQ(schedd) == NULL ) {
+    if(! qc.connect(schedd)) {
         // This was HTCondorIOError, in version 1.
         PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
         return NULL;
@@ -694,6 +693,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
     // Initialize the new cluster ad.
     if( sb->init_base_ad( time(NULL), schedd.getOwner().c_str() ) != 0 ) {
+        qc.abort();
+
         std::string error = "Failed to create a cluster ad, errmsg="
             + sb->error_stack()->getFullText();
 
@@ -707,6 +708,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
     // Get a new cluster ID.
     int clusterID = NewCluster();
     if( clusterID < 0 ) {
+        qc.abort();
+
         // This was HTCondorInternalError in version 1.
         PyErr_SetString( PyExc_RuntimeError, "Failed to create new cluster." );
         return NULL;
@@ -715,6 +718,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
     if( count == 0 ) {
         count = sb->queueStatementCount();
         if( count < 0 ) {
+            qc.abort();
+
             // This was HTCondorValueError in version 1.
             PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
             return NULL;
@@ -729,6 +734,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
     // Handle itemdata.
     SubmitForeachArgs * itemdata = sb->init_vars( clusterID );
     if( itemdata == NULL ) {
+        qc.abort();
+
         PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
         return NULL;
     }
@@ -739,6 +746,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
     if( itemCount == 0 ) {
         numJobs = submitProcAds( clusterID, count, sb, clusterAd );
         if(numJobs < 0) {
+            qc.abort();
+
             // submitProcAds() has already set an exception for us.
             delete itemdata;
             return NULL;
@@ -752,6 +761,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
                 sb->set_vars( itemdata->vars, item, itemIndex );
                 int nj = submitProcAds( clusterID, count, sb, clusterAd, itemIndex );
                 if( nj < 0 ) {
+                    qc.abort();
+
                     // submitProcAds() has already set an exception for us.
                     delete itemdata;
                     return NULL;
@@ -770,8 +781,19 @@ _schedd_submit( PyObject *, PyObject * args ) {
     delete itemdata;
 
 
-    // FIXME: Check error return and use error stack.
-    DisconnectQ(NULL);
+    std::string message;
+    if(! qc.commit(message)) {
+        // This was HTCondorIOError, in version 1.
+        PyErr_SetString(PyExc_RuntimeError, ("Unable to commit transaction: " + message).c_str());
+        return NULL;
+    }
+    if(! message.empty()) {
+        // The Python warning infrastructure will by default suppress
+        // the second and subsequent warnings, but that's the standard.
+        PyErr_WarnEx( PyExc_UserWarning,
+            ("Submit succeeded with warning: " + message).c_str(), 2
+        );
+    }
 
 
     Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;

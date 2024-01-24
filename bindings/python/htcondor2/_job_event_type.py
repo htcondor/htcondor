@@ -8,10 +8,8 @@ else:
 
 class JobEventType(enum.IntEnum):
     """
-    The type event of a user log event; corresponds to ``ULogEventNumber``
-    in the C++ source.
-
-    The values of the enumeration are:
+    An enumeration of the types of user log events;
+    corresponds to ``ULogEventNumber`` in the C++ source.
 
     .. attribute:: SUBMIT
     .. attribute:: EXECUTE

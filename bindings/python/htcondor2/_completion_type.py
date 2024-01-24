@@ -8,7 +8,7 @@ else:
 
 class CompletionType(enum.IntEnum):
     """
-    What a startd should do when it finishes draining.
+    An enumeration of what a startd can do when it finishes draining.
 
     .. attribute:: Nothing
 

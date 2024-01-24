@@ -160,16 +160,70 @@ _credd_do_check_oauth_creds(PyObject *, PyObject * args) {
         auto * handle = get_handle_from( py_classad );
         ClassAd * classad = (ClassAd *)handle->t;
 
-        ClassAd * copy = new ClassAd();
-        copy->CopyFrom(* classad);
-
-        requests.push_back(copy);
+        requests.push_back(classad);
     }
 
     std::string url;
     int rv = do_check_oauth_creds(&requests[0], (int)requests.size(), url, d);
     if( d != NULL ) { delete d; }
-    for( int i = 0; i < size; ++i ) { delete requests[i]; }
 
     return Py_BuildValue("iz", rv, url.c_str());
+}
+
+
+static PyObject *
+_credd_run_credential_producer(PyObject *, PyObject * args) {
+    // _credd_run_credential_producer(producer)
+
+    const char * producer = NULL;
+    if(! PyArg_ParseTuple( args, "z", & producer )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    // This code is duplicated, badly, in condor_submit.V6/submit.cpp,
+    // in process_job_credentials(), which inexplicably has a 64k limit
+    // on the size of credentials.
+    ArgList producerArgs;
+    producerArgs.AppendArg( producer );
+
+    #define NO_STDERR false
+    #define KEEP_PRIVS false
+
+    MyPopenTimer child;
+    if( child.start_program( producerArgs, NO_STDERR, NULL, KEEP_PRIVS ) < 0 ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "could not run credential producer" );
+        return NULL;
+    }
+
+    #define CAREFUL_RESEARCH 20
+    int exit_status = 0;
+    bool exited = child.wait_for_exit( CAREFUL_RESEARCH, & exit_status );
+    child.close_program(1);
+
+    if(! exited) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "credential producer did not exit" );
+        return NULL;
+    }
+
+    if( exit_status != 0 ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "credential producer non-zero exit code" );
+        return NULL;
+    }
+
+    char * credential = child.output().Detach();
+    if( credential == NULL || child.output_size() == 0 ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, "credential producer did not produce a credential" );
+        return NULL;
+    }
+
+    PyObject * rv = PyUnicode_FromString( credential );
+    free( credential );
+
+    return rv;
 }

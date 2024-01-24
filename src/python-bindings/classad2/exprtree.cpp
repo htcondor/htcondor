@@ -149,7 +149,35 @@ _exprtree_simplify( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    PyObject * rv = py_new_classad_exprtree(literal);
+    // It seems perfectly legitimate to have a literal list or literal
+    // ClassAd, but that's not, apparently, how we do things around here.
+    PyObject * rv = NULL;
+    switch( v->GetType() ) {
+        case classad::Value::LIST_VALUE:
+        case classad::Value::SLIST_VALUE: {
+            classad::ExprList * list = NULL;
+            // We don't care who owns the list because we're copying
+            // it before `v` goes out of scope.
+            ASSERT(v->IsListValue(list));
+
+            rv = py_new_classad_exprtree(list);
+            } break;
+
+        case classad::Value::CLASSAD_VALUE:
+        case classad::Value::SCLASSAD_VALUE: {
+            classad::ClassAd * classAd = NULL;
+            // We don't care who owns the ClassAd because we're
+            // copying it before `v` goes out of scope.
+            ASSERT(v->IsClassAdValue(classAd));
+
+            rv = py_new_classad_exprtree(classAd);
+            } break;
+
+        default:
+            rv = py_new_classad_exprtree(literal);
+            break;
+    }
+
     delete literal;
     return rv;
 }

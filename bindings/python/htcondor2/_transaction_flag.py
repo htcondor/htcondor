@@ -8,9 +8,11 @@ else:
 
 class TransactionFlag(enum.IntEnum):
     """
-    Enumerated flags affecting the characteristics of a transaction.
+    An enumeration of the flags affecting the characteristics of a transaction.
 
-    The values of the enumeration are:
+    .. attribute:: Default
+
+        The default transaction is not any of the following.
 
     .. attribute:: NonDurable
 
