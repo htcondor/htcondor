@@ -237,7 +237,7 @@ Flatten( EvalState &state, Value &val, ExprTree *&tree, int* op) const
 	return( _Flatten( state, val, tree, op ) );
 }
 
-bool ExprTree::isClassad(ClassAd ** ptr)
+bool ExprTree::isClassad(ClassAd ** ptr) const
 {
 	bool bRet = false;
 	

@@ -145,7 +145,7 @@ class ExprTree
 		 * To eliminate the mass of external checks to see if the ExprTree is 
 		 * a classad.
 		 */ 
-		virtual bool isClassad(ClassAd ** ptr=0);
+		virtual bool isClassad(ClassAd ** ptr=0) const;
 		
 		/**
 		 * Return a ptr to the raw exprtree below the interface
