@@ -2,7 +2,7 @@ How To Debug an Always Idle Job
 ===============================
 
 Sometimes, when you submit a job to HTCondor, it sits idle seemingly forever,
-*condor_q* shows it in the idle state, when you expect it should start running.
+:tool:`condor_q` shows it in the idle state, when you expect it should start running.
 This can be frustrating, but there are tools to give visibility so you can
 debug what is going on.
 
@@ -11,9 +11,9 @@ Jobs that start but are quickly evicted
 
 One possibility is that the job is actually starting, but something goes wrong
 very quickly after it starts, so the Execution Point evicts the job, and the
-*condor_schedd* puts it back to idle.  *condor_q* would only show it in the
+*condor_schedd* puts it back to idle.  :tool:`condor_q` would only show it in the
 "R"unning state for a brief moment, so it is likely that even frequent
-executions of *condor_q* will show it in the Idle state.
+executions of :tool:`condor_q` will show it in the Idle state.
 
 A quick look at the HTCondor job log will help to verify that this is what is
 happening.  Assuming your submit file contains a line like:

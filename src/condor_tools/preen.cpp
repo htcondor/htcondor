@@ -479,12 +479,18 @@ check_spool_dir()
 	}
 
 	//List of known history like config knobs to not delete if in spool
-	std::string history_knobs[] = {"HISTORY","JOB_EPOCH_HISTORY","STARTD_HISTORY", "COLLECTOR_PERSISTENT_AD_LOG"};
+	static const std::string valid_knobs[] = {
+		"HISTORY",
+		"JOB_EPOCH_HISTORY",
+		"STARTD_HISTORY",
+		"COLLECTOR_PERSISTENT_AD_LOG",
+		"LVM_BACKING_FILE",
+	};
 	//Param the knobs for the file name and add to data structure
-	std::deque<std::string> history_files;
-	for(auto &knob : history_knobs) {
+	std::deque<std::string> config_defined_files;
+	for(const auto &knob : valid_knobs) {
 		auto_free_ptr option(param(knob.c_str()));
-		if (option) { history_files.push_back(condor_basename(option)); }
+		if (option) { config_defined_files.push_back(condor_basename(option)); }
 	}
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
@@ -538,16 +544,16 @@ check_spool_dir()
 			continue;
 		}
 
-		//Check to see if file is a history
-		bool isValidHistory = false;
-		for (auto &file : history_files) {
+		//Check to see if file is a valid config defined file
+		bool isValidCondorFile = false;
+		for (const auto &file : config_defined_files) {
 			if (strncmp(f, file.c_str(), file.length()) == MATCH) {
-				isValidHistory = true;
+				isValidCondorFile = true;
 				break;
 			}
 		}
-		//If we found a match to a history file then mark this as good
-		if (isValidHistory) {
+		//If we found a valid config defined file then mark this as good
+		if (isValidCondorFile) {
 			good_file( Spool, f );
 			continue;
 		}
@@ -922,8 +928,8 @@ check_log_dir()
 						// If this core file is stale, flag it for removal
 						if( abs((int)( time(NULL) - statinfo.GetModifyTime() )) > coreFileStaleAge ) {
 							std::string coreFileDetails;
-							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zu",
-								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), statinfo.GetFileSize()
+							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
+								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
 							);
 							bad_file( Log, f, dir, coreFileDetails.c_str() );
 							continue;
@@ -939,8 +945,8 @@ check_log_dir()
 															std::pair<std::string,filesize_t>(std::string(f),statinfo.GetFileSize())));
 							} else {
 								std::string coreFileDetails;
-								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zu",
-									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), statinfo.GetFileSize()
+								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
+									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
 								);
 								bad_file( Log, f, dir, coreFileDetails.c_str() );
 							}

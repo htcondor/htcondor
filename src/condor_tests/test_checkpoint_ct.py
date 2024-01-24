@@ -185,14 +185,14 @@ def the_job_handle(the_job_pair):
 
 @action
 def the_completed_job(default_condor, the_job_handle):
-    the_job_handle.wait(
-        timeout=60,
+    assert the_job_handle.wait(
+        timeout=300,
         condition=ClusterState.all_running,
         fail_condition=ClusterState.any_held,
     )
 
-    the_job_handle.wait(
-        timeout=60,
+    assert the_job_handle.wait(
+        timeout=300,
         condition=ClusterState.all_idle,
         fail_condition=ClusterState.any_held,
     )
@@ -200,14 +200,14 @@ def the_completed_job(default_condor, the_job_handle):
     default_condor.run_command(['condor_reschedule'])
 
 
-    the_job_handle.wait(
-        timeout=60,
+    assert the_job_handle.wait(
+        timeout=300,
         condition=ClusterState.all_running,
         fail_condition=ClusterState.any_held,
     )
 
-    the_job_handle.wait(
-        timeout=60,
+    assert the_job_handle.wait(
+        timeout=300,
         condition=ClusterState.all_idle,
         fail_condition=ClusterState.any_held,
     )

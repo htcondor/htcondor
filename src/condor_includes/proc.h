@@ -91,8 +91,6 @@ int getJobStatusNum( const char* name );
 bool operator==( const PROC_ID a, const PROC_ID b);
 size_t hashFuncPROC_ID( const PROC_ID & );
 size_t hashFunction(const PROC_ID &);
-void procids_to_string(const std::vector<PROC_ID> *procids, std::string &str);
-std::vector<PROC_ID>* string_to_procids(const std::string &str);
 
 namespace std {
   template <> struct hash<PROC_ID>

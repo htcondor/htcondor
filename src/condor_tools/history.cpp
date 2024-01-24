@@ -115,7 +115,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 static void printJobAds(ClassAdList & jobs);
 static void printJob(ClassAd & ad);
 
-static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, StringList & attrs, const char * streamid, bool is_filename);
+static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, classad::References & attrs, const char * streamid, bool is_filename);
 static int getDisplayWidth();
 
 //------------------------------------------------------------------------
@@ -169,8 +169,7 @@ static bool streamresults = false;
 static bool streamresults_specified = false; // set to true if -stream-results:<bool> argument is supplied
 static int writetosocket_failcount = 0;
 static bool abort_transfer = false;
-static StringList projection;
-static classad::References whitelist;
+static classad::References projection;
 static ExprTree *sinceExpr = NULL;
 static bool want_startd_history = false;
 static bool delete_epoch_ads = false;
@@ -417,7 +416,7 @@ main(int argc, const char* argv[])
 			exit(1);
 		}
 		i++;
-		projection.initializeFromString(argv[i]);
+		projection = SplitAttrNames(argv[i]);
 	}
     else if (is_dash_arg_prefix(argv[i],"help",1)) {
 		Usage(argv[0],0);
@@ -451,7 +450,7 @@ main(int argc, const char* argv[])
 			fprintf(stderr, "Error: invalid expression : %s\n", argv[-ixNext]);
 			exit(1);
 		}
-		initStringListFromAttrs(projection, true, refs, true);
+		projection.insert(refs.begin(), refs.end());
 		if (ixNext > i)
 			i = ixNext-1;
 		customFormat = true;
@@ -684,10 +683,6 @@ main(int argc, const char* argv[])
   }
 
   if(readfromfile == true) {
-		// some output methods use a whitelist rather than a stringlist projection.
-		for (const char * attr = projection.first(); attr != NULL; attr = projection.next()) {
-			whitelist.insert(attr);
-		}
       // Read from single file, matching files, or a directory (if valid option)
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
@@ -767,8 +762,7 @@ static void init_default_custom_format()
 		ATTR_Q_DATE, ATTR_COMPLETION_DATE,
 	};
 	for (int ii = 0; ii < (int)COUNTOF(attrs); ++ii) {
-		const char * attr = attrs[ii];
-		if ( ! projection.contains_anycase(attr)) projection.append(attr);
+		projection.emplace(attrs[ii]);
 	}
 
 	customFormat = TRUE;
@@ -793,8 +787,7 @@ static void printHeader()
 					ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS1,
 				};
 				for (int ii = 0; ii < (int)COUNTOF(attrs); ++ii) {
-					const char * attr = attrs[ii];
-					if ( ! projection.contains_anycase(attr)) projection.append(attr);
+					projection.emplace(attrs[ii]);
 				}
 			} else {
 				init_default_custom_format();
@@ -849,7 +842,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
 	if (sinceExpr) ad.Insert("Since", sinceExpr);
 	// we may or may not be able to do the projection, we will decide after knowing the daemon version
-	bool do_projection = ! projection.isEmpty();
+	bool do_projection = ! projection.empty();
 
 	daemon_t dt = DT_SCHEDD;
 	const char * daemon_type = "schedd";
@@ -910,8 +903,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 	}
 
 	if (do_projection) {
-		auto_free_ptr proj_string(projection.print_to_delimed_string(","));
-		ad.Assign(ATTR_PROJECTION, proj_string.ptr());
+		ad.Assign(ATTR_PROJECTION, JoinAttrNames(projection, ","));
 	}
 
 	Sock* sock;
@@ -1214,17 +1206,17 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
         if (!constraint || constraint[0]=='\0' || EvalExprBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
-					fPrintAdAsXML(stdout, *ad, projection.isEmpty() ? NULL : &projection);
+					fPrintAdAsXML(stdout, *ad, projection.empty() ? NULL : &projection);
 				} else if ( use_json ) {
 					if ( printCount != 0 ) {
 						printf(",\n");
 					}
-					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection, false);
+					fPrintAdAsJson(stdout, *ad, projection.empty() ? NULL : &projection, false);
 				} else if ( use_json_lines ) {
-					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection, true);
+					fPrintAdAsJson(stdout, *ad, projection.empty() ? NULL : &projection, true);
 				}
 				else {
-					fPrintAd(stdout, *ad, false, projection.isEmpty() ? NULL : &projection);
+					fPrintAd(stdout, *ad, false, projection.empty() ? NULL : &projection);
 				}
 				printf("\n"); 
             } else {
@@ -1297,7 +1289,7 @@ static bool starts_with(const char * p1, const char * p2, const char ** ppEnd = 
 static void printJob(ClassAd & ad)
 {
 	if (writetosocket) {
-		if ( ! putClassAd(socks[0], ad, 0, whitelist.empty() ? NULL : &whitelist)) {
+		if ( ! putClassAd(socks[0], ad, 0, projection.empty() ? NULL : &projection)) {
 			++writetosocket_failcount;
 			abort_transfer = true;
 		} else if (streamresults && ! socks[0]->end_of_message()) {
@@ -1313,16 +1305,16 @@ static void printJob(ClassAd & ad)
 	// functionality of this code isn't actually used except for debugging.
 	if (longformat) {
 		if (use_xml) {
-			fPrintAdAsXML(stdout, ad, projection.isEmpty() ? NULL : &projection);
+			fPrintAdAsXML(stdout, ad, projection.empty() ? NULL : &projection);
 		} else if ( use_json ) {
 			if ( printCount != 0 ) {
 				printf(",\n");
 			}
-			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection, false);
+			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, false);
 		} else if ( use_json_lines ) {
-			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection, true);
+			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, true);
 		} else {
-			fPrintAd(stdout, ad, false, projection.isEmpty() ? NULL : &projection);
+			fPrintAd(stdout, ad, false, projection.empty() ? NULL : &projection);
 		}
 		printf("\n");
 	} else {
@@ -1448,6 +1440,12 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	//fprintf(stdout,"Ad type: %s\n",info.ad_type.c_str());
 	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %ld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
 
+	// For now, ignore the ad types.
+	if( info.ad_type != "JOB" && info.ad_type != "EPOCH" ) {
+		// fprintf( stderr, "%s\n", info.ad_type.c_str() );
+		return false;
+	}
+
 	if(jobIdFilterInfo.empty() && ownersList.empty()) { return true; } //If no searches were specified then return true to print job ad
 	else if (info.jid.cluster <= 0 && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true
 	else if (info.owner.empty() && !ownersList.empty()) { return true; }//If failed to parse owner and we are searching for an owner return true
@@ -1559,7 +1557,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 static int set_print_mask_from_stream(
 	AttrListPrintMask & print_mask,
 	std::string & constraint,
-	StringList & attrs,
+	classad::References & attrs,
 	const char * streamid,
 	bool is_filename)
 {
@@ -1608,7 +1606,7 @@ static int set_print_mask_from_stream(
 			formatstr_cat(messages, "UNIQUE aggregation is not supported.\n");
 			err = -1;
 		}
-		initStringListFromAttrs(attrs, false, propt.attrs);
+		attrs = propt.attrs;
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;

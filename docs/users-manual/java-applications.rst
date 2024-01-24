@@ -15,7 +15,7 @@ Compiled Java programs can be submitted to HTCondor, and HTCondor can
 execute the programs on any machine in the pool that will run the Java
 Virtual Machine.
 
-The *condor_status* command can be used to see a list of machines in
+The :tool:`condor_status` command can be used to see a list of machines in
 the pool for which HTCondor can use the Java Virtual Machine.
 
 .. code-block:: console
@@ -30,7 +30,7 @@ the pool for which HTCondor can use the Java Virtual Machine.
     slot2@bio.cs.wisc. Sun Micros 1.6.0_ Unclaimed Idle     0.000   118  7+03:13:28
     ...
 
-If there is no output from the *condor_status* command, then HTCondor
+If there is no output from the :tool:`condor_status` command, then HTCondor
 does not know the location details of the Java Virtual Machine on
 machines in the pool, or no machines have Java correctly installed.
 
@@ -127,7 +127,7 @@ To submit the job, where the submit description file is named
 
     $ condor_submit Hello.cmd
 
-To monitor the job, the commands *condor_q* and *condor_rm* are used
+To monitor the job, the commands :tool:`condor_q` and :tool:`condor_rm` are used
 as with all jobs.
 
 Less Simple Java Specifications

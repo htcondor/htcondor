@@ -189,7 +189,7 @@ Options
     conversion specifier must match the type of the attribute or
     expression. %s is suitable for strings such as ``Name``, %d for
     integers such as ``LastHeardFrom``, and %f for floating point
-    numbers such as ``LoadAvg``. %v identifies the type of the
+    numbers such as :ad-attr:`LoadAvg`. %v identifies the type of the
     attribute, and then prints the value in an appropriate format. %V
     identifies the type of the attribute, and then prints the value in
     an appropriate format as it would appear in the **-long** format. As
@@ -426,7 +426,7 @@ Static slots are not counted in the ``MaxSlotGb`` column.
 Constraint option examples
 
 The Unix command to use the constraint option to see all machines with
-the ``OpSys`` of ``"LINUX"``:
+the :ad-attr:`OpSys` of ``"LINUX"``:
 
 .. code-block:: console
 

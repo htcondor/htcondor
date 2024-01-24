@@ -12,7 +12,7 @@ read ClassAds from a file or pipe, transform them, and write the
 resulting ClassAds to a file or pipe.
 
 The transform language is build on the same basic macro expansion
-engine use by HTCondor configuration and by *condor_submit* and
+engine use by HTCondor configuration and by :tool:`condor_submit` and
 shares many of the same features such as ``$()`` macro expansion
 and if statements.
 
@@ -65,7 +65,7 @@ Transform Commands
    with leading and trailing whitespace removed.   Variables set in this way do not directly affect the
    resulting transformed ClassAd, but they can be used later in the transform by ``$(var)`` macro expansion. 
    In the *condor_job_router* some macro variable names will affect the way the router behaves.  For a list
-   of macro variable names have have special meaning to the *condor_job_router* see the 
+   of macro variable names have special meaning to the *condor_job_router* see the 
    :ref:`grid-computing/job-router:Routing Table Entry Commands and Macro values` section.
 
 ``REQUIREMENTS <expr>``

@@ -376,12 +376,6 @@ private:
 
 	bool WriteAdFiles() const;
 
-		//
-		// Check the disk usage of this job; if over the limits, potentially
-		// put the job on hold.
-		//
-	void CheckDiskUsage( int timerID = -1 );
-
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -424,13 +418,11 @@ private:
 		// the maximum permitted disk usage and the polling timer
 		//
 #if defined(LINUX)
-	int64_t m_lvm_max_size_kb{0};
-	int m_lvm_poll_tid{-1};
+	void CheckLVUsage( int timerID = -1 );
+	int64_t m_lvm_lv_size_kb{0};
 	time_t m_lvm_last_space_issue{-1};
+	int m_lvm_poll_tid{-1};
 	bool m_lvm_held_job{false};
-	std::string m_lvm_thin_volume;
-	std::string m_lvm_thin_pool;
-	std::string m_lvm_volume_group;
 #endif
 
 	UserProc* pre_script;
@@ -461,6 +453,8 @@ private:
 	std::unique_ptr<VolumeManager::Handle> m_volume_mgr;
 #endif // LINUX
 };
+
+#define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 
 #endif
 

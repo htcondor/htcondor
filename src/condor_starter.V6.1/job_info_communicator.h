@@ -304,19 +304,11 @@ public:
 	const char* getKrb5CCName( void ) { return job_Krb5CCName; };
 
 		/**
-		   Send a periodic update ClassAd to our controller.  The
-		   "insure_update" just controls if we make sure the update
-		   gets there (which is dependent on the children class to
-		   implement something if its relevant, for example, using TCP
-		   vs. UDP for talking to a shadow).  It has nothing to do
-		   with the "insure" memory analysis tool.
-
+		   Send a periodic update ClassAd to our controller.
 		   @param update_ad Update ad to use if you've already got the info
-		   @param insure_update Should we insure the update gets there?
 		   @return true if success, false if failure
 		*/
-	virtual bool periodicJobUpdate(ClassAd* update_ad = NULL,
-								   bool insure_update = false);
+	virtual bool periodicJobUpdate(ClassAd* update_ad = NULL);
 
 		/**
 		   Function to be called periodically to update the controller.

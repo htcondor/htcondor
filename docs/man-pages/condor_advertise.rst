@@ -78,14 +78,14 @@ will look like the following:
     Name = "condor.example.com"
     Requirements = Name == "condor.example.com"
 
-The definition for ``MyType`` is always ``Query``. ``TargetType`` is set
-to the ``MyType`` of the ad to be deleted. This ``MyType`` is
+The definition for :ad-attr:`MyType` is always ``Query``. :ad-attr:`TargetType` is set
+to the :ad-attr:`MyType` of the ad to be deleted. This :ad-attr:`MyType` is
 ``DaemonMaster`` for the *condor_master* ClassAd, ``Machine`` for the
 *condor_startd* ClassAd, ``Scheduler`` for the *condor_schedd*
 ClassAd, and ``Negotiator`` for the *condor_negotiator* ClassAd.
 
 ``Requirements`` is an expression evaluated within the context of ads of
-``TargetType``. When ``Requirements`` evaluates to ``True``, the
+:ad-attr:`TargetType`. When ``Requirements`` evaluates to ``True``, the
 matching ad is invalidated. A full example is given below.
 
 Options
@@ -133,8 +133,8 @@ automatically include the following attributes:
 
  ``UpdatesTotal``
  ``UpdatesLost``
- ``UpdatesSequenced``
- ``UpdatesHistory``
+ :ad-attr:`UpdatesSequenced`
+ :ad-attr:`UpdatesHistory`
 
     Affected by :macro:`COLLECTOR_DAEMON_HISTORY_SIZE`.
 

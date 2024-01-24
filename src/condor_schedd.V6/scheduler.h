@@ -658,6 +658,7 @@ class Scheduler : public Service
 	int				getMaxMaterializedJobsPerCluster() const { return MaxMaterializedJobsPerCluster; }
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
+	const ClassAd & getUserRecDefaultsAd() const { return m_userRecDefaultsAd; }
 	const ClassAd * getExtendedSubmitCommands() const { return &m_extendedSubmitCommands; }
 	const std::string & getExtendedSubmitHelpFile() const { return m_extendedSubmitHelpFile; }
 	bool			getEnableJobQueueTimestamps() const { return EnableJobQueueTimestamps; }
@@ -793,6 +794,7 @@ private:
 	SubmitRequirements	m_submitRequirements;
 	ClassAd*			m_adSchedd;
 	ClassAd*        	m_adBase;
+	ClassAd             m_userRecDefaultsAd;
 	ClassAd             m_extendedSubmitCommands;
 	std::string         m_extendedSubmitHelpFile;
 

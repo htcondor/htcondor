@@ -14,7 +14,7 @@ DaemonMaster ClassAd Attributes
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
 :classad-attribute-def:`LinuxCapabilities`
-    A hexidecimal formatted string that holds all set effective linux
+    A hexadecimal formatted string that holds all set effective Linux
     capabilities bit mask. This hex string can be decoded using ``capsh``.
     Only exists if running on a Linux OS.
  
@@ -22,7 +22,7 @@ DaemonMaster ClassAd Attributes
     A string with the machine's fully qualified host name.
 
 :classad-attribute-def:`MasterIpAddr`
-    String with the IP and port address of the *condor_master* daemon
+    String with the IP and port address of the :tool:`condor_master` daemon
     which is publishing this DaemonMaster ClassAd.
 
 :classad-attribute-def:`MonitorSelfAge`
@@ -50,19 +50,19 @@ DaemonMaster ClassAd Attributes
     ``MonitorSelf``.
 
 :classad-attribute-def:`MyAddress`
-    String with the IP and port address of the *condor_master* daemon
+    String with the IP and port address of the :tool:`condor_master` daemon
     which is publishing this ClassAd.
 
 :classad-attribute-def:`MyCurrentTime`
     The time, represented as the number of second elapsed since the Unix
-    epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_master*
+    epoch (00:00:00 UTC, Jan 1, 1970), at which the :tool:`condor_master`
     daemon last sent a ClassAd update to the *condor_collector*.
 
 :classad-attribute-def:`Name`
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
-    CPUs up into separate slots, each with with a unique name. These
+    CPUs up into separate slots, each with a unique name. These
     names will be of the form "slot#@full.hostname", for example,
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
@@ -71,7 +71,7 @@ DaemonMaster ClassAd Attributes
     Description is not yet written.
 
 :classad-attribute-def:`RealUid`
-    The UID under which the *condor_master* is started.
+    The UID under which the :tool:`condor_master` is started.
 
 :classad-attribute-def:`UpdateSequenceNumber`
     An integer, starting at zero, and incremented with each ClassAd

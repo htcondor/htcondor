@@ -10,7 +10,16 @@ from ._job_event_type import JobEventType
 
 class JobEvent(Mapping):
     """
-    FIXME
+    A single event from a job event log.
+
+    A :class:`JobEvent` is a :class:`Mapping` of event properties
+    to event values; the type of the value depends on the property.
+    The names of the properties and their types are currently
+    undocumented.
+
+    Because all events have the ``type``, ``cluster``, ``proc``,
+    and ``timestamp`` properties, these are available as attributes;
+    see below.
     """
 
     # It would be nice if this signature didn't appear in the docs,
@@ -24,8 +33,7 @@ class JobEvent(Mapping):
     @property
     def type(self) -> JobEventType:
         """
-        FIXME: the @property methods' docstrings aren't making it to the
-        HTML via Sphinx, so just be explicit in the class docstring.
+        The type of the event.
         """
         return JobEventType(self._data["EventTypeNumber"])
 
@@ -33,7 +41,7 @@ class JobEvent(Mapping):
     @property
     def cluster(self) -> int:
         """
-        FIXME
+        The cluster ID of the job to which the event happened.
         """
         return self._data["cluster"]
 
@@ -41,7 +49,8 @@ class JobEvent(Mapping):
     @property
     def proc(self) -> int:
         """
-        FIXME
+        The process ID of the job to which the event happened.  Returns
+        ``-1`` if no process ID was recorded for the event.
         """
         # The event ClassAd doesn't contain a Proc attribute if the original
         # event's ProcID was less than 0.  ULogEvent's default
@@ -55,9 +64,6 @@ class JobEvent(Mapping):
 
     @property
     def timestamp(self) -> int:
-        """
-        FIXME
-        """
         '''
         The Unix timestamp of the event.
         '''

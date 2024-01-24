@@ -3,12 +3,12 @@ File Paths in DAGs
 
 :index:`file paths in DAGs<single: DAGMan; File paths in DAGs>`
 
-*condor_dagman* assumes that all relative paths in a DAG input file and
+:tool:`condor_dagman` assumes that all relative paths in a DAG input file and
 the associated HTCondor submit description files are relative to the
-current working directory when *condor_submit_dag* is run. This works
+current working directory when :tool:`condor_submit_dag` is run. This works
 well for submitting a single DAG. It presents problems when multiple
 independent DAGs are submitted with a single invocation of
-*condor_submit_dag*. Each of these independent DAGs would logically be
+:tool:`condor_submit_dag`. Each of these independent DAGs would logically be
 in its own directory, such that it could be run or tested independent of
 other DAGs. Thus, all references to files will be designed to be
 relative to the DAG's own directory.
@@ -42,7 +42,7 @@ Directory contents are
 
 All file paths are correct relative to the ``dag1`` directory.
 Submission of this example DAG sets the current working directory to
-``dag1`` and invokes *condor_submit_dag*:
+``dag1`` and invokes :tool:`condor_submit_dag`:
 
 .. code-block:: console
 
@@ -81,8 +81,8 @@ does not work. Path names are now relative to ``parent``, which is not
 the desired behavior.
 
 The solution is the *-usedagdir* command line argument to
-*condor_submit_dag*. This feature runs each DAG as if
-*condor_submit_dag* had been run in the directory in which the
+:tool:`condor_submit_dag`. This feature runs each DAG as if
+:tool:`condor_submit_dag` had been run in the directory in which the
 relevant DAG file exists. A working invocation is
 
 .. code-block:: console
@@ -93,7 +93,7 @@ relevant DAG file exists. A working invocation is
 Output files will be placed in the correct directory, and the
 ``.dagman.out`` file will also be in the correct directory. A Rescue DAG
 file will be written to the current working directory, which is the
-directory when *condor_submit_dag* is invoked. The Rescue DAG should
+directory when :tool:`condor_submit_dag` is invoked. The Rescue DAG should
 be run from that same current working directory. The Rescue DAG includes
 all the path information necessary to run each node job in the proper
 directory.

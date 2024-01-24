@@ -33,6 +33,9 @@ RUN /tmp/setup.sh $CONDOR_VERSION
 EOF
     cp -pr setup.sh ../packaging/{debian,rpm} "$platform/tmp/"
     docker build "$platform" --tag "htcondor/nmi-build:$platform-$CONTAINER_VERSION" > "$platform.out" 2>&1
+    if grep -q 'Successfully tagged htcondor/nmi-build:' "$platform.out"; then
+        docker push "htcondor/nmi-build:$platform-$CONTAINER_VERSION"
+    fi
     rm -rf "$platform"
 }
 
@@ -51,9 +54,11 @@ buildimage ppc64le_Ubuntu20 ppc64le/ubuntu:focal &
 buildimage x86_64_AlmaLinux8 almalinux:8 &
 buildimage x86_64_AlmaLinux9 almalinux:9 &
 buildimage x86_64_AmazonLinux2023 amazonlinux:2023 &
+buildimage x86_64_CentOS7 centos:7 &
 buildimage x86_64_Debian11 debian:bullseye &
 buildimage x86_64_Debian12 debian:bookworm &
-buildimage x86_64_Fedora38 fedora:38 &
+buildimage x86_64_Fedora39 fedora:39 &
+buildimage x86_64_openSUSE15 opensuse/leap:15 &
 buildimage x86_64_Ubuntu20 ubuntu:focal &
 buildimage x86_64_Ubuntu22 ubuntu:jammy &
 wait

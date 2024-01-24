@@ -46,7 +46,7 @@ work in HTCondor:
 
 -  The ability to submit, run, and manage queues of jobs running on a
    cluster of Windows machines.
--  All tools such as *condor_q*, *condor_status*, *condor_userprio*,
+-  All tools such as :tool:`condor_q`, :tool:`condor_status`, :tool:`condor_userprio`,
    are included.
 -  The ability to customize job policy using ClassAds. The machine
    ClassAds contain all the information included in the Unix version,
@@ -91,7 +91,7 @@ HTCondor is started with root privileges. On Windows, however,
 performing an action as a particular user or on behalf of a particular
 user requires knowledge of that user's password, even when running at
 the maximum privilege level. HTCondor provides secure password storage
-through the use of the *condor_store_cred* tool. Passwords managed by
+through the use of the :tool:`condor_store_cred` tool. Passwords managed by
 HTCondor are encrypted and stored in a secure location within the
 Windows registry. When HTCondor needs to perform an action as or on
 behalf of a particular user, it uses the securely stored password to do
@@ -126,7 +126,7 @@ run account.
 
 This feature requires use of a *condor_credd* daemon for secure
 password storage and retrieval. With the *condor_credd* daemon running,
-the user's password must be stored, using the *condor_store_cred*
+the user's password must be stored, using the :tool:`condor_store_cred`
 tool. Then, a user that wants a job to run using their own account
 places into the job's submit description file
 
@@ -430,7 +430,7 @@ to the *condor_shadow* running on the submit machine. The
 *condor_shadow* places these files into the
 :subcom:`initialdir[eviction on Windows]` specified in
 the submit description file; if no :subcom:`initialdir` was specified, the
-files go into the directory where the user invoked *condor_submit*.
+files go into the directory where the user invoked :tool:`condor_submit`.
 Once all the output files are safely transferred back, the job is
 removed from the queue. If, however, the *condor_startd* forcibly kills
 the job before all output files could be transferred, the job is not
@@ -508,7 +508,7 @@ On the submit machine, HTCondor impersonates the submitting user,
 therefore the File Transfer mechanism has the same access rights as the
 submitting user. For example, say only Administrators can write to
 C:\\WINNT on the submit machine, and a user gives the following to
-*condor_submit* :
+:tool:`condor_submit` :
 
 .. code-block:: condor-submit
 
@@ -521,7 +521,7 @@ Unless that user is in group Administrators, HTCondor will not permit
 ``explorer.exe`` to be overwritten.
 
 If for some reason the submitting user's account disappears between the
-time *condor_submit* was run and when the job runs, HTCondor is not
+time :tool:`condor_submit` was run and when the job runs, HTCondor is not
 able to check and see if the now-defunct submitting user has read/write
 access to a given file. In this case, HTCondor will ensure that group
 "Everyone" has read or write access to any file the job subsequently
@@ -673,7 +673,7 @@ On the network file server, give the condor-guest user permissions to
 access files needed to run HTCondor jobs.
 
 Securely store the password of the condor-guest user in the Windows
-registry using *condor_store_cred* on all Windows machines.
+registry using :tool:`condor_store_cred` on all Windows machines.
 
 Tell HTCondor to use the condor-guest user as the owner of jobs, when
 required. Details for this are in
@@ -684,7 +684,7 @@ The *condor_kbdd* on Windows Platforms
 
 Windows platforms need to use the *condor_kbdd* to monitor the idle
 time of both the keyboard and mouse. By adding ``KBDD`` to configuration
-variable :macro:`DAEMON_LIST`, the *condor_master* daemon invokes the
+variable :macro:`DAEMON_LIST`, the :tool:`condor_master` daemon invokes the
 *condor_kbdd*, which then does the right thing to monitor activity
 given the version of Windows running.
 

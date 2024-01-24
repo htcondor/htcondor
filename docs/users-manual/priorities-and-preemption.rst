@@ -37,16 +37,15 @@ If no priority is set, the default is 0. See the Dagman section for ways that da
 can automatically set the priority of any or all jobs in a dag.
 
 Each job can be given a distinct priority. For an
-already queued job, its priority may be changed with the *condor_prio*
-command; see the example in the :doc:`/users-manual/managing-a-job` section, or
-the :doc:`/man-pages/condor_prio` manual page for details. This sets the value
-of job ClassAd attribute ``JobPrio``.  *condor_prio* can be called on a running
+already queued job, its priority may be changed with the :tool:`condor_prio`.
+command.  This sets the value
+of job ClassAd attribute :ad-attr:`JobPrio`.  :tool:`condor_prio` can be called on a running
 job, but lowering a job priority will not trigger eviction of the running 
-job.  The *condor_vacate_job* command can preempt a running job.
+job.  The :tool:`condor_vacate_job` command can preempt a running job.
 
 A fine-grained categorization of jobs and their ordering is available
-for experts by using the job ClassAd attributes: ``PreJobPrio1``,
-``PreJobPrio2``, ``JobPrio``, ``PostJobPrio1``, or ``PostJobPrio2``.
+for experts by using the job ClassAd attributes: :ad-attr:`PreJobPrio1`,
+:ad-attr:`PreJobPrio2`, :ad-attr:`JobPrio`, :ad-attr:`PostJobPrio1`, or :ad-attr:`PostJobPrio2`.
 
 User priority
 -------------
@@ -59,8 +58,7 @@ Slots are allocated to users based upon user priority. A lower
 numerical value for user priority means proportionally better priority, 
 so a user with priority 5 will be allocated 10 times the resources as
 someone with user priority 50. User priorities in HTCondor can be 
-examined with the *condor_userprio*
-command (see the :doc:`/man-pages/condor_userprio` manual page).
+examined with the :tool:`condor_userprio` command.
 :index:`condor_userprio<single: condor_userprio; HTCondor commands>` HTCondor
 administrators can set and change individual user priorities with the
 same utility.
@@ -100,7 +98,7 @@ from or even if the user submits jobs from multiple machines.
 :index:`nice job` :index:`nice job<single: nice job; priority>`
 
 The user priority system can also support backfill or nice jobs (see
-the :doc:`/man-pages/condor_submit` manual page). Nice jobs
+the :tool:`condor_submit` manual page). Nice jobs
 artificially boost the user priority by ten million just for the nice
 job. This effectively means that nice jobs will only run on machines
 that no other HTCondor job (that is, non-niced job) wants. In a similar
@@ -115,7 +113,7 @@ Details About How HTCondor Jobs Vacate Machines
 :index:`vacate` :index:`vacate<single: vacate; preemption>`
 
 When HTCondor needs a job to vacate a machine for whatever reason, it
-sends the job an operating system signal specified in the ``KillSig``
+sends the job an operating system signal specified in the :ad-attr:`KillSig`
 attribute of the job's ClassAd. The value of this attribute can be
 specified by the user at submit time by placing the **kill_sig** option
 in the HTCondor submit description file.
@@ -127,7 +125,7 @@ the clean up work needs to be quick. If the job takes too long to exit
 after getting the **kill_sig**, HTCondor sends a SIGKILL signal 
 which immediately terminates the process.
 
-The default value for ``KillSig`` is SIGTERM, the usual method 
+The default value for :ad-attr:`KillSig` is SIGTERM, the usual method 
 to nicely terminate a Unix program.
 
 

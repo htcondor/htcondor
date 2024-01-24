@@ -1,5 +1,9 @@
 Source: condor
+#if defined(SID)
+Maintainer: Debian HPC Team <debian-hpc@lists.debian.org>
+#else
 Maintainer: HTCondor Developers <htcondor-debian@cs.wisc.edu>
+#endif
 Uploaders: Tim Theisen <tim@cs.wisc.edu>
 Section: science
 Priority: optional
@@ -36,12 +40,11 @@ Build-Depends: cmake (>= 3.16),
                libx11-dev,
                libxml2-dev,
                libxss-dev,
-               lsb-release,
                python3-dev,
                python3-setuptools,
                python3-sphinx,
                python3-sphinx-rtd-theme,
-#if defined(FOCAL) || defined(JAMMY) || defined(BOOKWORM)
+#if defined(FOCAL) || defined(JAMMY) || defined(BOOKWORM) || defined(SID)
                python3-nbsphinx,
                python3-sphinx-autodoc-typehints,
 #endif
@@ -50,26 +53,30 @@ Build-Depends: cmake (>= 3.16),
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
 Standards-Version: 4.6.1
+#if defined(SID)
+Vcs-Browser: https://salsa.debian.org/hpc-team/condor
+Vcs-Git: https://salsa.debian.org/hpc-team/condor.git
+#else
 Vcs-Browser: https://github.com/htcondor/htcondor
 Vcs-Git: git://github.com/htcondor/htcondor.git
+#endif
 Homepage: https://htcondor.org/
-X-Python3-Version: >= 3.7
-
+Rules-Requires-Root: no
 
 Package: condor
 Architecture: any
 Depends: adduser,
          libdate-manip-perl,
          python3,
+         python3-cryptography,
          python3-requests,
-         lsb-release,
          libcom-err2,
          libgssapi-krb5-2,
          libk5crypto3,
          libkrb5-3,
          libkrb5support0,
          libmunge2,
-#if defined(JAMMY) || defined(BOOKWORM)
+#if defined(JAMMY) || defined(BOOKWORM) || defined(SID)
          libssl3,
 #else
          libssl1.1,
@@ -79,7 +86,9 @@ Depends: adduser,
          net-tools,
          libjs-bootstrap,
          libjs-jquery,
+#if !defined(SID)
          pelican-osdf-compat (>= 7.1.4),
+#endif
          ${misc:Depends},
          ${perl:Depends},
          ${python3:Depends},
@@ -243,6 +252,7 @@ Description: distributed workload management system - single node configuration
  Examines the current HTCondor installation and recommends changes to ensure
  a smooth upgrade to a subsequent HTCondor version.
 
+#if !defined(SID)
 Package: condor-tarball
 Architecture: any
 Section: science
@@ -266,6 +276,7 @@ Description: distributed workload management system - single node configuration
  the user.
  .
  This package provides files needed to create a stand-alone HTCondor tarball.
+#endif
 
 Package: condor-kbdd
 Architecture: any
@@ -340,6 +351,9 @@ Description: distributed workload management system - single node configuration
  system is available, HTCondor can transfer the job's data files on behalf of
  the user.
  .
+#if defined(SID)
+ This package provides a few miscellaneous test scripts.
+#else
  This package provides files needed to run tests against the extracted tarball
  in the BaTLab.
 
@@ -366,6 +380,7 @@ Description: distributed workload management system - debugging symbols
  the user.
  .
  This package provides the debugging symbols for HTCondor.
+#endif
 
 Package: htcondor
 Architecture: any
@@ -415,6 +430,7 @@ Description: transitional dummy package
  This package aids upgrades of existing htcondor installations to the
  package name "condor". The package is empty and it can safely be removed.
 
+#if !defined(SID)
 Package: htcondor-tarball
 Architecture: any
 Depends: condor-tarball (= ${binary:Version}),
@@ -422,6 +438,7 @@ Depends: condor-tarball (= ${binary:Version}),
 Description: transitional dummy package
  This package aids upgrades of existing htcondor installations to the
  package name "condor". The package is empty and it can safely be removed.
+#endif
 
 Package: htcondor-test
 Architecture: any
@@ -431,6 +448,7 @@ Description: transitional dummy package
  This package aids upgrades of existing htcondor installations to the
  package name "condor". The package is empty and it can safely be removed.
 
+#if !defined(SID)
 Package: htcondor-dbg
 Architecture: any
 Depends: htcondor (= ${binary:Version}),
@@ -438,4 +456,4 @@ Depends: htcondor (= ${binary:Version}),
 Description: transitional dummy package
  This package aids upgrades of existing htcondor installations to the
  package name "condor". The package is empty and it can safely be removed.
-
+#endif

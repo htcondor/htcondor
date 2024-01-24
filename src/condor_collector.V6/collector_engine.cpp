@@ -197,8 +197,7 @@ scheduleHousekeeper (int timeout)
 	// Are we filtering updates that we forward to the view collector?
 	std::string watch_list;
 	param(watch_list,"COLLECTOR_FORWARD_WATCH_LIST", "State,Cpus,Memory,IdleJobs,ClaimId,Capability,ClaimIdList,ChildClaimIds");
-	m_forwardWatchList.clearAll();
-	m_forwardWatchList.initializeFromString(watch_list.c_str());
+	m_forwardWatchList = split(watch_list);
 
 	m_forwardFilteringEnabled = param_boolean( "COLLECTOR_FORWARD_FILTERING", false );
 
@@ -1214,11 +1213,12 @@ extern bool   last_updateClassAd_was_insert;
 void
 movePrivateAttrs(ClassAd& dest, ClassAd& src)
 {
-	for (auto itr = src.begin(); itr != src.end(); /* no increment */ ) {
+	auto itr = src.begin();
+	while (itr != src.end()) {
 		if (ClassAdAttributeIsPrivateAny(itr->first)) {
-			const std::string name = itr->first;
-			ExprTree* expr = src.Remove((itr++)->first);
-			dest.Insert(name, expr);
+			const std::string &name = itr->first;
+			dest.Insert(name, itr->second->Copy());
+			itr = src.erase(itr);
 		} else {
 			itr++;
 		}
@@ -1307,9 +1307,7 @@ updateClassAd (CollectorHashTable &hashTable,
 			} else {
 				classad::Value old_val;
 				classad::Value new_val;
-				const char *attr;
-				m_forwardWatchList.rewind();
-				while ( (attr = m_forwardWatchList.next()) ) {
+				for (const auto& attr : m_forwardWatchList) {
 					// This treats attribute-not-present and
 					// attribute-evaluates-to-UNDEFINED as equivalent.
 					if ( old_ad->EvaluateAttr( attr, old_val ) &&

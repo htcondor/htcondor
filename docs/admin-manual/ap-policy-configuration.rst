@@ -114,7 +114,7 @@ terminates further evaluation of other submit requirements, and is the
 only requirement reported. Each submit requirement is evaluated in the
 context of the *condor_schedd* ClassAd, which is the ``MY.`` name space
 and the job ClassAd, which is the ``TARGET.`` name space. Note that
-``JobUniverse`` and ``RequestMemory`` are both job ClassAd attributes.
+:ad-attr:`JobUniverse` and :ad-attr:`RequestMemory` are both job ClassAd attributes.
 
 Further configuration may associate a rejection reason with a submit
 requirement with the :macro:`SUBMIT_REQUIREMENT_<Name>_REASON`.
@@ -138,7 +138,7 @@ typically be immediately presented to the user. If an optional
 :macro:`SUBMIT_REQUIREMENT_<Name>_REASON` is not defined, a default reason
 will include the ``<Name>`` chosen for the submit requirement.
 Completing the presentation of the example submit requirements, upon an
-attempt to submit a standard universe job, *condor_submit* would print
+attempt to submit a standard universe job, :tool:`condor_submit` would print
 
 .. code-block:: text
 
@@ -159,7 +159,7 @@ Starting in HTCondor 8.7.4, you may instead configure submit warnings. A
 submit warning is a submit requirement for which
 :macro:`SUBMIT_REQUIREMENT_<Name>_IS_WARNING` is true. A submit
 warning does not cause the submission to fail; instead, it returns a
-warning to the user's console (when triggered via *condor_submit*) or
+warning to the user's console (when triggered via :tool:`condor_submit`) or
 writes a message to the user log (always). Submit warnings are intended
 to allow HTCondor administrators to provide their users with advance
 warning of new submit requirements. For example, if you want to increase
@@ -172,7 +172,7 @@ the minimum request memory, you could use the following configuration.
     SUBMIT_REQUIREMENT_OneGig_REASON = "As of <date>, the minimum requested memory will be 1024."
     SUBMIT_REQUIREMENT_OneGig_IS_WARNING = TRUE
 
-When a user runs *condor_submit* to submit a job with ``RequestMemory``
+When a user runs :tool:`condor_submit` to submit a job with :ad-attr:`RequestMemory`
 between 512 and 1024, they will see (something like) the following,
 assuming that the job meets all the other requirements.
 
@@ -486,7 +486,7 @@ High Availability of the Job Queue
     This High Availability configuration depends entirely on using
     an extremely reliably shared file server.  In our experience, only
     expensive, proprietary file servers are suitable for this role.
-    Frequently, casual configuation of a Highly Available HTCondor
+    Frequently, casual configuration of a Highly Available HTCondor
     job queue will result in lowered reliability.
 
 For a pool where all jobs are submitted through a single machine in the
@@ -541,15 +541,15 @@ synchronizes which single machine does run the *condor_schedd* daemon.
 This lock and the job queue must both be located in a shared file space,
 and is currently specified only with a file URL. The configuration
 specifies the shared space (:macro:`SPOOL`), and the URL of the lock.
-*condor_preen* is not currently aware of the lock file and will delete
+:tool:`condor_preen` is not currently aware of the lock file and will delete
 it if it is placed in the :macro:`SPOOL` directory, so be sure to add file
 ``SCHEDD.lock`` to :macro:`VALID_SPOOL_FILES[with HA Schedd]`.
 
 As HTCondor starts on machines that are configured to run the single
-*condor_schedd* daemon, the *condor_master* daemon of the first
+*condor_schedd* daemon, the :tool:`condor_master` daemon of the first
 machine that looks at (polls) the lock and notices that no lock is held.
 This implies that no *condor_schedd* daemon is running. This
-*condor_master* daemon acquires the lock and runs the *condor_schedd*
+:tool:`condor_master` daemon acquires the lock and runs the *condor_schedd*
 daemon. Other machines with this same capability to run the
 *condor_schedd* daemon look at (poll) the lock, but do not run the
 daemon, as the lock is held. The machine running the *condor_schedd*
@@ -557,14 +557,14 @@ daemon renews the lock periodically.
 
 If the machine running the *condor_schedd* daemon fails to renew the
 lock (because the machine is not functioning), the lock times out
-(becomes stale). The lock is released by the *condor_master* daemon if
-*condor_off* or *condor_off -schedd* is executed, or when the
-*condor_master* daemon knows that the *condor_schedd* daemon is no
+(becomes stale). The lock is released by the :tool:`condor_master` daemon if
+:tool:`condor_off` or *condor_off -schedd* is executed, or when the
+:tool:`condor_master` daemon knows that the *condor_schedd* daemon is no
 longer running. As other machines capable of running the
 *condor_schedd* daemon look at the lock (poll), one machine will be the
 first to notice that the lock has timed out or been released. This
 machine (correctly) interprets this situation as the *condor_schedd*
-daemon is no longer running. This machine's *condor_master* daemon then
+daemon is no longer running. This machine's :tool:`condor_master` daemon then
 acquires the lock and runs the *condor_schedd* daemon.
 
 See the :ref:`admin-manual/configuration-macros:condor_master configuration

@@ -10,6 +10,10 @@ class TransactionFlag(enum.IntEnum):
     """
     An enumeration of the flags affecting the characteristics of a transaction.
 
+    .. attribute:: Default
+
+        The default transaction is not any of the following.
+
     .. attribute:: NonDurable
 
         Non-durable transactions are changes that may be lost when the

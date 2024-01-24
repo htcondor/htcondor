@@ -150,9 +150,9 @@ The submit description file appears as
      log          = job.log
      queue
 
-For a DAG such as this one, ``Arguments`` will become "A was prepended" and the
+For a DAG such as this one, :ad-attr:`Arguments` will become "A was prepended" and the
 output file will be named ``results-B.out``. If instead var1 used *APPEND*
-and var2 used *PREPEND* then ``Arguments`` will become "No variables prepended"
+and var2 used *PREPEND* then :ad-attr:`Arguments` will become "No variables prepended"
 and the output file will be named ``results-C.out``.
 
 If neither *PREPEND* nor *APPEND* is used in the *VARS* line then the variable
@@ -202,7 +202,7 @@ quote marks depend on whether the New Syntax or Old Syntax format is
 used for the **arguments** submit command. Note that in both syntaxes,
 double quote marks require two levels of escaping: one level is for the
 parsing of the DAG input file, and the other level is for passing the
-resulting value through *condor_submit*.
+resulting value through :tool:`condor_submit`.
 
 As of HTCondor version 8.3.7, single quotes are permitted within the
 value specification. For the specification of command line
@@ -214,7 +214,7 @@ value specification. For the specification of command line
 
 There are examples of all three cases below. In New Syntax, to pass a
 single quote as part of an argument, escape it with another single quote
-for *condor_submit* parsing as in the example's NodeA ``fourth`` macro.
+for :tool:`condor_submit` parsing as in the example's NodeA ``fourth`` macro.
 
 As an example that shows uses of all special characters, here are only
 the relevant parts of a DAG input file. Note that the NodeA value for

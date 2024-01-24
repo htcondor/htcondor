@@ -130,7 +130,7 @@ will also be necessary. Note that attributes set with '+' are inserted
 directly into the job's ClassAd. Specify attributes as they must appear
 in the job's ClassAd, not the submit description file. For example, the
 :subcom:`universe[and grid universe]` is specified
-using an integer assigned for a job ClassAd ``JobUniverse``. Similarly,
+using an integer assigned for a job ClassAd :ad-attr:`JobUniverse`. Similarly,
 place quotation marks around string expressions. As an example, a submit
 description file would ordinarily contain
 
@@ -344,11 +344,11 @@ The following table summarizes how job ClassAd attributes will be translated int
 +-------------------+---------------------+
 | Job ClassAd       | Slurm               |
 +===================+=====================+
-| ``RequestMemory`` | ``--mem``           |
+| RequestMemory     | ``--mem``           |
 +-------------------+---------------------+
-| ``BatchRuntime``  | ``--time``          |
+| BatchRuntime      | ``--time``          |
 +-------------------+---------------------+
-| ``BatchProject``  | ``--account``       |
+| BatchProject      | ``--account``       |
 +-------------------+---------------------+
 | ``Queue``         | ``--partition``     |
 +-------------------+---------------------+
@@ -367,7 +367,7 @@ submit description file.
 
     batch_extra_submit_args = --cpus-per-task=4 --qos=fast
 
-The *condor_qsub* command line tool will take PBS/SGE style batch files
+The :tool:`condor_qsub` command line tool will take PBS/SGE style batch files
 or command line arguments and submit the job to HTCondor instead. See
 the :doc:`/man-pages/condor_qsub` manual page for details.
 
@@ -378,7 +378,7 @@ HTCondor can submit jobs to a batch system on a remote machine via SSH.
 This requires an initial setup step that installs some binaries under
 your home directory on the remote machine and creates an SSH key that
 allows SSH authentication without the user typing a password.
-The setup command is *condor_remote_cluster*, which you should run at
+The setup command is :tool:`condor_remote_cluster`, which you should run at
 the command line.
 
 .. code-block:: text
@@ -411,7 +411,7 @@ the network from the remote machine on the SSH and HTCondor ports
 Also, your local machine must allow SSH logins using just an ssh key
 for authentication.
 
-First, run the *condor_remote_cluster* as you would for a regular
+First, run the :tool:`condor_remote_cluster` as you would for a regular
 remote SSH setup.
 
 .. code-block:: text
@@ -503,7 +503,7 @@ Since the job is a virtual machine image, most of the submit description
 file commands specifying input or output files are not applicable. The
 :subcom:`executable[and EC2 grid]` command is
 still required, but its value is ignored. It can be used to identify
-different jobs in the output of *condor_q*.
+different jobs in the output of :tool:`condor_q`.
 
 The VM image for the job must already reside in one of Amazon's storage
 service (S3 or EBS) and be registered with EC2. In the submit
@@ -774,7 +774,7 @@ The EC2 GAHP will set the CA file to whichever variable it finds first,
 checking these in the following order:
 
 #. The environment variable ``X509_CERT_FILE``, set when the
-   *condor_master* starts up.
+   :tool:`condor_master` starts up.
 #. The HTCondor configuration variable :macro:`GAHP_SSL_CAFILE`.
 
 The EC2 GAHP supplies no default value, if it does not find a CA file.
@@ -783,7 +783,7 @@ The EC2 GAHP will set the CA directory given whichever of these
 variables it finds first, checking in the following order:
 
 #. The environment variable ``X509_CERT_DIR``, set when the
-   *condor_master* starts up.
+   :tool:`condor_master` starts up.
 #. The HTCondor configuration variable :macro:`GAHP_SSL_CADIR`.
 
 The EC2 GAHP supplies no default value, if it does not find a CA
@@ -857,7 +857,7 @@ description file commands specifying input or output files are not
 applicable. The
 :subcom:`executable[and GCE grid]`
 still required, but its value is ignored. It identifies different jobs
-in the output of *condor_q*.
+in the output of :tool:`condor_q`.
 
 The VM image for the job must already reside in Google's Cloud Storage
 service and be registered with GCE. In the submit description file,
@@ -983,7 +983,7 @@ description file commands specifying input or output files are not
 applicable. The
 :subcom:`executable[and Azure grid]`
 still required, but its value is ignored. It identifies different jobs
-in the output of *condor_q*.
+in the output of :tool:`condor_q`.
 
 The VM image for the job must already be registered a virtual machine
 image in Azure. In the submit description file, provide the identifier

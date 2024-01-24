@@ -258,13 +258,6 @@ void ConvertLegacyUserprioAdToAdList(ClassAd &ad, std::vector<ClassAd> & prios)
 		const char * pattr = it->first.c_str();
 		const char * p = pattr;
 
-		// ConcurrencyLimits are also in this ad, and could end in a number.  Skip those
-		// Newer negotiators (post 8.6.10) don't send this anymore
-
-		if (strstr(pattr, "ConcurrencyLimit_") == pattr) {
-			continue;
-		}
-
 		// parse attribute nameNNN, looking for trailing NNN
 		// and set attr to name, and id to NNN.  
 		id = -1;
@@ -296,7 +289,7 @@ void ConvertLegacyUserprioAdToAdList(ClassAd &ad, std::vector<ClassAd> & prios)
 		}
 
 		// move the right hand side from the input ad into the vector of ads.
-		prios[id-1].Insert(attr, it->second); ad.Remove(it->first);
+		prios[id-1].Insert(attr, it->second->Copy());
 		prios[id-1].Assign("SubmittorId", id);
 	}
 }

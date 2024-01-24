@@ -100,8 +100,8 @@ the directory and file name at the destination.
 The plug-in is expected to do the transfer, exiting with status 0 if the
 transfer was successful, and a non-zero status if the transfer was not
 successful. When not successful, the job is placed on hold, and the job
-ClassAd attribute ``HoldReason`` will be set as appropriate for the job.
-The job ClassAd attribute ``HoldReasonSubCode`` will be set to the exit
+ClassAd attribute :ad-attr:`HoldReason` will be set as appropriate for the job.
+The job ClassAd attribute :ad-attr:`HoldReasonSubCode` will be set to the exit
 status of the plug-in.
 
 As an example of the transfer of a subset of output files, assume that
@@ -128,9 +128,8 @@ HTCondor also expects the plugin to exit with one of the following standardized
 exit codes:
 
     - **0**: Transfer successful
-    - **1**: Transfer failed
-    - **2**: Transfer needs a refreshed authentication token, should be retried
-      (slated for development, not implemented yet)
+    - **Any other value**: Transfer failed
+
 
 Custom File Transfer Plugins
 ''''''''''''''''''''''''''''
@@ -287,7 +286,7 @@ Self-Checkpointing Jobs
 -----------------------
 
 As of HTCondor 23.1, self-checkpointing jobs may set ``checkpoint_destination``
-(see the *condor_submit* :ref:`man page<checkpoint_destination>`),
+(see the :tool:`condor_submit` :ref:`man page<checkpoint_destination>`),
 which causes HTCondor to store the job's checkpoint(s) at the specific URL
 (rather than in the AP's :macro:`SPOOL` directory).  This can be a major
 improvement in scalability.  Once the job leaves the queue, HTCondor should
@@ -350,7 +349,7 @@ which are not specified with an absolute path are assumed to be in the
 :macro:`LIBEXEC` directory.
 
 The remainder of this section is a detailed explanation of how HTCondor
-launches such an executable.  This may be useful for adminstrators who
+launches such an executable.  This may be useful for administrators who
 wish to understand the process tree they're seeing, but it is intended
 to aid people trying to write a checkpoint clean-up plug-in for a
 different kind of checkpoint destination.  For the rest of this section,
@@ -360,17 +359,17 @@ When a job exits the queue, the *condor_schedd* will immediately spawn the
 checkpoint clean-up process (*condor_manifest*); that process will call the
 checkpoint clean-up plug-in once per file in each checkpoint the job wrote.
 The *condor_schedd* does not check to see if this process succeeded; that's
-a job for *condor_preen*.  When *condor_preen* runs, if a job's checkpoint
+a job for :tool:`condor_preen`.  When :tool:`condor_preen` runs, if a job's checkpoint
 has not been cleaned up, it will also spawn *condor_manifest*, and do so in
 exactly the same way the *condor_schedd* did.  Failures will be reported via
-the usual channels for *condor_preen*.  You may specify how long
+the usual channels for :tool:`condor_preen`.  You may specify how long
 *condor_manifest* may run with the configuration macro
 :macro:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`.  The
 *condor_manifest* tool removes each MANIFEST file as its contents get cleaned
 up, so this timeout need only be long enough to complete a single checkpoint's
 worth of clean-up in order to make progress.
 
-(On non-Windows platforms, *condor_manifest* is spawned as the ``Owner`` of
+(On non-Windows platforms, *condor_manifest* is spawned as the :ad-attr:`Owner` of
 the job whose checkpoints are being cleaned-up; this is both safer and easier,
 since that user may have useful privileges (for example, filesystems may be
 mounted "root-squash").)
@@ -403,19 +402,16 @@ Enabling the Fetching and Use of OAuth2 Credentials
 ---------------------------------------------------
 
 HTCondor supports two distinct methods for using OAuth2 credentials.
-One uses its own native OAuth client or issuer, and one uses a separate
-Hashicorp Vault server as the OAuth client and secure refresh token
-storage.  Each method uses a separate credmon implementation and rpm
+One uses its own native OAuth client and credential monitor, and one uses
+a separate Hashicorp Vault server as the OAuth client and secure refresh
+token storage.  Each method uses a separate credmon implementation and rpm
 and have their own advantages and disadvantages.
 
 If the native OAuth client is used with a remote token issuer, then each
 time a new refresh token is needed the user has to re-authorize it through
 a web browser.  An hour after all jobs of a user are stopped (by default),
-the refresh tokens are deleted.  If the client is used with the native
-token issuer is used, then no web browser authorizations are needed but
-the public keys of every token issuer have to be managed by all the
-resource providers.  In both cases, the tokens are only available inside
-HTCondor jobs.
+the refresh tokens are deleted.  The resulting access tokens are only
+available inside HTCondor jobs.
 
 If on the other hand a Vault server is used as the OAuth client, it
 stores the refresh token long term (typically about a month since last
@@ -427,8 +423,8 @@ Kerberos is also available, new vault tokens can be obtained automatically
 without any user intervention.  The HTCondor vault credmon also stores a
 longer lived vault token for use as long as jobs might run.
 
-Using the native OAuth client and/or issuer
-'''''''''''''''''''''''''''''''''''''''''''
+Using the native OAuth client
+'''''''''''''''''''''''''''''
 
 HTCondor can be configured to allow users to request and securely store
 credentials from most OAuth2 service providers.  Users' jobs can then request
@@ -522,11 +518,187 @@ install the ``condor-credmon-vault`` rpm.  Also install the htgettoken
 rpm on the access point.  Additionally, on the access point
 set the :macro:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
 ``-a <vault.name>`` where <vault.name> is the fully qualified domain name
-of the Vault machine.  *condor_submit* users will then be able to select
+of the Vault machine.  :tool:`condor_submit` users will then be able to select
 the oauth services that are defined on the Vault server.  See the
 htvault-config
 (`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
 documentation to see how to set up and configure the Vault server.
+
+.. _installing_credmon_local:
+
+Automatic Issuance of SciTokens Credentials
+-------------------------------------------
+
+The ``condor-credmon-local`` rpm package includes a SciTokens "local
+issuer."  Once enabled, no web browser authorization is needed for users
+to be issued a SciToken when submitting a job. The claims of the SciToken
+are entirely controlled by the HTCondor configuration (as read by the
+*condor_credmon_oauth* daemon), users may not specify custom scopes,
+audiences, etc. in a locally-issued token.
+
+There are three (or four) steps to setting up the SciTokens local issuer:
+
+1. Generate a SciTokens private/public key pair.
+2. Upload the generated public key to a public HTTPS address.
+3. Modify the HTCondor configuration to generate valid tokens with desired claims using the generated private key.
+4. (Optional) Modify the HTCondor configuration to automatically generate tokens on submit.
+
+Generating a SciTokens key pair
+'''''''''''''''''''''''''''''''
+
+The ``python3-scitokens`` package, which is installed as a dependency to
+the ``condor-credmon-local`` package, contains the command line tool
+``scitokens-admin-create-key`` which can generate private and public keys
+for SciTokens. Start by generating a private key, for example:
+
+.. code-block:: console
+
+    $ scitokens-admin-create-key --ec --create-keys --pem-private > my-private-key.pem
+
+In this example, ``my-private-key.pem`` contains a private key that can
+be used to sign tokens. Next, generate a corresponding public key in JWKS
+format, for example:
+
+.. code-block:: console
+
+    $ scitokens-admin-create-key --ec --private-keyfile=my-private-key.pem --jwks-public > my-public-key.jwks
+
+In this example, ``my-public-key.jwks`` is a JWKS file
+(JSON Web Key Set file) that contains the public key information
+needed to validate tokens generated by the private key in
+``my-private-key.pem``.
+
+Uploading the public key
+''''''''''''''''''''''''
+
+The JWKS file containing the public key file needs to be made available at a
+public HTTPS address so that any services that consume the SciTokens signed by
+the private key are able to validate the tokens' signatures.
+This "issuer URL" must have a subdirectory ``.well-known/`` containing a JSON
+file ``openid-configuration`` that contains a single object with the properties
+``issuer`` and ``jwks_uri``. These properties should have values that point
+to the parent (issuer) URL and the location of the JWKS file, respectively.
+
+For example, suppose that you want the issuer URL to be
+``https://example.com/scitokens``, that the web server at example.com is
+already serving files on port 443 with a valid certificate issued by a
+trusted CA, and that you have the ability to place files at that site.
+To make this a valid issuer, you could:
+
+1. Create the ``https://example.com/scitokens/.well-known`` directory,
+2. Upload your JWKS file (e.g. ``my-public.key.jwks``) to this ``.well-known`` directory, and
+3. Create ``https://example.com/scitokens/.well-known/openid-configuration`` with the following contents:
+
+.. code-block:: json
+
+    {
+        "issuer":"https://example.com/scitokens",
+        "jwks_uri":"https://example.com/scitokens/.well-known/my-public-key.jwks"
+    }
+
+Configuring HTCondor to generate valid SciTokens
+''''''''''''''''''''''''''''''''''''''''''''''''
+
+The ``condor-credmon-local`` package places ``40-oauth-credmon.conf`` in the
+``$(ETC)/config.d`` directory, which contains most of the relevant
+configuration commented out. To begin, add (or uncomment) the following:
+
+.. code-block:: condor-config
+
+    LOCAL_CREDMON_PROVIDER_NAME = scitokens
+    SEC_PROCESS_SUBMIT_TOKENS = false
+
+Note that this will create token files named ``scitokens.use``, change the
+value of ``LOCAL_CREDMON_PROVIDER_NAME`` if a different name is desired.
+
+Also make sure that ``SEC_DEFAULT_ENCRYPTION = REQUIRED`` is set and working
+in your configuration as encryption is required to securely send tokens from
+the access point to job sandboxes on the execution points.
+
+Next, place your private key file in an appropriate location, make it owned
+by root, and set file permissions so that it can only be read by root.
+For example:
+
+.. code-block:: console
+
+    $ sudo mv my-private-key.pem /etc/condor/scitokens-private.pem
+    $ sudo chown root: /etc/condor/scitokens-private.pem
+    $ sudo chmod 0400 /etc/condor/scitokens-private.pem
+
+Then point ``LOCAL_CREDMON_PRIVATE_KEY`` to the location of the private key
+file:
+
+.. code-block:: condor-config
+
+    LOCAL_CREDMON_PRIVATE_KEY = /etc/condor/scitokens-private.pem
+
+Next, set the audience claim of the locally-issued SciTokens. This claim
+should encompass the set of services that will consume these tokens.
+Version 2.0+ of the SciTokens specification requires that the audience claim
+be set for tokens to be valid.
+
+.. code-block:: condor-config
+
+    LOCAL_CREDMON_TOKEN_AUDIENCE = https://example.com https://anotherserver.edu
+
+Next, HTCondor must know the "issuer URL" that contains the pointer
+(``.well-known/openid-configuration``) to the public key file and the key id to
+use when signing tokens. The key id is the value of the "kid" property in the
+public key JWKS file. For example, if the "kid" is "abc0":
+
+.. code-block:: condor-config
+
+    LOCAL_CREDMON_ISSUER = https://example.com/scitokens
+    LOCAL_CREDMON_KEY_ID = abc0
+
+Finally, set the lifetime and scopes of the tokens. A templating system is
+available for setting scopes based on the submitter's system username.
+Optionally, if ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and
+``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE`` are set, a mapfile can be used
+to append additional scopes based on all of the values that the submitter's
+system username maps to, which is typically useful for group-accessed
+locations.
+
+.. code-block:: condor-config
+
+    LOCAL_CREDMON_TOKEN_LIFETIME = 1200
+    LOCAL_CREDMON_AUTHZ_TEMPLATE = read:/user/{username} write:/user/{username}
+    LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE = read:/groups/{groupname} write:/groups/{groupname}
+    LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE = /etc/condor/local_credmon_group_map
+
+For example, suppose that user "bob" should have access to
+``/groups/projectA`` and ``/group/projectB`` and "alice" should have access to
+``/groups/projectB``, the mapfile (``/etc/condor/local_credmon_group_map``)
+might look like:
+
+.. code-block:: text
+
+    * bob projectA,projectB
+    * alice projectB
+
+Configuring HTCondor to automatically create SciTokens for jobs
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+At this point, the local issuer is configured to be able to generate valid
+SciTokens. A final, optional step is to install a job transform that tells
+HTCondor to automatically create tokens and send them along with every
+submitted job.
+The following example is such a job transform that will do this for all
+vanilla, container, and local universe jobs:
+
+.. code-block:: condor-config
+
+    JOB_TRANSFORM_AddSciToken @=end
+    [
+        Requirements = (JobUniverse == 5 || JobUniverse == 12);
+        Eval_Set_OAuthServicesNeeded = strcat( "scitokens ", OAuthServicesNeeded ?: "");
+    ]
+    @end
+    JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AddSciToken
+
+This example also assumes that ``LOCAL_CREDMON_PROVIDER_NAME = scitokens``,
+replace ``"scitokens "`` in the ``strcat`` function to match this name if
+different.
 
 Using HTCondor with AFS
 -----------------------
@@ -590,7 +762,7 @@ writable to unauthenticated users, or must not be on AFS. Making these
 directories writable a very bad security hole, so it is not a viable
 solution. Placing :macro:`LOCAL_DIR` onto NFS is acceptable. To avoid AFS,
 place the directory defined for :macro:`LOCAL_DIR` on a local partition on
-each machine in the pool. This implies running *condor_configure* to
+each machine in the pool. This implies running :tool:`condor_configure` to
 install the release directory and configure the pool, setting the
 :macro:`LOCAL_DIR` variable to a local partition. When that is complete, log
 into each machine in the pool, and run *condor_init* to set up the

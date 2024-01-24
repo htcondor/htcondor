@@ -18,16 +18,16 @@ input file. The syntax for *JOBSTATE_LOG* is
 **JOBSTATE_LOG** *JobstateLogFileName*
 
 No more than one ``jobstate.log`` file can be created by a single
-instance of *condor_dagman*. If more than one ``jobstate.log`` file is
+instance of :tool:`condor_dagman`. If more than one ``jobstate.log`` file is
 specified, the first file name specified will take effect, and a warning
 will be printed in the ``dagman.out`` file when subsequent
 *JOBSTATE_LOG* specifications are parsed. Multiple specifications may
 exist in the same DAG file, within splices, or within multiple,
-independent DAGs run with a single *condor_dagman* instance.
+independent DAGs run with a single :tool:`condor_dagman` instance.
 
 The ``jobstate.log`` file can be considered a filtered version of the
 ``dagman.out`` file, in a machine-readable format. It contains the
-actual node job events that from *condor_dagman*, plus some additional
+actual node job events that from :tool:`condor_dagman`, plus some additional
 meta-events.
 
 The ``jobstate.log`` file is different from the node status file, in
@@ -39,27 +39,27 @@ There are 5 line types in the ``jobstate.log`` file. Each line begins
 with a Unix timestamp in the form of seconds since the Epoch. Fields
 within each line are separated by a single space character.
 
-*   **DAGMan start**: This line identifies the *condor_dagman* job. 
+*   **DAGMan start**: This line identifies the :tool:`condor_dagman` job. 
     The formatting of the line is
 
     .. code-block:: text
 
         timestamp INTERNAL \*** DAGMAN_STARTED dagmanCondorID \***
 
-    The *dagmanCondorID* field is the *condor_dagman* job's
-    ``ClusterId`` attribute, a period, and the ``ProcId`` attribute.
+    The *dagmanCondorID* field is the :tool:`condor_dagman` job's
+    :ad-attr:`ClusterId` attribute, a period, and the :ad-attr:`ProcId` attribute.
 
-*   **DAGMan exit**: This line identifies the completion of the *condor_dagman*
+*   **DAGMan exit**: This line identifies the completion of the :tool:`condor_dagman`
     job. The formatting of the line is
 
     .. code-block:: text
 
         timestamp INTERNAL \*** DAGMAN_FINISHED exitCode \***
 
-    The *exitCode* field is value the *condor_dagman* job returns upon
+    The *exitCode* field is value the :tool:`condor_dagman` job returns upon
     exit.
 
-*   **Recovery started**:  If the *condor_dagman* job goes into recovery mode,
+*   **Recovery started**:  If the :tool:`condor_dagman` job goes into recovery mode,
     this meta-event is printed. During recovery mode, events will only be 
     printed in the file if they were not already printed before recovery mode
     started. The formatting of the line is
@@ -96,8 +96,8 @@ within each line are separated by a single space character.
     The *eventName* is one of the many defined event or meta-events
     given in the lists below.
 
-    The *condorID* field is the job's ``ClusterId`` attribute, a period,
-    and the ``ProcId`` attribute. There is no *condorID* assigned yet
+    The *condorID* field is the job's :ad-attr:`ClusterId` attribute, a period,
+    and the :ad-attr:`ProcId` attribute. There is no *condorID* assigned yet
     for some meta-events, such as PRE_SCRIPT_STARTED. For these, the
     dash character ('-') is printed.
 

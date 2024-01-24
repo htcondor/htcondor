@@ -25,8 +25,10 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include "classad/classad_containers.h"
 #include "classad/exprTree.h"
+#include "classad/classad_flat_map.h"
 
 namespace classad {
 
@@ -38,7 +40,13 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-typedef classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr> AttrList;
+//#define USE_CLASSAD_FLAT_MAP
+#ifdef USE_CLASSAD_FLAT_MAP
+using AttrList = ClassAdFlatMap;
+#else
+using AttrList = classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr>;
+#endif
+
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);
@@ -612,6 +620,12 @@ class ClassAd : public ExprTree
 		//@}
 
 		void rehash(size_t s) { attrList.rehash(s);}
+		iterator erase(iterator i) { 
+#ifndef USE_CLASSAD_FLAT_MAP
+			delete i->second;
+#endif
+			return attrList.erase(i);
+		}
 		/** Deconstructor to get the components of a classad
 		 * 	@param vec A vector of (name,expression) pairs which are the
 		 * 		attributes of the classad

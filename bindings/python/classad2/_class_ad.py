@@ -119,9 +119,10 @@ class ClassAd(MutableMapping):
 
     def externalRefs(self, expr: "ExprTree") -> List[str]:
         """
-        FIXME
+        Returns the list of attributes referenced by the expression which
+        are *not* defined by this ClassAd.
 
-        :param expr:
+        :param expr: The expression.
         """
         if not isinstance(expr, ExprTree):
             raise TypeError("expr must be an ExprTree")
@@ -132,9 +133,15 @@ class ClassAd(MutableMapping):
 
     def flatten(self, expr : "ExprTree") -> "ExprTree":
         """
-        FIXME
+        Partially evaluate the expression in the context of this ad.
+        Attributes referenced by the expression which are not defined
+        by this ClassAd are not evaluated, but other attributes and
+        subexpressions are.  Thus, ``RequestMemory * 1024 * 1024`` will
+        evaluate to the amount of requested memory in bytes if this
+        ClassAd defines the ``RequestMemory`` attribute, and to
+        ``RequestMemory * 1048576`` otherwise.
 
-        :param expr:
+        :param expr: The expression.
         """
         if not isinstance(expr, ExprTree):
             raise TypeError("expr must be an ExprTree")
@@ -143,9 +150,10 @@ class ClassAd(MutableMapping):
 
     def internalRefs(self, expr: "ExprTree") -> List[str]:
         """
-        FIXME
+        Returns the list of attributes referenced by the expression which
+        *are* defined by this ClassAd.
 
-        :param expr:
+        :param expr: The expression.
         """
         if not isinstance(expr, ExprTree):
             raise TypeError("expr must be an ExprTree")

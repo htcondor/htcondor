@@ -1094,11 +1094,44 @@ ReadUserLog::readEventClassad( ULogEvent *& event, int log_type, FileLockBase *l
 	return ULOG_OK;
 }
 
-ULogEventOutcome
-ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
-{
-	long   filepos;
-	int    eventnumber;
+/*
+ *  This is the heart of the user log reader.  The precondition on entry is
+ *  that the fp in the class is pointing at the very start of a "native" user
+ *  log event, or at end of file (assuming the end of file is immediately after
+ *  a completely written event).  The writers must guarantee that events are
+ *  not interleaved.  They do this by gathering up all the bytes in a single
+ *  event, and writing them in one write(2) call, to an fd opened in O_APPEND
+ *  mode.  If somehow the fp is pointing in the middle of an event, we don't go
+ *  out of our way to detect this, but if we do, because we can't parse the
+ *  event, we will consume what's left of this event by reading and throwing
+ *  away all lines up to the next "^...", and returning ULOG_UNK_ERROR.
+ *
+ *  However, even if the writers are writing in O_APPEND with a single write,
+ *  we may still see a short write.  This is because POSIX only guarantees that
+ *  readers will see the full write if the read operation starts after the
+ *  write call has returned to userspace.  We make no attempt to enforce this.
+ *  However, we do know where the event ends, at the "^..." terminator.  If we
+ *  don't see this when we read, we know we have a short read.  In this case,
+ *  we fseek back to the where we started (hopefully, the beginning of an
+ *  event!), and return ULOG_NO_EVENT, which tells the caller to call us again
+ *  (perhaps after a delay) to try again.  ULOG_NO_EVENT is also returned when
+ *  EOF is hit.
+ *
+ *  When the code was originally written, it used file locking in the writer to
+ *  try to enforce both no short reads and no iterleaved events.  This was
+ *  problematic because it would not be reliable on shared filesystems like
+ *  NFS.  Switching to single write(2) calls fixes the interleaving problems.
+ *
+ *  We've left the read locking in here for historical reasons.  I think
+ *  it can be removed, except perhaps for the case of file rotation.
+ *  
+ *
+ */
+
+ULogEventOutcome ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock) { 
+
+	long   filepos; 
+	int    eventnumber; 
 	int    retval1, retval2;
 	bool   got_sync_line = false;
 
@@ -1108,7 +1141,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 	// rewind to this location
 	if (!m_fp || ((filepos = ftell(m_fp)) == -1L))
 	{
-		dprintf( D_FULLDEBUG,
+		dprintf( D_ALWAYS,
 				 "ReadUserLog: invalid m_fp, or ftell() failed\n" );
 		Unlock(lock, true);
 		return ULOG_UNK_ERROR;
@@ -1118,6 +1151,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 
 	// so we don't dump core if the above fscanf failed
 	if (retval1 != 1) {
+		int save_errno = errno;
 		eventnumber = 1;
 		// check for end of file -- why this is needed has been
 		// lost, but it was removed once and everything went to
@@ -1135,14 +1169,13 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 			Unlock(lock, true);
 			return ULOG_NO_EVENT;
 		}
-		dprintf( D_FULLDEBUG, "ReadUserLog: error (not EOF) reading "
-					"event number\n" );
+		dprintf( D_ALWAYS, "ReadUserLog: error %d (not EOF) reading event number\n", save_errno);
 	}
 
 	// allocate event object; check if allocated successfully
 	event = instantiateEvent ((ULogEventNumber) eventnumber);
 	if (!event) {
-		dprintf( D_FULLDEBUG, "ReadUserLog: unable to instantiate event\n" );
+		dprintf( D_ALWAYS, "ReadUserLog: unable to instantiate event\n" );
 		Unlock(lock, true);
 		return ULOG_UNK_ERROR;
 	}
@@ -1154,7 +1187,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 	// check if error in reading event
 	if (!retval1 || !retval2)
 	{
-		dprintf( D_FULLDEBUG,
+		dprintf( D_ALWAYS,
 				 "ReadUserLog: error reading event; re-trying\n" );
 
 		// we could end up here if file locking did not work for
@@ -1214,7 +1247,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 			// if failed again, we have a parse error
 			if (retval1 != 1 || !retval2)
 			{
-				dprintf( D_FULLDEBUG, "ReadUserLog: error reading event "
+				dprintf( D_ALWAYS, "ReadUserLog: error reading event "
 							"on second try\n");
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
@@ -1234,12 +1267,18 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 				{
 					// got the event, but could not synchronize!!
 					// treat as incomplete event
-					dprintf( D_FULLDEBUG,
+					dprintf( D_ALWAYS,
 							 "ReadUserLog: got event on second try "
 							 "but synchronize() failed\n");
 					delete event;
 					event = NULL;  // To prevent FMR: Free memory read
 					clearerr( m_fp );
+					if (fseek (m_fp, filepos, SEEK_SET))
+					{
+						dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent\n");
+						Unlock(lock, true);
+						return ULOG_UNK_ERROR;
+					}
 					Unlock(lock, true);
 					return ULOG_NO_EVENT;
 				}
@@ -1249,7 +1288,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 		{
 			// if we could not synchronize the log, we don't have the full
 			// event in the stream yet; restore file position and return
-			dprintf( D_FULLDEBUG, "ReadUserLog: syncronize() failed\n");
+			dprintf( D_ALWAYS, "ReadUserLog: synchronize() failed\n");
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent\n");
@@ -1275,12 +1314,18 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 		{
 			// got the event, but could not synchronize!!  treat as incomplete
 			// event
-			dprintf( D_FULLDEBUG, "ReadUserLog: got event on first try "
+			dprintf( D_ALWAYS, "ReadUserLog: got event on first try "
 					"but synchronize() failed\n");
 
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr (m_fp);
+			if (fseek (m_fp, filepos, SEEK_SET))
+			{
+				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent\n");
+				Unlock(lock, true);
+				return ULOG_UNK_ERROR;
+			}
 			Unlock(lock, true);
 			return ULOG_NO_EVENT;
 		}

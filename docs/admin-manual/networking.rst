@@ -91,16 +91,9 @@ configuration variables, as described in the
 :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
 section.
 
-NOTE: In the 6.6 stable series, and HTCondor versions earlier than
-6.7.5, the *condor_negotiator* also listened on a fixed, well-known
-port (the default was 9614). However, beginning with version 6.7.5, the
-*condor_negotiator* behaves like all other HTCondor daemons, and
-publishes its own ClassAd to the *condor_collector* which includes the
-dynamically assigned port the *condor_negotiator* is listening on. All
-HTCondor tools and daemons that need to communicate with the
-*condor_negotiator* will either use the
-:macro:`NEGOTIATOR_ADDRESS_FILE` or will query the
-*condor_collector* for the *condor_negotiator* 's ClassAd.
+All HTCondor tools and daemons that need to communicate with the
+*condor_negotiator* will either use the :macro:`NEGOTIATOR_ADDRESS_FILE` or
+will query the *condor_collector* for the *condor_negotiator* 's ClassAd.
 
 Using a Non Standard, Fixed Port for the *condor_collector*
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -343,7 +336,7 @@ shared port are not authenticated or restricted by the
 *condor_shared_port* daemon. They are simply passed to the requested
 daemon, which is then responsible for enforcing the security policy.
 
-When the *condor_master* is configured to use the shared port by
+When the :tool:`condor_master` is configured to use the shared port by
 setting the configuration variable
 
 .. code-block:: condor-config
@@ -352,9 +345,9 @@ setting the configuration variable
 
 the *condor_shared_port* daemon is treated specially.
 :macro:`SHARED_PORT` is automatically added to 
-:macro:`DAEMON_LIST`. A command such as *condor_off*, which shuts
-down all daemons except for the *condor_master*, will also leave the
-*condor_shared_port* running. This prevents the *condor_master* from
+:macro:`DAEMON_LIST`. A command such as :tool:`condor_off`, which shuts
+down all daemons except for the :tool:`condor_master`, will also leave the
+*condor_shared_port* running. This prevents the :tool:`condor_master` from
 getting into a state where it can no longer receive commands.
 
 Also when ``USE_SHARED_PORT = True``, the *condor_collector* needs to
@@ -641,13 +634,13 @@ variable :macro:`MAX_FILE_DESCRIPTORS` or
 an equivalent. Each HTCondor process configured to use CCB with
 :macro:`CCB_ADDRESS` requires one persistent TCP connection to the CCB
 server. A typical execute node requires one connection for the
-*condor_master*, one for the *condor_startd*, and one for each running
+:tool:`condor_master`, one for the *condor_startd*, and one for each running
 job, as represented by a *condor_starter*. A typical access point
-requires one connection for the *condor_master*, one for the
+requires one connection for the :tool:`condor_master`, one for the
 *condor_schedd*, and one for each running job, as represented by a
 *condor_shadow*. If there will be no administrative commands required
-to be sent to the *condor_master* from outside of the private network,
-then CCB may be disabled in the *condor_master* by assigning
+to be sent to the :tool:`condor_master` from outside of the private network,
+then CCB may be disabled in the :tool:`condor_master` by assigning
 ``MASTER.CCB_ADDRESS`` to nothing:
 
 .. code-block:: condor-config
@@ -656,7 +649,7 @@ then CCB may be disabled in the *condor_master* by assigning
 
 Completing the count of TCP connections in this example: suppose the
 pool consists of 500 8-slot execute nodes and CCB is not disabled in the
-configuration of the *condor_master* processes. In this case, the count
+configuration of the :tool:`condor_master` processes. In this case, the count
 of needed file descriptors plus some extra for other transient
 connections to the collector is 500\*(1+1+8)=5000. Be generous, and give
 it twice as many descriptors as needed by CCB alone:
@@ -758,7 +751,7 @@ Subsequent updates can reuse an already open socket.
 
 Each HTCondor daemon that sends updates to the *condor_collector* will
 have 1 socket open to it. So, in a pool with N machines, each of them
-running a *condor_master*, *condor_schedd*, and *condor_startd*, the
+running a :tool:`condor_master`, *condor_schedd*, and *condor_startd*, the
 *condor_collector* would need at least 3\*N file descriptors. If the
 *condor_collector* is also acting as a CCB server, it will require an
 additional file descriptor for each registered daemon. In the default

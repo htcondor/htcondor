@@ -59,7 +59,7 @@ daemon logs
     +------------------------------------+
 
     Daemon logs are often investigated to accomplish administrative
-    debugging. *condor_config_val* can be used to determine the
+    debugging. :tool:`condor_config_val` can be used to determine the
     location and file name of the daemon log. For example, to display
     the location of the log for the *condor_collector* daemon, use
 
@@ -92,8 +92,8 @@ job queue log
 *condor_schedd* audit log
     The optional *condor_schedd* audit log records user-initiated
     events that modify the job queue, such as invocations of
-    *condor_submit*, *condor_rm*, *condor_hold* and
-    *condor_release*. Each event has a time stamp and a message that
+    :tool:`condor_submit`, :tool:`condor_rm`, :tool:`condor_hold` and
+    :tool:`condor_release`. Each event has a time stamp and a message that
     describes details of the event.
 
     This log exists to help administrators track the activities of pool
@@ -159,7 +159,7 @@ accountant log
     more compact form.
 
     Administrators can change user priorities kept in this log by using
-    the command line tool *condor_userprio*.
+    the command line tool :tool:`condor_userprio`.
 
 negotiator match log
     The negotiator match log is a second daemon log from the
@@ -174,7 +174,7 @@ history log
     name is ``$(SPOOL)/history``.
 
     Administrators can change view this historical information by using
-    the command line tool *condor_history*.
+    the command line tool :tool:`condor_history`.
 
     Configuration variables that affect the history log, setting details
     such as the maximum size to which this log may grow are

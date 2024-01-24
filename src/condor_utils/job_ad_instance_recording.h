@@ -27,6 +27,10 @@
 //TODO: Add filename format for per cluster option if implemented
 
 // Function for Shadow to call to write Job Ad per Epoch
-void writeJobEpochFile(classad::ClassAd const *job_ad);
+void writeJobEpochFile(
+	classad::ClassAd const *job_ad,
+	classad::ClassAd const *other_ad = NULL,
+	const char *banner_name = "EPOCH"
+);
 
 #endif

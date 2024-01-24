@@ -64,7 +64,7 @@ library for all use of ClassAds within HTCondor. The library is placed
 into a compatibility mode so that HTCondor 7.5.1 is still able to
 exchange ClassAds with older versions of HTCondor.
 
-All user interaction with tools (such as *condor_q*) as well as output
+All user interaction with tools (such as :tool:`condor_q`) as well as output
 of tools is still compatible with Old ClassAds. Before HTCondor version
 7.5.1, New ClassAds were used only in the Job Router. There are some
 syntax and behavior differences between Old and New ClassAds, all of
@@ -129,10 +129,10 @@ that exemplify evaluating an expression within the context of a single
 ClassAd are during user job policy evaluation, and with the
 **-constraint** option to command-line tools.
 
-New ClassAds have no ``CurrentTime`` attribute. If needed, use the
+New ClassAds have no :ad-attr:`CurrentTime` attribute. If needed, use the
 time() function instead. In order to mimic Old ClassAd semantics in
 current versions of HTCondor, all ClassAds have an implicit
-``CurrentTime`` attribute, with a value of time().
+:ad-attr:`CurrentTime` attribute, with a value of time().
 
 In current versions of HTCondor, New ClassAds will mimic the evaluation
 behavior of Old ClassAds. No configuration variables or submit
@@ -253,7 +253,7 @@ Optional parameters are given within square brackets.
     evaluating the contents of the string as a ClassAd expression. This
     is useful when referring to an attribute such as ``slotX_State``
     where ``X``, the desired slot number is an expression, such as
-    ``SlotID+10``. In such a case, if attribute ``SlotID`` is 5, the
+    ``SlotID+10``. In such a case, if attribute :ad-attr:`SlotID` is 5, the
     value of the attribute ``slot15_State`` can be referenced using the
     expression ``eval(strcat("slot", SlotID+10,"_State"))``. Function
     strcat() calls function string() on the second parameter, which
@@ -1060,9 +1060,9 @@ Optional parameters are given within square brackets.
     HTCondor syntax to the new syntax. The single argument should
     evaluate to a string that represents a set of environment variables
     using the old HTCondor syntax (usually stored in the job ClassAd
-    attribute ``Env``). The result is the same set of environment
+    attribute :ad-attr:`Env`). The result is the same set of environment
     variables using the new HTCondor syntax (usually stored in the job
-    ClassAd attribute ``Environment``). If the argument evaluates to
+    ClassAd attribute :ad-attr:`Environment`). If the argument evaluates to
     ``UNDEFINED``, then the result is also ``UNDEFINED``.
     
 :index:`mergeEnvironment()<single: mergeEnvironment(); ClassAd functions>`
@@ -1077,7 +1077,7 @@ Optional parameters are given within square brackets.
     like an empty string. The result is a string that represents the
     merged set of environment variables using the new HTCondor syntax
     (suitable for use as the value of the job ClassAd attribute
-    ``Environment``).
+    :ad-attr:`Environment`).
 
 For the following functions, a delimiter is represented by a string.
 Each character within the delimiter string delimits individual strings
@@ -1176,7 +1176,7 @@ string.
     delimited by the optional ``delimiter`` string.  Returns ``FALSE`` if
     ``list1`` has any items that are not in ``list2``. Both lists are treated as sets. Empty items
     and duplicate items are ignored. The return value is ``TRUE`` if ``list1`` is ``UNDEFINED`` or empty
-    and ``list2`` is any string value.  The return value is ``FALSE`` if ``list1`` is any string vlaue and ``list2`` is
+    and ``list2`` is any string value.  The return value is ``FALSE`` if ``list1`` is any string value and ``list2`` is
     ``UNDEFINED``.  The return value is ``UNDEFINED`` if both ``list1`` and ``list2`` are ``UNDEFINED``.
     The return value is ``ERROR``, if any of the arguments are not either strings or ``UNDEFINED``
 
@@ -1382,7 +1382,7 @@ ClassAd A that is being evaluated in a context with another ClassAd B:
       the value from the environment is returned. This is a special
       environment, to be distinguished from the Unix environment.
       Currently, the only attribute of the environment is
-      ``CurrentTime``, which evaluates to the integer value returned by
+      :ad-attr:`CurrentTime`, which evaluates to the integer value returned by
       the system call ``time(2)``.
    -  Otherwise, the value of the reference is ``UNDEFINED``.
 
@@ -1472,7 +1472,7 @@ Expression Examples
 :index:`expression examples<single: expression examples; ClassAd>`
 
 The ``=?=`` operator is similar to the ``==`` operator. It checks if the
-left hand side operand is identical in both type and value to the the
+left hand side operand is identical in both type and value to the
 right hand side operand, returning ``TRUE`` when they are identical.
 
 .. caution::
@@ -1649,7 +1649,7 @@ Querying with ClassAd Expressions
 '''''''''''''''''''''''''''''''''
 
 The flexibility of this system may also be used when querying ClassAds
-through the *condor_status* and *condor_q* tools which allow users to
+through the :tool:`condor_status` and :tool:`condor_q` tools which allow users to
 supply ClassAd constraint expressions from the command line.
 
 Needed syntax is different on Unix and Windows platforms, due to the
@@ -1696,8 +1696,8 @@ The Windows equivalent command is
 
 Here is an example for a Unix platform that utilizes a regular
 expression ClassAd function to list specific information. A file
-contains ClassAd information. *condor_advertise* is used to inject this
-information, and *condor_status* constrains the search with an
+contains ClassAd information. :tool:`condor_advertise` is used to inject this
+information, and :tool:`condor_status` constrains the search with an
 expression that contains a ClassAd function.
 
 .. code-block:: console

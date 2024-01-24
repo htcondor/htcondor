@@ -63,7 +63,7 @@ applied whenever a job is routed.
 The routing table is given as a set of configuration macros.  Each configuration macro
 is given in the job transform language. This is the same transform language used by the
 *condor_schedd* for job transforms.  This language is similar to the
-*condor_submit* language, but has commands to describe the
+:tool:`condor_submit` language, but has commands to describe the
 transform steps and optional macro values such as ``MaxJobs`` that can control the way
 the route is used.
 
@@ -162,9 +162,9 @@ where ``job1.sub`` might contain:
 
 The status of the job may be observed as with any other HTCondor job,
 for example by looking in the job's log file. Before the job completes,
-*condor_q* shows the job's status. Should the job become routed, a
+:tool:`condor_q` shows the job's status. Should the job become routed, a
 second job will enter the job queue. This is the routed copy of the
-original job. The command *condor_router_q* shows a more specialized
+original job. The command :tool:`condor_router_q` shows a more specialized
 view of routed jobs, as this example shows:
 
 .. code-block:: console
@@ -175,7 +175,7 @@ view of routed jobs, as this example shows:
          10  I Site2      site2.edu/jobmanager-pbs
           2  R Site3      condor submit.site3.edu condor.site3.edu
 
-*condor_router_history* summarizes the history of routed jobs, as this
+:tool:`condor_router_history` summarizes the history of routed jobs, as this
 example shows:
 
 .. code-block:: console
@@ -300,8 +300,8 @@ may appear in a Routing Table entry.
 
 :index:`GridResource<single: GridResource; Job Router Routing Table ClassAd attribute>`
 
-``GridResource``
-    Specifies the value for the ``GridResource`` attribute that will be
+:ad-attr:`GridResource`
+    Specifies the value for the :ad-attr:`GridResource` attribute that will be
     inserted into the routed copy of the job's ClassAd.
 
 :index:`Requirements<single: Requirements; Job Router Routing Table ClassAd attribute>`
@@ -375,7 +375,7 @@ may appear in a Routing Table entry.
     ownership set to that of the user running the job. This requires the
     trust of the user. It is therefore recommended to avoid this
     mechanism when possible. Instead, require users to submit jobs with
-    ``X509UserProxy`` set in the submit description file. If this
+    :ad-attr:`X509UserProxy` set in the submit description file. If this
     feature is needed, use the boolean expression to only allow specific
     values of ``target.Owner`` to use this shared proxy file. The shared
     proxy file should be owned by the condor user. Currently, to use a
@@ -410,7 +410,7 @@ may appear in a Routing Table entry.
     version (a routed copy) of the job. In this mode, the Job Router
     Hook :macro:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
     in the routing table are applied during the job transformation. The
-    routing table attribute ``GridResource`` is ignored, and there is no
+    routing table attribute :ad-attr:`GridResource` is ignored, and there is no
     default transformation of the job from a vanilla job to a grid
     universe job as there is otherwise. Once transformed, the job is
     still a candidate for matching routing rules, so it is up to the
@@ -424,7 +424,9 @@ may appear in a Routing Table entry.
     undefined or older than some limit.
 
 :index:`UNIVERSE<single: UNIVERSE; Job Router Routing Table command>`
-    An universe name or integer value specifying the desired universe for the routed copy
+
+``UNIVERSE``
+    A universe name or integer value specifying the desired universe for the routed copy
     of the job. The default value is 9, which is the **grid** universe.
 
 :index:`SET <ATTR><single: SET <ATTR>; Job Router Routing Table command>`
@@ -594,7 +596,7 @@ overriding those specified in `JOB_ROUTER_DEFAULTS`.
 ``Name``
     An optional identifier that will be used in log messages concerning
     this route. If no name is specified, the default used will be the
-    value of ``GridResource``. The *condor_job_router* distinguishes
+    value of :ad-attr:`GridResource`. The *condor_job_router* distinguishes
     routes and advertises statistics based on this attribute's value.
 
 :index:`TargetUniverse<single: TargetUniverse; Job Router Routing Table ClassAd attribute>`
@@ -699,7 +701,7 @@ Adding this attribute to the job's ClassAd causes the
 prefixed with the defined keyword. ``HOOKNAME`` is a string chosen as an
 example; any string may be used.
 
-The job's ClassAd attribute definition of ``HookKeyword`` takes
+The job's ClassAd attribute definition of :ad-attr:`HookKeyword` takes
 precedence, but if not present, hooks may be enabled by defining on the
 access point the configuration variable
 
@@ -727,7 +729,7 @@ expected output. All hooks must exit successfully.
     Standard input given to the hook
        The first line will be the information on route that the job matched
        including the route name. This information will be formatted as a classad.
-       If the route has a  ``TargetUniverse`` or ``GridResource`` they will be
+       If the route has a  ``TargetUniverse`` or :ad-attr:`GridResource` they will be
        included in the classad. The route information classad will be followed
        by a separator line of dashes like ``------`` followed by a newline.
        The remainder of the input will be the job ClassAd.

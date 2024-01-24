@@ -210,7 +210,7 @@ JICLocal::disconnect()
 }
 
 bool
-JICLocal::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
+JICLocal::periodicJobUpdate( ClassAd* update_ad )
 {
 	dprintf( D_FULLDEBUG, "Entering JICLocal::peridocJobUpdate()\n" );
 
@@ -230,7 +230,7 @@ JICLocal::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
 	}
 	bool r1, r2;
 	r1 = writeUpdateAdFile(ad);
-	r2 = JobInfoCommunicator::periodicJobUpdate(ad, insure_update);
+	r2 = JobInfoCommunicator::periodicJobUpdate(ad);
 	return (r1 && r2);
 }
 

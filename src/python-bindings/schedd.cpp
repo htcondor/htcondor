@@ -1698,7 +1698,253 @@ struct Schedd {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
 
-	object exportJobs(object job_spec, std::string export_dir, std::string new_spool_dir)
+    object enableUsers(boost::python::list users, bool add_if_not)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        unsigned int num_users = py_len(users);
+        std::vector<const ClassAd*> userads;
+        std::vector<ClassAd> ads_holder; // hold ads so that they get deleted when we exit
+        userads.reserve(num_users);
+        ads_holder.reserve(num_users);
+
+        for (unsigned int ix = 0; ix < num_users; ++ix) {
+            boost::python::extract<std::string> extract_str(users[ix]);
+            std::string name;
+            ClassAd & ad = ads_holder.emplace_back();
+            if (extract_str.check()) {
+                name = extract_str();
+                ad.Assign(ATTR_USER, name);
+            } else {
+                boost::python::extract<ClassAdWrapper*> extract_classad(users[ix]);
+                if (extract_classad.check()) {
+                    auto wrapper = extract_classad();
+                    ad.CopyFrom(*wrapper);
+                    ad.Unchain();
+                    if ( ! ad.LookupString(ATTR_USER, name)) {
+                        THROW_EX(HTCondorValueError, "user ads must have a User string attribute")
+                    }
+                } else {
+                    THROW_EX(HTCondorValueError, "users must a list of strings or classads")
+                }
+            }
+            userads.push_back(&ad);
+        }
+
+        CondorError errstack;
+        ClassAd * result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.addOrEnableUsers(&userads[0], num_users, add_if_not, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to fetch ads from schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
+    object disableUsers(boost::python::list users, boost::python::object reason_obj)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        std::string reason_str;
+        boost::python::extract<std::string> extract_str(reason_obj);
+        if (extract_str.check()) { reason_str = extract_str(); }
+        const char * reason = reason_str.empty() ? nullptr : reason_str.c_str();
+
+        unsigned int num_users = py_len(users);
+        std::vector<const char*> usernames;
+        usernames.reserve(num_users);
+        std::set<std::string> names_holder; // hold names so that they get deleted.
+
+        for (unsigned int ix = 0; ix < num_users; ++ix) {
+            std::string name;
+            boost::python::extract<std::string> extract_str(users[ix]);
+            if (extract_str.check()) {
+                name = extract_str();
+            } else {
+                boost::python::extract<ClassAdWrapper*> extract_classad(users[ix]);
+                if (extract_classad.check()) {
+                    auto wrapper = extract_classad();
+                    wrapper->LookupString(ATTR_NAME, name);
+                } else {
+                    THROW_EX(HTCondorValueError, "users must a list of strings or classads")
+                }
+            }
+            if ( ! name.empty()) {
+                names_holder.insert(name);
+            }
+        }
+
+        for (auto & str : names_holder) {
+            usernames.push_back(str.c_str());
+        }
+
+        CondorError errstack;
+        ClassAd* result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.disableUsers(&usernames[0], (int)usernames.size(), reason, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to send enable User command to schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
+    object enableUsersByConstraint(boost::python::object constraint_obj)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        const char * constraint = nullptr;
+        std::string constraint_str;
+        if ( ! convert_python_to_constraint(constraint_obj, constraint_str, true, NULL)) {
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
+        }
+        if ( ! constraint_str.empty()) { constraint = constraint_str.c_str(); }
+
+        CondorError errstack;
+        ClassAd* result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.enableUsers(constraint, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to send enable User command to schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
+    object disableUsersByConstraint(boost::python::object constraint_obj, boost::python::object reason_obj)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        const char * constraint = nullptr;
+        std::string constraint_str;
+        if ( ! convert_python_to_constraint(constraint_obj, constraint_str, true, NULL)) {
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
+        }
+        if ( ! constraint_str.empty()) { constraint = constraint_str.c_str(); }
+
+        std::string reason_str;
+        boost::python::extract<std::string> extract_str(reason_obj);
+        if (extract_str.check()) { reason_str = extract_str(); }
+        const char * reason = reason_str.empty() ? nullptr : reason_str.c_str();
+
+        CondorError errstack;
+        ClassAd* result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.disableUsers(constraint, reason, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to send disable User command to schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
+    boost::python::list queryUsers(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), int match_limit=-1)
+    {
+        boost::python::list result;
+
+        const char * constraint = nullptr;
+        std::string constraint_str;
+        if ( ! convert_python_to_constraint(constraint_obj, constraint_str, true, NULL)) {
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
+        }
+        if ( ! constraint_str.empty()) { constraint = constraint_str.c_str(); }
+
+        classad::References projection;
+        int len_attrs = py_len(attrs);
+        for (int i=0; i<len_attrs; i++) {
+            std::string attrName = extract<std::string>(attrs[i]);
+            projection.insert(attrName);
+        }
+
+        classad::ClassAd query_ad;
+        DCSchedd schedd(m_addr.c_str());
+        int rval = DCSchedd::makeUsersQueryAd(query_ad, constraint, projection, match_limit);
+
+        int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
+        CondorError errstack;
+        //ClassAd * psummary_ad = nullptr;
+
+        // Tried to create ClassAdWrapper() objects inside the callback lambda below and kept crashing
+        // so the new strategy is to just capture all of the returned ads into a temporary collection
+        // and them turn them into a python list after the loop.
+        std::deque<ClassAd*> ads;
+        if (rval == Q_OK) {
+            condor::ModuleLock ml;
+            rval = schedd.queryUsers(
+                query_ad,
+                [](void* data, ClassAd * ad) -> int {
+                    static_cast<std::deque<ClassAd*>*>(data)->push_back(ad);
+                    return 0; // return 0 to indicate we took ownership of the ad
+                },
+                &ads, connect_timeout, &errstack, nullptr);
+        }
+
+        if (PyErr_Occurred()) { throw_error_already_set(); }
+
+        switch (rval)
+        {
+        case Q_OK:
+            for (auto & ad : ads) {
+                if ( ! PyErr_Occurred()) {
+                    try {
+                        boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
+                        wrapper->CopyFrom(*ad);
+                        result.append(object(wrapper));
+                    } catch (boost::python::error_already_set &) {
+                        // Suppress the C++ exception.  HTCondor sure can't deal with it.
+                        // However, PyErr_Occurred will be set and we will no longer invoke the callback.
+                    } catch (...) {
+                        PyErr_SetString(PyExc_HTCondorInternalError, "Uncaught C++ exception encountered.");
+                    }
+                }
+                delete ad;
+            }
+            ads.clear();
+            if (PyErr_Occurred()) { throw_error_already_set(); }
+            break;
+
+        case Q_PARSE_ERROR:
+        case Q_INVALID_CATEGORY:
+            THROW_EX(ClassAdParseError, "Parse error in constraint.");
+            break;
+        case Q_UNSUPPORTED_OPTION_ERROR:
+            THROW_EX(HTCondorIOError, "Query fetch option unsupported by this schedd.");
+            break;
+        default:
+            std::string errmsg = "Failed to fetch ads from schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+            break;
+        }
+
+        return result;
+    }
+
+    object exportJobs(object job_spec, std::string export_dir, std::string new_spool_dir)
 	{
 		std::string constraint;
 		StringList ids;
@@ -2833,16 +3079,10 @@ ConnectionSentry::~ConnectionSentry()
 	}
 }
 
-void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_opts, SubmitDagDeepOptions &deep_opts)
+void SetDagOptions(boost::python::dict opts, DagmanOptions &dag_opts)
 {
-    // Start by setting some default options. These must be set for everything to work correctly.
-    // Some of these might be changed later if different values are specified in opts.
-    shallow_opts.strSubFile = shallow_opts.primaryDagFile + ".condor.sub";
-    shallow_opts.strSchedLog = shallow_opts.primaryDagFile + ".nodes.log";
-    shallow_opts.strLibOut = shallow_opts.primaryDagFile + ".lib.out";
-    shallow_opts.strLibErr = shallow_opts.primaryDagFile + ".lib.err";
-    deep_opts.doRescueFrom = 0;
-    deep_opts[DagmanDeepOptions::b::UpdateSubmit] = false;
+    dag_opts.set("DoRescueFrom", 0);
+    dag_opts.set("UpdateSubmit", false);
 
     // Iterate over the list of arguments passed in and set the appropriate
     // values in m_shallowOpts and m_deepOpts
@@ -2878,68 +3118,85 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
         // Set shallowOpts or deepOpts variables as appropriate
         std::string key_lc = key;
         std::transform(key_lc.begin(), key_lc.end(), key_lc.begin(), ::tolower);
+        SetDagOpt ret;
         if (key_lc == "dagman")
-            deep_opts[DagmanDeepOptions::str::DagmanPath] = value.c_str();
+            ret = dag_opts.set("DagmanPath", value);
         else if (key_lc == "force")
-            deep_opts[DagmanDeepOptions::b::Force] = (value == "true") ? true : false;
+            ret = dag_opts.set("Force", value);
         else if (key_lc == "schedd-daemon-ad-file")
-            shallow_opts[DagmanShallowOptions::str::ScheddDaemonAdFile] = value.c_str();
+            ret = dag_opts.set("ScheddDeamonAdFile", value);
         else if (key_lc == "schedd-address-file")
-            shallow_opts[DagmanShallowOptions::str::ScheddAddressFile] = value.c_str();
+            ret = dag_opts.set("ScheddAddressFile", value);
         else if (key_lc == "alwaysrunpost")
-            shallow_opts[DagmanShallowOptions::b::PostRun] = (value == "true") ? true : false;
+            ret = dag_opts.set("PostRun", value);
         else if (key_lc == "maxidle")
-            shallow_opts[DagmanShallowOptions::i::MaxIdle] = atoi(value.c_str());
+            ret = dag_opts.set("MaxIdle", value);
         else if (key_lc == "maxjobs")
-            shallow_opts[DagmanShallowOptions::i::MaxJobs] = atoi(value.c_str());
+            ret = dag_opts.set("MaxJobs", value);
         else if (key_lc == "maxpre")
-            shallow_opts[DagmanShallowOptions::i::MaxPre] = atoi(value.c_str());
+            ret = dag_opts.set("MaxPre", value);
         else if (key_lc == "maxpost")
-            // Bug!
-            shallow_opts[DagmanShallowOptions::i::MaxPre] = atoi(value.c_str());
+            ret = dag_opts.set("MaxPost", value);
         else if (key_lc == "usedagdir")
-            deep_opts[DagmanDeepOptions::b::UseDagDir] = (value == "true") ? true : false;
+            ret = dag_opts.set("UseDagDir", value);
         else if (key_lc == "debug")
-            shallow_opts[DagmanShallowOptions::i::DebugLevel] = atoi(value.c_str());
+            ret = dag_opts.set("DebugLevel", value);
         else if (key_lc == "outfile_dir")
-            deep_opts[DagmanDeepOptions::str::OutfileDir] = value.c_str();
+            ret = dag_opts.set("OutfileDir", value);
         else if (key_lc == "config")
-            shallow_opts[DagmanShallowOptions::str::ConfigFile] = value.c_str();
+            ret = dag_opts.set("ConfigFile", value);
         else if (key_lc == "batch-name")
-            deep_opts.batchName = value.c_str();
+            ret = dag_opts.set("BatchName", value);
         else if (key_lc == "autorescue")
-            deep_opts[DagmanDeepOptions::b::AutoRescue] = (value == "true") ? true : false;
+            ret = dag_opts.set("AutoRescue", value);
         else if (key_lc == "dorescuefrom")
-            deep_opts.doRescueFrom = atoi(value.c_str());
+            ret = dag_opts.set("DoRescueFrom", value);
         else if (key_lc == "load_save")
-            shallow_opts[DagmanShallowOptions::str::SaveFile] = value;
+            ret = dag_opts.set("SaveFile", value);
         else if (key_lc == "allowversionmismatch")
-            deep_opts[DagmanDeepOptions::b::AllowVersionMismatch] = (value == "true") ? true : false;
+            ret = dag_opts.set("AllowVersionMismatch", value);
         else if (key_lc == "do_recurse")
-            deep_opts[DagmanDeepOptions::b::Recurse] = (value == "true") ? true : false;
+            ret = dag_opts.set("Recurse", value);
         else if (key_lc == "update_submit")
-            deep_opts[DagmanDeepOptions::b::UpdateSubmit] = (value == "true") ? true : false;
+            ret = dag_opts.set("UpdateSubmit", value);
         else if (key_lc == "import_env")
-            deep_opts[DagmanDeepOptions::b::ImportEnv] = (value == "true") ? true : false;
+            ret = dag_opts.set("ImportEnv", value);
         else if (key_lc == "include_env")
-            deep_opts[DagmanDeepOptions::str::GetFromEnv] += value;
+            ret = dag_opts.append("GetFromEnv", value);
         else if (key_lc == "insert_env") {
             trim(value);
-            deep_opts.addToEnv.push_back(value);
-            }
-        else if (key_lc == "dumprescue")
-            shallow_opts[DagmanShallowOptions::b::DumpRescueDag] = (value == "true") ? true : false;
+            ret = dag_opts.set("AddToEnv", value);
+        } else if (key_lc == "dumprescue")
+            ret = dag_opts.set("DumpRescueDag", value);
         else if (key_lc == "valgrind")
-            shallow_opts[DagmanShallowOptions::b::RunValgrind] = (value == "true") ? true : false;
+            ret = dag_opts.set("RunValgrind", value);
         else if (key_lc == "priority")
-            shallow_opts[DagmanShallowOptions::i::Priority] = atoi(value.c_str());
+            ret = dag_opts.set("Priority", value);
         else if (key_lc == "suppress_notification")
-            deep_opts[DagmanDeepOptions::b::SuppressNotification] = (value == "true") ? true : false;
+            ret = dag_opts.set("SuppressNotification", value);
         else if (key_lc == "dorecov")
-            // Bug!
-            deep_opts[DagmanDeepOptions::b::SuppressNotification] = (value == "true") ? true : false;
+            ret = dag_opts.set("DoRecovery", value);
         else
-            printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
+            ret = SetDagOpt::KEY_DNE;
+
+        std::string msg, type;
+        switch(ret) {
+            case SetDagOpt::SUCCESS:
+                break;
+            case SetDagOpt::KEY_DNE:
+                printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
+                break;
+            case SetDagOpt::INVALID_VALUE:
+                type = dag_opts.OptValueType(key);
+                formatstr(msg, "DAGMan option '%s' needs to be a %s.",
+                          key.c_str(), type.c_str());
+                THROW_EX(HTCondorTypeError, msg.c_str());
+            case SetDagOpt::NO_KEY:
+                THROW_EX(HTCondorInternalError, "Developer Error: DAGMan option key was empty.");
+            case SetDagOpt::NO_VALUE:
+                formatstr(msg, "empty value provided for DAGMan option %s", key.c_str());
+                THROW_EX(HTCondorInternalError, msg.c_str());
+        }
     }
 }
 
@@ -3195,10 +3452,8 @@ public:
     {
         DagmanUtils dagman_utils;
         FILE* sub_fp = NULL;
-        std::string sub_filename = dag_filename + std::string(".condor.sub");
         std::list<std::string> dag_file_attr_lines;
-        SubmitDagDeepOptions deep_opts;
-        SubmitDagShallowOptions shallow_opts;
+        DagmanOptions dag_opts;
 
         dagman_utils.usingPythonBindings = true;
 
@@ -3209,25 +3464,24 @@ public:
             THROW_EX(HTCondorIOError, "Could not read DAG file" );
         }
 
-        // Setting any submit options that may have been passed in (ie. max idle, max post)
-        shallow_opts.dagFiles.push_back(dag_filename.c_str());
-        shallow_opts.primaryDagFile = dag_filename;
-        SetDagOptions(opts, shallow_opts, deep_opts);
+        dag_opts.addDAGFile(dag_filename);
+        SetDagOptions(opts, dag_opts);
+        dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines);
 
         // Make sure we can actually submit this DAG with the given options.
         // If we can't, throw an exception and exit.
-        if ( !dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts) ) {
+        if ( !dagman_utils.ensureOutputFilesExist(dag_opts) ) {
             THROW_EX(HTCondorIOError, "Unable to write condor_dagman output files");
         }
 
         // Write out the .condor.sub file we need to submit the DAG
-        dagman_utils.setUpOptions(deep_opts, shallow_opts, dag_file_attr_lines);
-        if ( !dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines) ) {
+        if ( !dagman_utils.writeSubmitFile(dag_opts, dag_file_attr_lines) ) {
             // FIXME: include errno.
             THROW_EX(HTCondorIOError, "Unable to write condor_dagman submit file");
         }
 
         // Now write the submit file and open it
+        std::string sub_filename = dag_opts[DagmanShallowOptions::str::SubFile];
         sub_fp = safe_fopen_wrapper_follow(sub_filename.c_str(), "r");
         if(sub_fp == NULL) {
             // FIXME: include errno, sub_filename.c_str().
@@ -4568,6 +4822,68 @@ void export_schedd()
             :rtype: :class:`~classad.ClassAd`
             )C0ND0R",
             boost::python::args("self", "job_spec"))
+        .def("enable_users", &Schedd::enableUsers,
+            R"C0ND0R(
+                Add or Enable one or more User records in the queue.
+
+                :param users: The full names of users to add or enable, If a list of ClassAds is passed, each must have a "User" attribute.
+                :type users: list[str] or list[:class:`~classad.ClassAds`]
+                :param bool add: Set to ``True`` if you would like to insert these as new users if they do not already exist
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("users"), boost::python::arg("add")=false))
+        .def("enable_users_matching", &Schedd::enableUsersByConstraint,
+            R"C0ND0R(
+                Enable one or more User records in the queue.
+
+                :param constraint: A query constraint.
+                    Only users matching this constraint will be enabled
+                :type constraint: str or :class:`~classad.ExprTree`
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("constraint")))
+        .def("disable_users", &Schedd::disableUsers,
+            R"C0ND0R(
+                Disable one or more User records in the queue.  Disabled users cannot submit new jobs, but existing jobs will be allowed to run
+
+                :param usernames: The full names of users to add or enable, if a list of ClassAds is passed, each must have a "User" attribute.
+                :type usernames: list[str] or list[:class:`~classad.ClassAds`]
+                :param string reason: The reason that the user is being disabled.
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("users"), boost::python::arg("reason")=boost::python::object()))
+        .def("disable_users_matching", &Schedd::disableUsersByConstraint,
+            R"C0ND0R(
+                Disable one or more User records in the queue.  Disabled users cannot submit new jobs, but existing jobs will be allowed to run
+
+                :param constraint: A selection constraint.
+                    Only users matching this constraint will be disabled
+                :type constraint: str or :class:`~classad.ExprTree`
+                :param string reason: The reason that the user is being disabled.
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("constraint"), boost::python::arg("reason")=boost::python::object()))
+        .def("query_users", &Schedd::queryUsers,
+            R"C0ND0R(
+                Query the *condor_schedd* daemon for user ads.
+
+                :param constraint: A query constraint.
+                    Only users matching this constraint will be returned.
+                    Defaults to ``'true'``, which means all jobs will be returned.
+                :type constraint: str or :class:`~classad.ExprTree`
+                :param projection: Attributes that will be returned for each user in the query.
+                    At least the attributes in this list will be returned, but additional ones may be returned as well.
+                    An empty list (the default) returns all attributes.
+                :type projection: list[str]
+                :param int limit: The maximum number of ads to return; the default (``-1``) is to return all ads.
+                :return: ClassAds representing the matching users.
+                :rtype: list[:class:`~classad.ClassAd`]
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1))
         .def("reschedule", &Schedd::reschedule,
             R"C0ND0R(
             Send reschedule command to the schedd.

@@ -1942,41 +1942,42 @@ Starter::createTempExecuteDir( void )
 #endif /* WIN32 */
 
 #ifdef LINUX
-	const char *thinpool = getenv("_CONDOR_THINPOOL");
-	const char *thinpool_vg = getenv("_CONDOR_THINPOOL_VG");
-	const char *thinpool_size = getenv("_CONDOR_THINPOOL_SIZE_KB");
-	if (thinpool && thinpool_vg && thinpool_size) {
+	const char *lvm_vg = getenv("CONDOR_LVM_VG");
+	const char *lv_size = getenv("CONDOR_LVM_LV_SIZE_KB");
+	if (lvm_vg && lv_size) {
+		const char *thinpool = getenv("CONDOR_LVM_THINPOOL");
 		bool lvm_setup_successful = false;
+		bool thin_provision = strcasecmp(getenv("CONDOR_LVM_THIN_PROVISION"), "true") == MATCH;
+		bool do_encrypt = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
+
 		try {
-			m_lvm_max_size_kb = std::stol(thinpool_size);
+			m_lvm_lv_size_kb = std::stol(lv_size);
 		} catch (...) {
-			m_lvm_max_size_kb = -1;
+			m_lvm_lv_size_kb = -1;
 		}
-		if (m_lvm_max_size_kb > 0) {
+		if (thin_provision && ! thinpool) { m_lvm_lv_size_kb = -1; }
+		if ( ! thin_provision && thinpool) { m_lvm_lv_size_kb = -1; }
+
+		if (m_lvm_lv_size_kb > 0) {
 			CondorError err;
-			std::string thinpool_str(thinpool), slot_name(getMySlotName());
-			bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
-			if (do_encrypt) {
-				slot_name += "-enc";
-				thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
-			}
-			m_volume_mgr.reset(new VolumeManager::Handle(WorkingDir, slot_name, thinpool_str, thinpool_vg, m_lvm_max_size_kb, err));
-			if (!err.empty()) {
+			std::string thinpool_str(thinpool ? thinpool : ""), slot_name(getMySlotName());
+			if (do_encrypt) { slot_name += "-enc"; }
+			m_volume_mgr.reset(new VolumeManager::Handle(WorkingDir, slot_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, err));
+			if ( ! err.empty()) {
 				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
 				m_volume_mgr.reset(); //This calls handle destructor and cleans up any partial setup
 			} else {
 				lvm_setup_successful = true;
-				m_lvm_thin_volume = slot_name;
-				m_lvm_thin_pool = thinpool_str;
-				m_lvm_volume_group = thinpool_vg;
 				m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
-					(TimerHandlercpp)&Starter::CheckDiskUsage,
+					(TimerHandlercpp)&Starter::CheckLVUsage,
 					"check disk usage", this);
 			}
 		}
 		ASSERT( lvm_setup_successful );
 	}
 #endif // LINUX
+
+	dprintf_open_logs_in_directory(WorkingDir.c_str());
 
 	// now we can finally write .machine.ad and .job.ad into the sandbox
 	WriteAdFiles();
@@ -2781,7 +2782,7 @@ Starter::Reaper(int pid, int exit_status)
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
 			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PreExitCode", updateAd );
-			jic->periodicJobUpdate( & updateAd, true );
+			jic->periodicJobUpdate( & updateAd );
 
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
@@ -2819,7 +2820,7 @@ Starter::Reaper(int pid, int exit_status)
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
 			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PostExitCode", updateAd );
-			jic->periodicJobUpdate( & updateAd, true );
+			jic->periodicJobUpdate( & updateAd );
 
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
@@ -3288,6 +3289,19 @@ Starter::PublishToEnv( Env* proc_env )
 					env_name = base;
 					env_name += attr;
 					proc_env->SetEnv(env_name.c_str(), assigned.c_str());
+				}
+			}
+
+			// NVIDIA_VISIBLE_DEVICES needs to be set to an expression evaluated against the machine ad
+			// which may not be the same exact value as what we set CUDA_VISIBLE_DEVICES to
+			if (tags.contains_anycase("GPUs") && param_boolean("AUTO_SET_NVIDIA_VISIBLE_DEVICES",true)) {
+				classad::Value val;
+				const char * env_value = nullptr;
+				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
+					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
+					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
+				} else {
+					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
 				}
 			}
 		}
@@ -3780,10 +3794,14 @@ Starter::removeTempExecuteDir( void )
 				continue;
 			}
 		}
+
 		Directory execute_dir( full_exec_dir.c_str(), PRIV_ROOT );
 		if ( execute_dir.Find_Named_Entry( dir_name.c_str() ) ) {
 
-			dprintf( D_FULLDEBUG, "Removing %s%c%s\n", full_exec_dir.c_str(), DIR_DELIM_CHAR, dir_name.c_str() );
+			int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
+			if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
+
+			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
 			if (!execute_dir.Remove_Current_File()) {
 				has_failed = true;
 			}
@@ -3914,7 +3932,7 @@ Starter::WriteAdFiles() const
 
 		dprintf( D_FULLDEBUG, "Updating *Provisioned and Assigned* attributes:\n" );
 		dPrintAd( D_FULLDEBUG, updateAd );
-		jic->periodicJobUpdate( & updateAd, true );
+		jic->periodicJobUpdate( & updateAd );
 	}
 
 	return ret_val;
@@ -3935,14 +3953,14 @@ Starter::RecordJobExitStatus(int status) {
     jic->notifyExecutionExit();
 }
 
-void
-Starter::CheckDiskUsage( int /* timerID */ )
-{
 #ifdef LINUX
+void
+Starter::CheckLVUsage( int /* timerID */ )
+{
 		// Avoid repeatedly triggering
 	if (m_lvm_held_job) return;
 		// Logic error?
-	if (m_lvm_max_size_kb < 0) return;
+	if (m_lvm_lv_size_kb < 0) return;
 
 	// When the job exceeds its disk usage, there are three possibilities:
 	// 1. The backing pool has space remaining, we don't exhaust the extra allocated space (2GB by default),
@@ -3959,19 +3977,26 @@ Starter::CheckDiskUsage( int /* timerID */ )
 	// If you really want to avoid case (2), set THINPOOL_EXTRA_SIZE_MB to a value larger than the backing pool.
 
 	CondorError err;
+	bool out_of_space = false;
 	uint64_t used_bytes;
-	bool out_of_space;
-	if (!VolumeManager::GetThinVolumeUsage(m_lvm_thin_volume, m_lvm_thin_pool, m_lvm_volume_group, used_bytes, out_of_space, err)) {
+	if ( ! VolumeManager::GetVolumeUsage(m_volume_mgr.get(), used_bytes, out_of_space, err)) {
 		dprintf(D_ALWAYS, "Failed to poll managed volume (may not put job on hold correctly): %s\n", err.getFullText().c_str());
 		return;
 	}
-	if (used_bytes >= static_cast<uint64_t>(m_lvm_max_size_kb*1024)) {
-		std::stringstream ss;
-		ss << "Job is using " << (used_bytes/1024) << "KB of space, over the limit of " << m_lvm_max_size_kb << "KB";
-		dprintf(D_ALWAYS, "%s\n", ss.str().c_str());
-		jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+
+	uint64_t limit = static_cast<uint64_t>(m_lvm_lv_size_kb*1024LL);
+	//Thick provisioning check for 98% LV usage
+	if ( ! m_volume_mgr->IsThin()) { limit = limit * 0.98; }
+
+	if (used_bytes >= limit) {
+		std::string hold_msg;
+		formatstr(hold_msg, "Job is using %lluKB of space, over limit of %lluKB",
+		         (used_bytes/1024LL), (limit/1024LL));
+		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 		m_lvm_held_job = true;
 	}
+
+	// Only applies to thin provisioning of LVs
 	if (out_of_space) {
 		auto now = time(NULL);
 		if ((m_lvm_last_space_issue > 0) && (now - m_lvm_last_space_issue > 60)) {
@@ -3981,11 +4006,11 @@ Starter::CheckDiskUsage( int /* timerID */ )
 			return;
 		} else if (m_lvm_last_space_issue < 0) {
 			dprintf(D_ALWAYS, "WARNING: Thin pool used by startd (%s) is out of space; writes will be paused until this is resolved.\n",
-				m_lvm_thin_pool.c_str());
+			        m_volume_mgr->GetPool().c_str());
 			m_lvm_last_space_issue = now;
 		}
 	} else {
 		m_lvm_last_space_issue = -1;
 	}
-#endif // LINUX
 }
+#endif // LINUX

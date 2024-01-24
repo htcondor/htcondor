@@ -7,7 +7,7 @@ ClassAd Attributes Added by the *condor_collector*
 
 :classad-attribute-def:`AuthenticationMethod`
     The authentication method used by the *condor_collector* to
-    determine the ``AuthenticatedIdentity``.
+    determine the :ad-attr:`AuthenticatedIdentity`.
 
 :classad-attribute-def:`LastHeardFrom`
     The time inserted into a daemon's ClassAd representing the time that

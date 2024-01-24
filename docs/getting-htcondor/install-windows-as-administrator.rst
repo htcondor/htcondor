@@ -65,8 +65,8 @@ STEP 5: E-mail Settings.
 STEP 6: Java Settings.
     If this entry is already set, accept it.  Otherwise, skip it.
 
-STEP 7: Host Permission Settings.
-    Enter ``127.0.0.1`` for all settings.
+STEP 7: Access Permission Settings.
+    Accept the default values.  You can change these later by modifying the configuration files.
 
 STEP 8: VM Universe Setting.
     Disable the **vm** universe.
@@ -93,7 +93,6 @@ Follow the instructions above through Step 1. Then, customize the
 installation as follows:
 
 STEP 2: HTCondor Pool Configuration.
-
     Create a new pool
     only on the machine you've chosen as their central manager.  See
     the :doc:`admin-quick-start`.  Otherwise, choose the option to
@@ -101,7 +100,6 @@ STEP 2: HTCondor Pool Configuration.
     central manager.
 
 STEP 3: This Machine's Roles.
-
     Check the "submit jobs"
     box to select the submit role, or choose "always run jobs" to select
     the execute role.
@@ -123,12 +121,36 @@ STEP 6: Java Settings.
 
     To disable use of the **java** universe, leave the field blank.
 
-STEP 7: Host Permission Settings.
-    Leave all three
-    entries blank and configure security as appropriate for the
-    machine's role by editing HTCondor configuration files; see the
-    ``get_htcondor`` :doc:`man page <../man-pages/get_htcondor>` for
-    details.
+STEP 7: Access Permission Settings.
+    Machines within the HTCondor pool will need various types of access
+    permission. The three categories of permission that can be set here 
+    are read, write, and administrator.  The values can be usernames, hostnames
+    or IP address ranges, Wild cards and macros are permitted.
+    It is recommended that you accept the defaults here and change the
+    values later as needed by modifying the HTCondor configuration files.
+
+     Read
+        Read access allows a machine to obtain information about
+        HTCondor such as the status of machines in the pool and the job
+        queues.  If all of your HTCondor machines and users are in
+        a single DNS domain or IP Address range, setting this to \*.domain
+        an IP address range with wildcards is a good choice.
+        See ``ALLOW_READ`` :index:`ALLOW_READ`
+     Write
+        Write access is for submitting jobs to the Schedd.   Setting this
+        to ``*`` will allow any user that can login to the machine submit jobs.
+        See ``ALLOW_WRITE`` :index:`ALLOW_WRITE`
+     Administrator
+        Administrator access is for starting and stopping the daemons
+        and sending administrative commands such as reconfig and drain.
+        By default the installer will give this permission to the Windows
+        user that runs the installer and to the Windows ``Adminstrator`` account.
+        See ``ALLOW_ADMINISTRATOR`` :index:`ALLOW_ADMINISTRATOR`
+
+    For more details on these access permissions, and others that can be
+    manually changed in your configuration file, please see the section
+    titled Setting Up Security in HTCondor in the
+    :ref:`admin-manual/security:authorization` section.
 
 STEP 8: VM Universe Setting.
     Disable the **vm** universe.
@@ -140,6 +162,5 @@ STEP 9: Choose Destination Folder
     :index:`location of files<single: location of files; installation>`
 
     Experienced users may change the default installation path
-    (``c:\Condor``), but we don't recommend doing so.  The default path
-    is assumed in a number of script and configuration paths, so you should
-    expect problems if you do so.
+    (``c:\Condor``), but we don't recommend doing so.  Certain jobs may
+    not run if the installation path has a space in it.

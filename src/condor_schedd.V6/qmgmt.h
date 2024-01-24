@@ -338,6 +338,7 @@ public:
 };
 
 typedef JobQueueUserRec OwnerInfo;
+typedef JOB_ID_KEY JobQueueKey;
 
 // Internal set attribute functions for only the schedd to use.
 // these functions add attributes to a transaction and also set a transaction trigger
@@ -350,6 +351,7 @@ inline int SetUserAttributeString(JobQueueUserRec & urec, const char * attr_name
 	return SetUserAttributeValue(urec, attr_name, tmp);
 }
 int DeleteUserAttribute(JobQueueUserRec & urec, const char * attr_name);
+int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled);
 
 // get the Effect User record from the peer
 // returns NULL if no peer or the peer has not yet had an userrec set.
@@ -710,7 +712,6 @@ public:
 	JOB_ID_KEY_BUF(const JOB_ID_KEY& rhs)     : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }
 };
 
-typedef JOB_ID_KEY JobQueueKey;
 #ifdef JOB_QUEUE_PAYLOAD_IS_BASE
 typedef JobQueueBase* JobQueuePayload;
 #else
@@ -884,7 +885,8 @@ bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName);
 
 #ifdef USE_JOB_QUEUE_USERREC
 bool UserRecDestroy(int userrec_id);
-bool UserRecCreate(int userrec_id, const char * ownerinfoName, bool enabled);
+bool UserRecCreate(int userrec_id, const char * ownerinfoName, const ClassAd & cmdAd, const ClassAd & defaultsAd, bool enabled);
+void UserRecFixupDefaultsAd(ClassAd & defaultsAd);
 #endif
 
 // priority records

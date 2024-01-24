@@ -5,13 +5,16 @@ from ._common_imports import (
 
 class SubmitResult():
     """
-    FIXME
+    An object containing information about a successful job submission.
     """
 
     # It would be nice if this signature didn't appear in the docs,
     # since instantiating these objects shouldn't be in the API.
-    # ... there's probably a standard Pythonic way ot indicating that.
+    # ... there's probably a standard Pythonic way of indicating that.
     def __init__(self, clusterID, procID, num_procs, clusterAd):
+        '''
+        :meta private:
+        '''
         self._cluster = clusterID
         self._first_proc = procID
         self._clusterad = clusterAd

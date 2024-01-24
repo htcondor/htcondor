@@ -3,14 +3,14 @@ DAGMan and Accounting Groups
 
 :index:`accounting groups<single: DAGMan; Accounting groups>`
 
-*condor_dagman* propagates
+:tool:`condor_dagman` propagates
 :subcom:`accounting_group[and DAGman]` and :subcom:`accounting_group_user[and DAGman]`
-values specified for *condor_dagman* itself to all jobs within the DAG
+values specified for :tool:`condor_dagman` itself to all jobs within the DAG
 (including sub-DAGs).
 
 The :subcom:`accounting_group` and :subcom:`accounting_group_user`
 values can be specified using the **-append** flag to
-*condor_submit_dag*, for example:
+:tool:`condor_submit_dag`, for example:
 
 .. code-block:: console
 

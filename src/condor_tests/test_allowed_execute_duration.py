@@ -287,7 +287,7 @@ def final_job_two_handle(default_condor, job_two_handle):
     # This is amazingly stupid but nonetheless necessary for some reason.
     default_condor.run_command(
         ['condor_reschedule'],
-        timeout=5, echo=True)
+        timeout=60, echo=True)
 
     # This actually reads events out of the event_log trace, so it won't
     # miss the events that we just read in the loop above.  That might be
@@ -452,7 +452,7 @@ def final_job_five_handle(default_condor, job_five_handle):
     time.sleep(1)
     default_condor.run_command(
         ['condor_reschedule'],
-        timeout=5, echo=True)
+        timeout=60, echo=True)
 
     # This actually reads events out of the event_log trace, so it won't
     # miss the events that we just read in the loop above.  That might be

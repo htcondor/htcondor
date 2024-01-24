@@ -861,7 +861,7 @@ _classad_internal_refs( PyObject *, PyObject * args ) {
     classad::References references;
     if(! classAd->GetInternalReferences(expression, references, full_names)) {
         // This was a ClassAdValueError in version 1.
-        PyErr_SetString(PyExc_ValueError, "Unable to determine external references.");
+        PyErr_SetString(PyExc_ValueError, "Unable to determine internal references.");
         return NULL;
     }
 
@@ -896,7 +896,7 @@ _classad_print_json( PyObject *, PyObject * args ) {
 
 static PyObject *
 _classad_print_old( PyObject *, PyObject * args ) {
-    // _classad_print_json( self._handle )
+    // _classad_print_old( self._handle )
 
     PyObject_Handle * handle = NULL;
     if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {

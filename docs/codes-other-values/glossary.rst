@@ -21,7 +21,7 @@ Glossary
 
    Daemon
 
-     A long-running process often operating in the background.  An older term for "service".  The *condor_master*,
+     A long-running process often operating in the background.  An older term for "service".  The :tool:`condor_master`,
      *condor_collector*, *condor_schedd*, *condor_starter* and *condor_shadow* are some of the daemon in HTCSS.
 
    EP (Execution Point)
@@ -30,10 +30,21 @@ Glossary
      *condor_startd* daemon, which is responsible for dividing all of the resources the machine into
      slot. 
 
+   Glidein
+
+     The HTCondor Software Suite does not provide glideins as a first class entity itself, but implements
+     tools that users can build glideins from.  A glidein is a set of scripts which creates a short-lived,
+     usually unprivileged EP that runs as a job under HTCondor or some other batch system.  This glidein EP
+     then reports to a different batch pool that end users can submit jobs to.  Glideins are one way to
+     build a larger HTCondor pool from different sets of resources that a user or group may have access to.
+     One advantage of glideins is that they provide *late binding*, that is, glideins may sit idle in a foreign
+     queue for a very long time, but an idle user job does not select an EP to run on until it is ready to
+     accept work.  One example glidein system is GlideinWMS, though there are many others.
+
    Job
 
      Job has a very specific meaning in the HTCSS.  It is the atomic unit of work in HTCSS.  A job is
-     defined by a job classad, which is usually created by *condor_submit* and a submit file.  A job
+     defined by a job classad, which is usually created by :tool:`condor_submit` and a submit file.  A job
      can have defined input files, which HTCSS will transfer to the EP. One or more operating system
      processes can run inside a job.  Every job is a member of a cluster of jobs, which have cluster id.
      Each job also has a "proc id".  The job id uniquely identifies every job on an AP, the id is
@@ -75,5 +86,5 @@ Glossary
     pattern.  The requirements for jobs (or workflows) to run before or after
     others may be represented by a directed acyclic graph
     [https://en.wikipedia.org/wiki/Directed_acyclic_graph] (DAG)
-    See the *condor_dagman* (:ref:`automated-workflows/dagman-introduction:DAGMan Introduction`)
+    See the :tool:`condor_dagman` (:ref:`automated-workflows/dagman-introduction:DAGMan Introduction`)
     to automatically execute a workflow represented as a dag.

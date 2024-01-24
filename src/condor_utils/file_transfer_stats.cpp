@@ -39,20 +39,10 @@ void FileTransferStats::Init() {
 }
 
 void FileTransferStats::Publish(classad::ClassAd &ad) const {
-    
-    // The following statistics appear in every ad
-    ad.InsertAttr("ConnectionTimeSeconds", ConnectionTimeSeconds);
-    ad.InsertAttr("TransferEndTime", TransferEndTime);
-    ad.InsertAttr("TransferFileBytes", TransferFileBytes);
-    ad.InsertAttr("TransferStartTime", TransferStartTime);
-    ad.InsertAttr("TransferSuccess", TransferSuccess);
-    ad.InsertAttr("TransferTotalBytes", TransferTotalBytes);
 
-    // The following statistics only appear if they have a value set
-    if (!HttpCacheHitOrMiss.empty())
-        ad.InsertAttr("HttpCacheHitOrMiss", HttpCacheHitOrMiss);
-    if (!HttpCacheHost.empty())
-        ad.InsertAttr("HttpCacheHost", HttpCacheHost);
+    // This first block of attributes are common to all plug-ins.
+    ad.InsertAttr("TransferSuccess", TransferSuccess);
+
     if (!TransferError.empty()) {
         std::string augmented_error_msg = TransferError;
 
@@ -68,23 +58,58 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
 
         ad.InsertAttr("TransferError", augmented_error_msg);
     }
-    if (!TransferFileName.empty())
-        ad.InsertAttr("TransferFileName", TransferFileName);
-    if (!TransferHostName.empty())
-        ad.InsertAttr("TransferHostName", TransferHostName);
-    if (!TransferLocalMachineName.empty())
-        ad.InsertAttr("TransferLocalMachineName", TransferLocalMachineName);
-    if (!TransferProtocol.empty())
+
+    if (!TransferProtocol.empty()) {
         ad.InsertAttr("TransferProtocol", TransferProtocol);
-    if (TransferHTTPStatusCode > 0) 
-        ad.InsertAttr("TransferHTTPStatusCode", TransferHTTPStatusCode);
-    if (LibcurlReturnCode >= 0)
-        ad.InsertAttr("LibcurlReturnCode", LibcurlReturnCode);
-    if (TransferTries > 0) 
-        ad.InsertAttr("TransferTries", TransferTries);
-    if (!TransferType.empty())
+    }
+    if (!TransferType.empty()) {
         ad.InsertAttr("TransferType", TransferType);
-    if (!TransferUrl.empty())
-        ad.InsertAttr("TransferUrl", TransferUrl);     
-    
+    }
+    if (!TransferFileName.empty()) {
+        ad.InsertAttr("TransferFileName", TransferFileName);
+    }
+
+    ad.InsertAttr("TransferFileBytes", TransferFileBytes);
+    ad.InsertAttr("TransferTotalBytes", TransferTotalBytes);
+    ad.InsertAttr("TransferStartTime", TransferStartTime);
+    ad.InsertAttr("TransferEndTime", TransferEndTime);
+    ad.InsertAttr("ConnectionTimeSeconds", ConnectionTimeSeconds);
+
+    if (!TransferUrl.empty()) {
+        ad.InsertAttr("TransferUrl", TransferUrl);
+    }
+
+    // The following attributes go into the DeveloperData attribute until
+    // such time as we elect to standardize them.
+    ClassAd * developerAd = new ClassAd();
+    if (!HttpCacheHitOrMiss.empty()) {
+        developerAd->InsertAttr("HttpCacheHitOrMiss", HttpCacheHitOrMiss);
+    }
+    // This should be standardized; the host you end up transferring from
+    // may not be in the URL, and could still have a cache.
+    if (!HttpCacheHost.empty()) {
+        developerAd->InsertAttr("HttpCacheHost", HttpCacheHost);
+    }
+    // This is standardized in the urrent TransferErrorData proposal
+    // as `IntermediateServer`.
+    if (!TransferHostName.empty()) {
+        developerAd->InsertAttr("TransferHostName", TransferHostName);
+    }
+    if (!TransferLocalMachineName.empty()) {
+        developerAd->InsertAttr("TransferLocalMachineName", TransferLocalMachineName);
+    }
+    if (TransferHTTPStatusCode > 0) {
+        developerAd->InsertAttr("TransferHTTPStatusCode", TransferHTTPStatusCode);
+    }
+    if (LibcurlReturnCode >= 0) {
+        developerAd->InsertAttr("LibcurlReturnCode", LibcurlReturnCode);
+    }
+    // This is implicit in the current TransferErrorData proposal.
+    if (TransferTries > 0) {
+        developerAd->InsertAttr("TransferTries", TransferTries);
+    }
+
+    if(developerAd->size() != 0) {
+        ad.Insert( "DeveloperData", developerAd );
+    }
 }

@@ -45,10 +45,10 @@ command takes on one of three possible values:
    it is stored in.
 
 #. IF_NEEDED: HTCondor only transfers sandboxes when the job is matched with
-   a machine in a different ``FileSystemDomain`` than
+   a machine in a different :ad-attr:`FileSystemDomain` than
    the one the access point belongs to, as if
    should_transfer_files = YES. If the job is matched with a machine
-   in the same ``FileSystemDomain`` as the submitting machine, HTCondor 
+   in the same :ad-attr:`FileSystemDomain` as the submitting machine, HTCondor 
    will not transfer files and relies on the shared file system.
 #. NO: HTCondor's file transfer mechanism is disabled.  In this case is
    is the responsibility of the user to ensure that all data used by the
@@ -96,7 +96,7 @@ Note that the combination of
       when_to_transfer_output = ON_EXIT_OR_EVICT
 
 would produce undefined file access semantics. Therefore, this
-combination is prohibited by *condor_submit*.
+combination is prohibited by :tool:`condor_submit`.
 
 Specifying What Files to Transfer
 '''''''''''''''''''''''''''''''''
@@ -573,7 +573,7 @@ the files specified in
 :subcom:`public_input_files[example]`
 can be relative to the submit directory, or absolute paths. You can also
 specify an :subcom:`initialDir[and public input files]`,
-and *condor_submit* will look for files relative to that directory. The
+and :tool:`condor_submit` will look for files relative to that directory. The
 files must be world-readable on the file system (files with permissions
 set to 0644, directories with permissions set to 0755).
 

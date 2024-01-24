@@ -298,7 +298,7 @@ MultiLogFiles::FileReader::Close()
 
 std::string
 MultiLogFiles::fileNameToLogicalLines(const std::string &filename,
-			StringList &logicalLines)
+			std::vector<std::string> &logicalLines)
 {
 	std::string result;
 
@@ -309,19 +309,15 @@ MultiLogFiles::fileNameToLogicalLines(const std::string &filename,
 		return result;
 	}
 
-		// Split the file string into physical lines.
-		// Note: StringList constructor removes leading whitespace from lines.
-	StringList physicalLines(fileContents.c_str(), "\r\n");
-	physicalLines.rewind();
-
-		// Combine lines with continuation characters.
-	std::string combineResult = CombineLines(physicalLines, '\\',
+		// Parse the file string into physical lines, and
+		// combine into logical lines with continuation characters.
+		// Note: The parsing removes leading whitespace.
+	std::string combineResult = CombineLines(fileContents, '\\',
 				filename, logicalLines);
 	if ( combineResult != "" ) {
 		result = combineResult;
 		return result;
 	}
-	logicalLines.rewind();
 
 	return result;
 }
@@ -416,7 +412,7 @@ MultiLogFiles::loadValueFromSubFile(const std::string &strSubFilename,
 		}
 	}
 
-	StringList	logicalLines;
+	std::vector<std::string> logicalLines;
 	if ( fileNameToLogicalLines( strSubFilename, logicalLines ) != "" ) {
 		return "";
 	}
@@ -425,9 +421,7 @@ MultiLogFiles::loadValueFromSubFile(const std::string &strSubFilename,
 
 		// Now look through the submit file logical lines to find the
 		// value corresponding to the keyword.
-	const char *logicalLine;
-	while( (logicalLine = logicalLines.next()) != NULL ) {
-		std::string submitLine(logicalLine);
+	for (const auto& submitLine : logicalLines) {
 		std::string tmpValue = getParamFromSubmitLine(submitLine, keyword);
 		if ( tmpValue != "" ) {
 			value = tmpValue;
@@ -506,41 +500,35 @@ MultiLogFiles::getParamFromSubmitLine(const std::string &submitLineIn,
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string
-MultiLogFiles::CombineLines(StringList &listIn, char continuation,
-		const std::string &filename, StringList &listOut)
+MultiLogFiles::CombineLines(const std::string &dataIn, char continuation,
+		const std::string &filename, std::vector<std::string> &listOut)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::CombineLines(%s, %c)\n",
 				filename.c_str(), continuation );
 
-	listIn.rewind();
+	// Logical line is physical lines combined as needed by
+	// continuation characters (backslash).
+	std::string logicalLine;
 
-		// Physical line is one line in the file.
-	const char	*physicalLine;
-	while ( (physicalLine = listIn.next()) != NULL ) {
+	for (const auto& physicalLine : StringTokenIterator(dataIn, "\r\n")) {
 
-			// Logical line is physical lines combined as needed by
-			// continuation characters (backslash).
-		std::string logicalLine(physicalLine);
+		logicalLine += physicalLine;
 
-		while ( logicalLine[logicalLine.length()-1] == continuation ) {
-
-				// Remove the continuation character.
+		if (logicalLine[logicalLine.length()-1] == continuation) {
+			// Remove the continuation character.
 			logicalLine.erase(logicalLine.length()-1);
-
-				// Append the next physical line.
-			physicalLine = listIn.next();
-			if ( physicalLine ) {
-				logicalLine += physicalLine;
-			} else {
-				std::string result = std::string("Improper file syntax: ") +
-							"continuation character with no trailing line! (" +
-							logicalLine + ") in file " + filename;
-				dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.c_str());
-				return result;
-			}
+		} else {
+			// Logical line is complete, add to the output.
+			listOut.emplace_back(logicalLine);
+			logicalLine.clear();
 		}
-
-		listOut.append(logicalLine.c_str());
+	}
+	if (!logicalLine.empty()) {
+		std::string result = std::string("Improper file syntax: ") +
+					"continuation character with no trailing line! (" +
+					logicalLine + ") in file " + filename;
+		dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.c_str());
+		return result;
 	}
 
 	return ""; // blank means okay

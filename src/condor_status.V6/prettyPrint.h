@@ -91,7 +91,7 @@ class PrettyPrinter {
 		ppOption prettyPrintHeadings( bool any_ads );
 
 		int ppAdjustNameWidth( void * pv, Formatter * fmt ) const;
-		void prettyPrintAd( ppOption pps, ClassAd * ad, int output_index, StringList * whitelist, bool fHashOrder );
+		void prettyPrintAd( ppOption pps, ClassAd * ad, int output_index, classad::References * includelist, bool fHashOrder );
 
 		void printCustom( ClassAd * ad );
 		void ppInitPrintMask( ppOption pps, classad::References & proj, const char * & constr, bool no_pr_files );

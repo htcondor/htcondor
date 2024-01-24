@@ -10,10 +10,10 @@ for more information.
 Checking on the progress of jobs
 --------------------------------
 
-You can check on your jobs with the *condor_q*
+You can check on your jobs with the :tool:`condor_q`
 command. :index:`condor_q<single: condor_q; example>`\ This
 command has many options, by default, it displays only your jobs
-queued in the local scheduler. An example of the output from *condor_q* is
+queued in the local scheduler. An example of the output from :tool:`condor_q` is
 
 
 .. code-block:: console
@@ -34,11 +34,11 @@ queued in the local scheduler. An example of the output from *condor_q* is
     2388 jobs; 0 completed, 1 removed, 58 idle, 2276 running, 53 held, 0 suspended
 
 The goal of the HTCondor system is to effectively manage many jobs. As you may have thousands
-of jobs in a queue, by default *condor_q* summarizes many similar jobs on one line.  Depending
+of jobs in a queue, by default :tool:`condor_q` summarizes many similar jobs on one line.  Depending
 on the types of your jobs, this output may look a little different.
 
 Often, when you are starting out, and have few jobs, you may want to see one line of output
-per job.  The -nobatch option to *condor_q* does this, and output might look something like:
+per job.  The -nobatch option to :tool:`condor_q` does this, and output might look something like:
 
 .. code-block:: console
 
@@ -58,7 +58,7 @@ per job.  The -nobatch option to *condor_q* does this, and output might look som
     14 jobs; 4 idle, 8 running, 2 held
 
 This still only shows your jobs.  You can display information about all the users
-with jobs in this scheduler by adding the -allusers option to *condor_q*.
+with jobs in this scheduler by adding the -allusers option to :tool:`condor_q`.
 
 The output contains many columns of information about the queued jobs.
 :index:`of queued jobs<single: of queued jobs; status>`\ :index:`state<single: state; job>` The
@@ -97,7 +97,7 @@ limit the number of jobs that can run simultaneously by reducing the
 :macro:`MAX_JOBS_RUNNING` configuration variable.
 
 You can also find all the machines that are running your job through the
-*condor_status* command.
+:tool:`condor_status` command.
 :index:`condor_status<single: condor_status; example>`\ For example, to find
 all the machines that are running jobs submitted by
 ``breach@cs.wisc.edu``, type:
@@ -180,7 +180,7 @@ Removing a job from the queue
 -----------------------------
 
 A job can be removed from the queue at any time by using the
-*condor_rm* :index:`condor_rm<single: condor_rm; HTCondor commands>`\ command. If
+:tool:`condor_rm` :index:`condor_rm<single: condor_rm; HTCondor commands>`\ command. If
 the job that is being removed is currently running, the job is killed,
 and its queue entry is removed. The following
 example shows the queue of jobs before and after a job is removed.
@@ -215,10 +215,10 @@ Placing a job on hold
 ---------------------
 
 A job in the queue may be placed on hold by running the command
-*condor_hold*. A job in the hold state remains in the hold state until
-later released for execution by the command *condor_release*.
+:tool:`condor_hold`. A job in the hold state remains in the hold state until
+later released for execution by the command :tool:`condor_release`.
 
-Use of the *condor_hold* command causes a hard kill signal to be sent
+Use of the :tool:`condor_hold` command causes a hard kill signal to be sent
 to a currently running job (one in the running state). 
 
 Jobs that are running when placed on hold will start over from the 
@@ -238,7 +238,7 @@ submitted job. These job priorities are local to each queue and can be
 any integer value, with higher values meaning better priority.
 
 The default priority of a job is 0, but can be changed using the
-*condor_prio* command.
+:tool:`condor_prio` command.
 :index:`condor_prio<single: condor_prio; HTCondor commands>`\ For example, to change
 the priority of a job to -15,
 
@@ -278,7 +278,7 @@ attempts to identify some of the potential issues behind why a job is
 not running.
 
 At the most basic level, the user knows the status of a job by using
-*condor_q* to see that the job is not running. By far, the most common
+:tool:`condor_q` to see that the job is not running. By far, the most common
 reason (to the novice HTCondor job submitter) why the job is not running
 is that HTCondor has not yet been through its periodic negotiation
 cycle, in which queued jobs are assigned to machines within the pool and
@@ -291,8 +291,8 @@ or has run for at least a little bit.
 
 For jobs that have never run,
 :index:`condor_q<single: condor_q; HTCondor commands>`\ many problems can be
-diagnosed by using the **-analyze** option of the *condor_q* command.
-Here is an example; running *condor_q* 's analyzer provided the
+diagnosed by using the **-analyze** option of the :tool:`condor_q` command.
+Here is an example; running :tool:`condor_q` 's analyzer provided the
 following information:
 
 .. code-block:: console
@@ -339,7 +339,7 @@ requested, Mac OS X, is not available on any of the machines in the
 pool. Recall that unless informed otherwise in the
 :subcom:`requirements[usage for debugging]`
 expression in the submit description file, the platform requested for an
-execute machine will be the same as the platform where *condor_submit*
+execute machine will be the same as the platform where :tool:`condor_submit`
 is run to submit the job. And, while Mac OS X is a Unix-type operating
 system, it is not the same as Linux, and thus will not match with
 machines running Linux.
@@ -354,7 +354,7 @@ negotiation cycle.
 
 A second class of problems represents jobs that do or did run, for at
 least a short while, but are no longer running. The first issue is
-identifying whether the job is in this category. The *condor_q* command
+identifying whether the job is in this category. The :tool:`condor_q` command
 is not enough; it only tells the current state of the job. The needed
 information will be in the :subcom:`log[usage for debugging]`
 file or the :subcom:`error[usage for debugging]` file, as
@@ -383,14 +383,14 @@ Should HTCondor detect something about a job that would prevent it
 from ever running successfully, say, because the executable doesn't
 exist, or input files are missing, HTCondor will put the job in Hold state.
 A job in the Hold state will remain in the queue, and show up in the
-output of the *condor_q* command, but is not eligible to run.
+output of the :tool:`condor_q` command, but is not eligible to run.
 The job will stay in this state until it is released or removed.  Users
-may also hold their jobs manually with the *condor_hold* command.
+may also hold their jobs manually with the :tool:`condor_hold` command.
 
 A table listing the reasons why a job may be held is at the
 :doc:`/classad-attributes/job-classad-attributes` section. A
 string identifying the reason that a particular job is in the Hold state
-may be displayed by invoking *condor_q* -hold. For the example job ID 16.0,
+may be displayed by invoking :tool:`condor_q` -hold. For the example job ID 16.0,
 use:
 
 .. code-block:: console
@@ -398,7 +398,7 @@ use:
       $ condor_q  -hold  16.0
 
 This command prints information about the job, including the job ClassAd
-attribute ``HoldReason``.
+attribute :ad-attr:`HoldReason`.
 
 In the Job Event Log File
 -------------------------
@@ -416,7 +416,7 @@ event.
 The first field in an event is the numeric value assigned as the event
 type in a 3-digit format. The second field identifies the job which
 generated the event. Within parentheses are the job ClassAd attributes
-of ``ClusterId`` value, ``ProcId`` value, and the node number for
+of :ad-attr:`ClusterId` value, :ad-attr:`ProcId` value, and the node number for
 parallel universe jobs or a set of zeros (for jobs run under all other
 universes), separated by periods. The third field is the date and time
 of the event logging. The fourth field is a string that briefly
@@ -432,7 +432,7 @@ Job Termination
 
 From time to time, and for a variety of reasons, HTCondor may terminate
 a job before it completes.  For instance, a job could be removed (via
-*condor_rm*), preempted (by a user a with higher priority), or killed
+:tool:`condor_rm`), preempted (by a user a with higher priority), or killed
 (for using more memory than it requested).  In these cases, it might be
 helpful to know why HTCondor terminated the job.  HTCondor calls its
 records of these reasons "Tickets of Execution".
@@ -473,8 +473,8 @@ Job Completion
 When an HTCondor job completes, either through normal means or by
 abnormal termination by signal, HTCondor will remove it from the job
 queue. That is, the job will no longer appear in the output of
-*condor_q*, and the job will be inserted into the job history file.
-Examine the job history file with the *condor_history* command. If
+:tool:`condor_q`, and the job will be inserted into the job history file.
+Examine the job history file with the :tool:`condor_history` command. If
 there is a log file specified in the submit description file for the
 job, then the job exit status will be recorded there as well, along with
 other information described below.
@@ -489,7 +489,7 @@ killed by a signal. Notification will also include the following
 statistics (as appropriate) about the job:
 
  Submitted at:
-    when the job was submitted with *condor_submit*
+    when the job was submitted with :tool:`condor_submit`
  Completed at:
     when the job completed
  Real Time:
@@ -560,7 +560,7 @@ Summary of all HTCondor users and their jobs
 --------------------------------------------
 When jobs are submitted, HTCondor will attempt to find resources to run
 the jobs. A list of all those with jobs submitted may be obtained
-through *condor_status*
+through :tool:`condor_status`
 :index:`condor_status<single: condor_status; HTCondor commands>`\ with the *-submitters*
 option. An example of this would yield output similar to:
 

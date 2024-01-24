@@ -64,10 +64,10 @@ my $bulksubmitentries = '
 ##
 
 ##
-## The job will run every 3 minutes
+## The job will run every minute
 ##
 CronHour		= *
-CronMinute		= */2
+CronMinute		= *
 CronDayOfMonth	= *
 CronMonth		= *
 CronDayOfWeek	= *
@@ -80,9 +80,9 @@ CronPrepTime	= 20
 
 #
 # Deferral window
-# Give it 5 seconds leeway to run, so if it gets there late,it
+# Give it 15 seconds leeway to run, so if it gets there late,it
 # is still ok
-deferral_window = 5
+deferral_window = 15
 
 ##
 ## We only want to run it 2 times

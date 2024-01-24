@@ -651,22 +651,22 @@ def the_job_handle(the_job_pair):
 def the_completed_job(the_condor, the_job_handle):
     # The job will evict itself part of the way through.  To avoid a long
     # delay waiting for the schedd to reschedule it, call condor_reschedule.
-    the_job_handle.wait(
-        timeout=60,
+    assert the_job_handle.wait(
+        timeout=300,
         condition=ClusterState.all_running,
         fail_condition=ClusterState.any_held,
     )
 
-    the_job_handle.wait(
-        timeout=60,
+    assert the_job_handle.wait(
+        timeout=300,
         condition=ClusterState.all_idle,
         fail_condition=ClusterState.any_held,
     )
 
     the_condor.run_command(['condor_reschedule'])
 
-    the_job_handle.wait(
-        timeout=60,
+    assert the_job_handle.wait(
+        timeout=300,
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
     )

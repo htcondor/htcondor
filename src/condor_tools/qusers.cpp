@@ -43,9 +43,16 @@
 #include "match_prefix.h"
 #include "console-utils.h"
 
+#define USE_DC_SCHEDD_USERS_METHODS 1
+
 // For schedd commands
 #include "condor_commands.h"
 #include "CondorError.h"
+
+#ifdef USE_DC_SCHEDD_USERS_METHODS
+#include "condor_q.h"
+#else
+
 enum
 {
 	Q_NO_SCHEDD_IP_ADDR = 20,
@@ -81,6 +88,8 @@ int actOnUsers (
 	CondorError *errstack,
 	int connect_timeout = 20);
 
+#endif
+
 // Global variables
 int dash_verbose = 0;
 int dash_long = 0;
@@ -108,8 +117,11 @@ static const struct Translation MyCommandTranslation[] = {
 	{ "", 0 }
 };
 
+#if 0
 static const char * cmd_to_str(int cmd) { return getNameFromNum(cmd, MyCommandTranslation); }
+#endif
 static int str_to_cmd(const char * str) { return getNumFromName(str, MyCommandTranslation); }
+static void print_results(ClassAd * ad, const char * op);
 
 typedef std::map<std::string, MyRowOfValues> ROD_MAP_BY_KEY;
 typedef std::map<std::string, ClassAd*> AD_MAP_BY_KEY;
@@ -177,7 +189,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	}
 }
 
-bool store_ads(void*pv, ClassAd* ad)
+int store_ads(void*pv, ClassAd* ad)
 {
 	AD_MAP_BY_KEY & ads = *(AD_MAP_BY_KEY*)pv;
 
@@ -186,7 +198,7 @@ bool store_ads(void*pv, ClassAd* ad)
 		formatstr(key, "%06d", (int)ads.size()+1);
 	}
 	ads.emplace(key, ad);
-	return false; // we are keeping the ad
+	return 0; // return 0 means we are keeping the ad
 }
 
 // arguments passed to the process_ads_callback
@@ -203,9 +215,9 @@ struct _render_ads_info {
 	{}
 };
 
-bool render_ads(void* pv, ClassAd* ad)
+int render_ads(void* pv, ClassAd* ad)
 {
-	bool done_with_ad = true;
+	int done_with_ad = 1; // return 1 means we allow the ad to be deleted or re-used
 	struct _render_ads_info * pi = (struct _render_ads_info*)pv;
 	ROD_MAP_BY_KEY * pmap = pi->pmap;
 
@@ -235,13 +247,13 @@ bool render_ads(void* pv, ClassAd* ad)
 	auto pp = pmap->emplace(key,MyRowOfValues());
 	if (!pp.second) {
 		fprintf( stderr, "Error: Two results with the same key.\n" );
-		done_with_ad = true;
+		done_with_ad = 1;
 	} else {
 		MyRowOfValues & rov = pp.first->second;
 		int cols = MAX(pi->columns, pi->pm->ColCount());
 		rov.SetMaxCols(cols); // reserve space for column data
 		pi->pm->render(rov, ad);
-		done_with_ad = true;
+		done_with_ad = 1;
 	}
 
 	return done_with_ad;
@@ -477,6 +489,19 @@ main( int argc, const char *argv[] )
 	if (cmd == QUERY_USERREC_ADS) {
 
 		classad::ClassAd req_ad;
+	#ifdef USE_DC_SCHEDD_USERS_METHODS
+		// make sure we ask for the key attribute when we query
+		if ( ! attrs.empty()) { attrs.insert(ATTR_USER); }
+
+		int rval = schedd.makeUsersQueryAd(req_ad, constraint, attrs);
+		if (rval == Q_PARSE_ERROR) {
+			fprintf(stderr, "Error: invalid constraint expression: %s\n", constraint);
+			exit(1);
+		} else if (rval != Q_OK) {
+			fprintf(stderr, "Error: %d while making query ad\n", rval);
+			exit(1);
+		}
+	#else
 		if (makeUsersRequestAd(req_ad, constraint, attrs)) {
 			fprintf(stderr, "Error: invalid constraint expression\n");
 			exit(1);
@@ -490,6 +515,7 @@ main( int argc, const char *argv[] )
 			// make sure we ask for the key attribute when we query
 			attrs.insert(ATTR_USER);
 		}
+	#endif
 
 		ROD_MAP_BY_KEY rods;
 		struct _render_ads_info render_info(&rods, &prmask);
@@ -497,7 +523,7 @@ main( int argc, const char *argv[] )
 		ClassAd *summary_ad=nullptr;
 		CondorError errstack;
 
-		bool (*process_ads)(void*, ClassAd *ad) = nullptr;
+		int (*process_ads)(void*, ClassAd *ad) = nullptr;
 		void* process_ads_data = nullptr;
 		if (dash_long) {
 			process_ads = store_ads;
@@ -508,7 +534,12 @@ main( int argc, const char *argv[] )
 		}
 
 		int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
+	#if 1
+		rval = schedd.queryUsers(req_ad, process_ads, process_ads_data, connect_timeout, &errstack, &summary_ad);
+		if (rval != Q_OK) {
+	#else
 		if (fetchUsersFromSchedd (schedd, req_ad, process_ads, process_ads_data, connect_timeout, &errstack, &summary_ad)) {
+	#endif
 			fprintf(stderr, "Error: query failed - %s\n", errstack.getFullText().c_str());
 			exit(1);
 		} else if (dash_long) {
@@ -541,16 +572,43 @@ main( int argc, const char *argv[] )
 
 	} else if (cmd == ENABLE_USERREC) {
 		CondorError errstack;
+	#if 1
+		const char * opname = dash_add ? "add" : "enable";
+		const bool create_if = dash_add;
+		ClassAd * ad = schedd.enableUsers(&usernames[0], (int)usernames.size(), create_if, &errstack);
+		if ( ! ad) {
+			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
+			rval = 1;
+		} else {
+			rval = 0;
+			print_results(ad, opname);
+			delete ad;
+		}
+	#else
 		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), nullptr, &errstack);
 		if (rval != 0) {
 			fprintf(stderr, "Error: %s failed - %s\n", cmd_to_str(cmd), errstack.getFullText().c_str());
 		}
+	#endif
 	} else if (cmd == DISABLE_USERREC) {
 		CondorError errstack;
+	#if 1
+		const char * opname = "disable";
+		ClassAd * ad = schedd.disableUsers(&usernames[0], (int)usernames.size(), disableReason, &errstack);
+		if ( ! ad) {
+			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
+			rval = 1;
+		} else {
+			rval = 0;
+			print_results(ad, opname);
+			delete ad;
+		}
+	#else
 		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), disableReason, &errstack);
 		if (rval != 0) {
 			fprintf(stderr, "Error: %s failed - %s\n", cmd_to_str(cmd), errstack.getFullText().c_str());
 		}
+	#endif
 	} else {
 		fprintf(stderr, "Unsupported command %d\n", cmd);
 		rval = 1;
@@ -559,6 +617,14 @@ main( int argc, const char *argv[] )
 	dprintf_SetExitCode(rval);
 	return rval;
 }
+
+#ifdef USE_DC_SCHEDD_USERS_METHODS
+static void print_results(ClassAd * ad, const char * op)
+{
+	std::string buf; buf.reserve(200);
+	fprintf(stdout, "%s succeeded:\n%s\n", op, formatAd(buf, *ad, "    ", nullptr, false));
+}
+#else
 
 int makeUsersRequestAd(
 	classad::ClassAd & request_ad,
@@ -683,7 +749,10 @@ int actOnUsers (
 	// send the ads
 	for (int  ii = 0; ii < num_usernames; ++ii) {
 		cmd_ad.Assign(ATTR_USER, usernames[ii]);
-		if (dash_add) { cmd_ad.Assign("Create", true); }
+		if (dash_add) {
+			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE, true);
+			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE_DEPRECATED, true); // TODO: remove in late 23.x ?
+		}
 		if (reason) {
 			if (cmd == DISABLE_USERREC) cmd_ad.Assign(ATTR_DISABLE_REASON, reason);
 		}
@@ -712,7 +781,7 @@ int actOnUsers (
 	return rval;
 }
 
-
+#endif
 
 void
 usage(FILE *out, const char *appname)

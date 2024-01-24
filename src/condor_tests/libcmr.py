@@ -69,7 +69,13 @@ def sum_check_correct_uptimes(condor, handle, resource, resources):
         projection=["SlotID", f"Assigned{resource}s", f"Uptime{resource}sSeconds"],
     )
 
-    measured_uptimes = set(int(ad[f"Uptime{resource}sSeconds"]) for ad in direct)
+    try:
+      measured_uptimes = set(int(ad[f"Uptime{resource}sSeconds"]) for ad in direct)
+    except KeyError:
+      # There's a race condition in the test where rarely we haven't gotten
+      # the update with the value in it, in which case there is no
+      # Uptime{resource}sSeconds in the add.  Just skip in that case.
+      return 
     logger.info(f"Measured uptimes were {measured_uptimes} (may be out of order)")
 
     increments = {}

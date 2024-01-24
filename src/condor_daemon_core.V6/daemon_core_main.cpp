@@ -42,7 +42,6 @@
 #include "historyFileFinder.h"
 #include "store_cred.h"
 #include "condor_netaddr.h"
-#include "net_string_list.h"
 #include "dc_collector.h"
 #include "token_utils.h"
 #include "condor_scitokens.h"
@@ -105,6 +104,7 @@ static	char*	logDir = NULL;
 static	char*	pidFile = NULL;
 static	char*	addrFile[2] = { NULL, NULL };
 static	char*	logAppend = NULL;
+static	char*	log2Arg = nullptr;
 
 static int Termlog = 0;	//Replacing the Termlog in dprintf for daemons that use it
 
@@ -264,14 +264,12 @@ public:
 		auto peer_location = token_request.getPeerLocation();
 		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %zu rules.\n", m_approval_rules.size());
 		for (auto &rule : m_approval_rules) {
-			if (!rule.m_approval_netblock->find_matches_withnetwork(
-					peer_location.c_str(), nullptr)) {
-				char * netblock = rule.m_approval_netblock->print_to_string();
+			if (!matches_withnetwork(rule.m_approval_netblock,
+					peer_location.c_str())) {
 				dprintf(D_FULLDEBUG|D_SECURITY, "Cannot auto-approve request;"
 					" peer %s does not match netblock %s.\n",
 					peer_location.c_str(),
-					netblock);
-				free(netblock);
+					rule.m_approval_netblock.c_str());
 				continue;
 			}
 			if (token_request.m_request_time > rule.m_expiry_time) {
@@ -287,8 +285,7 @@ public:
 					" because it is too old");
 				continue;
 			}
-			std::unique_ptr<char> netblock(rule.m_approval_netblock->print_to_string());
-			formatstr(rule_text, "[netblock = %s; lifetime_left = %ld]", netblock.get(),  rule.m_expiry_time - now);
+			formatstr(rule_text, "[netblock = %s; lifetime_left = %ld]", rule.m_approval_netblock.c_str(),  rule.m_expiry_time - now);
 			return true;
 		}
 		return false;
@@ -308,7 +305,7 @@ public:
 
 		m_approval_rules.emplace_back();
 		auto &rule = m_approval_rules.back();
-		rule.m_approval_netblock.reset(new NetStringList(netblock.c_str()));
+		rule.m_approval_netblock = netblock;
 		rule.m_issue_time = time(NULL);
 		rule.m_expiry_time = rule.m_issue_time + lifetime;
 		return true;
@@ -532,7 +529,7 @@ private:
 
 	struct ApprovalRule
 	{
-		std::unique_ptr<NetStringList> m_approval_netblock;
+		std::string m_approval_netblock;
 		time_t m_issue_time;
 		time_t m_expiry_time;
 	};
@@ -3210,7 +3207,7 @@ dc_reconfig()
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(get_mySubSystem()->getName());
+	dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
@@ -3504,10 +3501,14 @@ int dc_main( int argc, char** argv )
 			  Derek Wright <wright@cs.wisc.edu> 11/11/99
 			*/
 		switch(ptr[0][1]) {
-		case 'a':		// Append to the log file name.
+		case 'a':		// Append to the log file name, or if "a2" capture the 2nd log argument
 			ptr++;
 			if( ptr && *ptr ) {
-				logAppend = *ptr;
+				if (ptr[-1][2] == '2') { // was it -append? or -a2 ?
+					log2Arg = *ptr;
+				} else {
+					logAppend = *ptr;
+				}
 				dcargs += 2;
 			} else {
 				fprintf( stderr, 
@@ -3753,7 +3754,7 @@ int dc_main( int argc, char** argv )
 		if(Termlog)
 			dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
 		else
-			dprintf_config(get_mySubSystem()->getName());
+			dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -3915,7 +3916,7 @@ int dc_main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName());
+		dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	}
 
 		// Now that we have the daemonCore object, we can finally

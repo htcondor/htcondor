@@ -647,7 +647,7 @@ CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
 			query_entry->adt[ix].skip_absent = skip_absent;
 
 			// check for <AdType>Limit
-			std::string attr(tag); tag += ATTR_LIMIT_RESULTS;
+			std::string attr(tag); attr += ATTR_LIMIT_RESULTS;
 			int taglimit = -1;
 			if (query->LookupInteger(attr, taglimit) && taglimit > 0) {
 				query_entry->adt[ix].limit = taglimit;
@@ -691,7 +691,7 @@ int CollectorDaemon::receive_query_cedar(int command,
 	bool is_locate;
 	bool negotiate_auth = false;
 	const unsigned int BIG_TABLE_MASK = (1<<GENERIC_AD) | (1<<ANY_AD) | (1<<MASTER_AD) | (1<<STARTDAEMON_AD)
-	                                  | (1<<STARTD_AD) | (1<<STARTD_PVT_AD) | (1<<SLOT_AD);
+	                                  | (1<<STARTD_AD) | (1<<STARTD_PVT_AD) | (1<<SLOT_AD) | (1<<BOGUS_AD);
 	KnownSubsystemId clientSubsys = SUBSYSTEM_ID_UNKNOWN;
 	AdTypes whichAds;
 	ClassAd *cad = new ClassAd();

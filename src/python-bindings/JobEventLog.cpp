@@ -140,7 +140,16 @@ JobEventLog::next() {
 		break;
 
 		case ULOG_RD_ERROR:
-			THROW_EX( HTCondorIOError, "ULOG_RD_ERROR" );
+		{
+			std::string message {"ULOG_RD_ERROR: "};
+			ReadUserLog::ErrorType et;
+			const char *estring = nullptr;
+			unsigned int lineno = 0;
+			wful.getErrorInfo(et, estring, lineno);
+			formatstr(message, "ULOG_RD_ERROR in file %s at offset %zu\n",
+					wful.getFilename().c_str(), wful.getOffset());
+			THROW_EX(HTCondorIOError, message.c_str());
+		}
 		break;
 
 		case ULOG_MISSED_EVENT:

@@ -34,10 +34,14 @@ class WaitForUserLog {
 		void releaseResources();
 		bool isInitialized() { return reader.isInitialized() && trigger.isInitialized(); }
 		ULogEventOutcome readEvent( ULogEvent * & event, int timeout = -1, bool following = true );
-        const std::string & getFilename() const { return filename; }
+		const std::string & getFilename() const { return filename; }
 
-        size_t getOffset() const;
-        void setOffset( size_t offset );
+		size_t getOffset() const;
+		void setOffset( size_t offset );
+
+		void getErrorInfo(ReadUserLog::ErrorType &error, const char *& error_str, unsigned &line_num) { 
+			reader.getErrorInfo(error, error_str, line_num);
+		}
 
 	private:
 		std::string filename;

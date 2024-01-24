@@ -9,11 +9,96 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
     The configuration macros JOB_ROUTER_DEFAULTS, JOB_ROUTER_ENTRIES, JOB_ROUTER_ENTRIES_CMD,
     and JOB_ROUTER_ENTRIES_FILE are deprecated and will be removed for V24 of HTCondor. New
     configuration syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and
-    JOB_ROUTER_ROUTE_<name>. Note: The removal will occur during the lifetime of the
+    JOB_ROUTER_ROUTE_<Name>. Note: The removal will occur during the lifetime of the
     HTCondor V23 feature series.
     :jira:`1968`
 
 The details of each version are described below.
+
+.. _lts-version-history-2305:
+
+Version 23.0.5
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.0.5 released on Month Date, 2024.
+
+- HTCondor version 23.0.5 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed bug in the event log reader that would rarely cause DAGMan
+  to lose track of a job, and wait forever for a job that had
+  really finished, with dagman not realizing that said job had
+  indeed finished.
+  :jira:`2236`
+
+- Fixed bug in DAGMan where nodes that had retries would incorrectly
+  set its descendants to the Futile state if the node job got removed.
+  :jira:`2240`
+
+- Fixed *condor_test_token* to access the SciTokens cache as the correct
+  user when run as root.
+  :jira:`2241`
+
+- Fixed a bug that caused a crash if a configuration file or submit
+  description file contained an empty multi-line value.
+  :jira:`2249`
+
+.. _lts-version-history-2304:
+
+Version 23.0.4
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.0.4 released on Month Date, 2023.
+
+- HTCondor version 23.0.4 not yet released.
+
+New Features:
+
+- The **condor_starter** can now be configured to capture the stdout and stderr
+  of file transfer plugins and write that output into the StarterLog.
+  :jira:`1459`
+
+- The **condor_starter** will now set the environment variable ``NVIDIA_VISIBLE_DEVICES`` either
+  to ``none`` or to a list of the full uuid of each GPU device assigned to the slot.
+  :jira:`2242`
+
+- Updated :tool:`condor_upgrade_check` script for better support and
+  maintainability. This update includes new flags/functionality
+  and removal of old checks for upgrading between V9 and V10 of
+  HTCondor.
+  :jira:`2168`
+
+Bugs Fixed:
+
+- The submit language will no longer treat ``request_gpu_memory`` and ``request_gpus_memory``
+  as requests for a custom resource of type ``gpu_memory`` or ``gpus_memory`` respectively.
+  :jira:`2201`
+
+- Fixed bug where DAG node jobs declared inline inside a DAG file
+  would fail to set the Job ClassAd attribute :ad-attr:`JobSubmitMethod`.
+  :jira:`2184`
+
+- Fixed ``SyntaxWarning`` raised by Python 3.12 in scripts packaged
+  with the Python bindings.
+  :jira:`2212`
+
+- Ensure Perl dependencies are present for the **condor_gather_info** script.
+  The **condor_gather_info** script now properly reports the User login name.
+  Also, report the contents of ``/etc/os-release```.
+  :jira:`2094`
+
+- Search engine timeout settings for **condor_adstash** now apply to all search
+  engine operations, not just the intial request to the search engine.
+  :jira:`2167`
 
 .. _lts-version-history-2303:
 
@@ -22,9 +107,10 @@ Version 23.0.3
 
 Release Notes:
 
-.. HTCondor version 23.0.3 released on Month Date, 2023.
+- HTCondor version 23.0.3 released on January 4, 2024.
 
-- HTCondor version 23.0.3 not yet released.
+- Preliminary support for openSUSE LEAP 15.
+  :jira:`2156`
 
 New Features:
 
@@ -37,7 +123,21 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a crash in the python bindings when job submit fails due to
+- The file transfer plugin documents that an exit code of 0
+  is success, 1 is failure, and 2 is reserved for future work to
+  handle the need to refresh credentials.  The definition has now
+  changed so that any non-zero exit codes are treated as an error
+  putting the job on hold.
+  :jira:`2205`
+
+- Fixed a bug where any file I/O error (such as disk full) was
+  ignored by the *condor_starter* when writing the ClassAd file
+  that controlled file transfer plugins.  As a result, in rare
+  cases, file transfer plugins could be unknowingly given
+  incomplete sets of files to transfer.
+  :jira:`2203`
+
+- Fixed a crash in the Python bindings when job submit fails due to
   any reason.  A common reason might be when :macro:`SUBMIT_REQUIREMENT_NAMES`
   fails.
   :jira:`1931`
@@ -48,31 +148,32 @@ Bugs Fixed:
   Previously, these were silently ignored.
   :jira:`2157`
 
-- Linux jobs with a invalid #! interpreter now get a better error
-  message when the EP is running as root.  This was enhanced in 10.0,
-  but a bug prevented the enhancement from fully working with a rootly EP.
+- Fixed a bug where the Python-based HTChirp client had its max line length set
+  much shorter than is allowed by the HTCondor Chirp server. The client now
+  also throws a relevant error when this max limit is hit while sending commands
+  to the server.
+  :jira:`2142`
+
+- Linux jobs with a invalid ``#!`` interpreter now get a better error
+  message when the Execution Point is running as root.  This was enhanced in 10.0,
+  but a bug prevented the enhancement from fully working on a system
+  installed Execution Point.
   :jira:`1698`
 
 - Fixed a bug where the DAGMan job proper for a DAG with a final
   node could stay stuck in the removed job state.
   :jira:`2147`
 
-- Fixed a bug where the Python-based HTChirp client had its max line length set
-  much shorter than is allowed by the HTCondor Chirp server. The client now
-  also throws a relevant error when this max limit is hit while sending commands
-  to the server.
-  :jira:`2157`
-
-- Updated the usage and man page of the *condor_drain* tool to include information
-  about the ``-reconfig-on-completion`` option.
-  :jira:`2164`
-
 - Correctly identify ``GPUsAverageUsage`` and ``GPUsMemoryUsage`` as floating point
-  values for *condor_adstash*.
+  values for :tool:`condor_adstash`.
   :jira:`2170`
 
-- Fixed a bug where *condor_adstash* would get wedged due to a logging failure.
+- Fixed a bug where :tool:`condor_adstash` would get wedged due to a logging failure.
   :jira:`2166`
+
+- Updated the usage and man page of the :tool:`condor_drain` tool to include information
+  about the ``-reconfig-on-completion`` option.
+  :jira:`2164`
 
 .. _lts-version-history-2302:
 
@@ -91,7 +192,7 @@ Bugs Fixed:
 
 - Fixed a bug when Hashicorp Vault is configured to issue data transfer tokens
   (which is not the default), job submission could hang and then fail.
-  Reverted a change to *condor_submit* that disconnected the output stream of
+  Reverted a change to :tool:`condor_submit` that disconnected the output stream of
   :macro:`SEC_CREDENTIAL_STORER` to the user's console, which broke OIDC flow.
   :jira:`2078`
 
@@ -131,13 +232,13 @@ Bugs Fixed:
   warning about the internal count of held job procs being incorrect.
   :jira:`2102`
 
-- Fixed a bug in *condor_transfer_data* where using the ``-addr``
+- Fixed a bug in :tool:`condor_transfer_data` where using the ``-addr``
   flag would automatically apply the ``-all`` flag to transfer
   all job data back making the use of ``-addr`` with a Job ID
   constraint fail.
   :jira:`2105`
 
-- Fixed warnings about use of deprecated HTCondor python binding methods
+- Fixed warnings about use of deprecated HTCondor Python binding methods
   in the `htcondor dag submit` command.
   :jira:`2104`
 
@@ -149,7 +250,7 @@ Bugs Fixed:
   SSL certificate.
   :jira:`2080`
 
-- Fixed bug in the *condor_userlog* tool where it would crash
+- Fixed bug in the :tool:`condor_userlog` tool where it would crash
   when reading logs with parallel universe jobs in it.
   :jira:`2099`
 
@@ -189,8 +290,8 @@ Bugs Fixed:
   an assertion check and crash.
   :jira:`2051`
 
-- The job attributes ``CpusProvisioned``, ``DiskProvisioned``, and
-  ``MemoryProvisioned`` are now updated for Condor-C and Job Router jobs.
+- The job attributes :ad-attr:`CpusProvisioned`, :ad-attr:`DiskProvisioned`, and
+  :ad-attr:`MemoryProvisioned` are now updated for Condor-C and Job Router jobs.
   :jira:`2069`
 
 - Updated HTCondor Windows binaries that are statically linked to the curl library to use curl version 8.4.0.
@@ -205,7 +306,7 @@ Bugs Fixed:
   job epoch history file.
   :jira:`2060`
 
-- Fixed a rare race condition where *condor_rm*'ing a parallel universe job would not remove
+- Fixed a rare race condition where :tool:`condor_rm`'ing a parallel universe job would not remove
   the job if the rm happened after the job was matched but before it fully started
   :jira:`2070`
 
@@ -225,25 +326,25 @@ New Features:
   The configuration template ``use FEATURE : StaticSlots`` was added for admins wanting the old behavior.
   :jira:`2026`
 
-- The ``TargetType`` attribute is no longer a required attribute in most Classads.  It is still used for
+- The :ad-attr:`TargetType` attribute is no longer a required attribute in most Classads.  It is still used for
   queries to the *condor_collector* and it remains in the Job ClassAd and the Machine ClassAd because
   of older versions of HTCondor require it to be present.
   :jira:`1997`
 
-- The ``-dry-run`` option of *condor_submit* will now print the output of a :macro:`SEC_CREDENTIAL_STORER` script.
+- The ``-dry-run`` option of :tool:`condor_submit` will now print the output of a :macro:`SEC_CREDENTIAL_STORER` script.
   This can be useful when developing such a script.
   :jira:`2014`
 
-- Added ability to query epoch history records from the python bindings.
+- Added ability to query epoch history records from the Python bindings.
   :jira:`2036`
 
 - The default value of :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS` will now be visible
-  in *condor_config_val*. The default for :macro:`SEC_*_AUTHENTICATION_METHODS`
+  in :tool:`condor_config_val`. The default for :macro:`SEC_*_AUTHENTICATION_METHODS`
   will inherit from this value, and thus no ``READ`` and ``CLIENT`` will no longer
   automatically have ``CLAIMTOBE``.
   :jira:`2047`
 
-- Added new tool *condor_test_token*, which will create a SciToken
+- Added new tool :tool:`condor_test_token`, which will create a SciToken
   with configurable contents (including issuer) which will be accepted
   for a short period of time by the local HTCondor daemons.
   :jira:`1115`
@@ -263,7 +364,7 @@ Bugs Fixed:
   for Docker Universe jobs doing user level check-pointing.
   :jira:`2014`
 
-- Fixed a bug where *condor_preen* was deleting files named '*OfflineAds*'
+- Fixed a bug where :tool:`condor_preen` was deleting files named '*OfflineAds*'
   in the spool directory.
   :jira:`2019`
 

@@ -19,7 +19,7 @@ Scheduler ClassAd Attributes
 :classad-attribute-def:`DaemonCoreDutyCycle`
     A Statistics attribute defining the ratio of the time spent handling
     messages and events to the elapsed time for the time period defined
-    by ``StatsLifetime`` of this *condor_schedd*. A value near 0.0
+    by :ad-attr:`StatsLifetime` of this *condor_schedd*. A value near 0.0
     indicates an idle daemon, while a value near 1.0 indicates a daemon
     running at or above capacity.
 
@@ -59,12 +59,12 @@ Scheduler ClassAd Attributes
 :classad-attribute-def:`JobsAccumRunningTime`.
     A Statistics attribute defining the sum of the all of the time jobs
     have spent running in the time interval defined by attribute
-    ``StatsLifetime``.
+    :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsAccumTimeToStart`.
     A Statistics attribute defining the sum of all the time jobs have
     spent waiting to start in the time interval defined by attribute
-    ``StatsLifetime``.
+    :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsBadputRuntimes`
     A Statistics attribute defining a histogram count of jobs that did
@@ -72,24 +72,24 @@ Scheduler ClassAd Attributes
     the lifetime of this *condor_schedd*. Counts within the histogram
     are separated by a comma and a space, where the time interval
     classification is defined in the ClassAd attribute
-    ``JobsRuntimesHistogramBuckets``.
+    :ad-attr:`JobsRuntimesHistogramBuckets`.
 
 :classad-attribute-def:`JobsBadputSizes`
     A Statistics attribute defining a histogram count of jobs that did
     not complete successfully, as classified by image size, over the
     lifetime of this *condor_schedd*. Counts within the histogram are
     separated by a comma and a space, where the size classification is
-    defined in the ClassAd attribute ``JobsSizesHistogramBuckets``.
+    defined in the ClassAd attribute :ad-attr:`JobsSizesHistogramBuckets`.
 
 :classad-attribute-def:`JobsCheckpointed`
     A Statistics attribute defining the number of times jobs that have
     exited with a *condor_shadow* exit code of ``JOB_CKPTED`` in the
-    time interval defined by attribute ``StatsLifetime``.
+    time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsCompleted`
     A Statistics attribute defining the number of jobs successfully
     completed in the time interval defined by attribute
-    ``StatsLifetime``.
+    :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsCompletedRuntimes`
     A Statistics attribute defining a histogram count of jobs that
@@ -97,68 +97,68 @@ Scheduler ClassAd Attributes
     lifetime of this *condor_schedd*. Counts within the histogram are
     separated by a comma and a space, where the time interval
     classification is defined in the ClassAd attribute
-    ``JobsRuntimesHistogramBuckets``.
+    :ad-attr:`JobsRuntimesHistogramBuckets`.
 
 :classad-attribute-def:`JobsCompletedSizes`
     A Statistics attribute defining a histogram count of jobs that
     completed successfully as classified by image size, over the
     lifetime of this *condor_schedd*. Counts within the histogram are
     separated by a comma and a space, where the size classification is
-    defined in the ClassAd attribute ``JobsSizesHistogramBuckets``.
+    defined in the ClassAd attribute :ad-attr:`JobsSizesHistogramBuckets`.
 
 :classad-attribute-def:`JobsCoredumped`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``JOB_COREDUMPED`` in
-    the time interval defined by attribute ``StatsLifetime``.
+    the time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsDebugLogError`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``DPRINTF_ERROR`` in the
-    time interval defined by attribute ``StatsLifetime``.
+    time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsExecFailed`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``JOB_EXEC_FAILED`` in
-    the time interval defined by attribute ``StatsLifetime``.
+    the time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsExited`
     A Statistics attribute defining the number of times that jobs that
     exited (successfully or not) in the time interval defined by
-    attribute ``StatsLifetime``.
+    attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsExitedAndClaimClosing`
     A Statistics attribute defining the number of times jobs have exited
     with a *condor_shadow* exit code of
     ``JOB_EXITED_AND_CLAIM_CLOSING`` in the time interval defined by
-    attribute ``StatsLifetime``.
+    attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsExitedNormally`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``JOB_EXITED`` or with
     an exit code of ``JOB_EXITED_AND_CLAIM_CLOSING`` in the time
-    interval defined by attribute ``StatsLifetime``.
+    interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsExitException`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``JOB_EXCEPTION`` or
     with an unknown status in the time interval defined by attribute
-    ``StatsLifetime``.
+    :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsKilled`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``JOB_KILLED`` in the
-    time interval defined by attribute ``StatsLifetime``.
+    time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsMissedDeferralTime`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of
     ``JOB_MISSED_DEFERRAL_TIME`` in the time interval defined by
-    attribute ``StatsLifetime``.
+    attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsNotStarted`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``JOB_NOT_STARTED`` in
-    the time interval defined by attribute ``StatsLifetime``.
+    the time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsRestartReconnectsAttempting`
     A Statistics attribute defining the number of *condor_startd*
@@ -173,7 +173,7 @@ Scheduler ClassAd Attributes
     *condor_schedd* was restarted, as classified by the time the job
     spent running. Counts within the histogram are separated by a comma
     and a space, where the time interval classification is defined in
-    the ClassAd attribute ``JobsRuntimesHistogramBuckets``.
+    the ClassAd attribute :ad-attr:`JobsRuntimesHistogramBuckets`.
 
 :classad-attribute-def:`JobsRestartReconnectsFailed`
     A Statistics attribute defining the number of *condor_startd*
@@ -209,13 +209,13 @@ Scheduler ClassAd Attributes
     running, as classified by elapsed runtime. Counts within the
     histogram are separated by a comma and a space, where the time
     interval classification is defined in the ClassAd attribute
-    ``JobsRuntimesHistogramBuckets``.
+    :ad-attr:`JobsRuntimesHistogramBuckets`.
 
 :classad-attribute-def:`JobsRunningSizes`
     A Statistics attribute defining a histogram count of jobs currently
     running, as classified by image size. Counts within the histogram
     are separated by a comma and a space, where the size classification
-    is defined in the ClassAd attribute ``JobsSizesHistogramBuckets``.
+    is defined in the ClassAd attribute :ad-attr:`JobsSizesHistogramBuckets`.
 
 :classad-attribute-def:`JobsRuntimesHistogramBuckets`
     A Statistics attribute defining the predefined bucket boundaries for
@@ -231,22 +231,22 @@ Scheduler ClassAd Attributes
     A Statistics attribute defining the number of times that jobs have
     exited because there was not enough memory to start the
     *condor_shadow* in the time interval defined by attribute
-    ``StatsLifetime``.
+    :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsShouldHold`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``JOB_SHOULD_HOLD`` in
-    the time interval defined by attribute ``StatsLifetime``.
+    the time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsShouldRemove`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``JOB_SHOULD_REMOVE`` in
-    the time interval defined by attribute ``StatsLifetime``.
+    the time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsShouldRequeue`
     A Statistics attribute defining the number of times that jobs have
     exited with a *condor_shadow* exit code of ``JOB_SHOULD_REQUEUE``
-    in the time interval defined by attribute ``StatsLifetime``.
+    in the time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsSizesHistogramBuckets`
     A Statistics attribute defining the predefined bucket boundaries for
@@ -261,11 +261,11 @@ Scheduler ClassAd Attributes
 
 :classad-attribute-def:`JobsStarted`.
     A Statistics attribute defining the number of jobs started in the
-    time interval defined by attribute ``StatsLifetime``.
+    time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsSubmitted`.
     A Statistics attribute defining the number of jobs submitted in the
-    time interval defined by attribute ``StatsLifetime``.
+    time interval defined by attribute :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`JobsUnmaterialized`.
     A Statistics attribute defining the number of jobs submitted as
@@ -316,7 +316,7 @@ Scheduler ClassAd Attributes
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
-    CPUs up into separate slots, each with with a unique name. These
+    CPUs up into separate slots, each with a unique name. These
     names will be of the form "slot#@full.hostname", for example,
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
@@ -364,7 +364,7 @@ Scheduler ClassAd Attributes
     the previous time interval defined by attribute
     ``RecentStatsLifetime``. Counts within the histogram are separated
     by a comma and a space, where the time interval classification is
-    defined in the ClassAd attribute ``JobsRuntimesHistogramBuckets``.
+    defined in the ClassAd attribute :ad-attr:`JobsRuntimesHistogramBuckets`.
 
 :classad-attribute-def:`RecentJobsBadputSizes`
     A Statistics attribute defining a histogram count of jobs that did
@@ -372,7 +372,7 @@ Scheduler ClassAd Attributes
     previous time interval defined by attribute ``RecentStatsLifetime``.
     Counts within the histogram are separated by a comma and a space,
     where the size classification is defined in the ClassAd attribute
-    ``JobsSizesHistogramBuckets``.
+    :ad-attr:`JobsSizesHistogramBuckets`.
 
 :classad-attribute-def:`RecentJobsCheckpointed`
     A Statistics attribute defining the number of times jobs that have
@@ -390,7 +390,7 @@ Scheduler ClassAd Attributes
     previous time interval defined by attribute ``RecentStatsLifetime``.
     Counts within the histogram are separated by a comma and a space,
     where the time interval classification is defined in the ClassAd
-    attribute ``JobsRuntimesHistogramBuckets``.
+    attribute :ad-attr:`JobsRuntimesHistogramBuckets`.
 
 :classad-attribute-def:`RecentJobsCompletedSizes`
     A Statistics attribute defining a histogram count of jobs that
@@ -398,7 +398,7 @@ Scheduler ClassAd Attributes
     time interval defined by attribute ``RecentStatsLifetime``. Counts
     within the histogram are separated by a comma and a space, where the
     size classification is defined in the ClassAd attribute
-    ``JobsSizesHistogramBuckets``.
+    :ad-attr:`JobsSizesHistogramBuckets`.
 
 :classad-attribute-def:`RecentJobsCoredumped`
     A Statistics attribute defining the number of times that jobs have
@@ -516,7 +516,7 @@ Scheduler ClassAd Attributes
     statistics values have been collected for attributes with names that
     begin with ``Recent``. This value starts at 0, and it may grow to a
     value as large as the value defined for attribute
-    ``RecentWindowMax``.
+    :ad-attr:`RecentWindowMax`.
 
 :classad-attribute-def:`RecentStatsTickTime`
     A Statistics attribute defining the time that attributes with names
@@ -542,7 +542,7 @@ Scheduler ClassAd Attributes
 :classad-attribute-def:`ShadowsReconnections`
     A Statistics attribute defining the number of times
     *condor_shadow* s lost connection to their *condor_starter* s
-    and successfully reconnected in the previous ``StatsLifetime``
+    and successfully reconnected in the previous :ad-attr:`StatsLifetime`
     seconds. This statistic only appears in the Scheduler ClassAd if the
     level of verbosity set by the configuration variable
     :macro:`STATISTICS_TO_PUBLISH` is set to 2 or higher.
@@ -550,7 +550,7 @@ Scheduler ClassAd Attributes
 :classad-attribute-def:`ShadowsRecycled`
     A Statistics attribute defining the number of times *condor_shadow*
     processes have been recycled for use with a new job in the previous
-    ``StatsLifetime`` seconds. This statistic only appears in the
+    :ad-attr:`StatsLifetime` seconds. This statistic only appears in the
     Scheduler ClassAd if the level of verbosity set by the configuration
     variable :macro:`STATISTICS_TO_PUBLISH` is set to 2 or higher.
 
@@ -566,7 +566,7 @@ Scheduler ClassAd Attributes
 :classad-attribute-def:`ShadowsStarted`
     A Statistics attribute defining the number of *condor_shadow*
     daemons started in the previous time interval defined by attribute
-    ``StatsLifetime``.
+    :ad-attr:`StatsLifetime`.
 
 :classad-attribute-def:`StartLocalUniverse`
     The same boolean value as set in the configuration variable

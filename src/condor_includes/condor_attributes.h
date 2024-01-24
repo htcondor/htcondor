@@ -113,6 +113,7 @@
 #define ATTR_CONDOR_ADMIN				"CondorAdmin"
 #define ATTR_CONSOLE_IDLE  "ConsoleIdle"
 #define ATTR_CONTAINER_IMAGE "ContainerImage"
+#define ATTR_CONTAINER_IMAGE_SOURCE "ContainerImageSource"
 #define ATTR_CONTINUE  "Continue"
 #define ATTR_CONTINUE_REASON  "ContinueReason"
 #define ATTR_CORE_SIZE  "CoreSize"
@@ -439,6 +440,8 @@
 #define ATTR_JOB_STATE  "JobState"
 #define ATTR_JOB_STATUS  "JobStatus"
 #define ATTR_LAST_JOB_STATUS  "LastJobStatus"
+#define ATTR_JOB_STARTER_DEBUG "JobStarterDebug"
+#define ATTR_JOB_STARTER_LOG "JobStarterLog"
 #define ATTR_JOB_TOE "ToE"  // termination of execution ad
 #define ATTR_JOB_STATUS_ON_RELEASE  "JobStatusOnRelease"
 #define ATTR_JOB_SUBMIT_METHOD "JobSubmitMethod"
@@ -791,6 +794,11 @@
 #define ATTR_UPDATE_SEQUENCE_NUMBER  "UpdateSequenceNumber"
 #define ATTR_USE_PARROT  "UseParrot"
 #define ATTR_USER  "User"
+#define ATTR_USERREC_OPT_prefix "_userrec_opt_"
+#define ATTR_USERREC_OPT_CREATE "_userrec_opt_create"
+#define ATTR_USERREC_OPT_UPDATE "_userrec_opt_update"
+#define ATTR_USERREC_OPT_ME "_userrec_opt_me"
+#define ATTR_USERREC_OPT_CREATE_DEPRECATED "create"
 #define ATTR_VACATE  "Vacate"
 #define ATTR_VACATE_TYPE  "VacateType"
 #define ATTR_VIRTUAL_MEMORY  "VirtualMemory"
@@ -1046,6 +1054,11 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_REQUEST_GPUS  "RequestGPUs"
 #define ATTR_REQUIRE_GPUS  "RequireGPUs"
 #define ATTR_REQUEST_VIRTUAL_MEMORY  "RequestVirtualMemory"
+// GPUs property constraints
+#define ATTR_GPUS_MIN_MEMORY "GPUsMinMemory"
+#define ATTR_GPUS_MIN_CAPABILITY "GPUsMinCapability"
+#define ATTR_GPUS_MAX_CAPABILITY "GPUsMaxCapability"
+#define ATTR_GPUS_MIN_RUNTIME "GPUsMinRuntime"
 
 // machine resource prefixes
 #define ATTR_REQUEST_PREFIX  "Request"
@@ -1059,14 +1072,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_NUM_CLAIMS "NumClaims"
 #define ATTR_CLAIM_ID_LIST "ClaimIdList"
 #define ATTR_CONSUMPTION_PREFIX "Consumption"
-
-// This is a record of the job exit status from a standard universe job exit
-// via waitpid. It is in the job ad to implement the terminate_pending
-// feature. It has to be here because of rampant global variable usage in the
-// standard universe shadow. It saved a tremendous amount of code to just
-// put this value in the job ad.
-#define ATTR_WAITPID_STATUS  "WaitpidStatus"
-#define ATTR_TERMINATION_REASON  "TerminationReason"
 
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)

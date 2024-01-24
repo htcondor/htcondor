@@ -43,7 +43,7 @@ Here are the basic steps to run a job with HTCondor.
     of submit file options is in :doc:`/man-pages/condor_submit`.
 
  Submit the Job.
-    Submit the program to HTCondor with the *condor_submit* command.
+    Submit the program to HTCondor with the :tool:`condor_submit` command.
     :index:`condor_submit<single: condor_submit; HTCondor commands>`
     HTCondor will assign the job a unique Cluster and Proc identifier
     as integers separated by a dot.  You use this Cluster and Proc

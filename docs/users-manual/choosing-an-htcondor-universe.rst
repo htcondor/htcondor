@@ -87,7 +87,7 @@ itself. Scheduler universe jobs are not matched with a remote machine,
 and will never be preempted. The job's requirements expression is
 evaluated against the *condor_schedd* 's ClassAd.
 
-Originally intended for meta-schedulers such as *condor_dagman*, the
+Originally intended for meta-schedulers such as :tool:`condor_dagman`, the
 scheduler universe can also be used to manage jobs of any sort that must
 run on the submit host.
 

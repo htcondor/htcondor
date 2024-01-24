@@ -1161,17 +1161,27 @@ default=
 type=string
 tags=startd_factory
 
-[THINPOOL_BACKING_FILE]
+[LVM_USE_THIN_PROVISIONING]
+default=true
+type=bool
+tags=startd
+
+[LVM_BACKING_FILE]
 default=$(SPOOL)/startd_disk.img
 type=string
 tags=startd
 
-[THINPOOL_EXTRA_SIZE_MB]
+[LVM_BACKING_FILE_SIZE_MB]
+default=10240
+type=int
+tags=startd
+
+[LVM_THIN_LV_EXTRA_SIZE_MB]
 default=2000
 type=int
 tags=starter
 
-[THINPOOL_HIDE_MOUNT]
+[LVM_HIDE_MOUNT]
 default=false
 type=bool
 tags=startd
@@ -2073,6 +2083,10 @@ description=Submit should generate requirements clauses for job attributes that 
 default=true
 type=bool
 tags=submit
+
+[SUBMIT_GENERATE_CONDOR_C_REQUIREMENTS]
+default=true
+type=bool
 
 [SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES]
 description=Set the default value submit should use for should_transfer_files for jobs that don't specify
@@ -4956,6 +4970,11 @@ default=false
 type=bool
 description=Whether to invoke file transfer plugins as user or as root
 
+[LOG_FILETRANSFER_PLUGIN_STDOUT_ON_FAILURE]
+default=D_ALWAYS
+type=string
+description=What log level to use to write the stdout/err of a failed file transfer plugin into the StaterLog
+
 [ENABLE_MULTIFILE_TRANSFER_PLUGINS]
 default=true
 type=bool
@@ -6424,7 +6443,7 @@ default : @end
 description=Settings to detect and use GPUs as custom resources, args:(optional-discovery-args)
 default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery $(1) -properties $(GPU_DISCOVERY_EXTRA)
-	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
+	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA// NVIDIA_VISIBLE_DEVICES=/CUDA//
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
 
 	use feature : GPUsMonitor

@@ -45,7 +45,6 @@ ParallelShadow::~ParallelShadow() {
     for ( size_t i=0 ; i<ResourceList.size() ; i++ ) {
         delete ResourceList[i];
     }
-	daemonCore->Cancel_Command( SHADOW_UPDATEINFO );
 }
 
 void 
@@ -58,16 +57,6 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 
         // BaseShadow::baseInit - basic init stuff...
     baseInit( job_ad, schedd_addr, xfer_queue_contact_info );
-
-		// Register command which gets updates from the starter
-		// on the job's image size, cpu usage, etc.  Each kind of
-		// shadow implements it's own version of this to deal w/ it
-		// properly depending on parallel vs. serial jobs, etc. 
-	daemonCore->
-		Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO", 
-						  (CommandHandlercpp)&ParallelShadow::updateFromStarter,
-						  "ParallelShadow::updateFromStarter", this, DAEMON ); 
-
 
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
@@ -602,7 +591,7 @@ ParallelShadow::handleJobRemoval( int sig ) {
 	return 0;
 }
 
-/* This is basically a search-and-replace "#MpInOdE#" with a number 
+/* This is basically a search-and-replace "#pArAlLeLnOdE#" with a number 
    for that node...so we can address each mpi node in the submit file. */
 void
 ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
@@ -630,21 +619,6 @@ ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 	}	
 }
 
-
-int
-ParallelShadow::updateFromStarter(int  /*command*/, Stream *s)
-{
-	ClassAd update_ad;
-	s->decode();
-	if (!getClassAd(s, update_ad)) {
-		s->end_of_message();
-		dprintf(D_ALWAYS, "ParallelShadow::updateFromStarter could not get Class Ad\n");
-		return FALSE;
-	}
-	s->end_of_message();
-	fix_update_ad(update_ad);
-	return updateFromStarterClassAd(&update_ad);
-}
 
 int
 ParallelShadow::updateFromStarterClassAd(ClassAd* update_ad)

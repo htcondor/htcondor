@@ -377,6 +377,67 @@ public:
 		const std::vector<std::string> &authz_bounding_set, int lifetime,
 		ImpersonationTokenCallbackType callback, void *misc_data, CondorError &err);
 
+		/*
+		 * methods for schedd UserRec records
+		 */
+	static int makeUsersQueryAd (
+		classad::ClassAd & request_ad,
+		const char * constraint,
+		const char * projection,
+		bool send_server_time = false,
+		int match_limit = -1);
+
+	static int makeUsersQueryAd (
+		classad::ClassAd & request_ad,
+		const char * constraint,
+		classad::References & projection,
+		int match_limit = -1);
+
+	int queryUsers(
+		const classad::ClassAd & query_ad,
+		// return 0 to take ownership of the ad, non-zero to allow the ad to be deleted after, -1 aborts the loop
+		int (*process_func)(void*, ClassAd *ad),
+		void * process_func_data,
+		int connect_timeout,
+		CondorError *errstack,
+		ClassAd ** psummary_ad);
+
+	ClassAd * addUsers(
+		const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+		int num_usernames,
+		CondorError *errstack);
+
+	ClassAd * enableUsers(
+		const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+		int num_usernames,
+		bool create_if,           // true if we want to create users that don't already exist
+		CondorError *errstack);
+
+	ClassAd * enableUsers(
+		const char * constraint,  // expression
+		CondorError *errstack);
+
+	ClassAd * addOrEnableUsers(
+		const ClassAd * userads[],   // ads must have ATTR_USER attribute, if create_if may have other attributes as well
+		int num_usernames,
+		bool create_if,           // true if we want to create users that don't already exist
+		CondorError *errstack);
+
+	ClassAd * disableUsers(
+		const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+		int num_usernames,
+		const char * reason,
+		CondorError *errstack);
+
+	ClassAd * disableUsers(
+		const char * constraint, // expression
+		const char * reason,
+		CondorError *errstack);
+
+	ClassAd * updateUserAds(
+		ClassAdList & user_ads,	 // ads must have ATTR_USER attribute at a minimum
+		CondorError *errstack);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This
@@ -406,6 +467,20 @@ private:
 						const char* reason_code, const char* reason_code_attr,
 						action_result_type_t result_type,
 						CondorError * errstack );
+
+	/*
+	* Create/Enable/Disable UserRec records in the schedd
+	* based on an existing session.
+	*/
+	ClassAd* actOnUsers (
+		int cmd, // ENABLE_USERREC or DISABLE_USERREC
+		const ClassAd* userads[], // either pass array of ad pointers
+		const char* usernames[], // or pass array of username pointers
+		int num_usernames,
+		bool create_if, // if true, treat ENABLE into as a CREATE
+		const char * reason,
+		CondorError *errstack,
+		int connect_timeout = 20);
 
 	void requestImpersonationTokenContinued(bool success, Sock *sock, CondorError *errstack,
 		const std::string &trust_domain, bool should_try_token_request, void *misc_data);

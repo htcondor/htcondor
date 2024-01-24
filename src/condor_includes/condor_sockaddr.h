@@ -28,6 +28,8 @@ enum condor_protocol { CP_PRIMARY, CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_
 std::string condor_protocol_to_str(condor_protocol p);
 condor_protocol str_to_condor_protocol( const std::string & str );
 
+bool matches_withnetwork(const std::string &pattern, const char* ip_address);
+
 class condor_sockaddr
 {
 	union {

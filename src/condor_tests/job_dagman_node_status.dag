@@ -1,44 +1,23 @@
-NODE_STATUS_FILE job_dagman_node_status.status 3 ALWAYS-UPDATE
+NODE_STATUS_FILE job_dagman_node_status.status 0 ALWAYS-UPDATE
+
+VARS ALL_NODES copystatus="0"
 
 Job A job_dagman_node_status.cmd
-Vars A nodename="$(JOB)" copystatus="1"
-Script Pre A job_dagman_node_status-script.pl
-Script Post A job_dagman_node_status-script.pl
+VARS A copystatus="1"
 
 Job B1 job_dagman_node_status.cmd
-Vars B1 nodename="$(JOB)" copystatus="0"
-
 Job B2 job_dagman_node_status.cmd
-Vars B2 nodename="$(JOB)" copystatus="0"
-
 Job B3 job_dagman_node_status.cmd
-Vars B3 nodename="$(JOB)" copystatus="0"
-
 Job B4 job_dagman_node_status.cmd
-Vars B4 nodename="$(JOB)" copystatus="0"
-
 Job B5 job_dagman_node_status.cmd
-Vars B5 nodename="$(JOB)" copystatus="0"
-
 Job B6 job_dagman_node_status.cmd
-Vars B6 nodename="$(JOB)" copystatus="0"
-
 Job B7 job_dagman_node_status.cmd
-Vars B7 nodename="$(JOB)" copystatus="0"
-
 Job B8 job_dagman_node_status.cmd
-Vars B8 nodename="$(JOB)" copystatus="0"
-
 Job B9 job_dagman_node_status.cmd
-Vars B9 nodename="$(JOB)" copystatus="0"
-
 Job B10 job_dagman_node_status.cmd
-Vars B10 nodename="$(JOB)" copystatus="0"
 
 Job C job_dagman_node_status.cmd
-Vars C nodename="$(JOB)" copystatus="1"
-Script Pre C job_dagman_node_status-script.pl
-Script Post C job_dagman_node_status-script.pl
+VARS C copystatus="1"
 
 Parent A Child B1 B2 B3 B4 B5 B6 B7 B8 B9 B10
 Parent B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 Child C

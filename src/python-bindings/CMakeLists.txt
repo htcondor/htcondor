@@ -247,6 +247,14 @@ else()
       add_definitions ( -DBOOST_NO_AUTO_PTR )
     endif()
 
+    # In clang 15 on macOS, support for std::unary_function is removed
+    # (since it's gone in C++17). The older boost versions don't
+    # detect this automatically, but setting _HAS_AUTO_PTR_ETC=0 will
+    # cause them to avoid using std::unary_function.
+    if (APPLE)
+      add_definitions ( -D_HAS_AUTO_PTR_ETC=0 )
+    endif()
+
     if (APPLE)
         # This is probably a sign that something else needs fixing.
         # Note that you can NOT set this to DARWIN, because CMake's parser
@@ -357,6 +365,8 @@ else()
           set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}" )
         elseif (${SYSTEM_NAME} MATCHES "Ubuntu.*18")
           set ( PYTHON3_BOOST_LIB "boost_python-py${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
+        elseif (${SYSTEM_NAME} MATCHES "openSUSE")
+          set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}" )
         else ()
           set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
         endif()
