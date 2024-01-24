@@ -974,7 +974,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	source.meta_off = -1;
 
 	ConfigIfStack ifstack;
-	StringList hereList;
+	std::string hereData;
 	std::string hereName;
 	std::string hereTag;
 
@@ -997,8 +997,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			const char * name = line;
 			if (name[0] == '@' && hereTag == name+1) {
 				/* expand self references only */
-				auto_free_ptr rhs(hereList.print_to_delimed_string("\n"));
-				auto_free_ptr value(expand_self_macro(rhs, hereName.c_str(), macro_set, ctx));
+				auto_free_ptr value(expand_self_macro(hereData.c_str(), hereName.c_str(), macro_set, ctx));
 				if (value.ptr() == NULL) {
 					return -1;
 				}
@@ -1006,10 +1005,13 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 
 				hereName.clear();
 				hereTag.clear();
-				hereList.clearAll();
+				hereData.clear();
 				continue;
 			}
-			hereList.append(line);
+			if (!hereData.empty()) {
+				hereData += '\n';
+			}
+			hereData += line;
 			continue;
 		}
 
@@ -1151,7 +1153,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			if (op == '@') {
 				hereName = name;
 				hereTag = rhs;
-				hereList.clearAll();
+				hereData.clear();
 				continue;
 			}
 
@@ -1404,7 +1406,7 @@ Parse_macros(
 	bool gl_opt_smart = (macro_set.options & CONFIG_OPT_SMART_COM_IN_CONT) ? true : false;
 	int opt_meta_colon = (macro_set.options & CONFIG_OPT_COLON_IS_META_ONLY) ? 1 : 0;
 	ConfigIfStack ifstack;
-	StringList    hereList; // used to accumulate @= multiline values
+	std::string   hereData; // used to accumulate @= multiline values
 	std::string      hereName;
 	std::string      hereTag;
 	MACRO_EVAL_CONTEXT defctx; defctx.init(NULL);
@@ -1450,8 +1452,7 @@ Parse_macros(
 		if ( ! hereName.empty()) {
 			if (name[0] == '@' && hereTag == name+1) {
 				/* expand self references only */
-				rhs = hereList.print_to_delimed_string("\n");
-				value = expand_self_macro(rhs, hereName.c_str(), macro_set, *pctx);
+				value = expand_self_macro(hereData.c_str(), hereName.c_str(), macro_set, *pctx);
 				if( value == NULL ) {
 					retval = -1;
 					name = NULL;
@@ -1459,14 +1460,16 @@ Parse_macros(
 				}
 				insert_macro(hereName.c_str(), value, macro_set, FileSource, *pctx);
 
-				free(rhs); rhs = NULL;
 				free(value); value = NULL;
 				hereName.clear();
 				hereTag.clear();
-				hereList.clearAll();
+				hereData.clear();
 				continue;
 			}
-			hereList.append(name);
+			if (!hereData.empty()) {
+				hereData += '\n';
+			}
+			hereData += name;
 			continue;
 		}
 
@@ -1815,7 +1818,7 @@ Parse_macros(
 			if (op == '@') {
 				hereName = name;
 				hereTag = rhs;
-				hereList.clearAll();
+				hereData.clear();
 				free(name); name = NULL;
 				continue;
 			}
