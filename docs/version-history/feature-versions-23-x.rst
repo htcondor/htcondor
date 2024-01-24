@@ -63,6 +63,21 @@ Bugs Fixed:
   :macro:`NEGOTIATOR_SLOT_CONSTRAINT` was completely ignored.
   :jira:`2245`
 
+Version 23.3.1
+--------------
+
+- HTCondor version 23.3.1 released on January 23, 2023.
+
+- HTCondor tarballs now contain `Pelican 7.4.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.4.0>`_
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 23.3.0
 --------------
 
