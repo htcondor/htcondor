@@ -46,6 +46,10 @@ Bugs Fixed:
   user when run as root.
   :jira:`2241`
 
+- Fixed a bug that caused a crash if a configuration file or submit
+  description file contained an empty multi-line value.
+  :jira:`2249`
+
 .. _lts-version-history-2304:
 
 Version 23.0.4
