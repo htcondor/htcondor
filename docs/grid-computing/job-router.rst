@@ -424,7 +424,9 @@ may appear in a Routing Table entry.
     undefined or older than some limit.
 
 :index:`UNIVERSE<single: UNIVERSE; Job Router Routing Table command>`
-    An universe name or integer value specifying the desired universe for the routed copy
+
+``UNIVERSE``
+    A universe name or integer value specifying the desired universe for the routed copy
     of the job. The default value is 9, which is the **grid** universe.
 
 :index:`SET <ATTR><single: SET <ATTR>; Job Router Routing Table command>`
