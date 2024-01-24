@@ -26,7 +26,7 @@ _set_subsystem( PyObject *, PyObject * args ) {
 	if( py_subsystem_type ) {
 		static PyObject * py_htcondor_module = NULL;
 		if( py_htcondor_module == NULL ) {
-			py_htcondor_module = PyImport_ImportModule( "htcondor2" );
+			py_htcondor_module = PyImport_ImportModule( HTCONDOR2_MODULE_NAME );
 		}
 
 		static PyObject * py_subsystemtype_class = NULL;
@@ -76,4 +76,28 @@ _reload_config( PyObject *, PyObject * ) {
 	config();
 
 	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_enable_debug( PyObject *, PyObject * ) {
+	dprintf_make_thread_safe();
+	dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_dprintf_dfulldebug( PyObject *, PyObject * args ) {
+    const char * str = NULL;
+
+	if(! PyArg_ParseTuple( args, "s", & str )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+    dprintf( D_FULLDEBUG, "%s", str );
+
+    Py_RETURN_NONE;
 }

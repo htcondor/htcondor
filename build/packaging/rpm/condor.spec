@@ -400,6 +400,7 @@ A collection of tests to verify that HTCondor is operating properly.
 Summary: Python bindings for HTCondor
 Group: Applications/System
 Requires: python >= 2.2
+Requires: python2-cryptography
 Requires: %name = %version-%release
 %{?python_provide:%python_provide python2-condor}
 %if 0%{?rhel} >= 7
@@ -432,6 +433,7 @@ Requires: boost-python3
 %endif
 %endif
 Requires: python3
+Requires: python3-cryptography
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
@@ -1411,6 +1413,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jan 23 2024 Tim Theisen <tim@cs.wisc.edu> - 23.3.1-1
+- HTCondor tarballs now contain Pelican 7.4.0
+
 * Thu Jan 04 2024 Tim Theisen <tim@cs.wisc.edu> - 23.3.0-1
 - Restore limited support for Enterprise Linux 7 systems
 - Additional assistance converting old syntax job routes to new syntax

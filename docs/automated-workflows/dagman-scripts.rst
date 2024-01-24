@@ -217,7 +217,7 @@ The special macros for all scripts:
 -  ``$DAG_STATUS`` is the status of the DAG. Note that this macro's
    value and definition is unrelated to the attribute named
    ``DagStatus`` as defined for use in a node status file. This macro's
-   value is the same as the job ClassAd attribute ``DAG_Status`` that is
+   value is the same as the job ClassAd attribute :ad-attr:`DAG_Status` that is
    defined within the :tool:`condor_dagman` job's ClassAd. This macro may
    have the following values:
 
@@ -236,7 +236,7 @@ Macros for POST Scripts only:
 
 -  ``$JOBID`` evaluates to a representation of
    the HTCondor job ID [ClusterId.ProcId] of the node job. For nodes
-   with multiple jobs in the same cluster, the ``ProcId`` value is the
+   with multiple jobs in the same cluster, the :ad-attr:`ProcId` value is the
    one of the last job within the cluster.
 -  ``$RETURN`` variable evaluates to the return
    value of the HTCondor job, if there is a single job within a cluster.

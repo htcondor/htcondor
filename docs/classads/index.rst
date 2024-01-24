@@ -15,7 +15,7 @@ tool.
 
 The third part describes how to format ClassAds for printing from command-line
 tools like `condor_q`, `condor_history`, and `condor_status`.  Advanced users
-may specify their own custom formats, or adminstrators may set custom defaults.
+may specify their own custom formats, or administrators may set custom defaults.
 
 .. note::
     A video which completely describes classads and their uses in HTCondor

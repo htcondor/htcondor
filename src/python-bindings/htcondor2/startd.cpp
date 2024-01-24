@@ -8,7 +8,7 @@ _startd_drain_jobs(PyObject *, PyObject * args) {
     const char * check = NULL;
     const char * start = NULL;
     const char * reason = NULL;
-    if(! PyArg_ParseTuple( args, "sllssz", & addr, & drain_type, & on_completion, & check, & start, & reason )) {
+    if(! PyArg_ParseTuple( args, "sllzzz", & addr, & drain_type, & on_completion, & check, & start, & reason )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }

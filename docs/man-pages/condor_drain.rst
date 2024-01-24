@@ -114,7 +114,7 @@ Options
     to use the machine again.
  **-request-id** *id*
     Specify a specific draining request to cancel, where *id* is given
-    by the ``DrainingRequestId`` machine ClassAd attribute.
+    by the :ad-attr:`DrainingRequestId` machine ClassAd attribute.
 
 Exit Status
 -----------

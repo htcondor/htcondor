@@ -957,12 +957,12 @@ JobInfoCommunicator::periodicJobUpdateTimerMaxInterval(void)
 void
 JobInfoCommunicator::periodicJobUpdateTimerHandler( int /* timerID */ )
 {
-	periodicJobUpdate(NULL, false);
+	periodicJobUpdate(NULL);
 }
 
 
 bool
-JobInfoCommunicator::periodicJobUpdate(ClassAd* update_ad, bool)
+JobInfoCommunicator::periodicJobUpdate(ClassAd* update_ad)
 {
 #if HAVE_JOB_HOOKS
 	if (m_hook_mgr) {

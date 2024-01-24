@@ -34,7 +34,7 @@ condor_status command with a direct query, such as
     RecentPipeMessages is the count of message in the last 20 minutes.
 
 :classad-attribute-def:`PipeRuntime`
-    This attribute respresents the total number of wall clock seconds
+    This attribute represents the total number of wall clock seconds
     this daemon has spent processing pipe message since start. The
     corresponding attribute RecentPipeRuntime is the total time in the
     last 20 minutes.

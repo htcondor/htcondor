@@ -130,7 +130,7 @@ will also be necessary. Note that attributes set with '+' are inserted
 directly into the job's ClassAd. Specify attributes as they must appear
 in the job's ClassAd, not the submit description file. For example, the
 :subcom:`universe[and grid universe]` is specified
-using an integer assigned for a job ClassAd ``JobUniverse``. Similarly,
+using an integer assigned for a job ClassAd :ad-attr:`JobUniverse`. Similarly,
 place quotation marks around string expressions. As an example, a submit
 description file would ordinarily contain
 
@@ -344,11 +344,11 @@ The following table summarizes how job ClassAd attributes will be translated int
 +-------------------+---------------------+
 | Job ClassAd       | Slurm               |
 +===================+=====================+
-| ``RequestMemory`` | ``--mem``           |
+| RequestMemory     | ``--mem``           |
 +-------------------+---------------------+
-| ``BatchRuntime``  | ``--time``          |
+| BatchRuntime      | ``--time``          |
 +-------------------+---------------------+
-| ``BatchProject``  | ``--account``       |
+| BatchProject      | ``--account``       |
 +-------------------+---------------------+
 | ``Queue``         | ``--partition``     |
 +-------------------+---------------------+

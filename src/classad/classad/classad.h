@@ -620,7 +620,12 @@ class ClassAd : public ExprTree
 		//@}
 
 		void rehash(size_t s) { attrList.rehash(s);}
-		iterator erase(iterator i) { return attrList.erase(i);}
+		iterator erase(iterator i) { 
+#ifndef USE_CLASSAD_FLAT_MAP
+			delete i->second;
+#endif
+			return attrList.erase(i);
+		}
 		/** Deconstructor to get the components of a classad
 		 * 	@param vec A vector of (name,expression) pairs which are the
 		 * 		attributes of the classad

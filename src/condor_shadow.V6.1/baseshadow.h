@@ -312,14 +312,6 @@ class BaseShadow : public Service
 		/// Used by static and global functions to access shadow object
 	static BaseShadow* myshadow_ptr;
 
-		/** Method to handle command from the starter to update info 
-			about the job.  Each kind of shadow needs to handle this
-			differently, since, for example, cpu usage is stored in
-			the remote resource object, and in mpi, we've got a whole
-			list of those, while in the unishadow, we've only got 1.
-		*/
-	virtual int updateFromStarter(int command, Stream *s) = 0;
-
 		/** Method to process an update from the starter with info 
 			about the job.  This is shared by both the daemoncore
 			command handler and the CONDOR_register_job_info RSC. 

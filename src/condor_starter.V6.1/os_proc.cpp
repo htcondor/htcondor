@@ -752,7 +752,7 @@ OsProc::JobReaper( int pid, int status )
 				// Update the schedd's copy of the job ad.
 				ClassAd updateAd( toe );
 				Starter->publishUpdateAd( & updateAd );
-				Starter->jic->periodicJobUpdate( & updateAd, true );
+				Starter->jic->periodicJobUpdate( & updateAd );
 			} else {
 				// If we didn't write a ToE, check to see if the startd did.
 				std::string jobAdFileName;
@@ -782,7 +782,7 @@ OsProc::JobReaper( int pid, int status )
 							// Update the schedd's copy of the job ad.
 							ClassAd updateAd( toe );
 							Starter->publishUpdateAd( & updateAd );
-							Starter->jic->periodicJobUpdate( & updateAd, true );
+							Starter->jic->periodicJobUpdate( & updateAd );
 						}
 					}
 				}

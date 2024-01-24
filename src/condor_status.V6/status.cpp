@@ -215,7 +215,7 @@ bool			naturalSort = true;
 const char *	dash_snapshot = 0; // for direct query, just return current state, do *not* recompute anything
 
 classad::References projList;
-StringList dashAttributes; // Attributes specifically requested via the -attributes argument
+classad::References dashAttributes; // Attributes specifically requested via the -attributes argument
 
 bool       dash_group_by; // the "group-by" command line arguments was specified.
 AdCluster<std::string> ad_groups; // does the actually grouping 
@@ -1413,12 +1413,8 @@ main (int argc, char *argv[])
 		mainPP.pm.clearFormats();
 
 		// but if -attributes was supplied, show only those attributes
-		if ( ! dashAttributes.isEmpty()) {
-			const char * s;
-			dashAttributes.rewind();
-			while ((s = dashAttributes.next())) {
-				projList.insert(s);
-			}
+		if ( ! dashAttributes.empty()) {
+			projList = dashAttributes;
 		}
 		mainPP.pmHeadFoot = HF_BARE;
 	}
@@ -1565,8 +1561,9 @@ main (int argc, char *argv[])
 	}
 
 	if (dash_group_by) {
-		if ( ! dashAttributes.isEmpty()) {
-			ad_groups.setSigAttrs(dashAttributes.print_to_string(), true, true);
+		if ( ! dashAttributes.empty()) {
+			std::string attrs = JoinAttrNames(dashAttributes, ",");
+			ad_groups.setSigAttrs(attrs.c_str(), true, true);
 		} else {
 			ad_groups.setSigAttrs("Cpus Memory GPUs IOHeavy START", false, true);
 		}
@@ -1822,8 +1819,8 @@ void doMergeOutput( struct _process_ads_info & ai ) {
 			pp.pm.display( line, it->second.rov );
 			fputs( line.c_str(), stdout );
 		} else {
-			StringList * whitelist = dashAttributes.isEmpty() ? NULL : & dashAttributes;
-			pp.prettyPrintAd( pps, it->second.ad, output_index, whitelist, print_attrs_in_hash_order );
+			classad::References * includelist = dashAttributes.empty() ? NULL : & dashAttributes;
+			pp.prettyPrintAd( pps, it->second.ad, output_index, includelist, print_attrs_in_hash_order );
 			if (it->second.ad) ++output_index;
 		}
 		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
@@ -1891,8 +1888,8 @@ doNormalOutput( struct _process_ads_info & ai, AdTypes & adType ) {
 			mainPP.pm.display(line, it->second.rov);
 			fputs(line.c_str(), stdout);
 		} else {
-			StringList * whitelist = dashAttributes.isEmpty() ? NULL : &dashAttributes;
-			mainPP.prettyPrintAd(pps, it->second.ad, output_index, whitelist, print_attrs_in_hash_order);
+			classad::References * includelist = dashAttributes.empty() ? NULL : &dashAttributes;
+			mainPP.prettyPrintAd(pps, it->second.ad, output_index, includelist, print_attrs_in_hash_order);
 			if (it->second.ad) ++output_index;
 		}
 		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
@@ -3109,10 +3106,9 @@ secondPass (int argc, char *argv[])
 
 		if (is_dash_arg_prefix (argv[i], "attributes", 2) ) {
 			// parse attributes to be selected and split them along ","
-			StringList more_attrs(argv[i+1],",");
-			for (const char * s = more_attrs.first(); s; s = more_attrs.next()) {
+			for (const auto& s: StringTokenIterator(argv[i+1], ",")) {
 				projList.insert(s);
-				dashAttributes.append(s);
+				dashAttributes.insert(s);
 			}
 
 			i++;

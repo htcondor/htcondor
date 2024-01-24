@@ -825,7 +825,7 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 	int newlyCommittedTime = (int)timersub_double(job_exit_time, job_start_time);
 	updateAd.Assign( ATTR_JOB_NEWLY_COMMITTED_TIME, newlyCommittedTime );
 
-	Starter->jic->periodicJobUpdate( & updateAd, false );
+	Starter->jic->periodicJobUpdate( & updateAd );
 }
 
 void VanillaProc::recordFinalUsage() {
@@ -900,7 +900,7 @@ VanillaProc::outOfMemoryEvent() {
 	// memory they used.
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
-	Starter->jic->periodicJobUpdate( &updateAd, true );
+	Starter->jic->periodicJobUpdate( &updateAd );
 	int64_t usageKB = 0;
 	// This is the peak
 	updateAd.LookupInteger(ATTR_IMAGE_SIZE, usageKB);

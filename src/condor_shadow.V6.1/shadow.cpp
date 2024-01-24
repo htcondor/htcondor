@@ -39,27 +39,7 @@ UniShadow::UniShadow() : delayedExitReason( -1 ) {
 
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
-	daemonCore->Cancel_Command( SHADOW_UPDATEINFO );
 	daemonCore->Cancel_Command( CREDD_GET_CRED );
-}
-
-
-int
-UniShadow::updateFromStarter(int /* command */, Stream *s)
-{
-	ClassAd update_ad;
-
-	// get info from the starter encapsulated in a ClassAd
-	s->decode();
-	if( ! getClassAd(s, update_ad) ) {
-		dprintf( D_ALWAYS, "ERROR in UniShadow::updateFromStarter:"
-				 "Can't read ClassAd, aborting.\n" );
-		return FALSE;
-	}
-	s->end_of_message();
-
-	fix_update_ad(update_ad);
-	return updateFromStarterClassAd(&update_ad);
 }
 
 
@@ -123,15 +103,6 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 	
 		// In this case we just pass the pointer along...
 	remRes->setJobAd( jobAd );
-	
-		// Register command which gets updates from the starter
-		// on the job's image size, cpu usage, etc.  Each kind of
-		// shadow implements it's own version of this to deal w/ it
-		// properly depending on parallel vs. serial jobs, etc. 
-	daemonCore->
-		Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO",
-						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
-						  "UniShadow::updateFromStarter", this, DAEMON );
 
 		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
 	daemonCore->

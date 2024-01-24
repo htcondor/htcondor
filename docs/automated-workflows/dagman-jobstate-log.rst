@@ -47,7 +47,7 @@ within each line are separated by a single space character.
         timestamp INTERNAL \*** DAGMAN_STARTED dagmanCondorID \***
 
     The *dagmanCondorID* field is the :tool:`condor_dagman` job's
-    ``ClusterId`` attribute, a period, and the ``ProcId`` attribute.
+    :ad-attr:`ClusterId` attribute, a period, and the :ad-attr:`ProcId` attribute.
 
 *   **DAGMan exit**: This line identifies the completion of the :tool:`condor_dagman`
     job. The formatting of the line is
@@ -96,8 +96,8 @@ within each line are separated by a single space character.
     The *eventName* is one of the many defined event or meta-events
     given in the lists below.
 
-    The *condorID* field is the job's ``ClusterId`` attribute, a period,
-    and the ``ProcId`` attribute. There is no *condorID* assigned yet
+    The *condorID* field is the job's :ad-attr:`ClusterId` attribute, a period,
+    and the :ad-attr:`ProcId` attribute. There is no *condorID* assigned yet
     for some meta-events, such as PRE_SCRIPT_STARTED. For these, the
     dash character ('-') is printed.
 

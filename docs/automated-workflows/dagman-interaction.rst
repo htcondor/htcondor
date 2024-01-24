@@ -56,7 +56,7 @@ submit description file is edited, use
 Since the :tool:`condor_dagman` process is an actual HTCondor job, the job
 Cluster Id produced for this DAGMan proper job is used to help mark
 all jobs ran by DAGMan. This is done by adding the job classad attribute 
-``DAGManJobId`` for all submitted jobs to the produced Job Id.
+:ad-attr:`DAGManJobId` for all submitted jobs to the produced Job Id.
 
 :index:`DAG monitoring<single: DAGMan; DAG monitoring>`
 

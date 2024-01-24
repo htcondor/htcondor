@@ -46,7 +46,7 @@ all attributes.
     notification that the job had been spawned to when the shadow received
     notification that the spawned process has exited.
 
-    Informally, this is the duration limited by ``AllowedExecuteDuration``.
+    Informally, this is the duration limited by :ad-attr:`AllowedExecuteDuration`.
 
     This attribute may not be used in startd policy expressions and is
     not computed until complete.
@@ -182,7 +182,7 @@ all attributes.
 :classad-attribute-def:`CommittedTime`
     The number of seconds of wall clock time that the job has been
     allocated a machine, excluding the time spent on run attempts that
-    were evicted. Like ``RemoteWallClockTime``,
+    were evicted. Like :ad-attr:`RemoteWallClockTime`,
     this includes time the job spent in a suspended state, so the total
     committed wall time spent running is
 
@@ -193,9 +193,9 @@ all attributes.
 :index:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute-def:`CommittedSlotTime`
-    This attribute is identical to ``CommittedTime`` except that the
-    time is multiplied by the ``SlotWeight`` of the machine(s) that ran
-    the job. This relies on ``SlotWeight`` being listed in
+    This attribute is identical to :ad-attr:`CommittedTime` except that the
+    time is multiplied by the :ad-attr:`SlotWeight` of the machine(s) that ran
+    the job. This relies on :ad-attr:`SlotWeight` being listed in
     :macro:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute-def:`CommittedSuspensionTime`
@@ -207,7 +207,7 @@ all attributes.
     The time when the job completed, or undefined if the job has not
     yet completed. Measured in the number of seconds since the epoch
     (00:00:00 UTC, Jan 1, 1970). Note that older versions of HTCondor
-    initialzed ``CompletionDate`` to the integer 0, so job ads from
+    initialized :ad-attr:`CompletionDate` to the integer 0, so job ads from
     older versions of HTCondor might have a 0 CompletionDate for
     jobs which haven't completed.
 
@@ -240,9 +240,9 @@ all attributes.
 :index:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute-def:`CumulativeSlotTime`
-    This attribute is identical to ``RemoteWallClockTime`` except that
-    the time is multiplied by the ``SlotWeight`` of the machine(s) that
-    ran the job. This relies on ``SlotWeight`` being listed in
+    This attribute is identical to :ad-attr:`RemoteWallClockTime` except that
+    the time is multiplied by the :ad-attr:`SlotWeight` of the machine(s) that
+    ran the job. This relies on :ad-attr:`SlotWeight` being listed in
     :macro:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute-def:`CumulativeSuspensionTime`
@@ -257,9 +257,9 @@ all attributes.
     The number of hosts in the claimed state, due to this job.
 
 :classad-attribute-def:`DAGManJobId`
-    For a DAGMan node job only, the ``ClusterId`` job ClassAd attribute
+    For a DAGMan node job only, the :ad-attr:`ClusterId` job ClassAd attribute
     of the :tool:`condor_dagman` job which is the parent of this node job.
-    For nested DAGs, this attribute holds only the ``ClusterId`` of the
+    For nested DAGs, this attribute holds only the :ad-attr:`ClusterId` of the
     job's immediate parent.
 
 :classad-attribute-def:`DAGParentNodeNames`
@@ -283,8 +283,8 @@ all attributes.
 :classad-attribute-def:`DAGManNodesMask`
     For a DAGMan node job only, a comma-separated list of the event
     codes that should be written to the log specified by
-    ``DAGManNodesLog``, known as the auxiliary log. All events not
-    specified in the ``DAGManNodesMask`` string are not written to the
+    :ad-attr:`DAGManNodesLog`, known as the auxiliary log. All events not
+    specified in the :ad-attr:`DAGManNodesMask` string are not written to the
     auxiliary event log. The value of this attribute is determined by
     DAGMan, and it is passed to the job via the :tool:`condor_submit` command
     line. By default, the following events are written to the auxiliary
@@ -304,9 +304,9 @@ all attributes.
     -  ``Post script terminated``, event code is 16
     -  ``Grid submit``, event code is 27
 
-    If ``DAGManNodesLog`` is not defined, it has no effect. The value of
-    ``DAGManNodesMask`` does not affect events recorded in the job event
-    log file referred to by ``UserLog``.
+    If :ad-attr:`DAGManNodesLog` is not defined, it has no effect. The value of
+    :ad-attr:`DAGManNodesMask` does not affect events recorded in the job event
+    log file referred to by :ad-attr:`UserLog`.
 
 :classad-attribute-def:`DAGManNodeRetry`
     For a DAGMan node job only, the current retry attempt number for the node
@@ -314,7 +314,7 @@ all attributes.
     :macro:`DAGMAN_NODE_RECORD_INFO` configuration option.
 
 :classad-attribute-def:`DeferralPrepTime`
-    An integer representing the number of seconds before the jobs ``DeferralTime``
+    An integer representing the number of seconds before the jobs :ad-attr:`DeferralTime`
     to which the job may be matched with a machine.
 
 :classad-attribute-def:`DeferralTime`
@@ -322,9 +322,9 @@ all attributes.
     attempt to begin executing the job.
 
 :classad-attribute-def:`DeferralWindow`
-    An integer representing the number of seconds after the jobs ``DeferralTime``
+    An integer representing the number of seconds after the jobs :ad-attr:`DeferralTime`
     to allow the job to arrive at the execute machine before automatically being
-    evicted due to missing its ``DeferralTime``.
+    evicted due to missing its :ad-attr:`DeferralTime`.
 
 :index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`
 
@@ -541,25 +541,25 @@ all attributes.
 :classad-attribute-def:`ExitBySignal`
     An attribute that is ``True`` when a user job exits via a signal and
     ``False`` otherwise. For some grid universe jobs, how the job exited
-    is unavailable. In this case, ``ExitBySignal`` is set to ``False``.
+    is unavailable. In this case, :ad-attr:`ExitBySignal` is set to ``False``.
 
 :classad-attribute-def:`ExitCode`
     When a user job exits by means other than a signal, this is the exit
     return code of the user job. For some grid universe jobs, how the
-    job exited is unavailable. In this case, ``ExitCode`` is set to 0.
+    job exited is unavailable. In this case, :ad-attr:`ExitCode` is set to 0.
 
 :classad-attribute-def:`ExitSignal`
     When a user job exits by means of an unhandled signal, this
     attribute takes on the numeric value of the signal. For some grid
     universe jobs, how the job exited is unavailable. In this case,
-    ``ExitSignal`` will be undefined.
+    :ad-attr:`ExitSignal` will be undefined.
 
 :classad-attribute-def:`ExitStatus`
     The way that HTCondor previously dealt with a job's exit status.
     This attribute should no longer be used. It is not always accurate
     in heterogeneous pools, or if the job exited with a signal. Instead,
-    see the attributes: ``ExitBySignal``, ``ExitCode``, and
-    ``ExitSignal``.
+    see the attributes: :ad-attr:`ExitBySignal`, :ad-attr:`ExitCode`, and
+    :ad-attr:`ExitSignal`.
     
 :classad-attribute-def:`GceAuthFile`
     Used for grid type gce jobs; a string taken from the definition of
@@ -613,19 +613,44 @@ all attributes.
 :classad-attribute-def:`GlobalJobId`
     A string intended to be a unique job identifier within a pool. It
     currently contains the *condor_schedd* daemon ``Name`` attribute, a
-    job identifier composed of attributes ``ClusterId`` and ``ProcId``
+    job identifier composed of attributes :ad-attr:`ClusterId` and :ad-attr:`ProcId`
     separated by a period, and the job's submission time in seconds
     since 1970-01-01 00:00:00 UTC, separated by # characters. The value
     submit.example.com#152.3#1358363336 is an example.  While HTCondor
-    guaratees this string will be globally unique, the contents are subject
+    guarantees this string will be globally unique, the contents are subject
     to change, and users should not parse out components of this string.
+
+:classad-attribute-def:`GPUsMaxCapability`
+    A floating point value indicating the maximum ``Capability`` value of a GPU
+    permitted by this job.  This attribute is referenced by the ``RequireGPUs``
+    job attribute in order to constrain which slots containing GPUs a job is matched to.
+    Set this attribute in a job by using the submit command :subcom:`gpus_maximum_capability`
+
+:classad-attribute-def:`GPUsMinCapability`
+    A floating point value indicating the minimum ``Capability`` value of a GPU
+    needed by this job.  This attribute is referenced by the ``RequireGPUs``
+    job attribute in order to constrain which slots containing GPUs a job is matched to.
+    Set this attribute in a job by using the submit command :subcom:`gpus_minimum_capability`
+
+:classad-attribute-def:`GPUsMinMemory`
+    A integer value in megabytes indicating the minimum ``GlobalMemoryMB`` amount a GPU
+    must have to run this job.  This attribute is referenced by the ``RequireGPUs``
+    job attribute in order to constrain which slots containing GPUs a job is matched to.
+    Set this attribute in a job by using the submit description file command :subcom:`gpus_minimum_memory`
+
+:classad-attribute-def:`GPUsMinRuntime`
+    A integer encoded version value which is compared to the ``MaxSupportedVersion`` value of a GPU
+    to determine if the runtime needed by the job is supported.  The value should be encoded as
+    MajorVersion*1000 + MinorVersion*10.  This attribute is referenced by the ``RequireGPUs``
+    job attribute in order to constrain which slots containing GPUs a job is matched to.
+    Set this attribute in a job by using the submit description file command :subcom:`gpus_minimum_runtime`
 
 :classad-attribute-def:`GridJobStatus`
     A string containing the job's status as reported by the remote job
     management system.
 
 :classad-attribute-def:`GridResource`
-    A string defined by the right hand side of the the submit
+    A string defined by the right hand side of the submit
     description file command
     :subcom:`grid_resource[and attribute GridResource]`.
     It specifies the target grid type, plus additional parameters
@@ -650,7 +675,7 @@ all attributes.
 :classad-attribute-def:`HoldReasonCode`
     An integer value that represents the reason that a job was put on
     hold.  The below table defines all possible values used by 
-    attributes ``HoldReasonCode``, ``NumHoldsByReason``, and ``HoldReasonSubCode``. 
+    attributes :ad-attr:`HoldReasonCode`, :ad-attr:`NumHoldsByReason`, and :ad-attr:`HoldReasonSubCode`. 
 
     +----------------------------------+-------------------------------------+--------------------------+
     | | Integer HoldReasonCode         | | Reason for Hold                   | | HoldReasonSubCode      |
@@ -818,7 +843,7 @@ all attributes.
     |                                  | Unexpected remote job               | 21                       |
     |                                  | status.                             |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 39                             | Adminstrator error in               |                          |
+    | | 39                             | Administrator error in              |                          |
     | | [EC2AdminError]                | the EC2 universe:                   |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     |                                  | EC2_GAHP not defined.               | 6                        |
@@ -899,8 +924,8 @@ all attributes.
 
 :classad-attribute-def:`HoldReasonSubCode`
     An integer value that represents further information to go along
-    with the ``HoldReasonCode``, for some values of ``HoldReasonCode``.
-    See ``HoldReasonCode`` for a table of possible values.
+    with the :ad-attr:`HoldReasonCode`, for some values of :ad-attr:`HoldReasonCode`.
+    See :ad-attr:`HoldReasonCode` for a table of possible values.
 
 :classad-attribute-def:`HookKeyword`
     A string that uniquely identifies a set of job hooks, and added to
@@ -910,14 +935,14 @@ all attributes.
     Maximum observed memory image size (i.e. virtual memory) of the job
     in KiB. The initial value is equal to the size of the executable for
     non-vm universe jobs, and 0 for vm universe jobs.
-    A vanilla universe job's ``ImageSize`` is recomputed
+    A vanilla universe job's :ad-attr:`ImageSize` is recomputed
     internally every 15 seconds. How quickly this updated information
     becomes visible to :tool:`condor_q` is controlled by
     :macro:`SHADOW_QUEUE_UPDATE_INTERVAL` and :macro:`STARTER_UPDATE_INTERVAL`.
 
     Under Linux, ``ProportionalSetSize`` is a better indicator of memory
     usage for jobs with significant sharing of memory between processes,
-    because ``ImageSize`` is simply the sum of virtual memory sizes
+    because :ad-attr:`ImageSize` is simply the sum of virtual memory sizes
     across all of the processes in the job, which may count the same
     memory pages more than once.
 
@@ -983,7 +1008,7 @@ all attributes.
 
 :classad-attribute-def:`JobDisconnectedDate`
     Time at which the *condor_shadow* and *condor_starter* become disconnected.
-    Set to ``Undefined`` when a succcessful reconnect occurs. Measured in the
+    Set to ``Undefined`` when a successful reconnect occurs. Measured in the
     number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 
 :classad-attribute-def:`JobLeaseDuration`
@@ -1022,9 +1047,9 @@ all attributes.
 
 :classad-attribute-def:`JobRunCount`
     This attribute is retained for backwards compatibility. It may go
-    away in the future. It is equivalent to ``NumShadowStarts`` for all
+    away in the future. It is equivalent to :ad-attr:`NumShadowStarts` for all
     universes except **scheduler**. For the **scheduler** universe, this
-    attribute is equivalent to ``NumJobStarts``.
+    attribute is equivalent to :ad-attr:`NumJobStarts`.
 
 :classad-attribute-def:`JobStartDate`
     Time at which the job first began running. Measured in the number of
@@ -1098,7 +1123,7 @@ all attributes.
 :index:`vm<pair: vm; universe>`
 
 
-``JobUniverse``
+:classad-attribute-def:`JobUniverse`
     Integer which indicates the job universe.
 
     +-------+-----------------+
@@ -1140,10 +1165,10 @@ all attributes.
     
 :classad-attribute-def:`KillSigTimeout`
     This attribute is replaced by the functionality in
-    ``JobMaxVacateTime`` as of HTCondor version 7.7.3. The number of
+    :ad-attr:`JobMaxVacateTime` as of HTCondor version 7.7.3. The number of
     seconds that the job requests the
     *condor_starter* wait after sending the signal defined as
-    ``KillSig`` and before forcibly removing the job. The actual amount
+    :ad-attr:`KillSig` and before forcibly removing the job. The actual amount
     of time will be the minimum of this value and the execute machine's
     configuration variable :macro:`KILLING_TIMEOUT`
 
@@ -1193,7 +1218,7 @@ all attributes.
 
 :classad-attribute-def:`MaxHosts`
     The maximum number of hosts that this job would like to claim. As
-    long as ``CurrentHosts`` is the same as ``MaxHosts``, no more hosts
+    long as :ad-attr:`CurrentHosts` is the same as :ad-attr:`MaxHosts`, no more hosts
     are negotiated for.
 
 :classad-attribute-def:`MaxJobRetirementTime`
@@ -1213,7 +1238,7 @@ all attributes.
     limit. If not set, the system setting :macro:`MAX_TRANSFER_INPUT_MB`
     is used. If the observed size
     of all input files at submit time is larger than the limit, the job
-    will be immediately placed on hold with a ``HoldReasonCode`` value
+    will be immediately placed on hold with a :ad-attr:`HoldReasonCode` value
     of 32. If the job passes this initial test, but the size of the
     input files increases or the limit decreases so that the limit is
     violated, the job will be placed on hold at the time when the file
@@ -1230,7 +1255,7 @@ all attributes.
     limit. If not set, the system setting :macro:`MAX_TRANSFER_OUTPUT_MB`
     is used. If the total size of
     the job's output files to be transferred is larger than the limit,
-    the job will be placed on hold with a ``HoldReasonCode`` value of
+    the job will be placed on hold with a :ad-attr:`HoldReasonCode` value of
     33. The output will be transferred up to the point when the limit is
     hit, so some files may be fully transferred, some partially, and
     some not at all.
@@ -1279,7 +1304,7 @@ all attributes.
     on  hold grouped by the reason the job went on hold.  It may be undefined until the job has been held
     at least once. Each attribute name in this classad is
     a NumHoldByReason label; see the table above under 
-    the documentation for job attribute ``HoldReasonCode`` for a table of possible values. Each attribute
+    the documentation for job attribute :ad-attr:`HoldReasonCode` for a table of possible values. Each attribute
     value is an integer stating how many times the job went on hold for that specific reason.  An example:
 
     .. code-block:: condor-classad
@@ -1382,14 +1407,14 @@ all attributes.
 :classad-attribute-def:`PostArgs`
     Defines the command-line arguments for the post command using the
     old argument syntax, as specified in :doc:`/man-pages/condor_submit`.
-    If both ``PostArgs`` and ``PostArguments`` exists, the former is ignored.
+    If both :ad-attr:`PostArgs` and :ad-attr:`PostArguments` exists, the former is ignored.
 
 :classad-attribute-def:`PostArguments`
     Defines the command-line arguments for the post command using the
     new argument syntax, as specified in
     :doc:`/man-pages/condor_submit`, excepting that
     double quotes must be escaped with a backslash instead of another
-    double quote. If both ``PostArgs`` and ``PostArguments`` exists, the
+    double quote. If both :ad-attr:`PostArgs` and :ad-attr:`PostArguments` exists, the
     former is ignored.
     
 :classad-attribute-def:`PostCmd`
@@ -1400,8 +1425,8 @@ all attributes.
     script command, this command is run on the execute machine; however,
     it is not run in the same environment as the
     :subcom:`executable[and attribute PostCmd]`.
-    Instead, its environment is set by ``PostEnv`` or
-    ``PostEnvironment``. Like the DAGMan POST script command, this
+    Instead, its environment is set by :ad-attr:`PostEnv` or
+    :ad-attr:`PostEnvironment`. Like the DAGMan POST script command, this
     command is not run in the same universe as the
     :subcom:`executable[and attribute PostCmd]`; in
     particular, this command is not run in a Docker container, nor in a
@@ -1425,44 +1450,44 @@ all attributes.
     and instead delete the job's execute directory in your post command.
 
 :classad-attribute-def:`PostCmdExitBySignal`
-    If ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` were set,
-    and the post command has run, this attribute will true if the the
+    If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
+    and the post command has run, this attribute will true if the
     post command exited on a signal and false if it did not. It is
     otherwise unset.
 
 :classad-attribute-def:`PostCmdExitCode`
-    If ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` were set,
+    If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
     the post command has run, and the post command did not exit on a
     signal, then this attribute will be set to the exit code. It is
     otherwise unset.
 
 :classad-attribute-def:`PostCmdExitSignal`
-    If ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` were set,
+    If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
     the post command has run, and the post command exited on a signal,
     then this attribute will be set to that signal. It is otherwise
     unset.
 
 :classad-attribute-def:`PostEnv`
     Defines the environment for the Postscript using the Old environment
-    syntax. If both ``PostEnv`` and ``PostEnvironment`` exist, the
+    syntax. If both :ad-attr:`PostEnv` and :ad-attr:`PostEnvironment` exist, the
     former is ignored.
 
 :classad-attribute-def:`PostEnvironment`
     Defines the environment for the Postscript using the New environment
-    syntax. If both ``PostEnv`` and ``PostEnvironment`` exist, the
+    syntax. If both :ad-attr:`PostEnv` and :ad-attr:`PostEnvironment` exist, the
     former is ignored.
 
 :classad-attribute-def:`PreArgs`
     Defines the command-line arguments for the pre command using the old
     argument syntax, as specified in :doc:`/man-pages/condor_submit`. If both
-    ``PreArgs`` and ``PreArguments`` exists, the former is ignored.
+    :ad-attr:`PreArgs` and :ad-attr:`PreArguments` exists, the former is ignored.
 
 :classad-attribute-def:`PreArguments`
     Defines the command-line arguments for the pre command using the new
     argument syntax, as specified in
     :doc:`/man-pages/condor_submit`, excepting that
     double quotes must be escape with a backslash instead of another
-    double quote. If both ``PreArgs`` and ``PreArguments`` exists, the
+    double quote. If both :ad-attr:`PreArgs` and :ad-attr:`PreArguments` exists, the
     former is ignored.
 
 :classad-attribute-def:`PreCmd`
@@ -1473,7 +1498,7 @@ all attributes.
     started. Unlike a DAGMan PRE script command, this command is run on
     the execute machine; however, it is not run in the same environment
     as the :subcom:`executable[and attribute PreCmd]`.
-    Instead, its environment is set by ``PreEnv`` or ``PreEnvironment``.
+    Instead, its environment is set by :ad-attr:`PreEnv` or :ad-attr:`PreEnvironment`.
     Like the DAGMan POST script command, this command is not run in the
     same universe as the
     :subcom:`executable[and attribute PreCmd]`; in
@@ -1488,68 +1513,68 @@ all attributes.
     list. 
     
 :classad-attribute-def:`PreCmdExitBySignal`
-    If ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` were set, and
-    the pre command has run, this attribute will true if the the pre
+    If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, and
+    the pre command has run, this attribute will true if the pre
     command exited on a signal and false if it did not. It is otherwise
     unset.
     
 :classad-attribute-def:`PreCmdExitCode`
-    If ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` were set, the
+    If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, the
     pre command has run, and the pre command did not exit on a signal,
     then this attribute will be set to the exit code. It is otherwise
     unset.
     
 :classad-attribute-def:`PreCmdExitSignal`
-    If ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` were set, the
+    If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, the
     pre command has run, and the pre command exited on a signal, then
     this attribute will be set to that signal. It is otherwise unset.
 
 :classad-attribute-def:`PreEnv`
     Defines the environment for the prescript using the Old environment
-    syntax. If both ``PreEnv`` and ``PreEnvironment`` exist, the former
+    syntax. If both :ad-attr:`PreEnv` and :ad-attr:`PreEnvironment` exist, the former
     is ignored.
     
 :classad-attribute-def:`PreEnvironment`
     Defines the environment for the prescript using the New environment
-    syntax. If both ``PreEnv`` and ``PreEnvironment`` exist, the former
+    syntax. If both :ad-attr:`PreEnv` and :ad-attr:`PreEnvironment` exist, the former
     is ignored.
 
 :classad-attribute-def:`PreJobPrio1`
     An integer value representing a user's priority to affect of choice
     of jobs to run. A larger value gives higher priority. When not
     explicitly set for a job, 0 is used for comparison purposes. This
-    attribute, when set, is considered first: before ``PreJobPrio2``,
-    before ``JobPrio``, before ``PostJobPrio1``, before
-    ``PostJobPrio2``, and before ``QDate``.
+    attribute, when set, is considered first: before :ad-attr:`PreJobPrio2`,
+    before :ad-attr:`JobPrio`, before :ad-attr:`PostJobPrio1`, before
+    :ad-attr:`PostJobPrio2`, and before :ad-attr:`QDate`.
 
 :classad-attribute-def:`PreJobPrio2`
     An integer value representing a user's priority to affect of choice
     of jobs to run. A larger value gives higher priority. When not
     explicitly set for a job, 0 is used for comparison purposes. This
-    attribute, when set, is considered after ``PreJobPrio1``, but before
-    ``JobPrio``, before ``PostJobPrio1``, before ``PostJobPrio2``, and
-    before ``QDate``.
+    attribute, when set, is considered after :ad-attr:`PreJobPrio1`, but before
+    :ad-attr:`JobPrio`, before :ad-attr:`PostJobPrio1`, before :ad-attr:`PostJobPrio2`, and
+    before :ad-attr:`QDate`.
 
 :classad-attribute-def:`PostJobPrio1`
     An integer value representing a user's priority to affect of choice
     of jobs to run. A larger value gives higher priority. When not
     explicitly set for a job, 0 is used for comparison purposes. This
-    attribute, when set, is considered after ``PreJobPrio1``, after
-    ``PreJobPrio1``, and after ``JobPrio``, but before ``PostJobPrio2``,
-    and before ``QDate``.
+    attribute, when set, is considered after :ad-attr:`PreJobPrio1`, after
+    :ad-attr:`PreJobPrio1`, and after :ad-attr:`JobPrio`, but before :ad-attr:`PostJobPrio2`,
+    and before :ad-attr:`QDate`.
 
 :classad-attribute-def:`PostJobPrio2`
     An integer value representing a user's priority to affect of choice
     of jobs to run. A larger value gives higher priority. When not
     explicitly set for a job, 0 is used for comparison purposes. This
-    attribute, when set, is considered after ``PreJobPrio1``, after
-    ``PreJobPrio1``, after ``JobPrio``, and after ``PostJobPrio1``, but
-    before ``QDate``.
+    attribute, when set, is considered after :ad-attr:`PreJobPrio1`, after
+    :ad-attr:`PreJobPrio1`, after :ad-attr:`JobPrio`, and after :ad-attr:`PostJobPrio1`, but
+    before :ad-attr:`QDate`.
 
 :classad-attribute-def:`PreserveRelativeExecutable`
     When ``True``, the *condor_starter* will not prepend ``Iwd`` to
-    ``Cmd``, when ``Cmd`` is a relative path name and
-    ``TransferExecutable`` is ``False``. The default value is ``False``.
+    :ad-attr:`Cmd`, when :ad-attr:`Cmd` is a relative path name and
+    :ad-attr:`TransferExecutable` is ``False``. The default value is ``False``.
     This attribute is primarily of interest for users of
     :macro:`USER_JOB_WRAPPER` for the purpose of allowing an executable's
     location to be resolved by the user's path in the job wrapper.
@@ -1561,8 +1586,8 @@ all attributes.
 
 :classad-attribute-def:`ProcId`
     Integer process identifier for this job. Within a cluster of many
-    jobs, each job has the same ``ClusterId``, but will have a unique
-    ``ProcId``. Within a cluster, assignment of a ``ProcId`` value will
+    jobs, each job has the same :ad-attr:`ClusterId`, but will have a unique
+    :ad-attr:`ProcId`. Within a cluster, assignment of a :ad-attr:`ProcId` value will
     start with the value 0. The job (process) identifier described here
     is unrelated to operating system PIDs.
 
@@ -1571,10 +1596,10 @@ all attributes.
     2.6.27, this is the maximum observed proportional set size (PSS) in
     KiB, summed across all processes in the job. If the execute machine
     does not support monitoring of PSS or PSS has not yet been measured,
-    this attribute will be undefined. PSS differs from ``ImageSize`` in
+    this attribute will be undefined. PSS differs from :ad-attr:`ImageSize` in
     how memory shared between processes is accounted. The PSS for one
     process is the sum of that process' memory pages divided by the
-    number of processes sharing each of the pages. ``ImageSize`` is the
+    number of processes sharing each of the pages. :ad-attr:`ImageSize` is the
     same, except there is no division by the number of processes sharing
     the pages.
 
@@ -1644,8 +1669,8 @@ all attributes.
         RemoteWallClockTime - CumulativeSuspensionTime
 
     Note that this number does not get reset to zero when a job is
-    forced to migrate from one machine to another. ``CommittedTime``, on
-    the other hand, is just like ``RemoteWallClockTime`` except it does
+    forced to migrate from one machine to another. :ad-attr:`CommittedTime`, on
+    the other hand, is just like :ad-attr:`RemoteWallClockTime` except it does
     get reset to 0 whenever the job is evicted.
 
 :classad-attribute-def:`LastRemoteWallClockTime`
@@ -1676,7 +1701,7 @@ all attributes.
     of GPUs that are needed in the created dynamic slot.
 
 :classad-attribute-def:`RequireGPUs`
-    Constraint on the properites of GPUs requested for this job. If dynamic
+    Constraint on the properties of GPUs requested for this job. If dynamic
     *condor_startd* provisioning is enabled, This constraint will be tested
     against the property attributes of the `AvailableGPUs` attribute of the
     partitionable slot when choosing which GPUs for the dynamic slot.
@@ -1700,10 +1725,10 @@ all attributes.
     A classad expression evaluated by the *condor_negotiator*,
     *condor_schedd*, and *condor_startd* in the context of slot ad.  If
     true, this job is eligible to run on that slot.  If the job
-    requirements does not mention the (startd) attribute ``OPSYS``,
+    requirements does not mention the (startd) attribute :ad-attr:`OpSys`,
     the schedd will append a clause to Requirements forcing the job to
-    match the same ``OPSYS`` as the access point. :index:`OPSYS`
-    The schedd appends a simliar clause to match the ``ARCH``. :index:`ARCH`
+    match the same :ad-attr:`OpSys` as the access point. :index:`OPSYS`
+    The schedd appends a similar clause to match the :ad-attr:`Arch`. :index:`ARCH`
     The schedd parameter :macro:`APPEND_REQUIREMENTS`, will, if set, append that
     value to every job's requirements expression.
     
@@ -1722,7 +1747,7 @@ all attributes.
     This is the current time, in Unix epoch seconds.
     It is added by the *condor_schedd* to the job ads that it sends in
     reply to a query (e.g. sent to :tool:`condor_q`).
-    Since it it not present in the job ad in the *condor_schedd*, it
+    Since it not present in the job ad in the *condor_schedd*, it
     should not be used in any expressions that will be evaluated by the
     *condor_schedd*.
 
@@ -1747,20 +1772,20 @@ all attributes.
 
 :classad-attribute-def:`StreamErr`
     An attribute utilized only for grid universe jobs. The default value
-    is ``True``. If ``True``, and ``TransferErr`` is ``True``, then
+    is ``True``. If ``True``, and :ad-attr:`TransferErr` is ``True``, then
     standard error is streamed back to the access point, instead of
     doing the transfer (as a whole) after the job completes. If
     ``False``, then standard error is transferred back to the submit
-    machine (as a whole) after the job completes. If ``TransferErr`` is
+    machine (as a whole) after the job completes. If :ad-attr:`TransferErr` is
     ``False``, then this job attribute is ignored.
 
 :classad-attribute-def:`StreamOut`
     An attribute utilized only for grid universe jobs. The default value
-    is ``True``. If ``True``, and ``TransferOut`` is ``True``, then job
+    is ``True``. If ``True``, and :ad-attr:`TransferOut` is ``True``, then job
     output is streamed back to the access point, instead of doing the
     transfer (as a whole) after the job completes. If ``False``, then
     job output is transferred back to the access point (as a whole)
-    after the job completes. If ``TransferOut`` is ``False``, then this
+    after the job completes. If :ad-attr:`TransferOut` is ``False``, then this
     job attribute is ignored.
 
 :index:`GROUP_AUTOREGROUP` 
@@ -1773,7 +1798,7 @@ all attributes.
 
 :classad-attribute-def:`SubmitterGlobalJobId`
     When HTCondor-C submits a job to a remote *condor_schedd*, it sets
-    this attribute in the remote job ad to match the ``GlobalJobId``
+    this attribute in the remote job ad to match the :ad-attr:`GlobalJobId`
     attribute of the original, local job.
 
 :classad-attribute-def:`SubmitterGroup`
@@ -1797,41 +1822,41 @@ all attributes.
     a successful self-checkpoint.
 
 :classad-attribute-def:`SuccessPreExitBySignal`
-    Specifies if a succesful pre command must exit with a signal.
+    Specifies if a successful pre command must exit with a signal.
 
 :classad-attribute-def:`SuccessPreExitCode`
     Specifies the code with which the pre command must exit to be
     considered successful. Pre commands which are not successful cause
-    the job to go on hold with ``ExitCode`` set to ``PreCmdExitCode``.
+    the job to go on hold with :ad-attr:`ExitCode` set to :ad-attr:`PreCmdExitCode`.
     The exit status of a pre command without one of
-    ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` defined is
+    :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` defined is
     ignored.
 
 :classad-attribute-def:`SuccessPreExitSignal`
     Specifies the signal on which the pre command must exit be
     considered successful. Pre commands which are not successful cause
-    the job to go on hold with ``ExitSignal`` set to
-    ``PreCmdExitSignal``. The exit status of a pre command without one
-    of ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` defined is
+    the job to go on hold with :ad-attr:`ExitSignal` set to
+    :ad-attr:`PreCmdExitSignal`. The exit status of a pre command without one
+    of :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` defined is
     ignored.
 
 :classad-attribute-def:`SuccessPostExitBySignal`
-    Specifies if a succesful post command must exit with a signal.
+    Specifies if a successful post command must exit with a signal.
 
 :classad-attribute-def:`SuccessPostExitCode`
     Specifies the code with which the post command must exit to be
     considered successful. Post commands which are not successful cause
-    the job to go on hold with ``ExitCode`` set to ``PostCmdExitCode``.
+    the job to go on hold with :ad-attr:`ExitCode` set to :ad-attr:`PostCmdExitCode`.
     The exit status of a post command without one of
-    ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` defined is
+    :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` defined is
     ignored.
 
 :classad-attribute-def:`SuccessPostExitSignal`
     Specifies the signal on which the post command must exit be
     considered successful. Post commands which are not successful cause
-    the job to go on hold with ``ExitSignal`` set to
-    ``PostCmdExitSignal``. The exit status of a post command without one
-    of ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` defined is
+    the job to go on hold with :ad-attr:`ExitSignal` set to
+    :ad-attr:`PostCmdExitSignal`. The exit status of a post command without one
+    of :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` defined is
     ignored.
 
 :classad-attribute-def:`ToE`
@@ -1849,7 +1874,7 @@ all attributes.
     access point's spool when the job successfully checkpoints.
 
 :classad-attribute-def:`TransferContainer`
-    A boolean expresion that controls whether the HTCondor should transfer the
+    A boolean expression that controls whether the HTCondor should transfer the
     container image from the submit node to the worker node.
 
 :classad-attribute-def:`TransferErr`
@@ -1866,9 +1891,9 @@ all attributes.
     is ``True``. If ``True``, then the job executable is transferred
     from the access point to the remote machine. The name of the file
     (on the access point) that is transferred is given by the job
-    attribute ``Cmd``. If ``False``, no transfer takes place, and the
+    attribute :ad-attr:`Cmd`. If ``False``, no transfer takes place, and the
     name of the file used (on the remote machine) will be as given in
-    the job attribute ``Cmd``.
+    the job attribute :ad-attr:`Cmd`.
 
 :classad-attribute-def:`TransferIn`
     An attribute utilized only for grid universe jobs. The default value
@@ -1885,7 +1910,7 @@ all attributes.
     input file transfer is enabled.
 
 :classad-attribute-def:`TransferInFinished`
-    When the job finished the most recent recent transfer of its input
+    When the job finished the most recent transfer of its input
     sandbox, measured in seconds from the epoch. (00:00:00 UTC Jan 1,
     1970). 
 
@@ -1897,7 +1922,7 @@ all attributes.
 :classad-attribute-def:`TransferInStarted`
     : When the job actually started to transfer files, the most recent
     time it transferred its input sandbox, measured in seconds from the
-    epoch. This will be later than ``TransferInQueued`` (if set).
+    epoch. This will be later than :ad-attr:`TransferInQueued` (if set).
     (00:00:00 UTC Jan 1, 1970).
 
 :classad-attribute-def:`TransferInputSizeMB`
@@ -1938,7 +1963,7 @@ all attributes.
     from the remote machine to the access point when output file transfer is enabled.
 
 :classad-attribute-def:`TransferOutFinished`
-    When the job finished the most recent recent transfer of its
+    When the job finished the most recent transfer of its
     output sandbox, measured in seconds from the epoch. (00:00:00 UTC
     Jan 1, 1970).
 
@@ -1949,13 +1974,13 @@ all attributes.
 
 :classad-attribute-def:`TransferOutputStats`
     The value of this classad attribute is a nested classad, whose values
-    mirror those for ```TransferInputStats```, but for the transfer
+    mirror those for `:ad-attr:`TransferInputStats``, but for the transfer
     from the EP worker node back to the AP submit point.
 
 :classad-attribute-def:`TransferOutStarted`
     When the job actually started to transfer files, the most recent
     time it transferred its output sandbox, measured in seconds from the
-    epoch. This will be later than ``TransferOutQueued`` (if set).
+    epoch. This will be later than :ad-attr:`TransferOutQueued` (if set).
     (00:00:00 UTC Jan 1, 1970).
 
 :classad-attribute-def:`TransferringInput`
@@ -1963,14 +1988,14 @@ all attributes.
     transferring input files. The value is ``Undefined`` if the job is
     not scheduled to run or has not yet attempted to start transferring
     input. When this value is ``True``, to see whether the transfer is
-    active or queued, check ``TransferQueued``.
+    active or queued, check :ad-attr:`TransferQueued`.
 
 :classad-attribute-def:`TransferringOutput`
     A boolean value that indicates whether the job is currently
     transferring output files. The value is ``Undefined`` if the job is
     not scheduled to run or has not yet attempted to start transferring
     output. When this value is ``True``, to see whether the transfer is
-    active or queued, check ``TransferQueued``.
+    active or queued, check :ad-attr:`TransferQueued`.
 
 :classad-attribute-def:`TransferPlugins`
     A string value containing a semicolon separated list of file transfer plugins
@@ -1983,7 +2008,7 @@ all attributes.
 
 :classad-attribute-def:`WantTransferPluginMethods`
     A string value containing a comma separated list of file transfer plugin URL prefixes
-    that are needed by the job but not supplied via the ``TransferPlugins`` attribute.
+    that are needed by the job but not supplied via the :ad-attr:`TransferPlugins` attribute.
     This attribute is intended to provide a convenient way to match against jobs that need
     a certain transfer plugin.
 
@@ -2008,8 +2033,8 @@ all attributes.
 
 :classad-attribute-def:`WantFTOnCheckpoint`
     A boolean that, when ``True``, specifies that when the ``executable``
-    exits as described by ``SuccessCheckpointExitCode``,
-    ``SuccessCheckpointExitBySignal``, and ``SuccessCheckpointExitSignal``,
+    exits as described by :ad-attr:`SuccessCheckpointExitCode`,
+    :ad-attr:`SuccessCheckpointExitBySignal`, and :ad-attr:`SuccessCheckpointExitSignal`,
     HTCondor should do (output) file transfer and immediately continue the
     job in the same sandbox by restarting ``executable`` with the same
     arguments as the first time.
@@ -2086,7 +2111,7 @@ all attributes.
 
 The following job ClassAd attributes appear in the job ClassAd only for
 declared cron jobs. These represent various allotted job start times that
-will be used to calculate the jobs ``DeferralTime``. These attributes can
+will be used to calculate the jobs :ad-attr:`DeferralTime`. These attributes can
 be represented as an integer, a list of integers, a range of integers, a
 step (intervals of a range), or an ``*`` for all allowed values. For more
 information visit :ref:`users-manual/time-scheduling-for-job-execution:cronTab scheduling`.
@@ -2213,7 +2238,7 @@ written to the job's execute directory while the job is running.
     The number of Cpus allocated to the job. With statically-allocated
     slots, it is the number of Cpus allocated to the slot. With
     dynamically-allocated slots, it is based upon the job attribute
-    ``RequestCpus``, but may be larger due to the minimum given to a
+    :ad-attr:`RequestCpus`, but may be larger due to the minimum given to a
     dynamic slot.
 
 :classad-attribute-def:`CpusUsage`
@@ -2229,14 +2254,14 @@ written to the job's execute directory while the job is running.
     The amount of disk space in KiB allocated to the job. With
     statically-allocated slots, it is the amount of disk space allocated
     to the slot. With dynamically-allocated slots, it is based upon the
-    job attribute ``RequestDisk``, but may be larger due to the minimum
+    job attribute :ad-attr:`RequestDisk`, but may be larger due to the minimum
     given to a dynamic slot.
 
 :classad-attribute-def:`MemoryProvisioned`
     The amount of memory in MiB allocated to the job. With
     statically-allocated slots, it is the amount of memory space
     allocated to the slot. With dynamically-allocated slots, it is based
-    upon the job attribute ``RequestMemory``, but may be larger due to
+    upon the job attribute :ad-attr:`RequestMemory`, but may be larger due to
     the minimum given to a dynamic slot.
 
 :classad-attribute-def:`<Name>Provisioned`

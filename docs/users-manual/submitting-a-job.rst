@@ -301,13 +301,13 @@ file.
     ``$(Cluster)`` or ``$(ClusterId)``. The first cluster of jobs are
     assigned to cluster 0, and the value is incremented by one for each
     new cluster of jobs. ``$(Cluster)`` or ``$(ClusterId)`` will have
-    the same value as the job ClassAd attribute ``ClusterId``.
+    the same value as the job ClassAd attribute :ad-attr:`ClusterId`.
 
 ``$(Process)`` or ``$(ProcId)``
     Within a cluster of jobs, each takes on its own unique
     ``$(Process)`` or ``$(ProcId)`` value. The first job has value 0.
     ``$(Process)`` or ``$(ProcId)`` will have the same value as the job
-    ClassAd attribute ``ProcId``.
+    ClassAd attribute :ad-attr:`ProcId`.
 
 ``$$(a_machine_classad_attribute)``
     When the machine is matched to this job for it to run on, any
@@ -909,7 +909,7 @@ performance (on Linpack benchmarks):
 
 This particular example highlights a difficulty with :subcom:`rank` expression
 evaluation as currently defined. While all machines have floating point
-processing ability, not all machines will have the ``kflops`` attribute
+processing ability, not all machines will have the :ad-attr:`KFlops` attribute
 defined. For machines where this attribute is not defined, :subcom:`rank` will
 evaluate to the value UNDEFINED, and HTCondor will use a default rank of
 the machine of 0.0. The :subcom:`rank` attribute will only rank machines where
@@ -921,13 +921,13 @@ expression's evaluation will lead to the expected resulting ranking of
 machines. This can be accomplished using the :tool:`condor_status` command
 with the *-constraint* argument. This allows the user to see a list of
 machines that fit a constraint. To see which machines in the pool have
-``kflops`` defined, use
+:ad-attr:`KFlops` defined, use
 
 .. code-block:: console
 
     $ condor_status -constraint kflops
 
-Alternatively, to see a list of machines where ``kflops`` is not
+Alternatively, to see a list of machines where :ad-attr:`KFlops` is not
 defined, use
 
 .. code-block:: console
@@ -986,7 +986,7 @@ cardinal.cs.wisc.edu, the file ``/u/p/s/psilord/data.txt`` must be
 available through either NFS or AFS for the job to run correctly.
 
 HTCondor allows users to ensure their jobs have access to the right
-shared files by using the ``FileSystemDomain`` and ``UidDomain`` machine
+shared files by using the :ad-attr:`FileSystemDomain` and :ad-attr:`UidDomain` machine
 ClassAd attributes. These attributes specify which machines have access
 to the same shared file systems. All machines that mount the same shared
 directories in the same locations are considered to belong to the same
@@ -999,25 +999,25 @@ UID domain and file system domain, using the full host name of the
 machine as the name of the domains. So, if a pool does have access to a
 shared file system, the pool administrator must correctly configure
 HTCondor such that all the machines mounting the same files have the
-same ``FileSystemDomain`` configuration. Similarly, all machines that
+same :ad-attr:`FileSystemDomain` configuration. Similarly, all machines that
 share common user information must be configured to have the same
-``UidDomain`` configuration.
+:ad-attr:`UidDomain` configuration.
 
 When a job relies on a shared file system, HTCondor uses the
 :subcom:`requirements` expression to ensure that the job runs on a machine in
-the correct ``UidDomain`` and ``FileSystemDomain``. In this case, the
+the correct :ad-attr:`UidDomain` and :ad-attr:`FileSystemDomain`. In this case, the
 default :subcom:`requirements` expression specifies that the job must run on a
-machine with the same ``UidDomain`` and ``FileSystemDomain`` as the
+machine with the same :ad-attr:`UidDomain` and :ad-attr:`FileSystemDomain` as the
 machine from which the job is submitted. This default is almost always
-correct. However, in a pool spanning multiple ``UidDomain``\ s and/or
-``FileSystemDomain``\ s, the user may need to specify a different
+correct. However, in a pool spanning multiple :ad-attr:`UidDomain`\ s and/or
+:ad-attr:`FileSystemDomain`\ s, the user may need to specify a different
 ``requirements`` expression to have the job run on the correct machines.
 
 For example, imagine a pool made up of both desktop workstations and a
 dedicated compute cluster. Most of the pool, including the compute
 cluster, has access to a shared file system, but some of the desktop
 machines do not. In this case, the administrators would probably define
-the ``FileSystemDomain`` to be ``cs.wisc.edu`` for all the machines that
+the :ad-attr:`FileSystemDomain` to be ``cs.wisc.edu`` for all the machines that
 mounted the shared files, and to the full host name for each machine
 that did not. An example is ``jimi.cs.wisc.edu``.
 
@@ -1037,7 +1037,7 @@ access to that shared data, so she specifies a different
                    TARGET.FileSystemDomain == "cs.wisc.edu"
 
 WARNING: If there is no shared file system, or the HTCondor pool
-administrator does not configure the ``FileSystemDomain`` setting
+administrator does not configure the :ad-attr:`FileSystemDomain` setting
 correctly (the default is that each machine in a pool is in its own file
 system and UID domain), a user submits a job that cannot use remote
 system calls (for example, a vanilla universe job), and the user does
@@ -1223,29 +1223,30 @@ the job. For example, a job that needs 1 GPU uses
 
 Because there are different capabilities among GPUs, your job might need
 to further qualify which GPU is required. The submit command
-:subcom:`require_gpus` does this.  For example, to request  a CUDA GPU whose
-CUDA Capability is at least 8, add the following to your submit file:
+:subcom:`require_gpus` does this, or in newer versions of HTCondor, there are
+special commands for some of the GPU properties like :subcom:`gpus_minimum_capability`
+and :subcom:`gpus_minimum_memory`.
+For example, to request a CUDA GPU whose CUDA Capability is at least 8, add one
+of the following to your submit file:
 
 .. code-block:: condor-submit
 
     request_GPUs = 1
     require_gpus = Capability >= 8.0
 
-To see which CUDA capabilities are available in your HTCondor pool,
-you can run the command
+.. code-block:: condor-submit
+
+    request_GPUs = 1
+    # works in HTCondor 23.5 or later
+    gpus_minimum_capability = 8.0
+    gpus_minimum_memory = 4GB
+
+To see a summary of the GPU devices HTCondor has detected on your pool,
+including the device names, Capability and Memory, run the following command.
 
 .. code-block:: console
 
-      $ condor_status -af Name GPUS_Capability
-
-
-To see which GPU devices HTCondor has detected on your pool,
-you can run the command
-
-.. code-block:: console
-
-      $ condor_status -af Name GPUS_DeviceName
-
+      $ condor_status -gpus -compact
 
 Access to GPU resources by an HTCondor job needs special configuration
 of the machines that offer GPUs. Details of how to set up the

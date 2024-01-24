@@ -38,10 +38,10 @@ for the machine where the job may run.
 
  CONDOR_ARCH
     Specifies the architecture of the required platform. Values will be
-    the same as the ``Arch`` machine ClassAd attribute.
+    the same as the :ad-attr:`Arch` machine ClassAd attribute.
  CONDOR_OPSYS
     Specifies the operating system of the required platform. Values will
-    be the same as the ``OpSys`` machine ClassAd attribute.
+    be the same as the :ad-attr:`OpSys` machine ClassAd attribute.
  CONDOR_REQUIREMENTS
     Specifies any additional requirements for the HTCondor job. It is
     recommended that the value defined for ``CONDOR_REQUIREMENTS`` be

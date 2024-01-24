@@ -52,7 +52,7 @@ experiment with or temporarily offer different software and
 configurations. For example, a pool may be configured with a maximum job
 runtime, perhaps to reduce the latency of fair-share adjustments or to
 protect against hung jobs. Adding cloud resources which permit
-longer-running jobs may be the least-disruptive way to accomodate a user
+longer-running jobs may be the least-disruptive way to accommodate a user
 whose jobs need more time.
 
 Use Case: Capacities

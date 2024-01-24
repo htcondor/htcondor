@@ -1073,14 +1073,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_CLAIM_ID_LIST "ClaimIdList"
 #define ATTR_CONSUMPTION_PREFIX "Consumption"
 
-// This is a record of the job exit status from a standard universe job exit
-// via waitpid. It is in the job ad to implement the terminate_pending
-// feature. It has to be here because of rampant global variable usage in the
-// standard universe shadow. It saved a tremendous amount of code to just
-// put this value in the job ad.
-#define ATTR_WAITPID_STATUS  "WaitpidStatus"
-#define ATTR_TERMINATION_REASON  "TerminationReason"
-
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
 #define MANAGED_EXTERNAL  "External"

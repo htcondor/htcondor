@@ -88,7 +88,7 @@ Options
     unevaluated, or raw values. The conversion specifier must match the
     type of the attribute or expression. %s is suitable for strings such
     as ``Name``, %d for integers such as ``LastHeardFrom``, and %f for
-    floating point numbers such as ``LoadAvg``. %v identifies the type
+    floating point numbers such as :ad-attr:`LoadAvg`. %v identifies the type
     of the attribute, and then prints the value in an appropriate
     format. %V identifies the type of the attribute, and then prints the
     value in an appropriate format as it would appear in the **-long**

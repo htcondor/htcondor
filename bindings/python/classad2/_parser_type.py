@@ -23,7 +23,7 @@ class ParserType(enum.IntEnum):
 
     .. attribute:: New
 
-        Assume that the input is a sequence of ClassAds serialzied in
+        Assume that the input is a sequence of ClassAds serialized in
         the "new" format.
     """
 

@@ -46,11 +46,15 @@ bool ClassAdAttributeIsPrivateAny( const std::string &name );
 
 typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
 
+classad::References SplitAttrNames(const std::string& str);
+classad::References SplitAttrNames(const char* str);
+std::string JoinAttrNames(const classad::References &names, const char* delim);
+
 	/** Print the ClassAd as an old ClassAd to the FILE
 		@param file The file handle to print to.
 		@return true
 	*/
-bool	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = true, StringList *attr_white_list = nullptr, const classad::References *excludeList = nullptr);
+bool	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = true, const classad::References *attr_white_list = nullptr, const classad::References *excludeList = nullptr);
 
 	/** Print the ClassAd as an old ClasAd with dprintf
 		@param level The dprintf level.
@@ -61,8 +65,8 @@ void dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private = tru
 		@param output The std::string to write into
 		@return true
 	*/
-bool sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr);
-bool sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, StringList *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr );
+bool sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr);
+bool sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, const classad::References *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr );
 
 	/** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
 		This version if the classad function prints the attributes in sorted order and allows for an optional
@@ -70,13 +74,13 @@ bool sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, Stri
 		@param output The std::string to write into
 		@return std::string.c_str()
 	*/
-const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent = NULL, StringList *attr_white_list = NULL, bool exclude_private = true);
+const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent = NULL, const classad::References *attr_include_list = NULL, bool exclude_private = true);
 
 	/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
 		@param attrs the set of attrs to insert into. This is set is NOT cleared first.
 		@return true
 	*/
-bool sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private = true, StringList *attr_white_list = NULL, bool ignore_parent = false );
+bool sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private = true, const classad::References *attr_include_list = NULL, bool ignore_parent = false );
 
 	/** Format the given attributes from the ClassAd as an old ClassAd into the given string
 		@param output The std::string to write into
@@ -299,8 +303,8 @@ public:
 	CondorClassAdFileParseHelper::ParseType autoSetFormat(CondorClassAdFileParseHelper & parse_help);
 
 	// these return < 0 on failure, 0 if nothing written, 1 if non-empty ad is written.
-	int writeAd(const ClassAd & ad, FILE * out, StringList * whitelist=NULL, bool hash_order=false);
-	int appendAd(const ClassAd & ad, std::string & buf, StringList * whitelist=NULL, bool hash_order=false);
+	int writeAd(const ClassAd & ad, FILE * out, const classad::References * includelist=NULL, bool hash_order=false);
+	int appendAd(const ClassAd & ad, std::string & buf, const classad::References * includelist=NULL, bool hash_order=false);
 	// write the footer if one is needed.
 	int writeFooter(FILE* out, bool xml_always_write_header_footer=true);
 	int appendFooter(std::string & buf, bool xml_always_write_header_footer=true);
@@ -343,7 +347,7 @@ bool IsValidAttrName(const char *name);
  * @returntrue as long as the file existed.
  */
 bool fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad,
-				  StringList *attr_white_list = NULL);
+                   const classad::References *attr_white_list = NULL);
 
 /* Prints the classad as XML to a string. fPrintAdAsXML calls this.
  * @param output The string to have filled with the XML-ified classad.
@@ -353,7 +357,7 @@ bool fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad,
  * @returntrue
  */
 bool sPrintAdAsXML(std::string &output, const classad::ClassAd &ad,
-				  StringList *attr_white_list = NULL);
+                   const classad::References *attr_white_list = NULL);
 
 /* Prints out the classad as json to a file.
  * @param fp The file to be printed to.
@@ -363,8 +367,8 @@ bool sPrintAdAsXML(std::string &output, const classad::ClassAd &ad,
  * @returntrue as long as the file existed.
  */
 bool fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad,
-				   StringList *attr_white_list = NULL,
-				   bool oneline = false);
+                    const classad::References *attr_white_list = NULL,
+                    bool oneline = false);
 
 /* Prints the classad as JSON to a string. fPrintAdAsJson calls this.
  * @param output The string to have filled with the JSON-ified classad.
@@ -375,8 +379,8 @@ bool fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad,
  * @returntrue
  */
 bool sPrintAdAsJson(std::string &output, const classad::ClassAd &ad,
-				   StringList *attr_white_list = NULL,
-				   bool oneline = false);
+                    const classad::References *attr_white_list = NULL,
+                    bool oneline = false);
 
 /** Given an attribute name, return a buffer containing the name
  *  and it's unevaluated value, like so:

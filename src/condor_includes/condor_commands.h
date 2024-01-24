@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 198> makeCommandTable() {
+std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -622,8 +622,8 @@ std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 *** Commands used by the daemon core Shadow
 */
 #define DCSHADOW_BASE 71000
-#define SHADOW_UPDATEINFO	   (DCSHADOW_BASE+0)
-		{SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO"},
+//#define SHADOW_UPDATEINFO	   (DCSHADOW_BASE+0)
+//		{SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO"},
 //#define TAKE_MATCH             (DCSHADOW_BASE+1)  // for MPI & parallel shadow, Not used
 #define MPI_START_COMRADE      (DCSHADOW_BASE+2)  // for MPI & parallel shadow
 		{MPI_START_COMRADE, "MPI_START_COMRADE"},

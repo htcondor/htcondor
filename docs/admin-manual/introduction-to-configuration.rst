@@ -1064,9 +1064,9 @@ determined automatically at run time but which can be overwritten.
     this attribute so that users can submit binaries compiled for a
     given platform and force them to run on the correct machines.
     :tool:`condor_submit` will append a requirement to the job ClassAd that
-    it must run on the same ``ARCH`` and ``OPSYS`` of the machine where
-    it was submitted, unless the user specifies ``ARCH`` and/or
-    ``OPSYS`` explicitly in their submit file. See the :tool:`condor_submit`
+    it must run on the same :ad-attr:`Arch` and :ad-attr:`OpSys` of the machine where
+    it was submitted, unless the user specifies :ad-attr:`Arch` and/or
+    :ad-attr:`OpSys` explicitly in their submit file. See the :tool:`condor_submit`
     manual page (doc:`/man-pages/condor_submit`) for details.
 
 ``$(OPSYS)`` :index:`OPSYS`
@@ -1085,11 +1085,11 @@ determined automatically at run time but which can be overwritten.
 
 ``$(UNAME_ARCH)`` :index:`UNAME_ARCH`
     The architecture as reported by *uname* (2)'s ``machine`` field.
-    Always the same as ``ARCH`` on Windows.
+    Always the same as :ad-attr:`Arch` on Windows.
 
 ``$(UNAME_OPSYS)`` :index:`UNAME_OPSYS`
     The operating system as reported by *uname* (2)'s ``sysname``
-    field. Always the same as ``OPSYS`` on Windows.
+    field. Always the same as :ad-attr:`OpSys` on Windows.
 
 ``$(DETECTED_MEMORY)`` :index:`DETECTED_MEMORY`
     The amount of detected physical memory (RAM) in MiB.
@@ -1449,8 +1449,8 @@ incorporates.
        exceed the number of cores in the slot by more than 0.8 on
        average over the past minute, immediately place the job on hold
        ignoring any job retirement time. The job will go on hold with a
-       reasonable hold reason in job attribute ``HoldReason`` and a
-       value of 101 in job attribute ``HoldReasonCode``. The hold reason
+       reasonable hold reason in job attribute :ad-attr:`HoldReason` and a
+       value of 101 in job attribute :ad-attr:`HoldReasonCode`. The hold reason
        and code can be customized by specifying
        ``HOLD_REASON_CPU_EXCEEDED`` and ``HOLD_SUBCODE_CPU_EXCEEDED``
        respectively.
@@ -1466,8 +1466,8 @@ incorporates.
        If the startd observes the amount of disk space used by the job
        exceed the disk in the slot, immediately place the job on hold
        ignoring any job retirement time. The job will go on hold with a
-       reasonable hold reason in job attribute ``HoldReason`` and a
-       value of 104 in job attribute ``HoldReasonCode``. The hold reason
+       reasonable hold reason in job attribute :ad-attr:`HoldReason` and a
+       value of 104 in job attribute :ad-attr:`HoldReasonCode`. The hold reason
        and code can be customized by specifying
        ``HOLD_REASON_DISK_EXCEEDED`` and ``HOLD_SUBCODE_DISK_EXCEEDED``
        respectively.
@@ -1483,8 +1483,8 @@ incorporates.
        If the startd observes the memory usage of the job exceed the
        memory provisioned in the slot, immediately place the job on hold
        ignoring any job retirement time. The job will go on hold with a
-       reasonable hold reason in job attribute ``HoldReason`` and a
-       value of 102 in job attribute ``HoldReasonCode``. The hold reason
+       reasonable hold reason in job attribute :ad-attr:`HoldReason` and a
+       value of 102 in job attribute :ad-attr:`HoldReasonCode`. The hold reason
        and code can be customized by specifying
        ``HOLD_REASON_MEMORY_EXCEEDED`` and
        ``HOLD_SUBCODE_MEMORY_EXCEEDED`` respectively.
@@ -1512,7 +1512,7 @@ incorporates.
     -  ``Startd_Publish_CpusUsage``
 
        Publish the number of CPU cores being used by the job into the
-       slot ad as attribute ``CpusUsage``. This value will be the
+       slot ad as attribute :ad-attr:`CpusUsage`. This value will be the
        average number of cores used by the job over the past minute,
        sampling every 5 seconds.
 

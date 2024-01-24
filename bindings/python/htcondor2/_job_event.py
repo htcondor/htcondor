@@ -9,7 +9,22 @@ from ._common_imports import (
 from ._job_event_type import JobEventType
 
 class JobEvent(Mapping):
+    """
+    A single event from a job event log.
 
+    A :class:`JobEvent` is a :class:`Mapping` of event properties
+    to event values; the type of the value depends on the property.
+    The names of the properties and their types are currently
+    undocumented.
+
+    Because all events have the ``type``, ``cluster``, ``proc``,
+    and ``timestamp`` properties, these are available as attributes;
+    see below.
+    """
+
+    # It would be nice if this signature didn't appear in the docs,
+    # since instantiating these objects shouldn't be in the API.
+    # ... there's probably a standard Pythonic way ot indicating that.
     def __init__(self, data : classad.ClassAd, event_text : str):
         self._data = data
         self._event_text = event_text
@@ -17,16 +32,26 @@ class JobEvent(Mapping):
 
     @property
     def type(self) -> JobEventType:
+        """
+        The type of the event.
+        """
         return JobEventType(self._data["EventTypeNumber"])
 
 
     @property
     def cluster(self) -> int:
+        """
+        The cluster ID of the job to which the event happened.
+        """
         return self._data["cluster"]
 
 
     @property
     def proc(self) -> int:
+        """
+        The process ID of the job to which the event happened.  Returns
+        ``-1`` if no process ID was recorded for the event.
+        """
         # The event ClassAd doesn't contain a Proc attribute if the original
         # event's ProcID was less than 0.  ULogEvent's default
         # ("invalid") procID is -1, so we'll just assume that's good for now.

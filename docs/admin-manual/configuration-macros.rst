@@ -243,7 +243,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     one job from filling up the same disk that other jobs are trying to
     write to. If this parameter is undefined for a given batch slot, it
     will use :macro:`EXECUTE` as the default. Note that each slot will
-    advertise ``TotalDisk`` and ``Disk`` for the partition containing
+    advertise :ad-attr:`TotalDisk` and :ad-attr:`Disk` for the partition containing
     its execute directory.
 
 :macro-def:`LOCAL_CONFIG_FILE[Global]`
@@ -841,7 +841,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     that is older than this number of seconds is dropped from the
     statistic. For example, if ``STATISTICS_WINDOW_SECONDS = 300``, then
     any jobs submitted more than 300 seconds ago are not counted in the
-    windowed statistic ``RecentJobsSubmitted``. Defaults to 1200
+    windowed statistic :ad-attr:`RecentJobsSubmitted`. Defaults to 1200
     seconds, which is 20 minutes.
 
     The window is broken into smaller time pieces called quantum. The
@@ -1259,7 +1259,7 @@ subsystem corresponding to the daemon.
     ``D_ALWAYS:1``, unless ``D_ALWAYS:0`` is added to this list.  Category and option names are:
 
     ``D_ANY``
-        This flag turns on all cagetories of messages Be
+        This flag turns on all categories of messages Be
         warned: this will generate about a HUGE amount of output. To
         obtain a higher level of output than the default, consider using
         ``D_FULLDEBUG`` before using this option.
@@ -1596,13 +1596,13 @@ a file that receives job events, but across all users and user's jobs.
     Number 028. This new event is placed in the event log in addition to
     each logged event. If :macro:`EVENT_LOG` is not defined, this
     configuration variable has no effect. This configuration variable is
-    the same as the job ClassAd attribute ``JobAdInformationAttrs`` (see
+    the same as the job ClassAd attribute :ad-attr:`JobAdInformationAttrs` (see
     :doc:`/classad-attributes/job-classad-attributes`), but it
     applies to the system Event Log rather than the user job log.
 
 :macro-def:`DEFAULT_USERLOG_FORMAT_OPTIONS[Global]`
     A list of case-insensitive keywords that control formatting of the events
-    and of timestamps for the log specified by a job's ``UserLog`` or ``DAGManNodesLog``
+    and of timestamps for the log specified by a job's :ad-attr:`UserLog` or :ad-attr:`DAGManNodesLog`
     attributes. see :macro:`EVENT_LOG_FORMAT_OPTIONS` above for the permitted options.
 
 DaemonCore Configuration File Entries
@@ -1954,7 +1954,7 @@ More information about networking in HTCondor can be found in
     value 0 disables the heartbeat. The heartbeat is automatically
     disabled if the CCB server is older than HTCondor version 7.5.0.
     Having the heartbeat interval greater than the job ClassAd attribute
-    ``JobLeaseDuration`` may cause unnecessary job disconnects in pools
+    :ad-attr:`JobLeaseDuration` may cause unnecessary job disconnects in pools
     with network issues.
 
 :macro-def:`CCB_POLLING_INTERVAL[Network]`
@@ -2423,7 +2423,7 @@ using a shared file system`.
     *condor_starter* daemon's boolean value. Under Unix, if the job
     does not specify it, this attribute defaults to ``True``. Under
     Windows, the attribute defaults to ``False``. In Unix, if the
-    ``UidDomain`` of the machine and job do not match, then there is no
+    :ad-attr:`UidDomain` of the machine and job do not match, then there is no
     possibility to run the job as the owner anyway, so, in that case,
     this setting has no effect. See
     :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
@@ -3030,7 +3030,7 @@ section.
     :subcom:`periodic_release[and WANT_HOLD]`
     and/or :subcom:`periodic_remove[and WANT_HOLD]`
     expressions to react to specific hold states automatically. The
-    attribute ``HoldReasonCode`` in the job ClassAd is set to the value
+    attribute :ad-attr:`HoldReasonCode` in the job ClassAd is set to the value
     21 when :macro:`WANT_HOLD` is responsible for putting the job on hold.
 
     Here is an example policy that puts jobs on hold that use too much
@@ -3050,16 +3050,16 @@ section.
 
 :macro-def:`WANT_HOLD_REASON[STARTD]`
     An expression that defines a string utilized to set the job ClassAd
-    attribute ``HoldReason`` when a job is put on hold due to
+    attribute :ad-attr:`HoldReason` when a job is put on hold due to
     :macro:`WANT_HOLD`. If not defined or if the expression evaluates to
     ``Undefined``, a default hold reason is provided.
 
 :macro-def:`WANT_HOLD_SUBCODE[STARTD]`
     An expression that defines an integer value utilized to set the job
-    ClassAd attribute ``HoldReasonSubCode`` when a job is put on hold
+    ClassAd attribute :ad-attr:`HoldReasonSubCode` when a job is put on hold
     due to :macro:`WANT_HOLD`. If not defined or if the expression evaluates
     to ``Undefined``, the value is set to 0. Note that
-    ``HoldReasonCode`` is always set to 21.
+    :ad-attr:`HoldReasonCode` is always set to 21.
 
 :macro-def:`CONTINUE[STARTD]`
     A boolean expression that, when ``True``, causes HTCondor to
@@ -3090,18 +3090,18 @@ section.
     *condor_startd* to advertise ClassAd attributes that may be used in
     partitionable slot preemption. The attributes are
 
-    -  ``ChildAccountingGroup``
-    -  ``ChildActivity``
+    -  :ad-attr:`ChildAccountingGroup`
+    -  :ad-attr:`ChildActivity`
     -  ``ChildCPUs``
-    -  ``ChildCurrentRank``
-    -  ``ChildEnteredCurrentState``
-    -  ``ChildMemory``
-    -  ``ChildName``
-    -  ``ChildRemoteOwner``
-    -  ``ChildRemoteUser``
-    -  ``ChildRetirementTimeRemaining``
-    -  ``ChildState``
-    -  ``PslotRollupInformation``
+    -  :ad-attr:`ChildCurrentRank`
+    -  :ad-attr:`ChildEnteredCurrentState`
+    -  :ad-attr:`ChildMemory`
+    -  :ad-attr:`ChildName`
+    -  :ad-attr:`ChildRemoteOwner`
+    -  :ad-attr:`ChildRemoteUser`
+    -  :ad-attr:`ChildRetirementTimeRemaining`
+    -  :ad-attr:`ChildState`
+    -  :ad-attr:`PslotRollupInformation`
 
 :macro-def:`STARTD_PARTITIONABLE_SLOT_ATTRS[STARTD]`
     A list of additional from the above default attributes from dynamic
@@ -3125,9 +3125,9 @@ section.
 
 :macro-def:`IS_OWNER[STARTD]`
     A boolean expression that determines when a machine ad should enter
-    the ``Owner`` state. While in the ``Owner`` state, the machine ad
+    the :ad-attr:`Owner` state. While in the :ad-attr:`Owner` state, the machine ad
     will not be matched to any jobs. The default value is ``False``
-    (never enter ``Owner`` state). Job ClassAd attributes should not be
+    (never enter :ad-attr:`Owner` state). Job ClassAd attributes should not be
     used in defining :macro:`IS_OWNER`, as they would be ``Undefined``.
 
 :macro-def:`STARTD_HISTORY[STARTD]`
@@ -3199,13 +3199,13 @@ section.
     is willing to wait for a job that has been soft-killed to gracefully
     shut down. The default value is 600 seconds (10 minutes). This
     expression is evaluated when the job starts running. The job may
-    adjust the wait time by setting ``JobMaxVacateTime``. If the job's
+    adjust the wait time by setting :ad-attr:`JobMaxVacateTime`. If the job's
     setting is less than the machine's, the job's specification is used.
     If the job's setting is larger than the machine's, the result
     depends on whether the job has any excess retirement time. If the
     job has more retirement time left than the machine's maximum vacate
     time setting, then retirement time will be converted into vacating
-    time, up to the amount of ``JobMaxVacateTime``. The :macro:`KILL`
+    time, up to the amount of :ad-attr:`JobMaxVacateTime`. The :macro:`KILL`
     expression may be used to abort the graceful shutdown of the job
     at any time. At the time when the job is preempted, the
     :macro:`WANT_VACATE` expression may be used to skip the graceful
@@ -3282,7 +3282,7 @@ section.
 :macro-def:`CONSOLE_DEVICES[STARTD]`
     This macro allows the *condor_startd* to monitor console (keyboard
     and mouse) activity by checking the access times on special files in
-    ``/dev``. Activity on these files shows up as ``ConsoleIdle`` time
+    ``/dev``. Activity on these files shows up as :ad-attr:`ConsoleIdle` time
     in the *condor_startd* 's ClassAd. Give a comma-separated list of
     the names of devices considered the console, without the ``/dev/``
     portion of the path name. The defaults vary from platform to
@@ -3396,7 +3396,7 @@ section.
     :macro:`STARTD_SHOULD_WRITE_CLAIM_ID_FILE` is true. By default, HTCondor
     will write the ClaimId into a file in the
     ``$(LOG)``\ :index:`LOG` directory called
-    ``.startd_claim_id.slotX``, where X is the value of ``SlotID``, the
+    ``.startd_claim_id.slotX``, where X is the value of :ad-attr:`SlotID`, the
     integer that identifies a given slot on the system, or 1 on a
     single-slot machine. If you define your own value for this setting,
     you should provide a full path, and HTCondor will automatically
@@ -3870,7 +3870,7 @@ needs.
     A boolean variable that defaults to ``False``.
     When set to ``True`` in the configuration of both the
     *condor_startd* and the *condor_schedd*, and the *condor_schedd*
-    claims a partitionable slot, the partitionable slot's ``State`` will
+    claims a partitionable slot, the partitionable slot's :ad-attr:`State` will
     change to ``Claimed`` in addition to the creation of a ``Claimed``
     dynamic slot.
     While the slot is ``Claimed``, no other *condor_schedd* is able
@@ -4022,7 +4022,7 @@ needs.
 
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTMEMORY[STARTD]`
     An integer expression used by the *condor_startd* daemon to modify
-    the evaluated value of the ``RequestMemory`` job ClassAd attribute,
+    the evaluated value of the :ad-attr:`RequestMemory` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
     given by
 
@@ -4033,7 +4033,7 @@ needs.
 
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTDISK[STARTD]`
     An integer expression used by the *condor_startd* daemon to modify
-    the evaluated value of the ``RequestDisk`` job ClassAd attribute,
+    the evaluated value of the :ad-attr:`RequestDisk` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
     given by
 
@@ -4044,7 +4044,7 @@ needs.
 
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTCPUS[STARTD]`
     An integer expression used by the *condor_startd* daemon to modify
-    the evaluated value of the ``RequestCpus`` job ClassAd attribute,
+    the evaluated value of the :ad-attr:`RequestCpus` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
     given by
 
@@ -4101,7 +4101,7 @@ section details consumption policies.
 :macro-def:`SLOT_WEIGHT[STARTD]`
     An expression that specifies a slot's weight, used as a multiplier
     the *condor_negotiator* daemon during matchmaking to assess user
-    usage of a slot, which affects user priority. Defaults to ``Cpus``.
+    usage of a slot, which affects user priority. Defaults to :ad-attr:`Cpus`.
 
     In the case of slots with consumption policies, the cost of each
     match is is assessed as the difference in the slot weight expression
@@ -4151,7 +4151,7 @@ advertisement.
     A boolean value that controls the advertising of the .NET framework
     on Windows platforms. When ``True``, the *condor_startd* will
     advertise all installed versions of the .NET framework within the
-    ``DotNetVersions`` attribute in the *condor_startd* machine
+    :ad-attr:`DotNetVersions` attribute in the *condor_startd* machine
     ClassAd. The default value is ``True``. Set the value to ``false``
     to turn off .NET version advertising.
 
@@ -4225,11 +4225,11 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     be woken up. The default value is
     ``MachineLastMatchTime =!= UNDEFINED``. This expression does not do
     anything, unless there is an instance of *condor_rooster* running,
-    or another program that evaluates the ``Unhibernate`` expression of
+    or another program that evaluates the :ad-attr:`Unhibernate` expression of
     offline machine ClassAds. In addition, the collecting of offline
     machine ClassAds must be enabled for this expression to work. The
     variable :macro:`COLLECTOR_PERSISTENT_AD_LOG` explains this. The special
-    attribute ``MachineLastMatchTime`` is updated in the ClassAds of
+    attribute :ad-attr:`MachineLastMatchTime` is updated in the ClassAds of
     offline machines when a job would have been matched to the machine
     if it had been online. For multi-slot machines, the offline ClassAd
     for slot1 will also contain the attributes
@@ -4442,7 +4442,7 @@ These macros control the *condor_schedd*.
     begin execution.
 
     The following example only allows 10 **local** universe jobs to
-    execute concurrently. The attribute ``TotalLocalJobsRunning`` is
+    execute concurrently. The attribute :ad-attr:`TotalLocalJobsRunning` is
     supplied by *condor_schedd* 's ClassAd:
 
     .. code-block:: condor-config
@@ -4484,7 +4484,7 @@ These macros control the *condor_schedd*.
     conditions are met, then the job is allowed to begin execution.
 
     The following example only allows 10 **scheduler** universe jobs to
-    execute concurrently. The attribute ``TotalSchedulerJobsRunning`` is
+    execute concurrently. The attribute :ad-attr:`TotalSchedulerJobsRunning` is
     supplied by *condor_schedd* 's ClassAd:
 
     .. code-block:: condor-config
@@ -4728,10 +4728,10 @@ These macros control the *condor_schedd*.
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value ``-1`` indicates
     no limit. The default value is -1. The job may override the system
-    setting by specifying its own limit using the ``MaxTransferInputMB``
+    setting by specifying its own limit using the :ad-attr:`MaxTransferInputMB`
     attribute. If the observed size of all input files at submit time is
     larger than the limit, the job will be immediately placed on hold
-    with a ``HoldReasonCode`` value of 32. If the job passes this
+    with a :ad-attr:`HoldReasonCode` value of 32. If the job passes this
     initial test, but the size of the input files increases or the limit
     decreases so that the limit is violated, the job will be placed on
     hold at the time when the file transfer is attempted.
@@ -4744,9 +4744,9 @@ These macros control the *condor_schedd*.
     refer to attributes of the job. The special value ``-1`` indicates
     no limit. The default value is -1. The job may override the system
     setting by specifying its own limit using the
-    ``MaxTransferOutputMB`` attribute. If the total size of the job's
+    :ad-attr:`MaxTransferOutputMB` attribute. If the total size of the job's
     output files to be transferred is larger than the limit, the job
-    will be placed on hold with a ``HoldReasonCode`` value of 33. The
+    will be placed on hold with a :ad-attr:`HoldReasonCode` value of 33. The
     output will be transferred up to the point when the limit is hit, so
     some files may be fully transferred, some partially, and some not at
     all.
@@ -4864,11 +4864,11 @@ These macros control the *condor_schedd*.
     jobs/second. This setting is defined in terms of seconds and
     defaults to 0, which means jobs will be started as fast as possible.
     If you wish to throttle the rate of specific types of jobs, you can
-    use the job attribute ``NextJobStartDelay``.
+    use the job attribute :ad-attr:`NextJobStartDelay`.
 
 :macro-def:`MAX_NEXT_JOB_START_DELAY[SCHEDD]`
     An integer number of seconds representing the maximum allowed value
-    of the job ClassAd attribute ``NextJobStartDelay``. It defaults to
+    of the job ClassAd attribute :ad-attr:`NextJobStartDelay`. It defaults to
     600, which is 10 minutes.
 
 :macro-def:`JOB_STOP_COUNT[SCHEDD]`
@@ -4917,7 +4917,7 @@ These macros control the *condor_schedd*.
     how often it is going to send these messages. The utilized interval
     for sending keep alive messages is the smallest of the two values
     :macro:`ALIVE_INTERVAL` and the expression ``JobLeaseDuration/3``, formed
-    with the job ClassAd attribute ``JobLeaseDuration``. The value of
+    with the job ClassAd attribute :ad-attr:`JobLeaseDuration`. The value of
     the interval is further constrained by the floor value of 10
     seconds. If the *condor_startd* does not receive any of these keep
     alive messages during a certain period of time (defined via
@@ -5008,7 +5008,7 @@ These macros control the *condor_schedd*.
 :macro-def:`QUEUE_ALL_USERS_TRUSTED[SCHEDD]`
     Defaults to False. If set to True, then unauthenticated users are
     allowed to write to the queue, and also we always trust whatever the
-    ``Owner`` value is set to be by the client in the job ad. This was
+    :ad-attr:`Owner` value is set to be by the client in the job ad. This was
     added so users can continue to use the SOAP web-services interface
     over HTTP (w/o authenticating) to submit jobs in a secure,
     controlled environment - for instance, in a portal setting.
@@ -5051,7 +5051,7 @@ These macros control the *condor_schedd*.
 :macro-def:`SYSTEM_JOB_MACHINE_ATTRS[SCHEDD]`
     This macro specifies a space and/or comma separated list of machine
     attributes that should be recorded in the job ClassAd. The default
-    attributes are ``Cpus`` and ``SlotWeight``. When there are multiple
+    attributes are :ad-attr:`Cpus` and :ad-attr:`SlotWeight`. When there are multiple
     run attempts, history of machine attributes from previous run
     attempts may be kept. The number of run attempts to store is
     specified by the configuration variable
@@ -5224,7 +5224,7 @@ These macros control the *condor_schedd*.
     It defaults to ``False``. When ``True``, it causes the job to stop
     running and go on hold. Here is an example that puts jobs on hold if
     they have been restarted too many times, have an unreasonably large
-    virtual memory ``ImageSize``, or have unreasonably large disk usage
+    virtual memory :ad-attr:`ImageSize`, or have unreasonably large disk usage
     for an invented environment. 
 
     .. code-block:: condor-config
@@ -5245,21 +5245,21 @@ These macros control the *condor_schedd*.
     This string expression is evaluated when the job is placed on hold
     due to :macro:`SYSTEM_PERIODIC_HOLD` or :macro:`SYSTEM_PERIODIC_HOLD_<Name>` evaluating to ``True``. If it
     evaluates to a non-empty string, this value is used to set the job
-    attribute ``HoldReason``. Otherwise, a default description is used.
+    attribute :ad-attr:`HoldReason`. Otherwise, a default description is used.
 
 :macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE[SCHEDD]` and :macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_SUBCODE[SCHEDD]`
     This integer expression is evaluated when the job is placed on hold
     due to :macro:`SYSTEM_PERIODIC_HOLD` or :macro:`SYSTEM_PERIODIC_HOLD_<Name>` evaluating to ``True``. If it
     evaluates to a valid integer, this value is used to set the job
-    attribute ``HoldReasonSubCode``. Otherwise, a default of 0 is used.
-    The attribute ``HoldReasonCode`` is set to 26, which indicates that
+    attribute :ad-attr:`HoldReasonSubCode`. Otherwise, a default of 0 is used.
+    The attribute :ad-attr:`HoldReasonCode` is set to 26, which indicates that
     the job went on hold due to a system job policy expression.
 
 :macro-def:`SYSTEM_PERIODIC_RELEASE_NAMES[SCHEDD]`
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will
     contain an expression that will be periodically evaluated for each
-    job that is in the ``HELD`` state (jobs with a ``HoldReasonCode``
+    job that is in the ``HELD`` state (jobs with a :ad-attr:`HoldReasonCode`
     value of ``1`` are ignored). Each name in the list will be used in the name of
     configuration variable ``SYSTEM_PERIODIC_RELEASE_<Name>``. The named expressions
     are evaluated in the order in which names appear in this list. Names are
@@ -5780,8 +5780,8 @@ These macros control the *condor_schedd*.
 :macro-def:`SYSTEM_IMMUTABLE_JOB_ATTRS[SCHEDD]`
     A predefined comma and/or space separated list of attributes that
     cannot be changed, once they have committed values. The hard-coded
-    value is: ``Owner`` ``ClusterId`` ``ProcId`` ``MyType``
-    ``TargetType``.
+    value is: :ad-attr:`Owner` :ad-attr:`ClusterId` :ad-attr:`ProcId` :ad-attr:`MyType`
+    :ad-attr:`TargetType`.
 
 :macro-def:`PROTECTED_JOB_ATTRS[SCHEDD]`
     A comma and/or space separated list of attributes provided by the
@@ -5886,7 +5886,7 @@ These settings affect the *condor_shadow*.
 :macro-def:`SHADOW_LAZY_QUEUE_UPDATE[SHADOW]`
     This boolean macro specifies if the *condor_shadow* should
     immediately update the job queue for certain attributes (at this
-    time, it only effects the ``NumJobStarts`` and ``NumJobReconnects``
+    time, it only effects the :ad-attr:`NumJobStarts` and :ad-attr:`NumJobReconnects`
     counters) or if it should wait and only update the job queue on the
     next periodic update. There is a trade-off between performance and
     the semantics of these attributes, which is why the behavior is
@@ -6064,9 +6064,9 @@ These settings affect the *condor_starter*.
     ``false`` will suppress the use of a file extension. A value of
     ``true`` gives the default behavior of using the slot name, unless
     there is only a single slot. A value of ``slot`` uses the slot name.
-    A value of ``cluster`` uses the job's ``ClusterId`` ClassAd
-    attribute. A value of ``jobid`` uses the job's ``ClusterId`` and
-    ``ProcId`` ClassAd
+    A value of ``cluster`` uses the job's :ad-attr:`ClusterId` ClassAd
+    attribute. A value of ``jobid`` uses the job's :ad-attr:`ClusterId` and
+    :ad-attr:`ProcId` ClassAd
     attributes. If ``cluster`` or ``jobid`` are specified, the resulting
     log files will persist until deleted by the user, so these two
     options should only be used to assist in debugging, not as permanent
@@ -6244,7 +6244,7 @@ These settings affect the *condor_starter*.
     directories, under which the *condor_starter* may run a chroot-ed
     job. This allows HTCondor to invoke chroot() before launching a job,
     if the job requests such by defining the job ClassAd attribute
-    ``RequestedChroot`` with a directory that matches one in this list.
+    :ad-attr:`RequestedChroot` with a directory that matches one in this list.
     There is no default value for this variable.
 
 :macro-def:`STARTER_UPLOAD_TIMEOUT[STARTER]`
@@ -6314,7 +6314,7 @@ These settings affect the *condor_starter*.
 :macro-def:`<PLUGIN>_TEST_URL[STARTER]`
     This configuration takes a URL to be tested against the specified
     ``<PLUGIN>``. If this test fails, then that plugin is removed from
-    the *condor_starter* classad attribute ``HasFileTransferPluginMethods``.
+    the *condor_starter* classad attribute :ad-attr:`HasFileTransferPluginMethods`.
     This attribute determines what plugin capabilities the *condor_starter*
     can utilize.
 
@@ -6396,11 +6396,11 @@ These settings affect the *condor_starter*.
 
 :macro-def:`MEMORY_USAGE_METRIC[STARTER]`
     A ClassAd expression that produces an initial value for the job
-    ClassAd attribute ``MemoryUsage`` in jobs that are not vm universe.
+    ClassAd attribute :ad-attr:`MemoryUsage` in jobs that are not vm universe.
 
 :macro-def:`MEMORY_USAGE_METRIC_VM[STARTER]`
     A ClassAd expression that produces an initial value for the job
-    ClassAd attribute ``MemoryUsage`` in vm universe jobs.
+    ClassAd attribute :ad-attr:`MemoryUsage` in vm universe jobs.
 
 :macro-def:`STARTER_RLIMIT_AS[STARTER]`
     An integer ClassAd expression, expressed in MiB, evaluated by the
@@ -6493,7 +6493,7 @@ These settings affect the *condor_starter*.
     If set to ``Auto``, then PID namespaces will be used if it is possible to do so, else not used.
     If set to ``True``, then a PID namespaces must be used; if the installed Singularity cannot
     activate PID namespaces (perhaps due to insufficient permissions), then the slot
-    attribute ``HasSingularity`` will be set to False so that jobs needing Singularity will match.
+    attribute :ad-attr:`HasSingularity` will be set to False so that jobs needing Singularity will match.
     If set to ``False``, then PID namespaces must not be used.
 
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS[STARTER]`
@@ -6549,7 +6549,7 @@ condor_submit Configuration File Entries
     :subcom:`request_disk[and JOB_DEFAULT_REQUESTDISK]`
     submit command. If the job defines the value, then that value takes
     precedence. If not set, then then the default is defined as
-    ``DiskUsage``.
+    :ad-attr:`DiskUsage`.
 
 :macro-def:`JOB_DEFAULT_REQUESTCPUS[SUBMIT]`
     The number of CPUs to acquire for a job, if the job does not specify
@@ -6830,7 +6830,7 @@ These macros affect the *condor_collector*.
 
     Please note that _all_ ClassAd updates are filtered.  Unless your
     requirements are the same for all daemons, including the collector
-    itself, you'll want to use the ``MyType`` attribute to limit your
+    itself, you'll want to use the :ad-attr:`MyType` attribute to limit your
     filter(s).
 
 :macro-def:`CLIENT_TIMEOUT[COLLECTOR]`
@@ -6936,10 +6936,10 @@ These macros affect the *condor_collector*.
     :index:`UpdatesSequenced<single: UpdatesSequenced; ClassAd attribute added by the condor_collector>`
     :index:`UpdatesLost<single: UpdatesLost; ClassAd attribute added by the condor_collector>`
 
-    The attributes inserted are ``UpdatesTotal``, ``UpdatesSequenced``,
+    The attributes inserted are ``UpdatesTotal``, :ad-attr:`UpdatesSequenced`,
     and ``UpdatesLost``. ``UpdatesTotal`` is the total number of updates
     (of this ClassAd type) the *condor_collector* has received from
-    this host. ``UpdatesSequenced`` is the number of updates that the
+    this host. :ad-attr:`UpdatesSequenced` is the number of updates that the
     *condor_collector* could have as lost. In particular, for the first
     update from a daemon, it is impossible to tell if any previous ones
     have been lost or not. ``UpdatesLost`` is the number of updates that
@@ -6963,7 +6963,7 @@ These macros affect the *condor_collector*.
     ignored, if :macro:`COLLECTOR_DAEMON_STATS` is not enabled.
 
     If the value is a non-zero one, the *condor_collector* will insert
-    attribute ``UpdatesHistory`` into the ClassAd (similar to
+    attribute :ad-attr:`UpdatesHistory` into the ClassAd (similar to
     ``UpdatesTotal``). AttrUpdatesHistory is a hexadecimal string which
     represents a bitmap of the last :macro:`COLLECTOR_DAEMON_HISTORY_SIZE`
     updates. The most significant bit (MSB) of the bitmap represents
@@ -6992,7 +6992,7 @@ These macros affect the *condor_collector*.
 
     If this variable has a non-zero value, the *condor_collector* will
     insert ``UpdatesClassHistory`` into the *condor_collector* ClassAd
-    (similar to ``UpdatesHistory``). These are added per class of
+    (similar to :ad-attr:`UpdatesHistory`). These are added per class of
     ClassAd, however. The classes refer to the type of ClassAds.
     Additionally, there is a Total class created, which represents the
     history of all ClassAds that this *condor_collector* receives.
@@ -7105,7 +7105,7 @@ These macros affect the *condor_collector*.
 :macro-def:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS[COLLECTOR]`
     When this boolean variable is set to ``False``, the *condor_collector*
     will not forward the private portion of Machine ads to the
-    :macro:`CONDOR_VIEW_HOST` if the ad's ``State`` is ``Claimed``.
+    :macro:`CONDOR_VIEW_HOST` if the ad's :ad-attr:`State` is ``Claimed``.
     The default value is ``$(NEGOTIATOR_CONSIDER_PREEMPTION)``.
 
 :macro-def:`COLLECTOR_FORWARD_PROJECTION[COLLECTOR]`
@@ -7390,7 +7390,7 @@ These macros affect the *condor_negotiator*.
     expression is used to rank machines that the job and the other
     negotiation expressions rank the same. For example, if the job has
     no preference, it is usually preferable to preempt a job with a
-    small ``ImageSize`` instead of a job with a large ``ImageSize``. The
+    small :ad-attr:`ImageSize` instead of a job with a large :ad-attr:`ImageSize`. The
     default value first considers the user's priority and chooses the
     user with the worst priority. Then, among the running jobs of that
     user, it chooses the job with the least accumulated run time:
@@ -7686,7 +7686,7 @@ The following configuration macros affect negotiation for group users.
     independent job submitters. This allows group submitted jobs to be
     matched with idle machines even if the group is over its quota. The
     user name that is used for accounting and prioritization purposes is
-    still the group user as specified by ``AccountingGroup`` in the job
+    still the group user as specified by :ad-attr:`AccountingGroup` in the job
     ClassAd.
 
 :macro-def:`GROUP_AUTOREGROUP_<groupname>[NEGOTIATOR]`
@@ -7739,7 +7739,7 @@ The following configuration macros affect negotiation for group users.
 :macro-def:`NEGOTIATOR_USE_SLOT_WEIGHTS[NEGOTIATOR]`
     A boolean value with a default of ``True``. When ``True``, the
     *condor_negotiator* pays attention to the machine ClassAd attribute
-    ``SlotWeight``. When ``False``, each slot effectively has a weight
+    :ad-attr:`SlotWeight`. When ``False``, each slot effectively has a weight
     of 1.
 
 :macro-def:`NEGOTIATOR_USE_WEIGHTED_DEMAND[NEGOTIATOR]`
@@ -7749,10 +7749,10 @@ The following configuration macros affect negotiation for group users.
     submitter ClassAd, which represents the number of idle jobs in the
     queue for that submitter, it will also advertise the total number of
     requested cores across all idle jobs from that submitter,
-    ``WeightedIdleJobs``. If partitionable slots are being used, and if
+    :ad-attr:`WeightedIdleJobs`. If partitionable slots are being used, and if
     hierarchical group quotas are used, and if any hierarchical group
     quotas set :macro:`GROUP_ACCEPT_SURPLUS` to ``True``, and if
-    configuration variable ``SlotWeight`` :index:`SlotWeight` is
+    configuration variable :ad-attr:`SlotWeight` :index:`SlotWeight` is
     set to the number of cores, then setting this configuration variable
     to ``True`` allows the amount of surplus allocated to each group to
     be calculated correctly.
@@ -7960,9 +7960,9 @@ These macros affect the *condor_gridmanager*.
     refreshed, at which point management of the job will resume.
 
 :macro-def:`GRIDMANAGER_SELECTION_EXPR[GRIDMANAGER]`
-    By default, the gridmanager operates on a per-``Owner`` basis.  That
+    By default, the gridmanager operates on a per-:ad-attr:`Owner` basis.  That
     is, the *condor_schedd* starts a distinct *condor_gridmanager* for each
-    grid universe job with a distinct ``Owner``.  For additional isolation
+    grid universe job with a distinct :ad-attr:`Owner`.  For additional isolation
     and/or scalability, you may set this macro to a ClassAd expression.
     It will be evaluated against each grid universe job, and jobs with
     the same evaluated result will go to the same gridmanager.  For instance,
@@ -8021,7 +8021,7 @@ These macros affect the *condor_gridmanager*.
     The number of seconds that the *condor_gridmanager* retains
     information about a grid resource, once the *condor_gridmanager*
     has no active jobs on that resource. An active job is a grid
-    universe job that is in the queue, for which ``JobStatus`` is
+    universe job that is in the queue, for which :ad-attr:`JobStatus` is
     anything other than Held. Defaults to 300 seconds.
 
 :macro-def:`GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE[GRIDMANAGER]`
@@ -8440,7 +8440,7 @@ These macros affect the *condor_job_router* daemon.
     configuration variable that specifies the filename, ownership and properties of the IDTOKEN.
 
 :macro-def:`JOB_ROUTER_IDTOKEN_REFRESH[JOB ROUTER]`
-    An integer value of secounds that controls the rate at which the JobRouter will refresh
+    An integer value of seconds that controls the rate at which the JobRouter will refresh
     the IDTOKENS listed by the :macro:`JOB_ROUTER_CREATE_IDTOKEN_NAMES` configuration variable.
 
 :macro-def:`JOB_ROUTER_CREATE_IDTOKEN_<NAME>[JOB ROUTER]`
@@ -8477,7 +8477,7 @@ These macros affect the *condor_job_router* daemon.
          If specified, the IDTOKEN file will be owned by this user.  If not specified, the IDTOKEN file will be owned
          by the owner of *condor_job_router* process.  This attribute is optional if the *condor_job_router* is running as an ordinary user
          but required if it is running as a Windows service or as the ``root`` or ``condor`` user.  The owner specified here
-         should be the same as the ``Owner`` attribute of the jobs that this IDTOKEN is intended to be sent to.
+         should be the same as the :ad-attr:`Owner` attribute of the jobs that this IDTOKEN is intended to be sent to.
 
 :macro-def:`JOB_ROUTER_SEND_ROUTE_IDTOKENS[JOB ROUTER]`
     List of the names of the IDTOKENS to add to the input file transfer list of each routed job. This list should be one or
@@ -8694,7 +8694,7 @@ General
 
 :macro-def:`DAGMAN_NODE_RECORD_INFO[DAGMan]`
     A string that when set to ``RETRY`` will cause DAGMan to insert a nodes current
-    retry attempt number into the nodes job ad as the attribute ``DAGManNodeRetry``
+    retry attempt number into the nodes job ad as the attribute :ad-attr:`DAGManNodeRetry`
     at submission time. This knob is not set by default.
 
 :macro-def:`DAGMAN_RECORD_MACHINE_ATTRS[DAGMan]`
@@ -8849,7 +8849,7 @@ Node job submission/removal
 :macro-def:`DAGMAN_HOLD_CLAIM_TIME[DAGMan]`
     An integer defining the number of seconds that :tool:`condor_dagman` will
     cause a hold on a claim after a job is finished, using the job
-    ClassAd attribute ``KeepClaimIdle``. The default value is 20. A
+    ClassAd attribute :ad-attr:`KeepClaimIdle`. The default value is 20. A
     value of 0 causes :tool:`condor_dagman` not to set the job ClassAd
     attribute.
 
@@ -9018,7 +9018,7 @@ Log files
        one on the command line.
     -  ``@(DAG_FILE)``: The name of the primary DAG input file. It does
        not include the path.
-    -  ``@(CLUSTER)``: The ``ClusterId`` attribute of the
+    -  ``@(CLUSTER)``: The :ad-attr:`ClusterId` attribute of the
        :tool:`condor_dagman` job.
     -  ``@(OWNER)``: The user name of the user who submitted the DAG.
     -  ``@(NODE_NAME)``: For SUBDAGs, this is the node name of the
@@ -9878,7 +9878,7 @@ machine within the pool. They specify items related to the
     virtual machine error as reported by the *condor_starter*, and
     before checking a final time on the status of the virtual machine.
     If the check fails, HTCondor disables starting any new vm universe
-    jobs by removing the ``VM_Type`` attribute from the machine ClassAd.
+    jobs by removing the :ad-attr:`VM_Type` attribute from the machine ClassAd.
 
 :macro-def:`VM_SOFT_SUSPEND[Virtual Machines]`
     A boolean value that defaults to ``False``, causing HTCondor to free
@@ -11073,7 +11073,7 @@ general discussion of *condor_defrag* may be found in
     A ClassAd expression that replaces the machine's :macro:`START`
     expression while it's draining. Slots which
     accepted a job after the machine began draining set the machine ad
-    attribute ``AcceptedWhileDraining`` to ``true``. When the last job
+    attribute :ad-attr:`AcceptedWhileDraining` to ``true``. When the last job
     which was not accepted while draining exits, all other jobs are
     immediately evicted with a ``MaxJobRetirementTime`` of 0; job vacate
     times are still respected. While the jobs which were accepted while

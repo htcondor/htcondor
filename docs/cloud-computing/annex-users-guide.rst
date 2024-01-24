@@ -55,7 +55,7 @@ already configured :tool:`condor_annex`. If you haven't, see the
 All the terminal commands (shown in a box without a title) and file
 edits (shown in a box with an emphasized filename for a title) in this
 section take place on the Linux machine. In this section, we follow the
-common convention that the commands you type are preceded by by '$' to
+common convention that the commands you type are preceded by '$' to
 distinguish them from any expected output; don't copy that part of each
 of the following lines. (Lines which end in a '\\' continue on the
 following line; be sure to copy both lines. Don't copy the '\\' itself.)
@@ -287,14 +287,14 @@ The following command combines these two reports:
 Run a Job
 ---------
 
-Starting in v8.7.1, the default behaviour for an annex instance is to
+Starting in v8.7.1, the default behavior for an annex instance is to
 run only jobs submitted by the user who ran the :tool:`condor_annex` command.
 If you'd like to allow other users to run jobs, list them (separated by
 commas; don't forget to include yourself) as arguments to the -owner
 flag when you start the instance. If you're creating an annex for
 general use, use the -no-owner flag to run jobs from anyone.
 
-Also starting in v8.7.1, the default behaviour for an annex instance is
+Also starting in v8.7.1, the default behavior for an annex instance is
 to run only jobs which have the MayUseAWS attribute set (to true). To
 submit a job with MayUseAWS set to true, add ``+MayUseAWS = TRUE`` to the
 submit file somewhere before the queue command. To allow an existing job
@@ -359,7 +359,7 @@ the template it used to start it up, which may also be called a virtual
 machine.) An on-demand instance has a price fixed by AWS; once acquired,
 AWS will let you keep it running as long as you continue to pay for it.
 
-In constrast, a "Spot" instance has a price determined by an (automated)
+In contrast, a "Spot" instance has a price determined by an (automated)
 auction; when you request a "Spot" instance, you specify the most (per
 hour) you're willing to pay for that instance. If you get an instance,
 however, you pay only what the spot price is for that instance; in
@@ -387,7 +387,7 @@ Using AWS Spot Fleet
 "Spot Fleet". Normally, when you request instances, you request a
 specific type of instance (the default on-demand instance is, for
 instance, 'm4.large'.) However, in many cases, you don't care too much
-about how many cores an intance has - HTCondor will automatically
+about how many cores an instance has - HTCondor will automatically
 advertise the right number and schedule jobs appropriately, so why would
 you? In such cases - or in other cases where your jobs will run
 acceptably on more than one type of instance - you can make a Spot Fleet
@@ -487,7 +487,7 @@ absence or presence of **-default** immediately preceding
 
 A "launch specification," in this context, means one of the virtual
 machine templates you told Spot Fleet would be an acceptable way to
-accomodate your resource request. This usually corresponds one-to-one
+accommodate your resource request. This usually corresponds one-to-one
 with instance types, but this is not required.
 
 Expert Mode

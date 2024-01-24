@@ -93,7 +93,7 @@ Options
     ``stderr`` is written. If not specified, set to the default name of
     ``  <commandfile>.e<ClusterId>``, where ``<commandfile>`` is the
     *condor_qsub* argument, and ``  <ClusterId>`` is the job attribute
-    ``ClusterId`` assigned for the job.
+    :ad-attr:`ClusterId` assigned for the job.
  **-f** *qsub_file*
     (Specific option) Parse *qsub_file* to search for and set
     additional *condor_submit* commands. Within the file, commands will
@@ -140,7 +140,7 @@ Options
     +--------------------------+--------------------------+--------------------------+
     | ``resource_name``        | ``value``                | Description              |
     +--------------------------+--------------------------+--------------------------+
-    | arch                     | string                   | Sets ``Arch`` machine    |
+    | arch                     | string                   | Sets :ad-attr:`Arch` machine    |
     |                          |                          | attribute. Enclose in    |
     |                          |                          | double quotes.           |
     +--------------------------+--------------------------+--------------------------+
@@ -164,7 +164,7 @@ Options
     |                          |                          | tent/topics/2-jobs/reque |
     |                          |                          | stingRes.htm#qsub>`_    |
     +--------------------------+--------------------------+--------------------------+
-    | opsys                    | string                   | Sets ``OpSys`` machine   |
+    | opsys                    | string                   | Sets :ad-attr:`OpSys` machine   |
     |                          |                          | attribute. Enclose in    |
     |                          |                          | double quotes.           |
     +--------------------------+--------------------------+--------------------------+
@@ -188,7 +188,7 @@ Options
     ``stdout`` is written. If not specified, set to the default name of
     ``  <commandfile>.o<ClusterId>``, where ``<commandfile>`` is the
     *condor_qsub* argument, and ``  <ClusterId>`` is the job attribute
-    ``ClusterId`` assigned for the job.
+    :ad-attr:`ClusterId` assigned for the job.
  **-p** *integer*
     (Status option) Sets the
     :subcom:`priority[condor_qsub]` submit
@@ -203,7 +203,7 @@ Options
     HTCondor policy of assuming that jobs that do not complete are
     placed back in the queue to be run again. When *n*, job submission
     is restricted to only running the job if the job ClassAd attribute
-    ``NumJobStarts`` is currently 0. This identifies the job as not
+    :ad-attr:`NumJobStarts` is currently 0. This identifies the job as not
     re-runnable, limiting it to start once.
  **-S** *shell*
     (Submission option) Specifies the path and executable name of a

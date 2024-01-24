@@ -35,8 +35,8 @@ of the file. Lines are of the form
 
 Changes to certain ClassAd attributes will cause the *condor_startd* to
 regenerate values for other ClassAd attributes. An example of this is
-setting ``HasVM``. This will cause ``OfflineUniverses``,
-``VMOfflineTime``, and ``VMOfflineReason`` to change.
+setting :ad-attr:`HasVM`. This will cause :ad-attr:`OfflineUniverses`,
+:ad-attr:`VMOfflineTime`, and :ad-attr:`VMOfflineReason` to change.
 
 Options
 -------
@@ -62,7 +62,7 @@ Examples
 
 To re-enable matching with the VM universe jobs, place on ``stdin`` a
 complete ClassAd (including the ending newline character) to change the
-value of ClassAd attribute ``HasVM``:
+value of ClassAd attribute :ad-attr:`HasVM`:
 
 .. code-block:: console
 

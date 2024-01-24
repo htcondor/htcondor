@@ -95,18 +95,6 @@ protected:
     */
     bool sendControlCmdToMaster( int );
 
-    /*
-      pushReceivedAlive(int id) - push to buffer id of HAD that
-      sent "ALIVE command".
-    */
-    int pushReceivedAlive( int );
-
-    /*
-      pushReceivedId(int id) -  push to buffer id of HAD that sent
-      "SEND ID command".
-    */
-    int pushReceivedId( int );
-
     int commandHandlerHad(int cmd,Stream *strm) ;
 
     int m_state;   
@@ -127,15 +115,15 @@ protected:
     Daemon* m_masterDaemon;
 	char *m_controlleeName;
 
-    List<int> receivedAliveList;
-    List<int> receivedIdList;
+    std::set<int> receivedAliveList;
+    std::set<int> receivedIdList;
 
     static bool getHadList(const char* s,
 						   bool use_primary,
 						   std::vector<std::string> &other,
 						   std::vector<std::string> &all,
 						   int &selfId );
-    bool  checkList(List<int>*) const;
+    bool checkList(std::set<int>) const;
     static void removeAllFromList(List<int>*);
     void clearBuffers(void);
     void printStep(const char *curState,const char *nextState) const;

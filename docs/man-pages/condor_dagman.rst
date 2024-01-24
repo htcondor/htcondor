@@ -243,7 +243,7 @@ Options
      the DAGMan manager jobs **environment**.
  **-insert_env** *Key=Value*
      This optional argument takes a delimited string of *Key=Value* pairs
-     to explicitly set into the ``.condor.sub`` files ``environment`` macro.
+     to explicitly set into the ``.condor.sub`` files :ad-attr:`Environment` macro.
      The base delimiter is a semicolon that can be overriden by setting
      the first character in the string to a valid delimiting character.
      If multiple **-insert_env** flags contain the same *Key* then the last

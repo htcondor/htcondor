@@ -36,6 +36,7 @@ with _add_dll_dir():
     from .htcondor2_impl import _platform as platform
     from .htcondor2_impl import _set_subsystem as set_subsystem
     from .htcondor2_impl import _reload_config as reload_config
+    from .htcondor2_impl import _enable_debug as enable_debug
 
     # Enumerations.
     from ._subsystem_type import SubsystemType

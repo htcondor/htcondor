@@ -2782,7 +2782,7 @@ Starter::Reaper(int pid, int exit_status)
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
 			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PreExitCode", updateAd );
-			jic->periodicJobUpdate( & updateAd, true );
+			jic->periodicJobUpdate( & updateAd );
 
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
@@ -2820,7 +2820,7 @@ Starter::Reaper(int pid, int exit_status)
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
 			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PostExitCode", updateAd );
-			jic->periodicJobUpdate( & updateAd, true );
+			jic->periodicJobUpdate( & updateAd );
 
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
@@ -3289,6 +3289,19 @@ Starter::PublishToEnv( Env* proc_env )
 					env_name = base;
 					env_name += attr;
 					proc_env->SetEnv(env_name.c_str(), assigned.c_str());
+				}
+			}
+
+			// NVIDIA_VISIBLE_DEVICES needs to be set to an expression evaluated against the machine ad
+			// which may not be the same exact value as what we set CUDA_VISIBLE_DEVICES to
+			if (tags.contains_anycase("GPUs") && param_boolean("AUTO_SET_NVIDIA_VISIBLE_DEVICES",true)) {
+				classad::Value val;
+				const char * env_value = nullptr;
+				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
+					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
+					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
+				} else {
+					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
 				}
 			}
 		}
@@ -3919,7 +3932,7 @@ Starter::WriteAdFiles() const
 
 		dprintf( D_FULLDEBUG, "Updating *Provisioned and Assigned* attributes:\n" );
 		dPrintAd( D_FULLDEBUG, updateAd );
-		jic->periodicJobUpdate( & updateAd, true );
+		jic->periodicJobUpdate( & updateAd );
 	}
 
 	return ret_val;

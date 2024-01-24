@@ -24,8 +24,8 @@ New Features:
 
 - Added new submit commands for constraining GPU properties. When these commands
   are use the ``RequireGPUs`` expression is generated automatically by submit and
-  desired values are stored as job attributes. The new submit commands are ``gpus_minimum_memory``,
-  ``gpus_minimum_runtime``, ``gpus_minimum_capability`` and ``gpus_maximum_capability``.
+  desired values are stored as job attributes. The new submit commands are :subcom:`gpus_minimum_memory`,
+  :subcom:`gpus_minimum_runtime`, :subcom:`gpus_minimum_capability` and :subcom:`gpus_maximum_capability`.
   :jira:`2201`
 
 Bugs Fixed:
@@ -62,11 +62,11 @@ New Features:
   optionally takes more than one eventlog to process at once.
   :jira:`2220`
 
-- Added job classad attribute ``ContainerImageSource``, a string which is
+- Added job classad attribute :ad-attr:`ContainerImageSource`, a string which is
   is set to the source of the image transfer.
   :jira:`1797`
 
-- If PER_JOB_HISTORY_DIR is set, it is now a fatal error to write a historical job
+- If :macro:`PER_JOB_HISTORY_DIR` is set, it is now a fatal error to write a historical job
   to the history file, just like the normal history file.
   :jira:`2027`
 
@@ -84,6 +84,23 @@ New Features:
   This can be disabled by setting the new configuration parameter
   :macro:`SUBMIT_GENERATE_CONDOR_C_REQUIREMENTS` to ``False``.
   :jira:`2204`
+
+Bugs Fixed:
+
+- Fixed a bug introduced in 23.3.0 wherein 
+  :macro:`NEGOTIATOR_SLOT_CONSTRAINT` was completely ignored.
+  :jira:`2245`
+
+Version 23.3.1
+--------------
+
+- HTCondor version 23.3.1 released on January 23, 2023.
+
+- HTCondor tarballs now contain `Pelican 7.4.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.4.0>`_
+
+New Features:
+
+- None.
 
 Bugs Fixed:
 
@@ -120,7 +137,7 @@ New Features:
   :jira:`1533`
 
 - Startd now advertises when jobs are running with cgroup enforcement in
-  the slot attribute ``CgroupEnforced``
+  the slot attribute :ad-attr:`CgroupEnforced`
   :jira:`1532`
 
 - START_CRON_LOG_NON_ZERO_EXIT now also logs the stderr of the startd cron

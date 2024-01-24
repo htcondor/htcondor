@@ -47,11 +47,12 @@ class Submit(MutableMapping):
         after the submit-language string, if any, is parsed.
 
         This object implements the Python dictionary protocol, except
-        that attempts to `del()` entries will raise a `NotImplementedError`
+        that attempts to ``del()`` entries will raise a
+        :class:`NotImplementedError`
         because the underlying logic does not distinguish between a
         missing key and a key whose value is the empty string.  (This seems
-        better than allowing you to `del(s[key])` but having `key` still
-        appear in s.keys().)
+        better than allowing you to ``del(s[key])`` but having ``key`` still
+        appear in ``s.keys()``.)
         '''
         self._handle = handle_t()
 
@@ -189,7 +190,16 @@ class Submit(MutableMapping):
         qdate : int = 0,
         owner : str = "",
     ):
-        # FIXME
+        """
+        FIXME (unimplemented)
+
+        :param count:
+        :param itemdata:
+        :param clusterid:
+        :param procid:
+        :param qdate:
+        :param owner:
+        """
         pass
 
 
@@ -203,11 +213,23 @@ class Submit(MutableMapping):
         qdate : int = 0,
         owner : str = "",
     ):
-        # FIXME
+        """
+        FIXME (unimplemented)
+
+        :param count:
+        :param itemdata:
+        :param clusterid:
+        :param procid:
+        :param qdate:
+        :param owner:
+        """
         pass
 
 
     def getQArgs(self) -> str:
+        """
+        Return the arguments to the queue statement.
+        """
         return _submit_getqargs(self, self._handle)
 
 
@@ -215,6 +237,8 @@ class Submit(MutableMapping):
         '''
         Set the queue statement.  This statement replaces the queue statement,
         if any, passed to the original constructor.
+
+        :param args:
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
@@ -225,13 +249,67 @@ class Submit(MutableMapping):
         method_value : int = -1,
         allow_reserved_values : bool = False
     ):
-        # FIXME
+        """
+        FIXME (unimplemented)
+
+        :param method_value:
+        :param allowed_reserved_values:
+        """
         pass
 
 
     def getSubmitMethod(self) -> int:
-        # FIXME
+        """
+        FIXME (unimplemented)
+        """
         pass
+
+
+    @staticmethod
+    def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> "Submit":
+        """
+        Creates a submit file on disk that will submit the given DAG.  Returns
+        a :class:`Submit` object that can be used to submit it.
+
+        :param filename:  The DAG description file.
+        :param options:  A dictionary of *condor_submit_dag* command-line
+            options and their values.  See :meth:`from_dag_options`.
+        """
+        if not isinstance(options, dict):
+            raise TypeError("options must be a dict")
+        if not Path(filename).exists():
+            raise IOError(f"{filename} does not exist")
+
+        # Convert from version 1 names to the proper internal names.
+        internal_options = {}
+        for key, value in options.items():
+            if not isinstance(key, str):
+                raise TypeError("options keys must by strings")
+            elif len(key) == 0:
+                raise KeyError("options key is empty")
+            internal_key = _NewOptionNames.get(key.lower(), key)
+            if not isinstance(value, (int, bool, str)):
+                raise TypeError("options values must be int, bool, or str")
+            internal_options[internal_key] = str(value)
+
+        subfile = _submit_from_dag(filename, internal_options)
+        subfile_text = Path(subfile).read_text()
+        return Submit(subfile_text)
+
+
+    @staticmethod
+    def from_dag_options():
+        """
+        Prints a table of valid keys for the ``options`` dictionary
+        passed to :meth:`from_dag`, the type of each key, and the
+        short description from *condor_submit_dag*'s ``-help`` output.
+
+        This function is useful if you don't have an installed copy of
+        *condor_submit_dag* or if this module and that command-line
+        tool could be from different versions.
+
+        FIXME: Unimplemented.
+        """
 
 
 # List does not include options which vary only in capitalization.
@@ -254,29 +332,3 @@ _NewOptionNames = {
     "valgrind":                 "RunValgrind",
     "suppress_notification":    "SuppressNotification",
 }
-
-
-def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> Submit:
-    if not isinstance(options, dict):
-        raise TypeError("options must be a dict")
-    if not Path(filename).exists():
-        raise IOError(f"{filename} does not exist")
-
-    # Convert from version 1 names to the proper internal names.
-    internal_options = {}
-    for key, value in options.items():
-        if not isinstance(key, str):
-            raise TypeError("options keys must by strings")
-        elif len(key) == 0:
-            raise KeyError("options key is empty")
-        internal_key = _NewOptionNames.get(key.lower(), key)
-        if not isinstance(value, (int, bool, str)):
-            raise TypeError("options values must be int, bool, or str")
-        internal_options[internal_key] = str(value)
-
-    subfile = _submit_from_dag(filename, internal_options)
-    subfile_text = Path(subfile).read_text()
-    return Submit(subfile_text)
-
-
-Submit.from_dag = from_dag

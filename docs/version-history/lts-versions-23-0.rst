@@ -15,6 +15,37 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-2305:
+
+Version 23.0.5
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.0.5 released on Month Date, 2024.
+
+- HTCondor version 23.0.5 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed bug in the event log reader that would rarely cause DAGMan
+  to lose track of a job, and wait forever for a job that had
+  really finished, with dagman not realizing that said job had
+  indeed finished.
+  :jira:`2236`
+
+- Fixed bug in DAGMan where nodes that had retries would incorrectly
+  set its descendants to the Futile state if the node job got removed.
+  :jira:`2240`
+
+- Fixed *condor_test_token* to access the SciTokens cache as the correct
+  user when run as root.
+  :jira:`2241`
+
 .. _lts-version-history-2304:
 
 Version 23.0.4
@@ -31,7 +62,11 @@ New Features:
 - The **condor_starter** can now be configured to capture the stdout and stderr
   of file transfer plugins and write that output into the StarterLog.
   :jira:`1459`
-  
+
+- The **condor_starter** will now set the environment variable ``NVIDIA_VISIBLE_DEVICES`` either
+  to ``none`` or to a list of the full uuid of each GPU device assigned to the slot.
+  :jira:`2242`
+
 - Updated :tool:`condor_upgrade_check` script for better support and
   maintainability. This update includes new flags/functionality
   and removal of old checks for upgrading between V9 and V10 of
@@ -45,7 +80,7 @@ Bugs Fixed:
   :jira:`2201`
 
 - Fixed bug where DAG node jobs declared inline inside a DAG file
-  would fail to set the Job ClassAd attribute ``JobSubmitMethod``.
+  would fail to set the Job ClassAd attribute :ad-attr:`JobSubmitMethod`.
   :jira:`2184`
 
 - Fixed ``SyntaxWarning`` raised by Python 3.12 in scripts packaged
@@ -251,8 +286,8 @@ Bugs Fixed:
   an assertion check and crash.
   :jira:`2051`
 
-- The job attributes ``CpusProvisioned``, ``DiskProvisioned``, and
-  ``MemoryProvisioned`` are now updated for Condor-C and Job Router jobs.
+- The job attributes :ad-attr:`CpusProvisioned`, :ad-attr:`DiskProvisioned`, and
+  :ad-attr:`MemoryProvisioned` are now updated for Condor-C and Job Router jobs.
   :jira:`2069`
 
 - Updated HTCondor Windows binaries that are statically linked to the curl library to use curl version 8.4.0.
@@ -287,7 +322,7 @@ New Features:
   The configuration template ``use FEATURE : StaticSlots`` was added for admins wanting the old behavior.
   :jira:`2026`
 
-- The ``TargetType`` attribute is no longer a required attribute in most Classads.  It is still used for
+- The :ad-attr:`TargetType` attribute is no longer a required attribute in most Classads.  It is still used for
   queries to the *condor_collector* and it remains in the Job ClassAd and the Machine ClassAd because
   of older versions of HTCondor require it to be present.
   :jira:`1997`

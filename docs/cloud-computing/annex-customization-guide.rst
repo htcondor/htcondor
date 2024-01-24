@@ -3,7 +3,7 @@ HTCondor Annex Customization Guide
 
 Aside from the configuration macros (see the
 :doc:`/cloud-computing/annex-configuration` section), the major way to
-ustomize :tool:`condor_annex` is my customizing the default disk image. Because
+customize :tool:`condor_annex` is my customizing the default disk image. Because
 the implementation of :tool:`condor_annex` varies from service to service, and that
 implementation determines the constraints on the disk image, the this section
 is divided by service.

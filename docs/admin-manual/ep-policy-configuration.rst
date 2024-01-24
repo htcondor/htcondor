@@ -70,7 +70,7 @@ of resources (e.g. Memory, Cpus, Disk) where a job may run.  Each slot is
 represented by its own machine ClassAd, distinguished by the machine ClassAd
 attribute ``Name``, which is of the form ``slot<N>@hostname``, or
 ``slot<M_N>@hostname``.  The value for ``<N>`` will also be defined with
-machine ClassAd attribute ``SlotID``.  Every *condor_startd* contains
+machine ClassAd attribute :ad-attr:`SlotID`.  Every *condor_startd* contains
 one or more slots, depending on configuration, and the hardware it runs on.
 There are three types of slots: Partitionable, Dynamic, and Static.
 
@@ -79,10 +79,10 @@ Partitionable Slots
 :index:`Slot Types<single; Slot Type; Partionable>`
 
 By default, each EP starts out with one partitionable slot, which represents
-all the detected resources on the machine.  Attributes like ``Memory``,
-``Disk`` and ``Cpus`` describe how much is available.  However, no jobs run
+all the detected resources on the machine.  Attributes like :ad-attr:`Memory`,
+:ad-attr:`Disk` and :ad-attr:`Cpus` describe how much is available.  However, no jobs run
 directly in Partionable slots.  Rather, partitionable slots serve as a parent
-for Dynamic slots.  Partionable slots have the attribute ``SlotType`` set to
+for Dynamic slots.  Partionable slots have the attribute :ad-attr:`SlotType` set to
 ``Partitionable``, and ``PartionableSlot`` set to ``True``, and are sometimes
 called p-slots for convenience.  p-slots are named slotN@startd_name, where N
 is usually 1.  Although possible, it is rare to have multiple p-slots on one
@@ -106,7 +106,7 @@ Depending on the configuration, the privilege level of HTCondor, and the OS,
 these slot may or may not enforce the resources limits they have allocated.
 dslots are named slotN_M@startd_name, where N is the number of the parent
 partitionable slot (often "1"). Dynamic slots have the attribute
-``DynamicSlot`` set to ``True``, and the attribute ``SlotType`` set to
+:ad-attr:`DynamicSlot` set to ``True``, and the attribute :ad-attr:`SlotType` set to
 ``Dynamic``.
 
 .. sidebar:: Discovering classad attribute values
@@ -374,7 +374,7 @@ Configuration Specific to Multi-core Machines
 
 Each slot within a multi-core machine is treated as an independent
 machine, each with its own view of its state as represented by the
-machine ClassAd attribute ``State``. The policy expressions for the
+machine ClassAd attribute :ad-attr:`State`. The policy expressions for the
 multi-core machine as a whole are propagated from the *condor_startd*
 to the slot's machine ClassAd. This policy may consider a slot state(s)
 in its expressions.
@@ -387,17 +387,17 @@ following way.
 #. Each slot reads the configuration file and sets up its own machine
    ClassAd.
 #. Each slot is now separate from the others. It has a different ClassAd
-   attribute ``State``, a different machine ClassAd, and if there is a
+   attribute :ad-attr:`State`, a different machine ClassAd, and if there is a
    job running, a separate job ClassAd. Each slot periodically evaluates
    the policy expressions, changing its own state as necessary. This
    occurs independently of the other slots on the machine. So, if the
    *condor_startd* daemon is evaluating a policy expression on a
-   specific slot, and the policy expression refers to ``ProcID``,
-   ``Owner``, or any attribute from a job ClassAd, it always refers to
+   specific slot, and the policy expression refers to :ad-attr:`ProcId`,
+   :ad-attr:`Owner`, or any attribute from a job ClassAd, it always refers to
    the ClassAd of the job running on the specific slot.
 
 To set a different policy for the slots within a machine, incorporate
-the slot-specific machine ClassAd attribute ``SlotID``. A :macro:`SUSPEND`
+the slot-specific machine ClassAd attribute :ad-attr:`SlotID`. A :macro:`SUSPEND`
 policy that is different for each of the two slots will be of the form
 
 .. code-block:: condor-config
@@ -553,7 +553,7 @@ set for the *condor_negotiator*:
       ALLOW_PSLOT_PREEMPTION = True
 
 When the negotiator examines the resources of dynamic slots, it sorts
-the slots by their ``CurrentRank`` attribute, such that slots with lower
+the slots by their :ad-attr:`CurrentRank` attribute, such that slots with lower
 values are considered first. The negotiator only examines the cpu,
 memory and disk resources of the dynamic slots; custom resources are
 ignored.
@@ -570,7 +570,7 @@ When multiple partitionable slots match a candidate job and the various
 job rank expressions are evaluated to sort the matching slots, the
 ClassAd of the partitionable slot is used for evaluation. This may cause
 unexpected results for some expressions, as attributes such as
-``RemoteOwner`` will not be present in a partitionable slot that matches
+:ad-attr:`RemoteOwner` will not be present in a partitionable slot that matches
 with preemption of some of its dynamic slots.
 
 Defaults for Partitionable Slot Sizes
@@ -853,7 +853,7 @@ allowed to exceed the limit. If the process goes above the hard
 limit, the job will be put on hold.
 
 The memory size used in both cases is the machine ClassAd
-attribute ``Memory``. Note that ``Memory`` is a static amount when using
+attribute :ad-attr:`Memory`. Note that :ad-attr:`Memory` is a static amount when using
 static slots, but it is dynamic when partitionable slots are used. That
 is, the limit is whatever the "Mem" column of condor_status reports for
 that slot.
@@ -871,8 +871,8 @@ can tell condor that a job should never use swap, by setting
 In addition to memory, the *condor_starter* can also control the total
 amount of CPU used by all processes within a job. To do this, it writes
 a value to the cpu.shares attribute of the cgroup cpu controller. The
-value it writes is copied from the ``Cpus`` attribute of the machine
-slot ClassAd multiplied by 100. Again, like the ``Memory`` attribute,
+value it writes is copied from the :ad-attr:`Cpus` attribute of the machine
+slot ClassAd multiplied by 100. Again, like the :ad-attr:`Memory` attribute,
 this value is fixed for static slots, but dynamic under partitionable
 slots. This tells the operating system to assign cpu usage
 proportionally to the number of cpus in the slot. Unlike memory, there
@@ -905,12 +905,12 @@ This feature will enable better handling of jobs that utilize more than the disk
 than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
 created for it, the starter will put the job on hold with the out of resources hold code (34).
 Otherwise, in a full filesystem, writes will fail with ENOSPC, and leave it up to the job
-to handle these errors inernally at all places writed occur. Even in included third party
+to handle these errors internally at all places writes occur. Even in included third party
 libraries.
 
 .. note::
     The ephemeral filesystem created for the job is private to that job so the contents of
-    the filesystem are not visable outside the process hierarchy. The nsenter command can
+    the filesystem are not visible outside the process hierarchy. The nsenter command can
     be used to enter this namespace in order inspect the job's sandbox.
 
 .. note::
@@ -995,8 +995,8 @@ The most important expression to the *condor_startd* is the
 :macro:`START` expression. This expression describes the
 conditions that must be met for a machine or slot to run a job. This
 expression can reference attributes in the machine's ClassAd (such as
-``KeyboardIdle`` and ``LoadAvg``) and attributes in a job ClassAd (such
-as ``Owner``, ``Imagesize``, and ``Cmd``, the name of the executable the
+:ad-attr:`KeyboardIdle` and :ad-attr:`LoadAvg`) and attributes in a job ClassAd (such
+as :ad-attr:`Owner`, :ad-attr:`ImageSize`, and :ad-attr:`Cmd`, the name of the executable the
 job will run). The value of the :macro:`START` expression plays a crucial
 role in determining the state and activity of a machine.
 
@@ -1020,8 +1020,8 @@ a match, or against whatever request ClassAd currently has claimed the
 machine. However, by locally evaluating an expression, the machine only
 evaluates the expression against its own ClassAd. If an expression
 cannot be locally evaluated (because it references other expressions
-that are only found in a request ClassAd, such as ``Owner`` or
-``Imagesize``), the expression is (usually) undefined. See
+that are only found in a request ClassAd, such as :ad-attr:`Owner` or
+:ad-attr:`ImageSize`), the expression is (usually) undefined. See
 the :doc:`/classads/classad-mechanism` section for specifics on
 how undefined terms are handled in ClassAd expression evaluation.
 
@@ -1085,7 +1085,7 @@ small research group has spent a lot of money on really fast machines
 for the group. As part of the larger pool, but to implement a policy
 that gives priority on the fast machines to anyone in the small research
 group, set the :macro:`RANK` expression on the machines to reference the
-``Owner`` attribute and prefer requests where that attribute matches one
+:ad-attr:`Owner` attribute and prefer requests where that attribute matches one
 of the people in the group as in
 
 .. code-block:: condor-config
@@ -1129,7 +1129,7 @@ machine ``bass``, since the boolean that matches gets multiplied by 10.
 Due to this, Jimmy Garrison's job could preempt Elvin Jones' job on the
 ``bass`` machine where Jimmy Garrison's jobs are preferred.
 
-The :macro:`RANK` expression is not required to reference the ``Owner`` of
+The :macro:`RANK` expression is not required to reference the :ad-attr:`Owner` of
 the jobs. Perhaps there is one machine with an enormous amount of
 memory, and others with not much at all. Perhaps configure this
 large-memory machine to prefer to run jobs with larger memory
@@ -1143,7 +1143,7 @@ That's all there is to it. The bigger the job, the more this machine
 wants to run it. It is an altruistic preference, always servicing the
 largest of jobs, no matter who submitted them. A little less altruistic
 is the :macro:`RANK` on Coltrane's machine that prefers John Coltrane's jobs
-over those with the largest ``Imagesize``:
+over those with the largest :ad-attr:`ImageSize`:
 
 .. code-block:: condor-config
 
@@ -1375,7 +1375,7 @@ which the *condor_schedd* sends keep alive updates to all
 Initially, as when the *condor_schedd* starts up, the alive interval
 starts at the value set by the configuration variable
 :macro:`ALIVE_INTERVAL`. It may be modified when a job is started.
-The job's ClassAd attribute ``JobLeaseDuration`` is checked. If the
+The job's ClassAd attribute :ad-attr:`JobLeaseDuration` is checked. If the
 value of ``JobLeaseDuration/3`` is less than the current alive interval,
 then the alive interval is set to either this lower value or the imposed
 lowest limit on the alive interval of 10 seconds. Thus, the alive
@@ -1383,11 +1383,11 @@ interval starts at :macro:`ALIVE_INTERVAL` and goes down, never up.
 
 If a claim lease expires, the *condor_startd* will drop the claim. The
 length of the claim lease is the job's ClassAd attribute
-``JobLeaseDuration``. ``JobLeaseDuration`` defaults to 40 minutes time,
+:ad-attr:`JobLeaseDuration`. :ad-attr:`JobLeaseDuration` defaults to 40 minutes time,
 except when explicitly set within the job's submit description file. If
-``JobLeaseDuration`` is explicitly set to 0, or it is not set as may be
+:ad-attr:`JobLeaseDuration` is explicitly set to 0, or it is not set as may be
 the case for a Web Services job that does not define the attribute, then
-``JobLeaseDuration`` is given the Undefined value. Further, when
+:ad-attr:`JobLeaseDuration` is given the Undefined value. Further, when
 undefined, the claim lease duration is calculated with
 ``MAX_CLAIM_ALIVES_MISSED * alive interval``. The alive interval is the
 current value, as sent by the *condor_schedd*. If the *condor_schedd*
@@ -1646,7 +1646,7 @@ configuration template is in use. If the :macro:`START` expression is
 
     START = KeyboardIdle > 15 * $(MINUTE) && Owner == "coltrane"
 
-and if ``KeyboardIdle`` is 34 seconds, then the machine would remain in
+and if :ad-attr:`KeyboardIdle` is 34 seconds, then the machine would remain in
 the Owner state. Owner is undefined, and anything && FALSE is FALSE.
 
 If, however, the :macro:`START` expression is
@@ -1655,11 +1655,11 @@ If, however, the :macro:`START` expression is
 
     START = KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
 
-and ``KeyboardIdle`` is 34 seconds, then the machine leaves the Owner
+and :ad-attr:`KeyboardIdle` is 34 seconds, then the machine leaves the Owner
 state and becomes Unclaimed. This is because FALSE || UNDEFINED is
 UNDEFINED. So, while this machine is not available to just anybody, if
 user coltrane has jobs submitted, the machine is willing to run them.
-Any other user's jobs have to wait until ``KeyboardIdle`` exceeds 15
+Any other user's jobs have to wait until :ad-attr:`KeyboardIdle` exceeds 15
 minutes. However, since coltrane might claim this resource, but has not
 yet, the machine goes to the Unclaimed state.
 
@@ -1714,7 +1714,7 @@ When in the Unclaimed state, the :macro:`RUNBENCHMARKS` expression is relevant.
 If :macro:`RUNBENCHMARKS` evaluates to TRUE while the machine is in the
 Unclaimed state, then the machine will transition from the Idle activity
 to the Benchmarking activity (transition **3**) and perform benchmarks
-to determine ``MIPS`` and ``KFLOPS``. When the benchmarks complete, the
+to determine :ad-attr:`Mips` and :ad-attr:`KFlops`. When the benchmarks complete, the
 machine returns to the Idle activity (transition **4**).
 
 The startd automatically inserts an attribute, ``LastBenchmark``,
@@ -1993,7 +1993,7 @@ activity lasts for as long as the maximum vacating time, then the
 machine also enters the Killing activity. The maximum vacating time is
 determined by the configuration variable
 :macro:`MachineMaxVacateTime`. This may be adjusted by the setting
-of the job ClassAd attribute ``JobMaxVacateTime``.
+of the job ClassAd attribute :ad-attr:`JobMaxVacateTime`.
 
 When the starter exits, or if there was no starter running when the
 machine enters the Preempting state (transition **10**), the other
@@ -2172,13 +2172,13 @@ It serves as a quick reference.
     When the machine enters the Preempting/Vacating state, this
     expression specifies the maximum time in seconds that the
     *condor_startd* will wait for the job to finish. The job may adjust
-    the wait time by setting ``JobMaxVacateTime``. If the job's setting
+    the wait time by setting :ad-attr:`JobMaxVacateTime`. If the job's setting
     is less than the machine's, the job's is used. If the job's setting
     is larger than the machine's, the result depends on whether the job
     has any excess retirement time. If the job has more retirement time
     left than the machine's maximum vacate time setting, then retirement
     time will be converted into vacating time, up to the amount of
-    ``JobMaxVacateTime``. Once the vacating time expires, the job is
+    :ad-attr:`JobMaxVacateTime`. Once the vacating time expires, the job is
     hard-killed. The :macro:`KILL` expression may be used
     to abort the graceful shutdown of the job at any time.
 
@@ -2846,13 +2846,13 @@ mostly jobs that cannot produce checkpoints, it
 might be a good idea to only allow the jobs to run when you know the
 machines will be idle and when they will not be interrupted.
 
-To configure this kind of policy, use the ``ClockMin`` and ``ClockDay``
+To configure this kind of policy, use the :ad-attr:`ClockMin` and :ad-attr:`ClockDay`
 attributes. These are special attributes which are automatically
 inserted by the *condor_startd* into its ClassAd, so you can always
-reference them in your policy expressions. ``ClockMin`` defines the
+reference them in your policy expressions. :ad-attr:`ClockMin` defines the
 number of minutes that have passed since midnight. For example, 8:00am
 is 8 hours after midnight, or 8 \* 60 minutes, or 480. 5:00pm is 17
-hours after midnight, or 17 \* 60, or 1020. ``ClockDay`` defines the day
+hours after midnight, or 17 \* 60, or 1020. :ad-attr:`ClockDay` defines the day
 of the week, Sunday = 0, Monday = 1, and so on.
 
 To make the policy expressions easy to read, we recommend using macros
@@ -3121,9 +3121,9 @@ The *condor_startd* advertises one classad per slot to the *condor_collector*.  
 these ads has many attributes. See :ref:`classad-attributes/machine-classad-attributes:machine classad attributes`
 for the complete list of the attributes defined and used by the system.  These attributes,
 and the custom attributes describe below, which can be used exactly as the predefined ones,
-have many uses.  Let's consider the machine classad attribute ``OpsysAndVer``. This is
-a more specific version of the attribute ``Opsys``, which will just be "Linux" on any
-Linux system, whereas ``OpsysAndVer`` might be ``CentOS8`` on such a system.
+have many uses.  Let's consider the machine classad attribute :ad-attr:`OpSysAndVer`. This is
+a more specific version of the attribute :ad-attr:`OpSys`, which will just be "Linux" on any
+Linux system, whereas :ad-attr:`OpSysAndVer` might be ``CentOS8`` on such a system.
 
 First, we might use this attribute to examine one particular machine.  We can use
 :tool:`condor_status` to query this attribute on a machine named "vulture" by running:
@@ -3219,7 +3219,7 @@ this new attribute.
 
 Beginning users may be tempted to hard-code, or assume the knowledge that
 certain well-known machines in their poool might have this database installed
-at some path.  But, by advertisting this value as a custom EP attribute,
+at some path.  But, by advertising this value as a custom EP attribute,
 administrators have gained a level of indirection, and are free to move
 the database to a different path, or perhaps add machines to the pool without
 such database.
@@ -3364,7 +3364,7 @@ multiple ClassAds, using the mechanism defined below:
    -  **SlotTypeId** *integer*: the current ad is merged into all ads
       that have the same value for their ``SlotTypeId`` attribute.
    -  **SlotId** *integer*: the current ad is merged into all ads that
-      have the same value for their ``SlotId`` attribute.
+      have the same value for their :ad-attr:`SlotID` attribute.
 
 For example, if the Startd Cron job returns:
 
@@ -3493,7 +3493,7 @@ execute machine that has Docker installed.
 The Docker service must be pre-installed on each execute machine that
 can execute a docker universe job. Upon start up of the *condor_startd*
 daemon, the capability of the execute machine to run docker universe
-jobs is probed, and the machine ClassAd attribute ``HasDocker`` is
+jobs is probed, and the machine ClassAd attribute :ad-attr:`HasDocker` is
 advertised for a machine that is capable of running Docker universe
 jobs.
 
@@ -3579,7 +3579,7 @@ Enterprise Linux machine.
          $ systemctl enable docker
 
 #. Reconfigure the execute machine, such that it can set the machine
-   ClassAd attribute ``HasDocker``:
+   ClassAd attribute :ad-attr:`HasDocker`:
 
    .. code-block:: console
 
@@ -3665,7 +3665,7 @@ memory limit:
     DOCKER_SHM_SIZE = ifThenElse(DevShmSize isnt Undefined && isInteger(DevShmSize) && int(DevShmSize) <= (Memory * 1024 * 1024), int(DevShmSize), 2 * 1024 * 1024 * 1024)
 
     
-Note: ``Memory`` is in MB, thus it needs to be scaled to bytes.
+Note: :ad-attr:`Memory` is in MB, thus it needs to be scaled to bytes.
 
 Apptainer and Singularity Support
 '''''''''''''''''''''''''''''''''
@@ -3703,7 +3703,7 @@ advertise two attributes in the slot ad:
        SingularityVersion = "singularity version 3.7.0-1.el7"
 
 If the detected Singularity installation fails to run test containers
-at startd startup, ``HasSingularity`` will be set to ``false``, and
+at startd startup, :ad-attr:`HasSingularity` will be set to ``false``, and
 the slot ad attribute ``SingularityOfflineReason`` will contain an error string.
 
 HTCondor will run a job under Singularity when the startd configuration knob
@@ -4056,10 +4056,10 @@ to all slots.
 When the problem is with the virtual machine infrastructure, these
 machine ClassAd attributes are changed:
 
--  ``HasVM`` will be set to ``False``
--  ``VMOfflineReason`` will be set to a somewhat explanatory string
--  ``VMOfflineTime`` will be set to the time of the failure
--  ``OfflineUniverses`` will be adjusted to include ``"VM"`` and ``13``
+-  :ad-attr:`HasVM` will be set to ``False``
+-  :ad-attr:`VMOfflineReason` will be set to a somewhat explanatory string
+-  :ad-attr:`VMOfflineTime` will be set to the time of the failure
+-  :ad-attr:`OfflineUniverses` will be adjusted to include ``"VM"`` and ``13``
 
 Since :tool:`condor_submit` adds ``HasVM == True`` to a vm universe job's
 requirements, no further vm universe jobs will match.
@@ -4077,7 +4077,7 @@ jobs.
    attributes related to the vm universe to be set indicating that vm
    universe jobs can match with this machine.
 #. Run the command line tool :tool:`condor_update_machine_ad` to set
-   machine ClassAd attribute ``HasVM`` to ``True``, and this will cause
+   machine ClassAd attribute :ad-attr:`HasVM` to ``True``, and this will cause
    the other attributes related to the vm universe to be set indicating
    that vm universe jobs can match with this machine. See the
    :tool:`condor_update_machine_ad` manual page for examples and details.
@@ -4587,7 +4587,7 @@ what output is expected, and, when relevant, the exit status expected.
     following attributes are required:
     :index:`required attributes<single: required attributes; FetchWork>`
 
-    ``Cmd``
+    :ad-attr:`Cmd`
         This attribute :index:`Cmd<single: Cmd; required attributes>`\ defines the
         full path to the executable program to be run as a FetchWork application.
         Since HTCondor does not currently provide any mechanism to transfer
@@ -4596,30 +4596,30 @@ what output is expected, and, when relevant, the exit status expected.
         string attribute, and must therefore be enclosed in quotation marks
         ("). There is no default.
 
-    ``Owner``
+    :ad-attr:`Owner`
         If the *condor_startd* daemon is executing as root on
         :index:`Owner<single: Owner; required attributes>`\ the resource where a FetchWork
-        application will run, the user must also define ``Owner`` to specify
+        application will run, the user must also define :ad-attr:`Owner` to specify
         what user name the application will run as. On Windows, the
         *condor_startd* daemon always runs as an Administrator service,
         which is equivalent to running as root on Unix platforms.
-        ``Owner`` must contain a valid user name on the given FetchWork resource.
+        :ad-attr:`Owner` must contain a valid user name on the given FetchWork resource.
         It is a string attribute, and must therefore be enclosed in
         quotation marks (").
 
-    ``RequestCpus``
+    :ad-attr:`RequestCpus`
         Required when running on a *condor_startd*
         :index:`RequestCpus<single: RequestCpus; required attributes>`\ that uses
         partitionable slots. It specifies the number of CPU cores from the
         partitionable slot allocated for this job.
 
-    ``RequestDisk``
+    :ad-attr:`RequestDisk`
         Required when running on a *condor_startd*
         :index:`RequestDisk<single: RequestDisk; required attributes>`\ that uses
         partitionable slots. It specifies the disk space, in Megabytes, from
         the partitionable slot allocated for this job.
 
-    ``RequestMemory``
+    :ad-attr:`RequestMemory`
         Required when running on a *condor_startd*
         :index:`RequestMemory<single: RequestMemory; required attributes>`\ that uses
         partitionable slots. It specifies the memory, in Megabytes, from the
@@ -4630,7 +4630,7 @@ what output is expected, and, when relevant, the exit status expected.
 
     The following list of attributes are optional:
 
-    ``JobUniverse``
+    :ad-attr:`JobUniverse`
         This attribute defines what HTCondor job
         :index:`JobUniverse<single: JobUniverse; optional attributes>`\ universe to use
         for the given FetchWork application. The only tested universes are vanilla
@@ -4678,7 +4678,7 @@ what output is expected, and, when relevant, the exit status expected.
         default is ``/dev/null``. It is a string attribute, and must
         therefore be enclosed in quotation marks (").
 
-    ``Env``
+    :ad-attr:`Env`
         This string defines environment variables to
         :index:`Env<single: Env; optional attributes>`\ set for a given FetchWork
         application. Each environment variable has the form NAME=value.
@@ -4686,18 +4686,18 @@ what output is expected, and, when relevant, the exit status expected.
         Env = "PATH=/usr/local/bin:/usr/bin;TERM=vt100" It is a string
         attribute, and must therefore be enclosed in quotation marks (").
 
-    ``Args``
+    :ad-attr:`Args`
         This string attribute defines the list of
         :index:`Args<single: Args; optional attributes>`\ arguments to be supplied
         to the program on the command-line. The arguments are delimited
         (separated) by space characters. There is no default. If the
-        ``JobUniverse`` corresponds to the Java universe, the first argument
+        :ad-attr:`JobUniverse` corresponds to the Java universe, the first argument
         must be the name of the class containing ``main``. It is a string
         attribute, and must therefore be enclosed in quotation marks (").
 
     ``JarFiles``
         This string attribute is only used if
-        :index:`JarFiles<single: JarFiles; optional attributes>`\ ``JobUniverse`` is 10
+        :index:`JarFiles<single: JarFiles; optional attributes>`\ :ad-attr:`JobUniverse` is 10
         (the Java universe). If a given FetchWork application is a Java program,
         specify the JAR files that the program requires with this attribute.
         There is no default. It is a string attribute, and must therefore be
@@ -4705,7 +4705,7 @@ what output is expected, and, when relevant, the exit status expected.
         delimited with either commas or white space characters, and
         therefore, file names can not contain spaces.
 
-    ``KillSig``
+    :ad-attr:`KillSig`
         This attribute specifies what signal should be
         :index:`KillSig<single: KillSig; optional attributes>`\ sent whenever the
         HTCondor system needs to gracefully shutdown the FetchWork application. It
@@ -4735,7 +4735,7 @@ what output is expected, and, when relevant, the exit status expected.
         ``StarterUserLogUseXML`` boolean is set to TRUE. The default if not
         specified is FALSE.
 
-    If any attribute that specifies a path (``Cmd``, ``In``,
+    If any attribute that specifies a path (:ad-attr:`Cmd`, ``In``,
     ``Out``,\ ``Err``, ``StarterUserLog``) is not a full path name, HTCondor
     automatically prepends the value of ``IWD``.
 
@@ -4810,7 +4810,7 @@ use a global keyword as defined by :macro:`STARTD_JOB_HOOK_KEYWORD`.
 
 Once a job is fetched via :macro:`<Keyword>_HOOK_FETCH_WORK`, the
 *condor_startd* will insert the keyword used to fetch that job into
-the job ClassAd as ``HookKeyword``. This way, the same keyword will
+the job ClassAd as :ad-attr:`HookKeyword`. This way, the same keyword will
 be used to select the hooks invoked by the *condor_starter* during
 the actual execution of the job.
 The :macro:`STARTER_DEFAULT_JOB_HOOK_KEYWORD` config knob can define a default
@@ -4818,7 +4818,7 @@ hook keyword to use in the event that keyword defined by the job is invalid
 or not specified.
 Alternatively, the :macro:`STARTER_JOB_HOOK_KEYWORD` can be defined to force the
 *condor_starter* to always use a given keyword for its own hooks,
-regardless of the value in the job ClassAd for the ``HookKeyword`` attribute.
+regardless of the value in the job ClassAd for the :ad-attr:`HookKeyword` attribute.
 
 For example, the following configuration defines two sets of hooks, and
 on a machine with 4 slots, 3 of the slots use the global keyword for
@@ -4920,7 +4920,7 @@ using Fetch Work hooks.
        A copy of the job ClassAd.
     Expected standard output from the hook
        A set of attributes to insert or update into the job ad. For
-       example, changing the ``Cmd`` attribute to a quoted string
+       example, changing the :ad-attr:`Cmd` attribute to a quoted string
        changes the executable to be run.
        Two special attributes can also 
        be specified: ``HookStatusCode`` and ``HookStatusMessage``.
@@ -4957,7 +4957,7 @@ using Fetch Work hooks.
        A copy of the job ClassAd.
     Expected standard output from the hook
        A set of attributes to insert or update into the job ad. For
-       example, changing the ``Cmd`` attribute to a quoted string
+       example, changing the :ad-attr:`Cmd` attribute to a quoted string
        changes the executable to be run.
        Two special attributes can also 
        be specified: ``HookStatusCode`` and ``HookStatusMessage``.
@@ -5004,18 +5004,18 @@ using Fetch Work hooks.
        ``JobPid``
            The process identifier for the initial job directly spawned
            by the *condor_starter*.
-       ``NumPids``
+       :ad-attr:`NumPids`
            The number of processes that the job has currently spawned.
-       ``JobStartDate``
+       :ad-attr:`JobStartDate`
            The epoch time when the job was first spawned by the
            *condor_starter*.
-       ``RemoteSysCpu``
+       :ad-attr:`RemoteSysCpu`
            The total number of seconds of system CPU time (the time
            spent at system calls) the job has used.
-       ``RemoteUserCpu``
+       :ad-attr:`RemoteUserCpu`
            The total number of seconds of user CPU time the job has
            used.
-       ``ImageSize``
+       :ad-attr:`ImageSize`
            The memory image size of the job in Kbytes.
 
     Expected standard output from the hook
@@ -5064,14 +5064,14 @@ using Fetch Work hooks.
 
        ``ExitReason``
            A human-readable string describing why the job exited.
-       ``ExitBySignal``
+       :ad-attr:`ExitBySignal`
            A boolean indicating if the job exited due to being killed by
            a signal, or if it exited with an exit status.
-       ``ExitSignal``
-           If ``ExitBySignal`` is true, the signal number that killed
+       :ad-attr:`ExitSignal`
+           If :ad-attr:`ExitBySignal` is true, the signal number that killed
            the job.
-       ``ExitCode``
-           If ``ExitBySignal`` is false, the integer exit code of the
+       :ad-attr:`ExitCode`
+           If :ad-attr:`ExitBySignal` is false, the integer exit code of the
            job.
        ``JobDuration``
            The number of seconds that the job ran during this
@@ -5097,7 +5097,7 @@ java universe utilizes a single, fixed JVM. There may be multiple JVMs
 available, and the HTCondor job may need to make the choice of JVM
 version. The use of a job hook solves this problem. The job does not use
 the java universe, and instead uses the vanilla universe in combination
-with a prepare job hook to overwrite the ``Cmd`` attribute of the job
+with a prepare job hook to overwrite the :ad-attr:`Cmd` attribute of the job
 ClassAd. This attribute is the name of the executable the
 *condor_starter* daemon will invoke, thereby selecting the specific JVM
 installation.
@@ -5108,7 +5108,7 @@ In the configuration of the execute machine:
 
     JAVA5_HOOK_PREPARE_JOB = $(LIBEXEC)/java5_prepare_hook
 
-With this configuration, a job that sets the ``HookKeyword`` attribute
+With this configuration, a job that sets the :ad-attr:`HookKeyword` attribute
 with
 
 .. code-block:: condor-submit

@@ -231,7 +231,7 @@ entries` section for definitions of these configuration variables.
     group, with a defined group quota, then this attribute is the
     integer number of slots currently utilized by the group.
 
-:index:`SubmitterGroup<single: SubmitterGroup; ClassAd attribute, ephemeral>`\ ``SubmitterGroup``
+:index:`SubmitterGroup<single: SubmitterGroup; ClassAd attribute, ephemeral>`\ :ad-attr:`SubmitterGroup`
     The accounting group name of the requesting submitter.
 
 :index:`SubmitterGroupQuota<single: SubmitterGroupQuota; ClassAd attribute, ephemeral>`\ ``SubmitterGroupQuota``
@@ -244,7 +244,7 @@ entries` section for definitions of these configuration variables.
     accounting group, with a defined group quota, then this attribute is
     the integer number of slots currently utilized by the group.
 
-:index:`RemoteGroup<single: RemoteGroup; ClassAd attribute, ephemeral>`\ ``RemoteGroup``
+:index:`RemoteGroup<single: RemoteGroup; ClassAd attribute, ephemeral>`\ :ad-attr:`RemoteGroup`
     The accounting group name of the owner of the currently running job.
 
 :index:`RemoteGroupQuota<single: RemoteGroupQuota; ClassAd attribute, ephemeral>`\ ``RemoteGroupQuota``
@@ -252,19 +252,19 @@ entries` section for definitions of these configuration variables.
     accounting group, with a defined group quota, then this attribute is
     the integer number of slots defined as the group's quota.
 
-:index:`SubmitterNegotiatingGroup<single: SubmitterNegotiatingGroup; ClassAd attribute, ephemeral>`\ ``SubmitterNegotiatingGroup``
+:index:`SubmitterNegotiatingGroup<single: SubmitterNegotiatingGroup; ClassAd attribute, ephemeral>`\ :ad-attr:`SubmitterNegotiatingGroup`
     The accounting group name that the candidate job is negotiating
     under.
 
-:index:`RemoteNegotiatingGroup<single: RemoteNegotiatingGroup; ClassAd attribute, ephemeral>`\ ``RemoteNegotiatingGroup``
+:index:`RemoteNegotiatingGroup<single: RemoteNegotiatingGroup; ClassAd attribute, ephemeral>`\ :ad-attr:`RemoteNegotiatingGroup`
     The accounting group name that the currently running job negotiated
     under.
 
-:index:`SubmitterAutoregroup<single: SubmitterAutoregroup; ClassAd attribute, ephemeral>`\ ``SubmitterAutoregroup``
+:index:`SubmitterAutoregroup<single: SubmitterAutoregroup; ClassAd attribute, ephemeral>`\ :ad-attr:`SubmitterAutoregroup`
     Boolean attribute is ``True`` if candidate job is negotiated via
     autoregroup.
 
-:index:`RemoteAutoregroup<single: RemoteAutoregroup; ClassAd attribute, ephemeral>`\ ``RemoteAutoregroup``
+:index:`RemoteAutoregroup<single: RemoteAutoregroup; ClassAd attribute, ephemeral>`\ :ad-attr:`RemoteAutoregroup`
     Boolean attribute is ``True`` if currently running job negotiated
     via autoregroup.
 
@@ -424,7 +424,7 @@ cluster jobs are similar. The configuration variable
 :macro:`NEGOTIATE_ALL_JOBS_IN_CLUSTER` disables the cluster-skipping
 optimization. Use of the configuration variable :macro:`SIGNIFICANT_ATTRIBUTES`
 will change the definition of what the *condor_schedd* considers a cluster from
-the default definition of all jobs that share the same ``ClusterId``.
+the default definition of all jobs that share the same :ad-attr:`ClusterId`.
 
 The Layperson's Description of the Pie Spin and Pie Slice
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1065,10 +1065,10 @@ quickly.
 To help gauge the costs of draining, the *condor_startd* advertises the
 accumulated time that was unused due to draining and the time spent by
 jobs that were killed due to draining. These are advertised respectively
-in the attributes ``TotalMachineDrainingUnclaimedTime`` and
-``TotalMachineDrainingBadput``. The *condor_defrag* daemon averages
+in the attributes :ad-attr:`TotalMachineDrainingUnclaimedTime` and
+:ad-attr:`TotalMachineDrainingBadput`. The *condor_defrag* daemon averages
 these values across the pool and advertises the result in its daemon
-ClassAd in the attributes ``AvgDrainingBadput`` and
+ClassAd in the attributes :ad-attr:`AvgDrainingBadput` and
 ``AvgDrainingUnclaimed``. Details of all attributes published by the
 *condor_defrag* daemon are described in the :doc:`/classad-attributes/defrag-classad-attributes` section.
 
@@ -1696,7 +1696,7 @@ Recognized metric attribute names and their use:
  TargetType
     A string containing a comma-separated list of daemon ClassAd types
     that this metric monitors. The specified values should match the
-    value of ``MyType`` of the daemon ClassAd. In addition, there are
+    value of :ad-attr:`MyType` of the daemon ClassAd. In addition, there are
     special values that may be included. "Machine_slot1" may be
     specified to monitor the machine ClassAd for slot 1 only. This is
     useful when monitoring machine-wide attributes. The special value
@@ -1920,7 +1920,7 @@ and the
 `Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`_,
 both of which must be available to the system Python 3 installation
 if using the daemonized version of :tool:`condor_adstash`.
-:tool:`condor_adstash` can also be run as a standalone tool (e.g. in a
+:tool:`condor_adstash` can also be run as a stand alone tool (e.g. in a
 Python 3 virtual environment containing the necessary libraries).
 
 Running :tool:`condor_adstash` as a daemon (i.e. under the watch of the

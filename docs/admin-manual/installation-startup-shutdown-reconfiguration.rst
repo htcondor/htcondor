@@ -49,9 +49,9 @@ HTCondor is running as root on a specific machine, use the command
       $ condor_status -master -l <machine-name>
 
 where <machine-name> is the name of the specified machine. This command
-displays the full condor_master ClassAd; if the attribute ``RealUid``
+displays the full condor_master ClassAd; if the attribute :ad-attr:`RealUid`
 equals zero, then the HTCondor daemons are indeed running with root
-access. If the ``RealUid`` attribute is not zero, then the HTCondor
+access. If the :ad-attr:`RealUid` attribute is not zero, then the HTCondor
 daemons do not have root access.
 
 .. note::
@@ -68,7 +68,7 @@ daemons do not have root access.
 
 If daemons are not running with root access, make any and all files
 and/or directories that the job will touch readable and/or writable by
-the UID (user id) specified by the ``RealUid`` attribute. Often this may
+the UID (user id) specified by the :ad-attr:`RealUid` attribute. Often this may
 mean using the Unix command chmod 777 on the directory from which the
 HTCondor job is submitted.
 

@@ -71,9 +71,6 @@ inline bool add_attrs_from_string_tokens(classad::References & attrs, const std:
 	return add_attrs_from_string_tokens(attrs, str.c_str(), delims);
 }
 
-// copy string list items into an attribute set
-void add_attrs_from_StringList(classad::References & attrs, const StringList & list);
-
 // print attributes to a std::string, returning the result as a const char *
 const char *print_attrs(std::string &out, bool append, const classad::References & attrs, const char * delim);
 
