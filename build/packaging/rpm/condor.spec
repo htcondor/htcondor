@@ -1413,6 +1413,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jan 23 2024 Tim Theisen <tim@cs.wisc.edu> - 23.3.1-1
+- HTCondor tarballs now contain Pelican 7.4.0
+
 * Thu Jan 04 2024 Tim Theisen <tim@cs.wisc.edu> - 23.3.0-1
 - Restore limited support for Enterprise Linux 7 systems
 - Additional assistance converting old syntax job routes to new syntax
