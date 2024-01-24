@@ -125,8 +125,8 @@ filterPluginResults( const classad::ClassAd & ad ) {
         list->GetComponents(exprs);
 
         std::vector<ExprTree *> filteredExprs;
-        for( ExprTree * expr : exprs ) {
-            classad::ClassAd * transferErrorDataAd = NULL;
+        for( const ExprTree * expr : exprs ) {
+            classad::ClassAd * transferErrorDataAd = nullptr;
             if(! expr->isClassad( & transferErrorDataAd )) { continue; }
             classad::ClassAd * filteredTEDAd = filterTransferErrorData( * transferErrorDataAd );
             filteredExprs.push_back(filteredTEDAd);
