@@ -901,22 +901,6 @@ a custom filesystem for the job's scratch directory. This allows HTCondor to pre
 from using more scratch space than provisioned. HTCondor manages this per scratch directory
 filesystem usage with the LVM disk management system.
 
-.. code-block:: condor-config
-
-    THINPOOL_VOLUME_GROUP_NAME = vgname
-    THINPOOL_NAME = htcondor
-    STARTD_ENFORCE_DISK_LIMITS = true
-
-
-#. :macro:`THINPOOL_VOLUME_GROUP_NAME` is the name of an existing LVM volume group for
-   HTCondor to utilize. This volume group should contain enough disk space to provision
-   scratch directories for all running jobs on the worker node.
-#. :macro:`THINPOOL_NAME` is the name of an existing thinly provisioned logical volume
-   for the Startd to utilize. This will act as the total pool of available disk space
-   that per job scratch filesystems and logical volumes will be carved from.
-#. :macro:`STARTD_ENFORCE_DISK_LIMITS` is a boolean to enable per job scratch directory
-   enforcement.
-
 This feature will enable better handling of jobs that utilize more than the disk space
 than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
 created for it, the starter will put the job on hold with the out of resources hold code (34).
@@ -934,7 +918,60 @@ libraries.
     that optimize for performance, not reliability, and may improve performance for I/O heavy
     jobs.
 
+To enable per job scratch directory filesystems, simply set :macro:`STARTD_ENFORCE_DISK_LIMITS`
+to ``True``. However, it is recommended to also setup a functioning Linux LVM environment
+for HTCondor to utilize by providing the LVM volume group and possibly thin-pool type logical
+volume via the configuration options :macro:`LVM_VOLUME_GROUP_NAME` and :macro:`LVM_THINPOOL_NAME`.
+If a pre-setup Linux LVM environment isn't provided then the *condor_startd* will automatically
+setup a Linux LVM environment using a backing loopback file specified by :macro:`LVM_BACKING_FILE`.
 
+.. sidebar:: Example LVM Configuration
+
+    .. code-block:: condor-config
+        :caption: Thin Provisioning Setup
+
+        STARTD_ENFORCE_FISK_LIMITS = True
+        LVM_VOLUME_GROUP_NAME = condor_vg
+        LVM_THINPOOL_NAME = htcondor
+
+    .. code-block:: condor-config
+        :caption: Thick Provisioning Setup
+
+        STARTD_ENFORCE_FISK_LIMITS = True
+        LVM_VOLUME_GROUP_NAME = condor_vg
+        LVM_USE_THIN_PROVISIONING = False
+
+    HTCondor will use the provided Linux LVM information to create logical volumes
+    and filesystems on a per job basis regardless of thin or thick provisioning.
+
+    .. note::
+
+        The minmum logical volume size is by default is 4MB.
+
+.. mermaid::
+    :caption: Linux LVM Environment Setup
+    :align: center
+
+    flowchart TD
+      Disk1(Disk 1) --> PV1(Physical Volume 1)
+      Disk2(Disk 2) --> PV2(Physical Volume 2)
+      PV1 --> VG(Volume Group\n<b style="color:red">condor_vg</b>)
+      PV2 --> VG(Volume Group\n<b style="color:red">condor_vg</b>)
+      VG -- Thin --> Thinpool(Thinpool Logical Volume\n<b style="color:red">htcondor</b>)
+      VG -- Thick --> Done(HTCondor Ready)
+      Thinpool --> Done(HTCondor Ready)
+
+.. note::
+
+    The condor_startd must be restarted rather than just reconfigured in order for
+    any LVM Startd disk enforcement configuration to take effect.
+
+.. warning::
+
+    When setup to use thin provisioning, if the backing thin pool logical volume fills
+    up completely then all writes to subsequent thin logical volumes carved from the thin
+    pool with pause for 60 seconds. If desired this behavior can be disabled by using
+    ``--errorwhenfull y`` option when creating the backing thin-pool type logical volume.
 
 *condor_startd* Policy Configuration
 ------------------------------------

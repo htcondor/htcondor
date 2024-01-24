@@ -1161,17 +1161,27 @@ default=
 type=string
 tags=startd_factory
 
-[THINPOOL_BACKING_FILE]
+[LVM_USE_THIN_PROVISIONING]
+default=true
+type=bool
+tags=startd
+
+[LVM_BACKING_FILE]
 default=$(SPOOL)/startd_disk.img
 type=string
 tags=startd
 
-[THINPOOL_EXTRA_SIZE_MB]
+[LVM_BACKING_FILE_SIZE_MB]
+default=10240
+type=int
+tags=startd
+
+[LVM_THIN_LV_EXTRA_SIZE_MB]
 default=2000
 type=int
 tags=starter
 
-[THINPOOL_HIDE_MOUNT]
+[LVM_HIDE_MOUNT]
 default=false
 type=bool
 tags=startd

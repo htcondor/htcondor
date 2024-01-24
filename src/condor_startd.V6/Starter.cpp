@@ -944,13 +944,13 @@ int Starter::execDCStarter(
 		auto &slot_name = claim->rip()->r_id_str;
 			// Cleanup from any previously-crashed starters.
 		CondorError err;
-                claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err);
+		claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err);
 
 		claim->rip()->getVolumeManager()->UpdateStarterEnv(new_env);
 		if (claim->rip()->r_attr) {
 			std::string size;
 			formatstr(size, "%lld", claim->rip()->r_attr->get_disk());
-			new_env.SetEnv("_CONDOR_THINPOOL_SIZE_KB", size.c_str());
+			new_env.SetEnv("CONDOR_LVM_LV_SIZE_KB", size.c_str());
 		}
 	}
 #endif // LINUX

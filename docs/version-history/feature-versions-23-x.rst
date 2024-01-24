@@ -17,6 +17,11 @@ Release Notes:
 
 New Features:
 
+- Added ability for administrators to specify whether Startd disk enforcement creates
+  thin or thick provisioned logical volumes for a jobs emphemeral execute directory.
+  This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.
+  :jira:`1783`
+
 - Added new submit commands for constraining GPU properties. When these commands
   are use the ``RequireGPUs`` expression is generated automatically by submit and
   desired values are stored as job attributes. The new submit commands are :subcom:`gpus_minimum_memory`,
