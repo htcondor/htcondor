@@ -115,7 +115,7 @@ fi
 
 # Setup Debian based repositories
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-    $INSTALL apt-transport-https curl gnupg
+    $INSTALL apt-transport-https apt-utils curl gnupg
     mkdir -p /etc/apt/keyrings
     curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${REPO_VERSION}-Key" -o /etc/apt/keyrings/htcondor.asc
     curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/$ID/htcondor-${REPO_VERSION}-${VERSION_CODENAME}.list" -o /etc/apt/sources.list.d/htcondor.list
@@ -134,7 +134,7 @@ if [ $ID = 'future' ]; then
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
     # ] ] Help out vim syntax highlighting
 fi
-if [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'future-opensuse-leap' ]; then
     cp -p /etc/zypp/repos.d/htcondor.repo /etc/zypp/repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/zypp/repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/zypp/repos.d/htcondor-test.repo
