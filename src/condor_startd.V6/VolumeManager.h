@@ -1,7 +1,7 @@
 
 #include <string>
 
-const int VOLUME_MANAGER_TIMEOUT 120
+const int VOLUME_MANAGER_TIMEOUT = 120
 
 class CondorError;
 class Env;
