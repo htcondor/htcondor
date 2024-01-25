@@ -183,6 +183,7 @@ endif ()
 	condor_pl_test (lib_meta_knob  "Test meta knobs" "quick;ctest" CTEST)
 	condor_pl_test (lib_include_cmd_config  "Test meta knobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_include_cmd_config1.txt;src/condor_tests/lib_include_cmd_config3.txt;src/condor_tests/lib_include_cmd_config.pl;src/condor_tests/lib_include_cmd_config2.txt;src/condor_tests/lib_include_cmd_config4.txt")
 
+
 	# an example of a test writen in python rather than in perl
 	# condor_pl_test (python_example "Sample python test" "quick;ctest")
 	if (WITH_PYTHON_BINDINGS)
@@ -201,6 +202,14 @@ endif ()
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 		if (LINUX OR APPLE)
+			# Fail.  We can't build this on Windows because of bad target names.
+			# At some point, this should be turned into a unit test.
+			condor_exe_test(test_filter.exe "test_filter.cpp;../condor_starter.V6.1/filter.cpp" "condor_utils")
+			# Fail.  ctest -R always runs PyTest with an Ornithology-only argument,
+			# which probably means we can't run this test without the bindings,
+			# although it doesn't use them.
+			condor_pl_test(test_filter "Test plug-in output ad filtering" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/test_filter.exe;src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 			# test_classad_eval doesn't actually depend on ornithology at all,
 			# but run_test.pl doesn't know that, and always runs pytest with an
 			# ornithology-specific command-line flag
