@@ -16,11 +16,11 @@ logger.setLevel(logging.DEBUG)
 
 @standup
 def condor(test_dir):
+    raw_config = "USE FEATURE : StaticSlots"
     with Condor(test_dir / "condor", 
+            raw_config=raw_config,
             config={
                 "NUM_CPUS": "20",
-                # What? You got a better hack to handle this?
-                "USE FEATURE : StaticSlots\n#": "",
                 "NEGOTIATOR_SLOT_CONSTRAINT": "SlotID == 7",
             }) as condor:
         yield condor
