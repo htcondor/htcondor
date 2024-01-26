@@ -381,7 +381,7 @@ XInterface::CheckActivity()
 	} else {
 		dprintf(D_FULLDEBUG,"saw Idle for %.3f sec\n", (double)time(NULL) - _last_event);
 	}
-	return input_active || cursor_active;
+	return input_active || cursor_active || xss_active;
 }
 
 
