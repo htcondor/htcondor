@@ -5,6 +5,10 @@
 
 .. autofunction:: enable_debug
 
+.. autofunction:: enable_log
+
+.. autofunction:: log
+
 .. attribute:: param
 
    A :class:`collections.abc.MutableMapping` of the HTCondor
