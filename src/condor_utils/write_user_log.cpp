@@ -964,8 +964,12 @@ WriteUserLog::checkGlobalLogRotation( void )
 				 m_global_path, errno, strerror(errno) );
 	}
 	else {
-		bool is_xml = (m_global_format_opts & ULogEvent::formatOpt::XML) != 0;
-		ReadUserLog	log_reader( fp, is_xml, false );
+		UserLogType is_xml = UserLogType::LOG_TYPE_NORMAL;
+		// TODO: add support for JSON and CLASSAD formats
+		if (m_global_format_opts & ULogEvent::formatOpt::XML) {
+			is_xml = UserLogType::LOG_TYPE_XML;
+		}
+		ReadUserLog log_reader( fp, is_xml, false );
 		if ( header_reader.Read( log_reader ) != ULOG_OK ) {
 			dprintf( D_ALWAYS,
 					 "WriteUserLog: Error reading header of \"%s\"\n",

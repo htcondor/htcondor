@@ -28,6 +28,9 @@ New Features:
   :subcom:`gpus_minimum_runtime`, :subcom:`gpus_minimum_capability` and :subcom:`gpus_maximum_capability`.
   :jira:`2201`
 
+- Improve the reliability of the userlog reader code by changing it to do line oriented reads and to seek less.
+  :jira:`2254`
+
 Bugs Fixed:
 
 - None.
