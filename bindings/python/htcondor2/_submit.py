@@ -308,7 +308,7 @@ class Submit(MutableMapping):
         *condor_submit_dag* or if this module and that command-line
         tool could be from different versions.
 
-        FIXME: Unimplemented.
+        FIXME (unimplemented)
         """
 
 
