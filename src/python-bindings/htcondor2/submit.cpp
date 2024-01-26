@@ -494,9 +494,7 @@ set_dag_options( PyObject * options, DagmanOptions& dag_opts) {
         }
 
 
-        // Special case:
-        //      - AddToEnv trims the value string
-        if( k == "AddToEnv" ) { trim(v); }
+        v = dag_opts.processOptionArg( k, v );
 
         SetDagOpt ret = dag_opts.set( k.c_str(), v );
 
@@ -570,3 +568,12 @@ _submit_from_dag( PyObject *, PyObject * args ) {
 
     return PyUnicode_FromString( dag_opts[shallow::str::SubFile].c_str() );
 }
+
+static PyObject *
+_display_dag_options( PyObject *, PyObject * /*args*/ ) {
+    DagmanUtils du;
+    du.DisplayDAGManOptions("%35s   | %s\n", DagOptionSrc::PYTHON_BINDINGS, " : ");
+
+    Py_RETURN_NONE;
+}
+
