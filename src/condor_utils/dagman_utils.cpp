@@ -775,7 +775,7 @@ DagmanUtils::ensureOutputFilesExist(const DagmanOptions &options)
 		// so, allow things to continue even if the files generated
 		// by condor_submit_dag already exist.
 	bool autoRunningRescue = false;
-	if (options[deep::b::AutoRescue]) {
+	if (options[deep::i::AutoRescue]) {
 		int rescueDagNum = FindLastRescueDagNum(options.primaryDag(), options.isMultiDag(), maxRescueDagNum);
 		if (rescueDagNum > 0) {
 			printf("Running rescue DAG %d\n", rescueDagNum);
@@ -812,7 +812,7 @@ DagmanUtils::ensureOutputFilesExist(const DagmanOptions &options)
 
 		// This is checking for the existance of an "old-style" rescue
 		// DAG file.
-	if ( ! options[deep::b::AutoRescue] && options[deep::i::DoRescueFrom] < 1 &&
+	if ( ! options[deep::i::AutoRescue] && options[deep::i::DoRescueFrom] < 1 &&
 		 fileExists(options[shallow::str::RescueFile])) {
 			fprintf(stderr, "ERROR: \"%s\" already exists.\n",
 			        options[shallow::str::RescueFile].c_str());
@@ -1027,7 +1027,7 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 	}
 
 	args.AppendArg("-AutoRescue");
-	args.AppendArg(std::to_string(self[b::AutoRescue]));
+	args.AppendArg(std::to_string(self[i::AutoRescue]));
 
 	if (inWriteSubmit || self[i::DoRescueFrom]) {
 		args.AppendArg("-DoRescueFrom");
@@ -1259,7 +1259,8 @@ SetDagOpt DagmanOptions::extend(const char* opt, const std::string& value) {
 *	    4. I -> integer
 *	- Cole Bollig 2023-12-20
 */
-std::string DagmanOptions::OptValueType(std::string& opt) {
+
+static std::string DagmanOptValueType(const std::string& opt) {
 	if (shallow::b::_from_string_nocase_nothrow(opt.c_str()) ||
 		deep::b::_from_string_nocase_nothrow(opt.c_str())) {
 			return "bool";
@@ -1271,5 +1272,164 @@ std::string DagmanOptions::OptValueType(std::string& opt) {
 	}
 
 	return "string";
+}
+
+std::string DagmanOptions::OptValueType(const char* opt) {
+	std::string option(opt ? opt : "");
+	return DagmanOptValueType(option);
+}
+
+std::string DagmanOptions::OptValueType(const std::string& opt) {
+	return DagmanOptValueType(opt);
+}
+
+// Return if option is CLI_BOOL_FLAG type
+static bool IsOptionTypeBool(const std::string& opt) {
+	return DagmanShallowOptions::b::_from_string_nocase_nothrow(opt.c_str())
+	       || DagmanDeepOptions::b::_from_string_nocase_nothrow(opt.c_str());
+}
+
+// Return if option is integer type
+static bool IsOptionTypeInt(const std::string& opt) {
+	return DagmanShallowOptions::i::_from_string_nocase_nothrow(opt.c_str())
+	       || DagmanDeepOptions::i::_from_string_nocase_nothrow(opt.c_str());
+}
+
+// Get DAGMan flag tuple information (OptionName, MetaVar, Desc, DisplayMask)
+static DagOptionInfo DagmanGetFlagInfo(const std::string& flag) {
+	DagOptionInfo empty;
+	if (flag.empty()) { return empty; }
+	const auto& [key, info] = *(dagOptionsInfoMap.lower_bound(flag));
+	if (strncasecmp(flag.c_str(), key.c_str(), flag.length()) != MATCH) { return empty; }
+	return info;
+}
+
+// Get full DAGMan flag name
+static std::string DagmanGetFullFlag(const std::string& flag) {
+	if (flag.empty()) { return ""; }
+	const auto& [key, info] = *(dagOptionsInfoMap.lower_bound(flag));
+	if (strncasecmp(flag.c_str(), key.c_str(), flag.length()) != MATCH) { return ""; }
+	return key;
+}
+
+DagOptionInfo DagmanUtils::GetFlagInfo(const std::string& flag) { return DagmanGetFlagInfo(flag); }
+std::string DagmanUtils::GetFullFlag(const std::string& flag) { return DagmanGetFullFlag(flag); }
+
+void DagmanUtils::DisplayDAGManOptions(const char* fmt, DagOptionSrc source, const std::string opt_delim_meta) {
+	assert(fmt);
+	std::set<std::string> displayedOptions;
+	for (auto const& [flag, info] : dagOptionsInfoMap) {
+		const auto& [opt, metavar, desc, dispSrc] = info;
+
+		switch(source) {
+			case DagOptionSrc::DAGMAN_MAIN:
+				if ( ! (dispSrc & DAG_OPT_DISP_DAGMAN)) continue;
+				break;
+			case DagOptionSrc::CONDOR_SUBMIT_DAG:
+				if ( ! (dispSrc & DAG_OPT_DISP_CSD)) continue;
+				break;
+			case DagOptionSrc::PYTHON_BINDINGS:
+				if ( ! (dispSrc & DAG_OPT_DISP_PY_BIND)) continue;
+				if (displayedOptions.contains(opt)) continue;
+				displayedOptions.emplace(opt);
+				break;
+		}
+
+		std::string dispOpt = (source == DagOptionSrc::PYTHON_BINDINGS) ? opt : flag;
+		std::string rawType = "(" + DagmanOptValueType(opt) + ")";
+		if (rawType.find("bool") != std::string::npos) { rawType += "   "; }
+		if (rawType.find("string") != std::string::npos) { rawType += " "; }
+		std::string_view meta{""};
+		if ( ! IsOptionTypeBool(opt) || source == DagOptionSrc::PYTHON_BINDINGS) {
+			meta = metavar;
+			dispOpt += opt_delim_meta;
+		}
+
+		dispOpt += (source == DagOptionSrc::PYTHON_BINDINGS) ? rawType : meta;
+
+		fprintf(stdout, fmt, dispOpt.c_str(), desc.c_str());
+	}
+}
+
+std::string DagmanOptions::processOptionArg(const std::string& opt, std::string arg) {
+	if (strcasecmp(opt.c_str(), "AddToEnv") == MATCH) {
+		trim(arg); // Trim empty space around key=value pairs
+	} else if (strcasecmp(opt.c_str(), "BatchName") == MATCH) {
+		trim_quotes(arg, "\""); // Trim "" if any
+	}
+	return arg;
+}
+
+bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err) {
+	SetDagOpt ret = SetDagOpt::KEY_DNE;
+	// Get information about flag
+	std::string fullFlag = DagmanGetFullFlag(flag);
+	const auto& [opt, meta, _, __] = DagmanGetFlagInfo(flag);
+	// No option means invalid flag
+	if (opt.empty()) {
+		formatstr(err,"Error: Unknown flag '%s' provided", flag.c_str());
+		return false;
+
+	// Handle bool options
+	} else if (IsOptionTypeBool(opt)) {
+		// Check if opposite flags for the same option were specified
+		if (boolFlagCheck.contains(opt)) {
+			std::string usedFlag = boolFlagCheck[opt];
+			if (usedFlag != fullFlag) {
+				formatstr(err, "Error: Both %s and %s can't be used at the same time",
+				          usedFlag.c_str(), fullFlag.c_str());
+				return false;
+			}
+		} else { boolFlagCheck.emplace(std::make_pair(opt, fullFlag)); }
+		// Parse with option infos metavar
+		ret = set(opt.c_str(), meta);
+
+	// Handle all other options
+	} else {
+		// Expect a secondary argument: -flag value
+		// Note: Integer options will fail set() if invalid
+		if (iArg + 1 >= argc || ( ! IsOptionTypeInt(opt) && *(argv[iArg+1]) == '-')) {
+			formatstr(err, "Error: Option %s (%s) requires an additional argument",
+			          fullFlag.c_str(), flag.c_str());
+			return false;
+		}
+
+		// Handle special case trimming
+		std::string optionArg = processOptionArg(opt, std::string(argv[++iArg]));
+		if (strcasecmp(opt.c_str(), "GetFromEnv") == MATCH) {
+			ret = append(opt.c_str(), optionArg);
+		} else {
+			ret = set(opt.c_str(), optionArg);
+		}
+	}
+
+	// Process return value for setting option
+	std::string optType = DagmanOptValueType(opt);
+	switch(ret) {
+		case SetDagOpt::SUCCESS:
+			return true;
+		case SetDagOpt::KEY_DNE:
+			// Developer Error
+			formatstr(err, "Error: Option %s derived from %s (%s) not found",
+			          opt.c_str(), fullFlag.c_str(), flag.c_str());
+			return false;
+		case SetDagOpt::INVALID_VALUE:
+			// User Error
+			formatstr(err, "Error: %s (%s) additional argument required to be a %s",
+			          flag.c_str(), fullFlag.c_str(), optType.c_str());
+			return false;
+		case SetDagOpt::NO_KEY:
+			// Developer Error
+			formatstr(err, "Error: Option key from %s (%s) was empty",
+			          fullFlag.c_str(), flag.c_str());
+			return false;
+		case SetDagOpt::NO_VALUE:
+			// User Error
+			formatstr(err, "Error: %s (%s) additional argument was empty",
+			          flag.c_str(), fullFlag.c_str());
+			return false;
+	}
+	// Should never get here
+	return false;
 }
 
