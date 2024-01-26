@@ -305,7 +305,13 @@ ParallelShadow::getResources( int /* timerID */ )
 				delete sock;
 				return;
 			};
-			ASSERT( jobAdNumInProc == numInProc);
+			if (jobAdNumInProc != numInProc) {
+				dprintf(D_ALWAYS, "ERROR -- job needs %d slots, but schedd gave us %d slots -- giving up\n", jobAdNumInProc, numInProc);
+				BaseShadow::shutDown(JOB_NOT_STARTED);
+				sock->end_of_message();
+				delete sock;
+				return;
+			}
         } // end of for loop for this proc
 
     } // end of for loop on all procs...
