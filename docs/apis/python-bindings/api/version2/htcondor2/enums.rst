@@ -19,6 +19,8 @@
 
 .. autoclass:: JobEventType
 
+.. autoclass:: JobStatus
+
 .. autoclass:: QueryOpt
 
 .. autoclass:: SubsystemType

@@ -62,6 +62,7 @@ with _add_dll_dir():
     from ._submit_result import SubmitResult
     from ._job_event import JobEvent
     from ._job_event_log import JobEventLog
+    from ._job_status import JobStatus
 
     # Additional aliases for compatibility with the `htcondor` module.
     from ._daemon_type import DaemonType as DaemonTypes

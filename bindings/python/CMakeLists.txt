@@ -55,6 +55,7 @@ htcondor2/_submit_result.py
 htcondor2/_job_event.py
 htcondor2/_job_event_log.py
 htcondor2/_job_event_type.py
+htcondor2/_job_status.py
 htcondor2/_param.py
 htcondor2/_file_transfer_event_type.py
 htcondor2/__init__.py
