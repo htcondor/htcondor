@@ -89,6 +89,15 @@ _enable_debug( PyObject *, PyObject * ) {
 
 
 static PyObject *
+_enable_log( PyObject *, PyObject * ) {
+	dprintf_make_thread_safe();
+	dprintf_config(get_mySubSystem()->getName());
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
 _dprintf_dfulldebug( PyObject *, PyObject * args ) {
     const char * str = NULL;
 
@@ -98,6 +107,22 @@ _dprintf_dfulldebug( PyObject *, PyObject * args ) {
 	}
 
     dprintf( D_FULLDEBUG, "%s", str );
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_py_dprintf( PyObject *, PyObject * args ) {
+    long debug_level = 0;
+    const char * str = NULL;
+
+	if(! PyArg_ParseTuple( args, "ls", & debug_level, & str )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+    dprintf( debug_level, "%s", str );
 
     Py_RETURN_NONE;
 }

@@ -67,12 +67,6 @@ static struct PyModuleDef classad2_impl_module = {
 
 PyMODINIT_FUNC
 PyInit_classad2_impl(void) {
-	// Initialization for HTCondor.  *sigh*
-	config();
-
-	// Control HTCondor's stderr verbosity with _CONDOR_TOOL_DEBUG.
-	dprintf_set_tool_debug( "TOOL", 0 );
-
 	PyObject * the_module = PyModule_Create(& classad2_impl_module);
 
 	DynamicPyType_Handle dpt_handle("classad2_impl._handle");
