@@ -77,6 +77,10 @@ New Features:
   HTCondor.
   :jira:`2168`
 
+- When the HTCondor Keyboard daemon (**condor_kbdd**) is installed, a
+  configuration file is included to automatically enable user input monitoring.
+  :jira:`2255`
+
 Bugs Fixed:
 
 - The submit language will no longer treat ``request_gpu_memory`` and ``request_gpus_memory``
@@ -99,6 +103,10 @@ Bugs Fixed:
 - Search engine timeout settings for **condor_adstash** now apply to all search
   engine operations, not just the intial request to the search engine.
   :jira:`2167`
+
+- Fixed a bug in the HTCondor Keyboard daemon where activity detected by the
+  X Screen Saver extension was ignored.
+  :jira:`2255`
 
 .. _lts-version-history-2303:
 
