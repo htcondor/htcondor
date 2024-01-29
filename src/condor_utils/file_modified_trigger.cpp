@@ -27,8 +27,11 @@
 
 #if defined( LINUX )
 #include <sys/inotify.h>
-#include <poll.h>
 #endif /* defined( LINUX ) */
+
+#ifndef WIN32
+#include <poll.h>
+#endif
 
 #include "utc_time.h"
 #include "file_modified_trigger.h"
