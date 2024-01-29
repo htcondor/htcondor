@@ -17,6 +17,11 @@ Release Notes:
 
 New Features:
 
+- On Linux systems with cgroup v1 enabled, HTCondor now uses the device cgroup
+  to hide GPUs that are not provisioned by the system.  This can be disabled
+  by settting the new knob :macro:`STARTER_HIDE_GPU_DEVICES` to false.
+  :jira:`1152`
+
 - Added ability for administrators to specify whether Startd disk enforcement creates
   thin or thick provisioned logical volumes for a jobs emphemeral execute directory.
   This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.
