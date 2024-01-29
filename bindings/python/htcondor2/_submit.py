@@ -305,7 +305,7 @@ class Submit(MutableMapping):
         short description from *condor_submit_dag*'s ``-help`` output.
 
         This function is useful if you don't have an installed copy of
-        *condor_submit_dag* or if this module and that command-line
+        :tool:`condor_submit_dag` or if this module and that command-line
         tool could be from different versions.
 
         FIXME: Unimplemented.

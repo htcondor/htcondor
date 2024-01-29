@@ -16,6 +16,11 @@ from sphinx import addnodes
 from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
 
+def get_rel_path_to_root_dir(inliner):
+    env = inliner.document.settings.env
+    doc = env.docname
+    return "../" * len(env.doc2path(doc, False).split("/"))
+
 def make_headerlink_node(attribute_name, options):
     ref = '#' + attribute_name
     node = nodes.reference('', '¶', refuri=ref, reftitle="Permalink to this headline", classes=['headerlink'], **options)
