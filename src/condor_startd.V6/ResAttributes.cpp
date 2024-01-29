@@ -1456,6 +1456,7 @@ MachAttributes::publish_static(ClassAd* cp)
 		cp->Assign(ATTR_HAS_USER_NAMESPACES, true);
 	}
 
+	static bool already_warned = false;
 	switch (hasRotationalScratch()) {
 		case rotational_result::ROTATIONAL:
 		cp->Assign(ATTR_HAS_ROTATIONAL_SCRATCH, true);
@@ -1463,9 +1464,13 @@ MachAttributes::publish_static(ClassAd* cp)
 		case rotational_result::NOT_ROTATIONAL:
 		cp->Assign(ATTR_HAS_ROTATIONAL_SCRATCH, false);
 		break;
-		case rotational_result::UNKNOWN:
-		dprintf(D_ALWAYS, "Cannot determine rotationality of execute dir, leaving it undefined\n");
-		break;
+		case rotational_result::UNKNOWN: {
+			 if (!already_warned) {
+				 dprintf(D_ALWAYS, "Cannot determine rotationality of execute dir, leaving it undefined\n");
+				 already_warned = true;
+			 }
+			 break;
+		 }
 
 	}
 #endif
