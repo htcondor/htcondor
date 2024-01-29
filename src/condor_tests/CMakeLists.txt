@@ -209,6 +209,7 @@ endif ()
 			# which probably means we can't run this test without the bindings,
 			# although it doesn't use them.
 			condor_pl_test(test_filter "Test plug-in output ad filtering" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/test_filter.exe;src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			add_dependencies(test_filter test_filter.exe)
 
 			# test_classad_eval doesn't actually depend on ornithology at all,
 			# but run_test.pl doesn't know that, and always runs pytest with an
