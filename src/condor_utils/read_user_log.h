@@ -83,7 +83,7 @@ class ReadUserLog
 		@param XML mode?
 		@param close the FP when done?
 	*/
-    ReadUserLog( FILE *fp, int log_type, bool enable_close = false );
+    ReadUserLog( FILE *fp, UserLogType log_type, bool enable_close = false );
 
     /** Constructor.
         @param filename the file to read from
@@ -168,15 +168,7 @@ class ReadUserLog
         @param event pointer to be set to new object
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome readEvent (ULogEvent * & event);
-
-	/** Read the next event from the log file.  The event pointer to
-		set to point to a newly instatiated ULogEvent object.
-		@param event pointer to be set to new object
-		@return the outcome of attempting to read the log
-	*/
-	ULogEventOutcome readEventWithLock (ULogEvent * & event, FileLockBase &lock);
-
+	ULogEventOutcome readEvent (ULogEvent * & event) { return internalReadEvent( event, true ); }
 
     /** Synchronize the log file if the last event read was an error.  This
         safe guard function should be called if there is some error reading an
@@ -193,8 +185,8 @@ class ReadUserLog
 
 	/** Lock / unlock the file
 	 */
-	void Lock(void)   { Lock(nullptr, true);   };
-	void Unlock(void) { Unlock(nullptr, true); };
+	//void Lock(void)   { Lock(true);   };
+	//void Unlock(void) { Unlock(true); };
 
 	/** Enable / disable locking
 	 */
@@ -209,14 +201,7 @@ class ReadUserLog
 		@param is_xml should be true if we have an XML log file,
 		 false otherwise
 	*/
-	void setIsCLASSADLog( int log_type ); // 0 = not classad, 1 = xml, 2 = json
-
-	/** Determine whether this ReadUserLog thinks its log file is XML.
-		Note that false may mean that the type is not yet known (e.g.,
-		the log file is empty).
-		@return true if XML, false otherwise
-	*/
-	int getIsCLASSADLog( void ) const;
+	void setLogType( UserLogType  log_type );
 
     /** Check the status of the file - has it grown, shrunk, etc.
 		@return LOG_STATUS_{ERROR,NOCHANGE,GROWN,SHRUNK}
@@ -364,10 +349,9 @@ class ReadUserLog
 	int getMaxRot( bool handle_rotation );
 
 	/** Internal lock/unlock methods
-		@param Verify that initialization has been done
 	 */
-	void Lock( FileLockBase *, bool verify_init );
-	void Unlock( FileLockBase *, bool verify_init );
+	bool Lock();
+	bool Unlock();
 
 	/** Set all members to their cleared values.
 	*/
@@ -379,21 +363,21 @@ class ReadUserLog
 		@param store the state after the read?
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome readEventWithLock (ULogEvent * & event, bool store_state, FileLockBase *lock );
+    ULogEventOutcome internalReadEvent (ULogEvent * & event, bool store_state );
 
     /** Raw read of the next event from the log file.
         @param event pointer to be set to new object
 		@param should the caller try the read again (after reopen) (returned)?
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome rawReadEvent (ULogEvent * & event, bool *try_again, FileLockBase *lock );
+    ULogEventOutcome rawReadEvent (ULogEvent * & event, bool *try_again );
 
 	/** Determine the type of log this is; note that if called on an
 	    empty log, this will return true and the log type will stay
 		LOG_TYPE_UNKNOWN.
         @return true for success, false otherwise
 	*/
-	bool determineLogType( FileLockBase *lock );
+	bool determineLogType( void );
 
 	/** Skip the XML header of this log, if there is one.
 	    @param the first character after the opening '<'
@@ -407,14 +391,14 @@ class ReadUserLog
         @param event pointer to be set to new object
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome readEventClassad (ULogEvent * & event, int log_type, FileLockBase *lock);
+    ULogEventOutcome readEventClassad (ULogEvent * & event, int log_type);
 
     /** Read the next event from the old style log file. The event pointer to
         set to point to a newly instatiated ULogEvent object.
         @param event pointer to be set to new object
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome readEventNormal (ULogEvent * & event, FileLockBase *lock);
+    ULogEventOutcome readEventNormal (ULogEvent * & event);
 
 	/** Reopen the log file
 		@param Restore from state?
