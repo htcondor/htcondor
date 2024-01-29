@@ -388,6 +388,7 @@ NegotiationUtils.h
 network_adapter.cpp
 network_adapter.h
 nullfile.cpp
+nvidia_utils.cpp
 overflow.cpp
 overflow.h
 param_info.cpp

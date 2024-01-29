@@ -2741,6 +2741,10 @@ default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREA
 type=string
 tags=starter
 
+[STARTER_HIDE_GPU_DEVICES]
+type=bool
+default=true
+
 [JOB_RENICE_INCREMENT]
 default=0
 win32_default=10

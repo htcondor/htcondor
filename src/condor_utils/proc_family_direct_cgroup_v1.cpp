@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "condor_uid.h"
+#include "condor_config.h"
 #include "directory.h"
 #include "proc_family_direct_cgroup_v1.h"
 #include <numeric>
@@ -28,6 +29,7 @@
 
 #include <filesystem>
 #include <sys/eventfd.h>
+#include <sys/sysmacros.h> // for device major/minor
 
 namespace stdfs = std::filesystem;
 
@@ -40,8 +42,8 @@ static stdfs::path cgroup_mount_point() {
 
 // The controllers we use.  We manipulate and measure all
 // of these.
-static std::array<const std::string, 3> controllers {
-		"memory", "cpu,cpuacct", "freezer"};
+static std::array<const std::string, 4> controllers {
+		"memory", "cpu,cpuacct", "freezer", "devices"};
 
 // Note that even root can't remove control group *files*,
 // only directories.
@@ -221,6 +223,26 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 	// and save the eventfd, so we can read from it when the job exits to 
 	// check for ooms
 	cgroup_eventfd_map[pid] = efd;
+
+
+	// Remove devices we want to make unreadable.  Note they will still appear
+	// in /dev, but any access will fail, even if permission bits allow for it.
+	for (dev_t dev: this->cgroup_hide_devices) {
+		stdfs::path cgroup_device_deny_path = cgroup_root_dir / "devices" / cgroup_name / "devices.deny";
+		int devd = open(cgroup_device_deny_path.c_str(), O_WRONLY, 0666);
+		if (devd > 0) {
+			std::string deny_command;
+			formatstr(deny_command, "c %d:%d rwm", major(dev), minor(dev));
+			dprintf(D_ALWAYS, "Cgroupv1 hiding device with %s\n", deny_command.c_str());
+			int r = write(devd, deny_command.c_str(), deny_command.length());
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Cgroupv1 hiding device write failed with %d\n",errno);
+			}
+
+			close(devd);
+		}
+	}
+
 	return true;
 }
 
@@ -229,9 +251,10 @@ ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	ASSERT(fi->cgroup);
 
-	std::string cgroup_name = fi->cgroup;
+	std::string cgroup_name   = fi->cgroup;
 	this->cgroup_memory_limit = fi->cgroup_memory_limit;
-	this->cgroup_cpu_shares = fi->cgroup_cpu_shares;
+	this->cgroup_cpu_shares   = fi->cgroup_cpu_shares;
+	this->cgroup_hide_devices = fi->cgroup_hide_devices;
 
 	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
 	if (!success) {
