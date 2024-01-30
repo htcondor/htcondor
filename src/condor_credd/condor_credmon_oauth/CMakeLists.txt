@@ -1,5 +1,5 @@
-install ( FILES condor_credmon_oauth condor_credmon_vault DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-install ( FILES scitokens_credential_producer DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES condor_credmon_oauth condor_credmon_vault condor_credmon_mytoken DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES scitokens_credential_producer condor_producer_mytoken DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES condor_vault_storer DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES condor_credmon_oauth.wsgi DESTINATION ${C_LIBEXEC} )
 install ( DIRECTORY credmon DESTINATION ${C_LIBEXEC} )
