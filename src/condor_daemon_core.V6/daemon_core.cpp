@@ -6904,7 +6904,9 @@ int DaemonCore::Create_Process(
 		const char* mysin = InfoCommandSinfulStringMyself(true);
 		// ASSERT(mysin && mysin[0]); // Empty entry means unparsable string.
 		if ( !mysin || !mysin[0] ) {
-			dprintf( D_ALWAYS, "Warning: mysin has length 0 (ignore if produced by DAGMan; see gittrac #4987, #5031)\n" );
+			// Assert changed to warning message see gittrac #4987, #5031
+			if ( ! get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN) )
+				dprintf( D_ALWAYS, "Warning: mysin has length 0\n" );
 		}
 		inheritbuf += mysin ? mysin : "";
 	} else {
