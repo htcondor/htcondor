@@ -723,6 +723,10 @@ ticket to autheticate to kerberified services such as AFS and GSSAPI.
 Kerberos, AFS usage by running jobs
 '''''''''''''''''''''''''''''''''''
 
+The configuration for using kerberos tokens with user jobs can be enabled by
+setting the metaknob "use feature: KRB".  To see the parameters this metaknob
+sets, you can run the command "condor_config_val use feature:krb"
+
 The first step is for :tool:`condor_submit` to obtain the kerberos uberticket.
 It will do this by executing an external program specified in the condor_config
 file as :macro:`SEC_CREDENTIAL_PRODUCER`. This program takes no arguments, and
