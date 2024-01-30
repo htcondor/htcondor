@@ -542,7 +542,7 @@ BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int & hold
 		if (err_occurred_at_EP) {
 			// Error happened at the EP
 			new_hold_reason += EP_name;
-			if (url_file_type.empty()) {
+			if (!url_file_type.empty()) {
 				formatstr_cat(new_hold_reason, " while %s files %s access point %s",
 					transfer_input_error ? "receiving" : "sending",
 					transfer_input_error ? "from" : "to",
@@ -562,6 +562,20 @@ BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int & hold
 		}
 		formatstr_cat(new_hold_reason, ". Details: %s",
 			actual_error.empty() ? orig_hold_reason : actual_error.c_str());
+
+		std::string credmon_oauth;
+                if (param(credmon_oauth, "CREDMON_OAUTH") && credmon_oauth.find("condor_credmon_mytoken") != std::string::npos) {
+		        if (err_occurred_at_EP && !transfer_input_error) {
+			        std::string mytoken_hold_reason;
+			        formatstr_cat(mytoken_hold_reason, "The transfer of your output file(s) failed at the execution point");
+		                if (new_hold_reason.find("401") != std::string::npos) {
+				        formatstr_cat(mytoken_hold_reason, " because your access token has expired. Please renew it.");
+		                } else if (new_hold_reason.find("SSL") != std::string::npos) {
+				        formatstr_cat(mytoken_hold_reason, " because your SSL certificate is invalid. Please check it.");
+	                        }
+				new_hold_reason = mytoken_hold_reason;
+		        }
+                }
 	}
 
 	return new_hold_reason;

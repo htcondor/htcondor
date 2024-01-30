@@ -523,6 +523,40 @@ Conflicts: %name-credmon-local
 The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
 
+
+#######################
+%package credmon-mytoken
+Summary: Helmholtz AAI credmon for HTCondor
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: python3-condor = %{version}-%{release}
+Requires: mytoken
+%if 0%{?rhel} == 7
+Requires: python36-cryptography
+Requires: python36-jwt
+%endif
+%if 0%{?rhel} >= 8
+Requires: python3-cryptography
+Requires: python3-jwt
+%endif
+
+%description credmon-mytoken
+The Mytoken credmon allows users to obtain credentials via the Mytoken service
+and to use those credentials securely inside running jobs.
+
+#######################  
+%package -n condor-c4p
+Summary: condor c4p package
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-credmon-mytoken = %version-%release
+Requires: python3-%name = %version-%release
+
+%description -n condor-c4p
+Include dependencies for condor c4p installation
+
+%files -n condor-c4p
+
 #######################
 %package -n minicondor
 Summary: Configuration for a single-node HTCondor
@@ -749,6 +783,7 @@ fi
 mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/passwords.d
 mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
+mkdir -p -m0770 %{buildroot}/%{_sysconfdir}/condor/encryption.d
 
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-htcondor-9.0.config
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
@@ -765,7 +800,7 @@ mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/execute
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/krb_credentials
 mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
-
+mkdir -p -m0770 %{buildroot}/%{_var}/lib/condor/mytoken_credentials
 
 # not packaging configure/install scripts
 %if ! %uw_build
@@ -786,6 +821,9 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/RE
 
 # Move vault credmon config file out of examples and into config.d
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
+
+# Move mytoken credmon config file out of examples and into config.d
+mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-mytoken-credmon.conf  %{buildroot}/%{_sysconfdir}/condor/config.d/40-mytoken-credmon.conf
 
 ###
 # Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
@@ -1375,9 +1413,17 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
 
+%files credmon-mytoken
+%doc examples/condor_credmon_oauth
+%_sbindir/condor_credmon_mytoken
+%_sbindir/condor_producer_mytoken
+%_libexecdir/condor/credmon
+%config(noreplace) %_sysconfdir/condor/config.d/40-mytoken-credmon.conf
+%ghost %_var/lib/condor/mytoken_credentials/CREDMON_COMPLETE
+%ghost %_var/lib/condor/mytoken_credentials/pid
+
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
-
 
 %post
 /sbin/ldconfig
