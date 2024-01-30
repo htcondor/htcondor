@@ -2585,9 +2585,8 @@ bool hasTokenSigningKey(const std::string &key_id, CondorError *err) {
 
 	// do a quick check in the issuer name cache, but don't rebuild it
 	auto keys = g_issuer_name_cache.Peek();
-	if ( ! keys.empty()) {
-		StringList list(keys.c_str());
-		if (list.contains(key_id.c_str())) {
+	for (auto& item: StringTokenIterator(keys)) {
+		if (item == key_id) {
 			return true;
 		}
 	}

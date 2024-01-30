@@ -31,7 +31,7 @@ arguments get put in 'args'.  If you have other dirs or jarfiles
 that should be placed in the classpath, provide them in 'extra_classpath'.
 */
 
-int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath )
+int java_config( std::string &cmd, ArgList &args, const std::vector<std::string> *extra_classpath )
 {
 	char *tmp;
 	char separator;
@@ -45,7 +45,7 @@ int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath )
 	tmp = param("JAVA_CLASSPATH_ARGUMENT");
 	if(!tmp) tmp = strdup("-classpath");
 	if(!tmp) return 0;
-	args->AppendArg(tmp);
+	args.AppendArg(tmp);
 	free(tmp);
 
 	tmp = param("JAVA_CLASSPATH_SEPARATOR");
@@ -76,23 +76,22 @@ int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath )
 	}
 
 	if(extra_classpath) {
-		extra_classpath->rewind();
-		while((tmp=extra_classpath->next())) {
+		for (auto& xpath: *extra_classpath) {
 			if(!first) {
 				arg_buf += separator;
 			}
 			else {
 				first = 0;
 			}
-			arg_buf += tmp;
+			arg_buf += xpath;
 		}
 	}
-	args->AppendArg(arg_buf);
+	args.AppendArg(arg_buf);
 
 	std::string args_error;
 
 	tmp = param("JAVA_EXTRA_ARGUMENTS");
-	if(!args->AppendArgsV1RawOrV2Quoted(tmp,args_error)) {
+	if(!args.AppendArgsV1RawOrV2Quoted(tmp,args_error)) {
 		dprintf(D_ALWAYS,"java_config: failed to parse extra arguments: %s\n",
 				args_error.c_str());
 		free(tmp);

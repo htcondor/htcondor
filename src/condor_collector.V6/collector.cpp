@@ -97,7 +97,7 @@ int CollectorDaemon::UpdateTimerId;
 
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
 
-StringList *viewCollectorTypes;
+std::vector<std::string> viewCollectorTypes;
 
 CCBServer *CollectorDaemon::m_ccb_server;
 bool CollectorDaemon::filterAbsentAds;
@@ -186,16 +186,7 @@ CollectorDaemon::schedd_token_request(int, Stream *stream)
 
 	std::string authz_list_str;
 	ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str);
-	std::vector<std::string> authz_bounding_set;
-	if (!authz_list_str.empty())
-	{
-		StringList authz_list(authz_list_str.c_str());
-		authz_list.rewind();
-		const char *authz_name;
-		while ( (authz_name = authz_list.next()) ) {
-			authz_bounding_set.emplace_back(authz_name);
-		}
-	}
+	std::vector<std::string> authz_bounding_set = split(authz_list_str);
 	int requested_lifetime = -1;
 	if (!ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
 		requested_lifetime = -1;
@@ -302,7 +293,6 @@ void CollectorDaemon::Init()
 	// read in various parameters from condor_config
 	CollectorName=NULL;
 	ad=NULL;
-	viewCollectorTypes = NULL;
 	UpdateTimerId=-1;
 	collectorsToUpdate = NULL;
 	Config();
@@ -1484,7 +1474,7 @@ int CollectorDaemon::receive_invalidation(int command,
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
 
-	if (viewCollectorTypes || command == INVALIDATE_STARTD_ADS || command == INVALIDATE_SUBMITTOR_ADS) {
+	if (!viewCollectorTypes.empty() || command == INVALIDATE_STARTD_ADS || command == INVALIDATE_SUBMITTOR_ADS) {
 		forward_classad_to_view_collector(command,
 										  ATTR_TARGET_TYPE,
 										  &cad);
@@ -1576,7 +1566,7 @@ int CollectorDaemon::receive_update(int command, Stream* sock)
 	CollectorEngine_ru_plugins_runtime += rt.tick(rt_last);
 #endif
 
-	if (viewCollectorTypes || command == UPDATE_STARTD_AD || command == UPDATE_SUBMITTOR_AD) {
+	if (!viewCollectorTypes.empty() || command == UPDATE_STARTD_AD || command == UPDATE_SUBMITTOR_AD) {
 		forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
 										  record->m_pvtAd);
@@ -1712,7 +1702,7 @@ int CollectorDaemon::receive_update_expect_ack(int command,
 		CollectorPluginManager::Update ( command, *record->m_publicAd );
 #endif
 
-		if (viewCollectorTypes || UPDATE_STARTD_AD_WITH_ACK == command) {
+		if (!viewCollectorTypes.empty() || UPDATE_STARTD_AD_WITH_ACK == command) {
 			forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
 										  record->m_pvtAd);
@@ -2166,20 +2156,17 @@ void CollectorDaemon::Config()
 
     tmp = param("CONDOR_VIEW_HOST");
     if (tmp) {
-        StringList cvh(tmp);
-        free(tmp);
-        cvh.rewind();
-        while (char* vhost = cvh.next()) {
-            DCCollector* vhd = new DCCollector(vhost, DCCollector::CONFIG_VIEW);
+        for (auto& vhost: StringTokenIterator(tmp)) {
+            DCCollector* vhd = new DCCollector(vhost.c_str(), DCCollector::CONFIG_VIEW);
             Sinful view_addr( vhd->addr() );
             Sinful my_addr( daemonCore->publicNetworkIpAddr() );
 
             if (my_addr.addressPointsToMe(view_addr)) {
-                dprintf(D_ALWAYS, "Not forwarding to View Server %s - self referential\n", vhost);
+                dprintf(D_ALWAYS, "Not forwarding to View Server %s - self referential\n", vhost.c_str());
                 delete vhd;
                 continue;
             }
-            dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", vhost);
+            dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", vhost.c_str());
 
             Sock* vhsock = NULL;
             if (vhd->useTCPForUpdates()) {
@@ -2193,6 +2180,7 @@ void CollectorDaemon::Config()
             vc_list.back().collector = vhd;
             vc_list.back().sock = vhsock;
         }
+        free(tmp);
     }
 
     if (!vc_list.empty()) {
@@ -2201,19 +2189,18 @@ void CollectorDaemon::Config()
         view_sock_timeslice.setMaxInterval(1200);
     }
 
-	if (viewCollectorTypes) delete viewCollectorTypes;
-	viewCollectorTypes = NULL;
+	viewCollectorTypes.clear();
 	if (!vc_list.empty()) {
-		auto_free_ptr tmp(param("CONDOR_VIEW_CLASSAD_TYPES"));
-		if (tmp) {
-			viewCollectorTypes = new StringList(tmp);
-			if (viewCollectorTypes->contains_anycase(STARTD_OLD_ADTYPE) && 
-				! viewCollectorTypes->contains_anycase(STARTD_SLOT_ADTYPE)) {
-				viewCollectorTypes->append(STARTD_SLOT_ADTYPE);
+		std::string tmp;
+		if (param(tmp, "CONDOR_VIEW_CLASSAD_TYPES")) {
+			viewCollectorTypes = split(tmp);
+			if (contains_anycase(viewCollectorTypes, STARTD_OLD_ADTYPE) &&
+				! contains_anycase(viewCollectorTypes, STARTD_SLOT_ADTYPE)) {
+				viewCollectorTypes.emplace_back(STARTD_SLOT_ADTYPE);
 			}
-			auto_free_ptr types(viewCollectorTypes->print_to_string());
+			std::string types = join(viewCollectorTypes, ",");
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
-				types ? types.ptr() : "");
+				types.c_str());
 		}
 
 		vc_projection.set(param("COLLECTOR_FORWARD_PROJECTION"));
@@ -2517,14 +2504,14 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 		return;
 	}
 
-	if (filterAttr && viewCollectorTypes) {
+	if (filterAttr && !viewCollectorTypes.empty()) {
 		std::string type;
 		if (!theAd->EvaluateAttrString(std::string(filterAttr), type)) {
 			dprintf(D_ALWAYS, "Failed to lookup %s on ad, not forwarding\n", filterAttr);
 			return;
 		}
 
-		if (!viewCollectorTypes->contains_anycase(type.c_str())) {
+		if (!contains_anycase(viewCollectorTypes, type)) {
 			return;
 		}
 		dprintf(D_ALWAYS, "Forwarding ad: type=%s command=%s\n",
