@@ -542,10 +542,18 @@ matches_withwildcard_impl(const char* pattern, const char* str, bool anycase, bo
 
 		if ( (asterisk = strchr(x,'*')) == NULL ) {
 			// There is no wildcard in this entry; just compare
-			if (anycase) {
-				temp = strcasecmp(x, str);
+			if (prefix) {
+				if (anycase) {
+					temp = strncasecmp(x, str, strlen(x));
+				} else {
+					temp = strncmp(x, str, strlen(x));
+				}
 			} else {
-				temp = strcmp(x, str);
+				if (anycase) {
+					temp = strcasecmp(x, str);
+				} else {
+					temp = strcmp(x, str);
+				}
 			}
 			return (temp == MATCH);
 		}
