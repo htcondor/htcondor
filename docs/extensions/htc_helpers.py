@@ -18,8 +18,9 @@ from sphinx.util.nodes import split_explicit_title, process_index_entry, set_rol
 
 def get_rel_path_to_root_dir(inliner):
     env = inliner.document.settings.env
-    doc = env.docname
-    return "../" * len(env.doc2path(doc, False).split("/"))
+    doc_path = str(env.doc2path(env.docname)).replace(str(env.srcdir)+"/", "")
+    return "../" * doc_path.count("/")
+    #return "../" * env.doc2path(env.docname, False).count("/")
 
 def make_headerlink_node(attribute_name, options):
     ref = '#' + attribute_name
