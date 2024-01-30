@@ -88,10 +88,9 @@ extern	int		polling_interval;	// Interval for polling when
 extern	int		update_interval;	// Interval to update CM
 extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or "Slot" and "StartDaemon" ads
 
-// String Lists
-extern	StringList* console_devices;
-extern	StringList* startd_job_attrs;
-extern	StringList* startd_slot_attrs;
+// Extra attrs for slot ads
+extern	std::vector<std::string> startd_job_attrs;
+extern	std::vector<std::string> startd_slot_attrs;
 
 // Hosts
 extern	char*	accountant_host;

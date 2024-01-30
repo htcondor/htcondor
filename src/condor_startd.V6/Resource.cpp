@@ -2691,9 +2691,9 @@ Resource::publish_dynamic(ClassAd* cap)
 	// ClassAd, so be careful about that, too.
 	State s = this->state();
 	if (s == claimed_state || s == preempting_state) {
-		if (startd_job_attrs && r_cur && r_cur->ad()) {
-			for (char * attr = startd_job_attrs->first(); attr != NULL; attr = startd_job_attrs->next()) {
-				caInsert(cap, r_cur->ad(), attr);
+		if (r_cur && r_cur->ad()) {
+			for (const auto& attr: startd_job_attrs) {
+				caInsert(cap, r_cur->ad(), attr.c_str());
 			}
 		}
 	}
@@ -2962,7 +2962,7 @@ Resource::makeChildClaimIds() {
 void
 Resource::publish_SlotAttrs( ClassAd* cap, bool as_literal, bool only_valid_values )
 {
-	if( ! startd_slot_attrs ) {
+	if( startd_slot_attrs.empty() ) {
 		return;
 	}
 	if( ! cap ) {
@@ -2977,7 +2977,7 @@ Resource::publish_SlotAttrs( ClassAd* cap, bool as_literal, bool only_valid_valu
 		classad::ExprList * lstval;
 		classad::ClassAd * adval;
 
-		for (const char * attr = startd_slot_attrs->first(); attr != NULL; attr = startd_slot_attrs->next()) {
+		for (const auto& attr: startd_slot_attrs) {
 			if (r_classad->EvaluateAttr(attr, val) && ! val.IsErrorValue() && ( ! only_valid_values || ! val.IsUndefinedValue())) {
 				slot_attr = r_id_str;
 				slot_attr += "_";
@@ -2992,12 +2992,10 @@ Resource::publish_SlotAttrs( ClassAd* cap, bool as_literal, bool only_valid_valu
 			}
 		}
 	} else {
-		char* ptr;
 		std::string prefix = r_id_str;
 		prefix += '_';
-		startd_slot_attrs->rewind();
-		while ((ptr = startd_slot_attrs->next())) {
-			caInsert(cap, r_classad, ptr, prefix.c_str());
+		for (const auto& attr: startd_slot_attrs) {
+			caInsert(cap, r_classad, attr.c_str(), prefix.c_str());
 		}
 	}
 }
