@@ -700,10 +700,12 @@ This example also assumes that ``LOCAL_CREDMON_PROVIDER_NAME = scitokens``,
 replace ``"scitokens "`` in the ``strcat`` function to match this name if
 different.
 
-Using HTCondor with AFS
------------------------
+Using HTCondor with Kerberos and AFS
+------------------------------------
 
 :index:`AFS<single: AFS; file system>`
+:index:`Kerberos<single: Kerberos>`
+:index:`KRB5<single: KRB5>`
 
 Configuration variables that allow machines to interact with and use a
 shared file system are given at the 
@@ -712,80 +714,88 @@ macros` section.
 
 Limitations with AFS occur because HTCondor does not currently have a
 way to authenticate itself to AFS. This is true of the HTCondor daemons
-that would like to authenticate as the AFS user condor, and of the
-*condor_shadow* which would like to authenticate as the user who
-submitted the job it is serving. Since neither of these things can
-happen yet, there are special things to do when interacting with AFS.
-Some of this must be done by the administrator(s) installing HTCondor.
-Other things must be done by HTCondor users who submit jobs.
+that would like to authenticate as the AFS user condor.
 
-AFS and HTCondor for Users
-''''''''''''''''''''''''''
+However, there is support for HTCondor to manage kerberos tickets
+for users' jobs, such that a running job can access a valid kerberos
+ticket to autheticate to kerberified services such as AFS and GSSAPI.
 
-The *condor_shadow* daemon runs on the machine where jobs are
-submitted. It performs all file system access on behalf of the jobs.
-Because the *condor_shadow* daemon is not authenticated to AFS as the
-user who submitted the job, the *condor_shadow* daemon will not
-normally be able to write any output. Therefore the directories in which
-the job will be creating output files will need to be world writable;
-they need to be writable by non-authenticated AFS users. In addition,
-the program's ``stdout``, ``stderr``, log file, and any file the program
-explicitly opens will need to be in a directory that is world-writable.
-
-An administrator may be able to set up special AFS groups that can make
-unauthenticated access to the program's files less scary. For example,
-there is supposed to be a way for AFS to grant access to any
-unauthenticated process on a given host. If set up, write access need
-only be granted to unauthenticated processes on the access point, as
-opposed to any unauthenticated process on the Internet. Similarly,
-unauthenticated read access could be granted only to processes running
-on the access point.
-
-A solution to this problem is to not use AFS for output files. If disk
-space on the access point is available in a partition not on AFS,
-submit the jobs from there. While the *condor_shadow* daemon is not
-authenticated to AFS, it does run with the effective UID of the user who
-submitted the jobs. So, on a local (or NFS) file system, the
-*condor_shadow* daemon will be able to access the files, and no special
-permissions need be granted to anyone other than the job submitter. If
-the HTCondor daemons are not invoked as root however, the
-*condor_shadow* daemon will not be able to run with the submitter's
-effective UID, leading to a similar problem as with files on AFS.
-
-AFS and HTCondor for Administrators
+Kerberos, AFS usage by running jobs
 '''''''''''''''''''''''''''''''''''
 
-The largest result from the lack of authentication with AFS is that the
-directory defined by the configuration variable :macro:`LOCAL_DIR` and its
-subdirectories ``log`` and ``spool`` on each machine must be either
-writable to unauthenticated users, or must not be on AFS. Making these
-directories writable a very bad security hole, so it is not a viable
-solution. Placing :macro:`LOCAL_DIR` onto NFS is acceptable. To avoid AFS,
-place the directory defined for :macro:`LOCAL_DIR` on a local partition on
-each machine in the pool. This implies running :tool:`condor_configure` to
-install the release directory and configure the pool, setting the
-:macro:`LOCAL_DIR` variable to a local partition. When that is complete, log
-into each machine in the pool, and run *condor_init* to set up the
-local HTCondor directory.
+The first step is for :tool:`condor_submit` to obtain the kerberos uberticket.
+It will do this by executing an external program specified in the condor_config
+file as :macro:`SEC_CREDENTIAL_PRODUCER`. This program takes no arguments, and
+writes its output to stdout. condor_submit will capture this output and use it
+as the uberticket. The program must exit with status zero on success and
+non-zero status on failure. condor_submit will send the uberticket to the
+condor_credd daemon, and will block for a configurable amount of time until the
+condor_credd signals that everything is ready.
 
-The directory defined by :macro:`RELEASE_DIR`, which holds all the HTCondor
-binaries, libraries, and scripts, can be on AFS. None of the HTCondor
-daemons need to write to these files. They only need to read them. So,
-the directory defined by :macro:`RELEASE_DIR` only needs to be world readable
-in order to let HTCondor function. This makes it easier to upgrade the
-binaries to a newer version at a later date, and means that users can
-find the HTCondor tools in a consistent location on all the machines in
-the pool. Also, the HTCondor configuration files may be placed in a
-centralized location.
+The condor_credd daemon runs on the same machine as the condor_schedd. The
+condor_master on that machine will launch the Credential Monitor as root to
+maintain the user’s credentials on the submit side. There will be one
+Credential Monitor per machine that is shared by all users. The Credential
+Monitor takes a directory as input and monitors all credentials in that
+directory. The condor_master will find the program specified in the
+condor_config as :macro:`SEC_CREDENTIAL_MONITOR` and launch it as root. The one
+command line flag to that program is “<directory_to_monitor>”. If the
+Credential Monitor exits for any reason, it will be restarted by the
+condor_master after a short delay. The exit status of the Credenital Monitor is
+logged but is otherwise ignored. The Credential Monitor must handle a SIGHUP
+signal which informs it that the contents of the directory it is monitoring
+have changed and it should rescan the directory and perform whatever actions
+are necessary
 
-Finally, consider setting up some targeted AFS groups to help users deal
-with HTCondor and AFS better. This is discussed in the following manual
-subsection. In short, create an AFS group that contains all users,
-authenticated or not, but which is restricted to a given host or subnet.
-These should be made as host-based ACLs with AFS, but here at
-UW-Madison, we have had some trouble getting that working. Instead, we
-have a special group for all machines in our department. The users here
-are required to make their output directories on AFS writable to any
-process running on any of our machines, instead of any process on any
-machine with AFS on the Internet.
+HTCondor will determine the directory in which to store ubertickets using the
+directory specified in the condor_config as :macro:`SEC_CREDENTIAL_DIRECTORY`.
+The files in this directory will be owned by the user ‘root’ and have
+permissions 0600 or 0400. All files written into this directory must be written
+atomically. Files with the extension .tmp should be created first and then
+rename(2)ed into place.
 
+The condor_credd will atomically place credentials into that directory when the
+user has jobs in the queue that need to run, and will remove credentials from
+that directory when a given user has no more jobs. The ubertickets will be
+named “<username>.cred”. The Credential Monitor will notice the new uberticket,
+either periodically or upon receiving SIGHUP, and obtain a TGT and atomically
+place it in a krb5 credential cache in the credential directory under the
+filename “<username>.cc”. HTCondor will know it has a valid TGT and AFS token
+for the user when the file “<user>.cc” is present in that directory. If the
+file “<username>.cc” is not present, HTCondor will assume that user does not
+have valid credentials and it should NOT try to perform any actions on that
+user’s behalf. The Credential Monitor does not need to do anything when an
+uberticket is removed from the credential directory
+
+Once the job is about to start runnning on the execute side, The condor_master
+on the execute machine will launch the Credential Monitor as root to maintain
+the user’s credentials on the execute side. There will be one Credential
+Monitor per machine shared by all users. The Credential Monitor takes a
+directory as input and monitors all credentials in that directory. The
+condor_master will find the program specified in the condor_config as
+:macro:`SEC_CREDENTIAL_MONITOR` and launch it as root. The one command line
+flag to that program is “<directory_to_monitor>”. If the Credential Monitor
+exits for any reason, it will be restarted by the condor_master after a short
+delay. The exit status of the Credenital Monitor is logged but is otherwise
+ignored. The Credential Monitor must handle a SIGHUP signal which informs it
+that the contents of the directory it is monitoring have changed and it sho
+
+The condor_starter will atomically place credentials into that directory when
+the user has jobs scheduled to run on that execute machine, and will remove
+credentials from that directory when a given user has no more jobs for that
+execute machine. The uberticket will be named “<username>.cred”. The Credential
+Monitor will notice the uberticket, either periodically or upon receiving
+SIGHUP, and will obtain a TGT and atomically place it in a krb5 credential
+cache in the credential directory under the filename “<username>.cc”. HTCondor
+will know it has a valid TGT and AFS token for the user when the file
+“<user>.cc” is present in that directory. If the file “<username>.cc” is not
+present, HTCondor will assume that user does not have valid credentials and it
+should NOT try to perform any actions on that user’s behalf. The Credential
+Monitor does not need to do anything when an uberticket is removed from the
+credential directory.
+
+When HTCondor executes the job, it will copy the user’s credential cache into
+:index:`KRB5CCNAME<single: KRB5CCNAME; environment variables>`
+the job sandbox and set the KRB5CCNAME environment variable to point to
+the credential cache. The condor_starter will also monitor the .cc file in the
+credential directory and place fresh copies into the job sandbox as needed.
