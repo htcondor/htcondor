@@ -116,7 +116,7 @@ catch_sigalrm( int  /*sig*/ )
 	}
 	/*printf("Awake now have log output\n");*/
 	rtime = myrusage.ru_utime.tv_sec + (myrusage.ru_utime.tv_usec * .000001);
-	sprintf( bigbuff, "done <%f>\n", rtime);
+	snprintf( bigbuff, sizeof(bigbuff), "done <%f>\n", rtime);
 	/*printf("have time calculated.......<%s>\n",bigbuff);*/
 	len = strlen((const char*)bigbuff);
 	ret =  write(fd, (const void *)&bigbuff, len);
