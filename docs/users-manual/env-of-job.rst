@@ -447,6 +447,7 @@ to forward to that port in the container; HTCondor will report that port
 in the job ad attribute :subcom:`<service-name>_HostPort` after it becomes
 available, which will be (several seconds) after the job starts.  HTCondor
 will update the job ad in the sandbox (``.job.ad``) at that time.
+
 Virtual Machine Jobs
 --------------------
 
@@ -829,7 +830,7 @@ in the submit description file. It causes HTCondor to wait until every
 node in the parallel job has completed to consider the job finished.
 
 Parallel Jobs and the Dedicated Scheduler
-;''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''
 
 To run parallel universe jobs, HTCondor must be configured such that
 :index:`dedicated<single: dedicated; scheduling>`\ machines running parallel jobs are
