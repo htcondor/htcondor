@@ -8209,6 +8209,12 @@ These macros affect the *condor_job_router* daemon.
     route names specified in :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES` or in :macro:`JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES`.
     The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
+:macro-def:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES[JOB ROUTER]`
+    A boolean value that defaults to ``False``. When ``True``, the
+    deprecated parameters :macro:`JOB_ROUTER_DEFAULTS` and
+    :macro:`JOB_ROUTER_ENTRIES` can be used to define routes in the
+    job routing table.
+
 :macro-def:`JOB_ROUTER_DEFAULTS[JOB ROUTER]`
     .. warning::
         This macro is deprecated and will be removed for V24 of HTCondor.

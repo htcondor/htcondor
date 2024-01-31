@@ -207,8 +207,7 @@ static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
 		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series\n");
 	}
 
-	// NOTE: for htcondor 9.0 we should change the default of this knob to false
-	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
+	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", false);
 	if ( ! use_entries && using_defaults) {
 		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is defined, but will be ignored because JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES is false\n");
 		return true;
@@ -405,8 +404,7 @@ JobRouter::config( int /* timerID */ ) {
 		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series.\n");
 	}
 
-	// NOTE: for htcondor 9.0 we should change the default of this knob to false
-	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
+	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", false);
 	if ( ! use_entries && (routing_file || routing_cmd || routing_entries)) {
 		dprintf(D_ALWAYS,
 			"JobRouter WARNING: one or more of JOB_ROUTER_ENTRIES, JOB_ROUTER_ENTRIES_FILE or JOB_ROUTER_ENTRIES_CMD are defined "
