@@ -636,9 +636,6 @@ checkpoint is subsequently used to resume execution of the virtual
 machine. This occurs whether or not the execution resumes on the same
 machine or a different one within the HTCondor pool.
 
-Disk Images
-'''''''''''
-
 Xen and KVM
 '''''''''''
 
