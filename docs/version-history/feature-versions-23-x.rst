@@ -36,6 +36,9 @@ New Features:
   version 24.0.0.
   :jira:`2260`
 
+- Improve the reliability of the userlog reader code by changing it to do line oriented reads and to seek less.
+  :jira:`2254`
+
 Bugs Fixed:
 
 - None.

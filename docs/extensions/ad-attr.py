@@ -6,7 +6,7 @@ from docutils.parsers.rst import Directive
 from sphinx import addnodes
 from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
-from htc_helpers import custom_ext_parser, make_ref_and_index_nodes, extra_info_parser
+from htc_helpers import *
 # Remove once Centos7 support is dropped (Requires Sphinx V2.0.0)
 try:
     from sphinx.util import logging
@@ -60,6 +60,7 @@ def warn(msg: str):
         logger.warning(msg)
 
 def classad_attr_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    root_dir = get_rel_path_to_root_dir(inliner)[:-1]
     attr_name, attr_info = custom_ext_parser(text)
     details = extra_info_parser(attr_info) if attr_info != "" else None
 
@@ -76,7 +77,7 @@ def classad_attr_role(name, rawtext, text, lineno, inliner, options={}, content=
             if len(ATTRIBUTE_FILES[attr_name]) > 1:
                 warn(f"Classad Attribute '{attr_name}' is defined in multiple files. Defaulting to {filename}")
 
-    ref_link = f"href=\"../classad-attributes/{filename}#{attr_name}\""
+    ref_link = f"href=\"{root_dir}/classad-attributes/{filename}#{attr_name}\""
     return make_ref_and_index_nodes(name, attr_name, attr_index,
                                     ref_link, rawtext, inliner, lineno, options)
 

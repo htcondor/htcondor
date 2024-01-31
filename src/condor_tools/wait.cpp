@@ -147,6 +147,15 @@ int main( int argc, char *argv[] )
 			} else {
 				print_status = true;
 			}
+		} else if (is_dash_arg_prefix(argv[i], "attach")) {
+		#ifdef WIN32
+			BOOL is_debugger = IsDebuggerPresent();
+			while ( ! is_debugger) {
+				fprintf(stderr, "waiting for debug attach\n");
+				sleep(4);
+				is_debugger = IsDebuggerPresent();
+			}
+		#endif
 		} else if(is_dash_arg_colon_prefix(argv[i],"echo", &pcolon, -1)) {
 			echo_events = true;
 			if (pcolon) {
@@ -195,6 +204,14 @@ int main( int argc, char *argv[] )
 				EXIT_FAILURE;
 			}
 			dprintf( D_FULLDEBUG, "Will wait until %d jobs end\n", minjobs );
+		} else if( !strcmp( argv[i], "-log" ) ) {
+			i++;
+			if( i >= argc ) {
+				fprintf( stderr, "-log requires an argument\n" );
+				usage( argv[0] );
+				EXIT_FAILURE;
+			}
+			log_file_name = argv[i];
 		} else if (log_file_name != NULL && job_name == NULL && !strcmp(argv[i], "-1")) {
 			job_name = argv[i]; // treat a bare -1 as 'all clusters'
 		} else if(argv[i][0]!='-') {
