@@ -17,8 +17,8 @@ Release Notes:
 
 New Features:
 
-- On Linux systems with cgroup v1 enabled, HTCondor now uses the device cgroup
-  to hide GPUs that are not provisioned by the system.  This can be disabled
+- On Linux systems with cgroup v1 enabled, HTCondor now uses the "devices" cgroup
+  to prevent the job from accessing unassigned GPUs.  This can be disabled
   by settting the new knob :macro:`STARTER_HIDE_GPU_DEVICES` to false.
   :jira:`1152`
 

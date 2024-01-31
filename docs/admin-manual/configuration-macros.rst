@@ -6207,12 +6207,13 @@ These settings affect the *condor_starter*.
     swap space configured by the operating system.
 
 :macro-def:`STARTER_HIDE_GPU_DEVICES[STARTER]`
-    A boolean that defaults to true.  When true, a HTCondor started as root on Linux
-    systems will use the devices cgroup prevent the job from being able to access
-    any nvidia GPUs not provisioned by the system.  The device files will still exist
-    in /dev, but any attempt to access them will fail, regardless of their unix file
-    permissions.  The nvidia-smi command will not report them as being available.
-    Setting it to false returns to the previous functionality of never hiding them.
+    A Linux-specific boolean that defaults to true.  When true, if started as root,
+    HTCondor will use the "devices" cgroup to prevent the job from accessing
+    any NVidia GPUs not assigned to it by HTCondor.  The device files will still exist
+    in ``/dev``, but any attempt to access them will fail, regardless of their file
+    permissions.  The ``nvidia-smi`` command will not report them as being available.
+    Setting this macro to false returns to the previous functionality (of allowing jobs
+    to access NVidia GPUs not assigned to them).
    
 :macro-def:`USE_VISIBLE_DESKTOP[STARTER]`
     This boolean variable is only meaningful on Windows machines. If
