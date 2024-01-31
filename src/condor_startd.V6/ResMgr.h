@@ -287,6 +287,7 @@ public:
 	void		init_config_classad( void );
 	void		updateExtrasClassAd( ClassAd * cap );
 	void		publish_daemon_ad(ClassAd & ad);
+	void		final_update_daemon_ad();
 
 	void		addResource( Resource* );
 	bool		removeResource( Resource* );

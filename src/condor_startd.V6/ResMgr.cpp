@@ -309,6 +309,36 @@ ResMgr::init_config_classad( void )
 }
 
 void
+ResMgr::final_update_daemon_ad()
+{
+	ClassAd invalidate_ad;
+	std::string exprstr, name, escaped_name;
+
+	if (Name) { name = Name; }
+	else { name = get_local_fqdn(); }
+
+	// Set the correct types
+	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_DAEMON_ADTYPE);
+
+	/*
+	* NOTE: the collector depends on the data below for performance reasons
+	* if you change here you will need to CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
+	* the IP was added to allow the collector to create a hash key to delete in O(1).
+	*/
+	exprstr = std::string("TARGET." ATTR_NAME " == ") + QuoteAdStringValue(name.c_str(), escaped_name);
+	invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, exprstr.c_str() );
+	invalidate_ad.Assign( ATTR_NAME, name );
+	invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
+
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+	StartdPluginManager::Invalidate(&invalidate_ad);
+#endif
+
+	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
+}
+
+void
 ResMgr::publish_daemon_ad(ClassAd & ad)
 {
 	SetMyTypeName(ad, STARTD_DAEMON_ADTYPE);
@@ -938,10 +968,14 @@ ResMgr::state( void )
 void
 ResMgr::final_update( void )
 {
-	if ( ! numSlots()) {
-		return;
+	if (numSlots()) {
+		walk( &Resource::final_update );
 	}
-	walk( &Resource::final_update );
+#ifdef DO_BULK_COLLECTOR_UPDATES
+	if (enable_single_startd_daemon_ad) {
+		final_update_daemon_ad();
+	}
+#endif
 }
 
 int
