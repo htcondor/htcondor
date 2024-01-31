@@ -77,120 +77,136 @@ QmgrJobUpdater::~QmgrJobUpdater()
 void
 QmgrJobUpdater::initJobQueueAttrLists( )
 {
-	common_job_queue_attrs.insert( ATTR_JOB_STATUS );
-	common_job_queue_attrs.insert( ATTR_IMAGE_SIZE );
-	common_job_queue_attrs.insert( ATTR_RESIDENT_SET_SIZE );
-	common_job_queue_attrs.insert( ATTR_PROPORTIONAL_SET_SIZE );
-	common_job_queue_attrs.insert( ATTR_MEMORY_USAGE );
-	common_job_queue_attrs.insert( ATTR_DISK_USAGE );
-	common_job_queue_attrs.insert( ATTR_SCRATCH_DIR_FILE_COUNT );
-	common_job_queue_attrs.insert( ATTR_JOB_REMOTE_SYS_CPU );
-	common_job_queue_attrs.insert( ATTR_JOB_REMOTE_USER_CPU );
-	common_job_queue_attrs.insert( ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU );
-	common_job_queue_attrs.insert( ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU );
-	common_job_queue_attrs.insert( ATTR_TOTAL_SUSPENSIONS );
-	common_job_queue_attrs.insert( ATTR_CUMULATIVE_SUSPENSION_TIME );
-	common_job_queue_attrs.insert( ATTR_COMMITTED_SUSPENSION_TIME );
-	common_job_queue_attrs.insert( ATTR_LAST_SUSPENSION_TIME );
-	common_job_queue_attrs.insert( ATTR_BYTES_SENT );
-	common_job_queue_attrs.insert( ATTR_BYTES_RECVD );
-	common_job_queue_attrs.insert( ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE );
-	common_job_queue_attrs.insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE );
-	common_job_queue_attrs.insert( ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE );
-	common_job_queue_attrs.insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE );
+	common_job_queue_attrs = {
+		ATTR_JOB_STATUS,
+		ATTR_IMAGE_SIZE,
+		ATTR_RESIDENT_SET_SIZE,
+		ATTR_PROPORTIONAL_SET_SIZE,
+		ATTR_MEMORY_USAGE,
+		ATTR_DISK_USAGE,
+		ATTR_SCRATCH_DIR_FILE_COUNT,
+		ATTR_JOB_REMOTE_SYS_CPU,
+		ATTR_JOB_REMOTE_USER_CPU,
+		ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU,
+		ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU,
+		ATTR_TOTAL_SUSPENSIONS,
+		ATTR_CUMULATIVE_SUSPENSION_TIME,
+		ATTR_COMMITTED_SUSPENSION_TIME,
+		ATTR_LAST_SUSPENSION_TIME,
+		ATTR_BYTES_SENT,
+		ATTR_BYTES_RECVD,
+		ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE,
+		ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE,
+		ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE,
+		ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE,
 
-	common_job_queue_attrs.insert( ATTR_JOB_ACTIVATION_DURATION );
-	common_job_queue_attrs.insert( ATTR_JOB_ACTIVATION_EXECUTION_DURATION );
-	common_job_queue_attrs.insert( ATTR_JOB_ACTIVATION_SETUP_DURATION );
-	common_job_queue_attrs.insert( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION );
+		ATTR_JOB_ACTIVATION_DURATION,
+		ATTR_JOB_ACTIVATION_EXECUTION_DURATION,
+		ATTR_JOB_ACTIVATION_SETUP_DURATION,
+		ATTR_JOB_ACTIVATION_TEARDOWN_DURATION,
 
-	common_job_queue_attrs.insert( "TransferInQueued" );
-	common_job_queue_attrs.insert( "TransferInStarted" );
-	common_job_queue_attrs.insert( "TransferInFinished" );
-	common_job_queue_attrs.insert( "TransferOutQueued" );
-	common_job_queue_attrs.insert( "TransferOutStarted" );
-	common_job_queue_attrs.insert( "TransferOutFinished" );
-	common_job_queue_attrs.insert( ATTR_TRANSFER_INPUT_STATS );
-	common_job_queue_attrs.insert( ATTR_TRANSFER_OUTPUT_STATS );
-	common_job_queue_attrs.insert( ATTR_NUM_JOB_STARTS );
-	common_job_queue_attrs.insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
-	common_job_queue_attrs.insert( ATTR_CUMULATIVE_TRANSFER_TIME );
-	common_job_queue_attrs.insert( ATTR_LAST_JOB_LEASE_RENEWAL );
-	common_job_queue_attrs.insert( ATTR_JOB_COMMITTED_TIME );
-	common_job_queue_attrs.insert( ATTR_COMMITTED_SLOT_TIME );
-	common_job_queue_attrs.insert( ATTR_DELEGATED_PROXY_EXPIRATION );
-	common_job_queue_attrs.insert( ATTR_BLOCK_WRITE_KBYTES );
-	common_job_queue_attrs.insert( ATTR_BLOCK_READ_KBYTES );
-	common_job_queue_attrs.insert( ATTR_BLOCK_WRITE_BYTES );
-	common_job_queue_attrs.insert( ATTR_BLOCK_READ_BYTES );
-	common_job_queue_attrs.insert( ATTR_BLOCK_WRITES );
-	common_job_queue_attrs.insert( ATTR_BLOCK_READS );
-	common_job_queue_attrs.insert( ATTR_NETWORK_IN );
-	common_job_queue_attrs.insert( ATTR_NETWORK_OUT );
-	common_job_queue_attrs.insert( ATTR_JOB_CPU_INSTRUCTIONS );
-    common_job_queue_attrs.insert( "Recent" ATTR_BLOCK_READ_KBYTES );
-    common_job_queue_attrs.insert( "Recent" ATTR_BLOCK_WRITE_KBYTES );
-    common_job_queue_attrs.insert( "Recent" ATTR_BLOCK_READ_BYTES );
-    common_job_queue_attrs.insert( "Recent" ATTR_BLOCK_WRITE_BYTES );
-    common_job_queue_attrs.insert( "Recent" ATTR_BLOCK_READS );
-    common_job_queue_attrs.insert( "Recent" ATTR_BLOCK_WRITES );
-    common_job_queue_attrs.insert( "StatsLastUpdateTimeStarter" );
-    common_job_queue_attrs.insert( "StatsLifetimeStarter" );
-    common_job_queue_attrs.insert( "RecentStatsLifetimeStarter" );
-    common_job_queue_attrs.insert( "RecentWindowMaxStarter" );
-    common_job_queue_attrs.insert( "RecentStatsTickTimeStarter" );
-	common_job_queue_attrs.insert( ATTR_JOB_VM_CPU_UTILIZATION );
-	common_job_queue_attrs.insert( ATTR_TRANSFERRING_INPUT );
-	common_job_queue_attrs.insert( ATTR_TRANSFERRING_OUTPUT );
-	common_job_queue_attrs.insert( ATTR_TRANSFER_QUEUED );
-	common_job_queue_attrs.insert( ATTR_NUM_JOB_COMPLETIONS );
-	common_job_queue_attrs.insert( ATTR_IO_WAIT);
+		"TransferInQueued",
+		"TransferInStarted",
+		"TransferInFinished",
+		"TransferOutQueued",
+		"TransferOutStarted",
+		"TransferOutFinished",
+		ATTR_TRANSFER_INPUT_STATS,
+		ATTR_TRANSFER_OUTPUT_STATS,
+		ATTR_NUM_JOB_STARTS,
+		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
+		ATTR_CUMULATIVE_TRANSFER_TIME,
+		ATTR_LAST_JOB_LEASE_RENEWAL,
+		ATTR_JOB_COMMITTED_TIME,
+		ATTR_COMMITTED_SLOT_TIME,
+		ATTR_DELEGATED_PROXY_EXPIRATION,
+		ATTR_BLOCK_WRITE_KBYTES,
+		ATTR_BLOCK_READ_KBYTES,
+		ATTR_BLOCK_WRITE_BYTES,
+		ATTR_BLOCK_READ_BYTES,
+		ATTR_BLOCK_WRITES,
+		ATTR_BLOCK_READS,
+		ATTR_NETWORK_IN,
+		ATTR_NETWORK_OUT,
+		ATTR_JOB_CPU_INSTRUCTIONS,
+		"Recent" ATTR_BLOCK_READ_KBYTES,
+		"Recent" ATTR_BLOCK_WRITE_KBYTES,
+		"Recent" ATTR_BLOCK_READ_BYTES,
+		"Recent" ATTR_BLOCK_WRITE_BYTES,
+		"Recent" ATTR_BLOCK_READS,
+		"Recent" ATTR_BLOCK_WRITES,
+		"StatsLastUpdateTimeStarter",
+		"StatsLifetimeStarter",
+		"RecentStatsLifetimeStarter",
+		"RecentWindowMaxStarter",
+		"RecentStatsTickTimeStarter",
+		ATTR_JOB_VM_CPU_UTILIZATION,
+		ATTR_TRANSFERRING_INPUT,
+		ATTR_TRANSFERRING_OUTPUT,
+		ATTR_TRANSFER_QUEUED,
+		ATTR_NUM_JOB_COMPLETIONS,
+		ATTR_IO_WAIT,
 
-	// FIXME: What I'd actually like is a way to queue all attributes
-	// not in any whitelist for delivery with the last update.
-	//
-	// (Why _do_ we filter the last job update?)
-	common_job_queue_attrs.insert( "PreExitCode" );
-	common_job_queue_attrs.insert( "PreExitSignal" );
-	common_job_queue_attrs.insert( "PreExitBySignal" );
-	common_job_queue_attrs.insert( "PostExitCode" );
-	common_job_queue_attrs.insert( "PostExitSignal" );
-	common_job_queue_attrs.insert( "PostExitBySignal" );
+		// FIXME: What I'd actually like is a way to queue all attributes
+		// not in any whitelist for delivery with the last update.
+		//
+		// (Why _do_ we filter the last job update?)
+		"PreExitCode",
+		"PreExitSignal",
+		"PreExitBySignal",
+		"PostExitCode",
+		"PostExitSignal",
+		"PostExitBySignal",
 
-	common_job_queue_attrs.insert( ATTR_JOB_CHECKPOINT_NUMBER );
+		ATTR_JOB_CHECKPOINT_NUMBER
+	};
 
-	hold_job_queue_attrs.insert( ATTR_HOLD_REASON );
-	hold_job_queue_attrs.insert( ATTR_HOLD_REASON_CODE );
-	hold_job_queue_attrs.insert( ATTR_HOLD_REASON_SUBCODE );
+	hold_job_queue_attrs = {
+		ATTR_HOLD_REASON,
+		ATTR_HOLD_REASON_CODE,
+		ATTR_HOLD_REASON_SUBCODE
+	};
 
-	evict_job_queue_attrs.insert( ATTR_LAST_VACATE_TIME );
+	evict_job_queue_attrs = {
+		ATTR_LAST_VACATE_TIME
+	};
 
-	remove_job_queue_attrs.insert( ATTR_REMOVE_REASON );
+	remove_job_queue_attrs = {
+		ATTR_REMOVE_REASON
+	};
 
-	requeue_job_queue_attrs.insert( ATTR_REQUEUE_REASON );
+	requeue_job_queue_attrs = {
+		ATTR_REQUEUE_REASON
+	};
 
-	terminate_job_queue_attrs.insert( ATTR_EXIT_REASON );
-	terminate_job_queue_attrs.insert( ATTR_JOB_EXIT_STATUS );
-	terminate_job_queue_attrs.insert( ATTR_JOB_CORE_DUMPED );
-	terminate_job_queue_attrs.insert( ATTR_ON_EXIT_BY_SIGNAL );
-	terminate_job_queue_attrs.insert( ATTR_ON_EXIT_SIGNAL );
-	terminate_job_queue_attrs.insert( ATTR_ON_EXIT_CODE );
-	terminate_job_queue_attrs.insert( ATTR_EXCEPTION_HIERARCHY );
-	terminate_job_queue_attrs.insert( ATTR_EXCEPTION_TYPE );
-	terminate_job_queue_attrs.insert( ATTR_EXCEPTION_NAME );
-	terminate_job_queue_attrs.insert( ATTR_TERMINATION_PENDING );
-	terminate_job_queue_attrs.insert( ATTR_JOB_CORE_FILENAME );
-	terminate_job_queue_attrs.insert( ATTR_SPOOLED_OUTPUT_FILES );
+	terminate_job_queue_attrs = {
+		ATTR_EXIT_REASON,
+		ATTR_JOB_EXIT_STATUS,
+		ATTR_JOB_CORE_DUMPED,
+		ATTR_ON_EXIT_BY_SIGNAL,
+		ATTR_ON_EXIT_SIGNAL,
+		ATTR_ON_EXIT_CODE,
+		ATTR_EXCEPTION_HIERARCHY,
+		ATTR_EXCEPTION_TYPE,
+		ATTR_EXCEPTION_NAME,
+		ATTR_TERMINATION_PENDING,
+		ATTR_JOB_CORE_FILENAME,
+		ATTR_SPOOLED_OUTPUT_FILES
+	};
 
-	checkpoint_job_queue_attrs.insert( ATTR_NUM_CKPTS );
-	checkpoint_job_queue_attrs.insert( ATTR_LAST_CKPT_TIME );
-	checkpoint_job_queue_attrs.insert( ATTR_VM_CKPT_MAC );
-	checkpoint_job_queue_attrs.insert( ATTR_VM_CKPT_IP );
+	checkpoint_job_queue_attrs = {
+		ATTR_NUM_CKPTS,
+		ATTR_LAST_CKPT_TIME,
+		ATTR_VM_CKPT_MAC,
+		ATTR_VM_CKPT_IP
+	};
 
-	x509_job_queue_attrs.insert( ATTR_X509_USER_PROXY_EXPIRATION );
+	x509_job_queue_attrs = {
+		ATTR_X509_USER_PROXY_EXPIRATION
+	};
 
 	if ( job_ad->LookupExpr( ATTR_TIMER_REMOVE_CHECK ) ) {
-		m_pull_attrs.insert( ATTR_TIMER_REMOVE_CHECK );
+		m_pull_attrs = { ATTR_TIMER_REMOVE_CHECK };
 	}
 }
 
