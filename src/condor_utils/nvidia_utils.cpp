@@ -39,6 +39,11 @@ using uuidMap = std::vector<std::string, dev_t>;
 
 // Return a single std::string with the contents of a file path
 // or empty string if can't read the file
+
+// Note that we can't use readShortFile because these files in 
+// /proc and /dev report a 0 file size length when stat(2)'ed, which
+// those utilities rely on.  Here we just read until EOF.
+
 static std::string
 file_to_string(const std::filesystem::path &p) {
 	std::string contents;
