@@ -12,16 +12,11 @@ Users' Manual
    managing-a-job
    automatic-job-management
    when-job-wont-run
-   services-for-jobs
+   choosing-an-htcondor-universe
+   env-of-job
    priorities-and-preemption
    job-sets
    matchmaking-with-classads
-   choosing-an-htcondor-universe
-   java-applications
-   parallel-applications
-   virtual-machine-applications
-   docker-universe-applications
-   container-universe-jobs
    self-checkpointing-applications
    submitting-a-remote-job
    chirp

@@ -1,48 +1,6 @@
 Special Environment Considerations
 ==================================
 
-NFS
----
-
-:index:`NFS<single: NFS; file system>` :index:`interaction with<single: interaction with; NFS>`
-
-If the current working directory when a job is submitted is accessed via
-an NFS automounter, HTCondor may have problems if the automounter later
-decides to unmount the volume before the job has completed. This is
-because :tool:`condor_submit` likely has stored the dynamic mount point as
-the job's initial current working directory, and this mount point could
-become automatically unmounted by the automounter.
-
-There is a simple work around. When submitting the job, use the submit
-command :subcom:`initialdir[and NFS]` to
-point to the stable access point. For example, suppose the NFS
-automounter is configured to mount a volume at mount point
-``/a/myserver.company.com/vol1/johndoe`` whenever the directory
-``/home/johndoe`` is accessed. Adding the following line to the submit
-description file solves the problem.
-
-.. code-block:: condor-submit
-
-      initialdir = /home/johndoe
-
-:index:`cache flush on access point<single: cache flush on access point; NFS>`
-:index:`IwdFlushNFSCache<single: IwdFlushNFSCache; ClassAd job attribute>`
-
-HTCondor attempts to flush the NFS cache on a access point in order to
-refresh a job's initial working directory. This allows files written by
-the job into an NFS mounted initial working directory to be immediately
-visible on the access point. Since the flush operation can require
-multiple round trips to the NFS server, it is expensive. Therefore, a
-job may disable the flushing by setting
-
-.. code-block:: condor-submit
-
-      +IwdFlushNFSCache = False
-
-in the job's submit description file. See the 
-:doc:`/classad-attributes/job-classad-attributes` page for a definition of the
-job ClassAd attribute.
-
 Job Leases
 ----------
 
