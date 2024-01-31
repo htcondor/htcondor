@@ -2,7 +2,7 @@
 
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 
-#if !defined(SID)
+#if defined(UW_BUILD)
 debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f 2,2 )
 upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 buildid = $(shell cat ../../BUILD-ID)
@@ -27,7 +27,7 @@ endif
 %:
 	dh $@ --with python3
 
-#if !defined(SID)
+#if defined(UW_BUILD)
 # Any changes here should be synchronized with changes
 # to ../rpm/condor.spec
 #endif
@@ -35,7 +35,7 @@ endif
 override_dh_auto_configure:
 	dh_auto_configure -- \\
 		$(CMAKE_TOOLCHAIN) \\
-#if !defined(SID)
+#if defined(UW_BUILD)
 		-DBUILDID:STRING="$(buildid)"\\
 		-DPACKAGEID:STRING="$(debver)"\\
 #endif
@@ -47,7 +47,7 @@ override_dh_auto_configure:
 
 override_dh_auto_build: docs/build
 	dh_auto_build --parallel
-#if !defined(SID)
+#if defined(UW_BUILD)
 	# The tests don't get built eventhough was asked for them
 	(cd obj-*; make tests)
 #else
@@ -75,7 +75,7 @@ docs/build:
 override_dh_auto_install:
 	dh_auto_install
 	rm -rf debian/tmp/etc/rc.d
-#if defined(SID)
+#if !defined(UW_BUILD)
 	# Remove tarball files that we do not use
 	rm -f debian/tmp/usr/bin/make-personal-from-tarball
 	rm -f debian/tmp/usr/sbin/condor_configure
@@ -88,7 +88,7 @@ override_dh_auto_install:
 		ln -s ../../../etc/blahp/$${batch_system}_local_submit_attributes.sh \\
 			debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh; \\
 	done
-#if !defined(SID)
+#if defined(UW_BUILD)
 	# tar up the tests
 	(cd obj-*; make tests-tar-pkg)
 	find debian/tmp|sort > /tmp/files
@@ -123,7 +123,7 @@ override_dh_install-arch:
 override_dh_auto_clean:
 	dh_auto_clean
 	# clean up our own mess
-#if defined(SID)
+#if !defined(UW_BUILD)
 	find $(CURDIR) -name '*.class' -delete -o -name '*.jar' -delete
 	find . -name '*.pyc' -delete
 #endif
@@ -162,10 +162,10 @@ override_dh_installinit:
 
 
 override_dh_strip:
-#if defined(SID)
-	dh_strip --dbgsym-migration='condor-dbg (<< 9.3.1~dfsg-1~)'
+#if defined(UW_BUILD)
+	dh_strip --dbgsym-migration='condor-dbg (<< 23.5.0)'
 #else
-	dh_strip --dbg-package=condor-dbg
+	dh_strip --dbgsym-migration='condor-dbg (<< 9.3.1~dfsg-1~)'
 #endif
 
 override_dh_auto_test:

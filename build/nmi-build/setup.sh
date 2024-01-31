@@ -162,7 +162,7 @@ fi
 
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL build-essential devscripts equivs gpp
-    (cd /tmp/debian; ./prepare-build-files.sh)
+    (cd /tmp/debian; ./prepare-build-files.sh -DUW_BUILD)
     mk-build-deps --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' /tmp/debian/control
 fi
 

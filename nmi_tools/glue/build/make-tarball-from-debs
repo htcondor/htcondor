@@ -43,7 +43,7 @@ mkdir tarball
 . /etc/os-release
 
 for file in $debdir/*.deb; do
-    if [[ $file == *-dbg_* ]]; then
+    if [[ $file == *-dbg* ]]; then
         # Skip debug information
         echo Skipping $file
     else
