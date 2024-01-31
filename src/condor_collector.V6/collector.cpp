@@ -560,7 +560,7 @@ CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
 		// for QUERY_STARTD_ADS, we look at the target type to figure which startd ad table to use
 		// if no target type, assume the slot ad table
 		if (query->LookupString(ATTR_TARGET_TYPE, target)) {
-			whichAds = get_real_startd_ad_type(target.c_str());
+			whichAds = get_realish_startd_adtype(target.c_str());
 			//?? label = AdTypeToString(whichAds);
 		}
 	} else if (whichAds == STARTD_PVT_AD && ! allow_pvt) {
@@ -1472,11 +1472,6 @@ int CollectorDaemon::receive_invalidation(int command,
     if (whichAds != (AdTypes) -1)
 		op.process_invalidation (whichAds, cad, sock);
 
-	// if the invalidation was for the STARTD ads, also invalidate startd
-	// private ads with the same query ad
-	if (command == INVALIDATE_STARTD_ADS)
-		op.process_invalidation (STARTD_PVT_AD, cad, sock);
-
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
 
@@ -1906,7 +1901,12 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 
 	CollectorEngine::HashFunc makeKey = nullptr;
 	CollectorHashTable * hTable = nullptr;
+	CollectorHashTable * hTablePvt = nullptr;
+	int num_pvt = 0;
 	bool expireInvalidatedAds = param_boolean( "EXPIRE_INVALIDATED_ADS", false );
+
+	//std::string adbuf;
+	//dprintf(D_ZKM, "process_invalidate(%d) : %s\n", whichAds, formatAd(adbuf, query, "\t", nullptr, false));
 
 	// For commands that specify the ad table type indirectly via the command int
 	// it is not necessary to specify the target type of the ad(s) to be invalidated.
@@ -1929,6 +1929,18 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 			dprintf(D_ALWAYS, "Invalidate %s failed - no target MyType specified\n", AdTypeToString(whichAds));
 			return;
 		}
+	} else if (whichAds == STARTD_AD) {
+		// INVALIDATE_STARTD_AD is used to invalidate the slot and the daemon ads
+		if (query.LookupString(ATTR_TARGET_TYPE, target_type) && YourStringNoCase(STARTD_DAEMON_ADTYPE) == target_type) {
+			whichAds = STARTDAEMON_AD;
+		}
+		collector.LookupByAdType(whichAds, hTable, makeKey);
+		if ( ! hTable) { target_type = AdTypeToString(whichAds); } // for the error message
+		else if (whichAds == STARTD_AD) { 
+			CollectorEngine::HashFunc dummy;
+			collector.LookupByAdType(STARTD_PVT_AD, hTablePvt, dummy);
+		}
+
 	} else {
 		collector.LookupByAdType(whichAds, hTable, makeKey);
 		if ( ! hTable) { target_type = AdTypeToString(whichAds); } // for the error message
@@ -1943,8 +1955,16 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 
 		if( expireInvalidatedAds ) {
 			__numAds__ = collector.expire(hTable, hKey);
+			if (hTablePvt) {
+				num_pvt = collector.expire(hTablePvt, hKey);
+				if (num_pvt > __numAds__) { dprintf(D_ALWAYS, "WARNING: expired %d private ads for %d ads\n", num_pvt, __numAds__); }
+			}
 		} else {
 			__numAds__ = collector.remove(hTable, hKey, whichAds);
+			if (hTablePvt) {
+				num_pvt = collector.remove(hTablePvt, hKey, STARTD_PVT_AD);
+				if (num_pvt > __numAds__) { dprintf(D_ALWAYS, "WARNING: removed %d private ads for %d ads\n", num_pvt, __numAds__); }
+			}
 		}
 
 	} else {
@@ -1961,24 +1981,34 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 
 		if (expireInvalidatedAds) {
 			collector.walkHashTable (*hTable, [this](CollectorRecord*cr){return this->expiration_scanFunc(cr);});
+			if (hTablePvt) { collector.walkHashTable (*hTablePvt, [this](CollectorRecord*cr){return this->expiration_scanFunc(cr);}); }
 			collector.invokeHousekeeper (whichAds);
 		} else if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true))  {
 			// first set all the "LastHeardFrom" attributes to low values ...
 			collector.walkHashTable (*hTable, [this](CollectorRecord*cr){return this->invalidation_scanFunc(cr);});
+			if (hTablePvt) { collector.walkHashTable (*hTablePvt, [this](CollectorRecord*cr){return this->invalidation_scanFunc(cr);}); }
 			// ... then invoke the housekeeper
 			collector.invokeHousekeeper (whichAds);
 		} else {
 			__numAds__ = collector.invalidateAds(hTable, __mytype__, query);
+			if (hTablePvt) {
+				num_pvt = collector.invalidateAds(hTablePvt, __mytype__, query);
+				if (num_pvt > __numAds__) { dprintf(D_ALWAYS, "WARNING: invalidated %d private ads for %d ads\n", num_pvt, __numAds__); }
+			}
 		}
 	}
 
-	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__ );
+	if (hTablePvt) {
+		dprintf (D_ALWAYS, "(Invalidated %d ads) + %d private ads\n", __numAds__, num_pvt );
+	} else {
+		dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__ );
+	}
 
 		// Suppose lots of ads are getting invalidated and we have no clue
 		// why.  That is what the following block of code tries to solve.
 	if( __numAds__ > 1 ) {
-		dprintf(D_ALWAYS, "The invalidation query was this:\n");
-		dPrintAd(D_ALWAYS, query);
+		std::string buf;
+		dprintf(D_ALWAYS, "The invalidation query was this: %s\n", formatAd(buf, query, "\t", nullptr, false));
 	}
 }	
 

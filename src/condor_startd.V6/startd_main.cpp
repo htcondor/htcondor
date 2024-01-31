@@ -505,6 +505,8 @@ init_params( int first_time)
 			enable_single_startd_daemon_ad = 2;
 		}
 	}
+	dprintf(D_STATUS, "ENABLE_STARTD_DAEMON_AD=%d (%s)\n", enable_single_startd_daemon_ad,
+		send_daemon_ad.ptr() ? send_daemon_ad.ptr() : "");
 
 	if( accountant_host ) {
 		free( accountant_host );

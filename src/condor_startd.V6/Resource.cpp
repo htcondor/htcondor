@@ -1657,8 +1657,7 @@ void
 Resource::final_update( void )
 {
 	ClassAd invalidate_ad;
-	std::string line;
-	string escaped_name;
+	std::string exprstr, escaped_name;
 
 		// Set the correct types
 	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
@@ -1673,9 +1672,9 @@ Resource::final_update( void )
 	 * if you change here you will need to CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
 	 * the IP was added to allow the collector to create a hash key to delete in O(1).
      */
-	 QuoteAdStringValue( r_name, escaped_name );
-     formatstr( line, "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
-     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
+	 
+     exprstr = std::string("TARGET." ATTR_NAME " == ") + QuoteAdStringValue(r_name, escaped_name);
+     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, exprstr.c_str() );
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 
@@ -2451,7 +2450,9 @@ void Resource::publish_static(ClassAd* cap)
 	}
 
 	// Set the correct types on the ClassAd
+	dprintf(D_ZKM | D_VERBOSE, "Resource::publish_static send_daemon_ad=%d\n", enable_single_startd_daemon_ad);
 	if (enable_single_startd_daemon_ad) {
+		cap->Assign(ATTR_HAS_START_DAEMON_AD, true);
 		SetMyTypeName( *cap,STARTD_SLOT_ADTYPE );
 	} else {
 		SetMyTypeName( *cap,STARTD_OLD_ADTYPE );
