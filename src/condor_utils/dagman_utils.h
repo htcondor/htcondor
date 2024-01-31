@@ -351,9 +351,6 @@ private:
 	DagOptionData<SSO> shallow;
 	//Deep options passed down to subdags
 	DagOptionData<DSO> deep;
-	// Map of used bool options to prevent contradictary flags
-	// Only applies to AutoParse()
-	std::map<std::string, std::string> boolFlagCheck;
 	bool is_MultiDag{false};
 };
 

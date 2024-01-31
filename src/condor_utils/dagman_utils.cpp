@@ -1330,6 +1330,8 @@ void DagmanUtils::DisplayDAGManOptions(const char* fmt, DagOptionSrc source, con
 				break;
 			case DagOptionSrc::PYTHON_BINDINGS:
 				if ( ! (dispSrc & DAG_OPT_DISP_PY_BIND)) continue;
+				// Some flags set (or unset) the same option (-[Dont]AlwaysRunPost),
+				// or are aliases (-v, -verbose).  Don't display them twice.
 				if (displayedOptions.contains(opt)) continue;
 				displayedOptions.emplace(opt);
 				break;
@@ -1361,6 +1363,8 @@ std::string DagmanOptions::processOptionArg(const std::string& opt, std::string 
 }
 
 bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err) {
+	// Map of used bool options to prevent contradictary flags
+	static std::map<std::string, std::string> boolFlagCheck;
 	SetDagOpt ret = SetDagOpt::KEY_DNE;
 	// Get information about flag
 	std::string fullFlag = DagmanGetFullFlag(flag);
