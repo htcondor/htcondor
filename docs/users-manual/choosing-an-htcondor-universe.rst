@@ -31,7 +31,7 @@ universe allows users to run jobs written for the Java Virtual Machine
 be spawned by the program known as a daemon on the submit host itself.
 :index:`parallel<single: parallel; universe>` The parallel universe is for programs
 that require multiple machines for one job. See the
-:doc:`/users-manual/parallel-applications` section for more
+:doc:`/users-manual/env-of-job` section for more
 about the Parallel universe. :index:`vm<single: vm; universe>` The vm universe
 allows users to run jobs where the job is no longer a simple executable,
 but a disk image, facilitating the execution of a virtual machine. Container
@@ -63,7 +63,7 @@ Grid Universe
 The Grid universe in HTCondor is intended to provide the standard
 HTCondor interface to users who wish to start jobs intended for remote
 management systems. :doc:`/grid-computing/grid-universe` section has details
-on using the Grid universe. The manual page for :doc:`/man-pages/condor_submit`
+on using the Grid universe. The manual page for :tool:`condor_submit`
 has detailed descriptions of the grid-related attributes.
 
 Java Universe
@@ -118,8 +118,8 @@ Parallel Universe
 
 The parallel universe allows parallel programs, such as MPI jobs, to be
 run within the opportunistic HTCondor environment. Please see
-the :ref:`users-manual/parallel-applications:parallel applications (including
-mpi applications)` section for more details.
+the :ref:`users-manual/env-of-job:parallel jobs (including mpi jobs)`
+section for more details.
 
 VM Universe
 '''''''''''
@@ -129,7 +129,7 @@ VM Universe
 HTCondor facilitates the execution of KVM and Xen virtual machines
 with the vm universe.
 
-Please see the :doc:`/users-manual/virtual-machine-applications` section for
+Please see the :doc:`/users-manual/env-of-job` section for
 details.
 
 Docker Universe
@@ -138,7 +138,7 @@ Docker Universe
 :index:`docker<single: docker; universe>` :index:`docker universe`
 
 The docker universe runs a docker container on an execute host as a job.
-Please see the :doc:`/users-manual/docker-universe-applications` section for
+Please see the :doc:`/users-manual/env-of-job` section for
 details.
 
 Container Universe
@@ -147,5 +147,5 @@ Container Universe
 :index:`container<single: container; universe>` :index:`container universe`
 
 The container universe runs a container on an execute host as a job.
-Please see the :doc:`/users-manual/container-universe-jobs` section for
+Please see the :doc:`/users-manual/env-of-job` section for
 details.
