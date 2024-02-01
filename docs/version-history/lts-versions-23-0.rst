@@ -46,11 +46,6 @@ Bugs Fixed:
   user when run as root.
   :jira:`2241`
 
-- In some rare cases where docker universe could not start a container,
-  it would not remove that container until the next time the start
-  restarted.  Now it is removed as soon as possible.
-  :jira:`2263`
-
 - Fixed a bug that caused a crash if a configuration file or submit
   description file contained an empty multi-line value.
   :jira:`2249`

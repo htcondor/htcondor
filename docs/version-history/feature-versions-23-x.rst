@@ -33,7 +33,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- In some rare cases where docker universe could not start a container,
+  it would not remove that container until the next time the start
+  restarted.  Now it is removed as soon as possible.
+  :jira:`2263`
 
 Version 23.4.0
 --------------

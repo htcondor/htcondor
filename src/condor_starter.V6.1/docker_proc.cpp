@@ -457,7 +457,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			if (rv == 0) {
 				dprintf(D_ERROR,"    Nevertheless, container %s was successfully removed.\n", containerName.c_str());
 			} else {
-				dprintf(D_ERROR,"    Container %s remove failed -- does it even exist? If so, startd will remove on next boo on next boot.\n", containerName.c_str());
+				dprintf(D_ERROR,"    Container %s remove failed -- does it even exist? If so, startd will remove on next boot.\n", containerName.c_str());
 			}
 			EXCEPT("Cannot inspect exited container");
 		}
