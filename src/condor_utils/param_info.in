@@ -2026,6 +2026,23 @@ default=
 type=string
 tags=startd,startd_cronmgr
 
+[STARTD_DETECT_GPUS]
+default=-properties $(GPU_DISCOVERY_EXTRA)
+type=string
+tags=startd
+description=Enable GPUs as a resource and set arguments for condor_gpu_discovery when USE FEATURE:GPUs is not configured
+usage=configure to empty to disable default GPU discovery
+
+[ENVIRONMENT_FOR_AssignedGPUs]
+default=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
+type=string
+tags=startd
+
+[ENVIRONMENT_VALUE_FOR_UnAssignedGPUs]
+default=10000
+type=string
+tags=startd
+
 [CLASSAD_USER_LIBS]
 default=
 type=string
@@ -6451,7 +6468,7 @@ default : @end
 description=Settings to detect and use GPUs as custom resources, args:(optional-discovery-args)
 default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery $(1) -properties $(GPU_DISCOVERY_EXTRA)
-	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA// NVIDIA_VISIBLE_DEVICES=/CUDA//
+	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
 
 	use feature : GPUsMonitor

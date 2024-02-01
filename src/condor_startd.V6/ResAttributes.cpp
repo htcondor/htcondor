@@ -1146,6 +1146,25 @@ void MachAttributes::init_machine_resources() {
 	// this may be filled from resource inventory scripts
 	m_machres_attr.Clear();
 
+	// If there no are declared GPUs resource config knobs, and STARTD_DETECT_GPUS is non-empty
+	// then do default gpu discovery using STARTD_DETECT_GPUS as arguments to condor_gpu_discovery
+	bool has_gpus_res = param_defined("MACHINE_RESOURCE_INVENTORY_GPUS") || param_defined("MACHINE_RESOURCE_GPUS");
+	if ( ! has_gpus_res) {
+		// auto_gpus should be command line arg if defined, but treat setting it to false as a special case
+		// to disable default discovery
+		auto_free_ptr auto_gpus(param("STARTD_DETECT_GPUS"));
+		if (auto_gpus && YourStringNoCase("false") != auto_gpus.ptr() && YourString("0") != auto_gpus.ptr()) {
+			if (YourStringNoCase("true") == auto_gpus.ptr() || YourStringNoCase("1") == auto_gpus.ptr()) {
+				dprintf(D_ERROR, "invalid configuration : STARTD_DETECT_GPUS=%s  see the manual for correct usage\n", auto_gpus.ptr());
+			} else {
+				auto_free_ptr cmd_line(expand_param("$(LIBEXEC)/condor_gpu_discovery $(STARTD_DETECT_GPUS)"));
+				int num_not_offline = init_machine_resource_from_script("GPUs", cmd_line);
+				if (num_not_offline < 0) num_not_offline = 0;
+				m_machres_map["GPUs"] = num_not_offline;
+			}
+		}
+	}
+
 	Regex re;
 	int errcode = 0, erroffset = 0;
 	ASSERT(re.compile("^MACHINE_RESOURCE_[a-zA-Z0-9_]+", &errcode, &erroffset, PCRE2_CASELESS));
