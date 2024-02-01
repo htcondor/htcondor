@@ -505,8 +505,11 @@ Deprecated router configuration
     preparation of HTCondor V24.
 
 Prior to version 8.9.7 the *condor_job_router* used a list of ClassAds
-to configure the routes. This form of configuration is still supported.
-It will be converted at load time to the new syntax.
+to configure the routes. This form of configuration is still supported,
+but is disabled by default.
+To enable it, set configuration parameter
+:macro:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES` to ``True``.
+The old syntax will be converted at load time to the new syntax.
 
 A good place to learn about the syntax of ClassAds is the Informal
 Language Description in the C++ ClassAds tutorial:
