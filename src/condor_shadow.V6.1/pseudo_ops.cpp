@@ -730,7 +730,21 @@ pseudo_event_notification( const ClassAd & ad ) {
 
 	if( eventType == "ActivationExecutionExit" ) {
 		thisRemoteResource->recordActivationExitExecutionTime(time(NULL));
+	} else if( eventType == "FailedCheckpoint" ) {
+	    int checkpointNumber = -1;
+	    if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
+            dprintf( D_ZKM, "Checkpoint number %d failed, deleting it and updating schedd.\n", checkpointNumber );
+
+	        // FIXME: Record on disk that this checkpoint attempt failed.
+	        // (So that we won't worry about not being able to delete every
+	        // file listed in its MANIFEST.)
+
+	        // FIXME: Update the schedd's copy of ATTR_JOB_CHECKPOINT_NUMBER.
+
+	        // FIXME: Invoke the checkpoint clean-up code on just this attempt.
+	    }
 	}
 
-	return 0;
+
+    return 0;
 }

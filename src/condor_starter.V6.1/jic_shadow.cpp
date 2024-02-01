@@ -962,6 +962,13 @@ JICShadow::notifyExecutionExit( void ) {
 	}
 }
 
+void
+JICShadow::notifyGenericEvent( const ClassAd & event ) {
+	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
+		REMOTE_CONDOR_event_notification(event);
+	}
+}
+
 bool
 JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 						  /* user_proc */ )
