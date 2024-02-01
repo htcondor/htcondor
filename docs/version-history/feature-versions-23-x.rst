@@ -27,6 +27,11 @@ New Features:
   This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.
   :jira:`1783`
 
+- GPU detection is now enabled by default on all execute nodes via a new configuration variable
+  :macro:`STARTD_DETECT_GPUS`.  This new configuration variable supplies arguments to
+  *condor_gpu_discovery* for use when GPU discovery is not otherwise explicitly enabled in the config.
+  :jira:`2264`
+
 - Added new submit commands for constraining GPU properties. When these commands
   are use the ``RequireGPUs`` expression is generated automatically by submit and
   desired values are stored as job attributes. The new submit commands are :subcom:`gpus_minimum_memory`,

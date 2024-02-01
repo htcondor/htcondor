@@ -3890,6 +3890,19 @@ needs.
     partitioning. If used, custom resources without names in the list
     are ignored.
 
+:macro_def:`STARTD_DETECT_GPUS[STARTD]`
+    The arguments passed to *condor_gpu_discovery* to detect GPUs when
+    the configuration does not have a GPUs resource explicity configured
+    via ``MACHINE_RESOURCE_GPUS`` or  ``MACHINE_RESOURCE_INVENTORY_GPUS``.
+    Use of the configuration template ``use FEATURE : GPUs`` will set
+    ``MACHINE_RESOURCE_INVENTORY_GPUS`` and that will cause this configuration variable
+    to be ignored.
+    If the value of this configuration variable is set to ``false`` or ``0``
+    or empty then automatic GPU discovery will be disabled, but a GPUs resource
+    will still be defined if the configuration has ``MACHINE_RESOURCE_GPUS`` or
+    ``MACHINE_RESOURCE_INVENTORY_GPUS`` or the configuration template ``use FEATURE : GPUs``.
+    The default value is ``-properties $(GPU_DISCOVERY_EXTRA)``
+
 :macro-def:`MACHINE_RESOURCE_<name>[STARTD]`
     An integer that specifies the quantity of or list of identifiers for
     the customized local machine resource available for an SMP machine.
