@@ -1771,14 +1771,17 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 
 	// Record the activation stop time (HTCONDOR-861) and set the
 	// corresponding duration attributes.
-	activation.TerminationTime = time(NULL);
-	time_t ActivationDuration = activation.TerminationTime - activation.StartTime;
-	time_t ActivationTeardownDuration = activation.TerminationTime - activation.ExitExecutionTime;
+	if (began_execution) {
+		// but only if we have begun execution, which is where we set activation.StartTime
+		activation.TerminationTime = time(nullptr);
+		time_t ActivationDuration = activation.TerminationTime - activation.StartTime;
+		time_t ActivationTeardownDuration = activation.TerminationTime - activation.ExitExecutionTime;
 
-	// Where would these attributes get rotated?  Here?
-	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_DURATION, ActivationDuration );
-	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
-	shadow->updateJobInQueue( U_STATUS );
+		// Where would these attributes get rotated?  Here?
+		jobAd->InsertAttr( ATTR_JOB_ACTIVATION_DURATION, ActivationDuration );
+		jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
+		shadow->updateJobInQueue( U_STATUS );
+	}
 
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
@@ -1790,17 +1793,6 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE, (int)tStart);
 		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE, (int)tEnd);
 	}
-
-#if 0 // tj: this seems to record only transfer output time, turn it off for now.
-	FileTransfer::FileTransferInfo fi = filetrans.GetInfo();
-	if (fi.duration) {
-		float cumulativeDuration = 0.0;
-		if ( ! jobAd->LookupFloat(ATTR_CUMULATIVE_TRANSFER_TIME, cumulativeDuration)) { 
-			cumulativeDuration = 0.0; 
-		}
-		jobAd->Assign(ATTR_CUMULATIVE_TRANSFER_TIME, cumulativeDuration + fi.duration );
-	}
-#endif
 
 	if( exit_value == -1 ) {
 			/* 
