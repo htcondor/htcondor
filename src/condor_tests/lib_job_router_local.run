@@ -24,6 +24,8 @@ use Check::SimpleJob;
 
 #testreq: personal
 my $config = <<'CONDOR_TESTREQ_CONFIG';
+  JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES = True
+
   JOB_ROUTER_DEFAULTS = \
   [ \
     requirements=target.WantJobRouter is True; \
