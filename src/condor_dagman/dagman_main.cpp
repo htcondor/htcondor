@@ -909,7 +909,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf(DEBUG_SILENT, "No environment variables passed for -include_env\n");
 				Usage();
 			}
-			dagman.options.append("GetFromEnv", argv[i]);
+			dagman.options.extend("GetFromEnv", argv[i]);
 
 		} else if( !strcasecmp( "-insert_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {
