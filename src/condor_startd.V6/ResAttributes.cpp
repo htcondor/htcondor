@@ -719,7 +719,7 @@ void MachAttributes::ReconfigOfflineDevIds()
 	m_machres_runtime_offline_ids_map.clear();
 
 	std::string knob;
-	StringList offline_ids;
+	std::vector<std::string> offline_ids;
 	for (auto &[restag, nft] : m_machres_nft_map) {
 		const char * tag = restag.c_str();
 		knob = "OFFLINE_MACHINE_RESOURCE_"; knob += restag;
@@ -732,7 +732,7 @@ void MachAttributes::ReconfigOfflineDevIds()
 		for (int ii = (int)nft.ids.size()-1; ii >= 0; --ii) {
 			const char * id = nft.ids[ii].id.c_str();
 			const FullSlotId & owner = nft.ids[ii].owner;
-			if (offline_ids.contains(id)) {
+			if (contains(offline_ids, id)) {
 				dprintf(D_ALWAYS, "%s %s is now marked offline\n", tag, id);
 				if (owner.dyn_id) {
 					// currently assigned to a dynamic slot

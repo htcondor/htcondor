@@ -35,7 +35,6 @@
 #include "subsystem_info.h"
 
 #include "condor_uid.h"
-#include "string_list.h"
 #include "directory.h"
 #include "condor_qmgr.h"
 #include "condor_classad.h"
@@ -76,7 +75,7 @@ extern void		_condor_set_debug_flags( const char *strflags, int flags );
 // Define this to check for memory leaks
 
 char		*Spool;				// dir for condor job queue
-StringList   ExecuteDirs;		// dirs for execution of condor jobs
+std::vector<std::string> ExecuteDirs;	// dirs for execution of condor jobs
 char		*Log;				// dir for condor program logs
 char		*DaemonSockDir;     // dir for daemon named sockets
 char        *PublicFilesWebrootDir; // dir for public input file hash links
@@ -862,16 +861,14 @@ check_execute_dir()
 		return;
 	}
 
-	ExecuteDirs.rewind();
-	char const *Execute;
-	while( (Execute=ExecuteDirs.next()) ) {
-		Directory dir( Execute, PRIV_ROOT );
+	for (const auto& Execute: ExecuteDirs) {
+		Directory dir( Execute.c_str(), PRIV_ROOT );
 		while( (f = dir.Next()) ) {
 			if( busy ) {
-				good_file( Execute, f );	// let anything go here
+				good_file( Execute.c_str(), f );	// let anything go here
 			} else {
 				if( dir.GetCreateTime() < now ) {
-					bad_file( Execute, f, dir ); // junk it
+					bad_file( Execute.c_str(), f, dir ); // junk it
 				}
 				else {
 						// In case the startd just started up a job, we
@@ -880,8 +877,8 @@ check_execute_dir()
 						// to wait for the startd to restart before they
 						// are cleaned up.)
 					dprintf(D_FULLDEBUG, "In %s, found %s with recent "
-					        "creation time.  Not removing.\n", Execute, f );
-					good_file( Execute, f ); // too young to kill
+					        "creation time.  Not removing.\n", Execute.c_str(), f );
+					good_file( Execute.c_str(), f ); // too young to kill
 				}
 			}
 		}
@@ -1196,7 +1193,7 @@ init_params()
 
 	char *Execute = param("EXECUTE");
 	if( Execute ) {
-		ExecuteDirs.append(Execute);
+		ExecuteDirs.emplace_back(Execute);
 		free(Execute);
 		Execute = NULL;
 	}
@@ -1208,8 +1205,8 @@ init_params()
 		for (size_t ii = 0; ii < params.size(); ++ii) {
 			Execute = param(params[ii].c_str());
 			if (Execute) {
-				if ( ! ExecuteDirs.contains(Execute)) {
-					ExecuteDirs.append(Execute);
+				if ( ! contains(ExecuteDirs, Execute)) {
+					ExecuteDirs.emplace_back(Execute);
 				}
 				free(Execute);
 			}

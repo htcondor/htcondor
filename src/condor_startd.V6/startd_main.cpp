@@ -60,8 +60,8 @@ int	update_interval = 0;	// Interval to update CM
 int enable_single_startd_daemon_ad = 0;
 
 // String Lists
-StringList *startd_job_attrs = NULL;
-StringList *startd_slot_attrs = NULL;
+std::vector<std::string> startd_job_attrs;
+std::vector<std::string> startd_slot_attrs;
 static StringList *valid_cod_users = NULL; 
 
 // Hosts
@@ -525,37 +525,21 @@ init_params( int first_time)
 
 	// Fill in *_JOB_ATTRS
 	//
-	if (startd_job_attrs) {
-		startd_job_attrs->clearAll();
-	} else {
-		startd_job_attrs = new StringList();
-	}
-	param_and_insert_unique_items("STARTD_JOB_ATTRS", *startd_job_attrs);
+	startd_job_attrs.clear();
+	param_and_insert_unique_items("STARTD_JOB_ATTRS", startd_job_attrs);
 	// merge in the deprecated _EXPRS config
-	param_and_insert_unique_items("STARTD_JOB_EXPRS", *startd_job_attrs);
+	param_and_insert_unique_items("STARTD_JOB_EXPRS", startd_job_attrs);
 	// Now merge in the attrs required by HTCondor - this knob is a secret from users
-	param_and_insert_unique_items("SYSTEM_STARTD_JOB_ATTRS", *startd_job_attrs);
-	if (startd_job_attrs->isEmpty()) {
-		delete startd_job_attrs;
-		startd_job_attrs = NULL;
-	}
+	param_and_insert_unique_items("SYSTEM_STARTD_JOB_ATTRS", startd_job_attrs);
 
 	// Fill in *_SLOT_ATTRS
 	//
-	if (startd_slot_attrs) {
-		startd_slot_attrs->clearAll();
-	} else {
-		startd_slot_attrs = new StringList();
-	}
-	param_and_insert_unique_items("STARTD_SLOT_ATTRS", *startd_slot_attrs);
-	param_and_insert_unique_items("STARTD_SLOT_EXPRS", *startd_slot_attrs);
+	startd_slot_attrs.clear();
+	param_and_insert_unique_items("STARTD_SLOT_ATTRS", startd_slot_attrs);
+	param_and_insert_unique_items("STARTD_SLOT_EXPRS", startd_slot_attrs);
 
 	// now insert attributes needed by HTCondor
-	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", *startd_slot_attrs);
-	if (startd_slot_attrs->isEmpty()) {
-		delete  startd_slot_attrs;
-		startd_slot_attrs = NULL;
-	}
+	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", startd_slot_attrs);
 
 	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", -12345);
 	if (console_slots == -12345) {

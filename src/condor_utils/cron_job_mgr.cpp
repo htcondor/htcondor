@@ -315,42 +315,31 @@ CronJobMgr::ParseJobList( const char *job_list_string )
 			 "CronJobMgr: Job list string is '%s'\n",
 			 job_list_string );
 
-	// Break it into a string list
-	StringList job_list;
-	StringTokenIterator it( job_list_string );
-	for( const char * item = it.first(); item; item = it.next() ) {
-		if( job_list.contains_anycase( item ) ) { continue; }
-		job_list.insert( item );
-	}
-
-	job_list.rewind( );
-
 	// Parse out the job names
-	const char *job_name;
-	while( ( job_name = job_list.next()) != NULL ) {
-		dprintf( D_FULLDEBUG, "CronJobMgr: Job name is '%s'\n", job_name );
+	for (auto& job_name: StringTokenIterator(job_list_string)) {
+		dprintf( D_FULLDEBUG, "CronJobMgr: Job name is '%s'\n", job_name.c_str() );
 
-		CronJobParams	*job_params = CreateJobParams( job_name );
+		CronJobParams	*job_params = CreateJobParams( job_name.c_str() );
 		if ( !job_params->Initialize() ) {
 			dprintf( D_ALWAYS,
 					 "Failed to initialize job '%s'; skipping\n",
-					 job_name );
+					 job_name.c_str() );
 			delete job_params;
 			continue;
 		}
 
 		// Create the job & add it to the list (if it's new)
-		CronJob *job = m_job_list.FindJob( job_name );
+		CronJob *job = m_job_list.FindJob( job_name.c_str() );
 
 		// If job mode changed, delete it & start over
 		if ( job   &&  ( ! job_params->Compatible(job->Params()) )  ) {
 			dprintf( D_ALWAYS,
 					 "CronJob: Mode of job '%s' changed from "
 					 "'%s' to '%s' -- creating new job object\n",
-					 job_name,
+					 job_name.c_str(),
 					 job->Params().GetModeString(),
 					 job_params->GetModeString() );
-			m_job_list.DeleteJob( job_name );
+			m_job_list.DeleteJob( job_name.c_str() );
 			job = NULL;			// New mode?  Build a new job object
 		}
 
@@ -359,7 +348,7 @@ CronJobMgr::ParseJobList( const char *job_list_string )
 			job->SetParams( job_params );
 			job->Mark( );
 			dprintf( D_FULLDEBUG,
-					 "CronJobMgr: Done processing job '%s'\n", job_name );
+					 "CronJobMgr: Done processing job '%s'\n", job_name.c_str() );
 			continue;
 		}
 
@@ -368,13 +357,13 @@ CronJobMgr::ParseJobList( const char *job_list_string )
 		if ( NULL == job ) {
 			dprintf( D_ALWAYS,
 					 "Cron: Failed to create job object for '%s'\n",
-					 job_name );
+					 job_name.c_str() );
 			delete job_params;
 			continue;
 		}
-		if ( !m_job_list.AddJob( job_name, job ) ) {
+		if ( !m_job_list.AddJob( job_name.c_str(), job ) ) {
 			dprintf( D_ALWAYS,
-					 "CronJobMgr: Error adding job '%s'\n", job_name );
+					 "CronJobMgr: Error adding job '%s'\n", job_name.c_str() );
 			delete job;
 			delete job_params;
 			continue;
@@ -383,7 +372,7 @@ CronJobMgr::ParseJobList( const char *job_list_string )
 		// Debug info
 		job->Mark( );
 		dprintf( D_FULLDEBUG,
-				 "CronJobMgr: Done creating job '%s'\n", job_name );
+				 "CronJobMgr: Done creating job '%s'\n", job_name.c_str() );
 	}
 
 	// All ok

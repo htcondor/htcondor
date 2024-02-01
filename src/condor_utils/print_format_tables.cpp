@@ -120,8 +120,7 @@ const char * extractUniqueStrings ( const classad::Value & value, Formatter &, s
 		}
 	} else if (value.IsStringValue(list_out)) {
 		// for strings, parse as a string list, and add each unique item into the set
-		StringList lst(list_out.c_str());
-		for (const char * psz = lst.first(); psz; psz = lst.next()) {
+		for (auto& psz: StringTokenIterator(list_out)) {
 			uniq.insert(psz);
 		}
 	} else {

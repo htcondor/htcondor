@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "hibernator.h"
-#include "string_list.h"
+#include "stl_string_utils.h"
 
 
 /***************************************************************
@@ -253,16 +253,11 @@ HibernatorBase::stringToStates( const char *str,
 								std::vector<SLEEP_STATE> &_states )
 {
 	_states.clear();
-	StringList	strlist( str );
-	strlist.rewind();
-	const char	*name;
-	int			n = 0;
-	while( (name = strlist.next()) != NULL ) {
-		SLEEP_STATE state = stringToSleepState( name );
+	for (auto& name: StringTokenIterator(str)) {
+		SLEEP_STATE state = stringToSleepState( name.c_str() );
 		_states.push_back( state );
-		n++;
 	}
-	return (n >= 1);
+	return (_states.size() >= 1);
 }
 
 bool
