@@ -21,6 +21,7 @@ from .htcondor2_impl import (
     _submit_getqargs,
     _submit_setqargs,
     _submit_from_dag,
+    _display_dag_options,
 )
 
 #
@@ -308,8 +309,12 @@ class Submit(MutableMapping):
         :tool:`condor_submit_dag` or if this module and that command-line
         tool could be from different versions.
 
-        FIXME: Unimplemented.
+        .. note::
+
+            Not all options available to *condor_submit_dag* exist for
+            the python bindings.
         """
+        _display_dag_options()
 
 
 # List does not include options which vary only in capitalization.
