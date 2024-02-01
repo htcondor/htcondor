@@ -206,6 +206,9 @@ RemoteResource::activateClaim( int starterVersion )
 				   (SocketHandlercpp)&RemoteResource::handleSysCalls,
 				   "HandleSyscalls", this );
 			setResourceState( RR_STARTUP );
+
+			// clear out reconnect attempt
+			jobAd->AssignExpr(ATTR_JOB_CURRENT_RECONNECT_ATTEMPT, "undefined");
 			hadContact();
 
 				// This expiration time we calculate here may be
@@ -2034,6 +2037,12 @@ RemoteResource::attemptReconnect( int /* timerID */ )
 		// if if this attempt fails, we need to remember we tried
 	reconnect_attempts++;
 
+	jobAd->Assign(ATTR_JOB_CURRENT_RECONNECT_ATTEMPT, reconnect_attempts);
+	int total_reconnects = 0;
+	jobAd->LookupInteger(ATTR_TOTAL_JOB_RECONNECT_ATTEMPTS, total_reconnects);
+	total_reconnects++;
+	jobAd->Assign(ATTR_TOTAL_JOB_RECONNECT_ATTEMPTS, total_reconnects);
+	shadow->updateJobInQueue(U_STATUS);
 	
 		// ask the startd if the starter is still alive, and if so,
 		// where it is located.  note we must ask the startd, even
@@ -2493,6 +2502,9 @@ RemoteResource::requestReconnect( void )
 			setResourceState( RR_STARTUP );
 		}
 	}
+
+	jobAd->AssignExpr(ATTR_JOB_CURRENT_RECONNECT_ATTEMPT, "undefined");
+	shadow->updateJobInQueue(U_STATUS);
 
 	reconnect_attempts = 0;
 	hadContact();

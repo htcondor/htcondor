@@ -450,6 +450,8 @@
 #define ATTR_JOB_WALL_CLOCK_CKPT  "WallClockCheckpoint"
 #define ATTR_JOB_QUEUE_BIRTHDATE  "JobQueueBirthdate"
 #define ATTR_JOB_REQUIRES_SANDBOX  "JobRequiresSandbox"
+#define ATTR_JOB_CURRENT_RECONNECT_ATTEMPT "JobCurrentReconnectAttempt"
+#define ATTR_TOTAL_JOB_RECONNECT_ATTEMPTS "TotalJobReconnectAttempts"
 #define ATTR_JOB_VM_TYPE  "JobVMType"
 #define ATTR_JOB_VM_MEMORY  "JobVMMemory"
 #define ATTR_JOB_VM_VCPUS  "JobVM_VCPUS"

@@ -146,6 +146,8 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		ATTR_TRANSFER_QUEUED,
 		ATTR_NUM_JOB_COMPLETIONS,
 		ATTR_IO_WAIT,
+		ATTR_JOB_CURRENT_RECONNECT_ATTEMPT,
+		ATTR_TOTAL_JOB_RECONNECT_ATTEMPTS,
 
 		// FIXME: What I'd actually like is a way to queue all attributes
 		// not in any whitelist for delivery with the last update.
