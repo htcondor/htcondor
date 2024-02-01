@@ -221,6 +221,9 @@ struct FamilyInfo {
 											 // if same as cgroup_memory_limit, then
 											 // use memory but no swap
 	int cgroup_cpu_shares{0};
+#if defined(LINUX)
+	std::vector<dev_t> cgroup_hide_devices;
+#endif
 	bool cgroup_active {false}; // are we actually using a cgroup?
 
 	FamilyInfo() = default;
