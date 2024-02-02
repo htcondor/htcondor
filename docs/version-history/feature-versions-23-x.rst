@@ -58,6 +58,11 @@ New Features:
 
 Bugs Fixed:
 
+- In some rare cases where docker universe could not start a container,
+  it would not remove that container until the next time the start
+  restarted.  Now it is removed as soon as possible.
+  :jira:`2263`
+
 - In rare cases, the values of TimeSlotBusy and TimeExecute would be incorrect in the
   job event log when the job was disconnected or did not start properly.
   :jira:`2265`

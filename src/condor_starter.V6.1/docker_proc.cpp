@@ -450,6 +450,15 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if( rv < 0 ) {
 			dprintf( D_ERROR, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
+			// We're in a tight spot.  But we've seen this happen in CHTC where we can create the
+			// container successfully, but not inspect it.  In this case, try to remove the container 
+			// so we don't leak it.
+			rv = DockerAPI::rm(containerName, error);
+			if (rv == 0) {
+				dprintf(D_ERROR,"    Nevertheless, container %s was successfully removed.\n", containerName.c_str());
+			} else {
+				dprintf(D_ERROR,"    Container %s remove failed -- does it even exist? If so, startd will remove on next boot.\n", containerName.c_str());
+			}
 			EXCEPT("Cannot inspect exited container");
 		}
 
