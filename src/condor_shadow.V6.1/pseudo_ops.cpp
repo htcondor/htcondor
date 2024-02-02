@@ -31,6 +31,11 @@
 #include "filename_tools.h"
 #include "basename.h"
 #include "nullfile.h"
+#include "spooled_job_files.h"
+
+#include <filesystem>
+#include "manifest.h"
+
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -731,20 +736,79 @@ pseudo_event_notification( const ClassAd & ad ) {
 	if( eventType == "ActivationExecutionExit" ) {
 		thisRemoteResource->recordActivationExitExecutionTime(time(NULL));
 	} else if( eventType == "FailedCheckpoint" ) {
-	    int checkpointNumber = -1;
-	    if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
-            dprintf( D_ZKM, "Checkpoint number %d failed, deleting it and updating schedd.\n", checkpointNumber );
+		int checkpointNumber = -1;
+		if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
+			dprintf( D_ZKM, "Checkpoint number %d failed, deleting it and updating schedd.\n", checkpointNumber );
 
-	        // FIXME: Record on disk that this checkpoint attempt failed.
-	        // (So that we won't worry about not being able to delete every
-	        // file listed in its MANIFEST.)
+			// Record on disk that this checkpoint attempt failed, so that
+			// we won't worry about not being able to entirely delete it.
+			std::string jobSpoolPath;
+			SpooledJobFiles::getJobSpoolPath(jobAd, jobSpoolPath);
+			std::filesystem::path spoolPath(spoolPath);
 
-	        // FIXME: Update the schedd's copy of ATTR_JOB_CHECKPOINT_NUMBER.
+			std::string failureName;
+			formatstr( failureName, "_condor_checkpoint_FAILURE.%.4d", checkpointNumber );
+			std::string manifestName;
+			formatstr( manifestName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
+			std::error_code errorCode;
+			std::filesystem::rename( spoolPath / manifestName, spoolPath / failureName, errorCode );
+			if( errorCode.value() != 0 ) {
+				// If no MANIFEST file was written, we can't clean up
+				// anyway, so it doesn't matter if we didn't rename it.
+				dprintf( D_FULLDEBUG,
+					"Failed to rename MANIFEST to FAILURE on checkpoint upload failure, error code %d (%s)\n",
+					errorCode.value(), errorCode.message().c_str()
+				);
+			}
 
-	        // FIXME: Invoke the checkpoint clean-up code on just this attempt.
-	    }
+
+			// Update the schedd's copy of ATTR_JOB_CHECKPOINT_NUMBER.
+			jobAd->Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+			Shadow->updateJobInQueue( U_PERIODIC );
+
+
+			// Clean up just this checkpoint attempt.  We don't actually
+			// care if it succeeds; condor_preen is back-stopping us.
+			//
+			std::string checkpointDestination;
+			if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
+				dprintf( D_ALWAYS,
+					"While handling failed checkpoint event, could not find %s in job ad, which is required to attempt a checkpoint.\n",
+					ATTR_JOB_CHECKPOINT_DESTINATION
+				);
+				return 1;
+			}
+			formatstr( checkpointDestination, "%s/%.4d",
+				checkpointDestination.c_str(), checkpointNumber
+			);
+
+			// The clean-up script is entitled to a copy of the job ad,
+			// and the only way to give it one is via the filesystem.
+			// It's clumsy, but for now, rather than deal with cleaning
+			// this job ad file up, just store it in the job's SPOOL.
+			// (Jobs with a checkpoint destination set don't transfer
+			// anything from SPOOL except for the MANIFEST files, so
+			// this won't cause problems even if the .job.ad file is
+			// written by the starter before file transfer rather than
+			// after.)
+			std::string jobAdPath = jobSpoolPath;
+
+
+			// FIXME: This invocation assumes that it's OK to block here
+			// in the shadow until the clean-up attempt is done.  We'll
+			// probably need to (refactor it into the cleanup utils and)
+			// call spawnCheckpointCleanupProcessWithTimeout() -- or
+			// something very similar -- and plumb through an additional
+			// option specifying which specific checkpoint to clean-up.
+			std::string error;
+			manifest::deleteFilesStoredAt( checkpointDestination,
+				spoolPath / failureName,
+				jobAdPath,
+				error
+			);
+		}
 	}
 
 
-    return 0;
+	return 0;
 }
