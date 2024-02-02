@@ -637,6 +637,18 @@ void main_init (int argc, char ** const argv) {
 
 	printf ("Executing condor dagman ... \n");
 
+
+// We are seeing crashes in dagman after exit when global dtors 
+// are being called after the classad cache map is destroyed,
+// but only on Windows, probably because order of destruction
+// is not defined.  
+// Surely there must be better ways to fix this, but 
+// for now, just turn off the cache on Windows for dagman.
+
+#ifdef WIN32
+	classad::ClassAdSetExpressionCaching(false);
+#endif
+
 	std::string tmpcwd;
 	condor_getcwd( tmpcwd );
 
