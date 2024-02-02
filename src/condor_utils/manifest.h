@@ -69,7 +69,8 @@ namespace manifest {
       const std::string & checkpointDestination,
       const std::string & manifestFileName,
       const std::filesystem::path & jobAdPath,
-      std::string & error );
+      std::string & error,
+      bool wasFailedCheckpoint = false );
 }
 
 #endif /* _CHECKPOINT_MANIFEST_H */

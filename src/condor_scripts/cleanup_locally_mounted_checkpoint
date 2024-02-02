@@ -29,6 +29,11 @@ if [[ $7 != "-delete" ]]; then
 fi
 DELETE=$8
 
+IGNORE_MISSING_FILES=
+if [[ $9 == "-ignore-missing-files" ]]; then
+    IGNORE_MISSING_FILES=-f
+fi
+
 FROM_REGEX="^${PREFIX}(.*)"
 
 if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
@@ -49,7 +54,7 @@ if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
     fi
 
     # Delete the file.
-    if ! rm -f ${LOCAL_PATH}${CHECKPOINT_DIR}${DELETE}; then
+    if ! rm ${IGNORE_MISSING_FILES} ${LOCAL_PATH}${CHECKPOINT_DIR}${DELETE}; then
         exit 2
     fi
 
