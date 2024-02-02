@@ -979,6 +979,12 @@ all attributes.
     sandbox. Measured in the number of seconds since the epoch (00:00:00
     UTC, Jan 1, 1970)
 
+:classad-attribute-def:`JobCurrentReconnectAttempt`
+    If a job is currently in disconnected state, and the AP is attempting
+    to reconnect to an EP, this attribute is set to the retry number.
+    Upon successful reconnection, or if the job has never been disconnected
+    this attribute is undefined. Note the singular value of "attempt".
+
 :classad-attribute-def:`JobCurrentStartDate`
     Time at which the job most recently began running. Measured in the
     number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
@@ -1863,6 +1869,11 @@ all attributes.
     ToE stands for Ticket of Execution, and is itself a nested classad that
     describes how a job was terminated by the execute machine.
     See the :doc:`/users-manual/managing-a-job` section for full details.
+
+:classad-attribute-def:`TotalJobReconnectAttempts`
+    The total number of reconnection attempts over the lifetime of the job.
+    If there have never been any, this attribute is undefined. Note the
+    plural nature of "Attempts".
 
 :classad-attribute-def:`TotalSuspensions`
     A count of the number of times this job has been suspended during

@@ -3890,6 +3890,19 @@ needs.
     partitioning. If used, custom resources without names in the list
     are ignored.
 
+:macro_def:`STARTD_DETECT_GPUS[STARTD]`
+    The arguments passed to *condor_gpu_discovery* to detect GPUs when
+    the configuration does not have a GPUs resource explicity configured
+    via ``MACHINE_RESOURCE_GPUS`` or  ``MACHINE_RESOURCE_INVENTORY_GPUS``.
+    Use of the configuration template ``use FEATURE : GPUs`` will set
+    ``MACHINE_RESOURCE_INVENTORY_GPUS`` and that will cause this configuration variable
+    to be ignored.
+    If the value of this configuration variable is set to ``false`` or ``0``
+    or empty then automatic GPU discovery will be disabled, but a GPUs resource
+    will still be defined if the configuration has ``MACHINE_RESOURCE_GPUS`` or
+    ``MACHINE_RESOURCE_INVENTORY_GPUS`` or the configuration template ``use FEATURE : GPUs``.
+    The default value is ``-properties $(GPU_DISCOVERY_EXTRA)``
+
 :macro-def:`MACHINE_RESOURCE_<name>[STARTD]`
     An integer that specifies the quantity of or list of identifiers for
     the customized local machine resource available for an SMP machine.
@@ -6206,6 +6219,15 @@ These settings affect the *condor_starter*.
     the hard limit, it will be put on hold.  When false, the job is allowed to use any
     swap space configured by the operating system.
 
+:macro-def:`STARTER_HIDE_GPU_DEVICES[STARTER]`
+    A Linux-specific boolean that defaults to true.  When true, if started as root,
+    HTCondor will use the "devices" cgroup to prevent the job from accessing
+    any NVidia GPUs not assigned to it by HTCondor.  The device files will still exist
+    in ``/dev``, but any attempt to access them will fail, regardless of their file
+    permissions.  The ``nvidia-smi`` command will not report them as being available.
+    Setting this macro to false returns to the previous functionality (of allowing jobs
+    to access NVidia GPUs not assigned to them).
+   
 :macro-def:`USE_VISIBLE_DESKTOP[STARTER]`
     This boolean variable is only meaningful on Windows machines. If
     ``True``, HTCondor will allow the job to create windows on the
@@ -8208,6 +8230,12 @@ These macros affect the *condor_job_router* daemon.
     Specification of a single pre-route or post-route transform.  ``<NAME>`` should be one of the
     route names specified in :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES` or in :macro:`JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES`.
     The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
+
+:macro-def:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES[JOB ROUTER]`
+    A boolean value that defaults to ``False``. When ``True``, the
+    deprecated parameters :macro:`JOB_ROUTER_DEFAULTS` and
+    :macro:`JOB_ROUTER_ENTRIES` can be used to define routes in the
+    job routing table.
 
 :macro-def:`JOB_ROUTER_DEFAULTS[JOB ROUTER]`
     .. warning::

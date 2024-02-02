@@ -167,15 +167,8 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 		return true;
 	}
 
-	StringList services_list(services_needed.c_str());
-	services_list.rewind();
-	char *curr;
 	std::unordered_set<std::string> processed_services;
-	while ((curr = services_list.next())) {
-		if (!strlen(curr)) {
-			continue;
-		}
-
+	for (auto& curr: StringTokenIterator(services_needed)) {
 		// Don't process the same service twice
 		if (processed_services.count(curr)) {
 			continue;
@@ -188,7 +181,7 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 		}
 
 		std::string fullname, fname;
-		formatstr(fname, "%s.use", curr);
+		formatstr(fname, "%s.use", curr.c_str());
 		replace_str(fname, "*", "_");
 		formatstr(fullname, "%s%c%s", m_cred_dir.c_str(), DIR_DELIM_CHAR, fname.c_str());
 		if (!WriteToCredDir(fullname, cred, err)) {

@@ -38,6 +38,7 @@
 #include "has_sysadmin_cap.h"
 #include "starter_util.h"
 #include "proc_family_direct_cgroup_v2.h"
+#include "nvidia_utils.h"
 #include <array>
 
 #include <sstream>
@@ -337,6 +338,17 @@ VanillaProc::StartJob()
 		}
 		fi.cgroup_cpu_shares = 100 * numCores;
 
+		if (param_boolean("STARTER_HIDE_GPU_DEVICES", true)) {
+			// Potentially disable GPU devices from job
+			std::string available_gpus;
+			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
+			classad::Value v;
+			Starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
+			v.IsStringValue(available_gpus);
+
+			// will remain empty if not set, meaning hide all
+			fi.cgroup_hide_devices = nvidia_env_var_to_exclude_list(available_gpus);
+		}
 		int64_t memory = 0;
 		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
 			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aborting\n");
@@ -932,8 +944,8 @@ VanillaProc::outOfMemoryEvent() {
 
 	std::string ss;
 	if (m_memory_limit >= 0) {
-		formatstr(ss, "Job has gone over cgroup memory limit of %ld megabytes. Peak usage: %ld megabytes.  Consider resubmitting with a higher request_memory.", 
-				(m_memory_limit / (1024 * 1024)), usageMB);
+		formatstr(ss, "Job has gone over cgroup memory limit of %lld megabytes. Peak usage: %lld megabytes.  Consider resubmitting with a higher request_memory.", 
+				(long long)(m_memory_limit / (1024 * 1024)), (long long)usageMB);
 	} else {
 		ss = "Job has encountered an out-of-memory event.";
 	}

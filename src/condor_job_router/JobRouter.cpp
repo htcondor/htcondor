@@ -207,8 +207,7 @@ static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
 		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series\n");
 	}
 
-	// NOTE: for htcondor 9.0 we should change the default of this knob to false
-	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
+	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", false);
 	if ( ! use_entries && using_defaults) {
 		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is defined, but will be ignored because JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES is false\n");
 		return true;
@@ -405,8 +404,7 @@ JobRouter::config( int /* timerID */ ) {
 		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series.\n");
 	}
 
-	// NOTE: for htcondor 9.0 we should change the default of this knob to false
-	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
+	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", false);
 	if ( ! use_entries && (routing_file || routing_cmd || routing_entries)) {
 		dprintf(D_ALWAYS,
 			"JobRouter WARNING: one or more of JOB_ROUTER_ENTRIES, JOB_ROUTER_ENTRIES_FILE or JOB_ROUTER_ENTRIES_CMD are defined "
@@ -504,17 +502,17 @@ JobRouter::config( int /* timerID */ ) {
 	classad::References xfm_names; // a set of all pre and post route transform names (used for error checking)
 
 	// load the pre-route transforms
-	StringList xfm_tags;
+	std::vector<std::string> xfm_tags;
 	std::string xfm_param;
 	param_and_insert_unique_items("JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES", xfm_tags);
-	for (const char * tag = xfm_tags.first(); tag != NULL; tag = xfm_tags.next()) {
+	for (auto& tag: xfm_tags) {
 		xfm_names.insert(tag); 
 		xfm_param = "JOB_ROUTER_TRANSFORM_"; xfm_param += tag;
 		const char * xfm_text = param_unexpanded(xfm_param.c_str());
 		if (xfm_text) {
 			std::string errmsg;
 			int offset = 0;
-			MacroStreamXFormSource *xfm = new MacroStreamXFormSource(tag);
+			MacroStreamXFormSource *xfm = new MacroStreamXFormSource(tag.c_str());
 			if (xfm->open(xfm_text, offset, errmsg) < 0) {
 				dprintf( D_ALWAYS, "%s load error: %s\n", xfm_param.c_str(), errmsg.c_str());
 				m_enable_job_routing = false;
@@ -529,16 +527,16 @@ JobRouter::config( int /* timerID */ ) {
 	}
 
 	// load the post route transforms
-	xfm_tags.clearAll();
+	xfm_tags.clear();
 	param_and_insert_unique_items("JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES", xfm_tags);
-	for (const char * tag = xfm_tags.first(); tag != NULL; tag = xfm_tags.next()) {
+	for (auto& tag: xfm_tags) {
 		xfm_names.insert(tag); 
 		xfm_param = "JOB_ROUTER_TRANSFORM_"; xfm_param += tag;
 		const char * xfm_text = param_unexpanded(xfm_param.c_str());
 		if (xfm_text) {
 			std::string errmsg;
 			int offset = 0;
-			MacroStreamXFormSource *xfm = new MacroStreamXFormSource(tag);
+			MacroStreamXFormSource *xfm = new MacroStreamXFormSource(tag.c_str());
 			if (xfm->open(xfm_text, offset, errmsg) < 0) {
 				dprintf( D_ALWAYS, "%s load error: %s\n", xfm_param.c_str(), errmsg.c_str());
 				m_enable_job_routing = false;
@@ -680,13 +678,12 @@ JobRouter::config( int /* timerID */ ) {
 
 void
 JobRouter::refreshIDTokens( int /* timerID */ ) {
-	StringList items;
+	std::vector<std::string> items;
 	param_and_insert_unique_items("JOB_ROUTER_CREATE_IDTOKEN_NAMES", items);
-	items.remove_anycase("NAMES");
 
 	if (IsDebugLevel(D_ALWAYS)) {
-		auto_free_ptr tokenids(items.print_to_string());
-		dprintf(D_ALWAYS, "JobRouter::refreshIDTokens - %s\n", tokenids.ptr());
+		std::string tokenids = join(items, ",");
+		dprintf(D_ALWAYS, "JobRouter::refreshIDTokens - %s\n", tokenids.c_str());
 	}
 
 	// Build a map of existing tokens that we will remove items from when we refresh these tokens
@@ -694,10 +691,13 @@ JobRouter::refreshIDTokens( int /* timerID */ ) {
 	for (auto it : m_idtokens) { delete_tokens[it.first] = it.second; }
 
 	// Create or overwrite token files
-	for (const char * item = items.first(); item != NULL; item = items.next()) {
+	for (auto& item: items) {
+		if (strcasecmp(item.c_str(), "NAMES") == 0) {
+			continue;
+		}
 		std::string knob("JOB_ROUTER_CREATE_IDTOKEN_"); knob += item;
 		auto_free_ptr props = param(knob.c_str());
-		if (props && CreateIDTokenFile(item, props)) {
+		if (props && CreateIDTokenFile(item.c_str(), props)) {
 			// no need to delete this one because we are going to overwrite it
 			delete_tokens.erase(item);
 		}

@@ -648,16 +648,14 @@ StatsD::initAndReconfig(char const *service_name)
 	formatstr(param_name,"%s_METRICS_CONFIG_DIR",service_name);
 	param(config_dir,param_name.c_str());
 	if( !config_dir.empty() ) {
-		StringList file_list;
+		std::vector<std::string> file_list;
 		if( !get_config_dir_file_list( config_dir.c_str(), file_list ) ) {
 			EXCEPT("Failed to read metric configuration from %s\n",config_dir.c_str());
 		}
 
-		file_list.rewind();
-		char const *fname;
-		while( (fname=file_list.next()) ) {
-			dprintf(D_ALWAYS,"Reading metric definitions from %s\n",fname);
-			ParseMetricsFromFile(fname);
+		for (auto& fname: file_list) {
+			dprintf(D_ALWAYS,"Reading metric definitions from %s\n",fname.c_str());
+			ParseMetricsFromFile(fname.c_str());
 		}
 	}
 }

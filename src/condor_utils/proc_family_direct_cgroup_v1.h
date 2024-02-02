@@ -107,6 +107,7 @@ private:
 	pid_t family_root_pid;
 	uint64_t cgroup_memory_limit;
 	int cgroup_cpu_shares;
+	std::vector<dev_t> cgroup_hide_devices;
 };
 
 #endif

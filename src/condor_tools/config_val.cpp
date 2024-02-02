@@ -1003,7 +1003,6 @@ main( int argc, const char* argv[] )
 			configuration file(s) available to this tool. Environment overloads
 			would be reflected. */
 
-		char *source = NULL;
 		char * hostname = param("FULL_HOSTNAME");
 		if (hostname == NULL) {
 			hostname = strdup("<unknown hostname>");
@@ -1124,9 +1123,8 @@ main( int argc, const char* argv[] )
 			if (global_config_source.length() > 0) {
 				fprintf(stdout, "#\t%s\n", global_config_source.c_str());
 			}
-			local_config_sources.rewind();
-			while ((source = local_config_sources.next()) != NULL) {
-				fprintf( stdout, "#\t%s\n", source);
+			for (const auto& source: local_config_sources) {
+				fprintf( stdout, "#\t%s\n", source.c_str());
 			}
 		}
 
@@ -1990,7 +1988,7 @@ static void PrintConfigSources(void)
 	fprintf( stdout, "\t%s\n", global_config_source.c_str() );
 	fflush( stdout );
 
-	unsigned int numSources = local_config_sources.number();
+	size_t numSources = local_config_sources.size();
 	if (numSources > 0) {
 		if (numSources == 1) {
 			fprintf( stderr, "Local configuration source:\n" );
@@ -1999,10 +1997,8 @@ static void PrintConfigSources(void)
 		}
 		fflush( stderr );
 
-		char *source;
-		local_config_sources.rewind();
-		while ( (source = local_config_sources.next()) != NULL ) {
-			fprintf( stdout, "\t%s\n", source );
+		for (const auto& source: local_config_sources) {
+			fprintf( stdout, "\t%s\n", source.c_str() );
 			fflush( stdout );
 		}
 

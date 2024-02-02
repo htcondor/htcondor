@@ -318,7 +318,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		{
 			std::string workingDir = Starter->GetWorkingDir(0);
 			std::string innerPath = Starter->GetWorkingDir(true);
-			StringList opts("-a");
+			std::vector<std::string> opts{"-a"};
 
 			//TODO: figure out if we need to do this, or to switch to  PRIV_USER
 			//TemporaryPrivSentry sentry(PRIV_ROOT);

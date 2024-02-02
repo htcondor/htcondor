@@ -17,16 +17,41 @@ Release Notes:
 
 New Features:
 
+- On Linux systems with cgroup v1 enabled, HTCondor now uses the "devices" cgroup
+  to prevent the job from accessing unassigned GPUs.  This can be disabled
+  by settting the new knob :macro:`STARTER_HIDE_GPU_DEVICES` to false.
+  :jira:`1152`
+
 - Added ability for administrators to specify whether Startd disk enforcement creates
   thin or thick provisioned logical volumes for a jobs emphemeral execute directory.
   This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.
   :jira:`1783`
+
+- GPU detection is now enabled by default on all execute nodes via a new configuration variable
+  :macro:`STARTD_DETECT_GPUS`.  This new configuration variable supplies arguments to
+  *condor_gpu_discovery* for use when GPU discovery is not otherwise explicitly enabled in the config.
+  :jira:`2264`
 
 - Added new submit commands for constraining GPU properties. When these commands
   are use the ``RequireGPUs`` expression is generated automatically by submit and
   desired values are stored as job attributes. The new submit commands are :subcom:`gpus_minimum_memory`,
   :subcom:`gpus_minimum_runtime`, :subcom:`gpus_minimum_capability` and :subcom:`gpus_maximum_capability`.
   :jira:`2201`
+
+- Added job attributes :ad-attr:`JobCurrentReconnectAttempt` and
+  :ad-attr:`TotalJobReconnectAttempts` to count the number of
+  reconnect attempts in progress, and total for the lifetime of
+  the job, respectively.
+  :jira:`2258`
+
+- The old ClassAd-based syntax for defining Job Router routes is now
+  disabled by default.
+  It can be enabled by setting configuration parameter
+  :macro:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES` to ``True``.
+  Support for the old syntax will be removed entirely before HTCondor
+  version 24.0.0.
+  :jira:`2260`
+
 
 - Improve the reliability of the userlog reader code by changing it to do line oriented reads and to seek less.
   :jira:`2254`
@@ -37,6 +62,10 @@ Bugs Fixed:
   it would not remove that container until the next time the start
   restarted.  Now it is removed as soon as possible.
   :jira:`2263`
+
+- In rare cases, the values of TimeSlotBusy and TimeExecute would be incorrect in the
+  job event log when the job was disconnected or did not start properly.
+  :jira:`2265`
 
 Version 23.4.0
 --------------

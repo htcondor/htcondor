@@ -132,6 +132,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_submit_getqargs", &_submit_getqargs, METH_VARARGS, NULL},
 	{"_submit_setqargs", &_submit_setqargs, METH_VARARGS, NULL},
 	{"_submit_from_dag", &_submit_from_dag, METH_VARARGS, NULL},
+	{"_display_dag_options", &_display_dag_options, METH_VARARGS, NULL},
 
 
 	{"_job_event_log_init", &_job_event_log_init, METH_VARARGS, NULL},
