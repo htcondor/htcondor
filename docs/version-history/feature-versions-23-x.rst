@@ -58,7 +58,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- In rare cases, the values of TimeSlotBusy and TimeExecute would be incorrect in the
+  job event log when the job was disconnected or did not start properly.
+  :jira:`2265`
 
 Version 23.4.0
 --------------
