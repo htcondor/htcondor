@@ -4,6 +4,7 @@
 # This allows the mimicry of transfer without actually transferring
 
 import classad
+
 import json
 import os
 import posixpath

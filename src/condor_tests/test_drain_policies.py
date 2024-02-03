@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     config,

@@ -1,7 +1,7 @@
 #!/usr/bin/env pytest
 
-import classad
-import htcondor
+import classad2 as classad
+import htcondor2 as htcondor
 import logging
 import os
 import shutil
@@ -99,6 +99,7 @@ def condor(test_dir, passwords_dir, system_tokens_dir, pool_signing_key, passwor
             "ALLOW_CONFIG" : "condor_pool@*/*, administrator@domain/*",
             "ALLOW_DAEMON" : "condor_pool@*/*, administrator@domain/*",
             "ALLOW_NEGOTIATOR" : "condor_pool@*/*, administrator@domain/*",
+            "ALLOW_ADVERTISE_STARTD" : "condor_pool@*/*, administrator@domain/*",
             "DENY_ALL" : "*",
         }
     ) as condor:
