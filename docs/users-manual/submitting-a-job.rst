@@ -1091,14 +1091,17 @@ for using user-obtained credentials
 to transfer files from some specific storage providers,
 see :ref:`file_transfer_using_a_url`.
 
-Some credential providers may require the user to provide
-a description of the permissions (often called "scopes") a user needs for a specific credential.
-Credential permission scoping is possible using the ``<service name>_oauth_permissions``
-submit file command.
-For example, suppose our CloudBoxDrive service has a ``/public`` directory,
-and the documentation for the service said that users must specify a ``read:<directory>`` scope
-in order to be able to read data out of ``<directory>``.
-The submit file would need to contain
+Credential Scopes
+'''''''''''''''''
+
+Some credential providers may require the user to provide a description of the
+permissions (often called "scopes") a user needs for a specific credential.
+Credential permission scoping is possible using the ``<service
+name>_oauth_permissions`` submit file command.  For example, suppose our
+CloudBoxDrive service has a ``/public`` directory, and the documentation for
+the service said that users must specify a ``read:<directory>`` scope in order
+to be able to read data out of ``<directory>``.  The submit file would need to
+contain
 
 .. code-block:: condor-submit
 
@@ -1118,13 +1121,15 @@ the submit file might look like
     cloudboxdrive_oauth_permissions = read:/public
     cloudboxdrive_oauth_resource = https://cloudboxdrive.myuni.edu
 
-It is possible for a single job to request and/or use credentials from multiple services
-by listing each service in the :subcom:`use_oauth_services` command.
-Suppose the nearby university has a SciTokens service that provides credentials to access the ``localstorage.myuni.edu`` machine,
-and the HTCondor pool administrator has configured the access point to allow users to obtain credentials from this service,
-and that a user has write access to the `/foo` directory on the storage machine.
-A submit file that would result in a job that contains credentials
-that can read from CloudBoxDrive and write to the local university storage might look like
+It is possible for a single job to request and/or use credentials from multiple
+services by listing each service in the :subcom:`use_oauth_services` command.
+Suppose the nearby university has a SciTokens service that provides credentials
+to access the ``localstorage.myuni.edu`` machine, and the HTCondor pool
+administrator has configured the access point to allow users to obtain
+credentials from this service, and that a user has write access to the `/foo`
+directory on the storage machine.  A submit file that would result in a job
+that contains credentials that can read from CloudBoxDrive and write to the
+local university storage might look like
 
 .. code-block:: condor-submit
 
@@ -1135,6 +1140,9 @@ that can read from CloudBoxDrive and write to the local university storage might
 
     myuni_oauth_permissions = write:/foo
     myuni_oauth_resource = https://localstorage.myuni.edu
+
+Credential Handles
+''''''''''''''''''
 
 A single job can also request multiple credentials from the same service provider
 by affixing handles to the :subcom:`<service>_oauth_permissions` and (if necessary)
@@ -1181,6 +1189,13 @@ as configured by the administrator of the Vault server:
 .. code-block:: condor-submit
 
     use_oauth_services = dune_production
+
+.. warning::
+
+   Note that if a handle is not used, the permissions granted by the token will
+   be the default permissions, which is usually the maximal, most permissive
+   set.  Using a handle allows the user to reduce the scope of the permissions
+   granted by the token.
 
 Vault does not require permissions or resources to be
 set, but they may be set to reduce the default permissions or restrict
