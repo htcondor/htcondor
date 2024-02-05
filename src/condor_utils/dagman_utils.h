@@ -153,7 +153,7 @@ namespace DagmanShallowOptions {
 
 namespace DagmanDeepOptions {
 	BETTER_ENUM(str, long,
-		DagmanPath = 0, OutfileDir, BatchName, GetFromEnv, Notification,
+		DagmanPath = 0, OutfileDir, BatchName, Notification,
 		BatchId, AcctGroup, AcctGroupUser
 	);
 
@@ -167,7 +167,7 @@ namespace DagmanDeepOptions {
 	);
 
 	BETTER_ENUM(slist, long,
-		AddToEnv = 0
+		AddToEnv = 0, GetFromEnv
 	);
 }
 
@@ -192,7 +192,7 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-AutoRescue",    {"AutoRescue", "<0|1>", "Control automatically running new rescue DAG (0=False | 1=True)", DAG_OPT_DISP_ALL}}, // Note non-zero = True
 	{"-Batch-Name",    {"BatchName", "<name>", "Set DAG batch name", DAG_OPT_DISP_ALL}},
 	{"-Config",        {"ConfigFile", "<filename>", "Specify DAGMan configuration file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
-	//{"-Dag",           {"DagFiles", "<NAME.dag>", "DAG file for DAGMan to execute", 0}}, // Only applies to DAGMan Main and is manually entered
+	{"-Dag",           {"DagFiles", "<NAME.dag>", "DAG file for DAGMan to execute", 0}}, // Only applies to DAGMan Main and is manually entered
 	{"-DAGMan",        {"DagmanPath", "<path>", "Full path to alternate condor_dagman executable", DAG_OPT_DISP_ALL}},
 	{"-Debug",         {"DebugLevel", "<level>", "Set DAGMan debug logs verbosity", DAG_OPT_DISP_ALL}},
 	{"-do_recurse",    {"Recurse", "True", "Recursively generate Sub-DAG *.condor.sub files", DAG_OPT_DISP_DAGMAN|DAG_OPT_DISP_CSD}},
@@ -306,13 +306,10 @@ public:
 	// Automagically parse cli flags to set a DAGMan option (Note: Possible incrementation of iArg)
 	bool AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err);
 
-	// Append a string to a delimited string list of items: "foo,bar,barz"
-	SetDagOpt append(const char* opt, const std::string& value, const char delim = ',');
-	SetDagOpt append(const char* opt, const char* value, const char delim = ',');
-
 	// Extend (push_back) value to list option
-	SetDagOpt extend(const char* opt, const std::string& value);
-	SetDagOpt extend(const char* opt, const char* value);
+	// Added to help clear up possible confusion from set() despite set() doing the correct thing
+	inline SetDagOpt extend(const char* opt, const std::string& value) { return set(opt, value); }
+	inline SetDagOpt extend(const char* opt, const char* value) { return set(opt, value); }
 
 	void addDeepArgs(ArgList& args, bool inWriteSubmit = true) const;
 	void addDAGFile(std::string& dagFile);
@@ -352,6 +349,9 @@ private:
 	//Deep options passed down to subdags
 	DagOptionData<DSO> deep;
 	bool is_MultiDag{false};
+	// Map of used bool options to prevent contradictary flags
+	// Used in AutoParse()
+	std::map<std::string, std::string> boolFlagCheck;
 };
 
 class DagmanUtils {

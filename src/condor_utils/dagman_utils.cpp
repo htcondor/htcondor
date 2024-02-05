@@ -87,9 +87,9 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		//Scitoken related variables
 		getEnv += ",BEARER_TOKEN,BEARER_TOKEN_FILE,XDG_RUNTIME_DIR";
 		//Add user defined via flag vars to getenv
-		if ( ! options[deep::str::GetFromEnv].empty()) {
-			getEnv += ",";
-			getEnv += options[deep::str::GetFromEnv];
+		for (const auto& vars : options[deep::slist::GetFromEnv]) {
+			if (vars.empty()) continue;
+			getEnv += "," + vars;
 		}
 		//Add config defined vars to add getenv
 		if (conf_getenvVars) { getEnv += ","; getEnv += conf_getenvVars.ptr(); }
@@ -542,9 +542,12 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 							result = false;
 						} else {
 							StringTokenIterator vars(remain);
-							for (auto& var : vars) {
-								options.append("GetFromEnv", var);
+							std::string delimVars;
+							for (const auto& var : vars) {
+								if ( ! delimVars.empty()) { delimVars += ","; }
+								delimVars += var;
 							}
+							options.extend("GetFromEnv", delimVars);
 						}
 					// Parse SET option
 					} else if (strcasecmp(type, "SET") == MATCH) {
@@ -554,8 +557,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 							AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV SET");
 							result = false;
 						} else {
-							std::string kv_pairs(info);
-							trim(kv_pairs);
+							std::string kv_pairs = options.processOptionArg("AddToEnv", std::string(info));
 							options.extend("AddToEnv", kv_pairs);
 						}
 					// Else error
@@ -1042,12 +1044,12 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 		args.AppendArg("-import_env");
 	}
 
-	if ( ! self[str::GetFromEnv].empty()) {
+	for (const auto& vars : self[slist::GetFromEnv]) {
 		args.AppendArg("-include_env");
-		args.AppendArg(self[str::GetFromEnv]);
+		args.AppendArg(vars);
 	}
 
-	for (auto &kv_pair : self[slist::AddToEnv]) {
+	for (const auto &kv_pair : self[slist::AddToEnv]) {
 		args.AppendArg("-insert_env");
 		args.AppendArg(kv_pair);
 	}
@@ -1180,74 +1182,6 @@ SetDagOpt DagmanOptions::set(const char* opt, const std::string& value) {
 	return SetDagOpt::KEY_DNE;
 }
 
-
-/*
-*	The DagmanOption::append() function takes a string DAGMan
-*	option and appends the provided value to it to create or add
-*	to a delimited list. Base delimiter is a comma
-*/
-SetDagOpt DagmanOptions::append(const char* opt, const char* value, const char delim) {
-	if ( ! value || *value == '\0') { return SetDagOpt::NO_VALUE; }
-	std::string v(value);
-	return append(opt, v, delim);
-}
-
-SetDagOpt DagmanOptions::append(const char* opt, const std::string& value, const char delim) {
-	if ( ! opt || *opt == '\0') { return SetDagOpt::NO_KEY; }
-	if (value.empty()) { return SetDagOpt::NO_VALUE; }
-
-	auto s_str_key = shallow::str::_from_string_nocase_nothrow(opt);
-	if (s_str_key) {
-		if ( ! shallow.stringOpts[*s_str_key].empty()) {
-			shallow.stringOpts[*s_str_key] += delim;
-		}
-		shallow.stringOpts[*s_str_key] += value;
-		return SetDagOpt::SUCCESS;
-	}
-
-	auto d_str_key = deep::str::_from_string_nocase_nothrow(opt);
-	if (d_str_key) {
-		if ( ! deep.stringOpts[*d_str_key].empty()) {
-			deep.stringOpts[*d_str_key] += delim;
-		}
-		deep.stringOpts[*d_str_key] += value;
-		return SetDagOpt::SUCCESS;
-	}
-
-	return SetDagOpt::KEY_DNE;
-}
-
-/*
-*	The DagmanOptions::extend() takes a string value to append to a
-*	list of strings associated with the specified DAGMan option.
-*	Note: DagmanOptions::set() for an slist option does the same
-*	behavior, but this is here to be explicit and reduce confusion.
-*	- Cole Bollig: 2023-12-29
-*/
-SetDagOpt DagmanOptions::extend(const char* opt, const char* value) {
-	if ( ! value || *value == '\0') { return SetDagOpt::NO_VALUE; }
-	std::string v(value);
-	return extend(opt, v);
-}
-
-SetDagOpt DagmanOptions::extend(const char* opt, const std::string& value) {
-	if ( ! opt || *opt == '\0') { return SetDagOpt::NO_KEY; }
-	if (value.empty()) { return SetDagOpt::NO_VALUE; }
-
-	auto s_slist_key = shallow::slist::_from_string_nocase_nothrow(opt);
-	if (s_slist_key) {
-		shallow.slistOpts[*s_slist_key].push_back(value);
-		return SetDagOpt::SUCCESS;
-	}
-	auto d_slist_key = deep::slist::_from_string_nocase_nothrow(opt);
-	if (d_slist_key) {
-		deep.slistOpts[*d_slist_key].push_back(value);
-		return SetDagOpt::SUCCESS;
-	}
-
-	return SetDagOpt::KEY_DNE;
-}
-
 /*
 *	Option Value type represents the type of input to set
 *	into an option. While these types can be passed in string
@@ -1363,8 +1297,6 @@ std::string DagmanOptions::processOptionArg(const std::string& opt, std::string 
 }
 
 bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err) {
-	// Map of used bool options to prevent contradictary flags
-	static std::map<std::string, std::string> boolFlagCheck;
 	SetDagOpt ret = SetDagOpt::KEY_DNE;
 	// Get information about flag
 	std::string fullFlag = DagmanGetFullFlag(flag);
@@ -1400,8 +1332,9 @@ bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_
 
 		// Handle special case trimming
 		std::string optionArg = processOptionArg(opt, std::string(argv[++iArg]));
-		if (strcasecmp(opt.c_str(), "GetFromEnv") == MATCH) {
-			ret = append(opt.c_str(), optionArg);
+		if (strcasecmp(opt.c_str(), "DagFiles") == MATCH) {
+			addDAGFile(optionArg);
+			ret = SetDagOpt::SUCCESS;
 		} else {
 			ret = set(opt.c_str(), optionArg);
 		}
