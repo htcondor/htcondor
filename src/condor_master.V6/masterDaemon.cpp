@@ -51,6 +51,10 @@
 #include <sstream>
 #endif
 
+#ifndef WIN32
+#include "largestOpenFD.h"
+#endif 
+
 // these are defined in master.C
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
@@ -2871,7 +2875,6 @@ Daemons::CleanupBeforeRestart()
 	daemonCore->Proc_Family_Cleanup();
 	
 #ifndef WIN32
-	int	max_fds = getdtablesize();
 
 		// Release file lock on the log file.
 	if ( MasterLock->release() == FALSE ) {
@@ -2887,6 +2890,7 @@ Daemons::CleanupBeforeRestart()
 		//		Winsock sockets as non-inheritable by default.
 		// Also not wanted for stderr, since we might be logging
 		// to that.  No real need for stdin or stdout either.
+	int	max_fds = largestOpenFD();
 	for (int i=3; i < max_fds; i++) {
 		int flag = fcntl(i,F_GETFD,0);
 		if( flag != -1 ) {
