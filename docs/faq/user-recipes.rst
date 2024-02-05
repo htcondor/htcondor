@@ -160,30 +160,3 @@ In this example, HTCondor assigns each job two random choices; an integer from 1
    executable = myprogram.exe
    arguments  = $RANDOM_CHOICE(1,2,3) $RANDOM_CHOICE(Alan, Betty, Claire)
    queue 10
-
-How To Request a GPU if available, or run on CPU-only if not
-------------------------------------------------------------
-
-.. code-block:: condor-submit
-
-   # Requirements section.
-   request_CPUs                = 1
-   request_GPUs                = countMatches(RequireGPUs, AvailableGPUs) >= 1 ? 1 : 0
-   require_GPUs                = Capability > 4
-
-   # Preferences section.
-   rank                        = RequestGPUs
-
-   # File transfer section.
-   should_transfer_files       = true
-   transfer_executable         = false
-
-   # Execution section.
-   executable                  = /bin/sleep
-   arguments                   = 60
-
-   # Queue section.
-   queue 1
-
-
-
