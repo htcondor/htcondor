@@ -28,7 +28,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Speed up starting of daemons on Linux systems configured with
+  very large number of file descriptors.
+  :jira:`2270`
 
 Bugs Fixed:
 
