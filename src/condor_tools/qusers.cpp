@@ -385,7 +385,8 @@ main( int argc, const char *argv[] )
 			}
 			prmask.registerFormatF( argv[i+1], argv[i+2], FormatOptionNoTruncate );
 			if ( ! IsValidClassAdExpression(argv[i+2], &attrs, NULL)) {
-				return i+2;
+				fprintf(stderr, "Error: -format arg '%s' is not a valid expression\n", argv[i+2]);
+				exit(2);
 			}
 			i+=2;
 		}
@@ -399,7 +400,8 @@ main( int argc, const char *argv[] )
 			}
 			int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, prmask, attrs, false);
 			if (ixNext < 0) {
-				return -ixNext;
+				fprintf(stderr, "Error: -autoformat arg '%s' is not a valid expression\n", argv[-ixNext]);
+				exit(2);
 			}
 			if (ixNext > i) {
 				i = ixNext-1;

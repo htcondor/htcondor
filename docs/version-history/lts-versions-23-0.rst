@@ -52,6 +52,11 @@ Bugs Fixed:
   description file contained an empty multi-line value.
   :jira:`2249`
 
+- Fixed error handing for the ``-format`` and ``-autoformat`` options of
+  the *condor_qusers* tool when the argument to those options was not a valid
+  expression.
+  :jira:`2269`
+
 .. _lts-version-history-2304:
 
 Version 23.0.4
