@@ -1784,7 +1784,7 @@ job_time(double cpu_time,ClassAd *ad)
 	double total_wall_time = previous_runs;
 	if ( ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday ) {
 		total_wall_time += cur_time - shadow_bday;
-	} else if ( (job_status == IDLE || job_status == HELD) && current_run) {
+	} else if ( (job_status == IDLE || job_status == HELD || job_status == JOB_STATUS_BLOCKED) && current_run) {
 		ad->LookupFloat( ATTR_JOB_LAST_REMOTE_WALL_CLOCK, total_wall_time );
 	}
 
