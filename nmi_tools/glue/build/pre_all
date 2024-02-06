@@ -35,12 +35,12 @@
 use Cwd;
 
 use Getopt::Long;
-use vars qw/ $opt_version_buildid $opt_skip_doc $opt_daily/;
+use vars qw/ $opt_version_buildid $opt_skip_doc $opt_daily $opt_sha1/;
 GetOptions(
   'version-buildid=s' => \$opt_version_buildid,
   'skip-doc' => \$opt_skip_doc,
   'daily' => \$opt_daily,
-  'sha1' => \$opt_sha1,
+  'sha1=s' => \$opt_sha1,
 );
 
 # autoflush our STDOUT
