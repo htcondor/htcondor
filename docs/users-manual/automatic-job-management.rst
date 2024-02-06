@@ -57,11 +57,11 @@ job which has been in the queue for more than 100 hours, the submit file could h
 
        periodic_remove = (time() - QDate) > (100 * 3600)
 
-or, to remove jobs that have been running for more than two hours:
+or, to remove jobs that have been running for more than seven hours:
 
 .. code-block:: condor-submit
 
-       periodic_remove = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
+       periodic_remove = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (7 * 3600)
 
 Automatically placing a job on hold
 -----------------------------------
@@ -91,8 +91,8 @@ in the :subcom:`periodic_release` expression.
 
 .. code-block:: condor-submit
 
-       periodic_hold = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
-       periodic_hold_reason = "Job ran for more than two hours"
+       periodic_hold = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (7 * 3600)
+       periodic_hold_reason = "Job ran for more than seven hours"
        periodic_hold_subcode = 42
        periodic_release = (HoldReasonSubCode == 42)
 
