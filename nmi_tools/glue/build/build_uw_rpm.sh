@@ -52,6 +52,9 @@ check_version_string () {
 # get the version and build id
 condor_build_id=$(<BUILD-ID)
 condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
+if [ -f GIT-SHA ]; then
+    condor_git_sha=$(<GIT-SHA)
+fi
 
 [[ $condor_version ]] || fail "Condor version string not found"
 check_version_string  condor_version
@@ -81,10 +84,7 @@ update_spec_define () {
 update_spec_define uw_build "1"
 update_spec_define condor_version "$condor_version"
 update_spec_define condor_build_id "$condor_build_id"
-if [ -f GIT-SHA ]; then
-    condor_git_sha=$(<GIT-SHA)
-    update_spec_define condor_git_sha "$condor_git_sha"
-fi
+update_spec_define condor_git_sha "$condor_git_sha"
 
 if [ "$PRE_RELEASE" = 'OFF' ]; then
     # Set HTCondor base release to 1 for final release.
