@@ -410,6 +410,10 @@ if(PACKAGEID)
   add_definitions( -DPACKAGEID=${PACKAGEID} )
 endif(PACKAGEID)
 
+if(CONDOR_GIT_SHA)
+  add_definitions( -DCONDOR_GIT_SHA=${CONDOR_GIT_SHA} )
+endif(CONDOR_GIT_SHA)
+
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions

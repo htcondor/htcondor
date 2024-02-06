@@ -1429,6 +1429,10 @@ EOF
 		$pre_all_args = $pre_all_args . " --skip-doc";
 	}
 
+	if (!defined($opt_sha1)) {
+		$pre_all_args = $pre_all_args . " --sha1=$opt_sha1";
+	}
+
 	if (!defined($opt_workspace)) {
 		$pre_all_args = $pre_all_args . " --daily";
 	}
