@@ -556,6 +556,7 @@ ClassAd* ConstructClassAdLogTableEntry<JobQueuePayload>::New(const char * key, c
 }
 
 
+// PRAGMA_REMIND("TJ: fix these for JOB_STATUS_BLOCKED")
 void JobQueueCluster::AttachJob(JobQueueJob * job)
 {
 	if ( ! job) return;
@@ -8794,8 +8795,8 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	// or not.
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
-    if (cur_hosts>=max_hosts || job_status==HELD || 
-			job_status==REMOVED || job_status==COMPLETED ||
+    if (cur_hosts>=max_hosts || job_status==HELD || job_status==JOB_STATUS_BLOCKED ||
+			job_status==REMOVED || job_status==COMPLETED || job_status==JOB_STATUS_FAILED ||
 			job->IsNoopJob() ||
 			!service_this_universe(universe,job) ||
 			scheduler.AlreadyMatched(job, job->Universe()))
@@ -8935,7 +8936,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 	job->LookupInteger(ATTR_JOB_STATUS, status);
 	job->LookupInteger(ATTR_CURRENT_HOSTS, hosts);
 
-	if ( status == COMPLETED ) {
+	if ( status == COMPLETED || status == JOB_STATUS_FAILED ) {
 		DestroyProc(cluster,proc);
 	} else if ( status == REMOVED ) {
 		// a globus job with a non-null contact string should be left alone
