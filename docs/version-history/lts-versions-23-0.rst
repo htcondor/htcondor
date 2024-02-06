@@ -57,6 +57,10 @@ Bugs Fixed:
   expression.
   :jira:`2269`
 
+- Fixed a bug where the **condor_collector** generated an invalid host
+  certificate for itself on macOS.
+  :jira:`2272`
+
 .. _lts-version-history-2304:
 
 Version 23.0.4
