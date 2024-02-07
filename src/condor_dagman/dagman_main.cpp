@@ -402,6 +402,10 @@ Dagman::Config()
 
 	_writePartialRescueDag = param_boolean( "DAGMAN_WRITE_PARTIAL_RESCUE",
 				_writePartialRescueDag );
+	if ( ! _writePartialRescueDag) {
+		debug_printf(DEBUG_NORMAL, "\n\nWARNING: DAGMan is configured to write Full Rescue DAG files.\n"
+		                           "This is Deprecated and will be removed during V24 feature series of HTCondor!\n\n");
+	}
 	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
 				_writePartialRescueDag ? "True" : "False" );
 
