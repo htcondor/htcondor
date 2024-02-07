@@ -87,7 +87,7 @@ if (BUILD_TESTING)
 	# exe test targets
 	condor_exe_test(lib_chirpio.exe "lib_chirpio.cpp" "chirp_client")
 	condor_exe_test(job_core_chirp_par_executable.exe "job_core_chirp_par.cpp" "chirp_client")
-	condor_exe_test(x_read_joblog.exe "x_read_joblog.cpp" "condorapi")
+	condor_exe_test(x_read_joblog.exe "x_read_joblog.cpp" condor_utils)
 	condor_exe_test(x_write_joblog.exe "x_write_joblog.cpp" condor_utils)
 	condor_exe_test(x_write_joblog_events.exe "x_write_joblog_events.cpp" condor_utils)
 	condor_exe_test(lib_eventlog_base_executable.exe "lib_eventlog_base.cpp" condor_utils)
@@ -519,9 +519,6 @@ endif ()
 	condor_pl_test(cmd_drain_scavenging_vacation "condor_drain -start with lazy job" "quick;ctest" CTEST DEPENDS "src/condor_tests/CustomMachineResource.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm")
 
 	##### lib log tests
-	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe;src/condor_tests/lib_userlog.cmd")
-	add_dependencies_suffix_hack(lib_userlog x_read_joblog.exe)
-	add_dependencies_suffix_hack(lib_userlog x_write_joblog.exe)
 	condor_pl_test(lib_eventlog "Basic Event Log Test" "core;quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
 	add_dependencies_suffix_hack(lib_eventlog x_read_joblog.exe)
 	condor_pl_test(lib_eventlog-xml "Basic XML Event Log Test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe;src/condor_tests/x_lib_eventlog.expected")

@@ -22,6 +22,11 @@ New Features:
   by settting the new knob :macro:`STARTER_HIDE_GPU_DEVICES` to false.
   :jira:`1152`
 
+- The library libcondorapi has been removed from the distribution.  We know of
+  no known user for this C++ event log reading code, and all of our known users
+  use the Python bindings for this, as we recommend.
+  :jira:`2278`
+
 - Added ability for administrators to specify whether Startd disk enforcement creates
   thin or thick provisioned logical volumes for a jobs emphemeral execute directory.
   This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.

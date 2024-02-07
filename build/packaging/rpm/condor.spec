@@ -806,7 +806,6 @@ mkdir -p %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/Chirp.jar %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/CondorJava*.class %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/libchirp_client.so %{buildroot}/usr/lib64
-mv %{buildroot}/usr/lib64/condor/libcondorapi.so %{buildroot}/usr/lib64
 mv %{buildroot}/usr/lib64/condor/libcondor_utils_*.so %{buildroot}/usr/lib64
 %if 0%{?rhel} == 7
 mv %{buildroot}/usr/lib64/condor/libpyclassad2*.so %{buildroot}/usr/lib64
@@ -884,7 +883,6 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-%_libdir/libcondorapi.so
 %_libdir/condor/libfmt.so
 %_libdir/condor/libfmt.so.10
 %_libdir/condor/libfmt.so.10.1.0
@@ -1216,7 +1214,6 @@ rm -rf %{buildroot}
 %{_includedir}/condor/file_lock.h
 %{_includedir}/condor/read_user_log.h
 %{_libdir}/condor/libchirp_client.a
-%{_libdir}/condor/libcondorapi.a
 %{_libdir}/libclassad.a
 
 ####### classads-devel files #######
