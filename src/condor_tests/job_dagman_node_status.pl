@@ -12,11 +12,12 @@ if ($ARGV[1]) {
 		system("rm $infile");
 	}
 	while (! -e $infile) {
-		sleep(5);
+		sleep(1);
 	}
 
 	print "  Saving $infile to $outfile\n";
 	system("cp $infile $outfile");
 } else {
+	print "  Just sleeping...\n";
 	sleep(1);
 }
