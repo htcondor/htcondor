@@ -2305,11 +2305,8 @@ Shared File System Configuration File Macros
 :index:`shared file system configuration variables<single: shared file system configuration variables; configuration>`
 
 These macros control how HTCondor interacts with various shared and
-network file systems. If you are using AFS as your shared file system,
-be sure to read :ref:`admin-manual/file-and-cred-transfer:using
-htcondor with afs`. For information on submitting jobs under
-shared file systems, see :ref:`users-manual/submitting-a-job:submitting jobs
-using a shared file system`.
+network file systems.For information on submitting jobs under shared
+file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Shared File System`.
 
 :macro-def:`UID_DOMAIN[FileSystem]`
     The :macro:`UID_DOMAIN` macro is used to decide under which user to run
@@ -3890,7 +3887,7 @@ needs.
     partitioning. If used, custom resources without names in the list
     are ignored.
 
-:macro_def:`STARTD_DETECT_GPUS[STARTD]`
+:macro-def:`STARTD_DETECT_GPUS[STARTD]`
     The arguments passed to *condor_gpu_discovery* to detect GPUs when
     the configuration does not have a GPUs resource explicity configured
     via ``MACHINE_RESOURCE_GPUS`` or  ``MACHINE_RESOURCE_INVENTORY_GPUS``.
@@ -9001,6 +8998,12 @@ Rescue/retry
     partial or a full DAG file as a Rescue DAG. If not defined,
     :macro:`DAGMAN_WRITE_PARTIAL_RESCUE` defaults to ``True``. **Note: users
     should rarely change this setting.**
+
+    .. warning::
+
+        :macro:`DAGMAN_WRITE_PARTIAL_RESCUE[Deprecation Warning]` is deprecated
+        as the writing of full Rescue DAG's is deprecated. This is slated to be
+        removed during the lifetime of the HTCondor V24 feature series.
 
 :macro-def:`DAGMAN_RETRY_SUBMIT_FIRST[DAGMan]`
     A boolean value that controls whether a failed submit is retried
