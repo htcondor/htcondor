@@ -6,8 +6,8 @@ debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f
 #if defined(UW_BUILD)
 upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 buildid = $(shell cat ../../BUILD-ID)
-gitsha = $(shell if [ -f ../../GIT-SHA ]; then cat ../../GIT-SHA; else echo 0; fi)
-ifneq ($(gitsha), 0)
+gitsha = $(shell if [ -f ../../GIT-SHA ]; then cat ../../GIT-SHA; else echo -1; fi)
+ifneq ($(gitsha), -1)
 	export GIT_SHA := -DCONDOR_GIT_SHA=$(gitsha)
 endif
 
