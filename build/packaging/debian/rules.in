@@ -6,7 +6,10 @@ debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f
 #if defined(UW_BUILD)
 upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 buildid = $(shell cat ../../BUILD-ID)
-$(shell if [ -f ../../GIT-SHA ]; then export CONDOR_GIT_SHA=$(<../../GIT-SHA); else export CONDOR_GIT_SHA='unknown'; fi)
+gitsha = $(shell if [ -f ../../GIT-SHA ]; then cat ../../GIT-SHA; else echo 0; fi)
+ifneq ($(gitsha), 0)
+	export GIT_SHA := -DCONDOR_GIT_SHA=$(gitsha)
+endif
 
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
     NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
