@@ -61,6 +61,10 @@ Bugs Fixed:
   certificate for itself on macOS.
   :jira:`2272`
 
+- Fixed a bug where a submit transform or a job router route could crash on a
+  two argument transform statement that had missing arguments.
+  :jira:`2280`
+
 .. _lts-version-history-2304:
 
 Version 23.0.4
