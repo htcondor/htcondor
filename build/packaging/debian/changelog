@@ -1,3 +1,13 @@
+condor (23.4.0-1) stable; urgency=medium
+
+  * condor_submit warns about unit-less request_disk and request_memory
+  * Separate condor-credmon-local RPM package provides local SciTokens issuer
+  * Fix bug where NEGOTIATOR_SLOT_CONSTRAINT was ignored since version 23.3.0
+  * The htcondor command line tool can process multiple event logs at once
+  * Prevent Docker daemon from keeping a duplicate copy of the job's stdout
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 08 Feb 2024 08:41:00 -0600
+
 condor (23.0.4-1) stable; urgency=medium
 
   * NVIDIA_VISIBLE_DEVICES environment variable lists full uuid of slot GPUs
