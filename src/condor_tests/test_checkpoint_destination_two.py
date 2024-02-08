@@ -447,7 +447,8 @@ class TestPartialUploads:
         pass
 
 
-# Copied from test_checkpoint_destination.
+# FIXME: this needs to fail to upload if it transfers file named FAILURE.
+# Mostly copied from test_checkpoint_destination.
 @action
 def path_to_the_plugin(test_dir):
     path_to_the_plugin = test_dir / "local.py"
