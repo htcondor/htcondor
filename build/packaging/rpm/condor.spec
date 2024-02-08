@@ -1413,6 +1413,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.4-1
+- NVIDIA_VISIBLE_DEVICES environment variable lists full uuid of slot GPUs
+- Fix problem where some container jobs would see GPUs not assigned to them
+- Restore condor keyboard monitoring that was broken since HTCondor 23.0.0
+- In condor_adstash, the search engine timeouts now apply to all operations
+- Ensure the prerequisite perl modules are installed for condor_gather_info
+
 * Tue Jan 23 2024 Tim Theisen <tim@cs.wisc.edu> - 23.3.1-1
 - HTCondor tarballs now contain Pelican 7.4.0
 
