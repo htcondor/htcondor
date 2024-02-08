@@ -744,7 +744,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			// we won't worry about not being able to entirely delete it.
 			std::string jobSpoolPath;
 			SpooledJobFiles::getJobSpoolPath(jobAd, jobSpoolPath);
-			std::filesystem::path spoolPath(spoolPath);
+			std::filesystem::path spoolPath(jobSpoolPath);
 
 			std::string failureName;
 			formatstr( failureName, "_condor_checkpoint_FAILURE.%.4d", checkpointNumber );
@@ -792,7 +792,6 @@ pseudo_event_notification( const ClassAd & ad ) {
 			// written by the starter before file transfer rather than
 			// after.)
 			std::string jobAdPath = jobSpoolPath;
-
 
 			// FIXME: This invocation assumes that it's OK to block here
 			// in the shadow until the clean-up attempt is done.  We'll
