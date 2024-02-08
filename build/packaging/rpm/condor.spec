@@ -1365,6 +1365,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.4-1
+- NVIDIA_VISIBLE_DEVICES environment variable lists full uuid of slot GPUs
+- Fix problem where some container jobs would see GPUs not assigned to them
+- Restore condor keyboard monitoring that was broken since HTCondor 23.0.0
+- In condor_adstash, the search engine timeouts now apply to all operations
+- Ensure the prerequisite perl modules are installed for condor_gather_info
+
 * Thu Jan 04 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.3-1
 - Preliminary support for openSUSE LEAP 15
 - All non-zero exit values from file transfer plugins are now errors
