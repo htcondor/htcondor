@@ -1,7 +1,7 @@
 Node Success/Failure
 ====================
 
-.. sidebar:: Node Success/Failure (Table 2.1)
+.. sidebar:: Node Success/Failure
 
     **Table 2.1** Node **S**\ uccess or **F**\ ailure definition
     with :macro:`DAGMAN_ALWAYS_RUN_POST` = False (the default).
