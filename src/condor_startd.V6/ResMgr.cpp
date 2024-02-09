@@ -32,7 +32,9 @@
 #include "condor_auth_passwd.h"
 #include "condor_netdb.h"
 #include "token_utils.h"
+#ifdef HAVE_DATA_REUSE_DIR
 #include "data_reuse.h"
+#endif
 #include <algorithm>
 #include "dc_schedd.h"
 
@@ -89,7 +91,7 @@ ResMgr::ResMgr() :
 
 #if HAVE_BACKFILL
 	m_backfill_mgr = NULL;
-	m_backfill_shutdown_pending = false;
+	m_backfill_mgr_shutdown_pending = false;
 #endif
 
 #if HAVE_JOB_HOOKS
@@ -357,6 +359,7 @@ ResMgr::publish_daemon_ad(ClassAd & ad)
 
 	primary_res_in_use.Publish(ad, "TotalInUse");
 	backfill_res_in_use.Publish(ad, "TotalBackfillInUse");
+	excess_backfill_res.Publish(ad, "ExcessBackfill");
 
 	// static information about custom resources
 	// this does not include the non fungible resource properties
@@ -391,11 +394,11 @@ ResMgr::backfillMgrDone()
 	dprintf( D_FULLDEBUG, "BackfillMgr now ready to be deleted\n" );
 	delete m_backfill_mgr;
 	m_backfill_mgr = NULL;
-	m_backfill_shutdown_pending = false;
+	m_backfill_mgr_shutdown_pending = false;
 
 		// We should call backfillConfig() again, since now that the
 		// "old" manager is gone, we might want to allocate a new one
-	backfillConfig();
+	backfillMgrConfig();
 }
 
 
@@ -416,9 +419,9 @@ verifyBackfillSystem( const char* sys )
 
 
 bool
-ResMgr::backfillConfig()
+ResMgr::backfillMgrConfig()
 {
-	if( m_backfill_shutdown_pending ) {
+	if( m_backfill_mgr_shutdown_pending ) {
 			/*
 			  we're already in the middle of trying to reconfig the
 			  backfill manager, anyway.  we can only get to this point
@@ -452,7 +455,7 @@ ResMgr::backfillConfig()
 					// in ResMgr::backfillMgrDone().
 				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
 						 "perform, postponing delete\n" );
-				m_backfill_shutdown_pending = true;
+				m_backfill_mgr_shutdown_pending = true;
 			}
 		}
 		return false;
@@ -497,7 +500,7 @@ ResMgr::backfillConfig()
 					// in ResMgr::backfillMgrDone().
 				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
 						 "perform, postponing delete\n" );
-				m_backfill_shutdown_pending = true;
+				m_backfill_mgr_shutdown_pending = true;
 				free( new_system );
 				return true;
 			}
@@ -539,6 +542,7 @@ ResMgr::backfillConfig()
 #endif /* HAVE_BACKFILL */
 
 
+// one time initialization/creation of static and partitionable slots
 void
 ResMgr::init_resources( void )
 {
@@ -608,6 +612,9 @@ ResMgr::init_resources( void )
 		// We can now seed our IdDispenser with the right slot id.
 	id_disp = new IdDispenser( i+1 );
 
+	// Do any post slot setup, currently used for determining the excess backfill resources
+	_post_init_resources();
+
 		// Finally, we can free up the space of the new_cpu_attrs
 		// array itself, now that all the objects it was holding that
 		// we still care about are stashed away in the various
@@ -617,7 +624,9 @@ ResMgr::init_resources( void )
 	delete [] bkfill_bools;
 
 #if HAVE_BACKFILL
-	backfillConfig();
+		// enable the pluggable backfill manager, aka. BACKFILL_SYSTEM  used for BOINC
+		// Note that this is distinct from backfill slots.  
+	backfillMgrConfig();
 #endif
 
 #if HAVE_JOB_HOOKS
@@ -625,6 +634,7 @@ ResMgr::init_resources( void )
 	m_hook_mgr->initialize();
 #endif
 
+#ifdef HAVE_DATA_REUSE_DIR
 	std::string reuse_dir;
 	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
 		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
@@ -633,6 +643,7 @@ ResMgr::init_resources( void )
 	} else {
 		m_reuse_dir.reset();
 	}
+#endif
 }
 
 
@@ -654,7 +665,7 @@ ResMgr::reconfig_resources( void )
 	dprintf(D_ALWAYS, "beginning reconfig_resources\n");
 
 #if HAVE_BACKFILL
-	backfillConfig();
+	backfillMgrConfig();
 #endif
 
 #if HAVE_JOB_HOOKS
@@ -677,6 +688,7 @@ ResMgr::reconfig_resources( void )
 	ASSERT(max_types > 0);
 	SlotType::init_types(max_types, false);
 
+#ifdef HAVE_DATA_REUSE_DIR
 	std::string reuse_dir;
 	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
 		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
@@ -685,6 +697,7 @@ ResMgr::reconfig_resources( void )
 	} else {
 		m_reuse_dir.reset();
 	}
+#endif
 
 		// mark all resources as dirty (i.e. needing update)
 		// TODO: change to update walk for reconfig?
@@ -1103,10 +1116,11 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 // called when Resource::update_needed is called
 time_t ResMgr::rip_update_needed(unsigned int whyfor_bits)
 {
-	dprintf(D_ZKM | (send_updates_tid < 0 ? 0 : D_VERBOSE), "ResMgr::rip_update_needed(%x) %s\n",
-		whyfor_bits, send_updates_tid < 0 ? "queuing timer" : "timer already queued");
-
 	send_updates_whyfor_mask |= whyfor_bits;
+
+	dprintf(D_FULLDEBUG, "ResMgr  update_needed(0x%x) -> 0x%x %s\n", whyfor_bits,
+		send_updates_whyfor_mask, send_updates_tid < 0 ? "queuing timer" : "timer already queued");
+
 	if (send_updates_tid < 0) {
 		send_updates_tid = daemonCore->Register_Timer(1,0,
 			(TimerHandlercpp)&ResMgr::send_updates_and_clear_dirty,
@@ -1416,6 +1430,7 @@ ResMgr::compute_dynamic(bool for_update)
 
 	// refresh the main resource classad from the internal Resource members
 	walk( [](Resource * rip) { rip->refresh_classad_dynamic(); } );
+	walk( [](Resource * rip) { rip->refresh_classad_dynamic(); } );
 
 		// Now that we have an updated internal classad for each
 		// resource, we can "compute" anything where we need to
@@ -1456,9 +1471,11 @@ void
 ResMgr::publish_resmgr_dynamic(ClassAd* cp, bool daemon_ad /*=false*/)
 {
 	cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
+#ifdef HAVE_DATA_REUSE_DIR
 	if (m_reuse_dir && ! daemon_ad) {
 		m_reuse_dir->Publish(*cp);
 	}
+#endif
 	m_vmuniverse_mgr.publish(cp);
 	startd_stats.Publish(*cp, 0);
 	startd_stats.Tick(time(0));
@@ -2455,12 +2472,65 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 	}
 }
 
+// private helper function called after all static and partitionable slots have been created on startup
+void ResMgr::_post_init_resources()
+{
+	// summarize the slot config
+	//
+	static int res_summary_log_level = D_ZKM /*|D_VERBOSE*/;
+	if (IsDebugCatAndVerbosity(res_summary_log_level)) {
+		std::string buf;
+		for (Resource * rip : slots) {
+			formatstr_cat(buf, "\t%s type%d : ", rip->r_id_str, rip->type_id());
+			rip->r_attr->cat_totals(buf);
+			buf += "\n";
+		}
+		if ( ! buf.empty()) { dprintf(res_summary_log_level, "Slot Config:\n%s", buf.c_str()); }
+	}
+
+	// calculate the resource difference between all backfill slots and all primary slots
+	// we need to take this constant difference into account when calculating resource conflicts
+
+	excess_backfill_res.reset();
+
+	int num_primary = 0;
+	int num_bkfill = 0;
+	for (Resource * rip : slots) {
+		if (rip->r_backfill_slot) {
+			num_bkfill += 1;
+			excess_backfill_res += *rip->r_attr;
+		} else {
+			num_primary += 1;
+			excess_backfill_res -= *rip->r_attr;
+		}
+	}
+
+	std::string names;
+	bool has_excess = excess_backfill_res.excess(&names);
+	if (has_excess && num_bkfill) {
+		dprintf(D_STATUS, "WARNING: Configured Backfill slots have more %s than primary slots\n", names.c_str());
+	}
+	names.clear();
+	if (excess_backfill_res.underrun(&names) && num_bkfill) {
+		dprintf(D_STATUS, "WARNING: Configured Backfill slots have less %s than primary slots\n", names.c_str());
+	}
+	names.clear();
+
+	// we want to use the excess in the calculation, but ignore the underun.
+	excess_backfill_res.clear_underrun();
+	if ((num_bkfill && has_excess) || IsFulldebug(D_FULLDEBUG)) {
+		std::string buf;
+		dprintf(D_STATUS, "Backfill excess: %s\n", excess_backfill_res.dump(buf));
+	}
+}
+
+
 bool
 ResMgr::compute_resource_conflicts()
 {
 	dprintf(D_ZKM | D_VERBOSE, "ResMgr::compute_resource_conflicts\n");
 
-	ResBag totbag;
+	ResBag totbag(excess_backfill_res); // totals start with difference between total backfill resources and total primary resources
 	std::string dumptmp;
 	std::deque<Resource*> active;
 	int num_nft_conflict = 0; // number of active backfill slots that already have non-fungible resource conflicts

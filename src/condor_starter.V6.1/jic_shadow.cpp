@@ -2465,10 +2465,12 @@ JICShadow::beginFileTransfer( void )
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		filetrans = new FileTransfer();
+	#if 1 //def HAVE_DATA_REUSE_DIR
 		auto reuse_dir = Starter->getDataReuseDirectory();
 		if (reuse_dir) {
 			filetrans->setDataReuseDirectory(*reuse_dir);
 		}
+	#endif
 
 		// file transfer plugins will need to know about OAuth credentials
 		const char *cred_path = getCredPath();

@@ -505,7 +505,7 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 			MATCH == strncasecmp(attr.c_str(), "virtualmemory", cattr))
 		{
 			// for now, we can only tolerate swap expressed a 'auto' or a proportion
-			// because we don't know how much disk is available until later.
+			// because we don't know how much swap is available until later.
 			if (share <= 0 || IS_AUTO_SHARE(share)) {
 				swap_fraction = compute_local_resource(1.0, share);
 			} else {
@@ -521,7 +521,7 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 		} else if (
 			MATCH == strncasecmp(attr.c_str(), "disk", cattr))
 		{
-			// for now, we can only tolerate swap expressed a 'auto' or a proportion
+			// for now, we can only tolerate disk expressed a 'auto' or a proportion
 			// because we don't know how much disk is available until later.
 			if (share <= 0 || IS_AUTO_SHARE(share)) {
 				disk_fraction = compute_local_resource(1.0, share);
