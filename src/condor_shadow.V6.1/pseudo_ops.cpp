@@ -738,7 +738,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 	} else if( eventType == "FailedCheckpoint" ) {
 		int checkpointNumber = -1;
 		if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
-			dprintf( D_ZKM, "Checkpoint number %d failed, deleting it and updating schedd.\n", checkpointNumber );
+			dprintf( D_STATUS, "Checkpoint number %d failed, deleting it and updating schedd.\n", checkpointNumber );
 
 			// Record on disk that this checkpoint attempt failed, so that
 			// we won't worry about not being able to entirely delete it.
@@ -746,17 +746,19 @@ pseudo_event_notification( const ClassAd & ad ) {
 			SpooledJobFiles::getJobSpoolPath(jobAd, jobSpoolPath);
 			std::filesystem::path spoolPath(jobSpoolPath);
 
-			std::string failureName;
-			formatstr( failureName, "_condor_checkpoint_FAILURE.%.4d", checkpointNumber );
 			std::string manifestName;
 			formatstr( manifestName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
+			std::string failureName;
+			formatstr( failureName, "_condor_checkpoint_FAILURE.%.4d", checkpointNumber );
 			std::error_code errorCode;
 			std::filesystem::rename( spoolPath / manifestName, spoolPath / failureName, errorCode );
 			if( errorCode.value() != 0 ) {
 				// If no MANIFEST file was written, we can't clean up
 				// anyway, so it doesn't matter if we didn't rename it.
 				dprintf( D_FULLDEBUG,
-					"Failed to rename MANIFEST to FAILURE on checkpoint upload failure, error code %d (%s)\n",
+					"Failed to rename %s to %s on checkpoint upload failure, error code %d (%s)\n",
+					(spoolPath / manifestName).string().c_str(),
+					(spoolPath / failureName).string().c_str(),
 					errorCode.value(), errorCode.message().c_str()
 				);
 			}
@@ -778,8 +780,15 @@ pseudo_event_notification( const ClassAd & ad ) {
 				);
 				return 1;
 			}
-			formatstr( checkpointDestination, "%s/%.4d",
-				checkpointDestination.c_str(), checkpointNumber
+
+			std::string globalJobID;
+			jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
+			ASSERT(! globalJobID.empty());
+			std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
+
+			formatstr( checkpointDestination, "%s/%s/%.4d",
+				checkpointDestination.c_str(), globalJobID.c_str(),
+				checkpointNumber
 			);
 
 			// The clean-up script is entitled to a copy of the job ad,
@@ -803,7 +812,8 @@ pseudo_event_notification( const ClassAd & ad ) {
 			manifest::deleteFilesStoredAt( checkpointDestination,
 				spoolPath / failureName,
 				jobAdPath,
-				error
+				error,
+				true /* this was a failed checkpoint */
 			);
 		}
 	}
