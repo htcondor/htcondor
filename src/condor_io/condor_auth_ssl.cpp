@@ -33,6 +33,7 @@
 #include "condor_scitokens.h"
 #include "ca_utils.h"
 #include "fcloser.h"
+#include "globus_utils.h"
 
 #if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
@@ -1170,6 +1171,24 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 			setRemoteUser("unauthenticated");
 			setAuthenticatedName("unauthenticated");
 		} else {
+			if (param_boolean("USE_VOMS_ATTRIBUTES", false) && param_boolean("AUTH_SSL_USE_VOMS_IDENTITY", true)) {
+				X509* peer = SSL_get_peer_certificate_ptr(m_auth_state->m_ssl);
+				STACK_OF(X509)* chain = nullptr;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+				chain = SSL_get_peer_cert_chain_ptr(m_auth_state->m_ssl);
+#else
+				chain = SSL_get0_verified_chain_ptr(m_auth_state->m_ssl);
+#endif
+				char* voms_fqan = nullptr;
+				int voms_err = extract_VOMS_info(peer, chain, 1, nullptr, nullptr, &voms_fqan);
+				if (!voms_err) {
+					dprintf(D_SECURITY|D_FULLDEBUG, "Found VOMS FQAN: %s\n", voms_fqan);
+					subjectname = voms_fqan;
+					free(voms_fqan);
+				} else {
+					dprintf(D_SECURITY|D_FULLDEBUG, "VOMS FQAN not present (error %d), ignoring.\n", voms_err);
+				}
+			}
 			setRemoteUser("ssl");
 			setAuthenticatedName(subjectname.c_str());
 		}
@@ -1850,7 +1869,7 @@ err_occured:
 
 std::string Condor_Auth_SSL::get_peer_identity(SSL *ssl)
 {
-	char subjectname[1024];
+	char subjectname[1024] = "";
 	X509 *peer = SSL_get_peer_certificate_ptr(ssl);
 	if (peer) {
 		BASIC_CONSTRAINTS *bs = nullptr;
