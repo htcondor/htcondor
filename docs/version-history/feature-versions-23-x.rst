@@ -66,6 +66,9 @@ New Features:
 - Improve the reliability of the userlog reader code by changing it to do line oriented reads and to seek less.
   :jira:`2254`
 
+- The ``$CondorVersion`` string contains the Git SHA for official CHTC builds of HTCondor.
+  :jira:`532`
+
 Bugs Fixed:
 
 - In some rare cases where docker universe could not start a container,
