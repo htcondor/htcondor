@@ -72,19 +72,21 @@ Version 23.0.4
 
 Release Notes:
 
-.. HTCondor version 23.0.4 released on Month Date, 2023.
-
-- HTCondor version 23.0.4 not yet released.
+- HTCondor version 23.0.4 released on February 8, 2023.
 
 New Features:
-
-- The **condor_starter** can now be configured to capture the stdout and stderr
-  of file transfer plugins and write that output into the StarterLog.
-  :jira:`1459`
 
 - The **condor_starter** will now set the environment variable ``NVIDIA_VISIBLE_DEVICES`` either
   to ``none`` or to a list of the full uuid of each GPU device assigned to the slot.
   :jira:`2242`
+
+- When the HTCondor Keyboard daemon (**condor_kbdd**) is installed, a
+  configuration file is included to automatically enable user input monitoring.
+  :jira:`2255`
+
+- The **condor_starter** can now be configured to capture the stdout and stderr
+  of file transfer plugins and write that output into the StarterLog.
+  :jira:`1459`
 
 - Updated **condor_upgrade_check** script for better support and
   maintainability. This update includes new flags/functionality
@@ -92,11 +94,20 @@ New Features:
   HTCondor.
   :jira:`2168`
 
-- When the HTCondor Keyboard daemon (**condor_kbdd**) is installed, a
-  configuration file is included to automatically enable user input monitoring.
+Bugs Fixed:
+
+- Fixed a bug in the HTCondor Keyboard daemon where activity detected by the
+  X Screen Saver extension was ignored.
   :jira:`2255`
 
-Bugs Fixed:
+- Search engine timeout settings for **condor_adstash** now apply to all search
+  engine operations, not just the initial request to the search engine.
+  :jira:`2167`
+
+- Ensure Perl dependencies are present for the **condor_gather_info** script.
+  The **condor_gather_info** script now properly reports the User login name.
+  Also, report the contents of ``/etc/os-release```.
+  :jira:`2094`
 
 - The submit language will no longer treat ``request_gpu_memory`` and ``request_gpus_memory``
   as requests for a custom resource of type ``gpu_memory`` or ``gpus_memory`` respectively.
@@ -109,19 +120,6 @@ Bugs Fixed:
 - Fixed ``SyntaxWarning`` raised by Python 3.12 in scripts packaged
   with the Python bindings.
   :jira:`2212`
-
-- Ensure Perl dependencies are present for the **condor_gather_info** script.
-  The **condor_gather_info** script now properly reports the User login name.
-  Also, report the contents of ``/etc/os-release```.
-  :jira:`2094`
-
-- Search engine timeout settings for **condor_adstash** now apply to all search
-  engine operations, not just the intial request to the search engine.
-  :jira:`2167`
-
-- Fixed a bug in the HTCondor Keyboard daemon where activity detected by the
-  X Screen Saver extension was ignored.
-  :jira:`2255`
 
 .. _lts-version-history-2303:
 
