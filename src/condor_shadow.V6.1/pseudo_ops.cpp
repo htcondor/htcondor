@@ -810,7 +810,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			// option specifying which specific checkpoint to clean-up.
 			std::string error;
 			manifest::deleteFilesStoredAt( checkpointDestination,
-				spoolPath / failureName,
+				(spoolPath / failureName).string(),
 				jobAdPath,
 				error,
 				true /* this was a failed checkpoint */
