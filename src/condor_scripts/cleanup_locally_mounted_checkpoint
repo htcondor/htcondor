@@ -29,8 +29,13 @@ if [[ $7 != "-delete" ]]; then
 fi
 DELETE=$8
 
+if [[ $9 != "-jobad" ]]; then
+    usage
+fi
+JOB_AD=${10}
+
 IGNORE_MISSING_FILES=
-if [[ $9 == "-ignore-missing-files" ]]; then
+if [[ ${11} == "-ignore-missing-files" ]]; then
     IGNORE_MISSING_FILES=-f
 fi
 
