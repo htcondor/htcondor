@@ -9384,6 +9384,15 @@ macros are described in the :doc:`/admin-manual/security` section.
     and verify VOMS attributes from X.509 credentials.
     The default is ``False``.
 
+:macro-def:`AUTH_SSL_USE_VOMS_IDENTITY[SECURITY]`
+    A boolean value that controls whether VOMS attributes are included
+    in the peer's authenticated identity during SSL authentication.
+    This is used with the unified map file to determine the peer's
+    HTCondor identity.
+    If :macro:`USE_VOMS_ATTRIBUTES` is ``False``, then this parameter
+    is treated as ``False``.
+    The default is ``True``.
+
 :macro-def:`SEC_<access-level>_SESSION_DURATION[SECURITY]`
     The amount of time in seconds before a communication session
     expires. A session is a record of necessary information to do

@@ -57,6 +57,11 @@ New Features:
   version 24.0.0.
   :jira:`2260`
 
+- During SSL authentication, VOMS attributes can be included when
+  mapping to an HTCondor identity.
+  To do so, configuration parameters :macro:`USE_VOMS_ATTRIBUTES` and
+  :macro:`AUTH_SSL_USE_VOMS_IDENTITY` must be set to ``True``.
+  :jira:`2256`
 
 - Improve the reliability of the userlog reader code by changing it to do line oriented reads and to seek less.
   :jira:`2254`
