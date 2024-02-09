@@ -621,6 +621,7 @@ make -C docs man
 
 %if %uw_build
 %define condor_build_id UW_development
+%define condor_git_sha -1
 %endif
 
 # Any changes here should be synchronized with
@@ -634,6 +635,9 @@ make -C docs man
 %if %uw_build
        -DBUILDID:STRING=%condor_build_id \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
+%if "%{condor_git_sha}" != "-1"
+       -DCONDOR_GIT_SHA:STRING=%condor_git_sha \
+%endif
        -DBUILD_TESTING:BOOL=TRUE \
 %else
        -DBUILD_TESTING:BOOL=FALSE \

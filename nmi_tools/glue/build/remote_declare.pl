@@ -72,7 +72,7 @@ if ($boos) {
 		print FH 'mkdir sources\msconfig' . "\n";
 		print FH 'for %%I in (userdir\msconfig\*) do copy %%I sources\msconfig\%%~nxI' . "\n";
 		print FH 'move userdir\msconfig\WiX sources\msconfig\WiX' . "\n";
-		print FH '"sources\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
+		print FH '"sources\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/GIT-SHA userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
 		print FH 'del userdir\condor-*.tgz' . "\n";
 		print FH 'for %%I in (userdir\*) do move %%I sources' . "\n";
 		print FH 'move userdir\src sources\src' . "\n";
@@ -91,7 +91,7 @@ if ($boos) {
 		print FH 'move userdir\externals sources\externals' . "\n";
 	} else {
 		print FH '#!/bin/sh' . "\n";
-		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
+		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/GIT-SHA userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
 		print FH 'for file in userdir/*; do if [ -f "$file" ]; then mv "$file" sources; fi; done' . "\n";
 		print FH 'mv userdir/src sources' . "\n";
 		print FH 'mv userdir/bindings sources' . "\n";

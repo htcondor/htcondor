@@ -2,10 +2,14 @@
 
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 
-#if defined(UW_BUILD)
 debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f 2,2 )
+#if defined(UW_BUILD)
 upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 buildid = $(shell cat ../../BUILD-ID)
+gitsha = $(shell if [ -f ../../GIT-SHA ]; then cat ../../GIT-SHA; else echo -1; fi)
+ifneq ($(gitsha), -1)
+	export GIT_SHA := -DCONDOR_GIT_SHA=$(gitsha)
+endif
 
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
     NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
@@ -35,9 +39,10 @@ endif
 override_dh_auto_configure:
 	dh_auto_configure -- \\
 		$(CMAKE_TOOLCHAIN) \\
+		-DPACKAGEID:STRING="$(debver)"\\
 #if defined(UW_BUILD)
 		-DBUILDID:STRING="$(buildid)"\\
-		-DPACKAGEID:STRING="$(debver)"\\
+		$(GIT_SHA) \\
 #endif
 		-DBUILD_TESTING:BOOL=ON \\
 		-DCMAKE_SKIP_RPATH:BOOL=ON \\

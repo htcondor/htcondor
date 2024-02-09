@@ -57,9 +57,11 @@ New Features:
   version 24.0.0.
   :jira:`2260`
 
-
 - Improve the reliability of the userlog reader code by changing it to do line oriented reads and to seek less.
   :jira:`2254`
+
+- The ``$CondorVersion`` string contains the Git SHA for official CHTC builds of HTCondor.
+  :jira:`532`
 
 Bugs Fixed:
 
