@@ -111,6 +111,12 @@ int main(int argc, char *argv[])
 		process_config_source(dagOpts[shallow::str::ConfigFile].c_str(), 0, "DAGMan config", NULL, true);
 	}
 
+	if ( ! param_boolean("DAGMAN_WRITE_PARTIAL_RESCUE", true)) {
+		fprintf(stdout, "WARNING: DAGMAN_WRITE_PARTIAL_RESCUE = False.\n"
+		                "   The use of full Rescue DAG's is deprecated and slated\n"
+		                "   for removal during the lifetime of V24 feature series of HTCondor.\n\n");
+	}
+
 		// Check whether the output files already exist; if so, we may
 		// abort depending on the -f flag and whether we're running
 		// a rescue DAG.

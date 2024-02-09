@@ -1191,7 +1191,9 @@ static bool test_get_access_time_close() {
 	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
 	emit_retval("%d", atime);
-	if(atime+1 < st.st_atime || atime > st.st_atime+1) { // allow 1 second slop because underlying file times are sub-second.
+	// allow 3 second slop because underlying file times are second. and
+	// there can be a long preemption between the two calls
+	if(atime+3 < st.st_atime || atime > st.st_atime+3) {
 		FAIL;
 	}
 	PASS;

@@ -402,6 +402,10 @@ Dagman::Config()
 
 	_writePartialRescueDag = param_boolean( "DAGMAN_WRITE_PARTIAL_RESCUE",
 				_writePartialRescueDag );
+	if ( ! _writePartialRescueDag) {
+		debug_printf(DEBUG_NORMAL, "\n\nWARNING: DAGMan is configured to write Full Rescue DAG files.\n"
+		                           "This is Deprecated and will be removed during V24 feature series of HTCondor!\n\n");
+	}
 	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
 				_writePartialRescueDag ? "True" : "False" );
 
@@ -921,7 +925,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf(DEBUG_SILENT, "No environment variables passed for -include_env\n");
 				Usage();
 			}
-			dagman.options.append("GetFromEnv", argv[i]);
+			dagman.options.extend("GetFromEnv", argv[i]);
 
 		} else if( !strcasecmp( "-insert_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {

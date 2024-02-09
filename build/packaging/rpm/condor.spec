@@ -806,7 +806,6 @@ mkdir -p %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/Chirp.jar %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/CondorJava*.class %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/libchirp_client.so %{buildroot}/usr/lib64
-mv %{buildroot}/usr/lib64/condor/libcondorapi.so %{buildroot}/usr/lib64
 mv %{buildroot}/usr/lib64/condor/libcondor_utils_*.so %{buildroot}/usr/lib64
 %if 0%{?rhel} == 7
 mv %{buildroot}/usr/lib64/condor/libpyclassad2*.so %{buildroot}/usr/lib64
@@ -884,7 +883,6 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-%_libdir/libcondorapi.so
 %_libdir/condor/libfmt.so
 %_libdir/condor/libfmt.so.10
 %_libdir/condor/libfmt.so.10.1.0
@@ -1216,7 +1214,6 @@ rm -rf %{buildroot}
 %{_includedir}/condor/file_lock.h
 %{_includedir}/condor/read_user_log.h
 %{_libdir}/condor/libchirp_client.a
-%{_libdir}/condor/libcondorapi.a
 %{_libdir}/libclassad.a
 
 ####### classads-devel files #######
@@ -1415,6 +1412,20 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.4.0-1
+- condor_submit warns about unit-less request_disk and request_memory
+- Separate condor-credmon-local RPM package provides local SciTokens issuer
+- Fix bug where NEGOTIATOR_SLOT_CONSTRAINT was ignored since version 23.3.0
+- The htcondor command line tool can process multiple event logs at once
+- Prevent Docker daemon from keeping a duplicate copy of the job's stdout
+
+* Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.4-1
+- NVIDIA_VISIBLE_DEVICES environment variable lists full uuid of slot GPUs
+- Fix problem where some container jobs would see GPUs not assigned to them
+- Restore condor keyboard monitoring that was broken since HTCondor 23.0.0
+- In condor_adstash, the search engine timeouts now apply to all operations
+- Ensure the prerequisite perl modules are installed for condor_gather_info
+
 * Tue Jan 23 2024 Tim Theisen <tim@cs.wisc.edu> - 23.3.1-1
 - HTCondor tarballs now contain Pelican 7.4.0
 
