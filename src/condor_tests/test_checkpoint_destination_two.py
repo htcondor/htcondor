@@ -107,7 +107,6 @@ SINGLE_TEST_CASES = {
     },
 }
 
-# FIXME: swap back to these in a bit
 TEST_CASES = {
     "a": {
         "expected_checkpoints":     ["0001", "0002"],
@@ -405,7 +404,7 @@ def the_epoch_log(the_condor, the_completed_job):
 class TestPartialUploads:
 
     # Test (1).
-    def test_shadow_removes_failed_checkpoints(self,
+    def test_s_removes_failed_checkpoints(self,
         the_config_name,
         the_target_directory,
         the_expected_checkpoints
@@ -432,7 +431,7 @@ class TestPartialUploads:
 
 
     # Test (2).
-    def test_preen_removes_failed_checkpoints(self,
+    def test_p_removes_failed_checkpoints(self,
         the_config_name,
         the_preen_directory
     ):

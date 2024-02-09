@@ -2391,6 +2391,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	int numFiles = 0;
 	ClassAd pluginStatsAd;
 	int plugin_exit_code = 0;
+	bool deferred_checkpoint_error = false;
 
 	// At the beginning of every download and every upload.
 	pluginResultList.clear();
@@ -2901,6 +2902,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				if(!file_info.LookupString("ErrorString", rt_err)) {
 					rt_err = "<null>";
 				}
+				bool checkpoint_url = false;
+				file_info.LookupBool("CheckpointURL", checkpoint_url);
 
 				// TODO: write to job log success/failure for each file (as a custom event?)
 				dprintf(D_ALWAYS, "DoDownload: other side transferred %s to %s and got result %i\n",
@@ -2917,8 +2920,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						"%s at %s failed due to remote transfer hook error: %s",
 						get_mySubSystem()->getName(),
 						s->my_ip_str(),fullname.c_str());
-					download_success = false;
-					try_again = false;
+					if( checkpoint_url ) {
+						deferred_checkpoint_error = true;
+					} else {
+						download_success = false;
+						try_again = false;
+					}
 					hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 					hold_subcode = rt_result;
 
@@ -3590,6 +3597,24 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 	downloadEndTime = condor_gettimestamp_double();
 
+	// If we're uploading a checkpoint file and suppressed an error uploading
+	// a URL to make sure we could clean it up later (by sending the MANIFEST
+	// file to SPOOL), report the error now.
+	//
+	// We report "try again" for this error so that the starter doesn't put
+	// the job on hold.  It would be better to inspect the plug-in's result
+	// to make that decision (most failures are try-again).
+	if( deferred_checkpoint_error && (hold_code != 0) ) {
+		SendTransferAck(s,
+		false /* failed */, true /* try again */,
+		hold_code, hold_subcode,
+		error_buf.c_str()
+		);
+
+		dprintf( D_ALWAYS, "DoDownload: exiting after allowing checkpoint to write its MANIFEST file.\n" );
+		return_and_resetpriv( -1 );
+	}
+
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
 
@@ -4074,6 +4099,13 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 		file_info.InsertAttr("ProtocolVersion", 1);
 		file_info.InsertAttr("Command", static_cast<int>(TransferCommand::Other));
 		file_info.InsertAttr("SubCommand", static_cast<int>(TransferSubCommand::UploadUrl));
+		// When transferring checkpoints, if an uplaod URL fails, we still
+		// want to preserve the corresponding MANIFEST file so that we can
+		// clean up after it, so we need to tell the shadow that's what
+		// we're doing.
+		if( uploadCheckpointFiles ) {
+			file_info.InsertAttr("CheckpointURL", true);
+		}
 
 			// Filename is expected to be relative to the sandbox directory; if we don't
 			// call condor_basename here, the shadow may see the absolute path to the execute
