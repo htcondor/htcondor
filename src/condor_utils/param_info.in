@@ -958,6 +958,10 @@ tags=shadow,remoteresource
 default=false
 type=bool
 
+[AUTH_SSL_USE_VOMS_IDENTITY]
+default=true
+type=bool
+
 [USE_NFS]
 default=
 type=string

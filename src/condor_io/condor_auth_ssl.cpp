@@ -1171,7 +1171,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 			setRemoteUser("unauthenticated");
 			setAuthenticatedName("unauthenticated");
 		} else {
-			if (param_boolean("USE_VOMS_ATTRIBUTES", false)) {
+			if (param_boolean("USE_VOMS_ATTRIBUTES", false) && param_boolean("AUTH_SSL_USE_VOMS_IDENTITY", true)) {
 				X509* peer = SSL_get_peer_certificate_ptr(m_auth_state->m_ssl);
 				STACK_OF(X509)* chain = nullptr;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
