@@ -1631,9 +1631,9 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 
 	// for 2 argument keywords, consume the attribute token and move on to the next one
 	if ((pkw->options & kw_opt_argcount_mask) == 2) {
-		toke.next();
+		if ( ! toke.next()) { errmsg = pkw->key; errmsg += " needs 2 arguments"; return -1; }
 		if (toke.matches("=") || toke.matches(",")) {
-			toke.next();  // consume the keyword token
+			if ( ! toke.next()) { errmsg = pkw->key; errmsg += " needs 2 arguments"; return -1; } // consume the keyword token
 		}
 	}
 
