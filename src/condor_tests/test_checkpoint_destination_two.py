@@ -105,6 +105,14 @@ TEST_CASES = {
         "expected_checkpoints":     ["0001", "0002"],
         "checkpoint_count":         3,
     },
+}
+
+# FIXME: swap back to these in a bit
+OLD_TEST_CASES = {
+    "a": {
+        "expected_checkpoints":     ["0001", "0002"],
+        "checkpoint_count":         3,
+    },
     "b": {
         "expected_checkpoints":     ["0000", "0002"],
         "checkpoint_count":         3,
@@ -178,7 +186,8 @@ def path_to_the_job_script(test_dir, the_condor):
         saved_state.write(f'{count}')
 
     fail_path = path / "FAILURE"
-    the_count = f"{count:04}"
+    checkpoint_number = count - 1
+    the_count = f"{checkpoint_number:04}"
     if the_count in expected_checkpoints:
         fail_path.unlink(missing_ok=True)
     else:
@@ -447,8 +456,8 @@ class TestPartialUploads:
         pass
 
 
-# FIXME: this needs to fail to upload if it transfers file named FAILURE.
-# Mostly copied from test_checkpoint_destination.
+# Copied from test_checkpoint_destination, and modified to fail to upload
+# files named FAILURE.
 @action
 def path_to_the_plugin(test_dir):
     path_to_the_plugin = test_dir / "local.py"
@@ -608,13 +617,18 @@ def path_to_the_plugin(test_dir):
                 # print(f"DEBUG: {start_time} upload {remote_file_path} <- {local_file_path}")
                 file_size = Path(local_file_path).stat().st_size
                 Path(remote_file_path).parent.mkdir(parents=True,exist_ok=True)
-                shutil.copy(local_file_path, remote_file_path)
+
+                success = True
+                if local_file_path.endswith("FAILURE"):
+                    success = False
+                if success:
+                    shutil.copy(local_file_path, remote_file_path)
 
                 end_time = time.time()
 
                 # Get transfer statistics
                 transfer_stats = {
-                    'TransferSuccess': True,
+                    'TransferSuccess': success,
                     'TransferProtocol': 'example',
                     'TransferType': 'upload',
                     'TransferFileName': local_file_path,
@@ -625,6 +639,8 @@ def path_to_the_plugin(test_dir):
                     'ConnectionTimeSeconds': end_time - start_time,
                     'TransferUrl': url,
                 }
+                if not success:
+                    transfer_stats["TransferError"] = "b/c you said so"
 
                 return transfer_stats
 
