@@ -1292,6 +1292,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_DISK_USAGE,
 		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
+		ATTR_CPUS_USAGE,
 		"CpusProvisioned",
 		"DiskProvisioned",
 		"MemoryProvisioned",

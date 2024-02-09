@@ -987,6 +987,8 @@ bool InitializeTerminateEvent( TerminatedEvent *event, classad::ClassAd const &j
 		event->total_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
 	}
 
+	setEventUsageAd(job_ad, &event->pusageAd);
+
 	return true;
 }
 
