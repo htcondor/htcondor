@@ -100,7 +100,7 @@ TEST_CONFIGS = {
 # For simplicity, (a)-(d) could all attempt four checkpoints.  The lists would
 # have to be updated, but we could also attempt eight checkpoints in all cases,
 # if that would easier.
-TEST_CASES = {
+SINGLE_TEST_CASES = {
     "a": {
         "expected_checkpoints":     ["0001", "0002"],
         "checkpoint_count":         3,
@@ -108,7 +108,7 @@ TEST_CASES = {
 }
 
 # FIXME: swap back to these in a bit
-OLD_TEST_CASES = {
+TEST_CASES = {
     "a": {
         "expected_checkpoints":     ["0001", "0002"],
         "checkpoint_count":         3,
@@ -414,15 +414,21 @@ class TestPartialUploads:
             pytest.skip("shadow-only test")
             return
 
-        # Everything on disk should be an expected checkpoint...
-        for path in the_target_directory.iterdir():
-            assert(path.is_dir())
-            assert(path.name in the_expected_checkpoints)
-
         # ... and every expected checkpoint should be on disk.
         for checkpoint in the_expected_checkpoints:
             path = the_target_directory / checkpoint
             assert(path.exists())
+
+        # If we don't expect any checkpoints, then the test below
+        # will fail because the_target_directory doesn't exist.
+        if len(the_expected_checkpoints) == 0:
+            assert not the_target_directory.exists()
+            return
+
+        # Everything on disk should be an expected checkpoint...
+        for path in the_target_directory.iterdir():
+            assert(path.is_dir())
+            assert(path.name in the_expected_checkpoints)
 
 
     # Test (2).
