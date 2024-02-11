@@ -101,9 +101,9 @@ TEST_CONFIGS = {
 # have to be updated, but we could also attempt eight checkpoints in all cases,
 # if that would easier.
 SINGLE_TEST_CASES = {
-    "a": {
-        "expected_checkpoints":     ["0001", "0002"],
-        "checkpoint_count":         3,
+    "b": {
+        "expected_checkpoints":     ["0000", "0002"],
+        "checkpoint_count":         4,
     },
 }
 
@@ -114,11 +114,26 @@ TEST_CASES = {
     },
     "b": {
         "expected_checkpoints":     ["0000", "0002"],
-        "checkpoint_count":         3,
+        # If we say there are only  three checkpoints, then the job
+        # evicts itself immediately after a failed upload, meaning that
+        # it checkpoints itself one more tme than it would otherwise
+        # (because the failed upload means it has to repeat a step);
+        # this screws up our expected numbering.
+        #
+        # If we say there are four checkpoints, we don't evict instead of
+        # writing a successful checkpoint '0002'; instead we evict after,
+        # before writing checkpoint '0003'.  However, since we expect
+        # that one not to be there, it's OK that it was never written
+        # rather than written and then deleted (like '0001').
+        "checkpoint_count":         4,
     },
     "c1": {
         "expected_checkpoints":     ["0001", "0003"],
-        "checkpoint_count":         4,
+        # See the comment for test case b, above.  Arguably, we should
+        # be specifying "how many iterations" and "which iteration to
+        # evict on" separately, but I think these tests cover all the
+        # cases anyway.
+        "checkpoint_count":         5,
     },
     "c2": {
         "expected_checkpoints":     ["0000", "0002"],
@@ -150,6 +165,8 @@ def path_to_the_job_script(test_dir, the_condor):
 
     import os
     import sys
+    import time
+    import subprocess
     from pathlib import Path
 
     os.environ['CONDOR_CONFIG'] = '{the_condor.config_file}'
@@ -160,6 +177,10 @@ def path_to_the_job_script(test_dir, the_condor):
     os.environ['PATH'] = condor_libexec + os.pathsep + os.environ.get('PATH', '') + os.pathsep + condor_bin
 
     count = 0
+
+    print("Starting up...")
+    if Path("saved-state-dir/FAILURE").exists():
+        print("Found FAILURE file")
 
     try:
         with open("saved-state-dir/count", "r") as saved_state:
@@ -192,6 +213,43 @@ def path_to_the_job_script(test_dir, the_condor):
     else:
         fail_path.touch()
 
+    # Evict ourselves once just before the end.
+    rv = subprocess.run(
+        ["condor_q", "-jobads", ".job.ad", "-af", "NumJobStarts"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=20
+    )
+    if rv.returncode != 0:
+        print(f'Failed to find NumJobStarts in .job.ad')
+        print(f'{rv.stdout}')
+        print(f'{rv.stderr}')
+        sys.exit(1)
+    epoch = int(rv.stdout.decode('utf-8').strip())
+
+    print(f"epoch {epoch}")
+    if count >= num_checkpoints and epoch == 0:
+        print("evicting myself...", flush=True)
+        rv = subprocess.run(
+            ["condor_vacate_job", jobID],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=20
+        )
+        if rv.returncode != 0:
+            print(f'Failed to vacate myself after second checkpoint:')
+            print(f'{rv.stdout}')
+            print(f'{rv.stderr}')
+            sys.exit(1)
+
+        # Don't exit before we've been vacated.
+        time.sleep(60)
+
+        # Signal a failure if we weren't vacated.
+        print("Failed to evict, aborting.")
+        sys.exit(1)
+
+    print("... checkpointing")
     sys.exit(85)
     """
 
@@ -224,7 +282,8 @@ def the_condor(test_dir, the_config, the_config_name):
         local_dir=local_dir,
         config={
             'ENABLE_URL_TRANSFERS':     'TRUE',
-            'SCHEDD_DEBUG':              'D_TEST D_SUB_SECOND D_CATEGORY',
+            'SCHEDD_DEBUG':             'D_TEST D_SUB_SECOND D_CATEGORY',
+            'SCHEDD_INTERVAL':          '2',
             ** the_config['config'],
         }
     ) as the_condor:
@@ -245,6 +304,8 @@ def the_job_description(test_dir, the_config_name, path_to_the_job_script, path_
         "transfer_executable":          "true",
         "should_transfer_files":        "true",
         "when_to_transfer_output":      "ON_EXIT",
+        "stream_output":                "true",
+        "stream_error":                 "true",
 
         "log":                          test_dir / f"{the_config_name}_test_job_$(CLUSTER).log",
         "output":                       test_dir / f"{the_config_name}_test_job_$(CLUSTER).out",
@@ -303,7 +364,9 @@ def the_job_handle(the_job_tuple):
 
 @action
 def the_completed_job(the_condor, the_job_handle):
-    # FIXME: the job doesn't evict itself yet.
+    # We now set SCHEDD_INTERVAL to a small enough value in the test suite
+    # that we don't have explicitly call for a reschedule to run the test
+    # in a timely fashion.
     assert the_job_handle.wait(
         timeout=300,
         condition=ClusterState.all_complete,
