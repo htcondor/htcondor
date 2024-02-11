@@ -2556,6 +2556,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
 	for( int rc = 0; ; ) {
+		bool log_this_transfer = true;
+
 		TransferCommand xfer_command = TransferCommand::Unknown;
 		{
 			int reply;
@@ -2916,12 +2918,15 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// that hapens further down
 					rc = 0;
 
+					// FIXME: report only the first error
+
 					formatstr(error_buf,
 						"%s at %s failed due to remote transfer hook error: %s",
 						get_mySubSystem()->getName(),
 						s->my_ip_str(),fullname.c_str());
 					if( checkpoint_url ) {
 						deferred_checkpoint_error = true;
+						log_this_transfer = false;
 					} else {
 						download_success = false;
 						try_again = false;
@@ -2934,6 +2939,14 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						"after encountering the following error: %s\n",
 						error_buf.c_str());
 				}
+
+				// If the starter is telling us about an upload it performed,
+				// we shouldn't log anything at all -- we don't know wha the
+				// right thing to log is, and we _certainly_ shouldn't log
+				// the default "download" reply saying that the file was
+				// transferred via CEDAR.  However, we _certainly_ shouldn't
+				// log a failed transfer as a success, which I think we also
+				// used to do.  *sigh*
 			} else if (subcommand == TransferSubCommand::ReuseInfo) {
 					// We must consume the EOM in order to send the ClassAd later.
 				if (!s->end_of_message()) {
@@ -3478,7 +3491,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		thisFileStatsAd.Update(pluginStatsAd);
 
 		// Write stats to disk
-		if( !isDeferredTransfer ) {
+		if( !isDeferredTransfer && log_this_transfer ) {
 			RecordFileTransferStats(thisFileStatsAd);
 		}
 
