@@ -15,6 +15,7 @@ from ornithology import (
 )
 
 import htcondor
+import classad
 
 import logging
 logger = logging.getLogger(__name__)
@@ -67,6 +68,10 @@ logger.setLevel(logging.DEBUG)
 #     script and see what's left).
 #   * We should be able to check (4) after the fact by looking at the
 #     transfer log.  (The URLs will all be distinct.)
+#     Test (4) doesn't actually make sense if we've passed test (1),
+#     so we could skip it in the shadow tests, but it won't hurt to
+#     double-check, and if (1) fails but (4) succeeds, that probably
+#     means we have an interesting problem....
 #   * We should be able to check (5) by looking at the epoch log: in order
 #     test (4), the job will have to have been evicted, which will write
 #     its CommittedTime to the epoch log.  Any test which is evicted
@@ -100,7 +105,7 @@ TEST_CONFIGS = {
 # For simplicity, (a)-(d) could all attempt four checkpoints.  The lists would
 # have to be updated, but we could also attempt eight checkpoints in all cases,
 # if that would easier.
-SINGLE_TEST_CASES = {
+ONE_TEST_CASES = {
     "b": {
         "expected_checkpoints":     ["0000", "0002"],
         "checkpoint_count":         4,
@@ -281,9 +286,10 @@ def the_condor(test_dir, the_config, the_config_name):
     with Condor(
         local_dir=local_dir,
         config={
-            'ENABLE_URL_TRANSFERS':     'TRUE',
-            'SCHEDD_DEBUG':             'D_TEST D_SUB_SECOND D_CATEGORY',
-            'SCHEDD_INTERVAL':          '2',
+            'ENABLE_URL_TRANSFERS':             'TRUE',
+            'SCHEDD_DEBUG':                     'D_TEST D_SUB_SECOND D_CATEGORY',
+            'SCHEDD_INTERVAL':                  '2',
+            'SHADOW.FILE_TRANSFER_STATS_LOG':   '$(LOG)/shadow_transfer_history',
             ** the_config['config'],
         }
     ) as the_condor:
@@ -382,7 +388,7 @@ def the_completed_job_ad(the_condor, the_completed_job):
     constraint = f'ClusterID == {the_completed_job.clusterid} && ProcID == 0'
     result = schedd.query(
             constraint=constraint,
-            projection=["CheckpointDestination", "GlobalJobID"],
+            projection=["CheckpointDestination", "GlobalJobID", "ClusterID", "ProcID"],
     )
 
     return result[0]
@@ -395,12 +401,93 @@ def the_target_directory(test_dir, the_completed_job_ad):
 
 
 @action
-def the_transfers(test_dir, the_completed_job_ad):
-    # FIXME: parse the transfer history file.  Each entry should
-    # contain `JobClusterID` and `JobProcID`, and a `TransferURL`.
-    # Parse the URL to find the checkpoint IDs and return them as
-    # a list of strings.
-    pass
+def the_transfers(test_dir, the_completed_job_ad, the_condor):
+    # Find the transfer history file.
+    with the_condor.use_config():
+        FILE_TRANSFER_STATS_LOG = htcondor.param["FILE_TRANSFER_STATS_LOG"]
+
+    # Each ClassAd in the transfer history file should have 'JobClusterID'
+    # and 'JobProcID' attribute.
+    clusterID = the_completed_job_ad["ClusterID"]
+    procID = the_completed_job_ad["ProcID"]
+
+    # Find each transfer ad for this job.
+    transfers = []
+    globalJobID = the_completed_job_ad["GlobalJobID"].replace('#', '_')
+    with open(FILE_TRANSFER_STATS_LOG, "r") as transfer_history:
+            #
+            # This is _amazingly_ stupid.  Why don't any of the condor tools
+            # actually handle this?  Why is there no Python API that does?
+            #
+
+            # Eat the first "separator" line.
+            line = transfer_history.readline()
+            while True:
+                buffer = ''
+
+                while True:
+                    line = transfer_history.readline()
+                    if line == "":
+                        # Because Python has no eof() function.
+                        break
+                    elif line != "***\n":
+                        buffer += line
+                    else:
+                        ad = classad.parseOne(buffer)
+
+                        # We only care about the job we're looking at.
+                        if ad['JobClusterID'] != clusterID:
+                            break
+                        if ad['JobProcID'] != procID:
+                            break
+
+                        # What I want to generate here was a list of all
+                        # the checkpoint numbers downloaded by the starter.
+                        #
+                        # The original idea was to look at the URLs downloaded
+                        # by the starter and parse them to find the checkpoint
+                        # numbers, and report the list of those.
+                        #
+                        # For some reason, the file transfer object doesn't
+                        # actually log downloaded URLs.  It also doesn't log
+                        # CEDAR uploads, and it logs uploads from the starter
+                        # to a URL as CEDAR downloads.
+                        #
+                        # The upshot of this disaster is that even adding
+                        # which subsystem logged [FIXME: set STARTER.xyz?]
+                        # the transfer doesn't let me figure out what
+                        # actually happened.
+                        #
+                        # Instead, I'm going to look for the starter's records
+                        # of downloaded MANIFEST files, and declare those to be
+                        # a true indication of what actually happened.
+                        #
+
+                        # However, we can set SHADOW.FILE_TRANSFER_STATS_LOG
+                        # and keep the shadow events out of the default
+                        # transfer history file without (further) hacks.
+                        # if ad['Subsystem'] != "STARTER":
+                        #   break
+                        if ad['TransferProtocol'] != "cedar":
+                            break
+                        # Just in case we ever fix any of the above.
+                        if ad['TransferType'] != 'download':
+                            break
+
+                        # The ./ seems redundant, but it's always there.
+                        prefix = "./_condor_checkpoint_MANIFEST."
+                        transferFileName = ad['TransferFileName']
+                        if transferFileName.startswith(prefix):
+                            suffix = transferFileName.removeprefix(prefix)
+                            transfers.append(suffix[0:4])
+
+                        break
+
+                if line == "" and buffer == "":
+                    break
+
+    # print(f"TRANSFERS: {transfers}")
+    return transfers
 
 
 @action
@@ -506,11 +593,12 @@ class TestPartialUploads:
 
 
     # Test (4).
-    @pytest.mark.skip
     def test_download_only_successful_checkpoints(self,
         the_transfers,
         the_expected_checkpoints
     ):
+        assert (len(the_expected_checkpoints) != 0) == (len(the_transfers) != 0)
+
         for transfer in the_transfers:
             assert(transfer in the_expected_checkpoints)
 
