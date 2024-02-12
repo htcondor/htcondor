@@ -192,7 +192,12 @@ def path_to_the_job_script(test_dir, the_condor):
     checkpoint_number = count - 1
     the_count = f"{checkpoint_number:04}"
     if the_count in expected_checkpoints:
-        fail_path.unlink(missing_ok=True)
+        # Sigh.  Python >= 3.8 only.
+        # fail_path.unlink(missing_ok=True)
+        try:
+            fail_path.unlink()
+        except FileNotFoundError:
+            pass
     else:
         fail_path.touch()
 
@@ -462,7 +467,9 @@ def the_transfers(test_dir, the_completed_job_ad, the_condor):
                         prefix = "./_condor_checkpoint_MANIFEST."
                         transferFileName = ad['TransferFileName']
                         if transferFileName.startswith(prefix):
-                            suffix = transferFileName.removeprefix(prefix)
+                            # Only for Python >= 3.9 :(
+                            # suffix = transferFileName.removeprefix(prefix)
+                            suffix = transferFileName[len(prefix):]
                             transfers.append(suffix[0:4])
 
                         break
