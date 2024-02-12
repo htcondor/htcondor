@@ -7259,7 +7259,7 @@ These macros affect the *condor_negotiator*.
 
 :macro-def:`PRIORITY_HALFLIFE[NEGOTIATOR]`
     This macro defines the half-life of the user priorities. See
-    :ref:`users-manual/priorities-and-preemption:user priority` on
+    :ref:`users-manual/job-scheduling:user priority` on
     User Priorities for details. It is defined in seconds and defaults
     to 86400 (1 day).
 

@@ -1487,3 +1487,182 @@ The *submit digest* for a Late Materialization job factory cannot be changed aft
 for the factory can be edited using :tool:`condor_qedit`.  Any :tool:`condor_qedit` command that has the ClusterId as a edit
 target will edit all currently materialized jobs, as well as editing the Cluster ad so that all jobs that materialize
 in the future will also be edited.
+
+Heterogeneous Submit: Execution on Differing Architectures
+----------------------------------------------------------
+
+:index:`heterogeneous submit<single: heterogeneous submit; job>`
+:index:`on a different architecture<single: on a different architecture; running a job>`
+:index:`submitting a job to<single: submitting a job to; heterogeneous pool>`
+
+If executables are available for the different platforms of machines in
+the HTCondor pool, HTCondor can be allowed the choice of a larger number
+of machines when allocating a machine for a job. Modifications to the
+submit description file allow this choice of platforms.
+
+A simplified example is a cross submission. An executable is available
+for one platform, but the submission is done from a different platform.
+Given the correct executable, the :subcom:`requirements` command in the submit
+description file specifies the target architecture. For example, an
+executable compiled for a 32-bit Intel processor running Windows Vista,
+submitted from an Intel architecture running Linux would add the
+``requirement``
+
+.. code-block:: condor-submit
+
+      requirements = Arch == "INTEL" && OpSys == "WINDOWS"
+
+Without this :subcom:`requirement`, :tool:`condor_submit` will assume that the
+program is to be executed on a machine with the same platform as the
+machine where the job is submitted.
+
+Vanilla Universe Example for Execution on Differing Architectures
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+A more complex example of a heterogeneous submission occurs when a job
+may be executed on many different architectures to gain full use of a
+diverse architecture and operating system pool. If the executables are
+available for the different architectures, then a modification to the
+submit description file will allow HTCondor to choose an executable
+after an available machine is chosen.
+
+A special-purpose Machine Ad substitution macro can be used in string
+attributes in the submit description file. The macro has the form
+
+.. code-block:: text
+
+      $$(MachineAdAttribute)
+
+The $$() informs HTCondor to substitute the requested
+``MachineAdAttribute`` from the machine where the job will be executed.
+
+An example of the heterogeneous job submission has executables available
+for two platforms: RHEL 3 on both 32-bit and 64-bit Intel processors.
+This example uses *povray* to render images using a popular free
+rendering engine.
+
+The substitution macro chooses a specific executable after a platform
+for running the job is chosen. These executables must therefore be named
+based on the machine attributes that describe a platform. The
+executables named
+
+.. code-block:: text
+
+      povray.LINUX.INTEL
+      povray.LINUX.X86_64
+
+will work correctly for the macro
+
+.. code-block:: text
+
+      povray.$$(OpSys).$$(Arch)
+
+The executables or links to executables with this name are placed into
+the initial working directory so that they may be found by HTCondor. A
+submit description file that queues three jobs for this example:
+
+.. code-block:: condor-submit
+
+      # Example of heterogeneous submission
+
+      universe     = vanilla
+      executable   = povray.$$(OpSys).$$(Arch)
+      log          = povray.log
+      output       = povray.out.$(Process)
+      error        = povray.err.$(Process)
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
+                     (Arch == "X86_64" && OpSys =="LINUX")
+
+      arguments    = +W1024 +H768 +Iimage1.pov
+      queue
+
+      arguments    = +W1024 +H768 +Iimage2.pov
+      queue
+
+      arguments    = +W1024 +H768 +Iimage3.pov
+      queue
+
+These jobs are submitted to the vanilla universe to assure that once a
+job is started on a specific platform, it will finish running on that
+platform. Switching platforms in the middle of job execution cannot work
+correctly.
+
+There are two common errors made with the substitution macro. The first
+is the use of a non-existent ``MachineAdAttribute``. If the specified
+``MachineAdAttribute`` does not exist in the machine's ClassAd, then
+HTCondor will place the job in the held state until the problem is
+resolved.
+
+The second common error occurs due to an incomplete job set up. For
+example, the submit description file given above specifies three
+available executables. If one is missing, HTCondor reports back that an
+executable is missing when it happens to match the job with a resource
+that requires the missing binary.
+
+Vanilla Universe Example for Execution on Differing Operating Systems
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+The addition of several related OpSys attributes assists in selection of
+specific operating systems and versions in heterogeneous pools.
+
+.. code-block:: condor-submit
+
+      # Example targeting only RedHat platforms
+
+      universe     = vanilla
+      Executable   = /bin/date
+      Log          = distro.log
+      Output       = distro.out
+      Error        = distro.err
+
+      Requirements = (OpSysName == "RedHat")
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      Queue
+
+.. code-block:: condor-submit
+
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+
+      universe     = vanilla
+      executable   = /bin/date
+      log          = distro.log
+      output       = distro.out
+      error        = distro.err
+
+      requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6 )
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      queue
+
+Here is a more compact way to specify a RedHat 6 platform.
+
+.. code-block:: condor-submit
+
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+
+      universe     = vanilla
+      executable   = /bin/date
+      log          = distro.log
+      output       = distro.out
+      error        = distro.err
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      requirements = (OpSysAndVer == "RedHat6")
+
+      queue
+
