@@ -62,8 +62,8 @@ struct slotOrderSorter {
 ResMgr::ResMgr() :
 	extras_classad( NULL ),
 	m_lastDirectAttachToSchedd(0),
-	max_job_retirement_time_override(-1),
-	m_token_requester(&ResMgr::token_request_callback, this)
+	m_token_requester(&ResMgr::token_request_callback, this),
+	max_job_retirement_time_override(-1)
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -1468,7 +1468,7 @@ ResMgr::compute_dynamic(bool for_update)
 
 
 void
-ResMgr::publish_resmgr_dynamic(ClassAd* cp, bool daemon_ad /*=false*/)
+ResMgr::publish_resmgr_dynamic(ClassAd* cp, bool /* daemon_ad =false*/)
 {
 	cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
 #ifdef HAVE_DATA_REUSE_DIR
