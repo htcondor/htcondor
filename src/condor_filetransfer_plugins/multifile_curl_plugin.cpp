@@ -248,7 +248,7 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 		}
         r = curl_easy_setopt( _handle, CURLOPT_HEADERFUNCTION, &HeaderCallback );
 		if (r != CURLE_OK) {
-			fprintf(stderr, "Can't setopt HEADERFUNCTOIN\n");
+			fprintf(stderr, "Can't setopt HEADERFUNCTION\n");
 		}
 
         GetToken(cred, token);
@@ -502,9 +502,11 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt CURLOPT_WRITEDATA\n");
 	}
-    r = curl_easy_setopt( _handle, CURLOPT_HEADERDATA, _this_file_stats.get() );
-	if (r != CURLE_OK) {
-		fprintf(stderr, "Can't setopt CURLOPT_HEADERDATA\n");
+	if (!url.starts_with("ftp://")) {
+		r = curl_easy_setopt( _handle, CURLOPT_HEADERDATA, _this_file_stats.get() );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt CURLOPT_HEADERDATA\n");
+		}
 	}
 
     if (header_list) {
