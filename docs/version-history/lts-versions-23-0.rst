@@ -15,6 +15,28 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-2307:
+
+Version 23.0.7
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.0.7 released on Month Date, 2024.
+
+- HTCondor version 23.0.7 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug that prevented the use of ftp: urls in the file
+  transfer plugin.
+  :jira:`2273`
+
+
 .. _lts-version-history-2305:
 
 Version 23.0.5
