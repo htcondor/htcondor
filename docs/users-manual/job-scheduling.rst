@@ -80,11 +80,11 @@ numerically increasing over time. If the number of machines is less then
 the priority, the priority will improve by numerically decreasing over
 time. The long-term result is fair-share access across all users. The
 speed at which HTCondor adjusts the priorities is controlled with the
-configuration variable :macro:`PRIORITY_HALFLIFE[definition]` HTCondor
-an exponential half-life value. The
-default is one day. If a user that has user priority of 100 and is
-utilizing 100 machines removes all his/her jobs, one day later that
-user's priority will be 50, and two days later the priority will be 25.
+configuration variable :macro:`PRIORITY_HALFLIFE[definition]`.
+The default is one day. A user running 100 cores of jobs for a long
+time will have their real user priority exponential grow to 100. 
+If all the jobs are removed, one day later that user's real priority 
+will be 50, and two days later it will shrink to 25.
 
 HTCondor enforces that each user gets his/her fair share of machines
 according to user priority by allocating available machines.
@@ -100,7 +100,7 @@ User priorities are keyed on ``<username>@<domain>``, for example
 by the HTCondor site administrator. Thus, user priority and therefore
 resource allocation is not impacted by which machine the user submits
 from or even if the user submits jobs from multiple machines.
-:index:`nice job` :index:`nice job<single: nice job; priority>`
+:index:`nice job<single: nice job; priority>`
 
 The user priority system can also support backfill or nice jobs (see
 the :tool:`condor_submit` manual page). Nice jobs
@@ -120,14 +120,14 @@ How Jobs are Vacated
 When HTCondor needs a job to vacate a machine for whatever reason, it
 sends the job an operating system signal specified in the :ad-attr:`KillSig`
 attribute of the job's ClassAd. The value of this attribute can be
-specified by the user at submit time by placing the **kill_sig** option
+specified by the user at submit time by placing the :subcom:`kill_sig` option
 in the HTCondor submit description file.
 
 If a program wanted to do some work when asked to vacate a
 machine, the program may set up a signal handler to handle this
-signal. This clean up signal is specified with **kill_sig**. Note that
+signal. This clean up signal is specified with :subcom:`kill_sig`. Note that
 the clean up work needs to be quick. If the job takes too long to exit
-after getting the **kill_sig**, HTCondor sends a SIGKILL signal 
+after getting the :subcom:`kill_sig`, HTCondor sends a SIGKILL signal 
 which immediately terminates the process.
 
 The default value for :ad-attr:`KillSig` is SIGTERM, the usual method 
@@ -684,9 +684,6 @@ variety of ways. For example,
     shows only machines which are currently running jobs.
  *condor_status -long*
     lists the machine ClassAds for all machines in the pool.
-
-Refer to the :doc:`/man-pages/condor_status` command reference page for a
-complete description of the :tool:`condor_status` command.
 
 The following shows a portion of a machine ClassAd
 :index:`machine example<single: machine example; ClassAd>` :index:`machine ClassAd`
