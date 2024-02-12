@@ -19,18 +19,19 @@ should be matched and run on the fair share, this is based on the *job priority*
 Job Priority
 ''''''''''''
 
-:index:`priority<single: priority; job>` :index:`of a job<single: of a job; priority>`
-
 Job priorities allow a user to sort their own jobs to determine which are
 tried to be run first.  A job priority can be any integer: larger values 
 denote better priority.  So, 0 is a better job priority than -3, and 6 is a better than 5.
 :index:`condor_prio<single: condor_prio; HTCondor commands>`
-Note that job priorities are computed per user, so that whatever job priorities
-one user sets has no impact at all on any other user, in terms of how many jobs
-users can run or in what order.  Also, unmatchable high priority jobs do not block
-lower priority jobs.  That is, a priority 10 job will try to be matched before 
-a priority 9 job, but if the priority 10 job doesn't match any slots, HTCondor 
-will keep going, and try the priority 9 job next.
+
+.. note::
+
+   Job priorities are computed per user, so that whatever job priorities
+   one user sets has no impact at all on any other user, in terms of how many jobs
+   users can run or in what order.  Also, unmatchable high priority jobs do not block
+   lower priority jobs.  That is, a priority 10 job will try to be matched before 
+   a priority 9 job, but if the priority 10 job doesn't match any slots, HTCondor 
+   will keep going, and try the priority 9 job next.
 
 The job priority may be specified in the submit description file by setting
 
@@ -63,8 +64,7 @@ Slots are allocated to users based upon user priority. A lower
 numerical value for user priority means proportionally better priority, 
 so a user with priority 5 will be allocated 10 times the resources as
 someone with user priority 50. User priorities in HTCondor can be 
-examined with the :tool:`condor_userprio` command.
-:index:`condor_userprio<single: condor_userprio; HTCondor commands>` HTCondor
+examined with the :tool:`condor_userprio` command.  HTCondor
 administrators can set and change individual user priorities with the
 same utility.
 
