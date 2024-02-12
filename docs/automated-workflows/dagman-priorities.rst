@@ -22,7 +22,7 @@ of their parent nodes have finished successfully) at the same time will
 be submitted. The node priority also sets the node job's priority in the
 queue (that is, its :ad-attr:`JobPrio` attribute), which affects the order in
 which jobs will be run once they are submitted (see
-:ref:`users-manual/priorities-and-preemption:job priority` for more
+:ref:`jobprio` for more
 information). The node priority only affects the
 order of job submission within a given DAG; but once jobs are submitted,
 their :ad-attr:`JobPrio` value affects the order in which they will be run

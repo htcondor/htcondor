@@ -2125,7 +2125,7 @@ declared cron jobs. These represent various allotted job start times that
 will be used to calculate the jobs :ad-attr:`DeferralTime`. These attributes can
 be represented as an integer, a list of integers, a range of integers, a
 step (intervals of a range), or an ``*`` for all allowed values. For more
-information visit :ref:`users-manual/time-scheduling-for-job-execution:cronTab scheduling`.
+information visit :ref:`crontab`.
 
 :classad-attribute-def:`CronMinute`
     The minutes in an hour when the cron job is allowed to start running.
