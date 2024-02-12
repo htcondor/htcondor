@@ -272,7 +272,7 @@ def the_condor(test_dir, the_config, the_config_name):
         local_dir=local_dir,
         config={
             'ENABLE_URL_TRANSFERS':             'TRUE',
-            'SCHEDD_DEBUG':                     'D_TEST D_SUB_SECOND D_CATEGORY',
+            'JOB_EPOCH_HISTORY':                '$(LOG)/EpochLog',
             'SCHEDD_INTERVAL':                  '2',
             'SHADOW.FILE_TRANSFER_STATS_LOG':   '$(LOG)/shadow_transfer_history',
             ** the_config['config'],
