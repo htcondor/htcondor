@@ -280,6 +280,9 @@ all attributes.
     are written to this log file in addition to any log file specified
     in the job's submit description file.
 
+:classad-attribute-def:`DAGNodeName`
+    Name of the DAG node that this job is associated with.
+
 :classad-attribute-def:`DAGManNodesMask`
     For a DAGMan node job only, a comma-separated list of the event
     codes that should be written to the log specified by
@@ -2209,12 +2212,24 @@ information for the DAG.
     The overall status of the DAG, with the same values as the macro
     ``$DAG_STATUS`` used in DAGMan FINAL nodes.
 
-    +--------------------------------------+--------------------------------------+
-    | 0                                    | OK                                   |
-    +--------------------------------------+--------------------------------------+
-    | 3                                    | the DAG has been aborted by an       |
-    |                                      | ABORT-DAG-ON specification           |
-    +--------------------------------------+--------------------------------------+
+    +------+--------------------------------------+
+    | 0    | OK                                   |
+    +------+--------------------------------------+
+    | 1    | An error has occured                 |
+    +------+--------------------------------------+
+    | 2    | One or more nodes in the DAG have    |
+    |      | failed                               |
+    +------+--------------------------------------+
+    | 3    | the DAG has been aborted by an       |
+    |      | ABORT-DAG-ON specification           |
+    +------+--------------------------------------+
+    | 4    | DAG was removed via :tool:`condor_rm`|
+    +------+--------------------------------------+
+    | 5    | A cycle was detected within the DAG  |
+    +------+--------------------------------------+
+    | 6    | DAG is halted                        |
+    |      | (see :ref:`Suspending a DAG`)        |
+    +------+--------------------------------------+
 
 :classad-attribute-def:`DAG_AdUpdateTime`
     A timestamp for when the DAGMan process last sent an update of internal

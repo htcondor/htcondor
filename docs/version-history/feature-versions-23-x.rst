@@ -176,7 +176,7 @@ New Features:
 
 - Added ability for DAGMan node script **STDOUT** and/or **STDERR** streams
   be captured in a user defined debug file. For more information visit
-  DAGMan script :ref:`automated-workflows/dagman-scripts:Debug File`
+  DAGMan script :ref:`Script Debugging`
   :jira:`2159`
 
 - Improve hold message when jobs on cgroup system exceed their memory limits.

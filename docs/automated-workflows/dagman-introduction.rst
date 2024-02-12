@@ -34,13 +34,13 @@ post script.
 
    flowchart LR
     Start((Start)) --> Job
-    Start --> PREscript
+    Start --> PRE[Pre-Script]
     subgraph DAG Node
-    PREscript --> Job
-    Job --> POSTscript
+    PRE --> Job
+    Job --> POST[Post-Script]
     end
     Job --> End((End))
-    POSTscript --> End((End))
+    POST --> End((End))
 
 An **edge** in DAGMan describes a dependency between two nodes. DAG edges are
 directional; each has a **parent** and a **child**, where the parent node must
@@ -49,7 +49,7 @@ of parents and children.
 
 
 Example: Diamond DAG
---------------------
+''''''''''''''''''''
 
 .. sidebar:: Diamond DAG
 
@@ -60,7 +60,7 @@ Example: Diamond DAG
          A --> B & C
          B & C --> D
 
-A simple diamond-shaped DAG, as shown in the following image is presented as a
+A simple diamond-shaped DAG, as shown in the image on the right is presented as a
 starting point for examples. This diamond DAG contains 4 nodes. This diamond-shaped
 DAG would be described like the following in the DAG input file:
 
@@ -68,10 +68,10 @@ DAG would be described like the following in the DAG input file:
 
     # File name: diamond.dag
 
-    JOB  A  A.sub
-    JOB  B  B.sub
-    JOB  C  C.sub
-    JOB  D  D.sub
+    JOB A A.sub
+    JOB B B.sub
+    JOB C C.sub
+    JOB D D.sub
     PARENT A CHILD B C
     PARENT B C CHILD D
 
@@ -80,8 +80,8 @@ DAG would be described like the following in the DAG input file:
 JOB
 ---
 
-The **JOB** command specifies an HTCondor job. The syntax used for each
-*JOB* command is:
+The **JOB** command specifies an HTCondor job that becomes the core of
+a node in the DAG. The syntax used for each *JOB* command is:
 
 .. code-block:: condor-dagman
 
@@ -169,8 +169,262 @@ As a further example, the following line produces four dependencies:
     flowchart TD
      p1 & p2 --> c1 & c2
 
-Node Job Submit File Contents
------------------------------
+Scripts
+-------
+
+:index:`SCRIPT command<single: DAG input file; SCRIPT command>`
+
+The optional *SCRIPT* command specifies processing that is done either
+before a job within a node is submitted, after a job within a node
+completes its execution, or when a job goes on hold. All scripts run
+on the Access Point and not the Execution Point where the node job
+is likely to run.
+
+:index:`PRE and POST scripts<single: DAGMan; PRE and POST scripts>`
+
+Script Types
+''''''''''''
+
+:index:`PRE script<single: DAGMan; PRE script>`
+:index:`POST script<single: DAGMan; POST script>`
+:index:`HOLD script<single: DAGMan; HOLD script>`
+Processing done before a job is submitted is called a *PRE* script. Processing
+done after a job completes its execution is called a *POST* script. The *PRE*
+and *POST* script are considered part of the DAG node structure. Additionally,
+there is a *HOLD* script that runs when a node job goes into the held state
+which are not considered part of the DAG workflow and are run on a best-effort
+basis. If one does not complete successfully, it has no effect on the overall
+workflow and no error will be reported.
+
+.. note::
+
+    The script executable does not have to be a shell script (Unix) or batch file
+    (Windows); but should be light weight since it runs directly on the AP.
+
+The syntax used for *SCRIPT* commands is
+
+.. code-block:: condor-dagman
+
+    # PRE-Script
+    SCRIPT [DEFER status time] [DEBUG filename type] PRE <JobName | ALL_NODES> ExecutableName [arguments]
+    # POST-Script
+    SCRIPT [DEFER status time] [DEBUG filename type] POST <JobName | ALL_NODES> ExecutableName [arguments]
+    # HOLD-Script
+    SCRIPT [DEFER status time] [DEBUG filename type] HOLD <JobName | ALL_NODES> ExecutableName [arguments]
+
+The *SCRIPT* command can use the *PRE*, *POST*, or *HOLD* keyword, which specifies
+the relative timing of when the script is to be run. The *JobName* identifies the
+node to which the script is attached. The *ExecutableName* specifies the executable
+(e.g., shell script or batch file) to be executed, and may not contain spaces. The
+optional *arguments* are command line arguments to the script, and spaces delimiting
+the arguments. Both *ExecutableName* and optional *arguments* are case
+sensitive.
+
+Scripts are commonly used to do simple tasks such as the following:
+
+- PRE: Verify inputs for a node job that are produced by a parent node.
+- POST: Turn a job execution failure into a successful node completion so the
+  DAG doesn't fail given a specific node job failure.
+- HOLD: Notify the user of a held node via email.
+
+DEFER retries
+'''''''''''''
+
+The optional *DEFER* keyword causes a retry of only the script, if the
+execution of the script exits with the exit code given by *status*. The
+retry occurs after at least *time* seconds, rather than being considered
+failed. While waiting for the retry, the script does not count against a
+*maxpre* or *maxpost* limit.
+
+.. note::
+
+    The ordering of the *DEFER* keyword within
+    the *SCRIPT* specification is fixed. It must come directly after the
+    *SCRIPT* keyword; this is done to avoid backward compatibility issues
+    for any DAG with a *JobName* of DEFER.
+
+.. _Script Debugging:
+
+DEBUG file
+''''''''''
+
+The optional *DEBUG* keyword will capture a scripts specified standard
+output streams (**STDOUT** and/or **STDERR**) and write them to a specified
+debug file. This keyword is followed by two pieces of information:
+
+  #. *Filename*: File to write captured output into.
+  #. *Type*: Type of output to capture. Takes one the following options:
+      #. **STDOUT**
+      #. **STDERR**
+      #. **ALL** (Both STDOUT & STDERR)
+
+This keyword is fixed to appear prior to the script type (PRE, POST, HOLD)
+and after any declared *DEFER* retries.
+
+.. note::
+
+    It is safe to have multiple scripts write to the same file as
+    DAGMan captures all of the scripts output and writes everything
+    at one time. This write also includes a dividing banner with
+    useful information regarding that scripts execution.
+
+Scripts as part of a DAG workflow
+'''''''''''''''''''''''''''''''''
+
+Scripts are executed on the access point; the access point is not
+necessarily the same machine upon which the node's job is run. Further,
+a single cluster of HTCondor jobs may be spread across several machines.
+
+If the PRE script fails, then the HTCondor job associated with the node
+is not submitted, and the POST script is not run either (by default). However,
+if the job is submitted, and there is a POST script, the POST script is always
+run once the job finishes. The behavior when the PRE script fails may be
+changed to run the POST script by setting configuration variable
+:macro:`DAGMAN_ALWAYS_RUN_POST` to ``True`` or by passing the **-AlwaysRunPost**
+argument to :tool:`condor_submit_dag`.
+
+Examples that use PRE or POST scripts
+'''''''''''''''''''''''''''''''''''''
+
+Examples use the diamond-shaped DAG. A first example uses a PRE script
+to expand a compressed file needed as input to each of the HTCondor jobs
+of nodes B and C. The DAG input file:
+
+.. code-block:: condor-dagman
+
+    # File name: diamond.dag
+
+    JOB  A  A.condor
+    JOB  B  B.condor
+    JOB  C  C.condor
+    JOB  D  D.condor
+    SCRIPT PRE  B  pre.sh $JOB .gz
+    SCRIPT PRE  C  pre.sh $JOB .gz
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+
+The script ``pre.sh`` uses its command line arguments to form the file
+name of the compressed file. The script contains
+
+.. code-block:: bash
+
+    #!/bin/sh
+    gunzip ${1}${2}
+
+Therefore, the PRE script invokes
+
+.. code-block:: bash
+
+    gunzip B.gz
+
+for node B, which uncompresses file ``B.gz``, placing the result in file ``B``.
+
+A second example uses the ``$RETURN`` macro. The DAG input file contains
+the POST script specification:
+
+.. code-block:: condor-dagman
+
+    SCRIPT POST A stage-out job_status $RETURN
+
+If the HTCondor job of node A exits with the value -1, the POST script
+is invoked as
+
+.. code-block:: text
+
+    stage-out job_status -1
+
+The slightly different example POST script specification in the DAG
+input file
+
+.. code-block:: condor-dagman
+
+    SCRIPT POST A stage-out job_status=$RETURN
+
+invokes the POST script with
+
+.. code-block:: console
+
+    $ stage-out job_status=$RETURN
+
+This example shows that when there is no space between the ``=`` sign
+and the variable ``$RETURN``, there is no substitution of the macro's
+value.
+
+Special Script Argument Macros
+''''''''''''''''''''''''''''''
+
+DAGMan provides the following macros to be used for node script arguments.
+The use of these macros are limited to being used as individual command line
+arguments surrounded by spaces:
+
++---------------+---------------+---------------+--------------------+
+|               | $JOB          | $RETRY        | $DAG_STATUS        |
+|  All Scripts  +---------------+---------------+--------------------+
+|               | $FAILED_COUNT | $MAX_RETRIES  |                    |
++---------------+---------------+---------------+--------------------+
+|  POST Scripts | $JOBID        | $RETURN       | $PRE_SCRIPT_RETURN |
++---------------+---------------+---------------+--------------------+
+
+
+:index:`Defined special node macros<single: DAGMan; Defined special node macros>`
+
+The special macros for all scripts:
+
+-  ``$JOB`` evaluates to the (case sensitive) string defined for *JobName*.
+-  ``$RETRY`` evaluates to an integer value set to 0 the first time a node
+   is run, and is incremented each time the node is retried. See :ref:`DAG node success`
+   for the description of how to cause nodes to be retried.
+-  ``$MAX_RETRIES`` evaluates to an integer value set to the maximum
+   number of retries for the node. Defaults to 0 if retries aren't
+   specified for a node.
+
+.. sidebar:: Useful Information
+
+    .. note::
+
+        The macro ``$DAG_STATUS`` value and definition is unrelated to the attribute named
+        ``DagStatus`` as defined for use in a node status file.
+
+-  ``$DAG_STATUS`` is the status of the DAG that is recorded in the DAGMan
+   scheduler universe job's Classad as :ad-attr:`DAG_Status`. This macro may
+   have the following values:
+
+   -  0: OK
+   -  1: error; an error condition different than those listed here
+   -  2: one or more nodes in the DAG have failed
+   -  3: the DAG has been aborted by an ABORT-DAG-ON specification
+   -  4: removed; the DAG has been removed by :tool:`condor_rm`
+   -  5: cycle; a cycle was found in the DAG
+   -  6: halted; the DAG has been halted (see :ref:`Suspending a DAG`)
+
+-  ``$FAILED_COUNT`` is defined by the number of nodes that have failed
+   in the DAG.
+
+Macros for POST Scripts only:
+
+-  ``$JOBID`` evaluates to a representation of the HTCondor job ID [ClusterId.ProcId]
+   of the node job. For nodes with multiple jobs in the same cluster, the
+   :ad-attr:`ProcId` value is the one of the last job within the cluster.
+-  ``$RETURN`` variable evaluates to the return value of the HTCondor job,
+   if there is a single job within a cluster. With multiple jobs within the
+   same cluster, the value will be 0 if all jobs within the cluster are
+   successful. Otherwise, the value is the exit value of the first job in
+   the cluster to write a terminate event.
+
+   A job that dies due to a signal is reported with a ``$RETURN`` value
+   representing the additive inverse of the signal number. For example,
+   SIGKILL (signal 9) is reported as -9. A job whose batch system
+   submission fails is reported as -1001. A job that is externally
+   removed from the batch system queue (by something other than
+   :tool:`condor_dagman`) is reported as -1002.
+-  ``$PRE_SCRIPT_RETURN`` variable evaluates to the return value of the
+   PRE script of a node, if there is one. If there is no PRE script, this
+   value will be -1. If the node job was skipped because of failure of
+   the PRE script, the value of ``$RETURN`` will be -1004 and this will
+   evaluate to the exit value of the PRE script.
+
+Node Submit Descriptions
+------------------------
 
 .. sidebar:: Example Diamond DAG Using Inline Descriptions
 
@@ -216,8 +470,6 @@ Instead of using a submit description file, you can alternatively include an
 inline submit description directly inside the .dag file. An inline submit
 description should be wrapped in ``{`` and ``}`` braces, with each argument
 appearing on a separate line, just like the contents of a regular submit file.
-Using the previous diamond-shaped DAG example, the diamond.dag file would look
-like this:
 
 This can be helpful when trying to manage lots of submit descriptions, so they
 can all be described in the same file instead of needed to regularly shift
@@ -230,7 +482,7 @@ SUBMIT-DESCRIPTION command
 
 In addition to declaring inline submit descriptions as part of a job, they
 can be declared independently of jobs using the *SUBMIT-DESCRIPTION* command.
-This can be helpful to reduce the size and readability of a .dag file when
+This can be helpful to reduce the size and readability of a ``.dag`` file when
 many nodes are running the same job.
 
 A *SUBMIT-DESCRIPTION* can be defined using the following syntax:
@@ -247,6 +499,15 @@ not used by any of the jobs. It can then be linked to a job as follows:
 .. code-block:: condor-dagman
 
     JOB JobName DescriptionName
+
+.. note::
+
+    Both inline submit descriptions and the SUBMIT-DESCRIPTION command
+    don't allow a queue statement resulting in only a single instance
+    of the job being submitted to HTCondor.
+
+    Both inline submit descriptions and the SUBMIT_DESCRIPTION command
+    can only be used when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``True``.
 
 .. sidebar:: Example Diamond DAG Using SUBMIT-DESCRIPTION Command
 
@@ -273,38 +534,32 @@ not used by any of the jobs. It can then be linked to a job as follows:
         PARENT A CHILD B C
         PARENT B C CHILD D
 
-.. mermaid::
-    :caption: One SUBMIT-DESCRIPTION Applied to Multiple Nodes
-    :align: center
-
-    classDiagram
-     DiamondDesc --|> A
-     DiamondDesc --|> B
-     DiamondDesc --|> C
-     DiamondDesc --|> D
-     class DiamondDesc{
-         executable   = /path/diamond.exe
-         output       = diamond.out.$(cluster)
-         error        = diamond.err.$(cluster)
-         log          = diamond_condor.log
-         universe     = vanilla
-         request_cpus   = 1
-         request_memory = 1024M
-         request_disk   = 10240K
-     }
-
-.. note::
-
-    Both inline submit descriptions and the SUBMIT-DESCRIPTION command
-    don't allow a queue statement resulting in only a single instance
-    of the job being submitted to HTCondor.
-
 :index:`node job submit description file<single: DAGMan; Node job submit description file>`
 
 External File Descriptions
 ''''''''''''''''''''''''''
 
-.. sidebar:: Example Diamond DAG Using External Submit Descriptions
+Each node in a DAG may use a submit description file like one that a user may
+use in to submit via :tool:`condor_submit`.
+
+.. code-block:: console
+
+    $ condor_submit submit_file.sub
+
+A key limitation is that each HTCondor submit description file must submit
+jobs described by a single cluster number; DAGMan cannot deal with a
+submit description file producing multiple job clusters.
+
+DAGMan does allow the submission of multi-proc job clusters when submitting
+a node job described in an external file. However, it is recommended that a
+node job only contains a single proc to the cluster because multi-proc nodes
+will have there entire job removed by DAGMan if a single proc fails.
+
+Since each node uses the same HTCondor submit description file, this implies
+that each node within the DAG runs the same job. The ``$(Cluster)`` macro
+produces unique file names for each job’s output because each node is it's own cluster.
+
+.. sidebar:: Example Diamond DAG Using External Submit File
 
     .. code-block:: condor-submit
 
@@ -331,29 +586,25 @@ External File Descriptions
         PARENT A CHILD B C
         PARENT B C CHILD D
 
-Each node in a DAG may use a unique submit description file. A key
-limitation is that each HTCondor submit description file must submit
-jobs described by a single cluster number; DAGMan cannot deal with a
-submit description file producing multiple job clusters.
+DAGMan Specific Information Macros
+''''''''''''''''''''''''''''''''''
 
-Consider again the diamond-shaped DAG example, where each node job uses
-the same submit description file. Since each node uses the same HTCondor
-submit description file, this implies that each node within the DAG runs
-the same job. The ``$(Cluster)`` macro produces unique file names for each
-job's output.
+When submitting a node job on behalf of the user, DAGMan will create custom
+submit description macros that the job can utilize for make descisions. The
+following macros are referencable by the job submit description:
 
-:index:`job ClassAd attribute<single: job ClassAd attribute; DAGParentNodeNames>`
+- **JOB**: The node name of which this job belongs.
+- **RETRY**: The current retry attempt number. First execution is 0.
+- **FAILED_COUNT**: The current number of failed nodes in the DAG
+  (Intended for Final nodes).
 
-The job ClassAd attribute :ad-attr:`DAGParentNodeNames` is also available for
-use within the submit description file. It defines a comma separated
-list of each *JobName* which is a parent node of this job's node. This
-attribute may be used in the :subcom:`arguments[and DAGman]`
-command for all but scheduler universe jobs. For example, if the job has two
-parents, with *JobName*\ s B and C, the submit description file command
+DAGMan will also add the following information to the jobs ClassAd:
 
-.. code-block:: condor-submit
+- :ad-attr:`DAGManJobId`: Job-Id of the DAGMan job that submitted this job.
+- :ad-attr:`DAGNodeName`: The node name of which this job belongs.
+- :ad-attr:`DAGManNodeRetry`: The nodes current retry number. First execution is 0.
+  This is only included if :macro:`DAGMAN_NODE_RECORD_INFO` inlcudes ``Retry``.
+- :ad-attr:`DAGParentNodeNames`: List of parent node names. Note depending on the number
+  of parent nodes this may be left empty.
+- :ad-attr:`DAG_Status`: Current DAG status (Intended for Final Nodes).
 
-    arguments = $$([DAGParentNodeNames])
-
-will pass the string ``"B,C"`` as the command line argument when
-invoking the job.
