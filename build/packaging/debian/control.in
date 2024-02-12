@@ -49,7 +49,7 @@ Build-Depends: cmake (>= 3.16),
                voms-dev,
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
-Standards-Version: 4.6.1
+Standards-Version: 4.6.2
 Vcs-Browser: https://github.com/htcondor/htcondor
 Vcs-Git: git://github.com/htcondor/htcondor.git
 Homepage: https://htcondor.org/
