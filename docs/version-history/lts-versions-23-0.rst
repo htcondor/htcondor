@@ -32,7 +32,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that prevented the use of ftp: urls in the file
+  transfer plugin.
+  :jira:`2273`
+
 
 .. _lts-version-history-2305:
 
@@ -70,10 +73,6 @@ Bugs Fixed:
 - Fixed a bug that caused a crash if a configuration file or submit
   description file contained an empty multi-line value.
   :jira:`2249`
-
-- Fixed a bug that prevented the use of ftp: urls in the file
-  transfer plugin.
-  :jira:`2273`
 
 - Fixed error handing for the ``-format`` and ``-autoformat`` options of
   the *condor_qusers* tool when the argument to those options was not a valid
