@@ -72,18 +72,10 @@ logger.setLevel(logging.DEBUG)
 #     so we could skip it in the shadow tests, but it won't hurt to
 #     double-check, and if (1) fails but (4) succeeds, that probably
 #     means we have an interesting problem....
-#   * We should be able to check (5) by looking at the epoch log: in order
-#     test (4), the job will have to have been evicted, which will write
-#     its CommittedTime to the epoch log.  Any test which is evicted
-#     immediately after a failure to upload should have a CommittedTime
-#     that's much smaller than the amount of time since the start of that
-#     epoch (which is a different job ad attribute, like ActivationStartTime);
-#     to check the contrapositive, the jobs which are evicted immediately
-#     after a successful upload should have a CommittedTime very similar
-#     to the time since the beginning of the epoch.  In both cases, this
-#     only applies to the first epoch -- although one could compare instead
-#     to the difference in CommittedTime between epochs, if that proved
-#     desirable.
+#   * We should be able to check (5) by looking at the epoch log, because
+#     all jobs evict themselves after their first upload failure.  For
+#     simplicity, we'll only look at the test cases whose first checkpoint
+#     fails, because then we know the CommittedTime should be 0.
 #
 
 TEST_CONFIGS = {
@@ -108,7 +100,7 @@ TEST_CONFIGS = {
 ONE_TEST_CASES = {
     "b": {
         "expected_checkpoints":     ["0000", "0002"],
-        "checkpoint_count":         4,
+        "checkpoint_count":         3,
     },
 }
 
@@ -119,26 +111,11 @@ TEST_CASES = {
     },
     "b": {
         "expected_checkpoints":     ["0000", "0002"],
-        # If we say there are only  three checkpoints, then the job
-        # evicts itself immediately after a failed upload, meaning that
-        # it checkpoints itself one more tme than it would otherwise
-        # (because the failed upload means it has to repeat a step);
-        # this screws up our expected numbering.
-        #
-        # If we say there are four checkpoints, we don't evict instead of
-        # writing a successful checkpoint '0002'; instead we evict after,
-        # before writing checkpoint '0003'.  However, since we expect
-        # that one not to be there, it's OK that it was never written
-        # rather than written and then deleted (like '0001').
-        "checkpoint_count":         4,
+        "checkpoint_count":         3,
     },
     "c1": {
         "expected_checkpoints":     ["0001", "0003"],
-        # See the comment for test case b, above.  Arguably, we should
-        # be specifying "how many iterations" and "which iteration to
-        # evict on" separately, but I think these tests cover all the
-        # cases anyway.
-        "checkpoint_count":         5,
+        "checkpoint_count":         4,
     },
     "c2": {
         "expected_checkpoints":     ["0000", "0002"],
@@ -195,6 +172,7 @@ def path_to_the_job_script(test_dir, the_condor):
         pass
 
     count +=1
+    time.sleep(1)
 
     jobID = sys.argv[1]
     expected_checkpoints = sys.argv[2]
@@ -233,7 +211,14 @@ def path_to_the_job_script(test_dir, the_condor):
     epoch = int(rv.stdout.decode('utf-8').strip())
 
     print(f"epoch {epoch}")
-    if count >= num_checkpoints and epoch == 0:
+    should_evict = False
+    if epoch == 0 and not the_count in expected_checkpoints:
+        should_evict = True
+    the_previous_count = f"{(checkpoint_number-1):04}"
+    if epoch == 1 and the_previous_count in expected_checkpoints:
+        should_evict = True
+
+    if should_evict:
         print("evicting myself...", flush=True)
         rv = subprocess.run(
             ["condor_vacate_job", jobID],
@@ -454,9 +439,8 @@ def the_transfers(test_dir, the_completed_job_ad, the_condor):
                         # to a URL as CEDAR downloads.
                         #
                         # The upshot of this disaster is that even adding
-                        # which subsystem logged [FIXME: set STARTER.xyz?]
-                        # the transfer doesn't let me figure out what
-                        # actually happened.
+                        # which subsystem logged to the transfer doesn't
+                        # let me figure out what actually happened.
                         #
                         # Instead, I'm going to look for the starter's records
                         # of downloaded MANIFEST files, and declare those to be
@@ -546,9 +530,11 @@ def the_preen_directory(the_removed_job, the_target_directory, the_condor, test_
 
 
 @action
-def the_epoch_log(the_condor, the_completed_job):
-    # FIXME
-    pass
+def the_epoch_log(the_condor, the_completed_job_ad, the_removed_job):
+    schedd = the_condor.get_local_schedd()
+    globalJobID = the_completed_job_ad["GlobalJobID"]
+    constraint = f'globalJobID == "{globalJobID}"'
+    return [ad for ad in schedd.jobEpochHistory(constraint, [])]
 
 
 class TestPartialUploads:
@@ -604,12 +590,20 @@ class TestPartialUploads:
 
 
     # Test (5).
-    @pytest.mark.skip
     def test_committed_time(self,
-        the_epoch_log
+        the_job_name,
+        the_epoch_log,
+        the_expected_checkpoints
     ):
-        # FIXME
-        pass
+        if '0000' in the_expected_checkpoints:
+            pytest.skip('for simplicitly, check only for 0 committed time')
+            return
+
+        first_epoch_ad = list(reversed(the_epoch_log))[0]
+        assert first_epoch_ad['CommittedTime'] == 0
+
+        # for ad in reversed(the_epoch_log):
+        #   print(f"{ad['ClusterID']}.{ad['ProcID']}: {ad['CommittedTime']}")
 
 
 # Copied from test_checkpoint_destination, and modified to fail to upload
