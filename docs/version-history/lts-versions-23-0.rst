@@ -36,6 +36,9 @@ Bugs Fixed:
   transfer plugin.
   :jira:`2273`
 
+- Fixed bug where the Shadow failed to write its job ad to :macro:`JOB_EPOCH_HISTORY`
+  when it failed to reconnect to the Starter.
+  :jira:`2289`
 
 .. _lts-version-history-2305:
 
