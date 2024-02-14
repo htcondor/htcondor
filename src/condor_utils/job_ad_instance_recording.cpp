@@ -150,6 +150,7 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info){
 	formatstr(banner,"*** EPOCH ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
 					 info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
 	if (info.buffer.back() != '\n') { info.buffer += '\n'; }
+	info.buffer += "EpochWriteTime = " + std::to_string(currentTime) + "\n";
 	info.buffer += banner;
 	if (info.buffer.empty())
 		return false;
