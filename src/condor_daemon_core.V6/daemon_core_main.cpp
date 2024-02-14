@@ -819,6 +819,7 @@ DaemonCore::kill_immediate_children() {
 			continue;
 		}
 		if (pid_entry->cleanup_signal == 0) {
+			dprintf(D_FULLDEBUG, "Daemon not killing child pid %d at exit\n", pid_entry->pid);
 			continue;
 		}
 		dprintf( D_ALWAYS, "Daemon exiting before all child processes gone; killing %d\n", pid_entry->pid );
