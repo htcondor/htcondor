@@ -1,3 +1,5 @@
+.. _DAG node success:
+
 Node Success/Failure
 ====================
 

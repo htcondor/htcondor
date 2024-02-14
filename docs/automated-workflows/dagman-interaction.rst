@@ -245,6 +245,8 @@ HTCondor queue.
 
 :index:`suspending a running DAG<single: DAGMan; Suspending a running DAG>`
 
+.. _Suspending a DAG:
+
 Suspending a Running DAG
 ------------------------
 
