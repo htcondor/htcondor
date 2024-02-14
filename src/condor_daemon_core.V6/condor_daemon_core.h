@@ -876,6 +876,11 @@ class DaemonCore : public Service
     int Was_Not_Responding(pid_t pid);
     int Got_Alive_Messages(pid_t pid, bool & not_responding); // returns number of DC_CHILDALIVE messages received
 
+	/* What signal should be sent to the given child pid when the current
+	 * daemon exits? Default is SIGKILL. 0 means no signal is sent.
+	 */
+	void Set_Cleanup_Signal(pid_t pid, int signum);
+
 	//@}
 
 	/** @name Socket events.
@@ -2099,6 +2104,7 @@ class DaemonCore : public Service
         int is_local;
         int parent_is_local;
         int reaper_id;
+        int cleanup_signal;
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
         std::string* pipe_buf[3];  // Buffers for data written to DC std pipes.
         int stdin_offset;
