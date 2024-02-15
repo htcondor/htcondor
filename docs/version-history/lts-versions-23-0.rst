@@ -40,6 +40,10 @@ Bugs Fixed:
   when it failed to reconnect to the Starter.
   :jira:`2289`
 
+- Fixed a bug that caused **ssh-agent** processes to be leaked when
+  using *grid* universe remote batch job submision over SSH.
+  :jira:`2286`
+
 .. _lts-version-history-2305:
 
 Version 23.0.5
