@@ -574,6 +574,10 @@ Job::CanAddParent( Job* parent, std::string &whynot )
 		whynot = "Tried to add a parent to a Final node";
 		return false;
 	}
+	if (GetType() == NodeType::PROVISIONER) {
+		whynot = "Tried to add parent to the Provisioner node";
+		return false;
+	}
 	if( GetType() == NodeType::SERVICE ) {
 		whynot = "Tried to add a parent to a SERVICE node";
 		return false;
