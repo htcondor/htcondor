@@ -32,6 +32,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where DAGMan would crash when the provisioner node was
+  given a parent node.
+  :jira:`2291`
+
 - Fixed a bug that prevented the use of ftp: urls in the file
   transfer plugin.
   :jira:`2273`
