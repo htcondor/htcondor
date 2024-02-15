@@ -36,6 +36,10 @@ Bugs Fixed:
   transfer plugin.
   :jira:`2273`
 
+- Fixed bug where the Shadow failed to write its job ad to :macro:`JOB_EPOCH_HISTORY`
+  when it failed to reconnect to the Starter.
+  :jira:`2289`
+
 - Fixed a bug that caused **ssh-agent** processes to be leaked when
   using *grid* universe remote batch job submision over SSH.
   :jira:`2286`
