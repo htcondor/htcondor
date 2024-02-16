@@ -24,7 +24,7 @@ For a Pool with Static Slots
 
 HTCondor uses static slots by default.
 
-.. code-block::
+.. code-block:: condor-config
 
     NEGOTIATOR_PRE_JOB_RANK = isUndefined(RemoteOwner) * (- SlotId)
 
@@ -47,13 +47,13 @@ depth-first filling of machines.
 On the schedd, make the following configuration change.
 This requires a ``condor_reconfig`` of the schedd to take effect.
 
-.. code-block::
+.. code-block:: condor-config
 
     CLAIM_PARTITIONABLE_LEFTOVERS = false
 
 Then on the central manager, make the following configuration change.
 This requires a ``condor_reconfig`` of the negotiator to take effect.
 
-.. code-block::
+.. code-block:: condor-config
 
     NEGOTIATOR_DEPTH_FIRST = false

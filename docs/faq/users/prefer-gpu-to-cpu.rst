@@ -1,7 +1,7 @@
 Example: Run a Job on a CPU if a GPU is not Available
 =====================================================
 
-.. code-block::
+.. code-block:: condor-submit
 
     ## Magic section: don't change anything in this section unless you
     ## understand why it works.
