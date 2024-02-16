@@ -8,7 +8,8 @@
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
-
+#include "dc_coroutines.h"
+#include "checkpoint_cleanup_utils.h"
 
 bool
 fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, std::string & argl, std::string & error ) {

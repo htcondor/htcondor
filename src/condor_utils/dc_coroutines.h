@@ -159,4 +159,11 @@ namespace dc {
 } // end namespace dc
 } // end namespace condor
 
+
+condor::dc::void_coroutine
+spawnCheckpointCleanupProcessWithTimeout(
+    int cluster, int proc, ClassAd * jobAd, time_t timeout
+);
+
+
 #endif /* defined(_CONDOR_DC_COROUTINES_H) */

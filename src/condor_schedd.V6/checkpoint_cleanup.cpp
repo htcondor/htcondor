@@ -9,40 +9,8 @@
 #include "scheduler.h"
 #include "qmgmt.h"
 
-#include "checkpoint_cleanup_utils.h"
-
 #include "dc_coroutines.h"
-using namespace condor;
-
-
-dc::void_coroutine
-spawnCheckpointCleanupProcessWithTimeout( int cluster, int proc, ClassAd * jobAd, time_t timeout ) {
-	dc::AwaitableDeadlineReaper logansRun;
-
-	std::string error;
-	int spawned_pid = -1;
-	bool rv = spawnCheckpointCleanupProcess(
-		cluster, proc, jobAd, logansRun.reaper_id(),
-		spawned_pid, error
-	);
-	if(! rv) { co_return /* false */; }
-
-	logansRun.born( spawned_pid, timeout );
-	auto [pid, timed_out, status] = co_await( logansRun );
-	// This pointer could have been invalidated while we were co_await()ing.
-	jobAd = NULL;
-
-	if( timed_out ) {
-		daemonCore->Shutdown_Graceful( pid );
-		dprintf( D_TEST, "checkpoint clean-up proc %d timed out after %ld seconds\n", pid, timeout );
-		// This keeps the awaitable deadline reaper alive until the process
-		// we just killed is reaped, which prevents a log message about an
-		// unknown process dying.
-		co_await( logansRun );
-	} else {
-		dprintf( D_TEST, "checkpoint clean-up proc %d returned %d\n", pid, status );
-	}
-}
+#include "checkpoint_cleanup_utils.h"
 
 
 void
