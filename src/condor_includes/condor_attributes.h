@@ -103,6 +103,7 @@
 #define ATTR_AUTO_CLUSTER_ATTRS  "AutoClusterAttrs"
 #define ATTR_EDITED_CLUSTER_ATTRS "EditedClusterAttrs"
 #define ATTR_COMPLETION_DATE  "CompletionDate"
+#define ATTR_JOB_EPOCH_WRITE_DATE "EpochWriteDate"
 #define ATTR_MATCHED_CONCURRENCY_LIMITS  "MatchedConcurrencyLimits"
 #define ATTR_MATCHED_PSG  "Matched_PSG"
 #define ATTR_CONCURRENCY_LIMITS  "ConcurrencyLimits"
