@@ -826,7 +826,7 @@ default=$(RELEASE_DIR)/include
 type=path
 
 [ETC]
-default=$(RELEASE_DIR)/etc
+default=$(LOCAL_DIR)
 type=path
 
 [XAUTHORITY_USERS]
@@ -2493,13 +2493,13 @@ type=path
 tags=store_cred
 
 [SEC_PASSWORD_DIRECTORY]
-default=/etc/condor/passwords.d
+default=$(ETC)/passwords.d
 win32_default=$(RELEASE_DIR)\tokens.sk
 type=path
 tags=store_cred
 
 [SEC_TOKEN_SYSTEM_DIRECTORY]
-default=/etc/condor/tokens.d
+default=$(ETC)/tokens.d
 win32_default=$(RELEASE_DIR)\tokens.d
 type=path
 tags=condor_auth_passwd
@@ -2629,14 +2629,14 @@ type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_AUTOGENERATE_CERTFILE]
-default=/etc/condor/hostcert.pem
+default=$(ETC)/hostcert.pem
 win32_default=
 description=Location of the auto-generated host X509 certificate
 type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_AUTOGENERATE_KEYFILE]
-default=/etc/condor/hostkey.pem
+default=$(ETC)/hostkey.pem
 win32_default=
 description=Location of the auto-generated host private key
 type=path
@@ -2674,19 +2674,19 @@ win32_default=false
 type=bool
 
 [TRUST_DOMAIN_CAFILE]
-default=/etc/condor/trust_domain_ca.pem
+default=$(ETC)/trust_domain_ca.pem
 win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [TRUST_DOMAIN_CAKEY]
-default=/etc/condor/trust_domain_ca_privkey.pem
+default=$(ETC)/trust_domain_ca_privkey.pem
 win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [SEC_SYSTEM_KNOWN_HOSTS]
-default=/etc/condor/known_hosts
+default=$(ETC)/known_hosts
 win32_default=$(LOCAL_DIR)\known_hosts
 type=path
 tags=io
@@ -4899,7 +4899,7 @@ type=string
 tags=condor_config
 
 [GANGLIAD_METRICS_CONFIG_DIR]
-default=/etc/condor/ganglia.d
+default=$(ETC)/ganglia.d
 type=path
 description=Ganglia metric config dir
 tags=condor_config
