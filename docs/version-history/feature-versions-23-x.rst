@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- When the :subcom:`docker_network_type` is set to host, docker universe
+  now sets the hostname inside the container to the same as the host,
+  to ease networking from inside the container to outside the container.
+  :jira:`2294`
 
 Bugs Fixed:
 

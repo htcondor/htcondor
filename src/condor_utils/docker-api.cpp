@@ -165,12 +165,6 @@ int DockerAPI::createContainer(
 	if (param_boolean("DOCKER_RUN_UNDER_INIT", true)) {
 		runArgs.AppendArg("--init");
 	}
-
-	// Give the container a useful name
-	std::string hname = makeHostname(&machineAd, &jobAd);
-	runArgs.AppendArg("--hostname");
-	runArgs.AppendArg(hname.c_str());
-
 		// Now the container name
 	runArgs.AppendArg( "--name" );
 	runArgs.AppendArg( containerName );
@@ -310,8 +304,10 @@ int DockerAPI::createContainer(
 
 	std::string networkType;
 	jobAd.LookupString(ATTR_DOCKER_NETWORK_TYPE, networkType);
+	bool setHostname = true;
 	if (networkType == "host") {
 		runArgs.AppendArg("--network=host");
+		setHostname = false;
 	} else if (networkType == "none") {
 		runArgs.AppendArg("--network=none");
 	} else if (networkType == "nat") {
@@ -333,6 +329,14 @@ int DockerAPI::createContainer(
 			return -1;
 		}
 	} 
+
+	// Give the container a useful name, but not if using host networking
+	if (setHostname) {
+		std::string hname = makeHostname(&machineAd, &jobAd);
+		runArgs.AppendArg("--hostname");
+		runArgs.AppendArg(hname.c_str());
+	}
+
 
 	// Handle port forwarding.
 	std::string containerServiceNames;
