@@ -47,7 +47,7 @@ Bugs Fixed:
 - Fixed a bug where the Shadow would not write a job termination event to
   the job log for a completed job if the Shadow failed to reconnect to the
   Starter prior to completed cleanup. This would result in DAGMan workflows
-  being stuch waiting forever for jobs to finish.
+  being stuck waiting forever for jobs to finish.
   :jira:`2292`
 
 - Fixed a bug that caused **ssh-agent** processes to be leaked when
