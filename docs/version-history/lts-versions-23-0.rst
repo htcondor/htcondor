@@ -44,6 +44,13 @@ Bugs Fixed:
   when it failed to reconnect to the Starter.
   :jira:`2289`
 
+- Fixed a bug where the *condor_shadow* would not write a job
+  termination event to the job log for a completed job if the
+  *condor_shadow* failed to reconnect to the *condor_starter* prior
+  to completing cleanup. This would result in DAGMan workflows being
+  stuck waiting forever for jobs to finish.
+  :jira:`2292`
+
 - Fixed a bug that caused **ssh-agent** processes to be leaked when
   using *grid* universe remote batch job submision over SSH.
   :jira:`2286`
