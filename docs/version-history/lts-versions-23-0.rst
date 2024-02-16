@@ -44,6 +44,12 @@ Bugs Fixed:
   when it failed to reconnect to the Starter.
   :jira:`2289`
 
+- Fixed a bug where the Shadow would not write a job termination event to
+  the job log for a completed job if the Shadow failed to reconnect to the
+  Starter prior to completed cleanup. This would result in DAGMan workflows
+  being stuch waiting forever for jobs to finish.
+  :jira:`2292`
+
 - Fixed a bug that caused **ssh-agent** processes to be leaked when
   using *grid* universe remote batch job submision over SSH.
   :jira:`2286`
