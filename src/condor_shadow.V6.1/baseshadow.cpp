@@ -419,6 +419,8 @@ BaseShadow::reconnectFailed( const char* reason )
 		int exit_reason = getExitReason();
 		if (exit_reason == -1) {
 			exit_reason = JOB_SHOULD_REQUEUE;
+		} else if ( jobCompleted() ) {
+			logTerminateEvent( exit_reason );
 		}
 		dprintf(D_ALWAYS,"Exiting with %d\n", exit_reason);
 		// does not return

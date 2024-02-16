@@ -201,6 +201,8 @@ class UniShadow : public BaseShadow
 
 	virtual void logReconnectFailedEvent( const char* reason );
 
+	virtual bool jobCompleted( void );
+
  private:
 	RemoteResource *remRes;
 	std::unique_ptr<ShadowHookMgr> m_hook_mgr;

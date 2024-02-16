@@ -450,6 +450,9 @@ class BaseShadow : public Service
 
 	virtual void emailTerminateEvent( int exitReason, update_style_t kind = US_NORMAL ) = 0;
 
+		/*	Check if the job has exited and remote resource is finished*/
+	virtual bool jobCompleted( void ) = 0;
+
 	void startdClaimedCB(DCMsgCallback *cb);
 	bool m_lazy_queue_update;
 

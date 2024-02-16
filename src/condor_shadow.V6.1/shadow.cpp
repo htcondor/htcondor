@@ -452,6 +452,24 @@ UniShadow::exitCode( void )
 }
 
 
+bool
+UniShadow::jobCompleted( void )
+{
+	bool jobExited = false;
+
+	switch ( getExitReason() ) {
+		case JOB_EXITED:
+		case JOB_EXITED_AND_CLAIM_CLOSING:
+			jobExited = true;
+			break;
+		default:
+			break;
+	}
+
+	return jobExited && remRes->getResourceState() == RR_FINISHED;
+}
+
+
 void
 UniShadow::resourceBeganExecution( RemoteResource* rr )
 {

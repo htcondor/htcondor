@@ -162,6 +162,8 @@ class ParallelShadow : public BaseShadow
 
 	virtual void logReconnectFailedEvent( const char* reason );
 
+	// TODO: Figure out logic for parallel shadow job completed state
+	virtual bool jobCompleted( void ) { return false; }
 
  private:
 
