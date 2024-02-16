@@ -341,7 +341,12 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ON_ERROR_RETURN( result );
+		if (!result) {
+			// This is the last RPC the starter sends before it closes
+			// up shop. It looks like closed the connection before we
+			// could send a reply. Just close our end of the conneciton.
+			thisRemoteResource->closeClaimSock();
+		}
 		return -1;
 	}
 
