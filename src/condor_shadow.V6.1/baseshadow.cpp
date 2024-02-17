@@ -405,6 +405,7 @@ BaseShadow::reconnectFailed( const char* reason )
 	dprintf( D_ALWAYS, "Reconnect FAILED: %s\n", reason );
 	
 	logReconnectFailedEvent( reason );
+	writeJobEpochFile(getJobAd());
 
 		// if the shadow was born disconnected, exit with 
 		// JOB_RECONNECT_FAILED so the schedd can make 

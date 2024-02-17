@@ -570,13 +570,19 @@ Job::CanAddParent( Job* parent, std::string &whynot )
 		whynot = "parent == NULL";
 		return false;
 	}
-	if( GetType() == NodeType::FINAL ) {
-		whynot = "Tried to add a parent to a Final node";
-		return false;
-	}
-	if( GetType() == NodeType::SERVICE ) {
-		whynot = "Tried to add a parent to a SERVICE node";
-		return false;
+
+	switch(GetType()) {
+		case NodeType::FINAL:
+			whynot = "Tried to add a parent to a Final node";
+			return false;
+		case NodeType::PROVISIONER:
+			whynot = "Tried to add parent to the PROVISIONER node";
+			return false;
+		case NodeType::SERVICE:
+			whynot = "Tried to add a parent to a SERVICE node";
+			return false;
+		default:
+			break;
 	}
 
 		// we don't currently allow a new parent to be added to a
@@ -596,17 +602,18 @@ Job::CanAddParent( Job* parent, std::string &whynot )
 
 bool Job::CanAddChildren(std::forward_list<Job*> & children, std::string &whynot)
 {
-	if ( GetType() == NodeType::FINAL ) {
-		whynot = "Tried to add a child to a final node";
-		return false;
-	}
-	if ( GetType() == NodeType::PROVISIONER ) {
-		whynot = "Tried to add a child to a provisioner node";
-		return false;
-	}
-	if ( GetType() == NodeType::SERVICE ) {
-		whynot = "Tried to add a child to a SERVICE node";
-		return false;
+	switch(GetType()) {
+		case NodeType::FINAL:
+			whynot = "Tried to add a child to a Final node";
+			return false;
+		case NodeType::PROVISIONER:
+			whynot = "Tried to add child to the PROVISIONER node";
+			return false;
+		case NodeType::SERVICE:
+			whynot = "Tried to add a child to a SERVICE node";
+			return false;
+		default:
+			break;
 	}
 
 	for (auto child : children) {

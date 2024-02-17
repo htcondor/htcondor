@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "condor_attributes.h"
 #include "basename.h"
 #include "classadHistory.h"
 #include "directory.h" // for StatInfo
@@ -152,6 +153,7 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 	formatstr(banner,"*** %s ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
 					 banner_name, info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
 	if (info.buffer.back() != '\n') { info.buffer += '\n'; }
+	info.buffer += std::string(ATTR_JOB_EPOCH_WRITE_DATE) + " = " + std::to_string(currentTime) + "\n";
 	info.buffer += banner;
 	if (info.buffer.empty())
 		return false;
