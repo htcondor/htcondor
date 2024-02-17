@@ -17,14 +17,14 @@ The details of each version are described below.
 
 .. _lts-version-history-2307:
 
-Version 23.0.7
+Version 23.0.8
 --------------
 
 Release Notes:
 
-.. HTCondor version 23.0.7 released on Month Date, 2024.
+.. HTCondor version 23.0.8 released on Month Date, 2024.
 
-- HTCondor version 23.0.7 not yet released.
+- HTCondor version 23.0.8 not yet released.
 
 New Features:
 
