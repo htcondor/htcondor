@@ -620,7 +620,7 @@ of a crash, no jobs will be lost on a restart.  The cost of this reliability,
 though, is relatively high.  In addition to writing to the disk, the schedd
 uses the fsync system call to force all the data onto the disk. By default,
 this file named job_queue.log is written to the :macro:`SPOOL` directory.
-However, if the :macro:`JOB_QUEUE_LOG` will override this path.  Setting
+However, the configuration option :macro:`JOB_QUEUE_LOG` will override this path.  Setting
 :macro:`JOB_QUEUE_LOG` to point to a file on a solid state or nvme drive will
 make the schedd faster.  Ideally, this path should be on a filesystem that only
 holds this file.
