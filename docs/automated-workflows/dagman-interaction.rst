@@ -59,7 +59,7 @@ Single Submission of Multiple, Independent DAGs
 
         $ condor_submit_dag A.dag B.dag C.dag
 
-Multiple indepent DAGs described in various DAG input files can be submitted
+Multiple independent DAGs described in various DAG input files can be submitted
 in a single instance of :tool:`condor_submit_dag` resulting in one :tool:`condor_dagman`
 job managing all DAGs. This is done by internally combining all independent
 DAGs into one large DAG with no inter-dependencies between the individual
@@ -118,7 +118,7 @@ DAGMan proper Job Id.
     $ condor_q <dagman-job-id> -af Attribute-1 ... Attribute-N
     $ condor_q -l <dagman-job-id>
 
-A large amount of information about DAG progess and errors can be found in
+A large amount of information about DAG progress and errors can be found in
 the debug log file named ``<DAG Input File>.dagman.out``. This file should
 be saved if errors occur. This file also doesn't get removed between DAG
 new executions, and all logged messages are appended to the file.
@@ -418,7 +418,7 @@ DAGs with large number of jobs to manage:
         ...
         JOB job999 job999.sub
 
-    The benefit of this method is the indiviual jobs can easily be submitted
+    The benefit of this method is the individual jobs can easily be submitted
     separately at any time but at the cost of producing ``n`` unique files
     that need to be stored and managed.
 
@@ -472,7 +472,7 @@ DAGMan Throttling
 
 To prevent possible overloading of the *condor_schedd* and resources on the
 Access Point that :tool:`condor_dagman` executes on, DAGMan comes with built
-in capabilites to help throttle/limit the load on the Access Point.
+in capabilities to help throttle/limit the load on the Access Point.
 
 :index:`throttling<single: DAGMan; Throttling>`
 
@@ -480,7 +480,7 @@ Throttling at DAG Submission
 ''''''''''''''''''''''''''''
 
 #. Total nodes/clusters:
-    The total number of DAG nodes that can be subitted to the HTCondor queue at a time.
+    The total number of DAG nodes that can be submitted to the HTCondor queue at a time.
     This is specified either at submit time via :tool:`condor_submit_dag`\s **-maxjobs**
     option or via the configuration option :macro:`DAGMAN_MAX_JOBS_SUBMITTED`.
 #. Idle procs:
