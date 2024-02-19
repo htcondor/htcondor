@@ -172,6 +172,8 @@ or all of the dependencies on separate lines:
     PARENT B CHILD D
     PARENT C CHILD D
 
+.. _DAG Node Scripts:
+
 Scripts
 -------
 

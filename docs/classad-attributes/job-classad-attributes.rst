@@ -2256,6 +2256,29 @@ rescue and be retained when a DAG is run via recovery mode.
     The total number of job processes within the DAG that have successfully
     completed.
 
+The following job ClassAd attributes appear in the job ClassAd for the
+:tool:`condor_dagman` job submitted under DAGMan. These values represent
+throttling limits active for the specified DAGMan workflow. Using :tool:`condor_qedit`
+to modify these value will take effect in the DAGMan workflow.
+
+:classad-attribute-def:`DAGMan_MaxJobs`
+    The maximum number of job clusters DAGMan will have submitted at any
+    point of time. This can be viewed as the max number of running Nodes
+    in a DAG since each Node has one cluster of jobs associated with it.
+
+:classad-attribute-def:`DAGMan_MaxIdle`
+    The maximum number of Idle job procs submitted by DAGMan. If this
+    number of passed upon submitting a Node job then DAGMan will pause
+    submitting new jobs.
+
+:classad-attribute-def:`DAGMan_MaxPreScripts`
+    The maximum number of PRE-Scripts DAGMan will execute at a single point
+    in time.
+
+:classad-attribute-def:`DAGMan_MaxPostScripts`
+    The maximum number of POST-Scripts DAGMan will execute at a single point
+    in time.
+
 The following job ClassAd attributes do not appear in the job ClassAd as
 kept by the *condor_schedd* daemon. They appear in the job ClassAd
 written to the job's execute directory while the job is running.
