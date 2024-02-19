@@ -20,6 +20,8 @@ working directory for a Rescue DAG. A Rescue DAG is has a file name ending in
 
 :index:`Rescue DAG<single: DAGMan; Rescue DAG>`
 
+.. _Rescue DAG:
+
 The Rescue DAG
 --------------
 

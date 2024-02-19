@@ -1,3 +1,5 @@
+.. _DAGMan VARS:
+
 Custom Variables for Nodes
 ==========================
 

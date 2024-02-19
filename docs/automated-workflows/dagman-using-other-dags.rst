@@ -589,6 +589,8 @@ argument will contain DIR specifications, so such a rescue DAG must be
 run without the *-usedagdir* argument. (Note that "full" rescue DAGs are
 no longer the default.)
 
+.. _DAG Splice Limitations:
+
 Splice Limitations
 ''''''''''''''''''
 
