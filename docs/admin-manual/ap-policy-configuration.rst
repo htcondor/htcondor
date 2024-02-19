@@ -571,3 +571,85 @@ See the :ref:`admin-manual/configuration-macros:condor_master configuration
 file macros` section for details relating to the configuration variables used
 to set timing and polling intervals.
 
+Performance Tuning of the AP
+----------------------------
+
+Of the three roles (AP, CM, EP) in a HTCondor system, the AP is the most common
+place performance tuning is done.  The CM is mostly stateless, and can
+typically scale out to very large pools without much additional work.  The EP
+daemons aren't resource intensive.  However, as the EP stores the state of all
+the jobs under its control, and persistently stores frequent updates to those
+jobs, it is not uncommon for the AP to exhaust system resources, like cpu, or
+disk and network bandwidth.
+
+Monitoring AP Performance
+'''''''''''''''''''''''''
+
+The *condor_schedd* is single threaded.  Practically, this means that it only
+does one thing at a time, and often when it may be "busy" doing that one thing,
+it is actually waiting on the system for some i/o to complete.  As such, it
+will rarely appear to use 100% of a cpu in any system monitoring tool.  To help
+guage how busy the schedd is, it keeps track of a metric called
+:ad-attr:`RecentDaemonCoreDutyCycle`.  This is a floating point value that
+ranges from 0.0 (completely idle) to 1.0 (competely busy).  Values over 0.95
+indicate the schedd is overloaded.  In extreme cases :tool:`condor_q` and
+:tool:`condor_submit` may timeout and fail trying to communicate to an
+overloaded schedd.  An administrator can see this attribute by running
+
+.. code-block:: console
+
+    $ condor_status -direct -schedd name-of-schedd -af RecentDaemonCoreDutyCycle
+
+
+Horizontal Scaling
+''''''''''''''''''
+
+While the *condor_schedd* and the machine it runs on can be tuned to handle a
+greater rate of jobs, every machine has some limit of jobs it can support.  The
+main strategy for supporting more jobs in the system as a whole is simply by
+running more schedds, or horizontal scaling.  This may require partitioning
+users onto differening submit machines, or submiting remotely, but at the end
+of the day, the best way to scale out a very large HTCondor system is by adding
+more *condor_schedd*'s.
+
+Putting the schedd's database on the fastest disk
+'''''''''''''''''''''''''''''''''''''''''''''''''
+
+The *condor_schedd* frequently saves state to a file on disk, so that in event
+of a crash, no jobs will be lost on a restart.  The cost of this reliability,
+though, is relatively high.  In addition to writing to the disk, the schedd
+uses the fsync system call to force all the data onto the disk. By default,
+this file named job_queue.log is written to the :macro:`SPOOL` directory.
+However, if the :macro:`JOB_QUEUE_LOG` will override this path.  Setting
+:macro:`JOB_QUEUE_LOG` to point to a file on a solid state or nvme drive will
+make the schedd faster.  Ideally, this path should be on a filesystem that only
+holds this file.
+
+Avoiding shared filesystems for event logs
+''''''''''''''''''''''''''''''''''''''''''
+
+Another type of file the *condor_schedd* frequently writes to are job event
+logs, those specified by the :subcom:`log` submit command.  When these are on
+NFS or other distributed or slow filesystems, the whole system can slow down
+tremendously.  If possible, encourage users not to put their event logs on such
+slow filesystems.
+
+Using third party (url / plugin) transfers when able
+''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+HTCondor can transfer user's sandboxes to the EP in many ways.  The default
+method, called HTCondor file transfer, or "cedar" file transfer, copies files
+from the AP to the EP.  Obviously, this uses cpu, disk and network bandwidth on
+the AP.  To the degree possible, changing large input file file transfers from
+cedar, to http transfers from some third party server, moves the load off of
+the AP, and onto an http server.  If one http server isn't sufficent there are
+many methods for scaling http servers to handle additional load.
+
+Limiting CPU or I/O bound procesing on the AP
+'''''''''''''''''''''''''''''''''''''''''''''
+
+The machine the *condor_schedd* runs on is typically a machine users can log
+into, to prepare and submit jobs.  Sometimes, users will start long-running,
+cpu or I/O heavy jobs on the submit machine, which can slow down the various
+HTCondor services on that machine.  We encourage admins to try to limit this,
+either by social pressure, or enforced by system limits on the user cpu.
