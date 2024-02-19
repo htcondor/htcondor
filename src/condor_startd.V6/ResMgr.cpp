@@ -1430,7 +1430,6 @@ ResMgr::compute_dynamic(bool for_update)
 
 	// refresh the main resource classad from the internal Resource members
 	walk( [](Resource * rip) { rip->refresh_classad_dynamic(); } );
-	walk( [](Resource * rip) { rip->refresh_classad_dynamic(); } );
 
 		// Now that we have an updated internal classad for each
 		// resource, we can "compute" anything where we need to
