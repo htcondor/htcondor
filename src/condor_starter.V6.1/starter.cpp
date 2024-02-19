@@ -53,7 +53,9 @@
 #include "condor_regex.h"
 #include "starter_util.h"
 #include "condor_random_num.h"
+#ifdef HAVE_DATA_REUSE_DIR
 #include "data_reuse.h"
+#endif
 #include "authentication.h"
 
 #include <sstream>
@@ -319,6 +321,7 @@ Starter::Config()
 		}
 	}
 
+#ifdef HAVE_DATA_REUSE_DIR
 	std::string reuse_dir;
 	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
 		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
@@ -328,6 +331,7 @@ Starter::Config()
 	} else {
 		m_reuse_dir.reset();
 	}
+#endif
 
 		// Tell our JobInfoCommunicator to reconfig, too.
 	jic->config();

@@ -316,12 +316,14 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	m_hook_keyword_initialized = false;
 #endif
 
+	const char * type_prefix = _parent ? "d" : (is_partitionable_slot() ? "p" : "");
 	if( r_attr->type_id() ) {
-		dprintf( D_ALWAYS, "New %smachine resource of type %d allocated\n",
-				 r_backfill_slot ? "backfill " : "",  r_attr->type_id() );
+		dprintf(D_ALWAYS, "New %s%sSlot of type %d allocated\n", r_backfill_slot ? "backfill " : "", type_prefix, r_attr->type_id() );
 	} else {
-		dprintf( D_ALWAYS, "New %smachine resource allocated\n", r_backfill_slot ? "backfill " : "");
+		dprintf(D_ALWAYS, "New %s%sSlot allocated\n", r_backfill_slot ? "backfill " : "", type_prefix);
 	}
+	tmp = "\t";
+	dprintf(D_ALWAYS, "%s\n", r_attr->cat_totals(tmp));
 
 #if 0 // TODO: maybe enable this? do we need to be agressive about this update?
 	// when we create a non-backfill d-slot will need to send the collector an update
@@ -402,7 +404,7 @@ Resource::clear_parent()
 		r_attr->unbind_DevIds(r_id, r_sub_id);
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
-		m_parent->refresh_classad_resources(resmgr->resourcesInUse());
+		resmgr->refresh_classad_resources(m_parent);
 		m_parent->update_needed(wf_dslotDelete);
 		// TODO: fold this code in to update_needed ?
 		resmgr->res_conflict_change(m_parent, true);
@@ -421,7 +423,7 @@ Resource::set_parent( Resource* rip )
 		// If we have a parent, we are dynamic
 		set_feature( DYNAMIC_SLOT );
 		*(m_parent->r_attr) -= *(r_attr);
-		m_parent->refresh_classad_resources(resmgr->resourcesInUse());
+		resmgr->refresh_classad_resources(m_parent);
 	}
 }
 
@@ -2499,8 +2501,7 @@ void Resource::publish_static(ClassAd* cap)
 		//if (cap == r_config_classad) { cap->Delete(ATTR_MY_CURRENT_TIME); }
 
 		// Put in cpu-specific attributes that can only change on reconfig
-		const ResBag * deduct = r_backfill_slot ? &resmgr->resourcesInUse() : nullptr;
-		r_attr->publish_static(cap, deduct);
+		resmgr->publish_static_slot_resources(this, cap);
 
 		// Put in machine-wide attributes that can only change on reconfig
 		resmgr->m_attr->publish_static(cap);
@@ -2704,7 +2705,7 @@ Resource::publish_dynamic(ClassAd* cap)
 	}
 
 	// Put in cpu-specific attributes (TotalDisk, LoadAverage)
-	r_attr->publish_dynamic(cap, nullptr);
+	r_attr->publish_dynamic(cap);
 
 	// Put in machine-wide dynamic attributes (Mips, OfflineGPUs)
 	resmgr->m_attr->publish_common_dynamic(cap);
@@ -3155,7 +3156,7 @@ void Resource::reconfig_latches()
 	}
 	// if we aren't at the end of the array, erase the remainder.
 	latches.erase(it, latches.end());
-	dump_latches(D_ZKM);
+	dump_latches(D_ZKM | D_VERBOSE);
 }
 
 void Resource::evaluate_latches()
@@ -3384,6 +3385,60 @@ Resource::acceptClaimRequest()
 	return accepted;
 }
 
+const char * Resource::analyze_match(
+	std::string & buf,
+	ClassAd* request_ad,
+	bool slot_requirements,
+	bool job_requirements)
+{
+	buf.reserve(1000);
+
+	if (slot_requirements) {
+		classad::References inline_attrs, target_refs;
+
+		inline_attrs.insert(ATTR_START);
+		inline_attrs.insert(ATTR_WITHIN_RESOURCE_LIMITS);
+
+		// print analysis
+		std::vector<ClassAd*> jobs; jobs.push_back(request_ad);
+		anaFormattingOptions fmt = { 100,
+			detail_analyze_each_sub_expr | detail_inline_std_slot_exprs | detail_smart_unparse_expr
+			| detail_suppress_tall_heading | detail_append_to_buf /* | detail_show_all_subexprs */,
+			"Requirements", "Slot", "Job" };
+		AnalyzeRequirementsForEachTarget(r_classad, ATTR_REQUIREMENTS, inline_attrs, jobs, buf, fmt);
+		chomp(buf); buf += "\n--------------------------\n";
+
+		// print relevent slot attrs
+		formatstr_cat(buf, "  Slot %s has the following attributes:\n", r_id_str);
+		ExprTree * tree = r_classad->LookupExpr(ATTR_START);
+		if (tree) {
+			buf += "    " ATTR_START " = ";
+			PrettyPrintExprTree(tree, buf, 4, 128);
+		}
+		if ( ! ends_with(buf, "\n")) buf += "\n";
+		tree = r_classad->LookupExpr(ATTR_WITHIN_RESOURCE_LIMITS);
+		if (tree) {
+			buf += "    " ATTR_WITHIN_RESOURCE_LIMITS " = ";
+			PrettyPrintExprTree(tree, buf, 4, 128);
+		}
+		if ( ! ends_with(buf, "\n")) buf += "\n";
+		AddReferencedAttribsToBuffer(r_classad, ATTR_REQUIREMENTS, inline_attrs, target_refs, true, "    ", buf);
+
+		// print targeted job attrs
+		std::string temp, target_name;
+		if (AddTargetAttribsToBuffer(target_refs, r_classad, request_ad, false, "    ", temp, target_name)) {
+			formatstr_cat(buf, "  %s has the following attributes:\n%s", target_name.c_str(), temp.c_str());
+		}
+		chomp(buf);
+
+	}
+
+	if (job_requirements) {
+		// TODO: write this one.
+	}
+
+	return buf.c_str();
+}
 
 bool
 Resource::willingToRun(ClassAd* request_ad)
@@ -3406,24 +3461,7 @@ Resource::willingToRun(ClassAd* request_ad)
 			// state internally, and it is not unexpected for START to
 			// locally evaluate to false in that case.
 
-		if (!slot_requirements || !req_requirements) {
-			if (!slot_requirements) {
-				dprintf(D_ERROR, "Slot requirements not satisfied.\n");
-				dprintf(D_ALWAYS, "Job ad was ============================\n");
-				dPrintAd(D_ALWAYS, *request_ad);
-				dprintf(D_ALWAYS, "Slot ad was ============================\n");
-				dPrintAd(D_ALWAYS, *r_classad);
-			}
-			if (!req_requirements) {
-				dprintf(D_ERROR, "Job requirements not satisfied.\n");
-				dprintf(D_ALWAYS, "Job ad was ============================\n");
-				dPrintAd(D_ALWAYS, *request_ad);
-				dprintf(D_ALWAYS, "Slot ad was ============================\n");
-				dPrintAd(D_ALWAYS, *r_classad);
-			}
-		}
-
-			// Possibly print out the ads we just got to the logs.
+		// Possibly print out the ads we just got to the logs.
 		if (IsDebugLevel(D_JOB)) {
 			std::string adbuf;
 			dprintf(D_JOB, "REQ_CLASSAD:\n%s", formatAd(adbuf, *request_ad, "\t"));
@@ -3431,6 +3469,24 @@ Resource::willingToRun(ClassAd* request_ad)
 		if (IsDebugLevel(D_MACHINE)) {
 			std::string adbuf;
 			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n%s", formatAd(adbuf, *r_classad, "\t"));
+		}
+
+		// on match failure, print the job and machine ad if we did not print them already
+		if (!slot_requirements || !req_requirements) {
+			if ( ! IsDebugLevel(D_JOB)) { // skip if we already printed the job ad
+				dprintf(D_FULLDEBUG, "Job ad was ============================\n");
+				dPrintAd(D_FULLDEBUG, *request_ad);
+			}
+			if ( ! IsDebugLevel(D_MACHINE)) { // skip if we already printed the machine ad
+				dprintf(D_FULLDEBUG, "Slot ad was ============================\n");
+				dPrintAd(D_FULLDEBUG, *r_classad);
+			}
+			if (!req_requirements) { dprintf(D_ERROR, "Job requirements not satisfied.\n"); }
+			if (!slot_requirements) {
+				std::string anabuf;
+				analyze_match(anabuf, request_ad, !slot_requirements, false);
+				dprintf(D_ERROR, "Slot Requirements not satisfied. Analysis:\n%s\n", anabuf.c_str());
+			}
 		}
 	}
 	else {
@@ -3728,6 +3784,9 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 		return rip;
 	}
 
+	std::string tmp;
+	dprintf(D_ZKM, "Create dSlot from %s : %s\n", rip->r_id_str, rip->r_attr->cat_totals(tmp));
+
 	// dummy {} to avoid unnecessary git diffs
 	{
 		ClassAd	*mach_classad = rip->r_classad;
@@ -3792,11 +3851,8 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 				// the while loop
 			if (mach_requirements == false) {
 
-				std::vector<ClassAd*> jobs; jobs.push_back(req_classad);
-				classad::References attrs; attrs.insert("START"); attrs.insert("WithinResourceLimits");
-				std::string buf; buf.reserve(1000);
-				anaFormattingOptions fmt = { 100, detail_analyze_each_sub_expr | detail_inline_std_slot_exprs | detail_smart_unparse_expr, "Requirements", "Slot", "Job" };
-				AnalyzeRequirementsForEachTarget(mach_classad, ATTR_REQUIREMENTS, attrs, jobs, buf, fmt);
+				std::string buf;
+				rip->analyze_match(buf, req_classad, !mach_requirements, false);
 				dprintf(D_ALWAYS, "STARTD Requirements do not match, %s MODIFY_REQUEST_EXPR_ edits. Analysis:\n%s\n",
 					unmodified_req_classad ? "with" : "w/o", buf.c_str());
 
@@ -3850,7 +3906,17 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
                 restmp = j->first; restmp += "=";
                 if (MATCH == strcasecmp(j->first.c_str(),"disk")) {
                     // if it weren't for special cases, we'd have no cases at all
-                    formatstr_cat(restmp, "%.1f%%", max(0, (0.1 + 100 * j->second / (double)rip->r_attr->get_total_disk())));
+                    // convert disk request into a fraction of total disk for the slot splitting code
+                 #if 0
+                    int denom = (int)(ceil(rip->r_attr->total_cpus()));
+                    double total_disk = rip->r_attr->get_total_disk();
+                    double disk_slop = max(1024, total_disk / (1024*1024));
+                    double disk_fraction = max(0, j->second + disk_slop) / total_disk;
+                 #else
+                    int denom = 100;
+                    double disk_fraction = max(0.001, 0.001 + j->second / (double) rip->r_attr->get_total_disk());
+                 #endif
+                    formatstr_cat(restmp, "%f/%d", denom * disk_fraction, denom);
                 } else {
                     formatstr_cat(restmp, "%d", int(j->second));
                 }
@@ -3895,8 +3961,18 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
                     return NULL;
                 }
             }
-            formatstr(restmp, "disk=%.1f%%",
-                                max((0.1 + disk / (double) rip->r_attr->get_total_disk() * 100), 0.001) );
+            // convert disk request into a fraction for the slot splitting code
+         #if 0
+            int denom = (int)(ceil(rip->r_attr->total_cpus()));
+            double total_disk = rip->r_attr->get_total_disk();
+            double disk_slop = max(1024, total_disk / (1024*1024));
+            double disk_fraction = max(0, disk + disk_slop) / total_disk;
+         #else
+            // max((0.1 + disk / (double) rip->r_attr->get_total_disk() * 100), 0.001)
+            int denom = 100;
+            double disk_fraction = max(0.001, 0.001 + disk / (double) rip->r_attr->get_total_disk());
+         #endif
+            formatstr(restmp, "disk=%f/%d", denom * disk_fraction, denom);
             type_list.append(restmp.c_str());
 
 

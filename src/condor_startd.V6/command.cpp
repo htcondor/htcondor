@@ -977,6 +977,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		EXCEPT( "request_claim: no current claim object." );
 	}
 
+	resmgr->startd_stats.total_claim_requests += 1;
+
 		/* 
 		   Now that we've been contacted by the schedd, we can
 		   cancel the match timer on either the current or the
@@ -1064,14 +1066,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 						// we *intend* to have all of these d-slots share a parent, but in case they don't
 						// we need to make sure that the parent refreshes it's classad
 						// TODO: should we call resmgr->compute_resource_conflicts(); here?
-						pslot->refresh_classad_resources(resmgr->resourcesInUse());
+						resmgr->refresh_classad_resources(pslot);
 					}
 				}
 				// TODO Do we need to call refresh_classad() on either slot?
 			}
 			if (parent) {
 				// TODO: should we call resmgr->compute_resource_conflicts(); here?
-				parent->refresh_classad_resources(resmgr->resourcesInUse());
+				resmgr->refresh_classad_resources(parent);
 			}
 		}
 	}
@@ -1195,7 +1197,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 		// Make sure we're willing to run this job at all.
 	if (num_dslots > 0 && !rip->willingToRun(req_classad)) {
-	    rip->dprintf(D_ALWAYS, "Request to claim resource refused.\n");
+		rip->dprintf(D_ALWAYS, "Request to claim resource refused.\n");
+		resmgr->startd_stats.total_new_dslot_unwilling += 1;
 		refuse(stream);
 		ABORT;
 	}
@@ -1575,6 +1578,7 @@ activate_claim( Resource* rip, Stream* stream )
 	rip->dprintf( D_ALWAYS,
 			 "Got activate_claim request from shadow (%s)\n", 
 			 shadow_addr );
+	resmgr->startd_stats.total_activation_requests += 1;
 
 		// Find out what version of the starter to use for the activation.
 		// This is now ignored, as there's only one starter.
@@ -2509,7 +2513,7 @@ command_coalesce_slots(int, Stream * stream ) {
 
 	// We just updated the partitionable slot's resources...
 	// TODO: should we call resmgr->compute_resource_conflicts(); here?
-	parent->refresh_classad_resources(resmgr->resourcesInUse());
+	resmgr->refresh_classad_resources(parent);
 
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
 	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
@@ -2557,8 +2561,8 @@ command_coalesce_slots(int, Stream * stream ) {
 	// The coalesced slot is born claimed.
 	coalescedSlot->change_state( claimed_state );
 	resmgr->compute_resource_conflicts();
-	coalescedSlot->refresh_classad_resources(resmgr->resourcesInUse());
-	parent->refresh_classad_resources(resmgr->resourcesInUse());
+	resmgr->refresh_classad_resources(coalescedSlot);
+	resmgr->refresh_classad_resources(parent);
 
 	dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing complete, sending reply\n" );
 

@@ -45,7 +45,10 @@
 #include "my_popen.h"
 #include "file_transfer_stats.h"
 #include "utc_time.h"
+#define HAVE_DATE_REUSE_DIR 1 // TODO: disable and remove data reuse hooks in file transfer
+#ifdef HAVE_DATA_REUSE_DIR
 #include "data_reuse.h"
+#endif
 #include "AWSv4-utils.h"
 #include "AWSv4-impl.h"
 #include "condor_random_num.h"
@@ -2360,6 +2363,7 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
   be in our desired state.
 */
 
+#ifdef HAVE_DATA_REUSE_DIR
 #define return_and_resetpriv(i)                     \
     if( saved_priv != PRIV_UNKNOWN )                \
         _set_priv(saved_priv,__FILE__,__LINE__,1);  \
@@ -2371,6 +2375,12 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
         }                                           \
     }                                               \
     return i;
+#else
+#define return_and_resetpriv(i)                     \
+    if( saved_priv != PRIV_UNKNOWN )                \
+        _set_priv(saved_priv,__FILE__,__LINE__,1);  \
+    return i;
+#endif
 
 
 int
@@ -2413,10 +2423,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 	downloadStartTime = condor_gettimestamp_double();
 
-		/* Track the potential data reuse
+#ifdef HAVE_DATA_REUSE_DIR
+	/* Track the potential data reuse
 		 */
 	std::vector<ReuseInfo> reuse_info;
 	std::string reservation_id;
+#endif
 
 		// When we are signing URLs, we want to make sure that the requested
 		// prefix is valid.
@@ -2759,9 +2771,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			formatstr(fullname,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,filename.c_str());
 		}
 
+#ifdef HAVE_DATA_REUSE_DIR
 		auto iter = std::find_if(reuse_info.begin(), reuse_info.end(),
 			[&](ReuseInfo &info){return !strcmp(filename.c_str(), info.filename().c_str());});
 		bool should_reuse = !reservation_id.empty() && m_reuse_dir && iter != reuse_info.end();
+#endif
 
 		if( PeerDoesGoAhead ) {
 			if( !s->end_of_message() ) {
@@ -2933,6 +2947,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				}
 				ClassAd ad;
+			#ifdef HAVE_DATA_REUSE_DIR
 				if (m_reuse_dir == nullptr) {
 					dprintf(D_FULLDEBUG, "DoDownload: No data reuse directory available; ignoring potential reuse info.\n");
 					ad.InsertAttr("Result", 1);
@@ -3024,6 +3039,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						rc = 0;
 					}
 				}
+			#else
+				dprintf(D_FULLDEBUG, "DoDownload: No data reuse directory available; ignoring potential reuse info.\n");
+				ad.InsertAttr("Result", 1);
+				rc = 0;
+			#endif
 				s->encode();
 				if (!putClassAd(s, ad) || !s->end_of_message()) {
 					dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
@@ -3202,6 +3222,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					case TransferPluginResult::Success:
 						break;
 				}
+			#ifdef HAVE_DATA_REUSE_DIR
 				CondorError err;
 				if (result == TransferPluginResult::Success && should_reuse && !m_reuse_dir->CacheFile(fullname.c_str(), iter->checksum(),
 					iter->checksum_type(), reservation_id, err))
@@ -3213,6 +3234,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						rc = -1;
 					}
 				}
+			#endif
 			}
 
 		} else if ( xfer_command == TransferCommand::XferX509 ) {
@@ -3302,6 +3324,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			// to preserve their permissions, let's just let this transfer
 			// fail if the remote side screwed up.
 			rc = s->get_file_with_permissions( &bytes, fullname.c_str(), false, this_file_max_bytes, &xfer_queue );
+		#ifdef HAVE_DATA_REUSE_DIR
 			CondorError err;
 			if (rc == 0 && should_reuse && !m_reuse_dir->CacheFile(fullname.c_str(), iter->checksum(),
 					iter->checksum_type(), reservation_id, err))
@@ -3313,6 +3336,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					rc = -1;
 				}
 			}
+		#endif
 		} else {
 			// See comment about directory creation above.
 			rc = s->get_file( &bytes, fullname.c_str(), false, false, this_file_max_bytes, &xfer_queue );

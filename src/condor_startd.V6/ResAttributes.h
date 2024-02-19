@@ -415,8 +415,8 @@ public:
 	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
 	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
-	void publish_static(ClassAd*, const ResBag * deduct) const;  // Publish desired info to given CA
-	void publish_dynamic(ClassAd*, const ResBag * deduct) const;  // Publish desired info to given CA
+	void publish_static(ClassAd*, const ResBag * inuse) const;  // Publish desired info to given CA
+	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
 	void compute_virt_mem();
 	void compute_disk();
 	void set_condor_load(double load) { c_condor_load = load; }
@@ -434,10 +434,11 @@ public:
 	time_t console_idle() const { return c_console_idle; };
 	unsigned int type_id() const { return c_type_id; };
 
-	void display(int dpf_flags) const;
+	void display_load(int dpf_flags) const;
 	void dprintf( int, const char*, ... ) const;
-	void cat_totals(std::string & buf) const;
+	const char * cat_totals(std::string & buf) const;
 
+	double total_cpus() const { return c_num_slot_cpus; }
 	double num_cpus() const { return c_num_cpus; }
 	bool allow_fractional_cpus(bool allow) { bool old = c_allow_fractional_cpus; c_allow_fractional_cpus = allow; return old; }
 	long long get_disk() const { return c_disk; }
@@ -529,6 +530,9 @@ public:
 
 	void reset();
 	bool underrun(std::string * names);
+	bool excess(std::string * names);
+	void clear_underrun(); // reset only the underrun values
+	void clear_excess();   // reset only the excess values
 	const char * dump(std::string & buf) const;
 	void Publish(ClassAd& ad, const char * prefix) const;
 

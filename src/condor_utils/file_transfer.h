@@ -167,7 +167,9 @@ class FileTransfer final: public Service {
 	/** @param reuse_dir: The DataReuseDirectory object to utilize for data reuse
 	 *  lookups
 	 */
+#if 1 //def HAVE_DATA_REUSE_DIR
 	void setDataReuseDirectory(htcondor::DataReuseDirectory &reuse_dir) {m_reuse_dir = &reuse_dir;}
+#endif
 
 	/** Set the location of various ads describing the runtime environment.
 	 *  Used by the file transfer plugins.
@@ -593,8 +595,10 @@ class FileTransfer final: public Service {
 	// stores the path to the proxy after one is received
 	std::string LocalProxyName;
 
+#if 1 //def HAVE_DATA_REUSE_DIR
 	// Object to manage reuse of any data locally.
 	htcondor::DataReuseDirectory *m_reuse_dir{nullptr};
+#endif
 
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);

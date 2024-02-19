@@ -1164,9 +1164,13 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 			if (single_machine || cSlots == 1) { 
 				for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
 					ClassAd * ptarget = it->second.get();
-					attrib_values = "\n";
-					AddTargetAttribsToBuffer(trefs, request, ptarget, false, "    ", attrib_values);
-					return_buf += attrib_values;
+					std::string name;
+					if (AddTargetAttribsToBuffer(trefs, request, ptarget, false, "    ", attrib_values, name)) {
+						return_buf += "\n";
+						return_buf += name;
+						return_buf += " has the following attributes:\n\n";
+						return_buf += attrib_values;
+					}
 				}
 			}
 			return_buf += "\n";
@@ -1393,9 +1397,13 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 					for (size_t ixj = 0; ixj < jobs.size(); ++ixj) {
 						ClassAd * job = jobs[ixj];
 						if ( ! job) continue;
-						attrib_values = "\n";
-						AddTargetAttribsToBuffer(trefs, slot, job, false, "    ", attrib_values);
-						strcat(return_buff, attrib_values.c_str());
+						std::string name;
+						if (AddTargetAttribsToBuffer(trefs, slot, job, false, "    ", attrib_values, name)) {
+							strcat(return_buff,"\n");
+							strcat(return_buff,name.c_str());
+							strcat(return_buff," has the following attributes:\n\n");
+							strcat(return_buff, attrib_values.c_str());
+						}
 					}
 				}
 				//strcat(return_buff, "\n");
