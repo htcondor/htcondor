@@ -59,11 +59,11 @@ if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
     fi
 
     # Delete the file.
-    if ! rm ${IGNORE_MISSING_FILES} ${LOCAL_PATH}${CHECKPOINT_DIR}${DELETE}; then
+    if ! rm ${IGNORE_MISSING_FILES} "${LOCAL_PATH}${CHECKPOINT_DIR}${DELETE}"; then
         exit 2
     fi
 
-    DIR=${LOCAL_PATH}${CHECKPOINT_DIR}
+    DIR="${LOCAL_PATH}${CHECKPOINT_DIR}"
     # We created directories in ${DIR} as necessary to write the
     # checkpoint, so delete them if we just removed the last file
     # in them.  This won't delete directories which didn't have
@@ -77,13 +77,13 @@ if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
     # We could call `rmdir --parents` on the absolute path, but
     # that will (surprisingly) remove the directory chosen to
     # store checkpoints if we remove the last checkpoint.
-    SUBDIR=`dirname ${DELETE}`
+    SUBDIR=$(dirname "${DELETE}")
     if [[ -d ${DIR}${SUBDIR} ]]; then
-        cd ${DIR}; rmdir -p ${SUBDIR}
-        CHECKPOINT_NUMBER=`basename ${DIR}`
-        cd ..; rmdir ${CHECKPOINT_NUMBER}
-        GLOBAL_JOB_ID=$(basename $(dirname ${DIR}))
-        cd ..; rmdir ${GLOBAL_JOB_ID}
+        cd "${DIR}"; rmdir -p "${SUBDIR}"
+        CHECKPOINT_NUMBER=$(basename "${DIR}")
+        cd ..; rmdir "${CHECKPOINT_NUMBER}"
+        GLOBAL_JOB_ID=$(basename "$(dirname "${DIR}")")
+        cd ..; rmdir "${GLOBAL_JOB_ID}"
     fi
 
     exit 0
