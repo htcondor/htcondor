@@ -22,6 +22,10 @@ New Features:
   to ease networking from inside the container to outside the container.
   :jira:`2294`
 
+- The configuration parameter :macro:`ETC` can now be used to relocate
+  files that are normally place under /etc/condor on unix platforms.
+  jira:`2290`
+
 Bugs Fixed:
 
 - None.
