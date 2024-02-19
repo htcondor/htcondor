@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function usage() {
-    echo "usage: $0 -prefix PREFIX -path PATH -from URL_TO_FILE -delete FILE"
+    echo "usage: $0 -prefix PREFIX -path PATH -from URL_TO_FILE -delete FILE -jobad PATH [-ignore-missing-files]"
     exit 1
 }
 
