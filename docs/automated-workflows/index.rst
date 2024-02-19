@@ -42,10 +42,8 @@ input for job ``B``. This can be described as a DAGMan workflow as follows:
 
    dagman-introduction
    dagman-interaction
+   dagman-completion
 
-   node-pass-or-fail
-   dagman-resubmit-failed
-   dagman-save-files
 
    dagman-using-other-dags
 
