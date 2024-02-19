@@ -577,7 +577,7 @@ Performance Tuning of the AP
 Of the three roles (AP, CM, EP) in a HTCondor system, the AP is the most common
 place performance tuning is done.  The CM is mostly stateless, and can
 typically scale out to very large pools without much additional work.  The EP
-daemons aren't resource intensive.  However, as the EP stores the state of all
+daemons aren't resource intensive.  However, as the AP stores the state of all
 the jobs under its control, and persistently stores frequent updates to those
 jobs, it is not uncommon for the AP to exhaust system resources, like cpu, or
 disk and network bandwidth.
