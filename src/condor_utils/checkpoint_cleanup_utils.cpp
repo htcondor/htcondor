@@ -10,6 +10,8 @@
 #include "spooled_job_files.h"
 #include "dc_coroutines.h"
 #include "checkpoint_cleanup_utils.h"
+#include "stat_wrapper.h"
+
 
 bool
 fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, std::string & argl, std::string & error ) {
@@ -36,6 +38,7 @@ fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, st
 
     return true;
 }
+
 
 bool
 spawnCheckpointCleanupProcess(
@@ -196,5 +199,174 @@ spawnCheckpointCleanupProcess(
 #endif /* ! defined(WINDOWS) */
 
 	dprintf( D_TEST, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
+	return true;
+}
+
+
+bool
+moveCheckpointsToCleanupDirectory(
+	int cluster, int proc, ClassAd * jobAd,
+	const std::set<long> & checkpointsToSave
+) {
+	std::string owner;
+	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
+		dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): no owner attribute in job, not cleaning up.\n" );
+		return false;
+	}
+
+	std::string spoolPath;
+	SpooledJobFiles::getJobSpoolPath( jobAd, spoolPath );
+	std::filesystem::path spool( spoolPath );
+
+	std::filesystem::path SPOOL = spool.parent_path().parent_path().parent_path();
+	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
+
+	std::error_code errCode;
+	if( std::filesystem::exists( checkpointCleanup ) ) {
+		if(! std::filesystem::is_directory( checkpointCleanup )) {
+			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", checkpointCleanup.string().c_str() );
+			return false;
+		}
+	} else {
+		// FIXME: This is done as user condor in the schedd; maybe it should
+		// be done by the schedd unconditionally on start-up?
+		std::filesystem::create_directory( checkpointCleanup, SPOOL, errCode );
+		if( errCode ) {
+			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", checkpointCleanup.string().c_str(), errCode.value(), errCode.message().c_str() );
+			return false;
+		}
+	}
+
+
+	//
+	// In order to make the directory itself removable, we need to put it
+	// in a (permanent) directory owned by the job's owner.
+	//
+	std::filesystem::path owner_dir = checkpointCleanup / owner;
+
+	// The owner-specific directory should have the same ownership
+	// as the spool directory going into it.
+	StatWrapper sw( spool.string() );
+	auto owner_uid = sw.GetBuf()->st_uid;
+	auto owner_gid = sw.GetBuf()->st_gid;
+
+	if( std::filesystem::exists( owner_dir ) ) {
+		if(! std::filesystem::is_directory( owner_dir )) {
+			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", owner_dir.string().c_str() );
+			return false;
+		}
+	} else {
+		// Sadly, std::filesystem doesn't handle ownership, and we can't
+		// create the directory as the user we want, either.
+		std::filesystem::create_directory( owner_dir, checkpointCleanup, errCode );
+		if( errCode ) {
+			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errCode.value(), errCode.message().c_str() );
+			return false;
+		}
+
+#if ! defined(WINDOWS)
+		{
+			TemporaryPrivSentry sentry(PRIV_ROOT);
+			int rv = chown( owner_dir.string().c_str(), owner_uid, owner_gid );
+			if( rv == -1 ) {
+				dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to chown() checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errno, strerror(errno) );
+				return false;
+			}
+		}
+#endif /* ! defined(WINDOWS) */
+	}
+
+
+	//
+	// Move each MANIFEST or FAILURE file not in `checkpointsToSave`
+	// from `spool` to `target_dir`.
+	//
+	// This loop is very similar to the code in pseudo_ops.cpp to
+	// decide which checkpoint(s) to keep, but it's not clear it's
+	// worth it to share code.
+	//
+	bool moved_a_manifest = false;
+	std::filesystem::path target_dir = owner_dir / spool.filename();
+	if(! std::filesystem::exists( spool ) ) {
+	    // Then the job never succesfully completed a checkpoint.  Sniff.
+	    return false;
+	}
+	auto spool_dir = std::filesystem::directory_iterator(spool);
+	for( const auto & entry : spool_dir ) {
+		const auto & stem = entry.path().stem();
+		if( starts_with(stem, "_condor_checkpoint_") ) {
+			bool success = ends_with(stem, "MANIFEST");
+			bool failure = ends_with(stem, "FAILURE");
+			if( success || failure ) {
+				char * endptr = NULL;
+				const auto & suffix = entry.path().extension().string().substr(1);
+				long manifestNumber = strtol( suffix.c_str(), & endptr, 10 );
+				if( endptr == suffix.c_str() || *endptr != '\0' ) {
+					dprintf( D_FULLDEBUG, "Unable to extract checkpoint number from '%s', skipping.\n", entry.path().string().c_str() );
+					continue;
+				}
+
+				if( checkpointsToSave.count(manifestNumber) != 0 ) {
+dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): skipping manifest %ld\n", manifestNumber );
+					continue;
+				}
+
+				{
+					TemporaryPrivSentry sentry(PRIV_ROOT);
+					std::filesystem::create_directory( target_dir, spool, errCode );
+				}
+				if( errCode ) {
+					dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+						"for job (%d.%d), failed to create %s, "
+						"return false.\n",
+						cluster, proc, target_dir.string().c_str()
+					);
+					return false;
+				}
+				{
+					TemporaryPrivSentry sentry(PRIV_ROOT);
+					std::filesystem::rename( entry.path(), target_dir / entry.path().filename(), errCode );
+				}
+				if( errCode ) {
+					dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+						"for job (%d.%d), failed to rename "
+						"manifest %ld [%s to %s] (%d: %s); returning false.\n",
+						cluster, proc, manifestNumber,
+						entry.path().string().c_str(),
+						(target_dir / entry.path().filename()).string().c_str(),
+						errCode.value(), errCode.message().c_str()
+					);
+					return false;
+				}
+
+dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): moved manifest %ld\n", manifestNumber );
+				moved_a_manifest = true;
+			}
+		}
+	}
+
+	if(! moved_a_manifest) { return true; }
+
+
+	// Drop a copy of the job ad into the directory in case this attempt
+	// to clean up fails and we need to try it again later.
+	FILE * jobAdFile = NULL;
+	std::filesystem::path jobAdPath = target_dir / ".job.ad";
+#if ! defined(WINDOWS)
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
+		// It's annoying if this fails, but not fatal; the directory owner
+		// (job owner) can remove it even if it's still owned by root.
+		std::ignore = chown( jobAdPath.string().c_str(), owner_uid, owner_gid );
+	}
+#endif /* ! defined(WINDOWS ) */
+	if( jobAdFile == NULL ) {
+		dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to open job ad file '%s'\n", jobAdPath.string().c_str() );
+		return false;
+	}
+	fPrintAd( jobAdFile, * jobAd );
+	fclose( jobAdFile );
+
 	return true;
 }
