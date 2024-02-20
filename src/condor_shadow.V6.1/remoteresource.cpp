@@ -2269,6 +2269,8 @@ RemoteResource::initFileTransfer()
 	const char * currentFile = NULL;
 	Directory spoolDirectory( spoolPath.c_str() );
 	while( (currentFile = spoolDirectory.Next()) ) {
+		// getNumberFromFileName() ignores FAILURE files, which is
+		// exactly the behavior we want here.
 		int manifestNumber = manifest::getNumberFromFileName( currentFile );
 		if( manifestNumber > largestManifestNumber ) {
 			largestManifestNumber = manifestNumber;

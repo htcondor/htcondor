@@ -164,6 +164,7 @@ public:
 	void notifyJobPreSpawn( void );
 
 	void notifyExecutionExit( void );
+	void notifyGenericEvent( const ClassAd & event );
 
 		/** Notify the shadow that the job exited. This will not only
 			update the job ad with the termination information of the job,

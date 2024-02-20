@@ -273,6 +273,9 @@ public:
 	// attributes that we don't want to change.  (HTCONDOR-861)
 	virtual void notifyExecutionExit( void ) { }
 
+    // Better than writing a bunch of tiny wrappers?
+    virtual void notifyGenericEvent( const ClassAd & ) { }
+
 		/** Notify our controller that the job exited
 			@param exit_status The exit status from wait()
 			@param reason The Condor-defined exit reason
