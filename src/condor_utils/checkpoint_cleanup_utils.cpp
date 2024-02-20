@@ -218,6 +218,12 @@ moveCheckpointsToCleanupDirectory(
 	SpooledJobFiles::getJobSpoolPath( jobAd, spoolPath );
 	std::filesystem::path spool( spoolPath );
 
+	if(! std::filesystem::exists( spool )) {
+	    // Then the job never succesfully completed a checkpoint, and we
+	    // don't have anything else to do.
+	    return false;
+	}
+
 	std::filesystem::path SPOOL = spool.parent_path().parent_path().parent_path();
 	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
 
@@ -228,8 +234,6 @@ moveCheckpointsToCleanupDirectory(
 			return false;
 		}
 	} else {
-		// FIXME: This is done as user condor in the schedd; maybe it should
-		// be done by the schedd unconditionally on start-up?
 		std::filesystem::create_directory( checkpointCleanup, SPOOL, errCode );
 		if( errCode ) {
 			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", checkpointCleanup.string().c_str(), errCode.value(), errCode.message().c_str() );
@@ -267,6 +271,7 @@ moveCheckpointsToCleanupDirectory(
 #if ! defined(WINDOWS)
 		{
 			TemporaryPrivSentry sentry(PRIV_ROOT);
+			// dprintf( D_FULLDEBUG, "chown(%s, %d, %d)\n", owner_dir.string().c_str(), owner_uid, owner_gid );
 			int rv = chown( owner_dir.string().c_str(), owner_uid, owner_gid );
 			if( rv == -1 ) {
 				dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to chown() checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errno, strerror(errno) );
@@ -287,11 +292,26 @@ moveCheckpointsToCleanupDirectory(
 	//
 	bool moved_a_manifest = false;
 	std::filesystem::path target_dir = owner_dir / spool.filename();
-	if(! std::filesystem::exists( spool ) ) {
-	    // Then the job never succesfully completed a checkpoint.  Sniff.
-	    return false;
+
+
+	// We have to have root here because the spool directory is mode 700
+	// and owned by the user, but its parent directories will be owned by
+	// condor and possibly not world-executable.
+	std::filesystem::directory_iterator spool_dir;
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		spool_dir = std::filesystem::directory_iterator(spool, errCode);
+		if( errCode ) {
+			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+				"for job (%d.%d), failed to iterate job spool directory %s, "
+				"returning false.\n",
+				cluster, proc, spool.string().c_str()
+			);
+			return false;
+		}
 	}
-	auto spool_dir = std::filesystem::directory_iterator(spool);
+
+
 	for( const auto & entry : spool_dir ) {
 		const auto & stem = entry.path().stem();
 		if( starts_with(stem, "_condor_checkpoint_") ) {
@@ -307,22 +327,41 @@ moveCheckpointsToCleanupDirectory(
 				}
 
 				if( checkpointsToSave.count(manifestNumber) != 0 ) {
-dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): skipping manifest %ld\n", manifestNumber );
+					dprintf( D_FULLDEBUG, "moveCheckpointsToCleanupDirectory(): skipping manifest %ld\n", manifestNumber );
 					continue;
 				}
+
 
 				{
 					TemporaryPrivSentry sentry(PRIV_ROOT);
 					std::filesystem::create_directory( target_dir, spool, errCode );
+
+					if( errCode ) {
+						dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+							"for job (%d.%d), failed to create %s, "
+							"returning false.\n",
+							cluster, proc, target_dir.string().c_str()
+						);
+						return false;
+					}
 				}
-				if( errCode ) {
-					dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
-						"for job (%d.%d), failed to create %s, "
-						"return false.\n",
-						cluster, proc, target_dir.string().c_str()
-					);
-					return false;
+
+#if ! defined(WINDOWS)
+				{
+					TemporaryPrivSentry sentry(PRIV_ROOT);
+					int rv = chown( target_dir.string().c_str(), owner_uid, owner_gid );
+
+					if( rv == -1 ) {
+						dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+							"for job (%d.%d), failed to chown %s, "
+							"returning false.\n",
+							cluster, proc, target_dir.string().c_str()
+						);
+						return false;
+					}
 				}
+#endif /* ! defined(WINDOWS) */
+
 				{
 					TemporaryPrivSentry sentry(PRIV_ROOT);
 					std::filesystem::rename( entry.path(), target_dir / entry.path().filename(), errCode );
@@ -339,7 +378,7 @@ dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): skipping manifest %ld\n
 					return false;
 				}
 
-dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): moved manifest %ld\n", manifestNumber );
+				dprintf( D_FULLDEBUG, "moveCheckpointsToCleanupDirectory(): moved manifest %ld\n", manifestNumber );
 				moved_a_manifest = true;
 			}
 		}
