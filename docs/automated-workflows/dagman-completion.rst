@@ -2,11 +2,11 @@ DAGMan Completion
 =================
 
 Like all HTCondor jobs DAGMan will exit the job queue upon completion once the
-DAG has succesfully completed or forward progress is blocked resulting in failure.
-A successful completion of a DAGMan workflow is determined by the succesful
+DAG has successfully completed or forward progress is blocked resulting in failure.
+A successful completion of a DAGMan workflow is determined by the successful
 execution of all the Nodes in the DAG. DAGMan has the ability to be re-submitted
 upon failure such that only the work that is imcompleted is executed. If desired,
-DAGMan also has a way to allow the re-submission of succesful completions
+DAGMan also has a way to allow the re-submission of successful completions
 from specific states in the DAG workflow.
 
 .. sidebar:: Node Success/Failure
@@ -208,9 +208,9 @@ The behavior differs based on the existence of PRE and/or POST scripts:
 Resubmitting a Failed DAG
 -------------------------
 
-.. sidebar:: Check DAG Succesful Exit
+.. sidebar:: Check DAG Successful Exit
 
-    To determine succesful completion of a DAG that has left the
+    To determine successful completion of a DAG that has left the
     queue, the final line in the ``*.dagman.out`` file should appear
     as similar to:
 
@@ -242,7 +242,7 @@ nodes completed successfully, and the Rescue DAG will be used when the
 DAG is again submitted. With the Rescue DAG, nodes that have already
 successfully completed are not re-run. Nodes that are re-run will execute
 every part of the node (PRE Script, job(s), and POST Script) even if
-one part had previously completed succesfully. There are a variety of
+one part had previously completed successfully. There are a variety of
 circumstances under which a Rescue DAG is generated:
 
 .. sidebar:: Rescue DAG On Removal
@@ -310,7 +310,7 @@ the DAG.
 If multiple independent DAGs are submitted at one time via :tool:`condor_submit_dag`
 then the Rescue DAG file will be named ``<Primary DAG>_multi.rescue<XXX>`` where
 the primary DAG is the first DAG input file specified on the command line. This
-multi-DAG rescue file will encompase all the nodes provided by the multiple
+multi-DAG rescue file will encompass all the nodes provided by the multiple
 independent DAG files.
 
 If a Rescue DAG exists when the original DAG is re-submitted, the Rescue
@@ -322,7 +322,7 @@ Using an Older Rescue DAG
 
 If a DAG has failed multiple times and produced many Rescue DAG files, specific
 Rescue DAGs can be specified to re-run the DAG from rather than the rescue with
-the highest magnitude. This is acheived by using the *-DoRescueFrom* option for
+the highest magnitude. This is achieved by using the *-DoRescueFrom* option for
 :tool:`condor_submit_dag`.
 
 .. code-block:: console
@@ -337,7 +337,7 @@ Special Cases
 '''''''''''''
 
 #. If multiple DAG input files are provided on the :tool:`condor_submit_dag`
-   command line, a single Rescue DAG encompasing all of the input DAG's is
+   command line, a single Rescue DAG encompassing all of the input DAG's is
    generated. The primary DAG (first DAG specified in the command line) will
    be used as the base of the Rescue DAG name.
 #. A DAG file that contains DAG splices also only produces a single Rescue DAG
@@ -491,7 +491,7 @@ DAGMan can be told to work in recovery mode by including the
 DAG Save Point Files
 --------------------
 
-A succesfully completed DAG can be re-run from a specific saved state if
+A successfully completed DAG can be re-run from a specific saved state if
 the DAG originally run contained save point nodes. Save point nodes are
 DAG nodes that have an associate **SAVE_POINT_FILE** command. The
 **SAVE_POINT_FILE** syntax is as follows:
@@ -514,7 +514,7 @@ except all retries are reset. The save file is written as follows:
 
 #. **Where:**
     If a path is provided in the save point filename then DAGMan will attempt to
-    write to that location. If the path is realtive then the file is written
+    write to that location. If the path is relative then the file is written
     relative to the DAGs working directory. Otherwise, DAGMan will write
     the save file to a new directory call ``save_files`` which is created in
     the DAGs working directory.
@@ -552,7 +552,7 @@ be set up as the following:
 
 .. mermaid::
     :align: center
-    :caption: Progessing Save File DAG Actions
+    :caption: Progressing Save File DAG Actions
 
     flowchart LR
         subgraph A[Node A]
