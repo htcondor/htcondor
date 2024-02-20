@@ -35,6 +35,8 @@
 
 #include <filesystem>
 #include "manifest.h"
+#include "dc_coroutines.h"
+#include "checkpoint_cleanup_utils.h"
 
 
 extern ReliSock *syscall_sock;
@@ -707,6 +709,7 @@ int pseudo_get_sec_session_info(
 	return 1;
 }
 
+
 //
 // This syscall MUST ignore information it doesn't know how to deal with.
 //
@@ -735,6 +738,77 @@ pseudo_event_notification( const ClassAd & ad ) {
 
 	if( eventType == "ActivationExecutionExit" ) {
 		thisRemoteResource->recordActivationExitExecutionTime(time(NULL));
+	} else if( eventType == "SuccessfulCheckpoint" ) {
+		int checkpointNumber = -1;
+		if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
+			unsigned long numToKeep = 1 + param_integer( "DEFAULT_NUM_EXTRA_CHECKPOINTS", 1 );
+			dprintf( D_STATUS, "Checkpoint number %d succeeded, deleting all but the most recent %lu successful checkpoints.\n", checkpointNumber, numToKeep );
+
+			// Before we can delete a checkpoint, it needs to be moved from the
+			// job's spool to the job owner's checkpoint-cleanup directory.  So
+			// we need to figure out which checkpoint(s) we want to keep and
+			// move all of the other ones.
+
+			std::string spoolPath;
+			SpooledJobFiles::getJobSpoolPath( jobAd, spoolPath );
+			std::filesystem::path spool( spoolPath );
+			if(! (std::filesystem::exists(spool) && std::filesystem::is_directory(spool))) {
+				dprintf(D_ALWAYS, "Checkpoint suceeded but job spool directory either doesn't exist or isn't a directory; not trying to clean up old checkpoints.\n" );
+				return 0;
+			}
+
+			std::set<long> checkpointsToSave;
+			auto spoolDir = std::filesystem::directory_iterator(spool);
+			for( const auto & entry : spoolDir ) {
+				const auto & stem = entry.path().stem();
+				if( starts_with(stem, "_condor_checkpoint_") ) {
+					bool success = ends_with(stem, "MANIFEST");
+					bool failure = ends_with(stem, "FAILURE");
+					if( success || failure ) {
+						char * endptr = NULL;
+						const auto & suffix = entry.path().extension().string().substr(1);
+						long manifestNumber = strtol( suffix.c_str(), & endptr, 10 );
+						if( endptr == suffix.c_str() || *endptr != '\0' ) {
+							dprintf( D_FULLDEBUG, "Unable to extract checkpoint number from '%s', skipping.\n", entry.path().string().c_str() );
+							continue;
+						}
+
+						if( success ) {
+							checkpointsToSave.insert(manifestNumber);
+							if( checkpointsToSave.size() > numToKeep ) {
+								checkpointsToSave.erase(checkpointsToSave.begin());
+							}
+						}
+					}
+				}
+			}
+
+			std::string buffer;
+			formatstr( buffer, "Last %lu succesful checkpoints were: ", numToKeep );
+			for( const auto & value : checkpointsToSave ) {
+				formatstr_cat( buffer, "%ld ", value );
+			}
+			dprintf( D_STATUS, "%s\n", buffer.c_str() );
+
+			// Move all but checkpointsToSave's MANIFEST/FAILURE files.  The
+			// schedd won't interrupt because it never does anything to the
+			// job's spool while the shadow is running, and we won't be moving
+			// (or removing) the shared intermediate directories: the schedd
+			// will clean those up when the job leaves the queue, as normal.
+
+			int cluster, proc;
+			jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
+			jobAd->LookupInteger( ATTR_PROC_ID, proc );
+			if(! moveCheckpointsToCleanupDirectory(
+				cluster, proc, jobAd, checkpointsToSave
+			)) {
+				// Then there's nothing we can do here.
+				return 0;
+			}
+
+			int CLEANUP_TIMEOUT = param_integer( "SHADOW_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
+			spawnCheckpointCleanupProcessWithTimeout( cluster, proc, jobAd, CLEANUP_TIMEOUT );
+		}
 	} else if( eventType == "FailedCheckpoint" ) {
 		int checkpointNumber = -1;
 		if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
@@ -778,7 +852,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 					"While handling failed checkpoint event, could not find %s in job ad, which is required to attempt a checkpoint.\n",
 					ATTR_JOB_CHECKPOINT_DESTINATION
 				);
-				return 1;
+				return 0;
 			}
 
 			std::string globalJobID;

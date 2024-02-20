@@ -98,9 +98,9 @@ TEST_CONFIGS = {
 # have to be updated, but we could also attempt eight checkpoints in all cases,
 # if that would easier.
 ONE_TEST_CASES = {
-    "b": {
-        "expected_checkpoints":     ["0000", "0002"],
-        "checkpoint_count":         3,
+    "five": {
+        "expected_checkpoints":     ["0000", "0001", "0002", "0004"],
+        "checkpoint_count":         5,
     },
 }
 
@@ -280,6 +280,7 @@ def the_condor(test_dir, the_config, the_config_name):
             'JOB_EPOCH_HISTORY':                '$(LOG)/EpochLog',
             'SCHEDD_INTERVAL':                  '2',
             'SHADOW.FILE_TRANSFER_STATS_LOG':   '$(LOG)/shadow_transfer_history',
+            'SHADOW_DEBUG':                     'D_CATEGORY D_SUBSECOND D_STATUS D_TEST',
             ** the_config['config'],
         }
     ) as the_condor:
@@ -557,7 +558,7 @@ class TestPartialUploads:
             return
 
         # ... and every expected checkpoint should be on disk.
-        for checkpoint in the_expected_checkpoints:
+        for checkpoint in the_expected_checkpoints[-2:]:
             path = the_target_directory / checkpoint
             assert(path.exists())
 
