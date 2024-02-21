@@ -1,22 +1,13 @@
 DAGMan Completion
 =================
 
-<<<<<<< Updated upstream
-Like all HTCondor jobs DAGMan will exit the job queue upon completion once the
-DAG has successfully completed or forward progress is blocked resulting in failure.
-A successful completion of a DAGMan workflow is determined by the successful
-execution of all the Nodes in the DAG. DAGMan has the ability to be re-submitted
-upon failure such that only the work that is imcompleted is executed. If desired,
-DAGMan also has a way to allow the re-submission of successful completions
-from specific states in the DAG workflow.
-=======
 DAGMan exits the job queue when it has successfully completed, or when
 it can no longer make forward progress. The latter case is considered
 failure. Successful completion happens when every node in the DAG has
 successfully completed. In the case of a DAGman failure, you can resubmit
 the dag so that only the incomplete work is run. Alternatively, you can
 re-run a DAG from pre-specified save points, and re-run previously completed nodes.
->>>>>>> Stashed changes
+
 
 .. sidebar:: Node Success/Failure
 
