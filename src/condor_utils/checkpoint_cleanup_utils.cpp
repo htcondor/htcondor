@@ -316,9 +316,9 @@ moveCheckpointsToCleanupDirectory(
 
 	for( const auto & entry : spool_dir ) {
 		const auto & stem = entry.path().stem();
-		if( starts_with(stem, "_condor_checkpoint_") ) {
-			bool success = ends_with(stem, "MANIFEST");
-			bool failure = ends_with(stem, "FAILURE");
+		if( starts_with(stem.string(), "_condor_checkpoint_") ) {
+			bool success = ends_with(stem.string(), "MANIFEST");
+			bool failure = ends_with(stem.string(), "FAILURE");
 			if( success || failure ) {
 				char * endptr = NULL;
 				const auto & suffix = entry.path().extension().string().substr(1);
