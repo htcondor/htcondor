@@ -26,6 +26,11 @@ New Features:
   files that are normally place under /etc/condor on unix platforms.
   jira:`2290`
 
+- For jobs that go through the grid universe or Job Router, the
+  terminate event will now include extended resource allocation and
+  usage information when available.
+  jira:`2281`
+
 Bugs Fixed:
 
 - None.
