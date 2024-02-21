@@ -840,6 +840,14 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 	Starter->jic->periodicJobUpdate( & updateAd );
 }
 
+void
+VanillaProc::notifyFailedPeriodicCheckpoint( int checkpointNumber ) {
+    ClassAd ad;
+    ad.InsertAttr( "EventType", "FailedCheckpoint" );
+    ad.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+    Starter->jic->notifyGenericEvent( ad );
+}
+
 void VanillaProc::recordFinalUsage() {
 	if( daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE ) {
 		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
@@ -873,13 +881,16 @@ void VanillaProc::restartCheckpointedJob() {
 		JobAd->LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
 	}
 
-	if( Starter->jic->uploadCheckpointFiles(checkpointNumber + 1) ) {
-			++checkpointNumber;
+    // Because not all upload attempts fail without writing any data, we
+    // need to clean up after failed attempts, which implies numbering them.
+	++checkpointNumber;
+	if( Starter->jic->uploadCheckpointFiles(checkpointNumber) ) {
 			notifySuccessfulPeriodicCheckpoint(checkpointNumber);
 	} else {
 			// We assume this is a transient failure and will try
 			// to transfer again after the next periodic checkpoint.
 			dprintf( D_ALWAYS, "Failed to transfer checkpoint.\n" );
+			notifyFailedPeriodicCheckpoint(checkpointNumber);
 	}
 
 	// While it's arguably sensible to kill the process family

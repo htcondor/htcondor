@@ -33,7 +33,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##
-@@ -68,5 +66,26 @@
+@@ -68,5 +66,27 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -51,6 +51,7 @@
 +LOCK    = $(LOCAL_DIR)/lock/condor
 +SPOOL   = $(LOCAL_DIR)/lib/condor/spool
 +EXECUTE = $(LOCAL_DIR)/lib/condor/execute
++ETC     = /etc/condor
 +BIN     = $(RELEASE_DIR)/bin
 +LIB     = $(RELEASE_DIR)/lib64/condor
 +INCLUDE = $(RELEASE_DIR)/include/condor

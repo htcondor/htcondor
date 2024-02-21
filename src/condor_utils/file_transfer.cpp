@@ -45,7 +45,10 @@
 #include "my_popen.h"
 #include "file_transfer_stats.h"
 #include "utc_time.h"
+#define HAVE_DATE_REUSE_DIR 1 // TODO: disable and remove data reuse hooks in file transfer
+#ifdef HAVE_DATA_REUSE_DIR
 #include "data_reuse.h"
+#endif
 #include "AWSv4-utils.h"
 #include "AWSv4-impl.h"
 #include "condor_random_num.h"
@@ -2360,6 +2363,7 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
   be in our desired state.
 */
 
+#ifdef HAVE_DATA_REUSE_DIR
 #define return_and_resetpriv(i)                     \
     if( saved_priv != PRIV_UNKNOWN )                \
         _set_priv(saved_priv,__FILE__,__LINE__,1);  \
@@ -2371,6 +2375,12 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
         }                                           \
     }                                               \
     return i;
+#else
+#define return_and_resetpriv(i)                     \
+    if( saved_priv != PRIV_UNKNOWN )                \
+        _set_priv(saved_priv,__FILE__,__LINE__,1);  \
+    return i;
+#endif
 
 
 int
@@ -2391,6 +2401,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	int numFiles = 0;
 	ClassAd pluginStatsAd;
 	int plugin_exit_code = 0;
+	bool deferred_checkpoint_error = false;
 
 	// At the beginning of every download and every upload.
 	pluginResultList.clear();
@@ -2413,10 +2424,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 	downloadStartTime = condor_gettimestamp_double();
 
-		/* Track the potential data reuse
+#ifdef HAVE_DATA_REUSE_DIR
+	/* Track the potential data reuse
 		 */
 	std::vector<ReuseInfo> reuse_info;
 	std::string reservation_id;
+#endif
 
 		// When we are signing URLs, we want to make sure that the requested
 		// prefix is valid.
@@ -2555,6 +2568,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
 	for( int rc = 0; ; ) {
+		bool log_this_transfer = true;
+
 		TransferCommand xfer_command = TransferCommand::Unknown;
 		{
 			int reply;
@@ -2759,9 +2774,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			formatstr(fullname,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,filename.c_str());
 		}
 
+#ifdef HAVE_DATA_REUSE_DIR
 		auto iter = std::find_if(reuse_info.begin(), reuse_info.end(),
 			[&](ReuseInfo &info){return !strcmp(filename.c_str(), info.filename().c_str());});
 		bool should_reuse = !reservation_id.empty() && m_reuse_dir && iter != reuse_info.end();
+#endif
 
 		if( PeerDoesGoAhead ) {
 			if( !s->end_of_message() ) {
@@ -2901,6 +2918,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				if(!file_info.LookupString("ErrorString", rt_err)) {
 					rt_err = "<null>";
 				}
+				bool checkpoint_url = false;
+				file_info.LookupBool("CheckpointURL", checkpoint_url);
 
 				// TODO: write to job log success/failure for each file (as a custom event?)
 				dprintf(D_ALWAYS, "DoDownload: other side transferred %s to %s and got result %i\n",
@@ -2913,12 +2932,19 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// that hapens further down
 					rc = 0;
 
+					// FIXME: report only the first error
+
 					formatstr(error_buf,
 						"%s at %s failed due to remote transfer hook error: %s",
 						get_mySubSystem()->getName(),
 						s->my_ip_str(),fullname.c_str());
-					download_success = false;
-					try_again = false;
+					if( checkpoint_url ) {
+						deferred_checkpoint_error = true;
+						log_this_transfer = false;
+					} else {
+						download_success = false;
+						try_again = false;
+					}
 					hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 					hold_subcode = rt_result;
 
@@ -2927,12 +2953,21 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						"after encountering the following error: %s\n",
 						error_buf.c_str());
 				}
+
+				// If the starter is telling us about an upload it performed,
+				// we shouldn't log anything at all -- we don't know wha the
+				// right thing to log is, and we _certainly_ shouldn't log
+				// the default "download" reply saying that the file was
+				// transferred via CEDAR.  However, we _certainly_ shouldn't
+				// log a failed transfer as a success, which I think we also
+				// used to do.  *sigh*
 			} else if (subcommand == TransferSubCommand::ReuseInfo) {
 					// We must consume the EOM in order to send the ClassAd later.
 				if (!s->end_of_message()) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				}
 				ClassAd ad;
+			#ifdef HAVE_DATA_REUSE_DIR
 				if (m_reuse_dir == nullptr) {
 					dprintf(D_FULLDEBUG, "DoDownload: No data reuse directory available; ignoring potential reuse info.\n");
 					ad.InsertAttr("Result", 1);
@@ -3024,6 +3059,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						rc = 0;
 					}
 				}
+			#else
+				dprintf(D_FULLDEBUG, "DoDownload: No data reuse directory available; ignoring potential reuse info.\n");
+				ad.InsertAttr("Result", 1);
+				rc = 0;
+			#endif
 				s->encode();
 				if (!putClassAd(s, ad) || !s->end_of_message()) {
 					dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
@@ -3202,6 +3242,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					case TransferPluginResult::Success:
 						break;
 				}
+			#ifdef HAVE_DATA_REUSE_DIR
 				CondorError err;
 				if (result == TransferPluginResult::Success && should_reuse && !m_reuse_dir->CacheFile(fullname.c_str(), iter->checksum(),
 					iter->checksum_type(), reservation_id, err))
@@ -3213,6 +3254,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						rc = -1;
 					}
 				}
+			#endif
 			}
 
 		} else if ( xfer_command == TransferCommand::XferX509 ) {
@@ -3302,6 +3344,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			// to preserve their permissions, let's just let this transfer
 			// fail if the remote side screwed up.
 			rc = s->get_file_with_permissions( &bytes, fullname.c_str(), false, this_file_max_bytes, &xfer_queue );
+		#ifdef HAVE_DATA_REUSE_DIR
 			CondorError err;
 			if (rc == 0 && should_reuse && !m_reuse_dir->CacheFile(fullname.c_str(), iter->checksum(),
 					iter->checksum_type(), reservation_id, err))
@@ -3313,6 +3356,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					rc = -1;
 				}
 			}
+		#endif
 		} else {
 			// See comment about directory creation above.
 			rc = s->get_file( &bytes, fullname.c_str(), false, false, this_file_max_bytes, &xfer_queue );
@@ -3471,7 +3515,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		thisFileStatsAd.Update(pluginStatsAd);
 
 		// Write stats to disk
-		if( !isDeferredTransfer ) {
+		if( !isDeferredTransfer && log_this_transfer ) {
 			RecordFileTransferStats(thisFileStatsAd);
 		}
 
@@ -3589,6 +3633,24 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	}
 
 	downloadEndTime = condor_gettimestamp_double();
+
+	// If we're uploading a checkpoint file and suppressed an error uploading
+	// a URL to make sure we could clean it up later (by sending the MANIFEST
+	// file to SPOOL), report the error now.
+	//
+	// We report "try again" for this error so that the starter doesn't put
+	// the job on hold.  It would be better to inspect the plug-in's result
+	// to make that decision (most failures are try-again).
+	if( deferred_checkpoint_error && (hold_code != 0) ) {
+		SendTransferAck(s,
+		false /* failed */, true /* try again */,
+		hold_code, hold_subcode,
+		error_buf.c_str()
+		);
+
+		dprintf( D_ALWAYS, "DoDownload: exiting after allowing checkpoint to write its MANIFEST file.\n" );
+		return_and_resetpriv( -1 );
+	}
 
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
@@ -4074,6 +4136,13 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 		file_info.InsertAttr("ProtocolVersion", 1);
 		file_info.InsertAttr("Command", static_cast<int>(TransferCommand::Other));
 		file_info.InsertAttr("SubCommand", static_cast<int>(TransferSubCommand::UploadUrl));
+		// When transferring checkpoints, if an uplaod URL fails, we still
+		// want to preserve the corresponding MANIFEST file so that we can
+		// clean up after it, so we need to tell the shadow that's what
+		// we're doing.
+		if( uploadCheckpointFiles ) {
+			file_info.InsertAttr("CheckpointURL", true);
+		}
 
 			// Filename is expected to be relative to the sandbox directory; if we don't
 			// call condor_basename here, the shadow may see the absolute path to the execute

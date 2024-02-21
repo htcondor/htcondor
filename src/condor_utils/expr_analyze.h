@@ -34,6 +34,8 @@ enum {
 	detail_always_analyze_req    = 0x200, // always analyze requirements, (better analize does this)
 	detail_dont_show_job_attrs   = 0x400, // suppress display of job attributes in verbose analyze
 	detail_inline_std_slot_exprs = 0x800, // inline WithinResourceLimits and IsValidCheckpointPlatform in addition to START
+	detail_suppress_tall_heading = 0x1000, // suppress 2-tall headings e.g "Jobs\nMatched"
+	detail_append_to_buf         = 0x2000, // don't clear the buffer before writing analysis.
 
 	detail_better                = 0x10000, // -better rather than  -analyze was specified.
 };
@@ -113,13 +115,15 @@ private:
 	size_t allocs;
 };
 
-void AddTargetAttribsToBuffer(
+// returns count of characters added to return_buf
+int AddTargetAttribsToBuffer(
 	classad::References & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
 	ClassAd * request,
 	ClassAd * target,
 	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false
 	const char * pindent,
-	std::string & return_buf);
+	std::string & return_buf,
+	std::string & target_name); // returns the name of the target classad i.e. Job 23.0 or Slot1@host
 
 // this functions walk the given classad data structure and determines the memory consumed into
 // the given QuantizingAccumulator. The effects of classad caching/compression are ignored by these functions.

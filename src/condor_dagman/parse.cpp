@@ -1463,6 +1463,7 @@ parse_parent(
 				" node \"%s\" and child nodes : %s\n",
 				filename, lineNumber, parent_type,
 				parent->GetJobName(), failReason.c_str());
+			return false;
 		}
 	}
 	return true;

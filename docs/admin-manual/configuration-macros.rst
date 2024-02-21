@@ -207,6 +207,12 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     it is, HTCondor loses the ability to make private instances of /tmp and /var/tmp
     for jobs.
 
+:macro-def:`ETC`
+    This directory contains configuration and credential files used by
+    the HTCondor daemons.
+    The default value is ``$(LOCAL_DIR)``.
+    For Linux package installations, the value ``/etc/condor`` is used.
+
 :macro-def:`TMP_DIR[Global]`
     A directory path to a directory where temporary files are placed by
     various portions of the HTCondor system. The daemons and tools that
@@ -7259,7 +7265,7 @@ These macros affect the *condor_negotiator*.
 
 :macro-def:`PRIORITY_HALFLIFE[NEGOTIATOR]`
     This macro defines the half-life of the user priorities. See
-    :ref:`users-manual/priorities-and-preemption:user priority` on
+    :ref:`users-manual/job-scheduling:user priority` on
     User Priorities for details. It is defined in seconds and defaults
     to 86400 (1 day).
 

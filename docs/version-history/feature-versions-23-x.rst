@@ -4,6 +4,32 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.6.1
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.6.1 released on Month Date, 2024.
+
+- HTCondor version 23.6.1 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-2308`.
+
+New Features:
+
+- When the :subcom:`docker_network_type` is set to host, docker universe
+  now sets the hostname inside the container to the same as the host,
+  to ease networking from inside the container to outside the container.
+  :jira:`2294`
+
+- The configuration parameter :macro:`ETC` can now be used to relocate
+  files that are normally place under /etc/condor on unix platforms.
+  jira:`2290`
+
+Bugs Fixed:
+
+- None.
+
 Version 23.5.0
 --------------
 
@@ -176,7 +202,7 @@ New Features:
 
 - Added ability for DAGMan node script **STDOUT** and/or **STDERR** streams
   be captured in a user defined debug file. For more information visit
-  DAGMan script :ref:`automated-workflows/dagman-scripts:Debug File`
+  DAGMan script :ref:`Script Debugging`
   :jira:`2159`
 
 - Improve hold message when jobs on cgroup system exceed their memory limits.

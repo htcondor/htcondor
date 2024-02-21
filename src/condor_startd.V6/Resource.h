@@ -248,8 +248,8 @@ public:
 	time_t	cpu_busy_time(time_t now);
 #endif
 
-	void	display_load() { r_attr->display(0); }
-	void	display_load_as_D_VERBOSE() { r_attr->display(D_VERBOSE); }
+	void	display_load() { r_attr->display_load(0); }
+	void	display_load_as_D_VERBOSE() { r_attr->display_load(D_VERBOSE); }
 
 		// dprintf() functions add the CPU id to the header of each
 		// message for SMP startds (single CPU machines get no special
@@ -302,10 +302,9 @@ public:
 	// called when the resource bag of a slot has changed (p-slot or coalesced slot)
 	void	refresh_classad_resources(const ResBag & inUse) {
 		if (r_classad) {
-			const ResBag * deduct = r_backfill_slot ? &inUse : nullptr;
 			// Put in cpu-specific attributes (A_STATIC, A_UPDATE, A_TIMEOUT)
-			r_attr->publish_static(r_config_classad, deduct);
-			r_attr->publish_dynamic(r_classad, deduct);
+			publish_static_resources(r_config_classad, inUse);
+			r_attr->publish_dynamic(r_classad);
 		}
 	}
 
@@ -319,6 +318,18 @@ public:
 	void	refresh_startd_cron_attrs(); // got startd cron updates, refresh now
 	void	reconfig( void );
 	void	publish_slot_config_overrides(ClassAd * cad);
+
+	void	publish_static_resources(ClassAd * cad, const ResBag & inUse) {
+		if (r_backfill_slot && can_create_dslot()) {
+			// deduct in-use resources from the backfill p-slot
+			// if there is more than one backfill p-slot, inuse resources will be overcounted.
+			// TODO: spread out deductions across multiple backfill p-slots and/or static slots?
+			r_attr->publish_static(cad, &inUse);
+		} else {
+			r_attr->publish_static(cad, nullptr);
+		}
+	}
+
 
 	typedef enum _whyfor {
 		wf_doUpdate,       //0	 the regular periodic update
@@ -366,6 +377,7 @@ public:
 #endif
 	bool	willingToRun( ClassAd* request_ad );
 	double	compute_rank( ClassAd* req_classad );
+	const char * analyze_match(std::string & buf, ClassAd* request_ad, bool slot_requirements, bool job_requirements);
 
 #if HAVE_BACKFILL
 	int		eval_start_backfill( void ); 

@@ -49,7 +49,7 @@ void
 Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	std::string owner;
 	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
-		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): no owner attribute in job, not cleaning up.\n" );
+		dprintf( D_ALWAYS, "doCheckpointCleanUp(): no owner attribute in job, not cleaning up.\n" );
 		return /* false */;
 	}
 
@@ -73,13 +73,13 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	std::error_code errCode;
 	if( std::filesystem::exists( checkpointCleanup ) ) {
 		if(! std::filesystem::is_directory( checkpointCleanup )) {
-			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", checkpointCleanup.string().c_str() );
+			dprintf( D_ALWAYS, "doCheckpointCleanUp(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", checkpointCleanup.string().c_str() );
 			return /* false */;
 		}
 	} else {
 		std::filesystem::create_directory( checkpointCleanup, SPOOL, errCode );
 		if( errCode ) {
-			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", checkpointCleanup.string().c_str(), errCode.value(), errCode.message().c_str() );
+			dprintf( D_ALWAYS, "doCheckpointCleanUp(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", checkpointCleanup.string().c_str(), errCode.value(), errCode.message().c_str() );
 			return /* false */;
 		}
 	}
@@ -99,7 +99,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 
 	if( std::filesystem::exists( owner_dir ) ) {
 		if(! std::filesystem::is_directory( owner_dir )) {
-			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", owner_dir.string().c_str() );
+			dprintf( D_ALWAYS, "doCheckpointCleanUp(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", owner_dir.string().c_str() );
 			return /* false */;
 		}
 	} else {
@@ -107,7 +107,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 		// create the directory as the user we want, either.
 		std::filesystem::create_directory( owner_dir, checkpointCleanup, errCode );
 		if( errCode ) {
-			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errCode.value(), errCode.message().c_str() );
+			dprintf( D_ALWAYS, "doCheckpointCleanUp(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errCode.value(), errCode.message().c_str() );
 			return /* false */;
 		}
 
@@ -116,7 +116,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 			TemporaryPrivSentry sentry(PRIV_ROOT);
 			int rv = chown( owner_dir.string().c_str(), owner_uid, owner_gid );
 			if( rv == -1 ) {
-				dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to chown() checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errno, strerror(errno) );
+				dprintf( D_ALWAYS, "doCheckpointCleanUp(): failed to chown() checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errno, strerror(errno) );
 				return /* false */;
 			}
 		}
@@ -130,7 +130,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 		std::filesystem::rename( spool, target_dir, errCode );
 	}
 	if( errCode ) {
-		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to rename job (%d.%d) spool directory (%d: %s), will not clean up.\n", cluster, proc, errCode.value(), errCode.message().c_str() );
+		dprintf( D_ALWAYS, "doCheckpointCleanUp(): failed to rename job (%d.%d) spool directory (%d: %s), will not clean up.\n", cluster, proc, errCode.value(), errCode.message().c_str() );
 		return /* false */;
 	}
 
@@ -149,7 +149,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	}
 #endif /* ! defined(WINDOWS ) */
 	if( jobAdFile == NULL ) {
-		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to open job ad file '%s'\n", jobAdPath.string().c_str() );
+		dprintf( D_ALWAYS, "doCheckpointCleanUp(): failed to open job ad file '%s'\n", jobAdPath.string().c_str() );
 		return /* false */;
 	}
 	fPrintAd( jobAdFile, * jobAd );

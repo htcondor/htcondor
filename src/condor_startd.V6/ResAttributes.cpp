@@ -2020,7 +2020,7 @@ CpuAttributes::reconfig_DevIds(int slot_id, int slot_sub_id) // release non-fung
 }
 
 void
-CpuAttributes::publish_dynamic(ClassAd* cp, const ResBag *) const
+CpuAttributes::publish_dynamic(ClassAd* cp) const
 {
 		cp->Assign( ATTR_TOTAL_DISK, c_total_disk );
 		cp->Assign( ATTR_DISK, c_disk );
@@ -2036,18 +2036,24 @@ CpuAttributes::publish_dynamic(ClassAd* cp, const ResBag *) const
 }
 
 void
-CpuAttributes::publish_static(ClassAd* cp, const ResBag * deduct) const
+CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 {
 		string ids;
 
 		int mem = c_phys_mem;
-		if (deduct) { mem = MAX(0, mem - deduct->mem); }
+		if (inuse) {
+			int deduct = MAX(0, inuse->mem);
+			mem = MAX(0, mem - deduct);
+		}
 		cp->Assign( ATTR_MEMORY, c_phys_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
 
 		double cpus = c_num_cpus;
-		if (deduct) { cpus = MAX(0, cpus - deduct->cpus); }
+		if (inuse) {
+			double deduct = MAX(0, inuse->cpus);
+			cpus = MAX(0, cpus - deduct);
+		}
 		if (c_allow_fractional_cpus) {
 			cp->Assign( ATTR_CPUS, cpus );
 			cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
@@ -2074,11 +2080,11 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * deduct) const
 				ids = join(k->second, ",");  // k->second is type slotres_assigned_ids_t which is vector<string>
 				cp->Assign(attr, ids);   // example: AssignedGPUs = "GPU-01abcdef,GPU-02bcdefa"
 			} else {
-				if (deduct) {
-					double quan = j->second;
-					auto dk = deduct->resmap.find(j->first);
-					if (dk != deduct->resmap.end()) { quan -= dk->second; }
-					cp->Assign(j->first, int(quan));        // example: set Bandwidth = 100
+				if (inuse) {
+					auto dk = inuse->resmap.find(j->first);
+					if (dk != inuse->resmap.end() && dk->second > 0) {
+						cp->Assign(j->first, int(j->second - dk->second));  // example: set Bandwidth = 100
+					}
 				}
 				continue;
 			}
@@ -2120,7 +2126,7 @@ CpuAttributes::compute_disk()
 
 
 void
-CpuAttributes::display(int dpf_flags) const
+CpuAttributes::display_load(int dpf_flags) const
 {
 	// dpf_flags is expected to be 0 or D_VERBOSE
 	dprintf( D_KEYBOARD | dpf_flags,
@@ -2136,7 +2142,7 @@ CpuAttributes::display(int dpf_flags) const
 }
 
 
-void
+const char *
 CpuAttributes::cat_totals(std::string & buf) const
 {
 	buf += "Cpus: ";
@@ -2144,6 +2150,7 @@ CpuAttributes::cat_totals(std::string & buf) const
 		buf += "auto";
 	} else {
 		formatstr_cat(buf, "%f", c_num_cpus);
+		if (c_num_cpus != c_num_slot_cpus) { formatstr_cat(buf, "of %f", c_num_slot_cpus); }
 	}
 
 	buf += ", Memory: ";
@@ -2177,6 +2184,8 @@ CpuAttributes::cat_totals(std::string & buf) const
 			formatstr_cat(buf, ", %s: %d", j->first.c_str(), int(j->second));
 		}
 	}
+
+	return buf.c_str();
 }
 
 
@@ -2267,7 +2276,7 @@ ResBag::operator-=(const CpuAttributes& rhs)
 void ResBag::reset()
 {
 	cpus = 0; disk = 0; mem = 0; slots = 0;
-	for (auto res : resmap) { resmap[res.first] = 0; }
+	for (auto & res : resmap) { resmap[res.first] = 0; }
 }
 
 bool ResBag::underrun(std::string * names)
@@ -2276,7 +2285,7 @@ bool ResBag::underrun(std::string * names)
 		if (cpus < 0) *names += "Cpus,";
 		if (mem < 0) *names +=  "Memory,";
 		if (disk < 0) *names += "Disk,";
-		for (auto res : resmap) {
+		for (const auto & res : resmap) {
 			if (res.second < 0) *names += res.first + ",";
 		}
 		size_t cch = names->size();
@@ -2287,10 +2296,55 @@ bool ResBag::underrun(std::string * names)
 	} else if (cpus < 0 || disk < 0 || mem < 0) {
 		return true;
 	}
-	for (auto res : resmap) {
+	for (const auto & res : resmap) {
 		if (res.second < 0) return true;
 	}
 	return false;
+}
+
+bool ResBag::excess(std::string * names)
+{
+	if (names) {
+		if (cpus > 0) *names += "Cpus,";
+		if (mem > 0) *names +=  "Memory,";
+		if (disk > 0) *names += "Disk,";
+		for (auto res : resmap) {
+			if (res.second > 0) *names += res.first + ",";
+		}
+		size_t cch = names->size();
+		if (cch > 0) {
+			names->resize(cch-1);  // delete the extra comma.
+			return true;
+		}
+	} else if (cpus > 0 || disk > 0 || mem > 0) {
+		return true;
+	}
+	for (const auto & res : resmap) {
+		if (res.second > 0) return true;
+	}
+	return false;
+}
+
+// reset only the underrun values
+void ResBag::clear_underrun()
+{
+	if (cpus < 0) cpus = 0;
+	if (mem < 0)  mem = 0;
+	if (disk < 0) disk = 0;
+	for (auto & res : resmap) {
+		if (res.second < 0) res.second = 0;
+	}
+}
+
+// reset only the excess values
+void ResBag::clear_excess()
+{
+	if (cpus > 0) cpus = 0;
+	if (mem > 0)  mem = 0;
+	if (disk > 0) disk = 0;
+	for (auto & res : resmap) {
+		if (res.second > 0) res.second = 0;
+	}
 }
 
 const char * ResBag::dump(std::string & buf) const

@@ -35,9 +35,11 @@
 #include "profile.WINDOWS.h" // for OwnerProfile class
 #endif
 
+#if 1 //def HAVE_DATA_REUSE_DIR TOO: remove this someday
 namespace htcondor {
 class DataReuseDirectory;
 }
+#endif
 
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
@@ -318,7 +320,11 @@ public:
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
+#ifdef HAVE_DATA_REUSE_DIR
 	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
+#else
+	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return nullptr;}
+#endif
 
 	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 
@@ -443,8 +449,10 @@ private:
 		// starter's exit code be?
 	int m_shutdown_exit_code;
 
-		// Manage the data reuse directory.
+#ifdef HAVE_DATA_REUSE_DIR
+	// Manage the data reuse directory.
 	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
+#endif
 
 	// The string to set the tmp env vars to
 	std::string tmpdir;

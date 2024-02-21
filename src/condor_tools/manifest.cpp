@@ -129,6 +129,8 @@ main( int argc, char ** argv ) {
         std::filesystem::path parentPath = fileStemPath.parent_path();
         std::filesystem::path jobAdPath = parentPath / ".job.ad";
 
+        std::string failureStem = fileStem.substr(0, fileStem.size() - 1);
+        failureStem.replace(failureStem.size() - 7, 7, "FAILURE");
 
         std::string file;
         std::string error;
@@ -138,8 +140,15 @@ main( int argc, char ** argv ) {
             formatstr( destination, "%s/%.4ld", locationStem.c_str(), i );
             formatstr( file, "%s.%.4ld", fileStem.c_str(), i );
 
+            bool isFailureFile = false;
+            std::filesystem::path filePath(file);
+            if((! std::filesystem::exists(filePath)) && ends_with(fileStem, "MANIFEST")) {
+                formatstr( file, "%s.%.4ld", failureStem.c_str(), i );
+                isFailureFile = true;
+            }
+
             // fprintf( stderr, "%s %s\n", destination.c_str(), file.c_str() );
-            if(! manifest::deleteFilesStoredAt( destination, file, jobAdPath, error )) {
+            if(! manifest::deleteFilesStoredAt( destination, file, jobAdPath, error, isFailureFile )) {
                 fprintf( stdout, "%s\n", error.c_str() );
                 deleted = false;
             }

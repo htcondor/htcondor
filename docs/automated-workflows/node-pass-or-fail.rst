@@ -1,3 +1,5 @@
+.. _DAG node success:
+
 Node Success/Failure
 ====================
 
@@ -89,6 +91,8 @@ will be executed, and the node will be marked as successful.
 
 :index:`RETRY command<single: DAG input file; RETRY command>`
 :index:`retrying failed nodes<single: DAGMan; Retrying failed nodes>`
+
+.. _Retry DAG Nodes:
 
 Retrying Failed Nodes
 ---------------------

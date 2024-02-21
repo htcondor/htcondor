@@ -9891,6 +9891,14 @@ int DaemonCore::Got_Alive_Messages(pid_t pid, bool & not_responding)
 	return itr->second.got_alive_msg;
 }
 
+void DaemonCore::Set_Cleanup_Signal(pid_t pid, int signum)
+{
+	auto itr = pidTable.find(pid);
+	if (itr != pidTable.end()) {
+		itr->second.cleanup_signal = signum;
+	}
+}
+
 int DaemonCore::CheckProcInterface()
 {
 	dprintf( D_FULLDEBUG, "DaemonCore: Checking health of the proc interface\n" );
@@ -10984,6 +10992,7 @@ DaemonCore::PidEntry::PidEntry() : pid(0),
 	is_local(0),
 	parent_is_local(0),
 	reaper_id(0),
+	cleanup_signal(SIGKILL),
 	stdin_offset(0),
 	hung_past_this_time(0),
 	was_not_responding(0),

@@ -141,6 +141,7 @@ private:
 	void killFamilyIfWarranted();
 	void notifySuccessfulEvictionCheckpoint();
 	void notifySuccessfulPeriodicCheckpoint(int checkpointNumber);
+	void notifyFailedPeriodicCheckpoint( int checkpointNumber );
 
 	bool isCheckpointing;
 	bool isSoftKilling;

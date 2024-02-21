@@ -14,11 +14,9 @@ Users' Manual
    when-job-wont-run
    choosing-an-htcondor-universe
    env-of-job
-   priorities-and-preemption
+   job-scheduling
    job-sets
-   matchmaking-with-classads
    self-checkpointing-applications
    submitting-a-remote-job
    chirp
-   time-scheduling-for-job-execution
    special-environment-considerations
