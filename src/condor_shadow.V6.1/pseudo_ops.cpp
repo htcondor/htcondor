@@ -742,7 +742,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		int checkpointNumber = -1;
 		if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
 			unsigned long numToKeep = 1 + param_integer( "DEFAULT_NUM_EXTRA_CHECKPOINTS", 1 );
-			dprintf( D_STATUS, "Checkpoint number %d succeeded, deleting all but the most recent %lu successful checkpoints.\n", checkpointNumber, numToKeep );
+			dprintf( D_STATUS | D_VERBOSE, "Checkpoint number %d succeeded, deleting all but the most recent %lu successful checkpoints.\n", checkpointNumber, numToKeep );
 
 			// Before we can delete a checkpoint, it needs to be moved from the
 			// job's spool to the job owner's checkpoint-cleanup directory.  So
@@ -753,7 +753,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			SpooledJobFiles::getJobSpoolPath( jobAd, spoolPath );
 			std::filesystem::path spool( spoolPath );
 			if(! (std::filesystem::exists(spool) && std::filesystem::is_directory(spool))) {
-				dprintf(D_ALWAYS, "Checkpoint suceeded but job spool directory either doesn't exist or isn't a directory; not trying to clean up old checkpoints.\n" );
+				dprintf(D_STATUS, "Checkpoint suceeded but job spool directory either doesn't exist or isn't a directory; not trying to clean up old checkpoints.\n" );
 				return 0;
 			}
 
@@ -788,7 +788,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			for( const auto & value : checkpointsToSave ) {
 				formatstr_cat( buffer, "%ld ", value );
 			}
-			dprintf( D_STATUS, "%s\n", buffer.c_str() );
+			dprintf( D_STATUS | D_VERBOSE, "%s\n", buffer.c_str() );
 
 			// Move all but checkpointsToSave's MANIFEST/FAILURE files.  The
 			// schedd won't interrupt because it never does anything to the

@@ -203,6 +203,8 @@ spawnCheckpointCleanupProcess(
 }
 
 
+// This is something of a misnomer; it's actually just moving the MANIFEST
+// and/or FAILURE files.
 bool
 moveCheckpointsToCleanupDirectory(
 	int cluster, int proc, ClassAd * jobAd,
@@ -210,7 +212,7 @@ moveCheckpointsToCleanupDirectory(
 ) {
 	std::string owner;
 	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
-		dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): no owner attribute in job, not cleaning up.\n" );
+		dprintf( D_ERROR, "moveCheckpointsToCleanupDirectory(): no owner attribute in job, not cleaning up.\n" );
 		return false;
 	}
 
@@ -219,8 +221,8 @@ moveCheckpointsToCleanupDirectory(
 	std::filesystem::path spool( spoolPath );
 
 	if(! std::filesystem::exists( spool )) {
-	    // Then the job never succesfully completed a checkpoint, and we
-	    // don't have anything else to do.
+	    // Then the job never uploaded a MANIFEST (or FAILURE) file,
+	    // and we have nothing to clean up (with).
 	    return false;
 	}
 
@@ -271,7 +273,7 @@ moveCheckpointsToCleanupDirectory(
 #if ! defined(WINDOWS)
 		{
 			TemporaryPrivSentry sentry(PRIV_ROOT);
-			// dprintf( D_FULLDEBUG, "chown(%s, %d, %d)\n", owner_dir.string().c_str(), owner_uid, owner_gid );
+			// dprintf( D_STATUS | D_VERBOSE, "chown(%s, %d, %d)\n", owner_dir.string().c_str(), owner_uid, owner_gid );
 			int rv = chown( owner_dir.string().c_str(), owner_uid, owner_gid );
 			if( rv == -1 ) {
 				dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to chown() checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errno, strerror(errno) );
@@ -378,7 +380,7 @@ moveCheckpointsToCleanupDirectory(
 					return false;
 				}
 
-				dprintf( D_FULLDEBUG, "moveCheckpointsToCleanupDirectory(): moved manifest %ld\n", manifestNumber );
+				dprintf( D_STATUS | D_VERBOSE, "moveCheckpointsToCleanupDirectory(): moved manifest %ld\n", manifestNumber );
 				moved_a_manifest = true;
 			}
 		}
