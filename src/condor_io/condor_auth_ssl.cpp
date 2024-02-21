@@ -1171,24 +1171,6 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 			setRemoteUser("unauthenticated");
 			setAuthenticatedName("unauthenticated");
 		} else {
-			if (param_boolean("USE_VOMS_ATTRIBUTES", false) && param_boolean("AUTH_SSL_USE_VOMS_IDENTITY", true)) {
-				X509* peer = SSL_get_peer_certificate_ptr(m_auth_state->m_ssl);
-				STACK_OF(X509)* chain = nullptr;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-				chain = SSL_get_peer_cert_chain_ptr(m_auth_state->m_ssl);
-#else
-				chain = SSL_get0_verified_chain_ptr(m_auth_state->m_ssl);
-#endif
-				char* voms_fqan = nullptr;
-				int voms_err = extract_VOMS_info(peer, chain, 1, nullptr, nullptr, &voms_fqan);
-				if (!voms_err) {
-					dprintf(D_SECURITY|D_FULLDEBUG, "Found VOMS FQAN: %s\n", voms_fqan);
-					subjectname = voms_fqan;
-					free(voms_fqan);
-				} else {
-					dprintf(D_SECURITY|D_FULLDEBUG, "VOMS FQAN not present (error %d), ignoring.\n", voms_err);
-				}
-			}
 			setRemoteUser("ssl");
 			setAuthenticatedName(subjectname.c_str());
 		}
@@ -1896,7 +1878,21 @@ std::string Condor_Auth_SSL::get_peer_identity(SSL *ssl)
 					PROXY_CERT_INFO_EXTENSION_free(pci);
 				}
 			}
-			dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy. Using identity '%s'\n", subjectname);
+			char* voms_fqan = nullptr;
+			if (param_boolean("USE_VOMS_ATTRIBUTES", false) && param_boolean("AUTH_SSL_USE_VOMS_IDENTITY", true)) {
+				int voms_err = extract_VOMS_info(peer, chain, 1, nullptr, nullptr, &voms_fqan);
+				if (voms_err) {
+					dprintf(D_SECURITY|D_FULLDEBUG, "VOMS FQAN not present (error %d), ignoring.\n", voms_err);
+				}
+			}
+			if (voms_fqan) {
+				strncpy(subjectname, voms_fqan, sizeof(subjectname));
+				subjectname[sizeof(subjectname)-1] = '\0';
+				free(voms_fqan);
+				dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy with VOMS attributes. Using identity '%s'\n", subjectname);
+			} else {
+				dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy. Using identity '%s'\n", subjectname);
+			}
 		} else {
 			X509_NAME_oneline(X509_get_subject_name(peer), subjectname, sizeof(subjectname));
 		}

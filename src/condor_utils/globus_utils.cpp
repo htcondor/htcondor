@@ -573,6 +573,7 @@ extract_VOMS_info( X509 *cert, STACK_OF(X509) *chain, int verify_type, char **vo
 	char *subject_name = NULL;
 	char **fqan = NULL;
 	int voms_err;
+	char *errmsg = nullptr;
 	int fqan_len = 0;
 	char *retfqan = NULL;
 	char *tmp_scan_ptr = NULL;
@@ -606,7 +607,10 @@ extract_VOMS_info( X509 *cert, STACK_OF(X509) *chain, int verify_type, char **vo
 	if (verify_type == 0) {
 		ret = (*VOMS_SetVerificationType_ptr)( VERIFY_NONE, voms_data, &voms_err );
 		if (ret == 0) {
-			(*VOMS_ErrorMessage_ptr)(voms_data, voms_err, NULL, 0);
+			errmsg = (*VOMS_ErrorMessage_ptr)(voms_data, voms_err, NULL, 0);
+			set_error_string(errmsg);
+			dprintf(D_SECURITY, "VOMS Error: %s\n", errmsg);
+			free(errmsg);
 			ret = voms_err;
 			goto end;
 		}
@@ -615,14 +619,27 @@ extract_VOMS_info( X509 *cert, STACK_OF(X509) *chain, int verify_type, char **vo
 	ret = (*VOMS_Retrieve_ptr)(cert, chain, RECURSE_CHAIN,
 						voms_data, &voms_err);
 
+	if (ret == 0 && voms_err == VERR_NOEXT) {
+		// No VOMS extensions present
+		ret = 1;
+		goto end;
+	}
+
 	// If verification was requested and no extensions were returned,
 	// try again without verification. If we get extensions that time,
 	// then verification failed. In that case, issue a warning, then
 	// act as if there were no extensions.
 	if (ret == 0 && verify_type != 0 ) {
+		errmsg = (*VOMS_ErrorMessage_ptr)(voms_data, voms_err, NULL, 0);
+		dprintf(D_SECURITY, "VOMS Error: %s\n", errmsg);
+		free(errmsg);
+
 		ret = (*VOMS_SetVerificationType_ptr)( VERIFY_NONE, voms_data, &voms_err );
 		if (ret == 0) {
-			(*VOMS_ErrorMessage_ptr)(voms_data, voms_err, NULL, 0);
+			errmsg = (*VOMS_ErrorMessage_ptr)(voms_data, voms_err, NULL, 0);
+			set_error_string(errmsg);
+			dprintf(D_SECURITY, "VOMS Error: %s\n", errmsg);
+			free(errmsg);
 			ret = voms_err;
 			goto end;
 		}
@@ -640,15 +657,12 @@ extract_VOMS_info( X509 *cert, STACK_OF(X509) *chain, int verify_type, char **vo
 		goto end;
 	}
 	if (ret == 0) {
-		if (voms_err == VERR_NOEXT) {
-			// No VOMS extensions present
-			ret = 1;
-			goto end;
-		} else {
-			(*VOMS_ErrorMessage_ptr)(voms_data, voms_err, NULL, 0);
-			ret = voms_err;
-			goto end;
-		}
+		errmsg = (*VOMS_ErrorMessage_ptr)(voms_data, voms_err, NULL, 0);
+		set_error_string(errmsg);
+		dprintf(D_SECURITY, "VOMS Error: %s\n", errmsg);
+		free(errmsg);
+		ret = voms_err;
+		goto end;
 	}
 
 	// we only support one cert for now.  serializing and encoding all the
