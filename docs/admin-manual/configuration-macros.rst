@@ -6412,6 +6412,14 @@ These settings affect the *condor_starter*.
     :tool:`condor_chirp` command **set_job_attr_delayed** exceeds this
     parameter, it is possible for these updates to be ignored.
 
+:macro-def:`CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY[STARTER]`
+    A boolean valued parameter which defaults to true.  When true,
+    it sets the environment variable LD_PRELOAD to point to the
+    htcondor-provided libgetpwnam.so for the sshd run by 
+    :tool:`condor_ssh_to_job`.  This results in the shell being
+    set to /bin/sh and the home directory to the scratch directory
+    for processes launched by :tool:`condor_ssh_to_job.
+
 :macro-def:`USE_PSS[STARTER]`
     A boolean value, that when ``True`` causes the *condor_starter* to
     measure the PSS (Proportional Set Size) of each HTCondor job. The
