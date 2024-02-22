@@ -69,12 +69,10 @@ New Features:
 - The ``$CondorVersion`` string contains the Git SHA for official CHTC builds of HTCondor.
   :jira:`532`
 
-- The new submit command :subcom:`starter_log` can be used to have the
-  *condor_starter* write a second copy of its daemon log, which is
-  included in the job's output sandbox that's transferred to the
-  Access Point.
-  New submit command :subcom:`starter_debug` can be used to control
-  the logging level of this job-specific log file.
+- The new submit commands :subcom:`starter_debug` and :subcom:`starter_log`
+  can be used to have the *condor_starter* write a second copy of its
+  daemon log and have that file transferred to the Access Point with the
+  job's output sandbox.
   :jira:`2296`
 
 Bugs Fixed:
