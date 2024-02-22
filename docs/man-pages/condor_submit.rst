@@ -2663,6 +2663,20 @@ ADVANCED COMMANDS
     replaces the default allocation of stack space, which is unlimited
     in size.
 
+ :subcom-def:`starter_debug` = <log levels>
+    When :subcom:`starter_log` is used to create a copy of the
+    *condor_starter* daemon log, this command controls what level of
+    logging is done. The value is the same as would be used for
+    :macro:`<SUBSYS>_DEBUG`. The default is to use the same level that
+    the *condor_starter* is configured to use for its normal daemon
+    log.
+
+ :subcom-def:`starter_log` = <pathname>
+    This command causes the *condor_starter* to write a separate copy
+    of its daemon log, which will be included in the job output
+    sandbox that is transferred to the Access Point.
+    The log is written to the given pathname.
+
  :subcom-def:`submit_event_notes` = <note>
     A string that is appended to the submit event in the job's log file.
     For DAGMan jobs, the string ``DAG Node:`` and the node's name is
