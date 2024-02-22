@@ -1751,8 +1751,8 @@ all attributes.
     attribute is defined when retrieval of the output begins.
 
 :classad-attribute:`StreamErr`
-    An attribute utilized only for grid universe jobs. The default value
-    is ``True``. If ``True``, and ``TransferErr`` is ``True``, then
+    The default value is ``False``.
+    If ``True``, and ``TransferErr`` is ``True``, then
     standard error is streamed back to the access point, instead of
     doing the transfer (as a whole) after the job completes. If
     ``False``, then standard error is transferred back to the submit
@@ -1760,8 +1760,8 @@ all attributes.
     ``False``, then this job attribute is ignored.
 
 :classad-attribute:`StreamOut`
-    An attribute utilized only for grid universe jobs. The default value
-    is ``True``. If ``True``, and ``TransferOut`` is ``True``, then job
+    The default value is ``False``.
+    If ``True``, and ``TransferOut`` is ``True``, then job
     output is streamed back to the access point, instead of doing the
     transfer (as a whole) after the job completes. If ``False``, then
     job output is transferred back to the access point (as a whole)
