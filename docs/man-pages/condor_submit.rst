@@ -712,7 +712,7 @@ BASIC COMMANDS
     one submit description file.
 
     :index:`universe<single: universe; submit commands>`
- universe = <vanilla | scheduler | local | grid | java | vm | parallel | docker>
+ universe = <vanilla | scheduler | local | grid | java | vm | parallel | docker | container>
     Specifies which HTCondor universe to use when running this job. The
     HTCondor universe specifies an HTCondor execution environment.
 
@@ -743,6 +743,9 @@ BASIC COMMANDS
     require multiple machines in order to run.
 
     The **docker** universe runs a docker container as an HTCondor job.
+
+    The **container** universe runs a container as an HTCondor job
+    using a supported container runtime system on the Execution Point.
 
     :index:`max_materialize<single: max_materialize; submit commands>`
  max_materialize = <limit>
