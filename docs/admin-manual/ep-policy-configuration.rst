@@ -4170,6 +4170,8 @@ constraint expression may be truncated.
         NUM_SLOTS_TYPE_3 = 2
 
 
+.. _consumption-policy:
+
 condor_negotiator-Side Resource Consumption Policies
 ----------------------------------------------------
 
