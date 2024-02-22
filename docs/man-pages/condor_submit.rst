@@ -688,7 +688,7 @@ BASIC COMMANDS
     This is handy when submitting multiple runs into one cluster with
     one submit description file.
 
- :subcom-def:`universe` = <vanilla | scheduler | local | grid | java | vm | parallel | docker>
+ :subcom-def:`universe` = <vanilla | scheduler | local | grid | java | vm | parallel | docker | container>
     Specifies which HTCondor universe to use when running this job. The
     HTCondor universe specifies an HTCondor execution environment.
 
@@ -716,6 +716,9 @@ BASIC COMMANDS
     require multiple machines in order to run.
 
     The **docker** universe runs a docker container as an HTCondor job.
+
+    The **container** universe runs a container as an HTCondor job
+    using a supported container runtime system on the Execution Point.
 
  :subcom-def:`max_materialize` = <limit>
     Submit jobs as a late materialization factory and instruct the *condor_schedd*
