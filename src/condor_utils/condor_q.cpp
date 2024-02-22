@@ -741,24 +741,23 @@ int JobSort(ClassAd *job1, ClassAd *job2, void *  /*data*/)
 char
 encode_status( int status )
 {
-	switch( status ) {
-	  case IDLE:
-		return 'I';
-	  case RUNNING:
-		return 'R';
-	  case COMPLETED:
-		return 'C';
-	  case REMOVED:
-		return 'X';
-	  case HELD:
-		return 'H';
-	  case TRANSFERRING_OUTPUT:
-		return '>';
-	  case SUSPENDED:
-		return 'S';
-	  default:
+	static const char encode[JOB_STATUS_MAX+1] = {
+		  0,	 //zero
+		'I',	 //IDLE					1
+		'R',	 //RUNNING				2
+		'X',	 //REMOVED				3
+		'C',	 //COMPLETED			4
+		'H',	 //HELD					5
+		'>',	 //TRANSFERRING_OUTPUT	6
+		'S',	 //SUSPENDED			7
+		'F',	 //JOB_STATUS_FAILED	8
+		'B',	 //JOB_STATUS_BLOCKED	9
+	};
+
+	if (status < JOB_STATUS_MIN || status > JOB_STATUS_MAX) {
 		return ' ';
 	}
+	return encode[status];
 }
 
 /*

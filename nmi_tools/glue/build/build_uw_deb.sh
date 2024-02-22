@@ -42,7 +42,7 @@ cd "condor-${condor_version}"
 
 # copy debian files into place
 cp -pr build/packaging/debian debian
-(cd debian; ./prepare-build-files.sh)
+(cd debian; ./prepare-build-files.sh -DUW_BUILD)
 
 # set default email address for build
 export DEBEMAIL=${DEBEMAIL-htcondor-admin@cs.wisc.edu}
@@ -97,7 +97,7 @@ dpkg-buildpackage -uc -us
 
 cd ..
 
-files="[a-z]*.buildinfo [a-z]*.changes [a-z]*.deb [a-z]*.debian.tar.* [a-z]*.dsc [a-z]*.orig.tar.*"
+files="[a-z]*.buildinfo [a-z]*.changes [a-z]*deb [a-z]*.debian.tar.* [a-z]*.dsc [a-z]*.orig.tar.*"
 # shellcheck disable=SC2086 # Intended splitting of files
 mv $files "$dest_dir"
 rm -rf "$tmpd"

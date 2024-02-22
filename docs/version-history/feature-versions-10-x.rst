@@ -304,8 +304,7 @@ New Features:
   specify DAG nodes as save points to record the current DAG's progress
   in a file similar to a rescue file. These files can then be specified
   with the new :tool:`condor_submit_dag` flag ``load_save`` to re-run the
-  DAG from that point of progression. For more information visit
-  :ref:`automated-workflows/dagman-save-files:dag save point files`.
+  DAG from that point of progression. For more information visit :ref:`DAG Save Files`.
   :jira:`1636`
 
 - The admin knob :macro:`SUBMIT_ALLOW_GETENV` when set to false, now allows

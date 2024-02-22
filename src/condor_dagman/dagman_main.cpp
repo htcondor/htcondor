@@ -51,42 +51,18 @@ DagmanUtils dagmanUtils;
 
 //---------------------------------------------------------------------------
 static void Usage() {
-	debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
-			"\t\t-Lockfile <NAME.dag.lock>\n"
-			"\t\t-Dag <NAME.dag>\n"
-			"\t\t-CsdVersion <version string>\n"
-			"\t\t[-Help]\n"
-			"\t\t[-Version]\n"
-			"\t\t[-Debug <level>]\n"
-			"\t\t[-MaxIdle <int N>]\n"
-			"\t\t[-MaxJobs <int N>]\n"
-			"\t\t[-MaxPre <int N>]\n"
-			"\t\t[-MaxPost <int N>]\n"
-			"\t\t[-MaxHold <int N>]\n"
-			"\t\t[-DontAlwaysRunPost]\n"
-			"\t\t[-AlwaysRunPost]\n"
-			"\t\t[-WaitForDebug]\n"
-			"\t\t[-UseDagDir]\n"
-			"\t\t[-AutoRescue <0|1>]\n"
-			"\t\t[-DoRescueFrom <int N>]\n"
-			"\t\t[-load_save filename]\n"
-			"\t\t[-AllowVersionMismatch]\n"
-			"\t\t[-DumpRescue]\n"
-			"\t\t[-Verbose]\n"
-			"\t\t[-Force]\n"
-			"\t\t[-Notification <never|always|complete|error>]\n"
-			"\t\t[-Suppress_notification]\n"
-			"\t\t[-Dont_Suppress_notification]\n"
-			"\t\t[-Dagman <dagman_executable>]\n"
-			"\t\t[-Outfile_dir <directory>]\n"
-			"\t\t[-Update_submit]\n"
-			"\t\t[-Import_env]\n"
-			"\t\t[-Include_env <Variables>]\n"
-			"\t\t[-Insert_env <Key=Value>]\n"
-			"\t\t[-Priority <int N>]\n"
-			"\t\t[-DoRecov]\n"
-			"\twhere NAME is the name of your DAG.\n"
-			"\tdefault -Debug is -Debug %d\n", DEBUG_VERBOSE );
+	std::string outFile = "<DAG File>.lib.out";
+	if (dagman.dagFiles.size() > 0) {
+		std::string primaryDag = dagman.dagFiles.front();
+		formatstr(outFile, "%s.lib.out", primaryDag.c_str());
+	}
+	debug_printf(DEBUG_SILENT, "To view condor_dagman usage look at %s\n", outFile.c_str());
+	fprintf(stdout, "Usage: condor_dagman -p 0 -f -l . -Dag <NAME.dag> -Lockfile <NAME.dag.lock> -CsdVersion <version string>\n");
+	fprintf(stdout, "\t[-Help]\n"
+	                "\t[-Version]\n");
+	dagmanUtils.DisplayDAGManOptions("\t[%s]\n", DagOptionSrc::DAGMAN_MAIN);
+	fprintf(stdout, "Where NAME is the name of your DAG file.\n"
+	                "Default -Debug is -Debug %d\n", DEBUG_VERBOSE);
 	DC_Exit( EXIT_ERROR );
 }
 
@@ -426,6 +402,10 @@ Dagman::Config()
 
 	_writePartialRescueDag = param_boolean( "DAGMAN_WRITE_PARTIAL_RESCUE",
 				_writePartialRescueDag );
+	if ( ! _writePartialRescueDag) {
+		debug_printf(DEBUG_NORMAL, "\n\nWARNING: DAGMan is configured to write Full Rescue DAG files.\n"
+		                           "This is Deprecated and will be removed during V24 feature series of HTCondor!\n\n");
+	}
 	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
 				_writePartialRescueDag ? "True" : "False" );
 
@@ -660,6 +640,18 @@ int main_testing_stub( Service *, int ) {
 void main_init (int argc, char ** const argv) {
 
 	printf ("Executing condor dagman ... \n");
+
+
+// We are seeing crashes in dagman after exit when global dtors 
+// are being called after the classad cache map is destroyed,
+// but only on Windows, probably because order of destruction
+// is not defined.  
+// Surely there must be better ways to fix this, but 
+// for now, just turn off the cache on Windows for dagman.
+
+#ifdef WIN32
+	classad::ClassAdSetExpressionCaching(false);
+#endif
 
 	std::string tmpcwd;
 	condor_getcwd( tmpcwd );
@@ -933,7 +925,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf(DEBUG_SILENT, "No environment variables passed for -include_env\n");
 				Usage();
 			}
-			dagman.options.append("GetFromEnv", argv[i]);
+			dagman.options.extend("GetFromEnv", argv[i]);
 
 		} else if( !strcasecmp( "-insert_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {
@@ -1222,7 +1214,7 @@ void main_init (int argc, char ** const argv) {
 		// already set.
 		//
 	dagman.options[deep::b::UseDagDir] = dagman.useDagDir;
-	dagman.options[deep::b::AutoRescue] = dagman.autoRescue;
+	dagman.options[deep::i::AutoRescue] = dagman.autoRescue;
 	dagman.options[deep::i::DoRescueFrom] = dagman.doRescueFrom;
 	dagman.options[deep::b::AllowVersionMismatch] = allowVerMismatch;
 	dagman.options[deep::b::Recurse] = false;

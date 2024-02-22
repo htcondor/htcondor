@@ -52,6 +52,41 @@ namespace classad {
 }
 using classad::ClassAd;
 
+// Log file type - what format the events are written as
+// AUTO is a special case used by read_user_log to indicate it should figure out the format type
+enum UserLogType {
+	LOG_TYPE_UNKNOWN = -1, LOG_TYPE_NORMAL=0, LOG_TYPE_AUTO, LOG_TYPE_XML, LOG_TYPE_JSON
+};
+
+class ULogFile {
+public:
+	ULogFile() = default;
+	ULogFile(const ULogFile& that) = delete;
+	~ULogFile() { if (fp) { fclose(fp); fp = nullptr; } }
+
+	int atEnd() { return feof(fp); }
+	void clearEof() { clearerr(fp); }
+
+	const char * stash(const char * line) {
+		const char * prev = stashed_line;
+		stashed_line = line;
+		return prev;
+	}
+
+	char* readLine(char * buf, size_t bufsize);
+	bool readLine(std::string& str, bool append);
+	//int read_formatted(const char * fmt, va_list args);
+
+	// hack to work with read_user_log.cpp for now
+	FILE* attach(FILE* _fp) {
+		stashed_line = nullptr;
+		FILE * ret = fp; fp = _fp; return ret;
+	}
+
+private:
+	FILE* fp = nullptr;
+	const char * stashed_line = nullptr;
+};
 
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
@@ -62,6 +97,7 @@ using classad::ClassAd;
 	         ^^^^^^           
 */
 enum ULogEventNumber {
+	/** not a valid event         */  ULOG_NO = -1,
 	/** Job submitted             */  ULOG_SUBMIT 					= 0,
 	/** Job now running           */  ULOG_EXECUTE 					= 1,
 	/** Error in executable       */  ULOG_EXECUTABLE_ERROR 		= 2,
@@ -180,14 +216,13 @@ class ULogEvent {
     
     /// Destructor
     virtual ~ULogEvent(void);
-    
-    /** Get the next event from the log.  Gets the log header and body.
-        @param file the non-NULL readable log file
-        @param got_sync_line is set to true if the ... (sync string) was read
-        @return 0 for failure, 1 for success
-    */
-    int getEvent (FILE *file, bool & got_sync_line);
-    
+
+	// temporary parsing hack as we fixup read_user_log
+	static ULogEventNumber readEventNumber(ULogFile& file, char* headbuf, size_t bufsize);
+
+	// populate the event from a file where the first line has already been read
+	int getEvent (ULogFile &file, const char * header_line, bool & got_sync_line);
+
 	/** Format the event into a string suitable for writing to the log file.
 	 *  Includes the event header and body, but not the synch delimiter.
 	 *  @param out string to which the formatted text should be appended
@@ -247,12 +282,14 @@ class ULogEvent {
     
   protected:
 
-    /** Read the resource usage from the log file.
-        @param file the non-NULL readable log file
-        @param usage the rusage buffer to modify
+    /** Read the resource usage line from the log file.
+        @param file   the non-NULL readable log file
+        @param usage  the rusage buffer to modify
+        @param line   rusage line is read into this buffer
+        @param remain set to offset in the buffer where rusage parser ended
         @return 0 for failure, 1 for success
     */
-    int readRusage (FILE * file, rusage & usage);
+    bool readRusageLine (std::string &line, ULogFile& file, bool & got_sync_line, rusage & usage, int & remain);
 
     /** Format the resource usage for writing to the log file.
         @param out string to which the usage should be appended
@@ -279,7 +316,7 @@ class ULogEvent {
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *file, bool & got_sync_line) = 0;
+    virtual int readEvent (ULogFile& file, bool & got_sync_line) = 0;
 
     /** Format the body of this event for writing to the log file.
      *  This virtual function will be implemented differently for each
@@ -289,11 +326,12 @@ class ULogEvent {
      */
     virtual bool formatBody( std::string &out ) = 0;
 
-    /** Read the header from the log file
-        @param file the non-NULL readable log file
-        @return 0 for failure, 1 for success
+    /** populate the ULogEvent fields from the header line of the event, returning a
+          pointer to the first character after the space at the end of the header fields
+        @param ptr - the first line of the event
+        @return null for parse failure, a pointer after the header fields on success
     */
-    int readHeader (FILE *file);
+	const char * readHeader(const char * ptr);
 
     /** Format the header for the log file
      *  @param out string to which the header should be appended
@@ -303,19 +341,22 @@ class ULogEvent {
 
 	// helper functions
 
+	// 
+	bool readLine(std::string& str, ULogFile& file, bool append=false) { return file.readLine(str, append); }
+
 	// returns true if the input is ... or ...\n or ...\r\n
 	bool is_sync_line(const char * line);
 
 	// read a line into the supplied buffer and return true if there was any data read
 	// and the data is not a sync line, if return values is false got_sync_line will be set accordingly
 	// if chomp is true, trailing \r and \n will be changed to \0
-	bool read_optional_line(FILE* file, bool & got_sync_line, char * buf, size_t bufsize, bool chomp=true, bool trim=false);
+	bool read_optional_line(ULogFile& file, bool & got_sync_line, char * buf, size_t bufsize, bool chomp=true, bool trim=false);
 
 	// read a line into a string 
-	bool read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp=true, bool want_trim=false);
+	bool read_optional_line(std::string & str, ULogFile& file, bool & got_sync_line, bool want_chomp=true, bool want_trim=false);
 
 	// read a value after a prefix into a string
-	bool read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp=true);
+	bool read_line_value(const char * prefix, std::string & val, ULogFile& file, bool & got_sync_line, bool want_chomp=true);
 
   private:
     /// The time this event occurred as a UNIX timestamp
@@ -348,11 +389,11 @@ class FutureEvent : public ULogEvent
     FutureEvent(ULogEventNumber en) { eventNumber = en; };
     ~FutureEvent(void) {};
 
-    /** Read the body of the next Submit event.
+    /** Read the body of the next event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -399,7 +440,7 @@ class SubmitEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -448,7 +489,7 @@ class RemoteErrorEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -514,7 +555,7 @@ class GenericEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -560,7 +601,7 @@ class ExecuteEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -619,7 +660,7 @@ class ExecutableErrorEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -657,7 +698,7 @@ class CheckpointedEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -699,7 +740,7 @@ class JobAbortedEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -788,7 +829,7 @@ class JobEvictedEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -860,7 +901,7 @@ class TerminatedEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent( FILE * file, bool & got_sync_line ) = 0;
+    virtual int readEvent(ULogFile& file, bool & got_sync_line ) = 0;
 
     /** Read the body of the next Terminated event.
         @param file the non-NULL readable log file
@@ -868,7 +909,7 @@ class TerminatedEvent : public ULogEvent
 		or "Node")
         @return 0 for failure, 1 for success
     */
-    int readEventBody( FILE *, bool & got_sync_line, const char* header );
+    int readEventBody(ULogFile& file, bool & got_sync_line, const char* header );
 
 	/** Populate the pusageAd from the given classad
 		@return 0 for failure, 1 for success
@@ -956,7 +997,7 @@ class JobTerminatedEvent : public TerminatedEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -988,7 +1029,7 @@ class NodeTerminatedEvent : public TerminatedEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1021,7 +1062,7 @@ class PostScriptTerminatedEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    int readEvent( FILE* file, bool & got_sync_line );
+    int readEvent(ULogFile& file, bool & got_sync_line );
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1074,7 +1115,7 @@ class JobImageSizeEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1115,7 +1156,7 @@ class ShadowExceptionEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1158,7 +1199,7 @@ class JobSuspendedEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1196,7 +1237,7 @@ class JobUnsuspendedEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1235,7 +1276,7 @@ class JobHeldEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1279,7 +1320,7 @@ class JobReleasedEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1316,7 +1357,7 @@ class NodeExecuteEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1365,7 +1406,7 @@ class JobDisconnectedEvent : public ULogEvent
 public:
 	JobDisconnectedEvent(void);
 
-	virtual int readEvent( FILE * , bool & got_sync_line);
+	virtual int readEvent(ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1392,7 +1433,7 @@ class JobReconnectedEvent : public ULogEvent
 public:
 	JobReconnectedEvent(void);
 
-	virtual int readEvent( FILE * , bool & got_sync_line);
+	virtual int readEvent(ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1421,7 +1462,7 @@ class JobReconnectFailedEvent : public ULogEvent
 public:
 	JobReconnectFailedEvent(void);
 
-	virtual int readEvent( FILE * , bool & got_sync_line);
+	virtual int readEvent(ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1452,7 +1493,7 @@ class GridResourceUpEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1484,7 +1525,7 @@ class GridResourceDownEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1521,7 +1562,7 @@ class GridSubmitEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1561,7 +1602,7 @@ class JobAdInformationEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1615,7 +1656,7 @@ class JobStatusUnknownEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1651,7 +1692,7 @@ class JobStatusKnownEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1686,7 +1727,7 @@ class JobStageInEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1721,7 +1762,7 @@ class JobStageOutEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1756,7 +1797,7 @@ class AttributeUpdate : public ULogEvent
 		@param file the non-NULL readable log file
 		@return 0 for failure, 1 for success
 	*/
-	virtual int readEvent (FILE *, bool & got_sync_line);
+	virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
 	/** Format the body of this event.
 		@param out string to which the formatted text should be appended
@@ -1805,7 +1846,7 @@ class PreSkipEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1847,7 +1888,7 @@ class ClusterSubmitEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended
@@ -1896,7 +1937,7 @@ class ClusterRemoveEvent : public ULogEvent
     @param file the non-NULL readable log file
     @return 0 for failure, 1 for success
 */
-virtual int readEvent (FILE *, bool & got_sync_line);
+virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
 /** Format the body of this event.
     @param out string to which the formatted text should be appended
@@ -1939,7 +1980,7 @@ public:
 	~FactoryPausedEvent () {}
 
 	// initialize this class by reading the next event from the given log file
-	virtual int readEvent (FILE * log_file, bool & got_sync_line);
+	virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
 	// Format the body of this event, and append to the given std::string
 	virtual bool formatBody( std::string &out );
@@ -1970,7 +2011,7 @@ public:
 	~FactoryResumedEvent () { };
 
 	// initialize this class by reading the next event from the given log file
-	virtual int readEvent (FILE *, bool & got_sync_line);
+	virtual int readEvent (ULogFile& file, bool & got_sync_line);
 	// Format the body of this event, and append to the given std::string
 	virtual bool formatBody( std::string &out );
 	// Return a ClassAd representation of this event
@@ -1992,7 +2033,7 @@ class FileTransferEvent : public ULogEvent {
 		FileTransferEvent();
 		~FileTransferEvent();
 
-		virtual int readEvent( FILE * f, bool & got_sync_line );
+		virtual int readEvent( ULogFile& file, bool & got_sync_line );
 		virtual bool formatBody( std::string & out );
 
 		virtual ClassAd * toClassAd(bool event_time_utc);
@@ -2032,7 +2073,7 @@ public:
 	ReserveSpaceEvent() {eventNumber = ULOG_RESERVE_SPACE;}
 	~ReserveSpaceEvent() {};
 
-	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual int readEvent( ULogFile& file, bool & got_sync_line ) override;
 	virtual bool formatBody( std::string & out ) override;
 
 	virtual ClassAd * toClassAd(bool event_time_utc) override;
@@ -2064,7 +2105,7 @@ public:
 	ReleaseSpaceEvent() {eventNumber = ULOG_RELEASE_SPACE;}
 	~ReleaseSpaceEvent() {};
 
-	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual int readEvent( ULogFile& file, bool & got_sync_line ) override;
 	virtual bool formatBody( std::string & out ) override;
 
 	virtual ClassAd * toClassAd(bool event_time_utc) override;
@@ -2083,7 +2124,7 @@ public:
 	FileCompleteEvent() : m_size(0) {eventNumber = ULOG_FILE_COMPLETE;}
 	~FileCompleteEvent() {};
 
-	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual int readEvent( ULogFile& file, bool & got_sync_line ) override;
 	virtual bool formatBody( std::string & out ) override;
 
 	virtual ClassAd * toClassAd(bool event_time_utc) override;
@@ -2114,7 +2155,7 @@ public:
 	FileUsedEvent() {eventNumber = ULOG_FILE_USED;}
 	~FileUsedEvent() {};
 
-	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual int readEvent( ULogFile& file, bool & got_sync_line ) override;
 	virtual bool formatBody( std::string & out ) override;
 
 	virtual ClassAd * toClassAd(bool event_time_utc) override;
@@ -2140,7 +2181,7 @@ public:
 	FileRemovedEvent() : m_size(0) {eventNumber = ULOG_FILE_REMOVED;}
 	~FileRemovedEvent() {};
 
-	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual int readEvent( ULogFile& file, bool & got_sync_line ) override;
 	virtual bool formatBody( std::string & out ) override;
 
 	virtual ClassAd * toClassAd(bool event_time_utc) override;
@@ -2180,7 +2221,7 @@ class DataflowJobSkippedEvent : public ULogEvent
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *, bool & got_sync_line);
+    virtual int readEvent (ULogFile& file, bool & got_sync_line);
 
     /** Format the body of this event.
         @param out string to which the formatted text should be appended

@@ -51,7 +51,7 @@ from typing import (
 #
 
 class ClassAd(MutableMapping):
-    """
+    R"""
     The `ClassAd language <https://htcondor.org/classad/refman/>`_
     defines a ClassAd as a mapping from attribute names to expressions.  A
     :class:`ClassAd` is a :class:`collections.abc.MutableMapping` from

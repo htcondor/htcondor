@@ -142,7 +142,8 @@ namespace DagmanShallowOptions {
 	);
 
 	BETTER_ENUM(b, long,
-		PostRun = 0, DumpRescueDag, RunValgrind, DoSubmit, DoRecovery, CopyToSpool
+		PostRun = 0, DumpRescueDag, RunValgrind, DoSubmit, DoRecovery, CopyToSpool, DryRun,
+		WaitForDebug
 	);
 
 	BETTER_ENUM(slist, long,
@@ -152,23 +153,88 @@ namespace DagmanShallowOptions {
 
 namespace DagmanDeepOptions {
 	BETTER_ENUM(str, long,
-		DagmanPath = 0, OutfileDir, BatchName, GetFromEnv, Notification,
+		DagmanPath = 0, OutfileDir, BatchName, Notification,
 		BatchId, AcctGroup, AcctGroupUser
 	);
 
 	BETTER_ENUM(i, long,
-		DoRescueFrom = 0
+		DoRescueFrom = 0, AutoRescue
 	);
 
 	BETTER_ENUM(b, long,
-		Force = 0, ImportEnv, UseDagDir, AutoRescue/*Fix to be int*/, AllowVersionMismatch,
+		Force = 0, ImportEnv, UseDagDir, AllowVersionMismatch,
 		Recurse, UpdateSubmit, SuppressNotification, Verbose
 	);
 
 	BETTER_ENUM(slist, long,
-		AddToEnv = 0
+		AddToEnv = 0, GetFromEnv
 	);
 }
+
+//Class to make the option map key comparison case insensitive
+struct KeyNoCaseCmp {
+	bool operator()(const std::string &left, const std::string right) const noexcept {
+		return strcasecmp(left.c_str(), right.c_str()) < 0;
+	}
+};
+
+#define DAG_OPT_DISP_DAGMAN (1 << 0)     // Display option for condor_dagman
+#define DAG_OPT_DISP_CSD (1 << 1)        // Display option for condor_submit_dag
+#define DAG_OPT_DISP_PY_BIND (1 << 2)    // Display option for python bindings
+#define DAG_OPT_DISP_ALL INT_MAX         // Display option for all sources
+
+typedef std::tuple<std::string, std::string, std::string, int> DagOptionInfo;
+static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMap = {
+	/* {Flag, {option, metavar, description, display sources}}, */
+	{"-AllowVersionMismatch", {"AllowVersionMismatch", "True", "Allow version difference between *.condor.sub file and condor_dagman", DAG_OPT_DISP_ALL}},
+	{"-AlwaysRunPost", {"PostRun", "True", "Run POST script if PRE script fails", DAG_OPT_DISP_ALL}},
+	{"-Append",        {"AppendLines", "<command>", "Append submit description command to *.condor.sub file", DAG_OPT_DISP_CSD}},
+	{"-AutoRescue",    {"AutoRescue", "<0|1>", "Control automatically running new rescue DAG (0=False | 1=True)", DAG_OPT_DISP_ALL}}, // Note non-zero = True
+	{"-Batch-Name",    {"BatchName", "<name>", "Set DAG batch name", DAG_OPT_DISP_ALL}},
+	{"-Config",        {"ConfigFile", "<filename>", "Specify DAGMan configuration file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-Dag",           {"DagFiles", "<NAME.dag>", "DAG file for DAGMan to execute", 0}}, // Only applies to DAGMan Main and is manually entered
+	{"-DAGMan",        {"DagmanPath", "<path>", "Full path to alternate condor_dagman executable", DAG_OPT_DISP_ALL}},
+	{"-Debug",         {"DebugLevel", "<level>", "Set DAGMan debug logs verbosity", DAG_OPT_DISP_ALL}},
+	{"-do_recurse",    {"Recurse", "True", "Recursively generate Sub-DAG *.condor.sub files", DAG_OPT_DISP_DAGMAN|DAG_OPT_DISP_CSD}},
+	{"-dont_suppress_notification", {"SuppressNotification", "False", "Suppress email notifications for DAGMan and all its submitted jobs", DAG_OPT_DISP_ALL}},
+	{"-DontAlwaysRunPost", {"PostRun", "False", "Don't run POST script if PRE script fails", DAG_OPT_DISP_ALL}},
+	{"-DoRecovery",    {"DoRecovery", "True", "Allow DAG submitted jobs to send email notifications", DAG_OPT_DISP_ALL}},
+	{"-DoRescueFrom",  {"DoRescueFrom", "<N>", "Run DAG rescue of given number", DAG_OPT_DISP_ALL}},
+	{"-DryRun",        {"DryRun", "True", "Dry run condor_dagman execution of DAG", DAG_OPT_DISP_DAGMAN}},
+	{"-DumpRescue",    {"DumpRescueDag", "True", "DAGMan dump rescue DAG and exit", DAG_OPT_DISP_ALL}},
+	{"-Force",         {"Force", "True", "Overwrite used DAG file if they exist", DAG_OPT_DISP_ALL}}, // Note: -f works for this
+	{"-import_env",    {"ImportEnv", "True", "Import current environment into *.condor.sub file", DAG_OPT_DISP_ALL}},
+	{"-include_env",   {"GetFromEnv", "<variables>", "Comma separated list of environment variables to *.condor.sub file getenv filter", DAG_OPT_DISP_ALL}},
+	{"-insert_env",    {"AddToEnv", "<key=value>", "Delimited key=value pairs to explicitly set in the *.condor.sub file environment", DAG_OPT_DISP_ALL}},
+	{"-insert_sub_file", {"AppendFile", "<filename>", "Append specified submit file to *.condor.sub file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-load_save",     {"SaveFile", "<filename>", "Run DAG from provided save point file", DAG_OPT_DISP_ALL}},
+	{"-Lockfile",      {"LockFile", "<NAME.dag.lock>", "DAGMan lock filename", 0}}, // Only applies to DAGMan Main and is manually displayed
+	{"-MaxIdle",       {"MaxIdle", "<N>", "Maximum number of Idle nodes allowed", DAG_OPT_DISP_ALL}},
+	{"-MaxJobs",       {"MaxJobs", "<N>", "Maximum number of jobs submitted at once", DAG_OPT_DISP_ALL}},
+	{"-MaxPost",       {"MaxPost", "<N>", "Maximum number of POST scripts to run at once", DAG_OPT_DISP_ALL}},
+	{"-MaxPre",        {"MaxPre", "<N>", "Maximum number of PRE scripts to run at once", DAG_OPT_DISP_ALL}},
+	{"-no_recurse",    {"Recurse", "False", "Don't recursively generate Sub-DAG *.condor.sub files (Default)", DAG_OPT_DISP_DAGMAN|DAG_OPT_DISP_CSD}},
+	{"-no_submit",     {"DoSubmit", "False", "DAG is not submitted to HTCondor automatically", DAG_OPT_DISP_CSD}},
+	{"-Notification",  {"Notification", "<option>", "Set HTCondor email notification level for DAG", DAG_OPT_DISP_ALL}},
+	{"-outfile_dir",   {"OutfileDir", "<path>", "Directory path to write *.dagman.out file", DAG_OPT_DISP_ALL}},
+	{"-Priority",      {"Priority", "<priority>", "Default priority for all jobs submitted by DAGMan", DAG_OPT_DISP_ALL}},
+	{"-Remote",        {"RemoteSchedd", "<schedd name>", "Name of remote schedd to submit DAGMan", DAG_OPT_DISP_CSD}}, // Note: -r works for this
+	{"-schedd-address-file", {"ScheddAddressFile", "<path>", "Submit DAG to Schedd provided by address file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-schedd-daemon-ad-file", {"ScheddDaemonAdFile", "<path>", "Submit DAG to Schedd provided by ad file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-suppress_notification", {"SuppressNotification", "True", "Suppress email notifications for DAGMan and all its submitted jobs", DAG_OPT_DISP_ALL}},
+	{"-update_submit", {"UpdateSubmit", "True", "Update *.condor.sub file if it exists", DAG_OPT_DISP_ALL}},
+	{"-UseDagDir",     {"UseDagDir", "True", "Run DAGs in directories specified by DAG file paths", DAG_OPT_DISP_ALL}},
+	{"-v",             {"Verbose", "True", "See -Verbose", 0}}, // Single letter flag to make -v equal to -Verbose
+	{"-Valgrind",      {"RunValgrind", "True", "Run DAGMan under Valgrind (Linux Only)", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-Verbose",       {"Verbose", "True", "Increase error message verbosity for condor_submit_dag", DAG_OPT_DISP_CSD}}, // Note: -v works for this
+	{"-WaitForDebug",  {"WaitForDebug", "True", "Pause condor_dagman execution until debugger is attached", DAG_OPT_DISP_DAGMAN}},
+};
+
+enum class DagOptionSrc {
+	DAGMAN_MAIN = 0,
+	CONDOR_SUBMIT_DAG,
+	PYTHON_BINDINGS,
+};
 
 enum class SetDagOpt {
 	SUCCESS = 0,
@@ -221,12 +287,13 @@ public:
 		{ //Initialize Deep Options
 			using namespace DagmanDeepOptions;
 			deep.intOpts[i::DoRescueFrom] = 0;
-			deep.boolOpts[b::AutoRescue] = param_boolean( "DAGMAN_AUTO_RESCUE", true );
+			deep.intOpts[i::AutoRescue] = (int)param_boolean( "DAGMAN_AUTO_RESCUE", true );
 		} //End Deep Option Initialization
 	}
 
 	// Get value type needed to set to option (int, bool, str)
-	std::string OptValueType(std::string& opt);
+	std::string OptValueType(const char* opt);
+	std::string OptValueType(const std::string& opt);
 
 	// Set a DAGMan option to given value
 	SetDagOpt set(const char* opt, const std::string& value);
@@ -234,13 +301,15 @@ public:
 	SetDagOpt set(const char* opt, bool value);
 	SetDagOpt set(const char* opt, int value);
 
-	// Append a string to a delimited string list of items: "foo,bar,barz"
-	SetDagOpt append(const char* opt, const std::string& value, const char delim = ',');
-	SetDagOpt append(const char* opt, const char* value, const char delim = ',');
+	// Handle special case modifications/messages regarding specific options
+	std::string processOptionArg(const std::string& opt, std::string arg);
+	// Automagically parse cli flags to set a DAGMan option (Note: Possible incrementation of iArg)
+	bool AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err);
 
 	// Extend (push_back) value to list option
-	SetDagOpt extend(const char* opt, const std::string& value);
-	SetDagOpt extend(const char* opt, const char* value);
+	// Added to help clear up possible confusion from set() despite set() doing the correct thing
+	inline SetDagOpt extend(const char* opt, const std::string& value) { return set(opt, value); }
+	inline SetDagOpt extend(const char* opt, const char* value) { return set(opt, value); }
 
 	void addDeepArgs(ArgList& args, bool inWriteSubmit = true) const;
 	void addDAGFile(std::string& dagFile);
@@ -280,6 +349,9 @@ private:
 	//Deep options passed down to subdags
 	DagOptionData<DSO> deep;
 	bool is_MultiDag{false};
+	// Map of used bool options to prevent contradictary flags
+	// Used in AutoParse()
+	std::map<std::string, std::string> boolFlagCheck;
 };
 
 class DagmanUtils {
@@ -341,6 +413,19 @@ public:
 	             relevant PID does exist and this DAGMan should abort
 	*/
 	int check_lock_file(const char *lockFileName);
+
+	/*
+	*	Function to print DAGMan options to stdout
+	*	Args:
+	*	    fmt = output format requires 2 c-string specifiers (Option+Metavar, Description)
+	*	    source = What source is parsing DAGMan options (i.e. condor_submit_dag, condor_dagman, python bindings, etc.)
+	*	    opt_delim_meta = String delimiting between opt/flag and meta var information (default space)
+	*/
+	void DisplayDAGManOptions(const char* fmt, DagOptionSrc source, const std::string opt_delim_meta=" ");
+
+	// Get DAGMan option info from cli flag
+	DagOptionInfo GetFlagInfo(const std::string& flag);
+	std::string GetFullFlag(const std::string& flag);
 
 };
 

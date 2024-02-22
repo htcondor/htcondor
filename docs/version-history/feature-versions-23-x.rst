@@ -4,6 +4,32 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.6.1
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.6.1 released on Month Date, 2024.
+
+- HTCondor version 23.6.1 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-2308`.
+
+New Features:
+
+- When the :subcom:`docker_network_type` is set to host, docker universe
+  now sets the hostname inside the container to the same as the host,
+  to ease networking from inside the container to outside the container.
+  :jira:`2294`
+
+- The configuration parameter :macro:`ETC` can now be used to relocate
+  files that are normally place under /etc/condor on unix platforms.
+  jira:`2290`
+
+Bugs Fixed:
+
+- None.
+
 Version 23.5.0
 --------------
 
@@ -17,10 +43,25 @@ Release Notes:
 
 New Features:
 
+- On Linux systems with cgroup v1 enabled, HTCondor now uses the "devices" cgroup
+  to prevent the job from accessing unassigned GPUs.  This can be disabled
+  by settting the new knob :macro:`STARTER_HIDE_GPU_DEVICES` to false.
+  :jira:`1152`
+
+- The library libcondorapi has been removed from the distribution.  We know of
+  no known user for this C++ event log reading code, and all of our known users
+  use the Python bindings for this, as we recommend.
+  :jira:`2278`
+
 - Added ability for administrators to specify whether Startd disk enforcement creates
   thin or thick provisioned logical volumes for a jobs emphemeral execute directory.
   This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.
   :jira:`1783`
+
+- GPU detection is now enabled by default on all execute nodes via a new configuration variable
+  :macro:`STARTD_DETECT_GPUS`.  This new configuration variable supplies arguments to
+  *condor_gpu_discovery* for use when GPU discovery is not otherwise explicitly enabled in the config.
+  :jira:`2264`
 
 - Added new submit commands for constraining GPU properties. When these commands
   are use the ``RequireGPUs`` expression is generated automatically by submit and
@@ -28,47 +69,57 @@ New Features:
   :subcom:`gpus_minimum_runtime`, :subcom:`gpus_minimum_capability` and :subcom:`gpus_maximum_capability`.
   :jira:`2201`
 
+- Added job attributes :ad-attr:`JobCurrentReconnectAttempt` and
+  :ad-attr:`TotalJobReconnectAttempts` to count the number of
+  reconnect attempts in progress, and total for the lifetime of
+  the job, respectively.
+  :jira:`2258`
+
+- The old ClassAd-based syntax for defining Job Router routes is now
+  disabled by default.
+  It can be enabled by setting configuration parameter
+  :macro:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES` to ``True``.
+  Support for the old syntax will be removed entirely before HTCondor
+  version 24.0.0.
+  :jira:`2260`
+
+- During SSL authentication, VOMS attributes can be included when
+  mapping to an HTCondor identity.
+  To do so, configuration parameters :macro:`USE_VOMS_ATTRIBUTES` and
+  :macro:`AUTH_SSL_USE_VOMS_IDENTITY` must be set to ``True``.
+  :jira:`2256`
+
+- Improve the reliability of the userlog reader code by changing it to do line oriented reads and to seek less.
+  :jira:`2254`
+
+- The ``$CondorVersion`` string contains the Git SHA for official CHTC builds of HTCondor.
+  :jira:`532`
+
 Bugs Fixed:
 
-- None.
+- In some rare cases where docker universe could not start a container,
+  it would not remove that container until the next time the start
+  restarted.  Now it is removed as soon as possible.
+  :jira:`2263`
+
+- In rare cases, the values of TimeSlotBusy and TimeExecute would be incorrect in the
+  job event log when the job was disconnected or did not start properly.
+  :jira:`2265`
 
 Version 23.4.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 23.4.0 released on Month Date, 2023.
-
-- HTCondor version 23.4.0 not yet released.
+- HTCondor version 23.4.0 released on February 8, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-2304`.
 
 New Features:
 
-- Docker universe now passes --log-driver none by default when running jobs,
-  but can be disabled with :macro:`DOCKER_LOG_DRIVER_NONE` knob.
-  :jira:`2190`
-
-- Jobs that are assigned nvidia GPUs now have the environment variable
-  NVIDIA_VISIBLE_DEVICES set in addition to, and with the same value as
-  CUDA_VISIBLE_DEVICES, as newer nvidia runtimes prefer the former.
-  :jira:`2189`
-
-- Added config parameter :macro:`SUBMIT_REQUEST_MISSING_UNITS`, to warn or prevent submitting
+- Added configuration parameter :macro:`SUBMIT_REQUEST_MISSING_UNITS`, to warn or prevent submitting
   with RequestDisk or RequestMemory without a units suffix.
   :jira:`1837`
-
-- The :tool:`htcondor` command line tools eventlog read command now
-  optionally takes more than one eventlog to process at once.
-  :jira:`2220`
-
-- Added job classad attribute :ad-attr:`ContainerImageSource`, a string which is
-  is set to the source of the image transfer.
-  :jira:`1797`
-
-- If :macro:`PER_JOB_HISTORY_DIR` is set, it is now a fatal error to write a historical job
-  to the history file, just like the normal history file.
-  :jira:`2027`
 
 - On RPM-based distributions, a new package ``condor-credmon-local`` is now
   available which provides the
@@ -77,6 +128,27 @@ New Features:
   The ``condor-credmon-local`` package is now a dependency of the
   ``condor-credmon-oauth`` package.
   :jira:`2197`
+
+- The :tool:`htcondor` command line tools eventlog read command now
+  optionally takes more than one eventlog to process at once.
+  :jira:`2220`
+
+- Docker universe now passes --log-driver none by default when running jobs,
+  but can be disabled with :macro:`DOCKER_LOG_DRIVER_NONE` knob.
+  :jira:`2190`
+
+- Jobs that are assigned nVidia GPUs now have the environment variable
+  NVIDIA_VISIBLE_DEVICES set in addition to, and with the same value as
+  CUDA_VISIBLE_DEVICES, as newer nVidia run-times prefer the former.
+  :jira:`2189`
+
+- Added job classad attribute :ad-attr:`ContainerImageSource`, a string which is
+  is set to the source of the image transfer.
+  :jira:`1797`
+
+- If :macro:`PER_JOB_HISTORY_DIR` is set, it is now a fatal error to write a historical job
+  to the history file, just like the normal history file.
+  :jira:`2027`
 
 - :tool:`condor_submit` now generates requirements expressions for
   **condor** grid universe jobs like it does for vanilla universe
@@ -130,7 +202,7 @@ New Features:
 
 - Added ability for DAGMan node script **STDOUT** and/or **STDERR** streams
   be captured in a user defined debug file. For more information visit
-  DAGMan script :ref:`automated-workflows/dagman-scripts:Debug File`
+  DAGMan script :ref:`Script Debugging`
   :jira:`2159`
 
 - Improve hold message when jobs on cgroup system exceed their memory limits.

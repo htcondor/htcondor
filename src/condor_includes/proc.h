@@ -83,7 +83,21 @@ typedef struct PROC_ID {
 #define	HELD				5
 #define	TRANSFERRING_OUTPUT	6
 #define SUSPENDED			7
-#define JOB_STATUS_MAX  	7 /* Largest valid job status value */
+#define JOB_STATUS_FAILED	8  /* possible future use */
+#define JOB_STATUS_BLOCKED	9  /* possible future use */
+#define JOB_STATUS_MAX  	9 /* Largest valid job status value */
+
+// define more searchable aliases for old job status defines
+#define JOB_STATUS_IDLE                IDLE
+#define JOB_STATUS_RUNNING             RUNNING
+#define JOB_STATUS_REMOVED             REMOVED
+#define JOB_STATUS_COMPLETED           COMPLETED
+#define JOB_STATUS_HELD                HELD
+#define JOB_STATUS_TRANSFERRING_OUTPUT TRANSFERRING_OUTPUT
+#define JOB_STATUS_SUSPENDED           SUSPENDED
+//#define JOB_STATUS_FAILED
+//#define JOB_STATUS_BLOCKED
+
 
 const char* getJobStatusString( int status );
 int getJobStatusNum( const char* name );

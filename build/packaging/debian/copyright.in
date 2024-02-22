@@ -2,7 +2,7 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: condor
 Upstream-Contact: HTCondor Team <htcondor-admin@cs.wisc.edu>
 Source: https://github.com/htcondor/htcondor
-#if defined(SID)
+#if !defined(UW_BUILD)
 Files-Excluded: */*.class
                 */*.jar
                 */*.pdf
@@ -13,7 +13,7 @@ Files-Excluded: */*.class
 #endif
 
 Files: *
-Copyright: 1990-2023, Center for High Throughput Computing,
+Copyright: 1990-2024, Center for High Throughput Computing,
                       HTCondor Team, Condor Team,
                       Computer Sciences Department,
                       University of Wisconsin-Madison, WI.
@@ -141,7 +141,7 @@ Files: build/cmake/macros/JoinPaths.cmake
 Copyright: 2020, Jan Tojnar
 License: Expat or CC0-1.0
 
-#if !defined(SID)
+#if defined(UW_BUILD)
 Files: msconfig/UUIDTiny.pm
 Copyright: 2009, 2010 Christian Augustin
 License: GPL-1+ or Artistic

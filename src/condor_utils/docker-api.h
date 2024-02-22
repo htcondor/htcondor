@@ -75,7 +75,7 @@ class DockerAPI {
 		static int copyToContainer(const std::string & srcPath, // path on local file system to copy file/folder from
 						const std::string &container,       // container to copy into
 						const std::string & containerPath,  // destination path in container
-						StringList * options);
+						const std::vector<std::string>& options);
 		/**
 		 * copy files/folders from given path in the container to destPath
 		 *   invokes
@@ -84,7 +84,7 @@ class DockerAPI {
 		static int copyFromContainer(const std::string &container, // container to copy into
 						const std::string & containerPath,             // source file or folder in container
 						const std::string & destPath,                 // destination path on local file system
-						StringList * options);
+						const std::vector<std::string>& options);
 
 		/**
 		 * Releases the disk space (but not the image) associated with

@@ -962,6 +962,13 @@ JICShadow::notifyExecutionExit( void ) {
 	}
 }
 
+void
+JICShadow::notifyGenericEvent( const ClassAd & event ) {
+	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
+		REMOTE_CONDOR_event_notification(event);
+	}
+}
+
 bool
 JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 						  /* user_proc */ )
@@ -2465,10 +2472,12 @@ JICShadow::beginFileTransfer( void )
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		filetrans = new FileTransfer();
+	#if 1 //def HAVE_DATA_REUSE_DIR
 		auto reuse_dir = Starter->getDataReuseDirectory();
 		if (reuse_dir) {
 			filetrans->setDataReuseDirectory(*reuse_dir);
 		}
+	#endif
 
 		// file transfer plugins will need to know about OAuth credentials
 		const char *cred_path = getCredPath();

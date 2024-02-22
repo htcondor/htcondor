@@ -826,7 +826,7 @@ default=$(RELEASE_DIR)/include
 type=path
 
 [ETC]
-default=$(RELEASE_DIR)/etc
+default=$(LOCAL_DIR)
 type=path
 
 [XAUTHORITY_USERS]
@@ -956,6 +956,10 @@ tags=shadow,remoteresource
 
 [USE_VOMS_ATTRIBUTES]
 default=false
+type=bool
+
+[AUTH_SSL_USE_VOMS_IDENTITY]
+default=true
 type=bool
 
 [USE_NFS]
@@ -2026,6 +2030,23 @@ default=
 type=string
 tags=startd,startd_cronmgr
 
+[STARTD_DETECT_GPUS]
+default=-properties $(GPU_DISCOVERY_EXTRA)
+type=string
+tags=startd
+description=Enable GPUs as a resource and set arguments for condor_gpu_discovery when USE FEATURE:GPUs is not configured
+usage=configure to empty to disable default GPU discovery
+
+[ENVIRONMENT_FOR_AssignedGPUs]
+default=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
+type=string
+tags=startd
+
+[ENVIRONMENT_VALUE_FOR_UnAssignedGPUs]
+default=10000
+type=string
+tags=startd
+
 [CLASSAD_USER_LIBS]
 default=
 type=string
@@ -2472,13 +2493,13 @@ type=path
 tags=store_cred
 
 [SEC_PASSWORD_DIRECTORY]
-default=/etc/condor/passwords.d
+default=$(ETC)/passwords.d
 win32_default=$(RELEASE_DIR)\tokens.sk
 type=path
 tags=store_cred
 
 [SEC_TOKEN_SYSTEM_DIRECTORY]
-default=/etc/condor/tokens.d
+default=$(ETC)/tokens.d
 win32_default=$(RELEASE_DIR)\tokens.d
 type=path
 tags=condor_auth_passwd
@@ -2608,14 +2629,14 @@ type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_AUTOGENERATE_CERTFILE]
-default=/etc/condor/hostcert.pem
+default=$(ETC)/hostcert.pem
 win32_default=
 description=Location of the auto-generated host X509 certificate
 type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_AUTOGENERATE_KEYFILE]
-default=/etc/condor/hostkey.pem
+default=$(ETC)/hostkey.pem
 win32_default=
 description=Location of the auto-generated host private key
 type=path
@@ -2653,19 +2674,19 @@ win32_default=false
 type=bool
 
 [TRUST_DOMAIN_CAFILE]
-default=/etc/condor/trust_domain_ca.pem
+default=$(ETC)/trust_domain_ca.pem
 win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [TRUST_DOMAIN_CAKEY]
-default=/etc/condor/trust_domain_ca_privkey.pem
+default=$(ETC)/trust_domain_ca_privkey.pem
 win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [SEC_SYSTEM_KNOWN_HOSTS]
-default=/etc/condor/known_hosts
+default=$(ETC)/known_hosts
 win32_default=$(LOCAL_DIR)\known_hosts
 type=path
 tags=io
@@ -2740,6 +2761,10 @@ tags=starter
 default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS ROOT_MAX_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
 type=string
 tags=starter
+
+[STARTER_HIDE_GPU_DEVICES]
+type=bool
+default=true
 
 [JOB_RENICE_INCREMENT]
 default=0
@@ -3109,6 +3134,10 @@ type=string
 tags=JobRouter
 
 [JOB_ROUTER_ROUND_ROBIN_SELECTION]
+default=false
+type=bool
+
+[JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES]
 default=false
 type=bool
 
@@ -4870,7 +4899,7 @@ type=string
 tags=condor_config
 
 [GANGLIAD_METRICS_CONFIG_DIR]
-default=/etc/condor/ganglia.d
+default=$(ETC)/ganglia.d
 type=path
 description=Ganglia metric config dir
 tags=condor_config
@@ -6033,8 +6062,8 @@ default : @end
 	KILL=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
-	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
-	SLOTS_CONNECTED_TO_CONSOLE=$(NUM_CPUS)
+	SLOTS_CONNECTED_TO_KEYBOARD=1024*1024
+	SLOTS_CONNECTED_TO_CONSOLE=1024*1024
 	IS_OWNER=(START =?= False)
 @end
 
@@ -6112,7 +6141,7 @@ default : @end
 	NEGOTIATOR_POST_JOB_RANK=$(UWCS_NEGOTIATOR_POST_JOB_RANK)
 	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
 	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
-	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
+	SLOTS_CONNECTED_TO_KEYBOARD=1024*1024
 	IS_OWNER=(START =?= False)
 @end
 
@@ -6443,7 +6472,7 @@ default : @end
 description=Settings to detect and use GPUs as custom resources, args:(optional-discovery-args)
 default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery $(1) -properties $(GPU_DISCOVERY_EXTRA)
-	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA// NVIDIA_VISIBLE_DEVICES=/CUDA//
+	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
 
 	use feature : GPUsMonitor

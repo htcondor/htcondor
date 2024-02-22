@@ -64,7 +64,7 @@ class ExprTree:
 
 
     def eval(self, scope : ClassAd = None, target : ClassAd = None):
-        """
+        R"""
         Evaluate the expression and return the corresponding Python type;
         either a :class:`classad2.ClassAd`, a boolean, a string, a
         :class:`datetime.datetime`, a float, an integer, a

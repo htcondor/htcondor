@@ -851,6 +851,11 @@ GahpServer::Startup(bool force)
 	ASSERT( daemonCore->Get_Pipe_FD( m_gahp_errorfd, &m_gahp_real_errorfd ) );
 #endif
 
+	// Don't send a signal to GAHPs when the gridmanager exits.
+	// Closing of the pipes will cause them to exit.
+	// The remote_gahp needs to shutdown its ssh-agent before exiting.
+	daemonCore->Set_Cleanup_Signal(m_gahp_pid, SIGTERM);
+
 		// Read in the initial greeting from the GAHP, which is the version.
 	if ( command_version() == false ) {
 		dprintf(D_ALWAYS,"Failed to read GAHP server version\n");

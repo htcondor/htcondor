@@ -996,11 +996,13 @@ void AnalyzeRequirementsForEachTarget(
 	//
 	// render final output
 	//
-	return_buf.clear();
-	if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
-	return_buf.append(7+(9-1-strlen(fmt.target_type_name))/2, ' ');
-	return_buf += fmt.target_type_name;
-	return_buf += "s\n";
+	if ( ! (fmt.detail_mask & detail_append_to_buf)) return_buf.clear();
+	if ( ! (fmt.detail_mask & detail_suppress_tall_heading)) {
+		if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
+		return_buf.append(7+(9-1-strlen(fmt.target_type_name))/2, ' ');
+		return_buf += fmt.target_type_name;
+		return_buf += "s\n";
+	}
 	if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
 	return_buf += "Step    Matched  Condition\n";
 	if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
@@ -1308,13 +1310,14 @@ void AddReferencedAttribsToBuffer(
 	}
 }
 
- void AddTargetAttribsToBuffer (
+ int AddTargetAttribsToBuffer (
 	classad::References & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
 	ClassAd * request,
 	ClassAd * target,
 	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false
 	const char * pindent,
-	std::string & return_buf)
+	std::string & return_buf,
+	std::string & name)
 {
 	classad::References::iterator it;
 
@@ -1328,13 +1331,10 @@ void AddReferencedAttribsToBuffer(
 		}
 	}
 	if (pm.IsEmpty())
-		return;
+		return 0;
 
-	std::string temp;
-	if (pm.display(temp, request, target) > 0) {
-		//return_buf += "\n";
-		//return_buf += pindent;
-		std::string name;
+	int num_chars_added = pm.display(return_buf, request, target);
+	if (num_chars_added > 0) {
 		if ( ! target->LookupString(ATTR_NAME, name)) {
 			int cluster=0, proc=0;
 			if (target->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
@@ -1344,10 +1344,8 @@ void AddReferencedAttribsToBuffer(
 				name = "Target";
 			}
 		}
-		return_buf += name;
-		return_buf += " has the following attributes:\n\n";
-		return_buf += temp;
 	}
+	return num_chars_added;
 }
 
 size_t AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator & accum, int & num_skipped)

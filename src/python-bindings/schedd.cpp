@@ -3162,7 +3162,7 @@ void SetDagOptions(boost::python::dict opts, DagmanOptions &dag_opts)
         else if (key_lc == "import_env")
             ret = dag_opts.set("ImportEnv", value);
         else if (key_lc == "include_env")
-            ret = dag_opts.append("GetFromEnv", value);
+            ret = dag_opts.extend("GetFromEnv", value);
         else if (key_lc == "insert_env") {
             trim(value);
             ret = dag_opts.set("AddToEnv", value);

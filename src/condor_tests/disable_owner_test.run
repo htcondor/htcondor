@@ -43,7 +43,10 @@ my $cmd_retval=42;
 # create a submit file for use by this test
 my $submitfile = "$testname$pid.sub";
 open (FH, ">$submitfile") || print "error writing to $submitfile: $!\n";
-print FH "executable = $executable\narguments=$arguments\n";
+print( FH "
+executable = $executable
+arguments=$arguments
+log=$testname$pid.log\n");
 close(FH);
 
 TLOG("Expect no User records");
@@ -150,6 +153,7 @@ RegisterResult($ok, check_name => "disabled user cannot submit", test_name => $t
 
 TLOG("condor_rm -all\n");
 `condor_rm -all`;
+`condor_wait -wait 60 ${testname}${pid}.log`;
 
 TLOG("Expect one user with 8 removed jobs in the queue.\n");
 # check for correct removed jobs count

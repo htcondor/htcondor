@@ -165,12 +165,6 @@ int DockerAPI::createContainer(
 	if (param_boolean("DOCKER_RUN_UNDER_INIT", true)) {
 		runArgs.AppendArg("--init");
 	}
-
-	// Give the container a useful name
-	std::string hname = makeHostname(&machineAd, &jobAd);
-	runArgs.AppendArg("--hostname");
-	runArgs.AppendArg(hname.c_str());
-
 		// Now the container name
 	runArgs.AppendArg( "--name" );
 	runArgs.AppendArg( containerName );
@@ -310,8 +304,10 @@ int DockerAPI::createContainer(
 
 	std::string networkType;
 	jobAd.LookupString(ATTR_DOCKER_NETWORK_TYPE, networkType);
+	bool setHostname = true;
 	if (networkType == "host") {
 		runArgs.AppendArg("--network=host");
+		setHostname = false;
 	} else if (networkType == "none") {
 		runArgs.AppendArg("--network=none");
 	} else if (networkType == "nat") {
@@ -324,8 +320,7 @@ int DockerAPI::createContainer(
 		std::string docker_networks;
 		machineAd.LookupString(ATTR_DOCKER_NETWORKS, docker_networks);
 
-		StringList allowedNetworksList = docker_networks.c_str();;
-		if (allowedNetworksList.contains(networkType.c_str())) {
+		if (contains(split(docker_networks), networkType)) {
 			std::string networkArg = "--network=";
 			networkArg += networkType;
 			runArgs.AppendArg(networkArg);
@@ -335,17 +330,22 @@ int DockerAPI::createContainer(
 		}
 	} 
 
+	// Give the container a useful name, but not if using host networking
+	if (setHostname) {
+		std::string hname = makeHostname(&machineAd, &jobAd);
+		runArgs.AppendArg("--hostname");
+		runArgs.AppendArg(hname.c_str());
+	}
+
+
 	// Handle port forwarding.
 	std::string containerServiceNames;
 	jobAd.LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
 	if(! containerServiceNames.empty()) {
-		StringList services(containerServiceNames.c_str());
-		services.rewind();
-		const char * service = NULL;
-		while( NULL != (service = services.next()) ) {
+		for (const auto& service: StringTokenIterator(containerServiceNames)) {
 			int portNo = -1;
 			std::string attrName;
-			formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
+			formatstr( attrName, "%s%s", service.c_str(), ATTR_CONTAINER_PORT_SUFFIX );
 			if( jobAd.LookupInteger( attrName, portNo ) ) {
 				runArgs.AppendArg("-p");
 				runArgs.AppendArg(std::to_string(portNo));
@@ -354,7 +354,7 @@ int DockerAPI::createContainer(
 				// FIXME: This should actually be a hold message.
 				dprintf( D_ALWAYS, "Requested container service '%s' did "
 					"not specify a port, or the specified port was not "
-					"a number.\n", service );
+					"a number.\n", service.c_str() );
 				return -1;
 			}
 		}
@@ -544,17 +544,15 @@ DockerAPI::execInContainer( const std::string &containerName,
 int DockerAPI::copyToContainer(const std::string & srcPath, // path on local file system to copy file/folder from
 	const std::string & container,       // container to copy into
 	const std::string & containerPath,     // destination path in container
-	StringList * options)
+	const std::vector<std::string>& options)
 {
 	ArgList args;
 	if (! add_docker_arg(args))
 		return -1;
 	args.AppendArg("cp");
 
-	if (options) {
-		for (const char * opt = options->first(); opt; opt = options->next()) {
-			args.AppendArg(opt);
-		}
+	for (auto& opt: options) {
+		args.AppendArg(opt);
 	}
 
 	args.AppendArg(srcPath);
@@ -591,17 +589,15 @@ int DockerAPI::copyToContainer(const std::string & srcPath, // path on local fil
 int DockerAPI::copyFromContainer(const std::string &container, // container to copy into
 	const std::string & containerPath,             // source file or folder in container
 	const std::string & destPath,                  // destination path on local file system
-	StringList * options)
+	const std::vector<std::string>& options)
 {
 	ArgList args;
 	if (! add_docker_arg(args))
 		return -1;
 	args.AppendArg("cp");
 
-	if (options) {
-		for (const char * opt = options->first(); opt; opt = options->next()) {
-			args.AppendArg(opt);
-		}
+	for (auto& opt: options) {
+		args.AppendArg(opt);
 	}
 
 	std::string src(container);
@@ -1141,18 +1137,17 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 		return -1;
 	inspectArgs.AppendArg( "inspect" );
 	inspectArgs.AppendArg( "--format" );
-	StringList formatElements(	"ContainerId=\"{{.Id}}\" "
-								"Pid={{.State.Pid}} "
-								"Name=\"{{.Name}}\" "
-								"Running={{.State.Running}} "
-								"ExitCode={{.State.ExitCode}} "
-								"StartedAt=\"{{.State.StartedAt}}\" "
-								"FinishedAt=\"{{.State.FinishedAt}}\" "
-								"DockerError=\"{{.State.Error}}\" "
-								"OOMKilled=\"{{.State.OOMKilled}}\" " );
-	char * formatArg = formatElements.print_to_delimed_string( "\n" );
+	const std::string formatArg("ContainerId=\"{{.Id}}\"\n"
+	                            "Pid={{.State.Pid}}\n"
+	                            "Name=\"{{.Name}}\"\n"
+	                            "Running={{.State.Running}}\n"
+	                            "ExitCode={{.State.ExitCode}}\n"
+	                            "StartedAt=\"{{.State.StartedAt}}\"\n"
+	                            "FinishedAt=\"{{.State.FinishedAt}}\"\n"
+	                            "DockerError=\"{{.State.Error}}\"\n"
+	                            "OOMKilled=\"{{.State.OOMKilled}}\"");
+	int formatCnt = std::ranges::count(formatArg, '\n') + 1;
 	inspectArgs.AppendArg( formatArg );
-	free( formatArg );
 	inspectArgs.AppendArg( containerID );
 
 	std::string displayString;
@@ -1170,11 +1165,11 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 		src = &pgm.output();
 	}
 
-	int expected_rows = formatElements.number();
+	int expected_rows = formatCnt;
 	dprintf( D_FULLDEBUG, "exit_status=%d, error=%d, %d bytes. expecting %d lines\n",
 		pgm.exit_status(), pgm.error_code(), pgm.output_size(), expected_rows );
 
-	// If the output isn't exactly formatElements.number() lines long,
+	// If the output isn't exactly formatCnt lines long,
 	// something has gone wrong and we'll at least be able to print out
 	// the error message(s).
 	std::vector<std::string> correctOutput(expected_rows);
@@ -1209,23 +1204,23 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	}
 
 	int attrCount = 0;
-	for( int i = 0; i < formatElements.number(); ++i ) {
+	for( int i = 0; i < formatCnt; ++i ) {
 		if( correctOutput[i].empty() || dockerAd->Insert( correctOutput[i].c_str() ) == FALSE ) {
 			break;
 		}
 		++attrCount;
 	}
 
-	if( attrCount != formatElements.number() ) {
-		dprintf( D_ALWAYS, "Failed to create classad from Docker output (%d).  Printing up to the first %d (nonblank) lines.\n", attrCount, formatElements.number() );
-		for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
+	if( attrCount != formatCnt ) {
+		dprintf( D_ALWAYS, "Failed to create classad from Docker output (%d).  Printing up to the first %d (nonblank) lines.\n", attrCount, formatCnt );
+		for( int i = 0; i < formatCnt && ! correctOutput[i].empty(); ++i ) {
 			dprintf( D_ALWAYS, "%s\n", correctOutput[i].c_str() );
 		}
 		return -4;
 	}
 
 	dprintf( D_FULLDEBUG, "docker inspect printed:\n" );
-	for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
+	for( int i = 0; i < formatCnt && ! correctOutput[i].empty(); ++i ) {
 		dprintf( D_FULLDEBUG, "\t%s\n", correctOutput[i].c_str() );
 	}
 	return 0;
@@ -1710,16 +1705,13 @@ DockerAPI::getServicePorts( const std::string & container,
 	std::string containerServiceNames;
 	jobAd.LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
 	if(! containerServiceNames.empty()) {
-		StringList services(containerServiceNames.c_str());
-		services.rewind();
-		const char * service = NULL;
-		while( NULL != (service = services.next()) ) {
+		for (const auto& service: StringTokenIterator(containerServiceNames)) {
 		    int portNo = -1;
 			std::string attrName;
-			formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
+			formatstr( attrName, "%s%s", service.c_str(), ATTR_CONTAINER_PORT_SUFFIX );
 			if( jobAd.LookupInteger( attrName, portNo ) ) {
 				if( containerPortToHostPortMap.count(portNo) ) {
-					formatstr( attrName, "%s_%s", service, "HostPort" );
+					formatstr( attrName, "%s_%s", service.c_str(), "HostPort" );
 					serviceAd.InsertAttr( attrName, containerPortToHostPortMap[portNo] );
 				}
 			}

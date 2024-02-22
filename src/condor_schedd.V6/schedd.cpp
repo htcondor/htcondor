@@ -9779,7 +9779,9 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 
 	case REMOVED:
 	case HELD:
+	case JOB_STATUS_BLOCKED:
 	case COMPLETED:
+	case JOB_STATUS_FAILED:
 		dprintf( D_FULLDEBUG,
 				 "Job %d.%d was %s while waiting to start\n",
 				 cluster, proc, getJobStatusString(status) );
@@ -12991,6 +12993,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 			// No break, fall through and do the deed...
 			//@fallthrough@
 	case COMPLETED:
+	case JOB_STATUS_FAILED:
 		DestroyProc( job_id->cluster, job_id->proc );
 		break;
 	default:

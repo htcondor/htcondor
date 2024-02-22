@@ -207,6 +207,12 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     it is, HTCondor loses the ability to make private instances of /tmp and /var/tmp
     for jobs.
 
+:macro-def:`ETC`
+    This directory contains configuration and credential files used by
+    the HTCondor daemons.
+    The default value is ``$(LOCAL_DIR)``.
+    For Linux package installations, the value ``/etc/condor`` is used.
+
 :macro-def:`TMP_DIR[Global]`
     A directory path to a directory where temporary files are placed by
     various portions of the HTCondor system. The daemons and tools that
@@ -2305,11 +2311,8 @@ Shared File System Configuration File Macros
 :index:`shared file system configuration variables<single: shared file system configuration variables; configuration>`
 
 These macros control how HTCondor interacts with various shared and
-network file systems. If you are using AFS as your shared file system,
-be sure to read :ref:`admin-manual/file-and-cred-transfer:using
-htcondor with afs`. For information on submitting jobs under
-shared file systems, see :ref:`users-manual/submitting-a-job:submitting jobs
-using a shared file system`.
+network file systems.For information on submitting jobs under shared
+file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Shared File System`.
 
 :macro-def:`UID_DOMAIN[FileSystem]`
     The :macro:`UID_DOMAIN` macro is used to decide under which user to run
@@ -3889,6 +3892,19 @@ needs.
     names identify the configuration variables that define the
     partitioning. If used, custom resources without names in the list
     are ignored.
+
+:macro-def:`STARTD_DETECT_GPUS[STARTD]`
+    The arguments passed to *condor_gpu_discovery* to detect GPUs when
+    the configuration does not have a GPUs resource explicity configured
+    via ``MACHINE_RESOURCE_GPUS`` or  ``MACHINE_RESOURCE_INVENTORY_GPUS``.
+    Use of the configuration template ``use FEATURE : GPUs`` will set
+    ``MACHINE_RESOURCE_INVENTORY_GPUS`` and that will cause this configuration variable
+    to be ignored.
+    If the value of this configuration variable is set to ``false`` or ``0``
+    or empty then automatic GPU discovery will be disabled, but a GPUs resource
+    will still be defined if the configuration has ``MACHINE_RESOURCE_GPUS`` or
+    ``MACHINE_RESOURCE_INVENTORY_GPUS`` or the configuration template ``use FEATURE : GPUs``.
+    The default value is ``-properties $(GPU_DISCOVERY_EXTRA)``
 
 :macro-def:`MACHINE_RESOURCE_<name>[STARTD]`
     An integer that specifies the quantity of or list of identifiers for
@@ -6206,6 +6222,15 @@ These settings affect the *condor_starter*.
     the hard limit, it will be put on hold.  When false, the job is allowed to use any
     swap space configured by the operating system.
 
+:macro-def:`STARTER_HIDE_GPU_DEVICES[STARTER]`
+    A Linux-specific boolean that defaults to true.  When true, if started as root,
+    HTCondor will use the "devices" cgroup to prevent the job from accessing
+    any NVidia GPUs not assigned to it by HTCondor.  The device files will still exist
+    in ``/dev``, but any attempt to access them will fail, regardless of their file
+    permissions.  The ``nvidia-smi`` command will not report them as being available.
+    Setting this macro to false returns to the previous functionality (of allowing jobs
+    to access NVidia GPUs not assigned to them).
+   
 :macro-def:`USE_VISIBLE_DESKTOP[STARTER]`
     This boolean variable is only meaningful on Windows machines. If
     ``True``, HTCondor will allow the job to create windows on the
@@ -6386,6 +6411,14 @@ These settings affect the *condor_starter*.
     *condor_starter*. If the number of unique attributes updated by the
     :tool:`condor_chirp` command **set_job_attr_delayed** exceeds this
     parameter, it is possible for these updates to be ignored.
+
+:macro-def:`CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY[STARTER]`
+    A boolean valued parameter which defaults to true.  When true,
+    it sets the environment variable LD_PRELOAD to point to the
+    htcondor-provided libgetpwnam.so for the sshd run by 
+    :tool:`condor_ssh_to_job`.  This results in the shell being
+    set to /bin/sh and the home directory to the scratch directory
+    for processes launched by :tool:`condor_ssh_to_job.
 
 :macro-def:`USE_PSS[STARTER]`
     A boolean value, that when ``True`` causes the *condor_starter* to
@@ -7240,7 +7273,7 @@ These macros affect the *condor_negotiator*.
 
 :macro-def:`PRIORITY_HALFLIFE[NEGOTIATOR]`
     This macro defines the half-life of the user priorities. See
-    :ref:`users-manual/priorities-and-preemption:user priority` on
+    :ref:`users-manual/job-scheduling:user priority` on
     User Priorities for details. It is defined in seconds and defaults
     to 86400 (1 day).
 
@@ -8209,6 +8242,12 @@ These macros affect the *condor_job_router* daemon.
     route names specified in :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES` or in :macro:`JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES`.
     The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
+:macro-def:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES[JOB ROUTER]`
+    A boolean value that defaults to ``False``. When ``True``, the
+    deprecated parameters :macro:`JOB_ROUTER_DEFAULTS` and
+    :macro:`JOB_ROUTER_ENTRIES` can be used to define routes in the
+    job routing table.
+
 :macro-def:`JOB_ROUTER_DEFAULTS[JOB ROUTER]`
     .. warning::
         This macro is deprecated and will be removed for V24 of HTCondor.
@@ -8974,6 +9013,12 @@ Rescue/retry
     :macro:`DAGMAN_WRITE_PARTIAL_RESCUE` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
+    .. warning::
+
+        :macro:`DAGMAN_WRITE_PARTIAL_RESCUE[Deprecation Warning]` is deprecated
+        as the writing of full Rescue DAG's is deprecated. This is slated to be
+        removed during the lifetime of the HTCondor V24 feature series.
+
 :macro-def:`DAGMAN_RETRY_SUBMIT_FIRST[DAGMan]`
     A boolean value that controls whether a failed submit is retried
     first (before any other submits) or last (after all other ready jobs
@@ -9352,6 +9397,15 @@ macros are described in the :doc:`/admin-manual/security` section.
     A boolean value that controls whether HTCondor will attempt to extract
     and verify VOMS attributes from X.509 credentials.
     The default is ``False``.
+
+:macro-def:`AUTH_SSL_USE_VOMS_IDENTITY[SECURITY]`
+    A boolean value that controls whether VOMS attributes are included
+    in the peer's authenticated identity during SSL authentication.
+    This is used with the unified map file to determine the peer's
+    HTCondor identity.
+    If :macro:`USE_VOMS_ATTRIBUTES` is ``False``, then this parameter
+    is treated as ``False``.
+    The default is ``True``.
 
 :macro-def:`SEC_<access-level>_SESSION_DURATION[SECURITY]`
     The amount of time in seconds before a communication session

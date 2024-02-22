@@ -280,6 +280,9 @@ all attributes.
     are written to this log file in addition to any log file specified
     in the job's submit description file.
 
+:classad-attribute-def:`DAGNodeName`
+    Name of the DAG node that this job is associated with.
+
 :classad-attribute-def:`DAGManNodesMask`
     For a DAGMan node job only, a comma-separated list of the event
     codes that should be written to the log specified by
@@ -978,6 +981,12 @@ all attributes.
     Time at which the job most recently finished transferring its output
     sandbox. Measured in the number of seconds since the epoch (00:00:00
     UTC, Jan 1, 1970)
+
+:classad-attribute-def:`JobCurrentReconnectAttempt`
+    If a job is currently in disconnected state, and the AP is attempting
+    to reconnect to an EP, this attribute is set to the retry number.
+    Upon successful reconnection, or if the job has never been disconnected
+    this attribute is undefined. Note the singular value of "attempt".
 
 :classad-attribute-def:`JobCurrentStartDate`
     Time at which the job most recently began running. Measured in the
@@ -1771,8 +1780,8 @@ all attributes.
     attribute is defined when retrieval of the output begins.
 
 :classad-attribute-def:`StreamErr`
-    An attribute utilized only for grid universe jobs. The default value
-    is ``True``. If ``True``, and :ad-attr:`TransferErr` is ``True``, then
+    The default value is ``False``.
+    If ``True``, and :ad-attr:`TransferErr` is ``True``, then
     standard error is streamed back to the access point, instead of
     doing the transfer (as a whole) after the job completes. If
     ``False``, then standard error is transferred back to the submit
@@ -1780,8 +1789,8 @@ all attributes.
     ``False``, then this job attribute is ignored.
 
 :classad-attribute-def:`StreamOut`
-    An attribute utilized only for grid universe jobs. The default value
-    is ``True``. If ``True``, and :ad-attr:`TransferOut` is ``True``, then job
+    The default value is ``False``.
+    If ``True``, and :ad-attr:`TransferOut` is ``True``, then job
     output is streamed back to the access point, instead of doing the
     transfer (as a whole) after the job completes. If ``False``, then
     job output is transferred back to the access point (as a whole)
@@ -1863,6 +1872,11 @@ all attributes.
     ToE stands for Ticket of Execution, and is itself a nested classad that
     describes how a job was terminated by the execute machine.
     See the :doc:`/users-manual/managing-a-job` section for full details.
+
+:classad-attribute-def:`TotalJobReconnectAttempts`
+    The total number of reconnection attempts over the lifetime of the job.
+    If there have never been any, this attribute is undefined. Note the
+    plural nature of "Attempts".
 
 :classad-attribute-def:`TotalSuspensions`
     A count of the number of times this job has been suspended during
@@ -2114,7 +2128,7 @@ declared cron jobs. These represent various allotted job start times that
 will be used to calculate the jobs :ad-attr:`DeferralTime`. These attributes can
 be represented as an integer, a list of integers, a range of integers, a
 step (intervals of a range), or an ``*`` for all allowed values. For more
-information visit :ref:`users-manual/time-scheduling-for-job-execution:cronTab scheduling`.
+information visit :ref:`crontab`.
 
 :classad-attribute-def:`CronMinute`
     The minutes in an hour when the cron job is allowed to start running.
@@ -2198,12 +2212,24 @@ information for the DAG.
     The overall status of the DAG, with the same values as the macro
     ``$DAG_STATUS`` used in DAGMan FINAL nodes.
 
-    +--------------------------------------+--------------------------------------+
-    | 0                                    | OK                                   |
-    +--------------------------------------+--------------------------------------+
-    | 3                                    | the DAG has been aborted by an       |
-    |                                      | ABORT-DAG-ON specification           |
-    +--------------------------------------+--------------------------------------+
+    +------+--------------------------------------+
+    | 0    | OK                                   |
+    +------+--------------------------------------+
+    | 1    | An error has occured                 |
+    +------+--------------------------------------+
+    | 2    | One or more nodes in the DAG have    |
+    |      | failed                               |
+    +------+--------------------------------------+
+    | 3    | the DAG has been aborted by an       |
+    |      | ABORT-DAG-ON specification           |
+    +------+--------------------------------------+
+    | 4    | DAG was removed via :tool:`condor_rm`|
+    +------+--------------------------------------+
+    | 5    | A cycle was detected within the DAG  |
+    +------+--------------------------------------+
+    | 6    | DAG is halted                        |
+    |      | (see :ref:`Suspending a DAG`)        |
+    +------+--------------------------------------+
 
 :classad-attribute-def:`DAG_AdUpdateTime`
     A timestamp for when the DAGMan process last sent an update of internal
@@ -2229,6 +2255,29 @@ rescue and be retained when a DAG is run via recovery mode.
 :classad-attribute-def:`DAG_JobsCompleted`
     The total number of job processes within the DAG that have successfully
     completed.
+
+The following job ClassAd attributes appear in the job ClassAd for the
+:tool:`condor_dagman` job submitted under DAGMan. These values represent
+throttling limits active for the specified DAGMan workflow. Using :tool:`condor_qedit`
+to modify these value will take effect in the DAGMan workflow.
+
+:classad-attribute-def:`DAGMan_MaxJobs`
+    The maximum number of job clusters DAGMan will have submitted at any
+    point of time. This can be viewed as the max number of running Nodes
+    in a DAG since each Node has one cluster of jobs associated with it.
+
+:classad-attribute-def:`DAGMan_MaxIdle`
+    The maximum number of Idle job procs submitted by DAGMan. If this
+    number of passed upon submitting a Node job then DAGMan will pause
+    submitting new jobs.
+
+:classad-attribute-def:`DAGMan_MaxPreScripts`
+    The maximum number of PRE-Scripts DAGMan will execute at a single point
+    in time.
+
+:classad-attribute-def:`DAGMan_MaxPostScripts`
+    The maximum number of POST-Scripts DAGMan will execute at a single point
+    in time.
 
 The following job ClassAd attributes do not appear in the job ClassAd as
 kept by the *condor_schedd* daemon. They appear in the job ClassAd

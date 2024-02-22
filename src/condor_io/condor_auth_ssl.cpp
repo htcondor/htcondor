@@ -33,6 +33,7 @@
 #include "condor_scitokens.h"
 #include "ca_utils.h"
 #include "fcloser.h"
+#include "globus_utils.h"
 
 #if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
@@ -1850,7 +1851,7 @@ err_occured:
 
 std::string Condor_Auth_SSL::get_peer_identity(SSL *ssl)
 {
-	char subjectname[1024];
+	char subjectname[1024] = "";
 	X509 *peer = SSL_get_peer_certificate_ptr(ssl);
 	if (peer) {
 		BASIC_CONSTRAINTS *bs = nullptr;
@@ -1877,7 +1878,21 @@ std::string Condor_Auth_SSL::get_peer_identity(SSL *ssl)
 					PROXY_CERT_INFO_EXTENSION_free(pci);
 				}
 			}
-			dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy. Using identity '%s'\n", subjectname);
+			char* voms_fqan = nullptr;
+			if (param_boolean("USE_VOMS_ATTRIBUTES", false) && param_boolean("AUTH_SSL_USE_VOMS_IDENTITY", true)) {
+				int voms_err = extract_VOMS_info(peer, chain, 1, nullptr, nullptr, &voms_fqan);
+				if (voms_err) {
+					dprintf(D_SECURITY|D_FULLDEBUG, "VOMS FQAN not present (error %d), ignoring.\n", voms_err);
+				}
+			}
+			if (voms_fqan) {
+				strncpy(subjectname, voms_fqan, sizeof(subjectname));
+				subjectname[sizeof(subjectname)-1] = '\0';
+				free(voms_fqan);
+				dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy with VOMS attributes. Using identity '%s'\n", subjectname);
+			} else {
+				dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy. Using identity '%s'\n", subjectname);
+			}
 		} else {
 			X509_NAME_oneline(X509_get_subject_name(peer), subjectname, sizeof(subjectname));
 		}

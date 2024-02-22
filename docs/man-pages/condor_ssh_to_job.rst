@@ -25,14 +25,13 @@ Description
 job is specified with the argument. If only the job *cluster* id is
 given, then the job *process* id defaults to the value 0.
 
-*condor_ssh_to_job* is available in Unix HTCondor distributions, and
-works with two kinds of jobs: those in the vanilla, vm, java, local, or
-parallel universes, and those jobs in the grid universe which use EC2
-resources. It will not work with other grid universe jobs.
+*condor_ssh_to_job* is available in Unix HTCondor distributions, and only works
+with jobs in the vanilla, container, docker, vm, java,
+local, or parallel universes. In the grid universe it only works
+with EC2 resources. It will not work with other grid universe jobs.
 
-For jobs in the vanilla, vm, java, local, or parallel universes, the
-user must be the owner of the job or must be a queue super user, and
-both the *condor_schedd* and *condor_starter* daemons must allow
+The user must be the owner of the job or must be a queue super user, and
+both the *condor_schedd* and *condor_starter* daemons must be configured to allow
 *condor_ssh_to_job* access. If no *remote-command* is specified, an
 interactive shell is created. An alternate *ssh* program such as *sftp*
 may be specified, using the **-ssh** option, for uploading and
@@ -48,6 +47,12 @@ associated with the job. At a minimum, the list will contain the PID of
 the process started when the job was launched, and it will be the first
 item in the list. It may contain additional PIDs of other processes that
 the job has created.
+
+If the job is a docker or container universe job, the interactive
+shell will be launched inside the container, and as much as possible
+should have all the access and visibility that the job proper does.
+Note this requires the container image to have a shell inside it,
+*condor_ssh_to_job* will fail if the container lacks a shell.
 
 The *ssh* session and all processes it creates are treated by HTCondor
 as though they are processes belonging to the job. If the slot is
@@ -87,12 +92,14 @@ execute node from outside of a firewall or private network,
 *condor_ssh_to_job* is able to make use of CCB in order to form the
 *ssh* connection.
 
-The login shell of the user id running the job is used to run the
-requested command, *sshd* subsystem, or interactive shell. This is
-hard-coded behavior in *OpenSSH* and cannot be overridden by
-configuration. This means that *condor_ssh_to_job* access is
-effectively disabled if the login shell disables access, as in the
-example programs */bin/true* and */sbin/nologin*.
+The *sshd* command HTCondor runs on the EP requires an entry
+in the /etc/passwd file with a valid shell and home directory.
+As these are often missing, the *condor_starter* uses the
+LD_PRELOAD environment variable to inject an implementation of the
+libc getpwnam function call into the ssh that forces the shell
+to be /bin/sh and the home directory to be the scratch directory
+for that user.  This can be disabled on the EP by setting
+:macro:`CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY` to false.
 
 *condor_ssh_to_job* is intended to work with *OpenSSH* as installed
 in typical environments. It does not work on Windows platforms. If the

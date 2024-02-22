@@ -34,7 +34,7 @@ EventIterator::EventIterator(FILE *source, bool is_xml, bool owns_fd)
   , m_step(1000)
   , m_done(0)
   , m_source(source)
-  , m_reader(new ReadUserLog(source, is_xml, false))
+  , m_reader(new ReadUserLog(source, is_xml ? UserLogType::LOG_TYPE_XML : UserLogType::LOG_TYPE_NORMAL, false))
 {
 	PyErr_Warn(PyExc_DeprecationWarning, "EventIterator is deprecated; use JobEventLog instead.");
 }
@@ -47,7 +47,7 @@ EventIterator::EventIterator(const EventIterator& that)
 	, m_step(that.m_step)
 	, m_done(that.m_done)
 	, m_source(that.m_source)
-	, m_reader(new ReadUserLog(that.m_source, that.m_is_xml, false))
+	, m_reader(new ReadUserLog(that.m_source, that.m_is_xml ? UserLogType::LOG_TYPE_XML : UserLogType::LOG_TYPE_NORMAL, false))
 {
 	PyErr_Warn(PyExc_DeprecationWarning, "EventIterator is deprecated; use JobEventLog instead.");
 
@@ -100,7 +100,7 @@ EventIterator::reset_to(off_t location)
 	if (r != 0) {
 		THROW_EX(HTCondorIOError, "Can't fseek event log");
 	}
-    m_reader.reset(new ReadUserLog(m_source, m_is_xml));
+    m_reader.reset(new ReadUserLog(m_source, m_is_xml ? UserLogType::LOG_TYPE_XML : UserLogType::LOG_TYPE_NORMAL));
 }
 
 

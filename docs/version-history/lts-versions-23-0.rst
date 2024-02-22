@@ -15,6 +15,46 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-2307:
+
+Version 23.0.8
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.0.8 released on Month Date, 2024.
+
+- HTCondor version 23.0.8 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where DAGMan would crash when the provisioner node was
+  given a parent node.
+  :jira:`2291`
+
+- Fixed a bug that prevented the use of ftp: urls in the file
+  transfer plugin.
+  :jira:`2273`
+
+- Fixed bug where the Shadow failed to write its job ad to :macro:`JOB_EPOCH_HISTORY`
+  when it failed to reconnect to the Starter.
+  :jira:`2289`
+
+- Fixed a bug where the *condor_shadow* would not write a job
+  termination event to the job log for a completed job if the
+  *condor_shadow* failed to reconnect to the *condor_starter* prior
+  to completing cleanup. This would result in DAGMan workflows being
+  stuck waiting forever for jobs to finish.
+  :jira:`2292`
+
+- Fixed a bug that caused **ssh-agent** processes to be leaked when
+  using *grid* universe remote batch job submision over SSH.
+  :jira:`2286`
+
 .. _lts-version-history-2305:
 
 Version 23.0.5
@@ -28,7 +68,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Speed up starting of daemons on Linux systems configured with
+  very large number of file descriptors.
+  :jira:`2270`
 
 Bugs Fixed:
 
@@ -50,6 +92,19 @@ Bugs Fixed:
   description file contained an empty multi-line value.
   :jira:`2249`
 
+- Fixed error handing for the ``-format`` and ``-autoformat`` options of
+  the *condor_qusers* tool when the argument to those options was not a valid
+  expression.
+  :jira:`2269`
+
+- Fixed a bug where the **condor_collector** generated an invalid host
+  certificate for itself on macOS.
+  :jira:`2272`
+
+- Fixed a bug where a submit transform or a job router route could crash on a
+  two argument transform statement that had missing arguments.
+  :jira:`2280`
+
 .. _lts-version-history-2304:
 
 Version 23.0.4
@@ -57,19 +112,21 @@ Version 23.0.4
 
 Release Notes:
 
-.. HTCondor version 23.0.4 released on Month Date, 2023.
-
-- HTCondor version 23.0.4 not yet released.
+- HTCondor version 23.0.4 released on February 8, 2023.
 
 New Features:
-
-- The **condor_starter** can now be configured to capture the stdout and stderr
-  of file transfer plugins and write that output into the StarterLog.
-  :jira:`1459`
 
 - The **condor_starter** will now set the environment variable ``NVIDIA_VISIBLE_DEVICES`` either
   to ``none`` or to a list of the full uuid of each GPU device assigned to the slot.
   :jira:`2242`
+
+- When the HTCondor Keyboard daemon (**condor_kbdd**) is installed, a
+  configuration file is included to automatically enable user input monitoring.
+  :jira:`2255`
+
+- The **condor_starter** can now be configured to capture the stdout and stderr
+  of file transfer plugins and write that output into the StarterLog.
+  :jira:`1459`
 
 - Updated :tool:`condor_upgrade_check` script for better support and
   maintainability. This update includes new flags/functionality
@@ -78,6 +135,19 @@ New Features:
   :jira:`2168`
 
 Bugs Fixed:
+
+- Fixed a bug in the HTCondor Keyboard daemon where activity detected by the
+  X Screen Saver extension was ignored.
+  :jira:`2255`
+
+- Search engine timeout settings for **condor_adstash** now apply to all search
+  engine operations, not just the initial request to the search engine.
+  :jira:`2167`
+
+- Ensure Perl dependencies are present for the **condor_gather_info** script.
+  The **condor_gather_info** script now properly reports the User login name.
+  Also, report the contents of ``/etc/os-release```.
+  :jira:`2094`
 
 - The submit language will no longer treat ``request_gpu_memory`` and ``request_gpus_memory``
   as requests for a custom resource of type ``gpu_memory`` or ``gpus_memory`` respectively.
@@ -90,15 +160,6 @@ Bugs Fixed:
 - Fixed ``SyntaxWarning`` raised by Python 3.12 in scripts packaged
   with the Python bindings.
   :jira:`2212`
-
-- Ensure Perl dependencies are present for the **condor_gather_info** script.
-  The **condor_gather_info** script now properly reports the User login name.
-  Also, report the contents of ``/etc/os-release```.
-  :jira:`2094`
-
-- Search engine timeout settings for **condor_adstash** now apply to all search
-  engine operations, not just the intial request to the search engine.
-  :jira:`2167`
 
 .. _lts-version-history-2303:
 

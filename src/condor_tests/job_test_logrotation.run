@@ -17,13 +17,6 @@
 ## limitations under the License.
 ##
 ##**************************************************************
-##
-## This test check availability and usage contol of the new
-## local, resources in both a static configuration and in psolts.
-## It is model after what we did to test concurrency limits
-## as we are checking the same sorts of things. bt
-##
-##**************************************************************
 
 use CondorTest;
 use CondorUtils;
@@ -81,8 +74,6 @@ if(!(defined $killconfig)) {
 		fresh_local => "TRUE",
 		condorlocalsrc => "$configfile1",
 	);
-	print "First test basic job\n";
-	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test1 = '
 		MAX_WRITELOG_LOG = 20 Kb
@@ -97,8 +88,6 @@ if(!(defined $killconfig)) {
 my $return = "";
 my $executecount = 0;
 my $result = 1;
-
-#Do a job before setting tesing exit codes
 
 my @adarray = ();
 my $LogLocation = "";
@@ -163,8 +152,6 @@ if(!(defined $killconfig)) {
 		condorlocalsrc => "$configfile2",
 	);
 
-	print "First test basic job\n";
-	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test2 = '
 		MAX_NUM_WRITELOG_LOG = 4
@@ -252,7 +239,7 @@ chomp($LogLocation);
 chdir("$LogLocation");
 
 @adarray = ();
-runCondorTool("condor_testwritelog -s 1 -c 80  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+runCondorTool("condor_testwritelog -s 1 -c 20  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
 $logsstring = GetLogsString($LogLocation,"WriteLogLog");
 # pass logs oldest to newest
 CondorTest::debug("About to call ValidateLogs:\n",$debuglevel);
@@ -320,9 +307,9 @@ chomp($LogLocation);
 chdir("$LogLocation");
 
 @adarray = ();
-CondorTest::debug("calling condor_testwritelog -s 1 -c 80 xxxxx\n",$debuglevel);
-runCondorTool("condor_testwritelog -s 1 -c 80  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
-CondorTest::debug("Back Froom condor_testwritelog -s 1 -c 80 xxxxx\n",$debuglevel);
+CondorTest::debug("calling condor_testwritelog -s 1 -c 20 xxxxx\n",$debuglevel);
+runCondorTool("condor_testwritelog -s 1 -c 20  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+CondorTest::debug("Back Froom condor_testwritelog -s 1 -c 20 xxxxx\n",$debuglevel);
 # pass logs oldest to newest
 my $logsstring = GetLogsString($LogLocation,"WriteLogLog");
 CondorTest::debug("About to call ValidateLogs:\n",$debuglevel);

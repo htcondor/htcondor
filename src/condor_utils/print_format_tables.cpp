@@ -120,8 +120,7 @@ const char * extractUniqueStrings ( const classad::Value & value, Formatter &, s
 		}
 	} else if (value.IsStringValue(list_out)) {
 		// for strings, parse as a string list, and add each unique item into the set
-		StringList lst(list_out.c_str());
-		for (const char * psz = lst.first(); psz; psz = lst.next()) {
+		for (auto& psz: StringTokenIterator(list_out)) {
 			uniq.insert(psz);
 		}
 	} else {
@@ -439,6 +438,8 @@ bool render_grid_status ( std::string & result, ClassAd * ad, Formatter & /* fmt
 		{ SUSPENDED, "SUSPENDED" },
 		{ REMOVED, "REMOVED" },
 		{ TRANSFERRING_OUTPUT, "XFER_OUT" },
+		{ JOB_STATUS_FAILED, "FAILED" },
+		{ JOB_STATUS_BLOCKED, "BLOCKED" },
 	};
 	for (size_t ii = 0; ii < COUNTOF(states); ++ii) {
 		if (jobStatus == states[ii].status) {
@@ -564,12 +565,14 @@ const char * format_job_status_raw (long long job_status, Formatter &)
 {
 	switch(job_status) {
 	case IDLE:      return "Idle   ";
-	case HELD:      return "Held   ";
 	case RUNNING:   return "Running";
-	case COMPLETED: return "Complet";
 	case REMOVED:   return "Removed";
-	case SUSPENDED: return "Suspend";
+	case COMPLETED: return "Complet";
+	case HELD:      return "Held   ";
 	case TRANSFERRING_OUTPUT: return "XFerOut";
+	case SUSPENDED: return "Suspend";
+	case JOB_STATUS_FAILED: return "Failed ";
+	case JOB_STATUS_BLOCKED: return "Blocked";
 	default:        return "Unk    ";
 	}
 }
@@ -581,8 +584,10 @@ const char * format_job_status_char (long long status, Formatter & /*fmt*/)
 	{
 	case IDLE:      ret = "I"; break;
 	case RUNNING:   ret = "R"; break;
-	case COMPLETED: ret = "C"; break;
 	case REMOVED:   ret = "X"; break;
+	case COMPLETED: ret = "C"; break;
+	case JOB_STATUS_FAILED: ret = "F"; break;
+	case JOB_STATUS_BLOCKED: ret = "B"; break;
 	case TRANSFERRING_OUTPUT: ret = ">"; break;
 	}
 	return ret;

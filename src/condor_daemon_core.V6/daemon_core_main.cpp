@@ -806,8 +806,12 @@ DaemonCore::kill_immediate_children() {
 			dprintf(D_FULLDEBUG, "Daemon exiting before reaping child pid %d\n", pid_entry.pid);
 			continue;
 		}
+		if (pid_entry.cleanup_signal == 0) {
+			dprintf(D_FULLDEBUG, "Daemon not killing child pid %d at exit\n", pid_entry.pid);
+			continue;
+		}
 		dprintf( D_ALWAYS, "Daemon exiting before all child processes gone; killing %d\n", pid_entry.pid );
-		Send_Signal( pid_entry.pid, SIGKILL );
+		Send_Signal( pid_entry.pid, pid_entry.cleanup_signal );
 	}
 }
 
@@ -3977,12 +3981,10 @@ int dc_main( int argc, char** argv )
 		}
 	}
 
-	if (!local_config_sources.isEmpty()) {
+	if (!local_config_sources.empty()) {
 		dprintf(D_ALWAYS, "Using local config sources: \n");
-		local_config_sources.rewind();
-		char *source;
-		while( (source = local_config_sources.next()) != NULL ) {
-			dprintf(D_ALWAYS, "   %s\n", source );
+		for (const auto& source: local_config_sources) {
+			dprintf(D_ALWAYS, "   %s\n", source.c_str() );
 		}
 	}
 	_macro_stats stats;

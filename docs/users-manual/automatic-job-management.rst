@@ -48,7 +48,7 @@ HTCondor can automatically remove a job, running or otherwise, from the queue
 if a given constraint is true.  In the submit description file, set
 :subcom:`periodic_remove` to a classad expression.  When this expression evaluates
 to true, the scheduler will remove the job, just as if **condor_rm** had
-run on that job.  See :doc:`/users-manual/matchmaking-with-classads` for information
+run on that job.  See :ref:`matchmaking` for information
 about the classad language and :doc:`/classad-attributes/index` for the list of attributes
 which can be used in these expressions.  For example, to automatically remove a 
 job which has been in the queue for more than 100 hours, the submit file could have
@@ -57,11 +57,11 @@ job which has been in the queue for more than 100 hours, the submit file could h
 
        periodic_remove = (time() - QDate) > (100 * 3600)
 
-or, to remove jobs that have been running for more than two hours:
+or, to remove jobs that have been running for more than seven hours:
 
 .. code-block:: condor-submit
 
-       periodic_remove = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
+       periodic_remove = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (7 * 3600)
 
 Automatically placing a job on hold
 -----------------------------------
@@ -91,8 +91,8 @@ in the :subcom:`periodic_release` expression.
 
 .. code-block:: condor-submit
 
-       periodic_hold = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
-       periodic_hold_reason = "Job ran for more than two hours"
+       periodic_hold = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (7 * 3600)
+       periodic_hold_reason = "Job ran for more than seven hours"
        periodic_hold_subcode = 42
        periodic_release = (HoldReasonSubCode == 42)
 
@@ -103,7 +103,7 @@ HTCondor can automatically evict a running job, from the machine
 it is running on, if a given constraint is true.  In the submit description file, set
 **periodic_vacate** to a classad expression.  When this expression evaluates
 to true, the scheduler will evicte the job, just as if **condor_vacate_job** had
-run on that job.  See :doc:`/users-manual/matchmaking-with-classads` for information
+run on that job.  See :ref:`matchmaking` for information
 about the classad language and :doc:`/classad-attributes/index` for the list of attributes
 which can be used in these expressions.  For example, to automatically evicte a 
 job which has been in the queue for more than 100 hours, and have it restart

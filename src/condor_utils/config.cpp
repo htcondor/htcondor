@@ -1768,7 +1768,7 @@ Parse_macros(
 					config_errmsg = "includes nested too deep";
 					retval = -2; // indicate that nesting depth has been exceeded.
 				} else {
-					if ( ! is_submit) local_config_sources.append(macro_source_filename(InnerSource, macro_set));
+					if ( ! is_submit) local_config_sources.emplace_back(macro_source_filename(InnerSource, macro_set));
 					MacroStreamYourFile msInner(fp, InnerSource);
 					retval = Parse_macros(msInner, depth+1, macro_set, options, pctx, config_errmsg, fnSubmit, pvSubmitData);
 				}

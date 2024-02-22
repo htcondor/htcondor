@@ -190,7 +190,8 @@ deleteFilesStoredAt(
   const std::string & checkpointDestination,
   const std::string & manifestFileName,
   const std::filesystem::path & jobAdPath,
-  std::string & error
+  std::string & error,
+  bool wasFailedCheckpoint
 ) {
 	FILE * fp = safe_fopen_no_create( manifestFileName.c_str(), "r" );
 	if( fp == NULL ) {
@@ -249,6 +250,10 @@ deleteFilesStoredAt(
 		args.AppendArg(file);
 		args.AppendArg("-jobad");
 		args.AppendArg(jobAdPath.string());
+
+		if( wasFailedCheckpoint ) {
+		    args.AppendArg("-ignore-missing-files");
+		}
 
 		std::string argStr;
 		args.GetArgsStringForLogging( argStr );
