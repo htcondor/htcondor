@@ -1,11 +1,10 @@
-Composing workflows from multiple DAG files
-===========================================
+Composing Workflows from DAGs
+=============================
 
 :index:`Composing workflows<single: DAGMan; Composing workflows>`
 
-HTCondor DAGMan is equipped with the ability to compose large DAG workflows
-from various smaller sub-workflows defined in individual DAG files. This may
-be beneficial for the following reasons:
+HTCondor DAGMan can compose large DAG workflows from various smaller sub-workflows
+defined in individual DAG files. This may be beneficial for the following reasons:
 
 - Easily incorporate pre-existing DAGs
 - Easily reuse a specific DAG sub-structure multiple times within a larger workflow
@@ -34,10 +33,9 @@ There are two ways that DAGs can be nested within other DAGs:
     Sub-DAGs and Splices can be combined in a single workflow, and to any depth,
     but be careful to avoid recursion which will cause problems.
 
-It is recommended to use Splices if the workflow being comprised doesn't
-require special functionality because splices don't produce the same scaling
-issue as Sub-DAGs. When determining how to incorporate DAGs into larger
-workflows consider the following pros and cons list:
+It is recommended to use Splices if the workflow doesn't require special functionality
+because splices don't produce the same scaling issue as Sub-DAGs. When determining how
+to incorporate DAGs into larger workflows consider the following pros and cons list:
 
 .. sidebar:: Splice Dependencies
 
@@ -346,9 +344,6 @@ submitted from. If the nodes in the spliced DAG specify their own working
 directory as a relative path then DAGMan will use the splice directory as
 a prefix to the nodes directory. Absolute paths are untouched.
 
-Simple SPLICE Example
-^^^^^^^^^^^^^^^^^^^^^
-
 .. sidebar:: Diamond DAG spliced between two nodes
 
     .. mermaid::
@@ -359,6 +354,9 @@ Simple SPLICE Example
          Diamond+A --> Diamond+B & Diamond+C
          Diamond+B & Diamond+C --> Diamond+D
          Diamond+D --> Y
+
+Simple SPLICE Example
+^^^^^^^^^^^^^^^^^^^^^
 
 This first simple example splices a diamond-shaped DAG in between the
 two nodes of a top level DAG. Given the following DAG input files, a
@@ -388,9 +386,6 @@ single DAGMan workflow will be created as shown on the right.
       PARENT X CHILD DIAMOND
       PARENT DIAMOND CHILD Y
 
-SPLICING one DAG Twice Example
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 .. sidebar:: X-shaped DAG
 
     .. mermaid::
@@ -399,6 +394,9 @@ SPLICING one DAG Twice Example
        flowchart TD
          A & B & C  --> D
          D --> E & F & G
+
+SPLICING one DAG Twice Example
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This next example illustrates the reuse of a DAG in multiple splices
 for a single workflow. Below we have the X-shaped DAG input file
