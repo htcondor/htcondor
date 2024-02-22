@@ -99,30 +99,30 @@ _enable_log( PyObject *, PyObject * ) {
 
 static PyObject *
 _dprintf_dfulldebug( PyObject *, PyObject * args ) {
-    const char * str = NULL;
+	const char * str = NULL;
 
 	if(! PyArg_ParseTuple( args, "s", & str )) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return NULL;
 	}
 
-    dprintf( D_FULLDEBUG, "%s", str );
+	dprintf( D_FULLDEBUG, "%s", str );
 
-    Py_RETURN_NONE;
+	Py_RETURN_NONE;
 }
 
 
 static PyObject *
 _py_dprintf( PyObject *, PyObject * args ) {
-    long debug_level = 0;
-    const char * str = NULL;
+	long debug_level = 0;
+	const char * str = NULL;
 
 	if(! PyArg_ParseTuple( args, "ls", & debug_level, & str )) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return NULL;
 	}
 
-    dprintf( debug_level, "%s", str );
+	dprintf( debug_level, "%s", str );
 
-    Py_RETURN_NONE;
+	Py_RETURN_NONE;
 }
