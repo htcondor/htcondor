@@ -254,7 +254,7 @@ def pytest_collection_modifyitems(items):
     shadow = []
     others = []
     for item in the_list:
-        if item.path.name == "test_checkpoint_destination_two.py":
+        if item.location[0] == "test_checkpoint_destination_two.py":
             if "[shadow-" in item.name:
                 shadow.append(item)
             elif "-shadow]" in item.name:
