@@ -19,8 +19,3 @@ x86_64_macOS13
 x86_64_Windows9
 x86_64_Windows10
 
-# Using 64-bit CentOS 7 hardware for IPv6 tests
-x86_64_CentOS7
-
-# We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-build:x86_64_Fedora38-23000202
