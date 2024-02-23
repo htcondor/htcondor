@@ -1038,90 +1038,6 @@ int getJobAdExitSignal(ClassAd *jad, int &exit_signal)
 	return TRUE;
 }
 
-static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd) 
-{
-	std::string resslist;
-	if ( ! jobAd->LookupString("ProvisionedResources", resslist))
-		resslist = "Cpus, Disk, Memory";
-
-	StringList reslist(resslist.c_str());
-	if (reslist.number() > 0) {
-		ClassAd * puAd = new ClassAd();
-
-		reslist.rewind();
-		while (const char * resname = reslist.next()) {
-			std::string attr;
-			std::string res = resname;
-			title_case(res); // capitalize it to make it print pretty.
-			const int copy_ok = classad::Value::ERROR_VALUE | classad::Value::BOOLEAN_VALUE | classad::Value::INTEGER_VALUE | classad::Value::REAL_VALUE;
-			classad::Value value;
-			attr = res + "Provisioned";	 // provisioned value
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(resname, plit); // usage ad has attribs like they appear in Machine ad
-				}
-			}
-			// /*for debugging*/ else { puAd->Assign(resname, 42); }
-			attr = "Request"; attr += res;   	// requested value
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-			// /*for debugging*/ else { puAd->Assign(attr, 99); }
-
-			attr = res + "Usage"; // (implicitly) peak usage value
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-
-			attr = res + "AverageUsage"; // average usage
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-
-			attr = res + "MemoryUsage"; // special case for GPUs.
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-
-			attr = res + "MemoryAverageUsage"; // just in case.
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-
-			attr = "Assigned"; attr += res;
-			CopyAttribute( attr, *puAd, *jobAd );
-		}
-
-		// Hard code a couple of useful time-based attributes that are not "Requested" yet
-		// and shorten their names to display more reasonably
-		int jaed = 0;
-		if (jobAd->LookupInteger(ATTR_JOB_ACTIVATION_EXECUTION_DURATION, jaed)) {
-			puAd->Assign("TimeExecuteUsage", jaed);
-		}
-		int jad = 0;
-		if (jobAd->LookupInteger(ATTR_JOB_ACTIVATION_DURATION, jad)) {
-			puAd->Assign("TimeSlotBusyUsage", jad);
-		}
-		*ppusageAd = puAd;
-	}
-}
-
 // kind defaults to US_NORMAL.
 void
 BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
@@ -1251,45 +1167,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		event.core_file = core_file_name;
 	}
 
-#if 1
-	set_usageAd(jobAd, &event.pusageAd);
-#else
-	std::string resslist;
-	if ( ! jobAd->LookupString("PartitionableResources", resslist))
-		resslist = "Cpus, Disk, Memory";
-
-	StringList reslist(resslist.c_str());
-	if (reslist.number() > 0) {
-		int64_t int64_value = 0;
-		ClassAd * puAd = new ClassAd();
-
-		reslist.rewind();
-		char * resname = NULL;
-		while ((resname = reslist.next()) != NULL) {
-			std::string attr;
-			int64_value = -1;
-			attr = resname; // provisioned value
-			if (jobAd->LookupInteger(attr, int64_value)) {
-				puAd->Assign(attr, int64_value);
-			} 
-			// /*for debugging*/ else { puAd->Assign(attr, 42); }
-			int64_value = -2;
-			attr = "Request";
-			attr += resname; // requested value
-			if (jobAd->LookupInteger(attr, int64_value)) {
-				puAd->Assign(attr, int64_value);
-			}
-			// /*for debugging*/ else { puAd->Assign(attr, 99); }
-			int64_value = -3;
-			attr = resname;
-			attr += "Usage"; // usage value
-			if (jobAd->LookupInteger(attr, int64_value)) {
-				puAd->Assign(attr, int64_value);
-			}
-		}
-		event.pusageAd = puAd;
-	}
-#endif
+	setEventUsageAd(*jobAd, &event.pusageAd);
 
 	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
 	event.setToeTag( toeTag );
@@ -1333,7 +1211,7 @@ BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr )
 		// remote rusage
 	event.run_remote_rusage = run_remote_rusage;
 	
-	set_usageAd(jobAd, &event.pusageAd);
+	setEventUsageAd(*jobAd, &event.pusageAd);
 
 		/*
 		  we want to log the events from the perspective of the user
