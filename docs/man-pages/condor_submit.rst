@@ -2663,6 +2663,22 @@ ADVANCED COMMANDS
     replaces the default allocation of stack space, which is unlimited
     in size.
 
+ :subcom-def:`starter_debug` = <log levels>
+    This command causes the *condor_starter* to write a separate copy
+    of its daemon log in the job scratch directory.
+    If the value is ``True``, then the logging level is the same that
+    the *condor_starter* is configured to use for its normal daemon
+    log.
+    Any other value will be interpreted the same way as
+    :macro:`<SUBSYS>_DEBUG` to set the logging level.
+
+ :subcom-def:`starter_log` = <pathname>
+    When the *condor_starter* is writing a job-specific daemon log
+    (see :subcom:`starter_debug`), this command causes the log file
+    to be transferred to the Access Point along with the job's output
+    sandbox. The log is written to the given pathname.
+    If :subcom:`starter_debug` isn't set, then it will be set to ``True``.
+
  :subcom-def:`submit_event_notes` = <note>
     A string that is appended to the submit event in the job's log file.
     For DAGMan jobs, the string ``DAG Node:`` and the node's name is
