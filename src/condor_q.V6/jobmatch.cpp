@@ -745,7 +745,6 @@ bool doJobRunAnalysis (
 	bool	val;
 	int		universe = CONDOR_UNIVERSE_MIN;
 	int		jobState;
-	bool	jobMatched = false;
 	std::string owner;
 	std::string user;
 	std::string slotname;
@@ -764,7 +763,6 @@ bool doJobRunAnalysis (
 	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 
 	request->LookupInteger(ATTR_JOB_STATUS, jobState);
-	request->LookupBool(ATTR_JOB_MATCHED, jobMatched);
 	if (jobState == RUNNING || jobState == TRANSFERRING_OUTPUT || jobState == SUSPENDED) {
 		job_status = "Job is running.";
 	}
@@ -782,9 +780,6 @@ bool doJobRunAnalysis (
 	}
 	if (jobState == COMPLETED) {
 		job_status = "Job is completed.";
-	}
-	if (jobMatched) {
-		job_status = "Job has been matched.";
 	}
 
 	// if we already figured out the job status, and we haven't been asked to analyze requirements anyway

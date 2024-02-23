@@ -761,7 +761,6 @@ Scheduler::Scheduler() :
 	spoolJobFileWorkers = NULL;
 
 	shadowsByProcID = NULL;
-	resourcesByProcID = NULL;
 	numMatches = 0;
 	numShadows = 0;
 	FlockCollectors = NULL;
@@ -904,14 +903,6 @@ Scheduler::~Scheduler()
 	}
 	if (shadowsByProcID) {
 		delete shadowsByProcID;
-	}
-	if ( resourcesByProcID ) {
-		resourcesByProcID->startIterations();
-		ClassAd* jobAd;
-		while (resourcesByProcID->iterate(jobAd) == 1) {
-			if (jobAd) delete jobAd;
-		}
-		delete resourcesByProcID;
 	}
 	if( FlockCollectors ) {
 		delete FlockCollectors;
@@ -7605,6 +7596,11 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	dprintf(D_MATCH,"Received match for job %d.%d (delivered=%d): %s\n",
 			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
+	if ( strcasecmp(claim_id,"null") == 0 ) {
+		dprintf(D_MATCH, "Rejecting match to %s because it has no claim id\n", slot_name);
+		return false;
+	}
+
 	bool scheddsAreSubmitters = false;
 	if (strncmp("AllSubmittersAt", getMatchUser(), 15) == 0) {
 		scheddsAreSubmitters = true;
@@ -7667,37 +7663,6 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	if( job_id.cluster == -1 || job_id.proc == -1 ) {
 		dprintf(D_FULLDEBUG,"No job found to run on %s\n",slot_name);
 		return false;
-	}
-
-	if ( strcasecmp(claim_id,"null") == 0 ) {
-			// No ClaimId given by the matchmaker.  This means
-			// the resource we were matched with does not support
-			// the claiming protocol.
-			//
-			// So, set the matched attribute in our classad to be true,
-			// and store a copy of match_ad in a hashtable.
-
-			// Normally with a job that has a shadow, we would insert the
-			// MachineAttrs when the shadow_rec is created, and then rotate the
-			// shadow_rec is destroyed.  But since this resource does not support
-			// claiming, there won't be a shadow rec, so do both insert and 
-			// rotate steps here. In this case we want to rotate, then insert.
-		scheduler.InsertMachineAttrs(job_id.cluster,job_id.proc,&match_ad, true);
-		scheduler.InsertMachineAttrs(job_id.cluster, job_id.proc, &match_ad, false);
-
-		ClassAd *tmp_ad = NULL;
-		scheduler.resourcesByProcID->lookup(job_id,tmp_ad);
-		if ( tmp_ad ) delete tmp_ad;
-		tmp_ad = new ClassAd( match_ad );
-		scheduler.resourcesByProcID->insert(job_id,tmp_ad);
-
-			// Update matched attribute in job ad
-		SetAttribute(job_id.cluster,job_id.proc,
-					 ATTR_JOB_MATCHED,"True",NONDURABLE);
-		SetAttributeInt(job_id.cluster,job_id.proc,
-						ATTR_CURRENT_HOSTS,1,NONDURABLE);
-
-		return true;
 	}
 
 	Daemon startd(&match_ad,DT_STARTD,NULL);
@@ -13462,8 +13427,6 @@ Scheduler::Init()
 		shadowsByPid = new HashTable <int, shadow_rec *>(pidHash);
 		shadowsByProcID =
 			new HashTable<PROC_ID, shadow_rec *>(hashFuncPROC_ID);
-		resourcesByProcID =
-			new HashTable<PROC_ID, ClassAd *>(hashFuncPROC_ID);
 	}
 
 	if ( spoolJobFileWorkers == NULL ) {
