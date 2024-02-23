@@ -100,6 +100,12 @@ New Features:
 - The ``$CondorVersion`` string contains the Git SHA for official CHTC builds of HTCondor.
   :jira:`532`
 
+- The new submit commands :subcom:`starter_debug` and :subcom:`starter_log`
+  can be used to have the *condor_starter* write a second copy of its
+  daemon log and have that file transferred to the Access Point with the
+  job's output sandbox.
+  :jira:`2296`
+
 Bugs Fixed:
 
 - In some rare cases where docker universe could not start a container,

@@ -1779,6 +1779,20 @@ all attributes.
     while the job waits in the queue in the ``Completed`` state. This
     attribute is defined when retrieval of the output begins.
 
+:classad-attribute-def:`JobStarterDebug`
+    This attribute causes the *condor_starter* to write a job-specific
+    copy of its daemon log in the job's scratch directory.
+    If the value is `True`, then the the logging level matches that of
+    the regular daemon log.
+    If the value is a string, then it specifies a different logging
+    level following the syntax of :macro:`<SUBSYS>_DEBUG`.
+
+:classad-attribute-def:`JobStarterLog`
+    When the *condor_starter* is creating a job-specific copy of its
+    dameon log (see :ad-attr:`JobStarterDebug`), this attribute causes
+    the log to be transferred to the Access Point with the job's
+    output sandbox, and written to the given pathname.
+
 :classad-attribute-def:`StreamErr`
     The default value is ``False``.
     If ``True``, and :ad-attr:`TransferErr` is ``True``, then
