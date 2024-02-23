@@ -513,7 +513,7 @@ OfflineCollectorPlugin::invalidate (
 
 	dprintf (
 		D_FULLDEBUG,
-		"In OfflineCollectorPlugin::update ( %d )\n",
+		"In OfflineCollectorPlugin::invalidate ( %d )\n",
 		command );
 
 	/* bail out if the plug-in is not enabled */
