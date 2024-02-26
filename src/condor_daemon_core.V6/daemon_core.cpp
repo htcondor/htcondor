@@ -99,9 +99,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 
 #include <algorithm>
 
-#if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
-#endif
-
 #if !defined(CLONE_NEWPID)
 #define CLONE_NEWPID 0x20000000
 #endif
