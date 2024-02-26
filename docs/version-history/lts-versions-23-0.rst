@@ -59,6 +59,11 @@ Bugs Fixed:
   idle forever.
   :jira:`2304`
 
+- Fixed a bug in the Windows MSI installer that would cause installation to fail
+  when the install path had a space in the pathname, such as when installing to
+  ``C:\Program Files``
+  :jira:`2302`
+
 .. _lts-version-history-2305:
 
 Version 23.0.5
