@@ -82,17 +82,9 @@ ClassAdAnalyzer::
 bool ClassAdAnalyzer::
 NeedsBasicAnalysis( ClassAd *request ) {
   int status;
-  int matched = false;
 
   request->LookupInteger( ATTR_JOB_STATUS, status );
-  request->LookupInteger( ATTR_JOB_MATCHED, matched );
 
-  // XXX: are there cases where we need "basic" analysis even though
-  // we're matched?
-  if (matched) {
-    return false;
-  }
-  
   switch(status) {
   // XXX:  should we have "is_running/completed/removed" in m_result?
   // XXX:  should we add "is_held" to m_result/include hold_reason?

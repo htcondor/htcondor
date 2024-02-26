@@ -55,6 +55,10 @@ Bugs Fixed:
   using *grid* universe remote batch job submision over SSH.
   :jira:`2286`
 
+- Fixed a bug where a job that's matched to an offline slot ad remains
+  idle forever.
+  :jira:`2304`
+
 - Fixed a bug in the Windows MSI installer that would cause installation to fail
   when the install path had a space in the pathname, such as when installing to
   ``C:\Program Files``
