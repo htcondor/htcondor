@@ -50,7 +50,6 @@
 #include "file_lock.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
-#include "subsystem_info.h"
 #include "my_popen.h"
 #include "stl_string_utils.h"
 #include "checkpoint_cleanup_utils.h"

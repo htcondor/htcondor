@@ -87,7 +87,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "shared_port_endpoint.h"
 #include "condor_open.h"
 #include "filename_tools.h"
-#include "authentication.h"
 #include "condor_claimid_parser.h"
 #include "condor_email.h"
 #include "valgrind.h"
@@ -101,7 +100,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include <algorithm>
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
-#include <sched.h>
 #endif
 
 #if !defined(CLONE_NEWPID)
@@ -110,7 +108,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 
 #include "systemd_manager.h"
 
-#include <algorithm>
 
 static const char* EMPTY_DESCRIP = "<NULL>";
 

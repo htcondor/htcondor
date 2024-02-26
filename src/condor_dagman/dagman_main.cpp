@@ -34,7 +34,6 @@
 #include "condor_getcwd.h"
 #include "directory.h"
 #include "condor_version.h"
-#include "subsystem_info.h"
 #include "dagman_metrics.h"
 
 namespace deep = DagmanDeepOptions;

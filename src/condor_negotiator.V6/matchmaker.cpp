@@ -40,7 +40,6 @@
 #include "condor_daemon_core.h"
 #include "selector.h"
 #include "consumption_policy.h"
-#include "condor_classad.h"
 #include "subsystem_info.h"
 #include "authentication.h"
 

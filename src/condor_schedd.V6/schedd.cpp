@@ -53,7 +53,6 @@
 #include "store_cred.h"
 #include "file_transfer.h"
 #include "basename.h"
-#include "nullfile.h"
 #include "user_job_policy.h"
 #include "condor_holdcodes.h"
 #include "sig_name.h"
@@ -82,7 +81,6 @@
 #include "schedd_negotiate.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
-#include "globus_utils.h"
 #ifdef UNIX
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"

@@ -52,7 +52,6 @@
 #include "my_username.h"
 #include "condor_regex.h"
 #include "starter_util.h"
-#include "condor_random_num.h"
 #ifdef HAVE_DATA_REUSE_DIR
 #include "data_reuse.h"
 #endif
