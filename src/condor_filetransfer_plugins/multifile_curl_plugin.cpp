@@ -1039,6 +1039,7 @@ main( int argc, char **argv ) {
                 "MultipleFileSupport = true\n"
                 "PluginVersion = \"0.2\"\n"
                 "PluginType = \"FileTransfer\"\n"
+                "ProtocolVersion = 2\n"
             );
             printf( "SupportedMethods = \"%s\"\n", SupportedMethods );
 
