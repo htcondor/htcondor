@@ -158,14 +158,15 @@ class Submit(MutableMapping):
             rv = rv + f"{key} = {value}\n"
         qargs = _submit_getqargs(self, self._handle)
         if qargs is not None:
-            rv = rv + "queue " + qargs
+            if qargs == '':
+                rv = rv + "queue\n"
+            else:
+                rv = rv + "queue " + qargs + "\n"
         return rv
 
 
-    # Consider making this do what Schedd.submit() does.
     def __repr__(self):
-        # FIXME
-        pass
+        return f'Submit({self})'
 
 
     def expand(self, attr : str) -> str:

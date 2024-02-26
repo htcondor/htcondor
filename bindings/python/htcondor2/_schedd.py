@@ -471,7 +471,7 @@ class Schedd():
         # SubmitResult object directly.
         #
         """
-        FIXME: Unimplemented.
+        FIXME (unimplemented)
 
         Upload the input files corresponding to a given :meth:`submit`.
         """
@@ -486,7 +486,7 @@ class Schedd():
         # probably not hard to permit both.
         #
         """
-        FIXME: Unimplemented.
+        FIXME (unimplemented)
 
         Retrieve the output files from the job(s) in a given :meth:`submit`.
         """

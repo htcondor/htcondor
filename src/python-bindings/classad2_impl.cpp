@@ -39,6 +39,7 @@ static PyMethodDef classad2_impl_methods[] = {
     {"_classad_internal_refs", &_classad_internal_refs, METH_VARARGS, NULL},
     {"_classad_print_json", &_classad_print_json, METH_VARARGS, NULL},
     {"_classad_print_old", &_classad_print_old, METH_VARARGS, NULL},
+    {"_classad_last_error", &_classad_last_error, METH_VARARGS, NULL},
 
     {"_exprtree_init", & _exprtree_init, METH_VARARGS, NULL},
     {"_exprtree_eq", & _exprtree_eq, METH_VARARGS, NULL},
@@ -66,12 +67,6 @@ static struct PyModuleDef classad2_impl_module = {
 
 PyMODINIT_FUNC
 PyInit_classad2_impl(void) {
-	// Initialization for HTCondor.  *sigh*
-	config();
-
-	// Control HTCondor's stderr verbosity with _CONDOR_TOOL_DEBUG.
-	dprintf_set_tool_debug( "TOOL", 0 );
-
 	PyObject * the_module = PyModule_Create(& classad2_impl_module);
 
 	DynamicPyType_Handle dpt_handle("classad2_impl._handle");

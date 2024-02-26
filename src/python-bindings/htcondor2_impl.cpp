@@ -62,13 +62,19 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	)C0ND0R"},
 
 	{"_platform", & _platform, METH_VARARGS, R"C0ND0R(
-        Returns the platform of HTCondor this module was compiled for.
+	    Returns the platform of HTCondor this module was compiled for.
 	)C0ND0R"},
 
 	{"_enable_debug", & _enable_debug, METH_VARARGS, R"C0ND0R(
-        Enable debugging output from HTCondor, where output is sent to
-        ``stderr``.  The logging level is controlled by the ``TOOL_DEBUG``
-        parameter.
+	    Enable debugging output from HTCondor, where output is sent to
+	    ``stderr``.  The logging level is set by the ``TOOL_DEBUG``
+	    parameter.
+	)C0ND0R"},
+
+	{"_enable_log", & _enable_log, METH_VARARGS, R"C0ND0R(
+	    Enable debugging output from HTCondor, where output is sent to
+	    a file. The logging level is set by the ``TOOL_DEBUG``
+	    parameter, and the file by ``TOOL_LOG``.
 	)C0ND0R"},
 
 	{"_set_subsystem", & _set_subsystem, METH_VARARGS, R"C0ND0R(
@@ -86,6 +92,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	)C0ND0R"},
 
 	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
+
+	{"_py_dprintf", &_py_dprintf, METH_VARARGS, NULL},
 
 
 	{"_collector_init", &_collector_init, METH_VARARGS, NULL},
@@ -172,11 +180,22 @@ static struct PyModuleDef htcondor2_impl_module = {
 
 PyMODINIT_FUNC
 PyInit_htcondor2_impl(void) {
-	// Initialization for HTCondor.  *sigh*
-	config();
+	//
+	// This is the default initialization from version 1.
+	//
 
-	// Control HTCondor's stderr verbosity with _CONDOR_TOOL_DEBUG.
-	dprintf_set_tool_debug( "TOOL", 0 );
+	// [export_config()]
+	dprintf_make_thread_safe();
+	config_ex(CONFIG_OPT_NO_EXIT | CONFIG_OPT_WANT_META);
+	param_insert("ENABLE_CLASSAD_CACHING", "false");
+	classad::ClassAdSetExpressionCaching(false);
+
+	// [export_dc_tool()]
+	if(! has_mySubSystem()) {
+		set_mySubSystem("TOOL", false, SUBSYSTEM_TYPE_TOOL);
+	}
+	dprintf_pause_buffering();
+
 
 	PyObject * the_module = PyModule_Create(& htcondor2_impl_module);
 

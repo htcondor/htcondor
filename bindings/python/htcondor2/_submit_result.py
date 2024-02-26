@@ -13,7 +13,6 @@ class SubmitResult():
     # ... there's probably a standard Pythonic way of indicating that.
     def __init__(self, clusterID, procID, num_procs, clusterAd):
         '''
-        :meta private:
         '''
         self._cluster = clusterID
         self._first_proc = procID

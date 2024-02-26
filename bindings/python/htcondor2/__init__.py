@@ -36,7 +36,10 @@ with _add_dll_dir():
     from .htcondor2_impl import _platform as platform
     from .htcondor2_impl import _set_subsystem as set_subsystem
     from .htcondor2_impl import _reload_config as reload_config
+
     from .htcondor2_impl import _enable_debug as enable_debug
+    from .htcondor2_impl import _enable_log as enable_log
+    from ._logging import _log as log
 
     # Enumerations.
     from ._subsystem_type import SubsystemType
@@ -50,6 +53,7 @@ with _add_dll_dir():
     from ._transaction_flag import TransactionFlag
     from ._job_event_type import JobEventType
     from ._file_transfer_event_type import FileTransferEventType
+    from ._log_level import LogLevel
 
     # Classes.
     from ._collector import Collector
@@ -62,6 +66,7 @@ with _add_dll_dir():
     from ._submit_result import SubmitResult
     from ._job_event import JobEvent
     from ._job_event_log import JobEventLog
+    from ._job_status import JobStatus
 
     # Additional aliases for compatibility with the `htcondor` module.
     from ._daemon_type import DaemonType as DaemonTypes
