@@ -16,7 +16,6 @@
 #include "stat_wrapper.h"
 #include "condor_base64.h"
 #include "my_username.h"
-#include "daemon.h"
 #include "shortfile.h"
 
 #include <queue>

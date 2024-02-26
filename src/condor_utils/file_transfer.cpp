@@ -22,7 +22,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "string_list.h"
-#include "condor_classad.h"
 #include "condor_io.h"
 #include "file_transfer.h"
 #include "condor_attributes.h"
@@ -65,7 +64,6 @@
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
-#include <string>
 #include <filesystem>
 
 const char * const StdoutRemapName = "_condor_stdout";
