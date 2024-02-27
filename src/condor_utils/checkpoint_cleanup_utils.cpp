@@ -152,7 +152,7 @@ spawnCheckpointCleanupProcess(
 	cleanup_process_args.push_back( buffer );
 
 
-	uid_t uid = (uid_t) -1; 
+	uid_t uid = (uid_t) -1;
 	gid_t gid = (gid_t) -1;
 	bool use_old_user_ids = user_ids_are_inited();
 	bool switch_users = param_boolean("RUN_CLEANUP_PLUGINS_AS_OWNER", true);
@@ -236,6 +236,7 @@ moveCheckpointsToCleanupDirectory(
 			return false;
 		}
 	} else {
+		TemporaryPrivSentry sentry(PRIV_CONDOR);
 		std::filesystem::create_directory( checkpointCleanup, SPOOL, errCode );
 		if( errCode ) {
 			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", checkpointCleanup.string().c_str(), errCode.value(), errCode.message().c_str() );
@@ -296,12 +297,34 @@ moveCheckpointsToCleanupDirectory(
 	std::filesystem::path target_dir = owner_dir / spool.filename();
 
 
-	// We have to have root here because the spool directory is mode 700
-	// and owned by the user, but its parent directories will be owned by
-	// condor and possibly not world-executable.
+	// If we assume that the SPOOL's directory's parents are all world-
+	// traversable, we can just switch IDs to the user at this point.  We
+	// don't actually enforce that assumption anywhere, but if we don't
+	// make it, we have to become root four different times in this operation,
+	// which the makes the security guru unhappy.
+
+	// Of course, the priv-switching system assumes there's always only one
+	// user of interest.  This is stupid, but rather than reimplement
+	// TemporaryPrivSentry, let's assume that this code is called if and only
+	// if either (a) PRIV_USER is the correct user already (this should be
+	// true in the shadow) or (b) PRIV_USER is unset (this should be true in
+	// the entirely bug-free schedd).
+
+	bool clearUserIDs;
+	if( user_ids_are_inited() ) {
+		ASSERT(get_user_uid() == owner_uid);
+		ASSERT(get_user_gid() == owner_gid);
+		clearUserIDs = false;
+	} else {
+		set_user_ids(owner_uid, owner_gid);
+		clearUserIDs = true;
+	}
+	TemporaryPrivSentry sentry(PRIV_USER, clearUserIDs);
+
+
 	std::filesystem::directory_iterator spool_dir;
 	{
-		TemporaryPrivSentry sentry(PRIV_ROOT);
+		// TemporaryPrivSentry sentry(PRIV_ROOT);
 		spool_dir = std::filesystem::directory_iterator(spool, errCode);
 		if( errCode ) {
 			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
@@ -335,7 +358,7 @@ moveCheckpointsToCleanupDirectory(
 
 
 				{
-					TemporaryPrivSentry sentry(PRIV_ROOT);
+					// TemporaryPrivSentry sentry(PRIV_ROOT);
 					std::filesystem::create_directory( target_dir, spool, errCode );
 
 					if( errCode ) {
@@ -349,8 +372,9 @@ moveCheckpointsToCleanupDirectory(
 				}
 
 #if ! defined(WINDOWS)
+/*
 				{
-					TemporaryPrivSentry sentry(PRIV_ROOT);
+					// TemporaryPrivSentry sentry(PRIV_ROOT);
 					int rv = chown( target_dir.string().c_str(), owner_uid, owner_gid );
 
 					if( rv == -1 ) {
@@ -362,12 +386,14 @@ moveCheckpointsToCleanupDirectory(
 						return false;
 					}
 				}
+*/
 #endif /* ! defined(WINDOWS) */
 
 				{
-					TemporaryPrivSentry sentry(PRIV_ROOT);
+					// TemporaryPrivSentry sentry(PRIV_ROOT);
 					std::filesystem::rename( entry.path(), target_dir / entry.path().filename(), errCode );
 				}
+
 				if( errCode ) {
 					dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
 						"for job (%d.%d), failed to rename "
@@ -395,11 +421,11 @@ moveCheckpointsToCleanupDirectory(
 	std::filesystem::path jobAdPath = target_dir / ".job.ad";
 #if ! defined(WINDOWS)
 	{
-		TemporaryPrivSentry sentry(PRIV_ROOT);
+		// TemporaryPrivSentry sentry(PRIV_ROOT);
 		jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
 		// It's annoying if this fails, but not fatal; the directory owner
 		// (job owner) can remove it even if it's still owned by root.
-		std::ignore = chown( jobAdPath.string().c_str(), owner_uid, owner_gid );
+		// std::ignore = chown( jobAdPath.string().c_str(), owner_uid, owner_gid );
 	}
 #endif /* ! defined(WINDOWS ) */
 	if( jobAdFile == NULL ) {
