@@ -702,10 +702,6 @@ class Scheduler : public Service
 	void			mail_problem_message();
 	bool            FindRunnableJobForClaim(match_rec* mrec);
 
-		// hashtable used to hold matching ClassAds for Globus Universe
-		// jobs which desire matchmaking.
-	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
-
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
 
 	//

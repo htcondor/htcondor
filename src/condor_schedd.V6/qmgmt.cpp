@@ -1161,24 +1161,6 @@ DecrementClusterSize(int cluster_id, JobQueueCluster * clusterAd)
 	}
 }
 
-static 
-void
-RemoveMatchedAd(int cluster_id, int proc_id)
-{
-	if ( scheduler.resourcesByProcID ) {
-		ClassAd *ad_to_remove = nullptr;
-		PROC_ID job_id;
-		job_id.cluster = cluster_id;
-		job_id.proc = proc_id;
-		scheduler.resourcesByProcID->lookup(job_id,ad_to_remove);
-		if ( ad_to_remove ) {
-			delete ad_to_remove;
-			scheduler.resourcesByProcID->remove(job_id);
-		}
-	}
-	return;
-}
-
 // CRUFT: Everything in this function is cruft, but not necessarily all
 //    the same cruft. Individual sections should say if/when they should
 //    be removed.
@@ -4404,9 +4386,6 @@ int DestroyProc(int cluster_id, int proc_id)
 
 		// remove jobid from any indexes
 	scheduler.removeJobFromIndexes(key, job_prio);
-
-		// remove any match (startd) ad stored w/ this job
-	RemoveMatchedAd(cluster_id,proc_id);
 
 	JobQueueDirty = true;
 
@@ -8212,13 +8191,6 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 		}
 
-		if ( startd_ad && job_universe == CONDOR_UNIVERSE_GRID ) {
-				// Can remove our matched ad since we stored all the
-				// values we need from it into the job ad.
-			RemoveMatchedAd(cluster_id,proc_id);
-		}
-
-
 		if ( attribute_not_found ) {
 			std::string hold_reason;
 			// Don't put the $$(expr) literally in the hold message, otherwise
@@ -8570,21 +8542,13 @@ ClassAd* GetExpandedJobAd(const PROC_ID& job_id, bool persist_expansions)
 	ClassAd *ad = job;
 	ClassAd *startd_ad = nullptr;
 
-	// find the startd ad.  this is done differently if the job
-	// is a globus universe jobs or not.
-	int	job_universe = -1;
-	ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
-	if ( job_universe == CONDOR_UNIVERSE_GRID ) {
-		// Globus job... find "startd ad" via our simple
-		// hash table.
-		scheduler.resourcesByProcID->lookup(job_id,startd_ad);
-	} else {
-		// Not a Globus job... find startd ad via the match rec
+	if (job->Universe() != CONDOR_UNIVERSE_GRID) {
+		// find startd ad via the match rec
 		match_rec *mrec = nullptr;
 		int sendToDS = 0;
 		ad->LookupInteger(ATTR_WANT_PARALLEL_SCHEDULING, sendToDS);
-		if ((job_universe == CONDOR_UNIVERSE_PARALLEL) ||
-			(job_universe == CONDOR_UNIVERSE_MPI) ||
+		if ((job->Universe() == CONDOR_UNIVERSE_PARALLEL) ||
+			(job->Universe() == CONDOR_UNIVERSE_MPI) ||
 			sendToDS) {
 			mrec = dedicated_scheduler.FindMRecByJobID( job_id );
 		} else {

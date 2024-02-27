@@ -292,7 +292,7 @@
         <CustomAction Id="ProbeInstall"
             Impersonate="no" Execute="deferred" Return="check"
             Property="InstallProbe"
-            ExeCommand="-log [INSTALLDIR]probe.log -dir [INSTALLDIR] -sid [UserSID]"
+            ExeCommand="-log &quot;[INSTALLDIR]probe.log&quot; -dir &quot;[INSTALLDIR]&quot; -sid [UserSID]"
          />
         <CustomAction Id="SetInstallHelper"
             Property="InstallHelper" Value="[INSTALLDIR]bin\win_install_helper.exe"
@@ -301,7 +301,7 @@
         <CustomAction Id="MakeAdminToken"
             Impersonate="no" Execute="deferred" Return="check"
             Property="InstallHelper"
-            ExeCommand="-config [INSTALLDIR]condor_config -log [INSTALLDIR]admintoken.log -sid [UserSID] -key LOCAL -token [INSTALLDIR]tokens.d\admin"
+            ExeCommand="-config &quot;[INSTALLDIR]condor_config&quot; -log &quot;[INSTALLDIR]admintoken.log&quot; -sid [UserSID] -key LOCAL -token &quot;[INSTALLDIR]tokens.d\admin&quot;"
          />
 
          <CustomAction Id="EditCondorConfig" Script="vbscript">
