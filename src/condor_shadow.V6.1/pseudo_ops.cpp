@@ -757,8 +757,13 @@ pseudo_event_notification( const ClassAd & ad ) {
 				return 0;
 			}
 
+			std::error_code errCode;
 			std::set<long> checkpointsToSave;
-			auto spoolDir = std::filesystem::directory_iterator(spool);
+			auto spoolDir = std::filesystem::directory_iterator(spool, errCode);
+			if( errCode ) {
+				dprintf(D_STATUS, "Checkpoint suceeded but job spool directory couldn't be checked for old checkpoints, not trying to clean them up: %d '%s'.\n", errCode.value(), errCode.message().c_str() );
+				return 0;
+			}
 			for( const auto & entry : spoolDir ) {
 				const auto & stem = entry.path().stem();
 				if( starts_with(stem.string(), "_condor_checkpoint_") ) {
