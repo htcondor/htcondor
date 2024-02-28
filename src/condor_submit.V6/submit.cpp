@@ -196,9 +196,6 @@ SubmitHash submit_hash;
 //const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros use as queue loop variables
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
-#define MEG	(1<<20)
-
-
 //
 // Dump ClassAd to file junk
 //
@@ -1686,6 +1683,19 @@ int submit_jobs (
 		rval = submit_hash.parse_up_to_q_line(ms, errmsg, &qline);
 		if (rval)
 			break;
+
+		// For -i where the user gave us a submit file, we are about
+		// to overwrite the executable with /bin/sh.  Before we do
+		// that, let's copy it to a well-known attribute so it
+		// can be stuffed into file xfer later.
+		if (dash_interactive && !InteractiveSubmitFile) {
+			std::string executable = submit_hash.lookup_no_default("executable");
+			if (!executable.empty() && !submit_hash.lookup_no_default("MY.OrigCmd")) {
+				executable.insert(0, "\"");
+				executable += '"';
+				submit_hash.set_submit_param("MY.OrigCmd", executable.c_str());
+			} 
+		}
 
 		if ( ! qline && GotQueueCommand) {
 			// after we have seen a queue command, if we parse and get no queue line

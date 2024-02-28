@@ -636,6 +636,14 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			// Don't add exec file if it already is in cached list
 			InputFiles->append(ExecFile);
 		}
+
+		// Special case for condor_submit -i 
+		std::string OrigExecFile;
+		Ad->LookupString(ATTR_JOB_ORIG_CMD, OrigExecFile);
+		if ( !OrigExecFile.empty() && !InputFiles->file_contains(OrigExecFile.c_str()) && !PubInpFiles.file_contains(OrigExecFile.c_str())) {
+			// Don't add origexec file if it already is in cached list
+			InputFiles->append(OrigExecFile.c_str());
+		}
 	} else if ( IsClient() && !simple_init ) {
 		ExecFile = strdup( condor_basename(buffer.c_str()) );
 	}
