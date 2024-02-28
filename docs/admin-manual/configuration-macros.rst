@@ -6418,7 +6418,7 @@ These settings affect the *condor_starter*.
     htcondor-provided libgetpwnam.so for the sshd run by 
     :tool:`condor_ssh_to_job`.  This results in the shell being
     set to /bin/sh and the home directory to the scratch directory
-    for processes launched by :tool:`condor_ssh_to_job.
+    for processes launched by :tool:`condor_ssh_to_job`.
 
 :macro-def:`USE_PSS[STARTER]`
     A boolean value, that when ``True`` causes the *condor_starter* to
