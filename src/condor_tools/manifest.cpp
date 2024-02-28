@@ -154,7 +154,21 @@ main( int argc, char ** argv ) {
             }
         }
 
-        if( deleted ) {
+        // If the .job.ad file is the only thing left, remove it and the
+        // corresponding directory even if a removal failed.  This will
+        // happen when the shadow deletes checkpoints while the job is
+        // still running, because the schedd will ask this tool to clean
+        // up all checkpoints, even the already removed ones.
+        bool onlyTheLonely = true;
+        auto i = std::filesystem::directory_iterator( jobAdPath.parent_path() );
+        for( const auto & f : i ) {
+            if( f != jobAdPath ) {
+                onlyTheLonely = false;
+                break;
+            }
+        }
+
+        if( deleted || onlyTheLonely ) {
             fprintf( stderr, "Removing %s after successful clean-up.\n", jobAdPath.string().c_str() );
             std::filesystem::remove( jobAdPath );
 

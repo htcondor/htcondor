@@ -889,6 +889,13 @@ pseudo_event_notification( const ClassAd & ad ) {
 				error,
 				true /* this was a failed checkpoint */
 			);
+
+			// It's OK that we don't remove the .job.ad file and the
+			// corresponding parent directory after a successful clean-up;
+			// we know we'll need them again later, since we aren't
+			// deleting all of the job's checkpoints, and the schedd's
+			// call to condor_manifest will delete them when job exits
+			// the queue.
 		}
 	}
 
