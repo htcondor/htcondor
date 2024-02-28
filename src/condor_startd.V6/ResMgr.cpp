@@ -25,12 +25,9 @@
 #include "ipv6_hostname.h" // for get_local_fqdn
 #include "startd_hibernator.h"
 #include "startd_named_classad_list.h"
-#include "classad_merge.h"
 #include "overflow.h"
-#include <math.h>
 #include "credmon_interface.h"
 #include "condor_auth_passwd.h"
-#include "condor_netdb.h"
 #include "token_utils.h"
 #ifdef HAVE_DATA_REUSE_DIR
 #include "data_reuse.h"
@@ -2492,14 +2489,12 @@ void ResMgr::_post_init_resources()
 
 	excess_backfill_res.reset();
 
-	int num_primary = 0;
 	int num_bkfill = 0;
 	for (Resource * rip : slots) {
 		if (rip->r_backfill_slot) {
 			num_bkfill += 1;
 			excess_backfill_res += *rip->r_attr;
 		} else {
-			num_primary += 1;
 			excess_backfill_res -= *rip->r_attr;
 		}
 	}
