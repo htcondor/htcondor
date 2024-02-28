@@ -320,20 +320,15 @@ moveCheckpointsToCleanupDirectory(
 	TemporaryPrivSentry sentry(PRIV_USER, clearUserIDs);
 
 
-	std::filesystem::directory_iterator spool_dir;
-	{
-		// TemporaryPrivSentry sentry(PRIV_ROOT);
-		spool_dir = std::filesystem::directory_iterator(spool, errCode);
-		if( errCode ) {
-			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
-				"for job (%d.%d), failed to iterate job spool directory %s, "
-				"returning false.\n",
-				cluster, proc, spool.string().c_str()
-			);
-			return false;
-		}
+	auto spool_dir = std::filesystem::directory_iterator(spool, errCode);
+	if( errCode ) {
+		dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+			"for job (%d.%d), failed to iterate job spool directory %s, "
+			"returning false.\n",
+			cluster, proc, spool.string().c_str()
+		);
+		return false;
 	}
-
 
 	for( const auto & entry : spool_dir ) {
 		const auto & stem = entry.path().stem();
@@ -355,43 +350,18 @@ moveCheckpointsToCleanupDirectory(
 				}
 
 
-				{
-					// TemporaryPrivSentry sentry(PRIV_ROOT);
-					std::filesystem::create_directory( target_dir, spool, errCode );
-
-					if( errCode ) {
-						dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
-							"for job (%d.%d), failed to create %s, "
-							"returning false.\n",
-							cluster, proc, target_dir.string().c_str()
-						);
-						return false;
-					}
+				// TemporaryPrivSentry sentry(PRIV_ROOT);
+				std::filesystem::create_directory( target_dir, spool, errCode );
+				if( errCode ) {
+					dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+						"for job (%d.%d), failed to create %s, "
+						"returning false.\n",
+						cluster, proc, target_dir.string().c_str()
+					);
+					return false;
 				}
 
-#if ! defined(WINDOWS)
-/*
-				{
-					// TemporaryPrivSentry sentry(PRIV_ROOT);
-					int rv = chown( target_dir.string().c_str(), owner_uid, owner_gid );
-
-					if( rv == -1 ) {
-						dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
-							"for job (%d.%d), failed to chown %s, "
-							"returning false.\n",
-							cluster, proc, target_dir.string().c_str()
-						);
-						return false;
-					}
-				}
-*/
-#endif /* ! defined(WINDOWS) */
-
-				{
-					// TemporaryPrivSentry sentry(PRIV_ROOT);
-					std::filesystem::rename( entry.path(), target_dir / entry.path().filename(), errCode );
-				}
-
+				std::filesystem::rename( entry.path(), target_dir / entry.path().filename(), errCode );
 				if( errCode ) {
 					dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
 						"for job (%d.%d), failed to rename "
@@ -417,15 +387,7 @@ moveCheckpointsToCleanupDirectory(
 	// to clean up fails and we need to try it again later.
 	FILE * jobAdFile = NULL;
 	std::filesystem::path jobAdPath = target_dir / ".job.ad";
-#if ! defined(WINDOWS)
-	{
-		// TemporaryPrivSentry sentry(PRIV_ROOT);
-		jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
-		// It's annoying if this fails, but not fatal; the directory owner
-		// (job owner) can remove it even if it's still owned by root.
-		// std::ignore = chown( jobAdPath.string().c_str(), owner_uid, owner_gid );
-	}
-#endif /* ! defined(WINDOWS ) */
+	jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
 	if( jobAdFile == NULL ) {
 		dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to open job ad file '%s'\n", jobAdPath.string().c_str() );
 		return false;
