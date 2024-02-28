@@ -1178,7 +1178,12 @@ class TestCheckpointDestination:
         # Get the CheckpointDestination and GlobalJobID from the history file.
         result = schedd.history(
             constraint=constraint,
-            projection=["CheckpointDestination", "GlobalJobID", "CheckpointNumber"],
+            projection=[
+                "CheckpointDestination",
+                "GlobalJobID",
+                "CheckpointNumber",
+                "Owner",
+            ],
             match=1,
         )
         results = [r for r in result]
@@ -1208,12 +1213,15 @@ class TestCheckpointDestination:
                 assert(not path.exists())
 
                 # Did we remove the manifest file?
-                manifest_file = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc0.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
+                manifest_file = test_dir / "condor" / "spool" / "checkpoint-cleanup" / jobAd["Owner"] / f"cluster{the_removed_job.clusterid}.proc0.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
+                if manifest_file.exists():
+                    # Crass empiricism.
+                    time.sleep(20)
                 assert(not manifest_file.exists())
 
             # Once we've removed all of the manifest files, we should also
             # remove the directory we used to store them.
-            checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc0.subproc0"
+            checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / jobAd["Owner"] / f"cluster{the_removed_job.clusterid}.proc0.subproc0"
             if checkpoint_cleanup_subdir.exists():
                 # Crass empiricism.
                 time.sleep(20)
