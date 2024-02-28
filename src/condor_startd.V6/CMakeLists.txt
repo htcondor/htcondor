@@ -59,6 +59,8 @@ if (LINUX)
 	list(APPEND startdElements
 		VolumeManager.cpp
 	)
+	set_source_files_properties(ResAttributes.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
+
 endif(LINUX)
 
 
