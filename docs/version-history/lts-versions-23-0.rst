@@ -64,6 +64,11 @@ Bugs Fixed:
   ``C:\Program Files``
   :jira:`2302`
 
+- Fixed a bug where the :macro:`USER_JOB_WRAPPER` was allowed to create job
+  event log information events with newlines in them, which broke the event
+  log parser.
+  :jira:`2305`
+
 .. _lts-version-history-2305:
 
 Version 23.0.5
