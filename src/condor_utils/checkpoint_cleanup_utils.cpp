@@ -312,8 +312,6 @@ moveCheckpointsToCleanupDirectory(
 
 	bool clearUserIDs;
 	if( user_ids_are_inited() ) {
-		ASSERT(get_user_uid() == owner_uid);
-		ASSERT(get_user_gid() == owner_gid);
 		clearUserIDs = false;
 	} else {
 		set_user_ids(owner_uid, owner_gid);
