@@ -31,6 +31,10 @@ New Features:
   usage information when available.
   jira:`2281`
 
+- IDTOKEN files whose access permissions are not restricted to the file
+  owner are now ignored.
+  :jira:`232`
+
 Bugs Fixed:
 
 - None.

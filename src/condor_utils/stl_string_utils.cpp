@@ -776,12 +776,12 @@ int StringTokenIterator::next_token(int & length)
 	size_t ixEnd = ix;
 
 	// skip leading separators and whitespace (if trimming)
-	while (str[ix] && (strchr(delims, str[ix]) || (m_trim && isspace(str[ix])))) ++ix;
+	while (ix < len && str[ix] && (strchr(delims, str[ix]) || (m_trim && isspace(str[ix])))) ++ix;
 	ixNext = ix;
 	ixEnd = ix;
 
 	// scan for next delimiter or \0
-	while (str[ix] && !strchr(delims, str[ix])) {
+	while (ix < len && str[ix] && !strchr(delims, str[ix])) {
 		if (!m_trim || !isspace(str[ix])) {
 			ixEnd = ix;
 		}
