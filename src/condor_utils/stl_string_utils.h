@@ -149,7 +149,7 @@ class StringTokenIterator {
 public:
 	StringTokenIterator(const char *s = NULL, const char *delim = ", \t\r\n", bool trim = false) : str(s), delims(delim), len(std::string::npos), ixNext(0), pastEnd(false), m_trim(trim) { };
 	StringTokenIterator(const char *s, size_t l, const char *delim = ", \t\r\n", bool trim = false) : str(s), delims(delim), len(l), ixNext(0), pastEnd(false), m_trim(trim) { };
-	StringTokenIterator(const std::string_view& s, const char *delim = ", \t\r\n", bool trim = false) : str(s.data()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(std::string_view s, const char *delim = ", \t\r\n", bool trim = false) : str(s.data()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
 	StringTokenIterator(const std::string & s, const char *delim = ", \t\r\n", bool trim = false) : str(s.c_str()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
 
 	void rewind() { ixNext = 0; pastEnd = false;}
