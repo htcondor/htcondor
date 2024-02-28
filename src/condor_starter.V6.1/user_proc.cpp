@@ -29,6 +29,8 @@
 #include "stream_handler.h"
 #include "subsystem_info.h"
 
+#include <algorithm>
+
 extern Starter *Starter;
 
 const char* JOB_WRAPPER_FAILURE_FILE = ".job_wrapper_failure";
