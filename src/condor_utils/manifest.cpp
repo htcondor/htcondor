@@ -319,7 +319,7 @@ createManifestFor(
     std::error_code errCode;
     for( const auto & dentry : std::filesystem::recursive_directory_iterator(path, errCode) ) {
         if( errCode ) {
-            formatstr( error, "Unable to compute file checksums (%d: %s), aborting.\n", errCode.value(), errorCode.message().c_str() );
+            formatstr( error, "Unable to compute file checksums (%d: %s), aborting.\n", errCode.value(), errCode.message().c_str() );
             return false;
         }
         if( dentry.is_directory() || dentry.is_socket() ) { continue; }
