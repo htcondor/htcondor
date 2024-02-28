@@ -121,7 +121,8 @@ make_nvidia_uuid_to_dev_map() {
 		return uuid_map;
 	}
 
-	for (const auto &pci_path : std::filesystem::directory_iterator(gpu_root)) {
+	std::error_code ec;
+	for (const auto &pci_path : std::filesystem::directory_iterator(gpu_root,ec)) {
 		if (pci_path.is_directory()) {
 			std::filesystem::path info_path = gpu_root / pci_path / "information";
 			std::string gpu_info = file_to_string(info_path);
