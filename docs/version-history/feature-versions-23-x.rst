@@ -24,12 +24,12 @@ New Features:
 
 - The configuration parameter :macro:`ETC` can now be used to relocate
   files that are normally place under /etc/condor on unix platforms.
-  jira:`2290`
+  :jira:`2290`
 
 - For jobs that go through the grid universe or Job Router, the
   terminate event will now include extended resource allocation and
   usage information when available.
-  jira:`2281`
+  :jira:`2281`
 
 - IDTOKEN files whose access permissions are not restricted to the file
   owner are now ignored.
