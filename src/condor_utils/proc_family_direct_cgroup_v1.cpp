@@ -55,7 +55,8 @@ void fullyRemoveCgroup(const stdfs::path &absCgroup) {
 	}
 
 	// Otherwise, we need to depth-firstly remove any subdirs
-	for (auto const& entry: std::filesystem::directory_iterator{absCgroup}) {
+	std::error_code ec;
+	for (auto const& entry: std::filesystem::directory_iterator{absCgroup, ec}) {
 		if (entry.is_directory()) {
 			// Must go depth-first
 			fullyRemoveCgroup(absCgroup / entry);
