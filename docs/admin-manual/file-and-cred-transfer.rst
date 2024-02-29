@@ -726,7 +726,7 @@ Setting up Kerberos, AFS usage for running jobs
 For HTCondor to forward kerberos tokens from the AP to the user's jobs,
 just set the feature metaknob "KRB" on the AP and the EP. That is,
 
-.. code-block:: condor-submit
+.. code-block:: condor-config
 
    use feature: KRB
 
