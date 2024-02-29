@@ -37,7 +37,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug in the htcondor eventlog read command that would fail
+  when events were written on leap day.
+  :jira:`2318`
 
 Version 23.5.2
 --------------
