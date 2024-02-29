@@ -624,7 +624,7 @@ class CondorConfigLexer(lexer.RegexLexer):
             (r"\s+", token.Text),
             (r"^#.*?$", token.Comment.Single),
             (
-                r"^@?(use)( +)(\w+)( *)(:)( *)([^(\s]+)(.*)$",
+                r"^(@?use)( +)(\w+)( *)(:)( *)([^(\s]+)(.*)$",
                 lexer.bygroups(
                     token.Keyword,              # (@)use
                     token.Text,                 # spaces
