@@ -720,12 +720,27 @@ However, there is support for HTCondor to manage kerberos tickets
 for users' jobs, such that a running job can access a valid kerberos
 ticket to autheticate to kerberified services such as AFS and GSSAPI.
 
-Kerberos, AFS usage by running jobs
-'''''''''''''''''''''''''''''''''''
+Setting up Kerberos, AFS usage for running jobs
+'''''''''''''''''''''''''''''''''''''''''''''''
 
-The configuration for using kerberos tokens with user jobs can be enabled by
-setting the metaknob "use feature: KRB".  To see the parameters this metaknob
-sets, you can run the command "condor_config_val use feature:krb"
+For HTCondor to forward kerberos tokens from the AP to the user's jobs,
+just set the feature metaknob "KRB" on the AP and the EP. That is,
+
+.. code-block:: condor-config
+
+   use feature: KRB
+
+in AP and EP config files.
+
+
+Detail of how KRB works under the hood
+''''''''''''''''''''''''''''''''''''''
+
+
+To see the parameters the "use feature:KRB" sets, you can run the command
+:tool:`condor_config_val` use feature:krb.  This feature relies on 
+a script which we believe works at most sites, but may need to be modified
+depending on the site-specific kerberos configuration.
 
 The first step is for :tool:`condor_submit` to obtain the kerberos uberticket.
 It will do this by executing an external program specified in the condor_config
@@ -799,7 +814,7 @@ Monitor does not need to do anything when an uberticket is removed from the
 credential directory.
 
 When HTCondor executes the job, it will copy the user’s credential cache into
-:index:`KRB5CCNAME<single: KRB5CCNAME; environment variables>`
-the job sandbox and set the KRB5CCNAME environment variable to point to
-the credential cache. The condor_starter will also monitor the .cc file in the
+the job sandbox and set the environment variable KRB5CCNAME 
+:index:`KRB5CCNAME<pair: KRB5CCNAME; environment variables for jobs>`
+to point to the credential cache. The condor_starter will also monitor the .cc file in the
 credential directory and place fresh copies into the job sandbox as needed.
