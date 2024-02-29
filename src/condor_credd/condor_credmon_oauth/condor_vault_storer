@@ -319,8 +319,12 @@ for REQUEST; do
     fi
 
     if [ -n "$HANDLE" ]; then
-        querycred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"
-        VAULTURL="$HANDLEURL"
-        storecred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"
+        if  $STOREVAULTTOKEN || ! querycred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"; then
+            # There's not really a need to store this because of
+            #  $STOREVAULTTOKEN but that's rare enough that we might
+            #  as well, just in case the URL changes or something.
+            VAULTURL="$HANDLEURL"
+            storecred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"
+        fi
     fi
 done
