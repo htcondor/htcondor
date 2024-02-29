@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- Added new job ad attribute :ad-attr:`JobSubmitFile` which contains
+  the filename of the submit file, if any.
+  :jira:`2319`
+
 - When the :subcom:`docker_network_type` is set to host, docker universe
   now sets the hostname inside the container to the same as the host,
   to ease networking from inside the container to outside the container.
