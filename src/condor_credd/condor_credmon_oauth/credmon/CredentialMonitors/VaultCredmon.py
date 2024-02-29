@@ -216,6 +216,10 @@ class VaultCredmon(AbstractCredentialMonitor):
 
         headers = {'X-Vault-Token' : vault_token}
         params = {'minimum_seconds' : self.get_minimum_seconds()}
+        if 'scopes' in top_data:
+            params['scopes'] = top_data['scopes']
+        if 'audience' in top_data:
+            params['audience'] = top_data['audience']
         try:
             response = self.request_url(url, headers, params)
         except Exception as e:
@@ -234,33 +238,6 @@ class VaultCredmon(AbstractCredentialMonitor):
         if 'data' not in response or 'access_token' not in response['data']:
             self.log.error("access_token missing in read from %s", url)
             return False
-
-        if 'scopes' in top_data or 'audience' in top_data:
-            # Re-request access token with restricted scopes and/or audience.
-            # These were not included in the initial request because currently
-            #  this uses a separate token exchange flow in Vault which does
-            #  not renew the refresh token, but we want that to happen too.
-            # Just ignore the original access token in this case.
-
-            if 'scopes' in top_data:
-                params['scopes'] = top_data['scopes']
-            if 'audience' in top_data:
-                params['audience'] = top_data['audience']
-
-            try:
-                response = self.request_url(url, headers, params)
-            except Exception as e:
-                self.log.error("Read of exchanged access token from %s failed: %s", url, str(e))
-                return False
-            try:
-                response = json.loads(response.data.decode())
-            except Exception as e:
-                self.log.error("Could not parse json response from %s: %s", url, str(e))
-                return False
-
-            if 'data' not in response or 'access_token' not in response['data']:
-                self.log.error("Exchanged access_token missing in read from %s", url)
-                return False
 
         access_token = response['data']['access_token']
 
