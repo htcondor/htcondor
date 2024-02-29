@@ -53,14 +53,21 @@ verbose()
     fi >&2
 }
 
+CONDOROPTS="`condor_config_val SEC_CREDENTIAL_VAULT_STORER_OPTS 2>/dev/null`"
 VERBOSE=
-while getopts "dv" opt; do
-    case ${opt} in
-        d) VERBOSE="-d";;
-        v) VERBOSE="-v";;
-        \?) usage;;
-    esac
-done
+parseopts()
+{
+    unset OPTIND
+    while getopts "dv" opt; do
+        case ${opt} in
+            d) VERBOSE="-d";;
+            v) VERBOSE="-v";;
+            \?) usage;;
+        esac
+    done
+}
+parseopts $CONDOROPTS
+parseopts "$@"
 shift $((OPTIND -1))
 
 if [ "$#" = 0 ]; then
