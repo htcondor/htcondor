@@ -15,6 +15,16 @@ from docutils.parsers.rst import Directive
 from sphinx import addnodes
 from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
+# Remove exception handling once Centos7 support is dropped (Requires Sphinx V2.0.0)
+try:
+    from sphinx.util import logging
+except ImportError:
+    logging = None
+
+def warn(msg: str):
+    logger = logging.getLogger(__name__) if logging is not None else None
+    if logger is not None:
+        logger.warning(msg)
 
 def get_rel_path_to_root_dir(inliner):
     env = inliner.document.settings.env
