@@ -472,6 +472,8 @@ still available resources and recomputed pie slices. The matchmaker
 continues spinning the pie until it runs out of machines or all the
 *condor_schedd* daemons say they have no more jobs.
 
+.. _Group Accounting:
+
 Group Accounting
 ----------------
 
@@ -510,7 +512,7 @@ jobs have identical requirements, they will be run First-In, First-Out,
 so whoever submitted first makes the subsequent jobs wait until the 
 last one of the first submit is finished.
 
-
+.. _Hierarchical Group Quotas:
 
 Accounting Groups with Hierarchical Group Quotas
 ------------------------------------------------

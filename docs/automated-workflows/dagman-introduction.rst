@@ -76,6 +76,8 @@ four node DAG would be described as the following in the DAG input file:
 
 :index:`JOB command<single: DAG Commands; JOB command>`
 
+.. _DAGMan JOB:
+
 JOB
 ---
 

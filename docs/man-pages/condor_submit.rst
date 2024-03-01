@@ -613,8 +613,7 @@ BASIC COMMANDS
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  :ref:`automated-workflows/dagman-priorities:Setting Priorities for Nodes`
-    for more details).
+    (see  :ref:`DAG Node Priorities` for more details).
 
  queue [**<int expr>** ]
     Places zero or more copies of the job into the HTCondor queue.
