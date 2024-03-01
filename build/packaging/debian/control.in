@@ -96,7 +96,6 @@ Recommends: openssh-server,
 #else
 Recommends: openssh-server
 #endif
-Recommends: openssh-server
 Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
