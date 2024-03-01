@@ -2251,7 +2251,7 @@ int SubmitHash::SetIWD()
 	if (ComputeIWD()) { ABORT_AND_RETURN(1); }
 	AssignJobString(ATTR_JOB_IWD, JobIwd.c_str());
 	if (!SubmitMacroSet.sources.empty()) {
-		const char *filename = submit_param("SUBMIT_FILE");
+		auto_free_ptr filename = submit_param("SUBMIT_FILE");
 		if (filename) {
 			AssignJobString(ATTR_JOB_SUBMIT_FILE, filename);
 		}
