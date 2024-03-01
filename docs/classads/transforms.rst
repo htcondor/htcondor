@@ -126,6 +126,4 @@ Transform Commands
 ``DELETE /<regex>/``
     Deletes all ClassAd attributes whose names match the regular expression ``<regex>`` from the transformed ClassAd.
 
-:index:`transforms`
-
 
