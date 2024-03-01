@@ -69,6 +69,9 @@ Bugs Fixed:
   log parser.
   :jira:`2305`
 
+- Fixed ``SyntaxWarning`` raised by Python 3.12 in **condor_adstash**.
+  :jira:`2312`
+
 .. _lts-version-history-2305:
 
 Version 23.0.5
