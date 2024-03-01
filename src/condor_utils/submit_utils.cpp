@@ -4119,7 +4119,7 @@ int SubmitHash::SetExecutable()
 	// that just waits for the interactive connection
 	auto_free_ptr icmd(submit_param(SUBMIT_KEY_INTERACTIVE_Executable));
 	if (IsInteractiveJob) {
-		if (icmd && (full_ename != icmd.ptr()) {
+		if (icmd && (full_ename != icmd.ptr())) {
 			bool is_transfer_exe = true;
 			job->LookupBool(ATTR_TRANSFER_EXECUTABLE, is_transfer_exe);
 			// the file transfer object will always transfer what is in ATTR_ORIG_JOB_CMD
