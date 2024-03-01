@@ -974,3 +974,57 @@ _history_query(PyObject *, PyObject * args) {
 
     return list;
 }
+
+
+static PyObject *
+retrieve_job_from( const char * addr, const char * constraint ) {
+    DCSchedd schedd(addr);
+
+    CondorError errStack;
+    bool result = schedd.receiveJobSandbox(constraint, & errStack);
+    if(! result) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString(PyExc_IOError, errStack.getFullText().c_str());
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_schedd_retrieve_job_ids(PyObject *, PyObject * args) {
+    // _schedd_retrieve_job_ids(addr, job_list)
+
+    const char * addr = NULL;
+    const char * job_list = NULL;
+
+    if(! PyArg_ParseTuple( args, "zz", & addr, & job_list )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    std::string constraint;
+    formatstr( constraint,
+        "stringListIMember( strcat(ClusterID, \".\", ProcID), \"%s\" )",
+        job_list
+    );
+
+    return retrieve_job_from(addr, constraint.c_str());
+}
+
+
+static PyObject *
+_schedd_retrieve_job_constraint(PyObject *, PyObject * args) {
+    // _schedd_retrieve_job_constraint(addr, constraint)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+
+    if(! PyArg_ParseTuple( args, "zz", & addr, & constraint )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    return retrieve_job_from( addr, constraint );
+}

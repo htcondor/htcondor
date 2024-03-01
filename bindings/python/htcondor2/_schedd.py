@@ -39,6 +39,8 @@ from .htcondor2_impl import (
     _schedd_unexport_job_constraint,
     _schedd_submit,
     _history_query,
+    _schedd_retrieve_job_constraint,
+    _schedd_retrieve_job_ids,
 )
 
 
@@ -482,15 +484,26 @@ class Schedd():
         job_spec : Union[List[str], str, classad.ExprTree],
     ) -> None:
         #
-        # The description is what this function ought to do, but it's
-        # probably not hard to permit both.
+        # In version 1, this function was documented as accepting either
+        # a constraint expression as a string or a list of ClassAds, but
+        # the latter was not implemented.
+        #
+        # This was presumably intended to be the output from Submit.jobs(),
+        # but since that may never be implemented in version 2, let's not
+        # worry about it.
         #
         """
-        FIXME (unimplemented)
-
         Retrieve the output files from the job(s) in a given :meth:`submit`.
+
+        :param job_spec: Which job(s) to export.  Either a :class:`str`
+             of the form ``clusterID.procID``, a :class:`list` of such
+             strings, or a :class:`classad.ExprTree` constraint, or
+             the string form of such a constraint.
         """
-        pass
+        result = job_spec_hack(self._addr, job_spec,
+            _schedd_retrieve_job_ids, _schedd_retrieve_job_constraint,
+            []
+        )
 
 
     # Assuming this should be deprecated.
