@@ -15,6 +15,7 @@
 
 import logging
 import classad
+import traceback
 
 from adstash.ad_sources.generic import GenericAdSource
 from adstash.convert import to_json, unique_doc_id
@@ -41,15 +42,14 @@ class FileAdSource(GenericAdSource):
                     if line.startswith("***") or line.strip() == "":
                         if ad_string == "":
                             continue
-                        else:
-                            yield classad.parseOne(ad_string)
-                            ad_string = ""
+                        yield classad.parseOne(ad_string)
+                        ad_string = ""
                     ad_string += line
         except IOError as e:
-            logging.error(f"Could not read {adfile}: {str(e)}")
+            logging.error(f"Could not read {ad_file}: {str(e)}")
             return
         except Exception:
-            logging.exception(f"Error while reading {adfile} ({str(e)}), displaying traceback.")
+            logging.exception(f"Error while reading {ad_file} ({str(e)}), displaying traceback.")
             return
 
 
@@ -59,7 +59,7 @@ class FileAdSource(GenericAdSource):
             try:
                 dict_ad = to_json(ad, return_dict=True)
             except Exception as e:
-                message = f"Failure when converting document in {schedd_ad['name']} history: {str(e)}"
+                message = f"Failure when converting document from ClassAd: {str(e)}"
                 exc = traceback.format_exc()
                 message += f"\n{exc}"
                 logging.warning(message)

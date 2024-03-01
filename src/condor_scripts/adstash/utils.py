@@ -17,7 +17,6 @@ import os
 import pwd
 import sys
 import time
-import json
 import socket
 import random
 import logging
@@ -25,7 +24,6 @@ import tempfile
 import logging.handlers
 
 import htcondor
-import classad
 
 from pathlib import Path
 
