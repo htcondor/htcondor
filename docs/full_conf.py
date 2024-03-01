@@ -483,15 +483,12 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^priority", token.Keyword, "priority"),
             (r"^category", token.Keyword, "category"),
             (r"^maxjobs", token.Keyword, "maxjobs"),
-            (r"^config", token.Keyword, "maxjobs"),
+            (r"^config", token.Keyword, "config"),
             (r"^set_job_attr", token.Keyword, "set_job_attr"),
             (r"^env", token.Keyword, "env"),
             (r"^include", token.Keyword, "include"),
             (r"^subdag", token.Keyword, "subdag"),
             (r"^splice", token.Keyword, "splice"),
-            (r"^connect", token.Keyword, "connect"),
-            (r"^pin_in", token.Keyword, "pin_in"),
-            (r"^pin_out", token.Keyword, "pin_out"),
             (r"^final", token.Keyword, "final"),
             (r"^provisioner", token.Keyword, "provisioner"),
             (r"^service", token.Keyword, "service"),
@@ -545,7 +542,12 @@ class CondorDAGManLexer(lexer.RegexLexer):
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
         ] + DAGMAN_COMMON,
-        "vars": DAGMAN_COMMON,
+        "vars": [
+            (
+                r"([\s\[])(prepend|append)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            )
+        ] + DAGMAN_COMMON,
         "priority": DAGMAN_COMMON,
         "category": DAGMAN_COMMON,
         "maxjobs": DAGMAN_COMMON,
@@ -570,9 +572,6 @@ class CondorDAGManLexer(lexer.RegexLexer):
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
         ] + DAGMAN_COMMON,
-        "connect": DAGMAN_COMMON,
-        "pin_in": DAGMAN_COMMON,
-        "pin_out": DAGMAN_COMMON,
         "final": [
             (
                 r"([\s\[])(dir|noop)([\s\]])",

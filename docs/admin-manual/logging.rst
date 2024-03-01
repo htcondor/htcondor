@@ -200,8 +200,7 @@ default node log
     submitted DAGs and other jobs from the submit host run. The syntax
     used in the definition of this configuration variable is different
     to enable the setting of a unique file name. See
-    the :ref:`admin-manual/configuration-macros:configuration file entries for
-    dagman` section for the complete definition.
+    the :ref:`DAGMan Configuration` section for the complete definition.
 
     Configuration variables that affect this log are
 

@@ -1612,6 +1612,27 @@ all attributes.
     same, except there is no division by the number of processes sharing
     the pages.
 
+:classad-attribute-def:`ProvisionerState`
+    The current state of a DAGs :ref:`DAG Provisioner Node` as set by the job
+    itself via chirp. This is an enumerated value to inform DAGMan of the
+    provisioner node jobs state to act accordingly (i.e. begin workflow).
+    Current enumeration values are as follows:
+
+    +--------------------------+------+
+    | Provisioning Started     |   1  |
+    +--------------------------+------+
+    | Provisioning Completed   |   2  |
+    +--------------------------+------+
+    | De-Provisioning Started  |   3  |
+    +--------------------------+------+
+    | De-Provisioning Completed|   4  |
+    +--------------------------+------+
+
+    .. note::
+
+        HTCondor does not set this value. The job is responsible for setting
+        this so DAGMan works correctly.
+
 :classad-attribute-def:`QDate`
     Time at which the job was submitted to the job queue. Measured in
     the number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).

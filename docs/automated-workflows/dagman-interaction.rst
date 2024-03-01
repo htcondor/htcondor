@@ -467,6 +467,8 @@ DAGs with large number of jobs to manage:
     files making directory traversal difficult. Consider how the directory structure
     should look for large DAGs prior to creating and running.
 
+.. _DAGMan throttling:
+
 DAGMan Throttling
 ^^^^^^^^^^^^^^^^^
 

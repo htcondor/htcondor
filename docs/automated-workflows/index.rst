@@ -43,18 +43,8 @@ input for job ``B``. This can be described as a DAGMan workflow as follows:
    dagman-introduction
    dagman-interaction
    dagman-completion
-
-
    dagman-using-other-dags
-
-   dagman-node-types
-   dagman-vars
-   dagman-config
-   dagman-scheduler-job-modification
-   dagman-include
-   dagman-all-nodes
-   dagman-priorities
-   dagman-accounting
+   dagman-advance-functionality
 
    dagman-DOT-files
    dagman-node-status-file
