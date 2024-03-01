@@ -33,12 +33,12 @@ class GenericInterface(object):
 
     def setup_index(self, **kwargs):
         print("Setting up dummy index")
-        client = get_handle()
+        client = self.get_handle()
 
 
     def post_ads(self, ads, metadata={}, **kwargs):
         print("Printing ads to screen")
-        client = get_handle()
+        client = self.get_handle()
         errors = 0
         successes = 0
         for ad in ads:
