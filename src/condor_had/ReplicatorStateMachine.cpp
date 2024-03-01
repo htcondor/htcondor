@@ -38,10 +38,6 @@
 // allowed to download the version and state files of other pool machines
 #define NEWLY_JOINED_TOLERANCE_FACTOR   (2)
 
-// gcc compilation pecularities demand explicit declaration of template classes
-// and functions instantiation
-template void utilCopyList<Version>( List<Version>&, List<Version>& );
-
 ReplicatorStateMachine::ReplicatorStateMachine()
 {
 	dprintf( D_ALWAYS, "ReplicatorStateMachine ctor started\n" );

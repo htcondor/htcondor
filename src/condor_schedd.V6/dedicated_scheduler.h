@@ -164,36 +164,6 @@ struct PreemptCandidateNode {
 	ClassAd *machine_ad;
 };
 
-// save for reservations
-#if 0
-
-class AvailTimeList : public List<ResTimeNode> {
- public:
-	~AvailTimeList();
-	void display( int debug_level );
-
-		/// Returns if there are any resources available in our list.
-	bool hasAvailResources( void );
-
-		/** Add the resource described in the given match record into
-			our list.  We find out when the resource will be
-			available, and add the resource to our list in the
-			appropriate ResTimeNode.  If no node exists for the given
-			time, we create a new node.
-			@param mrec The match record for the resource to add.  */
-	void addResource( match_rec* mrec );
-
-		/** Removes the resource classad from the given ResTimeNode in
-			our list.  If that was the last resource in the
-			ResTimeNode, we remove the node from our list, delete the
-			object, and set the given rtn pointer to NULL.
-			@param resource The resource to remove
-			@param rtn The ResTimeNode to remove it from */
-	void removeResource( ClassAd* resource, ResTimeNode* &rtn );
-};
-
-#endif
-
 class DedicatedScheduler : public Service {
  public:
 	DedicatedScheduler();
@@ -510,12 +480,6 @@ class DedicatedScheduler : public Service {
 // ////////////////////////////////////////////////////////////
 //   Utility functions
 // ////////////////////////////////////////////////////////////
-
-// Find when a given resource will next be available
-time_t findAvailTime( match_rec* mrec );
-
-// Comparison function for sorting job cluster ids by JOB_PRIO and QDate
-int clusterSortByPrioAndDate( const void* ptr1, const void* ptr2 );
 
 // Comparison function for sorting machines by rank, cluster_id
 bool
