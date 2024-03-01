@@ -834,7 +834,7 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "interactive", 1)) {
 				// we don't currently support -interactive on Windows, but we parse for it anyway.
 				dash_interactive = 1;
-				extraLines.Append( "+InteractiveJob=True" );
+				extraLines.Append( "MY.InteractiveJob=True" );
 			} else {
 				usage(stderr);
 				exit( 1 );
@@ -991,9 +991,10 @@ main( int argc, const char *argv[] )
 		// arguments, universe, and queue X are ignored from the submit
 		// file and instead we rewrite to the values below.
 		if ( !InteractiveSubmitFile ) {
-			extraLines.Append( "executable=/bin/sh" );
-			extraLines.Append( "arguments=\"-c 'sleep 180 && while test -d ${_CONDOR_SCRATCH_DIR}/.condor_ssh_to_job_1; do /bin/sleep 3; done'\"");
-			extraLines.Append( "transfer_executable=false" );
+			auto_free_ptr tmp(param("INTERACTIVE_SUBMIT_CMD_OVERRIDE"));
+			if (tmp) submit_hash.set_arg_variable(SUBMIT_KEY_INTERACTIVE_Executable, tmp);
+			tmp.set(param("INTERACTIVE_SUBMIT_ARGS_OVERRIDE"));
+			if (tmp) submit_hash.set_arg_variable(SUBMIT_KEY_INTERACTIVE_Args, tmp);
 		}
 	}
 
@@ -1683,19 +1684,6 @@ int submit_jobs (
 		rval = submit_hash.parse_up_to_q_line(ms, errmsg, &qline);
 		if (rval)
 			break;
-
-		// For -i where the user gave us a submit file, we are about
-		// to overwrite the executable with /bin/sh.  Before we do
-		// that, let's copy it to a well-known attribute so it
-		// can be stuffed into file xfer later.
-		if (dash_interactive && !InteractiveSubmitFile) {
-			std::string executable = submit_hash.lookup_no_default("executable");
-			if (!executable.empty() && !submit_hash.lookup_no_default("MY.OrigCmd")) {
-				executable.insert(0, "\"");
-				executable += '"';
-				submit_hash.set_submit_param("MY.OrigCmd", executable.c_str());
-			} 
-		}
 
 		if ( ! qline && GotQueueCommand) {
 			// after we have seen a queue command, if we parse and get no queue line
