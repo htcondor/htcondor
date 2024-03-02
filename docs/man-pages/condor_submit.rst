@@ -2246,6 +2246,17 @@ COMMANDS FOR THE DOCKER UNIVERSE
     which contains the port number on the host forwarding to the corresponding
     service.
 
+ :subcom-def:`docker_override_entrypoint` = <True | False>
+    If docker_override_entrypoint is set to True and **executable** is not empty,
+    the image entrypoint is replaced with the executable.
+    The default value (False) follows the same logic as the docker engine uses with images
+    (see `docker run <https://docs.docker.com/engine/reference/run/#default-command-and-options>`_):
+
+        * Without entrypoint, executable runs as main PID
+        * With entrypoint, it is launched with the excutable as first argument
+    
+    Any additional **arguments** will follow the executable.
+
 COMMANDS FOR THE CONTAINER UNIVERSE
 
  :subcom-def:`container_image` = < image-name >
