@@ -1091,6 +1091,10 @@ all attributes.
     | 7     | Suspended           |
     +-------+---------------------+
 
+:classad-attribute-def:`JobSubmitFile`
+    String which names the submit file the job came from,
+    if any.
+
 :classad-attribute-def:`JobSubmitMethod`
     Integer which indicates how a job was submitted to HTCondor. Users can
     set a custom value for job via Python Bindings API.
