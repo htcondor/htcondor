@@ -83,7 +83,6 @@
 const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
 void SetSendCredentialInAd( ClassAd *job_ad ); 
 void set_factory_submit_info(int cluster, int num_procs);
-int ParseDashAppendLines(List<const char> &exlines, MACRO_SOURCE& source, MACRO_SET& macro_set);
 void init_vars(SubmitHash & hash, int cluster_id, StringList & vars);
 
 extern AbstractScheddQ * MyQ;
