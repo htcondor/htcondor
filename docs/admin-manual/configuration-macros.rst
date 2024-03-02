@@ -6540,7 +6540,7 @@ These settings affect the *condor_starter*.
     does not request a container will be put into the container image specified By
     the parameter :macro:`DEFAULT_CONTAINER_IMAGE`
 
-:macro-def:`USE_DEFAULT_CONTAINER[STARTER]`
+:macro-def:`DEFAULT_CONTAINER_IMAGE[STARTER]`
     A string value that when :macro:`USE_DEFAULT_CONTAINER` is true, contains the container
     image to use, either starting with docker:, ending in .sif for a sif file, or otherwise
     an exploded directory for singularity/apptainer to run.
