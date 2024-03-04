@@ -39,6 +39,10 @@ New Features:
   owner are now ignored.
   :jira:`232`
 
+- The package containing the Pelican OSDF file transfer plugin is now
+  a weak dependency for HTCondor.
+  :jira:`2295`
+
 Bugs Fixed:
 
 - Fixed a bug in the htcondor eventlog read command that would fail
