@@ -6534,6 +6534,17 @@ These settings affect the *condor_starter*.
     to the Singularity command line. This can be an expression evaluted in the context of the
     slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
 
+:macro-def:`USE_DEFAULT_CONTAINER[STARTER]`
+    A boolean value or classad expression evaluating to boolean in the context of the Slot
+    ad (the MY.) and the job ad (the TARGET.).  When true, a vanilla universe job that
+    does not request a container will be put into the container image specified by
+    the parameter :macro:`DEFAULT_CONTAINER_IMAGE`
+
+:macro-def:`DEFAULT_CONTAINER_IMAGE[STARTER]`
+    A string value that when :macro:`USE_DEFAULT_CONTAINER` is true, contains the container
+    image to use, either starting with docker:, ending in .sif for a sif file, or otherwise
+    an exploded directory for singularity/apptainer to run.
+
 condor_submit Configuration File Entries
 -----------------------------------------
 

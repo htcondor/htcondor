@@ -2420,6 +2420,33 @@ Starter::SpawnJob( void )
 				wantDocker = true;
 			}
 
+			// But if the job doesn't want to run in a container, see
+			// if we want to force it into one.
+			if (!wantContainer && !wantDocker) {
+				if (param_boolean("USE_DEFAULT_CONTAINER", false, false, mad, jobAd)) {
+					dprintf(D_ALWAYS, "USE_DEFAULT_CONTAINER evaluates to true, containerizing job\n");
+					std::string default_container_image;
+					if (param_eval_string(default_container_image, "DEFAULT_CONTAINER_IMAGE", "", mad, jobAd)) {
+						dprintf(D_ALWAYS, "... putting job into container image %s\n", default_container_image.c_str());
+						if (default_container_image.starts_with("docker:") && hasDocker) {
+							wantDocker = true;
+							jobAd->Assign(ATTR_DOCKER_IMAGE, default_container_image);
+							jobAd->Assign(ATTR_WANT_DOCKER_IMAGE, true);
+						} else {
+							wantContainer = true;
+							jobAd->Assign(ATTR_CONTAINER_IMAGE, default_container_image);
+							if (default_container_image.ends_with(".sif")) {
+								jobAd->Assign(ATTR_WANT_SIF, true);
+							} else {
+								jobAd->Assign(ATTR_WANT_SANDBOX_IMAGE, true);
+							}
+						}
+					} else {
+						dprintf(D_ALWAYS, "... but DEFAULT_CONTAINER_IMAGE doesn't evaluate to a string, skippping containerizing\n");
+					}
+				}
+			}
+
 			std::string remote_cmd;
 			bool wantRemote = param(remote_cmd, "STARTER_REMOTE_CMD");
 

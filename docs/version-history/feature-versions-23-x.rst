@@ -17,6 +17,11 @@ Release Notes:
 
 New Features:
 
+- Allow the startd to force a job that doesn't ask to run inside a
+  docker or apptainer container inside one with new parameters
+  :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
+  :jira:`2317`
+
 - Added new job ad attribute :ad-attr:`JobSubmitFile` which contains
   the filename of the submit file, if any.
   :jira:`2319`
