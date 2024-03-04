@@ -219,7 +219,10 @@ class VaultCredmon(AbstractCredentialMonitor):
         if 'scopes' in top_data:
             params['scopes'] = top_data['scopes']
         if 'audience' in top_data:
-            params['audience'] = top_data['audience']
+            if '/creds/' in url:
+                params['audience'] = top_data['audience']
+            else:
+                params['audiences'] = top_data['audience']
         try:
             response = self.request_url(url, headers, params)
         except Exception as e:
