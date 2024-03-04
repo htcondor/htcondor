@@ -265,10 +265,13 @@ moveCheckpointsToCleanupDirectory(
 	} else {
 		// Sadly, std::filesystem doesn't handle ownership, and we can't
 		// create the directory as the user we want, either.
-		std::filesystem::create_directory( owner_dir, checkpointCleanup, errCode );
-		if( errCode ) {
-			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errCode.value(), errCode.message().c_str() );
-			return false;
+		{
+			TemporaryPrivSentry sentry(PRIV_CONDOR);
+			std::filesystem::create_directory( owner_dir, spool, errCode );
+			if( errCode ) {
+				dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errCode.value(), errCode.message().c_str() );
+				return false;
+			}
 		}
 
 #if ! defined(WINDOWS)
