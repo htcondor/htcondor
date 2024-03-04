@@ -23,25 +23,19 @@
 #include "condor_debug.h"
 #include "condor_fsync.h"
 
-Transaction::Transaction()
-	: op_log(hashFunction)
-	, op_log_iterating(NULL)
-	, m_triggers(0)
-	, m_EmptyTransaction(true)
+Transaction::Transaction(): op_log(hashFunction), m_triggers(0) , m_EmptyTransaction(true)
 {
 }
 
 Transaction::~Transaction()
 {
 	LogRecordList *l;
-	LogRecord		*log;
 	YourString key;
 
 	op_log.startIterations();
 	while( op_log.iterate(key,l) ) {
 		ASSERT( l );
-		l->Rewind();
-		while( (log = l->Next()) ) {
+		for (auto *log: *l) {
 			delete log;
 		}
 		delete l;
@@ -54,14 +48,11 @@ Transaction::~Transaction()
 void
 Transaction::Commit(FILE* fp, const char *filename, LoggableClassAdTable *data_structure, bool nondurable)
 {
-	LogRecord *log;
 	int fd;
 
-	if ( filename == NULL ) {
+	if ( filename == nullptr ) {
 		filename = "<null>";
 	}
-
-	ordered_op_log.Rewind();
 
 		// We're seeing sporadic test suite failures where 
 		// CommitTransaction() appears to take a long time to
@@ -69,8 +60,8 @@ Transaction::Commit(FILE* fp, const char *filename, LoggableClassAdTable *data_s
 		// narrow down the cause
 	time_t before, after;
 
-	while( (log = ordered_op_log.Next()) ) {
-		if ( fp != NULL ) {
+	for( auto *log: ordered_op_log) {
+		if ( fp != nullptr ) {
 			if ( log->Write( fp ) < 0 ) {
 				EXCEPT( "write to %s failed, errno = %d", filename, errno );
 			}
@@ -78,25 +69,25 @@ Transaction::Commit(FILE* fp, const char *filename, LoggableClassAdTable *data_s
 		log->Play(data_structure);
 	}
 
-	if ( !nondurable && fp != NULL ) {
+	if ( !nondurable && fp != nullptr ) {
 
-		before = time(NULL);
+		before = time(nullptr);
 		if ( fflush( fp ) != 0 ){
 			EXCEPT( "flush to %s failed, errno = %d", filename, errno );
 		}
-		after = time(NULL);
+		after = time(nullptr);
 		if ( (after - before) > 5 ) {
 			dprintf( D_FULLDEBUG, "Transaction::Commit(): fflush() took %ld seconds to run\n", after - before );
 		}
 
-		before = time(NULL);
+		before = time(nullptr);
 		fd = fileno( fp );
 		if ( fd >= 0 ) {
 			if ( condor_fdatasync( fd ) < 0 ) {
 				EXCEPT( "fdatasync of %s failed, errno = %d", filename, errno );
 			}
 		}
-		after = time(NULL);
+		after = time(nullptr);
 		if ( (after - before) > 5 ) {
 			dprintf( D_FULLDEBUG, "Transaction::Commit(): fdatasync() took %ld seconds to run\n", after - before );
 		}
@@ -111,46 +102,48 @@ Transaction::AppendLog(LogRecord *log)
 	char const *key = log->get_key();
 	YourString key_obj = key ? key : "";
 
-	LogRecordList *l = NULL;
+	LogRecordList *l = nullptr;
 	op_log.lookup(key_obj,l);
 	if( !l ) {
 		l = new LogRecordList;
 		op_log.insert(key_obj,l);
 	}
-	l->Append(log);
-	ordered_op_log.Append(log);
+	l->emplace_back(log);
+	ordered_op_log.emplace_back(log);
 }
 
 LogRecord *
 Transaction::FirstEntry(char const *key)
 {
 	YourString key_obj = key;
-	op_log_iterating = NULL;
-	op_log.lookup(key_obj,op_log_iterating);
+	
+	LogRecordList *lrl = nullptr;
+	op_log.lookup(key_obj,lrl);
 
-	if( !op_log_iterating ) {
-		return NULL;
+	if( !lrl ) {
+		return nullptr;
 	}
 
-	op_log_iterating->Rewind();
-	return op_log_iterating->Next();
+	op_log_iterating = lrl->begin();
+	op_log_iterating_end = lrl->end();
+	return *op_log_iterating++;
 }
+
 LogRecord *
 Transaction::NextEntry()
 {
-	ASSERT( op_log_iterating );
-	return op_log_iterating->Next();
+	if (op_log_iterating == op_log_iterating_end) {
+		return nullptr;
+	}
+	return *op_log_iterating++;
 }
 
 void
 Transaction::InTransactionListKeysWithOpType( int op_type, std::list<std::string> &new_keys )
 {
-	LogRecord *log;
-
-	ordered_op_log.Rewind();
-	while( (log = ordered_op_log.Next()) ) {
+	for( auto *log: ordered_op_log) {
 		if( log->get_op_type() == op_type ) {
-			new_keys.push_back( log->get_key() );
+			new_keys.emplace_back(log->get_key() );
 		}
 	}
 }
