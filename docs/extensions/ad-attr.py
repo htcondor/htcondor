@@ -7,11 +7,6 @@ from sphinx import addnodes
 from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
 from htc_helpers import *
-# Remove once Centos7 support is dropped (Requires Sphinx V2.0.0)
-try:
-    from sphinx.util import logging
-except ImportError:
-    logging = None
 
 ATTRIBUTE_FILES = {}
 AD_TYPE_FILES = {
@@ -36,7 +31,7 @@ def map_attrs(dir: str):
         if ad_file[-4:] != ".rst":
             continue
         path = os.path.join(files_dir, ad_file)
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if "classad-attribute-def" in line:
@@ -54,11 +49,6 @@ def dump(obj):
     for attr in dir(obj):
         print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
-def warn(msg: str):
-    logger = logging.getLogger(__name__) if logging is not None else None
-    if logger is not None:
-        logger.warning(msg)
-
 def classad_attr_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     root_dir = get_rel_path_to_root_dir(inliner)[:-1]
     attr_name, attr_info = custom_ext_parser(text)
@@ -69,13 +59,12 @@ def classad_attr_role(name, rawtext, text, lineno, inliner, options={}, content=
     filename = AD_TYPE_FILES.get(ad_type) if ad_type in AD_TYPE_FILES else None
 
     if attr_name not in ATTRIBUTE_FILES:
-        warn(f"Classad Attribute '{attr_name}' not defined in any Classad Documentation files")
+        warn(f"ClassAd Attribute '{attr_name}' not defined in any ClassAd Documentation files")
         filename = "classad-types.html"
-    else:
-        if filename is None:
-            filename = ATTRIBUTE_FILES[attr_name][0]
-            if len(ATTRIBUTE_FILES[attr_name]) > 1:
-                warn(f"Classad Attribute '{attr_name}' is defined in multiple files. Defaulting to {filename}")
+    elif filename is None:
+        filename = ATTRIBUTE_FILES[attr_name][0]
+        if len(ATTRIBUTE_FILES[attr_name]) > 1:
+            warn(f"ClassAd Attribute '{attr_name}' is defined in multiple files. Defaulting to {filename}")
 
     ref_link = f"href=\"{root_dir}/classad-attributes/{filename}#{attr_name}\""
     return make_ref_and_index_nodes(name, attr_name, attr_index,
