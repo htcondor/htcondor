@@ -13,7 +13,7 @@ CONFIG_KNOBS = []
 def find_conf_knobs(dir: str):
     knobs = []
     definition_file = os.path.join(dir, "admin-manual", "configuration-macros.rst")
-    with open(definition_file, "r") as f:
+    with open(definition_file, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if "macro-def" in line:

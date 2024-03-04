@@ -13,7 +13,7 @@ SUBMIT_CMDS = []
 def find_submit_cmds(dir: str):
     subcoms = []
     submit_man = os.path.join(dir, "man-pages", "condor_submit.rst")
-    with open(submit_man, "r") as f:
+    with open(submit_man, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             while "subcom-def" in line:

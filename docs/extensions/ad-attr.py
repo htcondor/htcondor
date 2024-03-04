@@ -31,7 +31,7 @@ def map_attrs(dir: str):
         if ad_file[-4:] != ".rst":
             continue
         path = os.path.join(files_dir, ad_file)
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if "classad-attribute-def" in line:
