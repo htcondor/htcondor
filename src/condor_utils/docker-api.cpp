@@ -404,7 +404,7 @@ int DockerAPI::createContainer(
 	// It is not frequent, but sometimes it is necessary to change the entrypoint.
 	if (command.length() > 0) {
 		bool overrideEntrypoint = false;
-		jobAd.LookupBool(ATTR_DOCKER_OVERRIDE_ENTRYPOINT, overrideEntrypoint);
+		jobAd.LookupBool(ATTR_DOCKER_ENTRYPOINT, overrideEntrypoint);
 		if (overrideEntrypoint) {
 			// Entrypoint flag must be before the image
 			runArgs.AppendArg( "--entrypoint" );

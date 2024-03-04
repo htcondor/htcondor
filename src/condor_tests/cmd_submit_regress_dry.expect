@@ -143,7 +143,7 @@ DockerImage="ubuntu"
 Requirements=/TARGET\.HasDocker/
 WantDocker=true
 Cmd=/^".*basic.cmd"$/
-DockerOverrideEntrypoint=true
+DockerEntrypoint=true
 JobStatus=1
 ProcId=0
 
