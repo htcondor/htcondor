@@ -353,6 +353,23 @@ If no :subcom:`executable[in docker universe]` is
 specified in the submit description file, it is presumed that the Docker
 container has a default command to run.
 
+If the docker image has an entrypoint defined, and :subcom:`executable[in docker universe]`
+is specified in the submit description file,
+it will be used as first argument for the entrypoint, followed by any :subcom:`arguments`.
+
+It is possible to use as entrypoint the :subcom:`executable[in docker universe]`
+directly, redefining the entrypoint of the image (equivalent to ``--entrypoint`` in
+`docker run <https://docs.docker.com/engine/reference/commandline/container_run>`_)
+
+The entrypoint is replaced by the executable if the submit description file contains the command:
+
+.. code-block:: condor-submit
+
+      docker_override_entrypoint = True
+
+The default value is ``False`` as it is the behaviour that works well with the majority of the
+docker images.
+
 When the job completes, is held, evicted, or is otherwise removed from
 the machine, the container will be removed.
 

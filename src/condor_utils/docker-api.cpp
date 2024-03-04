@@ -396,13 +396,28 @@ int DockerAPI::createContainer(
 		runArgs.AppendArg(std::to_string(shm_size));
 	}
 
-	// Run the command with its arguments in the image.
-	runArgs.AppendArg( imageID );
-
-
-	// If no command given, the default command in the image will run
+	
+	// Control image entry point if the job has an executable
+	// Docker create has two different behaviour depending on the image entrypoint:
+	// - Without entrypoint, first argument is the executable and the rest are its arguments
+	// - With entrypoint, all the arguments are used for it, nothing special happens with the first one.
+	// It is not frequent, but sometimes it is necessary to change the entrypoint.
 	if (command.length() > 0) {
-		runArgs.AppendArg( command );
+		bool overrideEntrypoint = false;
+		jobAd.LookupBool(ATTR_DOCKER_OVERRIDE_ENTRYPOINT, overrideEntrypoint);
+		if (overrideEntrypoint) {
+			// Entrypoint flag must be before the image
+			runArgs.AppendArg( "--entrypoint" );
+			runArgs.AppendArg( command );
+			
+			runArgs.AppendArg( imageID );
+		} else {
+			// Add the command as the first argument of the image
+			runArgs.AppendArg( imageID );
+			runArgs.AppendArg( command );
+		}
+	} else {
+		runArgs.AppendArg( imageID );
 	}
 
 	runArgs.AppendArgsFromArgList( args );

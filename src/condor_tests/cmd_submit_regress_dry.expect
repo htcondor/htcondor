@@ -138,6 +138,15 @@ TransferExecutable=false
 WantDocker=true
 ProcId=0
 
+==docker-entrypoint.sub
+DockerImage="ubuntu"
+Requirements=/TARGET\.HasDocker/
+WantDocker=true
+Cmd=/^".*basic.cmd"$/
+DockerOverrideEntrypoint=true
+JobStatus=1
+ProcId=0
+
 ==grid_azure.sub
 Arguments=""
 AzureAdminKey="/Users/jfrey/.ssh/azure_rsa.pub"
@@ -206,8 +215,8 @@ Requirements=/TARGET\.HasFileTransfer.+"FTP",TARGET\.HasFileTransferPluginMethod
 TransferInput="FTP://foo/bar"
 
 ==xfer1.sub
-Err=/"\d+xfer1\.17\.err"/
-Out=/"\d+xfer1\.17\.out"/
+Err=/"\d+xfer1\.18\.err"/
+Out=/"\d+xfer1\.18\.out"/
 Requirements=/TARGET\.HasFileTransfer/
 ShouldTransferFiles="YES"
 StreamErr=false
