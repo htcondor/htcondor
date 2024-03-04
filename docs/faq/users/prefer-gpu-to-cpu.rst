@@ -11,7 +11,7 @@ The following submit file will match a job in this case.
     executable                  = /bin/sleep
     arguments                   = 600
 
-    ## Requirements section. Also, probably needs customizatoin.
+    ## Requirements section. Also, probably needs customization.
     request_CPUs                = 1
     request_Memory              = 2G
     request_Disk                = 20G
