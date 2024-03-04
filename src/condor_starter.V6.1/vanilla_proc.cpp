@@ -694,7 +694,6 @@ VanillaProc::StartJob()
 bool
 VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
-	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 	static unsigned int max_rss = 0;
 #if HAVE_PSS
 	static unsigned int max_pss = 0;

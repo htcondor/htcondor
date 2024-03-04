@@ -470,7 +470,6 @@ ToolDaemonProc::Hold()
 bool
 ToolDaemonProc::PublishUpdateAd( ClassAd* /*ad*/ ) 
 {
-    dprintf( D_FULLDEBUG, "Inside ToolDaemonProc::PublishUpdateAd()\n" );
     // Nothing special for us to do.
     return true;
 }

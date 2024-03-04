@@ -178,8 +178,6 @@ UserProc::PublishUpdateAd( ClassAd* ad )
 	std::string prefix = name ? name : "";
 	std::string attrn;
 
-	dprintf( D_FULLDEBUG, "Inside UserProc::PublishUpdateAd()\n" );
-
 	if( JobPid >= 0 ) {
 		attrn = prefix + ATTR_JOB_PID;
 		ad->Assign( attrn, JobPid );

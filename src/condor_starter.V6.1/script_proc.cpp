@@ -313,8 +313,6 @@ ScriptProc::JobExit( void )
 bool
 ScriptProc::PublishUpdateAd( ClassAd* ad ) 
 {
-	dprintf( D_FULLDEBUG, "Inside ScriptProc::PublishUpdateAd()\n" );
-
 		// TODO: anything interesting or specific in here?
 
 	return UserProc::PublishUpdateAd( ad );

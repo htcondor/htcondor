@@ -208,7 +208,6 @@ ParallelProc::ShutdownFast() {
 bool
 ParallelProc::PublishUpdateAd( ClassAd* ad )
 {
-	dprintf( D_FULLDEBUG, "In ParallelProc::PublishUpdateAd()\n" );
 	ad->Assign( ATTR_NODE, Node );
 
 		// Now, call our parent class's version

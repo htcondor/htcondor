@@ -52,8 +52,6 @@ SSHDProc::JobExit( void )
 bool
 SSHDProc::PublishUpdateAd( ClassAd* ad)
 {
-	dprintf( D_FULLDEBUG, "In SSHDProc::PublishUpdateAd()\n" );
-
 	bool interactive = false;
 	JobAd->LookupBool("InteractiveJob", interactive);
 
