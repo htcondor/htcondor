@@ -1,5 +1,5 @@
-Networking (includes sections on Port Usage and CCB)
-====================================================
+Networking, Port Usage, and CCB
+===============================
 
 :index:`network`
 
