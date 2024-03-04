@@ -86,14 +86,16 @@ Depends: adduser,
          net-tools,
          libjs-bootstrap,
          libjs-jquery,
-#if defined(UW_BUILD)
-         pelican-osdf-compat (>= 7.1.4),
-#endif
          ${misc:Depends},
          ${perl:Depends},
          ${python3:Depends},
          ${shlibs:Depends}
+#if defined(UW_BUILD)
+Recommends: openssh-server,
+            pelican-osdf-compat (>= 7.1.4),
+#else
 Recommends: openssh-server
+#endif
 Suggests: docker.io,
           coop-computing-tools,
           singularity-container,

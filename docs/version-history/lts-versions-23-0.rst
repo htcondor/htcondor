@@ -15,7 +15,7 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-2307:
+.. _lts-version-history-2308:
 
 Version 23.0.8
 --------------
@@ -68,6 +68,9 @@ Bugs Fixed:
   event log information events with newlines in them, which broke the event
   log parser.
   :jira:`2305`
+
+- Fixed ``SyntaxWarning`` raised by Python 3.12 in **condor_adstash**.
+  :jira:`2312`
 
 .. _lts-version-history-2305:
 

@@ -22,6 +22,10 @@ New Features:
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
 
+- Added new job ad attribute :ad-attr:`JobSubmitFile` which contains
+  the filename of the submit file, if any.
+  :jira:`2319`
+
 - When the :subcom:`docker_network_type` is set to host, docker universe
   now sets the hostname inside the container to the same as the host,
   to ease networking from inside the container to outside the container.
@@ -39,6 +43,10 @@ New Features:
 - IDTOKEN files whose access permissions are not restricted to the file
   owner are now ignored.
   :jira:`232`
+
+- The package containing the Pelican OSDF file transfer plugin is now
+  a weak dependency for HTCondor.
+  :jira:`2295`
 
 Bugs Fixed:
 

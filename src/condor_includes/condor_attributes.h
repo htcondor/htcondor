@@ -432,6 +432,7 @@
 #define ATTR_JOB_SANDBOX_JOBAD  "DropJobAdInSandbox"
 #define ATTR_JOB_SET_ID "JobSetId"
 #define ATTR_JOB_SET_NAME "JobSetName"
+#define ATTR_JOB_SUBMIT_FILE  "JobSubmitFile"
 #define ATTR_JOB_SUBMISSION  "Submission"
 #define ATTR_JOB_SUBMISSION_ID  "SubmissionId"
 #define ATTR_JOB_BATCH_ID "JobBatchId"

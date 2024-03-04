@@ -269,7 +269,11 @@ Requires: systemd-libs
 Requires: rsync
 
 # Support OSDF client
+%if 0%{?rhel} == 7
 Requires: pelican-osdf-compat >= 7.1.4
+%else
+Recommends: pelican-osdf-compat >= 7.1.4
+%endif
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43

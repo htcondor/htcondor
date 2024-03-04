@@ -118,27 +118,4 @@ utilSafePutFile( ReliSock& socket, const std::string& filePath, int fips_mode );
 bool
 utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode );
 
-/* Function   : utilCopyList
- * Arguments  : lhs - the list to be assigned to
- *              rhs - the list to be copied
- * Description: function to copy generic lists
- */
-template <class T>
-void 
-utilCopyList(List<T>& lhs, List<T>& rhs)
-{
-    T* element = NULL;
-    rhs.Rewind( );
-
-    while( ( rhs.Next( element ) ) )
-    {
-        dprintf( D_FULLDEBUG, "utilCopyList: %s ", 
-				 element->toString().c_str() );
-        lhs.Append( element );
-    }
-
-    lhs.Rewind( );
-    rhs.Rewind( );
-}
-
 #endif // UTILS_H

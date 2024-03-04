@@ -1091,6 +1091,10 @@ all attributes.
     | 7     | Suspended           |
     +-------+---------------------+
 
+:classad-attribute-def:`JobSubmitFile`
+    String which names the submit file the job came from,
+    if any.
+
 :classad-attribute-def:`JobSubmitMethod`
     Integer which indicates how a job was submitted to HTCondor. Users can
     set a custom value for job via Python Bindings API.
@@ -1611,6 +1615,27 @@ all attributes.
     number of processes sharing each of the pages. :ad-attr:`ImageSize` is the
     same, except there is no division by the number of processes sharing
     the pages.
+
+:classad-attribute-def:`ProvisionerState`
+    The current state of a DAGs :ref:`DAG Provisioner Node` as set by the job
+    itself via chirp. This is an enumerated value to inform DAGMan of the
+    provisioner node jobs state to act accordingly (i.e. begin workflow).
+    Current enumeration values are as follows:
+
+    +--------------------------+------+
+    | Provisioning Started     |   1  |
+    +--------------------------+------+
+    | Provisioning Completed   |   2  |
+    +--------------------------+------+
+    | De-Provisioning Started  |   3  |
+    +--------------------------+------+
+    | De-Provisioning Completed|   4  |
+    +--------------------------+------+
+
+    .. note::
+
+        HTCondor does not set this value. The job is responsible for setting
+        this so DAGMan works correctly.
 
 :classad-attribute-def:`QDate`
     Time at which the job was submitted to the job queue. Measured in

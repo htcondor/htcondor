@@ -15,6 +15,7 @@
 
 import json
 import logging
+import traceback
 
 from pathlib import Path
 
@@ -72,7 +73,7 @@ class GenericAdSource(object):
             try:
                 dict_ad = to_json(ad, return_dict=True)
             except Exception as e:
-                message = f"Failure when converting document in {schedd_ad['name']} history: {str(e)}"
+                message = f"Failure when converting document from ClassAd: {str(e)}"
                 exc = traceback.format_exc()
                 message += f"\n{exc}"
                 logging.warning(message)

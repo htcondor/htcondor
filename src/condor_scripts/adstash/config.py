@@ -166,7 +166,7 @@ def get_environment_config(name="ADSTASH"):
 def debug2level(debug):
 
     level = "WARNING"
-    debug_levels = set(re.split("[\s,]+", debug))
+    debug_levels = set(re.split(r"[\s,]+", debug))
     if ("D_FULLDEBUG" in debug_levels) or ("D_ALL" in debug_levels):
         level = "INFO"
     if ("D_FULLDEBUG:2" in debug_levels) or ("D_ALL:2" in debug_levels):
@@ -183,7 +183,7 @@ def debug2fmt(debug=None):
         fmt = " ".join(fmt_list)
         return {"fmt": fmt, "datefmt": datefmt}
 
-    debug_levels = set(re.split("[\s,]+", debug))
+    debug_levels = set(re.split(r"[\s,]+", debug))
 
     if "D_CATEGORY" in debug_levels:
         fmt_list.insert(1, "(%(levelname)s)")

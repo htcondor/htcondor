@@ -2250,6 +2250,12 @@ int SubmitHash::SetIWD()
 	RETURN_IF_ABORT();
 	if (ComputeIWD()) { ABORT_AND_RETURN(1); }
 	AssignJobString(ATTR_JOB_IWD, JobIwd.c_str());
+	if (!SubmitMacroSet.sources.empty()) {
+		auto_free_ptr filename = submit_param("SUBMIT_FILE");
+		if (filename) {
+			AssignJobString(ATTR_JOB_SUBMIT_FILE, filename);
+		}
+	}
 	RETURN_IF_ABORT();
 	return 0;
 }

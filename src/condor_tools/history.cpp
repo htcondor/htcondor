@@ -158,8 +158,6 @@ static  bool customFormat=false;
 static  bool disable_user_print_files=false;
 static  bool backwards=true;
 static  AttrListPrintMask mask;
-//tj: headings moved into the mask object.
-//static  List<const char> headings; // The list of headings for the mask entries
 static int cluster=-1, proc=-1;
 static int matchCount = 0, adCount = 0;
 static int printCount = 0;

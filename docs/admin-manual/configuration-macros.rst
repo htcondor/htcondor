@@ -8620,20 +8620,25 @@ in configuration. This allows multiple instances of the
     types of ClassAds from the *condor_collector*. There is no default
     value, resulting in no constraints being placed on query.
 
-Configuration File Entries for DAGMan
--------------------------------------
+.. _DAGMan Configuration:
+
+DAGMan Configuration File Entries
+---------------------------------
 
 :index:`DAGMan configuration variables<single: DAGMan configuration variables; configuration>`
 
 These macros affect the operation of DAGMan and DAGMan jobs within
 HTCondor.
 
-**Note**: Many, if not all, of these configuration variables will be
-most appropriately set on a per DAG basis, rather than in the global
-HTCondor configuration files. Per DAG configuration is explained in
-:ref:`automated-workflows/dagman-config:Configuration Specific to a DAG`. Also
-note that configuration settings of a running :tool:`condor_dagman` job are
-not changed by doing a :tool:`condor_reconfig`.
+.. note::
+
+    Many of these configuration variables are appropriate to set on a
+    per DAG basis. For more information see :ref:`Per DAG Config`.
+
+.. warning::
+
+    Configuration settings do not get applied to running DAGMan workflows
+    when executing :tool:`condor_reconfig`.
 
 General
 '''''''
