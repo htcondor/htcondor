@@ -19,7 +19,7 @@ New Features:
 
 - Allow the startd to force a job that doesn't ask to run inside a
   docker or apptainer container inside one with new parameters
-  :param:`USE_DEFAULT_CONTAINER` and :param:`DEFAULT_CONTAINER_IMAGE`
+  :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
 
 - When the :subcom:`docker_network_type` is set to host, docker universe

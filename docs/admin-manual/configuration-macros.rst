@@ -6535,9 +6535,9 @@ These settings affect the *condor_starter*.
     slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
 
 :macro-def:`USE_DEFAULT_CONTAINER[STARTER]`
-    A boolean value or classad expression evaluting to boolean in the context of the Slot
-    ad (the MY.) and the job ad (the TARGET.).  When try, a vanilla universe job that
-    does not request a container will be put into the container image specified By
+    A boolean value or classad expression evaluating to boolean in the context of the Slot
+    ad (the MY.) and the job ad (the TARGET.).  When true, a vanilla universe job that
+    does not request a container will be put into the container image specified by
     the parameter :macro:`DEFAULT_CONTAINER_IMAGE`
 
 :macro-def:`DEFAULT_CONTAINER_IMAGE[STARTER]`
