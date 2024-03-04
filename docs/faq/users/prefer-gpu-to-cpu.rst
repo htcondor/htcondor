@@ -3,9 +3,13 @@ Example: Run a Job on a CPU if a GPU is not Available
 
 Some jobs may be able to take advantage of GPU if one is available, but
 can run on a CPU if there are no slots with GPUs immediately matchable.
-The following submit file will match a job in this case.
+The following submit file will match a job in this case, using
+:subcom:`rank` to prefer a GPU when both are available.
 
 .. code-block:: condor-submit
+
+    # This example comes from 
+    # https://htcondor.readthedocs.io/en/latest/faq/users/prefer-gpu-to-cpu.html
 
     ## Execution section. You will need to change these for your job
     executable                  = /bin/sleep
