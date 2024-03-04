@@ -15,6 +15,7 @@ def find_conf_knobs(dir: str):
     definition_file = os.path.join(dir, "admin-manual", "configuration-macros.rst")
     with open(definition_file, "r") as f:
         for line in f:
+            line = line.strip()
             if "macro-def" in line:
                 begin = line.find("`") + 1
                 end = line.rfind("`")
