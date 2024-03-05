@@ -357,7 +357,7 @@ BOOL_ATTRS = {
     "BufferFiles",
     "CurrentStatusUnknown",
     "DataflowJobSkipped",
-    "DockerEntrypoint",
+    "DockerOverrideEntrypoint",
     "EncryptExecuteDirectory",
     "EraseOutputAndErrorOnRestart",
     "ExitBySignal",
