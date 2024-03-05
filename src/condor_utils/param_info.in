@@ -4721,6 +4721,18 @@ type=string
 description=Location of default submit file for condor_submit -i
 tags=submit
 
+[INTERACTIVE_SUBMIT_CMD_OVERRIDE]
+default=/bin/sh
+type=string
+description=override CMD when -i is used with condor_submit <subfile>
+tags=submit
+
+[INTERACTIVE_SUBMIT_ARGS_OVERRIDE]
+default="-c 'sleep 180 && while test -d ${_CONDOR_SCRATCH_DIR}/.condor_ssh_to_job_1; do /bin/sleep 3; done'"
+type=string
+description=override ARGS when -i is used with condor_submit <subfile>
+tags=submit
+
 [MAX_GLOBAL_JOB_PRIOS]
 default=500
 version=7.9.1

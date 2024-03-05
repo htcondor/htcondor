@@ -3612,6 +3612,32 @@ int SubmitHash::SetArguments()
 		ABORT_AND_RETURN( 1 );
 	}
 
+	// if job is submitted interactively, use the interactive args override
+	auto_free_ptr iargs(submit_param(SUBMIT_KEY_INTERACTIVE_Args));
+	if (IsInteractiveJob && iargs) {
+		ArgList iarglist;
+		if ( ! iarglist.AppendArgsV1WackedOrV2Quoted(iargs, error_msg)) {
+			push_warning(stderr, "ignoring invalid %s : %s\n", SUBMIT_KEY_INTERACTIVE_Args, error_msg.c_str());
+		} else {
+			if (MyCondorVersionRequiresV1 && iarglist.InputWasV1()) {
+				if (job->LookupString(ATTR_JOB_ARGUMENTS1, value) && ! job->Lookup("Orig" ATTR_JOB_ARGUMENTS1)) {
+					AssignJobString("Orig" ATTR_JOB_ARGUMENTS1, value.c_str());
+				}
+				value.clear();
+				iarglist.GetArgsStringV1Raw(value, error_msg);
+				AssignJobString(ATTR_JOB_ARGUMENTS1, value.c_str());
+			} else {
+				if (job->LookupString(ATTR_JOB_ARGUMENTS2, value) && ! job->Lookup("Orig" ATTR_JOB_ARGUMENTS2)) {
+					AssignJobString("Orig" ATTR_JOB_ARGUMENTS2, value.c_str());
+				}
+				value.clear();
+				iarglist.GetArgsStringV2Raw(value);
+				AssignJobString(ATTR_JOB_ARGUMENTS2, value.c_str());
+				
+			}
+		}
+	}
+
 	if(args1) free(args1);
 	if(args2) free(args2);
 	return 0;
@@ -4034,6 +4060,9 @@ int SubmitHash::SetExecutable()
 	}
 
 	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );
+	if ( ! ename && IsInteractiveJob) {
+		ename = submit_param(SUBMIT_KEY_INTERACTIVE_Executable);
+	}
 	if( ename == NULL ) {
 		// if no executable keyword, but the job already has an executable we are done.
 		if (job->Lookup(ATTR_JOB_CMD)) {
@@ -4090,6 +4119,24 @@ int SubmitHash::SetExecutable()
 	}
 	if ( !ignore_it ) {
 		check_and_universalize_path(full_ename);
+	}
+
+	// for interactive jobs, we want to swap out the executable for one
+	// that just waits for the interactive connection
+	auto_free_ptr icmd(submit_param(SUBMIT_KEY_INTERACTIVE_Executable));
+	if (IsInteractiveJob) {
+		if (icmd && (full_ename != icmd.ptr())) {
+			bool is_transfer_exe = true;
+			job->LookupBool(ATTR_TRANSFER_EXECUTABLE, is_transfer_exe);
+			// the file transfer object will always transfer what is in ATTR_ORIG_JOB_CMD
+			// but we *don't* want to interactive exe to be transferred, so we stuff
+			// the existing exe into a new job attribute and turn off transfer executable
+			if (is_transfer_exe) {
+				AssignJobString (ATTR_ORIG_JOB_CMD, full_ename.c_str());
+				AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
+			}
+			full_ename = icmd.ptr();
+		}
 	}
 
 	AssignJobString (ATTR_JOB_CMD, full_ename.c_str());

@@ -346,6 +346,7 @@
 #define ATTR_JOB_CHECKPOINT_NUMBER  "CheckpointNumber"
 #define ATTR_JOB_CHECKPOINT_DESTINATION  "CheckpointDestination"
 #define ATTR_JOB_CMD  "Cmd"
+#define ATTR_JOB_ORIG_CMD  "OrigCmd"
 #define ATTR_JOB_DESCRIPTION "JobDescription"
 #define ATTR_STACK_SIZE  "StackSize"
 #define ATTR_JOB_CMD_HASH  "CmdHash"
