@@ -39,6 +39,10 @@ New Features:
   files that are normally place under /etc/condor on unix platforms.
   :jira:`2290`
 
+- The submit file expansion $(CondorScratchDir) now works for local
+  universe.
+  :jira:`2324`
+
 - For jobs that go through the grid universe or Job Router, the
   terminate event will now include extended resource allocation and
   usage information when available.
