@@ -135,12 +135,6 @@ private:
 		// The name of the metrics file we're going to write.
 	std::string _metricsFile;
 
-		// Pegasus information.
-	std::string _workflowId;
-	std::string _rootWorkflowId;
-	std::string _plannerName;
-	std::string _plannerVersion;
-
 		// Node counts.
 	int _simpleNodes;
 	int _subdagNodes;

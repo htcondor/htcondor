@@ -149,11 +149,7 @@ DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 	fprintf( fp, "{\n" );
 	fprintf( fp, "    \"client\":\"%s\",\n", "condor_dagman" );
 	fprintf( fp, "    \"version\":\"%s\",\n", GetVersion().c_str() );
-	fprintf( fp, "    \"planner\":\"%s\",\n", _plannerName.c_str() );
-	fprintf( fp, "    \"planner_version\":\"%s\",\n", _plannerVersion.c_str() );
 	fprintf( fp, "    \"type\":\"metrics\",\n" );
-	fprintf( fp, "    \"wf_uuid\":\"%s\",\n", _workflowId.c_str() );
-	fprintf( fp, "    \"root_wf_uuid\":\"%s\",\n", _rootWorkflowId.c_str() );
 	fprintf( fp, "    \"start_time\":%.3lf,\n", _startTime );
 	fprintf( fp, "    \"end_time\":%.3lf,\n", endTime );
 	fprintf( fp, "    \"duration\":%.3lf,\n", duration );
