@@ -467,14 +467,15 @@ Machine ClassAd Attributes
     A floating point number representing the current load average over time.
     This number goes up by 1.0 for every runnable thread.  More concretely, if
     a single-core machine has a load average of 1.0, it means the one cpu is
-    fully utilized -- on average, there is one running thread at all times.  If
-    that same single core machine has a load average of 2.0, it means there
-    are, over time, 2 runnable threads contending for CPU time, and thus each
-    is probably running at half the speed they would be if the other one was
-    not there.  This is not scaled by number of cores on the system, thus a
-    load average of 10.0 might indicated An overloaded 4 core system, but on a
-    128 core system, there would still be plenty of headroom.  Note that threads
-    that are sleeping blocked on long-term i/o do not count to the load average.
+    fully utilized. In other words, on average, there is one running thread
+    at all times.  If that same single core machine has a load average of 2.0,
+    it means there are, over time, 2 runnable threads contending for CPU time,
+    and thus each is probably running at half the speed they would be if the
+    other one was not there.  This is not scaled by number of cores on the
+    system, thus a load average of 10.0 might indicated An overloaded 4 core
+    system, but on a 128 core system, there would still be plenty of headroom.
+    Note that threads that are sleeping blocked on long-term i/o do not count
+    to the load average.
 
 :classad-attribute-def:`Machine`
     A string with the machine's fully qualified host name.
