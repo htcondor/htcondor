@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "list.h"
 #include "condor_attributes.h"
 #include "query_result_type.h"
 #include "generic_query.h"
