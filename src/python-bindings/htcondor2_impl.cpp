@@ -11,6 +11,7 @@
 // htcondor.*
 #include "condor_version.h"
 #include "subsystem_info.h"
+#include "daemon.h"
 #include "common2/py_util.cpp"
 #include "htcondor2/loose_functions.cpp"
 
@@ -90,6 +91,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_reload_config", & _reload_config, METH_VARARGS, R"C0ND0R(
 	    Reload the HTCondor configuration from disk.
 	)C0ND0R"},
+
+	{"_send_command", & _send_command, METH_VARARGS, NULL},
 
 	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
 

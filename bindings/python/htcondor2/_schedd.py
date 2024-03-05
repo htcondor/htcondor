@@ -463,14 +463,21 @@ class Schedd():
         ad_list : List[classad.ClassAd],
     ) -> None:
         #
-        # In version, the documentation for this function claims that
+        # In version 1, the documentation for this function claims that
         # SubmitResult has a jobs() method.  It never did, and I'm not
         # at all sure if the author meant Submit.jobs(), which shouldn't
         # work because that can't generate job ads with the correct
         # cluster ID.
         #
         # At any rate, the better API is probably just to accept the
-        # SubmitResult object directly.
+        # SubmitResult object directly.  (Actually, the Submit object
+        # _and_ the SubmitResult, both.)
+        #
+        # (What condor_submit does is store a copy of the job ad from
+        # SubmitHash::make_job_ad() -- plus some weird complications
+        # with UpdateFromChain() and ChainToAd() for the proc ads --
+        # and then set the cluster ID and job ID after submitting
+        # them but before calling Scheduler::spoolJobFiles().)
         #
         """
         FIXME (unimplemented)
