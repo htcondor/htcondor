@@ -8966,12 +8966,10 @@ Node job submission/removal
     specified by a node job.
 
 :macro-def:`DAGMAN_SUPPRESS_NOTIFICATION[DAGMan]`
-    A boolean value defining whether jobs submitted by :tool:`condor_dagman`
-    will use email notification when certain events occur. If ``True``,
-    all jobs submitted by :tool:`condor_dagman` will have the equivalent of
-    the submit command ``notification = never`` set. This does not
-    affect the notification for events relating to the :tool:`condor_dagman`
-    job itself. Defaults to ``True``.
+    A boolean value that controls whether jobs submitted by :tool:`condor_dagman`
+    can send email notifications. If **True** then no submitted jobs will
+    send email notifications. This is equivalent to setting :subcom:`notification`
+    to ``Never``. Defaults to **False**.
 
 :macro-def:`DAGMAN_CONDOR_SUBMIT_EXE[DAGMan]`
     The executable that :tool:`condor_dagman` will use to submit HTCondor

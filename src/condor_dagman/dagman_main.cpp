@@ -234,11 +234,9 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_priority );
 
-	options[deep::b::SuppressNotification] = param_boolean(
-		"DAGMAN_SUPPRESS_NOTIFICATION",
-		options[deep::b::SuppressNotification]);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_NOTIFICATION setting: %s\n",
-		options[deep::b::SuppressNotification] ? "True" : "False" );
+	options[deep::b::SuppressNotification] = param_boolean("DAGMAN_SUPPRESS_NOTIFICATION", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_SUPPRESS_NOTIFICATION setting: %s\n",
+	             options[deep::b::SuppressNotification] ? "True" : "False");
 
 		// Event checking setup...
 
