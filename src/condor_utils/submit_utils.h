@@ -267,7 +267,7 @@
 #define SUBMIT_KEY_DockerImage "docker_image"
 #define SUBMIT_KEY_DockerNetworkType "docker_network_type"
 #define SUBMIT_KEY_DockerPullPolicy "docker_pull_policy"
-#define SUBMIT_KEY_DockerOverrideEntrypoint "docker_entrypoint"
+#define SUBMIT_KEY_DockerOverrideEntrypoint "docker_override_entrypoint"
 
 #define SUBMIT_KEY_ContainerImage "container_image"
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"

@@ -130,7 +130,7 @@ queue 3
 universe=docker
 docker_image=ubuntu
 executable=$Fp(SUBMIT_FILE)basic.cmd
-DockerEntrypoint=TRUE
+DockerOverrideEntrypoint=TRUE
 queue 1
 
 ==grid_azure.sub

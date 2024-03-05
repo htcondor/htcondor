@@ -365,7 +365,7 @@ The entrypoint is replaced by the executable if the submit description file cont
 
 .. code-block:: condor-submit
 
-      docker_entrypoint = True
+      docker_override_entrypoint = True
 
 The default value is ``False`` as it is the behaviour that works well with the majority of the
 docker images.
