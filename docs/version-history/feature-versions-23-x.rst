@@ -48,7 +48,7 @@ New Features:
   a weak dependency for HTCondor.
   :jira:`2295`
 
-- DAGMan no longer suppresses email notifications for jobs it manages.
+- DAGMan no longer suppresses email notifications for jobs it manages by default.
   To revert behavior of suppressing notifications set :macro:`DAGMAN_SUPPRESS_NOTIFICATION`
   to **False**.
   :jira:`2323`
