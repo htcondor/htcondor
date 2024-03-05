@@ -48,9 +48,14 @@ New Features:
   a weak dependency for HTCondor.
   :jira:`2295`
 
+- DAGMan no longer suppresses email notifications for jobs it manages.
+  To revert behavior of suppressing notifications set :macro:`DAGMAN_SUPPRESS_NOTIFICATION`
+  to **False**.
+  :jira:`2323`
+
 Bugs Fixed:
 
-- Fixed a bug in the htcondor eventlog read command that would fail
+- Fixed a bug in the :tool:`htcondor eventlog read` command that would fail
   when events were written on leap day.
   :jira:`2318`
 

@@ -744,7 +744,7 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_SUPPRESS_NOTIFICATION]
-default=true
+default=false
 type=bool
 customization=normal
 tags=dagman,dagman_main
