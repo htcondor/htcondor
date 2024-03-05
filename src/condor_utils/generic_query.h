@@ -21,7 +21,6 @@
 #define __GENERIC_QUERY_H__
 
 #include "condor_classad.h"
-#include "list.h"
 #include "query_result_type.h"	
 
 class GenericQuery
@@ -91,20 +90,22 @@ class GenericQuery
 	std::vector<float> *floatConstraints;
 	List<char> 		  *stringConstraints;
 #endif
-	List<char> 		  customORConstraints;
-	List<char> 		  customANDConstraints;
+	std::vector<char *> 		  customORConstraints;
+	std::vector<char *> 		  customANDConstraints;
 
 	// helper functions
-	void clearQueryObject     (void);
+	void clearQueryObject     ();
 	void copyQueryObject      (const GenericQuery &);
-	bool hasItem(List<char>& lst, const char * value) {
-		for (YourString item = lst.First(); ! item.empty(); item = lst.Next()) {
-			if (item == value) return true;
+	bool hasItem(std::vector<char *>& lst, const char * value) {
+		for (auto *item : lst) {
+			if (YourString(item) == value) {
+				return true;
+			}
 		}
 		return false;
 	}
-	void clearStringCategory  (List<char> &);
-	void copyStringCategory   (List<char> &, List<char> &);
+	void clearStringCategory  (std::vector<char *> &);
+	void copyStringCategory   (std::vector<char *>&, std::vector<char *> &);
 #if 0
     void clearIntegerCategory (std::vector<int> &);
     void clearFloatCategory   (std::vector<float> &);

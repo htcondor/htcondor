@@ -193,7 +193,7 @@ addCustomOR (const char *value)
 	if (hasCustomOR(value)) return Q_OK;
 	char *x = new_strdup (value);
 	if (!x) return Q_MEMORY_ERROR;
-	customORConstraints.Append (x);
+	customORConstraints.emplace_back(x);
 	return Q_OK;
 }
 
@@ -203,7 +203,7 @@ addCustomAND (const char *value)
 	if (hasCustomAND(value)) return Q_OK;
 	char *x = new_strdup (value);
 	if (!x) return Q_MEMORY_ERROR;
-	customANDConstraints.Append (x);
+	customANDConstraints.emplace_back(x);
 	return Q_OK;
 }
 
@@ -347,13 +347,11 @@ makeQuery (std::string &req)
 #endif
 
 	// add custom AND constraints
-	customANDConstraints.Rewind ();
-	if (!customANDConstraints.AtEnd ())
+	if (!customANDConstraints.empty())
 	{
-		const char * item;
 		bool firstTime = true;
 		req += firstCategory ? "(" : " && (";
-		while ((item = customANDConstraints.Next ()))
+		for (auto *item: customANDConstraints)
 		{
 			formatstr_cat (req, "%s(%s)", firstTime ? " " : " && ", item);
 			firstTime = false;
@@ -363,13 +361,11 @@ makeQuery (std::string &req)
 	}
 
 	// add custom OR constraints
-	customORConstraints.Rewind ();
-	if (!customORConstraints.AtEnd ())
+	if (!customORConstraints.empty())
 	{
-		const char * item;
 		bool firstTime = true;
 		req += firstCategory ? "(" : " && (";
-		while ((item = customORConstraints.Next ()))
+		for (auto *item: customORConstraints)
 		{
 			formatstr_cat (req, "%s(%s)", firstTime ? " " : " || ", item);
 			firstTime = false;
@@ -423,15 +419,12 @@ clearQueryObject (void)
 }
 
 void GenericQuery::
-clearStringCategory (List<char> &str_category)
+clearStringCategory (std::vector<char *> &str_category)
 {
-    char *x;
-    str_category.Rewind ();
-    while ((x = str_category.Next ()))
-    {
-        delete [] x;
-        str_category.DeleteCurrent ();
-    }
+	for (auto *s: str_category) {
+        delete [] s;
+	}
+	str_category.clear();
 }
 
 #if 0
@@ -464,8 +457,8 @@ copyQueryObject (const GenericQuery &from)
 		if (integerConstraints) copyIntegerCategory (integerConstraints[i],from.integerConstraints[i]);
 #endif
 	// copy custom constraints
-	copyStringCategory (customANDConstraints, const_cast<List<char> &>(from.customANDConstraints));
-	copyStringCategory (customORConstraints, const_cast<List<char> &>(from.customORConstraints));
+	copyStringCategory (customANDConstraints, const_cast<std::vector<char *> &>(from.customANDConstraints));
+	copyStringCategory (customORConstraints,  const_cast<std::vector<char *> &>(from.customORConstraints));
 
 #if 0
 	// copy misc fields
@@ -484,14 +477,12 @@ copyQueryObject (const GenericQuery &from)
 }
 
 void GenericQuery::
-copyStringCategory (List<char> &to, List<char> &from)
+copyStringCategory (std::vector<char *> &to, std::vector<char *> &from)
 {
-	char *item;
-
 	clearStringCategory (to);
-	from.Rewind ();
-	while ((item = from.Next ()))
-		to.Append (new_strdup (item));
+	for (auto *item: from) {
+		to.emplace_back(new_strdup(item));
+	}
 }
 
 #if 0
