@@ -275,8 +275,14 @@ Requires: pelican-osdf-compat >= 7.1.4
 Recommends: pelican-osdf-compat >= 7.1.4
 %endif
 
-#Provides: user(condor) = 43
-#Provides: group(condor) = 43
+%if 0%{?rhel} != 7
+# Ensure that our bash completions work
+Recommends: bash-completion
+%endif
+
+#From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
+#Provides: user(condor) = 64
+#Provides: group(condor) = 64
 
 %if 0%{?rhel} == 7
 # Standard Universe discontinued as of 8.9.0
