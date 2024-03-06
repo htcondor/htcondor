@@ -1320,7 +1320,16 @@ void ResMgr::compute_static()
 	// each time we reconfig (or on startup) we must populate
 	// static machine attributes and per-slot config that depends on resource allocation
 	m_attr->compute_config();
-	walk(&Resource::initial_compute);
+
+	long long virt_mem = m_attr->virt_mem();
+	for(Resource* rip : slots) {
+		if (rip) {
+			// TODO: change disk and vir_mem so that they are allocated as % 
+			rip->r_attr->compute_virt_mem_share(virt_mem);
+			rip->r_attr->compute_disk();
+			rip->r_reqexp->config();
+		}
+	}
 }
 
 // Called to refresh dynamic slot attributes
@@ -1352,8 +1361,9 @@ ResMgr::compute_and_refresh(Resource * rip)
 #endif
 	// calculate slot and parent's virtual memory.
 	// TODO: can we get rid of CpuAttributes::c_virt_mem_fraction ?
-	rip->compute_shared();
-	if (parent) parent->compute_shared();
+	long long virt_mem = m_attr->virt_mem();
+	rip->r_attr->compute_virt_mem_share(virt_mem);
+	if (parent) parent->r_attr->compute_virt_mem_share(virt_mem);
 
 	// update global machine load and idle values, also dynamic WinReg attributes
 	m_attr->compute_for_policy();
@@ -1408,7 +1418,9 @@ ResMgr::compute_dynamic(bool for_update)
 	// and that may require a recompute of the resources that reference them
 	if (for_update) {
 		m_attr->compute_for_update();
-		walk(&Resource::compute_shared);
+		//TJ: removed. virt_mem cannot change, so no need to recompute this for update
+		//long long virt_mem = m_attr->virt_mem();
+		//for (Resource* rip : slots) { rip->r_attr->compute_virt_mem_share(virt_mem); }
 	}
 
 	// update machine load and idle values, also dynamic WinReg attributes

@@ -77,8 +77,14 @@ int RewriteAttrRefs(classad::ExprTree * expr, const NOCASE_STRING_MAP & mapping)
 // and the expression contains MY.Foo, the Foo is added to attrs.
 int GetAttrRefsOfScope(classad::ExprTree * expr, classad::References &attrs, const std::string &scope);
 
-classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
-classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
+const classad::ExprTree * SkipExprEnvelope(const classad::ExprTree * tree);
+inline classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree) {
+	return const_cast<classad::ExprTree *>(SkipExprEnvelope(const_cast<const classad::ExprTree *>(tree)));
+}
+const classad::ExprTree * SkipExprParens(const classad::ExprTree * tree);
+inline classad::ExprTree * SkipExprParens(classad::ExprTree * tree) {
+	return const_cast<classad::ExprTree *>(SkipExprParens(const_cast<const classad::ExprTree *>(tree)));
+}
 // create an op node, using copies of the input expr trees. this function will not copy envelope nodes (it skips over them)
 // and it is clever enough to insert parentheses around the input expressions when needed to insure that the expression
 // will unparse correctly.

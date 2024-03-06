@@ -403,21 +403,64 @@ public:
 	friend class AvailAttributes;
 	friend class ResBag;
 
-	CpuAttributes( MachAttributes*, unsigned int slot_type, double num_cpus,
+	struct _slot_request {
+		double num_cpus=0;
+		double virt_mem_fraction=0;
+		double disk_fraction=0;
+		int num_phys_mem=0;
+		bool allow_fractional_cpus=false;
+		MachAttributes::slotres_map_t slotres;
+		MachAttributes::slotres_constraint_map_t slotres_constr;
+		const char * dump(std::string & buf) const;
+	};
+
+	CpuAttributes( unsigned int slot_type, double num_cpus,
 				   int num_phys_mem, double virt_mem_fraction,
 				   double disk_fraction,
 				   const slotres_map_t& slotres_map,
 				   const slotres_constraint_map_t& slotres_req_map,
 				   const std::string &execute_dir, const std::string &execute_partition_id );
 
+	// init a slot_request from config strings
+	static bool buildSlotRequest(_slot_request & request, MachAttributes *m_attr, StringList* list, unsigned int type_id, bool except);
+
+	// construct from a _slot_request
+	CpuAttributes(unsigned int slot_type,
+		const struct _slot_request & req,
+		const std::string &execute_dir, const std::string &execute_partition_id )
+		: rip(nullptr)
+		, c_condor_load(-1.0)
+		, c_owner_load(-1.0)
+		, c_idle(-1)
+		, c_console_idle(-1)
+		, c_virt_mem(0)
+		, c_disk(0)
+		, c_total_disk(0)
+		, c_phys_mem(req.num_phys_mem)
+		, c_slot_mem(req.num_phys_mem)
+		, c_allow_fractional_cpus(req.allow_fractional_cpus)
+		, c_num_cpus(req.num_cpus)
+		, c_slotres_map(req.slotres)
+		, c_slottot_map(req.slotres)
+		, c_slotres_constraint_map(req.slotres_constr)
+		, c_num_slot_cpus(req.num_cpus)
+		, c_virt_mem_fraction(req.virt_mem_fraction)
+		, c_disk_fraction(req.disk_fraction)
+		, c_slot_disk(0)
+		, c_execute_dir(execute_dir)
+		, c_execute_partition_id(execute_partition_id)
+		, c_type_id(slot_type)
+	{
+	}
+
 	void attach( Resource* );	// Attach to the given Resource
-	bool bind_DevIds(int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail);   // bind non-fungable resource ids to a slot
-	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
-	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
+	bool bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail);   // bind non-fungable resource ids to a slot
+	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // release non-fungable resource ids
+	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
 	void publish_static(ClassAd*, const ResBag * inuse) const;  // Publish desired info to given CA
 	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
-	void compute_virt_mem();
+	void compute_virt_mem_share(double virt_mem);
 	void compute_disk();
 	void set_condor_load(double load) { c_condor_load = load; }
 
@@ -448,7 +491,6 @@ public:
 	char const *executePartitionID() { return c_execute_partition_id.c_str(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
     const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
-    const MachAttributes* get_mach_attr() { return map; }
 
 	void init_total_disk(const CpuAttributes* r_attr) {
 		if (r_attr && (r_attr->c_execute_partition_id == c_execute_partition_id)) {
@@ -466,7 +508,6 @@ public:
 
 private:
 	Resource*	 	rip;
-	MachAttributes*	map;
 
 		// Dynamic info
 	double			c_condor_load;
