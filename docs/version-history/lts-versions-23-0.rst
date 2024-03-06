@@ -72,6 +72,11 @@ Bugs Fixed:
 - Fixed ``SyntaxWarning`` raised by Python 3.12 in **condor_adstash**.
   :jira:`2312`
 
+- Improved use of Vault for job credentials. Reject some invalid use
+  cases and avoid redundant work with frequent job submission.
+  :jira:`2038`
+  :jira:`2232`
+
 .. _lts-version-history-2305:
 
 Version 23.0.5
