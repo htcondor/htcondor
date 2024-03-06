@@ -878,6 +878,7 @@
 #define ATTR_CONDOR_VERSION "CondorVersion"
 #define ATTR_CHECKPOINT_FILES "TransferCheckpoint"
 #define ATTR_PRESERVE_RELATIVE_PATHS "PreserveRelativePaths"
+#define ATTR_FAILURE_FILES "FailureFiles"
 
 #define ATTR_TRANSFER_SOCKET  "TransferSocket"
 #define ATTR_SERVER_TIME  "ServerTime"
