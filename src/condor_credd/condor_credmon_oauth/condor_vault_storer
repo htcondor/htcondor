@@ -172,6 +172,7 @@ for REQUEST; do
     HANDLESERVICE=""
     HANDLESTOREOPTS=("${STOREOPTS[@]}")
     HANDLEOPTS=("${OPTS[@]}")
+    REDUCED=false
     for PART in "${PARTS[@]:1}"; do
         VAL="${PART#*=}"
         case "$PART" in
@@ -182,14 +183,19 @@ for REQUEST; do
             scopes=*)
                 HANDLESTOREOPTS+=("-S" "$VAL")
                 HANDLEOPTS+=("--scopes=$VAL")
+                REDUCED=true
                 ;;
             audience=*)
                 HANDLESTOREOPTS+=("-A" "$VAL")
                 HANDLEOPTS+=("--audience=$VAL")
+                REDUCED=true
                 ;;
         esac
     done
 
+    if $REDUCED && [ -z "$HANDLE" ]; then
+        fatal "reduced scopes or audience require a handle"
+    fi
 
     if [ -n "$BTOKEN" ]; then
         OPTS=("-o" "$BTOKEN-$SERVICE" "${OPTS[@]}")
