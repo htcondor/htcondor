@@ -127,7 +127,7 @@ additionally following metrics will be recorded:
 Current Node Status File
 ------------------------
 
-DAGMan has to option to write the DAG and its node statuses to a file
+DAGMan has the option to write the DAG and its node statuses to a file
 periodically. This is intended for a user or script to use for monitoring
 the DAG. To have DAGMan write the node status file simply use the
 **NODE_STATUS_FILE** commands syntax as follows:

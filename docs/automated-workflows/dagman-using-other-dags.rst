@@ -322,7 +322,6 @@ simple HTCondor submit description file:
       # BEGIN SUBMIT FILE simple-job.sub
       executable   = /bin/echo
       arguments    = OK
-      universe     = vanilla
       output       = $(JOB).out
       error        = $(JOB).err
       log          = submit.log

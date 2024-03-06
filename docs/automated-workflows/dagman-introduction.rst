@@ -443,7 +443,6 @@ Macros for POST Scripts only:
                 output       = diamond.out.$(cluster)
                 error        = diamond.err.$(cluster)
                 log          = diamond_condor.log
-                universe     = vanilla
             }
 
             JOB B B.sub
@@ -463,7 +462,7 @@ Macros for POST Scripts only:
             output       = diamond.out.$(cluster)
             error        = diamond.err.$(cluster)
             log          = diamond_condor.log
-            universe     = vanilla
+
             request_cpus   = 1
             request_memory = 1024M
             request_disk   = 10240K

@@ -370,10 +370,9 @@ command line).
 Managing Large Numbers of Jobs
 ------------------------------
 
-Using DAGMan is recommended for submitting and managing large numbers of
-jobs whether the DAG is structured via dependencies or just a bag of loose
-jobs. DAGMan provides lots of useful mechanics to help manage these jobs.
-Notable features of DAGMan are:
+DAGMan provides lots of useful mechanisms to help submit and manage large
+numbers of jobs. This can be useful whether a DAG is structured via
+dependencies or just a bag of loose jobs. Notable features of DAGMan are:
 
 * Throttling
     Throttling limits the number of submitted jobs at any point in time.
@@ -389,7 +388,6 @@ Notable features of DAGMan are:
     .. code-block:: condor-submit
 
         # Generated Submit: job2.sub
-        universe = vanilla
         executable = /path/to/executable
         log = job2.log
         input = job2.in
@@ -427,7 +425,6 @@ DAGs with large number of jobs to manage:
     .. code-block:: condor-submit
 
         # Generic Submit: common.sub
-        universe = vanilla
         executable = /path/to/executable
         log = job$(runnumber).log
         input = job$(runnumber).in
