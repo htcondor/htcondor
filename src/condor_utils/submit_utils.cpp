@@ -24,14 +24,12 @@
 #include "spooled_job_files.h" // for GetSpooledExecutablePath()
 #include "basename.h"
 #include "condor_getcwd.h"
-#include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "domain_tools.h"
 #include "sig_install.h"
 #include "daemon.h"
 #include "string_list.h"
-#include "which.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "my_username.h" // for my_domainname
@@ -4227,7 +4225,7 @@ int SubmitHash::SetUniverse()
 		if ( ! IsContainerJob) {
 			IsDockerJob = clusterAd->Lookup(ATTR_DOCKER_IMAGE) != nullptr;
 		}
-	} else if (JobUniverse == CONDOR_UNIVERSE_VANILLA) {
+	} else if ((JobUniverse == CONDOR_UNIVERSE_VANILLA) || (JobUniverse == CONDOR_UNIVERSE_LOCAL)) {
 		auto_free_ptr containerImg(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 		if (IsDockerJob) {
 			// universe=docker does not allow the use of container_image
@@ -4278,15 +4276,6 @@ int SubmitHash::SetUniverse()
 		AssignJobVal(SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX ATTR_JOB_UNIVERSE, univ);
 	}
 
-	// for "scheduler" or "local" or "parallel" universe, this is all we need to do
-	if (JobUniverse == CONDOR_UNIVERSE_SCHEDULER ||
-		JobUniverse == CONDOR_UNIVERSE_LOCAL ||
-		JobUniverse == CONDOR_UNIVERSE_PARALLEL ||
-		JobUniverse == CONDOR_UNIVERSE_MPI)
-	{
-		return 0;
-	}
-
 	// we only check WantParallelScheduling when building the cluster ad (like universe)
 	bool wantParallel = submit_param_bool(ATTR_WANT_PARALLEL_SCHEDULING, NULL, false);
 	if (wantParallel) {
@@ -4298,7 +4287,7 @@ int SubmitHash::SetUniverse()
 	}
 
 	// for vanilla universe, we have some special cases for toppings...
-	if (JobUniverse == CONDOR_UNIVERSE_VANILLA) {
+	if ((JobUniverse == CONDOR_UNIVERSE_VANILLA)  || (JobUniverse == CONDOR_UNIVERSE_LOCAL)) {
 		if (IsDockerJob) {
 			// TODO: remove this when the docker starter no longer requires it.
 			AssignJobVal(ATTR_WANT_DOCKER, true);
@@ -4309,6 +4298,16 @@ int SubmitHash::SetUniverse()
 		}
 		return 0;
 	}
+
+	// for "scheduler" or "local" or "parallel" universe, this is all we need to do
+	if (JobUniverse == CONDOR_UNIVERSE_SCHEDULER ||
+		JobUniverse == CONDOR_UNIVERSE_LOCAL ||
+		JobUniverse == CONDOR_UNIVERSE_PARALLEL ||
+		JobUniverse == CONDOR_UNIVERSE_MPI)
+	{
+		return 0;
+	}
+
 
 	// "globus" or "grid" universe
 	if (JobUniverse == CONDOR_UNIVERSE_GRID) {
