@@ -77,6 +77,10 @@ Bugs Fixed:
   :jira:`2038`
   :jira:`2232`
 
+- Fixed an issue where HTCondor could not be installed on Debian or Ubuntu
+  platforms if there was more that one ``condor`` user in LDAP.
+  :jira:`2306`
+
 .. _lts-version-history-2305:
 
 Version 23.0.5
