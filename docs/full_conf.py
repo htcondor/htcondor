@@ -472,6 +472,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
         "root": [
             (r"\s+", token.Text),
             (r"^#.*?$", token.Comment.Single),
+            (r"^jobstate_log", token.Keyword, "jobstate_log"),
             (r"^job", token.Keyword, "job"),
             (r"^submit-description", token.Keyword, "submit-description"),
             (r"^parent", token.Keyword, "parent"),
@@ -593,6 +594,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
             ),
         ] + DAGMAN_COMMON,
         "save_point_file": DAGMAN_COMMON,
+        "jobstate_log" : DAGMAN_COMMON,
     }
 
 

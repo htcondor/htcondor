@@ -130,7 +130,7 @@ the following terminology is used:
 #. **Parent DAG:**
     The specific DAG that incorporates/declared the current DAG the workflow.
 
-:index:`SUBDAG command<single: DAG Commands; SUBDAG command;>`
+:index:`SUBDAG command<single: DAG Commands; SUBDAG command>`
 :index:`DAGs within DAGs<single: DAGMan; DAGs within DAGs>`
 
 .. _subdag-external:
@@ -322,7 +322,6 @@ simple HTCondor submit description file:
       # BEGIN SUBMIT FILE simple-job.sub
       executable   = /bin/echo
       arguments    = OK
-      universe     = vanilla
       output       = $(JOB).out
       error        = $(JOB).err
       log          = submit.log
