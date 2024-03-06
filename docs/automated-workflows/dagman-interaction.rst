@@ -367,8 +367,8 @@ command line).
 
 :index:`large numbers of jobs<single: DAGMan; Large numbers of jobs>`
 
-Managing Large Numbers of Jobs with DAGMan
-------------------------------------------
+Managing Large Numbers of Jobs
+------------------------------
 
 Using DAGMan is recommended for submitting and managing large numbers of
 jobs whether the DAG is structured via dependencies or just a bag of loose
@@ -383,11 +383,6 @@ Notable features of DAGMan are:
 * Scripts associated with node jobs
     Perform simple tasks on the Access Point before and/or after a node
     jobs execution. For more information visit DAGMan :ref:`DAG Node Scripts`.
-
-It is common for a large grouping of similar jobs to ran under a DAG. It
-is also very common for some external program or script to produce these
-large DAGs and needed files. There are generally two ways of organizing
-DAGs with large number of jobs to manage:
 
 .. sidebar:: Example Large DAG Unique Submit File
 
@@ -404,6 +399,11 @@ DAGs with large number of jobs to manage:
         request_memory = 1024M
         request_disk   = 10240K
         queue
+
+It is common for a large grouping of similar jobs to ran under a DAG. It
+is also very common for some external program or script to produce these
+large DAGs and needed files. There are generally two ways of organizing
+DAGs with large number of jobs to manage:
 
 #. Using a unique submit description for each job in the DAG
     In this setup, a single DAG input file containing ``n`` jobs with

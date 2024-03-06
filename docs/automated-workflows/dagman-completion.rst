@@ -1,14 +1,6 @@
 DAGMan Completion
 =================
 
-DAGMan exits the job queue when it has successfully completed, or when
-it can no longer make forward progress. The latter case is considered
-failure. Successful completion happens when every node in the DAG has
-successfully completed. In the case of a DAGman failure, you can resubmit
-the dag so that only the incomplete work is run. Alternatively, you can
-re-run a DAG from pre-specified save points, and re-run previously completed nodes.
-
-
 .. sidebar:: Node Success/Failure
 
     **Table 2.1** Node **S**\ uccess or **F**\ ailure definition
@@ -58,6 +50,13 @@ re-run a DAG from pre-specified save points, and re-run previously completed nod
     +-----+-----------+--------+-------+
     | F   | not run   | F      | **F** |
     +-----+-----------+--------+-------+
+
+DAGMan exits the job queue when it has successfully completed, or when
+it can no longer make forward progress. The latter case is considered
+failure. Successful completion happens when every node in the DAG has
+successfully completed. In the case of a DAGman failure, you can resubmit
+the dag so that only the incomplete work is run. Alternatively, you can
+re-run a DAG from pre-specified save points, and re-run previously completed nodes.
 
 .. _DAG node success:
 
