@@ -61,6 +61,11 @@ New Features:
   to **False**.
   :jira:`2323`
 
+- The Job Router route keywork ``GridResource`` is now always
+  optional. The job attribute ``GridResource`` can be set instead via
+  a ``SET`` or similar command in the route definition.
+  :jira:`2329`
+
 Bugs Fixed:
 
 - Fixed a bug in the :tool:`htcondor eventlog read` command that would fail
