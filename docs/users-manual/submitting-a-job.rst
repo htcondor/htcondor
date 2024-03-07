@@ -1512,7 +1512,7 @@ submitted from an Intel architecture running Linux would add the
 
       requirements = Arch == "INTEL" && OpSys == "WINDOWS"
 
-Without this :subcom:`requirement`, :tool:`condor_submit` will assume that the
+Without this :subcom:`requirements` command, :tool:`condor_submit` will assume that the
 program is to be executed on a machine with the same platform as the
 machine where the job is submitted.
 
