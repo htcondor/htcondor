@@ -367,13 +367,12 @@ command line).
 
 :index:`large numbers of jobs<single: DAGMan; Large numbers of jobs>`
 
-Managing Large Numbers of Jobs with DAGMan
-------------------------------------------
+Managing Large Numbers of Jobs
+------------------------------
 
-Using DAGMan is recommended for submitting and managing large numbers of
-jobs whether the DAG is structured via dependencies or just a bag of loose
-jobs. DAGMan provides lots of useful mechanics to help manage these jobs.
-Notable features of DAGMan are:
+DAGMan provides lots of useful mechanisms to help submit and manage large
+numbers of jobs. This can be useful whether a DAG is structured via
+dependencies or just a bag of loose jobs. Notable features of DAGMan are:
 
 * Throttling
     Throttling limits the number of submitted jobs at any point in time.
@@ -384,17 +383,11 @@ Notable features of DAGMan are:
     Perform simple tasks on the Access Point before and/or after a node
     jobs execution. For more information visit DAGMan :ref:`DAG Node Scripts`.
 
-It is common for a large grouping of similar jobs to ran under a DAG. It
-is also very common for some external program or script to produce these
-large DAGs and needed files. There are generally two ways of organizing
-DAGs with large number of jobs to manage:
-
 .. sidebar:: Example Large DAG Unique Submit File
 
     .. code-block:: condor-submit
 
         # Generated Submit: job2.sub
-        universe = vanilla
         executable = /path/to/executable
         log = job2.log
         input = job2.in
@@ -404,6 +397,11 @@ DAGs with large number of jobs to manage:
         request_memory = 1024M
         request_disk   = 10240K
         queue
+
+It is common for a large grouping of similar jobs to ran under a DAG. It
+is also very common for some external program or script to produce these
+large DAGs and needed files. There are generally two ways of organizing
+DAGs with large number of jobs to manage:
 
 #. Using a unique submit description for each job in the DAG
     In this setup, a single DAG input file containing ``n`` jobs with
@@ -427,7 +425,6 @@ DAGs with large number of jobs to manage:
     .. code-block:: condor-submit
 
         # Generic Submit: common.sub
-        universe = vanilla
         executable = /path/to/executable
         log = job$(runnumber).log
         input = job$(runnumber).in

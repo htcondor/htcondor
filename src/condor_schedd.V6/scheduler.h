@@ -756,6 +756,14 @@ class Scheduler : public Service
 	// Return a pointer to the protected URL map for late materilization factories
 	MapFile* getProtectedUrlMap() { return &m_protected_url_map; }
 
+	ClassAd *getLocalStarterAd() {
+		static bool firstTime = true;
+		if (firstTime) {
+			firstTime = false;
+			m_local_starter_ad.Assign(ATTR_CONDOR_SCRATCH_DIR, "#CoNdOrScRaTcHdIr#");
+		}
+		return &m_local_starter_ad;
+	}
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
@@ -793,6 +801,7 @@ private:
 	ClassAd             m_userRecDefaultsAd;
 	ClassAd             m_extendedSubmitCommands;
 	std::string         m_extendedSubmitHelpFile;
+	ClassAd             m_local_starter_ad;
 
 	// information about the command port which Shadows use
 	char*			MyShadowSockName;

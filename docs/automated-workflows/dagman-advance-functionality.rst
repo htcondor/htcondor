@@ -843,3 +843,49 @@ later take precedence:
    :tool:`condor_submit_dag[custom DAG Configuration]`\ s **-config** option.
 #. :tool:`condor_submit_dag` options that control the same behavior as a
    configuration option such as :macro:`DAGMAN_MAX_JOBS_SUBMITTED` and **-maxjobs**.
+
+
+:index:`DOT command<single: DAG Commands; DOT command>`
+:index:`Visualizing DAGs<single: DAGMan; Visualizing DAGs>`
+
+.. _visualizing-dags-with-dot:
+
+Visualizing DAGs
+----------------
+
+.. sidebar:: Example DAG DOT File
+
+    Provided the following DAG file declaration, DAGMan will produce a *dot*
+    file named ``dag.dot``.
+
+    .. code-block:: condor-dagman
+
+        DOT dag.dot
+
+    The ``dag.dot`` file can then be used with the *Graphiz* package as follows
+    to produce a visual of the DAG.
+
+    .. code-block:: console
+
+        $ dot -Tps dag.dot -o dag.ps
+
+To help visualize a DAG, DAGMan has the ability to create a *dot* input file
+for the AT&T Research Labs `Graphiz <https://www.graphviz.org/>`_ package to
+draw the DAG. DAGMan will produce *dot* files when the **DOT** command is declared
+with the following syntax:
+
+.. code-block:: condor-dagman
+
+    DOT filename [UPDATE | DONT-UPDATE] [OVERWRITE | DONT-OVERWRITE] [INCLUDE <dot-file-header>]
+
+The DOT command can take several optional parameters as follows:
+
+- **UPDATE** This will update the dot file every time a significant update happens.
+- **DONT-UPDATE** Creates a single dot file, when the DAGMan begins executing. This
+  is the default if the parameter **UPDATE** is not used.
+- **OVERWRITE** Overwrites the dot file each time it is created. This is the default,
+  unless **DONT-OVERWRITE** is specified.
+- **DONT-OVERWRITE** Creates a new dot file each time one is written as ``<filename>.<num>``.
+  Where the number increases with each write such as ``dag.dot.0`` to ``dag.dot.1``.
+- **INCLUDE** Includes the contents of the specified file in the produced dot file after
+  the graphs label line.

@@ -8558,11 +8558,11 @@ ClassAd* GetExpandedJobAd(const PROC_ID& job_id, bool persist_expansions)
 		if( mrec ) {
 			startd_ad = mrec->my_match_ad;
 		} else {
-			// no match rec, probably a local universe type job.
-			// set startd_ad to NULL and continue on - after all,
-			// the expression we are expanding may not even reference
-			// a startd attribute.
-			startd_ad = nullptr;
+			if (job->Universe() == CONDOR_UNIVERSE_LOCAL) {
+				startd_ad = scheduler.getLocalStarterAd();
+			} else {
+				startd_ad = nullptr;
+			}
 		}
 
 	}

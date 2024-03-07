@@ -187,7 +187,7 @@ completes its execution, or when a job goes on hold. All scripts run
 on the Access Point and not the Execution Point where the node job
 is likely to run.
 
-:index:`PRE and POST scripts<single: DAGMan; PRE and POST scripts>`
+:index:`Node scripts<single: DAGMan; Node scripts>`
 
 Script Types
 ''''''''''''
@@ -430,45 +430,54 @@ Macros for POST Scripts only:
    the PRE script, the value of ``$RETURN`` will be -1004 and this will
    evaluate to the exit value of the PRE script.
 
-Node Submit Descriptions
-------------------------
-
 .. sidebar:: Example Diamond DAG Using Inline Descriptions
 
     .. code-block:: condor-dagman
 
             # File name: diamond.dag
 
-            JOB  A  {
+            # Job A using personal inline
+            # submit description
+            JOB A {
                 executable   = /path/diamond.exe
                 output       = diamond.out.$(cluster)
                 error        = diamond.err.$(cluster)
                 log          = diamond_condor.log
-                universe     = vanilla
             }
-            JOB  B  {
-                executable   = /path/diamond.exe
-                output       = diamond.out.$(cluster)
-                error        = diamond.err.$(cluster)
-                log          = diamond_condor.log
-                universe     = vanilla
-            }
-            JOB  C  {
-                executable   = /path/diamond.exe
-                output       = diamond.out.$(cluster)
-                error        = diamond.err.$(cluster)
-                log          = diamond_condor.log
-                universe     = vanilla
-            }
-            JOB  D  {
-                executable   = /path/diamond.exe
-                output       = diamond.out.$(cluster)
-                error        = diamond.err.$(cluster)
-                log          = diamond_condor.log
-                universe     = vanilla
-            }
+
+            JOB B B.sub
+            JOB C C.sub
+            JOB D D.sub
+
             PARENT A CHILD B C
             PARENT B C CHILD D
+
+    .. code-block:: condor-dagman
+
+        # File name: diamond.dag
+
+        # Shared submit description
+        SUBMIT-DESCRIPTION DiamondDesc {
+            executable   = /path/diamond.exe
+            output       = diamond.out.$(cluster)
+            error        = diamond.err.$(cluster)
+            log          = diamond_condor.log
+
+            request_cpus   = 1
+            request_memory = 1024M
+            request_disk   = 10240K
+        }
+
+        JOB A DiamondDesc
+        JOB B DiamondDesc
+        JOB C DiamondDesc
+        JOB D DiamondDesc
+
+        PARENT A CHILD B C
+        PARENT B C CHILD D
+
+Node Submit Descriptions
+------------------------
 
 Inline Submit Descriptions
 ''''''''''''''''''''''''''
@@ -516,28 +525,30 @@ not used by any of the jobs. It can then be linked to a job as follows:
     Both inline submit descriptions and the SUBMIT_DESCRIPTION command
     can only be used when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``True``.
 
-.. sidebar:: Example Diamond DAG Using SUBMIT-DESCRIPTION Command
+.. sidebar:: Example Diamond DAG Using External Submit File
+
+    .. code-block:: condor-submit
+
+        # File name: diamond_job.sub
+
+        executable   = /path/diamond.exe
+        output       = diamond.out.$(cluster)
+        error        = diamond.err.$(cluster)
+        log          = diamond_condor.log
+        request_cpus   = 1
+        request_memory = 1024M
+        request_disk   = 10240K
+
+        queue
 
     .. code-block:: condor-dagman
 
         # File name: diamond.dag
 
-        SUBMIT-DESCRIPTION DiamondDesc {
-            executable   = /path/diamond.exe
-            output       = diamond.out.$(cluster)
-            error        = diamond.err.$(cluster)
-            log          = diamond_condor.log
-            universe     = vanilla
-            request_cpus   = 1
-            request_memory = 1024M
-            request_disk   = 10240K
-        }
-
-        JOB A DiamondDesc
-        JOB B DiamondDesc
-        JOB C DiamondDesc
-        JOB D DiamondDesc
-
+        JOB  A  diamond_job.sub
+        JOB  B  diamond_job.sub
+        JOB  C  diamond_job.sub
+        JOB  D  diamond_job.sub
         PARENT A CHILD B C
         PARENT B C CHILD D
 
@@ -565,33 +576,6 @@ will have there entire job removed by DAGMan if a single proc fails.
 Since each node uses the same HTCondor submit description file, this implies
 that each node within the DAG runs the same job. The ``$(Cluster)`` macro
 produces unique file names for each job’s output because each node is it's own cluster.
-
-.. sidebar:: Example Diamond DAG Using External Submit File
-
-    .. code-block:: condor-submit
-
-        # File name: diamond_job.sub
-
-        executable   = /path/diamond.exe
-        output       = diamond.out.$(cluster)
-        error        = diamond.err.$(cluster)
-        log          = diamond_condor.log
-        request_cpus   = 1
-        request_memory = 1024M
-        request_disk   = 10240K
-
-        queue
-
-    .. code-block:: condor-dagman
-
-        # File name: diamond.dag
-
-        JOB  A  diamond_job.sub
-        JOB  B  diamond_job.sub
-        JOB  C  diamond_job.sub
-        JOB  D  diamond_job.sub
-        PARENT A CHILD B C
-        PARENT B C CHILD D
 
 DAGMan Specific Information Macros
 ''''''''''''''''''''''''''''''''''

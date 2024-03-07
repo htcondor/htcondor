@@ -90,12 +90,11 @@ Depends: adduser,
          ${perl:Depends},
          ${python3:Depends},
          ${shlibs:Depends}
+Recommends: bash-completion,
 #if defined(UW_BUILD)
-Recommends: openssh-server,
             pelican-osdf-compat (>= 7.1.4),
-#else
-Recommends: openssh-server
 #endif
+            openssh-server
 Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
