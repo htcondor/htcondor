@@ -33,26 +33,37 @@ enum NegotiationResult { NR_MATCHED, NR_REJECTED, NR_END_NEGOTIATE,
 
 class CAList {
 public:
-	CAList() {};
-	virtual ~CAList() {};
+	CAList() {
+		it = l.begin();
+	};
+	virtual ~CAList() = default;
 
 	// Instead of deriving from List, have-a list internally instead
 	// allows us to controll access and replace List with std::list
 
-	void Rewind() { l.Rewind();}
-	ClassAd *Next() {return l.Next();}
-	ClassAd *Head() {return l.Head();}
+	void Rewind() { it = l.begin();}
+	ClassAd *Next() {
+		if (it != l.end()) {
+			return *it++; 
+		}
+			return nullptr;
+	}
+	ClassAd *Head() {return *l.begin();}
 
-	int Number() { return l.Number();}
-	int Length() { return l.Length();}
+	int size() const { return l.size();}
 
-	bool Delete(ClassAd *ad) {return l.Delete(ad);}
-	void DeleteCurrent() {l.DeleteCurrent();}
+	bool Delete(ClassAd *ad) {l.remove(ad); return true;}
+	void DeleteCurrent() {
+		// Really delete the one before the current
+		it--;
+		it = l.erase(it);
+	}
 
-	void Append(ClassAd *ad) {l.Append(ad);}
-	void Insert(ClassAd *ad) {l.Insert(ad);}
+	void Append(ClassAd *ad) {l.emplace_back(ad);}
+	void Insert(ClassAd *ad) {l.emplace_front(ad);}
 private:
-	List<ClassAd> l;
+	std::list<ClassAd *>::iterator it;
+	std::list<ClassAd *> l;
 };
 
 using MRecArray = std::vector<match_rec*>;
