@@ -1491,7 +1491,13 @@ FileTransfer::DetermineWhichFilesToSend() {
 	// See uploadCheckpointFiles comments, above.
 	if( uploadFailureFiles ) {
 		if( CheckpointFiles ) { delete CheckpointFiles; }
-		CheckpointFiles = new StringList( NULL, "," );
+
+		std::string failureList;
+		if( jobAd.LookupString( ATTR_FAILURE_FILES, failureList ) ) {
+			CheckpointFiles = new StringList( failureList.c_str(), "," );
+		} else {
+			CheckpointFiles = new StringList( NULL, "," );
+		}
 
 		// If we'd transfer output or error on success, do so on failure also.
 		if( shouldSendStdout() ) {
