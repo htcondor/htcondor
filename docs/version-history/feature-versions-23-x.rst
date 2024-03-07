@@ -22,6 +22,12 @@ New Features:
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
 
+- The startd now honors the environment variable OMP_NUM_THREADS
+  when setting the number of cores available.  This allows 
+  glideins to pass an allocated number of cores from a base batch
+  system to the glidein easily.
+  :jira:`727`
+
 - Added new job ad attribute :ad-attr:`JobSubmitFile` which contains
   the filename of the submit file, if any.
   :jira:`2319`
