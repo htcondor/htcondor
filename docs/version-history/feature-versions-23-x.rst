@@ -71,10 +71,10 @@ New Features:
   a ``SET`` or similar command in the route definition.
   :jira:`2329`
 
-- The configuration varibles :macro:`SLOTS_CONNECTED_TO_KEYBOARD` and
-  :macro:`SLOTS_CONNECTED_TO_CONSOLE` apply to partitionable slots but do
+- The configuration variables :macro:`SLOTS_CONNECTED_TO_KEYBOARD` and
+  :macro:`SLOTS_CONNECTED_TO_CONSOLE` now apply to partitionable slots but do
   not count them as slots.  As a consequence of this change, when
-  the of these variables is set equal to the number of cpus, all slots will be connected.
+  either of these variables are set equal to the number of cpus, all slots will be connected.
   :jira:`2331`
 
 Bugs Fixed:
