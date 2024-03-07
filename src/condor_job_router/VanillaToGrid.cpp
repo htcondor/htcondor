@@ -141,7 +141,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 		ad->Delete(ATTR_CURRENT_HOSTS);
 
 		// Set the grid resource
-		if( gridresource ) {
+		if( gridresource && *gridresource ) {
 			ad->InsertAttr(ATTR_GRID_RESOURCE, gridresource);
 		}
 
