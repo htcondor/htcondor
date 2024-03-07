@@ -3308,8 +3308,7 @@ JobRoute::ParseNext(
 	}
 	if (m_target_universe == CONDOR_UNIVERSE_GRID) {
 		if ( ! mset.local_param_unquoted_string(ATTR_GRID_RESOURCE, m_grid_resource, m_route.context()) ) {
-			dprintf(D_ALWAYS, "JobRouter: Missing or invalid %s in job route.\n",ATTR_GRID_RESOURCE);
-			return false;
+			dprintf(D_FULLDEBUG, "JobRouter: Missing or invalid %s in job route. Jobs will fail if it's not set in routed job ad.\n",ATTR_GRID_RESOURCE);
 		}	
 	}
 
