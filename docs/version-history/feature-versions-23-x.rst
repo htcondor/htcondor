@@ -35,6 +35,11 @@ New Features:
   with a submit file, now transfers the executable to the interactive job.
   :jira:`2315`
 
+- Added the environment variable PYTHON_CPU_COUNT to the set of environment
+  variables set for jobs to indicate how many cpu cores are provisioned.
+  Python 3.13 uses this override the detected count of cpu cores.
+  :jira:`2330`
+
 - The configuration parameter :macro:`ETC` can now be used to relocate
   files that are normally place under /etc/condor on unix platforms.
   :jira:`2290`
