@@ -892,10 +892,6 @@ Startd Disk Enforcement With Per Job Scratch Filesystems
 :index:`DISK usage`
 :index:`per job scratch filesystem`
 
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
-
-
 On Linux systems, when HTCondor is started as root, it optionally has the ability to create
 a custom filesystem for the job's scratch directory. This allows HTCondor to prevent the job
 from using more scratch space than provisioned. HTCondor manages this per scratch directory
