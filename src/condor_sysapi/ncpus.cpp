@@ -234,11 +234,11 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 
 void sysapi_ncpus_raw(int * pncpus, int * pnhyperthread_cpus) {
 	const char *cores_from_env = getenv("OMP_NUM_THREADS"); // magic env var to constrain threads
-	int env_cores = 0;
 	if (cores_from_env) {
-		env_cores = atoi(cores_from_env);
+		int env_cores = atoi(cores_from_env);
 		if (env_cores > 0) {
-			*pncpus = *pnhyperthread_cpus = env_cores;
+			if (pncpus) *pncpus = env_cores;
+			if (pnhyperthread_cpus) *pnhyperthread_cpus = env_cores;
 			return;
 		}
 	}
