@@ -165,6 +165,11 @@ Bugs Fixed:
   job event log when the job was disconnected or did not start properly.
   :jira:`2265`
 
+- Fixed a bug that can cause the condor_gridmanager to abort when multiple
+  grid universe jobs share the same proxy file to be used to authenticate
+  with the remote job scheduling service.
+  :jira:`2334`
+
 Version 23.4.0
 --------------
 
