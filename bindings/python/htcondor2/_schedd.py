@@ -41,6 +41,7 @@ from .htcondor2_impl import (
     _history_query,
     _schedd_retrieve_job_constraint,
     _schedd_retrieve_job_ids,
+    _schedd_spool,
 )
 
 
@@ -450,7 +451,6 @@ class Schedd():
             submit_file = _add_line_from_itemdata(submit_file, item)
         submit_file = submit_file + ")\n"
 
-        print(submit_file)
         real = Submit(submit_file)
         return _schedd_submit(self._addr, real._handle, count, spool)
 
@@ -460,31 +460,16 @@ class Schedd():
 
 
     def spool(self,
-        ad_list : List[classad.ClassAd],
+        result : SubmitResult
     ) -> None:
-        #
-        # In version 1, the documentation for this function claims that
-        # SubmitResult has a jobs() method.  It never did, and I'm not
-        # at all sure if the author meant Submit.jobs(), which shouldn't
-        # work because that can't generate job ads with the correct
-        # cluster ID.
-        #
-        # At any rate, the better API is probably just to accept the
-        # SubmitResult object directly.  (Actually, the Submit object
-        # _and_ the SubmitResult, both.)
-        #
-        # (What condor_submit does is store a copy of the job ad from
-        # SubmitHash::make_job_ad() -- plus some weird complications
-        # with UpdateFromChain() and ChainToAd() for the proc ads --
-        # and then set the cluster ID and job ID after submitting
-        # them but before calling Scheduler::spoolJobFiles().)
-        #
         """
-        FIXME (unimplemented)
+        Upload the input files corresponding to a given :meth:`submit`
+        for which the ``spool`` flag was set.
+        """
+        if result._spooledProcAds is None:
+            raise ValueError("result must have come from submit() with spool set")
 
-        Upload the input files corresponding to a given :meth:`submit`.
-        """
-        pass
+        _schedd_spool(self._addr, result._clusterad._handle, result._spooledProcAds._handle)
 
 
     def retrieve(self,

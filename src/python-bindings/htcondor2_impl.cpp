@@ -134,6 +134,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_unexport_job_constraint", &_schedd_unexport_job_constraint, METH_VARARGS, NULL},
 	{"_schedd_retrieve_job_ids", &_schedd_retrieve_job_ids, METH_VARARGS, NULL},
 	{"_schedd_retrieve_job_constraint", &_schedd_retrieve_job_constraint, METH_VARARGS, NULL},
+	{"_schedd_spool", &_schedd_spool, METH_VARARGS, NULL},
 	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
 
 

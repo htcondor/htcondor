@@ -69,6 +69,7 @@ with _add_dll_dir():
     from ._schedd import Schedd
     from ._submit import Submit
     from ._submit_result import SubmitResult
+    from ._submit_result import _SpooledProcAdList
     from ._job_event import JobEvent
     from ._job_event_log import JobEventLog
     from ._job_status import JobStatus

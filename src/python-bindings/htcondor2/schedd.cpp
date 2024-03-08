@@ -599,7 +599,7 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
 
 
 int
-submitProcAds( int clusterID, long count, SubmitBlob * sb, ClassAd * & clusterAd, int itemIndex = 0 ) {
+submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd * & clusterAd, std::vector<ClassAd *> * spooledProcAds, int itemIndex = 0 ) {
     int numJobs = 0;
 
     //
@@ -614,12 +614,24 @@ submitProcAds( int clusterID, long count, SubmitBlob * sb, ClassAd * & clusterAd
         }
 
         ClassAd * procAd = sb->make_job_ad( JOB_ID_KEY(clusterID, procID),
-            itemIndex, c, false, false, NULL, NULL );
+            itemIndex, c, false, spool, NULL, NULL );
         // FIXME: do something with sb->error_stack().
         if(! procAd) {
             // This was HTCondorInternalError in version 1.
             PyErr_SetString( PyExc_RuntimeError, "Failed to create job ad" );
             return -1;
+        }
+
+        // If we're spooling, we'll need a copy of each proc ad later,
+        // so just store them now, rather than try to recreate them.
+        // Don't chain them to this clusterAd; the Python SubmitResult
+        // object will be giving us a copy of it when we need it.
+        if( spooledProcAds ) {
+            ClassAd * copy = new ClassAd( * procAd );
+            copy->Assign( ATTR_CLUSTER_ID, clusterID );
+            copy->Assign( ATTR_PROC_ID, procID );
+            copy->Unchain();
+            spooledProcAds->push_back(copy);
         }
 
         if( c == 0 ) {
@@ -691,6 +703,13 @@ _schedd_submit( PyObject *, PyObject * args ) {
         sb->setScheddVersion( CondorVersion() );
     }
 
+
+    std::vector< ClassAd *> * spooledProcAds = NULL;
+    if( spool ) {
+        spooledProcAds = new std::vector< ClassAd *>();
+    }
+
+
     // Initialize the new cluster ad.
     if( sb->init_base_ad( time(NULL), schedd.getOwner().c_str() ) != 0 ) {
         qc.abort();
@@ -744,7 +763,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
     int numJobs = 0;
     if( itemCount == 0 ) {
-        numJobs = submitProcAds( clusterID, count, sb, clusterAd );
+        numJobs = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds );
         if(numJobs < 0) {
             qc.abort();
 
@@ -759,7 +778,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         while( (item = itemdata->items.next()) ) {
             if( itemdata->slice.selected( itemIndex, itemCount ) ) {
                 sb->set_vars( itemdata->vars, item, itemIndex );
-                int nj = submitProcAds( clusterID, count, sb, clusterAd, itemIndex );
+                int nj = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds, itemIndex );
                 if( nj < 0 ) {
                     qc.abort();
 
@@ -802,8 +821,13 @@ _schedd_submit( PyObject *, PyObject * args ) {
     }
 
 
+    PyObject * pySpooledProcAds = Py_None;
+    if( spooledProcAds ) {
+        pySpooledProcAds = py_new_htcondor2_spooled_proc_ad_list( spooledProcAds );
+    }
+
     PyObject * pyClusterAd = py_new_classad2_classad(clusterAd->Copy());
-    return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd );
+    return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
 }
 
 
@@ -1027,4 +1051,47 @@ _schedd_retrieve_job_constraint(PyObject *, PyObject * args) {
     }
 
     return retrieve_job_from( addr, constraint );
+}
+
+
+static PyObject *
+_schedd_spool(PyObject *, PyObject * args) {
+    // _schedd_spool(addr, sr._clusterad._handle, sr._spooledJobAds._handle)
+
+    const char * addr = NULL;
+    PyObject_Handle * clusterAdHandle = NULL;
+    PyObject_Handle * spooledProcAdsHandle = NULL;
+
+    if(! PyArg_ParseTuple( args, "sOO", & addr, & clusterAdHandle, & spooledProcAdsHandle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * clusterAd = (ClassAd *)clusterAdHandle->t;
+    auto * spooledProcAds = (std::vector<ClassAd *> *)spooledProcAdsHandle->t;
+
+    // Chain the proc ads.
+    for( auto * ad : * spooledProcAds ) {
+        ad->ChainToAd( clusterAd );
+    }
+
+    DCSchedd schedd(addr);
+    CondorError errorStack;
+    bool result = schedd.spoolJobFiles(
+        spooledProcAds->size(), &(*spooledProcAds)[0],
+        & errorStack
+    );
+
+    // Unchain the proc ads.
+    for( auto * ad : * spooledProcAds ) {
+        ad->Unchain();
+    }
+
+    if(! result) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
 }
