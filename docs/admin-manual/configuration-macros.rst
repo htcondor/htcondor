@@ -8441,7 +8441,7 @@ These macros affect the *condor_job_router* daemon.
 
 :macro-def:`JOB_ROUTER_SCHEDD2_SPOOL[JOB ROUTER]`
     DEPRECATED.  Please use
-    :macro:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG` instead.
+    :macro:`JOB_ROUTER_SCHEDD2_JOB_QUEUE_LOG` instead.
     The path to the spool directory for the *condor_schedd* to which
     the routed copy of the jobs are submitted. If not specified, this
     defaults to ``$(SPOOL)``. If specified, this parameter must point to
