@@ -28,6 +28,8 @@ my $configfile = "";
 my $ClusterId = 0;
 my $testname =  "job_hyperthread_check";
 
+delete $ENV{OMP_NUM_THREADS};
+
 my %lookups = (
 	"COUNT_HYPERTHREAD_CPUS" => 1,
 	"DETECTED_CPUS" => 1,
