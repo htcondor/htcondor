@@ -6690,7 +6690,7 @@ do not specify their own with:
 
 :macro-def:`SUBMIT_REQUEST_MISSING_UNITS`
     If set to the string ``error``, it is an error to submit a job with a 
-    :subcom:`RequestMemory` or :subcom:`RequestDisk` with a unitless
+    :subcom:`request_memory` or :subcom:`request_disk` with a unitless
     value.  If set to ``warn``, a warning is printed to the screen, but
     submit continues. Default value is unset (neither warn or error).
     :jira:`1837`

@@ -215,7 +215,7 @@ Submit Description File Commands
 Note: more information on submitting HTCondor jobs can be found here:
 :doc:`/users-manual/submitting-a-job`.
 
-As of version 8.5.6, the *condor_submit* language supports multi-line
+The *condor_submit* language supports multi-line
 values in commands. The syntax is the same as the configuration language
 (see more details here: 
 :ref:`admin-manual/introduction-to-configuration:multi-line values`).
@@ -615,7 +615,7 @@ BASIC COMMANDS
     in a DAG, and the priority of the node within the DAG is non-zero
     (see  :ref:`DAG Node Priorities` for more details).
 
- queue [**<int expr>** ]
+ :subcom-def:`queue` [**<int expr>** ]
     Places zero or more copies of the job into the HTCondor queue.
  queue
     [**<int expr>** ] [**<varname>** ] **in** [**slice** ] **<list of
@@ -1230,6 +1230,11 @@ FILE TRANSFER COMMANDS
     Note that (at present), you may not provide more than one set of
     credentials for ``s3://`` or ``gs://`` file transfer; this implies
     that all such URLs download from or upload to the same service.
+
+ :subcom-def:`public_input_files` = <file, file2>
+    A list of files on the AP that HTCondor should use a pre-configured
+    HTTP server on the AP to transfer. These files will not be encrypted,
+    and will be publically fetchable by anyone who knows their name.
 
  :subcom-def:`transfer_output_files` = < file1,file2,file... >
     This command forms an explicit list of output files and directories
@@ -2246,6 +2251,12 @@ COMMANDS FOR THE DOCKER UNIVERSE
     which contains the port number on the host forwarding to the corresponding
     service.
 
+ :subcom-def:`<service-name>_container_port` = port_number
+    See above.
+
+ :subcom-def:`<service-name>_HostPort` = port_number
+    See above.
+
  :subcom-def:`docker_override_entrypoint` = <True | False>
     If docker_override_entrypoint is set to True and **executable** is not empty,
     the image entrypoint is replaced with the executable.
@@ -2709,13 +2720,13 @@ ADVANCED COMMANDS
     environment. The credential service providers must be configured by
     the pool admin.
 
- <credential_service_name>_oauth_permissions[_<handle>] = <scope>
+ :subcom-def:`<credential_service_name>_oauth_permissions` [_<handle>] = <scope>
     A string containing the scope(s) that should be requested for
     the credential named <credential_service_name>[_<handle>], where
     <handle> is optionally provided to differentiate between multiple
     credentials from the same credential service provider.
 
- <credential_service_name>_oauth_resource[_<handle>] = <resource>
+ :subcom-def:`<credential_service_name>_oauth_resource` [_<handle>] = <resource>
     A string containing the resource (or "audience") that should be
     requested for the credential named
     <credential_service_name>[_<handle>], where <handle> is optionally

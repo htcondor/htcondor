@@ -132,7 +132,7 @@ all attributes.
     SCITOKENS) used to submit the job.
 
 :classad-attribute-def:`BatchExtraSubmitArgs`
-    For :subcom:`batch[and attribute BatchExtraSubmitArgs]` grid universe jobs, additional command-line arguments
+    For **batch** grid universe jobs, additional command-line arguments
     to be given to the target batch system's job submission command.
 
 :classad-attribute-def:`BatchProject`

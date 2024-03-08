@@ -572,7 +572,7 @@ Similar to the regular
 the files specified in
 :subcom:`public_input_files[example]`
 can be relative to the submit directory, or absolute paths. You can also
-specify an :subcom:`initialDir[and public input files]`,
+specify an :subcom:`initialdir[and public input files]`,
 and :tool:`condor_submit` will look for files relative to that directory. The
 files must be world-readable on the file system (files with permissions
 set to 0644, directories with permissions set to 0755).
