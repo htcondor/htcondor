@@ -3769,14 +3769,15 @@ section for details.
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     console. This allows the *condor_startd* to notice console
-    activity. Defaults to the number of slots in the machine, which is
-    ``$(NUM_CPUS)``.
+    activity. Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    this to a very large number so that all slots will be connected.
 
 :macro-def:`SLOTS_CONNECTED_TO_KEYBOARD[STARTD]`
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     keyboard (for remote tty activity, as well as console activity).
-    This defaults to all slots (N in a machine with N CPUs).
+    Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    this to a very large number so that all slots will be connected.
 
 :macro-def:`DISCONNECTED_KEYBOARD_IDLE_BOOST[STARTD]`
     If there are slots not connected to either the keyboard or the

@@ -541,25 +541,8 @@ init_params( int first_time)
 	// now insert attributes needed by HTCondor
 	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", startd_slot_attrs);
 
-	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", -12345);
-	if (console_slots == -12345) {
-		// if no value set, try the old names...
-		console_slots = resmgr->m_attr->num_cpus();
-		console_slots = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE",
-		                param_integer( "CONSOLE_VMS",
-		                param_integer( "CONSOLE_CPUS",
-		                console_slots)));
-	}
-
-	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD", -12345);
-	if (keyboard_slots == -12345) {
-		// if no value set, try the old names...
-		keyboard_slots = resmgr->m_attr->num_cpus();
-		keyboard_slots = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD",
-		                 param_integer( "KEYBOARD_VMS",
-		                 param_integer( "KEYBOARD_CPUS", 1)));
-	}
-
+	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", 0);
+	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD", 0);
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 1200 );
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
