@@ -398,7 +398,7 @@ Policy Scenario: Adding Desktop Resources To The Mix
                        + $(RANK)
         START  = (Scheduler =?= $(DedicatedScheduler)) || ($(START))
 
-    Define :macro:`RANK_FACTOR` to be a larger
+    Define ``RANK_FACTOR`` to be a larger
     value than the maximum value possible for the existing rank
     expression. :macro:`RANK` is a floating point value,
     so there is no harm in assigning a very large value.
