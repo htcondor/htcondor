@@ -1446,9 +1446,9 @@ main (int argc, char *argv[])
 			const char *adtypeName = mainPP.adtypeNameFromPPMode();
 			if (adtypeName) { pmms.select_from = mainPP.adtypeNameFromPPMode(); }
 			pmms.headfoot = mainPP.pmHeadFoot;
-			List<const char> * pheadings = NULL;
+			std::vector<const char *> * pheadings = NULL;
 			if ( ! mainPP.pm.has_headings()) {
-				if (mainPP.pm_head.Length() > 0) pheadings = &mainPP.pm_head;
+				if (mainPP.pm_head.size() > 0) pheadings = &mainPP.pm_head;
 			}
 			std::string requirements;
 			if (Q_OK == query->getRequirements(requirements) && ! requirements.empty()) {
@@ -1482,9 +1482,9 @@ main (int argc, char *argv[])
 		fprintf(fout, "Sort: [ %s<ord> ]\n", style_text.c_str());
 
 		style_text = "";
-		List<const char> * pheadings = NULL;
+		std::vector<const char *> * pheadings = NULL;
 		if ( ! mainPP.pm.has_headings()) {
-			if (mainPP.pm_head.Length() > 0) pheadings = &mainPP.pm_head;
+			if (mainPP.pm_head.size() > 0) pheadings = &mainPP.pm_head;
 		}
 		mainPP.pm.dump(style_text, &GlobalFnTable, pheadings);
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
@@ -3023,11 +3023,11 @@ secondPass (int argc, char *argv[])
 				std::string lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
-				if (fheadings || mainPP.pm_head.Length() > 0) { 
+				if (fheadings || mainPP.pm_head.size() > 0) { 
 					const char * hd = fheadings ? argv[i] : "(expr)";
 					wid = 0 - (int)strlen(hd); 
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
-					mainPP.pm_head.Append(hd);
+					mainPP.pm_head.emplace_back(hd);
 				}
 				else if (flabel) { formatstr(lbl, "%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");

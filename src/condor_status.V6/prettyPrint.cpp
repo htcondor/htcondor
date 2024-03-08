@@ -119,43 +119,43 @@ void PrettyPrinter::ppSetColumnFormat(const CustomFormatFn & fmt, const char * p
 
 void PrettyPrinter::ppSetColumn(const char * attr, const Lbl & label, int width, bool truncate, ivfield alt)
 {
-	pm_head.Append(label);
+	pm_head.emplace_back(label);
 	ppSetColumnFormat("%v", width, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, int width, bool truncate, ivfield alt)
 {
-	pm_head.Append(attr);
+	pm_head.emplace_back(attr);
 	ppSetColumnFormat("%v", width, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const Lbl & label, const char * print, bool truncate, ivfield alt)
 {
-	pm_head.Append(label);
+	pm_head.emplace_back(label);
 	ppSetColumnFormat(print, 0, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const char * print, bool truncate, ivfield alt)
 {
-	pm_head.Append(attr);
+	pm_head.emplace_back(attr);
 	ppSetColumnFormat(print, 0, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const Lbl & label, const CustomFormatFn & fmt, int width, bool truncate, ivfield alt)
 {
-	pm_head.Append(label);
+	pm_head.emplace_back(label);
 	ppSetColumnFormat(fmt, NULL, width, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const CustomFormatFn & fmt, int width, bool truncate, ivfield alt)
 {
-	pm_head.Append(attr);
+	pm_head.emplace_back(attr);
 	ppSetColumnFormat(fmt, NULL, width, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const Lbl & label, const CustomFormatFn & fmt, const char * print, int width, bool truncate, ivfield alt)
 {
-	pm_head.Append(label);
+	pm_head.emplace_back(label);
 	ppSetColumnFormat(fmt, print, width, truncate, alt, attr);
 }
 
@@ -267,7 +267,7 @@ ppOption PrettyPrinter::prettyPrintHeadings (bool any_ads)
 		no_headings = true;
 		newline_after_headings = NULL;
 		if ( ! wantOnlyTotals) {
-			bool fHasHeadings = pm.has_headings() || (pm_head.Length() > 0);
+			bool fHasHeadings = pm.has_headings() || (pm_head.size() > 0);
 			if (fHasHeadings) {
 				no_headings = (pmHeadFoot & HF_NOHEADER);
 			}
@@ -463,7 +463,7 @@ void PrettyPrinter::ppSetStartdNormalCols (int width)
 	} else {
 		ppSetColumn(ATTR_MEMORY, Lbl("Mem"), "%4d", false);
 	}
-	pm_head.Append(wide_display ? "ActivityTime" : "  ActvtyTime");
+	pm_head.emplace_back(wide_display ? "ActivityTime" : "  ActvtyTime");
 	pm.registerFormat("%T", 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix) | AltDash,
 		render_activity_time, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
 }
