@@ -9,6 +9,8 @@ job that runs under the schedd on the AP (often referred to as the
 DAGMan proper job) that will in turn manage and submit all the various
 jobs and scripts defined in the workflow.
 
+.. _DAG controls:
+
 Basic DAG Controls
 ------------------
 
@@ -528,9 +530,9 @@ Currently, you can change the following attributes:
 | :ad-attr:`DAGMan_MaxPostScripts` | Maximum number of running POST scripts              |
 +----------------------------------+-----------------------------------------------------+
 
-:index:`CATEGORY command<single: DAG Commands; CATEGORY command>`
-:index:`MAXJOBS command<single: DAG Commands; MAXJOBS command>`
 :index:`throttling nodes by category<single: DAGMan; Throttling nodes by category>`
+
+.. _DAG throttling cmds:
 
 Throttling Nodes by Category
 ''''''''''''''''''''''''''''
@@ -541,7 +543,7 @@ Throttling Nodes by Category
 
     .. code-block:: condor-dagman
 
-        CATEGORY <JobName | ALL_NODES> CategoryName
+        CATEGORY <NodeName | ALL_NODES> CategoryName
 
     .. code-block:: condor-dagman
 
