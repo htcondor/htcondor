@@ -22,6 +22,10 @@ New Features:
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
 
+- :subcom:`condor_q` -better now emits the units for memory and
+  disk.
+  :jira:`2333`
+
 - Added new job ad attribute :ad-attr:`JobSubmitFile` which contains
   the filename of the submit file, if any.
   :jira:`2319`
