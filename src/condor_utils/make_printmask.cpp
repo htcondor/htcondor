@@ -669,7 +669,7 @@ static int PrintPrintMaskWalkFunc(void*pv, int /*index*/, Formatter*fmt, const c
 int PrintPrintMask(std::string & fout,
 	const CustomFormatFnTable & FnTable,  // in: table of custom output functions for SELECT
 	const AttrListPrintMask & mask,       // in: columns and headers set in SELECT
-	const List<const char> * pheadings,   // in: headings override
+	const std::vector<const char *> * pheadings,   // in: headings override
 	const PrintMaskMakeSettings & mms, // in: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
 	const std::vector<GroupByKeyInfo> & /*group_by*/, // in: ordered set of attributes/expressions in GROUP BY
 	AttrListPrintMask * sumymask) // out: columns and headers set in SUMMMARY
