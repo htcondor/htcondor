@@ -3628,9 +3628,6 @@ section.
     to make /dev/shm on Linux private to each job.  When private, the
     starter removes any files from the private /dev/shm at job exit time.
 
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
-
 The following macros control if the *condor_startd* daemon should create a
 custom filesystem for the job's scratch directory. This allows HTCondor to
 prevent the job from using more scratch space than provisioned.

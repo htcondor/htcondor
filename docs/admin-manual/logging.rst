@@ -320,6 +320,3 @@ Directories use by the Execute Role
     should be set to the name of the existing large file on disk that HTCondor
     will use to make filesystems from.
 
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
-
