@@ -130,6 +130,8 @@ _py_dprintf( PyObject *, PyObject * args ) {
 
 static PyObject *
 _send_command( PyObject *, PyObject * args ) {
+	// _send_command(ad._handle, daemon_type, daemon_command, target)
+
 	daemon_t daemonType = DT_NONE;
 	long command = -1;
 	const char * target = NULL;
@@ -197,6 +199,34 @@ _send_command( PyObject *, PyObject * args ) {
 	}
 
 	sock.close();
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_send_alive( PyObject *, PyObject * args ) {
+	// _send_alive( addr, pid, timeout )
+
+	const char * addr = NULL;
+	long pid = -1;
+	long timeout = -1;
+
+	if(! PyArg_ParseTuple( args, "sll", & addr, & pid, & timeout )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+
+	auto * daemon = new Daemon( DT_ANY, addr );
+	auto * message = new ChildAliveMsg( pid, timeout, 0, 0, true );
+	daemon->sendBlockingMsg(message);
+	if( message->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString( PyExc_IOError, "Failed to deliver keepalive message." );
+		return NULL;
+	}
+
 
 	Py_RETURN_NONE;
 }

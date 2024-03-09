@@ -40,6 +40,7 @@ with _add_dll_dir():
     from .htcondor2_impl import _reload_config as reload_config
 
     from ._loose_functions import send_command
+    from ._loose_functions import send_alive
 
     from .htcondor2_impl import _enable_debug as enable_debug
     from .htcondor2_impl import _enable_log as enable_log

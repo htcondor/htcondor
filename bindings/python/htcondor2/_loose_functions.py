@@ -7,7 +7,13 @@ from ._common_imports import (
 from ._ad_type import AdType
 from ._daemon_type import DaemonType
 from ._daemon_command import DaemonCommand
+
 from .htcondor2_impl import _send_command
+from .htcondor2_impl import _send_alive
+
+import os
+import htcondor2
+
 
 def _daemon_type_from_ad_type(ad_type: AdType):
     map = {
@@ -53,3 +59,38 @@ def send_command(ad : classad.ClassAd, dc : DaemonCommand, target : Optional[str
 
     _send_command(ad._handle, daemon_type, dc, target)
 
+
+def send_alive(
+    ad : classad.ClassAd = None,
+    pid : int = None,
+    timeout : int = None
+) -> None:
+    if pid is None:
+        pid = os.getpid()
+    if not isinstance(pid, int):
+        raise TypeError("pid must be integer")
+
+    if timeout is None:
+        timeout = htcondor2.param['NOT_RESPONDING_TIMEOUT']
+    if not isinstance(timeout, int):
+        raise TypeError("timeout must be integer")
+
+    if ad is not None:
+        if not isinstance(ad, classad.ClassAd):
+            raise TypeError("ad must be ClassAd")
+        addr = ad.get('MyAddress')
+        if addr is None:
+            # This was HTCondorValueError in version 1.
+            raise ValueError('Address not available in location ClassAd.')
+    else:
+        inherit = os.environ.get('CONDOR_INHERIT')
+        if inherit is None:
+            # This was HTCondorValueError in version 1.
+            raise ValueError('No location specified and CONDOR_INHERIT not in environment.')
+
+        try:
+            (ppid, addr) = inherit.split(' ')[0:2]
+        except:
+            raise ValueError('No location specified and CONDOR_INHERIT is malformed.')
+
+    _send_alive( addr, pid, timeout )

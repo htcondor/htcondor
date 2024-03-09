@@ -93,6 +93,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	)C0ND0R"},
 
 	{"_send_command", & _send_command, METH_VARARGS, NULL},
+	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
 
 	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
 
