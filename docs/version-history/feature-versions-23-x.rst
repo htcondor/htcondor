@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- Updated :tool:`get_htcondor` to allow the aliases ``lts`` for **stable**
+  and ``feature`` for **current** when passed to the *--channel* option.
+  :jira:`775`
+
 - Allow the startd to force a job that doesn't ask to run inside a
   docker or apptainer container inside one with new parameters
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`

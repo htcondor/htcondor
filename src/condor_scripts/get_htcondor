@@ -793,10 +793,10 @@ while [ $# -gt 0 ]; do
 			;;
 		--channel)
 			case $2 in
-				stable)
+				stable|lts)
 					CHANNEL="stable"
 					;;
-				current|latest|developer)
+				current|latest|developer|feature)
 					CHANNEL="current"
 					;;
 				*-rc)
