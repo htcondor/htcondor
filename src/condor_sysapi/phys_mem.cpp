@@ -38,7 +38,6 @@ int64_t file_size_contents(const char *filename) {
 	if (f != nullptr) {
 		std::ignore = fscanf(f, "%zd", &s);
 		fclose(f);
-		return s;
 	}
 
 	// Some cgroup set memory max as 2 ^ 63 to 
