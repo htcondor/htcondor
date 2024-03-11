@@ -6512,7 +6512,7 @@ win32_default=$(LIBEXEC)\condor_gpu_utilization.exe
 description=Settings to monitor GPU usage
 default : @end
 	use feature : Monitor( GPUs, WaitForExit, 300, $(GPU_MONITOR), SUM:GPUs, PEAK:GPUsMemory )
-	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0
+	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0 && OpSys =!= "WINDOWS"
 
 	STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end
