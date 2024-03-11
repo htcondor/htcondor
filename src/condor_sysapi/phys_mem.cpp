@@ -33,7 +33,7 @@
 // return the 64 bit int or 0 if it is a string.
 int64_t file_size_contents(const char *filename) {
 	int64_t s = 0;
-	FILE *f = fopen(filename, "r");
+	FILE *f = safe_fopen_wrapper_follow(filename, "r");
 
 	if (f != nullptr) {
 		std::ignore = fscanf(f, "%zd", &s);
@@ -51,7 +51,7 @@ int64_t file_size_contents(const char *filename) {
 int64_t cgroup_current_memory_limit() {
 	// Note all these files should be readable
 	// by self without boosting privileges.
-	FILE *f = fopen("/proc/self/cgroup", "r");
+	FILE *f = safe_fopen_wrapper_follow("/proc/self/cgroup", "r");
 	if (f == nullptr) {
 		return 0;
 	}
