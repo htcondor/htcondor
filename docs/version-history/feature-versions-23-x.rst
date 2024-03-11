@@ -26,6 +26,15 @@ New Features:
   disk.
   :jira:`2333`
 
+- Add htcondor job out|err|log verbs to the :tool:`htcondor` cli tool.
+  :jira:`2182`
+
+- The startd now honors the environment variable OMP_NUM_THREADS
+  when setting the number of cores available.  This allows 
+  glideins to pass an allocated number of cores from a base batch
+  system to the glidein easily.
+  :jira:`727`
+
 - Added new job ad attribute :ad-attr:`JobSubmitFile` which contains
   the filename of the submit file, if any.
   :jira:`2319`
@@ -168,6 +177,11 @@ Bugs Fixed:
 - In rare cases, the values of TimeSlotBusy and TimeExecute would be incorrect in the
   job event log when the job was disconnected or did not start properly.
   :jira:`2265`
+
+- Fixed a bug that can cause the condor_gridmanager to abort when multiple
+  grid universe jobs share the same proxy file to be used to authenticate
+  with the remote job scheduling service.
+  :jira:`2334`
 
 Version 23.4.0
 --------------

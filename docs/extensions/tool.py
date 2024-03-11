@@ -31,7 +31,8 @@ def tool_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     original_name, program_index = custom_ext_parser(text)
     program_name = original_name if original_name[:8] != "htcondor" else "htcondor"
     if program_name not in TOOLS:
-        warn(f"Referenced tool '{program_name}' has no corresponding man page. Typo perhaps?")
+        docname = inliner.document.settings.env.docname
+        warn(f"{docname} @ {lineno} | Referenced tool '{program_name}' has no corresponding man page. Typo perhaps?")
     ref_link = f"href=\"{root_dir}/man-pages/{program_name}.html\""
     return make_ref_and_index_nodes(name, original_name, program_index,
                                     ref_link, rawtext, inliner, lineno, options)

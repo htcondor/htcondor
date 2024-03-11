@@ -119,7 +119,6 @@ additionally following metrics will be recorded:
           NextUpdate = 1399674141;
         ]
 
-:index:`NODE_STATUS_FILE command<single: DAG Commands; NODE_STATUS_FILE command>`
 :index:`node status file<single: DAGMan; Node status file>`
 
 .. _node-status-file:
@@ -190,7 +189,6 @@ node **G**'s *ancestors* are nodes **A**, **B**, **D**, and **F**.
     A *NODE_STATUS_FILE* command inside any splice is ignored, and if multiple
     DAG files are specified then the first specification takes precedence.
 
-:index:`JOBSTATE_LOG command<single: DAG Commands; JOBSTATE_LOG command>`
 :index:`machine-readable event history<single: DAGMan; Machine-readable event history>`
 
 .. _DAGMan Machine Readable History:

@@ -50,6 +50,7 @@ def dump(obj):
         print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
 def classad_attr_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    docname = inliner.document.settings.env.docname
     root_dir = get_rel_path_to_root_dir(inliner)[:-1]
     attr_name, attr_info = custom_ext_parser(text)
     details = extra_info_parser(attr_info) if attr_info != "" else None
@@ -59,12 +60,12 @@ def classad_attr_role(name, rawtext, text, lineno, inliner, options={}, content=
     filename = AD_TYPE_FILES.get(ad_type) if ad_type in AD_TYPE_FILES else None
 
     if attr_name not in ATTRIBUTE_FILES:
-        warn(f"ClassAd Attribute '{attr_name}' not defined in any ClassAd Documentation files")
+        warn(f"{docname} @ {lineno} | ClassAd Attribute '{attr_name}' not defined in any ClassAd Documentation files")
         filename = "classad-types.html"
     elif filename is None:
         filename = ATTRIBUTE_FILES[attr_name][0]
         if len(ATTRIBUTE_FILES[attr_name]) > 1:
-            warn(f"ClassAd Attribute '{attr_name}' is defined in multiple files. Defaulting to {filename}")
+            warn(f"{docname} @ {lineno} | ClassAd Attribute '{attr_name}' is defined in multiple files. Defaulting to {filename}")
 
     ref_link = f"href=\"{root_dir}/classad-attributes/{filename}#{attr_name}\""
     return make_ref_and_index_nodes(name, attr_name, attr_index,
