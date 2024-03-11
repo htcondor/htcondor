@@ -22,6 +22,9 @@ New Features:
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
 
+- Add htcondor job out|err|log verbs to the :tool:`htcondor` cli tool.
+  :jira:`2182`
+
 - The startd now honors the environment variable OMP_NUM_THREADS
   when setting the number of cores available.  This allows 
   glideins to pass an allocated number of cores from a base batch
