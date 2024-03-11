@@ -510,7 +510,7 @@ MultiLogFiles::CombineLines(const std::string &dataIn, char continuation,
 	// continuation characters (backslash).
 	std::string logicalLine;
 
-	for (const auto& physicalLine : StringTokenIterator(dataIn, "\r\n")) {
+	for (const auto& physicalLine : StringTokenIterator(dataIn, "\r\n", false)) {
 
 		logicalLine += physicalLine;
 

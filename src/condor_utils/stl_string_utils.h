@@ -147,10 +147,10 @@ void randomlyGenerateShortLivedPassword(std::string &str, int len);
 // unchanged during iteration.  This is trivial for string literals, of course.
 class StringTokenIterator {
 public:
-	StringTokenIterator(const char *s = NULL, const char *delim = ", \t\r\n", bool trim = false) : str(s), delims(delim), len(std::string::npos), ixNext(0), pastEnd(false), m_trim(trim) { };
-	StringTokenIterator(const char *s, size_t l, const char *delim = ", \t\r\n", bool trim = false) : str(s), delims(delim), len(l), ixNext(0), pastEnd(false), m_trim(trim) { };
-	StringTokenIterator(std::string_view s, const char *delim = ", \t\r\n", bool trim = false) : str(s.data()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
-	StringTokenIterator(const std::string & s, const char *delim = ", \t\r\n", bool trim = false) : str(s.c_str()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(const char *s = NULL, const char *delim = ", \t\r\n", bool trim = true) : str(s), delims(delim), len(std::string::npos), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(const char *s, size_t l, const char *delim = ", \t\r\n", bool trim = true) : str(s), delims(delim), len(l), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(std::string_view s, const char *delim = ", \t\r\n", bool trim = true) : str(s.data()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(const std::string & s, const char *delim = ", \t\r\n", bool trim = true) : str(s.c_str()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
 
 	void rewind() { ixNext = 0; pastEnd = false;}
 	const char * next() { const std::string * s = next_string(); return s ? s->c_str() : NULL; }
