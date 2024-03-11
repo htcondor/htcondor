@@ -1303,6 +1303,14 @@ void AddReferencedAttribsToBuffer(
 			continue;
 		std::string label;
 		formatstr(label, raw_values ? "%s%s = %%r" : "%s%s = %%V", pindent, it->c_str());
+
+		// Gross empiricism
+		if (*it == "RequestDisk") {
+			label += " (kb)";
+		}
+		if (*it == "RequestMemory") {
+			label += " (mb)";
+		}
 		pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, it->c_str());
 	}
 	if ( ! pm.IsEmpty()) {
@@ -1327,6 +1335,13 @@ void AddReferencedAttribsToBuffer(
 		std::string label;
 		formatstr(label, raw_values ? "%sTARGET.%s = %%r" : "%sTARGET.%s = %%V", pindent, it->c_str());
 		if (target->LookupExpr(*it)) {
+			// Gross empiricism
+			if (*it == ATTR_DISK) {
+				label += " (kb)";
+			}
+			if (*it == ATTR_MEMORY) {
+				label += " (mb)";
+			}
 			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, it->c_str());
 		}
 	}

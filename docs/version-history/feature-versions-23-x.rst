@@ -22,6 +22,10 @@ New Features:
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
 
+- :subcom:`condor_q` -better now emits the units for memory and
+  disk.
+  :jira:`2333`
+
 - Add htcondor job out|err|log verbs to the :tool:`htcondor` cli tool.
   :jira:`2182`
 
