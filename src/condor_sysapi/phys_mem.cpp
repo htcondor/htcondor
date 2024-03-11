@@ -24,21 +24,91 @@
 #include "sysapi_externs.h"
  
 #if defined(LINUX)
-#include <stdio.h>
+#include <cstdio>
+#include <algorithm>
+
+
+// Assuming a cgroup-style file with an integer
+// or a string that we don't care about in it,
+// return the 64 bit int or 0 if it is a string.
+int64_t file_size_contents(const char *filename) {
+	int64_t s = 0;
+	FILE *f = fopen(filename, "r");
+
+	if (f != nullptr) {
+		std::ignore = fscanf(f, "%zd", &s);
+		fclose(f);
+		return s;
+	}
+
+	// Some cgroup set memory max as 2 ^ 63 to 
+	// indicate infinity.  Set to zero
+	if (s > (1ll << 60)) {
+		s = 0;
+	}
+	return s;
+}
+
+int64_t cgroup_current_memory_limit() {
+	// Note all these files should be readable
+	// by self without boosting privileges.
+	FILE *f = fopen("/proc/self/cgroup", "r");
+	if (f == nullptr) {
+		return 0;
+	}
+
+	char line[512];
+	while (fgets(line, 511, f) != nullptr) {
+		std::string l = line;
+		size_t first_colon = l.find_first_of(':');
+		size_t second_colon = l.find_first_of(':', first_colon + 1);
+		if (first_colon == (second_colon - 1)) {
+			// cgroup v2
+			int64_t s = 0;
+			std::string cgroup = l.substr(second_colon + 1, l.size() - second_colon - 2);
+			std::string cgroup_hi = std::string("/sys/fs/cgroup/") + cgroup + "/memory.high";
+			s = file_size_contents(cgroup_hi.c_str());
+			if (s == 0) {
+				std::string cgroup_max = std::string("/sys/fs/cgroup/") + cgroup + "/memory.max";
+				s = file_size_contents(cgroup_max.c_str());
+			}
+			fclose(f);
+			return s;
+		} 
+
+		std::string controller = l.substr(first_colon + 1, second_colon - first_colon - 1 );
+		// cgroup v1
+		if (controller == "memory") {
+			int64_t s = 0;
+			std::string cgroup = l.substr(second_colon + 1, l.size() - second_colon - 2);
+			std::string cgroup_limit = std::string("/sys/fs/cgroup/memory/") + cgroup + "/memory.limit_in_bytes";
+			s = file_size_contents(cgroup_limit.c_str());
+			fclose(f);
+			return s;
+		}
+	}
+	fclose(f);
+	return 0;
+}
 
 int 
 sysapi_phys_memory_raw_no_param(void) 
 {	
 
-	double bytes;
-	double megs;
+	int64_t bytes = 0;
+	int64_t  megs = 0;
 
 	/* in bytes */
 	bytes = 
-		(double)sysconf(_SC_PHYS_PAGES) * (double)sysconf(_SC_PAGESIZE);
+		(int64_t) sysconf(_SC_PHYS_PAGES) * (int64_t) sysconf(_SC_PAGESIZE);
 
+	int64_t cgroup_limit = cgroup_current_memory_limit();
+	if (cgroup_limit > 0) {
+		// If the limit is higher than detected memory, clamp to detected
+		bytes = std::min(bytes, cgroup_limit);
+	}
 	/* convert it to Megabytes */
-	megs = bytes / (1024.0*1024.0);
+	megs = bytes / (1024ll * 1024ll);
 
 	if (megs > INT_MAX) {
 		return INT_MAX;

@@ -31,6 +31,11 @@ New Features:
   system to the glidein easily.
   :jira:`727`
 
+- If the EP is started under another batch system that limits the amount
+  of memory to the EP via a cgroup limit, the startd now advertises
+  this much memory available for jobs.
+  :jira:`727`
+
 - Added new job ad attribute :ad-attr:`JobSubmitFile` which contains
   the filename of the submit file, if any.
   :jira:`2319`
