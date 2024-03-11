@@ -57,6 +57,9 @@ New Features:
   Python 3.13 uses this override the detected count of cpu cores.
   :jira:`2330`
 
+- Added -file option to :tool:`condor_token_list`
+  :jira:`575`
+
 - The configuration parameter :macro:`ETC` can now be used to relocate
   files that are normally place under /etc/condor on unix platforms.
   :jira:`2290`
