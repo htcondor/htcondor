@@ -222,7 +222,6 @@ class Log(Verb):
 
     def __init__(self, logger, job_id, **options):
         job = None
-        job_status = "IDLE"
 
         job = get_job_ad(logger, job_id, options)
         log_file = job[0].get("UserLog","")
@@ -249,7 +248,6 @@ class Out(Verb):
 
     def __init__(self, logger, job_id, **options):
         job = None
-        job_status = "IDLE"
 
         job = get_job_ad(logger, job_id, options)
         out_file = job[0].get("Out","")
@@ -280,7 +278,6 @@ class Err(Verb):
 
     def __init__(self, logger, job_id, **options):
         job = None
-        job_status = "IDLE"
 
         job = get_job_ad(logger, job_id, options)
         err_file = job[0].get("Err","")

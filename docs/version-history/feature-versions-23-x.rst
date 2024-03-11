@@ -22,7 +22,7 @@ New Features:
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
 
-- Add htcondor job out|err|log verbs to the htcondor cli tool.
+- Add htcondor job out|err|log verbs to the :tool:`htcondor` cli tool.
   :jira:`2182`
 
 - The startd now honors the environment variable OMP_NUM_THREADS
