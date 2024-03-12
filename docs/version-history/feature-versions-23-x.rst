@@ -22,6 +22,10 @@ New Features:
   further debugging.
   :jira:`1896`
 
+- A local universe job can now specify a container image, and it will run
+  with that singularity or apptainer container runtime.
+  :jira:`2180`
+
 Bugs Fixed:
 
 - None.
