@@ -15,6 +15,30 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23010
+
+Version 23.0.10
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.0.10 released on Month Date, 2024.
+
+- HTCondor version 23.0.10 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
+  named "scitokens:2.0" (note plural).  The reference python scitoken implementation
+  uses the singular.  The C++ scitokens implementation incorrectly used the plural up to
+  version 0.6.0.  The old name can be restored with the config knob 
+  :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
+  :jira:`2285`
+
 .. _lts-version-history-2308:
 
 Version 23.0.8
