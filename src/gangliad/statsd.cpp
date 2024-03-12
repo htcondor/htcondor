@@ -650,7 +650,7 @@ StatsD::initAndReconfig(char const *service_name)
 	if( !config_dir.empty() ) {
 		std::vector<std::string> file_list;
 		if( !get_config_dir_file_list( config_dir.c_str(), file_list ) ) {
-			EXCEPT("Failed to read metric configuration from %s\n",config_dir.c_str());
+			EXCEPT("Failed to read metric configuration from %s",config_dir.c_str());
 		}
 
 		for (auto& fname: file_list) {
@@ -716,7 +716,7 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		}
 
 		if( failed ) {
-			EXCEPT("CONFIGURATION ERROR: error in metrics defined in %s: %s, for entry starting here: %.80s\n",
+			EXCEPT("CONFIGURATION ERROR: error in metrics defined in %s: %s, for entry starting here: %.80s",
 				   param_name,error_msg.c_str(),stats_metrics_string.c_str() + this_offset);
 		}
 
@@ -740,7 +740,7 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 			classad::ClassAdUnParser unparser;
 			std::string ad_str;
 			unparser.Unparse(ad_str,ad);
-			EXCEPT("CONFIGURATION ERROR: no target type specified for metric defined in %s: %s\n",
+			EXCEPT("CONFIGURATION ERROR: no target type specified for metric defined in %s: %s",
 				   param_name,
 				   ad_str.c_str());
 		}

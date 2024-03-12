@@ -711,7 +711,7 @@ DagmanUtils::RenameRescueDagsAfter(const std::string& primaryDagFile, bool multi
 		// Unlink here to be safe on Windows.
 		tolerant_unlink(newName);
 		if (rename(rescueDagName.c_str(), newName.c_str()) != 0) {
-			EXCEPT("Fatal error: unable to rename old rescue file %s: error %d (%s)\n",
+			EXCEPT("Fatal error: unable to rename old rescue file %s: error %d (%s)",
 			       rescueDagName.c_str(), errno, strerror(errno));
 		}
 	}

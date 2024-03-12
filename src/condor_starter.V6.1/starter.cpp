@@ -2465,7 +2465,7 @@ Starter::SpawnJob( void )
 			job = new ParallelProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_MPI: {
-			EXCEPT("MPI Universe is no longer supported\n");
+			EXCEPT("MPI Universe is no longer supported");
 			break;
 		}
 		case CONDOR_UNIVERSE_VM:
