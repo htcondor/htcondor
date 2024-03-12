@@ -32,6 +32,7 @@ extensions = [
     'sphinx_autodoc_typehints',
     'nbsphinx',
     'ticket',
+    'config-template',
     'macro',
     'macro-def',
     'subcom',
