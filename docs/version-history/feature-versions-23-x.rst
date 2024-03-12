@@ -48,7 +48,7 @@ New Features:
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
 
-- :subcom:`condor_q` -better now emits the units for memory and
+- :tool:`condor_q` -better now emits the units for memory and
   disk.
   :jira:`2333`
 

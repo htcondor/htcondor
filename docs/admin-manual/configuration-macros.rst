@@ -9292,6 +9292,7 @@ Configuration File Entries Relating to Security
 These macros affect the secure operation of HTCondor. Many of these
 macros are described in the :doc:`/admin-manual/security` section.
 
+:macro-def:`SEC_DEFAULT_AUTHENTICATION[SECURITY]`
 :macro-def:`SEC_*_AUTHENTICATION[SECURITY]`
     Whether authentication is required for a specified permission level.
     Acceptable values are ``REQUIRED``, ``PREFERRED``, ``OPTIONAL``, and
@@ -9301,6 +9302,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``SEC_DEFAULT_AUTHENTICATION``, controls the default setting if no
     others are specified.
 
+:macro-def:`SEC_DEFAULT_ENCRYPTION[SECURITY]`
 :macro-def:`SEC_*_ENCRYPTION[SECURITY]`
     Whether encryption is required for a specified permission level.
     Encryption prevents another entity on the same network from understanding
@@ -9312,6 +9314,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``SEC_DEFAULT_ENCRYPTION``, controls the default setting if no
     others are specified.
 
+:macro-def:`SEC_DEFAULT_INTEGRITY[SECURITY]`
 :macro-def:`SEC_*_INTEGRITY[SECURITY]`
     Whether integrity-checking is required for a specified permission level.
     Integrity checking allows the client and server to detect changes
@@ -9326,6 +9329,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     As a special exception, file transfers are not integrity checked unless
     they are also encrypted.
 
+:macro-def:`SEC_DEFAULT_NEGOTIATION[SECURITY]`
 :macro-def:`SEC_*_NEGOTIATION[SECURITY]`
     Whether the client and server should negotiate security parameters (such
     as encryption, integrity, and authentication) for a given authorization
@@ -9334,6 +9338,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     There is very little penalty for security negotiation and it is strongly
     suggested to leave this as the default (``REQUIRED``) at all times.
 
+:macro-def:`SEC_DEFAULT_AUTHENTICATION_METHODS[SECURITY]`
 :macro-def:`SEC_*_AUTHENTICATION_METHODS[SECURITY]`
     An ordered list of allowed authentication methods for a given authorization
     level.  This set of configuration variables controls both the ordering and
@@ -9352,6 +9357,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     The special value, ``SEC_DEFAULT_AUTHENTICATION_METHODS``, controls the
     default setting if no others are specified.
 
+:macro-def:`SEC_DEFAULT_CRYPTO_METHODS[SECURITY]`
 :macro-def:`SEC_*_CRYPTO_METHODS[SECURITY]`
     An ordered list of allowed cryptographic algorithms to use for
     encrypting a network session at a specified authorization level.
@@ -9825,6 +9831,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     When this parameter is enabled for all daemons, control of who is
     allowed to administer the pool can be consolidated in the
     **condor_collector** and its security configuration.
+
+:macro-def:`KERBEROS_MAP_FILE[SECURITY]`
+    A path to a file that contains ' = ' seperated keys and values,
+    one per line.  The key is the kerberos realm, and the value
+    is the HTCondor uid domain.
 
 :macro-def:`KERBEROS_SERVER_KEYTAB[SECURITY]`
     The path and file name of the keytab file that holds the necessary
