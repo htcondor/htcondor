@@ -4,6 +4,25 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.7.1
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.7.1 released on Month Date, 2024.
+
+- HTCondor version 23.7.1 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-2308`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 23.6.1
 --------------
 
@@ -52,6 +71,12 @@ New Features:
   now sets the hostname inside the container to the same as the host,
   to ease networking from inside the container to outside the container.
   :jira:`2294`
+
+- For vanilla universe jobs not running under container universe, that
+  manually start apptainer or singularity, the environment variables
+  APPTAINER_CACHEDIR and SINGULARITY_CACHEDIR are now set to the scratch
+  directory to insure any files they create are cleaned up on job exit.
+  :jira:`2337`
 
 - :tool:`condor_submit` with the -i (interactive) flag, and also run
   with a submit file, now transfers the executable to the interactive job.

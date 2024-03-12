@@ -3364,6 +3364,9 @@ Starter::PublishToEnv( Env* proc_env )
 	env_name += "SCRATCH_DIR";
 	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(true) );
 
+	    // Apptainer/Singlarity scratch dir
+	proc_env->SetEnv("APPTAINER_CACHEDIR", GetWorkingDir(true));
+	proc_env->SetEnv("SINGULARITY_CACHEDIR", GetWorkingDir(true));
 		// slot identifier
 	env_name = base;
 	env_name += "SLOT";
