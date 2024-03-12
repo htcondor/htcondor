@@ -13,6 +13,9 @@ Synopsis
 
 | **htcondor** **job** *submit* [**-\-resource** *resource-type*] [**-\-runtime** *time-seconds*] [**-\-email** *email-address*] submit_file
 | **htcondor** **job** *status* [**-\-resource** *resource-type*] [**-\-skip-history**] job_id
+| **htcondor** **job** *out* [**-\-resource** *resource-type*] [**-\-skip-history**] job_id
+| **htcondor** **job** *error* [**-\-resource** *resource-type*] [**-\-skip-history**] job_id
+| **htcondor** **job** *log* [**-\-resource** *resource-type*] [**-\-skip-history**] job_id
 | **htcondor** **job** *resources* [**-\-resource** *resource-type*] [**-\-skip-history**] job_id
 
 | **htcondor** **jobset** *submit* description-file
@@ -29,9 +32,11 @@ Synopsis
 Description
 -----------
 
-*htcondor* is a tool for managing HTCondor jobs, job sets, resources, event logs, and
-DAGs.  It can replace *condor_submit*, *condor_submit_dag*, *condor_q*,
-*condor_status*, and *condor_userlog*, as well as all-new functionality and features.  The user interface is more consistent than its predecessor tools.
+*htcondor* is a tool for managing HTCondor jobs, job sets, resources, event
+logs, and DAGs.  It can replace *condor_submit*, *condor_submit_dag*,
+*condor_q*, *condor_status*, and *condor_userlog*, as well as all-new
+functionality and features.  The user interface is more consistent than its
+predecessor tools.
 
 The first argument of the *htcondor* command (ignoring any global options) is
 the *noun* representing an object in the HTCondor system to be operated on.
@@ -87,6 +92,23 @@ Job Verbs
 
         Passed to the *status* verb to skip checking history
         if job not found in the active job queue.
+
+ **htcondor job out**
+     Takes as an argument a job id in the form of clusterid.procid,
+     and prints out the contents of that job's standard output
+     file, assuming that it exists on the AP.
+
+ **htcondor job err**
+     Takes as an argument a job id in the form of clusterid.procid,
+     and prints out the contents of that job's standard error
+     file, assuming that it exists on the AP.
+
+ **htcondor job log**
+     Takes as an argument a job id in the form of clusterid.procid,
+     and prints out the contents of that job's event log 
+     file.  If the job shared an event log file with other jobs,
+     the complete event log file will be printed, which may contain
+     events for other jobs.
 
  **htcondor job resources**
      Takes as an argument a job id in the form of clusterid.procid,

@@ -46,3 +46,4 @@ input for job ``B``. This can be described as a DAGMan workflow as follows:
    dagman-using-other-dags
    dagman-advance-functionality
    dagman-information-files
+   dagman-reference

@@ -84,7 +84,8 @@ def macro_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     # Handle reference to normal configuration knob
     else:
         if macro_name not in CONFIG_KNOBS:
-            warn(f"Config knob '{macro_name}' not found in defined list. Either a typo or knob needs definition.")
+            docname = inliner.document.settings.env.docname
+            warn(f"{docname} @ {lineno} | Config knob '{macro_name}' not found in defined list. Either a typo or knob needs definition.")
         ref_link = f"href=\"{root_dir}/admin-manual/{CONFIG_FILE}.html#" + str(macro_name) + "\""
     return make_ref_and_index_nodes(name, macro_name, macro_index,
                                     ref_link, rawtext, inliner, lineno, options)

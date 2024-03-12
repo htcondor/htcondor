@@ -3628,9 +3628,6 @@ section.
     to make /dev/shm on Linux private to each job.  When private, the
     starter removes any files from the private /dev/shm at job exit time.
 
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
-
 The following macros control if the *condor_startd* daemon should create a
 custom filesystem for the job's scratch directory. This allows HTCondor to
 prevent the job from using more scratch space than provisioned.
@@ -8425,13 +8422,23 @@ These macros affect the *condor_job_router* daemon.
     ClassAd to a pre-claimed state upon yielding control of the job.
 
 :macro-def:`JOB_ROUTER_SCHEDD1_SPOOL[JOB ROUTER]`
+    DEPRECATED.  Please use
+    :macro:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG` instead.
     The path to the spool directory for the *condor_schedd* serving as
     the source of jobs for routing. If not specified, this defaults to
     ``$(SPOOL)``. If specified, this parameter must point to the spool
     directory of the *condor_schedd* identified by
     :macro:`JOB_ROUTER_SCHEDD1_NAME`.
 
+:macro-def:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG[JOB ROUTER]`
+    The path to the job_queue.log file for the *condor_schedd*
+    serving as the source of jobs for routing.  If specified,
+    this must point to the job_queue.log file of the *condor_schedd*
+    identified by :macro:`JOB_ROUTER_SCHEDD1_NAME`.
+
 :macro-def:`JOB_ROUTER_SCHEDD2_SPOOL[JOB ROUTER]`
+    DEPRECATED.  Please use
+    :macro:`JOB_ROUTER_SCHEDD2_JOB_QUEUE_LOG` instead.
     The path to the spool directory for the *condor_schedd* to which
     the routed copy of the jobs are submitted. If not specified, this
     defaults to ``$(SPOOL)``. If specified, this parameter must point to
@@ -8443,6 +8450,12 @@ These macros affect the *condor_job_router* daemon.
     owners of the routed jobs. It is therefore usually necessary to
     configure :macro:`QUEUE_SUPER_USER_MAY_IMPERSONATE` in the configuration
     of the target *condor_schedd*.
+
+:macro-def:`JOB_ROUTER_SCHEDD2_JOB_QUEUE_LOG[JOB ROUTER]`
+    The path to the job_queue.log file for the *condor_schedd*
+    serving as the destination of jobs for routing.  If specified,
+    this must point to the job_queue.log file of the *condor_schedd*
+    identified by :macro:`JOB_ROUTER_SCHEDD2_NAME`.
 
 :macro-def:`JOB_ROUTER_SCHEDD1_NAME[JOB ROUTER]`
     The advertised daemon name of the *condor_schedd* serving as the

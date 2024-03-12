@@ -8,8 +8,9 @@ from docutils.parsers.rst import Directive
 from sphinx import addnodes
 from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
-from htc_helpers import make_headerlink_node
+from htc_helpers import make_headerlink_node, warn
 
+ATTRIBUTE_DEFS = {}
 
 def make_anchor_title_node(attribute_name):
     html_parser = html.parser.HTMLParser()
@@ -19,6 +20,7 @@ def make_anchor_title_node(attribute_name):
 
 
 def classad_attribute_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    global ATTRIBUTE_DEFS
     app = inliner.document.settings.env.app
     docname = inliner.document.settings.env.docname
 
@@ -33,6 +35,15 @@ def classad_attribute_def_role(name, rawtext, text, lineno, inliner, options={},
     type_matches = re.findall(r"/([-\w]*)-classad-attributes", docname)
     for match in type_matches:
         attr_type = match.capitalize() + " "
+
+    if text in ATTRIBUTE_DEFS.get(attr_type, []):
+        warn(f"{docname} @ {lineno} | {attr_type} ClassAd attribute '{text}' already defined")
+        textnode = nodes.Text(text, " ")
+        return [textnode], []
+    elif attr_type in ATTRIBUTE_DEFS:
+        ATTRIBUTE_DEFS[attr_type].append(text)
+    else:
+        ATTRIBUTE_DEFS.update({attr_type : [text]})
 
     # Automatically include an index entry for this attribute
     index_node = addnodes.index()
