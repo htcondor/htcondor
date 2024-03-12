@@ -1342,6 +1342,10 @@ BaseShadow::log_except(const char *msg)
 		event.began_execution = TRUE;
 	}
 
+	std::string msg_in_job = msg;
+	std::replace(msg_in_job.begin(), msg_in_job.end(), '\n', '_'); // just in case
+	Shadow->getJobAd()->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, msg_in_job);
+	Shadow->updateJobInQueue(U_STATUS);
 	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,shadow->jobAd))
 	{
 		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", msg);

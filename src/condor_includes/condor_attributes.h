@@ -331,6 +331,7 @@
 #define ATTR_JOB_ALLOWED_JOB_DURATION  "AllowedJobDuration"
 #define ATTR_JOB_ALLOWED_EXECUTE_DURATION "AllowedExecuteDuration"
 #define ATTR_JOB_EPOCH_WRITE_DATE "EpochWriteDate"
+#define ATTR_JOB_LAST_SHADOW_EXCEPTION    "LastShadowException"
 #define ATTR_JOB_MATERIALIZE_DIGEST_FILE  "JobMaterializeDigestFile"
 #define ATTR_JOB_MATERIALIZE_ITEMS_FILE   "JobMaterializeItemsFile"
 #define ATTR_JOB_MATERIALIZE_LIMIT        "JobMaterializeLimit"
