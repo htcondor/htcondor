@@ -21,6 +21,41 @@ from htcondor_cli.utils import readable_time, readable_size, s
 
 JSM_HTC_JOB_SUBMIT = 3
 
+def get_job_ad(logger, job_id, options):
+    # Split job id into cluster and proc
+    if "." in job_id:
+        cluster_id, proc_id = [int(i) for i in job_id.split(".")][:2]
+    else:
+        cluster_id = int(job_id)
+        proc_id = 0
+
+    # Get schedd
+    schedd = htcondor.Schedd()
+
+    # Query schedd
+    constraint = f"ClusterId == {cluster_id} && ProcId == {proc_id}"
+    projection = ["JobStartDate", "JobStatus", "QDate", "CompletionDate", "EnteredCurrentStatus",
+                "RequestMemory", "MemoryUsage", "RequestDisk", "DiskUsage", "HoldReason",
+                "ResourceType", "TargetAnnexName", "NumShadowStarts", "NumJobStarts", "NumHolds",
+                "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime",
+                "RemoteWallClockTime", "Iwd", "Out", "Err", "UserLog"]
+    try:
+        job = schedd.query(constraint=constraint, projection=projection, limit=1)
+    except IndexError:
+        raise RuntimeError(f"No job found for ID {job_id}.")
+    except Exception as e:
+        raise RuntimeError(f"Error looking up job status: {str(e)}")
+
+    # Check the history if no jobs found
+    if len(job) == 0 and not options["skip_history"]:
+        try:
+            logger.info(f"Job {job_id} was not found in the active queue, checking history...")
+            logger.info("(This may take a while, Ctrl-C to cancel.)")
+            job = list(schedd.history(constraint=constraint, projection=projection, match=1))
+        except KeyboardInterrupt:
+            logger.warning("History check cancelled.")
+            job = []
+    return job
 
 class Submit(Verb):
     """
@@ -167,6 +202,92 @@ class Submit(Verb):
                 raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
 
+class Log(Verb):
+    """
+    Shows the eventlog  of a job when given a job id
+    """
+
+    options = {
+        "job_id": {
+            "args": ("job_id",),
+            "help": "Job ID",
+        },
+        "skip_history": {
+            "args": ("--skip-history",),
+            "action": "store_true",
+            "default": False,
+            "help": "Skip checking history for log file",
+        },
+    }
+
+    def __init__(self, logger, job_id, **options):
+        job = None
+
+        job = get_job_ad(logger, job_id, options)
+        log_file = job[0].get("UserLog","")
+        with open(log_file, 'r') as f:
+            print(f.read())
+
+class Out(Verb):
+    """
+    Shows the stdout  of a job when given a job id
+    """
+
+    options = {
+        "job_id": {
+            "args": ("job_id",),
+            "help": "Job ID",
+        },
+        "skip_history": {
+            "args": ("--skip-history",),
+            "action": "store_true",
+            "default": False,
+            "help": "Skip checking history for stdout",
+        },
+    }
+
+    def __init__(self, logger, job_id, **options):
+        job = None
+
+        job = get_job_ad(logger, job_id, options)
+        out_file = job[0].get("Out","")
+        iwd      = job[0].get("Iwd","")
+
+        if (out_file[0] != '/'):
+            out_file = iwd + "/" + out_file
+        with open(out_file, 'r') as f:
+            print(f.read())
+
+class Err(Verb):
+    """
+    Shows the stderr of a job when given a job id
+    """
+
+    options = {
+        "job_id": {
+            "args": ("job_id",),
+            "help": "Job ID",
+        },
+        "skip_history": {
+            "args": ("--skip-history",),
+            "action": "store_true",
+            "default": False,
+            "help": "Skip checking history for stderr",
+        },
+    }
+
+    def __init__(self, logger, job_id, **options):
+        job = None
+
+        job = get_job_ad(logger, job_id, options)
+        err_file = job[0].get("Err","")
+        iwd      = job[0].get("Iwd","")
+
+        if (err_file[0] != '/'):
+            err_file = iwd + "/" + err_file
+        with open(err_file, 'r') as f:
+            print(f.read())
+
 class Status(Verb):
     """
     Shows current status of a job when given a job id
@@ -190,39 +311,7 @@ class Status(Verb):
         job_status = "IDLE"
         resource_type = "htcondor"
 
-        # Split job id into cluster and proc
-        if "." in job_id:
-            cluster_id, proc_id = [int(i) for i in job_id.split(".")][:2]
-        else:
-            cluster_id = int(job_id)
-            proc_id = 0
-
-        # Get schedd
-        schedd = htcondor.Schedd()
-
-        # Query schedd
-        constraint = f"ClusterId == {cluster_id} && ProcId == {proc_id}"
-        projection = ["JobStartDate", "JobStatus", "QDate", "CompletionDate", "EnteredCurrentStatus",
-                      "RequestMemory", "MemoryUsage", "RequestDisk", "DiskUsage", "HoldReason",
-                      "ResourceType", "TargetAnnexName", "NumShadowStarts", "NumJobStarts", "NumHolds",
-                      "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime",
-                      "RemoteWallClockTime"]
-        try:
-            job = schedd.query(constraint=constraint, projection=projection, limit=1)
-        except IndexError:
-            raise RuntimeError(f"No job found for ID {job_id}.")
-        except Exception as e:
-            raise RuntimeError(f"Error looking up job status: {str(e)}")
-
-        # Check the history if no jobs found
-        if len(job) == 0 and not options["skip_history"]:
-            try:
-                logger.info(f"Job {job_id} was not found in the active queue, checking history...")
-                logger.info("(This may take a while, Ctrl-C to cancel.)")
-                job = list(schedd.history(constraint=constraint, projection=projection, match=1))
-            except KeyboardInterrupt:
-                logger.warning("History check cancelled.")
-                job = []
+        job = get_job_ad(logger, job_id, options)
 
         if len(job) == 0:
             raise RuntimeError(f"No job found for ID {job_id}.")
@@ -570,9 +659,18 @@ class Job(Noun):
     class status(Status):
         pass
 
+    class out(Out):
+        pass
+
+    class err(Err):
+        pass
+
+    class log(Log):
+        pass
+
     class resources(Resources):
         pass
 
     @classmethod
     def verbs(cls):
-        return [cls.submit, cls.status, cls.resources]
+        return [cls.submit, cls.status, cls.out, cls.err, cls.log, cls.resources]

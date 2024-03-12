@@ -98,9 +98,9 @@ TEST_CONFIGS = {
 # have to be updated, but we could also attempt eight checkpoints in all cases,
 # if that would easier.
 ONE_TEST_CASES = {
-    "b": {
-        "expected_checkpoints":     ["0000", "0002"],
-        "checkpoint_count":         3,
+    "five": {
+        "expected_checkpoints":     ["0000", "0001", "0002", "0004"],
+        "checkpoint_count":         5,
     },
 }
 
@@ -280,6 +280,7 @@ def the_condor(test_dir, the_config, the_config_name):
             'JOB_EPOCH_HISTORY':                '$(LOG)/EpochLog',
             'SCHEDD_INTERVAL':                  '2',
             'SHADOW.FILE_TRANSFER_STATS_LOG':   '$(LOG)/shadow_transfer_history',
+            'SHADOW_DEBUG':                     'D_CATEGORY D_SUBSECOND D_STATUS D_TEST',
             ** the_config['config'],
         }
     ) as the_condor:
@@ -378,7 +379,13 @@ def the_completed_job_ad(the_condor, the_completed_job):
     constraint = f'ClusterID == {the_completed_job.clusterid} && ProcID == 0'
     result = schedd.query(
             constraint=constraint,
-            projection=["CheckpointDestination", "GlobalJobID", "ClusterID", "ProcID"],
+            projection=[
+                "CheckpointDestination",
+                "GlobalJobID",
+                "ClusterID",
+                "ProcID",
+                "Owner",
+            ],
     )
 
     return result[0]
@@ -557,7 +564,7 @@ class TestPartialUploads:
             return
 
         # ... and every expected checkpoint should be on disk.
-        for checkpoint in the_expected_checkpoints:
+        for checkpoint in the_expected_checkpoints[-2:]:
             path = the_target_directory / checkpoint
             assert(path.exists())
 
@@ -575,14 +582,29 @@ class TestPartialUploads:
 
     # Test (2).
     def test_p_removes_failed_checkpoints(self,
+        the_condor,
         the_config_name,
-        the_preen_directory
+        the_preen_directory,
+        the_completed_job_ad
     ):
         if the_config_name != "preen":
             pytest.skip("preen-only test")
             return
 
         assert(not the_preen_directory.exists())
+
+        # In addition to cleaning up the checkpoint destination, we should
+        # make certain that we clean up our own SPOOL directory; this test
+        # triggers a case the test_checkpoint_destination does not, so we
+        # need to check here, too.  (Where condor_preen and the schedd both
+        # try to clean up checkpoints whose MANIFEST files don't exist,
+        # causing condor_manifest to think that the clean-up failed; the
+        # tool now cleans up the .job.ad file (under checkpoint-cleanup/)
+        # and its containing directory if it's the only file in there.
+        with the_condor.use_config():
+            SPOOL = htcondor.param["SPOOL"]
+            cleanup_dir = Path(SPOOL) / "checkpoint-cleanup" / the_completed_job_ad["Owner"] / f"cluster{the_completed_job_ad['ClusterID']}.proc{the_completed_job_ad['ProcID']}.subproc0"
+            assert(not cleanup_dir.exists())
 
 
     # Test (4).

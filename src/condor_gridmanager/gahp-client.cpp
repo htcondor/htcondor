@@ -1338,7 +1338,8 @@ GahpServer::RegisterProxy( Proxy *proxy )
 
 		ProxiesByFilename[proxy->proxy_filename] = gahp_proxy;
 	} else {
-		it->second->num_references++;
+		gahp_proxy = it->second;
+		gahp_proxy->num_references++;
 	}
 
 	return gahp_proxy;

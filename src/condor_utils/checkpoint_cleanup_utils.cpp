@@ -8,6 +8,9 @@
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
+#include "dc_coroutines.h"
+#include "checkpoint_cleanup_utils.h"
+#include "stat_wrapper.h"
 
 
 bool
@@ -35,6 +38,7 @@ fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, st
 
     return true;
 }
+
 
 bool
 spawnCheckpointCleanupProcess(
@@ -148,7 +152,7 @@ spawnCheckpointCleanupProcess(
 	cleanup_process_args.push_back( buffer );
 
 
-	uid_t uid = (uid_t) -1; 
+	uid_t uid = (uid_t) -1;
 	gid_t gid = (gid_t) -1;
 	bool use_old_user_ids = user_ids_are_inited();
 	bool switch_users = param_boolean("RUN_CLEANUP_PLUGINS_AS_OWNER", true);
@@ -195,5 +199,204 @@ spawnCheckpointCleanupProcess(
 #endif /* ! defined(WINDOWS) */
 
 	dprintf( D_TEST, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
+	return true;
+}
+
+
+// This is something of a misnomer; it's actually just moving the MANIFEST
+// and/or FAILURE files.
+bool
+moveCheckpointsToCleanupDirectory(
+	int cluster, int proc, ClassAd * jobAd,
+	const std::set<long> & checkpointsToSave
+) {
+	std::string owner;
+	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
+		dprintf( D_ERROR, "moveCheckpointsToCleanupDirectory(): no owner attribute in job, not cleaning up.\n" );
+		return false;
+	}
+
+	std::string spoolPath;
+	SpooledJobFiles::getJobSpoolPath( jobAd, spoolPath );
+	std::filesystem::path spool( spoolPath );
+
+	if(! std::filesystem::exists( spool )) {
+	    // Then the job never uploaded a MANIFEST (or FAILURE) file,
+	    // and we have nothing to clean up (with).
+	    return false;
+	}
+
+	std::filesystem::path SPOOL = spool.parent_path().parent_path().parent_path();
+	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
+
+	std::error_code errCode;
+	if( std::filesystem::exists( checkpointCleanup ) ) {
+		if(! std::filesystem::is_directory( checkpointCleanup )) {
+			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", checkpointCleanup.string().c_str() );
+			return false;
+		}
+	} else {
+		TemporaryPrivSentry sentry(PRIV_CONDOR);
+		std::filesystem::create_directory( checkpointCleanup, SPOOL, errCode );
+		if( errCode ) {
+			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", checkpointCleanup.string().c_str(), errCode.value(), errCode.message().c_str() );
+			return false;
+		}
+	}
+
+
+	//
+	// In order to make the directory itself removable, we need to put it
+	// in a (permanent) directory owned by the job's owner.
+	//
+	std::filesystem::path owner_dir = checkpointCleanup / owner;
+
+	// The owner-specific directory should have the same ownership
+	// as the spool directory going into it.
+	StatWrapper sw( spool.string() );
+	auto owner_uid = sw.GetBuf()->st_uid;
+	auto owner_gid = sw.GetBuf()->st_gid;
+
+	if( std::filesystem::exists( owner_dir ) ) {
+		if(! std::filesystem::is_directory( owner_dir )) {
+			dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", owner_dir.string().c_str() );
+			return false;
+		}
+	} else {
+		// Sadly, std::filesystem doesn't handle ownership, and we can't
+		// create the directory as the user we want, either.
+		{
+			TemporaryPrivSentry sentry(PRIV_CONDOR);
+			std::filesystem::create_directory( owner_dir, spool, errCode );
+			if( errCode ) {
+				dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errCode.value(), errCode.message().c_str() );
+				return false;
+			}
+		}
+
+#if ! defined(WINDOWS)
+		{
+			TemporaryPrivSentry sentry(PRIV_ROOT);
+			// dprintf( D_STATUS | D_VERBOSE, "chown(%s, %d, %d)\n", owner_dir.string().c_str(), owner_uid, owner_gid );
+			int rv = chown( owner_dir.string().c_str(), owner_uid, owner_gid );
+			if( rv == -1 ) {
+				dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to chown() checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errno, strerror(errno) );
+				return false;
+			}
+		}
+#endif /* ! defined(WINDOWS) */
+	}
+
+
+	//
+	// Move each MANIFEST or FAILURE file not in `checkpointsToSave`
+	// from `spool` to `target_dir`.
+	//
+	// This loop is very similar to the code in pseudo_ops.cpp to
+	// decide which checkpoint(s) to keep, but it's not clear it's
+	// worth it to share code.
+	//
+	bool moved_a_manifest = false;
+	std::filesystem::path target_dir = owner_dir / spool.filename();
+
+
+	// If we assume that the SPOOL's directory's parents are all world-
+	// traversable, we can just switch IDs to the user at this point.  We
+	// don't actually enforce that assumption anywhere, but if we don't
+	// make it, we have to become root four different times in this operation,
+	// which the makes the security guru unhappy.
+
+	// Of course, the priv-switching system assumes there's always only one
+	// user of interest.  This is stupid, but rather than reimplement
+	// TemporaryPrivSentry, let's assume that this code is called if and only
+	// if either (a) PRIV_USER is the correct user already (this should be
+	// true in the shadow) or (b) PRIV_USER is unset (this should be true in
+	// the entirely bug-free schedd).
+
+	bool clearUserIDs;
+	if( user_ids_are_inited() ) {
+		clearUserIDs = false;
+	} else {
+		set_user_ids(owner_uid, owner_gid);
+		clearUserIDs = true;
+	}
+	TemporaryPrivSentry sentry(PRIV_USER, clearUserIDs);
+
+
+	auto spool_dir = std::filesystem::directory_iterator(spool, errCode);
+	if( errCode ) {
+		dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+			"for job (%d.%d), failed to iterate job spool directory %s, "
+			"returning false.\n",
+			cluster, proc, spool.string().c_str()
+		);
+		return false;
+	}
+
+	for( const auto & entry : spool_dir ) {
+		const auto & stem = entry.path().stem();
+		if( starts_with(stem.string(), "_condor_checkpoint_") ) {
+			bool success = ends_with(stem.string(), "MANIFEST");
+			bool failure = ends_with(stem.string(), "FAILURE");
+			if( success || failure ) {
+				char * endptr = NULL;
+				const auto & suffix = entry.path().extension().string().substr(1);
+				long manifestNumber = strtol( suffix.c_str(), & endptr, 10 );
+				if( endptr == suffix.c_str() || *endptr != '\0' ) {
+					dprintf( D_FULLDEBUG, "Unable to extract checkpoint number from '%s', skipping.\n", entry.path().string().c_str() );
+					continue;
+				}
+
+				if( checkpointsToSave.count(manifestNumber) != 0 ) {
+					dprintf( D_FULLDEBUG, "moveCheckpointsToCleanupDirectory(): skipping manifest %ld\n", manifestNumber );
+					continue;
+				}
+
+
+				// TemporaryPrivSentry sentry(PRIV_ROOT);
+				std::filesystem::create_directory( target_dir, spool, errCode );
+				if( errCode ) {
+					dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+						"for job (%d.%d), failed to create %s, "
+						"returning false.\n",
+						cluster, proc, target_dir.string().c_str()
+					);
+					return false;
+				}
+
+				std::filesystem::rename( entry.path(), target_dir / entry.path().filename(), errCode );
+				if( errCode ) {
+					dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): "
+						"for job (%d.%d), failed to rename "
+						"manifest %ld [%s to %s] (%d: %s); returning false.\n",
+						cluster, proc, manifestNumber,
+						entry.path().string().c_str(),
+						(target_dir / entry.path().filename()).string().c_str(),
+						errCode.value(), errCode.message().c_str()
+					);
+					return false;
+				}
+
+				dprintf( D_STATUS | D_VERBOSE, "moveCheckpointsToCleanupDirectory(): moved manifest %ld\n", manifestNumber );
+				moved_a_manifest = true;
+			}
+		}
+	}
+
+	if(! moved_a_manifest) { return true; }
+
+
+	// Drop a copy of the job ad into the directory in case this attempt
+	// to clean up fails and we need to try it again later.
+	FILE * jobAdFile = NULL;
+	std::filesystem::path jobAdPath = target_dir / ".job.ad";
+	jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
+	if( jobAdFile == NULL ) {
+		dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to open job ad file '%s'\n", jobAdPath.string().c_str() );
+		return false;
+	}
+	fPrintAd( jobAdFile, * jobAd );
+	fclose( jobAdFile );
+
 	return true;
 }

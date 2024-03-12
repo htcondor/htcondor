@@ -3628,9 +3628,6 @@ section.
     to make /dev/shm on Linux private to each job.  When private, the
     starter removes any files from the private /dev/shm at job exit time.
 
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
-
 The following macros control if the *condor_startd* daemon should create a
 custom filesystem for the job's scratch directory. This allows HTCondor to
 prevent the job from using more scratch space than provisioned.
@@ -3769,14 +3766,15 @@ section for details.
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     console. This allows the *condor_startd* to notice console
-    activity. Defaults to the number of slots in the machine, which is
-    ``$(NUM_CPUS)``.
+    activity. Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    this to a very large number so that all slots will be connected.
 
 :macro-def:`SLOTS_CONNECTED_TO_KEYBOARD[STARTD]`
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     keyboard (for remote tty activity, as well as console activity).
-    This defaults to all slots (N in a machine with N CPUs).
+    Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    this to a very large number so that all slots will be connected.
 
 :macro-def:`DISCONNECTED_KEYBOARD_IDLE_BOOST[STARTD]`
     If there are slots not connected to either the keyboard or the
@@ -6100,7 +6098,7 @@ These settings affect the *condor_starter*.
     Defaults to
     CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS,
     NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT,
-    OPENBLAS_NUM_THREADS, ROOT_MAX_THREADS, TF_LOOP_PARALLEL_ITERATIONS,
+    OPENBLAS_NUM_THREADS, PYTHON_CPU_COUNT, ROOT_MAX_THREADS, TF_LOOP_PARALLEL_ITERATIONS,
     TF_NUM_THREADS.
 
 :macro-def:`STARTER_UPDATE_INTERVAL[STARTER]`
@@ -6690,7 +6688,7 @@ do not specify their own with:
 
 :macro-def:`SUBMIT_REQUEST_MISSING_UNITS`
     If set to the string ``error``, it is an error to submit a job with a 
-    :subcom:`RequestMemory` or :subcom:`RequestDisk` with a unitless
+    :subcom:`request_memory` or :subcom:`request_disk` with a unitless
     value.  If set to ``warn``, a warning is printed to the screen, but
     submit continues. Default value is unset (neither warn or error).
     :jira:`1837`
@@ -8424,13 +8422,23 @@ These macros affect the *condor_job_router* daemon.
     ClassAd to a pre-claimed state upon yielding control of the job.
 
 :macro-def:`JOB_ROUTER_SCHEDD1_SPOOL[JOB ROUTER]`
+    DEPRECATED.  Please use
+    :macro:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG` instead.
     The path to the spool directory for the *condor_schedd* serving as
     the source of jobs for routing. If not specified, this defaults to
     ``$(SPOOL)``. If specified, this parameter must point to the spool
     directory of the *condor_schedd* identified by
     :macro:`JOB_ROUTER_SCHEDD1_NAME`.
 
+:macro-def:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG[JOB ROUTER]`
+    The path to the job_queue.log file for the *condor_schedd*
+    serving as the source of jobs for routing.  If specified,
+    this must point to the job_queue.log file of the *condor_schedd*
+    identified by :macro:`JOB_ROUTER_SCHEDD1_NAME`.
+
 :macro-def:`JOB_ROUTER_SCHEDD2_SPOOL[JOB ROUTER]`
+    DEPRECATED.  Please use
+    :macro:`JOB_ROUTER_SCHEDD2_JOB_QUEUE_LOG` instead.
     The path to the spool directory for the *condor_schedd* to which
     the routed copy of the jobs are submitted. If not specified, this
     defaults to ``$(SPOOL)``. If specified, this parameter must point to
@@ -8442,6 +8450,12 @@ These macros affect the *condor_job_router* daemon.
     owners of the routed jobs. It is therefore usually necessary to
     configure :macro:`QUEUE_SUPER_USER_MAY_IMPERSONATE` in the configuration
     of the target *condor_schedd*.
+
+:macro-def:`JOB_ROUTER_SCHEDD2_JOB_QUEUE_LOG[JOB ROUTER]`
+    The path to the job_queue.log file for the *condor_schedd*
+    serving as the destination of jobs for routing.  If specified,
+    this must point to the job_queue.log file of the *condor_schedd*
+    identified by :macro:`JOB_ROUTER_SCHEDD2_NAME`.
 
 :macro-def:`JOB_ROUTER_SCHEDD1_NAME[JOB ROUTER]`
     The advertised daemon name of the *condor_schedd* serving as the
@@ -8625,8 +8639,6 @@ in configuration. This allows multiple instances of the
 DAGMan Configuration File Entries
 ---------------------------------
 
-:index:`DAGMan configuration variables<single: DAGMan configuration variables; configuration>`
-
 These macros affect the operation of DAGMan and DAGMan jobs within
 HTCondor.
 
@@ -8640,10 +8652,10 @@ HTCondor.
     Configuration settings do not get applied to running DAGMan workflows
     when executing :tool:`condor_reconfig`.
 
+:index:`General<single: DAGMan Configuration Sections; General>`
+
 General
 '''''''
-
-:index:`DAGMan configuration: general`
 
 :macro-def:`DAGMAN_CONFIG_FILE[DAGMan]`
     The path and name of the configuration file to be used by
@@ -8758,10 +8770,10 @@ General
     This will result in the listed machine attributes to be injected into the nodes
     produced job ads and userlog. This knob is not set by default.
 
+:index:`Throttling<single: DAGMan Configuration Sections; Throttling>`
+
 Throttling
 ''''''''''
-
-:index:`DAGMan configuration: throttling`
 
 :macro-def:`DAGMAN_MAX_JOBS_IDLE[DAGMan]`
     An integer value that controls the maximum number of idle procs
@@ -8816,10 +8828,10 @@ Throttling
     :tool:`condor_dagman` should forceably remove jobs to meet the new limit.
     Defaults to ``False``.
 
+:index:`Node Semantics<single: DAGMan Configuration Sections; Node Semantics>`
+
 Priority, node semantics
 ''''''''''''''''''''''''
-
-:index:`DAGMan configuration: priority, node semantics`
 
 :macro-def:`DAGMAN_DEFAULT_PRIORITY[DAGMan]`
     An integer value defining the minimum priority of node jobs running
@@ -8849,10 +8861,10 @@ Priority, node semantics
     which is that a POST script is always executed, even if the PRE
     script fails.
 
+:index:`Job Management<single: DAGMan Configuration Sections; Job Management>`
+
 Node job submission/removal
 '''''''''''''''''''''''''''
-
-:index:`DAGMan configuration: submission/removal`
 
 :macro-def:`DAGMAN_USER_LOG_SCAN_INTERVAL[NEGOTIATOR]`
     An integer value representing the number of seconds that
@@ -8992,10 +9004,10 @@ Node job submission/removal
     defaults to ``True``. **Note: users should rarely change this
     setting.**
 
+:index:`Rescue and Retry<single: DAGMan Configuration Sections; Rescue and Retry>`
+
 Rescue/retry
 ''''''''''''
-
-:index:`DAGMan configuration: rescue/retry`
 
 :macro-def:`DAGMAN_AUTO_RESCUE[DAGMan]`
     A boolean value that controls whether :tool:`condor_dagman` automatically
@@ -9054,10 +9066,10 @@ Rescue/retry
     tail of the queue of ready nodes. This had been the behavior of
     :tool:`condor_dagman`. If not defined, it defaults to ``False``.
 
+:index:`Nodes Log File<single: DAGMan Configuration Sections; Nodes Log File>`
+
 Log files
 '''''''''
-
-:index:`DAGMan configuration: log files`
 
 :macro-def:`DAGMAN_DEFAULT_NODE_LOG[DAGMan]`
     The default name of a file to be used as a job event log by all node
@@ -9169,10 +9181,10 @@ Log files
     ``"job re-run after terminated event"`` bug breaks the semantics of
     the DAG.
 
+:index:`Debugging Log<single: DAGMan Configuration Sections; Debugging Log>`
+
 Debug output
 ''''''''''''
-
-:index:`DAGMan configuration: debug output`
 
 :macro-def:`DAGMAN_DEBUG[DAGMan]`
     This variable is described in :macro:`<SUBSYS>_DEBUG`.
@@ -9227,10 +9239,10 @@ Debug output
     This variable is described in :macro:`MAX_<SUBSYS>_LOG`. If not defined,
     :macro:`MAX_DAGMAN_LOG` defaults to 0 (unlimited size).
 
+:index:`HTCondor Attributes<single: DAGMan Configuration Sections; HTCondor Attributes>`
+
 HTCondor attributes
 '''''''''''''''''''
-
-:index:`DAGMan configuration: HTCondor attributes`
 
 :macro-def:`DAGMAN_COPY_TO_SPOOL[DAGMan]`
     A boolean value that when ``True`` copies the :tool:`condor_dagman`

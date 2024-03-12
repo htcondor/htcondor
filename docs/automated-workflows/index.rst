@@ -45,8 +45,5 @@ input for job ``B``. This can be described as a DAGMan workflow as follows:
    dagman-completion
    dagman-using-other-dags
    dagman-advance-functionality
-
-   dagman-DOT-files
-   dagman-node-status-file
-   dagman-jobstate-log
-   dagman-workflow-metrics
+   dagman-information-files
+   dagman-reference

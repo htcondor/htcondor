@@ -202,10 +202,6 @@ default node log
     to enable the setting of a unique file name. See
     the :ref:`DAGMan Configuration` section for the complete definition.
 
-    Configuration variables that affect this log are
-
-     :macro:`DAGMAN_ALWAYS_USE_NODE_LOG`
-
 the ``.dagman.out`` file
     A log created or appended to for each DAG submitted with timestamped
     events and extra information about the configuration applied to the
@@ -223,12 +219,9 @@ the ``.dagman.out`` file
     | :macro:`DAGMAN_VERBOSITY` | :macro:`DAGMAN_PENDING_REPORT_INTERVAL` |
     +---------------------------+-----------------------------------------+
 
-the ``jobstate.log`` file
+the DAGMan job state log
     This optional, machine-readable log enables automated monitoring of
-    DAG. The page :ref:`automated-workflows/dagman-jobstate-log:Machine-Readable Event History`
-    details this log.
-
-:index:`logging`
+    DAG. The page :ref:`DAGMan Machine Readable History` details this log.
 
 
 Directories
@@ -326,7 +319,4 @@ Directories use by the Execute Role
     existing file can be used as the backing store, in which case the knob :macro:`THINPOOL_BACKING_FILE`
     should be set to the name of the existing large file on disk that HTCondor
     will use to make filesystems from.
-
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
 

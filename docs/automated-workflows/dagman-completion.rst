@@ -1,14 +1,6 @@
 DAGMan Completion
 =================
 
-DAGMan exits the job queue when it has successfully completed, or when
-it can no longer make forward progress. The latter case is considered
-failure. Successful completion happens when every node in the DAG has
-successfully completed. In the case of a DAGman failure, you can resubmit
-the dag so that only the incomplete work is run. Alternatively, you can
-re-run a DAG from pre-specified save points, and re-run previously completed nodes.
-
-
 .. sidebar:: Node Success/Failure
 
     **Table 2.1** Node **S**\ uccess or **F**\ ailure definition
@@ -59,6 +51,13 @@ re-run a DAG from pre-specified save points, and re-run previously completed nod
     | F   | not run   | F      | **F** |
     +-----+-----------+--------+-------+
 
+DAGMan exits the job queue when it has successfully completed, or when
+it can no longer make forward progress. The latter case is considered
+failure. Successful completion happens when every node in the DAG has
+successfully completed. In the case of a DAGman failure, you can resubmit
+the dag so that only the incomplete work is run. Alternatively, you can
+re-run a DAG from pre-specified save points, and re-run previously completed nodes.
+
 .. _DAG node success:
 
 Node Success/Failure
@@ -83,9 +82,9 @@ where the PRE script fails, when DAGMan is configured to always run POST scripts
 If Node jobs are multi-proc and one fails then the entire cluster is removed
 and the node job is considered failed.
 
-:index:`PRE_SKIP command<single: DAG Commands; PRE_SKIP command>`
 :index:`skipping node execution<single: DAGMan; Skipping node execution>`
 
+.. _Node pre skip cmd:
 
 PRE_SKIP
 ^^^^^^^^
@@ -96,14 +95,13 @@ within the DAG input file uses the syntax:
 
 .. code-block:: condor-dagman
 
-    PRE_SKIP <JobName | ALL_NODES> non-zero-exit-code
+    PRE_SKIP <NodeName | ALL_NODES> non-zero-exit-code
 
-The PRE script of a node identified by *JobName* that exits with the
+The PRE script of a node identified by *NodeName* that exits with the
 value given by *non-zero-exit-code* skips the remainder of the node
 entirely. Neither the job associated with the node nor the POST script
 will be executed, and the node will be marked as successful.
 
-:index:`RETRY command<single: DAG Commands; RETRY command>`
 :index:`retrying failed nodes<single: DAGMan; Retrying failed nodes>`
 
 .. _Retry DAG Nodes:
@@ -133,9 +131,9 @@ DAG input file with the **RETRY** command. The syntax for retry is
 
 .. code-block:: condor-dagman
 
-    RETRY <JobName | ALL_NODES> NumberOfRetries [UNLESS-EXIT value]
+    RETRY <NodeName | ALL_NODES> NumberOfRetries [UNLESS-EXIT value]
 
-where *JobName* identifies the node. *NumberOfRetries* is an integer
+where *NodeName* identifies the node. *NumberOfRetries* is an integer
 number of times to retry the node after failure.
 
 The implied number of retries for any node is 0, the same as not having a
@@ -147,7 +145,6 @@ Retry of a node may be short circuited using the optional keyword
 the specified integer exit value, then no further processing will be
 done on the node.
 
-:index:`ABORT-DAG-ON command<single: DAG Commands; ABORT-DAG-ON command>`
 :index:`aborting a DAG<single: DAGMan; Aborting a DAG>`
 
 .. _abort-dag-on:
@@ -179,7 +176,7 @@ is
 
 .. code-block:: condor-dagman
 
-    ABORT-DAG-ON <JobName | ALL_NODES> AbortExitValue [RETURN DAGReturnValue]
+    ABORT-DAG-ON <NodeName | ALL_NODES> AbortExitValue [RETURN DAGReturnValue]
 
 If the return value for the specified node matches *AbortExitValue*, the DAG
 is immediately aborted. Meaning the DAG stops all currently running nodes,
@@ -498,7 +495,7 @@ DAG nodes that have an associate **SAVE_POINT_FILE** command. The
 
 .. code-block:: condor-dagman
 
-    SAVE_POINT_FILE NodeName [Filename]
+    SAVE_POINT_FILE NodeName [filename]
 
 This file is written in the exact same format as the partial Rescue DAG
 except all retries are reset. The save file is written as follows:

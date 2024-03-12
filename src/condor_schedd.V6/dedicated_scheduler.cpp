@@ -235,9 +235,9 @@ ResList::satisfyJobs( CAList *jobs,
 					  bool sort /* = false */ )
 {
     // Address the case of empty resource list up front
-    if (this->Number() <= 0) return false;
+    if (this->size() <= 0) return false;
 
-    dprintf(D_FULLDEBUG, "satisfyJobs: testing %d jobs against %d slots\n", (int)jobs->Number(), (int)this->Number());
+    dprintf(D_FULLDEBUG, "satisfyJobs: testing %d jobs against %d slots\n", (int)jobs->size(), (int)this->size());
 
 	jobs->Rewind();
 
@@ -286,7 +286,7 @@ ResList::satisfyJobs( CAList *jobs,
 					// This job is matched, don't use it again.
 				jobs->DeleteCurrent();
 
-				if( jobs->Number() == 0) {
+				if( jobs->size() == 0) {
 						// No more jobs to match, our work is done.
                     dprintf(D_FULLDEBUG, "satisfyJobs: jobs were satisfied\n");
 					return true;
@@ -311,7 +311,7 @@ ResList::sortByRank(ClassAd *rankAd) {
 
 	this->Rewind();
 
-	auto *array = new struct rankSortRec[this->Number()];
+	auto *array = new struct rankSortRec[this->size()];
 	ASSERT(array);
 	int index = 0;
 	ClassAd *machine = nullptr;
@@ -373,7 +373,7 @@ ResList::selectGroup( CAList *group,
 void
 ResList::display( int debug_level )
 {
-	if( Number() == 0) {
+	if( size() == 0) {
 		dprintf( debug_level, " ************ empty ************ \n");
 		return;
 	}
@@ -1083,7 +1083,6 @@ DedicatedScheduler::reaper( int pid, int status )
 				// exceptions 
 			if( !srec->removed ) {
 				shutdownMpiJob( srec );
-					// GGT  -- I think release_claim will fix this
 					//scheduler.HadException( srec->match );
 			}
 			break;
@@ -2566,7 +2565,7 @@ DedicatedScheduler::computeSchedule( )
 					// We may not need all of this array, this is
 					// worst-case allocation we will fill and sort a
 					// num_candidates number of entries
-				int len = busy_resources->Length();
+				int len = busy_resources->size();
 				preempt_candidate_array = new struct PreemptCandidateNode[len];
 				int num_candidates = 0;
 
@@ -2638,12 +2637,12 @@ DedicatedScheduler::computeSchedule( )
 				delete [] preempt_candidate_array;
 				preempt_candidate_array = nullptr;
 
-				if( jobs->Number() == 0) {
+				if( jobs->size() == 0) {
 					break;
 				}
 			}
 
-			if( jobs->Number() == 0) {
+			if( jobs->size() == 0) {
 					// We got every single thing we need
 				printSatisfaction( cluster, idle_candidates, serial_candidates,
 								   limbo_candidates, unclaimed_candidates,
@@ -2853,7 +2852,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 	MRecArray* matches=nullptr;
 
 	alloc = new AllocationNode( cluster, nprocs );
-	alloc->num_resources = idle_candidates->Number();
+	alloc->num_resources = idle_candidates->size();
 
 	alloc->is_reconnect = is_reconnect;
 
@@ -3593,7 +3592,7 @@ DedicatedScheduler::requestResources( )
 
 bool
 DedicatedScheduler::preemptResources() {
-	if( pending_preemptions->Length() > 0) {
+	if( pending_preemptions->size() > 0) {
 		pending_preemptions->Rewind();
 		while( ClassAd *machine = pending_preemptions->Next()) {
 			std::string buf;
@@ -3631,54 +3630,54 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 	std::string msg;
 	formatstr( msg, "Satisfied job %d with ", cluster );
 	bool had_one = false;
-	if( idle && idle->Length() ) {
-		msg += std::to_string( idle->Length() );
+	if( idle && idle->size() ) {
+		msg += std::to_string( idle->size() );
 		msg += " idle";
 		had_one = true;
 	}
-	if( limbo && limbo->Length() ) {
+	if( limbo && limbo->size() ) {
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += std::to_string( limbo->Length() );
+		msg += std::to_string( limbo->size() );
 		msg += " limbo";
 		had_one = true;
 	}
-	if( serial && serial->Length() ) {
+	if( serial && serial->size() ) {
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += std::to_string( serial->Length() );
+		msg += std::to_string( serial->size() );
 		msg += " serial";
 		had_one = true;
 	}
-	if( unclaimed && unclaimed->Length() ) {
+	if( unclaimed && unclaimed->size() ) {
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += std::to_string( unclaimed->Length() );
+		msg += std::to_string( unclaimed->size() );
 		msg += " unclaimed";
 		had_one = true;
 	}
-	if( busy && busy->Length() ) {
+	if( busy && busy->size() ) {
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += std::to_string( busy->Length() );
+		msg += std::to_string( busy->size() );
 		msg += " busy";
 		had_one = true;
 	}
 	msg += " resources";
 	dprintf( D_FULLDEBUG, "%s\n", msg.c_str() );
 
-	if( unclaimed && unclaimed->Length() ) {
+	if( unclaimed && unclaimed->size() ) {
 		dprintf( D_FULLDEBUG, "Generating %d resource requests for job %d\n", 
-				 unclaimed->Length(), cluster  );
+				 unclaimed->size(), cluster  );
 	}
 
-	if( busy && busy->Length() ) {
+	if( busy && busy->size() ) {
 		dprintf( D_FULLDEBUG, "Preempting %d resources for job %d\n", 
-				 busy->Length(), cluster  );
+				 busy->size(), cluster  );
 	}
 }
 
@@ -4045,7 +4044,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 
 			// We're going to try to start this reconnect job, so remove it
 			// from the reconnectLater list
-			if (machinesToAllocate.Number() > 0) {
+			if (machinesToAllocate.size() > 0) {
 				removeFromList(jobsToReconnectLater, &jobsToAllocate);
 
 				createAllocations(&machinesToAllocate, &jobsToAllocate, 
@@ -4181,7 +4180,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 	}
 
 		// Last time through, create the last bit of allocations, if there are any
-	if (machinesToAllocate.Number() > 0) {
+	if (machinesToAllocate.size() > 0) {
 		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", last_id.cluster);
 		// We're going to try to start this reconnect job, so remove it
 		// from the reconnectLater list

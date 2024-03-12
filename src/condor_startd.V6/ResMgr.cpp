@@ -1630,8 +1630,8 @@ void ResMgr::assign_load_and_idle()
 				return false;
 			}
 		}
-		// Otherwise, by pointer, just to avoid loops
-		return r1 < r2;
+		// Otherwise, by id and sub-id, just to avoid loops
+		return (r1->r_id*10000)+r1->r_sub_id < (r2->r_id*10000)+r2->r_sub_id;
 	};
 
 	std::sort(active.begin(), active.end(), ownerStateLessThan);
@@ -1677,8 +1677,12 @@ void ResMgr::assign_load_and_idle()
 	int num_console = console_slots;
 	int num_keyboard = keyboard_slots;
 	for (Resource* rip : active) {
-		if (--num_console < 0) { console = max; }
-		if (--num_keyboard < 0) { keyboard = console; }
+		// don't count p-slots as slots for purposes of decrementing the slot count
+		// but do set their keyboard and console idle value.
+		if ( ! rip->is_partitionable_slot()) {
+			if (--num_console < 0) { console = max; }
+			if (--num_keyboard < 0) { keyboard = console; }
+		}
 		rip->r_attr->set_console(console);
 		rip->r_attr->set_keyboard(keyboard);
 	}

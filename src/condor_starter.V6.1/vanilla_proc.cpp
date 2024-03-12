@@ -837,6 +837,13 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 	updateAd.Assign( ATTR_JOB_NEWLY_COMMITTED_TIME, newlyCommittedTime );
 
 	Starter->jic->periodicJobUpdate( & updateAd );
+
+	// Let's not try to be subtle and confusing (by reacting to the above
+	// update in the shadow instead of to a specific event).
+	ClassAd eventAd;
+	eventAd.InsertAttr( "EventType", "SuccessfulCheckpoint" );
+	eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+	Starter->jic->notifyGenericEvent( eventAd );
 }
 
 void
@@ -880,8 +887,8 @@ void VanillaProc::restartCheckpointedJob() {
 		JobAd->LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
 	}
 
-    // Because not all upload attempts fail without writing any data, we
-    // need to clean up after failed attempts, which implies numbering them.
+	// Because not all upload attempts fail without writing any data, we
+	// need to clean up after failed attempts, which implies numbering them.
 	++checkpointNumber;
 	if( Starter->jic->uploadCheckpointFiles(checkpointNumber) ) {
 			notifySuccessfulPeriodicCheckpoint(checkpointNumber);

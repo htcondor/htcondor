@@ -32,10 +32,13 @@ extensions = [
     'sphinx_autodoc_typehints',
     'nbsphinx',
     'ticket',
+    'config-template',
     'macro',
     'macro-def',
     'subcom',
     'subcom-def',
+    'dag-cmd-def',
+    'dag-cmd',
     'index',
     'jira',
     'classad-attribute-def',
@@ -472,6 +475,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
         "root": [
             (r"\s+", token.Text),
             (r"^#.*?$", token.Comment.Single),
+            (r"^jobstate_log", token.Keyword, "jobstate_log"),
             (r"^job", token.Keyword, "job"),
             (r"^submit-description", token.Keyword, "submit-description"),
             (r"^parent", token.Keyword, "parent"),
@@ -495,6 +499,8 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^dot", token.Keyword, "dot"),
             (r"^node_status_file", token.Keyword, "node_status_file"),
             (r"^save_point_file", token.Keyword, "save_point_file"),
+            (r"^done", token.Keyword, "done"),
+            (r"^reject", token.Keyword, "reject"),
             # examples sometimes use ... to indicate continuation
             (r"^.{3}$", token.Text),
         ],
@@ -593,6 +599,9 @@ class CondorDAGManLexer(lexer.RegexLexer):
             ),
         ] + DAGMAN_COMMON,
         "save_point_file": DAGMAN_COMMON,
+        "jobstate_log" : DAGMAN_COMMON,
+        "done": DAGMAN_COMMON,
+        "reject": DAGMAN_COMMON,
     }
 
 

@@ -79,7 +79,7 @@ The corresponding submit description file might look like the following
 The standard output for this job will go to the file
 ``outputfile``, as specified by the
 :subcom:`output[example]` command. Likewise,
-the standard error output will go to  :subcom:`errorfile`. 
+the standard error output will go to the file named errorfile. 
 
 HTCondor will append events about the job to a log file with the 
 requested name ``myexe.log``. When the job
@@ -1145,8 +1145,8 @@ Credential Handles
 ''''''''''''''''''
 
 A single job can also request multiple credentials from the same service provider
-by affixing handles to the :subcom:`<service>_oauth_permissions` and (if necessary)
-:subcom:`<service>_oauth_resource` commands.
+by affixing handles to the :subcom:`<credential_service_name>_oauth_permissions` and (if necessary)
+:subcom:`<credential_service_name>_oauth_resource` commands.
 For example, if a user wants separate read and write credentials for CloudBoxDrive
 
 .. code-block:: condor-submit
@@ -1172,7 +1172,7 @@ safest thing is to choose a unique handle.
 
 If a service provider does not require permissions or resources to be specified,
 a user can still request multiple credentials by affixing handles to
-:subcom:`<service>_oauth_permissions` commands with empty values
+:subcom:`<credential_service_name>_oauth_permissions` commands with empty values
 
 .. code-block:: condor-submit
 
@@ -1200,8 +1200,8 @@ as configured by the administrator of the Vault server:
 Vault does not require permissions or resources to be
 set, but they may be set to reduce the default permissions or restrict
 the resources that may use the credential.  The full service name
-including an underscore may be used in an :subcom:`oauth_permissions` or
-:subcom:`oauth_resource`.  Avoid using handles that might be confused as
+including an underscore may be used in an :subcom:`<credential_service_name>_oauth_permissions` or
+:subcom:`<credential_service_name>_oauth_resource`.  Avoid using handles that might be confused as
 role names.  For example, the following will result in a conflict
 between two credentials called ``dune_production.use``:
 
@@ -1512,7 +1512,7 @@ submitted from an Intel architecture running Linux would add the
 
       requirements = Arch == "INTEL" && OpSys == "WINDOWS"
 
-Without this :subcom:`requirement`, :tool:`condor_submit` will assume that the
+Without this :subcom:`requirements` command, :tool:`condor_submit` will assume that the
 program is to be executed on a machine with the same platform as the
 machine where the job is submitted.
 

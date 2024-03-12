@@ -4,6 +4,28 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.7.1
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.7.1 released on Month Date, 2024.
+
+- HTCondor version 23.7.1 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-2308`.
+
+New Features:
+
+- In the unlikely event that a shadow exception event happens, the text is
+  now saved in the job ad attribute :ad-attr:`LastShadowException` for
+  further debugging.
+  :jira:`1896`
+
+Bugs Fixed:
+
+- None.
+
 Version 23.6.1
 --------------
 
@@ -17,10 +39,32 @@ Release Notes:
 
 New Features:
 
+- Updated :tool:`get_htcondor` to allow the aliases ``lts`` for **stable**
+  and ``feature`` for **current** when passed to the *--channel* option.
+  :jira:`775`
+
 - Allow the startd to force a job that doesn't ask to run inside a
   docker or apptainer container inside one with new parameters
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
+
+- :subcom:`condor_q` -better now emits the units for memory and
+  disk.
+  :jira:`2333`
+
+- Add htcondor job out|err|log verbs to the :tool:`htcondor` cli tool.
+  :jira:`2182`
+
+- The startd now honors the environment variable OMP_NUM_THREADS
+  when setting the number of cores available.  This allows 
+  glideins to pass an allocated number of cores from a base batch
+  system to the glidein easily.
+  :jira:`727`
+
+- If the EP is started under another batch system that limits the amount
+  of memory to the EP via a cgroup limit, the startd now advertises
+  this much memory available for jobs.
+  :jira:`727`
 
 - Added new job ad attribute :ad-attr:`JobSubmitFile` which contains
   the filename of the submit file, if any.
@@ -31,13 +75,31 @@ New Features:
   to ease networking from inside the container to outside the container.
   :jira:`2294`
 
+- For vanilla universe jobs not running under container universe, that
+  manually start apptainer or singularity, the environment variables
+  APPTAINER_CACHEDIR and SINGULARITY_CACHEDIR are now set to the scratch
+  directory to insure any files they create are cleaned up on job exit.
+  :jira:`2337`
+
 - :tool:`condor_submit` with the -i (interactive) flag, and also run
   with a submit file, now transfers the executable to the interactive job.
   :jira:`2315`
 
+- Added the environment variable PYTHON_CPU_COUNT to the set of environment
+  variables set for jobs to indicate how many cpu cores are provisioned.
+  Python 3.13 uses this override the detected count of cpu cores.
+  :jira:`2330`
+
+- Added -file option to :tool:`condor_token_list`
+  :jira:`575`
+
 - The configuration parameter :macro:`ETC` can now be used to relocate
   files that are normally place under /etc/condor on unix platforms.
   :jira:`2290`
+
+- The submit file expansion $(CondorScratchDir) now works for local
+  universe.
+  :jira:`2324`
 
 - For jobs that go through the grid universe or Job Router, the
   terminate event will now include extended resource allocation and
@@ -56,6 +118,17 @@ New Features:
   To revert behavior of suppressing notifications set :macro:`DAGMAN_SUPPRESS_NOTIFICATION`
   to **False**.
   :jira:`2323`
+
+- The Job Router route keyword ``GridResource`` is now always
+  optional. The job attribute ``GridResource`` can be set instead via
+  a ``SET`` or similar command in the route definition.
+  :jira:`2329`
+
+- The configuration variables :macro:`SLOTS_CONNECTED_TO_KEYBOARD` and
+  :macro:`SLOTS_CONNECTED_TO_CONSOLE` now apply to partitionable slots but do
+  not count them as slots.  As a consequence of this change, when
+  either of these variables are set equal to the number of cpus, all slots will be connected.
+  :jira:`2331`
 
 Bugs Fixed:
 
@@ -144,6 +217,11 @@ Bugs Fixed:
 - In rare cases, the values of TimeSlotBusy and TimeExecute would be incorrect in the
   job event log when the job was disconnected or did not start properly.
   :jira:`2265`
+
+- Fixed a bug that can cause the condor_gridmanager to abort when multiple
+  grid universe jobs share the same proxy file to be used to authenticate
+  with the remote job scheduling service.
+  :jira:`2334`
 
 Version 23.4.0
 --------------

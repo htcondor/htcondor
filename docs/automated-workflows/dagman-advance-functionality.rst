@@ -12,7 +12,6 @@ of information to :tool:`condor_submit`. DAGMan can be what told ``key=value``
 pairs to pass at node job submit time allowing a single submit description to
 easily be used for multiple nodes in a DAG with variance.
 
-:index:`VARS command<single: DAG Commands; VARS command>`
 :index:`VARS (macro for submit description file)<single: DAGMan; VARS (macro for submit description file)>`
 
 Macro Variables for Nodes
@@ -53,7 +52,7 @@ following syntax:
 
 .. code-block:: condor-dagman
 
-    VARS <JobName | ALL_NODES> [PREPEND | APPEND] macroname="string" [macroname2="string2" ... ]
+    VARS <NodeName | ALL_NODES> [PREPEND | APPEND] macroname="string" [macroname2="string2" ... ]
 
 A *macroname* may contain alphanumeric characters (a-z, A-Z, and 0-9)
 and the underscore character. A restriction is that the *macroname*
@@ -349,7 +348,6 @@ While most DAGMan nodes are the standard JOB type that run a job and possibly
 a PRE or POST script, special nodes can be specified in the DAG submit description
 to help manage the DAG and its resources in various ways.
 
-:index:`FINAL command<single: DAG Commands; FINAL command>`
 :index:`FINAL node<single: DAGMan; FINAL node>`
 
 .. _final-node:
@@ -372,10 +370,10 @@ use the following syntax for the **FINAL** command:
 
 .. code-block:: condor-dagman
 
-    FINAL JobName SubmitDescription [DIR directory] [NOOP]
+    FINAL NodeName SubmitDescription [DIR directory] [NOOP]
 
 Like the **JOB** command the **FINAL** command produces a node with
-name *JobName* and an associated job submit description. The *DIR*
+name *NodeName* and an associated job submit description. The *DIR*
 and *NOOP* keywords work exactly like they do detailed in the
 :ref:`DAGMan JOB` command.
 
@@ -409,7 +407,6 @@ node, and subsequently the DAG as a whole.
 If DAGMan is removed via :tool:`condor_rm` then DAGMan will allow two
 submit attempts of the FINAL nodes job (On Unix only).
 
-:index:`PROVISIONER command<single: DAG Commands; PROVISIONER command>`
 :index:`PROVISIONER node<single: DAGMan; PROVISIONER node>`
 
 .. _DAG Provisioner Node:
@@ -424,7 +421,7 @@ of the nodes in the workflow. The syntax used for the **PROVISIONER** command is
 
 .. code-block:: condor-dagman
 
-    PROVISIONER JobName SubmitDescription
+    PROVISIONER NodeName SubmitDescription
 
 When the PROVISIONER node is defined in a DAG, DAGMan will run the PROVISIONER
 node before all other nodes and wait for the PROVISIONER job to state it is ready.
@@ -442,8 +439,9 @@ cloud computing instances that should not be allowed to run indefinitely.
     Currently only one PROVISIONER node may exist for a DAG. If multiple are
     defined in a DAG then an error will be logged and the DAG will fail.
 
-:index:`SERVICE command<single: DAG Commands; SERVICE command>`
 :index:`SERVICE node<single: DAGMan; SERVICE node>`
+
+.. _DAG Service Node:
 
 SERVICE Node
 ^^^^^^^^^^^^
@@ -457,7 +455,7 @@ The syntax used for the **SERVICE** command is
 
 .. code-block:: condor-dagman
 
-    SERVICE ServiceName SubmitDescription
+    SERVICE NodeName SubmitDescription
 
 If a DAGMan workflow finishes while there are SERVICE nodes still running,
 it will remove all running SERVICE nodes and exit.
@@ -473,7 +471,6 @@ to ``Local`` will make it more likely to begin running prior to other nodes.
     correctly, this will not register as an error and the DAG workflow will
     continue normally.
 
-:index:`PRIORITY command<single: DAG Commands; PRIORITY command>`
 :index:`node priorities<single: DAGMan; Node priorities>`
 
 .. _DAG Node Priorities:
@@ -510,7 +507,7 @@ follow the syntax for the **PRIORITY** command as follows:
 
 .. code-block:: condor-dagman
 
-    PRIORITY <JobName | ALL_NODES> PriorityValue
+    PRIORITY <NodeName | ALL_NODES> PriorityValue
 
 Node priorities are most relevant when :ref:`DAGMan throttling` is being
 utilized or if there are not enough resources in the pool to run all
@@ -672,7 +669,7 @@ precedent overriding other earlier definitions. For example:
 
     RETRY A 10
 
-:index:`INCLUDE command<single: DAG Commands; INCLUDE command>`
+.. _DAG Include cmd:
 
 INCLUDE
 -------
@@ -724,8 +721,9 @@ DAG Manager Job Specifications
 While most DAG commands modify/describe the DAG workflow and its various pieces,
 some commands modify the DAGMan proper job itself.
 
-:index:`SET_JOB_ATTR command<single: DAG Commands; SET_JOB_ATTR command>`
 :index:`Setting ClassAd Attributes in the DAGMan Job<single: DAGMan; Setting ClassAd Attributes in the DAGMan Job>`
+
+.. _DAG set-job-attrs:
 
 Setting Job Ad Attributes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -760,8 +758,9 @@ at submit time as follows:
 
     $ condor_submit_dag -append 'My.<attribute> = <value>'
 
-:index:`ENV command<single: DAG Commands; ENV command>`
 :index:`Setting DAGMan job environment variables<single: DAGMan; Setting DAGMan job environment variables>`
+
+.. _DAG ENV cmd:
 
 Controlling the Job Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -793,7 +792,6 @@ syntax is:
         The added **key=value** pairs must follow the normal HTCondor job
         environment rules.
 
-:index:`CONFIG command<single: DAG Commands; CONFIG command>`
 :index:`configuration specific to a DAG<single: DAGMan; Configuration specific to a DAG>`
 
 .. _Per DAG Config:
@@ -815,7 +813,7 @@ DAG Specific Configuration
 
 DAGMan allows for all :ref:`DAGMan Configuration` to be applied on a per DAG
 basis. To apply custom configuration for a DAGMan workflow simply create a
-custom configuration file to provide the the **CONFIG** command.
+custom configuration file to provide the the :dag-cmd:`CONFIG` command.
 
 Only one configuration file is permitted per DAGMan process. If multiple DAGs
 are submitted at one time or a workflow is comprised of Splices then a fatal
@@ -843,3 +841,47 @@ later take precedence:
    :tool:`condor_submit_dag[custom DAG Configuration]`\ s **-config** option.
 #. :tool:`condor_submit_dag` options that control the same behavior as a
    configuration option such as :macro:`DAGMAN_MAX_JOBS_SUBMITTED` and **-maxjobs**.
+
+:index:`Visualizing DAGs<single: DAGMan; Visualizing DAGs>`
+
+.. _visualizing-dags-with-dot:
+
+Visualizing DAGs
+----------------
+
+.. sidebar:: Example DAG DOT File
+
+    Provided the following DAG file declaration, DAGMan will produce a *dot*
+    file named ``dag.dot``.
+
+    .. code-block:: condor-dagman
+
+        DOT dag.dot
+
+    The ``dag.dot`` file can then be used with the *Graphiz* package as follows
+    to produce a visual of the DAG.
+
+    .. code-block:: console
+
+        $ dot -Tps dag.dot -o dag.ps
+
+To help visualize a DAG, DAGMan has the ability to create a *dot* input file
+for the AT&T Research Labs `Graphiz <https://www.graphviz.org/>`_ package to
+draw the DAG. DAGMan will produce *dot* files when the **DOT** command is declared
+with the following syntax:
+
+.. code-block:: condor-dagman
+
+    DOT filename [UPDATE | DONT-UPDATE] [OVERWRITE | DONT-OVERWRITE] [INCLUDE <dot-file-header>]
+
+The DOT command can take several optional parameters as follows:
+
+- **UPDATE** This will update the dot file every time a significant update happens.
+- **DONT-UPDATE** Creates a single dot file, when the DAGMan begins executing. This
+  is the default if the parameter **UPDATE** is not used.
+- **OVERWRITE** Overwrites the dot file each time it is created. This is the default,
+  unless **DONT-OVERWRITE** is specified.
+- **DONT-OVERWRITE** Creates a new dot file each time one is written as ``<filename>.<num>``.
+  Where the number increases with each write such as ``dag.dot.0`` to ``dag.dot.1``.
+- **INCLUDE** Includes the contents of the specified file in the produced dot file after
+  the graphs label line.

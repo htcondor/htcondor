@@ -132,7 +132,7 @@ all attributes.
     SCITOKENS) used to submit the job.
 
 :classad-attribute-def:`BatchExtraSubmitArgs`
-    For :subcom:`batch[and attribute BatchExtraSubmitArgs]` grid universe jobs, additional command-line arguments
+    For **batch** grid universe jobs, additional command-line arguments
     to be given to the target batch system's job submission command.
 
 :classad-attribute-def:`BatchProject`
@@ -1202,6 +1202,11 @@ all attributes.
     The name of the *condor_collector* of the pool in which a job ran
     via flocking in the most recent run attempt. This attribute is not
     defined if the job did not run via flocking.
+
+:classad-attribute-def:`LastShadowException`
+    If the *condor_shadow* excepted with an error message, forcing the
+    job to either go on hold or be evicted, this attribute contains
+    a string that describes the error.
 
 :classad-attribute-def:`LastSuspensionTime`
     Time at which the job last performed a successful suspension.

@@ -331,6 +331,7 @@
 #define ATTR_JOB_ALLOWED_JOB_DURATION  "AllowedJobDuration"
 #define ATTR_JOB_ALLOWED_EXECUTE_DURATION "AllowedExecuteDuration"
 #define ATTR_JOB_EPOCH_WRITE_DATE "EpochWriteDate"
+#define ATTR_JOB_LAST_SHADOW_EXCEPTION    "LastShadowException"
 #define ATTR_JOB_MATERIALIZE_DIGEST_FILE  "JobMaterializeDigestFile"
 #define ATTR_JOB_MATERIALIZE_ITEMS_FILE   "JobMaterializeItemsFile"
 #define ATTR_JOB_MATERIALIZE_LIMIT        "JobMaterializeLimit"
@@ -878,6 +879,7 @@
 #define ATTR_CONDOR_VERSION "CondorVersion"
 #define ATTR_CHECKPOINT_FILES "TransferCheckpoint"
 #define ATTR_PRESERVE_RELATIVE_PATHS "PreserveRelativePaths"
+#define ATTR_FAILURE_FILES "FailureFiles"
 
 #define ATTR_TRANSFER_SOCKET  "TransferSocket"
 #define ATTR_SERVER_TIME  "ServerTime"

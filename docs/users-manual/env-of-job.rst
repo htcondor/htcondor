@@ -96,17 +96,37 @@ executing job that may be useful.
    StarterLog for the administrator to debug the problem.
 -  ``CUBACORES`` ``GOMAXPROCS`` ``JULIA_NUM_THREADS`` ``MKL_NUM_THREADS``
    ``NUMEXPR_NUM_THREADS`` ``OMP_NUM_THREADS`` ``OMP_THREAD_LIMIT``
-   ``OPENBLAS_NUM_THREADS`` ``ROOT_MAX_THREADS`` ``TF_LOOP_PARALLEL_ITERATIONS``
+   ``OPENBLAS_NUM_THREADS`` ``PYTHON_CPU_COUNT`` ``ROOT_MAX_THREADS`` ``TF_LOOP_PARALLEL_ITERATIONS``
    ``TF_NUM_THREADS``
+   :index:`CUBACORES<pair: CUBACORES; environment variables for jobs>`
+   :index:`GOMAXPROCS<pair: GOMAXPROCS; environment variables for jobs>`
+   :index:`JULIA_NUM_THREADS<pair: JULIA_NUM_THREADS; environment variables for jobs>`
+   :index:`MKL_NUM_THREADS<pair: MKL_NUM_THREADS; environment variables for jobs>`
+   :index:`NUMEXPR_NUM_THREADS<pair: NUMEXPR_NUM_THREADS; environment variables for jobs>`
+   :index:`OMP_NUM_THREADS<pair: OMP_NUM_THREADS; environment variables for jobs>`
+   :index:`OMP_THREAD_LIMIT<pair: OMP_THREAD_LIMIT; environment variables for jobs>`
+   :index:`OPENBLAS_NUM_THREADS<pair: OPENBLAS_NUM_THREADS; environment variables for jobs>`
+   :index:`PYTHON_CPU_COUNT<pair: PYTHON_CPU_COUNT; environment variables for jobs>`
+   :index:`ROOT_MAX_THREADS<pair: ROOT_MAX_THREADS; environment variables for jobs>`
+   :index:`TF_LOOP_PARALLEL_ITERATIONS<pair: TF_LOOP_PARALLEL_ITERATIONS; environment variables for jobs>`
+   :index:`TF_NUM_THREADS<pair: TF_NUM_THREADS; environment variables for jobs>`
    are set to the number of cpu cores provisioned to this job.  Should be
    at least RequestCpus, but HTCondor may match a job to a bigger slot.  Jobs should not 
    spawn more than this number of cpu-bound threads, or their performance will suffer.
-   Many third party libraries like OpenMP obey these environment variables.
+   Many third party libraries like OpenMP obey these environment variables.  An
+   administrator can add new variables to this set with the configuration knob
+   :macro:`STARTER_NUM_THREADS_ENV_VARS`.
 -  ``BATCH_SYSTEM`` 
    :index:`BATCH_SYSTEM environment variable`\ :index:`BATCH_SYSTEM<pair: BATCH_SYSTEM; environment variables for jobs>`
    All job running under a HTCondor starter have the environment variable BATCH_SYSTEM 
    set to the string *HTCondor*.  Inspecting this variable allows a job to
    determine if it is running under HTCondor.
+-  ``SINGULARITY_CACHEDIR`` ``SINGULARITY_CACHEDIR``
+   :index:`SINGULARITY_CACHEDIR<pair: SINGULARITY_CACHEDIR; environment variables for jobs>`
+   :index:`APPTAINER_CACHEDIR<pair: APPTAINER_CACHEDIR; environment variables for jobs>`
+   These two variables are set to the location of the scratch directory to prevent apptainer
+   or singularity from writing to a home directory or other place that isn't cleaned up on
+   job exit.
 -  ``X509_USER_PROXY``
    :index:`X509_USER_PROXY environment variable`\ :index:`X509_USER_PROXY<pair: X509_USER_PROXY; environment variables for jobs>`
    gives the full path to the X.509 user proxy file if one is associated
@@ -1719,4 +1739,3 @@ job may disable the flushing by setting
 in the job's submit description file. See the 
 :doc:`/classad-attributes/job-classad-attributes` page for a definition of the
 job ClassAd attribute.
-
