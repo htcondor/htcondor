@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- In the unlikely event that a shadow exception event happens, the text is
+  now saved in the job ad attribute :ad-attr:`LastShadowException` for
+  further debugging.
+  :jira:`1896`
 
 Bugs Fixed:
 
