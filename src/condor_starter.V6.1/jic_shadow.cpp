@@ -2631,7 +2631,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 					if(! manifestFileName.empty()) {
 						std::string message = "Found more than one MANIFEST file, aborting.";
 						notifyStarterError( message.c_str(), true, 0, 0 );
-						EXCEPT( "%s\n", message.c_str() );
+						EXCEPT( "%s", message.c_str() );
 					}
 					manifestFileName = currentFile;
 				}
@@ -2645,14 +2645,14 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 				if(! manifest::validateManifestFile( manifestFileName )) {
 					std::string message = "Invalid MANIFEST file, aborting.";
 					notifyStarterError( message.c_str(), true, 0, 0 );
-					EXCEPT( "%s\n", message.c_str() );
+					EXCEPT( "%s", message.c_str() );
 				}
 
 				std::string error;
 				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
 					formatstr( error, "%s, aborting.", error.c_str() );
 					notifyStarterError( error.c_str(), true, 0, 0 );
-					EXCEPT( "%s\n", error.c_str() );
+					EXCEPT( "%s", error.c_str() );
 				}
 
 				unlink( manifestFileName.c_str() );

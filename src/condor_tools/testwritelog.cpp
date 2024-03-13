@@ -282,17 +282,17 @@ init_params()
 {
 	Spool = param("SPOOL");
     if( Spool == NULL ) {
-        EXCEPT( "SPOOL not specified in config file\n" );
+        EXCEPT( "SPOOL not specified in config file" );
     }
 
 	Log = param("LOG");
     if( Log == NULL ) {
-        EXCEPT( "LOG not specified in config file\n" );
+        EXCEPT( "LOG not specified in config file" );
     }
 
 	DaemonSockDir = param("DAEMON_SOCKET_DIR");
 	if( DaemonSockDir == NULL ) {
-		EXCEPT("DAEMON_SOCKET_DIR not defined\n");
+		EXCEPT("DAEMON_SOCKET_DIR not defined");
 	}
 
 	char *Execute = param("EXECUTE");

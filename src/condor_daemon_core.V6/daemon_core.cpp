@@ -10226,7 +10226,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 	}
 
 	if( (!tryIPv4) && (!tryIPv6) ) {
-		EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE.\n" );
+		EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE." );
 	}
 
 	// Arbitrary constant, borrowed from bindAnyCommandPort().
