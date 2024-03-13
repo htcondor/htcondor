@@ -398,8 +398,8 @@ Starter::ShutdownGraceful( void )
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
-		if (listit != m_job_list.end()) listit++;
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
@@ -471,8 +471,8 @@ Starter::ShutdownFast( void )
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
-		if (listit != m_job_list.end()) listit++;
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
@@ -545,8 +545,8 @@ Starter::Remove( ) {
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
-		if (listit != m_job_list.end()) listit++;
 	}
 	ShuttingDown = TRUE;
 
@@ -1746,8 +1746,8 @@ Starter::Hold( void )
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
-		if (listit != m_job_list.end()) listit++;
 	}
 	ShuttingDown = TRUE;
 	return ( !jobRunning );
@@ -2894,8 +2894,9 @@ Starter::Reaper(int pid, int exit_status)
 			handled_jobs++;
 			listit = stable_job_list.erase(listit);
 			stable_reaped_job_list.emplace_back(job);
+		} else {
+			listit++;
 		}
-		if (listit != stable_job_list.end()) listit++;
 	}
 
 	copyProcList( stable_reaped_job_list, m_reaped_job_list );
@@ -3041,7 +3042,6 @@ Starter::cleanupJobs( void )
 					 "lease to expire or for a reconnect attempt\n" );
 			return false;
 		}
-		if (listit != m_reaped_job_list.end()) listit++;
 	}
 		// No more jobs, all cleanup done, notify our JIC
 	jic->allJobsGone();
