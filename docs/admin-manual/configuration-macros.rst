@@ -11404,3 +11404,20 @@ condor_annex Configuration File Macros
 
 See :doc:`/cloud-computing/annex-configuration` for :tool:`condor_annex`
 configuration file macros.
+
+``htcondor annex`` Configuration File Macros
+--------------------------------------------
+:index:`htcondor annex configuration variables<single: htcondor annex configuration variables; configuration>`
+
+:macro-def:`HPC_ANNEX_ENABLED`
+    If true, users will have access to the ``annex`` noun of the
+    :doc:`../man-pages/htcondor` command.
+
+    .. warning::
+
+        This does not configure the AP so that ``htcondor annex``
+        will *work*.  Configuring an AP for ``htcondor annex`` is
+        tricky, and we recommend that you add :macro:`use feature:HPC_ANNEX`
+        instead, which sets this macro.
+
+    Defaults to false.

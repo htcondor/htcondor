@@ -10,3 +10,9 @@ but we've prepared a few examples for job submitters already.
     :glob:
 
     prefer-gpu-to-cpu
+    anvil
+    bridges2
+    expanse
+    path-facility
+    perlmutter
+    annex-example-job
