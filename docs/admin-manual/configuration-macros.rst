@@ -6556,6 +6556,17 @@ These settings affect the *condor_starter*.
     A string value or classad expression containing a list of extra arguments to be appended
     to the Singularity command line. This can be an expression evaluted in the context of the
     slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
+:macro-def:`SINGULARITY_RUN_TEST_BEFORE_JOB[STARTER]`
+    A boolean value which defaults to true.  When true, before running a singularity
+    or apptainer contained job, the HTCondor starter will run apptainer test your_image.
+    Only if that succeeds will HTCondor then run your job proper.
+
+:macro-def:`SINGULARITY_VERBOSITY[STARTER]`
+    A string value that defaults to -q.  This string is placed immediately after the
+    singularity or apptainer command, intended to control debugging verbosity, but
+    could be used for any global option for all singularity or apptainer commands.
+    Debugging singularity or apptainer problems may be aided by setting this to -v
+    or -d.
 
 :macro-def:`USE_DEFAULT_CONTAINER[STARTER]`
     A boolean value or classad expression evaluating to boolean in the context of the Slot
