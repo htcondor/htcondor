@@ -108,14 +108,6 @@ struct SubmitErrContext {
 };
 extern struct SubmitErrContext  ErrContext;
 
-#if 0 // no longer used
-int submit_factory_job (
-	FILE * fp,
-	MACRO_SOURCE & source,            // source that fp refers to
-	List<const char> & extraLines,    // lines passed in via -a argument
-	std::string & queueCommandLine);  // queue statement passed in via -q argument
-#endif
-
 int write_factory_file(const char * filename, const void* data, int cb, mode_t access);
 
 // used by refactoring of main submit loop.
