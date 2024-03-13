@@ -40,7 +40,7 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-//#define USE_CLASSAD_FLAT_MAP
+#define USE_CLASSAD_FLAT_MAP
 #ifdef USE_CLASSAD_FLAT_MAP
 using AttrList = ClassAdFlatMap;
 #else
