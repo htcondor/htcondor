@@ -45,7 +45,7 @@ IsStringEnd(const char *str, unsigned off)
 	return (  (str[off] == '\0') || (str[off] == '\n') || (str[off] == '\r')  );
 }
 
-static StringList ClassAdUserLibs;
+static std::vector<std::string> ClassAdUserLibs;
 
 static void registerClassadFunctions();
 static void classad_debug_dprintf(const char *s);
@@ -77,9 +77,9 @@ void ClassAdReconfig()
 		new_libs_list.rewind();
 		char *new_lib;
 		while ( (new_lib = new_libs_list.next()) ) {
-			if ( !ClassAdUserLibs.contains( new_lib ) ) {
+			if ( !contains(ClassAdUserLibs, new_lib) ) {
 				if ( classad::FunctionCall::RegisterSharedLibraryFunctions( new_lib ) ) {
-					ClassAdUserLibs.append( new_lib );
+					ClassAdUserLibs.emplace_back(new_lib);
 				} else {
 					dprintf( D_ALWAYS, "Failed to load ClassAd user library %s: %s\n",
 							 new_lib, classad::CondorErrMsg.c_str() );
@@ -96,12 +96,12 @@ void ClassAdReconfig()
 		std::string user_python(user_python_char);
 		free(user_python_char); user_python_char = NULL;
 		char *loc_char = param("CLASSAD_USER_PYTHON_LIB");
-		if (loc_char && !ClassAdUserLibs.contains(loc_char))
+		if (loc_char && !contains(ClassAdUserLibs, loc_char))
 		{
 			std::string loc(loc_char);
 			if (classad::FunctionCall::RegisterSharedLibraryFunctions(loc.c_str()))
 			{
-				ClassAdUserLibs.append(loc.c_str());
+				ClassAdUserLibs.emplace_back(loc);
 #if defined(UNIX)
 				void *dl_hdl = dlopen(loc.c_str(), RTLD_LAZY);
 				if (dl_hdl) // Not warning on failure as the RegisterSharedLibraryFunctions should have done that.
@@ -218,8 +218,11 @@ bool stringListSize_func( const char * /*name*/,
 		return true;
 	}
 
-	StringList sl( list_str.c_str(), delim_str.c_str() );
-	result.SetIntegerValue( sl.number() );
+	int cnt = 0;
+	for (auto& item : StringTokenIterator(list_str, delim_str.c_str())) {
+		cnt++;
+	}
+	result.SetIntegerValue(cnt);
 
 	return true;
 }
@@ -297,8 +300,22 @@ bool stringListSummarize_func( const char *name,
 		return false;
 	}
 
-	StringList sl( list_str.c_str(), delim_str.c_str() );
-	if ( sl.number() == 0 ) {
+	int cnt = 0;
+	for (auto& entry : StringTokenIterator(list_str, delim_str.c_str())) {
+		cnt++;
+		double temp;
+		int r = sscanf(entry.c_str(), "%lf", &temp);
+		if (r != 1) {
+			result.SetErrorValue();
+			return true;
+		}
+		if (strspn(entry.c_str(), "+-0123456789") != strlen(entry.c_str())) {
+			is_real = true;
+		}
+		accumulator = func( temp, accumulator );
+	}
+
+	if ( cnt == 0 ) {
 		if ( empty_allowed ) {
 			result.SetRealValue( 0.0 );
 		} else {
@@ -307,23 +324,8 @@ bool stringListSummarize_func( const char *name,
 		return true;
 	}
 
-	sl.rewind();
-	const char *entry;
-	while ( (entry = sl.next()) ) {
-		double temp;
-		int r = sscanf(entry, "%lf", &temp);
-		if (r != 1) {
-			result.SetErrorValue();
-			return true;
-		}
-		if (strspn(entry, "+-0123456789") != strlen(entry)) {
-			is_real = true;
-		}
-		accumulator = func( temp, accumulator );
-	}
-
 	if ( is_avg ) {
-		accumulator /= sl.number();
+		accumulator /= cnt;
 	}
 
 	if ( is_real ) {
@@ -408,11 +410,11 @@ bool stringListMember_func( const char *name,
 
 	int rc = 0;
 	if (member) {
-		StringList sl( list_str.c_str(), delim_str.c_str() );
+		std::vector<std::string> sl = split(list_str, delim_str.c_str());
 		if (case_sensitive) {
-			rc = sl.contains( item_str.c_str() );
+			rc = contains(sl, item_str.c_str());
 		} else {
-			rc = sl.contains_anycase( item_str.c_str() );
+			rc = contains_anycase(sl, item_str.c_str());
 		}
 	} else if (subset_match) { // SubsetMatch
 
@@ -520,12 +522,6 @@ bool stringListRegexpMember_func( const char * /*name*/,
 		return true;
 	}
 
-	StringList sl( list_str.c_str(), delim_str.c_str() );
-	if ( sl.number() == 0 ) {
-		result.SetUndefinedValue();
-		return true;
-	}
-
 	Regex r;
 	int errcode;
 	int errpos = 0;
@@ -541,12 +537,16 @@ bool stringListRegexpMember_func( const char * /*name*/,
 
 	result.SetBooleanValue( false );
 
-	sl.rewind();
-	char *entry;
-	while( (entry = sl.next())) {
-		if (r.match(entry)) {
+	bool empty = true;
+	for (auto& entry : StringTokenIterator(list_str, delim_str.c_str())) {
+		empty = false;
+		if (r.match(entry.c_str())) {
 			result.SetBooleanValue( true );
 		}
+	}
+
+	if (empty) {
+		result.SetUndefinedValue();
 	}
 
 	return true;
