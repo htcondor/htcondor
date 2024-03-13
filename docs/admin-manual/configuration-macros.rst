@@ -3272,6 +3272,11 @@ section.
     many keep alive messages can be missed before the *condor_startd*
     considers the claim no longer valid. The default is 6.
 
+:macro-def:`MATCH_TIMEOUT[STARTD]`
+    The amount of time a startd will stay in Matched state without
+    getting a claim request before reverting back to Unclaimed state.
+    Defaults to 120 seconds.
+
 :macro-def:`STARTD_HAS_BAD_UTMP[STARTD]`
     When the *condor_startd* is computing the idle time of all the
     users of the machine (both local and remote), it checks the ``utmp``
@@ -4334,11 +4339,21 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
 
           DOCKER = /usr/bin/docker
 
+
 :macro-def:`DOCKER_VOLUMES[STARTD]`
-    A list of directories on the host execute machine to be volume
+    A list of directories on the host execute machine that might be volume
     mounted within the container. See the Docker Universe section for
     full details
     (:ref:`admin-manual/ep-policy-configuration:docker universe`).
+
+:macro-def:`DOCKER_MOUNT_VOLUMES[STARTD]`
+    A list of volumes, defined in the macro above, that will unconditionally
+    be mounted inside the docker container.
+
+:macro-def:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF[STARTD]`
+    This is a class ad expression, evaluated in the context of the job ad and the
+    machine ad. Only when it evaluted to TRUE, is the volume named xxx mounted.
+
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE[STARTD]`
     The number of most recently used Docker images that will be kept on
     the local machine. The default value is 8.
