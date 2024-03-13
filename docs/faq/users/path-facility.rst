@@ -34,9 +34,11 @@ Assumptions
 Preparation
 ===========
 
-First, you will need to determine the project name associated with
-your credits at the PATh Facility.  There's presently no tool to
-determine this by logging in to the PATh Facility.
+None!
+
+(A note: when copying examples further down the page, don't copy the ``$``;
+it just signifies something you type in, rather than something
+that the computer prints out.)
 
 Instructions
 ============
@@ -44,8 +46,8 @@ Instructions
 1. Log into the OSG Connect Access Point
 ''''''''''''''''''''''''''''''''''''''''
 
-Log into an OSG Connect access point (e.g., ``login04.osgconnect.net`` or
-``login05.osgconnect.net``) using your OSG Connect account and password.
+Log into an OSG Connect access point (e.g., ``ap20.uc.osg-htc.org`` or
+``ap21.uc.osg-htc.org``) using your OSG Connect account and password.
 
 2. Submit the Job
 '''''''''''''''''
@@ -74,36 +76,33 @@ Notes on the output of this command:
 To run your job on the PATh Facility, you will need to create an *annex* there;
 an annex is a named set of leased resources.  The following command will
 submit a request to lease an annex named ``example`` from the PATh Facility.
-Project ``PROJECT_ID`` will be charged for resources used (by
-default, two nodes).  The **text in bold** is emphasized to distinguish
+The **text in bold** is emphasized to distinguish
 it from the PATh Facility's log-in prompt.
 
-.. raw:: html
+.. parsed-literal::
+    :class: highlight
 
-    <div class="highlight-text notranslate"><div class="highlight">
-    <pre>$ htcondor annex create example cpu@path-facility --project PROJECT_ID --login-name LOGIN_NAME
-    <b>This command will access the system named 'PATh Facility' via SSH.  To proceed, follow the
-    prompts from that system below; to cancel, hit CTRL-C.</b>
-    </pre></div></div>
+    $ htcondor annex create example cpu\@path-facility --cpus 2 --login-name LOGIN_NAME
+    **This command will access the system named 'PATh Facility' via SSH.  To proceed, follow the**
+    **prompts from that system below; to cancel, hit CTRL-C.**
 
 You will need to log into the PATh Facility at this prompt.
 
-.. raw:: html
+.. parsed-literal::
+    :class: highlight
 
-    <div class="highlight-text notranslate"><div class="highlight">
-    <pre><b>Thank you.</b>
+    **Thank you.**
 
     Requesting annex named 'example' from queue 'cpu' on the system named 'PATH Facility'...
-    </pre></div></div>
 
 The tool will display an indented log of the request progress, because
 it may take a while.  Once the request is done, it will display:
 
 .. code-block:: text
 
-	... requested.
+    ... requested.
 
-It may take some time for the PATh Facility to establish the requested annex.
+    It may take some time for the PATh Facility to establish the requested annex.
 
 4. Confirm that the Resources are Available
 '''''''''''''''''''''''''''''''''''''''''''
