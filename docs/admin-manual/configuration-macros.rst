@@ -3748,6 +3748,16 @@ htcondor for running backfill jobs` for details.
     :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     section.
 
+:macro-def:`BOINC_Arguments[STARTD]`
+:macro-def:`BOINC_Environment[STARTD]`
+:macro-def:`BOINC_Error[STARTD]`
+:macro-def:`BOINC_Executable[STARTD]`
+:macro-def:`BOINC_InitialDir[STARTD]`
+:macro-def:`BOINC_Output[STARTD]`
+:macro-def:`BOINC_Owner[STARTD]`
+:macro-def:`BOINC_Universe[STARTD]`
+     These relate to the BOINC backfill system.
+
 The following macros only apply to the *condor_startd* daemon when it
 is running on a multi-core machine. See the
 :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
