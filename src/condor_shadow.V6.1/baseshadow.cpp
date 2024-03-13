@@ -39,6 +39,7 @@
 #include "ipv6_hostname.h"
 #include <math.h>
 #include "job_ad_instance_recording.h"
+#include <algorithm>
 
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
