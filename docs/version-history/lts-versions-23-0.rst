@@ -39,6 +39,11 @@ Bugs Fixed:
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`
 
+- Fixed a bug where an error message from the *condor_starter* could
+  create job event log entries with newlines in them, which broke the
+  event log parser.
+  :jira:`2343`
+
 .. _lts-version-history-2308:
 
 Version 23.0.8
