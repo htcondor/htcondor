@@ -158,11 +158,16 @@ public:
 		*/
 	virtual int jobEnvironmentReady( void );
 	
+	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
+
 		/**
 		 * 
 		 * 
 		 **/
 	virtual void SpawnPreScript( int timerID = -1 );
+
+		/* timer to handle unwinding to pump while skipping job spawn */
+	virtual void SkipJobs( int timerID = -1 );
 
 		/** Does initial cleanup once all the jobs (and post script, if
 			any) have completed.  This notifies the JIC so it can
@@ -332,6 +337,11 @@ public:
 protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;
+
+	// JobEnvironmentCannotReady sets these to pass along the setup failure info that
+	// we want to report *after* we finish transfer of FailureFiles
+	int            m_setupStatus = 0; // 0 is success, non-zero indicates failure of job setup
+	struct UnreadyReason  m_urea; // details when m_setupStatus is non-zero
 
 #ifdef WIN32
 	OwnerProfile m_owner_profile;
