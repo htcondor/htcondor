@@ -1621,6 +1621,7 @@ details on DaemonCore. There are certain configuration file settings
 that DaemonCore uses which affect all HTCondor daemons.
 
 :macro-def:`ALLOW[Global]`
+:macro-def:`DENY[Global]`
     All macros that begin with either :macro:`ALLOW` or
     :macro:`DENY` are settings for HTCondor's security.
     See :ref:`admin-manual/security:authorization` on Setting
@@ -3088,6 +3089,14 @@ section.
     A larger value for a specific job ranks that job above others with
     lower values for :macro:`RANK`.
 
+:macro-def:`MaxJobRetirementTime[START]`
+    An expression evaluated in the context of the slot ad and the Job
+    ad that should evaluate to a number of seconds.  This is the
+    number of seconds after a running job has been requested to
+    be preempted or evicted, that it is allowed to remain
+    running in the Preempting/Retiring state.  It can Be
+    thought of as a "minimum guaranteed runtime".
+
 :macro-def:`ADVERTISE_PSLOT_ROLLUP_INFORMATION[STARTD]`
     A boolean value that defaults to ``True``, causing the
     *condor_startd* to advertise ClassAd attributes that may be used in
@@ -4441,22 +4450,6 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     InfiniBand) regardless of this setting. The default value is
     ``docker0``,\ ``virbr0``.
 
-These macros control the startds (and starters) capability to
-create a private filesystem for the scratch directory for each job.
-
-:macro-def:`THINPOOL_VOLUME_GROUP_NAME[STARTD]`
-    A string that names the Linux LVM volume group the administrator 
-    has configured as the storage for per-job scratch directories.
-
-:macro-def:`THINPOOL_NAME[STARTD]`
-    A string that names the Linux LVM logical volume for storage 
-    for per-job scratch directories.
-
-:macro-def:`STARTD_ENFORCE_DISK_LIMITS[STARTD]`
-    A boolean that defaults to false that controls whether the
-    starter puts a job on hold that fills the per-job filesystem.
-
-
 condor_schedd Configuration File Entries
 -----------------------------------------
 
@@ -5147,6 +5140,17 @@ These macros control the *condor_schedd*.
 :macro-def:`SCHEDD_EXECUTE[SCHEDD]`
     A directory to use as a temporary sandbox for local universe jobs.
     Defaults to ``$(SPOOL)``/execute.
+
+:macro-def:`FLOCK_TO[SCHEDD]`
+    This defines a comma separate list of central manager
+    machines this schedd should flock to.  The default value
+    is empty.  For flocking to work, each of these central
+    managers should also define :macro:`FLOCK_FROM` with the
+    name of this schedd in that list.  This paramaeter
+    explicilty sets :macro:`FLOCK_NEGOTIATOR_HOSTS` and 
+    :macro:`FLOCK_COLLECTOR_HOSTS` so that you usually
+    just need to set :macro:`FLOCK_TO` and no others to make
+    flocking work.
 
 :macro-def:`FLOCK_NEGOTIATOR_HOSTS[SCHEDD]`
     Defines a comma and/or space separated list of *condor_negotiator*
@@ -7000,6 +7004,11 @@ These macros affect the *condor_collector*.
     (and recommended) value is 60 seconds. Setting this macro's value
     too low will increase the load on the collector, while setting it to
     high will produce less precise statistical information.
+
+:macro-def:`FLOCK_FROM[COLLECTOR]`
+    The macros contains a comma separate list of schedd names that
+    should be allowed to flock to this central manager.  Defaults
+    to an empty list.
 
 :macro-def:`COLLECTOR_DAEMON_STATS[COLLECTOR]`
     A boolean value that controls whether or not the *condor_collector*
@@ -10535,6 +10544,9 @@ These configuration variables affect the *condor_shared_port* daemon.
 For general discussion of the *condor_shared_port* daemon,
 see :ref:`admin-manual/networking:reducing port usage with the
 *condor_shared_port* daemon`.
+
+:macro-def:`SHARED_PORT`
+    The path to the binary of the shared_port daemon.
 
 :macro-def:`USE_SHARED_PORT[SHARED PORT]`
     A boolean value that specifies whether HTCondor daemons should rely
