@@ -23,6 +23,7 @@
 #include "directory.h"
 #include "dc_collector.h"
 #include "statsd.h"
+#include "directory_util.h"
 
 #include <memory>
 #include <fstream>
@@ -46,6 +47,7 @@
 
 Metric::Metric():
 	derivative(false),
+	zero_value(false),
 	verbosity(0),
 	lifetime(-1),
     scale(1.0),
@@ -496,7 +498,7 @@ Metric::getValueString(std::string &result) const {
         case FLOAT:
 		case DOUBLE: {
 			double dbl = 0.0;
-			if( value.IsNumber(dbl) ) {
+			if( zero_value || value.IsNumber(dbl) ) {
                 dbl *= scale;
 				formatstr(result,"%g",dbl);
 				return true;
@@ -516,7 +518,7 @@ Metric::getValueString(std::string &result) const {
         case INT32:
         case UINT32: {
             int i = 0;
-            if( value.IsIntegerValue(i) ) {
+            if( zero_value || value.IsIntegerValue(i) ) {
                 i *= scale;
                 formatstr(result,"%d",i);
                 return true;
@@ -688,6 +690,29 @@ StatsD::initAndReconfig(char const *service_name)
 
 	formatstr(param_name,"%s_REQUIREMENTS",service_name);
 	param(m_requirements,param_name.c_str());
+
+	m_reset_metrics_filename.clear();
+	formatstr(param_name,"%s_WANT_RESET_METRICS",service_name);
+	if (param_boolean(param_name.c_str(),false)) {
+		formatstr(param_name,"%s_RESET_METRICS_FILE",service_name);
+		param(m_reset_metrics_filename,param_name.c_str());
+		
+		if (!m_reset_metrics_filename.empty()) {
+			// If filename from the user is a relative path, stick it in SPOOL dir
+			if ( !IS_ANY_DIR_DELIM_CHAR(m_reset_metrics_filename[0]) ) {
+				std::string fname = m_reset_metrics_filename;
+				std::string dirname;
+				param(dirname,"SPOOL");
+				dircat(dirname.c_str(),fname.c_str(),m_reset_metrics_filename);
+			}
+
+			// If filename from user does not end with the expected suffix,
+			// then append it.  This is required so preen doesn't go removing it.
+			if (!m_reset_metrics_filename.ends_with(".ganglia_metrics")) {
+				m_reset_metrics_filename += ".ganglia_metrics";
+			}
+		}
+	}
 
 	formatstr(param_name,"%s_PER_EXECUTE_NODE_METRICS",service_name);
 	m_per_execute_node_metrics = param_boolean(param_name.c_str(),true);
@@ -985,6 +1010,45 @@ StatsD::publishDaemonMetrics(ClassAd *daemon_ad)
 void
 StatsD::publishAggregateMetrics()
 {
+	static bool atStartup = true;
+	bool rewriteMetricsToReset = false;
+	bool want_reset_metrics = !m_reset_metrics_filename.empty();
+
+	if ( want_reset_metrics ) {
+
+		// Here we handle "reset metrics". The alogirthm is as follows:
+		// We keep track of the aggregate metrics we sent during the previous update, and for any such metric that
+		// is not being updated to a new value during the current update, we send a value of zero to signfify this
+		// metric "disappeared".  Otherwise, systems like Ganglia will keep the previous value around.
+		// Then for every aggregate metric that is updated in this current update, store these metrics to a disk file in case
+		// the gangliad is shutdown before the next update so we don't fail to reset these metrics to zero.
+		// We keep track of all the metrics written into the disk file in set m_metrics_to_reset_at_startup and
+		// only rewrite the file if the set of updated metrics change (as it will often be the same between any two 
+		// updates).
+
+		int resetMetricsSent = 0;
+
+		if (atStartup) {
+			atStartup = false;
+			rewriteMetricsToReset = true;
+			ReadMetricsToReset();	// this will populate m_previous_aggregate_metrics 
+		}
+
+		for ( const auto& [key,metric] : m_previous_aggregate_metrics ) {
+			if (!m_aggregate_metrics.contains(key)) {
+				metric->zero_value = true;
+				publishMetric(*metric);
+				resetMetricsSent++;
+			}
+			delete metric;
+		}
+		m_previous_aggregate_metrics.clear();
+		
+		if (resetMetricsSent > 0) {
+			dprintf(D_ALWAYS,"Published %d reset metrics\n",resetMetricsSent);
+		}
+	}
+
 	for( AggregateMetricList::iterator itr = m_aggregate_metrics.begin();
 		 itr != m_aggregate_metrics.end();
 		 itr++ )
@@ -992,8 +1056,115 @@ StatsD::publishAggregateMetrics()
 		Metric *metric = newMetric(itr->second);
 		metric->convertToNonAggregateValue();
 		publishMetric(*metric);
-		delete metric;
+		if ( want_reset_metrics &&
+			 metric->type != Metric::MetricTypeEnum::STRING && 
+			 metric->type != Metric::MetricTypeEnum::BOOLEAN )
+		{
+			m_previous_aggregate_metrics[itr->first] = metric;
+			if (!m_metrics_to_reset_at_startup.contains(itr->first)) {
+				rewriteMetricsToReset = true;
+			}
+		} 
+		else {
+			delete metric;
+		}
 	}
+
+	if ( want_reset_metrics ) {
+		if (m_metrics_to_reset_at_startup.size() != m_previous_aggregate_metrics.size() ) {
+			rewriteMetricsToReset = true;
+		}
+		if (rewriteMetricsToReset) {
+			WriteMetricsToReset();
+		}
+	}
+}
+
+bool
+StatsD::ReadMetricsToReset()
+{
+	bool ret_val = true;
+
+	if (m_reset_metrics_filename.empty()) return true;  // not an error if not configured
+
+	FILE *fp = safe_fopen_no_create(m_reset_metrics_filename.c_str(),"rb");
+	if (!fp) return true;	// not an errror if file does not exist
+
+	// Create a std::string buffer large enough to hold file contents and read it in.
+	// No need to check for errors here, since we will catch any problems when deserializing
+	fseek(fp, 0 , SEEK_END);
+	long fileSize = ftell(fp);
+	fseek(fp, 0 , SEEK_SET);
+	std::string buf(fileSize,'\0');
+	size_t actual = fread(&buf[0], sizeof(char), static_cast<size_t>(fileSize), fp);
+	if (actual != static_cast<size_t>(fileSize)) {
+		dprintf(D_ALWAYS,"WARNING: failed to read complete reset metrics file\n");
+		ret_val = false;
+	}
+	fclose(fp);
+
+	// First read out how many metrics are in the file
+	YourStringDeserializer in(buf.c_str());
+	int numMetrics = 0;
+	if ( ! in.deserialize_int(&numMetrics) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM) ) {
+		dprintf(D_ALWAYS,"WARNING: failed to read number of metrics from reset metrics file; ignoring\n");
+		numMetrics = 0;
+		ret_val = false;
+	}
+
+	// For each metric stored in the file, create a metric in m_previous_aggregate_metrics map
+	for (int i=0; i < numMetrics; i++) {
+		Metric *metric = newMetric();
+		if ( metric->deserialize(in) ) {
+			m_previous_aggregate_metrics[metric->aggregate_group] = metric;
+		} else {
+			// no need for a dprintf here as deserialize() method already did that
+			delete metric;
+			ret_val = false;
+			break;
+		}
+	}
+
+	dprintf(D_ALWAYS,"%s read %d metrics to reset from file %s\n",
+		ret_val ? "Successfully" : "ERROR - unable to completely",
+		numMetrics,
+		m_reset_metrics_filename.c_str()
+	);
+
+	return ret_val;
+}
+
+bool
+StatsD::WriteMetricsToReset()
+{
+	bool ret_val = true;
+
+	if (m_reset_metrics_filename.empty()) return true;  // not an error if not configured
+
+	std::string bufToWrite;
+	bufToWrite += std::to_string(m_previous_aggregate_metrics.size()) + METRIC_SERIALIZATION_DELIM;
+	m_metrics_to_reset_at_startup.clear();
+	for ( const auto& [key,metric] : m_previous_aggregate_metrics ) {
+		m_metrics_to_reset_at_startup.insert(key);
+		bufToWrite += metric->serialize() + "\n";
+	}
+	FILE *fp = safe_fcreate_replace_if_exists(m_reset_metrics_filename.c_str(),"wb");
+	if (fp) {
+		size_t s = fwrite(bufToWrite.c_str(),sizeof(char),bufToWrite.size(),fp);
+		if ( s != bufToWrite.size() ) {
+			dprintf(D_ALWAYS,"WARNING: Unable to write reset metrics file (disk full?)\n");
+			ret_val = false;
+		}
+		if (fclose(fp)) {
+			dprintf(D_ALWAYS,"WARNING: fclose failed on reset metrics file (disk full?)\n");
+			ret_val = false;
+		}
+	} else {
+		dprintf(D_ALWAYS,"WARNING: Unable to open reset metrics file for writing (disk full?)\n");
+		ret_val = false;
+	}
+
+	return ret_val;
 }
 
 void
