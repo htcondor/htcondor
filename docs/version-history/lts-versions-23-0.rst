@@ -15,16 +15,14 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-2305:
+.. _lts-version-history-2306:
 
-Version 23.0.5
+Version 23.0.6
 --------------
 
 Release Notes:
 
-.. HTCondor version 23.0.5 released on Month Date, 2024.
-
-- HTCondor version 23.0.5 not yet released.
+- HTCondor version 23.0.6 released on March 14, 2024.
 
 New Features:
 
@@ -34,15 +32,15 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug in the event log reader that would rarely cause DAGMan
-  to lose track of a job, and wait forever for a job that had
-  really finished, with dagman not realizing that said job had
-  indeed finished.
-  :jira:`2236`
-
 - Fixed bug in DAGMan where nodes that had retries would incorrectly
   set its descendants to the Futile state if the node job got removed.
   :jira:`2240`
+
+- Fixed bug in the event log reader that would rarely cause DAGMan
+  to lose track of a job, and wait forever for a job that had
+  really finished, with DAGMan not realizing that said job had
+  indeed finished.
+  :jira:`2236`
 
 - Fixed *condor_test_token* to access the SciTokens cache as the correct
   user when run as root.
@@ -51,6 +49,10 @@ Bugs Fixed:
 - Fixed a bug that caused a crash if a configuration file or submit
   description file contained an empty multi-line value.
   :jira:`2249`
+
+- Fixed a bug where a submit transform or a job router route could crash on a
+  two argument transform statement that had missing arguments.
+  :jira:`2280`
 
 - Fixed error handing for the ``-format`` and ``-autoformat`` options of
   the *condor_qusers* tool when the argument to those options was not a valid
@@ -61,10 +63,6 @@ Bugs Fixed:
   certificate for itself on macOS.
   :jira:`2272`
 
-- Fixed a bug where a submit transform or a job router route could crash on a
-  two argument transform statement that had missing arguments.
-  :jira:`2280`
-
 .. _lts-version-history-2304:
 
 Version 23.0.4
@@ -72,7 +70,7 @@ Version 23.0.4
 
 Release Notes:
 
-- HTCondor version 23.0.4 released on February 8, 2023.
+- HTCondor version 23.0.4 released on February 8, 2024.
 
 New Features:
 
