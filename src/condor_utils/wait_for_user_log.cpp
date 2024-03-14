@@ -78,7 +78,7 @@ WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
 				return readEvent( event, revised_timeout, following );
 			}
 			default:
-				EXCEPT( "Unknown return value from FileModifiedTrigger::wait(): %d, aborting.\n", result );
+				EXCEPT( "Unknown return value from FileModifiedTrigger::wait(): %d, aborting.", result );
 		}
 	}
 }

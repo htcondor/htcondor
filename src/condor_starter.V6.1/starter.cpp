@@ -377,7 +377,6 @@ bool
 Starter::ShutdownGraceful( void )
 {
 	bool jobRunning = false;
-	UserProc *job;
 
 	dprintf(D_ALWAYS, "ShutdownGraceful all jobs.\n");
 
@@ -389,15 +388,17 @@ Starter::ShutdownGraceful( void )
 		this->removeDeferredJobs();
 	}
 
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	auto listit = m_job_list.begin();
+	while (listit != m_job_list.end()) {
+		auto *job = *listit;
 		if ( job->ShutdownGraceful() ) {
 			// job is completely shut down, so delete it
-			m_job_list.DeleteCurrent();
+			listit = m_job_list.erase(listit);
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
 	}
 	ShuttingDown = TRUE;
@@ -449,7 +450,6 @@ bool
 Starter::ShutdownFast( void )
 {
 	bool jobRunning = false;
-	UserProc *job;
 
 	dprintf(D_ALWAYS, "ShutdownFast all jobs.\n");
 	
@@ -461,15 +461,17 @@ Starter::ShutdownFast( void )
 		this->removeDeferredJobs();
 	}
 
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	auto listit = m_job_list.begin();
+	while (listit != m_job_list.end()) {
+		UserProc *job = *listit;;
 		if ( job->ShutdownFast() ) {
 			// job is completely shut down, so delete it
-			m_job_list.DeleteCurrent();
+			listit = m_job_list.erase(listit);
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
 	}
 	ShuttingDown = TRUE;
@@ -522,7 +524,6 @@ Starter::RemoteRemove( int )
 bool
 Starter::Remove( ) {
 	bool jobRunning = false;
-	UserProc *job;
 
 	dprintf( D_ALWAYS, "Remove all jobs\n" );
 
@@ -534,15 +535,17 @@ Starter::Remove( ) {
 		this->removeDeferredJobs();
 	}
 
-	m_job_list.Rewind();
-	while( (job = m_job_list.Next()) != NULL ) {
+	auto listit = m_job_list.begin();
+	while (listit != m_job_list.end()) {
+		UserProc *job = *listit;
 		if( job->Remove() ) {
 			// job is completely shut down, so delete it
-			m_job_list.DeleteCurrent();
+			listit = m_job_list.erase(listit);
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
 	}
 	ShuttingDown = TRUE;
@@ -1641,7 +1644,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		delete proc;
 		return FALSE;
 	}
-	m_job_list.Append(proc);
+	m_job_list.emplace_back(proc);
 	if( this->suspended ) {
 		proc->Suspend();
 	}
@@ -1722,7 +1725,6 @@ bool
 Starter::Hold( void )
 {	
 	bool jobRunning = false;
-	UserProc *job;
 
 	dprintf( D_ALWAYS, "Hold all jobs\n" );
 
@@ -1734,15 +1736,17 @@ Starter::Hold( void )
 		this->removeDeferredJobs();
 	}
 
-	m_job_list.Rewind();
-	while( (job = m_job_list.Next()) != NULL ) {
+	auto listit = m_job_list.begin();
+	while (listit != m_job_list.end()) {
+		UserProc *job = *listit;;
 		if( job->Hold() ) {
 			// job is completely shut down, so delete it
-			m_job_list.DeleteCurrent();
+			listit = m_job_list.erase(listit);
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
 	}
 	ShuttingDown = TRUE;
@@ -2465,7 +2469,7 @@ Starter::SpawnJob( void )
 			job = new ParallelProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_MPI: {
-			EXCEPT("MPI Universe is no longer supported\n");
+			EXCEPT("MPI Universe is no longer supported");
 			break;
 		}
 		case CONDOR_UNIVERSE_VM:
@@ -2479,7 +2483,7 @@ Starter::SpawnJob( void )
 	} /* switch */
 
 	if (job->StartJob()) {
-		m_job_list.Append(job);
+		m_job_list.emplace_back(job);
 		
 			//
 			// If the Starter received a Suspend call while the
@@ -2507,7 +2511,7 @@ Starter::SpawnJob( void )
 			tool_daemon_proc = new ToolDaemonProc( jobAd, job->GetJobPid() );
 
 			if( tool_daemon_proc->StartJob() ) {
-				m_job_list.Append( tool_daemon_proc );
+				m_job_list.emplace_back( tool_daemon_proc );
 				dprintf( D_FULLDEBUG, "ToolDaemonProc added to m_job_list\n");
 					//
 					// If the Starter received a Suspend call while the
@@ -2633,9 +2637,7 @@ bool
 Starter::Suspend( void ) {
 	dprintf(D_ALWAYS, "Suspending all jobs.\n");
 
-	UserProc *job;
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	for (auto *job: m_job_list) {
 		job->Suspend();
 	}
 	
@@ -2691,11 +2693,8 @@ Starter::Continue( void )
 {
 	dprintf(D_ALWAYS, "Continuing all jobs.\n");
 
-	UserProc *job;
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
-		if (this->suspended)
-		{
+	for (auto *job: m_job_list) {
+		if (this->suspended) {
 		  job->Continue();
 		}
 	}
@@ -2744,9 +2743,7 @@ Starter::PeriodicCkpt( void )
 	}
 	if( ! wantCheckpoint ) { return false; }
 
-	UserProc *job;
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	for (auto *job: m_job_list) {
 		if( job->Ckpt() ) {
 
 			bool transfer_ok = jic->uploadWorkingFiles();
@@ -2778,12 +2775,10 @@ Starter::PeriodicCkpt( void )
 	return true;
 }
 
-void copyProcList( List<UserProc> & from, List<UserProc> & to ) {
-	to.Clear();
-	from.Rewind();
-	UserProc * job = NULL;
-	while( (job = from.Next()) != NULL ) {
-		to.Append( job );
+void copyProcList( std::vector<UserProc *> & from, std::vector<UserProc *> & to ) {
+	to.clear();
+	for (auto *job: from) {
+		to.emplace_back( job );
 	}
 }
 
@@ -2793,7 +2788,6 @@ Starter::Reaper(int pid, int exit_status)
 {
 	int handled_jobs = 0;
 	int all_jobs = 0;
-	UserProc *job;
 
 	if( WIFSIGNALED(exit_status) ) {
 		dprintf( D_ALWAYS, "Process exited, pid=%d, signal=%d\n", pid,
@@ -2886,19 +2880,22 @@ Starter::Reaper(int pid, int exit_status)
 	//
 
 	// Is there a good reason to have neither assignment nor copy ctor?
-	List<UserProc> stable_job_list;
-	List<UserProc> stable_reaped_job_list;
+	std::vector<UserProc *> stable_job_list;
+	std::vector<UserProc *> stable_reaped_job_list;
 
 	copyProcList( m_job_list, stable_job_list );
 	copyProcList( m_reaped_job_list, stable_reaped_job_list );
 
-	stable_job_list.Rewind();
-	while ((job = stable_job_list.Next()) != NULL) {
+	auto listit = stable_job_list.begin();
+	while (listit != stable_job_list.end()) {
+		auto *job = *listit;
 		all_jobs++;
 		if( job->GetJobPid()==pid && job->JobReaper(pid, exit_status) ) {
 			handled_jobs++;
-			stable_job_list.DeleteCurrent();
-			stable_reaped_job_list.Append(job);
+			listit = stable_job_list.erase(listit);
+			stable_reaped_job_list.emplace_back(job);
+		} else {
+			listit++;
 		}
 	}
 
@@ -2963,7 +2960,6 @@ Starter::allJobsDone( void )
 bool
 Starter::transferOutput( void )
 {
-	UserProc *job;
 	bool transient_failure = false;
 
 	if( recorded_job_exit_status ) {
@@ -2991,8 +2987,7 @@ Starter::transferOutput( void )
 		//
 		// See the usage of the "name" variable in user_proc.h/cpp
 
-		m_reaped_job_list.Rewind();
-		while ((job = m_reaped_job_list.Next()) != NULL) {
+		for (auto *job: m_reaped_job_list) {
 			ClassAd ad;
 			int pid;
 			job->PublishUpdateAd(&ad);
@@ -3031,11 +3026,11 @@ Starter::cleanupJobs( void )
 		// Now that we're done with HOOK_JOB_EXIT and transfering
 		// files, we can finally go through the m_reaped_job_list and
 		// call JobExit() on all the procs in there.
-	UserProc *job;
-	m_reaped_job_list.Rewind();
-	while( (job = m_reaped_job_list.Next()) != NULL) {
+	auto listit = m_reaped_job_list.begin();
+	while (listit != m_reaped_job_list.end()) {
+		auto *job = *listit;
 		if( job->JobExit() ) {
-			m_reaped_job_list.DeleteCurrent();
+			listit = m_reaped_job_list.erase(listit);
 			delete job;
 		} else {
 				// This could fail because either we're talking to a
@@ -3069,7 +3064,7 @@ Starter::publishJobExitAd( ClassAd* ad )
 
 
 bool
-Starter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
+Starter::publishJobInfoAd(std::vector<UserProc *> *proc_list, ClassAd* ad)
 {
 		// Iterate through all our UserProcs and have those publish,
 		// as well.  This method is virtual, so we'll get all the
@@ -3080,9 +3075,7 @@ Starter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
 		found_one = true;
 	}
 	
-	UserProc *job;
-	proc_list->Rewind();
-	while ((job = proc_list->Next()) != NULL) {
+	for (auto *job: *proc_list) {
 		if( job->PublishUpdateAd(ad) ) {
 			found_one = true;
 		}
@@ -3236,9 +3229,7 @@ Starter::PublishToEnv( Env* proc_env )
 	proc_env->SetEnv("_CONDOR_JOB_IWD",jic->jobRemoteIWD());
 
 	std::string job_pids;
-	UserProc* uproc;
-	m_job_list.Rewind();
-	while ((uproc = m_job_list.Next()) != NULL) {
+	for (auto *uproc: m_job_list) {
 		uproc->PublishToEnv( proc_env );
 
 		if( ! job_pids.empty() ) {
@@ -3258,8 +3249,7 @@ Starter::PublishToEnv( Env* proc_env )
 	}
 
 		// put in environment variables specific to the type (universe) of job
-	m_reaped_job_list.Rewind();
-	while ((uproc = m_reaped_job_list.Next()) != NULL) {
+	for (auto *uproc: m_reaped_job_list) {
 		uproc->PublishToEnv( proc_env );	// a virtual method per universe
 	}
 
@@ -3364,6 +3354,9 @@ Starter::PublishToEnv( Env* proc_env )
 	env_name += "SCRATCH_DIR";
 	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(true) );
 
+	    // Apptainer/Singlarity scratch dir
+	proc_env->SetEnv("APPTAINER_CACHEDIR", GetWorkingDir(true));
+	proc_env->SetEnv("SINGULARITY_CACHEDIR", GetWorkingDir(true));
 		// slot identifier
 	env_name = base;
 	env_name += "SLOT";

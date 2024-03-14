@@ -15,6 +15,30 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23010
+
+Version 23.0.10
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.10 released on Month Date, 2024.
+
+- HTCondor version 23.0.10 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
+  named "scitokens:2.0" (note plural).  The reference python scitoken implementation
+  uses the singular.  The C++ scitokens implementation incorrectly used the plural up to
+  version 0.6.0.  The old name can be restored with the config knob 
+  :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
+  :jira:`2285`
+
 .. _lts-version-history-2308:
 
 Version 23.0.8
@@ -81,16 +105,14 @@ Bugs Fixed:
   platforms if there was more that one ``condor`` user in LDAP.
   :jira:`2306`
 
-.. _lts-version-history-2305:
+.. _lts-version-history-2306:
 
-Version 23.0.5
+Version 23.0.6
 --------------
 
 Release Notes:
 
-.. HTCondor version 23.0.5 released on Month Date, 2024.
-
-- HTCondor version 23.0.5 not yet released.
+- HTCondor version 23.0.6 released on March 14, 2024.
 
 New Features:
 
@@ -100,15 +122,15 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug in the event log reader that would rarely cause DAGMan
-  to lose track of a job, and wait forever for a job that had
-  really finished, with dagman not realizing that said job had
-  indeed finished.
-  :jira:`2236`
-
 - Fixed bug in DAGMan where nodes that had retries would incorrectly
   set its descendants to the Futile state if the node job got removed.
   :jira:`2240`
+
+- Fixed bug in the event log reader that would rarely cause DAGMan
+  to lose track of a job, and wait forever for a job that had
+  really finished, with DAGMan not realizing that said job had
+  indeed finished.
+  :jira:`2236`
 
 - Fixed *condor_test_token* to access the SciTokens cache as the correct
   user when run as root.
@@ -117,6 +139,10 @@ Bugs Fixed:
 - Fixed a bug that caused a crash if a configuration file or submit
   description file contained an empty multi-line value.
   :jira:`2249`
+
+- Fixed a bug where a submit transform or a job router route could crash on a
+  two argument transform statement that had missing arguments.
+  :jira:`2280`
 
 - Fixed error handing for the ``-format`` and ``-autoformat`` options of
   the *condor_qusers* tool when the argument to those options was not a valid
@@ -127,10 +153,6 @@ Bugs Fixed:
   certificate for itself on macOS.
   :jira:`2272`
 
-- Fixed a bug where a submit transform or a job router route could crash on a
-  two argument transform statement that had missing arguments.
-  :jira:`2280`
-
 .. _lts-version-history-2304:
 
 Version 23.0.4
@@ -138,7 +160,7 @@ Version 23.0.4
 
 Release Notes:
 
-- HTCondor version 23.0.4 released on February 8, 2023.
+- HTCondor version 23.0.4 released on February 8, 2024.
 
 New Features:
 

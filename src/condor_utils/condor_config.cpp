@@ -636,7 +636,7 @@ bool validate_config(bool abort_if_invalid, int opt)
 		int errcode, erroffset;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
 		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS)) {
-			EXCEPT("Programmer error in condor_config: invalid regexp\n");
+			EXCEPT("Programmer error in condor_config: invalid regexp");
 		}
 	}
 

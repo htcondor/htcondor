@@ -152,7 +152,7 @@ UniShadow::spawn()
 				"hookTimeout",
 				this);
 		} else {
-			EXCEPT("Hook manager returned an invalid code\n");
+			EXCEPT("Hook manager returned an invalid code");
 		}
 	}
 }

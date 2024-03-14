@@ -41,7 +41,6 @@
 #include "condor_classad.h"
 #include "condor_secman.h"
 #include "KeyCache.h"
-#include "list.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"
@@ -2141,7 +2140,7 @@ class DaemonCore : public Service
         int nEntries;
     };
 
-    List<PidWatcherEntry> PidWatcherList;
+	std::vector<PidWatcherEntry *> PidWatcherList;
 
     int                 WatchPid(PidEntry *pidentry);
 
@@ -2263,7 +2262,7 @@ class DaemonCore : public Service
 		void * data;
 	};
 
-    List<TimeSkipWatcher> m_TimeSkipWatchers;
+	std::vector<TimeSkipWatcher *> m_TimeSkipWatchers;
 
 		/**
 		   Evaluate a DC-specific policy expression and return the

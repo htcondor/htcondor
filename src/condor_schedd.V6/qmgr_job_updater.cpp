@@ -160,6 +160,7 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		"PostExitSignal",
 		"PostExitBySignal",
 
+		ATTR_JOB_LAST_SHADOW_EXCEPTION,
 		ATTR_JOB_CHECKPOINT_NUMBER
 	};
 

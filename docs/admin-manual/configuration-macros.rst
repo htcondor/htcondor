@@ -1621,6 +1621,7 @@ details on DaemonCore. There are certain configuration file settings
 that DaemonCore uses which affect all HTCondor daemons.
 
 :macro-def:`ALLOW[Global]`
+:macro-def:`DENY[Global]`
     All macros that begin with either :macro:`ALLOW` or
     :macro:`DENY` are settings for HTCondor's security.
     See :ref:`admin-manual/security:authorization` on Setting
@@ -3088,6 +3089,14 @@ section.
     A larger value for a specific job ranks that job above others with
     lower values for :macro:`RANK`.
 
+:macro-def:`MaxJobRetirementTime[START]`
+    An expression evaluated in the context of the slot ad and the Job
+    ad that should evaluate to a number of seconds.  This is the
+    number of seconds after a running job has been requested to
+    be preempted or evicted, that it is allowed to remain
+    running in the Preempting/Retiring state.  It can Be
+    thought of as a "minimum guaranteed runtime".
+
 :macro-def:`ADVERTISE_PSLOT_ROLLUP_INFORMATION[STARTD]`
     A boolean value that defaults to ``True``, causing the
     *condor_startd* to advertise ClassAd attributes that may be used in
@@ -3271,6 +3280,11 @@ section.
     will not immediately release the claim. This setting controls how
     many keep alive messages can be missed before the *condor_startd*
     considers the claim no longer valid. The default is 6.
+
+:macro-def:`MATCH_TIMEOUT[STARTD]`
+    The amount of time a startd will stay in Matched state without
+    getting a claim request before reverting back to Unclaimed state.
+    Defaults to 120 seconds.
 
 :macro-def:`STARTD_HAS_BAD_UTMP[STARTD]`
     When the *condor_startd* is computing the idle time of all the
@@ -3742,6 +3756,16 @@ htcondor for running backfill jobs` for details.
     Backfill state, see :doc:`/admin-manual/ep-policy-configuration`, especially the
     :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     section.
+
+:macro-def:`BOINC_Arguments[STARTD]`
+:macro-def:`BOINC_Environment[STARTD]`
+:macro-def:`BOINC_Error[STARTD]`
+:macro-def:`BOINC_Executable[STARTD]`
+:macro-def:`BOINC_InitialDir[STARTD]`
+:macro-def:`BOINC_Output[STARTD]`
+:macro-def:`BOINC_Owner[STARTD]`
+:macro-def:`BOINC_Universe[STARTD]`
+     These relate to the BOINC backfill system.
 
 The following macros only apply to the *condor_startd* daemon when it
 is running on a multi-core machine. See the
@@ -4334,11 +4358,21 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
 
           DOCKER = /usr/bin/docker
 
+
 :macro-def:`DOCKER_VOLUMES[STARTD]`
-    A list of directories on the host execute machine to be volume
+    A list of directories on the host execute machine that might be volume
     mounted within the container. See the Docker Universe section for
     full details
     (:ref:`admin-manual/ep-policy-configuration:docker universe`).
+
+:macro-def:`DOCKER_MOUNT_VOLUMES[STARTD]`
+    A list of volumes, defined in the macro above, that will unconditionally
+    be mounted inside the docker container.
+
+:macro-def:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF[STARTD]`
+    This is a class ad expression, evaluated in the context of the job ad and the
+    machine ad. Only when it evaluted to TRUE, is the volume named xxx mounted.
+
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE[STARTD]`
     The number of most recently used Docker images that will be kept on
     the local machine. The default value is 8.
@@ -4415,22 +4449,6 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     exclusively use low latency/high speed networks it finds (e.g.
     InfiniBand) regardless of this setting. The default value is
     ``docker0``,\ ``virbr0``.
-
-These macros control the startds (and starters) capability to
-create a private filesystem for the scratch directory for each job.
-
-:macro-def:`THINPOOL_VOLUME_GROUP_NAME[STARTD]`
-    A string that names the Linux LVM volume group the administrator 
-    has configured as the storage for per-job scratch directories.
-
-:macro-def:`THINPOOL_NAME[STARTD]`
-    A string that names the Linux LVM logical volume for storage 
-    for per-job scratch directories.
-
-:macro-def:`STARTD_ENFORCE_DISK_LIMITS[STARTD]`
-    A boolean that defaults to false that controls whether the
-    starter puts a job on hold that fills the per-job filesystem.
-
 
 condor_schedd Configuration File Entries
 -----------------------------------------
@@ -5122,6 +5140,17 @@ These macros control the *condor_schedd*.
 :macro-def:`SCHEDD_EXECUTE[SCHEDD]`
     A directory to use as a temporary sandbox for local universe jobs.
     Defaults to ``$(SPOOL)``/execute.
+
+:macro-def:`FLOCK_TO[SCHEDD]`
+    This defines a comma separate list of central manager
+    machines this schedd should flock to.  The default value
+    is empty.  For flocking to work, each of these central
+    managers should also define :macro:`FLOCK_FROM` with the
+    name of this schedd in that list.  This paramaeter
+    explicilty sets :macro:`FLOCK_NEGOTIATOR_HOSTS` and 
+    :macro:`FLOCK_COLLECTOR_HOSTS` so that you usually
+    just need to set :macro:`FLOCK_TO` and no others to make
+    flocking work.
 
 :macro-def:`FLOCK_NEGOTIATOR_HOSTS[SCHEDD]`
     Defines a comma and/or space separated list of *condor_negotiator*
@@ -6531,6 +6560,17 @@ These settings affect the *condor_starter*.
     A string value or classad expression containing a list of extra arguments to be appended
     to the Singularity command line. This can be an expression evaluted in the context of the
     slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
+:macro-def:`SINGULARITY_RUN_TEST_BEFORE_JOB[STARTER]`
+    A boolean value which defaults to true.  When true, before running a singularity
+    or apptainer contained job, the HTCondor starter will run apptainer test your_image.
+    Only if that succeeds will HTCondor then run your job proper.
+
+:macro-def:`SINGULARITY_VERBOSITY[STARTER]`
+    A string value that defaults to -q.  This string is placed immediately after the
+    singularity or apptainer command, intended to control debugging verbosity, but
+    could be used for any global option for all singularity or apptainer commands.
+    Debugging singularity or apptainer problems may be aided by setting this to -v
+    or -d.
 
 :macro-def:`USE_DEFAULT_CONTAINER[STARTER]`
     A boolean value or classad expression evaluating to boolean in the context of the Slot
@@ -6964,6 +7004,11 @@ These macros affect the *condor_collector*.
     (and recommended) value is 60 seconds. Setting this macro's value
     too low will increase the load on the collector, while setting it to
     high will produce less precise statistical information.
+
+:macro-def:`FLOCK_FROM[COLLECTOR]`
+    The macros contains a comma separate list of schedd names that
+    should be allowed to flock to this central manager.  Defaults
+    to an empty list.
 
 :macro-def:`COLLECTOR_DAEMON_STATS[COLLECTOR]`
     A boolean value that controls whether or not the *condor_collector*
@@ -9292,6 +9337,7 @@ Configuration File Entries Relating to Security
 These macros affect the secure operation of HTCondor. Many of these
 macros are described in the :doc:`/admin-manual/security` section.
 
+:macro-def:`SEC_DEFAULT_AUTHENTICATION[SECURITY]`
 :macro-def:`SEC_*_AUTHENTICATION[SECURITY]`
     Whether authentication is required for a specified permission level.
     Acceptable values are ``REQUIRED``, ``PREFERRED``, ``OPTIONAL``, and
@@ -9301,6 +9347,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``SEC_DEFAULT_AUTHENTICATION``, controls the default setting if no
     others are specified.
 
+:macro-def:`SEC_DEFAULT_ENCRYPTION[SECURITY]`
 :macro-def:`SEC_*_ENCRYPTION[SECURITY]`
     Whether encryption is required for a specified permission level.
     Encryption prevents another entity on the same network from understanding
@@ -9312,6 +9359,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``SEC_DEFAULT_ENCRYPTION``, controls the default setting if no
     others are specified.
 
+:macro-def:`SEC_DEFAULT_INTEGRITY[SECURITY]`
 :macro-def:`SEC_*_INTEGRITY[SECURITY]`
     Whether integrity-checking is required for a specified permission level.
     Integrity checking allows the client and server to detect changes
@@ -9326,6 +9374,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     As a special exception, file transfers are not integrity checked unless
     they are also encrypted.
 
+:macro-def:`SEC_DEFAULT_NEGOTIATION[SECURITY]`
 :macro-def:`SEC_*_NEGOTIATION[SECURITY]`
     Whether the client and server should negotiate security parameters (such
     as encryption, integrity, and authentication) for a given authorization
@@ -9334,6 +9383,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     There is very little penalty for security negotiation and it is strongly
     suggested to leave this as the default (``REQUIRED``) at all times.
 
+:macro-def:`SEC_DEFAULT_AUTHENTICATION_METHODS[SECURITY]`
 :macro-def:`SEC_*_AUTHENTICATION_METHODS[SECURITY]`
     An ordered list of allowed authentication methods for a given authorization
     level.  This set of configuration variables controls both the ordering and
@@ -9352,6 +9402,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     The special value, ``SEC_DEFAULT_AUTHENTICATION_METHODS``, controls the
     default setting if no others are specified.
 
+:macro-def:`SEC_DEFAULT_CRYPTO_METHODS[SECURITY]`
 :macro-def:`SEC_*_CRYPTO_METHODS[SECURITY]`
     An ordered list of allowed cryptographic algorithms to use for
     encrypting a network session at a specified authorization level.
@@ -9825,6 +9876,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     When this parameter is enabled for all daemons, control of who is
     allowed to administer the pool can be consolidated in the
     **condor_collector** and its security configuration.
+
+:macro-def:`KERBEROS_MAP_FILE[SECURITY]`
+    A path to a file that contains ' = ' seperated keys and values,
+    one per line.  The key is the kerberos realm, and the value
+    is the HTCondor uid domain.
 
 :macro-def:`KERBEROS_SERVER_KEYTAB[SECURITY]`
     The path and file name of the keytab file that holds the necessary
@@ -10488,6 +10544,9 @@ These configuration variables affect the *condor_shared_port* daemon.
 For general discussion of the *condor_shared_port* daemon,
 see :ref:`admin-manual/networking:reducing port usage with the
 *condor_shared_port* daemon`.
+
+:macro-def:`SHARED_PORT`
+    The path to the binary of the shared_port daemon.
 
 :macro-def:`USE_SHARED_PORT[SHARED PORT]`
     A boolean value that specifies whether HTCondor daemons should rely

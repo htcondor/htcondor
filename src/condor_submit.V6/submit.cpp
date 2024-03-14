@@ -185,7 +185,6 @@ extern const int JOB_DEFERRAL_PREP_DEFAULT;
 char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
-List<const char> extraLines;  // lines passed in via -a argument
 std::string queueCommandLine; // queue statement passed in via -q argument
 
 SubmitHash submit_hash;
@@ -215,7 +214,7 @@ int submit_jobs (
 	FILE * fp,
 	MACRO_SOURCE & source,
 	int as_factory,                  // 0=not factory, 1=must be factory, 2=smart factory (max_materialize), 3=smart factory (all-but-single-proc)
-	List<const char> & append_lines, // lines passed in via -a argument
+	std::vector<std::string> & append_lines, // lines passed in via -a argument
 	std::string & queue_cmd_line);   // queue statement passed in via -q argument
 void check_umask();
 void setupAuthentication();
@@ -328,22 +327,22 @@ void TestFilePermissions( const char *scheddAddr = NULL )
 }
 
 static bool fnStoreWarning(void * pv, int code, const char * /*subsys*/, const char * message) {
-	List<const char> & warns = *(List<const char> *)pv;
+	std::vector<std::string> *warns = (std::vector<std::string> *)pv;
 	if (message && ! code) {
-		warns.InsertHead(message);
+		warns->insert(warns->begin(), message);
 	}
-	return 1;
+	return true;
 }
 
 void print_submit_parse_warnings(FILE* out, CondorError *errstack)
 {
 	if (errstack && ! errstack->empty()) {
-		// put the warnings into a list so that we can print them int the order they were added (sigh)
-		List<const char> warns;
+		// put the warnings into a vector so that we can print them int the order they were added (sigh)
+		std::vector<std::string> warns;
 		errstack->walk(fnStoreWarning, &warns);
-		const char * msg;
-		warns.Rewind();
-		while ((msg = warns.Next())) { fprintf(out, "WARNING: %s", msg); }
+		for (const auto &msg: warns) {
+			fprintf(out, "WARNING: %s", msg.c_str());
+		}
 		errstack->clear();
 	}
 }
@@ -519,6 +518,7 @@ main( int argc, const char *argv[] )
 	const char *pcolon = NULL;
 	const char *cmd_file = NULL;
 	std::string method;
+	std::vector<std::string> extraLines;  // lines passed in via -a argument
 
 	setbuf( stdout, NULL );
 
@@ -697,7 +697,7 @@ main( int argc, const char *argv[] )
 					}
 					queueCommandLine = ptr[0];
 				} else {
-					extraLines.Append( *ptr );
+					extraLines.emplace_back( *ptr );
 					GotCmdlineKeys = true;
 				}
 			} else if (is_dash_arg_prefix(ptr[0], "batch-name", 1)) {
@@ -715,8 +715,7 @@ main( int argc, const char *argv[] )
 				}
 				// if batch_name_line is not NULL,  we will leak a bit here, but that's better than
 				// freeing something behind the back of the extraLines
-				batch_name_line = strdup(tmp.c_str());
-				extraLines.Append(batch_name_line);
+				extraLines.emplace_back(tmp);
 			} else if (is_dash_arg_prefix(ptr[0], "batch-id", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -batch-id requires another argument\n",
@@ -732,8 +731,7 @@ main( int argc, const char *argv[] )
 				}
 				// if batch_id_line is not NULL,  we will leak a bit here, but that's better than
 				// freeing something behind the back of the extraLines
-				batch_id_line = strdup(tmp.c_str());
-				extraLines.Append(batch_id_line);
+				extraLines.emplace_back(tmp);
 			} else if (is_dash_arg_prefix(ptr[0], "queue", 1)) {
 				if( !(--argc) || (!(*ptr[1]) || *ptr[1] == '-')) {
 					fprintf( stderr, "%s: -queue requires at least one argument\n",
@@ -834,7 +832,7 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "interactive", 1)) {
 				// we don't currently support -interactive on Windows, but we parse for it anyway.
 				dash_interactive = 1;
-				extraLines.Append( "MY.InteractiveJob=True" );
+				extraLines.emplace_back( "MY.InteractiveJob=True" );
 			} else {
 				usage(stderr);
 				exit( 1 );
@@ -1521,17 +1519,15 @@ int iterate_queue_foreach(int queue_num, StringList & vars, StringList & items, 
 }
 
 //PRAGMA_REMIND("TODO: move this into submit_hash?")
-int ParseDashAppendLines(List<const char> &exlines, MACRO_SOURCE& source, MACRO_SET& macro_set)
+int ParseDashAppendLines(std::vector<std::string> &exlines, MACRO_SOURCE& source, MACRO_SET& macro_set)
 {
 	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 
 	ErrContext.phase = PHASE_DASH_APPEND;
 	ExtraLineNo = 0;
-	exlines.Rewind();
-	const char * exline;
-	while (exlines.Next(exline)) {
+	for (const auto &exline: exlines) {
 		++ExtraLineNo;
-		int rval = Parse_config_string(source, 1, exline, macro_set, ctx);
+		int rval = Parse_config_string(source, 1, exline.c_str(), macro_set, ctx);
 		if (rval < 0)
 			return rval;
 		rval = 0;
@@ -1650,7 +1646,7 @@ int submit_jobs (
 	FILE * fp,
 	MACRO_SOURCE & source,
 	int as_factory,                  // 0=not factory, 1=dash_factory, 2=smart factory (max_materialize), 3=smart factory (all but single-proc)
-	List<const char> & append_lines, // lines passed in via -a argument
+	std::vector<std::string> & append_lines, // lines passed in via -a argument
 	std::string & queue_cmd_line)    // queue statement passed in via -q argument
 {
 	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");

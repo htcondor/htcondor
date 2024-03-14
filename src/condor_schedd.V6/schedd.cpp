@@ -15253,6 +15253,8 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "MaxFlockLevel", MaxFlockLevel );
 	cad->Assign( "FlockLevel", FlockLevel );
 	cad->Assign( "MaxExceptions", MaxExceptions );
+	cad->Assign( "HasContainer", true );
+	cad->Assign( "HasSIF", true );
 	
 		// -------------------------------------------------------
 		// Basic Attributes

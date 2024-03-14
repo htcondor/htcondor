@@ -1428,6 +1428,23 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.2-1
+- Old ClassAd based syntax is disabled by default for the job router
+- Can efficiently manage/enforce disk space using LVM partitions
+- GPU discovery is enabled on all Execution Points by default
+- Prevents accessing unallocated GPUs using cgroup v1 enforcement
+- New condor_submit commands for constraining GPU properties
+- Add ability to transfer EP's starter log back to the Access Point
+- Can use VOMS attributes when mapping identities of SSL connections
+- The CondorVersion string contains the source git SHA
+
+* Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.6-1
+- Fix DAGMan where descendants of removed retry-able jobs are marked futile
+- Ensure the condor_test_token works correctly when invoked as root
+- Fix bug where empty multi-line values could cause a crash
+- condor_qusers returns proper exit code for errors in formatting options
+- Fix crash in job router when a job transform is missing an argument
+
 * Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.4.0-1
 - condor_submit warns about unit-less request_disk and request_memory
 - Separate condor-credmon-local RPM package provides local SciTokens issuer

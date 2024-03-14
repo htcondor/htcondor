@@ -5655,7 +5655,7 @@ default=
 type=string
 
 [LOCAL_CREDMON_TOKEN_VERSION]
-default=scitokens:2.0
+default=scitoken:2.0
 type=string
 
 

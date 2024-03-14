@@ -1190,35 +1190,35 @@ There are four ``<category name>`` values. Within a category, a
 predefined, case insensitive name identifies the set of configuration it
 incorporates.
 
-``ROLE category``
+:config-template:`ROLE` category
     Describes configuration for the various roles that a machine might
     play within an HTCondor pool. The configuration will identify which
     daemons are running on a machine.
 
-    -  ``Personal``
+    -  :config-template:`Personal<ROLE>`
 
        Settings needed for when a single machine is the entire pool.
 
-    -  ``Submit``
+    -  :config-template:`Submit<ROLE>`
 
        Settings needed to allow this machine to submit jobs to the pool.
        May be combined with ``Execute`` and ``CentralManager`` roles.
 
-    -  ``Execute``
+    -  :config-template:`Execute<ROLE>`
 
        Settings needed to allow this machine to execute jobs. May be
        combined with ``Submit`` and ``CentralManager`` roles.
 
-    -  ``CentralManager``
+    -  :config-template:`CentralManager<ROLE>`
 
        Settings needed to allow this machine to act as the central
        manager for the pool. May be combined with ``Submit`` and
        ``Execute`` roles.
 
-``FEATURE category``
+:config-template:`FEATURE` category
     Describes configuration for implemented features.
 
-    -  ``Remote_Runtime_Config``
+    -  :config-template:`Remote_Runtime_Config<FEATURE>`
 
        Enables the use of :tool:`condor_config_val` **-rset** to the machine
        with this configuration. Note that there are security
@@ -1226,7 +1226,7 @@ incorporates.
        permits the arbitrary modification of configuration. Variable
        :macro:`SETTABLE_ATTRS_CONFIG` must also be defined.
 
-    -  ``Remote_Config``
+    -  :config-template:`Remote_Config<FEATURE>`
 
        Enables the use of :tool:`condor_config_val` **-set** to the machine
        with this configuration. Note that there are security
@@ -1234,7 +1234,7 @@ incorporates.
        permits the arbitrary modification of configuration. Variable
        :macro:`SETTABLE_ATTRS_CONFIG` must also be defined.
 
-    -  ``GPUs([discovery_args])``
+    -  :config-template:`GPUs([discovery_args])<FEATURE>`
 
        Sets configuration based on detection with the
        :tool:`condor_gpu_discovery` tool, and defines a custom resource
@@ -1242,18 +1242,18 @@ incorporates.
        detected. Automatically includes the ``GPUsMonitor`` feature.
        Optional discovery_args are passed to :tool:`condor_gpu_discovery`
 
-    -  ``GPUsMonitor``
+    -  :config-template:`GPUsMonitor<FEATURE>`
 
        Also adds configuration to report the usage of NVidia GPUs.
 
-    -  ``Monitor( resource_name, mode, period, executable, metric[, metric]+ )``
+    -  :config-template:`Monitor( resource_name, mode, period, executable, metric[, metric]+ )<FEATURE>`
 
        Configures a custom machine resource monitor with the given name,
        mode, period, executable, and metrics. See
        :ref:`admin-manual/ep-policy-configuration:Startd Cron` for the definitions of
        these terms.
 
-    -  ``PartitionableSlot( slot_type_num [, allocation] )``
+    -  :config-template:`PartitionableSlot( slot_type_num [, allocation] )<FEATURE>`
 
        Sets up a partitionable slot of the specified slot type number
        and allocation (defaults for slot_type_num and allocation are 1
@@ -1261,14 +1261,15 @@ incorporates.
        :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy
        configuration` for information on partitionable slot policies.
 
-    -  ``StaticSlots( slot_type_num [, num_slots, [, allocation] ] )``
+    -  :config-template:`StaticSlots( slot_type_num [, num_slots, [, allocation] ] )<FEATURE>`
 
        Sets up a number of static slots of the specified slot type number
        (defaults for slot_type_num and num_slots are 1 and ``$(NUM_CPUS)`` respectively).
        The number of slots will be equal to ``num_slots``. If no value is provided for the allocation,
        the default is to divide 100% of the machine resources evenly across the slots.
 
-    -  ``AssignAccountingGroup( map_filename [, check_request] )`` Sets up a
+    -  :config-template:`AssignAccountingGroup( map_filename [, check_request] )<FEATURE>`
+       Sets up a
        *condor_schedd* job transform that assigns an accounting group
        to each job as it is submitted. The accounting group is determined by
        mapping the Owner attribute of the job using the given map file, which
@@ -1279,11 +1280,12 @@ incorporates.
        fail if the requested accounting group is present and not valid.  If the argument
        is false, the requested accounting group will be ignored if it is not valid.
 
-    -  ``ScheddUserMapFile( map_name, map_filename )`` Defines a
+    -  :config-template:`ScheddUserMapFile( map_name, map_filename )<FEATURE>`
+       Defines a
        *condor_schedd* usermap named map_name using the given map
        file.
 
-    -  ``SetJobAttrFromUserMap( dst_attr, src_attr, map_name [, map_filename] )``
+    -  :config-template:`SetJobAttrFromUserMap( dst_attr, src_attr, map_name [, map_filename] )<FEATURE>`
        Sets up a *condor_schedd* job transform that sets the dst_attr
        attribute of each job as it is submitted. The value of dst_attr
        is determined by mapping the src_attr of the job using the
@@ -1291,74 +1293,74 @@ incorporates.
        is specified, then this metaknob also defines a *condor_schedd*
        usermap named map_Name using the given map file.
 
-    -  ``StartdCronOneShot( job_name, exe [, hook_args] )``
+    -  :config-template:`StartdCronOneShot( job_name, exe [, hook_args] )<FEATURE>`
 
        Create a one-shot *condor_startd* job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
-    -  ``StartdCronPeriodic( job_name, period, exe [, hook_args] )``
+    -  :config-template:`StartdCronPeriodic( job_name, period, exe [, hook_args] )<FEATURE>`
 
        Create a periodic-shot *condor_startd* job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
-    -  ``StartdCronContinuous( job_name, exe [, hook_args] )``
+    -  :config-template:`StartdCronContinuous( job_name, exe [, hook_args] )<FEATURE>`
 
        Create a (nearly) continuous *condor_startd* job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
-    -  ``ScheddCronOneShot( job_name, exe [, hook_args] )``
+    -  :config-template:`ScheddCronOneShot( job_name, exe [, hook_args] )<FEATURE>`
 
        Create a one-shot *condor_schedd* job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
-    -  ``ScheddCronPeriodic( job_name, period, exe [, hook_args] )``
+    -  :config-template:`ScheddCronPeriodic( job_name, period, exe [, hook_args] )<FEATURE>`
 
        Create a periodic-shot *condor_schedd* job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
-    -  ``ScheddCronContinuous( job_name, exe [, hook_args] )``
+    -  :config-template:`ScheddCronContinuous( job_name, exe [, hook_args] )<FEATURE>`
 
        Create a (nearly) continuous *condor_schedd* job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
-    -  ``OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )``
+    -  :config-template:`OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )<FEATURE>`
 
        Create a one-shot job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
-    -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe [,hook_args] )``
+    -  :config-template:`PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe [,hook_args] )<FEATURE>`
 
        Create a periodic job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
-    -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args] )``
+    -  :config-template:`ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args] )<FEATURE>`
 
        Create a (nearly) continuous job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
-    -  ``OAuth``
+    -  :config-template:`OAuth<FEATURE>`
 
        Sets configuration that enables the *condor_credd* and *condor_credmon_oauth* daemons,
        which allow for the automatic renewal of user-supplied OAuth2 credentials.
        See section :ref:`enabling_oauth_credentials` for more information.
 
-    -  ``Adstash``
+    -  :config-template:`Adstash<FEATURE>`
 
        Sets configuration that enables :tool:`condor_adstash` to run as a daemon.
        :tool:`condor_adstash` polls job history ClassAds and pushes them to an
        Elasticsearch index, see section
        :ref:`admin-manual/cm-configuration:Elasticsearch` for more information.
 
-    -  ``UWCS_Desktop_Policy_Values``
+    -  :config-template:`UWCS_Desktop_Policy_Values<FEATURE>`
 
        Configuration values used in the ``UWCS_DESKTOP`` policy. (Note
        that these values were previously in the parameter table;
@@ -1369,23 +1371,23 @@ incorporates.
 
 .. _CommonCloudAttributesConfiguration:
 
-    - ``CommonCloudAttributesAWS``
-    - ``CommonCloudAttributesGoogle``
+    - :config-template:`CommonCloudAttributesAWS<FEATURE>`
+    - :config-template:`CommonCloudAttributesGoogle<FEATURE>`
 
        Sets configuration that will put some common cloud-related attributes
        in the slot ads.  Use the version which specifies the cloud you're
        using.  See :ref:`CommonCloudAttributes` for details.
 
-    - ``JobsHaveInstanceIDs``
+    - :config-template:`JobsHaveInstanceIDs<FEATURE>`
 
        Sets configuration that will cause job ads to track the instance IDs
        of slots that they ran on (if available).
 
-``POLICY category``
+:config-template:`POLICY` category
     Describes configuration for the circumstances under which machines
     choose to run jobs.
 
-    -  ``Always_Run_Jobs``
+    -  :config-template:`Always_Run_Jobs<POLICY>`
 
        Always start jobs and run them to completion, without
        consideration of *condor_negotiator* generated preemption or
@@ -1396,25 +1398,25 @@ incorporates.
 
 .. _OnlyRegisteredCheckpointDestinations:
 
-    -  ``OnlyRegisteredCheckpointDestinations``
+    -  :config-template:`OnlyRegisteredCheckpointDestinations<POLICY>`
 
        Jobs which specify a checkpoint destination must specify a checkpoint
        destination that the AP knows how to clean up (that has a matching
        entry in :macro:`CHECKPOINT_DESTINATION_MAPFILE`).
 
-    -  ``UWCS_Desktop``
+    -  :config-template:`UWCS_Desktop<POLICY>`
 
        This was the default policy before HTCondor version 8.1.6. It is
        intended to be used with desktop machines not exclusively running
        HTCondor jobs. It injects ``UWCS`` into the name of some
        configuration variables.
 
-    -  ``Desktop``
+    -  :config-template:`Desktop<POLICY>`
 
        An updated and re-implementation of the ``UWCS_Desktop`` policy,
        but without the ``UWCS`` naming of some configuration variables.
 
-    -  ``Limit_Job_Runtimes( limit_in_seconds )``
+    -  :config-template:`Limit_Job_Runtimes( limit_in_seconds )<POLICY>`
 
        Limits running jobs to a maximum of the specified time using
        preemption. (The default limit is 24 hours.) This policy does not
@@ -1425,25 +1427,25 @@ incorporates.
        policy, order the specification by placing this
        ``Limit_Job_Runtimes`` policy second.
 
-    -  ``Preempt_if_Runtime_Exceeds( limit_in_seconds )``
+    -  :config-template:`Preempt_if_Runtime_Exceeds( limit_in_seconds )<POLICY>`
 
        Limits running jobs to a maximum of the specified time using
        preemption. (The default limit is 24 hours).
 
-    -  ``Hold_if_Runtime_Exceeds( limit_in_seconds )``
+    -  :config-template:`Hold_if_Runtime_Exceeds( limit_in_seconds )<POLICY>`
 
        Limits running jobs to a maximum of the specified time by placing
        them on hold immediately (ignoring any job retirement time). (The
        default limit is 24 hours).
 
-    -  ``Preempt_If_Cpus_Exceeded``
+    -  :config-template:`Preempt_If_Cpus_Exceeded<POLICY>`
 
        If the startd observes the number of CPU cores used by the job
        exceed the number of cores in the slot by more than 0.8 on
        average over the past minute, preempt the job immediately
        ignoring any job retirement time.
 
-    -  ``Hold_If_Cpus_Exceeded``
+    -  :config-template:`Hold_If_Cpus_Exceeded<POLICY>`
 
        If the startd observes the number of CPU cores used by the job
        exceed the number of cores in the slot by more than 0.8 on
@@ -1455,13 +1457,13 @@ incorporates.
        ``HOLD_REASON_CPU_EXCEEDED`` and ``HOLD_SUBCODE_CPU_EXCEEDED``
        respectively.
 
-    -  ``Preempt_If_Disk_Exceeded``
+    -  :config-template:`Preempt_If_Disk_Exceeded<POLICY>`
 
        If the startd observes the amount of disk space used by the job
        exceed the disk in the slot, preempt the job immediately
        ignoring any job retirement time.
 
-    -  ``Hold_If_Disk_Exceeded``
+    -  :config-template:`Hold_If_Disk_Exceeded<POLICY>`
 
        If the startd observes the amount of disk space used by the job
        exceed the disk in the slot, immediately place the job on hold
@@ -1472,13 +1474,13 @@ incorporates.
        ``HOLD_REASON_DISK_EXCEEDED`` and ``HOLD_SUBCODE_DISK_EXCEEDED``
        respectively.
 
-    -  ``Preempt_If_Memory_Exceeded``
+    -  :config-template:`Preempt_If_Memory_Exceeded<POLICY>`
 
        If the startd observes the memory usage of the job exceed the
        memory provisioned in the slot, preempt the job immediately
        ignoring any job retirement time.
 
-    -  ``Hold_If_Memory_Exceeded``
+    -  :config-template:`Hold_If_Memory_Exceeded<POLICY>`
 
        If the startd observes the memory usage of the job exceed the
        memory provisioned in the slot, immediately place the job on hold
@@ -1489,7 +1491,7 @@ incorporates.
        ``HOLD_REASON_MEMORY_EXCEEDED`` and
        ``HOLD_SUBCODE_MEMORY_EXCEEDED`` respectively.
 
-    -  ``Preempt_If( policy_variable )``
+    -  :config-template:`Preempt_If( policy_variable )<POLICY>`
 
        Preempt jobs according to the specified policy.
        ``policy_variable`` must be the name of a configuration macro
@@ -1499,7 +1501,7 @@ incorporates.
        See an example here:
        :ref:`admin-manual/introduction-to-configuration:configuration template examples`.
 
-    -  ``Want_Hold_If( policy_variable, subcode, reason_text )``
+    -  :config-template:`Want_Hold_If( policy_variable, subcode, reason_text )<POLICY>`
 
        Add the given policy to the :macro:`WANT_HOLD` expression; if the
        :macro:`WANT_HOLD` expression is defined, ``policy_variable`` is
@@ -1509,32 +1511,32 @@ incorporates.
        See an example here:
        :ref:`admin-manual/introduction-to-configuration:configuration template examples`.
 
-    -  ``Startd_Publish_CpusUsage``
+    -  :config-template:`Startd_Publish_CpusUsage<POLICY>`
 
        Publish the number of CPU cores being used by the job into the
        slot ad as attribute :ad-attr:`CpusUsage`. This value will be the
        average number of cores used by the job over the past minute,
        sampling every 5 seconds.
 
-``SECURITY category``
+:config-template:`SECURITY` category
     Describes configuration for an implemented security model.
 
-    -  ``Host_Based``
+    -  :config-template:`Host_Based<SECURITY>`
 
        The default security model (based on IPs and DNS names). Do not
        combine with ``User_Based`` security.
 
-    -  ``User_Based``
+    -  :config-template:`User_Based<SECURITY>`
 
        Grants permissions to an administrator and uses
        ``With_Authentication``. Do not combine with ``Host_Based``
        security.
 
-    -  ``With_Authentication``
+    -  :config-template:`With_Authentication<SECURITY>`
 
        Requires both authentication and integrity checks.
 
-    -  ``Strong``
+    -  :config-template:`Strong<SECURITY>`
 
        Requires authentication, encryption, and integrity checks.
 

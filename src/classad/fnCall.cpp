@@ -3154,7 +3154,7 @@ static bool regexp_helper(
 				output.append(&target[target_idx], (ovector[0]) - target_idx);
 			}
 
-			if (pcre2_substring_list_get(match_data, &groups_pcre2, NULL)) {
+			if (pcre2_substring_list_get(match_data, &groups_pcre2, nullptr)) {
 				result.SetErrorValue( );
 				goto cleanup;
 			}
@@ -3177,7 +3177,11 @@ static bool regexp_helper(
 				replace_ptr++;
 			}
 
-			pcre2_substring_list_free((PCRE2_SPTR *) groups_pcre2);
+#if PCRE2_MAJOR == 10 && PCRE2_MINOR < 43
+			pcre2_substring_list_free((PCRE2_SPTR *)groups_pcre2);
+#else
+			pcre2_substring_list_free(groups_pcre2);
+#endif
 
 			target_idx = ovector[1];
 			if ( ovector[0] == ovector[1] ) {
