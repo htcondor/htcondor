@@ -1678,6 +1678,30 @@ int submit_jobs (
 	for (;;) {
 		if (feof(fp)) { break; }
 
+		// Error if any data (non-comment/blank lines) exist post queue for late materialization
+		// and if AP admin is preventing multi-queue statement submits
+		if (GotQueueCommand && (want_factory || param_boolean("SUBMIT_PREVENT_MULTI_QUEUE", false))) {
+			if ( ! CmdFileIsStdin) {
+				bool extra_data = false;
+				const char* line;
+				while ((line = getline_trim(ms)) != nullptr) {
+					if (*line == '#' || blankline(line)) { continue; }
+					errmsg = "Extra data found after queue statement";
+					rval = -1;
+					extra_data = true;
+					break;
+				}
+				if (extra_data) { break; }
+			} else{
+				const char* line = getline_trim(ms);
+				if (line && !blankline(line)) {
+					errmsg = "Extra data was provided to STDIN after queue statement";
+					rval = -1;
+					break;
+				}
+			}
+		}
+
 		ErrContext.phase = PHASE_READ_SUBMIT;
 
 		char * qline = NULL;
@@ -2004,13 +2028,16 @@ int submit_jobs (
 		if (rval < 0)
 			break;
 
-		// We allow only a single queue statement for factory submits.
-		if (want_factory)
-			break;
-
 	} // end for(;;)
 
 	submit_hash.detachTransferMap();
+
+	if (GotQueueCommand > 1) {
+		fprintf(stderr, "\nWarning: Use of multiple queue statements in a single submit file is deprecated."
+		                "\n         This functionality will be removed in the V24 feature series. To see"
+		                "\n         how multiple queue statements can be converted into one visit:"
+		                "\nhttps://htcondor.readthedocs.io/en/latest/auto-redirect.html?category=example&tag=convert-multi-queue-statements\n");
+	}
 
 	// report errors from submit
 	//
