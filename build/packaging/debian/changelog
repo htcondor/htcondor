@@ -1,3 +1,16 @@
+condor (23.5.2-1) stable; urgency=medium
+
+  * Old ClassAd based syntax is disabled by default for the job router
+  * Can efficiently manage/enforce disk space using LVM partitions
+  * GPU discovery is enabled on all Execution Points by default
+  * Prevents accessing unallocated GPUs using cgroup v1 enforcement
+  * New condor_submit commands for constraining GPU properties
+  * Add ability to transfer EP's starter log back to the Access Point
+  * Can use VOMS attributes when mapping identities of SSL connections
+  * The CondorVersion string contains the source git SHA
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 13 Mar 2024 20:55:00 -0500
+
 condor (23.0.6-1) stable; urgency=medium
 
   * Fix DAGMan where descendants of removed retry-able jobs are marked futile
