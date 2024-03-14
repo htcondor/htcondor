@@ -221,7 +221,7 @@ SYSTEM_TABLE = {
         "default_queue":    "regular",
         "batch_system":     "SLURM",
         "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "perlmutter.multi-pilot"],
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  True,  # Only for GPUs, oddly.
 
         # Actually "QoS" limits.  See get_constraints().
