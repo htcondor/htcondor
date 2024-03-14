@@ -104,6 +104,7 @@ int send_email();
 bool is_valid_shared_exe( const char *name );
 bool is_ckpt_file_or_submit_digest(const char *name, JOB_ID_KEY & jid);
 bool is_ccb_file( const char *name );
+bool is_gangliad_file( const char *name );
 bool touched_recently(char const *fname,time_t delta);
 bool linked_recently(char const *fname,time_t delta);
 #ifdef HAVE_HTTP_PUBLIC_FILES
@@ -568,6 +569,12 @@ check_spool_dir()
 			continue;
 		}
 
+			// See if it's a GangliaD reset metrics file
+		if ( is_gangliad_file( f ) ) {
+			good_file( Spool, f );
+			continue;
+		}
+
 		// if the file is a directory, look into it.
 		if (dir.IsDirectory() && ! dir.IsSymlink()) {
 
@@ -822,6 +829,19 @@ is_ccb_file( const char *name )
 	}
 	return false;
 }
+
+/*
+  Check whether the given file is a GandliaD metrics file
+*/
+bool
+is_gangliad_file( const char *name )
+{
+	if( strstr(name,".ganglia_metrics") ) {
+		return true;
+	}
+	return false;
+}
+
 
 
 /*
