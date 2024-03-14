@@ -4450,17 +4450,6 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     InfiniBand) regardless of this setting. The default value is
     ``docker0``,\ ``virbr0``.
 
-These macros control the startds (and starters) capability to
-create a private filesystem for the scratch directory for each job.
-
-:macro-def:`THINPOOL_VOLUME_GROUP_NAME[STARTD]`
-    A string that names the Linux LVM volume group the administrator 
-    has configured as the storage for per-job scratch directories.
-
-:macro-def:`THINPOOL_NAME[STARTD]`
-    A string that names the Linux LVM logical volume for storage 
-    for per-job scratch directories.
-
 condor_schedd Configuration File Entries
 -----------------------------------------
 
