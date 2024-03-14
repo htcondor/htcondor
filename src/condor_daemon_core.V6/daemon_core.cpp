@@ -9572,7 +9572,6 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	}
 
 	// First see if we can just add this entry to an existing thread
-	PidWatcherList.Rewind();
 	auto pwlit = PidWatcherList.begin();
 	while (pwlit != PidWatcherList.end()) {
 
