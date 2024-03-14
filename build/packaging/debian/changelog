@@ -1,3 +1,13 @@
+condor (23.0.6-1) stable; urgency=medium
+
+  * Fix DAGMan where descendants of removed retry-able jobs are marked futile
+  * Ensure the condor_test_token works correctly when invoked as root
+  * Fix bug where empty multi-line values could cause a crash
+  * condor_qusers returns proper exit code for errors in formatting options
+  * Fix crash in job router when a job transform is missing an argument
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 13 Mar 2024 19:33:00 -0500
+
 condor (23.0.4-1) stable; urgency=medium
 
   * NVIDIA_VISIBLE_DEVICES environment variable lists full uuid of slot GPUs
