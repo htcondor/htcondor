@@ -1147,7 +1147,7 @@ no further configuration is needed. To run a different
 HTCondor to automatically start it.
 
 If using a separate host for the HTCondorView collector, to start it, add the
-value :macro:`COLLECTOR` to :macro:`DAEMON_LIST`, and restart HTCondor on that
+value ``COLLECTOR`` to :macro:`DAEMON_LIST`, and restart HTCondor on that
 host. To run the HTCondorView collector on the same host as another
 *condor_collector*, ensure that the two *condor_collector* daemons use
 different network ports. Here is an example configuration in which the main

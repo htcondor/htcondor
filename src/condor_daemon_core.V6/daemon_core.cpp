@@ -477,9 +477,7 @@ DaemonCore::~DaemonCore()
 	}
 
 	// Delete all time-skip watchers
-	m_TimeSkipWatchers.Rewind();
-	TimeSkipWatcher * p;
-	while( (p = m_TimeSkipWatchers.Next()) ) {
+	for (auto *p: m_TimeSkipWatchers) {
 		delete p;
 	}
 
@@ -9574,9 +9572,10 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	}
 
 	// First see if we can just add this entry to an existing thread
-	PidWatcherList.Rewind();
-	while ( (entry=PidWatcherList.Next()) ) {
+	auto pwlit = PidWatcherList.begin();
+	while (pwlit != PidWatcherList.end()) {
 
+		entry = *pwlit++;
 		::EnterCriticalSection(&(entry->crit_section));
 
 		if ( entry->nEntries == 0 ) {
@@ -9586,7 +9585,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 			::DeleteCriticalSection(&(entry->crit_section));
 			::CloseHandle(entry->event);
 			::CloseHandle(entry->hThread);
-			PidWatcherList.DeleteCurrent();
+			pwlit = PidWatcherList.erase(pwlit - 1);
 			delete entry;
 			continue;	// so we dont hit the LeaveCriticalSection below
 		}
@@ -9629,7 +9628,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 		EXCEPT("CreateThread failed");
 	}
 
-	PidWatcherList.Append(entry);
+	PidWatcherList.emplace_back(entry);
 
 	return TRUE;
 }
@@ -10226,7 +10225,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 	}
 
 	if( (!tryIPv4) && (!tryIPv6) ) {
-		EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE.\n" );
+		EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE." );
 	}
 
 	// Arbitrary constant, borrowed from bindAnyCommandPort().
@@ -10713,9 +10712,7 @@ DaemonCore::RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 	ASSERT(fnc);
 	watcher->fn = fnc;
 	watcher->data = data;
-	if( ! m_TimeSkipWatchers.Append(watcher)) {
-		EXCEPT("Unable to register time skip callback.  Possible out of memory condition.");	
-	}
+	m_TimeSkipWatchers.emplace_back(watcher);
 }
 
 void 
@@ -10724,21 +10721,15 @@ DaemonCore::UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 	if ( daemonCore == NULL ) {
 		return;
 	}
-	m_TimeSkipWatchers.Rewind();
-	TimeSkipWatcher * p;
-	while( (p = m_TimeSkipWatchers.Next()) ) {
-		if(p->fn == fnc && p->data == data) {
-			m_TimeSkipWatchers.DeleteCurrent();
-			return;
-		}
-	}
-	EXCEPT("Attempted to remove time skip watcher (%p, %p), but it was not registered", fnc, data);
+	std::erase_if(m_TimeSkipWatchers, [&](const TimeSkipWatcher *t) {
+			return t->fn == fnc && t->data == data;
+			});
 }
 
 void
 DaemonCore::CheckForTimeSkip(time_t time_before, time_t okay_delta)
 {
-	if(m_TimeSkipWatchers.Number() == 0) {
+	if (m_TimeSkipWatchers.empty()) {
 		// No one cares if the clock jumped.
 		return;
 	}
@@ -10777,9 +10768,7 @@ DaemonCore::CheckForTimeSkip(time_t time_before, time_t okay_delta)
 	dprintf(D_FULLDEBUG, "Time skip noticed.  The system clock jumped approximately %d seconds.\n", delta);
 
 	// Hrm.  I guess the clock got wonky.  Warn anyone who cares.
-	m_TimeSkipWatchers.Rewind();
-	TimeSkipWatcher * p;
-	while( (p = m_TimeSkipWatchers.Next()) ) {
+	for (auto *p: m_TimeSkipWatchers) {
 		ASSERT(p->fn);
 		p->fn(p->data, delta);
 	}

@@ -121,6 +121,12 @@ executing job that may be useful.
    All job running under a HTCondor starter have the environment variable BATCH_SYSTEM 
    set to the string *HTCondor*.  Inspecting this variable allows a job to
    determine if it is running under HTCondor.
+-  ``SINGULARITY_CACHEDIR`` ``APPTAINER_CACHEDIR``
+   :index:`SINGULARITY_CACHEDIR<pair: SINGULARITY_CACHEDIR; environment variables for jobs>`
+   :index:`APPTAINER_CACHEDIR<pair: APPTAINER_CACHEDIR; environment variables for jobs>`
+   These two variables are set to the location of the scratch directory to prevent apptainer
+   or singularity from writing to a home directory or other place that isn't cleaned up on
+   job exit.
 -  ``X509_USER_PROXY``
    :index:`X509_USER_PROXY environment variable`\ :index:`X509_USER_PROXY<pair: X509_USER_PROXY; environment variables for jobs>`
    gives the full path to the X.509 user proxy file if one is associated

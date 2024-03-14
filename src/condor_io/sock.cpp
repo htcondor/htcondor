@@ -1194,7 +1194,7 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 		}
 
 		if( (!acceptIPv4) && (!acceptIPv6) ) {
-			EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE.\n" );
+			EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE." );
 		}
 	}
 

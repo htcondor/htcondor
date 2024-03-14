@@ -364,7 +364,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 				return false;
 			}
 			if( strcmp( myOwnSinful, _addr.c_str() ) == 0 ) {
-				EXCEPT( "Collector attempted to send itself an update.\n" );
+				EXCEPT( "Collector attempted to send itself an update." );
 			}
 		}
 	}

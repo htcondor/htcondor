@@ -1203,6 +1203,11 @@ all attributes.
     via flocking in the most recent run attempt. This attribute is not
     defined if the job did not run via flocking.
 
+:classad-attribute-def:`LastShadowException`
+    If the *condor_shadow* excepted with an error message, forcing the
+    job to either go on hold or be evicted, this attribute contains
+    a string that describes the error.
+
 :classad-attribute-def:`LastSuspensionTime`
     Time at which the job last performed a successful suspension.
     Measured in the number of seconds since the epoch (00:00:00 UTC, Jan

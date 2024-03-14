@@ -2198,7 +2198,7 @@ RemoteResource::initFileTransfer()
 	int r = filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
 	if (r == 0) {
 		// filetransfer Init failed
-		EXCEPT( "RemoteResource::initFileTransfer  Init failed\n");
+		EXCEPT( "RemoteResource::initFileTransfer  Init failed");
 	}
 
 	filetrans.RegisterCallback(

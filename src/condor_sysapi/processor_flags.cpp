@@ -51,14 +51,14 @@ static const struct sysapi_cpuinfo *sysapi_processor_flags_read_proc_cpuinfo( vo
         int size = 128;
         char * buffer = (char *)malloc( size );
         if( buffer == NULL ) {
-            EXCEPT( "Failed to allocate buffer for parsing /proc/cpuinfo.\n" );
+            EXCEPT( "Failed to allocate buffer for parsing /proc/cpuinfo." );
         }            
         
         while( fgets( buffer, size, fp ) ) {
             while( strchr( buffer, '\n' ) == NULL ) {
                 char * newBuffer = (char *)realloc( buffer, size + size );
                 if( newBuffer == NULL ) {
-                    EXCEPT( "Failed to allocate memory for a long line in /proc/cpuinfo.\n" );
+                    EXCEPT( "Failed to allocate memory for a long line in /proc/cpuinfo." );
                 }
                 buffer = newBuffer;
                 
@@ -66,7 +66,7 @@ static const struct sysapi_cpuinfo *sysapi_processor_flags_read_proc_cpuinfo( vo
                 if( ! fgets( newBuffer, size, fp ) ) {
                     /* If we fail a read before finding the end of the line,
                        something has probably gone terribly, terribly wrong. */
-                    EXCEPT( "Failed to find end of line ('%s') before end of file.\n", buffer );
+                    EXCEPT( "Failed to find end of line ('%s') before end of file.", buffer );
                 }
                 size += size;
             }

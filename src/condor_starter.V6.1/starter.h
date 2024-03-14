@@ -17,12 +17,10 @@
  *
  ***************************************************************/
 
-
 #if !defined(_CONDOR_STARTER_H)
 #define _CONDOR_STARTER_H
 
 #include "condor_daemon_core.h"
-#include "list.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
 #include "exit.h"
@@ -285,7 +283,7 @@ public:
 		/** Returns the number of jobs currently running under
 		 * this multi-starter.
 		 */
-	int numberOfJobs( void ) { return m_job_list.Number(); };
+	int numberOfJobs( void ) { return m_job_list.size(); };
 
 	bool isGridshell( void ) const {return is_gridshell;};
 #ifdef WIN32
@@ -332,8 +330,8 @@ public:
 
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 protected:
-	List<UserProc> m_job_list;
-	List<UserProc> m_reaped_job_list;
+	std::vector<UserProc *> m_job_list;
+	std::vector<UserProc *> m_reaped_job_list;
 
 #ifdef WIN32
 	OwnerProfile m_owner_profile;
@@ -365,7 +363,7 @@ private:
 		   @see Starter::publishJobExitAd()
 		   @see UserProc::PublishUpdateAd()
 		*/
-	bool publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad);
+	bool publishJobInfoAd(std::vector<UserProc * > *proc_list, ClassAd* ad);
 
 		/*
 		  @param result Buffer in which to store fully-qualified user name of the job owner
