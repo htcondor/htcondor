@@ -287,6 +287,7 @@ case the network topology might look something like this:
 
 .. mermaid::
    :caption: HTCondor daemon behind firewall with NAT
+   :align: center
 
    flowchart LR
     start((Internet)) --> NAT
