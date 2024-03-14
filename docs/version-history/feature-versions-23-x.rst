@@ -101,7 +101,8 @@ New Features:
   :macro:`GANGLIAD_RESET_METRICS_FILE`, enabling *condor_gangliad* to
   be configured to reset aggregate metrics to a value of zero when they are
   no longer being updated.  Previously aggregate metrics published to
-  Ganglia retained the last value published indefinitely.`
+  Ganglia retained the last value published indefinitely.
+  :jira:`2346`
 
 - The Job Router route keyword ``GridResource`` is now always
   optional. The job attribute ``GridResource`` can be set instead via
