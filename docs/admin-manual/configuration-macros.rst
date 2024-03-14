@@ -5148,7 +5148,7 @@ These macros control the *condor_schedd*.
     managers should also define :macro:`FLOCK_FROM` with the
     name of this schedd in that list.  This paramaeter
     explicilty sets :macro:`FLOCK_NEGOTIATOR_HOSTS` and 
-    macro:`FLOCK_COLLECTOR_HOSTS` so that you usually
+    :macro:`FLOCK_COLLECTOR_HOSTS` so that you usually
     just need to set :macro:`FLOCK_TO` and no others to make
     flocking work.
 
