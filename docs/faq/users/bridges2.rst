@@ -4,17 +4,19 @@ Recipe: Run a Job on Bridges-2 Using an Allocation
 This recipe assumes that you have decided to use your allocation
 for Bridges-2 to run one of your HTCondor jobs.  It takes you step by
 step through the process of Bringing Your Own Resources (BYOR) in the
-form of an allocation to an OSG Connect access point and using that
+form of an allocation to an OSG Portal access point and using that
 resource to run your HTCondor job.  In what follows, we refer to the
 named set of resources leased from that allocation as an *annex*.
 
 In this recipe, we assume that the job has not yet been placed at an
-OSG Connect access point when we begin.
+OSG Portal access point when we begin.
 
 Ingredients
 ===========
 
-- An OSG Connect account and password
+- An
+  `OSG Portal account <https://portal.osg-htc.org/application>`_
+  and password.
 - An HTCondor job submit file (:doc:`example.submit <annex-example-job>`).
 - An allocation for Bridges-2.
 - Command-line login access to Bridges-2 (see
@@ -53,11 +55,11 @@ need to put that entry.
 Instructions
 ============
 
-1. Log into the OSG Connect Access Point
-''''''''''''''''''''''''''''''''''''''''
+1. Log into the OSG Portal Access Point
+'''''''''''''''''''''''''''''''''''''''
 
-Log into an OSG Connect access point (e.g., ``ap20.uc.osg-htc.org`` or
-``ap21.uc.osg-htc.org``) using your OSG Connect account and password.
+Log into an OSG Portal access point (e.g., ``ap20.uc.osg-htc.org`` or
+``ap21.uc.osg-htc.org``) using your OSG Portal account and password.
 
 2. Submit the Job
 '''''''''''''''''
