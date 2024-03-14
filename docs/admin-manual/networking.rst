@@ -286,6 +286,7 @@ forwarding address to get packets delivered to it may be.  In this
 case the network topology might look something like this:
 
 .. mermaid::
+   :caption: HTCondor daemon behind firewall with NAT
 
    flowchart LR
     start((Internet)) --> NAT
