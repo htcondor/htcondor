@@ -1369,6 +1369,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.6-1
+- Fix DAGMan where descendants of removed retry-able jobs are marked futile
+- Ensure the condor_test_token works correctly when invoked as root
+- Fix bug where empty multi-line values could cause a crash
+- condor_qusers returns proper exit code for errors in formatting options
+- Fix crash in job router when a job transform is missing an argument
+
 * Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.4-1
 - NVIDIA_VISIBLE_DEVICES environment variable lists full uuid of slot GPUs
 - Fix problem where some container jobs would see GPUs not assigned to them
