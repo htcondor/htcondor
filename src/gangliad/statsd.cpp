@@ -57,6 +57,97 @@ Metric::Metric():
 {
 }
 
+const char* METRIC_SERIALIZATION_DELIM = "~";
+
+// Must increment the METRIC_SERIALIZATION_VERSION whenever the serialized format
+// changes.  New versions should be backwards compatible with previous versions.
+const int METRIC_SERIALIZATION_VERSION = 1;
+
+std::string
+Metric::serialize() const {
+	std::string result;
+
+	result = 
+		std::to_string(METRIC_SERIALIZATION_VERSION) + METRIC_SERIALIZATION_DELIM
+		+ name + METRIC_SERIALIZATION_DELIM
+		+ title + METRIC_SERIALIZATION_DELIM
+		+ desc + METRIC_SERIALIZATION_DELIM
+		+ units + METRIC_SERIALIZATION_DELIM
+		+ group + METRIC_SERIALIZATION_DELIM
+		+ machine + METRIC_SERIALIZATION_DELIM
+		+ ip + METRIC_SERIALIZATION_DELIM
+		+ cluster + METRIC_SERIALIZATION_DELIM
+		+ (derivative ? "1" : "0") + METRIC_SERIALIZATION_DELIM
+		+ std::to_string(verbosity) + METRIC_SERIALIZATION_DELIM
+		+ std::to_string(lifetime) + METRIC_SERIALIZATION_DELIM
+		+ std::to_string(type) + METRIC_SERIALIZATION_DELIM
+		+ std::to_string(aggregate) + METRIC_SERIALIZATION_DELIM
+		+ aggregate_group + METRIC_SERIALIZATION_DELIM
+		+ target_type.to_string() + METRIC_SERIALIZATION_DELIM
+		+ (restrict_slot1 ? "1" : "0") + METRIC_SERIALIZATION_DELIM;
+	
+	return result;
+}
+
+bool 
+Metric::deserialize(const std::string &buf)
+{
+	YourStringDeserializer in(buf.c_str());
+	return deserialize(in);
+}
+
+bool
+Metric::deserialize(YourStringDeserializer &in)
+{
+	int version = 99999;
+	std::string target_type_buf;
+	int type_int;
+	int aggregate_int;
+
+	if ( ! in.deserialize_int(&version) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM) ) {
+		// failed to deserialize version
+		dprintf(D_ALWAYS,"WARNING: Unable to deserialize reset metric version; ignoring\n");
+		return false;
+	}
+
+	if (version > METRIC_SERIALIZATION_VERSION) {
+		// serialized version is a newer version than we understand...
+		// code should always be kept backwards compatbile, but cannot be
+		// forwards comnpatible.  
+		dprintf(D_ALWAYS,"WARNING: reset metric written by a newer version of HTCondor; ignoring\n");
+		return false;
+	}
+
+	if (
+		   ! in.deserialize_string(name, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_string(title, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_string(desc, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_string(units, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_string(group, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_string(machine, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_string(ip, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_string(cluster, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_int(&derivative) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_int(&verbosity) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_int(&lifetime) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_int(&type_int) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_int(&aggregate_int) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_string(aggregate_group, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_string(target_type_buf, METRIC_SERIALIZATION_DELIM) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+		|| ! in.deserialize_int(&restrict_slot1) || ! in.deserialize_sep(METRIC_SERIALIZATION_DELIM)
+	) {
+		// serialization buffer is corrupted
+		dprintf(D_ALWAYS,"WARNING: reset metric file corrupted; ignoring\n");
+		return false;
+	}
+
+	type = static_cast<MetricTypeEnum>(type_int);
+	aggregate = static_cast<AggregateFunc>(aggregate_int);
+	target_type.initializeFromString(target_type_buf.c_str());
+
+	return true;
+}
+
 std::string
 Metric::whichMetric() const {
 	std::string result;

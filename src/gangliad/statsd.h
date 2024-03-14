@@ -34,6 +34,13 @@ public:
 	Metric();
 	virtual ~Metric() {}
 
+	// Serialize state in this metric to a string
+	std::string serialize() const;
+
+	// Deserialize state from a string or a deserializer stream into this metric
+	bool deserialize(const std::string &buf);
+	bool deserialize(YourStringDeserializer &in);
+
 	// Given a metric definition ad and an ad to monitor,
 	// evaluate the monitored value and other properties such as
 	// name, description, and so on.
