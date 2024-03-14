@@ -1320,7 +1320,17 @@ subsystem corresponding to the daemon.
         communicate with the *condor_startd* whenever there is activity
         on the X server, and the command used for keep-alives are both
         only printed with ``D_FULLDEBUG`` enabled, it is best if this
-        setting is used for all daemons.
+        setting is used for all daemons.  When this flag is used
+        with the ``-debug`` option of a tool, the commands that are
+        sent by the tool will be included in the debug output.
+
+    ``D_CRON``
+        With this flag set, most messages about tasks defined in the
+        :macro:`STARTD_CRON_JOBLIST`, :macro:`BENCHMARKS_JOBLIST` or
+        :macro:`SCHEDD_CRON` will be shown.  Note that prior to
+        version 23.7 most of these messages were shown as ``D_FULLDEBUG`` messages.
+        Some of the more frequent and detailed messages will only be
+        shown when ``D_CRON:2`` is set.
 
     ``D_LOAD``
         The *condor_startd* keeps track of the load average on the

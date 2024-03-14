@@ -22,6 +22,12 @@ New Features:
   further debugging.
   :jira:`1896`
 
+- Most daemon log messages about tasks in the :macro:`STARTD_CRON_JOBLIST`,
+  :macro:`BENCHMARKS_JOBLIST` or :macro:`SCHEDD_CRON_JOBLIST` that were
+  logged as ``D_FULLDEBUG`` messages are now logged using the new message
+  category ``D_CRON``.
+  :jira:`2308`
+
 - A local universe job can now specify a container image, and it will run
   with that singularity or apptainer container runtime.
   :jira:`2180`
