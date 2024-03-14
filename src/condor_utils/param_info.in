@@ -4910,6 +4910,18 @@ default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
 tags=condor_config
 
+[GANGLIAD_RESET_METRICS_FILE]
+default=$(SPOOL)/metricsToReset.ganglia_metrics
+type=path
+description=Path to filename where gangliad stores state
+tags=gangliad
+
+[GANGLIAD_WANT_RESET_METRICS]
+default=false
+type=bool
+description=Should gangliad reset aggregate metrics to zero on restart
+tags=gangliad
+
 [GANGLIAD_METRICS_CONFIG_DIR]
 default=$(ETC)/ganglia.d
 type=path

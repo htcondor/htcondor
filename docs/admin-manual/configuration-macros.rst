@@ -11384,6 +11384,21 @@ has.
     This option is useful for pools such that use glidein, in which it
     is not desired to record metrics for individual execute nodes.
 
+:macro-def:`GANGLIAD_WANT_RESET_METRICS[GANGLIAD]`
+    A boolean value that, when ``True``, causes aggregate numeric metrics
+    to be reset to a value of zero when they are no longer being updated.
+    The default value is ``False``, causing aggregate metrics published to
+    Ganglia to retain the last value published indefinitely.
+
+:macro-def:`GANGLIA_RESET_METRICS_FILE[GANGLIAD]`
+    The file name where persistent data will
+    be stored if ``GANGLIAD_WANT_RESET_METRICS`` is set to ``True``. 
+    If not set to a fully qualified path, the file will be stored in the 
+    SPOOL directory with a filename extension of ``.ganglia_metrics``.
+    If you are running multiple *condor_gangliad* instances
+    that share a SPOOL directory, this knob should be customized. 
+    The default is ``$(SPOOL)/metricsToReset.ganglia_metrics``.
+
 :macro-def:`GANGLIA_CONFIG[GANGLIAD]`
     The path and file name of the Ganglia configuration file. The
     default is ``/etc/ganglia/gmond.conf``.
