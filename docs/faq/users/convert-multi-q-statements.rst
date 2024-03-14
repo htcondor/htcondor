@@ -162,7 +162,7 @@ two jobs with a varying ``type`` variable.
 .. code-block:: condor-submit
 
     # Converted Syntax
-    type = $Choice(STEP,"soft","hard")
+    type = $CHOICE(STEP,"soft","hard")
     queue 2 capacity from (
         100
         42

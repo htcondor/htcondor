@@ -816,7 +816,7 @@ The parallel universe supersedes the mpi universe. The mpi universe
 eventually will be removed from HTCondor.
 
 How Parallel Jobs Run
-;''''''''''''''''''''
+'''''''''''''''''''''
 
 Parallel universe jobs are submitted from the machine running the
 dedicated scheduler. The dedicated scheduler matches and claims a fixed
