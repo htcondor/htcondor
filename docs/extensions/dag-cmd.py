@@ -16,11 +16,7 @@ def find_dag_cmds(dir: str):
     with open(dag_ref, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            while "dag-cmd-def" in line:
-                begin = line.find("`") + 1
-                end = line.find("`", begin)
-                cmd = line[begin:end]
-                line = line[end+1:]
+            for cmd in get_all_defined_role("dag-cmd-def", line):
                 if cmd not in dag_cmds:
                     dag_cmds.append(cmd)
     dag_cmds.sort()

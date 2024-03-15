@@ -25,12 +25,7 @@ def find_conf_knobs(dir: str):
     with open(definition_file, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            # Check if a defined macro is inline
-            if "macro-def" in line:
-                # Parse out macro name
-                begin = line.find("`") + 1
-                end = line.rfind("`")
-                knob = line[begin:end]
+            for knob in get_all_defined_role("macro-def", line):
                 if "[" in knob:
                     info = knob.find("[")
                     knob = knob[:info]
