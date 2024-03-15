@@ -151,7 +151,7 @@ UserProc::JobReaper(int pid, int status)
 		// in corrupting the job event log.
 		std::replace(
 		    error_txt.begin(), error_txt.end(),
-		    '\n', ' '
+		    '\n', '|'
 		);
 		EXCEPT("The job wrapper failed to execute the job: %s", error_txt.c_str());
 	}

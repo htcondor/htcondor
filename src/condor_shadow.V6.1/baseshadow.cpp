@@ -39,6 +39,7 @@
 #include "ipv6_hostname.h"
 #include <math.h>
 #include "job_ad_instance_recording.h"
+#include <algorithm>
 
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
@@ -1421,20 +1422,25 @@ BaseShadow::checkSwap( void )
 
 // Note: log_except is static
 void
-BaseShadow::log_except(const char *msg)
+BaseShadow::log_except(const char *msg_str)
 {
-	if(!msg) msg = "";
+	std::string msg = msg_str ? msg_str : "";
 
 	if ( BaseShadow::myshadow_ptr == NULL ) {
-		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg);
+		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg.c_str());
 		return;
 	}
+
+	// Do NOT pass newlines into this exception, since it ends up
+	// in corrupting the job event log.
+	trim(msg);
+	std::replace(msg.begin(), msg.end(), '\n', '|');
 
 	// log shadow exception event
 	ShadowExceptionEvent event;
 	bool exception_already_logged = false;
 
-	snprintf(event.message, sizeof(event.message), "%s", msg);
+	snprintf(event.message, sizeof(event.message), "%s", msg.c_str());
 	event.message[sizeof(event.message)-1] = '\0';
 
 	BaseShadow *shadow = BaseShadow::myshadow_ptr;
@@ -1452,7 +1458,7 @@ BaseShadow::log_except(const char *msg)
 
 	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,shadow->jobAd))
 	{
-		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", msg);
+		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", msg.c_str());
 	}
 }
 
