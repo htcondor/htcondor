@@ -885,17 +885,24 @@ eight slots where running jobs, with each configured for one cpu, the
 cpu usage would be assigned equally to each job, regardless of the
 number of processes or threads in each job.
 
+.. _LVM Description:
 
-Startd Disk Enforcement With Per Job Scratch Filesystems
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Per Job Ephemeral Scratch Filesystems
+'''''''''''''''''''''''''''''''''''''
 
 :index:`DISK usage`
 :index:`per job scratch filesystem`
 
 On Linux systems, when HTCondor is started as root, it optionally has the ability to create
-a custom filesystem for the job's scratch directory. This allows HTCondor to prevent the job
-from using more scratch space than provisioned. HTCondor manages this per scratch directory
-filesystem usage with the LVM disk management system.
+a custom ephemeral filesystem for the job's scratch directory. HTCondor manages this per
+scratch directory filesystem usage with the LVM disk management system. This feature has
+the following benefits:
+
+- Disk usage is more accurately monitored and enforced preventing the job from using more
+  scratch space than provisioned.
+- HTCondor can get the current disk usage much quicker.
+- Creates more isolation for the jobs workspace.
+- HTCondor can cleanup the jobs workspace much quicker..
 
 This feature will enable better handling of jobs that utilize more than the disk space
 than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
