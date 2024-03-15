@@ -1620,10 +1620,9 @@ Please read :ref:`admin-manual/installation-startup-shutdown-reconfiguration:Dae
 details on DaemonCore. There are certain configuration file settings
 that DaemonCore uses which affect all HTCondor daemons.
 
-:macro-def:`ALLOW[Global]`
-:macro-def:`DENY[Global]`
-    All macros that begin with either :macro:`ALLOW` or
-    :macro:`DENY` are settings for HTCondor's security.
+:macro-def:`ALLOW_*[Global]` :macro-def:`DENY_*[Global]`
+    All macros that begin with either :macro:`ALLOW_*` or
+    :macro:`DENY_*` are settings for HTCondor's security.
     See :ref:`admin-manual/security:authorization` on Setting
     up security in HTCondor for details on these macros and how to
     configure them.
@@ -11377,7 +11376,7 @@ has.
     The default value is ``False``, causing aggregate metrics published to
     Ganglia to retain the last value published indefinitely.
 
-:macro-def:`GANGLIA_RESET_METRICS_FILE[GANGLIAD]`
+:macro-def:`GANGLIAD_RESET_METRICS_FILE[GANGLIAD]`
     The file name where persistent data will
     be stored if ``GANGLIAD_WANT_RESET_METRICS`` is set to ``True``. 
     If not set to a fully qualified path, the file will be stored in the 
