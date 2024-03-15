@@ -98,7 +98,6 @@ if [[ $OS_ID == centos || $OS_ID == almalinux ]]; then
     fi
     $yum install "${repo_base_centos}/${series_str}/htcondor-release-current.el${OS_VERSION_ID}.noarch.rpm"
     rpm --import /etc/pki/rpm-gpg/*
-    centos_enable_repo htcondor-update
     if [[ $HTCONDOR_VERSION == daily ]]; then
         centos_enable_repo htcondor-daily
     fi
@@ -134,10 +133,6 @@ elif [[ $OS_ID == ubuntu ]]; then
     echo "deb     ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
     echo "deb-src ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
     # Update repository is only available for feature versions
-    if [[ $series_minor -gt 0 ]]; then
-        echo "deb     ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
-        echo "deb-src ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
-    fi
     if [[ $HTCONDOR_VERSION == daily ]]; then
         set -o pipefail
         wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${series_str}-Daily-Key" | apt-key add -
