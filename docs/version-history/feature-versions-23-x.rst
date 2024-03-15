@@ -15,6 +15,11 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-2308`.
 
+- The use of multiple :subcom:`queue` statements in a single submit description
+  file is now deprecated. This functionality is planned to be removed during the
+  lifetime of the **V24** feature series.
+  :jira:`2338`
+
 New Features:
 
 - In the unlikely event that a shadow exception event happens, the text is
