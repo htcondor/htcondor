@@ -1694,7 +1694,7 @@ Recognized metric attribute names and their use:
  Verbosity
     The integer verbosity level of this metric. Metrics with a higher
     verbosity level than that specified by configuration variable
-    :macro:`GANGLIA_VERBOSITY` will not be published.
+    :macro:`GANGLIAD_VERBOSITY` will not be published.
  TargetType
     A string containing a comma-separated list of daemon ClassAd types
     that this metric monitors. The specified values should match the
