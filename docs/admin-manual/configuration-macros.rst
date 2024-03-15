@@ -3757,14 +3757,7 @@ htcondor for running backfill jobs` for details.
     :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     section.
 
-:macro-def:`BOINC_Arguments[STARTD]`
-:macro-def:`BOINC_Environment[STARTD]`
-:macro-def:`BOINC_Error[STARTD]`
-:macro-def:`BOINC_Executable[STARTD]`
-:macro-def:`BOINC_InitialDir[STARTD]`
-:macro-def:`BOINC_Output[STARTD]`
-:macro-def:`BOINC_Owner[STARTD]`
-:macro-def:`BOINC_Universe[STARTD]`
+:macro-def:`BOINC_Arguments[STARTD]` :macro-def:`BOINC_Environment[STARTD]` :macro-def:`BOINC_Error[STARTD]` :macro-def:`BOINC_Executable[STARTD]` :macro-def:`BOINC_InitialDir[STARTD]` :macro-def:`BOINC_Output[STARTD]` :macro-def:`BOINC_Owner[STARTD]` :macro-def:`BOINC_Universe[STARTD]`
      These relate to the BOINC backfill system.
 
 The following macros only apply to the *condor_startd* daemon when it
@@ -9337,8 +9330,7 @@ Configuration File Entries Relating to Security
 These macros affect the secure operation of HTCondor. Many of these
 macros are described in the :doc:`/admin-manual/security` section.
 
-:macro-def:`SEC_DEFAULT_AUTHENTICATION[SECURITY]`
-:macro-def:`SEC_*_AUTHENTICATION[SECURITY]`
+:macro-def:`SEC_DEFAULT_AUTHENTICATION[SECURITY]` :macro-def:`SEC_*_AUTHENTICATION[SECURITY]`
     Whether authentication is required for a specified permission level.
     Acceptable values are ``REQUIRED``, ``PREFERRED``, ``OPTIONAL``, and
     ``NEVER``.  For example, setting ``SEC_READ_AUTHENTICATION = REQUIRED``
@@ -9347,8 +9339,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``SEC_DEFAULT_AUTHENTICATION``, controls the default setting if no
     others are specified.
 
-:macro-def:`SEC_DEFAULT_ENCRYPTION[SECURITY]`
-:macro-def:`SEC_*_ENCRYPTION[SECURITY]`
+:macro-def:`SEC_DEFAULT_ENCRYPTION[SECURITY]` :macro-def:`SEC_*_ENCRYPTION[SECURITY]`
     Whether encryption is required for a specified permission level.
     Encryption prevents another entity on the same network from understanding
     the contents of the transfer between client and server.
@@ -9359,8 +9350,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``SEC_DEFAULT_ENCRYPTION``, controls the default setting if no
     others are specified.
 
-:macro-def:`SEC_DEFAULT_INTEGRITY[SECURITY]`
-:macro-def:`SEC_*_INTEGRITY[SECURITY]`
+:macro-def:`SEC_DEFAULT_INTEGRITY[SECURITY]` :macro-def:`SEC_*_INTEGRITY[SECURITY]`
     Whether integrity-checking is required for a specified permission level.
     Integrity checking allows the client and server to detect changes
     (malicious or otherwise)  to the contents of the transfer.
@@ -9374,8 +9364,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     As a special exception, file transfers are not integrity checked unless
     they are also encrypted.
 
-:macro-def:`SEC_DEFAULT_NEGOTIATION[SECURITY]`
-:macro-def:`SEC_*_NEGOTIATION[SECURITY]`
+:macro-def:`SEC_DEFAULT_NEGOTIATION[SECURITY]` :macro-def:`SEC_*_NEGOTIATION[SECURITY]`
     Whether the client and server should negotiate security parameters (such
     as encryption, integrity, and authentication) for a given authorization
     level.  For example, setting ``SEC_DEFAULT_NEGOTIATION = REQUIRED`` will
@@ -9383,8 +9372,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     There is very little penalty for security negotiation and it is strongly
     suggested to leave this as the default (``REQUIRED``) at all times.
 
-:macro-def:`SEC_DEFAULT_AUTHENTICATION_METHODS[SECURITY]`
-:macro-def:`SEC_*_AUTHENTICATION_METHODS[SECURITY]`
+:macro-def:`SEC_DEFAULT_AUTHENTICATION_METHODS[SECURITY]` :macro-def:`SEC_*_AUTHENTICATION_METHODS[SECURITY]`
     An ordered list of allowed authentication methods for a given authorization
     level.  This set of configuration variables controls both the ordering and
     the allowed methods.  Currently allowed values are
@@ -9402,8 +9390,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     The special value, ``SEC_DEFAULT_AUTHENTICATION_METHODS``, controls the
     default setting if no others are specified.
 
-:macro-def:`SEC_DEFAULT_CRYPTO_METHODS[SECURITY]`
-:macro-def:`SEC_*_CRYPTO_METHODS[SECURITY]`
+:macro-def:`SEC_DEFAULT_CRYPTO_METHODS[SECURITY]` :macro-def:`SEC_*_CRYPTO_METHODS[SECURITY]`
     An ordered list of allowed cryptographic algorithms to use for
     encrypting a network session at a specified authorization level.
     The server will select the first entry in its list that both
