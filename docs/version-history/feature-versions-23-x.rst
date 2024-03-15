@@ -22,6 +22,11 @@ New Features:
   further debugging.
   :jira:`1896`
 
+- We now compute the path to the proper python3 interpreter for :tool:`condor_watch_q`
+  at compile time.  This should not change anything, but if it does break, the
+  guilty ticket is:
+  :jira:`1146`
+
 - A local universe job can now specify a container image, and it will run
   with that singularity or apptainer container runtime.
   :jira:`2180`

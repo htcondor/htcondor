@@ -80,6 +80,9 @@ endif (WINDOWS)
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS)
+	# Prefer "/usr/bin/python3" over "/usr/bin/python3.10"
+	set(Python3_FIND_UNVERSIONED_NAMES FIRST)
+
 	# We don't support python2 on mac (anymore)
 	if (APPLE)
 		set(WANT_PYTHON2_BINDINGS OFF)
