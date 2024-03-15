@@ -1917,6 +1917,11 @@ that DaemonCore uses which affect all HTCondor daemons.
     output an entire ClassAd, and the ClassAd may be larger than the
     default.
 
+:macro-def:`DETECTED_MEMORY[Global]`
+    A read-only macro that cannot be set, but expands to the
+    amount of detected memory on the system, regardless
+    of any overrides via the :macro:`MEMORY` setting.
+
 Network-Related Configuration File Entries
 ------------------------------------------
 
@@ -4835,6 +4840,12 @@ These macros control the *condor_schedd*.
     old single line summary totals. When ``False`` :tool:`condor_q` will show
     the new multi-line summary totals.
 
+:macro-def:`SCHEDD_MIN_INTERVAL[SCHEDD]`
+    This macro determines the minimum interval for both how often the
+    *condor_schedd* sends a ClassAd update to the *condor_collector*
+    and how often the *condor_schedd* daemon evaluates jobs. It is
+    defined in terms of seconds and defaults to 5 seconds.
+
 :macro-def:`SCHEDD_INTERVAL[SCHEDD]`
     This macro determines the maximum interval for both how often the
     *condor_schedd* sends a ClassAd update to the *condor_collector*
@@ -5894,6 +5905,22 @@ These macros control the *condor_schedd*.
 :macro-def:`USE_JOBSETS[SCHEDD]`
     Boolean to enable the use of job sets with the `htcondor jobset` command.
     Defaults to false.
+
+:macro-def:`ENABLE_HTTP_PUBLIC_FILES[SCHEDD]`:
+    A boolean that defaults to false.  When true, the schedd will
+    use an external http server to transfer public input file.
+
+:macro-def:`HTTP_PUBLIC_FILES_ADDRESS[SCHEDD]`
+    The full web address (hostname + port) where your web server is serving files (default:
+    127.0.0.1:8080)
+
+:macro-def:`HTTP_PUBLIC_FILES_ROOT_DIR[SCHEDD]`
+    Absolute path to the local directory where the web service is serving files from.
+
+:macro-def:`HTTP_PUBLIC_FILES_USER[SCHEDD]`
+   User security level used to write links to the directory specified by
+   HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
+   this knob:  **<user>**, **<condor>** or **<%username%>**
 
 condor_shadow Configuration File Entries
 -----------------------------------------
@@ -11349,7 +11376,7 @@ has.
     depend on attributes that are not published to the *condor_collector*
     when using the default value of :macro:`STATISTICS_TO_PUBLISH`. For
     example, per-user file transfer statistics will only be published to
-    Ganglia if ``GANGLIA_VERBOSITY`` is set to 1 or higher in the
+    Ganglia if :macro:`GANGLIAD_VERBOSITY` is set to 1 or higher in the
     *condor_gangliad* configuration and :macro:`STATISTICS_TO_PUBLISH` in
     the *condor_schedd* configuration contains ``TRANSFER:2``, or if
     the :macro:`STATISTICS_TO_PUBLISH_LIST` contains the desired attributes
