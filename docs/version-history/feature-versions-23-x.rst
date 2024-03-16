@@ -41,6 +41,11 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-2308`.
 
+- Man pages are no longer being built for Enterprise Linux 7. The ancient
+  old version of sphinx on that platform does not have the required features
+  to build the current manual.
+  :jira:`2283`
+
 New Features:
 
 - Updated :tool:`get_htcondor` to allow the aliases ``lts`` for **stable**
