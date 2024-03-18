@@ -58,7 +58,7 @@ enum {
    D_THREADS,     // debug the daemon core threads
    D_ACCOUNTANT,  // the Accountant in the negotiator
    D_SYSCALLS,    // debug qmgmt, starter/shadow and chirp syscall layer
-   D_obsolete_CKPT, // ---- available -----
+   D_CRON,        // STARTD_CRON, SCHEDD_CRON and CRON_MGR details
    D_HOSTNAME,    // the network layer hostname detection
    D_PERF_TRACE,  // daemoncore select logging
    D_LOAD,        // debug the startd load avg code
