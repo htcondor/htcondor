@@ -9,6 +9,8 @@
 
 .. autoclass:: CredType
 
+.. autoclass:: DaemonCommand
+
 .. autoclass:: DaemonType
 
 .. autoclass:: DrainType
