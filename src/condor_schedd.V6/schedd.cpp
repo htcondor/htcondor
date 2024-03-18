@@ -10982,7 +10982,8 @@ RotateAttributeList( int cluster, int proc, char const *attrname, int start_inde
 	} else {
 		// Only rotate if there is something new in MachineAttrX0 (the start_index element)
 		char *value = NULL;
-		if (GetAttributeExprNew(cluster, proc, attr_start_index.c_str(), &value) == 0) {
+		GetAttributeExprNew(cluster, proc, attr_start_index.c_str(), &value);
+		if (value) {
 			free(value);
 		} else {
 			// MachineAttrX0 is empty, should not rotate
@@ -11000,7 +11001,8 @@ RotateAttributeList( int cluster, int proc, char const *attrname, int start_inde
 		formatstr(attr,"%s%d",attrname,index-1);
 
 		char *value=NULL;
-		if( GetAttributeExprNew(cluster,proc,attr.c_str(),&value) == 0 ) {
+		GetAttributeExprNew(cluster,proc,attr.c_str(),&value);
+		if (value) {
 			formatstr(attr,"%s%d",attrname,index);
 			SetAttribute(cluster,proc,attr.c_str(),value);
 			free( value );
@@ -15253,6 +15255,8 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "MaxFlockLevel", MaxFlockLevel );
 	cad->Assign( "FlockLevel", FlockLevel );
 	cad->Assign( "MaxExceptions", MaxExceptions );
+	cad->Assign( "HasContainer", true );
+	cad->Assign( "HasSIF", true );
 	
 		// -------------------------------------------------------
 		// Basic Attributes

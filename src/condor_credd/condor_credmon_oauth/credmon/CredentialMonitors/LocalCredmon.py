@@ -29,7 +29,7 @@ class LocalCredmon(OAuthCredmon):
         self.token_lifetime = 60*20
         self.token_use_json = True
         self.token_aud = ""
-        self.token_ver = "scitokens:2.0"
+        self.token_ver = "scitoken:2.0"
         if htcondor != None:
             self._private_key_location = htcondor.param.get('LOCAL_CREDMON_PRIVATE_KEY', "/etc/condor/scitokens-private.pem")
             if self._private_key_location != None and os.path.exists(self._private_key_location):
@@ -89,8 +89,8 @@ class LocalCredmon(OAuthCredmon):
         aud_list = self.token_aud.strip().split()
         if aud_list:
             token.update_claims({'aud': aud_list})
-        elif self.token_ver.lower() == "scitokens:2.0":
-            self.log.error('No "aud" claim, LOCAL_CREDMON_TOKEN_AUDIENCE must be set when requesting a scitokens:2.0 token')
+        elif self.token_ver.lower() == "scitoken:2.0":
+            self.log.error('No "aud" claim, LOCAL_CREDMON_TOKEN_AUDIENCE must be set when requesting a scitoken:2.0 token')
             return False
 
         # Serialize the token and write it to a file

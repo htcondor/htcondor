@@ -10,6 +10,7 @@ but we've prepared a few examples for job submitters already.
     :glob:
 
     prefer-gpu-to-cpu
+    convert-multi-q-statements
     anvil
     bridges2
     expanse

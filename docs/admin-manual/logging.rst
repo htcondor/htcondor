@@ -299,24 +299,5 @@ Directories use by the Execute Role
 
     Usually, the per-job scratch execute directory is created by the startd
     as a directory under :macro:`EXECUTE`.  However, on Linux machines where HTCondor
-    has root privilege, it can be configured to make an ephemeral, per-job scratch filesystem
-    backed either by LVM, if it is configured, or a large existing file on the filesystem.
-
-    There are several advantages to this approach.  The first is that disk space is
-    more accurately measured and enforced.  HTCondor can get the disk usage by a single
-    system call, instead of traversing what might be a very deep directory hierarchy. There
-    may also be performance benefits, as this filesystem never needs to survive a reboot,
-    and is thus mounted with mount options that provide the least amount of disk consistence
-    in the face of a reboot.  Also, when the job exits, all the files in the filesystem
-    can be removed by simply unmounting and destroying the filesystem, which is much
-    faster than having condor remove each scratch file in turn.
-
-    To enable this, first set :macro:`STARTD_ENFORCE_DISK_LIMITS` to ``true``.  Then, if LVM is 
-    installed and configured, set :macro:`THINPOOL_NAME` to the name of a logical volume.
-    ``"condor_lv"`` might be a good choice.  Finally, set :macro:`THINPOOL_VOLUME_GROUP` to 
-    the name of the volume group the LVM administrator has created for this purpose.
-    ``"condor_vg"`` might be a good name.  If there is no LVM on the system, a single large
-    existing file can be used as the backing store, in which case the knob :macro:`THINPOOL_BACKING_FILE`
-    should be set to the name of the existing large file on disk that HTCondor
-    will use to make filesystems from.
-
+    has root privilege, it can be configured to make an ephemeral per-job scratch
+    filesystem. For more information visit :ref:`LVM Description`.

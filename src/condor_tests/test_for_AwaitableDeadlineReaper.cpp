@@ -130,7 +130,7 @@ spawn_test03_subtest() {
 			ASSERT( WIFSIGNALED(status) );
 			ASSERT( WTERMSIG(status) == SIGKILL );
 		} else {
-			EXCEPT("AwaitableDeadlineReaper returned unknown PID!\n");
+			EXCEPT("AwaitableDeadlineReaper returned unknown PID!");
 		}
 	}
 }

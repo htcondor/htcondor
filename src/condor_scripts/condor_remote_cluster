@@ -696,6 +696,7 @@ eval set -- "$TEMP"
 platform_force=
 override_dir=
 release_url=
+update_url=
 rc_url=
 daily_url=
 
@@ -878,6 +879,9 @@ if [ -z "${release_url}" ]; then
         # Use the latest LTS release instead.
         release_url="${url_base}23.0/current/condor-${platform}-stripped.tar.gz"
     fi
+    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " -e "UW_development" ; then
+        update_url="${url_base}${series}/${version}/update/condor-${version}-${platform}-stripped.tar.gz"
+    fi
 fi
 
 # Create a tmp dir, download the files and rsync them to the remote system
@@ -890,6 +894,14 @@ if [ ! -z "$daily_url" ] ; then
     rc=$?
     if [ $rc -ne 0 ] ; then
         echo "Failed to download daily build."
+    fi
+fi
+# Prefer blessed RC
+if [ ! -z "$update_url" -a $rc -ne 0 ] ; then
+    show_progress "Downloading update build for $remote_host" curl -f -s -S -o $tmp_dir/bosco-download.tar.gz $update_url
+    rc=$?
+    if [ $rc -ne 0 ] ; then
+        echo "Failed to download update build."
     fi
 fi
 if [ ! -z "$rc_url" -a $rc -ne 0 ] ; then

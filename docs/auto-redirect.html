@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+	<link rel="shortcut icon" href="_static/logo.svg"/>
+</head>
+
+<body onload="redirect()">
+
+<h2>Error: HTCondor Documentation Auto-Redirect Failed</h2>
+<p><b>Reason:</b> <span id="fail-reason">Unknown</span></p>
+<h3>What to do:</h3>
+<p>
+	Please inform the HTCSS development team of this issue by emailing us at htcondor-users@cs.wisc.edu
+	with the failure reason, the URL you attempted to reach, and where you found the attempted URL.
+</p>
+
+<a id="doc-link">HTCondor Documentation</a>
+
+<script>
+// Root URL to redirect too
+const url_root = "https://htcondor.readthedocs.io/en/latest/";
+//const url_root = "http://127.0.0.1:8000/";
+
+// Map of tag -> URL end
+const examples = new Map([
+	["convert-multi-queue-statements", "faq/users/convert-multi-q-statements.html"],
+]);
+
+// Map of category -> tag map
+const categories = new Map([
+	["example", examples],
+]);
+
+// Magic Redirect function to parse URL info and redirect
+// Expects: url_root/auto-redirect.html?category=<value>&tag=<value>
+function redirect() {
+	// Process extra URL info
+	var url = window.location.href;
+	var infoStart = url.indexOf("?") + 1,
+	    infoEnd = url.length + 1,
+	    info = url.slice(infoStart, infoEnd);
+
+	var errmsg = "";
+	if (info === url || info === "") { // Verify extra information provided
+		errmsg = "No redirect information specified.";
+	} else {
+		// Parse & delimited key=value pairs post ?
+		var params = {}, i, key, val,
+		    pairs = info.replace(/\+/g, " ").split("&");
+		for (i = 0; i < pairs.length; i++) {
+			var pair = pairs[i].split("=", 2);
+			key = decodeURIComponent(pair[0]);
+			val = decodeURIComponent(pair[1]);
+			params[key] = val;
+		}
+
+		if (!params.hasOwnProperty("category")) { // Verify category provided
+			errmsg = "Redirect URL does not contain a category.";
+		} else if (!categories.has(params["category"])) { // Verify valid/existing category
+			errmsg = "Redirect URL contains unknown category: " + params["category"];
+		} else {
+			// Get specified category map
+			var category = categories.get(params["category"]);
+			if (!params.hasOwnProperty("tag")) { // Verify tag provided
+				errmsg = "Redirect URL does not contain a tag.";
+			} else if (!category.has(params["tag"])) { // Verify valid/existing tag
+				errmsg = "Redirect contains unknown tag (" + params["tag"] + ") for category: " + params["category"];
+			} else {
+				// Create redirect URL and go there
+				var redirect_url = url_root + category.get(params["tag"]);
+				window.location.replace(redirect_url);
+			}
+		}
+	}
+
+	// UhOh: error happend so update page display with the found issue
+	if (errmsg !== "") {
+		document.getElementById("doc-link").href = url_root;
+		document.getElementById("fail-reason").innerHTML = errmsg;
+	}
+}
+</script>
+
+</body>
+</html>

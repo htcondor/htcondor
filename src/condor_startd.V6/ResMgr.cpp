@@ -1075,7 +1075,9 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 
 	// TODO: figure out collector version and implement ENABLE_STARTD_DAEMON_AD=auto
 
-	const unsigned int send_daemon_ad_mask = (1<<Resource::WhyFor::wf_doUpdate) | (1<<Resource::WhyFor::wf_hiberChange);
+	const unsigned int send_daemon_ad_mask = (1<<Resource::WhyFor::wf_doUpdate)
+		| (1<<Resource::WhyFor::wf_hiberChange)
+		| (1<<Resource::WhyFor::wf_cronRequest);
 	if (enable_single_startd_daemon_ad && (whyfor_mask & send_daemon_ad_mask)) {
 		publish_daemon_ad(public_ad);
 		send_update(UPDATE_STARTD_AD, &public_ad, nullptr, true);

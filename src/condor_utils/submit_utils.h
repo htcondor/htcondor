@@ -1109,5 +1109,18 @@ const	int			SCHEDD_INTERVAL_DEFAULT = 300;
 const	int			JOB_DEFERRAL_PREP_TIME_DEFAULT = 300; // seconds
 const	int			JOB_DEFERRAL_WINDOW_DEFAULT = 0; // seconds
 
+
+#define PJC_NOT_DRY_RUN 0
+
+int process_job_credentials(
+    // Input parameters.
+    SubmitHash & submit_hash,
+    int DashDryRun /* should default to 0 */,
+
+    // Output parameters.
+    std::string & URL,
+    std::string & error_string
+);
+
 #endif // _SUBMIT_UTILS_H
 
