@@ -3913,7 +3913,7 @@ needs.
     are ignored.
 
 :macro-def:`STARTD_DETECT_GPUS[STARTD]`
-    The arguments passed to *condor_gpu_discovery* to detect GPUs when
+    The arguments passed to :tool:`condor_gpu_discovery` to detect GPUs when
     the configuration does not have a GPUs resource explicity configured
     via ``MACHINE_RESOURCE_GPUS`` or  ``MACHINE_RESOURCE_INVENTORY_GPUS``.
     Use of the configuration template ``use FEATURE : GPUs`` will set
@@ -3924,6 +3924,11 @@ needs.
     will still be defined if the configuration has ``MACHINE_RESOURCE_GPUS`` or
     ``MACHINE_RESOURCE_INVENTORY_GPUS`` or the configuration template ``use FEATURE : GPUs``.
     The default value is ``-properties $(GPU_DISCOVERY_EXTRA)``
+
+:macro-def:`GPU_DISCOVERY_EXTRA[STARTD]`
+    A string valued parameter that defaults to ``-extra``.  It cannot
+    be used to pass additional command line arguments to the
+    :tool:`condor_gpu_discovery` tool.
 
 :macro-def:`MACHINE_RESOURCE_<name>[STARTD]`
     An integer that specifies the quantity of or list of identifiers for
@@ -6155,6 +6160,14 @@ These settings affect the *condor_starter*.
     *condor_shadow* and *condor_startd* daemons. Defaults to 300 (5
     minutes).
 
+:macro-def:`STARTER_INITIAL_UPDATE_INTERVAL[STARTER]`
+    An integer value representing the number of seconds before the
+    first ClassAd update from the *condor_starter* to the *condor_shadow*
+    and *condor_startd*.  Defaults to 2 seconds.  On extremely
+    large systems which frequently launch all starters at the same time,
+    setting this to a random delay may help spread out starter updates
+    over time.
+
 :macro-def:`STARTER_UPDATE_INTERVAL_TIMESLICE[STARTER]`
     A floating point value, specifying the highest fraction of time that
     the *condor_starter* daemon should spend collecting monitoring
@@ -6517,6 +6530,15 @@ These settings affect the *condor_starter*.
     directory is group-accessible, with permissions set to 0750. If set
     to ``world``, then the directory is created with permissions set to
     0755.
+
+:macro-def:`CONDOR_SSHD[STARTER]`
+    A string value defaulting to /usr/sbin/sshd which is used by
+    the example parallel universe scripts to find a working sshd.
+
+:macro-def:`CONDOR_SSH_KEYGEN[STARTER]`
+    A string value defaulting to /usr/bin/ssh_keygen which is used by
+    the example parallel universe scripts to find a working ssh_keygen
+    program.
 
 :macro-def:`STARTER_STATS_LOG[STARTER]`
     The full path and file name of a file that stores TCP statistics for
@@ -7977,23 +7999,23 @@ condor_credd Configuration File Macros
 
 These macros affect the *condor_credd* and its credmon plugin.
 
-:macro-def:`CREDD_HOST[PROCD]`
+:macro-def:`CREDD_HOST[CREDD]`
     The host name of the machine running the *condor_credd* daemon.
 
-:macro-def:`CREDD_POLLING_TIMEOUT[PROCD]`
+:macro-def:`CREDD_POLLING_TIMEOUT[CREDD]`
     An integer value representing the number of seconds that the
     *condor_credd*, *condor_starter*, and *condor_schedd* daemons
     will wait for valid credentials to be produced by a credential
     monitor (CREDMON) service. The default value is 20.
 
-:macro-def:`CREDD_CACHE_LOCALLY[PROCD]`
+:macro-def:`CREDD_CACHE_LOCALLY[CREDD]`
     A boolean value that defaults to ``False``. When ``True``, the first
     successful password fetch operation to the *condor_credd* daemon
     causes the password to be stashed in a local, secure password store.
     Subsequent uses of that password do not require communication with
     the *condor_credd* daemon.
 
-:macro-def:`CRED_SUPER_USERS[PROCD]`
+:macro-def:`CRED_SUPER_USERS[CREDD]`
     A comma and/or space separated list of user names on a given machine
     that are permitted to store credentials for any user when using the
     :tool:`condor_store_cred` command. When not on this list, users can only
@@ -8001,7 +8023,7 @@ These macros affect the *condor_credd* and its credmon plugin.
     single '\*' wildcard character, which matches any sequence of
     characters.
 
-:macro-def:`SKIP_WINDOWS_LOGON_NETWORK[PROCD]`
+:macro-def:`SKIP_WINDOWS_LOGON_NETWORK[CREDD]`
     A boolean value that defaults to ``False``. When ``True``, Windows
     authentication skips trying authentication with the
     ``LOGON_NETWORK`` method first, and attempts authentication with
@@ -8009,24 +8031,40 @@ These macros affect the *condor_credd* and its credmon plugin.
     authentication failures are noticed, potentially leading to users
     getting locked out.
 
-:macro-def:`CREDMON_KRB[PROCD]`
+:macro-def:`CREDMON_KRB[CREDD]`
     The path to the credmon daemon process when using the Kerberos 
     credentials type.  The default is /usr/sbin/condor_credmon_krb
 
-:macro-def:`CREDMON_OAUTH[PROCD]`
+:macro-def:`CREDMON_OAUTH[CREDD]`
     The path to the credmon daemon process when using the OAuth2
     credentials type.  The default is /usr/sbin/condor_credmon_oauth.
 
-:macro-def:`CREDMON_OAUTH_TOKEN_MINIMUM[PROCD]`
+:macro-def:`CREDMON_OAUTH_TOKEN_MINIMUM[CREDD]`
     The minimum time in seconds that OAuth2 tokens should have remaining
     on them when they are generated.  The default is 40 minutes.
     This is currently implemented only in the vault credmon, not the
     default oauth credmon.
 
-:macro-def:`CREDMON_OAUTH_TOKEN_REFRESH[PROCD]`
+:macro-def:`CREDMON_OAUTH_TOKEN_REFRESH[CREDD]`
     The time in seconds between renewing OAuth2 tokens.  The default is
     half of :macro:`CREDMON_OAUTH_TOKEN_MINIMUM`.  This is currently implemented
     only in the vault credmon, not the default oauth credmon.
+
+:macro-def:`LOCAL_CREDMON_TOKEN_VERSION[CREDD]`
+    A string valued macro that defines what the local issuer should put into
+    the "ver" field of the token.  Defaults to ``scitoken:2.0``.
+
+:macro-def:`SEC_CREDENTIAL_DIRECTORY[CREDD]`
+    A string valued macro that defines a path directory where
+    the credmon looks for credential files.
+
+:macro-def:`SEC_CREDENTIAL_MONITOR[CREDD]`
+    A string valued macro that defines a path to the credential monitor
+    executable.
+
+:macro-def:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
+    pass additional command line options to gettoken.  Mostly
+    used for vault, where this should be set to "-a vault_name".
 
 condor_gridmanager Configuration File Entries
 ----------------------------------------------
@@ -10725,6 +10763,16 @@ details. The other set replace functionality of the
     compute slot. There is no default keyword. Sites that wish to use
     job hooks must explicitly define the keyword and the corresponding
     hook paths.
+
+:macro-def:`STARTER_DEFAULT_JOB_HOOK_KEYWORD[HOOKS]`
+    A string valued parameter that defaults to empty.  If the job
+    does not define a hook, or defines an invalid one, this
+    can be used to force a default hook for the job.
+
+:macro-def:`STARTER_JOB_HOOK_KEYWORD[HOOKS]`
+    This can be defined to force the *condor_starter* to always use a 
+    given keyword for its own hooks, regardless of the value in the 
+    job ClassAd for the :ad-attr:`HookKeyword` attribute.¬
 
 :macro-def:`<Keyword>_HOOK_FETCH_WORK[HOOKS]`
     For the fetch work hooks, the full path to the program to invoke
