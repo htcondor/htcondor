@@ -8066,8 +8066,6 @@ These macros affect the *condor_credd* and its credmon plugin.
     pass additional command line options to gettoken.  Mostly
     used for vault, where this should be set to "-a vault_name".
 
-  1 ``-a <vault.name>`` where <vault.name> i
-
 condor_gridmanager Configuration File Entries
 ----------------------------------------------
 
