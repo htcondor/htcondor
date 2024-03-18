@@ -99,6 +99,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -146,6 +151,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter Development)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
