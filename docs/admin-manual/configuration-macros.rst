@@ -6164,7 +6164,7 @@ These settings affect the *condor_starter*.
     An integer value representing the number of seconds before the
     first ClassAd update from the *condor_starter* to the *condor_shadow*
     and *condor_startd*.  Defaults to 2 seconds.  On extremely
-    large systems which frequently launch all startds at the same time,
+    large systems which frequently launch all starters at the same time,
     setting this to a random delay may help spread out starter updates
     over time.
 
