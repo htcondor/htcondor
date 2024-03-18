@@ -17,12 +17,10 @@
  *
  ***************************************************************/
 
-
 #if !defined(_CONDOR_STARTER_H)
 #define _CONDOR_STARTER_H
 
 #include "condor_daemon_core.h"
-#include "list.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
 #include "exit.h"
@@ -160,11 +158,16 @@ public:
 		*/
 	virtual int jobEnvironmentReady( void );
 	
+	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
+
 		/**
 		 * 
 		 * 
 		 **/
 	virtual void SpawnPreScript( int timerID = -1 );
+
+		/* timer to handle unwinding to pump while skipping job spawn */
+	virtual void SkipJobs( int timerID = -1 );
 
 		/** Does initial cleanup once all the jobs (and post script, if
 			any) have completed.  This notifies the JIC so it can
@@ -285,7 +288,7 @@ public:
 		/** Returns the number of jobs currently running under
 		 * this multi-starter.
 		 */
-	int numberOfJobs( void ) { return m_job_list.Number(); };
+	int numberOfJobs( void ) { return m_job_list.size(); };
 
 	bool isGridshell( void ) const {return is_gridshell;};
 #ifdef WIN32
@@ -332,8 +335,13 @@ public:
 
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 protected:
-	List<UserProc> m_job_list;
-	List<UserProc> m_reaped_job_list;
+	std::vector<UserProc *> m_job_list;
+	std::vector<UserProc *> m_reaped_job_list;
+
+	// JobEnvironmentCannotReady sets these to pass along the setup failure info that
+	// we want to report *after* we finish transfer of FailureFiles
+	int            m_setupStatus = 0; // 0 is success, non-zero indicates failure of job setup
+	struct UnreadyReason  m_urea; // details when m_setupStatus is non-zero
 
 #ifdef WIN32
 	OwnerProfile m_owner_profile;
@@ -365,7 +373,7 @@ private:
 		   @see Starter::publishJobExitAd()
 		   @see UserProc::PublishUpdateAd()
 		*/
-	bool publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad);
+	bool publishJobInfoAd(std::vector<UserProc * > *proc_list, ClassAd* ad);
 
 		/*
 		  @param result Buffer in which to store fully-qualified user name of the job owner

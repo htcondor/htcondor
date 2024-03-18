@@ -39,6 +39,9 @@ from .htcondor2_impl import (
     _schedd_unexport_job_constraint,
     _schedd_submit,
     _history_query,
+    _schedd_retrieve_job_constraint,
+    _schedd_retrieve_job_ids,
+    _schedd_spool,
 )
 
 
@@ -448,7 +451,6 @@ class Schedd():
             submit_file = _add_line_from_itemdata(submit_file, item)
         submit_file = submit_file + ")\n"
 
-        print(submit_file)
         real = Submit(submit_file)
         return _schedd_submit(self._addr, real._handle, count, spool)
 
@@ -458,39 +460,42 @@ class Schedd():
 
 
     def spool(self,
-        ad_list : List[classad.ClassAd],
+        result : SubmitResult
     ) -> None:
-        #
-        # In version, the documentation for this function claims that
-        # SubmitResult has a jobs() method.  It never did, and I'm not
-        # at all sure if the author meant Submit.jobs(), which shouldn't
-        # work because that can't generate job ads with the correct
-        # cluster ID.
-        #
-        # At any rate, the better API is probably just to accept the
-        # SubmitResult object directly.
-        #
         """
-        FIXME (unimplemented)
+        Upload the input files corresponding to a given :meth:`submit`
+        for which the ``spool`` flag was set.
+        """
+        if result._spooledProcAds is None:
+            raise ValueError("result must have come from submit() with spool set")
 
-        Upload the input files corresponding to a given :meth:`submit`.
-        """
-        pass
+        _schedd_spool(self._addr, result._clusterad._handle, result._spooledProcAds._handle)
 
 
     def retrieve(self,
         job_spec : Union[List[str], str, classad.ExprTree],
     ) -> None:
         #
-        # The description is what this function ought to do, but it's
-        # probably not hard to permit both.
+        # In version 1, this function was documented as accepting either
+        # a constraint expression as a string or a list of ClassAds, but
+        # the latter was not implemented.
+        #
+        # This was presumably intended to be the output from Submit.jobs(),
+        # but since that may never be implemented in version 2, let's not
+        # worry about it.
         #
         """
-        FIXME (unimplemented)
-
         Retrieve the output files from the job(s) in a given :meth:`submit`.
+
+        :param job_spec: Which job(s) to export.  Either a :class:`str`
+             of the form ``clusterID.procID``, a :class:`list` of such
+             strings, or a :class:`classad.ExprTree` constraint, or
+             the string form of such a constraint.
         """
-        pass
+        result = job_spec_hack(self._addr, job_spec,
+            _schedd_retrieve_job_ids, _schedd_retrieve_job_constraint,
+            []
+        )
 
 
     # Assuming this should be deprecated.

@@ -1237,7 +1237,7 @@ void main_init (int argc, char ** const argv) {
 						  false, dagman._schedd ); /* toplevel dag! */
 
 	if( dagman.dag == NULL ) {
-		EXCEPT( "ERROR: out of memory!\n");
+		EXCEPT( "ERROR: out of memory!");
 	}
 
 	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );

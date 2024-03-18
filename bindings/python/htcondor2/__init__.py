@@ -1,3 +1,5 @@
+from typing import Optional
+
 #
 # Python > 3.8 on Windows doesn't use PATH to find DLLs any more,
 # which breaks everything.
@@ -37,6 +39,9 @@ with _add_dll_dir():
     from .htcondor2_impl import _set_subsystem as set_subsystem
     from .htcondor2_impl import _reload_config as reload_config
 
+    from ._loose_functions import send_command
+    from ._loose_functions import send_alive
+
     from .htcondor2_impl import _enable_debug as enable_debug
     from .htcondor2_impl import _enable_log as enable_log
     from ._logging import _log as log
@@ -54,6 +59,7 @@ with _add_dll_dir():
     from ._job_event_type import JobEventType
     from ._file_transfer_event_type import FileTransferEventType
     from ._log_level import LogLevel
+    from ._daemon_command import DaemonCommand
 
     # Classes.
     from ._collector import Collector
@@ -64,6 +70,7 @@ with _add_dll_dir():
     from ._schedd import Schedd
     from ._submit import Submit
     from ._submit_result import SubmitResult
+    from ._submit_result import _SpooledProcAdList
     from ._job_event import JobEvent
     from ._job_event_log import JobEventLog
     from ._job_status import JobStatus
@@ -75,4 +82,4 @@ with _add_dll_dir():
     from ._drain_type import DrainType as DrainTypes
     from ._transaction_flag import TransactionFlag as TransactionFlags
     from ._query_opt import QueryOpt as QueryOpts
-
+    from ._daemon_command import DaemonCommand as DaemonCommands

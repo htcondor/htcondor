@@ -48,7 +48,6 @@ Files:  build/cmake/CondorConfigure.cmake
         externals/bundles/libxml2/2.7.3/CMakeLists.txt
         externals/bundles/voms/2.1.0/CMakeLists.txt
         src/ccb/CMakeLists.txt
-        src/classad_analysis/CMakeLists.txt
         src/classad/classadCache.cpp
         src/classad/classad/classadCache.h
         src/classad/CMakeLists.txt

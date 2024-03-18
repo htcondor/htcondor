@@ -2881,7 +2881,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 		int proc = -1;
 		job->LookupInteger(ATTR_PROC_ID, proc);
 		if (proc == -1) {
-			EXCEPT("illegal value for proc: %d in dedicated cluster id %d\n", proc, cluster);
+			EXCEPT("illegal value for proc: %d in dedicated cluster id %d", proc, cluster);
 		}
 
 			// Get the match record

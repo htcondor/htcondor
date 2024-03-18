@@ -15,9 +15,34 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-2308`.
 
+- The use of multiple :subcom:`queue` statements in a single submit description
+  file is now deprecated. This functionality is planned to be removed during the
+  lifetime of the **V24** feature series.
+  :jira:`2338`
+
 New Features:
 
-- None.
+- In the unlikely event that a shadow exception event happens, the text is
+  now saved in the job ad attribute :ad-attr:`LastShadowException` for
+  further debugging.
+  :jira:`1896`
+
+- Most daemon log messages about tasks in the :macro:`STARTD_CRON_JOBLIST`,
+  :macro:`BENCHMARKS_JOBLIST` or :macro:`SCHEDD_CRON_JOBLIST` that were
+  logged as ``D_FULLDEBUG`` messages are now logged using the new message
+  category ``D_CRON``.
+  :jira:`2308`
+
+- A local universe job can now specify a container image, and it will run
+  with that singularity or apptainer container runtime.
+  :jira:`2180`
+
+- The file specified using the submit command :subcom:`starter_log` is now
+  returned on both success and on failure when the submit command
+  :subcom:`when_to_transfer_output` is set to ``ON_SUCCESS``.  In addition,
+  a failure to transfer input is now treated as a failure for purposes of
+  of ``ON_SUCCESS``.
+  :jira:`2347`
 
 Bugs Fixed:
 
@@ -45,7 +70,7 @@ New Features:
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
   :jira:`2317`
 
-- :subcom:`condor_q` -better now emits the units for memory and
+- :tool:`condor_q` -better now emits the units for memory and
   disk.
   :jira:`2333`
 
@@ -116,6 +141,13 @@ New Features:
   to **False**.
   :jira:`2323`
 
+- Added configuration knobs :macro:`GANGLIAD_WANT_RESET_METRICS`  and 
+  :macro:`GANGLIAD_RESET_METRICS_FILE`, enabling *condor_gangliad* to
+  be configured to reset aggregate metrics to a value of zero when they are
+  no longer being updated.  Previously aggregate metrics published to
+  Ganglia retained the last value published indefinitely.
+  :jira:`2346`
+
 - The Job Router route keyword ``GridResource`` is now always
   optional. The job attribute ``GridResource`` can be set instead via
   a ``SET`` or similar command in the route definition.
@@ -138,45 +170,16 @@ Version 23.5.2
 
 Release Notes:
 
-.. HTCondor version 23.5.2 released on Month Date, 2024.
+- HTCondor version 23.5.2 released on March 14, 2024.
 
-- HTCondor version 23.5.2 not yet released.
-
-- This version includes all the updates from :ref:`lts-version-history-2305`.
-
-New Features:
-
-- On Linux systems with cgroup v1 enabled, HTCondor now uses the "devices" cgroup
-  to prevent the job from accessing unassigned GPUs.  This can be disabled
-  by settting the new knob :macro:`STARTER_HIDE_GPU_DEVICES` to false.
-  :jira:`1152`
+- This version includes all the updates from :ref:`lts-version-history-2306`.
 
 - The library libcondorapi has been removed from the distribution.  We know of
   no known user for this C++ event log reading code, and all of our known users
   use the Python bindings for this, as we recommend.
   :jira:`2278`
 
-- Added ability for administrators to specify whether Startd disk enforcement creates
-  thin or thick provisioned logical volumes for a jobs emphemeral execute directory.
-  This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.
-  :jira:`1783`
-
-- GPU detection is now enabled by default on all execute nodes via a new configuration variable
-  :macro:`STARTD_DETECT_GPUS`.  This new configuration variable supplies arguments to
-  *condor_gpu_discovery* for use when GPU discovery is not otherwise explicitly enabled in the config.
-  :jira:`2264`
-
-- Added new submit commands for constraining GPU properties. When these commands
-  are use the ``RequireGPUs`` expression is generated automatically by submit and
-  desired values are stored as job attributes. The new submit commands are :subcom:`gpus_minimum_memory`,
-  :subcom:`gpus_minimum_runtime`, :subcom:`gpus_minimum_capability` and :subcom:`gpus_maximum_capability`.
-  :jira:`2201`
-
-- Added job attributes :ad-attr:`JobCurrentReconnectAttempt` and
-  :ad-attr:`TotalJobReconnectAttempts` to count the number of
-  reconnect attempts in progress, and total for the lifetime of
-  the job, respectively.
-  :jira:`2258`
+New Features:
 
 - The old ClassAd-based syntax for defining Job Router routes is now
   disabled by default.
@@ -186,23 +189,50 @@ New Features:
   version 24.0.0.
   :jira:`2260`
 
-- During SSL authentication, VOMS attributes can be included when
-  mapping to an HTCondor identity.
-  To do so, configuration parameters :macro:`USE_VOMS_ATTRIBUTES` and
-  :macro:`AUTH_SSL_USE_VOMS_IDENTITY` must be set to ``True``.
-  :jira:`2256`
+- Added ability for administrators to specify whether Startd disk enforcement creates
+  thin or thick provisioned logical volumes for a jobs ephemeral execute directory.
+  This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.
+  :jira:`1783`
 
-- Improve the reliability of the userlog reader code by changing it to do line oriented reads and to seek less.
-  :jira:`2254`
+- GPU detection is now enabled by default on all execute nodes via a new configuration variable
+  :macro:`STARTD_DETECT_GPUS`.  This new configuration variable supplies arguments to
+  *condor_gpu_discovery* for use when GPU discovery is not otherwise explicitly enabled in the configuration.
+  :jira:`2264`
 
-- The ``$CondorVersion`` string contains the Git SHA for official CHTC builds of HTCondor.
-  :jira:`532`
+- On Linux systems with cgroup v1 enabled, HTCondor now uses the "devices" cgroup
+  to prevent the job from accessing unassigned GPUs.  This can be disabled
+  by setting the new knob :macro:`STARTER_HIDE_GPU_DEVICES` to false.
+  :jira:`1152`
+
+- Added new submit commands for constraining GPU properties. When these commands
+  are use the ``RequireGPUs`` expression is generated automatically by submit and
+  desired values are stored as job attributes. The new submit commands are :subcom:`gpus_minimum_memory`,
+  :subcom:`gpus_minimum_runtime`, :subcom:`gpus_minimum_capability` and :subcom:`gpus_maximum_capability`.
+  :jira:`2201`
 
 - The new submit commands :subcom:`starter_debug` and :subcom:`starter_log`
   can be used to have the *condor_starter* write a second copy of its
   daemon log and have that file transferred to the Access Point with the
   job's output sandbox.
   :jira:`2296`
+
+- During SSL authentication, VOMS attributes can be included when
+  mapping to an HTCondor identity.
+  To do so, configuration parameters :macro:`USE_VOMS_ATTRIBUTES` and
+  :macro:`AUTH_SSL_USE_VOMS_IDENTITY` must be set to ``True``.
+  :jira:`2256`
+
+- The ``$CondorVersion`` string contains the Git SHA for official CHTC builds of HTCondor.
+  :jira:`532`
+
+- Added job attributes :ad-attr:`JobCurrentReconnectAttempt` and
+  :ad-attr:`TotalJobReconnectAttempts` to count the number of
+  reconnect attempts in progress, and total for the lifetime of
+  the job, respectively.
+  :jira:`2258`
+
+- Improve the reliability of the user log reader code by changing it to do line oriented reads and to seek less.
+  :jira:`2254`
 
 Bugs Fixed:
 
@@ -225,7 +255,7 @@ Version 23.4.0
 
 Release Notes:
 
-- HTCondor version 23.4.0 released on February 8, 2023.
+- HTCondor version 23.4.0 released on February 8, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-2304`.
 
@@ -280,7 +310,7 @@ Bugs Fixed:
 Version 23.3.1
 --------------
 
-- HTCondor version 23.3.1 released on January 23, 2023.
+- HTCondor version 23.3.1 released on January 23, 2024.
 
 - HTCondor tarballs now contain `Pelican 7.4.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.4.0>`_
 
@@ -297,7 +327,7 @@ Version 23.3.0
 
 Release Notes:
 
-- HTCondor version 23.3.0 released on January 4, 2023.
+- HTCondor version 23.3.0 released on January 4, 2024.
 
 - Limited support for Enterprise Linux 7 in the 23.x feature versions.
   Since we are developing new features, the Enterprise Linux 7 build may

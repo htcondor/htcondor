@@ -121,7 +121,6 @@ public:
 			MUST use transferOutputMopUp() afterwards to handle
 			problems the file transfer may have had.
 		*/
-	void setJobFailed( void );
 	bool transferOutput( bool &transient_failure );
 
 		/** After transferOutput returns, we need to handle what happens
@@ -297,7 +296,7 @@ private:
 	bool beginFileTransfer( void );
 
 		/// Callback for when the FileTransfer object is done
-	int transferCompleted(FileTransfer *);
+	int transferInputCompleted(FileTransfer *);
 
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );
@@ -445,7 +444,8 @@ private:
 		// The shadow is feeding us a new proxy. Override from parent
 	bool updateX509Proxy(int cmd, ReliSock * s);
 
-	void setX509ProxyExpirationTimer();
+	// leftover from gl_exec? this does nothing now..
+	//void setX509ProxyExpirationTimer();
 
 		// The proxy is about to expire, do something!
 	void proxyExpiring();
@@ -551,7 +551,8 @@ private:
 	bool m_job_update_attrs_set;
 	StringList m_job_update_attrs;
 
-	bool job_failed = false;
+	// moved to base class
+	//bool job_failed = false;
 };
 
 

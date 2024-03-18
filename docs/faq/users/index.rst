@@ -16,3 +16,4 @@ but we've prepared a few examples for job submitters already.
     path-facility
     perlmutter
     annex-example-job
+    convert-multi-q-statements

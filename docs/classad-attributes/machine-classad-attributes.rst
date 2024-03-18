@@ -559,11 +559,6 @@ Machine ClassAd Attributes
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
 
-:classad-attribute-def:`Offline`
-    A string that lists specific instances of a user-defined machine
-    resource, identified by ``name``. Each instance is currently
-    unavailable for purposes of match making.
-
 :classad-attribute-def:`OfflineUniverses`
     A ClassAd list that specifies which job universes are presently
     offline, both as strings and as the corresponding job universe

@@ -4910,6 +4910,18 @@ default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
 tags=condor_config
 
+[GANGLIAD_RESET_METRICS_FILE]
+default=$(SPOOL)/metricsToReset.ganglia_metrics
+type=path
+description=Path to filename where gangliad stores state
+tags=gangliad
+
+[GANGLIAD_WANT_RESET_METRICS]
+default=false
+type=bool
+description=Should gangliad reset aggregate metrics to zero on restart
+tags=gangliad
+
 [GANGLIAD_METRICS_CONFIG_DIR]
 default=$(ETC)/ganglia.d
 type=path
@@ -5655,7 +5667,7 @@ default=
 type=string
 
 [LOCAL_CREDMON_TOKEN_VERSION]
-default=scitokens:2.0
+default=scitoken:2.0
 type=string
 
 
@@ -6512,7 +6524,7 @@ win32_default=$(LIBEXEC)\condor_gpu_utilization.exe
 description=Settings to monitor GPU usage
 default : @end
 	use feature : Monitor( GPUs, WaitForExit, 300, $(GPU_MONITOR), SUM:GPUs, PEAK:GPUsMemory )
-	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0
+	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0 && OpSys =!= "WINDOWS"
 
 	STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end

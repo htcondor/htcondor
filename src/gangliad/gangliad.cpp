@@ -238,6 +238,12 @@ GangliaD::initializeHostList()
     m_need_heartbeat.clear();
     m_ganglia_metrics_sent = 0;
 
+	if (m_send_data_for_all_hosts) {
+		// If we are sending data for all hosts, might as well bail out here, since
+		// we don't need the list of monitored hosts in this case.
+		return;
+	}
+
 	FILE *fp = my_popenv(m_gstat_argv,"r",MY_POPEN_OPT_WANT_STDERR);
 	if( !fp ) {
 		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",m_gstat_command.c_str(),strerror(errno));
@@ -271,7 +277,9 @@ GangliaD::sendHeartbeats()
 		 itr != m_need_heartbeat.end();
 		 itr++ )
 	{
-        ganglia_send_heartbeat(m_ganglia_context, m_ganglia_channels, itr->c_str());
+		if (!m_ganglia_noop) {
+        	ganglia_send_heartbeat(m_ganglia_context, m_ganglia_channels, itr->c_str());
+		}
         heartbeats_sent++;
 	}
     dprintf(D_ALWAYS, "Heartbeats sent: %d\n", heartbeats_sent);
