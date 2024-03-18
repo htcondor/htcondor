@@ -37,6 +37,13 @@ New Features:
   with that singularity or apptainer container runtime.
   :jira:`2180`
 
+- The file specified using the submit command :subcom:`starter_log` is now
+  returned on both success and on failure when the submit command
+  :subcom:`when_to_transfer_output` is set to ``ON_SUCCESS``.  In addition,
+  a failure to transfer input is now treated as a failure for purposes of
+  of ``ON_SUCCESS``.
+  :jira:`2347`
+
 Bugs Fixed:
 
 - None.

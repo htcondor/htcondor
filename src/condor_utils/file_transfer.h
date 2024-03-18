@@ -282,6 +282,9 @@ class FileTransfer final: public Service {
 	//
 	void addOutputFile( const char* filename );
 
+	// Add the given filename to the list of "failure" files.
+	void addFailureFile( const char* filename );
+
 	//
 	// Add the given path or URL to the list of checkpoint files.  The file
 	// will be transferred to the named destination* in the sandbox.
@@ -532,6 +535,7 @@ class FileTransfer final: public Service {
 	StringList* CheckpointFiles{nullptr};
 	StringList* EncryptCheckpointFiles{nullptr};
 	StringList* DontEncryptCheckpointFiles{nullptr};
+	StringList FailureFiles{nullptr, ","};
 
 	char* OutputDestination{nullptr};
 	char* SpooledIntermediateFiles{nullptr};

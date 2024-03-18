@@ -1362,10 +1362,7 @@ FILE TRANSFER COMMANDS
     to transfer the job's output files back to the submitting machine when
     the job completes (exits on its own).  If a job is evicted and started
     again, the subsequent execution will start with only the executable and
-    input files in the scratch directory sandbox.  If ``transfer_output_files``
-    is not set, HTCondor considers all new files in the sandbox's top-level
-    directory to be the output; subdirectories and their contents will not
-    be transferred.
+    input files in the scratch directory sandbox.
 
     Setting ``when_to_transfer_output`` to ``ON_EXIT_OR_EVICT`` will cause
     HTCondor to transfer the job's output files when the job completes
@@ -1373,15 +1370,15 @@ FILE TRANSFER COMMANDS
     HTCondor will transfer the output files to a temporary directory on the
     submit node (determined by the :macro:`SPOOL` configuration variable).  When
     the job restarts, these files will be transferred instead of the input
-    files.  If ``transfer_output_files`` is not set, HTCondor considers all
-    files in the sandbox's top-level directory to be the output;
-    subdirectories and their contents will not be transferred.
+    files.
 
     Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
-    to transfer the job's output files when the job completes successfully.
+    to transfer the job's output files only when the job completes successfully.
     Success is defined by the ``success_exit_code`` command, which must be
-    set, even if the successful value is the default ``0``.  If
-    ``transfer_output_files`` is not set, HTCondor considers all new files
+    set, even if the successful value is the default ``0``.  This prevents the
+    job from going on hold if it does not produce all of the output files when it fails.
+    
+    If ``transfer_output_files`` is not set, HTCondor considers all new files
     in the sandbox's top-level directory to be the output; subdirectories
     and their contents will not be transferred.
 

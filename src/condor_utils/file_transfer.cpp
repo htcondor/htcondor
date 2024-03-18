@@ -313,6 +313,7 @@ FileTransfer::FileTransfer()
 
 FileTransfer::~FileTransfer()
 {
+	dprintf(D_ZKM, "FileTransfer destructor %p daemonCore=%p\n", this, daemonCore);
 	if (daemonCore && ActiveTransferTid >= 0) {
 		dprintf(D_ALWAYS, "FileTransfer object destructor called during "
 				"active transfer.  Cancelling transfer.\n");
@@ -731,6 +732,22 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		DontEncryptOutputFiles = new StringList(buf,",");
 	} else {
 		DontEncryptOutputFiles = new StringList(NULL,",");
+	}
+
+	if (Ad->LookupString(ATTR_FAILURE_FILES, buf, sizeof(buf)) == 1) {
+		FailureFiles.initializeFromString(buf);
+
+		if( shouldSendStdout() ) {
+			if(! FailureFiles.file_contains(JobStdoutFile.c_str()) ) {
+				FailureFiles.append( JobStdoutFile.c_str() );
+			}
+		}
+
+		if( shouldSendStderr() ) {
+			if(! FailureFiles.file_contains(JobStderrFile.c_str()) ) {
+				FailureFiles.append( JobStderrFile.c_str() );
+			}
+		}
 	}
 
 	// We need to know whether to apply output file remaps or not.
@@ -1488,40 +1505,8 @@ FileTransfer::DetermineWhichFilesToSend() {
 		}
 	}
 
-	// See uploadCheckpointFiles comments, above.
 	if( uploadFailureFiles ) {
-		if( CheckpointFiles ) { delete CheckpointFiles; }
-
-		std::string failureList;
-		if( jobAd.LookupString( ATTR_FAILURE_FILES, failureList ) ) {
-			CheckpointFiles = new StringList( failureList.c_str(), "," );
-		} else {
-			CheckpointFiles = new StringList( NULL, "," );
-		}
-
-		// If we'd transfer output or error on success, do so on failure also.
-		if( shouldSendStdout() ) {
-			if(! CheckpointFiles->file_contains(JobStdoutFile.c_str()) ) {
-				CheckpointFiles->append( JobStdoutFile.c_str() );
-			}
-		}
-
-		if( shouldSendStderr() ) {
-			if(! CheckpointFiles->file_contains(JobStderrFile.c_str()) ) {
-				CheckpointFiles->append( JobStderrFile.c_str() );
-			}
-		}
-
-		if( EncryptCheckpointFiles ) { delete EncryptCheckpointFiles; }
-		EncryptCheckpointFiles = new StringList( NULL, "," );
-
-		if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
-		DontEncryptCheckpointFiles = new StringList( NULL, "," );
-
-		FilesToSend = CheckpointFiles;
-		EncryptFiles = EncryptCheckpointFiles;
-		DontEncryptFiles = DontEncryptCheckpointFiles;
-
+		FilesToSend = &FailureFiles;
 		return;
 	}
 
@@ -5123,7 +5108,7 @@ FileTransfer::uploadFileList(
 		TransferSubCommand file_subcommand = TransferSubCommand::Unknown;
 
 		// find out if this file is in DontEncryptFiles
-		if ( DontEncryptFiles->file_contains_withwildcard(filename.c_str()) ) {
+		if ( DontEncryptFiles && DontEncryptFiles->file_contains_withwildcard(filename.c_str()) ) {
 			// turn crypto off for this file (actually done below)
 			file_command = TransferCommand::DisableEncryption;
 		}
@@ -5131,7 +5116,7 @@ FileTransfer::uploadFileList(
 		// now find out if this file is in EncryptFiles.  if it was
 		// also in DontEncryptFiles, that doesn't matter, this will
 		// override.
-		if ( EncryptFiles->file_contains_withwildcard(filename.c_str()) ) {
+		if ( EncryptFiles && EncryptFiles->file_contains_withwildcard(filename.c_str()) ) {
 			// turn crypto on for this file (actually done below)
 			file_command = TransferCommand::EnableEncryption;
 		}
@@ -6150,6 +6135,14 @@ FileTransfer::addOutputFile( const char* filename )
 		return;
 	}
 	OutputFiles->append( filename );
+}
+
+void
+FileTransfer::addFailureFile( const char* filename )
+{
+	if( !FailureFiles.file_contains(filename) ) {
+		FailureFiles.append( filename );
+	}
 }
 
 bool
