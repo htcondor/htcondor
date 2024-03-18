@@ -73,14 +73,15 @@ on your own resource (the Anvil allocation, in this case) with the
     $ htcondor job submit example.submit --annex-name example
     Job 123 was submitted and will run only on the annex 'example'.
 
-Notes on the output of this command:
+.. note::
+    Notes on the output of this command:
 
-- 123 is the job ID assigned by the access point to the placed job.
-- Placing the job with the annex name specified means that the job
-  won't run anywhere other than the annex.
-- Note that the annex name does not say anything about Anvil; it is simply
-  a label for the Anvil resources we will be provisioning
-  in the next step.
+    - ``123`` is the job ID assigned by the access point to the placed job.
+    - Placing the job with the annex name specified means that the job
+      won't run anywhere other than the annex.
+    - The annex name does not say anything about Anvil; it is simply
+      a label for the Anvil resources we will be provisioning
+      in the next step.
 
 3. Lease the Resources
 ''''''''''''''''''''''
