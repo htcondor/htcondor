@@ -1659,15 +1659,16 @@ void ResMgr::assign_load_and_idle()
 	// even if the value was greater than 1.0, but other than that this algorithm is
 	// the same as before.  This algorithm doesn't make a lot of sense for multi-core slots
 	// but it's the way it has always worked so...
-	for (Resource* rip : active) {
-		if (total_owner_load < 1.0) {
-			rip->set_owner_load(total_owner_load);
-			total_owner_load = 0;
-		} else {
-			rip->set_owner_load(1.0);
-			total_owner_load -= 1.0;
-		}
-	}
+        for (Resource* rip : active) {
+                long long cpus = rip->r_attr->num_cpus();
+                if (total_owner_load < cpus) {
+                        rip->set_owner_load(total_owner_load);
+                        total_owner_load = 0;
+                } else {
+                        rip->set_owner_load(cpus);
+                        total_owner_load -= cpus;
+                }
+        }
 
 	// assign keyboard and console idle
 	time_t console = m_attr->console_idle();
