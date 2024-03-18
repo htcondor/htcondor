@@ -28,7 +28,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Updated *condor_upgrade_check* to warn about the deprecated functionality of having
+  multiple queue statements in a single submit description file.
+  :jira:`2338`
 
 Bugs Fixed:
 
