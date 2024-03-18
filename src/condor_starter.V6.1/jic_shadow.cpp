@@ -2000,29 +2000,9 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 	const char * proxyfilename = condor_basename(path.c_str());
 
 	bool retval = ::updateX509Proxy(cmd, s, proxyfilename);
-
-#if 0
-	// now, if the update was successful, and we are using glexec, make sure we
-	// set a timer to put the job on hold before the proxy expires and we lose
-	// control of it.
-	if( retval ) {
-		setX509ProxyExpirationTimer();
-	}
-#endif
-
 	return retval;
 }
 
-#if 0
-void
-JICShadow::setX509ProxyExpirationTimer()
-{
-	std::string path;
-	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
-		return;
-	}
-}
-#endif
 
 bool
 JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr )
@@ -2732,10 +2712,6 @@ JICShadow::transferInputCompleted( FileTransfer *ftrans )
 			set_priv( saved_priv );
 		}
 	}
-
-#if 0 // this does nothing (leftover from glexec?)
-	setX509ProxyExpirationTimer();
-#endif
 
 	// We are done with input transfer, so record the sandbox content now
 	// note that if setupCompleted() runs a PREPARE_JOB hook which modifies the sandbox
