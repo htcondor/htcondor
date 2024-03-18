@@ -225,6 +225,8 @@ transfer_input_files        = ${WELL_KNOWN_LOCATION_FOR_BINARIES}, ${WELL_KNOWN_
 transfer_output_files       = \"\"
 when_to_transfer_output     = ON_EXIT
 
+requirements                = GLIDEIN_Site =!= \"FIU-PATH\"
+
 output                      = out.\$(ClusterID).\$(ProcID)
 error                       = err.\$(ClusterID).\$(ProcID)
 log                         = log.\$(ClusterID).\$(ProcID)
