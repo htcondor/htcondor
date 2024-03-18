@@ -993,10 +993,16 @@ struct SubmitStepFromQArgs {
 		// then store that field data into the m_livevars set
 		// NOTE: we don't use the SubmitForeachArgs::split_item method that takes a NOCASE_STRING_MAP
 		// because it clears the map first, and that is only safe to do after we unset_live_vars()
+
+		// NOTE: If a row of item data does not contain a value for each variable (A,B,C -> 1,2) then
+		// the remaining variables will not update their values. Meaning they inherit the previous
+		// jobs values (or is undefined). If this 'allowed' behavior changes in condor_submit then
+		// also change it here.
 		std::vector<const char*> splits;
-		m_fea.split_item(data.ptr(), splits);
+		int num_items = m_fea.split_item(data.ptr(), splits);
 		int ix = 0;
 		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+			if (ix >= num_items) { break; }
 			m_livevars[key] = splits[ix++];
 		}
 		return 1;

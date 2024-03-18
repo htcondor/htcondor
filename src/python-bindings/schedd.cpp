@@ -617,11 +617,12 @@ struct QueueItemsIterator {
 
 		if (m_fea.vars.number() > 1 || (m_fea.vars.number()==1 && (YourStringNoCase("Item") != m_fea.vars.first()))) {
 			std::vector<const char*> splits;
-			m_fea.split_item(line.ptr(), splits);
+			int num_items = m_fea.split_item(line.ptr(), splits);
 
 			boost::python::dict values;
 			int ix = 0;
 			for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+				if (ix >= num_items) { break; }
 				values[boost::python::object(std::string(key))] = boost::python::object(std::string(splits[ix++]));
 			}
 
@@ -870,9 +871,10 @@ struct SubmitStepFromPyIter {
 				auto_free_ptr data(strdup(str.c_str()));
 
 				std::vector<const char*> splits;
-				m_fea.split_item(data.ptr(), splits);
+				int num_items = m_fea.split_item(data.ptr(), splits);
 				int ix = 0;
 				for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+					if (ix >= num_items) { break; }
 					m_livevars[key] = splits[ix++];
 				}
 			}

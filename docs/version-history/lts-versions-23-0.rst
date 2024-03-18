@@ -41,6 +41,11 @@ Bugs Fixed:
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`
 
+- Fixed a bug where DAGMan would crash when directly submitting a node job
+  with a queue for each statement that was provided less item data values
+  in a row than declared custom variables.
+  :jira:`2351`
+
 - Fixed a bug where an error message from the *condor_starter* could
   create job event log entries with newlines in them, which broke the
   event log parser.
