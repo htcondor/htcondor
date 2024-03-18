@@ -3927,7 +3927,7 @@ needs.
 
 :macro-def:`GPU_DISCOVERY_EXTRA[STARTD]`
     A string valued parameter that defaults to ``-extra``.  It cannot
-    be used to pass addiitonal command line arguments to the
+    be used to pass additional command line arguments to the
     :tool:`condor_gpu_discovery` tool.
 
 :macro-def:`MACHINE_RESOURCE_<name>[STARTD]`
