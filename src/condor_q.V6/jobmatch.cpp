@@ -55,7 +55,6 @@
 #include "ipv6_hostname.h"
 #include <map>
 #include <vector>
-//#include "../classad_analysis/analysis.h"
 //#include "pool_allocator.h"
 #include "expr_analyze.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope stats

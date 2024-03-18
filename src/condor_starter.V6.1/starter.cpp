@@ -2021,6 +2021,49 @@ Starter::createTempExecuteDir( void )
 	return true;
 }
 
+/*
+ * When input file transfer or other setup tasks fail, will enter this method
+ * to begin reporting the failure.  Reporting might include transferring FailureFiles
+ **/
+int
+Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea)
+{
+	// record these for later
+	m_setupStatus = status;
+	m_urea = urea;
+
+	// we've already decided to start the job, so just exit here
+	if (this->deferral_tid != -1) {
+		dprintf(D_ALWAYS, "ERROR: deferral timer already queued when jobEnvironmentCannotReady\n");
+		return 0;
+	}
+
+	//
+	// Now we will register a callback that will
+	// call the function to actually execute the job
+	// If there wasn't a deferral time then the job will 
+	// be started right away. We store the timer id so that
+	// if a suspend comes in, we can cancel the job from being
+	// executed
+	//
+	this->deferral_tid = daemonCore->Register_Timer(0,
+		(TimerHandlercpp)&Starter::SkipJobs,
+		"SkipJobs",
+		this );
+
+	//
+	// Make sure our timer callback registered properly
+	//
+	if( this->deferral_tid < 0 ) {
+		EXCEPT( "Can't register SkipJob DaemonCore timer" );
+	}
+	dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
+			this->jic->jobCluster(),
+			this->jic->jobProc() );
+
+	return true;
+}
+
 /**
  * After any file transfers are complete, will enter this method
  * to setup anything else that needs to happen in the Starter
@@ -2293,7 +2336,6 @@ Starter::removeDeferredJobs() {
  * Start the prescript for a job, if one exists
  * If one doesn't, then we will call SpawnJob() directly
  * 
- * return true if no errors occured
  **/
 void
 Starter::SpawnPreScript( int /* timerID */ )
@@ -2350,6 +2392,30 @@ Starter::SpawnPreScript( int /* timerID */ )
 		main_shutdown_fast();
 	}
 }
+
+/**
+* Timer handler to Skip job execution because we failed setup
+* used instead of the deferral timer that executes SpawnPreScript above
+* return true if no errors occured
+**/
+void
+Starter::SkipJobs( int /* timerID */ )
+{
+	//
+	// Unset the deferral timer so that we know that no job
+	// is waiting to be spawned
+	//
+	if ( this->deferral_tid != -1 ) {
+		this->deferral_tid = -1;
+	}
+
+	if (m_setupStatus != 0) {
+		jic->setJobFailed(); // so we transfer FailureFiles instead of output files
+	}
+	// this starts output transfer of FailureFiles
+	allJobsDone();
+}
+
 
 void Starter::getJobOwnerFQUOrDummy(std::string &result) const
 {
@@ -2941,6 +3007,7 @@ Starter::allJobsDone( void )
 {
 	m_all_jobs_done = true;
 	bool bRet=false;
+	dprintf(D_ZKM | D_BACKTRACE, "Starter::allJobsDone()\n");
 
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
@@ -2951,7 +3018,7 @@ Starter::allJobsDone( void )
 	if (m_deferred_job_update){
 		jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, 0 );
 	}
-		// JIC::allJobsDonbRete() returned false: propagate that so we
+		// JIC::allJobsDone() returned false: propagate that so we
 		// halt the cleanup process and wait for external events.
 	return bRet;
 }
@@ -2961,6 +3028,8 @@ bool
 Starter::transferOutput( void )
 {
 	bool transient_failure = false;
+
+	dprintf(D_ZKM | D_BACKTRACE, "Starter::transferOutput()\n");
 
 	if( recorded_job_exit_status ) {
 		bool exitStatusSpecified = false;
@@ -3043,6 +3112,12 @@ Starter::cleanupJobs( void )
 			return false;
 		}
 	}
+
+	// If setup failed and we should hold the job, notify the startd
+	if (m_setupStatus == JOB_SHOULD_HOLD) {
+		jic->notifyStarterError(m_urea.message.c_str(), true, m_urea.hold_code, m_urea.hold_subcode);
+	}
+
 		// No more jobs, all cleanup done, notify our JIC
 	jic->allJobsGone();
 	return true;

@@ -133,8 +133,9 @@ JICLocal::config( void )
 void
 JICLocal::setupJobEnvironment( void )
 { 
-		// Nothing for us to do, let our parent class do its thing.
-	JobInfoCommunicator::setupJobEnvironment();
+		// Nothing for us to do, so tell the parent class we succeeded
+		// this will normally queue a hook or a timer to spawn the job
+	JobInfoCommunicator::setupCompleted(0);
 }
 
 

@@ -698,14 +698,14 @@ startd_exit()
 
 	// Shut down the cron logic
 	if( cron_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting cron job manager\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of cron job manager\n" );
 		cron_job_mgr->Shutdown( true );
 		delete cron_job_mgr;
 	}
 
 	// Shut down the benchmark job manager
 	if( bench_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting benchmark job mgr\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of benchmark job mgr\n" );
 		bench_job_mgr->Shutdown( true );
 		delete bench_job_mgr;
 	}

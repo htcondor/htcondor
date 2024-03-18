@@ -15,6 +15,11 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-2308`.
 
+- The use of multiple :subcom:`queue` statements in a single submit description
+  file is now deprecated. This functionality is planned to be removed during the
+  lifetime of the **V24** feature series.
+  :jira:`2338`
+
 New Features:
 
 - In the unlikely event that a shadow exception event happens, the text is
@@ -27,9 +32,22 @@ New Features:
   guilty ticket is:
   :jira:`1146`
 
+- Most daemon log messages about tasks in the :macro:`STARTD_CRON_JOBLIST`,
+  :macro:`BENCHMARKS_JOBLIST` or :macro:`SCHEDD_CRON_JOBLIST` that were
+  logged as ``D_FULLDEBUG`` messages are now logged using the new message
+  category ``D_CRON``.
+  :jira:`2308`
+
 - A local universe job can now specify a container image, and it will run
   with that singularity or apptainer container runtime.
   :jira:`2180`
+
+- The file specified using the submit command :subcom:`starter_log` is now
+  returned on both success and on failure when the submit command
+  :subcom:`when_to_transfer_output` is set to ``ON_SUCCESS``.  In addition,
+  a failure to transfer input is now treated as a failure for purposes of
+  of ``ON_SUCCESS``.
+  :jira:`2347`
 
 Bugs Fixed:
 

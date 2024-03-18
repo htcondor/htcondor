@@ -20,5 +20,7 @@
 
 .. autofunction:: reload_config
 
+.. autofunction:: send_command
+
 .. autofunction:: version
 
