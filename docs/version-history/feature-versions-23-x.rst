@@ -37,6 +37,11 @@ New Features:
   with that singularity or apptainer container runtime.
   :jira:`2180`
 
+- If a schedd has a schedd-specific SPOOL directory (set by
+  schedd_name.SPOOL), the schedd now creates that directory
+  with the proper ownership and permissions.
+  :jira:`907`
+
 - The file specified using the submit command :subcom:`starter_log` is now
   returned on both success and on failure when the submit command
   :subcom:`when_to_transfer_output` is set to ``ON_SUCCESS``.  In addition,
