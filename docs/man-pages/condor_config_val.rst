@@ -60,7 +60,7 @@ levels can modify which settings. See
 the :doc:`/admin-manual/security` section for more details on
 security settings. Further, security considerations require proper
 settings of configuration variables :macro:`SETTABLE_ATTRS_<PERMISSION-LEVEL>`,
-:macro:`ENABLE_PERSISTENT_CONFIG`, and :macro:`ALLOW`
+:macro:`ENABLE_PERSISTENT_CONFIG`, and :macro:`ALLOW_CONFIG`
 in order to use *condor_config_val* to change any configuration variable.
 
 It is generally wise to test a new configuration on a single machine to

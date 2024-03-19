@@ -250,12 +250,10 @@ DCCollector::parseTCPInfo( void )
 		use_tcp = false;
 		char *tmp = param( "TCP_UPDATE_COLLECTORS" );
 		if( tmp ) {
-			StringList tcp_collectors;
-
-			tcp_collectors.initializeFromString( tmp );
+			std::vector<std::string> tcp_collectors = split(tmp);
 			free( tmp );
 			if( ! _name.empty() &&
-				tcp_collectors.contains_anycase_withwildcard(_name.c_str()) )
+				contains_anycase_withwildcard(tcp_collectors, _name) )
 			{	
 				use_tcp = true;
 				break;

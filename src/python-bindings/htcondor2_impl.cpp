@@ -11,6 +11,7 @@
 // htcondor.*
 #include "condor_version.h"
 #include "subsystem_info.h"
+#include "daemon.h"
 #include "common2/py_util.cpp"
 #include "htcondor2/loose_functions.cpp"
 
@@ -91,6 +92,9 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	    Reload the HTCondor configuration from disk.
 	)C0ND0R"},
 
+	{"_send_command", & _send_command, METH_VARARGS, NULL},
+	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
+
 	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
 
 	{"_py_dprintf", &_py_dprintf, METH_VARARGS, NULL},
@@ -129,6 +133,9 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_import_exported_job_results", &_schedd_import_exported_job_results, METH_VARARGS, NULL},
 	{"_schedd_unexport_job_ids", &_schedd_unexport_job_ids, METH_VARARGS, NULL},
 	{"_schedd_unexport_job_constraint", &_schedd_unexport_job_constraint, METH_VARARGS, NULL},
+	{"_schedd_retrieve_job_ids", &_schedd_retrieve_job_ids, METH_VARARGS, NULL},
+	{"_schedd_retrieve_job_constraint", &_schedd_retrieve_job_constraint, METH_VARARGS, NULL},
+	{"_schedd_spool", &_schedd_spool, METH_VARARGS, NULL},
 	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
 
 

@@ -132,14 +132,14 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char *
 		if ( sad->InSlotList(r_id) && sad->ShouldMergeInto(merged_ad, &match_attr) ) {
 			ClassAd	*ad = nad->GetAd( );
 			if ( NULL != ad ) {
-				dprintf( D_FULLDEBUG,
+				dprintf( D_CRON | D_VERBOSE,
 						 "Publishing ClassAd '%s' to %s [%s matches]\n",
 						 nad->GetName(), r_id_str, match_attr ? match_attr : "InSlotList" );
 				sad->MergeInto(merged_ad);
 			}
 		}
 		else if (match_attr) {
-			dprintf( D_FULLDEBUG,
+			dprintf( D_CRON | D_VERBOSE,
 						"Rejecting ClassAd '%s' for %s [%s does not match]\n",
 						nad->GetName(), r_id_str, match_attr );
 		}

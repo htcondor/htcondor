@@ -24,3 +24,8 @@ is a list of items that administrators should be aware of.
   :macro:`JOB_ROUTER_TRANSFORM_<name>` :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`,
   and :macro:`JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES`) should be used instead.
   :jira:`2259`
+
+- The use of multiple :subcom:`queue` statements in a single submit description
+  file is now deprecated. This functionality is planned to be removed during the
+  lifetime of the **V24** feature series.
+  :jira:`2338`

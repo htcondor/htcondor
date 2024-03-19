@@ -342,6 +342,7 @@ public:
 		wf_dslotCreate,    //7
 		wf_dslotDelete,    //8
 		wf_refreshRes,     //9
+		wf_cronRequest,    //10  STARTD_CRON job requested a collector update
 	} WhyFor;
 	void	update_needed( WhyFor why );// Schedule to update the central manager.
 	void	update_walk_for_timer() { update_needed(wf_doUpdate); } // for use with Walk where arguments are not permitted
