@@ -28,7 +28,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Updated *condor_upgrade_check* to warn about the deprecated functionality of having
+  multiple queue statements in a single submit description file.
+  :jira:`2338`
 
 Bugs Fixed:
 
@@ -38,6 +40,11 @@ Bugs Fixed:
   version 0.6.0.  The old name can be restored with the config knob 
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`
+
+- Fixed a bug where DAGMan would crash when directly submitting a node job
+  with a queue for each statement that was provided less item data values
+  in a row than declared custom variables.
+  :jira:`2351`
 
 - Fixed a bug where an error message from the *condor_starter* could
   create job event log entries with newlines in them, which broke the
