@@ -171,7 +171,7 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 				dprintf( D_MACHINE, "StartdCronJobMgr::ShouldStartJob(%s): evaluated in context:\n%s\n",
 					job.GetName(), formatAd(buf,context,"\t") );
 				buf.clear(); ClassAdValueToString(v, buf);
-				dprintf( D_FULLDEBUG, "StartdCronJobMgr::ShouldStartJob(%s) Condition[%s] = %s\n", condition.c_str(), buf.c_str());
+				dprintf( D_FULLDEBUG, "StartdCronJobMgr::ShouldStartJob(%s) Condition[%s] = %s\n", job.GetName(), condition.c_str(), buf.c_str());
 			}
 		}
 		return false;
