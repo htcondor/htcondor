@@ -131,7 +131,7 @@ public:
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_TOTALS );
 
-		/** Hold all jobs specified in the given StringList.  The list
+		/** Hold all jobs specified in the given list.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.  Also, set ATTR_HOLD_REASON to the given reason.
 			@param constraint What jobs to act on
@@ -141,12 +141,12 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* holdJobs( StringList* ids, const char* reason,
+	ClassAd* holdJobs( const std::vector<std::string>& ids, const char* reason,
 					   const char* reason_code,
 					   CondorError * errstack,
 					   action_result_type_t result_type = AR_LONG );
 
-		/** Remove all jobs specified in the given StringList.  The
+		/** Remove all jobs specified in the given list.  The
 			list should contain a comma-seperated list of cluster.proc
 			job ids.  Also, set ATTR_REMOVE_REASON to the given
 			reason.
@@ -157,12 +157,12 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* removeJobs( StringList* ids, const char* reason,
+	ClassAd* removeJobs( const std::vector<std::string>& ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
 
 		/** Force the local removal of jobs in the X state specified
-			in the given StringList, regardless of whether they've
+			in the given list, regardless of whether they've
 			been successfully removed remotely.  The list should
 			contain a comma-seperated list of cluster.proc job ids.
 			Also, set ATTR_REMOVE_REASON to the given reason.
@@ -173,11 +173,11 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* removeXJobs( StringList* ids, const char* reason,
+	ClassAd* removeXJobs( const std::vector<std::string>& ids, const char* reason,
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_LONG );
 
-		/** Release all jobs specified in the given StringList.  The
+		/** Release all jobs specified in the given list.  The
 			list should contain a comma-seperated list of cluster.proc
 			job ids.  Also, set ATTR_RELEASE_REASON to the given
 			reason.
@@ -188,12 +188,12 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* releaseJobs( StringList* ids, const char* reason,
+	ClassAd* releaseJobs( const std::vector<std::string>& ids, const char* reason,
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_LONG );
 
 
-		/** Vacate all jobs specified in the given StringList.  The list
+		/** Vacate all jobs specified in the given list.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.
 			@param ids What jobs to act on
@@ -203,7 +203,7 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* vacateJobs( StringList* ids, VacateType vacate_type,
+	ClassAd* vacateJobs( const std::vector<std::string>& ids, VacateType vacate_type,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
 
@@ -220,7 +220,7 @@ public:
 						 action_result_type_t result_type = AR_TOTALS );
 
 
-	/** Suspend all jobs specified in the given StringList.  The list
+	/** Suspend all jobs specified in the given list.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.
 			@param ids What jobs to act on
@@ -230,7 +230,7 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* suspendJobs( StringList* ids, const char* reason,
+	ClassAd* suspendJobs( const std::vector<std::string>& ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
 
@@ -246,7 +246,7 @@ public:
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_TOTALS );
 
-	/** Continue all jobs specified in the given StringList.  The list
+	/** Continue all jobs specified in the given list.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.
 			@param ids What jobs to act on
@@ -256,7 +256,7 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* continueJobs( StringList* ids, const char* reason,
+	ClassAd* continueJobs( const std::vector<std::string>& ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
 
@@ -276,7 +276,7 @@ public:
 			@param ids What jobs to act on
 			@param result_type What kind of results you want
 		*/
-	ClassAd* clearDirtyAttrs( StringList* ids, CondorError * errstack,
+	ClassAd* clearDirtyAttrs( const std::vector<std::string>& ids, CondorError * errstack,
 						action_result_type_t result_type = AR_TOTALS );
 
 	/** export jobs to an external job_queue and put mark them as MANAGED by Lumberjack
@@ -284,7 +284,7 @@ public:
 	    @param export_dir what directory to export the jobs to. <export_dir>/job_queue.log will be the exported log
 	    @param new_spool_dir what value to use when rewriting paths into the SPOOL directory
 	*/
-	ClassAd* exportJobs( StringList* ids, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+	ClassAd* exportJobs( const std::vector<std::string>& ids, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 	ClassAd* exportJobs( const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 
 	/** import the results from a previously exported job_queue.log managed by Lumberjack
@@ -295,7 +295,7 @@ public:
 	/** unexport jobs that were previously exported via exportJobs().
 	    @param ids or constraint What jobs to act on
 	*/
-	ClassAd* unexportJobs( StringList* ids, CondorError * errstack);
+	ClassAd* unexportJobs( const std::vector<std::string>& ids, CondorError * errstack);
 	ClassAd* unexportJobs( const char * constraint, CondorError * errstack);
 
 	/** Vacate the victim and schedule the beneficiary on its slot.  Hard-
@@ -451,7 +451,7 @@ private:
 			aborts the transaction.
 			@param action What action we're supposed to perform
 			@param constraint Constraint to operate on, or NULL
-			@param ids StringList of ids to operate on, or NULL
+			@param ids vector<string> of ids to operate on, or NULL
 			@param reason A string describing what we're doing
 			@param reason_attr_name Attribute name for the reason
 			@param reason_code A string such as an error code
@@ -462,7 +462,7 @@ private:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* actOnJobs( JobAction action,
-						const char* constraint, StringList* ids,
+						const char* constraint, const std::vector<std::string>* ids,
 						const char* reason, const char* reason_attr,
 						const char* reason_code, const char* reason_code_attr,
 						action_result_type_t result_type,
@@ -487,9 +487,9 @@ private:
 
 	int requestImpersonationTokenFinish(Stream *stream);
 
-	ClassAd* exportJobsWorker( StringList* ids, const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+	ClassAd* exportJobsWorker( const std::vector<std::string>* ids, const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 
-	ClassAd* unexportJobsWorker( StringList* ids, const char * constraint, CondorError * errstack);
+	ClassAd* unexportJobsWorker( const std::vector<std::string>* ids, const char * constraint, CondorError * errstack);
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

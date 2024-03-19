@@ -117,17 +117,12 @@ DCSchedd::releaseJobs( const char* constraint, const char* reason,
 
 
 ClassAd*
-DCSchedd::holdJobs( StringList* ids, const char* reason,
+DCSchedd::holdJobs( const std::vector<std::string>& ids, const char* reason,
 					const char* reason_code,
 					CondorError * errstack,
 					action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::holdJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_HOLD_JOBS, NULL, ids, reason,
+	return actOnJobs( JA_HOLD_JOBS, NULL, &ids, reason,
 					  ATTR_HOLD_REASON,
 					  reason_code, ATTR_HOLD_REASON_SUBCODE,
 					  result_type,
@@ -136,48 +131,33 @@ DCSchedd::holdJobs( StringList* ids, const char* reason,
 
 
 ClassAd*
-DCSchedd::removeJobs( StringList* ids, const char* reason,
+DCSchedd::removeJobs( const std::vector<std::string>& ids, const char* reason,
 					CondorError * errstack,
 					action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::removeJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_REMOVE_JOBS, NULL, ids,
+	return actOnJobs( JA_REMOVE_JOBS, NULL, &ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
 
 
 ClassAd*
-DCSchedd::removeXJobs( StringList* ids, const char* reason,
+DCSchedd::removeXJobs( const std::vector<std::string>& ids, const char* reason,
 					   CondorError * errstack,
 					   action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::removeXJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_REMOVE_X_JOBS, NULL, ids,
+	return actOnJobs( JA_REMOVE_X_JOBS, NULL, &ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
 
 
 ClassAd*
-DCSchedd::releaseJobs( StringList* ids, const char* reason,
+DCSchedd::releaseJobs( const std::vector<std::string>& ids, const char* reason,
 					   CondorError * errstack,
 					   action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::releaseJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_RELEASE_JOBS, NULL, ids,
+	return actOnJobs( JA_RELEASE_JOBS, NULL, &ids,
 					  reason, ATTR_RELEASE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
@@ -205,37 +185,27 @@ DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
 
 
 ClassAd*
-DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
+DCSchedd::vacateJobs( const std::vector<std::string>& ids, VacateType vacate_type,
 					  CondorError * errstack,
 					  action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
 	JobAction cmd;
 	if( vacate_type == VACATE_FAST ) {
 		cmd = JA_VACATE_FAST_JOBS;
 	} else {
 		cmd = JA_VACATE_JOBS;
 	}
-	return actOnJobs( cmd, NULL, ids, NULL, NULL, NULL, NULL,
+	return actOnJobs( cmd, NULL, &ids, NULL, NULL, NULL, NULL,
 					  result_type, errstack );
 }
 
 
 ClassAd*
-DCSchedd::suspendJobs( StringList* ids, const char* reason,
+DCSchedd::suspendJobs( const std::vector<std::string>& ids, const char* reason,
 					CondorError * errstack,
 					action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::suspendJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_SUSPEND_JOBS, NULL, ids,
+	return actOnJobs( JA_SUSPEND_JOBS, NULL, &ids,
 					  reason, ATTR_SUSPEND_REASON, NULL, NULL, result_type,
 					  errstack );
 }
@@ -257,16 +227,11 @@ DCSchedd::suspendJobs( const char* constraint, const char* reason,
 }
 
 ClassAd*
-DCSchedd::continueJobs( StringList* ids, const char* reason,
+DCSchedd::continueJobs( const std::vector<std::string>& ids, const char* reason,
 					CondorError * errstack,
 					action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::continueJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_CONTINUE_JOBS, NULL, ids,
+	return actOnJobs( JA_CONTINUE_JOBS, NULL, &ids,
 					  reason, ATTR_CONTINUE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
@@ -289,21 +254,16 @@ DCSchedd::continueJobs( const char* constraint, const char* reason,
 
 
 ClassAd*
-DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
+DCSchedd::clearDirtyAttrs( const std::vector<std::string>& ids, CondorError * errstack,
                                          action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::clearDirtyAttrs: "
-				"list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_CLEAR_DIRTY_JOB_ATTRS, NULL, ids, NULL, NULL,
+	return actOnJobs( JA_CLEAR_DIRTY_JOB_ATTRS, NULL, &ids, NULL, NULL,
 					  NULL, NULL, result_type, errstack );
 }
 
 ClassAd* 
 DCSchedd::exportJobsWorker(
-	StringList* ids_list,
+	const std::vector<std::string>* ids_list,
 	const char * constraint_str,
 	const char * export_dir,
 	const char * new_spool_dir,
@@ -322,8 +282,7 @@ DCSchedd::exportJobsWorker(
 
 	ClassAd cmd_ad;
 	if (ids_list) {
-		auto_free_ptr ids(ids_list->print_to_string());
-		cmd_ad.Assign(ATTR_ACTION_IDS, (const char *)ids);
+		cmd_ad.Assign(ATTR_ACTION_IDS, join(*ids_list, ","));
 	} else {
 		if ( ! cmd_ad.AssignExpr(ATTR_ACTION_CONSTRAINT, constraint_str)) {
 			dprintf(D_ALWAYS, "DCSchedd::exportJobs invalid constraint : %s\n", constraint_str);
@@ -397,9 +356,9 @@ DCSchedd::exportJobsWorker(
 }
 
 ClassAd*
-DCSchedd::exportJobs(StringList* ids_list, const char * export_dir, const char * new_spool_dir, CondorError * errstack)
+DCSchedd::exportJobs(const std::vector<std::string>& ids_list, const char * export_dir, const char * new_spool_dir, CondorError * errstack)
 {
-	return exportJobsWorker(ids_list, nullptr, export_dir, new_spool_dir, errstack);
+	return exportJobsWorker(&ids_list, nullptr, export_dir, new_spool_dir, errstack);
 }
 
 ClassAd*
@@ -490,7 +449,7 @@ DCSchedd::importExportedJobResults(const char * import_dir, CondorError * errsta
 
 ClassAd*
 DCSchedd::unexportJobsWorker(
-	StringList* ids_list,
+	const std::vector<std::string>* ids_list,
 	const char * constraint_str,
 	CondorError * errstack)
 {
@@ -507,8 +466,7 @@ DCSchedd::unexportJobsWorker(
 
 	ClassAd cmd_ad;
 	if (ids_list) {
-		auto_free_ptr ids(ids_list->print_to_string());
-		cmd_ad.Assign(ATTR_ACTION_IDS, (const char *)ids);
+		cmd_ad.Assign(ATTR_ACTION_IDS, join(*ids_list, ","));
 	} else {
 		if ( ! cmd_ad.AssignExpr(ATTR_ACTION_CONSTRAINT, constraint_str)) {
 			dprintf(D_ALWAYS, "DCSchedd::unexportJobs invalid constraint : %s\n", constraint_str);
@@ -580,9 +538,9 @@ DCSchedd::unexportJobsWorker(
 }
 
 ClassAd*
-DCSchedd::unexportJobs(StringList* ids_list, CondorError * errstack)
+DCSchedd::unexportJobs(const std::vector<std::string>& ids_list, CondorError * errstack)
 {
-	return unexportJobsWorker(ids_list, nullptr, errstack);
+	return unexportJobsWorker(&ids_list, nullptr, errstack);
 }
 
 ClassAd*
@@ -1226,7 +1184,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 
 ClassAd*
 DCSchedd::actOnJobs( JobAction action,
-					 const char* constraint, StringList* ids,
+					 const char* constraint, const std::vector<std::string>* ids,
 					 const char* reason, const char* reason_attr,
 					 const char* reason_code, const char* reason_code_attr,
 					 action_result_type_t result_type,
@@ -1261,7 +1219,7 @@ DCSchedd::actOnJobs( JobAction action,
 			return NULL;
 		}			
 	} else if( ids ) {
-		std::string action_ids = ids->to_string();
+		std::string action_ids = join(*ids, ",");
 		if (!action_ids.empty()) {
 			cmd_ad.Assign( ATTR_ACTION_IDS, action_ids );
 		}
@@ -1882,7 +1840,7 @@ DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage
 
 	// It would seem obvious to construct a ClassAd list of ClassAds
 	// with attributes "Cluster" and "Proc", but it turns out to be
-	// way easier to send a StringList of the x.y notation, instead.
+	// way easier to send a vector<string> of the x.y notation, instead.
 	//
 	// It's also marginally more efficient to send a string than two
 	// 64-bit ints, so encode the beneficiary job ID that way.

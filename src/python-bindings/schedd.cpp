@@ -54,7 +54,7 @@ using namespace boost::python;
     { \
     condor::ModuleLock ml; \
     if (use_ids) \
-        result = schedd. action_name (&ids, reason_str.c_str(), NULL, AR_TOTALS); \
+        result = schedd. action_name (ids, reason_str.c_str(), NULL, AR_TOTALS); \
     else \
         result = schedd. action_name (constraint.c_str(), reason_str.c_str(), NULL, AR_TOTALS); \
     }
@@ -1573,7 +1573,7 @@ struct Schedd {
         }
 
         // job_spec can either be a list of job id's (as strings) or a constraint expression
-        StringList ids;
+        std::vector<std::string> ids;
         std::string constraint, reason_str, reason_code;
         boost::python::extract<std::string> str_obj(job_spec);
         bool use_ids = false;
@@ -1581,8 +1581,7 @@ struct Schedd {
             int id_len = py_len(job_spec);
             for (int i=0; i<id_len; i++)
             {
-                std::string str = extract<std::string>(job_spec[i]);
-                ids.append(str.c_str());
+                ids.emplace_back(extract<std::string>(job_spec[i]));
             }
             use_ids = true;
         } else {
@@ -1598,7 +1597,7 @@ struct Schedd {
                     constraint = string_extract();
                     JOB_ID_KEY jid;
                     if (jid.set(constraint.c_str())) {
-                        ids.append(constraint.c_str());
+                        ids.emplace_back(constraint);
                         use_ids = true;
                     }
                 }
@@ -1632,7 +1631,7 @@ struct Schedd {
             if (use_ids)
             {
                 condor::ModuleLock ml;
-                result = schedd.holdJobs(&ids, reason_char, reason_code_char, NULL, AR_TOTALS);
+                result = schedd.holdJobs(ids, reason_char, reason_code_char, NULL, AR_TOTALS);
             }
             else
             {
@@ -1655,7 +1654,7 @@ struct Schedd {
             if (use_ids)
             {
                 condor::ModuleLock ml;
-                result = schedd.vacateJobs(&ids, vacate_type, NULL, AR_TOTALS);
+                result = schedd.vacateJobs(ids, vacate_type, NULL, AR_TOTALS);
             }
             else
             {
@@ -1949,15 +1948,14 @@ struct Schedd {
     object exportJobs(object job_spec, std::string export_dir, std::string new_spool_dir)
 	{
 		std::string constraint;
-		StringList ids;
+		std::vector<std::string> ids;
 		boost::python::extract<std::string> str_obj(job_spec);
 		bool use_ids = false;
 		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
 			int id_len = py_len(job_spec);
 			for (int i = 0; i < id_len; i++)
 			{
-				std::string str = extract<std::string>(job_spec[i]);
-				ids.append(str.c_str());
+				ids.emplace_back(extract<std::string>(job_spec[i]));
 			}
 			use_ids = true;
 		} else {
@@ -1972,7 +1970,7 @@ struct Schedd {
 					constraint = string_extract();
 					JOB_ID_KEY jid;
 					if (jid.set(constraint.c_str())) {
-						ids.append(constraint.c_str());
+						ids.emplace_back(constraint);
 						use_ids = true;
 					}
 				}
@@ -1986,7 +1984,7 @@ struct Schedd {
 		if (use_ids)
 		{
 			condor::ModuleLock ml;
-			result = schedd.exportJobs(&ids, export_dir.c_str(), spool, &errstack);
+			result = schedd.exportJobs(ids, export_dir.c_str(), spool, &errstack);
 		} else {
 			condor::ModuleLock ml;
 			result = schedd.exportJobs(constraint.c_str(), export_dir.c_str(), spool, &errstack);
@@ -2026,15 +2024,14 @@ struct Schedd {
 	object unexportJobs(object job_spec)
 	{
 		std::string constraint;
-		StringList ids;
+		std::vector<std::string> ids;
 		boost::python::extract<std::string> str_obj(job_spec);
 		bool use_ids = false;
 		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
 			int id_len = py_len(job_spec);
 			for (int i = 0; i < id_len; i++)
 			{
-				std::string str = extract<std::string>(job_spec[i]);
-				ids.append(str.c_str());
+				ids.emplace_back(extract<std::string>(job_spec[i]));
 			}
 			use_ids = true;
 		} else {
@@ -2049,7 +2046,7 @@ struct Schedd {
 					constraint = string_extract();
 					JOB_ID_KEY jid;
 					if (jid.set(constraint.c_str())) {
-						ids.append(constraint.c_str());
+						ids.emplace_back(constraint);
 						use_ids = true;
 					}
 				}
@@ -2062,7 +2059,7 @@ struct Schedd {
 		if (use_ids)
 		{
 			condor::ModuleLock ml;
-			result = schedd.unexportJobs(&ids, &errstack);
+			result = schedd.unexportJobs(ids, &errstack);
 		} else {
 			condor::ModuleLock ml;
 			result = schedd.unexportJobs(constraint.c_str(), &errstack);
