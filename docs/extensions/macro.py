@@ -10,47 +10,51 @@ from sphinx.util.nodes import split_explicit_title, process_index_entry, set_rol
 from htc_helpers import *
 
 SPECIAL_CASE_KNOBS = ["<SUBSYS>"]
-
-CONFIG_FILE = "configuration-macros"
 TEMPLATE_FILE = "introduction-to-configuration"
 
+# List of files that define macros with :macro-def:
+CONFIG_FILES = [
+    ["admin-manual", "configuration-macros.rst"],
+    ["cloud-computing", "annex-configuration.rst"],
+]
+
 CONFIG_REGEX = {}
-CONFIG_KNOBS = []
+CONFIG_KNOBS = {}
 TEMPLATES = {}
 
 def find_conf_knobs(dir: str):
-    knobs = []
+    knobs = {}
     regex_map = {}
-    definition_file = os.path.join(dir, "admin-manual", f"{CONFIG_FILE}.rst")
-    with open(definition_file, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            for knob in get_all_defined_role("macro-def", line):
-                if "[" in knob:
-                    info = knob.find("[")
-                    knob = knob[:info]
-                # Store macro for warning check
-                # Handle special case knobs
-                if knob in SPECIAL_CASE_KNOBS:
-                    if knob not in knobs:
-                        knobs.append(knob)
-                # Check if knob requires regex matching
-                elif "*" in knob:
-                    regex = rf"{knob.replace('*', '(.+)')}"
-                    regex_map.update({regex : knob})
-                elif "<" in knob:
-                    temp = knob
-                    while "<" in temp:
-                        start = temp.find("<")
-                        end = temp.find(">")
-                        temp = regex = rf"{temp.replace(temp[start:end+1], '(.+)')}"
-                    # Don't allow (.+) to be a regex match option
-                    if regex != "(.+)":
-                        regex_map.update({regex : knob})
-                # Store whatever is left (if not already included)
-                elif knob not in knobs:
-                    knobs.append(knob)
-    knobs.sort()
+    for file_path in CONFIG_FILES:
+        url_path = "/".join(file_path).replace(".rst", ".html")
+        definition_file = os.path.join(dir, *file_path)
+        with open(definition_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                for knob in get_all_defined_role("macro-def", line):
+                    if "[" in knob:
+                        info = knob.find("[")
+                        knob = knob[:info]
+                    # Store macro for warning check
+                    # Handle special case knobs
+                    if knob in SPECIAL_CASE_KNOBS:
+                        knobs[knob] = url_path
+                    # Check if knob requires regex matching
+                    elif "*" in knob:
+                        regex = rf"{knob.replace('*', '(.+)')}"
+                        regex_map.update({regex : (knob, url_path)})
+                    elif "<" in knob:
+                        temp = knob
+                        while "<" in temp:
+                            start = temp.find("<")
+                            end = temp.find(">")
+                            temp = regex = rf"{temp.replace(temp[start:end+1], '(.+)')}"
+                        # Don't allow (.+) to be a regex match option
+                        if regex != "(.+)":
+                            regex_map.update({regex : (knob, url_path)})
+                    # Store whatever is left (if not already included)
+                    else:
+                        knobs[knob] = url_path
     return (knobs, regex_map)
 
 def find_templates(dir: str):
@@ -104,18 +108,19 @@ def macro_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
         ref_link = f"href=\"{root_dir}/admin-manual/{TEMPLATE_FILE}.html#" + str(ref) + "\""
     # Handle reference to normal configuration knob
     else:
+        url_path = CONFIG_KNOBS.get(macro_name, "admin-manual/configuration-macros.html")
         ref = macro_name
-        if macro_name not in CONFIG_KNOBS:
+        if macro_name not in CONFIG_KNOBS.keys():
             regex_match = False
             for r in CONFIG_REGEX.keys():
                 if re.match(r, macro_name):
                     regex_match = True
-                    ref = CONFIG_REGEX[r]
+                    ref, url_path = CONFIG_REGEX[r]
             # If here then not in pure defined list or matched a recorded regex
             if not regex_match:
                 docname = inliner.document.settings.env.docname
                 warn(f"{docname} @ {lineno} | Config knob '{macro_name}' not found in defined list. Either a typo or knob needs definition.")
-        ref_link = f"href=\"{root_dir}/admin-manual/{CONFIG_FILE}.html#" + str(ref) + "\""
+        ref_link = f"href=\"{root_dir}/{url_path}#" + str(ref) + "\""
     return make_ref_and_index_nodes(name, macro_name, macro_index,
                                     ref_link, rawtext, inliner, lineno, options)
 
