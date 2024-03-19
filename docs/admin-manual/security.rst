@@ -776,7 +776,7 @@ The DEFAULT value for <context> provides a way to set a policy for all
 access levels (READ, WRITE, etc.) that do not have a specific
 configuration variable defined. In addition, some access levels will
 default to the settings specified for other access levels. For example,
-:macro:`ADVERTISE_STARTD` defaults to ``DAEMON``, and ``DAEMON`` defaults to
+:macro:`ALLOW_ADVERTISE_STARTD` defaults to ``DAEMON``, and ``DAEMON`` defaults to
 ``WRITE``, which then defaults to the general DEFAULT setting.
 
 Configuration for Security Methods

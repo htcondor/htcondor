@@ -15,7 +15,7 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-23010
+.. _lts-version-history-23010:
 
 Version 23.0.10
 ---------------
