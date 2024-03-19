@@ -1401,6 +1401,7 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 		if ( ! (analyze_detail_level & detail_inline_std_slot_exprs)) {
 			inline_attrs.clear();
 			inline_attrs.insert(ATTR_START);
+			inline_attrs.insert(ATTR_WITHIN_RESOURCE_LIMITS);
 		}
 
 		std::string subexpr_detail;
