@@ -2170,6 +2170,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		EXCEPT("SPOOL must be defined.");
 	}
 
+#ifndef WIN32
 	{
 		// The master usually does this, but if we are a secondary schedd,
 		// it can't know what our per-schedd SPOOL is set to.
@@ -2179,6 +2180,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		std::ignore = mkdir(spool.c_str(), 0755); // just in case
 		std::ignore = chown(spool.c_str(), condor_uid, condor_gid);
 	}
+#endif
 
 	int spool_min_version = 0;
 	int spool_cur_version = 0;
