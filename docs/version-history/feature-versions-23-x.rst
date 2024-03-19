@@ -26,6 +26,11 @@ New Features:
   with that singularity or apptainer container runtime.
   :jira:`2180`
 
+- If a schedd has a schedd-specific SPOOL directory (set by
+  schedd_name.SPOOL), the schedd now creates that directory
+  with the proper ownership and permissions.
+  :jira:`907`
+
 Bugs Fixed:
 
 - None.
