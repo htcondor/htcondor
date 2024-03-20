@@ -34,6 +34,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
+  to a random, non-HTCondor process, if pids are reused quickly.
+  :jira:`2357`
+
 - The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
   named "scitokens:2.0" (note plural).  The reference python scitoken implementation
   uses the singular.  The C++ scitokens implementation incorrectly used the plural up to
