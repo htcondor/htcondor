@@ -62,18 +62,15 @@ TransferQueueContactInfo::TransferQueueContactInfo(char const *str) {
 		}
 
 		if( name == "limit" ) {
-			StringList limited_queues(value.c_str(),",");
-			char const *queue;
-			limited_queues.rewind();
-			while( (queue=limited_queues.next()) ) {
-				if( !strcmp(queue,"upload") ) {
+			for (auto& queue: StringTokenIterator(value, ",")) {
+				if( queue == "upload" ) {
 					m_unlimited_uploads = false;
 				}
-				else if( !strcmp(queue,"download") ) {
+				else if( queue == "download" ) {
 					m_unlimited_downloads = false;
 				}
 				else {
-					EXCEPT("Unexpected value %s=%s",name.c_str(),queue);
+					EXCEPT("Unexpected value %s=%s",name.c_str(),queue.c_str());
 				}
 			}
 		}

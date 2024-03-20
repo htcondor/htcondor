@@ -106,6 +106,21 @@ def make_version_str(version):
 
 
 # ===============================Incompatibility Check Functions===============================
+def warn_multi_q_deprecation(*args, **kwargs):
+    """Warn about multi-queue statement deprecation"""
+    format_print(
+        """
+        Warning:
+            The use of multiple queue statements in a single submit
+            description file is now deprecated. This functionality
+            will be removed during the lifetime of the V24 feature
+            series.
+        """,
+        offset=4,
+        newline=True,
+        debug=Debug.WARNING,
+    )
+
 def warn_dagman_env(*args, **kwargs):
     """Warn about DAGMan cleansing its environment"""
     format_print(
@@ -341,6 +356,15 @@ def check_pslot_default(*args, **kwargs):
 
 # =============================================================================================
 INCOMPATIBILITY_CHECKS = [
+    Check(
+        test=warn_multi_q_deprecation,
+        name="Multiple Queue Statment Deprecation",
+        tag="MULTI-Q",
+        synopsis="The use of multiple queue statements in one submit file is deprecated",
+        version=(23, 7, 1),
+        daemons=["SCHEDD"],
+        warning=True,
+    ),
     Check(
         test=warn_dagman_env,
         name="DAGMan Environment Cleanse",

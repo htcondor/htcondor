@@ -11,3 +11,9 @@ but we've prepared a few examples for job submitters already.
 
     prefer-gpu-to-cpu
     convert-multi-q-statements
+    anvil
+    bridges2
+    expanse
+    path-facility
+    perlmutter
+    annex-example-job

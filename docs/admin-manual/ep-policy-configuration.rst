@@ -1156,6 +1156,8 @@ This :macro:`RANK` does not work if a job is submitted with an image size of
 more 10\ :sup:`12` Kbytes. However, with that size, this :macro:`RANK`
 expression preferring that job would not be HTCondor's only problem!
 
+.. _Machine States:
+
 Machine States
 ''''''''''''''
 
@@ -2291,14 +2293,9 @@ HTCondor job). Once a resource enters the Backfill state, the
 backfill client, to launch and manage the backfill computation. When
 other work arrives, the *condor_startd* will kill the backfill client
 and clean up any processes it has spawned, freeing the machine resources
-for the new, higher priority task. More details about the different
+for the new, higher priority task.  More details about the different
 states an HTCondor resource can enter and all of the possible
-transitions between them are described in
-:doc:`/admin-manual/ep-policy-configuration/`, especially the
-:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
-and
-:ref:`admin-manual/ap-policy-configuration:*condor_schedd* policy configuration`
-sections.
+transitions between them are described in :ref:`Machine States`, above.
 
 At this point, the only backfill system supported by HTCondor is BOINC.
 The *condor_startd* has the ability to start and stop the BOINC client

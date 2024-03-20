@@ -151,41 +151,40 @@ _schedd_act_on_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    StringList ids(job_list);
-
+    std::vector<std::string> ids = split(job_list);
 
     ClassAd * result = NULL;
     DCSchedd schedd(addr);
     switch( action ) {
         case JA_HOLD_JOBS:
-            result = schedd.holdJobs(& ids, reason_string, reason_code, NULL, AR_TOTALS );
+            result = schedd.holdJobs( ids, reason_string, reason_code, NULL, AR_TOTALS );
             break;
 
         case JA_RELEASE_JOBS:
-            result = schedd.releaseJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.releaseJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         case JA_REMOVE_JOBS:
-            result = schedd.removeJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.removeJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         case JA_REMOVE_X_JOBS:
-            result = schedd.removeXJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.removeXJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         case JA_VACATE_JOBS:
         case JA_VACATE_FAST_JOBS:
             {
             auto vacate_type = action == JA_VACATE_JOBS ? VACATE_GRACEFUL : VACATE_FAST;
-            result = schedd.vacateJobs(& ids, vacate_type, NULL, AR_TOTALS);
+            result = schedd.vacateJobs( ids, vacate_type, NULL, AR_TOTALS);
             } break;
 
         case JA_SUSPEND_JOBS:
-            result = schedd.suspendJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.suspendJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         case JA_CONTINUE_JOBS:
-            result = schedd.continueJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.continueJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         default:
@@ -301,12 +300,8 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    StringList ids(job_list);
-
-
     long matchCount = 0;
-    const char * id = NULL;
-    for( ids.rewind(); (id = ids.next()) != NULL; ) {
+	for (auto& id: StringTokenIterator(job_list)) {
         JOB_ID_KEY jobIDKey;
         if(! jobIDKey.set(id)) {
             qc.abort();
@@ -429,13 +424,12 @@ _schedd_export_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    StringList ids(job_list);
-
+    std::vector<std::string> ids = split(job_list);
 
     CondorError errorStack;
     DCSchedd schedd(addr);
     ClassAd * result = schedd.exportJobs(
-        & ids, export_dir, new_spool_dir, & errorStack
+        ids, export_dir, new_spool_dir, & errorStack
     );
 
     if( errorStack.code() > 0 ) {
@@ -538,12 +532,11 @@ _schedd_unexport_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    StringList ids(job_list);
-
+    std::vector<std::string> ids = split(job_list);
 
     DCSchedd schedd(addr);
     CondorError errorStack;
-    ClassAd * result = schedd.unexportJobs( & ids, & errorStack );
+    ClassAd * result = schedd.unexportJobs( ids, & errorStack );
 
     if( errorStack.code() > 0 ) {
         // This was HTCondorIOError in version 1.
@@ -860,11 +853,9 @@ _history_query(PyObject *, PyObject * args) {
 
     commandAd.Assign(ATTR_NUM_MATCHES, match);
 
-    StringList sl(projection);
     std::string prefix = "";
     std::string projectionList = "{";
-    const char * attr = NULL;
-    for( sl.rewind(); (attr = sl.next()) != NULL; ) {
+	for (auto& attr : StringTokenIterator(projection)) {
         projectionList += prefix + "\"" + attr + "\"";
         prefix = ", ";
     }

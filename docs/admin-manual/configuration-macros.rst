@@ -1327,7 +1327,7 @@ subsystem corresponding to the daemon.
     ``D_CRON``
         With this flag set, most messages about tasks defined in the
         :macro:`STARTD_CRON_JOBLIST`, :macro:`BENCHMARKS_JOBLIST` or
-        :macro:`SCHEDD_CRON` will be shown.  Note that prior to
+        :macro:`SCHEDD_CRON_JOBLIST` will be shown.  Note that prior to
         version 23.7 most of these messages were shown as ``D_FULLDEBUG`` messages.
         Some of the more frequent and detailed messages will only be
         shown when ``D_CRON:2`` is set.
@@ -8072,7 +8072,7 @@ These macros affect the *condor_credd* and its credmon plugin.
     A string valued macro that defines a path to the credential monitor
     executable.
 
-:macro-def:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
+:macro-def:`SEC_CREDENTIAL_GETTOKEN_OPTS[CREDD]` configuration option to
     pass additional command line options to gettoken.  Mostly
     used for vault, where this should be set to "-a vault_name".
 
@@ -10008,6 +10008,31 @@ macros are described in the :doc:`/admin-manual/security` section.
     with the -S option, and the audience should be passed to it with the
     -A option.
 
+:macro-def:`SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES[SECURITY]`
+    A boolean value that defaults to False.  Set to True to 
+    allow EGI CheckIn tokens to be used to authenticate via the SCITOKENS
+    authentication method.
+
+:macro-def:`SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS[SECURITY]`
+    When the :macro:`SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES` is True,
+    this parameter is a list of URLs that determine which token types
+    will be accepted under these relaxed checks. It's a list of issuer URLs that
+    defaults to the EGI CheckIn issuer.  These parameters should be used with
+    caution, as they disable some security checks.
+
+:macro-def:`SEC_SCITOKENS_PLUGIN_NAMES[SECURITY]`
+    If the special value ``PLUGIN:*`` is given in the scitokens map file, 
+    then this configuration parameter is consulted to determine the names of the
+    plugins to run.
+
+:macro-def:`SEC_SCITOKENS_PLUGIN_<name>_COMMAND[SECURITY]`
+    For each plugin above with <name>, this parameter gives the executable and optional
+    command line arguments needed to invoke the plugin.
+
+:macro-def:`SEC_SCITOKENS_PLUGIN_<name>_MAPPING[SECURITY]`
+    For each plugin above with <name>, this parameter specifies the mapped
+    identity if the plugin accepts the token.
+
 :macro-def:`LEGACY_ALLOW_SEMANTICS[SECURITY]`
     A boolean parameter that defaults to ``False``.
     In HTCondor 8.8 and prior, if `ALLOW_DAEMON` or `DENY_DAEMON` wasn't
@@ -11549,3 +11574,20 @@ condor_annex Configuration File Macros
 
 See :doc:`/cloud-computing/annex-configuration` for :tool:`condor_annex`
 configuration file macros.
+
+``htcondor annex`` Configuration File Macros
+--------------------------------------------
+:index:`htcondor annex configuration variables<single: htcondor annex configuration variables; configuration>`
+
+:macro-def:`HPC_ANNEX_ENABLED`
+    If true, users will have access to the ``annex`` noun of the
+    :doc:`../man-pages/htcondor` command.
+
+    .. warning::
+
+        This does not configure the AP so that ``htcondor annex``
+        will *work*.  Configuring an AP for ``htcondor annex`` is
+        tricky, and we recommend that you add :macro:`use feature:HPC_ANNEX`
+        instead, which sets this macro.
+
+    Defaults to false.
