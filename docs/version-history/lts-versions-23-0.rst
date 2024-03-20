@@ -37,9 +37,13 @@ Bugs Fixed:
 - The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
   named "scitokens:2.0" (note plural).  The reference python scitoken implementation
   uses the singular.  The C++ scitokens implementation incorrectly used the plural up to
-  version 0.6.0.  The old name can be restored with the config knob 
+  version 0.6.0.  The old name can be restored with the config knob
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`
+
+- Fixed a bug where using :subcom:`output_destination` would still create
+  directories on the access point.
+  :jira:`2353`
 
 - Fixed a bug where DAGMan would crash when directly submitting a node job
   with a queue for each statement that was provided less item data values

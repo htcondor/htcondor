@@ -5181,7 +5181,7 @@ FileTransfer::uploadFileList(
 
 		bool fail_because_mkdir_not_supported = false;
 		bool fail_because_symlink_not_supported = false;
-		if( fileitem.isDirectory() ) {
+		if( fileitem.isDirectory() && ! fileitem.isDestUrl() ) {
 			if( fileitem.isSymlink() ) {
 				fail_because_symlink_not_supported = true;
 				dprintf(D_ALWAYS,"DoUpload: attempting to transfer symlink %s which points to a directory.  This is not supported.\n", filename.c_str());
