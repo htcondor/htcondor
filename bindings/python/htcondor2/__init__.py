@@ -60,6 +60,7 @@ with _add_dll_dir():
     from ._file_transfer_event_type import FileTransferEventType
     from ._log_level import LogLevel
     from ._daemon_command import DaemonCommand
+    from ._submit_method import SubmitMethod
 
     # Classes.
     from ._collector import Collector
