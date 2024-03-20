@@ -4123,16 +4123,12 @@ int SubmitHash::SetExecutable()
 	// that just waits for the interactive connection
 	auto_free_ptr icmd(submit_param(SUBMIT_KEY_INTERACTIVE_Executable));
 	if (IsInteractiveJob) {
-		if (icmd && (full_ename != icmd.ptr())) {
-			bool is_transfer_exe = true;
-			job->LookupBool(ATTR_TRANSFER_EXECUTABLE, is_transfer_exe);
+		if (icmd) {
 			// the file transfer object will always transfer what is in ATTR_ORIG_JOB_CMD
 			// but we *don't* want to interactive exe to be transferred, so we stuff
 			// the existing exe into a new job attribute and turn off transfer executable
-			if (is_transfer_exe) {
-				AssignJobString (ATTR_ORIG_JOB_CMD, full_ename.c_str());
-				AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
-			}
+			AssignJobString (ATTR_ORIG_JOB_CMD, full_ename.c_str());
+			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			full_ename = icmd.ptr();
 		}
 	}
