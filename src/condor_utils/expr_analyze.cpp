@@ -249,7 +249,7 @@ int AnalyzeThisSubExpr(
 				// special case for inline_attrs and CurrentTime expressions, we want behave as if the *value* of the
 				// attribute were here rather than just the attr reference.
 				left = myad->LookupExpr(strAttr);
-				printf("              : inlining %s = %p\n", strAttr.c_str(), left);
+				if (chatty) printf("              : inlining %s = %p\n", strAttr.c_str(), left);
 			}
 			show_work = false;
 			break;

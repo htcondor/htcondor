@@ -51,7 +51,7 @@ Bugs Fixed:
   event log parser.
   :jira:`2343`
 
-- Fixed a big in the ``-better-analyze`` option of *condor_q* that could result
+- Fixed a bug in the ``-better-analyze`` option of *condor_q* that could result
   in ``[-1]`` and no expression text being displayed for some analysis steps.
   :jira:`2355`
 
