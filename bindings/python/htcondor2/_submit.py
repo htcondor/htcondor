@@ -257,9 +257,9 @@ class Submit(MutableMapping):
     ):
         """
         By default, jobs created by this class record (in the job ad
-        attribute :ad-attr:`JobSubmitMethod` that they were submitted via
+        attribute :ad-attr:`JobSubmitMethod`) that they were submitted via
         the  Python bindings.  Calling this method before submitting allows
-        you to change that.  Values between `0` (inclusive) and `100`
+        you to change that.  Values between ``0`` (inclusive) and ``100``
         (exclusive) are reserved for :class:`htcondor2.SubmitMethod`
         and can't be set unless the ``allowed_reserved_values`` flag is
         :const:`True`.  Values less than `0` may be used to remove
@@ -280,6 +280,9 @@ class Submit(MutableMapping):
     def getSubmitMethod(self) -> int:
         """
         Returns the submit method.
+
+        :return:  The integer value of the submit method.  The symbolic
+                  value can be obtained from the :class:`SubmitMethod`.
         """
         return _submit_get_submit_method(self._handle)
 
