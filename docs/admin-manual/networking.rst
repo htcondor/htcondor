@@ -572,6 +572,23 @@ HTCondor Connection Brokering (CCB)
 
 :index:`CCB (HTCondor Connection Brokering)`
 
+.. sidebar:: When CCB is needed
+
+   .. mermaid::
+      :caption: One process (B) behind firewall, the other (A) not.
+      :align: center
+
+      flowchart LR
+      start((Process A))
+      start -- blocked\nby Firewall --o Firewall
+
+      subgraph Firewall
+      Condor((Process B))
+      end
+
+      Condor -- can connect to --> start
+
+
 HTCondor Connection Brokering, or CCB, is a way of allowing HTCondor
 components to communicate with each other when one side is in a private
 network or behind a firewall. Specifically, CCB allows communication
@@ -594,6 +611,26 @@ server, if both are authorized by the CCB server, and if it is possible
 for the execute node within the private network to connect to the submit
 node, then it is possible for the submit node to run jobs on the execute
 node.
+
+.. sidebar:: CCB Architecture
+
+   .. mermaid::
+      :caption: CCB Architecture -- Only Process B behind firewall
+      :align: center
+
+      flowchart TB
+
+      start((Process A\ncondor_schedd))
+      CCB((CCB Server))
+
+      subgraph Firewall
+      Condor((Process B\ncondor_startd))
+      end
+      
+      start -- "I want to \ntalk to B" --> CCB
+      Condor -- "Who wants \nto talk to me?" --> CCB
+      Condor -- "CCB said you\nwant to talk to me\n(last step)" --> start
+
 
 To effect this CCB solution, the execute node's *condor_startd* within
 the private network registers itself with the CCB server by setting the
