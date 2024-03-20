@@ -8770,10 +8770,9 @@ General
 '''''''
 
 :macro-def:`DAGMAN_CONFIG_FILE[DAGMan]`
-    The path and name of the configuration file to be used by
-    :tool:`condor_dagman`. This configuration variable is set automatically
-    by :tool:`condor_submit_dag`, and it should not be explicitly set by the
-    user. Defaults to the empty string.
+    The path and name of the configuration file to be used by :tool:`condor_dagman`.
+    This option is set by :tool:`condor_submit_dag` automatically and should not be
+    set explicitly by the user. Defaults to an empty string.
 
 :macro-def:`DAGMAN_USE_STRICT[DAGMan]`
     An integer defining the level of strictness :tool:`condor_dagman` will
@@ -8791,71 +8790,69 @@ General
 :macro-def:`DAGMAN_STARTUP_CYCLE_DETECT[DAGMan]`
     A boolean value that defaults to ``False``. When ``True``, causes
     :tool:`condor_dagman` to check for cycles in the DAG before submitting
-    DAG node jobs, in addition to its run time cycle detection. Note
-    that setting this value to ``True`` will impose significant startup
-    delays for large DAGs.
+    DAG node jobs, in addition to its run time cycle detection.
+
+.. note::
+
+    The startup process for DAGMan is much slower for large DAGs when set
+    to ``True``.
 
 :macro-def:`DAGMAN_ABORT_DUPLICATES[DAGMan]`
-    A boolean value that controls whether to attempt to abort duplicate
-    instances of :tool:`condor_dagman` running the same DAG on the same
-    machine. When :tool:`condor_dagman` starts up, if no DAG lock file
-    exists, :tool:`condor_dagman` creates the lock file and writes its PID
-    into it. If the lock file does exist, and
-    :macro:`DAGMAN_ABORT_DUPLICATES` is set to ``True``, :tool:`condor_dagman`
-    checks whether a process with the given PID exists, and if so, it
-    assumes that there is already another instance of :tool:`condor_dagman`
-    running the same DAG. Note that this test is not foolproof: it is
-    possible that, if :tool:`condor_dagman` crashes, the same PID gets reused
-    by another process before :tool:`condor_dagman` gets rerun on that DAG.
-    This should be quite rare, however. If not defined,
-    :macro:`DAGMAN_ABORT_DUPLICATES` defaults to ``True``. **Note: users
-    should rarely change this setting.**
+    A boolean that defaults to ``True``. When ``True``, upon startup DAGMan
+    will check to see if a previous DAGMan process for a specific DAG is
+    still running and prevent the new DAG instance from executing. This
+    check is done by checking for a DAGMan lock file and verifying whether
+    or not the recorded PID's associated process is still running.
+
+.. note::
+
+    This value should rarely be changed, especially by users, since have
+    multiple DAGMan processes executing the same DAG in the same directory
+    can lead to strange behavior and issues.
 
 :macro-def:`DAGMAN_USE_SHARED_PORT[DAGMan]`
-    A boolean value that controls whether :tool:`condor_dagman` will attempt
-    to connect to the shared port daemon. If not defined,
-    :macro:`DAGMAN_USE_SHARED_PORT` defaults to ``False``. There is no reason
-    to ever change this value; it was introduced to prevent spurious
-    shared port-related error messages from appearing in ``dagman.out``
-    files.
+    A boolean that defaults to ``False``. When ``True``, :tool:`condor_dagman`
+    will attempt to connect to the shared port daemon.
+
+.. note::
+
+    This value should never be changed since it was added to prevent spurious
+    shared port related error messages from appearing the DAGMan debug log.
 
 :macro-def:`DAGMAN_USE_DIRECT_SUBMIT[DAGMan]`
-    A boolean value that controls whether :tool:`condor_dagman` submits jobs using
-    :tool:`condor_submit` or by opening a direct connection to the *condor_schedd*.
-    :macro:`DAGMAN_USE_DIRECT_SUBMIT` defaults to ``True``.  When set to ``True``
-    :tool:`condor_dagman` will submit jobs to the local Schedd by connecting to it
-    directly.  This is faster than using :tool:`condor_submit`, especially for very
-    large DAGs; But this method will ignore some submit file features such as
-    ``max_materialize`` and more than one ``QUEUE`` statement.
+    A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`
+    will open a direct connection to the local *condor_schedd* to submit jobs rather
+    than shelling out a :tool:`condor_submit` command.
 
 :macro-def:`DAGMAN_USE_JOIN_NODES[DAGMan]`
-    A boolean value that defaults to ``True``. When ``True``, causes
-    :tool:`condor_dagman` to break up many-PARENT-many-CHILD relationships with an
-    intermediate *join node*. When these sets are large, this significantly
-    optimizes the graph structure by reducing the number of dependencies, 
-    resulting in a significant improvement to the :tool:`condor_dagman` memory 
-    footprint, parse time, and submit speed.
+    A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`
+    will create special *join nodes* for :dag-cmd:`PARENT/CHILD` relationships between
+    multiple parent nodes and multiple child nodes.
+
+.. note::
+
+    This should never be changed since it reduces the number of dependencies in the
+    graph resulting in a significant improvement to the memory footprint, parse time,
+    and submit speed of :tool:`condor_dagman` (Especially for large DAGs).
 
 :macro-def:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD[DAGMan]`
-    A boolean value that when set to ``True`` causes DAGMan to automatically
-    retry a node with its job submitted on hold, if any of the nodes job procs
-    fail. This only applies for job failures and not ``PRE``, ``POST``, or
-    ``HOLD`` script failures within a DAG node. The job is only put on hold
-    if the node has no more declared ``RETRY`` attempts. The default value is
-    ``False``.
+    A boolean value that defaults to ``False``. When ``True``, DAGMan will automatically
+    retry a node with its job submitted on hold if any of the nodes jobs fail. Script
+    failures do not cause this behavior. The job is only put on hold if the node has no
+    more declared :dag-cmd:`RETRY` attempts.
 
 :macro-def:`DAGMAN_DEFAULT_APPEND_VARS[DAGMan]`
     A boolean value that defaults to ``False``. When ``True``, variables
-    parsed in the DAG file *VARS* line will be appended to the given Job
-    submit description file unless *VARS* specifies *PREPEND* or *APPEND*.
+    parsed in the DAG file :dag-cmd:`VARS` line will be appended to the given Job
+    submit description file unless :dag-cmd:`VARS` specifies *PREPEND* or *APPEND*.
     When ``False``, the parsed variables will be prepended unless specified.
 
 :macro-def:`DAGMAN_MANAGER_JOB_APPEND_GETENV[DAGMan]`
-    A comma separated list of variable names to add to the DAGMan ``.condor.sub``
-    file's ``getenv`` option. This will in turn add any found matching environment
-    variables to the DAGMan proper jobs **environment**. Setting this value to
-    ``True`` will result in ``getenv = true``. The Base ``.condor.sub`` values for
-    ``getenv`` are the following.
+    A comma separated list of variable names to add to the DAGMan ``*.condor.sub``
+    file's :subcom:`getenv` option. This will in turn add any found matching environment
+    variables to the DAGMan proper jobs :ad-attr:`Environment`. Setting this value to
+    ``True`` will result in ``getenv = true``. The Base ``*.condor.sub`` values for
+    :subcom:`getenv` are the following:
 
     +---------------+--------------------+--------------------+--------------------+
     |               |        PATH        |        HOME        |        USER        |
@@ -8877,10 +8874,21 @@ General
     at submission time. This knob is not set by default.
 
 :macro-def:`DAGMAN_RECORD_MACHINE_ATTRS[DAGMan]`
-    A comma separated list of machine attributes that DAGMan will insert into a
-    node jobs submit description for ``job_ad_information_attrs`` and ``job_machine_attrs``.
-    This will result in the listed machine attributes to be injected into the nodes
-    produced job ads and userlog. This knob is not set by default.
+    A comma separated list of machine attributes that DAGMan will insert into a node jobs
+    submit description for :subcom:`job_ad_information_attrs` and :subcom:`job_machine_attrs`.
+    This will result in the listed machine attributes to be injected into the nodes produced
+    job ads and userlog. This knob is not set by default.
+
+:macro-def:`DAGMAN_REPORT_GRAPH_METRICS`
+    A boolean that defaults to ``False``. When ``True``, DAGMan will write additional
+    information regarding graph metrics to ``*.metrics`` file. The included graph metrics
+    are as follows:
+
+    - Graph Height
+    - Graph Width
+    - Number of edges (dependencies)
+    - Number of vertices (nodes)
+
 
 :index:`Throttling<single: DAGMan Configuration Sections; Throttling>`
 
