@@ -8770,7 +8770,7 @@ General
 '''''''
 
 :macro-def:`DAGMAN_CONFIG_FILE[DAGMan]`
-    The path and name of the configuration file to be used by :tool:`condor_dagman`.
+    The path to the configuration file to be used by :tool:`condor_dagman`.
     This option is set by :tool:`condor_submit_dag` automatically and should not be
     set explicitly by the user. Defaults to an empty string.
 
@@ -8822,7 +8822,7 @@ General
 :macro-def:`DAGMAN_USE_DIRECT_SUBMIT[DAGMan]`
     A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`
     will open a direct connection to the local *condor_schedd* to submit jobs rather
-    than shelling out a :tool:`condor_submit` command.
+    than spawning the :tool:`condor_submit` process.
 
 :macro-def:`DAGMAN_USE_JOIN_NODES[DAGMan]`
     A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`
