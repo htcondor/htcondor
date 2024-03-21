@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "string_list.h"
+#include "stl_string_utils.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"
 #include "condor_config.h"
@@ -38,18 +38,16 @@ int main(int argc, char **argv)
 	dprintf_set_tool_debug("condor_check_userlogs", 0);
 	set_debug_flags(NULL, D_ALWAYS);
 
-	StringList	logFiles;
+	std::vector<std::string> logFiles;
 	for ( int argnum = 1; argnum < argc; ++argnum ) {
-		logFiles.append(argv[argnum]);
+		logFiles.emplace_back(argv[argnum]);
 	}
-	logFiles.rewind();
 
 	ReadMultipleUserLogs	ru;
-	char *filename;
-	while ( (filename = logFiles.next()) ) {
+	for (auto& filename : logFiles) {
 		CondorError errstack;
-		if ( !ru.monitorLogFile( filename, false, errstack ) ) {
-			fprintf( stderr, "Error monitoring log file %s: %s\n", filename,
+		if ( !ru.monitorLogFile( filename.c_str(), false, errstack ) ) {
+			fprintf( stderr, "Error monitoring log file %s: %s\n", filename.c_str(),
 						errstack.getFullText().c_str() );
 			result = 1;
 		}
@@ -136,11 +134,10 @@ int main(int argc, char **argv)
         }
 	}
 
-	logFiles.rewind();
-	while ( (filename = logFiles.next()) ) {
+	for (auto& filename: logFiles) {
 		CondorError errstack;
-		if ( !ru.unmonitorLogFile( filename, errstack ) ) {
-			fprintf( stderr, "Error unmonitoring log file %s: %s\n", filename,
+		if ( !ru.unmonitorLogFile( filename.c_str(), errstack ) ) {
+			fprintf( stderr, "Error unmonitoring log file %s: %s\n", filename.c_str(),
 						errstack.getFullText().c_str() );
 			result = 1;
 		}
