@@ -5231,8 +5231,8 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 				"which would cause an infinite loop on UNIX" );
 	}
 
-	if( pid < 0 ) {
-		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::ShutdownGraceful(%d): tried to kill a process group.\n", pid );
+	if( pid <= 0 ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::ShutdownGraceful(%d): tried to kill pid <= 0.\n", pid );
 		return FALSE;
 	}
 
