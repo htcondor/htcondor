@@ -5163,11 +5163,10 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 
 int DaemonCore::Shutdown_Graceful(pid_t pid)
 {
-	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Graceful(%d)\n",
-		pid);
-
-	if ( pid == ppid )
+	if ( pid == ppid ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::ShutdownGraceful(): tried to kill our own parent.\n" );
 		return FALSE;		// cannot shut down our parent
+	}
 
 #if defined(WIN32)
 
@@ -5230,6 +5229,11 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 	if( pid == mypid ) {
 		EXCEPT( "Called Shutdown_Graceful() on yourself, "
 				"which would cause an infinite loop on UNIX" );
+	}
+
+	if( pid < 0 ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::ShutdownGraceful(%d): tried to kill a process group.\n", pid );
+		return FALSE;
 	}
 
 	int status;
