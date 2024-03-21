@@ -108,7 +108,9 @@ spawnCheckpointCleanupProcessWithTimeout( int cluster, int proc, ClassAd * jobAd
 	dc::AwaitableDeadlineReaper logansRun;
 
 	std::string error;
-	int spawned_pid = -1;
+	// Always initialize PIDs to 0 rather than -1 to avoid accidentally
+	// kill()ing all (of your) processes on the system.
+	int spawned_pid = 0;
 	bool rv = spawnCheckpointCleanupProcess(
 		cluster, proc, jobAd, logansRun.reaper_id(),
 		spawned_pid, error
