@@ -8603,6 +8603,9 @@ DaemonCore::Kill_Thread(int tid)
 	 */
 	return 1;
 #else
+	if (ProcessExitedButNotReaped(tid)) {
+		return true;
+	}
 	priv_state priv = set_root_priv();
 	int status = kill(tid, SIGKILL);
 	set_priv(priv);
