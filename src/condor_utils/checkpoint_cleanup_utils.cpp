@@ -49,12 +49,13 @@ spawnCheckpointCleanupProcess(
 
 	std::string checkpointDestination;
 	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
-		return true;
+		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: no %s attribute found!\n", cluster, proc, ATTR_JOB_CHECKPOINT_DESTINATION );
+		return false;
 	}
 
 	std::string owner;
 	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
-		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: no owner attribute found!\n", cluster, proc );
+		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: no %s attribute found!\n", cluster, proc, ATTR_OWNER );
 		return false;
 	}
 
