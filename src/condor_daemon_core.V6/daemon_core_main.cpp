@@ -3129,18 +3129,22 @@ unix_sighup(int)
 
 
 void
-unix_sigterm(int)
+unix_sigterm(int, siginfo_t *s_info, void *)
 {
 	if (daemonCore) {
+		dprintf(D_ALWAYS, "Caught SIGTERM: si_pid=%d si_uid=%d\n",
+		        (int)s_info->si_pid, (int)s_info->si_uid);
 		daemonCore->Signal_Myself(SIGTERM);
 	}
 }
 
 
 void
-unix_sigquit(int)
+unix_sigquit(int, siginfo_t *s_info, void *)
 {
 	if (daemonCore) {
+		dprintf(D_ALWAYS, "Caught SIGQUIT: si_pid=%d si_uid=%d\n",
+		        (int)s_info->si_pid, (int)s_info->si_uid);
 		daemonCore->Signal_Myself(SIGQUIT);
 	}
 }
@@ -3422,9 +3426,9 @@ int dc_main( int argc, char** argv )
 
 		// Install these signal handlers with a default mask
 		// of all signals blocked when we're in the handlers.
-	install_sig_handler_with_mask(SIGQUIT, &fullset, unix_sigquit);
+	install_sig_action_with_mask(SIGQUIT, &fullset, unix_sigquit);
 	install_sig_handler_with_mask(SIGHUP, &fullset, unix_sighup);
-	install_sig_handler_with_mask(SIGTERM, &fullset, unix_sigterm);
+	install_sig_action_with_mask(SIGTERM, &fullset, unix_sigterm);
 	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
 	install_sig_handler_with_mask(SIGUSR1, &fullset, unix_sigusr1);
 	install_sig_handler_with_mask(SIGUSR2, &fullset, unix_sigusr2);
