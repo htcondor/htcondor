@@ -87,7 +87,7 @@ const char * ClassAdValueToString ( const classad::Value & value )
 	return ClassAdValueToString(value, buffer);
 }
 
-classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree) {
+const classad::ExprTree * SkipExprEnvelope(const classad::ExprTree * tree) {
 	if ( ! tree) return tree;
 	classad::ExprTree::NodeKind kind = tree->GetKind();
 	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
@@ -96,12 +96,12 @@ classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree) {
 	return tree;
 }
 
-classad::ExprTree * SkipExprParens(classad::ExprTree * tree) {
+const classad::ExprTree * SkipExprParens(const classad::ExprTree * tree) {
 	if ( ! tree) return tree;
 	classad::ExprTree::NodeKind kind = tree->GetKind();
-	classad::ExprTree * expr = tree;
+	classad::ExprTree * expr = const_cast<classad::ExprTree*>(tree);
 	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
-		expr = ((classad::CachedExprEnvelope*)tree)->get();
+		expr = ((const classad::CachedExprEnvelope*)tree)->get();
 		if (expr) tree = expr;
 	}
 

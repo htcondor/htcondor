@@ -483,10 +483,9 @@ match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
 		if( IsDebugLevel(D_MACHINE) ) {
-			dprintf( D_MACHINE, "*** ClassAd of Matched Resource ***\n" );
-			dPrintAd( D_MACHINE, *my_match_ad );
-			dprintf( D_MACHINE | D_NOHEADER, "*** End of ClassAd ***\n" );
-		}		
+			std::string buf; buf.reserve(1000);
+			dprintf( D_MACHINE, "*** ClassAd of Matched Resource ***\n%s", formatAd(buf, *my_match_ad, "\t"));
+		}
 	} else {
 		my_match_ad = NULL;
 	}
@@ -8507,16 +8506,24 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// For now, delete the old match_rec. Eventually, we may want to keep
 	// it around (it should be for the claimed pslot).
 	if (msg->have_claimed_slot_info()) {
-		if (strcmp(msg->claimed_slot_claim_id(), match->claim_id.claimId())) {
-			PROC_ID job_id(match->cluster, match->proc);
-			SetMrecJobID(match, -1, -1);
-			msg->claimed_slot_ad()->Update(match->m_added_attrs);
-			match_rec* new_match = AddMrec(msg->claimed_slot_claim_id(), match->peer, &job_id, msg->claimed_slot_ad(), match->user, match->m_pool.c_str());
-			DelMrec(match);
-			match = new_match;
-		} else {
-			match->my_match_ad->CopyFrom(*msg->claimed_slot_ad());
-			match->my_match_ad->Update(match->m_added_attrs);
+		for (auto & slotInfo : msg->claimed_slots()) {
+			if (slotInfo.claim_id != match->claim_id.claimId()) {
+				PROC_ID job_id(match->cluster, match->proc);
+				SetMrecJobID(match, -1, -1);
+				ClassAd slotAd(slotInfo.slot_ad);
+				slotAd.Update(match->m_added_attrs);
+				match_rec* new_match = AddMrec(slotInfo.claim_id.c_str(), match->peer, &job_id, &slotAd, match->user, match->m_pool.c_str());
+				if (new_match) {
+					// AddMrec can fail and return null for reasons other than out-of-memory
+					DelMrec(match);
+					match = new_match;
+				}
+			} else {
+				match->my_match_ad->CopyFrom(slotInfo.slot_ad);
+				match->my_match_ad->Update(match->m_added_attrs);
+			}
+
+			break; // TODO: remove this to handle more than a single slot in the claim reply
 		}
 	}
 

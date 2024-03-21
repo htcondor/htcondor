@@ -1061,6 +1061,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_REQUEST_DISK  "RequestDisk"
 #define ATTR_REQUEST_GPUS  "RequestGPUs"
 #define ATTR_REQUIRE_GPUS  "RequireGPUs"
+#define ATTR_REQUIRE_PREFIX "Require"
 #define ATTR_REQUEST_VIRTUAL_MEMORY  "RequestVirtualMemory"
 // GPUs property constraints
 #define ATTR_GPUS_MIN_MEMORY "GPUsMinMemory"
