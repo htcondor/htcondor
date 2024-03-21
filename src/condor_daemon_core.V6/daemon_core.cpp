@@ -5170,6 +5170,16 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 		return FALSE;		// cannot shut down our parent
 	}
 
+	if( ProcessExitedButNotReaped(pid) ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::ShutdownGraceful(): tried to kill pid %d, which has already exited (but not yet been reaped).\n", pid );
+		return TRUE; // The process _is_ dead, so I guess we succeeded.
+	} else if(! pidTable.contains(pid)) {
+		if(! param_boolean( "DAEMON_CORE_KILL_ANY_PROCESS", true )) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::ShutdownGraceful(): tried to kill pid %d, which we don't think we started.\n", pid );
+			return TRUE; // For backwards compability.
+		}
+	}
+
 #if defined(WIN32)
 
 	// WINDOWS
