@@ -5163,8 +5163,7 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 
 int DaemonCore::Shutdown_Graceful(pid_t pid)
 {
-	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Graceful(%d)\n",
-		pid);
+	dprintf(D_ALWAYS,"Called DaemonCore::Shutdown_Graceful (%d)\n", pid);
 
 	if ( pid == ppid )
 		return FALSE;		// cannot shut down our parent
