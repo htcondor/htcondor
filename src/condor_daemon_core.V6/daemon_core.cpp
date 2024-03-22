@@ -5096,11 +5096,21 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 {
 	(void) want_core;		// For windoze
 
-	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Fast(%d)\n",
-		pid);
-
-	if ( pid == ppid )
+	if ( pid == ppid ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill our own parent.\n" );
 		return FALSE;		// cannot shut down our parent
+	}
+
+	if( ProcessExitedButNotReaped(pid) ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill pid %d, which has already exited (but not yet been reaped).\n", pid );
+		return TRUE; // The process _is_ dead, so I guess we succeeded.
+	} else if(! pidTable.contains(pid)) {
+		if(! param_boolean( "DAEMON_CORE_KILL_ANY_PROCESS", true )) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill pid %d, which we don't think we started.\n", pid );
+			return TRUE; // For backwards compability.
+		}
+	}
+
 
 #if defined(WIN32)
 	// even on a shutdown_fast, first try to send a WM_CLOSE because
@@ -5156,6 +5166,11 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 	}
 	return ret_value;
 #else
+	if( pid <= 0 ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(%d): tried to kill pid <= 0.\n", pid );
+		return FALSE;
+	}
+
 	priv_state priv = set_root_priv();
 	int status = kill(pid, want_core ? SIGABRT : SIGKILL );
 	set_priv(priv);
@@ -5165,11 +5180,20 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 
 int DaemonCore::Shutdown_Graceful(pid_t pid)
 {
-	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Graceful(%d)\n",
-		pid);
-
-	if ( pid == ppid )
+	if ( pid == ppid ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(): tried to kill our own parent.\n" );
 		return FALSE;		// cannot shut down our parent
+	}
+
+	if( ProcessExitedButNotReaped(pid) ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(): tried to kill pid %d, which has already exited (but not yet been reaped).\n", pid );
+		return TRUE; // The process _is_ dead, so I guess we succeeded.
+	} else if(! pidTable.contains(pid)) {
+		if(! param_boolean( "DAEMON_CORE_KILL_ANY_PROCESS", true )) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(): tried to kill pid %d, which we don't think we started.\n", pid );
+			return TRUE; // For backwards compability.
+		}
+	}
 
 #if defined(WIN32)
 
@@ -5234,9 +5258,13 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 				"which would cause an infinite loop on UNIX" );
 	}
 
-	int status;
+	if( pid <= 0 ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(%d): tried to kill pid <= 0.\n", pid );
+		return FALSE;
+	}
+
 	priv_state priv = set_root_priv();
-	status = kill(pid, SIGTERM);
+	int status = kill(pid, SIGTERM);
 	set_priv(priv);
 	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
 
