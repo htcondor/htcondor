@@ -38,10 +38,7 @@ int main(int argc, char **argv)
 	dprintf_set_tool_debug("condor_check_userlogs", 0);
 	set_debug_flags(NULL, D_ALWAYS);
 
-	std::vector<std::string> logFiles;
-	for ( int argnum = 1; argnum < argc; ++argnum ) {
-		logFiles.emplace_back(argv[argnum]);
-	}
+	std::vector<std::string> logFiles {&argv[1], &argv[argc]};
 
 	ReadMultipleUserLogs	ru;
 	for (auto& filename : logFiles) {
