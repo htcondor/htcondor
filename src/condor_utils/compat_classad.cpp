@@ -218,10 +218,9 @@ bool stringListSize_func( const char * /*name*/,
 		return true;
 	}
 
-	int cnt = 0;
-	for (auto& item : StringTokenIterator(list_str, delim_str.c_str())) {
-		cnt++;
-	}
+	StringTokenIterator sti(list_str, delim_str.c_str());
+	size_t cnt = std::distance(sti.begin(), sti.end());
+
 	result.SetIntegerValue(cnt);
 
 	return true;
@@ -309,7 +308,7 @@ bool stringListSummarize_func( const char *name,
 			result.SetErrorValue();
 			return true;
 		}
-		if (strspn(entry.c_str(), "+-0123456789") != strlen(entry.c_str())) {
+		if (strspn(entry.c_str(), "+-0123456789") != entry.size()) {
 			is_real = true;
 		}
 		accumulator = func( temp, accumulator );
