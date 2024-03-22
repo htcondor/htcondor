@@ -8836,9 +8836,6 @@ int    last_autocluster_type=0;
 int    last_autocluster_classad_cache_hit=0;
 stats_entry_abs<int> SCGetAutoClusterType;
 
-// Returns cur_hosts so that another function in the scheduler can
-// update JobsRunning and keep the scheduler and queue manager
-// seperate. 
 int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 {
     int     job_prio = 0, 
@@ -8846,11 +8843,8 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
             pre_job_prio2 = 0, 
             post_job_prio1 = 0, 
             post_job_prio2 = 0;
-    int     job_status = 0;
     char    owner[100];
-    int     cur_hosts = 0;
-    int     max_hosts = 0;
-    int     universe = 0;
+	const char* dummy = nullptr;
 
 	ASSERT(job);
 
@@ -8883,27 +8877,12 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	SCGetAutoClusterType = last_autocluster_type;
 	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
 
-	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
-	ASSERT(universe == job->Universe());
-
-	job->LookupInteger(ATTR_JOB_STATUS, job_status);
-    if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
-        cur_hosts = ((job_status == SUSPENDED || job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) ? 1 : 0);
-    }
-    if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
-        max_hosts = ((job_status == IDLE) ? 1 : 0);
-    }
 	// Figure out if we should contine and put this job into the PrioRec array
 	// or not.
-    // No longer judge whether or not a job can run by looking at its status.
-    // Rather look at if it has all the hosts that it wanted.
-    if (cur_hosts>=max_hosts || job_status==HELD || job_status==JOB_STATUS_BLOCKED ||
-			job_status==REMOVED || job_status==COMPLETED || job_status==JOB_STATUS_FAILED ||
-			job->IsNoopJob() ||
-			!service_this_universe(universe,job) ||
+	if ( ! Runnable(job, dummy) ||
 			scheduler.AlreadyMatched(job, job->Universe()))
 	{
-        return cur_hosts;
+		return 0;
 	}
 
 	// --- Insert this job into the PrioRec array ---
@@ -8969,7 +8948,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     PrioRec[N_PrioRecs].pre_job_prio2  = pre_job_prio2;
     PrioRec[N_PrioRecs].post_job_prio1 = post_job_prio1;
     PrioRec[N_PrioRecs].post_job_prio2 = post_job_prio2;
-    PrioRec[N_PrioRecs].status         = job_status;
     PrioRec[N_PrioRecs].not_runnable   = false;
     PrioRec[N_PrioRecs].matched        = false;
 	if ( auto_id == -1 ) {
@@ -8985,7 +8963,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		grow_prio_recs( 2 * N_PrioRecs );
 	}
 
-	return cur_hosts;
+	return 0;
 }
 
 bool
@@ -9747,60 +9725,44 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	// no more jobs to run anywhere.  nothing more to do.  failure.
 }
 
-int Runnable(JobQueueJob *job, const char *& reason)
+bool Runnable(JobQueueJob *job, const char *& reason)
 {
-	int status = 0, universe = 0, cur = 0, max = 1;
+	int cur = 0, max = 1;
 
 	if ( ! job || ! job->IsJob())
 	{
 		reason = "not runnable (not found)";
-		return FALSE;
+		return false;
 	}
 
 	if (job->IsNoopJob())
 	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (IsNoopJob)\n");
 		reason = "not runnable (IsNoopJob)";
-		return FALSE;
+		return false;
 	}
 
-	if ( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 )
-	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",ATTR_JOB_STATUS);
-		reason = "not runnable (no " ATTR_JOB_STATUS ")";
-		return FALSE;
-	}
-	if (status == HELD)
-	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (HELD)\n");
+	switch (job->Status()) {
+	case HELD:
 		reason = "not runnable (HELD)";
-		return FALSE;
-	}
-	if (status == REMOVED)
-	{
-		// dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (REMOVED)\n");
+		return false;
+		break;
+	case REMOVED:
 		reason = "not runnable (REMOVED)";
-		return FALSE;
-	}
-	if (status == COMPLETED)
-	{
-		// dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (COMPLETED)\n");
+		return false;
+		break;
+	case COMPLETED:
 		reason = "not runnable (COMPLETED)";
-		return FALSE;
+		return false;
+		break;
+	default:
+		// continue on
+		break;
 	}
 
-
-	if ( job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 )
+	if( !service_this_universe(job->Universe(), job) )
 	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n", ATTR_JOB_UNIVERSE);
-		reason = "not runnable (no " ATTR_JOB_UNIVERSE ")";
-		return FALSE;
-	}
-	if( !service_this_universe(universe,job) )
-	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (Universe=%s)\n", CondorUniverseName(universe) );
 		reason = "not runnable (universe not in service)";
-		return FALSE;
+		return false;
 	}
 
 	job->LookupInteger(ATTR_CURRENT_HOSTS, cur);
@@ -9808,20 +9770,18 @@ int Runnable(JobQueueJob *job, const char *& reason)
 
 	if (cur < max)
 	{
-		// dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");
 		reason = "is runnable";
-		return TRUE;
+		return true;
 	}
 	
-	//dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable (default rule)\n");
 	reason = "not runnable (default rule)";
-	return FALSE;
+	return false;
 }
 
-int Runnable(PROC_ID* id)
+bool Runnable(PROC_ID* id)
 {
 	const char * reason = "";
-	int runnable = Runnable(GetJobAd(id->cluster,id->proc), reason);
+	bool runnable = Runnable(GetJobAd(id->cluster,id->proc), reason);
 	dprintf (D_FULLDEBUG, "Job %d.%d: %s\n", id->cluster, id->proc, reason);
 	return runnable;
 }

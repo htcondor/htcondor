@@ -896,8 +896,8 @@ extern HashTable<int,int> *PrioRecAutoClusterRejected;
 extern int grow_prio_recs(int);
 
 extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user);
-extern int Runnable(PROC_ID*);
-extern int Runnable(JobQueueJob *job, const char *& reason);
+extern bool Runnable(PROC_ID*);
+extern bool Runnable(JobQueueJob *job, const char *& reason);
 
 extern class ForkWork schedd_forker;
 
