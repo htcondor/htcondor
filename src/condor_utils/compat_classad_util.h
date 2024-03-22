@@ -162,9 +162,9 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 void AddClassAdXMLFileHeader(std::string &buffer);
 void AddClassAdXMLFileFooter(std::string &buffer);
 
-void clear_user_maps(StringList * keep_list);
+void clear_user_maps(std::vector<std::string> * keep_list);
 int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NULL*/);
-int add_user_mapping(const char * mapname, char * mapdata);
+int add_user_mapping(const char * mapname, const char * mapdata);
 // these functions are in classad_usermap.cpp (and also libcondorapi_stubs.cpp)
 int reconfig_user_maps();
 bool user_map_do_mapping(const char * mapname, const char * input, std::string & output);
