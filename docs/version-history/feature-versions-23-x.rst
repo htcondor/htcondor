@@ -27,6 +27,11 @@ New Features:
   further debugging.
   :jira:`1896`
 
+- We now compute the path to the proper python3 interpreter for :tool:`condor_watch_q`
+  at compile time.  This should not change anything, but if it does break, the
+  guilty ticket is:
+  :jira:`1146`
+
 - Most daemon log messages about tasks in the :macro:`STARTD_CRON_JOBLIST`,
   :macro:`BENCHMARKS_JOBLIST` or :macro:`SCHEDD_CRON_JOBLIST` that were
   logged as ``D_FULLDEBUG`` messages are now logged using the new message
