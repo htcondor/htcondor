@@ -121,6 +121,21 @@ Bugs Fixed:
   when events were written on leap day.
   :jira:`2318`
 
+Version 23.5.3
+--------------
+
+- HTCondor version 23.5.3 released on March 25, 2024.
+
+- HTCondor tarballs now contain `Pelican 7.6.2 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.6.2>`_
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 23.5.2
 --------------
 
