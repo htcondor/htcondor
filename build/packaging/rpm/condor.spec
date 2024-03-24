@@ -1418,6 +1418,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Mar 25 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.3-1
+- HTCondor tarballs now contain Pelican 7.6.2
+
 * Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.2-1
 - Old ClassAd based syntax is disabled by default for the job router
 - Can efficiently manage/enforce disk space using LVM partitions
