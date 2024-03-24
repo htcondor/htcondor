@@ -1,3 +1,9 @@
+condor (23.5.3-1) stable; urgency=medium
+
+  * HTCondor tarballs now contain Pelican 7.6.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 24 Mar 2024 11:55:00 -0500
+
 condor (23.5.2-1) stable; urgency=medium
 
   * Old ClassAd based syntax is disabled by default for the job router
