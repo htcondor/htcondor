@@ -27,6 +27,8 @@
 
 .. autoclass:: QueryOpt
 
+.. autoclass:: SubmitMethod
+
 .. autoclass:: SubsystemType
 
 .. autoclass:: TransactionFlag

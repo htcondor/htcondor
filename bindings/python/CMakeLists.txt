@@ -52,6 +52,7 @@ htcondor2/_query_opt.py
 htcondor2/_job_action.py
 htcondor2/_transaction_flag.py
 htcondor2/_submit.py
+htcondor2/_submit_method.py
 htcondor2/_submit_result.py
 htcondor2/_job_event.py
 htcondor2/_job_event_log.py
