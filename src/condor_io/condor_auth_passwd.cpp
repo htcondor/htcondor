@@ -2964,10 +2964,9 @@ Condor_Auth_Passwd::create_signing_key( const std::string & filepath, const char
 
 		// Generate a signing key.
 	char rand_buffer[64];
-	if (!RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer))) {
-		// Insufficient entropy available; bail out!
-		return;
-	}
+	int r = RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer));
+	ASSERT(r == 1)
+
 
 		// Write out the signing key.
 	if (TRUE == write_binary_password_file(filepath.c_str(), rand_buffer, sizeof(rand_buffer))) {

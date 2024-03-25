@@ -44,7 +44,6 @@
 #include "condor_base64.h"
 #include "globus_utils.h" // for warn_on_gsi_config()
 
-#include <sstream>
 #include <algorithm>
 #include <string>
 
@@ -136,14 +135,7 @@ SecMan::setTag(const std::string &tag) {
 void
 SecMan::setTagAuthenticationMethods(DCpermission perm, const std::vector<std::string> &methods)
 {
-	std::stringstream ss;
-	bool first = true;
-	for (const auto &method : methods) {
-		if (first) first = false;
-		else ss << ",";
-		ss << method;
-	}
-	m_tag_methods[perm] = ss.str();
+	m_tag_methods[perm] = join(methods, ",");
 }
 
 
