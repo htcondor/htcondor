@@ -27,6 +27,11 @@ New Features:
   further debugging.
   :jira:`1896`
 
+- Periodic policy expressions like :subcom:`periodic_remove` are now checked
+  for during file input transfer.  Previously, HTCondor didn't start running these
+  checks until the file transfer was finished at the job proper started.
+  :jira:`2362`
+
 - We now compute the path to the proper python3 interpreter for :tool:`condor_watch_q`
   at compile time.  This should not change anything, but if it does break, the
   guilty ticket is:
