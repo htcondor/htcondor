@@ -284,6 +284,14 @@ SYSTEM_TABLE = {
                 "gpus_per_node":        4,
                 "max_nodes_per_job":    4, # "TBD"
             },
+            "gpuA100x4-preempt": {
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         256 * 1024,
+                "gpus_per_node":        4,
+                "max_nodes_per_job":    4, # "TBD"
+            },
             "gpuA100x8": {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
@@ -293,6 +301,14 @@ SYSTEM_TABLE = {
                 "max_nodes_per_job":    4, # "TBD"
             },
             "gpuA40x4": {
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         256 * 1204,
+                "gpus_per_node":        4,
+                "max_nodes_per_job":    4, # "TBD"
+            },
+            "gpuA40x4-preempt": {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       64,
