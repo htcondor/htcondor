@@ -1316,7 +1316,7 @@ bool MacroStreamCharSource::open(const char * src_string, const MACRO_SOURCE& _s
 {
 	src = _src;
 	if (input) delete input;
-	input = new StringTokenIterator(src_string, "\n");
+	input = new StringTokenIterator(src_string, "\n", STI_NO_TRIM);
 	return input != NULL;
 }
 

@@ -157,7 +157,7 @@ bool findToken(const std::string &tokenfilename,
 	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true)) {
 		return false;
 	}
-	for (auto& line: StringTokenIterator(data, len, "\n", true)) {
+	for (auto& line: StringTokenIterator(data, len, "\n")) {
 		if (line.empty() || line[0] == '#') continue;
 		bool good_token = checkToken(line, issuer, server_key_ids, tokenfilename, username, token, signature);
 		if (good_token) {

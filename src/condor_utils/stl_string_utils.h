@@ -30,6 +30,8 @@
 // efficiency.  This is the size of that buffer.
 #define STL_STRING_UTILS_FIXBUF 500
 
+enum STI_TrimBehavior { STI_NO_TRIM=0, STI_TRIM };
+
 // Analogous to standard sprintf(), but writes to std::string 's', and is
 // memory/buffer safe.
 int formatstr(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
@@ -88,8 +90,8 @@ bool ends_with(const std::string& str, const std::string& post);
 bool sort_ascending_ignore_case(std::string const & a, std::string const & b);
 bool sort_decending_ignore_case(std::string const & a, std::string const & b);
 
-std::vector<std::string> split(const std::string& str, const char* delim=", \t\r\n", bool trim=true);
-std::vector<std::string> split(const char* str, const char* delim=", \t\r\n", bool trim=true);
+std::vector<std::string> split(const std::string& str, const char* delim=", \t\r\n", STI_TrimBehavior trim=STI_TRIM);
+std::vector<std::string> split(const char* str, const char* delim=", \t\r\n", STI_TrimBehavior trim=STI_TRIM);
 std::string join(const std::vector<std::string> &list, const char* delim);
 
 bool contains(const std::vector<std::string> &list, const std::string& str);
@@ -147,10 +149,10 @@ void randomlyGenerateShortLivedPassword(std::string &str, int len);
 // unchanged during iteration.  This is trivial for string literals, of course.
 class StringTokenIterator {
 public:
-	StringTokenIterator(const char *s = NULL, const char *delim = ", \t\r\n", bool trim = false) : str(s), delims(delim), len(std::string::npos), ixNext(0), pastEnd(false), m_trim(trim) { };
-	StringTokenIterator(const char *s, size_t l, const char *delim = ", \t\r\n", bool trim = false) : str(s), delims(delim), len(l), ixNext(0), pastEnd(false), m_trim(trim) { };
-	StringTokenIterator(std::string_view s, const char *delim = ", \t\r\n", bool trim = false) : str(s.data()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
-	StringTokenIterator(const std::string & s, const char *delim = ", \t\r\n", bool trim = false) : str(s.c_str()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(const char *s = NULL, const char *delim = ", \t\r\n", STI_TrimBehavior trim = STI_TRIM) : str(s), delims(delim), len(std::string::npos), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(const char *s, size_t l, const char *delim = ", \t\r\n", STI_TrimBehavior trim = STI_TRIM) : str(s), delims(delim), len(l), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(std::string_view s, const char *delim = ", \t\r\n", STI_TrimBehavior trim = STI_TRIM) : str(s.data()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(const std::string & s, const char *delim = ", \t\r\n", STI_TrimBehavior trim = STI_TRIM) : str(s.c_str()), delims(delim), len(s.length()), ixNext(0), pastEnd(false), m_trim(trim) { };
 
 	void rewind() { ixNext = 0; pastEnd = false;}
 	const char * next() { const std::string * s = next_string(); return s ? s->c_str() : NULL; }
@@ -209,7 +211,7 @@ protected:
 	size_t len;
 	size_t ixNext;
 	bool pastEnd;
-	bool m_trim;
+	STI_TrimBehavior m_trim;
 };
 
 // Case insensitive string_view
