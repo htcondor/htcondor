@@ -483,7 +483,7 @@ MultiLogFiles::getParamFromSubmitLine(const std::string &submitLineIn,
 
 	const char *DELIM = "=";
 
-	StringTokenIterator submittok(submitLineIn, DELIM, true);
+	StringTokenIterator submittok(submitLineIn, DELIM);
 	const char *token = submittok.next();
 	if ( token ) {
 		if ( !strcasecmp(token, paramName) ) {
@@ -510,7 +510,7 @@ MultiLogFiles::CombineLines(const std::string &dataIn, char continuation,
 	// continuation characters (backslash).
 	std::string logicalLine;
 
-	for (const auto& physicalLine : StringTokenIterator(dataIn, "\r\n", false)) {
+	for (const auto& physicalLine : StringTokenIterator(dataIn, "\r\n", STI_NO_TRIM)) {
 
 		logicalLine += physicalLine;
 

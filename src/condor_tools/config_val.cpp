@@ -2204,7 +2204,7 @@ void PrintMetaKnob(const char * metaval, bool expand, bool verbose)
 {
 	if ( ! metaval) return;
 	bool print_use = verbose || ! expand;
-	StringTokenIterator lines(metaval, "\n", false);
+	StringTokenIterator lines(metaval, "\n", STI_NO_TRIM);
 	for (const char * line = lines.first(); line; line = lines.next()) {
 		StringTokenIterator toks(line, " \t:");
 		bool is_use = YourString("use") == toks.first();
