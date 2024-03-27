@@ -38,6 +38,7 @@ def get_default_config(name="ADSTASH"):
         "collectors": htcondor.param.get("CONDOR_HOST"),
         "read_schedd_history": False,
         "read_startd_history": False,
+        "read_schedd_job_epoch_history": False,
         "read_ad_file": None,
         "schedd_history_max_ads": 10000,
         "startd_history_max_ads": 10000,
@@ -70,6 +71,7 @@ def get_htcondor_config(name="ADSTASH"):
         "startds": p.get(f"{name}_READ_STARTDS"),
         "read_schedd_history": p.get(f"{name}_SCHEDD_HISTORY"),
         "read_startd_history": p.get(f"{name}_STARTD_HISTORY"),
+        "read_schedd_job_epoch_history": p.get(f"{name}_SCHEDD_JOB_EPOCH_HISTORY"),
         "read_ad_file": p.get(f"{name}_AD_FILE"),
         "schedd_history_max_ads": p.get(f"{name}_SCHEDD_HISTORY_MAX_ADS"),
         "startd_history_max_ads": p.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
@@ -135,6 +137,7 @@ def get_environment_config(name="ADSTASH"):
         "startds": env.get(f"{name}_READ_STARTDS"),
         "read_schedd_history": env.get(f"{name}_SCHEDD_HISTORY"),
         "read_startd_history": env.get(f"{name}_STARTD_HISTORY"),
+        "read_schedd_job_epoch_history": env.get(f"{name}_SCHEDD_JOB_EPOCH_HISTORY"),
         "read_ad_file": env.get(f"{name}_AD_FILE"),
         "schedd_history_max_ads": env.get(f"{name}_SCHEDD_HISTORY_MAX_ADS"),
         "startd_history_max_ads": env.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
@@ -221,6 +224,7 @@ def normalize_config_types(conf):
         "standalone",
         "read_schedd_history",
         "read_startd_history",
+        "read_schedd_job_epoch_history",
         "to_elasticsearch",
         "to_json",
         "se_use_https",
@@ -378,6 +382,15 @@ def get_config(argv=None):
         dest="read_startd_history",
         help=(
             "Poll Startd histories "
+            "[default: %(default)s]"
+        ),
+    )
+    source_group.add_argument(
+        "--schedd_job_epoch_history",
+        action="store_true",
+        dest="read_schedd_job_epoch_history",
+        help=(
+            "Poll Schedd Job Epoch histories "
             "[default: %(default)s]"
         ),
     )
