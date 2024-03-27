@@ -581,6 +581,12 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_CHECK_QUEUE_INTERVAL]
+default=1200
+type=int
+tags=dagman,dagman_main
+restart=never
+
 [MAX_DAGMAN_LOG]
 default=0
 type=int
