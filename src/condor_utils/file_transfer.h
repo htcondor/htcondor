@@ -285,6 +285,9 @@ class FileTransfer final: public Service {
 	// Add the given filename to the list of "failure" files.
 	void addFailureFile( const char* filename );
 
+	// Check if we have failure files
+	bool hasFailureFiles() const { return !FailureFiles.isEmpty(); }
+
 	//
 	// Add the given path or URL to the list of checkpoint files.  The file
 	// will be transferred to the named destination* in the sandbox.
