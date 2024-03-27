@@ -489,6 +489,8 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 		if ( job_execute_date >= claim_start_date ) {
 			began_execution = true;
 		}
+		// Start the timer for the periodic user job policy
+		shadow_user_policy.startTimer();
 	}
 
 		// Since our reconnect worked, clear attemptingReconnectAtStartup
