@@ -39,7 +39,6 @@
 #include "condor_regex.h"
 #include "xform_utils.h"
 
-#include "list.h"
 #include "my_popen.h"
 
 #include <charconv>

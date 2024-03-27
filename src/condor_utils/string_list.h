@@ -122,10 +122,6 @@ public:
 	char* print_to_string(void) const;
 	char* print_to_delimed_string(const char *delim = NULL) const;
 
-	/** Return the actual list -- used for ::identical()
-		@retval the list
-	*/
-	const List<char> &getList( void ) const { return m_strings; };
 	const char *getDelimiters(void) const { return m_delimiters; };
 
 	StringList &operator=(StringList &&rhs)  noexcept {
