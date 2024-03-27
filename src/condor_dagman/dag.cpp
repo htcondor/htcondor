@@ -45,6 +45,7 @@
 #include "condor_getcwd.h"
 #include "directory.h"
 #include "tmp_dir.h"
+#include "condor_q.h"
 #include <iostream>
 
 const CondorID Dag::_defaultCondorId;
@@ -297,39 +298,40 @@ bool Dag::Bootstrap (bool recovery)
 {
 	// This function should never be called on a dag object which is acting
 	// like a splice.
-	ASSERT( _isSplice == false );
+	ASSERT(_isSplice == false);
 
-    // update dependencies for pre-completed jobs (jobs marked DONE in
-    // the DAG input file)
-    for (auto & _job : _jobs) {
-		if( _job->GetStatus() == Job::STATUS_DONE ) {
+	// update dependencies for pre-completed jobs (jobs marked DONE in
+	// the DAG input file)
+	for (auto & _job : _jobs) {
+		if (_job->GetStatus() == Job::STATUS_DONE) {
 			TerminateJob(_job, false, true);
 		}
-    }
-    int nodesDone = NumNodesDone( true );
-    debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
-				  nodesDone );
+	}
+	int nodesDone = NumNodesDone(true);
+	debug_printf(DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n", nodesDone);
 
-    //User defined DONE nodes may result in children being 'done' before parent nodes
-    //Check for this use case and write a warning if found
-    int count = 0;
-    for (auto &_job : _jobs) {
-        bool done = _job->GetStatus() == Job::STATUS_DONE;
-        if ( done ) { count++; }
-        if ( _job->IsWaiting() && done && !_job->NoChildren() ) {
-            debug_printf( DEBUG_VERBOSE, "Warning: Node %s was marked as done even though parent nodes aren't complete."
-                        " Child nodes may run out of order.\n", _job->GetJobName());
-        }
-        if ( count >= nodesDone) { break; }
-    }
-    
+	//User defined DONE nodes may result in children being 'done' before parent nodes
+	//Check for this use case and write a warning if found
+	int count = 0;
+	for (auto &_job : _jobs) {
+		bool done = _job->GetStatus() == Job::STATUS_DONE;
+		if (done) { count++; }
+		if (_job->IsWaiting() && done && !_job->NoChildren()) {
+			debug_printf(DEBUG_VERBOSE, "Warning: Node %s was marked as done even though parent nodes aren't complete."
+			                            " Child nodes may run out of order.\n", _job->GetJobName());
+		}
+		if (count >= nodesDone) { break; }
+	}
+
 	_recovery = recovery;
 
 	(void) MonitorLogFile();
 
-    if (recovery) {
-        debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode... "
-					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
+	if (recovery) {
+		// GetLogStatus() will set the file size internally for the log reader
+		// allowing DAGMan to call this again to check for growth in VerifyJobsInQueue()
+		(void)_condorLogRdr.GetLogStatus();
+		debug_printf(DEBUG_NORMAL, "Running in RECOVERY mode... >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 		_jobstateLog.WriteRecoveryStarted();
 		_jobstateLog.InitializeRecovery();
 
@@ -343,8 +345,8 @@ bool Dag::Bootstrap (bool recovery)
 
 		debug_cache_start_caching();
 
-		if( CondorLogFileCount() > 0 ) {
-			if( !ProcessLogEvents( recovery ) ) {
+		if (CondorLogFileCount() > 0) {
+			if ( ! ProcessLogEvents(recovery)) {
 				_recovery = false;
 				debug_cache_stop_caching();
 				_jobstateLog.WriteRecoveryFailure();
@@ -352,10 +354,12 @@ bool Dag::Bootstrap (bool recovery)
 			}
 		}
 
-		// all jobs stuck in STATUS_POSTRUN need their scripts run
-		for (auto & _job : _jobs) {
-			if( _job->GetStatus() == Job::STATUS_POSTRUN ) {
-				if ( !RunPostScript( _job, _alwaysRunPost, 0, false ) ) {
+		// Check node states for submitted and in post_run
+		int numSubmitted = 0;
+		for (auto &_job : _jobs) {
+			if (_job->GetStatus() == Job::STATUS_SUBMITTED) { numSubmitted++; }
+			else if (_job->GetStatus() == Job::STATUS_POSTRUN) {
+				if ( ! RunPostScript(_job, _alwaysRunPost, 0, false)) {
 					debug_cache_stop_caching();
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
@@ -363,45 +367,47 @@ bool Dag::Bootstrap (bool recovery)
 			}
 		}
 
-		set_fake_condorID( _recoveryMaxfakeID );
+		set_fake_condorID(_recoveryMaxfakeID);
 
 		debug_cache_stop_caching();
 
 		_jobstateLog.WriteRecoveryFinished();
-        debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
-					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
+		debug_printf(DEBUG_NORMAL, "...done with RECOVERY mode <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+
+		if (numSubmitted > 0) {
+			debug_printf(DEBUG_NORMAL, "%d nodes claim to have jobs submitted to queue. Verifying...\n",
+			             numSubmitted);
+			VerifyJobsInQueue();
+		}
+
 		print_status();
 
 		_recovery = false;
-    }
-	
-    if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
+	}
+
+	if (DEBUG_LEVEL(DEBUG_DEBUG_2)) {
 		PrintJobList();
-		PrintReadyQ( DEBUG_DEBUG_2 );
-    }
+		PrintReadyQ(DEBUG_DEBUG_2);
+	}
 
 		// If we have any service nodes, start those right away
-	if( !_service_nodes.empty() ) {
-		if ( !StartServiceNodes() ) {
-			debug_printf( DEBUG_QUIET, "Warning: unable to start service nodes."
-				" Proceeding with the DAG workflow.\n");
-		}
-	}
-    
-		// If we have a provisioner job, submit that before any other jobs
-	if( HasProvisionerNode() ) {
-		StartProvisionerNode();
-	}
-		// Note: we're bypassing the ready queue here...
-	else {
-		for (auto & _job : _jobs) {
-			if( _job->CanSubmit() ) {
-				StartNode( _job, false );
-			}
+	if ( ! _service_nodes.empty()) {
+		if ( ! StartServiceNodes()) {
+			debug_printf(DEBUG_QUIET, "Warning: unable to start service nodes. Proceeding with the DAG workflow.\n");
 		}
 	}
 
-    return true;
+	// If we have a provisioner job, submit that before any other jobs
+	if (HasProvisionerNode()) {
+		StartProvisionerNode();
+	} else {
+		// Note: we're bypassing the ready queue here...
+		for (auto & _job : _jobs) {
+			if(_job->CanSubmit()) { StartNode(_job, false); }
+		}
+	}
+
+	return true;
 }
 
 //-------------------------------------------------------------------------
@@ -445,33 +451,110 @@ Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 }
 
 //-------------------------------------------------------------------------
-ReadUserLog::FileStatus
-Dag::GetCondorLogStatus () {
+// Helper function to process queried job ad and store clusterid
+static bool StoreJobClusterId(void * pv, ClassAd* ad) {
+	std::set<int> *ids = (std::set<int>*)pv;
+	int ClusterId = -1;
+	ad->LookupInteger(ATTR_CLUSTER_ID, ClusterId);
+	ids->insert(ClusterId);
+	return true; // Don't take ownership of ClassAd
+}
 
-	ReadUserLog::FileStatus status = _condorLogRdr.GetLogStatus();
+//-------------------------------------------------------------------------
+/*
+*	VerifyJobsInQueue() will query the local schedd job queue for all jobs
+*	associated with this DAG and verify that all nodes in the submitted state
+*	can find their recorded job (ClusterId) in the returned ClassAds query.
+*	If any submitted node jobs are missing from the queue then rescue and abort.
+*/
+void Dag::VerifyJobsInQueue() {
+	debug_printf(DEBUG_VERBOSE, "Querying local schedd for associated jobs in queue\n");
+	// Setup variables for queue query
+	CondorQ queue;
+	StringList attrs("ClusterId");
+	int fetchOpts = CondorQ::fetch_Jobs | CondorQ::fetch_IncludeClusterAd;
+	int limit = NumNodes(true);
+	CondorError errstack;
+	std::set<int> job_ids; // Collection of DAG node job clusterids found in queue
 
-		//
-		// Print the nodes we're waiting for if the time threshold
-		// since the last event has been exceeded, and we also haven't
-		// printed a report in that time.
-		//
-	time_t		currentTime;
-	time( &currentTime );
+	// Constraint to only DAGMan jobs and ClusterAds
+	std::string dagID;
+	formatstr(dagID, "DAGManJobId==%d", _DAGManJobId->_cluster);
+	(void)queue.addAND(dagID.c_str());
+	(void)queue.addAND("ProcId=?=UNDEFINED");
 
-	if ( status == ReadUserLog::LOG_STATUS_GROWN ) _lastEventTime = currentTime;
-	time_t		elapsedEventTime = currentTime - _lastEventTime;
-	time_t		elapsedPrintTime = currentTime - _lastPendingNodePrintTime;
+	// Query the local schedd queue
+	int ret = queue.fetchQueueFromHostAndProcess(_schedd->addr(), attrs, fetchOpts, limit, StoreJobClusterId, &job_ids, 2, &errstack, nullptr);
 
-	if ( (int)elapsedEventTime >= _pendingReportInterval &&
-				(int)elapsedPrintTime >= _pendingReportInterval ) {
-		debug_printf( DEBUG_NORMAL, "%d seconds since last log event\n",
-					(int)elapsedEventTime );
-		PrintPendingNodes();
-
-		_lastPendingNodePrintTime = currentTime;
+	// Check for query failure. If failure then write error and return
+	if (ret != Q_OK) {
+		switch(ret) {
+			case Q_PARSE_ERROR:
+			case Q_INVALID_CATEGORY:
+			case Q_UNSUPPORTED_OPTION_ERROR:
+				debug_printf(DEBUG_NORMAL, "ERROR(%d): Invalid Schedd query information.\n", ret);
+				break;
+			default:
+				debug_printf(DEBUG_NORMAL, "ERROR(%d): Failed to fetch job ads from local Schedd: %s\n",
+				             ret, errstack.getFullText().c_str());
+		}
+		return;
 	}
 
-    return status;
+	// Check if file has grown since query to prevent race condition
+	if (_condorLogRdr.GetLogStatus() == ReadUserLog::LOG_STATUS_GROWN) { return; }
+
+	// Check submitted node jobs have associated ClusterIds found in query
+	bool lost_jobs = false;
+	for (auto &node : _jobs) {
+		if (node->GetStatus() == Job::STATUS_SUBMITTED) {
+			int cluster = node->GetCluster();
+			if ( ! job_ids.contains(cluster)) {
+				if ( ! lost_jobs) { debug_printf(DEBUG_NORMAL, "ERROR: DAGMan lost track the following jobs:\n"); }
+				lost_jobs = true;
+				debug_printf(DEBUG_NORMAL, "\t- Node %s (ClusterId=%d)\n", node->GetJobName(), cluster);
+			}
+		}
+	}
+
+	// Rescue and abort if lost track of jobs
+	if (lost_jobs) { main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR); }
+	debug_printf(DEBUG_VERBOSE, "All pending jobs found in local schedd queue\n");
+}
+
+//-------------------------------------------------------------------------
+// Print nodes we are waiting on after a set amount of time has occurred since
+// the last nodes log event and printing occurred. If printing has occurred for
+// a long time check the queue for jobs.
+ReadUserLog::FileStatus Dag::GetCondorLogStatus() {
+	static time_t lastQueryTime = 0;
+	time_t currentTime;
+	time(&currentTime);
+	ReadUserLog::FileStatus status = _condorLogRdr.GetLogStatus();
+
+	if (lastQueryTime == 0) { lastQueryTime = currentTime; }
+	if (status == ReadUserLog::LOG_STATUS_GROWN) {
+		lastQueryTime = _lastEventTime = currentTime;
+	}
+
+	time_t elapsedEventTime = currentTime - _lastEventTime;
+	time_t elapsedPrintTime = currentTime - _lastPendingNodePrintTime;
+
+	if (elapsedEventTime >= (time_t)_pendingReportInterval &&
+	    elapsedPrintTime >= (time_t)_pendingReportInterval)
+	{
+		_lastPendingNodePrintTime = currentTime;
+		debug_printf(DEBUG_NORMAL, "%zu seconds since last log event\n", elapsedEventTime);
+		PrintPendingNodes();
+
+		time_t elapsedQueryTime =  currentTime - lastQueryTime;
+		if (elapsedQueryTime >= (time_t)param_integer("DAGMAN_CHECK_QUEUE_INTERVAL")) {
+			lastQueryTime = currentTime;
+			VerifyJobsInQueue();
+		}
+	}
+
+	return status;
 }
 
 //-------------------------------------------------------------------------
