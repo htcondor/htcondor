@@ -225,8 +225,6 @@ static bool test_is_empty_one(void);
 static bool test_is_empty_many(void);
 static bool test_is_empty_append(void);
 static bool test_is_empty_insert(void);
-static bool test_get_list_empty(void);
-static bool test_get_list_non_empty(void);
 static bool test_get_delimiters_empty_no(void);
 static bool test_get_delimiters_empty_yes(void);
 static bool test_get_delimiters_non_empty_no(void);
@@ -441,8 +439,6 @@ bool OTEST_StringList(void) {
 	driver.register_function(test_is_empty_many);
 	driver.register_function(test_is_empty_append);
 	driver.register_function(test_is_empty_insert);
-	driver.register_function(test_get_list_empty);
-	driver.register_function(test_get_list_non_empty);
 	driver.register_function(test_get_delimiters_empty_no);
 	driver.register_function(test_get_delimiters_empty_yes);
 	driver.register_function(test_get_delimiters_non_empty_no);
@@ -5145,50 +5141,6 @@ static bool test_is_empty_insert() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
-		free(orig);
-		FAIL;
-	}
-	free(orig);
-	PASS;
-}
-
-static bool test_get_list_empty() {
-	emit_test("Test that getList() returns a the List<char> representation "
-		"of the strings in an empty StringList.");
-	emit_comment("All this test checks is if getList() is empty since all of "
-		"List's operations are tested elswhere.");
-	StringList sl("", "");
-	char* orig  = sl.print_to_string();
-	bool isEmpty = sl.getList().IsEmpty();
-	emit_input_header();
-	emit_param("StringList", nicePrint(orig));
-	emit_output_expected_header();
-	emit_param("Is Empty", "%s", "TRUE");
-	emit_output_actual_header();
-	emit_param("Is Empty", "%s", tfstr(isEmpty));
-	if(!isEmpty) {
-		free(orig);
-		FAIL;
-	}
-	free(orig);
-	PASS;
-}
-
-static bool test_get_list_non_empty() {
-	emit_test("Test that getList() returns a the List<char> representation "
-		"of the strings in a non-empty StringList.");
-	emit_comment("All this test checks is if getList() is not empty since all"
-		" of List's operations are tested elswhere.");
-	StringList sl("a;b;c;dog", ";");
-	char* orig  = sl.print_to_string();
-	bool isEmpty = sl.getList().IsEmpty();
-	emit_input_header();
-	emit_param("StringList", nicePrint(orig));
-	emit_output_expected_header();
-	emit_param("Is Empty", "%s", "FALSE");
-	emit_output_actual_header();
-	emit_param("Is Empty", "%s", tfstr(isEmpty));
-	if(isEmpty) {
 		free(orig);
 		FAIL;
 	}

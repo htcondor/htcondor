@@ -44,7 +44,6 @@
 
 // #include <afxtempl.h>
 #include <map>
-#include "list.h"
 
 // #include <winternl.h>
 #include <ntsecapi.h>
