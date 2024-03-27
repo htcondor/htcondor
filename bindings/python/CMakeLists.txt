@@ -59,6 +59,7 @@ htcondor2/_job_event_log.py
 htcondor2/_job_event_type.py
 htcondor2/_job_status.py
 htcondor2/_param.py
+htcondor2/_remote_param.py
 htcondor2/_file_transfer_event_type.py
 htcondor2/_logging.py
 htcondor2/_log_level.py
