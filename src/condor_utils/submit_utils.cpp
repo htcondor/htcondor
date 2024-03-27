@@ -49,7 +49,6 @@
 #include "metric_units.h"
 #include "submit_utils.h"
 
-#include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "my_popen.h"

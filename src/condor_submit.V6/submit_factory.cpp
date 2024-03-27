@@ -69,7 +69,6 @@
 #include "condor_qmgr.h"
 #include "submit_internal.h"
 
-#include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "my_popen.h"

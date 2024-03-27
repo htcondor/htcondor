@@ -47,7 +47,6 @@
 #include "prio_rec.h"
 #include "HashTable.h"
 #include "string_list.h"
-#include "list.h"
 #include "write_user_log.h"
 #include "autocluster.h"
 #include "enum_utils.h"
