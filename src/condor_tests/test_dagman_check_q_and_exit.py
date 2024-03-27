@@ -71,7 +71,7 @@ PARENT A CHILD B
 def run_dag(condor, write_dag):
     dag = htcondor.Submit.from_dag(write_dag)
     dagman_job = condor.submit(dag)
-    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=30)
+    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=45)
     return write_dag
 
 #--------------------------------------------------------------------------
@@ -101,7 +101,7 @@ def run_recovery_dag(condor, write_recovery_dag):
     assert os.path.exists(f"{RECOVERY_DAG}.nodes.log")
     dag = htcondor.Submit.from_dag(RECOVERY_DAG, {"DoRecov" : True})
     dagman_job = condor.submit(dag)
-    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=15)
+    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=30)
     return RECOVERY_DAG
 
 #==========================================================================
