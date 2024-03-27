@@ -8,14 +8,21 @@ from .htcondor2_impl import (
 )
 
 from ._common_imports import (
-    classad,
+    classad
 )
 
 class RemoteParam(MutableMapping):
 
-    def __init__(self, location : classad):
+    def __init__(self, location : classad.ClassAd):
         """
-        FIXME
+        The keys and values of this :class:`collections.abc.MutableMapping` are the keys
+        and values of the specified daemon's configuration.  Assigning to
+        a key sets the "runtime" configuration for the corresponding
+        HTCondor macro, which won't take effect until the daemon has been
+        reconfigured.  See :macro:`ENABLE_RUNTIME_CONFIG`.
+
+        :param location:  A ClassAd with a ``MyAddress`` attribute, such as
+            might be returned by :meth:`htcondor2.Collector.locate`.
         """
         self.location = location
         self.refresh()
@@ -23,7 +30,11 @@ class RemoteParam(MutableMapping):
 
     def refresh(self):
         """
-        FIXME
+        Rebuild the dictionary based on the current configuration of the
+        daemon.  Configuration values set by assigning to this dictionary
+        do not become part of the current configuration until the daemon
+        has been reconfigured; if you have not reconfigured the daemon,
+        this method will result in a dictionary without those changes.
         """
         key_list = _remote_param_keys(self.location._handle)
         self.keys = key_list.split(',')
