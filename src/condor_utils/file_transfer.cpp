@@ -915,7 +915,6 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	}
 
 	if ( !input_timestamps.empty() ) {
-
 		newest_input_timestamp = *input_timestamps.rbegin();
 
 		// If the oldest output file is more recent than the newest input file,
@@ -924,23 +923,24 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			oldest_output_timestamp = *output_timestamps.begin();
 			is_dataflow = oldest_output_timestamp > newest_input_timestamp;
 		}
-		// If the executable is more recent than the newest input file, 
+
+        // If the oldest output file is more recent than the executable,
 		// then this is a dataflow job.
 		job_ad->LookupString( ATTR_JOB_CMD, executable_file );
 		if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
 			int executable_file_timestamp = file_stat.st_mtime;
-			if ( executable_file_timestamp > newest_input_timestamp ) {
+			if ( oldest_output_timestamp > executable_file_timestamp ) {
 				is_dataflow = true;
 			}
 		}
 
-		// If the standard input file is more recent than newest input,
+		// If the oldest output file is more recent than the newest input file,
 		// then this is a dataflow job.
 		job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
 		if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
 			if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
 				int stdin_file_timestamp = file_stat.st_mtime;
-				if ( stdin_file_timestamp > newest_input_timestamp ) {
+				if ( oldest_output_timestamp > stdin_file_timestamp ) {
 					is_dataflow = true;
 				}
 			}
