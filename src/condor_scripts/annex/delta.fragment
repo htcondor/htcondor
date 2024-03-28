@@ -1,0 +1,20 @@
+# WELL_KNOWN_LOCATION_FOR_BINARIES
+
+# Populates $SCRATCH (and $WORK) if SLURM_JOB_ACCOUNT is set.
+export SLURM_JOB_ACCOUNT=$ALLOCATION
+module reset
+
+
+CONFIG_FRAGMENT() {
+    echo '
+        # Testing singularity adds 120 seconds to start-up time,
+        # both times we test it.
+        SINGULARITY = /bin/false
+    '
+}
+SHELL_FRAGMENT() {
+    : # This function intentionally left defined but blank.
+}
+SYSTEM_SPECIFIC_GPU_FLAG=--gpus-per-node
+
+SBATCH_CONSTRAINT_LINE="#SBATCH --constraint=\"scratch\""
