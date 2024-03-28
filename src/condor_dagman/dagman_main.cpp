@@ -1937,7 +1937,6 @@ void condor_event_timer (int /* tid */) {
 	// Statistics gathering
 	eventTimerEndTime = condor_gettimestamp_double();
 	dagman._dagmanStats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
-
 }
 
 

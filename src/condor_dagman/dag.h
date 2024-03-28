@@ -176,6 +176,9 @@ class Dag {
     // Get the current status of the condor log file
 	ReadUserLog::FileStatus	GetCondorLogStatus();
 
+	// Verify schedd q contains expected jobs
+	void VerifyJobsInQueue();
+
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
 
