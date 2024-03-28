@@ -923,16 +923,21 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			oldest_output_timestamp = *output_timestamps.begin();
 			is_dataflow = oldest_output_timestamp > newest_input_timestamp;
 		}
+		if(! is_dataflow) { return false; }
 
-        // If the oldest output file is more recent than the executable,
+		// If the oldest output file is more recent than the executable,
 		// then this is a dataflow job.
 		job_ad->LookupString( ATTR_JOB_CMD, executable_file );
 		if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
 			int executable_file_timestamp = file_stat.st_mtime;
-			if ( oldest_output_timestamp > executable_file_timestamp ) {
-				is_dataflow = true;
-			}
+			is_dataflow = oldest_output_timestamp > executable_file_timestamp;
+		} else {
+			// The container universe doesn't need a real executable
+			// to run a job, but we'll worry about supporting that if
+			// anyone ever asks for it.
+			is_dataflow = false;
 		}
+		if(! is_dataflow) { return false; }
 
 		// If the oldest output file is more recent than the newest input file,
 		// then this is a dataflow job.
@@ -940,11 +945,10 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 		if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
 			if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
 				int stdin_file_timestamp = file_stat.st_mtime;
-				if ( oldest_output_timestamp > stdin_file_timestamp ) {
-					is_dataflow = true;
-				}
+				is_dataflow = oldest_output_timestamp > stdin_file_timestamp;
 			}
 		}
+        if(! is_dataflow) { return false; }
 	}
 
 	return is_dataflow;
