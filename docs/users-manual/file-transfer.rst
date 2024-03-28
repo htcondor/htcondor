@@ -519,17 +519,17 @@ initial working directory as ``/scratch/test/out1``.
 
     queue
 
+
 .. _dataflow:
 
 Dataflow Jobs
 '''''''''''''
 
 A **dataflow job** is a job that might not need to run because its desired
-outputs already exist, and are more up-to-date than the input files.
+outputs already exist and don't need to be recomputed.
 To skip such a job, add the :subcom:`skip_if_dataflow`
 submit command to your submit file, as in the following example:
 :index:`dataflow<single: arguments; example>`
-
 
 .. code-block:: condor-submit
 
@@ -554,16 +554,35 @@ submit command to your submit file, as in the following example:
 
     queue
 
-A dataflow job meets any of the following criteria:
+A dataflow job must meet a number of critera for HTCondor to correctly
+detect if it doesn't need to be run again:
 
-*   The output files are declared in :subcom:`transfer_output_files`
-*   Output files exist, are newer than input files
-*   Execute file is newer than input files
-*   Standard input file is newer than input files
+* Regarding the job's output:
+
+  * The output files are declared in :subcom:`transfer_output_files`.
+  * The job does not declare :subcom:`transfer_output_remaps`.
+  * The job does not set :subcom:`output_destination`.
+  * Every entry in :subcom:`transfer_output_files` is a file.
+  * No entry in :subcom:`transfer_output_files` is a symbolic link.
+
+* Regarding the job's input:
+
+  * The input files are declared in :subcom:`transfer_input_files`.
+  * Every entry in :subcom:`transfer_input_files` is a file.
+  * No entry in :subcom:`transfer_input_files` is a symbolic link.
+  * If the job sets :subcom:`input`, it must be a file that is not a
+    symbolic link.
+
+A dataflow job is skipped if only if the oldest file listed in
+:subcom:`transfer_output_files` is younger than:
+
+* the oldest file listed in :subcom:`transfer_input_files`;
+* the :subcom:`executable`;
+* and the :subcom:`input`, if any.
 
 Skipping dataflow jobs can potentially save large amounts of time in
-long-running workflows.  Like any other jobs, dataflow jobs may
-appear in nodes of a DAG.
+long-running workflows.  Like any other job, dataflow jobs may
+appear in the nodes of a DAG.
 
 
 Public Input Files
