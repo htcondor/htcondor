@@ -240,19 +240,3 @@ _remote_param_set( PyObject *, PyObject * args ) {
 
     Py_RETURN_NONE;
 }
-
-
-static PyObject *
-_remote_param_del( PyObject *, PyObject * args ) {
-    // _param_del(self.location._handle, key)
-    PyObject_Handle * handle = NULL;
-    const char * key = NULL;
-
-    if(! PyArg_ParseTuple( args, "Os", (PyObject **)& handle, & key )) {
-        // PyArg_ParseTuple() has already set an exception for us.
-        return NULL;
-    }
-
-    // FIXME
-    Py_RETURN_NONE;
-}

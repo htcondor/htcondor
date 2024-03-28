@@ -171,7 +171,6 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_remote_param_keys", &_remote_param_keys, METH_VARARGS, NULL},
 	{"_remote_param_get", &_remote_param_get, METH_VARARGS, NULL},
 	{"_remote_param_set", &_remote_param_set, METH_VARARGS, NULL},
-	{"_remote_param_del", &_remote_param_del, METH_VARARGS, NULL},
 
 
 	{"_history_query", &_history_query, METH_VARARGS, NULL},

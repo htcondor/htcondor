@@ -4,7 +4,6 @@ from .htcondor2_impl import (
     _remote_param_keys,
     _remote_param_get,
     _remote_param_set,
-    _remote_param_del,
 )
 
 from ._common_imports import (
