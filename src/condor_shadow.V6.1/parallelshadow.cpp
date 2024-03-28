@@ -159,6 +159,8 @@ ParallelShadow::spawn( void )
 	if( info_tid < 0 ) {
 		EXCEPT( "Can't register DC timer!" );
 	}
+	// Start the timer for the periodic user job policy
+	shadow_user_policy.startTimer();
 }
 
 
@@ -944,12 +946,12 @@ ParallelShadow::resourceReconnected( RemoteResource* /* rr */ )
 		}
 	}
 
+	// Start the timer for the periodic user job policy
+	shadow_user_policy.startTimer();
+
 		// If we know the job is already executing, ensure the timers
 		// that are supposed to start then are running.
 	if (began_execution) {
-			// Start the timer for the periodic user job policy
-		shadow_user_policy.startTimer();
-
 			// Start the timer for updating the job queue for this job
 		startQueueUpdateTimer();
 	}

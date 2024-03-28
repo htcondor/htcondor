@@ -127,6 +127,9 @@ UniShadow::spawnFinish()
 			// we're screwed, give up:
 		shutDown( JOB_NOT_STARTED );
 	}
+	// Start the timer for the periodic user job policy
+	shadow_user_policy.startTimer();
+
 }
 
 
@@ -486,6 +489,8 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 		if ( job_execute_date >= claim_start_date ) {
 			began_execution = true;
 		}
+		// Start the timer for the periodic user job policy
+		shadow_user_policy.startTimer();
 	}
 
 		// Since our reconnect worked, clear attemptingReconnectAtStartup
@@ -522,12 +527,7 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 		requestJobRemoval();
 	}
 
-		// If we know the job is already executing, ensure the timers
-		// that are supposed to start then are running.
 	if (began_execution) {
-			// Start the timer for the periodic user job policy
-		shadow_user_policy.startTimer();
-
 			// Start the timer for updating the job queue for this job
 		startQueueUpdateTimer();
 	}
