@@ -519,25 +519,51 @@ initial working directory as ``/scratch/test/out1``.
 
     queue
 
+.. _dataflow:
+
 Dataflow Jobs
 '''''''''''''
 
 A **dataflow job** is a job that might not need to run because its desired
-outputs already exist. To skip such a job, add the following line to your
-submit file: :index:`dataflow<single: arguments; example>`
+outputs already exist, and are more up-to-date than the input files.
+To skip such a job, add the :subcom:`skip_if_dataflow`
+submit command to your submit file, as in the following example:
+:index:`dataflow<single: arguments; example>`
+
 
 .. code-block:: condor-submit
 
+    executable      = my_program
+    universe        = vanilla
+
+    error           = logs/err.$(cluster)
+    output          = logs/out.$(cluster)
+    log             = logs/log.$(cluster)
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+
+    transfer_input_files = in1,in2
+    transfer_output_files = out1
+
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     skip_if_dataflow = True
+
+    queue
 
 A dataflow job meets any of the following criteria:
 
+*   The output files are declared in :subcom:`transfer_output_files`
 *   Output files exist, are newer than input files
 *   Execute file is newer than input files
 *   Standard input file is newer than input files
 
 Skipping dataflow jobs can potentially save large amounts of time in
-long-running workflows.
+long-running workflows.  Like any other jobs, dataflow jobs may
+appear in nodes of a DAG.
 
 
 Public Input Files
