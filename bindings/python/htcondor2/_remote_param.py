@@ -18,7 +18,9 @@ class RemoteParam(MutableMapping):
         and values of the specified daemon's configuration.  Assigning to
         a key sets the "runtime" configuration for the corresponding
         HTCondor macro, which won't take effect until the daemon has been
-        reconfigured.  See :macro:`ENABLE_RUNTIME_CONFIG`.
+        reconfigured.  See :macro:`ENABLE_RUNTIME_CONFIG`.  Nonetheless,
+        prior assignments will be reflected in subsequent lookups, but
+        see :meth:`refresh`, below.
 
         :param location:  A ClassAd with a ``MyAddress`` attribute, such as
             might be returned by :meth:`htcondor2.Collector.locate`.
