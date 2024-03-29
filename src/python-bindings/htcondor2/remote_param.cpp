@@ -101,9 +101,9 @@ _remote_param_keys( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    StringList keys( NULL, "," );
+    std::vector<std::string> keys;
     if(! reply.empty()) {
-        keys.append(reply.c_str());
+        keys.push_back(reply.c_str());
     }
 
     std::string key;
@@ -114,7 +114,7 @@ _remote_param_keys( PyObject *, PyObject * args ) {
             return NULL;
         }
 
-        keys.append(key.c_str());
+        keys.push_back(key.c_str());
     }
 
     if(! sock.end_of_message()) {
@@ -123,8 +123,7 @@ _remote_param_keys( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-
-    return PyUnicode_FromString(keys.to_string().c_str());
+    return PyUnicode_FromString(join(keys, ",").c_str());
 }
 
 
