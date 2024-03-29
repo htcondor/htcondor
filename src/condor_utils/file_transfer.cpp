@@ -854,7 +854,6 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
-	bool is_dataflow = false;
 	int newest_input_timestamp = -1;
 	int oldest_output_timestamp = -1;
 	std::set<int> input_timestamps;
@@ -869,6 +868,7 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	// Lookup the working directory
 	job_ad->LookupString( ATTR_JOB_IWD, iwd );
+
 
 	// Parse the list of input files
 	job_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, input_files );
@@ -890,6 +890,28 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			}
 		}
 	}
+
+	// The executable is an input file for purposes of this analysis.
+	job_ad->LookupString( ATTR_JOB_CMD, executable_file );
+	if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
+		input_timestamps.insert( file_stat.st_mtime );
+	} else {
+		// The container universe doesn't need a real executable
+		// to run a job, but we'll worry about supporting that if
+		// anyone ever asks for it.
+		return false;
+	}
+
+	// The standard input file, if any, is an input file for this analysis.
+	job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
+	if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
+		if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
+			input_timestamps.insert( file_stat.st_mtime );
+		} else {
+			return false;
+		}
+	}
+
 
 	// Parse the list of output files
 	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, output_files );
@@ -914,6 +936,7 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 		}
 	}
 
+
 	if ( !input_timestamps.empty() ) {
 		newest_input_timestamp = *input_timestamps.rbegin();
 
@@ -921,37 +944,11 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 		// then this is a dataflow job.
 		if ( !output_timestamps.empty() ) {
 			oldest_output_timestamp = *output_timestamps.begin();
-			is_dataflow = oldest_output_timestamp > newest_input_timestamp;
+			return oldest_output_timestamp > newest_input_timestamp;
 		}
-		if(! is_dataflow) { return false; }
-
-		// If the oldest output file is more recent than the executable,
-		// then this is a dataflow job.
-		job_ad->LookupString( ATTR_JOB_CMD, executable_file );
-		if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
-			int executable_file_timestamp = file_stat.st_mtime;
-			is_dataflow = oldest_output_timestamp > executable_file_timestamp;
-		} else {
-			// The container universe doesn't need a real executable
-			// to run a job, but we'll worry about supporting that if
-			// anyone ever asks for it.
-			is_dataflow = false;
-		}
-		if(! is_dataflow) { return false; }
-
-		// If the oldest output file is more recent than the newest input file,
-		// then this is a dataflow job.
-		job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
-		if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
-			if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
-				int stdin_file_timestamp = file_stat.st_mtime;
-				is_dataflow = oldest_output_timestamp > stdin_file_timestamp;
-			}
-		}
-        if(! is_dataflow) { return false; }
 	}
 
-	return is_dataflow;
+	return false;
 }
 
 #ifdef HAVE_HTTP_PUBLIC_FILES
