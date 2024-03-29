@@ -70,7 +70,7 @@ _remote_param_keys( PyObject *, PyObject * args ) {
     std::string reply;
     if(! sock.code(reply)) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to receive rely for parameter names." );
+        PyErr_SetString( PyExc_IOError, "Failed to receive reply for parameter names." );
         return NULL;
     }
 
