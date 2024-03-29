@@ -1945,7 +1945,7 @@ FILE* Open_macro_source (
 	} else {
 		fp = safe_fopen_wrapper_follow(source, "r");
 		if ( ! fp) {
-			config_errmsg = "can't open file";
+			config_errmsg = std::string("can't open file ") + source + ": " + strerror(errno);
 			return NULL;
 		}
 	}
