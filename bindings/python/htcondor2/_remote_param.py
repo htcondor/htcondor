@@ -25,7 +25,7 @@ class RemoteParam(MutableMapping):
         :param location:  A ClassAd with a ``MyAddress`` attribute, such as
             might be returned by :meth:`htcondor2.Collector.locate`.
         """
-        self.location = location
+        self._location = location
         self.refresh()
 
 
@@ -37,20 +37,20 @@ class RemoteParam(MutableMapping):
         has been reconfigured; if you have not reconfigured the daemon,
         this method will result in a dictionary without those changes.
         """
-        key_list = _remote_param_keys(self.location._handle)
-        self.keys = key_list.split(',')
-        self.cache = dict()
+        key_list = _remote_param_keys(self._location._handle)
+        self._keys = key_list.split(',')
+        self._cache = dict()
 
 
     def __getitem__(self, key : str):
         if not isinstance(key, str):
             raise TypeError("key must be a string")
-        if not key in self.keys:
+        if not key in self._keys:
             raise KeyError(key)
 
-        if not key in self.cache:
-            self.cache[key] = _remote_param_get(self.location._handle, key)
-        return self.cache[key]
+        if not key in self._cache:
+            self._cache[key] = _remote_param_get(self._location._handle, key)
+        return self._cache[key]
 
 
     def __setitem__(self, key : str, value : str):
@@ -59,27 +59,27 @@ class RemoteParam(MutableMapping):
         if not isinstance(value, str):
             raise TypeError("value must be a string")
 
-        self.keys.append(key)
-        self.cache[key] = value
-        return _remote_param_set(self.location._handle, key, value)
+        self._keys.append(key)
+        self._cache[key] = value
+        return _remote_param_set(self._location._handle, key, value)
 
 
     def __delitem__(self, key : str):
         if not isinstance(key, str):
             raise TypeError("key must be a string")
-        if not key in self.keys:
+        if not key in self._keys:
             raise KeyError(key)
 
-        del self.cache[key]
-        self.keys.remove(key)
-        return _remote_param_set(self.location._handle, key, "")
+        del self._cache[key]
+        self._keys.remove(key)
+        return _remote_param_set(self._location._handle, key, "")
 
 
     def __iter__(self):
-        for key in self.keys:
+        for key in self._keys:
             yield(key)
 
 
     def __len__(self):
-        return len(self.keys)
+        return len(self._keys)
 
