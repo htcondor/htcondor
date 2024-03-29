@@ -736,7 +736,7 @@ Singularity::canRun(const std::string &image, int timeout) {
 	if (retry_on_fail_without_namespaces && m_use_pid_namespaces) {
 		m_use_pid_namespaces = false;
 		dprintf(D_ALWAYS, "Singularity exec failed, trying again without pid namespaces\n");
-		return canRun(image);	// Ooooh... recursion!  fancy!
+		return canRun(image, timeout);	// Ooooh... recursion!  fancy!
 	}
 	else {
 		return false;
