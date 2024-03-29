@@ -16,6 +16,8 @@ start_config_command( int cmd, ReliSock & sock, const ClassAd & location ) {
     CondorError errorStack;
     bool result = sock.connect( d.addr(), 0, false, & errorStack );
     if(! result) {
+        dprintf( D_NETWORK | D_VERBOSE, "start_config_command(): sock.connect() failed: %s\n", errorStack.getFullText().c_str() );
+
         // This was HTCondorValueError in version 1.
         PyErr_SetString( PyExc_IOError, "Failed to connect to daemon." );
         return false;
@@ -23,6 +25,8 @@ start_config_command( int cmd, ReliSock & sock, const ClassAd & location ) {
 
     result = d.startCommand( cmd, & sock, 0, & errorStack );
     if(! result) {
+        dprintf( D_NETWORK | D_VERBOSE, "start_config_command(): d.startCommand() failed: %s\n", errorStack.getFullText().c_str() );
+
         // This was HTCondorIOError in version 1.
         PyErr_SetString( PyExc_IOError, "Failed to start command." );
         return false;
