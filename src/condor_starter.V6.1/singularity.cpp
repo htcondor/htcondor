@@ -618,7 +618,8 @@ bool
 Singularity::canRunSandbox(bool &can_use_pidnamespaces) {
 	std::string sandbox_dir;
 	param(sandbox_dir, "SINGULARITY_TEST_SANDBOX");
-	bool result = Singularity::canRun(sandbox_dir);  // canRun() will also set m_use_pid_namespaces
+	int sandbox_timeout = param_integer("SINGULARITY_TEST_SANDBOX_TIMEOUT", m_default_timeout);
+	bool result = Singularity::canRun(sandbox_dir, sandbox_timeout);  // canRun() will also set m_use_pid_namespaces
 	can_use_pidnamespaces = m_use_pid_namespaces;
 	return result;
 }
@@ -645,8 +646,8 @@ Singularity::add_containment_args(ArgList & sing_args)
 }
 
 
-bool 
-Singularity::canRun(const std::string &image) {
+bool
+Singularity::canRun(const std::string &image, int timeout) {
 #ifdef LINUX
 	bool success = true;
 	bool retry_on_fail_without_namespaces = false;
@@ -707,7 +708,7 @@ Singularity::canRun(const std::string &image) {
 	}
 	else {
 		int exitCode = -1;
-		pgm.wait_for_exit(m_default_timeout, &exitCode);
+		pgm.wait_for_exit(timeout, &exitCode);
 		if (WEXITSTATUS(exitCode) != 37) {  // hard coded return from exit_37
 			pgm.close_program(1);
 			dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); stderr is :\n",
