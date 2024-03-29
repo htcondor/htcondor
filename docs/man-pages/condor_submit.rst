@@ -1697,8 +1697,7 @@ POLICY COMMANDS
     :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
-    :index:`periodic_vacate<single: periodic_vacate; submit commands>`
- periodic_vacate = <ClassAd Boolean Expression>
+ :subcom-def:`periodic_vacate` = <ClassAd Boolean Expression>
     This expression is checked periodically for running jobs. If it becomes ``True``, 
     job is evicted from the machine it is running on, and return to the queue,
     in an Idle state. If unspecified, the default value is ``False``.
