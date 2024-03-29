@@ -555,7 +555,13 @@ submit command to your submit file, as in the following example:
     queue
 
 A dataflow job must meet a number of critera for HTCondor to correctly
-detect if it doesn't need to be run again:
+detect if it doesn't need to be run again.
+
+.. warning::
+
+    If these criteria are not met, and the job is marked as a dataflow
+    job, it might be skipped when it should not be.  HTCondor neither
+    detects nor warns when these criteria are not met.
 
 * Regarding the job's output:
 
