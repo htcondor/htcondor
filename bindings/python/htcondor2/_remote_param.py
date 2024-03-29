@@ -59,7 +59,8 @@ class RemoteParam(MutableMapping):
         if not isinstance(value, str):
             raise TypeError("value must be a string")
 
-        self._keys.append(key)
+        if key not in self._keys:
+            self._keys.append(key)
         self._cache[key] = value
         return _remote_param_set(self._location._handle, key, value)
 
