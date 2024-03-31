@@ -20,6 +20,10 @@ Release Notes:
   lifetime of the **V24** feature series.
   :jira:`2338`
 
+- The semantics of :subcom:`skip_if_dataflow` have been changed to make
+  more sense.  The restrictions have been :ref:`documented <dataflow>`.
+  :jira:`1899`
+
 New Features:
 
 - In the unlikely event that a shadow exception event happens, the text is
