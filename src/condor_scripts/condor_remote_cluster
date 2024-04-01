@@ -841,14 +841,12 @@ if [ -z "${release_url}" ]; then
     fi
 
     release_url="${url_base}${series}/${version}/release/condor-${version}-${platform}-stripped.tar.gz"
-    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" -e "UW_development" ; then
-        daily_url="${url_base}${series}/${version}/daily/condor-${version}-${platform}-stripped.tar.gz"
-    fi
+    update_url="${url_base}${series}/${version}/update/condor-${version}-${platform}-stripped.tar.gz"
     if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " -e "UW_development" ; then
         rc_url="${url_base}${series}/${version}/rc/condor-${version}-${platform}-stripped.tar.gz"
     fi
-    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " -e "UW_development" ; then
-        update_url="${url_base}${series}/${version}/update/condor-${version}-${platform}-stripped.tar.gz"
+    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" -e "UW_development" ; then
+        daily_url="${url_base}${series}/${version}/daily/condor-${version}-${platform}-stripped.tar.gz"
     fi
 fi
 
@@ -857,15 +855,16 @@ fi
 # OS X mktemp requires a template
 tmp_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
 rc=1
-if [ ! -z "$daily_url" ] ; then
-    show_progress "Downloading daily build for $remote_host" curl -f -s -S -o $tmp_dir/bosco-download.tar.gz $daily_url
+# Check for final release first, most general case
+if [ $rc -ne 0 ] ; then
+    show_progress "Downloading release build for $remote_host" curl -f -s -S -o $tmp_dir/bosco-download.tar.gz $release_url
     rc=$?
     if [ $rc -ne 0 ] ; then
-        echo "Failed to download daily build."
+        echo "Failed to download release build."
     fi
 fi
-# Prefer blessed RC
-if [ ! -z "$update_url" -a $rc -ne 0 ] ; then
+# Next, check for update releases or blessed RCs
+if [ $rc -ne 0 ] ; then
     show_progress "Downloading update build for $remote_host" curl -f -s -S -o $tmp_dir/bosco-download.tar.gz $update_url
     rc=$?
     if [ $rc -ne 0 ] ; then
@@ -879,11 +878,11 @@ if [ ! -z "$rc_url" -a $rc -ne 0 ] ; then
         echo "Failed to download rc build."
     fi
 fi
-if [ $rc -ne 0 ] ; then
-    show_progress "Downloading release build for $remote_host" curl -f -s -S -o $tmp_dir/bosco-download.tar.gz $release_url
+if [ ! -z "$daily_url" ] ; then
+    show_progress "Downloading daily build for $remote_host" curl -f -s -S -o $tmp_dir/bosco-download.tar.gz $daily_url
     rc=$?
     if [ $rc -ne 0 ] ; then
-        echo "Failed to download release build."
+        echo "Failed to download daily build."
     fi
 fi
 if [ $rc -eq 0 ] ; then
