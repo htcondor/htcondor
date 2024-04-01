@@ -7224,8 +7224,16 @@ removeOtherJobs( int cluster, int proc )
 					" was removed", ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
 					removeConstraint.c_str(), cluster, proc );
 		std::vector<PROC_ID> otherJobs = getJobsByConstraint(removeConstraint.c_str());
-		for (auto it = otherJobs.rbegin(); it != otherJobs.rend(); it++) {
-			scheduler.enqueueActOnJobMyself( *it, JA_REMOVE_JOBS, true);
+
+		if (!otherJobs.empty()) {
+			BeginTransaction();
+
+			for (auto it = otherJobs.rbegin(); it != otherJobs.rend(); it++) {
+				SetAttributeInt(it->cluster, it->proc, ATTR_JOB_STATUS, REMOVED);
+				scheduler.enqueueActOnJobMyself( *it, JA_REMOVE_JOBS, true);
+			}
+
+			CommitTransactionOrDieTrying();
 		}
 	}
 	return result;
