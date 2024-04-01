@@ -51,7 +51,7 @@ New Features:
   with that singularity or apptainer container runtime.
   :jira:`2180`
 
-- A new ``-jobset`` display option was added to *condor_q*.  When jobsets are enabled
+- A new ``-jobset`` display option was added to :tool:`condor_q`.  When jobsets are enabled
   in the *condor_schedd* it will show information from the jobset ads.
   :jira:`2358`
 

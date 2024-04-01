@@ -2063,7 +2063,7 @@ usage (const char *myName, int other)
 		"\t<cluster>.<proc>\t Get information about specific job\n"
 		"\t<owner>\t\t\t Information about jobs owned by <owner>\n"
 		"\t-factory\t\t Get information about late materialization job factories\n"
-//		"\t-jobset\t\t\t Use jobset ads if the Schedd has them\n"
+		"\t-jobset\t\t\t Get information from jobset ads\n"
 		"\t-autocluster\t\t Get information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\t Get information about jobs that match <expr>\n"
 		"\t-unmatchable\t\t Get information about jobs that do not match any machines\n"
@@ -3822,10 +3822,10 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	}
 	if ((useFastPath > 1) && ((fetch_opts & QueryFetchOpts::fetch_FromMask) == QueryFetchOpts::fetch_Jobs)) {
 		if (dash_tot && ! dash_unmatchable) {
-			fetch_opts |= fetch_SummaryOnly;
+			fetch_opts |= QueryFetchOpts::fetch_SummaryOnly;
 #ifdef CONDOR_Q_HANDLE_CLUSTER_AD 
 		} else if (dash_factory && (dash_long || ! dash_batch)) {
-			fetch_opts |= fetch_IncludeClusterAd;
+			fetch_opts |= QueryFetchOpts::fetch_IncludeClusterAd;
 #endif
 		} else if (dash_jobset) {
 			fetch_opts |= QueryFetchOpts::fetch_JobsetAds;
