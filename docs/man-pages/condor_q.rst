@@ -416,9 +416,9 @@ Options
     normal output of *condor_q* will be blank.
  **-factory**
     (output option) Display information about late materialization job
-    factories in the *condor_shedd*.
+    factories in the *condor_schedd*.
  **-jobset**
-    (output option) Display information about jobsets in the *condor_shedd*
+    (output option) Display information about jobsets in the *condor_schedd*
  **-autocluster**
     (output option) Output *condor_schedd* daemon auto cluster
     information. For each auto cluster, output the unique ID of the auto
