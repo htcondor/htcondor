@@ -589,10 +589,11 @@ submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd *
 
         ClassAd * procAd = sb->make_job_ad( JOB_ID_KEY(clusterID, procID),
             itemIndex, c, false, spool, NULL, NULL );
-        // FIXME: do something with sb->error_stack().
         if(! procAd) {
+            std::string error = "Failed to create job ad";
+            formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
             // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Failed to create job ad" );
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
             return -1;
         }
 
@@ -620,9 +621,10 @@ submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd *
 
             int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
                 * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
-            // FIXME: do something with sb->error_stack()
             if( rval < 0 ) {
-                PyErr_SetString( PyExc_RuntimeError, "Failed to send cluster attributes" );
+                std::string error = "Failed to send cluster attributes";
+                formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
+                PyErr_SetString( PyExc_RuntimeError, error.c_str() );
                 return -1;
             }
         }
