@@ -30,11 +30,10 @@
 #include "my_username.h"
 #include "condor_environ.h"
 #include "dagman_main.h"
-#include "dagman_commands.h"
 #include "condor_getcwd.h"
-#include "directory.h"
 #include "condor_version.h"
 #include "dagman_metrics.h"
+#include "directory.h"
 
 namespace deep = DagmanDeepOptions;
 

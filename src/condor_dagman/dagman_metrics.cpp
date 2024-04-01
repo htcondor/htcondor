@@ -22,13 +22,7 @@
 #include "debug.h"
 #include "safe_fopen.h"
 #include "condor_version.h"
-#include "condor_string.h" // for getline()
-#include "condor_arglist.h"
 #include "utc_time.h"
-
-#include <iostream>
-#include <queue>
-#include <unordered_map>
 
 double DagmanMetrics::_startTime = 0.0;
 std::string DagmanMetrics::_dagmanId;

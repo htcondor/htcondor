@@ -20,14 +20,10 @@
 
 #include "condor_common.h"
 #include "job.h"
-#include "condor_string.h"
 #include "condor_debug.h"
-#include "dagman_main.h"
 #include "read_multiple_logs.h"
 #include "throttle_by_category.h"
 #include "dag.h"
-#include "dagman_metrics.h"
-#include <set>
 #include <forward_list>
 
 static const char *JOB_TAG_NAME = "+job_tag_name";
@@ -353,13 +349,7 @@ int Job::CountChildren() const
 		if (_multiple_children) {
 			Edge * edge = Edge::ById(_child);
 			ASSERT(edge);
-		#if 1 // if the child list has a size method
 			count = (int)edge->size();
-		#else // if it does not
-			for (auto it = edge->_children.begin(); it != edge->_children.end(); ++it) {
-				++count;
-			}
-		#endif
 		} else {
 			count = 1;
 		}
