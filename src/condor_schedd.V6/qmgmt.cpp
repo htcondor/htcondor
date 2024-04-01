@@ -84,7 +84,6 @@ ClassAdLog<K,AD>::filter_iterator::operator++(int)
 
 	HashIterator<K, AD> end = m_table->end();
 	bool boolVal = false;
-	int intVal = 0;
 	int miss_count = 0;
 	Stopwatch sw;
 	while (!(m_cur == end))
