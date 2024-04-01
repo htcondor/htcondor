@@ -20,9 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_attributes.h"
-#include "util_lib_proto.h"
 #include "my_popen.h"
-#include "condor_string.h"
 #include "submit_utils.h"
 #include "condor_version.h"
 #include "my_username.h"
