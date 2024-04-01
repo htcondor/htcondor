@@ -882,11 +882,11 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 			case HRS_SCHEDD_JOB_HIST:
 				break;
 			case HRS_STARTD_HIST:
-				ad.InsertAttr("HistoryRecordSource","STARTD");
+				ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"STARTD");
 				break;
 			case HRS_JOB_EPOCH:
 				if (v.built_since_version(10, 3, 0)) {
-					ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+					ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"JOB_EPOCH");
 					if (read_dir) { ad.InsertAttr("HistoryFromDir",true); }
 				} else {
 					formatstr(err_msg, "The remote schedd (%s) version does not support remote job epoch history.",g_name.c_str());

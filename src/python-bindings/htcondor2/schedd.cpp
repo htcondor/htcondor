@@ -851,10 +851,10 @@ _history_query(PyObject *, PyObject * args) {
         case 0: /* HRS_SCHEDD_JOB_HIST */
             break;
         case 1: /* HRS_STARTD_JOB_HIST */
-            commandAd.InsertAttr("HistoryRecordSource" /* FIXME */, "STARTD");
+            commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "STARTD");
             break;
         case 2: /* HRS_JOB_EPOCH */
-            commandAd.InsertAttr("HistoryRecordSource" /* FIXME */, "JOB_EPOCH");
+            commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "JOB_EPOCH");
             break;
         default:
             // This was HTCondorValueError in version 1.
