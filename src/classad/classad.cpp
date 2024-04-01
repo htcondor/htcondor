@@ -1169,7 +1169,6 @@ EvaluateExpr( const ExprTree *tree , Value &val, Value::ValueType mask ) const
 	return res;
 }
 
-
 bool ClassAd::
 EvaluateExpr( const ExprTree *tree , Value &val , ExprTree *&sig ) const
 {

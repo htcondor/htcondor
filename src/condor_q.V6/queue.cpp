@@ -147,7 +147,7 @@ static ClassAdFileParseType::ParseType dash_long_format = ClassAdFileParseType::
 static bool print_attrs_in_hash_order = false;
 static bool auto_standard_summary = false; // print standard summary
 static  int dash_autocluster = 0; // can be 0, or CondorQ::fetch_DefaultAutoCluster or CondorQ::fetch_GroupBy
-static  int default_fetch_opts = CondorQ::fetch_MyJobs;
+static  int default_fetch_opts = QueryFetchOpts::fetch_MyJobs;
 bool widescreen = false;
 //static  int  use_old_code = true;
 static  bool expert = false;
@@ -527,9 +527,9 @@ int main (int argc, const char **argv)
 	scheddQuery.setDesiredAttrs(attrs);
 
 	if (param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
-		default_fetch_opts |= CondorQ::fetch_MyJobs;
+		default_fetch_opts |= QueryFetchOpts::fetch_MyJobs;
 	} else {
-		default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+		default_fetch_opts &= ~QueryFetchOpts::fetch_MyJobs;
 	}
 
 	dash_batch_is_default = param_boolean("CONDOR_Q_DASH_BATCH_IS_DEFAULT", true);
@@ -580,7 +580,7 @@ int main (int argc, const char **argv)
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
 				if (v.built_since_version(8,3,3)) {
-					bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & CondorQ::fetch_MyJobs);
+					bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & QueryFetchOpts::fetch_MyJobs);
 					useFastScheddQuery = v3_query_with_auth ? 3 : 2;
 				} else {
 					useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
@@ -705,7 +705,7 @@ int main (int argc, const char **argv)
 		ad->LookupString(ATTR_VERSION, scheddVersion);
 		CondorVersionInfo v(scheddVersion.c_str());
 		if (v.built_since_version(8, 3, 3)) {
-			bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & CondorQ::fetch_MyJobs);
+			bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & QueryFetchOpts::fetch_MyJobs);
 			useFastScheddQuery = v3_query_with_auth ? 3 : 2;
 		} else {
 			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
@@ -790,6 +790,7 @@ enum {
 	QDO_Progress,
 
 	QDO_AutoclusterNormal, // Print typical autocluster attributes
+	QDO_JobsetNormal,      // Print jobset counters
 
 	QDO_Custom,  // a custom printformat file was loaded, standard outputs should be below this one.
 	QDO_Analyze, // not really a print format.
@@ -835,7 +836,7 @@ processCommandLineArguments (int argc, const char *argv[])
 					exit( 1 );
 				}
 				// dont default to 'my jobs' if an owner was specified.
-				default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+				default_fetch_opts &= ~QueryFetchOpts::fetch_MyJobs;
 			}
 
 			continue;
@@ -1068,7 +1069,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				free (uid_domain);
 			}
 			// dont default to 'my jobs'
-			default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+			default_fetch_opts &= ~QueryFetchOpts::fetch_MyJobs;
 
 			// insert the constraints
 			submittorQuery.addORConstraint (constraint);
@@ -1171,11 +1172,11 @@ processCommandLineArguments (int argc, const char *argv[])
 		} 
 		else
 		if (is_dash_arg_colon_prefix (dash_arg, "autocluster", &pcolon, 2)) {
-			dash_autocluster = CondorQ::fetch_DefaultAutoCluster;
+			dash_autocluster = QueryFetchOpts::fetch_DefaultAutoCluster;
 		}
 		else
 		if (is_dash_arg_colon_prefix (dash_arg, "group-by", &pcolon, 2)) {
-			dash_autocluster = CondorQ::fetch_GroupBy;
+			dash_autocluster = QueryFetchOpts::fetch_GroupBy;
 		}
 		else
 		if (is_dash_arg_colon_prefix (dash_arg, "factory", &pcolon, 4)) {
@@ -1196,7 +1197,7 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 		else
 		if (is_dash_arg_colon_prefix (dash_arg, "jobset", &pcolon, 5)) {
-			dash_jobset = CondorQ::fetch_IncludeJobsetAds;
+			dash_jobset = QueryFetchOpts::fetch_IncludeJobsetAds;
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "attributes", 2)) {
@@ -1271,7 +1272,7 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "allusers", 2) || is_dash_arg_prefix (dash_arg, "all-users", 2)) {
-			default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+			default_fetch_opts &= ~QueryFetchOpts::fetch_MyJobs;
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "schedd-constraint", 5)) {
@@ -1675,17 +1676,18 @@ processCommandLineArguments (int argc, const char *argv[])
 				mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
 			//	mode == QDO_JobIdle || // TODO: need a custom format for -batch -idle
 				mode == QDO_DAG) { // DAG and batch go naturally together
-				if ( ! dash_factory && ! dash_run && ! dash_idle) {
+				if ( ! dash_factory && ! dash_run && ! dash_idle && ! dash_jobset) {
 					dash_batch = dash_batch_is_default;
 				}
 			}
 		}
 
 		// for now, can't use both -batch and one of the aggregation modes.
-		if (dash_autocluster && dash_batch) {
+		if (dash_autocluster && (dash_batch || dash_jobset)) {
 			if (dash_batch_specified) {
+				const char * dashopt = dash_jobset ? "-jobset" :  "-autocluster";
 				fprintf( stderr, "Error: -batch conflicts with %s\n",
-					(dash_autocluster == CondorQ::fetch_GroupBy) ? "-group-by" : "-autocluster" );
+					(dash_autocluster == QueryFetchOpts::fetch_GroupBy) ? "-group-by" : dashopt );
 				exit( 1 );
 			}
 			dash_batch = false;
@@ -1715,7 +1717,7 @@ processCommandLineArguments (int argc, const char *argv[])
 	// as well as the dag itself.
 	if ( ! constrID.empty()) {
 		// dont default to 'my jobs'
-		default_fetch_opts &= ~CondorQ::fetch_MyJobs;
+		default_fetch_opts &= ~QueryFetchOpts::fetch_MyJobs;
 
 		for (std::vector<CondorID>::const_iterator it = constrID.begin(); it != constrID.end(); ++it) {
 
@@ -2306,6 +2308,7 @@ extern const char * const jobDAG_PrintFormat;
 extern const char * const jobTotals_PrintFormat;
 extern const char * const jobProgress_PrintFormat; // NEW, summarize batch progress
 extern const char * const autoclusterNormal_PrintFormat;
+extern const char * const jobsetNormal_PrintFormat;
 
 static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_mode)
 {
@@ -2327,7 +2330,8 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 
 	// If no display mode has been set, pick one.
 	if ((qdo_mode & QDO_BaseMask) == QDO_NotSet) {
-		if (dash_autocluster == CondorQ::fetch_DefaultAutoCluster) { qdo_mode = QDO_AutoclusterNormal; }
+		if (dash_autocluster == QueryFetchOpts::fetch_DefaultAutoCluster) { qdo_mode = QDO_AutoclusterNormal; }
+		else if (dash_jobset == QueryFetchOpts::fetch_IncludeJobsetAds) { qdo_mode = QDO_JobsetNormal; }
 		else { 
 			int mode = QDO_JobNormal;
 			if (show_held) {
@@ -2366,6 +2370,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		{ QDO_Totals,         "TOTALS",   jobTotals_PrintFormat },
 		{ QDO_Progress,       "PROGRESS", jobProgress_PrintFormat },
 		{ QDO_AutoclusterNormal, "AUTOCLUSTER", autoclusterNormal_PrintFormat },
+		{ QDO_JobsetNormal,   "JOBSET",   jobsetNormal_PrintFormat },
 	};
 
 	int ixInfo = -1;
@@ -2506,7 +2511,7 @@ static bool AddJobToClassAdCollection(void * pv, ClassAd* ad) {
 
 	if (dash_autocluster) {
 		const char * attr_id = ATTR_AUTO_CLUSTER_ID;
-		if (dash_autocluster == CondorQ::fetch_GroupBy) attr_id = "Id";
+		if (dash_autocluster == QueryFetchOpts::fetch_GroupBy) attr_id = "Id";
 		ad->LookupInteger(attr_id, jobid.id);
 	} else {
 		if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster)) {
@@ -2750,7 +2755,7 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 
 	if (dash_autocluster) {
 		const char * attr_id = ATTR_AUTO_CLUSTER_ID;
-		if (dash_autocluster == CondorQ::fetch_GroupBy) attr_id = "Id";
+		if (dash_autocluster == QueryFetchOpts::fetch_GroupBy) attr_id = "Id";
 		job->LookupInteger(attr_id, jobid.id);
 	} else {
 		if ( ! job->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster)) {
@@ -3815,15 +3820,15 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ( ! fetch_opts && (useFastPath > 1)) {
 		fetch_opts = default_fetch_opts;
 	}
-	if ((useFastPath > 1) && ((fetch_opts & CondorQ::fetch_FromMask) == CondorQ::fetch_Jobs)) {
+	if ((useFastPath > 1) && ((fetch_opts & QueryFetchOpts::fetch_FromMask) == QueryFetchOpts::fetch_Jobs)) {
 		if (dash_tot && ! dash_unmatchable) {
-			fetch_opts |= CondorQ::fetch_SummaryOnly;
+			fetch_opts |= fetch_SummaryOnly;
 #ifdef CONDOR_Q_HANDLE_CLUSTER_AD 
 		} else if (dash_factory && (dash_long || ! dash_batch)) {
-			fetch_opts |= CondorQ::fetch_IncludeClusterAd;
+			fetch_opts |= fetch_IncludeClusterAd;
 #endif
 		} else if (dash_jobset) {
-			fetch_opts |= CondorQ::fetch_IncludeJobsetAds;
+			fetch_opts |= QueryFetchOpts::fetch_JobsetAds;
 		}
 	}
 	classad::References no_attrs;
@@ -4337,6 +4342,18 @@ const char * const autoclusterNormal_PrintFormat = "SELECT\n"
 "   Requirements  AS REQUIREMENTS PRINTF %r\n"
 "SUMMARY NONE\n";
 
+const char * const jobsetNormal_PrintFormat = "SELECT\n"
+"   JobSetId      AS  JOBSETID  WIDTH 8 PRINTF %8d\n"
+"   JobSetName    AS  NAME      WIDTH AUTO\n"
+"   Owner         AS  OWNER     WIDTH AUTO PRINTAS OWNER OR ??\n"
+"   NumCompleted  AS  COMPLETE  WIDTH 8 PRINTF %8d\n"
+"   NumRemoved    AS  REMOVED   WIDTH 7 PRINTF %7d\n"
+"   NumIdle       AS '   IDLE'  WIDTH 7 PRINTF %7d\n"
+"   NumRunning    AS  RUNNING   WIDTH 7 PRINTF %7d\n"
+"   NumHeld       AS '   HELD'  WIDTH 7 PRINTF %7d\n"
+"WHERE ProcId is undefined\n"
+"SUMMARY NONE\n";
+
 
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
@@ -4403,15 +4420,16 @@ static int set_print_mask_from_stream(
 		}
 		if (propt.aggregate) {
 			if (propt.aggregate == PR_COUNT_UNIQUE) {
-				dash_autocluster = CondorQ::fetch_GroupBy;
+				dash_autocluster = QueryFetchOpts::fetch_GroupBy;
 				attrs.insert(propt.attrs.begin(), propt.attrs.end());
 			} else if (propt.aggregate == PR_FROM_AUTOCLUSTER) {
-				dash_autocluster = CondorQ::fetch_DefaultAutoCluster;
+				dash_autocluster = QueryFetchOpts::fetch_DefaultAutoCluster;
 			}
 		} else {
 			// make sure that the projection has ClusterId and ProcId.
 			propt.attrs.insert(ATTR_CLUSTER_ID);
 			propt.attrs.insert(ATTR_PROC_ID);
+			if (dash_jobset) propt.attrs.insert(ATTR_JOB_SET_ID);
 			if ( ! (propt.headfoot & HF_NOSUMMARY)) {
 				// in case we are generating the summary line, make sure that we have JobStatus and JobUniverse
 				propt.attrs.insert(ATTR_JOB_STATUS);

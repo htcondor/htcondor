@@ -639,6 +639,10 @@
 #define ATTR_REQUEUE_REASON  "RequeueReason"
 #define ATTR_REQUIREMENTS  "Requirements"
 #define ATTR_CUDA_VERSION "CUDAVersion"
+#define ATTR_QUERY_Q_IDS                "IDs"
+#define ATTR_QUERY_Q_INCLUDE_CLUSTER_AD "IncludeClusterAd"
+#define ATTR_QUERY_Q_INCLUDE_JOBSET_ADS "IncludeJobsetAds"
+#define ATTR_QUERY_Q_NO_PROC_ADS        "NoProcAds"
 #define ATTR_RESOURCE_REQUEST_CONSTRAINT "_condor_RESOURCE_CONSTRAINT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"

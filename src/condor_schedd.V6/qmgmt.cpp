@@ -87,19 +87,8 @@ ClassAdLog<K,AD>::filter_iterator::operator++(int)
 	int intVal = 0;
 	int miss_count = 0;
 	Stopwatch sw;
-	sw.start();
 	while (!(m_cur == end))
 	{
-		miss_count++;
-			// 500 was chosen here based on a queue of 1M jobs and
-			// estimated 30ns per clock_gettime call - resulting in
-			// an overhead of 0.06 ms from the timing calls to iterate
-			// through a whole queue.  Compared to the cost of doing
-			// the rest of the iteration (6ms per 10k ads, or 600ms)
-			// for the whole queue, I consider this overhead
-			// acceptable.  BB, 09/2014.
-		if ((miss_count % 500 == 0) && (sw.get_ms() > m_timeslice_ms)) {break;}
-
 		cur = *this;
 		//const K & tmp_key = (*m_cur).first;
 		AD tmp_ad = (*m_cur++).second;
@@ -110,7 +99,11 @@ ClassAdLog<K,AD>::filter_iterator::operator++(int)
 
 		// we want to ignore all but job ads, unless the options flag indicates we should
 		// also iterate this type of ad, in any case we always want to skip the header ad.
-		if ( ! tmp_ad->IsJob()) {
+		if (tmp_ad->IsJob()) {
+			if (m_options & JOB_QUEUE_ITERATOR_OPT_NO_PROC_ADS) {
+				continue; // don't iterate this one
+			}
+		} else {
 			if (tmp_ad->IsCluster() && (m_options & JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS)) {
 				// iterate this one
 			} else if (tmp_ad->IsJobSet() && (m_options & JOB_QUEUE_ITERATOR_OPT_INCLUDE_JOBSETS)) {
@@ -121,28 +114,41 @@ ClassAdLog<K,AD>::filter_iterator::operator++(int)
 		}
 
 		if (m_requirements) {
+			//IsDebugCatAndVerbosity(D_COMMAND | D_VERBOSE) {
+			//  dprintf(D_COMMAND | D_VERBOSE, "ClassAdLog::filter_iterator++ checking requirements: %s\n", ExprTreeToString(&requirements));
+			//}
+			classad::Value result;
+		#if 1
+			bool eval_ok = classad::ClassAd::EvaluateExpr(tmp_ad, m_requirements, result, classad::Value::ValueType::NUMBER_VALUES);
+		#else
 			classad::ExprTree &requirements = *const_cast<classad::ExprTree*>(m_requirements);
-			//dprintf(D_COMMAND | D_VERBOSE, "ClassAdLog::filter_iterator++ checking requirements: %s\n", ExprTreeToString(&requirements));
 			const classad::ClassAd *old_scope = requirements.GetParentScope();
 			requirements.SetParentScope( tmp_ad );
-			classad::Value result;
-			int retval = requirements.Evaluate(result);
+			bool eval_ok = tmp_ad->EvaluateExpr(requirements, result, classad::Value::ValueType::NUMBER_VALUES);
 			requirements.SetParentScope(old_scope);
-			if (!retval) {
-				dprintf(D_FULLDEBUG, "Unable to evaluate ad.\n");
-				continue;
-			}
+		#endif
+			eval_ok = eval_ok && result.IsBooleanValueEquiv(boolVal);
+			if ( ! eval_ok || ! boolVal) {
 
-			if (!(result.IsBooleanValue(boolVal) && boolVal) &&
-					!(result.IsIntegerValue(intVal) && intVal)) {
-				//dprintf(D_COMMAND | D_VERBOSE, "requirements did not evaluate to bool or int. %s\n", ClassAdValueToString(result));
+				if ( ! eval_ok && IsDebugCatAndVerbosity(D_COMMAND | D_VERBOSE)) {
+					dprintf(D_COMMAND | D_VERBOSE, "requirements did not evaluate to bool equivalent: %s\n", ClassAdValueToString(result));
+				}
+
+				// 500 (ish) was chosen here based on a queue of 1M jobs and
+				// estimated 30ns per clock_gettime call - resulting in
+				// an overhead of 0.06 ms from the timing calls to iterate
+				// through a whole queue.  Compared to the cost of doing
+				// the rest of the iteration (6ms per 10k ads, or 600ms)
+				// for the whole queue, I consider this overhead
+				// acceptable.  BB, 09/2014.
+				if ( ! miss_count) { sw.start(); }
+				++miss_count;
+				if ((miss_count & 0x1FF) == 0 && (sw.get_ms() > m_timeslice_ms)) {break;}
+
+				// keep looking
 				continue;
 			}
 		}
-		//int tmp_int;
-		//if (!tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, tmp_int) || !tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, tmp_int)) {
-		//	continue;
-		//}
 		cur.m_found_ad = true;
 		m_found_ad = true;
 		break;

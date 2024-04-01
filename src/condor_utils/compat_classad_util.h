@@ -222,6 +222,7 @@ public:
 	void set(char * str) { if (str && (exprstr != str)) { clear(); exprstr = str; } }
 	// get the constraint, parsing the string if needed to construct it.
 	// returns NULL if no constraint
+	bool parse(const char * str) { clear(); return ParseClassAdRvalExpr(str, expr); }
 	classad::ExprTree * Expr(int * error=NULL) const {
 		int rval = 0;
 		if ( ! expr && ! empty()) {
