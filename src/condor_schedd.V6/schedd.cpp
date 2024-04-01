@@ -7195,6 +7195,7 @@ Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log )
 	}
 }
 
+static std::vector<PROC_ID> getJobsByConstraint(const char *constraint);
 /**
  * Remove any jobs that match the specified job's OtherJobRemoveRequirements
  * attribute, if it has one.
@@ -7222,10 +7223,11 @@ removeOtherJobs( int cluster, int proc )
 					"removed because <%s = %s> fired when job (%d.%d)"
 					" was removed", ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
 					removeConstraint.c_str(), cluster, proc );
-		result = abortJobsByConstraint(removeConstraint.c_str(),
-					reason.c_str(), true);
+		std::vector<PROC_ID> otherJobs = getJobsByConstraint(removeConstraint.c_str());
+		for (auto it = otherJobs.rbegin(); it != otherJobs.rend(); it++) {
+			scheduler.enqueueActOnJobMyself( *it, JA_REMOVE_JOBS, true);
+		}
 	}
-
 	return result;
 }
 
@@ -15854,6 +15856,24 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 	return result;
 }
 
+static 
+std::vector<PROC_ID> getJobsByConstraint(const char *constraint) {
+	std::vector<PROC_ID> result;
+	ClassAd *ad = GetNextJobByConstraint(constraint, 1);
+	while (ad) {
+		int cluster, proc;
+		if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster) ||
+			!ad->LookupInteger(ATTR_PROC_ID, proc)) {
+
+			result.clear();
+			break;
+		}
+		result.emplace_back(cluster, proc);
+		ad = GetNextJobByConstraint(constraint, 0);
+	}
+	return result;
+}
+
 bool
 abortJobsByConstraint( const char *constraint,
 					   const char *reason,
@@ -15861,8 +15881,6 @@ abortJobsByConstraint( const char *constraint,
 {
 	bool result = true;
 
-	std::vector<PROC_ID> jobs;
-	int job_count;
 
 	dprintf(D_FULLDEBUG, "abortJobsByConstraint: '%s'\n", constraint);
 
@@ -15870,37 +15888,22 @@ abortJobsByConstraint( const char *constraint,
 		BeginTransaction();
 	}
 
-	job_count = 0;
-	ClassAd *ad = GetNextJobByConstraint(constraint, 1);
-	while ( ad ) {
-		int cluster, proc;
-		if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster) ||
-			!ad->LookupInteger(ATTR_PROC_ID, proc)) {
+	std::vector<PROC_ID> jobs = getJobsByConstraint(constraint);
 
-			result = false;
-			job_count = 0;
-			break;
-		}
-		jobs.emplace_back(cluster, proc);
-
-		dprintf(D_FULLDEBUG, "remove by constraint matched: %d.%d\n", cluster, proc);
-
-		job_count++;
-
-		ad = GetNextJobByConstraint(constraint, 0);
-	}
-
-	job_count--;
+	int job_count = jobs.size();
 	std::vector<PROC_ID> removedJobs;
-	while ( job_count >= 0 ) {
-		dprintf(D_FULLDEBUG, "removing: %d.%d\n",
-				jobs[job_count].cluster, jobs[job_count].proc);
 
-		bool tmpResult = abortJobRaw(jobs[job_count].cluster,
-									   jobs[job_count].proc,
-									   reason);
+	// Go in reverse order, as later jobs are more likely to Be
+	// idle, and removing all idle jobs makes FindRunnableJob
+	// much faster when we go to remove any Running jobs
+	//
+	for (auto it = jobs.rbegin(); it != jobs.rend(); ++it) {
+		auto [cluster, proc] = *it;
+		dprintf(D_FULLDEBUG, "removing: %d.%d\n", cluster, proc);
+
+		bool tmpResult = abortJobRaw(cluster, proc, reason);
 		if ( tmpResult ) {
-			removedJobs.emplace_back(jobs[job_count].cluster, jobs[job_count].proc);
+			removedJobs.emplace_back(cluster, proc);
 		}
 		result = result && tmpResult;
 		job_count--;

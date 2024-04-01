@@ -24,6 +24,11 @@ Release Notes:
   more sense.  The restrictions have been :ref:`documented <dataflow>`.
   :jira:`1899`
 
+- When removing a large dag, the schedd now removes any existing child
+  dag jobs in a non-blocking way, making the schedd more responsive during
+  this removal.
+  :jira:`2364`
+
 New Features:
 
 - In the unlikely event that a shadow exception event happens, the text is
