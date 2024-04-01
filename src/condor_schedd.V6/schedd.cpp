@@ -2934,12 +2934,19 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 	}
 
 	int iter_options = 0;
-	bool include_cluster = false, include_jobsets = false;
-	if (queryAd.EvaluateAttrBool("IncludeClusterAd", include_cluster) && include_cluster) {
+	bool include_cluster = false, include_jobsets = false, no_proc_ads = false;
+	if (queryAd.EvaluateAttrBool(ATTR_QUERY_Q_INCLUDE_CLUSTER_AD, include_cluster) && include_cluster) {
 		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS;
 	}
-	if (queryAd.EvaluateAttrBool("IncludeJobsetAds", include_jobsets) && include_jobsets) {
+	if (queryAd.EvaluateAttrBool(ATTR_QUERY_Q_INCLUDE_JOBSET_ADS, include_jobsets) && include_jobsets) {
 		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_JOBSETS;
+	}
+	if (queryAd.EvaluateAttrBool(ATTR_QUERY_Q_NO_PROC_ADS, no_proc_ads) && no_proc_ads) {
+		iter_options |= JOB_QUEUE_ITERATOR_OPT_NO_PROC_ADS;
+	}
+	std::string ids;
+	if (queryAd.LookupString(ATTR_QUERY_Q_IDS, ids) && ! ids.empty()) {
+		// TODO: add a ID based QueryJobAdsContinuation instead of the current JobQueue iteration based
 	}
 
 	if (IsDebugCatAndVerbosity(dpf_level)) {

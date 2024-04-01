@@ -82,7 +82,7 @@ _schedd_query(PyObject *, PyObject * args) {
         addr, slAttributes, opts, limit,
         _schedd_query_callback, & results,
         2 /* use fetchQueueFromHostAndProcess2() */, & errStack,
-        opts == CondorQ::fetch_SummaryOnly ? & summaryAd : NULL
+        opts == QueryFetchOpts::fetch_SummaryOnly ? & summaryAd : NULL
     );
 
     switch( rv ) {
@@ -115,7 +115,7 @@ _schedd_query(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    if( opts == CondorQ::fetch_SummaryOnly ) {
+    if( opts == QueryFetchOpts::fetch_SummaryOnly ) {
         ASSERT(summaryAd != NULL);
         ASSERT(results.size() == 0);
         results.push_back(summaryAd);

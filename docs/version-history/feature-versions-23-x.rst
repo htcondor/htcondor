@@ -51,6 +51,10 @@ New Features:
   with that singularity or apptainer container runtime.
   :jira:`2180`
 
+- A new ``-jobset`` display option was added to :tool:`condor_q`.  If jobsets are enabled
+  in the *condor_schedd* it will show information from the jobset ads.
+  :jira:`2358`
+
 - If a schedd has a schedd-specific SPOOL directory (set by
   schedd_name.SPOOL), the schedd now creates that directory
   with the proper ownership and permissions.
