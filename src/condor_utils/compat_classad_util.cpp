@@ -87,21 +87,21 @@ const char * ClassAdValueToString ( const classad::Value & value )
 	return ClassAdValueToString(value, buffer);
 }
 
-classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree) {
+const classad::ExprTree * SkipExprEnvelope(const classad::ExprTree * tree) {
 	if ( ! tree) return tree;
 	classad::ExprTree::NodeKind kind = tree->GetKind();
 	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
-		return ((classad::CachedExprEnvelope*)tree)->get();
+		return (dynamic_cast<const classad::CachedExprEnvelope *>(tree))->get();
 	}
 	return tree;
 }
 
-classad::ExprTree * SkipExprParens(classad::ExprTree * tree) {
+const classad::ExprTree * SkipExprParens(const classad::ExprTree * tree) {
 	if ( ! tree) return tree;
 	classad::ExprTree::NodeKind kind = tree->GetKind();
-	classad::ExprTree * expr = tree;
+	classad::ExprTree * expr = const_cast<classad::ExprTree*>(tree);
 	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
-		expr = ((classad::CachedExprEnvelope*)tree)->get();
+		expr = (dynamic_cast<const classad::CachedExprEnvelope*>(tree))->get();
 		if (expr) tree = expr;
 	}
 
@@ -109,7 +109,7 @@ classad::ExprTree * SkipExprParens(classad::ExprTree * tree) {
 	while (kind == classad::ExprTree::OP_NODE) {
 		classad::ExprTree *e2, *e3;
 		classad::Operation::OpKind op;
-		((classad::Operation*)tree)->GetComponents(op, expr, e2, e3);
+		(dynamic_cast<const classad::Operation*>(tree))->GetComponents(op, expr, e2, e3);
 		if ( ! expr || op != classad::Operation::PARENTHESES_OP) break;
 		tree = expr;
 		kind = tree->GetKind();

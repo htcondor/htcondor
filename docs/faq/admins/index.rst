@@ -6,6 +6,7 @@ Answers for Admins
     :glob:
 
     breadth-first
+    slot-attrs
 
 Which platforms does HTCondor support?
 --------------------------------------

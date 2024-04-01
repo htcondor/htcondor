@@ -20,12 +20,26 @@ Release Notes:
   lifetime of the **V24** feature series.
   :jira:`2338`
 
+- The semantics of :subcom:`skip_if_dataflow` have been changed to make
+  more sense.  The restrictions have been :ref:`documented <dataflow>`.
+  :jira:`1899`
+
 New Features:
 
 - In the unlikely event that a shadow exception event happens, the text is
   now saved in the job ad attribute :ad-attr:`LastShadowException` for
   further debugging.
   :jira:`1896`
+
+- Periodic policy expressions like :subcom:`periodic_remove` are now checked
+  for during file input transfer.  Previously, HTCondor didn't start running these
+  checks until the file transfer was finished at the job proper started.
+  :jira:`2362`
+
+- We now compute the path to the proper python3 interpreter for :tool:`condor_watch_q`
+  at compile time.  This should not change anything, but if it does break, the
+  guilty ticket is:
+  :jira:`1146`
 
 - Most daemon log messages about tasks in the :macro:`STARTD_CRON_JOBLIST`,
   :macro:`BENCHMARKS_JOBLIST` or :macro:`SCHEDD_CRON_JOBLIST` that were
@@ -36,6 +50,10 @@ New Features:
 - A local universe job can now specify a container image, and it will run
   with that singularity or apptainer container runtime.
   :jira:`2180`
+
+- A new ``-jobset`` display option was added to :tool:`condor_q`.  If jobsets are enabled
+  in the *condor_schedd* it will show information from the jobset ads.
+  :jira:`2358`
 
 - If a schedd has a schedd-specific SPOOL directory (set by
   schedd_name.SPOOL), the schedd now creates that directory
@@ -174,6 +192,21 @@ Bugs Fixed:
 - Fixed a bug in the :tool:`htcondor eventlog read` command that would fail
   when events were written on leap day.
   :jira:`2318`
+
+Version 23.5.3
+--------------
+
+- HTCondor version 23.5.3 released on March 25, 2024.
+
+- HTCondor tarballs now contain `Pelican 7.6.2 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.6.2>`_
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
 
 Version 23.5.2
 --------------

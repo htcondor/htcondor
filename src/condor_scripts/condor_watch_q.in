@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!@Python3_EXECUTABLE@
 
 # Copyright 2020 HTCondor Team, Computer Sciences Department,
 # University of Wisconsin-Madison, WI.

@@ -30,11 +30,10 @@
 #include "my_username.h"
 #include "condor_environ.h"
 #include "dagman_main.h"
-#include "dagman_commands.h"
 #include "condor_getcwd.h"
-#include "directory.h"
 #include "condor_version.h"
 #include "dagman_metrics.h"
+#include "directory.h"
 
 namespace deep = DagmanDeepOptions;
 
@@ -361,7 +360,7 @@ Dagman::Config()
 	if (!_requestedMachineAttrs.empty()) {
 		debug_printf(DEBUG_NORMAL, "DAGMAN_RECORD_MACHINE_ATTRS: %s\n", _requestedMachineAttrs.c_str());
 		//Use machine attrs list to construct new job ad attributes to add to userlog
-		StringTokenIterator requestAttrs(_requestedMachineAttrs, " ,\t");
+		StringTokenIterator requestAttrs(_requestedMachineAttrs);
 		bool firstAttr = true;
 		_ulogMachineAttrs.clear();
 		for(auto& attr : requestAttrs) {

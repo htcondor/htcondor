@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 #include "throttle_by_category.h"
-#include "dagman_main.h"
+#include "condor_debug.h"
 #include "debug.h"
 
 const int ThrottleByCategory::noThrottleSetting = -1;

@@ -211,12 +211,11 @@ main( int argc, const char *argv[] )
 
 				ClassAdFileParseType::ParseType out_format = DashOutFormat;
 				if (pcolon) {
-					StringList opts(++pcolon);
-					for (const char * opt = opts.first(); opt; opt = opts.next()) {
+					for (auto& opt: StringTokenIterator(++pcolon)) {
 						if (YourString(opt) == "nosort") {
 							DashOutAttrsInHashOrder = true;
 						} else {
-							out_format = parseAdsFileFormat(opt, out_format);
+							out_format = parseAdsFileFormat(opt.c_str(), out_format);
 						}
 					}
 				}
@@ -249,12 +248,11 @@ main( int argc, const char *argv[] )
 				}
 			} else if (is_dash_arg_colon_prefix(ptr[0], "testing", &pcolon, 4)) {
 				testing.enabled = true;
-				if (pcolon) { 
-					StringList opts(++pcolon);
-					for (const char * opt = opts.first(); opt; opt = opts.next()) {
-						if (is_arg_colon_prefix(opt, "repeat", &pcolon, 3)) {
+				if (pcolon) {
+					for (auto& opt: StringTokenIterator(++pcolon)) {
+						if (is_arg_colon_prefix(opt.c_str(), "repeat", &pcolon, 3)) {
 							testing.repeat_count = (pcolon) ? atoi(++pcolon) : 100;
-						} else if (is_arg_prefix(opt, "nooutput", 5)) {
+						} else if (is_arg_prefix(opt.c_str(), "nooutput", 5)) {
 							testing.no_output = true;
 						}
 					}
@@ -830,7 +828,7 @@ int ConvertJobRouterRoutes(int options, const char * config_file)
 	ClassAd default_route_ad;
 	ClassAd generated_default_route_ad;
 	std::string routes_string;
-	StringList routes_list;
+	std::string routes_list;
 
 	auto_free_ptr routing;
 
@@ -894,7 +892,8 @@ int ConvertJobRouterRoutes(int options, const char * config_file)
 					std::string tag(xfm.getName());
 					if ( ! tag.empty()) {
 						cleanStringForUseAsAttr(tag);
-						routes_list.append(tag.c_str());
+						if (!routes_list.empty()) routes_list += ' ';
+						routes_list += tag;
 						fprintf(stdout, "\n##### Route %d\nJOB_ROUTER_ROUTE_%s @=jre\n", route_index, tag.c_str());
 						// if the name matches the tag, clear the name so that text of the route doesn't have a NAME statement
 						if (tag == xfm.getName()) { xfm.setName(""); }
@@ -953,8 +952,7 @@ int ConvertJobRouterRoutes(int options, const char * config_file)
 	}
 
 	if (config_file && ! ceconfig.lookup("JOB_ROUTER_ROUTE_NAMES", ctx)) {
-		auto_free_ptr list(routes_list.print_to_delimed_string(" "));
-		fprintf(stdout, "\nJOB_ROUTER_ROUTE_NAMES = %s\n", list.ptr());
+		fprintf(stdout, "\nJOB_ROUTER_ROUTE_NAMES = %s\n", routes_list.c_str());
 	}
 
 	return 0;

@@ -854,7 +854,6 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
-	bool is_dataflow = false;
 	int newest_input_timestamp = -1;
 	int oldest_output_timestamp = -1;
 	std::set<int> input_timestamps;
@@ -869,6 +868,7 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	// Lookup the working directory
 	job_ad->LookupString( ATTR_JOB_IWD, iwd );
+
 
 	// Parse the list of input files
 	job_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, input_files );
@@ -890,6 +890,28 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			}
 		}
 	}
+
+	// The executable is an input file for purposes of this analysis.
+	job_ad->LookupString( ATTR_JOB_CMD, executable_file );
+	if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
+		input_timestamps.insert( file_stat.st_mtime );
+	} else {
+		// The container universe doesn't need a real executable
+		// to run a job, but we'll worry about supporting that if
+		// anyone ever asks for it.
+		return false;
+	}
+
+	// The standard input file, if any, is an input file for this analysis.
+	job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
+	if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
+		if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
+			input_timestamps.insert( file_stat.st_mtime );
+		} else {
+			return false;
+		}
+	}
+
 
 	// Parse the list of output files
 	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, output_files );
@@ -914,40 +936,19 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 		}
 	}
 
-	if ( !input_timestamps.empty() ) {
 
+	if ( !input_timestamps.empty() ) {
 		newest_input_timestamp = *input_timestamps.rbegin();
 
 		// If the oldest output file is more recent than the newest input file,
 		// then this is a dataflow job.
 		if ( !output_timestamps.empty() ) {
 			oldest_output_timestamp = *output_timestamps.begin();
-			is_dataflow = oldest_output_timestamp > newest_input_timestamp;
-		}
-		// If the executable is more recent than the newest input file, 
-		// then this is a dataflow job.
-		job_ad->LookupString( ATTR_JOB_CMD, executable_file );
-		if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
-			int executable_file_timestamp = file_stat.st_mtime;
-			if ( executable_file_timestamp > newest_input_timestamp ) {
-				is_dataflow = true;
-			}
-		}
-
-		// If the standard input file is more recent than newest input,
-		// then this is a dataflow job.
-		job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
-		if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
-			if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
-				int stdin_file_timestamp = file_stat.st_mtime;
-				if ( stdin_file_timestamp > newest_input_timestamp ) {
-					is_dataflow = true;
-				}
-			}
+			return oldest_output_timestamp > newest_input_timestamp;
 		}
 	}
 
-	return is_dataflow;
+	return false;
 }
 
 #ifdef HAVE_HTTP_PUBLIC_FILES
@@ -5181,7 +5182,7 @@ FileTransfer::uploadFileList(
 
 		bool fail_because_mkdir_not_supported = false;
 		bool fail_because_symlink_not_supported = false;
-		if( fileitem.isDirectory() ) {
+		if( fileitem.isDirectory() && ! fileitem.isDestUrl() ) {
 			if( fileitem.isSymlink() ) {
 				fail_because_symlink_not_supported = true;
 				dprintf(D_ALWAYS,"DoUpload: attempting to transfer symlink %s which points to a directory.  This is not supported.\n", filename.c_str());

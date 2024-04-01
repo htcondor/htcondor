@@ -39,14 +39,12 @@
 #include "dagman_main.h"
 #include "write_user_log.h"
 #include "condor_daemon_core.h"
-#include <set>
 #include "dagman_metrics.h"
 #include "enum_utils.h"
 #include "condor_getcwd.h"
 #include "directory.h"
 #include "tmp_dir.h"
 #include "condor_q.h"
-#include <iostream>
 
 const CondorID Dag::_defaultCondorId;
 

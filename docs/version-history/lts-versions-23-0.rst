@@ -34,12 +34,20 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
+  to a random, non-HTCondor process, if pids are reused quickly.
+  :jira:`2357`
+
 - The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
   named "scitokens:2.0" (note plural).  The reference python scitoken implementation
   uses the singular.  The C++ scitokens implementation incorrectly used the plural up to
-  version 0.6.0.  The old name can be restored with the config knob 
+  version 0.6.0.  The old name can be restored with the config knob
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`
+
+- Fixed a bug where using :subcom:`output_destination` would still create
+  directories on the access point.
+  :jira:`2353`
 
 - Fixed a bug where DAGMan would crash when directly submitting a node job
   with a queue for each statement that was provided less item data values
@@ -50,6 +58,10 @@ Bugs Fixed:
   create job event log entries with newlines in them, which broke the
   event log parser.
   :jira:`2343`
+
+- Fixed a bug in the ``-better-analyze`` option of *condor_q* that could result
+  in ``[-1]`` and no expression text being displayed for some analysis steps.
+  :jira:`2355`
 
 .. _lts-version-history-2308:
 

@@ -1100,6 +1100,13 @@ FILE TRANSFER COMMANDS
     by **log** and output files
     defined with **output** or **transfer_output_files**.
 
+ :subcom-def:`skip_if_dataflow` = <True | False>
+    A boolean value that defaults to ``False``.  When ``True``,
+    marks this job as a :ref:`dataflow` job.  Dataflow jobs are
+    marked as completed and skipped if all of their output files
+    exist and have newer modification dates than all of the input files,
+    similar to how the "make" program works.
+
  :subcom-def:`stream_error` = <True | False>
     If ``True``, then ``stderr`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stderr`` is stored
@@ -1697,8 +1704,7 @@ POLICY COMMANDS
     :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
-    :index:`periodic_vacate<single: periodic_vacate; submit commands>`
- periodic_vacate = <ClassAd Boolean Expression>
+ :subcom-def:`periodic_vacate` = <ClassAd Boolean Expression>
     This expression is checked periodically for running jobs. If it becomes ``True``, 
     job is evicted from the machine it is running on, and return to the queue,
     in an Idle state. If unspecified, the default value is ``False``.

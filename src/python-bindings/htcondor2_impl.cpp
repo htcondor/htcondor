@@ -56,6 +56,9 @@
 #include "param_info.h"
 #include "htcondor2/param.cpp"
 
+// htcondor.RemoteParam
+#include "htcondor2/remote_param.cpp"
+
 
 static PyMethodDef htcondor2_impl_methods[] = {
 	{"_version", & _version, METH_VARARGS, R"C0ND0R(
@@ -148,6 +151,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_submit_setqargs", &_submit_setqargs, METH_VARARGS, NULL},
 	{"_submit_from_dag", &_submit_from_dag, METH_VARARGS, NULL},
 	{"_display_dag_options", &_display_dag_options, METH_VARARGS, NULL},
+	{"_submit_set_submit_method", &_submit_set_submit_method, METH_VARARGS, NULL},
+	{"_submit_get_submit_method", &_submit_get_submit_method, METH_VARARGS, NULL},
 
 
 	{"_job_event_log_init", &_job_event_log_init, METH_VARARGS, NULL},
@@ -161,6 +166,11 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_param__setitem__", &_param__setitem__, METH_VARARGS, NULL},
 	{"_param__delitem__", &_param__delitem__, METH_VARARGS, NULL},
 	{"_param_keys", &_param_keys, METH_VARARGS, NULL},
+
+
+	{"_remote_param_keys", &_remote_param_keys, METH_VARARGS, NULL},
+	{"_remote_param_get", &_remote_param_get, METH_VARARGS, NULL},
+	{"_remote_param_set", &_remote_param_set, METH_VARARGS, NULL},
 
 
 	{"_history_query", &_history_query, METH_VARARGS, NULL},

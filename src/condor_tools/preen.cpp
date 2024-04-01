@@ -686,7 +686,7 @@ check_spool_dir()
 					formatstr(tmpstr, ATTR_CLUSTER_ID ">=%d && " ATTR_CLUSTER_ID "<=%d", firstid, lastid);
 				}
 				ad.AssignExpr(ATTR_REQUIREMENTS, tmpstr.c_str());
-				ad.Assign("IncludeClusterAd", true);
+				ad.Assign(ATTR_QUERY_Q_INCLUDE_CLUSTER_AD, true);
 
 				if ( ! putClassAd(sock, ad) || ! sock->end_of_message()) {
 					dprintf(D_ALWAYS, "Error, schedd communication error\n");

@@ -49,7 +49,6 @@
 #include "metric_units.h"
 #include "submit_utils.h"
 
-#include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "my_popen.h"
@@ -3979,6 +3978,7 @@ int SubmitHash::SetExecutable()
 	RETURN_IF_ABORT();
 	bool	transfer_it = true;
 	bool	ignore_it = false;
+	bool	empty_job_exe = false; // set to true when there is no executable for an interactive job
 	char	*ename = NULL;
 	char	*macro_value = NULL;
 	_submit_file_role role = SFR_EXECUTABLE;
@@ -4060,6 +4060,7 @@ int SubmitHash::SetExecutable()
 	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );
 	if ( ! ename && IsInteractiveJob) {
 		ename = submit_param(SUBMIT_KEY_INTERACTIVE_Executable);
+		empty_job_exe = true;
 	}
 	if( ename == NULL ) {
 		// if no executable keyword, but the job already has an executable we are done.
@@ -4122,19 +4123,17 @@ int SubmitHash::SetExecutable()
 	// for interactive jobs, we want to swap out the executable for one
 	// that just waits for the interactive connection
 	auto_free_ptr icmd(submit_param(SUBMIT_KEY_INTERACTIVE_Executable));
-	if (IsInteractiveJob) {
-		if (icmd && (full_ename != icmd.ptr())) {
-			bool is_transfer_exe = true;
-			job->LookupBool(ATTR_TRANSFER_EXECUTABLE, is_transfer_exe);
-			// the file transfer object will always transfer what is in ATTR_ORIG_JOB_CMD
-			// but we *don't* want to interactive exe to be transferred, so we stuff
-			// the existing exe into a new job attribute and turn off transfer executable
-			if (is_transfer_exe) {
-				AssignJobString (ATTR_ORIG_JOB_CMD, full_ename.c_str());
-				AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
-			}
-			full_ename = icmd.ptr();
+	if (IsInteractiveJob && icmd) {
+		bool is_transfer_exe = true;
+		job->LookupBool(ATTR_TRANSFER_EXECUTABLE, is_transfer_exe);
+		// the file transfer object will always transfer what is in ATTR_ORIG_JOB_CMD
+		// but we *don't* want to interactive exe to be transferred, so we stuff
+		// the existing exe into a new job attribute and turn off transfer executable
+		if (is_transfer_exe) {
+			if ( ! empty_job_exe) AssignJobString (ATTR_ORIG_JOB_CMD, full_ename.c_str());
+			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 		}
+		full_ename = icmd.ptr();
 	}
 
 	AssignJobString (ATTR_JOB_CMD, full_ename.c_str());

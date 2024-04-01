@@ -59,6 +59,9 @@ int	update_interval = 0;	// Interval to update CM
 //      and advertise STARTD_OLD_ADTYPE to older collectors
 int enable_single_startd_daemon_ad = 0;
 
+// set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
+bool enable_claimable_partitionable_slots = false;
+
 // String Lists
 std::vector<std::string> startd_job_attrs;
 std::vector<std::string> startd_slot_attrs;
@@ -486,6 +489,8 @@ init_params( int first_time)
 	if (first_time) {
 		std::string func_name("SlotEval");
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
+
+		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
 	}
 
 	resmgr->init_config_classad();

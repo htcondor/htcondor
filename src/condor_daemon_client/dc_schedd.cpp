@@ -2063,17 +2063,179 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	return true;
 }
 
-// TODO: this belongs in a header file, but would conflict with the query object.
-// figure out how to rationalize the two.
-enum
+/*static*/ int DCSchedd::makeJobsQueryAd (
+	ClassAd & request_ad,
+	const char *constraint,
+	const char *projection,
+	int fetch_opts,     // flags from QueryFetchOpts enum
+	int match_limit /*= -1*/,
+	const char * owner /*= nullptr*/, // needed if fetch_opts includes MyJobs flag
+	bool send_server_time /*= false*/)
 {
-	Q_NO_SCHEDD_IP_ADDR = 20,
-	Q_SCHEDD_COMMUNICATION_ERROR,
-	Q_INVALID_REQUIREMENTS,
-	Q_INTERNAL_ERROR,
-	Q_REMOTE_ERROR,
-	Q_UNSUPPORTED_OPTION_ERROR
-};
+	if (constraint && constraint[0] && ! request_ad.AssignExpr(ATTR_REQUIREMENTS, constraint)) {
+		return Q_PARSE_ERROR;
+	}
+
+	request_ad.Assign(ATTR_SEND_SERVER_TIME, send_server_time);
+
+	if (projection) {
+		request_ad.InsertAttr(ATTR_PROJECTION, projection);
+	}
+
+	if (fetch_opts == fetch_DefaultAutoCluster) {
+		request_ad.InsertAttr("QueryDefaultAutocluster", true);
+		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
+	} else if (fetch_opts == fetch_GroupBy) {
+		request_ad.InsertAttr("ProjectionIsGroupBy", true);
+		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
+	} else {
+		if (fetch_opts & fetch_MyJobs) {
+			if (owner) { request_ad.InsertAttr("Me", owner); }
+			request_ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
+		}
+		if (fetch_opts & fetch_SummaryOnly) {
+			request_ad.InsertAttr("SummaryOnly", true);
+		}
+		if (fetch_opts & fetch_IncludeClusterAd) {
+			request_ad.InsertAttr(ATTR_QUERY_Q_INCLUDE_CLUSTER_AD, true);
+		}
+		if (fetch_opts & fetch_IncludeJobsetAds) {
+			request_ad.InsertAttr(ATTR_QUERY_Q_INCLUDE_JOBSET_ADS, true);
+		}
+		if (fetch_opts & fetch_NoProcAds) {
+			request_ad.InsertAttr(ATTR_QUERY_Q_NO_PROC_ADS, true);
+		}
+	}
+
+	if (match_limit >= 0) {
+		request_ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
+	}
+
+	return 0;
+}
+
+bool DCSchedd::canUseQueryWithAuth()
+{
+	// determine if authentication can/will happen.  three reasons why it might not:
+	// 1) security negotiation is disabled (NEVER or OPTIONAL for outgoing connections)
+	// 2) Authentication is disabled (NEVER) by the client
+	// 3) Authentication is disabled (NEVER) by the server.  this is actually impossible to
+	//    get correct without actually querying the server but we make an educated guess by
+	//    paraming the READ auth level.
+	bool can_auth = true;
+	char *paramer = NULL;
+
+	paramer = SecMan::getSecSetting ("SEC_%s_NEGOTIATION", CLIENT_PERM);
+	if (paramer != NULL) {
+		char p = toupper(paramer[0]);
+		free(paramer);
+		if (p == 'N' || p == 'O') {
+			// authentication will not happen since no security negotiation will occur
+			can_auth = false;
+		}
+	}
+
+	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", CLIENT_PERM);
+	if (paramer != NULL) {
+		char p = toupper(paramer[0]);
+		free(paramer);
+		if (p == 'N') {
+			// authentication will not happen since client doesn't allow it.
+			can_auth = false;
+		}
+	}
+
+	// authentication will not happen since server probably doesn't allow it.
+	// on the off chance that someone's config manages to trick us, leave an
+	// undocumented knob as a last resort to disable our inference.
+	if (param_boolean("CONDOR_Q_INFER_SCHEDD_AUTHENTICATION", true)) {
+		paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", READ);
+		if (paramer != NULL) {
+			char p = toupper(paramer[0]);
+			free(paramer);
+			if (p == 'N') {
+				can_auth = false;
+			}
+		}
+
+		paramer = SecMan::getSecSetting ("SCHEDD.SEC_%s_AUTHENTICATION", READ);
+		if (paramer != NULL) {
+			char p = toupper(paramer[0]);
+			free(paramer);
+			if (p == 'N') {
+				can_auth = false;
+			}
+		}
+	}
+
+	return can_auth;
+}
+
+
+int DCSchedd::queryJobs (
+	int cmd, // QUERY_JOB_ADS or QUERY_JOB_ADS_WITH_AUTH
+	ClassAd & request_ad,
+	// return false to take ownership of the ad, true to allow the ad to be deleted after
+	bool (*process_func)(void*, ClassAd *ad),
+	void * process_func_data,
+	int connect_timeout,
+	CondorError *errstack,
+	ClassAd ** psummary_ad)
+{
+	Sock* sock;
+	if (!(sock = startCommand(cmd, Stream::reli_sock, connect_timeout, errstack))) return Q_SCHEDD_COMMUNICATION_ERROR;
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
+	dprintf(D_FULLDEBUG, "Sent Query classad to schedd\n");
+
+	ClassAd *ad = NULL;	// job ad result
+	int rval = 0;
+	do {
+		ad = new ClassAd();
+		if ( ! getClassAd(sock, *ad) || ! sock->end_of_message()) {
+			rval = Q_SCHEDD_COMMUNICATION_ERROR;
+			break;
+		}
+		dprintf(D_FULLDEBUG, "Got classad from schedd.\n");
+		long long intVal;
+		if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
+		{ // Last ad.
+			sock->close();
+			dprintf(D_FULLDEBUG, "Ad was last one from schedd.\n");
+			std::string errorMsg;
+			if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+			{
+				if (errstack) errstack->push("TOOL", intVal, errorMsg.c_str());
+				rval = Q_REMOTE_ERROR;
+			}
+			if (psummary_ad && rval == 0) {
+				std::string val;
+				if (ad->LookupString(ATTR_MY_TYPE, val) && val == "Summary") {
+					ad->Delete(ATTR_OWNER); // remove the bogus owner attribute
+					*psummary_ad = ad; // return the final ad, because it has summary information
+					ad = NULL; // so we don't delete it below.
+				}
+			}
+			break;
+		}
+		// Note: According to condor_q.h, process_func() will return false if taking
+		// ownership of ad, so only delete if it returns true, else set to NULL
+		// so we don't delete it here.  Either way, next set ad to NULL since either
+		// it has been deleted or will be deleted later by process_func().
+		if (process_func(process_func_data, ad)) {
+			delete ad;
+		}
+		ad = NULL;
+	} while (true);
+
+	// Make sure ad is not leaked no matter how we break out of the above loop.
+	delete ad;
+
+	return rval;
+}
+
 
 /*static*/ int DCSchedd::makeUsersQueryAd (
 	classad::ClassAd & request_ad,

@@ -160,18 +160,16 @@ MachAttributes::~MachAttributes()
 	if( m_utsname_version ) free( m_utsname_version );
 	if( m_utsname_machine ) free( m_utsname_machine );
 
-    AttribValue *val = NULL;
-    m_lst_dynamic.Rewind();
-    while ((val = m_lst_dynamic.Next()) ) {
+	for (auto *val : m_lst_dynamic) {
        if (val) free (val);
-       m_lst_dynamic.DeleteCurrent();
-    }
+	}
+	m_lst_dynamic.clear();
 
-    m_lst_static.Rewind();
-    while ((val = m_lst_static.Next())) {
+	for (auto *val: m_lst_static) {
        if (val) free (val);
-       m_lst_static.DeleteCurrent();
     }
+	m_lst_static.clear();
+
     m_user_specified.clearAll();
 #if defined(WIN32)
 	if( m_local_credd ) free( m_local_credd );
@@ -186,20 +184,15 @@ MachAttributes::init_user_settings()
 {
 	m_user_settings_init = true;
 
-	AttribValue *val = NULL;
-	m_lst_dynamic.Rewind();
-	while ((val = m_lst_dynamic.Next()))
-    {
+	for (auto *val : m_lst_dynamic) {
         if (val) free (val);
-	    m_lst_dynamic.DeleteCurrent();
 	}
+	m_lst_dynamic.clear();
 
-	m_lst_static.Rewind();
-	while ((val = m_lst_static.Next()))
-    {
+	for (auto *val: m_lst_static) {
 	    if (val) free (val);
-	    m_lst_static.DeleteCurrent();
 	}
+	m_lst_static.clear();
 
 	m_user_specified.clearAll();
 
@@ -261,7 +254,7 @@ MachAttributes::init_user_settings()
 			//
             AttribValue * pav = add_WinPerf_Query(pszAttr, pkey+ixStart+1);
             if (pav)
-		        m_lst_dynamic.Append(pav);
+		        m_lst_dynamic.emplace_back(pav);
 		}
         else
         {
@@ -273,7 +266,7 @@ MachAttributes::init_user_settings()
             if (pav)
             {
                 pav->pquery = (void*)pkey;
-				m_lst_static.Append(pav);
+				m_lst_static.emplace_back(pav);
 			}
 		}
 
@@ -524,9 +517,7 @@ MachAttributes::compute_for_policy()
         update_all_WinPerf_results();
 #endif
 
-        AttribValue *pav = NULL;
-        m_lst_dynamic.Rewind();
-        while ((pav = m_lst_dynamic.Next()) ) {
+		for (auto *pav : m_lst_dynamic) {
            if (pav) {
              #ifdef WIN32
               if ( ! update_WinPerf_Value(pav))
@@ -1367,8 +1358,7 @@ MachAttributes::publish_static(ClassAd* cp)
 	// publish values from the window's registry as specified
 	// in the STARTD_PUBLISH_WINREG param.
 	//
-	m_lst_static.Rewind();
-	while (AttribValue *pav = m_lst_static.Next()) {
+	for (auto *pav: m_lst_static) {
 		if (pav) pav->AssignToClassAd(cp);
 	}
 
@@ -1608,8 +1598,7 @@ MachAttributes::publish_common_dynamic(ClassAd* cp, bool global /*=false*/)
 	cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
 	cp->Assign( ATTR_CLOCK_DAY, m_clock_day );
 
-	m_lst_dynamic.Rewind();
-	while (AttribValue *pav = m_lst_dynamic.Next() ) {
+	for (auto *pav : m_lst_dynamic) {
 		if (pav) pav->AssignToClassAd(cp);
 	}
 }
@@ -1618,12 +1607,12 @@ void
 MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, bool slot_is_bk, const std::string & res_conflict)
 {
 	// the global resource conflicts are determined elsewhere and passed in here
-	// we we add the NFR conflicts and the publish
+	// we we add the NFR conflicts and then publish
 	std::string conflict = res_conflict;
 
 	// publish "Available" custom resources and resource properties
 	// for use by the evalInEachContext matchmaking function
-	// this loop also detects primary/backfill resource conflcits for non-fungible resources
+	// this loop also detects primary/backfill resource conflicts for non-fungible resources
 	for (auto &[restag, nft] : m_machres_nft_map) {
 		auto & offline_ids(m_machres_runtime_offline_ids_map[restag]);
 
@@ -1801,7 +1790,7 @@ MachAttributes::credd_test()
 }
 #endif
 
-CpuAttributes::CpuAttributes( MachAttributes* map_arg, 
+CpuAttributes::CpuAttributes(
 							  unsigned int slot_type,
 							  double num_cpus_arg,
 							  int num_phys_mem,
@@ -1812,7 +1801,6 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 							  const std::string &execute_dir,
 							  const std::string &execute_partition_id )
 {
-	map = map_arg;
 	c_type_id = slot_type;
 	c_num_slot_cpus = c_num_cpus = num_cpus_arg;
 	c_allow_fractional_cpus = num_cpus_arg > 0 && num_cpus_arg < 0.9;
@@ -1876,7 +1864,7 @@ CpuAttributes::set_total_disk(long long total, bool refresh) {
 }
 
 bool
-CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail) // bind non-fungable resource ids to a slot
+CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail) // bind non-fungable resource ids to a slot
 {
 	if ( ! map)
 		return true;
@@ -1953,7 +1941,7 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id, bool backfill_slot, boo
 }
 
 void
-CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungable resource ids
+CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id) // release non-fungable resource ids
 {
 	if ( ! map) return;
 
@@ -1984,7 +1972,7 @@ CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungab
 }
 
 void
-CpuAttributes::reconfig_DevIds(int slot_id, int slot_sub_id) // release non-fungable resource ids
+CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id) // release non-fungable resource ids
 {
 	if (! map) return;
 
@@ -2101,10 +2089,10 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 }
 
 void
-CpuAttributes::compute_virt_mem()
+CpuAttributes::compute_virt_mem_share(double virt_mem)
 {
 	// Shared attributes that we only get a fraction of
-	double val = map->virt_mem();
+	double val = virt_mem;
 	if (!IS_AUTO_SHARE(c_virt_mem_fraction)) {
 		val *= c_virt_mem_fraction;
 	}
@@ -2210,7 +2198,7 @@ CpuAttributes::operator+=( CpuAttributes& rhs )
 	if (!IS_AUTO_SHARE(rhs.c_virt_mem_fraction) &&
 		!IS_AUTO_SHARE(c_virt_mem_fraction)) {
 		c_virt_mem_fraction += rhs.c_virt_mem_fraction;
-		c_virt_mem = map->virt_mem() * c_virt_mem_fraction;
+		c_virt_mem += rhs.c_virt_mem;   // not perfect, but close enough for now..
 	}
 
 	if (!IS_AUTO_SHARE(rhs.c_disk_fraction) &&
@@ -2250,6 +2238,24 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 
 	return *this;
 }
+
+const char * CpuAttributes::_slot_request::dump(std::string & buf) const
+{
+	buf.clear();
+	formatstr(buf, "Cpus=%f, Memory=%d, Disk=%f/1", num_cpus, num_phys_mem, disk_fraction);
+	if (virt_mem_fraction > 0) {
+		formatstr_cat(buf, ", Swap=%f/1", virt_mem_fraction);
+	}
+	for (auto &[tag,val] : slotres) {
+		formatstr_cat(buf, " ,%s=%f", tag.c_str(), val);
+		auto found = slotres_constr.find(tag);
+		if (found != slotres_constr.end()) {
+			formatstr_cat(buf, " : %s", found->second.c_str());
+		}
+	}
+	return buf.c_str();
+}
+
 
 ResBag&
 ResBag::operator+=(const CpuAttributes& rhs)

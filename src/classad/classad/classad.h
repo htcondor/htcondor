@@ -429,6 +429,19 @@ class ClassAd : public ExprTree
 		*/
 		bool EvaluateExpr( const ExprTree* expr, Value &result, Value::ValueType mask=Value::ValueType::SAFE_VALUES ) const;
 
+		/* Evaluates a loose expression in the context of a single ad (or nullptr) without mutating the expression
+		 *   Note that since this function cannot call setParentScope() on tree, the tree cannot contain a nested ad that
+		 *   with attribute references that are expected to resolve against attributes of the ad.
+		 *   i.e.  when expr is [foo = RequestCpus;].foo, foo will evaluate to 'undefined' rather than looking up RequestCpus in the ad.
+		 */
+		static bool EvaluateExpr(const ClassAd * ad, const ExprTree * tree, Value & val, Value::ValueType mask=Value::ValueType::SAFE_VALUES) {
+			EvalState state;
+			state.SetScopes(ad);
+			if ( ! tree->Evaluate(state, val)) return false;
+			if ( ! val.SafetyCheck(state, mask)) return false;
+			return true;
+		}
+
 		/** Evaluates an expression, and returns the significant subexpressions
 				encountered during the evaluation.  If the expression doesn't 
 				already live in this ClassAd, call the setParentScope() method 
