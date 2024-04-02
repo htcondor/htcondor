@@ -199,7 +199,9 @@ cd ${PILOT_DIR}
 # PILOT_BIN mainly because this script has too many arguments already.
 SIF_DIR=${PILOT_DIR}/sif
 mkdir ${SIF_DIR}
-mv ${PILOT_BIN_DIR}/sif ${PILOT_DIR}
+if [[ -d ${PILOT_BIN_DIR}/sif ]]; then
+    mv ${PILOT_BIN_DIR}/sif ${PILOT_DIR}
+fi
 
 # The pilot scripts need to live in the ${PILOT_DIR} because the front-end
 # copied them into a temporary directory that it's responsible for cleaning up.
@@ -393,10 +395,12 @@ $(CONFIG_FRAGMENT)
 
 " > local/config.d/00-basic-pilot
 
-mkdir local/passwords.d
-mkdir local/tokens.d
+mkdir -p local/passwords.d
+mkdir -p local/tokens.d
 mv ${TOKEN_FILE} local/tokens.d
-mv ${PASSWORD_FILE} local/passwords.d/POOL
+# On Delta, if this pair is just `mv`, instead, there's a weird warning.
+cp ${PASSWORD_FILE} local/passwords.d/POOL
+rm -f ${PASSWORD_FILE}
 
 
 #
