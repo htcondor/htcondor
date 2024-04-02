@@ -440,12 +440,12 @@ else
     # Jobs on shared (non-whole-node) SLURM partitions can't be multi-node on
     # Expanse.  Request one job, and specify the resources that should be
     # allocated to the job.
-
-    # XXX Should I reject NODES > 1?
-    # FIXME: I'm OK with ignoring it, but the FE should check..
+    #
+    # However, Delta doesn't have that restriction, so we'll have to do the
+    # enforcement in the front end.
     SBATCH_RESOURCES_LINES="\
-#SBATCH --ntasks=1
-#SBATCH --nodes=1
+#SBATCH --ntasks=${NODES}
+#SBATCH --nodes=${NODES}
 "
     if [[ $CPUS ]]; then
         SBATCH_RESOURCES_LINES="\
