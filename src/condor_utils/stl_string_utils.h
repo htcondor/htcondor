@@ -187,13 +187,20 @@ public:
 		return sti;
 	}
 
-	std::string &operator*() {
+	const std::string &operator*() const {
 		return current;
 	}
 	
 	StringTokenIterator &operator++() {
 		next();
 		return *this;
+	}
+
+	// post increment
+	StringTokenIterator operator++(int) {
+		StringTokenIterator old = *this;
+		operator++();
+		return old;
 	}
 
 friend bool operator==(const StringTokenIterator &lhs, const StringTokenIterator &rhs) {

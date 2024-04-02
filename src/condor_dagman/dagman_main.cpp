@@ -345,11 +345,12 @@ Dagman::Config()
 	if (adInjectInfo) {
 		debug_printf(DEBUG_NORMAL, "DAGMAN_NODE_RECORD_INFO recording:\n");
 		StringTokenIterator list(adInjectInfo);
-		for (auto& info : list) {
-			trim(info);
-			lower_case(info);
+		for (const auto& info : list) {
+			std::string mutable_info {info};
+			trim(mutable_info);
+			lower_case(mutable_info);
 			//TODO: If adding more keywords consider using an unsigned int and bit mask
-			if (info.compare("retry") == MATCH) {
+			if (mutable_info.compare("retry") == MATCH) {
 				jobInsertRetry = true;
 				debug_printf(DEBUG_NORMAL, "\t-NODE Retries\n");
 			}
