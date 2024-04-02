@@ -197,8 +197,10 @@ public:
 	}
 
 	// post increment
-	void operator++(int) {
-		++*this;
+	StringTokenIterator operator++(int) {
+		StringTokenIterator old = *this;
+		operator++();
+		return old;
 	}
 
 friend bool operator==(const StringTokenIterator &lhs, const StringTokenIterator &rhs) {
