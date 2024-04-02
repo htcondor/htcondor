@@ -867,6 +867,9 @@ set (FMT_INSTALL false)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
 
+# Remove when we have C++23 everywhere
+include_directories(${CONDOR_SOURCE_DIR}/src/vendor/zip-views-1.0)
+
 # But don't try to install the header files anywhere
 set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
 install(TARGETS fmt
