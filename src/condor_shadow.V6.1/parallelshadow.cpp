@@ -453,7 +453,6 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 	FILE* mailer;
 	Email msg;
 	std::string str;
-	char *s;
 
 	mailer = msg.open_stream( jobAd, exitReason );
 	if( ! mailer ) {
