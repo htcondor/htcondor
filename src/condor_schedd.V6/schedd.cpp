@@ -268,6 +268,7 @@ int  count_a_job( JobQueueBase *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 void load_job_factories();
 static void WriteCompletionVisa(ClassAd* ad);
+static bool abortJobRaw( int cluster, int proc, const char *reason);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
 schedd_runtime_probe WalkJobQ_count_a_job_runtime;
@@ -7229,8 +7230,7 @@ removeOtherJobs( int cluster, int proc )
 			BeginTransaction();
 
 			for (auto it = otherJobs.rbegin(); it != otherJobs.rend(); it++) {
-				SetAttributeInt(it->cluster, it->proc, ATTR_JOB_STATUS, REMOVED);
-				scheduler.enqueueActOnJobMyself( *it, JA_REMOVE_JOBS, true);
+				abortJobRaw(it->cluster, it->proc, reason.c_str());
 			}
 
 			CommitTransactionOrDieTrying();
@@ -15821,10 +15821,8 @@ abortJobRaw( int cluster, int proc, const char *reason )
 
 	fixReasonAttrs( job_id, JA_REMOVE_JOBS );
 
-	// Abort the job now
-	abort_job_myself( job_id, JA_REMOVE_JOBS, true );
-	dprintf( D_ALWAYS, "Job %d.%d aborted: %s\n", cluster, proc, reason );
-
+	// enqueue a job abort
+	scheduler.enqueueActOnJobMyself(job_id, JA_REMOVE_JOBS, true);
 	return true;
 }
 
@@ -15867,16 +15865,9 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 static 
 std::vector<PROC_ID> getJobsByConstraint(const char *constraint) {
 	std::vector<PROC_ID> result;
-	ClassAd *ad = GetNextJobByConstraint(constraint, 1);
+	JobQueueJob *ad = GetNextJobByConstraint(constraint, 1);
 	while (ad) {
-		int cluster, proc;
-		if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster) ||
-			!ad->LookupInteger(ATTR_PROC_ID, proc)) {
-
-			result.clear();
-			break;
-		}
-		result.emplace_back(cluster, proc);
+		result.emplace_back(ad->jid.cluster, ad->jid.proc);
 		ad = GetNextJobByConstraint(constraint, 0);
 	}
 	return result;
