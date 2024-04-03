@@ -36,21 +36,26 @@ For example, if your jobs are described in a file named *my-jobs.set*:
 .. code-block:: condor-submit
    :caption: my-jobs.set file
 
-    name = MyJobSet
+   # Jobset example from https://htcondor.readthedocs.io/en/latest/users-manual/job-sets.html
+   name = MyJobSet
 
-    iterator = table inputfile {
-        input_A.txt
-        input_B.txt
-    }
-          
-    job {
-        executable = a.out
-        arguments = $(inputfile)
-        transfer_input_files = $(inputfile)
-        Request_cpus = 1
-        Request_memory = 1024M
-        Request_disk   = 1024M
-    }
+   iterator = table my_var {
+       input_A.txt
+       input_B.txt
+   }
+   
+   job {
+       executable     = /bin/echo
+       arguments = $(my_var)
+
+       Request_cpus   = 1
+       Request_memory = 1024M
+       Request_disk   = 1024M
+
+       output         = out
+       error          = err
+       log            = log
+   }
 
 
 Then you can submit this set using the following command from the shell:
@@ -58,7 +63,7 @@ Then you can submit this set using the following command from the shell:
 .. code-block:: console
    :caption: Command line to submit a simple job set
 
-    $ htcondor jobset submit my-jobs.set
+   $ htcondor jobset submit my-jobs.set
 
 A **job set description file** must contain:
 
@@ -89,13 +94,13 @@ The job set description file syntax for a *table iterator* is:
 
 .. code-block:: condor-submit
 
-    iterator = table <list of variable names> <table file name>
+   iterator = table <list of variable names> <table file name>
 
-    or
+   or
 
-    iterator = table <list of variable names> {
-        <list of items>
-    }
+   iterator = table <list of variable names> {
+       <list of items>
+   }
 
 Suppose you have four *input files*,
 and each input file is associated with two parameters, *foo* and *bar*,
@@ -143,13 +148,13 @@ The job set description file syntax for a *job* is:
 
 .. code-block:: condor-submit
 
-    job [<list of mapped variable names>] <submit file name>
+   job [<list of mapped variable names>] <submit file name>
 
-    or
+   or
 
-    job [<list of mapped variable names>] {
-        <submit file description>
-    }
+   job [<list of mapped variable names>] {
+       <submit file description>
+   }
 
 Suppose you have two jobs
 that you want to have use the *inputfile*, *foo*, and *bar* values
@@ -162,13 +167,13 @@ Your *job* descriptions could look like:
 
 .. code-block:: condor-submit
 
-    job x=foo,y=bar my-job.sub
+   job x=foo,y=bar my-job.sub
 
-    job {
-        executable = a.out
-        arguments = $(inputfile) $(foo) $(bar)
-        transfer_input_files = $(inputfile)
-    }
+   job {
+       executable = a.out
+       arguments = $(inputfile) $(foo) $(bar)
+       transfer_input_files = $(inputfile)
+   }
 
 Note how in the second job above that there is no ``queue`` statement.
 Job description queue statements
