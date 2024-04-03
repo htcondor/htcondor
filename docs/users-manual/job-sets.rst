@@ -46,7 +46,7 @@ For example, if your jobs are described in a file named *my-jobs.set*:
    
    job {
        executable     = /bin/echo
-       arguments = $(my_var)
+       arguments      = $(my_var)
 
        Request_cpus   = 1
        Request_memory = 1024M
@@ -170,7 +170,7 @@ Your *job* descriptions could look like:
    job x=foo,y=bar my-job.sub
 
    job {
-       executable = a.out
+       executable = a.sh
        arguments = $(inputfile) $(foo) $(bar)
        transfer_input_files = $(inputfile)
    }
@@ -200,7 +200,7 @@ an entire example job set might look like:
     job x=foo,y=bar my-job.sub
 
     job {
-        executable = a.out
+        executable = a.sh
         arguments = $(inputfile) $(foo) $(bar)
         transfer_input_files = $(inputfile)
     }
