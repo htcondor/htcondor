@@ -453,7 +453,6 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 	FILE* mailer;
 	Email msg;
 	std::string str;
-	char *s;
 
 	mailer = msg.open_stream( jobAd, exitReason );
 	if( ! mailer ) {
@@ -476,12 +475,10 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		// This should be a more rare case in any event.
 
 		jobAd->LookupString(ATTR_REMOTE_HOSTS, str);
-		StringList slist(str.c_str());
 
-		slist.rewind();
-		while((s = slist.next()) != NULL)
+		for (auto& s: StringTokenIterator(str))
 		{
-			fprintf( mailer, "%s\n", s);
+			fprintf( mailer, "%s\n", s.c_str());
 		}
 
 		fprintf( mailer, "\nExit codes are currently unavailable.\n\n");

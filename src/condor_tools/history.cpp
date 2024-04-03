@@ -190,7 +190,7 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 	}
 
 	std::string psinful;
-	StringList remaining_items; // for the remainder which we expect to be empty.
+	std::vector<std::string> remaining_items; // for the remainder which we expect to be empty.
 	int cSocks = extractInheritedSocks(inherit, ppid, psinful, socks, (int)cMaxSocks, remaining_items);
 	UnsetEnv(envName); // prevent this from being passed on to children.
 	return cSocks;

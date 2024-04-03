@@ -111,7 +111,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 
 	std::string prefix;
 	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
-	m_delayed_update_prefix.initializeFromString(prefix.c_str());
+	m_delayed_update_prefix = split(prefix);
 
 	param_and_insert_attrs("PROTECTED_JOB_ATTRS", m_unsettable_attrs);
 	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", m_unsettable_attrs);
@@ -2704,7 +2704,7 @@ RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 	bool response = m_want_chirp || m_want_remote_updates;
 	if (!response && m_want_delayed)
 	{
-		response = m_delayed_update_prefix.contains_anycase_withwildcard(name.c_str());
+		response = contains_anycase_withwildcard(m_delayed_update_prefix, name);
 	}
 
 	// Since this function is called to see if a user job is allowed to update

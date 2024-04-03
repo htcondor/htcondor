@@ -36,7 +36,7 @@
 */
 
 /* needed by idle_time.C and last_x_event.c */
-extern StringList *_sysapi_console_devices;
+extern std::vector<std::string> *_sysapi_console_devices;
 
 extern time_t _sysapi_last_x_event;
 
