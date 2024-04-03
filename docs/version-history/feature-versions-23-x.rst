@@ -41,6 +41,10 @@ New Features:
   guilty ticket is:
   :jira:`1146`
 
+- If a collector defines a local-name, but not a :macro:`COLLECTOR_NAME`,
+  the local name is now used as the default name.
+  :jira:`1105`
+
 - Most daemon log messages about tasks in the :macro:`STARTD_CRON_JOBLIST`,
   :macro:`BENCHMARKS_JOBLIST` or :macro:`SCHEDD_CRON_JOBLIST` that were
   logged as ``D_FULLDEBUG`` messages are now logged using the new message
