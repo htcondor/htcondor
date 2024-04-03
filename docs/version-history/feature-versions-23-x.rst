@@ -67,6 +67,10 @@ New Features:
   of ``ON_SUCCESS``.
   :jira:`2347`
 
+- File transfer plugins that are installed on the EP can now advertise extra
+  attributes into the STARTD ads.
+  :jira:`1051`
+
 Bugs Fixed:
 
 - None.
