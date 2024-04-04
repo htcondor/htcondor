@@ -328,8 +328,9 @@ Machine ClassAd Attributes
     *condor_starter* has exited.
 
 :classad-attribute-def:`JobBusyTimeCount`
-    attribute. This is also the total number times a
-    *condor_starter* has exited.
+    The total number of jobs used to calculate the :ad-attr:`JobBusyTimeAvg`
+    attribute. This is also the the total number times a *condor_starter*
+    has exited.
 
 :classad-attribute-def:`JobBusyTimeMax`
     The Maximum lifetime of all jobs, including transfer time. This is
