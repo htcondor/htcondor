@@ -71,9 +71,15 @@ New Features:
   of ``ON_SUCCESS``.
   :jira:`2347`
 
+- DAGMan will now write a rescue DAG and abort when :tool:`condor_dagman` has
+  been pending on nodes for :macro:`DAGMAN_CHECK_QUEUE_INTERVAL` seconds and the
+  associated jobs are not found in the local *condor_schedd* queue.
+  :jira:`1546`
+
 - File transfer plugins that are installed on the EP can now advertise extra
   attributes into the STARTD ads.
   :jira:`1051`
+
 
 Bugs Fixed:
 
