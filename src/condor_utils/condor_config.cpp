@@ -75,7 +75,6 @@
 #include "condor_uid.h"
 #include "condor_mkstemp.h"
 #include "basename.h"
-#include "condor_random_num.h"
 #include "subsystem_info.h"
 #include "param_info.h"
 #include "param_info_tables.h"
@@ -83,8 +82,10 @@
 #include "filename_tools.h"
 #include "which.h"
 #include "classad_helpers.h"
-#include <algorithm> // for std::sort
 #include "CondorError.h"
+#include "../condor_sysapi/sysapi.h"
+#include <algorithm> // for std::sort
+
 
 // define this to keep param who's values match defaults from going into the runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
