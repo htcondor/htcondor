@@ -71,6 +71,11 @@ New Features:
   of ``ON_SUCCESS``.
   :jira:`2347`
 
+- Removed some of the logging while loading the security configuration and moved
+  some of the logging to ``D_SECURITY:2`` to make the ``-debug:D_SECURITY`` option
+  of the various tools more useful.
+  :jira:`2369`
+
 - File transfer plugins that are installed on the EP can now advertise extra
   attributes into the STARTD ads.
   :jira:`1051`

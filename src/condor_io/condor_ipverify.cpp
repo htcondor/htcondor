@@ -77,7 +77,9 @@ IpVerify::Init()
 	}
 	char *pAllow = NULL, *pDeny = NULL;
 	DCpermission perm;
-	const char* const ssysname = get_mySubSystem()->getName();	
+	auto ssinfo = get_mySubSystem();
+	const char* const ssysname = ssinfo->getName();
+	bool client_only = ssinfo->isType(SUBSYSTEM_TYPE_TOOL) || ssinfo->isType(SUBSYSTEM_TYPE_SUBMIT);
 
 	did_init = TRUE;
 
@@ -103,25 +105,20 @@ IpVerify::Init()
 		PermTypeArray[perm] = pentry;
 		std::string allow_param, deny_param;
 
-		dprintf(D_SECURITY,"IPVERIFY: Subsystem %s\n",ssysname);
-		dprintf(D_SECURITY,"IPVERIFY: Permission %s\n",PermString(perm));
-		if(strcmp(ssysname,"TOOL")==0 || strcmp(ssysname,"SUBMIT")==0){
 			// to avoid unneccesary DNS activity, the TOOL and SUBMIT
 			// subsystems only load the CLIENT lists, since they have no
 			// command port and don't need the other authorization lists.
-			if(strcmp(PermString(perm),"CLIENT")==0){ 
-				pAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
-				pDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
-			}
-		} else {
+		if ((perm == CLIENT_PERM) || ! client_only) {
 			pAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
 			pDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
 		}
-		if( pAllow ) {
-			dprintf ( D_SECURITY, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.c_str());
-		}
-		if( pDeny ) {
-			dprintf ( D_SECURITY, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.c_str());
+		if (IsDebugVerbose(D_SECURITY)) {
+			if (pAllow) {
+				dprintf(D_SECURITY|D_VERBOSE, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.c_str());
+			}
+			if(pDeny) {
+				dprintf(D_SECURITY|D_VERBOSE, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.c_str());
+			}
 		}
 
 		// Treat "*" or "*/*" specially, because that's an optimized default.
@@ -134,11 +131,11 @@ IpVerify::Init()
 		} else if (denyAll || (!pAllow && (perm != READ && perm != WRITE))) { // Deny everyone
 			// READ or WRITE may be implicitly allowed by other permissions
 			pentry->behavior = USERVERIFY_DENY;
-			dprintf( D_SECURITY, "ipverify: %s optimized to deny everyone\n", PermString(perm) );
+			if ( ! client_only) dprintf( D_SECURITY|D_VERBOSE, "ipverify: %s optimized to deny everyone\n", PermString(perm) );
 		} else if (allowAll) {
 			if (!pDeny) { // Allow anyone
 				pentry->behavior = USERVERIFY_ALLOW;
-				dprintf( D_SECURITY, "ipverify: %s optimized to allow anyone\n", PermString(perm) );
+				if ( ! client_only) dprintf( D_SECURITY|D_VERBOSE, "ipverify: %s optimized to allow anyone\n", PermString(perm) );
 			} else {
 				pentry->behavior = USERVERIFY_ONLY_DENIES;
 				fill_table( pentry, pDeny, false );
@@ -155,7 +152,7 @@ IpVerify::Init()
 			}
 		}
 
-        // Free up strings for next time around the loop
+		// Free up strings for next time around the loop
 		if (pAllow) {
 			free(pAllow);
 			pAllow = NULL;
@@ -165,8 +162,12 @@ IpVerify::Init()
 			pDeny = NULL;
 		}
 	}
-	dprintf(D_FULLDEBUG|D_SECURITY,"Initialized the following authorization table:\n");
-	PrintAuthTable(D_FULLDEBUG|D_SECURITY);
+
+	int dpf_level = D_SECURITY | (client_only ? D_VERBOSE : 0);
+	if (IsDebugCatAndVerbosity(dpf_level)) {
+		dprintf(dpf_level,"Initialized the following authorization table:\n");
+		PrintAuthTable(dpf_level);
+	}
 	return TRUE;
 }
 
@@ -722,7 +723,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		bool determined_by_parent = false;
 		if ( mask == 0 ) {
 			if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
-				dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who, addr.to_sinful().c_str());
+				dprintf(D_SECURITY|D_VERBOSE,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who, addr.to_sinful().c_str());
 				formatstr(allow_reason,
 						"%s authorization policy does not deny, so allowing",
 						PermString(perm));
@@ -737,7 +738,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 					if( Verify( *parent_perms, addr, user, allow_reason, deny_reason ) == USER_AUTH_SUCCESS ) {
 						determined_by_parent = true;
 						parent_allowed = true;
-						dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().c_str(),PermString(perm),PermString(*parent_perms));
+						dprintf(D_SECURITY|D_VERBOSE,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().c_str(),PermString(perm),PermString(*parent_perms));
 						std::string tmp = allow_reason;
 						formatstr(allow_reason,
 								"%s is implied by %s; %s",
@@ -850,7 +851,7 @@ IpVerify::lookup_user(UserHash_t& users, netgroup_list_t& netgroups, char const 
 		}
 
 		if (host_matches && contains_anycase_withwildcard(userlist, user)) {
-			dprintf ( D_SECURITY, "IPVERIFY: matched user %s from %s to %s list\n",
+			dprintf ( D_SECURITY|D_VERBOSE, "IPVERIFY: matched user %s from %s to %s list\n",
 					  user, host_key.c_str(), is_allow_list ? "allow" : "deny" );
 			return true;
 		}
@@ -886,13 +887,13 @@ IpVerify::PunchHole(DCpermission perm, const std::string& id)
 {
 	int count = ++PunchedHoleArray[perm][id];
 	if (count == 1) {
-		dprintf(D_SECURITY,
+		dprintf(D_SECURITY|D_VERBOSE,
 		        "IpVerify::PunchHole: opened %s level to %s\n",
 		        PermString(perm),
 		        id.c_str());
 	}
 	else {
-		dprintf(D_SECURITY,
+		dprintf(D_SECURITY|D_VERBOSE,
 		        "IpVerify::PunchHole: "
 			    "open count at level %s for %s now %d\n",
 		        PermString(perm),
@@ -926,7 +927,7 @@ IpVerify::FillHole(DCpermission perm, const std::string& id)
 	}
 
 	if (itr->second <= 0) {
-		dprintf(D_SECURITY,
+		dprintf(D_SECURITY|D_VERBOSE,
 		        "IpVerify::FillHole: "
 		            "removed %s-level opening for %s\n",
 		        PermString(perm),
@@ -934,7 +935,7 @@ IpVerify::FillHole(DCpermission perm, const std::string& id)
 		PunchedHoleArray[perm].erase(itr);
 	}
 	else {
-		dprintf(D_SECURITY,
+		dprintf(D_SECURITY|D_VERBOSE,
 		        "IpVerify::FillHole: "
 		            "open count at level %s for %s now %d\n",
 		        PermString(perm),
