@@ -13,8 +13,8 @@ import os
 def condor(test_dir):
     with Condor(local_dir=test_dir / "condor", config={
             "DAGMAN_USE_DIRECT_SUBMIT" : True,
-            "DAGMAN_PENDING_REPORT_INTERVAL" : 0,
-            "DAGMAN_CHECK_QUEUE_INTERVAL" : 1}) as condor:
+            "DAGMAN_PENDING_REPORT_INTERVAL" : 3,
+            "DAGMAN_CHECK_QUEUE_INTERVAL" : 3}) as condor:
         yield condor
 
 #--------------------------------------------------------------------------
@@ -110,7 +110,10 @@ class TestDAGManQueryCheck:
         found_errmsg = False
         with open(str(dag_file) + ".dagman.out", "r") as f:
             for line in f:
-                if "ERROR: DAGMan lost track the following jobs:" in line:
+                if "ERROR: DAGMan lost track of node" in line:
+                    found_errmsg = True
+                    break
+                elif "is in submitted state with no recorded job events!" in line:
                     found_errmsg = True
                     break
         return found_errmsg

@@ -387,6 +387,9 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
 
+	check_queue_interval = param_integer("DAGMAN_CHECK_QUEUE_INTERVAL", 28800);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_CHECK_QUEUE_INTERVAL setting: %d\n", check_queue_interval);
+
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n",
 				autoRescue ? "True" : "False" );
@@ -1230,7 +1233,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
-						  dagman._defaultNodeLog.c_str(),
+						  dagman._defaultNodeLog,
 						  dagman._generateSubdagSubmits,
 						  &dagman.options,
 						  false, dagman._schedd ); /* toplevel dag! */
@@ -1749,7 +1752,7 @@ void condor_event_timer (int /* tid */) {
 
 	// Before submitting ready jobs, check the user log for errors or shrinking.
 	// If either happens, this is really really bad! Bail out immediately.
-	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus();
+	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus(dagman.check_queue_interval);
 	if( log_status == ReadUserLog::LOG_STATUS_ERROR || log_status == ReadUserLog::LOG_STATUS_SHRUNK ) {
 		debug_printf( DEBUG_NORMAL, "DAGMan exiting due to error in log file\n" );
 		dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
