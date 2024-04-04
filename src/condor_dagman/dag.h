@@ -1309,6 +1309,9 @@ private:
 		// The last time we printed a pending node report.
 	time_t		_lastPendingNodePrintTime;
 
+	// The last time DAGMan had failed queried the local schedd queue
+	time_t queryFailTime{0};
+
 		// Default HTCondor ID to use in reseting a node's HTCondor ID on
 		// retry.
 	static const CondorID	_defaultCondorId;

@@ -488,7 +488,6 @@ static bool StoreQueueInformation(void* pv, ClassAd* ad) {
 */
 void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 	// If query failed then don't query again for a minimum of 10 minutes
-	static time_t queryFailTime = 0;
 	time_t now; time(&now);
 	if (now - queryFailTime < 600) { return; }
 
