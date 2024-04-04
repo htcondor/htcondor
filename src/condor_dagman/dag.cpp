@@ -457,8 +457,18 @@ static bool StoreQueueInformation(void* pv, ClassAd* ad) {
 	int ClusterId = -1;
 	int ProcId = -1;
 
-	ad->LookupInteger(ATTR_CLUSTER_ID, ClusterId);
-	ad->LookupInteger(ATTR_PROC_ID, ProcId);
+	bool missing_attr = false;
+	if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, ClusterId)) {
+		debug_printf(DEBUG_NORMAL, "ERROR: Queried Job Ad does not have ClusterId\n");
+		missing_attr = true;
+	}
+	if ( ! ad->LookupInteger(ATTR_PROC_ID, ProcId)) {
+		debug_printf(DEBUG_NORMAL, "ERROR: Queried Job Ad does not have ProcId\n");
+		missing_attr = true;
+	}
+
+	// If missing an attribute don't store and return
+	if (missing_attr) { return true; } // Don't take ownership of classad
 
 	if (info->contains(ClusterId)) {
 		(*info)[ClusterId].insert(ProcId);
