@@ -24,6 +24,7 @@
 #include <math.h>
 #include "filesystem_remap.h"
 #include "classad_helpers.h" // for cleanStringForUseAsAttr
+#include "../condor_sysapi/sysapi.h"
 
 #include <set>
 #include <algorithm>

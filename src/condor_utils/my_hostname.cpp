@@ -28,6 +28,7 @@
 #include "ipv6_hostname.h"
 #include "condor_sinful.h"
 #include "CondorError.h"
+#include "../condor_sysapi/sysapi.h"
 
 bool
 network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest)

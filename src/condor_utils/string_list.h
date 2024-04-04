@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "list.h"
+#include <string>
 
 
 /*

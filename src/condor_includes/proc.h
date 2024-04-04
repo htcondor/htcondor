@@ -23,6 +23,7 @@
 
 #include "condor_universe.h"
 #include "condor_header_features.h"
+#include <string>
 
 // parse a string of the form X.Y as a PROC_ID.
 // return true the input string was a valid proc id and ended with \0 or whitespace.
