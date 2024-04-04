@@ -109,7 +109,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 	}
 
 	std::string record_src;
-	queryAd.EvaluateAttrString("HistoryRecordSource", record_src);
+	queryAd.EvaluateAttrString(ATTR_HISTORY_RECORD_SOURCE, record_src);
 
 	bool searchDir = false;
 	if (!queryAd.EvaluateAttrBool("HistoryFromDir", searchDir)) {

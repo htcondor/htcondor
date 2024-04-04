@@ -264,3 +264,33 @@ py_new_htcondor2_spooled_proc_ad_list( std::vector< ClassAd * > * spooledProcAds
 
 	return result;
 }
+
+
+int
+py_list_to_vector_of_strings( PyObject * l, std::vector<std::string> & v, const char * name ) {
+    Py_ssize_t size = PyList_Size(l);
+    for( int i = 0; i < size; ++i ) {
+        PyObject * py_s = PyList_GetItem(l, i);
+        if( py_s == NULL ) {
+            // PyList_GetItem() has already set an exception for us.
+            return -1;
+        }
+
+        if(! PyUnicode_Check(py_s)) {
+            std::string exception;
+            formatstr( exception, "%s must be a list of strings", name );
+            PyErr_SetString(PyExc_TypeError, exception.c_str() );
+            return -1;
+        }
+
+        std::string s;
+        if( py_str_to_std_string(py_s, s) != -1 ) {
+            v.push_back(s);
+        } else {
+            // py_str_to_std_str() has already set an exception for us.
+            return -1;
+        }
+    }
+
+    return 0;
+}

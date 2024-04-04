@@ -364,10 +364,10 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		case HRS_SCHEDD_JOB_HIST:
 			break;
 		case HRS_STARTD_JOB_HIST:
-			ad.InsertAttr("HistoryRecordSource","STARTD");
+			ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"STARTD");
 			break;
 		case HRS_JOB_EPOCH:
-			ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+			ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"JOB_EPOCH");
 			break;
 		default:
 			THROW_EX(HTCondorValueError, "Unknown history record source given");

@@ -2433,18 +2433,16 @@ command_coalesce_slots(int, Stream * stream ) {
 		return FALSE;
 	}
 
-	StringList claimIDList( claimIDListString.c_str() );
-	if( claimIDList.isEmpty() ) {
+	// Remove duplicate claims.
+	std::set<std::string> ucil;
+	for (auto& claimID: StringTokenIterator(claimIDListString)) {
+		ucil.insert( claimID );
+	}
+
+	if (ucil.empty()) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): command ad's claim ID list empty or invalid\n" );
 		delete requestAd;
 		return FALSE;
-	}
-	// Remove duplicate claims.
-	claimIDList.rewind();
-	char * claimID = NULL;
-	std::set< char * > ucil;
-	while( (claimID = claimIDList.next()) != NULL ) {
-		ucil.insert( claimID );
 	}
 
 	//
@@ -2454,11 +2452,10 @@ command_coalesce_slots(int, Stream * stream ) {
 	CAResult result = CA_SUCCESS;
 
 	Resource * parent = NULL;
-	for(auto i : ucil) {
-		claimID = i;
+	for(auto& claimID : ucil) {
 
 		// If a slot has been preempted, don't coalesce it.
-		Resource * r = resmgr->get_by_cur_id( claimID );
+		Resource * r = resmgr->get_by_cur_id( claimID.c_str() );
 
 		// We'll ignore failed preconditions on the basis that if we return
 		// what we can, the schedd may (eventually) be able to do something
@@ -2554,11 +2551,10 @@ command_coalesce_slots(int, Stream * stream ) {
 	}
 
 	dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing slots...\n" );
-	for(auto i : ucil) {
-		claimID = i;
+	for(auto& claimID : ucil) {
 
 		// If a slot has been preempted, don't coalesce it.
-		Resource * r = resmgr->get_by_cur_id( claimID );
+		Resource * r = resmgr->get_by_cur_id( claimID.c_str() );
 		if (r) {
 			dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing %s...\n", r->r_id_str );
 

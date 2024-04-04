@@ -356,7 +356,7 @@ class FileTransfer final: public Service {
 
 	void setTransferQueueContactInfo(char const *contact);
 
-	void InsertPluginMappings(const std::string& methods, const std::string& p, bool supports_testing);
+	void InsertPluginMappings(const std::string& methods, const std::string& p, bool supports_testing, std::string & failed_methods);
 		// Run a test invocation of URL schema using plugin.  Will attempt to download
 		// the URL specified by config param `schema`_TEST_URL to a temporary directory.
 	bool TestPlugin(const std::string &schema, const std::string &plugin);
@@ -413,6 +413,9 @@ class FileTransfer final: public Service {
 	}
 
 	ClassAd *GetJobAd();
+
+	// get the raw '-classad' results from when we build the plugin to url map
+	const std::vector<ClassAd> & getPluginQueryAds() { return plugin_ads; }
 
 	bool transferIsInProgress() const { return ActiveTransferTid != -1; }
 
@@ -566,6 +569,7 @@ class FileTransfer final: public Service {
 	bool ClientCallbackWantsStatusUpdates{false};
 	FileTransferInfo Info;
 	PluginHashTable* plugin_table{nullptr};
+	std::vector<ClassAd> plugin_ads;  // raw results from -classad query of the plugins
 	std::map<std::string, bool> plugins_multifile_support;
 	std::map<std::string, bool> plugins_from_job;
 	bool I_support_filetransfer_plugins{false};

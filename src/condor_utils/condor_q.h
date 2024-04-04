@@ -117,11 +117,13 @@ class CondorQ
 	// default timeout when talking the schedd (via ConnectQ())
 	int connect_timeout;
 	
+#if 0
 	int *clusterarray;
 	int *procarray;
 	int clusterprocarraysize;
 	int numclusters;
 	int numprocs;
+#endif
 	char owner[MAXOWNERLEN];
 	char schedd[MAXSCHEDDLEN];
 	bool defaulting_operator;

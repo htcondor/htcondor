@@ -509,11 +509,7 @@ main( int argc, const char *argv[] )
 			exit(1);
 		}
 
-		StringList white;
-		//StringList * whitelist = nullptr;
 		if ( ! attrs.empty()) {
-			for (auto attr : attrs) { white.insert(attr.c_str()); }
-			//whitelist = &white;
 			// make sure we ask for the key attribute when we query
 			attrs.insert(ATTR_USER);
 		}
@@ -536,30 +532,14 @@ main( int argc, const char *argv[] )
 		}
 
 		int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
-	#if 1
 		rval = schedd.queryUsers(req_ad, process_ads, process_ads_data, connect_timeout, &errstack, &summary_ad);
 		if (rval != Q_OK) {
-	#else
-		if (fetchUsersFromSchedd (schedd, req_ad, process_ads, process_ads_data, connect_timeout, &errstack, &summary_ad)) {
-	#endif
 			fprintf(stderr, "Error: query failed - %s\n", errstack.getFullText().c_str());
 			exit(1);
 		} else if (dash_long) {
-		#if 0
-			std::string buf; buf.reserve(1024);
-			for (auto it : ads) {
-				classad::References ad_attrs;
-				sGetAdAttrs(ad_attrs, *it.second, false, whitelist);
-				sPrintAdAttrs(buf, *it.second, ad_attrs);
-				buf += "\n";
-				fputs(buf.c_str(), stdout);
-				buf.clear();
-			}
-		#else
 			CondorClassAdListWriter writer(dash_long_format);
 			for (const auto &[key, ad]: ads) { writer.writeAd(*ad, stdout); }
 			if (writer.needsFooter()) { writer.writeFooter(stdout); }
-		#endif
 		} else {
 			std::string line; line.reserve(1024);
 			// render once to set column widths

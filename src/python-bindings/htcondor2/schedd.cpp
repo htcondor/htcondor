@@ -42,30 +42,11 @@ _schedd_query(PyObject *, PyObject * args) {
     }
 
 
-    // FIXME: copied from _collector_query(), refactor.
-    // FIXME: Commas aren't legal in attribute names.  Consider rewriting
-    // to do the implosion on the Python side and a StringList here.
     std::vector<std::string> attributes;
-    Py_ssize_t size = PyList_Size(projection);
-    for( int i = 0; i < size; ++i ) {
-        PyObject * py_attr = PyList_GetItem(projection, i);
-        if( py_attr == NULL ) {
-            // PyList_GetItem() has already set an exception for us.
-            return NULL;
-        }
-
-        if(! PyUnicode_Check(py_attr)) {
-            PyErr_SetString(PyExc_TypeError, "projection must be a list of strings");
-            return NULL;
-        }
-
-        std::string attribute;
-        if( py_str_to_std_string(py_attr, attribute) != -1 ) {
-            attributes.push_back(attribute);
-        } else {
-            // py_str_to_std_str() has already set an exception for us.
-            return NULL;
-        }
+    int rv = py_list_to_vector_of_strings(projection, attributes, "projection");
+    if( rv == -1 ) {
+        // py_list_to_vector_of_strings() has already set an exception for us.
+        return NULL;
     }
 
     // Why _don't_ we have a std::vector<std::string> constructor for these?
@@ -78,7 +59,7 @@ _schedd_query(PyObject *, PyObject * args) {
     CondorError errStack;
     ClassAd * summaryAd = NULL;
     std::vector<ClassAd *> results;
-    int rv = q.fetchQueueFromHostAndProcess(
+    rv = q.fetchQueueFromHostAndProcess(
         addr, slAttributes, opts, limit,
         _schedd_query_callback, & results,
         2 /* use fetchQueueFromHostAndProcess2() */, & errStack,
@@ -608,10 +589,11 @@ submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd *
 
         ClassAd * procAd = sb->make_job_ad( JOB_ID_KEY(clusterID, procID),
             itemIndex, c, false, spool, NULL, NULL );
-        // FIXME: do something with sb->error_stack().
         if(! procAd) {
+            std::string error = "Failed to create job ad";
+            formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
             // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Failed to create job ad" );
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
             return -1;
         }
 
@@ -639,9 +621,10 @@ submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd *
 
             int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
                 * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
-            // FIXME: do something with sb->error_stack()
             if( rval < 0 ) {
-                PyErr_SetString( PyExc_RuntimeError, "Failed to send cluster attributes" );
+                std::string error = "Failed to send cluster attributes";
+                formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
+                PyErr_SetString( PyExc_RuntimeError, error.c_str() );
                 return -1;
             }
         }
@@ -870,10 +853,10 @@ _history_query(PyObject *, PyObject * args) {
         case 0: /* HRS_SCHEDD_JOB_HIST */
             break;
         case 1: /* HRS_STARTD_JOB_HIST */
-            commandAd.InsertAttr("HistoryRecordSource" /* FIXME */, "STARTD");
+            commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "STARTD");
             break;
         case 2: /* HRS_JOB_EPOCH */
-            commandAd.InsertAttr("HistoryRecordSource" /* FIXME */, "JOB_EPOCH");
+            commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "JOB_EPOCH");
             break;
         default:
             // This was HTCondorValueError in version 1.

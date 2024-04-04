@@ -41,6 +41,10 @@ New Features:
   guilty ticket is:
   :jira:`1146`
 
+- If a collector defines a local-name, but not a :macro:`COLLECTOR_NAME`,
+  the local name is now used as the default name.
+  :jira:`1105`
+
 - Most daemon log messages about tasks in the :macro:`STARTD_CRON_JOBLIST`,
   :macro:`BENCHMARKS_JOBLIST` or :macro:`SCHEDD_CRON_JOBLIST` that were
   logged as ``D_FULLDEBUG`` messages are now logged using the new message
@@ -71,6 +75,11 @@ New Features:
   been pending on nodes for :macro:`DAGMAN_CHECK_QUEUE_INTERVAL` seconds and the
   associated jobs are not found in the local *condor_schedd* queue.
   :jira:`1546`
+
+- File transfer plugins that are installed on the EP can now advertise extra
+  attributes into the STARTD ads.
+  :jira:`1051`
+
 
 Bugs Fixed:
 

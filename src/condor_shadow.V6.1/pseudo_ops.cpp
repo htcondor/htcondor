@@ -438,9 +438,9 @@ static int attr_list_has_file( const char *attr, const char *path )
 	file = condor_basename(path);
 
 	Shadow->getJobAd()->LookupString(attr,str);
-	StringList list(str.c_str());
+	std::vector<std::string> list = split(str);
 
-	if( list.contains_withwildcard(path) || list.contains_withwildcard(file) ) {
+	if( contains_withwildcard(list, path) || contains_withwildcard(list, file) ) {
 		return 1;
 	} else {
 		return 0;

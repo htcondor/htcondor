@@ -3227,15 +3227,17 @@ SecMan::ReconcileMethodLists( const char * cli_methods, const char * srv_methods
 	int match = 0;
 
 	// server methods, one at a time
-	for (auto& sm : StringTokenIterator(srv_methods)) {
-		if (!strcasecmp("TOKENS", sm.c_str()) || !strcasecmp("IDTOKENS", sm.c_str()) || !strcasecmp("IDTOKEN", sm.c_str())) {
-			sm = "TOKEN";
+	for (const auto& sm : StringTokenIterator(srv_methods)) {
+		std::string server_method {sm};
+		if (!strcasecmp("TOKENS", server_method.c_str()) || !strcasecmp("IDTOKENS", server_method.c_str()) || !strcasecmp("IDTOKEN", server_method.c_str())) {
+			server_method = "TOKEN";
 		}
 		for (auto cm: StringTokenIterator(cli_methods)) {
-			if (!strcasecmp("TOKENS", cm.c_str()) || !strcasecmp("IDTOKENS", cm.c_str()) || !strcasecmp("IDTOKEN", cm.c_str())) {
+			std::string cli_method {cm};
+			if (!strcasecmp("TOKENS", cli_method.c_str()) || !strcasecmp("IDTOKENS", cli_method.c_str()) || !strcasecmp("IDTOKEN", cli_method.c_str())) {
 				cm = "TOKEN";
 			}
-			if (!strcasecmp(sm.c_str(), cm.c_str())) {
+			if (!strcasecmp(server_method.c_str(), cli_method.c_str())) {
 				// add a comma if it isn't the first match
 				if (match) {
 					results += ",";
@@ -3244,7 +3246,7 @@ SecMan::ReconcileMethodLists( const char * cli_methods, const char * srv_methods
 				}
 
 				// and of course, append the common method
-				results += cm;
+				results += cli_method;
 			}
 		}
 	}
@@ -3480,6 +3482,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 		input_methods.c_str());
 	for (auto& tmp : StringTokenIterator(input_methods)) {
 		int method = sec_char_to_auth_method(tmp.c_str());
+		std::string input_method {tmp};
 		switch (method) {
 			case CAUTH_TOKEN: {
 				if (!Condor_Auth_Passwd::should_try_auth()) {
@@ -3488,7 +3491,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 				dprintf(D_FULLDEBUG|D_SECURITY, "Will try IDTOKENS auth.\n");
 					// For wire compatibility with older versions, we
 					// actually say 'TOKEN' instead of the canonical 'TOKENS'.
-				tmp = "TOKEN";
+				input_method = "TOKEN";
 				break;
 			}
 #ifndef WIN32
@@ -3522,7 +3525,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 			{
 					// Ensure we use the canonical 'SCITOKENS' on the wire
 					// for compatibility with older HTCondor versions.
-				tmp = "SCITOKENS";
+				input_method = "SCITOKENS";
 				break;
 			}
 #else
@@ -3544,7 +3547,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 			}
 			case 0: {
 				dprintf(D_SECURITY, "Requested configured authentication method "
-				        "%s not known or supported by HTCondor.\n", tmp.c_str());
+				        "%s not known or supported by HTCondor.\n", input_method.c_str());
 				continue;
 			}
 			// As additional filters are made, we can add them here.
@@ -3553,7 +3556,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 		};
 		if (first) {first = false;}
 		else {result += ",";}
-		result += tmp;
+		result += input_method;
 	}
 	return result;
 }

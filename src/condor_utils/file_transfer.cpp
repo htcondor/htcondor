@@ -7177,7 +7177,8 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 			trim(plugin_path);
 			std::string plugin(condor_basename(plugin_path.c_str()));
 
-			InsertPluginMappings(methods, plugin, false);
+			std::string dummy;
+			InsertPluginMappings(methods, plugin, false, dummy);
 			plugins_multifile_support[plugin] = true;
 			plugins_from_job[plugin.c_str()] = true;
 			multifile_plugins_enabled = true;
@@ -7198,27 +7199,24 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 		delete plugin_table;
 		plugin_table = NULL;
 	}
+	plugin_ads.clear();
 
 	// see if this is explicitly disabled
 	if (!I_support_filetransfer_plugins) {
 		return -1;
 	}
 
-	// even if we do not have any plugins, we still need to set up the
-	// table so any user plugins can be added.  plugin_table should not
-	// be NULL after this function exits.
-	char* plugin_list_string = param("FILETRANSFER_PLUGINS");
-
 	// plugin_table is a member variable
 	plugin_table = new PluginHashTable(hashFunction);
 
-	StringList plugin_list (plugin_list_string);
-	plugin_list.rewind();
+	// even if we do not have any plugins, we still need to set up the
+	// table so any user plugins can be added.  plugin_table should not
+	// be NULL after this function exits.
+	auto_free_ptr plugin_list_string(param("FILETRANSFER_PLUGINS"));
 
-	char *p;
-	while ((p = plugin_list.next())) {
+	for (const auto & path : StringTokenIterator(plugin_list_string)) {
 		// TODO: plugin must be an absolute path (win and unix)
-		SetPluginMappings( e, p, enable_testing );
+		SetPluginMappings( e, path.c_str(), enable_testing );
 	}
 
 	// If we have an https plug-in, this version of HTCondor also supports S3.
@@ -7230,100 +7228,111 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 		}
 	}
 
-	free(plugin_list_string);
 	return 0;
 }
 
-
+// query a plugins for the -classad output, capture that into the plugin_ads vector.
+// Also look at some attributes of the ad and update the URL to plugin map
+// and the plugins_multifile_support map.
 void
 FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_testing )
 {
-    FILE* fp;
-    const char *args[] = { path, "-classad", NULL};
-    char buf[1024];
 
-        // first, try to execute the given path with a "-classad"
-        // option, and grab the output as a ClassAd
-    fp = my_popenv( args, "r", FALSE );
+	ArgList args;
+	args.AppendArg(path);
+	args.AppendArg("-classad");
 
-    if( ! fp ) {
-        dprintf( D_ALWAYS, "FILETRANSFER: Failed to execute %s, ignoring\n", path );
+	const int timeout = 20; // max time to allow the plugin to run
+
+	MyPopenTimer pgm;
+	if (pgm.start_program(args, false) < 0) {
+		dprintf( D_ALWAYS, "FILETRANSFER: Failed to execute %s, ignoring\n", path );
 		e.pushf("FILETRANSFER", 1, "Failed to execute %s, ignoring", path );
-        return;
-    }
-    ClassAd* ad = new ClassAd;
-    bool read_something = false;
-    while( fgets(buf, 1024, fp) ) {
-        read_something = true;
-        if( ! ad->Insert(buf) ) {
-            dprintf( D_ALWAYS, "FILETRANSFER: Failed to insert \"%s\" into ClassAd, "
-                     "ignoring invalid plugin\n", buf );
-            delete( ad );
-            pclose( fp );
-			e.pushf("FILETRANSFER", 1, "Received invalid input '%s', ignoring", buf );
-            return;
-        }
-    }
-    my_pclose( fp );
-    if( ! read_something ) {
-        dprintf( D_ALWAYS,
-                 "FILETRANSFER: \"%s -classad\" did not produce any output, ignoring\n",
-                 path );
-        delete( ad );
+		return;
+	}
+
+	if ( ! pgm.wait_and_close(timeout) || pgm.output_size() <= 0) {
+		int error = pgm.error_code();
+		if ( ! error) error = 1;
+		dprintf( D_ALWAYS, "FILETRANSFER: No output from %s -classad, ignoring\n", path );
+		e.pushf("FILETRANSFER", error, "No output from %s -classad, ignoring", path );
+		return;
+	}
+
+	ClassAd & ad = plugin_ads.emplace_back();
+
+	std::string line;
+	while (pgm.output().readLine(line)) {
+		trim(line);
+		if (line.empty() || line.front() == '#') continue;
+		if ( ! ad.Insert(line.c_str())) {
+			dprintf( D_ALWAYS, "FILETRANSFER: Failed to insert '%s' into ClassAd, "
+				"ignoring invalid plugin\n", line.c_str());
+			e.pushf("FILETRANSFER", 1, "Received invalid input '%s', ignoring", line.c_str() );
+			plugin_ads.pop_back();
+			return;
+		}
+	}
+
+	if (ad.size() == 0) {
+		dprintf( D_ALWAYS,
+					"FILETRANSFER: \"%s -classad\" did not produce any output, ignoring\n",
+					path );
 		e.pushf("FILETRANSFER", 1, "\"%s -classad\" did not produce any output, ignoring", path );
-        return;
-    }
+		plugin_ads.pop_back();
+		return;
+	}
+
+	ad.Assign("Path", path);
 
 	// TODO: verify that plugin type is FileTransfer
 	// e.pushf("FILETRANSFER", 1, "\"%s -classad\" is not plugin type FileTransfer, ignoring", path );
 
 	// extract the info we care about
-	std::string methods;
+	std::string methods, failed_methods;
 	bool this_plugin_supports_multifile = false;
-	if ( ad->LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
+	if ( ad.LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
 		plugins_multifile_support[path] = this_plugin_supports_multifile;
 	}
 
 	// Before adding mappings, make sure that if multifile plugins are disabled,
 	// this is not a multifile plugin.
 	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
-		if (ad->LookupString( "SupportedMethods", methods)) {
-			InsertPluginMappings( methods, path, enable_testing );
+		if (ad.LookupString( "SupportedMethods", methods)) {
+			InsertPluginMappings( methods, path, enable_testing, failed_methods);
 
 			// Additionally, if the plug-in report a proxy for any of its
 			// supported methods, record that, too.
 			for( const auto & method : StringTokenIterator(methods) ) {
-			    std::string attr = method + "_proxy";
+				std::string attr = method + "_proxy";
 
-			    std::string proxy;
-			    if( ad->LookupString( attr, proxy ) ) {
-			        proxy_by_method[method] = proxy;
-			    }
+				std::string proxy;
+				if( ad.LookupString( attr, proxy ) ) {
+					proxy_by_method[method] = proxy;
+				}
 			}
 		}
 	}
 
-	delete( ad );
+	if ( ! failed_methods.empty()) { ad.Assign("FailedMethods", failed_methods); }
+
 	return;
 }
 
 
 void
-FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p, bool enable_testing)
+FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p, bool enable_testing, std::string & failed_methods)
 {
-	StringList method_list(methods.c_str());
-
-	const char* m;
-
-	method_list.rewind();
-	while((m = method_list.next())) {
+	for (auto & m : StringTokenIterator(methods)) {
 		if (enable_testing && !TestPlugin(m, p)) {
-			dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" not handled by \"%s\" due to failed test\n", m, p.c_str());
+			dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" not handled by \"%s\" due to failed test\n", m.c_str(), p.c_str());
+			if ( ! failed_methods.empty()) failed_methods += ",";
+			failed_methods += m;
 			continue;
 		}
-		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m, p.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m.c_str(), p.c_str());
 		if ( plugin_table->insert(m, p, true) != 0 ) {
-			dprintf(D_FULLDEBUG, "FILETRANSFER: error adding protocol \"%s\" to plugin table, ignoring\n", m);
+			dprintf(D_FULLDEBUG, "FILETRANSFER: error adding protocol \"%s\" to plugin table, ignoring\n", m.c_str());
 		}
 	}
 }

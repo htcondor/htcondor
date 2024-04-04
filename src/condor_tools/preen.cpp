@@ -86,7 +86,7 @@ char        *InvalidLogFiles;   // files we know we want to delete from log
 bool		MailFlag;			// true if we should send mail about problems
 bool		VerboseFlag;		// true if we should produce verbose output
 bool		RmFlag;				// true if we should remove extraneous files
-StringList	*BadFiles;			// list of files which don't belong
+std::vector<std::string> BadFiles;	// list of files which don't belong
 
 // prototypes of local interest
 void usage();
@@ -215,7 +215,6 @@ preen_main( int, char ** ) {
 	}
 
 	init_params();
-	BadFiles = new StringList;
 
 	if (VerboseFlag)
 	{
@@ -259,21 +258,18 @@ int
 preen_report() {
 	// Produce output, either on stdout or by mail
 	int exit_status = PREEN_EXIT_STATUS_SUCCESS;
-	if( !BadFiles->isEmpty() ) {
+	if( !BadFiles.empty() ) {
 		// write the files we deleted to the daemon log
-		for (const char * str = BadFiles->first(); str; str = BadFiles->next()) {
-			dprintf(D_ALWAYS, "%s\n", str);
+		for (auto& str: BadFiles) {
+			dprintf(D_ALWAYS, "%s\n", str.c_str());
 		}
 
-		dprintf(D_ALWAYS, "Results: %d file%s preened\n", BadFiles->number(), (BadFiles->number()>1) ? "s" : "");
+		dprintf(D_ALWAYS, "Results: %zu file%s preened\n", BadFiles.size(), (BadFiles.size()>1) ? "s" : "");
 
 		exit_status = send_email();
 	} else {
 		dprintf(D_ALWAYS, "Results: No files preened\n");
 	}
-
-	// Clean up
-	delete BadFiles;
 
 	dprintf( D_ALWAYS, "********************************\n");
 	dprintf( D_ALWAYS, "ENDING: condor_preen PID: %d STATUS: %d\n", getpid(), exit_status);
@@ -346,12 +342,11 @@ main( int argc, char * argv[] ) {
 int
 send_email()
 {
-	char	*str;
 	FILE	*mailer;
 	std::string subject,szTmp;
-	formatstr(subject, "condor_preen results %s: %d old file%s found",
-		get_local_fqdn().c_str(), BadFiles->number(),
-		(BadFiles->number() > 1)?"s":"");
+	formatstr(subject, "condor_preen results %s: %zu old file%s found",
+		get_local_fqdn().c_str(), BadFiles.size(),
+		(BadFiles.size() > 1)?"s":"");
 
 	if( MailFlag ) {
 		if( (mailer=email_nonjob_open(PreenAdmin, subject.c_str())) == NULL ) {
@@ -375,8 +370,8 @@ send_email()
 		fprintf( mailer, "%s", szTmp.c_str());
 	}
 
-	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
-		formatstr(szTmp, "  %s\n", str);
+	for (auto& str: BadFiles) {
+		formatstr(szTmp, "  %s\n", str.c_str());
 		fprintf( mailer, "%s", szTmp.c_str() );
 	}
 
@@ -922,15 +917,15 @@ check_log_dir()
 	param_longlong("PREEN_SCHEDD_COREFILES_TOTAL_DISK", scheddCoresMaxSum, true, 4 * coreFileMaxSize);
 	param_longlong("PREEN_NEGOTIATOR_COREFILES_TOTAL_DISK", negotiatorCoresMaxSum, true, 4 * coreFileMaxSize);
 	param_longlong("PREEN_COLLECTOR_COREFILES_TOTAL_DISK", collectorCoresMaxSum, true, 4 * coreFileMaxSize);
-	StringList invalid;
+	std::vector<std::string> invalid;
 	std::map<std::string, std::map<int, std::string>> programCoreFiles;
 	//Corefiles for daemons with large base sizes (schedd, negotiator, collector)
 	std::map<std::string, std::map<time_t, std::pair<std::string, filesize_t>>> largeCoreFiles;
 
-	invalid.initializeFromString (InvalidLogFiles ? InvalidLogFiles : "");
+	invalid = split(InvalidLogFiles ? InvalidLogFiles : "");
 
 	while( (f = dir.Next()) ) {
-		if( invalid.contains(f) ) {
+		if( contains(invalid, f) ) {
 			bad_file( Log, f, dir );
 		}
 		#ifndef WIN32
@@ -1298,7 +1293,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir, const char * e
 	if( extra != NULL ) {
 		formatstr_cat( buf, " - %s", extra );
 	}
-	BadFiles->append( buf.c_str() );
+	BadFiles.emplace_back( buf );
 }
 
 
@@ -1564,7 +1559,7 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	std::string buffer;
 	for( const auto & [path, message] : badPathMap ) {
 		formatstr( buffer, "%s - %s\n", path.string().c_str(), message.c_str() );
-		BadFiles->append( buffer.c_str() );
+		BadFiles.emplace_back( buffer );
 	}
 
 	DC_Exit(preen_report());
