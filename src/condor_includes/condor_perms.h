@@ -32,7 +32,7 @@
 // we can iterate through all the permission levels, and know when to 
 // stop. 
 /// enum for Daemon Core socket/command/signal permissions
-typedef enum {
+enum DCpermission {
   /** Place holder, must be same as next */  FIRST_PERM = 0,
   /** Open to everyone */                    ALLOW = 0,
   /** Able to read data */                   READ,
@@ -49,7 +49,7 @@ typedef enum {
   /** master ad */                           ADVERTISE_MASTER_PERM,
   /** Place holder, must be last */          LAST_PERM,
   /** Perm value is unset*/                  UNSET_PERM
-} DCpermission;
+};
 
 // convenience macro for iterating through DCpermission values
 #define NEXT_PERM(perm) ( (DCpermission) (((int)perm)+1) )

@@ -20,53 +20,72 @@
 #include "condor_common.h"
 #include "condor_perms.h"
 #include "condor_config.h"
+#include "stl_string_utils.h"
+#include <map>
+#include <array>
+#include <algorithm>
 
-const char*
-PermString( DCpermission perm )
+constexpr const
+std::array<std::pair<DCpermission, const char *>, LAST_PERM> makePermStringTable() {
+	return {{ // Yes, we need two...
+			/** Open to everyone */                    {ALLOW,                 "ALLOW"},
+			/** Able to read data */                   {READ,                  "READ"},
+			/** Able to modify data (submit jobs) */   {WRITE,                 "WRITE"},
+			/** From the negotiator */                 {NEGOTIATOR,            "NEGOTIATOR"},
+			/** Administrative cmds (on, off, etc) */  {ADMINISTRATOR,         "ADMINISTRATOR"},
+			/** Changing config settings remotely */   {CONFIG_PERM,           "CONFIG"},
+			/** Daemon to daemon communcation     */   {DAEMON,                "DAEMON"},
+			/** SOAP interface (http PUT) */           {SOAP_PERM,             "SOAP"},
+			/** DEFAULT */                             {DEFAULT_PERM,          "DEFAULT"},
+			/** CLIENT */                              {CLIENT_PERM,           "CLIENT"},
+			/** startd ad */                           {ADVERTISE_STARTD_PERM, "ADVERTISE_STARTD"},
+			/** schedd ad */                           {ADVERTISE_SCHEDD_PERM, "ADVERTISE_SCHEDD"},
+			/** master ad */                           {ADVERTISE_MASTER_PERM, "ADVERTISE_MASTER"},
+		}};
+}
+
+template<size_t N> constexpr
+auto sortByFirst(const std::array<std::pair<DCpermission, const char *>, N> &table) {
+	auto sorted = table;
+	std::sort(sorted.begin(), sorted.end(),
+		[](const std::pair<DCpermission, const char *> &lhs,
+			const std::pair<DCpermission, const char *> &rhs) {
+				return lhs.first < rhs.first;
+		});
+	return sorted;
+}
+
+template<size_t N> constexpr
+auto sortBySecond(const std::array<std::pair<DCpermission, const char *>, N> &table) {
+	std::array sorted = table;
+	std::sort(sorted.begin(), sorted.end(),
+		[](const std::pair<DCpermission, const char *> &lhs,
+			const std::pair<DCpermission, const char *> &rhs) {
+				return istring_view(lhs.second) < istring_view(rhs.second);
+		});
+	return sorted;
+}
+
+
+const char * PermString(DCpermission perm)
 {
-	switch( perm ) {
-	case ALLOW:
-		return "ALLOW";
-	case READ:
-		return "READ";
-	case WRITE:
-		return "WRITE";
-	case NEGOTIATOR:
-		return "NEGOTIATOR";
-	case ADMINISTRATOR:
-		return "ADMINISTRATOR";
-	case CONFIG_PERM:
-		return "CONFIG";
-    case DAEMON:
-        return "DAEMON";
-	case SOAP_PERM:
-		return "SOAP";
-	case DEFAULT_PERM:
-		return "DEFAULT";
-	case CLIENT_PERM:
-		return "CLIENT";
-	case ADVERTISE_STARTD_PERM:
-		return "ADVERTISE_STARTD";
-	case ADVERTISE_SCHEDD_PERM:
-		return "ADVERTISE_SCHEDD";
-	case ADVERTISE_MASTER_PERM:
-		return "ADVERTISE_MASTER";
-	default:
-		return "Unknown";
+	constexpr static const auto table = sortByFirst(makePermStringTable());
+	if (perm < 0 || (size_t)perm >= table.size()) {
+		return nullptr;
 	}
-};
-
+	ASSERT(table[perm].first == perm);
+	return table[perm].second;
+}
 
 DCpermission
-getPermissionFromString( const char * permstring )
+getPermissionFromString( const char * name )
 {
-	for ( DCpermission i = FIRST_PERM; i < LAST_PERM; i = NEXT_PERM(i) ) {
-		if (strcasecmp(permstring, PermString(i)) == 0) {
-			// match
-			return i;
-		}
-	}
-
+	constexpr static const auto table = sortBySecond(makePermStringTable());
+	auto it = std::lower_bound(table.begin(), table.end(), name,
+		[](const std::pair<int, const char *> &p, const char *name) {
+			return istring_view(p.second) < istring_view(name);
+		});;
+	if ((it != table.end()) && (istring_view(name) == istring_view(it->second))) return (DCpermission)it->first;
 	return (DCpermission)-1;
 }
 
