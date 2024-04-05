@@ -7227,6 +7227,11 @@ removeOtherJobs( int cluster, int proc )
 		std::vector<PROC_ID> otherJobs = getJobsByConstraint(removeConstraint.c_str());
 
 		if (!otherJobs.empty()) {
+			// Recursively remove other jobs from these other jobs, for nested dagmans.
+			for (auto it = otherJobs.begin(); it != otherJobs.end(); it++) {
+				removeOtherJobs(it->cluster, it->proc);
+			}
+
 			BeginTransaction();
 
 			for (auto it = otherJobs.rbegin(); it != otherJobs.rend(); it++) {
@@ -15870,64 +15875,6 @@ std::vector<PROC_ID> getJobsByConstraint(const char *constraint) {
 		result.emplace_back(ad->jid.cluster, ad->jid.proc);
 		ad = GetNextJobByConstraint(constraint, 0);
 	}
-	return result;
-}
-
-bool
-abortJobsByConstraint( const char *constraint,
-					   const char *reason,
-					   bool use_transaction )
-{
-	bool result = true;
-
-
-	dprintf(D_FULLDEBUG, "abortJobsByConstraint: '%s'\n", constraint);
-
-	if ( use_transaction ) {
-		BeginTransaction();
-	}
-
-	std::vector<PROC_ID> jobs = getJobsByConstraint(constraint);
-
-	int job_count = jobs.size();
-	std::vector<PROC_ID> removedJobs;
-
-	// Go in reverse order, as later jobs are more likely to Be
-	// idle, and removing all idle jobs makes FindRunnableJob
-	// much faster when we go to remove any Running jobs
-	//
-	for (auto it = jobs.rbegin(); it != jobs.rend(); ++it) {
-		auto [cluster, proc] = *it;
-		dprintf(D_FULLDEBUG, "removing: %d.%d\n", cluster, proc);
-
-		bool tmpResult = abortJobRaw(cluster, proc, reason);
-		if ( tmpResult ) {
-			removedJobs.emplace_back(cluster, proc);
-		}
-		result = result && tmpResult;
-		job_count--;
-	}
-
-	if ( use_transaction ) {
-		if ( result ) {
-			CommitTransactionOrDieTrying();
-		} else {
-			AbortTransaction();
-		}
-	}
-
-		//
-		// Remove "other" jobs that need to be removed as a result of
-		// the OtherJobRemoveRequirements exppression(s) in the job(s)
-		// that have just been removed.  Note that this must be done
-		// *after* the transaction is committed.
-		//
-	for (auto it = removedJobs.rbegin(); it != removedJobs.rend(); ++it) {
-		// Ignoring return value because we're not sure what to do
-		// with it.
-		(void)removeOtherJobs( it->cluster, it->proc);
-	}
-
 	return result;
 }
 
