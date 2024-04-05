@@ -376,10 +376,10 @@ Machine ClassAd Attributes
     transfer input, for instance) will not be included in the average.
 
 :classad-attribute-def:`JobDurationCount`
-    The average lifetime time of all jobs, not including time spent
-    transferring files. This attribute will be undefined until the first
-    time a job exits. Jobs that never start (because they fail to
-    transfer input, for instance) will not be included in the average.
+    The total number of jobs used to calculate the :ad-attr:`JobDurationAvg`
+    attribute. This is also the the total number times a job has exited.
+    Jobs that never start (because input transfer fails, for instance)
+    are not included in the count.
 
 :classad-attribute-def:`JobDurationMax`
     The lifetime of the longest lived job that has exited. This
