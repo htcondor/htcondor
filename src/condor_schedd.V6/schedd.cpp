@@ -93,6 +93,7 @@
 #include "token_utils.h"
 #include "jobsets.h"
 #include "classad_collection.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX

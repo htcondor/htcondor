@@ -44,6 +44,7 @@
 
 // #include <afxtempl.h>
 #include <map>
+#include <vector>
 
 // #include <winternl.h>
 #include <ntsecapi.h>

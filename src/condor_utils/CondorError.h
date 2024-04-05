@@ -24,6 +24,8 @@
 
 #include "condor_error_codes.h"
 
+#include <string>
+
 class CondorError {
 
 	public:

@@ -24,6 +24,7 @@
    a buffer as necessary.
    returns: true on success, false on failure (errno contains reason)
  */
+#include <string>
 bool condor_getcwd(std::string &path);
 
 #endif

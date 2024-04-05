@@ -21,6 +21,8 @@
 #ifndef CONDOR_SOCKADDR_H
 #define CONDOR_SOCKADDR_H
 
+#include <string>
+
 enum condor_protocol { CP_PRIMARY, CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_MAX, CP_PARSE_INVALID };
 
 // Return a human friendly(ish) name for a protocol. Suitable for

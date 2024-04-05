@@ -34,6 +34,7 @@
 #include "CondorError.h"
 #include <iosfwd>
 #include <string>
+#include <vector>
 #include <map>
 
 class MultiLogFiles

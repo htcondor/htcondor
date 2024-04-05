@@ -44,6 +44,10 @@
 #include "condor_getcwd.h"
 #include "directory.h"
 #include "tmp_dir.h"
+#include "condor_q.h"
+
+// {ClusterId : {ProcId,ProcId...}}
+using QueriedJobs = std::map<int, std::set<int>>;
 
 const CondorID Dag::_defaultCondorId;
 
@@ -83,7 +87,7 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
-		  const char *defaultNodeLog, bool generateSubdagSubmits,
+		  std::string defaultNodeLog, bool generateSubdagSubmits,
 		  DagmanOptions *dagDeepOpts, bool isSplice,
 		  DCSchedd *schedd, const std::string &spliceScope ) :
 	_maxPreScripts        (maxPreScripts),
@@ -120,7 +124,6 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 	_catThrottleDeferredCount (0),
 	_prohibitMultiJobs	  (prohibitMultiJobs),
 	_submitDepthFirst	  (submitDepthFirst),
-	_defaultNodeLog		  (defaultNodeLog),
 	_generateSubdagSubmits (generateSubdagSubmits),
 	_submitDagDeepOpts	  (dagDeepOpts),
 	_isSplice			  (isSplice),
@@ -136,6 +139,7 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.c_str() );
 
+	_defaultNodeLog.assign(defaultNodeLog);
 	// If this dag is a splice, then it may have been specified with a DIR
 	// directive. If so, then this records what it was so we can later
 	// propogate this information to all contained nodes in the DAG--effectively
@@ -295,39 +299,37 @@ bool Dag::Bootstrap (bool recovery)
 {
 	// This function should never be called on a dag object which is acting
 	// like a splice.
-	ASSERT( _isSplice == false );
+	ASSERT(_isSplice == false);
 
-    // update dependencies for pre-completed jobs (jobs marked DONE in
-    // the DAG input file)
-    for (auto & _job : _jobs) {
-		if( _job->GetStatus() == Job::STATUS_DONE ) {
+	// update dependencies for pre-completed jobs (jobs marked DONE in
+	// the DAG input file)
+	for (auto & _job : _jobs) {
+		if (_job->GetStatus() == Job::STATUS_DONE) {
 			TerminateJob(_job, false, true);
 		}
-    }
-    int nodesDone = NumNodesDone( true );
-    debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
-				  nodesDone );
+	}
+	int nodesDone = NumNodesDone(true);
+	debug_printf(DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n", nodesDone);
 
-    //User defined DONE nodes may result in children being 'done' before parent nodes
-    //Check for this use case and write a warning if found
-    int count = 0;
-    for (auto &_job : _jobs) {
-        bool done = _job->GetStatus() == Job::STATUS_DONE;
-        if ( done ) { count++; }
-        if ( _job->IsWaiting() && done && !_job->NoChildren() ) {
-            debug_printf( DEBUG_VERBOSE, "Warning: Node %s was marked as done even though parent nodes aren't complete."
-                        " Child nodes may run out of order.\n", _job->GetJobName());
-        }
-        if ( count >= nodesDone) { break; }
-    }
-    
+	//User defined DONE nodes may result in children being 'done' before parent nodes
+	//Check for this use case and write a warning if found
+	int count = 0;
+	for (auto &_job : _jobs) {
+		bool done = _job->GetStatus() == Job::STATUS_DONE;
+		if (done) { count++; }
+		if (_job->IsWaiting() && done && !_job->NoChildren()) {
+			debug_printf(DEBUG_VERBOSE, "Warning: Node %s was marked as done even though parent nodes aren't complete."
+			                            " Child nodes may run out of order.\n", _job->GetJobName());
+		}
+		if (count >= nodesDone) { break; }
+	}
+
 	_recovery = recovery;
 
 	(void) MonitorLogFile();
 
-    if (recovery) {
-        debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode... "
-					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
+	if (recovery) {
+		debug_printf(DEBUG_NORMAL, "Running in RECOVERY mode... >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 		_jobstateLog.WriteRecoveryStarted();
 		_jobstateLog.InitializeRecovery();
 
@@ -341,8 +343,8 @@ bool Dag::Bootstrap (bool recovery)
 
 		debug_cache_start_caching();
 
-		if( CondorLogFileCount() > 0 ) {
-			if( !ProcessLogEvents( recovery ) ) {
+		if (CondorLogFileCount() > 0) {
+			if ( ! ProcessLogEvents(recovery)) {
 				_recovery = false;
 				debug_cache_stop_caching();
 				_jobstateLog.WriteRecoveryFailure();
@@ -350,10 +352,12 @@ bool Dag::Bootstrap (bool recovery)
 			}
 		}
 
-		// all jobs stuck in STATUS_POSTRUN need their scripts run
-		for (auto & _job : _jobs) {
-			if( _job->GetStatus() == Job::STATUS_POSTRUN ) {
-				if ( !RunPostScript( _job, _alwaysRunPost, 0, false ) ) {
+		// Check node states for submitted and in post_run
+		int numSubmitted = 0;
+		for (auto &_job : _jobs) {
+			if (_job->GetStatus() == Job::STATUS_SUBMITTED) { numSubmitted++; }
+			else if (_job->GetStatus() == Job::STATUS_POSTRUN) {
+				if ( ! RunPostScript(_job, _alwaysRunPost, 0, false)) {
 					debug_cache_stop_caching();
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
@@ -361,45 +365,49 @@ bool Dag::Bootstrap (bool recovery)
 			}
 		}
 
-		set_fake_condorID( _recoveryMaxfakeID );
+		auto log_size = std::filesystem::file_size(_defaultNodeLog);
+
+		set_fake_condorID(_recoveryMaxfakeID);
 
 		debug_cache_stop_caching();
 
 		_jobstateLog.WriteRecoveryFinished();
-        debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
-					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
+		debug_printf(DEBUG_NORMAL, "...done with RECOVERY mode <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+
+		if (numSubmitted > 0) {
+			debug_printf(DEBUG_NORMAL, "%d nodes claim to have jobs submitted to queue. Verifying...\n",
+			             numSubmitted);
+			VerifyJobsInQueue(log_size);
+		}
+
 		print_status();
 
 		_recovery = false;
-    }
-	
-    if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
+	}
+
+	if (DEBUG_LEVEL(DEBUG_DEBUG_2)) {
 		PrintJobList();
-		PrintReadyQ( DEBUG_DEBUG_2 );
-    }
+		PrintReadyQ(DEBUG_DEBUG_2);
+	}
 
 		// If we have any service nodes, start those right away
-	if( !_service_nodes.empty() ) {
-		if ( !StartServiceNodes() ) {
-			debug_printf( DEBUG_QUIET, "Warning: unable to start service nodes."
-				" Proceeding with the DAG workflow.\n");
-		}
-	}
-    
-		// If we have a provisioner job, submit that before any other jobs
-	if( HasProvisionerNode() ) {
-		StartProvisionerNode();
-	}
-		// Note: we're bypassing the ready queue here...
-	else {
-		for (auto & _job : _jobs) {
-			if( _job->CanSubmit() ) {
-				StartNode( _job, false );
-			}
+	if ( ! _service_nodes.empty()) {
+		if ( ! StartServiceNodes()) {
+			debug_printf(DEBUG_QUIET, "Warning: unable to start service nodes. Proceeding with the DAG workflow.\n");
 		}
 	}
 
-    return true;
+	// If we have a provisioner job, submit that before any other jobs
+	if (HasProvisionerNode()) {
+		StartProvisionerNode();
+	} else {
+		// Note: we're bypassing the ready queue here...
+		for (auto & _job : _jobs) {
+			if(_job->CanSubmit()) { StartNode(_job, false); }
+		}
+	}
+
+	return true;
 }
 
 //-------------------------------------------------------------------------
@@ -443,33 +451,151 @@ Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 }
 
 //-------------------------------------------------------------------------
-ReadUserLog::FileStatus
-Dag::GetCondorLogStatus () {
+// Helper function to process queried job ad and store clusterid
+static bool StoreQueueInformation(void* pv, ClassAd* ad) {
+	QueriedJobs *info = (QueriedJobs*)pv;
+	int ClusterId = -1;
+	int ProcId = -1;
 
-	ReadUserLog::FileStatus status = _condorLogRdr.GetLogStatus();
-
-		//
-		// Print the nodes we're waiting for if the time threshold
-		// since the last event has been exceeded, and we also haven't
-		// printed a report in that time.
-		//
-	time_t		currentTime;
-	time( &currentTime );
-
-	if ( status == ReadUserLog::LOG_STATUS_GROWN ) _lastEventTime = currentTime;
-	time_t		elapsedEventTime = currentTime - _lastEventTime;
-	time_t		elapsedPrintTime = currentTime - _lastPendingNodePrintTime;
-
-	if ( (int)elapsedEventTime >= _pendingReportInterval &&
-				(int)elapsedPrintTime >= _pendingReportInterval ) {
-		debug_printf( DEBUG_NORMAL, "%d seconds since last log event\n",
-					(int)elapsedEventTime );
-		PrintPendingNodes();
-
-		_lastPendingNodePrintTime = currentTime;
+	bool missing_attr = false;
+	if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, ClusterId)) {
+		debug_printf(DEBUG_NORMAL, "ERROR: Queried Job Ad does not have ClusterId\n");
+		missing_attr = true;
+	}
+	if ( ! ad->LookupInteger(ATTR_PROC_ID, ProcId)) {
+		debug_printf(DEBUG_NORMAL, "ERROR: Queried Job Ad does not have ProcId\n");
+		missing_attr = true;
 	}
 
-    return status;
+	// If missing an attribute don't store and return
+	if (missing_attr) { return true; } // Don't take ownership of classad
+
+	if (info->contains(ClusterId)) {
+		(*info)[ClusterId].insert(ProcId);
+	} else {
+		info->insert({ClusterId, {ProcId}});
+	}
+
+	return true; // Don't take ownership of ClassAd
+}
+
+//-------------------------------------------------------------------------
+/*
+*	VerifyJobsInQueue() will query the local schedd job queue for all jobs
+*	associated with this DAG and verify that all nodes in the submitted state
+*	can find their recorded job (ClusterId.ProcId) in the returned ClassAds query.
+*	If any submitted node jobs are missing from the queue then rescue and abort.
+*/
+void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
+	// If query failed then don't query again for a minimum of 10 minutes
+	time_t now; time(&now);
+	if (now - queryFailTime < 600) { return; }
+
+	debug_printf(DEBUG_VERBOSE, "Querying local schedd for associated jobs in queue\n");
+	// Setup variables for queue query
+	CondorQ queue;
+	StringList attrs("ClusterId,ProcId");
+	CondorError errstack;
+	QueriedJobs job_info;
+
+	// Constraint to only DAGMan jobs and ClusterAds
+	std::string dagID;
+	formatstr(dagID, "DAGManJobId==%d", _DAGManJobId->_cluster);
+	(void)queue.addAND(dagID.c_str());
+
+	// Query the local schedd queue
+	int ret = queue.fetchQueueFromHostAndProcess(_schedd->addr(), attrs, QueryFetchOpts::fetch_Jobs, /*MatchLimit*/ -1,
+	                                             StoreQueueInformation, &job_info, 2, &errstack, nullptr);
+
+	auto log_size = std::filesystem::file_size(_defaultNodeLog);
+
+	// Check for query failure. If failure then write error and return
+	if (ret != Q_OK) {
+		switch(ret) {
+			case Q_PARSE_ERROR:
+			case Q_INVALID_CATEGORY:
+			case Q_UNSUPPORTED_OPTION_ERROR:
+				debug_printf(DEBUG_NORMAL, "ERROR(%d): Invalid Schedd query information.\n", ret);
+				break;
+			default:
+				debug_printf(DEBUG_NORMAL, "ERROR(%d): Failed to fetch job ads from local Schedd: %s\n",
+				             ret, errstack.getFullText().c_str());
+		}
+		queryFailTime = now;
+		return;
+	}
+
+	bool possible_race = (log_size > before_size);
+	bool abort_dag = false;
+	bool valid_state = true;
+
+	for (auto &node : _jobs) {
+		if (node->GetStatus() == Job::STATUS_SUBMITTED) {
+			int cluster = node->GetCluster();
+			// No jobs (cluster) found in queue or particular job not found in queue
+			if ( !job_info.contains(cluster) || !node->VerifyJobStates(job_info[cluster])) {
+				valid_state = false;
+				// Node has had issue already and a possible race is
+				// detected then note issue and continue on
+				if ( ! node->missingJobs && possible_race) {
+					node->missingJobs = true;
+				} else {
+					abort_dag = true;
+					debug_printf(DEBUG_NORMAL, "ERROR: DAGMan lost track of node %s (ClusterId=%d)\n",
+					             node->GetJobName(), cluster);
+				}
+			// All expected jobs found in the queue
+			} else if (node->missingJobs) { node->missingJobs = false; }
+		}
+	}
+
+	// Lost track of entire cluster or a particular job so abort.
+	if (abort_dag) { main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR); }
+	if ( ! valid_state) {
+		_validatedState = false;
+		return;
+	}
+
+	debug_printf(DEBUG_VERBOSE, "All pending job states validated\n");
+	_validatedState = true;
+	_validatedStateTime = _jobs[0]->GetLastStateChange();
+}
+
+//-------------------------------------------------------------------------
+// Print nodes we are waiting on after a set amount of time has occurred since
+// the last nodes log event and printing occurred. If printing has occurred for
+// a long time check the queue for jobs.
+ReadUserLog::FileStatus Dag::GetCondorLogStatus(time_t checkQInterval) {
+	time_t currentTime;
+	time(&currentTime);
+	ReadUserLog::FileStatus status = _condorLogRdr.GetLogStatus();
+
+	if (status == ReadUserLog::LOG_STATUS_GROWN) { _lastEventTime = currentTime; }
+	auto log_size = std::filesystem::file_size(_defaultNodeLog);
+
+	time_t elapsedEventTime = currentTime - _lastEventTime;
+	time_t elapsedPrintTime = currentTime - _lastPendingNodePrintTime;
+
+	if (elapsedEventTime >= (time_t)_pendingReportInterval &&
+	    elapsedPrintTime >= (time_t)_pendingReportInterval)
+	{
+		_lastPendingNodePrintTime = currentTime;
+		debug_printf(DEBUG_NORMAL, "%zu seconds since last log event\n", elapsedEventTime);
+		PrintPendingNodes();
+
+		if (checkQInterval > 0) {
+			time_t elapsedCheckQTime = currentTime - _jobs[0]->GetLastStateChange();
+
+			auto nodeIsSubmitted = [](const Job* n){ return n->GetStatus() == Job::STATUS_SUBMITTED; };
+			bool hasSubmittedJobs = std::find_if(_jobs.begin(), _jobs.end(), nodeIsSubmitted) != _jobs.end();
+
+			if (hasSubmittedJobs && !_validatedState && elapsedCheckQTime >= checkQInterval) {
+				VerifyJobsInQueue(log_size);
+			}
+		}
+	}
+
+	return status;
 }
 
 //-------------------------------------------------------------------------
@@ -590,12 +716,11 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				break;
 			} 
 
-				// Log this event if necessary.
-			if ( job ) {
-				_jobstateLog.WriteEvent( event, job );
-			}
+			// Log this event if necessary.
+			_jobstateLog.WriteEvent(event, job);
+			job->SetLastEventTime(event);
 
-			job->SetLastEventTime( event );
+			_validatedState = _validatedStateTime == job->GetLastStateChange();
 
 				// Note: this is a bit conservative -- some events (e.g.,
 				// ImageSizeUpdate) don't actually outdate the status file.
@@ -617,7 +742,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				ProcessNotIdleEvent( job, event->proc );
 				ProcessAbortEvent(event, job, recovery);
 				break;
-              
+
 			case ULOG_JOB_TERMINATED:
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent( job, event->proc );
@@ -1921,8 +2046,9 @@ Dag::PreScriptReaper( Job *job, int status )
 
 				// Mark the node as a skipped node.
 			CondorID id;
+			std::string logFile = DefaultNodeLog();
 			if ( !writePreSkipEvent( id, job, job->GetJobName(),
-					job->GetDirectory(), DefaultNodeLog() ) ) {
+					job->GetDirectory(), logFile.c_str() ) ) {
 				debug_printf( DEBUG_NORMAL, "Failed to write PRE_SKIP event for node %s\n",
 					job->GetJobName() );
 				main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
@@ -2044,10 +2170,11 @@ Dag::PostScriptReaper( Job *job, int status )
 	WriteUserLog ulog;
 	ulog.setUseCLASSAD( 0 );
 
+	std::string logFile = DefaultNodeLog();
 	debug_printf( DEBUG_QUIET,
 				"Initializing user log writer for %s, (%d.%d.%d)\n",
-				DefaultNodeLog(), event.cluster, event.proc, event.subproc );
-	ulog.initialize( DefaultNodeLog(), event.cluster, event.proc,
+				logFile.c_str(), event.cluster, event.proc, event.subproc );
+	ulog.initialize( logFile.c_str(), event.cluster, event.proc,
 				event.subproc );
 
 	for(int write_attempts = 0;;++write_attempts) {
@@ -3390,45 +3517,35 @@ Dag::EscapeClassadString( const char* strIn )
 }
 
 //---------------------------------------------------------------------------
-bool
-Dag::MonitorLogFile()
-{
-	debug_printf( DEBUG_DEBUG_2,
-				"Attempting to monitor log file <%s>\n", _defaultNodeLog );
+bool Dag::MonitorLogFile() {
+	std::string nodesLog = DefaultNodeLog();
+	debug_printf(DEBUG_DEBUG_2, "Attempting to monitor log file <%s>\n", nodesLog.c_str());
 
 	CondorError errstack;
-	if ( !_condorLogRdr.monitorLogFile( _defaultNodeLog, !_recovery,
-				errstack ) ) {
-		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
-					"ERROR: Unable to monitor log file <%s>\n",
-					_defaultNodeLog );
-		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
-		EXCEPT( "Fatal log file monitoring error!" );
-		return false;
+	if ( ! _condorLogRdr.monitorLogFile(nodesLog.c_str(), !_recovery, errstack)) {
+		errstack.pushf("DAGMan::Job", DAGMAN_ERR_LOG_FILE, "ERROR: Unable to monitor log file <%s>\n",
+		               nodesLog.c_str());
+		debug_printf(DEBUG_QUIET, "%s\n", errstack.getFullText().c_str());
+		EXCEPT("Fatal log file monitoring error!");
 	}
 
 	return true;
 }
 
 //---------------------------------------------------------------------------
-bool
-Dag::UnmonitorLogFile()
-{
-	debug_printf( DEBUG_DEBUG_2, "Unmonitoring log file <%s>\n",
-				_defaultNodeLog );
+bool Dag::UnmonitorLogFile() {
+	std::string nodesLog = DefaultNodeLog();
+	debug_printf(DEBUG_DEBUG_2, "Unmonitoring log file <%s>\n", nodesLog.c_str());
 
 	CondorError errstack;
-	bool result = _condorLogRdr.unmonitorLogFile( _defaultNodeLog,
-				errstack );
-	if ( !result ) {
-		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
-					"ERROR: Unable to unmonitor log file <%s>\n",
-					_defaultNodeLog );
-		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
-		EXCEPT( "Fatal log file monitoring error!" );
+	if ( ! _condorLogRdr.unmonitorLogFile(nodesLog.c_str(), errstack)) {
+		errstack.pushf("DAGMan::Job", DAGMAN_ERR_LOG_FILE, "ERROR: Unable to unmonitor log file <%s>\n",
+		               nodesLog.c_str());
+		debug_printf(DEBUG_QUIET, "%s\n", errstack.getFullText().c_str());
+		EXCEPT("Fatal log file monitoring error!");
 	}
 
-	return result;
+	return true;
 }
 
 //-------------------------------------------------------------------------
@@ -4259,12 +4376,13 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			  	node->JobTypeString(), node->GetJobName() );
 
 	bool submit_success = false;
+	std::string logFile = DefaultNodeLog();
 
  	node->_submitTries++;
 	if ( node->GetNoop() ) {
    		submit_success = fake_condor_submit( condorID, 0,
 					node->GetJobName(), node->GetDirectory(),
-					_defaultNodeLog );
+					logFile.c_str() );
 	} else if (!dm.useDirectSubmit) {
 		std::string parents("");
 		if ( ! node->NoParents()) {
@@ -4292,7 +4410,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					node->GetJobName(), parents.c_str(),
 					node, node->_effectivePriority,
 					node->GetRetries(),
-					node->GetDirectory(), _defaultNodeLog,
+					node->GetDirectory(), logFile.c_str(),
 					( ! node->NoChildren()) && dm._claim_hold_time > 0,
 					batchName, batchId );
 	} else {
@@ -4319,7 +4437,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		}
 
 		submit_success = direct_condor_submit(dm, node,
-			_defaultNodeLog, parents.c_str(), batchName, batchId, condorID);
+			logFile.c_str(), parents.c_str(), batchName, batchId, condorID);
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;
