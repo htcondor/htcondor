@@ -376,9 +376,10 @@ Machine ClassAd Attributes
     transfer input, for instance) will not be included in the average.
 
 :classad-attribute-def:`JobDurationCount`
-    attribute. This is also the total number times a job has exited.
-    Jobs that never start (because input transfer fails, for instance)
-    are not included in the count.
+    The average lifetime time of all jobs, not including time spent
+    transferring files. This attribute will be undefined until the first
+    time a job exits. Jobs that never start (because they fail to
+    transfer input, for instance) will not be included in the average.
 
 :classad-attribute-def:`JobDurationMax`
     The lifetime of the longest lived job that has exited. This
@@ -439,9 +440,7 @@ Machine ClassAd Attributes
     keyboard activity from telnet and rlogin sessions. Note that
     :ad-attr:`KeyboardIdle` will always be equal to or less than
     :ad-attr:`ConsoleIdle`. The value can be modified with
-    :macro:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
-    :ref:`admin-manual/configuration-macros:condor_startd configuration file
-    macros` section.
+    :macro:`SLOTS_CONNECTED_TO_KEYBOARD`.
 
 :classad-attribute-def:`KFlops`
     Relative floating point performance as determined via a Linpack
