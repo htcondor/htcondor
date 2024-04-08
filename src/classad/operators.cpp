@@ -452,14 +452,13 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			val2.IsIntegerValue( index );
 			
 			// check bounds
-			ExprListIterator itr( elist );
-			if( index < 0 || !itr.ToNth( index ) ) {
+			if( index < 0 || index > elist->size()) {
 				result.SetErrorValue();
 				return SIG_CHLD2;
 			}
 			
 			// get value
-			if( !itr.CurrentValue( result, es ) ) {
+			if (!elist->GetValueAt(index, result, es)) {
 				result.SetErrorValue( );
 			}
 			return( SIG_CHLD1 | SIG_CHLD2 );

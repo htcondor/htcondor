@@ -90,7 +90,7 @@ public:
 protected:
 	
 	virtual void _SetParentScope( const ClassAd* parent) { parentScope = parent; }
-	CachedExprEnvelope() : parentScope(NULL) {;};
+	CachedExprEnvelope() : parentScope(NULL) {};
 	
 	/**
 	 * SameAs() - determines if two elements are the same.
