@@ -2648,11 +2648,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 
 std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
 	std::string res;
-	DCpermissionHierarchy hierarchy( perm );
-	DCpermission const *perms = hierarchy.getImpliedPerms();
-
-		// iterate through a list of this perm and all perms implied by it
-	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+	for ( ; perm < LAST_PERM; perm = DCpermissionHierarchy::nextImplied(perm)) {
 		for (auto &ce : comTable) {
 			bool alternate_perm_match = false;
 			if (ce.alternate_perm) {

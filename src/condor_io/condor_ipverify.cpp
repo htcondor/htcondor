@@ -730,20 +730,17 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 
 				mask |= allow_mask(perm);
 			} else {
-				DCpermissionHierarchy hierarchy( perm );
-				DCpermission const *parent_perms =
-					hierarchy.getPermsIAmDirectlyImpliedBy();
 				bool parent_allowed = false;
-				for( ; *parent_perms != LAST_PERM; parent_perms++ ) {
-					if( Verify( *parent_perms, addr, user, allow_reason, deny_reason ) == USER_AUTH_SUCCESS ) {
+				for (auto parent_perm : DCpermissionHierarchy::DirectlyImpliedBy(perm)) {
+					if( Verify( parent_perm, addr, user, allow_reason, deny_reason ) == USER_AUTH_SUCCESS ) {
 						determined_by_parent = true;
 						parent_allowed = true;
-						dprintf(D_SECURITY|D_VERBOSE,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().c_str(),PermString(perm),PermString(*parent_perms));
+						dprintf(D_SECURITY|D_VERBOSE,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().c_str(),PermString(perm),PermString(parent_perm));
 						std::string tmp = allow_reason;
 						formatstr(allow_reason,
 								"%s is implied by %s; %s",
 								PermString(perm),
-								PermString(*parent_perms),
+								PermString(parent_perm),
 								tmp.c_str());
 						break;
 					}
@@ -901,13 +898,21 @@ IpVerify::PunchHole(DCpermission perm, const std::string& id)
 		        count);
 	}
 
-	DCpermissionHierarchy hierarchy( perm );
-	DCpermission const *implied_perms=hierarchy.getImpliedPerms();
-	for(; implied_perms[0] != LAST_PERM; implied_perms++ ) {
-		if( perm != implied_perms[0] ) {
-			PunchHole(implied_perms[0],id);
+#if 1
+	// recursively iterate and puch holes for implied perms
+	DCpermission implied_perm = DCpermissionHierarchy::nextImplied(perm);
+	if (implied_perm < LAST_PERM && implied_perm != perm) {
+		PunchHole(implied_perm,id);
+	}
+#else // this is what the pre 23.x code did...
+	// iteratively and recursively puch holes for implied perms
+	DCpermission implied_perm = perm;
+	for ( ; implied_perm < LAST_PERM; implied_perm = DCpermissionHierarchy::nextImplied(implied_perm)) {
+		if (perm != implied_perm) {
+			PunchHole(implied_perm,id);
 		}
 	}
+#endif
 
 	return true;
 }
@@ -943,13 +948,21 @@ IpVerify::FillHole(DCpermission perm, const std::string& id)
 		        itr->second);
 	}
 
-	DCpermissionHierarchy hierarchy( perm );
-	DCpermission const *implied_perms=hierarchy.getImpliedPerms();
-	for(; implied_perms[0] != LAST_PERM; implied_perms++ ) {
-		if( perm != implied_perms[0] ) {
-			FillHole(implied_perms[0],id);
+#if 1
+	// recursively iterate and puch holes for implied perms
+	DCpermission implied_perm = DCpermissionHierarchy::nextImplied(perm);
+	if (implied_perm < LAST_PERM && implied_perm != perm) {
+		FillHole(implied_perm,id);
+	}
+#else // this is what the pre 23.x code did.
+	// iteratively and recursively puch holes for implied perms
+	DCpermission implied_perm = perm;
+	for ( ; implied_perm < LAST_PERM; implied_perm = DCpermissionHierarchy::nextImplied(implied_perm)) {
+		if (perm != implied_perm) {
+			FillHole(implied_perm,id);
 		}
 	}
+#endif
 
 	return true;
 }

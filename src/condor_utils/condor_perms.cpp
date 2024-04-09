@@ -28,19 +28,19 @@
 constexpr const
 std::array<std::pair<DCpermission, const char *>, LAST_PERM> makePermStringTable() {
 	return {{ // Yes, we need two...
-			/** Open to everyone */                    {ALLOW,                 "ALLOW"},
-			/** Able to read data */                   {READ,                  "READ"},
-			/** Able to modify data (submit jobs) */   {WRITE,                 "WRITE"},
-			/** From the negotiator */                 {NEGOTIATOR,            "NEGOTIATOR"},
-			/** Administrative cmds (on, off, etc) */  {ADMINISTRATOR,         "ADMINISTRATOR"},
-			/** Changing config settings remotely */   {CONFIG_PERM,           "CONFIG"},
-			/** Daemon to daemon communcation     */   {DAEMON,                "DAEMON"},
-			/** SOAP interface (http PUT) */           {SOAP_PERM,             "SOAP"},
-			/** DEFAULT */                             {DEFAULT_PERM,          "DEFAULT"},
-			/** CLIENT */                              {CLIENT_PERM,           "CLIENT"},
-			/** startd ad */                           {ADVERTISE_STARTD_PERM, "ADVERTISE_STARTD"},
-			/** schedd ad */                           {ADVERTISE_SCHEDD_PERM, "ADVERTISE_SCHEDD"},
-			/** master ad */                           {ADVERTISE_MASTER_PERM, "ADVERTISE_MASTER"},
+			{ALLOW,                 "ALLOW\0Open to everyone"},
+			{READ,                  "READ\0Able to read data"},
+			{WRITE,                 "WRITE\0Able to modify data (submit jobs)"},
+			{NEGOTIATOR,            "NEGOTIATOR\0From the negotiator"},
+			{ADMINISTRATOR,         "ADMINISTRATOR\0Administrative cmds (on, off, etc)"},
+			{CONFIG_PERM,           "CONFIG\0Changing config settings remotely"},
+			{DAEMON,                "DAEMON\0Daemon to daemon communcation"},
+			{SOAP_PERM,             "SOAP\0(deprecated) SOAP interface (http PUT)"},
+			{DEFAULT_PERM,          "DEFAULT\0Default config settings"},
+			{CLIENT_PERM,           "CLIENT\0Tools and client-side daemons"},
+			{ADVERTISE_STARTD_PERM, "ADVERTISE_STARTD\0Able to advertise a STARTD ad"},
+			{ADVERTISE_SCHEDD_PERM, "ADVERTISE_SCHEDD\0Able to advertise a SCHEDD ad"},
+			{ADVERTISE_MASTER_PERM, "ADVERTISE_MASTER\0Able to advertise a MASTER ad"},
 		}};
 }
 
@@ -77,6 +77,17 @@ const char * PermString(DCpermission perm)
 	return table[perm].second;
 }
 
+const char * PermDescription(DCpermission perm)
+{
+	constexpr static const auto table = sortByFirst(makePermStringTable());
+	if (perm < 0 || (size_t)perm >= table.size()) {
+		return nullptr;
+	}
+	ASSERT(table[perm].first == perm);
+	return table[perm].second + strlen(table[perm].second)+1;
+}
+
+
 DCpermission
 getPermissionFromString( const char * name )
 {
@@ -86,83 +97,63 @@ getPermissionFromString( const char * name )
 			return istring_view(p.second) < istring_view(name);
 		});;
 	if ((it != table.end()) && (istring_view(name) == istring_view(it->second))) return (DCpermission)it->first;
-	return (DCpermission)-1;
+	return NOT_A_PERM;
 }
 
+// tables for iterating DCpermissionHierarchy::nextConfig
+// each entry should have the value that will iterate next
+// all paths should lead to LAST_PERM
+// i.e.   aConfigNext[DAEMON] -> aConfigNext[DEFAULT] -> aConfigNext[LAST]
+// the legacy table is the config order we used before recommended_v90 security
+const DCpermission DCpermissionHierarchy::aConfigNext[] = {
+	/*                ALLOW */ DEFAULT_PERM,
+	/*                 READ */ DEFAULT_PERM,
+	/*                WRITE */ DEFAULT_PERM,
+	/*           NEGOTIATOR */ DEFAULT_PERM,
+	/*        ADMINISTRATOR */ DEFAULT_PERM,
+	/*               CONFIG */ DEFAULT_PERM,
+	/*               DAEMON */ DEFAULT_PERM,
+	/*                 SOAP */ DEFAULT_PERM,
+	/*              DEFAULT */ LAST_PERM,
+	/*               CLIENT */ DEFAULT_PERM,
+	/*     ADVERTISE_STARTD */ DAEMON,
+	/*     ADVERTISE_SCHEDD */ DAEMON,
+	/*     ADVERTISE_MASTER */ DAEMON,
+	/*     LAST_PERM        */ UNSET_PERM,
+};
+const DCpermission DCpermissionHierarchy::aConfigNextLegacy[] = {
+	/*                ALLOW */ DEFAULT_PERM,
+	/*                 READ */ DEFAULT_PERM,
+	/*                WRITE */ DEFAULT_PERM,
+	/*           NEGOTIATOR */ DEFAULT_PERM,
+	/*        ADMINISTRATOR */ DEFAULT_PERM,
+	/*               CONFIG */ DEFAULT_PERM,
+	/*               DAEMON */ WRITE,
+	/*                 SOAP */ DEFAULT_PERM,
+	/*              DEFAULT */ LAST_PERM,
+	/*               CLIENT */ DEFAULT_PERM,
+	/*     ADVERTISE_STARTD */ DAEMON,
+	/*     ADVERTISE_SCHEDD */ DAEMON,
+	/*     ADVERTISE_MASTER */ DAEMON,
+	/*     LAST_PERM        */ UNSET_PERM,
+};
 
-DCpermissionHierarchy::
-DCpermissionHierarchy(DCpermission perm) {
-	m_base_perm = perm;
-	unsigned int i = 0;
-
-	m_implied_perms[i++] = m_base_perm;
-
-		// Add auth levels implied by specified perm
-	bool done = false;
-	while(!done) {
-		switch( m_implied_perms[i-1] ) {
-		case DAEMON:
-		case ADMINISTRATOR:
-			m_implied_perms[i++] = WRITE;
-			break;
-		case WRITE:
-		case NEGOTIATOR:
-		case CONFIG_PERM:
-		case ADVERTISE_STARTD_PERM:
-		case ADVERTISE_SCHEDD_PERM:
-		case ADVERTISE_MASTER_PERM:
-			m_implied_perms[i++] = READ;
-			break;
-		default:
-				// end of hierarchy
-			done = true;
-			break;
-		}
-	}
-	m_implied_perms[i] = LAST_PERM;
-
-	i=0;
-	switch(m_base_perm) {
-	case READ:
-		m_directly_implied_by_perms[i++] = WRITE;
-		m_directly_implied_by_perms[i++] = NEGOTIATOR;
-		m_directly_implied_by_perms[i++] = CONFIG_PERM;
-		m_directly_implied_by_perms[i++] = ADVERTISE_STARTD_PERM;
-		m_directly_implied_by_perms[i++] = ADVERTISE_SCHEDD_PERM;
-		m_directly_implied_by_perms[i++] = ADVERTISE_MASTER_PERM;
-		break;
-	case WRITE:
-		m_directly_implied_by_perms[i++] = ADMINISTRATOR;
-		m_directly_implied_by_perms[i++] = DAEMON;
-		break;
-	default:
-		break;
-	}
-	m_directly_implied_by_perms[i] = LAST_PERM;
-
-	i=0;
-	m_config_perms[i++] = m_base_perm;
-	done = false;
-	while( !done ) {
-		switch(m_config_perms[i-1]) {
-		case DAEMON:
-			if (param_boolean("LEGACY_ALLOW_SEMANTICS", false)) {
-				m_config_perms[i++] = WRITE;
-			} else {
-				done = true;
-			}
-			break;
-		case ADVERTISE_STARTD_PERM:
-		case ADVERTISE_SCHEDD_PERM:
-		case ADVERTISE_MASTER_PERM:
-			m_config_perms[i++] = DAEMON;
-			break;
-		default:
-				// end of config hierarchy
-			done = true;
-			break;
-		}
-	}
-	m_config_perms[i++] = DEFAULT_PERM;
-	m_config_perms[i] = LAST_PERM;
-}
+// table for iterating permissions implied by a given permission.
+// all paths should lead to LAST_PERM
+// aImpliedNext[DAEMON] -> aImpliedNext[WRITE] -> aImpliedNext[READ] -> aImpliedNext[LAST]
+const DCpermission DCpermissionHierarchy::aImpliedNext[] = {
+	/*                ALLOW */ LAST_PERM,
+	/*                 READ */ LAST_PERM,
+	/*                WRITE */ READ,
+	/*           NEGOTIATOR */ READ,
+	/*        ADMINISTRATOR */ WRITE,
+	/*               CONFIG */ READ,
+	/*               DAEMON */ WRITE,
+	/*                 SOAP */ LAST_PERM,
+	/*              DEFAULT */ LAST_PERM,
+	/*               CLIENT */ LAST_PERM,
+	/*     ADVERTISE_STARTD */ READ,
+	/*     ADVERTISE_SCHEDD */ READ,
+	/*     ADVERTISE_MASTER */ READ,
+	/*     LAST_PERM        */ UNSET_PERM,
+};

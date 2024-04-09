@@ -359,70 +359,57 @@ SecMan::getAuthenticationMethods(DCpermission perm) {
 	return filterAuthenticationMethods(perm, methods);
 }
 
-bool
-SecMan::getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
+char*
+SecMan::getSecSetting( const char* fmt, DCpermission perm, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
 {
-	return getSecSetting_implementation(&result,NULL,fmt,auth_level,param_name,check_subsystem);
-}
+	std::string buf;
+	char * result = nullptr;
 
-char* 
-SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
-{
-	char *result = NULL;
-	getSecSetting_implementation(NULL,&result,fmt,auth_level,param_name,check_subsystem);
+	// param used by the use SECURITY:HOST_BASED knob to request the old config inheritance order
+	// legacy only applies to DEMON and ADVERTISE_* so don't even bother to param if not in that range.
+	bool legacy = (perm >= DAEMON) && param_boolean("LEGACY_ALLOW_SEMANTICS", false);
+
+	// Now march through the list of config settings to look for.  The
+	// last one in the list should always be DEFAULT_PERM, which we only use
+	// if nothing else is found first.
+
+	for( ; perm < LAST_PERM; perm = DCpermissionHierarchy::nextConfig(perm, legacy)) {
+
+		if (check_subsystem) {
+			// First see if there is a specific config entry for the
+			// specified condor subsystem.
+			formatstr(buf, fmt, PermString(perm));
+			buf += "_"; buf += check_subsystem;
+			result = param(buf.c_str());
+			if (result) {
+				break;
+			}
+		}
+
+		formatstr(buf, fmt, PermString(perm));
+		result = param(buf.c_str());
+		if (result) {
+			break;
+		}
+	}
+
+	if (result && param_name) { // Caller wants to know the param name.
+		*param_name = buf;
+	}
+
 	return result;
 }
 
 bool
-SecMan::getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name, char const *check_subsystem )
+SecMan::getIntSecSetting( int &result, const char* fmt, DCpermission auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
 {
-	DCpermission const *perms = auth_level.getConfigPerms();
-	bool found;
-
-		// Now march through the list of config settings to look for.  The
-		// last one in the list will be DEFAULT_PERM, which we only use
-		// if nothing else is found first.
-
-	for( ; *perms != LAST_PERM; perms++ ) {
-		std::string buf;
-		if( check_subsystem ) {
-				// First see if there is a specific config entry for the
-				// specified condor subsystem.
-			formatstr( buf, fmt, PermString(*perms) );
-			formatstr_cat(buf, "_%s",check_subsystem);
-			if( int_result ) {
-				found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
-			}
-			else {
-				*str_result = param( buf.c_str() );
-				found = *str_result;
-			}
-			if( found ) {
-				if( param_name ) {
-						// Caller wants to know the param name.
-					*param_name = buf;
-				}
-				return true;
-			}
-		}
-
-		formatstr( buf, fmt, PermString(*perms) );
-		if( int_result ) {
-			found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
-		}
-		else {
-			*str_result = param( buf.c_str() );
-			found = *str_result;
-		}
-		if( found ) {
-			if( param_name ) {
-					// Caller wants to know the param name.
-				*param_name = buf;
-			}
-			return true;
-		}
+	auto_free_ptr str(getSecSetting(fmt, auth_level, param_name, check_subsystem));
+	long long llval=0;
+	if (str && string_is_long_param(str, llval)) {
+		llval = MAX(llval, INT_MIN);
+		llval = MIN(llval, INT_MAX);
+		result = (int)llval;
 	}
-
 	return false;
 }
 
