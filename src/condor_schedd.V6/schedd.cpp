@@ -4923,6 +4923,10 @@ jobIsFinished( int cluster, int proc, void* )
 		// little consequence.
 	WriteCompletionVisa(job_ad);
 
+	// Remove related Jobs
+	removeOtherJobs(cluster, proc);
+
+
 		/*
 		  make sure we can switch uids.  if not, there's nothing to
 		  do, so we should exit right away.
