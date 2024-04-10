@@ -941,28 +941,23 @@ Modify( ClassAd& mod )
 		// Step 3:  Process Deletes attribute
 	if( ( expr = mod.Lookup( ATTR_DELETES ) ) != NULL ) {
 		const ExprList 		*list;
-		ExprListIterator	itor;
 		const char			*attrName;
 
 			// make a first pass to check that it is a list of strings ...
 		if( !expr->Evaluate( val ) || !val.IsListValue( list ) ) {
 			return;
 		}
-		itor.Initialize( list );
-		while( ( expr = itor.CurrentExpr( ) ) ) {
+		for (const auto *expr: *list) {
 			if( !expr->Evaluate( val ) || !val.IsStringValue( attrName ) ) {
 				return;
 			}
-			itor.NextExpr( );
 		}
 
 			// now go through and delete all the named attributes ...
-		itor.Initialize( list );
-		while( ( expr = itor.CurrentExpr( ) ) ) {
+		for (const auto *expr: *list) {
 			if( expr->Evaluate( val ) && val.IsStringValue( attrName ) ) {
 				ctx->Delete( attrName );
 			}
-			itor.NextExpr( );
 		}
 	}
 

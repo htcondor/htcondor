@@ -679,8 +679,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 
     // check for membership
 	arg1.IsListValue( el );
-	ExprListIterator itr( el );
-	while( ( tree = itr.CurrentExpr( ) ) ) {
+	for (const auto *tree: *el) {
 		if( !tree->Evaluate( state, cArg ) ) {
 			val.SetErrorValue( );
 			return( false );
@@ -690,7 +689,6 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 		if( val.IsBooleanValue( b ) && b ) {
 			return true;
 		}
-		itr.NextExpr( );
 	}
 	val.SetBooleanValue( false );	
 
@@ -877,7 +875,6 @@ sumAvg(const char *name, const ArgumentList &argList,
 	const ExprTree    *listElement;
 	Value             numElements, result;
 	const ExprList    *listToSum;
-	ExprListIterator  listIterator;
 	bool		      first;
 	int			      len;
 	bool              onlySum = (strcasecmp("sum", name) == 0 );
@@ -901,16 +898,13 @@ sumAvg(const char *name, const ArgumentList &argList,
 	}
 
 	onlySum = (strcasecmp("sum", name) == 0 );
-	listIterator.Initialize(listToSum);
 	result.SetIntegerValue(0); // sum({}) should be 0
 	len = 0;
 	first = true;
 
 	// Walk over each element in the list, and sum.
-	for (listElement = listIterator.CurrentExpr();
-		 listElement != NULL;
-		 listElement = listIterator.NextExpr()) {
-		if (listElement != NULL) {
+	for (const auto *listElement: *listToSum) {
+		if (listElement != nullptr) {
 			len++;
 			// Make sure this element is a number.
 			if (!listElement->Evaluate(state, listElementValue)) {
@@ -963,7 +957,6 @@ minMax(const char *fn, const ArgumentList &argList,
 	const ExprTree     *listElement;
 	Value              result;
 	const ExprList     *listToBound;
-	ExprListIterator   listIterator;
     bool		       first = true, b = false;
 	Operation::OpKind  comparisonOperator;
 
@@ -992,14 +985,11 @@ minMax(const char *fn, const ArgumentList &argList,
 		comparisonOperator = Operation::GREATER_THAN_OP;
 	}
 
-	listIterator.Initialize(listToBound);
 	result.SetUndefinedValue();
 
 	// Walk over the list, calculating the bound the whole way.
-	for (listElement = listIterator.CurrentExpr();
-		 listElement != NULL;
-		 listElement = listIterator.NextExpr()) {
-		if (listElement != NULL) {
+	for (const auto *listElement: *listToBound) {
+		if (listElement != nullptr) {
 
 			// For this element of the list, make sure it is 
 			// acceptable.
@@ -1043,7 +1033,6 @@ listCompare(
 	Value              stringValue;
 	const ExprTree     *listElement;
 	const ExprList     *listToCompare;
-	ExprListIterator   listIterator;
     bool		       needAllMatch;
 	string             comparison_string;
 	Operation::OpKind  comparisonOperator;
@@ -1118,12 +1107,8 @@ listCompare(
 		val.SetBooleanValue(true);
 	}
 
-	listIterator.Initialize(listToCompare);
-
 	// Walk over the list
-	for (listElement = listIterator.CurrentExpr();
-		 listElement != NULL;
-		 listElement = listIterator.NextExpr()) {
+	for (const auto *listElement: *listToCompare) {
 		if (listElement != NULL) {
 
 			// For this element of the list, make sure it is 
@@ -2477,8 +2462,7 @@ doMath2( const char* name,const ArgumentList &argList,EvalState &state,
 				const ExprList *list = NULL;
 				arg2.IsListValue(list);
 				base.SetRealValue(0.0), rbase = 0.0; // treat an empty list as 'don't quantize'
-				for (ExprListIterator itr(list); !itr.IsAfterLast(); itr.NextExpr()) {
-					const ExprTree *expr = itr.CurrentExpr();
+				for (const auto *expr: *list) {
 					if ( ! expr->Evaluate(state, base)) {
 						result.SetErrorValue();
 						return false; // eval should not fail
