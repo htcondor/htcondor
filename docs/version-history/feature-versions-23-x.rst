@@ -96,6 +96,10 @@ New Features:
   a weak dependency for HTCondor.
   :jira:`2295`
 
+- Include a weak dependency on ``bash-completion`` so the ``htcondor`` CLI
+  command has ``<TAB>`` completions.
+  :jira:`2311`
+
 - DAGMan no longer suppresses email notifications for jobs it manages by default.
   To revert behavior of suppressing notifications set :macro:`DAGMAN_SUPPRESS_NOTIFICATION`
   to **False**.
