@@ -75,6 +75,7 @@ extern	DLL_IMPORT_MAGIC char**		environ;
 extern char const * const HOME_POOL_SUBMITTER_TAG;
 
 void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
+bool removeOtherJobs(int cluster_id, int proc_id);
 
 //
 // Given a ClassAd from the job queue, we check to see if it
