@@ -4268,9 +4268,6 @@ int DestroyProc(int cluster_id, int proc_id)
 		return DESTROYPROC_SUCCESS_DELAY;
 	}
 
-	// Remove related Jobs
-	removeOtherJobs(cluster_id, proc_id);
-
 		// should we leave the job in the queue?
 	bool leave_job_in_q = false;
 	{
