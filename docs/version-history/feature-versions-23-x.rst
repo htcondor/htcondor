@@ -123,7 +123,7 @@ New Features:
   docker universe jobs to override the entrypoint in the image.
   :jira:`2321`
 
-- :tool:`condor_q` -better-analyze now emits the units for memory and
+- :tool:`condor_q` ``-better-analyze`` now emits the units for memory and
   disk.
   :jira:`2333`
 
