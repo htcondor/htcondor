@@ -394,7 +394,7 @@ void print_security_config(bool include_soap, const char * subsys)
 				std::string filtered_methods = SecMan::filterCryptoMethods(crypto_methods);
 				if (filtered_methods != crypto_methods) {
 					fprintf(stdout, "%s = %s\n"
-						" # from: <filtered-default>\n",
+						" # from: <filtered-default>\n"
 						" # default: %s\n",
 						param_name.c_str(), filtered_methods.c_str(), crypto_methods.c_str()
 					);
