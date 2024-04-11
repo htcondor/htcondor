@@ -8,7 +8,7 @@ module reset &> /dev/null
 
 CONFIG_FRAGMENT() {
     echo '
-        # Testing singularity sandboxes hangs right now (2023-03-28),
+        # Testing singularity sandboxes hangs right now (2024-03-28),
         # so only give the tests a few seconds to finish.
         SINGULARITY_TEST_SANDBOX_TIMEOUT = 5
     '
