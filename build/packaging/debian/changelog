@@ -1,3 +1,12 @@
+condor (23.0.8-1) stable; urgency=medium
+
+  * Fix bug where ssh-agent processes were leaked with grid universe jobs
+  * Fix DAGMan crash when a provisioner node was given a parent
+  * Fix bug that prevented use of "ftp:" URLs in file transfer
+  * Fix bug where jobs that matched an offline slot never start
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 11 Apr 2024 10:53:00 -0500
+
 condor (23.0.6-1) stable; urgency=medium
 
   * Fix DAGMan where descendants of removed retry-able jobs are marked futile
