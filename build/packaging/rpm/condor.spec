@@ -1428,6 +1428,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.1-1
+- Improved security checks for IDTOKENS
+- Add the ability to force vanilla universe jobs to run in a container
+- Add the ability to override the entrypoint for a Docker image
+- condor_q analysis includes units for memory and disk quantities
+
 * Mon Mar 25 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.3-1
 - HTCondor tarballs now contain Pelican 7.6.2
 
