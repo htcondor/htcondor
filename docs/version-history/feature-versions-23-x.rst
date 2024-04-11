@@ -9,42 +9,48 @@ Version 23.6.1
 
 Release Notes:
 
-.. HTCondor version 23.6.1 released on Month Date, 2024.
+- HTCondor version 23.6.1 released on April 11, 2024.
 
-- HTCondor version 23.6.1 not yet released.
+- **NOTE**: ``IDTOKEN`` files with permissive file protections are ignored.
+  In particular, the /etc/condor/tokens.d directory and the tokens contained
+  within should be only accessible by the root account.
 
 - This version includes all the updates from :ref:`lts-version-history-2308`.
 
 New Features:
 
-- Updated :tool:`get_htcondor` to allow the aliases ``lts`` for **stable**
-  and ``feature`` for **current** when passed to the *--channel* option.
-  :jira:`775`
+- ``IDTOKEN`` files whose access permissions are not restricted to the file
+  owner are now ignored.
+  :jira:`232`
+
+- Allow the *condor_startd* to force a job that doesn't ask to run inside a
+  docker or apptainer container inside one with new parameters
+  :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
+  :jira:`2317`
 
 - Added new submit command :subcom:`docker_override_entrypoint` to allow
   docker universe jobs to override the entrypoint in the image.
   :jira:`2321`
 
-- Allow the startd to force a job that doesn't ask to run inside a
-  docker or apptainer container inside one with new parameters
-  :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
-  :jira:`2317`
-
 - :subcom:`condor_q` -better now emits the units for memory and
   disk.
   :jira:`2333`
 
-- Add htcondor job out|err|log verbs to the :tool:`htcondor` cli tool.
+- Updated :tool:`get_htcondor` to allow the aliases ``lts`` for **stable**
+  and ``feature`` for **current** when passed to the *--channel* option.
+  :jira:`775`
+
+- Add htcondor job ``out``, ``err``, and ``log`` verbs to the :tool:`htcondor` CLI tool.
   :jira:`2182`
 
-- The startd now honors the environment variable OMP_NUM_THREADS
+- The *condor_startd* now honors the environment variable OMP_NUM_THREADS
   when setting the number of cores available.  This allows 
   glideins to pass an allocated number of cores from a base batch
   system to the glidein easily.
   :jira:`727`
 
 - If the EP is started under another batch system that limits the amount
-  of memory to the EP via a cgroup limit, the startd now advertises
+  of memory to the EP via a cgroup limit, the *condor_startd* now advertises
   this much memory available for jobs.
   :jira:`727`
 
@@ -68,18 +74,18 @@ New Features:
   :jira:`2315`
 
 - Added the environment variable PYTHON_CPU_COUNT to the set of environment
-  variables set for jobs to indicate how many cpu cores are provisioned.
-  Python 3.13 uses this override the detected count of cpu cores.
+  variables set for jobs to indicate how many CPU cores are provisioned.
+  Python 3.13 uses this override the detected count of CPU cores.
   :jira:`2330`
 
 - Added -file option to :tool:`condor_token_list`
   :jira:`575`
 
 - The configuration parameter :macro:`ETC` can now be used to relocate
-  files that are normally place under /etc/condor on unix platforms.
+  files that are normally place under /etc/condor on Unix platforms.
   :jira:`2290`
 
-- The submit file expansion $(CondorScratchDir) now works for local
+- The submit file expansion ``$(CondorScratchDir)`` now works for local
   universe.
   :jira:`2324`
 
@@ -87,10 +93,6 @@ New Features:
   terminate event will now include extended resource allocation and
   usage information when available.
   :jira:`2281`
-
-- IDTOKEN files whose access permissions are not restricted to the file
-  owner are now ignored.
-  :jira:`232`
 
 - The package containing the Pelican OSDF file transfer plugin is now
   a weak dependency for HTCondor.
@@ -120,7 +122,7 @@ New Features:
 - The configuration variables :macro:`SLOTS_CONNECTED_TO_KEYBOARD` and
   :macro:`SLOTS_CONNECTED_TO_CONSOLE` now apply to partitionable slots but do
   not count them as slots.  As a consequence of this change, when
-  either of these variables are set equal to the number of cpus, all slots will be connected.
+  either of these variables are set equal to the number of CPUs, all slots will be connected.
   :jira:`2331`
 
 Bugs Fixed:
