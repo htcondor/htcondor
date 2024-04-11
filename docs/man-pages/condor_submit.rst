@@ -2278,6 +2278,11 @@ COMMANDS FOR THE CONTAINER UNIVERSE
     a singularity exploded directory, or a path to an image in a docker style 
     repository
 
+ :subcom-def:`transfer_container` = < True | False >
+    A boolean value that defaults to True.  When false, sif container images
+    and expanded directories are assumed to be pre-staged on the EP, and
+    HTCondor will not attempt to transfer them. 
+
  :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped
     to the scratch directory on the worker node.
