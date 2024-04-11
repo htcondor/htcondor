@@ -359,7 +359,11 @@ MASTER_ATTRS = \$(MASTER_ATTRS) AnnexName IsAnnex hpc_annex_request_id
 JOB_EXECUTION_TRANSFORM_NAMES = siffile
 JOB_EXECUTION_TRANSFORM_siffile @=end
 if defined MY.ContainerImage
-    EVALSET ContainerImage strcat(\"${SIF_DIR}/\", MY.ContainerImage)
+    EVALMACRO FOO=TransferContainer ?: true
+    if $(FOO)
+        EVALSET ContainerImage strcat(\"${SIF_DIR}/\", MY.ContainerImage)
+        SET TransferContainer false
+    endif
 endif
 @end
 
