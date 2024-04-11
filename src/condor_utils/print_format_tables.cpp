@@ -81,7 +81,7 @@ const char * extractStringsFromList ( const classad::Value & value, Formatter &,
 	classad::ExprList::const_iterator i = list->begin();
 	for( ; i != list->end(); ++i ) {
 		std::string item;
-		if ((*i)->GetKind() != classad::ExprTree::LITERAL_NODE) continue;
+		if (dynamic_cast<classad::Literal *>(*i) == nullptr) continue;
 		classad::Value val;
 		reinterpret_cast<classad::Literal*>(*i)->GetValue(val);
 		if (val.IsStringValue(item)) {
@@ -107,7 +107,7 @@ const char * extractUniqueStrings ( const classad::Value & value, Formatter &, s
 		// for lists, unparse each item into the uniqueness set.
 		for(classad::ExprList::const_iterator it = list->begin() ; it != list->end(); ++it ) {
 			std::string item;
-			if ((*it)->GetKind() != classad::ExprTree::LITERAL_NODE) {
+			if (dynamic_cast<classad::Literal *>(*it) == nullptr) {
 				unparser.Unparse( item, *it );
 			} else {
 				classad::Value val;

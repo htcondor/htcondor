@@ -22,216 +22,459 @@
 #define __CLASSAD_LITERALS_H__
 
 #include <vector>
+#include <limits>
 #include "exprTree.h"
 
 namespace classad {
 
-typedef std::vector<ExprTree*> ArgumentList;
+class ErrorLiteral;
+class UndefinedLiteral;
+class BooleanLiteral;
+class IntegerLiteral;
+class RealLiteral;
+class ReltimeLiteral;
+class AbstimeLiteral;
+class StringLiteral;
 
-/** Represents the literals of the ClassAd language, such as integers,
-		reals, booleans, strings, undefined and real.
-*/
-class Literal : public ExprTree 
-{
+// abstract base class for the common code in all the
+// concrete literal sub classes
+
+class Literal: public ExprTree {
 	public:
-		/// Destructor
-		virtual ~Literal () {};
+		virtual NodeKind GetKind (void) const = 0;
+        virtual bool SameAs(const ExprTree *tree) const = 0;
+		virtual const ClassAd *GetParentScope( ) const { return nullptr; }
 
-		/// Copy constructor
-		Literal(const Literal &lit)
-			: ExprTree()
-			, value(lit.value)
-			{}
+		static AbstimeLiteral   *MakeAbsTime( abstime_t *now=NULL ); 
+		static AbstimeLiteral   *MakeAbsTime( std::string timestr);
+		static ReltimeLiteral   *MakeRelTime( time_t secs=-1 );
+		static ReltimeLiteral   *MakeRelTime( time_t t1, time_t t2 );
+		static ReltimeLiteral   *MakeRelTime(const std::string &str);
+		static UndefinedLiteral *MakeUndefined();
+		static ErrorLiteral     *MakeError();
+		static BooleanLiteral   *MakeBool(bool val);
+		static IntegerLiteral   *MakeInteger(int64_t i);
+		static RealLiteral      *MakeReal(const std::string &s);
+		static RealLiteral      *MakeReal(double d);
+		static StringLiteral    *MakeString(const std::string &str);
+		static StringLiteral    *MakeString(const char *);
+		static StringLiteral    *MakeString(const char *, size_t size);
+		static Literal          *MakeLiteral( const Value& v, Value::NumberFactor f=Value::NO_FACTOR);
 
-		/// Assignment operator
-		Literal &operator=(const Literal &lit) {
-			if (this != &lit) {
-				CopyFrom(lit);
-			}
-			return *this;
-		}
-
-		/// node type
-		virtual NodeKind GetKind (void) const { return LITERAL_NODE; }
-
-		/** Create an absolute time literal.
-		 * 	@param now The time in UNIX epoch.  If a value of NULL is passed in
-		 * 	the system's current time will be used.
-		 * 	@return The literal expression.
-		 */
-		static Literal* MakeAbsTime( abstime_t *now=NULL );
-
-		/* Creates an absolute time literal, from the string timestr, 
-		 *parsing it as the regular expression:
-		 D* dddd [D* dd [D* dd [D* dd [D* dd [D* dd D*]]]]] [-dddd | +dddd | z | Z]
-		 D => non-digit, d=> digit
-		 Ex - 2003-01-25T09:00:00-0600
-		*/
-		static Literal* MakeAbsTime( std::string timestr);
-
-		/** Create a relative time literal.
-		 * @param secs The number of seconds.  If a value of -1 is passed in
-		 * the time since midnight (i.e., the daytime) is used.
-		 * @return The literal expression.
-		 */
-		static Literal* MakeRelTime( time_t secs=-1 );
-
-		/** Create a relative time interval by subtracting two absolute times.
-		 * @param t1 The end time of the interval.  If -1 is passed in, the
-		 * system's current time will be used.
-		 * @param t2 the start time of the interval  If -1 is passed in, the
-		 * system's current time will be used.
-		 * @return The literal expression of the relative time (t1 - t2).
-		 */
-		static Literal* MakeRelTime( time_t t1, time_t t2 );
-
-		/* Creates a relative time literal, from the string timestr, 
-		 *parsing it as [[[days+]hh:]mm:]ss
-		 * Ex - 1+00:02:00
-		*/		
-		static Literal* MakeRelTime(const std::string &str);
-
-		/** Create a real literal from the given string.
-		 * Use of a scaling factor in the string is not supported.
-		 * @param realstr String representation of a floating-point value.
-		 * @return The literal expression.
-		 */
-		static Literal* MakeReal(const std::string &realstr);
-
-		/// optimized literal makers for common cases.
-		// these skip the error setting reporting on purpose - leaving that to the caller if it is desired.
-		static Literal* MakeBool(bool val) {
-			Literal* lit = new Literal();
-			if (lit) { lit->value.SetBooleanValue(val); }
-			return lit;
-		}
-		static Literal* MakeLong(long long val) {
-			Literal* lit = new Literal();
-			if (lit) { lit->value.SetIntegerValue(val); }
-			return lit;
-		}
-		static Literal* MakeReal(double real) {
-			Literal* lit = new Literal();
-			if (lit) { lit->value.SetRealValue(real); }
-			return lit;
-		}
-		static Literal* MakeString(const std::string & str) {
-			Literal* lit = new Literal();
-			if (lit) { lit->value.SetStringValue(str); }
-			return lit;
-		}
-		static Literal* MakeString(const char* str) {
-			Literal* lit = new Literal();
-			if (lit) { lit->value.SetStringValue(str); }
-			return lit;
-		}
-		static Literal* MakeString(const char* str, size_t cch) {
-			Literal* lit = new Literal();
-			if (lit) { lit->value.SetStringValue(str, cch); }
-			return lit;
-		}
-		static Literal* MakeError() {
-			Literal* lit = new Literal();
-			if (lit) { lit->value.SetErrorValue(); }
-			return lit;
-		}
-		static Literal* MakeUndefined() {
-			Literal* lit = new Literal();
-			if (lit) { lit->value.SetUndefinedValue(); }
-			return lit;
-		}
-		static Literal* MakeUndefined( Value * & v ) {
-			Literal* lit = new Literal();
-			// lit->value is already the undefined value.
-			if (lit) { v = & lit->value; }
-			return lit;
-		}
-
-		/// optimized value replacers
-		void SetBool(bool val) { value.SetBooleanValue(val); }
-		void SetReal(double val) { value.SetRealValue(val); }
-		void SetLong(long long val) { value.SetIntegerValue(val); }
-		void SetString(const char * str) { value.SetStringValue(str); }
-		void SetString(const char * str, size_t cch) { value.SetStringValue(str, cch); }
-		void SetString(const std::string & str) { value.SetStringValue(str); }
-		void SetUndefined() { value.SetUndefinedValue(); }
-
-		/// Make a deep copy
-		virtual ExprTree* Copy( ) const {
-			Literal *tree = new Literal(*this);
-			if ( ! tree) setError(ERR_MEM_ALLOC_FAILED);
-			return tree;
-		}
-
-		void CopyFrom(const Literal &lit) {
-			ExprTree::CopyFrom(lit);
-			value.CopyFrom(lit.value);
-		}
-
-		/** Factory method to construct a Literal
-		 * @param v The value to convert to a literal. (Cannot be a classad or
-		 * 			list value.)
-		 * @param f The number factor (B, K, M, G, T) --- ignored for
-		 * 			non-numeric values.
-		 * @return The constructed literal expression
-		 */
-		static Literal*MakeLiteral( const Value& v, Value::NumberFactor f=
-					Value::NO_FACTOR );
-
-		/** Deconstructor to get the components of the literal 
-		 * 	@param v The encapsulated value
-		 * 	@param f The number factor (invalid if v is non-numeric)
-		 */
-		void GetComponents( Value& v) const {
-			v = value;
-		}
-
-		const Value& getValue() const {
-			return value;
-		}
-
-		/** Get the encapsulated value
-		 * 	@param v The value encapsulated by the literal
-		 */
-		void GetValue( Value& val ) const {
-			val.CopyFrom( value );
-		}
-
-		/** Special case fetch of the c_str() within a literal string
-		 *  to avoid copying it into a new literal
-		 */
-		bool GetStringValue( const char * & cstr ) const { return value.IsStringValue(cstr); };
-
-		/* Takes the number of seconds since the epoch as argument - epochsecs, 
-		 *and returns the timezone offset(relative to GMT) in the currect locality
-		 */
 		static int findOffset(time_t epochsecs);
 
-        virtual bool SameAs(const ExprTree *tree) const;
-
-        friend bool operator==(Literal &literal1, Literal &literal2);
-
-		virtual const ClassAd *GetParentScope( ) const { return NULL; }
+		void GetValue(Value& val) const {
+			EvalState dummy;
+			this->_Evaluate(dummy, val);
+		}
 
 	protected:
-		/// Constructor
-		Literal () {}
-		static void setError(int err, const char *msg=NULL);
-
-  	private:
-		friend class FunctionCall;
-		friend class ClassAd;
-		friend class ExprList;
-		friend class Operation;
-
-		virtual void _SetParentScope( const ClassAd* ){ }
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
- 		virtual bool _Evaluate (EvalState &, Value &) const;
- 		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&) const;
-
-		// literal specific information
-		Value value;
+		// no-op for all literals
+		virtual void _SetParentScope(const ClassAd*) {}
+		Literal(): ExprTree() {}
 };
+	// An empty instance.  Could be a singleton, if we cared enough
+class ErrorLiteral: public Literal {
+	public:
+		virtual ~ErrorLiteral() {}
+		ErrorLiteral(const ErrorLiteral &) : Literal() {}
+		ErrorLiteral &operator=(const ErrorLiteral &) {return *this;}
+
+		virtual NodeKind GetKind (void) const { return ERROR_LITERAL; }
+		virtual ExprTree* Copy() const { return new ErrorLiteral();}
+        virtual bool SameAs(const ExprTree *tree) const {return dynamic_cast<const ErrorLiteral *>(tree);} 
+	protected:
+		ErrorLiteral() {}
+
+		// Always evaluates to error
+ 		virtual bool _Evaluate(EvalState &, Value &v) const {
+			v.SetErrorValue();
+			return true;
+		};
+
+		virtual bool _Flatten(EvalState &state, Value &val, ExprTree*& tree, int*) const {
+			tree = nullptr;
+			return(_Evaluate(state, val));
+		}
+
+ 		virtual bool _Evaluate(EvalState &state, Value &value, ExprTree *&tree) const {
+			_Evaluate(state, value);
+			return ((tree = Copy()));
+		};
+		friend class Literal;
+};
+	
+class UndefinedLiteral: public Literal {
+	public:
+		virtual ~UndefinedLiteral() {}
+		UndefinedLiteral(const UndefinedLiteral &) : Literal() {}
+		UndefinedLiteral &operator=(const UndefinedLiteral &) {return *this;}
+
+		virtual NodeKind GetKind (void) const { return UNDEFINED_LITERAL; }
+		virtual ExprTree* Copy() const { return new UndefinedLiteral();}
+        virtual bool SameAs(const ExprTree *tree) const {return dynamic_cast<const UndefinedLiteral *>(tree);} 
+	protected:
+		UndefinedLiteral() {}
+
+		// Always evaluates to Undefined
+ 		virtual bool _Evaluate(EvalState &, Value &v) const {
+			v.SetUndefinedValue();
+			return true;
+		};
+
+		virtual bool _Flatten(EvalState &state, Value &val, ExprTree*& tree, int*) const {
+			tree = nullptr;
+			return(_Evaluate(state, val));
+		}
+
+ 		virtual bool _Evaluate(EvalState &state, Value &value, ExprTree *&tree) const {
+			_Evaluate(state, value);
+			return ((tree = Copy()));
+		};
+		friend class Literal;
+};
+
+
+class BooleanLiteral: public Literal {
+	public:
+		virtual ~BooleanLiteral() {}
+		BooleanLiteral(const BooleanLiteral &rhs) : Literal(), _theBoolean(rhs._theBoolean) {}
+		BooleanLiteral &operator=(const BooleanLiteral &rhs) {_theBoolean = rhs._theBoolean ; return *this;}
+
+		virtual NodeKind GetKind (void) const { return BOOLEAN_LITERAL; }
+		virtual ExprTree* Copy() const { return new BooleanLiteral(_theBoolean);}
+        virtual bool SameAs(const ExprTree *tree) const {
+			const BooleanLiteral *bl = dynamic_cast<const BooleanLiteral *>(tree); 
+			if (bl && (bl->_theBoolean == _theBoolean)) {
+				return true;
+			}
+			return false;
+		}
+
+	protected:
+		BooleanLiteral(bool b): _theBoolean(b) {}
+		virtual void _SetParentScope(const ClassAd*) {}
+
+		// Always evaluates to true/false
+ 		virtual bool _Evaluate(EvalState &, Value &v) const {
+			v.SetBooleanValue(_theBoolean);
+			return true;
+		};
+
+		virtual bool _Flatten(EvalState &state, Value &val, ExprTree*& tree, int*) const {
+			tree = nullptr;
+			return(_Evaluate(state, val));
+		}
+
+ 		virtual bool _Evaluate(EvalState &state, Value &value, ExprTree *&tree) const {
+			_Evaluate(state, value);
+			return ((tree = Copy()));
+		};
+
+	private:
+		bool _theBoolean;
+		friend class Literal;
+};
+
+class IntegerLiteral: public Literal {
+	public:
+		virtual ~IntegerLiteral() {}
+		IntegerLiteral(const IntegerLiteral &rhs) : Literal(), _theInteger(rhs._theInteger) {}
+		IntegerLiteral &operator=(const IntegerLiteral &rhs) {_theInteger = rhs._theInteger; return *this;}
+
+		virtual NodeKind GetKind (void) const { return INTEGER_LITERAL; }
+		virtual ExprTree* Copy() const { return new IntegerLiteral(_theInteger);}
+        virtual bool SameAs(const ExprTree *tree) const {
+			const IntegerLiteral *bl = dynamic_cast<const IntegerLiteral *>(tree); 
+			if (bl && (bl->_theInteger == _theInteger)) {
+				return true;
+			}
+			return false;
+		}
+
+	protected:
+		IntegerLiteral(int64_t i): _theInteger(i) {}
+
+		// Always evaluates to the integer
+ 		virtual bool _Evaluate(EvalState &, Value &v) const {
+			v.SetIntegerValue(_theInteger);
+			return true;
+		};
+
+		virtual bool _Flatten(EvalState &state, Value &val, ExprTree*& tree, int*) const {
+			tree = nullptr;
+			return(_Evaluate(state, val));
+		}
+
+ 		virtual bool _Evaluate(EvalState &state, Value &value, ExprTree *&tree) const {
+			_Evaluate(state, value);
+			return ((tree = Copy()));
+		};
+
+	private:
+		int64_t _theInteger;
+		friend class Literal;
+};
+
+class RealLiteral: public Literal {
+	public:
+		virtual ~RealLiteral() {}
+		RealLiteral(const RealLiteral &rhs) : Literal(), _theReal(rhs._theReal) {}
+		RealLiteral &operator=(const RealLiteral &rhs) {_theReal = rhs._theReal; return *this;}
+
+		virtual NodeKind GetKind (void) const { return REAL_LITERAL; }
+		virtual ExprTree* Copy() const { return new RealLiteral(_theReal);}
+        virtual bool SameAs(const ExprTree *tree) const {
+			const RealLiteral *rl = dynamic_cast<const RealLiteral *>(tree); 
+
+			// The old code did a strict == here, but avoid warning and NaNsense this way
+			if (rl && (fabs(rl->_theReal - _theReal) <= std::numeric_limits<double>::epsilon())) {
+				return true;
+			}
+			return false;
+		}
+
+	protected:
+		RealLiteral(double d): _theReal(d) {}
+
+		// Always evaluates to the double
+ 		virtual bool _Evaluate(EvalState &, Value &v) const {
+			v.SetRealValue(_theReal);
+			return true;
+		};
+
+		virtual bool _Flatten(EvalState &state, Value &val, ExprTree*& tree, int*) const {
+			tree = nullptr;
+			return(_Evaluate(state, val));
+		}
+
+ 		virtual bool _Evaluate(EvalState &state, Value &value, ExprTree *&tree) const {
+			_Evaluate(state, value);
+			return ((tree = Copy()));
+		};
+
+	private:
+		double _theReal;
+		friend class Literal;
+};
+
+class ReltimeLiteral: public Literal {
+	public:
+		virtual ~ReltimeLiteral() {}
+		ReltimeLiteral(const ReltimeLiteral &rhs) : Literal(), _theReltime(rhs._theReltime) {}
+		ReltimeLiteral &operator=(const ReltimeLiteral &rhs) {_theReltime = rhs._theReltime; return *this;}
+
+		virtual NodeKind GetKind (void) const { return RELTIME_LITERAL; }
+		virtual ExprTree* Copy() const { return new ReltimeLiteral(_theReltime);}
+        virtual bool SameAs(const ExprTree *tree) const {
+			const ReltimeLiteral *rl = dynamic_cast<const ReltimeLiteral *>(tree); 
+			if (rl && (fabs(rl->_theReltime - _theReltime) <= std::numeric_limits<double>::epsilon())) {
+				return true;
+			}
+			return false;
+		}
+
+	protected:
+		ReltimeLiteral(double d): _theReltime(d) {}
+
+		// Always evaluates to the double
+ 		virtual bool _Evaluate(EvalState &, Value &v) const {
+			v.SetRealValue(_theReltime);
+			return true;
+		};
+
+		virtual bool _Flatten(EvalState &state, Value &val, ExprTree*& tree, int*) const {
+			tree = nullptr;
+			return(_Evaluate(state, val));
+		}
+
+ 		virtual bool _Evaluate(EvalState &state, Value &value, ExprTree *&tree) const {
+			_Evaluate(state, value);
+			return ((tree = Copy()));
+		};
+
+	private:
+		double _theReltime;
+		friend class Literal;
+};
+
+class AbstimeLiteral: public Literal {
+	public:
+		virtual ~AbstimeLiteral() {}
+		AbstimeLiteral(const AbstimeLiteral &rhs ) : Literal(), _theAbstime(rhs._theAbstime) {}
+		AbstimeLiteral &operator=(const AbstimeLiteral &rhs) {_theAbstime = rhs._theAbstime; return *this;}
+
+		virtual NodeKind GetKind (void) const { return ABSTIME_LITERAL; }
+		virtual ExprTree* Copy() const { return new AbstimeLiteral(_theAbstime);}
+        virtual bool SameAs(const ExprTree *tree) const {
+			const AbstimeLiteral *al = dynamic_cast<const AbstimeLiteral *>(tree); 
+			if (al && (al->_theAbstime.secs == _theAbstime.secs) && (al->_theAbstime.offset == _theAbstime.offset)) {
+				return true;
+			}
+			return false;
+		}
+
+	protected:
+		AbstimeLiteral(abstime_t a): _theAbstime(a) {}
+
+		// Always evaluates to the abstime
+ 		virtual bool _Evaluate(EvalState &, Value &v) const {
+			v.SetAbsoluteTimeValue(_theAbstime);
+			return true;
+		};
+
+		virtual bool _Flatten(EvalState &state, Value &val, ExprTree*& tree, int*) const {
+			tree = nullptr;
+			return(_Evaluate(state, val));
+		}
+
+ 		virtual bool _Evaluate(EvalState &state, Value &value, ExprTree *&tree) const {
+			_Evaluate(state, value);
+			return ((tree = Copy()));
+		};
+
+	private:
+		abstime_t _theAbstime;
+		friend class Literal;
+};
+
+class StringLiteral: public Literal {
+	public:
+		virtual ~StringLiteral() {}
+		StringLiteral(const StringLiteral &rhs) : Literal(), _theString(rhs._theString) {}
+		StringLiteral &operator=(const StringLiteral &rhs) {_theString = rhs._theString; return *this;}
+
+		const char *getCString() const { 
+			return _theString.c_str();;
+		}
+		virtual NodeKind GetKind (void) const { return STRING_LITERAL; }
+		virtual ExprTree* Copy() const { return new StringLiteral(_theString);}
+        virtual bool SameAs(const ExprTree *tree) const {
+			const StringLiteral *sl = dynamic_cast<const StringLiteral *>(tree); 
+			if (sl && (sl->_theString == _theString)) {
+				return true;
+			}
+			return false;
+		}
+
+	protected:
+		StringLiteral(const std::string &s): _theString(s) {}
+
+		// Always evaluates to the abstime
+ 		virtual bool _Evaluate(EvalState &, Value &v) const {
+			v.SetStringValue(_theString);
+			return true;
+		};
+
+		virtual bool _Flatten(EvalState &state, Value &val, ExprTree*& tree, int*) const {
+			tree = nullptr;
+			return(_Evaluate(state, val));
+		}
+
+ 		virtual bool _Evaluate(EvalState &state, Value &value, ExprTree *&tree) const {
+			_Evaluate(state, value);
+			return ((tree = Copy()));
+		};
+
+	private:
+		std::string _theString;
+		friend class Literal;
+};
+
+typedef std::vector<ExprTree*> ArgumentList;
+
+/*
+ERROR_VALUE         = 1<<0,
+UNDEFINED_VALUE     = 1<<1,
+BOOLEAN_VALUE 		= 1<<2,
+INTEGER_VALUE       = 1<<3,
+REAL_VALUE          = 1<<4,
+RELATIVE_TIME_VALUE = 1<<5,
+ABSOLUTE_TIME_VALUE = 1<<6,
+STRING_VALUE        = 1<<7,
+CLASSAD_VALUE       = 1<<8,
+LIST_VALUE 	= 1<<9,
+SLIST_VALUE	= 1<<10,
+*/
+
+inline BooleanLiteral* 
+Literal::MakeBool(bool val) {
+	return new BooleanLiteral(val);
+}
+
+inline IntegerLiteral* 
+Literal::MakeInteger(int64_t val) {
+	return new IntegerLiteral(val);
+}
+
+inline RealLiteral* 
+Literal::MakeReal(double real) {
+	return new RealLiteral(real);
+}
+inline StringLiteral* 
+Literal::MakeString(const std::string & str) {
+	return new StringLiteral(str);
+}
+inline StringLiteral* 
+Literal::MakeString(const char* str) {
+	return new StringLiteral(str ? str : "");
+}
+
+inline StringLiteral* 
+Literal::MakeString(const char* str, size_t cch) {
+	if (str == nullptr) {
+		return new StringLiteral("");
+	}
+	return new StringLiteral(std::string(str, cch));
+}
+inline ErrorLiteral* 
+Literal::MakeError() {
+	return new ErrorLiteral();
+}
+inline UndefinedLiteral *
+Literal::MakeUndefined() {
+	return new UndefinedLiteral();
+}
+
+inline Literal*
+Literal::MakeLiteral(const Value &v, Value::NumberFactor) {
+	switch (v.valueType) {
+		case Value::UNDEFINED_VALUE:
+			return new UndefinedLiteral;
+			break;
+		case Value::ERROR_VALUE:
+			return new ErrorLiteral;
+			break;
+		case Value::STRING_VALUE: {
+			std::string s;
+			std::ignore = v.IsStringValue(s);
+			return new StringLiteral(s);
+			break;
+		}
+		case Value::REAL_VALUE: {
+			double d = 0;
+			std::ignore = v.IsRealValue(d);
+			return new RealLiteral(d);
+			break;
+		}
+		case Value::INTEGER_VALUE: {
+			int64_t i = 0;
+			std::ignore = v.IsIntegerValue(i);
+			return new IntegerLiteral(i);
+			break;
+		}
+		case Value::BOOLEAN_VALUE: {
+			bool b = true;
+			std::ignore = v.IsBooleanValue(b);
+			return new BooleanLiteral(b);
+			break;
+		}
+		default:
+			return nullptr;
+	}
+	return nullptr;
+}
+
 
 } // classad
 

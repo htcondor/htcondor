@@ -140,13 +140,21 @@ ExprTree * DeltaClassAd::HasParentTree(const std::string & attr, classad::ExprTr
 // of the given value type.
 const classad::Value * DeltaClassAd::HasParentValue(const std::string & attr, classad::Value::ValueType vt)
 {
-	ExprTree * expr = HasParentTree(attr, ExprTree::NodeKind::LITERAL_NODE);
-	if ( ! expr)
-		return NULL;
-	const classad::Value * pval = &static_cast<classad::Literal*>(expr)->getValue();
-	if (!pval || (pval->GetType() != vt))
-		return NULL;
-	return pval;
+	classad::ClassAd * parent = ad.GetChainedParentAd();
+	if (parent) {
+		ExprTree * expr = parent->Lookup(attr);
+		if (expr) {
+			expr = SkipExprEnvelope(expr);
+			if (dynamic_cast<classad::Literal *>(expr) != nullptr) {
+				static classad::Value v;
+				((classad::Literal *)expr)->GetValue(v);
+				if (v.GetType() == vt) {
+					return &v;;
+				}
+			}
+		}
+	}
+	return nullptr;
 }
 
 bool DeltaClassAd::Insert(const std::string & attr, ExprTree * tree)

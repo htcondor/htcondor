@@ -220,9 +220,16 @@ int AnalyzeThisSubExpr(
 
 	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
 	switch(kind) {
-		case classad::ExprTree::LITERAL_NODE: {
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
-			((classad::Literal*)expr)->GetComponents(val);
+			((classad::Literal*)expr)->GetValue(val);
 			unparser.UnparseAux(strLabel, val);
 			if (chatty) {
 				printf("     %d:const : %s\n", kind, strLabel.c_str());
@@ -281,7 +288,7 @@ int AnalyzeThisSubExpr(
 				// elvis of MY refs are not interesting,
 				// elvis of possible TARGET refs are interesting
 				if (my_elvis_is_not_interesting) {
-					if (ExprTreeIsMyRef(left, myad) && SkipExprParens(gripping)->GetKind() == classad::ExprTree::LITERAL_NODE) {
+					if (ExprTreeIsMyRef(left, myad) && dynamic_cast<classad::Literal *>(SkipExprParens(gripping)) != nullptr) {
 						push_it = false;
 					} else {
 						//logic_op = 4;
@@ -1426,9 +1433,16 @@ size_t AddExprTreeMemoryUse (const classad::ExprTree* expr, QuantizingAccumulato
 
 	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
 	switch(kind) {
-		case classad::ExprTree::LITERAL_NODE: {
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
-			((const classad::Literal*)expr)->GetComponents(val);
+			((const classad::Literal*)expr)->GetValue(val);
 			accum += sizeof(classad::Literal);
 			const char * s = NULL;
 			classad::ExprList * lst = NULL;

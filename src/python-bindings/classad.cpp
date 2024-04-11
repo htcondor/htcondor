@@ -60,13 +60,31 @@ bool ExprTreeHolder::ShouldEvaluate() const
     if (m_expr->GetKind() == classad::ExprTree::EXPR_ENVELOPE)
     {
         classad::CachedExprEnvelope *expr = static_cast<classad::CachedExprEnvelope*>(m_expr);
-        return expr->get()->GetKind() == classad::ExprTree::LITERAL_NODE ||
-               expr->get()->GetKind() == classad::ExprTree::CLASSAD_NODE ||
-               expr->get()->GetKind() == classad::ExprTree::EXPR_LIST_NODE;
+		int kind = expr->get()->GetKind();
+		return
+			kind == classad::ExprTree::ERROR_LITERAL ||
+			kind == classad::ExprTree::UNDEFINED_LITERAL ||
+			kind == classad::ExprTree::BOOLEAN_LITERAL ||
+			kind == classad::ExprTree::INTEGER_LITERAL ||
+			kind == classad::ExprTree::REAL_LITERAL ||
+			kind == classad::ExprTree::RELTIME_LITERAL ||
+			kind == classad::ExprTree::ABSTIME_LITERAL ||
+			kind == classad::ExprTree::STRING_LITERAL ||
+			kind == classad::ExprTree::CLASSAD_NODE ||
+			kind == classad::ExprTree::EXPR_LIST_NODE;
     }
-    return m_expr->GetKind() == classad::ExprTree::LITERAL_NODE ||
-           m_expr->GetKind() == classad::ExprTree::CLASSAD_NODE ||
-           m_expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE;
+	int kind = m_expr->GetKind();
+    return 
+			kind == classad::ExprTree::ERROR_LITERAL ||
+			kind == classad::ExprTree::UNDEFINED_LITERAL ||
+			kind == classad::ExprTree::BOOLEAN_LITERAL ||
+			kind == classad::ExprTree::INTEGER_LITERAL ||
+			kind == classad::ExprTree::REAL_LITERAL ||
+			kind == classad::ExprTree::RELTIME_LITERAL ||
+			kind == classad::ExprTree::ABSTIME_LITERAL ||
+			kind == classad::ExprTree::STRING_LITERAL ||
+			kind == classad::ExprTree::CLASSAD_NODE ||
+			kind == classad::ExprTree::EXPR_LIST_NODE;
 }
 
 long long ExprTreeHolder::toLong() const
@@ -287,9 +305,10 @@ ExprTreeHolder::Evaluate(boost::python::object scope) const
 ExprTreeHolder
 ExprTreeHolder::simplify(boost::python::object scope, boost::python::object target) const
 {
-    classad::Value * value = NULL;
-    classad::Literal * literal = classad::Literal::MakeUndefined(value);
-    eval(scope, *value, target);
+    classad::Value value;
+	value.SetUndefinedValue();
+    eval(scope, value, target);
+    classad::Literal * literal = classad::Literal::MakeLiteral(value);
     ExprTreeHolder rv(literal, true);
     return rv;
 }
@@ -309,6 +328,13 @@ ExprTreeHolder::subscript(boost::python::object input)
     return holder;
 }
 
+static
+const classad::ExprTree *openEnvelope(const classad::ExprTree *expr) {
+	if (expr->GetKind() == classad::ExprTree::EXPR_ENVELOPE) {
+		expr = ((const classad::CachedExprEnvelope *) expr)->get();
+	}
+	return expr;
+}
 boost::python::object ExprTreeHolder::getItem(boost::python::object input)
 {
     if (isKind(*m_expr, classad::ExprTree::EXPR_LIST_NODE))
@@ -335,8 +361,7 @@ boost::python::object ExprTreeHolder::getItem(boost::python::object input)
         if (holder.ShouldEvaluate()) { return holder.Evaluate(); }
         return boost::python::object(holder);
     }
-    else if (isKind(*m_expr, classad::ExprTree::LITERAL_NODE))
-    {
+    else if (dynamic_cast<const classad::Literal *>(openEnvelope(m_expr)) != nullptr) {
         return Evaluate()[input];
     }
     else
@@ -525,7 +550,7 @@ boost::python::object ClassAdWrapper::setdefault(const std::string attr, boost::
         InsertAttrObject(attr, default_result);
         return default_result;
     }
-    if (expr->GetKind() == classad::ExprTree::LITERAL_NODE) return EvaluateAttrObject(attr);
+    if (dynamic_cast<classad::Literal *>(expr) != nullptr) return EvaluateAttrObject(attr);
     ExprTreeHolder holder(expr, false);
     boost::python::object result(holder);
     return result;
@@ -661,7 +686,7 @@ ExprTreeHolder
 literal(boost::python::object value)
 {
     classad::ExprTree* expr( convert_python_to_exprtree(value) );
-    if ((expr->GetKind() != classad::ExprTree::LITERAL_NODE) || (expr->GetKind() == classad::ExprTree::EXPR_ENVELOPE && (static_cast<classad::CachedExprEnvelope*>(expr)->get()->GetKind() != classad::ExprTree::LITERAL_NODE)))
+    if ((dynamic_cast<classad::Literal *>(expr) == nullptr) || (expr->GetKind() == classad::ExprTree::EXPR_ENVELOPE && dynamic_cast<classad::Literal *>(static_cast<classad::CachedExprEnvelope*>(expr)->get()) == nullptr))
     {
         classad::Value value;
         bool success = false;
@@ -1065,10 +1090,10 @@ bool convert_python_to_constraint(boost::python::object value, std::string & con
 		// rather than treating those as errors, because these *might* be intended
 		// to contact the daemon but get no results
 		bool has_constraint = true;
-		if (expr->GetKind() == classad::ExprTree::LITERAL_NODE) {
+		if (dynamic_cast<classad::Literal *>(expr) != nullptr) {
 			classad::Value lvalue;
 			bool bvalue = false;
-			((classad::Literal*)expr)->GetComponents(lvalue);
+			((classad::Literal*)expr)->GetValue(lvalue);
 			if (lvalue.IsBooleanValue(bvalue) && bvalue) {
 				has_constraint = false;
 			} else {

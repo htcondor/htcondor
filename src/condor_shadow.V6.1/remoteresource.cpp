@@ -1213,7 +1213,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	// expression, then just copy the expression into the job ad.
 	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
 	if (tree) {
-		if (tree->GetKind() != ExprTree::LITERAL_NODE) {
+		if (dynamic_cast<classad::Literal *>(tree) == nullptr) {
 				// Copy the exression over
 			tree = tree->Copy();
 			jobAd->Insert(ATTR_MEMORY_USAGE, tree);

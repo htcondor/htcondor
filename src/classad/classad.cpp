@@ -330,14 +330,9 @@ InsertAttr( const string &name, long long value)
 	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
-		if (expr->GetKind() == LITERAL_NODE) {
-			((Literal*)expr)->SetLong(value);
-			return true;
-		} else {
 			delete expr;
-		}
 	}
-	expr = Literal::MakeLong(value);
+	expr = Literal::MakeInteger(value);
 	return expr != NULL;
 }
 
@@ -396,12 +391,7 @@ InsertAttr( const string &name, double value)
 	// Optimized insert of Real values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
-		if (expr->GetKind() == LITERAL_NODE) {
-			((Literal*)expr)->SetReal(value);
-			return true;
-		} else {
 			delete expr;
-		}
 	}
 	expr = Literal::MakeReal(value);
 	return expr != NULL;
@@ -429,12 +419,7 @@ InsertAttr( const string &name, bool value )
 	// Optimized insert of bool values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
-		if (expr->GetKind() == LITERAL_NODE) {
-			((Literal*)expr)->SetBool(value);
-			return true;
-		} else {
 			delete expr;
-		}
 	}
 	expr = Literal::MakeBool(value);
 	return expr != NULL;
@@ -468,12 +453,7 @@ InsertAttr( const string &name, const char * str, size_t len)
 	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
-		if (expr->GetKind() == LITERAL_NODE) {
-			((Literal*)expr)->SetString(str, len);
-			return true;
-		} else {
 			delete expr;
-		}
 	}
 	expr = Literal::MakeString( str, len );
 	return expr != NULL;
@@ -1316,8 +1296,15 @@ bool ClassAd::
 _GetExternalReferences( const ExprTree *expr, const ClassAd *ad, 
 	EvalState &state, References& refs, bool fullNames )
 {
-    switch( expr->GetKind( ) ) {
-        case LITERAL_NODE:
+    switch( expr->GetKind()) {
+		case ERROR_LITERAL:
+		case UNDEFINED_LITERAL:
+		case BOOLEAN_LITERAL:
+		case INTEGER_LITERAL:
+		case REAL_LITERAL:
+		case RELTIME_LITERAL:
+		case ABSTIME_LITERAL:
+		case STRING_LITERAL:
                 // no external references here
             return( true );
 
@@ -1518,7 +1505,14 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 	EvalState &state, PortReferences& refs ) const
 {
     switch( expr->GetKind( ) ) {
-        case LITERAL_NODE:
+		case ERROR_LITERAL:
+		case UNDEFINED_LITERAL:
+		case BOOLEAN_LITERAL:
+		case INTEGER_LITERAL:
+		case REAL_LITERAL:
+		case RELTIME_LITERAL:
+		case ABSTIME_LITERAL:
+		case STRING_LITERAL:
                 // no external references here
             return( true );
 
@@ -1676,10 +1670,16 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
 
     switch( expr->GetKind() ){
         //nothing to be found here!
-        case LITERAL_NODE:{
+		case ERROR_LITERAL:
+		case UNDEFINED_LITERAL:
+		case BOOLEAN_LITERAL:
+		case INTEGER_LITERAL:
+		case REAL_LITERAL:
+		case RELTIME_LITERAL:
+		case ABSTIME_LITERAL:
+		case STRING_LITERAL:
             return true;
         break;
-                          }
 
         case ATTRREF_NODE:{
             const ClassAd   *start;
@@ -1887,7 +1887,6 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
             return false;
 
     }
-
 }
 
 #if defined( EXPERIMENTAL )
@@ -2003,15 +2002,15 @@ _MakeRectangles( const ExprTree *tree, const string &allowed, Rectangles &r,
 		return( false );
 	}
 
-	if( t1->GetKind( )==ExprTree::ATTRREF_NODE && 
-			t2->GetKind( )==ExprTree::LITERAL_NODE ) {
+	if (t1->GetKind( )==ExprTree::ATTRREF_NODE && 
+			dynamic_cast<Literal *>(t2) != nullptr) {
 			// ref <op> lit
 		attr = t1;
 		lit  = t2;
 			// if not the attribute we're interested in, ignore
 		if( !_CheckRef( attr, allowed ) ) return( true );
 	} else if(t2->GetKind()==ExprTree::ATTRREF_NODE && 
-			t1->GetKind()==ExprTree::LITERAL_NODE){
+			dynamic_cast<Literal *>(t1) != nullptr) {
 			// lit <op> ref
 		attr = t2;
 		lit  = t1;
