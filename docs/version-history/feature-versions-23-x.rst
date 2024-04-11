@@ -103,8 +103,8 @@ Release Notes:
 - HTCondor version 23.6.1 released on April 11, 2024.
 
 - **NOTE**: ``IDTOKEN`` files with permissive file protections are ignored.
-  In particular, the /etc/condor/tokens.d directory and the tokens contained
-  within should be only accessible by the root account.
+  In particular, the ``/etc/condor/tokens.d`` directory and the tokens contained
+  within should be only accessible by the ``root`` account.
 
 - This version includes all the updates from :ref:`lts-version-history-2308`.
 
@@ -123,7 +123,7 @@ New Features:
   docker universe jobs to override the entrypoint in the image.
   :jira:`2321`
 
-- :tool:`condor_q` -better now emits the units for memory and
+- :tool:`condor_q` -better-analyze now emits the units for memory and
   disk.
   :jira:`2333`
 
@@ -134,7 +134,7 @@ New Features:
 - Add htcondor job ``out``, ``err``, and ``log`` verbs to the :tool:`htcondor` CLI tool.
   :jira:`2182`
 
-- The *condor_startd* now honors the environment variable OMP_NUM_THREADS
+- The *condor_startd* now honors the environment variable ``OMP_NUM_THREADS``
   when setting the number of cores available.  This allows 
   glideins to pass an allocated number of cores from a base batch
   system to the glidein easily.
@@ -149,14 +149,14 @@ New Features:
   the filename of the submit file, if any.
   :jira:`2319`
 
-- When the :subcom:`docker_network_type` is set to host, docker universe
+- When the :subcom:`docker_network_type` is set to ``host``, docker universe
   now sets the hostname inside the container to the same as the host,
   to ease networking from inside the container to outside the container.
   :jira:`2294`
 
 - For vanilla universe jobs not running under container universe, that
   manually start apptainer or singularity, the environment variables
-  APPTAINER_CACHEDIR and SINGULARITY_CACHEDIR are now set to the scratch
+  ``APPTAINER_CACHEDIR`` and ``SINGULARITY_CACHEDIR`` are now set to the scratch
   directory to insure any files they create are cleaned up on job exit.
   :jira:`2337`
 
@@ -164,7 +164,7 @@ New Features:
   with a submit file, now transfers the executable to the interactive job.
   :jira:`2315`
 
-- Added the environment variable PYTHON_CPU_COUNT to the set of environment
+- Added the environment variable ``PYTHON_CPU_COUNT`` to the set of environment
   variables set for jobs to indicate how many CPU cores are provisioned.
   Python 3.13 uses this override the detected count of CPU cores.
   :jira:`2330`
@@ -173,7 +173,7 @@ New Features:
   :jira:`575`
 
 - The configuration parameter :macro:`ETC` can now be used to relocate
-  files that are normally place under /etc/condor on Unix platforms.
+  files that are normally place under ``/etc/condor`` on Unix platforms.
   :jira:`2290`
 
 - The submit file expansion ``$(CondorScratchDir)`` now works for local
@@ -195,7 +195,7 @@ New Features:
 
 - DAGMan no longer suppresses email notifications for jobs it manages by default.
   To revert behavior of suppressing notifications set :macro:`DAGMAN_SUPPRESS_NOTIFICATION`
-  to **False**.
+  to **True**.
   :jira:`2323`
 
 - Added configuration knobs :macro:`GANGLIAD_WANT_RESET_METRICS`  and 

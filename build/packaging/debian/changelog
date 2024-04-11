@@ -1,3 +1,12 @@
+condor (23.6.1-1) stable; urgency=medium
+
+  * Improved security checks for IDTOKENS
+  * Add the ability to force vanilla universe jobs to run in a container
+  * Add the ability to override the entrypoint for a Docker image
+  * condor_q analysis includes units for memory and disk quantities
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 11 Apr 2024 12:23:00 -0500
+
 condor (23.5.3-1) stable; urgency=medium
 
   * HTCondor tarballs now contain Pelican 7.6.2
