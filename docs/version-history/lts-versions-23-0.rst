@@ -34,9 +34,8 @@ New Features:
 
 Bugs Fixed:
 
-- Changed the value of the HoldSubCode when a job goes on hold due to a file
-  transfer plugin error.  Now the HoldSubCode contains the exit code of the
-  plugin process.
+- Fixed bug where the ``HoldReasonSubcode`` was not the documented value
+  for jobs put on hold because of errors running a file transfer plugin.
   :jira:`2373`
 
 - Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal

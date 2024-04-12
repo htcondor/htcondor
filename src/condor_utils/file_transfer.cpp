@@ -3935,10 +3935,9 @@ FileTransfer::UploadThread(void *arg, Stream *s)
  *   of bytes to use for the transfer summary.
  */
 TransferPluginResult
-FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err, long long &upload_bytes)
+FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, int &exit_code, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err, long long &upload_bytes)
 {
 	std::vector<std::unique_ptr<ClassAd>> result_ads;
-	int exit_code = 0;
 	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, pluginPath, input,
 		LocalProxyName.c_str(), true, &result_ads);
 
@@ -5001,7 +5000,8 @@ FileTransfer::uploadFileList(
 		long long upload_bytes = 0;
 		if (!currentUploadPlugin.empty() && (multifilePluginPath != currentUploadPlugin)) {
 			dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
-			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack, upload_bytes);
+			int exit_code = 0;
+			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
 			if (result == TransferPluginResult::Error) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!first_failed_file_transfer_happened) {
@@ -5196,7 +5196,8 @@ FileTransfer::uploadFileList(
 					if (!can_defer_uploads) {
 						dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
 						long long upload_bytes = 0;
-						TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, false, errstack, upload_bytes);
+						int exit_code = 0;
+						TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, false, errstack, upload_bytes);
 						if (result == TransferPluginResult::Error) {
 							return_and_resetpriv( -1 );
 						}
@@ -5447,7 +5448,8 @@ FileTransfer::uploadFileList(
 	// Clear out the multi-upload queue; we must do the error handling locally if it fails.
 	long long upload_bytes = 0;
 	if (!currentUploadRequests.empty()) {
-		TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack, upload_bytes);
+		int exit_code = 0;
+		TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
 		if (result != TransferPluginResult::Success) {
 			formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 			if (!first_failed_file_transfer_happened) {
@@ -5455,7 +5457,7 @@ FileTransfer::uploadFileList(
 				first_failed_upload_success = false;
 				first_failed_try_again = false;
 				first_failed_hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
-				first_failed_hold_subcode = static_cast<int>(result) << 8;
+				first_failed_hold_subcode = exit_code << 8;
 				first_failed_error_desc = error_desc;
 				first_failed_line_number = __LINE__;
 			}
