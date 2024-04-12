@@ -363,8 +363,8 @@ class FileTransfer final: public Service {
 	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const;
 	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
-	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
+	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
+	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, int &exit_code, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
 	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
 	int RecordFileTransferStats( ClassAd &stats );
 	std::string GetSupportedMethods(CondorError &err);
