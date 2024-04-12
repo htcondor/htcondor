@@ -1434,6 +1434,12 @@ fi
 - Add the ability to override the entrypoint for a Docker image
 - condor_q analysis includes units for memory and disk quantities
 
+* Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+- Fix bug where ssh-agent processes were leaked with grid universe jobs
+- Fix DAGMan crash when a provisioner node was given a parent
+- Fix bug that prevented use of "ftp:" URLs in file transfer
+- Fix bug where jobs that matched an offline slot never start
+
 * Mon Mar 25 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.3-1
 - HTCondor tarballs now contain Pelican 7.6.2
 

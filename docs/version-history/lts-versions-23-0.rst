@@ -70,9 +70,7 @@ Version 23.0.8
 
 Release Notes:
 
-.. HTCondor version 23.0.8 released on Month Date, 2024.
-
-- HTCondor version 23.0.8 not yet released.
+- HTCondor version 23.0.8 released on April 11, 2024.
 
 New Features:
 
@@ -80,17 +78,21 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that caused **ssh-agent** processes to be leaked when
+  using *grid* universe remote batch job submission over SSH.
+  :jira:`2286`
+
 - Fixed a bug where DAGMan would crash when the provisioner node was
   given a parent node.
   :jira:`2291`
 
-- Fixed a bug that prevented the use of ftp: urls in the file
+- Fixed a bug that prevented the use of ``ftp:`` URLs in the file
   transfer plugin.
   :jira:`2273`
 
-- Fixed bug where the Shadow failed to write its job ad to :macro:`JOB_EPOCH_HISTORY`
-  when it failed to reconnect to the Starter.
-  :jira:`2289`
+- Fixed a bug where a job that's matched to an offline slot ad remains
+  idle forever.
+  :jira:`2304`
 
 - Fixed a bug where the *condor_shadow* would not write a job
   termination event to the job log for a completed job if the
@@ -99,16 +101,12 @@ Bugs Fixed:
   stuck waiting forever for jobs to finish.
   :jira:`2292`
 
-- Fixed a bug that caused **ssh-agent** processes to be leaked when
-  using *grid* universe remote batch job submision over SSH.
-  :jira:`2286`
-
-- Fixed a bug where a job that's matched to an offline slot ad remains
-  idle forever.
-  :jira:`2304`
+- Fixed bug where the Shadow failed to write its job ad to :macro:`JOB_EPOCH_HISTORY`
+  when it failed to reconnect to the Starter.
+  :jira:`2289`
 
 - Fixed a bug in the Windows MSI installer that would cause installation to fail
-  when the install path had a space in the pathname, such as when installing to
+  when the install path had a space in the path name, such as when installing to
   ``C:\Program Files``
   :jira:`2302`
 
