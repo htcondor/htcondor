@@ -148,8 +148,6 @@ _exprtree_simplify( PyObject *, PyObject * args ) {
         PyErr_SetString(PyExc_RuntimeError, "failed to evaluate expression");
         return NULL;
     }
-	classad::Literal * literal = classad::Literal::MakeLiteral(v);
-
 
     // It seems perfectly legitimate to have a literal list or literal
     // ClassAd, but that's not, apparently, how we do things around here.
@@ -176,6 +174,7 @@ _exprtree_simplify( PyObject *, PyObject * args ) {
             } break;
 
         default:
+            classad::Literal * literal = classad::Literal::MakeLiteral(v);
             rv = py_new_classad_exprtree(literal);
             break;
     }
