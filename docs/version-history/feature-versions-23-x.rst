@@ -19,7 +19,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Changed the value of the HoldSubCode when a job goes on hold due to a file
+  transfer plugin error.  Now the HoldSubCode contains the exit code of the
+  plugin process.
+  :jira:`2373`
+
 
 Version 23.6.1
 --------------
