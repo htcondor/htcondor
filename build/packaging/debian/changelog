@@ -6,6 +6,15 @@ condor (23.6.1-1) stable; urgency=medium
 
  -- Tim Theisen <tim@cs.wisc.edu>  Fri, 12 Apr 2024 14:47:00 -0500
 
+condor (23.0.8-1) stable; urgency=medium
+
+  * Fix bug where ssh-agent processes were leaked with grid universe jobs
+  * Fix DAGMan crash when a provisioner node was given a parent
+  * Fix bug that prevented use of "ftp:" URLs in file transfer
+  * Fix bug where jobs that matched an offline slot never start
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 11 Apr 2024 10:53:00 -0500
+
 condor (23.5.3-1) stable; urgency=medium
 
   * HTCondor tarballs now contain Pelican 7.6.2
