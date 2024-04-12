@@ -1369,6 +1369,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+- Fix bug where ssh-agent processes were leaked with grid universe jobs
+- Fix DAGMan crash when a provisioner node was given a parent
+- Fix bug that prevented use of "ftp:" URLs in file transfer
+- Fix bug where jobs that matched an offline slot never start
+
 * Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.6-1
 - Fix DAGMan where descendants of removed retry-able jobs are marked futile
 - Ensure the condor_test_token works correctly when invoked as root
