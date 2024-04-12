@@ -100,19 +100,15 @@ Version 23.6.1
 
 Release Notes:
 
-- HTCondor version 23.6.1 released on April 11, 2024.
+- HTCondor version 23.6.1 released on April 15, 2024.
 
-- **NOTE**: ``IDTOKEN`` files with permissive file protections are ignored.
+- **NOTE**: Soon, ``IDTOKEN`` files with permissive file protections will be ignored.
   In particular, the ``/etc/condor/tokens.d`` directory and the tokens contained
   within should be only accessible by the ``root`` account.
 
 - This version includes all the updates from :ref:`lts-version-history-2308`.
 
 New Features:
-
-- ``IDTOKEN`` files whose access permissions are not restricted to the file
-  owner are now ignored.
-  :jira:`232`
 
 - Allow the *condor_startd* to force a job that doesn't ask to run inside a
   docker or apptainer container inside one with new parameters

@@ -154,7 +154,8 @@ bool findToken(const std::string &tokenfilename,
 	bool rv = false;
 	char* data = nullptr;
 	size_t len = 0;
-	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true)) {
+	// TODO Change this to SECURE_FILE_VERIFY_ALL in 23.8.x
+	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true, SECURE_FILE_VERIFY_NONE)) {
 		return false;
 	}
 	for (auto& line: StringTokenIterator(data, len, "\n")) {

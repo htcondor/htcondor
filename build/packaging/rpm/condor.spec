@@ -1428,11 +1428,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.1-1
-- Improved security checks for IDTOKENS
+* Mon Apr 15 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.1-1
 - Add the ability to force vanilla universe jobs to run in a container
 - Add the ability to override the entrypoint for a Docker image
-- condor_q analysis includes units for memory and disk quantities
+- condor_q -better-analyze includes units for memory and disk quantities
+
+* Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+- Fix bug where ssh-agent processes were leaked with grid universe jobs
+- Fix DAGMan crash when a provisioner node was given a parent
+- Fix bug that prevented use of "ftp:" URLs in file transfer
+- Fix bug where jobs that matched an offline slot never start
 
 * Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
 - Fix bug where ssh-agent processes were leaked with grid universe jobs
