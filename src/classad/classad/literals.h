@@ -54,7 +54,6 @@ class Literal: public ExprTree {
 		static ErrorLiteral     *MakeError();
 		static BooleanLiteral   *MakeBool(bool val);
 		static IntegerLiteral   *MakeInteger(int64_t i);
-		static RealLiteral      *MakeReal(const std::string &s);
 		static RealLiteral      *MakeReal(double d);
 		static StringLiteral    *MakeString(const std::string &str);
 		static StringLiteral    *MakeString(const char *);

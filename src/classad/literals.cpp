@@ -39,17 +39,6 @@ static double revDouble(const string &revNumStr);
 static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin);
 
 
-RealLiteral* 
-Literal::MakeReal(const string &number_string) 
-{
-	char   *end;
-	double real = strtod(number_string.c_str(), &end);
-	if (end == number_string.c_str() && real == 0.0) {
-		return nullptr;
-	}
-	return new RealLiteral(real);
-}
-
 AbstimeLiteral* 
 Literal::MakeAbsTime( abstime_t *tim )
 {
