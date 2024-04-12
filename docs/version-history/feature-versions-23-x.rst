@@ -9,9 +9,9 @@ Version 23.6.1
 
 Release Notes:
 
-- HTCondor version 23.6.1 released on April 11, 2024.
+- HTCondor version 23.6.1 released on April 15, 2024.
 
-- **NOTE**: ``IDTOKEN`` files with permissive file protections are ignored.
+- **NOTE**: Soon, ``IDTOKEN`` files with permissive file protections will be ignored.
   In particular, the ``/etc/condor/tokens.d`` directory and the tokens contained
   within should be only accessible by the ``root`` account.
 
@@ -28,7 +28,7 @@ New Features:
   docker universe jobs to override the entrypoint in the image.
   :jira:`2321`
 
-- :tool:`condor_q` -better-analyze now emits the units for memory and
+- :tool:`condor_q` ``-better-analyze`` now emits the units for memory and
   disk.
   :jira:`2333`
 
