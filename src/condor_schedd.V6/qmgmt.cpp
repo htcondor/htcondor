@@ -5539,7 +5539,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		ExprTree *tree = nullptr;
 		classad::Value val;
 		if ( ParseClassAdRvalExpr(attr_value, tree) == 0 &&
-			 tree->GetKind() == classad::ExprTree::LITERAL_NODE ) {
+			(dynamic_cast<classad::Literal *>(tree) != nullptr)) {
 			(dynamic_cast<classad::Literal *>(tree))->GetValue( val );
 			if ( val.GetType() == classad::Value::INTEGER_VALUE ) {
 				attr_type = classad::Value::INTEGER_VALUE;

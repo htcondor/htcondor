@@ -3143,8 +3143,16 @@ int ExprHasSlotEval(classad::ExprTree * tree)
 	int iret = 0;
 	if ( ! tree) return 0;
 	switch (tree->GetKind()) {
-	case classad::ExprTree::LITERAL_NODE:
-	break;
+
+	case ExprTree::ERROR_LITERAL:
+	case ExprTree::UNDEFINED_LITERAL:
+	case ExprTree::BOOLEAN_LITERAL:
+	case ExprTree::INTEGER_LITERAL:
+	case ExprTree::REAL_LITERAL:
+	case ExprTree::RELTIME_LITERAL:
+	case ExprTree::ABSTIME_LITERAL:
+	case ExprTree::STRING_LITERAL: 
+		break;
 
 	case classad::ExprTree::ATTRREF_NODE: {
 		const classad::AttributeReference* atref = reinterpret_cast<const classad::AttributeReference*>(tree);

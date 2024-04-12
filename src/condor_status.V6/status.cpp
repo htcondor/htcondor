@@ -1932,7 +1932,7 @@ const char * extractGPUsProps ( const classad::Value & value, ClassAd* /*slot*/,
 		// for lists, unparse each item into the uniqueness set.
 		for(classad::ExprList::const_iterator it = list->begin() ; it != list->end(); ++it ) {
 			std::string item;
-			if ((*it)->GetKind() != classad::ExprTree::LITERAL_NODE) {
+			if (dynamic_cast<classad::Literal *>(*it) == nullptr) {
 				unparser.Unparse( item, *it );
 			} else {
 				classad::Value val;
