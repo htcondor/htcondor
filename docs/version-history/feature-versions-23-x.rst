@@ -19,10 +19,6 @@ Release Notes:
 
 New Features:
 
-- ``IDTOKEN`` files whose access permissions are not restricted to the file
-  owner are now ignored.
-  :jira:`232`
-
 - Allow the *condor_startd* to force a job that doesn't ask to run inside a
   docker or apptainer container inside one with new parameters
   :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
