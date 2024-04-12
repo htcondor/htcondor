@@ -34,6 +34,11 @@ New Features:
 
 Bugs Fixed:
 
+- Changed the value of the HoldSubCode when a job goes on hold due to a file
+  transfer plugin error.  Now the HoldSubCode contains the exit code of the
+  plugin process.
+  :jira:`2373`
+
 - Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
   to a random, non-HTCondor process, if pids are reused quickly.
   :jira:`2357`
