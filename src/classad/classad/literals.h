@@ -469,6 +469,18 @@ Literal::MakeLiteral(const Value &v, Value::NumberFactor) {
 			return new BooleanLiteral(b);
 			break;
 		}
+		case Value::ABSOLUTE_TIME_VALUE: {
+			classad::abstime_t atime {};
+			std::ignore = v.IsAbsoluteTimeValue(atime);
+			return new AbstimeLiteral(atime);
+			break;
+		}
+		case Value::RELATIVE_TIME_VALUE: {
+			time_t seconds = 0;
+			std::ignore = v.IsRelativeTimeValue(seconds);
+			return new ReltimeLiteral(seconds);
+			break;
+		}
 		default:
 			return nullptr;
 	}

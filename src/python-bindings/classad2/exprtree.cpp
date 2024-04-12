@@ -142,12 +142,14 @@ _exprtree_simplify( PyObject *, PyObject * args ) {
     //
     // Not sure why this has to be so hard, but let's not mess with it.
     classad::Value v;
-    classad::Literal * literal = classad::Literal::MakeUndefined();
+    v.SetUndefinedValue();
     if(! evaluate( e, s, t, v )) {
         // In version 1, this was ClassAdEvaluationError.
         PyErr_SetString(PyExc_RuntimeError, "failed to evaluate expression");
         return NULL;
     }
+	classad::Literal * literal = classad::Literal::MakeLiteral(v);
+
 
     // It seems perfectly legitimate to have a literal list or literal
     // ClassAd, but that's not, apparently, how we do things around here.
