@@ -176,9 +176,9 @@ _exprtree_simplify( PyObject *, PyObject * args ) {
         default:
             classad::Literal * literal = classad::Literal::MakeLiteral(v);
             rv = py_new_classad_exprtree(literal);
+            delete literal;
             break;
     }
 
-    delete literal;
     return rv;
 }
