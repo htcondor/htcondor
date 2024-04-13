@@ -4102,7 +4102,6 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 TransferPluginResult
 FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, int &exit_code, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err, long long &upload_bytes)
 {
-	int exit_code = 0;
 	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, pluginPath, input,
 		LocalProxyName.c_str(), true);
 
