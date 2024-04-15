@@ -34,6 +34,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed bug where the ``HoldReasonSubcode`` was not the documented value
+  for jobs put on hold because of errors running a file transfer plugin.
+  :jira:`2373`
+
 - Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
   to a random, non-HTCondor process, if pids are reused quickly.
   :jira:`2357`
