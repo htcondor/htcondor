@@ -95,6 +95,23 @@ Bugs Fixed:
 
 - None.
 
+Version 23.6.2
+--------------
+
+.. HTCondor version 23.6.2 released on Month Date, 2024.
+
+- HTCondor version 23.6.2 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed bug where the :attr:`HoldReasonSubcode` was not the documented value
+  for jobs put on hold because of errors running a file transfer plugin.
+  :jira:`2373`
+
 Version 23.6.1
 --------------
 
