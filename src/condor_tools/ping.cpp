@@ -370,7 +370,7 @@ void print_security_config(bool include_soap, const char * subsys)
 
 					const MACRO_META * pmet = nullptr;
 					const char * def_val = nullptr;
-					const char * rawval = param_get_info(from_param.c_str(), subsys, nullptr, dotted_param, &def_val, &pmet);
+					std::ignore = param_get_info(from_param.c_str(), subsys, nullptr, dotted_param, &def_val, &pmet);
 
 					if (pmet && ! already_reported) {
 						std::string location;
