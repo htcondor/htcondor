@@ -252,6 +252,84 @@ SYSTEM_TABLE = {
     }
     ),
 
+    "delta": System( **{
+        "pretty_name":      "Delta",
+        "host_name":        "login.delta.ncsa.illinois.edu",
+        "default_queue":    "cpu",
+        "batch_system":     "SLURM",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "allocation_reqd":  True,
+
+        "queues": {
+            "cpu": {
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       128,
+                "ram_per_node":         256 * 1024,
+                "max_nodes_per_job":    4, # "TBD"
+            },
+            "cpu-interactive": {
+                "max_duration":         30 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       128,
+                "ram_per_node":         256 * 1024,
+                "max_nodes_per_job":    4, # "TBD"
+            },
+            "gpuA100x4": {
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         256 * 1024,
+                "gpus_per_node":        4,
+                "max_nodes_per_job":    4, # "TBD"
+            },
+            "gpuA100x4-preempt": {
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         256 * 1024,
+                "gpus_per_node":        4,
+                "max_nodes_per_job":    4, # "TBD"
+            },
+            "gpuA100x8": {
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       128,
+                "ram_per_node":         2048 * 1024,
+                "gpus_per_node":        8,
+                "max_nodes_per_job":    4, # "TBD"
+            },
+            "gpuA40x4": {
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         256 * 1204,
+                "gpus_per_node":        4,
+                "max_nodes_per_job":    4, # "TBD"
+            },
+            "gpuA40x4-preempt": {
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         256 * 1204,
+                "gpus_per_node":        4,
+                "max_nodes_per_job":    4, # "TBD"
+            },
+# Disabled until HTCONDOR-2377 is released (and the well-known URL for
+# binaries is updated to match).
+#            "gpuMI100x8": {
+#                "max_duration":         48 * 60 * 60,
+#                "allocation_type":      "cores_or_ram",
+#                "cores_per_node":       128,
+#                "ram_per_node":         2048 * 1024,
+#                "gpus_per_node":        8,
+#                "max_nodes_per_job":    4, # "TBD"
+#            },
+        },
+    }
+    ),
+
     "stampede2": System( **{
         "pretty_name":      "Stampede 2",
         "host_name":        "stampede2.tacc.utexas.edu",
