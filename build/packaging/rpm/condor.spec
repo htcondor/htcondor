@@ -1428,6 +1428,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.2-1
+- Fix bug where file transfer plugin error was not in hold reason code
+
 * Mon Apr 15 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.1-1
 - Add the ability to force vanilla universe jobs to run in a container
 - Add the ability to override the entrypoint for a Docker image

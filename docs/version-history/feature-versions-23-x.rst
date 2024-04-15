@@ -9,9 +9,7 @@ Version 23.6.2
 
 Release Notes:
 
-.. HTCondor version 23.6.2 released on Month Date, 2024.
-
-- HTCondor version 23.6.2 not yet released.
+- HTCondor version 23.6.2 released on April 16, 2024.
 
 New Features:
 
