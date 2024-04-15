@@ -677,14 +677,22 @@ main( int argc, const char** argv)
 	std::map< std::string, int > cudaDevices;
 	std::vector< BasicProps > nvmlDevices;
 	std::vector< BasicProps > enumeratedDevices;
+
+	bool enumeratedCUDADevices = false;
 	if(! opt_opencl) {
-		if (cuDeviceGetCount && ! enumerateCUDADevices(enumeratedDevices)) {
+		if (cuDeviceGetCount && enumerateCUDADevices(enumeratedDevices)) {
+			enumeratedCUDADevices = true;
+		}
+	}
+
+	if(! enumeratedCUDADevices) {
+		if( opt_cuda_only ) {
 			const char * problem = "Failed to enumerate GPU devices";
 			fprintf( stderr, "# %s, aborting.\n", problem );
 			fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
 			return 1;
 		}
-
+	} else {
 		//
 		// We have to report NVML devices, because enabling MIG on any
 		// GPU prevents CUDA from reporting any MIG-capable GPU, even
