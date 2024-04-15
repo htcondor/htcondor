@@ -1,3 +1,9 @@
+condor (23.6.2-1) stable; urgency=medium
+
+  * Fix bug where file transfer plugin error was not in hold reason code
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 15 Apr 2024 15:22:00 -0500
+
 condor (23.6.1-1) stable; urgency=medium
 
   * Add the ability to force vanilla universe jobs to run in a container
