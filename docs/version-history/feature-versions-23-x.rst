@@ -13,7 +13,7 @@ Release Notes:
 
 - HTCondor version 23.7.1 not yet released.
 
-- This version includes all the updates from :ref:`lts-version-history-2308`.
+- This version includes all the updates from :ref:`lts-version-history-23010`.
 
 - The use of multiple :subcom:`queue` statements in a single submit description
   file is now deprecated. This functionality is planned to be removed during the
