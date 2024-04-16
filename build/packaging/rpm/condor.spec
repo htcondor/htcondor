@@ -658,7 +658,7 @@ make -C docs man
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
 %endif
 %if 0%{?rhel} == 7 || 0%{?rhel} == 8
-       -DPython3_EXECUTABLE=%__python3
+       -DPython3_EXECUTABLE=%__python3 \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
