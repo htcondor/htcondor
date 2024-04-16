@@ -15,10 +15,29 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23012:
+
+Version 23.0.12
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.12 released on Month Date, 2024.
+
+- HTCondor version 23.0.12 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-23010
 
 Version 23.0.10
---------------
+---------------
 
 Release Notes:
 
