@@ -6643,13 +6643,16 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 				" exited unexpectedly without producing an error message ";
 		}
 		plugin_stats->LookupString("TransferUrl", transferUrl);
+		// If transferUrl is empty, don't include it in the error message
+		std::string urlFileErrMsg = transferUrl.empty() ? "" : " ( URL file = " + std::string(UrlSafePrint(transferUrl)) + " )";
+
 		if (exit_by_signal) {
-			e.pushf("FILETRANSFER", 1, "exit by signal %d from %s. |Error: %s ( URL file = %s )|",  // URL file in err msg
-					WTERMSIG(rc), plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
+			e.pushf("FILETRANSFER", 1, "exit by signal %d from %s. |Error: %s%s|",  // URL file in err msg
+			WTERMSIG(rc), plugin.c_str(), errorMessage.c_str(), urlFileErrMsg.c_str());
 		} else {
-			e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s ( URL file = %s )|",  // URL file in err msg
-					exit_status, plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
-		}
+			e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s%s|",  // URL file in err msg
+				exit_status, plugin.c_str(), errorMessage.c_str(), urlFileErrMsg.c_str());
+}
 		return TransferPluginResult::Error;
 	}
 
@@ -6931,18 +6934,20 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 			std::string error_message;
 			std::string transfer_url;
 			this_file_stats_ad.LookupString( "TransferUrl", transfer_url );
+			// Don't include the URL in the error message if it's empty
+			std::string urlFileErrMsg = transfer_url.empty() ? "" : " ( URL file = " + std::string(UrlSafePrint(transfer_url)) + " )";
 			if ( !this_file_stats_ad.LookupBool( "TransferSuccess", transfer_success ) ) {
 				error_message = "File transfer plugin " + plugin_path +
 					" exited without producing a TransferSuccess result ";
-				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s (%s)|",
-					exit_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
+				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s%s|",
+					exit_status, plugin_path.c_str(), error_message.c_str(), urlFileErrMsg.c_str() );
 			} else if ( !transfer_success ) {
 				if (!this_file_stats_ad.LookupString("TransferError", error_message)) {
 					error_message = "File transfer plugin " + plugin_path +
 						" exited unexpectedly without producing an error message ";
 				}
-				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s ( URL file = %s )|",   // URL file in err msg
-					exit_status, plugin_path.c_str(), error_message.c_str(), UrlSafePrint(transfer_url) );
+				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s%s|",
+					exit_status, plugin_path.c_str(), error_message.c_str(), urlFileErrMsg.c_str() );
 			}
 
 			SendPluginOutputAd( this_file_stats_ad );
