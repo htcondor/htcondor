@@ -363,7 +363,12 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 		return false;
 	}
 
+    // This can't be the right way to print something in either of
+    // two different debug levels.
 	dprintf(D_FULLDEBUG,
+			"TransferQueueManager: enqueueing %s.\n",
+			client->Description());
+	dprintf(D_TEST,
 			"TransferQueueManager: enqueueing %s.\n",
 			client->Description());
 

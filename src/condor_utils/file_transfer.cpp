@@ -5724,9 +5724,19 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 	ASSERT( timeout > alive_slop );
 	timeout -= alive_slop;
 
-	if( !xfer_queue.RequestTransferQueueSlot(downloading,sandbox_size,full_fname,m_jobid.c_str(),queue_user.c_str(),timeout,error_desc) )
-	{
-		go_ahead = GO_AHEAD_FAILED;
+	// Don't bother to request a transfer queue slot for
+	// small-enough sandboxes.
+	long int min_required_to_transfer = param_integer(
+		"BYTES_REQUIRED_TO_QUEUE_FOR_TRANSFER", 100 * 1024 * 1024
+	);
+	if( sandbox_size <= min_required_to_transfer ) {
+		dprintf( D_ALWAYS, "Not entering transfer queue because sandbox is too small.\n" );
+		go_ahead = GO_AHEAD_ALWAYS;
+	} else {
+		if( !xfer_queue.RequestTransferQueueSlot(downloading,sandbox_size,full_fname,m_jobid.c_str(),queue_user.c_str(),timeout,error_desc) )
+		{
+			go_ahead = GO_AHEAD_FAILED;
+		}
 	}
 
 	bool first_poll = true;
