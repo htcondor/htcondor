@@ -146,6 +146,7 @@ html_extra_path = ["auto-redirect.html"]
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'ReadtheDocsTemplatedoc'
 
+copybutton_exclude = '.linenos, .gp'
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
