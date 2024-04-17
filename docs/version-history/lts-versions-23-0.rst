@@ -34,7 +34,7 @@ Bugs Fixed:
 
 - None.
 
-.. _lts-version-history-23010
+.. _lts-version-history-23010:
 
 Version 23.0.10
 ---------------
