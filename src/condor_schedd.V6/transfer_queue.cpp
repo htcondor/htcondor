@@ -363,13 +363,11 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 		return false;
 	}
 
-    // This can't be the right way to print something in either of
-    // two different debug levels.
-	dprintf(D_FULLDEBUG,
-			"TransferQueueManager: enqueueing %s.\n",
-			client->Description());
-	dprintf(D_TEST,
-			"TransferQueueManager: enqueueing %s.\n",
+	int flag = D_FULLDEBUG;
+	if( IsDebugLevel(D_TEST) ) {
+		flag = D_TEST;
+	}
+	dprintf(flag, "TransferQueueManager: enqueueing %s.\n",
 			client->Description());
 
 	int rc = daemonCore->Register_Socket(client->m_sock,
