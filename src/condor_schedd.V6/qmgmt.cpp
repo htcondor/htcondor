@@ -9765,6 +9765,13 @@ bool Runnable(JobQueueJob *job, const char *& reason)
 		return false;
 	}
 
+	time_t cool_down = 0;
+	job->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
+	if (cool_down >= time(nullptr)) {
+		reason = "not runnable (in cool-down)";
+		return false;
+	}
+
 	job->LookupInteger(ATTR_CURRENT_HOSTS, cur);
 	job->LookupInteger(ATTR_MAX_HOSTS, max);
 

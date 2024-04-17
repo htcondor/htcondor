@@ -10975,6 +10975,11 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
 		}
 	}
+
+	// Delete vacate reason from any previous execution attempt
+	DeleteAttribute(cluster, proc, ATTR_VACATE_REASON);
+	DeleteAttribute(cluster, proc, ATTR_VACATE_REASON_CODE);
+	DeleteAttribute(cluster, proc, ATTR_VACATE_REASON_SUBCODE);
 }
 
 static void
@@ -12417,6 +12422,35 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			srec->reconnect_done = true;
 		}
 	}
+	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
+		long long ival = 0;
+		classad::Value val;
+		ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
+		if (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0) {
+			int cnt = 0;
+			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
+			cnt++;
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, cnt);
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + ival);
+			stats.JobsCoolDowns += 1;
+			OTHER.JobsCoolDowns += 1;
+		}
+		else {
+			int code = 0;
+			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
+			if (code > 0 && code < CONDOR_HOLD_CODE::VacateBase) {
+				std::string reason;
+				int subcode = 0;
+				GetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, reason);
+				SetAttributeString(job_id.cluster, job_id.proc, ATTR_HOLD_REASON, reason.c_str());
+				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_CODE, code);
+				if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &subcode) >= 0) {
+					SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, subcode);
+				}
+				exit_code = JOB_SHOULD_HOLD;
+			}
+		}
+	}
 	switch( exit_code ) {
 		case JOB_NO_MEM:
 			this->swap_space_exhausted();
@@ -13341,6 +13375,15 @@ Scheduler::Init()
 				 "START_SCHEDULER_UNIVERSE: %s\n", this->StartSchedulerUniverse );
 	}
 	free( tmp );
+
+	// Job Cool Down expression
+	delete m_jobCoolDownExpr;
+	m_jobCoolDownExpr = nullptr;
+	tmp = param("SYSTEM_ON_VACATE_COOL_DOWN");
+	if (tmp) {
+		ParseClassAdRvalExpr(tmp, m_jobCoolDownExpr);
+		free(tmp);
+	}
 
 	MaxRunningSchedulerJobsPerOwner = param_integer("MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER", 200);
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);

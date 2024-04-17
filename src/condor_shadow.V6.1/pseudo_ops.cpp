@@ -32,6 +32,7 @@
 #include "basename.h"
 #include "nullfile.h"
 #include "spooled_job_files.h"
+#include "condor_holdcodes.h"
 
 #include <filesystem>
 #include "manifest.h"
@@ -506,9 +507,6 @@ pseudo_ulog( ClassAd *ad )
 	int result = 0;
 	char const *critical_error = NULL;
 	std::string CriticalErrorBuf;
-	bool event_already_logged = false;
-	bool put_job_on_hold = false;
-	std::string hold_reason;
 	int hold_reason_code = 0;
 	int hold_reason_sub_code = 0;
 
@@ -520,14 +518,6 @@ pseudo_ulog( ClassAd *ad )
 		  "invalid event ClassAd in pseudo_ulog: %s\n",
 		  add_str.c_str());
 		return -1;
-	}
-
-	if(ad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code) &&
-		hold_reason_code > 0)
-	{
-		put_job_on_hold = true;
-		ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_reason_sub_code);
-		ad->LookupString(ATTR_HOLD_REASON,hold_reason);
 	}
 
 	if( event->eventNumber == ULOG_REMOTE_ERROR ) {
@@ -549,20 +539,16 @@ pseudo_ulog( ClassAd *ad )
 			  err->getErrorText());
 
 			critical_error = CriticalErrorBuf.c_str();
-			if(hold_reason.empty()) {
-				hold_reason = critical_error;
-			}
 
-			//Temporary: the following causes critical remote errors
-			//to be logged as ShadowExceptionEvents, rather than
-			//RemoteErrorEvents.  The result is ugly, but guaranteed to
-			//be compatible with other user-log reading tools.
-			BaseShadow::log_except(critical_error);
-			event_already_logged = true;
+			hold_reason_code = err->hold_reason_code;
+			hold_reason_sub_code = err->hold_reason_subcode;
+			if (hold_reason_code == 0) {
+				hold_reason_code = CONDOR_HOLD_CODE::StarterError;
+			}
 		}
 	}
 
-	if( !event_already_logged && !Shadow->uLog.writeEvent( event, ad ) ) {
+	if( !Shadow->uLog.writeEvent( event, ad ) ) {
 		std::string add_str;
 		sPrintAd(add_str, *ad);
 		dprintf(
@@ -572,24 +558,11 @@ pseudo_ulog( ClassAd *ad )
 		result = -1;
 	}
 
-	if(put_job_on_hold) {
-		if (critical_error) hold_reason = critical_error;
-		if(hold_reason.empty()) {
-			hold_reason = "Job put on hold by remote host.";
-		}
+	if (critical_error) {
 		// Let the RemoteResource know that the starter is shutting
 		// down and failing to kill it it expected.
-		thisRemoteResource->resourceExit( JOB_SHOULD_HOLD, -1 );
-		Shadow->holdJobAndExit(hold_reason.c_str(),hold_reason_code,hold_reason_sub_code);
-		//should never get here, because holdJobAndExit() exits.
-	}
-
-	if( critical_error ) {
-		//Suppress ugly "Shadow exception!"
-		Shadow->exception_already_logged = true;
-
-		//lame: at the time of this writing, EXCEPT does not want const:
-		EXCEPT("%s", critical_error);
+		thisRemoteResource->resourceExit( JOB_SHOULD_REQUEUE, -1 );
+		Shadow->evictJob(JOB_SHOULD_REQUEUE, critical_error, hold_reason_code, hold_reason_sub_code);
 	}
 
 	delete event;

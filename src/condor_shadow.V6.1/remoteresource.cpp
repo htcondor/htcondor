@@ -478,7 +478,7 @@ RemoteResource::attemptShutdown()
 	abortFileTransfer();
 
 		// we call our shadow's shutdown method:
-	shadow->shutDown( exit_reason );
+	shadow->shutDown( exit_reason, "" );
 }
 
 int

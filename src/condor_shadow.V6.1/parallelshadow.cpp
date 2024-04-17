@@ -27,6 +27,7 @@
 #include "daemon.h"
 #include "condor_config.h"
 #include "spooled_job_files.h"
+#include "condor_holdcodes.h"
 
 RemoteResource *parallelMasterResource = NULL;
 
@@ -66,10 +67,7 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 	SpooledJobFiles::getJobSpoolPath(jobAd, dir);
 	job_ad->Assign(ATTR_REMOTE_SPOOL_DIR,dir);
 
-    if( !job_ad->Assign(ATTR_MPI_IS_MASTER, true) ) {
-        dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", ATTR_MPI_IS_MASTER );
-        shutDown( JOB_NOT_STARTED );
-    }
+	job_ad->Assign(ATTR_MPI_IS_MASTER, true);
 
 	replaceNode( job_ad, 0 );
 	rr->setNode( 0 );
@@ -307,7 +305,7 @@ ParallelShadow::getResources( int /* timerID */ )
 			};
 			if (jobAdNumInProc != numInProc) {
 				dprintf(D_ALWAYS, "ERROR -- job needs %d slots, but schedd gave us %d slots -- giving up\n", jobAdNumInProc, numInProc);
-				BaseShadow::shutDown(JOB_NOT_STARTED);
+				BaseShadow::shutDown(JOB_NOT_STARTED, "Wrong number of slots");
 				sock->end_of_message();
 				delete sock;
 				return;
@@ -374,7 +372,7 @@ ParallelShadow::spawnNode( MpiResource* rr )
 	} else {
 			// First, contact the startd to spawn the job
 		if( rr->activateClaim() != OK ) {
-			shutDown( JOB_NOT_STARTED );
+			shutDown(JOB_NOT_STARTED, "Failed to activate claim", CONDOR_HOLD_CODE::FailedToActivateClaim);
 			
 		}
 	}
@@ -523,7 +521,7 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 
 
 void 
-ParallelShadow::shutDown( int exitReason )
+ParallelShadow::shutDown( int exitReason, const char* reason_str, int reason_code, int reason_subcode )
 {	
 	if (exitReason != JOB_NOT_STARTED) {
 		if (shutdownPolicy == WAIT_FOR_ALL) {
@@ -557,7 +555,7 @@ ParallelShadow::shutDown( int exitReason )
 		   do the real work, which is shared among all kinds of
 		   shadows.  the shutDown process will call other virtual
 		   functions to get universe-specific goodness right. */
-	BaseShadow::shutDown( exitReason );
+	BaseShadow::shutDown( exitReason, reason_str, reason_code, reason_subcode );
 }
 
 
@@ -592,7 +590,7 @@ ParallelShadow::handleJobRemoval( int sig ) {
     }
 
 	if (allPre) {
-		BaseShadow::shutDown(JOB_SHOULD_REMOVE);
+		BaseShadow::shutDown(JOB_SHOULD_REMOVE, "");
 	}
 	return 0;
 }

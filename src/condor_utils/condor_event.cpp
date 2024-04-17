@@ -2198,14 +2198,13 @@ JobEvictedEvent::formatBody( std::string &out )
 	return false;
       }
     }
-
-    if( !reason.empty() ) {
-      if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
-	return false;
-      }
-    }
-
   }
+
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
+			return false;
+		}
+	}
 
 	// print out resource request/usage values.
 	//
