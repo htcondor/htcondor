@@ -95,6 +95,11 @@ $aborted = sub
 		$diditpass = 0;
 	}
 
+	if (-e "job_dagman_rm-NodeF-job.finished") {
+		CondorTest::debug("Error: file NodeF-job.finished exists; NodeF job should have been condor_rm'ed\n",1);
+		$diditpass = 0;
+	}
+
 	@Zfiles = glob("job_dagman_rm-NodeZ-job.*.finished");
 	if ($#Zfiles >= 0) {
 		CondorTest::debug("Error: found @Zfiles; NodeZ jobs should have been condor_rm'ed\n",1);
