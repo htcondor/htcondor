@@ -578,7 +578,7 @@ def _add_line_from_itemdata(submit_file, item):
     elif isinstance(item, dict):
         if any(["\n" in x for x in item.keys()]):
             raise ValueError("itemdata strings must not contain newlines")
-        submit_file = submit_file + " ".join(item.values()) + "\n"
+        submit_file = submit_file + "\x1F".join(item.values()) + "\n"
     return submit_file
 
 
