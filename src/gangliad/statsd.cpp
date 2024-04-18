@@ -909,7 +909,6 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 				continue;
 			}
 		}
-		classad::ClassAd::const_iterator attr_it;
 		for ( const auto& [attr_name,attr_value] : *ad ) {
 			// ignore list type values when computing external refs.
 			// this prevents Child* and AvailableGPUs slot attributes from polluting the sig attrs
