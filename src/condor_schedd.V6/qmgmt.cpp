@@ -9742,7 +9742,7 @@ bool Runnable(JobQueueJob *job, const char *& reason)
 	}
 
 	if (job->Status() != IDLE) {
-		reason = "not runanble (not IDLE)";
+		reason = "not runnanble (not IDLE)";
 		return false;
 	}
 
