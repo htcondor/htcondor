@@ -522,6 +522,14 @@ public:
 		*/
 	bool Release(int proc);
 
+	// Get Shared Node time of the last state change
+	static time_t GetLastStateChange() { return lastStateChangeTime; }
+
+	// Check internal Job states against returned queue query results
+	bool VerifyJobStates(std::set<int>& queuedJobs);
+
+	bool missingJobs{false};
+
 	static const char * dedup_str(const char* str) { return stringSpace.strdup_dedup(str); }
 
 private:
@@ -627,6 +635,9 @@ private:
 	 *  (for debugging).
 	*/
 	void PrintProcIsIdle();
+
+	static void SetStateChangeTime() { time(&lastStateChangeTime); }
+	static time_t lastStateChangeTime;
 };
 
 struct SortJobsById

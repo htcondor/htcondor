@@ -2004,7 +2004,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 	// otherwise, we will use the system default.
 
     if (cafile) {
-        for (const auto& ca_str : StringTokenIterator(cafile, ",", true)) {
+        for (const auto& ca_str : StringTokenIterator(cafile, ",")) {
             int fd = open(ca_str.c_str(), O_RDONLY);
             if (fd < 0) {
                 continue;
@@ -2028,8 +2028,8 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
         goto setup_server_ctx_err;
     }
     {
-        StringTokenIterator certfile_list(certfile ? certfile : "", ",", true);
-        StringTokenIterator keyfile_list(keyfile ? keyfile : "", ",", true);
+        StringTokenIterator certfile_list(certfile ? certfile : "", ",");
+        StringTokenIterator keyfile_list(keyfile ? keyfile : "", ",");
         const char *cert, *key;
         while ((cert = certfile_list.next()))
         {
@@ -2114,8 +2114,8 @@ Condor_Auth_SSL::should_try_auth()
 		return false;
 	}
 
-	StringTokenIterator certfile_list(certfile, ",", true);
-	StringTokenIterator keyfile_list(keyfile, ",", true);
+	StringTokenIterator certfile_list(certfile, ",");
+	StringTokenIterator keyfile_list(keyfile, ",");
 	keyfile_list.rewind();
 	const char *cert, *key;
 	std::string last_error;

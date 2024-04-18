@@ -1316,7 +1316,7 @@ bool MacroStreamCharSource::open(const char * src_string, const MACRO_SOURCE& _s
 {
 	src = _src;
 	if (input) delete input;
-	input = new StringTokenIterator(src_string, "\n");
+	input = new StringTokenIterator(src_string, "\n", STI_NO_TRIM);
 	return input != NULL;
 }
 
@@ -1945,7 +1945,7 @@ FILE* Open_macro_source (
 	} else {
 		fp = safe_fopen_wrapper_follow(source, "r");
 		if ( ! fp) {
-			config_errmsg = "can't open file";
+			config_errmsg = std::string("can't open file ") + source + ": " + strerror(errno);
 			return NULL;
 		}
 	}

@@ -93,6 +93,7 @@
 #include "token_utils.h"
 #include "jobsets.h"
 #include "classad_collection.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -2934,12 +2935,19 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 	}
 
 	int iter_options = 0;
-	bool include_cluster = false, include_jobsets = false;
-	if (queryAd.EvaluateAttrBool("IncludeClusterAd", include_cluster) && include_cluster) {
+	bool include_cluster = false, include_jobsets = false, no_proc_ads = false;
+	if (queryAd.EvaluateAttrBool(ATTR_QUERY_Q_INCLUDE_CLUSTER_AD, include_cluster) && include_cluster) {
 		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS;
 	}
-	if (queryAd.EvaluateAttrBool("IncludeJobsetAds", include_jobsets) && include_jobsets) {
+	if (queryAd.EvaluateAttrBool(ATTR_QUERY_Q_INCLUDE_JOBSET_ADS, include_jobsets) && include_jobsets) {
 		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_JOBSETS;
+	}
+	if (queryAd.EvaluateAttrBool(ATTR_QUERY_Q_NO_PROC_ADS, no_proc_ads) && no_proc_ads) {
+		iter_options |= JOB_QUEUE_ITERATOR_OPT_NO_PROC_ADS;
+	}
+	std::string ids;
+	if (queryAd.LookupString(ATTR_QUERY_Q_IDS, ids) && ! ids.empty()) {
+		// TODO: add a ID based QueryJobAdsContinuation instead of the current JobQueue iteration based
 	}
 
 	if (IsDebugCatAndVerbosity(dpf_level)) {
@@ -4914,6 +4922,10 @@ jobIsFinished( int cluster, int proc, void* )
 		// not be present in the job ad file, but that should be of
 		// little consequence.
 	WriteCompletionVisa(job_ad);
+
+	// Remove related Jobs
+	removeOtherJobs(cluster, proc);
+
 
 		/*
 		  make sure we can switch uids.  if not, there's nothing to
@@ -7202,8 +7214,7 @@ Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log )
  * @param: the proc of the "controlling" job
  * @return: true if successful, false otherwise
  */
-static bool
-removeOtherJobs( int cluster, int proc )
+bool removeOtherJobs( int cluster, int proc )
 {
 	bool result = true;
 
@@ -7260,22 +7271,6 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS: {
 		abort_job_myself( job_id, action, log );
-
-			//
-			// Changes here to fix gittrac #741 and #1490:
-			// 1) Child job removing code below is enabled for all
-			//    platforms.
-			// 2) Child job removing code below is only executed when
-			//    *removing* a job.
-			// 3) Child job removing code is only executed when the
-			//    removed job has ChildRemoveConstraint set in its classad.
-			// The main reason for doing this is that, if we don't, when
-			// a DAGMan job is held and then removed, its child jobs
-			// are left running.
-			//
-		if ( action == JA_REMOVE_JOBS ) {
-			(void)removeOtherJobs(job_id.cluster, job_id.proc);
-		}
 		break;
     }
 	case JA_RELEASE_JOBS: {
@@ -15854,9 +15849,8 @@ abortJobRaw( int cluster, int proc, const char *reason )
 
 	fixReasonAttrs( job_id, JA_REMOVE_JOBS );
 
-	// Abort the job now
-	abort_job_myself( job_id, JA_REMOVE_JOBS, true );
-	dprintf( D_ALWAYS, "Job %d.%d aborted: %s\n", cluster, proc, reason );
+	// enqueue the job abort
+	scheduler.enqueueActOnJobMyself(job_id, JA_REMOVE_JOBS, true);
 
 	return true;
 }
@@ -15884,14 +15878,6 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 		} else {
 			AbortTransaction();
 		}
-	}
-
-		// If we successfully removed the job, remove any jobs that
-		// match is OtherJobRemoveRequirements attribute, if it has one.
-	if ( result ) {
-		// Ignoring return value because we're not sure what to do
-		// with it.
-		(void)removeOtherJobs( cluster, proc );
 	}
 
 	return result;
@@ -15955,18 +15941,6 @@ abortJobsByConstraint( const char *constraint,
 		} else {
 			AbortTransaction();
 		}
-	}
-
-		//
-		// Remove "other" jobs that need to be removed as a result of
-		// the OtherJobRemoveRequirements exppression(s) in the job(s)
-		// that have just been removed.  Note that this must be done
-		// *after* the transaction is committed.
-		//
-	for (auto it = removedJobs.rbegin(); it != removedJobs.rend(); ++it) {
-		// Ignoring return value because we're not sure what to do
-		// with it.
-		(void)removeOtherJobs( it->cluster, it->proc);
 	}
 
 	return result;

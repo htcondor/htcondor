@@ -25,6 +25,7 @@
 #include "ResAttributes.h"
 #include "condor_daemon_core.h"
 #include "slot_builder.h"
+#include "../condor_sysapi/sysapi.h"
 
 static void
 _checkInvalidParam( const char* name, bool except ) {

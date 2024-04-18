@@ -63,27 +63,24 @@ JobTransforms::initAndReconfig()
 		// No job transforms requested in the config, no more work to do
 		return;
 	}
-	StringList nameList( jobtransNames.c_str() );
-	nameList.rewind();
-	const char * name = nullptr;
 	MacroStreamXFormSource *xfm = nullptr;
-	while( (name = nameList.next()) != nullptr ) {
+	for (auto& name: StringTokenIterator(jobtransNames)) {
 
-		if( strcasecmp( name, "NAMES" ) == 0 ) { continue; }  // prevent recursion!
+		if( strcasecmp( name.c_str(), "NAMES" ) == 0 ) { continue; }  // prevent recursion!
 		std::string attributeName;
-		formatstr( attributeName, "JOB_TRANSFORM_%s", name );
+		formatstr( attributeName, "JOB_TRANSFORM_%s", name.c_str() );
 
 		// fetch unexpanded param, we will only expand it now for the old (classad) style transforms.
 		// this pointer does not need to be freed.
 		const char * raw_transform_text = param_unexpanded( attributeName.c_str() );
 		if( !raw_transform_text ) {
-			dprintf( D_ALWAYS, "JOB_TRANSFORM_%s not defined, ignoring.\n", name );
+			dprintf( D_ALWAYS, "JOB_TRANSFORM_%s not defined, ignoring.\n", name.c_str() );
 			continue;
 		}
 		// skip leading whitespace (I think the param code does this, but...)
 		while (isspace(*raw_transform_text)) { ++raw_transform_text; }
 		if ( !raw_transform_text[0] ) {
-			dprintf( D_ALWAYS, "JOB_TRANSFORM_%s definition is empty, ignoring.\n", name );
+			dprintf( D_ALWAYS, "JOB_TRANSFORM_%s definition is empty, ignoring.\n", name.c_str() );
 			continue;
 		}
 
@@ -91,7 +88,7 @@ JobTransforms::initAndReconfig()
 		// this object is clean if errors were encountered instantiating a 
 		// previous transform rule.
 		if (xfm) delete xfm;
-		xfm = new MacroStreamXFormSource(name);
+		xfm = new MacroStreamXFormSource(name.c_str());
 		ASSERT(xfm);
 
 		// Load transform rule from the config param into the xfm object.  If
@@ -113,7 +110,7 @@ JobTransforms::initAndReconfig()
 				 ((rval=XFormLoadFromClassadJobRouterRoute(*xfm,empty,offset,transformAd,0)) < 0) )
 			{
 				dprintf( D_ALWAYS, "JOB_TRANSFORM_%s classad malformed, ignoring. (err=%d)\n",
-					name, rval );
+					name.c_str(), rval );
 				continue;
 			}
 		} else {
@@ -123,7 +120,7 @@ JobTransforms::initAndReconfig()
 			int offset = 0;
 			if ( (rval=xfm->open(raw_transform_text, offset, errmsg)) < 0 ) {
 				dprintf( D_ALWAYS, "JOB_TRANSFORM_%s macro stream malformed, ignoring. (err=%d) %s\n",
-					name, rval, errmsg.c_str() );
+					name.c_str(), rval, errmsg.c_str() );
 				continue;
 			}
 		}
@@ -138,7 +135,7 @@ JobTransforms::initAndReconfig()
 		std::string xfm_text;
 		dprintf(D_ALWAYS, 
 			"JOB_TRANSFORM_%s setup as transform rule #%zu :\n%s\n",
-			name, transforms_list.size(), xfm->getFormattedText(xfm_text, "\t") );
+			name.c_str(), transforms_list.size(), xfm->getFormattedText(xfm_text, "\t") );
 		xfm = nullptr;  // we handed the xfm pointer off to our list
 
 	} // end of while loop thru job transform names	

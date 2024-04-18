@@ -30,6 +30,7 @@
 #include "misc_utils.h"
 #include "slot_builder.h"
 #include "history_queue.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "StartdPlugin.h"

@@ -413,7 +413,7 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 	return NULL;
 }
 
-std::vector<std::string> split(const std::string& str, const char* delim, bool trim)
+std::vector<std::string> split(const std::string& str, const char* delim, STI_TrimBehavior trim)
 {
 	std::vector<std::string> list;
 	for (const auto& item: StringTokenIterator(str, delim, trim)) {
@@ -422,7 +422,7 @@ std::vector<std::string> split(const std::string& str, const char* delim, bool t
 	return list;
 }
 
-std::vector<std::string> split(const char* str, const char* delim, bool trim)
+std::vector<std::string> split(const char* str, const char* delim, STI_TrimBehavior trim)
 {
 	std::vector<std::string> list;
 	for (const auto& item: StringTokenIterator(str, delim, trim)) {
@@ -776,13 +776,13 @@ int StringTokenIterator::next_token(int & length)
 	size_t ixEnd = ix;
 
 	// skip leading separators and whitespace (if trimming)
-	while (ix < len && str[ix] && (strchr(delims, str[ix]) || (m_trim && isspace(str[ix])))) ++ix;
+	while (ix < len && str[ix] && (strchr(delims, str[ix]) || (m_trim == STI_TRIM && isspace(str[ix])))) ++ix;
 	ixNext = ix;
 	ixEnd = ix;
 
 	// scan for next delimiter or \0
 	while (ix < len && str[ix] && !strchr(delims, str[ix])) {
-		if (!m_trim || !isspace(str[ix])) {
+		if (m_trim != STI_TRIM || !isspace(str[ix])) {
 			ixEnd = ix;
 		}
 		++ix;

@@ -64,16 +64,21 @@ HTCondor assumes that all plug-ins will respond in specific ways. To
 determine the capabilities of the plug-ins as to which protocols they
 handle, the *condor_starter* daemon invokes each plug-in giving it the
 command line argument ``-classad``. In response to invocation with this
-command line argument, the plug-in must respond with an output of four
-ClassAd attributes. The first three are fixed:
+command line argument, the plug-in must respond with an output of at least
+four ClassAd attributes. The first three are fixed, the next is recommended:
 
 .. code-block:: condor-classad
 
     MultipleFileSupport = true
-    PluginVersion = "0.1"
+    PluginVersion = "1.1"
     PluginType = "FileTransfer"
+    ProtocolVersion = 2
 
-The fourth ClassAd attribute is ``SupportedMethods``. This attribute is a
+The current protocol versions are 1 for single file plugins, and 2 for
+multi file.  These protocols will be assumed if the ``ProtocolVersion`` attribute
+is missing.
+
+The Next ClassAd attribute is ``SupportedMethods``. This attribute is a
 string containing a comma separated list of the protocols that the
 plug-in handles. So, for example
 
@@ -87,6 +92,18 @@ given within a URL in a
 :subcom:`transfer_input_files[and URLs]`
 command or within a URL in an :subcom:`output_destination[and URLs]`
 command in a submit description file for a job.
+
+This can be optionally followed by 2 or more attributes that give the
+plugin the ability to put arbitrary information, such as the plugin
+version into the STARTD classads. The first attribute should be a list
+of attribute names that should be included in the STARTD ads. By convention
+these attributes should have a common prefix. For example, the curl plugin might have:
+
+.. code-block:: condor-classad
+
+    StartdAttrs = "CurlPluginInfo"
+    CurlPluginInfo = strcat("Multi2:",PluginVersion,":",SupportedMethods)
+
 
 When a job specifies a URL transfer, the plug-in is invoked, without the
 command line argument ``-classad``. It will instead be given two other

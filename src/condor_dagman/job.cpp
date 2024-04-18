@@ -20,20 +20,17 @@
 
 #include "condor_common.h"
 #include "job.h"
-#include "condor_string.h"
 #include "condor_debug.h"
-#include "dagman_main.h"
 #include "read_multiple_logs.h"
 #include "throttle_by_category.h"
 #include "dag.h"
-#include "dagman_metrics.h"
-#include <set>
 #include <forward_list>
 
 static const char *JOB_TAG_NAME = "+job_tag_name";
 static const char *PEGASUS_SITE = "+pegasus_site";
 
 StringSpace Job::stringSpace;
+time_t Job::lastStateChangeTime;
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
@@ -309,6 +306,8 @@ Job::SetProcIsIdle( int proc, bool isIdle )
 		proc = 0;
 	}
 
+	SetStateChangeTime();
+
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		_gotEvents.resize(proc + 1, 0);
 	}
@@ -326,6 +325,8 @@ Job::SetProcEvent( int proc, int event )
 	if ( GetNoop() ) {
 		proc = 0;
 	}
+
+	SetStateChangeTime();
 
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 			_gotEvents.resize(proc + 1, 0);
@@ -353,13 +354,7 @@ int Job::CountChildren() const
 		if (_multiple_children) {
 			Edge * edge = Edge::ById(_child);
 			ASSERT(edge);
-		#if 1 // if the child list has a size method
 			count = (int)edge->size();
-		#else // if it does not
-			for (auto it = edge->_children.begin(); it != edge->_children.end(); ++it) {
-				++count;
-			}
-		#endif
 		} else {
 			count = 1;
 		}
@@ -1058,6 +1053,7 @@ Job::SetCondorID(const CondorID& cid)
 bool
 Job::Hold(int proc) 
 {
+	SetStateChangeTime();
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		_gotEvents.resize(proc + 1, 0);
 	}
@@ -1078,6 +1074,7 @@ Job::Hold(int proc)
 bool
 Job::Release(int proc)
 {
+	SetStateChangeTime();
 	//PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d "
@@ -1113,4 +1110,43 @@ Job::Cleanup()
 
 	std::vector<unsigned char> s2;
 	_gotEvents.swap(s2); // Free memory in _gotEvents
+}
+
+//---------------------------------------------------------------------------
+/*
+	Verify internal job states agree with queue query such that jobs found in
+	queue don't have ABORT_TERM_MASK and jobs not found in queue do have ABORT_TERM_MASK
+	return True for everything matches
+	return False for one job has differring state
+*/
+bool Job::VerifyJobStates(std::set<int>& queuedJobs) {
+	bool good_state = true;
+	int proc = 0;
+	int cluster = GetCluster();
+	const char* nodeName = GetJobName();
+
+	if (_gotEvents.size() == 0) {
+		debug_printf(DEBUG_NORMAL, "ERROR: Node %s is in submitted state with no recorded job events!\n",
+		             nodeName);
+		return false;
+	}
+
+	for (auto& state : _gotEvents) {
+		if (queuedJobs.contains(proc)) {
+			if (state & ABORT_TERM_MASK) {
+				debug_printf(DEBUG_NORMAL,
+				             "ERROR: Node %s (%d.%d) located in queue but marked as exited.\n",
+				             nodeName, cluster, proc);
+				good_state = false;
+			}
+		} else if (state != ABORT_TERM_MASK) {
+			debug_printf(DEBUG_NORMAL,
+			             "ERROR: Node %s (%d.%d) not located in queue and not marked as exited.\n",
+			             nodeName, cluster, proc);
+			good_state = false;
+		}
+		proc++;
+	}
+
+	return good_state;
 }

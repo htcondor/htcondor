@@ -24,6 +24,7 @@
 #include <grp.h>
 #include <string>
 #include <map>
+#include <vector>
 
 struct group_entry {
 	std::vector<gid_t> gidlist;	/* groups this user is a member of */

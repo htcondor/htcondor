@@ -642,7 +642,11 @@ JICShadow::transferOutput( bool &transient_failure )
 		dprintf( D_FULLDEBUG, "Begin transfer of sandbox to shadow.\n");
 			// this will block
 		if( job_failed && final_transfer ) {
-			m_ft_rval = filetrans->UploadFailureFiles( true );
+			// Only attempt failure file upload if we have failure files
+			if (filetrans->hasFailureFiles()) {
+				sleep(1); // Delay to give time for shadow side to reap previous upload
+				m_ft_rval = filetrans->UploadFailureFiles( true );
+			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
 		}

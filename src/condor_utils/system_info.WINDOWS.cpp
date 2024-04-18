@@ -402,9 +402,8 @@ SystemHandleInformation::SystemHandleInformation( DWORD pID, BOOL bRefresh, LPCT
 
 SystemHandleInformation::~SystemHandleInformation()
 {
-	while ( !m_HandleInfos.IsEmpty () ) {
-		VirtualFree ( m_HandleInfos.Current (), 0, MEM_RELEASE );
-		m_HandleInfos.DeleteCurrent ();
+	for (auto *h: m_HandleInfos) {
+		VirtualFree(h, 0, MEM_RELEASE );
 	}
 }
 
@@ -445,10 +444,10 @@ BOOL SystemHandleInformation::Refresh()
 	std::string strType;
 
 	// m_HandleInfos.RemoveAll();
-	while ( !m_HandleInfos.IsEmpty () ) {
-		VirtualFree ( m_HandleInfos.Current (), 0, MEM_RELEASE );
-		m_HandleInfos.DeleteCurrent ();
+	for (auto *h: m_HandleInfos) {
+		VirtualFree (h, 0, MEM_RELEASE );
 	}
+	m_HandleInfos.clear();
 
 	if ( !INtDll::NtDllStatus )
 		return FALSE;
@@ -515,7 +514,7 @@ BOOL SystemHandleInformation::Refresh()
 				SYSTEM_HANDLE* ptmp = (SYSTEM_HANDLE*)VirtualAlloc ( NULL, sizeof ( SYSTEM_HANDLE ), MEM_COMMIT, PAGE_READWRITE );
 				ASSERT(ptmp);
 				memcpy ( ptmp, &pSysHandleInformation->Handles[i], sizeof ( SYSTEM_HANDLE ) );
-				m_HandleInfos.Append ( ptmp );
+				m_HandleInfos.emplace_back(ptmp);
 
 			}
 		}

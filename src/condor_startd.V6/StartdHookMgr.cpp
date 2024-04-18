@@ -389,7 +389,7 @@ FetchClient::hookExited(int exit_status) {
 	if (m_std_out.length()) {
 		ASSERT(m_job_ad == NULL);
 		m_job_ad = new ClassAd();
-		StringTokenIterator tok(m_std_out, "\n", true);
+		StringTokenIterator tok(m_std_out, "\n");
 		const char* hook_line = NULL;
 		while ((hook_line = tok.next())) {
 			if (!m_job_ad->Insert(hook_line)) {

@@ -24,6 +24,7 @@
 #include <math.h>
 #include "filesystem_remap.h"
 #include "classad_helpers.h" // for cleanStringForUseAsAttr
+#include "../condor_sysapi/sysapi.h"
 
 #include <set>
 #include <algorithm>
@@ -160,18 +161,16 @@ MachAttributes::~MachAttributes()
 	if( m_utsname_version ) free( m_utsname_version );
 	if( m_utsname_machine ) free( m_utsname_machine );
 
-    AttribValue *val = NULL;
-    m_lst_dynamic.Rewind();
-    while ((val = m_lst_dynamic.Next()) ) {
+	for (auto *val : m_lst_dynamic) {
        if (val) free (val);
-       m_lst_dynamic.DeleteCurrent();
-    }
+	}
+	m_lst_dynamic.clear();
 
-    m_lst_static.Rewind();
-    while ((val = m_lst_static.Next())) {
+	for (auto *val: m_lst_static) {
        if (val) free (val);
-       m_lst_static.DeleteCurrent();
     }
+	m_lst_static.clear();
+
     m_user_specified.clearAll();
 #if defined(WIN32)
 	if( m_local_credd ) free( m_local_credd );
@@ -186,20 +185,15 @@ MachAttributes::init_user_settings()
 {
 	m_user_settings_init = true;
 
-	AttribValue *val = NULL;
-	m_lst_dynamic.Rewind();
-	while ((val = m_lst_dynamic.Next()))
-    {
+	for (auto *val : m_lst_dynamic) {
         if (val) free (val);
-	    m_lst_dynamic.DeleteCurrent();
 	}
+	m_lst_dynamic.clear();
 
-	m_lst_static.Rewind();
-	while ((val = m_lst_static.Next()))
-    {
+	for (auto *val: m_lst_static) {
 	    if (val) free (val);
-	    m_lst_static.DeleteCurrent();
 	}
+	m_lst_static.clear();
 
 	m_user_specified.clearAll();
 
@@ -261,7 +255,7 @@ MachAttributes::init_user_settings()
 			//
             AttribValue * pav = add_WinPerf_Query(pszAttr, pkey+ixStart+1);
             if (pav)
-		        m_lst_dynamic.Append(pav);
+		        m_lst_dynamic.emplace_back(pav);
 		}
         else
         {
@@ -273,7 +267,7 @@ MachAttributes::init_user_settings()
             if (pav)
             {
                 pav->pquery = (void*)pkey;
-				m_lst_static.Append(pav);
+				m_lst_static.emplace_back(pav);
 			}
 		}
 
@@ -524,9 +518,7 @@ MachAttributes::compute_for_policy()
         update_all_WinPerf_results();
 #endif
 
-        AttribValue *pav = NULL;
-        m_lst_dynamic.Rewind();
-        while ((pav = m_lst_dynamic.Next()) ) {
+		for (auto *pav : m_lst_dynamic) {
            if (pav) {
              #ifdef WIN32
               if ( ! update_WinPerf_Value(pav))
@@ -1367,8 +1359,7 @@ MachAttributes::publish_static(ClassAd* cp)
 	// publish values from the window's registry as specified
 	// in the STARTD_PUBLISH_WINREG param.
 	//
-	m_lst_static.Rewind();
-	while (AttribValue *pav = m_lst_static.Next()) {
+	for (auto *pav: m_lst_static) {
 		if (pav) pav->AssignToClassAd(cp);
 	}
 
@@ -1608,8 +1599,7 @@ MachAttributes::publish_common_dynamic(ClassAd* cp, bool global /*=false*/)
 	cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
 	cp->Assign( ATTR_CLOCK_DAY, m_clock_day );
 
-	m_lst_dynamic.Rewind();
-	while (AttribValue *pav = m_lst_dynamic.Next() ) {
+	for (auto *pav : m_lst_dynamic) {
 		if (pav) pav->AssignToClassAd(cp);
 	}
 }

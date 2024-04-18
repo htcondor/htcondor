@@ -321,7 +321,7 @@ private:
 	bool			m_seen_keypress;    // Have we seen our first keypress yet?
 	int				m_clock_day;
 	int				m_clock_min;
-	List<AttribValue> m_lst_dynamic;    // list of user specified dynamic Attributes
+	std::vector<AttribValue *> m_lst_dynamic;    // list of user specified dynamic Attributes
 	int64_t			m_docker_cached_image_size;  // Size in bytes of our cached docker images -1 means unknown
 	time_t			m_docker_cached_image_size_time;
 #if defined(WIN32)
@@ -360,7 +360,7 @@ private:
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
-	List<AttribValue> m_lst_static;     // list of user-specified static attributes
+	std::vector<AttribValue *> m_lst_static;     // list of user-specified static attributes
 
      	// temporary attributes for raw utsname info
 	char*			m_utsname_sysname;

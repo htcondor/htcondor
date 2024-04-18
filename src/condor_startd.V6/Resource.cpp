@@ -3915,7 +3915,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 
             for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
                 if (YourStringNoCase("disk") == j->first) {
-                    int denom = (int)(ceil(rip->r_attr->total_cpus()));
+                    // int denom = (int)(ceil(rip->r_attr->total_cpus()));
                     double total_disk = rip->r_attr->get_total_disk();
                     double disk_slop = max(1024, total_disk / (1024*1024));
                     cpu_attrs_request.disk_fraction = max(0, j->second + disk_slop) / total_disk;
@@ -3967,7 +3967,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
                 }
             }
             // convert disk request into a fraction for the slot splitting code
-            int denom = (int)(ceil(rip->r_attr->total_cpus()));
+            //int denom = (int)(ceil(rip->r_attr->total_cpus()));
             double total_disk = rip->r_attr->get_total_disk();
             double disk_slop = max(1024, total_disk / (1024*1024));
             double disk_fraction = max(0, disk + disk_slop) / total_disk;

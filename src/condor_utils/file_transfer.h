@@ -285,6 +285,9 @@ class FileTransfer final: public Service {
 	// Add the given filename to the list of "failure" files.
 	void addFailureFile( const char* filename );
 
+	// Check if we have failure files
+	bool hasFailureFiles() const { return !FailureFiles.isEmpty(); }
+
 	//
 	// Add the given path or URL to the list of checkpoint files.  The file
 	// will be transferred to the named destination* in the sandbox.
@@ -353,7 +356,7 @@ class FileTransfer final: public Service {
 
 	void setTransferQueueContactInfo(char const *contact);
 
-	void InsertPluginMappings(const std::string& methods, const std::string& p, bool supports_testing);
+	void InsertPluginMappings(const std::string& methods, const std::string& p, bool supports_testing, std::string & failed_methods);
 		// Run a test invocation of URL schema using plugin.  Will attempt to download
 		// the URL specified by config param `schema`_TEST_URL to a temporary directory.
 	bool TestPlugin(const std::string &schema, const std::string &plugin);
@@ -366,9 +369,9 @@ class FileTransfer final: public Service {
 	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const;
 	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
-	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
-	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
+	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
+	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, int &exit_code, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
+	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, int &exit_code, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
 	int RecordFileTransferStats( ClassAd &stats );
 	std::string GetSupportedMethods(CondorError &err);
 	void DoPluginConfiguration();
@@ -410,6 +413,9 @@ class FileTransfer final: public Service {
 	}
 
 	ClassAd *GetJobAd();
+
+	// get the raw '-classad' results from when we build the plugin to url map
+	const std::vector<ClassAd> & getPluginQueryAds() { return plugin_ads; }
 
 	bool transferIsInProgress() const { return ActiveTransferTid != -1; }
 
@@ -563,6 +569,7 @@ class FileTransfer final: public Service {
 	bool ClientCallbackWantsStatusUpdates{false};
 	FileTransferInfo Info;
 	PluginHashTable* plugin_table{nullptr};
+	std::vector<ClassAd> plugin_ads;  // raw results from -classad query of the plugins
 	std::map<std::string, bool> plugins_multifile_support;
 	std::map<std::string, bool> plugins_from_job;
 	bool I_support_filetransfer_plugins{false};

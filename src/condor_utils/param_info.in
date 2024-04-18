@@ -33,6 +33,10 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[DAEMON_CORE_KILL_ANY_PROCESS]
+default=false
+description=Allows DaemonCore to send signals to processes it didn't start.
+
 [MAX_DRAINING_ACTIVATION_DELAY]
 default=20
 description=When draining, how many seconds should a claimed slot wait to be activated?  Draining will be extended by this delay..
@@ -577,6 +581,12 @@ restart=never
 
 [DAGMAN_PENDING_REPORT_INTERVAL]
 default=600
+type=int
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_CHECK_QUEUE_INTERVAL]
+default=28800
 type=int
 tags=dagman,dagman_main
 restart=never

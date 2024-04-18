@@ -9355,6 +9355,15 @@ Debug output
     If not defined, :macro:`DAGMAN_PENDING_REPORT_INTERVAL` defaults to 600
     seconds (10 minutes).
 
+:macro-def:`DAGMAN_CHECK_QUEUE_INTERVAL[DAGMan]`
+    An integer value representing the number of seconds DAGMan will wait
+    pending on nodes to make progress before querying the local *condor_schedd*
+    queue to verify that the jobs the DAG is pending on are in said queue.
+    If jobs are missing, DAGMan will write a rescue DAG and abort. When set
+    to a value equal to or less than 0 DAGMan will not query the *condor_schedd*.
+    Default value is 28800 seconds (8 Hours).
+
+
 :macro-def:`MAX_DAGMAN_LOG[DAGMan]`
     This variable is described in :macro:`MAX_<SUBSYS>_LOG`. If not defined,
     :macro:`MAX_DAGMAN_LOG` defaults to 0 (unlimited size).

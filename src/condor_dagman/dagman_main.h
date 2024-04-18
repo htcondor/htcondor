@@ -117,6 +117,10 @@ class Dagman {
 		// will want to keep them infrequent to reduce load on the schedd.
 	int schedd_update_interval;
 
+	// How long DAGMan waits in pending and unvalidated state before querying
+	// the schedd queue
+	int check_queue_interval;
+
 		// "Primary" DAG file -- if we have multiple DAG files this is
 		// the first one.  The lock file name, rescue DAG name, etc., 
 		// are based on this name.

@@ -39,28 +39,9 @@ static double revDouble(const string &revNumStr);
 static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin);
 
 
-void Literal::setError(int err, const char *msg /*=NULL*/)
+AbstimeLiteral* 
+Literal::MakeAbsTime( abstime_t *tim )
 {
-	CondorErrno = err;
-	CondorErrMsg = msg ? msg : "";
-}
-
-
-Literal* Literal::
-MakeReal(const string &number_string) 
-{
-	char   *end;
-	double real = strtod(number_string.c_str(), &end);
-	if (end == number_string.c_str() && real == 0.0) {
-		return MakeUndefined();
-	}
-	return MakeReal(real);
-}
-
-Literal* Literal::
-MakeAbsTime( abstime_t *tim )
-{
-    Value val;
     abstime_t abst;
     if (tim == NULL) { // => current time/offset
         time_t now;
@@ -71,8 +52,7 @@ MakeAbsTime( abstime_t *tim )
     else { //make a literal out of the passed value
         abst = *tim;
     }
-    val.SetAbsoluteTimeValue( abst);
-    return( MakeLiteral( val ) );
+    return new AbstimeLiteral(abst);
 }
 
 /* Creates an absolute time literal, from the string timestr, 
@@ -81,8 +61,8 @@ MakeAbsTime( abstime_t *tim )
  D => non-digit, d=> digit
  Ex - 2003-01-25T09:00:00-06:00
 */
-Literal* Literal::
-MakeAbsTime(string timeStr )
+AbstimeLiteral * 
+Literal::MakeAbsTime(string timeStr )
 {    
 	abstime_t abst;
 	Value val;
@@ -113,8 +93,7 @@ MakeAbsTime(string timeStr )
 	
 	nextDigitChar(timeStr,i);
 	if(i > len-4) { // string has to contain dddd (year)
-		val.SetErrorValue( );
-		return(MakeLiteral( val ));
+		return nullptr;
 	}    
 	
 	abstm.tm_year = atoi(timeStr.substr(i,4).c_str()) - 1900;
@@ -152,15 +131,13 @@ MakeAbsTime(string timeStr )
 	nextDigitChar(timeStr,i);
 	
 	if((i<=len-1) && (isdigit(timeStr[i]))) {  // there should be no more digit characters once the required
-		val.SetErrorValue( );                             // parameteres are parsed
-		return(MakeLiteral( val ));
+		return nullptr;
 	}      
 	
 	abst.secs = mktime(&abstm);
 	
 	if(abst.secs == -1)  { // the time should be one, which can be supported by the time_t type
-		val.SetErrorValue( );
-		return(MakeLiteral( val ));
+		return nullptr;
 	}      
 
 	if(offset) {
@@ -183,52 +160,43 @@ MakeAbsTime(string timeStr )
 	abst.secs -= abst.offset;
 	
 	if(abst.offset == -1) { // corresponds to illegal offset
-		val.SetErrorValue( );
-		return(MakeLiteral( val ) );
+		return nullptr;
 	}
 	else {
-		val.SetAbsoluteTimeValue(abst);
+		return new AbstimeLiteral(abst);
 	}
-	
-	return( MakeLiteral( val ) );
 }
 
-Literal* Literal::
-MakeRelTime( time_t t1, time_t t2 )
+ReltimeLiteral *
+Literal::MakeRelTime( time_t t1, time_t t2 )
 {
-	Value	val;
-
 	if( t1<0 ) time( &t1 );
 	if( t2<0 ) time( &t2 );
-	val.SetRelativeTimeValue( t1 - t2 );
-	return( MakeLiteral( val ) );
+	return new ReltimeLiteral(t1 - t2);
 }
 
 
-Literal* Literal::
-MakeRelTime( time_t secs )
+ReltimeLiteral *
+Literal::MakeRelTime( time_t secs )
 {
-	Value		val;
 	struct	tm 	lt;
 
 	if( secs<0 ) {
 		time(&secs );
 		getLocalTime( &secs, &lt );
-		val.SetRelativeTimeValue((time_t) (lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec));
+		return new ReltimeLiteral((time_t) (lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec));
 	} else {
-		val.SetRelativeTimeValue((time_t) secs);
+		return new ReltimeLiteral((time_t) secs);
 	}
-	return( MakeLiteral( val ) );
 }
 
 /* Creates a relative time literal, from the string timestr, 
  *parsing it as [[[days+]hh:]mm:]ss
  * Ex - 1+00:02:00
  */
-Literal* Literal::
-MakeRelTime(const string &timeStr)
+ReltimeLiteral * 
+Literal::MakeRelTime(const string &timeStr)
 {
-	Value val;  
 	double rsecs;
 	
 	int len = (int)timeStr.length();
@@ -305,14 +273,12 @@ MakeRelTime(const string &timeStr)
 	prevNonSpaceChar(timeStr,i);
     
 	if((i>=0) && (!(isspace(timeStr[i])))) { // should not conatin any non-space char beyond -,d,h,m,s
-		val.SetErrorValue( );
-		return(MakeLiteral( val ));
+		return nullptr;
 	}   
 	
 	rsecs = ( negative ? -1 : +1 ) * ( days*86400 + hrs*3600 + mins*60 + secs );
-	val.SetRelativeTimeValue(rsecs);
 	
-	return( MakeLiteral( val ) );
+	return new ReltimeLiteral(rsecs);
 }
 
 /* Function which iterates through the string Str from the location 'index', 
@@ -382,72 +348,10 @@ findOffset(time_t epochsecs)
 } 
 
 
-Literal* Literal::
-MakeLiteral( const Value& val, Value::NumberFactor f ) 
-{
-	if(val.GetType()==Value::CLASSAD_VALUE || val.GetType()==Value::SCLASSAD_VALUE || val.GetType()==Value::LIST_VALUE || val.GetType()==Value::SLIST_VALUE){
-		setError(ERR_BAD_VALUE, "list and classad values are not literals");
-		return( NULL );
-	}
-
-	Literal* lit = new Literal();
-	if( !lit ){
-		setError(ERR_MEM_ALLOC_FAILED);
-		return NULL;
-	}
-	lit->value.CopyFrom( val );
-	lit->value.ApplyFactor(f);
-
-	return lit;
-}
-
-bool Literal::
-SameAs(const ExprTree *tree) const
-{
-    bool    is_same;
-    const ExprTree * pSelfTree = tree->self();
-    
-    if (this == pSelfTree) {
-        is_same = true;
-    } else if (pSelfTree->GetKind() != LITERAL_NODE) {
-        is_same = false;
-    } else {
-        const Literal *other_literal;
-        
-        other_literal = (const Literal *) pSelfTree;
-        is_same = (value.SameAs(other_literal->value));
-    }
-    return is_same;
-}
-
 bool 
 operator==(Literal &literal1, Literal &literal2)
 {
     return literal1.SameAs(&literal2);
-}
-
-
-bool Literal::
-_Evaluate (EvalState &, Value &val) const
-{
-	val.CopyFrom( value );
-	return( true );
-}
-
-
-bool Literal::
-_Evaluate( EvalState &state, Value &val, ExprTree *&tree ) const
-{
-	_Evaluate( state, val );
-	return( ( tree = Copy() ) );
-}
-
-
-bool Literal::
-_Flatten( EvalState &state, Value &val, ExprTree *&tree, int*) const
-{
-	tree = NULL;
-	return( _Evaluate( state, val ) );
 }
 
 static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin) 

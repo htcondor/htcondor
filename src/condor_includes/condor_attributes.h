@@ -302,6 +302,7 @@
 #define ATTR_UNHIBERNATE  "Unhibernate"
 #define ATTR_HOLD_KILL_SIG  "HoldKillSig"
 #define ATTR_HOOK_KEYWORD  "HookKeyword"
+#define ATTR_HISTORY_RECORD_SOURCE  "HistoryRecordSource"
 #define ATTR_IDLE_JOBS  "IdleJobs"
 #define ATTR_IMAGE_SIZE  "ImageSize"
 #define ATTR_IO_WAIT  "IOWait"
@@ -641,6 +642,10 @@
 #define ATTR_REQUEUE_REASON  "RequeueReason"
 #define ATTR_REQUIREMENTS  "Requirements"
 #define ATTR_CUDA_VERSION "CUDAVersion"
+#define ATTR_QUERY_Q_IDS                "IDs"
+#define ATTR_QUERY_Q_INCLUDE_CLUSTER_AD "IncludeClusterAd"
+#define ATTR_QUERY_Q_INCLUDE_JOBSET_ADS "IncludeJobsetAds"
+#define ATTR_QUERY_Q_NO_PROC_ADS        "NoProcAds"
 #define ATTR_RESOURCE_REQUEST_CONSTRAINT "_condor_RESOURCE_CONSTRAINT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"

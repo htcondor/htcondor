@@ -2394,7 +2394,7 @@ int extractInheritedSocks (
 	std::string & psinful, // out: sinful of the parent
 	Stream* socks[],   // out: filled in with items from the inherit string
 	int     cMaxSocks, // in: number of items in the socks array
-	StringList & remaining_items); // out: unparsed items from the inherit string are appended
+	std::vector<std::string> & remaining_items); // out: unparsed items from the inherit string are appended
 
 // helper class that uses C++ constructor/destructor to automatically
 // time a function call. 

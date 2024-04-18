@@ -44,7 +44,7 @@
 
 // #include <afxtempl.h>
 #include <map>
-#include "list.h"
+#include <vector>
 
 // #include <winternl.h>
 #include <ntsecapi.h>
@@ -333,8 +333,7 @@ protected:
 	BOOL IsSupportedHandle( SYSTEM_HANDLE& handle );
 
 public:
-	// CList< SYSTEM_HANDLE, SYSTEM_HANDLE& > m_HandleInfos;
-	List<SYSTEM_HANDLE> m_HandleInfos;
+	std::vector<SYSTEM_HANDLE *> m_HandleInfos;
 	DWORD	m_processId;
 
 protected:
