@@ -12425,15 +12425,15 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
 		long long ival = 0;
 		classad::Value val;
-		ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
+		JobQueueJob * job_ad = GetJobAd( job_id.cluster, job_id.proc );
 		if (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0) {
 			int cnt = 0;
 			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
 			cnt++;
 			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, cnt);
 			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + ival);
-			stats.JobsCoolDowns += 1;
-			OTHER.JobsCoolDowns += 1;
+			stats.JobsCoolDown += 1;
+			OTHER.JobsCoolDown += 1;
 		}
 		else {
 			int code = 0;

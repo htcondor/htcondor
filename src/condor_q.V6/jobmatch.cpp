@@ -745,6 +745,7 @@ bool doJobRunAnalysis (
 	int		universe = CONDOR_UNIVERSE_MIN;
 	int		jobState;
 	time_t  cool_down = 0;
+	time_t  server_time = time(nullptr);
 	std::string owner;
 	std::string user;
 	std::string slotname;
@@ -764,6 +765,7 @@ bool doJobRunAnalysis (
 
 	request->LookupInteger(ATTR_JOB_STATUS, jobState);
 	request->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
+	request->LookupInteger(ATTR_SERVER_TIME, server_time);
 	if (jobState == RUNNING || jobState == TRANSFERRING_OUTPUT || jobState == SUSPENDED) {
 		job_status = "Job is running.";
 	}
@@ -782,7 +784,7 @@ bool doJobRunAnalysis (
 	if (jobState == COMPLETED) {
 		job_status = "Job is completed.";
 	}
-	if (jobState == IDLE && cool_down > time(nullptr)) {
+	if (jobState == IDLE && cool_down > server_time) {
 		job_status = "Job is in cool down.";
 	}
 

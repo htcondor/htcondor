@@ -9741,22 +9741,9 @@ bool Runnable(JobQueueJob *job, const char *& reason)
 		return false;
 	}
 
-	switch (job->Status()) {
-	case HELD:
-		reason = "not runnable (HELD)";
+	if (job->Status() != IDLE) {
+		reason = "not runanble (not IDLE)";
 		return false;
-		break;
-	case REMOVED:
-		reason = "not runnable (REMOVED)";
-		return false;
-		break;
-	case COMPLETED:
-		reason = "not runnable (COMPLETED)";
-		return false;
-		break;
-	default:
-		// continue on
-		break;
 	}
 
 	if( !service_this_universe(job->Universe(), job) )
@@ -9781,7 +9768,7 @@ bool Runnable(JobQueueJob *job, const char *& reason)
 		return true;
 	}
 	
-	reason = "not runnable (default rule)";
+	reason = "not runnable (already matched)";
 	return false;
 }
 
