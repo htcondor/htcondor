@@ -17,7 +17,17 @@ Release Notes:
 
 New Features:
 
-- None.
+- A job can now be put into a cool-down state after a failed execution
+  attempt.
+  If the expression given by new configuration parameter
+  :macro:`SYSTEM_ON_VACATE_COOL_DOWN` evaluates to a positive integer,
+  then the job will not be run again until after that number of
+  seconds elapses.
+  New job attributes :ad-attr:`VacateReason`,
+  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode` are
+  set after a failed execution attempt and can be referenced in the
+  cool-down expression.
+  :jira:`2134`
 
 Bugs Fixed:
 
@@ -125,7 +135,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug where the :attr:`HoldReasonSubcode` was not the documented value
+- Fixed bug where the :ad-attr:`HoldReasonSubcode` was not the documented value
   for jobs put on hold because of errors running a file transfer plugin.
   :jira:`2373`
 

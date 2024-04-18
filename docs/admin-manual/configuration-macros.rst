@@ -5396,6 +5396,13 @@ These macros control the *condor_schedd*.
     ``False``. When ``True``, it causes the job to be evicted from the
     machine it is running on.
 
+:macro-def:`SYSTEM_ON_VACATE_COOL_DOWN[SCHEDD]`
+    This expression is evaluated whenever an execution attempt for a
+    job is interrupted (i.e. the job does not exit of its own accord).
+    If it evaluates to a positive integer, then the job is put into a
+    cool-down state for that number of seconds. During this time, the
+    job will not be run again.
+
 :macro-def:`SCHEDD_ASSUME_NEGOTIATOR_GONE[SCHEDD]`
     This macro determines the period, in seconds, that the
     *condor_schedd* will wait for the *condor_negotiator* to initiate
