@@ -366,6 +366,18 @@ VanillaProc::StartJob()
 			fi.cgroup_memory_limit = (uint64_t) memory * 1024 * 1024;
 		}
 
+		long long low_value = 0; // meaning do not set low limit
+		if (param_longlong("CGROUP_LOW_MEMORY_LIMIT", low_value,
+					false, // use_default,
+					0,     // default_value
+					false, // check_ranges
+					0,     // min_value
+					std::numeric_limits<long long>::max(), // max_value
+					Starter->jic->machClassAd(), // my ad
+					JobAd)) {
+			fi.cgroup_memory_limit_low = (uint64_t) low_value * 1024 * 1024;
+		}
+
 		if (policy == "custom") {
 			long long hard_value = 0;
 			const bool use_default = false;

@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- New config parameter :macro:`CGROUP_LOW_MEMORY_LIMIT` allows an administrator
+  of a Linux cgroup v2 system to set the "memory.low" setting in a job's cgroup
+  to encourage cacheable memory pages to be reclaimed faster.
+  :jira:`2391`
 
 Bugs Fixed:
 

@@ -6284,6 +6284,19 @@ These settings affect the *condor_starter*.
     must be set, which is a classad expression evaluated
     in the context of the machine and the job, respectively, to determine the hard limits.
 
+:macro-def:`CGROUP_HARD_MEMORY_LIMIT_EXPR`
+    See above.
+
+:macro-def:`CGROUP_LOW_MEMORY_LIMIT`
+    A classad expression, evaluated in the context of the slot and job ad.
+    When it evaluated to a number, that number is written to the job's
+    cgroup memory.low limit.  This is only implemented on Linux systems
+    where HTCondor controls the jobs' cgroups.  When the job exceeds this 
+    limit, the kernel will aggressively evict read-only pages (often disk cache)
+    from the job's use.  For example, an admin could set this to 
+    Memory * 0.5, in order to prevent the system from using otherwise available
+    memory for caching on behalf of the job.
+
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
     *condor_starter* will set the memws to the same value as the hard memory limit.
