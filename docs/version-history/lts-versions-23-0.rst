@@ -32,9 +32,8 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a crash when using the *condor_upgrade_check* tool with either the
-  ``--ignore`` or the ``--only`` flag in a python version older than **3.8**.
-  This bug was introduced in V23.0.4 of HTCondor.
+- Fixed a crash when using the *condor_upgrade_check* tool when using
+  a python version older than **3.8**. This bug was introduced in V23.0.4.
   :jira:`2393`
 
 .. _lts-version-history-23010:
