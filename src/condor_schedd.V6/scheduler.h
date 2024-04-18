@@ -956,7 +956,8 @@ private:
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
-	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd, TransactionWatcher & txn, CondorError & errstack);
+	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd,
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserAttributesInfo & info);
 	void		remove_unused_owners();
 	void			child_exit(int, int);
 	// AFAICT, reapers should be be registered void to begin with.

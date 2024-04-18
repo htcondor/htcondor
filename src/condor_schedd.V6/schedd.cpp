@@ -2367,7 +2367,13 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 	return TRUE;
 }
 
-int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd, TransactionWatcher & txn, CondorError & /*errstack*/)
+int Scheduler::act_on_user(
+	int cmd,
+	const std::string & username,
+	const ClassAd& cmdAd,
+	TransactionWatcher & txn,
+	CondorError & /*errstack*/,
+	struct UpdateUserAttributesInfo & updatesInfo)
 {
 	int rval = 0;
 
@@ -2382,7 +2388,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 			if (cmdAd.LookupBool(ATTR_USERREC_OPT_UPDATE, do_update) && do_update) {
 				bool has_enable = cmdAd.LookupBool(ATTR_ENABLED, enable);
 				txn.BeginOrContinue(userrec_id);
-				UpdateUserAttributes(urec->jid, cmdAd, enable);
+				UpdateUserAttributes(urec->jid, cmdAd, enable, updatesInfo);
 				// if the update is setting enabled to false, make sure that DisableReason is also set to a string
 				if (has_enable && ! enable) {
 					SetUserAttributeInt(*urec, ATTR_ENABLED, 0); // update will have filtered this
@@ -2433,7 +2439,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 	case EDIT_USERREC:
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
-			UpdateUserAttributes(urec->jid, cmdAd, urec->IsEnabled());
+			UpdateUserAttributes(urec->jid, cmdAd, urec->IsEnabled(), updatesInfo);
 		} else { // user does not exist, cannot be edited
 			rval = 2;
 		}
@@ -2471,6 +2477,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 	const char * cmd_name = getCommandStringSafe(cmd);
 	ClassAd cmdAd;
 	int num_users = 0;
+	struct UpdateUserAttributesInfo updatesInfo;
 
 	dprintf( D_FULLDEBUG, "In command_act_on_user_ads\n" );
 
@@ -2522,19 +2529,19 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 		if (act.Lookup(ATTR_REQUIREMENTS)) {
 			for (auto it : OwnersInfo) {
 				if (IsAConstraintMatch(&act, it.second)) {
-					rval = act_on_user(cmd, it.first, act, txn, errstack);
+					rval = act_on_user(cmd, it.first, act, txn, errstack, updatesInfo);
 					if (rval) break;
 					++num_ads;
 				}
 			}
 			if (rval) break;
 		} else if (act.LookupString(ATTR_USER, username) && ! username.empty()) {
-			rval = act_on_user(cmd, username, act, txn, errstack);
+			rval = act_on_user(cmd, username, act, txn, errstack, updatesInfo);
 			if (rval) break;
 			++num_ads;
 		} else if (act.Lookup(ATTR_USERREC_OPT_ME)) {
 			username = rsock->getFullyQualifiedUser();
-			rval = act_on_user(cmd, username, act, txn, errstack);
+			rval = act_on_user(cmd, username, act, txn, errstack, updatesInfo);
 			if (rval) break;
 			++num_ads;
 		} else {
@@ -2557,14 +2564,28 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	resultAd.Assign(ATTR_NUM_ADS, num_ads);
 	resultAd.Assign(ATTR_RESULT, rval);
+	if (cmd == EDIT_USERREC) { resultAd.Assign("NumAttributesSet", updatesInfo.valid); }
+
 	std::string errmsg;
 	if ( ! errstack.empty()) { 
 		errmsg = errstack.getFullText(true);
 		resultAd.Assign(ATTR_ERROR_STRING, errmsg);
 		errmsg = errstack.getFullText(false); // for dprintf
+	} else if (updatesInfo.invalid > 0 || updatesInfo.special > 0) {
+		formatstr(errmsg, "%s updates were ignored because ", updatesInfo.valid ? "Some" : "All");
+		if (updatesInfo.special > 0) {
+			formatstr_cat(errmsg, "%d were reserved attributes", updatesInfo.special);
+			if (updatesInfo.invalid > 0) errmsg += " and ";
+		}
+		if (updatesInfo.invalid > 0) {
+			formatstr_cat(errmsg, "%d had invalid values", updatesInfo.invalid);
+		}
+		resultAd.Assign(ATTR_WARNING, errmsg);
 	}
 
-	dprintf( D_FULLDEBUG, "Processed %d ads for command %s : sending result %d %s\n", num_ads, cmd_name, rval, errmsg.c_str() ); 
+
+	dprintf( D_FULLDEBUG, "Processed %d ads for command %s : sending result %d %s\n",
+		num_ads, cmd_name, rval, errmsg.c_str()); 
 
 	// Finally, close up shop.  We have to send the result ad to signal the end.
 	if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
@@ -13986,17 +14007,16 @@ Scheduler::Register()
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
 
 	//disable these until we decide permissions
-	#if 0
 	daemonCore->Register_CommandWithPayload(EDIT_USERREC, "EDIT_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(RESET_USERREC, "RESET_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(DELETE_USERREC, "DELETE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
-	#endif
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+
 #endif
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.

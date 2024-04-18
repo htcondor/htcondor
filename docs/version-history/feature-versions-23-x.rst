@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added an ``-edit`` option to the *condor_qusers* tool.  This option allows
+  and administrator to add custom attributes to a User classad in the *condor_schedd*.
+  :jira:`2381`
 
 Bugs Fixed:
 
