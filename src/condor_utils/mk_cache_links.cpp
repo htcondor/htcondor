@@ -244,7 +244,7 @@ static std::string MakeAbsolutePath(const char* path, const char* initialWorking
 
 } // end namespace
 
-void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
+void ProcessCachedInpFiles(ClassAd *const Ad, StringList &const InputFiles,
 	StringList &PubInpFiles) {
 
 	char *initialWorkingDir = NULL;
@@ -294,15 +294,15 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 
 			std::string hashName = MakeHashName( fullPath.c_str(), fileModifiedTime );
 			if (MakeLink(fullPath.c_str(), hashName)) {
-				InputFiles->remove(path); // Remove plain file name from InputFiles
+				InputFiles.remove(path); // Remove plain file name from InputFiles
 				remap += hashName;
 				remap += "=";
 				remap += basename(path);
 				remap += ";";
 				hashName = url + hashName;
 				const char *const namePtr = hashName.c_str();
-				if ( !InputFiles->contains(namePtr) ) {
-					InputFiles->append(namePtr);
+				if ( !InputFiles.contains(namePtr) ) {
+					InputFiles.append(namePtr);
 					dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Adding url to "
 												"InputFiles: %s\n", namePtr);
 				} 

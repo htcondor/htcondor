@@ -495,7 +495,7 @@ class FileTransfer final: public Service {
 	int AddInputFilenameRemaps(ClassAd *Ad);
 #endif
 	uint64_t bytesSent{0}, bytesRcvd{0};
-	StringList* InputFiles{nullptr};
+	StringList InputFiles{nullptr, ","};
 
   private:
 
@@ -522,19 +522,19 @@ class FileTransfer final: public Service {
 #else
 	std::vector<std::string> ExceptionFiles;
 #endif
-	StringList* OutputFiles{nullptr};
-	StringList* EncryptInputFiles{nullptr};
-	StringList* EncryptOutputFiles{nullptr};
-	StringList* DontEncryptInputFiles{nullptr};
-	StringList* DontEncryptOutputFiles{nullptr};
-	StringList* IntermediateFiles{nullptr};
+	StringList OutputFiles{nullptr, ","};
+	StringList EncryptInputFiles{nullptr, ","};
+	StringList EncryptOutputFiles{nullptr, ","};
+	StringList DontEncryptInputFiles{nullptr, ","};
+	StringList DontEncryptOutputFiles{nullptr, ","};
+	StringList IntermediateFiles{nullptr, ","};
 	StringList* FilesToSend{nullptr};
 	StringList* EncryptFiles{nullptr};
 	StringList* DontEncryptFiles{nullptr};
 
-	StringList* CheckpointFiles{nullptr};
-	StringList* EncryptCheckpointFiles{nullptr};
-	StringList* DontEncryptCheckpointFiles{nullptr};
+	StringList CheckpointFiles{nullptr, ","};
+	StringList EncryptCheckpointFiles{nullptr, ","};
+	StringList DontEncryptCheckpointFiles{nullptr, ","};
 	StringList FailureFiles{nullptr, ","};
 
 	char* OutputDestination{nullptr};

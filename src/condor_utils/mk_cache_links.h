@@ -27,6 +27,6 @@
 #ifdef HAVE_HTTP_PUBLIC_FILES
 
 extern void ProcessCachedInpFiles(ClassAd *const Ad,
-  StringList *const InputFiles, StringList &PubInpFiles);
+  StringList &const InputFiles, StringList &PubInpFiles);
 
 #endif
