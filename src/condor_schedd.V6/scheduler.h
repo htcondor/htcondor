@@ -46,7 +46,6 @@
 #include "proc.h"
 #include "prio_rec.h"
 #include "HashTable.h"
-#include "string_list.h"
 #include "write_user_log.h"
 #include "autocluster.h"
 #include "enum_utils.h"
@@ -1091,7 +1090,7 @@ private:
 	int m_send_reschedule_timer;
 	Timeslice m_negotiate_timeslice;
 
-	StringList m_job_machine_attrs;
+	std::vector<std::string> m_job_machine_attrs;
 	int m_job_machine_attrs_history_length;
 
 	bool m_use_startd_for_local;

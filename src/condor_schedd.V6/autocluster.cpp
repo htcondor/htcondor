@@ -112,12 +112,16 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 		// Merge everything in new_sig_attrs into our existing
 		// significant_attrs.  Take note if significant_attrs changed,
 		// since we need to return this info to our caller.
-		StringList attrs(significant_attrs);
-		StringList new_attrs(new_sig_attrs);
-		sig_attrs_changed = attrs.create_union(new_attrs,true);
+		std::vector<std::string> attrs = split(significant_attrs);
+		for (auto& new_attr: StringTokenIterator(new_sig_attrs)) {
+			if (!contains_anycase(attrs, new_attr)) {
+				attrs.emplace_back(new_attr);
+				sig_attrs_changed = true;
+			}
+		}
 		if (sig_attrs_changed) {
 			free(const_cast<char*>(significant_attrs));
-			significant_attrs = attrs.print_to_string();
+			significant_attrs = strdup(join(attrs, ",").c_str());
 		}
 		if (free_input_attrs) {
 			free(const_cast<char*>(new_sig_attrs));
