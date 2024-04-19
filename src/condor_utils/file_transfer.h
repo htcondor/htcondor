@@ -286,7 +286,7 @@ class FileTransfer final: public Service {
 	void addFailureFile( const char* filename );
 
 	// Check if we have failure files
-	bool hasFailureFiles() const { return !FailureFiles.isEmpty(); }
+	bool hasFailureFiles() const { return !FailureFiles.empty(); }
 
 	//
 	// Add the given path or URL to the list of checkpoint files.  The file
