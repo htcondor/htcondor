@@ -3713,12 +3713,12 @@ public:
 			// force re-initialization (and a new cluster) if this hash is used again.
 			m_queue_may_append_to_cluster = false;
 
-			// load the first item, this also sets jid, item_index, and step
-			rval = ssi.next(jid, item_index, step);
-
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// load the first item, this also sets jid, item_index, and step
+			rval = ssi.next(jid, item_index, step);
 
 			// make and send the cluster ad
 			ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
@@ -3832,7 +3832,7 @@ public:
 	queue_from_iter(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object from, bool spool=false)
 	{
 		if (!txn.get() || !txn->transaction()) {
-		    THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
+			THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
 		}
 
 		// Before calling init_base_ad(), we should invoke methods to tell
@@ -3881,13 +3881,13 @@ public:
 
 		if (factory_submit) {
 
-			// get the first rowdata, we need that to build the submit digest, etc
-			rval = ssi.next(jid, item_index, step);
-			if (rval < 0) { ssi.throw_error(); }
-
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// get the first rowdata, we need that to build the submit digest, etc
+			rval = ssi.next(jid, item_index, step);
+			if (rval < 0) { ssi.throw_error(); }
 
 			// make a proc0 ad (because that's the same as a cluster ad)
 			ClassAd *proc_ad = m_hash.make_job_ad(JOB_ID_KEY(cluster, 0), 0, 0, false, spool, NULL, NULL);
@@ -3914,6 +3914,8 @@ public:
 					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 				num_jobs = row_count * ssi.step_size();
+			} else {
+			    num_jobs = count;
 			}
 
 			// append the queue statement

@@ -735,15 +735,142 @@ _schedd_submit( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    int itemCount = itemdata->items.number();
+
+    // Before we start sending jobs to the schedd, determine if this
+    // is a factory job.  This really ought to be in code shared
+    // between condor_submit, condor_dagman, and these Python bindings.
+    bool isFactoryJob = false;
+    long long maxIdle = INT_MAX;
+    long long maxMaterialize = INT_MAX;
+    if( sb->submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, maxMaterialize, true) ) {
+        isFactoryJob = true;
+    } else if( sb->submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, maxIdle, true) || sb->submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, maxIdle, true) ) {
+        maxMaterialize = INT_MAX;
+        isFactoryJob = true;
+    }
 
     int numJobs = 0;
-    if( itemCount == 0 ) {
+
+    int itemCount = itemdata->items.number();
+    if( (! isFactoryJob) && itemCount == 0 ) {
         numJobs = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds );
         if(numJobs < 0) {
             qc.abort();
 
             // submitProcAds() has already set an exception for us.
+            delete itemdata;
+            return NULL;
+        }
+    } else if( isFactoryJob ) {
+        // Generate the cluster ad (by generating the first proc ad),
+        // then send the cluster ad followed by the itemdata, followed
+        // by the submit digest.
+        int itemIndex = 0;
+        itemdata->items.rewind();
+        char * item = itemdata->items.next();
+
+        sb->set_vars( itemdata->vars, item, itemIndex );
+
+        // Generate the (first) proc ad.
+        ClassAd * procAd = sb->make_job_ad(
+            JOB_ID_KEY(clusterID, 0),
+            itemIndex, 0, false, spool, NULL, NULL
+        );
+        if(! procAd) {
+            std::string error = "Failed to create job ad (late materialization)";
+            formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
+            // This was HTCondorInternalError in version 1.
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+
+            delete itemdata;
+            return NULL;
+        }
+
+        // Extract the cluster ad.
+        clusterAd = procAd->GetChainedParentAd();
+        if(! clusterAd) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to get parent ad (late materialization)" );
+
+            delete itemdata;
+            return NULL;
+        }
+
+        // Send it to the schedd.
+        int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
+            * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
+        if( rval < 0 ) {
+            std::string error = "Failed to send cluster attributes (late materialization)";
+            formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+
+            delete itemdata;
+            return NULL;
+        }
+
+
+        // Send the item data.  This very closely tracks
+        // ActualScheddQ::send_Itemdata(), and at some point it might be
+        // worth refactoring that function so we can keep the same set of
+        // exceptions.
+        if( itemdata->items.number() > 0 ) {
+            int numItems = 0;
+            itemdata->items.rewind();
+            rval = SendMaterializeData(
+                clusterID, 0,
+                & AbstractScheddQ::next_rowdata, itemdata,
+                // Output parameters.
+                itemdata->items_filename, & numItems
+            );
+
+            if( rval < 0 ) {
+                PyErr_SetString( PyExc_RuntimeError, "Failed to send item data (late materialization)" );
+
+                delete itemdata;
+                return NULL;
+            }
+
+            if( numItems != itemdata->items.number() ) {
+                std::string message = "Item data size mismatch in late materialization: ";
+                formatstr_cat( message, "%d (local) != %d (remote)", itemdata->items.number(), numItems );
+                PyErr_SetString( PyExc_RuntimeError, message.c_str() );
+
+                delete itemdata;
+                return NULL;
+            }
+
+            itemdata->foreach_mode = foreach_from;
+        }
+
+        // Construct the submit digest.
+        std::string submitDigest;
+        sb->make_digest( submitDigest, clusterID, itemdata->vars, 0 );
+        if( submitDigest.empty() ) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to make submit digest (late materialization)" );
+
+            delete itemdata;
+            return NULL;
+        }
+
+        rval = append_queue_statement( submitDigest, * itemdata );
+        if( rval < 0 ) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to append queue statement (late materialization)" );
+
+            delete itemdata;
+            return NULL;
+        }
+
+
+        // Compute max materialization.
+        numJobs = (itemdata->queue_num ? itemdata->queue_num : 1) * itemdata->item_len();
+        if( maxMaterialize <= 0 ) { maxMaterialize = INT_MAX; }
+        maxMaterialize = MIN(maxMaterialize, numJobs);
+        maxMaterialize = MAX(maxMaterialize, 1);
+
+        // Send the submit digest.
+        rval = SetJobFactory( clusterID, maxMaterialize, "", submitDigest.c_str() );
+        if( rval < 0 ) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to send submit digest (late materialization)" );
+
             delete itemdata;
             return NULL;
         }
