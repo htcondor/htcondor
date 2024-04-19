@@ -5730,7 +5730,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		"BYTES_REQUIRED_TO_QUEUE_FOR_TRANSFER", 100 * 1024 * 1024
 	);
 	if( sandbox_size <= min_required_to_transfer ) {
-		dprintf( D_ALWAYS, "Not entering transfer queue because sandbox is too small.\n" );
+		dprintf( D_ALWAYS, "Not entering transfer queue because sandbox (%ld) is too small (<= %ld).\n", sandbox_size, min_required_to_transfer );
 		go_ahead = GO_AHEAD_ALWAYS;
 	} else {
 		if( !xfer_queue.RequestTransferQueueSlot(downloading,sandbox_size,full_fname,m_jobid.c_str(),queue_user.c_str(),timeout,error_desc) )
