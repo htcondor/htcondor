@@ -665,6 +665,26 @@ Claim::beginClaim( void )
 	startLeaseTimer();
 }
 
+/** Copy info about the client and resource request from another claim object.
+    Used when claiming multiple slots in a single request_claim call. Note that
+    the job ad at this point is normally a resource request not ad, not an activation ad
+*/
+void
+Claim::copyClientInfo(const Claim & that)
+{
+	if (c_jobad) { delete(c_jobad); c_jobad = nullptr; }
+	if (that.c_jobad) { c_jobad = new ClassAd(*that.c_jobad); }
+
+	c_rank = that.c_rank;
+	c_oldrank = that.c_oldrank;
+
+	if (that.c_client) {
+		if ( ! c_client) c_client = new Client();
+		*c_client = *that.c_client;
+		c_client->c_numPids = 0;
+	}
+}
+
 void
 Claim::loadAccountingInfo()
 {

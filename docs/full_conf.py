@@ -32,6 +32,7 @@ extensions = [
     'sphinx_autodoc_typehints',
     'nbsphinx',
     'ticket',
+    'sphinx_copybutton',
     'config-template',
     'macro',
     'macro-def',
@@ -145,6 +146,7 @@ html_extra_path = ["auto-redirect.html"]
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'ReadtheDocsTemplatedoc'
 
+copybutton_exclude = '.linenos, .gp'
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {

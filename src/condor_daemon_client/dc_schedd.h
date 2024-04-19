@@ -377,6 +377,42 @@ public:
 		const std::vector<std::string> &authz_bounding_set, int lifetime,
 		ImpersonationTokenCallbackType callback, void *misc_data, CondorError &err);
 
+
+		/*
+		 * Methods to query job ads, cluster ads, jobset ads, and autocluster ads.
+		 * also dynamic autocluster ads (aka group-by)
+		 */
+
+	static const char* makeProjectionFromAttrs(classad::References & attrs, std::string & proj) {
+		for (const auto & attr : attrs) { if (!proj.empty()) proj += "\n"; proj += attr; }
+		if (proj.empty()) return nullptr;
+		return proj.c_str();
+	}
+
+	static int makeJobsQueryAd (
+		ClassAd & request_ad,
+		const char *constraint,
+		const char *projection,
+		int fetch_opts,     // flags from QueryFetchOpts enum in condor_q.h
+		int match_limit = -1,
+		const char * owner = nullptr, // needed if fetch_opts includes MyJobs flag
+		bool send_server_time = false);
+
+	// check config to see if settings allow us to use QUERY_JOB_ADS_WITH_AUTH
+	// TODO: someday also check Schedd locate ad to see if it will allow that?? (right now we assume the schedd config is the same as ours)
+	bool canUseQueryWithAuth(); // returns true if we think the schedd and handle QUERY_JOB_ADS_WITH_AUTH
+
+	// returns Q_OK (0) on success
+	// returns one of errors from query_result_type.h on failure (like Q_SCHEDD_COMMUNICATION_ERROR)
+	int queryJobs (int cmd, // QUERY_JOB_ADS or QUERY_JOB_ADS_WITH_AUTH
+		ClassAd & query_ad,
+		// return false to take ownership of the ad, true to allow the ad to be deleted after
+		bool (*process_func)(void*, ClassAd *ad),
+		void * process_func_data,
+		int connect_timeout,
+		CondorError *errstack,
+		ClassAd ** psummary_ad);
+
 		/*
 		 * methods for schedd UserRec records
 		 */

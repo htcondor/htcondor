@@ -188,7 +188,7 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 	return out.c_str();
 }
 
-Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent ) 
+Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_parent_claim )
 	: r_state(nullptr)
 	, r_config_classad(nullptr)
 	, r_classad(nullptr)
@@ -242,8 +242,8 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 
 	// can't bind until after we get a r_sub_id but must happen before creating the Reqexp
 	if (_parent) {
-		if ( ! r_attr->bind_DevIds(r_id, r_sub_id, r_backfill_slot, false)) {
-			r_attr->unbind_DevIds(r_id, r_sub_id); // give back the ids that were bound before the failure
+		if ( ! r_attr->bind_DevIds(resmgr->m_attr, r_id, r_sub_id, r_backfill_slot, false)) {
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id); // give back the ids that were bound before the failure
 			_parent->m_id_dispenser->insert(r_sub_id); // give back the slot id.
 
 			// we can't fail a constructor, so indicate the the slot is unusable instead
@@ -276,10 +276,16 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 		}
 	}
 
-    r_cur = new Claim(this);
+	if (_parent && _take_parent_claim) {
+		r_cur = _parent->r_cur;
+		r_cur->setResource(this);
+		_parent->r_cur = new Claim(_parent);
+	} else {
+		r_cur = new Claim(this);
+	}
 
 	// make the full slot name "<r_id_str>@<name>"
-	// rior to version 9.7.0 machines with a single slot would not include the slot id in the slot name
+	// prior to version 9.7.0 machines with a single slot would not include the slot id in the slot name
 	tmp = r_id_str;
 	tmp += "@";
 	if (Name) { tmp += Name; } else { tmp += get_local_fqdn(); }
@@ -401,7 +407,7 @@ Resource::clear_parent()
 
 	// If we have a parent, return our resources to it
 	if( m_parent && !m_currently_fetching ) {
-		r_attr->unbind_DevIds(r_id, r_sub_id);
+		r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id);
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		resmgr->refresh_classad_resources(m_parent);
@@ -658,34 +664,6 @@ Resource::removeClaim( Claim* c )
 	EXCEPT( "Resource::removeClaim() called, but can't find the Claim!" );
 }
 
-#if 0
-
-void
-Resource::setBadputCausedByDraining()
-{
-	if( r_cur ) {
-		r_cur->setBadputCausedByDraining();
-	}
-}
-
-void
-Resource::releaseAllClaims( void )
-{
-	shutdownAllClaims( true );
-}
-
-void
-Resource::releaseAllClaimsReversibly( void )
-{
-	shutdownAllClaims( true, true );
-}
-
-void
-Resource::killAllClaims( void )
-{
-	shutdownAllClaims( false );
-}
-#endif
 
 void
 Resource::dropAdInLogFile( void )
@@ -1251,12 +1229,13 @@ Resource::init_classad()
 
 void Resource::initial_compute(Resource * pslot)
 {
+	r_attr->compute_virt_mem_share(resmgr->m_attr->virt_mem());
 	// set dslot total disk from pslot total disk (if appropriate)
 	if ( ! resmgr->m_attr->always_recompute_disk()) {
 		r_attr->init_total_disk(pslot->r_attr);
 	}
-
-	initial_compute();
+	r_attr->compute_disk();
+	r_reqexp->config();
 }
 
 void Resource::compute_unshared()
@@ -1333,7 +1312,7 @@ Resource::eval_state( void )
 void
 Resource::reconfig( void )
 {
-	r_attr->reconfig_DevIds(r_id, r_sub_id);
+	r_attr->reconfig_DevIds(resmgr->m_attr, r_id, r_sub_id);
 #if HAVE_JOB_HOOKS
 	if (m_hook_keyword) {
 		free(m_hook_keyword);
@@ -1658,6 +1637,8 @@ void Resource::publish_single_slot_ad(ClassAd & ad, time_t last_heard_from, Purp
 void
 Resource::final_update( void )
 {
+	if (r_no_collector_updates) return;
+
 	ClassAd invalidate_ad;
 	std::string exprstr, escaped_name;
 
@@ -2589,7 +2570,7 @@ void Resource::publish_static(ClassAd* cap)
 		if (r_backfill_slot) cap->Assign(ATTR_SLOT_BACKFILL, true);
 
 		// include any attributes set via local resource inventory
-		cap->Update(r_attr->get_mach_attr()->machres_attrs());
+		cap->Update(resmgr->m_attr->machres_attrs());
 
 		// advertise the slot type id number, as in SLOT_TYPE_<N>
 		cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type_id() );
@@ -2598,12 +2579,9 @@ void Resource::publish_static(ClassAd* cap)
 		case PARTITIONABLE_SLOT:
 			cap->Assign(ATTR_SLOT_PARTITIONABLE, true);
 			cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
-			if (param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false)) {
+			if (enable_claimable_partitionable_slots) {
 				int lease = param_integer("MAX_PARTITIONABLE_SLOT_CLAIM_TIME", 3600);
 				cap->Assign(ATTR_MAX_CLAIM_TIME, lease);
-			}
-			if (state() == claimed_state) {
-				cap->Assign(ATTR_CLAIM_END_TIME, r_cur->getLeaseEndtime());
 			}
 			break;
 		case DYNAMIC_SLOT:
@@ -2746,7 +2724,11 @@ Resource::publish_dynamic(ClassAd* cap)
 	// Update info from the current Claim object, if it exists.
 	if( r_cur ) {
 		r_cur->publish( cap );
-		if (state() == claimed_state)  cap->Assign(ATTR_PUBLIC_CLAIM_ID, r_cur->publicClaimId());
+		if (state() == claimed_state) {
+			cap->Assign(ATTR_PUBLIC_CLAIM_ID, r_cur->publicClaimId());
+			cap->Assign(ATTR_CLAIM_END_TIME, r_cur->getLeaseEndtime());
+		}
+
 	}
 	if( r_pre ) {
 		r_pre->publishPreemptingClaim( cap );
@@ -3360,7 +3342,7 @@ Resource::acceptClaimRequest()
 	case CLAIM_OPPORTUNISTIC:
 		if (r_cur->requestStream()) {
 				// We have a pending opportunistic claim, try to accept it.
-			accepted = accept_request_claim(this);
+			accepted = accept_request_claim(r_cur);
 		}
 		break;
 
@@ -3771,10 +3753,35 @@ Resource::compute_rank( ClassAd* req_classad ) {
 
 #endif /* HAVE_JOB_HOOKS */
 
+// partially evaluate the Require<tag> expression so it can be used by bind_DevIds
+bool Resource::fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad, std::string & require)
+{
+	if ( ! expr) return false;
+
+	// skip over parens and envelope nodes, then copy the expr so we can mutate it
+	expr = SkipExprParens(expr);
+	ConstraintHolder constr(expr->Copy());
+
+	// remove TARGET prefix (which would be JOB refs for CountMatches())
+	// so that flattenAndInline will flatten them as job refs
+	NOCASE_STRING_MAP mapping;
+	mapping["TARGET"] = "";
+	RewriteAttrRefs(constr.Expr(), mapping);
+
+	ExprTree * flattened = nullptr;
+	classad::Value val;
+	if (request_ad->FlattenAndInline(constr.Expr(), val, flattened) && flattened) {
+		constr.set(flattened);
+	}
+	ExprTreeToString(constr.Expr(), require);
+
+	return true;
+}
+
 //
 // Create dynamic slot from p-slot
 //
-Resource * create_dslot(Resource * rip, ClassAd * req_classad)
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
@@ -3784,14 +3791,22 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 		return rip;
 	}
 
-	std::string tmp;
-	dprintf(D_ZKM, "Create dSlot from %s : %s\n", rip->r_id_str, rip->r_attr->cat_totals(tmp));
+	// for logging convenience, extract the "jobid" from the request classad.
+	JOB_ID_KEY jid;
+	req_classad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
+	req_classad->LookupInteger(ATTR_PROC_ID, jid.proc);
+	std::string req_jobid;
+	jid.sprint(req_jobid);
+
+	std::string tmpbuf;
+	dprintf(D_ZKM, "Create dSlot for %s from %s : %s\n", req_jobid.c_str(), rip->r_id_str, rip->r_attr->cat_totals(tmpbuf));
 
 	// dummy {} to avoid unnecessary git diffs
 	{
 		ClassAd	*mach_classad = rip->r_classad;
-		CpuAttributes *cpu_attrs;
-		StringList type_list;
+		CpuAttributes *cpu_attrs = nullptr;
+		CpuAttributes::_slot_request cpu_attrs_request;
+		//StringList type_list;
 		int cpus;
 		long long disk, memory, swap;
 		bool must_modify_request = param_boolean("MUST_MODIFY_REQUEST_EXPRS",false,false,req_classad,mach_classad);
@@ -3812,21 +3827,19 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 		for (int i=0; resources[i]; i++) {
 			std::string knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
-			char *tmp = param(knob.c_str());
-			if( tmp ) {
+			auto_free_ptr exprstr(param(knob.c_str()));
+			if (exprstr) {
 				ExprTree *tree = NULL;
 				classad::Value result;
 				long long val = 0;
-				ParseClassAdRvalExpr(tmp, tree);
+				ParseClassAdRvalExpr(exprstr, tree);
 				if ( tree &&
 					 EvalExprToNumber(tree,req_classad,mach_classad,result) &&
 					 result.IsIntegerValue(val) )
 				{
 					req_classad->Assign(resources[i],val);
-
 				}
 				if (tree) delete tree;
-				free(tmp);
 			}
 		}
 
@@ -3886,41 +3899,35 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 			unmodified_req_classad = NULL;
 		}
 
-			// Pull out the requested attribute values.  If specified, we go with whatever
-			// the schedd wants, which is in request attributes prefixed with
-			// "_condor_".  This enables to schedd to request something different than
-			// what the end user specified, and yet still preserve the end-user's
-			// original request. If the schedd does not specify, go with whatever the user
-			// placed in the ad, aka the ATTR_REQUEST_* attributes itself.  If that does
-			// not exist, we either cons up a default or refuse the claim.
+		// Pull out the requested attribute values.  If specified, we go with whatever
+		// the schedd wants, which is in request attributes prefixed with
+		// "_condor_".  This enables to schedd to request something different than
+		// what the end user specified, and yet still preserve the end-user's
+		// original request. If the schedd does not specify, go with whatever the user
+		// placed in the ad, aka the ATTR_REQUEST_* attributes itself.  If that does
+		// not exist, we either cons up a default or refuse the claim.
 		std::string schedd_requested_attr;
-		std::string restmp; restmp.reserve(100);
 
         if (cp_supports_policy(*mach_classad)) {
             // apply consumption policy
             consumption_map_t consumption;
             cp_compute_consumption(*req_classad, *mach_classad, consumption);
 
-            // generate the type string used by standard code path
             for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
-                restmp = j->first; restmp += "=";
-                if (MATCH == strcasecmp(j->first.c_str(),"disk")) {
-                    // if it weren't for special cases, we'd have no cases at all
-                    // convert disk request into a fraction of total disk for the slot splitting code
-                 #if 0
-                    int denom = (int)(ceil(rip->r_attr->total_cpus()));
+                if (YourStringNoCase("disk") == j->first) {
+                    // int denom = (int)(ceil(rip->r_attr->total_cpus()));
                     double total_disk = rip->r_attr->get_total_disk();
                     double disk_slop = max(1024, total_disk / (1024*1024));
-                    double disk_fraction = max(0, j->second + disk_slop) / total_disk;
-                 #else
-                    int denom = 100;
-                    double disk_fraction = max(0.001, 0.001 + j->second / (double) rip->r_attr->get_total_disk());
-                 #endif
-                    formatstr_cat(restmp, "%f/%d", denom * disk_fraction, denom);
+                    cpu_attrs_request.disk_fraction = max(0, j->second + disk_slop) / total_disk;
+                } else if (YourStringNoCase("swap") == j->first) {
+                    cpu_attrs_request.virt_mem_fraction = j->second;
+                } else if (YourStringNoCase("cpus") == j->first) {
+                    cpu_attrs_request.num_cpus = MAX(1.0/128.0, j->second);
+                } else if (YourStringNoCase("memory") == j->first) {
+                    cpu_attrs_request.num_phys_mem = int(j->second);
                 } else {
-                    formatstr_cat(restmp, "%d", int(j->second));
+                    cpu_attrs_request.slotres[j->first] = j->second;
                 }
-                type_list.append(restmp.c_str());
             }
         } else {
                 // Look to see how many CPUs are being requested.
@@ -3931,8 +3938,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
                     cpus = 1; // reasonable default, for sure
                 }
             }
-            formatstr(restmp, "cpus=%d", cpus);
-            type_list.append(restmp.c_str());
+            cpu_attrs_request.num_cpus = cpus;
 
                 // Look to see how much MEMORY is being requested.
             schedd_requested_attr = "_condor_";
@@ -3946,8 +3952,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
                     return NULL;
                 }
             }
-            formatstr(restmp, "memory=%lld", memory);
-            type_list.append(restmp.c_str());
+            cpu_attrs_request.num_phys_mem = memory;
 
                 // Look to see how much DISK is being requested.
             schedd_requested_attr = "_condor_";
@@ -3962,24 +3967,17 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
                 }
             }
             // convert disk request into a fraction for the slot splitting code
-         #if 0
-            int denom = (int)(ceil(rip->r_attr->total_cpus()));
+            //int denom = (int)(ceil(rip->r_attr->total_cpus()));
             double total_disk = rip->r_attr->get_total_disk();
             double disk_slop = max(1024, total_disk / (1024*1024));
             double disk_fraction = max(0, disk + disk_slop) / total_disk;
-         #else
-            // max((0.1 + disk / (double) rip->r_attr->get_total_disk() * 100), 0.001)
-            int denom = 100;
-            double disk_fraction = max(0.001, 0.001 + disk / (double) rip->r_attr->get_total_disk());
-         #endif
-            formatstr(restmp, "disk=%f/%d", denom * disk_fraction, denom);
-            type_list.append(restmp.c_str());
 
+            cpu_attrs_request.disk_fraction = disk_fraction;
 
                 // Look to see how much swap is being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_VIRTUAL_MEMORY;
-			double total_virt_mem = rip->r_attr->get_mach_attr()->virt_mem();
+			double total_virt_mem = resmgr->m_attr->virt_mem();
 			bool set_swap = true;
 
             if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, swap ) ) {
@@ -3987,9 +3985,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 						// Schedd didn't set it, user didn't request it
 					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
 						// set swap to same percentage of swap as we have of physical memory
-						double mpcent = 100.0 * double(memory) / double(rip->r_attr->get_mach_attr()->phys_mem());
-						formatstr_cat(restmp, "swap=%d%%", int(mpcent));
-						type_list.append(restmp.c_str());
+						cpu_attrs_request.virt_mem_fraction = double(memory) / double(resmgr->m_attr->phys_mem());
 						set_swap = false;
 					} else {
 						// Fall back to you get everything and don't pay anything
@@ -3999,47 +3995,47 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
             }
 
 			if (set_swap) {
-				formatstr(restmp, "swap=%d%%", 
-					max((int) ceil((swap / total_virt_mem) * 100), 1));
-				type_list.append(restmp.c_str());
+				cpu_attrs_request.virt_mem_fraction = swap / total_virt_mem;
 			}
 
-            for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
-                string reqname;
-                formatstr(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
-                double reqval = 0;
-                if (!EvalFloat(reqname.c_str(), req_classad, mach_classad, reqval)) reqval = 0.0;
-                formatstr(restmp, "%s=%f", j->first.c_str(), reqval);
-
-                if (reqval > 0.0) {
-                    // check for a constraint on the resource
-                    formatstr(reqname, "%s%s", "Require", j->first.c_str());
-                    ExprTree * constr = req_classad->Lookup(reqname);
-                    if (constr) {
-                        restmp += " : ";
-                        // TODO: flatten and inline this expression before printing it
-                        ExprTreeToString(constr, restmp);
-                    }
-                }
-
-                type_list.append(restmp.c_str());
-            }
-        }
-
-		if (IsDebugVerbose(D_FULLDEBUG)) {
-			auto_free_ptr reslist(type_list.print_to_delimed_string("\t"));
-			rip->dprintf(D_FULLDEBUG,
-				"Match requesting resources: %s\n", reslist.ptr());
+			for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
+				std::string reqname = ATTR_REQUEST_PREFIX + j->first;
+				double reqval = 0;
+				if (!EvalFloat(reqname.c_str(), req_classad, mach_classad, reqval)) reqval = 0.0;
+				cpu_attrs_request.slotres[j->first] = reqval;
+				if (reqval > 0.0) {
+					// check for a constraint on the resource
+					reqname = ATTR_REQUIRE_PREFIX + j->first;
+					ExprTree * constr = req_classad->Lookup(reqname);
+					if (constr) {
+						rip->fix_require_tag_expr(constr, req_classad, cpu_attrs_request.slotres_constr[j->first]);
+					}
+				}
+			}
 		}
 
-		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, rip->type_id(), false );
-		if( ! cpu_attrs ) {
+		if (IsDebugVerbose(D_FULLDEBUG)) {
+			std::string resources;
+			cpu_attrs_request.dump(resources);
+			rip->dprintf(D_FULLDEBUG, "Job %s requesting resources: %s\n", req_jobid.c_str(), resources.c_str());
+		}
+
+		if (cpu_attrs_request.num_cpus > 0.0) { // quick and dirty check for for non-empty request
+			// EXECUTE and SLOT<n>_EXECUTE will always give d-slots the same execute dir as the p-slot
+			const char * executeDir = rip->r_attr->executeDir();
+			const char * partitionId = rip->r_attr->executePartitionID();
+			if ( ! cpu_attrs_request.allow_fractional_cpus) {
+				cpu_attrs_request.num_cpus = MAX(cpu_attrs_request.num_cpus, 1.0);
+				cpu_attrs_request.num_phys_mem = MAX(cpu_attrs_request.num_phys_mem, 1);
+			}
+			cpu_attrs = new CpuAttributes(rip->type_id(), cpu_attrs_request, executeDir, partitionId);
+		} else {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );
 			return NULL;
 		}
 
-		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip);
+		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip, take_parent_claim);
 		if( ! new_rip || new_rip->is_broken_slot()) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );
@@ -4053,20 +4049,6 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 		new_rip->initial_compute(rip);
 		new_rip->init_classad();
 		new_rip->refresh_classad_slot_attrs(); 
-
-			// If the pslot isn't claimed, then move its current Claim
-			// to the new dslot. Otherwise, leave the current Claim with
-			// the pslot.
-		if (rip->state() != claimed_state) {
-				// The new resource needs the claim from its
-				// parititionable parent
-			delete new_rip->r_cur;
-			new_rip->r_cur = rip->r_cur;
-			new_rip->r_cur->setResource( new_rip );
-
-				// And the partitionable parent needs a new claim
-			rip->r_cur = new Claim( rip );
-		}
 
 			// Recompute the partitionable slot's resources
 			// Call update() in case we were never matched, i.e. no state change
@@ -4084,6 +4066,28 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 		return new_rip;
 	}
 }
+
+/*
+Create multiple dynamic slots for a single request ad
+*/
+std::vector<Resource*> create_dslots(Resource* rip, ClassAd * req_classad, int num_dslots, bool take_parent_claim)
+{
+	std::vector<Resource*> dslots(num_dslots);
+
+	dslots.clear();
+	for (int ix = 0; ix < num_dslots; ++ix) {
+		Resource * dslot = create_dslot(rip, req_classad, take_parent_claim);
+		if ( ! dslot) break;
+		dslots.push_back(dslot);
+	}
+
+	return dslots;
+}
+
+
+
+
+
 
 void
 Resource::publishDynamicChildSummaries(ClassAd *cap)

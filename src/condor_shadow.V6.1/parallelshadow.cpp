@@ -159,6 +159,8 @@ ParallelShadow::spawn( void )
 	if( info_tid < 0 ) {
 		EXCEPT( "Can't register DC timer!" );
 	}
+	// Start the timer for the periodic user job policy
+	shadow_user_policy.startTimer();
 }
 
 
@@ -451,7 +453,6 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 	FILE* mailer;
 	Email msg;
 	std::string str;
-	char *s;
 
 	mailer = msg.open_stream( jobAd, exitReason );
 	if( ! mailer ) {
@@ -474,12 +475,10 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		// This should be a more rare case in any event.
 
 		jobAd->LookupString(ATTR_REMOTE_HOSTS, str);
-		StringList slist(str.c_str());
 
-		slist.rewind();
-		while((s = slist.next()) != NULL)
+		for (auto& s: StringTokenIterator(str))
 		{
-			fprintf( mailer, "%s\n", s);
+			fprintf( mailer, "%s\n", s.c_str());
 		}
 
 		fprintf( mailer, "\nExit codes are currently unavailable.\n\n");
@@ -944,12 +943,12 @@ ParallelShadow::resourceReconnected( RemoteResource* /* rr */ )
 		}
 	}
 
+	// Start the timer for the periodic user job policy
+	shadow_user_policy.startTimer();
+
 		// If we know the job is already executing, ensure the timers
 		// that are supposed to start then are running.
 	if (began_execution) {
-			// Start the timer for the periodic user job policy
-		shadow_user_policy.startTimer();
-
 			// Start the timer for updating the job queue for this job
 		startQueueUpdateTimer();
 	}

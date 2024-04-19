@@ -364,10 +364,10 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		case HRS_SCHEDD_JOB_HIST:
 			break;
 		case HRS_STARTD_JOB_HIST:
-			ad.InsertAttr("HistoryRecordSource","STARTD");
+			ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"STARTD");
 			break;
 		case HRS_JOB_EPOCH:
-			ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+			ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"JOB_EPOCH");
 			break;
 		default:
 			THROW_EX(HTCondorValueError, "Unknown history record source given");
@@ -1418,7 +1418,7 @@ struct Schedd {
         return negotiator;
     }
 
-    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs)
+    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, QueryFetchOpts fetch_opts=QueryFetchOpts::fetch_Jobs)
     {
         std::string constraint;
         if ( ! convert_python_to_constraint(constraint_obj, constraint, true, NULL)) {
@@ -1454,7 +1454,7 @@ struct Schedd {
         void *helper_ptr = static_cast<void *>(&helper);
         ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
         ClassAd ** p_summary_ad = NULL;
-        if ( fetch_opts == CondorQ::fetch_SummaryOnly ) {  // only get the summary ad if option says so
+        if ( fetch_opts == QueryFetchOpts::fetch_SummaryOnly ) {  // only get the summary ad if option says so
             p_summary_ad = &summary_ad;
         }
 
@@ -2769,7 +2769,7 @@ struct Schedd {
         return sentry_ptr;
     }
 
-    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs, boost::python::object tag=boost::python::object())
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, QueryFetchOpts fetch_opts=QueryFetchOpts::fetch_Jobs, boost::python::object tag=boost::python::object())
     {
         std::string val_str;
 
@@ -4345,7 +4345,7 @@ void export_schedd()
         .value("ShouldLog", SHOULDLOG)
         ;
 
-    enum_<CondorQ::QueryFetchOpts>("QueryOpts",
+    enum_<QueryFetchOpts>("QueryOpts",
             R"C0ND0R(
             Enumerated flags sent to the *condor_schedd* during a query to alter its behavior.
 
@@ -4376,14 +4376,28 @@ void export_schedd()
 
                 Query should return raw cluster ads as well as job ads if the cluster ads match the query constraint.
 
+            .. attribute:: IncludeJobsetAds
+
+                Query should return raw jobset ads as well as job ads if the jobset ads match the query constraint.
+
+            .. attribute:: ClusterAds
+
+                Query should return only raw cluster ads that match the query constraint.
+
+            .. attribute:: JobsetAds
+
+                Query should return only raw jobset ads that match the query constraint.
+
             )C0ND0R")
-        .value("Default", CondorQ::fetch_Jobs)
-        .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
-        .value("GroupBy", CondorQ::fetch_GroupBy)
-        .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
-        .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
-        .value("IncludeClusterAd", CondorQ::fetch_IncludeClusterAd)
-        .value("IncludeJobsetAds", CondorQ::fetch_IncludeJobsetAds)
+        .value("Default", fetch_Jobs)
+        .value("AutoCluster", fetch_DefaultAutoCluster)
+        .value("GroupBy", fetch_GroupBy)
+        .value("DefaultMyJobsOnly", fetch_MyJobs)
+        .value("SummaryOnly", fetch_SummaryOnly)
+        .value("IncludeClusterAd", fetch_IncludeClusterAd)
+        .value("IncludeJobsetAds", fetch_IncludeJobsetAds)
+        .value("ClusterAds", fetch_ClusterAds)
+        .value("JobsetAds", fetch_JobsetAds)
         ;
 
     enum_<BlockingMode>("BlockingMode",
@@ -4471,7 +4485,7 @@ void export_schedd()
 #if BOOST_VERSION < 103400
             (boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=QueryFetchOpts::fetch_Jobs)
 #endif
             ))
         .def("xquery", &Schedd::xquery,
@@ -4515,7 +4529,7 @@ void export_schedd()
 #if BOOST_VERSION < 103400
             (boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=QueryFetchOpts::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #endif
             )
         .def("jobEpochHistory", &Schedd::jobEpochHistory,

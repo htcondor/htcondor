@@ -32,15 +32,6 @@
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
-#if 0
-static const char *intKeywords[] =
-{
-	ATTR_CLUSTER_ID,
-	ATTR_PROC_ID,
-	ATTR_JOB_STATUS,
-	ATTR_JOB_UNIVERSE
-};
-#endif
 
 static const char *strKeywordsOld[] =
 {
@@ -54,13 +45,6 @@ static const char *strKeywordsModern[] =
 	"(" ATTR_ACCOUNTING_GROUP "?:" ATTR_OWNER ")"
 };
 
-#if 0
-static const char *fltKeywords[] = 
-{
-	""	// add one string to avoid compiler error
-};
-#endif
-
 // need this global variable to hold information reqd by the scan function
 // 30-Dec-2001: These no longer seem needed--nothing refers to them, there
 // doesn't seem to be a scan function.
@@ -72,25 +56,6 @@ CondorQ::
 CondorQ(void)
 {
 	connect_timeout = 20;
-#if 0
-	query.setNumIntegerCats(CQ_INT_THRESHOLD);
-	query.setNumStringCats(CQ_STR_THRESHOLD);
-	query.setNumFloatCats(CQ_FLT_THRESHOLD);
-	query.setIntegerKwList(const_cast<char **>(intKeywords));
-	query.setFloatKwList(const_cast<char **>(fltKeywords));
-
-	clusterprocarraysize = 128;
-	clusterarray = (int *)malloc(clusterprocarraysize * sizeof(int));
-	procarray = (int *)malloc(clusterprocarraysize * sizeof(int));
-	ASSERT(clusterarray != NULL && procarray != NULL);
-	int i;
-	for (i = 0; i < clusterprocarraysize; i++) {
-		clusterarray[i] = -1;
-		procarray[i] = -1;
-	}
-	numclusters = 0;
-	numprocs = 0;
-#endif
 
 	owner[0] = '\0';
 	schedd[0] = '\0';
@@ -102,16 +67,7 @@ CondorQ(void)
 void CondorQ::useDefaultingOperator(bool enable)
 {
 	defaulting_operator = enable;
-#if 0
-	if (defaulting_operator) {
-		query.setStringKwList(const_cast<char **>(strKeywordsModern));
-	} else {
-		query.setStringKwList(const_cast<char **>(strKeywordsOld));
-	}
-#endif
 }
-
-
 
 CondorQ::
 ~CondorQ ()
@@ -129,56 +85,6 @@ init()
 	connect_timeout = param_integer( "Q_QUERY_TIMEOUT", connect_timeout );
 	return true;
 }
-
-#if 0
-int CondorQ::
-addDBConstraint (CondorQIntCategories cat, int value) 
-{
-	int i;
-
-		// remember the cluster and proc values so that they can be pushed down to DB query
-	switch (cat) {
-	case CQ_CLUSTER_ID:
-		clusterarray[numclusters] = value;
-		numclusters++;
-		if(numclusters == clusterprocarraysize-1) {
-		   void * pvc = realloc(clusterarray, 
-					clusterprocarraysize * 2 * sizeof(int));
-		   void * pvp = realloc(procarray, 
-					clusterprocarraysize * 2 * sizeof(int));
-		   ASSERT( pvc != NULL && pvp != NULL );
-		   clusterarray = (int *) pvc;
-		   procarray = (int *) pvp;
-		   for(i=clusterprocarraysize; 
-				i < clusterprocarraysize * 2; i++) {
-		      clusterarray[i] = -1;
-		      procarray[i] = -1;
-		   }
-		   clusterprocarraysize *= 2;
-		} 
-		break;
-	case CQ_PROC_ID:
-		// we want to store the procs at the same index as its 
-		// corresponding cluster so we simply use the numclusters 
-		// value.  numclusters is already incremented above as the 
-		// cluster value appears before proc in the user's 
-		// constraint string, so we store it at numclusters-1
-		procarray[numclusters-1] = value;
-		numprocs++;
-		break;
-	default:
-		break;
-	}
-	return 1;
-}
-
-int CondorQ::
-add (CondorQIntCategories cat, int value)
-{
-	return query.addInteger (cat, value);
-}
-
-#endif
 
 int CondorQ::
 add (CondorQStrCategories cat, const char *value)
@@ -210,14 +116,6 @@ add (CondorQStrCategories cat, const char *value)
 
 	return query.addCustomOR (expr.c_str());
 }
-
-#if 0
-int CondorQ::
-add (CondorQFltCategories cat, float value)
-{
-	return query.addFloat (cat, value);
-}
-#endif
 
 int CondorQ::
 addOR (const char *value)
@@ -337,19 +235,6 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 }
 
 int
-CondorQ::fetchQueueFromDB (ClassAdList &list,
-						   char *&lastUpdate,
-						   const char *dbconn,
-						   CondorError*  /*errstack*/)
-{
-	(void) list;
-	(void) lastUpdate;
-	(void) dbconn;
-
-	return Q_OK;
-}
-
-int
 CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 										StringList &attrs,
 										int fetch_opts,
@@ -362,25 +247,20 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 {
 	Qmgr_connection *qmgr;
 	ExprTree		*tree;
-	char 			*constraint;
 	int     		result;
 
 	// make the query ad
-	if ((result = query.makeQuery (tree)) != Q_OK)
-		return result;
-	constraint = strdup( ExprTreeToString( tree ) );
-	delete tree;
-
 	if (useFastPath > 1) {
-		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, useFastPath, errstack, psummary_ad);
-		free( constraint);
-		return result;
+		return fetchQueueFromHostAndProcessV2(host, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, useFastPath, errstack, psummary_ad);
 	}
 
 	if (fetch_opts != fetch_Jobs) {
-		free( constraint );
 		return Q_UNSUPPORTED_OPTION_ERROR;
 	}
+
+	if ((result = query.makeQuery (tree)) != Q_OK)
+		return result;
+	ConstraintHolder constraint(tree);
 
 	/*
 	 connect to the Q manager.
@@ -392,148 +272,92 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	init();  // needed to get default connect_timeout
 	DCSchedd schedd(host);
 	if( !(qmgr = ConnectQ( schedd, connect_timeout, true, errstack)) ) {
-		free( constraint );
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 	}
 
 	// get the ads and filter them
-	result = getFilterAndProcessAds (constraint, attrs, match_limit, process_func, process_func_data, useFastPath);
+	result = getFilterAndProcessAds (constraint.c_str(), attrs, match_limit, process_func, process_func_data, useFastPath);
 
 	DisconnectQ (qmgr);
-	free( constraint );
 	return result;
 }
 
 int
-CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
-					const char *constraint,
-					StringList &attrs,
-					int fetch_opts,
-					int match_limit,
-					condor_q_process_func process_func,
-					void * process_func_data,
-					int connect_timeout,
-					int useFastPath,
-					CondorError *errstack,
-					ClassAd ** psummary_ad)
+CondorQ::initQueryAd(
+	ClassAd & request_ad,
+	StringList & attrs,
+	int fetch_opts,
+	int match_limit)
 {
-	classad::ClassAdParser parser;
-	classad::ExprTree *expr = NULL;
-	parser.ParseExpression(constraint, expr);
-	if (!expr) return Q_INVALID_REQUIREMENTS;
+	std::string constraint;
+	int rval = query.makeQuery(constraint);
+	if (rval != Q_OK) return rval;
 
-	classad::ClassAd request_ad;  // query ad to send to schedd
-	ClassAd *ad = NULL;	// job ad result
+	// TODO: can we get rid of this? I don't think the schedd requires a trival constraint anymore.
+	if (constraint.empty()) constraint = "TRUE";
 
-	request_ad.Insert(ATTR_REQUIREMENTS, expr);
+	auto_free_ptr projection(attrs.print_to_delimed_string("\n"));
 
-	request_ad.Assign(ATTR_SEND_SERVER_TIME, requestservertime);
+	auto_free_ptr owner;
+	if (fetch_opts & fetch_MyJobs) { owner.set(my_username()); }
 
-	char *projection = attrs.print_to_delimed_string("\n");
-	if (projection) {
-		request_ad.InsertAttr(ATTR_PROJECTION, projection);
-		free(projection);
-	}
+	return DCSchedd::makeJobsQueryAd(request_ad, constraint.c_str(), projection, fetch_opts, match_limit, owner, requestservertime);
+}
 
-	bool want_authentication = false;
-	if (fetch_opts == fetch_DefaultAutoCluster) {
-		request_ad.InsertAttr("QueryDefaultAutocluster", true);
-		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
-	} else if (fetch_opts == fetch_GroupBy) {
-		request_ad.InsertAttr("ProjectionIsGroupBy", true);
-		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
-	} else {
-		if (fetch_opts & fetch_MyJobs) {
-			char * owner = my_username();
-			if (owner) { request_ad.InsertAttr("Me", owner); }
-			request_ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
-			want_authentication = true;
-			free(owner);
-		}
-		if (fetch_opts & fetch_SummaryOnly) {
-			request_ad.InsertAttr("SummaryOnly", true);
-		}
-		if (fetch_opts & fetch_IncludeClusterAd) {
-			request_ad.InsertAttr("IncludeClusterAd", true);
-		}
-		if (fetch_opts & fetch_IncludeJobsetAds) {
-			request_ad.InsertAttr("IncludeJobsetAds", true);
-		}
-	}
+int
+CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
+	StringList &attrs,
+	int fetch_opts,
+	int match_limit,
+	condor_q_process_func process_func,
+	void * process_func_data,
+	int connect_timeout,
+	int useFastPath,
+	CondorError *errstack,
+	ClassAd ** psummary_ad)
+{
+	bool want_authentication = (fetch_opts & fetch_MyJobs) != 0;
 
-	if (match_limit >= 0) {
-		request_ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
-	}
-
-	// determine if authentication can/will happen.  three reasons why it might not:
-	// 1) security negotiation is disabled (NEVER or OPTIONAL for outgoing connections)
-	// 2) Authentication is disabled (NEVER) by the client
-	// 3) Authentication is disabled (NEVER) by the server.  this is actually impossible to
-	//    get correct without actually querying the server but we make an educated guess by
-	//    paraming the READ auth level.
-	bool can_auth = true;
-	char *paramer = NULL;
-
-	paramer = SecMan::getSecSetting ("SEC_%s_NEGOTIATION", CLIENT_PERM);
-	if (paramer != NULL) {
-		char p = toupper(paramer[0]);
-		free(paramer);
-		if (p == 'N' || p == 'O') {
-			// authentication will not happen since no security negotiation will occur
-			can_auth = false;
-		}
-	}
-
-	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", CLIENT_PERM);
-	if (paramer != NULL) {
-		char p = toupper(paramer[0]);
-		free(paramer);
-		if (p == 'N') {
-			// authentication will not happen since client doesn't allow it.
-			can_auth = false;
-		}
-	}
-
-	// authentication will not happen since server probably doesn't allow it.
-	// on the off chance that someone's config manages to trick us, leave an
-	// undocumented knob as a last resort to disable our inference.
-	if (param_boolean("CONDOR_Q_INFER_SCHEDD_AUTHENTICATION", true)) {
-		paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", READ);
-		if (paramer != NULL) {
-			char p = toupper(paramer[0]);
-			free(paramer);
-			if (p == 'N') {
-				can_auth = false;
-			}
-		}
-
-		paramer = SecMan::getSecSetting ("SCHEDD.SEC_%s_AUTHENTICATION", READ);
-		if (paramer != NULL) {
-			char p = toupper(paramer[0]);
-			free(paramer);
-			if (p == 'N') {
-				can_auth = false;
-			}
-		}
-	}
-
-	if (!can_auth) {
-		dprintf (D_ALWAYS, "detected that authentication will not happen.  falling back to QUERY_JOB_ADS without authentication.\n");
+	ClassAd request_ad;
+	int rval = initQueryAd(request_ad, attrs, fetch_opts, match_limit);
+	if (rval != Q_OK) {
+		return rval;
 	}
 
 	DCSchedd schedd(host);
 	int cmd = QUERY_JOB_ADS;
-	if (want_authentication && can_auth && (useFastPath > 2)) {
-		cmd = QUERY_JOB_ADS_WITH_AUTH;
+	if (want_authentication && (useFastPath > 2)) {
+		bool can_auth = schedd.canUseQueryWithAuth();
+		if (can_auth) {
+			cmd = QUERY_JOB_ADS_WITH_AUTH;
+		} else {
+			dprintf (D_ALWAYS, "detected that authentication will not happen.  falling back to QUERY_JOB_ADS without authentication.\n");
+		}
 	}
+
+	return schedd.queryJobs(cmd, request_ad, process_func, process_func_data, connect_timeout, errstack, psummary_ad);
+}
+
+#if 0 // moved to DCSChedd object
+int CondorQ::fetchQueueV2(
+	DCSchedd & schedd,
+	int cmd,
+	ClassAd & request_ad,
+	condor_q_process_func process_func,
+	void * process_func_data,
+	int connect_timeout,
+	CondorError *errstack,
+	ClassAd ** psummary_ad)
+{
 	Sock* sock;
 	if (!(sock = schedd.startCommand(cmd, Stream::reli_sock, connect_timeout, errstack))) return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	classad_shared_ptr<Sock> sock_sentry(sock);
 
 	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
-	dprintf(D_FULLDEBUG, "Sent classad to schedd\n");
+	dprintf(D_FULLDEBUG, "Sent Query classad to schedd\n");
 
+	ClassAd *ad = NULL;	// job ad result
 	int rval = 0;
 	do {
 		ad = new ClassAd();
@@ -578,6 +402,7 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 
 	return rval;
 }
+#endif
 
 #if 0
 int

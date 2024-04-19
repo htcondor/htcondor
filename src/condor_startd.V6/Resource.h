@@ -96,7 +96,7 @@ struct AttrLatchLTStr {
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int id, Resource* _parent = NULL);
+	Resource( CpuAttributes*, int id, Resource* _parent = NULL, bool take_parent_claim = false);
 	~Resource();
 
 		// override param by slot_type
@@ -184,18 +184,9 @@ public:
 
 		// called when creating a d-slot
 	void	initial_compute(Resource * pslot);
-		// called only by initialize_resource, when a slot is created
-	void	initial_compute() { 
-		r_reqexp->config();
-		r_attr->compute_virt_mem();
-		r_attr->compute_disk();
-	}
 		// called only by resmgr::compute()
 	void	compute_unshared();
-		// called only by resmgr::compute()
-	void	compute_shared() {
-		r_attr->compute_virt_mem();
-	}
+
 	// called by resmgr::compute_and_refresh(rip) and by resmgr::compute_dynamic()
 	// always called after refresh_classad_dynamic()
 	void	compute_evaluated();
@@ -481,6 +472,10 @@ public:
 
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
 
+	// partially evaluate a Require<tag> expression against the request ad
+	// returning the flattenAndInline'd expression as a string
+	bool fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad, std::string & require);
+
 	void set_res_conflict(const std::string & conflict) { m_res_conflict = conflict; }
 	bool has_nft_conflicts(MachAttributes* ma) { return ma->has_nft_conflicts(r_id, r_sub_id); }
 
@@ -577,6 +572,11 @@ only if rip->can_create_dslot() is true.
 
 The job may be rejected, in which case the returned Resource will be null.
 */
-Resource * create_dslot(Resource * rip, ClassAd * req_classad);
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim);
+
+/*
+Create multiple dynamic slots for a single request ad
+*/
+std::vector<Resource*> create_dslots(Resource* rip, ClassAd * req_classad, int num_dslots, bool take_parent_claim);
 
 #endif /* _STARTD_RESOURCE_H */

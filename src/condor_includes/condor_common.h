@@ -46,8 +46,6 @@
 #include "condor_open.h"
 #include "condor_blkng_full_disk_io.h"
 
-#include "../condor_sysapi/sysapi.h"
-
 /*********************************************************************
 ** On WinNT, we _must_ make redefine the assert() macro to be EXCEPT.
 ** One reason we must do this is the system assert() on NT is a

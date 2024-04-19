@@ -21,7 +21,6 @@
 #include <map>
 
 #include "condor_classad.h"
-#include "list.h"
 #include "schedd_negotiate.h"
 #include "scheduler.h"
 #include <vector>

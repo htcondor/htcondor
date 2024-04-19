@@ -56,6 +56,10 @@ struct SubmitBlob {
         const std::string & get_queue_args() const;
         bool set_queue_args( const char * queue_args );
 
+
+        void setSubmitMethod(int method_value) { m_hash.setSubmitMethod(method_value); }
+        int  getSubmitMethod() { return m_hash.getSubmitMethod(); }
+
     private:
         SubmitHash m_hash;
         MACRO_SOURCE m_src_pystring;
@@ -242,6 +246,7 @@ SubmitBlob::from_lines( const char * lines, std::string & errorMessage ) {
     char * qLine = NULL;
     int rv = m_hash.parse_up_to_q_line(msmf, errorMessage, &qLine);
     if( rv != 0 ) {
+        formatstr(errorMessage, "parse_up_to_q_line() failed");
         return false;
     }
 
@@ -524,6 +529,7 @@ set_dag_options( PyObject * options, DagmanOptions& dag_opts) {
     return true;
 }
 
+
 namespace shallow = DagmanShallowOptions;
 
 static PyObject *
@@ -569,6 +575,7 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     return PyUnicode_FromString( dag_opts[shallow::str::SubFile].c_str() );
 }
 
+
 static PyObject *
 _display_dag_options( PyObject *, PyObject * /*args*/ ) {
     DagmanUtils du;
@@ -577,3 +584,37 @@ _display_dag_options( PyObject *, PyObject * /*args*/ ) {
     Py_RETURN_NONE;
 }
 
+
+static PyObject *
+_submit_set_submit_method( PyObject *, PyObject * args ) {
+    // _submit_set_submit_method( self._handle, method_value )
+    PyObject_Handle * handle = NULL;
+    long method_value = -1;
+
+    if(! PyArg_ParseTuple( args, "Ol", (PyObject **)& handle, & method_value )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+    sb->setSubmitMethod( method_value );
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_submit_get_submit_method( PyObject *, PyObject * args ) {
+    // _submit_get_submit_method( self._handle )
+    PyObject_Handle * handle = NULL;
+
+    if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+    long method_value = sb->getSubmitMethod();
+
+    return PyLong_FromLong(method_value);
+}

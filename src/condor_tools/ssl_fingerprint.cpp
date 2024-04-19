@@ -65,14 +65,7 @@ int print_known_hosts_file(std::string desired_fname = "")
 		trim(line);
 		if (line.empty() || line[0] == '#') continue;
 
-		StringList splitter(line, " ");
-		splitter.rewind();
-		char *token;
-		std::vector<std::string> tokens;
-		tokens.reserve(3);
-		while ( (token = splitter.next()) ) {
-			tokens.emplace_back(token);
-		}
+		std::vector<std::string> tokens = split(line, " ");
 		if (tokens.size() < 3 || !tokens[0].size() || !tokens[1].size()) {
 			fprintf(stderr, "No PEM-formatted certificate found; incorrect format for known_hosts file.\n");
 			exit(5);

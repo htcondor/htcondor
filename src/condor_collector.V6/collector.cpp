@@ -2487,38 +2487,42 @@ void CollectorDaemon::sendCollectorAd(int /* tid */)
 
 void CollectorDaemon::init_classad(int interval)
 {
-    if( ad ) delete( ad );
-    ad = new ClassAd();
+	if( ad ) delete( ad );
+	ad = new ClassAd();
 
-    SetMyTypeName(*ad, COLLECTOR_ADTYPE);
+	SetMyTypeName(*ad, COLLECTOR_ADTYPE);
 
-    char *tmp;
-    tmp = param( "CONDOR_ADMIN" );
-    if( tmp ) {
-        ad->Assign( ATTR_CONDOR_ADMIN, tmp );
-        free( tmp );
-    }
+	char *tmp;
+	tmp = param( "CONDOR_ADMIN" );
+	if( tmp ) {
+		ad->Assign( ATTR_CONDOR_ADMIN, tmp );
+		free( tmp );
+	}
 
-    std::string id;
-    if( CollectorName ) {
-            if( strchr( CollectorName, '@' ) ) {
-               formatstr( id, "%s", CollectorName );
-            } else {
-               formatstr( id, "%s@%s", CollectorName, get_local_fqdn().c_str() );
-            }
-    } else {
-            formatstr( id, "%s", get_local_fqdn().c_str() );
-    }
-    ad->Assign( ATTR_NAME, id );
+	std::string id;
+	if( CollectorName ) {
+		if (strchr(CollectorName, '@')) {
+			id = CollectorName;
+		} else {
+			id = CollectorName;
+			id += '@';
+			id += get_local_fqdn();
+		}
+	} else if (get_mySubSystem()->getLocalName()) {
+		id = get_mySubSystem()->getLocalName();
+	} else {
+		id = get_local_fqdn();
+	}
+	ad->Assign( ATTR_NAME, id );
 
-    ad->Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
+	ad->Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
 
-    if ( interval > 0 ) {
-            ad->Assign( ATTR_UPDATE_INTERVAL, 24*interval );
-    }
+	if ( interval > 0 ) {
+		ad->Assign( ATTR_UPDATE_INTERVAL, 24*interval );
+	}
 
-		// Publish all DaemonCore-specific attributes, which also handles
-		// COLLECTOR_ATTRS for us.
+	// Publish all DaemonCore-specific attributes, which also handles
+	// COLLECTOR_ATTRS for us.
 	daemonCore->publish(ad);
 }
 

@@ -89,7 +89,7 @@ UnparseAux(std::string &buffer,Operation::OpKind op, ExprTree *t1, ExprTree *t2,
     std::string attribute_name;
     std::string attribute_value; 
 
-    if (t1->GetKind() == ExprTree::LITERAL_NODE &&
+    if ((dynamic_cast<Literal *>(t1) != nullptr) &&
         t2->GetKind() == ExprTree::ATTRREF_NODE)
      {
       args_ok = true;
@@ -97,7 +97,7 @@ UnparseAux(std::string &buffer,Operation::OpKind op, ExprTree *t1, ExprTree *t2,
       value = t1;
       value_at_right = false;
      }
-    if (t2->GetKind() == ExprTree::LITERAL_NODE &&
+    if ((dynamic_cast<Literal *>(t2) != nullptr) &&
         t1->GetKind() == ExprTree::ATTRREF_NODE)
      {
       args_ok = true;
@@ -192,7 +192,7 @@ UnparseAux( std::string &buffer, std::string &fnName, std::vector<ExprTree*>& ar
 {
   if (strcasecmp(fnName.c_str(),"member") == 0)
    {
-    if ((args[0])->GetKind() == ExprTree::LITERAL_NODE &&
+    if ((dynamic_cast<Literal *>(args[0]) != nullptr) &&
         (args[1])->GetKind() == ExprTree::ATTRREF_NODE)
      {
       std::string attribute_name;

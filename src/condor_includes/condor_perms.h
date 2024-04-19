@@ -22,9 +22,10 @@
 #define _CONDOR_PERMS_H_
 
 #include "condor_common.h"
+#include <vector>
 
-// IMPORTANT NOTE:  If you add a new enum value here, please add a new
-// case to PermString() in condor_perms.c (in the util lib).
+// IMPORTANT NOTE:  If you add a new enum value here, please update
+// makePermStringTable() in condor_perms.cpp
 // There should be NO HOLES in the numerical values of this list,
 // because NEXT_PERM() assumes values are contiguous.
 // Also make any necessary updates to DCpermissionHierarchy.
@@ -32,15 +33,16 @@
 // we can iterate through all the permission levels, and know when to 
 // stop. 
 /// enum for Daemon Core socket/command/signal permissions
-typedef enum {
+enum DCpermission {
+	                                         NOT_A_PERM = -1,
   /** Place holder, must be same as next */  FIRST_PERM = 0,
-  /** Open to everyone */                    ALLOW = 0,
-  /** Able to read data */                   READ,
-  /** Able to modify data (submit jobs) */   WRITE,
-  /** From the negotiator */                 NEGOTIATOR,
-  /** Administrative cmds (on, off, etc) */  ADMINISTRATOR,
+  /** Open to everyone */                    ALLOW_PERM = 0,     ALLOW=ALLOW_PERM,
+  /** Able to read data */                   READ_PERM,          READ=READ_PERM,
+  /** Able to modify data (submit jobs) */   WRITE_PERM,         WRITE=WRITE_PERM,
+  /** From the negotiator */                 NEGOTIATOR_PERM,    NEGOTIATOR=NEGOTIATOR_PERM,
+  /** Administrative cmds (on, off, etc) */  ADMINISTRATOR_PERM, ADMINISTRATOR=ADMINISTRATOR_PERM,
   /** Changing config settings remotely */   CONFIG_PERM,
-  /** Daemon to daemon communcation     */   DAEMON,
+  /** Daemon to daemon communcation     */   DAEMON_PERM,        DAEMON=DAEMON_PERM,
   /** SOAP interface (http PUT) */			 SOAP_PERM,
   /** DEFAULT */                             DEFAULT_PERM,
   /** CLIENT */                              CLIENT_PERM,
@@ -49,7 +51,7 @@ typedef enum {
   /** master ad */                           ADVERTISE_MASTER_PERM,
   /** Place holder, must be last */          LAST_PERM,
   /** Perm value is unset*/                  UNSET_PERM
-} DCpermission;
+};
 
 // convenience macro for iterating through DCpermission values
 #define NEXT_PERM(perm) ( (DCpermission) (((int)perm)+1) )
@@ -60,51 +62,37 @@ typedef enum {
 		@return The string version of it
 	*/
 const char* PermString( DCpermission perm );
+const char* PermDescription( DCpermission perm );
 
 DCpermission getPermissionFromString( const char * permstring );
 
 class DCpermissionHierarchy {
-
 private:
-	DCpermission m_base_perm; // the specified permission level
-
-		// [0] is base perm, [1] is implied by [0], ...
-		// Terminated by an entry with value LAST_PERM.
-	DCpermission m_implied_perms[LAST_PERM+1];
-
-		// List of perms that imply base perm, not including base perm,
-		// and not including things that indirectly imply base perm, such
-		// as the things that imply the members of this list.
-		// Example: for base perm WRITE, this list includes DAEMON and
-		// ADMINISTRATOR.
-		// Terminated by an entry with value LAST_PERM.
-	DCpermission m_directly_implied_by_perms[LAST_PERM+1];
-
-		// [0] is base perm, [1] is perm to param for if [0] is undefined, ...
-		// The list ends with DEFAULT_PERM, followed by LAST_PERM.
-	DCpermission m_config_perms[LAST_PERM+1];
-
+	static const DCpermission aConfigNext[LAST_PERM+1];
+	static const DCpermission aConfigNextLegacy[LAST_PERM+1];
+	static const DCpermission aImpliedNext[LAST_PERM+1];
 public:
+	DCpermissionHierarchy() = delete;
+	~DCpermissionHierarchy() = delete;
 
-		// [0] is base perm, [1] is implied by [0], ...
-		// Terminated by an entry with value LAST_PERM.
-	DCpermission const * getImpliedPerms() const { return m_implied_perms; }
+	static DCpermission nextConfig(DCpermission perm, bool legacy_allow_semantics) {
+		if (perm < FIRST_PERM || perm >= LAST_PERM) return UNSET_PERM;
+		if (legacy_allow_semantics) { return aConfigNextLegacy[perm]; }
+		return aConfigNext[perm];
+	}
+	static DCpermission nextImplied(DCpermission perm) {
+		if (perm < FIRST_PERM || perm >= LAST_PERM) return UNSET_PERM;
+		return aImpliedNext[perm];
+	}
 
-		// List of perms that imply base perm, not including base perm,
-		// and not including things that indirectly imply base perm, such
-		// as the things that imply the members of this list.
-		// Example: for base perm WRITE, this list includes DAEMON and
-		// ADMINISTRATOR.
-		// Terminated by an entry with value LAST_PERM.
-	DCpermission const * getPermsIAmDirectlyImpliedBy() const { return m_directly_implied_by_perms; }
-
-		// [0] is base perm, [1] is perm to param for if [0] is undefined, ...
-		// The list ends with DEFAULT_PERM, followed by LAST_PERM.
-	DCpermission const * getConfigPerms() const { return m_config_perms; }
-
-	DCpermissionHierarchy(DCpermission perm);
+	static std::vector<DCpermission> DirectlyImpliedBy(DCpermission perm) {
+		std::vector<DCpermission> ret;
+		for (int pm = FIRST_PERM; pm < LAST_PERM; ++pm) {
+			if (aImpliedNext[pm] == perm) ret.push_back((DCpermission)(pm));
+		}
+		return ret;
+	}
 };
-
 
 #endif /* _CONDOR_PERMS_H_ */
 

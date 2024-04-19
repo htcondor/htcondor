@@ -2648,11 +2648,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 
 std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
 	std::string res;
-	DCpermissionHierarchy hierarchy( perm );
-	DCpermission const *perms = hierarchy.getImpliedPerms();
-
-		// iterate through a list of this perm and all perms implied by it
-	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+	for ( ; perm < LAST_PERM; perm = DCpermissionHierarchy::nextImplied(perm)) {
 		for (auto &ce : comTable) {
 			bool alternate_perm_match = false;
 			if (ce.alternate_perm) {
@@ -5094,11 +5090,21 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 {
 	(void) want_core;		// For windoze
 
-	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Fast(%d)\n",
-		pid);
-
-	if ( pid == ppid )
+	if ( pid == ppid ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill our own parent.\n" );
 		return FALSE;		// cannot shut down our parent
+	}
+
+	if( ProcessExitedButNotReaped(pid) ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill pid %d, which has already exited (but not yet been reaped).\n", pid );
+		return TRUE; // The process _is_ dead, so I guess we succeeded.
+	} else if(! pidTable.contains(pid)) {
+		if(! param_boolean( "DAEMON_CORE_KILL_ANY_PROCESS", true )) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill pid %d, which we don't think we started.\n", pid );
+			return TRUE; // For backwards compability.
+		}
+	}
+
 
 #if defined(WIN32)
 	// even on a shutdown_fast, first try to send a WM_CLOSE because
@@ -5154,6 +5160,11 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 	}
 	return ret_value;
 #else
+	if( pid <= 0 ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(%d): tried to kill pid <= 0.\n", pid );
+		return FALSE;
+	}
+
 	priv_state priv = set_root_priv();
 	int status = kill(pid, want_core ? SIGABRT : SIGKILL );
 	set_priv(priv);
@@ -5163,11 +5174,20 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 
 int DaemonCore::Shutdown_Graceful(pid_t pid)
 {
-	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Graceful(%d)\n",
-		pid);
-
-	if ( pid == ppid )
+	if ( pid == ppid ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(): tried to kill our own parent.\n" );
 		return FALSE;		// cannot shut down our parent
+	}
+
+	if( ProcessExitedButNotReaped(pid) ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(): tried to kill pid %d, which has already exited (but not yet been reaped).\n", pid );
+		return TRUE; // The process _is_ dead, so I guess we succeeded.
+	} else if(! pidTable.contains(pid)) {
+		if(! param_boolean( "DAEMON_CORE_KILL_ANY_PROCESS", true )) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(): tried to kill pid %d, which we don't think we started.\n", pid );
+			return TRUE; // For backwards compability.
+		}
+	}
 
 #if defined(WIN32)
 
@@ -5232,9 +5252,13 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 				"which would cause an infinite loop on UNIX" );
 	}
 
-	int status;
+	if( pid <= 0 ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(%d): tried to kill pid <= 0.\n", pid );
+		return FALSE;
+	}
+
 	priv_state priv = set_root_priv();
-	status = kill(pid, SIGTERM);
+	int status = kill(pid, SIGTERM);
 	set_priv(priv);
 	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
 
@@ -8601,6 +8625,9 @@ DaemonCore::Kill_Thread(int tid)
 	 */
 	return 1;
 #else
+	if (ProcessExitedButNotReaped(tid)) {
+		return true;
+	}
 	priv_state priv = set_root_priv();
 	int status = kill(tid, SIGKILL);
 	set_priv(priv);
@@ -8671,8 +8698,6 @@ DaemonCore::Proc_Family_QuitProcd(void(*notify)(void*me, int pid, int status), v
 }
 
 
-#define REFACTOR_SOCK_INHERIT 1
-#ifdef REFACTOR_SOCK_INHERIT
 // extracts the parent address and inherited socket information from the given inherit string
 // then tokenizes the remaining items from the inherit string into the supplied StringList.
 // return value: number of entries in the socks[] array that were populated.
@@ -8684,7 +8709,7 @@ int extractInheritedSocks (
 	std::string & psinful, // out: sinful of the parent
 	Stream* socks[],   // out: filled in with items from the inherit string
 	int     cMaxSocks, // in: number of items in the socks array
-	StringList & remaining_items) // out: unparsed items from the inherit string are added to this
+	std::vector<std::string> & remaining_items) // out: unparsed items from the inherit string are added to this
 {
 	if ( ! inherit || ! inherit[0])
 		return 0;
@@ -8737,19 +8762,17 @@ int extractInheritedSocks (
 
 	// put the remainder of the inherit items into a stringlist for use by the caller.
 	while ((ptmp = list.next())) {
-		remaining_items.append(ptmp);
+		remaining_items.emplace_back(ptmp);
 	}
-	remaining_items.rewind();
 
 	return cSocks;
 }
-#endif
 
 void
 DaemonCore::Inherit( void )
 {
 	int numInheritedSocks = 0;
-	char *ptmp;
+	const char *ptmp;
 	static bool already_inherited = false;
 	std::string saved_sinful_string;
 
@@ -8771,7 +8794,6 @@ DaemonCore::Inherit( void )
 	*/
 	const char *envName = ENV_CONDOR_INHERIT;
 	const char *tmp = GetEnv( envName );
-#ifdef REFACTOR_SOCK_INHERIT
 	if (tmp) {
 		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, tmp );
 		UnsetEnv( envName );
@@ -8779,7 +8801,7 @@ DaemonCore::Inherit( void )
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
 	}
 
-	StringList inherit_list;
+	std::vector<std::string> inherit_list;
 	numInheritedSocks = extractInheritedSocks(tmp,
 		ppid, saved_sinful_string,
 		inheritedSocks, COUNTOF(inheritedSocks),
@@ -8787,32 +8809,6 @@ DaemonCore::Inherit( void )
 	if (ppid) {
 		// insert ppid into table
 		dprintf(D_DAEMONCORE,"Parent PID = %d\n", ppid);
-#else
-	char *inheritbuf = NULL;
-	if ( tmp != NULL ) {
-		inheritbuf = strdup( tmp );
-		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, inheritbuf );
-		UnsetEnv( envName );
-	} else {
-		inheritbuf = strdup( "" );
-		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
-	}
-
-	StringList inherit_list(inheritbuf," ");
-	if ( inheritbuf != NULL ) {
-		free( inheritbuf );
-		inheritbuf = NULL;
-	}
-	inherit_list.rewind();
-	if ( (ptmp=inherit_list.next()) != NULL && *ptmp ) {
-		// we read out CONDOR__INHERIT ok, ptmp is now first item
-
-		// insert ppid into table
-		dprintf(D_DAEMONCORE,"Parent PID = %s\n",ptmp);
-		ppid = atoi(ptmp);
-		ptmp=inherit_list.next();
-		saved_sinful_string = ptmp;
-#endif
 		auto [pid_itr, inserted] = pidTable.emplace(ppid, PidEntry());
 		ASSERT(inserted);
 		PidEntry& pidtmp = pid_itr->second;
@@ -8859,71 +8855,34 @@ DaemonCore::Inherit( void )
 		}
 #endif
 
-#ifdef REFACTOR_SOCK_INHERIT
-	if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
-		EXCEPT("MAX_SOCKS_INHERITED reached.");
-	}
-	inheritedSocks[numInheritedSocks] = NULL;
-#else
-		// inherit cedar socks
-		ptmp=inherit_list.next();
-		while ( ptmp && (*ptmp != '0') ) {
-			if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
-				EXCEPT("MAX_SOCKS_INHERITED reached.");
-			}
-			switch ( *ptmp ) {
-				case '1' : {
-					// inherit a relisock
-					ReliSock * rsock = new ReliSock();
-					ptmp=inherit_list.next();
-					rsock->deserialize(ptmp);
-					rsock->set_inheritable(false);
-					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
-					// place into array...
-					inheritedSocks[numInheritedSocks++] = (Stream *)rsock;
-					break;
-				}
-				case '2': {
-					SafeSock * ssock = new SafeSock();
-					ptmp=inherit_list.next();
-					ssock->deserialize(ptmp);
-					ssock->set_inheritable(false);
-					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
-					// place into array...
-					inheritedSocks[numInheritedSocks++] = (Stream *)ssock;
-					break;
-				}
-				default:
-					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks, not %c (%d)", *ptmp, (int)*ptmp);
-					break;
-			} // end of switch
-			ptmp=inherit_list.next();
+		if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
+			EXCEPT("MAX_SOCKS_INHERITED reached.");
 		}
 		inheritedSocks[numInheritedSocks] = NULL;
-#endif
 
 		// inherit our "command" cedar socks.  they are sent
 		// relisock, then safesock, then a "0".
 		// we then register rsock and ssock as command sockets below...
-		ptmp=inherit_list.next();
-		if( ptmp && strncmp(ptmp,"SharedPort:",11)==0 ) {
-			ptmp += 11;
+		auto inherit_list_itr = inherit_list.begin();
+		if (inherit_list_itr != inherit_list.end() && strncmp(inherit_list_itr->c_str(), "SharedPort:", 11) == 0) {
+			ptmp = inherit_list_itr->c_str() + 11;
 			delete m_shared_port_endpoint;
 			m_shared_port_endpoint = new SharedPortEndpoint();
 			dprintf(D_DAEMONCORE, "Inheriting a shared port pipe.\n");
 			m_shared_port_endpoint->deserialize(ptmp);
-			ptmp=inherit_list.next();
+			inherit_list_itr++;
 		}
 
 		dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
-		while ( ptmp && (*ptmp != '0') ) {
+		while (inherit_list_itr != inherit_list.end() && (*inherit_list_itr)[0] != '0') {
+			ptmp = inherit_list_itr->c_str();
 			switch ( *ptmp ) {
 				case '0': {
 					EXCEPT("Daemoncore: Launched by a pre-8.2 HTCondor process; this is not supported. Please upgrade all HTCondor executables on this computer.");
 					break;
 				}
 				case '1': {
-					ptmp=inherit_list.next();
+					ptmp = (++inherit_list_itr)->c_str();
 					if(dc_socks.empty() || dc_socks.back().has_relisock()) {
 						dc_socks.push_back(SockPair());
 					}
@@ -8934,7 +8893,7 @@ DaemonCore::Inherit( void )
 				}
 
 				case '2': {
-					ptmp=inherit_list.next();
+					ptmp = (++inherit_list_itr)->c_str();
 					if( !m_wants_dc_udp_self ) {
 							// we don't want a UDP command socket, but our parent
 							// made one for us, because it didn't know any better
@@ -8957,7 +8916,7 @@ DaemonCore::Inherit( void )
 					break;
 			}
 
-			ptmp=inherit_list.next();
+			inherit_list_itr++;
 		}
 
 	}	// end of if we read out CONDOR_INHERIT ok
@@ -8967,15 +8926,14 @@ DaemonCore::Inherit( void )
 	const char *privTmp = GetEnv( privEnvName );
 	if ( privTmp != NULL ) {
 		dprintf ( D_DAEMONCORE, "Processing %s from parent\n", privEnvName );
+	} else {
+		privTmp = "";
 	}
 
-	StringList private_list(privTmp, " ");
-	UnsetEnv( privEnvName );
-
-	private_list.rewind();
-	while((ptmp = private_list.next()) != NULL)
+	for (auto& entry: StringTokenIterator(privTmp, " "))
 	{
-		if( ptmp && strncmp(ptmp,"SessionKey:",11)==0 ) {
+		ptmp = entry.c_str();
+		if( strncmp(ptmp,"SessionKey:",11)==0 ) {
 			dprintf(D_DAEMONCORE, "Removing session key.\n");
 			ClaimIdParser claimid(ptmp+11);
 			bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
@@ -9010,6 +8968,8 @@ DaemonCore::Inherit( void )
 			}
 		}
 	}
+
+	UnsetEnv( privEnvName );
 
 	bool new_family_session = false;
 	if ( m_family_session_id.empty() ) {

@@ -1224,11 +1224,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		// levels to that of the current command and any implied ones.
 		if ( !strcasecmp(method_used, "CLAIMTOBE") ) {
 			std::string perm_list;
-			DCpermissionHierarchy hierarchy( m_comTable[m_cmd_index].perm );
-			DCpermission const *perms = hierarchy.getImpliedPerms();
-
-			// iterate through a list of this perm and all perms implied by it
-			for (DCpermission perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+			DCpermission perm = m_comTable[m_cmd_index].perm;
+			for ( ; perm < LAST_PERM; perm = DCpermissionHierarchy::nextImplied(perm)) {
 				if (!perm_list.empty()) {
 					perm_list += ',';
 				}

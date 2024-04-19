@@ -30,11 +30,10 @@
 #include "my_username.h"
 #include "condor_environ.h"
 #include "dagman_main.h"
-#include "dagman_commands.h"
 #include "condor_getcwd.h"
-#include "directory.h"
 #include "condor_version.h"
 #include "dagman_metrics.h"
+#include "directory.h"
 
 namespace deep = DagmanDeepOptions;
 
@@ -346,11 +345,12 @@ Dagman::Config()
 	if (adInjectInfo) {
 		debug_printf(DEBUG_NORMAL, "DAGMAN_NODE_RECORD_INFO recording:\n");
 		StringTokenIterator list(adInjectInfo);
-		for (auto& info : list) {
-			trim(info);
-			lower_case(info);
+		for (const auto& info : list) {
+			std::string mutable_info {info};
+			trim(mutable_info);
+			lower_case(mutable_info);
 			//TODO: If adding more keywords consider using an unsigned int and bit mask
-			if (info.compare("retry") == MATCH) {
+			if (mutable_info.compare("retry") == MATCH) {
 				jobInsertRetry = true;
 				debug_printf(DEBUG_NORMAL, "\t-NODE Retries\n");
 			}
@@ -361,7 +361,7 @@ Dagman::Config()
 	if (!_requestedMachineAttrs.empty()) {
 		debug_printf(DEBUG_NORMAL, "DAGMAN_RECORD_MACHINE_ATTRS: %s\n", _requestedMachineAttrs.c_str());
 		//Use machine attrs list to construct new job ad attributes to add to userlog
-		StringTokenIterator requestAttrs(_requestedMachineAttrs, " ,\t");
+		StringTokenIterator requestAttrs(_requestedMachineAttrs);
 		bool firstAttr = true;
 		_ulogMachineAttrs.clear();
 		for(auto& attr : requestAttrs) {
@@ -387,6 +387,9 @@ Dagman::Config()
 				pendingReportInterval );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
+
+	check_queue_interval = param_integer("DAGMAN_CHECK_QUEUE_INTERVAL", 28800);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_CHECK_QUEUE_INTERVAL setting: %d\n", check_queue_interval);
 
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n",
@@ -1231,7 +1234,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
-						  dagman._defaultNodeLog.c_str(),
+						  dagman._defaultNodeLog,
 						  dagman._generateSubdagSubmits,
 						  &dagman.options,
 						  false, dagman._schedd ); /* toplevel dag! */
@@ -1750,7 +1753,7 @@ void condor_event_timer (int /* tid */) {
 
 	// Before submitting ready jobs, check the user log for errors or shrinking.
 	// If either happens, this is really really bad! Bail out immediately.
-	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus();
+	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus(dagman.check_queue_interval);
 	if( log_status == ReadUserLog::LOG_STATUS_ERROR || log_status == ReadUserLog::LOG_STATUS_SHRUNK ) {
 		debug_printf( DEBUG_NORMAL, "DAGMan exiting due to error in log file\n" );
 		dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
@@ -1937,7 +1940,6 @@ void condor_event_timer (int /* tid */) {
 	// Statistics gathering
 	eventTimerEndTime = condor_gettimestamp_double();
 	dagman._dagmanStats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
-
 }
 
 

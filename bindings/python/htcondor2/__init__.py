@@ -60,6 +60,7 @@ with _add_dll_dir():
     from ._file_transfer_event_type import FileTransferEventType
     from ._log_level import LogLevel
     from ._daemon_command import DaemonCommand
+    from ._submit_method import SubmitMethod
 
     # Classes.
     from ._collector import Collector
@@ -74,6 +75,7 @@ with _add_dll_dir():
     from ._job_event import JobEvent
     from ._job_event_log import JobEventLog
     from ._job_status import JobStatus
+    from ._remote_param import RemoteParam
 
     # Additional aliases for compatibility with the `htcondor` module.
     from ._daemon_type import DaemonType as DaemonTypes

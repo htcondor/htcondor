@@ -41,6 +41,10 @@ const int ENCRYPTION_IS_ON = 2;
 
 const condor_mode_t NULL_FILE_PERMISSIONS = (condor_mode_t)0;
 
+// For backward compatibility, the low bits of the following must equal
+// NULL_FULL_PERMISSIONS above
+const condor_mode_t MISSING_FILE_PERMISSIONS = (condor_mode_t)(1 << 24);
+
 #include "proc.h"
 
 /** @name Special Types

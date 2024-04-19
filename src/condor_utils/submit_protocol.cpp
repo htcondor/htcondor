@@ -66,7 +66,6 @@
 #include "condor_url.h"
 #include "condor_version.h"
 
-#include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "submit_protocol.h"

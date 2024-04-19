@@ -87,6 +87,7 @@ extern	int		polling_interval;	// Interval for polling when
 									// running a job
 extern	int		update_interval;	// Interval to update CM
 extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or "Slot" and "StartDaemon" ads
+extern  bool	enable_claimable_partitionable_slots;
 
 // Extra attrs for slot ads
 extern	std::vector<std::string> startd_job_attrs;
