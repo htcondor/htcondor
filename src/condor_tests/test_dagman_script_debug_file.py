@@ -7,7 +7,7 @@
 # debug file.
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 import os
 from pathlib import Path
 

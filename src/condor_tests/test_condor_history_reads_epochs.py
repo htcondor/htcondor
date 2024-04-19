@@ -8,7 +8,7 @@
 
 from ornithology import *
 import os
-import htcondor
+import htcondor2 as htcondor
 from pathlib import Path
 from time import sleep
 from time import time
