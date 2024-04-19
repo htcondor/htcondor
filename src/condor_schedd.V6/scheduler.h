@@ -782,14 +782,14 @@ private:
 
 	// We have to evaluate requirements in the listed order to maintain
 	// user sanity, so the submit requirements data structure must ordered.
-	typedef struct SubmitRequirementsEntry_t {
-		const char *		name;
-		classad::ExprTree *	requirement;
-		classad::ExprTree * reason;
-		bool				isWarning;
+	struct SubmitRequirementsEntry {
+		std::string name;
+		std::unique_ptr<classad::ExprTree> requirement;
+		std::unique_ptr<classad::ExprTree> reason;
+		bool isWarning;
 
-		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr, bool iw ) : name(n), requirement(r), reason(rr), isWarning(iw) {}
-	} SubmitRequirementsEntry;
+		SubmitRequirementsEntry( const std::string& n, classad::ExprTree * r, classad::ExprTree * rr, bool iw ) : name(n), requirement(r), reason(rr), isWarning(iw) {}
+	};
 
 	typedef std::vector< SubmitRequirementsEntry > SubmitRequirements;
 

@@ -13798,8 +13798,6 @@ Scheduler::Init()
 
 				classad::ExprTree * submitRequirement = parser.ParseExpression( srAttribute );
 				if( submitRequirement != NULL ) {
-					const char * permanentName = strdup( srName.c_str() );
-					assert( permanentName != NULL );
 
 					// Handle the corresponding rejection reason.
 					std::string srrAttribute;
@@ -13817,8 +13815,7 @@ Scheduler::Init()
 					formatstr( isWarningName, "SUBMIT_REQUIREMENT_%s_IS_WARNING", srName.c_str() );
 					bool isWarning = param_boolean( isWarningName.c_str(), false );
 
-					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement, submitReason, isWarning );
-					m_submitRequirements.push_back( sre );
+					m_submitRequirements.emplace_back(srName, submitRequirement, submitReason, isWarning);
 				} else {
 					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName.c_str() );
 				}
@@ -17439,13 +17436,13 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 	SubmitRequirements::iterator it = m_submitRequirements.begin();
 	for( ; it != m_submitRequirements.end(); ++it ) {
 		classad::Value result;
-		rval = EvalExprToBool( it->requirement, m_adSchedd, procAd, result, "SCHEDD", "JOB" );
+		rval = EvalExprToBool( it->requirement.get(), m_adSchedd, procAd, result, "SCHEDD", "JOB" );
 
 		if( rval ) {
 			bool bVal;
 			if( ! result.IsBooleanValueEquiv( bVal ) ) {
 				if ( errorStack ) {
-					errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name );
+					errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name.c_str() );
 				}
 				return -3;
 			}
@@ -17453,18 +17450,18 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 			if( ! bVal ) {
 				classad::Value reason;
 				std::string reasonString;
-				formatstr( reasonString, "Submit requirement %s not met.\n", it->name );
+				formatstr( reasonString, "Submit requirement %s not met.\n", it->name.c_str() );
 
 				if( it->reason != NULL ) {
-					int sval = EvalExprToString( it->reason, m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
+					int sval = EvalExprToString( it->reason.get(), m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
 					if( ! sval ) {
-						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name );
+						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name.c_str() );
 					} else {
 						std::string userReasonString;
 						if( reason.IsStringValue( userReasonString ) ) {
 							reasonString = userReasonString;
 						} else {
-							dprintf( D_ALWAYS, "Submit requirement reason %s did not evaluate to a string.\n", it->name );
+							dprintf( D_ALWAYS, "Submit requirement reason %s did not evaluate to a string.\n", it->name.c_str() );
 						}
 					}
 				}
@@ -17481,7 +17478,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 			}
 		} else {
 			if ( errorStack ) {
-				errorStack->pushf( "QMGMT", 3, "Submit requirement %s failed to evaluate.\n", it->name );
+				errorStack->pushf( "QMGMT", 3, "Submit requirement %s failed to evaluate.\n", it->name.c_str() );
 			}
 			return -2;
 		}
