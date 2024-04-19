@@ -1858,7 +1858,7 @@ err_occured:
 
 std::string Condor_Auth_SSL::get_peer_identity(SSL *ssl)
 {
-	char subjectname[1024];
+	char subjectname[1024] = "";
 	X509 *peer = SSL_get_peer_certificate_ptr(ssl);
 	if (peer) {
 		BASIC_CONSTRAINTS *bs = nullptr;
