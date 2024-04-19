@@ -109,7 +109,10 @@ def enqueued_jobs(the_schedd_log):
 
     for message in the_schedd_log.read():
         if 'TransferQueueManager: enqueueing' in message:
-            jobs.append(str(message).split(' ')[7])
+            words = str(message).split(' ')
+            for i in range(len(words)):
+                if words[i] == "job":
+                    jobs.append(words[i+1])
 
     return jobs
 
