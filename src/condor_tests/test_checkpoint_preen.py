@@ -76,7 +76,7 @@ def plugin_python_file(test_dir):
         from urllib.parse import urlparse
         from pathlib import Path
 
-        import classad
+        import classad2 as classad
 
         DEFAULT_TIMEOUT = 30
         PLUGIN_VERSION = '1.0.0'

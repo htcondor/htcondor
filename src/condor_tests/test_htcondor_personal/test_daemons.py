@@ -15,7 +15,7 @@
 
 import pytest
 
-import htcondor
+import htcondor2 as htcondor
 
 
 def test_can_use_collector(pool):
@@ -29,14 +29,12 @@ def test_can_use_schedd(pool):
     assert len(pool.schedd.query(constraint="true")) == 0
 
 
-@pytest.mark.parametrize("queue_method", ["queue", "queue_with_itemdata"])
-def test_can_submit_a_job(pool, queue_method):
+def test_can_submit_a_job(pool):
     sub = htcondor.Submit({"executable": "foobar"})
 
     # make sure the schedd doesn't get garbage collected out from under us
     schedd = pool.schedd
-    with schedd.transaction() as txn:
-        cluster_id = getattr(sub, queue_method)(txn)
+    schedd.submit(sub)
 
 
 def test_different_pools_have_different_collectors(pool, another_pool):
