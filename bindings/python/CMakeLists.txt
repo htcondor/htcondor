@@ -66,6 +66,21 @@ htcondor2/_log_level.py
 htcondor2/_loose_functions.py
 htcondor2/__init__.py
 
+# This can't be the best way to do this.
+htcondor2/personal.py
+htcondor2/htchirp/__init__.py
+htcondor2/htchirp/htchirp.py
+htcondor2/dags/writer.py
+htcondor2/dags/exceptions.py
+htcondor2/dags/__init__.py
+htcondor2/dags/formatter.py
+htcondor2/dags/dag.py
+htcondor2/dags/walk_order.py
+htcondor2/dags/edges.py
+htcondor2/dags/utils.py
+htcondor2/dags/rescue.py
+htcondor2/dags/node.py
+
 classad2/__init__.py
 classad2/_class_ad.py
 classad2/_value.py
