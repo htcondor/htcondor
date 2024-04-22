@@ -759,6 +759,8 @@ StatsD::initAndReconfig(char const *service_name)
 		m_default_metric_ad.Insert(ATTR_IP,expr);
 	}
 
+	m_want_projection = true;
+	m_projection_references.clear();
 	clearMetricDefinitions();
 	std::string config_dir;
 	formatstr(param_name,"%s_METRICS_CONFIG_DIR",service_name);
@@ -773,6 +775,21 @@ StatsD::initAndReconfig(char const *service_name)
 			dprintf(D_ALWAYS,"Reading metric definitions from %s\n",fname.c_str());
 			ParseMetricsFromFile(fname.c_str());
 		}
+	}
+
+	// Note: ParseMetrics call above will end up setting m_want_projection and m_projection_references
+	if (m_want_projection) {
+		dprintf(D_ALWAYS,"Using collector projection of %lu attributes\n",m_projection_references.size());
+		std::string collector_projection;
+		for ( const auto& it : m_projection_references) {
+			if ( !collector_projection.empty() ) {
+				collector_projection += ',';				
+			}
+			collector_projection += it;
+		}
+		dprintf(D_FULLDEBUG,"collector projection = %s\n",collector_projection.c_str());
+	} else {
+		dprintf(D_ALWAYS,"Not using a collector projection\n");
 	}
 }
 
@@ -863,7 +880,44 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		StringList target_types(target_type.c_str());
 		m_target_types.create_union(target_types,true);
 
+		// Add this metric ad to our list of metrics
 		stats_metrics.push_back(ad);
+
+		// For even more efficient queries to the collector, keep track of 
+		// which ad attributes we need (attribute projection).
+		// Note that we need to give up on using a projection if:
+		//    1. any metric has a RegEx attribute
+		//    2. any metric does not have a value  AND has a name that is not a string literal
+		// Happily, both of the above conditions are pretty advanced and thus rarely used.
+		if (!m_want_projection) continue;
+		if (ad->Lookup(ATTR_REGEX)) {
+			// Crap, we have to bail on using a projection
+			dprintf(D_FULLDEBUG,"No collector projection: metric found with %s attribute\n",ATTR_REGEX);
+			m_want_projection = false;
+			continue;
+		}
+		if (!ad->Lookup(ATTR_VALUE)) {
+			std::string attr_name;
+			if (ExprTreeIsLiteralString(ad->Lookup(ATTR_NAME),attr_name)) {
+				// add this to projection list
+				m_projection_references.insert(attr_name);
+			} else {
+				// Crap, we have to bail on using a projection
+				dprintf(D_FULLDEBUG,
+					"No collector projection: metric found without a Value attribute and a non-literal Name\n");
+				m_want_projection = false;
+				continue;
+			}
+		}
+		for ( const auto& [attr_name,attr_value] : *ad ) {
+			// ignore list type values when computing external refs.
+			// this prevents Child* and AvailableGPUs slot attributes from polluting the sig attrs
+			if (attr_value->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+				continue;
+			}
+			ad->GetExternalReferences( attr_value, m_projection_references, false );
+			ad->GetInternalReferences( attr_value, m_projection_references, false );
+		}				
 	}
 }
 
@@ -891,6 +945,12 @@ StatsD::publishMetrics( int /* timerID */ )
 	ClassAdList daemon_ads;
 	CondorQuery query(ANY_AD);
 
+	// Set query projection (if we can)
+	if (m_want_projection) {
+		query.setDesiredAttrs(m_projection_references);
+	}
+
+	// Set query constraint to only fetch ad types needed
 	if( !m_target_types.contains_anycase("any") ) {
 		if( !m_requirements.empty() ) {
 			query.addANDConstraint(m_requirements.c_str());

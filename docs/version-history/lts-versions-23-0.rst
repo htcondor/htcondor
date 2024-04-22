@@ -57,6 +57,10 @@ Bugs Fixed:
   for jobs put on hold because of errors running a file transfer plugin.
   :jira:`2373`
 
+- Fixed a crash when using the *condor_upgrade_check* tool when using
+  a python version older than **3.8**. This bug was introduced in V23.0.4.
+  :jira:`2393`
+
 - Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
   to a random, non-HTCondor process, if pids are reused quickly.
   :jira:`2357`

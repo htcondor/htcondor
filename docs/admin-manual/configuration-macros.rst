@@ -5928,13 +5928,13 @@ These macros control the *condor_schedd*.
     Boolean to enable the use of job sets with the `htcondor jobset` command.
     Defaults to false.
 
-:macro-def:`ENABLE_HTTP_PUBLIC_FILES[SCHEDD]`:
+:macro-def:`ENABLE_HTTP_PUBLIC_FILES[SCHEDD]`
     A boolean that defaults to false.  When true, the schedd will
     use an external http server to transfer public input file.
 
 :macro-def:`HTTP_PUBLIC_FILES_ADDRESS[SCHEDD]`
     The full web address (hostname + port) where your web server is serving files (default:
-    127.0.0.1:8080)
+    127.0.0.1:80)
 
 :macro-def:`HTTP_PUBLIC_FILES_ROOT_DIR[SCHEDD]`
     Absolute path to the local directory where the web service is serving files from.
@@ -6290,6 +6290,19 @@ These settings affect the *condor_starter*.
     When set to custom, the additional knob CGROUP_HARD_MEMORY_LIMIT_EXPR
     must be set, which is a classad expression evaluated
     in the context of the machine and the job, respectively, to determine the hard limits.
+
+:macro-def:`CGROUP_HARD_MEMORY_LIMIT_EXPR`
+    See above.
+
+:macro-def:`CGROUP_LOW_MEMORY_LIMIT`
+    A classad expression, evaluated in the context of the slot and job ad.
+    When it evaluated to a number, that number is written to the job's
+    cgroup memory.low limit.  This is only implemented on Linux systems
+    where HTCondor controls the jobs' cgroups.  When the job exceeds this 
+    limit, the kernel will aggressively evict read-only pages (often disk cache)
+    from the job's use.  For example, an admin could set this to 
+    Memory * 0.5, in order to prevent the system from using otherwise available
+    memory for caching on behalf of the job.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`
     A boolean that defaults to false.  When true, and cgroups are in effect, the

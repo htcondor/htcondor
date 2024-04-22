@@ -10,6 +10,7 @@ import subprocess
 import textwrap
 import argparse
 from enum import Enum
+
 # Temporary needed imports (for a check)
 # End imports
 
@@ -105,6 +106,15 @@ def make_version_str(version):
     return ".".join([f"{n}" for n in version])
 
 
+def iter_list(l: list):
+    """Recursively yield each item in a list of lists"""
+    for item in l:
+        if type(item) is list:
+            yield from iter_list(item)
+        else:
+            yield item
+
+
 # ===============================Incompatibility Check Functions===============================
 def warn_multi_q_deprecation(*args, **kwargs):
     """Warn about multi-queue statement deprecation"""
@@ -120,6 +130,7 @@ def warn_multi_q_deprecation(*args, **kwargs):
         newline=True,
         debug=Debug.WARNING,
     )
+
 
 def warn_dagman_env(*args, **kwargs):
     """Warn about DAGMan cleansing its environment"""
@@ -549,8 +560,11 @@ class NegateAction(argparse.Action):
         setattr(args, self.dest, option_string.rstrip("-").startswith("no"))
 
 
-def parse_args():
+def parse_args(has_extend_action: bool):
     """Function to parse tool command line arguments"""
+
+    list_action = "extend" if has_extend_action else "append"
+
     parser = argparse.ArgumentParser(
         prog="condor_upgrade_check",
         description=textwrap.dedent(
@@ -595,7 +609,7 @@ def parse_args():
         "-i",
         "--ignore",
         nargs="+",
-        action="extend",
+        action=list_action,
         metavar="TAG",
         default=[],
         help="Skip the provided TAGs. This option takes precedence over the --only option.",
@@ -605,7 +619,7 @@ def parse_args():
         "-o",
         "--only",
         nargs="+",
-        action="extend",
+        action=list_action,
         metavar="TAG",
         default=[],
         help="Check only the provided TAGs. Use the tag WARNINGS to only check warnings",
@@ -657,7 +671,8 @@ def main():
         )
         sys.exit(0)
 
-    args = parse_args()
+    has_extend_action = sys.version_info[0] >= 3 and sys.version_info[1] >= 8
+    args = parse_args(has_extend_action)
 
     global VERBOSITY
     try:
@@ -665,8 +680,16 @@ def main():
     except ValueError:
         VERBOSITY = Debug.MAX
 
-    ignore_list = [tag.upper() for tag in args.ignore]
-    only_list = [tag.upper() for tag in args.only]
+    ignore_list = (
+        [tag.upper() for tag in args.ignore]
+        if has_extend_action
+        else [tag.upper() for tag in iter_list(args.ignore)]
+    )
+    only_list = (
+        [tag.upper() for tag in args.only]
+        if has_extend_action
+        else [tag.upper() for tag in iter_list(args.only)]
+    )
 
     if args.tags:
         list_tags()
