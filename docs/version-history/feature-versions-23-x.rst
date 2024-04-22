@@ -26,6 +26,9 @@ New Features:
   the *condor_collector*.  Specifically, it now uses a projection when querying the collector.
   :jira:`2394`
 
+- ``IDTOKEN`` files whose access permissions are too open are now ignored.
+  :jira:`232`
+
 Bugs Fixed:
 
 - None.
