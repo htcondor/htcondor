@@ -279,7 +279,11 @@ void ProcessCachedInpFiles(ClassAd *const Ad, std::vector<std::string> &InputFil
 
 			// Determine the time last modified of the file to be transferred
 			if( stat( fullPath.c_str(), &fileStat ) == 0 ) {
+#if defined(DARWIN)
+				struct timespec fileTime = fileStat.st_mtimespec;
+#else
 				struct timespec fileTime = fileStat.st_mtim;
+#endif
 				fileModifiedTime = fileTime.tv_sec;
 			}
 			else {
@@ -295,7 +299,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, std::vector<std::string> &InputFil
 
 				remap += hashName;
 				remap += "=";
-				remap += basename(path.c_str());
+				remap += condor_basename(path.c_str());
 				remap += ";";
 				hashName = url + hashName;
 				const char *const namePtr = hashName.c_str();

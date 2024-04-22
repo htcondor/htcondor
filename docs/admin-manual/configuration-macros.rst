@@ -5921,13 +5921,13 @@ These macros control the *condor_schedd*.
     Boolean to enable the use of job sets with the `htcondor jobset` command.
     Defaults to false.
 
-:macro-def:`ENABLE_HTTP_PUBLIC_FILES[SCHEDD]`:
+:macro-def:`ENABLE_HTTP_PUBLIC_FILES[SCHEDD]`
     A boolean that defaults to false.  When true, the schedd will
     use an external http server to transfer public input file.
 
 :macro-def:`HTTP_PUBLIC_FILES_ADDRESS[SCHEDD]`
     The full web address (hostname + port) where your web server is serving files (default:
-    127.0.0.1:8080)
+    127.0.0.1:80)
 
 :macro-def:`HTTP_PUBLIC_FILES_ROOT_DIR[SCHEDD]`
     Absolute path to the local directory where the web service is serving files from.
