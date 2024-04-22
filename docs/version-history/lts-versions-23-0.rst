@@ -67,6 +67,10 @@ Bugs Fixed:
   in ``[-1]`` and no expression text being displayed for some analysis steps.
   :jira:`2355`
 
+- Fixed a bug where a bad DN value was used during SSL authentication
+  when the client didn't present a credential.
+  :jira:`2396`
+
 .. _lts-version-history-2308:
 
 Version 23.0.8
