@@ -916,6 +916,8 @@ private:
 	ExprTree* m_parsed_gridman_selection_expr;
 	char* m_unparsed_gridman_selection_expr;
 
+	ExprTree* m_jobCoolDownExpr {nullptr};
+
 	// The object which manages the transfer queue
 	TransferQueueManager m_xfer_queue_mgr;
 

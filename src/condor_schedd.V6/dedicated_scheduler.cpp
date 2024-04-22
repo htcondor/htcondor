@@ -57,8 +57,6 @@ extern DedicatedScheduler dedicated_scheduler;
 extern char* Name;
 
 extern void mark_job_running(PROC_ID*);
-extern void mark_job_stopped(PROC_ID*);
-extern int Runnable(PROC_ID*);
 
 /*
   Stash this value as a static variable to this whole file, since we
