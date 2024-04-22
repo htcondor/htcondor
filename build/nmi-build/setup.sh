@@ -290,6 +290,8 @@ if [ $ID != 'amzn' ]; then
         curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
             bash -s - "$externals_dir/apptainer"
         rm -r "$externals_dir/apptainer/$ARCH/libexec/apptainer/cni"
+        # Move apptainer out of the default path
+        mv "$externals_dir/apptainer/bin" "$externals_dir/apptainer/libexec"
     fi
 fi
 

@@ -26,6 +26,9 @@ Release Notes:
 
 - HTCondor version 23.0.10 not yet released.
 
+- In the tarballs, the *apptainer* executable has been moved to the ``usr/libexec`` directory.
+  :jira:`2397`
+
 New Features:
 
 - Updated *condor_upgrade_check* to warn about the deprecated functionality of having
