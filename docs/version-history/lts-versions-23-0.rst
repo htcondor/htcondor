@@ -32,7 +32,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- When submitting to a remote batch scheduler via ssh, improve error
+  handling when the initial ssh connection failures and a subsequent
+  attempt succeeds.
+  Before, transfers of job sandboxes would fail after such an error.
+  :jira:`2398`
 
 .. _lts-version-history-23010:
 
