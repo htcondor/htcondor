@@ -3603,7 +3603,7 @@ section.
 
 :macro-def:`MOUNT_UNDER_SCRATCH[STARTD]`
     A ClassAd expression, which when evaluated in the context of the job
-    ClassAd, evaluates to a string that contains a comma separated list
+    and machine ClassAds, evaluates to a string that contains a comma separated list
     of directories. For each directory in the list, HTCondor creates a
     directory in the job's temporary scratch directory with that name,
     and makes it available at the given name using bind mounts. This is
@@ -3615,7 +3615,7 @@ section.
 
     .. code-block:: condor-config
 
-          MOUNT_UNDER_SCRATCH = ifThenElse(TARGET.UtsnameSysname ? "Linux", "/tmp,/var/tmp", "")
+          MOUNT_UNDER_SCRATCH = ifThenElse(TARGET.UtsnameSysname =?= "Linux", "/tmp,/var/tmp", "")
 
     If the job is running on a Linux system, it will see the usual
     ``/tmp`` and ``/var/tmp`` directories, but when accessing files via

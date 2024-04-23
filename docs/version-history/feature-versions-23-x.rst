@@ -147,7 +147,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug where the :ad-attr:`HoldReasonSubcode` was not the documented value
+- Fixed bug where the :ad-attr:`HoldReasonSubCode` was not the documented value
   for jobs put on hold because of errors running a file transfer plugin.
   :jira:`2373`
 
