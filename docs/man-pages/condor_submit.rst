@@ -1100,6 +1100,13 @@ FILE TRANSFER COMMANDS
     by **log** and output files
     defined with **output** or **transfer_output_files**.
 
+ :subcom-def:`skip_if_dataflow` = <True | False>
+    A boolean value that defaults to ``False``.  When ``True``,
+    marks this job as a :ref:`dataflow` job.  Dataflow jobs are
+    marked as completed and skipped if all of their output files
+    exist and have newer modification dates than all of the input files,
+    similar to how the "make" program works.
+
  :subcom-def:`stream_error` = <True | False>
     If ``True``, then ``stderr`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stderr`` is stored
@@ -1362,10 +1369,7 @@ FILE TRANSFER COMMANDS
     to transfer the job's output files back to the submitting machine when
     the job completes (exits on its own).  If a job is evicted and started
     again, the subsequent execution will start with only the executable and
-    input files in the scratch directory sandbox.  If ``transfer_output_files``
-    is not set, HTCondor considers all new files in the sandbox's top-level
-    directory to be the output; subdirectories and their contents will not
-    be transferred.
+    input files in the scratch directory sandbox.
 
     Setting ``when_to_transfer_output`` to ``ON_EXIT_OR_EVICT`` will cause
     HTCondor to transfer the job's output files when the job completes
@@ -1373,15 +1377,15 @@ FILE TRANSFER COMMANDS
     HTCondor will transfer the output files to a temporary directory on the
     submit node (determined by the :macro:`SPOOL` configuration variable).  When
     the job restarts, these files will be transferred instead of the input
-    files.  If ``transfer_output_files`` is not set, HTCondor considers all
-    files in the sandbox's top-level directory to be the output;
-    subdirectories and their contents will not be transferred.
+    files.
 
     Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
-    to transfer the job's output files when the job completes successfully.
+    to transfer the job's output files only when the job completes successfully.
     Success is defined by the ``success_exit_code`` command, which must be
-    set, even if the successful value is the default ``0``.  If
-    ``transfer_output_files`` is not set, HTCondor considers all new files
+    set, even if the successful value is the default ``0``.  This prevents the
+    job from going on hold if it does not produce all of the output files when it fails.
+    
+    If ``transfer_output_files`` is not set, HTCondor considers all new files
     in the sandbox's top-level directory to be the output; subdirectories
     and their contents will not be transferred.
 
@@ -1700,8 +1704,7 @@ POLICY COMMANDS
     :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
-    :index:`periodic_vacate<single: periodic_vacate; submit commands>`
- periodic_vacate = <ClassAd Boolean Expression>
+ :subcom-def:`periodic_vacate` = <ClassAd Boolean Expression>
     This expression is checked periodically for running jobs. If it becomes ``True``, 
     job is evicted from the machine it is running on, and return to the queue,
     in an Idle state. If unspecified, the default value is ``False``.
@@ -2274,6 +2277,11 @@ COMMANDS FOR THE CONTAINER UNIVERSE
     Defines the name of the container image. Can be a singularity .sif file,
     a singularity exploded directory, or a path to an image in a docker style 
     repository
+
+ :subcom-def:`transfer_container` = < True | False >
+    A boolean value that defaults to True.  When false, sif container images
+    and expanded directories are assumed to be pre-staged on the EP, and
+    HTCondor will not attempt to transfer them. 
 
  :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped

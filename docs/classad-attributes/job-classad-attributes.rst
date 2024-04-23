@@ -237,6 +237,10 @@ all attributes.
     For Container universe jobs, a filename that becomes the working directory of
     the job.  Mapped to the scratch directory.
 
+:classad-attribute-def:`TransferContainer`
+    For Container universe jobs, a boolean that describes whether a container
+    image should be transfered by HTCondor.
+
 :index:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute-def:`CumulativeSlotTime`

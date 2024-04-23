@@ -262,11 +262,11 @@ with
    container_image = http://example.com/dir/image.sif
 
 A container image that would otherwise be transferred can be forced
-to never be transferred by setting
+to never be transferred with :subcom:`transfer_container`.
 
 .. code-block:: condor-submit
 
-      should_transfer_container = no
+      transfer_container = false
 
 HTCondor knows that "docker://" and "oras://" (for apptainer) are special, and
 are never transferred by HTCondor plugins.
@@ -822,7 +822,7 @@ The parallel universe supersedes the mpi universe. The mpi universe
 eventually will be removed from HTCondor.
 
 How Parallel Jobs Run
-;''''''''''''''''''''
+'''''''''''''''''''''
 
 Parallel universe jobs are submitted from the machine running the
 dedicated scheduler. The dedicated scheduler matches and claims a fixed

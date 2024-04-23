@@ -33,15 +33,6 @@
 // because the caller will normally delete the ad, but in fact has no more use for it.
 typedef bool (*condor_q_process_func)(void*, ClassAd *ad);
 
-enum
-{
-	Q_NO_SCHEDD_IP_ADDR = 20,
-	Q_SCHEDD_COMMUNICATION_ERROR,
-	Q_INVALID_REQUIREMENTS,
-	Q_INTERNAL_ERROR,
-	Q_REMOTE_ERROR,
-	Q_UNSUPPORTED_OPTION_ERROR
-};
 
 enum CondorQStrCategories
 {
@@ -77,6 +68,8 @@ enum CondorQFltCategories
 
 #endif
 
+class DCSChedd; // forward ref
+
 class CondorQ
 {
   public:
@@ -105,32 +98,12 @@ class CondorQ
 	// from the local schedd
 	int fetchQueue (ClassAdList &, StringList &attrs, ClassAd * = 0, CondorError* errstack = 0);
 	int fetchQueueFromHost (ClassAdList &, StringList &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
-	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
+	int fetchQueueFromHostAndProcess (const char * schedd_host, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
+
+	int initQueryAd(ClassAd & request_ad, StringList &attrs, int fetch_opts, int match_limit);
 
 	void useDefaultingOperator(bool enable);
 
-	// option flags for fetchQueueFromHost* functions, these can modify the meaning of attrs
-	// use only one of the choices < fetch_FromMask, optionally OR'd with one or more fetch flags
-	// currently only fetch_Jobs accepts flags.
-	typedef enum {
-		fetch_Jobs=0,
-		fetch_DefaultAutoCluster=1,
-		fetch_GroupBy=2,
-		fetch_FromMask=0x03,         // mask off the 'from' bits
-		fetch_MyJobs=0x04,           // modifies fetch_Jobs
-		fetch_SummaryOnly=0x08,      // modifies fetch_Jobs
-		fetch_IncludeClusterAd=0x10, // modifies fetch_Jobs
-		fetch_IncludeJobsetAds=0x20, // modifies fetch_Jobs
-	} QueryFetchOpts;
-	
-		// fetch the job ads from database 	
-	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, const char * = 0, CondorError* errstack = 0);
-	int fetchQueueFromDBAndProcess ( const char *, char *&lastUpdate, condor_q_process_func process_func, void * process_func_data, CondorError* errstack = 0);
-
-#if 0
-		// return the results from a DB query directly to user
-	void rawDBQuery(const char *, CondorQQueryType);
-#endif
 	// return the effective query constraint directly to the user.
 	// the caller is responsible for deleting the returned ExprTree.
 	int  rawQuery(ExprTree * &tree) { return query.makeQuery(tree); }
@@ -144,11 +117,13 @@ class CondorQ
 	// default timeout when talking the schedd (via ConnectQ())
 	int connect_timeout;
 	
+#if 0
 	int *clusterarray;
 	int *procarray;
 	int clusterprocarraysize;
 	int numclusters;
 	int numprocs;
+#endif
 	char owner[MAXOWNERLEN];
 	char schedd[MAXSCHEDDLEN];
 	bool defaulting_operator;
@@ -156,9 +131,9 @@ class CondorQ
 	time_t scheddBirthdate;
 	
 	// helper functions
-	int fetchQueueFromHostAndProcessV2 ( const char * host, const char * constraint, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
-	int getAndFilterAds( const char *, StringList &attrs, int match_limit, ClassAdList &, int useAll );
-	int getFilterAndProcessAds( const char *, StringList &attrs, int match_limit, condor_q_process_func pfn, void * process_func_data, bool useAll );
+	int fetchQueueFromHostAndProcessV2 ( const char * host, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
+	int getAndFilterAds( const char * constraint, StringList &attrs, int match_limit, ClassAdList &, int useAll );
+	int getFilterAndProcessAds( const char * constraint, StringList &attrs, int match_limit, condor_q_process_func pfn, void * process_func_data, bool useAll );
 };
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data);

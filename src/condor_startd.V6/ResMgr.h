@@ -218,9 +218,10 @@ public:
 	// called from StartdCronJob::Publish after one or more adlist ads with an ad_name prefix are updated
 	// this gives a chance to refresh the startd cron ads right away
 	// TODO: TJ, figure out is this necessary?
-	void adlist_updated(const char * /*ad_name*/) {
+	void adlist_updated(const char * /*ad_name*/, bool update_collector) {
 		// TODO: be more selective about what we refresh here?
 		walk(&Resource::refresh_startd_cron_attrs);
+		if (update_collector) rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
 	}
 
 private:

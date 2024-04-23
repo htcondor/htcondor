@@ -26,6 +26,7 @@
 #include "my_popen.h"
 #include "condor_daemon_core.h"
 #include "basename.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(LINUX)
 #include <sys/utsname.h>

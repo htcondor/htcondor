@@ -43,6 +43,7 @@ htcondor2/_cred_type.py
 htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py
 htcondor2/_ad_type.py
+htcondor2/_daemon_command.py
 htcondor2/_drain_type.py
 htcondor2/_completion_type.py
 htcondor2/_common_imports.py
@@ -51,15 +52,18 @@ htcondor2/_query_opt.py
 htcondor2/_job_action.py
 htcondor2/_transaction_flag.py
 htcondor2/_submit.py
+htcondor2/_submit_method.py
 htcondor2/_submit_result.py
 htcondor2/_job_event.py
 htcondor2/_job_event_log.py
 htcondor2/_job_event_type.py
 htcondor2/_job_status.py
 htcondor2/_param.py
+htcondor2/_remote_param.py
 htcondor2/_file_transfer_event_type.py
 htcondor2/_logging.py
 htcondor2/_log_level.py
+htcondor2/_loose_functions.py
 htcondor2/__init__.py
 
 classad2/__init__.py

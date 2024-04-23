@@ -49,7 +49,6 @@
 #include "metric_units.h"
 #include "submit_utils.h"
 
-#include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "my_popen.h"
@@ -141,13 +140,21 @@ ExprTree * DeltaClassAd::HasParentTree(const std::string & attr, classad::ExprTr
 // of the given value type.
 const classad::Value * DeltaClassAd::HasParentValue(const std::string & attr, classad::Value::ValueType vt)
 {
-	ExprTree * expr = HasParentTree(attr, ExprTree::NodeKind::LITERAL_NODE);
-	if ( ! expr)
-		return NULL;
-	const classad::Value * pval = &static_cast<classad::Literal*>(expr)->getValue();
-	if (!pval || (pval->GetType() != vt))
-		return NULL;
-	return pval;
+	classad::ClassAd * parent = ad.GetChainedParentAd();
+	if (parent) {
+		ExprTree * expr = parent->Lookup(attr);
+		if (expr) {
+			expr = SkipExprEnvelope(expr);
+			if (dynamic_cast<classad::Literal *>(expr) != nullptr) {
+				static classad::Value v;
+				((classad::Literal *)expr)->GetValue(v);
+				if (v.GetType() == vt) {
+					return &v;;
+				}
+			}
+		}
+	}
+	return nullptr;
 }
 
 bool DeltaClassAd::Insert(const std::string & attr, ExprTree * tree)
@@ -3979,6 +3986,7 @@ int SubmitHash::SetExecutable()
 	RETURN_IF_ABORT();
 	bool	transfer_it = true;
 	bool	ignore_it = false;
+	bool	empty_job_exe = false; // set to true when there is no executable for an interactive job
 	char	*ename = NULL;
 	char	*macro_value = NULL;
 	_submit_file_role role = SFR_EXECUTABLE;
@@ -4060,6 +4068,7 @@ int SubmitHash::SetExecutable()
 	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );
 	if ( ! ename && IsInteractiveJob) {
 		ename = submit_param(SUBMIT_KEY_INTERACTIVE_Executable);
+		empty_job_exe = true;
 	}
 	if( ename == NULL ) {
 		// if no executable keyword, but the job already has an executable we are done.
@@ -4122,19 +4131,17 @@ int SubmitHash::SetExecutable()
 	// for interactive jobs, we want to swap out the executable for one
 	// that just waits for the interactive connection
 	auto_free_ptr icmd(submit_param(SUBMIT_KEY_INTERACTIVE_Executable));
-	if (IsInteractiveJob) {
-		if (icmd && (full_ename != icmd.ptr())) {
-			bool is_transfer_exe = true;
-			job->LookupBool(ATTR_TRANSFER_EXECUTABLE, is_transfer_exe);
-			// the file transfer object will always transfer what is in ATTR_ORIG_JOB_CMD
-			// but we *don't* want to interactive exe to be transferred, so we stuff
-			// the existing exe into a new job attribute and turn off transfer executable
-			if (is_transfer_exe) {
-				AssignJobString (ATTR_ORIG_JOB_CMD, full_ename.c_str());
-				AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
-			}
-			full_ename = icmd.ptr();
+	if (IsInteractiveJob && icmd) {
+		bool is_transfer_exe = true;
+		job->LookupBool(ATTR_TRANSFER_EXECUTABLE, is_transfer_exe);
+		// the file transfer object will always transfer what is in ATTR_ORIG_JOB_CMD
+		// but we *don't* want to interactive exe to be transferred, so we stuff
+		// the existing exe into a new job attribute and turn off transfer executable
+		if (is_transfer_exe) {
+			if ( ! empty_job_exe) AssignJobString (ATTR_ORIG_JOB_CMD, full_ename.c_str());
+			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 		}
+		full_ename = icmd.ptr();
 	}
 
 	AssignJobString (ATTR_JOB_CMD, full_ename.c_str());
@@ -9025,3 +9032,329 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 	return out.c_str();
 }
 
+
+// Submit-time (file-transfer) token credential-handling magic starts here.
+#include "store_cred.h"
+
+
+bool
+credd_has_tokens(
+	std::string & tokens,
+	std::string & URL,
+	SubmitHash & submit_hash,
+	int DashDryRun,
+
+	std::string & error_string
+) {
+	URL.clear();
+	tokens.clear();
+
+	std::string requests_error;
+	ClassAdList requests;
+	if (submit_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
+		if( ! requests_error.empty()) {
+			formatstr( error_string, "credd_has_tokens(): NeedsOAuthServices() failed with '%s'\n", requests_error.c_str() );
+			return false;
+		}
+	} else {
+		return false;
+	}
+
+	if (IsDebugLevel(D_SECURITY)) {
+		char *myname = my_username();
+		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", tokens.c_str(), myname);
+		free(myname);
+	}
+
+	StringList unique_names(tokens.c_str());
+
+
+	// PHASE 3
+	//
+	// Send all the requests to the CREDD
+	//
+	if (DashDryRun & (2|4)) {
+		std::string buf;
+		fprintf(stdout, "::sendCommand(CREDD_CHECK_CREDS...)\n");
+		requests.Rewind();
+		for (const char * name = unique_names.first(); name != NULL; name = unique_names.next()) {
+			fprintf(stdout, "# %s \n%s\n", name, formatAd(buf, *requests.Next(), "\t"));
+			buf.clear();
+		}
+		if (! (DashDryRun & 4)) {
+			URL = "http://getcreds.example.com";
+		}
+		return true;
+	}
+
+	// build a vector of the request ads from the classad list.
+	std::vector<const classad::ClassAd*> req_ads;
+	requests.Rewind();
+	classad::ClassAd * ad;
+	while ((ad = requests.Next())) { req_ads.push_back(ad); }
+
+	std::string url;
+	int rv = do_check_oauth_creds(&req_ads[0], (int)req_ads.size(), url);
+	if (rv > 0) { URL = url; }
+	else if (rv < 0) {
+		// this little bit of nonsense preserves the pre 8.9.9 error messages to stdout
+		// do_check_oauth_creds will also dprintf the same(ish) messages
+		switch (rv) {
+		case -1:
+			formatstr( error_string, "CRED: invalid request to credd!\n");
+			break;
+		case -2: // could not locate
+			formatstr( error_string, "CRED: locate(credd) failed!\n");
+			break;
+		case -3: // start command failed
+			formatstr( error_string, "CRED: startCommand to CredD failed!\n");
+			break;
+		case -4: // communication failure (timeout of protocol mismatch)
+			formatstr( error_string, "CRED: communication failure!\n");
+			break;
+		}
+
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+get_oauth_service_requests(
+	ArgList & service_requests,
+	SubmitHash & submit_hash,
+
+	std::string & error_string
+) {
+	std::string services;
+	std::string requests_error;
+	ClassAdList requests;
+	if( submit_hash.NeedsOAuthServices(services, &requests, &requests_error) ) {
+		if(! requests_error.empty()) {
+			formatstr(error_string, "get_oauth_service_requests(): NeedsOAuthServices() failed with '%s'\n", requests_error.c_str() );
+			return false;
+		}
+	} else {
+		return false;
+	}
+
+	ClassAd *request;
+	std::string request_arg;
+	while ((request = requests.Next())) {
+		std::string str;
+		request->LookupString("Service", str);
+		if (str == "")
+			continue;
+		request_arg = str;
+		std::string keys[] = { "handle", "scopes", "audience", "options" };
+		for (const auto& key : keys) {
+			if (!request->LookupString(key, str) || str.empty()) {
+				continue;
+			}
+			if (key == "scopes") {
+				// make the value only comma-separated
+				std::string new_val;
+				for (const auto& item : StringTokenIterator(str)) {
+					if (!new_val.empty()) {
+						new_val += ',';
+					}
+					new_val += item;
+				}
+				str = new_val;
+			}
+			request_arg += "&" + key + "=" + str;
+		}
+		service_requests.AppendArg(request_arg);
+	}
+	return true;
+}
+
+
+int
+process_job_credentials(
+	SubmitHash & submit_hash,
+	int DashDryRun,
+
+	std::string & URL,
+	std::string & error_string
+) {
+	std::string storer;
+	if(param(storer, "SEC_CREDENTIAL_STORER")) {
+		// SEC_CREDENTIAL_STORER is a script to run that calls
+		// condor_store_cred when it has new credentials to store.
+		// Pass it parameters of the service requests needed as
+		// defined in the submit file.
+		ArgList args;
+		args.AppendArg(storer);
+		if( get_oauth_service_requests(args, submit_hash, error_string) ) {
+			if( my_system(args) != 0 ) {
+				formatstr( error_string, "process_job_credentials(): invoking '%s' failed: %d (%s)\n", storer.c_str(), errno, strerror(errno) );
+				return 1;
+			}
+		} else {
+			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
+		}
+		return 0;
+	}
+
+	// do this by default, the knob is just to skip in case this code causes problems
+	if(param_boolean("SEC_PROCESS_SUBMIT_TOKENS", true)) {
+
+		// we need to extract a few things from the submit file that
+		// tell us what credentials will be needed for the job.
+		//
+		// we then craft a classad that we will send to the credd to
+		// see if we have the needed tokens.  if not, the credd will
+		// create a "request file" and provide a URL that references
+		// it.  we forward this URL to the user so they can obtain the
+		// tokens needed.
+		std::string tokens_needed;
+		if( credd_has_tokens(tokens_needed, URL, submit_hash, DashDryRun, error_string) ) {
+			if (!URL.empty()) {
+				if (IsUrl(URL.c_str())) {
+					return 0;
+				} else {
+					formatstr(error_string, "OAuth error: %s\n\n", URL.c_str() );
+					return 1;
+				}
+			}
+			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", tokens_needed.c_str());
+
+			// force this to be written into the job, by using set_arg_variable
+			// it is also available to the submit file parser itself (i.e. can be used in If statements)
+			//TJ:gt7462 don't set SendCredential for OAuth, now that we have multiple credmons, this applies only to Krb credential
+			//submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
+		} else if(! error_string.empty()) {
+			return 1;
+		} else {
+			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
+		}
+	}
+
+
+	// If LOCAL_CREDMON_PROVIDER_NAME is set, this means.  we want to
+	// instruct the credd to create a file in the OAUTH tree but not
+	// actually go through the OAuth flow.  this is somewhat of a hack to
+	// support SciTokens in "local issuer mode".
+	std::string pname;
+	if (!param(pname, "LOCAL_CREDMON_PROVIDER_NAME")) {
+		dprintf(D_SECURITY, "CREDMON: skipping the storage of any LOCAL credential with CredD.\n");
+	} else {
+		dprintf(D_ALWAYS, "CREDMON: LOCAL_CREDMON_PROVIDER_NAME is set and provider name is \"%s\"\n", pname.c_str());
+		Daemon my_credd(DT_CREDD);
+		if (my_credd.locate()) {
+			// we're piggybacking on "krb" mode but using a magic value
+			const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
+			const char * err = NULL;
+			ClassAd return_ad;
+
+			// construct the "magic string":
+			std::string magic("LOCAL:");
+			magic += pname.c_str();
+			dprintf(D_SECURITY, "CREDMON: sending magic value \"%s\" to CredD.\n", magic.c_str());
+
+			// pass an empty username here, which tells the CredD to take the authenticated name from the socket
+			long long result = do_store_cred("", mode, (const unsigned char*)magic.c_str(), magic.length(), return_ad, NULL, &my_credd);
+			if (store_cred_failed(result, mode, &err)) {
+				formatstr( error_string, "ERROR: store_cred of LOCAL credential failed - %s\n", err ? err : "");
+				return 1;
+			}
+		} else {
+			formatstr( error_string, "ERROR: locate(credd) failed!\n" );
+			return 1;
+		}
+
+		// ZKM TODO
+		//
+		// we should add this service name into UseOAuthServices and set SendCredential to TRUE
+		//
+	}
+
+	// deal with credentials generated by a user-invoked script
+
+	std::string producer;
+	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {
+		// nothing to do
+		return 0;
+	}
+
+	// If SEC_CREDENTIAL_PRODUCER is set to magic value CREDENTIAL_ALREADY_STORED,
+	// this means that condor_submit should NOT bother spending time to send the
+	// credential to the credd (because it is already there), but it SHOULD do
+	// all the other work as if it did send it (such as setting the SendCredential
+	// attribute so the starter will fetch the credential at job launch).
+	// If SEC_CREDENTIAL_PRODUCER is anything else, then consider it to be the
+	// name of a script we should spawn to create the credential.
+
+	if ( strcasecmp(producer.c_str(),"CREDENTIAL_ALREADY_STORED") != MATCH ) {
+		// If we made it here, we need to spawn a credential producer process.
+		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
+		ArgList args;
+		args.AppendArg(producer);
+		FILE* uber_file = my_popen(args, "r", 0);
+		unsigned char *uber_ticket = NULL;
+		if (!uber_file) {
+			formatstr( error_string, "ERROR: (%i) invoking %s\n", errno, producer.c_str() );
+			return 1;
+		} else {
+			uber_ticket = (unsigned char*)malloc(65536);
+			ASSERT(uber_ticket);
+			size_t bytes_read = fread(uber_ticket, 1, 65536, uber_file);
+			// what constitutes failure?
+			my_pclose(uber_file);
+
+			if(bytes_read == 0) {
+				formatstr( error_string, "ERROR: failed to read any data from %s!\n", producer.c_str() );
+				return 1;
+			}
+
+			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
+			Daemon my_credd(DT_CREDD);
+			if (my_credd.locate()) {
+				// this version check will fail if CredD is not
+				// local.  the version is not exchanged over
+				// the wire until calling startCommand().  if
+				// we want to support remote submit we should
+				// just send the command anyway, after checking
+				// to make sure older CredDs won't completely
+				// choke on the new protocol.
+				bool new_credd = true; // assume new credd
+				if (my_credd.version()) {
+					CondorVersionInfo cvi(my_credd.version());
+					new_credd = (cvi.getMajorVer() <= 0) || cvi.built_since_version(8, 9, 7);
+				}
+				if (new_credd) {
+					const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
+					const char * err = NULL;
+					ClassAd return_ad;
+					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
+					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
+					if (store_cred_failed(result, mode, &err)) {
+						formatstr( error_string, "ERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "" );
+						return 1;
+					}
+				} else {
+					formatstr( error_string, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
+							"  Credd version: %s", my_credd.version() );
+					return 1;
+				}
+			} else {
+				formatstr( error_string, "ERROR: locate(credd) failed!\n" );
+				return 1;
+			}
+		}
+	}  // end of block to run a credential producer
+
+	// If we made it here, we either successufully ran a credential producer, or
+	// we've been told a credential has already been stored.  Either way we want
+	// to set a flag that tells the rest of condor_submit that there is a stored
+	// credential associated with this job.
+
+	// force this to be written into the job, by using set_arg_variable
+	// it is also available to the submit file parser itself (i.e. can be used in If statements)
+	submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
+
+	return 0;
+}

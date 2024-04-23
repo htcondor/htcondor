@@ -1383,6 +1383,11 @@ incorporates.
        Sets configuration that will cause job ads to track the instance IDs
        of slots that they ran on (if available).
 
+    - :config-template:`HPC_ANNEX<FEATURE>`
+
+       Set configuration that enables the use of the ``annex`` noun
+       in the :doc:`../man-pages/htcondor` command.
+
 :config-template:`POLICY` category
     Describes configuration for the circumstances under which machines
     choose to run jobs.

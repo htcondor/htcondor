@@ -16,11 +16,7 @@ def find_submit_cmds(dir: str):
     with open(submit_man, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            while "subcom-def" in line:
-                begin = line.find("`") + 1
-                end = line.find("`", begin)
-                subcom = line[begin:end]
-                line = line[end+1:]
+            for subcom in get_all_defined_role("subcom-def", line):
                 if subcom not in subcoms:
                     subcoms.append(subcom)
     subcoms.sort()

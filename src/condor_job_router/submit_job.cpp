@@ -853,10 +853,10 @@ static bool remove_job_with_current_privs(int cluster, int proc, char const *rea
 
 	std::string id_str;
 	formatstr(id_str, "%d.%d", cluster, proc);
-	StringList job_ids(id_str.c_str());
+	std::vector<std::string> job_ids = {id_str};
 	ClassAd *result_ad;
 
-	result_ad = schedd.removeJobs(&job_ids, reason, &errstack, AR_LONG);
+	result_ad = schedd.removeJobs(job_ids, reason, &errstack, AR_LONG);
 
 	PROC_ID job_id;
 	job_id.cluster = cluster;

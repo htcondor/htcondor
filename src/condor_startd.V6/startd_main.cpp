@@ -30,6 +30,7 @@
 #include "misc_utils.h"
 #include "slot_builder.h"
 #include "history_queue.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "StartdPlugin.h"
@@ -58,6 +59,9 @@ int	update_interval = 0;	// Interval to update CM
 //  2 - Advertise STARTD_SLOT_ADTYPE and STARTD_DAEMON_ADTYPE to collectors that are 23.2 or later
 //      and advertise STARTD_OLD_ADTYPE to older collectors
 int enable_single_startd_daemon_ad = 0;
+
+// set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
+bool enable_claimable_partitionable_slots = false;
 
 // String Lists
 std::vector<std::string> startd_job_attrs;
@@ -486,6 +490,8 @@ init_params( int first_time)
 	if (first_time) {
 		std::string func_name("SlotEval");
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
+
+		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
 	}
 
 	resmgr->init_config_classad();
@@ -698,14 +704,14 @@ startd_exit()
 
 	// Shut down the cron logic
 	if( cron_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting cron job manager\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of cron job manager\n" );
 		cron_job_mgr->Shutdown( true );
 		delete cron_job_mgr;
 	}
 
 	// Shut down the benchmark job manager
 	if( bench_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting benchmark job mgr\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of benchmark job mgr\n" );
 		bench_job_mgr->Shutdown( true );
 		delete bench_job_mgr;
 	}

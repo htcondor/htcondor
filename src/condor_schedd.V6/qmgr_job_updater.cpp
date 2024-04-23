@@ -442,11 +442,11 @@ QmgrJobUpdater::retrieveJobUpdates( )
 {
 	ClassAd updates;
 	CondorError errstack;
-	StringList job_ids;
+	std::vector<std::string> job_ids;
 	char id_str[PROC_ID_STR_BUFLEN];
 
 	ProcIdToStr(cluster, proc, id_str);
-	job_ids.insert(id_str);
+	job_ids.emplace_back(id_str);
 
 	if ( !ConnectQ( m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false ) ) {
 		return false;
@@ -461,7 +461,7 @@ QmgrJobUpdater::retrieveJobUpdates( )
 	dPrintAd( D_JOB, updates );
 	MergeClassAds( job_ad, &updates, true );
 
-	if ( m_schedd_obj.clearDirtyAttrs( &job_ids, &errstack ) == nullptr ) {
+	if ( m_schedd_obj.clearDirtyAttrs( job_ids, &errstack ) == nullptr ) {
 		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText().c_str() );
 		return false;
 	}

@@ -33,6 +33,10 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[DAEMON_CORE_KILL_ANY_PROCESS]
+default=false
+description=Allows DaemonCore to send signals to processes it didn't start.
+
 [MAX_DRAINING_ACTIVATION_DELAY]
 default=20
 description=When draining, how many seconds should a claimed slot wait to be activated?  Draining will be extended by this delay..
@@ -577,6 +581,12 @@ restart=never
 
 [DAGMAN_PENDING_REPORT_INTERVAL]
 default=600
+type=int
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_CHECK_QUEUE_INTERVAL]
+default=28800
 type=int
 tags=dagman,dagman_main
 restart=never
@@ -4910,6 +4920,18 @@ default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
 tags=condor_config
 
+[GANGLIAD_RESET_METRICS_FILE]
+default=$(SPOOL)/metricsToReset.ganglia_metrics
+type=path
+description=Path to filename where gangliad stores state
+tags=gangliad
+
+[GANGLIAD_WANT_RESET_METRICS]
+default=false
+type=bool
+description=Should gangliad reset aggregate metrics to zero on restart
+tags=gangliad
+
 [GANGLIAD_METRICS_CONFIG_DIR]
 default=$(ETC)/ganglia.d
 type=path
@@ -6512,7 +6534,7 @@ win32_default=$(LIBEXEC)\condor_gpu_utilization.exe
 description=Settings to monitor GPU usage
 default : @end
 	use feature : Monitor( GPUs, WaitForExit, 300, $(GPU_MONITOR), SUM:GPUs, PEAK:GPUsMemory )
-	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0
+	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0 && OpSys =!= "WINDOWS"
 
 	STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end

@@ -44,6 +44,7 @@
 #include "shared_port_server.h"
 #include "shared_port_endpoint.h"
 #include "credmon_interface.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "MasterPlugin.h"

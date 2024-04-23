@@ -47,7 +47,6 @@
 #include "prio_rec.h"
 #include "HashTable.h"
 #include "string_list.h"
-#include "list.h"
 #include "write_user_log.h"
 #include "autocluster.h"
 #include "enum_utils.h"
@@ -76,6 +75,7 @@ extern	DLL_IMPORT_MAGIC char**		environ;
 extern char const * const HOME_POOL_SUBMITTER_TAG;
 
 void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
+bool removeOtherJobs(int cluster_id, int proc_id);
 
 //
 // Given a ClassAd from the job queue, we check to see if it

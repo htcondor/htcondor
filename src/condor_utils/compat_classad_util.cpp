@@ -87,21 +87,21 @@ const char * ClassAdValueToString ( const classad::Value & value )
 	return ClassAdValueToString(value, buffer);
 }
 
-classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree) {
+const classad::ExprTree * SkipExprEnvelope(const classad::ExprTree * tree) {
 	if ( ! tree) return tree;
 	classad::ExprTree::NodeKind kind = tree->GetKind();
 	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
-		return ((classad::CachedExprEnvelope*)tree)->get();
+		return (dynamic_cast<const classad::CachedExprEnvelope *>(tree))->get();
 	}
 	return tree;
 }
 
-classad::ExprTree * SkipExprParens(classad::ExprTree * tree) {
+const classad::ExprTree * SkipExprParens(const classad::ExprTree * tree) {
 	if ( ! tree) return tree;
 	classad::ExprTree::NodeKind kind = tree->GetKind();
-	classad::ExprTree * expr = tree;
+	classad::ExprTree * expr = const_cast<classad::ExprTree*>(tree);
 	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
-		expr = ((classad::CachedExprEnvelope*)tree)->get();
+		expr = (dynamic_cast<const classad::CachedExprEnvelope*>(tree))->get();
 		if (expr) tree = expr;
 	}
 
@@ -109,7 +109,7 @@ classad::ExprTree * SkipExprParens(classad::ExprTree * tree) {
 	while (kind == classad::ExprTree::OP_NODE) {
 		classad::ExprTree *e2, *e3;
 		classad::Operation::OpKind op;
-		((classad::Operation*)tree)->GetComponents(op, expr, e2, e3);
+		(dynamic_cast<const classad::Operation*>(tree))->GetComponents(op, expr, e2, e3);
 		if ( ! expr || op != classad::Operation::PARENTHESES_OP) break;
 		tree = expr;
 		kind = tree->GetKind();
@@ -173,8 +173,8 @@ bool ExprTreeIsLiteral(classad::ExprTree * expr, classad::Value & value)
 		kind = expr->GetKind();
 	}
 
-	if (kind == classad::ExprTree::LITERAL_NODE) {
-		((classad::Literal*)expr)->GetComponents(value);
+	if (dynamic_cast<classad::Literal *>(expr) != nullptr) {
+		((classad::Literal*)expr)->GetValue(value);
 		return true;
 	}
 
@@ -202,8 +202,10 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char * & cstr)
 		kind = expr->GetKind();
 	}
 
-	if (kind == classad::ExprTree::LITERAL_NODE) {
-		return ((classad::Literal*)expr)->GetStringValue(cstr);
+	if (dynamic_cast<classad::StringLiteral*>(expr) != nullptr) {
+		const char *s = ((classad::StringLiteral*)expr)->getCString();
+		cstr = s;
+		return true;
 	}
 
 	return false;
@@ -263,23 +265,11 @@ bool ExprTreeMayDollarDollarExpand(classad::ExprTree * tree,  std::string & unpa
 	tree = SkipExprEnvelope(tree);
 	if ( ! tree) return false;
 
-	if (tree->GetKind() == classad::ExprTree::LITERAL_NODE) {
-		const auto non_string_types = classad::Value::ValueType::ERROR_VALUE
-				| classad::Value::ValueType::UNDEFINED_VALUE
-				| classad::Value::ValueType::BOOLEAN_VALUE
-				| classad::Value::ValueType::INTEGER_VALUE
-				| classad::Value::ValueType::REAL_VALUE
-				| classad::Value::ValueType::RELATIVE_TIME_VALUE
-				| classad::Value::ValueType::ABSOLUTE_TIME_VALUE;
-
-		classad::Literal * lit = ((classad::Literal*)tree);
-		if (lit->getValue().GetType() & non_string_types) {
-			return false; // these types cannot have $$() expansions
-		}
-
+	if (dynamic_cast<classad::StringLiteral *>(tree) != nullptr) {
 		// simple string literals can be quickly checked for possible $$ expansion
-		const char * cstr;
-		if (lit->GetStringValue(cstr) && ! strchr(cstr, '$')) {
+		classad::StringLiteral *lit = (classad::StringLiteral *) tree;
+		const char * cstr  = lit->getCString();
+		if (!strchr(cstr, '$')) {
 			return false;
 		}
 	}
@@ -453,16 +443,15 @@ int walk_attr_refs (
 	int iret = 0;
 	if ( ! tree) return 0;
 	switch (tree->GetKind()) {
-		case classad::ExprTree::LITERAL_NODE: {
-			classad::ClassAd * ad;
-			classad::Value val;
-			((const classad::Literal*)tree)->GetComponents( val);
-			if (val.IsClassAdValue(ad)) {
-				iret += walk_attr_refs(ad, pfn, pv);
-			}
-		}
-		break;
-
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: 
+			break;
 		case classad::ExprTree::ATTRREF_NODE: {
 			const classad::AttributeReference* atref = reinterpret_cast<const classad::AttributeReference*>(tree);
 			classad::ExprTree *expr;
@@ -531,7 +520,8 @@ int walk_attr_refs (
 
 		default:
 			// unknown or unallowed node.
-			ASSERT(0);
+			// GGT GGT GGT FIXME
+			//ASSERT(0);
 		break;
 	}
 	return iret;
@@ -587,16 +577,15 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 	int iret = 0;
 	if ( ! tree) return 0;
 	switch (tree->GetKind()) {
-		case classad::ExprTree::LITERAL_NODE: {
-			classad::ClassAd * ad;
-			classad::Value val;
-			((classad::Literal*)tree)->GetComponents( val);
-			if (val.IsClassAdValue(ad)) {
-				iret += RewriteAttrRefs(ad, mapping);
-			}
-		}
-		break;
-
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: 
+			break;
 		case classad::ExprTree::ATTRREF_NODE: {
 			classad::AttributeReference* atref = reinterpret_cast<classad::AttributeReference*>(tree);
 			classad::ExprTree *expr;

@@ -50,7 +50,7 @@ public:
 
   static bool canRunSandbox(bool &can_use_pidnamespaces);
   static bool canRunSIF();
-  static bool canRun(const std::string &image);
+  static bool canRun(const std::string &image, int timeout = m_default_timeout);
   static std::string m_lastSingularityErrorLine;
 
 private:

@@ -244,16 +244,15 @@ static std::string MakeAbsolutePath(const char* path, const char* initialWorking
 
 } // end namespace
 
-void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
-	StringList &PubInpFiles) {
+void ProcessCachedInpFiles(ClassAd *const Ad, std::vector<std::string> &InputFiles,
+	const std::vector<std::string> &PubInpFiles) {
 
 	char *initialWorkingDir = NULL;
-	const char *path;
 	std::string remap;
 	struct stat fileStat;
 	time_t fileModifiedTime = time(NULL);
 
-	if (PubInpFiles.isEmpty() == false) {
+	if (PubInpFiles.empty() == false) {
 		const char *webServerAddress = param("HTTP_PUBLIC_FILES_ADDRESS");
 
 		// If a web server address is not defined, exit quickly. The file
@@ -269,16 +268,14 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 		url += webServerAddress; 
 		url += "/";
 
-		PubInpFiles.rewind();
-		
 		if (Ad->LookupString(ATTR_JOB_IWD, &initialWorkingDir) != 1) {
 			dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Job ad did not have an "
 				"initialWorkingDir! Falling back to regular file transfer\n");
 			return;
 		}
-		while ((path = PubInpFiles.next()) != NULL) {
+		for (auto& path: PubInpFiles) {
 			// Determine the full path of the file to be transferred
-			std::string fullPath = MakeAbsolutePath(path, initialWorkingDir);
+			std::string fullPath = MakeAbsolutePath(path.c_str(), initialWorkingDir);
 
 			// Determine the time last modified of the file to be transferred
 			if( stat( fullPath.c_str(), &fileStat ) == 0 ) {
@@ -294,15 +291,16 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 
 			std::string hashName = MakeHashName( fullPath.c_str(), fileModifiedTime );
 			if (MakeLink(fullPath.c_str(), hashName)) {
-				InputFiles->remove(path); // Remove plain file name from InputFiles
+				std::erase_if(InputFiles, [&](auto& f) {return f == path;});
+
 				remap += hashName;
 				remap += "=";
-				remap += basename(path);
+				remap += basename(path.c_str());
 				remap += ";";
 				hashName = url + hashName;
 				const char *const namePtr = hashName.c_str();
-				if ( !InputFiles->contains(namePtr) ) {
-					InputFiles->append(namePtr);
+				if ( !contains(InputFiles, namePtr) ) {
+					InputFiles.emplace_back(namePtr);
 					dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Adding url to "
 												"InputFiles: %s\n", namePtr);
 				} 

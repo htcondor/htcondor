@@ -65,6 +65,14 @@ Example: **:macro-def:\`START\`**
 
 Example: **:macro-def:\`START[Startd]\`**
 
+If the **:macro-def:** is being added to a file other than one listed below, be sure to update **macro.py**
+extension to know where to find the newly added macro definition (i.e. add the file path).
+
+|          **Macro Definition Files**         |
+|:-------------------------------------------:|
+|    admin-manual/configuration-macros        |
+|    cloud-computing/annex-configuration      |
+
 ---
 
 **:macro:** used to reference a condor config macro knob declared with **macro-def** as above. **macro** creates

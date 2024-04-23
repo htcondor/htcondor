@@ -154,10 +154,11 @@ bool findToken(const std::string &tokenfilename,
 	bool rv = false;
 	char* data = nullptr;
 	size_t len = 0;
-	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true)) {
+	// TODO Change this to SECURE_FILE_VERIFY_ALL in 23.8.x
+	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true, SECURE_FILE_VERIFY_NONE)) {
 		return false;
 	}
-	for (auto& line: StringTokenIterator(data, len, "\n", true)) {
+	for (auto& line: StringTokenIterator(data, len, "\n")) {
 		if (line.empty() || line[0] == '#') continue;
 		bool good_token = checkToken(line, issuer, server_key_ids, tokenfilename, username, token, signature);
 		if (good_token) {
@@ -2964,10 +2965,9 @@ Condor_Auth_Passwd::create_signing_key( const std::string & filepath, const char
 
 		// Generate a signing key.
 	char rand_buffer[64];
-	if (!RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer))) {
-		// Insufficient entropy available; bail out!
-		return;
-	}
+	int r = RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer));
+	ASSERT(r == 1)
+
 
 		// Write out the signing key.
 	if (TRUE == write_binary_password_file(filepath.c_str(), rand_buffer, sizeof(rand_buffer))) {

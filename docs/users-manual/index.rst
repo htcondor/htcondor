@@ -20,3 +20,4 @@ Users' Manual
    submitting-a-remote-job
    chirp
    special-environment-considerations
+   bringing-your-own-resources

@@ -39,7 +39,6 @@
 #include "condor_regex.h"
 #include "xform_utils.h"
 
-#include "list.h"
 #include "my_popen.h"
 
 #include <charconv>
@@ -841,7 +840,7 @@ int MacroStreamXFormSource::open(const char * statements_in, int & offset, std::
 	size_t cb = strlen(statements);
 	char * buf = (char*)malloc(cb + 2);
 	file_string.set(buf);
-	StringTokenIterator lines(statements, "\r\n", false);
+	StringTokenIterator lines(statements, "\r\n", STI_NO_TRIM);
 	int start, length, linecount = 0;
 	while ((start = lines.next_token(length)) >= 0) {
 		// tentatively copy the line, then append a null terminator
@@ -996,7 +995,7 @@ const char * MacroStreamXFormSource::getFormattedText(std::string & buf, const c
 		buf += requirements.c_str();
 	}
 	if (file_string) {
-		StringTokenIterator lines(file_string.ptr(), "\n", false);
+		StringTokenIterator lines(file_string.ptr(), "\n", STI_NO_TRIM);
 		for (const char * line = lines.first(); line; line = lines.next()) {
 			if ( ! include_comments) {
 				while (*line && isspace(*line)) ++line;

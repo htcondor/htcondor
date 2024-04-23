@@ -1335,9 +1335,9 @@ bool ClassAdParser::shouldEvaluateAtParseTime(
 	c_function_name = functionName.c_str();
 	if (   strcasecmp(c_function_name, "absTime") == 0 
 		|| strcasecmp(c_function_name, "relTime") == 0) {
-		if (argList.size() == 1 && argList[0]->GetKind() == ExprTree::LITERAL_NODE) {
+		if (argList.size() == 1 && (dynamic_cast<Literal *>(argList[0]) != nullptr)) {
 			Value val;
-			((Literal *)argList[0])->GetComponents(val);
+			((Literal *)argList[0])->GetValue(val);
 			if (val.IsStringValue()) {
 				should_eval = true;
 			}
@@ -1354,7 +1354,7 @@ ExprTree *ClassAdParser::evaluateFunction(
 	ExprTree             *tree;
 	const char           *c_function_name;
 
-	((Literal *)argList[0])->GetComponents(val);
+	((Literal *)argList[0])->GetValue(val);
 	c_function_name = functionName.c_str();
 	tree = NULL;
 

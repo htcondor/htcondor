@@ -483,7 +483,7 @@ New Features:
   directly set key=value pairs of information into the ``.condor.sub`` environment.
   :jira:`1580`
 
-- New configuration parameter ``SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
+- New configuration parameter `SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
   restricts which issuers' tokens will be accepted under
   ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``.
   Updated default values allow EGI CheckIn tokens to be accepted under
@@ -868,7 +868,7 @@ New Features:
 
 - EGI CheckIn tokens can now be used to authenticate via the SCITOKENS
   authentication method.
-  New configuration parameter ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``
+  New configuration parameter :macro:`SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES`
   must be set to ``True`` to enable this usage.
   :jira:`1498`
 

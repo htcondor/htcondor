@@ -42,30 +42,11 @@ _schedd_query(PyObject *, PyObject * args) {
     }
 
 
-    // FIXME: copied from _collector_query(), refactor.
-    // FIXME: Commas aren't legal in attribute names.  Consider rewriting
-    // to do the implosion on the Python side and a StringList here.
     std::vector<std::string> attributes;
-    Py_ssize_t size = PyList_Size(projection);
-    for( int i = 0; i < size; ++i ) {
-        PyObject * py_attr = PyList_GetItem(projection, i);
-        if( py_attr == NULL ) {
-            // PyList_GetItem() has already set an exception for us.
-            return NULL;
-        }
-
-        if(! PyUnicode_Check(py_attr)) {
-            PyErr_SetString(PyExc_TypeError, "projection must be a list of strings");
-            return NULL;
-        }
-
-        std::string attribute;
-        if( py_str_to_std_string(py_attr, attribute) != -1 ) {
-            attributes.push_back(attribute);
-        } else {
-            // py_str_to_std_str() has already set an exception for us.
-            return NULL;
-        }
+    int rv = py_list_to_vector_of_strings(projection, attributes, "projection");
+    if( rv == -1 ) {
+        // py_list_to_vector_of_strings() has already set an exception for us.
+        return NULL;
     }
 
     // Why _don't_ we have a std::vector<std::string> constructor for these?
@@ -78,11 +59,11 @@ _schedd_query(PyObject *, PyObject * args) {
     CondorError errStack;
     ClassAd * summaryAd = NULL;
     std::vector<ClassAd *> results;
-    int rv = q.fetchQueueFromHostAndProcess(
+    rv = q.fetchQueueFromHostAndProcess(
         addr, slAttributes, opts, limit,
         _schedd_query_callback, & results,
         2 /* use fetchQueueFromHostAndProcess2() */, & errStack,
-        opts == CondorQ::fetch_SummaryOnly ? & summaryAd : NULL
+        opts == QueryFetchOpts::fetch_SummaryOnly ? & summaryAd : NULL
     );
 
     switch( rv ) {
@@ -115,7 +96,7 @@ _schedd_query(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    if( opts == CondorQ::fetch_SummaryOnly ) {
+    if( opts == QueryFetchOpts::fetch_SummaryOnly ) {
         ASSERT(summaryAd != NULL);
         ASSERT(results.size() == 0);
         results.push_back(summaryAd);
@@ -151,41 +132,40 @@ _schedd_act_on_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    StringList ids(job_list);
-
+    std::vector<std::string> ids = split(job_list);
 
     ClassAd * result = NULL;
     DCSchedd schedd(addr);
     switch( action ) {
         case JA_HOLD_JOBS:
-            result = schedd.holdJobs(& ids, reason_string, reason_code, NULL, AR_TOTALS );
+            result = schedd.holdJobs( ids, reason_string, reason_code, NULL, AR_TOTALS );
             break;
 
         case JA_RELEASE_JOBS:
-            result = schedd.releaseJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.releaseJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         case JA_REMOVE_JOBS:
-            result = schedd.removeJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.removeJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         case JA_REMOVE_X_JOBS:
-            result = schedd.removeXJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.removeXJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         case JA_VACATE_JOBS:
         case JA_VACATE_FAST_JOBS:
             {
             auto vacate_type = action == JA_VACATE_JOBS ? VACATE_GRACEFUL : VACATE_FAST;
-            result = schedd.vacateJobs(& ids, vacate_type, NULL, AR_TOTALS);
+            result = schedd.vacateJobs( ids, vacate_type, NULL, AR_TOTALS);
             } break;
 
         case JA_SUSPEND_JOBS:
-            result = schedd.suspendJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.suspendJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         case JA_CONTINUE_JOBS:
-            result = schedd.continueJobs(& ids, reason_string, NULL, AR_TOTALS );
+            result = schedd.continueJobs( ids, reason_string, NULL, AR_TOTALS );
             break;
 
         default:
@@ -301,12 +281,8 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    StringList ids(job_list);
-
-
     long matchCount = 0;
-    const char * id = NULL;
-    for( ids.rewind(); (id = ids.next()) != NULL; ) {
+	for (auto& id: StringTokenIterator(job_list)) {
         JOB_ID_KEY jobIDKey;
         if(! jobIDKey.set(id)) {
             qc.abort();
@@ -429,13 +405,12 @@ _schedd_export_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    StringList ids(job_list);
-
+    std::vector<std::string> ids = split(job_list);
 
     CondorError errorStack;
     DCSchedd schedd(addr);
     ClassAd * result = schedd.exportJobs(
-        & ids, export_dir, new_spool_dir, & errorStack
+        ids, export_dir, new_spool_dir, & errorStack
     );
 
     if( errorStack.code() > 0 ) {
@@ -538,12 +513,11 @@ _schedd_unexport_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    StringList ids(job_list);
-
+    std::vector<std::string> ids = split(job_list);
 
     DCSchedd schedd(addr);
     CondorError errorStack;
-    ClassAd * result = schedd.unexportJobs( & ids, & errorStack );
+    ClassAd * result = schedd.unexportJobs( ids, & errorStack );
 
     if( errorStack.code() > 0 ) {
         // This was HTCondorIOError in version 1.
@@ -599,7 +573,7 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
 
 
 int
-submitProcAds( int clusterID, long count, SubmitBlob * sb, ClassAd * & clusterAd, int itemIndex = 0 ) {
+submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd * & clusterAd, std::vector<ClassAd *> * spooledProcAds, int itemIndex = 0 ) {
     int numJobs = 0;
 
     //
@@ -614,12 +588,25 @@ submitProcAds( int clusterID, long count, SubmitBlob * sb, ClassAd * & clusterAd
         }
 
         ClassAd * procAd = sb->make_job_ad( JOB_ID_KEY(clusterID, procID),
-            itemIndex, c, false, false, NULL, NULL );
-        // FIXME: do something with sb->error_stack().
+            itemIndex, c, false, spool, NULL, NULL );
         if(! procAd) {
+            std::string error = "Failed to create job ad";
+            formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
             // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Failed to create job ad" );
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
             return -1;
+        }
+
+        // If we're spooling, we'll need a copy of each proc ad later,
+        // so just store them now, rather than try to recreate them.
+        // Don't chain them to this clusterAd; the Python SubmitResult
+        // object will be giving us a copy of it when we need it.
+        if( spooledProcAds ) {
+            ClassAd * copy = new ClassAd( * procAd );
+            copy->Assign( ATTR_CLUSTER_ID, clusterID );
+            copy->Assign( ATTR_PROC_ID, procID );
+            copy->Unchain();
+            spooledProcAds->push_back(copy);
         }
 
         if( c == 0 ) {
@@ -634,9 +621,10 @@ submitProcAds( int clusterID, long count, SubmitBlob * sb, ClassAd * & clusterAd
 
             int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
                 * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
-            // FIXME: do something with sb->error_stack()
             if( rval < 0 ) {
-                PyErr_SetString( PyExc_RuntimeError, "Failed to send cluster attributes" );
+                std::string error = "Failed to send cluster attributes";
+                formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
+                PyErr_SetString( PyExc_RuntimeError, error.c_str() );
                 return -1;
             }
         }
@@ -691,6 +679,13 @@ _schedd_submit( PyObject *, PyObject * args ) {
         sb->setScheddVersion( CondorVersion() );
     }
 
+
+    std::vector< ClassAd *> * spooledProcAds = NULL;
+    if( spool ) {
+        spooledProcAds = new std::vector< ClassAd *>();
+    }
+
+
     // Initialize the new cluster ad.
     if( sb->init_base_ad( time(NULL), schedd.getOwner().c_str() ) != 0 ) {
         qc.abort();
@@ -744,7 +739,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
     int numJobs = 0;
     if( itemCount == 0 ) {
-        numJobs = submitProcAds( clusterID, count, sb, clusterAd );
+        numJobs = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds );
         if(numJobs < 0) {
             qc.abort();
 
@@ -759,7 +754,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         while( (item = itemdata->items.next()) ) {
             if( itemdata->slice.selected( itemIndex, itemCount ) ) {
                 sb->set_vars( itemdata->vars, item, itemIndex );
-                int nj = submitProcAds( clusterID, count, sb, clusterAd, itemIndex );
+                int nj = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds, itemIndex );
                 if( nj < 0 ) {
                     qc.abort();
 
@@ -802,8 +797,13 @@ _schedd_submit( PyObject *, PyObject * args ) {
     }
 
 
+    PyObject * pySpooledProcAds = Py_None;
+    if( spooledProcAds ) {
+        pySpooledProcAds = py_new_htcondor2_spooled_proc_ad_list( spooledProcAds );
+    }
+
     PyObject * pyClusterAd = py_new_classad2_classad(clusterAd->Copy());
-    return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd );
+    return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
 }
 
 
@@ -836,11 +836,9 @@ _history_query(PyObject *, PyObject * args) {
 
     commandAd.Assign(ATTR_NUM_MATCHES, match);
 
-    StringList sl(projection);
     std::string prefix = "";
     std::string projectionList = "{";
-    const char * attr = NULL;
-    for( sl.rewind(); (attr = sl.next()) != NULL; ) {
+	for (auto& attr : StringTokenIterator(projection)) {
         projectionList += prefix + "\"" + attr + "\"";
         prefix = ", ";
     }
@@ -855,10 +853,10 @@ _history_query(PyObject *, PyObject * args) {
         case 0: /* HRS_SCHEDD_JOB_HIST */
             break;
         case 1: /* HRS_STARTD_JOB_HIST */
-            commandAd.InsertAttr("HistoryRecordSource" /* FIXME */, "STARTD");
+            commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "STARTD");
             break;
         case 2: /* HRS_JOB_EPOCH */
-            commandAd.InsertAttr("HistoryRecordSource" /* FIXME */, "JOB_EPOCH");
+            commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "JOB_EPOCH");
             break;
         default:
             // This was HTCondorValueError in version 1.
@@ -973,4 +971,101 @@ _history_query(PyObject *, PyObject * args) {
     }
 
     return list;
+}
+
+
+static PyObject *
+retrieve_job_from( const char * addr, const char * constraint ) {
+    DCSchedd schedd(addr);
+
+    CondorError errStack;
+    bool result = schedd.receiveJobSandbox(constraint, & errStack);
+    if(! result) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString(PyExc_IOError, errStack.getFullText().c_str());
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_schedd_retrieve_job_ids(PyObject *, PyObject * args) {
+    // _schedd_retrieve_job_ids(addr, job_list)
+
+    const char * addr = NULL;
+    const char * job_list = NULL;
+
+    if(! PyArg_ParseTuple( args, "zz", & addr, & job_list )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    std::string constraint;
+    formatstr( constraint,
+        "stringListIMember( strcat(ClusterID, \".\", ProcID), \"%s\" )",
+        job_list
+    );
+
+    return retrieve_job_from(addr, constraint.c_str());
+}
+
+
+static PyObject *
+_schedd_retrieve_job_constraint(PyObject *, PyObject * args) {
+    // _schedd_retrieve_job_constraint(addr, constraint)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+
+    if(! PyArg_ParseTuple( args, "zz", & addr, & constraint )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    return retrieve_job_from( addr, constraint );
+}
+
+
+static PyObject *
+_schedd_spool(PyObject *, PyObject * args) {
+    // _schedd_spool(addr, sr._clusterad._handle, sr._spooledJobAds._handle)
+
+    const char * addr = NULL;
+    PyObject_Handle * clusterAdHandle = NULL;
+    PyObject_Handle * spooledProcAdsHandle = NULL;
+
+    if(! PyArg_ParseTuple( args, "sOO", & addr, & clusterAdHandle, & spooledProcAdsHandle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * clusterAd = (ClassAd *)clusterAdHandle->t;
+    auto * spooledProcAds = (std::vector<ClassAd *> *)spooledProcAdsHandle->t;
+
+    // Chain the proc ads.
+    for( auto * ad : * spooledProcAds ) {
+        ad->ChainToAd( clusterAd );
+    }
+
+    DCSchedd schedd(addr);
+    CondorError errorStack;
+    bool result = schedd.spoolJobFiles(
+        spooledProcAds->size(), &(*spooledProcAds)[0],
+        & errorStack
+    );
+
+    // Unchain the proc ads.
+    for( auto * ad : * spooledProcAds ) {
+        ad->Unchain();
+    }
+
+    if(! result) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
 }
