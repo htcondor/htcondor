@@ -965,6 +965,7 @@ GahpServer::Startup(bool force)
 	m_gahp_writefd = -1;
 	m_gahp_real_readfd = -1;
 	m_gahp_real_errorfd = -1;
+	m_ssh_forward_port = 0;
 
 	return false;
 }
