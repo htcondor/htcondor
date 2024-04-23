@@ -630,8 +630,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 	Value &val)
 {
     Value     		arg0, arg1, cArg;
-    const ExprTree 	*tree;
-	const ExprList	*el = NULL;
+	const ExprList	*el = nullptr;
 	bool			b;
 	bool			useIS = ( strcasecmp( "identicalmember", name ) == 0 );
 
@@ -872,7 +871,6 @@ sumAvg(const char *name, const ArgumentList &argList,
 	   EvalState &state, Value &val)
 {
 	Value             listElementValue, listVal;
-	const ExprTree    *listElement;
 	Value             numElements, result;
 	const ExprList    *listToSum;
 	bool		      first;
@@ -954,7 +952,6 @@ minMax(const char *fn, const ArgumentList &argList,
 	   EvalState &state, Value &val)
 {
 	Value		       listElementValue, listVal, cmp;
-	const ExprTree     *listElement;
 	Value              result;
 	const ExprList     *listToBound;
     bool		       first = true, b = false;
@@ -1031,7 +1028,6 @@ listCompare(
 {
 	Value		       listElementValue, listVal, compareVal;
 	Value              stringValue;
-	const ExprTree     *listElement;
 	const ExprList     *listToCompare;
     bool		       needAllMatch;
 	string             comparison_string;
