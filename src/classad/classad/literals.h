@@ -133,7 +133,6 @@ class UndefinedLiteral: public Literal {
 		friend class Literal;
 };
 
-
 class BooleanLiteral: public Literal {
 	public:
 		virtual ~BooleanLiteral() {}
@@ -148,6 +147,9 @@ class BooleanLiteral: public Literal {
 				return true;
 			}
 			return false;
+		}
+		bool getBool() const {
+			return _theBoolean;
 		}
 
 	protected:
@@ -189,6 +191,10 @@ class IntegerLiteral: public Literal {
 				return true;
 			}
 			return false;
+		}
+
+		int64_t getInteger() const {
+			return _theInteger;
 		}
 
 	protected:
@@ -233,6 +239,10 @@ class RealLiteral: public Literal {
 			return false;
 		}
 
+		double getReal() const {
+			return _theReal;
+		}
+
 	protected:
 		RealLiteral(double d): _theReal(d) {}
 
@@ -271,6 +281,9 @@ class ReltimeLiteral: public Literal {
 				return true;
 			}
 			return false;
+		}
+		double getReltime() const {
+			return _theReltime;
 		}
 
 	protected:
@@ -312,6 +325,9 @@ class AbstimeLiteral: public Literal {
 			}
 			return false;
 		}
+		abstime_t getAbstime() const {
+			return _theAbstime;
+		}
 
 	protected:
 		AbstimeLiteral(abstime_t a): _theAbstime(a) {}
@@ -346,6 +362,11 @@ class StringLiteral: public Literal {
 		const char *getCString() const { 
 			return _theString.c_str();;
 		}
+
+		const std::string &getString() const {
+			return _theString;
+		}
+
 		virtual NodeKind GetKind (void) const { return STRING_LITERAL; }
 		virtual ExprTree* Copy() const { return new StringLiteral(_theString);}
         virtual bool SameAs(const ExprTree *tree) const {
