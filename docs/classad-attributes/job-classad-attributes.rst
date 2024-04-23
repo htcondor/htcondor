@@ -237,10 +237,6 @@ all attributes.
     For Container universe jobs, a filename that becomes the working directory of
     the job.  Mapped to the scratch directory.
 
-:classad-attribute-def:`TransferContainer`
-    For Container universe jobs, a boolean that describes whether a container
-    image should be transfered by HTCondor.
-
 :index:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute-def:`CumulativeSlotTime`
@@ -1432,6 +1428,11 @@ all attributes.
      ``"WAIT_FOR_ALL"``
         HTCondor will wait until every node in the parallel job has
         completed to consider the job finished.
+
+:classad-attribute-def:`PeriodicVacate`
+    A classad expression set from :subcom:`periodic_vacate`.  When true
+    a running job is evicted from the machine, and set back to the idle
+    state to be schedulable later.
 
 :index:`Starter pre and post scripts`
 
