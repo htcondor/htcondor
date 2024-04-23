@@ -6576,7 +6576,7 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	return 0;
 }
 
-int SubmitHash::process_input_file_list(const std::vector<std::string>& input_list, long long * accumulate_size_kb)
+int SubmitHash::process_input_file_list(std::vector<std::string>& input_list, long long * accumulate_size_kb)
 {
 	int count = 0;
 	std::string tmp;

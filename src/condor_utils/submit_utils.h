@@ -877,7 +877,7 @@ private:
 	int64_t calc_image_size_kb( const char *name);
 
 	// returns a count of files in the input list
-	int process_input_file_list(const std::vector<std::string>& input_list, long long * accumulate_size_kb);
+	int process_input_file_list(std::vector<std::string>& input_list, long long * accumulate_size_kb);
 	//int non_negative_int_fail(const char * Name, char * Value);
 	typedef int (SubmitHash::*FNSETATTRS)(const char * key);
 	FNSETATTRS is_special_request_resource(const char * key);
