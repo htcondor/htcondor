@@ -1047,7 +1047,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 	}
 
 	// if no loop variable specified, but a foreach mode is used. use "Item" for the loop variable.
-	if (oa.vars.isEmpty() && (oa.foreach_mode != foreach_not)) { oa.vars.append("Item"); }
+	if (oa.vars.empty() && (oa.foreach_mode != foreach_not)) { oa.vars.emplace_back("Item"); }
 
 	// fill in the items array from a file
 	if ( ! oa.items_filename.empty()) {
@@ -1180,7 +1180,7 @@ static char EmptyItemString[] = "";
 
 int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 {
-	if (oa.vars.isEmpty()) return 0;
+	if (oa.vars.empty()) return 0;
 
 	// make a copy of the item so we can destructively edit it.
 	char * data;
@@ -1195,8 +1195,8 @@ int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 
 	// set the first loop variable unconditionally, we set it initially to the whole item
 	// we may later truncate that item when we assign fields to other loop variables.
-	char * var = oa.vars.first();
-	set.set_live_variable(var, data, ctx);
+	auto var_it = oa.vars.begin();
+	set.set_live_variable(var_it->c_str(), data, ctx);
 
 	const char* token_seps = ", \t";
 	const char* token_ws = " \t";
@@ -1204,7 +1204,7 @@ int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 	// if there is more than a single loop variable, then assign them as well
 	// we do this by destructively null terminating the item for each var
 	// the last var gets all of the remaining item text (if any)
-	while ((var = oa.vars.next())) {
+	while ((++var_it != oa.vars.end())) {
 		// scan for next token separator
 		while (*data && ! strchr(token_seps, *data)) ++data;
 		// null terminate the previous token and advance to the start of the next token.
@@ -1212,7 +1212,7 @@ int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 			*data++ = 0;
 			// skip leading separators and whitespace
 			while (*data && strchr(token_ws, *data)) ++data;
-			set.set_live_variable(var, data, ctx);
+			set.set_live_variable(var_it->c_str(), data, ctx);
 		}
 	}
 	return curr_item.ptr() != NULL;

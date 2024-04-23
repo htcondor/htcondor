@@ -568,15 +568,15 @@ struct QueueItemsIterator {
 		auto_free_ptr line(m_fea.items.pop());
 		if ( ! line) { THROW_EX(StopIteration, "All items returned"); }
 
-		if (m_fea.vars.number() > 1 || (m_fea.vars.number()==1 && (YourStringNoCase("Item") != m_fea.vars.first()))) {
+		if (m_fea.vars.size() > 1 || (m_fea.vars.size()==1 && (YourStringNoCase("Item") != m_fea.vars[0]))) {
 			std::vector<const char*> splits;
 			int num_items = m_fea.split_item(line.ptr(), splits);
 
 			boost::python::dict values;
 			int ix = 0;
-			for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+			for (const auto& key: m_fea.vars) {
 				if (ix >= num_items) { break; }
-				values[boost::python::object(std::string(key))] = boost::python::object(std::string(splits[ix++]));
+				values[boost::python::object(key)] = boost::python::object(std::string(splits[ix++]));
 			}
 
 			return boost::python::object(values);
@@ -736,18 +736,18 @@ struct SubmitStepFromPyIter {
 		return (0 == iter_index) ? 2 : 1;
 	}
 
-	StringList & vars() { return m_fea.vars; }
+	std::vector<std::string> & vars() { return m_fea.vars; }
 	SubmitForeachArgs & fea() { return m_fea; }
 
 	//
 	void set_live_vars()
 	{
-		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+		for (const auto& key: m_fea.vars) {
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end()) {
-				m_hash.set_live_submit_variable(key, str->second.c_str(), false);
+				m_hash.set_live_submit_variable(key.c_str(), str->second.c_str(), false);
 			} else {
-				m_hash.unset_live_submit_variable(key);
+				m_hash.unset_live_submit_variable(key.c_str());
 			}
 		}
 	}
@@ -755,8 +755,8 @@ struct SubmitStepFromPyIter {
 	void unset_live_vars()
 	{
 		// set the pointers of the 'live' variables to the unset string (i.e. "")
-		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
-			m_hash.unset_live_submit_variable(key);
+		for (const auto& key: m_fea.vars) {
+			m_hash.unset_live_submit_variable(key.c_str());
 		}
 	}
 
@@ -772,7 +772,7 @@ struct SubmitStepFromPyIter {
 			return 0;
 		}
 
-		bool no_vars_yet = m_fea.vars.number() == 0;
+		bool no_vars_yet = m_fea.vars.size() == 0;
 
 		// load the next row item
 		if (PyDict_Check(obj)) {
@@ -782,7 +782,7 @@ struct SubmitStepFromPyIter {
 				std::string key = extract<std::string>(k);
 				if (key[0] == '+') { key.replace(0, 1, "MY."); }
 				m_livevars[key] = extract<std::string>(v);
-				if (no_vars_yet) { m_fea.vars.append(key.c_str()); }
+				if (no_vars_yet) { m_fea.vars.emplace_back(key); }
 			}
 		} else if (PyList_Check(obj)) {
 			// use the key names that have been stored in m_fea.vars
@@ -794,16 +794,13 @@ struct SubmitStepFromPyIter {
 				// no vars have been specified, so make some up based on the number if items in the list
 				std::string key("Item");
 				for (Py_ssize_t ix = 0; ix < num; ++ix) {
-					m_fea.vars.append(key.c_str());
+					m_fea.vars.emplace_back(key);
 					formatstr(key, "Item%d", (int)ix+1);
 				}
 			}
-			const char * key = m_fea.vars.first();
-			for (Py_ssize_t ix = 0; ix < num; ++ix) {
-				if ( ! key) break;
+			for (Py_ssize_t ix = 0; ix < num && (size_t)ix < m_fea.vars.size(); ++ix) {
 				PyObject * v = PyList_GetItem(obj, ix);
-				m_livevars[key] = extract<std::string>(v);
-				key = m_fea.vars.next();
+				m_livevars[m_fea.vars[ix]] = extract<std::string>(v);
 			}
 		} else {
 			// not a list or a dict, the item must be a string.
@@ -817,7 +814,7 @@ struct SubmitStepFromPyIter {
 			// if there are vars, then split the string in the same way that the QUEUE statement would
 			if (no_vars_yet) {
 				const char * key = "Item";
-				m_fea.vars.append(key);
+				m_fea.vars.emplace_back(key);
 				m_livevars[key] = item_extract();
 			} else {
 				std::string str = item_extract();;
@@ -826,7 +823,7 @@ struct SubmitStepFromPyIter {
 				std::vector<const char*> splits;
 				int num_items = m_fea.split_item(data.ptr(), splits);
 				int ix = 0;
-				for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+				for (const auto& key: m_fea.vars) {
 					if (ix >= num_items) { break; }
 					m_livevars[key] = splits[ix++];
 				}
@@ -845,7 +842,7 @@ struct SubmitStepFromPyIter {
 		int cchSep = sep ? (sep[0] ? (int)strlen(sep) : 1) : 0;
 		int cchEol = eol ? (eol[0] ? (int)strlen(eol) : 1) : 0;
 		line.clear();
-		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+		for (const auto& key: m_fea.vars) {
 			if ( ! line.empty() && sep) line.append(sep, cchSep);
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end() && ! str->second.empty()) {
@@ -3750,8 +3747,8 @@ public:
 				}
 
 				// PRAGMA_REMIND("fix this when python submit supports foreach, maybe make this common with condor_submit")
-				auto_free_ptr submit_vars(ssi.vars().print_to_delimed_string(","));
-				if (submit_vars) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+				std::string submit_vars = join(ssi.vars(), ",");
+				if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 
 				//char slice_str[16*3+1];
 				//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
@@ -3920,8 +3917,8 @@ public:
 			submit_digest += "\n";
 			submit_digest += "Queue ";
 			if (count) { formatstr_cat(submit_digest, "%d ", count); }
-			auto_free_ptr submit_vars(ssi.vars().print_to_delimed_string(","));
-			if (submit_vars.ptr()) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+			std::string submit_vars = join(ssi.vars(), ",");
+			if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 			//char slice_str[16*3+1];
 			//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
 			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename.c_str(); }

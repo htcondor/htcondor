@@ -219,9 +219,9 @@ void check_umask();
 void setupAuthentication();
 const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
 int allocate_a_cluster();
-void init_vars(SubmitHash & hash, int cluster_id, StringList & vars);
-int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws);
-void cleanup_vars(SubmitHash & hash, StringList & vars);
+void init_vars(SubmitHash & hash, int cluster_id, const std::vector<std::string> & vars);
+int set_vars(SubmitHash & hash, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws);
+void cleanup_vars(SubmitHash & hash, const std::vector<std::string> & vars);
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 bool is_crlf_shebang(const char * path);
@@ -1464,57 +1464,6 @@ const char * is_queue_statement(const char * line)
 }
 
 
-int iterate_queue_foreach(int queue_num, StringList & vars, StringList & items, qslice & slice)
-{
-	int rval;
-	const char* token_seps = ", \t";
-	const char* token_ws = " \t";
-
-	int queue_item_opts = 0;
-	if (submit_hash.submit_param_bool("SubmitWarnEmptyFields", "submit_warn_empty_fields", true)) {
-		queue_item_opts |= QUEUE_OPT_WARN_EMPTY_FIELDS;
-	}
-	if (submit_hash.submit_param_bool("SubmitFailEmptyFields", "submit_fail_empty_fields", false)) {
-		queue_item_opts |= QUEUE_OPT_FAIL_EMPTY_FIELDS;
-	}
-
-	if (queue_num > 0) {
-		if ( ! MyQ) {
-			int rval = queue_connect();
-			if (rval < 0)
-				return rval;
-		}
-
-		rval = queue_begin(vars, NewExecutable || (ClusterId < 0)); // called before iterating items
-		if (rval < 0)
-			return rval;
-
-		char * item = NULL;
-		if (items.isEmpty()) {
-			rval = queue_item(queue_num, vars, item, 0, queue_item_opts, token_seps, token_ws);
-		} else {
-			int citems = items.number();
-			items.rewind();
-			int item_index = 0;
-			while ((item = items.next())) {
-				if (slice.selected(item_index, citems)) {
-					rval = queue_item(queue_num, vars, item, item_index, queue_item_opts, token_seps, token_ws);
-					if (rval < 0)
-						break;
-				}
-				++item_index;
-			}
-		}
-
-		// make sure vars don't continue to reference the o.items data that we are about to free.
-		cleanup_vars(submit_hash, vars);
-		if (rval < 0)
-			return rval;
-	}
-
-	return 0;
-}
-
 //PRAGMA_REMIND("TODO: move this into submit_hash?")
 int ParseDashAppendLines(std::vector<std::string> &exlines, MACRO_SOURCE& source, MACRO_SET& macro_set)
 {
@@ -2153,7 +2102,7 @@ int queue_connect()
 
 // buffers used while processing the queue statement to inject $(Cluster) and $(Process) into the submit hash table.
 static char ClusterString[20]="1", ProcessString[20]="0", EmptyItemString[] = "";
-void init_vars(SubmitHash & hash, int cluster_id, StringList & vars)
+void init_vars(SubmitHash & hash, int cluster_id, const std::vector<std::string> & vars)
 {
 	snprintf(ClusterString, sizeof(ClusterString), "%d", cluster_id);
 	strcpy(ProcessString, "0");
@@ -2164,9 +2113,9 @@ void init_vars(SubmitHash & hash, int cluster_id, StringList & vars)
 	hash.set_live_submit_variable(SUBMIT_KEY_Cluster, ClusterString);
 	hash.set_live_submit_variable(SUBMIT_KEY_Process, ProcessString);
 	
-	vars.rewind();
-	char * var;
-	while ((var = vars.next())) { hash.set_live_submit_variable(var, EmptyItemString, false); }
+	for (const auto& var: vars) {
+		hash.set_live_submit_variable(var.c_str(), EmptyItemString, false);
+	}
 
 	// optimize the macro set for lookups if we inserted anything.  we expect this to happen only once.
 	hash.optimize();
@@ -2174,7 +2123,7 @@ void init_vars(SubmitHash & hash, int cluster_id, StringList & vars)
 
 // DESTRUCTIVELY! parse 'item' and store the fields into the submit hash as 'live' variables.
 //
-int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws)
+int set_vars(SubmitHash & hash, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws)
 {
 	int rval = 0;
 
@@ -2184,7 +2133,7 @@ int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, 
 	// UseStrict = condor_param_bool("Submit.IsStrict", "Submit_IsStrict", UseStrict);
 
 	// If there are loop variables, destructively tokenize item and stuff the tokens into the submit hashtable.
-	if ( ! vars.isEmpty())  {
+	if ( ! vars.empty())  {
 
 		if ( ! item) {
 			item = EmptyItemString;
@@ -2193,15 +2142,14 @@ int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, 
 
 		// set the first loop variable unconditionally, we set it initially to the whole item
 		// we may later truncate that item when we assign fields to other loop variables.
-		vars.rewind();
-		char * var = vars.next();
+		auto var_it = vars.begin();
 		char * data = item;
-		hash.set_live_submit_variable(var, data, false);
+		hash.set_live_submit_variable(var_it->c_str(), data, false);
 
 		// if there is more than a single loop variable, then assign them as well
 		// we do this by destructively null terminating the item for each var
 		// the last var gets all of the remaining item text (if any)
-		while ((var = vars.next())) {
+		while (++var_it != vars.end()) {
 			// scan for next token separator
 			while (*data && ! strchr(delims, *data)) ++data;
 			// null terminate the previous token and advance to the start of the next token.
@@ -2209,26 +2157,23 @@ int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, 
 				*data++ = 0;
 				// skip leading separators and whitespace
 				while (*data && strchr(ws, *data)) ++data;
-				hash.set_live_submit_variable(var, data, false);
+				hash.set_live_submit_variable(var_it->c_str(), data, false);
 			}
 		}
 
 		if (DashDryRun && DumpSubmitHash) {
 			fprintf(stdout, "----- submit hash changes for ItemIndex = %d -----\n", item_index);
-			char * var;
-			vars.rewind();
-			while ((var = vars.next())) {
-				MACRO_ITEM* pitem = hash.lookup_exact(var);
-				fprintf (stdout, "  %s = %s\n", var, pitem ? pitem->raw_value : "");
+			for (const auto& var: vars) {
+				MACRO_ITEM* pitem = hash.lookup_exact(var.c_str());
+				fprintf (stdout, "  %s = %s\n", var.c_str(), pitem ? pitem->raw_value : "");
 			}
 			fprintf(stdout, "-----\n");
 		}
 
 		if (check_empty) {
-			vars.rewind();
 			std::string empties;
-			while ((var = vars.next())) {
-				MACRO_ITEM* pitem = hash.lookup_exact(var);
+			for (const auto& var: vars) {
+				MACRO_ITEM* pitem = hash.lookup_exact(var.c_str());
 				if ( ! pitem || (pitem->raw_value != EmptyItemString && 0 == strlen(pitem->raw_value))) {
 					if ( ! empties.empty()) empties += ",";
 					empties += var;
@@ -2247,13 +2192,11 @@ int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, 
 	return rval;
 }
 
-void cleanup_vars(SubmitHash & hash, StringList & vars)
+void cleanup_vars(SubmitHash & hash, const std::vector<std::string> & vars)
 {
 	// set live submit variables to generate reasonable unused-item messages.
-	if ( ! vars.isEmpty())  {
-		vars.rewind();
-		char * var;
-		while ((var = vars.next())) { hash.set_live_submit_variable(var, "<Queue_item>", false); }
+	for (const auto& var: vars) {
+		hash.set_live_submit_variable(var.c_str(), "<Queue_item>", false);
 	}
 }
 
@@ -2292,30 +2235,10 @@ int allocate_a_cluster()
 }
 
 
-int queue_begin(StringList & vars, bool new_cluster)
-{
-	if ( ! MyQ)
-		return -1;
-
-	if (new_cluster) {
-		allocate_a_cluster();
-	}
-
-	init_vars(submit_hash, ClusterId, vars);
-
-	if (DashDryRun && DumpSubmitHash) {
-		fprintf(stdout, "\n----- submit hash at queue begin -----\n");
-		submit_hash.dump(stdout, DumpSubmitHash & 0xF);
-		fprintf(stdout, "-----\n");
-	}
-
-	return 0;
-}
-
 // queue N for a single item from the foreach itemlist.
 // if there is no item list (i.e the old Queue N syntax) then item will be NULL.
 //
-int queue_item(int num, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws)
+int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws)
 {
 	ErrContext.item_index = item_index;
 

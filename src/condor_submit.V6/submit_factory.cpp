@@ -351,8 +351,8 @@ int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o)
 	submit_digest += "\n";
 	submit_digest += "Queue ";
 	if (o.queue_num) { formatstr_cat(submit_digest, "%d ", o.queue_num); }
-	auto_free_ptr submit_vars(o.vars.print_to_delimed_string(","));
-	if (submit_vars.ptr()) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+	std::string submit_vars = join(o.vars, ",");
+	if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 	if ( ! o.items_filename.empty()) {
 		submit_digest += "from ";
 		char slice_str[16*3+1];
