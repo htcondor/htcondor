@@ -119,7 +119,7 @@ chmod g-s tarball/var/lib/condor/oauth_credentials
 if [ -d /usr/local/condor/externals/apptainer ]; then
     /usr/local/condor/externals/apptainer/libexec/apptainer --version
     cp -a /usr/local/condor/externals/apptainer/* tarball/usr
-    tarball/bin/apptainer --version >> tarball/Manifest.txt
+    tarball/usr/libexec/apptainer --version >> tarball/Manifest.txt
 fi
 
 echo ======= Manifest.txt =======
