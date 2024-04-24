@@ -1058,10 +1058,16 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 		args.AppendArg("-do_recurse");
 	}
 
-	if(self[b::SuppressNotification]) {
+	if (self[b::SuppressNotification]) {
 		args.AppendArg("-suppress_notification");
 	} else if(self[b::SuppressNotification].set()) {
 		args.AppendArg("-dont_suppress_notification");
+	}
+
+	if (self[b::DirectSubmit]) {
+		args.AppendArg("-DirectSubmit");
+	} else if (self[b::DirectSubmit].set()) {
+		args.AppendArg("-ExternalSubmit");
 	}
 
 	if (inWriteSubmit) {
