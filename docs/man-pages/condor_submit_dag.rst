@@ -28,6 +28,7 @@ Synopsis
 [**-schedd-daemon-ad-file** *FileName*]
 [**-schedd-address-file** *FileName*] [**-suppress_notification** ]
 [**-dont_suppress_notification** ] [**-DoRecovery** ]
+[**-DirectSubmit**] [**-ExternalSubmit**]
 *DAGInputFile1* [*DAGInputFile2 ... DAGInputFileN* ]
 
 Description
@@ -290,6 +291,12 @@ Options
     Causes *condor_dagman* to start in recovery mode. This means that
     DAGMan reads the relevant ``.nodes.log`` file to restore its previous
     state of node completions and failures to continue running.
+ **-DirectSubmit**
+    Causes *condor_dagman* to directly submit jobs to the local *condor_schedd*
+    queue.
+ **-ExternalSubmit**
+     Causes *condor_dagman* to externally run :tool:`condor_submit` when submitting
+     jobs to the local *condor_schedd* queue.
 
 Exit Status
 -----------
