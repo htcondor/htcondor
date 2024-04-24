@@ -492,7 +492,7 @@ bool ClassAd::Insert(const std::string& serialized_nvp);
 
 // Parse and insert an attribute value via cache if the cache is enabled
 //
-bool ClassAd::InsertViaCache( std::string& name, const std::string & rhs, bool lazy /*=false*/)
+bool ClassAd::InsertViaCache(const std::string& name, const std::string & rhs, bool lazy /*=false*/)
 {
 	if (name.empty()) return false;
 

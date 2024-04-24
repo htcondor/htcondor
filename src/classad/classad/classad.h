@@ -111,7 +111,7 @@ class ClassAd : public ExprTree
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax
-		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
+		bool InsertViaCache(const std::string& attrName, const std::string & rhs, bool lazy=false);
 
 		/** Insert an attribute/value into the ClassAd
 		 *  @param str A string of the form "Attribute = Value"

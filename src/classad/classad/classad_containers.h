@@ -35,15 +35,4 @@
 #define classad_map   std::map 
 #define classad_slist std::list
 
-// G++ uses a shared copy-on-write (COW) std::string on older versions
-// classads will force a copy from the cache for COW strings, but
-// newer gccs and all other compilers use the small string optimization
-// for their std::strings, and this copy just slows things down
-
-#if defined(__GNUC__) && (__GNUC__ < 5)
-#define HAVE_COW_STRING
-#else
-#undef HAVE_COW_STRING
-#endif
-
 #endif /* __CLASSAD_CLASSAD_CONTAINERS_H__ */
