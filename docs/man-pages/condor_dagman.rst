@@ -24,8 +24,7 @@ Synopsis
 [**-outfile_dir** *directory*] [**-update_submit** ]
 [**-import_env** ] [**-include_env** *Variables*]
 [**-insert_env** *Key=Value*] [**-priority** *number*]
-[**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ]
-[**-DirectSubmit**] [**-ExternalSubmit**]
+[**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ] [**-SubmitMethod** *value*]
 [**-DoRecovery** ] [**-dot**] **-dag** *dag_file*
 [**-dag** *dag_file_2* ... **-dag** *dag_file_n* ]
 
@@ -262,12 +261,13 @@ Options
     Causes *condor_dagman* to start in recovery mode. This means that
     it reads the relevant job user log(s) and catches up to the given
     DAG's previous state before submitting any new jobs.
- **-DirectSubmit**
-    Causes *condor_dagman* to directly submit jobs to the local *condor_schedd*
-    queue.
- **-ExternalSubmit**
-     Causes *condor_dagman* to externally run :tool:`condor_submit` when submitting
-     jobs to the local *condor_schedd* queue.
+ **-SubmitMethod** *value*
+    This optional argument takes an enumerated value representing the
+    method in which *condor_dagman* will submit managed jobs for execution.
+    Enumeration values are as follows:
+
+    -  **0** : Run :tool:`condor_submit`
+    -  **1** : Directly submit job to local *condor_schedd* queue
  **-dot**
     Run *condor_dagman* up until the point when a **DOT** file is
     produced.

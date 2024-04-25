@@ -24,11 +24,10 @@ Synopsis
 [**-no_recurse** ] [**-do_recurse** ] [**-update_submit** ]
 [**-import_env** ] [**-include_env** *Variables*] [**-insert_env** *Key=Value*]
 [**-DumpRescue** ] [**-valgrind** ] [**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ]
-[**-priority** *number*]
+[**-priority** *number*] [**-SubmitMethod** *value*]
 [**-schedd-daemon-ad-file** *FileName*]
 [**-schedd-address-file** *FileName*] [**-suppress_notification** ]
 [**-dont_suppress_notification** ] [**-DoRecovery** ]
-[**-DirectSubmit**] [**-ExternalSubmit**]
 *DAGInputFile1* [*DAGInputFile2 ... DAGInputFileN* ]
 
 Description
@@ -291,12 +290,13 @@ Options
     Causes *condor_dagman* to start in recovery mode. This means that
     DAGMan reads the relevant ``.nodes.log`` file to restore its previous
     state of node completions and failures to continue running.
- **-DirectSubmit**
-    Causes *condor_dagman* to directly submit jobs to the local *condor_schedd*
-    queue.
- **-ExternalSubmit**
-     Causes *condor_dagman* to externally run :tool:`condor_submit` when submitting
-     jobs to the local *condor_schedd* queue.
+ **-SubmitMethod** *value*
+    This optional argument takes an enumerated value representing the
+    method in which *condor_dagman* will submit managed jobs for execution.
+    Enumeration values are as follows:
+
+    -  **0** : Run :tool:`condor_submit`
+    -  **1** : Directly submit job to local *condor_schedd* queue
 
 Exit Status
 -----------

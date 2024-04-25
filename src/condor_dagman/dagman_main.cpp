@@ -947,13 +947,14 @@ void main_init (int argc, char ** const argv) {
 		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
 			dagman._doRecovery = true;
 
-		} else if ( !strcasecmp("-DirectSubmit", argv[i])) {
-			dagman.useDirectSubmit = true;
-			dagman.options.set("DirectSubmit", true);
-
-		} else if ( !strcasecmp("-ExternalSubmit", argv[i])) {
-			dagman.useDirectSubmit = false;
-			dagman.options.set("DirectSubmit", false);
+		} else if ( !strcasecmp("-SubmitMethod", argv[i])) {
+			i++;
+			if (argc <= i) {
+				debug_printf( DEBUG_SILENT, "No submit method specified\n" );
+				Usage();
+			}
+			dagman.options.set("SubmitMethod", argv[i]);
+			dagman.useDirectSubmit = (bool)dagman.options[deep::i::SubmitMethod];
 
 		} else {
 			debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",

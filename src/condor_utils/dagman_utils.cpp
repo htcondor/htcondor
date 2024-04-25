@@ -1064,10 +1064,9 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 		args.AppendArg("-dont_suppress_notification");
 	}
 
-	if (self[b::DirectSubmit]) {
-		args.AppendArg("-DirectSubmit");
-	} else if (self[b::DirectSubmit].set()) {
-		args.AppendArg("-ExternalSubmit");
+	if (self[i::SubmitMethod] >= 0) {
+		args.AppendArg("-SubmitMethod");
+		args.AppendArg(std::to_string(self[i::SubmitMethod]));
 	}
 
 	if (inWriteSubmit) {
