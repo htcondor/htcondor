@@ -1,14 +1,14 @@
-Example: DAGMan Exit Upon Percent Completed
-===========================================
+Example: DAGMan Completes When Some Percentage of Nodes Succeed
+===============================================================
 
 .. sidebar:: Definition: Bag of Nodes
 
     A bag of nodes is a DAG workflow comprising of nodes bearing
-    no :dag-cmd:`PARENT/CHILD` relationships. Thus, being a loose bag of nodes
-    without any inter-dependencies.
+    no :dag-cmd:`PARENT/CHILD` relationships. That is a loose bag
+    of nodes without any inter-dependencies.
 
-Sometimes it is desired to have a DAG set up as a bag of nodes that stops
-executing after a certain percentage of successfully executed nodes. The following
+Sometimes it is desired to have a DAG set up as a bag of nodes that completes
+after a certain percentage of successfully executed nodes. The following
 example adds a POST :dag-cmd:`SCRIPT` to all nodes in the DAG to calculate the
 percent of nodes that finished successfully that informs the DAG to exit when
 the specified threshold is achieved.
