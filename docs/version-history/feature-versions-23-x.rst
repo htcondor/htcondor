@@ -41,6 +41,11 @@ New Features:
 - ``IDTOKEN`` files whose access permissions are too open are now ignored.
   :jira:`232`
 
+- Added new ``-SubmitMethod`` flag to :tool:`condor_submit_dag` which controls whether
+  DAGMan directly submits jobs to the local *condor_schedd* queue or externally runs
+  :tool:`condor_submit`.
+  :jira:`2406`
+
 Bugs Fixed:
 
 - None.

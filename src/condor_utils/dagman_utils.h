@@ -158,7 +158,7 @@ namespace DagmanDeepOptions {
 	);
 
 	BETTER_ENUM(i, long,
-		DoRescueFrom = 0, AutoRescue
+		DoRescueFrom = 0, AutoRescue, SubmitMethod
 	);
 
 	BETTER_ENUM(b, long,
@@ -178,10 +178,10 @@ struct KeyNoCaseCmp {
 	}
 };
 
-#define DAG_OPT_DISP_DAGMAN (1 << 0)     // Display option for condor_dagman
-#define DAG_OPT_DISP_CSD (1 << 1)        // Display option for condor_submit_dag
-#define DAG_OPT_DISP_PY_BIND (1 << 2)    // Display option for python bindings
-#define DAG_OPT_DISP_ALL INT_MAX         // Display option for all sources
+const int DAG_OPT_DISP_DAGMAN = (1 << 0);     // Display option for condor_dagman
+const int DAG_OPT_DISP_CSD = (1 << 1);        // Display option for condor_submit_dag
+const int DAG_OPT_DISP_PY_BIND = (1 << 2);    // Display option for python bindings
+const int DAG_OPT_DISP_ALL = INT_MAX;         // Display option for all sources
 
 typedef std::tuple<std::string, std::string, std::string, int> DagOptionInfo;
 static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMap = {
@@ -202,7 +202,8 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-DoRescueFrom",  {"DoRescueFrom", "<N>", "Run DAG rescue of given number", DAG_OPT_DISP_ALL}},
 	{"-DryRun",        {"DryRun", "True", "Dry run condor_dagman execution of DAG", DAG_OPT_DISP_DAGMAN}},
 	{"-DumpRescue",    {"DumpRescueDag", "True", "DAGMan dump rescue DAG and exit", DAG_OPT_DISP_ALL}},
-	{"-Force",         {"Force", "True", "Overwrite used DAG file if they exist", DAG_OPT_DISP_ALL}}, // Note: -f works for this
+	{"-f",             {"Force", "True", "See -Force", 0}}, // Single letter flag to make -f equal to -Force
+	{"-Force",         {"Force", "True", "Overwrite used DAG file if they exist", DAG_OPT_DISP_ALL}},
 	{"-import_env",    {"ImportEnv", "True", "Import current environment into *.condor.sub file", DAG_OPT_DISP_ALL}},
 	{"-include_env",   {"GetFromEnv", "<variables>", "Comma separated list of environment variables to *.condor.sub file getenv filter", DAG_OPT_DISP_ALL}},
 	{"-insert_env",    {"AddToEnv", "<key=value>", "Delimited key=value pairs to explicitly set in the *.condor.sub file environment", DAG_OPT_DISP_ALL}},
@@ -222,6 +223,7 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-schedd-address-file", {"ScheddAddressFile", "<path>", "Submit DAG to Schedd provided by address file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-schedd-daemon-ad-file", {"ScheddDaemonAdFile", "<path>", "Submit DAG to Schedd provided by ad file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-suppress_notification", {"SuppressNotification", "True", "Suppress email notifications for DAGMan and all its submitted jobs", DAG_OPT_DISP_ALL}},
+	{"-SubmitMethod",  {"SubmitMethod", "<value>", "Specify how DAGMan submits jobs for execution (0=condor_submit|1=DirectSubmit)", DAG_OPT_DISP_ALL}},
 	{"-update_submit", {"UpdateSubmit", "True", "Update *.condor.sub file if it exists", DAG_OPT_DISP_ALL}},
 	{"-UseDagDir",     {"UseDagDir", "True", "Run DAGs in directories specified by DAG file paths", DAG_OPT_DISP_ALL}},
 	{"-v",             {"Verbose", "True", "See -Verbose", 0}}, // Single letter flag to make -v equal to -Verbose
@@ -288,6 +290,7 @@ public:
 			using namespace DagmanDeepOptions;
 			deep.intOpts[i::DoRescueFrom] = 0;
 			deep.intOpts[i::AutoRescue] = (int)param_boolean( "DAGMAN_AUTO_RESCUE", true );
+			deep.intOpts[i::SubmitMethod] = -1;
 		} //End Deep Option Initialization
 	}
 
