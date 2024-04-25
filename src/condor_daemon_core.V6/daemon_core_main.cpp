@@ -3947,7 +3947,13 @@ int dc_main( int argc, char** argv )
 			);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
-	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
+	dprintf(D_ALWAYS,"** PID = %lu", (unsigned long) daemonCore->getpid());
+#ifdef WIN32
+	dprintf(D_ALWAYS | D_NOHEADER,"\n");
+#else
+	dprintf(D_ALWAYS | D_NOHEADER, " RealUID = %u\n", getuid());
+#endif
+
 	time_t log_last_mod_time = dprintf_last_modification();
 	if ( log_last_mod_time <= 0 ) {
 		dprintf(D_ALWAYS,"** Log last touched time unavailable (%s)\n",
@@ -3958,17 +3964,6 @@ int dc_main( int argc, char** argv )
 				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min,
 				tm->tm_sec);
 	}
-
-#ifndef WIN32
-		// Want to do this dprintf() here, since we can't do it w/n 
-		// the priv code itself or we get major problems. 
-		// -Derek Wright 12/21/98 
-	if( getuid() ) {
-		dprintf(D_PRIV, "** Running as non-root: No privilege switching\n");
-	} else {
-		dprintf(D_PRIV, "** Running as root: Privilege switching in effect\n");
-	}
-#endif
 
 	dprintf(D_ALWAYS,"******************************************************\n");
 
