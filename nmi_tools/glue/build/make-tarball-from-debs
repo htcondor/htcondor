@@ -64,6 +64,8 @@ elif [ $VERSION_CODENAME = 'focal' ]; then
     arch_dist="${arch}_Ubuntu20"
 elif [ $VERSION_CODENAME = 'jammy' ]; then
     arch_dist="${arch}_Ubuntu22"
+elif [ $VERSION_CODENAME = 'noble' ]; then
+    arch_dist="${arch}_Ubuntu24"
 elif [ $VERSION_CODENAME = 'chimaera' ]; then
     arch_dist="${arch}_Devuan4"
 else
