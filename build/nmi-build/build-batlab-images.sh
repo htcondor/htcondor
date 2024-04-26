@@ -61,6 +61,6 @@ buildimage x86_64_Fedora38 fedora:38 &
 buildimage x86_64_openSUSE15 opensuse/leap:15 &
 buildimage x86_64_Ubuntu20 ubuntu:focal &
 buildimage x86_64_Ubuntu22 ubuntu:jammy &
-buildimage x86_64_Ubuntu22 ubuntu:noble &
+buildimage x86_64_Ubuntu24 ubuntu:noble &
 wait
 tail -n 1 ./*.out
