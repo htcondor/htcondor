@@ -108,6 +108,7 @@ class Schedd():
             will instead be omitted.
         :param limit:  The maximum number of ads to return.  The default
             (``-1``) is to return all ads.
+        :param opts:  Special query options; see the enumeration for details.
         '''
         results = _schedd_query(self._addr, str(constraint), projection, int(limit), int(opts))
         if callback is None:
