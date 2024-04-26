@@ -951,11 +951,8 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const std::string &pool) {
 
 	std::string flock_targets;
 	if (job_ad.EvaluateAttrString(ATTR_FLOCK_TO, flock_targets)) {
-		StringList flock_list(flock_targets.c_str());
-		flock_list.rewind();
-		char *flock_entry = nullptr;
-		while ( (flock_entry = flock_list.next()) ) {
-			if (!strcasecmp(pool.c_str(), flock_entry)) {
+		for (auto& flock_entry: StringTokenIterator(flock_targets)) {
+			if (!strcasecmp(pool.c_str(), flock_entry.c_str())) {
 				return true;
 			}
 		}
@@ -3663,11 +3660,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		std::string flock_targets;
 		bool include_default_flock = param_boolean("FLOCK_BY_DEFAULT", true);
 		if (job->EvaluateAttrString(ATTR_FLOCK_TO, flock_targets)) {
-			StringList flock_list(flock_targets.c_str());
-			flock_list.rewind();
-			char *flock_entry = nullptr;
-			while ( (flock_entry = flock_list.next()) ) {
-				if (!strcasecmp(flock_entry, "default")) {
+			for (auto& flock_entry: StringTokenIterator(flock_targets)) {
+				if (!strcasecmp(flock_entry.c_str(), "default")) {
 					include_default_flock = true;
 				} else {
 					auto iter = SubData->flock.insert({flock_entry, SubmitterFlockCounters()});
@@ -3676,8 +3670,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 				}
 			}
 				// Subtract out overlap with default list of flocked pools.
-			flock_list.rewind();
-			while ( (flock_entry = flock_list.next()) ) {
+			for (auto& flock_entry: StringTokenIterator(flock_targets)) {
 				auto iter = scheduler.FlockPools.find(flock_entry);
 				if (iter != scheduler.FlockPools.end()) {
 					SubData->flock[flock_entry].JobsIdle -= job_idle;
@@ -11109,15 +11102,17 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad, bool 
 		return;
 	}
 
-	StringList machine_attrs(user_machine_attrs.c_str());
+	std::vector<std::string> machine_attrs = split(user_machine_attrs);
 
-	machine_attrs.create_union( m_job_machine_attrs, true );
+	for (auto& attr: m_job_machine_attrs) {
+		if (!contains_anycase(machine_attrs, attr)) {
+			machine_attrs.emplace_back(attr);
+		}
+	}
 
-	machine_attrs.rewind();
-	char const *attr;
-	while( (attr=machine_attrs.next()) != NULL ) {
+	for (auto& attr: machine_attrs) {
 		std::string result_attr;
-		formatstr(result_attr,"%s%s",ATTR_MACHINE_ATTR_PREFIX,attr);
+		formatstr(result_attr, "%s%s", ATTR_MACHINE_ATTR_PREFIX, attr.c_str());
 
 		if (do_rotation) {
 			RotateAttributeList(cluster,proc,result_attr.c_str(),0,history_len);
@@ -13776,8 +13771,7 @@ Scheduler::Init()
 
 	std::string job_machine_attrs_str;
 	param(job_machine_attrs_str,"SYSTEM_JOB_MACHINE_ATTRS");
-	m_job_machine_attrs.clearAll();
-	m_job_machine_attrs.initializeFromString( job_machine_attrs_str.c_str() );
+	m_job_machine_attrs = split(job_machine_attrs_str);
 
 	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
 
@@ -13834,14 +13828,11 @@ Scheduler::Init()
 	m_submitRequirements.clear();
 	std::string submitRequirementNames;
 	if( param( submitRequirementNames, "SUBMIT_REQUIREMENT_NAMES" ) ) {
-		StringList srNameList( submitRequirementNames.c_str() );
 
-		srNameList.rewind();
-		const char * srName = NULL;
-		while( (srName = srNameList.next()) != NULL ) {
-			if( strcmp( srName, "NAMES" ) == 0 ) { continue; }
+		for (auto& srName: StringTokenIterator(submitRequirementNames)) {
+			if( strcmp( srName.c_str(), "NAMES" ) == 0 ) { continue; }
 			std::string srAttributeName;
-			formatstr( srAttributeName, "SUBMIT_REQUIREMENT_%s", srName );
+			formatstr( srAttributeName, "SUBMIT_REQUIREMENT_%s", srName.c_str() );
 
 			std::string srAttribute;
 			if( param( srAttribute, srAttributeName.c_str() ) ) {
@@ -13850,34 +13841,31 @@ Scheduler::Init()
 
 				classad::ExprTree * submitRequirement = parser.ParseExpression( srAttribute );
 				if( submitRequirement != NULL ) {
-					const char * permanentName = strdup( srName );
-					assert( permanentName != NULL );
 
 					// Handle the corresponding rejection reason.
 					std::string srrAttribute;
 					std::string srrAttributeName;
 					classad::ExprTree * submitReason = NULL;
-					formatstr( srrAttributeName, "SUBMIT_REQUIREMENT_%s_REASON", srName );
+					formatstr( srrAttributeName, "SUBMIT_REQUIREMENT_%s_REASON", srName.c_str() );
 					if( param( srrAttribute, srrAttributeName.c_str() ) ) {
 						submitReason = parser.ParseExpression( srrAttribute );
 						if( submitReason == NULL ) {
-							dprintf( D_ALWAYS, "Unable to parse submit requirement reason %s, ignoring.\n", srName );
+							dprintf( D_ALWAYS, "Unable to parse submit requirement reason %s, ignoring.\n", srName.c_str() );
 						}
 					}
 
 					std::string isWarningName;
-					formatstr( isWarningName, "SUBMIT_REQUIREMENT_%s_IS_WARNING", srName );
+					formatstr( isWarningName, "SUBMIT_REQUIREMENT_%s_IS_WARNING", srName.c_str() );
 					bool isWarning = param_boolean( isWarningName.c_str(), false );
 
-					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement, submitReason, isWarning );
-					m_submitRequirements.push_back( sre );
+					m_submitRequirements.emplace_back(srName, submitRequirement, submitReason, isWarning);
 				} else {
-					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName );
+					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName.c_str() );
 				}
 
 				// We could add SUBMIT_REQUIREMENT_<NAME>_REJECT_REASON, as well.
 			} else {
-				dprintf( D_ALWAYS, "Submit requirement %s not defined, ignoring.\n", srName );
+				dprintf( D_ALWAYS, "Submit requirement %s not defined, ignoring.\n", srName.c_str() );
 			}
 		}
 	}
@@ -15016,10 +15004,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 	std::set<std::string> config_bounding_set;
 	std::string config_bounding_set_str;
 	if (param(config_bounding_set_str, "SEC_IMPERSONATION_TOKEN_LIMITS")) {
-		StringList config_bounding_set_list(config_bounding_set_str.c_str());
-		config_bounding_set_list.rewind();
-		const char *authz;
-		while ( (authz = config_bounding_set_list.next()) ) {
+		for (auto& authz: StringTokenIterator(config_bounding_set_str)) {
 			config_bounding_set.insert(authz);
 		}
 	}
@@ -15027,10 +15012,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 	std::vector<std::string> bounding_set;
 	std::string bounding_set_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, bounding_set_str)) {
-		StringList authz_str_list(bounding_set_str.c_str());
-		authz_str_list.rewind();
-		const char *authz;
-		while ( (authz = authz_str_list.next()) ) {
+		for (auto& authz: StringTokenIterator(bounding_set_str)) {
 			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
 				bounding_set.emplace_back(authz);
 			}
@@ -15482,25 +15464,19 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		int subproc = -1;
 		if( GetPrivateAttributeString(jobid.cluster,jobid.proc,ATTR_CLAIM_IDS,claim_ids)==0 &&
 			jobad->LookupString(ATTR_ALL_REMOTE_HOSTS,remote_hosts_string) ) {
-			StringList claim_idlist(claim_ids.c_str(),",");
-			StringList remote_hosts(remote_hosts_string.c_str(),",");
+			std::vector<std::string> claim_idlist = split(claim_ids, ",");
+			std::vector<std::string> remote_hosts = split(remote_hosts_string, ",");
 			input.LookupInteger(ATTR_SUB_PROC_ID,subproc);
-			if( claim_idlist.number() == 1 && subproc == -1 ) {
+			if( claim_idlist.size() == 1 && subproc == -1 ) {
 				subproc = 0;
 			}
-			if( subproc == -1 || subproc >= claim_idlist.number() ) {
-				formatstr(error_msg, "This is a parallel job.  Please specify job %d.%d.X where X is an integer from 0 to %d.",jobid.cluster,jobid.proc,claim_idlist.number()-1);
+			if( subproc == -1 || subproc >= (int)claim_idlist.size() || subproc >= (int)remote_hosts.size() ) {
+				formatstr(error_msg, "This is a parallel job.  Please specify job %d.%d.X where X is an integer from 0 to %d.",jobid.cluster,jobid.proc,(int)claim_idlist.size()-1);
 				goto error_wrapup;
 			}
 			else {
-				claim_idlist.rewind();
-				remote_hosts.rewind();
-				for(int sp=0;sp<subproc;sp++) {
-					claim_idlist.next();
-					remote_hosts.next();
-				}
-				mrec = dedicated_scheduler.FindMrecByClaimID(claim_idlist.next());
-				startd_name = remote_hosts.next();
+				mrec = dedicated_scheduler.FindMrecByClaimID(claim_idlist[subproc].c_str());
+				startd_name = remote_hosts[subproc];
 				if( mrec && mrec->peer ) {
 					job_is_suitable = true;
 				}
@@ -17503,13 +17479,13 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 	SubmitRequirements::iterator it = m_submitRequirements.begin();
 	for( ; it != m_submitRequirements.end(); ++it ) {
 		classad::Value result;
-		rval = EvalExprToBool( it->requirement, m_adSchedd, procAd, result, "SCHEDD", "JOB" );
+		rval = EvalExprToBool( it->requirement.get(), m_adSchedd, procAd, result, "SCHEDD", "JOB" );
 
 		if( rval ) {
 			bool bVal;
 			if( ! result.IsBooleanValueEquiv( bVal ) ) {
 				if ( errorStack ) {
-					errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name );
+					errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name.c_str() );
 				}
 				return -3;
 			}
@@ -17517,18 +17493,18 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 			if( ! bVal ) {
 				classad::Value reason;
 				std::string reasonString;
-				formatstr( reasonString, "Submit requirement %s not met.\n", it->name );
+				formatstr( reasonString, "Submit requirement %s not met.\n", it->name.c_str() );
 
 				if( it->reason != NULL ) {
-					int sval = EvalExprToString( it->reason, m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
+					int sval = EvalExprToString( it->reason.get(), m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
 					if( ! sval ) {
-						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name );
+						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name.c_str() );
 					} else {
 						std::string userReasonString;
 						if( reason.IsStringValue( userReasonString ) ) {
 							reasonString = userReasonString;
 						} else {
-							dprintf( D_ALWAYS, "Submit requirement reason %s did not evaluate to a string.\n", it->name );
+							dprintf( D_ALWAYS, "Submit requirement reason %s did not evaluate to a string.\n", it->name.c_str() );
 						}
 					}
 				}
@@ -17545,7 +17521,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 			}
 		} else {
 			if ( errorStack ) {
-				errorStack->pushf( "QMGMT", 3, "Submit requirement %s failed to evaluate.\n", it->name );
+				errorStack->pushf( "QMGMT", 3, "Submit requirement %s failed to evaluate.\n", it->name.c_str() );
 			}
 			return -2;
 		}
@@ -17697,21 +17673,18 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 
 	std::string vidString;
 	if( request.LookupString( "VictimJobIDs", vidString ) ) {
-		StringList vidList( vidString.c_str() );
-		if( vidList.number() <= 0 ) {
-			handleReassignSlotError( sock, "invalid vacate-job ID list" );
-			return FALSE;
-		}
-
-		vidList.rewind();
-		char * vs = vidList.next();
-		for( ; vs != NULL; vs = vidList.next() ) {
+		for (auto& vs: StringTokenIterator(vidString)) {
 			PROC_ID vID;
-			if(! vID.set( vs )) {
+			if(! vID.set( vs.c_str() )) {
 				handleReassignSlotError( sock, "invalid vacate-job ID in list" );
 				return FALSE;
 			}
 			vids.push_back( vID );
+		}
+
+		if( vids.empty() ) {
+			handleReassignSlotError( sock, "invalid vacate-job ID list" );
+			return FALSE;
 		}
 
 		dprintf( D_COMMAND, "REASSIGN SLOT: to %d.%d from %s\n", bid.cluster, bid.proc, vidString.c_str() );
