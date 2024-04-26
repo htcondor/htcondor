@@ -762,14 +762,91 @@ _schedd_submit( PyObject *, PyObject * args ) {
             return NULL;
         }
     } else if( isFactoryJob ) {
-        // Generate the cluster ad (by generating the first proc ad),
-        // then send the cluster ad followed by the itemdata, followed
-        // by the submit digest.
-        int itemIndex = 0;
+        //
+        // This is absurd, but I'm stuck with it.  The submit hash
+        // requires that the caller keep the SubmitForeachArgs (itemdata)
+        // live, but then grants itself permission to freely modify
+        // that data, including in ways that prevent some functions from
+        // being called after others.  In particular, if you call
+        // set_vars() before sending the itemdata, the itemdata will
+        // incomplete (because set_vars() inserts NULs).
+        //
+        // On top of that, the generated submit digest is has superflous
+        // lines in it, and the first proc's data is in the cluster ad.
+        //
+
+
+        // Send the item data.  This very closely tracks
+        // ActualScheddQ::send_Itemdata(), and at some point it might be
+        // worth refactoring that function so we can keep the same set of
+        // exceptions.
+        if( itemdata->items.number() > 0 ) {
+fprintf( stderr, "itemdata->items.number() = %d\n", itemdata->items.number() );
+            int numItems = 0;
+            itemdata->items.rewind();
+            int rval = SendMaterializeData(
+                clusterID, 0,
+                & AbstractScheddQ::next_rowdata, itemdata,
+                // Output parameters.
+                itemdata->items_filename, & numItems
+            );
+
+            if( rval < 0 ) {
+                PyErr_SetString( PyExc_RuntimeError, "Failed to send item data (late materialization)" );
+
+                delete itemdata;
+                return NULL;
+            }
+
+            if( numItems != itemdata->items.number() ) {
+                std::string message = "Item data size mismatch in late materialization: ";
+                formatstr_cat( message, "%d (local) != %d (remote)", itemdata->items.number(), numItems );
+                PyErr_SetString( PyExc_RuntimeError, message.c_str() );
+
+                delete itemdata;
+                return NULL;
+            }
+
+            itemdata->foreach_mode = foreach_from;
+        }
+
+
+        //
+        // Step to the first item data and set it as the submit hash's
+        // current item data.
+        //
+        // FIXME: The submit digest code doesn't appear to need this
+        // to happen; if it doesn't, it simply sets the first job's
+        // queue variables to blank.  We'd rather it skip the queue
+        // variables entirely, but until that bug is fixed, we'll
+        // keep setting the variables because that's the expected
+        // behavior.
+        //
+
+        const int itemIndex = 0;
         itemdata->items.rewind();
         char * item = itemdata->items.next();
 
         sb->set_vars( itemdata->vars, item, itemIndex );
+
+
+        // Construct the submit digest.
+        std::string submitDigest;
+        sb->make_digest( submitDigest, clusterID, itemdata->vars, 0 );
+        if( submitDigest.empty() ) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to make submit digest (late materialization)" );
+
+            delete itemdata;
+            return NULL;
+        }
+
+
+        //
+        // FIXME: Likewise, it's wrong for the cluster ad to have the first
+        // proc ad's queue variables set in it, but that's what everyone
+        // expects to see.
+        //
+
 
         // Generate the (first) proc ad.
         ClassAd * procAd = sb->make_job_ad(
@@ -808,48 +885,12 @@ _schedd_submit( PyObject *, PyObject * args ) {
         }
 
 
-        // Send the item data.  This very closely tracks
-        // ActualScheddQ::send_Itemdata(), and at some point it might be
-        // worth refactoring that function so we can keep the same set of
-        // exceptions.
-        if( itemdata->items.number() > 0 ) {
-            int numItems = 0;
-            itemdata->items.rewind();
-            rval = SendMaterializeData(
-                clusterID, 0,
-                & AbstractScheddQ::next_rowdata, itemdata,
-                // Output parameters.
-                itemdata->items_filename, & numItems
-            );
+        // Compute max materialization.
+        numJobs = (itemdata->queue_num ? itemdata->queue_num : 1) * itemdata->item_len();
+        if( maxMaterialize <= 0 ) { maxMaterialize = INT_MAX; }
+        maxMaterialize = MIN(maxMaterialize, numJobs);
+        maxMaterialize = MAX(maxMaterialize, 1);
 
-            if( rval < 0 ) {
-                PyErr_SetString( PyExc_RuntimeError, "Failed to send item data (late materialization)" );
-
-                delete itemdata;
-                return NULL;
-            }
-
-            if( numItems != itemdata->items.number() ) {
-                std::string message = "Item data size mismatch in late materialization: ";
-                formatstr_cat( message, "%d (local) != %d (remote)", itemdata->items.number(), numItems );
-                PyErr_SetString( PyExc_RuntimeError, message.c_str() );
-
-                delete itemdata;
-                return NULL;
-            }
-
-            itemdata->foreach_mode = foreach_from;
-        }
-
-        // Construct the submit digest.
-        std::string submitDigest;
-        sb->make_digest( submitDigest, clusterID, itemdata->vars, 0 );
-        if( submitDigest.empty() ) {
-            PyErr_SetString( PyExc_RuntimeError, "Failed to make submit digest (late materialization)" );
-
-            delete itemdata;
-            return NULL;
-        }
 
         rval = append_queue_statement( submitDigest, * itemdata );
         if( rval < 0 ) {
@@ -859,12 +900,6 @@ _schedd_submit( PyObject *, PyObject * args ) {
             return NULL;
         }
 
-
-        // Compute max materialization.
-        numJobs = (itemdata->queue_num ? itemdata->queue_num : 1) * itemdata->item_len();
-        if( maxMaterialize <= 0 ) { maxMaterialize = INT_MAX; }
-        maxMaterialize = MIN(maxMaterialize, numJobs);
-        maxMaterialize = MAX(maxMaterialize, 1);
 
         // Send the submit digest.
         rval = SetJobFactory( clusterID, maxMaterialize, "", submitDigest.c_str() );
