@@ -6152,6 +6152,7 @@ int SubmitHash::SetConcurrencyLimits()
 			if ( !ParseConcurrencyLimit(limit_cpy, increment) ) {
 				push_error(stderr, "Invalid concurrency limit '%s'\n",
 				           limit.c_str());
+				free(limit_cpy);
 				ABORT_AND_RETURN( 1 );
 			}
 			free( limit_cpy );
