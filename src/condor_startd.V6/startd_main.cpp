@@ -66,7 +66,7 @@ bool enable_claimable_partitionable_slots = false;
 // String Lists
 std::vector<std::string> startd_job_attrs;
 std::vector<std::string> startd_slot_attrs;
-static StringList *valid_cod_users = NULL; 
+std::vector<std::string> valid_cod_users;
 
 // Hosts
 char*	accountant_host = NULL;
@@ -230,8 +230,8 @@ main_init( int, char* argv[] )
 	resmgr->init_resources();
 
 		// Do a little sanity checking and cleanup
-	StringList execute_dirs;
-	resmgr->FillExecuteDirsList( &execute_dirs );
+	std::vector<std::string> execute_dirs;
+	resmgr->FillExecuteDirsList( execute_dirs );
 	check_execute_dir_perms( execute_dirs );
 	cleanup_execute_dirs( execute_dirs );
 
@@ -570,14 +570,11 @@ init_params( int first_time)
 
 	pid_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", DEFAULT_PID_SNAPSHOT_INTERVAL );
 
-	if( valid_cod_users ) {
-		delete( valid_cod_users );
-		valid_cod_users = NULL;
-	}
 	tmp.set(param("VALID_COD_USERS"));
 	if (tmp) {
-		valid_cod_users = new StringList();
-		valid_cod_users->initializeFromString( tmp );
+		valid_cod_users = split(tmp);
+	} else {
+		valid_cod_users.clear();
 	}
 
 	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
@@ -927,8 +924,5 @@ main( int argc, char **argv )
 bool
 authorizedForCOD( const char* owner )
 {
-	if( ! valid_cod_users ) {
-		return false;
-	}
-	return valid_cod_users->contains( owner );
+	return contains(valid_cod_users, owner);
 }

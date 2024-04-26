@@ -372,7 +372,7 @@ public:
        double EndWalk(VoidResourceMember memberfunc, double timeBegin);
     } stats;
 
-	void FillExecuteDirsList( class StringList *list );
+	void FillExecuteDirsList( std::vector<std::string>& list );
 
 	int nextId( void ) { return id_disp->next(); };
 
@@ -467,7 +467,7 @@ private:
 	time_t	cur_time;		// current time
 	time_t	deathTime = 0;		// If non-zero, time we will SIGTERM
 
-	StringList**	type_strings;	// Array of StringLists that
+	std::vector<std::string> type_strings;	// Array of strings that
 		// define the resource types specified in the config file.  
 	int*		type_nums;		// Number of each type.
 	int*		new_type_nums;	// New numbers of each type.

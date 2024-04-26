@@ -138,7 +138,6 @@ ResMgr::ResMgr() :
 
 	max_types = 0;
 	num_updates = 0;
-	type_strings = NULL;
 	m_startd_hook_shutdown_pending = false;
 }
 
@@ -182,7 +181,6 @@ double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 
 ResMgr::~ResMgr()
 {
-	int i;
 	if( extras_classad ) delete extras_classad;
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
@@ -215,12 +213,6 @@ ResMgr::~ResMgr()
 
 	for (auto rip : slots) { delete rip; }
 	slots.clear();
-	for( i=0; i<max_types; i++ ) {
-		if( type_strings[i] ) {
-			delete type_strings[i];
-		}
-	}
-	delete [] type_strings;
 	delete [] type_nums;
 	if( new_type_nums ) {
 		delete [] new_type_nums;
@@ -569,10 +561,7 @@ ResMgr::init_resources( void )
 
 	max_types += 1;
 
-		// The reason this isn't on the stack is b/c of the variable
-		// nature of max_types. *sigh*
-	type_strings = new StringList*[max_types];
-	memset( type_strings, 0, (sizeof(StringList*) * max_types) );
+	type_strings.resize(max_types);
 
 		// Fill in the type_strings array with all the appropriate
 		// string lists for each type definition.  This only happens
@@ -914,16 +903,16 @@ ResMgr::get_by_name_prefix(const char* name )
 	}
 
 	// not found, print possible names
-	StringList names;
+	std::string names;
 	for (Resource * rip : slots) {
 		if (!rip) continue;
-		names.append(rip->r_name);
+		if (!names.empty()) names += ',';
+		names += rip->r_name;
 		if( !strcmp(rip->r_name, name) ) {
 			return rip;
 		}
 	}
-	auto_free_ptr namelist(names.print_to_string());
-	dprintf(D_ALWAYS, "%s not found, slot names are %s\n", name, namelist ? namelist.ptr() : "<empty>");
+	dprintf(D_ALWAYS, "%s not found, slot names are %s\n", name, names.empty() ? "<empty>" : names.c_str());
 
 	return NULL;
 }
@@ -2019,13 +2008,6 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 	int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
 	queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
 	if ( ! stats_config.empty()) {
-#if 0 // HACK to test swapping claims without a schedd
-		dprintf(D_ALWAYS, "Got QUERY_STARTD_ADS with stats config: %s\n", stats_config.c_str());
-		if (starts_with_ignore_case(stats_config.c_str(), "swap:")) {
-			StringList swap_args(stats_config.c_str()+5);
-			hack_test_claim_swap(swap_args);
-		} else
-#endif
 			daemonCore->dc_stats.PublishFlags = 
 			generic_stats_ParseConfigString(stats_config.c_str(), 
 				"DC", "DAEMONCORE", 
@@ -2470,17 +2452,16 @@ claimedRankCmp( const void* a, const void* b )
 #endif
 
 void
-ResMgr::FillExecuteDirsList( class StringList *list )
+ResMgr::FillExecuteDirsList( std::vector<std::string>& list )
 {
 	if ( ! numSlots())
 		return;
 
-	ASSERT( list );
 	for (Resource * rip : slots) {
 		if (rip) {
 			const char * execute_dir = rip->executeDir();
-			if( !list->contains( execute_dir ) ) {
-				list->append(execute_dir);
+			if( !contains( list, execute_dir ) ) {
+				list.emplace_back(execute_dir);
 			}
 		}
 	}
@@ -3018,10 +2999,10 @@ ResMgr::printSlotAds(const char * slot_types) const
 	if (slot_types) {
 		// check the filter to see if we will print
 		dprintf(D_FULLDEBUG, "Filtering ads to %s\n", slot_types);
-		StringList sl(slot_types);
-		if(sl.contains_anycase("static")) { filter.insert(Resource::STANDARD_SLOT); }
-		if(sl.contains_anycase("partitionable")) { filter.insert(Resource::PARTITIONABLE_SLOT); }
-		if(sl.contains_anycase("dynamic")) { filter.insert(Resource::DYNAMIC_SLOT); }
+		std::vector<std::string> sl = split(slot_types);
+		if(contains_anycase(sl, "static")) { filter.insert(Resource::STANDARD_SLOT); }
+		if(contains_anycase(sl, "partitionable")) { filter.insert(Resource::PARTITIONABLE_SLOT); }
+		if(contains_anycase(sl, "dynamic")) { filter.insert(Resource::DYNAMIC_SLOT); }
 	}
 
 	for (Resource * rip : slots) {
