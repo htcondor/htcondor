@@ -17,33 +17,62 @@ def the_condor(default_condor):
     return default_condor
 
 
-@action
-def the_submitted_job(path_to_sleep, the_condor):
+TEST_CASES = {
+    "latemat": {
+        "args": "20",
 
-    submit = htcondor2.Submit(f"""
-        executable = {path_to_sleep}
-""" + """
-        My.Pos = \"{$(Row),$(Step),$(foo)}\"
-        hold = 1
-        max_materialize = 3
+        "job": """
+            args=30
+            My.Pos = \"{$(Row),$(Step)}\"
+            hold = 1
+            max_materialize = 3
 
-        queue foo,bar from (
-            1 2
-            3 4
-            a z
-        )
-    """)
-    submit['args'] = '30 -f $(foo) -b $(bar) -z $(baz)'
+            queue my.foo,my.bar from (
+                1 2
+                3 4
+                a z
+            )
+        """,
 
-    schedd = the_condor.get_local_schedd()
-    return schedd.submit(submit)
+        "digest": """FACTORY.Requirements=MY.Requirements
+hold=1
+max_materialize=3
+My.Pos=\"{$(Row),$(Step)}\"
 
+Queue 1 my.foo,my.bar from """,
 
-@action
-def the_expected_digest(the_submitted_job, the_condor):
-    the_itemdata_path = the_condor.spool_dir / str(the_submitted_job.cluster()) / f"condor_submit.{the_submitted_job.cluster()}.items"
+        "values": {
+            0: {
+                'Args': "20",
+                'Pos': '{0,0}',
+            },
+            1: {
+                'Args': "20",
+                'Pos': '{1,0}',
+            },
+            2: {
+                'Args': "20",
+                'Pos': '{2,0}',
+            },
+        },
+    },
 
-    return """FACTORY.Requirements=MY.Requirements
+    "late2mat2": {
+        "args": '30 -f $(foo) -b $(bar) -z $(baz)',
+
+        "job": """
+            My.Pos = \"{$(Row),$(Step),$(foo)}\"
+            hold = 1
+            max_materialize = 3
+
+            queue foo,bar from (
+                1 2
+                3 4
+                a z
+            )
+        """,
+
+        "digest": """FACTORY.Requirements=MY.Requirements
 args=30 -f $(foo) -b $(bar) -z 
 bar=2
 foo=1
@@ -51,26 +80,79 @@ hold=1
 max_materialize=3
 My.Pos="{$(Row),$(Step),$(foo)}"
 
-Queue 1 foo,bar from """ + the_itemdata_path.as_posix() + "\n"
+Queue 1 foo,bar from """,
+
+        "values": {
+            0: {
+                'args': '30 -f 1 -b 2 -z',
+                'Pos': '{0,0,1}',
+            },
+            1: {
+                'args': '30 -f 3 -b 4 -z',
+                'Pos': '{1,0,3}',
+            },
+            2: {
+                'args': '30 -f a -b z -z',
+                'Pos': '{2,0,a}',
+            },
+        },
+    },
+}
+
+
+@action(params={name: name for name in TEST_CASES})
+def the_test_case(request):
+    return (request.param, TEST_CASES[request.param])
 
 
 @action
-def the_expected_values():
-    return {
-        0: {
-            'args': '30 -f 1 -b 2 -z',
-            'Pos': '{0,0,1}',
-        },
-        1: {
-            'args': '30 -f 3 -b 4 -z',
-            'Pos': '{1,0,3}',
-        },
-        2: {
-            'args': '30 -f a -b z -z',
-            'Pos': '{2,0,a}',
-        },
-    }
+def the_test_name(the_test_case):
+    return the_test_case[0]
 
+
+@action
+def the_test_job(the_test_case):
+    return the_test_case[1]['job']
+
+
+@action
+def the_test_digest(the_test_case):
+    return the_test_case[1]['digest']
+
+
+@action
+def the_test_values(the_test_case):
+    return the_test_case[1]['values']
+
+
+@action
+def the_test_args(the_test_case):
+    return the_test_case[1]['args']
+
+
+@action
+def the_submitted_job(path_to_sleep, the_condor, the_test_job, the_test_args):
+
+    submit = htcondor2.Submit(
+        f"executable = {path_to_sleep}\n" + the_test_job
+    )
+    # Just to make things harder, apparently.
+    submit['args'] = the_test_args
+
+    schedd = the_condor.get_local_schedd()
+    return schedd.submit(submit)
+
+
+@action
+def the_expected_digest(the_submitted_job, the_condor, the_test_digest):
+    the_itemdata_path = the_condor.spool_dir / str(the_submitted_job.cluster()) / f"condor_submit.{the_submitted_job.cluster()}.items"
+
+    return the_test_digest + the_itemdata_path.as_posix() + "\n"
+
+
+@action
+def the_expected_values(the_test_values):
+    return the_test_values
 
 
 class TestLMMore:
@@ -95,7 +177,7 @@ class TestLMMore:
 
     def test_all_jobs_generated_properly(self, the_condor, the_submitted_job, the_expected_values):
         schedd = the_condor.get_local_schedd()
-        constraint = str(the_submitted_job.cluster())
+        constraint = f"ClusterID == {the_submitted_job.cluster()}"
         projection = set([ key  for value in the_expected_values.values() for key in value.keys()])
         projection.add('ProcID')
         projection = list(projection)
