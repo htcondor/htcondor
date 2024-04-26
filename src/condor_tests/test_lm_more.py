@@ -57,6 +57,49 @@ Queue 1 my.foo,my.bar from """,
         },
     },
 
+    "latemat2": {
+        "args": '30 -f $(foo) -b $(bar) -z $(baz)',
+
+        "job": """
+            args=30
+            My.Pos = \"{$(Row),$(Step),$(foo)}\"
+            hold = 1
+            max_materialize = 3
+
+            queue foo,bar from (
+                1 2
+                3 4
+                a z
+            )
+        """,
+
+        "digest": """FACTORY.Requirements=MY.Requirements
+args=30 -f $(foo) -b $(bar) -z 
+bar=2
+foo=1
+hold=1
+max_materialize=3
+My.Pos="{$(Row),$(Step),$(foo)}"
+
+Queue 1 foo,bar from """
+        ,
+
+        "values": {
+            0: {
+                'Args': "30 -f 1 -b 2 -z",
+                'Pos': '{0,0,1}',
+            },
+            1: {
+                'Args': "30 -f 3 -b 4 -z",
+                'Pos': '{1,0,3}',
+            },
+            2: {
+                'Args': "30 -f a -b z -z",
+                'Pos': '{2,0,a}',
+            },
+        },
+    },
+
     "late2mat2": {
         "args": '30 -f $(foo) -b $(bar) -z $(baz)',
 
@@ -94,6 +137,44 @@ Queue 1 foo,bar from """,
             2: {
                 'args': '30 -f a -b z -z',
                 'Pos': '{2,0,a}',
+            },
+        },
+    },
+
+    "latemat3": {
+        "args": None,
+
+        "job": """
+            args=30
+            My.Pos = \"{$(Row),$(Step),$(item)}\"
+            hold = 1
+            request_memory = $(item)
+            max_materialize = 3
+
+            queue in ( 1, 2, 3 )
+        """,
+
+        "digest": """FACTORY.Requirements=MY.Requirements
+hold=1
+Item=1
+max_materialize=3
+My.Pos="{$(Row),$(Step),$(item)}"
+request_memory=$(item)
+
+Queue 1 Item from """,
+
+        "values": {
+            0: {
+                'args': '30',
+                'Pos': '{0,0,1}',
+            },
+            1: {
+                'args': '30',
+                'Pos': '{1,0,2}',
+            },
+            2: {
+                'args': '30',
+                'Pos': '{2,0,3}',
             },
         },
     },
@@ -137,7 +218,8 @@ def the_submitted_job(path_to_sleep, the_condor, the_test_job, the_test_args):
         f"executable = {path_to_sleep}\n" + the_test_job
     )
     # Just to make things harder, apparently.
-    submit['args'] = the_test_args
+    if the_test_args is not None:
+        submit['args'] = the_test_args
 
     schedd = the_condor.get_local_schedd()
     return schedd.submit(submit)
