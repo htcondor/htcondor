@@ -38,7 +38,7 @@
 #include "docker-api.h"
 
 MachAttributes::MachAttributes()
-   : m_user_specified(NULL, ";"), m_user_settings_init(false), m_named_chroot()
+   : m_user_settings_init(false), m_named_chroot()
 {
 	m_mips = -1;
 	m_kflops = -1;
@@ -171,7 +171,6 @@ MachAttributes::~MachAttributes()
     }
 	m_lst_static.clear();
 
-    m_user_specified.clearAll();
 #if defined(WIN32)
 	if( m_local_credd ) free( m_local_credd );
     if( m_dot_Net_Versions ) free ( m_dot_Net_Versions );
@@ -195,32 +194,31 @@ MachAttributes::init_user_settings()
 	}
 	m_lst_static.clear();
 
-	m_user_specified.clearAll();
+	m_user_specified.clear();
 
 #ifdef WIN32
 	char * pszParam = NULL;
 	pszParam = param("STARTD_PUBLISH_WINREG");
 	if (pszParam)
     {
-		m_user_specified.initializeFromString(pszParam);
+		m_user_specified = split(pszParam, ";");
 		free(pszParam);
 	}
 #endif
 
-	m_user_specified.rewind();
-	while(char * pszItem = m_user_specified.next())
+	for (const auto& pszItem: m_user_specified)
     {
 		// if the reg_item is of the form attr_name=reg_path;
 		// then skip over the attr_name and '=' and trailing
 		// whitespace.  But if the = is after the first \, then
 		// it's a part of the reg_path, so ignore it.
 		//
-		const char * pkey = strchr(pszItem, '=');
-		const char * pbs  = strchr(pszItem, '\\');
+		const char * pkey = strchr(pszItem.c_str(), '=');
+		const char * pbs  = strchr(pszItem.c_str(), '\\');
 		if (pkey && ( ! pbs || pkey < pbs)) {
 			++pkey; // skip the '='
 		} else {
-			pkey = pszItem;
+			pkey = pszItem.c_str();
 		}
 
 		// skip any leading whitespace in the key
@@ -228,7 +226,7 @@ MachAttributes::init_user_settings()
 			++pkey;
 
        #ifdef WIN32
-		char * pszAttr = generate_reg_key_attr_name("WINREG_", pszItem);
+		char * pszAttr = generate_reg_key_attr_name("WINREG_", pszItem.c_str());
 
 		// if the keyname begins with 32 or 64, use that to designate either
 		// the WOW64 or WOW32 view of the registry, but don't pass the
@@ -935,9 +933,9 @@ bool MachAttributes::ComputeDevProps(
 // fungable resource, or a list of ids of non-fungable resources.
 // if res_value contains a list, then ids is set on exit from this function
 // otherwise, ids empty.
-static double parse_user_resource_config(const char * tag, const char * res_value, StringList & ids)
+static double parse_user_resource_config(const char * tag, const char * res_value, std::set<std::string> & ids)
 {
-	ids.clearAll();
+	ids.clear();
 	double num = 0;
 	char * pend = NULL;
 	num = strtod(res_value, &pend);
@@ -951,8 +949,10 @@ static double parse_user_resource_config(const char * tag, const char * res_valu
 			is_simple_double = true;
 		} else {
 			// not a simple double, so treat it as a list of id's, the number of resources is the number of ids
-			ids.initializeFromString(res_value);
-			num = ids.number();
+			for (const auto& item: StringTokenIterator(res_value)) {
+				ids.insert(item);
+			}
+			num = ids.size();
 		}
 	}
 
@@ -989,7 +989,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			classad::Value value;
 			std::string attr(ATTR_OFFLINE_PREFIX); attr += tag;
 			std::string res_value;
-			StringList offline_ids;
+			std::set<std::string> offline_ids;
 			if (ad.LookupString(attr,res_value)) {
 				offline = parse_user_resource_config(tag, res_value.c_str(), offline_ids);
 			} else {
@@ -1001,13 +1001,12 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 
 			attr = ATTR_DETECTED_PREFIX; attr += tag;
 			if (ad.LookupString(attr,res_value)) {
-				StringList ids;
+				std::set<std::string> ids;
 				quantity = parse_user_resource_config(tag, res_value.c_str(), ids);
-				if ( ! ids.isEmpty()) {
+				if ( ! ids.empty()) {
 					offline = 0; // we only want to count ids that match the detected list
-					ids.rewind();
-					while (const char* id = ids.next()) {
-						if (offline_ids.contains(id)) {
+					for (const auto& id: ids) {
+						if (offline_ids.count(id)) {
 							unique_ids.insert(id);
 							this->m_machres_offline_devIds_map[tag].emplace_back(id);
 							++offline;
@@ -1036,7 +1035,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 				// then remove it from the nested ad collection so we don't see it when we iterate
 				auto common_it = nested.find("common");
 				if (common_it != nested.end()) {
-					for (auto id : unique_ids) {
+					for (const auto& id : unique_ids) {
 						m_machres_nft_map[tag].props[id].Update(*common_it->second);
 					}
 					ad.Delete(common_it->first);
@@ -1097,7 +1096,7 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 			num = pme->init_machine_resource_from_script(tag, res_value);
 		}
 	} else {
-		StringList offline_ids;
+		std::set<std::string> offline_ids;
 		std::string off_name("OFFLINE_"); off_name += name;
 		std::string my_value;
 		if (param(my_value, off_name.c_str()) && !my_value.empty()) {
@@ -1105,13 +1104,12 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 		}
 
 		// if the param value parses as a double, then we can handle it simply
-		StringList ids;
+		std::set<std::string> ids;
 		num = parse_user_resource_config(tag, res_value, ids);
-		if ( ! ids.isEmpty()) {
+		if ( ! ids.empty()) {
 			offline = 0; // we only want to count ids that match the detected list
-			ids.rewind();
-			while (const char* id = ids.next()) {
-				if (offline_ids.contains(id)) {
+			for (const auto& id: ids) {
+				if (offline_ids.count(id)) {
 					pme->m_machres_offline_devIds_map[tag].emplace_back(id);
 					++offline;
 				} else {
@@ -1163,26 +1161,26 @@ void MachAttributes::init_machine_resources() {
 	const int iter_options = HASHITER_NO_DEFAULTS; // we can speed up iteration if there are no machine resources in the defaults table.
 	foreach_param_matching(re, iter_options, (bool(*)(void*,HASHITER&))MachAttributes::init_machine_resource, this);
 
-	StringList allowed;
+	std::vector<std::string> allowed;
 	char* allowed_names = param("MACHINE_RESOURCE_NAMES");
-	if (allowed_names && allowed_names[0]) {
+	if (allowed_names) {
 		// if admin defined MACHINE_RESOURCE_NAMES, then use this list
 		// as the source of expected custom machine resources
-		allowed.initializeFromString(allowed_names);
+		allowed = split(allowed_names);
 		free(allowed_names);
 	}
 
-	StringList disallowed("CPU CPUS DISK SWAP MEM MEMORY RAM");
+	std::vector<std::string> disallowed = {"CPU", "CPUS", "DISK", "SWAP", "MEM", "MEMORY", "RAM"};
 
 	std::vector<const char *> tags_to_erase;
 	for (slotres_map_t::iterator it(m_machres_map.begin());  it != m_machres_map.end();  ++it) {
 		const char * tag = it->first.c_str();
-		if ( ! allowed.isEmpty() && ! allowed.contains_anycase(tag)) {
+		if ( ! allowed.empty() && ! contains_anycase(allowed, tag)) {
 			dprintf(D_ALWAYS, "Local machine resource %s is not in MACHINE_RESOURCE_NAMES so it will have no effect\n", tag);
 			tags_to_erase.emplace_back(tag);
 			continue;
 		}
-		if ( ! disallowed.isEmpty() && disallowed.contains_anycase(tag)) {
+		if ( ! disallowed.empty() && contains_anycase(disallowed, tag)) {
 			EXCEPT("fatal error - MACHINE_RESOURCE_%s is invalid, '%s' is a reserved resource name", tag, tag);
 			continue;
 		}
@@ -1407,10 +1405,7 @@ MachAttributes::publish_static(ClassAd* cp)
 	// Advertise Docker Volumes
 	char *dockerVolumes = param("DOCKER_VOLUMES");
 	if (dockerVolumes) {
-		StringList vl(dockerVolumes);
-		vl.rewind();
-		char *volume = 0;
-		while ((volume = vl.next())) {
+		for (const auto& volume: StringTokenIterator(dockerVolumes)) {
 			std::string attrName = "HasDockerVolume";
 			attrName += volume;
 			cp->Assign(attrName, true);

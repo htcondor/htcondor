@@ -463,7 +463,7 @@ check_spool_dir()
 {
 	const char  	*f;
 	Directory  		dir(Spool, PRIV_ROOT);
-	StringList 		well_known_list;
+	std::vector<std::string> well_known_list;
 	JobIdSpoolFiles maybe_stale;
 	std::string tmpstr;
 
@@ -487,10 +487,13 @@ check_spool_dir()
 		if (option) { config_defined_files.push_back(condor_basename(option)); }
 	}
 
-	well_known_list.initializeFromString (ValidSpoolFiles);
+	well_known_list = split(ValidSpoolFiles);
 	if (UserValidSpoolFiles) {
-		StringList tmp(UserValidSpoolFiles);
-		well_known_list.create_union(tmp, false);
+		for (const auto& item: StringTokenIterator(UserValidSpoolFiles)) {
+			if (!contains(well_known_list, item)) {
+				well_known_list.emplace_back(item);
+			}
+		}
 	}
 		// add some reasonable defaults that we never want to remove
 	static const char* valid_list[] = {
@@ -510,8 +513,8 @@ check_spool_dir()
 		};
 
 	for (auto & ix : valid_list) {
-		if ( ! well_known_list.contains(ix)) { 
-			well_known_list.append(ix);
+		if ( ! contains(well_known_list, ix)) {
+			well_known_list.emplace_back(ix);
 		}
 	}
 
@@ -521,7 +524,7 @@ check_spool_dir()
 		// which we'll deal with later.
 	while((f = dir.Next()) ) {
 			// see if it's on the list
-		if( well_known_list.contains_withwildcard(f) ) {
+		if( contains_withwildcard(well_known_list, f) ) {
 			good_file( Spool, f );
 			continue;
 		}

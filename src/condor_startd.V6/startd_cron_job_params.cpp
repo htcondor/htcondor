@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include <ctype.h>
-#include "string_list.h"
+#include "stl_string_utils.h"
 #include "startd.h"
 #include "classad_cron_job.h"
 #include "startd_cron_job.h"
@@ -46,18 +46,15 @@ StartdCronJobParams::Initialize( void )
 	Lookup( "SLOTS", slots_str );
 
 	m_slots.clear();
-	StringList	slot_list( slots_str.c_str() );
-	slot_list.rewind();
-	const char *slot;
-	while( ( slot = slot_list.next()) != NULL ) {
-		if( !isdigit(*slot)) {
+	for (const auto& slot: StringTokenIterator(slots_str)) {
+		if( !isdigit(*slot.c_str())) {
 			dprintf( D_ALWAYS,
 					 "Cron Job '%s': INVALID slot # '%s': ignoring slot list",
-					 GetName(), slot );
+					 GetName(), slot.c_str() );
 			m_slots.clear();
 			break;
 		}
-		unsigned	slotno = atoi( slot );
+		unsigned	slotno = atoi( slot.c_str() );
 		m_slots.push_back( slotno );
 	}
 
@@ -82,13 +79,12 @@ StartdCronJobParams::Initialize( void )
 	const char * jobName = this->GetName();
 	char * metricString = this->Lookup( "METRICS" );
 	if( metricString != NULL && metricString[0] != '\0' ) {
-		StringList pairs( metricString );
-		for( char * pair = pairs.first(); pair != NULL; pair = pairs.next() ) {
-			StringList tn( pair, ":" );
-			char * metricType = tn.first();
-			if (!metricType) continue;
+		for (const auto& pair: StringTokenIterator(metricString)) {
+			std::vector<std::string> tn = split(pair, ":");
+			if (tn.size() < 2) continue;
+			const char * metricType = tn[0].c_str();
 
-			char * attributeName = tn.next();
+			const char * attributeName = tn[1].c_str();
 			if(! this->addMetric( metricType, attributeName )) {
 				dprintf(    D_ALWAYS, "Unknown metric type '%s' for attribute "
 				            "'%s' in monitor '%s', ignoring.\n", metricType,
