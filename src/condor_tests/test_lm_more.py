@@ -104,9 +104,7 @@ class TestLMMore:
             projection=projection,
         )
 
-        print(projection)
         for result in results:
-            print(result)
             procID = result['ProcID']
             attributes = the_expected_values[procID]
             for key in attributes.keys():
