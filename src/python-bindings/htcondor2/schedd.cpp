@@ -781,7 +781,6 @@ _schedd_submit( PyObject *, PyObject * args ) {
         // worth refactoring that function so we can keep the same set of
         // exceptions.
         if( itemdata->items.number() > 0 ) {
-fprintf( stderr, "itemdata->items.number() = %d\n", itemdata->items.number() );
             int numItems = 0;
             itemdata->items.rewind();
             int rval = SendMaterializeData(
