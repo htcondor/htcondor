@@ -26,6 +26,9 @@ Release Notes:
 
 - HTCondor version 23.0.10 not yet released.
 
+- Preliminary support for Ubuntu 22.04 (Noble Numbat).
+  :jira:`2407`
+
 - In the tarballs, the *apptainer* executable has been moved to the ``usr/libexec`` directory.
   :jira:`2397`
 
