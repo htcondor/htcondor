@@ -918,23 +918,17 @@ static bool validate_disk_param(const char *pszDisk, int min_params, int max_par
 
 	// parse each disk
 	// e.g.) disk = filename1:hda1:w, filename2:hda2:w
-	StringList disk_files(ptr, ",");
-	if( disk_files.isEmpty() ) {
-		return false;
-	}
-
-	disk_files.rewind();
-	const char *one_disk = NULL;
-	while( (one_disk = disk_files.next() ) != NULL ) {
+	bool found_any = false;
+	for (const auto& one_disk: StringTokenIterator(ptr, ",")) {
 
 		// found disk file
-		StringList single_disk_file(one_disk, ":");
-        int iNumDiskParams = single_disk_file.number();
+		found_any = true;
+		int iNumDiskParams = std::ranges::count(one_disk, ':') + 1;
 		if( iNumDiskParams < min_params || iNumDiskParams > max_params ) {
 			return false;
 		}
 	}
-	return true;
+	return found_any;
 }
 
 
@@ -1429,7 +1423,6 @@ int SubmitHash::SetJavaVMArgs()
 int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags )
 {
 	std::string strPathname;
-	StringList *list;
 
 		/* The user can disable file checks on a per job basis, in such a
 		   case we avoid adding the files to CheckFilesWrite/Read.
@@ -1465,11 +1458,10 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 
 	auto_free_ptr append_files(submit_param( SUBMIT_KEY_AppendFiles, ATTR_APPEND_FILES ));
 	if (append_files.ptr()) {
-		list = new StringList(append_files.ptr(), ",");
-		if(list->contains_withwildcard(name)) {
+		std::vector<std::string> file_list = split(append_files.ptr(), ",");
+		if(contains_withwildcard(file_list, name)) {
 			flags = flags & ~O_TRUNC;
 		}
-		delete list;
 	}
 
 	bool dryrun_create = FakeFileCreationChecks && ((flags & (O_CREAT|O_TRUNC)) != 0);
@@ -2562,19 +2554,15 @@ int SubmitHash::SetContainerSpecial()
 		if( serviceList ) {
 			AssignJobString( ATTR_CONTAINER_SERVICE_NAMES, serviceList );
 
-			const char * service = NULL;
-			StringList sl(serviceList);
-
-			sl.rewind();
-			while( (service = sl.next()) != NULL ) {
+			for (const auto& service: StringTokenIterator(serviceList)) {
 				std::string attrName;
-				formatstr( attrName, "%s%s", service, SUBMIT_KEY_ContainerPortSuffix );
+				formatstr( attrName, "%s%s", service.c_str(), SUBMIT_KEY_ContainerPortSuffix );
 				int portNo = submit_param_int( attrName.c_str(), NULL, -1 );
 				if( 0 <= portNo && portNo <= 65535 ) {
-					formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
+					formatstr( attrName, "%s%s", service.c_str(), ATTR_CONTAINER_PORT_SUFFIX );
 					AssignJobVal( attrName.c_str(), portNo );
 				} else {
-					push_error( stderr, "Requested container service '%s' was not assigned a port, or the assigned port was not valid.\n", service );
+					push_error( stderr, "Requested container service '%s' was not assigned a port, or the assigned port was not valid.\n", service.c_str() );
 					ABORT_AND_RETURN( 1 );
 				}
 			}
@@ -2766,14 +2754,14 @@ void SubmitHash::handleAVPairs( const char * submitKey, const char * jobKey,
 	//
 
 	char * tmp;
-	StringList tagNames;
+	std::vector<std::string> tagNames;
 	if ((tmp = submit_param(submitKey, jobKey))) {
-		tagNames.initializeFromString(tmp);
+		tagNames = split(tmp);
 		free(tmp); tmp = NULL;
 	} else {
 		std::string names;
 		if (job->LookupString(jobKey, names)) {
-			tagNames.initializeFromString(names.c_str());
+			tagNames = split(names);
 		}
 	}
 
@@ -2794,15 +2782,13 @@ void SubmitHash::handleAVPairs( const char * submitKey, const char * jobKey,
 		}
 
 		if (strncasecmp(name, "Names", 5) &&
-			!tagNames.contains_anycase(name)) {
-			tagNames.append(name);
+			!contains_anycase(tagNames, name)) {
+			tagNames.emplace_back(name);
 		}
 	}
 	hash_iter_delete(&it);
 
-	char *tagName;
-	tagNames.rewind();
-	while ((tagName = tagNames.next())) {
+	for (auto& tagName: tagNames) {
 		// XXX: Check that tagName does not contain an equal sign (=)
 		std::string submitKey(submitPrefix); submitKey.append(tagName);
 		std::string jobKey(jobPrefix); jobKey.append(tagName);
@@ -2818,8 +2804,7 @@ void SubmitHash::handleAVPairs( const char * submitKey, const char * jobKey,
 
 	// For compatibility with the AWS Console, set the Name tag to
 	// be the executable, which is just a label for EC2 jobs
-	tagNames.rewind();
-	if( gridType == "ec2" && (!tagNames.contains_anycase("Name")) ) {
+	if( gridType == "ec2" && (!contains_anycase(tagNames, "Name")) ) {
 		bool wantsNameTag = submit_param_bool(SUBMIT_KEY_WantNameTag, NULL, true );
 		if( wantsNameTag ) {
 			std::string ename;
@@ -2831,9 +2816,9 @@ void SubmitHash::handleAVPairs( const char * submitKey, const char * jobKey,
 		}
 	}
 
-	if ( !tagNames.isEmpty() ) {
-		auto_free_ptr names(tagNames.print_to_delimed_string(","));
-		AssignJobString(jobKey, names);
+	if ( !tagNames.empty() ) {
+		std::string names = join(tagNames, ",");
+		AssignJobString(jobKey, names.c_str());
 	}
 }
 
@@ -3137,14 +3122,14 @@ int SubmitHash::SetGridParams()
 	//
 	// Handle arbitrary EC2 RunInstances parameters.
 	//
-	StringList paramNames;
+	std::vector<std::string> paramNames;
 	if( (tmp = submit_param( SUBMIT_KEY_EC2ParamNames, ATTR_EC2_PARAM_NAMES )) ) {
-		paramNames.initializeFromString( tmp );
+		paramNames = split(tmp);
 		free( tmp );
 	} else {
 		std::string names;
 		if (job->LookupString(ATTR_EC2_PARAM_NAMES, names)) {
-			paramNames.initializeFromString(names.c_str());
+			paramNames = split(names);
 		}
 	}
 
@@ -3170,9 +3155,7 @@ int SubmitHash::SetGridParams()
 		set_submit_param_used( key );
 
 		bool found = false;
-		paramNames.rewind();
-		char * existingPN = NULL;
-		while( (existingPN = paramNames.next()) != NULL ) {
+		for (const auto& existingPN: paramNames) {
 			std::string converted = existingPN;
 			std::replace( converted.begin(), converted.end(), '.', '_' );
 			if( strcasecmp( converted.c_str(), paramName ) == 0 ) {
@@ -3181,15 +3164,14 @@ int SubmitHash::SetGridParams()
 			}
 		}
 		if( ! found ) {
-			paramNames.append( paramName );
+			paramNames.emplace_back(paramName);
 		}
 	}
 	hash_iter_delete( & smsIter );
 
-	if( ! paramNames.isEmpty() ) {
-		char * paramNamesStr = paramNames.print_to_delimed_string( ", " );
-		AssignJobString(ATTR_EC2_PARAM_NAMES, paramNamesStr);
-		free( paramNamesStr );
+	if( ! paramNames.empty() ) {
+		std::string paramNamesStr = join(paramNames, ", ");
+		AssignJobString(ATTR_EC2_PARAM_NAMES, paramNamesStr.c_str());
 	}
 
 	//
@@ -3247,11 +3229,9 @@ int SubmitHash::SetGridParams()
 	// GceMetadata is not a necessary parameter
 	// This is a comma-separated list of name/value pairs
 	if( (tmp = submit_param( SUBMIT_KEY_GceMetadata, ATTR_GCE_METADATA )) ) {
-		StringList list( tmp, "," );
-		char *list_str = list.print_to_string();
-		AssignJobString(ATTR_GCE_METADATA, list_str);
-		free( list_str );
-		free(tmp);
+		std::vector<std::string> list = split(tmp, ",");
+		std::string list_str = join(list, ",");
+		AssignJobString(ATTR_GCE_METADATA, list_str.c_str());
 	}
 
 	// GceMetadataFile is not a necessary parameter
@@ -4879,9 +4859,9 @@ int SubmitHash::do_simple_commands(const SimpleSubmitKeyword * cmdtable)
 				str = trim_and_strip_quotes_in_place(expr.ptr());
 			}
 			if (i->opts & SimpleSubmitKeyword::f_as_list) {
-				StringList list(str);
-				expr.set(list.print_to_string());
-				str = expr;
+				std::vector<std::string> list = split(str);
+				buffer = join(list, ",");
+				str = buffer.c_str();
 			}
 			if (i->opts & SimpleSubmitKeyword::f_filemask) {
 				if (str && str[0]) {
@@ -5958,10 +5938,9 @@ int SubmitHash::SetRequirements()
 				// check input
 				std::string file_list;
 				if (job->LookupString(ATTR_TRANSFER_INPUT_FILES, file_list)) {
-					StringList files(file_list.c_str(), ",");
-					for (const char * file = files.first(); file; file = files.next()) {
-						if (IsUrl(file)){
-							std::string tag = getURLType(file, true);
+					for (const auto& file: StringTokenIterator(file_list, ",")) {
+						if (IsUrl(file.c_str())){
+							std::string tag = getURLType(file.c_str(), true);
 							if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 						}
 					}
@@ -5977,9 +5956,7 @@ int SubmitHash::SetRequirements()
 
 				// check output remaps
 				if (job->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS, file_list)) {
-					StringList files(file_list.c_str(), ";");
-					for (const char * file = files.first(); file; file = files.next()) {
-						std::string remap(file);
+					for (const auto& remap: StringTokenIterator(file_list, ";")) {
 						auto eq = remap.find("=");
 						if( eq != std::string::npos ) {
 							std::string url = remap.substr(eq + 1);
@@ -6163,32 +6140,29 @@ int SubmitHash::SetConcurrencyLimits()
 			push_error( stderr, SUBMIT_KEY_ConcurrencyLimits " and " SUBMIT_KEY_ConcurrencyLimitsExpr " can't be used together\n" );
 			ABORT_AND_RETURN( 1 );
 		}
-		char *str;
 
 		lower_case(tmp);
 
-		StringList list(tmp.c_str());
+		std::vector<std::string> list = split(tmp);
 
-		char *limit;
-		list.rewind();
-		while ( (limit = list.next()) ) {
+		for (const auto& limit: list) {
 			double increment;
-			char *limit_cpy = strdup( limit );
+			char *limit_cpy = strdup(limit.c_str());
 
 			if ( !ParseConcurrencyLimit(limit_cpy, increment) ) {
 				push_error(stderr, "Invalid concurrency limit '%s'\n",
-						 limit );
+				           limit.c_str());
+				free(limit_cpy);
 				ABORT_AND_RETURN( 1 );
 			}
 			free( limit_cpy );
 		}
 
-		list.qsort();
+		std::sort(list.begin(), list.end());
 
-		str = list.print_to_string();
-		if ( str ) {
-			AssignJobString(ATTR_CONCURRENCY_LIMITS, str);
-			free(str);
+		std::string str = join(list, ",");
+		if ( !str.empty() ) {
+			AssignJobString(ATTR_CONCURRENCY_LIMITS, str.c_str());
 		}
 	} else if (!tmp2.empty()) {
 		AssignJobExpr(ATTR_CONCURRENCY_LIMITS, tmp2.c_str() );
@@ -6537,7 +6511,7 @@ int SubmitHash::SetVMParams()
 	return 0;
 }
 
-int SubmitHash::process_container_input_files(StringList & input_files, long long * accumulate_size_kb) {
+int SubmitHash::process_container_input_files(std::vector<std::string> & input_files, long long * accumulate_size_kb) {
 	auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 
 	// Did user ask for container transfer?
@@ -6551,9 +6525,8 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 	// don't xfer if on known shared fs
 	if (container_image) {
 		auto_free_ptr sharedfs (param("CONTAINER_SHARED_FS"));
-		StringList roots(sharedfs.ptr(), ",");
-		for (const char * base = roots.first(); base != NULL; base = roots.next()) {
-			if (starts_with(container_image.ptr(), base)) {
+		for (const auto& base: StringTokenIterator(sharedfs.ptr(), ",")) {
+			if (starts_with(container_image.ptr(), base.c_str())) {
 				job->Assign(ATTR_CONTAINER_IMAGE_SOURCE, "local");
 				return 0;
 			}
@@ -6577,7 +6550,7 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
 	if (container_image.ptr())  {
-		input_files.append(container_image.ptr());
+		input_files.emplace_back(container_image.ptr());
 		if (accumulate_size_kb) {
 			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
 		}
@@ -6604,34 +6577,23 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 	return 0;
 }
 
-int SubmitHash::process_input_file_list(StringList * input_list, long long * accumulate_size_kb)
+int SubmitHash::process_input_file_list(std::vector<std::string>& input_list, long long * accumulate_size_kb)
 {
-	int count;
+	int count = 0;
 	std::string tmp;
-	char* tmp_ptr;
 
-	if( ! input_list->isEmpty() ) {
-		input_list->rewind();
-		count = 0;
-		while ( (tmp_ptr=input_list->next()) ) {
-			count++;
-			tmp = tmp_ptr;
-			if ( check_and_universalize_path(tmp) != 0) {
-				// path was universalized, so update the string list
-				input_list->deleteCurrent();
-				input_list->insert(tmp.c_str());
-			}
-			check_open(SFR_INPUT, tmp.c_str(), O_RDONLY);
-			// get file size, but only if the caller requests it.
-			// in practice, we will check the sizes of files here in submit
-			// but not when doing late materialization
-			if (accumulate_size_kb) {
-				*accumulate_size_kb += calc_image_size_kb(tmp.c_str());
-			}
+	for (auto& tmp: input_list) {
+		count++;
+		check_and_universalize_path(tmp);
+		check_open(SFR_INPUT, tmp.c_str(), O_RDONLY);
+		// get file size, but only if the caller requests it.
+		// in practice, we will check the sizes of files here in submit
+		// but not when doing late materialization
+		if (accumulate_size_kb) {
+			*accumulate_size_kb += calc_image_size_kb(tmp.c_str());
 		}
-		return count;
 	}
-	return 0;
+	return count;
 }
 
 SubmitHash::ContainerImageType 
@@ -6667,8 +6629,8 @@ int SubmitHash::SetTransferFiles()
 	std::string tmp;
 	bool in_files_specified = false;
 	bool out_files_specified = false;
-	StringList input_file_list(NULL, ",");
-	StringList output_file_list(NULL, ",");
+	std::vector<std::string> input_file_list;
+	std::vector<std::string> output_file_list;
 	ShouldTransferFiles_t should_transfer = STF_IF_NEEDED;
 	std::string output_remaps;
 
@@ -6684,15 +6646,15 @@ int SubmitHash::SetTransferFiles()
 		// as a special case transferinputfiles="" will produce an empty list of input files, not a syntax error
 		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
 		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
-			input_file_list.clearAll();
+			// Do nothing
 		} else {
-			input_file_list.initializeFromString(macro_value);
+			input_file_list = split(macro_value, ",");
 		}
 		free(macro_value); macro_value = NULL;
 	}
 	RETURN_IF_ABORT();
 
-	if (process_input_file_list(&input_file_list, pInputFilesSizeKb) > 0) {
+	if (process_input_file_list(input_file_list, pInputFilesSizeKb) > 0) {
 		in_files_specified = true;
 	}
 	RETURN_IF_ABORT();
@@ -6723,19 +6685,12 @@ int SubmitHash::SetTransferFiles()
 		// as a special case transferoutputfiles="" will produce an empty list of output files, not a syntax error
 		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
 		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
-			output_file_list.clearAll();
 			out_files_specified = true;
 		} else {
-			output_file_list.initializeFromString(macro_value);
-			for (const char * file = output_file_list.first(); file != NULL; file = output_file_list.next()) {
+			output_file_list = split(macro_value, ",");
+			for (auto& file: output_file_list) {
 				out_files_specified = true;
-				std::string buf = file;
-				if (check_and_universalize_path(buf) != 0)
-				{
-					// we universalized the path, so update the string list
-					output_file_list.deleteCurrent();
-					output_file_list.insert(buf.c_str());
-				}
+				check_and_universalize_path(file);
 			}
 		}
 		free(macro_value);
@@ -6939,15 +6894,15 @@ int SubmitHash::SetTransferFiles()
 		  any) are included in the transfer_input_files list.
 		*/
 	if (should_transfer != STF_NO && job->LookupString(ATTR_TOOL_DAEMON_CMD, tmp)) {
-		if ( ! input_file_list.contains(tmp.c_str())) {
-			input_file_list.append(tmp.c_str());
+		if ( ! contains(input_file_list, tmp)) {
+			input_file_list.emplace_back(tmp);
 			if (pInputFilesSizeKb) {
 				*pInputFilesSizeKb += calc_image_size_kb(tmp.c_str());
 			}
 		}
 		if (job->LookupString(ATTR_TOOL_DAEMON_INPUT, tmp)
-			&& ! input_file_list.contains(tmp.c_str())) {
-			input_file_list.append(tmp.c_str());
+			&& ! contains(input_file_list, tmp)) {
+			input_file_list.emplace_back(tmp);
 			if (pInputFilesSizeKb) {
 				*pInputFilesSizeKb += calc_image_size_kb(tmp.c_str());
 			}
@@ -6976,8 +6931,8 @@ int SubmitHash::SetTransferFiles()
 
 	if( should_transfer!=STF_NO && JobUniverse==CONDOR_UNIVERSE_JAVA ) {
 		if (job->LookupString(ATTR_JOB_CMD, tmp) && tmp != "java") {
-			if ( ! input_file_list.contains(tmp.c_str())) {
-				input_file_list.append(tmp.c_str());
+			if ( ! contains(input_file_list, tmp)) {
+				input_file_list.emplace_back(tmp);
 				check_open(SFR_INPUT, tmp.c_str(), O_RDONLY);
 				if (pInputFilesSizeKb) {
 					*pInputFilesSizeKb += calc_image_size_kb(tmp.c_str());
@@ -6987,11 +6942,10 @@ int SubmitHash::SetTransferFiles()
 
 		if (job->LookupString(ATTR_JAR_FILES, tmp)) {
 			std::string filepath;
-			StringList files(tmp.c_str(), ",");
-			for (const char * file = files.first(); file != NULL; file = files.next()) {
+			for (const auto& file: StringTokenIterator(tmp, ",")) {
 				filepath = file;
 				check_and_universalize_path(filepath);
-				input_file_list.append(filepath.c_str());
+				input_file_list.emplace_back(filepath);
 				check_open(SFR_INPUT, filepath.c_str(), O_RDONLY);
 				if (pInputFilesSizeKb) {
 					*pInputFilesSizeKb += calc_image_size_kb(filepath.c_str());
@@ -7089,39 +7043,31 @@ int SubmitHash::SetTransferFiles()
 	// exprs  
 	if( should_transfer != STF_NO ) {
 		if (in_files_specified) {
-			auto_free_ptr input_files(input_file_list.print_to_string());
-			AssignJobString (ATTR_TRANSFER_INPUT_FILES, input_files);
+			std::string input_files = join(input_file_list, ",");
+			AssignJobString (ATTR_TRANSFER_INPUT_FILES, input_files.c_str());
 		}
 #ifdef HAVE_HTTP_PUBLIC_FILES
 		char *public_input_files = 
 			submit_param(SUBMIT_KEY_PublicInputFiles, ATTR_PUBLIC_INPUT_FILES);
 		if (public_input_files) {
-			StringList pub_inp_file_list(NULL, ",");
-			pub_inp_file_list.initializeFromString(public_input_files);
+			std::vector<std::string> pub_inp_file_list = split(public_input_files, ",");
 			// Process file list, but output string is for ATTR_TRANSFER_INPUT_FILES,
 			// so it's not used here.
 			// we don't count public files as part of the transfer size
-			process_input_file_list(&pub_inp_file_list, NULL);
-			if (pub_inp_file_list.isEmpty() == false) {
-				char *inp_file_str = pub_inp_file_list.print_to_string();
-				if (inp_file_str) {
-					AssignJobString(ATTR_PUBLIC_INPUT_FILES, inp_file_str);
-					free(inp_file_str);
-				}
+			process_input_file_list(pub_inp_file_list, NULL);
+			if (pub_inp_file_list.empty() == false) {
+				std::string inp_file_str = join(pub_inp_file_list, ",");
+				AssignJobString(ATTR_PUBLIC_INPUT_FILES, inp_file_str.c_str());
 			}
 			free(public_input_files);
 		} 
 #endif
 
 		if ( out_files_specified ) {
-			if (output_file_list.isEmpty()) {
-				// transferoutputfiles="" will produce an empty list of output files
-				// (this is so you can prevent the output directory from being transferred back, but still allowing for input transfer)
-				AssignJobString (ATTR_TRANSFER_OUTPUT_FILES, "");
-			} else {
-				auto_free_ptr output_files(output_file_list.print_to_string());
-				AssignJobString (ATTR_TRANSFER_OUTPUT_FILES, output_files);
-			}
+			// transferoutputfiles="" will produce an empty list of output files
+			// (this is so you can prevent all output from being transferred back, but still allowing for input transfer)
+			std::string output_files = join(output_file_list, ",");
+			AssignJobString (ATTR_TRANSFER_OUTPUT_FILES, output_files.c_str());
 		}
 	}
 
@@ -7175,10 +7121,9 @@ int SubmitHash::SetTransferFiles()
 	}
 
 		// Check accessibility of output files.
-	output_file_list.rewind();
 	char const *output_file;
-	while ( (output_file=output_file_list.next()) ) {
-		output_file = condor_basename(output_file);
+	for (const auto& file: output_file_list) {
+		output_file = condor_basename(file.c_str());
 		if( !output_file || !output_file[0] ) {
 				// output_file may be empty if the entry in the list is
 				// a path ending with a slash.  Since a path ending in a
@@ -8143,7 +8088,7 @@ int SubmitForeachArgs::parse_queue_args (
 	char * pqargs)      // in:  queue line, THIS MAY BE MODIFIED!! \0 will be inserted to delimit things
 {
 	foreach_mode = foreach_not;
-	vars.clearAll();
+	vars.clear();
 	// we can't clear this unconditionally, because it may already be filled with itemdata sent over from submit
 	// items.clearAll();
 	items_filename.clear();
@@ -8284,7 +8229,7 @@ int SubmitForeachArgs::parse_queue_args (
 				--pt;
 			}
 			// pvars should now point to a null-terminated string that is the var set.
-			vars.initializeFromString(pvars);
+			vars = split(pvars);
 		}
 		// whatever remains from pvars to the start of the args is the queue count.
 		pnum_end = pvars;
@@ -8313,13 +8258,13 @@ int SubmitForeachArgs::parse_queue_args (
 int SubmitForeachArgs::split_item(char* item, std::vector<const char*> & values)
 {
 	values.clear();
-	values.reserve(vars.number());
+	values.reserve(vars.size());
 	if ( ! item) return 0;
 
 	const char* token_seps = ", \t";
 	const char* token_ws = " \t";
 
-	char * var = vars.first();
+	auto var_it = vars.begin();
 	char * data = item;
 
 	// skip leading separators and whitespace
@@ -8340,14 +8285,14 @@ int SubmitForeachArgs::split_item(char* item, std::vector<const char*> & values)
 			// trim token separator and also trailing whitespace
 			char * endp = pus-1;
 			while (endp >= data && (*endp == ' ' || *endp == '\t')) *endp-- = 0;
-			if ( ! var) break;
+			if (var_it == vars.end()) break;
 
 			// advance to the next field and skip leading whitespace
 			data = pus+1;
 			while (*data == ' ' || *data == '\t') ++data;
 			pus = strchr(data, '\x1F');
-			var = vars.next();
-			if (var) {
+			var_it++;
+			if (var_it != vars.end()) {
 				values.push_back(data);
 			}
 			if ( ! pus) {
@@ -8358,7 +8303,7 @@ int SubmitForeachArgs::split_item(char* item, std::vector<const char*> & values)
 				if (pus == data) {
 					// we ran out of fields!
 					// we ran out of fields! use terminating null for all of the remaining fields
-					while ((var = vars.next())) { values.push_back(data); }
+					while (++var_it != vars.end()) { values.push_back(data); }
 				}
 			}
 		}
@@ -8370,7 +8315,7 @@ int SubmitForeachArgs::split_item(char* item, std::vector<const char*> & values)
 	// if there is more than a single loop variable, then assign them as well
 	// we do this by destructively null terminating the item for each var
 	// the last var gets all of the remaining item text (if any)
-	while ((var = vars.next())) {
+	while (++var_it != vars.end()) {
 		// scan for next token separator
 		while (*data && ! strchr(token_seps, *data)) ++data;
 		// null terminate the previous token and advance to the start of the next token.
@@ -8396,7 +8341,7 @@ int SubmitForeachArgs::split_item(char* item, NOCASE_STRING_MAP & values)
 	split_item(item, splits);
 
 	int ix = 0;
-	for (const char * key = vars.first(); key != NULL; key = vars.next()) {
+	for (const auto& key: vars) {
 		values[key] = splits[ix++];
 	}
 	return (int)values.size();
@@ -8440,7 +8385,7 @@ int SubmitHash::load_inline_q_foreach_items (
 	bool items_are_external = false;
 
 	// if no loop variable specified, but a foreach mode is used. use "Item" for the loop variable.
-	if (o.vars.isEmpty() && (o.foreach_mode != foreach_not)) { o.vars.append("Item"); }
+	if (o.vars.empty() && (o.foreach_mode != foreach_not)) { o.vars.emplace_back("Item"); }
 
 	if ( ! o.items_filename.empty()) {
 		if (o.items_filename == "<") {
@@ -8504,7 +8449,7 @@ int SubmitHash::load_external_q_foreach_items (
 	std::string & errmsg)                  // OUT: error message if return value is not 0
 {
 	// if no loop variable specified, but a foreach mode is used. use "Item" for the loop variable.
-	if (o.vars.isEmpty() && (o.foreach_mode != foreach_not)) { o.vars.append("Item"); }
+	if (o.vars.empty() && (o.foreach_mode != foreach_not)) { o.vars.emplace_back("Item"); }
 
 	// set glob expansion options from submit statements.
 	int expand_options = 0;
@@ -8925,7 +8870,7 @@ bool SubmitHash::key_is_prunable(const char * key)
 	return false;
 }
 
-const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringList & vars, int options)
+const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std::vector<std::string> & vars, int options)
 {
 	int flags = HASHITER_NO_DEFAULTS;
 	out.reserve(SubmitMacroSet.size * 80); // make a guess at how much space we need.
@@ -8964,10 +8909,8 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 	skip_knobs.insert("Row");
 	skip_knobs.insert("Node");
 	skip_knobs.insert("Item");
-	if ( ! vars.isEmpty()) {
-		for (const char * var = vars.first(); var != NULL; var = vars.next()) {
-			skip_knobs.insert(var);
-		}
+	for (const auto& var: vars) {
+		skip_knobs.insert(var);
 	}
 
 	if (cluster_id > 0) {
@@ -9066,9 +9009,6 @@ credd_has_tokens(
 		free(myname);
 	}
 
-	StringList unique_names(tokens.c_str());
-
-
 	// PHASE 3
 	//
 	// Send all the requests to the CREDD
@@ -9077,8 +9017,8 @@ credd_has_tokens(
 		std::string buf;
 		fprintf(stdout, "::sendCommand(CREDD_CHECK_CREDS...)\n");
 		requests.Rewind();
-		for (const char * name = unique_names.first(); name != NULL; name = unique_names.next()) {
-			fprintf(stdout, "# %s \n%s\n", name, formatAd(buf, *requests.Next(), "\t"));
+		for (const auto& name: StringTokenIterator(tokens)) {
+			fprintf(stdout, "# %s \n%s\n", name.c_str(), formatAd(buf, *requests.Next(), "\t"));
 			buf.clear();
 		}
 		if (! (DashDryRun & 4)) {
