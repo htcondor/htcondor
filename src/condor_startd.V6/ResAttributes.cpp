@@ -1173,8 +1173,8 @@ void MachAttributes::init_machine_resources() {
 	std::vector<std::string> disallowed = {"CPU", "CPUS", "DISK", "SWAP", "MEM", "MEMORY", "RAM"};
 
 	std::vector<const char *> tags_to_erase;
-	for (slotres_map_t::iterator it(m_machres_map.begin());  it != m_machres_map.end();  ++it) {
-		const char * tag = it->first.c_str();
+	for (auto & it : m_machres_map) {
+		const char * tag = it.first.c_str();
 		if ( ! allowed.empty() && ! contains_anycase(allowed, tag)) {
 			dprintf(D_ALWAYS, "Local machine resource %s is not in MACHINE_RESOURCE_NAMES so it will have no effect\n", tag);
 			tags_to_erase.emplace_back(tag);
@@ -1184,7 +1184,7 @@ void MachAttributes::init_machine_resources() {
 			EXCEPT("fatal error - MACHINE_RESOURCE_%s is invalid, '%s' is a reserved resource name", tag, tag);
 			continue;
 		}
-		dprintf(D_ALWAYS, "Local machine resource %s = %g\n", tag, it->second);
+		dprintf(D_ALWAYS, "Local machine resource %s = %g\n", tag, it.second);
 	}
 	for( auto i = tags_to_erase.begin(); i != tags_to_erase.end(); ++i ) {
 		m_machres_map.erase(*i);
@@ -1377,23 +1377,23 @@ MachAttributes::publish_static(ClassAd* cp)
 
 	std::string machine_resources = "Cpus Memory Disk Swap";
 	// publish any local resources
-	for (slotres_map_t::iterator j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
-		const char * rname = j->first.c_str();
+	for (auto & j : m_machres_map) {
+		const char * rname = j.first.c_str();
 		std::string attr(ATTR_DETECTED_PREFIX); attr += rname;
-		double ipart, fpart = modf(j->second, &ipart);
+		double ipart, fpart = modf(j.second, &ipart);
 		if (fpart >= 0.0 && fpart <= 0.0) {
 			cp->Assign(attr, (long long)ipart);
 		} else {
-			cp->Assign(attr, j->second);
+			cp->Assign(attr, j.second);
 		}
 		attr = ATTR_TOTAL_PREFIX; attr += rname;
 		if (fpart >= 0.0 && fpart <= 0.0) {
 			cp->Assign(attr, (long long)ipart);
 		} else {
-			cp->Assign(attr, j->second);
+			cp->Assign(attr, j.second);
 		}
 		machine_resources += " ";
-		machine_resources += j->first;
+		machine_resources += j.first;
 	}
 	cp->Assign(ATTR_MACHINE_RESOURCES, machine_resources);
 
@@ -1880,36 +1880,36 @@ CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bo
 		}
 	}
 
-	for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
+	for (auto & j : c_slotres_map) {
 		// TODO: handle fractional assigned custome resources?
-		int cAssigned = int(j->second);
+		int cAssigned = int(j.second);
 
 		// if this resource already has bound ids, don't bind again.
-		slotres_devIds_map_t::const_iterator m(c_slotres_ids_map.find(j->first));
+		slotres_devIds_map_t::const_iterator m(c_slotres_ids_map.find(j.first));
 		if (m != c_slotres_ids_map.end() && cAssigned == (int)m->second.size())
 			continue;
 
 		const char * request = nullptr;
-		slotres_constraint_map_t::const_iterator req(c_slotres_constraint_map.find(j->first));
+		slotres_constraint_map_t::const_iterator req(c_slotres_constraint_map.find(j.first));
 		if (req != c_slotres_constraint_map.end()) { request = req->second.c_str(); }
 
-		::dprintf(D_ALWAYS, "bind %s DevIds tag=%s contraint=%s\n", name, j->first.c_str(), request ? request : "");
+		::dprintf(D_ALWAYS, "bind %s DevIds tag=%s contraint=%s\n", name, j.first.c_str(), request ? request : "");
 
-		if (map->machres_devIds().count(j->first)) {
+		if (map->machres_devIds().count(j.first)) {
 			int cAllocated = 0;
 			for (int ii = 0; ii < cAssigned; ++ii) {
-				const char * id = map->AllocateDevId(j->first, request, slot_id, slot_sub_id, backfill_slot);
+				const char * id = map->AllocateDevId(j.first, request, slot_id, slot_sub_id, backfill_slot);
 				if (id) {
 					++cAllocated;
-					c_slotres_ids_map[j->first].push_back(id);
+					c_slotres_ids_map[j.first].push_back(id);
 					::dprintf(d_log_devids, "bind DevIds for %s bound %s %d\n",
-						name, id, (int)c_slotres_ids_map[j->first].size());
+						name, id, (int)c_slotres_ids_map[j.first].size());
 				}
 			}
 			if (cAllocated < cAssigned) {
-				::dprintf(D_ALWAYS | D_BACKTRACE, "%s Failed to bind local resource '%s'\n", name, j->first.c_str());
+				::dprintf(D_ALWAYS | D_BACKTRACE, "%s Failed to bind local resource '%s'\n", name, j.first.c_str());
 				if (abort_on_fail) {
-					EXCEPT("Failed to bind local resource '%s'", j->first.c_str());
+					EXCEPT("Failed to bind local resource '%s'", j.first.c_str());
 				}
 				return false;
 			}
@@ -1918,8 +1918,8 @@ CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bo
 			// of making c_slot_res_ids_map['tag'] exist, which in turn results in the
 			// "Assigned<Tag>" slot attribute being defined rather than undefined.
 			if (cAllocated > 0) {
-				c_slotres_props_map[j->first].Clear();
-				map->ComputeDevProps(c_slotres_props_map[j->first], j->first, c_slotres_ids_map[j->first]);
+				c_slotres_props_map[j.first].Clear();
+				map->ComputeDevProps(c_slotres_props_map[j.first], j.first, c_slotres_ids_map[j.first]);
 			}
 		}
 	}
@@ -1948,12 +1948,12 @@ CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id) 
 
 	if ( ! slot_sub_id) return;
 
-	for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-		slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
+	for (auto & j : c_slotres_map) {
+		slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j.first));
 		if (k != c_slotres_ids_map.end()) {
-			slotres_assigned_ids_t & ids = c_slotres_ids_map[j->first];
+			slotres_assigned_ids_t & ids = c_slotres_ids_map[j.first];
 			while ( ! ids.empty()) {
-				bool released = map->ReleaseDynamicDevId(j->first, ids.back().c_str(), slot_id, slot_sub_id);
+				bool released = map->ReleaseDynamicDevId(j.first, ids.back().c_str(), slot_id, slot_sub_id);
 				dprintf(released ? d_log_devids : D_ALWAYS, "ubind DevIds for slot%d.%d unbind %s %d %s\n",
 					slot_id, slot_sub_id, ids.back().c_str(), (int)ids.size(), released ? "OK" : "failed");
 				ids.pop_back();
@@ -2389,8 +2389,8 @@ AvailAttributes::AvailAttributes( MachAttributes* map ):
 	a_virt_mem_fraction = 1.0;
 	a_virt_mem_auto_count = 0;
     a_slotres_map = map->machres();
-    for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
-        a_autocnt_map[j->first] = 0;
+    for (auto & j : a_slotres_map) {
+        a_autocnt_map[j.first] = 0;
     }
 }
 
@@ -2590,7 +2590,7 @@ AvailAttributes::cat_totals(std::string & buf, const char * execute_partition_id
 	formatstr_cat(buf, "Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
 		a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
 		100*partition.m_disk_fraction );
-	for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
-		formatstr_cat(buf, ", %s: %d", j->first.c_str(), int(j->second));
+	for (auto & j : a_slotres_map) {
+		formatstr_cat(buf, ", %s: %d", j.first.c_str(), int(j.second));
 	}
 }
