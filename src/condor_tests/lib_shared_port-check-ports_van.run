@@ -196,9 +196,8 @@ $on_execute = sub {
 	foreach(@shadow_log_contents) {
 		chomp;
 		# get line with shadow's pid
-		if(index($_, "PID = ", 0) != -1) {
-			my $r = rindex($_, " ");
-			my $shadow_pid = substr($_, $r+1);
+		if (/PID = (\d+)/) {
+			my $shadow_pid = $1;
 			push(@pids, $shadow_pid);
 			$familypids{$shadow_pid} = 1;
 			$piddaemonlistencount{$shadow_pid} = 0;
@@ -217,9 +216,8 @@ $on_execute = sub {
 	foreach(@shared_port_log_contents) {
 		chomp;
 		# get line with shared_port's pid
-		if(index($_, "PID = ", 0) != -1) {
-			my $r = rindex($_, " ");
-			my $shared_port_pid = substr($_, $r+1);
+		if (/PID = (\d+)/) {
+			my $shared_port_pid = $1;
 			push(@pids, $shared_port_pid);
 			$familypids{$shared_port_pid} = 1;
 			$piddaemonlistencount{$shared_port_pid} = 0;

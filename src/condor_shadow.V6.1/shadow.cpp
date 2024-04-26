@@ -27,6 +27,7 @@
 #include "metric_units.h"
 #include "ShadowHookMgr.h"
 #include "store_cred.h"
+#include "condor_holdcodes.h"
 
 extern "C" char* d_format_time(double);
 
@@ -125,7 +126,7 @@ UniShadow::spawnFinish()
 	hookTimerCancel();
 	if( ! remRes->activateClaim() ) {
 			// we're screwed, give up:
-		shutDown( JOB_NOT_STARTED );
+		shutDown(JOB_NOT_STARTED, "Failed to activate claim", CONDOR_HOLD_CODE::FailedToActivateClaim);
 	}
 	// Start the timer for the periodic user job policy
 	shadow_user_policy.startTimer();
@@ -144,7 +145,7 @@ UniShadow::spawn()
 		if (rval == -1) {
 			dprintf(D_ALWAYS, "Prepare job hook has failed.  Will shutdown job.\n");
 			BaseShadow::log_except("Submit-side job hook execution failed");
-			shutDown(JOB_NOT_STARTED);
+			shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed");
 		} else if (rval == 0) {
 			dprintf(D_FULLDEBUG, "No prepare job hook to run - activating job immediately.\n");
 			spawnFinish();
@@ -166,7 +167,7 @@ UniShadow::hookTimeout( int /* timerID */ )
 {
 	dprintf(D_ERROR, "Timed out waiting for a hook to exit\n");
 	BaseShadow::log_except("Submit-side job hook execution timed out");
-	shutDown(JOB_NOT_STARTED);
+	shutDown(JOB_NOT_STARTED, "Shadow prepare hook timed out");
 }
 
 

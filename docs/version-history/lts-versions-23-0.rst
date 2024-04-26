@@ -32,7 +32,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- When submitting to a remote batch scheduler via ssh, improve error
+  handling when the initial ssh connection failures and a subsequent
+  attempt succeeds.
+  Before, transfers of job sandboxes would fail after such an error.
+  :jira:`2398`
 
 .. _lts-version-history-23010:
 
@@ -45,6 +49,9 @@ Release Notes:
 
 - HTCondor version 23.0.10 not yet released.
 
+- In the tarballs, the *apptainer* executable has been moved to the ``usr/libexec`` directory.
+  :jira:`2397`
+
 New Features:
 
 - Updated *condor_upgrade_check* to warn about the deprecated functionality of having
@@ -56,6 +63,10 @@ Bugs Fixed:
 - Fixed bug where the ``HoldReasonSubcode`` was not the documented value
   for jobs put on hold because of errors running a file transfer plugin.
   :jira:`2373`
+
+- Fixed a crash when using the *condor_upgrade_check* tool when using
+  a python version older than **3.8**. This bug was introduced in V23.0.4.
+  :jira:`2393`
 
 - Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
   to a random, non-HTCondor process, if pids are reused quickly.
@@ -85,6 +96,10 @@ Bugs Fixed:
 - Fixed a bug in the ``-better-analyze`` option of *condor_q* that could result
   in ``[-1]`` and no expression text being displayed for some analysis steps.
   :jira:`2355`
+
+- Fixed a bug where a bad DN value was used during SSL authentication
+  when the client didn't present a credential.
+  :jira:`2396`
 
 .. _lts-version-history-2308:
 

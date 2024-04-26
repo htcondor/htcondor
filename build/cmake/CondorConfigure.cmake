@@ -542,6 +542,8 @@ if( NOT WINDOWS)
 	set(SIGWAIT_ARGS "2")
 
 	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
+
+	option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 endif()
 
 find_program(LN ln)
@@ -602,7 +604,6 @@ if("${OS_NAME}" STREQUAL "LINUX")
 	set(HAVE_PSS ON)
 
 	set(HAVE_GNU_LD ON)
-    option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
     option(WITH_BLAHP "Compiling the blahp" ON)
 

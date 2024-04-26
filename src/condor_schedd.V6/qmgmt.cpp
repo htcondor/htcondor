@@ -225,7 +225,8 @@ int		MaterializeJobs(JobQueueCluster * clusterAd, TransactionWatcher & txn, int 
 
 static bool qmgmt_was_initialized = false;
 static JobQueueType *JobQueue = nullptr;
-static StringList DirtyJobIDs;
+static std::set<JOB_ID_KEY> DirtyJobIDs;
+static std::set<JOB_ID_KEY>::iterator DirtyJobIDsItr = DirtyJobIDs.begin();
 static std::set<int> DirtyPidsSignaled;
 static int next_cluster_num = -1;
 // If we ever allow more than one concurrent transaction, and next_proc_num
@@ -1457,8 +1458,7 @@ QmgmtPeer::isAuthenticated() const
 void
 InitQmgmt()
 {
-	StringList s_users;
-	char * tmp = nullptr;
+	std::vector<std::string> s_users;
 
 	std::string uid_domain;
 	param(uid_domain, "UID_DOMAIN");
@@ -1467,27 +1467,25 @@ InitQmgmt()
 
 	auto_free_ptr super(param("QUEUE_SUPER_USERS"));
 	if (super) {
-		s_users.initializeFromString(super);
+		s_users = split(super);
 	} else {
-		s_users.initializeFromString(default_super_user);
+		s_users = split(default_super_user);
 	}
-	super.set(s_users.print_to_string());
-	dprintf(D_ALWAYS, "config super users : %s\n", super.ptr());
+	dprintf(D_ALWAYS, "config super users : %s\n", super ? super : default_super_user);
 #ifdef WIN32
 	const char * process_dom_and_user = get_condor_username();
 	const char * process_user = strchr(process_dom_and_user, '/');
 	if (process_user) { ++process_user; } else { process_user = process_dom_and_user; }
-	if ( ! s_users.contains(process_user) ) { s_users.append(process_user); }
-	if ( ! s_users.contains("condor")) { s_users.append("condor"); } // because of family security sessions
+	if ( ! contains(s_users, process_user) ) { s_users.emplace_back(process_user); }
+	if ( ! contains(s_users, "condor")) { s_users.emplace_back("condor"); } // because of family security sessions
 #else
-	if( ! s_users.contains(get_condor_username()) ) {
-		s_users.append( get_condor_username() );
+	if( ! contains(s_users, get_condor_username()) ) {
+		s_users.emplace_back( get_condor_username() );
 	}
 #endif
 	super_users.clear();
-	super_users.reserve(s_users.number() + 3);
-	s_users.rewind();
-	while( (tmp = s_users.next()) ) {
+	super_users.reserve(s_users.size() + 3);
+	for (auto& tmp: s_users) {
 		if (user_is_the_new_owner) {
 			// Backward compatibility hack:
 			// QUEUE_SUPER_USERS historically has referred to owners (actual OS usernames)
@@ -1499,15 +1497,15 @@ InitQmgmt()
 			// are considered superusers.
 			std::string super_user(tmp);
 			if (super_user.find('@') == std::string::npos) {
-				std::string alt_super_user = std::string(tmp) + "@" + uid_domain;
+				std::string alt_super_user = tmp + "@" + uid_domain;
 				super_users.emplace_back(alt_super_user);
 			} else {
 				super_users.emplace_back(super_user);
 			}
 #ifdef WIN32
-			if (!strcasecmp(tmp, "condor"))
+			if (!strcasecmp(tmp.c_str(), "condor"))
 #else
-			if (!strcmp(tmp, "condor"))
+			if (!strcmp(tmp.c_str(), "condor"))
 #endif
 			{
 				super_users.emplace_back("condor@child");
@@ -1629,31 +1627,28 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 		}
 
 			// The value we are changing is a list of files
-		StringList old_paths(v.c_str(),",");
-		StringList new_paths(nullptr,",");
+		std::vector<std::string> new_paths;
 		bool changed = false;
 
-		old_paths.rewind();
 		char const *op = nullptr;
-		while( (op=old_paths.next()) ) {
+		for (auto& item: StringTokenIterator(v, ",")) {
+			op = item.c_str();
 			if( !strncmp(op,o,strlen(o)) ) {
 				std::string np = n;
 				np += op + strlen(o);
-				new_paths.append(np.c_str());
+				new_paths.emplace_back(np);
 				changed = true;
 			}
 			else {
-				new_paths.append(op);
+				new_paths.emplace_back(op);
 			}
 		}
 
 		if( changed ) {
-			char *nv = new_paths.print_to_string();
-			ASSERT( nv );
+			std::string nv = join(new_paths, ",");
 			dprintf(D_ALWAYS,"Changing job %d.%d %s from %s to %s\n",
-					cluster, proc, attr, v.c_str(), nv);
-			job_ad->Assign(attr,nv);
-			free( nv );
+					cluster, proc, attr, v.c_str(), nv.c_str());
+			job_ad->Assign(attr, nv);
 		}
 	}
 }
@@ -2783,7 +2778,7 @@ DestroyJobQueue( )
 	JobQueue = nullptr;
 
 	scheduler.deleteZombieOwners();
-	DirtyJobIDs.clearAll();
+	DirtyJobIDs.clear();
 
 		// There's also our hashtable of the size of each cluster
 	delete ClusterSizeHashTable;
@@ -5701,10 +5696,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
 
 		// Add the key to list of dirty classads
-		if( ! DirtyJobIDs.contains( key.c_str() ) &&
+		if( DirtyJobIDs.count( key ) == 0 &&
 			SendDirtyJobAdNotification( key ) ) {
 
-			DirtyJobIDs.append( key.c_str() );
+			DirtyJobIDs.insert( key );
 
 			// Start timer to ensure notice is confirmed
 			if( dirty_notice_timer_id <= 0 ) {
@@ -5900,24 +5895,23 @@ SendDirtyJobAdNotification(const PROC_ID & job_id)
 void
 PeriodicDirtyAttributeNotification(int /* tid */)
 {
-	char	*job_id_str = nullptr;
-
 	DirtyPidsSignaled.clear();
 
-	DirtyJobIDs.rewind();
-	while( (job_id_str = DirtyJobIDs.next()) != nullptr ) {
-		JOB_ID_KEY key(job_id_str);
-		if ( SendDirtyJobAdNotification(key) == false ) {
+	auto key_itr = DirtyJobIDs.begin();
+	while (key_itr != DirtyJobIDs.end()) {
+		if ( SendDirtyJobAdNotification(*key_itr) == false ) {
 			// There's no shadow/gridmanager for this job.
 			// Mark it clean and remove it from the dirty list.
 			// We can't call MarkJobClean() here, as that would
 			// disrupt our traversal of DirtyJobIDs.
-			JobQueue->ClearClassAdDirtyBits(key);
-			DirtyJobIDs.deleteCurrent();
+			JobQueue->ClearClassAdDirtyBits(*key_itr);
+			key_itr = DirtyJobIDs.erase(key_itr);
+		} else {
+			key_itr++;
 		}
 	}
 
-	if( DirtyJobIDs.isEmpty() && dirty_notice_timer_id > 0 )
+	if( DirtyJobIDs.empty() && dirty_notice_timer_id > 0 )
 	{
 		dprintf(D_FULLDEBUG, "Cancelling dirty attribute notification timer\n");
 		daemonCore->Cancel_Timer(dirty_notice_timer_id);
@@ -7771,15 +7765,14 @@ void
 MarkJobClean(PROC_ID proc_id)
 {
 	JobQueueKeyBuf job_id(proc_id);
-	const char * job_id_str = job_id.c_str();
 	if (JobQueue->ClearClassAdDirtyBits(job_id))
 	{
-		dprintf(D_FULLDEBUG, "Cleared dirty attributes for job %s\n", job_id_str);
+		dprintf(D_FULLDEBUG, "Cleared dirty attributes for job %s\n", job_id.c_str());
 	}
 
-	DirtyJobIDs.remove(job_id_str);
+	DirtyJobIDs.erase(job_id);
 
-	if( DirtyJobIDs.isEmpty() && dirty_notice_timer_id > 0 )
+	if( DirtyJobIDs.empty() && dirty_notice_timer_id > 0 )
 	{
 		dprintf(D_FULLDEBUG, "Cancelling dirty attribute notification timer\n");
 		daemonCore->Cancel_Timer(dirty_notice_timer_id);
@@ -8196,10 +8189,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			} else {
 				resslist = "Cpus, Disk, Memory";
 			}
-			StringList reslist(resslist.c_str());
 
-			reslist.rewind();
-			while (const char * resname = reslist.next()) {
+			for (auto& resname: StringTokenIterator(resslist)) {
 				std::string res = resname;
 				title_case(res); // capitalize it to make it print pretty.
 
@@ -8212,7 +8203,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				// as DiskProvisionedDisk, MemoryProvisioned, etc.  note that we 
 				// evaluate rather than lookup the value so we collapse expressions
 				// into literal values at this point.
-				if (EvalAttr(resname, ad, startd_ad, val)) {
+				if (EvalAttr(resname.c_str(), ad, startd_ad, val)) {
 					classad::Value::ValueType vt = val.GetType();
 					if (vt & value_type_ok) {
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
@@ -8378,16 +8369,11 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 			// attribute.
 		std::string remap_string;
 		if (job_ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS, remap_string)) {
-			StringList remap_commands_list(remap_string.c_str(), ";");
-			remap_commands_list.rewind();
-			char *command = nullptr;
 			std::string remap_commands;
-			while( (command = remap_commands_list.next()) ) {
-				StringList command_parts(command, " =");
-				if (command_parts.number() != 2) {continue;}
-				command_parts.rewind();
-				command_parts.next();
-				auto dest = command_parts.next();
+			for (auto& command: StringTokenIterator(remap_string, ";")) {
+				std::vector<std::string> command_parts = split(command, " =");
+				if (command_parts.size() != 2) {continue;}
+				auto dest = command_parts[1].c_str();
 				if (IsUrl(dest)) {
 					if (!url_remap_commands.empty()) {
 						url_remap_commands += ";";
@@ -8469,25 +8455,24 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		}
 			// Create new value - deal with the fact that
 			// some of these attributes contain a list of pathnames
-		StringList old_paths(nullptr,",");
-		StringList new_paths(nullptr,",");
+		std::vector<std::string> old_paths;
+		std::string new_paths;
 		if ( AttrIsList[attrIndex] ) {
-			old_paths.initializeFromString(buf);
+			old_paths = split(buf);
 		} else {
-			old_paths.insert(buf);
+			old_paths.emplace_back(buf);
 		}
-		old_paths.rewind();
-		char *old_path_buf = nullptr;
 		bool changed = false;
 		const char *base = nullptr;
-		while ( (old_path_buf=old_paths.next()) ) {
-			base = condor_basename(old_path_buf);
-			if ((strcmp(AttrsToModify[attrIndex], ATTR_TRANSFER_INPUT_FILES)==0) && IsUrl(old_path_buf)) {
-				base = old_path_buf;
-			} else if ( strcmp(base,old_path_buf)!=0 ) {
+		for (auto& old_path_buf: old_paths) {
+			base = condor_basename(old_path_buf.c_str());
+			if ((strcmp(AttrsToModify[attrIndex], ATTR_TRANSFER_INPUT_FILES)==0) && IsUrl(old_path_buf.c_str())) {
+				base = old_path_buf.c_str();
+			} else if ( strcmp(base,old_path_buf.c_str())!=0 ) {
 				changed = true;
 			}
-			new_paths.append(base);
+			if (!new_paths.empty()) new_paths += ',';
+			new_paths += base;
 		}
 		if ( changed ) {
 				// Backup original value
@@ -8498,14 +8483,11 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 				SetAttributeString(cluster,proc,new_attr_name,buf);
 			}
 				// Store new value
-			char *new_value = new_paths.print_to_string();
-			ASSERT(new_value);
 			if ( modify_ad ) {
-				job_ad->Assign(AttrsToModify[attrIndex],new_value);
+				job_ad->Assign(AttrsToModify[attrIndex],new_paths);
 			} else {
-				SetAttributeString(cluster,proc,AttrsToModify[attrIndex],new_value);
+				SetAttributeString(cluster,proc,AttrsToModify[attrIndex],new_paths.c_str());
 			}
-			free(new_value);
 		}
 	}
 	if (buf) free(buf);
@@ -8738,22 +8720,20 @@ JobQueueJob *
 GetNextDirtyJobByConstraint(const char *constraint, int initScan)
 {
 	JobQueueJob *ad = nullptr;
-	char *job_id_str = nullptr;
 
 	if (initScan) {
-		DirtyJobIDs.rewind( );
+		DirtyJobIDsItr = DirtyJobIDs.begin();
 	}
 
-	while( (job_id_str = DirtyJobIDs.next( )) != nullptr ) {
-		JOB_ID_KEY job_id(job_id_str);
-		if( !JobQueue->Lookup( job_id, ad ) ) {
-			dprintf(D_ALWAYS, "Warning: Job %s is marked dirty, but could not find in the job queue.  Skipping\n", job_id_str);
-			continue;
-		}
-
-		if (EvalConstraint(ad, constraint)) {
+	while (DirtyJobIDsItr != DirtyJobIDs.end()) {
+		if( !JobQueue->Lookup( *DirtyJobIDsItr, ad ) ) {
+			std::string id_str;
+			DirtyJobIDsItr->sprint(id_str);
+			dprintf(D_ALWAYS, "Warning: Job %s is marked dirty, but could not find in the job queue.  Skipping\n", id_str.c_str());
+		} else if (EvalConstraint(ad, constraint)) {
 			return ad;
 		}
+		DirtyJobIDsItr++;
 	}
 	return nullptr;
 }
@@ -8873,9 +8853,6 @@ int    last_autocluster_type=0;
 int    last_autocluster_classad_cache_hit=0;
 stats_entry_abs<int> SCGetAutoClusterType;
 
-// Returns cur_hosts so that another function in the scheduler can
-// update JobsRunning and keep the scheduler and queue manager
-// seperate. 
 int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 {
     int     job_prio = 0, 
@@ -8883,11 +8860,8 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
             pre_job_prio2 = 0, 
             post_job_prio1 = 0, 
             post_job_prio2 = 0;
-    int     job_status = 0;
     char    owner[100];
-    int     cur_hosts = 0;
-    int     max_hosts = 0;
-    int     universe = 0;
+	const char* dummy = nullptr;
 
 	ASSERT(job);
 
@@ -8920,27 +8894,12 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	SCGetAutoClusterType = last_autocluster_type;
 	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
 
-	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
-	ASSERT(universe == job->Universe());
-
-	job->LookupInteger(ATTR_JOB_STATUS, job_status);
-    if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
-        cur_hosts = ((job_status == SUSPENDED || job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) ? 1 : 0);
-    }
-    if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
-        max_hosts = ((job_status == IDLE) ? 1 : 0);
-    }
 	// Figure out if we should contine and put this job into the PrioRec array
 	// or not.
-    // No longer judge whether or not a job can run by looking at its status.
-    // Rather look at if it has all the hosts that it wanted.
-    if (cur_hosts>=max_hosts || job_status==HELD || job_status==JOB_STATUS_BLOCKED ||
-			job_status==REMOVED || job_status==COMPLETED || job_status==JOB_STATUS_FAILED ||
-			job->IsNoopJob() ||
-			!service_this_universe(universe,job) ||
+	if ( ! Runnable(job, dummy) ||
 			scheduler.AlreadyMatched(job, job->Universe()))
 	{
-        return cur_hosts;
+		return 0;
 	}
 
 	// --- Insert this job into the PrioRec array ---
@@ -9006,7 +8965,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     PrioRec[N_PrioRecs].pre_job_prio2  = pre_job_prio2;
     PrioRec[N_PrioRecs].post_job_prio1 = post_job_prio1;
     PrioRec[N_PrioRecs].post_job_prio2 = post_job_prio2;
-    PrioRec[N_PrioRecs].status         = job_status;
     PrioRec[N_PrioRecs].not_runnable   = false;
     PrioRec[N_PrioRecs].matched        = false;
 	if ( auto_id == -1 ) {
@@ -9022,7 +8980,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		grow_prio_recs( 2 * N_PrioRecs );
 	}
 
-	return cur_hosts;
+	return 0;
 }
 
 bool
@@ -9784,60 +9742,38 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	// no more jobs to run anywhere.  nothing more to do.  failure.
 }
 
-int Runnable(JobQueueJob *job, const char *& reason)
+bool Runnable(JobQueueJob *job, const char *& reason)
 {
-	int status = 0, universe = 0, cur = 0, max = 1;
+	int cur = 0, max = 1;
 
 	if ( ! job || ! job->IsJob())
 	{
 		reason = "not runnable (not found)";
-		return FALSE;
+		return false;
 	}
 
 	if (job->IsNoopJob())
 	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (IsNoopJob)\n");
 		reason = "not runnable (IsNoopJob)";
-		return FALSE;
+		return false;
 	}
 
-	if ( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 )
-	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",ATTR_JOB_STATUS);
-		reason = "not runnable (no " ATTR_JOB_STATUS ")";
-		return FALSE;
-	}
-	if (status == HELD)
-	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (HELD)\n");
-		reason = "not runnable (HELD)";
-		return FALSE;
-	}
-	if (status == REMOVED)
-	{
-		// dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (REMOVED)\n");
-		reason = "not runnable (REMOVED)";
-		return FALSE;
-	}
-	if (status == COMPLETED)
-	{
-		// dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (COMPLETED)\n");
-		reason = "not runnable (COMPLETED)";
-		return FALSE;
+	if (job->Status() != IDLE) {
+		reason = "not runnanble (not IDLE)";
+		return false;
 	}
 
-
-	if ( job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 )
+	if( !service_this_universe(job->Universe(), job) )
 	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n", ATTR_JOB_UNIVERSE);
-		reason = "not runnable (no " ATTR_JOB_UNIVERSE ")";
-		return FALSE;
-	}
-	if( !service_this_universe(universe,job) )
-	{
-		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (Universe=%s)\n", CondorUniverseName(universe) );
 		reason = "not runnable (universe not in service)";
-		return FALSE;
+		return false;
+	}
+
+	time_t cool_down = 0;
+	job->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
+	if (cool_down >= time(nullptr)) {
+		reason = "not runnable (in cool-down)";
+		return false;
 	}
 
 	job->LookupInteger(ATTR_CURRENT_HOSTS, cur);
@@ -9845,20 +9781,18 @@ int Runnable(JobQueueJob *job, const char *& reason)
 
 	if (cur < max)
 	{
-		// dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");
 		reason = "is runnable";
-		return TRUE;
+		return true;
 	}
 	
-	//dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable (default rule)\n");
-	reason = "not runnable (default rule)";
-	return FALSE;
+	reason = "not runnable (already matched)";
+	return false;
 }
 
-int Runnable(PROC_ID* id)
+bool Runnable(PROC_ID* id)
 {
 	const char * reason = "";
-	int runnable = Runnable(GetJobAd(id->cluster,id->proc), reason);
+	bool runnable = Runnable(GetJobAd(id->cluster,id->proc), reason);
 	dprintf (D_FULLDEBUG, "Job %d.%d: %s\n", id->cluster, id->proc, reason);
 	return runnable;
 }

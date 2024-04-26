@@ -3603,7 +3603,7 @@ section.
 
 :macro-def:`MOUNT_UNDER_SCRATCH[STARTD]`
     A ClassAd expression, which when evaluated in the context of the job
-    ClassAd, evaluates to a string that contains a comma separated list
+    and machine ClassAds, evaluates to a string that contains a comma separated list
     of directories. For each directory in the list, HTCondor creates a
     directory in the job's temporary scratch directory with that name,
     and makes it available at the given name using bind mounts. This is
@@ -3615,7 +3615,7 @@ section.
 
     .. code-block:: condor-config
 
-          MOUNT_UNDER_SCRATCH = ifThenElse(TARGET.UtsnameSysname ? "Linux", "/tmp,/var/tmp", "")
+          MOUNT_UNDER_SCRATCH = ifThenElse(TARGET.UtsnameSysname =?= "Linux", "/tmp,/var/tmp", "")
 
     If the job is running on a Linux system, it will see the usual
     ``/tmp`` and ``/var/tmp`` directories, but when accessing files via
@@ -5396,6 +5396,13 @@ These macros control the *condor_schedd*.
     ``False``. When ``True``, it causes the job to be evicted from the
     machine it is running on.
 
+:macro-def:`SYSTEM_ON_VACATE_COOL_DOWN[SCHEDD]`
+    This expression is evaluated whenever an execution attempt for a
+    job is interrupted (i.e. the job does not exit of its own accord).
+    If it evaluates to a positive integer, then the job is put into a
+    cool-down state for that number of seconds. During this time, the
+    job will not be run again.
+
 :macro-def:`SCHEDD_ASSUME_NEGOTIATOR_GONE[SCHEDD]`
     This macro determines the period, in seconds, that the
     *condor_schedd* will wait for the *condor_negotiator* to initiate
@@ -5921,13 +5928,13 @@ These macros control the *condor_schedd*.
     Boolean to enable the use of job sets with the `htcondor jobset` command.
     Defaults to false.
 
-:macro-def:`ENABLE_HTTP_PUBLIC_FILES[SCHEDD]`:
+:macro-def:`ENABLE_HTTP_PUBLIC_FILES[SCHEDD]`
     A boolean that defaults to false.  When true, the schedd will
     use an external http server to transfer public input file.
 
 :macro-def:`HTTP_PUBLIC_FILES_ADDRESS[SCHEDD]`
     The full web address (hostname + port) where your web server is serving files (default:
-    127.0.0.1:8080)
+    127.0.0.1:80)
 
 :macro-def:`HTTP_PUBLIC_FILES_ROOT_DIR[SCHEDD]`
     Absolute path to the local directory where the web service is serving files from.
@@ -6283,6 +6290,19 @@ These settings affect the *condor_starter*.
     When set to custom, the additional knob CGROUP_HARD_MEMORY_LIMIT_EXPR
     must be set, which is a classad expression evaluated
     in the context of the machine and the job, respectively, to determine the hard limits.
+
+:macro-def:`CGROUP_HARD_MEMORY_LIMIT_EXPR`
+    See above.
+
+:macro-def:`CGROUP_LOW_MEMORY_LIMIT`
+    A classad expression, evaluated in the context of the slot and job ad.
+    When it evaluated to a number, that number is written to the job's
+    cgroup memory.low limit.  This is only implemented on Linux systems
+    where HTCondor controls the jobs' cgroups.  When the job exceeds this 
+    limit, the kernel will aggressively evict read-only pages (often disk cache)
+    from the job's use.  For example, an admin could set this to 
+    Memory * 0.5, in order to prevent the system from using otherwise available
+    memory for caching on behalf of the job.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`
     A boolean that defaults to false.  When true, and cgroups are in effect, the

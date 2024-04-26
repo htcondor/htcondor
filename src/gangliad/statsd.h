@@ -179,6 +179,9 @@ class StatsD: Service {
 	std::string m_default_aggregate_host;
 	classad::ClassAd m_default_metric_ad;
 	StringList m_target_types;
+	bool m_want_projection;
+	classad::References m_projection_references;
+
 
 	unsigned m_derivative_publication_failed;
 	unsigned m_non_derivative_publication_failed;
