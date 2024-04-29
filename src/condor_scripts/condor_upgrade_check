@@ -404,6 +404,10 @@ def validate_token_permissions(info: os.stat_result, uid: int, perms: dict):
 def check_token_permissions(*args, **kwargs):
     """Check the token directories and stored tokens for the apropriate ownership and access permissions"""
 
+    # Does not apply to Windows hosts
+    if IS_WINDOWS:
+        return True
+
     p = subprocess.run(["hostname", "-f"], stdout=subprocess.PIPE)
     hostname = p.stdout.rstrip().decode()
     if len(hostname) == 0:
