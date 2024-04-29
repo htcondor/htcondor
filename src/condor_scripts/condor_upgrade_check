@@ -370,22 +370,18 @@ def check_pslot_default(*args, **kwargs):
     return True
 
 
-def validate_token_permissions(info: os.stat_result, uid: int, udata: tuple, perms: dict):
+def uid2user(uid: int):
+    udata = pwd.getpwuid(uid)
+    return udata.pw_name if uid != 0 else "root"
+
+
+def validate_token_permissions(info: os.stat_result, uid: int, perms: dict):
     """Function to verify token directory/file ownership and permissions"""
 
     errors = []
 
     if info.st_uid != uid:
-        errors.append(f"Owner is not '{udata[0]}'")
-
-    wrong_gid = False
-    if uid != 0 and platform.system() == "Darwin":
-        wrong_gid = info.st_gid != grp.getgrnam("staff").gr_gid
-    else:
-        wrong_gid = info.st_gid != uid
-
-    if wrong_gid:
-        errors.append(f"Group is not '{udata[1]}' (Recommended but not required)")
+        errors.append(f"Owner is not '{uid2user(uid)}'")
 
     keys = list(perms.keys())
     keys.sort()
@@ -412,6 +408,7 @@ def check_token_permissions(*args, **kwargs):
     hostname = p.stdout.rstrip().decode()
     if len(hostname) == 0:
         format_print("Error: Failed to get hostname", newline=True, err=True)
+        return False
 
     format_print(f"Hostname: {hostname}", newline=True, debug=Debug.DEBUGGING)
 
@@ -440,14 +437,6 @@ def check_token_permissions(*args, **kwargs):
         format_print("HTCondor is running as root on system so test requires root", newline=True)
         return False
 
-    udata = pwd.getpwuid(uid)
-
-    user = udata.pw_name if uid != 0 else "root"
-
-    priv_group = "wheel" if platform.system() == "Darwin" else "root"
-    unpriv_group = "staff" if platform.system() == "Darwin" else udata.pw_name
-    group = unpriv_group if uid != 0 else priv_group
-
     format_print("", newline=True, debug=Debug.DEBUGGING)
 
     TOKEN_DIRS = [
@@ -475,7 +464,7 @@ def check_token_permissions(*args, **kwargs):
         valid_perms = {"700" : stat.S_IRWXU}
 
         format_print(f"Validating: {directory}", offset=4, debug=Debug.DEBUGGING)
-        errors = validate_token_permissions(os.stat(directory), uid, (user,group), valid_perms)
+        errors = validate_token_permissions(os.stat(directory), uid, valid_perms)
 
         if errors is not None:
             issues[directory] = errors
@@ -488,18 +477,20 @@ def check_token_permissions(*args, **kwargs):
         for f in os.listdir(directory):
             token_file = os.path.join(directory, f)
             format_print(f"Validating: {token_file}", offset=4, debug=Debug.DEBUGGING)
-            errors = validate_token_permissions(os.stat(token_file), uid, (user,group), valid_perms)
+            errors = validate_token_permissions(os.stat(token_file), uid, valid_perms)
 
             if errors is not None:
                 issues[token_file] = errors
 
     if len(issues) > 0:
+        user = uid2user(uid)
+
         format_print(
             f"""
             Found {len(issues)} token related thing(s) with incorrect ownership
             or file permissions. Expected:
-                - Token Directories: ({user}:{group}) 700
-                - Token Files: ({user}:{group}) 400|600|700
+                - Token Directories-> {user}:700
+                - Token Files-------> {user}:400|600|700
             """,
             newline=True,
             offset=4,
@@ -507,15 +498,6 @@ def check_token_permissions(*args, **kwargs):
 
         if extra_msg is not None:
             format_print(extra_msg, offset=4)
-
-        format_print(
-            f"""
-            $(<EMPTY_LINE>)
-            Note: This checks for a recommended group but is not required
-                  since tokens should only be user readable.
-            """,
-            offset=4,
-        )
 
         if VERBOSITY < Debug.DETAILED:
             format_print(
