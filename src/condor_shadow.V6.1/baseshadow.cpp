@@ -1590,12 +1590,22 @@ extern BaseShadow *Shadow;
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
+	constexpr int cchpid = 10 * (sizeof(pid_t)/4); // 10 chars for 32 bit pids, 19 chars for 64 bit pids
+	static char pidbuf[cchpid+2 +1 + cchpid+2 +2] = {0}; // room for "()>()" + cchpid digits for each pid plus trailing \0
 	static pid_t mypid = 0;
 	int mycluster = -1;
 	int myproc = -1;
 
-	if (!mypid) {
-		mypid = daemonCore->getpid();
+	// show the shadow pid when we first start up
+	// then if we fork show the forked pid also
+	if (daemonCore) {
+		pid_t tpid = daemonCore->getpid();
+		if (!pidbuf[0]) {
+			mypid = tpid;
+			snprintf(pidbuf, sizeof(pidbuf)-1, "(%lld)", (long long)mypid);
+		} else if (tpid != mypid) {
+			snprintf(pidbuf, sizeof(pidbuf)-1, "(%lld)>(%lld)", (long long)mypid, (long long)tpid);
+		}
 	}
 
 	if (Shadow) {
@@ -1604,9 +1614,9 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 	}
 
 	if ( mycluster != -1 ) {
-		return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) (%ld): ", mycluster, myproc, (long)mypid );
+		return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) %s: ", mycluster, myproc, pidbuf );
 	} else {
-		return sprintf_realloc( buf, bufpos, buflen, "(?.?) (%ld): ", (long)mypid );
+		return sprintf_realloc( buf, bufpos, buflen, "(?.?) %s: ", pidbuf );
 	}
 
 	return 0;
