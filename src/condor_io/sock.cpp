@@ -3007,3 +3007,38 @@ Sock::invalidateSock()
 {
 	_sock = INVALID_SOCKET; 
 }
+
+char const *
+Sock::get_sinful_public() const
+{
+		// In case TCP_FORWARDING_HOST changes, do not cache it.
+	std::string tcp_forwarding_host;
+	param(tcp_forwarding_host,"TCP_FORWARDING_HOST");
+	if (!tcp_forwarding_host.empty()) {
+		condor_sockaddr addr;
+		
+		if (!addr.from_ip_string(tcp_forwarding_host)) {
+			std::vector<condor_sockaddr> addrs = resolve_hostname(tcp_forwarding_host);
+			if (addrs.empty()) {
+				dprintf(D_ALWAYS,
+					"failed to resolve address of TCP_FORWARDING_HOST=%s\n",
+					tcp_forwarding_host.c_str());
+				return NULL;
+			}
+			addr = addrs.front();
+		}
+		addr.set_port(get_port());
+		_sinful_public_buf = addr.to_sinful().c_str();
+
+		std::string alias;
+		if( param(alias,"HOST_ALIAS") ) {
+			Sinful s(_sinful_public_buf.c_str());
+			s.setAlias(alias.c_str());
+			_sinful_public_buf = s.getSinful();
+		}
+
+		return _sinful_public_buf.c_str();
+	}
+
+	return get_sinful();
+}
