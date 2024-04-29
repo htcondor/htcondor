@@ -12,6 +12,10 @@ import argparse
 from enum import Enum
 
 # Temporary needed imports (for a check)
+import stat
+import pwd
+import grp
+import platform
 # End imports
 
 try:
@@ -34,7 +38,8 @@ class Debug(Enum):
     WARNING = 0
     BASE = 1
     DETAILED = 2
-    MAX = 3
+    DEBUGGING = 3
+    MAX = 4
 
     def __gt__(self, other):
         if self.__class__ is other.__class__:
@@ -365,6 +370,176 @@ def check_pslot_default(*args, **kwargs):
     return True
 
 
+def validate_token_permissions(info: os.stat_result, uid: int, udata: tuple, perms: dict):
+    """Function to verify token directory/file ownership and permissions"""
+
+    errors = []
+
+    if info.st_uid != uid:
+        errors.append(f"Owner is not '{udata[0]}'")
+
+    wrong_gid = False
+    if uid != 0 and platform.system() == "Darwin":
+        wrong_gid = info.st_gid != grp.getgrnam("staff").gr_gid
+    else:
+        wrong_gid = info.st_gid != uid
+
+    if wrong_gid:
+        errors.append(f"Group is not '{udata[1]}' (Recommended but not required)")
+
+    keys = list(perms.keys())
+    keys.sort()
+    perms_str = "|".join(keys)
+
+    fs_perm = info.st_mode & (stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+
+    valid = False
+    for perm in perms.values():
+        if fs_perm == perm:
+            valid = True
+            break
+
+    if not valid:
+            errors.append(f"Invalid permissions ({oct(fs_perm)[2:]}): Requires ({perms_str})")
+
+    return errors if len(errors) > 0 else None
+
+
+def check_token_permissions(*args, **kwargs):
+    """Check the token directories and stored tokens for the apropriate ownership and access permissions"""
+
+    p = subprocess.run(["hostname", "-f"], stdout=subprocess.PIPE)
+    hostname = p.stdout.rstrip().decode()
+    if len(hostname) == 0:
+        format_print("Error: Failed to get hostname", newline=True, err=True)
+
+    format_print(f"Hostname: {hostname}", newline=True, debug=Debug.DEBUGGING)
+
+    try:
+        ads = htcondor.Collector().query(
+            htcondor.AdTypes.Master,
+            constraint=f'Machine=="{hostname}"',
+            projection=["RealUid"]
+        )
+        if len(ads) != 1:
+            format_print("Error: No Master Ad returned for this host", newline=True, err=True)
+            return False
+    except Exception as e:
+        format_print(f"Error: Failed to contact pool Collector: {repr(e)}", newline=True, err=True)
+        return False
+
+    master_ad = ads[0]
+
+    if "RealUid" not in master_ad:
+        format_print("Error: Master Ad missing 'RealUid'", newline=True, err=True)
+        return False
+
+    uid = master_ad["RealUid"]
+
+    if uid == 0 and os.getuid() != 0:
+        format_print("HTCondor is running as root on system so test requires root", newline=True)
+        return False
+
+    udata = pwd.getpwuid(uid)
+
+    user = udata.pw_name if uid != 0 else "root"
+
+    priv_group = "wheel" if platform.system() == "Darwin" else "root"
+    unpriv_group = "staff" if platform.system() == "Darwin" else udata.pw_name
+    group = unpriv_group if uid != 0 else priv_group
+
+    format_print("", newline=True, debug=Debug.DEBUGGING)
+
+    TOKEN_DIRS = [
+        htcondor.param["SEC_TOKEN_SYSTEM_DIRECTORY"],
+        htcondor.param.get("SEC_TOKEN_DIRECTORY", "~/.condor/tokens.d"),
+    ]
+
+    issues = {}
+    extra_msg = None
+
+    for directory in TOKEN_DIRS:
+        if len(directory) == 0:
+            continue
+
+        if directory[0] == "~":
+            extra_msg = """
+                        Warning:
+                            SEC_TOKEN_DIRECTORY is relative to a home directory '~'
+                            which is applied on a per user basis. This directory and
+                            stored tokens are expected to be owned and only readable
+                            by the user. This tool is not verifying this behavior.
+                        """
+            continue
+
+        valid_perms = {"700" : stat.S_IRWXU}
+
+        format_print(f"Validating: {directory}", offset=4, debug=Debug.DEBUGGING)
+        errors = validate_token_permissions(os.stat(directory), uid, (user,group), valid_perms)
+
+        if errors is not None:
+            issues[directory] = errors
+
+        valid_perms.update({
+            "400" : stat.S_IRUSR,
+            "600" : stat.S_IRUSR | stat.S_IWUSR,
+        })
+
+        for f in os.listdir(directory):
+            token_file = os.path.join(directory, f)
+            format_print(f"Validating: {token_file}", offset=4, debug=Debug.DEBUGGING)
+            errors = validate_token_permissions(os.stat(token_file), uid, (user,group), valid_perms)
+
+            if errors is not None:
+                issues[token_file] = errors
+
+    if len(issues) > 0:
+        format_print(
+            f"""
+            Found {len(issues)} token related thing(s) with incorrect ownership
+            or file permissions. Expected:
+                - Token Directories: ({user}:{group}) 700
+                - Token Files: ({user}:{group}) 400|600|700
+            """,
+            newline=True,
+            offset=4,
+        )
+
+        if extra_msg is not None:
+            format_print(extra_msg, offset=4)
+
+        format_print(
+            f"""
+            $(<EMPTY_LINE>)
+            Note: This checks for a recommended group but is not required
+                  since tokens should only be user readable.
+            """,
+            offset=4,
+        )
+
+        if VERBOSITY < Debug.DETAILED:
+            format_print(
+                """
+                For a complete list of files and their issues, increase
+                the tool output verbosity with -v
+                """,
+                newline=True,
+                offset=4,
+            )
+
+        format_print("", newline=True, debug=Debug.DETAILED)
+
+        for item, errors in issues.items():
+            i_type = "DIR" if item in TOKEN_DIRS else "FILE"
+            format_print(f"{i_type:<4s}> {item}", offset=4, debug=Debug.DETAILED)
+            for err in errors:
+                format_print(f"* {err}", offset=10, debug=Debug.DETAILED)
+
+        return False
+
+    return True
+
+
 # =============================================================================================
 INCOMPATIBILITY_CHECKS = [
     Check(
@@ -424,6 +599,20 @@ INCOMPATIBILITY_CHECKS = [
         synopsis="Use of StartD RANK doesn't function with new Partitionable Slot default",
         version=(23, 0, 0),
         daemons=["STARTD"],
+    ),
+    Check(
+        test=check_token_permissions,
+        name="Token Permissions",
+        tag="TOK-PERM",
+        synopsis="Verify ownership and permissions of stored tokens",
+        desc="""
+             This check will verify that the SEC_TOKEN_SYSTEM_DIRECTORY
+             along with all stored tokens have the correct owner and
+             file system permissions.
+             $(<EMPTY_LINE>)
+             Note: Requires root if HTCondor is running rootly
+             """,
+        version=(23, 7, 1),
     ),
 ]
 
