@@ -413,7 +413,9 @@ LocalUserLog::logRequeueEvent( ClassAd* ad, bool checkpointed )
     	//
     	// Grab the exit reason out of the ad
     	//
-	ad->LookupString( ATTR_REQUEUE_REASON, event.reason );
+	std::string reasonstr;
+	ad->LookupString( ATTR_REQUEUE_REASON, reasonstr );
+	event.setReason(reasonstr);
     
 	event.run_local_rusage = run_local_rusage;
     event.checkpointed = checkpointed;

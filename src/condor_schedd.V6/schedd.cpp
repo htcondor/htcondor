@@ -5065,8 +5065,10 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	}
 	JobAbortedEvent event;
 
+	std::string reasonstr;
 	GetAttributeString(job_id.cluster, job_id.proc,
-	                   ATTR_REMOVE_REASON, event.reason);
+	                   ATTR_REMOVE_REASON, reasonstr);
+	event.setReason(reasonstr);
 
 	// Jobs usually have a shadow, and this event is usually written after
 	// that shadow dies, but that's by no means certain.  If we happen to
@@ -5103,12 +5105,14 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	}
 	JobHeldEvent event;
 
+	std::string reasonstr;
 	if( GetAttributeString(job_id.cluster, job_id.proc,
-	                       ATTR_HOLD_REASON, event.reason) < 0 ) {
+	                       ATTR_HOLD_REASON, reasonstr) < 0 ) {
 		dprintf( D_ALWAYS, "Scheduler::WriteHoldToUserLog(): "
 				 "Failed to get %s from job %d.%d\n", ATTR_HOLD_REASON,
 				 job_id.cluster, job_id.proc );
 	}
+	event.setReason(reasonstr);
 
 	GetAttributeInt(job_id.cluster, job_id.proc,
 	                ATTR_HOLD_REASON_CODE, &event.code);
@@ -5141,8 +5145,10 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 	}
 	JobReleasedEvent event;
 
+	std::string reasonstr;
 	GetAttributeString(job_id.cluster, job_id.proc,
-	                   ATTR_RELEASE_REASON, event.reason);
+	                   ATTR_RELEASE_REASON, reasonstr);
+	event.setReason(reasonstr);
 
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
@@ -5296,8 +5302,8 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 		event.normal = false;
 		event.signal_number = WTERMSIG(status);
 	}
-	if(reason) {
-		event.reason = reason;
+	if (reason && reason[0]) {
+		event.setReason(reason);
 	}
 	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
@@ -8805,7 +8811,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
 			"schedd now running again";
-		event.disconnect_reason = txt;
+		event.setDisconnectReason(txt);
 		event.startd_addr = startd_addr;
 		event.startd_name = startd_name;
 
