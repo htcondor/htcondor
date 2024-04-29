@@ -714,11 +714,11 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 			set_live_submit_variable(SUBMIT_KEY_Cluster, LiveClusterString);
 			set_live_submit_variable(SUBMIT_KEY_Process, LiveProcessString);
 	
-			if (fea.vars.isEmpty()) {
+			if (fea.vars.empty()) {
 				set_live_submit_variable("item", emptyItemString);
 			} else {
-				for (const char * var = fea.vars.first(); var != nullptr; var = fea.vars.next()) {
-					set_live_submit_variable(var, emptyItemString, false);
+				for (const auto& var: fea.vars) {
+					set_live_submit_variable(var.c_str(), emptyItemString, false);
 				}
 			}
 
@@ -865,7 +865,7 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 	// If there are loop variables, destructively tokenize item and stuff the tokens into the submit hashtable.
 	if ( ! item) { item = emptyItemString; }
 
-	if (fea.vars.isEmpty()) {
+	if (fea.vars.empty()) {
 		set_live_submit_variable("item", item, true);
 		return loaded_row;
 	}
@@ -873,10 +873,9 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 
 	// set the first loop variable unconditionally, we set it initially to the whole item
 	// we may later truncate that item when we assign fields to other loop variables.
-	fea.vars.rewind();
-	char * var = fea.vars.next();
+	auto var_it = fea.vars.begin();
 	char * data = item;
-	set_live_submit_variable(var, data, false);
+	set_live_submit_variable(var_it->c_str(), data, false);
 
 	// check for the use of US as a field separator
 	// if we find one, then use that instead of the default token separator
@@ -892,16 +891,16 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 			// trim token separator and also trailing whitespace
 			char * endp = pus-1;
 			while (endp >= data && (*endp == ' ' || *endp == '\t')) *endp-- = 0;
-			if ( ! var) break;
+			if (var_it == fea.vars.end()) break;
 
 			// advance to the next field and skip leading whitespace
 			data = pus;
 			if (data < pend) ++data;
 			while (*data == ' ' || *data == '\t') ++data;
 			pus = strchr(data, '\x1F');
-			var = fea.vars.next();
-			if (var) {
-				set_live_submit_variable(var, data, false);
+			var_it++;
+			if (var_it != fea.vars.end()) {
+				set_live_submit_variable(var_it->c_str(), data, false);
 			}
 			if ( ! pus) {
 				// last field, use the terminating null for the remainder of items.
@@ -912,7 +911,7 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 		// if there is more than a single loop variable, then assign them as well
 		// we do this by destructively null terminating the item for each var
 		// the last var gets all of the remaining item text (if any)
-		while ((var = fea.vars.next())) {
+		while ((++var_it != fea.vars.end())) {
 			// scan for next token separator
 			while (*data && ! strchr(token_seps, *data)) ++data;
 			// null terminate the previous token and advance to the start of the next token.
@@ -920,16 +919,15 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 				*data++ = 0;
 				// skip leading separators and whitespace
 				while (*data && strchr(token_ws, *data)) ++data;
-				set_live_submit_variable(var, data, false);
+				set_live_submit_variable(var_it->c_str(), data, false);
 			}
 		}
 	}
 
 	if (empty_var_names) {
-		fea.vars.rewind();
 		empty_var_names->clear();
-		while ((var = fea.vars.next())) {
-			MACRO_ITEM* pitem = lookup_exact(var);
+		for (const auto& var: fea.vars) {
+			MACRO_ITEM* pitem = lookup_exact(var.c_str());
 			if ( ! pitem || (pitem->raw_value != emptyItemString && 0 == strlen(pitem->raw_value))) {
 				if ( ! empty_var_names->empty()) (*empty_var_names) += ",";
 				(*empty_var_names) += var;

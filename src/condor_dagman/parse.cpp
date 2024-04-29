@@ -31,9 +31,7 @@
 #include "job.h"
 #include "parse.h"
 #include "debug.h"
-#include "util_lib_proto.h"
 #include "dagman_commands.h"
-#include "dagman_main.h"
 #include "tmp_dir.h"
 #include "basename.h"
 #include "condor_getcwd.h"
@@ -1463,6 +1461,7 @@ parse_parent(
 				" node \"%s\" and child nodes : %s\n",
 				filename, lineNumber, parent_type,
 				parent->GetJobName(), failReason.c_str());
+			return false;
 		}
 	}
 	return true;

@@ -37,6 +37,7 @@ with _add_dll_dir():
     from ._class_ad import _parseNext as parseNext
     from ._class_ad import _quote as quote
     from ._class_ad import _unquote as unquote
+    from ._class_ad import _lastError as lastError
 
     # For compability with version 1.
     from ._parser_type import ParserType as Parser

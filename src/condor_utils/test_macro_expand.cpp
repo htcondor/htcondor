@@ -31,7 +31,7 @@
 #include <string>
 
 // for testing the userMap classad function
-extern int add_user_mapping(const char * mapname, char * mapdata);
+extern int add_user_mapping(const char * mapname, const char * mapdata);
 
 //uncomment if   SUBSYS.LOCAL.KNOB is allowed.
 //#define ALLOW_SUBSYS_LOCAL_HEIRARCHY 1

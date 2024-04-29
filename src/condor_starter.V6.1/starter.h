@@ -17,12 +17,10 @@
  *
  ***************************************************************/
 
-
 #if !defined(_CONDOR_STARTER_H)
 #define _CONDOR_STARTER_H
 
 #include "condor_daemon_core.h"
-#include "list.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
 #include "exit.h"
@@ -35,9 +33,11 @@
 #include "profile.WINDOWS.h" // for OwnerProfile class
 #endif
 
+#if 1 //def HAVE_DATA_REUSE_DIR TOO: remove this someday
 namespace htcondor {
 class DataReuseDirectory;
 }
+#endif
 
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
@@ -158,11 +158,16 @@ public:
 		*/
 	virtual int jobEnvironmentReady( void );
 	
+	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
+
 		/**
 		 * 
 		 * 
 		 **/
 	virtual void SpawnPreScript( int timerID = -1 );
+
+		/* timer to handle unwinding to pump while skipping job spawn */
+	virtual void SkipJobs( int timerID = -1 );
 
 		/** Does initial cleanup once all the jobs (and post script, if
 			any) have completed.  This notifies the JIC so it can
@@ -283,7 +288,7 @@ public:
 		/** Returns the number of jobs currently running under
 		 * this multi-starter.
 		 */
-	int numberOfJobs( void ) { return m_job_list.Number(); };
+	int numberOfJobs( void ) { return m_job_list.size(); };
 
 	bool isGridshell( void ) const {return is_gridshell;};
 #ifdef WIN32
@@ -318,7 +323,11 @@ public:
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
+#ifdef HAVE_DATA_REUSE_DIR
 	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
+#else
+	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return nullptr;}
+#endif
 
 	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 
@@ -326,8 +335,13 @@ public:
 
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 protected:
-	List<UserProc> m_job_list;
-	List<UserProc> m_reaped_job_list;
+	std::vector<UserProc *> m_job_list;
+	std::vector<UserProc *> m_reaped_job_list;
+
+	// JobEnvironmentCannotReady sets these to pass along the setup failure info that
+	// we want to report *after* we finish transfer of FailureFiles
+	int            m_setupStatus = 0; // 0 is success, non-zero indicates failure of job setup
+	struct UnreadyReason  m_urea; // details when m_setupStatus is non-zero
 
 #ifdef WIN32
 	OwnerProfile m_owner_profile;
@@ -359,7 +373,7 @@ private:
 		   @see Starter::publishJobExitAd()
 		   @see UserProc::PublishUpdateAd()
 		*/
-	bool publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad);
+	bool publishJobInfoAd(std::vector<UserProc * > *proc_list, ClassAd* ad);
 
 		/*
 		  @param result Buffer in which to store fully-qualified user name of the job owner
@@ -443,8 +457,10 @@ private:
 		// starter's exit code be?
 	int m_shutdown_exit_code;
 
-		// Manage the data reuse directory.
+#ifdef HAVE_DATA_REUSE_DIR
+	// Manage the data reuse directory.
 	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
+#endif
 
 	// The string to set the tmp env vars to
 	std::string tmpdir;

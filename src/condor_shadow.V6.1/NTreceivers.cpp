@@ -341,7 +341,12 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ON_ERROR_RETURN( result );
+		if (!result) {
+			// This is the last RPC the starter sends before it closes
+			// up shop. It looks like closed the connection before we
+			// could send a reply. Just close our end of the conneciton.
+			thisRemoteResource->closeClaimSock();
+		}
 		return -1;
 	}
 
@@ -2192,10 +2197,7 @@ case CONDOR_getdir:
 		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
 		bool had_error = false;
-		StringList services_list(services_needed.c_str());
-		services_list.rewind();
-		char *curr;
-		while((curr = services_list.next())) {
+		for (auto& curr: StringTokenIterator(services_needed)) {
 			std::string service_name = curr;
 
 			if (service_add_use) {
@@ -2206,7 +2208,7 @@ case CONDOR_getdir:
 			}
 
 			std::string fname,fullname;
-			formatstr(fname, "%s.use", curr);
+			formatstr(fname, "%s.use", curr.c_str());
 
 			// change the '*' to an '_'.  These are stored that way
 			// so that the original service name can be cleanly
@@ -2216,7 +2218,7 @@ case CONDOR_getdir:
 
 			formatstr(fullname, "%s%c%s", cred_dir_name.c_str(), DIR_DELIM_CHAR, fname.c_str());
 
-			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.c_str(), curr);
+			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.c_str(), curr.c_str());
 			// read the file (fourth argument "true" means as_root)
 			unsigned char *buf = 0;
 			size_t len = 0;

@@ -41,6 +41,8 @@
 #ifndef _UID_H
 #define _UID_H
 
+#include <string>
+
 /*
   Our code depends on _priv_state_threshold being last, so if you add
   another priv state here, put it *BEFORE* _priv_state_threshold!!!!

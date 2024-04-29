@@ -30,6 +30,7 @@
 #include "misc_utils.h"
 #include "slot_builder.h"
 #include "history_queue.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "StartdPlugin.h"
@@ -59,10 +60,13 @@ int	update_interval = 0;	// Interval to update CM
 //      and advertise STARTD_OLD_ADTYPE to older collectors
 int enable_single_startd_daemon_ad = 0;
 
+// set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
+bool enable_claimable_partitionable_slots = false;
+
 // String Lists
-StringList *startd_job_attrs = NULL;
-StringList *startd_slot_attrs = NULL;
-static StringList *valid_cod_users = NULL; 
+std::vector<std::string> startd_job_attrs;
+std::vector<std::string> startd_slot_attrs;
+std::vector<std::string> valid_cod_users;
 
 // Hosts
 char*	accountant_host = NULL;
@@ -226,8 +230,8 @@ main_init( int, char* argv[] )
 	resmgr->init_resources();
 
 		// Do a little sanity checking and cleanup
-	StringList execute_dirs;
-	resmgr->FillExecuteDirsList( &execute_dirs );
+	std::vector<std::string> execute_dirs;
+	resmgr->FillExecuteDirsList( execute_dirs );
 	check_execute_dir_perms( execute_dirs );
 	cleanup_execute_dirs( execute_dirs );
 
@@ -486,6 +490,8 @@ init_params( int first_time)
 	if (first_time) {
 		std::string func_name("SlotEval");
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
+
+		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
 	}
 
 	resmgr->init_config_classad();
@@ -505,6 +511,8 @@ init_params( int first_time)
 			enable_single_startd_daemon_ad = 2;
 		}
 	}
+	dprintf(D_STATUS, "ENABLE_STARTD_DAEMON_AD=%d (%s)\n", enable_single_startd_daemon_ad,
+		send_daemon_ad.ptr() ? send_daemon_ad.ptr() : "");
 
 	if( accountant_host ) {
 		free( accountant_host );
@@ -523,57 +531,24 @@ init_params( int first_time)
 
 	// Fill in *_JOB_ATTRS
 	//
-	if (startd_job_attrs) {
-		startd_job_attrs->clearAll();
-	} else {
-		startd_job_attrs = new StringList();
-	}
-	param_and_insert_unique_items("STARTD_JOB_ATTRS", *startd_job_attrs);
+	startd_job_attrs.clear();
+	param_and_insert_unique_items("STARTD_JOB_ATTRS", startd_job_attrs);
 	// merge in the deprecated _EXPRS config
-	param_and_insert_unique_items("STARTD_JOB_EXPRS", *startd_job_attrs);
+	param_and_insert_unique_items("STARTD_JOB_EXPRS", startd_job_attrs);
 	// Now merge in the attrs required by HTCondor - this knob is a secret from users
-	param_and_insert_unique_items("SYSTEM_STARTD_JOB_ATTRS", *startd_job_attrs);
-	if (startd_job_attrs->isEmpty()) {
-		delete startd_job_attrs;
-		startd_job_attrs = NULL;
-	}
+	param_and_insert_unique_items("SYSTEM_STARTD_JOB_ATTRS", startd_job_attrs);
 
 	// Fill in *_SLOT_ATTRS
 	//
-	if (startd_slot_attrs) {
-		startd_slot_attrs->clearAll();
-	} else {
-		startd_slot_attrs = new StringList();
-	}
-	param_and_insert_unique_items("STARTD_SLOT_ATTRS", *startd_slot_attrs);
-	param_and_insert_unique_items("STARTD_SLOT_EXPRS", *startd_slot_attrs);
+	startd_slot_attrs.clear();
+	param_and_insert_unique_items("STARTD_SLOT_ATTRS", startd_slot_attrs);
+	param_and_insert_unique_items("STARTD_SLOT_EXPRS", startd_slot_attrs);
 
 	// now insert attributes needed by HTCondor
-	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", *startd_slot_attrs);
-	if (startd_slot_attrs->isEmpty()) {
-		delete  startd_slot_attrs;
-		startd_slot_attrs = NULL;
-	}
+	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", startd_slot_attrs);
 
-	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", -12345);
-	if (console_slots == -12345) {
-		// if no value set, try the old names...
-		console_slots = resmgr->m_attr->num_cpus();
-		console_slots = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE",
-		                param_integer( "CONSOLE_VMS",
-		                param_integer( "CONSOLE_CPUS",
-		                console_slots)));
-	}
-
-	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD", -12345);
-	if (keyboard_slots == -12345) {
-		// if no value set, try the old names...
-		keyboard_slots = resmgr->m_attr->num_cpus();
-		keyboard_slots = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD",
-		                 param_integer( "KEYBOARD_VMS",
-		                 param_integer( "KEYBOARD_CPUS", 1)));
-	}
-
+	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", 0);
+	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD", 0);
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 1200 );
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
@@ -595,14 +570,11 @@ init_params( int first_time)
 
 	pid_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", DEFAULT_PID_SNAPSHOT_INTERVAL );
 
-	if( valid_cod_users ) {
-		delete( valid_cod_users );
-		valid_cod_users = NULL;
-	}
 	tmp.set(param("VALID_COD_USERS"));
 	if (tmp) {
-		valid_cod_users = new StringList();
-		valid_cod_users->initializeFromString( tmp );
+		valid_cod_users = split(tmp);
+	} else {
+		valid_cod_users.clear();
 	}
 
 	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
@@ -729,14 +701,14 @@ startd_exit()
 
 	// Shut down the cron logic
 	if( cron_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting cron job manager\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of cron job manager\n" );
 		cron_job_mgr->Shutdown( true );
 		delete cron_job_mgr;
 	}
 
 	// Shut down the benchmark job manager
 	if( bench_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting benchmark job mgr\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of benchmark job mgr\n" );
 		bench_job_mgr->Shutdown( true );
 		delete bench_job_mgr;
 	}
@@ -952,8 +924,5 @@ main( int argc, char **argv )
 bool
 authorizedForCOD( const char* owner )
 {
-	if( ! valid_cod_users ) {
-		return false;
-	}
-	return valid_cod_users->contains( owner );
+	return contains(valid_cod_users, owner);
 }

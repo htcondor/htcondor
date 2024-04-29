@@ -78,6 +78,7 @@ void print_usage(FILE* fp, const char *argv0) {
 		"Lists the tokens available to the current user.\n"
 		"\noptions:\n"
 		"    -dir  <path>  Look in the given directory for tokens\n"
+		"    -file  <filename>  Look in the given file for a token\n"
 		"    -help         print this message\n"
 		"\nIf no -dir agument is supplied, tokens are located by using the condor config files.\n"
 		"Ordinary users will use SEC_TOKEN_DIRECTORY or ~/tokens.d, The root user will use SEC_TOKEN_SYSTEM_DIRECTORY."
@@ -207,6 +208,16 @@ int main(int argc, const char *argv[]) {
 				exit(1);
 			}
 			token_dir = argv[++i];
+		} else if (is_dash_arg_prefix(argv[i], "file", 1)) {
+			if (!argv[i+1]) {
+				fprintf(stderr, "%s: -file requires file argument.\n", argv[0]);
+				print_usage(stderr, argv[0]);
+				exit(1);
+			}
+			const char *token_file = argv[++i];
+			printToken(token_file);
+			exit(0);
+
 		} else {
 			fprintf(stderr, "%s: Invalid command line argument: %s\n", argv[0], argv[i]);
 			print_usage(stderr, argv[0]);

@@ -21,7 +21,7 @@ def startd_history_source():
     from adstash.ad_sources.startd_history import StartdHistorySource
     return StartdHistorySource
 def ad_file_source():
-    from adstash.ad_source.ad_file import FileAdSource
+    from adstash.ad_sources.ad_file import FileAdSource
     return FileAdSource
 
 

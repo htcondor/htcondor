@@ -55,7 +55,6 @@
 #include "ipv6_hostname.h"
 #include <map>
 #include <vector>
-//#include "../classad_analysis/analysis.h"
 //#include "pool_allocator.h"
 #include "expr_analyze.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
@@ -745,7 +744,8 @@ bool doJobRunAnalysis (
 	bool	val;
 	int		universe = CONDOR_UNIVERSE_MIN;
 	int		jobState;
-	bool	jobMatched = false;
+	time_t  cool_down = 0;
+	time_t  server_time = time(nullptr);
 	std::string owner;
 	std::string user;
 	std::string slotname;
@@ -764,7 +764,8 @@ bool doJobRunAnalysis (
 	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 
 	request->LookupInteger(ATTR_JOB_STATUS, jobState);
-	request->LookupBool(ATTR_JOB_MATCHED, jobMatched);
+	request->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
+	request->LookupInteger(ATTR_SERVER_TIME, server_time);
 	if (jobState == RUNNING || jobState == TRANSFERRING_OUTPUT || jobState == SUSPENDED) {
 		job_status = "Job is running.";
 	}
@@ -783,8 +784,8 @@ bool doJobRunAnalysis (
 	if (jobState == COMPLETED) {
 		job_status = "Job is completed.";
 	}
-	if (jobMatched) {
-		job_status = "Job has been matched.";
+	if (jobState == IDLE && cool_down > server_time) {
+		job_status = "Job is in cool down.";
 	}
 
 	// if we already figured out the job status, and we haven't been asked to analyze requirements anyway
@@ -1164,9 +1165,13 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 			if (single_machine || cSlots == 1) { 
 				for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
 					ClassAd * ptarget = it->second.get();
-					attrib_values = "\n";
-					AddTargetAttribsToBuffer(trefs, request, ptarget, false, "    ", attrib_values);
-					return_buf += attrib_values;
+					std::string name;
+					if (AddTargetAttribsToBuffer(trefs, request, ptarget, false, "    ", attrib_values, name)) {
+						return_buf += "\n";
+						return_buf += name;
+						return_buf += " has the following attributes:\n\n";
+						return_buf += attrib_values;
+					}
 				}
 			}
 			return_buf += "\n";
@@ -1393,9 +1398,13 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 					for (size_t ixj = 0; ixj < jobs.size(); ++ixj) {
 						ClassAd * job = jobs[ixj];
 						if ( ! job) continue;
-						attrib_values = "\n";
-						AddTargetAttribsToBuffer(trefs, slot, job, false, "    ", attrib_values);
-						strcat(return_buff, attrib_values.c_str());
+						std::string name;
+						if (AddTargetAttribsToBuffer(trefs, slot, job, false, "    ", attrib_values, name)) {
+							strcat(return_buff,"\n");
+							strcat(return_buff,name.c_str());
+							strcat(return_buff," has the following attributes:\n\n");
+							strcat(return_buff, attrib_values.c_str());
+						}
 					}
 				}
 				//strcat(return_buff, "\n");
@@ -1406,6 +1415,7 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 		if ( ! (analyze_detail_level & detail_inline_std_slot_exprs)) {
 			inline_attrs.clear();
 			inline_attrs.insert(ATTR_START);
+			inline_attrs.insert(ATTR_WITHIN_RESOURCE_LIMITS);
 		}
 
 		std::string subexpr_detail;

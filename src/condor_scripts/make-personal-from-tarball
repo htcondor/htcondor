@@ -83,9 +83,7 @@ CONDOR_HOST = \$(FULL_HOSTNAME)
 # daemons have access and those which you-the-user have access (via the tools),
 # but we can't at the moment, so we choose not to share your tokens by default.
 #
-SEC_TOKEN_SYSTEM_DIRECTORY = \$(LOCAL_DIR)/tokens.d
 SEC_TOKEN_DIRECTORY = \$(SEC_TOKEN_SYSTEM_DIRECTORY)
-SEC_PASSWORD_DIRECTORY = \$(LOCAL_DIR)/passwords.d
 EOF
 ) > "${LOCAL_CONFIG_DIR}/00-personal-condor"
 

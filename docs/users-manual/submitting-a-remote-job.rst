@@ -1,5 +1,5 @@
-Submitting a Remote Job
-=======================
+Submitting to a Remote AP 
+=========================
 
 Submitting a job to a remote Access Point
 -----------------------------------------

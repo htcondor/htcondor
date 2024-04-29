@@ -17,6 +17,7 @@ It is not intended as a tutorial for new users.
     jobevent
     jobeventlog
     negotiator
+    remoteparam
     schedd
     startd
     submit

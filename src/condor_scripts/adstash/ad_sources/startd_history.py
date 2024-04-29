@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import time
-import json
 import logging
 import htcondor
 import traceback

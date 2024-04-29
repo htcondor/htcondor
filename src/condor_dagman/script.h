@@ -21,6 +21,8 @@
 #ifndef _SCRIPT_H_
 #define _SCRIPT_H_
 
+#include <string>
+
 #define SCRIPT_DEFER_STATUS_NONE (-1)
 
 enum ScriptType {

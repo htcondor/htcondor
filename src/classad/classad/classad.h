@@ -40,7 +40,7 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-//#define USE_CLASSAD_FLAT_MAP
+#define USE_CLASSAD_FLAT_MAP
 #ifdef USE_CLASSAD_FLAT_MAP
 using AttrList = ClassAdFlatMap;
 #else
@@ -111,7 +111,7 @@ class ClassAd : public ExprTree
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax
-		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
+		bool InsertViaCache(const std::string& attrName, const std::string & rhs, bool lazy=false);
 
 		/** Insert an attribute/value into the ClassAd
 		 *  @param str A string of the form "Attribute = Value"
@@ -428,6 +428,19 @@ class ClassAd : public ExprTree
 			@param result The result of the evaluation.
 		*/
 		bool EvaluateExpr( const ExprTree* expr, Value &result, Value::ValueType mask=Value::ValueType::SAFE_VALUES ) const;
+
+		/* Evaluates a loose expression in the context of a single ad (or nullptr) without mutating the expression
+		 *   Note that since this function cannot call setParentScope() on tree, the tree cannot contain a nested ad that
+		 *   with attribute references that are expected to resolve against attributes of the ad.
+		 *   i.e.  when expr is [foo = RequestCpus;].foo, foo will evaluate to 'undefined' rather than looking up RequestCpus in the ad.
+		 */
+		static bool EvaluateExpr(const ClassAd * ad, const ExprTree * tree, Value & val, Value::ValueType mask=Value::ValueType::SAFE_VALUES) {
+			EvalState state;
+			state.SetScopes(ad);
+			if ( ! tree->Evaluate(state, val)) return false;
+			if ( ! val.SafetyCheck(state, mask)) return false;
+			return true;
+		}
 
 		/** Evaluates an expression, and returns the significant subexpressions
 				encountered during the evaluation.  If the expression doesn't 

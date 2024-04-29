@@ -31,6 +31,14 @@
 #include "filename_tools.h"
 #include "basename.h"
 #include "nullfile.h"
+#include "spooled_job_files.h"
+#include "condor_holdcodes.h"
+
+#include <filesystem>
+#include "manifest.h"
+#include "dc_coroutines.h"
+#include "checkpoint_cleanup_utils.h"
+
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -431,9 +439,9 @@ static int attr_list_has_file( const char *attr, const char *path )
 	file = condor_basename(path);
 
 	Shadow->getJobAd()->LookupString(attr,str);
-	StringList list(str.c_str());
+	std::vector<std::string> list = split(str);
 
-	if( list.contains_withwildcard(path) || list.contains_withwildcard(file) ) {
+	if( contains_withwildcard(list, path) || contains_withwildcard(list, file) ) {
 		return 1;
 	} else {
 		return 0;
@@ -499,9 +507,6 @@ pseudo_ulog( ClassAd *ad )
 	int result = 0;
 	char const *critical_error = NULL;
 	std::string CriticalErrorBuf;
-	bool event_already_logged = false;
-	bool put_job_on_hold = false;
-	std::string hold_reason;
 	int hold_reason_code = 0;
 	int hold_reason_sub_code = 0;
 
@@ -513,14 +518,6 @@ pseudo_ulog( ClassAd *ad )
 		  "invalid event ClassAd in pseudo_ulog: %s\n",
 		  add_str.c_str());
 		return -1;
-	}
-
-	if(ad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code) &&
-		hold_reason_code > 0)
-	{
-		put_job_on_hold = true;
-		ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_reason_sub_code);
-		ad->LookupString(ATTR_HOLD_REASON,hold_reason);
 	}
 
 	if( event->eventNumber == ULOG_REMOTE_ERROR ) {
@@ -542,20 +539,16 @@ pseudo_ulog( ClassAd *ad )
 			  err->getErrorText());
 
 			critical_error = CriticalErrorBuf.c_str();
-			if(hold_reason.empty()) {
-				hold_reason = critical_error;
-			}
 
-			//Temporary: the following causes critical remote errors
-			//to be logged as ShadowExceptionEvents, rather than
-			//RemoteErrorEvents.  The result is ugly, but guaranteed to
-			//be compatible with other user-log reading tools.
-			BaseShadow::log_except(critical_error);
-			event_already_logged = true;
+			hold_reason_code = err->hold_reason_code;
+			hold_reason_sub_code = err->hold_reason_subcode;
+			if (hold_reason_code == 0) {
+				hold_reason_code = CONDOR_HOLD_CODE::StarterError;
+			}
 		}
 	}
 
-	if( !event_already_logged && !Shadow->uLog.writeEvent( event, ad ) ) {
+	if( !Shadow->uLog.writeEvent( event, ad ) ) {
 		std::string add_str;
 		sPrintAd(add_str, *ad);
 		dprintf(
@@ -565,24 +558,11 @@ pseudo_ulog( ClassAd *ad )
 		result = -1;
 	}
 
-	if(put_job_on_hold) {
-		if (critical_error) hold_reason = critical_error;
-		if(hold_reason.empty()) {
-			hold_reason = "Job put on hold by remote host.";
-		}
+	if (critical_error) {
 		// Let the RemoteResource know that the starter is shutting
 		// down and failing to kill it it expected.
-		thisRemoteResource->resourceExit( JOB_SHOULD_HOLD, -1 );
-		Shadow->holdJobAndExit(hold_reason.c_str(),hold_reason_code,hold_reason_sub_code);
-		//should never get here, because holdJobAndExit() exits.
-	}
-
-	if( critical_error ) {
-		//Suppress ugly "Shadow exception!"
-		Shadow->exception_already_logged = true;
-
-		//lame: at the time of this writing, EXCEPT does not want const:
-		EXCEPT("%s", critical_error);
+		thisRemoteResource->resourceExit( JOB_SHOULD_REQUEUE, -1 );
+		Shadow->evictJob(JOB_SHOULD_REQUEUE, critical_error, hold_reason_code, hold_reason_sub_code);
 	}
 
 	delete event;
@@ -702,6 +682,7 @@ int pseudo_get_sec_session_info(
 	return 1;
 }
 
+
 //
 // This syscall MUST ignore information it doesn't know how to deal with.
 //
@@ -730,7 +711,178 @@ pseudo_event_notification( const ClassAd & ad ) {
 
 	if( eventType == "ActivationExecutionExit" ) {
 		thisRemoteResource->recordActivationExitExecutionTime(time(NULL));
+	} else if( eventType == "SuccessfulCheckpoint" ) {
+		std::string checkpointDestination;
+		if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
+			dprintf( D_TEST, "Not attempting to clean up checkpoints going to SPOOL.\n" );
+			return 0;
+		}
+
+		int checkpointNumber = -1;
+		if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
+			unsigned long numToKeep = 1 + param_integer( "DEFAULT_NUM_EXTRA_CHECKPOINTS", 1 );
+			dprintf( D_STATUS | D_VERBOSE, "Checkpoint number %d succeeded, deleting all but the most recent %lu successful checkpoints.\n", checkpointNumber, numToKeep );
+
+			// Before we can delete a checkpoint, it needs to be moved from the
+			// job's spool to the job owner's checkpoint-cleanup directory.  So
+			// we need to figure out which checkpoint(s) we want to keep and
+			// move all of the other ones.
+
+			std::string spoolPath;
+			SpooledJobFiles::getJobSpoolPath( jobAd, spoolPath );
+			std::filesystem::path spool( spoolPath );
+			if(! (std::filesystem::exists(spool) && std::filesystem::is_directory(spool))) {
+				dprintf(D_STATUS, "Checkpoint suceeded but job spool directory either doesn't exist or isn't a directory; not trying to clean up old checkpoints.\n" );
+				return 0;
+			}
+
+			std::error_code errCode;
+			std::set<long> checkpointsToSave;
+			auto spoolDir = std::filesystem::directory_iterator(spool, errCode);
+			if( errCode ) {
+				dprintf( D_STATUS, "Checkpoint suceeded but job spool directory couldn't be checked for old checkpoints, not trying to clean them up: %d '%s'.\n", errCode.value(), errCode.message().c_str() );
+				return 0;
+			}
+			for( const auto & entry : spoolDir ) {
+				const auto & stem = entry.path().stem();
+				if( starts_with(stem.string(), "_condor_checkpoint_") ) {
+					bool success = ends_with(stem.string(), "MANIFEST");
+					bool failure = ends_with(stem.string(), "FAILURE");
+					if( success || failure ) {
+						char * endptr = NULL;
+						const auto & suffix = entry.path().extension().string().substr(1);
+						long manifestNumber = strtol( suffix.c_str(), & endptr, 10 );
+						if( endptr == suffix.c_str() || *endptr != '\0' ) {
+							dprintf( D_FULLDEBUG, "Unable to extract checkpoint number from '%s', skipping.\n", entry.path().string().c_str() );
+							continue;
+						}
+
+						if( success ) {
+							checkpointsToSave.insert(manifestNumber);
+							if( checkpointsToSave.size() > numToKeep ) {
+								checkpointsToSave.erase(checkpointsToSave.begin());
+							}
+						}
+					}
+				}
+			}
+
+			std::string buffer;
+			formatstr( buffer, "Last %lu succesful checkpoints were: ", numToKeep );
+			for( const auto & value : checkpointsToSave ) {
+				formatstr_cat( buffer, "%ld ", value );
+			}
+			dprintf( D_STATUS | D_VERBOSE, "%s\n", buffer.c_str() );
+
+			// Move all but checkpointsToSave's MANIFEST/FAILURE files.  The
+			// schedd won't interrupt because it never does anything to the
+			// job's spool while the shadow is running, and we won't be moving
+			// (or removing) the shared intermediate directories: the schedd
+			// will clean those up when the job leaves the queue, as normal.
+
+			int cluster, proc;
+			jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
+			jobAd->LookupInteger( ATTR_PROC_ID, proc );
+			if(! moveCheckpointsToCleanupDirectory(
+				cluster, proc, jobAd, checkpointsToSave
+			)) {
+				// Then there's nothing we can do here.
+				return 0;
+			}
+
+			int CLEANUP_TIMEOUT = param_integer( "SHADOW_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
+			spawnCheckpointCleanupProcessWithTimeout( cluster, proc, jobAd, CLEANUP_TIMEOUT );
+		}
+	} else if( eventType == "FailedCheckpoint" ) {
+		int checkpointNumber = -1;
+		if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
+			dprintf( D_STATUS, "Checkpoint number %d failed, deleting it and updating schedd.\n", checkpointNumber );
+
+			// Record on disk that this checkpoint attempt failed, so that
+			// we won't worry about not being able to entirely delete it.
+			std::string jobSpoolPath;
+			SpooledJobFiles::getJobSpoolPath(jobAd, jobSpoolPath);
+			std::filesystem::path spoolPath(jobSpoolPath);
+
+			std::string manifestName;
+			formatstr( manifestName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
+			std::string failureName;
+			formatstr( failureName, "_condor_checkpoint_FAILURE.%.4d", checkpointNumber );
+			std::error_code errorCode;
+			std::filesystem::rename( spoolPath / manifestName, spoolPath / failureName, errorCode );
+			if( errorCode.value() != 0 ) {
+				// If no MANIFEST file was written, we can't clean up
+				// anyway, so it doesn't matter if we didn't rename it.
+				dprintf( D_FULLDEBUG,
+					"Failed to rename %s to %s on checkpoint upload failure, error code %d (%s)\n",
+					(spoolPath / manifestName).string().c_str(),
+					(spoolPath / failureName).string().c_str(),
+					errorCode.value(), errorCode.message().c_str()
+				);
+			}
+
+
+			// Update the schedd's copy of ATTR_JOB_CHECKPOINT_NUMBER.
+			jobAd->Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+			Shadow->updateJobInQueue( U_PERIODIC );
+
+
+			// Clean up just this checkpoint attempt.  We don't actually
+			// care if it succeeds; condor_preen is back-stopping us.
+			//
+			std::string checkpointDestination;
+			if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
+				dprintf( D_ALWAYS,
+					"While handling failed checkpoint event, could not find %s in job ad, which is required to attempt a checkpoint.\n",
+					ATTR_JOB_CHECKPOINT_DESTINATION
+				);
+				return 0;
+			}
+
+			std::string globalJobID;
+			jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
+			ASSERT(! globalJobID.empty());
+			std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
+
+			formatstr( checkpointDestination, "%s/%s/%.4d",
+				checkpointDestination.c_str(), globalJobID.c_str(),
+				checkpointNumber
+			);
+
+			// The clean-up script is entitled to a copy of the job ad,
+			// and the only way to give it one is via the filesystem.
+			// It's clumsy, but for now, rather than deal with cleaning
+			// this job ad file up, just store it in the job's SPOOL.
+			// (Jobs with a checkpoint destination set don't transfer
+			// anything from SPOOL except for the MANIFEST files, so
+			// this won't cause problems even if the .job.ad file is
+			// written by the starter before file transfer rather than
+			// after.)
+			std::string jobAdPath = jobSpoolPath;
+
+			// FIXME: This invocation assumes that it's OK to block here
+			// in the shadow until the clean-up attempt is done.  We'll
+			// probably need to (refactor it into the cleanup utils and)
+			// call spawnCheckpointCleanupProcessWithTimeout() -- or
+			// something very similar -- and plumb through an additional
+			// option specifying which specific checkpoint to clean-up.
+			std::string error;
+			manifest::deleteFilesStoredAt( checkpointDestination,
+				(spoolPath / failureName).string(),
+				jobAdPath,
+				error,
+				true /* this was a failed checkpoint */
+			);
+
+			// It's OK that we don't remove the .job.ad file and the
+			// corresponding parent directory after a successful clean-up;
+			// we know we'll need them again later, since we aren't
+			// deleting all of the job's checkpoints, and the schedd's
+			// call to condor_manifest will delete them when job exits
+			// the queue.
+		}
 	}
+
 
 	return 0;
 }

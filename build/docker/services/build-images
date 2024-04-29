@@ -684,8 +684,6 @@ def parse_arguments(argv, known_versions):
 
     if args.registry.lower() == "dockerhub":
         args.registry = "docker.io"
-    elif args.registry.lower() == "chtc":
-        args.registry = "dockerreg.chtc.wisc.edu:443"
     elif args.registry.lower() == "osg":
         args.registry = "hub.opensciencegrid.org"
 

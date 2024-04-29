@@ -186,6 +186,10 @@ class VaultCredmon(AbstractCredentialMonitor):
                         parenttop_data = json.load(f)
                 except IOError as ie:
                     self.log.warning("Could not open %s: %s", parenttop_path, str(ie))
+                    # This can happen when the parent was deleted because of
+                    # permission denied
+                    self.log.info("Deleting %s token for user %s because parent .top not available", token_name, username)
+                    self.delete_tokens(username, token_name)
                     return False
                 except ValueError as ve:
                     self.log.warning("The file at %s is invalid; could not parse as JSON: %s", parenttop_path, str(ve))
@@ -212,47 +216,31 @@ class VaultCredmon(AbstractCredentialMonitor):
 
         headers = {'X-Vault-Token' : vault_token}
         params = {'minimum_seconds' : self.get_minimum_seconds()}
+        if 'scopes' in top_data:
+            params['scopes'] = top_data['scopes']
+        if 'audience' in top_data:
+            if '/creds/' in url:
+                params['audience'] = top_data['audience']
+            else:
+                params['audiences'] = top_data['audience']
         try:
             response = self.request_url(url, headers, params)
         except Exception as e:
-            self.log.error("read of access token from %s failed: %s", url, str(e))
+            self.log.error("Read of access token from %s failed: %s", url, str(e))
+            if 'permission denied' in str(e):
+                # the vault token is expired, might as well delete it
+                self.log.info("Deleting %s token for user %s because permission denied", token_name, username)
+                self.delete_tokens(username, token_name)
             return False
         try:
             response = json.loads(response.data.decode())
         except Exception as e:
-            self.log.error("could not parse json response from %s: %s", url, str(e))
+            self.log.error("Could not parse json response from %s: %s", url, str(e))
             return False
 
         if 'data' not in response or 'access_token' not in response['data']:
             self.log.error("access_token missing in read from %s", url)
             return False
-
-        if 'scopes' in top_data or 'audience' in top_data:
-            # Re-request access token with restricted scopes and/or audience.
-            # These were not included in the initial request because currently
-            #  this uses a separate token exchange flow in Vault which does
-            #  not renew the refresh token, but we want that to happen too.
-            # Just ignore the original access token in this case.
-
-            if 'scopes' in top_data:
-                params['scopes'] = top_data['scopes']
-            if 'audience' in top_data:
-                params['audience'] = top_data['audience']
-
-            try:
-                response = self.request_url(url, headers, params)
-            except Exception as e:
-                self.log.error("read of exchanged access token from %s failed: %s", url, str(e))
-                return False
-            try:
-                response = json.loads(response.data.decode())
-            except Exception as e:
-                self.log.error("could not parse json response from %s: %s", url, str(e))
-                return False
-
-            if 'data' not in response or 'access_token' not in response['data']:
-                self.log.error("exchanged access_token missing in read from %s", url)
-                return False
 
         access_token = response['data']['access_token']
 

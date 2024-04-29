@@ -21,6 +21,7 @@ from .classad2_impl import (
     _classad_external_refs,
     _classad_print_json,
     _classad_print_old,
+    _classad_last_error,
 )
 
 # So that the typehints match version 1.
@@ -50,7 +51,7 @@ from typing import (
 #
 
 class ClassAd(MutableMapping):
-    """
+    R"""
     The `ClassAd language <https://htcondor.org/classad/refman/>`_
     defines a ClassAd as a mapping from attribute names to expressions.  A
     :class:`ClassAd` is a :class:`collections.abc.MutableMapping` from
@@ -403,6 +404,17 @@ def _unquote(input : str) -> str:
     :param input:
     '''
     return _classad_unquote(input)
+
+
+def _lastError() -> str:
+    '''
+    Return the string representation of the last error to occur in the
+    ClassAd library.
+
+    As the ClassAd language has no concept of an exception, this is the
+    only mechanism to receive detailed error messages from functions.
+    '''
+    return _classad_last_error()
 
 
 # Sphinx whines about forward references in the type hints if this isn't here.

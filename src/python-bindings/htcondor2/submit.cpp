@@ -50,11 +50,15 @@ struct SubmitBlob {
         // the itemdata variables.  Returns the corresponding SubmitForeachArgs
         // pointer or NULL on a failure.
         SubmitForeachArgs * init_vars( int clusterID );
-        void set_vars( StringList & vars, char * item, int itemIndex );
-        void cleanup_vars( StringList & vars );
+        void set_vars( const std::vector<std::string> & vars, char * item, int itemIndex );
+        void cleanup_vars( const std::vector<std::string> & vars );
 
         const std::string & get_queue_args() const;
         bool set_queue_args( const char * queue_args );
+
+
+        void setSubmitMethod(int method_value) { m_hash.setSubmitMethod(method_value); }
+        int  getSubmitMethod() { return m_hash.getSubmitMethod(); }
 
     private:
         SubmitHash m_hash;
@@ -180,12 +184,10 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
     }
 
 
-    char * var = NULL;
-    sfa->vars.rewind();
-    while( (var = sfa->vars.next()) ) {
+    for (const auto& var: sfa->vars) {
         // Note that this implies that updates to variables created by the
         // queue statement MUST be pointer replacements.
-        m_hash.set_live_submit_variable( var, EmptyItemString, false );
+        m_hash.set_live_submit_variable( var.c_str(), EmptyItemString, false );
     }
 
 
@@ -195,42 +197,37 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
 
 
 void
-SubmitBlob::set_vars( StringList & vars, char * item, int /* itemIndex */ ) {
-    if( vars.isEmpty() ) { return; }
+SubmitBlob::set_vars( const std::vector<std::string> & vars, char * item, int /* itemIndex */ ) {
+    if( vars.empty() ) { return; }
 
     if( item == NULL ) {
         item = EmptyItemString;
     }
 
     // This is awful, but it's what condor_submit does.
-    vars.rewind();
-    char * var = vars.next();
+    auto var_it = vars.begin();
     char * data = item;
-    m_hash.set_live_submit_variable( var, data, false );
+    m_hash.set_live_submit_variable( var_it->c_str(), data, false );
 
     // This is for the human-readable form in the submit file.
     const char * separators = ", \t";
     const char * whitespace = " \t";
 
-    while( (var = vars.next()) ) {
+    while( ++var_it != vars.end() ) {
         while (*data && ! strchr(separators, *data)) ++data;
         if( data != NULL ) {
             *data++ = 0;
             while (*data && strchr(whitespace, *data)) ++data;
-            m_hash.set_live_submit_variable(var, data, false);
+            m_hash.set_live_submit_variable(var_it->c_str(), data, false);
         }
     }
 }
 
 
 void
-SubmitBlob::cleanup_vars( StringList & vars ) {
-    if( vars.isEmpty() ) { return; }
-
-    vars.rewind();
-    char * var = NULL;
-    while( (var = vars.next()) ) {
-        m_hash.set_live_submit_variable( var, NULL, false );
+SubmitBlob::cleanup_vars( const std::vector<std::string> & vars ) {
+    for (const auto& var: vars) {
+        m_hash.set_live_submit_variable( var.c_str(), NULL, false );
     }
 }
 
@@ -242,6 +239,7 @@ SubmitBlob::from_lines( const char * lines, std::string & errorMessage ) {
     char * qLine = NULL;
     int rv = m_hash.parse_up_to_q_line(msmf, errorMessage, &qLine);
     if( rv != 0 ) {
+        formatstr(errorMessage, "parse_up_to_q_line() failed");
         return false;
     }
 
@@ -494,9 +492,7 @@ set_dag_options( PyObject * options, DagmanOptions& dag_opts) {
         }
 
 
-        // Special case:
-        //      - AddToEnv trims the value string
-        if( k == "AddToEnv" ) { trim(v); }
+        v = dag_opts.processOptionArg( k, v );
 
         SetDagOpt ret = dag_opts.set( k.c_str(), v );
 
@@ -525,6 +521,7 @@ set_dag_options( PyObject * options, DagmanOptions& dag_opts) {
 
     return true;
 }
+
 
 namespace shallow = DagmanShallowOptions;
 
@@ -569,4 +566,48 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     }
 
     return PyUnicode_FromString( dag_opts[shallow::str::SubFile].c_str() );
+}
+
+
+static PyObject *
+_display_dag_options( PyObject *, PyObject * /*args*/ ) {
+    DagmanUtils du;
+    du.DisplayDAGManOptions("%35s   | %s\n", DagOptionSrc::PYTHON_BINDINGS, " : ");
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_submit_set_submit_method( PyObject *, PyObject * args ) {
+    // _submit_set_submit_method( self._handle, method_value )
+    PyObject_Handle * handle = NULL;
+    long method_value = -1;
+
+    if(! PyArg_ParseTuple( args, "Ol", (PyObject **)& handle, & method_value )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+    sb->setSubmitMethod( method_value );
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_submit_get_submit_method( PyObject *, PyObject * args ) {
+    // _submit_get_submit_method( self._handle )
+    PyObject_Handle * handle = NULL;
+
+    if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+    long method_value = sb->getSubmitMethod();
+
+    return PyLong_FromLong(method_value);
 }

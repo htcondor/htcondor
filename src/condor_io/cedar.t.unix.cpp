@@ -28,7 +28,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <stdio.h>
 
 #define SERVER_PORT 7678
 

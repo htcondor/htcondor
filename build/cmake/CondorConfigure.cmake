@@ -80,6 +80,9 @@ endif (WINDOWS)
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS)
+	# Prefer "/usr/bin/python3" over "/usr/bin/python3.10"
+	set(Python3_FIND_UNVERSIONED_NAMES FIRST)
+
 	# We don't support python2 on mac (anymore)
 	if (APPLE)
 		set(WANT_PYTHON2_BINDINGS OFF)
@@ -96,6 +99,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -143,6 +151,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter Development)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -410,6 +423,10 @@ if(PACKAGEID)
   add_definitions( -DPACKAGEID=${PACKAGEID} )
 endif(PACKAGEID)
 
+if(CONDOR_GIT_SHA)
+  add_definitions( -DCONDOR_GIT_SHA=${CONDOR_GIT_SHA} )
+endif(CONDOR_GIT_SHA)
+
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions
@@ -525,6 +542,8 @@ if( NOT WINDOWS)
 	set(SIGWAIT_ARGS "2")
 
 	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
+
+	option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 endif()
 
 find_program(LN ln)
@@ -585,7 +604,6 @@ if("${OS_NAME}" STREQUAL "LINUX")
 	set(HAVE_PSS ON)
 
 	set(HAVE_GNU_LD ON)
-    option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
     option(WITH_BLAHP "Compiling the blahp" ON)
 

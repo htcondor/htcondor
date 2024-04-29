@@ -33,6 +33,7 @@
 #include "jobstate_log.h"
 #include "dagman_classad.h"
 #include "dag_priority_q.h"
+#include <filesystem>
 
 #include <queue>
 
@@ -130,7 +131,7 @@ class Dag {
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
-		 const char *defaultNodeLog, bool generateSubdagSubmits,
+		 std::string defaultNodeLog, bool generateSubdagSubmits,
 		 DagmanOptions *dagDeepOpts,
 		 bool isSplice = false, DCSchedd *schedd = NULL,
 		 const std::string &spliceScope = "root" );
@@ -172,9 +173,12 @@ class Dag {
 	    are also limited by halt status and maxpre/maxpost.
 	*/
 	void RunWaitingScripts();
-  
-    // Get the current status of the condor log file
-	ReadUserLog::FileStatus	GetCondorLogStatus();
+
+	// Get the current status of the condor log file
+	ReadUserLog::FileStatus	GetCondorLogStatus(time_t checkQInterval);
+
+	// Verify schedd q contains expected jobs
+	void VerifyJobsInQueue(const std::uintmax_t before_size);
 
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
@@ -712,7 +716,7 @@ class Dag {
 
 	bool SubmitDepthFirst(void) const { return _submitDepthFirst; }
 
-	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
+	std::string DefaultNodeLog(void) { return _defaultNodeLog.string(); }
 
 	bool GenerateSubdagSubmits(void) const { return _generateSubdagSubmits; }
 
@@ -1135,6 +1139,9 @@ private:
 	// NOOP nodes are indexed by subprocID.
 	std::map<int, Job *>			_noopIDHash;
 
+	// Path object to shared nodes.log file
+	std::filesystem::path _defaultNodeLog{};
+
     // Number of nodes that are done (completed execution)
     int _numNodesDone;
     
@@ -1293,18 +1300,21 @@ private:
 		// node reports.
 	int			_pendingReportInterval;
 
+	time_t _validatedStateTime{0};
+	bool _validatedState{false};
+
 		// The last time we got a log event for a node job.
 	time_t		_lastEventTime;
 
 		// The last time we printed a pending node report.
 	time_t		_lastPendingNodePrintTime;
 
+	// The last time DAGMan had failed queried the local schedd queue
+	time_t queryFailTime{0};
+
 		// Default HTCondor ID to use in reseting a node's HTCondor ID on
 		// retry.
 	static const CondorID	_defaultCondorId;
-
-		// The user log file to be used for nodes jobs.
-	const char *_defaultNodeLog;
 
 		// Whether to generate the .condor.sub files for sub-DAGs
 		// at run time (just before the node is submitted).

@@ -52,6 +52,7 @@ my %skipad = (
 	"EnteredCurrentStatus" => 1,
 	"ClusterId" => 1,
 	"JobCurrentStartDate" => 1,
+	"JobSubmitFile" => 1,
 	"ServerTime" => 1,
 	"ShadowBday" => 1,
 	"EnteredCurrentStatus" => 1,

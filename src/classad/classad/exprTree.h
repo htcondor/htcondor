@@ -92,8 +92,6 @@ class ExprTree
   	public:
 			/// The kinds of nodes in expression trees
 		enum NodeKind {
-	    	/// Literal node (string, integer, real, boolean, undefined, error)
-	    	LITERAL_NODE,
 			/// Attribute reference node (attr, .attr, expr.attr) 
 			ATTRREF_NODE,
 			/// Expression operation node (unary, binary, ternary)/
@@ -105,7 +103,15 @@ class ExprTree
 			/// Expression list node 
 			EXPR_LIST_NODE,
 			/// Expression envelope.
-			EXPR_ENVELOPE
+			EXPR_ENVELOPE,
+			ERROR_LITERAL,
+			UNDEFINED_LITERAL,
+			BOOLEAN_LITERAL,
+			INTEGER_LITERAL,
+			REAL_LITERAL,
+			RELTIME_LITERAL,
+			ABSTIME_LITERAL,
+			STRING_LITERAL
 		};
 
 		/// Virtual destructor
@@ -224,6 +230,7 @@ class ExprTree
 		friend class ExprListIterator;
 		friend class ClassAd;
 		friend class CachedExprEnvelope;
+		friend class Literal;
 
 		/// Copy constructor
         ExprTree(const ExprTree &tree);

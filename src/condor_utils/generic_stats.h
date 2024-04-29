@@ -688,7 +688,8 @@ public:
 
 template <class T> class stats_entry_sum_ema_rate : public stats_entry_ema_base<T> {
 public:
-	T recent_sum;
+	T recent_sum = {};
+
 
 	void Clear() {
 		this->recent_sum = 0;

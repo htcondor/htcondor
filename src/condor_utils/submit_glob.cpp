@@ -47,7 +47,6 @@
 #include "condor_url.h"
 #include "condor_version.h"
 
-#include "list.h"
 #include "submit_utils.h"
 
 #ifdef WIN32

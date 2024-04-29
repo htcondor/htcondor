@@ -25,7 +25,7 @@ case "$1" in
             # the only problem is the possibility to conflict with an actual
             # "human" user with the same name, so only proceed when the
             # respective user is locked down
-            SH=$(getent passwd | egrep '^condor:'| cut -d : -f 7)
+            SH=$(getent passwd | egrep '^condor:'| cut -d : -f 7 | head -1)
             if [ "$SH" = "/bin/true" -o "$SH" = "/bin/false" -o \
                  "$SH" = "/sbin/nologin" -o "$SH" = "/usr/sbin/nologin" -o \
                  "$SH" = "/bin/nosh" ]; then

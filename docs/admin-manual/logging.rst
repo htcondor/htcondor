@@ -200,12 +200,7 @@ default node log
     submitted DAGs and other jobs from the submit host run. The syntax
     used in the definition of this configuration variable is different
     to enable the setting of a unique file name. See
-    the :ref:`admin-manual/configuration-macros:configuration file entries for
-    dagman` section for the complete definition.
-
-    Configuration variables that affect this log are
-
-     :macro:`DAGMAN_ALWAYS_USE_NODE_LOG`
+    the :ref:`DAGMan Configuration` section for the complete definition.
 
 the ``.dagman.out`` file
     A log created or appended to for each DAG submitted with timestamped
@@ -224,12 +219,9 @@ the ``.dagman.out`` file
     | :macro:`DAGMAN_VERBOSITY` | :macro:`DAGMAN_PENDING_REPORT_INTERVAL` |
     +---------------------------+-----------------------------------------+
 
-the ``jobstate.log`` file
+the DAGMan job state log
     This optional, machine-readable log enables automated monitoring of
-    DAG. The page :ref:`automated-workflows/dagman-jobstate-log:Machine-Readable Event History`
-    details this log.
-
-:index:`logging`
+    DAG. The page :ref:`DAGMan Machine Readable History` details this log.
 
 
 Directories
@@ -307,27 +299,5 @@ Directories use by the Execute Role
 
     Usually, the per-job scratch execute directory is created by the startd
     as a directory under :macro:`EXECUTE`.  However, on Linux machines where HTCondor
-    has root privilege, it can be configured to make an ephemeral, per-job scratch filesystem
-    backed either by LVM, if it is configured, or a large existing file on the filesystem.
-
-    There are several advantages to this approach.  The first is that disk space is
-    more accurately measured and enforced.  HTCondor can get the disk usage by a single
-    system call, instead of traversing what might be a very deep directory hierarchy. There
-    may also be performance benefits, as this filesystem never needs to survive a reboot,
-    and is thus mounted with mount options that provide the least amount of disk consistence
-    in the face of a reboot.  Also, when the job exits, all the files in the filesystem
-    can be removed by simply unmounting and destroying the filesystem, which is much
-    faster than having condor remove each scratch file in turn.
-
-    To enable this, first set :macro:`STARTD_ENFORCE_DISK_LIMITS` to ``true``.  Then, if LVM is 
-    installed and configured, set :macro:`THINPOOL_NAME` to the name of a logical volume.
-    ``"condor_lv"`` might be a good choice.  Finally, set :macro:`THINPOOL_VOLUME_GROUP` to 
-    the name of the volume group the LVM administrator has created for this purpose.
-    ``"condor_vg"`` might be a good name.  If there is no LVM on the system, a single large
-    existing file can be used as the backing store, in which case the knob :macro:`THINPOOL_BACKING_FILE`
-    should be set to the name of the existing large file on disk that HTCondor
-    will use to make filesystems from.
-
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
-
+    has root privilege, it can be configured to make an ephemeral per-job scratch
+    filesystem. For more information visit :ref:`LVM Description`.

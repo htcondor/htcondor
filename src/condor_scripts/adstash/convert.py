@@ -357,6 +357,7 @@ BOOL_ATTRS = {
     "BufferFiles",
     "CurrentStatusUnknown",
     "DataflowJobSkipped",
+    "DockerOverrideEntrypoint",
     "EncryptExecuteDirectory",
     "EraseOutputAndErrorOnRestart",
     "ExitBySignal",
@@ -622,7 +623,7 @@ def bulk_convert_ad_data(ad, result):
         # Do not return invalid expressions
         try:
             value = ad.eval(key)
-        except:
+        except Exception:
             continue
 
         if isinstance(value, classad.Value):

@@ -33,7 +33,7 @@
 #include <string>
 
 // for testing the userMap classad function
-extern int add_user_mapping(const char * mapname, char * mapdata);
+extern int add_user_mapping(const char * mapname, const char * mapdata);
 
 // temporary, for testing.
 extern void get_mapfile_re_info(size_t *info); // pass an array of 4 elements

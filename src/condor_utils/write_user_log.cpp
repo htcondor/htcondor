@@ -38,7 +38,6 @@
 
 #include <string>
 #include <algorithm>
-#include "condor_attributes.h"
 #include "basename.h"
 
 // Set to non-zero to enable fine-grained rotation debugging / timing

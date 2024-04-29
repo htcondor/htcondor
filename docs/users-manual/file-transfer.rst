@@ -519,25 +519,76 @@ initial working directory as ``/scratch/test/out1``.
 
     queue
 
+
+.. _dataflow:
+
 Dataflow Jobs
 '''''''''''''
 
 A **dataflow job** is a job that might not need to run because its desired
-outputs already exist. To skip such a job, add the following line to your
-submit file: :index:`dataflow<single: arguments; example>`
+outputs already exist and don't need to be recomputed.
+To skip such a job, add the :subcom:`skip_if_dataflow`
+submit command to your submit file, as in the following example:
+:index:`dataflow<single: arguments; example>`
 
 .. code-block:: condor-submit
 
+    executable      = my_program
+    universe        = vanilla
+
+    error           = logs/err.$(cluster)
+    output          = logs/out.$(cluster)
+    log             = logs/log.$(cluster)
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+
+    transfer_input_files = in1,in2
+    transfer_output_files = out1
+
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     skip_if_dataflow = True
 
-A dataflow job meets any of the following criteria:
+    queue
 
-*   Output files exist, are newer than input files
-*   Execute file is newer than input files
-*   Standard input file is newer than input files
+A dataflow job must meet a number of critera for HTCondor to correctly
+detect if it doesn't need to be run again.
+
+.. warning::
+
+    If these criteria are not met, and the job is marked as a dataflow
+    job, it might be skipped when it should not be.  HTCondor neither
+    detects nor warns when these criteria are not met.
+
+* Regarding the job's output:
+
+  * The output files are declared in :subcom:`transfer_output_files`.
+  * The job does not declare :subcom:`transfer_output_remaps`.
+  * The job does not set :subcom:`output_destination`.
+  * Every entry in :subcom:`transfer_output_files` is a file.
+  * No entry in :subcom:`transfer_output_files` is a symbolic link.
+
+* Regarding the job's input:
+
+  * The input files are declared in :subcom:`transfer_input_files`.
+  * Every entry in :subcom:`transfer_input_files` is a file.
+  * No entry in :subcom:`transfer_input_files` is a symbolic link.
+  * If the job sets :subcom:`input`, it must be a file that is not a
+    symbolic link.
+
+A dataflow job is skipped if only if the oldest file listed in
+:subcom:`transfer_output_files` is younger than:
+
+* the oldest file listed in :subcom:`transfer_input_files`;
+* the :subcom:`executable`;
+* and the :subcom:`input`, if any.
 
 Skipping dataflow jobs can potentially save large amounts of time in
-long-running workflows.
+long-running workflows.  Like any other job, dataflow jobs may
+appear in the nodes of a DAG.
 
 
 Public Input Files
@@ -572,7 +623,7 @@ Similar to the regular
 the files specified in
 :subcom:`public_input_files[example]`
 can be relative to the submit directory, or absolute paths. You can also
-specify an :subcom:`initialDir[and public input files]`,
+specify an :subcom:`initialdir[and public input files]`,
 and :tool:`condor_submit` will look for files relative to that directory. The
 files must be world-readable on the file system (files with permissions
 set to 0644, directories with permissions set to 0755).

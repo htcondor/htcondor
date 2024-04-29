@@ -436,7 +436,7 @@ class RemoteResource : public Service {
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
 	bool m_want_delayed;
-	StringList m_delayed_update_prefix;
+	std::vector<std::string> m_delayed_update_prefix;
 	classad::References m_unsettable_attrs;
 
 		// If we specially create a security session for file transfer,

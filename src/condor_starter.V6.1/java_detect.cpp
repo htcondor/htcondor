@@ -34,7 +34,7 @@ ClassAd * java_detect()
 	sigset_t mask;
 #endif
 
-	if(!java_config(path,&args,0)) return 0;
+	if(!java_config(path,args,0)) return 0;
 
 	args.InsertArg(path.c_str(),0);
 	args.AppendArg("CondorJavaInfo");

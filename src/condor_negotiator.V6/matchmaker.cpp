@@ -40,7 +40,6 @@
 #include "condor_daemon_core.h"
 #include "selector.h"
 #include "consumption_policy.h"
-#include "condor_classad.h"
 #include "subsystem_info.h"
 #include "authentication.h"
 
@@ -266,7 +265,7 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 	if ( (unsigned)idx >= expr_list.size() ) {
 		return false;
 	}
-	if ( expr_list[idx]->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+	if (dynamic_cast<classad::Literal *>(expr_list[idx]) == nullptr) {
 		return false;
 	}
 	((classad::Literal*)expr_list[idx])->GetValue( value );

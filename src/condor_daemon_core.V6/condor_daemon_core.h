@@ -41,7 +41,6 @@
 #include "condor_classad.h"
 #include "condor_secman.h"
 #include "KeyCache.h"
-#include "list.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"
@@ -217,10 +216,14 @@ struct FamilyInfo {
 	bool want_pid_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
+	uint64_t cgroup_memory_limit_low{0};      // limit after which kernel aggressively evicts memory
 	uint64_t cgroup_memory_and_swap_limit{0}; // limit of swap INclusive of memory. i.e.  
 											 // if same as cgroup_memory_limit, then
 											 // use memory but no swap
 	int cgroup_cpu_shares{0};
+#if defined(LINUX)
+	std::vector<dev_t> cgroup_hide_devices;
+#endif
 	bool cgroup_active {false}; // are we actually using a cgroup?
 
 	FamilyInfo() = default;
@@ -872,6 +875,11 @@ class DaemonCore : public Service
     */
     int Was_Not_Responding(pid_t pid);
     int Got_Alive_Messages(pid_t pid, bool & not_responding); // returns number of DC_CHILDALIVE messages received
+
+	/* What signal should be sent to the given child pid when the current
+	 * daemon exits? Default is SIGKILL. 0 means no signal is sent.
+	 */
+	void Set_Cleanup_Signal(pid_t pid, int signum);
 
 	//@}
 
@@ -2096,6 +2104,7 @@ class DaemonCore : public Service
         int is_local;
         int parent_is_local;
         int reaper_id;
+        int cleanup_signal;
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
         std::string* pipe_buf[3];  // Buffers for data written to DC std pipes.
         int stdin_offset;
@@ -2132,7 +2141,7 @@ class DaemonCore : public Service
         int nEntries;
     };
 
-    List<PidWatcherEntry> PidWatcherList;
+	std::vector<PidWatcherEntry *> PidWatcherList;
 
     int                 WatchPid(PidEntry *pidentry);
 
@@ -2254,7 +2263,7 @@ class DaemonCore : public Service
 		void * data;
 	};
 
-    List<TimeSkipWatcher> m_TimeSkipWatchers;
+	std::vector<TimeSkipWatcher *> m_TimeSkipWatchers;
 
 		/**
 		   Evaluate a DC-specific policy expression and return the
@@ -2386,7 +2395,7 @@ int extractInheritedSocks (
 	std::string & psinful, // out: sinful of the parent
 	Stream* socks[],   // out: filled in with items from the inherit string
 	int     cMaxSocks, // in: number of items in the socks array
-	StringList & remaining_items); // out: unparsed items from the inherit string are appended
+	std::vector<std::string> & remaining_items); // out: unparsed items from the inherit string are appended
 
 // helper class that uses C++ constructor/destructor to automatically
 // time a function call. 

@@ -72,6 +72,7 @@ typedef struct ScheddJobCounters {
    stats_entry_recent<int> JobsMissedDeferralTime;    // jobs that exited with JOB_MISSED_DEFERRAL_TIME
    stats_entry_recent<int> JobsShouldHold;            // jobs that exited with JOB_SHOULD_HOLD
    stats_entry_recent<int> JobsDebugLogError;         // jobs that exited with DPRINTF_ERROR
+   stats_entry_recent<int> JobsCoolDown;             // jobs that entered cool-down
 
    void InitJobCounters(StatisticsPool &Pool, int base_verbosity);
 

@@ -151,22 +151,22 @@ bool findToken(const std::string &tokenfilename,
 {
 	dprintf(D_SECURITY, "IDTOKENS: Examining %s for valid tokens from issuer %s.\n", tokenfilename.c_str(), issuer.c_str());
 
-	std::unique_ptr<FILE,fcloser> f(safe_fopen_no_create( tokenfilename.c_str(), "r" ));
-
-	if( f.get() == NULL ) {
-		dprintf(D_ALWAYS, "Failed to open token file '%s': %d (%s)\n",
-		    tokenfilename.c_str(), errno, strerror(errno));
+	bool rv = false;
+	char* data = nullptr;
+	size_t len = 0;
+	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true, SECURE_FILE_VERIFY_ALL)) {
 		return false;
 	}
-    for( std::string line; readLine( line, f.get(), false ); ) {
-		trim(line);
+	for (auto& line: StringTokenIterator(data, len, "\n")) {
 		if (line.empty() || line[0] == '#') continue;
 		bool good_token = checkToken(line, issuer, server_key_ids, tokenfilename, username, token, signature);
 		if (good_token) {
-			return true;
+			rv = true;
+			break;
 		}
 	}
-	return false;
+	free(data);
+	return rv;
 }
 
 bool
@@ -2964,10 +2964,9 @@ Condor_Auth_Passwd::create_signing_key( const std::string & filepath, const char
 
 		// Generate a signing key.
 	char rand_buffer[64];
-	if (!RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer))) {
-		// Insufficient entropy available; bail out!
-		return;
-	}
+	int r = RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer));
+	ASSERT(r == 1)
+
 
 		// Write out the signing key.
 	if (TRUE == write_binary_password_file(filepath.c_str(), rand_buffer, sizeof(rand_buffer))) {

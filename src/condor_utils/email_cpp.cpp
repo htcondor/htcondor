@@ -95,24 +95,18 @@ construct_custom_attributes( std::string &attributes, ClassAd* job_ad )
 		return;
 	}
 
-	StringList email_attrs;
-	email_attrs.initializeFromString( tmp.c_str() );
-	tmp.clear();
-		
 	ExprTree* expr_tree;
-	email_attrs.rewind();
-	char *p = nullptr;
-	while( (p = email_attrs.next()) ) {
+	for (auto& p: StringTokenIterator(tmp)) {
 		expr_tree = job_ad->LookupExpr(p);
 		if( ! expr_tree ) {
-            dprintf(D_ALWAYS, "Custom email attribute (%s) is undefined.", p);
+            dprintf(D_ALWAYS, "Custom email attribute (%s) is undefined.", p.c_str());
 			continue;
 		}
 		if( first_time ) {
 			formatstr_cat(attributes, "\n\n");
 			first_time = false;
 		}
-		formatstr_cat(attributes, "%s = %s\n", p, ExprTreeToString(expr_tree));
+		formatstr_cat(attributes, "%s = %s\n", p.c_str(), ExprTreeToString(expr_tree));
 	}
     return;
 }

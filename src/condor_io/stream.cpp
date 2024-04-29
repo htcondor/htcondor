@@ -495,7 +495,11 @@ Stream::code(condor_mode_t &m)
 			 S_IROTH|S_IWOTH|S_IXOTH);
 
     if( _coding == stream_encode ) {
-		y = m & mask;
+		if (m != MISSING_FILE_PERMISSIONS) {
+			y = m & mask;
+		} else {
+			y = m;
+		}
 	}
 #else
 	if( _coding == stream_encode ) {
@@ -507,7 +511,11 @@ Stream::code(condor_mode_t &m)
 
     if( _coding == stream_decode ) {
 #if !defined(WIN32)
-		m = (condor_mode_t)(y & mask);
+		if (y != MISSING_FILE_PERMISSIONS) {
+			m = (condor_mode_t)(y & mask);
+		} else {
+			m = MISSING_FILE_PERMISSIONS;;
+		}
 #else
 		m = NULL_FILE_PERMISSIONS;
 #endif
@@ -1293,7 +1301,8 @@ Stream::get_secret( std::string& s )
 
 	retval = get_string_ptr(str, len);
 	if (retval) {
-		s.assign(str ? str : "", len);
+		// len includes a NUL terminator, don't make that part of the string
+		s.assign(str ? str : "", len-1);
 	}
 
 	restore_crypto_after_secret();

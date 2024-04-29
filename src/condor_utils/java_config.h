@@ -29,6 +29,6 @@ arguments get put in 'args'.  If you have other dirs or jarfiles
 that should be placed in the classpath, provide them in 'extra_classpath'.
 */
 
-int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath );
+int java_config( std::string &cmd, ArgList &args, const std::vector<std::string>* extra_classpath );
 
 #endif

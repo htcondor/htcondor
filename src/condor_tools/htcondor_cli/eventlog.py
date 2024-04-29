@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import htcondor
+import traceback
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
@@ -91,7 +92,7 @@ def get_job_summaries(log_file, groupby):
                         "ExecuteProps").get(groupby)
                 # get last execution time
                 start_time = datetime.strptime(
-                    event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
+                    event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d/%y %H:%M")
                 job_summary["Start Time"] = start_time or None
                 job_summary["last_exec_time"] = start_time
                 # set boolean that job has been executed
@@ -118,20 +119,20 @@ def get_job_summaries(log_file, groupby):
                     job_summary["Evictions"] = job_summary.get(
                         "Evictions", 0) + 1
                     job_summary["last_exec_time"] = datetime.strptime(
-                        event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
+                        event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d/%y %H:%M")
                 job_summary["Evict Time"] = datetime.strptime(
-                    event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
+                    event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d/%y %H:%M")
                 if job_summary.get("Start Time", "") != "":
                     # get wall time
                     delta = datetime.strptime(
-                        job_summary["Evict Time"], "%m/%d %H:%M") - datetime.strptime(job_summary["Start Time"], "%m/%d %H:%M")
+                        job_summary["Evict Time"], "%m/%d/%y %H:%M") - datetime.strptime(job_summary["Start Time"], "%m/%d/%y %H:%M")
                     wall_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}:{delta.seconds%60:02d}"
                     job_summary["Wall Time"] = wall_time
                 # get total execution time for calculating good time
                 event_time = datetime.strptime(
-                    event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
+                    event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d/%y %H:%M")
                 delta = datetime.strptime(
-                    event_time, "%m/%d %H:%M") - datetime.strptime(job_summary["last_exec_time"], "%m/%d %H:%M")
+                    event_time, "%m/%d/%y %H:%M") - datetime.strptime(job_summary["last_exec_time"], "%m/%d/%y %H:%M")
                 good_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}:{delta.seconds%60:02d}"
                 job_summary["Good Time"] = good_time
                 # get Return Value

@@ -35,7 +35,7 @@ StartdCronJobMgr::StartdCronJobMgr( void )
 // Basic destructor
 StartdCronJobMgr::~StartdCronJobMgr( void )
 {
-	dprintf( D_FULLDEBUG, "StartdCronJobMgr: Bye\n" );
+	dprintf( D_CRON | D_VERBOSE, "StartdCronJobMgr: Bye\n" );
 }
 
 int
@@ -45,8 +45,9 @@ StartdCronJobMgr::Initialize( const char *name )
 
 	SetName( name, name, "_cron" );
 	
-	char *cron_name = param( "STARTD_CRON_NAME" );
-	if ( NULL != cron_name ) {
+#if 0
+	auto_free_ptr cron_name(param( "STARTD_CRON_NAME" ));
+	if (cron_name) {
 		dprintf( D_ALWAYS,
 				 "WARNING: The use of STARTD_CRON_NAME to 'name' your "
 				 "Startd's Daemon ClassAd Hook Manager is not longer supported "
@@ -54,11 +55,9 @@ StartdCronJobMgr::Initialize( const char *name )
 		name = cron_name;
 		SetName( name, name );
 	}
+#endif
 
 	status = CronJobMgr::Initialize( name );
-	if ( NULL != cron_name ) {
-		free( cron_name );
-	}
 
 	ParamAutoPublish( );
 	return status;
@@ -79,12 +78,12 @@ StartdCronJobMgr::ParamAutoPublish( void )
 	if( tmp ) {
 		m_auto_publish = getCronAutoPublishNum(tmp);
 		if( m_auto_publish == CAP_ERROR ) {
-			dprintf( D_ALWAYS, "StartdCronJobMgr::Reconfig(): "
+			dprintf( D_ERROR, "StartdCronJobMgr::Reconfig(): "
 					 "invalid value for STARTD_CRON_AUTOPUBLISH: \"%s\" "
 					 "using default value of NEVER\n", tmp );
 			m_auto_publish = CAP_NEVER;
 		} else {
-			dprintf( D_FULLDEBUG, "StartdCronJobMgr::Reconfig(): "
+			dprintf( D_CRON | D_VERBOSE, "StartdCronJobMgr::Reconfig(): "
 					 "STARTD_CRON_AUTOPUBLISH set to \"%s\"\n", tmp );
 		}
 		free( tmp );
@@ -105,9 +104,13 @@ StartdCronJobMgr::Shutdown( bool force )
 bool
 StartdCronJobMgr::ShutdownOk( void )
 {
-	bool	idle = IsAllIdle( );
-
-	// dprintf( D_ALWAYS, "ShutdownOk: %s\n", idle ? "Idle" : "Busy" );
+	std::string nonidle;
+	bool	idle = IsAllIdle(&nonidle);
+	if (idle) {
+		dprintf( D_FULLDEBUG, "StartdCronJobMgr::ShutdownOk: All Idles\n");
+	} else {
+		dprintf( D_STATUS, "StartdCronJobMgr::ShutdownOk: No. Busy=[%s]\n", nonidle.c_str());
+	}
 	return idle;
 }
 
@@ -122,7 +125,7 @@ StartdCronJobMgr::CreateJob( CronJobParams *job_params )
 {
 	const char * jobName = job_params->GetName();
 
-	dprintf( D_FULLDEBUG,
+	dprintf( D_CRON,
 			 "*** Creating Startd Cron job '%s'***\n",
 			 jobName );
 	StartdCronJobParams *params =
@@ -154,23 +157,21 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 	if(condition.Expr() != NULL) {
 
 		ClassAd context;
-		daemonCore->publish(& context);
-		resmgr->m_attr->compute_for_policy();
-		resmgr->m_attr->publish_static(& context);
-		resmgr->m_attr->publish_common_dynamic(& context);
-		resmgr->publish_static(& context);
-		resmgr->publish_resmgr_dynamic(& context);
-		if (IsDebugCategory(D_MATCH)) {
-			std::string buf;
-			dprintf( D_MATCH, "StartdCronJobMgr::ShouldStartJob(%s): evaluating in context:\n%s\n",
-				job.GetName(), formatAd(buf,context,"\t") );
-		}
+		resmgr->publish_daemon_ad(context);
 
 		classad::Value v;
-		if( context.EvaluateExpr( condition.Expr(), v ) ) {
-			bool rv = false;
-			if( v.IsBooleanValueEquiv(rv) && rv ) {
-				return true;
+		bool rv = false;
+		if( context.EvaluateExpr( condition.Expr(), v ) && v.IsBooleanValueEquiv(rv)) {
+			if (rv) { return true; }
+			dprintf(D_CRON, "CronJob: job '%s' CONDITION evaluated to false\n", job.GetName());
+		} else {
+			dprintf(D_ERROR, "CronJob: job '%s' CONDITION is not boolean, treating as false\n", job.GetName());
+			if (IsDebugCategory(D_FULLDEBUG)) {
+				std::string buf;
+				dprintf( D_MACHINE, "StartdCronJobMgr::ShouldStartJob(%s): evaluated in context:\n%s\n",
+					job.GetName(), formatAd(buf,context,"\t") );
+				buf.clear(); ClassAdValueToString(v, buf);
+				dprintf( D_FULLDEBUG, "StartdCronJobMgr::ShouldStartJob(%s) Condition[%s] = %s\n", job.GetName(), condition.c_str(), buf.c_str());
 			}
 		}
 		return false;
@@ -183,7 +184,7 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 bool
 StartdCronJobMgr::ShouldStartBenchmarks( void ) const
 {
-	dprintf( D_FULLDEBUG,
+	dprintf( D_CRON | D_VERBOSE,
 			 "ShouldStartBenchmarks: load=%.2f max=%.2f\n",
 			 GetCurJobLoad(), GetMaxJobLoad() );
 	return ( GetCurJobLoad() < GetMaxJobLoad() );
@@ -193,6 +194,7 @@ StartdCronJobMgr::ShouldStartBenchmarks( void ) const
 bool
 StartdCronJobMgr::JobStarted( const CronJob &job )
 {
+	dprintf(D_STATUS, "STARTD_CRON job %s started. pid=%d\n", job.GetName(), job.GetPid());
 	return CronJobMgr::JobStarted( job );
 }
 

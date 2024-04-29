@@ -28,6 +28,7 @@
 #ifndef INTERNET_H
 #define INTERNET_H
 
+#include <string>
 
 #if !defined(SOCKET) && !defined(WIN32)
 #define SOCKET int

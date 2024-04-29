@@ -298,104 +298,14 @@ void ExprList::CopyList(const vector<ExprTree*> &exprs)
 	return;
 }
 
-// Iterator implementation
-ExprListIterator::
-ExprListIterator( )
-{
-	l = NULL;
-}
-
-
-ExprListIterator::
-ExprListIterator( const ExprList* list )
-{
-	Initialize( list );
-}
-
-
-ExprListIterator::
-~ExprListIterator( )
-{
-}
-
-
-void ExprListIterator::
-Initialize( const ExprList *el )
-{
-	// initialize eval state
-	l = el;
-	state.curAd = l->parentScope;
-	state.SetRootScope( );
-
-	// initialize list iterator
-	itr = l->exprList.begin( );
-}
-
-
-void ExprListIterator::
-ToFirst( )
-{
-	if( l ) itr = l->exprList.begin( );
-}
-
-
-void ExprListIterator::
-ToAfterLast( )
-{
-	if( l ) itr = l->exprList.end( );
-}
-
-
-bool ExprListIterator::
-ToNth( int n ) 
-{
-	if( l && n >= 0 && l->exprList.size( ) > (unsigned)n ) {
-		itr = l->exprList.begin( ) + n;
-		return( true );
-	}
-	return( false );
-}
-
-
-const ExprTree* ExprListIterator::
-NextExpr( )
-{
-	if( l && itr != l->exprList.end( ) ) {
-		itr++;
-		return( itr==l->exprList.end() ? NULL : *itr );
-	}
-	return( NULL );
-}
-
-
-const ExprTree* ExprListIterator::
-CurrentExpr( ) const
-{
-	return( l && itr != l->exprList.end( ) ? *itr : NULL );
-}
-
-
-const ExprTree* ExprListIterator::
-PrevExpr( )
-{
-	if( l && itr != l->exprList.begin( ) ) {
-		itr++;
-		return( *itr );
-	}
-	return( NULL );
-}
-
-
-bool ExprListIterator::
-GetValue( Value& val, const ExprTree *tree, EvalState *es )
-{
+bool 
+ExprList::GetValueAt(int location, Value& val, EvalState *es)  const {
 	Value				cv;
 	EvalState			*currentState;
-
-	if( !tree ) return false;
+	ExprTree			*tree = exprList[location];
 
 	// if called from user code, es == NULL so we use &state instead
-	currentState = es ? es : &state;
+	currentState = es; // ? es : &state;
 
 	if( currentState->depth_remaining <= 0 ) {
 		val.SetErrorValue();
@@ -411,90 +321,6 @@ GetValue( Value& val, const ExprTree *tree, EvalState *es )
 	currentState->depth_remaining++;
 
 	return true;
-}
-
-
-bool ExprListIterator::
-NextValue( Value& val, EvalState *es )
-{
-	return GetValue( val, NextExpr( ), es );
-}
-
-
-bool ExprListIterator::
-CurrentValue( Value& val, EvalState *es )
-{
-	return GetValue( val, CurrentExpr( ), es );
-}
-
-
-bool ExprListIterator::
-PrevValue( Value& val, EvalState *es )
-{
-	return GetValue( val, PrevExpr( ), es );
-}
-
-
-bool ExprListIterator::
-GetValue( Value& val, ExprTree*& sig, const ExprTree *tree, EvalState *es ) 
-{
-	Value				cv;
-	EvalState			*currentState;
-
-	if( !tree ) return false;
-
-	// if called from user code, es == NULL so we use &state instead
-	currentState = es ? es : &state;
-
-	if( currentState->depth_remaining <= 0 ) {
-		val.SetErrorValue();
-		return false;
-	}
-	currentState->depth_remaining--;
-
-	const ClassAd *tmpScope = currentState->curAd;
-	currentState->curAd = tree->GetParentScope();
-	tree->Evaluate( *currentState, val, sig );
-	currentState->curAd = tmpScope;
-
-	currentState->depth_remaining++;
-
-	return true;
-}
-
-
-bool ExprListIterator::
-NextValue( Value& val, ExprTree*& sig, EvalState *es )
-{
-	return GetValue( val, sig, NextExpr( ), es );
-}
-
-
-bool ExprListIterator::
-CurrentValue( Value& val, ExprTree*& sig, EvalState *es )
-{
-	return GetValue( val, sig, CurrentExpr( ), es );
-}
-
-
-bool ExprListIterator::
-PrevValue( Value& val, ExprTree*& sig, EvalState *es )
-{
-	return GetValue( val, sig, PrevExpr( ), es );
-}
-
-
-bool ExprListIterator::
-IsAtFirst( ) const
-{
-	return( l && itr == l->exprList.begin( ) );
-}
-
-
-bool ExprListIterator::
-IsAfterLast( ) const
-{
-	return( l && itr == l->exprList.end( ) );
 }
 
 } // classad

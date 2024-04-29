@@ -123,6 +123,7 @@ class TestXferHoldCodes:
 
    def test_jobInputFailureEP(self, jobInputFailureEP):
       assert jobInputFailureEP["HoldReasonCode"] == 13
+      assert jobInputFailureEP["HoldReasonSubCode"] == (1 << 8)
       assert "Transfer input files failure at execution point" in jobInputFailureEP["HoldReason"]
 
    def test_jobOutputFailureEP(self, jobOutputFailureEP):

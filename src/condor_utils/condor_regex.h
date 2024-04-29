@@ -23,6 +23,8 @@
 #include "condor_common.h"
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
+#include <string>
+#include <vector>
 
 //Regex NULLRegex;
 

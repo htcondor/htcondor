@@ -31,6 +31,7 @@
 #include "dc_schedd.h"
 #include "spool_version.h"
 #include "file_transfer.h"
+#include "condor_holdcodes.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -308,7 +309,7 @@ void startShadow( ClassAd *ad )
 			Shadow->isDataflowJob = true;
 			Shadow->logDataflowJobSkippedEvent(); // Must get called before Shadow->shutDown
 			dprintf(D_ALWAYS, "Job %d.%d is a dataflow job, skipping\n", cluster, proc);
-			Shadow->shutDown( JOB_EXITED );
+			Shadow->shutDown( JOB_EXITED, "" );
 		}
 		else {
 			Shadow->updateJobAttr(ATTR_DATAFLOW_JOB_SKIPPED, "false");
@@ -429,7 +430,7 @@ main_config()
 void
 main_shutdown_fast()
 {
-	Shadow->shutDownFast( JOB_SHOULD_REQUEUE );
+	Shadow->shutDownFast(JOB_SHOULD_REQUEUE, "User requested the job to vacate", CONDOR_HOLD_CODE::UserVacateJob, 0);
 }
 
 void

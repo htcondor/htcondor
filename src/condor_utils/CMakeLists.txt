@@ -388,6 +388,7 @@ NegotiationUtils.h
 network_adapter.cpp
 network_adapter.h
 nullfile.cpp
+nvidia_utils.cpp
 overflow.cpp
 overflow.h
 param_info.cpp
@@ -574,7 +575,7 @@ set_source_files_properties(config.cpp condor_config.cpp param_info.cpp param_in
 set( EXTRA_SRCS "${SAFE_OPEN_SRC};${CCB_UTIL_SRCS};${CEDAR_UTIL_SRCS};${DAEMON_CLIENT_UTIL_SRCS};${DAEMON_CORE_UTIL_SRCS};${PROCAPI_UTIL_SRCS};${PROCD_CLIENT_UTIL_SRCS};${QMGMT_UTIL_SRCS};${SYSAPI_UTIL_SRCS}" )
 if (UNIX)
 set_source_files_properties(../condor_sysapi/clinpack.cpp PROPERTIES COMPILE_FLAGS -w)
-set_source_files_properties(../condor_daemon_core.V6/self_monitor.cpp ../classad_analysis/analysis.cpp ../classad_analysis/interval.cpp generic_stats.cpp generic_query.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
+set_source_files_properties(../condor_daemon_core.V6/self_monitor.cpp generic_stats.cpp generic_query.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
 endif(UNIX)
 
 # Turn off the OpenSSL deprecation warnings until we decide on the long-term direction with OpenSSL on Mac.
@@ -723,15 +724,6 @@ else()
 	target_link_libraries(condor_api_objects pcre2-8)
 endif()
 
-condor_static_lib(condorapi 
-						$<TARGET_OBJECTS:condor_api_objects>
-						$<TARGET_OBJECTS:condor_api_and_utils_objects>
-						$<TARGET_OBJECTS:condor_safe_objects>
-)
-target_link_libraries(condorapi pcre2-8)
-
-#add_dependencies( condorapi condor_utils )
-
 if (HAVE_OLD_SCANDIR)
 	add_definitions(-DHAVE_OLD_SCANDIR)
 endif()
@@ -740,33 +732,45 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker-api.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
 endif()
 
-target_link_libraries(condorapi classads)
-if (LINUX AND LIBUUID_FOUND)
-	target_link_libraries(condorapi ${LIBUUID_FOUND})
-endif()
-
-if (LINUX OR APPLE)
-	condor_shared_lib(condorapi_shared 
-						$<TARGET_OBJECTS:condor_api_objects>
-						$<TARGET_OBJECTS:condor_api_and_utils_objects>
-						$<TARGET_OBJECTS:condor_safe_objects>
+if (WE_HOPE_TO_REMOVE_LIBCONDOR_API_BUT_JUST_IN_CASE)
+	condor_static_lib(condorapi 
+		$<TARGET_OBJECTS:condor_api_objects>
+		$<TARGET_OBJECTS:condor_api_and_utils_objects>
+		$<TARGET_OBJECTS:condor_safe_objects>
 	)
-	#add_dependencies( condorapi_shared condor_utils )
-	target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
-	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
+	target_link_libraries(condorapi pcre2-8)
+
+	add_dependencies( condorapi condor_utils )
+
+	target_link_libraries(condorapi classads)
+	if (LINUX AND LIBUUID_FOUND)
+		target_link_libraries(condorapi ${LIBUUID_FOUND})
+	endif()
+
+	if (LINUX OR APPLE)
+		condor_shared_lib(condorapi_shared 
+			$<TARGET_OBJECTS:condor_api_objects>
+			$<TARGET_OBJECTS:condor_api_and_utils_objects>
+			$<TARGET_OBJECTS:condor_safe_objects>
+		)
+		#add_dependencies( condorapi_shared condor_utils )
+		target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
+		set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
+	endif()
+
+	install ( TARGETS condorapi DESTINATION ${C_LIB} )
+	if (LINUX OR APPLE)
+		install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
+	endif()
+	if (APPLE)
+		install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/libcondorapi.dylib)" )
+	endif()
+	condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
 endif()
 
 install (FILES condor_event.h
 		 read_user_log.h
 		DESTINATION ${C_INCLUDE})
-
-install ( TARGETS condorapi DESTINATION ${C_LIB} )
-if (LINUX OR APPLE)
-    install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
-endif()
-if (APPLE)
-    install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/libcondorapi.dylib)" )
-endif()
 
 set_source_files_properties(test_log_reader.cpp PROPERTIES DEFINITIONS ENABLE_STATE_DUMP)
 
@@ -774,7 +778,6 @@ condor_exe_test(test_classad_funcs "test_classad_funcs.cpp" "${CONDOR_TOOL_LIBS}
 condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
-condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
 
 condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_macro_expand "test_macro_expand.cpp" "${CONDOR_TOOL_LIBS}" )

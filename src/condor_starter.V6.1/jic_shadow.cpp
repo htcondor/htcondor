@@ -406,7 +406,7 @@ JICShadow::setupJobEnvironment_part2(void)
 		// Otherwise, there were no files to transfer, so we can
 		// pretend the transfer just finished and try to spawn the job
 		// now.
-	transferCompleted( NULL );
+	transferInputCompleted( NULL );
 }
 
 bool
@@ -609,6 +609,7 @@ JICShadow::transferOutput( bool &transient_failure )
 				filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME);
 			} else {
 				filetrans->addOutputFile(SANDBOX_STARTER_LOG_FILENAME);
+				filetrans->addFailureFile(SANDBOX_STARTER_LOG_FILENAME);
 			}
 			filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME ".old");
 		}
@@ -641,7 +642,11 @@ JICShadow::transferOutput( bool &transient_failure )
 		dprintf( D_FULLDEBUG, "Begin transfer of sandbox to shadow.\n");
 			// this will block
 		if( job_failed && final_transfer ) {
-			m_ft_rval = filetrans->UploadFailureFiles( true );
+			// Only attempt failure file upload if we have failure files
+			if (filetrans->hasFailureFiles()) {
+				sleep(1); // Delay to give time for shadow side to reap previous upload
+				m_ft_rval = filetrans->UploadFailureFiles( true );
+			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
 		}
@@ -959,6 +964,13 @@ JICShadow::notifyExecutionExit( void ) {
 		ClassAd ad;
 		ad.InsertAttr( "EventType", "ActivationExecutionExit" );
 		REMOTE_CONDOR_event_notification(ad);
+	}
+}
+
+void
+JICShadow::notifyGenericEvent( const ClassAd & event ) {
+	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
+		REMOTE_CONDOR_event_notification(event);
 	}
 }
 
@@ -1992,25 +2004,9 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 	const char * proxyfilename = condor_basename(path.c_str());
 
 	bool retval = ::updateX509Proxy(cmd, s, proxyfilename);
-
-	// now, if the update was successful, and we are using glexec, make sure we
-	// set a timer to put the job on hold before the proxy expires and we lose
-	// control of it.
-	if( retval ) {
-		setX509ProxyExpirationTimer();
-	}
-
 	return retval;
 }
 
-void
-JICShadow::setX509ProxyExpirationTimer()
-{
-	std::string path;
-	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
-		return;
-	}
-}
 
 bool
 JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr )
@@ -2465,10 +2461,12 @@ JICShadow::beginFileTransfer( void )
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		filetrans = new FileTransfer();
+	#if 1 //def HAVE_DATA_REUSE_DIR
 		auto reuse_dir = Starter->getDataReuseDirectory();
 		if (reuse_dir) {
 			filetrans->setDataReuseDirectory(*reuse_dir);
 		}
+	#endif
 
 		// file transfer plugins will need to know about OAuth credentials
 		const char *cred_path = getCredPath();
@@ -2496,7 +2494,7 @@ JICShadow::beginFileTransfer( void )
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->setSyscallSocket(syscall_sock);
 		filetrans->RegisterCallback(
-				  (FileTransferHandlerCpp)&JICShadow::transferCompleted,this );
+				  (FileTransferHandlerCpp)&JICShadow::transferInputCompleted,this );
 
 		if ( shadow_version == NULL ) {
 			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
@@ -2568,16 +2566,51 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 }
 
 
+// FileTransfer callback for completion of input transfer
 int
-JICShadow::transferCompleted( FileTransfer *ftrans )
+JICShadow::transferInputCompleted( FileTransfer *ftrans )
 {
+	dprintf(D_ZKM,"transferInputCompleted(%p) success=%d try_again=%d\n", ftrans,
+		ftrans ? ftrans->GetInfo().success : -1,
+		ftrans ? ftrans->GetInfo().try_again : -1) ;
+
 	if ( ftrans ) {
+		updateShadowWithPluginResults("Input");
+
 			// Make certain the file transfer succeeded.
-			// Until "multi-starter" has meaning, it's ok to
-			// EXCEPT here, since there's nothing else for us
-			// to do.
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
 		if ( !ft_info.success ) {
+
+		#if 1 // don't EXCEPT, keep going to transfer FailureFiles
+			UnreadyReason urea = { ft_info.hold_code, ft_info.hold_subcode, "Failed to transfer files: " };
+			if ( ! ft_info.try_again && ! urea.hold_code) {
+				// make sure we have a valid hold code
+				urea.hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
+			}
+			if (ft_info.error_desc.empty()) {
+				urea.message += " reason unknown.";
+			} else {
+				urea.message += ft_info.error_desc;
+			}
+
+			dprintf(D_ERROR, "%s\n", urea.message.c_str());
+
+			// setupCompleted with non-success will queue a SkipJob timer to
+			// start output transfer of FailureFiles
+			setupCompleted(ft_info.try_again ? JOB_SHOULD_REQUEUE : JOB_SHOULD_HOLD, &urea);
+			m_job_setup_done = true;
+			return TRUE;
+		#else
+			if (job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
+				// Do a failure transfer
+				dprintf(D_ZKM,"JEF Doing failure transfer\n");
+				dprintf_close_logs_in_directory(Starter->GetWorkingDir(false), false);
+				TemporaryPrivSentry sentry(PRIV_USER);
+				filetrans->addFailureFile(SANDBOX_STARTER_LOG_FILENAME);
+				priv_state saved_priv = set_user_priv();
+				filetrans->UploadFailureFiles( true );
+			}
+
 			if(!ft_info.try_again) {
 					// Put the job on hold.
 				ASSERT(ft_info.hold_code != 0);
@@ -2593,10 +2626,8 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 			}
 
 			EXCEPT("%s", message.c_str());
+		#endif
 		}
-
-
-		updateShadowWithPluginResults("Input");
 
 
 		// It's not enought to for the FTO to believe that the transfer
@@ -2622,7 +2653,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 					if(! manifestFileName.empty()) {
 						std::string message = "Found more than one MANIFEST file, aborting.";
 						notifyStarterError( message.c_str(), true, 0, 0 );
-						EXCEPT( "%s\n", message.c_str() );
+						EXCEPT( "%s", message.c_str() );
 					}
 					manifestFileName = currentFile;
 				}
@@ -2636,14 +2667,14 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 				if(! manifest::validateManifestFile( manifestFileName )) {
 					std::string message = "Invalid MANIFEST file, aborting.";
 					notifyStarterError( message.c_str(), true, 0, 0 );
-					EXCEPT( "%s\n", message.c_str() );
+					EXCEPT( "%s", message.c_str() );
 				}
 
 				std::string error;
 				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
 					formatstr( error, "%s, aborting.", error.c_str() );
 					notifyStarterError( error.c_str(), true, 0, 0 );
-					EXCEPT( "%s\n", error.c_str() );
+					EXCEPT( "%s", error.c_str() );
 				}
 
 				unlink( manifestFileName.c_str() );
@@ -2686,17 +2717,19 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		}
 	}
 
-	setX509ProxyExpirationTimer();
-
-		// Now that we're done, let our parent class do its thing.
-	JobInfoCommunicator::setupJobEnvironment();
-
+	// We are done with input transfer, so record the sandbox content now
+	// note that if setupCompleted() runs a PREPARE_JOB hook which modifies the sandbox
+	// the post hook code will need to re-do this work, which currently it does not.
 	std::string dummy;
 	bool want_manifest = false;
 	if( job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dummy ) ||
 		(job_ad->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest) ) {
 		recordSandboxContents( "in" );
 	}
+
+	// Now that we're done, report successful setup to the base class which tells the starter.
+	// This will either queue a prepare hook. or a queue a DEFERRAL timer to launch the job
+	setupCompleted(0);
 
 	return TRUE;
 }
@@ -3323,12 +3356,6 @@ bool JICShadow::receiveExecutionOverlayAd(Stream* stream)
 		}
 	}
 	return ret_val;
-}
-
-
-void
-JICShadow::setJobFailed( void ) {
-	job_failed = true;
 }
 
 #if !defined(WINDOWS)

@@ -134,6 +134,6 @@ Systemic problems
 The final case is that you have done nothing wrong, but there is some problem
 with the system.  Maybe a network is down, or a system daemon has crashed,
 or there is an overload somewhere.  If you are an expert, there may be
-information in the debug logs, usually found in /usr/log/condor.  In this
+information in the debug logs, usually found in /var/log/condor.  In this
 case, you may need to consult your system administrator, or ask for
 help on the *condor-users* email list.

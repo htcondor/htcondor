@@ -81,7 +81,7 @@ StringList::StringList( const StringList &other )
 	}
 
 	// Walk through the other list, verify that everything is in my list
-	iter.Initialize( other.getList() );
+	iter.Initialize( other.m_strings);
 	iter.ToBeforeFirst( );
 	while ( iter.Next(str) ) {
 		char	*dup = strdup( str );
@@ -533,7 +533,7 @@ StringList::identical( const StringList &other, bool anycase ) const
 	}
 
 	// Walk through the other list, verify that everything is in my list
-	iter.Initialize ( other.getList() );
+	iter.Initialize ( other.m_strings);
 	iter.ToBeforeFirst ();
 	while ( iter.Next(x) ) {
 		if ( !find( x, anycase ) ) {

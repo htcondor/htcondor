@@ -36,10 +36,9 @@
 #include <string>
 #include <set>
 #include "log.h"
-#include "list.h"
 #include "HashTable.h"
 
-typedef List<LogRecord> LogRecordList;
+using LogRecordList = std::vector<LogRecord *>;
 
 class LoggableClassAdTable;
 
@@ -61,7 +60,8 @@ public:
 private:
 	HashTable<YourString,LogRecordList *> op_log;
 	LogRecordList ordered_op_log;
-	LogRecordList *op_log_iterating;
+	LogRecordList::iterator op_log_iterating;
+	LogRecordList::iterator op_log_iterating_end;
 	int  m_triggers; // for use by transaction users to record transaction triggers.
 	bool m_EmptyTransaction;
 };

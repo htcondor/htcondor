@@ -54,14 +54,21 @@ verbose()
     fi >&2
 }
 
+CONDOROPTS="`condor_config_val SEC_CREDENTIAL_VAULT_STORER_OPTS 2>/dev/null`"
 VERBOSE=
-while getopts "dv" opt; do
-    case ${opt} in
-        d) VERBOSE="-d";;
-        v) VERBOSE="-v";;
-        \?) usage;;
-    esac
-done
+parseopts()
+{
+    unset OPTIND
+    while getopts "dv" opt; do
+        case ${opt} in
+            d) VERBOSE="-d";;
+            v) VERBOSE="-v";;
+            \?) usage;;
+        esac
+    done
+}
+parseopts $CONDOROPTS
+parseopts "$@"
 shift $((OPTIND -1))
 
 if [ "$#" = 0 ]; then
@@ -173,6 +180,7 @@ for REQUEST; do
     HANDLESERVICE=""
     HANDLESTOREOPTS=("${STOREOPTS[@]}")
     HANDLEOPTS=("${OPTS[@]}")
+    REDUCED=false
     for PART in "${PARTS[@]:1}"; do
         VAL="${PART#*=}"
         case "$PART" in
@@ -183,10 +191,12 @@ for REQUEST; do
             scopes=*)
                 HANDLESTOREOPTS+=("-S" "$VAL")
                 HANDLEOPTS+=("--scopes=$VAL")
+                REDUCED=true
                 ;;
             audience=*)
                 HANDLESTOREOPTS+=("-A" "$VAL")
                 HANDLEOPTS+=("--audience=$VAL")
+                REDUCED=true
                 ;;
             options=*)
                 OPTS+=($VAL)
@@ -195,6 +205,9 @@ for REQUEST; do
         esac
     done
 
+    if $REDUCED && [ -z "$HANDLE" ]; then
+        fatal "reduced scopes or audience require a handle"
+    fi
 
     if [ -n "$BTOKEN" ]; then
         OPTS=("-o" "$BTOKEN-$SERVICE" "${OPTS[@]}")
@@ -324,8 +337,12 @@ for REQUEST; do
     fi
 
     if [ -n "$HANDLE" ]; then
-        querycred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"
-        VAULTURL="$HANDLEURL"
-        storecred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"
+        if  $STOREVAULTTOKEN || ! querycred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"; then
+            # There's not really a need to store this because of
+            #  $STOREVAULTTOKEN but that's rare enough that we might
+            #  as well, just in case the URL changes or something.
+            VAULTURL="$HANDLEURL"
+            storecred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"
+        fi
     fi
 done

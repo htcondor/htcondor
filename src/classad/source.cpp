@@ -1040,63 +1040,51 @@ parsePrimaryExpression(ExprTree *&tree)
 
 		case Lexer::LEX_UNDEFINED_VALUE:
 			{
-				Value val;
 				lexer.ConsumeToken( );
-				val.SetUndefinedValue( );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeUndefined()) != nullptr );
 			}
 
 		case Lexer::LEX_ERROR_VALUE:
 			{
-				Value val;
 				lexer.ConsumeToken( );
-				val.SetErrorValue( );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return (tree=Literal::MakeError()) != nullptr;
 			}
 
 		case Lexer::LEX_BOOLEAN_VALUE:
 			{
-				Value 	val;
 				bool	b;
 				tv.GetBoolValue( b );
 				lexer.ConsumeToken( );
-				val.SetBooleanValue( b );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeBool(b)) != NULL );
 			}
 
 		case Lexer::LEX_INTEGER_VALUE:
 			{
-				Value 	val;
 				long long 	i;
 				Value::NumberFactor f;
 
 				tv.GetIntValue( i, f );
 				lexer.ConsumeToken( );
-				val.SetIntegerValue( i );
-				return( (tree=Literal::MakeLiteral(val, f)) != NULL );
+				return( (tree=Literal::MakeInteger(i)) != NULL );
 			}
 
 		case Lexer::LEX_REAL_VALUE:
 			{
-				Value 	val;
 				double 	r;
 				Value::NumberFactor f;
 
 				tv.GetRealValue( r, f );
 				lexer.ConsumeToken( );
-				val.SetRealValue( r );
-				return( (tree=Literal::MakeLiteral(val, f)) != NULL );
+				return( (tree=Literal::MakeReal(r)) != NULL );
 			}
 
 		case Lexer::LEX_STRING_VALUE:
 			{
-				Value	val;
 				string	s;
 
 				tv.GetStringValue( s );
 				lexer.ConsumeToken( );
-				val.SetStringValue( s );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeString(s)) != NULL );
 			}
 		default:
 			tree = NULL;
@@ -1335,9 +1323,9 @@ bool ClassAdParser::shouldEvaluateAtParseTime(
 	c_function_name = functionName.c_str();
 	if (   strcasecmp(c_function_name, "absTime") == 0 
 		|| strcasecmp(c_function_name, "relTime") == 0) {
-		if (argList.size() == 1 && argList[0]->GetKind() == ExprTree::LITERAL_NODE) {
+		if (argList.size() == 1 && (dynamic_cast<Literal *>(argList[0]) != nullptr)) {
 			Value val;
-			((Literal *)argList[0])->GetComponents(val);
+			((Literal *)argList[0])->GetValue(val);
 			if (val.IsStringValue()) {
 				should_eval = true;
 			}
@@ -1354,7 +1342,7 @@ ExprTree *ClassAdParser::evaluateFunction(
 	ExprTree             *tree;
 	const char           *c_function_name;
 
-	((Literal *)argList[0])->GetComponents(val);
+	((Literal *)argList[0])->GetValue(val);
 	c_function_name = functionName.c_str();
 	tree = NULL;
 

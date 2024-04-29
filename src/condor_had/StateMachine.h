@@ -124,7 +124,6 @@ protected:
 						   std::vector<std::string> &all,
 						   int &selfId );
     bool checkList(std::set<int>) const;
-    static void removeAllFromList(List<int>*);
     void clearBuffers(void);
     void printStep(const char *curState,const char *nextState) const;
     //char* commandToString(int command);

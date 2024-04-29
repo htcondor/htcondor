@@ -132,6 +132,7 @@ void ScheddJobCounters::InitJobCounters(StatisticsPool &Pool, int base_verbosity
    SCHEDD_STATS_ADD_RECENT(Pool, JobsMissedDeferralTime,    if_poolbasic | IF_NONZERO);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedAndClaimClosing, if_poolbasic | IF_NONZERO);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsDebugLogError,         if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCoolDown,              if_poolbasic | IF_NONZERO);
 
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedSizes,        if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputSizes,           if_poolbasic);

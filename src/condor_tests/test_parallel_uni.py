@@ -77,8 +77,6 @@ class TestParallelUni:
             assert in_order(
                 events_for_parallel_job,
                 [
-                    SetJobStatus(JobStatus.IDLE),
-                    SetJobStatus(JobStatus.RUNNING),
                     SetJobStatus(JobStatus.COMPLETED),
-                    ],
+                ],
                 )

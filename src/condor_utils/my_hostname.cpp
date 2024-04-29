@@ -28,6 +28,7 @@
 #include "ipv6_hostname.h"
 #include "condor_sinful.h"
 #include "CondorError.h"
+#include "../condor_sysapi/sysapi.h"
 
 bool
 network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest)
@@ -57,7 +58,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		return true;
 	}
 
-	StringList pattern(interface_pattern);
+	std::vector<std::string> pattern = split(interface_pattern);
 
 	std::string matches_str;
 	std::vector<NetworkDeviceInfo> dev_list;
@@ -83,12 +84,12 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 	{
 		bool matches = false;
 		if( strcmp(dev->name(),"")!=0 &&
-			pattern.contains_anycase_withwildcard(dev->name()) )
+			contains_anycase_withwildcard(pattern, dev->name()) )
 		{
 			matches = true;
 		}
 		else if( strcmp(dev->IP(),"")!=0 &&
-				 pattern.contains_anycase_withwildcard(dev->IP()) )
+				 contains_anycase_withwildcard(pattern, dev->IP()) )
 		{
 			matches = true;
 		}

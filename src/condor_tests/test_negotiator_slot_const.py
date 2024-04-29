@@ -59,4 +59,11 @@ def job_one_ad(job_one_handle):
 
 class TestNegotiatorSlotConstraint:
     def test_internal_consistency(self, job_one_ad):
-        assert job_one_ad["LastRemoteHost"].startswith("slot7@")
+        # There's a race condition when the sched moves
+        # RemoteHost to LastRemoteHost. If the latter
+        # doesn't exist, try the former
+        if "LastRemoteHost" in job_one_ad:
+            host = job_one_ad["LastRemoteHost"]
+        else:
+            host = job_one_ad["RemoteHost"]
+        assert host.startswith("slot7@")

@@ -429,7 +429,7 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 	{
 		std::string msg_str;
 		sPrintAd(msg_str, msg);
-		EXCEPT("CCBListener: invalid CCB request from %s: %s\n",
+		EXCEPT("CCBListener: invalid CCB request from %s: %s",
 			   m_ccb_address.c_str(),
 			   msg_str.c_str() );
 	}

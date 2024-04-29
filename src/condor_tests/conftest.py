@@ -243,3 +243,30 @@ def pytest_sessionfinish(session, exitstatus):
 
     if custom_exit_status > 1:
         session.exitstatus = custom_exit_status
+
+
+# This is broken beyond belief, but PyTest doesn't allow you to anything sane.
+def pytest_collection_modifyitems(items):
+    the_list = []
+    the_list[:] = items
+
+    preen = []
+    shadow = []
+    others = []
+    for item in the_list:
+        if item.location[0] == "test_checkpoint_destination_two.py":
+            if "[shadow-" in item.name:
+                shadow.append(item)
+            elif "-shadow]" in item.name:
+                shadow.append(item)
+            elif "[preen-" in item.name:
+                preen.append(item)
+            elif "-preen]" in item.name:
+                preen.append(item)
+            else:
+                others.append(item)
+        else:
+            others.append(item)
+
+    the_list = [ * others, * preen, * shadow ]
+    items[:] = the_list

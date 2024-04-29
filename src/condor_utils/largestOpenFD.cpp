@@ -34,7 +34,8 @@ int largestOpenFD() {
 #ifdef LINUX
 	stdfs::path fds {"/proc/self/fd"};
 	int max_fd = 0;
-	for (const auto &d : stdfs::directory_iterator(fds)) {
+	std::error_code ec;
+	for (const auto &d : stdfs::directory_iterator(fds,ec)) {
 		std::string basename = d.path().filename().string();
 		int fd = 0;
 		std::ignore =  // should never fail, so don't bother to test if invalid

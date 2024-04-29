@@ -126,11 +126,11 @@ class BaseShadow : public Service
 		/** Everyone should be able to shut down.<p>
 			@param reason The reason the job exited (JOB_BLAH_BLAH)
 		 */
-	virtual void shutDown( int reason );
+	virtual void shutDown( int reason, const char* reason_str, int reason_code=0, int reason_subcode=0 );
 		/** Forces the starter to shutdown fast as well.<p>
 			@param reason The reason the job exited (JOB_BLAH_BLAH)
 		 */
-	virtual void shutDownFast( int reason );
+	virtual void shutDownFast( int reason, const char* reason_str, int reason_code=0, int reason_subcode=0 );
 
 		/** Graceful shutdown method.  This is virtual so each kind of
 			shadow can do the right thing.
@@ -220,7 +220,7 @@ class BaseShadow : public Service
 			This uses the virtual cleanUp() method to take care of any
 			universe-specific code before we exit.
 		*/
-	void evictJob( int reason, const std::string &reasonStr );
+	void evictJob( int exit_reason, const char* reason_str, int reason_code=0, int reason_subcode=0 );
 		/** It's possible to the shadow to initiate eviction, and in
 			some cases that means we need to wait around for the starter
 			to tell us what happened.
@@ -457,9 +457,9 @@ class BaseShadow : public Service
 		*/
 	void checkSwap( void );
 
-		/** Improve HoldReason string and hold codes before sending this info
+		/** Improve Hold/EvictReason string and codes before sending this info
 			to the job classad in the schedd. */
-	std::string improveHoldAttributes(const char* const orig_hold_reason, int  &hold_reason_code, int &hold_reason_subcode);
+	std::string improveReasonAttributes(const char* orig_reason_str, int  &reason_code, int &reason_subcode);
 
 	// config file parameters
 	int reconnect_ceiling;

@@ -66,6 +66,7 @@ class CronJob : public Service
 	bool IsRunning( void ) const {
 		return ( (CRON_RUNNING == m_state) && (m_pid > 0) );
 	};
+	int  GetPid( void ) const { return m_pid; }
 	bool IsIdle( void ) const {
 		return ( CRON_IDLE == m_state );
 	};

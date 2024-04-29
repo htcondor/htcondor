@@ -631,20 +631,24 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	return true;
 }
 
-AdTypes get_real_startd_ad_type(const char * mytype) {
+AdTypes get_realish_startd_adtype(const char * mytype) {
 	if (mytype) {
 		if (MATCH == strcasecmp(mytype, STARTD_DAEMON_ADTYPE)) {
 			return STARTDAEMON_AD;
 		}
-		if (MATCH == strcasecmp(mytype, STARTD_SLOT_ADTYPE)) {
+		if (MATCH == strcasecmp(mytype, "Slot")) { // future, currently mytype of slot ads is "Machine"
 			return SLOT_AD;
 		}
 	}
 	// ads not known to be daemon ads or Slot ads are presumed to be old startd ads
 	return STARTD_AD;
 }
-AdTypes get_real_startd_ad_type(ClassAd & ad) {
-	return get_real_startd_ad_type(GetMyTypeName(ad));
+AdTypes get_real_startd_adtype(ClassAd & ad) {
+	AdTypes adtype = get_realish_startd_adtype(GetMyTypeName(ad));
+	if (adtype == STARTD_AD) {
+		if (ad.Lookup(ATTR_HAS_START_DAEMON_AD)) { return SLOT_AD; }
+	}
+	return adtype;
 }
 
 static bool is_primary_slot_ad(ClassAd & ad) {
@@ -722,19 +726,19 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 #ifdef PROFILE_RECEIVE_UPDATE
 		CollectorEngine_rucc_makeHashKey_runtime.Add(rt.tick(rt_last));
 #endif
-		realAdType = get_real_startd_ad_type(*clientAd);
+		realAdType = get_real_startd_adtype(*clientAd);
 		if (realAdType == STARTDAEMON_AD) {
-			retVal=updateClassAd (StartdDaemonAds, "StartDaemonAd", "StartD",
+			retVal=updateClassAd (StartdDaemonAds, "StartDaemonAd", "StartD", false,
 				clientAd, hk, hashString, insert, from );
 		} else {
-			retVal=updateClassAd (StartdSlotAds,   "StartdSlotAd ", "Slot",
+			retVal=updateClassAd (StartdSlotAds,   "MachineSlotAd", "Slot", true,
 								  clientAd, hk, hashString, insert, from );
 
 			// For old Startd ads, we want to synthesize a StartDaemon ad from the slot1 ad
 			if (realAdType == STARTD_AD) {
 				if (is_primary_slot_ad(*clientAd)) {
 					ClassAd * daemonAd = synthesize_startd_daemon_ad(*clientAd);
-					if ( ! updateClassAd(StartdDaemonAds, "StartDaemonAd", "StartD",
+					if ( ! updateClassAd(StartdDaemonAds, "StartDaemonAd", "StartD", false,
 						daemonAd, hk, hashString, insert, from)) {
 						delete daemonAd;
 					}
@@ -786,8 +790,8 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 
 			// insert the private ad into its hashtable --- use the same
 			// hash key as the public ad
-			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ",
-								  "StartdPvt", pvtAd, hk, hashString, insPvt,
+			(void) updateClassAd (StartdPrivateAds, "MachinePvtAd ", "MachinePvt", true,
+								  pvtAd, hk, hashString, insPvt,
 								  from );
 #ifdef PROFILE_RECEIVE_UPDATE
 			if (last_updateClassAd_was_insert) { CollectorEngine_rucc_insertPvtAd_runtime.Add(rt.tick(rt_last));
@@ -811,7 +815,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				fakeAd->Assign(ATTR_NAME, newname);
 				makeStartdAdHashKey (hk, fakeAd);
 				hk.sprint(hashString);
-				if (! updateClassAd (StartdSlotAds, "StartdSlotAd ", "Start",
+				if (! updateClassAd (StartdSlotAds, "MachineSlotAd ", "Slot", true,
 							  fakeAd, hk, hashString, insert, from ) )
 				{
 					// don't leak memory if there is some failure
@@ -835,7 +839,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=mergeClassAd (StartdSlotAds, "StartdSlotAd ", "Start",
+		retVal=mergeClassAd (StartdSlotAds, "MachineSlotAd ", "Slot",
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -848,7 +852,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=updateClassAd (ScheddAds, "ScheddAd     ", "Schedd",
+		retVal=updateClassAd (ScheddAds, "ScheddAd     ", "Schedd", false,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -865,7 +869,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
 		hk.sprint(hashString);
-		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", "Submittor",
+		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", "Submittor", true,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -881,7 +885,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
 		hk.sprint(hashString);
-		retVal=updateClassAd (LicenseAds, "LicenseAd  ", "License",
+		retVal=updateClassAd (LicenseAds, "LicenseAd  ", "License", false,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -894,7 +898,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=updateClassAd (MasterAds, "MasterAd     ", "Master",
+		retVal=updateClassAd (MasterAds, "MasterAd     ", "Master", false,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -907,7 +911,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", "CkptSrvr",
+		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", "CkptSrvr", false,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -920,7 +924,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=updateClassAd (CollectorAds, "CollectorAd  ", "Collector",
+		retVal=updateClassAd (CollectorAds, "CollectorAd  ", "Collector", false,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -933,7 +937,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=updateClassAd (StorageAds, "StorageAd  ", "Storage",
+		retVal=updateClassAd (StorageAds, "StorageAd  ", "Storage", false,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -946,7 +950,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=updateClassAd (AccountingAds, "AccountingAd  ", "Accounting",
+		retVal=updateClassAd (AccountingAds, "AccountingAd  ", "Accounting", false,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -965,7 +969,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			// collector any given time.
 			purgeHashTable( NegotiatorAds );
 		}
-		retVal=updateClassAd (NegotiatorAds, "NegotiatorAd  ", "Negotiator",
+		retVal=updateClassAd (NegotiatorAds, "NegotiatorAd  ", "Negotiator", false,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -978,7 +982,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=updateClassAd (HadAds, "HadAd  ", "HAD",
+		retVal=updateClassAd (HadAds, "HadAd  ", "HAD", false,
 							  clientAd, hk, hashString, insert, from );
 		break;
 
@@ -991,7 +995,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			break;
 		}
 		hk.sprint(hashString);
-		retVal=updateClassAd (GridAds, "GridAd  ", "Grid",
+		retVal=updateClassAd (GridAds, "GridAd  ", "Grid", false,
 							  clientAd, hk, hashString, insert, from );
           break;
 
@@ -1020,7 +1024,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			  break;
 		  }
 		  hk.sprint(hashString);
-		  retVal = updateClassAd(*cht, type_str, type_str, clientAd,
+		  retVal = updateClassAd(*cht, type_str, type_str, false, clientAd,
 					 hk, hashString, insert, from);
 		  break;
 	  }
@@ -1100,14 +1104,14 @@ int CollectorEngine::remove(CollectorHashTable * table, AdNameHashKey &hk, AdTyp
 		// For INVALIDATE_STARTD_ADS, If the mytype is "Machine" and this is the primary slot ad
 		// we should invalidate the StartDaemon ad as well
 		if ((t_AddType == STARTD_AD) && record && record->m_publicAd &&
-			STARTD_AD == get_real_startd_ad_type(*(record->m_publicAd)) &&
+			STARTD_AD == get_real_startd_adtype(*(record->m_publicAd)) &&
 			is_primary_slot_ad(*(record->m_publicAd)))
 		{
 			CollectorRecord* daemon = nullptr;
 			if (StartdDaemonAds.lookup(hk, daemon) != -1) {
-				iRet += (StartdDaemonAds.remove(hk) == 0) ? 1 : 0;
-				dprintf (D_ALWAYS,"\t\t**** Removed(%d) %s ad(s): \"%s\"\n",
-					iRet, STARTD_DAEMON_ADTYPE, hkString.c_str() );
+				int num = (StartdDaemonAds.remove(hk) == 0) ? 1 : 0;
+				dprintf (D_ALWAYS,"\t\t**** Removed(%d) %s (sim) ad: \"%s\"\n",
+					num, STARTD_DAEMON_ADTYPE, hkString.c_str() );
 				delete daemon;
 			}
 		}
@@ -1229,6 +1233,7 @@ CollectorRecord * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
 			   const char *label,
+			   bool filter_forward,
 			   ClassAd *ad,
 			   AdNameHashKey &hk,
 			   const std::string &hashString,
@@ -1239,6 +1244,8 @@ updateClassAd (CollectorHashTable &hashTable,
 	ClassAd		*old_ad, *new_ad;
 	ClassAd     *new_pvt_ad;
 	time_t		now;
+	static int update_dpf_level = D_FULLDEBUG;
+	update_dpf_level = D_ALWAYS;
 
 		// NOTE: LastHeardFrom will already be in ad if we are loading
 		// adds from the offline classad collection, so don't mess with
@@ -1267,7 +1274,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		dprintf (D_ALWAYS, "%s: Inserting ** \"%s\"\n", adType, hashString.c_str() );
 
 		// Update statistics, but not for private ads we can't see
-		if (strcmp(label, "StartdPvt") != 0) {
+		if (strcmp(label, "MachinePvt") != 0) {
 			collectorStats->update( label, NULL, new_ad );
 		}
 
@@ -1280,7 +1287,7 @@ updateClassAd (CollectorHashTable &hashTable,
 
 		insert = 1;
 
-		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+		if ( m_forwardFilteringEnabled && filter_forward ) {
 			new_ad->Assign( ATTR_LAST_FORWARDED, time(nullptr) );
 		}
 
@@ -1289,16 +1296,16 @@ updateClassAd (CollectorHashTable &hashTable,
 	else
     {
 		// yes ... old ad must be updated
-		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.c_str() );
+		dprintf (update_dpf_level, "%s: Updating ... \"%s\"\n", adType, hashString.c_str() );
 
 		old_ad = record->m_publicAd;
 
 		// Update statistics
-		if (strcmp(label, "StartdPvt") != 0) {
+		if (strcmp(label, "MachinePvt") != 0) {
 			collectorStats->update( label, old_ad, new_ad );
 		}
 
-		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
+		if ( m_forwardFilteringEnabled && filter_forward ) {
 			bool forward = false;
 			int last_forwarded = 0;
 			old_ad->LookupInteger( "LastForwarded", last_forwarded );

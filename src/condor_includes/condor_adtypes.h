@@ -25,8 +25,8 @@
 #define TT_ADTYPE			"TTProcess"
 //#define STARTD_ADTYPE			"Machine"
 #define STARTD_OLD_ADTYPE		"Machine"
-#define STARTD_SLOT_ADTYPE		"Slot"
-#define STARTD_DAEMON_ADTYPE	"StartDaemon"
+#define STARTD_SLOT_ADTYPE		"Machine"  // can't make this "Slot" without breaking GANGLIAD for now....
+#define STARTD_DAEMON_ADTYPE	"StartD"
 #define STARTD_PVT_ADTYPE		"MachinePrivate"
 #define SCHEDD_ADTYPE			"Scheduler"
 #define MASTER_ADTYPE			"DaemonMaster"

@@ -638,6 +638,10 @@ ReliSock::get_file_with_permissions( filesize_t *size,
 		return -1;
 	}
 
+	if (file_mode == MISSING_FILE_PERMISSIONS) {
+		// pull file metadata down to keep stream n'sync
+		return get_file( size, GET_FILE_NULL_FD, flush_buffers, /*append*/ false, max_bytes, xfer_q );
+	}
 	result = get_file( size, destination, flush_buffers, false, max_bytes, xfer_q );
 
 	if ( result < 0 ) {
@@ -695,7 +699,7 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source, files
 
 		// Now send an empty file in order to recover sanity on this
 		// stream.
-		file_mode = NULL_FILE_PERMISSIONS;
+		file_mode = MISSING_FILE_PERMISSIONS;
 		this->encode();
 		if( this->code( file_mode) == FALSE ||
 			this->end_of_message() == FALSE ) {

@@ -71,7 +71,7 @@ StartdBenchJobMgr::StartdBenchJobMgr( void )
 // Basic destructor
 StartdBenchJobMgr::~StartdBenchJobMgr( void )
 {
-	dprintf( D_FULLDEBUG, "StartdBenchJobMgr: Bye\n" );
+	dprintf( D_CRON | D_VERBOSE, "StartdBenchJobMgr: Bye\n" );
 }
 
 int
@@ -91,7 +91,7 @@ StartdBenchJobMgr::StartBenchmarks( Resource *rip, int &count )
 	}
 	m_rip = rip;
 	count = GetNumJobs( );
-	dprintf( D_ALWAYS, "BenchMgr:StartBenchmarks()\n" );
+	dprintf( D_STATUS, "BenchMgr:StartBenchmarks()\n" );
 	return StartOnDemandJobs( ) == 0;
 }
 
@@ -135,7 +135,7 @@ StartdBenchJobMgr::ShutdownOk( void )
 {
 	bool	idle = IsAllIdle( );
 
-	// dprintf( D_ALWAYS, "ShutdownOk: %s\n", idle ? "Idle" : "Busy" );
+	dprintf( idle ? D_FULLDEBUG : D_STATUS, "ShutdownOk: %s\n", idle ? "Idle" : "Busy" );
 	return idle;
 }
 
@@ -155,7 +155,7 @@ StartdBenchJobMgr::CreateJobParams( const char *job_name )
 StartdBenchJob *
 StartdBenchJobMgr::CreateJob( CronJobParams *job_params )
 {
-	dprintf( D_FULLDEBUG,
+	dprintf( D_CRON,
 			 "*** Creating Benchmark job '%s'***\n",
 			 job_params->GetName() );
 	StartdBenchJobParams *params =
@@ -169,14 +169,14 @@ bool
 StartdBenchJobMgr::ShouldStartJob( const CronJob &job ) const
 {
 	if ( m_shutting_down ) {
-		dprintf( D_ALWAYS, "ShouldStartJob: shutting down\n" );
+		//dprintf( D_FULLDEBUG, "ShouldStartJob: shutting down\n" );
 		return false;
 	}
 
 	// If we're busy running cron jobs, wait
 	if (  ( NULL != cron_job_mgr ) &&
 		  ( !cron_job_mgr->ShouldStartBenchmarks() )  ) {
-		dprintf( D_ALWAYS, "ShouldStartJob: running normal cron jobs\n" );
+		dprintf( D_CRON, "ShouldStartJob: benchmarks disabled while running normal cron jobs\n" );
 		return false;
 	}
 
@@ -188,6 +188,7 @@ StartdBenchJobMgr::ShouldStartJob( const CronJob &job ) const
 bool
 StartdBenchJobMgr::JobStarted( const CronJob &job )
 {
+	dprintf(D_STATUS, "BENCHMARK job %s started. pid=%d\n", job.GetName(), job.GetPid());
 	if ( ! m_is_running ) {
 		m_rip->benchmarks_started( );
 	}

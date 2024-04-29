@@ -22,6 +22,7 @@
 #define DAGMAN_DEBUG_H
 
 #include "condor_header_features.h"
+#include <string>
 
 /** @name debug.h
     

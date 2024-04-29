@@ -66,7 +66,6 @@
 #include "condor_url.h"
 #include "condor_version.h"
 
-#include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "submit_protocol.h"
@@ -227,7 +226,7 @@ int ActualScheddQ::set_Factory(int cluster, int qnum, const char * filename, con
 	bool got_US = strchr(str, '\x1F') != NULL;
 
 	// we only need to split and re-assemble the field data if there are multiple fields
-	if (fea.vars.number() > 1 && ! got_US) {
+	if (fea.vars.size() > 1 && ! got_US) {
 		auto_free_ptr tmp(strdup(str));
 		std::vector<const char *> splits;
 		if (fea.split_item(tmp.ptr(), splits) <= 0)

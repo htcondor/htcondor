@@ -4,23 +4,334 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
-Version 23.5.0
+Version 23.8.1
 --------------
 
 Release Notes:
 
-.. HTCondor version 23.5.0 released on Month Date, 2024.
+.. HTCondor version 23.8.1 released on Month Date, 2024.
 
-- HTCondor version 23.5.0 not yet released.
+- HTCondor version 23.8.1 not yet released.
 
-- This version includes all the updates from :ref:`lts-version-history-2305`.
+- This version includes all the updates from :ref:`lts-version-history-23012`.
 
 New Features:
 
+- A job can now be put into a cool-down state after a failed execution
+  attempt.
+  If the expression given by new configuration parameter
+  :macro:`SYSTEM_ON_VACATE_COOL_DOWN` evaluates to a positive integer,
+  then the job will not be run again until after that number of
+  seconds elapses.
+  New job attributes :ad-attr:`VacateReason`,
+  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode` are
+  set after a failed execution attempt and can be referenced in the
+  cool-down expression.
+  :jira:`2134`
+
+- New config parameter :macro:`CGROUP_LOW_MEMORY_LIMIT` allows an administrator
+  of a Linux cgroup v2 system to set the "memory.low" setting in a job's cgroup
+  to encourage cacheable memory pages to be reclaimed faster.
+  :jira:`2391`
+
+- The *condor_gangliad* memory consumption has been reduced, and it also places less load on
+  the *condor_collector*.  Specifically, it now uses a projection when querying the collector.
+  :jira:`2394`
+
+- ``IDTOKEN`` files whose access permissions are too open are now ignored.
+  :jira:`232`
+
+- Added new ``-SubmitMethod`` flag to :tool:`condor_submit_dag` which controls whether
+  DAGMan directly submits jobs to the local *condor_schedd* queue or externally runs
+  :tool:`condor_submit`.
+  :jira:`2406`
+
+Bugs Fixed:
+
+- None.
+
+Version 23.7.1
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.7.1 released on Month Date, 2024.
+
+- HTCondor version 23.7.1 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-23010`.
+
+- The use of multiple :subcom:`queue` statements in a single submit description
+  file is now deprecated. This functionality is planned to be removed during the
+  lifetime of the **V24** feature series.
+  :jira:`2338`
+
+- The semantics of :subcom:`skip_if_dataflow` have been changed to make
+  more sense.  The restrictions have been :ref:`documented <dataflow>`.
+  :jira:`1899`
+
+- When removing a large dag, the schedd now removes any existing child
+  dag jobs in a non-blocking way, making the schedd more responsive during
+  this removal.
+  :jira:`2364`
+
+New Features:
+
+- In the unlikely event that a shadow exception event happens, the text is
+  now saved in the job ad attribute :ad-attr:`LastShadowException` for
+  further debugging.
+  :jira:`1896`
+
+- Periodic policy expressions like :subcom:`periodic_remove` are now checked
+  for during file input transfer.  Previously, HTCondor didn't start running these
+  checks until the file transfer was finished at the job proper started.
+  :jira:`2362`
+
+- We now compute the path to the proper python3 interpreter for :tool:`condor_watch_q`
+  at compile time.  This should not change anything, but if it does break, the
+  guilty ticket is:
+  :jira:`1146`
+
+- If a collector defines a local-name, but not a :macro:`COLLECTOR_NAME`,
+  the local name is now used as the default name.
+  :jira:`1105`
+
+- Most daemon log messages about tasks in the :macro:`STARTD_CRON_JOBLIST`,
+  :macro:`BENCHMARKS_JOBLIST` or :macro:`SCHEDD_CRON_JOBLIST` that were
+  logged as ``D_FULLDEBUG`` messages are now logged using the new message
+  category ``D_CRON``.
+  :jira:`2308`
+
+- A local universe job can now specify a container image, and it will run
+  with that singularity or apptainer container runtime.
+  :jira:`2180`
+
+- A new ``-jobset`` display option was added to :tool:`condor_q`.  If jobsets are enabled
+  in the *condor_schedd* it will show information from the jobset ads.
+  :jira:`2358`
+
+- If a schedd has a schedd-specific SPOOL directory (set by
+  schedd_name.SPOOL), the schedd now creates that directory
+  with the proper ownership and permissions.
+  :jira:`907`
+
+- The file specified using the submit command :subcom:`starter_log` is now
+  returned on both success and on failure when the submit command
+  :subcom:`when_to_transfer_output` is set to ``ON_SUCCESS``.  In addition,
+  a failure to transfer input is now treated as a failure for purposes of
+  of ``ON_SUCCESS``.
+  :jira:`2347`
+
+- Removed some of the logging while loading the security configuration and moved
+  some of the logging to ``D_SECURITY:2`` to make the ``-debug:D_SECURITY`` option
+  of the various tools more useful.
+  :jira:`2369`
+
+- DAGMan will now write a rescue DAG and abort when :tool:`condor_dagman` has
+  been pending on nodes for :macro:`DAGMAN_CHECK_QUEUE_INTERVAL` seconds and the
+  associated jobs are not found in the local *condor_schedd* queue.
+  :jira:`1546`
+
+- File transfer plugins that are installed on the EP can now advertise extra
+  attributes into the STARTD ads.
+  :jira:`1051`
+
+
+Bugs Fixed:
+
+- None.
+
+Version 23.6.2
+--------------
+
+- HTCondor version 23.6.2 released on April 16, 2024.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed bug where the :ad-attr:`HoldReasonSubCode` was not the documented value
+  for jobs put on hold because of errors running a file transfer plugin.
+  :jira:`2373`
+
+Version 23.6.1
+--------------
+
+Release Notes:
+
+- HTCondor version 23.6.1 released on April 15, 2024.
+
+- **NOTE**: Soon, ``IDTOKEN`` files with permissive file protections will be ignored.
+  In particular, the ``/etc/condor/tokens.d`` directory and the tokens contained
+  within should be only accessible by the ``root`` account.
+
+- This version includes all the updates from :ref:`lts-version-history-2308`.
+
+New Features:
+
+- Allow the *condor_startd* to force a job that doesn't ask to run inside a
+  docker or apptainer container inside one with new parameters
+  :macro:`USE_DEFAULT_CONTAINER` and :macro:`DEFAULT_CONTAINER_IMAGE`
+  :jira:`2317`
+
+- Added new submit command :subcom:`docker_override_entrypoint` to allow
+  docker universe jobs to override the entrypoint in the image.
+  :jira:`2321`
+
+- :tool:`condor_q` ``-better-analyze`` now emits the units for memory and
+  disk.
+  :jira:`2333`
+
+- Updated :tool:`get_htcondor` to allow the aliases ``lts`` for **stable**
+  and ``feature`` for **current** when passed to the *--channel* option.
+  :jira:`775`
+
+- Add htcondor job ``out``, ``err``, and ``log`` verbs to the :tool:`htcondor` CLI tool.
+  :jira:`2182`
+
+- The *condor_startd* now honors the environment variable ``OMP_NUM_THREADS``
+  when setting the number of cores available.  This allows 
+  glideins to pass an allocated number of cores from a base batch
+  system to the glidein easily.
+  :jira:`727`
+
+- If the EP is started under another batch system that limits the amount
+  of memory to the EP via a cgroup limit, the *condor_startd* now advertises
+  this much memory available for jobs.
+  :jira:`727`
+
+- Added new job ad attribute :ad-attr:`JobSubmitFile` which contains
+  the filename of the submit file, if any.
+  :jira:`2319`
+
+- When the :subcom:`docker_network_type` is set to ``host``, docker universe
+  now sets the hostname inside the container to the same as the host,
+  to ease networking from inside the container to outside the container.
+  :jira:`2294`
+
+- For vanilla universe jobs not running under container universe, that
+  manually start apptainer or singularity, the environment variables
+  ``APPTAINER_CACHEDIR`` and ``SINGULARITY_CACHEDIR`` are now set to the scratch
+  directory to insure any files they create are cleaned up on job exit.
+  :jira:`2337`
+
+- :tool:`condor_submit` with the -i (interactive) flag, and also run
+  with a submit file, now transfers the executable to the interactive job.
+  :jira:`2315`
+
+- Added the environment variable ``PYTHON_CPU_COUNT`` to the set of environment
+  variables set for jobs to indicate how many CPU cores are provisioned.
+  Python 3.13 uses this override the detected count of CPU cores.
+  :jira:`2330`
+
+- Added -file option to :tool:`condor_token_list`
+  :jira:`575`
+
+- The configuration parameter :macro:`ETC` can now be used to relocate
+  files that are normally place under ``/etc/condor`` on Unix platforms.
+  :jira:`2290`
+
+- The submit file expansion ``$(CondorScratchDir)`` now works for local
+  universe.
+  :jira:`2324`
+
+- For jobs that go through the grid universe or Job Router, the
+  terminate event will now include extended resource allocation and
+  usage information when available.
+  :jira:`2281`
+
+- The package containing the Pelican OSDF file transfer plugin is now
+  a weak dependency for HTCondor.
+  :jira:`2295`
+
+- Include a weak dependency on ``bash-completion`` so the ``htcondor`` CLI
+  command has ``<TAB>`` completions.
+  :jira:`2311`
+
+- DAGMan no longer suppresses email notifications for jobs it manages by default.
+  To revert behavior of suppressing notifications set :macro:`DAGMAN_SUPPRESS_NOTIFICATION`
+  to **True**.
+  :jira:`2323`
+
+- Added configuration knobs :macro:`GANGLIAD_WANT_RESET_METRICS`  and 
+  :macro:`GANGLIAD_RESET_METRICS_FILE`, enabling *condor_gangliad* to
+  be configured to reset aggregate metrics to a value of zero when they are
+  no longer being updated.  Previously aggregate metrics published to
+  Ganglia retained the last value published indefinitely.
+  :jira:`2346`
+
+- The Job Router route keyword ``GridResource`` is now always
+  optional. The job attribute ``GridResource`` can be set instead via
+  a ``SET`` or similar command in the route definition.
+  :jira:`2329`
+
+- The configuration variables :macro:`SLOTS_CONNECTED_TO_KEYBOARD` and
+  :macro:`SLOTS_CONNECTED_TO_CONSOLE` now apply to partitionable slots but do
+  not count them as slots.  As a consequence of this change, when
+  either of these variables are set equal to the number of CPUs, all slots will be connected.
+  :jira:`2331`
+
+Bugs Fixed:
+
+- Fixed a bug in the :tool:`htcondor eventlog read` command that would fail
+  when events were written on leap day.
+  :jira:`2318`
+
+Version 23.5.3
+--------------
+
+- HTCondor version 23.5.3 released on March 25, 2024.
+
+- HTCondor tarballs now contain `Pelican 7.6.2 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.6.2>`_
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
+Version 23.5.2
+--------------
+
+Release Notes:
+
+- HTCondor version 23.5.2 released on March 14, 2024.
+
+- This version includes all the updates from :ref:`lts-version-history-2306`.
+
+- The library libcondorapi has been removed from the distribution.  We know of
+  no known user for this C++ event log reading code, and all of our known users
+  use the Python bindings for this, as we recommend.
+  :jira:`2278`
+
+New Features:
+
+- The old ClassAd-based syntax for defining Job Router routes is now
+  disabled by default.
+  It can be enabled by setting configuration parameter
+  :macro:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES` to ``True``.
+  Support for the old syntax will be removed entirely before HTCondor
+  version 24.0.0.
+  :jira:`2260`
+
 - Added ability for administrators to specify whether Startd disk enforcement creates
-  thin or thick provisioned logical volumes for a jobs emphemeral execute directory.
+  thin or thick provisioned logical volumes for a jobs ephemeral execute directory.
   This is controlled by the new configuration knob :macro:`LVM_USE_THIN_PROVISIONING`.
   :jira:`1783`
+
+- GPU detection is now enabled by default on all execute nodes via a new configuration variable
+  :macro:`STARTD_DETECT_GPUS`.  This new configuration variable supplies arguments to
+  *condor_gpu_discovery* for use when GPU discovery is not otherwise explicitly enabled in the configuration.
+  :jira:`2264`
+
+- On Linux systems with cgroup v1 enabled, HTCondor now uses the "devices" cgroup
+  to prevent the job from accessing unassigned GPUs.  This can be disabled
+  by setting the new knob :macro:`STARTER_HIDE_GPU_DEVICES` to false.
+  :jira:`1152`
 
 - Added new submit commands for constraining GPU properties. When these commands
   are use the ``RequireGPUs`` expression is generated automatically by submit and
@@ -28,50 +339,60 @@ New Features:
   :subcom:`gpus_minimum_runtime`, :subcom:`gpus_minimum_capability` and :subcom:`gpus_maximum_capability`.
   :jira:`2201`
 
-- Improve the reliability of the userlog reader code by changing it to do line oriented reads and to seek less.
+- The new submit commands :subcom:`starter_debug` and :subcom:`starter_log`
+  can be used to have the *condor_starter* write a second copy of its
+  daemon log and have that file transferred to the Access Point with the
+  job's output sandbox.
+  :jira:`2296`
+
+- During SSL authentication, VOMS attributes can be included when
+  mapping to an HTCondor identity.
+  To do so, configuration parameters :macro:`USE_VOMS_ATTRIBUTES` and
+  :macro:`AUTH_SSL_USE_VOMS_IDENTITY` must be set to ``True``.
+  :jira:`2256`
+
+- The ``$CondorVersion`` string contains the Git SHA for official CHTC builds of HTCondor.
+  :jira:`532`
+
+- Added job attributes :ad-attr:`JobCurrentReconnectAttempt` and
+  :ad-attr:`TotalJobReconnectAttempts` to count the number of
+  reconnect attempts in progress, and total for the lifetime of
+  the job, respectively.
+  :jira:`2258`
+
+- Improve the reliability of the user log reader code by changing it to do line oriented reads and to seek less.
   :jira:`2254`
 
 Bugs Fixed:
 
-- None.
+- In some rare cases where docker universe could not start a container,
+  it would not remove that container until the next time the start
+  restarted.  Now it is removed as soon as possible.
+  :jira:`2263`
+
+- In rare cases, the values of TimeSlotBusy and TimeExecute would be incorrect in the
+  job event log when the job was disconnected or did not start properly.
+  :jira:`2265`
+
+- Fixed a bug that can cause the condor_gridmanager to abort when multiple
+  grid universe jobs share the same proxy file to be used to authenticate
+  with the remote job scheduling service.
+  :jira:`2334`
 
 Version 23.4.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 23.4.0 released on Month Date, 2023.
-
-- HTCondor version 23.4.0 not yet released.
+- HTCondor version 23.4.0 released on February 8, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-2304`.
 
 New Features:
 
-- Docker universe now passes --log-driver none by default when running jobs,
-  but can be disabled with :macro:`DOCKER_LOG_DRIVER_NONE` knob.
-  :jira:`2190`
-
-- Jobs that are assigned nvidia GPUs now have the environment variable
-  NVIDIA_VISIBLE_DEVICES set in addition to, and with the same value as
-  CUDA_VISIBLE_DEVICES, as newer nvidia runtimes prefer the former.
-  :jira:`2189`
-
-- Added config parameter :macro:`SUBMIT_REQUEST_MISSING_UNITS`, to warn or prevent submitting
+- Added configuration parameter :macro:`SUBMIT_REQUEST_MISSING_UNITS`, to warn or prevent submitting
   with RequestDisk or RequestMemory without a units suffix.
   :jira:`1837`
-
-- The :tool:`htcondor` command line tools eventlog read command now
-  optionally takes more than one eventlog to process at once.
-  :jira:`2220`
-
-- Added job classad attribute :ad-attr:`ContainerImageSource`, a string which is
-  is set to the source of the image transfer.
-  :jira:`1797`
-
-- If :macro:`PER_JOB_HISTORY_DIR` is set, it is now a fatal error to write a historical job
-  to the history file, just like the normal history file.
-  :jira:`2027`
 
 - On RPM-based distributions, a new package ``condor-credmon-local`` is now
   available which provides the
@@ -80,6 +401,27 @@ New Features:
   The ``condor-credmon-local`` package is now a dependency of the
   ``condor-credmon-oauth`` package.
   :jira:`2197`
+
+- The :tool:`htcondor` command line tools eventlog read command now
+  optionally takes more than one eventlog to process at once.
+  :jira:`2220`
+
+- Docker universe now passes --log-driver none by default when running jobs,
+  but can be disabled with :macro:`DOCKER_LOG_DRIVER_NONE` knob.
+  :jira:`2190`
+
+- Jobs that are assigned nVidia GPUs now have the environment variable
+  NVIDIA_VISIBLE_DEVICES set in addition to, and with the same value as
+  CUDA_VISIBLE_DEVICES, as newer nVidia run-times prefer the former.
+  :jira:`2189`
+
+- Added job classad attribute :ad-attr:`ContainerImageSource`, a string which is
+  is set to the source of the image transfer.
+  :jira:`1797`
+
+- If :macro:`PER_JOB_HISTORY_DIR` is set, it is now a fatal error to write a historical job
+  to the history file, just like the normal history file.
+  :jira:`2027`
 
 - :tool:`condor_submit` now generates requirements expressions for
   **condor** grid universe jobs like it does for vanilla universe
@@ -97,7 +439,7 @@ Bugs Fixed:
 Version 23.3.1
 --------------
 
-- HTCondor version 23.3.1 released on January 23, 2023.
+- HTCondor version 23.3.1 released on January 23, 2024.
 
 - HTCondor tarballs now contain `Pelican 7.4.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.4.0>`_
 
@@ -114,7 +456,7 @@ Version 23.3.0
 
 Release Notes:
 
-- HTCondor version 23.3.0 released on January 4, 2023.
+- HTCondor version 23.3.0 released on January 4, 2024.
 
 - Limited support for Enterprise Linux 7 in the 23.x feature versions.
   Since we are developing new features, the Enterprise Linux 7 build may
@@ -133,7 +475,7 @@ New Features:
 
 - Added ability for DAGMan node script **STDOUT** and/or **STDERR** streams
   be captured in a user defined debug file. For more information visit
-  DAGMan script :ref:`automated-workflows/dagman-scripts:Debug File`
+  DAGMan script :ref:`Script Debugging`
   :jira:`2159`
 
 - Improve hold message when jobs on cgroup system exceed their memory limits.

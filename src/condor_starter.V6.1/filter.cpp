@@ -72,7 +72,7 @@ filterTransferErrorData( const classad::ClassAd & ad ) {
         { "FailedServer",                   Value::STRING_VALUE },
         { "ShouldRefresh" ,                 Value::BOOLEAN_VALUE },
         { "ErrorCode",                      Value::INTEGER_VALUE },
-        { "ErrorSrring",                    Value::STRING_VALUE },
+        { "ErrorString",                    Value::STRING_VALUE },
         // Reserved for plug-in developers.
         { "DeveloperData",                  Value::CLASSAD_VALUE },
     };

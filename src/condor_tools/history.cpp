@@ -55,8 +55,10 @@ void Usage(const char* name, int iExitCode)
 	printf ("Usage: %s [source] [restriction-list] [options]\n"
 		"\n   where [source] is one of\n"
 		"\t-file <file>\t\tRead history data from specified file\n"
+		"\t-search <path>\t\tRead history data from all matching HTCondor time rotated files\n"
 		"\t-local\t\t\tRead history data from the configured files\n"
 		"\t-startd\t\t\tRead history data for the Startd\n"
+		"\t-epochs\t\t\tRead epoch (per job run instance) history data\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
@@ -156,8 +158,6 @@ static  bool customFormat=false;
 static  bool disable_user_print_files=false;
 static  bool backwards=true;
 static  AttrListPrintMask mask;
-//tj: headings moved into the mask object.
-//static  List<const char> headings; // The list of headings for the mask entries
 static int cluster=-1, proc=-1;
 static int matchCount = 0, adCount = 0;
 static int printCount = 0;
@@ -190,7 +190,7 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 	}
 
 	std::string psinful;
-	StringList remaining_items; // for the remainder which we expect to be empty.
+	std::vector<std::string> remaining_items; // for the remainder which we expect to be empty.
 	int cSocks = extractInheritedSocks(inherit, ppid, psinful, socks, (int)cMaxSocks, remaining_items);
 	UnsetEnv(envName); // prevent this from being passed on to children.
 	return cSocks;
@@ -882,11 +882,11 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 			case HRS_SCHEDD_JOB_HIST:
 				break;
 			case HRS_STARTD_HIST:
-				ad.InsertAttr("HistoryRecordSource","STARTD");
+				ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"STARTD");
 				break;
 			case HRS_JOB_EPOCH:
 				if (v.built_since_version(10, 3, 0)) {
-					ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+					ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"JOB_EPOCH");
 					if (read_dir) { ad.InsertAttr("HistoryFromDir",true); }
 				} else {
 					formatstr(err_msg, "The remote schedd (%s) version does not support remote job epoch history.",g_name.c_str());

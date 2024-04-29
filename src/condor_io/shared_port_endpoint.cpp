@@ -1534,7 +1534,7 @@ SharedPortEndpoint::InitializeDaemonSocketDir()
 		// shared port "directory" in the abstract Unix namespace.
 	char *keybuf = Condor_Crypt_Base::randomHexKey(32);
 	if (keybuf == NULL) {
-		EXCEPT("SharedPortEndpoint: Unable to create a secure shared port cookie.\n");
+		EXCEPT("SharedPortEndpoint: Unable to create a secure shared port cookie.");
 	}
 	result = keybuf;
 	free(keybuf);
@@ -1559,7 +1559,7 @@ SharedPortEndpoint::InitializeDaemonSocketDir()
 			char dirname_template[] = "/tmp/condor_shared_port_XXXXXX";
 			const char *dirname = mkdtemp(dirname_template);
 			if (dirname == NULL) {
-				EXCEPT("SharedPortEndpoint: Failed to create shared port directory: %s (errno=%d)\n", strerror(errno), errno);
+				EXCEPT("SharedPortEndpoint: Failed to create shared port directory: %s (errno=%d)", strerror(errno), errno);
 			}
 			m_created_shared_port_dir = true;
 			result = dirname;

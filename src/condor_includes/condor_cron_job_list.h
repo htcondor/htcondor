@@ -36,11 +36,11 @@ class CondorCronJobList
 	// Methods to manipulate the job list
 	int InitializeAll( void );
 	int HandleReconfig( void );
-	int DeleteAll( void );
-	int KillAll( bool force );
+	int DeleteAll( const char * label );
+	int KillAll( bool force, const char * label );
 	int NumJobs( void ) const { return (int)m_job_list.size(); };
-	int NumAliveJobs( void ) const;
-	int NumActiveJobs( void ) const;
+	int NumAliveJobs(std::string * names = nullptr) const;
+	int NumActiveJobs() const;
 	bool GetStringList( StringList &sl ) const;
 	double RunningJobLoad( void ) const;
 	bool AddJob( 

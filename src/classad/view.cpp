@@ -1084,8 +1084,7 @@ string View::
 makePartitionSignature( ClassAd *ad )
 {
 	ClassAdUnParser		unparser;
-	ExprListIterator	itr;
-	string				signature;
+	std::string				signature;
     Value   			value;
 	ClassAd				*oad, *info;
 	const ExprList		*el = NULL;
@@ -1110,12 +1109,10 @@ makePartitionSignature( ClassAd *ad )
 
 		// go through the expression list and form a value vector
 	signature = "<|";
-	itr.Initialize( el );
-	while( !itr.IsAfterLast( ) ) {
-		itr.CurrentValue( value );
+	for (int i = 0; i < el->size(); i++) {
+		el->GetValueAt(i, value);
 		unparser.Unparse( signature, value );
 		signature += "|";
-		itr.NextExpr( );
     }
 	signature += ">";
 

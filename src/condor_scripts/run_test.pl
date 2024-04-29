@@ -121,6 +121,12 @@ if ($iswindows) {
     # yet add in base dir of all tests and compiler directories
     $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 }
+
+# temporary hack to allow cmd_gpu_discovery to work
+delete $ENV{NVIDIA_VISIBLE_DEVICES};
+delete $ENV{CUDA_VISIBLE_DEVICES};
+delete $ENV{GPU_DEVICE_ORDINAL};
+
 # the args:
 my @testlist;
 

@@ -1,5 +1,5 @@
-Chirp: Jobs Writing user data to the AP
-=======================================
+Chirp: custom updates to the AP
+===============================
 
 :index:`Chirp<single: Chirp; API>` :index:`Chirp API`
 

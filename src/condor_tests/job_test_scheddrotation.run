@@ -17,13 +17,6 @@
 ## limitations under the License.
 ##
 ##**************************************************************
-##
-## This test check availability and usage contol of the new
-## local, resources in both a static configuration and in psolts.
-## It is model after what we did to test concurrency limits
-## as we are checking the same sorts of things. bt
-##
-##**************************************************************
 use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;

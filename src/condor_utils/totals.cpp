@@ -23,7 +23,7 @@
 #include "condor_attributes.h"
 #include "stdio.h"
 #include "totals.h"
-#include "string_list.h"
+#include "stl_string_utils.h"
 
 #ifndef WIN32
 #endif
@@ -454,18 +454,12 @@ StartdCODTotal::updateTotals( ClassAd* ad, const char* id )
 int StartdCODTotal::
 update (ClassAd *ad, int /*options*/)
 {
-	StringList cod_claim_list;
-	char* cod_claims = NULL;
-	ad->LookupString( ATTR_COD_CLAIMS, &cod_claims );
-	if( ! cod_claims ) {
+	std::string cod_claims;
+	if (!ad->LookupString(ATTR_COD_CLAIMS, cod_claims)) {
 		return 0;
 	}
-	cod_claim_list.initializeFromString( cod_claims );
-	free( cod_claims );
-	char* claim_id;
-	cod_claim_list.rewind();
-	while( (claim_id = cod_claim_list.next()) ) {
-		updateTotals( ad, claim_id );
+	for (auto& claim_id: StringTokenIterator(cod_claims)) {
+		updateTotals( ad, claim_id.c_str() );
 	}
 	return 1;
 }

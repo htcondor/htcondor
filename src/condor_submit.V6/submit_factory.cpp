@@ -69,7 +69,6 @@
 #include "condor_qmgr.h"
 #include "submit_internal.h"
 
-#include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "my_popen.h"
@@ -83,7 +82,6 @@
 const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
 void SetSendCredentialInAd( ClassAd *job_ad ); 
 void set_factory_submit_info(int cluster, int num_procs);
-int ParseDashAppendLines(List<const char> &exlines, MACRO_SOURCE& source, MACRO_SET& macro_set);
 void init_vars(SubmitHash & hash, int cluster_id, StringList & vars);
 
 extern AbstractScheddQ * MyQ;
@@ -353,8 +351,8 @@ int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o)
 	submit_digest += "\n";
 	submit_digest += "Queue ";
 	if (o.queue_num) { formatstr_cat(submit_digest, "%d ", o.queue_num); }
-	auto_free_ptr submit_vars(o.vars.print_to_delimed_string(","));
-	if (submit_vars.ptr()) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+	std::string submit_vars = join(o.vars, ",");
+	if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 	if ( ! o.items_filename.empty()) {
 		submit_digest += "from ";
 		char slice_str[16*3+1];

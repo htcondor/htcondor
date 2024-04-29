@@ -419,16 +419,17 @@ do_install() {
 				fi
 
 				echo -e "\n# Adding our repository"
+				apt_get='DEBIAN_FRONTEND=noninteractive apt-get'
 
 				# Install our repository key.
-				$sh_c "apt-get update"
-				$sh_c "apt-get install -y gnupg"
+				$sh_c "${apt_get} update"
+				$sh_c "${apt_get} install -y gnupg"
 				$sh_c "mkdir -p /etc/apt/keyrings"
 				$sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key -o /etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key"
 
 				# Our repository redirects to https even if you try to
 				# avoid it, and Debian 9 doesn't come with this by default.
-				$sh_c "apt-get install apt-transport-https"
+				$sh_c "${apt_get} install apt-transport-https"
 
 				# Add our repository.
 				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
@@ -436,10 +437,10 @@ do_install() {
 				$sh_c "echo \"deb-src [signed-by=/etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" >> ${HTCONDOR_LIST}"
 
 				echo -e "\n# Updating package lists"
-				$sh_c "apt-get update"
+				$sh_c "${apt_get} update"
 
 				echo -e "\n# Installing ps"
-				$sh_c "apt-get install -y procps"
+				$sh_c "${apt_get} install -y procps"
 
 				# In the Ubuntu 20.04 Docker container, the following packages
 				# need to be installed non-interactively, because the pipe
@@ -453,15 +454,15 @@ do_install() {
 				case $lsb_dist.$dist_version in
 				    ubuntu.bionic|ubuntu.focal|ubuntu.jammy)
     					echo -e "\n# Preconfiguring packages for Ubuntu."
-	    				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
+	    				$sh_c "${apt_get} install -y keyboard-configuration console-setup tzdata"
                     ;;
                 esac
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
 				if [[ ! $ROLE ]]; then
-					$sh_c "apt-get install -y minicondor"
+					$sh_c "${apt_get} install -y minicondor"
 				else
-					$sh_c "apt-get install -y condor"
+					$sh_c "${apt_get} install -y condor"
 				fi
 			)
 			;;
@@ -792,10 +793,10 @@ while [ $# -gt 0 ]; do
 			;;
 		--channel)
 			case $2 in
-				stable)
+				stable|lts)
 					CHANNEL="stable"
 					;;
-				current|latest|developer)
+				current|latest|developer|feature)
 					CHANNEL="current"
 					;;
 				*-rc)

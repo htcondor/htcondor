@@ -184,7 +184,7 @@ static bool test_split_valid_trim_whitespace() {
 static bool test_split_valid_notrim_whitespace() {
 	emit_test("Test split when passed "
 		" a valid string with whitespace that shouldn't be trimmed.");
-	std::vector<std::string> sl = split(" a ; b b ; c ", ";", false);
+	std::vector<std::string> sl = split(" a ; b b ; c ", ";", STI_NO_TRIM);
 	const char* expect = " a , b b , c ";
 	std::string retVal = join(sl, ",");
 	emit_input_header();

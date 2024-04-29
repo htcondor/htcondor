@@ -25,6 +25,7 @@
 #include "condor_auth_passwd.h"
 #include <openssl/rand.h>              // SSLeay rand function
 #include "condor_debug.h"
+#include <array>
 
 #include "condor_crypt_aesgcm.h"
 
@@ -158,10 +159,9 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
     memset(key, 0, length);
 
     static bool already_seeded = false;
-    int size = 128;
     if( ! already_seeded ) {
-        unsigned char * buf = (unsigned char *) malloc(size);
-        ASSERT(buf);
+		const int size = 128;
+		std::array<unsigned char, size> buf;
 		// Note that RAND_seed does not seed, but rather simply
 		// adds entropy to the pool that is initialized with /dev/urandom
 		// (actually, this could potentially help in the case where HTCondor
@@ -174,12 +174,12 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
 			buf[i] = get_random_int_insecure() & 0xFF;
 		}
 
-        RAND_seed(buf, size);
-        free(buf);
+        RAND_seed(&buf[0], size);
 		already_seeded = true;
     }
 
-    RAND_bytes(key, length);
+    int r = RAND_bytes(key, length);
+	ASSERT(r == 1);
     return key;
 }
 

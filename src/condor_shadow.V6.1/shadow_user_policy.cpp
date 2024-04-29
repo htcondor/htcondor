@@ -96,7 +96,12 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 		break;
 
 	case VACATE_FROM_RUNNING:
-		this->shadow->evictJob(JOB_SHOULD_REQUEUE, reason);
+		if (reason_code == CONDOR_HOLD_CODE::JobPolicy) {
+			reason_code = CONDOR_HOLD_CODE::JobPolicyVacate;
+		} else if (reason_code == CONDOR_HOLD_CODE::SystemPolicy) {
+			reason_code = CONDOR_HOLD_CODE::SystemPolicyVacate;
+		}
+		this->shadow->evictJob(JOB_SHOULD_REQUEUE, reason.c_str(), reason_code, reason_subcode);
 		break;
 	default:
 		EXCEPT( "Unknown action (%d) in ShadowUserPolicy::doAction",

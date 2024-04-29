@@ -9,7 +9,7 @@ If you are a user of HTCondor, and have been given a login or credentials to use
 Access Point (sometimes called a scheduler or login node), you may want to read our Quick Start guide
 here: :ref:`users-manual/quick-start-guide:Users' Quick Start Guide`
 
-If you are beginning administrator of HTCondor, or want to install it for the first time, please
+If you are a beginning administrator of HTCondor, or want to install it for the first time, please
 look at our installation guide here: :ref:`getting-htcondor/index:Downloading and Installing`
 
 Otherwise, for users of HTCondor who want more information, a complete user's reference manual

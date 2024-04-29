@@ -1017,7 +1017,6 @@ OsProc::Hold()
 bool
 OsProc::PublishUpdateAd( ClassAd* ad ) 
 {
-	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
 	std::string buf;
 
 	if (m_proc_exited) {

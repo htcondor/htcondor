@@ -21,6 +21,16 @@ table.indextable li {
 	display: table-cell;
 }
 
+div.wy-side-nav-search {
+	background-color: #d312456e;
+}
+
+div.wy-side-nav-search a.icon.icon-home:before {
+	content: url(../logo.svg);
+	width: 25px;
+	height: 15px;
+}
+
 /* override table width restrictions */
 @media screen and (min-width: 767px) {
 

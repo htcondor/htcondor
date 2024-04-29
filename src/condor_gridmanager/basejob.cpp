@@ -1133,6 +1133,8 @@ WriteTerminateEventToUserLog( ClassAd *job_ad )
 		event.total_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
 	}
 
+	setEventUsageAd(*job_ad, &event.pusageAd);
+
 	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {

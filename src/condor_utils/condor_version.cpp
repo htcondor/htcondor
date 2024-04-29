@@ -68,6 +68,12 @@
 #define PACKAGEIDSTR ""
 #endif
 
+#if defined(CONDOR_GIT_SHA)
+#define GIT_SHA_STR " GitSHA: " xstr(CONDOR_GIT_SHA)
+#else
+#define GIT_SHA_STR ""
+#endif
+
 #if !defined(BUILD_DATE)
 #  define BUILD_DATE __DATE__
 #endif
@@ -93,7 +99,7 @@
 
 
 static const char* CondorVersionString =
-"$CondorVersion: " CONDOR_VERSION " " BUILD_DATE BUILDIDSTR PACKAGEIDSTR  PRE_RELEASE_STR " $";
+"$CondorVersion: " CONDOR_VERSION " " BUILD_DATE BUILDIDSTR PACKAGEIDSTR GIT_SHA_STR PRE_RELEASE_STR " $";
 
 /* Here is the platform string.  You don't need to edit this */
 static const char* CondorPlatformString = "$CondorPlatform: " PLATFORM " $";

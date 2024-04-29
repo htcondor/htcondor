@@ -29,6 +29,8 @@
 #include "stream_handler.h"
 #include "subsystem_info.h"
 
+#include <algorithm>
+
 extern Starter *Starter;
 
 const char* JOB_WRAPPER_FAILURE_FILE = ".job_wrapper_failure";
@@ -145,6 +147,12 @@ UserProc::JobReaper(int pid, int status)
 			fclose(fp);
 		}
 		trim(error_txt);
+		// Do NOT pass newlines into this exception, since it ends up
+		// in corrupting the job event log.
+		std::replace(
+		    error_txt.begin(), error_txt.end(),
+		    '\n', '|'
+		);
 		EXCEPT("The job wrapper failed to execute the job: %s", error_txt.c_str());
 	}
 
@@ -169,8 +177,6 @@ UserProc::PublishUpdateAd( ClassAd* ad )
 {
 	std::string prefix = name ? name : "";
 	std::string attrn;
-
-	dprintf( D_FULLDEBUG, "Inside UserProc::PublishUpdateAd()\n" );
 
 	if( JobPid >= 0 ) {
 		attrn = prefix + ATTR_JOB_PID;

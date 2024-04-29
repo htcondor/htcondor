@@ -77,8 +77,14 @@ int RewriteAttrRefs(classad::ExprTree * expr, const NOCASE_STRING_MAP & mapping)
 // and the expression contains MY.Foo, the Foo is added to attrs.
 int GetAttrRefsOfScope(classad::ExprTree * expr, classad::References &attrs, const std::string &scope);
 
-classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
-classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
+const classad::ExprTree * SkipExprEnvelope(const classad::ExprTree * tree);
+inline classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree) {
+	return const_cast<classad::ExprTree *>(SkipExprEnvelope(const_cast<const classad::ExprTree *>(tree)));
+}
+const classad::ExprTree * SkipExprParens(const classad::ExprTree * tree);
+inline classad::ExprTree * SkipExprParens(classad::ExprTree * tree) {
+	return const_cast<classad::ExprTree *>(SkipExprParens(const_cast<const classad::ExprTree *>(tree)));
+}
 // create an op node, using copies of the input expr trees. this function will not copy envelope nodes (it skips over them)
 // and it is clever enough to insert parentheses around the input expressions when needed to insure that the expression
 // will unparse correctly.
@@ -156,9 +162,9 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 void AddClassAdXMLFileHeader(std::string &buffer);
 void AddClassAdXMLFileFooter(std::string &buffer);
 
-void clear_user_maps(StringList * keep_list);
+void clear_user_maps(std::vector<std::string> * keep_list);
 int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NULL*/);
-int add_user_mapping(const char * mapname, char * mapdata);
+int add_user_mapping(const char * mapname, const char * mapdata);
 // these functions are in classad_usermap.cpp (and also libcondorapi_stubs.cpp)
 int reconfig_user_maps();
 bool user_map_do_mapping(const char * mapname, const char * input, std::string & output);
@@ -216,6 +222,7 @@ public:
 	void set(char * str) { if (str && (exprstr != str)) { clear(); exprstr = str; } }
 	// get the constraint, parsing the string if needed to construct it.
 	// returns NULL if no constraint
+	bool parse(const char * str) { clear(); return ParseClassAdRvalExpr(str, expr); }
 	classad::ExprTree * Expr(int * error=NULL) const {
 		int rval = 0;
 		if ( ! expr && ! empty()) {

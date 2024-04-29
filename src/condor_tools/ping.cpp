@@ -31,27 +31,272 @@
 #include "daemon_list.h"
 #include "dc_collector.h"
 #include "my_hostname.h"
+#include "match_prefix.h"
+
+// moved here from condor_perms.cpp for the purpose of comparing the new
+// implementation to the previous one.
+class DCpermissionHierarchyOld {
+
+private:
+	DCpermission m_base_perm; // the specified permission level
+
+	// [0] is base perm, [1] is implied by [0], ...
+	// Terminated by an entry with value LAST_PERM.
+	DCpermission m_implied_perms[LAST_PERM+1];
+
+	// List of perms that imply base perm, not including base perm,
+	// and not including things that indirectly imply base perm, such
+	// as the things that imply the members of this list.
+	// Example: for base perm WRITE, this list includes DAEMON and
+	// ADMINISTRATOR.
+	// Terminated by an entry with value LAST_PERM.
+	DCpermission m_directly_implied_by_perms[LAST_PERM+1];
+
+	// [0] is base perm, [1] is perm to param for if [0] is undefined, ...
+	// The list ends with DEFAULT_PERM, followed by LAST_PERM.
+	DCpermission m_config_perms[LAST_PERM+1];
+
+public:
+
+	// [0] is base perm, [1] is implied by [0], ...
+	// Terminated by an entry with value LAST_PERM.
+	DCpermission const * getImpliedPerms() const { return m_implied_perms; }
+
+	// List of perms that imply base perm, not including base perm,
+	// and not including things that indirectly imply base perm, such
+	// as the things that imply the members of this list.
+	// Example: for base perm WRITE, this list includes DAEMON and
+	// ADMINISTRATOR.
+	// Terminated by an entry with value LAST_PERM.
+	DCpermission const * getPermsIAmDirectlyImpliedBy() const { return m_directly_implied_by_perms; }
+
+	// [0] is base perm, [1] is perm to param for if [0] is undefined, ...
+	// The list ends with DEFAULT_PERM, followed by LAST_PERM.
+	DCpermission const * getConfigPerms() const { return m_config_perms; }
+
+	DCpermissionHierarchyOld(DCpermission perm) {
+		m_base_perm = perm;
+		unsigned int i = 0;
+
+		m_implied_perms[i++] = m_base_perm;
+
+		// Add auth levels implied by specified perm
+		bool done = false;
+		while(!done) {
+			switch( m_implied_perms[i-1] ) {
+			case DAEMON:
+			case ADMINISTRATOR:
+				m_implied_perms[i++] = WRITE;
+				break;
+			case WRITE:
+			case NEGOTIATOR:
+			case CONFIG_PERM:
+			case ADVERTISE_STARTD_PERM:
+			case ADVERTISE_SCHEDD_PERM:
+			case ADVERTISE_MASTER_PERM:
+				m_implied_perms[i++] = READ;
+				break;
+			default:
+				// end of hierarchy
+				done = true;
+				break;
+			}
+		}
+		m_implied_perms[i] = LAST_PERM;
+
+		i=0;
+		switch(m_base_perm) {
+		case READ:
+			m_directly_implied_by_perms[i++] = WRITE;
+			m_directly_implied_by_perms[i++] = NEGOTIATOR;
+			m_directly_implied_by_perms[i++] = CONFIG_PERM;
+			m_directly_implied_by_perms[i++] = ADVERTISE_STARTD_PERM;
+			m_directly_implied_by_perms[i++] = ADVERTISE_SCHEDD_PERM;
+			m_directly_implied_by_perms[i++] = ADVERTISE_MASTER_PERM;
+			break;
+		case WRITE:
+			m_directly_implied_by_perms[i++] = ADMINISTRATOR;
+			m_directly_implied_by_perms[i++] = DAEMON;
+			break;
+		default:
+			break;
+		}
+		m_directly_implied_by_perms[i] = LAST_PERM;
+
+		i=0;
+		m_config_perms[i++] = m_base_perm;
+		done = false;
+		while( !done ) {
+			switch(m_config_perms[i-1]) {
+			case DAEMON:
+				if (param_boolean("LEGACY_ALLOW_SEMANTICS", false)) {
+					m_config_perms[i++] = WRITE;
+				} else {
+					done = true;
+				}
+				break;
+			case ADVERTISE_STARTD_PERM:
+			case ADVERTISE_SCHEDD_PERM:
+			case ADVERTISE_MASTER_PERM:
+				m_config_perms[i++] = DAEMON;
+				break;
+			default:
+				// end of config hierarchy
+				done = true;
+				break;
+			}
+		}
+		m_config_perms[i++] = DEFAULT_PERM;
+		m_config_perms[i] = LAST_PERM;
+	}
+
+};
+
+
+static const char * PermSuffix(DCpermission perm) {
+	if (perm == CONFIG_PERM || perm >= SOAP_PERM) return "_PERM";
+	return "";
+}
 
 void
-usage( char *cmd )
+print_permission_heirarchy()
 {
-	fprintf(stderr,"Usage: %s [options] TOKEN [TOKEN [TOKEN [...]]]\n",cmd);
-	fprintf(stderr,"\nwhere TOKEN is ( ALL | <authorization-level> | <command-name> | <command-int> )\n\n");
-	fprintf(stderr,"general options:\n");
-	fprintf(stderr,"    -config <filename>              Add configuration from specified file\n");
-	fprintf(stderr,"    -debug                          Show extra debugging info\n");
-	fprintf(stderr,"    -version                        Display Condor version\n");
-	fprintf(stderr,"    -help                           Display options\n");
-	fprintf(stderr,"\nspecifying target options:\n");
-	fprintf(stderr,"    -address <sinful>               Use this sinful string\n");
-	fprintf(stderr,"    -pool    <host>                 Query this collector\n");
-	fprintf(stderr,"    -name    <name>                 Find a daemon with this name\n");
-	fprintf(stderr,"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n");
-	fprintf(stderr,"\noutput options (specify only one):\n");
-	fprintf(stderr,"    -quiet                          No output, only sets status\n");
-	fprintf(stderr,"    -table                          Print one result per line\n");
-	fprintf(stderr,"    -verbose                        Print all available information\n");
-	fprintf(stderr,"\nExample:\n    %s -addr \"<127.0.0.1:9618>\" -table READ WRITE DAEMON\n\n",cmd);
+	bool legacy_allow = param_boolean("LEGACY_ALLOW_SEMANTICS", false);
+
+	printf("=== Permission Heirarchy ===\n");
+	printf("%sConfig perms:\n", legacy_allow ? "Legacy " : "");
+	for (auto perm = FIRST_PERM; perm != LAST_PERM; perm = NEXT_PERM(perm)) {
+		DCpermissionHierarchyOld heir(perm);
+		auto lst = heir.getConfigPerms();
+		printf("\t/* %20s */ {", PermString(perm));
+		const char * sep = "";
+		while (*lst != LAST_PERM) {
+			printf("%s%s%s", sep, PermString(*lst), PermSuffix(*lst));
+			sep = ", ";
+			++lst;
+		}
+		printf("},\n");
+	}
+
+	printf("%s nextConfig perms:\n", legacy_allow ? "Legacy " : "");
+	for (auto perm = FIRST_PERM; perm != LAST_PERM; perm = NEXT_PERM(perm)) {
+		printf("\t/* %20s */ {", PermString(perm));
+		const char * sep = "";
+		const char * suffix = " /**/";
+		auto p2 = perm;
+		while (p2 != LAST_PERM) {
+			printf("%s%s%s%s", sep, PermString(p2), PermSuffix(p2), suffix);
+			sep = ", "; suffix = "";
+			p2 = DCpermissionHierarchy::nextConfig(p2, legacy_allow);
+		}
+		printf("},\n");
+	}
+
+	///
+	///
+	printf("\nImplied perms:\n");
+	for (auto perm = FIRST_PERM; perm != LAST_PERM; perm = NEXT_PERM(perm)) {
+		DCpermissionHierarchyOld heir(perm);
+		auto lst = heir.getImpliedPerms();
+		printf("\t/* %20s */ {", PermString(perm));
+		const char * sep = "";
+		while (*lst != LAST_PERM) {
+			printf("%s%s%s", sep, PermString(*lst), PermSuffix(*lst));
+			sep = ", ";
+			++lst;
+		}
+		printf("},\n");
+	}
+
+	printf("\nnextImplied:\n");
+	for (auto perm = FIRST_PERM; perm != LAST_PERM; perm = NEXT_PERM(perm)) {
+		printf("\t/* %20s */ {", PermString(perm));
+		const char * sep = "";
+		const char * suffix = " /**/";
+		auto p2 = perm;
+		while (p2 != LAST_PERM) {
+			printf("%s%s%s%s", sep, PermString(p2), PermSuffix(p2), suffix);
+			sep = ", "; suffix = "";
+			p2 = DCpermissionHierarchy::nextImplied(p2);
+		}
+		printf("},\n");
+	}
+
+	///
+	///
+	printf("\nImplied by:\n");
+	for (auto perm = FIRST_PERM; perm != LAST_PERM; perm = NEXT_PERM(perm)) {
+		DCpermissionHierarchyOld heir(perm);
+		auto lst = heir.getPermsIAmDirectlyImpliedBy();
+		printf("\t/* %20s */ {", PermString(perm));
+		const char * sep = "";
+		while (*lst != LAST_PERM) {
+			printf("%s%s%s", sep, PermString(*lst), PermSuffix(*lst));
+			sep = ", ";
+			++lst;
+		}
+		printf("},\n");
+	}
+
+	printf("\nnextImpliedBy:\n");
+	for (auto perm = FIRST_PERM; perm != LAST_PERM; perm = NEXT_PERM(perm)) {
+		printf("\t/* %20s */ {", PermString(perm));
+		const char * sep = "";
+		for (auto p2 : DCpermissionHierarchy::DirectlyImpliedBy(perm)) {
+			printf("%s%s%s", sep, PermString(p2), PermSuffix(p2));
+			sep = ", ";
+		}
+		printf("},\n");
+	}
+}
+
+
+enum { usage_Error=-1, usage_Help=0, usage_AuthLevels=1, usage_Config=2, usage_PermHeir=0x100, usage_HelpAll=0xFF };
+void print_security_config(bool include_soap, const char * subsys);
+
+void
+usage( const char *cmd, int other=usage_Error )
+{
+	bool include_soap=false;
+
+	if (other & usage_PermHeir) {
+		print_permission_heirarchy();
+		if (other == usage_PermHeir) return;
+	}
+
+	FILE* out = (other == usage_Error) ? stderr : stdout;
+
+	fprintf(out,"Usage: %s [options] TOKEN [TOKEN [TOKEN [...]]]\n",cmd);
+	fprintf(out,"\nwhere TOKEN is ( ALL | <authorization-level> | <command-name> | <command-int> )\n\n");
+	fprintf(out,"general options:\n");
+	fprintf(out,"    -config <filename>              Add configuration from specified file\n");
+	fprintf(out,"    -debug                          Show extra debugging info\n");
+	fprintf(out,"    -help                           Display this output\n");
+	//fprintf(out,"    -help [config|levels|all]       Display this output [and details]\n");
+	fprintf(out,"    -version                        Display Condor version\n");
+	fprintf(out,"\nspecifying target options:\n");
+	fprintf(out,"    -address <sinful>               Use this sinful string\n");
+	fprintf(out,"    -pool    <host>                 Query this collector\n");
+	fprintf(out,"    -name    <name>                 Find a daemon with this name\n");
+	fprintf(out,"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n");
+	fprintf(out,"\noutput options (specify only one):\n");
+	fprintf(out,"    -quiet                          No output, only sets status\n");
+	fprintf(out,"    -table                          Print one result per line\n");
+	fprintf(out,"    -verbose                        Print all available information\n");
+	fprintf(out,"\nExample:\n    %s -addr \"<127.0.0.1:9618>\" -table READ WRITE DAEMON\n\n",cmd);
+
+	if (other & usage_AuthLevels) {
+		fprintf(out, "\nWhere <authorization-level> is one of:\n");
+		for (DCpermission perm = FIRST_PERM; perm < LAST_PERM; perm = NEXT_PERM(perm)) {
+			if (perm == SOAP_PERM && !include_soap) continue;
+			fprintf(out, "    %-20s %s\n", PermString(perm), PermDescription(perm));
+		}
+	}
+
+	if (other & usage_Config) {
+		fprintf(out, "\nEffective security config:\n");
+		print_security_config(include_soap, nullptr);
+	}
 }
 
 void
@@ -66,6 +311,106 @@ void process_err_stack(CondorError *errstack) {
 
 	printf("%s\n", errstack->getFullText(true).c_str());
 
+}
+
+void print_security_config(bool include_soap, const char * subsys)
+{
+	const char * const knobs[] = {
+		"SEC_%s_AUTHENTICATION_METHODS", "SEC_%s_CRYPTO_METHODS",
+		"SEC_%s_AUTHENTICATION", "SEC_%s_NEGOTIATION",
+		"ALLOW_%s", "DENY_%s",
+	};
+
+	std::set<std::string> reported; // so we don't repeat ourselves
+	std::string param_name;
+	const char * banner = nullptr;
+
+	bool legacy = param_boolean("LEGACY_ALLOW_SEMANTICS", false);
+	if (legacy) { printf("WARNING: LEGACY_ALLOW_SEMANTICS = true\n"); }
+
+	for (auto knob : knobs) {
+		bool is_allow_knob = false;
+		if (starts_with(knob, "ALLOW_")) {
+			banner = "ALLOW";
+			is_allow_knob = true;
+		} else if (starts_with(knob, "DENY_")) {
+			banner = "DENY";
+			is_allow_knob = true;
+		} else {
+			banner = knob + sizeof("SEC_%s");
+		}
+
+		for (DCpermission it = ALLOW_PERM; it < LAST_PERM; it = NEXT_PERM(it)) {
+			// iterate so we do DEFAULT first, and skip ALLOW and SOAP
+			DCpermission perm = it;
+			if (it == DEFAULT_PERM) continue;
+			else if (perm == ALLOW_PERM) perm = DEFAULT_PERM;
+			else if (perm == SOAP_PERM && !include_soap) continue;
+
+			formatstr(param_name, knob, PermString(perm));
+			if (subsys) { param_name += "_"; param_name += subsys; }
+
+			for (auto tag = perm; tag < LAST_PERM; tag = DCpermissionHierarchy::nextConfig(tag, legacy)) {
+				std::string from_param, dotted_param;
+				auto_free_ptr value(SecMan::getSecSetting(knob, tag, &from_param, subsys));
+				if (value) {
+					bool already_reported = (reported.count(from_param) > 0);
+					bool skip_this = (already_reported && !is_allow_knob);
+					if (skip_this) continue;
+					const char* hash = skip_this ? "#" : "";
+
+					if (banner) {
+						printf("\n #--- %s ---#\n", banner);
+						banner = nullptr;
+					}
+
+					printf("%s%s = %s\n", hash, param_name.c_str(), value.ptr());
+					if (param_name != from_param) fprintf(stdout, "%s # from: %s\n", hash, from_param.c_str());
+					reported.insert(from_param);
+
+					const MACRO_META * pmet = nullptr;
+					const char * def_val = nullptr;
+					std::ignore = param_get_info(from_param.c_str(), subsys, nullptr, dotted_param, &def_val, &pmet);
+
+					if (pmet && ! already_reported) {
+						std::string location;
+						param_get_location(pmet, location);
+						fprintf(stdout, "%s # at: %s\n", hash, location.c_str());
+					}
+					break;
+				}
+			}
+		}
+		// If we had *no* config lookups for this knob, print the default value
+		if (banner && ! is_allow_knob) {
+			printf("\n #--- %s ---#\n", banner);
+			banner = nullptr;
+
+			formatstr(param_name, knob, PermString(DEFAULT_PERM));
+			if (subsys) { param_name += "_"; param_name += subsys; }
+
+			if (ends_with(knob, "_CRYPTO_METHODS")) {
+				std::string crypto_methods = SecMan::getDefaultCryptoMethods();
+				std::string filtered_methods = SecMan::filterCryptoMethods(crypto_methods);
+				if (filtered_methods != crypto_methods) {
+					fprintf(stdout, "%s = %s\n"
+						" # from: <filtered-default>\n"
+						" # default: %s\n",
+						param_name.c_str(), filtered_methods.c_str(), crypto_methods.c_str()
+					);
+				} else {
+					fprintf(stdout, "%s = %s\n"
+						" # from: <compiled-default>\n",
+						param_name.c_str(), crypto_methods.c_str()
+					);
+				}
+			} else {
+				const char * def_value = "OPTIONAL";
+				if (ends_with(knob, "_NEGOTIATION")) def_value = "PREFERRED";
+				fprintf(stdout, "%s = %s\n # from: <compiled-default>\n", param_name.c_str(), def_value);
+			}
+		}
+	}
 }
 
 
@@ -371,27 +716,42 @@ bool do_item(Daemon* d, const std::string & name, int num, int output_mode) {
 
 
 
-int main( int argc, char *argv[] )
+int main( int argc, const char *argv[] )
 {
-	char *pool=0;
-	char *name=0;
-	char *address=0;
-	char *optional_config=0;
+	const char *pcolon;
+	const char *pool=nullptr;
+	const char *name=nullptr;
+	const char *address=nullptr;
+	const char *optional_config=nullptr;
+	const char *root_config=nullptr;
 	int  output_mode = -1;
+	bool dash_help = false;
+	int  help_details = 0;
+	bool dash_debug = false;
+	const char * debug_flags = nullptr;
 	daemon_t dtype = DT_NONE;
 
 	std::vector<std::string> worklist_name;
 	std::vector<int> worklist_number;
 	Daemon * daemon = NULL;
 
-	set_priv_initialize(); // allow uid switching if root
-	config();
-
 	for( int i=1; i<argc; i++ ) {
-		if(!strncmp(argv[i],"-help",strlen(argv[i]))) {
-			usage(argv[0]);
-			exit(0);
-		} else if(!strncmp(argv[i],"-quiet",strlen(argv[i]))) {	
+		if (is_dash_arg_prefix (argv[i], "help", 1)) {
+			help_details = usage_Help;
+			while ((i+1 < argc) && *(argv[i+1]) != '-') {
+				++i;
+				if (is_arg_prefix(argv[i], "levels", 3) || is_arg_prefix(argv[i], "auth", 2)) {
+					help_details |= usage_AuthLevels;
+				} else if (is_arg_prefix(argv[i], "config", 2)) {
+					help_details |= usage_Config;
+				} else if (is_arg_prefix(argv[i], "permheir", 2)) {
+					help_details |= usage_PermHeir;
+				} else if (is_arg_prefix(argv[i], "all", 2)) {
+					help_details |= usage_HelpAll;
+				}
+			}
+			dash_help = true;
+		} else if (is_dash_arg_prefix(argv[i],"quiet")) {
 			if(output_mode == -1) {
 				output_mode = 0;
 			} else {
@@ -399,7 +759,7 @@ int main( int argc, char *argv[] )
 				usage(argv[0]);
 				exit(1);
 			}
-		} else if(!strncmp(argv[i],"-table",strlen(argv[i]))) {	
+		} else if (is_dash_arg_prefix(argv[i],"table",2)) {
 			if(output_mode == -1) {
 				output_mode = 10;
 			} else {
@@ -407,7 +767,7 @@ int main( int argc, char *argv[] )
 				usage(argv[0]);
 				exit(1);
 			}
-		} else if(!strncmp(argv[i],"-verbose",strlen(argv[i]))) {	
+		} else if (is_dash_arg_prefix(argv[i],"verbose")) {
 			if(output_mode == -1) {
 				output_mode = 2;
 			} else {
@@ -415,7 +775,7 @@ int main( int argc, char *argv[] )
 				usage(argv[0]);
 				exit(1);
 			}
-		} else if(!strncmp(argv[i],"-config",strlen(argv[i]))) {	
+		} else if (is_dash_arg_prefix(argv[i],"config")) {
 			i++;
 			if(!argv[i]) {
 				fprintf(stderr,"ERROR: -config requires an argument.\n\n");
@@ -423,7 +783,14 @@ int main( int argc, char *argv[] )
 				exit(1);
 			}
 			optional_config = argv[i];
-		} else if(!strncmp(argv[i],"-pool",strlen(argv[i]))) {	
+		} else if (is_dash_arg_prefix(argv[i], "root-config", 4)) {
+			if(!argv[i]) {
+				fprintf(stderr,"ERROR: -root-config requires an argument.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+			root_config = argv[i];
+		} else if (is_dash_arg_prefix(argv[i],"pool")) {
 			i++;
 			if(!argv[i]) {
 				fprintf(stderr,"ERROR: -pool requires an argument.\n\n");
@@ -436,7 +803,7 @@ int main( int argc, char *argv[] )
 				exit(1);
 			}
 			pool = argv[i];
-		} else if(!strncmp(argv[i],"-name",strlen(argv[i]))) {	
+		} else if (is_dash_arg_prefix(argv[i],"name")) {
 			i++;
 			if(!argv[i]) {
 				fprintf(stderr,"ERROR: -name requires an argument.\n\n");
@@ -449,10 +816,10 @@ int main( int argc, char *argv[] )
 				exit(1);
 			}
 			name = argv[i];
-		} else if(!strncmp(argv[i],"-type",strlen(argv[i]))) {	
+		} else if (is_dash_arg_prefix(argv[i],"subsystem",3) || is_dash_arg_prefix(argv[i],"type",4)) {
 			i++;
 			if(!argv[i]) {
-				fprintf(stderr,"ERROR: -type requires an argument.\n\n");
+				fprintf(stderr,"ERROR: %s requires an argument.\n\n", argv[i]);
 				usage(argv[0]);
 				exit(1);
 			}
@@ -462,7 +829,7 @@ int main( int argc, char *argv[] )
 				usage(argv[0]);
 				exit(1);
 			}
-		} else if(!strncmp(argv[i],"-address",strlen(argv[i]))) {	
+		} else if (is_dash_arg_prefix(argv[i],"address")) {
 			i++;
 			if(!argv[i]) {
 				fprintf(stderr,"ERROR: -address requires an argument.\n\n");
@@ -475,12 +842,12 @@ int main( int argc, char *argv[] )
 				exit(1);
 			}
 			address = argv[i];
-		} else if(!strcmp(argv[i],"-version")) {
+		} else if (is_dash_arg_prefix(argv[i],"version", 4)) {
 			version();
 			exit(0);
-		} else if(!strcmp(argv[i],"-debug")) {
-				// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+		} else if (is_dash_arg_colon_prefix(argv[i],"debug",&pcolon)) {
+			dash_debug = true;
+			debug_flags = (pcolon && pcolon[1]) ? pcolon+1 : nullptr;
 		} else if(argv[i][0]!='-' || !strcmp(argv[i],"-")) {
 			// a special case
 			// CRUFT The old OWNER authorization level was merged into
@@ -510,6 +877,29 @@ int main( int argc, char *argv[] )
 		}
 	}
 
+	set_priv_initialize(); // allow uid switching if root
+
+	// load the supplied config if specified
+	if (optional_config) {
+		// push the optional config into a global used config_host as the "last" local config file
+		extern const char * simulated_local_config;
+		simulated_local_config = optional_config;
+	}
+
+	int config_options = CONFIG_OPT_WANT_META;
+	if (root_config) { config_options |= CONFIG_OPT_USE_THIS_ROOT_CONFIG | CONFIG_OPT_NO_EXIT; }
+	config_host(NULL, config_options, root_config);
+
+	// we do this after we load config so that "-help config" works correctly 
+	if (dash_help) {
+		usage(argv[0], help_details);
+		exit(0);
+	}
+
+	// dprintf to console
+	if (dash_debug) {
+		dprintf_set_tool_debug("TOOL", debug_flags);
+	}
 
 	// 1 (normal) is the default
 	if(output_mode == -1) {
@@ -587,14 +977,6 @@ int main( int argc, char *argv[] )
 	// do we need to print headers?
 	if(output_mode == 10) {
 		printf ("         Instruction Authentication Encryption Integrity Decision Identity\n");
-	}
-
-	// load the supplied config if specified
-	if (optional_config) {
-		process_config_source( optional_config, 0, "special config", NULL, true);
-		//process_config_source( optional_config, 0, "special config", get_local_hostname().Value(), true);
-
-		// ZKM TODO FIXME check the success of loading the config
 	}
 
 	all_okay = true;

@@ -381,6 +381,11 @@ ULogEvent *instantiateEvent (ULogEventNumber event);
 ULogEvent *instantiateEvent (ClassAd *ad);
 
 
+// For events that include a ClassAd of resource usage information,
+// populate the usage ad based on the given job ad.
+void setEventUsageAd(const ClassAd& jobAd, ClassAd ** ppusageAd);
+
+
 // This event type is used for all events where the event ID is not in the ULogEventNumber enum
 // for this build.
 class FutureEvent : public ULogEvent

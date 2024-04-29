@@ -57,7 +57,7 @@ const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT] = {
 	"D_PRIV", "D_DAEMONCORE", "D_FULLDEBUG", "D_SECURITY",
 	"D_COMMAND", "D_MATCH", "D_NETWORK", "D_KEYBOARD",
 	"D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
-	"D_SYSCALLS", "D_21", "D_HOSTNAME", "D_PERF_TRACE", // D_21 formerly D_CKPT
+	"D_SYSCALLS", "D_CRON", "D_HOSTNAME", "D_PERF_TRACE", // D_CRON formerly D_CKPT
 	"D_LOAD", "D_25", "D_26", "D_AUDIT", "D_TEST",      // D_25 formerly D_PROC (HAD)  D_26 formerly D_NFS
 	"D_STATS", "D_MATERIALIZE", "D_31",
 };

@@ -117,6 +117,7 @@ private:
 	time_t start_time;
 	pid_t family_root_pid;
 	uint64_t cgroup_memory_limit;
+	uint64_t cgroup_memory_limit_low;
 	uint64_t cgroup_memory_and_swap_limit;
 	int cgroup_cpu_shares;
 };

@@ -215,7 +215,8 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 
 	if (willing) {
 		if (rip->can_create_dslot()) {
-			Resource * new_rip = create_dslot(rip, job_ad);
+			const bool take_parent_claim = true;
+			Resource * new_rip = create_dslot(rip, job_ad, take_parent_claim);
 			if (new_rip) { rip = new_rip; }
 			else { willing = false; }
 		}
@@ -388,7 +389,7 @@ FetchClient::hookExited(int exit_status) {
 	if (m_std_out.length()) {
 		ASSERT(m_job_ad == NULL);
 		m_job_ad = new ClassAd();
-		StringTokenIterator tok(m_std_out, "\n", true);
+		StringTokenIterator tok(m_std_out, "\n");
 		const char* hook_line = NULL;
 		while ((hook_line = tok.next())) {
 			if (!m_job_ad->Insert(hook_line)) {

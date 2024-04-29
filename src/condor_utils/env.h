@@ -335,8 +335,8 @@ public:
 	// clear the white and black filter lists
 	void ClearWhiteBlackList();
 protected:
-	StringList m_black;
-	StringList m_white;
+	std::vector<std::string> m_black;
+	std::vector<std::string> m_white;
 };
 
 

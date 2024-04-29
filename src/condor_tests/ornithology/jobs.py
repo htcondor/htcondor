@@ -104,6 +104,8 @@ class JobStatus(str, enum.Enum):
     HELD = "5"
     TRANSFERRING_OUTPUT = "6"
     SUSPENDED = "7"
+    FAILED = "8"
+    BLOCKED = "9"
     UNMATERIALIZED = "100"
 
     def __repr__(self):

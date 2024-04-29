@@ -26,6 +26,7 @@
 #include "my_popen.h"
 #include "condor_daemon_core.h"
 #include "basename.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(LINUX)
 #include <sys/utsname.h>
@@ -673,21 +674,18 @@ root_dir_list()
 	execute_dir_list.push_back(pair_strings("root","/"));
 	const char * allowed_root_dirs = param("NAMED_CHROOT");
 	if (allowed_root_dirs) {
-		StringList chroot_list(allowed_root_dirs);
-		chroot_list.rewind();
-		const char * next_chroot;
-		while ( (next_chroot=chroot_list.next()) ) {
+		for (const auto& next_chroot: StringTokenIterator(allowed_root_dirs)) {
 			StringTokenIterator chroot_spec(next_chroot, "=");
 			const char* tok;
 			tok = chroot_spec.next();
 			if (tok == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
 				continue;
 			}
 			std::string chroot_name = tok;
 			tok = chroot_spec.next();
 			if (tok == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
 				continue;
 			}
 			std::string next_dir = tok;

@@ -86,7 +86,7 @@ class Credd():
 
         if credential is None:
             producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
-            if producer is "CREDENTIAL_ALREADY_STORED":
+            if producer == "CREDENTIAL_ALREADY_STORED":
                 # This was HTCondorIOError in version 1.
                 raise IOError(producer)
 
@@ -125,7 +125,7 @@ class Credd():
 
         if credential is None:
             producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
-            if producer is "CREDENTIAL_ALREADY_STORED":
+            if producer == "CREDENTIAL_ALREADY_STORED":
                 # This was HTCondorIOError in version 1.
                 raise IOError(producer)
 

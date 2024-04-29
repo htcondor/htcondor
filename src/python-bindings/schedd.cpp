@@ -54,7 +54,7 @@ using namespace boost::python;
     { \
     condor::ModuleLock ml; \
     if (use_ids) \
-        result = schedd. action_name (&ids, reason_str.c_str(), NULL, AR_TOTALS); \
+        result = schedd. action_name (ids, reason_str.c_str(), NULL, AR_TOTALS); \
     else \
         result = schedd. action_name (constraint.c_str(), reason_str.c_str(), NULL, AR_TOTALS); \
     }
@@ -364,10 +364,10 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		case HRS_SCHEDD_JOB_HIST:
 			break;
 		case HRS_STARTD_JOB_HIST:
-			ad.InsertAttr("HistoryRecordSource","STARTD");
+			ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"STARTD");
 			break;
 		case HRS_JOB_EPOCH:
-			ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+			ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"JOB_EPOCH");
 			break;
 		default:
 			THROW_EX(HTCondorValueError, "Unknown history record source given");
@@ -568,14 +568,15 @@ struct QueueItemsIterator {
 		auto_free_ptr line(m_fea.items.pop());
 		if ( ! line) { THROW_EX(StopIteration, "All items returned"); }
 
-		if (m_fea.vars.number() > 1 || (m_fea.vars.number()==1 && (YourStringNoCase("Item") != m_fea.vars.first()))) {
+		if (m_fea.vars.size() > 1 || (m_fea.vars.size()==1 && (YourStringNoCase("Item") != m_fea.vars[0]))) {
 			std::vector<const char*> splits;
-			m_fea.split_item(line.ptr(), splits);
+			int num_items = m_fea.split_item(line.ptr(), splits);
 
 			boost::python::dict values;
 			int ix = 0;
-			for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
-				values[boost::python::object(std::string(key))] = boost::python::object(std::string(splits[ix++]));
+			for (const auto& key: m_fea.vars) {
+				if (ix >= num_items) { break; }
+				values[boost::python::object(key)] = boost::python::object(std::string(splits[ix++]));
 			}
 
 			return boost::python::object(values);
@@ -735,18 +736,18 @@ struct SubmitStepFromPyIter {
 		return (0 == iter_index) ? 2 : 1;
 	}
 
-	StringList & vars() { return m_fea.vars; }
+	std::vector<std::string> & vars() { return m_fea.vars; }
 	SubmitForeachArgs & fea() { return m_fea; }
 
 	//
 	void set_live_vars()
 	{
-		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+		for (const auto& key: m_fea.vars) {
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end()) {
-				m_hash.set_live_submit_variable(key, str->second.c_str(), false);
+				m_hash.set_live_submit_variable(key.c_str(), str->second.c_str(), false);
 			} else {
-				m_hash.unset_live_submit_variable(key);
+				m_hash.unset_live_submit_variable(key.c_str());
 			}
 		}
 	}
@@ -754,8 +755,8 @@ struct SubmitStepFromPyIter {
 	void unset_live_vars()
 	{
 		// set the pointers of the 'live' variables to the unset string (i.e. "")
-		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
-			m_hash.unset_live_submit_variable(key);
+		for (const auto& key: m_fea.vars) {
+			m_hash.unset_live_submit_variable(key.c_str());
 		}
 	}
 
@@ -771,7 +772,7 @@ struct SubmitStepFromPyIter {
 			return 0;
 		}
 
-		bool no_vars_yet = m_fea.vars.number() == 0;
+		bool no_vars_yet = m_fea.vars.size() == 0;
 
 		// load the next row item
 		if (PyDict_Check(obj)) {
@@ -781,7 +782,7 @@ struct SubmitStepFromPyIter {
 				std::string key = extract<std::string>(k);
 				if (key[0] == '+') { key.replace(0, 1, "MY."); }
 				m_livevars[key] = extract<std::string>(v);
-				if (no_vars_yet) { m_fea.vars.append(key.c_str()); }
+				if (no_vars_yet) { m_fea.vars.emplace_back(key); }
 			}
 		} else if (PyList_Check(obj)) {
 			// use the key names that have been stored in m_fea.vars
@@ -793,16 +794,13 @@ struct SubmitStepFromPyIter {
 				// no vars have been specified, so make some up based on the number if items in the list
 				std::string key("Item");
 				for (Py_ssize_t ix = 0; ix < num; ++ix) {
-					m_fea.vars.append(key.c_str());
+					m_fea.vars.emplace_back(key);
 					formatstr(key, "Item%d", (int)ix+1);
 				}
 			}
-			const char * key = m_fea.vars.first();
-			for (Py_ssize_t ix = 0; ix < num; ++ix) {
-				if ( ! key) break;
+			for (Py_ssize_t ix = 0; ix < num && (size_t)ix < m_fea.vars.size(); ++ix) {
 				PyObject * v = PyList_GetItem(obj, ix);
-				m_livevars[key] = extract<std::string>(v);
-				key = m_fea.vars.next();
+				m_livevars[m_fea.vars[ix]] = extract<std::string>(v);
 			}
 		} else {
 			// not a list or a dict, the item must be a string.
@@ -816,16 +814,17 @@ struct SubmitStepFromPyIter {
 			// if there are vars, then split the string in the same way that the QUEUE statement would
 			if (no_vars_yet) {
 				const char * key = "Item";
-				m_fea.vars.append(key);
+				m_fea.vars.emplace_back(key);
 				m_livevars[key] = item_extract();
 			} else {
 				std::string str = item_extract();;
 				auto_free_ptr data(strdup(str.c_str()));
 
 				std::vector<const char*> splits;
-				m_fea.split_item(data.ptr(), splits);
+				int num_items = m_fea.split_item(data.ptr(), splits);
 				int ix = 0;
-				for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+				for (const auto& key: m_fea.vars) {
+					if (ix >= num_items) { break; }
 					m_livevars[key] = splits[ix++];
 				}
 			}
@@ -843,7 +842,7 @@ struct SubmitStepFromPyIter {
 		int cchSep = sep ? (sep[0] ? (int)strlen(sep) : 1) : 0;
 		int cchEol = eol ? (eol[0] ? (int)strlen(eol) : 1) : 0;
 		line.clear();
-		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+		for (const auto& key: m_fea.vars) {
 			if ( ! line.empty() && sep) line.append(sep, cchSep);
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end() && ! str->second.empty()) {
@@ -1416,7 +1415,7 @@ struct Schedd {
         return negotiator;
     }
 
-    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs)
+    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, QueryFetchOpts fetch_opts=QueryFetchOpts::fetch_Jobs)
     {
         std::string constraint;
         if ( ! convert_python_to_constraint(constraint_obj, constraint, true, NULL)) {
@@ -1452,7 +1451,7 @@ struct Schedd {
         void *helper_ptr = static_cast<void *>(&helper);
         ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
         ClassAd ** p_summary_ad = NULL;
-        if ( fetch_opts == CondorQ::fetch_SummaryOnly ) {  // only get the summary ad if option says so
+        if ( fetch_opts == QueryFetchOpts::fetch_SummaryOnly ) {  // only get the summary ad if option says so
             p_summary_ad = &summary_ad;
         }
 
@@ -1571,7 +1570,7 @@ struct Schedd {
         }
 
         // job_spec can either be a list of job id's (as strings) or a constraint expression
-        StringList ids;
+        std::vector<std::string> ids;
         std::string constraint, reason_str, reason_code;
         boost::python::extract<std::string> str_obj(job_spec);
         bool use_ids = false;
@@ -1579,8 +1578,7 @@ struct Schedd {
             int id_len = py_len(job_spec);
             for (int i=0; i<id_len; i++)
             {
-                std::string str = extract<std::string>(job_spec[i]);
-                ids.append(str.c_str());
+                ids.emplace_back(extract<std::string>(job_spec[i]));
             }
             use_ids = true;
         } else {
@@ -1596,7 +1594,7 @@ struct Schedd {
                     constraint = string_extract();
                     JOB_ID_KEY jid;
                     if (jid.set(constraint.c_str())) {
-                        ids.append(constraint.c_str());
+                        ids.emplace_back(constraint);
                         use_ids = true;
                     }
                 }
@@ -1630,7 +1628,7 @@ struct Schedd {
             if (use_ids)
             {
                 condor::ModuleLock ml;
-                result = schedd.holdJobs(&ids, reason_char, reason_code_char, NULL, AR_TOTALS);
+                result = schedd.holdJobs(ids, reason_char, reason_code_char, NULL, AR_TOTALS);
             }
             else
             {
@@ -1653,7 +1651,7 @@ struct Schedd {
             if (use_ids)
             {
                 condor::ModuleLock ml;
-                result = schedd.vacateJobs(&ids, vacate_type, NULL, AR_TOTALS);
+                result = schedd.vacateJobs(ids, vacate_type, NULL, AR_TOTALS);
             }
             else
             {
@@ -1947,15 +1945,14 @@ struct Schedd {
     object exportJobs(object job_spec, std::string export_dir, std::string new_spool_dir)
 	{
 		std::string constraint;
-		StringList ids;
+		std::vector<std::string> ids;
 		boost::python::extract<std::string> str_obj(job_spec);
 		bool use_ids = false;
 		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
 			int id_len = py_len(job_spec);
 			for (int i = 0; i < id_len; i++)
 			{
-				std::string str = extract<std::string>(job_spec[i]);
-				ids.append(str.c_str());
+				ids.emplace_back(extract<std::string>(job_spec[i]));
 			}
 			use_ids = true;
 		} else {
@@ -1970,7 +1967,7 @@ struct Schedd {
 					constraint = string_extract();
 					JOB_ID_KEY jid;
 					if (jid.set(constraint.c_str())) {
-						ids.append(constraint.c_str());
+						ids.emplace_back(constraint);
 						use_ids = true;
 					}
 				}
@@ -1984,7 +1981,7 @@ struct Schedd {
 		if (use_ids)
 		{
 			condor::ModuleLock ml;
-			result = schedd.exportJobs(&ids, export_dir.c_str(), spool, &errstack);
+			result = schedd.exportJobs(ids, export_dir.c_str(), spool, &errstack);
 		} else {
 			condor::ModuleLock ml;
 			result = schedd.exportJobs(constraint.c_str(), export_dir.c_str(), spool, &errstack);
@@ -2024,15 +2021,14 @@ struct Schedd {
 	object unexportJobs(object job_spec)
 	{
 		std::string constraint;
-		StringList ids;
+		std::vector<std::string> ids;
 		boost::python::extract<std::string> str_obj(job_spec);
 		bool use_ids = false;
 		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
 			int id_len = py_len(job_spec);
 			for (int i = 0; i < id_len; i++)
 			{
-				std::string str = extract<std::string>(job_spec[i]);
-				ids.append(str.c_str());
+				ids.emplace_back(extract<std::string>(job_spec[i]));
 			}
 			use_ids = true;
 		} else {
@@ -2047,7 +2043,7 @@ struct Schedd {
 					constraint = string_extract();
 					JOB_ID_KEY jid;
 					if (jid.set(constraint.c_str())) {
-						ids.append(constraint.c_str());
+						ids.emplace_back(constraint);
 						use_ids = true;
 					}
 				}
@@ -2060,7 +2056,7 @@ struct Schedd {
 		if (use_ids)
 		{
 			condor::ModuleLock ml;
-			result = schedd.unexportJobs(&ids, &errstack);
+			result = schedd.unexportJobs(ids, &errstack);
 		} else {
 			condor::ModuleLock ml;
 			result = schedd.unexportJobs(constraint.c_str(), &errstack);
@@ -2770,7 +2766,7 @@ struct Schedd {
         return sentry_ptr;
     }
 
-    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs, boost::python::object tag=boost::python::object())
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, QueryFetchOpts fetch_opts=QueryFetchOpts::fetch_Jobs, boost::python::object tag=boost::python::object())
     {
         std::string val_str;
 
@@ -3162,7 +3158,7 @@ void SetDagOptions(boost::python::dict opts, DagmanOptions &dag_opts)
         else if (key_lc == "import_env")
             ret = dag_opts.set("ImportEnv", value);
         else if (key_lc == "include_env")
-            ret = dag_opts.append("GetFromEnv", value);
+            ret = dag_opts.extend("GetFromEnv", value);
         else if (key_lc == "insert_env") {
             trim(value);
             ret = dag_opts.set("AddToEnv", value);
@@ -3751,8 +3747,8 @@ public:
 				}
 
 				// PRAGMA_REMIND("fix this when python submit supports foreach, maybe make this common with condor_submit")
-				auto_free_ptr submit_vars(ssi.vars().print_to_delimed_string(","));
-				if (submit_vars) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+				std::string submit_vars = join(ssi.vars(), ",");
+				if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 
 				//char slice_str[16*3+1];
 				//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
@@ -3921,8 +3917,8 @@ public:
 			submit_digest += "\n";
 			submit_digest += "Queue ";
 			if (count) { formatstr_cat(submit_digest, "%d ", count); }
-			auto_free_ptr submit_vars(ssi.vars().print_to_delimed_string(","));
-			if (submit_vars.ptr()) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+			std::string submit_vars = join(ssi.vars(), ",");
+			if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 			//char slice_str[16*3+1];
 			//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
 			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename.c_str(); }
@@ -4346,7 +4342,7 @@ void export_schedd()
         .value("ShouldLog", SHOULDLOG)
         ;
 
-    enum_<CondorQ::QueryFetchOpts>("QueryOpts",
+    enum_<QueryFetchOpts>("QueryOpts",
             R"C0ND0R(
             Enumerated flags sent to the *condor_schedd* during a query to alter its behavior.
 
@@ -4377,14 +4373,28 @@ void export_schedd()
 
                 Query should return raw cluster ads as well as job ads if the cluster ads match the query constraint.
 
+            .. attribute:: IncludeJobsetAds
+
+                Query should return raw jobset ads as well as job ads if the jobset ads match the query constraint.
+
+            .. attribute:: ClusterAds
+
+                Query should return only raw cluster ads that match the query constraint.
+
+            .. attribute:: JobsetAds
+
+                Query should return only raw jobset ads that match the query constraint.
+
             )C0ND0R")
-        .value("Default", CondorQ::fetch_Jobs)
-        .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
-        .value("GroupBy", CondorQ::fetch_GroupBy)
-        .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
-        .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
-        .value("IncludeClusterAd", CondorQ::fetch_IncludeClusterAd)
-        .value("IncludeJobsetAds", CondorQ::fetch_IncludeJobsetAds)
+        .value("Default", fetch_Jobs)
+        .value("AutoCluster", fetch_DefaultAutoCluster)
+        .value("GroupBy", fetch_GroupBy)
+        .value("DefaultMyJobsOnly", fetch_MyJobs)
+        .value("SummaryOnly", fetch_SummaryOnly)
+        .value("IncludeClusterAd", fetch_IncludeClusterAd)
+        .value("IncludeJobsetAds", fetch_IncludeJobsetAds)
+        .value("ClusterAds", fetch_ClusterAds)
+        .value("JobsetAds", fetch_JobsetAds)
         ;
 
     enum_<BlockingMode>("BlockingMode",
@@ -4472,7 +4482,7 @@ void export_schedd()
 #if BOOST_VERSION < 103400
             (boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=QueryFetchOpts::fetch_Jobs)
 #endif
             ))
         .def("xquery", &Schedd::xquery,
@@ -4516,7 +4526,7 @@ void export_schedd()
 #if BOOST_VERSION < 103400
             (boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=QueryFetchOpts::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #endif
             )
         .def("jobEpochHistory", &Schedd::jobEpochHistory,

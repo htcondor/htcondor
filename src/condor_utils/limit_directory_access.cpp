@@ -39,7 +39,7 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 
 	std::string full_pathname;  // this needs to have the same lifetime as path
 	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW)) {
-		static StringList allow_path_prefix_list;
+		static std::vector<std::string> allow_path_prefix_list;
 		static bool path_prefix_initialized = false;
 
 		if (init == false && path_prefix_initialized == false) {
@@ -52,37 +52,33 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 
 
 		if (init) {
-			allow_path_prefix_list.clearAll();
+			allow_path_prefix_list.clear();
 
 			// If LIMIT_DIRECTORY_ACCESS is defined in the config file by the admin,
 			// then honor it.  Only if it is empty to we then allow the user to 
 			// specify the list in their job.
-			StringList wlist;
-			char *whitelist = param("LIMIT_DIRECTORY_ACCESS");
-			if (whitelist) {
-				wlist.initializeFromString(whitelist, ',');
-				free(whitelist);
-			}
-			if (wlist.isEmpty() && job_ad_whitelist && job_ad_whitelist[0]) {
-				wlist.initializeFromString(job_ad_whitelist, ',');
+			std::vector<std::string> wlist;
+			std::string whitelist;
+			param(whitelist, "LIMIT_DIRECTORY_ACCESS");
+			wlist = split(whitelist);
+			if (wlist.empty() && job_ad_whitelist && job_ad_whitelist[0]) {
+				wlist = split(job_ad_whitelist, ",");
 			}
 
 			// If there are any limits, then add the job's SPOOL directory to the list
-			if (!wlist.isEmpty() && spool_dir) {
-				wlist.append(spool_dir);
+			if (!wlist.empty() && spool_dir) {
+				wlist.emplace_back(spool_dir);
 				std::string tmpSpool(spool_dir);
 				// Also add spool_dir with ".tmp", since FileTransfer will also use that.
 				tmpSpool += ".tmp";
-				wlist.append(tmpSpool.c_str());
+				wlist.emplace_back(tmpSpool.c_str());
 			}
 
-			// Now go through all the directories and attempt to cannonicalize them 
-			const char *st;
-			wlist.rewind();
-			while ((st = wlist.next())) {
+			// Now go through all the directories and attempt to cannonicalize them
+			for (auto& st: wlist) {
 				char *strp = NULL;
 				std::string item;
-				if ((strp = realpath(st, NULL))) {
+				if ((strp = realpath(st.c_str(), NULL))) {
 					item = strp;
 					free(strp);
 				}
@@ -93,21 +89,20 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 				if (!IS_ANY_DIR_DELIM_CHAR(item.back()) && item.back()!='*') {
 					item += DIR_DELIM_CHAR;
 				}
-				allow_path_prefix_list.append(item.c_str());
+				allow_path_prefix_list.emplace_back(item);
 			}
 
-			whitelist = allow_path_prefix_list.print_to_string();
-			if (whitelist == NULL) {
-				whitelist = strdup("<unset>");
+			whitelist = join(allow_path_prefix_list, ",");
+			if (whitelist.empty()) {
+				whitelist = "<unset>";
 			}
-			dprintf(D_ALWAYS, "LIMIT_DIRECTORY_ACCESS = %s\n", whitelist);
-			free(whitelist);
+			dprintf(D_ALWAYS, "LIMIT_DIRECTORY_ACCESS = %s\n", whitelist.c_str());
 
 			path_prefix_initialized = true;
 		}
 
 		// If we are restricting pathnames the shadow can access, check now
-		if (path && !allow_path_prefix_list.isEmpty()) {
+		if (path && !allow_path_prefix_list.empty()) {
 			// Make path fully qualified if it is relative to the cwd
 			if (!fullpath(path)) {
 				if (condor_getcwd(full_pathname)) {
@@ -152,10 +147,10 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 			if (allow) {
 #ifdef WIN32
 				// On Win32 paths names are case insensitive
-				allow = allow_path_prefix_list.prefix_anycase_withwildcard(rpath);
+				allow = contains_prefix_anycase_withwildcard(allow_path_prefix_list, rpath);
 #else
 				// On everything other than Win32, path names are case sensitive
-				allow = allow_path_prefix_list.prefix_withwildcard(rpath);
+				allow = contains_prefix_withwildcard(allow_path_prefix_list, rpath);
 #endif
 			}
 

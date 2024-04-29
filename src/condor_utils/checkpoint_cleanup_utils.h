@@ -15,4 +15,9 @@ bool spawnCheckpointCleanupProcess(
     int & spawned_id, std::string & error
 );
 
+bool moveCheckpointsToCleanupDirectory(
+    int cluster, int proc, ClassAd * jobAd,
+    const std::set<long> & checkpointsToSave
+);
+
 #endif /* CHECKPOINT_CLEANUP_UTILS_H */

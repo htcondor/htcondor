@@ -33,4 +33,35 @@ enum QueryResult
 	Q_NO_COLLECTOR_HOST     = 6		// could not determine collector host
 };
 
+// error codes used by the condor_q schedd query wrapper object
+// These must not use the same numbers as the QueryResult codes above.
+enum
+{
+	Q_NO_SCHEDD_IP_ADDR = 20,	   // lookup of ATTR_SCHEDD_IP_ADDR in schedd ad failed
+	Q_SCHEDD_COMMUNICATION_ERROR,  // ConnnectQ failed. see errstack for details
+	Q_INVALID_REQUIREMENTS,		   // constraint not supplied when required, or constraint did not parse
+	Q_INTERNAL_ERROR,
+	Q_REMOTE_ERROR,				   // response from the schedd does not have a valid data
+	Q_UNSUPPORTED_OPTION_ERROR	   // the combination of options are not supported, trying to use modern options with ConnnectQ
+};
+
+// option flags for fetchQueueFromHost* functions, these can modify the meaning of attrs
+// use only one of the choices < fetch_FromMask, optionally OR'd with one or more fetch flags
+// currently only fetch_Jobs accepts flags.
+enum QueryFetchOpts {
+	fetch_Jobs=0,
+	fetch_DefaultAutoCluster=1,
+	fetch_GroupBy=2,
+	fetch_FromMask=0x03,         // mask off the 'from' bits
+	fetch_MyJobs=0x04,           // modifies fetch_Jobs
+	fetch_SummaryOnly=0x08,      // modifies fetch_Jobs
+	fetch_IncludeClusterAd=0x10, // modifies fetch_Jobs
+	fetch_IncludeJobsetAds=0x20, // modifies fetch_Jobs
+	fetch_NoProcAds=0x40,
+	fetch_ClusterAds=fetch_IncludeClusterAd | fetch_NoProcAds,
+	fetch_JobsetAds=fetch_IncludeJobsetAds | fetch_NoProcAds,
+};
+
+
+
 #endif

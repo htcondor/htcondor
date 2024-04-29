@@ -1120,7 +1120,7 @@ int daemon::RealStart( )
 	// the shutdown signal on to the collector.
 	if( daemon_is_shared_port ) {
 		if(! daemonCore->setChildSharedPortID( pid, "self" ) ) {
-			EXCEPT( "Unable to update shared port daemon's Sinful string, won't be able to kill it.\n" );
+			EXCEPT( "Unable to update shared port daemon's Sinful string, won't be able to kill it." );
 		}
 	}
 

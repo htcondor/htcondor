@@ -181,6 +181,7 @@ protected:
 class MyStringCharSource : public MyStringSource {
 public:
 	MyStringCharSource(char* src=NULL, bool delete_src=true) : ptr(src), ix(0), owns_ptr(delete_src) {}
+	MyStringCharSource(const char* src) : ptr(const_cast<char*>(src)), ix(0), owns_ptr(false) {}
 	virtual ~MyStringCharSource() { if (ptr && owns_ptr) free(ptr); ptr = NULL; };
 
 	char* Attach(char* src) { char* pOld = ptr; ptr = src; return pOld; }

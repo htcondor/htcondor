@@ -578,9 +578,9 @@ static void test_exprlist(const Parameters &, Results &results)
     ExprList::iterator  iter;
 
     /* ----- Setup Literals, the vectors, then ExprLists ----- */
-    literal1_0 = Literal::MakeReal("1.0");
-    literal2_0 = Literal::MakeReal("2.0");
-    literal2_1 = Literal::MakeReal("2.1");
+    literal1_0 = Literal::MakeReal(1.0);
+    literal2_0 = Literal::MakeReal(2.0);
+    literal2_1 = Literal::MakeReal(2.1);
 
     vector1.push_back(literal1_0);
     vector2.push_back(literal2_0);
@@ -643,7 +643,7 @@ static void test_exprlist(const Parameters &, Results &results)
 
     /* ----- Test adding and deleting from a list ----- */
     Literal *add;
-    add = Literal::MakeReal("2.2");
+    add = Literal::MakeReal(2.2);
 
     if (list2_copy) {
         iter = list2_copy->begin();

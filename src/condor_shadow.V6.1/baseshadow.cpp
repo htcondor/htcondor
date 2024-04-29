@@ -39,6 +39,8 @@
 #include "ipv6_hostname.h"
 #include <math.h>
 #include "job_ad_instance_recording.h"
+#include "../condor_sysapi/sysapi.h"
+#include <algorithm>
 
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
@@ -345,13 +347,13 @@ int BaseShadow::cdToIwd() {
 
 
 void
-BaseShadow::shutDownFast( int reason ) {
+BaseShadow::shutDownFast(int reason, const char* reason_str, int reason_code, int reason_subcode) {
 	m_force_fast_starter_shutdown = true;
-	shutDown( reason );
+	shutDown(reason, reason_str, reason_code, reason_subcode);
 }
 
 void
-BaseShadow::shutDown( int reason ) 
+BaseShadow::shutDown(int reason, const char* reason_str, int reason_code, int reason_subcode) 
 {
 		// exit now if there is no job ad
 	if ( !getJobAd() ) {
@@ -359,16 +361,11 @@ BaseShadow::shutDown( int reason )
 	}
 		//Attempt to write Job ad to epoch file
 		//If knob isn't set or there is no job ad the function will just log and return
-	writeJobEpochFile(getJobAd());
-		// if we are being called from the exception handler, return
-		// now to prevent infinite loop in case we call EXCEPT below.
-	if ( reason == JOB_EXCEPTION ) {
-		return;
-	}
 
 		// Only if the job is trying to leave the queue should we
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
+		writeJobEpochFile(getJobAd());
 		if( !waitingToUpdateSchedd() ) {
 			shadow_user_policy.checkAtExit();
 				// WARNING: 'this' may have been deleted by the time we get here!!!
@@ -377,7 +374,7 @@ BaseShadow::shutDown( int reason )
 	else {
 		// if we aren't trying to evaluate the user's policy, we just
 		// want to evict this job.
-		evictJob(reason, "");
+		evictJob(reason, reason_str, reason_code, reason_subcode);
 	}
 }
 
@@ -413,15 +410,14 @@ BaseShadow::reconnectFailed( const char* reason )
 	if ( attemptingReconnectAtStartup ) {
 		dprintf(D_ALWAYS,"Exiting with JOB_RECONNECT_FAILED\n");
 		// does not return
-		DC_Exit( JOB_RECONNECT_FAILED );
+		evictJob(JOB_RECONNECT_FAILED, reason, CONDOR_HOLD_CODE::ReconnectFailed);
 	} else {
 		int exit_reason = getExitReason();
 		if (exit_reason == -1) {
 			exit_reason = JOB_SHOULD_REQUEUE;
 		}
-		dprintf(D_ALWAYS,"Exiting with %d\n", exit_reason);
 		// does not return
-		DC_Exit( exit_reason );
+		evictJob(exit_reason, reason, CONDOR_HOLD_CODE::ReconnectFailed);
 	}
 
 	// Should never get here....
@@ -429,20 +425,20 @@ BaseShadow::reconnectFailed( const char* reason )
 }
 
 std::string
-BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int & hold_reason_code, int & /*hold_reason_subcode*/ )
+BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_code, int & /*reason_subcode*/ )
 {
-	/* This method is invokved by the shadow when we are putting a job on hold, and allow us to
-	   change/edit the HoldReason attribute and HoldReason codes before the shadow sends the info
+	/* This method is invokved by the shadow when we are putting a job on hold or back to idle, and allow us to
+	   change/edit the Hold/EvictReason attribute and Hold/EvictReason codes before the shadow sends the info
 	   to the schedd.
-	   To change HoldReason string:  just set variable new_hold_reason - if it remains the empty string,
-	       then the orig_hold_reason will be used unmodified.
-	   To change HoldReasonCode or HoldReasonSubCode: just change the value of hold_reason_code and
-	       hold_reason_subcode respectively (not they are passed in by reference).
+	   To change Hold/EvictReason string:  just set variable new_reason_str - if it remains the empty string,
+	       then the orig_reason_str will be used unmodified.
+	   To change Hold/EvictReasonCode or Hold/EvictReasonSubCode: just change the value of reason_code and
+	       reason_subcode respectively (note they are passed in by reference).
 	*/
-	std::string new_hold_reason;
+	std::string new_reason_str;
 
 	/*
-	Improve hold reason/codes related to file transfer.  Here is a table of what
+	Improve reason/codes related to file transfer.  Here is a table of what
 	gets set by the file transfer object (from the starter), which is pretty
 	much useless to anyone who is not an expert:
 
@@ -458,20 +454,20 @@ BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int & hold
 		4. HoldReasonCode = 12 (DownloadFileError) if transfer of output files fail w/ error at AP
 		   Sample HoldReason = "Error from slot1@TODDS480S: STARTER at 127.0.0.1 failed to send file(s) to <127.0.0.1:50288>; SHADOW at 127.0.0.1 failed to write to file C:\condor\test\not_there\blah: (errno 2) No such file or directory"
 
-	Here we will rewrite the hold reason code to be TransferInputError or TransferOutputError, instead of
+	Here we will rewrite the reason code to be TransferInputError or TransferOutputError, instead of
 	the alsmost meaningless UploadFileError and DownloadFileError we get from the File Transfer object.
-	And try to improve the hold reason string as well, so people who shower have a chance understanding it.
+	And try to improve the reason string as well, so people who shower have a chance understanding it.
 	*/
-	if (hold_reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError ||
-		hold_reason_code == FILETRANSFER_HOLD_CODE::UploadFileError)
+	if (reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError ||
+		reason_code == FILETRANSFER_HOLD_CODE::UploadFileError)
 	{
 		bool transfer_input_error = !began_execution;
 		bool transfer_output_error = began_execution;
 		bool err_occurred_at_EP =
-			(transfer_input_error && hold_reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError) ||
-			(transfer_output_error && hold_reason_code == FILETRANSFER_HOLD_CODE::UploadFileError);
+			(transfer_input_error && reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError) ||
+			(transfer_output_error && reason_code == FILETRANSFER_HOLD_CODE::UploadFileError);
 
-		std::string old_reason = orig_hold_reason;
+		std::string old_reason = orig_reason_str;
 		size_t pos = std::string::npos;
 
 		// Try to parse out the name of the slot / EP involved
@@ -523,26 +519,26 @@ BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int & hold
 			}
 		}
 
-		// Currently, the hold_reason_code is set to either FILETRANSFER_HOLD_CODE::DownloadFileError
+		// Currently, the reason_code is set to either FILETRANSFER_HOLD_CODE::DownloadFileError
 		// or FILETRANSFER_HOLD_CODE::UploadFileError.  These are not very useful to users.
-		// So reset the hold_reason_code to something based on if the failure happened
+		// So reset the reason_code to something based on if the failure happened
 		// during transfer of input files or during transfer of output/checkpoint files.
 		if (transfer_input_error) {
-			hold_reason_code = CONDOR_HOLD_CODE::TransferInputError;
+			reason_code = CONDOR_HOLD_CODE::TransferInputError;
 		}
 		else {
-			hold_reason_code = CONDOR_HOLD_CODE::TransferOutputError;
+			reason_code = CONDOR_HOLD_CODE::TransferOutputError;
 		}
 
 		// Now create a more human-readable HoldReason string.
 		std::string EP_name = slot_name.empty() ? "the execution point" : ("execution point " + slot_name);
-		formatstr(new_hold_reason, "Transfer %s files failure at ",
+		formatstr(new_reason_str, "Transfer %s files failure at ",
 			transfer_input_error ? "input" : "output");
 		if (err_occurred_at_EP) {
 			// Error happened at the EP
-			new_hold_reason += EP_name;
+			new_reason_str += EP_name;
 			if (url_file_type.empty()) {
-				formatstr_cat(new_hold_reason, " while %s files %s access point %s",
+				formatstr_cat(new_reason_str, " while %s files %s access point %s",
 					transfer_input_error ? "receiving" : "sending",
 					transfer_input_error ? "from" : "to",
 					get_local_hostname().c_str());
@@ -550,20 +546,20 @@ BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int & hold
 		}
 		else {
 			// Error happened at the AP
-			formatstr_cat(new_hold_reason, "access point %s while %s files %s %s",
+			formatstr_cat(new_reason_str, "access point %s while %s files %s %s",
 				get_local_hostname().c_str(),
 				transfer_output_error ? "receiving" : "sending",
 				transfer_output_error ? "from" : "to",
 				EP_name.c_str());
 		}
 		if (!url_file_type.empty()) {
-			formatstr_cat(new_hold_reason, " using protocol %s", url_file_type.c_str());
+			formatstr_cat(new_reason_str, " using protocol %s", url_file_type.c_str());
 		}
-		formatstr_cat(new_hold_reason, ". Details: %s",
-			actual_error.empty() ? orig_hold_reason : actual_error.c_str());
+		formatstr_cat(new_reason_str, ". Details: %s",
+			actual_error.empty() ? orig_reason_str : actual_error.c_str());
 	}
 
-	return new_hold_reason;
+	return new_reason_str;
 }
 
 void
@@ -574,15 +570,6 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In HoldJob() for job %d.%d w/ NULL JobAd!\n", getCluster(), getProc() );
 		DC_Exit( JOB_SHOULD_HOLD );
-	}
-
-	// Note: improveHoldAttributescan change the hold_reason_code and subcode,
-	// and will pass back a potentially improved hold reason string.
-	std::string improved_hold_reason =
-		improveHoldAttributes(reason, hold_reason_code, hold_reason_subcode);
-	// If we have an improved hold reason string, use it instead.
-	if (!improved_hold_reason.empty()) {
-		reason = improved_hold_reason.c_str();
 	}
 
 	dprintf(D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n",
@@ -894,7 +881,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 
 void
-BaseShadow::evictJob( int reason, const std::string &reasonStr)
+BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, int reason_subcode)
 {
 	std::string from_where;
 	std::string machine;
@@ -902,9 +889,34 @@ BaseShadow::evictJob( int reason, const std::string &reasonStr)
 	// If we previously delayed exiting to let the starter wrap up, then
 	// immediately try exiting now. None of the cleanup below here is
 	// appropriate in that case.
-	if ( exitDelayed( reason ) ) {
-		exitAfterEvictingJob( reason );
+	if ( exitDelayed( exit_reason ) ) {
+		exitAfterEvictingJob( exit_reason );
 		return;
+	}
+
+	if (reason_str == nullptr || *reason_str == '\0') {
+		switch(exit_reason) {
+		case JOB_SHOULD_REQUEUE:
+			if (!reason_str) reason_str = "Unspecified job interruption";
+			reason_code = CONDOR_HOLD_CODE::JobShouldRequeue;
+			break;
+		case JOB_NOT_STARTED:
+			if (!reason_str) reason_str = "Problem preparing job to run";
+			reason_code = CONDOR_HOLD_CODE::JobNotStarted;
+			break;
+		default:
+			// Other exit reasons don't need a reason
+			reason_str = "";
+		}
+	}
+
+	// Note: improveReasonAttributescan change the reason_code and subcode,
+	// and will pass back a potentially improved reason string.
+	std::string improved_reason_str =
+		improveReasonAttributes(reason_str, reason_code, reason_subcode);
+	// If we have an improved reason string, use it instead.
+	if (!improved_reason_str.empty()) {
+		reason_str = improved_reason_str.c_str();
 	}
 
 	if( getMachineName(machine) ) {
@@ -915,17 +927,24 @@ BaseShadow::evictJob( int reason, const std::string &reasonStr)
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In evictJob() w/ NULL JobAd!\n" );
-		DC_Exit( reason );
+		DC_Exit( exit_reason );
 	}
 
+		// record details about this vacate into the job ad
+	jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+	jobAd->Assign(ATTR_VACATE_REASON, reason_str);
+	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
+	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
+
+	writeJobEpochFile(getJobAd());
+
+	if (exit_reason != JOB_RECONNECT_FAILED) {
 		// cleanup this shadow (kill starters, etc)
-	cleanUp( jobWantsGracefulRemoval() );
+		cleanUp( jobWantsGracefulRemoval() );
 
 		// write stuff to user log:
-	logEvictEvent( reason, reasonStr);
-
-		// record the time we were vacated into the job ad 
-	jobAd->Assign( ATTR_LAST_VACATE_TIME, time(nullptr) );
+		logEvictEvent( exit_reason, reason_str);
+	}
 
 		// update the job ad in the queue with some important final
 		// attributes so we know what happened to the job when using
@@ -935,7 +954,7 @@ BaseShadow::evictJob( int reason, const std::string &reasonStr)
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
-	exitAfterEvictingJob( reason );
+	exitAfterEvictingJob( exit_reason );
 }
 
 
@@ -1035,90 +1054,6 @@ int getJobAdExitSignal(ClassAd *jad, int &exit_signal)
 	}
 
 	return TRUE;
-}
-
-static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd) 
-{
-	std::string resslist;
-	if ( ! jobAd->LookupString("ProvisionedResources", resslist))
-		resslist = "Cpus, Disk, Memory";
-
-	StringList reslist(resslist.c_str());
-	if (reslist.number() > 0) {
-		ClassAd * puAd = new ClassAd();
-
-		reslist.rewind();
-		while (const char * resname = reslist.next()) {
-			std::string attr;
-			std::string res = resname;
-			title_case(res); // capitalize it to make it print pretty.
-			const int copy_ok = classad::Value::ERROR_VALUE | classad::Value::BOOLEAN_VALUE | classad::Value::INTEGER_VALUE | classad::Value::REAL_VALUE;
-			classad::Value value;
-			attr = res + "Provisioned";	 // provisioned value
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(resname, plit); // usage ad has attribs like they appear in Machine ad
-				}
-			}
-			// /*for debugging*/ else { puAd->Assign(resname, 42); }
-			attr = "Request"; attr += res;   	// requested value
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-			// /*for debugging*/ else { puAd->Assign(attr, 99); }
-
-			attr = res + "Usage"; // (implicitly) peak usage value
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-
-			attr = res + "AverageUsage"; // average usage
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-
-			attr = res + "MemoryUsage"; // special case for GPUs.
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-
-			attr = res + "MemoryAverageUsage"; // just in case.
-			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
-				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
-				if (plit) {
-					puAd->Insert(attr, plit);
-				}
-			}
-
-			attr = "Assigned"; attr += res;
-			CopyAttribute( attr, *puAd, *jobAd );
-		}
-
-		// Hard code a couple of useful time-based attributes that are not "Requested" yet
-		// and shorten their names to display more reasonably
-		int jaed = 0;
-		if (jobAd->LookupInteger(ATTR_JOB_ACTIVATION_EXECUTION_DURATION, jaed)) {
-			puAd->Assign("TimeExecuteUsage", jaed);
-		}
-		int jad = 0;
-		if (jobAd->LookupInteger(ATTR_JOB_ACTIVATION_DURATION, jad)) {
-			puAd->Assign("TimeSlotBusyUsage", jad);
-		}
-		*ppusageAd = puAd;
-	}
 }
 
 // kind defaults to US_NORMAL.
@@ -1250,45 +1185,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		event.core_file = core_file_name;
 	}
 
-#if 1
-	set_usageAd(jobAd, &event.pusageAd);
-#else
-	std::string resslist;
-	if ( ! jobAd->LookupString("PartitionableResources", resslist))
-		resslist = "Cpus, Disk, Memory";
-
-	StringList reslist(resslist.c_str());
-	if (reslist.number() > 0) {
-		int64_t int64_value = 0;
-		ClassAd * puAd = new ClassAd();
-
-		reslist.rewind();
-		char * resname = NULL;
-		while ((resname = reslist.next()) != NULL) {
-			std::string attr;
-			int64_value = -1;
-			attr = resname; // provisioned value
-			if (jobAd->LookupInteger(attr, int64_value)) {
-				puAd->Assign(attr, int64_value);
-			} 
-			// /*for debugging*/ else { puAd->Assign(attr, 42); }
-			int64_value = -2;
-			attr = "Request";
-			attr += resname; // requested value
-			if (jobAd->LookupInteger(attr, int64_value)) {
-				puAd->Assign(attr, int64_value);
-			}
-			// /*for debugging*/ else { puAd->Assign(attr, 99); }
-			int64_value = -3;
-			attr = resname;
-			attr += "Usage"; // usage value
-			if (jobAd->LookupInteger(attr, int64_value)) {
-				puAd->Assign(attr, int64_value);
-			}
-		}
-		event.pusageAd = puAd;
-	}
-#endif
+	setEventUsageAd(*jobAd, &event.pusageAd);
 
 	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
 	event.setToeTag( toeTag );
@@ -1332,7 +1229,7 @@ BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr )
 		// remote rusage
 	event.run_remote_rusage = run_remote_rusage;
 	
-	set_usageAd(jobAd, &event.pusageAd);
+	setEventUsageAd(*jobAd, &event.pusageAd);
 
 		/*
 		  we want to log the events from the perspective of the user
@@ -1434,20 +1331,25 @@ BaseShadow::checkSwap( void )
 
 // Note: log_except is static
 void
-BaseShadow::log_except(const char *msg)
+BaseShadow::log_except(const char *msg_str)
 {
-	if(!msg) msg = "";
+	std::string msg = msg_str ? msg_str : "";
 
 	if ( BaseShadow::myshadow_ptr == NULL ) {
-		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg);
+		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg.c_str());
 		return;
 	}
+
+	// Do NOT pass newlines into this exception, since it ends up
+	// in corrupting the job event log.
+	trim(msg);
+	std::replace(msg.begin(), msg.end(), '\n', '|');
 
 	// log shadow exception event
 	ShadowExceptionEvent event;
 	bool exception_already_logged = false;
 
-	snprintf(event.message, sizeof(event.message), "%s", msg);
+	snprintf(event.message, sizeof(event.message), "%s", msg.c_str());
 	event.message[sizeof(event.message)-1] = '\0';
 
 	BaseShadow *shadow = BaseShadow::myshadow_ptr;
@@ -1463,9 +1365,13 @@ BaseShadow::log_except(const char *msg)
 		event.began_execution = TRUE;
 	}
 
+	std::string msg_in_job = msg;
+	std::replace(msg_in_job.begin(), msg_in_job.end(), '\n', '_'); // just in case
+	Shadow->getJobAd()->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, msg_in_job);
+	Shadow->updateJobInQueue(U_STATUS);
 	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,shadow->jobAd))
 	{
-		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", msg);
+		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", msg.c_str());
 	}
 }
 

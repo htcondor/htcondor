@@ -42,10 +42,8 @@ int submit_expand_globs(StringList &items, int options, std::string & errmsg);
 
 // functions for handling the queue statement
 int queue_connect();
-int queue_begin(StringList & vars, bool new_cluster); // called before iterating items
-void queue_end(StringList & vars, bool fEof); // called when done iterating items for a single queue statement, and at end of file
 
-int queue_item(int num, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws);
+int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws);
 // option flags for queue_item.
 #define QUEUE_OPT_WARN_EMPTY_FIELDS (1<<0)
 #define QUEUE_OPT_FAIL_EMPTY_FIELDS (1<<1)
@@ -107,14 +105,6 @@ struct SubmitErrContext {
 	const char * raw_macro_val; // set to raw macro value during submit hashtable expansion
 };
 extern struct SubmitErrContext  ErrContext;
-
-#if 0 // no longer used
-int submit_factory_job (
-	FILE * fp,
-	MACRO_SOURCE & source,            // source that fp refers to
-	List<const char> & extraLines,    // lines passed in via -a argument
-	std::string & queueCommandLine);  // queue statement passed in via -q argument
-#endif
 
 int write_factory_file(const char * filename, const void* data, int cb, mode_t access);
 

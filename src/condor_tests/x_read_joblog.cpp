@@ -562,7 +562,7 @@ int main(int argc, char* argv[])
 
 	if( strcmp(action, "FULLREMOVE") == 0 )
 	{
-		if(running_jobs)
+		if(running_jobs > 0)
 		{
 			printf("FAILED\n");
 			return(1);

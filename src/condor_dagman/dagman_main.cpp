@@ -30,12 +30,10 @@
 #include "my_username.h"
 #include "condor_environ.h"
 #include "dagman_main.h"
-#include "dagman_commands.h"
 #include "condor_getcwd.h"
-#include "directory.h"
 #include "condor_version.h"
-#include "subsystem_info.h"
 #include "dagman_metrics.h"
+#include "directory.h"
 
 namespace deep = DagmanDeepOptions;
 
@@ -51,42 +49,18 @@ DagmanUtils dagmanUtils;
 
 //---------------------------------------------------------------------------
 static void Usage() {
-	debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
-			"\t\t-Lockfile <NAME.dag.lock>\n"
-			"\t\t-Dag <NAME.dag>\n"
-			"\t\t-CsdVersion <version string>\n"
-			"\t\t[-Help]\n"
-			"\t\t[-Version]\n"
-			"\t\t[-Debug <level>]\n"
-			"\t\t[-MaxIdle <int N>]\n"
-			"\t\t[-MaxJobs <int N>]\n"
-			"\t\t[-MaxPre <int N>]\n"
-			"\t\t[-MaxPost <int N>]\n"
-			"\t\t[-MaxHold <int N>]\n"
-			"\t\t[-DontAlwaysRunPost]\n"
-			"\t\t[-AlwaysRunPost]\n"
-			"\t\t[-WaitForDebug]\n"
-			"\t\t[-UseDagDir]\n"
-			"\t\t[-AutoRescue <0|1>]\n"
-			"\t\t[-DoRescueFrom <int N>]\n"
-			"\t\t[-load_save filename]\n"
-			"\t\t[-AllowVersionMismatch]\n"
-			"\t\t[-DumpRescue]\n"
-			"\t\t[-Verbose]\n"
-			"\t\t[-Force]\n"
-			"\t\t[-Notification <never|always|complete|error>]\n"
-			"\t\t[-Suppress_notification]\n"
-			"\t\t[-Dont_Suppress_notification]\n"
-			"\t\t[-Dagman <dagman_executable>]\n"
-			"\t\t[-Outfile_dir <directory>]\n"
-			"\t\t[-Update_submit]\n"
-			"\t\t[-Import_env]\n"
-			"\t\t[-Include_env <Variables>]\n"
-			"\t\t[-Insert_env <Key=Value>]\n"
-			"\t\t[-Priority <int N>]\n"
-			"\t\t[-DoRecov]\n"
-			"\twhere NAME is the name of your DAG.\n"
-			"\tdefault -Debug is -Debug %d\n", DEBUG_VERBOSE );
+	std::string outFile = "<DAG File>.lib.out";
+	if (dagman.dagFiles.size() > 0) {
+		std::string primaryDag = dagman.dagFiles.front();
+		formatstr(outFile, "%s.lib.out", primaryDag.c_str());
+	}
+	debug_printf(DEBUG_SILENT, "To view condor_dagman usage look at %s\n", outFile.c_str());
+	fprintf(stdout, "Usage: condor_dagman -p 0 -f -l . -Dag <NAME.dag> -Lockfile <NAME.dag.lock> -CsdVersion <version string>\n");
+	fprintf(stdout, "\t[-Help]\n"
+	                "\t[-Version]\n");
+	dagmanUtils.DisplayDAGManOptions("\t[%s]\n", DagOptionSrc::DAGMAN_MAIN);
+	fprintf(stdout, "Where NAME is the name of your DAG file.\n"
+	                "Default -Debug is -Debug %d\n", DEBUG_VERBOSE);
 	DC_Exit( EXIT_ERROR );
 }
 
@@ -259,11 +233,9 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_priority );
 
-	options[deep::b::SuppressNotification] = param_boolean(
-		"DAGMAN_SUPPRESS_NOTIFICATION",
-		options[deep::b::SuppressNotification]);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_NOTIFICATION setting: %s\n",
-		options[deep::b::SuppressNotification] ? "True" : "False" );
+	options[deep::b::SuppressNotification] = param_boolean("DAGMAN_SUPPRESS_NOTIFICATION", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_SUPPRESS_NOTIFICATION setting: %s\n",
+	             options[deep::b::SuppressNotification] ? "True" : "False");
 
 		// Event checking setup...
 
@@ -373,11 +345,12 @@ Dagman::Config()
 	if (adInjectInfo) {
 		debug_printf(DEBUG_NORMAL, "DAGMAN_NODE_RECORD_INFO recording:\n");
 		StringTokenIterator list(adInjectInfo);
-		for (auto& info : list) {
-			trim(info);
-			lower_case(info);
+		for (const auto& info : list) {
+			std::string mutable_info {info};
+			trim(mutable_info);
+			lower_case(mutable_info);
 			//TODO: If adding more keywords consider using an unsigned int and bit mask
-			if (info.compare("retry") == MATCH) {
+			if (mutable_info.compare("retry") == MATCH) {
 				jobInsertRetry = true;
 				debug_printf(DEBUG_NORMAL, "\t-NODE Retries\n");
 			}
@@ -388,7 +361,7 @@ Dagman::Config()
 	if (!_requestedMachineAttrs.empty()) {
 		debug_printf(DEBUG_NORMAL, "DAGMAN_RECORD_MACHINE_ATTRS: %s\n", _requestedMachineAttrs.c_str());
 		//Use machine attrs list to construct new job ad attributes to add to userlog
-		StringTokenIterator requestAttrs(_requestedMachineAttrs, " ,\t");
+		StringTokenIterator requestAttrs(_requestedMachineAttrs);
 		bool firstAttr = true;
 		_ulogMachineAttrs.clear();
 		for(auto& attr : requestAttrs) {
@@ -415,6 +388,9 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
 
+	check_queue_interval = param_integer("DAGMAN_CHECK_QUEUE_INTERVAL", 28800);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_CHECK_QUEUE_INTERVAL setting: %d\n", check_queue_interval);
+
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n",
 				autoRescue ? "True" : "False" );
@@ -426,6 +402,10 @@ Dagman::Config()
 
 	_writePartialRescueDag = param_boolean( "DAGMAN_WRITE_PARTIAL_RESCUE",
 				_writePartialRescueDag );
+	if ( ! _writePartialRescueDag) {
+		debug_printf(DEBUG_NORMAL, "\n\nWARNING: DAGMan is configured to write Full Rescue DAG files.\n"
+		                           "This is Deprecated and will be removed during V24 feature series of HTCondor!\n\n");
+	}
 	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
 				_writePartialRescueDag ? "True" : "False" );
 
@@ -660,6 +640,18 @@ int main_testing_stub( Service *, int ) {
 void main_init (int argc, char ** const argv) {
 
 	printf ("Executing condor dagman ... \n");
+
+
+// We are seeing crashes in dagman after exit when global dtors 
+// are being called after the classad cache map is destroyed,
+// but only on Windows, probably because order of destruction
+// is not defined.  
+// Surely there must be better ways to fix this, but 
+// for now, just turn off the cache on Windows for dagman.
+
+#ifdef WIN32
+	classad::ClassAdSetExpressionCaching(false);
+#endif
 
 	std::string tmpcwd;
 	condor_getcwd( tmpcwd );
@@ -933,7 +925,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf(DEBUG_SILENT, "No environment variables passed for -include_env\n");
 				Usage();
 			}
-			dagman.options.append("GetFromEnv", argv[i]);
+			dagman.options.extend("GetFromEnv", argv[i]);
 
 		} else if( !strcasecmp( "-insert_env", argv[i] ) ) {
 			if (argc <= i+1 || argv[++i][0] == '-') {
@@ -954,6 +946,15 @@ void main_init (int argc, char ** const argv) {
 
 		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
 			dagman._doRecovery = true;
+
+		} else if ( !strcasecmp("-SubmitMethod", argv[i])) {
+			i++;
+			if (argc <= i) {
+				debug_printf( DEBUG_SILENT, "No submit method specified\n" );
+				Usage();
+			}
+			dagman.options.set("SubmitMethod", argv[i]);
+			dagman.useDirectSubmit = (bool)dagman.options[deep::i::SubmitMethod];
 
 		} else {
 			debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
@@ -1222,7 +1223,7 @@ void main_init (int argc, char ** const argv) {
 		// already set.
 		//
 	dagman.options[deep::b::UseDagDir] = dagman.useDagDir;
-	dagman.options[deep::b::AutoRescue] = dagman.autoRescue;
+	dagman.options[deep::i::AutoRescue] = dagman.autoRescue;
 	dagman.options[deep::i::DoRescueFrom] = dagman.doRescueFrom;
 	dagman.options[deep::b::AllowVersionMismatch] = allowVerMismatch;
 	dagman.options[deep::b::Recurse] = false;
@@ -1242,13 +1243,13 @@ void main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
-						  dagman._defaultNodeLog.c_str(),
+						  dagman._defaultNodeLog,
 						  dagman._generateSubdagSubmits,
 						  &dagman.options,
 						  false, dagman._schedd ); /* toplevel dag! */
 
 	if( dagman.dag == NULL ) {
-		EXCEPT( "ERROR: out of memory!\n");
+		EXCEPT( "ERROR: out of memory!");
 	}
 
 	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
@@ -1761,7 +1762,7 @@ void condor_event_timer (int /* tid */) {
 
 	// Before submitting ready jobs, check the user log for errors or shrinking.
 	// If either happens, this is really really bad! Bail out immediately.
-	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus();
+	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus(dagman.check_queue_interval);
 	if( log_status == ReadUserLog::LOG_STATUS_ERROR || log_status == ReadUserLog::LOG_STATUS_SHRUNK ) {
 		debug_printf( DEBUG_NORMAL, "DAGMan exiting due to error in log file\n" );
 		dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
@@ -1948,7 +1949,6 @@ void condor_event_timer (int /* tid */) {
 	// Statistics gathering
 	eventTimerEndTime = condor_gettimestamp_double();
 	dagman._dagmanStats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
-
 }
 
 

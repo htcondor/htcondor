@@ -472,6 +472,8 @@ still available resources and recomputed pie slices. The matchmaker
 continues spinning the pie until it runs out of machines or all the
 *condor_schedd* daemons say they have no more jobs.
 
+.. _Group Accounting:
+
 Group Accounting
 ----------------
 
@@ -510,7 +512,7 @@ jobs have identical requirements, they will be run First-In, First-Out,
 so whoever submitted first makes the subsequent jobs wait until the 
 last one of the first submit is finished.
 
-
+.. _Hierarchical Group Quotas:
 
 Accounting Groups with Hierarchical Group Quotas
 ------------------------------------------------
@@ -1145,7 +1147,7 @@ no further configuration is needed. To run a different
 HTCondor to automatically start it.
 
 If using a separate host for the HTCondorView collector, to start it, add the
-value :macro:`COLLECTOR` to :macro:`DAEMON_LIST`, and restart HTCondor on that
+value ``COLLECTOR`` to :macro:`DAEMON_LIST`, and restart HTCondor on that
 host. To run the HTCondorView collector on the same host as another
 *condor_collector*, ensure that the two *condor_collector* daemons use
 different network ports. Here is an example configuration in which the main
@@ -1692,7 +1694,7 @@ Recognized metric attribute names and their use:
  Verbosity
     The integer verbosity level of this metric. Metrics with a higher
     verbosity level than that specified by configuration variable
-    :macro:`GANGLIA_VERBOSITY` will not be published.
+    :macro:`GANGLIAD_VERBOSITY` will not be published.
  TargetType
     A string containing a comma-separated list of daemon ClassAd types
     that this metric monitors. The specified values should match the

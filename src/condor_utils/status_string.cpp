@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include <string>
 
 void
 statusString( int status, std::string& str )

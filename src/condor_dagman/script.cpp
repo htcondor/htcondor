@@ -23,9 +23,7 @@
 #include "script.h"
 #include "job.h"
 #include "tmp_dir.h"
-#include "dagman_main.h"
 
-#include "env.h"
 #include "condor_daemon_core.h"
 
 extern DLL_IMPORT_MAGIC char **environ;

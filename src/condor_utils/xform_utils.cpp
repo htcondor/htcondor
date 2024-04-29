@@ -39,7 +39,6 @@
 #include "condor_regex.h"
 #include "xform_utils.h"
 
-#include "list.h"
 #include "my_popen.h"
 
 #include <charconv>
@@ -841,7 +840,7 @@ int MacroStreamXFormSource::open(const char * statements_in, int & offset, std::
 	size_t cb = strlen(statements);
 	char * buf = (char*)malloc(cb + 2);
 	file_string.set(buf);
-	StringTokenIterator lines(statements, "\r\n", false);
+	StringTokenIterator lines(statements, "\r\n", STI_NO_TRIM);
 	int start, length, linecount = 0;
 	while ((start = lines.next_token(length)) >= 0) {
 		// tentatively copy the line, then append a null terminator
@@ -996,7 +995,7 @@ const char * MacroStreamXFormSource::getFormattedText(std::string & buf, const c
 		buf += requirements.c_str();
 	}
 	if (file_string) {
-		StringTokenIterator lines(file_string.ptr(), "\n", false);
+		StringTokenIterator lines(file_string.ptr(), "\n", STI_NO_TRIM);
 		for (const char * line = lines.first(); line; line = lines.next()) {
 			if ( ! include_comments) {
 				while (*line && isspace(*line)) ++line;
@@ -1048,7 +1047,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 	}
 
 	// if no loop variable specified, but a foreach mode is used. use "Item" for the loop variable.
-	if (oa.vars.isEmpty() && (oa.foreach_mode != foreach_not)) { oa.vars.append("Item"); }
+	if (oa.vars.empty() && (oa.foreach_mode != foreach_not)) { oa.vars.emplace_back("Item"); }
 
 	// fill in the items array from a file
 	if ( ! oa.items_filename.empty()) {
@@ -1181,7 +1180,7 @@ static char EmptyItemString[] = "";
 
 int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 {
-	if (oa.vars.isEmpty()) return 0;
+	if (oa.vars.empty()) return 0;
 
 	// make a copy of the item so we can destructively edit it.
 	char * data;
@@ -1196,8 +1195,8 @@ int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 
 	// set the first loop variable unconditionally, we set it initially to the whole item
 	// we may later truncate that item when we assign fields to other loop variables.
-	char * var = oa.vars.first();
-	set.set_live_variable(var, data, ctx);
+	auto var_it = oa.vars.begin();
+	set.set_live_variable(var_it->c_str(), data, ctx);
 
 	const char* token_seps = ", \t";
 	const char* token_ws = " \t";
@@ -1205,7 +1204,7 @@ int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 	// if there is more than a single loop variable, then assign them as well
 	// we do this by destructively null terminating the item for each var
 	// the last var gets all of the remaining item text (if any)
-	while ((var = oa.vars.next())) {
+	while ((++var_it != oa.vars.end())) {
 		// scan for next token separator
 		while (*data && ! strchr(token_seps, *data)) ++data;
 		// null terminate the previous token and advance to the start of the next token.
@@ -1213,7 +1212,7 @@ int MacroStreamXFormSource::set_iter_item(XFormHash &set, const char* item)
 			*data++ = 0;
 			// skip leading separators and whitespace
 			while (*data && strchr(token_ws, *data)) ++data;
-			set.set_live_variable(var, data, ctx);
+			set.set_live_variable(var_it->c_str(), data, ctx);
 		}
 	}
 	return curr_item.ptr() != NULL;
@@ -1631,9 +1630,9 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 
 	// for 2 argument keywords, consume the attribute token and move on to the next one
 	if ((pkw->options & kw_opt_argcount_mask) == 2) {
-		toke.next();
+		if ( ! toke.next()) { errmsg = pkw->key; errmsg += " needs 2 arguments"; return -1; }
 		if (toke.matches("=") || toke.matches(",")) {
-			toke.next();  // consume the keyword token
+			if ( ! toke.next()) { errmsg = pkw->key; errmsg += " needs 2 arguments"; return -1; } // consume the keyword token
 		}
 	}
 

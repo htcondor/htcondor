@@ -155,7 +155,7 @@ All configuration settings necessary to enable the *condor_credd* are
 contained in the example file etc\\condor_config.local.credd from the
 HTCondor distribution. Copy these settings into a local configuration
 file for the machine that will run the *condor_credd*. Run
-``condor_restart`` for these new settings to take effect, then verify
+:tool:`condor_restart` for these new settings to take effect, then verify
 (via Task Manager) that a *condor_credd* process is running.
 
 A second set of configuration variables specify security for the
@@ -164,7 +164,7 @@ all machines in the pool. The following example settings are in the
 comments contained in the etc\\condor_config.local.credd example file.
 These sample settings rely on the ``PASSWORD`` method for authentication
 among daemons, including communication with the *condor_credd* daemon.
-The :macro:`LOCAL_CREDD` variable must be
+The :macro:`CREDD_HOST` variable must be
 customized to point to the machine hosting the *condor_credd* and the
 :macro:`ALLOW_CONFIG` variable will be
 customized, if needed, to refer to an administrative account that exists

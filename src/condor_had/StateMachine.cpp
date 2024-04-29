@@ -879,22 +879,6 @@ HADStateMachine::checkList( std::set<int> list ) const
 }
 
 /***********************************************************
-  Function :
-*/
-void
-HADStateMachine::removeAllFromList( List<int>* list )
-{
-    int* elem;
-    list->Rewind();
-    while((elem = list->Next()) ) {
-        delete elem;
-        list->DeleteCurrent();
-    }
-    //assert(list->IsEmpty());
-
-}
-
-/***********************************************************
     Function :
 */
 void

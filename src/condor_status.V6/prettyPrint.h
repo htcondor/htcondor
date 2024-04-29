@@ -130,7 +130,7 @@ class PrettyPrinter {
 
 	public:
 		AttrListPrintMask           pm;
-		List<const char>			pm_head;
+		std::vector<const char *>	pm_head;
 		ppOption					ppStyle;
 		ppOption					ppTotalStyle;
 		printmask_headerfooter_t	pmHeadFoot;

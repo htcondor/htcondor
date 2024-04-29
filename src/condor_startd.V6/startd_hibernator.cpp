@@ -36,17 +36,13 @@
 
 // Publich Linux hibernator class methods
 StartdHibernator::StartdHibernator( void ) noexcept
-		: HibernatorBase (),
-		  m_plugin_args(NULL)
+		: HibernatorBase ()
 {
 	update( );
 }
 
 StartdHibernator::~StartdHibernator( void ) noexcept
 {
-	if (m_plugin_args) {
-		delete m_plugin_args;
-	}	
 }
 
 bool
@@ -73,13 +69,10 @@ StartdHibernator::update( void )
 		free( tmp );
 	}
 
-	if( m_plugin_args ) {
-		delete m_plugin_args;
-		m_plugin_args = NULL;
-	}
+	m_plugin_args.clear();
 	tmp = param("HIBERNATION_PLUGIN_ARGS");
 	if ( tmp ) {
-		m_plugin_args = new StringList( tmp );
+		m_plugin_args = split(tmp);
 		free( tmp );
 	}
 	return true;
@@ -91,12 +84,8 @@ StartdHibernator::initialize( void )
 	ArgList	argList;
 	argList.AppendArg( m_plugin_path );
 
-	if ( m_plugin_args ) {
-		m_plugin_args->rewind();
-		char	*tmp;
-		while( ( tmp = m_plugin_args->next() ) != NULL ) {
-			argList.AppendArg( tmp );
-		}
+	for (const auto& tmp: m_plugin_args) {
+		argList.AppendArg(tmp);
 	}
 
 	argList.AppendArg( "ad" );
@@ -168,12 +157,8 @@ StartdHibernator::enterState( SLEEP_STATE state, bool /*force*/ ) const
 	if( param_boolean("HIBERNATION_DEBUG", false) ) {
 		args.AppendArg( "-d" );
 	}
-	if ( m_plugin_args ) {
-		m_plugin_args->rewind();
-		char	*tmp;
-		while( ( tmp = m_plugin_args->next() ) != NULL ) {
-			args.AppendArg( tmp );
-		}
+	for (const auto& tmp: m_plugin_args) {
+		args.AppendArg( tmp );
 	}
 
 	args.AppendArg( "set" );

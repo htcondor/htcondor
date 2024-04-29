@@ -75,7 +75,6 @@
 #include "condor_uid.h"
 #include "condor_mkstemp.h"
 #include "basename.h"
-#include "condor_random_num.h"
 #include "subsystem_info.h"
 #include "param_info.h"
 #include "param_info_tables.h"
@@ -83,8 +82,10 @@
 #include "filename_tools.h"
 #include "which.h"
 #include "classad_helpers.h"
-#include <algorithm> // for std::sort
 #include "CondorError.h"
+#include "../condor_sysapi/sysapi.h"
+#include <algorithm> // for std::sort
+
 
 // define this to keep param who's values match defaults from going into the runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
@@ -386,8 +387,8 @@ static bool continue_if_no_config = false; // so condor_who won't exit if no con
 extern bool condor_fsync_on;
 
 std::string global_config_source;
-StringList local_config_sources;
-std::string user_config_source; // which if the files in local_config_sources is the user file
+std::vector<std::string> local_config_sources;
+std::string user_config_source; // which of the files in local_config_sources is the user file
 
 
 static void init_macro_eval_context(MACRO_EVAL_CONTEXT &ctx)
@@ -450,21 +451,20 @@ void config_dump_string_pool(FILE * fh, const char * sep)
 
 /* 
   A convenience function that calls param() then inserts items from the value
-  into the given StringList if they are not already there
+  into the given vector if they are not already there
 */
-bool param_and_insert_unique_items(const char * param_name, StringList & items, bool case_sensitive /*=false*/)
+bool param_and_insert_unique_items(const char * param_name, std::vector<std::string> & items, bool case_sensitive /*=false*/)
 {
 	int num_inserts = 0;
-	auto_free_ptr value(param(param_name));
-	if (value) {
-		StringTokenIterator it(value);
-		for (const char * item = it.first(); item; item = it.next()) {
+	std::string value;
+	if (param(value, param_name)) {
+		for (auto& item: StringTokenIterator(value)) {
 			if (case_sensitive) {
-				if (items.contains(item)) continue;
+				if (contains(items, item)) continue;
 			} else {
-				if (items.contains_anycase(item)) continue;
+				if (contains_anycase(items, item)) continue;
 			}
-			items.insert(item);
+			items.emplace_back(item);
 			++num_inserts;
 		}
 	}
@@ -494,7 +494,7 @@ void
 config_fill_ad( ClassAd* ad, const char *prefix )
 {
 	const char * subsys = get_mySubSystem()->getName();
-	StringList reqdAttrs;
+	std::vector<std::string> reqdAttrs;
 	std::string param_name;
 
 	if( !ad ) return;
@@ -525,24 +525,21 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 		param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 	}
 
-	if ( ! reqdAttrs.isEmpty()) {
+	for (const auto& attr: reqdAttrs) {
+		auto_free_ptr expr(NULL);
+		if (prefix) {
+			formatstr(param_name, "%s_%s", prefix, attr.c_str());
+			expr.set(param(param_name.c_str()));
+		}
+		if ( ! expr) {
+			expr.set(param(attr.c_str()));
+		}
+		if ( ! expr) continue;
 
-		for (const char * attr = reqdAttrs.first(); attr; attr = reqdAttrs.next()) {
-			auto_free_ptr expr(NULL);
-			if (prefix) {
-				formatstr(param_name, "%s_%s", prefix, attr);
-				expr.set(param(param_name.c_str()));
-			}
-			if ( ! expr) {
-				expr.set(param(attr));
-			}
-			if ( ! expr) continue;
-
-			if ( ! ad->AssignExpr(attr, expr.ptr())) {
-				dprintf(D_ALWAYS,
-						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						attr, expr.ptr(), subsys);
-			}
+		if ( ! ad->AssignExpr(attr, expr.ptr())) {
+			dprintf(D_ALWAYS,
+					"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
+					attr.c_str(), expr.ptr(), subsys);
 		}
 	}
 	
@@ -640,7 +637,7 @@ bool validate_config(bool abort_if_invalid, int opt)
 		int errcode, erroffset;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
 		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS)) {
-			EXCEPT("Programmer error in condor_config: invalid regexp\n");
+			EXCEPT("Programmer error in condor_config: invalid regexp");
 		}
 	}
 
@@ -964,7 +961,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		if (find_user_file(user_config_source, user_config_name.c_str(), true, false)) {
 			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config_source.c_str());
 			process_config_source(user_config_source.c_str(), 1, "user_config source", host, false);
-			local_config_sources.append(user_config_source.c_str());
+			local_config_sources.emplace_back(user_config_source);
 		}
 	}
 
@@ -1130,7 +1127,7 @@ process_locals( const char* param_name, const char* host )
 		if (simulated_local_config) sources_to_process.append(simulated_local_config);
 		sources_to_process.rewind();
 		while( (source = sources_to_process.next()) ) {
-			local_config_sources.append( source );
+			local_config_sources.emplace_back( source );
 			process_config_source( source, 1, "config source", host,
 								   local_required );
 
@@ -1271,7 +1268,7 @@ get_exclude_regex(Regex &excludeFilesRegex)
 */
 bool check_config_file_access(
 	const char * username,
-	StringList &errfiles)
+	std::vector<std::string> &errfiles)
 {
 	if ( ! can_switch_ids())
 		return true;
@@ -1292,20 +1289,19 @@ bool check_config_file_access(
 	bool any_failed = false;
 	if (0 != access(global_config_source.c_str(), R_OK)) {
 		any_failed = true; 
-		errfiles.append(global_config_source.c_str());
+		errfiles.emplace_back(global_config_source);
 	}
-	local_config_sources.rewind();
-	
-	for (const char * file = local_config_sources.first(); file != NULL; file = local_config_sources.next()) {
+
+	for (const auto& file: local_config_sources) {
 		// If we switch users, then we wont even see the current user config file, so dont' check it's access.
-		if ( ! user_config_source.empty() && (MATCH == strcmp(file, user_config_source.c_str())))
+		if ( ! user_config_source.empty() && (MATCH == strcmp(file.c_str(), user_config_source.c_str())))
 			continue;
-		if (is_piped_command(file)) continue;
+		if (is_piped_command(file.c_str())) continue;
 		// check for access, other failures we ignore here since if the file or directory doesn't exist
 		// that will most likely not be an error once we reconfig
-		if (0 != access(file, R_OK) && errno == EACCES) {
+		if (0 != access(file.c_str(), R_OK) && errno == EACCES) {
 			any_failed = true;
-			errfiles.append(file);
+			errfiles.emplace_back(file);
 		}
 	}
 
@@ -1317,7 +1313,7 @@ bool check_config_file_access(
 
 
 bool
-get_config_dir_file_list( char const *dirpath, StringList &files )
+get_config_dir_file_list( char const *dirpath, std::vector<std::string> &files )
 {
 	Regex excludeFilesRegex;
 	get_exclude_regex(excludeFilesRegex);
@@ -1335,7 +1331,7 @@ get_config_dir_file_list( char const *dirpath, StringList &files )
 		if(! dir.IsDirectory() ) {
 			if(!excludeFilesRegex.isInitialized() ||
 			   !excludeFilesRegex.match(file)) {
-				files.append(dir.GetFullPath());
+				files.emplace_back(dir.GetFullPath());
 			} else {
 				dprintf(D_FULLDEBUG|D_CONFIG,
 						"Ignoring config file "
@@ -1346,7 +1342,7 @@ get_config_dir_file_list( char const *dirpath, StringList &files )
 		}
 	}
 
-	files.qsort();
+	std::sort(files.begin(), files.end());
 	return true;
 }
 
@@ -1364,15 +1360,13 @@ process_directory( const char* dirlist, const char* host )
 	locals.initializeFromString( dirlist );
 	locals.rewind();
 	while( (dirpath = locals.next()) ) {
-		StringList file_list;
+		std::vector<std::string> file_list;
 		get_config_dir_file_list(dirpath,file_list);
-		file_list.rewind();
 
-		char const *file;
-		while( (file=file_list.next()) ) {
-			process_config_source( file, 1, "config source", host, local_required );
+		for (auto& file: file_list) {
+			process_config_source( file.c_str(), 1, "config source", host, local_required );
 
-			local_config_sources.append(file);
+			local_config_sources.emplace_back(file);
 		}
 	}
 }
@@ -2006,7 +2000,7 @@ clear_global_config_table()
 	delete[] ConfigMacroSet.metat; ConfigMacroSet.metat = NULL;
 	*/
 	global_config_source       = "";
-	local_config_sources.clearAll();
+	local_config_sources.clear();
 	return;
 }
 

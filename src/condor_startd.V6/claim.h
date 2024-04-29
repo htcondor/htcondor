@@ -119,6 +119,11 @@ public:
 		*/
 	void beginClaim( void );	
 
+		/** Copy info about the client and resource request from another claim object.
+			Used when claiming multiple slots in a single request_claim call
+		 */
+	void copyClientInfo(const Claim& that);
+
 		/** Load info used by the accountant into this object from the
 			current classad.
 		 */

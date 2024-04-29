@@ -269,10 +269,20 @@ Requires: systemd-libs
 Requires: rsync
 
 # Support OSDF client
+%if 0%{?rhel} == 7
 Requires: pelican-osdf-compat >= 7.1.4
+%else
+Recommends: pelican-osdf-compat >= 7.1.4
+%endif
 
-#Provides: user(condor) = 43
-#Provides: group(condor) = 43
+%if 0%{?rhel} != 7
+# Ensure that our bash completions work
+Recommends: bash-completion
+%endif
+
+#From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
+#Provides: user(condor) = 64
+#Provides: group(condor) = 64
 
 %if 0%{?rhel} == 7
 # Standard Universe discontinued as of 8.9.0
@@ -433,7 +443,9 @@ Requires: boost-python3
 %endif
 %endif
 Requires: python3
+%if 0%{?rhel} != 7
 Requires: python3-cryptography
+%endif
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
@@ -655,6 +667,7 @@ make -C docs man
 
 %if %uw_build
 %define condor_build_id UW_development
+%define condor_git_sha -1
 %endif
 
 # Any changes here should be synchronized with
@@ -668,12 +681,18 @@ make -C docs man
 %if %uw_build
        -DBUILDID:STRING=%condor_build_id \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
+%if "%{condor_git_sha}" != "-1"
+       -DCONDOR_GIT_SHA:STRING=%condor_git_sha \
+%endif
        -DBUILD_TESTING:BOOL=TRUE \
 %else
        -DBUILD_TESTING:BOOL=FALSE \
 %endif
 %if 0%{?suse_version}
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
+%endif
+%if 0%{?rhel} == 7 || 0%{?rhel} == 8
+       -DPython3_EXECUTABLE=%__python3 \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
@@ -844,7 +863,6 @@ mkdir -p %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/Chirp.jar %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/CondorJava*.class %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/libchirp_client.so %{buildroot}/usr/lib64
-mv %{buildroot}/usr/lib64/condor/libcondorapi.so %{buildroot}/usr/lib64
 mv %{buildroot}/usr/lib64/condor/libcondor_utils_*.so %{buildroot}/usr/lib64
 %if 0%{?rhel} == 7
 mv %{buildroot}/usr/lib64/condor/libpyclassad2*.so %{buildroot}/usr/lib64
@@ -922,7 +940,6 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-%_libdir/libcondorapi.so
 %_libdir/condor/libfmt.so
 %_libdir/condor/libfmt.so.10
 %_libdir/condor/libfmt.so.10.1.0
@@ -1254,7 +1271,6 @@ rm -rf %{buildroot}
 %{_includedir}/condor/file_lock.h
 %{_includedir}/condor/read_user_log.h
 %{_libdir}/condor/libchirp_client.a
-%{_libdir}/condor/libcondorapi.a
 %{_libdir}/libclassad.a
 
 ####### classads-devel files #######
@@ -1461,6 +1477,60 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.2-1
+- Fix bug where file transfer plugin error was not in hold reason code
+
+* Mon Apr 15 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.1-1
+- Add the ability to force vanilla universe jobs to run in a container
+- Add the ability to override the entrypoint for a Docker image
+- condor_q -better-analyze includes units for memory and disk quantities
+
+* Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+- Fix bug where ssh-agent processes were leaked with grid universe jobs
+- Fix DAGMan crash when a provisioner node was given a parent
+- Fix bug that prevented use of "ftp:" URLs in file transfer
+- Fix bug where jobs that matched an offline slot never start
+
+* Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+- Fix bug where ssh-agent processes were leaked with grid universe jobs
+- Fix DAGMan crash when a provisioner node was given a parent
+- Fix bug that prevented use of "ftp:" URLs in file transfer
+- Fix bug where jobs that matched an offline slot never start
+
+* Mon Mar 25 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.3-1
+- HTCondor tarballs now contain Pelican 7.6.2
+
+* Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.2-1
+- Old ClassAd based syntax is disabled by default for the job router
+- Can efficiently manage/enforce disk space using LVM partitions
+- GPU discovery is enabled on all Execution Points by default
+- Prevents accessing unallocated GPUs using cgroup v1 enforcement
+- New condor_submit commands for constraining GPU properties
+- Add ability to transfer EP's starter log back to the Access Point
+- Can use VOMS attributes when mapping identities of SSL connections
+- The CondorVersion string contains the source git SHA
+
+* Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.6-1
+- Fix DAGMan where descendants of removed retry-able jobs are marked futile
+- Ensure the condor_test_token works correctly when invoked as root
+- Fix bug where empty multi-line values could cause a crash
+- condor_qusers returns proper exit code for errors in formatting options
+- Fix crash in job router when a job transform is missing an argument
+
+* Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.4.0-1
+- condor_submit warns about unit-less request_disk and request_memory
+- Separate condor-credmon-local RPM package provides local SciTokens issuer
+- Fix bug where NEGOTIATOR_SLOT_CONSTRAINT was ignored since version 23.3.0
+- The htcondor command line tool can process multiple event logs at once
+- Prevent Docker daemon from keeping a duplicate copy of the job's stdout
+
+* Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.4-1
+- NVIDIA_VISIBLE_DEVICES environment variable lists full uuid of slot GPUs
+- Fix problem where some container jobs would see GPUs not assigned to them
+- Restore condor keyboard monitoring that was broken since HTCondor 23.0.0
+- In condor_adstash, the search engine timeouts now apply to all operations
+- Ensure the prerequisite perl modules are installed for condor_gather_info
+
 * Tue Jan 23 2024 Tim Theisen <tim@cs.wisc.edu> - 23.3.1-1
 - HTCondor tarballs now contain Pelican 7.4.0
 

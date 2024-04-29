@@ -21,7 +21,12 @@ from .htcondor2_impl import (
     _submit_getqargs,
     _submit_setqargs,
     _submit_from_dag,
+    _display_dag_options,
+    _submit_set_submit_method,
+    _submit_get_submit_method,
 )
+
+from ._submit_method import SubmitMethod
 
 #
 # MutableMapping provides generic implementations for all mutable mapping
@@ -157,14 +162,15 @@ class Submit(MutableMapping):
             rv = rv + f"{key} = {value}\n"
         qargs = _submit_getqargs(self, self._handle)
         if qargs is not None:
-            rv = rv + "queue " + qargs
+            if qargs == '':
+                rv = rv + "queue\n"
+            else:
+                rv = rv + "queue " + qargs + "\n"
         return rv
 
 
-    # Consider making this do what Schedd.submit() does.
     def __repr__(self):
-        # FIXME
-        pass
+        return f'Submit({self})'
 
 
     def expand(self, attr : str) -> str:
@@ -246,23 +252,39 @@ class Submit(MutableMapping):
 
 
     def setSubmitMethod(self,
-        method_value : int = -1,
+        method_value : Union[SubmitMethod, int] = -1,
         allow_reserved_values : bool = False
     ):
         """
-        FIXME (unimplemented)
+        By default, jobs created by this class record (in the job ad
+        attribute :ad-attr:`JobSubmitMethod`) that they were submitted via
+        the  Python bindings.  Calling this method before submitting allows
+        you to change that.  Values between ``0`` (inclusive) and ``100``
+        (exclusive) are reserved for :class:`htcondor2.SubmitMethod`
+        and can't be set unless the ``allowed_reserved_values`` flag is
+        :const:`True`.  Values less than `0` may be used to remove
+        ``JobSubmitMethod`` from the job ad entirely.
 
-        :param method_value:
-        :param allowed_reserved_values:
+        :param method_value:  The method to record.
+        :param allowed_reserved_values:  Set to true to used a reserved ``method_value``.
         """
-        pass
+        if isinstance(method_value, SubmitMethod):
+            method_value = int(method_value)
+        if 0 <= method_value and method_value < 100:
+            if not allow_reserved_values:
+                # This was HTCondorValueError in version 1.
+                raise ValueError("Submit method value must be 100 or greater, or allowed_reserved_values must be True.")
+        _submit_set_submit_method(self._handle, method_value)
 
 
     def getSubmitMethod(self) -> int:
         """
-        FIXME (unimplemented)
+        Returns the submit method.
+
+        :return:  The integer value of the submit method.  The symbolic
+                  value can be obtained from the :class:`SubmitMethod`.
         """
-        pass
+        return _submit_get_submit_method(self._handle)
 
 
     @staticmethod
@@ -305,11 +327,15 @@ class Submit(MutableMapping):
         short description from *condor_submit_dag*'s ``-help`` output.
 
         This function is useful if you don't have an installed copy of
-        *condor_submit_dag* or if this module and that command-line
+        :tool:`condor_submit_dag` or if this module and that command-line
         tool could be from different versions.
 
-        FIXME: Unimplemented.
+        .. note::
+
+            Not all options available to *condor_submit_dag* exist for
+            the python bindings.
         """
+        _display_dag_options()
 
 
 # List does not include options which vary only in capitalization.

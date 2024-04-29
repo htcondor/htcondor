@@ -70,7 +70,7 @@ class ParallelShadow : public BaseShadow
 
 	virtual bool shouldAttemptReconnect(RemoteResource *r);
 
-	void shutDown( int exitReason );
+	void shutDown( int exitReason, const char* reason_str, int reason_code=0, int reason_subcode=0 );
 
 	/**
 	 * override to allow starter+shadow to gracefully exit

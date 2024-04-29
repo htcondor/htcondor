@@ -193,6 +193,24 @@ bool JobSets::removeJobFromSet(JobQueueJob & job)
 			jobset->LookupInteger(attr, val);
 			val++;
 			SetSecureAttributeInt(jobset->jid.cluster, jobset->jid.proc, attr, val);
+
+			// accumulate CPUTime of completed jobs as CompletedJobsCpuTime and removed jobs as RemovedJobsCpuTime
+			attr = (job.Status() == REMOVED) ? "RemovedJobsCpuTime" : "CompletedJobsCpuTime";
+			double accum = 0.0, cputime;
+			jobset->LookupFloat(attr, accum);
+			// add the jobs' CumulativeRemoteUserCpu + CumulativeRemoteSysCpu to the jobset cumulative value
+			cputime = 0.0;
+			if (job.LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, cputime) && cputime > 0.0) {
+				accum += cputime;
+			}
+			cputime = 0.0;
+			if (job.LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, cputime) && cputime > 0.0) {
+				accum += cputime;
+			}
+
+			char buf[100];
+			snprintf(buf,100,"%f",accum);
+			SetSecureAttribute(jobset->jid.cluster, jobset->jid.proc, attr, buf);
 		}
 
 		if (jobset->member_count > 0) {

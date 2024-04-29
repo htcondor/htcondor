@@ -27,6 +27,7 @@
 #include "chirp_protocol.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 
 // the documentation for the chirp tool is that it returns 1 on failure, so that is what we will do.
 // when the chirp_client API calls abort().
