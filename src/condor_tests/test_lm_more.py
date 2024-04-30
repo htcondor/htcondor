@@ -7,6 +7,8 @@ from ornithology import (
 
 import htcondor2
 
+import os
+
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -37,7 +39,8 @@ TEST_CASES = {
         "digest": """FACTORY.Requirements=MY.Requirements
 hold=1
 max_materialize=3
-My.Pos=\"{$(Row),$(Step)}\"
+My.Pos=\"{{$(Row),$(Step)}}\"
+FACTORY.Iwd={IWD}
 
 Queue 1 my.foo,my.bar from """,
 
@@ -62,7 +65,7 @@ Queue 1 my.foo,my.bar from """,
 
         "job": """
             args=30
-            My.Pos = \"{$(Row),$(Step),$(foo)}\"
+            My.Pos = "{$(Row),$(Step),$(foo)}"
             hold = 1
             max_materialize = 3
 
@@ -79,7 +82,8 @@ bar=2
 foo=1
 hold=1
 max_materialize=3
-My.Pos="{$(Row),$(Step),$(foo)}"
+My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
+FACTORY.Iwd={IWD}
 
 Queue 1 foo,bar from """
         ,
@@ -104,7 +108,7 @@ Queue 1 foo,bar from """
         "args": '30 -f $(foo) -b $(bar) -z $(baz)',
 
         "job": """
-            My.Pos = \"{$(Row),$(Step),$(foo)}\"
+            My.Pos = "{$(Row),$(Step),$(foo)}"
             hold = 1
             max_materialize = 3
 
@@ -121,7 +125,8 @@ bar=2
 foo=1
 hold=1
 max_materialize=3
-My.Pos="{$(Row),$(Step),$(foo)}"
+My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
+FACTORY.Iwd={IWD}
 
 Queue 1 foo,bar from """,
 
@@ -146,7 +151,7 @@ Queue 1 foo,bar from """,
 
         "job": """
             args=30
-            My.Pos = \"{$(Row),$(Step),$(item)}\"
+            My.Pos = "{$(Row),$(Step),$(item)}"
             hold = 1
             request_memory = $(item)
             max_materialize = 3
@@ -158,8 +163,9 @@ Queue 1 foo,bar from """,
 hold=1
 Item=1
 max_materialize=3
-My.Pos="{$(Row),$(Step),$(item)}"
+My.Pos=\"{{$(Row),$(Step),$(item)}}\"
 request_memory=$(item)
+FACTORY.Iwd={IWD}
 
 Queue 1 Item from """,
 
@@ -198,8 +204,9 @@ def the_test_job(the_test_case):
 
 @action
 def the_test_digest(the_test_case):
-    return the_test_case[1]['digest']
-
+    # return the_test_case[1]['digest']
+    digest = the_test_case[1]['digest']
+    return digest.format(IWD=os.getcwd())
 
 @action
 def the_test_values(the_test_case):
