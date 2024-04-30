@@ -1420,9 +1420,8 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 	ASSERT( event );
 
 	const JobHeldEvent *heldEvent = (const JobHeldEvent *)event;
-	const char *reason = heldEvent->reason.empty() ?
-		"(unknown)" : heldEvent->reason.c_str();
-	debug_printf( DEBUG_VERBOSE, "  Hold reason: %s\n", reason );
+	const char *reason = heldEvent->getReason();
+	debug_printf( DEBUG_VERBOSE, "  Hold reason: %s\n", (reason && reason[0]) ? reason : "(unknown)" );
 
 	if( job->Hold( event->proc ) ) {
 		if ( _maxJobHolds > 0 && job->_jobProcsOnHold >= _maxJobHolds ) {

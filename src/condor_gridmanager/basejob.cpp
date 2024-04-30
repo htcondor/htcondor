@@ -1034,7 +1034,9 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 
 	JobAbortedEvent event;
 
-	job_ad->LookupString(ATTR_REMOVE_REASON, event.reason);
+	std::string reasonstr;
+	job_ad->LookupString(ATTR_REMOVE_REASON, reasonstr);
+	event.setReason(reasonstr);
 
 	int rc = ulog.writeEvent(&event,job_ad);
 
