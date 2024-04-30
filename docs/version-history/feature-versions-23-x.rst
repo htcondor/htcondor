@@ -51,6 +51,9 @@ New Features:
   :tool:`condor_submit`.
   :jira:`2406`
 
+- For **batch** grid universe jobs, the HOME environment variable is no
+  longer set to the job's current working directory.
+  :jira:`2413`
 
 Bugs Fixed:
 
