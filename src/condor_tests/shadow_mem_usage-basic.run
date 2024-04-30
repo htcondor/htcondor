@@ -74,6 +74,7 @@ my %memory_data64 = (
 	"ubuntu18" => "752",
 	"ubuntu20" => "752",
 	"ubuntu22" => "1500",
+	"ubuntu24" => "1284",
 );
 # for X86 shadows
 my %memory_data32 = (
