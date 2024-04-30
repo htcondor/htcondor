@@ -5,7 +5,7 @@ from ornithology import (
     ClusterState,
 )
 
-import htcondor2
+import htcondor
 
 import logging
 logger = logging.getLogger(__name__)
@@ -214,7 +214,7 @@ def the_test_args(the_test_case):
 @action
 def the_submitted_job(path_to_sleep, the_condor, the_test_job, the_test_args):
 
-    submit = htcondor2.Submit(
+    submit = htcondor.Submit(
         f"executable = {path_to_sleep}\n" + the_test_job
     )
     # Just to make things harder, apparently.
@@ -251,7 +251,7 @@ class TestLMMore:
         results = schedd.query(
             constraint=constraint,
             projection=['ClusterID'],
-            opts=htcondor2.QueryOpts.IncludeClusterAd,
+            opts=htcondor.QueryOpts.IncludeClusterAd,
         )
         clusterIDs = [ad['ClusterID'] for ad in results]
         assert the_submitted_job.cluster() in clusterIDs
