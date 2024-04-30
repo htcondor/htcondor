@@ -762,6 +762,11 @@ _schedd_submit( PyObject *, PyObject * args ) {
             return NULL;
         }
     } else if( isFactoryJob ) {
+
+        std::string cwd;
+        condor_getcwd(cwd);
+        sb->insert_macro( "FACTORY.Iwd", cwd );
+
         //
         // This is absurd, but I'm stuck with it.  The submit hash
         // requires that the caller keep the SubmitForeachArgs (itemdata)

@@ -46,6 +46,7 @@
 #include "condor_qmgr.h"
 #include "condor_attributes.h"
 #include "submit_protocol.h"
+#include "condor_getcwd.h"
 #include "htcondor2/schedd.cpp"
 
 // htcondor.JobEventLog

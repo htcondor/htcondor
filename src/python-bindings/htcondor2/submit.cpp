@@ -66,6 +66,8 @@ struct SubmitBlob {
         void setSubmitMethod(int method_value) { m_hash.setSubmitMethod(method_value); }
         int  getSubmitMethod() { return m_hash.getSubmitMethod(); }
 
+        void insert_macro( const char * name, const std::string & value );
+
     private:
         SubmitHash m_hash;
         MACRO_SOURCE m_src_pystring;
@@ -82,6 +84,14 @@ struct SubmitBlob {
 
 
 MACRO_SOURCE SubmitBlob::EmptyMacroSrc = { false, false, 3, -2, -1, -2 };
+
+
+void
+SubmitBlob::insert_macro( const char * name, const std::string & value ) {
+    MACRO_EVAL_CONTEXT ctx;
+    ctx.init("SUBMIT");
+    ::insert_macro( name, value.c_str(), m_hash.macros(), DetectedMacro, ctx );
+}
 
 
 const char *
