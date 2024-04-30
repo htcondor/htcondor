@@ -226,11 +226,21 @@ SubmitBlob::set_vars( StringList & vars, char * item, int /* itemIndex */ ) {
     vars.rewind();
     char * var = vars.next();
     char * data = item;
+
+    // The string at data is a single NUL-terminated line.  If no
+    // seperators are found, then we don't change it, and the whole
+    // line is correctly assigned to the first var.  Otherwise, we
+    // mutate data, replacing the seperators with NULs.
     m_hash.set_live_submit_variable( var, data, false );
 
     // This is for the human-readable form in the submit file.
     const char * separators = ", \t";
     const char * whitespace = " \t";
+
+    // This is for when the bindings construct a submit file from itemdata.
+    if( strchr(data, '\x1F') != NULL ) {
+        separators = "\x1F";
+    }
 
     while( (var = vars.next()) ) {
         while (*data && ! strchr(separators, *data)) ++data;
