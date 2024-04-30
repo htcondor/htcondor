@@ -2089,11 +2089,23 @@ COMMANDS FOR THE GRID
     or the ``BEARER_TOKEN_FILE`` environment variable is set, but it will not be an error if no
     file is specified.
 
+    This command is only useful for **grid** universe jobs.  The scitoken will be used by the
+    *condor_gridmanager* to authenticate to the remote CE; It has no effect
+    on how any submit method authenticates to the *condor_schedd* to submit the initial grid
+    universe job.
+
  :subcom-def:`scitokens_file` = <full-pathname>
     Used to set the path to the file containing the scitoken that the job needs,
     or to override the path to the scitoken contained in the ``BEARER_TOKEN_FILE``
     environment variable.
 
+    **scitokens_file** is relevant when the **universe** **grid** and the type of grid
+    system is one of **condor**, or **arc**. Defining
+    a value causes authentication to the remote system to be made using the given scitoken.
+    Unlike **x509userproxy**, no attributes from the scitoken other than the filename will be
+    copied into the job.
+    Note that neither this nor **use_scitokens** will have any effect on how any job submission
+    method authenticates to the *condor_schedd* to place the grid universe job initially.
 
 COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 
