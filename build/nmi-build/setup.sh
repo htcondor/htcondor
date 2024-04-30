@@ -209,16 +209,16 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
-# Matcb the current version. Consult:
+# Match the current version. Consult:
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    wget https://github.com/apptainer/apptainer/releases/download/v1.2.3/apptainer_1.2.3_amd64.deb
-    $INSTALL ./apptainer_1.2.3_amd64.deb
-    rm ./apptainer_1.2.3_amd64.deb
+    wget https://github.com/apptainer/apptainer/releases/download/v1.3.1/apptainer_1.3.1_amd64.deb
+    $INSTALL ./apptainer_1.3.1_amd64.deb
+    rm ./apptainer_1.3.1_amd64.deb
 fi
 
-if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
+if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ] && [ $VERSION_CODENAME != 'noble' ]; then
     $INSTALL software-properties-common
     add-apt-repository -y ppa:apptainer/ppa
     apt-get update
@@ -232,15 +232,17 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt-get download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5
+    apt-get download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libscitokens0
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        apt-get download libboost-python1.74.0
+        apt-get download libboost-python1.74.0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        apt-get download libboost-python1.74.0
+        apt-get download libboost-python1.74.0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        apt-get download libboost-python1.71.0
+        apt-get download libboost-python1.71.0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        apt-get download libboost-python1.74.0
+        apt-get download libboost-python1.74.0 libvomsapi1v5
+    elif [ $VERSION_CODENAME = 'noble' ]; then
+        apt-get download libboost-python1.83.0 libvomsapi1t64
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
@@ -297,10 +299,14 @@ fi
 
 # Install pytest for BaTLab testing
 # Install sphinx-mermaid so docs can have images
-if [ "$VERSION_CODENAME" = 'bookworm' ]; then
-    pip3 install --break-system-packages pytest pytest-httpserver sphinxcontrib-mermaid
+if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+    if [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ] || [ "$VERSION_CODENAME" = 'jammy' ]; then
+        pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+    else
+        pip3 install --break-system-packages pytest pytest-httpserver sphinxcontrib-mermaid
+    fi
 else
-    pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+        pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
 fi
 
 if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then
