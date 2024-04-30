@@ -17,6 +17,11 @@ Release Notes:
 
 New Features:
 
+
+- Added an ``-edit`` option to the *condor_qusers* tool.  This option allows
+  and administrator to add custom attributes to a User classad in the *condor_schedd*.
+  :jira:`2381`
+
 - A job can now be put into a cool-down state after a failed execution
   attempt.
   If the expression given by new configuration parameter
@@ -45,6 +50,7 @@ New Features:
   DAGMan directly submits jobs to the local *condor_schedd* queue or externally runs
   :tool:`condor_submit`.
   :jira:`2406`
+
 
 Bugs Fixed:
 

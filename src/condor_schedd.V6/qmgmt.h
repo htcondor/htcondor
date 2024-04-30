@@ -351,7 +351,8 @@ inline int SetUserAttributeString(JobQueueUserRec & urec, const char * attr_name
 	return SetUserAttributeValue(urec, attr_name, tmp);
 }
 int DeleteUserAttribute(JobQueueUserRec & urec, const char * attr_name);
-int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled);
+struct UpdateUserAttributesInfo { int valid{0}; int invalid{0}; int special{0}; };
+int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled, struct UpdateUserAttributesInfo& info );
 
 // get the Effect User record from the peer
 // returns NULL if no peer or the peer has not yet had an userrec set.
