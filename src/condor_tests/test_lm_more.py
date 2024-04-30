@@ -37,9 +37,9 @@ TEST_CASES = {
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
+My.Pos=\"{{$(Row),$(Step)}}\"
 hold=1
 max_materialize=3
-My.Pos=\"{{$(Row),$(Step)}}\"
 FACTORY.Iwd={IWD}
 
 Queue 1 my.foo,my.bar from """,
@@ -77,12 +77,12 @@ Queue 1 my.foo,my.bar from """,
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
+My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 args=30 -f $(foo) -b $(bar) -z 
 bar=2
 foo=1
 hold=1
 max_materialize=3
-My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 FACTORY.Iwd={IWD}
 
 Queue 1 foo,bar from """
@@ -120,12 +120,12 @@ Queue 1 foo,bar from """
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
+My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 args=30 -f $(foo) -b $(bar) -z 
 bar=2
 foo=1
 hold=1
 max_materialize=3
-My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 FACTORY.Iwd={IWD}
 
 Queue 1 foo,bar from """,
@@ -160,11 +160,11 @@ Queue 1 foo,bar from """,
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
+My.Pos=\"{{$(Row),$(Step),$(item)}}\"
 hold=1
 Item=1
-max_materialize=3
-My.Pos=\"{{$(Row),$(Step),$(item)}}\"
 request_memory=$(item)
+max_materialize=3
 FACTORY.Iwd={IWD}
 
 Queue 1 Item from """,
@@ -229,7 +229,13 @@ def the_submitted_job(path_to_sleep, the_condor, the_test_job, the_test_args):
         submit['args'] = the_test_args
 
     schedd = the_condor.get_local_schedd()
-    return schedd.submit(submit)
+    return schedd.submit(
+        submit,
+        # This isn't necessary in version 2.
+        count=1,
+        # That this is required is actually just broken in version 1.
+        itemdata=submit.itemdata(),
+    )
 
 
 @action
