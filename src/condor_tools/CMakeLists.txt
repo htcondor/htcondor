@@ -110,4 +110,6 @@ endif()
 
 # htcondor tool + Python htcondor_cli module
 install ( FILES htcondor DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES htcondor_typer DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( DIRECTORY htcondor_cli DESTINATION ${C_PYTHON3ARCHLIB} )
+install ( DIRECTORY typer_htcondor DESTINATION ${C_PYTHON3ARCHLIB} )
