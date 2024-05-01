@@ -56,7 +56,7 @@ struct SubmitBlob {
         const std::string & get_queue_args() const;
         bool set_queue_args( const char * queue_args );
 
-        void make_digest( std::string & buffer, int clusterID, StringList & vars, int options ) {
+        void make_digest( std::string & buffer, int clusterID, const std::vector<std::string> & vars, int options ) {
             (void) m_hash.make_digest(buffer, clusterID, vars, options);
         }
         bool submit_param_long_exists( const char * name, const char * alt_name, long long & value, bool int_range=false ) const {
