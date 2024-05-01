@@ -759,7 +759,7 @@ StatsD::initAndReconfig(char const *service_name)
 		m_default_metric_ad.Insert(ATTR_IP,expr);
 	}
 
-	m_want_projection = true;
+	m_want_projection = param_boolean("GANGLIAD_WANT_PROJECTION", false);
 	m_projection_references.clear();
 	clearMetricDefinitions();
 	std::string config_dir;
@@ -779,6 +779,19 @@ StatsD::initAndReconfig(char const *service_name)
 
 	// Note: ParseMetrics call above will end up setting m_want_projection and m_projection_references
 	if (m_want_projection) {
+		// In addition to the projection attributes discovered by ParseMetrics, we always want
+		// these metrics since we look them up during metric evaluation, for example the daemon name
+		// so we know which machine to associate the metric with.
+		m_projection_references.insert(ATTR_TYPE);
+		m_projection_references.insert(ATTR_MY_TYPE);
+		m_projection_references.insert(ATTR_TARGET_TYPE);
+		m_projection_references.insert(ATTR_SLOT_ID);
+		m_projection_references.insert(ATTR_SLOT_DYNAMIC);
+		m_projection_references.insert(ATTR_NAME);
+		m_projection_references.insert(ATTR_SCHEDD_NAME);
+		m_projection_references.insert(ATTR_NEGOTIATOR_NAME);
+		m_projection_references.insert(ATTR_MACHINE);
+		m_projection_references.insert(ATTR_MY_ADDRESS);
 		dprintf(D_ALWAYS,"Using collector projection of %lu attributes\n",m_projection_references.size());
 		std::string collector_projection;
 		for ( const auto& it : m_projection_references) {
