@@ -390,7 +390,11 @@ class Schedd():
             each string will be parsed as its own item data line.  If you
             provide an iterator over dictionaries, the dictionary's key-value
             pairs will become submit variable name-value pairs; only the first
-            dictionary's keys will be used.
+            dictionary's keys will be used.  In either case, leading and
+            trailing whitespace will be trimmed for each individual item.
+            Lines (and items) may not contain newlines (``\n``) or the ASCII
+            unit separator character (``\x1F``).  Keys, if specified, must be
+            valid submit-language variable names.
         '''
 
         if itemdata is None:

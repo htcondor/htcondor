@@ -240,6 +240,11 @@ SubmitBlob::set_vars( StringList & vars, char * item, int /* itemIndex */ ) {
     // This is for when the bindings construct a submit file from itemdata.
     if( strchr(data, '\x1F') != NULL ) {
         separators = "\x1F";
+        // The line parser eats leading and trailing whitespace, so if we
+        // include it here, only part of it actually makes it through.
+        // Fixing this would be a pain in the ass, so let's just document
+        // if for now.
+        // whitespace = NULL;
     }
 
     while( (var = vars.next()) ) {
