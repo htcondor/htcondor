@@ -77,13 +77,13 @@ Queue 1 my.foo,my.bar from """,
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
-My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 args=30 -f $(foo) -b $(bar) -z 
-bar=2
-foo=1
+My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 hold=1
 max_materialize=3
 FACTORY.Iwd={IWD}
+foo=1
+bar=2
 
 Queue 1 foo,bar from """
         ,
@@ -121,12 +121,12 @@ Queue 1 foo,bar from """
 
         "digest": """FACTORY.Requirements=MY.Requirements
 My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
-args=30 -f $(foo) -b $(bar) -z 
-bar=2
-foo=1
 hold=1
 max_materialize=3
+args=30 -f $(foo) -b $(bar) -z 
 FACTORY.Iwd={IWD}
+foo=1
+bar=2
 
 Queue 1 foo,bar from """,
 
@@ -151,21 +151,21 @@ Queue 1 foo,bar from """,
 
         "job": """
             args=30
-            My.Pos = "{$(Row),$(Step),$(item)}"
+            My.Pos = "{$(Row),$(Step),$(Item)}"
             hold = 1
-            request_memory = $(item)
+            request_memory = $(Item)
             max_materialize = 3
 
             queue in ( 1, 2, 3 )
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
-My.Pos=\"{{$(Row),$(Step),$(item)}}\"
+My.Pos=\"{{$(Row),$(Step),$(Item)}}\"
 hold=1
-Item=1
-request_memory=$(item)
+request_memory=$(Item)
 max_materialize=3
 FACTORY.Iwd={IWD}
+Item=1
 
 Queue 1 Item from """,
 
