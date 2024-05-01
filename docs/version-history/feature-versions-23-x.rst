@@ -55,6 +55,11 @@ New Features:
   longer set to the job's current working directory.
   :jira:`2413`
 
+- **batch** grid universe jobs are now run in the Iwd directory by
+  default. Before, they were run in a temporary directory under the
+  Iwd directory.
+  :jira:`2415`
+
 Bugs Fixed:
 
 - None.
