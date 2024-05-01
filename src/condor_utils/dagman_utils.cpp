@@ -1058,10 +1058,15 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 		args.AppendArg("-do_recurse");
 	}
 
-	if(self[b::SuppressNotification]) {
+	if (self[b::SuppressNotification]) {
 		args.AppendArg("-suppress_notification");
 	} else if(self[b::SuppressNotification].set()) {
 		args.AppendArg("-dont_suppress_notification");
+	}
+
+	if (self[i::SubmitMethod] >= 0) {
+		args.AppendArg("-SubmitMethod");
+		args.AppendArg(std::to_string(self[i::SubmitMethod]));
 	}
 
 	if (inWriteSubmit) {

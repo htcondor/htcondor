@@ -2513,10 +2513,16 @@ ClassAd * DCSchedd::disableUsers(
 }
 
 ClassAd * DCSchedd::updateUserAds(
-	ClassAdList & /*user_ads*/,	 // ads must have ATTR_USER attribute at a minimum
-	CondorError * /*errstack*/)
+	ClassAdList & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
+	CondorError * errstack)
 {
-	// TODO: write this
-	return nullptr; 
+	int connect_timeout = 20;
+
+	std::vector<const ClassAd*> ads;
+	ads.reserve(user_ads.Length());
+	user_ads.Rewind();
+	const ClassAd * cmdAd;
+	while ((cmdAd = user_ads.Next())) { ads.push_back(cmdAd); }
+	return actOnUsers (EDIT_USERREC, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 

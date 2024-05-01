@@ -152,7 +152,6 @@ JobTransforms::transformJob(
 {
 	int transforms_applied = 0;
 	int transforms_considered = 0;
-	StringList attrs_changed;
 	int rval = 0;
 	std::string errmsg;
 	std::string applied_names;

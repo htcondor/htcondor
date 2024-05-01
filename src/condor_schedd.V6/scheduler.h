@@ -46,7 +46,6 @@
 #include "proc.h"
 #include "prio_rec.h"
 #include "HashTable.h"
-#include "string_list.h"
 #include "write_user_log.h"
 #include "autocluster.h"
 #include "enum_utils.h"
@@ -783,14 +782,14 @@ private:
 
 	// We have to evaluate requirements in the listed order to maintain
 	// user sanity, so the submit requirements data structure must ordered.
-	typedef struct SubmitRequirementsEntry_t {
-		const char *		name;
-		classad::ExprTree *	requirement;
-		classad::ExprTree * reason;
-		bool				isWarning;
+	struct SubmitRequirementsEntry {
+		std::string name;
+		std::unique_ptr<classad::ExprTree> requirement;
+		std::unique_ptr<classad::ExprTree> reason;
+		bool isWarning;
 
-		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr, bool iw ) : name(n), requirement(r), reason(rr), isWarning(iw) {}
-	} SubmitRequirementsEntry;
+		SubmitRequirementsEntry( const std::string& n, classad::ExprTree * r, classad::ExprTree * rr, bool iw ) : name(n), requirement(r), reason(rr), isWarning(iw) {}
+	};
 
 	typedef std::vector< SubmitRequirementsEntry > SubmitRequirements;
 
@@ -916,6 +915,8 @@ private:
 	ExprTree* m_parsed_gridman_selection_expr;
 	char* m_unparsed_gridman_selection_expr;
 
+	ExprTree* m_jobCoolDownExpr {nullptr};
+
 	// The object which manages the transfer queue
 	TransferQueueManager m_xfer_queue_mgr;
 
@@ -956,7 +957,8 @@ private:
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
-	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd, TransactionWatcher & txn, CondorError & errstack);
+	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd,
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserAttributesInfo & info);
 	void		remove_unused_owners();
 	void			child_exit(int, int);
 	// AFAICT, reapers should be be registered void to begin with.
@@ -1091,7 +1093,7 @@ private:
 	int m_send_reschedule_timer;
 	Timeslice m_negotiate_timeslice;
 
-	StringList m_job_machine_attrs;
+	std::vector<std::string> m_job_machine_attrs;
 	int m_job_machine_attrs_history_length;
 
 	bool m_use_startd_for_local;

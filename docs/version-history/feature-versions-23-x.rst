@@ -17,7 +17,43 @@ Release Notes:
 
 New Features:
 
-- None.
+
+- Added an ``-edit`` option to the *condor_qusers* tool.  This option allows
+  and administrator to add custom attributes to a User classad in the *condor_schedd*.
+  :jira:`2381`
+
+- A job can now be put into a cool-down state after a failed execution
+  attempt.
+  If the expression given by new configuration parameter
+  :macro:`SYSTEM_ON_VACATE_COOL_DOWN` evaluates to a positive integer,
+  then the job will not be run again until after that number of
+  seconds elapses.
+  New job attributes :ad-attr:`VacateReason`,
+  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode` are
+  set after a failed execution attempt and can be referenced in the
+  cool-down expression.
+  :jira:`2134`
+
+- New config parameter :macro:`CGROUP_LOW_MEMORY_LIMIT` allows an administrator
+  of a Linux cgroup v2 system to set the "memory.low" setting in a job's cgroup
+  to encourage cacheable memory pages to be reclaimed faster.
+  :jira:`2391`
+
+- The *condor_gangliad* memory consumption has been reduced, and it also places less load on
+  the *condor_collector*.  Specifically, it now uses a projection when querying the collector.
+  :jira:`2394`
+
+- ``IDTOKEN`` files whose access permissions are too open are now ignored.
+  :jira:`232`
+
+- Added new ``-SubmitMethod`` flag to :tool:`condor_submit_dag` which controls whether
+  DAGMan directly submits jobs to the local *condor_schedd* queue or externally runs
+  :tool:`condor_submit`.
+  :jira:`2406`
+
+- For **batch** grid universe jobs, the HOME environment variable is no
+  longer set to the job's current working directory.
+  :jira:`2413`
 
 Bugs Fixed:
 
@@ -32,7 +68,7 @@ Release Notes:
 
 - HTCondor version 23.7.1 not yet released.
 
-- This version includes all the updates from :ref:`lts-version-history-2308`.
+- This version includes all the updates from :ref:`lts-version-history-23010`.
 
 - The use of multiple :subcom:`queue` statements in a single submit description
   file is now deprecated. This functionality is planned to be removed during the
@@ -125,7 +161,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug where the :attr:`HoldReasonSubcode` was not the documented value
+- Fixed bug where the :ad-attr:`HoldReasonSubCode` was not the documented value
   for jobs put on hold because of errors running a file transfer plugin.
   :jira:`2373`
 

@@ -958,20 +958,6 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
         return rval;
 }                                                                              
 
-int REMOTE_CONDOR_ulog_error_printf( int hold_reason_code, int hold_reason_subcode, char const *str, ... )
-{
-	std::string buf;
-	va_list args;
-	int retval;
-
-	va_start(args,str);
-	vformatstr(buf, str, args);
-	retval = REMOTE_CONDOR_ulog_error( hold_reason_code, hold_reason_subcode, buf.c_str() );
-	va_end(args);
-
-	return retval;
-}
-
 int
 REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char const *str )
 {

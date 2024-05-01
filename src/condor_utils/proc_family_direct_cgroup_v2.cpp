@@ -240,6 +240,24 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 			dprintf(D_ALWAYS, "Error setting cgroup memory limit of %lu in cgroup %s: %s\n", cgroup_memory_limit, leaf.c_str(), strerror(errno));
 		}
 	}
+
+	if (cgroup_memory_limit_low > 0) {
+		// write memory limits
+		stdfs::path memory_limits_path = leaf / "memory.low";
+		int fd = open(memory_limits_path.c_str(), O_WRONLY, 0666);
+		if (fd >= 0) {
+			std::string buf;
+			formatstr(buf, "%lu", cgroup_memory_limit_low);
+			int r = write(fd, buf.data(), buf.size());
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error setting cgroup low memory limit of %s in cgroup %s: %s\n", buf.c_str(), leaf.c_str(), strerror(errno));
+			}
+			close(fd);
+		} else {
+			dprintf(D_ALWAYS, "Error setting cgroup memory low limit of %lu in cgroup %s: %s\n", cgroup_memory_limit_low, leaf.c_str(), strerror(errno));
+		}
+	}
+
 	//
 	// Set swap limits, if any
 	if (cgroup_memory_and_swap_limit > 0) {
@@ -339,6 +357,7 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	std::string cgroup_name = fi->cgroup;
 	this->cgroup_memory_limit = fi->cgroup_memory_limit;
+	this->cgroup_memory_limit_low = fi->cgroup_memory_limit_low;
 	this->cgroup_memory_and_swap_limit = fi->cgroup_memory_and_swap_limit;
 	this->cgroup_cpu_shares = fi->cgroup_cpu_shares;
 

@@ -194,10 +194,8 @@ Starter::config()
 void
 Starter::publish( ClassAd* ad )
 {
-	StringList ability_list;
-	StringList ignored_attr_list;
-	ignored_attr_list.append(ATTR_VERSION);
-	ignored_attr_list.append(ATTR_IS_DAEMON_CORE);
+	std::string ability_list;
+	std::vector<std::string> ignored_attr_list = {ATTR_VERSION, ATTR_IS_DAEMON_CORE};
 
 	if (!s_ad) {
 		return;
@@ -211,26 +209,17 @@ Starter::publish( ClassAd* ad )
 		pCopy=0;
 	
 			// insert every attr that's not in the ignored_attr_list
-		if (!ignored_attr_list.contains(lhstr)) {
+		if (!contains(ignored_attr_list, lhstr)) {
 			pCopy = tree->Copy();
 			ad->Insert(lhstr, pCopy);
 			if (strncasecmp(lhstr, "Has", 3) == MATCH) {
-				ability_list.append(lhstr);
+				if (!ability_list.empty()) ability_list += ',';
+				ability_list += lhstr;
 			}
 		}
 	}
 
-	// finally, print out all the abilities we added into the
-	// classad so that other folks can know what we did.
-	char* ability_str = ability_list.print_to_string();
-
-	// If our ability list is NULL it means that we have no starters.
-	// This is ok for hawkeye; nothing more to do here!
-	if ( NULL == ability_str ) {
-		ability_str = strdup("");
-	}
-	ad->Assign( ATTR_STARTER_ABILITY_LIST, ability_str );
-	free( ability_str );
+	ad->Assign(ATTR_STARTER_ABILITY_LIST, ability_list);
 
 }
 

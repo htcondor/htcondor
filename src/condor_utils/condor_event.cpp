@@ -44,6 +44,8 @@
 #include <uuid/uuid.h>
 #endif
 
+#include <algorithm>
+
 char* ULogFile::readLine(char * buf, size_t bufsize) {
 	if (stashed_line) {
 		strncpy(buf, stashed_line, bufsize);
@@ -754,6 +756,24 @@ bool ULogEvent::read_line_value(const char * prefix, std::string & val, ULogFile
 		return true;
 	}
 	return false;
+}
+
+// store a string into an event member, while converting all \n to | and \r to space
+void ULogEvent::set_reason_member(std::string & reason_out, const std::string & reason_in)
+{
+	if (reason_in.empty()) {
+		reason_out.clear();
+		return;
+	}
+
+	reason_out.resize(reason_in.size(), 0);
+	std::transform(reason_in.begin(), reason_in.end(), reason_out.begin(),
+		[](char ch) -> char {
+			if (ch == '\n') return '|';
+			if (ch == '\r') return ' ';
+			return ch;
+		}
+	);
 }
 
 #if 0 // not currently used
@@ -2198,14 +2218,13 @@ JobEvictedEvent::formatBody( std::string &out )
 	return false;
       }
     }
-
-    if( !reason.empty() ) {
-      if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
-	return false;
-      }
-    }
-
   }
+
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
+			return false;
+		}
+	}
 
 	// print out resource request/usage values.
 	//
@@ -3126,7 +3145,6 @@ JobImageSizeEvent::initFromClassAd(ClassAd* ad)
 ShadowExceptionEvent::ShadowExceptionEvent (void)
 {
 	eventNumber = ULOG_SHADOW_EXCEPTION;
-	message[0] = '\0';
 	sent_bytes = recvd_bytes = 0.0;
 	began_execution = FALSE;
 }
@@ -3143,7 +3161,7 @@ ShadowExceptionEvent::readEvent (ULogFile& file, bool & got_sync_line)
 		return 0;
 	}
 	// read message
-	if ( ! read_optional_line(file, got_sync_line, message, sizeof(message), true, true)) {
+	if ( ! read_optional_line(message, file, got_sync_line, true, true)) {
 		return 1; // backwards compatibility
 	}
 
@@ -3164,7 +3182,7 @@ ShadowExceptionEvent::formatBody( std::string &out )
 {
 	if (formatstr_cat( out, "Shadow exception!\n\t" ) < 0)
 		return false;
-	if (formatstr_cat( out, "%s\n", message ) < 0)
+	if (formatstr_cat( out, "%s\n", message.c_str() ) < 0)
 		return false;
 
 	if (formatstr_cat( out, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes ) < 0 ||
@@ -3206,7 +3224,9 @@ ShadowExceptionEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	ad->LookupString("Message", message, BUFSIZ);
+	if ( ! ad->LookupString("Message", message)) {
+		message.clear();
+	}
 
 	ad->LookupFloat("SentBytes", sent_bytes);
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);
@@ -5497,7 +5517,7 @@ FactoryPausedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 	const char * p = buf;
 	// discard leading spaces, and store the result as the reason
 	while (isspace(*p)) ++p;
-	if (*p) { reason = strdup(p); }
+	if (*p) { reason = p; }
 
 	// read the pause code and/or hold code, if they exist
 	while ( read_optional_line(file, got_sync_line, buf, sizeof(buf)) )
@@ -5588,8 +5608,7 @@ FactoryPausedEvent::initFromClassAd(ClassAd* ad)
 
 void FactoryPausedEvent::setReason(const char* str)
 {
-	reason.clear();
-	if (str) reason = str;
+	set_reason_member(reason, str);
 }
 
 // ----- the FactoryResumedEvent class
@@ -5661,10 +5680,7 @@ FactoryResumedEvent::initFromClassAd(ClassAd* ad)
 
 void FactoryResumedEvent::setReason(const char* str)
 {
-	reason.clear();
-	if (str) {
-		reason = str;
-	}
+	set_reason_member(reason, str);
 }
 
 //

@@ -156,14 +156,10 @@ check_execute_dir_perms( char const *exec_path )
 }
 
 void
-check_execute_dir_perms( StringList &list )
+check_execute_dir_perms(const std::vector<std::string> &list)
 {
-	char const *exec_path;
-
-	list.rewind();
-
-	while( (exec_path = list.next()) ) {
-		check_execute_dir_perms( exec_path );
+	for (const auto& exec_path: list) {
+		check_execute_dir_perms(exec_path.c_str());
 	}
 }
 
@@ -253,20 +249,16 @@ check_recovery_file( const char *sandbox_dir, bool abnormal_exit )
 	}
 }
 void
-cleanup_execute_dirs( StringList &list )
+cleanup_execute_dirs(const std::vector<std::string> &list)
 {
-	char const *exec_path;
-
-	list.rewind();
-
-	while( (exec_path = list.next()) ) {
+	for (const auto& exec_path: list) {
 #if defined(WIN32)
 		dynuser nobody_login;
 		// remove all users matching this prefix
 		nobody_login.cleanup_condor_users("condor-run-");
 
 		// get rid of everything in the execute directory
-		Directory execute_dir(exec_path);
+		Directory execute_dir(exec_path.c_str());
 
 		execute_dir.Rewind();
 		while ( execute_dir.Next() ) {
@@ -278,7 +270,7 @@ cleanup_execute_dirs( StringList &list )
 		std::string dirbuf;
 		pair_strings_vector root_dirs = root_dir_list();
 		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-			const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
+			const char * exec_path_full = dirscat(it->second.c_str(), exec_path.c_str(), dirbuf);
 			if(exec_path_full) {
 				dprintf(D_FULLDEBUG, "Looking at %s\n",exec_path_full);
 				Directory execute_dir( exec_path_full, PRIV_ROOT );

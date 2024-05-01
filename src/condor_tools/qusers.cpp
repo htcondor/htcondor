@@ -379,7 +379,7 @@ main( int argc, const char *argv[] )
 				usage(stderr, my_name);
 				exit(1);
 			}
-			cmd = RESET_USERREC;
+			cmd = EDIT_USERREC;
 		}
 		else
 		if (is_dash_arg_colon_prefix (argv[i], "long", &pcolon, 1)) {
@@ -591,6 +591,55 @@ main( int argc, const char *argv[] )
 			fprintf(stderr, "Error: %s failed - %s\n", cmd_to_str(cmd), errstack.getFullText().c_str());
 		}
 	#endif
+	} else if (cmd == EDIT_USERREC) {
+		ClassAd * ad = new ClassAd();
+		for (auto & line : edit_args) {
+			if ( ! ad->Insert(line)) {
+				fprintf(stderr, "Error: not a valid classad assigment: %s\n", line);
+				rval = 1;
+				ad->Clear();
+				break;
+			}
+		}
+		if (ad && ad->size() > 0) {
+			ClassAdList adlist;
+			rval = 1; // assume failure
+
+			if (constraint) {
+				if (ad->AssignExpr(ATTR_REQUIREMENTS, constraint)) {
+					adlist.Insert(ad);
+					rval = 0;
+				} else {
+					fprintf(stderr, "Error: invalid constraint : %s\n", constraint);
+				}
+			} else if (usernames.size()) {
+				// we need a separate ad for each user, each should contain all of the edit_args
+				for (auto & name : usernames) {
+					// make a copy of the edit_args attributes for each user beyond the first
+					if (adlist.Length() > 0) { ad = new ClassAd(*ad); }
+					ad->Assign(ATTR_USER, name);
+					adlist.Insert(ad);
+					rval = 0;
+				}
+			} else {
+				fprintf(stderr, "Error: no username for constraint - don't know which user(s) to edit\n");
+				rval = 1;
+			}
+
+			// if we got to here with a valid adlist, send it on to the schedd
+			if (rval == 0) {
+				CondorError errstack;
+				ClassAd * resultAd = schedd.updateUserAds(adlist, &errstack);
+				if ( ! resultAd) {
+					fprintf(stderr, "Error: edit failed - %s\n", errstack.getFullText().c_str());
+					rval = 1;
+				} else {
+					rval = 0;
+					print_results(resultAd, "edit");
+					delete resultAd;
+				}
+			}
+		}
 	} else {
 		fprintf(stderr, "Unsupported command %d\n", cmd);
 		rval = 1;
@@ -815,10 +864,10 @@ usage(FILE *out, const char *appname)
 	fprintf(out, "    -enable\t\t Enable existing user records, Add new records as needed\n" );
 	fprintf(out, "    -disable\t\t Disable existing user records, user cannot submit jobs\n" );
 	fprintf(out, "    -reason <string>\t Reason for disabling the user. Use with -disable\n" );
-//	fprintf(out, "    -delete\t\t Delete user records\n" );
+	fprintf(out, "    -delete\t\t Delete user records\n" );
 //	fprintf(out, "    -reset\t\t Reset user records to default settings and limits\n" );
-//	fprintf(out, "    -edit\t\t Edit fields of user records\n" );
+	fprintf(out, "    -edit\t\t Edit fields of user records\n" );
 	fprintf(out, "\n"
-//		"  This tool is use to query, modify and delete User/Owner records in the Schedd.\n"
+		"  This tool is use to query, modify and delete User/Owner records in the Schedd.\n"
 		"  The default operation is to query and display users.\n" );
 }

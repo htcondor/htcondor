@@ -50,8 +50,8 @@ struct SubmitBlob {
         // the itemdata variables.  Returns the corresponding SubmitForeachArgs
         // pointer or NULL on a failure.
         SubmitForeachArgs * init_vars( int clusterID );
-        void set_vars( StringList & vars, char * item, int itemIndex );
-        void cleanup_vars( StringList & vars );
+        void set_vars( const std::vector<std::string> & vars, char * item, int itemIndex );
+        void cleanup_vars( const std::vector<std::string> & vars );
 
         const std::string & get_queue_args() const;
         bool set_queue_args( const char * queue_args );
@@ -200,12 +200,10 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
     }
 
 
-    char * var = NULL;
-    sfa->vars.rewind();
-    while( (var = sfa->vars.next()) ) {
+    for (const auto& var: sfa->vars) {
         // Note that this implies that updates to variables created by the
         // queue statement MUST be pointer replacements.
-        m_hash.set_live_submit_variable( var, EmptyItemString, false );
+        m_hash.set_live_submit_variable( var.c_str(), EmptyItemString, false );
     }
 
 
@@ -215,18 +213,17 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
 
 
 void
-SubmitBlob::set_vars( StringList & vars, char * item, int /* itemIndex */ ) {
-    if( vars.isEmpty() ) { return; }
+SubmitBlob::set_vars( const std::vector<std::string> & vars, char * item, int /* itemIndex */ ) {
+    if( vars.empty() ) { return; }
 
     if( item == NULL ) {
         item = EmptyItemString;
     }
 
     // This is awful, but it's what condor_submit does.
-    vars.rewind();
-    char * var = vars.next();
+    auto var_it = vars.begin();
     char * data = item;
-    m_hash.set_live_submit_variable( var, data, false );
+    m_hash.set_live_submit_variable( var_it->c_str(), data, false );
 
     // This is for the human-readable form in the submit file.
     const char * separators = ", \t";
@@ -242,25 +239,21 @@ SubmitBlob::set_vars( StringList & vars, char * item, int /* itemIndex */ ) {
         // whitespace = NULL;
     }
 
-    while( (var = vars.next()) ) {
+    while( ++var_it != vars.end() ) {
         while (*data && ! strchr(separators, *data)) ++data;
         if( data != NULL ) {
             *data++ = 0;
             while (*data && strchr(whitespace, *data)) ++data;
-            m_hash.set_live_submit_variable(var, data, false);
+            m_hash.set_live_submit_variable(var_it->c_str(), data, false);
         }
     }
 }
 
 
 void
-SubmitBlob::cleanup_vars( StringList & vars ) {
-    if( vars.isEmpty() ) { return; }
-
-    vars.rewind();
-    char * var = NULL;
-    while( (var = vars.next()) ) {
-        m_hash.set_live_submit_variable( var, NULL, false );
+SubmitBlob::cleanup_vars( const std::vector<std::string> & vars ) {
+    for (const auto& var: vars) {
+        m_hash.set_live_submit_variable( var.c_str(), NULL, false );
     }
 }
 

@@ -375,7 +375,7 @@ private:
 	// to initialize m_lst_static and m_lst_dynamic.  these two lists
 	// continue to hold pointers into this.  do not free it unless you first empty those
 	// lists. -tj
-	StringList      m_user_specified;
+	std::vector<std::string> m_user_specified;
 	int             m_user_settings_init;  // set to true when init_user_settings has been called at least once.
 
 	std::string		m_named_chroot;
@@ -422,7 +422,7 @@ public:
 				   const std::string &execute_dir, const std::string &execute_partition_id );
 
 	// init a slot_request from config strings
-	static bool buildSlotRequest(_slot_request & request, MachAttributes *m_attr, StringList* list, unsigned int type_id, bool except);
+	static bool buildSlotRequest(_slot_request & request, MachAttributes *m_attr, const std::string& list, unsigned int type_id, bool except);
 
 	// construct from a _slot_request
 	CpuAttributes(unsigned int slot_type,
