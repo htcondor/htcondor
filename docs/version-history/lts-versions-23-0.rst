@@ -38,6 +38,10 @@ New Features:
   multiple queue statements in a single submit description file.
   :jira:`2338`
 
+- Updated *condor_upgrade_check* to verify that :macro:`SEC_TOKEN_SYSTEM_DIRECTORY` and
+  all stored tokens have the correct ownership and file permissions.
+  :jira:`2372`
+
 Bugs Fixed:
 
 - Fixed bug where the ``HoldReasonSubcode`` was not the documented value
