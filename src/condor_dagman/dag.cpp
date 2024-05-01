@@ -46,6 +46,8 @@
 #include "tmp_dir.h"
 #include "condor_q.h"
 
+namespace deep = DagmanDeepOptions;
+
 // {ClusterId : {ProcId,ProcId...}}
 using QueriedJobs = std::map<int, std::set<int>>;
 
@@ -2485,35 +2487,8 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 //-----------------------------------------------------------------------------
 void Dag::WriteSavePoint(Job* node) {
 	if (!node || !node->IsSavePoint()) { return; }
-	std::string saveFile = node->GetSaveFile();
-	std::string saveDir = condor_dirname(saveFile.c_str());
-	bool no_path = saveFile.compare(condor_basename(saveFile.c_str())) == MATCH;
-	//If path is current directory '.' but save file is not specified as ./filename
-	//then make path to save_files sub directory
-	if (saveDir.compare(".") == MATCH && no_path) {
-		//Use full path from condor_getcwd so writing save files written to save_files
-		//directory are unaffected by useDagDir
-		std::string cwd;
-		condor_getcwd(cwd);
-		std::string subDir = condor_dirname(_dagFiles.front().c_str());
-		if (subDir.compare(".") != MATCH) {
-			std::string tmp;
-			dircat(cwd.c_str(), subDir.c_str(), tmp);
-			cwd = tmp;
-		}
-		dircat(cwd.c_str(), "save_files", saveDir);
-		Directory dir(saveDir.c_str());
-		if (!dir.IsDirectory()) {
-			if (mkdir(saveDir.c_str(),0755) < 0 && errno != EEXIST) {
-				debug_printf(DEBUG_QUIET, "Error: Failed to create save file dir (%s): Errno %d (%s)\n",
-							saveDir.c_str(), errno, strerror(errno));
-				return;
-			}
-		}
-		std::string temp;
-		dircat(saveDir.c_str(), saveFile.c_str(), temp);
-		saveFile = temp;
-	}
+	auto [saveFile, success] = _dagmanUtils.ResolveSaveFile(_dagFiles.front(), node->GetSaveFile(), true);
+	if ( ! success) { return; }
 	TmpDir tmpDir;
 	std::string errMsg;
 	//If using useDagDir then switch to directory to write save files
@@ -4379,65 +4354,46 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	std::string logFile = DefaultNodeLog();
 
  	node->_submitTries++;
-	if ( node->GetNoop() ) {
-   		submit_success = fake_condor_submit( condorID, 0,
-					node->GetJobName(), node->GetDirectory(),
-					logFile.c_str() );
-	} else if (!dm.useDirectSubmit) {
-		std::string parents("");
-		if ( ! node->NoParents()) {
-			parents.reserve(2048);
-			node->PrintParents(parents, 2000, this, ",");
-		}
-
-			// This is to allow specifying a top-level batch name of
-			// " " to *not* override batch names specified at a lower
-			// level.
-		const char *batchName;
-		std::string batchId;
-		if ( !node->GetDagFile() && dm._batchName == " " ) {
-			batchName = "";
-		} else {
-			batchName = dm._batchName.c_str();
-		}
-		if ( !node->GetDagFile() && dm._batchId == " " ) {
-			batchId = "";
-		} else {
-			batchId = dm._batchId.c_str();
-		}
-
-		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
-					node->GetJobName(), parents.c_str(),
-					node, node->_effectivePriority,
-					node->GetRetries(),
-					node->GetDirectory(), logFile.c_str(),
-					( ! node->NoChildren()) && dm._claim_hold_time > 0,
-					batchName, batchId );
+	if (node->GetNoop()) {
+		submit_success = fake_condor_submit(condorID, 0, node->GetJobName(), node->GetDirectory(), logFile.c_str());
 	} else {
-		std::string parents("");
+		std::string parents, batchName, batchId;
 		if ( ! node->NoParents()) {
 			parents.reserve(2048);
 			node->PrintParents(parents, 2000, this, ",");
 		}
 
-		// This is to allow specifying a top-level batch name of
-		// " " to *not* override batch names specified at a lower
-		// level.
-		const char *batchName;
-		const char *batchId;
-		if (!node->GetDagFile() && dm._batchName == " ") {
+		if ( !node->GetDagFile() && dm.options[deep::str::BatchName] == " " ) {
 			batchName = "";
 		} else {
-			batchName = dm._batchName.c_str();
-		}
-				if ( !node->GetDagFile() && dm._batchId == " " ) {
-			batchId = "";
-		} else {
-			batchId = dm._batchId.c_str();
+			batchName = dm.options[deep::str::BatchName];
 		}
 
-		submit_success = direct_condor_submit(dm, node,
-			logFile.c_str(), parents.c_str(), batchName, batchId, condorID);
+		if ( !node->GetDagFile() && dm.options[deep::str::BatchId] == " " ) {
+			batchId = "";
+		} else {
+			batchId = dm.options[deep::str::BatchId];
+		}
+
+		switch(dm.options[deep::i::SubmitMethod]) {
+			case 0: // run condor_submit
+				submit_success = condor_submit(dm, node->GetCmdFile(), condorID, node->GetJobName(),
+			                                   parents.c_str(), node, node->_effectivePriority,
+			                                   node->GetRetries(), node->GetDirectory(), logFile.c_str(),
+			                                   ( ! node->NoChildren()) && dm._claim_hold_time > 0,
+			                                   batchName.c_str(), batchId);
+				break;
+			case 1: // direct submit
+				submit_success = direct_condor_submit(dm, node, logFile.c_str(), parents.c_str(),
+				                                      batchName.c_str(), batchId.c_str(), condorID);
+				break;
+			default:
+				// We have unknown submission method requested so jobs will never be submitted abort
+				debug_printf(DEBUG_NORMAL, "Error: Unknown submit method (%d)\n", dm.options[deep::i::SubmitMethod]);
+				main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR);
+			break;
+		}
+
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;

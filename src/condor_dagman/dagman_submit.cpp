@@ -814,7 +814,7 @@ finis:
 
 bool send_reschedule(const Dagman & dm)
 {
-	if (!dm.useDirectSubmit)
+	if (dm.options[deep::i::SubmitMethod] == 0)
 		return true; // submit already did it
 
 	DCSchedd schedd;
