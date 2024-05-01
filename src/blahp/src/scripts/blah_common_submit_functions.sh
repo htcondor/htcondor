@@ -445,6 +445,12 @@ function bls_setup_temp_files ()
 
 function bls_setup_all_files ()
 {
+    # The run-in-workdir option assumes all directories are shared between
+    # the submit and worker nodes. Disable it if the configuration says
+    # that's not true.
+    if [ "$blah_shared_directories" != "/" ] ; then
+        blah_run_in_workdir=no
+    fi
 
 # Make sure /dev/null is always 'shared' (i.e., not copied over by the
 # batch system).
@@ -489,7 +495,12 @@ function bls_setup_all_files ()
   uni_pid=$$
   uni_time=`date +%s`
   uni_ext=$uni_uid.$uni_pid.$uni_time
-  
+
+  local job_iwd=${bls_opt_workdir}
+  if [ "${job_iwd: -1}" != "/" ] ; then
+      $job_iwd="${job_iwd}/"
+  fi
+
   # Put executable into inputsandbox (unless in a shared dir)
   bls_test_shared_dir "$bls_opt_the_command"
   if [ "x$bls_is_in_shared_dir" == "xyes" ] ; then
@@ -590,6 +601,11 @@ function bls_setup_all_files ()
       exec 4< "$bls_opt_inputflstring"
       while read xfile <&4 ; do
           if [ ! -z $xfile  ] ; then
+              if [ "$blah_run_in_workdir" == "yes" ] ; then
+                  if [ "${xfile:0:${#job_iwd}}" == "${job_iwd}" -o "${xfile}" == "$(basename ${xfile})" ] ; then
+                      continue
+                  fi
+               fi
                if [ "${xfile:0:1}" != "/" ] ; then xfile=${bls_opt_workdir}/${xfile} ; fi
                bls_test_shared_dir "$xfile"
                if [ "x$bls_is_in_shared_dir" == "xyes" ] ; then
@@ -622,6 +638,9 @@ function bls_setup_all_files ()
 
               if [ -z $xfileremap ] ; then
                 xfileremap="$xfile"
+              fi
+              if [ "$blah_run_in_workdir" == "yes" -a "${xfileremap}" == "${xfile}" ] ; then
+                continue
               fi
               if [ "${xfileremap:0:1}" != "/" ] ; then
                 xfileremap=${bls_opt_workdir}/${xfileremap}
@@ -669,21 +688,28 @@ function bls_start_job_wrapper ()
   
   print_blahp_job_env
 
-  echo "old_home=\`pwd\`"
-  # Set the temporary home (including cd'ing into it)
-  if [ "x$bls_opt_run_dir" != "x" ] ; then
-    run_dir="$bls_opt_run_dir"
-  else
-    run_dir="home_$bls_tmp_name"
-  fi
-  if [ -n "$blah_wn_temporary_home_dir" ] ; then
-    echo "new_home=${blah_wn_temporary_home_dir}/$run_dir"
-  else
-    echo "new_home=\${old_home}/$run_dir"
-  fi
+  if [ "$blah_run_in_workdir" == "yes" ] ; then
+    echo "old_home=$bls_opt_workdir"
+    echo "new_home=$bls_opt_workdir"
 
-  echo 'mkdir "$new_home"'
-  echo 'job_wait_cleanup () { wait "$job_pid"; cd "$old_home"; rm -rf "$new_home"; }'
+    echo 'job_wait_cleanup () { wait "$job_pid"; }'
+  else
+    echo "old_home=\`pwd\`"
+    # Set the temporary home (including cd'ing into it)
+    if [ "x$bls_opt_run_dir" != "x" ] ; then
+      run_dir="$bls_opt_run_dir"
+    else
+      run_dir="home_$bls_tmp_name"
+    fi
+    if [ -n "$blah_wn_temporary_home_dir" ] ; then
+      echo "new_home=${blah_wn_temporary_home_dir}/$run_dir"
+    else
+      echo "new_home=\${old_home}/$run_dir"
+    fi
+
+    echo 'mkdir "$new_home"'
+    echo 'job_wait_cleanup () { wait "$job_pid"; cd "$old_home"; rm -rf "$new_home"; }'
+  fi
   echo 'on_signal () { kill -$1 "$job_pid"; job_wait_cleanup; exit 255; }'
   echo 'trap_sigs () { for sig; do trap "on_signal $sig" $sig; done; }'
   echo 'trap_sigs HUP INT QUIT TERM XCPU'
