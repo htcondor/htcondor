@@ -11517,6 +11517,14 @@ has.
     This option is useful for pools such that use glidein, in which it
     is not desired to record metrics for individual execute nodes.
 
+:macro-def:`GANGLIAD_WANT_PROJECTION[GANGLIAD]`
+    A boolean value that, when ``True``, causes the *condor_gangliad* to
+    use an attribute projection when querying the collector whenever possible.
+    This significantly reduces the memory consumption of the *condor_gangliad*, and also
+    places less load on the *condor_collector*.
+    The default value is currently ``False``; it is expected this default will
+    be changed to ``True`` in a future release after additional testing.
+
 :macro-def:`GANGLIAD_WANT_RESET_METRICS[GANGLIAD]`
     A boolean value that, when ``True``, causes aggregate numeric metrics
     to be reset to a value of zero when they are no longer being updated.
