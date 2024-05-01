@@ -596,7 +596,7 @@ INCOMPATIBILITY_CHECKS = [
              along with all stored tokens have the correct owner and
              file system permissions.
              $(<EMPTY_LINE>)
-             Note: Requires root if HTCondor is running rootly
+             Note: Requires root if HTCondor is running as root
              """,
         version=(23, 7, 1),
     ),
