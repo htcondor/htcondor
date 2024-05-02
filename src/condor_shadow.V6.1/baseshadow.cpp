@@ -1591,9 +1591,9 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 		pid_t tpid = daemonCore->getpid();
 		if (!pidbuf[0]) {
 			mypid = tpid;
-			snprintf(pidbuf, sizeof(pidbuf)-1, "(%lld)", (long long)mypid);
+			snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)", mypid);
 		} else if (tpid != mypid) {
-			snprintf(pidbuf, sizeof(pidbuf)-1, "(%lld)>(%lld)", (long long)mypid, (long long)tpid);
+			snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)>(%d)", mypid, tpid);
 		}
 	}
 
