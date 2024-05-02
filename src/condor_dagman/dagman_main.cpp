@@ -554,8 +554,6 @@ void main_init(int argc, char ** const argv) {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Process command-line arguments
-	dagOpts[deep::b::Recurse] = false;
-
 	for (size_t iArg = 1; iArg < (size_t)argc; iArg++) {
 		std::string strArg = argv[iArg];
 
