@@ -1320,9 +1320,6 @@ private:
 		// at run time (just before the node is submitted).
 	bool	_generateSubdagSubmits;
 
-		// Options for running condor_submit_dag on nested DAGs.
-	DagmanOptions *_submitDagDeepOpts;
-
 		// Dag objects are used to parse splice files, which are like include
 		// files that ultimately result in a larger in memory dag. To toplevel
 		// dag will have this be false, and any included splices will be true.

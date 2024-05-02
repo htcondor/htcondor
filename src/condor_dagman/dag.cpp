@@ -127,7 +127,6 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 	_prohibitMultiJobs	  (prohibitMultiJobs),
 	_submitDepthFirst	  (submitDepthFirst),
 	_generateSubdagSubmits (generateSubdagSubmits),
-	_submitDagDeepOpts	  (dagDeepOpts),
 	_isSplice			  (isSplice),
 	_spliceScope		  (spliceScope),
 	_recoveryMaxfakeID	  (0),
@@ -4333,7 +4332,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		if ( _dagmanUtils.runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
+		if ( _dagmanUtils.runSubmitDag( dm.inheritOpts, node->GetDagFile(),
 					node->GetDirectory(), node->_effectivePriority,
 					isRetry ) != 0 ) {
 			++node->_submitTries;
