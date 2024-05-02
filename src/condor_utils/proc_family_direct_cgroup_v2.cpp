@@ -331,6 +331,14 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 
 	return true;
 }
+		
+void 
+ProcFamilyDirectCgroupV2::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
+	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
+	if (!success) {
+		ASSERT("Couldn't insert into cgroup map, duplicate?");
+	}
+}
 
 bool 
 ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
@@ -342,10 +350,7 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 	this->cgroup_memory_and_swap_limit = fi->cgroup_memory_and_swap_limit;
 	this->cgroup_cpu_shares = fi->cgroup_cpu_shares;
 
-	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
-	if (!success) {
-		ASSERT("Couldn't insert into cgroup map, duplicate?");
-	}
+	assign_cgroup_for_pid(pid, cgroup_name);
 
 	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
 	return fi->cgroup_active;
@@ -540,7 +545,7 @@ ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 	return success;
 }
 
-	bool
+bool
 ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
