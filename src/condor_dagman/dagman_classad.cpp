@@ -140,8 +140,7 @@ ScheddClassad::GetAttribute( const char *attrName, int &attrVal,
 }
 
 //---------------------------------------------------------------------------
-DagmanClassad::DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd ) :
-	_valid( false )
+DagmanClassad::DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd )
 {
 	CondorID defaultCondorId;
 	if ( DAGManJobId == defaultCondorId ) {
@@ -332,8 +331,7 @@ DagmanClassad::InitializeMetrics()
 }
 
 //---------------------------------------------------------------------------
-ProvisionerClassad::ProvisionerClassad( const CondorID &JobId, DCSchedd *schedd ) :
-	_valid( false )
+ProvisionerClassad::ProvisionerClassad( const CondorID &JobId, DCSchedd *schedd )
 {
 	CondorID defaultCondorId;
 	if ( JobId == defaultCondorId ) {
