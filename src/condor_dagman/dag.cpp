@@ -47,6 +47,7 @@
 #include "condor_q.h"
 
 namespace deep = DagmanDeepOptions;
+namespace shallow = DagmanShallowOptions;
 
 // {ClusterId : {ProcId,ProcId...}}
 using QueriedJobs = std::map<int, std::set<int>>;
@@ -81,24 +82,14 @@ void touch (const char * filename) {
 }
 
 //---------------------------------------------------------------------------
-Dag::Dag( /* const */ std::list<std::string> &dagFiles,
-		  const int maxJobsSubmitted,
-		  const int maxPreScripts, const int maxPostScripts,
-		  const int maxHoldScripts,
-		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
-		  bool retryNodeFirst, const char *condorRmExe,
-		  const CondorID *DAGManJobID,
-		  bool prohibitMultiJobs, bool submitDepthFirst,
-		  std::string defaultNodeLog, bool generateSubdagSubmits,
-		  DagmanOptions *dagDeepOpts, bool isSplice,
-		  DCSchedd *schedd, const std::string &spliceScope ) :
-	_maxPreScripts        (maxPreScripts),
-	_maxPostScripts       (maxPostScripts),
-	_maxHoldScripts       (maxHoldScripts),
+Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
+	_maxPreScripts        (dm.options[shallow::i::MaxPre]),
+	_maxPostScripts       (dm.options[shallow::i::MaxPost]),
+	_maxHoldScripts       (dm.options[shallow::i::MaxHold]),
 	MAX_SIGNAL			  (64),
 	_splices              ({}),
-	_dagFiles             (dagFiles),
-	_useDagDir            (useDagDir),
+	dagOpts(dm.options),
+	_useDagDir            (dm.options[deep::b::UseDagDir]),
 	_final_job (0),
 	_nodeNameHash		  ({}),
 	_nodeIDHash			  ({}),
@@ -110,13 +101,13 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 	_numJobsSubmitted     (0),
 	_totalJobsSubmitted   (0),
 	_totalJobsCompleted   (0),
-	_maxJobsSubmitted     (maxJobsSubmitted),
+	_maxJobsSubmitted     (dm.options[shallow::i::MaxJobs]),
 	_numIdleJobProcs		  (0),
-	_maxIdleJobProcs		  (maxIdleJobProcs),
-	m_retrySubmitFirst	  (retrySubmitFirst),
-	m_retryNodeFirst	  (retryNodeFirst),
-	_condorRmExe		  (condorRmExe),
-	_DAGManJobId		  (DAGManJobID),
+	_maxIdleJobProcs		  (dm.options[shallow::i::MaxIdle]),
+	m_retrySubmitFirst	  (dm.retrySubmitFirst),
+	m_retryNodeFirst	  (dm.retryNodeFirst),
+	_condorRmExe		  (dm.condorRmExe.c_str()),
+	_DAGManJobId		  (&dm.DAGManJobId),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
 	_holdRunNodeCount	  (0),
@@ -124,9 +115,9 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 	_maxJobsDeferredCount (0),
 	_maxIdleDeferredCount (0),
 	_catThrottleDeferredCount (0),
-	_prohibitMultiJobs	  (prohibitMultiJobs),
-	_submitDepthFirst	  (submitDepthFirst),
-	_generateSubdagSubmits (generateSubdagSubmits),
+	_prohibitMultiJobs	  (dm.prohibitMultiJobs),
+	_submitDepthFirst	  (dm.submitDepthFirst),
+	_generateSubdagSubmits (dm._generateSubdagSubmits),
 	_isSplice			  (isSplice),
 	_spliceScope		  (spliceScope),
 	_recoveryMaxfakeID	  (0),
@@ -136,11 +127,11 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 	_dry_run			  (0),
 	_dagPriority		  (0),
 	_metrics			  (NULL),
-	_schedd				  (schedd)
+	_schedd				  (dm._schedd)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.c_str() );
 
-	_defaultNodeLog.assign(defaultNodeLog);
+	_defaultNodeLog.assign(dm._defaultNodeLog);
 	// If this dag is a splice, then it may have been specified with a DIR
 	// directive. If so, then this records what it was so we can later
 	// propogate this information to all contained nodes in the DAG--effectively
@@ -151,8 +142,8 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 
 	// for the toplevel dag, emit the dag files we ended up using.
 	if (_isSplice == false) {
-		ASSERT( dagFiles.size() >= 1 );
-		PrintDagFiles( dagFiles );
+		ASSERT(dm.options.numDagFiles() >= 1 );
+		PrintDagFiles(dm.options.dagFiles());
 	}
 
  	_readyQ = new DagPriorityQ;
@@ -211,7 +202,7 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 
 	_dagIsHalted = false;
 	_dagIsAborted = false;
-	_haltFile = _dagmanUtils.HaltFileName( _dagFiles.front() );
+	_haltFile = _dagmanUtils.HaltFileName(dm.options.primaryDag());
 	_dagStatus = DAG_STATUS_OK;
 
 	_graph_width = 0;
@@ -1255,11 +1246,11 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		debug_printf( DEBUG_QUIET, "Error: DAG semantics violated!  "
 					"Node %s was submitted but has unfinished parents!\n",
 					job->GetJobName() );
-		const char *dagFile = _dagFiles.front().c_str();
+		std::string dagFile = dagOpts.primaryDag();
 		debug_printf( DEBUG_QUIET, "This may indicate log file corruption; "
 					"you may want to check the log files and re-run the "
 					"DAG in recovery mode by giving the command "
-					"'condor_submit %s.condor.sub'\n", dagFile );
+					"'condor_submit %s.condor.sub'\n", dagFile.c_str());
 		job->Dump( this );
 			// We do NOT want to create a rescue DAG here, because it
 			// would probably be invalid.
@@ -1672,7 +1663,7 @@ Dag::SetAllowEvents( int allowEvents)
 
 //-------------------------------------------------------------------------
 void
-Dag::PrintDagFiles( /* const */ std::list<std::string> &dagFiles )
+Dag::PrintDagFiles(const std::list<std::string> &dagFiles )
 {
 	if ( dagFiles.size() > 1 ) {
 		debug_printf( DEBUG_VERBOSE, "All DAG files:\n");
@@ -2485,7 +2476,7 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 //-----------------------------------------------------------------------------
 void Dag::WriteSavePoint(Job* node) {
 	if (!node || !node->IsSavePoint()) { return; }
-	auto [saveFile, success] = _dagmanUtils.ResolveSaveFile(_dagFiles.front(), node->GetSaveFile(), true);
+	auto [saveFile, success] = _dagmanUtils.ResolveSaveFile(dagOpts.primaryDag(), node->GetSaveFile(), true);
 	if ( ! success) { return; }
 	TmpDir tmpDir;
 	std::string errMsg;
@@ -3230,7 +3221,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 	fprintf( outfile, "  DagFiles = {\n" );
 	const char *separator = "";
-	for (auto & _dagFile : _dagFiles) {
+	for (auto & _dagFile : dagOpts.dagFiles()) {
 		fprintf( outfile, "%s    %s", separator,
 					EscapeClassadString( _dagFile.c_str() ) );
 		separator = ",\n";

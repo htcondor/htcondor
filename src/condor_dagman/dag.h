@@ -89,30 +89,9 @@ class Dag {
   public:
   
     /** Create a DAG
-		@param dagFile the DAG file name
-        @param maxJobsSubmitted the maximum number of jobs to submit to HTCondor
-               at one time
-        @param maxPreScripts the maximum number of PRE scripts to spawn at
-		       one time
-        @param maxPostScripts the maximum number of POST scripts to spawn at
-		       one time
-		@param allowLogError whether to allow the DAG to run even if we
-			   have an error determining the job log files
-		@param useDagDir run DAGs in directories from DAG file paths
-		       if true
-		@param maxIdleJobProcs the maximum number of idle job procs to
-			   allow at one time (0 means unlimited)
-		@param retrySubmitFirst whether, when a submit fails for a node's
-		       job, to put the node at the head of the ready queue
-		@param retryNodeFirst whether, when a node fails and has retries,
-			   to put the node at the head of the ready queue
-		@param condorRmExe executable to remove HTCondor jobs
-		@param DAGManJobId HTCondor ID of this DAGMan process
-		@param prohibitMultiJobs whether submit files queueing multiple
-			   job procs are prohibited
-		@param submitDepthFirst whether ready nodes should be submitted
-			   in depth-first (as opposed to breadth-first) order
-		@param defaultNodeLog The user log file to be used for node jobs.
+		@param dm is the DAGMan object holding all vital configuration and
+				command line information. Plus other key bits like the local
+				Schedd object.
 		@param isSplice is a boolean which lets the dag object know whether
 				of not it is a splicing dag, or the toplevel dag. We don't
 				wan't to allocate some regulated resources we won't need
@@ -123,21 +102,9 @@ class Dag {
 				"root" for the top-level DAG.
     */
 
-    Dag( /* const */ std::list<std::string> &dagFiles,
-		 const int maxJobsSubmitted,
-		 const int maxPreScripts, const int maxPostScripts,
-		 const int maxHoldScripts,
-		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
-		 bool retryNodeFirst, const char *condorRmExe,
-		 const CondorID *DAGManJobId,
-		 bool prohibitMultiJobs, bool submitDepthFirst,
-		 std::string defaultNodeLog, bool generateSubdagSubmits,
-		 DagmanOptions *dagDeepOpts,
-		 bool isSplice = false, DCSchedd *schedd = NULL,
-		 const std::string &spliceScope = "root" );
+	Dag(const Dagman& dm, bool isSplice = false, const std::string &spliceScope = "root");
 
-    ///
-    ~Dag();
+	~Dag();
 
 		/** Create the DagmanMetrics object for this DAGMan.
 			@param primaryDagFile The primary (first) DAG file specified.
@@ -720,8 +687,6 @@ class Dag {
 
 	bool GenerateSubdagSubmits(void) const { return _generateSubdagSubmits; }
 
-	std::list<std::string>& DagFiles(void) { return _dagFiles; }
-
 	/** Determine whether a job is a NOOP job based on the HTCondor ID.
 		@param the HTCondor ID of the job
 		@return true iff the job is a NOOP
@@ -912,16 +877,15 @@ class Dag {
 	// associated with the splice.
 	std::map<std::string, Dag*> _splices;
 
-	// A reference to something the dagman passes into the constructor
-	std::list<std::string>& _dagFiles;
-
 	// Internal instance of a DagmanUtils object
 	DagmanUtils _dagmanUtils;
+
+	const DagmanOptions &dagOpts;
 
 	/** Print a numbered list of the DAG files.
 	    @param The list of DAG files being run.
 	*/
-	void PrintDagFiles( /* const */ std::list<std::string> &dagFiles );
+	void PrintDagFiles(const std::list<std::string> &dagFiles );
 
     /* Prepares to submit job by running its PRE Script if one exists,
        otherwise adds job to _readyQ and calls SubmitReadyJobs()
