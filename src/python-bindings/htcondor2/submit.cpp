@@ -60,6 +60,10 @@ struct SubmitBlob {
         void setSubmitMethod(int method_value) { m_hash.setSubmitMethod(method_value); }
         int  getSubmitMethod() { return m_hash.getSubmitMethod(); }
 
+        // This is an awful, terrible hack.
+        MacroStreamMemoryFile get_itemdata_state() { return m_ms_inline; }
+        void set_itemdata_state(const MacroStreamMemoryFile & state) { m_ms_inline = state; }
+
     private:
         SubmitHash m_hash;
         MACRO_SOURCE m_src_pystring;
@@ -182,7 +186,6 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
         delete sfa;
         return NULL;
     }
-
 
     for (const auto& var: sfa->vars) {
         // Note that this implies that updates to variables created by the
@@ -610,4 +613,45 @@ _submit_get_submit_method( PyObject *, PyObject * args ) {
     long method_value = sb->getSubmitMethod();
 
     return PyLong_FromLong(method_value);
+}
+
+
+static PyObject *
+_submit_itemdata( PyObject *, PyObject * args ) {
+    PyObject * self = NULL;
+    PyObject_Handle * handle = NULL;
+
+    if(! PyArg_ParseTuple( args, "OO", & self, (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+    auto state = sb->get_itemdata_state();
+
+    int ignored = -1;
+    SubmitForeachArgs * itemdata = sb->init_vars( ignored );
+    if( itemdata == NULL ) {
+        sb->set_itemdata_state(state);
+
+        PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
+        return NULL;
+    }
+
+    if( itemdata->items.number() == 0 ) {
+        sb->set_itemdata_state(state);
+
+        Py_RETURN_NONE;
+    }
+
+    char * item = NULL;
+    itemdata->items.rewind();
+    std::vector<std::string> items;
+    while( (item = itemdata->items.next()) ) {
+        items.push_back(item);
+    }
+    std::string value = join(items, "\n");
+
+    sb->set_itemdata_state(state);
+    return PyUnicode_FromString(value.c_str());
 }
