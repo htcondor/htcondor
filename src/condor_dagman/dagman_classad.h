@@ -93,16 +93,8 @@ class DagmanClassad : public ScheddClassad {
 	*/
 	~DagmanClassad();
 
-	/** Initialize the DAGMan job's classad.
-		@param maxJobs Maximum number of submitted jobs
-		@param maxIdle Maximum number of idle jobs
-		@param maxPreScripts Maximum number of active pre scripts
-		@param maxPostScripts Maximum number of active post scripts
-		@param maxHoldScripts Maximum number of active hold scripts
-	**/
-	void Initialize( int maxJobs, int maxIdle, int maxPreScripts,
-			int maxPostScripts, int maxHoldScripts );
-
+	// Initialize the DAGMan job's classad.
+	void Initialize(DagmanOptions& dagOpts);
 
 	/** Update the status information in the DAGMan job's classad.
 		@param dagman: Dagman object to pull status information from
@@ -114,25 +106,6 @@ class DagmanClassad : public ScheddClassad {
 			@param nodeName: A string to receive the DAGNodeName value.
 		*/
 	void GetInfo( std::string &owner, std::string &nodeName );
-
-		/** Get the JobBatchId value from our ClassAd (setting it
-		    to the default if it's not already set).
-			@param batchId: An int to receive the JobBatchId value
-		*/
-	void GetSetBatchId( std::string &batchId );
-
-		/** Get the JobBatchName value from our ClassAd (setting it
-		    to the default if it's not already set).
-			@param batchName: A string to receive the JobBatchName value
-		*/
-	void GetSetBatchName( const std::string &primaryDagFile,
-				std::string &batchName );
-
-		/** Get the AcctGroup and AcctGroupUser values from our ClassAd.
-			@param group: A string to receive the AcctGroup value
-			@param user: A string to receive the AcctGroupUser value
-		*/
-	void GetAcctInfo( std::string &group, std::string &user );
 
   private:
 		/** Initialize metrics information related to our classad.
