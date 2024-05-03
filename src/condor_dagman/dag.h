@@ -119,14 +119,6 @@ class Dag {
 		*/
 	void ReportMetrics( int exitCode );
 
-	/** Set the _abortOnScarySubmit value -- controls whether we abort
-		the DAG on "scary" submit events.
-		@param The abortOnScarySubmit value
-	*/
-	void SetAbortOnScarySubmit( bool abortOnScarySubmit ) {
-		_abortOnScarySubmit = abortOnScarySubmit;
-	}
-
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
         @param recovery specifies if this is a recovery
         @return true: successful, false: failure
@@ -297,12 +289,6 @@ class Dag {
 		@param prefix a string of the prefix for all nodes.
 	*/
 	void PrefixAllNodeNames(const std::string &prefix);
-
-    /** Set the event checking level.
-		@param allowEvents what "bad" events to treat as non-fatal (as
-			   opposed to fatal) errors; see check_events.h for values.
-    */
-	void SetAllowEvents( int allowEvents );
 
     /// Print the list of jobs to stdout (for debugging).
     void PrintJobList() const;
@@ -632,11 +618,6 @@ class Dag {
 
 	bool ProhibitMultiJobs() const { return _prohibitMultiJobs; }
 
-		/** Set the config file used for this DAG.
-			@param configFile The configuration file for this DAG.
-		*/
-	void SetConfigFile( const char *configFile ) { _configFile = configFile; }
-
 		/** Set the interval for "pending node" reports.
 			@param interval The number of seconds without an event we
 			wait before reporting the pending nodes.
@@ -751,26 +732,8 @@ class Dag {
 	static bool ConnectSplices( Dag *parentSplice, Dag *childSplice );
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	/** Set the maximum number of job holds before a node is declared
-		a failure.
-		@param the maximum number of job holds before failure
-	*/
-	void SetMaxJobHolds(int maxJobHolds) { _maxJobHolds = maxJobHolds; }
-
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
-	bool GetPostRun() const { return _alwaysRunPost; }
-	void SetPostRun(bool postRun) { _alwaysRunPost = postRun; }	
 
-	int GetDryRun() const { return _dry_run; }
-	void SetDryRun(int dry) { _dry_run = dry; }
-
-		// Set the overall priority for this DAG (set on command
-		// line (could be from higher-level DAG) or via config).
-	void SetDagPriority(const int prio) { _dagPriority = prio; }
-
-		// Get this DAG's overall priority.
-	int GetDagPriority() const { return _dagPriority; }
-		
 		// Set priorities for the individual nodes within this DAG.
 	void SetNodePriorities();
 
@@ -1284,17 +1247,6 @@ private:
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
-
-	// If true, run the POST script, regardless of the exit status of the PRE script
-	// Defaults to true
-	bool _alwaysRunPost{false};
-
-	// If true, don't dry-run the dag. pretending that all jobs terminated successfully
-	// upon submission
-	int _dry_run{0};
-
-		// The priority for this DAG. (defaults to 0)
-	int _dagPriority{0};
 
 		// Whether the DAG is currently halted.
 	bool _dagIsHalted{false};

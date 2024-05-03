@@ -805,17 +805,6 @@ void main_init(int argc, char ** const argv) {
 
 	if ( ! dagman.dag) { EXCEPT("ERROR: out of memory!"); }
 
-	dagman.dag->SetAbortOnScarySubmit(dagman.abortOnScarySubmit);
-	dagman.dag->SetAllowEvents(dagman.allow_events);
-	const std::string &dagConfig = dagman._dagmanConfigFile;
-	dagman.dag->SetConfigFile(dagConfig.empty() ? nullptr : dagConfig.c_str());
-	dagman.dag->SetMaxJobHolds(dagman._maxJobHolds);
-	dagman.dag->SetPostRun(dagOpts[shallow::b::PostRun]);
-	dagman.dag->SetDryRun(dagOpts[shallow::b::DryRun]);
-	if (dagOpts[shallow::i::Priority] != 0) {
-		dagman.dag->SetDagPriority(dagOpts[shallow::i::Priority]);
-	}
-
 	// Parse the input files.  The parse() routine
 	// takes care of adding jobs and dependencies to the DagMan
 
@@ -855,7 +844,7 @@ void main_init(int argc, char ** const argv) {
 		}
 	}
 
-	if (dagman.dag->GetDagPriority() != 0) {
+	if (dagOpts[shallow::i::Priority] != 0) {
 		dagman.dag->SetNodePriorities(); // Applies to the nodes of the dag
 	}
 

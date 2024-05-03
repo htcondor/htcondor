@@ -90,14 +90,19 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	_DAGManJobId		  (&dm.DAGManJobId),
 	_prohibitMultiJobs	  (dm.prohibitMultiJobs),
 	_submitDepthFirst	  (dm.submitDepthFirst),
+	_abortOnScarySubmit(dm.abortOnScarySubmit),
 	_generateSubdagSubmits (dm._generateSubdagSubmits),
 	_isSplice			  (isSplice),
 	_spliceScope		  (spliceScope),
+	_maxJobHolds (dm._maxJobHolds),
 	_schedd				  (dm._schedd)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.c_str() );
 
 	_defaultNodeLog.assign(dm._defaultNodeLog);
+	_checkCondorEvents.SetAllowEvents(dm.allow_events);
+	const std::string &dagConfig = dm._dagmanConfigFile;
+	_configFile = dagConfig.empty() ? nullptr : dagConfig.c_str();
 	// If this dag is a splice, then it may have been specified with a DIR
 	// directive. If so, then this records what it was so we can later
 	// propogate this information to all contained nodes in the DAG--effectively
@@ -282,7 +287,7 @@ bool Dag::Bootstrap (bool recovery)
 		for (auto &_job : _jobs) {
 			if (_job->GetStatus() == Job::STATUS_SUBMITTED) { numSubmitted++; }
 			else if (_job->GetStatus() == Job::STATUS_POSTRUN) {
-				if ( ! RunPostScript(_job, _alwaysRunPost, 0, false)) {
+				if ( ! RunPostScript(_job, dagOpts[shallow::b::PostRun], 0, false)) {
 					debug_cache_stop_caching();
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
@@ -1019,7 +1024,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 				job->SetStatus( Job::STATUS_POSTRUN );
 				_postRunNodeCount++;
 			} else {
-				(void)RunPostScript( job, _alwaysRunPost, 0 );
+				(void)RunPostScript( job, dagOpts[shallow::b::PostRun], 0 );
 			}
 		} else if( job->GetStatus() != Job::STATUS_ERROR ) {
 			// no POST script was specified, so update DAG with
@@ -1409,7 +1414,7 @@ Dag::ProcessClusterRemoveEvent(Job *job, bool recovery) {
 				job->SetStatus( Job::STATUS_POSTRUN );
 				_postRunNodeCount++;
 			} else {
-				(void)RunPostScript( job, _alwaysRunPost, 0 );
+				(void)RunPostScript( job, dagOpts[shallow::b::PostRun], 0 );
 			}
 		} else if( job->GetStatus() != Job::STATUS_ERROR ) {
 			// no POST script was specified, so update DAG with
@@ -1585,13 +1590,6 @@ Job * Dag::FindNodeByEventID ( const CondorID condorID ) const {
 	}
 
 	return node;
-}
-
-//-------------------------------------------------------------------------
-void
-Dag::SetAllowEvents( int allowEvents)
-{
-	_checkCondorEvents.SetAllowEvents( allowEvents );
 }
 
 //-------------------------------------------------------------------------
@@ -1871,7 +1869,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						catThrottle->_maxJobs );
 			deferredJobs.push_back(job);
 			_catThrottleDeferredCount++;
-		} else if (_dry_run) {
+		} else if (dagOpts[shallow::b::DryRun]) {
 			// Don't actually submit the job. Just terminate it right away
 			debug_printf(DEBUG_NORMAL, "Processing job: %s\n", job->GetJobName());
 			TerminateJob(job, false, false);
@@ -1900,7 +1898,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 
 	// if we didn't actually invoke condor_submit, and we submitted any jobs
 	// we should now send a reschedule command
-	if (numSubmitsThisCycle > 0 && !_dry_run)
+	if (numSubmitsThisCycle > 0 && !dagOpts[shallow::b::DryRun])
 	{
 		send_reschedule(dm);
 	}
@@ -1987,11 +1985,11 @@ Dag::PreScriptReaper( Job *job, int status )
 		}
 
 			// Check for POST script.
-		else if ( _alwaysRunPost && job->_scriptPost != NULL ) {
+		else if ( dagOpts[shallow::b::PostRun] && job->_scriptPost != NULL ) {
 				// PRE script Failed.  The return code is in retval member.
 			job->_scriptPost->_retValScript = job->retval;
 			job->_scriptPost->_retValJob = DAG_ERROR_JOB_SKIPPED;
-			RunPostScript( job, _alwaysRunPost, job->retval );
+			RunPostScript( job, dagOpts[shallow::b::PostRun], job->retval );
 		}
 
 			// Check for retries.
@@ -4396,7 +4394,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 		bool ranPostScript = false;
 		if( node->_scriptPost ) {
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
-			ranPostScript = RunPostScript( node, _alwaysRunPost, 0 );
+			ranPostScript = RunPostScript( node, dagOpts[shallow::b::PostRun], 0 );
 		} else {
 			node->TerminateFailure();
 				// We consider service nodes to be best-effort
@@ -4987,9 +4985,10 @@ Dag::AssumeOwnershipofNodes(const std::string &spliceName, OwnedMaterials *om)
 // Iterate over the jobs and set the effective priorities for the nodes.
 void Dag::SetNodePriorities()
 {
-	if ( GetDagPriority() != 0 ) {
+	const int dagPrior = dagOpts[shallow::i::Priority];
+	if ( dagPrior != 0 ) {
 		for (auto & _job : _jobs) {
-			_job->_effectivePriority += GetDagPriority();
+			_job->_effectivePriority += dagPrior;
 		}
 	}
 }
