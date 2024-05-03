@@ -628,7 +628,7 @@ class Dag {
 
 		// The maximum signal we can deal with in the error-reporting
 		// code.
-	const int MAX_SIGNAL;
+	const int MAX_SIGNAL{64};
 
 	bool ProhibitMultiJobs() const { return _prohibitMultiJobs; }
 
@@ -784,7 +784,7 @@ class Dag {
 	*/
 	bool IsHalted() const { return _dagIsHalted; }
 
-	DagStatus _dagStatus;
+	DagStatus _dagStatus{DAG_STATUS_OK};
 
 	// WARNING!  DagStatus and _dag_status_names just be kept in sync!
 	static const char *_dag_status_names[];
@@ -857,7 +857,7 @@ class Dag {
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.
-	std::map<std::string, Dag*> _splices;
+	std::map<std::string, Dag*> _splices{};
 
 	// Internal instance of a DagmanUtils object
 	DagmanUtils _dagmanUtils;
@@ -1031,7 +1031,7 @@ class Dag {
 
 		// True iff the final node is ready to be run, is running,
 		// or has been run (including PRE and POST scripts, if any).
-	bool _finalNodeRun;
+	bool _finalNodeRun{false};
 
 	/** Escape a string according to new classad syntax.
 	    Note:  This method uses a static buffer and is therefore not
@@ -1059,7 +1059,7 @@ protected:
 private:
 		// Note: the final node is in the _jobs list; this pointer is just
 		// for convenience.
-	Job* _final_job;
+	Job* _final_job{nullptr};
 
 	Job* _provisioner_node = NULL;
 
@@ -1069,43 +1069,43 @@ private:
 
 	std::vector<Job*> _service_nodes{};
 
-	std::map<std::string, Job *>	_nodeNameHash;
+	std::map<std::string, Job *>	_nodeNameHash{};
 
-	std::map<JobID_t, Job *>		_nodeIDHash;
+	std::map<JobID_t, Job *>		_nodeIDHash{};
 
 	// Hash by HTCondorID (really just by the cluster ID because all
 	// procs in the same cluster map to the same node).
-	std::map<int, Job *>			_condorIDHash;
+	std::map<int, Job *>			_condorIDHash{};
 
 	// NOOP nodes are indexed by subprocID.
-	std::map<int, Job *>			_noopIDHash;
+	std::map<int, Job *>			_noopIDHash{};
 
 	// Path object to shared nodes.log file
 	std::filesystem::path _defaultNodeLog{};
 
     // Number of nodes that are done (completed execution)
-    int _numNodesDone;
+    int _numNodesDone{0};
     
     // Number of nodes that failed (job or PRE or POST script failed)
-    int _numNodesFailed;
+    int _numNodesFailed{0};
 
     // Number of nodes that can't run due to an ancestor failing
-    int _numNodesFutile;
+    int _numNodesFutile{0};
 
     // Number of batch system jobs currently submitted
-    int _numJobsSubmitted;
+    int _numJobsSubmitted{0};
 	
 	//Number of batch system jobs submitted 
-	int _totalJobsSubmitted;
+	int _totalJobsSubmitted{0};
 	
 	//Number of batch system jobs completed
-	int _totalJobsCompleted;
+	int _totalJobsCompleted{0};
 
 		// Number of DAG job procs currently idle.
-	int _numIdleJobProcs;
+	int _numIdleJobProcs{0};
 
 		// Policy for how we respond to DAG edits.
-	std::string _editPolicy;
+	std::string _editPolicy{};
 
 		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts
@@ -1125,39 +1125,39 @@ private:
 	const CondorID *	_DAGManJobId;
 
 	// queue of jobs ready to be submitted to HTCondor
-	DagPriorityQ* _readyQ;
+	DagPriorityQ* _readyQ{nullptr};
 
 	// queue of submitted jobs not yet matched with submit events in
 	// the HTCondor job log
-	std::queue<Job*>* _submitQ;
+	std::queue<Job*>* _submitQ{nullptr};
 
-	ScriptQ* _preScriptQ;
-	ScriptQ* _postScriptQ;
-	ScriptQ* _holdScriptQ;
+	ScriptQ* _preScriptQ{nullptr};
+	ScriptQ* _postScriptQ{nullptr};
+	ScriptQ* _holdScriptQ{nullptr};
 
 		// Number of nodes currently in status Job::STATUS_PRERUN.
-	int		_preRunNodeCount;
+	int		_preRunNodeCount{0};
 
 		// Number of nodes currently in status Job::STATUS_POSTRUN.
-	int		_postRunNodeCount;
+	int		_postRunNodeCount{0};
 
 		// Number of nodes currently running HOLD scripts.
 		// We do not have a special status for these nodes.
-	int		_holdRunNodeCount;
+	int		_holdRunNodeCount{0};
 	
-	int DFS_ORDER;
-	int _graph_width;
-	int _graph_height;
+	int DFS_ORDER{0};
+	int _graph_width{0};
+	int _graph_height{0};
 	std::vector<int> _graph_widths;
 
 	// Information for producing dot files, which can be used to visualize
 	// DAG files. Dot is part of the graphviz package, which is available from
 	// http://www.research.att.com/sw/tools/graphviz/
-	char *_dot_file_name;
-	char *_dot_include_file_name;
-	bool  _update_dot_file;
-	bool  _overwrite_dot_file;
-	int   _dot_file_name_suffix;
+	char *_dot_file_name{nullptr};
+	char *_dot_include_file_name{nullptr};
+	bool  _update_dot_file{false};
+	bool  _overwrite_dot_file{true};
+	int   _dot_file_name_suffix{0};
 
 	void IncludeExtraDotCommands(FILE *dot_file);
 	void DumpDotFileNodes(FILE *temp_dot_file);
@@ -1165,37 +1165,37 @@ private:
 	void ChooseDotFileName(std::string &dot_file_name);
 
 		// Name of node status file.
-	char *_statusFileName;
+	char *_statusFileName{nullptr};
 		
 		// Whether things have changed since the last time the file
 		// was written.
-	bool _statusFileOutdated;
+	bool _statusFileOutdated{true};
 		
 		// Minimum time between updates (so we can avoid trying to
 		// write the file too often, e.g., for large DAGs).
-	int _minStatusUpdateTime;
+	int _minStatusUpdateTime{0};
 
 		// If this is true, we update the node status file even if
 		// nothing has changed (defaults to false).
-	bool _alwaysUpdateStatus;
+	bool _alwaysUpdateStatus{false};
 
 		// Last time the status file was written.
-	time_t _lastStatusUpdateTimestamp;
+	time_t _lastStatusUpdateTimestamp{0};
 
-	CheckEvents	_checkCondorEvents;
+	CheckEvents	_checkCondorEvents{};
 
 		// Total count of jobs deferred because of MaxJobs limit (note
 		// that a single job getting deferred multiple times is counted
 		// multiple times).
-	int		_maxJobsDeferredCount;
+	int		_maxJobsDeferredCount{0};
 
 		// Total count of jobs deferred because of MaxIdle limit (note
 		// that a single job getting deferred multiple times is counted
 		// multiple times).
-	int		_maxIdleDeferredCount;
+	int		_maxIdleDeferredCount{0};
 
 		// Total count of jobs deferred because of node category throttles.
-	int		_catThrottleDeferredCount;
+	int		_catThrottleDeferredCount{0};
 
 		// whether or not to prohibit multiple job proc submitsn (e.g.,
 		// node jobs that create more than one job proc)
@@ -1205,40 +1205,40 @@ private:
 		// to breadth-first order).
 	bool		_submitDepthFirst;
 
-	bool		_abortOnScarySubmit;
+	bool		_abortOnScarySubmit{true};
 
 		// The next time we're allowed to try submitting a job -- 0 means
 		// go ahead and submit right away.
-	time_t		_nextSubmitTime;
+	time_t		_nextSubmitTime{0};
 
 		// The delay we use the next time a submit fails -- _nextSubmitTime
 		// becomes the current time plus _nextSubmitDelay (this is in
 		// seconds).
-	int			_nextSubmitDelay;
+	int			_nextSubmitDelay{1};
 
 		// Whether we're in recovery mode.  We only need this here for
 		// the PR 554 fix in PostScriptReaper -- otherwise it gets passed
 		// down thru the call stack.
-	bool		_recovery;
+	bool		_recovery{false};
 
 		// The config file (if any) specified for this DAG.  As of 2007-06-08,
 		// this is only used when writing a rescue DAG -- we already
 		// parse the given config file (if any) before the Dag object
 		// is created.
-	const char *	_configFile;
+	const char *	_configFile{nullptr};
 
 		// The time interval (in seconds) at which to print pending
 		// node reports.
-	int			_pendingReportInterval;
+	int			_pendingReportInterval{-1};
 
 	time_t _validatedStateTime{0};
 	bool _validatedState{false};
 
 		// The last time we got a log event for a node job.
-	time_t		_lastEventTime;
+	time_t		_lastEventTime{0};
 
 		// The last time we printed a pending node report.
-	time_t		_lastPendingNodePrintTime;
+	time_t		_lastPendingNodePrintTime{0};
 
 	// The last time DAGMan had failed queried the local schedd queue
 	time_t queryFailTime{0};
@@ -1267,16 +1267,16 @@ private:
 		// The maximum fake subprocID we see in recovery mode (needed to
 		// initialize the ID for subsequent fake events so IDs don't
 		// collide).
-	int _recoveryMaxfakeID;
+	int _recoveryMaxfakeID{0};
 
 		// The maximum number of times a node job can go on hold before
 		// we declare it a failure and remove it; 0 means no limit.
-	int _maxJobHolds;
+	int _maxJobHolds{0};
 
 		// If this flag is set, we shouldn't actually run this DAG file
 		// (this is set when running a "rescue" produced when DAGMan is
 		// run with -DumpRescue and parsing the DAG fails).
-	bool _reject;
+	bool _reject{false};
 
 		// The file and line number where we first found a REJECT
 		// specification, if any.
@@ -1287,29 +1287,29 @@ private:
 
 	// If true, run the POST script, regardless of the exit status of the PRE script
 	// Defaults to true
-	bool _alwaysRunPost;
+	bool _alwaysRunPost{false};
 
 	// If true, don't dry-run the dag. pretending that all jobs terminated successfully
 	// upon submission
-	int _dry_run;
+	int _dry_run{0};
 
 		// The priority for this DAG. (defaults to 0)
-	int _dagPriority;
+	int _dagPriority{0};
 
 		// Whether the DAG is currently halted.
-	bool _dagIsHalted;
+	bool _dagIsHalted{false};
 
 		// Whether the DAG has been aborted.
 		// Note:  we need this in addition to _dagStatus, because if you
 		// have a abort-dag-on return value of 0, _dagStatus will be
 		// DAG_STATUS_OK even on the abort...
-	bool _dagIsAborted;
+	bool _dagIsAborted{false};
 
 		// The name of the halt file (we halt the DAG if that file exists).
-	std::string _haltFile;
+	std::string _haltFile{};
 	
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
-	DagmanMetrics *_metrics;
+	DagmanMetrics *_metrics{nullptr};
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Splice connections.

@@ -84,43 +84,15 @@ void touch (const char * filename) {
 //---------------------------------------------------------------------------
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	dagOpts(dm.options),
-	MAX_SIGNAL			  (64),
-	_splices              ({}),
-	_final_job (0),
-	_nodeNameHash		  ({}),
-	_nodeIDHash			  ({}),
-	_condorIDHash		  ({}),
-	_noopIDHash			  ({}),
-	_numNodesDone         (0),
-	_numNodesFailed       (0),
-	_numNodesFutile       (0),
-	_numJobsSubmitted     (0),
-	_totalJobsSubmitted   (0),
-	_totalJobsCompleted   (0),
-	_numIdleJobProcs		  (0),
 	m_retrySubmitFirst	  (dm.retrySubmitFirst),
 	m_retryNodeFirst	  (dm.retryNodeFirst),
 	_condorRmExe		  (dm.condorRmExe.c_str()),
 	_DAGManJobId		  (&dm.DAGManJobId),
-	_preRunNodeCount	  (0),
-	_postRunNodeCount	  (0),
-	_holdRunNodeCount	  (0),
-	_checkCondorEvents    (),
-	_maxJobsDeferredCount (0),
-	_maxIdleDeferredCount (0),
-	_catThrottleDeferredCount (0),
 	_prohibitMultiJobs	  (dm.prohibitMultiJobs),
 	_submitDepthFirst	  (dm.submitDepthFirst),
 	_generateSubdagSubmits (dm._generateSubdagSubmits),
 	_isSplice			  (isSplice),
 	_spliceScope		  (spliceScope),
-	_recoveryMaxfakeID	  (0),
-	_maxJobHolds		  (0),
-	_reject				  (false),
-	_alwaysRunPost		  (true),
-	_dry_run			  (0),
-	_dagPriority		  (0),
-	_metrics			  (NULL),
 	_schedd				  (dm._schedd)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.c_str() );
@@ -158,49 +130,16 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 		if( !_preScriptQ || !_postScriptQ ) {
 			EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 		}
-	} else {
-		_preScriptQ = NULL;
-		_postScriptQ = NULL;
-		_holdScriptQ = NULL;
 	}
 
 	debug_printf( DEBUG_DEBUG_4, "MaxJobsSubmitted = %d, "
 				  "MaxPreScripts = %d, MaxPostScripts = %d\n",
 				  dagOpts[shallow::i::MaxJobs], dagOpts[shallow::i::MaxPre], dagOpts[shallow::i::MaxPost]);
-	DFS_ORDER = 0;
 
-	_dot_file_name         = NULL;
-	_dot_include_file_name = NULL;
-	_update_dot_file       = false;
-	_overwrite_dot_file    = true;
-	_dot_file_name_suffix  = 0;
-
-	_statusFileName = NULL;
-	_statusFileOutdated = true;
-	_minStatusUpdateTime = 0;
-	_alwaysUpdateStatus = false;
-	_lastStatusUpdateTimestamp = 0;
-
-	_nextSubmitTime = 0;
-	_nextSubmitDelay = 1;
-	_recovery = false;
-	_abortOnScarySubmit = true;
-	_configFile = NULL;
-	_finalNodeRun = false;
-		
 		// Don't print any waiting node reports until we're done with
 		// recovery mode.
-	_pendingReportInterval = -1;
-	_lastPendingNodePrintTime = 0;
-	_lastEventTime = 0;
 
-	_dagIsHalted = false;
-	_dagIsAborted = false;
 	_haltFile = _dagmanUtils.HaltFileName(dm.options.primaryDag());
-	_dagStatus = DAG_STATUS_OK;
-
-	_graph_width = 0;
-	_graph_height = 0;
 
 	return;
 }
