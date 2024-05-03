@@ -336,7 +336,7 @@ void
 ProcFamilyDirectCgroupV2::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
 	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
 	if (!success) {
-		ASSERT("Couldn't insert into cgroup map, duplicate?");
+		EXCEPT("Couldn't insert into cgroup map, duplicate?");
 	}
 }
 
