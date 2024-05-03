@@ -1991,6 +1991,7 @@ ReliSock::get_file( filesize_t *size, int fd,
 		struct timeval t1,t2;
 		if( xfer_q ) {
 			condor_gettimestamp(t1);
+			this->XferPingAliveTime();
 		}
 
 		int	iosize =
@@ -2333,6 +2334,7 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 			struct timeval t2;
 			if( xfer_q ) {
 				condor_gettimestamp(t1);
+				this->XferPingAliveTime();
 			}
 
 			// Be very careful about where the cast to size_t happens; see gt#4150

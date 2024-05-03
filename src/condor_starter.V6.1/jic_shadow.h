@@ -295,8 +295,8 @@ private:
 		*/
 	bool beginFileTransfer( void );
 
-		/// Callback for when the FileTransfer object is done
-	int transferInputCompleted(FileTransfer *);
+		/// Callback for when the FileTransfer object is done or has status
+	int transferInputStatus(FileTransfer *);
 
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );
@@ -454,6 +454,7 @@ private:
 	void refreshSandboxCredentialsKRB_from_timer( int /* timerID */ ) { (void)refreshSandboxCredentialsKRB(); }
 	bool refreshSandboxCredentialsOAuth();
 	void refreshSandboxCredentialsOAuth_from_timer( int /* timerID */ ) { (void)refreshSandboxCredentialsOAuth(); }
+	void verifyXferProgressing(int /*timerid*/);
 
 	bool shadowDisconnected() const { return syscall_sock_lost_time > 0; };
 
@@ -551,8 +552,8 @@ private:
 	bool m_job_update_attrs_set;
 	StringList m_job_update_attrs;
 
-	// moved to base class
-	//bool job_failed = false;
+	time_t file_xfer_last_alive_time = 0;
+	int    file_xfer_last_alive_tid = 0;
 };
 
 
