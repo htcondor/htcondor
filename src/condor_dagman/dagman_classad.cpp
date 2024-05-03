@@ -212,7 +212,7 @@ void DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::Update(const Dagman &dagman)
+DagmanClassad::Update(Dagman &dagman)
 {
 	if ( ! _valid) {
 		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd update -- DagmanClassad object is invalid\n");
@@ -254,27 +254,22 @@ DagmanClassad::Update(const Dagman &dagman)
 	
 	// Certain DAGMan properties (MaxJobs, MaxIdle, etc.) can be changed by
 	// users. Start by declaring variables for these properties.
-	int jobAdMaxIdle = dagman.options[shallow::i::MaxIdle];
-	int jobAdMaxJobs = dagman.options[shallow::i::MaxJobs];
-	int jobAdMaxPreScripts  = dagman.options[shallow::i::MaxPre];
-	int jobAdMaxPostScripts = dagman.options[shallow::i::MaxPost];
-	int jobAdMaxHoldScripts = dagman.options[shallow::i::MaxHold];
+	int oldMaxJobs = dagman.options[shallow::i::MaxJobs];
 
 	// Look up the current values of these properties in the condor_dagman job ad.
-	GetAttribute(ATTR_DAGMAN_MAXIDLE, jobAdMaxIdle);
-	GetAttribute(ATTR_DAGMAN_MAXJOBS, jobAdMaxJobs);
-	GetAttribute(ATTR_DAGMAN_MAXPRESCRIPTS, jobAdMaxPreScripts);
-	GetAttribute(ATTR_DAGMAN_MAXPOSTSCRIPTS, jobAdMaxPostScripts);
-	GetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, jobAdMaxHoldScripts);
+	GetAttribute(ATTR_DAGMAN_MAXIDLE, dagman.options[shallow::i::MaxIdle]);
+	GetAttribute(ATTR_DAGMAN_MAXJOBS, dagman.options[shallow::i::MaxJobs]);
+	GetAttribute(ATTR_DAGMAN_MAXPRESCRIPTS, dagman.options[shallow::i::MaxPre]);
+	GetAttribute(ATTR_DAGMAN_MAXPOSTSCRIPTS, dagman.options[shallow::i::MaxPost]);
+	GetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, dagman.options[shallow::i::MaxHold]);
 
+	int newMaxJobs = dagman.options[shallow::i::MaxJobs];
+	if (newMaxJobs != 0 && newMaxJobs != oldMaxJobs && dagman.enforceNewJobsLimit) {
+		dagman.dag->EnforceNewJobsLimit();
+	}
 	// It's possible that certain DAGMan attributes were changed in the job ad.
 	// If this happened, update the internal values in our dagman data structure.
 	// Update our internal dag values according to whatever is in the job ad.
-	dagman.dag->SetMaxIdleJobProcs(jobAdMaxIdle);
-	dagman.dag->SetMaxJobsSubmitted(jobAdMaxJobs);
-	dagman.dag->SetMaxPreScripts(jobAdMaxPreScripts);
-	dagman.dag->SetMaxPostScripts(jobAdMaxPostScripts);
-	dagman.dag->SetMaxHoldScripts(jobAdMaxHoldScripts);
 
 	CloseConnection(queue);
 }

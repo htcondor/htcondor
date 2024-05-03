@@ -264,7 +264,7 @@ bool Dagman::Config() {
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n", _defaultNodeLog.c_str());
 
 	_generateSubdagSubmits = param_boolean("DAGMAN_GENERATE_SUBDAG_SUBMITS", _generateSubdagSubmits);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n", _generateSubdagSubmits ? "True" : "False" );
+	debug_printf(DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n", _generateSubdagSubmits ? "True" : "False");
 
 	_maxJobHolds = param_integer("DAGMAN_MAX_JOB_HOLDS", _maxJobHolds, 0, 1'000'000);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n", _maxJobHolds);
@@ -289,6 +289,9 @@ bool Dagman::Config() {
 
 	_removeNodeJobs = param_boolean("DAGMAN_REMOVE_NODE_JOBS", _removeNodeJobs);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n", _removeNodeJobs ? "True" : "False");
+
+	enforceNewJobsLimit = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE setting: %s\n", enforceNewJobsLimit ? "True" : "False");
 
 	debug_printf(DEBUG_NORMAL, "DAGMAN will adjust edges after parsing\n");
 

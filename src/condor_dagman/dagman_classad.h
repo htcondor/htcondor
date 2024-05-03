@@ -101,7 +101,7 @@ class DagmanClassad : public ScheddClassad {
 	/** Update the status information in the DAGMan job's classad.
 		@param dagman: Dagman object to pull status information from
 	*/
-	void Update( const Dagman &dagman );
+	void Update(Dagman &dagman );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A string to receive the Owner value.

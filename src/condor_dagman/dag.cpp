@@ -83,13 +83,9 @@ void touch (const char * filename) {
 
 //---------------------------------------------------------------------------
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
-	_maxPreScripts        (dm.options[shallow::i::MaxPre]),
-	_maxPostScripts       (dm.options[shallow::i::MaxPost]),
-	_maxHoldScripts       (dm.options[shallow::i::MaxHold]),
+	dagOpts(dm.options),
 	MAX_SIGNAL			  (64),
 	_splices              ({}),
-	dagOpts(dm.options),
-	_useDagDir            (dm.options[deep::b::UseDagDir]),
 	_final_job (0),
 	_nodeNameHash		  ({}),
 	_nodeIDHash			  ({}),
@@ -101,9 +97,7 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	_numJobsSubmitted     (0),
 	_totalJobsSubmitted   (0),
 	_totalJobsCompleted   (0),
-	_maxJobsSubmitted     (dm.options[shallow::i::MaxJobs]),
 	_numIdleJobProcs		  (0),
-	_maxIdleJobProcs		  (dm.options[shallow::i::MaxIdle]),
 	m_retrySubmitFirst	  (dm.retrySubmitFirst),
 	m_retryNodeFirst	  (dm.retryNodeFirst),
 	_condorRmExe		  (dm.condorRmExe.c_str()),
@@ -170,9 +164,9 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 		_holdScriptQ = NULL;
 	}
 
-	debug_printf( DEBUG_DEBUG_4, "_maxJobsSubmitted = %d, "
-				  "_maxPreScripts = %d, _maxPostScripts = %d\n",
-				  _maxJobsSubmitted, _maxPreScripts, _maxPostScripts );
+	debug_printf( DEBUG_DEBUG_4, "MaxJobsSubmitted = %d, "
+				  "MaxPreScripts = %d, MaxPostScripts = %d\n",
+				  dagOpts[shallow::i::MaxJobs], dagOpts[shallow::i::MaxPre], dagOpts[shallow::i::MaxPost]);
 	DFS_ORDER = 0;
 
 	_dot_file_name         = NULL;
@@ -1870,6 +1864,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		}
 	}
 
+	int maxJobs = dagOpts[shallow::i::MaxJobs];
+	int maxIdle = dagOpts[shallow::i::MaxIdle];
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
 
 //		PrintReadyQ( DEBUG_DEBUG_4 );
@@ -1880,20 +1876,20 @@ Dag::SubmitReadyJobs(const Dagman &dm)
     	}
 
     		// max jobs already submitted
-    	if( _maxJobsSubmitted && (_numJobsSubmitted >= _maxJobsSubmitted) ) {
+    	if(maxJobs && (_numJobsSubmitted >= maxJobs) ) {
         	debug_printf( DEBUG_DEBUG_1,
                       	"Max jobs (%d) already running; "
 					  	"deferring submission of %d ready job%s.\n",
-                      	_maxJobsSubmitted, _readyQ->size(),
+                      	maxJobs, _readyQ->size(),
 					  	_readyQ->size() == 1 ? "" : "s" );
 			_maxJobsDeferredCount += _readyQ->size();
 			break; // break out of while loop
     	}
-		if ( _maxIdleJobProcs && (_numIdleJobProcs >= _maxIdleJobProcs) ) {
+		if ( maxIdle && (_numIdleJobProcs >= maxIdle) ) {
         	debug_printf( DEBUG_DEBUG_1,
 					  	"Hit max number of idle DAG nodes (%d); "
 					  	"deferring submission of %d ready job%s.\n",
-					  	_maxIdleJobProcs, _readyQ->size(),
+					  	maxIdle, _readyQ->size(),
 					  	_readyQ->size() == 1 ? "" : "s" );
 			_maxIdleDeferredCount += _readyQ->size();
 			break; // break out of while loop
@@ -2482,7 +2478,7 @@ void Dag::WriteSavePoint(Job* node) {
 	std::string errMsg;
 	//If using useDagDir then switch to directory to write save files
 	//in case relative path was given
-	if (_useDagDir) {
+	if (dagOpts[deep::b::UseDagDir]) {
 		if (!tmpDir.Cd2TmpDir(node->GetDirectory(), errMsg)) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to change to directory %s: %s\n", node->GetDirectory(), errMsg.c_str());
 			debug_printf(DEBUG_QUIET, "       Not writing save file (%s) at node %s.\n", saveFile.c_str(), node->GetJobName());
@@ -2500,7 +2496,7 @@ void Dag::WriteSavePoint(Job* node) {
 	std::string headerInfo;
 	formatstr(headerInfo, "# Save file written at Start Node %s\n", node->GetJobName());
 	WriteRescue(saveFile.c_str(), headerInfo.c_str(), false, true, true);
-	if (_useDagDir) {
+	if (dagOpts[deep::b::UseDagDir]) {
 		if (!tmpDir.Cd2MainDir(errMsg)) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to change back to original directory: %s\n", errMsg.c_str());
 		}
@@ -3532,28 +3528,16 @@ Dag::GetReject( std::string &firstLocation )
 
 //-------------------------------------------------------------------------
 void 
-Dag::SetMaxJobsSubmitted(int newMax) {
-
-	bool isChanged = (newMax != _maxJobsSubmitted);
-	bool removeJobsAfterLimitChange = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
-
-	// Update our internal max jobs count
-	_maxJobsSubmitted = newMax;
-
-	// If maxJobs is set to 0, that means no maximum limit. Exit now.
-	if (_maxJobsSubmitted == 0) return;
-
-	// Optionally remove jobs to meet the new limit, starting with most recent
-	if (isChanged && removeJobsAfterLimitChange) {
-		int submittedJobsCount = 0;
-		for (auto & _job : _jobs) {
-			if (_job->GetStatus() == Job::STATUS_SUBMITTED) {
-				submittedJobsCount++;
-				if (submittedJobsCount > _maxJobsSubmitted) {
-					_job->retry_max++;
-					std::string rm_reason = "DAG Limit: Max number of submitted jobs was reached.";
-					RemoveBatchJob(_job, rm_reason);
-				}
+Dag::EnforceNewJobsLimit() {
+	// Remove Node batch jobs that exceed new MaxJobs Limit
+	int submittedJobsCount = 0;
+	for (auto & _job : _jobs) {
+		if (_job->GetStatus() == Job::STATUS_SUBMITTED) {
+			submittedJobsCount++;
+			if (submittedJobsCount > dagOpts[shallow::i::MaxJobs]) {
+				_job->retry_max++;
+				std::string rm_reason = "DAG Limit: Max number of submitted jobs was reached.";
+				RemoveBatchJob(_job, rm_reason);
 			}
 		}
 	}
@@ -3676,13 +3660,13 @@ Dag::PrintDeferrals( debug_level_t level, bool force ) const
 	if( _maxJobsDeferredCount > 0 || force ) {
 		debug_printf( level, "Note: %d total job deferrals because "
 					"of -MaxJobs limit (%d)\n", _maxJobsDeferredCount,
-					_maxJobsSubmitted );
+					dagOpts[shallow::i::MaxJobs]);
 	}
 
 	if( _maxIdleDeferredCount > 0 || force ) {
 		debug_printf( level, "Note: %d total job deferrals because "
 					"of -MaxIdle limit (%d)\n", _maxIdleDeferredCount,
-					_maxIdleJobProcs );
+					dagOpts[shallow::i::MaxIdle]);
 	}
 
 	if( _catThrottleDeferredCount > 0 || force ) {
@@ -3694,21 +3678,21 @@ Dag::PrintDeferrals( debug_level_t level, bool force ) const
 		debug_printf( level, "Note: %d total PRE script deferrals because "
 					"of -MaxPre limit (%d) or DEFER\n",
 					_preScriptQ->GetScriptDeferredCount(),
-					_maxPreScripts );
+					dagOpts[shallow::i::MaxPre]);
 	}
 
 	if( _postScriptQ->GetScriptDeferredCount() > 0 || force ) {
 		debug_printf( level, "Note: %d total POST script deferrals because "
 					"of -MaxPost limit (%d) or DEFER\n",
 					_postScriptQ->GetScriptDeferredCount(),
-					_maxPostScripts );
+					dagOpts[shallow::i::MaxPost]);
 	}
 
 	if( _holdScriptQ->GetScriptDeferredCount() > 0 || force ) {
 		debug_printf( level, "Note: %d total HOLD script deferrals because "
 					"of -MaxHold limit (%d) or DEFER\n",
 					_holdScriptQ->GetScriptDeferredCount(),
-					_maxHoldScripts );
+					dagOpts[shallow::i::MaxHold]);
 	}
 }
 

@@ -547,8 +547,6 @@ class Dag {
 
 	void PrintReadyQ( debug_level_t level ) const;
 
-	bool _removeJobsAfterLimitChange = false;
-
 	std::map<std::string, SubmitHash*> SubmitDescriptions;
 
     /* Detects cycle within dag submitted by user
@@ -556,10 +554,7 @@ class Dag {
 	*/
 	bool isCycle();
 
-	// max number of PRE & POST scripts to run at once (0 means no limit)
-    int _maxPreScripts;
-    int _maxPostScripts;
-	int _maxHoldScripts;
+	const DagmanOptions &dagOpts;
 
 	char* GetDotFileName(void) { return _dot_file_name; }
 	void SetDotFileName(const char *dot_file_name);
@@ -657,20 +652,7 @@ class Dag {
 		*/
 	void CheckThrottleCats();
 
-	int MaxJobsSubmitted(void) const { return _maxJobsSubmitted; }
-
-	bool UseDagDir(void) const { return _useDagDir; }
-
-	int MaxIdleJobProcs(void) const { return _maxIdleJobProcs; }
-	int MaxPreScripts(void) const { return _maxPreScripts; }
-	int MaxPostScripts(void) const { return _maxPostScripts; }
-	int MaxHoldScripts(void) const { return _maxHoldScripts; }
-
-	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
-	void SetMaxJobsSubmitted(int newMax);
-	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
-	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
-	void SetMaxHoldScripts(int maxHoldScripts) { _maxHoldScripts = maxHoldScripts; };
+	void EnforceNewJobsLimit();
 
 	bool RetrySubmitFirst(void) const { return m_retrySubmitFirst; }
 
@@ -880,8 +862,6 @@ class Dag {
 	// Internal instance of a DagmanUtils object
 	DagmanUtils _dagmanUtils;
 
-	const DagmanOptions &dagOpts;
-
 	/** Print a numbered list of the DAG files.
 	    @param The list of DAG files being run.
 	*/
@@ -1018,9 +998,6 @@ class Dag {
 		*/
 	const std::map<int, Job *> *		GetEventIDHash(bool isNoop) const;
 
-	// run DAGs in directories from DAG file paths if true
-	bool _useDagDir;
-
     // Documentation on ReadUserLog is present in condor_utils
 	ReadMultipleUserLogs _condorLogRdr;
 
@@ -1124,18 +1101,8 @@ private:
 	//Number of batch system jobs completed
 	int _totalJobsCompleted;
 
-    /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
-        unlimited
-    */
-    int _maxJobsSubmitted;
-
 		// Number of DAG job procs currently idle.
 	int _numIdleJobProcs;
-
-    	// Maximum number of idle job procs to allow (stop submitting if the
-		// number of idle job procs hits this limit).  Non-negative.  Zero
-		// means unlimited.
-    int _maxIdleJobProcs;
 
 		// Policy for how we respond to DAG edits.
 	std::string _editPolicy;
