@@ -40,10 +40,6 @@
 // They are for use with the Globus GSI gss-assist library.
 int relisock_gsi_get(void *arg, void **bufp, size_t *sizep);
 int relisock_gsi_put(void *arg,  void *buf, size_t size);
-// These variables hold the size of the last data block handled by each
-// respective function. They are part of a hacky workaround for a GSI bug.
-extern size_t relisock_gsi_get_last_size;
-extern size_t relisock_gsi_put_last_size;
 
 class Authentication;
 class Condor_MD_MAC;
