@@ -3244,6 +3244,9 @@ JICShadow::initMatchSecuritySession()
 			// Continue using the one we have.  We cannot destroy it
 			// and create a new one, because the syscall socket is
 			// already using the session key from it.
+			// If a new DCShadow object was created, ensure it's using
+			// the session.
+		shadow->setSecSessionId(m_reconnect_sec_session);
 	}
 	else if( reconnect_session_id.length() ) {
 		rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
@@ -3264,6 +3267,7 @@ JICShadow::initMatchSecuritySession()
 		}
 		else {
 			m_reconnect_sec_session = strdup(reconnect_session_id.c_str());
+			shadow->setSecSessionId(m_reconnect_sec_session);
 		}
 	}
 

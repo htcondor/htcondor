@@ -59,7 +59,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where transfer of Kerberos credentials from the
+  *condor_shadow* to the *condor_starter* would fail if the daemons
+  weren't explicitly configured to trust each other.
+  :jira:`2411`
 
 Version 23.7.1
 --------------
