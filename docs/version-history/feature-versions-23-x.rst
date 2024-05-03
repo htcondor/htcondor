@@ -153,7 +153,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug on cgroup v2 systems where a race condition could cause a job to run
+  in the wrong cgroup v2 for a very short amount of time.  If this job spawned a sub-job,
+  the child job would forever live in the wrong cgroup.
+  :jira:`2423`
 
 Version 23.6.2
 --------------

@@ -56,6 +56,7 @@ public:
 
 	virtual bool track_family_via_cgroup(pid_t, FamilyInfo *) = 0;
 #endif
+	virtual void assign_cgroup_for_pid(pid_t, const std::string &){}
 
 	virtual bool get_usage(pid_t, ProcFamilyUsage&, bool) = 0;
 
