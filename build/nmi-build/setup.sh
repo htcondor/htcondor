@@ -218,7 +218,7 @@ if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     rm ./apptainer_1.3.1_amd64.deb
 fi
 
-if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ] && [ $VERSION_CODENAME != 'noble' ]; then
+if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL software-properties-common
     add-apt-repository -y ppa:apptainer/ppa
     apt-get update
