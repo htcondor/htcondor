@@ -60,9 +60,12 @@ struct SubmitBlob {
         void setSubmitMethod(int method_value) { m_hash.setSubmitMethod(method_value); }
         int  getSubmitMethod() { return m_hash.getSubmitMethod(); }
 
-        // This is an awful, terrible hack.
-        MacroStreamMemoryFile get_itemdata_state() { return m_ms_inline; }
-        void set_itemdata_state(const MacroStreamMemoryFile & state) { m_ms_inline = state; }
+        // Something in init_vars() -- probably
+        // m_hash.load_inline_q_foreach_items() -- assumes that our
+        // "macro source" for itemdata can't be rewound.  Since we know it can,
+        // we can do so and thereby make it possible to call _submit_itemdata()
+        // more than once and without breaking a subsequent submit() call.
+        void reset_itemdata_state() { m_ms_inline.rewind_to( 0, 0 ); }
 
     private:
         SubmitHash m_hash;
@@ -627,19 +630,18 @@ _submit_itemdata( PyObject *, PyObject * args ) {
     }
 
     SubmitBlob * sb = (SubmitBlob *)handle->t;
-    auto state = sb->get_itemdata_state();
 
     int ignored = -1;
     SubmitForeachArgs * itemdata = sb->init_vars( ignored );
     if( itemdata == NULL ) {
-        sb->set_itemdata_state(state);
+        sb->reset_itemdata_state();
 
         PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
         return NULL;
     }
 
     if( itemdata->items.number() == 0 ) {
-        sb->set_itemdata_state(state);
+        sb->reset_itemdata_state();
 
         Py_RETURN_NONE;
     }
@@ -652,6 +654,6 @@ _submit_itemdata( PyObject *, PyObject * args ) {
     }
     std::string value = join(items, "\n");
 
-    sb->set_itemdata_state(state);
+    sb->reset_itemdata_state();
     return PyUnicode_FromString(value.c_str());
 }
