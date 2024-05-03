@@ -37,8 +37,9 @@
 #include "condor_sockfunc.h"
 #include "condor_config.h"
 #include "condor_sinful.h"
-#include <classad/classad.h>
+#include "classad/classad.h"
 #include "condor_attributes.h"
+#include "condor_daemon_core.h"
 
 #if defined(WIN32)
 // <winsock2.h> already included...
@@ -3007,3 +3008,133 @@ Sock::invalidateSock()
 {
 	_sock = INVALID_SOCKET; 
 }
+
+char const *
+Sock::get_sinful_public() const
+{
+		// In case TCP_FORWARDING_HOST changes, do not cache it.
+	std::string tcp_forwarding_host;
+	param(tcp_forwarding_host,"TCP_FORWARDING_HOST");
+	if (!tcp_forwarding_host.empty()) {
+		condor_sockaddr addr;
+		
+		if (!addr.from_ip_string(tcp_forwarding_host)) {
+			std::vector<condor_sockaddr> addrs = resolve_hostname(tcp_forwarding_host);
+			if (addrs.empty()) {
+				dprintf(D_ALWAYS,
+					"failed to resolve address of TCP_FORWARDING_HOST=%s\n",
+					tcp_forwarding_host.c_str());
+				return NULL;
+			}
+			addr = addrs.front();
+		}
+		addr.set_port(get_port());
+		_sinful_public_buf = addr.to_sinful().c_str();
+
+		std::string alias;
+		if( param(alias,"HOST_ALIAS") ) {
+			Sinful s(_sinful_public_buf.c_str());
+			s.setAlias(alias.c_str());
+			_sinful_public_buf = s.getSinful();
+		}
+
+		return _sinful_public_buf.c_str();
+	}
+
+	return get_sinful();
+}
+
+int 
+Sock::special_connect(char const *host,int /*port*/,bool nonblocking,CondorError * errorStack)
+{
+	if( !host || *host != '<' ) {
+		return CEDAR_ENOCCB;
+	}
+
+	Sinful sinful(host);
+	if( !sinful.valid() ) {
+		return CEDAR_ENOCCB;
+	}
+
+	char const *shared_port_id = sinful.getSharedPortID();
+	if( shared_port_id ) {
+			// If the port of the SharedPortServer is 0, that means
+			// we do not know the address of the SharedPortServer.
+			// This happens, for example when Create_Process passes
+			// the parent's address to a child or the child's address
+			// to the parent and the SharedPortServer does not exist yet.
+			// So do a local connection bypassing SharedPortServer,
+			// if we are on the same machine.
+
+			// Another case where we want to bypass connecting to
+			// SharedPortServer is if we are the shared port server,
+			// because this causes us to hang.
+
+			// We could additionally bypass using the shared port
+			// server if we use the same shared port server as the
+			// target daemon and we are on the same machine.  However,
+			// this causes us to use an additional ephemeral port than
+			// if we connect to the shared port, so in case that is
+			// important, use the shared port server instead.
+
+		bool no_shared_port_server =
+			sinful.getPort() && strcmp(sinful.getPort(),"0")==0;
+
+		bool same_host = false;
+		// TODO: Picking IPv4 arbitrarily.
+		//   We should do a better job of detecting whether sinful
+		//   points to a local interface.
+		std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		if( sinful.getHost() && strcmp(my_ip.c_str(),sinful.getHost())==0 ) {
+			same_host = true;
+		}
+
+		bool i_am_shared_port_server = false;
+		if( daemonCore ) {
+			char const *daemon_addr = daemonCore->publicNetworkIpAddr();
+			if( daemon_addr ) {
+				Sinful my_sinful(daemon_addr);
+				if( my_sinful.getHost() && sinful.getHost() &&
+					strcmp(my_sinful.getHost(),sinful.getHost())==0 &&
+					my_sinful.getPort() && sinful.getPort() &&
+					strcmp(my_sinful.getPort(),sinful.getPort())==0 &&
+					(!my_sinful.getSharedPortID() ||
+					 strcmp(my_sinful.getSharedPortID(),shared_port_id)==0) )
+				{
+					i_am_shared_port_server = true;
+					dprintf(D_FULLDEBUG,"Bypassing connection to shared port server %s, because that is me.\n",daemon_addr);
+				}
+			}
+		}
+		if( (no_shared_port_server && same_host) || i_am_shared_port_server ) {
+
+			if( no_shared_port_server && same_host ) {
+				dprintf(D_FULLDEBUG,"Bypassing connection to shared port server, because its address is not yet established; passing socket directly to %s.\n",host);
+			}
+
+			// do_shared_port_local_connect() calls connect_socketpair(), which
+			// normally uses loopback addresses.  However, the loopback address
+			// may not be in the ALLOW list.  Instead, we need to use the
+			// address we would use to contact the shared port daemon.
+			const char * sharedPortIP = sinful.getHost();
+			// Presently, for either same_host or i_am_shared_port_server to
+			// be true, this must be as well.
+			ASSERT( sharedPortIP );
+
+			return do_shared_port_local_connect( shared_port_id, nonblocking, sharedPortIP );
+		}
+	}
+
+		// Set shared port id even if it is null so we clear whatever may
+		// already be there.  If it is not null, then this information
+		// is saved here and used later after we have connected.
+	setTargetSharedPortID( shared_port_id );
+
+	char const *ccb_contact = sinful.getCCBContact();
+	if( !ccb_contact || !*ccb_contact ) {
+		return CEDAR_ENOCCB;
+	}
+
+	return do_reverse_connect(ccb_contact,nonblocking, errorStack);
+}
+
