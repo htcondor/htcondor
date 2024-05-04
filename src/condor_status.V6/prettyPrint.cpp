@@ -259,7 +259,7 @@ ppOption PrettyPrinter::prettyPrintHeadings (bool any_ads)
 {
 	ppOption pps = ppStyle;
 	bool no_headings = wantOnlyTotals || ! any_ads;
-	bool old_headings = (pps == PP_STARTD_COD);
+	bool old_headings = (pps == PP_SLOTS_COD);
 	bool long_form = PP_IS_LONGish(pps);
 	const char * newline_after_headings = "\n";
 	if ((pps == PP_CUSTOM) || using_print_format) {
@@ -361,7 +361,7 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, c
 			printNewClassad (*ad, output_index == 0, proj);
 			break;
 
-		case PP_STARTD_COD:
+		case PP_SLOTS_COD:
 			printCOD (ad);
 			break;
 		case PP_CUSTOM:
@@ -542,6 +542,7 @@ void PrettyPrinter::ppSetStateCols (int width)
 		const char * constr = NULL;
 		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 		}
 
 		// adjust column offsets for these
@@ -619,7 +620,27 @@ void PrettyPrinter::ppSetRunCols (int width)
 	ppSetColumn(ATTR_CLIENT_MACHINE, -16, ! wide_display);
 }
 
-const char * const GPUs_PrintFormat = "SELECT\n"
+const char * const DaemonGPUs_PrintFormat = "SELECT\n"
+ATTR_NAME    " AS Name      WIDTH AUTO\n"               // 0
+"DetectedCPUs  AS Cores\n"  // 1
+"DetectedMemory AS '  Memory' WIDTH 10 PRINTAS READABLE_MB\n" // 2
+"DetectedGPUs  AS GPUs PRINTAS MEMBER_COUNT\n"                             // 3
+"evalInEachContext(GlobalMemoryMB,DetectedGPUs) AS GPU-Memory PRINTAS UNIQUE OR ' '\n"
+"evalInEachContext(DeviceName,DetectedGPUs) AS GPU-Name PRINTAS UNIQUE OR ' '\n"
+"OfflineGPUs AS Offline-GPUs PRINTAS UNIQUE or ' '\n"
+"WHERE TotalGPUs > 0\n"
+"SUMMARY STANDARD\n";
+
+const char * const DaemonGPUsCompact_PrintFormat = "SELECT\n"
+ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"         // 0
+ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n"   // 1 projects Arch, OpSysAndVer and OpSysShortName
+ATTR_NUM_DYNAMIC_SLOTS " AS Slot PRINTF %4d OR ' '\n" // 2
+ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
+"DetectedGPUs AS GPUs  PRINTAS MEMBER_COUNT\n"          // 4
+"WHERE TotalGPUs > 0\n"
+"SUMMARY STANDARD\n";
+
+const char * const SlotGPUs_PrintFormat = "SELECT\n"
 ATTR_NAME    " AS Name      WIDTH AUTO\n"               // 0
 ATTR_ACTIVITY " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n"  // 1
 ATTR_REMOTE_USER " AS User WIDTH AUTO PRINTF %s OR _\n" // 2
@@ -630,7 +651,7 @@ ATTR_REMOTE_USER " AS User WIDTH AUTO PRINTF %s OR _\n" // 2
 "WHERE " PMODE_GPUS_CONSTRAINT "\n"
 "SUMMARY STANDARD\n";
 
-const char * const GPUsCompact_PrintFormat = "SELECT\n"
+const char * const SlotGPUsCompact_PrintFormat = "SELECT\n"
 ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"         // 0
 ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n"   // 1 projects Arch, OpSysAndVer and OpSysShortName
 ATTR_NUM_DYNAMIC_SLOTS " AS Slot PRINTF %4d OR ' '\n" // 2
@@ -646,11 +667,11 @@ ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
 "SUMMARY STANDARD\n";
 
 
-void PrettyPrinter::ppSetGPUsCols (int /*width*/, const char * & constr)
+void PrettyPrinter::ppSetGPUsCols (int /*width*/, bool daemon_ad, const char * & constr)
 {
 	if (compactMode) {
 		const char * tag = "GPUsCompact";
-		const char * fmt = GPUsCompact_PrintFormat;
+		const char * fmt = daemon_ad ? DaemonGPUsCompact_PrintFormat : SlotGPUsCompact_PrintFormat;
 		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 		}
@@ -669,7 +690,7 @@ void PrettyPrinter::ppSetGPUsCols (int /*width*/, const char * & constr)
 	}
 
 	const char * tag = "GPUs";
-	const char * fmt = GPUs_PrintFormat;
+	const char * fmt = daemon_ad ? DaemonGPUs_PrintFormat : SlotGPUs_PrintFormat;
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
@@ -879,6 +900,25 @@ int PrettyPrinter::ppSetMasterNormalCols(int)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 	return 12;
+}
+
+const char * const startDaemonNormal_PrintFormat = "SELECT\n"
+"Name           AS Name         WIDTH AUTO\n"
+"join(\"_\",ARCH,OPSYSANDVER) AS Platform  WIDTH AUTO\n"
+"CondorVersion  AS Version      WIDTH AUTO PRINTAS CONDOR_VERSION\n"
+"DetectedCpus   AS Cpus         WIDTH 4 PRINTF %4d OR ??\n"
+"DetectedMemory AS '  Memory'   WIDTH 10 PRINTAS READABLE_MB OR ??\n"
+"DetectedGPUs   AS GPUs         WIDTH 5 PRINTAS MEMBER_COUNT OR ' '\n"
+"DaemonStartTime AS '   Uptime' WIDTH 13 %T PRINTAS ELAPSED_TIME\n"
+"SUMMARY STANDARD\n";
+
+void PrettyPrinter::ppSetStartDaemonCols(int, const char * & constr )
+{
+	const char * tag = "StartD";
+	const char * fmt = startDaemonNormal_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
 }
 
 void PrettyPrinter::ppSetCkptSrvrNormalCols (int width)
@@ -1201,7 +1241,7 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 	int machine_flags = name_flags;
 
 	switch (pps) {
-		case PP_STARTD_NORMAL:
+		case PP_SLOTS_NORMAL:
 		if (absentMode) {
 			ppSetStartdAbsentCols();
 		} else if(offlineMode) {
@@ -1214,24 +1254,29 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 		}
 		break;
 
-		case PP_STARTD_SERVER:
+		case PP_SLOTS_SERVER:
 		ppSetServerCols(display_width, constr);
 		break;
 
-		case PP_STARTD_RUN:
+		case PP_SLOTS_RUN:
 		ppSetRunCols(display_width);
 		break;
 
 		case PP_STARTD_GPUS:
-		ppSetGPUsCols(display_width, constr);
+		case PP_SLOTS_GPUS:
+		ppSetGPUsCols(display_width, (pps==PP_STARTD_GPUS), constr);
 		break;
 
-		case PP_STARTD_COD:
+		case PP_STARTDAEMON:
+		ppSetStartDaemonCols(display_width, constr);
+		break;
+
+		case PP_SLOTS_COD:
 			//PRAGMA_REMIND("COD format needs conversion to ppSetCodCols")
 		//ppSetCODNormalCols(display_width);
 		break;
 
-		case PP_STARTD_STATE:
+		case PP_SLOTS_STATE:
 		ppSetStateCols(display_width);
 		break;
 
