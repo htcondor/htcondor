@@ -57,7 +57,6 @@
 #include "param_info_tables.h"
 #include "condor_version.h"
 
-#include <sstream>
 #include <algorithm> // for std::sort
 
 const char * MyName;
@@ -461,9 +460,10 @@ char* EvaluatedValue(char const* value, ClassAd const* ad) {
     ClassAd empty;
     bool rc = (ad) ? ad->EvaluateExpr(value, res) : empty.EvaluateExpr(value, res);
     if (!rc) return NULL;
-    std::stringstream ss;
-    ss << res;
-    return strdup(ss.str().c_str());
+    std::string s;
+	classad::ClassAdUnParser unp;
+	unp.Unparse(s, res);
+    return strdup(s.c_str());
 }
 
 // consume the next command line argument, otherwise return an error

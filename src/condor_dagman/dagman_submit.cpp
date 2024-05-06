@@ -26,8 +26,6 @@
 #include "my_username.h"
 #include "../condor_utils/dagman_utils.h"
 
-#include <sstream>
-
 //
 // Local DAGMan includes
 //
@@ -952,7 +950,7 @@ const char *
 getEventMask()
 {
 	static std::string result("");
-	static std::stringstream dmaskstrm("");
+	static std::string dmaskstr("");
 
 	if ( result == "" ) {
 		//
@@ -984,13 +982,13 @@ getEventMask()
 
 		for ( const int *p = &mask[0]; *p != -1; ++p ) {
 			if ( p != &mask[0] ) {
-				dmaskstrm << ",";
+				dmaskstr += ',';
 			}
-			dmaskstrm << *p;
+			dmaskstr += std::to_string(*p);
 		}
 
-		result = dmaskstrm.str();
+		result = dmaskstr;
 	}
 
-	return result.c_str();
+	return result.c_str(); // somewhat safe because result is static.
 }
