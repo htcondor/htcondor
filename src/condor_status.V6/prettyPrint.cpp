@@ -542,7 +542,6 @@ void PrettyPrinter::ppSetStateCols (int width)
 		const char * constr = NULL;
 		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
-			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 		}
 
 		// adjust column offsets for these
