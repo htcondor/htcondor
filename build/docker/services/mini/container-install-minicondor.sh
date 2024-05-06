@@ -15,7 +15,7 @@ if [[ $OS_ID != centos && $OS_ID != almalinux && $OS_ID != ubuntu ]]; then
     exit 1
 fi
 
-getent passwd rest || useradd -m restd
+getent passwd restd || useradd -m restd
 getent passwd submituser || useradd -m submituser
 
 if [[ $OS_ID == centos || $OS_ID == almalinux ]]; then
