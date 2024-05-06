@@ -54,24 +54,6 @@ using QueriedJobs = std::map<int, std::set<int>>;
 
 const CondorID Dag::_defaultCondorId;
 
-const int Dag::DAG_ERROR_CONDOR_SUBMIT_FAILED = -1001;
-const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
-const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
-const int Dag::DAG_ERROR_JOB_SKIPPED = -1004;
-
-// NOTE: this must be kept in sync with the DagStatus enum
-const char * Dag::_dag_status_names[] = {
-    "DAG_STATUS_OK",
-    "DAG_STATUS_ERROR",
-    "DAG_STATUS_NODE_FAILED",
-    "DAG_STATUS_ABORT",
-    "DAG_STATUS_RM",
-    "DAG_STATUS_CYCLE",
-    "DAG_STATUS_HALTED"
-};
-
-const char *Dag::ALL_NODES = "ALL_NODES";
-
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT, 0600);
@@ -84,18 +66,17 @@ void touch (const char * filename) {
 //---------------------------------------------------------------------------
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	dagOpts                (dm.options),
+	_schedd                (dm._schedd),
+	_DAGManJobId           (&dm.DAGManJobId),
+	_spliceScope           (spliceScope),
+	_condorRmExe           (dm.condorRmExe.c_str()),
+	_maxJobHolds           (dm._maxJobHolds),
 	m_retrySubmitFirst     (dm.retrySubmitFirst),
 	m_retryNodeFirst       (dm.retryNodeFirst),
-	_condorRmExe           (dm.condorRmExe.c_str()),
-	_DAGManJobId           (&dm.DAGManJobId),
-	_prohibitMultiJobs     (dm.prohibitMultiJobs),
 	_submitDepthFirst      (dm.submitDepthFirst),
 	_abortOnScarySubmit    (dm.abortOnScarySubmit),
 	_generateSubdagSubmits (dm._generateSubdagSubmits),
-	_isSplice              (isSplice),
-	_spliceScope           (spliceScope),
-	_maxJobHolds           (dm._maxJobHolds),
-	_schedd                (dm._schedd)
+	_isSplice              (isSplice)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.c_str() );
 
@@ -1462,7 +1443,7 @@ Dag::FindAllNodesByName( const char* nodeName,
 	bool skipFinalNode = true;
 	Job *node = NULL;
 	if ( nodeName ) {
-		if ( strcasecmp( nodeName, ALL_NODES ) ) {
+		if ( strcasecmp( nodeName, DAG::ALL_NODES ) ) {
 				// Looking for a specific node.
 			_allNodesIt = _jobs.end(); 
 				// Specific node lookups should not skip the final node.

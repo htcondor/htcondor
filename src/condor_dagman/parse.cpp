@@ -114,7 +114,7 @@ void exampleSyntax (const char * example) {
 bool
 isReservedWord( const char *token )
 {
-    static const char * keywords[] = { "PARENT", "CHILD", Dag::ALL_NODES };
+    static const char * keywords[] = { "PARENT", "CHILD", DAG::ALL_NODES };
     for (auto & keyword : keywords) {
         if (!strcasecmp (token, keyword)) {
     		debug_printf( DEBUG_QUIET,
@@ -2433,7 +2433,7 @@ parse_save_point_file(Dag *dag, const char* filename, int lineNumber)
 					 filename, lineNumber);
 		exampleSyntax(example.c_str());
 		return false;
-	} else if (strcasecmp(jobName,dag->ALL_NODES) == MATCH) { //It is redundant to use all nodes for save files
+	} else if (strcasecmp(jobName, DAG::ALL_NODES) == MATCH) { //It is redundant to use all nodes for save files
 		debug_printf(DEBUG_NORMAL, "ERROR: %s (line %d): SAVE_POINT_FILE does not allow ALL_NODES option.\n",
 					 filename, lineNumber);
 		exampleSyntax(example.c_str());
