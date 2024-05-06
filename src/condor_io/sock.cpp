@@ -330,8 +330,12 @@ Sock::isAuthorizationInBoundingSet(const std::string &authz) const
 			if (_policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy))
 			{
 				for (const auto& authz_name : StringTokenIterator(authz_policy)) {
-					if (authz_name[0]) {
-						const_cast<Sock*>(this)->m_authz_bound.insert(authz_name);
+					const_cast<Sock*>(this)->m_authz_bound.insert(authz_name);
+					DCpermission implied_perm = getPermissionFromString(authz_name.c_str());
+					if (implied_perm != NOT_A_PERM) {
+						while ((implied_perm = DCpermissionHierarchy::nextImplied(implied_perm)) < LAST_PERM) {
+							const_cast<Sock*>(this)->m_authz_bound.insert(PermString(implied_perm));
+						}
 					}
 				}
 			}

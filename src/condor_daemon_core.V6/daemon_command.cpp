@@ -1543,32 +1543,25 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			std::string authz_policy;
 			bool can_attempt = true;
 			if (m_policy && m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
-				StringList authz_limits(authz_policy.c_str());
-				authz_limits.rewind();
-				const char *perm_cstr = PermString(m_comTable[m_cmd_index].perm);
-				const char *authz_name;
-				bool found_limit = false;
-				while ( (authz_name = authz_limits.next()) ) {
-					if (!strcmp(perm_cstr, authz_name)) {
-						found_limit = true;
-						break;
+				std::set<DCpermission> authz_limits;
+				for (const auto& limit_str: StringTokenIterator(authz_policy)) {
+					DCpermission limit_perm = getPermissionFromString(limit_str.c_str());
+					if (limit_perm != NOT_A_PERM) {
+						authz_limits.insert(limit_perm);
+						while ((limit_perm = DCpermissionHierarchy::nextImplied(limit_perm)) < LAST_PERM) {
+							authz_limits.insert(limit_perm);
+						}
 					}
 				}
+				bool found_limit = authz_limits.count(m_comTable[m_cmd_index].perm) > 0;
+				const char *perm_cstr = PermString(m_comTable[m_cmd_index].perm);
 				bool has_allow_perm = !strcmp(perm_cstr, "ALLOW");
 					// If there was no match, iterate through the alternates table.
 				if (!found_limit && m_comTable[m_cmd_index].alternate_perm) {
 					for (auto perm : *m_comTable[m_cmd_index].alternate_perm) {
-						auto perm_cstr = PermString(perm);
-						const char *authz_name;
-						authz_limits.rewind();
+						perm_cstr = PermString(perm);
 						has_allow_perm |= !strcmp(perm_cstr, "ALLOW");
-						while ( (authz_name = authz_limits.next()) ) {
-							dprintf(D_SECURITY, "Checking limit in token (%s) for permission %s\n", authz_name, perm_cstr);
-							if (!strcmp(perm_cstr, authz_name)) {
-								found_limit = true;
-								break;
-							}
-						}
+						found_limit = authz_limits.count(perm) > 0;
 						if (found_limit) {break;}
 					}
 				}
