@@ -37,9 +37,9 @@ TEST_CASES = {
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
+My.Pos=\"{{$(Row),$(Step)}}\"
 hold=1
 max_materialize=3
-My.Pos=\"{{$(Row),$(Step)}}\"
 FACTORY.Iwd={IWD}
 
 Queue 1 my.foo,my.bar from """,
@@ -78,11 +78,9 @@ Queue 1 my.foo,my.bar from """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
 args=30 -f $(foo) -b $(bar) -z 
-bar=2
-foo=1
+My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 hold=1
 max_materialize=3
-My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 FACTORY.Iwd={IWD}
 
 Queue 1 foo,bar from """
@@ -120,12 +118,10 @@ Queue 1 foo,bar from """
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
-args=30 -f $(foo) -b $(bar) -z 
-bar=2
-foo=1
+My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 hold=1
 max_materialize=3
-My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
+args=30 -f $(foo) -b $(bar) -z 
 FACTORY.Iwd={IWD}
 
 Queue 1 foo,bar from """,
@@ -160,11 +156,10 @@ Queue 1 foo,bar from """,
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
-hold=1
-Item=1
-max_materialize=3
 My.Pos=\"{{$(Row),$(Step),$(item)}}\"
+hold=1
 request_memory=$(item)
+max_materialize=3
 FACTORY.Iwd={IWD}
 
 Queue 1 Item from """,
