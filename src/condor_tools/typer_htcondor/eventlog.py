@@ -12,7 +12,7 @@ from enum import Enum
 from datetime import datetime
 from datetime import timedelta
 
-eventlog_app = typer.Typer()
+eventlog_app = typer.Typer(no_args_is_help=True)
 
 
 class attributes(str, Enum):

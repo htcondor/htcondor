@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+# main.py
+import typer
+from typer_htcondor import eventlog, job, dag, jobset, annex
+
+app = typer.Typer(help="A tool for managing HTCondor jobs and resources", no_args_is_help=True)
+app.add_typer(eventlog.eventlog_app, name="eventlog", help="Interacts with eventlogs")
+app.add_typer(job.job_app, name="job", help="Run operations on HTCondor jobs")
+app.add_typer(dag.dag_app, name="dag", help="Run operations on HTCondor DAGs")
+app.add_typer(jobset.jobset_app, name="jobset", help="Run operations on HTCondor job sets")
+app.add_typer(annex.annex_app, name="annex", help="Operations on HPC Annexes")
+
+if __name__ == "__main__":
+    typer.run(app())
