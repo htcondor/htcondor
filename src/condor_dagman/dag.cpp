@@ -83,44 +83,40 @@ void touch (const char * filename) {
 
 //---------------------------------------------------------------------------
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
-	dagOpts(dm.options),
-	m_retrySubmitFirst	  (dm.retrySubmitFirst),
-	m_retryNodeFirst	  (dm.retryNodeFirst),
-	_condorRmExe		  (dm.condorRmExe.c_str()),
-	_DAGManJobId		  (&dm.DAGManJobId),
-	_prohibitMultiJobs	  (dm.prohibitMultiJobs),
-	_submitDepthFirst	  (dm.submitDepthFirst),
-	_abortOnScarySubmit(dm.abortOnScarySubmit),
+	dagOpts                (dm.options),
+	m_retrySubmitFirst     (dm.retrySubmitFirst),
+	m_retryNodeFirst       (dm.retryNodeFirst),
+	_condorRmExe           (dm.condorRmExe.c_str()),
+	_DAGManJobId           (&dm.DAGManJobId),
+	_prohibitMultiJobs     (dm.prohibitMultiJobs),
+	_submitDepthFirst      (dm.submitDepthFirst),
+	_abortOnScarySubmit    (dm.abortOnScarySubmit),
 	_generateSubdagSubmits (dm._generateSubdagSubmits),
-	_isSplice			  (isSplice),
-	_spliceScope		  (spliceScope),
-	_maxJobHolds (dm._maxJobHolds),
-	_schedd				  (dm._schedd)
+	_isSplice              (isSplice),
+	_spliceScope           (spliceScope),
+	_maxJobHolds           (dm._maxJobHolds),
+	_schedd                (dm._schedd)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.c_str() );
 
 	_defaultNodeLog.assign(dm._defaultNodeLog);
 	_checkCondorEvents.SetAllowEvents(dm.allow_events);
+
+	_haltFile = _dagmanUtils.HaltFileName(dm.options.primaryDag());
+
 	const std::string &dagConfig = dm._dagmanConfigFile;
 	_configFile = dagConfig.empty() ? nullptr : dagConfig.c_str();
-	// If this dag is a splice, then it may have been specified with a DIR
-	// directive. If so, then this records what it was so we can later
-	// propogate this information to all contained nodes in the DAG--effectively
-	// giving all nodes in the DAG a DIR definition with this directory
-	// as a prefix to what is already there (except in the case of absolute
-	// paths, in which case nothing is done).
-	m_directory = ".";
 
 	// for the toplevel dag, emit the dag files we ended up using.
-	if (_isSplice == false) {
-		ASSERT(dm.options.numDagFiles() >= 1 );
+	if ( ! _isSplice) {
+		ASSERT(dm.options.numDagFiles() >= 1);
 		PrintDagFiles(dm.options.dagFiles());
 	}
 
- 	_readyQ = new DagPriorityQ;
+	_readyQ = new DagPriorityQ;
 	_submitQ = new std::queue<Job*>;
-	if( !_readyQ || !_submitQ ) {
-		EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
+	if (!_readyQ || !_submitQ) {
+		EXCEPT("ERROR: out of memory (%s:%d)!", __FILE__, __LINE__);
 	}
 
 	/* The ScriptQ object allocates daemoncore reapers, which are a
@@ -129,32 +125,24 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 		In the other codes that expect this pointer to be valid, there is
 		either an ASSERT or other checks to ensure it is valid. */
 	if (_isSplice == false) {
-		_preScriptQ = new ScriptQ( this );
-		_postScriptQ = new ScriptQ( this );
-		_holdScriptQ = new ScriptQ( this );
-		if( !_preScriptQ || !_postScriptQ ) {
-			EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
+		_preScriptQ = new ScriptQ(this);
+		_postScriptQ = new ScriptQ(this);
+		_holdScriptQ = new ScriptQ(this);
+		if (!_preScriptQ || !_postScriptQ) {
+			EXCEPT("ERROR: out of memory (%s:%d)!", __FILE__, __LINE__);
 		}
 	}
 
-	debug_printf( DEBUG_DEBUG_4, "MaxJobsSubmitted = %d, "
-				  "MaxPreScripts = %d, MaxPostScripts = %d\n",
-				  dagOpts[shallow::i::MaxJobs], dagOpts[shallow::i::MaxPre], dagOpts[shallow::i::MaxPost]);
-
-		// Don't print any waiting node reports until we're done with
-		// recovery mode.
-
-	_haltFile = _dagmanUtils.HaltFileName(dm.options.primaryDag());
-
-	return;
+	debug_printf(DEBUG_DEBUG_4, "MaxJobsSubmitted = %d, MaxPreScripts = %d, MaxPostScripts = %d\n",
+	             dagOpts[shallow::i::MaxJobs], dagOpts[shallow::i::MaxPre], dagOpts[shallow::i::MaxPost]);
 }
 
 //-------------------------------------------------------------------------
 Dag::~Dag()
 {
-	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::~Dag()\n", _spliceScope.c_str() );
+	debug_printf(DEBUG_DEBUG_1, "Dag(%s)::~Dag()\n", _spliceScope.c_str());
 
-	if ( _condorLogRdr.activeLogFileCount() > 0 ) {
+	if (_condorLogRdr.activeLogFileCount() > 0) {
 		(void) UnmonitorLogFile();
 	}
 
@@ -163,18 +151,18 @@ Dag::~Dag()
 		delete job;
 	}
 
-	for (auto &nv_pair : _splices) {
-		delete nv_pair.second;;
+	for (auto &[_, splice] : _splices) {
+		delete splice;
 	}
 
 	// And remove them from the vector
 	_jobs.clear();
 
-    delete _preScriptQ;
-    delete _postScriptQ;
+	delete _preScriptQ;
+	delete _postScriptQ;
 	delete _holdScriptQ;
-    delete _submitQ;
-    delete _readyQ;
+	delete _submitQ;
+	delete _readyQ;
 
 	free(_dot_file_name);
 	free(_dot_include_file_name);
@@ -183,13 +171,12 @@ Dag::~Dag()
 
 	delete _metrics;
 
-	DeletePinList( _pinIns );
-	DeletePinList( _pinOuts );
+	DeletePinList(_pinIns);
+	DeletePinList(_pinOuts);
 
 	delete _provisionerClassad;
-	_provisionerClassad = NULL;
+	_provisionerClassad = nullptr;
 
-    return;
 }
 
 //-------------------------------------------------------------------------

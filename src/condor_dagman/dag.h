@@ -597,7 +597,7 @@ class Dag {
 	void PrintDeferrals( debug_level_t level, bool force ) const;
 
     	/** Print information about the nodes that are currently
-		    pending for.
+		    pending for. Do not print until recovery mode is complete
 		*/
     void PrintPendingNodes() const;
 
@@ -801,7 +801,7 @@ class Dag {
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
 	// defaults to ".".
- 	std::string m_directory;
+ 	std::string m_directory{"."};
 
 	// move the nodes from the splice into the parent
 	void LiftSplice(Dag *parent, Dag *splice);
