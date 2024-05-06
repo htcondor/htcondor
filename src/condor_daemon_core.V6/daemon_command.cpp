@@ -270,8 +270,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 		char * return_address_ss = NULL;
 
 		if (cleartext_info) {
-			StringList info_list(cleartext_info);
-			char * tmp = NULL;
+			StringTokenIterator info_list(cleartext_info);
+			const char * tmp = nullptr;
 
 			info_list.rewind();
 			tmp = info_list.next();
@@ -287,7 +287,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				}
 
 			} else {
-				// protocol violation... StringList didn't give us anything!
+				// protocol violation... We didn't get anything!
 				// this is unlikely to work, but we may as well try... so, we
 				// don't fail here.
 			}
@@ -363,8 +363,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 		return_address_ss = NULL;
 
 		if (cleartext_info) {
-			StringList info_list(cleartext_info);
-			char * tmp = NULL;
+			StringTokenIterator info_list(cleartext_info);
+			const char* tmp = nullptr;
 
 			info_list.rewind();
 			tmp = info_list.next();
@@ -381,7 +381,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				}
 
 			} else {
-				// protocol violation... StringList didn't give us anything!
+				// protocol violation... We didn't get anything!
 				// this is unlikely to work, but we may as well try... so, we
 				// don't fail here.
 			}
@@ -1775,8 +1775,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 				std::string all_methods;
 				if (m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
 					dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
-					StringList sl(all_methods.c_str());
-					if (sl.contains_anycase(fallback_method_str.c_str())) {
+					std::vector<std::string> sl = split(all_methods);
+					if (contains_anycase(sl, fallback_method_str)) {
 						keyvec.emplace_back(m_key->getKeyData(), 24, fallback_method, 0);
 						dprintf(D_SECURITY, "SESSION: server duplicated AES to %s key for UDP.\n",
 							fallback_method_str.c_str());
