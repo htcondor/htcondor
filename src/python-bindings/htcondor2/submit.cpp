@@ -46,10 +46,8 @@ struct SubmitBlob {
         // the value otherwise.
         int queueStatementCount() const;
 
-        // Given a cluster ID, parses the queue statement and initializes
-        // the itemdata variables.  Returns the corresponding SubmitForeachArgs
-        // pointer or NULL on a failure.
-        SubmitForeachArgs * init_vars( int clusterID );
+        SubmitForeachArgs * init_sfa();
+        void set_sfa( SubmitForeachArgs * sfa );
         void set_vars( const std::vector<std::string> & vars, char * item, int itemIndex );
         void cleanup_vars( const std::vector<std::string> & vars );
 
@@ -176,7 +174,7 @@ SubmitBlob::queueStatementCount() const {
 
 
 SubmitForeachArgs *
-SubmitBlob::init_vars( int /* clusterID */ ) {
+SubmitBlob::init_sfa() {
     char * expanded_queue_args = m_hash.expand_macro( m_qargs.c_str() );
 
     SubmitForeachArgs * sfa = new SubmitForeachArgs();
@@ -199,16 +197,19 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
         return NULL;
     }
 
+    return sfa;
+}
 
+
+void
+SubmitBlob::set_sfa( SubmitForeachArgs * sfa ) {
     for (const auto& var: sfa->vars) {
         // Note that this implies that updates to variables created by the
         // queue statement MUST be pointer replacements.
         m_hash.set_live_submit_variable( var.c_str(), EmptyItemString, false );
     }
 
-
     m_hash.optimize();
-    return sfa;
 }
 
 
