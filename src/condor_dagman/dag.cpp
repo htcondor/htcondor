@@ -48,20 +48,10 @@
 
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
-
 // {ClusterId : {ProcId,ProcId...}}
 using QueriedJobs = std::map<int, std::set<int>>;
 
 const CondorID Dag::_defaultCondorId;
-
-//---------------------------------------------------------------------------
-void touch (const char * filename) {
-    int fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT, 0600);
-    if (fd == -1) {
-        debug_error( 1, DEBUG_QUIET, "Error: can't open %s\n", filename );
-    }
-    close (fd);
-}
 
 //---------------------------------------------------------------------------
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
