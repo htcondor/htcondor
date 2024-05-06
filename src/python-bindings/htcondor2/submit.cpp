@@ -49,7 +49,9 @@ struct SubmitBlob {
         // Given a cluster ID, parses the queue statement and initializes
         // the itemdata variables.  Returns the corresponding SubmitForeachArgs
         // pointer or NULL on a failure.
-        SubmitForeachArgs * init_vars( int clusterID );
+        // SubmitForeachArgs * init_vars( int clusterID );
+        SubmitForeachArgs * init_sfa();
+        void set_sfa( SubmitForeachArgs * sfa );
         void set_vars( StringList & vars, char * item, int itemIndex );
         void cleanup_vars( StringList & vars );
 
@@ -176,7 +178,7 @@ SubmitBlob::queueStatementCount() const {
 
 
 SubmitForeachArgs *
-SubmitBlob::init_vars( int /* clusterID */ ) {
+SubmitBlob::init_sfa() {
     char * expanded_queue_args = m_hash.expand_macro( m_qargs.c_str() );
 
     SubmitForeachArgs * sfa = new SubmitForeachArgs();
@@ -199,7 +201,12 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
         return NULL;
     }
 
+    return sfa;
+}
 
+
+void
+SubmitBlob::set_sfa( SubmitForeachArgs * sfa ) {
     char * var = NULL;
     sfa->vars.rewind();
     while( (var = sfa->vars.next()) ) {
@@ -208,9 +215,7 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
         m_hash.set_live_submit_variable( var, EmptyItemString, false );
     }
 
-
     m_hash.optimize();
-    return sfa;
 }
 
 

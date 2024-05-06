@@ -727,7 +727,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
 
     // Handle itemdata.
-    SubmitForeachArgs * itemdata = sb->init_vars( clusterID );
+    SubmitForeachArgs * itemdata = sb->init_sfa();
     if( itemdata == NULL ) {
         qc.abort();
 
@@ -753,6 +753,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
     int itemCount = itemdata->items.number();
     if( (! isFactoryJob) && itemCount == 0 ) {
+        sb->set_sfa(itemdata);
+
         numJobs = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds );
         if(numJobs < 0) {
             qc.abort();
@@ -815,26 +817,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
         }
 
 
-        //
-        // Step to the first item data and set it as the submit hash's
-        // current item data.
-        //
-        // FIXME: The submit digest code doesn't appear to need this
-        // to happen; if it doesn't, it simply sets the first job's
-        // queue variables to blank.  We'd rather it skip the queue
-        // variables entirely, but until that bug is fixed, we'll
-        // keep setting the variables because that's the expected
-        // behavior.
-        //
-
-        const int itemIndex = 0;
-        itemdata->items.rewind();
-        char * item = itemdata->items.next();
-
-        sb->set_vars( itemdata->vars, item, itemIndex );
-
-
-        // Construct the submit digest.
+        // If we construct the submit digest _before_ calling set_sfa()
+        // (and set_vars()), it won't include redundant information from
+        // the first job proc.
         std::string submitDigest;
         sb->make_digest( submitDigest, clusterID, itemdata->vars, 0 );
         if( submitDigest.empty() ) {
@@ -845,8 +830,17 @@ _schedd_submit( PyObject *, PyObject * args ) {
         }
 
 
+        sb->set_sfa(itemdata);
+
+        const int itemIndex = 0;
+        itemdata->items.rewind();
+        char * item = itemdata->items.next();
+
+        sb->set_vars( itemdata->vars, item, itemIndex );
+
+
         //
-        // FIXME: Likewise, it's wrong for the cluster ad to have the first
+        // FIXME: It's wrong for the cluster ad to have the first
         // proc ad's queue variables set in it, but that's what everyone
         // expects to see.
         //
@@ -914,6 +908,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
             return NULL;
         }
     } else {
+        sb->set_sfa(itemdata);
+
         int itemIndex = 0;
         char * item = NULL;
         itemdata->items.rewind();
