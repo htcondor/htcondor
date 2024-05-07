@@ -57,6 +57,13 @@ New Features:
   longer set to the job's current working directory.
   :jira:`2413`
 
+- When an IDToken or SciToken has restricted authorization levels,
+  additional levels that are usually implied by those levels are now
+  also included.
+  For example, a token that provides ADVERTISE_SCHEDD authorization
+  now also provides READ authorization.
+  :jira:`2424`
+
 Bugs Fixed:
 
 - None.
