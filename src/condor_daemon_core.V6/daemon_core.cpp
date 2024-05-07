@@ -8272,6 +8272,13 @@ int DaemonCore::Create_Process(
 		                NULL,
 		               family_info);
 	}
+	// A bit of a hack.  If there's a cgroup, we've set that upon
+	// in the child process, to avoid any races.  But here in the parent
+	// we need to record that happened, so we can use the cgroup For
+	// monitoring, cleanup, etc.
+	if (family_info && m_proc_family && family_info->cgroup) {
+		m_proc_family->assign_cgroup_for_pid(newpid, family_info->cgroup);
+	}
 #endif
 
 	runtime = _condor_debug_get_time_double();

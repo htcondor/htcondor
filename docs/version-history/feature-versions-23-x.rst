@@ -39,8 +39,18 @@ New Features:
   to encourage cacheable memory pages to be reclaimed faster.
   :jira:`2391`
 
+- Sandbox file transfers will now timeout if no progress has been made either
+  on a single read or write.  The default timeout is one hour (3600 seconds), controlled
+  by :macro:`STARTER_FILE_XFER_STALL_TIMEOUT`.  Note this doesn't limit the *total* 
+  time for sandbox transfers, as long as it is making some progress.  This can help jobs
+  reading or writing to down NFS servers.  When the timeout is hit, the job is evicted,
+  set back to idle and can start again.
+  :jira:`1395`
+
 - The *condor_gangliad* memory consumption has been reduced, and it also places less load on
-  the *condor_collector*.  Specifically, it now uses a projection when querying the collector.
+  the *condor_collector*.  Specifically, it now uses a projection when querying the collector
+  if config knob :macro:`GANGLIAD_WANT_PROJECTION` is set to True. Currently the default for
+  this knob is False, but after additional testing, an upcoming release will default to True.
   :jira:`2394`
 
 - ``IDTOKEN`` files whose access permissions are too open are now ignored.
@@ -57,7 +67,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where transfer of Kerberos credentials from the
+  *condor_shadow* to the *condor_starter* would fail if the daemons
+  weren't explicitly configured to trust each other.
+  :jira:`2411`
 
 Version 23.7.1
 --------------
@@ -148,7 +161,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug on cgroup v2 systems where a race condition could cause a job to run
+  in the wrong cgroup v2 for a very short amount of time.  If this job spawned a sub-job,
+  the child job would forever live in the wrong cgroup.
+  :jira:`2423`
 
 Version 23.6.2
 --------------

@@ -2776,6 +2776,11 @@ tags=starter
 type=bool
 default=true
 
+[STARTER_FILE_XFER_STALL_TIMEOUT]
+type=int
+default=3600
+tags=starter
+
 [JOB_RENICE_INCREMENT]
 default=0
 win32_default=10
@@ -4919,6 +4924,12 @@ tags=condor_config
 default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
 tags=condor_config
+
+[GANGLIAD_WANT_PROJECTION]
+default=false
+type=bool
+description=Should gangliad use an attribute projection to query the collector
+tags=gangliad
 
 [GANGLIAD_RESET_METRICS_FILE]
 default=$(SPOOL)/metricsToReset.ganglia_metrics

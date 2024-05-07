@@ -27,6 +27,8 @@
 #include "basename.h"
 #include "dagman_main.h"
 
+namespace shallow = DagmanShallowOptions;
+
 //---------------------------------------------------------------------------
 Qmgr_connection *
 ScheddClassad::OpenConnection() const
@@ -161,36 +163,65 @@ DagmanClassad::~DagmanClassad()
 }
 
 //---------------------------------------------------------------------------
-void
-DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
-			int maxPostScripts, int maxHoldScripts )
-{
+void DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 	Qmgr_connection *queue = OpenConnection();
-	if ( !queue ) {
-		return;
+	if ( ! queue) { return; }
+
+
+	SetAttribute(ATTR_DAGMAN_MAXJOBS, dagOpts[shallow::i::MaxJobs]);
+	SetAttribute(ATTR_DAGMAN_MAXIDLE, dagOpts[shallow::i::MaxIdle]);
+	SetAttribute(ATTR_DAGMAN_MAXPRESCRIPTS, dagOpts[shallow::i::MaxPre]);
+	SetAttribute(ATTR_DAGMAN_MAXPOSTSCRIPTS, dagOpts[shallow::i::MaxPost]);
+	SetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, dagOpts[shallow::i::MaxHold]);
+
+	if (_valid) {
+		using namespace DagmanDeepOptions;
+		std::string batchId, batchName, acctGroup, acctUser;
+		if ( ! GetAttribute(ATTR_JOB_BATCH_ID, batchId, false)) {
+			batchId = std::to_string(_jobId._cluster);
+			batchId += ".";
+			batchId += std::to_string(_jobId._proc);
+			SetAttribute(ATTR_JOB_BATCH_ID, batchId);
+		}
+		dagOpts[str::BatchId] = batchId;
+		debug_printf(DEBUG_VERBOSE, "Workflow batch-id: <%s>\n", batchId.c_str());
+
+		if ( ! GetAttribute(ATTR_JOB_BATCH_NAME, batchName, false)) {
+			// Default batch name is top-level DAG's primary DAG file (base name only).
+			batchName = condor_basename(dagOpts.primaryDag().c_str());
+			batchName += "+";
+			batchName += std::to_string(_jobId._cluster);
+			SetAttribute(ATTR_JOB_BATCH_NAME, batchName);
+		}
+		dagOpts[str::BatchName] = batchName;
+		debug_printf(DEBUG_VERBOSE, "Workflow batch-name: <%s>\n", batchName.c_str());
+
+		GetAttribute(ATTR_ACCT_GROUP, acctGroup, false);
+		dagOpts[str::AcctGroup] = acctGroup;
+		debug_printf(DEBUG_VERBOSE, "Workflow accounting_group: <%s>\n", acctGroup.c_str());
+
+		GetAttribute(ATTR_ACCT_GROUP_USER, acctUser, false);
+		dagOpts[str::AcctGroupUser] = acctUser;
+		debug_printf(DEBUG_VERBOSE, "Workflow accounting_group_user: <%s>\n", acctUser.c_str());
+
+	} else {
+		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd query -- DagmanClassad object is invalid\n");
 	}
 
-	SetAttribute( ATTR_DAGMAN_MAXJOBS, maxJobs );
-	SetAttribute( ATTR_DAGMAN_MAXIDLE, maxIdle );
-	SetAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, maxPreScripts );
-	SetAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, maxPostScripts );
-	SetAttribute( ATTR_DAGMAN_MAXHOLDSCRIPTS, maxHoldScripts );
-
-	CloseConnection( queue );
+	CloseConnection(queue);
 }
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::Update( const Dagman &dagman )
+DagmanClassad::Update(const Dagman &dagman)
 {
-	if ( !_valid ) {
-		debug_printf( DEBUG_VERBOSE,
-					"Skipping ClassAd update -- DagmanClassad object is invalid\n" );
+	if ( ! _valid) {
+		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd update -- DagmanClassad object is invalid\n");
 		return;
 	}
 
 	Qmgr_connection *queue = OpenConnection();
-	if ( !queue ) {
+	if ( ! queue) {
 		return;
 	}
 
@@ -198,44 +229,44 @@ DagmanClassad::Update( const Dagman &dagman )
 	int jobProcsIdle, jobProcsHeld, jobProcsRunning;
 	dagman.dag->NumJobProcStates(&jobProcsHeld,&jobProcsIdle,&jobProcsRunning);
 
-	SetAttribute( ATTR_DAG_AD_UPDATE_TIME, time(NULL)); // Set the time that update occurred
-	SetAttribute( ATTR_DAG_NODES_TOTAL, dagman.dag->NumNodes( true ) );
-	SetAttribute( ATTR_DAG_NODES_DONE, dagman.dag->NumNodesDone( true ) );
-	SetAttribute( ATTR_DAG_NODES_PRERUN, dagman.dag->PreRunNodeCount() );
-	SetAttribute( ATTR_DAG_NODES_QUEUED, dagman.dag->NumJobsSubmitted() );
-	SetAttribute( ATTR_DAG_NODES_POSTRUN, dagman.dag->PostRunNodeCount() );
-	SetAttribute( ATTR_DAG_NODES_HOLDRUN, dagman.dag->HoldRunNodeCount() );
-	SetAttribute( ATTR_DAG_NODES_READY, dagman.dag->NumNodesReady() );
-	SetAttribute( ATTR_DAG_NODES_FAILED, dagman.dag->NumNodesFailed() );
-	SetAttribute( ATTR_DAG_NODES_UNREADY, dagman.dag->NumNodesUnready( true ) );
-	SetAttribute( ATTR_DAG_NODES_FUTILE, dagman.dag->NumNodesFutile() );
-	SetAttribute( ATTR_DAG_STATUS, (int)dagman.dag->_dagStatus );
-	SetAttribute( ATTR_DAG_IN_RECOVERY, dagman.dag->Recovery() );
-	SetAttribute( ATTR_DAG_JOBS_SUBMITTED, dagman.dag->TotalJobsSubmitted() );
-	SetAttribute( ATTR_DAG_JOBS_IDLE, jobProcsIdle );
-	SetAttribute( ATTR_DAG_JOBS_HELD, jobProcsHeld );
-	SetAttribute( ATTR_DAG_JOBS_RUNNING, jobProcsRunning );
-	SetAttribute( ATTR_DAG_JOBS_COMPLETED, dagman.dag->TotalJobsCompleted() );
+	SetAttribute(ATTR_DAG_AD_UPDATE_TIME, time(nullptr)); // Set the time that update occurred
+	SetAttribute(ATTR_DAG_NODES_TOTAL, dagman.dag->NumNodes(true));
+	SetAttribute(ATTR_DAG_NODES_DONE, dagman.dag->NumNodesDone(true));
+	SetAttribute(ATTR_DAG_NODES_PRERUN, dagman.dag->PreRunNodeCount());
+	SetAttribute(ATTR_DAG_NODES_QUEUED, dagman.dag->NumJobsSubmitted());
+	SetAttribute(ATTR_DAG_NODES_POSTRUN, dagman.dag->PostRunNodeCount());
+	SetAttribute(ATTR_DAG_NODES_HOLDRUN, dagman.dag->HoldRunNodeCount());
+	SetAttribute(ATTR_DAG_NODES_READY, dagman.dag->NumNodesReady());
+	SetAttribute(ATTR_DAG_NODES_FAILED, dagman.dag->NumNodesFailed());
+	SetAttribute(ATTR_DAG_NODES_UNREADY, dagman.dag->NumNodesUnready(true));
+	SetAttribute(ATTR_DAG_NODES_FUTILE, dagman.dag->NumNodesFutile());
+	SetAttribute(ATTR_DAG_STATUS, (int)dagman.dag->_dagStatus);
+	SetAttribute(ATTR_DAG_IN_RECOVERY, dagman.dag->Recovery());
+	SetAttribute(ATTR_DAG_JOBS_SUBMITTED, dagman.dag->TotalJobsSubmitted());
+	SetAttribute(ATTR_DAG_JOBS_IDLE, jobProcsIdle);
+	SetAttribute(ATTR_DAG_JOBS_HELD, jobProcsHeld);
+	SetAttribute(ATTR_DAG_JOBS_RUNNING, jobProcsRunning);
+	SetAttribute(ATTR_DAG_JOBS_COMPLETED, dagman.dag->TotalJobsCompleted());
 
 	// Publish DAGMan stats to a classad, then update those also
 	ClassAd stats_ad;
-	dagman._dagmanStats.Publish( stats_ad );
-	SetAttribute( ATTR_DAG_STATS, stats_ad );
+	dagman._dagmanStats.Publish(stats_ad);
+	SetAttribute(ATTR_DAG_STATS, stats_ad);
 	
 	// Certain DAGMan properties (MaxJobs, MaxIdle, etc.) can be changed by
 	// users. Start by declaring variables for these properties.
-	int jobAdMaxIdle = dagman.maxIdle;
-	int jobAdMaxJobs = dagman.maxJobs;
-	int jobAdMaxPreScripts  = dagman.maxPreScripts;
-	int jobAdMaxPostScripts = dagman.maxPostScripts;
-	int jobAdMaxHoldScripts = dagman.maxHoldScripts;
+	int jobAdMaxIdle = dagman.options[shallow::i::MaxIdle];
+	int jobAdMaxJobs = dagman.options[shallow::i::MaxJobs];
+	int jobAdMaxPreScripts  = dagman.options[shallow::i::MaxPre];
+	int jobAdMaxPostScripts = dagman.options[shallow::i::MaxPost];
+	int jobAdMaxHoldScripts = dagman.options[shallow::i::MaxHold];
 
 	// Look up the current values of these properties in the condor_dagman job ad.
-	GetAttribute( ATTR_DAGMAN_MAXIDLE, jobAdMaxIdle );
-	GetAttribute( ATTR_DAGMAN_MAXJOBS, jobAdMaxJobs );
-	GetAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, jobAdMaxPreScripts );
-	GetAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, jobAdMaxPostScripts );
-	GetAttribute( ATTR_DAGMAN_MAXHOLDSCRIPTS, jobAdMaxHoldScripts );
+	GetAttribute(ATTR_DAGMAN_MAXIDLE, jobAdMaxIdle);
+	GetAttribute(ATTR_DAGMAN_MAXJOBS, jobAdMaxJobs);
+	GetAttribute(ATTR_DAGMAN_MAXPRESCRIPTS, jobAdMaxPreScripts);
+	GetAttribute(ATTR_DAGMAN_MAXPOSTSCRIPTS, jobAdMaxPostScripts);
+	GetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, jobAdMaxHoldScripts);
 
 	// It's possible that certain DAGMan attributes were changed in the job ad.
 	// If this happened, update the internal values in our dagman data structure.
@@ -246,122 +277,30 @@ DagmanClassad::Update( const Dagman &dagman )
 	dagman.dag->SetMaxPostScripts(jobAdMaxPostScripts);
 	dagman.dag->SetMaxHoldScripts(jobAdMaxHoldScripts);
 
-	CloseConnection( queue );
+	CloseConnection(queue);
 }
 
 //---------------------------------------------------------------------------
-void
-DagmanClassad::GetInfo( std::string &owner, std::string &nodeName )
-{
-	if ( !_valid ) {
-		debug_printf( DEBUG_VERBOSE,
-					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
+void DagmanClassad::GetInfo(std::string &owner, std::string &nodeName) {
+	if ( ! _valid) {
+		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd query -- DagmanClassad object is invalid\n");
 		return;
 	}
 
 	Qmgr_connection *queue = OpenConnection();
-	if ( !queue ) {
-		return;
-	}
+	if ( ! queue) { return; }
 
-	if ( !GetAttribute( ATTR_OWNER, owner ) ) {
-		check_warning_strictness( DAG_STRICT_1 );
+	if ( ! GetAttribute(ATTR_OWNER, owner)) {
+		check_warning_strictness(DAG_STRICT_1);
 		owner = "undef";
 	}
 
-	if ( !GetAttribute( ATTR_DAG_NODE_NAME, nodeName ) ) {
+	if ( ! GetAttribute(ATTR_DAG_NODE_NAME, nodeName)) {
 		// We should only get this value if we're a sub-DAG.
 		nodeName = "undef";
 	}
 
-	CloseConnection( queue );
-
-	return;
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanClassad::GetSetBatchId( std::string &batchId )
-{
-	if ( !_valid ) {
-		debug_printf( DEBUG_VERBOSE,
-					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
-		return;
-	}
-
-	Qmgr_connection *queue = OpenConnection();
-	if ( !queue ) {
-		return;
-	}
-
-	if ( !GetAttribute( ATTR_JOB_BATCH_ID, batchId, false ) ) {
-		batchId = std::to_string( _jobId._cluster );
-		batchId += ".";
-		batchId += std::to_string( _jobId._proc );
-		SetAttribute( ATTR_JOB_BATCH_ID, batchId );
-	}
-
-	CloseConnection( queue );
-
-	debug_printf( DEBUG_VERBOSE, "Workflow batch-id: <%s>\n",
-				batchId.c_str() );
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanClassad::GetSetBatchName( const std::string &primaryDagFile,
-			std::string &batchName )
-{
-	if ( !_valid ) {
-		debug_printf( DEBUG_VERBOSE,
-					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
-		return;
-	}
-
-	Qmgr_connection *queue = OpenConnection();
-	if ( !queue ) {
-		return;
-	}
-
-	if ( !GetAttribute( ATTR_JOB_BATCH_NAME, batchName, false ) ) {
-			// Default batch name is top-level DAG's primary
-			// DAG file (base name only).
-		batchName = condor_basename( primaryDagFile.c_str() );
-		batchName += "+";
-		batchName += std::to_string( _jobId._cluster );
-		SetAttribute( ATTR_JOB_BATCH_NAME, batchName );
-	}
-
-	CloseConnection( queue );
-
-	debug_printf( DEBUG_VERBOSE, "Workflow batch-name: <%s>\n",
-				batchName.c_str() );
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanClassad::GetAcctInfo( std::string &group, std::string &user )
-{
-	if ( !_valid ) {
-		debug_printf( DEBUG_VERBOSE,
-					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
-		return;
-	}
-
-	Qmgr_connection *queue = OpenConnection();
-	if ( !queue ) {
-		return;
-	}
-
-	GetAttribute( ATTR_ACCT_GROUP, group, false );
-	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group: <%s>\n",
-				group.c_str() );
-
-	GetAttribute( ATTR_ACCT_GROUP_USER, user, false );
-	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group_user: <%s>\n",
-				user.c_str() );
-
-	CloseConnection( queue );
+	CloseConnection(queue);
 
 	return;
 }

@@ -56,6 +56,9 @@
 #include <iomanip>
 #include <string.h>
 
+// remove when we have C++ 23 everywhere
+#include "zip_view.hpp"
+
 #include "condor_daemon_core.h"
 
 GCC_DIAG_OFF(float-equal)
@@ -2116,27 +2119,21 @@ Condor_Auth_SSL::should_try_auth()
 
 	StringTokenIterator certfile_list(certfile, ",");
 	StringTokenIterator keyfile_list(keyfile, ",");
-	keyfile_list.rewind();
-	const char *cert, *key;
+
 	std::string last_error;
-	while ((cert = certfile_list.next())) {
-		key = keyfile_list.next();
-		if (key == nullptr) {
-			last_error = formatstr(last_error, "No key to match the certificate %s", cert);
-			break;
-		}
+	for (const auto &[cert, key]: c9::zip(certfile_list, keyfile_list)) {
 		TemporaryPrivSentry sentry(PRIV_ROOT);
-		int fd = open(cert, O_RDONLY);
+		int fd = open(cert.c_str(), O_RDONLY);
 		if (fd < 0) {
 			formatstr(last_error, "Not trying SSL auth because server certificate"
-				" (%s) is not readable by HTCondor: %s.\n", cert, strerror(errno));
+				" (%s) is not readable by HTCondor: %s.\n", cert.c_str(), strerror(errno));
 			continue;
 		}
 		close(fd);
-		fd = open(key, O_RDONLY);
+		fd = open(key.c_str(), O_RDONLY);
 		if (fd < 0) {
 			formatstr(last_error, "Not trying SSL auth because server key"
-			          " (%s) is not readable by HTCondor: %s.\n", key, strerror(errno));
+			          " (%s) is not readable by HTCondor: %s.\n", key.c_str(), strerror(errno));
 			continue;
 		}
 		close(fd);

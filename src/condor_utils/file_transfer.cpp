@@ -1821,11 +1821,6 @@ FileTransfer::Reaper(int pid, int exit_status)
 void
 FileTransfer::callClientCallback()
 {
-	if (ClientCallback) {
-		dprintf(D_FULLDEBUG,
-				"Calling client FileTransfer handler function.\n");
-		(*(ClientCallback))(this);
-	}
 	if (ClientCallbackCpp) {
 		dprintf(D_FULLDEBUG,
 				"Calling client FileTransfer handler function.\n");
@@ -2337,7 +2332,6 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
     return i;
 #endif
 
-
 int
 FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 {
@@ -2372,6 +2366,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+	std::function<void(void)> f {[this] { this->ReceiveAliveMessage(); }};
+	s->SetXferAliveCallback(f);
 	CondorError errstack;
 
 	priv_state saved_priv = PRIV_UNKNOWN;
@@ -3894,6 +3890,21 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	}
 
 	return 1;
+}
+
+
+void
+FileTransfer::ReceiveAliveMessage() {
+	// We've got a alive from cedar get/put File
+	// if we are in the forked child, need to pass
+	// a message on our pipe up to the parent.
+	static time_t lastUpdate = 0;
+	time_t now = time(nullptr);
+	//GGT 
+	if ((now - lastUpdate) > 1) {
+		UpdateXferStatus(XFER_STATUS_ACTIVE);
+		lastUpdate = now;
+	}
 }
 
 bool

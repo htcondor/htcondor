@@ -699,7 +699,7 @@ struct SubmitStepFromPyIter {
 	// returns 0 if done iterating
 	// returns 2 for first iteration
 	// returns 1 for subsequent iterations
-	int next(JOB_ID_KEY & jid, int & item_index, int & step)
+	int next(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
 	{
 		if (m_done) return 0;
 
@@ -719,7 +719,7 @@ struct SubmitStepFromPyIter {
 					m_done = (rval == 0);
 					return rval;
 				}
-				set_live_vars();
+				if (set_live) set_live_vars();
 			} else {
 				if (0 == iter_index) {
 					// if no next row, then we are done iterating, unless it is the FIRST iteration
@@ -974,10 +974,10 @@ struct SubmitJobsIterator {
 
 		if (m_iter_qargs) {
 			if (m_ssqa.done()) { THROW_EX(StopIteration, "All ads processed"); }
-			rval = m_ssqa.next(jid, item_index, step);
+			rval = m_ssqa.next(jid, item_index, step, true);
 		} else {
 			if (m_sspi.done()) { THROW_EX(StopIteration, "All ads processed"); }
-			rval = m_sspi.next(jid, item_index, step);
+			rval = m_sspi.next(jid, item_index, step, true);
 			if (rval < 0) {
 			    THROW_EX(HTCondorInternalError, m_sspi.errmsg());
 				m_sspi.throw_error();
@@ -3711,11 +3711,15 @@ public:
 			m_queue_may_append_to_cluster = false;
 
 			// load the first item, this also sets jid, item_index, and step
-			rval = ssi.next(jid, item_index, step);
+			// but do not set the live vars into the hash before we build the submit digest
+			rval = ssi.next(jid, item_index, step, false);
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// now that we have built the submit digest, we can set the live vars into the hash
+			ssi.set_live_vars();
 
 			// make and send the cluster ad
 			ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
@@ -3772,7 +3776,7 @@ public:
 		} else {
 			// loop through the itemdata, sending jobs for each item
 			//
-			while ((rval = ssi.next(jid, item_index, step)) > 0) {
+			while ((rval = ssi.next(jid, item_index, step, true)) > 0) {
 
 				int procid = txn->newProc();
 				if (procid < 0) {
@@ -3879,12 +3883,16 @@ public:
 		if (factory_submit) {
 
 			// get the first rowdata, we need that to build the submit digest, etc
-			rval = ssi.next(jid, item_index, step);
+			// but don't set the live vars yet, since we don't want them in the digest
+			rval = ssi.next(jid, item_index, step, false);
 			if (rval < 0) { ssi.throw_error(); }
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// now that we have build the submit digest, we can set the live vars
+			ssi.set_live_vars();
 
 			// make a proc0 ad (because that's the same as a cluster ad)
 			ClassAd *proc_ad = m_hash.make_job_ad(JOB_ID_KEY(cluster, 0), 0, 0, false, spool, NULL, NULL);
@@ -3940,7 +3948,7 @@ public:
 
 		} else {
 
-			while ((rval = ssi.next(jid, item_index, step)) > 0) {
+			while ((rval = ssi.next(jid, item_index, step, true)) > 0) {
 
 				int procid = txn->newProc();
 				if (procid < 0) {

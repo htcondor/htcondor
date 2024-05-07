@@ -962,7 +962,7 @@ struct SubmitStepFromQArgs {
 	// returns 0 if done iterating
 	// returns 2 for first iteration
 	// returns 1 for subsequent iterations
-	int next(JOB_ID_KEY & jid, int & item_index, int & step)
+	int next(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
 	{
 		if (m_done) return 0;
 
@@ -975,7 +975,7 @@ struct SubmitStepFromQArgs {
 
 		if (0 == step) { // have we started a new row?
 			if (next_rowdata()) {
-				set_live_vars();
+				if (set_live) set_live_vars();
 			} else {
 				// if no next row, then we are done iterating, unless it is the FIRST iteration
 				// in which case we want to pretend there is a single empty item called "Item"

@@ -711,7 +711,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 			goto finis;
 		}
 
-		while ((rval = ssi.next(jid, item_index, step)) > 0) {
+		while ((rval = ssi.next(jid, item_index, step, true)) > 0) {
 			proc_id = NewProc(cluster_id);
 			if (proc_id != jid.proc) {
 				formatstr(errmsg, "expected next ProcId to be %d, but Schedd says %d", jid.proc, proc_id);
@@ -814,7 +814,7 @@ finis:
 
 bool send_reschedule(const Dagman & dm)
 {
-	if (!dm.useDirectSubmit)
+	if (dm.options[deep::i::SubmitMethod] == 0)
 		return true; // submit already did it
 
 	DCSchedd schedd;

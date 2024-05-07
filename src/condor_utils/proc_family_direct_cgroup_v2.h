@@ -68,13 +68,14 @@ public:
 	// Tell DaemonCore to call register_subfamily
 	// from the parent. Otherwise the state passed in is lost
 	// to the parent by being set in the forked child.
-	bool register_from_child() { return false; }
+	bool register_from_child() { return true; }
 
 	// This is the way.  The only way.
 
 	// As we don't get the requested cgroup name in register, this method
 	// actually makes the cgroup, if need be.
 	bool track_family_via_cgroup(pid_t pid, FamilyInfo *fi);
+	void assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name);
 
 	bool get_usage(pid_t, ProcFamilyUsage&, bool);
 
