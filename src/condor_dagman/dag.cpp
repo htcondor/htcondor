@@ -719,7 +719,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job, bool recovery) {
 		}
 
 		//If no post script and not a retry node then set descendants to Futile
-		if ( !job->_scriptPost && !job->DoRetry()) { _numNodesFutile += job->SetDescendantsToFutile(*this); }
+		if (!job->_scriptPost && !job->DoRetry()) { _numNodesFutile += job->SetDescendantsToFutile(*this); }
 
 		ProcessJobProcEnd(job, recovery, true);
 	}
@@ -780,7 +780,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job, bool recovery) {
 			}
 
 			//If no post script and not retrying the node then set descendants to Futile
-			if ( !job->_scriptPost && !job->DoRetry()) { _numNodesFutile += job->SetDescendantsToFutile(*this); }
+			if (!job->_scriptPost && !job->DoRetry()) { _numNodesFutile += job->SetDescendantsToFutile(*this); }
 
 		} else { // job succeeded
 			ASSERT(termEvent->returnValue == 0);
