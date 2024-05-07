@@ -1448,16 +1448,17 @@ Dag::StartFinalNode()
 		// dealing with that for now.  wenger 2014-03-17
 		auto nonFinal = [](Job *job) -> bool {
 			if (job->GetType() != NodeType::FINAL) {
-				debug_printf(DEBUG_DEBUG_1, "Removing node %s from ready queue\n", job->GetJobName());
+				debug_printf(DEBUG_DEBUG_2, "Removing node %s from ready queue\n", job->GetJobName());
 				job->SetStatus(Job::STATUS_NOT_READY);
 				return true;
 			}
 			return false;
 		};
-		// TODO: replace with erase_if()
-		auto it = std::remove_if(_readyQ->begin(), _readyQ->end(), nonFinal);
-		_readyQ->erase(it, _readyQ->end());
-		_readyQ->make_heap();
+
+		size_t erased = _readyQ->erase_if(nonFinal);
+		debug_printf(DEBUG_DEBUG_1, "Removed %lu nodes from the ready queue.\n", erased);
+		// Note: Don't need to call _readyQ->make_heap() because queue should be 1 node or empty
+		ASSERT(_readyQ->size() == 0 || _readyQ->size() == 1);
 
 		// Now start up the final node.
 		_final_job->SetStatus(Job::STATUS_READY);
@@ -3913,21 +3914,6 @@ Dag::UpdateJobCounts(Job *node, int change)
 	}
 }
 
-
-//---------------------------------------------------------------------------
-void
-Dag::SetDirectory(std::string &dir)
-{
-	m_directory = dir;
-}
-
-//---------------------------------------------------------------------------
-void
-Dag::SetDirectory(char *dir)
-{
-	m_directory = dir;
-}
-
 //---------------------------------------------------------------------------
 void
 Dag::PropagateDirectoryToAllNodes(void)
@@ -4123,13 +4109,6 @@ Dag::ConnectSplices(Dag *parentSplice, Dag *childSplice)
 	}
 
 	return true;
-}
-
-//---------------------------------------------------------------------------
-void
-Dag::DeletePinList(PinList &pinList)
-{
-	for (auto pn : pinList) { delete pn; }
 }
 
 //---------------------------------------------------------------------------

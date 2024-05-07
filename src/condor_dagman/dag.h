@@ -133,8 +133,7 @@ public:
 	bool GetReject(std::string &firstLocation); // Check if DAG was rejected
 	void SetPendingNodeReportInterval(int interval); // Set interval of when to report pending nodes
 	// Set the DAGs working directory from DIR subcommand
-	void SetDirectory(std::string &dir);
-	void SetDirectory(char *dir);
+	void SetDirectory(std::string &dir) { m_directory = dir; }
 	// Set nodes effective priotities
 	void SetNodePriorities();
 
@@ -225,12 +224,9 @@ public:
 		return NumPreScriptsRunning() + NumPostScriptsRunning();
 	}
 
-	// TODO: Replace with std::count_if
 	inline int NumReadyServiceNodes() const {
-		int num = 0;
-		for (auto node : _service_nodes)
-			if (node->GetStatus() == Job::STATUS_READY) { ++num; }
-		return num;
+		auto IsReady = [](Job* n) -> bool { return n->GetStatus() == Job::STATUS_READY; };
+		return std::count_if(_service_nodes.begin(), _service_nodes.end(), IsReady);
 	}
 
 	inline int PreRunNodeCount() const { return _preRunNodeCount; }
@@ -385,7 +381,9 @@ private:
 	bool SetPinInOut(PinList &pinList, Job *node, int pinNum);
 	const PinNodes *GetPinInOut(bool isPinIn, int pinNum) const;
 	const static PinNodes *GetPinInOut(const PinList &pinList, const char *inOutStr, int pinNum);
-	static void DeletePinList(PinList &pinList);
+	static void DeletePinList(PinList &pinList) {
+		for (auto pn : pinList) { delete pn; }
+	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	void WriteSavePoint(Job* node); // Write a node save point file
