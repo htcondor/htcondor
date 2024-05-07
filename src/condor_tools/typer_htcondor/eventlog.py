@@ -267,13 +267,13 @@ def complete_log_files(incomplete: str) -> List[str]:
     # Return files that match the incomplete input
     return [f for f in log_files if f.startswith(incomplete)]
 
-@eventlog_app.command()
+@eventlog_app.command(no_args_is_help=True)
 def read(
     log_files: Annotated[List[str], typer.Argument(..., autocompletion=complete_log_files, help="Log file or space separated list of log files")],
     json: Annotated[bool, typer.Option(help="Output in JSON format")] = False,
     csv: Annotated[bool, typer.Option(help="Output in CSV format")] = False,
     group: Annotated[Optional[attributes], typer.Option(
-        help="Group by this attribute")] = None
+        help="Group by this attribute")] = None,
 ):
     """
     Reads an eventlog
@@ -303,7 +303,7 @@ def read(
     output_job_summaries(job_summaries_across_files, group, options)
 
 
-@eventlog_app.command()
+@eventlog_app.command(no_args_is_help=True)
 def follow(
     log_file: Annotated[str, typer.Argument(..., autocompletion=complete_log_files, help="Log file")],
     json: Annotated[bool, typer.Option(help="Output in JSON format")] = False,
@@ -340,7 +340,3 @@ def follow(
         # exit gracefully if user presses Ctrl+C
         print(" Exiting...")
         pass
-
-
-if __name__ == "__main__":
-    eventlog_app()

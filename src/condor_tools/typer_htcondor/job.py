@@ -68,7 +68,7 @@ def get_job_ad(logger, job_id, options):
             job = []
     return job
 
-@job_app.command()
+@job_app.command(no_args_is_help=True)
 def submit(
     submit_file: Path = typer.Argument(..., exists=True, readable=True, help="Path to the submit file"),
     resource: str = typer.Option("htcondor", "--resource", help="Resource to run this job. Supports Slurm and EC2"),
