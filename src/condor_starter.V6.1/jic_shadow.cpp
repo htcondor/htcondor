@@ -2494,8 +2494,14 @@ JICShadow::beginFileTransfer( void )
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->setSyscallSocket(syscall_sock);
 		// "true" means want in-flight status updates
+#ifdef WINDOWS
 		filetrans->RegisterCallback(
-				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this, true);
+				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,false);
+#else
+		filetrans->RegisterCallback(
+				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,true);
+#endif
+
 
 		if ( shadow_version == NULL ) {
 			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
@@ -2510,8 +2516,10 @@ JICShadow::beginFileTransfer( void )
 		}
 
 		this->file_xfer_last_alive_time = time(nullptr);
+#ifndef WINDOWS
 		this->file_xfer_last_alive_tid = 
 			daemonCore->Register_Timer(20, 300, (TimerHandlercpp) &JICShadow::verifyXferProgressing, "verify xfer progress", this); 
+#endif
 		return true;
 	}
 		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
@@ -2597,9 +2605,11 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 		ftrans ? ftrans->GetInfo().success : -1,
 		ftrans ? ftrans->GetInfo().try_again : -1) ;
 
+#ifndef WINDOWS
 	if (this->file_xfer_last_alive_tid) {
 		daemonCore->Cancel_Timer(this->file_xfer_last_alive_tid);
 	}
+#endif
 
 	if ( ftrans ) {
 		updateShadowWithPluginResults("Input");
