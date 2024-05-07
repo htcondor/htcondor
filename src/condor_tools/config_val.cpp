@@ -461,8 +461,8 @@ char* EvaluatedValue(char const* value, ClassAd const* ad) {
     bool rc = (ad) ? ad->EvaluateExpr(value, res) : empty.EvaluateExpr(value, res);
     if (!rc) return NULL;
     std::string s;
-	classad::ClassAdUnParser unp;
-	unp.Unparse(s, res);
+    classad::ClassAdUnParser unp;
+    unp.Unparse(s, res);
     return strdup(s.c_str());
 }
 
