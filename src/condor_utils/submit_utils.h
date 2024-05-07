@@ -1128,5 +1128,7 @@ int process_job_credentials(
     std::string & error_string
 );
 
+int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o);
+
 #endif // _SUBMIT_UTILS_H
 

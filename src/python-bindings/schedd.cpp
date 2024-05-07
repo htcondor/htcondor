@@ -3833,7 +3833,7 @@ public:
 	queue_from_iter(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object from, bool spool=false)
 	{
 		if (!txn.get() || !txn->transaction()) {
-		    THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
+			THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
 		}
 
 		// Before calling init_base_ad(), we should invoke methods to tell
@@ -3919,6 +3919,8 @@ public:
 					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 				num_jobs = row_count * ssi.step_size();
+			} else {
+			    num_jobs = count;
 			}
 
 			// append the queue statement
