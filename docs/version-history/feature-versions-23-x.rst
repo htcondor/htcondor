@@ -90,13 +90,16 @@ New Features:
   attributes into the STARTD ads.
   :jira:`1051`
 
-
 Bugs Fixed:
 
 - Fixed bug on cgroup v2 systems where a race condition could cause a job to run
   in the wrong cgroup v2 for a very short amount of time.  If this job spawned a sub-job,
   the child job would forever live in the wrong cgroup.
   :jira:`2423`
+
+- Fixed a bug where using :subcom:`output_destination` would still create
+  directories on the access point.
+  :jira:`2353`
 
 Version 23.6.2
 --------------
