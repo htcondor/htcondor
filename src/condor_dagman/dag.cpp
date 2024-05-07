@@ -3753,14 +3753,14 @@ Dag::SubmitNodeJob(const Dagman &dm, Job *node, CondorID &condorID)
 		}
 
 		switch(dm.options[deep::i::SubmitMethod]) {
-			case 0: // run condor_submit
+			case (int)DagSubmitMethod::CONDOR_SUBMIT: // run condor_submit
 				submit_success = condor_submit(dm, node->GetCmdFile(), condorID, node->GetJobName(),
 			                                   parents.c_str(), node, node->_effectivePriority,
 			                                   node->GetRetries(), node->GetDirectory(), logFile.c_str(),
 			                                   ( ! node->NoChildren()) && dm._claim_hold_time > 0,
 			                                   batchName.c_str(), batchId);
 				break;
-			case 1: // direct submit
+			case (int)DagSubmitMethod::DIRECT: // direct submit
 				submit_success = direct_condor_submit(dm, node, logFile.c_str(), parents.c_str(),
 				                                      batchName.c_str(), batchId.c_str(), condorID);
 				break;
