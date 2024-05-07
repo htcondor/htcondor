@@ -44,6 +44,7 @@
 #define ATTR_IP "IP"
 #define ATTR_SCALE "Scale"
 #define ATTR_LIFETIME "Lifetime"
+#define ATTR_STASH_COLLECTOR_NAME "_condorColName"
 
 Metric::Metric():
 	derivative(false),
@@ -377,7 +378,15 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( isAggregateMetric() ) {
 		// This is like GROUP BY in SQL.
 		// By default, group by the name of the metric.
-		aggregate_group = name;
+		// If this GangliaD is configured to monitor multiple pools, however, then
+		// the default is the name of the metric PLUS the collector name since we typically 
+		// want an aggregate metric per pool.
+		std::string collector_name;
+		if (daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,collector_name)) {
+			aggregate_group = name + "/" + collector_name;
+		} else {
+			aggregate_group = name;
+		}
 		if( !evaluateOptionalString(ATTR_AGGREGATE_GROUP,aggregate_group,metric_ad,daemon_ad,regex_groups) ) return false;
 	}
 
@@ -459,7 +468,9 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
     }
 
 	if( isAggregateMetric() ) {
-		machine = statsd->getDefaultAggregateHost();
+		if (!daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,machine)) {
+			machine = statsd->getDefaultAggregateHost();
+		}
 	}
 	else {
 		if( (!strcasecmp(my_type.c_str(),"machine") && restrict_slot1) || !strcasecmp(my_type.c_str(),"collector") ) {
@@ -975,21 +986,96 @@ StatsD::publishMetrics( int /* timerID */ )
 		}
 	}
 
-	CollectorList* collectors = daemonCore->getCollectorList();
-	ASSERT( collectors );
 
-	QueryResult result;
-	result = collectors->query(query,daemon_ads);
-	if( result != Q_OK ) {
-		dprintf(D_ALWAYS,
-				"Couldn't fetch schedd ads: %s\n",
-				getStrQueryResult(result));
+	// Handle config knob MONITOR_MULTIPLE_COLLECTORS, which is an optional knob to
+	// tell the gangliad to monitor a list of specified collectors instead of the
+	// default pool collector.  This knob should be a comma seperated list of entries,
+	// where each entry is name-of-collector/address-of-collector, where the address is
+	// same as what you would give the "-pool" parameter of condor_status.  For instance,
+	// MONITOR_MULTIPLE_COLLECTORS = ce1.wisc.edu/ce1.wisc.edu:9619, ce2.wisc.edu/ce2.wisc.edu:9619
+	bool multiple_collectors = false;
+	std::vector<std::string> collector_pool_list;
+	std::vector<std::string> collector_name_list;
+	char *param_monitor_multiple_collectors = param("MONITOR_MULTIPLE_COLLECTORS");
+	if (param_monitor_multiple_collectors && param_monitor_multiple_collectors[0]) {
+		StringList collist(param_monitor_multiple_collectors);
+		free(param_monitor_multiple_collectors);
+		param_monitor_multiple_collectors = NULL;
+		collist.rewind();
+		char *col;
+		while( (col=collist.next()) ) {
+			char* pos = strchr(col,'/');
+			if (!pos || !pos[1]) {
+				break;
+			}
+			*pos = '\0';
+			collector_name_list.push_back(col);
+			collector_pool_list.push_back(pos+1);
+		}
+		if (collector_name_list.size() > 0 && 
+			collector_name_list.size() == collector_pool_list.size()) 
+		{
+			multiple_collectors = true;
+		} else {
+			EXCEPT("ERROR: config knob MONITOR_MULTIPLE_COLLECTORS malformed");
+		}
+	}
+
+	int num_collectors = multiple_collectors ? collector_pool_list.size() : 1;
+	int num_ads_from_prev_rounds = 0;
+	CollectorList* collectors = nullptr;
+	for (int i=0; i < num_collectors; i++) {
+		if (multiple_collectors) {
+			collectors = CollectorList::create(collector_pool_list[i].c_str());
+		} else {
+			collectors = daemonCore->getCollectorList();
+		}
+		ASSERT( collectors );
+
+		QueryResult result;
+		result = collectors->query(query,daemon_ads);
+
+		if( result != Q_OK ) {
+			dprintf(D_ALWAYS,
+					"Couldn't fetch schedd ads: %s\n",
+					getStrQueryResult(result));
+		} else {
+			if (multiple_collectors) {
+				dprintf(D_ALWAYS,"Got %d daemon ads from %s\n",
+					daemon_ads.MyLength() - num_ads_from_prev_rounds,
+					collector_pool_list[i].c_str());
+				num_ads_from_prev_rounds = daemon_ads.MyLength();
+				daemon_ads.Open();
+				ClassAd *daemon;
+				while( (daemon=daemon_ads.Next()) ) {
+					if (!daemon->Lookup(ATTR_STASH_COLLECTOR_NAME)) {
+						daemon->Assign(ATTR_STASH_COLLECTOR_NAME,collector_name_list[i]);
+					}
+				}
+				daemon_ads.Close();
+				if ( i+1 == num_collectors ) {
+					dprintf(D_ALWAYS,"Got %d daemon ads total from %d collectors\n",
+						num_ads_from_prev_rounds,num_collectors);
+				}
+			} else {
+				dprintf(D_ALWAYS,"Got %d daemon ads\n", daemon_ads.MyLength());
+			}
+		}
+
+		mapCollectorIPs(*collectors,i);
+
+		if (multiple_collectors) {
+			delete collectors;
+			collectors = nullptr;
+		}
+	}
+
+	if (daemon_ads.MyLength() == 0) {
+		// No ads means no more work to do
 		return;
 	}
 
-	dprintf(D_ALWAYS,"Got %d daemon ads\n",daemon_ads.MyLength());
-
-	mapDaemonIPs(daemon_ads,*collectors);
+	mapDaemonIPs(daemon_ads);
 
 	if( !m_per_execute_node_metrics ) {
 		determineExecuteNodes(daemon_ads);
@@ -1263,11 +1349,9 @@ StatsD::addToAggregateValue(Metric const &metric) {
 
 
 void
-StatsD::mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors) {
+StatsD::mapDaemonIPs(ClassAdList &daemon_ads) {
 	// The map of machines to IPs is used when directing ganglia to
 	// associate specific metrics with specific hosts (host spoofing)
-
-	m_daemon_ips.clear();
 
 	daemon_ads.Open();
 	ClassAd *daemon;
@@ -1289,12 +1373,24 @@ StatsD::mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors) {
 		}
 	}
 	daemon_ads.Close();
+}
 
-	// Also add a mapping of collector hosts to IPs, and determine the
+void
+StatsD::mapCollectorIPs(CollectorList &collectors, int collector_index) {
+
+	// Add a mapping of collector hosts to IPs, and determine the
 	// collector host to use as the default machine name for aggregate
 	// metrics.
 
-	m_default_aggregate_host = "";
+	// Note: Parameter collector_index will be zero if knob MONITOR_MULTIPLE_COLLECTORS is not
+	// set, else it will be the index into the list of collectors being polled.
+
+	// If this is the first collector we are looking at during this metric publication
+	// cycle, then clear out default host and table of IPs.
+	if (collector_index == 0) {
+		m_default_aggregate_host = "";
+		m_daemon_ips.clear();
+	}
 
 	for (auto& collector : collectors.getList()) {
 		char const *collector_host = collector->fullHostname();
