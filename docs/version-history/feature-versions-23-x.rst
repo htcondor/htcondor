@@ -24,6 +24,9 @@ Release Notes:
   more sense.  The restrictions have been :ref:`documented <dataflow>`.
   :jira:`1899`
 
+- HTCondor tarballs now contain `Pelican 7.7.4 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.4.4>`_
+  :jira:`2399`
+
 - When removing a large dag, the schedd now removes any existing child
   dag jobs in a non-blocking way, making the schedd more responsive during
   this removal.
