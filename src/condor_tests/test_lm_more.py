@@ -82,8 +82,6 @@ My.Pos=\"{{$(Row),$(Step),$(foo)}}\"
 hold=1
 max_materialize=3
 FACTORY.Iwd={IWD}
-foo=1
-bar=2
 
 Queue 1 foo,bar from """
         ,
@@ -125,8 +123,6 @@ hold=1
 max_materialize=3
 args=30 -f $(foo) -b $(bar) -z 
 FACTORY.Iwd={IWD}
-foo=1
-bar=2
 
 Queue 1 foo,bar from """,
 
@@ -165,7 +161,6 @@ hold=1
 request_memory=$(Item)
 max_materialize=3
 FACTORY.Iwd={IWD}
-Item=1
 
 Queue 1 Item from """,
 
