@@ -407,11 +407,16 @@ static void test_classad(const Parameters &, Results &results)
     TEST("Have attribute D", (have_attribute == true));
     TEST("D is true", (b == true));
 
-/* These functions removed
-    have_attribute = basic->EvaluateAttrList("E", l);
+	classad::Value v;
+    have_attribute = basic->EvaluateExpr("E[0]", v);
     TEST("Have attribute E", (have_attribute == true));
-    TEST("E is list of size ", (l->size() == 1));
+	v.IsIntegerValue(i);
+    TEST("E[0] == 1", 1 == i);
 
+    have_attribute = basic->EvaluateExpr("E[1]", v);
+    TEST("E[1] is error result", v.IsErrorValue());
+
+/* These functions removed
     have_attribute = basic->EvaluateAttrClassAd("F", c);
     TEST("Have attribute F", (have_attribute == true));
     have_attribute = c->EvaluateAttrInt("AA", i);
