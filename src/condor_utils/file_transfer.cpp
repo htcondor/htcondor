@@ -56,10 +56,8 @@
 #include "shortfile.h"
 #include "fcloser.h"
 
-#include <fstream>
 #include <algorithm>
 #include <numeric>
-#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
@@ -833,8 +831,7 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	// Parse the list of input files
 	job_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, input_files );
-	std::stringstream is( input_files );
-	while ( getline( is, token, ',' ) ) {
+	for (const auto &token: StringTokenIterator(input_files, ",")) {
 		// Skip any file path that looks like a URL or transfer plugin related
 		if ( token.find( "://" ) == std::string::npos ) {
 			// Stat each file. Paths can be relative or absolute.
@@ -876,8 +873,7 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	// Parse the list of output files
 	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, output_files );
-	std::stringstream os( output_files );
-	while ( getline( os, token, ',' ) ) {
+	for (const auto &token: StringTokenIterator(output_files, ",")) {
 		// Stat each file. Add the last-modified timestamp to set of timestamps.
 		std::string output_filename;
 		if ( token.find_last_of( DIR_DELIM_CHAR ) != std::string::npos ) {

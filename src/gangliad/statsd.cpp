@@ -27,7 +27,6 @@
 
 #include <memory>
 #include <fstream>
-#include <sstream>
 
 #define ATTR_REGEX  "Regex"
 #define ATTR_VERBOSITY "Verbosity"
@@ -538,10 +537,10 @@ Metric::getValueString(std::string &result) const {
 			break;
 		}
 	}
-	std::stringstream value_str;
-	classad::Value v = value;
-	value_str << v;
-	dprintf(D_ALWAYS,"Invalid value %s=%s\n",name.c_str(),value_str.str().c_str());
+	std::string str;
+	classad::ClassAdUnParser unp;
+	unp.Unparse(str, value);
+	dprintf(D_ALWAYS,"Invalid value %s=%s\n",name.c_str(),str.c_str());
 	return false;
 }
 
