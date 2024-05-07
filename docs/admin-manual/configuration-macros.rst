@@ -6171,6 +6171,12 @@ These settings affect the *condor_starter*.
     OPENBLAS_NUM_THREADS, PYTHON_CPU_COUNT, ROOT_MAX_THREADS, TF_LOOP_PARALLEL_ITERATIONS,
     TF_NUM_THREADS.
 
+:macro-def:`STARTER_FILE_XFER_STALL_TIMEOUT`
+    This value defaults to 3600 (seconds).  It controlls the amount of
+    time a file transfer can stall before the starter evicts the job.
+    A stall can happen when the sandbox is on an NFS server that it down,
+    or the network has broken.
+
 :macro-def:`STARTER_UPDATE_INTERVAL[STARTER]`
     An integer value representing the number of seconds between ClassAd
     updates that the *condor_starter* daemon sends to the

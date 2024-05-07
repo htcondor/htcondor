@@ -2776,6 +2776,11 @@ tags=starter
 type=bool
 default=true
 
+[STARTER_FILE_XFER_STALL_TIMEOUT]
+type=int
+default=3600
+tags=starter
+
 [JOB_RENICE_INCREMENT]
 default=0
 win32_default=10

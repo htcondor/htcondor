@@ -406,7 +406,7 @@ JICShadow::setupJobEnvironment_part2(void)
 		// Otherwise, there were no files to transfer, so we can
 		// pretend the transfer just finished and try to spawn the job
 		// now.
-	transferInputCompleted( NULL );
+	transferInputStatus(nullptr);
 }
 
 bool
@@ -2493,8 +2493,15 @@ JICShadow::beginFileTransfer( void )
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->setSyscallSocket(syscall_sock);
+		// "true" means want in-flight status updates
+#ifdef WINDOWS
 		filetrans->RegisterCallback(
-				  (FileTransferHandlerCpp)&JICShadow::transferInputCompleted,this );
+				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,false);
+#else
+		filetrans->RegisterCallback(
+				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,true);
+#endif
+
 
 		if ( shadow_version == NULL ) {
 			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
@@ -2502,11 +2509,17 @@ JICShadow::beginFileTransfer( void )
 			filetrans->setPeerVersion( *shadow_version );
 		}
 
-		if( ! filetrans->DownloadFiles(false) ) { // do not block
+		if( ! filetrans->DownloadFiles(false) ) { // do not block (i.e. fork)
 				// Error starting the non-blocking file transfer.  For
 				// now, consider this a fatal error
 			EXCEPT( "Could not initiate file transfer" );
 		}
+
+		this->file_xfer_last_alive_time = time(nullptr);
+#ifndef WINDOWS
+		this->file_xfer_last_alive_tid = 
+			daemonCore->Register_Timer(20, 300, (TimerHandlercpp) &JICShadow::verifyXferProgressing, "verify xfer progress", this); 
+#endif
 		return true;
 	}
 		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
@@ -2565,14 +2578,38 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 	updateShadow( & updateAd );
 }
 
+void 
+JICShadow::verifyXferProgressing(int /*timerid*/) {
+	int stall_timeout = param_integer("STARTER_FILE_XFER_STALL_TIMEOUT", 3600);
+	time_t now = time(nullptr);
+	if ((now - this->file_xfer_last_alive_time) > stall_timeout) {
+		EXCEPT( "Input File transfer stalled for %ld seconds", now - file_xfer_last_alive_time);
+	}
+}
 
-// FileTransfer callback for completion of input transfer
+// FileTransfer callback for status messages of input transfer
 int
-JICShadow::transferInputCompleted( FileTransfer *ftrans )
+JICShadow::transferInputStatus(FileTransfer *ftrans)
 {
+	// An in-progress message? (ftrans is null when we fake completion)
+	if (ftrans) {
+		const FileTransfer::FileTransferInfo &info = ftrans->GetInfo();
+		if (info.in_progress) {
+			// a status ping message. xfer is still making progress!
+			this->file_xfer_last_alive_time = time(nullptr);
+			return 1;
+		}
+	}
+
 	dprintf(D_ZKM,"transferInputCompleted(%p) success=%d try_again=%d\n", ftrans,
 		ftrans ? ftrans->GetInfo().success : -1,
 		ftrans ? ftrans->GetInfo().try_again : -1) ;
+
+#ifndef WINDOWS
+	if (this->file_xfer_last_alive_tid) {
+		daemonCore->Cancel_Timer(this->file_xfer_last_alive_tid);
+	}
+#endif
 
 	if ( ftrans ) {
 		updateShadowWithPluginResults("Input");
@@ -2645,7 +2682,7 @@ JICShadow::transferInputCompleted( FileTransfer *ftrans )
 			// it is erroneous to have received more than one.
 
 			std::string manifestFileName;
-			const char * currentFile = NULL;
+			const char * currentFile = nullptr;
 			// Should this be Starter->getWorkingDir(false)?
 			Directory sandboxDirectory( "." );
 			while( (currentFile = sandboxDirectory.Next()) ) {
@@ -2731,7 +2768,7 @@ JICShadow::transferInputCompleted( FileTransfer *ftrans )
 	// This will either queue a prepare hook. or a queue a DEFERRAL timer to launch the job
 	setupCompleted(0);
 
-	return TRUE;
+	return 1;
 }
 
 

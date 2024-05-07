@@ -39,6 +39,14 @@ New Features:
   to encourage cacheable memory pages to be reclaimed faster.
   :jira:`2391`
 
+- Sandbox file transfers will now timeout if no progress has been made either
+  on a single read or write.  The default timeout is one hour (3600 seconds), controlled
+  by :macro:`STARTER_FILE_XFER_STALL_TIMEOUT`.  Note this doesn't limit the *total* 
+  time for sandbox transfers, as long as it is making some progress.  This can help jobs
+  reading or writing to down NFS servers.  When the timeout is hit, the job is evicted,
+  set back to idle and can start again.
+  :jira:`1395`
+
 - The *condor_gangliad* memory consumption has been reduced, and it also places less load on
   the *condor_collector*.  Specifically, it now uses a projection when querying the collector
   if config knob :macro:`GANGLIAD_WANT_PROJECTION` is set to True. Currently the default for
