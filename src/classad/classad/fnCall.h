@@ -161,9 +161,7 @@ class FunctionCall : public ExprTree
 	static bool timeZoneOffset(const char*,const ArgumentList&,EvalState&,
 							   Value&);
 	static bool dayTime(const char*,const ArgumentList&,EvalState&,Value&);
-	/* Unused
-	static bool makeDate(const char*,const ArgumentList&,EvalState&,Value&);
-	*/
+
 	// time management (selectors)
 	static bool getField(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool splitTime(const char*,const ArgumentList&,EvalState&,Value&);
