@@ -175,9 +175,14 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		// pass arguments in the format that condor_history wants
 		args.AppendArg("condor_history");
 		args.AppendArg("-inherit"); // tell it to write to an inherited socket
+		// Specify history source for default Ad type filtering despite specifying files to search
 		if (m_want_startd) {
 			args.AppendArg("-startd");
 		}
+		if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) {
+			args.AppendArg("-epochs");
+		}
+		// End history source specification
 		if (state.m_streamresults) { args.AppendArg("-stream-results"); }
 		if ( ! state.MatchCount().empty()) {
 			args.AppendArg("-match");
@@ -202,7 +207,6 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		if (state.m_searchdir) {
 			searchKnob += "_DIR";
 			args.AppendArg("-dir");
-			if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) { args.AppendArg("-epochs"); }
 		}
 		if ( ! state.RecordSrc().empty()) {
 			searchKnob = state.RecordSrc() + "_" + searchKnob;
