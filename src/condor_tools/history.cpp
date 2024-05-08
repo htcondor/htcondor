@@ -42,6 +42,7 @@
 #include "condor_daemon_core.h" // for extractInheritedSocks
 #include "console-utils.h"
 #include <algorithm> //for std::reverse
+#include <utility> // for std::move
 
 #include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
@@ -940,6 +941,17 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 		if (!err_msg.empty()) {
 			fprintf(stderr,"Error: %s\n",err_msg.c_str());
 			exit(1);
+		}
+		// Add Ad type filter if remote version supports it
+		if ( ! filterAdTypes.empty()) {
+			if ( ! v.built_since_version(23, 8, 0)) {
+				const char* daemonType = (dt == DT_SCHEDD) ? "Schedd" : "StartD";
+				fprintf(stderr, "Remote %s does not support -type filering for history queries.\n", daemonType);
+				exit(1);
+			}
+			auto join = [](std::string list, std::string type) -> std::string { return std::move(list) + ',' + type; };
+			std::string adFilter = std::accumulate(std::next(filterAdTypes.begin()), filterAdTypes.end(), *(filterAdTypes.begin()), join);
+			ad.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, adFilter);
 		}
 	}
 
