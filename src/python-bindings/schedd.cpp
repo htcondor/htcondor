@@ -275,7 +275,7 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 
 
 boost::shared_ptr<HistoryIterator>
-history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int hrs, int cmd, const std::string & addr)
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, const std::string& type, int hrs, int cmd, const std::string & addr)
 {
 	bool want_startd = (cmd == GET_HISTORY);
 
@@ -372,6 +372,10 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		default:
 			THROW_EX(HTCondorValueError, "Unknown history record source given");
 			break;
+	}
+
+	if ( ! type.empty()) {
+		ad.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, type);
 	}
 
 	daemon_t dt = DT_SCHEDD;
@@ -2637,126 +2641,22 @@ struct Schedd {
 		return result;
 	}
 
-    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
+    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement,
+                                                       boost::python::list projection=boost::python::list(),
+                                                       int match=-1,
+                                                       boost::python::object since=boost::python::object(),
+                                                       boost::python::object type=boost::python::object())
     {
-        return history_query(requirement, projection, match, since, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
+        std::string ad_type_filter;
+        if (type.ptr() != Py_None) {
+            ad_type_filter = boost::python::extract<std::string>(type);
+        }
+        return history_query(requirement, projection, match, since, ad_type_filter, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
     }
 
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
-#if 1
-		return history_query(requirement, projection, match, since, HRS_SCHEDD_JOB_HIST, QUERY_SCHEDD_HISTORY, m_addr);
-#else
-        std::string val_str;
-        extract<ExprTreeHolder &> exprtree_extract(requirement);
-        extract<std::string> string_extract(requirement);
-        classad::ExprTree *expr = NULL;
-        boost::shared_ptr<classad::ExprTree> expr_ref;
-        if (string_extract.check())
-        {
-            classad::ClassAdParser parser;
-            std::string val_str = string_extract();
-            if (!parser.ParseExpression(val_str, expr))
-            {
-                THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
-            }
-            expr_ref.reset(expr);
-        }
-        else if (exprtree_extract.check())
-        {
-            expr = exprtree_extract().get();
-        }
-        else
-        {
-            THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
-        }
-        classad::ExprTree *expr_copy = expr->Copy();
-        if (!expr_copy) {
-            THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression");
-        }
-
-	classad::ExprList *projList(new classad::ExprList());
-	unsigned len_attrs = py_len(projection);
-	for (unsigned idx = 0; idx < len_attrs; idx++)
-	{
-		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
-		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-		if (!entry) {
-		    THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.")
-		}
-		projList->push_back(entry);
-	}
-
-	// decode the since argument, this can either be an expression, or a string
-	// containing either an expression, a cluster id or a full job id.
-	classad::ExprTree *since_expr_copy = NULL;
-	extract<ExprTreeHolder &> since_exprtree_extract(since);
-	extract<std::string> since_string_extract(since);
-	extract<int>  since_cluster_extract(since);
-	if (since_cluster_extract.check()) {
-		std::string expr_str;
-		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
-		classad::ClassAdParser parser;
-		parser.ParseExpression(expr_str, since_expr_copy);
-	} else if (since_string_extract.check()) {
-		std::string since_str = since_string_extract();
-		classad::ClassAdParser parser;
-		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
-			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
-		} else {
-			classad::Value val;
-			if (ExprTreeIsLiteral(since_expr_copy, val) && (val.IsIntegerValue() || val.IsRealValue())) {
-				delete since_expr_copy; since_expr_copy = NULL;
-				// if the stop constraint is a numeric literal.
-				// then there are a few special cases...
-				// it might be a job id. or it might (someday) be a time value
-				PROC_ID jid;
-				const char * pend;
-				if (StrIsProcId(since_str.c_str(), jid.cluster, jid.proc, &pend) && !*pend) {
-					if (jid.proc >= 0) {
-						formatstr(since_str, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
-					} else {
-						formatstr(since_str, "ClusterId == %d", jid.cluster);
-					}
-					parser.ParseExpression(since_str, since_expr_copy);
-				}
-			}
-		}
-	} else if (since_exprtree_extract.check()) {
-		since_expr_copy = since_exprtree_extract().get()->Copy();
-	} else if (since.ptr() != Py_None) {
-		THROW_EX(HTCondorValueError, "invalid since argument");
-	}
-
-
-	classad::ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, expr_copy);
-	ad.InsertAttr(ATTR_NUM_MATCHES, match);
-	if (since_expr_copy) { ad.Insert("Since", since_expr_copy); }
-
-	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
-	ad.Insert(ATTR_PROJECTION, projTree);
-
-	DCSchedd schedd(m_addr.c_str());
-	Sock* sock;
-        bool result;
-        {
-        condor::ModuleLock ml;
-        result = !(sock = schedd.startCommand(QUERY_SCHEDD_HISTORY, Stream::reli_sock, 0));
-        }
-        if (result)
-        {
-            THROW_EX(HTCondorIOError, "Unable to connect to schedd");
-        }
-        boost::shared_ptr<Sock> sock_sentry(sock);
-
-        if (!putClassAdAndEOM(*sock, ad)) {
-            THROW_EX(HTCondorIOError, "Unable to send request classad to schedd");
-        }
-
-        boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
-        return iter;
-#endif
+        return history_query(requirement, projection, match, since, "", HRS_SCHEDD_JOB_HIST, QUERY_SCHEDD_HISTORY, m_addr);
     }
 
 
@@ -4566,6 +4466,8 @@ void export_schedd()
                 true; the job making the expression become true will not be
                 returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
                 same set of jobs.
+            :param type: A comma separated list of Ad types to return from the
+                epoch history.
             :type since: int, str, or :class:`~classad.ExprTree`
             :return: All matching ads in the Schedd history, with attributes according to the
                 ``projection`` keyword.
@@ -4575,7 +4477,7 @@ void export_schedd()
              (boost::python::arg("self"),
 #endif
              boost::python::arg("constraint"), boost::python::arg("projection"), boost::python::arg("match")=-1,
-             boost::python::arg("since")=boost::python::object())
+             boost::python::arg("since")=boost::python::object(), boost::python::arg("type")=boost::python::object())
             )
         .def("history", &Schedd::history,
             R"C0ND0R(
