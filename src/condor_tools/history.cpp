@@ -217,11 +217,8 @@ static void condenseJobFilterList(bool sort = false) {
 		}
 	}
 
-	//Shift data structure to set all filter items set to done towards the end
-	auto rm_start = std::remove_if(jobIdFilterInfo.begin(), jobIdFilterInfo.end(),
-								   [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
-	//Erase/Remove all elements from first marked for removal to the end of data structure
-	jobIdFilterInfo.erase(rm_start, jobIdFilterInfo.end());
+	// Erase JobId filters that are completed (All possible Cluster.Procs found)
+	std::erase_if(jobIdFilterInfo, [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
 }
 
 //Use passed info to determine if we can set a record source: do so then return or error out
