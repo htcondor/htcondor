@@ -131,23 +131,6 @@ initialize_sockets()
 	return 1;
 }
 
-/* This function doesn't seem to be used anywhere. */
-#if 0
-static int 
-shutdown_sockets()
-{
-	if(!sockets_initialized)
-		return 1;
-
-#if defined(WIN32)
-	WSACleanup();
-#endif
-
-	sockets_initialized = 0;
-	return 1;
-}
-#endif
-
 DLLEXPORT struct chirp_client * 
 chirp_client_connect_url( const char *url, const char **path_part)
 {
