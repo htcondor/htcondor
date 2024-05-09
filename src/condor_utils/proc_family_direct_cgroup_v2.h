@@ -87,6 +87,11 @@ public:
 	bool continue_family(pid_t);
 
 	bool kill_family(pid_t);
+
+	// Tell cgroups that when we later unregister this family,
+	// not to completely kill it off, as that will also take out
+	// the sshd below it.
+	bool extend_family_lifetime(pid_t);
 	
 	// Note this isn't called in the starter, as DaemonCore calls
 	// it after calling the Reaper, and the starter exits in the
