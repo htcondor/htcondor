@@ -148,7 +148,7 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 	// Remove all the subcgroups, bottom up
 	for (auto dir: getTree(cgroup_name)) {
 		int r = rmdir(dir.c_str());
-		if (r < 0) {
+		if ((r < 0) && (errno != ENOENT)) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::trimCgroupTree error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
 		}
 	}
