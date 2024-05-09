@@ -32,6 +32,7 @@
 namespace stdfs = std::filesystem;
 
 static std::map<pid_t, std::string> cgroup_map;
+static std::vector<pid_t> lifetime_extended_pids;
 
 static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
@@ -583,6 +584,13 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	return true;
 }
 
+bool
+ProcFamilyDirectCgroupV2::extend_family_lifetime(pid_t pid)
+{
+	lifetime_extended_pids.emplace_back(pid);
+	return true;
+}
+
 //
 // Note: DaemonCore doesn't call this from the starter, because
 // the starter exits from the JobReaper, and dc call this after
@@ -590,6 +598,11 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	bool
 ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 {
+	if (std::count(lifetime_extended_pids.begin(), lifetime_extended_pids.end(), (pid)) > 0) {
+		dprintf(D_FULLDEBUG, "Unregistering process with living sshds, not killing it\n");
+		return true;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::unregister_family for pid %u\n", pid);
