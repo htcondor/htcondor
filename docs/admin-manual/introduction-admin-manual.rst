@@ -141,7 +141,7 @@ Putting it all together
     :align: center
  
      flowchart TD
-         subgraph Access Point
+         subgraph Access Point - AP
          direction LR;
          
          subgraph Persistent Services
@@ -158,7 +158,7 @@ Putting it all together
              condor_schedd -- writes to file --o job_queue
          end
      
-         subgraph CM
+         subgraph Central Manager - CM
          subgraph Persistent Services for CM
              direction TB
              cm_master[condor master]
@@ -171,7 +171,7 @@ Putting it all together
          end
      end
  
-     subgraph EP
+     subgraph Execution Point - EP
      subgraph Persistent Services for EP
              direction TB
              ep_master[condor_master]
