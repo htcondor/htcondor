@@ -1137,7 +1137,7 @@ tags=had,AbstractReplicatorStateMachine
 
 [TRANSFER_JOB_ATTRS]
 default=ClusterID, ProcID, NumShadowStarts
-types=string
+type=string
 
 [MAX_TRANSFER_LIFETIME]
 default=300
