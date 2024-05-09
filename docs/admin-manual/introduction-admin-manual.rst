@@ -182,6 +182,8 @@ Putting it all together
                      
          condor_startd -- spawns for job --> condor_starter1
          condor_startd -- spawns for job --> condor_starter2
+         condor_starter1 -- spawns job --> job1
+         condor_starter2 -- spawns job --> job2
      end
  
      condor_shadow1 -- connects to --o condor_starter1
