@@ -875,14 +875,18 @@ void VanillaProc::recordFinalUsage() {
 
 void VanillaProc::killFamilyIfWarranted() {
 	// Kill_Family() will (incorrectly?) kill the SSH-to-job daemon
-	// if we're using dedicated accounts, so don't unless we know
+	// if we're using dedicated accounts or cgroups, so don't unless we know
 	// we're the only job.
-	if ( ! m_dedicated_account || Starter->numberOfJobs() == 1 ) {
+	if (Starter->numberOfJobs() == 1 ) {
 		dprintf( D_PROCFAMILY, "About to call Kill_Family()\n" );
-		daemonCore->Kill_Family( JobPid );
+		daemonCore->Kill_Family(JobPid);
 	} else {
 		dprintf( D_PROCFAMILY, "Postponing call to Kill_Family() "
 			"(perhaps due to ssh_to_job)\n" );
+		// Tell DC not to kill this process tree on exit, As
+		// it might kill child cgroups
+		// This is a hack until we have proper nested cgroup v2s
+		daemonCore->Extend_Family_Lifetime(JobPid);
 	}
 }
 

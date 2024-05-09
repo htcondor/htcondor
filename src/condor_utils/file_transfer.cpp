@@ -3896,7 +3896,7 @@ FileTransfer::ReceiveAliveMessage() {
 	// a message on our pipe up to the parent.
 	static time_t lastUpdate = 0;
 	time_t now = time(nullptr);
-	//GGT 
+
 	if ((now - lastUpdate) > 1) {
 		UpdateXferStatus(XFER_STATUS_ACTIVE);
 		lastUpdate = now;
