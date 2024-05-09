@@ -22,9 +22,7 @@ Version 23.0.10
 
 Release Notes:
 
-.. HTCondor version 23.0.10 released on Month Date, 2024.
-
-- HTCondor version 23.0.10 not yet released.
+- HTCondor version 23.0.10 released on May 9, 2024.
 
 - Preliminary support for Ubuntu 22.04 (Noble Numbat).
   :jira:`2407`

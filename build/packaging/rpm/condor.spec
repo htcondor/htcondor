@@ -1431,6 +1431,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.10-1
+- Preliminary support for Ubuntu 22.04 (Noble Numbat)
+- Warns about deprecated multiple queue statements in a submit file
+- Fix bug where plugins could not signify to retry a file transfer
+- The condor_upgrade_check script checks for proper token file permissions
+- Fix bug where the condor_upgrade_check script crashes on older platforms
+- The bundled version of apptainer was moved to libexec in the tarball
+
 * Tue Apr 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.2-1
 - Fix bug where file transfer plugin error was not in hold reason code
 
