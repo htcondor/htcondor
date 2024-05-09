@@ -9,9 +9,7 @@ Version 23.7.1
 
 Release Notes:
 
-.. HTCondor version 23.7.1 released on Month Date, 2024.
-
-- HTCondor version 23.7.1 not yet released.
+- HTCondor version 23.7.1 released on May 9, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-23010`.
 
@@ -24,22 +22,42 @@ Release Notes:
   more sense.  The restrictions have been :ref:`documented <dataflow>`.
   :jira:`1899`
 
+- HTCondor tarballs now contain `Pelican 7.7.4 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.4.4>`_
+  :jira:`2399`
+
 - When removing a large dag, the schedd now removes any existing child
   dag jobs in a non-blocking way, making the schedd more responsive during
   this removal.
   :jira:`2364`
 
-New Features:
+- **NOTE**: Soon, ``IDTOKEN`` files with permissive file protections will be ignored.
+  In particular, the ``/etc/condor/tokens.d`` directory and the tokens contained
+  within should be only accessible by the ``root`` account.
 
-- In the unlikely event that a shadow exception event happens, the text is
-  now saved in the job ad attribute :ad-attr:`LastShadowException` for
-  further debugging.
-  :jira:`1896`
+New Features:
 
 - Periodic policy expressions like :subcom:`periodic_remove` are now checked
   for during file input transfer.  Previously, HTCondor didn't start running these
   checks until the file transfer was finished at the job proper started.
   :jira:`2362`
+
+- A local universe job can now specify a container image, and it will run
+  with that singularity or apptainer container runtime.
+  :jira:`2180`
+
+- File transfer plugins that are installed on the EP can now advertise extra
+  attributes into the STARTD ads.
+  :jira:`1051`
+
+- DAGMan will now write a rescue DAG and abort when :tool:`condor_dagman` has
+  been pending on nodes for :macro:`DAGMAN_CHECK_QUEUE_INTERVAL` seconds and the
+  associated jobs are not found in the local *condor_schedd* queue.
+  :jira:`1546`
+
+- In the unlikely event that a shadow exception event happens, the text is
+  now saved in the job ad attribute :ad-attr:`LastShadowException` for
+  further debugging.
+  :jira:`1896`
 
 - We now compute the path to the proper python3 interpreter for :tool:`condor_watch_q`
   at compile time.  This should not change anything, but if it does break, the
@@ -55,10 +73,6 @@ New Features:
   logged as ``D_FULLDEBUG`` messages are now logged using the new message
   category ``D_CRON``.
   :jira:`2308`
-
-- A local universe job can now specify a container image, and it will run
-  with that singularity or apptainer container runtime.
-  :jira:`2180`
 
 - A new ``-jobset`` display option was added to :tool:`condor_q`.  If jobsets are enabled
   in the *condor_schedd* it will show information from the jobset ads.
@@ -90,13 +104,16 @@ New Features:
   attributes into the STARTD ads.
   :jira:`1051`
 
-
 Bugs Fixed:
 
 - Fixed bug on cgroup v2 systems where a race condition could cause a job to run
   in the wrong cgroup v2 for a very short amount of time.  If this job spawned a sub-job,
   the child job would forever live in the wrong cgroup.
   :jira:`2423`
+
+- Fixed a bug where using :subcom:`output_destination` would still create
+  directories on the access point.
+  :jira:`2353`
 
 Version 23.6.2
 --------------
