@@ -1431,6 +1431,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.7.1-1
+- Warns about deprecated multiple queue statements in a submit file
+- The semantics of 'skip_if_dataflow' have been improved
+- Removing large DAGs is now non-blocking, preserving schedd performance
+- Periodic policy expressions are now checked during input file transfer
+- Local universe jobs can now specify a container image
+- File transfer plugins can now advertise extra attributes
+- DAGMan can rescue and abort if pending jobs are missing from the job queue
+
 * Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.10-1
 - Preliminary support for Ubuntu 22.04 (Noble Numbat)
 - Warns about deprecated multiple queue statements in a submit file
