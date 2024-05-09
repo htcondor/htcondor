@@ -106,6 +106,10 @@ Bugs Fixed:
   directories on the access point.
   :jira:`2353`
 
+- Fixed a bug where :tool:`condor_submit` -i did not work on a 
+  cgroup v2 system.
+  :jira:`2438`
+
 Version 23.6.2
 --------------
 
