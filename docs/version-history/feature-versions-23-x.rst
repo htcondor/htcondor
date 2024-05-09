@@ -79,6 +79,10 @@ Bugs Fixed:
   weren't explicitly configured to trust each other.
   :jira:`2411`
 
+- Fixed a bug where :tool:`condor_submit` -i did not work on a 
+  cgroup v2 system.
+  :jira:`2438`
+
 Version 23.7.1
 --------------
 
