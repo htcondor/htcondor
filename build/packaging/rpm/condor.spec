@@ -1431,7 +1431,7 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.7.1-1
+* Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.7.1-0.1
 - Warns about deprecated multiple queue statements in a submit file
 - The semantics of 'skip_if_dataflow' have been improved
 - Removing large DAGs is now non-blocking, preserving schedd performance

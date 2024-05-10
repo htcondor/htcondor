@@ -586,7 +586,7 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_CHECK_QUEUE_INTERVAL]
-default=28800
+default=0
 type=int
 tags=dagman,dagman_main
 restart=never

@@ -132,7 +132,7 @@ New Features:
   attributes into the STARTD ads.
   :jira:`1051`
 
-- DAGMan will now write a rescue DAG and abort when :tool:`condor_dagman` has
+- DAGMan can now write a rescue DAG and abort when :tool:`condor_dagman` has
   been pending on nodes for :macro:`DAGMAN_CHECK_QUEUE_INTERVAL` seconds and the
   associated jobs are not found in the local *condor_schedd* queue.
   :jira:`1546`
@@ -188,6 +188,10 @@ Bugs Fixed:
 - Fixed a bug where using :subcom:`output_destination` would still create
   directories on the access point.
   :jira:`2353`
+
+- Fixed a bug where :tool:`condor_submit` -i did not work on a 
+  cgroup v2 system.
+  :jira:`2438`
 
 Version 23.6.2
 --------------

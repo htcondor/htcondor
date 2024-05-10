@@ -1126,7 +1126,7 @@ bool Job::VerifyJobStates(std::set<int>& queuedJobs) {
 	const char* nodeName = GetJobName();
 
 	if (_gotEvents.size() == 0) {
-		debug_printf(DEBUG_NORMAL, "ERROR: Node %s is in submitted state with no recorded job events!\n",
+		debug_printf(DEBUG_NORMAL, "ERROR: Node %s is internally in submitted state with no recorded job events!\n",
 		             nodeName);
 		return false;
 	}
@@ -1135,13 +1135,13 @@ bool Job::VerifyJobStates(std::set<int>& queuedJobs) {
 		if (queuedJobs.contains(proc)) {
 			if (state & ABORT_TERM_MASK) {
 				debug_printf(DEBUG_NORMAL,
-				             "ERROR: Node %s (%d.%d) located in queue but marked as exited.\n",
+				             "ERROR: Node %s (%d.%d) located in queue but internally marked as exited.\n",
 				             nodeName, cluster, proc);
 				good_state = false;
 			}
-		} else if (state != ABORT_TERM_MASK) {
+		} else if ( ! (state & ABORT_TERM_MASK)) { // If abort/term mask bit not set
 			debug_printf(DEBUG_NORMAL,
-			             "ERROR: Node %s (%d.%d) not located in queue and not marked as exited.\n",
+			             "ERROR: Node %s (%d.%d) not located in queue and not internally marked as exited.\n",
 			             nodeName, cluster, proc);
 			good_state = false;
 		}
