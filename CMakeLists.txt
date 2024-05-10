@@ -57,8 +57,8 @@ set(VERSION "23.7.1")
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
 #set(PRE_RELEASE "PRE-RELEASE-UWCS")
-#set(PRE_RELEASE "RC")
-set(PRE_RELEASE OFF)
+set(PRE_RELEASE "RC")
+#set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for
 #   PRE_RELEASE to be forced into a build.
