@@ -824,7 +824,7 @@ bool render_version (std::string & str, ClassAd*, Formatter & fmt)
 	return false;
 }
 
-bool render_member_count (classad::Value & value, ClassAd*, Formatter & fmt)
+bool render_member_count (classad::Value & value, ClassAd*, Formatter &)
 {
 	const char * list = nullptr;
 	classad::ExprList* ary = nullptr;
