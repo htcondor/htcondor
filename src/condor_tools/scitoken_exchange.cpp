@@ -32,7 +32,7 @@
 #include "fcloser.h"
 
 void print_usage(const char *argv0) {
-	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] -scitoken FILENAME [-token NAME]\n\n"
+	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] -scitoken FILENAME [-token NAME | -file NAME]\n\n"
 		"Exchanges a SciToken from a remote daemon and prints its contents to stdout.\n"
 		"\nToken options:\n"
 		"    -scitoken <val>                 File containing SciToken to exchange\n"
@@ -41,14 +41,16 @@ void print_usage(const char *argv0) {
 		"    -name    <name>                 Find a daemon with this name\n"
 		"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n"
 		"\nOther options:\n"
-		"    -token    <NAME>                Name of token file\n", argv0);
+		"    -token    <NAME>                Name of token file in tokens.d\n"
+		"    -file     <NAME>                Token filename\n", argv0);
 	exit(1);
 }
 
 
 int
 exchange_scitoken(const std::string &pool, const std::string &name, daemon_t dtype,
-	const std::string &scitoken_filename, const std::string &token_name)
+	const std::string &scitoken_filename, const std::string &token_name,
+	bool use_tokens_dir)
 {
 	std::unique_ptr<FILE, fcloser> f(
 		safe_fopen_no_create(scitoken_filename.c_str(), "r"));
@@ -98,7 +100,12 @@ exchange_scitoken(const std::string &pool, const std::string &name, daemon_t dty
 		fprintf(stderr, "Failed to exchange SciToken: %s\n", err.getFullText().c_str());
 		exit(1);
 	}
-	return htcondor::write_out_token(token_name, token, "");
+	std::string err_msg;
+	if (!htcondor::write_out_token(token_name, token, "", use_tokens_dir, &err_msg)) {
+		fprintf(stderr, "%s\n", err_msg.c_str());
+		exit(1);
+	}
+	return 0;
 }
 
 
@@ -113,6 +120,7 @@ int main(int argc, char *argv[]) {
 	std::string identity;
 	std::string token_name;
 	std::string scitoken_filename;
+	bool use_tokens_dir = false;
 	for (int i = 1; i < argc; i++) {
 		if (is_dash_arg_prefix(argv[i], "scitoken", 1)) {
 			i++;
@@ -142,6 +150,15 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 			token_name = argv[i];
+			use_tokens_dir = true;
+		} else if (is_dash_arg_prefix(argv[i], "file", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -file requires a file name argument.\n", argv[0]);
+				exit(1);
+			}
+			token_name = argv[i];
+			use_tokens_dir = false;
 		} else if (is_dash_arg_prefix(argv[i], "type", 1)) {
 			i++;
 			if (!argv[i]) {
@@ -173,5 +190,5 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	return exchange_scitoken(pool, name, dtype, scitoken_filename, token_name);
+	return exchange_scitoken(pool, name, dtype, scitoken_filename, token_name, use_tokens_dir);
 }
