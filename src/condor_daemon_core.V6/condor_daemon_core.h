@@ -1413,6 +1413,7 @@ class DaemonCore : public Service
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
+    int Extend_Family_Lifetime(pid_t);
     int Signal_Process(pid_t,int);
     
 	// This method should go away in the long term.

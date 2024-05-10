@@ -8670,6 +8670,14 @@ DaemonCore::Kill_Family(pid_t pid)
 	return m_proc_family->kill_family(pid);
 }
 
+
+int
+DaemonCore::Extend_Family_Lifetime(pid_t pid)
+{
+	if (m_proc_family != nullptr) {
+		return m_proc_family->extend_family_lifetime(pid);
+	}
+}
 int
 DaemonCore::Signal_Process(pid_t pid, int sig)
 {
