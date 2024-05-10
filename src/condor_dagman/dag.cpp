@@ -343,6 +343,8 @@ bool Dag::Bootstrap (bool recovery)
 
 		debug_cache_start_caching();
 
+		auto log_size = std::filesystem::file_size(_defaultNodeLog);
+
 		if (CondorLogFileCount() > 0) {
 			if ( ! ProcessLogEvents(recovery)) {
 				_recovery = false;
@@ -364,8 +366,6 @@ bool Dag::Bootstrap (bool recovery)
 				}
 			}
 		}
-
-		auto log_size = std::filesystem::file_size(_defaultNodeLog);
 
 		set_fake_condorID(_recoveryMaxfakeID);
 
@@ -541,7 +541,7 @@ void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 					node->missingJobs = true;
 				} else {
 					abort_dag = true;
-					debug_printf(DEBUG_NORMAL, "ERROR: DAGMan lost track of node %s (ClusterId=%d)\n",
+					debug_printf(DEBUG_NORMAL, "ERROR: DAGMan lost track of node %s (ClusterId=%d). Please resubmit DAG from produced rescue file.\n",
 					             node->GetJobName(), cluster);
 				}
 			// All expected jobs found in the queue

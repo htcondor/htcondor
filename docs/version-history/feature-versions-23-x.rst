@@ -49,7 +49,7 @@ New Features:
   attributes into the STARTD ads.
   :jira:`1051`
 
-- DAGMan will now write a rescue DAG and abort when :tool:`condor_dagman` has
+- DAGMan can now write a rescue DAG and abort when :tool:`condor_dagman` has
   been pending on nodes for :macro:`DAGMAN_CHECK_QUEUE_INTERVAL` seconds and the
   associated jobs are not found in the local *condor_schedd* queue.
   :jira:`1546`
