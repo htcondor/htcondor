@@ -39,6 +39,10 @@ New Features:
   to encourage cacheable memory pages to be reclaimed faster.
   :jira:`2391`
 
+- Local universe jobs on Linux are now put into their own cgroups.  New knob
+  :macro:`USE_CGROUPS_FOR_LOCAL_UNIVERSE` disables it.
+  :jira:`2440`
+
 - Sandbox file transfers will now timeout if no progress has been made either
   on a single read or write.  The default timeout is one hour (3600 seconds), controlled
   by :macro:`STARTER_FILE_XFER_STALL_TIMEOUT`.  Note this doesn't limit the *total* 
