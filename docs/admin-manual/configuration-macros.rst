@@ -4516,6 +4516,11 @@ These macros control the *condor_schedd*.
     subdirectory within this directory. If not specified, it defaults to
     ``$(SPOOL)/local_univ_execute``.
 
+:macro-def:`USE_CGROUPS_FOR_LOCAL_UNIVERSE[SCHEDD]`
+    A boolean value that defaults to true.  When true, local universe
+    jobs on Linux are put into their own cgroup, for monitoring and
+    cleanup.
+
 :macro-def:`START_SCHEDULER_UNIVERSE[SCHEDD]`
     A boolean value that defaults to
     ``TotalSchedulerJobsRunning < 500``. The *condor_schedd* uses this
