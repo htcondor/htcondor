@@ -2645,11 +2645,11 @@ struct Schedd {
                                                        boost::python::list projection=boost::python::list(),
                                                        int match=-1,
                                                        boost::python::object since=boost::python::object(),
-                                                       boost::python::object type=boost::python::object())
+                                                       boost::python::object ad_type=boost::python::object())
     {
         std::string ad_type_filter;
-        if (type.ptr() != Py_None) {
-            ad_type_filter = boost::python::extract<std::string>(type);
+        if (ad_type.ptr() != Py_None) {
+            ad_type_filter = boost::python::extract<std::string>(ad_type);
         }
         return history_query(requirement, projection, match, since, ad_type_filter, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
     }
@@ -4466,7 +4466,7 @@ void export_schedd()
                 true; the job making the expression become true will not be
                 returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
                 same set of jobs.
-            :param type: A comma separated list of Ad types to return from the
+            :param ad_type: A comma separated string of ad types to return from the
                 epoch history.
             :type since: int, str, or :class:`~classad.ExprTree`
             :return: All matching ads in the Schedd history, with attributes according to the
@@ -4477,7 +4477,7 @@ void export_schedd()
              (boost::python::arg("self"),
 #endif
              boost::python::arg("constraint"), boost::python::arg("projection"), boost::python::arg("match")=-1,
-             boost::python::arg("since")=boost::python::object(), boost::python::arg("type")=boost::python::object())
+             boost::python::arg("since")=boost::python::object(), boost::python::arg("ad_type")=boost::python::object())
             )
         .def("history", &Schedd::history,
             R"C0ND0R(
