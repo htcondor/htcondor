@@ -76,7 +76,7 @@ Bugs Fixed:
   :jira:`2393`
 
 - Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
-  to a random, non-HTCondor process, if pids are reused quickly.
+  to a random, non-HTCondor process, if process IDs are reused quickly.
   :jira:`2357`
 
 - The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
