@@ -978,9 +978,10 @@ _history_query(PyObject *, PyObject * args) {
     const char * projection = NULL;
     long match = 0;
     const char * since = NULL;
+    const char * adFilter = NULL;
     long history_record_source = -1;
     long command = -1;
-    if(! PyArg_ParseTuple( args, "zzzlzll", & addr, & constraint, & projection, & match, & since, & history_record_source, & command )) {
+    if(! PyArg_ParseTuple( args, "zzzlzzll", & addr, & constraint, & projection, & match, & since, & adFilter, & history_record_source, & command )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
@@ -1009,6 +1010,10 @@ _history_query(PyObject *, PyObject * args) {
 
     if( since != NULL && since[0] != '\0' ) {
         commandAd.AssignExpr("Since", since);
+    }
+
+    if ( adFilter && adFilter[0] != '\0' ) {
+        commandAd.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, adFilter);
     }
 
     switch( history_record_source ) {
