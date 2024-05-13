@@ -1905,11 +1905,11 @@ Elasticsearch
 :index:`condor_adstash`
 
 HTCondor supports pushing *condor_schedd* and *condor_startd* job
-history ClassAds to Elasticsearch (and other targets) via the
+and job epoch ClassAds to Elasticsearch (and other targets) via the
 :tool:`condor_adstash` tool/daemon.
-:tool:`condor_adstash` collects job history ClassAds as specified by its
-configuration, either querying specified daemons' histories
-or reading job history ClassAds from a specified file,
+:tool:`condor_adstash` collects job ClassAds as specified by its
+configuration, either querying specified daemons
+or reading job ClassAds from a specified file,
 converts each ClassAd to a JSON document,
 and pushes each doc to the configured Elasticsearch index.
 The index is automatically created if it does not exist, and fields
@@ -1929,10 +1929,10 @@ Running :tool:`condor_adstash` as a daemon (i.e. under the watch of the
 :tool:`condor_master`) can be enabled by adding
 ``use feature : adstash``
 to your HTCondor configuration.
-By default, this configuration will poll all *condor_schedds* that
-report to the ``$(CONDOR_HOST)`` *condor_collector* every 20 minutes
-and push the contents of the job history ClassAds to an Elasticsearch
-instance running on ``localhost`` to an index named
+By default, this configuration will poll the job history on all
+*condor_schedds* that report to the ``$(CONDOR_HOST)`` *condor_collector*
+every 20 minutes and push the contents of the job history ClassAds to an
+Elasticsearch instance running on ``localhost`` to an index named
 ``htcondor-000001``.
 Your situation and monitoring needs are likely different!
 See the ``condor_config.local.adstash`` example configuration file in
