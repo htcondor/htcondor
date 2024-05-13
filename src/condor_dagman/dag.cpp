@@ -1280,7 +1280,7 @@ Dag::FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const ch
 	bool skipFinalNode = true;
 	Job *node = nullptr;
 	if (nodeName) {
-		if (strcasecmp(nodeName, DAG::ALL_NODES)) {
+		if (strcasecmp(nodeName, DAG::ALL_NODES) != MATCH) {
 			// Looking for a specific node.
 			_allNodesIt = _jobs.end(); 
 			// Specific node lookups should not skip the final node.
