@@ -66,6 +66,10 @@ struct SubmitBlob {
 
         void insert_macro( const char * name, const std::string & value );
 
+        int process_job_credentials( std::string & URL, std::string & error_string ) {
+            return ::process_job_credentials( m_hash, 0, URL, error_string );
+        }
+
     private:
         SubmitHash m_hash;
         MACRO_SOURCE m_src_pystring;
