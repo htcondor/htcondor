@@ -125,37 +125,6 @@ time_t DaemonCore::m_startup_time = time(NULL);
 // DO NOT include any system header files after this!
 #include "condor_debug.h"
 
-#if 0
-	// Lord help us -- here we define some CRT internal data structure info.
-	// If you compile Condor NT with anything other than VC++ 6.0, you
-	// need to check the C runtime library (CRT) source to make certain the below
-	// still makes sense (in particular, the ioinfo struct).  In the CRT,
-	// look at INTERNAL.H and MSDOS.H.  Good Luck.
-	typedef struct {
-			long osfhnd;    /* underlying OS file HANDLE */
-			char osfile;    /* attributes of file (e.g., open in text mode?) */
-			char pipech;    /* one char buffer for handles opened on pipes */
-			#ifdef _MT
-			int lockinitflag;
-			CRITICAL_SECTION lock;
-			#endif  /* _MT */
-		}   ioinfo;
-	#define IOINFO_L2E          5
-	#define IOINFO_ARRAY_ELTS   (1 << IOINFO_L2E)
-	#define IOINFO_ARRAYS       64
-	#define _pioinfo(i) ( __pioinfo[(i) >> IOINFO_L2E] + ((i) & (IOINFO_ARRAY_ELTS - \
-								  1)) )
-	#define _osfile(i)  ( _pioinfo(i)->osfile )
-	#define _pipech(i)  ( _pioinfo(i)->pipech )
-	extern _CRTIMP ioinfo * __pioinfo[];
-	extern int _nhandle;
-	#define FOPEN           0x01    /* file handle open */
-	#define FPIPE           0x08    /* file handle refers to a pipe */
-	#define FDEV            0x40    /* file handle refers to device */
-	extern void __cdecl _lock_fhandle(int);
-	extern void __cdecl _unlock_fhandle(int);
-#endif
-
 // We should only need to include the libTDP header once
 // the library is made portable. For now, the TDP process
 // control stuff is in here

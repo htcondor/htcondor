@@ -73,11 +73,6 @@ public:
 
 	Env     env;			// Environment of daemon.
 
-#if 0
-	char*	port;				 	// for config server
-	char*	config_info_file;				// for config server
-#endif
-
 	time_t		GetNextRestart() const;
 	int		NextStart() const;
 	int		Start( bool never_forward = false );
@@ -208,10 +203,6 @@ public:
 	void	ExecMaster();
 
 	const char*	DaemonLog(int pid);			// full log file path name
-#if 0
-	void	SignalAll(int signal);		// send signal to all children
-	int		NumberOfChildren();
-#endif
 	int		ChildrenOfType(daemon_t type, StringList * names=nullptr);
 
 	int		AllReaper(int, int);
