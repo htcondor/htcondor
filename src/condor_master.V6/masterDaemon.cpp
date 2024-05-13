@@ -182,10 +182,6 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	needs_update = FALSE;
 	num_controllees = 0;
 
-#if 0
-	port = NULL;
-	config_info_file = NULL;
-#endif
 	type = stringToDaemonType( name );
 	daemons.RegisterDaemon(this);
 }
@@ -3050,21 +3046,6 @@ const char* Daemons::DaemonLog( int pid )
 	}
 	return "Unknown Program!!!";
 }
-
-
-#if 0
-void
-Daemons::SignalAll( int signal )
-{
-	// Sends the given signal to all daemons except the master
-	// itself.  (Master has runs_here set to false).
-	for ( int i=0; i < no_daemons; i++) {
-		if( daemon_ptr[i]->runs_here && (daemon_ptr[i]->pid > 0) ) {
-			daemon_ptr[i]->Kill(signal);
-		}
-	}
-}
-#endif
 
 
 // This function returns the number of active child processes with the given daemon type
