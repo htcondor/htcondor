@@ -392,8 +392,8 @@ class Schedd():
             pairs will become submit variable name-value pairs; only the first
             dictionary's keys will be used.  In either case, leading and
             trailing whitespace will be trimmed for each individual item.
-            Lines (and items) may not contain newlines (``\n``) or the ASCII
-            unit separator character (``\x1F``).  Keys, if specified, must be
+            Lines (and items) may not contain newlines (``\\n``) or the ASCII
+            unit separator character (``\\x1F``).  Keys, if specified, must be
             valid submit-language variable names.
         '''
 
