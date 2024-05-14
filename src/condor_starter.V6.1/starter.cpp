@@ -57,8 +57,6 @@
 #endif
 #include "authentication.h"
 
-#include <sstream>
-
 extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";

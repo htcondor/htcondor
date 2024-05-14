@@ -1,9 +1,5 @@
 import sys
-
-if sys.version_info < (3, 5, 0):
-    import compat_enum as enum
-else:
-    import enum
+import enum
 
 
 class QueryOpt(enum.IntEnum):

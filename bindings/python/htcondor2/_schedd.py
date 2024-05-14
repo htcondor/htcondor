@@ -108,6 +108,7 @@ class Schedd():
             will instead be omitted.
         :param limit:  The maximum number of ads to return.  The default
             (``-1``) is to return all ads.
+        :param opts:  Special query options; see the enumeration for details.
         '''
         results = _schedd_query(self._addr, str(constraint), projection, int(limit), int(opts))
         if callback is None:
@@ -389,7 +390,11 @@ class Schedd():
             each string will be parsed as its own item data line.  If you
             provide an iterator over dictionaries, the dictionary's key-value
             pairs will become submit variable name-value pairs; only the first
-            dictionary's keys will be used.
+            dictionary's keys will be used.  In either case, leading and
+            trailing whitespace will be trimmed for each individual item.
+            Lines (and items) may not contain newlines (``\\n``) or the ASCII
+            unit separator character (``\\x1F``).  Keys, if specified, must be
+            valid submit-language variable names.
         '''
 
         if itemdata is None:
@@ -578,7 +583,7 @@ def _add_line_from_itemdata(submit_file, item):
     elif isinstance(item, dict):
         if any(["\n" in x for x in item.keys()]):
             raise ValueError("itemdata strings must not contain newlines")
-        submit_file = submit_file + " ".join(item.values()) + "\n"
+        submit_file = submit_file + "\x1F".join(item.values()) + "\n"
     return submit_file
 
 

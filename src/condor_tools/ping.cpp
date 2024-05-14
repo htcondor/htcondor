@@ -255,7 +255,7 @@ enum { usage_Error=-1, usage_Help=0, usage_AuthLevels=1, usage_Config=2, usage_P
 void print_security_config(bool include_soap, const char * subsys);
 
 void
-usage( const char *cmd, int other=usage_Error )
+usage( const char *cmd, int other=usage_Error, const char * subsystem=nullptr )
 {
 	bool include_soap=false;
 
@@ -271,13 +271,14 @@ usage( const char *cmd, int other=usage_Error )
 	fprintf(out,"general options:\n");
 	fprintf(out,"    -config <filename>              Add configuration from specified file\n");
 	fprintf(out,"    -debug                          Show extra debugging info\n");
-	fprintf(out,"    -help                           Display this output\n");
-	//fprintf(out,"    -help [config|levels|all]       Display this output [and details]\n");
+	//fprintf(out,"    -help                           Display this output\n");
+	fprintf(out,"    -help [config|levels|all]       Display this output [and details]\n");
 	fprintf(out,"    -version                        Display Condor version\n");
 	fprintf(out,"\nspecifying target options:\n");
 	fprintf(out,"    -address <sinful>               Use this sinful string\n");
 	fprintf(out,"    -pool    <host>                 Query this collector\n");
 	fprintf(out,"    -name    <name>                 Find a daemon with this name\n");
+	fprintf(out,"    -subsystem <subsystem>          Type of daemon to contact (default: SCHEDD)\n");
 	fprintf(out,"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n");
 	fprintf(out,"\noutput options (specify only one):\n");
 	fprintf(out,"    -quiet                          No output, only sets status\n");
@@ -295,7 +296,7 @@ usage( const char *cmd, int other=usage_Error )
 
 	if (other & usage_Config) {
 		fprintf(out, "\nEffective security config:\n");
-		print_security_config(include_soap, nullptr);
+		print_security_config(include_soap, subsystem);
 	}
 }
 
@@ -724,6 +725,7 @@ int main( int argc, const char *argv[] )
 	const char *address=nullptr;
 	const char *optional_config=nullptr;
 	const char *root_config=nullptr;
+	const char *dash_subsystem=nullptr;
 	int  output_mode = -1;
 	bool dash_help = false;
 	int  help_details = 0;
@@ -823,6 +825,7 @@ int main( int argc, const char *argv[] )
 				usage(argv[0]);
 				exit(1);
 			}
+			dash_subsystem = argv[i];
 			dtype = stringToDaemonType(argv[i]);
 			if( dtype == DT_NONE) {
 				fprintf(stderr,"ERROR: unrecognized daemon type: %s\n\n", argv[i]);
@@ -892,7 +895,7 @@ int main( int argc, const char *argv[] )
 
 	// we do this after we load config so that "-help config" works correctly 
 	if (dash_help) {
-		usage(argv[0], help_details);
+		usage(argv[0], help_details, dash_subsystem);
 		exit(0);
 	}
 

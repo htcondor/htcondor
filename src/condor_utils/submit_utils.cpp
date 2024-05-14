@@ -9298,3 +9298,26 @@ process_job_credentials(
 
 	return 0;
 }
+
+
+int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o)
+{
+	int rval = 0;
+
+	// append the digest of the queue statement to the submit digest.
+	//
+	submit_digest += "\n";
+	submit_digest += "Queue ";
+	if (o.queue_num) { formatstr_cat(submit_digest, "%d ", o.queue_num); }
+	std::string submit_vars = join(o.vars, ",");
+	if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
+	if ( ! o.items_filename.empty()) {
+		submit_digest += "from ";
+		char slice_str[16*3+1];
+		if (o.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
+		submit_digest += o.items_filename.c_str();
+	}
+	submit_digest += "\n";
+
+	return rval;
+}

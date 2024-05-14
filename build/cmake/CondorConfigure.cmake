@@ -866,6 +866,9 @@ set (FMT_INSTALL false)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
 
+# Remove when we have C++23 everywhere
+include_directories(${CONDOR_SOURCE_DIR}/src/vendor/zip-views-1.0)
+
 # But don't try to install the header files anywhere
 set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
 install(TARGETS fmt
@@ -1102,12 +1105,12 @@ else(MSVC)
 
 	# rpmbuild/debian set _FORTIFY_SOURCE to 2 or 3 depending on platform
 	# If already set, let's trust that they set it to the right value
-	# otherwise set it to 3 (most strict)
+	# otherwise set it to 2 (most portable)
 
 	if (LINUX)
 		string(FIND "${CMAKE_CXX_FLAGS}" "-D_FORTIFY_SOURCE" ALREADY_FORTIFIED)
 		if (${ALREADY_FORTIFIED} EQUAL -1)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3")
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2")
 		endif()
 	endif()
 

@@ -25,6 +25,8 @@
 
 #include "dag.h"
 
+namespace shallow = DagmanShallowOptions;
+
 ScriptQ::ScriptQ( Dag* dag ) : 
 	_scriptDeferredCount	(0)
 {
@@ -78,9 +80,15 @@ ScriptQ::Run( Script *script )
 		// limit, instead of getting it from the Dag object.  wenger 2015-03-18
 	int maxScripts = 20; // TODO: Use better default value?
 	switch( script->_type ) {
-		case ScriptType::PRE: maxScripts = _dag->_maxPreScripts; break;
-		case ScriptType::POST: maxScripts = _dag->_maxPostScripts; break;
-		case ScriptType::HOLD: maxScripts = _dag->_maxHoldScripts; break;
+		case ScriptType::PRE:
+			maxScripts = _dag->dagOpts[shallow::i::MaxPre];
+			break;
+		case ScriptType::POST:
+			maxScripts = _dag->dagOpts[shallow::i::MaxPost];
+			break;
+		case ScriptType::HOLD:
+			maxScripts = _dag->dagOpts[shallow::i::MaxHold];
+			break;
 	}
 	if ( maxScripts != 0 && _numScriptsRunning >= maxScripts ) {
 			// max scripts already running

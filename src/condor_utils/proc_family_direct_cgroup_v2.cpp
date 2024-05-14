@@ -32,6 +32,7 @@
 namespace stdfs = std::filesystem;
 
 static std::map<pid_t, std::string> cgroup_map;
+static std::vector<pid_t> lifetime_extended_pids;
 
 static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
@@ -147,7 +148,7 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 	// Remove all the subcgroups, bottom up
 	for (auto dir: getTree(cgroup_name)) {
 		int r = rmdir(dir.c_str());
-		if (r < 0) {
+		if ((r < 0) && (errno != ENOENT)) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::trimCgroupTree error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
 		}
 	}
@@ -349,6 +350,14 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 
 	return true;
 }
+		
+void 
+ProcFamilyDirectCgroupV2::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
+	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
+	if (!success) {
+		EXCEPT("Couldn't insert into cgroup map, duplicate?");
+	}
+}
 
 bool 
 ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
@@ -361,10 +370,7 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 	this->cgroup_memory_and_swap_limit = fi->cgroup_memory_and_swap_limit;
 	this->cgroup_cpu_shares = fi->cgroup_cpu_shares;
 
-	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
-	if (!success) {
-		ASSERT("Couldn't insert into cgroup map, duplicate?");
-	}
+	assign_cgroup_for_pid(pid, cgroup_name);
 
 	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
 	return fi->cgroup_active;
@@ -559,7 +565,7 @@ ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 	return success;
 }
 
-	bool
+bool
 ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
@@ -578,6 +584,13 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	return true;
 }
 
+bool
+ProcFamilyDirectCgroupV2::extend_family_lifetime(pid_t pid)
+{
+	lifetime_extended_pids.emplace_back(pid);
+	return true;
+}
+
 //
 // Note: DaemonCore doesn't call this from the starter, because
 // the starter exits from the JobReaper, and dc call this after
@@ -585,6 +598,11 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	bool
 ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 {
+	if (std::count(lifetime_extended_pids.begin(), lifetime_extended_pids.end(), (pid)) > 0) {
+		dprintf(D_FULLDEBUG, "Unregistering process with living sshds, not killing it\n");
+		return true;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::unregister_family for pid %u\n", pid);

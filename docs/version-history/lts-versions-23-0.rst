@@ -45,9 +45,7 @@ Version 23.0.10
 
 Release Notes:
 
-.. HTCondor version 23.0.10 released on Month Date, 2024.
-
-- HTCondor version 23.0.10 not yet released.
+- HTCondor version 23.0.10 released on May 9, 2024.
 
 - Preliminary support for Ubuntu 22.04 (Noble Numbat).
   :jira:`2407`
@@ -76,7 +74,7 @@ Bugs Fixed:
   :jira:`2393`
 
 - Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
-  to a random, non-HTCondor process, if pids are reused quickly.
+  to a random, non-HTCondor process, if process IDs are reused quickly.
   :jira:`2357`
 
 - The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
@@ -85,10 +83,6 @@ Bugs Fixed:
   version 0.6.0.  The old name can be restored with the config knob
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`
-
-- Fixed a bug where using :subcom:`output_destination` would still create
-  directories on the access point.
-  :jira:`2353`
 
 - Fixed a bug where DAGMan would crash when directly submitting a node job
   with a queue for each statement that was provided less item data values

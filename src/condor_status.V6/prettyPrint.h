@@ -108,10 +108,11 @@ class PrettyPrinter {
 		void ppSetAnyNormalCols();
 		void ppSetStartdOfflineCols();
 		void ppSetStartdAbsentCols();
+		void    ppSetStartDaemonCols( int width, const char * & constr );
 		void    ppSetStartdNormalCols( int width );
 		void           ppSetStateCols( int width );
 		void             ppSetRunCols( int width );
-		void            ppSetGPUsCols( int width, const char * & constr );
+		void            ppSetGPUsCols( int width, bool daemon_ad, const char * & constr );
 		void ppSetCollectorNormalCols( int width );
 		void  ppSetCkptSrvrNormalCols( int width );
 		void   ppSetStorageNormalCols( int width );
