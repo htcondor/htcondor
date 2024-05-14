@@ -223,6 +223,10 @@ class StatsD: Service {
 
 	// Determine which machines are execute-only nodes
 	void determineExecuteNodes(ClassAdList &daemon_ads);
+
+	// Fetch daemon ads from collector(s) - invoked from publishMetrics()
+	void getDaemonAds(ClassAdList &daemon_ads);
+
 };
 
 #endif
