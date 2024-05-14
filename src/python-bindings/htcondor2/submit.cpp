@@ -642,3 +642,34 @@ _submit_get_submit_method( PyObject *, PyObject * args ) {
 
     return PyLong_FromLong(method_value);
 }
+
+
+static PyObject *
+_submit_issue_credentials( PyObject *, PyObject * args ) {
+    // _submit_issue_credentials(self.handle_t)
+
+    PyObject_Handle * handle = NULL;
+
+    if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+
+    std::string URL;
+    std::string error_string;
+    int rv = sb->process_job_credentials( URL, error_string );
+
+    if(rv != 0) {
+        PyErr_SetString( PyExc_RuntimeError, error_string.c_str() );
+        return NULL;
+    }
+
+    if(! URL.empty()) {
+        return PyUnicode_FromString(URL.c_str());
+    }
+
+    Py_RETURN_NONE;
+}

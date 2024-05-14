@@ -42,7 +42,6 @@ from .htcondor2_impl import (
     _schedd_retrieve_job_constraint,
     _schedd_retrieve_job_ids,
     _schedd_spool,
-    _schedd_issue_credentials_for,
 )
 
 
@@ -574,18 +573,6 @@ class Schedd():
             _schedd_unexport_job_ids, _schedd_unexport_job_constraint,
             (),
         )
-
-
-    def issue_credentials_for(self, description : Submit) -> Union[str, None]:
-        '''
-        Issue credentials for the specified job description.
-
-        :param description:  A job description.
-        :return:  A string containing a URL that the submitter must visit
-                  in order to complete an OAuth2 flow, or :py:obj:`None`
-                  if no such visit is necessary.
-        '''
-        return _schedd_issue_credentials_for(self._addr, description._handle)
 
 
 def _add_line_from_itemdata(submit_file, item):

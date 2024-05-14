@@ -143,7 +143,6 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_retrieve_job_constraint", &_schedd_retrieve_job_constraint, METH_VARARGS, NULL},
 	{"_schedd_spool", &_schedd_spool, METH_VARARGS, NULL},
 	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
-	{"_schedd_issue_credentials_for", &_schedd_issue_credentials_for, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},
@@ -157,6 +156,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_display_dag_options", &_display_dag_options, METH_VARARGS, NULL},
 	{"_submit_set_submit_method", &_submit_set_submit_method, METH_VARARGS, NULL},
 	{"_submit_get_submit_method", &_submit_get_submit_method, METH_VARARGS, NULL},
+	{"_submit_issue_credentials", &_submit_issue_credentials, METH_VARARGS, NULL},
 
 
 	{"_job_event_log_init", &_job_event_log_init, METH_VARARGS, NULL},

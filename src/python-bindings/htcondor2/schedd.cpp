@@ -1231,35 +1231,3 @@ _schedd_spool(PyObject *, PyObject * args) {
 
     Py_RETURN_NONE;
 }
-
-
-static PyObject *
-_schedd_issue_credentials_for( PyObject *, PyObject * args ) {
-    // _schedd_issue_credentials_for(addr, submit.handle_t)
-
-    const char * addr = NULL;
-    PyObject_Handle * handle = NULL;
-
-    if(! PyArg_ParseTuple( args, "zO", & addr, (PyObject **)& handle )) {
-        // PyArg_ParseTuple() has already set an exception for us.
-        return NULL;
-    }
-
-
-    SubmitBlob * sb = (SubmitBlob *)handle->t;
-
-    std::string URL;
-    std::string error_string;
-    int rv = sb->process_job_credentials( URL, error_string );
-
-    if(rv != 0) {
-        PyErr_SetString( PyExc_RuntimeError, error_string.c_str() );
-        return NULL;
-    }
-
-    if(! URL.empty()) {
-        return PyUnicode_FromString(URL.c_str());
-    }
-
-    Py_RETURN_NONE;
-}
