@@ -1112,14 +1112,14 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 				// until the next reconfig.
 				enable_single_startd_daemon_ad = 0;
 				send_daemon_ad_first = false;
-			} else if (num_unknown > 0) {
-				// not all collectors have known version, so calling update for the daemon ad
-				// will just fail the version check inside DCCollector until a successful slot update
+			} else if (num_modern == 0 && num_unknown > 0) {
+				// No collectors are known to be modern, but not all collector versions are known
+				// So updates will just fail the version check inside DCCollector until a successful slot update
 				// (which opens a persistent connnection) has been sent.  Instead we just set the
 				// daemon ad dirty bit, which will queue a timer for another update of just the daemon ad
 				if (whyfor_mask != (1<<Resource::WhyFor::wf_daemonAd)) {
 					dprintf(D_ZKM, "Queueing STARTD daemon ad update after slot ad updates are started\n");
-					rip_update_needed(1<<Resource::WhyFor::wf_doUpdate);
+					rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
 					send_daemon_ad_first = false;
 				}
 			}
