@@ -336,7 +336,7 @@ class Schedd():
 
         ad_type = kwargs.get("ad_type", None)
         if isinstance(ad_type, list):
-            ad_type = ",".join([str(i) for i in ad_type])
+            ad_type = ",".join(ad_type)
         elif ad_type is None:
             ad_type = ""
         elif not isinstance(ad_type, str):
