@@ -103,7 +103,7 @@ void credmon_clear_completion(int /*cred_type*/, const char * cred_dir)
 	//TODO: the code in the master that was doing this before did not setpriv, should it?
 	//priv_state priv = set_root_priv();
 
-	dprintf(D_SECURITY, "CREDMON: removing %s.", ccfile.c_str());
+	dprintf(D_SECURITY, "CREDMON: removing %s.\n", ccfile.c_str());
 	unlink(ccfile.c_str());
 
 	//set_priv(priv);

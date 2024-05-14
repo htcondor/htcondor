@@ -135,15 +135,15 @@ CondorCronJobList::NumActiveJobs() const
 
 // Get a string list representation of the current job list
 bool
-CondorCronJobList::GetStringList( StringList &sl ) const
+CondorCronJobList::GetStringList( std::vector<std::string> &sl ) const
 {
-	sl.clearAll( );
+	sl.clear();
 
 	// Walk through the list
 	std::list<CronJob *>::const_iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		const CronJob	*job = *iter;
-		sl.append( job->GetName() );
+		sl.emplace_back(job->GetName());
 	}
 	return true;
 }

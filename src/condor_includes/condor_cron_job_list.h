@@ -41,7 +41,7 @@ class CondorCronJobList
 	int NumJobs( void ) const { return (int)m_job_list.size(); };
 	int NumAliveJobs(std::string * names = nullptr) const;
 	int NumActiveJobs() const;
-	bool GetStringList( StringList &sl ) const;
+	bool GetStringList( std::vector<std::string> &sl ) const;
 	double RunningJobLoad( void ) const;
 	bool AddJob( 
 		const char		*jobName,
