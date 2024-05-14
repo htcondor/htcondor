@@ -192,25 +192,27 @@ public:
 		const char * status = "All daemons are responding";
 		const char * format_string = "READY=1\nSTATUS=%s\nWATCHDOG=1";
 
-		char *name;
 		class daemon *daemon;
 
 		// check for missing daemons
-		daemons.ordered_daemon_names.rewind();
+		auto ordered_it = daemons.ordered_daemon_names.begin();
 		bool missing_daemons = false;
-		while ((name = daemons.ordered_daemon_names.next())) {
+		while (ordered_it != daemons.ordered_daemon_names.end()) {
+			const char *name = (*ordered_it).c_str();
 			daemon = daemons.FindDaemon(name);
 			if (!daemon->pid && !daemon->OnHold()) {
 				missing_daemons = true;
 				break;
 			}
+			ordered_it++;
 		}
 
 		// build a detailed status string if there are missing daemons
 		std::string buf;
 		if (missing_daemons) {
 			buf.reserve(100);
-			while( (name = daemons.ordered_daemon_names.next()) ) {
+			while (ordered_it != daemons.ordered_daemon_names.end()) {
+				const char *name = (*ordered_it).c_str();
 				daemon = daemons.FindDaemon( name );
 				if (!daemon->pid)
 				{
@@ -218,7 +220,7 @@ public:
 					time_t starttime = daemon->GetNextRestart();
 					if (starttime)
 					{
-						time_t secs_to_start = starttime-time(NULL);
+						time_t secs_to_start = starttime-time(nullptr);
 						if (secs_to_start > 0)
 						{ formatstr_cat(buf, "%s=RESTART in %llds", name, (long long)secs_to_start); }
 						else
@@ -226,6 +228,7 @@ public:
 					}
 					else { formatstr_cat(buf, "%s=STOPPED", name); }
 				}
+				ordered_it++;
 			}
 			status = buf.c_str();
 			format_string = "STATUS=Problems: %s\nWATCHDOG=1";
@@ -944,7 +947,7 @@ int do_flexible_daemons_command(int cmd, ClassAd & cmdAd, ClassAd * replyAd /* =
 	int on_completion = DRAIN_EXIT_ON_COMPLETION;
 	std::string drain, drain_reason;
 	ExprTree *drain_check = nullptr, *drain_start = nullptr;
-	StringList drain_list;
+	std::vector<std::string> drain_list;
 	ClassAd drain_request_ids;
 	auto_free_ptr shutdown_path; // full path to the shutdown exe
 	std::string shutdown_task; // knob tag name
@@ -1002,31 +1005,31 @@ int do_flexible_daemons_command(int cmd, ClassAd & cmdAd, ClassAd * replyAd /* =
 			// build a list of daemon names for the startds
 			daemons.ChildrenOfType(DT_STARTD, &drain_list);
 		} else {
-			drain_list.initializeFromString(drain.c_str());
+			drain_list = split(drain);
 		}
-		dprintf(D_FULLDEBUG, "Effective drain list is %s\n", drain_list.to_string().c_str());
+		dprintf(D_FULLDEBUG, "Effective drain list is %s\n", join(drain_list, ",").c_str());
 	} else {
 		dprintf(D_STATUS, "Handling %s : %s\n", getCommandStringSafe(cmd), getCommandStringSafe(real_cmd));
 	}
 
 	drain_request_ids.Clear();
-	for (const char * subsys = drain_list.first(); subsys; subsys = drain_list.next()) {
-		if (!(daemon = daemons.FindDaemon(subsys))) {
-			dprintf(D_ERROR, "Error: Can't find daemon %s to drain for %s\n", subsys, getCommandStringSafe(real_cmd));
+	for (auto &subsys: drain_list) {
+		if (!(daemon = daemons.FindDaemon(subsys.c_str()))) {
+			dprintf(D_ERROR, "Error: Can't find daemon %s to drain for %s\n", subsys.c_str(), getCommandStringSafe(real_cmd));
 		} else {
-			dprintf(D_STATUS, "Sending drain command to %s\n", subsys);
+			dprintf(D_STATUS, "Sending drain command to %s\n", subsys.c_str());
 			std::string request_id;
 			int drain_started = daemon->Drain(request_id, how_fast, on_completion, drain_reason.c_str(), drain_check, drain_start);
 			if (drain_started > 0) {
 				drain_request_ids.Assign(daemon->name_in_config_file, request_id);
-				dprintf(D_FULLDEBUG, "Drain of %s started, id=%s\n", subsys, request_id.c_str());
+				dprintf(D_FULLDEBUG, "Drain of %s started, id=%s\n", subsys.c_str(), request_id.c_str());
 			} else if (drain_started < 0) {
 				// unable to drain a child, abort the command
 				dprintf(D_ERROR, "Aborting %s because of failure to start drain of %s\n", getCommandStringSafe(real_cmd), daemon->daemon_name);
 				rval = FALSE;
 				goto bail;
 			} else {
-				dprintf(D_FULLDEBUG, "%s did not need to drain\n", subsys);
+				dprintf(D_FULLDEBUG, "%s did not need to drain\n", subsys.c_str());
 			}
 		}
 	}
@@ -1385,7 +1388,7 @@ init_daemon_list()
 	bool have_primary_collector = false; // daemon list has COLLECTOR (just that - VIEW_COLLECTOR or COLLECTOR_B doesn't count)
 	std::set<std::string> dc_daemon_exes; // paths to daemon binaries for the daemon core daemons, used if needed
 
-	daemons.ordered_daemon_names.clearAll();
+	daemons.ordered_daemon_names.clear();
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
 
 	if( !dc_daemon_list ) {
@@ -1437,20 +1440,21 @@ init_daemon_list()
 	if( ha_list ) {
 			// Make MASTER_HA_LIST case insensitive by always converting
 			// what we get to uppercase.
-		StringList ha_names;
 		ha_list = strupr( ha_list );
-		ha_names.initializeFromString(ha_list);
-			// Tolerate a trailing comma in the list
-		ha_names.remove( "" );
-		daemons.ordered_daemon_names.create_union( ha_names, false );
+		std::vector<std::string> ha_names = split(ha_list);
 
-		ha_names.rewind();
-		while( (daemon_name = ha_names.next()) ) {
-			if(daemons.FindDaemon(daemon_name) == NULL) {
-				if( dc_daemon_names.contains(daemon_name) ) {
-					new class daemon(daemon_name, true, true );
+		for (const auto &ha_name: ha_names) {
+			if (!contains(daemons.ordered_daemon_names, ha_name)) {
+				daemons.ordered_daemon_names.emplace_back(ha_name);
+			}
+		}
+
+		for (const auto &daemon_name: ha_names) {
+			if(daemons.FindDaemon(daemon_name.c_str()) == nullptr) {
+				if( dc_daemon_names.contains(daemon_name.c_str()) ) {
+					new class daemon(daemon_name.c_str(), true, true );
 				} else {
-					new class daemon(daemon_name, false, true );
+					new class daemon(daemon_name.c_str(), false, true );
 				}
 			}
 		}
@@ -1527,9 +1531,14 @@ init_daemon_list()
 			dprintf(D_SECURITY|D_VERBOSE, "Not modifying DAEMON_LIST.  AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is false.\n");
 		}
 
-		daemons.ordered_daemon_names.create_union( daemon_names, false );
-
 		daemon_names.rewind();
+		while ((daemon_name = daemon_names.next())) {
+			if (!contains(daemons.ordered_daemon_names, daemon_name)) {
+				daemons.ordered_daemon_names.emplace_back(daemon_name);
+			}
+		}	
+		daemon_names.rewind();
+
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.FindDaemon(daemon_name) == NULL) {
 				bool is_DC = dc_daemon_names.contains(daemon_name);
@@ -1556,7 +1565,12 @@ init_daemon_list()
 				}
 			}
 		}
-		daemons.ordered_daemon_names.create_union(daemon_names, false);
+		daemon_names.rewind();
+		while ((daemon_name = daemon_names.next())) {
+			if (!contains(daemons.ordered_daemon_names, daemon_name)) {
+				daemons.ordered_daemon_names.emplace_back(daemon_name);
+			}
+		}
 	}
 
 	// if we have a primary collector, and it is behind a shared port daemon
@@ -1642,15 +1656,7 @@ lock_or_except( const char* file_name )
 void
 main_config()
 {
-	StringList old_daemon_list;
-	char *list = daemons.ordered_daemon_names.print_to_string();
-	char *daemon_name;
-	class daemon	*adaemon;
-
-	if( list ) {
-		old_daemon_list.initializeFromString(list);
-		free(list);
-	}
+	std::vector<std::string> old_daemon_list(daemons.ordered_daemon_names);
 
 		// Re-read the config files and create a new classad
 	init_classad(); 
@@ -1663,11 +1669,10 @@ main_config()
 	init_daemon_list();
 
 		// Remove daemons that should no longer be running
-	old_daemon_list.rewind();
-	while( (daemon_name = old_daemon_list.next()) ) {
-		if( !daemons.ordered_daemon_names.contains(daemon_name) ) {
-			if( NULL != daemons.FindDaemon(daemon_name) ) {
-				daemons.RemoveDaemon(daemon_name);
+	for (const auto &daemon_name: old_daemon_list) {
+		if (!contains(daemons.ordered_daemon_names, daemon_name)) {
+			if( nullptr != daemons.FindDaemon(daemon_name.c_str())) {
+				daemons.RemoveDaemon(daemon_name.c_str());
 			}
 		}
 	}
@@ -1689,19 +1694,18 @@ main_config()
 			// Setup and configure controllers for all daemons in
 			// case the reconfig changed controller setup.  Start
 			// any new daemons as well
-		daemons.ordered_daemon_names.rewind();
-		while( ( daemon_name = daemons.ordered_daemon_names.next() ) ) {
-			adaemon = daemons.FindDaemon(daemon_name);
-			if ( adaemon == NULL ) {
-				dprintf( D_ALWAYS, "ERROR: Setup for daemon %s failed\n", daemon_name );
+		for (const auto &daemon_name: daemons.ordered_daemon_names) {
+			class daemon *adaemon = daemons.FindDaemon(daemon_name.c_str());
+			if ( adaemon == nullptr ) {
+				dprintf( D_ALWAYS, "ERROR: Setup for daemon %s failed\n", daemon_name.c_str());
 			}
 			else if ( adaemon->SetupController() < 0 ) {
 				dprintf( D_ALWAYS,
 						"ERROR: Setup of controller for daemon %s failed\n",
-						daemon_name );
-				daemons.RemoveDaemon( daemon_name );
+						daemon_name.c_str());
+				daemons.RemoveDaemon(daemon_name.c_str());
 			}
-			else if( !old_daemon_list.contains(daemon_name) ) {
+			else if(!contains(old_daemon_list, daemon_name)) {
 				daemons.StartDaemonHere(adaemon);
 			}
 
@@ -1837,9 +1841,9 @@ const char * StopStateToString(StopStateT state)
 		return aStopStateNames[state].name;
 	}
 	// if the names table isn't packed and sorted, the brute force search it.
-	for (int ii = 0; ii < (int)COUNTOF(aStopStateNames); ++ii) {
-		if (aStopStateNames[ii].state == state) {
-			return aStopStateNames[ii].name;
+	for (auto aStopStateName : aStopStateNames) {
+		if (aStopStateName.state == state) {
+			return aStopStateName.name;
 		}
 	}
 	return "??";
