@@ -50,6 +50,10 @@ using QueriedJobs = std::map<int, std::set<int>>;
 
 const CondorID Dag::_defaultCondorId;
 
+namespace DAG {
+	const char *ALL_NODES = "ALL_NODES";
+}
+
 //---------------------------------------------------------------------------
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	dagOpts                (dm.options),

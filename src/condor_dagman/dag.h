@@ -68,7 +68,7 @@ static const char * DAG_STATUS_NAMES[] = {
 };
 
 namespace DAG {
-	static const char *ALL_NODES = "ALL_NODES";
+	extern const char *ALL_NODES;
 }
 
 class Dagman;
