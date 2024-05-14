@@ -71,7 +71,10 @@ class DagPriorityQ {
 		}	
 
 		// must call make_heap after this
-		void erase(std::vector<Job*>::iterator from, std::vector<Job*>::iterator to) { _q.erase(from,to);}
+		template<typename T> size_t erase_if(T filter) {
+			// filter = [](Job* node) -> bool { nodes to erase from queue }
+			return std::erase_if(_q, filter);
+		}
 
 		void make_heap() {
 			std::make_heap(_q.begin(), _q.end(), JobSorter{});

@@ -264,7 +264,7 @@ bool Dagman::Config() {
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n", _defaultNodeLog.c_str());
 
 	_generateSubdagSubmits = param_boolean("DAGMAN_GENERATE_SUBDAG_SUBMITS", _generateSubdagSubmits);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n", _generateSubdagSubmits ? "True" : "False" );
+	debug_printf(DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n", _generateSubdagSubmits ? "True" : "False");
 
 	_maxJobHolds = param_integer("DAGMAN_MAX_JOB_HOLDS", _maxJobHolds, 0, 1'000'000);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n", _maxJobHolds);
@@ -289,6 +289,9 @@ bool Dagman::Config() {
 
 	_removeNodeJobs = param_boolean("DAGMAN_REMOVE_NODE_JOBS", _removeNodeJobs);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n", _removeNodeJobs ? "True" : "False");
+
+	enforceNewJobsLimit = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE setting: %s\n", enforceNewJobsLimit ? "True" : "False");
 
 	debug_printf(DEBUG_NORMAL, "DAGMAN will adjust edges after parsing\n");
 
@@ -798,26 +801,9 @@ void main_init(int argc, char ** const argv) {
 	// in submitDagOpts, but I'm keeping them separate so we don't have to
 	// bother to construct a new SubmitDagOtions object for splices.
 	// wenger 2010-03-25
-	dagman.dag = new Dag(dagOpts[shallow::slist::DagFiles], dagOpts[shallow::i::MaxJobs],
-	                     dagOpts[shallow::i::MaxPre], dagOpts[shallow::i::MaxPost],
-	                     dagOpts[shallow::i::MaxHold], dagOpts[deep::b::UseDagDir],
-	                     dagOpts[shallow::i::MaxIdle], dagman.retrySubmitFirst,
-	                     dagman.retryNodeFirst, dagman.condorRmExe.c_str(), &dagman.DAGManJobId,
-	                     dagman.prohibitMultiJobs, dagman.submitDepthFirst, dagman._defaultNodeLog,
-	                     dagman._generateSubdagSubmits, &dagman.inheritOpts, false, dagman._schedd); /* toplevel dag! */
+	dagman.dag = new Dag(dagman); /* toplevel dag! */
 
 	if ( ! dagman.dag) { EXCEPT("ERROR: out of memory!"); }
-
-	dagman.dag->SetAbortOnScarySubmit(dagman.abortOnScarySubmit);
-	dagman.dag->SetAllowEvents(dagman.allow_events);
-	const std::string &dagConfig = dagman._dagmanConfigFile;
-	dagman.dag->SetConfigFile(dagConfig.empty() ? nullptr : dagConfig.c_str());
-	dagman.dag->SetMaxJobHolds(dagman._maxJobHolds);
-	dagman.dag->SetPostRun(dagOpts[shallow::b::PostRun]);
-	dagman.dag->SetDryRun(dagOpts[shallow::b::DryRun]);
-	if (dagOpts[shallow::i::Priority] != 0) {
-		dagman.dag->SetDagPriority(dagOpts[shallow::i::Priority]);
-	}
 
 	// Parse the input files.  The parse() routine
 	// takes care of adding jobs and dependencies to the DagMan
@@ -833,7 +819,7 @@ void main_init(int argc, char ** const argv) {
 	for (const auto & file : sl) {
 		debug_printf(DEBUG_VERBOSE, "Parsing %s ...\n", file.c_str());
 
-		if( ! parse(dagman.dag, file.c_str(), dagOpts[deep::b::UseDagDir], dagman._schedd, dagman.doAppendVars)) {
+		if( ! parse(dagman, dagman.dag, file.c_str())) {
 			if (dagman.options[shallow::b::DumpRescueDag]) {
 				// Dump the rescue DAG so we can see what we got
 				// in the failed parse attempt.
@@ -858,7 +844,7 @@ void main_init(int argc, char ** const argv) {
 		}
 	}
 
-	if (dagman.dag->GetDagPriority() != 0) {
+	if (dagOpts[shallow::i::Priority] != 0) {
 		dagman.dag->SetNodePriorities(); // Applies to the nodes of the dag
 	}
 
@@ -887,7 +873,9 @@ void main_init(int argc, char ** const argv) {
 		parseSetDoNameMunge(false);
 		//Attempt to parse the save file. Run parse with useDagDir = false because
 		//there is no point risking changing directories just to read save file (i.e. partial rescue)
-		if ( ! parse(dagman.dag, saveFile.c_str(), false, dagman._schedd, dagman.doAppendVars)) {
+		auto saveUseDadDir = dagman.options[deep::b::UseDagDir];
+		dagman.options[deep::b::UseDagDir] = false;
+		if ( ! parse(dagman, dagman.dag, saveFile.c_str())) {
 			std::string rm_reason;
 			formatstr(rm_reason, "Startup Error: DAGMan failed to parse save file (%s).",
 			          saveFile.c_str());
@@ -896,6 +884,7 @@ void main_init(int argc, char ** const argv) {
 			dagman.CleanUp();
 			debug_error(1, DEBUG_QUIET, "Failed to parse save file\n");
 		}
+		dagman.options[deep::b::UseDagDir] = saveUseDadDir;
 	} else if (rescueDagNum > 0) {
 		// Actually parse the "new-new" style (partial DAG info only)
 		// rescue DAG here.  Note: this *must* be done after splices
@@ -912,7 +901,7 @@ void main_init(int argc, char ** const argv) {
 		// it will already have munged node names.
 		parseSetDoNameMunge(false);
 
-		if( ! parse(dagman.dag, dagman.rescueFileToRun.c_str(), dagOpts[deep::b::UseDagDir], dagman._schedd, dagman.doAppendVars)) {
+		if( ! parse(dagman, dagman.dag, dagman.rescueFileToRun.c_str())) {
 			if (dagOpts[shallow::b::DumpRescueDag]) {
 				// Dump the rescue DAG so we can see what we got
 				// in the failed parse attempt.

@@ -57,6 +57,11 @@ enum DagStatus {
     DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
 };
 
+enum class DagSubmitMethod {
+	CONDOR_SUBMIT = 0,
+	DIRECT = 1
+};
+
 #include "enum.h"
 typedef std::list<std::string> str_list;
 

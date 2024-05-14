@@ -78,8 +78,10 @@ class ScheddClassad {
 		// The condor ID for this connection client.
 	CondorID _jobId;
 
+	bool _valid{false}; // Whether Object is is Valid
+
 		// The schedd we need to talk to to update the classad.
-	DCSchedd *_schedd = NULL;
+	DCSchedd *_schedd{nullptr};
 
 };
 
@@ -99,7 +101,7 @@ class DagmanClassad : public ScheddClassad {
 	/** Update the status information in the DAGMan job's classad.
 		@param dagman: Dagman object to pull status information from
 	*/
-	void Update( const Dagman &dagman );
+	void Update(Dagman &dagman );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A string to receive the Owner value.
@@ -111,14 +113,6 @@ class DagmanClassad : public ScheddClassad {
 		/** Initialize metrics information related to our classad.
 		*/
 	void InitializeMetrics();
-
-
-		// Whether this object is valid.
-	bool _valid;
-
-		// The HTCondor ID for this DAGMan -- that's the classad we'll
-		// update.
-	CondorID _dagmanId;
 };
 
 
@@ -134,10 +128,6 @@ class ProvisionerClassad : public ScheddClassad {
 
 		// Returns the state of a provisioner, represented as a string
 	int GetProvisionerState();
-
-		// Whether this object is valid.
-	bool _valid;
-
 };
 
 
