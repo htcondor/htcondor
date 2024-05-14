@@ -1378,6 +1378,14 @@ main (int argc, char *argv[])
 
 	// in order to totals, the projection MUST have certain attributes
 	if (mainPP.wantOnlyTotals || ((mainPP.ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
+	#if 1
+		rightTotals.addProjection(projList);
+		if (dash_gpus && (mainPP.ppTotalStyle == PP_STARTDAEMON)) {
+			const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
+			query->addANDConstraint (constr);
+		}
+	#else
 		switch (mainPP.ppTotalStyle) {
 			case PP_SLOTS_SERVER:
 				projList.insert(ATTR_MEMORY);
@@ -1450,6 +1458,7 @@ main (int argc, char *argv[])
 			default:
 				break;
 		}
+	#endif
 	}
 
 	// fetch the query

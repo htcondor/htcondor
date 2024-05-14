@@ -903,7 +903,7 @@ int PrettyPrinter::ppSetMasterNormalCols(int)
 
 const char * const startDaemonNormal_PrintFormat = "SELECT\n"
 "Name           AS Name         WIDTH AUTO\n"
-"join(\"_\",ARCH,OPSYSANDVER) AS Platform  WIDTH AUTO\n"
+"OpSys          AS Platform     WIDTH AUTO PRINTAS PLATFORM\n"
 "CondorVersion  AS Version      WIDTH AUTO PRINTAS CONDOR_VERSION\n"
 "DetectedCpus   AS Cpus         WIDTH 4 PRINTF %4d OR ??\n"
 "DetectedMemory AS '  Memory'   WIDTH 10 PRINTAS READABLE_MB OR ??\n"
