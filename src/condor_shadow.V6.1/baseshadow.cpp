@@ -1218,9 +1218,7 @@ BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr )
 	}
 
 	JobEvictedEvent event;
-	if (!reasonStr.empty()) {
-		event.reason = reasonStr;
-	}
+	event.setReason(reasonStr);
 	event.checkpointed = (exitReason == JOB_CKPTED);
 	
 		// TODO: fill in local rusage
@@ -1272,7 +1270,7 @@ BaseShadow::logRequeueEvent( const char* reason )
 	}
 
 	if( reason ) {
-		event.reason = reason;
+		event.setReason(reason);
 	}
 
 		// TODO: fill in local rusage
@@ -1333,24 +1331,17 @@ BaseShadow::checkSwap( void )
 void
 BaseShadow::log_except(const char *msg_str)
 {
-	std::string msg = msg_str ? msg_str : "";
-
 	if ( BaseShadow::myshadow_ptr == NULL ) {
-		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg.c_str());
+		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg_str ? msg_str : "");
 		return;
 	}
-
-	// Do NOT pass newlines into this exception, since it ends up
-	// in corrupting the job event log.
-	trim(msg);
-	std::replace(msg.begin(), msg.end(), '\n', '|');
 
 	// log shadow exception event
 	ShadowExceptionEvent event;
 	bool exception_already_logged = false;
 
-	snprintf(event.message, sizeof(event.message), "%s", msg.c_str());
-	event.message[sizeof(event.message)-1] = '\0';
+	// setMessage will convert any \n and \r in the message to | and space respectively
+	if (msg_str && msg_str[0]) { event.setMessage(msg_str); }
 
 	BaseShadow *shadow = BaseShadow::myshadow_ptr;
 
@@ -1365,13 +1356,11 @@ BaseShadow::log_except(const char *msg_str)
 		event.began_execution = TRUE;
 	}
 
-	std::string msg_in_job = msg;
-	std::replace(msg_in_job.begin(), msg_in_job.end(), '\n', '_'); // just in case
-	Shadow->getJobAd()->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, msg_in_job);
+	Shadow->getJobAd()->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
 	Shadow->updateJobInQueue(U_STATUS);
 	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,shadow->jobAd))
 	{
-		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", msg.c_str());
+		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", event.getMessage());
 	}
 }
 
@@ -1590,12 +1579,22 @@ extern BaseShadow *Shadow;
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
+	constexpr int cchpid = 10 * (sizeof(pid_t)/4); // 10 chars for 32 bit pids, 19 chars for 64 bit pids
+	static char pidbuf[cchpid+2 +1 + cchpid+2 +2] = {0}; // room for "()>()" + cchpid digits for each pid plus trailing \0
 	static pid_t mypid = 0;
 	int mycluster = -1;
 	int myproc = -1;
 
-	if (!mypid) {
-		mypid = daemonCore->getpid();
+	// show the shadow pid when we first start up
+	// then if we fork show the forked pid also
+	if (daemonCore) {
+		pid_t tpid = daemonCore->getpid();
+		if (!pidbuf[0]) {
+			mypid = tpid;
+			snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)", mypid);
+		} else if (tpid != mypid) {
+			snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)>(%d)", mypid, tpid);
+		}
 	}
 
 	if (Shadow) {
@@ -1604,9 +1603,9 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 	}
 
 	if ( mycluster != -1 ) {
-		return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) (%ld): ", mycluster, myproc, (long)mypid );
+		return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) %s: ", mycluster, myproc, pidbuf );
 	} else {
-		return sprintf_realloc( buf, bufpos, buflen, "(?.?) (%ld): ", (long)mypid );
+		return sprintf_realloc( buf, bufpos, buflen, "(?.?) %s: ", pidbuf );
 	}
 
 	return 0;

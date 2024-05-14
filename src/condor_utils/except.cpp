@@ -81,6 +81,15 @@ _EXCEPT_(const char *fmt, ...)
 	}
 
 	if( _EXCEPT_Cleanup ) {
+		// make sure that there are no naked \r or \n characters in the buffer
+		// since it will be used by the starter and shadow to set a classad string.
+		// we will change \r to space, and \n to |
+		for (int ii = 0; ii < BUFSIZ; ++ii) {
+			char ch = buf[ii];
+			if ( ! ch) break;
+			if (ch == '\r') buf[ii] = ' ';
+			if (ch == '\n') buf[ii] = '|';
+		}
 		(*_EXCEPT_Cleanup)( _EXCEPT_Line, _EXCEPT_Errno, buf );
 	}
 

@@ -31,7 +31,6 @@
 #include "condor_arglist.h"
 #define CLASSAD_USER_MAP_RETURNS_STRINGLIST 1
 
-#include <sstream>
 #include <unordered_set>
 
 #if defined(UNIX)
@@ -786,12 +785,9 @@ static void
 problemExpression(const std::string &msg, classad::ExprTree *problem, classad::Value &result)
 {
 	result.SetErrorValue();
-	classad::ClassAdUnParser up;
-	std::string problem_str;
-	up.Unparse(problem_str, problem);
-	std::stringstream ss;
-	ss << msg << "  Problem expression: " << problem_str;
-	classad::CondorErrMsg = ss.str();
+	classad::ClassAdUnParser unp;
+	classad::CondorErrMsg = msg + "  Problem expression: ";
+	unp.Unparse(classad::CondorErrMsg, problem);
 }
 
 
@@ -803,10 +799,8 @@ ArgsToList( const char * name,
 {
 	if ((arguments.size() != 1) && (arguments.size() != 2))
 	{
-		std::stringstream ss;
 		result.SetErrorValue();
-		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
-		classad::CondorErrMsg = ss.str();
+		classad::CondorErrMsg = std::string("Invalid number of arguments passed to ") +  name + "; one string argument expected.";
 		return true;
 	}
 	int vers = 2;
@@ -825,9 +819,9 @@ ArgsToList( const char * name,
 		}
 		if ((vers != 1) && (vers != 2))
 		{
-			std::stringstream ss;
-			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
-			problemExpression(ss.str(), arguments[1], result);
+			std::string s;
+			formatstr(s, "Valid values for version are 1 or 2.  Passed expression evaluates to %d.", vers);
+			problemExpression(s, arguments[1], result);
 			return true;
 		}
 	}
@@ -847,16 +841,16 @@ ArgsToList( const char * name,
 	std::string error_msg;
 	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), error_msg))
 	{
-		std::stringstream ss;
-		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
-		problemExpression(ss.str(), arguments[0], result);
+		std::string s;
+		s = std::string("Error when parsing argument to arg V1: ") + error_msg;
+		problemExpression(s, arguments[0], result);
 		return true;
 	}
 	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), error_msg))
 	{
-		std::stringstream ss;
-		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
-		problemExpression(ss.str(), arguments[0], result);
+		std::string s;
+		s = std::string("Error when parsing argument to arg V2: ") + error_msg;
+		problemExpression(s, arguments[0], result);
 		return true;
 	}
 	std::vector<classad::ExprTree*> list_exprs;
@@ -902,10 +896,8 @@ ListToArgs(const char * name,
 {
 	if ((arguments.size() != 1) && (arguments.size() != 2))
 	{
-		std::stringstream ss;
 		result.SetErrorValue();
-		ss << "Invalid number of arguments passed to " << name << "; one list argument expected.";
-		classad::CondorErrMsg = ss.str();
+		classad::CondorErrMsg = std::string("Invalid number of arguments passed to ") + name + "; one list argument expected.";
 		return true;
 	}
 	int vers = 2;
@@ -924,9 +916,9 @@ ListToArgs(const char * name,
 		}
 		if ((vers != 1) && (vers != 2))
 		{
-			std::stringstream ss;
-			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
-			problemExpression(ss.str(), arguments[1], result);
+			std::string s;
+			formatstr(s, "Valid values for version are 1 or 2.  Passed expression evaluates to %d.", vers);
+			problemExpression(s, arguments[1], result);
 			return true;
 		}
 	}
@@ -944,22 +936,22 @@ ListToArgs(const char * name,
 	}
 	ArgList arg_list;
 	size_t idx=0;
-	for (classad::ExprList::const_iterator it=args->begin(); it!=args->end(); it++, idx++)
+	for (auto it=args->begin(); it!=args->end(); it++, idx++)
 	{
 		classad::Value value;
 		if (!(*it)->Evaluate(state, value))
 		{
-			std::stringstream ss;
-			ss << "Unable to evaluate list entry " << idx << ".";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Unable to evaluate list entry %zu.", idx);
+			problemExpression(s, *it, result);
 			return false;
 		}
 		std::string tmp_str;
 		if (!value.IsStringValue(tmp_str))
 		{
-			std::stringstream ss;
-			ss << "Entry " << idx << " did not evaluate to a string.";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Entry %zu did not evaluate to a string.", idx);
+			problemExpression(s, *it, result);
 			return true;
 		}
 		arg_list.AppendArg(tmp_str.c_str());
@@ -967,16 +959,14 @@ ListToArgs(const char * name,
 	std::string error_msg, result_mystr;
 	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(result_mystr, error_msg))
 	{
-		std::stringstream ss;
-		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
-		problemExpression(ss.str(), arguments[0], result);
+		std::string s = std::string("Error when parsing argument to arg V1: ") + error_msg;
+		problemExpression(s, arguments[0], result);
 		return true;
 	}
 	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(result_mystr))
 	{
-		std::stringstream ss;
-		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
-		problemExpression(ss.str(), arguments[0], result);
+		std::string s = std::string("Error when parsing argument to arg V2: ") +  error_msg;
+		problemExpression(s, arguments[0], result);
 		return true;
 	}
 	result.SetStringValue(result_mystr);
@@ -992,10 +982,9 @@ EnvironmentV1ToV2(const char * name,
 {
 	if (arguments.size() != 1)
 	{
-		std::stringstream ss;
 		result.SetErrorValue();
-		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
-		classad::CondorErrMsg = ss.str();
+		classad::CondorErrMsg =
+		   	std::string("Invalid number of arguments passed to ") +  name + "; one string argument expected.";
 		return true;
 	}
 	classad::Value val;
@@ -1043,14 +1032,14 @@ MergeEnvironment(const char * /*name*/,
 {
 	Env env;
 	size_t idx = 0;
-	for (classad::ArgumentList::const_iterator it=arguments.begin(); it!=arguments.end(); it++, idx++)
+	for (auto it=arguments.begin(); it!=arguments.end(); it++, idx++)
 	{
 		classad::Value val;
 		if (!(*it)->Evaluate(state, val))
 		{
-			std::stringstream ss;
-			ss << "Unable to evaluate argument " << idx << ".";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Unable to evaluate argument %zu.", idx);
+			problemExpression(s, *it, result);
 			return false;
 		}
 			// Skip over undefined values; this makes it more natural
@@ -1063,16 +1052,16 @@ MergeEnvironment(const char * /*name*/,
 		std::string env_str;
 		if (!val.IsStringValue(env_str))
 		{
-			std::stringstream ss;
-			ss << "Unable to evaluate argument " << idx << ".";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Unable to evaluate argument %zu.", idx);
+			problemExpression(s, *it, result);
 			return true;
 		}
 		if (!env.MergeFromV2Raw(env_str.c_str(), nullptr))
 		{
-			std::stringstream ss;
-			ss << "Argument " << idx << " cannot be parsed as environment string.";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Argument %zu cannot be parsed as environment string.", idx);
+			problemExpression(s, *it, result);
 			return true;
 		}
 	}
@@ -1132,10 +1121,10 @@ userHome_func(const char *                 name,
 {
 	if ((arguments.size() != 1) && (arguments.size() != 2))
 	{
-		std::stringstream ss;
 		result.SetErrorValue();
-		ss << "Invalid number of arguments passed to " << name << "; " << arguments.size() << "given, 1 required and 1 optional.";
-		classad::CondorErrMsg = ss.str();
+		std::string s;
+		formatstr(s, "Invalid number of arguments passed to %s ; %zu given, 1 required and 1 optional.", name, arguments.size());
+		classad::CondorErrMsg = s;
 		return false;
 	}
 
@@ -1165,11 +1154,10 @@ userHome_func(const char *                 name,
 	}
 	if (!owner_value.IsStringValue(owner_string))
 	{
-		std::string unp_string;
-		std::stringstream ss;
-		classad::ClassAdUnParser unp; unp.Unparse(unp_string, arguments[0]);
-		ss << "Could not evaluate the first argument of " << name << " to string.  Expression: " << unp_string << ".";
-		return return_home_result(default_home, ss.str(), result, true);
+		std::string s = std::string("Could not evaluate the first argument of ") + name + " to string.  Expression: ";
+		classad::ClassAdUnParser unp; unp.Unparse(s, arguments[0]);
+		s += '.';
+		return return_home_result(default_home, s, result, true);
 	}
 
 	errno = 0;
@@ -1185,21 +1173,19 @@ userHome_func(const char *                 name,
 	struct passwd *info = getpwnam(owner_string.c_str());
 	if (!info)
 	{
-		std::stringstream ss;
-		ss << "Unable to find home directory for user " << owner_string;
+		std::string s = std::string("Unable to find home directory for user ") + owner_string;
 		if (errno) {
-			ss << ": " << strerror(errno) << "(errno=" << errno << ")";
+			s += std::string(": ") + strerror(errno) +  "(errno=" + std::to_string(errno) + ')';
 		} else {
-			ss << ": No such user.";
+			s += ": No such user.";
 		}
-		return return_home_result(default_home, ss.str(), result, false);
+		return return_home_result(default_home, s, result, false);
 	}
 
 	if (!info->pw_dir)
 	{
-		std::stringstream ss;
-		ss << "User " << owner_string << " has no home directory.";
-		return return_home_result(default_home, ss.str(), result, false);
+		std::string s = std::string("User ") + owner_string + " has no home directory";
+		return return_home_result(default_home, s, result, false);
 	}
 	std::string home_string = info->pw_dir;
 	result.SetStringValue(home_string);

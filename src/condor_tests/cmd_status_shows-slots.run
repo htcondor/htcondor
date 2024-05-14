@@ -29,8 +29,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-my $testdesc =  'cmd_status_shows-startd';
-my $testname = "cmd_status_shows-startd";
+my $testdesc =  'cmd_status_shows-slots';
+my $testname = "cmd_status_shows-slots";
 my $debuglevel = 2;
 
 print scalar localtime() . "\n";
@@ -43,7 +43,7 @@ if($mypid == 0) {
 
 CondorTest::debug("Master PID is $mypid\n",$debuglevel);
 
-my $outsource = CondorCmdStatusWorker2::SetUp("cmd_status_shows-startd");
+my $outsource = CondorCmdStatusWorker2::SetUp("cmd_status_shows-slots");
 CondorUtils::fullchomp($outsource);
 
 if($outsource eq "") {
@@ -67,10 +67,10 @@ if($stable == 1) {
 	my $nattempts = 8;
 	my $count = 0;
 
-	print "Looking for 2 startds with condor_status -startd -format ... - ";
+	print "Looking for 6 slots condor_status ... - ";
 	while($count < $nattempts) {
-		my $cmd = "condor_status -startd -format \"%s\\n\" name";
-		CondorTest::debug("Looking for exactly 6 startd slots\n",$debuglevel);
+		my $cmd = "condor_status -af name";
+		CondorTest::debug("Looking for exactly 6 slots\n",$debuglevel);
 		my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     	if(!$cmdstatus)
     	{
@@ -95,20 +95,22 @@ if($stable == 1) {
 		}
 
 		if($numstartd == 6) {
-			CondorTest::debug("Condor_status -startd found the expected 9 slots\n",$debuglevel);
+			CondorTest::debug("Condor_status found the expected 6 slots\n",$debuglevel);
 			print "ok\n";
 			$done = 1;
 			last;
 		} else {
-			CondorTest::debug("Condor_status -startd found incorrect startd slot count<$numstartd>\n",$debuglevel);
+			CondorTest::debug("Condor_status found incorrect startd slot count<$numstartd>\n",$debuglevel);
 		}
 
 		$count = $count + 1;
 		sleep($count * 5);
 	}
 }
+my $test_ok = 1;
 if($done == 0) {
-	print "bad\n";
+	print "did not see expected number of slots\n";
+	$test_ok = 0;
 }
 
 
@@ -124,7 +126,7 @@ $res = runCondorTool("condor_rm -all",\@rm1,2,{emit_output=>0});
 $ENV{CONDOR_CONFIG} = $scheddoneconfig;
 $res = runCondorTool("condor_rm -all",\@rm2,2,{emit_output=>0});
 
-RegisterResult(1,"test_name", "$testname");
+RegisterResult($test_ok,"test_name", "$testname");
 CondorTest::EndTest();
 print scalar localtime() . "\n";
 
@@ -134,5 +136,5 @@ if( $done == 0 )
 	exit(1);
 }
 
-CondorTest::debug("cmd_status_shows-startd SUCCESS\n",$debuglevel);
+CondorTest::debug("cmd_status_shows-slots SUCCESS\n",$debuglevel);
 exit(0);

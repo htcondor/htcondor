@@ -86,6 +86,9 @@ elif [ "$VERSION_CODENAME" = 'focal' ]; then
     true
 elif [ "$VERSION_CODENAME" = 'jammy' ]; then
     dch --distribution $dist --nmu 'place holder entry'
+elif [ "$VERSION_CODENAME" = 'noble' ]; then
+    dch --distribution $dist --nmu 'place holder entry'
+    dch --distribution $dist --nmu 'place holder entry'
 elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
     true
 else

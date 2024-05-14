@@ -68,7 +68,6 @@ GCC_DIAG_OFF(cast-qual)
 GCC_DIAG_ON(float-equal)
 GCC_DIAG_ON(cast-qual)
 
-#include <fstream>
 #include <stdio.h>
 
 namespace {

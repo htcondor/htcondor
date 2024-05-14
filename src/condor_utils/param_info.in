@@ -1135,6 +1135,10 @@ default=
 type=string
 tags=had,AbstractReplicatorStateMachine
 
+[TRANSFER_JOB_ATTRS]
+default=ClusterID, ProcID, NumShadowStarts
+type=string
+
 [MAX_TRANSFER_LIFETIME]
 default=300
 type=int
@@ -2775,6 +2779,11 @@ tags=starter
 [STARTER_HIDE_GPU_DEVICES]
 type=bool
 default=true
+
+[STARTER_FILE_XFER_STALL_TIMEOUT]
+type=int
+default=3600
+tags=starter
 
 [JOB_RENICE_INCREMENT]
 default=0
@@ -4919,6 +4928,12 @@ tags=condor_config
 default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
 tags=condor_config
+
+[GANGLIAD_WANT_PROJECTION]
+default=false
+type=bool
+description=Should gangliad use an attribute projection to query the collector
+tags=gangliad
 
 [GANGLIAD_RESET_METRICS_FILE]
 default=$(SPOOL)/metricsToReset.ganglia_metrics

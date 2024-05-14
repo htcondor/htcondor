@@ -107,7 +107,7 @@ cmd_status_shows-claim
 cmd_status_shows-help
 cmd_status_shows-master
 cmd_status_shows-schedd
-cmd_status_shows-startd
+cmd_status_shows-slots
 cmd_status_shows-absent
 cmd_q_shows-dag
 cmd_q_shows-hold

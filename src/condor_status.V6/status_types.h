@@ -24,11 +24,14 @@
 enum ppOption {
     PP_NOTSET,
 
-    PP_STARTD_NORMAL,
-    PP_STARTD_SERVER,
-    PP_STARTD_STATE,
-    PP_STARTD_RUN,
-    PP_STARTD_COD,
+    PP_SLOTS_NORMAL,
+    PP_SLOTS_SERVER,
+    PP_SLOTS_STATE,
+    PP_SLOTS_RUN,
+    PP_SLOTS_COD,
+    PP_SLOTS_GPUS,
+
+    PP_STARTDAEMON,
     PP_STARTD_GPUS,
 
     PP_SCHEDD_NORMAL,
@@ -49,6 +52,7 @@ enum ppOption {
     PP_GENERIC_NORMAL,
     PP_GENERIC,
     PP_CUSTOM,
+
     PP_LONG,
     PP_XML,
     PP_JSON,
@@ -61,14 +65,20 @@ enum ppOption {
 // display modes for condor_status
 enum {
 	SDO_NotSet,			//  MODE_NOTSET,
-	SDO_Startd,			//  MODE_STARTD_NORMAL,
-	SDO_Startd_Avail,	//  MODE_STARTD_AVAIL,
-	SDO_Startd_Claimed,	//  MODE_STARTD_RUN,
-	SDO_Startd_Cod,		//  MODE_STARTD_COD,
-	SDO_Startd_GPUs,	//  MODE_STARTD_GPUS,
+
+	SDO_Slots,			//  MODE_SLOTS_NORMAL,
+	SDO_Slots_Avail,	//  MODE_SLOTS_AVAIL,
+	SDO_Slots_Claimed,	//  MODE_SLOTS_RUN,
+	SDO_Slots_Cod,		//  MODE_SLOTS_COD,
+	SDO_Slots_GPUs, 	//  MODE_SLOTS_GPUS,
+
+	SDO_StartDaemon,    //  MODE_STARTD_DAEMON,
+	SDO_StartD_GPUs,    //  MODE_STARTD_GPUS,
+
 	SDO_Schedd,			//  MODE_SCHEDD_NORMAL,
 	SDO_Schedd_Data,	//  MODE_SCHEDD_DATA,
 	SDO_Schedd_Run,		//  MODE_SCHEDD_RUN,
+
 	SDO_Submitters,		//  MODE_SCHEDD_SUBMITTORS,
 	SDO_Master,			//  MODE_MASTER_NORMAL,
 	SDO_Collector,		//  MODE_COLLECTOR_NORMAL,

@@ -34,6 +34,7 @@ Build-Depends: cmake (>= 3.16),
                libpcre2-dev,
                libpq-dev,
                libscitokens-dev,
+               libssl-dev,
                libsqlite3-dev,
                libsystemd-dev,
                libvirt-dev,
@@ -76,16 +77,10 @@ Depends: adduser,
          libkrb5-3,
          libkrb5support0,
          libmunge2,
-#if defined(FOCAL) || defined(BULLSEYE)
-         libssl1.1,
-#else
-         libssl3,
-#endif
-         libscitokens0,
-         libvomsapi1v5,
          net-tools,
          libjs-bootstrap,
          libjs-jquery,
+         ${lib:Depends},
          ${misc:Depends},
          ${perl:Depends},
          ${python3:Depends},
@@ -377,6 +372,7 @@ Description: transitional dummy package
 
 Package: htcondor-doc
 Architecture: all
+Section: doc
 Depends: condor-doc (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package

@@ -69,8 +69,6 @@
 # include <time.h>
 #endif
 
-#include <sstream>
-
 // call when you want to insure that dprintfs are thread safe on Linux regardless of
 // wether daemon core threads are enabled. thread safety cannot be disabled once enabled
 #ifdef WIN32

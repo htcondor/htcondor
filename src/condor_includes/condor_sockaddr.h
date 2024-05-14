@@ -150,12 +150,6 @@ public:
 	std::string to_ip_string_ex(bool decorate=false) const; 
 	const char* to_ip_string_ex(char* buf, int len, bool decorate=false) const;
 
-#if 0
-	// if the address contained is ipv4, it converts to 
-	// IPv6-V4MAPPED address. caller must check is_ipv4() first.
-	void convert_to_ipv6();
-#endif
-
 	// How desirable is this address for public use?  Prefers public addresses
 	// over private addresses.  Higher numbers are more desirable.  The number
 	// will be less than 10000.  0 will only be used for errors, otherwise it

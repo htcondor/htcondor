@@ -296,23 +296,14 @@ VanillaProc::StartJob()
 	param(cgroup_base, "BASE_CGROUP", "");
 	std::string cgroup_str;
 	const char *cgroup = NULL;
-		/* Note on CONDOR_UNIVERSE_LOCAL - The cgroup setup code below
-		 *  requires a unique name for the cgroup. It relies on
-		 *  uniqueness of the MachineAd's Name
-		 *  attribute. Unfortunately, in the local universe the
-		 *  MachineAd (mach_ad elsewhere) is never populated, because
-		 *  there is no machine. As a result the ASSERT on
-		 *  starter_name fails. This means that the local universe
-		 *  will not work on any machine that has BASE_CGROUP
-		 *  configured. A potential workaround is to set
-		 *  STARTER.BASE_CGROUP on any machine that is also running a
-		 *  schedd, but that disables cgroup support from a
-		 *  co-resident startd. Instead, I'm disabling cgroup support
-		 *  from within the local universe until the intraction of
-		 *  local universe and cgroups can be properly worked
-		 *  out. -matt 7 nov '12
-		 */
-	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_is_writeable(cgroup_base)) {
+
+	bool create_cgroup = true;
+	if ((CONDOR_UNIVERSE_LOCAL == job_universe) &&
+				! param_boolean("USE_CGROUPS_FOR_LOCAL_UNIVERSE", true)) {
+		create_cgroup = false;
+	}
+
+	if (create_cgroup && cgroup_is_writeable(cgroup_base)) {
 		std::string cgroup_uniq;
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
@@ -351,8 +342,8 @@ VanillaProc::StartJob()
 		}
 		int64_t memory = 0;
 		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
-			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aborting\n");
-			ASSERT(false);
+			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; not setting memory limits\n");
+			memory = 0; // just to be sure
 		}
 		fi.cgroup_memory_limit = 0; // meaning no limit
 
@@ -875,14 +866,18 @@ void VanillaProc::recordFinalUsage() {
 
 void VanillaProc::killFamilyIfWarranted() {
 	// Kill_Family() will (incorrectly?) kill the SSH-to-job daemon
-	// if we're using dedicated accounts, so don't unless we know
+	// if we're using dedicated accounts or cgroups, so don't unless we know
 	// we're the only job.
-	if ( ! m_dedicated_account || Starter->numberOfJobs() == 1 ) {
+	if (Starter->numberOfJobs() == 1 ) {
 		dprintf( D_PROCFAMILY, "About to call Kill_Family()\n" );
-		daemonCore->Kill_Family( JobPid );
+		daemonCore->Kill_Family(JobPid);
 	} else {
 		dprintf( D_PROCFAMILY, "Postponing call to Kill_Family() "
 			"(perhaps due to ssh_to_job)\n" );
+		// Tell DC not to kill this process tree on exit, As
+		// it might kill child cgroups
+		// This is a hack until we have proper nested cgroup v2s
+		daemonCore->Extend_Family_Lifetime(JobPid);
 	}
 }
 

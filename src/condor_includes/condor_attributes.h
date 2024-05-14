@@ -196,6 +196,7 @@
 #define ATTR_ENTERED_CURRENT_STATUS  "EnteredCurrentStatus"
 #define ATTR_ERROR_STRING  "ErrorString"
 #define ATTR_ERROR_CODE  "ErrorCode"
+#define ATTR_WARNING "Warning"
 #define ATTR_EXCEPTION_HIERARCHY  "ExceptionHierarchy"
 #define ATTR_EXCEPTION_NAME  "ExceptionName"
 #define ATTR_EXCEPTION_TYPE  "ExceptionType"

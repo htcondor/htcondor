@@ -67,7 +67,6 @@ typedef HashTable <std::string, CatalogEntry *> FileCatalogHashTable;
 typedef HashTable <std::string, std::string> PluginHashTable;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
-typedef int		(*FileTransferHandler)(FileTransfer *);
 
 enum FileTransferStatus {
 	XFER_STATUS_UNKNOWN,
@@ -207,11 +206,6 @@ class FileTransfer final: public Service {
 			last transfer.  It is safe for the handler to deallocate the
 			FileTransfer object.
 		*/
-	void RegisterCallback(FileTransferHandler handler, bool want_status_updates=false)
-		{ 
-			ClientCallback = handler; 
-			ClientCallbackWantsStatusUpdates = want_status_updates;
-		}
 	void RegisterCallback(FileTransferHandlerCpp handler, Service* handlerclass, bool want_status_updates=false)
 		{ 
 			ClientCallbackCpp = handler; 
@@ -563,7 +557,6 @@ class FileTransfer final: public Service {
 	time_t TransferStart{0};
 	int TransferPipe[2] {-1, -1};
 	bool registered_xfer_pipe{false};
-	FileTransferHandler ClientCallback{nullptr};
 	FileTransferHandlerCpp ClientCallbackCpp{nullptr};
 	Service* ClientCallbackClass{nullptr};
 	bool ClientCallbackWantsStatusUpdates{false};
@@ -645,6 +638,8 @@ class FileTransfer final: public Service {
 	bool DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc);
 
 	std::string GetTransferQueueUser();
+
+	void ReceiveAliveMessage();
 
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);

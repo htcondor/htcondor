@@ -114,7 +114,6 @@ int write_factory_file(const char * filename, const void* data, int cb, mode_t a
 // if the foreach mode is foreach_not, then this function does nothing.
 //
 int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int ClusterId, bool spill_items);
-int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o);
 int SendClusterAd (ClassAd * ad);
 
 

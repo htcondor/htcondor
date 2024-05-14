@@ -694,7 +694,6 @@ function bls_start_job_wrapper ()
   echo "# Move into new home any relative input sandbox file"
   bls_fl_subst_relative_paths_and_dump inputsand "mv \"@@F_REMOTE\" \"\$new_home/@@F_WORKNAME\" &> /dev/null" 
 
-  echo "export HOME=\$new_home"
   echo "cd \$new_home"
   
   # Set the path to the user proxy

@@ -356,13 +356,7 @@ Unparse( string &buffer, const ExprTree *tree )
 		}
 		
 		case ExprTree::EXPR_ENVELOPE: {
-#if 0
-			if (this->oldClassAd) {
-				buffer += ((CachedExprEnvelope*)tree)->get_unparsed_str();
-			} else {
-#else
 			{
-#endif
 				// recurse b/c we indirect for this element.
 				Unparse( buffer, ((CachedExprEnvelope*)tree)->get());
 			}

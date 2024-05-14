@@ -30,7 +30,6 @@
 #include "condor_config.h"
 #include "VanillaToGrid.h"
 #include "submit_job.h"
-#include "schedd_v7_utils.h"
 #include "util_lib_proto.h"
 #include "my_popen.h"
 #include "file_lock.h"

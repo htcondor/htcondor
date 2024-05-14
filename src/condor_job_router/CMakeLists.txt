@@ -22,7 +22,6 @@ JobRouter.cpp
 JobRouterHookMgr.cpp
 NewClassAdJobLogConsumer.cpp
 schedd_main.cpp
-schedd_v7_utils.cpp
 submit_job.cpp
 VanillaToGrid.cpp
 )

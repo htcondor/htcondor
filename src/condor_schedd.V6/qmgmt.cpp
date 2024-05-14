@@ -4578,6 +4578,7 @@ enum {
 	idATTR_ENABLED,
 	idATTR_DISABLE_REASON,
 	idATTR_USERREC_OPT_CREATE_DEPRECATED,
+	idATTR_USERREC_LIVE,
 };
 
 enum {
@@ -6320,24 +6321,42 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 
 // category values for aSpecialUserRecAttrs
 enum {
-	catUserRecForbidden = -2,
+	catUserRecForbidden = -3,	// commands that don't match ATTR_USERREC_OPT_prefix, but should still not be merged into the user ad
+	catUserRecLiveValue = -2,   // attributes that are updates live and not stored in the ad
 	catUserRecRequiredKey = -1, // immutable/secure attributes that are part of the key
 	catUserRecDisable = 2,      // attributes related to enable/disable
 };
 
 #define FILL(attr,cat) { attr, id##attr, cat }
+#define LIVE(attr) { #attr, idATTR_USERREC_LIVE, catUserRecLiveValue }
 // negative value in the category field indicates that the attribute secure/immutable
 static const ATTR_IDENT_PAIR aSpecialUserRecAttrs[] = {
 	FILL(ATTR_USERREC_OPT_CREATE_DEPRECATED, catUserRecForbidden), // backward compat hack for 10.x and early 23.0.x
 	FILL(ATTR_DISABLE_REASON,     catUserRecDisable),
 	FILL(ATTR_ENABLED,            catUserRecDisable),
 	FILL(ATTR_NT_DOMAIN,          catUserRecRequiredKey),
+	LIVE(NumCompleted),
+	LIVE(NumHeld),
+	LIVE(NumIdle),
+	LIVE(NumJobs),
+	LIVE(NumRemoved),
+	LIVE(NumRunning),
+	LIVE(NumSchedulerCompleted),
+	LIVE(NumSchedulerHeld),
+	LIVE(NumSchedulerIdle),
+	LIVE(NumSchedulerJobs),
+	LIVE(NumSchedulerRemoved),
+	LIVE(NumSchedulerRunning),
+	LIVE(NumSuspended),
 	FILL(ATTR_OWNER,              catUserRecRequiredKey),
+	FILL(ATTR_REQUIREMENTS,       catUserRecForbidden), // don't want to copy the Requirements out of the command ad
 	FILL(ATTR_USER,               catUserRecRequiredKey),
 };
 #undef FILL
+#undef LIVE
 
-static bool IsSpecialUserRecAttrName(const char * attr, int& cat)
+
+static int IsSpecialUserRecAttrName(const char * attr, int& cat)
 {
 	const ATTR_IDENT_PAIR* found = nullptr;
 	found = BinaryLookup<ATTR_IDENT_PAIR>(
@@ -6354,7 +6373,7 @@ static bool IsSpecialUserRecAttrName(const char * attr, int& cat)
 
 
 // merge and update command ad into a UserRec ad
-int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled)
+int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled, struct UpdateUserAttributesInfo& info )
 {
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
@@ -6366,13 +6385,25 @@ int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled)
 		// don't allow most special attributes to be set from the command ad
 		// the exception is the DisableReason when creating a disabled user
 		int cat=0, idAttr = IsSpecialUserRecAttrName(attr.c_str(), cat);
-		if (cat < 0 || idAttr == idATTR_ENABLED) continue;
-		if (enabled && idAttr == idATTR_DISABLE_REASON) continue;
+		if (cat < 0 || idAttr == idATTR_ENABLED ||
+			(enabled && idAttr == idATTR_DISABLE_REASON)) {
+			// count the number of unexpected attributes that are skipped
+			// it is expected that ATTR_USER and ATTR_REQUIREMENTS will sometimes be present
+			// and should be quietly ignored.
+			if (cat != catUserRecForbidden && cat != catUserRecRequiredKey) {
+				info.special += 1;
+			}
+			continue;
+		}
 
 		buf.clear();
 		unparse.Unparse(buf, tree);
-		JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0);
-		JobQueue->SetTransactionTriggers(catSetUserRec);
+		if (JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0)) {
+			info.valid += 1;
+			JobQueue->SetTransactionTriggers(catSetUserRec);
+		} else {
+			info.invalid += 1;
+		}
 	}
 
 	return 0;
@@ -6556,7 +6587,8 @@ bool UserRecCreate(int userrec_id, const char * username, const ClassAd & cmdAd,
 		}
 
 		// populate the new userrec with attributes from the command ad
-		rval = UpdateUserAttributes(key, cmdAd, enabled) == 0;
+		struct UpdateUserAttributesInfo dummy; // TODO: expose this to the caller?
+		rval = UpdateUserAttributes(key, cmdAd, enabled, dummy) == 0;
 	}
 
 	if ( ! already_in_transaction) {

@@ -82,14 +82,15 @@ bool TrackTotals::haveTotals()
 	// display totals only for meaningful modes
 	switch (ppo)
 	{
-    	case PP_STARTD_NORMAL:
-    	case PP_STARTD_SERVER:
-    	case PP_STARTD_RUN:
-		case PP_STARTD_STATE:
-    	case PP_STARTD_COD:
+    	case PP_SLOTS_NORMAL:
+    	case PP_SLOTS_SERVER:
+    	case PP_SLOTS_RUN:
+		case PP_SLOTS_STATE:
+    	case PP_SLOTS_COD:
     	case PP_SCHEDD_NORMAL:
     	case PP_SUBMITTER_NORMAL:
     	case PP_CKPT_SRVR_NORMAL:
+		case PP_STARTDAEMON:
 			break;
 
 		default:
@@ -139,6 +140,67 @@ displayTotals (FILE *file, int keyLength)
 	}
 }
 
+int StartDaemonTotal::
+update (ClassAd *ad, int /*options*/)
+{
+	bool bad = false;
+	int total_slots = 0;
+	long long total_mem = 0, inuse_mem=0, bk_mem=0;
+	int total_cpus = 0, total_gpus = 0, inuse_cpus = 0, inuse_gpus = 0, bk_cpus = 0, bk_gpus = 0;
+	if ( ! ad->LookupInteger(ATTR_TOTAL_SLOTS, total_slots) && ! ad->LookupInteger(ATTR_NUM_DYNAMIC_SLOTS, total_slots)) {
+		bad = true; total_slots = 0;
+	}
+
+	if ( ! ad->LookupInteger(ATTR_TOTAL_CPUS, total_cpus)) { bad = true; total_cpus = 0; }
+	if ( ! ad->LookupInteger("TotalGPUs", total_gpus)) { bad = true; total_gpus = 0; }
+	if ( ! ad->LookupInteger(ATTR_TOTAL_MEMORY, total_mem)) { bad = true; total_mem = 0; }
+
+	// TODO: handle p-slots that are simulating daemon ads ?
+	if ( ! ad->LookupInteger("TotalInUseCpus", inuse_cpus)) { inuse_cpus = 0; }
+	if ( ! ad->LookupInteger("TotalInUseGPUs", inuse_gpus)) { inuse_gpus = 0; }
+	if ( ! ad->LookupInteger("TotalInUseMemory", inuse_mem)) { inuse_mem = 0; }
+	if ( ! ad->LookupInteger("TotalBackfillInUseCpus", bk_cpus)) { bk_cpus = 0; }
+	if ( ! ad->LookupInteger("TotalBackfillInUseGPUs", bk_gpus)) { bk_gpus = 0; }
+	if ( ! ad->LookupInteger("TotalBackfillInUseMemory", bk_mem)) { bk_mem = 0; }
+
+	machines += 1;
+	slots += total_slots;
+	cpus += total_cpus;
+	gpus += total_gpus;
+	busy_cpus += inuse_cpus;
+	busy_gpus += inuse_gpus;
+	bkfill_cpus += bk_cpus;
+	bkfill_gpus += bk_gpus;
+
+	mem_usage += (double)inuse_mem / total_mem;
+	bk_mem_usage += (double)bk_mem / total_mem;
+
+	// return 0 for malformed ads, 1 for success
+	if (bad) return 0;
+	return 1;
+}
+
+void StartDaemonTotal::
+displayHeader(FILE *file)
+{
+	fprintf (file, "%8.8s %8.8s %8.8s %8.8s %8.8s %8.8s %8.8s %8.8s %8.8s %8.8s\n",
+		"Machines", "Slots",
+		"Cpus", "BusyCpus", "BkCpus",
+		"GPUs", "BusyGPUs", "BkGPUs",
+		"Memory%", "BkMem%");
+}
+
+
+void StartDaemonTotal::
+displayInfo (FILE *file, int)
+{
+	fprintf (file, "%8d %8d %8d %8d %8d %8d %8d %8d %7.2f%% %7.2f%%\n",
+		machines, slots,
+		cpus, busy_cpus, bkfill_cpus,
+		gpus, busy_gpus, bkfill_gpus,
+		100 * mem_usage/machines, 100 * bk_mem_usage/machines
+		);
+}
 
 int StartdNormalTotal::
 update (ClassAd *ad, int options)
@@ -221,7 +283,7 @@ displayInfo (FILE *file, int)
 StartdServerTotal::
 StartdServerTotal()
 {
-	ppo = PP_STARTD_SERVER;
+	ppo = PP_SLOTS_SERVER;
 	machines = 0;
 	avail = 0;
 	memory = 0;
@@ -622,14 +684,15 @@ makeTotalObject (ppOption ppo)
 
 	switch (ppo)
 	{
-		case PP_STARTD_NORMAL: 		ct = new StartdNormalTotal; break;
-		case PP_STARTD_SERVER:		ct = new StartdServerTotal;	break;
-		case PP_STARTD_RUN:			ct = new StartdRunTotal;	break;
-		case PP_STARTD_STATE:		ct = new StartdStateTotal;	break;
-		case PP_STARTD_COD:			ct = new StartdCODTotal;	break;
+		case PP_SLOTS_NORMAL: 		ct = new StartdNormalTotal; break;
+		case PP_SLOTS_SERVER:		ct = new StartdServerTotal;	break;
+		case PP_SLOTS_RUN:			ct = new StartdRunTotal;	break;
+		case PP_SLOTS_STATE:		ct = new StartdStateTotal;	break;
+		case PP_SLOTS_COD:			ct = new StartdCODTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
 		case PP_SUBMITTER_NORMAL:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
+		case PP_STARTDAEMON:		ct = new StartDaemonTotal; break;
 
 		default:
 			return NULL;
@@ -642,32 +705,36 @@ makeTotalObject (ppOption ppo)
 int ClassTotal::
 makeKey (std::string &key, ClassAd *ad, ppOption ppo)
 {
-	char p1[256], p2[256], buf[512];
-
 	switch (ppo)
 	{
-		case PP_STARTD_NORMAL:
-		case PP_STARTD_RUN:
-		case PP_STARTD_COD:
-		case PP_STARTD_SERVER:
-			if (!ad->LookupString(ATTR_ARCH, p1, sizeof(p1)) || 
+		case PP_SLOTS_NORMAL:
+		case PP_SLOTS_RUN:
+		case PP_SLOTS_COD:
+		case PP_SLOTS_SERVER:
+		{
+			char p1[128], p2[128];
+			if (!ad->LookupString(ATTR_ARCH, p1, sizeof(p1)) ||
 				!ad->LookupString(ATTR_OPSYS, p2, sizeof(p2)))
-					return 0;
-			snprintf(buf, sizeof(buf), "%s/%s", p1, p2);
-			key = buf;
-			return 1;
-
-		case PP_STARTD_STATE:
-			if( !ad->LookupString( ATTR_ACTIVITY , p1, sizeof(p1) ) )
 				return 0;
-			snprintf( buf, sizeof(buf), "%s", p1 );
-			key = buf;
+			formatstr(key, "%s/%s", p1, p2);
 			return 1;
+		}
+
+		case PP_STARTDAEMON:
+		{
+			char p1[24], p2[128];
+			if (!ad->LookupString(ATTR_ARCH, p1, sizeof(p1)) || 
+				!ad->LookupString(ATTR_OPSYS_AND_VER, p2, sizeof(p2)))
+				return 0;
+			formatstr(key, "%s_%s", p1, p2);
+			return 1;
+		}
+
+		case PP_SLOTS_STATE:
+			return ad->LookupString(ATTR_ACTIVITY, key) ? 0 : 1;
 
 		case PP_SUBMITTER_NORMAL:
-			if (!ad->LookupString(ATTR_NAME, p1, sizeof(p1))) return 0;
-			key = p1;
-			return 1;
+			return ad->LookupString(ATTR_NAME, key) ? 0 : 1;
 
 		// all ads in the following categories hash to the same key for totals
 		case PP_CKPT_SRVR_NORMAL:

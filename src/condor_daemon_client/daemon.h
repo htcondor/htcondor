@@ -670,6 +670,9 @@ public:
 	void setAuthenticationMethods(const std::vector<std::string> &methods) {m_methods = methods;}
 	const std::vector<std::string> &getAuthenticationMethods() const {return m_methods;}
 
+	void setSecSessionId(const std::string& sess_id) { m_sec_session_id = sess_id; }
+	const std::string& getSecSessionId() { return m_sec_session_id; }
+
 protected:
 	// Data members
 	std::string _name;
@@ -945,6 +948,10 @@ private:
 
 		// The virtual 'owner' of this collector object
 	std::string m_owner;
+
+		// The security session to use for each command.
+		// If empty, find/create a session automatically
+	std::string m_sec_session_id;
 
 		// Authentication method overrides
 	std::vector<std::string> m_methods;

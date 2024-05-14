@@ -909,7 +909,9 @@ bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job
 			 "(%d.%d) Writing abort record to user logfile\n",
 			 cluster, proc );
 
-	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, event->reason);
+	std::string reasonstr;
+	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, reasonstr);
+	event->setReason(reasonstr);
 
 	return true;
 }
@@ -1007,7 +1009,9 @@ bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 			 "(%d.%d) Writing hold record to user logfile\n",
 			 cluster, proc );
 
-	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, event->reason);
+	std::string reasonstr;
+	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, reasonstr);
+	event->setReason(reasonstr);
 
 	return true;
 }

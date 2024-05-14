@@ -71,13 +71,33 @@ class TrackTotals
 		ClassTotal*	topLevelTotal;
 };
 
+// startd (daemon ad) totals
+class StartDaemonTotal : public ClassTotal
+{
+public:
+	StartDaemonTotal() : ClassTotal(PP_STARTDAEMON) {}
+	virtual int update (ClassAd *, int options);
+	virtual void displayHeader(FILE *);
+	virtual void displayInfo(FILE *,int);
 
+protected:
+	int machines{0};
+	int slots{0};
+	int cpus{0};
+	int gpus{0};
+	int busy_cpus{0};
+	int busy_gpus{0};
+	int bkfill_cpus{0};
+	int bkfill_gpus{0};
+	double mem_usage{0.0};
+	double bk_mem_usage{0.0};
+};
 
-// startd totals
+// slot totals
 class StartdNormalTotal : public ClassTotal
 {
 	public:
-		StartdNormalTotal() : ClassTotal(PP_STARTD_NORMAL) {}
+		StartdNormalTotal() : ClassTotal(PP_SLOTS_NORMAL) {}
 		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE *);
 		virtual void displayInfo(FILE *, int);
@@ -95,7 +115,6 @@ class StartdNormalTotal : public ClassTotal
 
 		int update(const char * state, bool backfill_slot);
 };
-
 
 class StartdRunTotal : public ClassTotal
 {
@@ -134,7 +153,7 @@ class StartdServerTotal : public ClassTotal
 class StartdStateTotal : public ClassTotal
 {
 	public:
-		StartdStateTotal() : ClassTotal(PP_STARTD_STATE) {};
+		StartdStateTotal() : ClassTotal(PP_SLOTS_STATE) {};
 		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);

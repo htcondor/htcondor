@@ -720,7 +720,10 @@ void handle_eval(
                 variable = new Variable(variable_name, value);
                 variables[variable_name] = variable;
                 if (parameters.interactive) {
-                    cout << value << endl;
+					classad::ClassAdUnParser unp;
+					std::string s;
+					unp.Unparse(s, value);
+                    cout << s << endl;
                 }
             }
         }
@@ -780,9 +783,14 @@ void handle_same(
             print_error_message("Couldn't evaluate second expressions.\n", state);
         } else if (!value1.SameAs(value2)) {
             if (parameters.debug) {
+				classad::ClassAdUnParser unp;
+				std::string s1;
+				std::string s2;
+				unp.Unparse(s1, value1);
+				unp.Unparse(s2, value2);
                 cout << "They evaluated to: \n";
-                cout << " " << value1 << endl;
-                cout << " " << value2 << endl;
+                cout << " " << s1 << endl;
+                cout << " " << s2 << endl;
             }
             print_error_message("the expressions are different.", state);
         }

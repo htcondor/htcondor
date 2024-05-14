@@ -39,13 +39,13 @@
 #endif
 
 const int UTIL_MAX_LINE_LENGTH = 1024;
-
 // The default maximum rescue DAG number.
 const int MAX_RESCUE_DAG_DEFAULT = 100;
-
 // The absolute maximum allowed rescue DAG number (the real maximum
 // is normally configured lower).
 const int ABS_MAX_RESCUE_DAG_NUM = 999;
+// MaxIdle Jobs default value
+const int MAX_IDLE_DEFAULT = 1000;
 
 enum DagStatus {
     DAG_STATUS_OK = 0,
@@ -134,16 +134,17 @@ struct CLI_BOOL_FLAG {
 namespace DagmanShallowOptions {
 	BETTER_ENUM(str, long,
 		ScheddDaemonAdFile = 0, ScheddAddressFile, ConfigFile, SaveFile, RemoteSchedd, AppendFile,
-		PrimaryDagFile, LibOut, LibErr, DebugLog, SchedLog, SubFile, RescueFile, LockFile
+		PrimaryDagFile, LibOut, LibErr, DebugLog, SchedLog, SubFile, RescueFile, LockFile,
+		CsdVersion
 	);
 
 	BETTER_ENUM(i, long,
-		MaxIdle = 0, MaxJobs, MaxPre, MaxPost, DebugLevel, Priority
+		MaxIdle = 0, MaxJobs, MaxPre, MaxPost, MaxHold, DebugLevel, Priority
 	);
 
 	BETTER_ENUM(b, long,
 		PostRun = 0, DumpRescueDag, RunValgrind, DoSubmit, DoRecovery, CopyToSpool, DryRun,
-		WaitForDebug
+		OnlyDumpDot
 	);
 
 	BETTER_ENUM(slist, long,
@@ -192,6 +193,7 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-AutoRescue",    {"AutoRescue", "<0|1>", "Control automatically running new rescue DAG (0=False | 1=True)", DAG_OPT_DISP_ALL}}, // Note non-zero = True
 	{"-Batch-Name",    {"BatchName", "<name>", "Set DAG batch name", DAG_OPT_DISP_ALL}},
 	{"-Config",        {"ConfigFile", "<filename>", "Specify DAGMan configuration file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-CsdVersion",    {"CsdVersion", "<Version String>", "Current condor_submit_dag version string", 0}}, // Not user controlled and manually displayed in condor_dagman
 	{"-Dag",           {"DagFiles", "<NAME.dag>", "DAG file for DAGMan to execute", 0}}, // Only applies to DAGMan Main and is manually entered
 	{"-DAGMan",        {"DagmanPath", "<path>", "Full path to alternate condor_dagman executable", DAG_OPT_DISP_ALL}},
 	{"-Debug",         {"DebugLevel", "<level>", "Set DAGMan debug logs verbosity", DAG_OPT_DISP_ALL}},
@@ -200,6 +202,7 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-DontAlwaysRunPost", {"PostRun", "False", "Don't run POST script if PRE script fails", DAG_OPT_DISP_ALL}},
 	{"-DoRecovery",    {"DoRecovery", "True", "Allow DAG submitted jobs to send email notifications", DAG_OPT_DISP_ALL}},
 	{"-DoRescueFrom",  {"DoRescueFrom", "<N>", "Run DAG rescue of given number", DAG_OPT_DISP_ALL}},
+	{"-Dot",           {"OnlyDumpDot", "True", "Have DAGMan dump DOT file and exit", DAG_OPT_DISP_DAGMAN}},
 	{"-DryRun",        {"DryRun", "True", "Dry run condor_dagman execution of DAG", DAG_OPT_DISP_DAGMAN}},
 	{"-DumpRescue",    {"DumpRescueDag", "True", "DAGMan dump rescue DAG and exit", DAG_OPT_DISP_ALL}},
 	{"-f",             {"Force", "True", "See -Force", 0}}, // Single letter flag to make -f equal to -Force
@@ -211,6 +214,7 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-load_save",     {"SaveFile", "<filename>", "Run DAG from provided save point file", DAG_OPT_DISP_ALL}},
 	{"-Lockfile",      {"LockFile", "<NAME.dag.lock>", "DAGMan lock filename", 0}}, // Only applies to DAGMan Main and is manually displayed
 	{"-MaxIdle",       {"MaxIdle", "<N>", "Maximum number of Idle nodes allowed", DAG_OPT_DISP_ALL}},
+	{"-MaxHold",       {"MaxHold", "<N>", "Maximum number of HOLD scripts to run at once", DAG_OPT_DISP_ALL}},
 	{"-MaxJobs",       {"MaxJobs", "<N>", "Maximum number of jobs submitted at once", DAG_OPT_DISP_ALL}},
 	{"-MaxPost",       {"MaxPost", "<N>", "Maximum number of POST scripts to run at once", DAG_OPT_DISP_ALL}},
 	{"-MaxPre",        {"MaxPre", "<N>", "Maximum number of PRE scripts to run at once", DAG_OPT_DISP_ALL}},
@@ -229,7 +233,7 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-v",             {"Verbose", "True", "See -Verbose", 0}}, // Single letter flag to make -v equal to -Verbose
 	{"-Valgrind",      {"RunValgrind", "True", "Run DAGMan under Valgrind (Linux Only)", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-Verbose",       {"Verbose", "True", "Increase error message verbosity for condor_submit_dag", DAG_OPT_DISP_CSD}}, // Note: -v works for this
-	{"-WaitForDebug",  {"WaitForDebug", "True", "Pause condor_dagman execution until debugger is attached", DAG_OPT_DISP_DAGMAN}},
+	//{"-WaitForDebug",  {"WaitForDebug", "True", "Pause condor_dagman execution until debugger is attached", DAG_OPT_DISP_DAGMAN}}, // Note: Handled in condor_dagman
 };
 
 enum class DagOptionSrc {
@@ -278,7 +282,7 @@ public:
 			shallow.stringOpts[str::AppendFile] = appendFile;
 			shallow.boolOpts[b::DoSubmit] = true;
 			shallow.boolOpts[b::CopyToSpool] = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
-			shallow.intOpts[i::MaxIdle] = 0;
+			shallow.intOpts[i::MaxIdle] = MAX_IDLE_DEFAULT;
 			shallow.intOpts[i::MaxJobs] = 0;
 			shallow.intOpts[i::MaxPre] = 0;
 			shallow.intOpts[i::MaxPost] = 0;
@@ -289,7 +293,7 @@ public:
 		{ //Initialize Deep Options
 			using namespace DagmanDeepOptions;
 			deep.intOpts[i::DoRescueFrom] = 0;
-			deep.intOpts[i::AutoRescue] = (int)param_boolean( "DAGMAN_AUTO_RESCUE", true );
+			deep.intOpts[i::AutoRescue] = (int)param_boolean("DAGMAN_AUTO_RESCUE", true);
 			deep.intOpts[i::SubmitMethod] = -1;
 		} //End Deep Option Initialization
 	}
@@ -307,7 +311,7 @@ public:
 	// Handle special case modifications/messages regarding specific options
 	std::string processOptionArg(const std::string& opt, std::string arg);
 	// Automagically parse cli flags to set a DAGMan option (Note: Possible incrementation of iArg)
-	bool AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err);
+	bool AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err, DagmanOptions* duplicate=nullptr);
 
 	// Extend (push_back) value to list option
 	// Added to help clear up possible confusion from set() despite set() doing the correct thing
@@ -320,7 +324,7 @@ public:
 	inline std::string primaryDag() const { return shallow.stringOpts[DagmanShallowOptions::str::PrimaryDagFile]; }
 	inline str_list dagFiles() const { return shallow.slistOpts[DagmanShallowOptions::slist::DagFiles]; }
 	inline bool isMultiDag() const { return is_MultiDag; }
-
+	size_t numDagFiles() const { return shallow.slistOpts[DagmanShallowOptions::slist::DagFiles].size(); }
 
 	// Const shallow options access operator declarations
 	const str_list & operator[]( SSO::slist opt ) const { return shallow.slistOpts[opt._to_integral()]; }
@@ -379,6 +383,8 @@ public:
 	bool fileExists(const std::string &strFile);
 
 	bool ensureOutputFilesExist(const DagmanOptions &options);
+
+	std::tuple<std::string, bool> ResolveSaveFile(const std::string& primaryDag, const std::string& saveFile, bool mkSaveDir=false);
 
 	std::string RescueDagName(const std::string &primaryDagFile, bool multiDags, int rescueDagNum);
 

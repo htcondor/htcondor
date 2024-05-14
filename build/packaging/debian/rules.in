@@ -175,3 +175,10 @@ override_dh_strip:
 
 override_dh_auto_test:
 
+override_dh_gencontrol:
+	dh_gencontrol -- \\
+		-Vlib:Depends="$(foreach package, libscitokens libssl, \\
+			$(shell dpkg-query -W -f '$${Depends}' $(package)-dev \\
+				| sed -E 's/.*($(package)[[:alnum:].-]+).*/\\1,/' )) \\
+			$(shell dpkg-query -W -f '$${Depends}' voms-dev \\
+				| sed -E 's/.*(libvomsapi[[:alnum:].-]+).*/\\1,/' )"

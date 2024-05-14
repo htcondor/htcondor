@@ -7,7 +7,6 @@
 #include "fcloser.h"
 #include <algorithm>
 #include <exception>
-#include <sstream>
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -121,8 +120,8 @@ GetToken(const std::string & cred_name, std::string & token) {
 	}
 	const char *creddir = getenv("_CONDOR_CREDS");
 	if (!creddir) {
-		std::stringstream ss; ss << "Credential for " << cred_name << " requested by $_CONDOR_CREDS not set";
-		throw std::runtime_error(ss.str());
+		std::string s; s += std::string("Credential for ") + cred_name + " requested by $_CONDOR_CREDS not set";
+		throw std::runtime_error(s);
 	}
 
 	// Cred name (via URL scheme) come in as <provider>[.<handle>]
@@ -135,8 +134,8 @@ GetToken(const std::string & cred_name, std::string & token) {
 	if (-1 == fd) {
 		fprintf( stderr, "Error: Unable to open credential file %s: %s (errno=%d)", cred_path.c_str(),
 			strerror(errno), errno);
-		std::stringstream ss; ss << "Unable to open credential file " << cred_path << ": " << strerror(errno) << " (errno=" << errno << ")";
-		throw std::runtime_error(ss.str());
+		std::string s; s =  std::string("Unable to open credential file ") + cred_path + ": " + strerror(errno) + " (errno=" + std::to_string(errno) + ")";
+		throw std::runtime_error(s);
 	}
 	close(fd);
 	std::ifstream istr(cred_path, std::ios::binary);

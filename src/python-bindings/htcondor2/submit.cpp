@@ -46,19 +46,25 @@ struct SubmitBlob {
         // the value otherwise.
         int queueStatementCount() const;
 
-        // Given a cluster ID, parses the queue statement and initializes
-        // the itemdata variables.  Returns the corresponding SubmitForeachArgs
-        // pointer or NULL on a failure.
-        SubmitForeachArgs * init_vars( int clusterID );
+        SubmitForeachArgs * init_sfa();
+        void set_sfa( SubmitForeachArgs * sfa );
         void set_vars( const std::vector<std::string> & vars, char * item, int itemIndex );
         void cleanup_vars( const std::vector<std::string> & vars );
 
         const std::string & get_queue_args() const;
         bool set_queue_args( const char * queue_args );
 
+        void make_digest( std::string & buffer, int clusterID, const std::vector<std::string> & vars, int options ) {
+            (void) m_hash.make_digest(buffer, clusterID, vars, options);
+        }
+        bool submit_param_long_exists( const char * name, const char * alt_name, long long & value, bool int_range=false ) const {
+            return m_hash.submit_param_long_exists( name, alt_name, value, int_range );
+        }
 
         void setSubmitMethod(int method_value) { m_hash.setSubmitMethod(method_value); }
         int  getSubmitMethod() { return m_hash.getSubmitMethod(); }
+
+        void insert_macro( const char * name, const std::string & value );
 
     private:
         SubmitHash m_hash;
@@ -76,6 +82,14 @@ struct SubmitBlob {
 
 
 MACRO_SOURCE SubmitBlob::EmptyMacroSrc = { false, false, 3, -2, -1, -2 };
+
+
+void
+SubmitBlob::insert_macro( const char * name, const std::string & value ) {
+    MACRO_EVAL_CONTEXT ctx;
+    ctx.init("SUBMIT");
+    ::insert_macro( name, value.c_str(), m_hash.macros(), DetectedMacro, ctx );
+}
 
 
 const char *
@@ -160,7 +174,7 @@ SubmitBlob::queueStatementCount() const {
 
 
 SubmitForeachArgs *
-SubmitBlob::init_vars( int /* clusterID */ ) {
+SubmitBlob::init_sfa() {
     char * expanded_queue_args = m_hash.expand_macro( m_qargs.c_str() );
 
     SubmitForeachArgs * sfa = new SubmitForeachArgs();
@@ -183,16 +197,19 @@ SubmitBlob::init_vars( int /* clusterID */ ) {
         return NULL;
     }
 
+    return sfa;
+}
 
+
+void
+SubmitBlob::set_sfa( SubmitForeachArgs * sfa ) {
     for (const auto& var: sfa->vars) {
         // Note that this implies that updates to variables created by the
         // queue statement MUST be pointer replacements.
         m_hash.set_live_submit_variable( var.c_str(), EmptyItemString, false );
     }
 
-
     m_hash.optimize();
-    return sfa;
 }
 
 
@@ -212,6 +229,16 @@ SubmitBlob::set_vars( const std::vector<std::string> & vars, char * item, int /*
     // This is for the human-readable form in the submit file.
     const char * separators = ", \t";
     const char * whitespace = " \t";
+
+    // This is for when the bindings construct a submit file from itemdata.
+    if( strchr(data, '\x1F') != NULL ) {
+        separators = "\x1F";
+        // The line parser eats leading and trailing whitespace, so if we
+        // include it here, only part of it actually makes it through.
+        // Fixing this would be a pain in the ass, so let's just document
+        // if for now.
+        // whitespace = NULL;
+    }
 
     while( ++var_it != vars.end() ) {
         while (*data && ! strchr(separators, *data)) ++data;

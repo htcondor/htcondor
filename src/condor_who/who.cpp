@@ -22,7 +22,6 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_state.h"
-#include "status_types.h"
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_collector.h"
