@@ -291,7 +291,7 @@ class Schedd():
         projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
-        ad_type : Union[list, str] = None,
+        **kwargs
     ) -> List[classad.ClassAd]:
         """
         Query this schedd's
@@ -314,10 +314,6 @@ class Schedd():
             until the expression becomes true; the job making the expression
             become true will not be returned.  Thus, ``1038`` and
             ``"clusterID == 1038"`` return the same set of jobs.
-        :param ad_type: A comma separated string or list of types of ads to
-            return from the history. :py:obj:`None` will return ``EPOCH``
-            (single job execution instance) ads. Other options include
-            ``INPUT``, ``OUTPUT``, ``CHECKPOINT``, ``TRANSFER``, and ``ALL``.
 
             If :py:obj:`None`, return all (matching) jobs.
         """
@@ -338,6 +334,7 @@ class Schedd():
         else:
             raise TypeError("since must be an int, string, or ExprTree")
 
+        ad_type = kwargs.get("ad_type", None)
         if isinstance(ad_type, list):
             ad_type = ",".join([str(i) for i in ad_type])
         elif ad_type is None:

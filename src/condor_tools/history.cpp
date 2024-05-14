@@ -496,7 +496,7 @@ main(int argc, const char* argv[])
 			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
 		}
 	}
-	else if (is_dash_arg_prefix(argv[i], "type", 1)) {
+	else if (is_dash_arg_prefix(argv[i], "type", 1)) { // Purposefully undocumented (Intended internal use)
 		if (argc <= i+1 || *(argv[i+1]) == '-') {
 			fprintf(stderr, "Error: Argument %s requires another parameter\n", argv[i]);
 			exit(1);

@@ -4466,9 +4466,10 @@ void export_schedd()
                 true; the job making the expression become true will not be
                 returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
                 same set of jobs.
-            :param ad_type: A comma separated string of ad types to return from the
-                epoch history.
             :type since: int, str, or :class:`~classad.ExprTree`
+            :param ad_type: DEPRECATED. Comma separated string of history Ad types
+                to return. If :py:obj:`None` then return normal job ClassAds. Default
+                :py:obj:`None`.
             :return: All matching ads in the Schedd history, with attributes according to the
                 ``projection`` keyword.
             :rtype: :class:`HistoryIterator`
