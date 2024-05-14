@@ -128,6 +128,7 @@ public:
 	bool _generateSubdagSubmits{true}; // Generate the *.condor.sub file for sub-DAGs at run time
 	bool _suppressJobLogs{false}; // Suppress specified job log files (see gittrac #4353)
 	bool _removeNodeJobs{true}; // DAGMan itself will remove managed node jobs when condor_rm'ed
+	bool enforceNewJobsLimit{false}; // Have DAG enforce the a newly set MaxJobs limit by removing node batch jobs
 };
 
 #endif	// ifndef DAGMAN_MAIN_H
