@@ -76,6 +76,10 @@ New Features:
   now also provides READ authorization.
   :jira:`2424`
 
+- Added option to :tool:`condor_adstash` to poll access points' job
+  epoch histories.
+  :jira:`2076`
+
 Bugs Fixed:
 
 - Fixed a bug where transfer of Kerberos credentials from the

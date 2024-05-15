@@ -985,6 +985,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/ad_sources/registry.py
 %_libexecdir/condor/adstash/ad_sources/schedd_history.py
 %_libexecdir/condor/adstash/ad_sources/startd_history.py
+%_libexecdir/condor/adstash/ad_sources/schedd_job_epoch_history.py
 %_libexecdir/condor/adstash/interfaces/__init__.py
 %_libexecdir/condor/adstash/interfaces/elasticsearch.py
 %_libexecdir/condor/adstash/interfaces/opensearch.py
