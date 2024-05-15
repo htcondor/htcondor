@@ -92,6 +92,8 @@ TEST_CASES = {
     "remote_clust.proc" : TestReqs("condor_history 5.3 -name TEST_SCHEDD@", ["5.3"], STD_HEADER),
     "remote_match"      : TestReqs("condor_history 5 -name TEST_SCHEDD@ -limit 2", ["5.4","5.3"], STD_HEADER),
     "remote_since"      : TestReqs("condor_history -name TEST_SCHEDD@ -since 4.0", ["4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
+    "remote_forwards"   : TestReqs("condor_history 2 -name TEST_SCHEDD@", ["2.0","2.1","2.2"], STD_HEADER),
+    "remote_scanlimit"  : TestReqs("condor_history -scanlimit 2 -name TEST_SCHEDD@", ["5.3","5.4"], STD_HEADER),
     # Special case requires reconfig
     # Test remote query works when history=  and schedd.history=file
     "remote_schedd.hist": TestReqs("condor_history 4 -name TEST_SCHEDD@", ["4.0","4.1"], STD_HEADER),
