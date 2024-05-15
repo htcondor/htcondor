@@ -1148,6 +1148,8 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 		return false;
 }
 
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner);
+
 // Read the history from a single file and print it out. 
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
@@ -1213,66 +1215,22 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
             continue;
         }
-        if (!constraint || constraint[0]=='\0' || EvalExprBool(ad, constraintExpr)) {
-            if (longformat) { 
-				if( use_xml ) {
-					fPrintAdAsXML(stdout, *ad, projection.isEmpty() ? NULL : &projection);
-				} else if ( use_json ) {
-					if ( printCount != 0 ) {
-						printf(",\n");
-					}
-					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection, false);
-				} else if ( use_json_lines ) {
-					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection, true);
-				}
-				else {
-					fPrintAd(stdout, *ad, false, projection.isEmpty() ? NULL : &projection);
-				}
-				printf("\n"); 
-            } else {
-                if (customFormat) {
-                    mask.display(stdout, ad);
-                } else {
-                    displayJobShort(ad);
-                }
-            }
 
-            printCount++;
-            matchCount++; // if control reached here, match has occured
+		BannerInfo ad_info;
+		parseBanner(ad_info, banner);
+		bool done = printJobIfConstraint(*ad, constraint, constraintExpr, ad_info);
 
-            if (specifiedMatch > 0) { // User specified a match number
-                if (matchCount == specifiedMatch) { // Found n number of matches, cleanup  
-                    if (ad) {
-                        delete ad;
-                        ad = NULL;
-                    }
-                    
-                    fclose(LogFile);
-                    return;
-                }
-            }
-        }
-
-		if (cluster > 0) { //User specified cluster or cluster.proc.
-			BannerInfo ad_info;
-			parseBanner(ad_info, banner);
-			if (checkMatchJobIdsFound(ad_info, ad)) { //Check if all possible matches have been found
-				if (ad) {
-					delete ad;
-					ad = NULL;
-				}
-				fclose(LogFile);
-				return;
-			}
+		if (ad) {
+			delete ad;
+			ad = nullptr;
 		}
 
-        if(ad) {
-            delete ad;
-            ad = NULL;
-        }
-    }
-    fclose(LogFile);
-    return;
+		if (done || (specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
+			break;
+		}
+	}
+	fclose(LogFile);
+	return;
 }
 
 // return true if p1 starts with p2
@@ -1360,11 +1318,16 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 		}
 		exprs.pop_back();
 	}
+	printJobIfConstraint(ad, constraint, constraintExpr, banner);
+}
+
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner)
+{
 	++adCount;
 
 	if (sinceExpr && EvalExprBool(&ad, sinceExpr)) {
 		maxAds = adCount; // this will force us to stop scanning
-		return;
+		return true;
 	}
 
 	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
@@ -1374,9 +1337,10 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 	if (cluster > 0) { //User specified cluster or cluster.proc.
 		if (checkMatchJobIdsFound(banner, &ad)) { //Check if all possible ads have been displayed
 			maxAds = adCount;
-			return;
+			return true;
 		}
 	}
+	return false;
 }
 
 static void printJobAds(ClassAdList & jobs)
