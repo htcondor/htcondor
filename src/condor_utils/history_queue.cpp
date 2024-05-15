@@ -108,6 +108,14 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		streamresults = false;
 	}
 
+	bool searchForwards;
+	if ( ! queryAd.EvaluateAttrBool("HistoryReadForwards", searchForwards)) { searchForwards = false; }
+
+	std::string scanLimit;
+	if (queryAd.EvaluateAttr("ScanLimit", value) && value.IsIntegerValue()) {
+		unparser.Unparse(scanLimit, value);
+	}
+
 	std::string record_src;
 	queryAd.EvaluateAttrString("HistoryRecordSource", record_src);
 
@@ -124,12 +132,16 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		HistoryHelperState state(stream_shared, requirements_str, since_str, proj_str, match_limit, record_src);
 		state.m_streamresults = streamresults;
 		state.m_searchdir = searchDir;
+		state.m_searchForwards = searchForwards;
+		state.m_scanLimit = scanLimit;
 		m_queue.push_back(state);
 		return KEEP_STREAM;
 	} else {
 		HistoryHelperState state(*stream, requirements_str, since_str, proj_str, match_limit, record_src);
 		state.m_streamresults = streamresults;
 		state.m_searchdir = searchDir;
+		state.m_searchForwards = searchForwards;
+		state.m_scanLimit = scanLimit;
 		return launcher(state);
 	}
 }
@@ -183,8 +195,15 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 			args.AppendArg("-match");
 			args.AppendArg(state.MatchCount());
 		}
+		if (state.m_searchForwards) {
+			args.AppendArg("-forwards");
+		}
 		args.AppendArg("-scanlimit");
-		args.AppendArg(std::to_string(param_integer("HISTORY_HELPER_MAX_HISTORY", 50000)));
+		if (state.m_scanLimit.empty()) {
+			args.AppendArg(std::to_string(param_integer("HISTORY_HELPER_MAX_HISTORY", 50000)));
+		} else {
+			args.AppendArg(state.m_scanLimit);
+		}
 		if ( ! state.Since().empty()) {
 			args.AppendArg("-since");
 			args.AppendArg(state.Since());

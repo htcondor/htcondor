@@ -43,8 +43,10 @@ public:
 	const std::string & Projection() const { return m_proj; }
 	const std::string & MatchCount() const { return m_match; }
 	const std::string & RecordSrc() const { return m_recordSrc; }
+	std::string m_scanLimit{};
 	bool m_streamresults;
 	bool m_searchdir;
+	bool m_searchForwards{false};
 
 private:
 	Stream *m_stream_ptr;

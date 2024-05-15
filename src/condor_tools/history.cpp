@@ -308,9 +308,7 @@ main(int argc, const char* argv[])
 				"Error: Argument -forwards cannot be combined with -since.\n");
 			exit(1);
 		}
-		if ( ! writetosocket) {
-			backwards=FALSE;
-		}
+		backwards=FALSE;
 		hasForwards = true;
 	}
 
@@ -848,6 +846,8 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 		bool want_streamresults = streamresults_specified ? streamresults : true;
 		ad.InsertAttr("StreamResults", want_streamresults);
 	}
+	if ( ! backwards) { ad.InsertAttr("HistoryReadForwards", true); }
+	if (maxAds >= 0) { ad.InsertAttr("ScanLimit", maxAds); }
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
 	if (sinceExpr) ad.Insert("Since", sinceExpr);
 	// we may or may not be able to do the projection, we will decide after knowing the daemon version
