@@ -38,6 +38,10 @@ Bugs Fixed:
   Before, transfers of job sandboxes would fail after such an error.
   :jira:`2398`
 
+- Fixed a bug where the *condor_procd* could crash on Windows EPs
+  using the default Desktop policy.
+  :jira:`2444`
+
 .. _lts-version-history-23010:
 
 Version 23.0.10
