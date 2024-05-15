@@ -23,17 +23,15 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
-#include "exit.h"
 #include "vanilla_proc.h"
+#include "condor_uid.h"
 #include "starter.h"
 #include "condor_config.h"
-#include "domain_tools.h"
 #include "classad_helpers.h"
 #include "filesystem_remap.h"
 #include "directory.h"
 #include "env.h"
 #include "subsystem_info.h"
-#include "selector.h"
 #include "singularity.h"
 #include "has_sysadmin_cap.h"
 #include "starter_util.h"
@@ -217,19 +215,65 @@ static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
 	return can_switch_ids() && cgroup_controller_is_writeable("", relative_cgroup);
 }
 
-static bool cgroup_is_writeable(const std::string &relative_cgroup) {
-	dprintf(D_ALWAYS, "Checking to see if %s is a writeable cgroup\n", relative_cgroup.c_str());
+static std::string current_parent_cgroup() {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	std::string cgroup;
 
-	struct stat statbuf;
+	int fd = open("/proc/self/cgroup", 0666);
+	if (fd < 0) {
+		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
+		return cgroup; // empty cgroup is invalid
+	}
 
+	char buf[1024];
+	int r = read(fd, buf, sizeof(buf)-1);
+	if (r < 0) {
+		dprintf(D_ALWAYS, "Cannot read /proc/self/cgroup: %s\n", strerror(errno));
+		close(fd);
+		return cgroup;
+	}
+	buf[r] = '\0';
+	cgroup = buf;
+	close(fd);
+
+	if (cgroup.starts_with("0::")) {
+		cgroup = cgroup.substr(3,cgroup.size() - 4); // 4 because of newline at end
+	} else {
+		dprintf(D_ALWAYS, "Unknown prefix for /proc/self/cgroup: %s\n", cgroup.c_str());
+		cgroup = "";
+	}
+
+	size_t lastSlash = cgroup.rfind('/');
+	if (lastSlash == std::string::npos) {
+		// This can happen if you are at the root of a cgroup namespace.  Not sure how to handle
+		dprintf(D_ALWAYS, "Cgroup %s has no internal directory to chdir .. to...\n", cgroup.c_str());
+		cgroup = "";
+	} else {
+		cgroup.erase(lastSlash); // Remove trailing slash
+	}
+	return cgroup;
+}
+
+static bool hasCgroupV2() {
+	struct stat statbuf{};
 	// Should be readable by everyone
 	if (stat("/sys/fs/cgroup/cgroup.procs", &statbuf) == 0) {
 		// This means we're on cgroups v2
-		return cgroup_v2_is_writeable(relative_cgroup);
-	} else {
-		// V1.
-		return cgroup_v1_is_writeable(relative_cgroup);
+		return true;
 	}
+	// V1.
+	return false;
+}
+
+static bool cgroup_is_writeable(const std::string &relative_cgroup) {
+	dprintf(D_ALWAYS, "Checking to see if %s is a writeable cgroup\n", relative_cgroup.c_str());
+	// Should be readable by everyone
+	if (hasCgroupV2()) {
+		// This means we're on cgroups v2
+		return cgroup_v2_is_writeable(relative_cgroup);
+	}
+	// V1.
+	return cgroup_v1_is_writeable(relative_cgroup);
 }
 #endif
 
@@ -303,9 +347,28 @@ VanillaProc::StartJob()
 		create_cgroup = false;
 	}
 
+	if (cgroup_base.empty()) {
+		create_cgroup = false;
+	}
+
+	// For v2, let's put the job into the current cgroup hierarchy
+	// Because of the "no process in interior cgroups" rule, this means
+	// we create a new child of our parent. (a sibling, if you will).
+	if (hasCgroupV2()) {
+		std::string current = current_parent_cgroup();
+		cgroup_base = current + '/' + cgroup_base;
+
+		// remove leading / from cgroup_name. cgroupv2 code hates that
+		if (cgroup_base.starts_with('/')) {
+			cgroup_base = cgroup_base.substr(1, cgroup_base.size() - 1);
+		}
+		replace_str(cgroup_base, "//", "/");
+	}
+
 	if (create_cgroup && cgroup_is_writeable(cgroup_base)) {
 		std::string cgroup_uniq;
-		std::string starter_name, execute_str;
+		std::string starter_name;
+		std::string execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
 		Starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
