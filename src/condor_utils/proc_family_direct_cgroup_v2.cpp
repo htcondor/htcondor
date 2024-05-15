@@ -114,7 +114,9 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 	FILE *f = fopen(kill_path.c_str(), "r");
 	if (!f) {
 		// Could be it just doesn't exist
-		dprintf(D_FULLDEBUG, "trimCgroupTree: cannot open %s: %d %s\n", kill_path.c_str(), errno, strerror(errno));
+		if (errno != ENOENT) {
+			dprintf(D_ALWAYS, "trimCgroupTree: cannot open %s: %d %s\n", kill_path.c_str(), errno, strerror(errno));
+		}
 	} else {
 		fprintf(f, "%c", '1');
 		fclose(f);
@@ -353,7 +355,7 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		
 void 
 ProcFamilyDirectCgroupV2::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
-	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
+	auto [it, success] = cgroup_map.emplace(pid, cgroup_name);
 	if (!success) {
 		EXCEPT("Couldn't insert into cgroup map, duplicate?");
 	}
@@ -388,7 +390,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		return true;
 	}
 
-	std::string cgroup_name = cgroup_map[pid];
+	const std::string cgroup_name = cgroup_map[pid];
 
 	// Initialize the ones we don't set to -1 to mean "don't know".
 	usage.block_reads = usage.block_writes = usage.block_read_bytes = usage.block_write_bytes = usage.m_instructions = -1;
