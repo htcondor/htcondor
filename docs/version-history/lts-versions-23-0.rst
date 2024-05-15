@@ -28,7 +28,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- *condor_history* will now pass along the ``-forwards`` and ``-scanlimit``
+  flags when doing a remote history query.
+  :jira:`2448`
 
 Bugs Fixed:
 
