@@ -34,6 +34,13 @@ const char * StopStateToString(StopStateT state);
 StopStateT StringToStopState(const char * psz);
 bool advertise_shutdown_program(ClassAd & ad);
 
+constexpr const char	*default_dc_daemon_array[] = {
+"MASTER", "STARTD", "SCHEDD", "KBDD", "COLLECTOR", "NEGOTIATOR", "EVENTD",
+"VIEW_SERVER", "CONDOR_VIEW", "VIEW_COLLECTOR", "CREDD", "HAD",
+"REPLICATION", "JOB_ROUTER", "ROOSTER", "SHARED_PORT",
+"DEFRAG", "GANGLIAD", "ANNEXD"
+};
+
 // used to keep track of a query command for which we want to deferr the reply
 class DeferredQuery
 {
@@ -187,7 +194,7 @@ public:
 	int 	StartDaemonHere(class daemon *);
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
-	void	RemoveDaemon( char* name );
+	void	RemoveDaemon(const char* name );
 	void	HardKillAllDaemons();
 	void	StopPeacefulAllDaemons();
 	int		SetPeacefulShutdown(int timeout);
@@ -203,7 +210,7 @@ public:
 	void	ExecMaster();
 
 	const char*	DaemonLog(int pid);			// full log file path name
-	int		ChildrenOfType(daemon_t type, StringList * names=nullptr);
+	int		ChildrenOfType(daemon_t type, std::vector<std::string> *names=nullptr);
 
 	int		AllReaper(int, int);
 	int		DefaultReaper(int, int);
@@ -226,7 +233,7 @@ public:
 	StopStateT	stop_other_daemons_when_startds_gone = NONE;
 	ClassAd * cmd_after_drain = nullptr; // when draining startds in order to shutdown/restart/etc this will be non-null
 
-	StringList	ordered_daemon_names;
+	std::vector<std::string>	ordered_daemon_names;
 
 	void	Update( ClassAd* );
 	void	UpdateCollector( int timerID = -1 );
