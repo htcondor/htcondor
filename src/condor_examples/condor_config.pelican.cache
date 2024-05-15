@@ -1,0 +1,45 @@
+######################################################################
+##
+##  condor_config.pelican.cache
+##
+##  This is the default local configuration file for the machine
+##  running the local PELICANCACHE.  You should copy this file to the
+##  appropriate location and customize it for your needs.
+##
+##  This configuration will start up another condor daemon called PELICANCACHE
+##  which acts as a local cache on the machine. The values should be configured
+##  based on what the machine can handle in terms of disk space, this configuration
+##  provides default values that may or may not be right for your machine.
+##
+######################################################################
+
+## NOTE: this configuration requires Pelican to be installed on your machine.
+## Pelican might have been installed by default with HTCondor but this should be
+## verified before using this configuration
+
+
+# This should be the default install location of the Pelican binary, change this path if incorrect
+PELICANCACHE = /usr/bin/pelican 
+
+# Add PELICANCACHE to the daemon list
+DAEMON_LIST = $(DAEMON_LIST) PELICANCACHE
+
+PELICANCACHE_LOG=$(LOG)/PelicanCacheLog
+PELICANCACHE_FEDERATION=osg-htc.org
+
+# '-d' is the flag for debug logging, '-l' is the location of the log, and '-f' is the specified Pelican federation
+PELICANCACHE_ARGS=serve -d --module localcache -l $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
+
+STARTD_ENVIRONMENT="NEAREST_CACHE=unix:/$(LOCAL_DIR)/localcache/cache.sock"
+
+# The size with units (ex: MB, GB, ...) of the cache
+PELICANCACHE_SIZE=256GB
+
+# These percentages mark when the cache performs a cleanup. When the high watermark percentage is hit, the cache will
+# delete files until it hits the low watermark percentage
+PELICANCACHE_HIGHWATERMARKPERCENTAGE=95
+PELICANCACHE_LOWWATERMARKPERCENTAGE=85
+
+# The location of the cache (where it runs/where the data is stored)
+PELICANCACHE_RUNLOCATION=$(LOCAL_DIR)/localcache
+PELICANCACHE_ENVIRONMENT="PELICAN_SERVER_ENABLEUI=false PELICAN_LOCALCACHE_SIZE=$(PELICANCACHE_SIZE) PELICAN_LOCALCACHE_HIGHWATERMARKPERCENTAGE=$(PELICANCACHE_HIGHWATERMARKPERCENTAGE) PELICAN_LOCALCACHE_LOWWATERMARKPERCENTAGE=$(PELICANCACHE_LOWWATERMARKPERCENTAGE) PELICAN_LOCALCACHE_RUNLOCATION=$(PELICANCACHE_RUNLOCATION)"
