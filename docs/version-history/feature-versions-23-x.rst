@@ -17,7 +17,6 @@ Release Notes:
 
 New Features:
 
-
 - Added an ``-edit`` option to the *condor_qusers* tool.  This option allows
   and administrator to add custom attributes to a User classad in the *condor_schedd*.
   :jira:`2381`
@@ -33,6 +32,12 @@ New Features:
   set after a failed execution attempt and can be referenced in the
   cool-down expression.
   :jira:`2134`
+
+- V2 cgroups created for jobs will now be in the cgroup tree the daemons
+  are born in.  This tree is marked as Delegated in the systemd unit file,
+  so that HTCondor is the sole manipulator of these trees, following the
+  systemd "one writer" cgroup rule.
+  :jira:`2445`
 
 - New config parameter :macro:`CGROUP_LOW_MEMORY_LIMIT` allows an administrator
   of a Linux cgroup v2 system to set the "memory.low" setting in a job's cgroup
