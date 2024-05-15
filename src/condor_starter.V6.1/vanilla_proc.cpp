@@ -226,7 +226,7 @@ static std::string current_parent_cgroup() {
 	}
 
 	char buf[1024];
-	int r = read(fd, buf, 1024);
+	int r = read(fd, buf, sizeof(buf)-1);
 	if (r < 0) {
 		dprintf(D_ALWAYS, "Cannot read /proc/self/cgroup: %s\n", strerror(errno));
 		close(fd);
@@ -249,7 +249,7 @@ static std::string current_parent_cgroup() {
 		dprintf(D_ALWAYS, "Cgroup %s has no internal directory to chdir .. to...\n", cgroup.c_str());
 		cgroup = "";
 	} else {
-		cgroup = cgroup.substr(0,lastSlash); // Remove trailing slash
+		cgroup.erase(lastSlash); // Remove trailing slash
 	}
 	return cgroup;
 }
