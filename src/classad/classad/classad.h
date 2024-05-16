@@ -111,7 +111,7 @@ class ClassAd : public ExprTree
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax
-		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
+		bool InsertViaCache(const std::string& attrName, const std::string & rhs, bool lazy=false);
 
 		/** Insert an attribute/value into the ClassAd
 		 *  @param str A string of the form "Attribute = Value"
@@ -555,44 +555,6 @@ class ClassAd : public ExprTree
 		bool EvaluateAttrBoolEquiv( const std::string &attr, bool& boolValue ) const;
 		bool LookupBool(const std::string &name, bool &value) const
 		{ return EvaluateAttrBoolEquiv(name, value); }
-
-		/** Evaluates an attribute to a ClassAd.  A pointer to the ClassAd is 
-				returned. You do not own the ClassAd--do not free it.
-			@param attr The name of the attribute.
-			@param classad The value of the attribute.
-			@return true if attrName evaluated to a ClassAd, false 
-				otherwise.
-		*/
-		// This interface is disabled, because it cannot support dynamically allocated
-		// classad values (in case such a thing is ever added, similar to SLIST_VALUE).
-		// Instead, use EvaluateAttr().
-		// Waiting to hear if anybody cares ...
-		// If anybody does, we can make this set a shared_ptr instead, but that
-		// has performance implications that depend on whether all ClassAds
-		// are managed via shared_ptr or only ones dynamically created
-		// during evaluation (because a fresh copy has to be made for
-		// objects not already managed via shared_ptr).  So let's avoid depending
-		// on this interface until we need it.
-        //bool EvaluateAttrClassAd( const std::string &attr, ClassAd *&classad ) const;
-
-		/** Evaluates an attribute to an ExprList.  A pointer to the ExprList is 
-				returned. You do not own the ExprList--do not free it.
-			@param attr The name of the attribute.
-			@param l The value of the attribute.
-			@return true if attrName evaluated to a ExprList, false 
-				otherwise.
-		*/
-		// This interface is disabled, because it cannot support dynamically allocated
-		// list values (SLIST_VALUE).  Instead, use EvaluateAttr().
-		// Waiting to hear if anybody cares ...
-		// If anybody does, we can make this set a shared_ptr instead, but that
-		// has performance implications that depend on whether all ExprLists
-		// in ClassAds are managed via shared_ptr or only ones dynamically created
-		// during evaluation  (because a fresh copy has to be made for
-		// objects not already managed via shared_ptr).  So let's avoid depending
-		// on this interface until we need it.
-        //bool EvaluateAttrList( const std::string &attr, ExprList *&l ) const;
-		//@}
 
 		/**@name STL-like Iterators */
 		//@{

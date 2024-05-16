@@ -68,13 +68,14 @@ public:
 	// Tell DaemonCore to call register_subfamily
 	// from the parent. Otherwise the state passed in is lost
 	// to the parent by being set in the forked child.
-	bool register_from_child() { return false; }
+	bool register_from_child() { return true; }
 
 	// This is the way.  The only way.
 
 	// As we don't get the requested cgroup name in register, this method
 	// actually makes the cgroup, if need be.
 	bool track_family_via_cgroup(pid_t pid, FamilyInfo *fi);
+	void assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name);
 
 	bool get_usage(pid_t, ProcFamilyUsage&, bool);
 
@@ -86,6 +87,11 @@ public:
 	bool continue_family(pid_t);
 
 	bool kill_family(pid_t);
+
+	// Tell cgroups that when we later unregister this family,
+	// not to completely kill it off, as that will also take out
+	// the sshd below it.
+	bool extend_family_lifetime(pid_t);
 	
 	// Note this isn't called in the starter, as DaemonCore calls
 	// it after calling the Reaper, and the starter exits in the

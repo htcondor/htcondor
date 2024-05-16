@@ -929,7 +929,7 @@ def fail_job(the_condor, fail_job_handle):
     # This is mildly incestuous; it should be moved into an Ornithology
     # API and/or all but the last line of this function replace by
     # `fail_job_handle.wait_for_event(
-    #       of_type=EventType.SHADOW_EXCEPTION,
+    #       of_type=EventType.REMOTE_ERROR,
     #       timeout=60,
     # )`.
     last_event_read = fail_job_handle.state._last_event_read
@@ -942,7 +942,7 @@ def fail_job(the_condor, fail_job_handle):
         for event in events:
             last_event_read += 1
 
-            if event.type is JobEventType.SHADOW_EXCEPTION:
+            if event.type is JobEventType.REMOTE_ERROR:
                 found_event = True
                 break
 
@@ -1253,17 +1253,17 @@ class TestCheckpointDestination:
 
         shadow_exception = None
         for event in fail_job.event_log.events:
-            if event.type is JobEventType.SHADOW_EXCEPTION:
-                shadow_exception = event
+            if event.type is JobEventType.REMOTE_ERROR:
+                remote_error = event
                 break
 
-        assert shadow_exception is not None
+        assert remote_error is not None
 
         # This should be part of the test case, instead.
         if "missing_file" in fail_job_name:
-            assert "Failed to open checkpoint file" in shadow_exception["message"]
-            assert "to compute checksum" in shadow_exception["message"]
+            assert "Failed to open checkpoint file" in remote_error["ErrorMsg"]
+            assert "to compute checksum" in remote_error["ErrorMsg"]
         elif "corrupt_manifest" in fail_job_name:
-            assert "Invalid MANIFEST file, aborting" in shadow_exception["message"]
+            assert "Invalid MANIFEST file, aborting" in remote_error["ErrorMsg"]
         elif "corrupt_file" in fail_job_name:
-            assert "did not have expected checksum" in shadow_exception["message"]
+            assert "did not have expected checksum" in remote_error["ErrorMsg"]

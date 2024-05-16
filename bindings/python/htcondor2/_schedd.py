@@ -277,6 +277,8 @@ class Schedd():
 
         return _history_query(self._addr,
             str(constraint), projection_string, int(match), since,
+            # Ad Type Filter
+            "",
             # HRS_JOB_HISTORY
             0,
             # QUERY_SCHEDD_HISTORY
@@ -289,6 +291,7 @@ class Schedd():
         projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
+        **kwargs
     ) -> List[classad.ClassAd]:
         """
         Query this schedd's
@@ -331,11 +334,19 @@ class Schedd():
         else:
             raise TypeError("since must be an int, string, or ExprTree")
 
+        ad_type = kwargs.get("ad_type", None)
+        if isinstance(ad_type, list):
+            ad_type = ",".join(ad_type)
+        elif ad_type is None:
+            ad_type = ""
+        elif not isinstance(ad_type, str):
+            raise TypeError("ad_type must be a list of strings or a string")
+
         if constraint is None:
             constraint = ""
 
         return _history_query(self._addr,
-            str(constraint), projection_string, int(match), since,
+            str(constraint), projection_string, int(match), since, ad_type,
             # HRS_JOB_EPOCH
             2,
             # QUERY_SCHEDD_HISTORY
@@ -392,8 +403,8 @@ class Schedd():
             pairs will become submit variable name-value pairs; only the first
             dictionary's keys will be used.  In either case, leading and
             trailing whitespace will be trimmed for each individual item.
-            Lines (and items) may not contain newlines (``\n``) or the ASCII
-            unit separator character (``\x1F``).  Keys, if specified, must be
+            Lines (and items) may not contain newlines (``\\n``) or the ASCII
+            unit separator character (``\\x1F``).  Keys, if specified, must be
             valid submit-language variable names.
         '''
 

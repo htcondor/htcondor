@@ -951,11 +951,8 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const std::string &pool) {
 
 	std::string flock_targets;
 	if (job_ad.EvaluateAttrString(ATTR_FLOCK_TO, flock_targets)) {
-		StringList flock_list(flock_targets.c_str());
-		flock_list.rewind();
-		char *flock_entry = nullptr;
-		while ( (flock_entry = flock_list.next()) ) {
-			if (!strcasecmp(pool.c_str(), flock_entry)) {
+		for (auto& flock_entry: StringTokenIterator(flock_targets)) {
+			if (!strcasecmp(pool.c_str(), flock_entry.c_str())) {
 				return true;
 			}
 		}
@@ -2367,7 +2364,13 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 	return TRUE;
 }
 
-int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd, TransactionWatcher & txn, CondorError & /*errstack*/)
+int Scheduler::act_on_user(
+	int cmd,
+	const std::string & username,
+	const ClassAd& cmdAd,
+	TransactionWatcher & txn,
+	CondorError & /*errstack*/,
+	struct UpdateUserAttributesInfo & updatesInfo)
 {
 	int rval = 0;
 
@@ -2382,7 +2385,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 			if (cmdAd.LookupBool(ATTR_USERREC_OPT_UPDATE, do_update) && do_update) {
 				bool has_enable = cmdAd.LookupBool(ATTR_ENABLED, enable);
 				txn.BeginOrContinue(userrec_id);
-				UpdateUserAttributes(urec->jid, cmdAd, enable);
+				UpdateUserAttributes(urec->jid, cmdAd, enable, updatesInfo);
 				// if the update is setting enabled to false, make sure that DisableReason is also set to a string
 				if (has_enable && ! enable) {
 					SetUserAttributeInt(*urec, ATTR_ENABLED, 0); // update will have filtered this
@@ -2433,7 +2436,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 	case EDIT_USERREC:
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
-			UpdateUserAttributes(urec->jid, cmdAd, urec->IsEnabled());
+			UpdateUserAttributes(urec->jid, cmdAd, urec->IsEnabled(), updatesInfo);
 		} else { // user does not exist, cannot be edited
 			rval = 2;
 		}
@@ -2471,6 +2474,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 	const char * cmd_name = getCommandStringSafe(cmd);
 	ClassAd cmdAd;
 	int num_users = 0;
+	struct UpdateUserAttributesInfo updatesInfo;
 
 	dprintf( D_FULLDEBUG, "In command_act_on_user_ads\n" );
 
@@ -2522,19 +2526,19 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 		if (act.Lookup(ATTR_REQUIREMENTS)) {
 			for (auto it : OwnersInfo) {
 				if (IsAConstraintMatch(&act, it.second)) {
-					rval = act_on_user(cmd, it.first, act, txn, errstack);
+					rval = act_on_user(cmd, it.first, act, txn, errstack, updatesInfo);
 					if (rval) break;
 					++num_ads;
 				}
 			}
 			if (rval) break;
 		} else if (act.LookupString(ATTR_USER, username) && ! username.empty()) {
-			rval = act_on_user(cmd, username, act, txn, errstack);
+			rval = act_on_user(cmd, username, act, txn, errstack, updatesInfo);
 			if (rval) break;
 			++num_ads;
 		} else if (act.Lookup(ATTR_USERREC_OPT_ME)) {
 			username = rsock->getFullyQualifiedUser();
-			rval = act_on_user(cmd, username, act, txn, errstack);
+			rval = act_on_user(cmd, username, act, txn, errstack, updatesInfo);
 			if (rval) break;
 			++num_ads;
 		} else {
@@ -2557,14 +2561,28 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	resultAd.Assign(ATTR_NUM_ADS, num_ads);
 	resultAd.Assign(ATTR_RESULT, rval);
+	if (cmd == EDIT_USERREC) { resultAd.Assign("NumAttributesSet", updatesInfo.valid); }
+
 	std::string errmsg;
 	if ( ! errstack.empty()) { 
 		errmsg = errstack.getFullText(true);
 		resultAd.Assign(ATTR_ERROR_STRING, errmsg);
 		errmsg = errstack.getFullText(false); // for dprintf
+	} else if (updatesInfo.invalid > 0 || updatesInfo.special > 0) {
+		formatstr(errmsg, "%s updates were ignored because ", updatesInfo.valid ? "Some" : "All");
+		if (updatesInfo.special > 0) {
+			formatstr_cat(errmsg, "%d were reserved attributes", updatesInfo.special);
+			if (updatesInfo.invalid > 0) errmsg += " and ";
+		}
+		if (updatesInfo.invalid > 0) {
+			formatstr_cat(errmsg, "%d had invalid values", updatesInfo.invalid);
+		}
+		resultAd.Assign(ATTR_WARNING, errmsg);
 	}
 
-	dprintf( D_FULLDEBUG, "Processed %d ads for command %s : sending result %d %s\n", num_ads, cmd_name, rval, errmsg.c_str() ); 
+
+	dprintf( D_FULLDEBUG, "Processed %d ads for command %s : sending result %d %s\n",
+		num_ads, cmd_name, rval, errmsg.c_str()); 
 
 	// Finally, close up shop.  We have to send the result ad to signal the end.
 	if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
@@ -3663,11 +3681,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		std::string flock_targets;
 		bool include_default_flock = param_boolean("FLOCK_BY_DEFAULT", true);
 		if (job->EvaluateAttrString(ATTR_FLOCK_TO, flock_targets)) {
-			StringList flock_list(flock_targets.c_str());
-			flock_list.rewind();
-			char *flock_entry = nullptr;
-			while ( (flock_entry = flock_list.next()) ) {
-				if (!strcasecmp(flock_entry, "default")) {
+			for (auto& flock_entry: StringTokenIterator(flock_targets)) {
+				if (!strcasecmp(flock_entry.c_str(), "default")) {
 					include_default_flock = true;
 				} else {
 					auto iter = SubData->flock.insert({flock_entry, SubmitterFlockCounters()});
@@ -3676,8 +3691,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 				}
 			}
 				// Subtract out overlap with default list of flocked pools.
-			flock_list.rewind();
-			while ( (flock_entry = flock_list.next()) ) {
+			for (auto& flock_entry: StringTokenIterator(flock_targets)) {
 				auto iter = scheduler.FlockPools.find(flock_entry);
 				if (iter != scheduler.FlockPools.end()) {
 					SubData->flock[flock_entry].JobsIdle -= job_idle;
@@ -5072,8 +5086,10 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	}
 	JobAbortedEvent event;
 
+	std::string reasonstr;
 	GetAttributeString(job_id.cluster, job_id.proc,
-	                   ATTR_REMOVE_REASON, event.reason);
+	                   ATTR_REMOVE_REASON, reasonstr);
+	event.setReason(reasonstr);
 
 	// Jobs usually have a shadow, and this event is usually written after
 	// that shadow dies, but that's by no means certain.  If we happen to
@@ -5110,12 +5126,14 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	}
 	JobHeldEvent event;
 
+	std::string reasonstr;
 	if( GetAttributeString(job_id.cluster, job_id.proc,
-	                       ATTR_HOLD_REASON, event.reason) < 0 ) {
+	                       ATTR_HOLD_REASON, reasonstr) < 0 ) {
 		dprintf( D_ALWAYS, "Scheduler::WriteHoldToUserLog(): "
 				 "Failed to get %s from job %d.%d\n", ATTR_HOLD_REASON,
 				 job_id.cluster, job_id.proc );
 	}
+	event.setReason(reasonstr);
 
 	GetAttributeInt(job_id.cluster, job_id.proc,
 	                ATTR_HOLD_REASON_CODE, &event.code);
@@ -5148,8 +5166,10 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 	}
 	JobReleasedEvent event;
 
+	std::string reasonstr;
 	GetAttributeString(job_id.cluster, job_id.proc,
-	                   ATTR_RELEASE_REASON, event.reason);
+	                   ATTR_RELEASE_REASON, reasonstr);
+	event.setReason(reasonstr);
 
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
@@ -5303,8 +5323,8 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 		event.normal = false;
 		event.signal_number = WTERMSIG(status);
 	}
-	if(reason) {
-		event.reason = reason;
+	if (reason && reason[0]) {
+		event.setReason(reason);
 	}
 	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
@@ -8812,7 +8832,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
 			"schedd now running again";
-		event.disconnect_reason = txt;
+		event.setDisconnectReason(txt);
 		event.startd_addr = startd_addr;
 		event.startd_name = startd_name;
 
@@ -10970,6 +10990,11 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
 		}
 	}
+
+	// Delete vacate reason from any previous execution attempt
+	DeleteAttribute(cluster, proc, ATTR_VACATE_REASON);
+	DeleteAttribute(cluster, proc, ATTR_VACATE_REASON_CODE);
+	DeleteAttribute(cluster, proc, ATTR_VACATE_REASON_SUBCODE);
 }
 
 static void
@@ -11104,15 +11129,17 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad, bool 
 		return;
 	}
 
-	StringList machine_attrs(user_machine_attrs.c_str());
+	std::vector<std::string> machine_attrs = split(user_machine_attrs);
 
-	machine_attrs.create_union( m_job_machine_attrs, true );
+	for (auto& attr: m_job_machine_attrs) {
+		if (!contains_anycase(machine_attrs, attr)) {
+			machine_attrs.emplace_back(attr);
+		}
+	}
 
-	machine_attrs.rewind();
-	char const *attr;
-	while( (attr=machine_attrs.next()) != NULL ) {
+	for (auto& attr: machine_attrs) {
 		std::string result_attr;
-		formatstr(result_attr,"%s%s",ATTR_MACHINE_ATTR_PREFIX,attr);
+		formatstr(result_attr, "%s%s", ATTR_MACHINE_ATTR_PREFIX, attr.c_str());
 
 		if (do_rotation) {
 			RotateAttributeList(cluster,proc,result_attr.c_str(),0,history_len);
@@ -12412,6 +12439,35 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			srec->reconnect_done = true;
 		}
 	}
+	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
+		long long ival = 0;
+		classad::Value val;
+		JobQueueJob * job_ad = GetJobAd( job_id.cluster, job_id.proc );
+		if (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0) {
+			int cnt = 0;
+			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
+			cnt++;
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, cnt);
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + ival);
+			stats.JobsCoolDown += 1;
+			OTHER.JobsCoolDown += 1;
+		}
+		else {
+			int code = 0;
+			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
+			if (code > 0 && code < CONDOR_HOLD_CODE::VacateBase) {
+				std::string reason;
+				int subcode = 0;
+				GetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, reason);
+				SetAttributeString(job_id.cluster, job_id.proc, ATTR_HOLD_REASON, reason.c_str());
+				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_CODE, code);
+				if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &subcode) >= 0) {
+					SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, subcode);
+				}
+				exit_code = JOB_SHOULD_HOLD;
+			}
+		}
+	}
 	switch( exit_code ) {
 		case JOB_NO_MEM:
 			this->swap_space_exhausted();
@@ -13337,6 +13393,15 @@ Scheduler::Init()
 	}
 	free( tmp );
 
+	// Job Cool Down expression
+	delete m_jobCoolDownExpr;
+	m_jobCoolDownExpr = nullptr;
+	tmp = param("SYSTEM_ON_VACATE_COOL_DOWN");
+	if (tmp) {
+		ParseClassAdRvalExpr(tmp, m_jobCoolDownExpr);
+		free(tmp);
+	}
+
 	MaxRunningSchedulerJobsPerOwner = param_integer("MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER", 200);
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	MaxJobsPerOwner = param_integer( "MAX_JOBS_PER_OWNER", INT_MAX );
@@ -13733,8 +13798,7 @@ Scheduler::Init()
 
 	std::string job_machine_attrs_str;
 	param(job_machine_attrs_str,"SYSTEM_JOB_MACHINE_ATTRS");
-	m_job_machine_attrs.clearAll();
-	m_job_machine_attrs.initializeFromString( job_machine_attrs_str.c_str() );
+	m_job_machine_attrs = split(job_machine_attrs_str);
 
 	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
 
@@ -13791,14 +13855,11 @@ Scheduler::Init()
 	m_submitRequirements.clear();
 	std::string submitRequirementNames;
 	if( param( submitRequirementNames, "SUBMIT_REQUIREMENT_NAMES" ) ) {
-		StringList srNameList( submitRequirementNames.c_str() );
 
-		srNameList.rewind();
-		const char * srName = NULL;
-		while( (srName = srNameList.next()) != NULL ) {
-			if( strcmp( srName, "NAMES" ) == 0 ) { continue; }
+		for (auto& srName: StringTokenIterator(submitRequirementNames)) {
+			if( strcmp( srName.c_str(), "NAMES" ) == 0 ) { continue; }
 			std::string srAttributeName;
-			formatstr( srAttributeName, "SUBMIT_REQUIREMENT_%s", srName );
+			formatstr( srAttributeName, "SUBMIT_REQUIREMENT_%s", srName.c_str() );
 
 			std::string srAttribute;
 			if( param( srAttribute, srAttributeName.c_str() ) ) {
@@ -13807,34 +13868,31 @@ Scheduler::Init()
 
 				classad::ExprTree * submitRequirement = parser.ParseExpression( srAttribute );
 				if( submitRequirement != NULL ) {
-					const char * permanentName = strdup( srName );
-					assert( permanentName != NULL );
 
 					// Handle the corresponding rejection reason.
 					std::string srrAttribute;
 					std::string srrAttributeName;
 					classad::ExprTree * submitReason = NULL;
-					formatstr( srrAttributeName, "SUBMIT_REQUIREMENT_%s_REASON", srName );
+					formatstr( srrAttributeName, "SUBMIT_REQUIREMENT_%s_REASON", srName.c_str() );
 					if( param( srrAttribute, srrAttributeName.c_str() ) ) {
 						submitReason = parser.ParseExpression( srrAttribute );
 						if( submitReason == NULL ) {
-							dprintf( D_ALWAYS, "Unable to parse submit requirement reason %s, ignoring.\n", srName );
+							dprintf( D_ALWAYS, "Unable to parse submit requirement reason %s, ignoring.\n", srName.c_str() );
 						}
 					}
 
 					std::string isWarningName;
-					formatstr( isWarningName, "SUBMIT_REQUIREMENT_%s_IS_WARNING", srName );
+					formatstr( isWarningName, "SUBMIT_REQUIREMENT_%s_IS_WARNING", srName.c_str() );
 					bool isWarning = param_boolean( isWarningName.c_str(), false );
 
-					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement, submitReason, isWarning );
-					m_submitRequirements.push_back( sre );
+					m_submitRequirements.emplace_back(srName, submitRequirement, submitReason, isWarning);
 				} else {
-					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName );
+					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName.c_str() );
 				}
 
 				// We could add SUBMIT_REQUIREMENT_<NAME>_REJECT_REASON, as well.
 			} else {
-				dprintf( D_ALWAYS, "Submit requirement %s not defined, ignoring.\n", srName );
+				dprintf( D_ALWAYS, "Submit requirement %s not defined, ignoring.\n", srName.c_str() );
 			}
 		}
 	}
@@ -13986,17 +14044,16 @@ Scheduler::Register()
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
 
 	//disable these until we decide permissions
-	#if 0
 	daemonCore->Register_CommandWithPayload(EDIT_USERREC, "EDIT_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(RESET_USERREC, "RESET_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(DELETE_USERREC, "DELETE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
-	#endif
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+
 #endif
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
@@ -14973,10 +15030,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 	std::set<std::string> config_bounding_set;
 	std::string config_bounding_set_str;
 	if (param(config_bounding_set_str, "SEC_IMPERSONATION_TOKEN_LIMITS")) {
-		StringList config_bounding_set_list(config_bounding_set_str.c_str());
-		config_bounding_set_list.rewind();
-		const char *authz;
-		while ( (authz = config_bounding_set_list.next()) ) {
+		for (auto& authz: StringTokenIterator(config_bounding_set_str)) {
 			config_bounding_set.insert(authz);
 		}
 	}
@@ -14984,10 +15038,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 	std::vector<std::string> bounding_set;
 	std::string bounding_set_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, bounding_set_str)) {
-		StringList authz_str_list(bounding_set_str.c_str());
-		authz_str_list.rewind();
-		const char *authz;
-		while ( (authz = authz_str_list.next()) ) {
+		for (auto& authz: StringTokenIterator(bounding_set_str)) {
 			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
 				bounding_set.emplace_back(authz);
 			}
@@ -15439,25 +15490,19 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		int subproc = -1;
 		if( GetPrivateAttributeString(jobid.cluster,jobid.proc,ATTR_CLAIM_IDS,claim_ids)==0 &&
 			jobad->LookupString(ATTR_ALL_REMOTE_HOSTS,remote_hosts_string) ) {
-			StringList claim_idlist(claim_ids.c_str(),",");
-			StringList remote_hosts(remote_hosts_string.c_str(),",");
+			std::vector<std::string> claim_idlist = split(claim_ids, ",");
+			std::vector<std::string> remote_hosts = split(remote_hosts_string, ",");
 			input.LookupInteger(ATTR_SUB_PROC_ID,subproc);
-			if( claim_idlist.number() == 1 && subproc == -1 ) {
+			if( claim_idlist.size() == 1 && subproc == -1 ) {
 				subproc = 0;
 			}
-			if( subproc == -1 || subproc >= claim_idlist.number() ) {
-				formatstr(error_msg, "This is a parallel job.  Please specify job %d.%d.X where X is an integer from 0 to %d.",jobid.cluster,jobid.proc,claim_idlist.number()-1);
+			if( subproc == -1 || subproc >= (int)claim_idlist.size() || subproc >= (int)remote_hosts.size() ) {
+				formatstr(error_msg, "This is a parallel job.  Please specify job %d.%d.X where X is an integer from 0 to %d.",jobid.cluster,jobid.proc,(int)claim_idlist.size()-1);
 				goto error_wrapup;
 			}
 			else {
-				claim_idlist.rewind();
-				remote_hosts.rewind();
-				for(int sp=0;sp<subproc;sp++) {
-					claim_idlist.next();
-					remote_hosts.next();
-				}
-				mrec = dedicated_scheduler.FindMrecByClaimID(claim_idlist.next());
-				startd_name = remote_hosts.next();
+				mrec = dedicated_scheduler.FindMrecByClaimID(claim_idlist[subproc].c_str());
+				startd_name = remote_hosts[subproc];
 				if( mrec && mrec->peer ) {
 					job_is_suitable = true;
 				}
@@ -17460,13 +17505,13 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 	SubmitRequirements::iterator it = m_submitRequirements.begin();
 	for( ; it != m_submitRequirements.end(); ++it ) {
 		classad::Value result;
-		rval = EvalExprToBool( it->requirement, m_adSchedd, procAd, result, "SCHEDD", "JOB" );
+		rval = EvalExprToBool( it->requirement.get(), m_adSchedd, procAd, result, "SCHEDD", "JOB" );
 
 		if( rval ) {
 			bool bVal;
 			if( ! result.IsBooleanValueEquiv( bVal ) ) {
 				if ( errorStack ) {
-					errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name );
+					errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name.c_str() );
 				}
 				return -3;
 			}
@@ -17474,18 +17519,18 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 			if( ! bVal ) {
 				classad::Value reason;
 				std::string reasonString;
-				formatstr( reasonString, "Submit requirement %s not met.\n", it->name );
+				formatstr( reasonString, "Submit requirement %s not met.\n", it->name.c_str() );
 
 				if( it->reason != NULL ) {
-					int sval = EvalExprToString( it->reason, m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
+					int sval = EvalExprToString( it->reason.get(), m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
 					if( ! sval ) {
-						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name );
+						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name.c_str() );
 					} else {
 						std::string userReasonString;
 						if( reason.IsStringValue( userReasonString ) ) {
 							reasonString = userReasonString;
 						} else {
-							dprintf( D_ALWAYS, "Submit requirement reason %s did not evaluate to a string.\n", it->name );
+							dprintf( D_ALWAYS, "Submit requirement reason %s did not evaluate to a string.\n", it->name.c_str() );
 						}
 					}
 				}
@@ -17502,7 +17547,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 			}
 		} else {
 			if ( errorStack ) {
-				errorStack->pushf( "QMGMT", 3, "Submit requirement %s failed to evaluate.\n", it->name );
+				errorStack->pushf( "QMGMT", 3, "Submit requirement %s failed to evaluate.\n", it->name.c_str() );
 			}
 			return -2;
 		}
@@ -17654,21 +17699,18 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 
 	std::string vidString;
 	if( request.LookupString( "VictimJobIDs", vidString ) ) {
-		StringList vidList( vidString.c_str() );
-		if( vidList.number() <= 0 ) {
-			handleReassignSlotError( sock, "invalid vacate-job ID list" );
-			return FALSE;
-		}
-
-		vidList.rewind();
-		char * vs = vidList.next();
-		for( ; vs != NULL; vs = vidList.next() ) {
+		for (auto& vs: StringTokenIterator(vidString)) {
 			PROC_ID vID;
-			if(! vID.set( vs )) {
+			if(! vID.set( vs.c_str() )) {
 				handleReassignSlotError( sock, "invalid vacate-job ID in list" );
 				return FALSE;
 			}
 			vids.push_back( vID );
+		}
+
+		if( vids.empty() ) {
+			handleReassignSlotError( sock, "invalid vacate-job ID list" );
+			return FALSE;
 		}
 
 		dprintf( D_COMMAND, "REASSIGN SLOT: to %d.%d from %s\n", bid.cluster, bid.proc, vidString.c_str() );

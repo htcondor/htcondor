@@ -26,48 +26,50 @@
 #include <map>
 #include <algorithm>
 
+struct _adtype_and_daemon_type { AdTypes at; daemon_t dt; };
+
  // Map of MyType of an ad to what daemon produces it
  // Primary user is python bindings code to initialize the Daemon class
  // But it might be generally useful.
  // This returns return a std::array at compile time that other
  // consteval functions can use as a lookup table
 constexpr 
-std::array<std::pair<const char *, daemon_t>,23>
+std::array<std::pair<const char *, _adtype_and_daemon_type>,23>
 makeAdTypeToDaemonTable() {
 	return {{ // yes, there needs to be 2 open braces here...
-		{ ANY_ADTYPE,			DT_ANY },
-		{ STARTD_SLOT_ADTYPE,	DT_STARTD },
-		{ STARTD_DAEMON_ADTYPE, DT_STARTD },
-		{ STARTD_OLD_ADTYPE,	DT_STARTD },
-		{ SCHEDD_ADTYPE,		DT_SCHEDD },
-		{ SUBMITTER_ADTYPE,		DT_SCHEDD },
-		{ MASTER_ADTYPE,		DT_MASTER },
-		{ COLLECTOR_ADTYPE,		DT_COLLECTOR },
-		{ NEGOTIATOR_ADTYPE,	DT_NEGOTIATOR },
-		{ ACCOUNTING_ADTYPE,	DT_NEGOTIATOR },
-		{ HAD_ADTYPE,			DT_HAD },
-		{ REPLICATION_ADTYPE,	DT_GENERIC },	// Replocation ads go into the generic table in the collector
-		{ CLUSTER_ADTYPE,		DT_CLUSTER },
-		{ GENERIC_ADTYPE,		DT_GENERIC },
-		{ CREDD_ADTYPE,			DT_CREDD },
-		{ XFER_SERVICE_ADTYPE,	DT_TRANSFERD },
-		{ LEASE_MANAGER_ADTYPE,	DT_LEASE_MANAGER },
-		{ GRID_ADTYPE,			DT_GRIDMANAGER },
-		{ DEFRAG_ADTYPE,		DT_GENERIC },   // Defrag ads go into the generic table in the collector
-		{ JOB_ROUTER_ADTYPE,	DT_GENERIC },	// Job_Router ads go into the generic table in the collector
-		{ JOB_ADTYPE,			DT_SCHEDD },
-		{ JOB_SET_ADTYPE,		DT_SCHEDD },
-		{ OWNER_ADTYPE,			DT_SCHEDD },
+		{ ANY_ADTYPE,			{          ANY_AD, DT_ANY } },
+		{ STARTD_SLOT_ADTYPE,	{         SLOT_AD, DT_STARTD } },
+		{ STARTD_DAEMON_ADTYPE, {  STARTDAEMON_AD, DT_STARTD } },
+		{ STARTD_OLD_ADTYPE,	{       STARTD_AD, DT_STARTD } },
+		{ SCHEDD_ADTYPE,		{       SCHEDD_AD, DT_SCHEDD } },
+		{ SUBMITTER_ADTYPE,		{    SUBMITTOR_AD, DT_SCHEDD } },
+		{ MASTER_ADTYPE,		{       MASTER_AD, DT_MASTER } },
+		{ COLLECTOR_ADTYPE,		{    COLLECTOR_AD, DT_COLLECTOR } },
+		{ NEGOTIATOR_ADTYPE,	{   NEGOTIATOR_AD, DT_NEGOTIATOR } },
+		{ ACCOUNTING_ADTYPE,	{   ACCOUNTING_AD, DT_NEGOTIATOR } },
+		{ HAD_ADTYPE,			{          HAD_AD, DT_HAD } },
+		{ REPLICATION_ADTYPE,	{      GENERIC_AD, DT_GENERIC } },	// Replocation ads go into the generic table in the collector
+		{ CLUSTER_ADTYPE,		{      CLUSTER_AD, DT_CLUSTER } },
+		{ GENERIC_ADTYPE,		{      GENERIC_AD, DT_GENERIC } },
+		{ CREDD_ADTYPE,			{        CREDD_AD, DT_CREDD } },
+		{ XFER_SERVICE_ADTYPE,	{ XFER_SERVICE_AD, DT_TRANSFERD } },
+		{ LEASE_MANAGER_ADTYPE,	{LEASE_MANAGER_AD, DT_LEASE_MANAGER } },
+		{ GRID_ADTYPE,			{         GRID_AD, DT_GRIDMANAGER } },
+		{ DEFRAG_ADTYPE,		{       DEFRAG_AD, DT_GENERIC } },   // Defrag ads go into the generic table in the collector
+		{ JOB_ROUTER_ADTYPE,	{      GENERIC_AD, DT_GENERIC } },	// Job_Router ads go into the generic table in the collector
+		{ JOB_ADTYPE,			{           NO_AD, DT_SCHEDD } },	// should we have an AdTypes entry for jobs ?
+		{ JOB_SET_ADTYPE,		{           NO_AD, DT_SCHEDD } },	// should we have an AdTypes entry for jobs ?
+		{ OWNER_ADTYPE,			{           NO_AD, DT_SCHEDD } },	// should we have an AdTypes entry for jobs ?
 
 		}};
 }
 
 template<size_t N> constexpr
-auto sortByFirst(const std::array<std::pair<const char *, daemon_t>, N> &table) {
+auto sortByFirst(const std::array<std::pair<const char *, _adtype_and_daemon_type>, N> &table) {
 	auto sorted = table;
 	std::sort(sorted.begin(), sorted.end(),
-		[](const std::pair<const char *, daemon_t> &lhs,
-			const std::pair<const char *, daemon_t> &rhs) {
+		[](const std::pair<const char *, _adtype_and_daemon_type> &lhs,
+			const std::pair<const char *, _adtype_and_daemon_type> &rhs) {
 				return istring_view(lhs.first) < istring_view(rhs.first);
 		});
 	return sorted;
@@ -78,11 +80,23 @@ AdTypeStringToDaemonType(const char* adtype_string)
 {
 	constexpr static const auto table = sortByFirst(makeAdTypeToDaemonTable());
 	auto it = std::lower_bound(table.begin(), table.end(), adtype_string,
-		[](const std::pair<const char *, daemon_t> &p, const char * name) {
+		[](const std::pair<const char *, _adtype_and_daemon_type> &p, const char * name) {
 			return istring_view(p.first) < istring_view(name);
 		});;
-	if ((it != table.end()) && (istring_view(it->first) == istring_view(adtype_string))) return it->second;
+	if ((it != table.end()) && (istring_view(it->first) == istring_view(adtype_string))) return it->second.dt;
 	return DT_NONE;
+}
+
+AdTypes
+AdTypeStringToAdType(const char* adtype_string)
+{
+	constexpr static const auto table = sortByFirst(makeAdTypeToDaemonTable());
+	auto it = std::lower_bound(table.begin(), table.end(), adtype_string,
+		[](const std::pair<const char *, _adtype_and_daemon_type> &p, const char * name) {
+			return istring_view(p.first) < istring_view(name);
+		});;
+	if ((it != table.end()) && (istring_view(it->first) == istring_view(adtype_string))) return it->second.at;
+	return NO_AD;
 }
 
 static const char* daemon_names[] = {

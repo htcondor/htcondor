@@ -322,7 +322,7 @@ char * is_valid_config_assignment(const char *config)
 		tmp = strchr(name, ':');
 		if (tmp) {
 			// turn the right hand side into a string list
-			StringList opts(tmp+1);
+			std::vector<std::string> opts = split(tmp+1);
 
 			// null terminate and trim trailing whitespace from the category name
 			*tmp = 0; 
@@ -331,15 +331,13 @@ char * is_valid_config_assignment(const char *config)
 
 			// the proper way to parse the right hand side of a metaknob is by using a stringlist
 			// but for remote setting, we really only want to allow a single options on the right hand side.
-			opts.rewind();
-			char * opt;
-			while ((opt = opts.next())) {
+			for (const auto& opt: opts) {
 				// lookup name,val as a metaknob, a return of -1 means not found
-				if ( ! is_valid && param_meta_value(name+1, opt, nullptr)) {
+				if ( ! is_valid && param_meta_value(name+1, opt.c_str(), nullptr)) {
 					is_valid = true;
 					// append the value to the metaknob name.
 					*tmp++ = '.';
-					strcpy(tmp, opt);
+					strcpy(tmp, opt.c_str());
 					tmp += strlen(tmp);
 					continue;
 				}

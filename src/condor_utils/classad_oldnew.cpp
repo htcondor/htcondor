@@ -597,7 +597,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 
 	classad::ClassAdUnParser	unp;
 	std::string					buf;
-	buf.reserve(8192);
+	buf.reserve(65536);
 	bool send_server_time = false;
 
 	unp.SetOldClassAd( true, true );
@@ -789,6 +789,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 	}
 
 	std::string buf;
+	buf.reserve(65536);
 	bool crypto_is_noop =  sock->prepare_crypto_for_secret_is_noop();
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
 

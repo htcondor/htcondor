@@ -52,6 +52,6 @@ enum HistoryRecordSource {
 };
 
 boost::shared_ptr<HistoryIterator>
-history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int hrs, int cmd, const std::string & addr);
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, const std::string& type, int hrs, int cmd, const std::string & addr);
 
 #endif

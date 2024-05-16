@@ -147,18 +147,18 @@ Queue 1 foo,bar from """,
 
         "job": """
             args=30
-            My.Pos = "{$(Row),$(Step),$(item)}"
+            My.Pos = "{$(Row),$(Step),$(Item)}"
             hold = 1
-            request_memory = $(item)
+            request_memory = $(Item)
             max_materialize = 3
 
             queue in ( 1, 2, 3 )
         """,
 
         "digest": """FACTORY.Requirements=MY.Requirements
-My.Pos=\"{{$(Row),$(Step),$(item)}}\"
+My.Pos=\"{{$(Row),$(Step),$(Item)}}\"
 hold=1
-request_memory=$(item)
+request_memory=$(Item)
 max_materialize=3
 FACTORY.Iwd={IWD}
 

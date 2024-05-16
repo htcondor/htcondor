@@ -237,10 +237,6 @@ all attributes.
     For Container universe jobs, a filename that becomes the working directory of
     the job.  Mapped to the scratch directory.
 
-:classad-attribute-def:`TransferContainer`
-    For Container universe jobs, a boolean that describes whether a container
-    image should be transfered by HTCondor.
-
 :index:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute-def:`CumulativeSlotTime`
@@ -976,6 +972,11 @@ all attributes.
     If a job is given a batch name with the -batch-name option to `condor_submit`, this 
     string valued attribute will contain the batch name.
 
+:classad-attribute-def:`JobCoolDownExpiration`
+    Time at which the job's most recent cool-down state expires.
+    Measured in the number of seconds since the epoch (00:00:00
+    UTC, Jan 1, 1970)
+
 :classad-attribute-def:`JobCurrentFinishTransferInputDate`
     Time at which the job most recently finished transferring its input
     sandbox. Measured in the number of seconds since the epoch (00:00:00
@@ -1341,6 +1342,10 @@ all attributes.
     completed state; this attribute is therefore normally only of use
     when, for example, ``on_exit_remove`` or ``on_exit_hold`` is set.
 
+:classad-attribute-def:`NumJobCoolDowns`
+    An integer that is incremented by the *condor_schedd* each time the
+    job enters a cool-down state.
+
 :classad-attribute-def:`NumJobMatches`
     An integer that is incremented by the *condor_schedd* each time the
     job is matched with a resource ad by the negotiator.
@@ -1423,6 +1428,11 @@ all attributes.
      ``"WAIT_FOR_ALL"``
         HTCondor will wait until every node in the parallel job has
         completed to consider the job finished.
+
+:classad-attribute-def:`PeriodicVacate`
+    A classad expression set from :subcom:`periodic_vacate`.  When true
+    a running job is evicted from the machine, and set back to the idle
+    state to be schedulable later.
 
 :index:`Starter pre and post scripts`
 
@@ -2082,6 +2092,55 @@ all attributes.
 :classad-attribute-def:`UserLog`
     The full path and file name on the access point of the log file of
     job events.
+
+:classad-attribute-def:`VacateReason`
+    A string containing a human-readable message about why a job's
+    most recent execution attempt failed
+
+:classad-attribute-def:`VacateReasonCode`
+    An integer value that represents the reason why a job's most
+    recent exeuction attempt failed.
+    The below table defines values used by
+    attributes :ad-attr:`VacateReasonCode` and
+    :ad-attr:`VacateReasonSubCode`.
+    Values defined for :ad-attr:`HoldReasonCode` are also valid here
+
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | Integer VacateReasonCode       | | Reason for Vacate                 | | VacateReasonSubCode    |
+    | | [Label]                        |                                     |                          |
+    +==================================+=====================================+==========================+
+    | | 1000                           | :ad-attr:`PeriodicVacate` evaluated |                          |
+    | | [JobPolicyVacate]              | to ``True``.                        |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1001                           | :macro:`SYSTEM_PERIODIC_VACATE`     |                          |
+    | | [SystemPolicyVacate]           | evaluated to ``True``.              |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1002                           | A Shadow Exception event occurred.  |                          |
+    | | [ShadowException]              |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1003                           | A setup step failed.                |                          |
+    | | [JobNotStarted]                |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1004                           | The user requested the job be       |                          |
+    | | [UserVacateJob]                | vacated.                            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1005                           | An unspecified error occurred.      |                          |
+    | | [JobShouldRequeue]             |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1006                           | The shadow failed to activate the   |                          |
+    | | [FailedToActivateClaim]        | claim                               |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1007                           | The starter encountered an error.   |                          |
+    | | [StarterError]                 |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1008                           | The shadow failed to reconnect      |                          |
+    | | [ReconnectFailed]              | after a network failure.            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+
+:classad-attribute-def:`VacateReasonSubCode`
+    An integer value that represents further information to go along
+    with the :ad-attr:`VacateReasonCode`, for some values of :ad-attr:`VacateReasonCode`.
+    See :ad-attr:`VacateReasonCode` for a table of possible values.
 
 :classad-attribute-def:`WantContainer`
     A boolean that when true, tells HTCondor to run this job in container

@@ -909,7 +909,7 @@ dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const 
 	// for each item registered in the print mask
 	for (auto *fmt: formats) {
 		if (attrit == attributes.end()) break;
-		const char * pszHead = *headit++;
+		const char * pszHead = nullptr; if (headit != pheadings->end()) pszHead = *headit++;
 		char 	*attr = *attrit++;
 		const char * fnName = "";
 		item.clear();

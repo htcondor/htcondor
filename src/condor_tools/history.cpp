@@ -42,6 +42,7 @@
 #include "condor_daemon_core.h" // for extractInheritedSocks
 #include "console-utils.h"
 #include <algorithm> //for std::reverse
+#include <utility> // for std::move
 
 #include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
@@ -175,6 +176,7 @@ static bool want_startd_history = false;
 static bool delete_epoch_ads = false;
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
+static std::set<std::string> filterAdTypes; // Allow filter of Ad types specified in history banner (different from MyType)
 static HistoryRecordSource recordSrc = HRS_AUTO;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
@@ -216,11 +218,8 @@ static void condenseJobFilterList(bool sort = false) {
 		}
 	}
 
-	//Shift data structure to set all filter items set to done towards the end
-	auto rm_start = std::remove_if(jobIdFilterInfo.begin(), jobIdFilterInfo.end(),
-								   [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
-	//Erase/Remove all elements from first marked for removal to the end of data structure
-	jobIdFilterInfo.erase(rm_start, jobIdFilterInfo.end());
+	// Erase JobId filters that are completed (All possible Cluster.Procs found)
+	std::erase_if(jobIdFilterInfo, [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
 }
 
 //Use passed info to determine if we can set a record source: do so then return or error out
@@ -497,6 +496,31 @@ main(int argc, const char* argv[])
 			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
 		}
 	}
+	else if (is_dash_arg_prefix(argv[i], "type", 1)) { // Purposefully undocumented (Intended internal use)
+		if (argc <= i+1 || *(argv[i+1]) == '-') {
+			fprintf(stderr, "Error: Argument %s requires another parameter\n", argv[i]);
+			exit(1);
+		}
+		++i; // Claim the next argument for this option even if we don't use it
+		// Process passed Filter Ad Types if 'ALL' has not been specified
+		if ( ! filterAdTypes.contains("ALL")) {
+			StringTokenIterator adTypes(argv[i]);
+			for (auto type : adTypes) {
+				upper_case(type);
+				if (type == "ALL") {
+					// 'ALL' will not filter out any ad types so add to set and break
+					filterAdTypes.insert(type);
+					break;
+				} else if (type == "TRANSFER") {
+					// Special handling to specify Plugin Transfer return ads
+					std::set<std::string> xferTypes{"INPUT", "OUTPUT", "CHECKPOINT"};
+					filterAdTypes.merge(xferTypes);
+				} else { // Insert specified type
+					filterAdTypes.insert(type);
+				}
+			}
+		}
+	}
 	else if (is_dash_arg_prefix(argv[i],"directory",3)) {
 		readFromDir = true;
 	}
@@ -683,6 +707,24 @@ main(int argc, const char* argv[])
   }
 
   if(readfromfile == true) {
+      // Set Default expected Ad type to be filtered for display per history source
+      if (filterAdTypes.empty()) {
+          switch(recordSrc) {
+              case HRS_SCHEDD_JOB_HIST:
+              case HRS_STARTD_HIST:
+                  filterAdTypes.insert("JOB");
+                  break;
+              case HRS_JOB_EPOCH:
+                  filterAdTypes.insert("EPOCH");
+                  break;
+              case HRS_AUTO:
+              default:
+                  fprintf(stderr,
+                          "Error: Invalid history record source (%d) selected for default ad types.\n",
+                          (int)recordSrc);
+                  exit(1);
+          }
+      }
       // Read from single file, matching files, or a directory (if valid option)
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
@@ -899,6 +941,17 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 		if (!err_msg.empty()) {
 			fprintf(stderr,"Error: %s\n",err_msg.c_str());
 			exit(1);
+		}
+		// Add Ad type filter if remote version supports it
+		if ( ! filterAdTypes.empty()) {
+			if ( ! v.built_since_version(23, 8, 0)) {
+				const char* daemonType = (dt == DT_SCHEDD) ? "Schedd" : "StartD";
+				fprintf(stderr, "Remote %s does not support -type filering for history queries.\n", daemonType);
+				exit(1);
+			}
+			auto join = [](std::string list, std::string type) -> std::string { return std::move(list) + ',' + type; };
+			std::string adFilter = std::accumulate(std::next(filterAdTypes.begin()), filterAdTypes.end(), *(filterAdTypes.begin()), join);
+			ad.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, adFilter);
 		}
 	}
 
@@ -1393,6 +1446,13 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	BannerInfo newInfo;
 
 	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
+
+	upper_case(newInfo.ad_type);
+	if ( ! filterAdTypes.contains("ALL") && !filterAdTypes.contains(newInfo.ad_type)) {
+		//fprintf(stdout, "Banner Ad Type: %s\n", newInfo.ad_type.c_str());
+		return false;
+	}
+
 	//fprintf(stdout, "parseBanner(%s)\n", p);
 	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
 	if (!p) { info = newInfo; return true; }
@@ -1439,12 +1499,6 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	//For testing output of banner
 	//fprintf(stdout,"Ad type: %s\n",info.ad_type.c_str());
 	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %ld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
-
-	// For now, ignore the ad types.
-	if( info.ad_type != "JOB" && info.ad_type != "EPOCH" ) {
-		// fprintf( stderr, "%s\n", info.ad_type.c_str() );
-		return false;
-	}
 
 	if(jobIdFilterInfo.empty() && ownersList.empty()) { return true; } //If no searches were specified then return true to print job ad
 	else if (info.jid.cluster <= 0 && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true

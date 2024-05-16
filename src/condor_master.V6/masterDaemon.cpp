@@ -64,7 +64,6 @@ extern StopStateT new_bin_restart_mode;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
-extern char		default_dc_daemon_list[];
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
@@ -182,10 +181,6 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	needs_update = FALSE;
 	num_controllees = 0;
 
-#if 0
-	port = NULL;
-	config_info_file = NULL;
-#endif
 	type = stringToDaemonType( name );
 	daemons.RegisterDaemon(this);
 }
@@ -847,17 +842,11 @@ int daemon::RealStart( )
 
 	args.AppendArg(shortname);
 
-#if 1
-	// as if 8.9.7 daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
+	// Daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
 	// If we *dont* pass -f, then we can valigrind or strace a daemon just by adding two statements to the config file
 	// for example:
 	//  JOB_ROUTER = /usr/bin/valgrind
 	//  JOB_ROUTER_ARGS = --leak-check=full --log-file=$(LOG)/job_router-vg.%p --error-limit=no $(LIBEXEC)/condor_job_router -f $(JOB_ROUTER_ARGS)
-#else
-	if(isDC) {
-		args.AppendArg("-f");
-	}
-#endif
 
 	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
 	char *daemon_args = param( buf );
@@ -865,10 +854,10 @@ int daemon::RealStart( )
 	// Automatically set -localname if appropriate.
 	bool setLocalName = false;
 	if( isDC ) {
-		StringList viewServerDaemonNames("VIEW_COLLECTOR CONDOR_VIEW VIEW_SERVER");
-		StringList hardcodedDCDaemonNames( default_dc_daemon_list );
-		if (viewServerDaemonNames.contains_anycase( name_in_config_file ) ||
-			! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
+		static constexpr const char *viewServerDaemonNames[] {"VIEW_COLLECTOR", "CONDOR_VIEW", "VIEW_SERVER"};
+		auto samey = [&](const char *s) {return strcasecmp(s, name_in_config_file) == 0;};
+		if (std::any_of(viewServerDaemonNames, std::size(viewServerDaemonNames) + viewServerDaemonNames, samey) ||
+			std::none_of(default_dc_daemon_array, std::size(default_dc_daemon_array) + default_dc_daemon_array, samey)) {
 			// Since the config's args are appended after this, they should
 			// win, but we might as well do it right.
 			bool foundLocalName = false;
@@ -2529,14 +2518,12 @@ Daemons::RetryStartAllDaemons( int /* timerID */ )
 void
 Daemons::StartAllDaemons()
 {
-	char *name;
 	class daemon *daemon;
 
-	ordered_daemon_names.rewind();
-	while( (name = ordered_daemon_names.next()) ) {
-		daemon = FindDaemon( name );
+	for (const auto &name: ordered_daemon_names) {
+		daemon = FindDaemon(name.c_str());
 		if( daemon == NULL ) {
-			EXCEPT("Unable to start daemon %s", name);
+			EXCEPT("Unable to start daemon %s", name.c_str());
 		}
 		if( daemon->pid > 0 ) {
 			if( daemon->WaitBeforeStartingOtherDaemons(false) ) {
@@ -2627,7 +2614,7 @@ Daemons::StopAllDaemons()
 // We want to move it from the daemons collection
 // to the removed_daemons collection until it can be reaped
 void
-Daemons::RemoveDaemon( char* name )
+Daemons::RemoveDaemon(const char* name )
 {
 	std::map<std::string, class daemon*>::iterator iter;
 
@@ -3052,31 +3039,16 @@ const char* Daemons::DaemonLog( int pid )
 }
 
 
-#if 0
-void
-Daemons::SignalAll( int signal )
-{
-	// Sends the given signal to all daemons except the master
-	// itself.  (Master has runs_here set to false).
-	for ( int i=0; i < no_daemons; i++) {
-		if( daemon_ptr[i]->runs_here && (daemon_ptr[i]->pid > 0) ) {
-			daemon_ptr[i]->Kill(signal);
-		}
-	}
-}
-#endif
-
-
 // This function returns the number of active child processes with the given daemon type
 // currently being supervised by the master.
-int Daemons::ChildrenOfType(daemon_t type, StringList * names /*=nullptr*/)
+int Daemons::ChildrenOfType(daemon_t type, std::vector<std::string> *names /*=nullptr*/)
 {
 	int result = 0;
 	for (auto iter = daemon_ptr.begin(); iter != daemon_ptr.end(); ++iter) {
 		if( iter->second->runs_here && iter->second->pid
 			&& !iter->second->OnlyStopWhenMasterStops()
 			&& (type == DT_ANY || type == iter->second->type)) {
-			if (names) { names->append(iter->second->name_in_config_file); }
+			if (names) { names->emplace_back(iter->second->name_in_config_file); }
 			result++;
 		}
 	}

@@ -125,37 +125,6 @@ time_t DaemonCore::m_startup_time = time(NULL);
 // DO NOT include any system header files after this!
 #include "condor_debug.h"
 
-#if 0
-	// Lord help us -- here we define some CRT internal data structure info.
-	// If you compile Condor NT with anything other than VC++ 6.0, you
-	// need to check the C runtime library (CRT) source to make certain the below
-	// still makes sense (in particular, the ioinfo struct).  In the CRT,
-	// look at INTERNAL.H and MSDOS.H.  Good Luck.
-	typedef struct {
-			long osfhnd;    /* underlying OS file HANDLE */
-			char osfile;    /* attributes of file (e.g., open in text mode?) */
-			char pipech;    /* one char buffer for handles opened on pipes */
-			#ifdef _MT
-			int lockinitflag;
-			CRITICAL_SECTION lock;
-			#endif  /* _MT */
-		}   ioinfo;
-	#define IOINFO_L2E          5
-	#define IOINFO_ARRAY_ELTS   (1 << IOINFO_L2E)
-	#define IOINFO_ARRAYS       64
-	#define _pioinfo(i) ( __pioinfo[(i) >> IOINFO_L2E] + ((i) & (IOINFO_ARRAY_ELTS - \
-								  1)) )
-	#define _osfile(i)  ( _pioinfo(i)->osfile )
-	#define _pipech(i)  ( _pioinfo(i)->pipech )
-	extern _CRTIMP ioinfo * __pioinfo[];
-	extern int _nhandle;
-	#define FOPEN           0x01    /* file handle open */
-	#define FPIPE           0x08    /* file handle refers to a pipe */
-	#define FDEV            0x40    /* file handle refers to device */
-	extern void __cdecl _lock_fhandle(int);
-	extern void __cdecl _unlock_fhandle(int);
-#endif
-
 // We should only need to include the libTDP header once
 // the library is made portable. For now, the TDP process
 // control stuff is in here
@@ -347,7 +316,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	inServiceCommandSocket_flag = FALSE;
 	m_need_reconfig = false;
 	m_delay_reconfig = false;
-		// Initialize our array of StringLists used to authorize
+		// Initialize our array of lists used to authorize
 		// condor_config_val -set and friends.
 	int i;
 	for( i=0; i<LAST_PERM; i++ ) {
@@ -2938,7 +2907,7 @@ DaemonCore::reconfig(void) {
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
 
-		// Initialize the StringLists that contain the attributes we
+		// Initialize the lists that contain the attributes we
 		// will allow people to set with condor_config_val from
 		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
 	InitSettableAttrsLists();
@@ -8272,6 +8241,13 @@ int DaemonCore::Create_Process(
 		                NULL,
 		               family_info);
 	}
+	// A bit of a hack.  If there's a cgroup, we've set that upon
+	// in the child process, to avoid any races.  But here in the parent
+	// we need to record that happened, so we can use the cgroup For
+	// monitoring, cleanup, etc.
+	if (family_info && m_proc_family && family_info->cgroup) {
+		m_proc_family->assign_cgroup_for_pid(newpid, family_info->cgroup);
+	}
 #endif
 
 	runtime = _condor_debug_get_time_double();
@@ -8663,6 +8639,15 @@ DaemonCore::Kill_Family(pid_t pid)
 	return m_proc_family->kill_family(pid);
 }
 
+
+int
+DaemonCore::Extend_Family_Lifetime(pid_t pid)
+{
+	if (m_proc_family != nullptr) {
+		return m_proc_family->extend_family_lifetime(pid);
+	}
+	return true;
+}
 int
 DaemonCore::Signal_Process(pid_t pid, int sig)
 {
@@ -8699,7 +8684,7 @@ DaemonCore::Proc_Family_QuitProcd(void(*notify)(void*me, int pid, int status), v
 
 
 // extracts the parent address and inherited socket information from the given inherit string
-// then tokenizes the remaining items from the inherit string into the supplied StringList.
+// then tokenizes the remaining items from the inherit string into the supplied vector.
 // return value: number of entries in the socks[] array that were populated.
 // note: the size of the socks array should be 1 more than the maximum
 //
@@ -10389,23 +10374,19 @@ bool
 DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )
 {
 	// we've got to check each textline of the string passed in by
-	// config.  here we use the StringList class to split lines.
-
-	StringList all_attrs (config, "\n");
+	// config.
 
 	// start out by assuming everything is okay.  we'll check all
 	// the attrs and set this flag if something is not authorized.
 	bool  all_attrs_okay = true;
 
-	char *single_attr;
-	all_attrs.rewind();
-
-	// short-circuit out of the while once any attribute is not
+	// short-circuit out of the loop once any attribute is not
 	// okay.  otherwise, get one value at a time
-	while (all_attrs_okay && (single_attr = all_attrs.next())) {
+	for (const auto& single_attr: StringTokenIterator(config, "\n")) {
 		// check this individual attr
-		if (!CheckConfigAttrSecurity(single_attr, sock)) {
+		if (!CheckConfigAttrSecurity(single_attr.c_str(), sock)) {
 			all_attrs_okay = false;
+			break;
 		}
 	}
 
@@ -10455,8 +10436,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 		if( sock->isAuthorizationInBoundingSet(perm_name) && Verify(command_desc.c_str(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
-			if( (SettableAttrsLists[i])->
-				contains_anycase_withwildcard(name) ) {
+			if( contains_anycase_withwildcard(*SettableAttrsLists[i], name) ) {
 					// everything's cool.  allow this.
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
@@ -10517,19 +10497,18 @@ DaemonCore::InitSettableAttrsLists( void )
 		}
 			// there's no subsystem-specific one, just try the generic
 			// version.  if this doesn't work either, we just leave
-			// this StringList NULL and will ignore cmds from it.
+			// this list NULL and will ignore cmds from it.
 		InitSettableAttrsList( NULL, i );
 	}
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
 		// Just for debugging, print out everything
-	char* tmp;
+	std::string tmp;
 	for( i=0; i<LAST_PERM; i++ ) {
 		if( SettableAttrsLists[i] ) {
-			tmp = (SettableAttrsLists[i])->print_to_string();
+			tmp = join(*SettableAttrsLists[i], ",");
 			dprintf( D_ALWAYS, "SettableAttrList[%s]: %s\n",
-					 PermString((DCpermission)i), tmp?tmp:"" );
-			free( tmp );
+					 PermString((DCpermission)i), tmp.c_str() );
 		}
 	}
 #endif
@@ -10552,8 +10531,8 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 	param_name += PermString((DCpermission)i);
 	tmp = param( param_name.c_str() );
 	if( tmp ) {
-		SettableAttrsLists[i] = new StringList;
-		(SettableAttrsLists[i])->initializeFromString( tmp );
+		SettableAttrsLists[i] = new std::vector<std::string>;
+		*SettableAttrsLists[i] = split(tmp);
 		free( tmp );
 		return true;
 	}
@@ -10832,6 +10811,20 @@ DaemonCore::initCollectorList() {
 		delete m_collector_list;
 	}
 	m_collector_list = CollectorList::create(NULL, adSeq);
+
+	// This param has legal values of TRUE, FALSE, and AUTO
+	// but we only need to check for TRUE here because TRUE means we
+	// should disable the version check for sending updates.
+	// it is the caller's responsibility to honor the FALSE state
+	if (m_collector_list && param_true("ENABLE_STARTD_DAEMON_AD")) {
+		// disable version check, so that we will not drop the initial update when
+		// the version is unknown. This is necessary because for collectors, the version
+		// is not known util we are already committed to sending the update.
+		// And because of offline collectors, etc, it is very difficult to make sure
+		// that the initial update is always safe for older collectors. Setting
+		// this knob to true is how an admin tells us not to worry about older collectors.
+		m_collector_list->checkVersionBeforeSendingUpdates(false);
+	}
 }
 
 

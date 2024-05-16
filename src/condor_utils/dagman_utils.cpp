@@ -31,6 +31,7 @@
 #include "tmp_dir.h"
 #include "tokener.h"
 #include "which.h"
+#include "directory.h"
 
 namespace shallow = DagmanShallowOptions;
 namespace deep = DagmanDeepOptions;
@@ -625,6 +626,43 @@ DagmanUtils::MakePathAbsolute(std::string &filePath, std::string &errMsg)
 	return result;
 }
 
+std::tuple<std::string, bool> DagmanUtils::ResolveSaveFile(const std::string& primaryDag, const std::string& saveFile, bool mkSaveDir) {
+	std::string resolved(saveFile);
+	std::string saveDir = condor_dirname(saveFile.c_str());
+	bool no_path = saveFile.compare(condor_basename(saveFile.c_str())) == MATCH;
+
+	//If path is current directory '.' but save file is not specified as ./filename
+	//then make path to save_files sub directory
+	if (saveDir.compare(".") == MATCH && no_path) {
+		//Use full path from condor_getcwd so writing save files written to save_files
+		//directory are unaffected by useDagDir
+		std::string cwd;
+		condor_getcwd(cwd);
+		std::string subDir = condor_dirname(primaryDag.c_str());
+
+		if (subDir.compare(".") != MATCH) {
+			std::string tmp;
+			dircat(cwd.c_str(), subDir.c_str(), tmp);
+			cwd = tmp;
+		}
+		dircat(cwd.c_str(), "save_files", saveDir);
+
+		if (mkSaveDir) { // When writing node save point file create the save_files subDir
+			Directory dir(saveDir.c_str());
+			if ( ! dir.IsDirectory()) {
+				if (mkdir(saveDir.c_str(),0755) < 0 && errno != EEXIST) {
+					dprintf(D_ALWAYS, "Error: Failed to create save file dir (%s): Errno %d (%s)\n",
+					        saveDir.c_str(), errno, strerror(errno));
+					return {"", false};
+				}
+			}
+		}
+
+		dircat(saveDir.c_str(), saveFile.c_str(), resolved);
+	}
+	return {resolved, true};
+}
+
 /** Finds the number of the last existing rescue DAG file for the
 	given "primary" DAG.
 	@param primaryDagFile The primary DAG file name
@@ -1058,10 +1096,15 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 		args.AppendArg("-do_recurse");
 	}
 
-	if(self[b::SuppressNotification]) {
+	if (self[b::SuppressNotification]) {
 		args.AppendArg("-suppress_notification");
 	} else if(self[b::SuppressNotification].set()) {
 		args.AppendArg("-dont_suppress_notification");
+	}
+
+	if (self[i::SubmitMethod] >= 0) {
+		args.AppendArg("-SubmitMethod");
+		args.AppendArg(std::to_string(self[i::SubmitMethod]));
 	}
 
 	if (inWriteSubmit) {
@@ -1296,7 +1339,7 @@ std::string DagmanOptions::processOptionArg(const std::string& opt, std::string 
 	return arg;
 }
 
-bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err) {
+bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err, DagmanOptions* duplicate) {
 	SetDagOpt ret = SetDagOpt::KEY_DNE;
 	// Get information about flag
 	std::string fullFlag = DagmanGetFullFlag(flag);
@@ -1319,6 +1362,7 @@ bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_
 		} else { boolFlagCheck.emplace(std::make_pair(opt, fullFlag)); }
 		// Parse with option infos metavar
 		ret = set(opt.c_str(), meta);
+		if (duplicate) { (void)duplicate->set(opt.c_str(), meta); }
 
 	// Handle all other options
 	} else {
@@ -1337,6 +1381,7 @@ bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_
 			ret = SetDagOpt::SUCCESS;
 		} else {
 			ret = set(opt.c_str(), optionArg);
+			if (duplicate) { (void)duplicate->set(opt.c_str(), optionArg); }
 		}
 	}
 

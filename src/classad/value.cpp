@@ -21,12 +21,10 @@
 #include "classad/operators.h"
 #include "classad/sink.h"
 #include "classad/value.h"
-#include <iostream>
 
 using std::string;
 using std::vector;
 using std::pair;
-using std::ostream;
 
 
 namespace classad {
@@ -471,54 +469,6 @@ SameAs(const Value &otherValue) const
 bool operator==(const Value &value1, const Value &value2)
 {
     return value1.SameAs(value2);
-}
-
-ostream& operator<<(ostream &stream, Value &value)
-{
-	ClassAdUnParser unparser;
-	string          unparsed_text;
-
-	switch (value.valueType) {
-	case Value::NULL_VALUE:
-		stream << "(null)";
-		break;
-	case Value::ERROR_VALUE:
-		stream << "error";
-		break;
-	case Value::UNDEFINED_VALUE:
-		stream << "undefined";
-		break;
-	case Value::BOOLEAN_VALUE:
-		if (value.booleanValue) {
-			stream << "true";
-		} else {
-			stream << "false";
-		}
-		break;
-	case Value::INTEGER_VALUE:
-		stream << value.integerValue;
-		break;
-	case Value::REAL_VALUE:
-		stream << value.realValue;
-		break;
-	case Value::LIST_VALUE:
-	case Value::SLIST_VALUE:
-	case Value::CLASSAD_VALUE:
-	case Value::SCLASSAD_VALUE:
-	case Value::RELATIVE_TIME_VALUE:
-	case Value::ABSOLUTE_TIME_VALUE: {
-		unparser.Unparse(unparsed_text, value);
-		stream << unparsed_text;
-		break;
-	}
-	case Value::STRING_VALUE:
-		stream << *value.strValue;
-		break;
-	default:
-		break;
-	}
-
-	return stream;
 }
 
 bool convertValueToRealValue(const Value value, Value &realValue)

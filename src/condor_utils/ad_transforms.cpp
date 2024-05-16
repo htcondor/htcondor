@@ -39,23 +39,20 @@ AdTransforms::config(const char * param_prefix)
 	if( !param( adtransNames, (std::string(param_prefix) + "_TRANSFORM_NAMES").c_str() ) ) {
 		return;
 	}
-	StringList nameList(adtransNames.c_str());
-	nameList.rewind();
-	const char *name = nullptr;
-	while( (name = nameList.next()) ) {
+	for (const auto& name: StringTokenIterator(adtransNames)) {
 
-		if (!strcasecmp(name, "NAMES") ) { continue; }  // prevent recursion!
+		if (!strcasecmp(name.c_str(), "NAMES") ) { continue; }  // prevent recursion!
 
 		std::string attributeName = std::string(param_prefix) + "_TRANSFORM_" + name;
 
 		// fetch unexpanded param, we will only expand it now for the old (classad) style transforms.
 		const char * raw_transform_text = param_unexpanded(attributeName.c_str());
 		if (!raw_transform_text) {
-			dprintf(D_ALWAYS, (std::string(param_prefix) + "_TRANSFORM_%s not defined, ignoring.\n").c_str(), name);
+			dprintf(D_ALWAYS, (std::string(param_prefix) + "_TRANSFORM_%s not defined, ignoring.\n").c_str(), name.c_str());
 			continue;
 		}
 
-		std::unique_ptr<MacroStreamXFormSource> xfm(new MacroStreamXFormSource(name));
+		std::unique_ptr<MacroStreamXFormSource> xfm(new MacroStreamXFormSource(name.c_str()));
 
 		// Always assume that the native xform is used, not the
 		// new-ClassAd style used by the JobRouter and JOB_TRANSFORM_*
@@ -63,7 +60,7 @@ AdTransforms::config(const char * param_prefix)
 		int offset = 0;
 		if ( (rval=xfm->open(raw_transform_text, offset, errmsg)) < 0 ) {
 			dprintf(D_ALWAYS, (std::string(param_prefix) + "_TRANSFORM_%s macro stream malformed, ignoring. (err=%d) %s\n").c_str(),
-				name, rval, errmsg.c_str());
+				name.c_str(), rval, errmsg.c_str());
 			continue;
 		}
 
@@ -72,7 +69,7 @@ AdTransforms::config(const char * param_prefix)
 		std::string xfm_text;
 		dprintf(D_ALWAYS, 
 			(std::string(param_prefix) + "_TRANSFORM_%s setup as transform rule #%lu :\n%s\n").c_str(),
-			name, m_transforms_list.size(), m_transforms_list.back()->getFormattedText(xfm_text, "\t") );
+			name.c_str(), m_transforms_list.size(), m_transforms_list.back()->getFormattedText(xfm_text, "\t") );
 	}
 }
 
@@ -83,7 +80,6 @@ AdTransforms::transform(ClassAd *ad, CondorError *errorStack)
 
 	int transforms_applied = 0;
 	int transforms_considered = 0;
-	StringList attrs_changed;
 	int rval;
 	std::string errmsg;
 	std::string applied_names;

@@ -302,6 +302,7 @@ endif ()
 				condor_pl_test(test_dataflow_job_more "Test dataflow jobs (stupid)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 				condor_pl_test(test_dont_queue_small_sandboxes "Test not using transfer queue for small transfers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_epoch_attrs "Test our work-around for ElasticSearch not doing joins" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 				if(NOT EMULATED_PLATFORM)
 					# The emulated platforms are too slow to run these tests.
@@ -482,7 +483,7 @@ endif ()
 	condor_pl_test(cmd_status_shows-help "Condor_status -help works as expected" "quick;ctest" CTEST)
 	condor_pl_test(cmd_status_shows-master "Condor_status -master works as expected" "quick;ctest" CTEST DEPENDS "src/condor_tests/CondorCmdStatusWorker2.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_status_shows-schedd "Condor_status -schedd works as expected" "quick;ctest" CTEST DEPENDS "src/condor_tests/CondorCmdStatusWorker2.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/x_sleep.pl")
-	condor_pl_test(cmd_status_shows-startd "Condor_status -startd works as expected" "quick;ctest" CTEST DEPENDS "src/condor_tests/CondorCmdStatusWorker2.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/x_sleep.pl")
+	condor_pl_test(cmd_status_shows-slots "Condor_status works as expected" "quick;ctest" CTEST DEPENDS "src/condor_tests/CondorCmdStatusWorker2.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_status_shows-absent "Condor_status -absent works as expected" "quick;ctest" CTEST DEPENDS "src/condor_tests/CondorCmdStatusWorker2.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_q_shows-dag "Condor_q shows dag" "quick;ctest" CTEST)
 	condor_pl_test(cmd_q_shows-hold "Condor_q shows hold" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")

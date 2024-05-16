@@ -3603,7 +3603,7 @@ section.
 
 :macro-def:`MOUNT_UNDER_SCRATCH[STARTD]`
     A ClassAd expression, which when evaluated in the context of the job
-    ClassAd, evaluates to a string that contains a comma separated list
+    and machine ClassAds, evaluates to a string that contains a comma separated list
     of directories. For each directory in the list, HTCondor creates a
     directory in the job's temporary scratch directory with that name,
     and makes it available at the given name using bind mounts. This is
@@ -3615,7 +3615,7 @@ section.
 
     .. code-block:: condor-config
 
-          MOUNT_UNDER_SCRATCH = ifThenElse(TARGET.UtsnameSysname ? "Linux", "/tmp,/var/tmp", "")
+          MOUNT_UNDER_SCRATCH = ifThenElse(TARGET.UtsnameSysname =?= "Linux", "/tmp,/var/tmp", "")
 
     If the job is running on a Linux system, it will see the usual
     ``/tmp`` and ``/var/tmp`` directories, but when accessing files via
@@ -4516,6 +4516,11 @@ These macros control the *condor_schedd*.
     subdirectory within this directory. If not specified, it defaults to
     ``$(SPOOL)/local_univ_execute``.
 
+:macro-def:`USE_CGROUPS_FOR_LOCAL_UNIVERSE[SCHEDD]`
+    A boolean value that defaults to true.  When true, local universe
+    jobs on Linux are put into their own cgroup, for monitoring and
+    cleanup.
+
 :macro-def:`START_SCHEDULER_UNIVERSE[SCHEDD]`
     A boolean value that defaults to
     ``TotalSchedulerJobsRunning < 500``. The *condor_schedd* uses this
@@ -5396,6 +5401,13 @@ These macros control the *condor_schedd*.
     ``False``. When ``True``, it causes the job to be evicted from the
     machine it is running on.
 
+:macro-def:`SYSTEM_ON_VACATE_COOL_DOWN[SCHEDD]`
+    This expression is evaluated whenever an execution attempt for a
+    job is interrupted (i.e. the job does not exit of its own accord).
+    If it evaluates to a positive integer, then the job is put into a
+    cool-down state for that number of seconds. During this time, the
+    job will not be run again.
+
 :macro-def:`SCHEDD_ASSUME_NEGOTIATOR_GONE[SCHEDD]`
     This macro determines the period, in seconds, that the
     *condor_schedd* will wait for the *condor_negotiator* to initiate
@@ -5921,13 +5933,13 @@ These macros control the *condor_schedd*.
     Boolean to enable the use of job sets with the `htcondor jobset` command.
     Defaults to false.
 
-:macro-def:`ENABLE_HTTP_PUBLIC_FILES[SCHEDD]`:
+:macro-def:`ENABLE_HTTP_PUBLIC_FILES[SCHEDD]`
     A boolean that defaults to false.  When true, the schedd will
     use an external http server to transfer public input file.
 
 :macro-def:`HTTP_PUBLIC_FILES_ADDRESS[SCHEDD]`
     The full web address (hostname + port) where your web server is serving files (default:
-    127.0.0.1:8080)
+    127.0.0.1:80)
 
 :macro-def:`HTTP_PUBLIC_FILES_ROOT_DIR[SCHEDD]`
     Absolute path to the local directory where the web service is serving files from.
@@ -6163,6 +6175,12 @@ These settings affect the *condor_starter*.
     NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT,
     OPENBLAS_NUM_THREADS, PYTHON_CPU_COUNT, ROOT_MAX_THREADS, TF_LOOP_PARALLEL_ITERATIONS,
     TF_NUM_THREADS.
+
+:macro-def:`STARTER_FILE_XFER_STALL_TIMEOUT`
+    This value defaults to 3600 (seconds).  It controlls the amount of
+    time a file transfer can stall before the starter evicts the job.
+    A stall can happen when the sandbox is on an NFS server that it down,
+    or the network has broken.
 
 :macro-def:`STARTER_UPDATE_INTERVAL[STARTER]`
     An integer value representing the number of seconds between ClassAd
@@ -11509,6 +11527,14 @@ has.
     machines will still be published. The default value is ``True``.
     This option is useful for pools such that use glidein, in which it
     is not desired to record metrics for individual execute nodes.
+
+:macro-def:`GANGLIAD_WANT_PROJECTION[GANGLIAD]`
+    A boolean value that, when ``True``, causes the *condor_gangliad* to
+    use an attribute projection when querying the collector whenever possible.
+    This significantly reduces the memory consumption of the *condor_gangliad*, and also
+    places less load on the *condor_collector*.
+    The default value is currently ``False``; it is expected this default will
+    be changed to ``True`` in a future release after additional testing.
 
 :macro-def:`GANGLIAD_WANT_RESET_METRICS[GANGLIAD]`
     A boolean value that, when ``True``, causes aggregate numeric metrics

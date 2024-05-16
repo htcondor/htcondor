@@ -32,7 +32,15 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- When submitting to a remote batch scheduler via ssh, improve error
+  handling when the initial ssh connection failures and a subsequent
+  attempt succeeds.
+  Before, transfers of job sandboxes would fail after such an error.
+  :jira:`2398`
+
+- Fixed a bug where the *condor_procd* could crash on Windows EPs
+  using the default Desktop policy.
+  :jira:`2444`
 
 .. _lts-version-history-23010:
 
@@ -41,9 +49,13 @@ Version 23.0.10
 
 Release Notes:
 
-.. HTCondor version 23.0.10 released on Month Date, 2024.
+- HTCondor version 23.0.10 released on May 9, 2024.
 
-- HTCondor version 23.0.10 not yet released.
+- Preliminary support for Ubuntu 22.04 (Noble Numbat).
+  :jira:`2407`
+
+- In the tarballs, the *apptainer* executable has been moved to the ``usr/libexec`` directory.
+  :jira:`2397`
 
 New Features:
 
@@ -51,14 +63,22 @@ New Features:
   multiple queue statements in a single submit description file.
   :jira:`2338`
 
+- Updated *condor_upgrade_check* to verify that :macro:`SEC_TOKEN_SYSTEM_DIRECTORY` and
+  all stored tokens have the correct ownership and file permissions.
+  :jira:`2372`
+
 Bugs Fixed:
 
 - Fixed bug where the ``HoldReasonSubcode`` was not the documented value
   for jobs put on hold because of errors running a file transfer plugin.
   :jira:`2373`
 
+- Fixed a crash when using the *condor_upgrade_check* tool when using
+  a python version older than **3.8**. This bug was introduced in V23.0.4.
+  :jira:`2393`
+
 - Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
-  to a random, non-HTCondor process, if pids are reused quickly.
+  to a random, non-HTCondor process, if process IDs are reused quickly.
   :jira:`2357`
 
 - The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
@@ -67,10 +87,6 @@ Bugs Fixed:
   version 0.6.0.  The old name can be restored with the config knob
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`
-
-- Fixed a bug where using :subcom:`output_destination` would still create
-  directories on the access point.
-  :jira:`2353`
 
 - Fixed a bug where DAGMan would crash when directly submitting a node job
   with a queue for each statement that was provided less item data values
@@ -85,6 +101,10 @@ Bugs Fixed:
 - Fixed a bug in the ``-better-analyze`` option of *condor_q* that could result
   in ``[-1]`` and no expression text being displayed for some analysis steps.
   :jira:`2355`
+
+- Fixed a bug where a bad DN value was used during SSL authentication
+  when the client didn't present a credential.
+  :jira:`2396`
 
 .. _lts-version-history-2308:
 
