@@ -43,22 +43,18 @@ from typing import Dict, List, Set, Union
 # Ubuntu support is currently broken, leaving this here as reminder to fix it
 # fmt:off
 SUPPORTED_DISTROS = [
-         "el8",
          "el9",
     "ubu22.04",
 ]
 SUPPORTED_DAILY_DISTROS = [
-    "el8",
     "el9",
     "ubu22.04",
 ]
 X86_64_DISTRO_IMAGE = {
-         "el8": "almalinux:8",
          "el9": "almalinux:9",
     "ubu22.04": "ubuntu:22.04",
 }
 ARM64_DISTRO_IMAGE = {
-         "el8": "arm64v8/almalinux:8",
          "el9": "arm64v8/almalinux:9",
     "ubu22.04": "arm64v8/ubuntu:22.04",
 }
