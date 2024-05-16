@@ -96,7 +96,7 @@ TEST_CASES = {
     "remote_clust.proc" : TestReqs("condor_history 5.3 -name TEST_SCHEDD@", ["5.3"], STD_HEADER),
     "remote_match"      : TestReqs("condor_history 5 -name TEST_SCHEDD@ -limit 2", ["5.4","5.3"], STD_HEADER),
     "remote_since"      : TestReqs("condor_history -name TEST_SCHEDD@ -since 4.0", ["4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
-    "remote_contraint"  : TestReqs("condor_history -const CustAttr=!=UNDEFINED -name TEST_SCHEDD@", ["3.0"], STD_HEADER),
+    "remote_constraint" : TestReqs("condor_history -const CustAttr=!=UNDEFINED -name TEST_SCHEDD@", ["3.0"], STD_HEADER),
     # Note: remote_epochs default type is EPOCH ads so query should return the first 3 ads marked as EPOCH in their banners
     "remote_epochs"     : TestReqs("condor_history -epochs -const IsEpoch=!=UNDEFINED -match 3 -name TEST_SCHEDD@", ["5.0","7.0","8.0"], STD_HEADER),
     "remote_type"       : TestReqs("condor_history -epochs -const IsEpoch=!=UNDEFINED -type STARTER,CHECKPOINT -name TEST_SCHEDD@", ["9.0","10.0"], STD_HEADER),
