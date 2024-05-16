@@ -453,6 +453,8 @@ const char * 	format_readable_kb (const classad::Value &val, Formatter &);
 const char * 	format_readable_mb (const classad::Value &val, Formatter &);
 const char * 	format_real_time (long long t, Formatter &);
 const char * 	format_utime_double (double utime, Formatter & /*fmt*/);
-
+const char * extractStringsFromList (const classad::Value & value, Formatter &, std::string &prettyList);
+const char * extractUniqueStrings (const classad::Value & value, Formatter &, std::string &list_out);
+bool format_platform_name (std::string & str, ClassAd* al);
 
 #endif // __AD_PRINT_MASK__

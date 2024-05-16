@@ -35,7 +35,7 @@
 //
 class DCCollectorAdSeq {
 public:
-	DCCollectorAdSeq() : sequence(0), last_advance(0) {}
+	DCCollectorAdSeq() = default;
 	long long getSequence() const { return sequence; }
 	time_t    lastAdvance() const { return last_advance; }
 	long long advance(time_t now) {
@@ -44,15 +44,18 @@ public:
 		++sequence;
 		return sequence;
 	}
+	AdTypes   getAdType() const { return adtype; }
+	void setAdType(AdTypes adt) { adtype = adt; }
 protected:
-	long long sequence;     // current sequence number
-	time_t    last_advance; // last time advance was called (for garbage collection if we ever want to do that)
+	long long sequence{0};     // current sequence number
+	time_t    last_advance{0}; // last time advance was called (for garbage collection if we ever want to do that)
+	AdTypes   adtype{NO_AD};
 };
 
 typedef std::map<std::string, DCCollectorAdSeq> DCCollectorAdSeqMap;
 class DCCollectorAdSequences {
 public:
-	DCCollectorAdSeq* getAdSeq(const ClassAd & ad);
+	DCCollectorAdSeq& getAdSeq(const ClassAd & ad);
 private:
 	DCCollectorAdSeqMap seqs;
 };
@@ -103,6 +106,11 @@ public:
 	void blacklistMonitorQueryFinished( bool success );
 
 	bool useTCPForUpdates() const { return use_tcp; }
+	void checkVersionBeforeSendingUpdate(bool check) { do_version_check_before_startd_daemon_ad_update = check; }
+	bool checkVersionBeforeSendingUpdate() { return do_version_check_before_startd_daemon_ad_update; }
+	// do a version check against the cached version number, return default value if version is not known
+	bool checkCachedVersion(int major, int minor, int subminor, bool default_value);
+	bool hasVersion() { return ! _version.empty(); }
 
 	time_t getStartTime() const { return startTime; }
 	time_t getReconfigTime() const { return reconfigTime; }
@@ -124,6 +132,7 @@ private:
 
 	bool use_tcp;
 	bool use_nonblocking_update;
+	bool do_version_check_before_startd_daemon_ad_update{true};
 	UpdateType up_type;
 
 	std::deque<class UpdateData*> pending_update_list;

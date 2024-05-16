@@ -10817,6 +10817,20 @@ DaemonCore::initCollectorList() {
 		delete m_collector_list;
 	}
 	m_collector_list = CollectorList::create(NULL, adSeq);
+
+	// This param has legal values of TRUE, FALSE, and AUTO
+	// but we only need to check for TRUE here because TRUE means we
+	// should disable the version check for sending updates.
+	// it is the caller's responsibility to honor the FALSE state
+	if (m_collector_list && param_true("ENABLE_STARTD_DAEMON_AD")) {
+		// disable version check, so that we will not drop the initial update when
+		// the version is unknown. This is necessary because for collectors, the version
+		// is not known util we are already committed to sending the update.
+		// And because of offline collectors, etc, it is very difficult to make sure
+		// that the initial update is always safe for older collectors. Setting
+		// this knob to true is how an admin tells us not to worry about older collectors.
+		m_collector_list->checkVersionBeforeSendingUpdates(false);
+	}
 }
 
 
