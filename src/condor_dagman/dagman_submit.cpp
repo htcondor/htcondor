@@ -26,8 +26,6 @@
 #include "my_username.h"
 #include "../condor_utils/dagman_utils.h"
 
-#include <sstream>
-
 //
 // Local DAGMan includes
 //
@@ -711,7 +709,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 			goto finis;
 		}
 
-		while ((rval = ssi.next(jid, item_index, step)) > 0) {
+		while ((rval = ssi.next(jid, item_index, step, true)) > 0) {
 			proc_id = NewProc(cluster_id);
 			if (proc_id != jid.proc) {
 				formatstr(errmsg, "expected next ProcId to be %d, but Schedd says %d", jid.proc, proc_id);
@@ -814,7 +812,7 @@ finis:
 
 bool send_reschedule(const Dagman & dm)
 {
-	if (!dm.useDirectSubmit)
+	if (dm.options[deep::i::SubmitMethod] == (int)DagSubmitMethod::CONDOR_SUBMIT)
 		return true; // submit already did it
 
 	DCSchedd schedd;
@@ -952,7 +950,7 @@ const char *
 getEventMask()
 {
 	static std::string result("");
-	static std::stringstream dmaskstrm("");
+	static std::string dmaskstr("");
 
 	if ( result == "" ) {
 		//
@@ -984,13 +982,13 @@ getEventMask()
 
 		for ( const int *p = &mask[0]; *p != -1; ++p ) {
 			if ( p != &mask[0] ) {
-				dmaskstrm << ",";
+				dmaskstr += ',';
 			}
-			dmaskstrm << *p;
+			dmaskstr += std::to_string(*p);
 		}
 
-		result = dmaskstrm.str();
+		result = dmaskstr;
 	}
 
-	return result.c_str();
+	return result.c_str(); // somewhat safe because result is static.
 }

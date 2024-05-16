@@ -98,17 +98,13 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 
 
 		std::string b;
-		StringList taglist;
+		std::string taglist;
 		formatstr( b, "%s=%s", "htcondor:AnnexName", annexID.c_str() );
-		taglist.append( b.c_str() );
+		taglist = b;
 
 		std::string buffer;
 		if( command->LookupString( ATTR_EC2_TAG_NAMES, buffer ) ) {
-			StringList tagNames(buffer);
-
-			char * tagName = NULL;
-			tagNames.rewind();
-			while( (tagName = tagNames.next()) ) {
+			for (const auto& tagName: StringTokenIterator(buffer)) {
 				std::string tagAttr(ATTR_EC2_TAG_PREFIX);
 				tagAttr.append(tagName);
 
@@ -117,16 +113,15 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 					return FALSE;
 				}
 
-				formatstr( b, "%s=%s", tagName, tagValue );
-				taglist.append( b.c_str() );
+				formatstr( b, "%s=%s", tagName.c_str(), tagValue );
+				if (!taglist.empty()) taglist += ',';
+				taglist += b;
 
 				free( tagValue );
 			}
 		}
 
-		char * s = taglist.print_to_string();
-		blob[ "Tags" ] = s;
-		free( s );
+		blob[ "Tags" ] = taglist;
 
 
 		ExprTree * iipTree = launchConfiguration.Lookup( "IamInstanceProfile" );
@@ -150,7 +145,7 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 				return false;
 			}
 
-			StringList sgIDList, sgNameList;
+			std::string sgIDList, sgNameList;
 			auto sgIterator = sgList->begin();
 			for( ; sgIterator != sgList->end(); ++sgIterator ) {
 				classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( * sgIterator );
@@ -163,20 +158,22 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 				std::string groupID, groupName;
 				securityGroup.LookupString( "GroupId", groupID );
 				securityGroup.LookupString( "GroupName", groupName );
-				if(! groupID.empty()) { sgIDList.append( groupID.c_str() ); }
-				if(! groupName.empty()){ sgNameList.append( groupName.c_str() ); }
+				if(! groupID.empty()) {
+					if (!sgIDList.empty()) sgIDList += ", ";
+					sgIDList += groupID;
+				}
+				if(! groupName.empty()){
+					if (!sgNameList.empty()) sgNameList += ", ";
+					sgNameList += groupName;
+				}
 			}
 
-			char * fail = sgIDList.print_to_delimed_string( ", " );
-			if( fail ) {
-				blob[ "SecurityGroupIDs" ] = fail;
-				free( fail );
+			if( !sgIDList.empty() ) {
+				blob[ "SecurityGroupIDs" ] = sgIDList;
 			}
 
-			char * suck = sgNameList.print_to_delimed_string( ", " );
-			if( suck ) {
-				blob[ "SecurityGroupNames" ] = suck;
-				free( suck );
+			if( !sgNameList.empty() ) {
+				blob[ "SecurityGroupNames" ] = sgNameList;
 			}
 		}
 
@@ -188,7 +185,7 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 				return false;
 			}
 
-			StringList bdmList;
+			std::string bdmList;
 			auto bdmIterator = blockDeviceMappings->begin();
 			for( ; bdmIterator != blockDeviceMappings->end(); ++bdmIterator ) {
 				classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( * bdmIterator );
@@ -243,13 +240,12 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 				std::string bdmString;
 				formatstr( bdmString, "%s=%s:%d:%s:%s",
 					dn.c_str(), si.c_str(), vs, dot ? "true" : "false", vt.c_str() );
-				bdmList.append( bdmString.c_str() );
+				if (!bdmList.empty()) bdmList += ", ";
+				bdmList += bdmString;
 			}
 
-			char * fail = bdmList.print_to_delimed_string( ", " );
-			if( fail != NULL ) {
-				blob[ "BlockDeviceMapping" ] = fail;
-				free( fail );
+			if( !bdmList.empty() ) {
+				blob[ "BlockDeviceMapping" ] = bdmList;
 			}
 		}
 

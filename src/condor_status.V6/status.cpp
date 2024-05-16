@@ -687,7 +687,23 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 		}
 
 		// we can do normal totals now. but compact mode totals we have to do after checking the slot type
-		if (totals && ( ! pi->columns || ! compactMode)) { totals->update(ad); }
+		if (totals && ( ! pi->columns || ! compactMode)) {
+			const char * totkey = nullptr;
+			#if 0
+			classad::Value val;
+			if (thePP.ppStyle == PP_STARTDAEMON) {
+				// TODO generalize and move this
+				if (ad->EvaluateExpr("join(\"_\",ARCH,OPSYSANDVER,split(CondorVersion)[1])", val)) {
+					val.IsStringValue(totkey);
+					if (totkey) {
+						int len = strlen(totkey);
+						thePP.max_totals_subkey = MAX(thePP.max_totals_subkey, len);
+					}
+				}
+			}
+			#endif
+			totals->update(ad, 0, totkey);
+		}
 
 		if (pi->columns) {
 			StatusRowOfData & srod = pp.first->second;
@@ -750,7 +766,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 					case PP_SCHEDD_NORMAL:
 					case PP_SCHEDD_DATA:
 					case PP_SCHEDD_RUN:
-					case PP_STARTD_STATE:
+					case PP_SLOTS_STATE:
 						subtot_key = nullptr; /* use totals default key generated from ad */
 						break;
 					default:
@@ -1173,12 +1189,12 @@ main (int argc, char *argv[])
 	// the second pass.
 	firstPass (argc, argv);
 
-	// if the mode has not been set, it is SDO_Startd, we set it here
+	// if the mode has not been set, it is SDO_Slots, we set it here
 	// but with default priority, so that any mode set in the first pass
 	// takes precedence.
 	// the actual adType to be queried is returned, note that this will
 	// _not_ be STARTD_AD if another ad type was set in pass 1
-	AdTypes adType = mainPP.setMode (SDO_Startd, 0, DEFAULT);
+	AdTypes adType = mainPP.setMode (SDO_Slots, 0, DEFAULT);
 	ASSERT(sdo_mode != SDO_NotSet);
 
 	// instantiate query object
@@ -1218,15 +1234,15 @@ main (int argc, char *argv[])
 	// set the OR constraints implied by the mode
 	// TODO: tj 2023 : is this a bug? shouldn't it be AND?
 	mode_constraint = nullptr;
-	if (sdo_mode == SDO_Startd_Avail && ! compactMode) {
+	if (sdo_mode == SDO_Slots_Avail && ! compactMode) {
 		// -avail shows unclaimed slots
 		mode_constraint = PMODE_AVAIL_CONSTRAINT;
 	}
-	else if (sdo_mode == SDO_Startd_Claimed && ! compactMode) {
+	else if (sdo_mode == SDO_Slots_Claimed && ! compactMode) {
 		// -claimed shows claimed slots
 		mode_constraint = PMODE_CLAIMED_CONSTRAINT;
 	}
-	else if (sdo_mode == SDO_Startd_Cod) {
+	else if (sdo_mode == SDO_Slots_Cod) {
 		// -run shows claimed slots
 		mode_constraint = ATTR_NUM_COD_CLAIMS;
 	}
@@ -1281,19 +1297,27 @@ main (int argc, char *argv[])
 
 	if (compactMode && ! (vmMode || javaMode)) {
 		mode_constraint = nullptr;
-		if (sdo_mode == SDO_Startd_Avail) {
+		if (sdo_mode == SDO_Slots_Avail) {
 			// State==Unclaimed picks up partitionable and unclaimed static, Cpus > 0 picks up only partitionable that have free memory
 			mode_constraint = PMODE_AVAIL_COMPACT_CONSTRAINT;
-		} else if (sdo_mode == SDO_Startd_Claimed) {
+		} else if (sdo_mode == SDO_Slots_Claimed) {
 			// State==Claimed picks up static slots, NumDynamicSlots picks up partitionable slots that are partly claimed.
 			// in later versions of HTCondor p-slots can be Claimed, but not before 10.7.0
 			mode_constraint = PMODE_CLAIMED_COMPACT_CONSTRAINT;
-		} else if (sdo_mode == SDO_Startd_GPUs) {
+		} else if (sdo_mode == SDO_Slots_GPUs) {
 			// Note: this check for AvailableGPUs will miss GPUs on machines that do not have nested GPU properties enabled.
 			mode_constraint = PMODE_GPUS_COMPACT_CONSTRAINT;
 			//projList.insert("AvailableGPUs");
 			//projList.insert("AssignedGPUs");
 			//projList.insert("OfflineGPUs");
+		} else if (sdo_mode == SDO_StartD_GPUs) {
+			// for the STARTD daemon ad, DetectedGPUs might be 0, or it might be a string list of GPUIDs
+			// or it might be an array of GPU property ad refs (like AvailableGPUs)
+			mode_constraint = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+			projList.insert("DetectedGPUs");
+			projList.insert("OfflineGPUs");
+			projList.insert(ATTR_CONDOR_VERSION);
+			projList.insert(ATTR_ENTERED_CURRENT_STATE); // daemon ads won't have this, simulated ads will (for now?)
 		} else {
 			mode_constraint = PMODE_STARTD_COMPACT_CONSTRAINT;
 		}
@@ -1342,7 +1366,7 @@ main (int argc, char *argv[])
 	if (mainPP.ppStyle == PP_CUSTOM && mainPP.using_print_format) {
 		if (mainPP.pmHeadFoot & HF_NOSUMMARY) mainPP.ppTotalStyle = PP_CUSTOM;
 	} else if (dash_gpus) {
-		mainPP.ppTotalStyle = PP_STARTD_STATE;
+		mainPP.ppTotalStyle = (mainPP.ppStyle == PP_STARTD_GPUS) ? PP_STARTDAEMON : PP_SLOTS_STATE;
 	} else {
 		mainPP.ppTotalStyle = mainPP.ppStyle;
 	}
@@ -1354,19 +1378,27 @@ main (int argc, char *argv[])
 
 	// in order to totals, the projection MUST have certain attributes
 	if (mainPP.wantOnlyTotals || ((mainPP.ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
+	#if 1
+		rightTotals.addProjection(projList);
+		if (dash_gpus && (mainPP.ppTotalStyle == PP_STARTDAEMON)) {
+			const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
+			query->addANDConstraint (constr);
+		}
+	#else
 		switch (mainPP.ppTotalStyle) {
-			case PP_STARTD_SERVER:
+			case PP_SLOTS_SERVER:
 				projList.insert(ATTR_MEMORY);
 				projList.insert(ATTR_DISK);
 				// fall through
-			case PP_STARTD_RUN:
+			case PP_SLOTS_RUN:
 				projList.insert(ATTR_LOAD_AVG);
 				projList.insert(ATTR_MIPS);
 				projList.insert(ATTR_KFLOPS);
 				// fall through
-			case PP_STARTD_NORMAL:
-			case PP_STARTD_COD:
-				if (mainPP.ppTotalStyle == PP_STARTD_COD) {
+			case PP_SLOTS_NORMAL:
+			case PP_SLOTS_COD:
+				if (mainPP.ppTotalStyle == PP_SLOTS_COD) {
 					projList.insert(ATTR_CLAIM_STATE);
 					projList.insert(ATTR_COD_CLAIMS);
 				}
@@ -1375,7 +1407,33 @@ main (int argc, char *argv[])
 				projList.insert(ATTR_OPSYS); // for key
 				break;
 
-			case PP_STARTD_STATE:
+			case PP_STARTDAEMON:
+				projList.insert(ATTR_TOTAL_SLOTS);
+				projList.insert(ATTR_NUM_DYNAMIC_SLOTS);
+				projList.insert(ATTR_TOTAL_CPUS);
+				projList.insert(ATTR_TOTAL_MEMORY);
+				projList.insert("TotalGPUs");
+				//projList.insert("TotalDisk");
+				// daemon ads have TotalInUse* and TotalBackfillInUse*
+				projList.insert("TotalInUseCpus");
+				projList.insert("TotalInUseMemory");
+				projList.insert("TotalInUseDisk");
+				projList.insert("TotalInUseGPUs");
+				projList.insert("TotalBackfillInUseCpus");
+				projList.insert("TotalBackfillInUseMemory");
+				projList.insert("TotalBackfillInUseDisk");
+				projList.insert("TotalBackfillInUseGPUs");
+				projList.insert(ATTR_ARCH);  // for key
+				projList.insert(ATTR_OPSYS_AND_VER); // for key
+				projList.insert(ATTR_CONDOR_VERSION);
+				if (dash_gpus) {
+					const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+					if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
+					query->addANDConstraint (constr);
+				}
+				break;
+
+			case PP_SLOTS_STATE:
 				projList.insert(ATTR_STATE);
 				projList.insert(ATTR_ACTIVITY); // for key
 				break;
@@ -1400,6 +1458,7 @@ main (int argc, char *argv[])
 			default:
 				break;
 		}
+	#endif
 	}
 
 	// fetch the query
@@ -2361,7 +2420,8 @@ usage (const char * opts)
 		"\t-run\t\t\tDisplay running job stats\n"
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
-		"\t-startd\t\t\tDisplay resource attributes\n"
+		"\t-slot\t\t\tDisplay slot resource attributes\n"
+		"\t-startd\t\t\tDisplay STARTD daemon attributes\n"
 		"\t-generic\t\tDisplay attributes of 'generic' ads\n"
 		"\t-subsystem <type>\tDisplay classads of the given type\n"
 		"\t-negotiator\t\tDisplay negotiator attributes\n"
@@ -2448,7 +2508,7 @@ firstPass (int argc, char *argv[])
 	//   constraints are added on the second pass
 	for (int i = 1; i < argc; i++) {
 		if (is_dash_arg_prefix (argv[i], "avail", 2)) {
-			mainPP.setMode (SDO_Startd_Avail, i, argv[i]);
+			mainPP.setMode (SDO_Slots_Avail, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "pool", 1)) {
 			if( pool ) {
@@ -2686,7 +2746,7 @@ firstPass (int argc, char *argv[])
 			i++;
 		} else
 		if (is_dash_arg_prefix(argv[i], "claimed", 2)) {
-			mainPP.setMode (SDO_Startd_Claimed, i, argv[i]);
+			mainPP.setMode (SDO_Slots_Claimed, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix(argv[i], "data", 2)) {
 			if (sdo_mode >= SDO_Schedd && sdo_mode < SDO_Schedd_Run) {
@@ -2696,9 +2756,9 @@ firstPass (int argc, char *argv[])
 			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "run", 1)) {
-			// NOTE: default for bare -run changed from SDO_Startd_Claimed to SDO_Schedd_Run in 8.5.7
-			if (sdo_mode == SDO_Startd || sdo_mode == SDO_Startd_Claimed) {
-				mainPP.resetMode (SDO_Startd_Claimed, i, argv[i]);
+			// NOTE: default for bare -run changed from SDO_Slots_Claimed to SDO_Schedd_Run in 8.5.7
+			if (sdo_mode == SDO_Slots || sdo_mode == SDO_Slots_Claimed) {
+				mainPP.resetMode (SDO_Slots_Claimed, i, argv[i]);
 			} else {
 				if (sdo_mode == SDO_Schedd) {
 					mainPP.resetMode (SDO_Schedd_Run, i, argv[i]);
@@ -2708,10 +2768,14 @@ firstPass (int argc, char *argv[])
 			}
 		} else
 		if( is_dash_arg_prefix (argv[i], "cod", 3) ) {
-			mainPP.setMode (SDO_Startd_Cod, i, argv[i]);
+			mainPP.setMode (SDO_Slots_Cod, i, argv[i]);
 		} else
 		if( is_dash_arg_prefix (argv[i], "gpus", 3) ) {
-			mainPP.setMode (SDO_Startd_GPUs, i, argv[i]);
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_GPUs, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots_GPUs, i, argv[i]);
+			}
 			dash_gpus = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "java", 1)) {
@@ -2738,7 +2802,7 @@ firstPass (int argc, char *argv[])
 			/*explicit_mode =*/ vmMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "slots", 2)) {
-			mainPP.setMode (SDO_Startd, i, argv[i]);
+			mainPP.setMode (SDO_Slots, i, argv[i]);
 			compactMode = false;
 		} else
 		if (is_dash_arg_prefix (argv[i], "compact", 3)) {
@@ -2749,11 +2813,11 @@ firstPass (int argc, char *argv[])
 		} else
 		if (is_dash_arg_prefix (argv[i], "server", 2)) {
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
-			mainPP.setPPstyle (PP_STARTD_SERVER, i, argv[i]);
+			mainPP.setPPstyle (PP_SLOTS_SERVER, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "state", 4)) {
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
-			mainPP.setPPstyle (PP_STARTD_STATE, i, argv[i]);
+			mainPP.setPPstyle (PP_SLOTS_STATE, i, argv[i]);
 		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
 			dash_snapshot = "1";
@@ -2774,10 +2838,14 @@ firstPass (int argc, char *argv[])
 			statistics = strdup( argv[i] );
 		} else
 		if (is_dash_arg_prefix (argv[i], "startd", 4)) {
-			mainPP.setMode (SDO_Startd,i, argv[i]);
+			if (sdo_mode == SDO_Slots_GPUs) {
+				mainPP.resetMode (SDO_StartD_GPUs, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
+			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "schedd", 2)) {
-			if (sdo_mode == SDO_Startd_Claimed) {
+			if (sdo_mode == SDO_Slots_Claimed) {
 				mainPP.resetMode (SDO_Schedd_Run, i, argv[i]);
 			} else if (sdo_mode >= SDO_Schedd && sdo_mode <= SDO_Schedd_Run) {
 				// Do nothing.
@@ -2799,7 +2867,9 @@ firstPass (int argc, char *argv[])
 			static const struct { const char * tag; int sm; } asub[] = {
 				{"schedd", SDO_Schedd},
 				{"submitters", SDO_Submitters},
-				{"startd", SDO_Startd},
+				{"slots", SDO_Slots},
+				{"machine", SDO_Slots},
+				{"startd", SDO_StartDaemon},
 				{"defrag", SDO_Defrag},
 				{"grid", SDO_Grid},
 				{"accounting", SDO_Accounting},
@@ -3145,7 +3215,7 @@ secondPass (int argc, char *argv[])
 				name = daemonname;
 			}
 
-			if (sdo_mode == SDO_Startd_Claimed) {
+			if (sdo_mode == SDO_Slots_Claimed) {
 				snprintf (buffer, sizeof(buffer), ATTR_REMOTE_USER " == \"%s\"", argv[i]);
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);

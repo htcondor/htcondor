@@ -4516,6 +4516,11 @@ These macros control the *condor_schedd*.
     subdirectory within this directory. If not specified, it defaults to
     ``$(SPOOL)/local_univ_execute``.
 
+:macro-def:`USE_CGROUPS_FOR_LOCAL_UNIVERSE[SCHEDD]`
+    A boolean value that defaults to true.  When true, local universe
+    jobs on Linux are put into their own cgroup, for monitoring and
+    cleanup.
+
 :macro-def:`START_SCHEDULER_UNIVERSE[SCHEDD]`
     A boolean value that defaults to
     ``TotalSchedulerJobsRunning < 500``. The *condor_schedd* uses this
@@ -6170,6 +6175,12 @@ These settings affect the *condor_starter*.
     NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT,
     OPENBLAS_NUM_THREADS, PYTHON_CPU_COUNT, ROOT_MAX_THREADS, TF_LOOP_PARALLEL_ITERATIONS,
     TF_NUM_THREADS.
+
+:macro-def:`STARTER_FILE_XFER_STALL_TIMEOUT`
+    This value defaults to 3600 (seconds).  It controlls the amount of
+    time a file transfer can stall before the starter evicts the job.
+    A stall can happen when the sandbox is on an NFS server that it down,
+    or the network has broken.
 
 :macro-def:`STARTER_UPDATE_INTERVAL[STARTER]`
     An integer value representing the number of seconds between ClassAd
@@ -11516,6 +11527,14 @@ has.
     machines will still be published. The default value is ``True``.
     This option is useful for pools such that use glidein, in which it
     is not desired to record metrics for individual execute nodes.
+
+:macro-def:`GANGLIAD_WANT_PROJECTION[GANGLIAD]`
+    A boolean value that, when ``True``, causes the *condor_gangliad* to
+    use an attribute projection when querying the collector whenever possible.
+    This significantly reduces the memory consumption of the *condor_gangliad*, and also
+    places less load on the *condor_collector*.
+    The default value is currently ``False``; it is expected this default will
+    be changed to ``True`` in a future release after additional testing.
 
 :macro-def:`GANGLIAD_WANT_RESET_METRICS[GANGLIAD]`
     A boolean value that, when ``True``, causes aggregate numeric metrics

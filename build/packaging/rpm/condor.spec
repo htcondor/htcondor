@@ -985,6 +985,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/ad_sources/registry.py
 %_libexecdir/condor/adstash/ad_sources/schedd_history.py
 %_libexecdir/condor/adstash/ad_sources/startd_history.py
+%_libexecdir/condor/adstash/ad_sources/schedd_job_epoch_history.py
 %_libexecdir/condor/adstash/interfaces/__init__.py
 %_libexecdir/condor/adstash/interfaces/elasticsearch.py
 %_libexecdir/condor/adstash/interfaces/opensearch.py
@@ -1431,6 +1432,24 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.7.2-0.1
+- Warns about deprecated multiple queue statements in a submit file
+- The semantics of 'skip_if_dataflow' have been improved
+- Removing large DAGs is now non-blocking, preserving schedd performance
+- Periodic policy expressions are now checked during input file transfer
+- Local universe jobs can now specify a container image
+- File transfer plugins can now advertise extra attributes
+- DAGMan can rescue and abort if pending jobs are missing from the job queue
+- Fix so 'condor_submit -interactive' works on cgroup v2 execution points
+
+* Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.10-1
+- Preliminary support for Ubuntu 22.04 (Noble Numbat)
+- Warns about deprecated multiple queue statements in a submit file
+- Fix bug where plugins could not signify to retry a file transfer
+- The condor_upgrade_check script checks for proper token file permissions
+- Fix bug where the condor_upgrade_check script crashes on older platforms
+- The bundled version of apptainer was moved to libexec in the tarball
+
 * Tue Apr 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.2-1
 - Fix bug where file transfer plugin error was not in hold reason code
 

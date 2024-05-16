@@ -27,11 +27,11 @@ class HistoryHelperState
 {
 public:
 	HistoryHelperState(Stream &stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match, const std::string &source)
-		: m_streamresults(false), m_searchdir(false), m_stream_ptr(&stream), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_recordSrc(source)
+		: m_stream_ptr(&stream), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_recordSrc(source)
 	{}
 
 	HistoryHelperState(classad_shared_ptr<Stream> stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match, const std::string &source)
-		: m_streamresults(false), m_searchdir(false), m_stream_ptr(NULL), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_recordSrc(source), m_stream(stream)
+		: m_stream_ptr(nullptr), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_recordSrc(source), m_stream(stream)
 	{}
 
 	~HistoryHelperState() { if (m_stream.get() && (m_stream.use_count() == 1)) daemonCore->Cancel_Socket(m_stream.get()); }
@@ -43,8 +43,9 @@ public:
 	const std::string & Projection() const { return m_proj; }
 	const std::string & MatchCount() const { return m_match; }
 	const std::string & RecordSrc() const { return m_recordSrc; }
-	bool m_streamresults;
-	bool m_searchdir;
+	std::string m_adTypeFilter{};
+	bool m_streamresults{false};
+	bool m_searchdir{false};
 
 private:
 	Stream *m_stream_ptr;

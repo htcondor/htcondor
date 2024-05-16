@@ -440,7 +440,6 @@ stat_info.cpp
 stat_info.h
 status_string.cpp
 status_string.h
-status_types.h
 stopwatch.h
 store_cred.cpp
 store_cred.h
@@ -467,8 +466,6 @@ tokener.cpp
 tokener.h
 token_utils.cpp
 token_utils.h
-totals.cpp
-totals.h
 translation_utils.cpp
 translation_utils.h
 tree.h

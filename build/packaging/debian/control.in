@@ -372,6 +372,7 @@ Description: transitional dummy package
 
 Package: htcondor-doc
 Architecture: all
+Section: doc
 Depends: condor-doc (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package

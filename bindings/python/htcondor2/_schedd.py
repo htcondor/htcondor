@@ -111,6 +111,7 @@ class Schedd():
             will instead be omitted.
         :param limit:  The maximum number of ads to return.  The default
             (``-1``) is to return all ads.
+        :param opts:  Special query options; see the enumeration for details.
         '''
         results = _schedd_query(self._addr, str(constraint), projection, int(limit), int(opts))
         if callback is None:
@@ -279,6 +280,8 @@ class Schedd():
 
         return _history_query(self._addr,
             str(constraint), projection_string, int(match), since,
+            # Ad Type Filter
+            "",
             # HRS_JOB_HISTORY
             0,
             # QUERY_SCHEDD_HISTORY
@@ -291,6 +294,7 @@ class Schedd():
         projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
+        **kwargs
     ) -> List[classad.ClassAd]:
         """
         Query this schedd's
@@ -333,11 +337,19 @@ class Schedd():
         else:
             raise TypeError("since must be an int, string, or ExprTree")
 
+        ad_type = kwargs.get("ad_type", None)
+        if isinstance(ad_type, list):
+            ad_type = ",".join(ad_type)
+        elif ad_type is None:
+            ad_type = ""
+        elif not isinstance(ad_type, str):
+            raise TypeError("ad_type must be a list of strings or a string")
+
         if constraint is None:
             constraint = ""
 
         return _history_query(self._addr,
-            str(constraint), projection_string, int(match), since,
+            str(constraint), projection_string, int(match), since, ad_type,
             # HRS_JOB_EPOCH
             2,
             # QUERY_SCHEDD_HISTORY
@@ -392,7 +404,11 @@ class Schedd():
             each string will be parsed as its own item data line.  If you
             provide an iterator over dictionaries, the dictionary's key-value
             pairs will become submit variable name-value pairs; only the first
-            dictionary's keys will be used.
+            dictionary's keys will be used.  In either case, leading and
+            trailing whitespace will be trimmed for each individual item.
+            Lines (and items) may not contain newlines (``\\n``) or the ASCII
+            unit separator character (``\\x1F``).  Keys, if specified, must be
+            valid submit-language variable names.
         '''
 
         submit_file = ''
@@ -557,7 +573,7 @@ def _add_line_from_itemdata(submit_file, item):
     elif isinstance(item, dict):
         if any(["\n" in x for x in item.keys()]):
             raise ValueError("itemdata strings must not contain newlines")
-        submit_file = submit_file + " ".join(item.values()) + "\n"
+        submit_file = submit_file + "\x1F".join(item.values()) + "\n"
     return submit_file
 
 

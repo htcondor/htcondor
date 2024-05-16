@@ -275,7 +275,7 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 
 
 boost::shared_ptr<HistoryIterator>
-history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int hrs, int cmd, const std::string & addr)
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, const std::string& type, int hrs, int cmd, const std::string & addr)
 {
 	bool want_startd = (cmd == GET_HISTORY);
 
@@ -372,6 +372,10 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		default:
 			THROW_EX(HTCondorValueError, "Unknown history record source given");
 			break;
+	}
+
+	if ( ! type.empty()) {
+		ad.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, type);
 	}
 
 	daemon_t dt = DT_SCHEDD;
@@ -699,7 +703,7 @@ struct SubmitStepFromPyIter {
 	// returns 0 if done iterating
 	// returns 2 for first iteration
 	// returns 1 for subsequent iterations
-	int next(JOB_ID_KEY & jid, int & item_index, int & step)
+	int next(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
 	{
 		if (m_done) return 0;
 
@@ -719,7 +723,7 @@ struct SubmitStepFromPyIter {
 					m_done = (rval == 0);
 					return rval;
 				}
-				set_live_vars();
+				if (set_live) set_live_vars();
 			} else {
 				if (0 == iter_index) {
 					// if no next row, then we are done iterating, unless it is the FIRST iteration
@@ -974,10 +978,10 @@ struct SubmitJobsIterator {
 
 		if (m_iter_qargs) {
 			if (m_ssqa.done()) { THROW_EX(StopIteration, "All ads processed"); }
-			rval = m_ssqa.next(jid, item_index, step);
+			rval = m_ssqa.next(jid, item_index, step, true);
 		} else {
 			if (m_sspi.done()) { THROW_EX(StopIteration, "All ads processed"); }
-			rval = m_sspi.next(jid, item_index, step);
+			rval = m_sspi.next(jid, item_index, step, true);
 			if (rval < 0) {
 			    THROW_EX(HTCondorInternalError, m_sspi.errmsg());
 				m_sspi.throw_error();
@@ -2637,126 +2641,22 @@ struct Schedd {
 		return result;
 	}
 
-    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
+    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement,
+                                                       boost::python::list projection=boost::python::list(),
+                                                       int match=-1,
+                                                       boost::python::object since=boost::python::object(),
+                                                       boost::python::object ad_type=boost::python::object())
     {
-        return history_query(requirement, projection, match, since, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
+        std::string ad_type_filter;
+        if (ad_type.ptr() != Py_None) {
+            ad_type_filter = boost::python::extract<std::string>(ad_type);
+        }
+        return history_query(requirement, projection, match, since, ad_type_filter, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
     }
 
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
-#if 1
-		return history_query(requirement, projection, match, since, HRS_SCHEDD_JOB_HIST, QUERY_SCHEDD_HISTORY, m_addr);
-#else
-        std::string val_str;
-        extract<ExprTreeHolder &> exprtree_extract(requirement);
-        extract<std::string> string_extract(requirement);
-        classad::ExprTree *expr = NULL;
-        boost::shared_ptr<classad::ExprTree> expr_ref;
-        if (string_extract.check())
-        {
-            classad::ClassAdParser parser;
-            std::string val_str = string_extract();
-            if (!parser.ParseExpression(val_str, expr))
-            {
-                THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
-            }
-            expr_ref.reset(expr);
-        }
-        else if (exprtree_extract.check())
-        {
-            expr = exprtree_extract().get();
-        }
-        else
-        {
-            THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
-        }
-        classad::ExprTree *expr_copy = expr->Copy();
-        if (!expr_copy) {
-            THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression");
-        }
-
-	classad::ExprList *projList(new classad::ExprList());
-	unsigned len_attrs = py_len(projection);
-	for (unsigned idx = 0; idx < len_attrs; idx++)
-	{
-		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
-		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-		if (!entry) {
-		    THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.")
-		}
-		projList->push_back(entry);
-	}
-
-	// decode the since argument, this can either be an expression, or a string
-	// containing either an expression, a cluster id or a full job id.
-	classad::ExprTree *since_expr_copy = NULL;
-	extract<ExprTreeHolder &> since_exprtree_extract(since);
-	extract<std::string> since_string_extract(since);
-	extract<int>  since_cluster_extract(since);
-	if (since_cluster_extract.check()) {
-		std::string expr_str;
-		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
-		classad::ClassAdParser parser;
-		parser.ParseExpression(expr_str, since_expr_copy);
-	} else if (since_string_extract.check()) {
-		std::string since_str = since_string_extract();
-		classad::ClassAdParser parser;
-		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
-			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
-		} else {
-			classad::Value val;
-			if (ExprTreeIsLiteral(since_expr_copy, val) && (val.IsIntegerValue() || val.IsRealValue())) {
-				delete since_expr_copy; since_expr_copy = NULL;
-				// if the stop constraint is a numeric literal.
-				// then there are a few special cases...
-				// it might be a job id. or it might (someday) be a time value
-				PROC_ID jid;
-				const char * pend;
-				if (StrIsProcId(since_str.c_str(), jid.cluster, jid.proc, &pend) && !*pend) {
-					if (jid.proc >= 0) {
-						formatstr(since_str, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
-					} else {
-						formatstr(since_str, "ClusterId == %d", jid.cluster);
-					}
-					parser.ParseExpression(since_str, since_expr_copy);
-				}
-			}
-		}
-	} else if (since_exprtree_extract.check()) {
-		since_expr_copy = since_exprtree_extract().get()->Copy();
-	} else if (since.ptr() != Py_None) {
-		THROW_EX(HTCondorValueError, "invalid since argument");
-	}
-
-
-	classad::ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, expr_copy);
-	ad.InsertAttr(ATTR_NUM_MATCHES, match);
-	if (since_expr_copy) { ad.Insert("Since", since_expr_copy); }
-
-	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
-	ad.Insert(ATTR_PROJECTION, projTree);
-
-	DCSchedd schedd(m_addr.c_str());
-	Sock* sock;
-        bool result;
-        {
-        condor::ModuleLock ml;
-        result = !(sock = schedd.startCommand(QUERY_SCHEDD_HISTORY, Stream::reli_sock, 0));
-        }
-        if (result)
-        {
-            THROW_EX(HTCondorIOError, "Unable to connect to schedd");
-        }
-        boost::shared_ptr<Sock> sock_sentry(sock);
-
-        if (!putClassAdAndEOM(*sock, ad)) {
-            THROW_EX(HTCondorIOError, "Unable to send request classad to schedd");
-        }
-
-        boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
-        return iter;
-#endif
+        return history_query(requirement, projection, match, since, "", HRS_SCHEDD_JOB_HIST, QUERY_SCHEDD_HISTORY, m_addr);
     }
 
 
@@ -3711,11 +3611,15 @@ public:
 			m_queue_may_append_to_cluster = false;
 
 			// load the first item, this also sets jid, item_index, and step
-			rval = ssi.next(jid, item_index, step);
+			// but do not set the live vars into the hash before we build the submit digest
+			rval = ssi.next(jid, item_index, step, false);
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// now that we have built the submit digest, we can set the live vars into the hash
+			ssi.set_live_vars();
 
 			// make and send the cluster ad
 			ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
@@ -3772,7 +3676,7 @@ public:
 		} else {
 			// loop through the itemdata, sending jobs for each item
 			//
-			while ((rval = ssi.next(jid, item_index, step)) > 0) {
+			while ((rval = ssi.next(jid, item_index, step, true)) > 0) {
 
 				int procid = txn->newProc();
 				if (procid < 0) {
@@ -3829,7 +3733,7 @@ public:
 	queue_from_iter(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object from, bool spool=false)
 	{
 		if (!txn.get() || !txn->transaction()) {
-		    THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
+			THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
 		}
 
 		// Before calling init_base_ad(), we should invoke methods to tell
@@ -3879,12 +3783,16 @@ public:
 		if (factory_submit) {
 
 			// get the first rowdata, we need that to build the submit digest, etc
-			rval = ssi.next(jid, item_index, step);
+			// but don't set the live vars yet, since we don't want them in the digest
+			rval = ssi.next(jid, item_index, step, false);
 			if (rval < 0) { ssi.throw_error(); }
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// now that we have build the submit digest, we can set the live vars
+			ssi.set_live_vars();
 
 			// make a proc0 ad (because that's the same as a cluster ad)
 			ClassAd *proc_ad = m_hash.make_job_ad(JOB_ID_KEY(cluster, 0), 0, 0, false, spool, NULL, NULL);
@@ -3911,6 +3819,8 @@ public:
 					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 				num_jobs = row_count * ssi.step_size();
+			} else {
+			    num_jobs = count;
 			}
 
 			// append the queue statement
@@ -3938,7 +3848,7 @@ public:
 
 		} else {
 
-			while ((rval = ssi.next(jid, item_index, step)) > 0) {
+			while ((rval = ssi.next(jid, item_index, step, true)) > 0) {
 
 				int procid = txn->newProc();
 				if (procid < 0) {
@@ -4557,6 +4467,9 @@ void export_schedd()
                 returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
                 same set of jobs.
             :type since: int, str, or :class:`~classad.ExprTree`
+            :param ad_type: DEPRECATED. Comma separated string of history Ad types
+                to return. If :py:obj:`None` then return normal job ClassAds. Default
+                :py:obj:`None`.
             :return: All matching ads in the Schedd history, with attributes according to the
                 ``projection`` keyword.
             :rtype: :class:`HistoryIterator`
@@ -4565,7 +4478,7 @@ void export_schedd()
              (boost::python::arg("self"),
 #endif
              boost::python::arg("constraint"), boost::python::arg("projection"), boost::python::arg("match")=-1,
-             boost::python::arg("since")=boost::python::object())
+             boost::python::arg("since")=boost::python::object(), boost::python::arg("ad_type")=boost::python::object())
             )
         .def("history", &Schedd::history,
             R"C0ND0R(
