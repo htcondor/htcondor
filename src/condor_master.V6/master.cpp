@@ -29,13 +29,10 @@
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
-#include "condor_io.h"
 #include "directory.h"
-#include "exit.h"
 #include "string_list.h"
 #include "get_daemon_name.h"
 #include "daemon_types.h"
-#include "daemon_list.h"
 #include "strupr.h"
 #include "condor_environ.h"
 #include "store_cred.h"
@@ -45,6 +42,7 @@
 #include "shared_port_endpoint.h"
 #include "credmon_interface.h"
 #include "../condor_sysapi/sysapi.h"
+#include <iterator>
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "MasterPlugin.h"
@@ -145,14 +143,6 @@ static const struct {
 	{ "SCHEDD",       false, false},
 	{ NULL, false, false}, // mark of list record
 };
-
-// NOTE: When adding something here, also add it to the various condor_config
-// examples in src/condor_examples
-char	default_dc_daemon_list[] =
-"MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
-"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
-"REPLICATION, JOB_ROUTER, ROOSTER, SHARED_PORT, "
-"DEFRAG, GANGLIAD, ANNEXD";
 
 // create an object of class daemons.
 class Daemons daemons;
@@ -1362,12 +1352,12 @@ init_params()
 }
 
 // helper function to determin if the executable of a daemon matches the executable of a DC daemon
-static bool same_exe_as_daemon(const char * daemon_name, StringList & dc_names, std::set<std::string> & dc_exes)
+static bool same_exe_as_daemon(const char * daemon_name, std::vector<std::string> &dc_names, std::set<std::string> & dc_exes)
 {
 	// first time we call this, build a collection of daemon executables paths
-	if (dc_exes.empty() && ! dc_names.isEmpty()) {
-		for (const char * name = dc_names.first(); name != nullptr; name = dc_names.next()) {
-			auto_free_ptr program(param(name));
+	if (dc_exes.empty() && ! dc_names.empty()) {
+		for (const auto &name: dc_names) {
+			auto_free_ptr program(param(name.c_str()));
 			if (program) { dc_exes.insert(program.ptr()); }
 		}
 	}
@@ -1383,8 +1373,8 @@ static bool same_exe_as_daemon(const char * daemon_name, StringList & dc_names, 
 void
 init_daemon_list()
 {
-	char	*daemon_name;
-	StringList daemon_names, dc_daemon_names;
+	std::vector<std::string> daemon_names;
+	std::vector<std::string> dc_daemon_names;
 	bool have_primary_collector = false; // daemon list has COLLECTOR (just that - VIEW_COLLECTOR or COLLECTOR_B doesn't count)
 	std::set<std::string> dc_daemon_exes; // paths to daemon binaries for the daemon core daemons, used if needed
 
@@ -1392,29 +1382,26 @@ init_daemon_list()
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
 
 	if( !dc_daemon_list ) {
-		dc_daemon_names.initializeFromString(default_dc_daemon_list);
-	}
-	else {
+		std::ranges::copy(default_dc_daemon_array, std::back_inserter(dc_daemon_names));
+	} else {
 		if ( *dc_daemon_list == '+' ) {
-			std::string	dclist;
-			dclist = default_dc_daemon_list;
-			dclist += ", ";
-			dclist += &dc_daemon_list[1];
-			dc_daemon_names.initializeFromString( dclist.c_str() );
+			std::ranges::copy(default_dc_daemon_array, std::back_inserter(dc_daemon_names));
+			dc_daemon_names.emplace_back(&dc_daemon_list[1]);
 		}
 		else {
-			dc_daemon_names.initializeFromString(dc_daemon_list);
+			dc_daemon_names = split(dc_daemon_list);
 
-			StringList default_list(default_dc_daemon_list);
-			default_list.rewind();
-			char *default_entry;
 			int	missing = 0;
-			while( (default_entry=default_list.next()) ) {
-				if( !dc_daemon_names.contains_anycase(default_entry) ) {
+			for (const char *default_entry: default_dc_daemon_array) {
+				bool found = false;
+				for (const auto &dc_daemon_name : dc_daemon_names) {
+					found = (MATCH == strcasecmp(dc_daemon_name.c_str(), default_entry));
+				}
+				if(!found) {
 					dprintf(D_ALWAYS,
 							"WARNING: expected to find %s in"
 							" DC_DAEMON_LIST, but it is not there.\n",
-							default_entry );
+							default_entry);
 					missing++;
 				}
 			}
@@ -1434,7 +1421,9 @@ init_daemon_list()
 	}
 
 		// Tolerate a trailing comma in the list
-	dc_daemon_names.remove( "" );
+	if (dc_daemon_names.back().size() == 0) {
+		dc_daemon_names.erase(--dc_daemon_names.end());
+	}
 
 	char* ha_list = param("MASTER_HA_LIST");
 	if( ha_list ) {
@@ -1451,7 +1440,9 @@ init_daemon_list()
 
 		for (const auto &daemon_name: ha_names) {
 			if(daemons.FindDaemon(daemon_name.c_str()) == nullptr) {
-				if( dc_daemon_names.contains(daemon_name.c_str()) ) {
+				if (std::count(dc_daemon_names.begin(),
+							   dc_daemon_names.end(),
+							   daemon_name) > 0) {
 					new class daemon(daemon_name.c_str(), true, true );
 				} else {
 					new class daemon(daemon_name.c_str(), false, true );
@@ -1465,62 +1456,49 @@ init_daemon_list()
 			// Make DAEMON_LIST case insensitive by always converting
 			// what we get to uppercase.
 		daemon_list = strupr( daemon_list );
-		daemon_names.initializeFromString(daemon_list);
+		daemon_names = split(daemon_list);
 		free( daemon_list );
+
 			// Tolerate a trailing comma in the list
-		daemon_names.remove( "" );
+		if (daemon_names.back().empty()) {
+			daemon_names.erase(daemon_names.end());
+		}
 
 			// if the master is not in the list, pretend it is.
 			// so we end up creating a daemon object for it, and don't just abort
-		if ( ! daemon_names.contains("MASTER")) {
-			daemon_names.append("MASTER");
+		if (daemon_names.end() == std::ranges::find(daemon_names, std::string("MASTER"))) {
+			daemon_names.emplace_back("MASTER");
 		}
 
 
 			/*
 			  Make sure that if COLLECTOR is in the list, put it at
-			  the front...  unfortunately, our List template (what
-			  StringList is defined in terms of) is amazingly broken
-			  with regard to insert() and append().  :( insert()
-			  usually means: insert *before* the current position.
-			  however, if you're at the end, it inserts before the
-			  last valid entry, instead of working like append() as
-			  you'd expect.  OR, if you just called rewind() and
-			  insert() (to insert at the begining, right?) it works
-			  like append() and sticks it at the end!!  ARGH!!!  so,
-			  we've got to call next() after rewind() so we really
-			  insert it at the front of the list.  UGH!  EVIL!!!
-			  Derek Wright <wright@cs.wisc.edu> 2004-12-23
+			  the front... 
 			*/
-		if( daemon_names.contains("COLLECTOR") ) {
-			daemon_names.deleteCurrent();
-			daemon_names.rewind();
-			daemon_names.next();
-			daemon_names.insert( "COLLECTOR" );
+		auto col_it = std::ranges::find(daemon_names, std::string("COLLECTOR"));
+		if (col_it != daemon_names.end()) {
+			std::iter_swap(daemon_names.begin(), col_it);
 			have_primary_collector = true;
 		}
 
 			// start shared_port first for a cleaner startup
-		if( daemon_names.contains("SHARED_PORT") ) {
-			daemon_names.deleteCurrent();
-			daemon_names.rewind();
-			daemon_names.next();
-			daemon_names.insert( "SHARED_PORT" );
-		}
-		else if( SharedPortEndpoint::UseSharedPort() ) {
+		auto sp_it = std::ranges::find(daemon_names, std::string("SHARED_PORT"));
+		if (sp_it != daemon_names.end()) {
+			std::iter_swap(daemon_names.begin(), sp_it);
+		} else if( SharedPortEndpoint::UseSharedPort() ) {
 			if( param_boolean("AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST",true) ) {
 				dprintf(D_ALWAYS,"Adding SHARED_PORT to DAEMON_LIST, because USE_SHARED_PORT=true (to disable this, set AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST=False)\n");
-				daemon_names.rewind();
-				daemon_names.next();
-				daemon_names.insert( "SHARED_PORT" );
+				daemon_names.insert(daemon_names.begin(), "SHARED_PORT" );
 			}
 		}
 
 		if( param_boolean("AUTO_INCLUDE_CREDD_IN_DAEMON_LIST", false)) {
-			if (daemon_names.contains("SCHEDD")) {
-				if (!daemon_names.contains("CREDD")) {
+			auto cr_it = std::ranges::find(daemon_names, std::string("CREDD"));
+			auto sched_it = std::ranges::find(daemon_names, std::string("SCHEDD"));
+			if (sched_it != daemon_names.end()) {
+				if (cr_it == daemon_names.end()) {
 					dprintf(D_ALWAYS, "Adding CREDD to DAEMON_LIST.  This machine is running a SCHEDD and AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is TRUE)\n");
-					daemon_names.append("CREDD");
+					daemon_names.emplace_back("CREDD");
 				} else {
 					dprintf(D_SECURITY|D_VERBOSE, "Not modifying DAEMON_LIST. This machine is running a SCHEDD and CREDD is already explicitly listed.\n");
 				}
@@ -1531,23 +1509,22 @@ init_daemon_list()
 			dprintf(D_SECURITY|D_VERBOSE, "Not modifying DAEMON_LIST.  AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is false.\n");
 		}
 
-		daemon_names.rewind();
-		while ((daemon_name = daemon_names.next())) {
+		for (const auto &daemon_name : daemon_names) {
 			if (!contains(daemons.ordered_daemon_names, daemon_name)) {
 				daemons.ordered_daemon_names.emplace_back(daemon_name);
 			}
 		}	
-		daemon_names.rewind();
 
-		while( (daemon_name = daemon_names.next()) ) {
-			if(daemons.FindDaemon(daemon_name) == NULL) {
-				bool is_DC = dc_daemon_names.contains(daemon_name);
+		for (const auto &daemon_name : daemon_names) {
+			if(daemons.FindDaemon(daemon_name.c_str()) == nullptr) {
+				bool is_DC = dc_daemon_names.end() != 
+					std::ranges::find(dc_daemon_names, daemon_name);
 				if ( ! is_DC) {
 					// daemon is not in the DC list, check to see if uses the same executable
 					// as on of the DC daemons, if so, we presume it is DC
-					is_DC = same_exe_as_daemon(daemon_name, dc_daemon_names, dc_daemon_exes);
+					is_DC = same_exe_as_daemon(daemon_name.c_str(), dc_daemon_names, dc_daemon_exes);
 				}
-				new class daemon(daemon_name, is_DC);
+				new class daemon(daemon_name.c_str(), is_DC);
 			}
 		}
 	} else {
@@ -1557,7 +1534,7 @@ init_daemon_list()
 		// use the default daemon list to decide which daemons to start now, and which will we allow to start
 		for(int i = 0; default_daemon_list[i].name; i++) {
 			const char * name = default_daemon_list[i].name;
-			daemon_names.append(name); // add to list of allowed daemons
+			daemon_names.emplace_back(name); // add to list of allowed daemons
 			// should we start it now?
 			if (default_daemon_list[i].auto_start) {
 				if (shared_port || ! default_daemon_list[i].only_if_shared_port) {
@@ -1565,8 +1542,7 @@ init_daemon_list()
 				}
 			}
 		}
-		daemon_names.rewind();
-		while ((daemon_name = daemon_names.next())) {
+		for (const auto &daemon_name : daemon_names) {
 			if (!contains(daemons.ordered_daemon_names, daemon_name)) {
 				daemons.ordered_daemon_names.emplace_back(daemon_name);
 			}

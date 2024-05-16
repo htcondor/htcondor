@@ -22,8 +22,6 @@
 
 #include "condor_daemon_core.h"
 #include "condor_lock.h"
-#include "dc_collector.h"
-#include "condor_pidenvid.h"
 #include "env.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
