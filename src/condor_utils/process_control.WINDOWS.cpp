@@ -192,6 +192,13 @@ static HashTable<DWORD, SuspendedProcess*> suspended_processes(hash_func);
 bool
 windows_suspend(DWORD pid)
 {
+	// get the list of threads for this process
+	std::vector<DWORD> tid_array;
+	if (sys_info.GetTIDs(pid, tid_array) == 0) {
+		dprintf(D_ALWAYS, "Error: Windows Suspend Process failed to get threads for pid %u\n", pid);
+		return false;
+	}
+
 	// make sure we haven't already suspended this process, then allocate
 	// a SuspendedProcess object and add it to the hash table
 	//
@@ -213,17 +220,6 @@ windows_suspend(DWORD pid)
 		// proven otherwise
 		//
 		finished = true;
-
-		// get the list of threads for this process
-		//
-		std::vector<DWORD> tid_array;
-		int num_tids = sys_info.GetTIDs(pid, tid_array);
-		if (num_tids == 0) {
-			// TODO: we need to handle this case!!!
-			//
-			EXCEPT("windows_suspend_process failed: can't get threads for pid %u",
-			       pid);
-		}
 
 		// go through the thread list, calling SuspendThread on each
 		//
