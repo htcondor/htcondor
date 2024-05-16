@@ -96,6 +96,10 @@ TEST_CASES = {
     "remote_clust.proc" : TestReqs("condor_history 5.3 -name TEST_SCHEDD@", ["5.3"], STD_HEADER),
     "remote_match"      : TestReqs("condor_history 5 -name TEST_SCHEDD@ -limit 2", ["5.4","5.3"], STD_HEADER),
     "remote_since"      : TestReqs("condor_history -name TEST_SCHEDD@ -since 4.0", ["4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
+    "remote_constraint" : TestReqs("condor_history -const CustAttr=!=UNDEFINED -name TEST_SCHEDD@", ["3.0"], STD_HEADER),
+    # Note: remote_epochs default type is EPOCH ads so query should return the first 3 ads marked as EPOCH in their banners
+    "remote_epochs"     : TestReqs("condor_history -epochs -const IsEpoch=!=UNDEFINED -match 3 -name TEST_SCHEDD@", ["5.0","7.0","8.0"], STD_HEADER),
+    "remote_type"       : TestReqs("condor_history -epochs -const IsEpoch=!=UNDEFINED -type STARTER,CHECKPOINT -name TEST_SCHEDD@", ["9.0","10.0"], STD_HEADER),
     # Test the -type flag
     "default_epoch_type": TestReqs("condor_history -epochs", ["1.0","3.0","5.0","7.0","8.0"], STD_HEADER),
     "epoch_input_type"  : TestReqs("condor_history -epochs -type input", ["2.0","6.0","6.1"], STD_HEADER),
@@ -241,7 +245,7 @@ queue
 #2.0 tj        1010 1070  -
 #2.1 tj        1010 1070  -
 #2.2 tj        1010 1070  -
-#3.0 tj        1015 1075  -
+#3.0 tj        1015 1075  CustAttr=True
 #4.0 unclegreg 1020 1080  -
 #4.1 unclegreg 1020 1080  -
 #5.0 cole      1025 1085  -
@@ -257,7 +261,7 @@ def writeHistoryFile(default_condor, test_dir, jobAd):
     clusters = [
         HistAdsViaCluster("cole",1,1,t),
         HistAdsViaCluster("tj",2,3,t+10),
-        HistAdsViaCluster("tj",3,1,t+15),
+        HistAdsViaCluster("tj",3,1,t+15,{"CustAttr":True}),
         HistAdsViaCluster("unclegreg",4,2,t+20),
         HistAdsViaCluster("cole",5,5,t+25),
     ]
@@ -286,17 +290,18 @@ def writeHistoryFile(default_condor, test_dir, jobAd):
 #10.0 cole  CHECKPOINT
 @action
 def writeEpochHistory(default_condor, jobAd):
+    attrs = {"IsEpoch":True}
     clusters = [
-        HistAdsViaCluster("cole", 1, 1, ad_type="EPOCH"),
-        HistAdsViaCluster("cole", 2, 1, ad_type="INPUT"),
-        HistAdsViaCluster("cole", 3, 1, ad_type="EPOCH"),
-        HistAdsViaCluster("cole", 4, 2, ad_type="OUTPUT"),
-        HistAdsViaCluster("cole", 5, 1, ad_type="EPOCH"),
-        HistAdsViaCluster("cole", 6, 2, ad_type="INPUT"),
-        HistAdsViaCluster("cole", 7, 1, ad_type="EPOCH"),
-        HistAdsViaCluster("cole", 8, 1, ad_type="EPOCH"),
-        HistAdsViaCluster("cole", 9, 1, ad_type="STARTER"),
-        HistAdsViaCluster("cole", 10, 1, ad_type="CHECKPOINT"),
+        HistAdsViaCluster("cole", 1, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 2, 1, cust_attrs=attrs, ad_type="INPUT"),
+        HistAdsViaCluster("cole", 3, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 4, 2, cust_attrs=attrs, ad_type="OUTPUT"),
+        HistAdsViaCluster("cole", 5, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 6, 2, cust_attrs=attrs, ad_type="INPUT"),
+        HistAdsViaCluster("cole", 7, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 8, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 9, 1, cust_attrs=attrs, ad_type="STARTER"),
+        HistAdsViaCluster("cole",10, 1, cust_attrs=attrs, ad_type="CHECKPOINT"),
     ]
     p = default_condor.run_command(["condor_config_val","JOB_EPOCH_HISTORY"])
     writeAdToHistory(p.stdout, clusters, jobAd, True)
