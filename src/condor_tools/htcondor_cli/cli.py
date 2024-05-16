@@ -1,4 +1,4 @@
-import os
+lsimport os
 import sys
 import time
 import logging
@@ -110,7 +110,7 @@ def main():
     try:
         options = parse_args()
     except Exception as e:
-        logger = get_logger(__name__, level=logging.INFO)
+        logger = get_logger( )
         logger.error(str(e))
         return 2
 
