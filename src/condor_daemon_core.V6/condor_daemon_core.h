@@ -2255,7 +2255,7 @@ class DaemonCore : public Service
 		*/
 	void InitSettableAttrsLists( void );
 	bool InitSettableAttrsList( const char* subsys, int i );
-	StringList* SettableAttrsLists[LAST_PERM];
+	std::vector<std::string>* SettableAttrsLists[LAST_PERM];
 
 	bool peaceful_shutdown;
 
@@ -2381,7 +2381,7 @@ bool InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & so
 // helper function to extract the parent address and inherited socket information from
 // the inherit string that is normally passed via the CONDOR_INHERIT environment variable
 // This function extracts parent & socket info then tokenizes the remaining items from
-// the string into the supplied StringList.
+// the string into the supplied vector.
 //
 // @return
 //    number of entries in the socks[] array that were populated.
