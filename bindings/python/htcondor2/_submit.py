@@ -1,6 +1,8 @@
 from typing import (
     Union,
     Dict,
+    Iterator,
+    List,
 )
 
 from pathlib import Path
@@ -24,9 +26,12 @@ from .htcondor2_impl import (
     _display_dag_options,
     _submit_set_submit_method,
     _submit_get_submit_method,
+    _submit_itemdata,
 )
 
 from ._submit_method import SubmitMethod
+
+DefaultItemData = object()
 
 #
 # MutableMapping provides generic implementations for all mutable mapping
@@ -249,6 +254,18 @@ class Submit(MutableMapping):
         if not isinstance(args, str):
             raise TypeError("args must be a string")
         _submit_setqargs(self, self._handle, args)
+
+
+    def itemdata(self) -> Iterator[List[str]]:
+        '''
+        Returns an iterator over the itemdata specified by the queue statement,
+        suitable for passing to meth:`schedd.Submit`.
+        '''
+        id = _submit_itemdata(self, self._handle)
+        if id is None:
+            return None
+        else:
+            return iter(id.split("\n"))
 
 
     def setSubmitMethod(self,
