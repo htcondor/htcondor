@@ -44,8 +44,10 @@ public:
 	const std::string & MatchCount() const { return m_match; }
 	const std::string & RecordSrc() const { return m_recordSrc; }
 	std::string m_adTypeFilter{};
+	std::string m_scanLimit{};
 	bool m_streamresults{false};
 	bool m_searchdir{false};
+	bool m_searchForwards{false};
 
 private:
 	Stream *m_stream_ptr;
