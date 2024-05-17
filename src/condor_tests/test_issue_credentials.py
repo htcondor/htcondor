@@ -1,7 +1,7 @@
 #!/usr/bin/env pytest
 
-import os
 from pathlib import Path
+from getpass import getuser
 
 from ornithology import (
     config,
@@ -69,7 +69,7 @@ def the_directory(the_test_case, the_local_dir):
 @action
 def the_username():
     # Seems like we should have a way to get this from HTCondor.
-    return os.getlogin()
+    return getuser()
 
 
 @action
