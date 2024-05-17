@@ -839,11 +839,6 @@ type=path
 default=$(LOCAL_DIR)
 type=path
 
-[XAUTHORITY_USERS]
-default=
-type=string
-tags=kbdd,XInterface
-
 [GROUP_NAMES]
 default=
 type=string
