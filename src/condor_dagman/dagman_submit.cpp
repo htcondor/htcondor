@@ -132,6 +132,12 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 	vars.push_back(NodeVar(SUBMIT_KEY_DagmanLogFile, dm._defaultNodeLog, true));
 	vars.push_back(NodeVar("My." ATTR_DAGMAN_WORKFLOW_MASK, std::string("\"") + getEventMask() + "\"", true));
 
+	// NOTE: we specify the job ID of DAGMan using only its cluster ID
+	// so that it may be referenced by jobs in their priority
+	// attribute (which needs an int, not a string).  Doing so allows
+	// users to effectively "batch" jobs by DAG so that when they
+	// submit many DAGs to the same schedd, all the ready jobs from
+	// one DAG complete before any jobs from another begin.
 	if (dm.DAGManJobId._cluster > 0) {
 		vars.push_back(NodeVar("My." ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true));
 		vars.push_back(NodeVar(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true));
@@ -152,197 +158,16 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 	return vars;
 }
 
-// data {key,value,append}
-// static vector<data> init_node_vars
-// shell_submit
-// direct_submit
-// dag_node_submit
-
-typedef bool (* parse_submit_fnc)( const char *buffer, int &jobProcCount,
-			int &cluster );
-
-//-------------------------------------------------------------------------
-/** Parse output from condor_submit, determine the number of job procs
-    and the cluster.
-	@param buffer containing the line to be parsed
-	@param integer to be filled in with the number of job procs generated
-	       by the condor_submit
-	@param integer to be filled in with the cluster ID
-	@return true iff the line was correctly parsed
-*/
-static bool
-parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
-{
-  // The initial space is to make the sscanf match zero or more leading
-  // whitespace that may exist in the buffer.
-  if ( 2 != sscanf( buffer, " %d job(s) submitted to cluster %d",
-  			&jobProcCount, &cluster) ) {
-	debug_printf( DEBUG_QUIET, "ERROR: parse_condor_submit failed:\n\t%s\n",
-				buffer );
-    return false;
-  }
-  
-  return true;
-}
-
-static bool
-submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
-{
-  std::string cmd; // for debug output
-  args.GetArgsStringForDisplay( cmd );
-
-  FILE * fp = my_popen( args, "r", MY_POPEN_OPT_WANT_STDERR );
-  if (fp == NULL) {
-    debug_printf( DEBUG_NORMAL, 
-		  "ERROR: my_popen(%s) in submit_try() failed!\n",
-		  cmd.c_str() );
-    return false;
-  }
-  
-  //----------------------------------------------------------------------
-  // Parse submit command output for a HTCondor job ID.  This
-  // desperately needs to be replaced by HTCondor submit APIs.
-  //
-  // Typical condor_submit output for HTCondor v6 looks like:
-  //
-  //   Submitting job(s).
-  //   Logging submit event(s).
-  //   1 job(s) submitted to cluster 2267.
-  //----------------------------------------------------------------------
-
-  char buffer[UTIL_MAX_LINE_LENGTH];
-  buffer[0] = '\0';
-
-  	// Configure what we look for in the command output according to
-	// which type of job we have.
-  const char *marker = NULL;
-  parse_submit_fnc parseFnc = NULL;
-
-  marker = " submitted to cluster ";
-
-  // Note: we *could* check how many jobs got submitted here, and
-  // correlate that with how many submit events we see later on.
-  // I'm not worrying about that for now...  wenger 2006-02-07.
-  // We also have to check the number of jobs to get an accurate
-  // count of submitted jobs to report in the dagman.out file.
-
-  // We should also check whether we got more than one cluster, and
-  // either deal with it correctly or generate an error message.
-  parseFnc = parse_condor_submit;
-  
-  // Take all of the output (both stdout and stderr) from condor_submit,
-  // and echo it to the dagman.out file.  Look for
-  // the line (if any) containing the word "cluster" (HTCondor).
-  // If we don't find such a line, something
-  // went wrong with the submit, so we return false.  The caller of this
-  // function can retry the submit by repeatedly calling this function.
-
-  std::string command_output = "";
-  std::string keyLine = "";
-  while (fgets(buffer, UTIL_MAX_LINE_LENGTH, fp)) {
-	std::string buf_line = buffer;
-	chomp(buf_line);
-	debug_printf(DEBUG_VERBOSE, "From submit: %s\n", buf_line.c_str());
-	command_output += buf_line;
-    if (strstr(buffer, marker) != NULL) {
-	  keyLine = buf_line;
-	}
-  }
-
-  { // Relocated this curly bracket to its previous position to hopefully
-    // fix Coverity warning.  Not sure why these curly brackets are here
-	// at all...  wenger 2013-06-12
-    int status = my_pclose(fp) & 0xff;
-
-    if (keyLine == "") {
-      debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
-      debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.c_str());
-      return false;
-    }
-
-    if (status != 0) {
-		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
-					 command_output.c_str());
-		debug_printf( DEBUG_QUIET, "ERROR while running \"%s\": "
-					  "my_pclose() failed with status %d (errno %d, %s)!\n",
-					  cmd.c_str(), status, errno, strerror( errno ) );
-		return false;
-    }
-  }
-
-  int	jobProcCount;
-  if ( !parseFnc( keyLine.c_str(), jobProcCount, condorID._cluster) ) {
-		// We are going forward (do not return false here)
-		// Expectation is that higher levels will catch that we
-		// did not get a cluster initialized properly here, fail,
-		// and write a rescue DAG. gt3658 2013-06-03
-		//
-		// This is better than the old failure that would submit
-		// DAGMAN_MAX_SUBMIT_ATTEMPT copies of the same job.
-      debug_printf( DEBUG_NORMAL, "WARNING: submit returned 0, but "
-        "parsing submit output failed!\n" );
-		// Returning here so we don't try to process invalid values
-		// below.  (This should really return something like "submit failed
-		// don't retry" -- see gittrac #3685.)
-  	  return true;
-  }
-
-  	// Check for multiple job procs if configured to disallow that.
-  if ( prohibitMultiJobs && (jobProcCount > 1) ) {
-	debug_printf( DEBUG_NORMAL, "Submit generated %d job procs; "
-				"disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
-				jobProcCount );
-	main_shutdown_rescue( EXIT_ERROR, DagStatus::DAG_STATUS_ERROR );
-  }
-  
-  return true;
-}
-
-//-------------------------------------------------------------------------
-// NOTE: this and submit_try should probably be merged into a single
-// method -- submit_batch_job or something like that.  wenger/pfc 2006-04-05.
-static bool
-do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
-{
-	std::string cmd; // for debug output
-	args.GetArgsStringForDisplay( cmd );
-	debug_printf( DEBUG_VERBOSE, "submitting: %s\n", cmd.c_str() );
-  
-	bool success = false;
-
-	success = submit_try( args, condorID, prohibitMultiJobs );
-
-	if( !success ) {
-	    debug_printf( DEBUG_QUIET, "ERROR: submit attempt failed\n" );
-		debug_printf( DEBUG_QUIET, "submit command was: %s\n", cmd.c_str() );
-	}
-
-	return success;
-}
-
-
 //-------------------------------------------------------------------------
 static bool
 shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 {
 	const char* cmdFile = node->GetCmdFile();
 	auto vars = init_vars(dm, *node);
+
+	// Construct condor_submit command to execute
 	ArgList args;
-
-	// construct arguments to condor_submit to add attributes to the
-	// job classad which identify the job's node name in the DAG, the
-	// node names of its parents in the DAG, and the job ID of DAGMan
-	// itself; then, define submit_event_notes to print the job's node
-	// name inside the submit event in the userlog
-
-	// NOTE: we specify the job ID of DAGMan using only its cluster ID
-	// so that it may be referenced by jobs in their priority
-	// attribute (which needs an int, not a string).  Doing so allows
-	// users to effectively "batch" jobs by DAG so that when they
-	// submit many DAGs to the same schedd, all the ready jobs from
-	// one DAG complete before any jobs from another begin.
-
-	args.AppendArg( dm.condorSubmitExe );
+	args.AppendArg(dm.condorSubmitExe);
 
 	std::set<std::string> defer_list = {"DAG_PARENT_NAMES", "MY.DAGParentNodeNames"};
 	std::vector<NodeVar> deferred;
@@ -353,6 +178,7 @@ shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 		args.AppendArg(cmd);
 	}
 
+	// Hold on adding parent nodes list incase command exceeds max size
 	ArgList extraArgs;
 	for (const auto& var : deferred) {
 		if (var.append) { extraArgs.AppendArg("-a"); }
@@ -360,42 +186,83 @@ shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 		args.AppendArg(cmd);
 	}
 
-
-		//
-		// Add parents of this node to arguments, if we have room.
-		//
-		// This should be the last thing in the arguments, except
-		// for the submit file name!!!
-		//
-
-		// how big is the command line so far?
+	// Get size of parts of the command line we are about to run
 	std::string display;
 	args.GetArgsStringForDisplay( display );
 	int cmdLineSize = display.length();
-
 	extraArgs.GetArgsStringForDisplay( display );
 	int DAGParentNodeNamesLen = display.length();
-		// how many additional chars must we still add to command line
-	        // NOTE: according to the POSIX spec, the args +
-   	        // environ given to exec() cannot exceed
-   	        // _POSIX_ARG_MAX, so we also need to calculate & add
-   	        // the size of environ** to reserveNeeded
 	int reserveNeeded = (int)strlen( cmdFile );
-	int maxCmdLine = _POSIX_ARG_MAX;
 
-		// if we don't have room for DAGParentNodeNames, leave it unset
-	if( cmdLineSize + reserveNeeded + DAGParentNodeNamesLen > maxCmdLine ) {
-		debug_printf( DEBUG_NORMAL, "Warning: node %s has too many parents "
-					  "to list in its classad; leaving its DAGParentNodeNames "
-					  "attribute undefined\n", node->GetJobName());
-		check_warning_strictness( DAG_STRICT_3 );
+	// if we don't have room for DAGParentNodeNames, leave it unset
+	if ((cmdLineSize + reserveNeeded + DAGParentNodeNamesLen) > _POSIX_ARG_MAX) {
+		debug_printf(DEBUG_NORMAL,
+		             "Warning: node %s has too many parents to list in its classad; leaving its DAGParentNodeNames attribute undefined\n",
+		             node->GetJobName());
+		check_warning_strictness(DAG_STRICT_3);
 	} else {
-		args.AppendArgsFromArgList( extraArgs );
+		args.AppendArgsFromArgList(extraArgs);
 	}
 
-	args.AppendArg( cmdFile );
+	args.AppendArg(cmdFile);
+	// End command construction
 
-	return do_submit( args, condorID, dm.prohibitMultiJobs );
+	args.GetArgsStringForDisplay(display);
+	debug_printf(DEBUG_VERBOSE, "Submitting: %s\n", display.c_str());
+
+	// Execute condor_submit command
+	int jobProcCount;
+	int exit_status;
+	auto_free_ptr output = run_command(180, args, MY_POPEN_OPT_WANT_STDERR, nullptr, &exit_status);
+
+	if ( ! output) {
+		if (exit_status != 0) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to run condor_submit for node %s with status %d\n",
+			             node->GetJobName(), exit_status);
+		} else {
+			debug_printf(DEBUG_QUIET, "ERROR (%d): Failed to run condor_submit for node %s: %s\n",
+			             errno, node->GetJobName(), strerror(errno));
+		}
+		return false;
+	}
+
+	//----------------------------------------------------------------------
+	// Parse submit command output for a HTCondor job ID.
+	// Typical condor_submit output looks like:
+	//    Submitting job(s).
+	//    Logging submit event(s).
+	//    1 job(s) submitted to cluster 2267.
+	//----------------------------------------------------------------------
+
+	bool successful_submit = false;
+	for (const auto& line : StringTokenIterator(output.ptr(), "\n")) {
+		debug_printf(DEBUG_VERBOSE, "From submit: %s\n", line.c_str());
+		if (line.find(" submitted to cluster ") != std::string::npos) {
+			if (2 != sscanf(line.c_str(), " %d job(s) submitted to cluster %d", &jobProcCount, &condorID._cluster)) {
+				debug_printf(DEBUG_QUIET, "ERROR: parse_condor_submit failed:\n\t%s\n", line.c_str());
+				// Return true so higher level code handles failure correctly rather than
+				// retrying the submit however many times DAGMan is configured to.
+				return true;
+			}
+			successful_submit = true;
+			break;
+		}
+	}
+
+	if ( ! successful_submit) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to run condor_submit for node %s:\n%s\n",
+		             node->GetJobName(), output.ptr());
+		return false;
+	}
+
+	// Check for multiple job procs if configured to disallow that.
+	if (dm.prohibitMultiJobs && jobProcCount > 1) {
+		debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
+		             jobProcCount);
+		main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_ERROR);
+	}
+
+	return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////////
