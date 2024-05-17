@@ -17,9 +17,14 @@ Release Notes:
 
 New Features:
 
-- Added an ``-edit`` option to the *condor_qusers* tool.  This option allows
+- Added an ``-edit`` option to the :tool:`condor_qusers`.  This option allows
   and administrator to add custom attributes to a User classad in the *condor_schedd*.
   :jira:`2381`
+
+- Added an ``-long``, ``-format`` and ``-autoformat`` options to the :tool:`condor_ping`.
+  These options allows give predictable output for programs that wish to parse the results
+  of running the command.
+  :jira:`2449`
 
 - A job can now be put into a cool-down state after a failed execution
   attempt.
