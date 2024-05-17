@@ -25,8 +25,6 @@
 
 bool condor_submit(const Dagman &dm, Job* node, CondorID& condorID);
 
-bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID);
-
 bool send_reschedule(const Dagman &dm);
 
 void set_fake_condorID( int subprocID );

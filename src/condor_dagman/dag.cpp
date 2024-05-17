@@ -3738,20 +3738,7 @@ Dag::SubmitNodeJob(const Dagman &dm, Job *node, CondorID &condorID)
 	if (node->GetNoop()) {
 		submit_success = fake_condor_submit(condorID, 0, node->GetJobName(), node->GetDirectory(), logFile.c_str());
 	} else {
-		switch(dm.options[deep::i::SubmitMethod]) {
-			case (int)DagSubmitMethod::CONDOR_SUBMIT: // run condor_submit
-				submit_success = condor_submit(dm, node, condorID);
-				break;
-			case (int)DagSubmitMethod::DIRECT: // direct submit
-				submit_success = direct_condor_submit(dm, node, condorID);
-				break;
-			default:
-				// We have unknown submission method requested so jobs will never be submitted abort
-				debug_printf(DEBUG_NORMAL, "Error: Unknown submit method (%d)\n", dm.options[deep::i::SubmitMethod]);
-				main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR);
-			break;
-		}
-
+		submit_success = condor_submit(dm, node, condorID);
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;

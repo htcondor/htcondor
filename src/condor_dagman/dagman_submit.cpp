@@ -322,23 +322,11 @@ do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 
 
 //-------------------------------------------------------------------------
-bool
-condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
+static bool
+shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 {
-	const char* directory = node->GetDirectory();
 	const char* cmdFile = node->GetCmdFile();
-	TmpDir		tmpDir;
-	std::string	errMsg;
-	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to node directory %s: %s\n",
-				directory, errMsg.c_str() );
-		return false;
-	}
-	bool success = false;
-
 	auto vars = init_vars(dm, *node);
-
 	ArgList args;
 
 	// construct arguments to condor_submit to add attributes to the
@@ -407,16 +395,7 @@ condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 
 	args.AppendArg( cmdFile );
 
-	success = do_submit( args, condorID, dm.prohibitMultiJobs );
-
-	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to original directory: %s\n",
-				errMsg.c_str() );
-		success = false;
-	}
-
-	return success;
+	return do_submit( args, condorID, dm.prohibitMultiJobs );
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -438,7 +417,7 @@ static bool send_jobset_if_allowed(SubmitHash& submitHash, int cluster)
 }
 
 //-------------------------------------------------------------------------
-bool
+static bool
 direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 {
 	const char* cmdFile = node->GetCmdFile();
@@ -449,15 +428,6 @@ direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 	// Otherwise we'll initialize and parse it in from the submit file later
 	SubmitHash* submitHash = node->GetSubmitDesc();
 
-	TmpDir		tmpDir;
-	std::string	errMsg;
-	const char* directory = node->GetDirectory();
-	if (!tmpDir.Cd2TmpDir(directory, errMsg)) {
-		debug_printf(DEBUG_QUIET,
-			"Could not change to node directory %s: %s\n",
-			directory, errMsg.c_str());
-		return false;
-	}
 	int rval = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	bool success = false;
@@ -655,16 +625,43 @@ finis:
 		}
 	}
 
-	if (!tmpDir.Cd2MainDir(errMsg)) {
-		debug_printf(DEBUG_QUIET,
-			"Could not change to original directory: %s\n",
-			errMsg.c_str());
-		success = false;
-	}
-
 	// If the submitHash was only allocated in this function (and not linked to the node) delete it now
 	if (!node->GetSubmitDesc()) {
 		delete submitHash;
+	}
+
+	return success;
+}
+
+bool condor_submit(const Dagman &dm, Job* node, CondorID& condorID) {
+	bool success = false;
+	const char* directory = node->GetDirectory();
+	TmpDir tmpDir;
+	std::string errMsg;
+
+	if ( ! tmpDir.Cd2TmpDir(directory, errMsg)) {
+		debug_printf(DEBUG_QUIET, "Could not change to node directory %s: %s\n", directory, errMsg.c_str());
+		return success;
+	}
+
+	DagSubmitMethod method = static_cast<DagSubmitMethod>(dm.options[deep::i::SubmitMethod]);
+	switch(method) {
+		case DagSubmitMethod::CONDOR_SUBMIT: // run condor_submit
+			success = shell_condor_submit(dm, node, condorID);
+			break;
+		case DagSubmitMethod::DIRECT: // direct submit
+			success = direct_condor_submit(dm, node, condorID);
+			break;
+		default:
+			// We have unknown submission method requested so jobs will never be submitted abort
+			debug_printf(DEBUG_NORMAL, "Error: Unknown submit method (%d)\n", (int)method);
+			main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR);
+		break;
+	}
+
+	if ( ! tmpDir.Cd2MainDir(errMsg)) {
+		debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n", errMsg.c_str());
+		success = false;
 	}
 
 	return success;
