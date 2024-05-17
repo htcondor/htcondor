@@ -40,11 +40,11 @@ for file in $rpmdir/*.rpm; do
     elif [[ $file == */python2-* ]]; then
         # Skip Python 2 bindings
         echo Skipping $file
-    elif [[ $file == *-credmon-local* ]]; then
-        # We only want -credmon-oauth for tests, for now.
+    elif [[ $file == *-credmon-ouath* ]]; then
+        # We only want sbin/condor_credmon_ouath for tests, for now,
+        # but that's in the credmon-local package for some reaosn.
         echo Skipping $file
     elif [[ $file == *-credmon-vault* ]]; then
-        # We only want -credmon-oauth for tests, for now.
         echo Skipping $file
     else
         eval $(perl -e "(\$package, \$version, \$release, \$dist, \$arch) = '$file' =~ m:^.*/(.*)-([0-9][0-9.]*)-([0-9][0-9.]*)\.([^.]+)\.([^.]+)\.rpm$:; print \"package=\$package version=\$version release=\$release dist=\$dist arch=\$arch\";")
