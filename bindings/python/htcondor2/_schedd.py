@@ -287,7 +287,7 @@ class Schedd():
 
 
     def jobEpochHistory(self,
-        constraint : Union[str, classad.ExprTree],
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
         projection : List[str] = [],
         match : int = -1,
         since : Union[int, str, classad.ExprTree] = None,
