@@ -27,14 +27,12 @@ bool condor_submit(const Dagman &dm, Job* node, CondorID& condorID);
 
 bool send_reschedule(const Dagman &dm);
 
-void set_fake_condorID( int subprocID );
-
-bool fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
-					const char* directory, const char *logFile );
+void set_fake_condorID(int subprocID);
 
 int get_fake_condorID();
 
-bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
-			   const char* directory, const char *logFile );
+bool fake_condor_submit(CondorID& condorID, Job* job, const char* DAGNodeName, const char* directory, const char *logFile);
+
+bool writePreSkipEvent(CondorID& condorID, Job* job, const char* DAGNodeName, const char* directory, const char *logFile);
 
 #endif /* #ifndef DAGMAN_SUBMIT_H */
