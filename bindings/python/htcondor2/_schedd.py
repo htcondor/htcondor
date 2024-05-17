@@ -447,6 +447,7 @@ class Schedd():
             submit_file = submit_file + ")\n"
 
         real = Submit(submit_file)
+        real.setSubmitMethod(description.getSubmitMethod())
         return _schedd_submit(self._addr, real._handle, count, spool)
 
 
