@@ -1,4 +1,4 @@
-condor (23.7.1-0.1) stable; urgency=medium
+condor (23.7.2-0.1) stable; urgency=medium
 
   * Warns about deprecated multiple queue statements in a submit file
   * The semantics of 'skip_if_dataflow' have been improved
@@ -7,8 +7,9 @@ condor (23.7.1-0.1) stable; urgency=medium
   * Local universe jobs can now specify a container image
   * File transfer plugins can now advertise extra attributes
   * DAGMan can rescue and abort if pending jobs are missing from the job queue
+  * Fix so 'condor_submit -interactive' works on cgroup v2 execution points
 
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 09 May 2024 12:35:00 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 16 May 2024 11:32:00 -0500
 
 condor (23.0.10-1) stable; urgency=medium
 

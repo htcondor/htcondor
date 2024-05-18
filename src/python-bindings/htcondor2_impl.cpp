@@ -157,6 +157,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_submit_set_submit_method", &_submit_set_submit_method, METH_VARARGS, NULL},
 	{"_submit_get_submit_method", &_submit_get_submit_method, METH_VARARGS, NULL},
 	{"_submit_issue_credentials", &_submit_issue_credentials, METH_VARARGS, NULL},
+	{"_submit_itemdata", &_submit_itemdata, METH_VARARGS, NULL},
 
 
 	{"_job_event_log_init", &_job_event_log_init, METH_VARARGS, NULL},

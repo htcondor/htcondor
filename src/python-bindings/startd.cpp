@@ -113,7 +113,7 @@ struct Startd
 
 	boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection = boost::python::list(), int match = -1, boost::python::object since = boost::python::object())
 	{
-		return history_query(requirement, projection, match, since, HRS_STARTD_JOB_HIST, GET_HISTORY, m_addr);
+		return history_query(requirement, projection, match, since, "", HRS_STARTD_JOB_HIST, GET_HISTORY, m_addr);
 	}
 
 private:

@@ -40,7 +40,6 @@
 #include "condor_io.h"
 #include "condor_uid.h"
 #include "match_prefix.h"
-#include "string_list.h"
 #include "condor_string.h"
 #include "get_daemon_name.h"
 #include "daemon.h"
@@ -61,7 +60,7 @@
 
 const char * MyName;
 
-StringList params;
+std::vector<std::string> params;
 daemon_t dt = DT_MASTER;
 bool mixedcase = false;
 bool diagnostic = false;
@@ -197,7 +196,7 @@ typedef union _write_config_options {
 	};
 } WRITE_CONFIG_OPTIONS;
 
-char* GetRemoteParam( Daemon*, char* );
+char* GetRemoteParam( Daemon*, const char* );
 char* GetRemoteParamRaw(Daemon*, const char* name, bool & raw_supported, std::string & raw_value, std::string & file_and_line, std::string & def_value, std::string & usage_report);
 int GetRemoteParamStats(Daemon* target, ClassAd & ad);
 int   GetRemoteParamNamesMatching(Daemon*, const char* pattern, std::vector<std::string> & names, bool summary, bool detected);
@@ -532,7 +531,8 @@ static const char * RemotePrintValue(const char * val, const char * indent, std:
 int
 main( int argc, const char* argv[] )
 {
-	char	*value = NULL, *tmp = NULL;
+	char	*value = NULL;
+	const char * tmp = nullptr;
 	const char * pcolon;
 	const char *name_arg = NULL; // raw argument from -name (before get_daemon_name lookup)
 	const char *addr = NULL;
@@ -604,16 +604,16 @@ main( int argc, const char* argv[] )
 					++i; // skip "use"
 					// save off the parameter name, prefixed with ^ so that the code below we know it's a metaknob name.
 					std::string meta("^"); meta += argv[i];
-					params.append(meta.c_str());
+					params.emplace_back(meta);
 				} else {
 					fprintf(stderr, "use should be followed by a category or category:option argument\n");
-					params.append("^");
+					params.emplace_back("^");
 				}
 			#ifdef WIN32
 			} else if (i == 1 && wait_for_win32_debugger) {
 			#endif
 			} else {
-				params.append(argv[i]);
+				params.emplace_back(argv[i]);
 			}
 			continue;
 		}
@@ -675,9 +675,8 @@ main( int argc, const char* argv[] )
 		} else if (is_arg_colon_prefix(arg, "verbose", &pcolon, 1)) {
 			verbose = true;
 			if (pcolon) {
-				StringList opts(pcolon+1,":,");
-				opts.rewind();
-				while (NULL != (tmp = opts.next())) {
+				for (const auto& opt: StringTokenIterator(pcolon+1, ":,")) {
+					tmp = opt.c_str();
 					if (is_arg_prefix(tmp, "usage", 2) ||
 						is_arg_prefix(tmp, "use", -1)) {
 						dash_usage = true;
@@ -747,9 +746,8 @@ main( int argc, const char* argv[] )
 			dash_summary = true;
 			write_config = "-";
 			if (pcolon) {
-				StringList opts(pcolon+1,":,");
-				for (const char * opt = opts.first(); opt != nullptr; opt = opts.next()) {
-					if (is_arg_prefix(opt, "detected", 3)) {
+				for (const auto& opt: StringTokenIterator(pcolon+1, ":,")) {
+					if (is_arg_prefix(opt.c_str(), "detected", 3)) {
 						dash_detected = true;
 						write_config_flags.show_detected = true;
 					}
@@ -763,10 +761,9 @@ main( int argc, const char* argv[] )
 			write_config = use_next_arg("writeconfig", argv, i);
 			write_config_flags.all = 0;
 			if (pcolon) {
-				StringList opts(pcolon+1,":,");
-				opts.rewind();
 				bool comment = false;
-				while (NULL != (tmp = opts.next())) {
+				for (const auto& opt: StringTokenIterator(pcolon+1, ":,")) {
+					tmp = opt.c_str();
 					if (is_arg_prefix(tmp, "comment", 3)) {
 						comment = true;
 					} else if (is_arg_prefix(tmp, "default", 3)) {
@@ -820,7 +817,7 @@ main( int argc, const char* argv[] )
 		} else if (is_dash_arg_colon_prefix(argv[i], "profile", &pcolon, -1)) {
 			check_configif = "profile"; //use_next_arg("profile", argv, i);
 			if (pcolon) {
-				StringList opts(pcolon+1,":,");
+				StringTokenIterator opts(pcolon+1, ":,");
 				tmp = opts.first(); if (tmp) profile_test_id = atoi(tmp);
 				tmp = opts.next(); if (tmp) profile_iter = atoi(tmp);
 			}
@@ -1010,8 +1007,7 @@ main( int argc, const char* argv[] )
 		fprintf(stdout, "# Configuration from machine: %s\n", hostname);
 
 		// if no param qualifiers were sent, print all.
-		params.rewind();
-		if( ! params.number()) {
+		if( ! params.size()) {
 			if (dash_dump_both) {
 				std::string last;
 				int opts = 0;
@@ -1022,14 +1018,14 @@ main( int argc, const char* argv[] )
 				foreach_param(opts, dump_both_callback, (void*)&last);
 				fprintf(stdout, "%d items\n", dump_both_count);
 			} else {
-				params.append("");
-				params.rewind();
+				params.emplace_back("");
 			}
 		}
 
-		if (params.number()) {
-			while ((tmp = params.next()) != NULL) {
-				if (tmp && tmp[0]) { fprintf(stdout, "\n# Parameters with names that match %s:\n", tmp); }
+		if (params.size()) {
+			for (const auto& buf: params) {
+				tmp = buf.c_str();
+				if (tmp[0]) { fprintf(stdout, "\n# Parameters with names that match %s:\n", tmp); }
 				std::vector<std::string> names;
 				std::string rawvalbuf;
 				Regex re; int errcode = 0; int errindex;
@@ -1144,11 +1140,9 @@ main( int argc, const char* argv[] )
 		my_exit(0);
 	}
 
-	params.rewind();
-	if( ! params.number() && !print_config_sources) {
+	if( ! params.size() && !print_config_sources) {
 		if (dump_all_variables || dump_stats || (dash_summary && ask_a_daemon)) {
-			params.append("");
-			params.rewind();
+			params.emplace_back("");
 			//if (diagnostic) fprintf(stderr, "querying all\n");
 		} else if (write_config) {
 			my_exit(0);
@@ -1184,8 +1178,8 @@ main( int argc, const char* argv[] )
 
 	// handle SET/RSET etc
 	if (mt != CONDOR_QUERY) {
-		for (const char * name = params.first(); name; name = params.next()) {
-			SetRemoteParam(target, name, mt);
+		for (const auto& name: params) {
+			SetRemoteParam(target, name.c_str(), mt);
 		}
 		my_exit(0);
 	}
@@ -1193,7 +1187,8 @@ main( int argc, const char* argv[] )
 	// handle query
 	// 
 	int num_not_defined = 0;
-	while( (tmp = params.next()) ) {
+	for (const auto& buf: params) {
+		tmp = buf.c_str();
 		std::string herevalbuf;
 		// empty parens so that we don't have to change the brace level of ALL of the code below.
 		{
@@ -1441,7 +1436,7 @@ main( int argc, const char* argv[] )
 
 
 char*
-GetRemoteParam( Daemon* target, char* param_name ) 
+GetRemoteParam( Daemon* target, const char* param_name )
 {
     ReliSock s;
 	s.timeout( 30 );
@@ -1479,7 +1474,7 @@ GetRemoteParam( Daemon* target, char* param_name )
 	target->startCommand( CONFIG_VAL, &s, 30 );
 
 	s.encode();
-	if( !s.code(param_name) ) {
+	if( !s.put(param_name) ) {
 		fprintf( stderr, "Can't send request (%s)\n", param_name );
 		return NULL;
 	}
@@ -2046,8 +2041,8 @@ struct _write_config_args {
 	WRITE_CONFIG_OPTIONS opt;
 	int iter;
 	const char * pszLast;
-	StringList *obsolete;
-	StringList *obsoleteif;
+	std::vector<std::string> *obsolete;
+	std::vector<std::string> *obsoleteif;
 	std::string * buffer;
 	std::map<unsigned long long, std::string> output;
 };
@@ -2103,7 +2098,7 @@ bool write_config_callback(void* user, HASHITER & it) {
 		}
 
 		if (pargs->opt.hide_obsolete && pargs->obsolete) {
-			if (pargs->obsolete->contains_anycase(hash_iter_key(it))) {
+			if (contains_anycase(*pargs->obsolete, hash_iter_key(it))) {
 				return true;
 			}
 		}
@@ -2114,7 +2109,7 @@ bool write_config_callback(void* user, HASHITER & it) {
 			item += "=";
 			const char * val = hash_iter_value(it);
 			if (val) item += hash_iter_value(it);
-			if (pargs->obsoleteif->contains(item.c_str())) {
+			if (contains(*pargs->obsoleteif, item)) {
 				return true;
 			}
 		}
@@ -2477,35 +2472,43 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 	args.obsoleteif = NULL;
 	args.pszLast = NULL;
 
-	StringList obsolete("","\n");
+	std::vector<std::string> obsolete;
 	if (opts.hide_obsolete) {
 		items = param_meta_value("UPGRADE", "DISCARD", nullptr);
 		if (items && items[0]) {
 			//fprintf(stderr, "$UPGRADE.DISCARD=\n%s\n", items);
-			obsolete.initializeFromString(items);
+			for (const auto& item: StringTokenIterator(items, "\n")) {
+				obsolete.emplace_back(item);
+			}
 			//fprintf(stderr, "obsolete=\n%s\n", obsolete.print_to_delimed_string("\n"));
 		}
 		items = param_meta_value("UPGRADE", "DISCARDX", nullptr);
 		if (items && items[0]) {
 			//fprintf(stderr, "$UPGRADE.DISCARD_OPSYS=\n%s\n", items);
-			obsolete.initializeFromString(items);
+			for (const auto& item: StringTokenIterator(items, "\n")) {
+				obsolete.emplace_back(item);
+			}
 		}
 		args.obsolete = &obsolete;
 
 		// fprintf(stderr, "obsolete=\n%s\n", obsolete.print_to_delimed_string("\n"));
 	}
 
-	StringList obsoleteif("","\n");
+	std::vector<std::string> obsoleteif;
 	if (opts.hide_if_match) {
 		items = param_meta_value("UPGRADE", "DISCARDIF", nullptr);
 		if (items && items[0]) {
-			obsoleteif.initializeFromString(items);
+			for (const auto& item: StringTokenIterator(items, "\n")) {
+				obsoleteif.emplace_back(item);
+			}
 			args.obsoleteif = &obsoleteif;
 		}
 
 		items = param_meta_value("UPGRADE", "DISCARDIFX", nullptr);
 		if (items && items[0]) {
-			obsoleteif.initializeFromString(items);
+			for (const auto& item: StringTokenIterator(items, "\n")) {
+				obsoleteif.emplace_back(item);
+			}
 			args.obsoleteif = &obsoleteif;
 		}
 	}
@@ -2515,8 +2518,10 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 	// We want to ignore them on upgrade since we've removed VMWare support.
 	items = param_meta_value("UPGRADE", "DISCARD_VMWARE", nullptr);
 	if (items && items[0]) {
-		obsolete.initializeFromString(items);
-		args.obsolete = &obsoleteif;
+		for (const auto& item: StringTokenIterator(items, "\n")) {
+			obsoleteif.emplace_back(item);
+		}
+		args.obsoleteif = &obsoleteif;
 	}
 	#endif
 

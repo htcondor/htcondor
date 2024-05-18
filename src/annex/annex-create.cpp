@@ -59,11 +59,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
     std::string buffer;
 	std::vector< std::pair< std::string, std::string > > tags;
 	if( command->LookupString( ATTR_EC2_TAG_NAMES, buffer ) ) {
-		StringList tagNames( buffer );
-
-		char * tagName = NULL;
-		tagNames.rewind();
-		while( (tagName = tagNames.next()) ) {
+		for (const auto& tagName: StringTokenIterator(buffer)) {
 			std::string tagAttr(ATTR_EC2_TAG_PREFIX);
 			tagAttr.append(tagName);
 

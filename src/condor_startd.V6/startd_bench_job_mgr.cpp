@@ -98,7 +98,7 @@ StartdBenchJobMgr::StartBenchmarks( Resource *rip, int &count )
 int
 StartdBenchJobMgr::Reconfig( void )
 {
-	StringList	before, after;
+	std::vector<std::string> before, after;
 
 	m_job_list.GetStringList( before );
 	int status = CronJobMgr::HandleReconfig();
@@ -106,17 +106,15 @@ StartdBenchJobMgr::Reconfig( void )
 	if ( status ) {
 		return status;
 	}
-	if ( ! before.identical(after) ) {
-		char	*before_str = before.print_to_string();
-		char	*after_str  = after.print_to_string();
+	if ( before != after ) {
+		std::string before_str = join(before, ",");
+		std::string after_str  = join(after, ",");
 		dprintf( D_ALWAYS,
 				 "WARNING: benchmark job list changed from '%s' to '%s'"
 				 " -- If there are additions to the benchmark list, these"
 				 " new benchmarks won't be run until the 'RunBenchmarks'"
 				 " expresion becomes true and all benchmarks are run.\n",
-				 before_str?before_str:"", after_str?after_str:"" );
-		free( before_str );
-		free( after_str );
+				 before_str.c_str(), after_str.c_str() );
 	}
 	return 1;
 }

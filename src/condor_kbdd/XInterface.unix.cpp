@@ -146,15 +146,6 @@ XInterface::XInterface(int id)
 
 	g_connected = false;
 
-	tmp = param( "XAUTHORITY_USERS" );
-	if(tmp != NULL) {
-		_xauth_users = new StringList();
-		_xauth_users->initializeFromString( tmp );
-		free( tmp );
-	} else {
-		_xauth_users = NULL;
-	}
-
 	_display_name = param( "X_CONSOLE_DISPLAY" );
 	
 	/* If there's no specified display name, we'll use the default... */
@@ -167,10 +158,6 @@ XInterface::XInterface(int id)
 
 XInterface::~XInterface()
 {
-	if(_xauth_users != NULL) {
-		delete _xauth_users;
-	}
-
 	if(_display_name != NULL) {
 	  free(_display_name);
 	}

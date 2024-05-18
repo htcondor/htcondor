@@ -288,12 +288,14 @@ void setEventUsageAd(const ClassAd& jobAd, ClassAd ** ppusageAd)
 	if ( ! jobAd.LookupString("ProvisionedResources", resslist))
 		resslist = "Cpus, Disk, Memory";
 
-	StringList reslist(resslist.c_str());
-	if (reslist.number() > 0) {
-		ClassAd * puAd = new ClassAd();
+	ClassAd * puAd = nullptr;
+	// if() removed, keeping {} to not re-indent enclosed code
+	{
+		for (const auto& resname: StringTokenIterator(resslist)) {
+			if (puAd == nullptr) {
+				puAd = new ClassAd();
+			}
 
-		reslist.rewind();
-		while (const char * resname = reslist.next()) {
 			std::string attr;
 			std::string res = resname;
 			title_case(res); // capitalize it to make it print pretty.
@@ -351,7 +353,9 @@ void setEventUsageAd(const ClassAd& jobAd, ClassAd ** ppusageAd)
 			attr = "Assigned"; attr += res;
 			CopyAttribute( attr, *puAd, jobAd );
 		}
+	}
 
+	if (puAd) {
 		// Hard code a couple of useful time-based attributes that are not "Requested" yet
 		// and shorten their names to display more reasonably
 		int jaed = 0;

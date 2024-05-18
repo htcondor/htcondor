@@ -13,6 +13,7 @@
 #       - This test DOES NOT check epoch stuff or the following flag options:
 #               xml,json,jsonl,long,attributes,format,pool,or autoformat
 #       - This test will also test some various expected failures
+#       - This test sets up a non-accurate EPOCH history for testing the -type flag
 
 #Configuration for personal condor. We add names for STARTD & SCHEDD to trick history for remote queries
 #Note: I put set the config dir to the execute dir because we don't run any actual jobs still might be
@@ -23,6 +24,7 @@
     SCHEDD_NAME = TEST_SCHEDD@
     STARTD_NAME = TEST_STARTD@
     LOCAL_CONFIG_DIR = $(EXECUTE)
+    JOB_EPOCH_HISTORY = $(SPOOL)/epoch_history
 """
 #endtestreq
 
@@ -31,10 +33,11 @@ from time import time
 import os
 import sys
 import htcondor
+import htcondor2
 
 #Custom class to help build job ads for history files
 class HistAdsViaCluster():
-    def __init__(self, ownr="mironlivny", clust=-1, procs=1, qdate=-1, cust_attrs={}):
+    def __init__(self, ownr="mironlivny", clust=-1, procs=1, qdate=-1, cust_attrs={}, ad_type=""):
         self.owner = ownr
         self.clusterId = clust
         #Procs = number of job procs for this cluster
@@ -42,6 +45,7 @@ class HistAdsViaCluster():
         self.QDate = qdate
         #cust_attrs = dictionary of key value pairs to add/change attrs for this cluster
         self.attrs = cust_attrs
+        self.ad_type = ad_type
 
 #Custom class to set up specific test runs parameters for success
 class TestReqs:
@@ -92,6 +96,22 @@ TEST_CASES = {
     "remote_clust.proc" : TestReqs("condor_history 5.3 -name TEST_SCHEDD@", ["5.3"], STD_HEADER),
     "remote_match"      : TestReqs("condor_history 5 -name TEST_SCHEDD@ -limit 2", ["5.4","5.3"], STD_HEADER),
     "remote_since"      : TestReqs("condor_history -name TEST_SCHEDD@ -since 4.0", ["4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
+    "remote_forwards"   : TestReqs("condor_history 2 -forwards -scanlimit 4 -name TEST_SCHEDD@", ["2.0","2.1","2.2"], STD_HEADER),
+    "remote_scanlimit"  : TestReqs("condor_history -scanlimit 2 -name TEST_SCHEDD@", ["5.3","5.4"], STD_HEADER),
+    "remote_constraint" : TestReqs("condor_history -const CustAttr=!=UNDEFINED -name TEST_SCHEDD@", ["3.0"], STD_HEADER),
+    # Note: remote_epochs default type is EPOCH ads so query should return the first 3 ads marked as EPOCH in their banners
+    "remote_epochs"     : TestReqs("condor_history -epochs -const IsEpoch=!=UNDEFINED -match 3 -name TEST_SCHEDD@", ["5.0","7.0","8.0"], STD_HEADER),
+    "remote_type"       : TestReqs("condor_history -epochs -const IsEpoch=!=UNDEFINED -type STARTER,CHECKPOINT -name TEST_SCHEDD@", ["9.0","10.0"], STD_HEADER),
+    # Test the -type flag
+    "default_epoch_type": TestReqs("condor_history -epochs", ["1.0","3.0","5.0","7.0","8.0"], STD_HEADER),
+    "epoch_input_type"  : TestReqs("condor_history -epochs -type input", ["2.0","6.0","6.1"], STD_HEADER),
+    "epoch_output_type" : TestReqs("condor_history -epochs -type output", ["4.0","4.1"], STD_HEADER),
+    "epoch_chkpt_type"  : TestReqs("condor_history -epochs -type checkpoint", ["10.0"], STD_HEADER),
+    "epoch_starter_type": TestReqs("condor_history -epochs -type STARTER", ["9.0"], STD_HEADER),
+    "epoch_mix_type"    : TestReqs("condor_history -epochs -type STARTER,OutPut", ["4.0","4.1","9.0"], STD_HEADER),
+    "epoch_transfer_type":TestReqs("condor_history -epochs -type transfer", ["2.0","4.0","4.1","6.0","6.1","10.0"], STD_HEADER),
+    "epoch_all_type"    : TestReqs("condor_history -epochs -type ALL", ["1.0","2.0","3.0","4.0","4.1","5.0","6.0","6.1","7.0","8.0","9.0","10.0"], STD_HEADER),
+    "epoch_unknown_type": TestReqs("condor_history -epochs -type UNKNOWN", header=STD_HEADER),
     # Special case requires reconfig
     # Test remote query works when history=  and schedd.history=file
     "remote_schedd.hist": TestReqs("condor_history 4 -name TEST_SCHEDD@", ["4.0","4.1"], STD_HEADER),
@@ -180,7 +200,7 @@ def writeAdToHistory(filename, clusters, ad, is_schedd=True):
             for key,value in sorted_attrs.items():
                 ad_str += f"{key}={value}\n"
             #Add banner at end
-            ad_str += f"*** Offset = {offset} ClusterId = {clust.clusterId} ProcId = {i} Owner = \"{clust.owner}\" CompletionDate = {compDate}\n"
+            ad_str += f"*** {clust.ad_type} Offset = {offset} ClusterId = {clust.clusterId} ProcId = {i} Owner = \"{clust.owner}\" CompletionDate = {compDate}\n"
             fd.write(ad_str)
             offset += sys.getsizeof(ad_str)
     fd.close()
@@ -227,7 +247,7 @@ queue
 #2.0 tj        1010 1070  -
 #2.1 tj        1010 1070  -
 #2.2 tj        1010 1070  -
-#3.0 tj        1015 1075  -
+#3.0 tj        1015 1075  CustAttr=True
 #4.0 unclegreg 1020 1080  -
 #4.1 unclegreg 1020 1080  -
 #5.0 cole      1025 1085  -
@@ -243,7 +263,7 @@ def writeHistoryFile(default_condor, test_dir, jobAd):
     clusters = [
         HistAdsViaCluster("cole",1,1,t),
         HistAdsViaCluster("tj",2,3,t+10),
-        HistAdsViaCluster("tj",3,1,t+15),
+        HistAdsViaCluster("tj",3,1,t+15,{"CustAttr":True}),
         HistAdsViaCluster("unclegreg",4,2,t+20),
         HistAdsViaCluster("cole",5,5,t+25),
     ]
@@ -253,6 +273,41 @@ def writeHistoryFile(default_condor, test_dir, jobAd):
         p = default_condor.run_command(["condor_config_val",hist])
         writeAdToHistory(p.stdout, clusters, jobAd, hist=="HISTORY")
     return ""
+
+#-----------------------------------------------------------------------------------------------
+# Write Epoch History file with different Ad Types to test -type flag
+# History in Top (oldest) -> Bottom (newest)
+# JID Owner Type
+# 1.0 cole  EPOCH
+# 2.0 cole  INPUT
+# 3.0 cole  EPOCH
+# 4.0 cole  OUTPUT
+# 4.1 cole  OUTPUT
+# 5.0 cole  EPOCH
+# 6.0 cole  INPUT
+# 6.1 cole  INPUT
+# 7.0 cole  EPOCH
+# 8.0 cole  EPOCH
+# 9.0 cole  STARTER
+#10.0 cole  CHECKPOINT
+@action
+def writeEpochHistory(default_condor, jobAd):
+    attrs = {"IsEpoch":True}
+    clusters = [
+        HistAdsViaCluster("cole", 1, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 2, 1, cust_attrs=attrs, ad_type="INPUT"),
+        HistAdsViaCluster("cole", 3, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 4, 2, cust_attrs=attrs, ad_type="OUTPUT"),
+        HistAdsViaCluster("cole", 5, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 6, 2, cust_attrs=attrs, ad_type="INPUT"),
+        HistAdsViaCluster("cole", 7, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 8, 1, cust_attrs=attrs, ad_type="EPOCH"),
+        HistAdsViaCluster("cole", 9, 1, cust_attrs=attrs, ad_type="STARTER"),
+        HistAdsViaCluster("cole",10, 1, cust_attrs=attrs, ad_type="CHECKPOINT"),
+    ]
+    p = default_condor.run_command(["condor_config_val","JOB_EPOCH_HISTORY"])
+    writeAdToHistory(p.stdout, clusters, jobAd, True)
+    return None
 
 #-----------------------------------------------------------------------------------------------
 #Global list of files to append to command to search specific files as opposed to knob locations
@@ -358,7 +413,7 @@ def writeSearchFiles(test_dir, jobAd):
 REQUEST_FILES = {"-file":0,"-userlog":1,"-search":2}
 #Set up action to write all the ads to appropriate files and return special files
 @action
-def setUpFiles(writeHistoryFile, writeSearchFiles, writeSingleFile, writeULog):
+def setUpFiles(writeHistoryFile, writeSearchFiles, writeSingleFile, writeULog, writeEpochHistory):
     return (writeSingleFile, writeULog, writeSearchFiles)
 #Actualy run commands/test cases (set up to all run concurrently)
 @action
@@ -422,6 +477,28 @@ def runPyBindings(default_condor):
         query["Startd"] = htcondor.Startd().history(const, proj)
         query["Schedd"] = htcondor.Schedd().history(const, proj)
     return query
+#===============================================================================================
+@action
+def runTypeFilterPyBindings(default_condor):
+    test_info = {
+        "V1-Output/INPUT"     : {"expected":["2.0","4.0","4.1","6.0","6.1"]},
+        "V1-Normal"           : {"expected":["1.0","3.0","5.0","7.0","8.0"]},
+        "V2-INPUT/CHECKPOINT" : {"expected":["2.0","6.0","6.1","10.0"]},
+        "V2-STARTER/OUTPUT"   : {"expected":["4.0","4.1","9.0"]},
+        "V2-Normal"           : {"expected":["1.0","3.0","5.0","7.0","8.0"]},
+    }
+    proj = ["ClusterId", "ProcId"]
+    with default_condor.use_config():
+        # Test V1 py bindings
+        v1_schedd = htcondor.Schedd()
+        test_info["V1-Output/INPUT"]["ads"] = v1_schedd.jobEpochHistory(None, proj, ad_type="output,input")
+        test_info["V1-Normal"]["ads"] = v1_schedd.jobEpochHistory(None, proj)
+        # Test V2 py bindings
+        v2_schedd = htcondor2.Schedd()
+        test_info["V2-INPUT/CHECKPOINT"]["ads"] = v2_schedd.jobEpochHistory(None, proj, ad_type="input,checkpoint")
+        test_info["V2-STARTER/OUTPUT"]["ads"] = v2_schedd.jobEpochHistory(None, proj, ad_type=["starter","output"])
+        test_info["V2-Normal"]["ads"] = v2_schedd.jobEpochHistory(None, proj)
+    return test_info
 #===============================================================================================
 @action
 def runErrorCmds(default_condor, test_dir):
@@ -530,6 +607,15 @@ class TestCondorHistory:
                 proc_count += 1
             assert proc_count == 2
 
+    def test_python_type_filter(self, runTypeFilterPyBindings):
+        for test,params in runTypeFilterPyBindings.items():
+            expected = params["expected"]
+            for ad in params["ads"]:
+                jid = f"{ad.get('ClusterId', -1)}.{ad.get('ProcId', -1)}"
+                assert jid in expected
+                expected.remove(jid)
+            assert len(expected) == 0
+
     def test_history_errors(self, runFailed):
         error_found = False
         #Open output file and check for given error message
@@ -541,6 +627,4 @@ class TestCondorHistory:
             if not error_found:
                 print(f"\nERROR: {runFailed[0]} failed to produce error message '{runFailed[1]}'")
         assert error_found == True
-
-
 

@@ -839,11 +839,6 @@ type=path
 default=$(LOCAL_DIR)
 type=path
 
-[XAUTHORITY_USERS]
-default=
-type=string
-tags=kbdd,XInterface
-
 [GROUP_NAMES]
 default=
 type=string
@@ -5982,6 +5977,10 @@ type=bool
 default=False
 [ADSTASH_STARTD_HISTORY]
 description=Should condor_adstash query Startd job history
+type=bool
+default=False
+[ADSTASH_SCHEDD_JOB_EPOCH_HISTORY]
+description=Should condor_adstash query Schedd job epoch history
 type=bool
 default=False
 [ADSTASH_SCHEDD_HISTORY_MAX_ADS]

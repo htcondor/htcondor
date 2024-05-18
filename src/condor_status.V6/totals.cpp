@@ -24,6 +24,7 @@
 #include "stdio.h"
 #include "totals.h"
 #include "stl_string_utils.h"
+#include "ad_printmask.h" // for format_platform_name
 
 #ifndef WIN32
 #endif
@@ -99,6 +100,14 @@ bool TrackTotals::haveTotals()
 	return true;
 }
 
+void TrackTotals::addProjection(classad::References & attrs)
+{
+	if (topLevelTotal) { 
+		topLevelTotal->addProjection(attrs);
+	}
+	return;
+}
+
 
 void TrackTotals::
 displayTotals (FILE *file, int keyLength)
@@ -138,6 +147,18 @@ displayTotals (FILE *file, int keyLength)
 		fprintf(file, "\n%*.*s(Omitted %d malformed ads in computed attribute "
 					"totals)\n\n", keyLength, keyLength, "", malformed);
 	}
+}
+
+void StartDaemonTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = {
+		ATTR_TOTAL_SLOTS, ATTR_NUM_DYNAMIC_SLOTS,
+		ATTR_TOTAL_CPUS, ATTR_TOTAL_MEMORY, /*"TotalDisk",*/ "TotalGPUs", 
+		"TotalInUseCpus", "TotalInUseMemory", "TotalInUseDisk", "TotalInUseGPUs",
+		"TotalBackfillInUseCpus", "TotalBackfillInUseMemory", "TotalBackfillInUseDisk", "TotalBackfillInUseGPUs",
+		ATTR_ARCH, ATTR_OPSYS, ATTR_OPSYS_AND_VER, ATTR_CONDOR_VERSION,	// for key
+	};
+	for (auto key : keys) attrs.insert(key);
 }
 
 int StartDaemonTotal::
@@ -200,6 +221,15 @@ displayInfo (FILE *file, int)
 		gpus, busy_gpus, bkfill_gpus,
 		100 * mem_usage/machines, 100 * bk_mem_usage/machines
 		);
+}
+
+void StartdNormalTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = {
+		ATTR_STATE,
+		ATTR_ARCH, ATTR_OPSYS, // for key
+	};
+	for (auto key : keys) attrs.insert(key);
 }
 
 int StartdNormalTotal::
@@ -292,6 +322,14 @@ StartdServerTotal()
 	kflops = 0;
 }
 
+void StartdServerTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = {
+		ATTR_STATE, ATTR_MEMORY, ATTR_DISK,	ATTR_MIPS, ATTR_KFLOPS,
+		ATTR_ARCH, ATTR_OPSYS, // for key
+	};
+	for (auto key : keys) attrs.insert(key);
+}
 
 int StartdServerTotal::
 update (ClassAd *ad, int options)
@@ -359,6 +397,14 @@ StartdRunTotal()
 	loadavg = 0;
 }
 
+void StartdRunTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = {
+		ATTR_MIPS, ATTR_KFLOPS, ATTR_LOAD_AVG,
+		ATTR_ARCH, ATTR_OPSYS, // for key
+	};
+	for (auto key : keys) attrs.insert(key);
+}
 
 int StartdRunTotal::
 update (ClassAd *ad, int options)
@@ -407,6 +453,14 @@ displayInfo (FILE *file, int)
 			 (machines > 0) ? float(loadavg/machines) : 0);
 }
 
+void StartdStateTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = {
+		ATTR_STATE,
+		ATTR_ACTIVITY, // for key
+	};
+	for (auto key : keys) attrs.insert(key);
+}
 
 int StartdStateTotal::
 update (ClassAd *ad, int options)
@@ -513,6 +567,15 @@ StartdCODTotal::updateTotals( ClassAd* ad, const char* id )
 	total++;
 }
 
+void StartdCODTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = {
+		ATTR_CLAIM_STATE, ATTR_COD_CLAIMS, ATTR_STATE,
+		ATTR_ARCH, ATTR_OPSYS, // for key
+	};
+	for (auto key : keys) attrs.insert(key);
+}
+
 int StartdCODTotal::
 update (ClassAd *ad, int /*options*/)
 {
@@ -550,6 +613,13 @@ ScheddNormalTotal()
 	heldJobs = 0;
 }
 
+void ScheddNormalTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = {
+		ATTR_TOTAL_RUNNING_JOBS, ATTR_TOTAL_IDLE_JOBS, ATTR_TOTAL_HELD_JOBS,
+	};
+	for (auto key : keys) attrs.insert(key);
+}
 
 int ScheddNormalTotal::
 update (ClassAd *ad, int /*options*/)
@@ -601,6 +671,14 @@ ScheddSubmittorTotal()
 	heldJobs = 0;
 }
 
+void ScheddSubmittorTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = {
+		ATTR_RUNNING_JOBS, ATTR_IDLE_JOBS, ATTR_HELD_JOBS,
+		ATTR_NAME, // for key
+	};
+	for (auto key : keys) attrs.insert(key);
+}
 
 int ScheddSubmittorTotal::
 update (ClassAd *ad, int /*options*/)
@@ -647,6 +725,12 @@ CkptSrvrNormalTotal()
 {
 	numServers = 0;
 	disk = 0;
+}
+
+void CkptSrvrNormalTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = { ATTR_DISK, };
+	for (auto key : keys) attrs.insert(key);
 }
 
 int CkptSrvrNormalTotal::
@@ -702,8 +786,8 @@ makeTotalObject (ppOption ppo)
 }
 
 
-int ClassTotal::
-makeKey (std::string &key, ClassAd *ad, ppOption ppo)
+/*static*/
+bool ClassTotal::makeKey (std::string &key, ClassAd *ad, ppOption ppo)
 {
 	switch (ppo)
 	{
@@ -715,36 +799,30 @@ makeKey (std::string &key, ClassAd *ad, ppOption ppo)
 			char p1[128], p2[128];
 			if (!ad->LookupString(ATTR_ARCH, p1, sizeof(p1)) ||
 				!ad->LookupString(ATTR_OPSYS, p2, sizeof(p2)))
-				return 0;
+				return false;
 			formatstr(key, "%s/%s", p1, p2);
-			return 1;
+			return true;
 		}
 
 		case PP_STARTDAEMON:
-		{
-			char p1[24], p2[128];
-			if (!ad->LookupString(ATTR_ARCH, p1, sizeof(p1)) || 
-				!ad->LookupString(ATTR_OPSYS_AND_VER, p2, sizeof(p2)))
-				return 0;
-			formatstr(key, "%s_%s", p1, p2);
-			return 1;
-		}
+			return format_platform_name(key, ad);
 
 		case PP_SLOTS_STATE:
-			return ad->LookupString(ATTR_ACTIVITY, key) ? 0 : 1;
+			return ad->LookupString(ATTR_ACTIVITY, key);
 
 		case PP_SUBMITTER_NORMAL:
-			return ad->LookupString(ATTR_NAME, key) ? 0 : 1;
+			return ad->LookupString(ATTR_NAME, key);
 
 		// all ads in the following categories hash to the same key for totals
 		case PP_CKPT_SRVR_NORMAL:
 		case PP_SCHEDD_NORMAL:
 			key = " ";
-			return 1;
+			return true;
 
 		default:
-			return 0;
+			return false;
 	}
+	return false;
 }
 
 

@@ -812,7 +812,7 @@ finis:
 
 bool send_reschedule(const Dagman & dm)
 {
-	if (dm.options[deep::i::SubmitMethod] == 0)
+	if (dm.options[deep::i::SubmitMethod] == (int)DagSubmitMethod::CONDOR_SUBMIT)
 		return true; // submit already did it
 
 	DCSchedd schedd;

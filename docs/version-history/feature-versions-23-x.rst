@@ -17,7 +17,6 @@ Release Notes:
 
 New Features:
 
-
 - Added an ``-edit`` option to the *condor_qusers* tool.  This option allows
   and administrator to add custom attributes to a User classad in the *condor_schedd*.
   :jira:`2381`
@@ -33,6 +32,12 @@ New Features:
   set after a failed execution attempt and can be referenced in the
   cool-down expression.
   :jira:`2134`
+
+- V2 cgroups created for jobs will now be in the cgroup tree the daemons
+  are born in.  This tree is marked as Delegated in the systemd unit file,
+  so that HTCondor is the sole manipulator of these trees, following the
+  systemd "one writer" cgroup rule.
+  :jira:`2445`
 
 - New config parameter :macro:`CGROUP_LOW_MEMORY_LIMIT` allows an administrator
   of a Linux cgroup v2 system to set the "memory.low" setting in a job's cgroup
@@ -76,6 +81,10 @@ New Features:
   now also provides READ authorization.
   :jira:`2424`
 
+- Added option to :tool:`condor_adstash` to poll access points' job
+  epoch histories.
+  :jira:`2076`
+
 Bugs Fixed:
 
 - Fixed a bug where transfer of Kerberos credentials from the
@@ -87,12 +96,12 @@ Bugs Fixed:
   cgroup v2 system.
   :jira:`2438`
 
-Version 23.7.1
+Version 23.7.2
 --------------
 
 Release Notes:
 
-- HTCondor version 23.7.1 released on May 9, 2024.
+- HTCondor version 23.7.2 released on May 16, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-23010`.
 
@@ -105,7 +114,7 @@ Release Notes:
   more sense.  The restrictions have been :ref:`documented <dataflow>`.
   :jira:`1899`
 
-- HTCondor tarballs now contain `Pelican 7.7.4 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.4.4>`_
+- HTCondor tarballs now contain `Pelican 7.8.2 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.8.2>`_
   :jira:`2399`
 
 - When removing a large dag, the schedd now removes any existing child
@@ -180,6 +189,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where :tool:`condor_submit` -i did not work on a
+  cgroup v2 system.
+  :jira:`2438`
+
 - Fixed bug on cgroup v2 systems where a race condition could cause a job to run
   in the wrong cgroup v2 for a very short amount of time.  If this job spawned a sub-job,
   the child job would forever live in the wrong cgroup.
@@ -188,10 +201,6 @@ Bugs Fixed:
 - Fixed a bug where using :subcom:`output_destination` would still create
   directories on the access point.
   :jira:`2353`
-
-- Fixed a bug where :tool:`condor_submit` -i did not work on a 
-  cgroup v2 system.
-  :jira:`2438`
 
 Version 23.6.2
 --------------
