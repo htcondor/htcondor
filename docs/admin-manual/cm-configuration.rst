@@ -31,7 +31,7 @@ the pool accounting into separate shards.
 The *condor_collector* is mainly an in-memory datastore of classads representing 
 all of the daemons and all of the slots in the pool.  Because it keeps this in memory,
 all state of the pool's daemons is lost when it restarts.  To mitigate problems with
-restarts, each daemon is responsible to periodically send the current value of Its
+restarts, each daemon is responsible to periodically send the current value of its
 classad to the collector, usually, no less frequently than every five minutes.  Thus
 even after a restart, the whole state of the pool will refresh within five minutes.
 Most of the various options to the :tool:`condor_status` command query the *condor_collector*.
@@ -65,7 +65,7 @@ The heart of the *condor_negotiator* is the negotiation cycle.  The
 run for minutes, then waits for :macro:`NEGOTIATOR_CYCLE_DELAY` before starting
 the next cycle.  During this delay, the rest of the system processes the
 decisions made by the negotiator, and the negotiator can also respond to
-queried made by :tool:`condor_userprio` and other tools.  The job of 
+queries made by :tool:`condor_userprio` and other tools.  The job of 
 the negotiation cycle is to match slots to submitters and their jobs.
 
 .. sidebar:: The term "Submitter"
@@ -75,7 +75,7 @@ the negotiation cycle is to match slots to submitters and their jobs.
    the "accounting principal".  In HTCondor, we call this entity "the
    submitter".  By default, the submitter is the same as the operating
    system users, but it need not be.  For example, if the same human
-   has account on two different APs, and can submit jobs from either of
+   has an account on two different APs, and can submit jobs from either of
    those, should those two OS accounts be considered the same for HTCondor
    fair-share and accounting?  The answer is the submitter -- if jobs
    from those two submissions come from the same HTCondor submitter,
@@ -1074,7 +1074,7 @@ different kinds of machines in your pool.  For example, let's say you have some
 GPU machines and non-GPU machines, and you want usage of the non-GPU machine to
 not "count" against the fair-share usage of GPU machines.  One way to do this
 would be to have a separate negotiator for the GPU machines vs the non-GPU
-machines.   At Wisconsin, we have a separate, small subset of our pool for
+machines.   At UW-Madison, we have a separate, small subset of our pool for
 quick-starting interactive jobs.  By allocating a negotiator to only negotiate
 for these few machines, we can speed up the time to match these machines to
 interactive users who submit with *condor_submit -i*.
