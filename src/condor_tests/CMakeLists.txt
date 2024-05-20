@@ -345,7 +345,7 @@ endif ()
 			# This test requires the Python scitokens library, which
 			# has unresolvable depedencies on CentOS 7.
 			if (NOT ${SYSTEM_NAME} MATCHES "centos7")
-				if (NOT ${SYSTEM_NAME} MATCHES "ubuntu.*20")
+				if (NOT ${SYSTEM_NAME} MATCHES "Ubuntu.*20")
 					condor_pl_test(test_issue_credentials "Test issue_credentials()" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				endif()
 			endif()
