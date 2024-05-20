@@ -1,17 +1,220 @@
 Configuration for Central Managers
 ==================================
+:index:`central manager<single: central manager; machine>`
 
-:index:`condor_schedd policy<single: condor_schedd policy; configuration>`
-:index:`policy configuration<single: policy configuration; submit host>`
+Introduction
+------------
+
+The Center Manager machine, or CM, is a role that usually runs on one machine
+in your pool.  In some ways, it defines the extend and scope of the pool.  A
+central manager must run at least one *condor_collector* and
+*condor_negotiator* daemon, and most pools run exactly one of each.  Some large
+sites run multiple collectors, perhaps on multiple machines, to handle the load
+over a very large pool (say, more than 100,000 slots), or to move the load of
+handling monitoring and reporting queries to a different collector than is
+handling the operational aspects of running a pool, or to improve the
+availability of the pool as a whole.  In the same way, most pools run with a
+single negotiator negotiator daemon, but in some specialized configurations,
+separate negotiators can handle fast matching to a subset of the pool, or break
+the pool accounting into separate shards.
+
+.. sidebar::
+   Central Manager (CM) Diagram
+
+   .. mermaid::
+      :caption: Daemons for Central Manager, both managed by a :tool:`condor_master`
+      :align: center
+
+      flowchart TD
+         condor_master --> condor_collector & condor_negotiator
+
+The *condor_collector* is mainly an in-memory datastore of classads representing 
+all of the daemons and all of the slots in the pool.  Because it keeps this in memory,
+all state of the pool's daemons is lost when it restarts.  To mitigate problems with
+restarts, each daemon is responsible to periodically send the current value of its
+classad to the collector, usually, no less frequently than every five minutes.  Thus
+even after a restart, the whole state of the pool will refresh within five minutes.
+Most of the various options to the :tool:`condor_status` command query the *condor_collector*.
+There is not much configuration for the *condor_collector* daemon.
+
+The *condor_negotiator*, is responsible for allocating the slots of the pools
+to users according to the policies of the administrators of the CM and the EP.
+Thus, there is a lot of configuration control that you have over this daemon
+and how it works.  Scheduling of jobs is a two-phased process.  The *condor_negotiator*
+tries to balance the allocation of all the slots in the pool in some fair way.
+It then give these allocated slots to the *condor_schedd*'s that hold the jobs
+of those users, and it is the *condor_schedd* on the AP that is responsible for the
+final selection of which jobs run on which slots.  The *condor_schedd* can re-use a
+match the negotiator has given it to run multiple jobs in succession.  Because of this,
+the negotiator isn't as time-critical for starting jobs as the *condor_schedd* might be,
+so it can afford to take more time to make better decisions.  The *condor_negotiator*
+has a pool-wide view of scheduling, but the *condor_schedd* can only see those slots
+in the pool that have been assigned to it.
+
+Configuration and Operation of the Negotiator
+---------------------------------------------
+
+The Negotiation Cycle
+'''''''''''''''''''''
+
+:index:`negotiation`
+:index:`negotiation cycle<single: negotiation cycle; matchmaking>`
+
+The heart of the *condor_negotiator* is the negotiation cycle.  The
+*condor_negotiator* runs the negotiation cycle, a cpu-bound process which can
+run for minutes, then waits for :macro:`NEGOTIATOR_CYCLE_DELAY` before starting
+the next cycle.  During this delay, the rest of the system processes the
+decisions made by the negotiator, and the negotiator can also respond to
+queries made by :tool:`condor_userprio` and other tools.  The job of 
+the negotiation cycle is to match slots to submitters and their jobs.
+
+.. sidebar:: The term "Submitter"
+
+   For accounting and fair-share purposes, HTCondor needs to know who
+   to "charge" for usage, and who the user is.  Some systems call this
+   the "accounting principal".  In HTCondor, we call this entity "the
+   submitter".  By default, the submitter is the same as the operating
+   system users, but it need not be.  For example, if the same human
+   has an account on two different APs, and can submit jobs from either of
+   those, should those two OS accounts be considered the same for HTCondor
+   fair-share and accounting?  The answer is the submitter -- if jobs
+   from those two submissions come from the same HTCondor submitter,
+   they are considered the same for HTCondor's accounting. Conversely,
+   if a human is part of two projects, say, Chemistry and Genetics, perhaps
+   an HTCondor administrator would like to consider those differently 
+   for accounting reasons.  If the user submits the jobs with different
+   submitters, using :subcom:`accounting_group_user`, they will be
+   considered different.  This also comes up in submissions from web portals,
+   where the portal may be running as one OS users, and submitting jobs
+   on behalf of many different humans, who should be considered as
+   different accounting entries.
+
+
+#. Build a list of all the slots, subject to :macro:`NEGOTIATOR_SLOT_CONSTRAINT`
+   This is the equivalent of running :tool:`condor_status`.  If
+   :macro:`NEGOTIATOR_CONSIDER_PREEMPTION` is false, only use idle slots.
+   This means preemption can't happen, but negotiation will be much faster.
+#. Obtain a list of all job submitters
+   This is the equivalent of running :tool:`condor_status` -submitters.
+#. Sort the list of all job submitters based on the Effective User Priority (EUP) (see
+   below for an explanation of EUP). The submitter with the lowest numerical priority is first.
+   The command :tool:`condor_userprio` shows the EUP for each submitter.
+#. Calculate the "fair share" for each submitter, which is the number of cores
+   each submitter should be getting, and the actual number of cores each
+   submitter is using.  Note that as some submitters may have less demand for
+   slots than their fair share, these excess slots might be allocated to other
+   submitters, putting them over their fair share.
+
+#. Iterate until the negotiator runs out of slots or jobs.
+
+       For each submitter below their floor, if any; after those, for all 
+       submitters, both in EUP order:
+
+           Fetch an idle job from a *condor_schedd* holding jobs from
+           that submitter.  The *condor_schedd* will present the jobs
+           to the negotiator in job :subcom:`priority` order.
+
+           -  Build a potential match list of slots where this job could run,
+              out of all the slots the negotiator fetched in the first step above:
+
+              #. Skip slots where ``machine.requirements`` evaluates to ``False`` or
+                 ``job.requirements`` evaluates to ``False``.  That is, skip the slot 
+                 if it does not match the job's requirements or vice-versa.
+              #. Skip slots in the Claimed state, but not running a job.
+              #. For slots not running a job, add to the
+                 potential match list with a reason of No Preemption.
+              #. For slots running a job
+
+                 -  If the ``machine.RANK`` on this job is better than
+                    the running job, add the slot to the potential
+                    match list with a reason of Rank.
+                 -  If the EUP of this job is better than the EUP of the
+                    currently running job, and
+                    :macro:`PREEMPTION_REQUIREMENTS` is ``True``, and the
+                    ``machine.RANK`` on the job is not worse than the
+                    currently running job, add the slot to the
+                    potential match list with a reason of Priority.
+                    See example below.
+
+           -  Sort the potential match list, first by
+              :macro:`NEGOTIATOR_PRE_JOB_RANK`. If two or more slots
+              have the same value, sort those by ``job.RANK``.  Break
+              any more ties by sorting by :macro:`NEGOTIATOR_POST_JOB_RANK`.
+              Further ties are broken by reason for claim (No Preemption, 
+              then Rank, then Priority), and finally :macro:`PREEMPTION_RANK`.
+           -  The job is assigned to the top slot on the potential
+              match list. The slot is then removed from the list of
+              slots to match (on this negotiation cycle).
+           -  Ask the *condor_schedd* for the next idle job for this submitter.
+              If there are no more idle jobs, move to the next submitter.
+
+As described above, the *condor_negotiator* tries to match each job
+to all slots in the pool.  Assume that five slots match one request for
+three jobs, and that their :macro:`NEGOTIATOR_PRE_JOB_RANK`, ``Job.Rank``, 
+and :macro:`NEGOTIATOR_POST_JOB_RANK` expressions evaluate (in the context 
+of both the slot ad and the job ad) to the following values.
+
++------------+-------------------------+----------+-------------------------+
+|Slot Name   |  NEGOTIATOR_PRE_JOB_RANK|  Job.Rank| NEGOTIATOR_POST_JOB_RANK|
++============+=========================+==========+=========================+
+|slot1       |                      100|         1|                       10|
++------------+-------------------------+----------+-------------------------+
+|slot2       |                      100|         2|                       20|
++------------+-------------------------+----------+-------------------------+
+|slot3       |                      100|         2|                       30|
++------------+-------------------------+----------+-------------------------+
+|slot4       |                        0|         1|                       40|
++------------+-------------------------+----------+-------------------------+
+|slot5       |                      200|         1|                       50|
++------------+-------------------------+----------+-------------------------+
+
+Table 3.1: Example of slots in the potential match list before sorting
+
+These slots would be sorted first on :macro:`NEGOTIATOR_PRE_JOB_RANK`, then
+sorting all ties based on ``Job.Rank`` and any remaining ties sorted by
+:macro:`NEGOTIATOR_POST_JOB_RANK`.  After that, the first three slots would be
+handed to the *condor_schedd*.  This means that
+:macro:`NEGOTIATOR_PRE_JOB_RANK` is very strong, and overrides any ranking
+expression by the submitter of the job.  After sorting, the slots would look
+like this, and the schedd would be given slot5, slot3 and slot2:
+
++-------------+-------------------------+----------+-------------------------+
+| Slot Name   | NEGOTIATOR_PRE_JOB_RANK | Job.Rank | NEGOTIATOR_POST_JOB_RANK|
++=============+=========================+==========+=========================+
+| slot5       |                      200|         1|                       50|
++-------------+-------------------------+----------+-------------------------+
+| slot3       |                      100|         2|                       30|
++-------------+-------------------------+----------+-------------------------+
+| slot2       |                      100|         2|                       20|
++-------------+-------------------------+----------+-------------------------+
+| slot1       |                      100|         1|                       10|
++-------------+-------------------------+----------+-------------------------+
+| slot4       |                        0|         1|                       40|
++-------------+-------------------------+----------+-------------------------+
+
+Table 3.2: Example of slots in the potential match list after sorting: Here, slot5 would be the first slot given to a submitter.
+
+
+The *condor_negotiator* asks the *condor_schedd* for the "next job" from a
+given submitter/user. Typically, the *condor_schedd* returns jobs in the order
+of job priority. If priorities are the same, job submission time is used; older
+jobs go first. If a cluster has multiple procs in it and one of the jobs cannot
+be matched, the *condor_schedd* will not return any more jobs in that cluster
+on that negotiation pass.  This is an optimization based on the theory that the
+cluster jobs are similar. The configuration variable
+:macro:`NEGOTIATE_ALL_JOBS_IN_CLUSTER` disables the cluster-skipping
+optimization. Use of the configuration variable :macro:`SIGNIFICANT_ATTRIBUTES`
+will change the definition of what the *condor_schedd* considers a cluster from
+the default definition of all jobs that share the same :ad-attr:`ClusterId`.
 
 User Priorities and Negotiation
--------------------------------
+'''''''''''''''''''''''''''''''
 
 :index:`in machine allocation<single: in machine allocation; priority>`
 :index:`user priority`
 
-HTCondor uses priorities to determine machine allocation for jobs. This
-section details the priorities and the allocation of machines
+HTCondor uses priorities to allocate slots to jobs. This
+section details the priorities and the allocation of slots
 (negotiation).
 
 .. note::
@@ -21,17 +224,17 @@ section details the priorities and the allocation of machines
 
 For accounting purposes, each user is identified by
 username@uid_domain. Each user is assigned a priority value even if
-submitting jobs from different machines in the same domain, or even if
+submitting jobs from different Access Points in the same domain, or even if
 submitting from multiple machines in the different domains.
 
 The numerical priority value assigned to a user is inversely related to
 the goodness of the priority. A user with a numerical priority of 5 gets
-more resources than a user with a numerical priority of 50. There are
+more slots (or bigger slots) than a user with a numerical priority of 50. There are
 two priority values assigned to HTCondor users:
 
 -  Real User Priority (RUP), which measures resource usage of the user.
 -  Effective User Priority (EUP), which determines the number of
-   resources the user can get.
+   slots the user can get.
 
 This section describes these two priorities and how they affect resource
 allocations in HTCondor. Documentation on configuring and controlling
@@ -94,12 +297,12 @@ example, setting the priority factor of some user to 2,000 will grant that user
 twice as many cores as a user with the default priority factor of 1,000,
 assuming they both have the same historical usage.
 
-The number of resources that a user may receive is inversely related to
+The number of slots that a user may receive is inversely related to
 the ratio between the EUPs of submitting users. User A with
-EUP=5 will receive twice as many resources as user B with EUP=10 and
-four times as many resources as user C with EUP=20. However, if A does
-not use the full number of resources that A may be given, the available
-resources are repartitioned and distributed among remaining users
+EUP=5 will receive twice as many slots as user B with EUP=10 and
+four times as many slots as user C with EUP=20. However, if A does
+not use the full number of slots that A may be given, the available
+slots are repartitioned and distributed among remaining users
 according to the inverse ratio rule.
 
 Assume two users with no history, named A and B, using a pool with 100 cores. To
@@ -132,8 +335,8 @@ Nice users
     ``True``. This nice user job will have its RUP boosted by the
     :macro:`NICE_USER_PRIO_FACTOR`
     priority factor specified in the configuration, leading to a very
-    large EUP. This corresponds to a low priority for resources,
-    therefore using resources not used by other HTCondor users.
+    large EUP. This corresponds to a low priority for slots,
+    therefore using slots not used by other HTCondor users.
 
 Remote Users
     HTCondor's flocking feature (see the :doc:`/grid-computing/connecting-pools-with-flocking` section)
@@ -144,7 +347,7 @@ Remote Users
     users preferentially over these remote users. If configured,
     HTCondor will boost the RUPs of remote users by
     :macro:`REMOTE_PRIO_FACTOR` specified
-    in the configuration, thereby lowering their priority for resources.
+    in the configuration, thereby lowering their priority for slots.
 
 The priority boost factors for individual users can be set with the
 **setfactor** option of :tool:`condor_userprio`. Details may be found in the
@@ -157,14 +360,14 @@ Priorities in Negotiation and Preemption
 :index:`priority<single: priority; preemption>`
 
 Priorities are used to ensure that users get their fair share of
-resources. The priority values are used at allocation time, meaning
+slots in the pool. The priority values are used at allocation time, meaning
 during negotiation and matchmaking. Therefore, there are ClassAd
 attributes that take on defined values only during negotiation, making
 them ephemeral. In addition to allocation, HTCondor may preempt a
-machine claim and reallocate it when conditions change.
+slot claim and reallocate it when conditions change.
 
 Too many preemptions lead to thrashing, a condition in which negotiation
-for a machine identifies a new job with a better priority most every
+for a slot identifies a new job with a better priority most every
 cycle. Each job is, in turn, preempted, and no job finishes. To avoid
 this situation, the :macro:`PREEMPTION_REQUIREMENTS` configuration variable is defined
 for and used only by the *condor_negotiator* daemon to specify the
@@ -174,9 +377,9 @@ running job has been running for a relatively short period of time. This
 effectively limits the number of preemptions per resource per time
 interval. Note that :macro:`PREEMPTION_REQUIREMENTS` only applies to
 preemptions due to user priority. It does not have any effect if the
-machine's :macro:`RANK` expression prefers a different job, or if the
-machine's policy causes the job to vacate due to other activity on the
-machine. See the :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy
+slot's :macro:`RANK` expression prefers a different job, or if the
+slot's policy causes the job to vacate due to other activity on the
+slot. See the :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy
 configuration` section for the current default policy on preemption.
 
 The following ephemeral attributes may be used within policy
@@ -213,18 +416,18 @@ entries` section for definitions of these configuration variables.
 
 :index:`RemoteUserPrio<single: RemoteUserPrio; ClassAd attribute, ephemeral>`\ ``RemoteUserPrio``
     A floating point value representing the user priority of the job
-    currently running on the machine. This version of the attribute,
+    currently running on the slot. This version of the attribute,
     with no slot represented in the attribute name, refers to the
     current slot being evaluated.
 
 :index:`Slot_RemoteUserPrio<single: Slot_RemoteUserPrio; ClassAd attribute, ephemeral>`\ ``Slot<N>_RemoteUserPrio``
     A floating point value representing the user priority of the job
     currently running on the particular slot represented by <N> on the
-    machine.
+    slot.
 
 :index:`RemoteUserResourcesInUse<single: RemoteUserResourcesInUse; ClassAd attribute, ephemeral>`\ ``RemoteUserResourcesInUse``
     The integer number of slots currently utilized by the user of the
-    job currently running on the machine.
+    job currently running on the slot.
 
 :index:`SubmitterGroupResourcesInUse<single: SubmitterGroupResourcesInUse; ClassAd attribute, ephemeral>`\ ``SubmitterGroupResourcesInUse``
     If the owner of the candidate job is a member of a valid accounting
@@ -281,7 +484,7 @@ time interval :math:`\delta t` using the formula
 
     \pi_r(u,t) = \beta × \pi_r(u, t - \delta t) + (1 - \beta) × \rho(u, t)
 
-where :math:`\rho (u,t)` is the number of resources used by user :math:`u` at time :math:`t`,
+where :math:`\rho (u,t)` is the number of cores used by user :math:`u` at time :math:`t`,
 and :math:`\beta = 0.5^{\delta t / h}`.
 :math:`h` is the half life period set by :macro:`PRIORITY_HALFLIFE`.
 
@@ -294,137 +497,13 @@ The EUP of user :math:`u` at time :math:`t`, :math:`\pi_{e}(u,t)` is calculated 
 where :math:`f(u,t)` is the priority boost factor for user :math:`u` at time :math:`t`.
 
 As mentioned previously, the RUP calculation is designed so that at
-steady state, each user's RUP stabilizes at the number of resources used
+steady state, each user's RUP stabilizes at the number of cores used
 by that user. The definition of :math:`\beta` ensures that the calculation of
 :math:`\pi_{r}(u,t)` can be calculated over non-uniform time intervals :math:`\delta t`
 without affecting the calculation. The time interval :math:`\delta t` varies due to
 events internal to the system, but HTCondor guarantees that unless the
-central manager machine is down, no matches will be unaccounted for due
+central manager is down, no matches will be unaccounted for due
 to this variance.
-
-Negotiation
------------
-
-:index:`negotiation`
-:index:`negotiation algorithm<single: negotiation algorithm; matchmaking>`
-
-Negotiation is the method HTCondor undergoes periodically to match
-queued jobs with resources capable of running jobs. The
-*condor_negotiator* daemon is responsible for negotiation.
-
-During a negotiation cycle, the *condor_negotiator* daemon accomplishes
-the following ordered list of items.
-
-#. Build a list of all possible resources, regardless of the state of
-   those resources.
-#. Obtain a list of all job submitters (for the entire pool).
-#. Sort the list of all job submitters based on EUP (see
-   :ref:`admin-manual/cm-configuration:the layperson's description
-   of the pie spin and pie slice` for an explanation of EUP). The
-   submitter with the best priority is first within the sorted list.
-#. Iterate until there are either no more resources to match, or no more
-   jobs to match.
-
-       For each submitter (in EUP order):
-
-           For each submitter, get each job. Since jobs may be submitted
-           from more than one machine (hence to more than one
-           *condor_schedd* daemon), here is a further definition of the
-           ordering of these jobs. With jobs from a single
-           *condor_schedd* daemon, jobs are typically returned in job
-           priority order. When more than one *condor_schedd* daemon is
-           involved, they are contacted in an undefined order. All jobs
-           from a single *condor_schedd* daemon are considered before
-           moving on to the next. For each job:
-
-           -  For each machine in the pool that can execute jobs:
-
-              #. If ``machine.requirements`` evaluates to ``False`` or
-                 ``job.requirements`` evaluates to ``False``, skip this
-                 machine
-              #. If the machine is in the Claimed state, but not running
-                 a job, skip this machine.
-              #. If this machine is not running a job, add it to the
-                 potential match list by reason of No Preemption.
-              #. If the machine is running a job
-
-                 -  If the ``machine.RANK`` on this job is better than
-                    the running job, add this machine to the potential
-                    match list by reason of Rank.
-                 -  If the EUP of this job is better than the EUP of the
-                    currently running job, and
-                    :macro:`PREEMPTION_REQUIREMENTS` is ``True``, and the
-                    ``machine.RANK`` on this job is not worse than the
-                    currently running job, add this machine to the
-                    potential match list by reason of Priority.
-                    See example below.
-
-           -  Of machines in the potential match list, sort by
-              :macro:`NEGOTIATOR_PRE_JOB_RANK`, ``job.RANK``,
-              :macro:`NEGOTIATOR_POST_JOB_RANK`, Reason for claim (No
-              Preemption, then Rank, then Priority), :macro:`PREEMPTION_RANK`
-           -  The job is assigned to the top machine on the potential
-              match list. The machine is removed from the list of
-              resources to match (on this negotiation cycle).
-
-As described above, the *condor_negotiator* tries to match each job
-to all slots in the pool.  Assume that five slots match one request for
-three jobs, and that their :macro:`NEGOTIATOR_PRE_JOB_RANK`, ``Job.Rank``, 
-and :macro:`NEGOTIATOR_POST_JOB_RANK` expressions evaluate (in the context 
-of both the slot ad and the job ad) to the following values.
-
-+------------+-------------------------+----------+-------------------------+
-|Slot Name   |  NEGOTIATOR_PRE_JOB_RANK|  Job.Rank| NEGOTIATOR_POST_JOB_RANK|
-+============+=========================+==========+=========================+
-|slot1       |                      100|         1|                       10|
-+------------+-------------------------+----------+-------------------------+
-|slot2       |                      100|         2|                       20|
-+------------+-------------------------+----------+-------------------------+
-|slot3       |                      100|         2|                       30|
-+------------+-------------------------+----------+-------------------------+
-|slot4       |                        0|         1|                       40|
-+------------+-------------------------+----------+-------------------------+
-|slot5       |                      200|         1|                       50|
-+------------+-------------------------+----------+-------------------------+
-
-Table 3.1: Example of slots before sorting
-
-These slots would be sorted first on :macro:`NEGOTIATOR_PRE_JOB_RANK`, then
-sorting all ties based on ``Job.Rank`` and any remaining ties sorted by
-:macro:`NEGOTIATOR_POST_JOB_RANK`.  After that, the first three slots would be
-handed to the *condor_schedd*.  This means that
-:macro:`NEGOTIATOR_PRE_JOB_RANK` is very strong, and overrides any ranking
-expression by the submitter of the job.  After sorting, the slots would look
-like this, and the schedd would be given slot5, slot3 and slot2:
-
-+-------------+-------------------------+----------+-------------------------+
-| Slot Name   | NEGOTIATOR_PRE_JOB_RANK | Job.Rank | NEGOTIATOR_POST_JOB_RANK|
-+=============+=========================+==========+=========================+
-| slot5       |                      200|         1|                       50|
-+-------------+-------------------------+----------+-------------------------+
-| slot3       |                      100|         2|                       30|
-+-------------+-------------------------+----------+-------------------------+
-| slot2       |                      100|         2|                       20|
-+-------------+-------------------------+----------+-------------------------+
-| slot1       |                      100|         1|                       10|
-+-------------+-------------------------+----------+-------------------------+
-| slot4       |                        0|         1|                       40|
-+-------------+-------------------------+----------+-------------------------+
-
-Table 3.2: Example of slots after sorting
-
-
-The *condor_negotiator* asks the *condor_schedd* for the "next job" from a
-given submitter/user. Typically, the *condor_schedd* returns jobs in the order
-of job priority. If priorities are the same, job submission time is used; older
-jobs go first. If a cluster has multiple procs in it and one of the jobs cannot
-be matched, the *condor_schedd* will not return any more jobs in that cluster
-on that negotiation pass.  This is an optimization based on the theory that the
-cluster jobs are similar. The configuration variable
-:macro:`NEGOTIATE_ALL_JOBS_IN_CLUSTER` disables the cluster-skipping
-optimization. Use of the configuration variable :macro:`SIGNIFICANT_ATTRIBUTES`
-will change the definition of what the *condor_schedd* considers a cluster from
-the default definition of all jobs that share the same :ad-attr:`ClusterId`.
 
 The Layperson's Description of the Pie Spin and Pie Slice
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -462,20 +541,20 @@ the highest ranked slot is already running a job, the negotiator may preempt
 the running job for the new job. 
 
 This matchmaking cycle continues until the user has received all of the
-machines in their pie slice. If there is a per-user ceiling defined
+slots for their pie slice. If there is a per-user ceiling defined
 with the :tool:`condor_userprio` -setceil command, and this ceiling is smaller
 than the pie slice, the user gets only up to their ceiling number of
 cores.  The matchmaker then contacts the next
 highest priority user and offers that user their pie slice worth of
-machines. After contacting all users, the cycle is repeated with any
-still available resources and recomputed pie slices. The matchmaker
-continues spinning the pie until it runs out of machines or all the
+slots. After contacting all users, the cycle is repeated with any
+still available slots and recomputed pie slices. The matchmaker
+continues spinning the pie until it runs out of slots or all the
 *condor_schedd* daemons say they have no more jobs.
 
 .. _Group Accounting:
 
 Group Accounting
-----------------
+''''''''''''''''
 
 :index:`accounting<single: accounting; groups>` :index:`by group<single: by group; accounting>`
 :index:`by group<single: by group; priority>`
@@ -515,7 +594,7 @@ last one of the first submit is finished.
 .. _Hierarchical Group Quotas:
 
 Accounting Groups with Hierarchical Group Quotas
-------------------------------------------------
+''''''''''''''''''''''''''''''''''''''''''''''''
 
 :index:`hierarchical group quotas`
 :index:`by group<single: by group; negotiation>` :index:`quotas<single: quotas; groups>`
@@ -531,8 +610,8 @@ be specified with group quotas.
 Consider an example pool with thirty slots: twenty slots are owned by
 the physics group and ten are owned by the chemistry group. The desired
 policy is that no more than twenty concurrent jobs are ever running from
-the physicists, and only ten from the chemists. These machines are
-otherwise identical, so it does not matter which machines run which
+the physicists, and only ten from the chemists. These slots are
+otherwise identical, so it does not matter which slots run which
 group's jobs. It only matters that the proportions of allocated slots
 are correct.
 
@@ -759,12 +838,12 @@ and the current usage by group. For example:
     Number of users: 2                                 ByQuota
 
 This shows that there are two groups, each with 60 jobs in the queue.
-group_physics.hep has a quota of 15 machines, and group_physics.lep
-has 5 machines. Other options to :tool:`condor_userprio`, such as **-most**
-will also show the number of resources in use.
+group_physics.hep has a quota of 15 cores, and group_physics.lep
+has 5 cores. Other options to :tool:`condor_userprio`, such as **-most**
+will also show the number of cores in use.
 
 Setting Accounting Group automatically per user
------------------------------------------------
+'''''''''''''''''''''''''''''''''''''''''''''''
 
 :index:`group quotas`
 :index:`accounting groups`
@@ -805,7 +884,7 @@ opt into.  If the user does not set an accounting group in the submit file
 the first entry in the list will be used.
 
 Concurrency Limits
-------------------
+''''''''''''''''''
 
 :index:`concurrency limits`
 
@@ -977,6 +1056,41 @@ daemon to the *condor_collector* daemon, it is possible for the limit
 to be exceeded. If the limits are exceeded, HTCondor will not kill any
 job to reduce the number of running jobs to meet the limit.
 
+Running Multiple Negotiators in One Pool
+''''''''''''''''''''''''''''''''''''''''
+
+Usually, a single HTCondor pool will have a single *condor_collector* instance
+running and a single *condor_negotiator* instance running.  However, there are
+special situation where you may want to run more than one *condor_negotiator*
+against a *condor_collector*, and still consider it one pool.
+
+In such a scenario, each *condor_negotiator* is responsible for some
+non-overlapping partition of the slots in the pool.  This might be for
+performance -- if you have more than 100,000 slots in the pool, you may need to
+shard this pool into several smaller sections in order to lower the time each
+negotiator spends.  Because accounting is done at the negotiator level, you
+may want to do this to have separate accounting and distinct fair share between
+different kinds of machines in your pool.  For example, let's say you have some
+GPU machines and non-GPU machines, and you want usage of the non-GPU machine to
+not "count" against the fair-share usage of GPU machines.  One way to do this
+would be to have a separate negotiator for the GPU machines vs the non-GPU
+machines.   At UW-Madison, we have a separate, small subset of our pool for
+quick-starting interactive jobs.  By allocating a negotiator to only negotiate
+for these few machines, we can speed up the time to match these machines to
+interactive users who submit with *condor_submit -i*.
+
+Sharding the negotiator is straightforward.  Simply add the NEGOTIATOR entry to
+the :macro:`DAEMON_LIST` on an additional machine.  While it is possible to run
+multiple negotiators on one machine, we may not want to, if we are trying to
+improve performance.  Then, in each negotiator, set
+:macro:`NEGOTIATOR_SLOT_CONSTRAINT` to only match those slots this negotiator
+should use.
+
+Running with multiple negotiators also means you need to be careful with the
+:tool:`condor_userprio` command.  As there is no default negotiator, you should
+always name the specific negotiator you want to :tool:`condor_userprio` to talk to
+with the `-name` option.
+
 Defragmenting Dynamic Slots
 ---------------------------
 
@@ -984,7 +1098,7 @@ Defragmenting Dynamic Slots
 
 When partitionable slots are used, some attention must be given to the
 problem of the starvation of large jobs due to the fragmentation of
-resources. The problem is that over time the machine resources may
+slot. The problem is that over time the machine resources may
 become partitioned into slots suitable only for running small jobs. If a
 sufficient number of these slots do not happen to become idle at the
 same time on a machine, then a large job will not be able to claim that
@@ -1166,41 +1280,6 @@ For this change to take effect, restart the :tool:`condor_master` on this
 host. This may be accomplished with the :tool:`condor_restart` command, if
 the command is run with administrator access to the pool.
 
-Running Multiple Negotiators in One Pool
-----------------------------------------
-
-Usually, a single HTCondor pool will have a single *condor_collector* instance
-running and a single *condor_negotiator* instance running.  However, there are
-special situation where you may want to run more than one *condor_negotiator*
-against a *condor_collector*, and still consider it one pool.
-
-In such a scenario, each *condor_negotiator* is responsible for some
-non-overlapping partition of the slots in the pool.  This might be for
-performance -- if you have more than 100,000 slots in the pool, you may need to
-shard this pool into several smaller sections in order to lower the time each
-negotiator spends.  Because accounting is done at the negotiator level, you
-may want to do this to have separate accounting and distinct fair share between
-different kinds of machines in your pool.  For example, let's say you have some
-GPU machines and non-GPU machines, and you want usage of the non-GPU machine to
-not "count" against the fair-share usage of GPU machines.  One way to do this
-would be to have a separate negotiator for the GPU machines vs the non-GPU
-machines.   At Wisconsin, we have a separate, small subset of our pool for
-quick-starting interactive jobs.  By allocating a negotiator to only negotiate
-for these few machines, we can speed up the time to match these machines to
-interactive users who submit with *condor_submit -i*.
-
-Sharding the negotiator is straightforward.  Simply add the NEGOTIATOR entry to
-the :macro:`DAEMON_LIST` on an additional machine.  While it is possible to run
-multiple negotiators on one machine, we may not want to, if we are trying to
-improve performance.  Then, in each negotiator, set
-:macro:`NEGOTIATOR_SLOT_CONSTRAINT` to only match those slots this negotiator
-should use.
-
-Running with multiple negotiators also means you need to be careful with the
-:tool:`condor_userprio` command.  As there is no default negotiator, you should
-always name the specific negotiator you want to :tool:`condor_userprio` to talk to
-with the `-name` option.
-
 High Availability of the Central Manager
 ----------------------------------------
 
@@ -1228,15 +1307,15 @@ to pools with high availability mechanisms enabled.
    *condor_negotiator* will never get jobs from a flocked
    *condor_schedd*.
 
-Introduction
-''''''''''''
+Introduction to High availability
+'''''''''''''''''''''''''''''''''
 
 The *condor_negotiator* and *condor_collector* daemons are the heart
 of the HTCondor matchmaking system. The availability of these daemons is
 critical to an HTCondor pool's functionality. Both daemons usually run
 on the same machine, most often known as the central manager. The
 failure of a central manager machine prevents HTCondor from matching new
-jobs and allocating new resources. High availability of the
+jobs and allocating new slots. High availability of the
 *condor_negotiator* and *condor_collector* daemons eliminates this
 problem.
 
