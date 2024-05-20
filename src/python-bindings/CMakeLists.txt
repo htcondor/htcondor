@@ -216,7 +216,7 @@ if(WINDOWS)
 
       add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
       target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_libraries(        py3classad3_impl ${CLASSADS_FOUND} condor_utils ${PYTHON3_LIBRARIES} ${CONDOR_WIN_LIBS} )
+      target_link_libraries(        py3classad3_impl ${CLASSADS_FOUND} condor_utils ${PLFN} ${CONDOR_WIN_LIBS} )
       set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
       set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad3_impl PDB_NAME py3classad3 )
       set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
