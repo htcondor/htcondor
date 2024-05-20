@@ -537,6 +537,7 @@ def record_time(ad, fallback_to_launch=True):
         - else to EnteredCurrentStatus if present
     For other (Running/Idle/Held/Suspended) jobs,
          use EnteredCurrentStatus if present
+    For epoch ads, try to use EpochWriteDate
     Else fall back to launch time
     """
     if ad["JobStatus"] in [3, 4, 6]:
@@ -545,6 +546,9 @@ def record_time(ad, fallback_to_launch=True):
 
     elif ad.get("EnteredCurrentStatus", 0) > 0:
         return ad["EnteredCurrentStatus"]
+
+    elif ad.get("EpochWriteDate", 0) > 0:
+        return ad["EpochWriteDate"]
 
     if fallback_to_launch:
         return _LAUNCH_TIME

@@ -250,6 +250,58 @@ def adstash(args):
 
         logging.warning(f"Processing time for schedd job epoch history: {(time.time()-schedd_starttime)/60:.2f} mins")
 
+    if args.read_schedd_transfer_epoch_history:
+        schedd_starttime = time.time()
+
+        # Get Schedd daemon ads
+        schedd_ads = []
+        schedd_ads = get_schedds(args)
+        logging.warning(f"There are {len(schedd_ads)} schedds to query")
+
+        metadata = collect_process_metadata()
+        metadata["condor_adstash_source"] = "schedd_transfer_epoch_history"
+
+        ad_source = ADSTASH_AD_SOURCE_REGISTRY["schedd_transfer_epoch_history"]()(checkpoint_file=args.checkpoint_file)
+
+        futures = []
+        manager = multiprocessing.Manager()
+        checkpoint_queue = manager.Queue()
+
+        with multiprocessing.Pool(processes=args.threads, maxtasksperchild=1) as pool:
+
+            if len(schedd_ads) > 0:
+                for schedd_ad in schedd_ads:
+                    name = schedd_ad["Name"]
+
+                    future = pool.apply_async(
+                        schedd_transfer_epoch_history_processor,
+                        (ad_source, schedd_ad, checkpoint_queue, interface, metadata, args, src_kwargs),
+                    )
+                    futures.append((name, future))
+
+            ckpt_updater = multiprocessing.Process(target=_schedd_ckpt_updater, args=(args, checkpoint_queue, ad_source))
+            ckpt_updater.start()
+
+            # Report processes if they timeout or error
+            for name, future in futures:
+                try:
+                    logging.warning(f"Waiting for Schedd {name} to finish.")
+                    future.get(args.schedd_history_timeout)
+                except multiprocessing.TimeoutError:
+                    logging.warning(f"Waited too long for Schedd {name}; it may still complete in the background.")
+                except Exception:
+                    logging.exception(f"Error getting progress from Schedd {name}.")
+
+            checkpoint_queue.put(None)
+            logging.warning("Joining the schedd checkpoint queue.")
+            ckpt_updater.join(timeout=(len(schedd_ads) * args.schedd_history_timeout * len(schedd_ads)))
+            logging.warning("Shutting down the schedd checkpoint queue.")
+            ckpt_updater.terminate()
+            manager.shutdown()
+            logging.warning("Shutting down the schedd multiprocessing pool.")
+
+        logging.warning(f"Processing time for schedd transfer epoch history: {(time.time()-schedd_starttime)/60:.2f} mins")
+
     processing_time = int(time.time() - starttime)
     return processing_time
 
@@ -313,3 +365,25 @@ def schedd_job_epoch_history_processor(src, schedd_ad, ckpt_queue, iface, metada
                 ckpt_queue.put({f"Job Epoch {schedd_ad['Name']}": ckpt})
     except Exception as e:
         logging.error(f"Could not push job epoch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
+
+
+def schedd_transfer_epoch_history_processor(src, schedd_ad, ckpt_queue, iface, metadata, args, src_kwargs):
+    metadata["condor_history_runtime"] = int(time.time())
+    metadata["condor_history_host_version"] = schedd_ad.get("CondorVersion", "UNKNOWN")
+    metadata["condor_history_host_platform"] = schedd_ad.get("CondorPlatform", "UNKNOWN")
+    metadata["condor_history_host_machine"] = schedd_ad.get("Machine", "UNKNOWN")
+    metadata["condor_history_host_name"] = schedd_ad.get("Name", "UNKNOWN")
+    try:
+        ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads)
+    except Exception as e:
+        logging.error(f"Could not fetch transfer epoch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
+        return
+    else:
+        if ads is None:
+            return
+    try:
+        for ckpt in src.process_ads(iface, ads, schedd_ad, metadata=metadata, **src_kwargs):
+            if ckpt is not None:
+                ckpt_queue.put({f"Job Epoch {schedd_ad['Name']}": ckpt})
+    except Exception as e:
+        logging.error(f"Could not push transfer epoch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
