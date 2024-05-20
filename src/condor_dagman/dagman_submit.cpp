@@ -101,12 +101,12 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 		node.PrintParents(parents, 2000, dm.dag, ",");
 	}
 
-	if (!node.GetDagFile() && dm.options[deep::str::BatchName] == " ") {
+	if ( ! node.GetDagFile() && dm.options[deep::str::BatchName] == " ") {
 		batchName = "";
 	} else {
 		batchName = dm.options[deep::str::BatchName];
 	}
-	if (!node.GetDagFile() && dm.options[deep::str::BatchId] == " ") {
+	if ( ! node.GetDagFile() && dm.options[deep::str::BatchId] == " ") {
 		batchId = "";
 	} else {
 		batchId = dm.options[deep::str::BatchId];
@@ -141,19 +141,19 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 		vars.push_back(NodeVar(SUBMIT_KEY_Hold, "true", false));
 	}
 
-	if (!node.NoChildren() && dm._claim_hold_time > 0) {
+	if ( ! node.NoChildren() && dm._claim_hold_time > 0) {
 		vars.push_back(NodeVar(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm._claim_hold_time), false));
 	}
 
-	if (!dm.options[deep::str::AcctGroup].empty()) {
+	if ( ! dm.options[deep::str::AcctGroup].empty()) {
 		vars.push_back(NodeVar(SUBMIT_KEY_AcctGroup, dm.options[deep::str::AcctGroup], false));
 	}
 
-	if (!dm.options[deep::str::AcctGroupUser].empty()) {
+	if ( ! dm.options[deep::str::AcctGroupUser].empty()) {
 		vars.push_back(NodeVar(SUBMIT_KEY_AcctGroupUser, dm.options[deep::str::AcctGroupUser], false));
 	}
 
-	if (!dm._requestedMachineAttrs.empty()) {
+	if ( ! dm._requestedMachineAttrs.empty()) {
 		vars.push_back(NodeVar(SUBMIT_KEY_JobAdInformationAttrs, dm._ulogMachineAttrs, false));
 		vars.push_back(NodeVar(SUBMIT_KEY_JobMachineAttrs, dm._requestedMachineAttrs, false));
 	}
@@ -212,16 +212,20 @@ static bool shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 	for (const auto& var : deferred) {
 		if (var.append) { extraArgs.AppendArg("-a"); }
 		std::string cmd = var.key + "=" + var.value;
-		args.AppendArg(cmd);
+		extraArgs.AppendArg(cmd);
 	}
 
 	// Get size of parts of the command line we are about to run
 	std::string display;
-	args.GetArgsStringForDisplay( display );
+	args.GetArgsStringForDisplay(display);
 	int cmdLineSize = display.length();
-	extraArgs.GetArgsStringForDisplay( display );
+	display.clear();
+
+	extraArgs.GetArgsStringForDisplay(display);
 	int DAGParentNodeNamesLen = display.length();
-	int reserveNeeded = (int)strlen( cmdFile );
+	display.clear();
+
+	int reserveNeeded = (int)strlen(cmdFile);
 
 	// if we don't have room for DAGParentNodeNames, leave it unset
 	if ((cmdLineSize + reserveNeeded + DAGParentNodeNamesLen) > _POSIX_ARG_MAX) {
@@ -240,9 +244,12 @@ static bool shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 	debug_printf(DEBUG_VERBOSE, "Submitting: %s\n", display.c_str());
 
 	// Execute condor_submit command
+	Env myEnv;
+	myEnv.Import();
+
 	int jobProcCount;
 	int exit_status;
-	auto_free_ptr output = run_command(180, args, MY_POPEN_OPT_WANT_STDERR, nullptr, &exit_status);
+	auto_free_ptr output = run_command(180, args, MY_POPEN_OPT_WANT_STDERR, &myEnv, &exit_status);
 
 	if ( ! output) {
 		if (exit_status != 0) {
@@ -266,7 +273,7 @@ static bool shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 	bool successful_submit = false;
 	for (const auto& line : StringTokenIterator(output.ptr(), "\n")) {
 		debug_printf(DEBUG_VERBOSE, "From submit: %s\n", line.c_str());
-		if (line.find(" submitted to cluster ") != std::string::npos) {
+		if ( ! successful_submit && line.find(" job(s) submitted to cluster ") != std::string::npos) {
 			if (2 != sscanf(line.c_str(), " %d job(s) submitted to cluster %d", &jobProcCount, &condorID._cluster)) {
 				debug_printf(DEBUG_QUIET, "ERROR: parse_condor_submit failed:\n\t%s\n", line.c_str());
 				// Return true so higher level code handles failure correctly rather than
@@ -274,7 +281,6 @@ static bool shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 				return true;
 			}
 			successful_submit = true;
-			break;
 		}
 	}
 
@@ -518,7 +524,7 @@ bool condor_submit(const Dagman &dm, Job* node, CondorID& condorID) {
 	}
 
 	DagSubmitMethod method = static_cast<DagSubmitMethod>(dm.options[deep::i::SubmitMethod]);
-	switch(method) {
+	switch (method) {
 		case DagSubmitMethod::CONDOR_SUBMIT: // run condor_submit
 			success = shell_condor_submit(dm, node, condorID);
 			break;
@@ -529,7 +535,7 @@ bool condor_submit(const Dagman &dm, Job* node, CondorID& condorID) {
 			// We have unknown submission method requested so jobs will never be submitted abort
 			debug_printf(DEBUG_NORMAL, "Error: Unknown submit method (%d)\n", (int)method);
 			main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR);
-		break;
+			break;
 	}
 
 	if ( ! tmpDir.Cd2MainDir(errMsg)) {
@@ -541,8 +547,13 @@ bool condor_submit(const Dagman &dm, Job* node, CondorID& condorID) {
 }
 
 bool send_reschedule(const Dagman & dm) {
-	if (dm.options[deep::i::SubmitMethod] == (int)DagSubmitMethod::CONDOR_SUBMIT)
-		return true; // submit already did it
+	DagSubmitMethod method = static_cast<DagSubmitMethod>(dm.options[deep::i::SubmitMethod]);
+	switch (method) {
+		case DagSubmitMethod::CONDOR_SUBMIT: // condor_submit already rescheduled
+			return true;
+		default:
+			break;
+	}
 
 	DCSchedd schedd;
 	Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
