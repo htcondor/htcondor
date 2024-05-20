@@ -7,8 +7,8 @@ import tempfile
 import time
 import getpass
 import typer
-
-
+import json
+import requests
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -80,29 +80,6 @@ def complete_submit_files(incomplete: str) -> List[str]:
     # Return files that match the incomplete input
     return [f for f in submit_files if f.startswith(incomplete)]
 
-def convert_to_dict(job_data):
-    if not job_data or not isinstance(job_data, list) or not job_data[0]:
-        return {}
-
-    # Extract the string from the list
-    job_info = job_data[0]
-    
-    # Prepare to store the dictionary
-    job_dict = {}
-    
-    # Split the string into key-value pairs
-    attributes = job_info.split("; ")
-    for attribute in attributes:
-        # Split each attribute at the first occurrence of '=' to handle values that may contain '='
-        key_val = attribute.split(" = ", 1)
-        if len(key_val) == 2:
-            key, val = key_val
-            # Remove any leading and trailing whitespace or quotes
-            val = val.strip('"')
-            job_dict[key.strip()] = val
-
-    return job_dict
-
 @job_app.command(no_args_is_help=True)
 def submit(
     submit_file: Path = typer.Argument(..., autocompletion=complete_submit_files,exists=True, readable=True, help="Path to the submit file"),
@@ -134,14 +111,37 @@ def submit(
             logger.info(f"Job {cluster_id} was submitted to HTCondor.")
 
         elif resource.casefold() == "slurm":
-            handle_slurm_submission(submit_file, runtime, email, logger)  # Function to handle Slurm specifics
+            handle_slurm_submission(submit_file, runtime, email, logger)
 
         elif resource.casefold() == "ec2":
-            handle_ec2_submission(submit_file, runtime, email, logger)  # Function to handle EC2 specifics
+            handle_ec2_submission(submit_file, runtime, email, logger)
 
     except Exception as e:
         logger.error(f"Error submitting job: {str(e)}")
         raise typer.Exit(code=1)
+    
+def  handle_ec2_submission(submit_file, runtime, email, logger):
+    if runtime is None:
+        raise TypeError("Error: EC2 resources must specify a --runtime argument")
+    
+    Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
+    DAGMan.write_ec2_dag(file,runtime, email)
+    os.chdir(TMP_DIR)  # DAG must be submitted from TMP_DIR
+    submit_description = htcondor.Submit.from_dag("ec2_submit.dag")
+    submit_description["+ResourceType"] = "\"EC2\""
+
+    # The Job class can only submit a single job at a time
+    submit_qargs = submit_description.getQArgs()
+    if submit_qargs != "" and submit_qargs != "1":
+        raise ValueError("Can only submit one job at a time. "
+                         "See the job-set syntax for submitting multiple jobs.")
+
+    try:
+        result = schedd.submit(submit_description, count=1)
+        cluster_id = result.cluster()
+        logger.info(f"Job {cluster_id} was submitted.")
+    except Exception as e:
+        raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
 def handle_slurm_submission(submit_file, runtime, email, logger):
     if runtime is None:
@@ -171,7 +171,7 @@ def handle_slurm_submission(submit_file, runtime, email, logger):
             raise RuntimeError(f"Unable to setup Slurm execution environment")
 
     Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
-    DAGMan.write_slurm_dag(submit_file, options["runtime"], options["email"])
+    DAGMan.write_slurm_dag(submit_file, runtime, email)
     os.chdir(TMP_DIR)  # DAG must be submitted from TMP_DIR
     submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
     submit_description["+ResourceType"] = "\"Slurm\""
@@ -208,9 +208,6 @@ def status(
         if not job:
             logger.error(f"No job found for ID {job_id}.")
             raise typer.Exit(code=1)
-        # job = convert_to_dict(job)
-        typer.echo(type(job))
-        typer.echo(job)
         resource_type = job[0].get("ResourceType", "htcondor").casefold() or "htcondor"
         # Now, produce job status based on the resource type
         if resource_type == "htcondor":
@@ -423,22 +420,213 @@ def status(
         raise typer.Exit(code=1)
 
 @job_app.command(no_args_is_help=True)
-def Out():
+def log(
+    job_id: str = typer.Argument(..., help="Job ID"),
+    skip_history: bool = typer.Option(False, "--skip-history", help="Skip checking history for log file")
+    ):
+    """
+    Shows the eventlog  of a job when given a job id
+    """
+    logger = get_logger(__name__)
+    options = {"skip_history": skip_history}
+    job = None
+    job = get_job_ad(logger, job_id, options)
+    log_file = job[0].get("UserLog","")
+    with open(log_file, 'r') as f:
+        print(f.read())
+
+@job_app.command(no_args_is_help=True)
+def out(
+    job_id: str = typer.Argument(..., help="Job ID"),
+    skip_history: bool = typer.Option(False, "--skip-history", help="Skip checking history for stdout")
+    ):
     """
     Shows the stdout  of a job when given a job id
     """
-    typer.echo("Needs to be implemented")
+    logger = get_logger(__name__)
+    options = {"skip_history": skip_history}
+    job = None
+
+    job = get_job_ad(logger, job_id, options)
+    out_file = job[0].get("Out","")
+    iwd      = job[0].get("Iwd","")
+    
+    if (out_file[0] != '/'):
+        out_file = iwd + "/" + out_file
+    with open(out_file, 'r') as f:
+        print(f.read())
 
 @job_app.command(no_args_is_help=True)
-def Err():
+def err(
+    job_id: str = typer.Argument(..., help="Job ID"),
+    skip_history: bool = typer.Option(False, "--skip-history", help="Skip checking history for stderr")
+    ):
     """
     Shows the stderr of a job when given a job id
     """
-    typer.echo("Needs to be implemented")
+    logger = get_logger(__name__)
+    options = {"skip_history": skip_history}
+    job = None
+    
+    job = get_job_ad(logger, job_id, options)
+    err_file = job[0].get("Err","")
+    iwd      = job[0].get("Iwd","")
+    
+    if (err_file[0] != '/'):
+        err_file = iwd + "/" + err_file
+    with open(err_file, 'r') as f:
+        print(f.read())
 
 @job_app.command(no_args_is_help=True)
-def resource():
+def resources(
+    job_id: str = typer.Argument(..., help="Job ID"),
+    resource: str = typer.Option("htcondor", "--resource", help="Resource used by job. Required for Slurm jobs."),
+    ):
     """
     Shows resources used by a job when given a job id
     """
-    typer.echo("Needs to be implemented")
+    schedd = htcondor.Schedd()
+    resource = resource.casefold()
+    if resource == "htcondor":
+        try:
+            job = schedd.query(
+                constraint=f"ClusterId == {job_id}",
+                projection=["RemoteHost", "TargetAnnexName", "MachineAttrAnnexName0"]
+            )
+        except IndexError:
+            raise RuntimeError(f"No jobs found for ID {job_id}.")
+        except:
+            raise RuntimeError(f"Unable to look up job resources")
+        if len(job) == 0:
+            raise RuntimeError(f"No jobs found for ID {job_id}.")
+        # TODO: Make this work correctly for jobs that haven't started running yet
+        try:
+            job_host = job[0]["RemoteHost"]
+        except KeyError:
+            raise RuntimeError(f"Job {job_id} is not running yet.")
+        target_annex = job[0].get("TargetAnnexName", None)
+        machine_annex = job[0].get("MachineAttrAnnexName0", None)
+        if target_annex is not None and machine_annex is not None and target_annex == machine_annex:
+            pretty_job_host = job_host.split('@')[1]
+            logger.info(f"Job is using annex '{target_annex}', node {pretty_job_host}.")
+        else:
+            logger.info(f"Job is using resource {job_host}")
+
+    # Jobs running on provisioned Slurm resources need to retrieve
+    # additional information from the provisioning DAGMan log
+    elif resource == "slurm":
+
+        # Internal variables
+        dagman_cluster_id = None
+        provisioner_cluster_id = None
+        slurm_cluster_id = None
+
+        # User-facing variables (all values set below are default/initial state)
+        provisioner_job_submitted_time = None
+        provisioner_job_scheduled_end_time = None
+        job_status = "NOT SUBMITTED"
+        job_started_time = None
+        jobs_running = 0
+        slurm_nodes_requested = None
+        slurm_runtime = None
+
+        dagman_dag, dagman_out, dagman_log = DAGMan.get_files(id)
+
+        if dagman_dag is None:
+            raise RuntimeError(f"No Slurm job found for ID {job_id}.")
+
+        # Parse the .dag file to retrieve some user input values
+        with open(dagman_dag, "r") as dagman_dag_file:
+            for line in dagman_dag_file.readlines():
+                if "annex_runtime =" in line:
+                    slurm_runtime = int(line.split("=")[1].strip())
+
+        # Parse the DAGMan event log for useful information
+        dagman_events = htcondor.JobEventLog(dagman_log)
+        for event in dagman_events.events(0):
+            if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: B":
+                provisioner_cluster_id = event.cluster
+                provisioner_job_submitted_time = datetime.fromtimestamp(event.timestamp)
+                provisioner_job_scheduled_end_time = datetime.fromtimestamp(event.timestamp + slurm_runtime)
+                job_status = "PROVISIONING REQUEST PENDING"
+            if event.cluster == provisioner_cluster_id and event.type == htcondor.JobEventType.EXECUTE:
+                provisioner_job_started_time = datetime.fromtimestamp(event.timestamp)
+                provisioner_job_scheduled_end_time = datetime.fromtimestamp(event.timestamp + slurm_runtime)
+            if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: C":
+                slurm_cluster_id = event.cluster
+                job_started_time = datetime.fromtimestamp(event.timestamp)
+            if event.cluster == slurm_cluster_id and event.type == htcondor.JobEventType.EXECUTE:
+                job_status = "RUNNING"
+                jobs_running += 1
+            if event.cluster == slurm_cluster_id and (event.type == htcondor.JobEventType.JOB_TERMINATED or event.type == htcondor.JobEventType.JOB_EVICTED):
+                jobs_running -= 1
+                if jobs_running == 0:
+                    job_status = "COMPLETE"
+            if event.type == htcondor.JobEventType.JOB_HELD or event.type == htcondor.JobEventType.EXECUTABLE_ERROR:
+                job_status = "ERROR"
+
+        # Now that we have all the information we want, display it
+        if job_status == "PROVISIONING REQUEST PENDING":
+            logger.info(f"Job is still waiting for {slurm_nodes_requested} Slurm nodes to provision")
+        elif job_status == "RUNNING":
+            logger.info(f"Job is running on {jobs_running}/{slurm_nodes_requested} requested Slurm nodes")
+        elif job_status == "ERROR":
+            logger.info(f"An error occurred provisioning Slurm resources")
+
+        # Show information about time remaining
+        if job_status == "RUNNING" or job_status == "COMPLETE":
+            current_time = datetime.now()
+            if current_time < provisioner_job_scheduled_end_time:
+                time_diff = provisioner_job_scheduled_end_time - current_time
+                logger.info(f"Slurm resources are reserved for another {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+            else:
+                time_diff = current_time - provisioner_job_scheduled_end_time
+                logger.info(f"Slurm resources were terminated since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+
+def load_templates() -> List[dict]:
+    """
+    Load templates from a JSON file.
+    """
+    try:
+        # @TODO change to permanent path
+        with open("/home/mjhartke/typer_htcondor/templates.json", "r") as f:
+            templates = json.load(f)
+        return templates
+    except FileNotFoundError:
+        return []
+        
+@job_app.command()
+def template(template_name: Optional[str] = None):
+    """
+    List available submit file templates and create submit files from them
+    
+    If a template name is provided, create a submit file from that template.
+    If no template name is provided, list all available job templates.
+    """
+    templates = load_templates()
+    if template_name:
+        template = next((t for t in templates if t['template_name'] == template_name), None)
+        if template:
+            typer.echo(f"Creating submit file from template: {template_name}")
+            try:
+                response = requests.get(template['template_url'])
+                response.raise_for_status()  # Raises an HTTPError for bad responses
+                submit_file_content = response.text
+
+                # Define the filename for the submit file
+                filename = f"{template_name.replace(' ', '_').lower()}.sub"
+                with open(filename, 'w') as file:
+                    file.write(submit_file_content)
+                
+                typer.echo(f"Generated submit file saved as {filename}.")
+            except requests.RequestException as e:
+                typer.echo(f"Failed to download the template: {e}")
+        else:
+            typer.echo(f"Template '{template_name}' not found.")
+    else:
+        if templates:
+            typer.echo("Available templates:")
+            for template in templates:
+                typer.echo(f"Name: {template['template_name']}, URL: {template['template_url']}, Description: {template['template_description']}")
+        else:
+            typer.echo("No templates available.")
