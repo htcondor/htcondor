@@ -193,12 +193,14 @@ if(WINDOWS)
 				target_include_directories( py3htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
 
-      get_filename_component(PYTHON3_LIBRARY_DIR ${PYTHON3_LIBRARIES} "DIRECTORY")
+      get_filename_component(PLD ${PYTHON3_LIBRARIES} "DIRECTORY")
+      message(STATUS "PLD=${PLD}")
+      set(PLFN "${PLD}/python3.lib")
+
 
       add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
       target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_directories(      py3classad2_impl ${PYTHON3_LIBRARY_DIR} )
-      target_link_libraries(        py3classad2_impl ${CLASSADS_FOUND} condor_utils "python3.dll" ${CONDOR_WIN_LIBS} )
+      target_link_libraries(        py3classad2_impl ${CLASSADS_FOUND} condor_utils ${PLFN} ${CONDOR_WIN_LIBS} )
       set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
       set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad2_impl PDB_NAME py3classad2 )
       set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
@@ -206,8 +208,7 @@ if(WINDOWS)
 
       add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
       target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_directories(      py3htcondor2_impl ${PYTHON3_LIBRARY_DIR} )
-      target_link_libraries(        py3htcondor2_impl ${CLASSADS_FOUND} condor_utils "python3.dll" ${CONDOR_WIN_LIBS} )
+      target_link_libraries(        py3htcondor2_impl ${CLASSADS_FOUND} condor_utils ${PLFN} ${CONDOR_WIN_LIBS} )
       set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
       set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME htcondor2_impl PDB_NAME py3htcondor2 )
       set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
