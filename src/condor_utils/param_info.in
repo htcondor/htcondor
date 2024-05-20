@@ -5971,6 +5971,10 @@ default=False
 description=Should condor_adstash query Schedd job epoch history
 type=bool
 default=False
+[ADSTASH_SCHEDD_TRANSFER_EPOCH_HISTORY]
+description=Should condor_adstash query Schedd transfer epoch history
+type=bool
+default=False
 [ADSTASH_SCHEDD_HISTORY_MAX_ADS]
 description=Stop retrieving ads from a Schedd after this many ads per poll
 type=int
