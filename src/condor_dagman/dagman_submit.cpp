@@ -35,8 +35,52 @@
 
 namespace deep = DagmanDeepOptions;
 
-// Get the event mask for the workflow/default log file.
-const char *getEventMask();
+const char *
+getEventMask()
+{
+	static std::string result("");
+	static std::string dmaskstr("");
+
+	if ( result == "" ) {
+		//
+		// IMPORTANT NOTE:  see all events that we deal with in
+		// Dag::ProcessOneEvent() -- all of those need to be in the
+		// event mask!! (wenger 2012-11-16)
+		//
+		int mask[] = {
+			ULOG_SUBMIT,
+			ULOG_EXECUTE,
+			ULOG_EXECUTABLE_ERROR,
+			ULOG_JOB_EVICTED,
+			ULOG_JOB_TERMINATED,
+			ULOG_SHADOW_EXCEPTION,
+			ULOG_GENERIC,
+			ULOG_JOB_ABORTED,
+			ULOG_JOB_SUSPENDED,
+			ULOG_JOB_UNSUSPENDED,
+			ULOG_JOB_HELD,
+			ULOG_JOB_RELEASED,
+			ULOG_POST_SCRIPT_TERMINATED,
+			ULOG_GLOBUS_SUBMIT,			// For Pegasus
+			ULOG_JOB_RECONNECT_FAILED,
+			ULOG_GRID_SUBMIT,			// For Pegasus
+			ULOG_CLUSTER_SUBMIT,
+			ULOG_CLUSTER_REMOVE,
+			-1
+		};
+
+		for ( const int *p = &mask[0]; *p != -1; ++p ) {
+			if ( p != &mask[0] ) {
+				dmaskstr += ',';
+			}
+			dmaskstr += std::to_string(*p);
+		}
+
+		result = dmaskstr;
+	}
+
+	return result.c_str(); // somewhat safe because result is static.
+}
 
 struct NodeVar {
 	NodeVar(std::string k, std::string v, bool a) : key(k), value(v), append(a) {};
@@ -614,51 +658,4 @@ bool writePreSkipEvent(CondorID& condorID, Job* job, const char* DAGNodeName, co
 		return false;
 	}
 	return true;
-}
-
-const char *
-getEventMask()
-{
-	static std::string result("");
-	static std::string dmaskstr("");
-
-	if ( result == "" ) {
-		//
-		// IMPORTANT NOTE:  see all events that we deal with in
-		// Dag::ProcessOneEvent() -- all of those need to be in the
-		// event mask!! (wenger 2012-11-16)
-		//
-		int mask[] = {
-			ULOG_SUBMIT,
-			ULOG_EXECUTE,
-			ULOG_EXECUTABLE_ERROR,
-			ULOG_JOB_EVICTED,
-			ULOG_JOB_TERMINATED,
-			ULOG_SHADOW_EXCEPTION,
-			ULOG_GENERIC,
-			ULOG_JOB_ABORTED,
-			ULOG_JOB_SUSPENDED,
-			ULOG_JOB_UNSUSPENDED,
-			ULOG_JOB_HELD,
-			ULOG_JOB_RELEASED,
-			ULOG_POST_SCRIPT_TERMINATED,
-			ULOG_GLOBUS_SUBMIT,			// For Pegasus
-			ULOG_JOB_RECONNECT_FAILED,
-			ULOG_GRID_SUBMIT,			// For Pegasus
-			ULOG_CLUSTER_SUBMIT,
-			ULOG_CLUSTER_REMOVE,
-			-1
-		};
-
-		for ( const int *p = &mask[0]; *p != -1; ++p ) {
-			if ( p != &mask[0] ) {
-				dmaskstr += ',';
-			}
-			dmaskstr += std::to_string(*p);
-		}
-
-		result = dmaskstr;
-	}
-
-	return result.c_str(); // somewhat safe because result is static.
 }
