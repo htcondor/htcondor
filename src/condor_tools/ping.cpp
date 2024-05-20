@@ -953,7 +953,6 @@ int main( int argc, const char *argv[] )
 				usage(App.Name);
 				exit(1);
 			}
-			output_mode = 3;
 			i+=2;
 		} else if (is_dash_arg_colon_prefix(argv[i], "af", &pcolon, 2) ||
 				is_dash_arg_colon_prefix(argv[i], "autoformat", &pcolon, 5)) {

@@ -22,7 +22,7 @@ New Features:
   :jira:`2381`
 
 - Added an ``-long``, ``-format`` and ``-autoformat`` options to the :tool:`condor_ping`.
-  These options allows give predictable output for programs that wish to parse the results
+  These options give predictable output for programs that wish to parse the results
   of running the command.
   :jira:`2449`
 
