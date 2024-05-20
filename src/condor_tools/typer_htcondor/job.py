@@ -599,7 +599,7 @@ def load_templates() -> List[dict]:
 def template(template_name: Optional[str] = None):
     """
     List available submit file templates and create submit files from them
-    
+        
     If a template name is provided, create a submit file from that template.
     If no template name is provided, list all available job templates.
     """

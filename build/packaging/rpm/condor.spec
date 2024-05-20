@@ -1320,7 +1320,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad/
 %{python_sitearch}/htcondor/
-%{python_sitearch}/htcondor_typer/
+%{python_sitearch}/htc/
 %{python_sitearch}/htcondor-*.egg-info/
 %endif
 
@@ -1331,7 +1331,7 @@ rm -rf %{buildroot}
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
-%_bindir/htcondor_typer
+%_bindirh/htc
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libclassad_python3_user.so

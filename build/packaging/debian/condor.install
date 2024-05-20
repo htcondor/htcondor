@@ -73,7 +73,7 @@ usr/bin/condor_wait
 usr/bin/condor_watch_q
 usr/bin/condor_who
 usr/bin/htcondor
-usr/bin/htcondor_typer
+usr/bin/htc
 usr/lib/condor/*.so* usr/lib/
 usr/lib/libclassad*.so.*
 usr/lib/condor/*.jar usr/lib/condor/
