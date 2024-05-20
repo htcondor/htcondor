@@ -588,8 +588,7 @@ def load_templates() -> List[dict]:
     Load templates from a JSON file.
     """
     try:
-        # @TODO change to permanent path
-        with open("/home/mjhartke/typer_htcondor/templates.json", "r") as f:
+        with open("/etc/condor/templates.json", "r") as f:
             templates = json.load(f)
         return templates
     except FileNotFoundError:
