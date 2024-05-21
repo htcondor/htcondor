@@ -330,15 +330,10 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 	DCSchedd schedd;
 
 	auto vars = init_vars(dm, *node);
-
-	auto sort_prepend = [](NodeVar lhs, NodeVar rhs) -> bool {
-		if (lhs.append == rhs.append) { return false; }
-		return ! lhs.append;
-	};
-	std::stable_sort(vars.begin(), vars.end(), sort_prepend);
+	const auto partition = std::ranges::stable_partition(vars, [](NodeVar v) -> bool { return !v.append; });
 
 	// If the submitDesc hash is not set, we need to parse it from the file
-	if (!node->GetSubmitDesc()) {
+	if ( ! node->GetSubmitDesc()) {
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node->GetJobName(), node->GetCmdFile());
 		submitHash = new SubmitHash();
 		// Start by populating the hash with some parameters
@@ -355,8 +350,7 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 		};
 
 		AddVar setVar(submitHash);
-		auto append_point = std::find_if(vars.begin(), vars.end(), [](NodeVar v) -> bool { return v.append; });
-		std::for_each(vars.begin(), append_point, setVar); // Add node vars (prepend)
+		std::for_each(vars.begin(), partition.begin(), setVar); // Add node vars (prepend)
 
 		// open the submit file
 		if ( ! ms.open(cmdFile, false, submitHash->macros(), errmsg)) {
@@ -387,7 +381,7 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 			goto finis;
 		}
 
-		std::for_each(append_point, vars.end(), setVar); // Add node vars (append)
+		std::for_each(partition.begin(), partition.end(), setVar); // Add node vars (append)
 	}
 	else {
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from inline description using direct job submission\n", node->GetJobName());
