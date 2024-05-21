@@ -26,6 +26,7 @@ from .htcondor2_impl import (
     _display_dag_options,
     _submit_set_submit_method,
     _submit_get_submit_method,
+    _submit_issue_credentials,
     _submit_itemdata,
 )
 
@@ -334,6 +335,17 @@ class Submit(MutableMapping):
         subfile = _submit_from_dag(filename, internal_options)
         subfile_text = Path(subfile).read_text()
         return Submit(subfile_text)
+
+
+    def issue_credentials(self) -> Union[str, None]:
+        '''
+        Issue credentials for this job description.
+
+        :return:  A string containing a URL that the submitter must visit
+                  in order to complete an OAuth2 flow, or :py:obj:`None`
+                  if no such visit is necessary.
+        '''
+        return _submit_issue_credentials(self._handle)
 
 
     @staticmethod

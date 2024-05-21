@@ -72,6 +72,10 @@ struct SubmitBlob {
         void reset_itemdata_state() { m_ms_inline.rewind_to( 0, 0 ); }
         void insert_macro( const char * name, const std::string & value );
 
+        int process_job_credentials( std::string & URL, std::string & error_string ) {
+            return ::process_job_credentials( m_hash, 0, URL, error_string );
+        }
+
     private:
         SubmitHash m_hash;
         MACRO_SOURCE m_src_pystring;
@@ -684,4 +688,34 @@ _submit_itemdata( PyObject *, PyObject * args ) {
 
     sb->reset_itemdata_state();
     return PyUnicode_FromString(value.c_str());
+}
+
+
+static PyObject *
+_submit_issue_credentials( PyObject *, PyObject * args ) {
+    // _submit_issue_credentials(self.handle_t)
+
+    PyObject_Handle * handle = NULL;
+
+    if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+
+    std::string URL;
+    std::string error_string;
+    int rv = sb->process_job_credentials( URL, error_string );
+
+    if(rv != 0) {
+        PyErr_SetString( PyExc_RuntimeError, error_string.c_str() );
+        return NULL;
+    }
+
+    if(! URL.empty()) {
+        return PyUnicode_FromString(URL.c_str());
+    }
+
+    Py_RETURN_NONE;
 }

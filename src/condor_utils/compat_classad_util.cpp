@@ -517,12 +517,6 @@ int walk_attr_refs (
 			if (expr) iret += walk_attr_refs(expr, pfn, pv);
 		}
 		break;
-
-		default:
-			// unknown or unallowed node.
-			// GGT GGT GGT FIXME
-			//ASSERT(0);
-		break;
 	}
 	return iret;
 }

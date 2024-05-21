@@ -42,6 +42,7 @@
 #include "setenv.h"
 #include "systemd_manager.h"
 #include "dc_startd.h"
+#include "dc_collector.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "MasterPlugin.h"

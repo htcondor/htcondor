@@ -32,6 +32,17 @@
 #include "dc_collector.h"
 #include "my_hostname.h"
 #include "match_prefix.h"
+#include "ad_printmask.h"
+
+ // for -af 
+static struct AppType {
+	const char * Name{nullptr}; // tool name as invoked from argv[0]
+	bool diagnostic{false};
+	bool long_format{false};
+	bool printed_headings{false};
+	AttrListPrintMask prmask;   // -af and -format printing 
+	classad::References prattrs;  // Attributes that we want to print for -long
+} App;
 
 // moved here from condor_perms.cpp for the purpose of comparing the new
 // implementation to the previous one.
@@ -284,6 +295,22 @@ usage( const char *cmd, int other=usage_Error, const char * subsystem=nullptr )
 	fprintf(out,"    -quiet                          No output, only sets status\n");
 	fprintf(out,"    -table                          Print one result per line\n");
 	fprintf(out,"    -verbose                        Print all available information\n");
+	fprintf(out,"    -long                           Print result classad\n");
+	fprintf(out,"    -format <fmt> <attr>\tDisplay <attr> values with formatting\n");
+	fprintf(out,"    -autoformat[:lhVr,tng] <attr> [<attr2> [...]]\n");
+	fprintf(out,"    -af[:lhVr,tng] <attr> [attr2 [...]]\n");
+	fprintf(out,"        Print attr(s) with automatic formatting\n");
+	fprintf(out,"        the [lhVr,tng] options modify the formatting\n");
+	fprintf(out,"            l   attribute labels\n");
+	fprintf(out,"            h   attribute column headings\n");
+	fprintf(out,"            V   %%V formatting (string values are quoted)\n");
+	fprintf(out,"            r   %%r formatting (raw/unparsed values)\n");
+	fprintf(out,"            ,   comma after each value\n");
+	fprintf(out,"            t   tab before each value (default is space)\n");
+	fprintf(out,"            n   newline after each value\n");
+	fprintf(out,"            g   newline between ClassAds, no space before values\n");
+	fprintf(out,"        use -af:h to get tabular values with headings\n");
+	fprintf(out,"        use -af:lrng to get -long equivalent format\n");
 	fprintf(out,"\nExample:\n    %s -addr \"<127.0.0.1:9618>\" -table READ WRITE DAEMON\n\n",cmd);
 
 	if (other & usage_AuthLevels) {
@@ -545,6 +572,124 @@ void print_useful_info_2(bool rv, const char* dname, int cmd, const std::string 
 
 }
 
+void print_policy_ad(bool rv, const char* dname, int cmd, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
+	FILE * out = stdout;
+	std::string  buffer;
+
+	const char * authok = "DENIED";
+	if(!rv) {
+		authok = "FAILED";
+		buffer = "#";
+		buffer += errstack->getFullText(false);
+		buffer += "\n";
+	} else {
+		bool bval = false;
+		if (authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval)) {
+			if  (bval) authok = "ALLOWED";
+		}
+	}
+
+	// for -long output print a comment before each ad showing the ALLOW/DENY result
+	// unless a projection was specified. For the projection case, inject a few fake attrs
+	if (App.prattrs.empty()) {
+		formatstr_cat(buffer, "# %s command to %s is %s\n", name.c_str(), dname, authok);
+	} else {
+		// set some fake attributes about the query
+		// they will only be printed if they are in the projection.
+		ad->Assign(ATTR_NAME, getCommandStringSafe(cmd));
+		ad->Assign("From", dname);
+		ad->Assign("Result", authok);
+	}
+
+	if (rv) {
+		classad::References * attrs = nullptr;
+		if ( ! App.prattrs.empty()) attrs = &App.prattrs;
+		formatAd(buffer, *ad, nullptr, attrs, false);
+		buffer += "\n";
+	}
+	fputs(buffer.c_str(), out);
+}
+
+static bool simulate_policy_from_errstack(ClassAd & ad, CondorError * errstack)
+{
+	if ( ! errstack) return false;
+
+	std::string tmp;
+	int errcode = errstack->code();
+
+	// fake up a policy ad from the errstack text for permission denied
+	if (errcode == SECMAN_ERR_AUTHORIZATION_FAILED) {
+		// SECMAN:2010:Received "DENIED" from server for user bob@host using method XYZ.
+		int state = 0;
+		for (auto &tok : StringTokenIterator(errstack->message(), ", \r\n\"" )) {
+			switch(state) {
+			case 0: if ("Received" == tok) { state = 1; } break;
+			case 1: { ad.Assign("Result", tok); state = 2; } break;
+			case 2: if ("user" == tok) { state = 3; } break;
+			case 3: { ad.Assign("MyRemoteUserName", tok); state = 4; } break;
+			case 4: if ("method" == tok) { state = 5; } break;
+			case 5: {
+				// get rid of trailing .
+				tmp = tok; if (tmp.back() == '.') tmp.pop_back();
+				ad.Assign("AuthMethods", tmp); state = 6;
+			} break;
+			}
+		}
+		return true;
+	} else if (errcode == SECMAN_ERR_COMMUNICATIONS_ERROR) {
+		// SECMAN:2007:Failed to end classad message.
+	}
+
+	return false;
+}
+
+void print_policy_attrs(bool rv, const char* dname, int cmd, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
+	FILE * out = stdout;
+	ClassAd fake_policy;
+	std::string  buffer;
+
+	const char * authok = "DENIED";
+	if(!rv) {
+		authok = "FAILED";
+		buffer = "#";
+		buffer += errstack->getFullText(false);
+		buffer += "\n";
+
+		// fake a policy ad for the benefit of -af
+		ad = &fake_policy;
+		ad->Assign("AuthCommand", cmd);
+		ad->Assign("Result", authok);
+		if (simulate_policy_from_errstack(*ad, errstack)) {
+			buffer.clear(); // don't print the errstack text.
+		}
+	} else {
+		bool bval = false;
+		if (authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval)) {
+			if (bval) authok = "ALLOWED";
+		}
+		ad->Assign("Result", authok);
+	}
+
+	// inject some context attributes
+	ad->Assign(ATTR_NAME, getCommandStringSafe(cmd));
+	ad->Assign("From", dname);
+
+	// print headings (if any) before the first output
+	if (App.prmask.has_headings() && ! App.printed_headings) {
+		// render an ad to calculate column widths.
+		App.prmask.display(buffer, ad);
+		buffer.clear();
+		// now print headings
+		App.prmask.display_Headings(out);
+		App.printed_headings = true;
+	}
+
+
+
+	App.prmask.display(buffer, ad);
+
+	fputs(buffer.c_str(), out);
+}
 
 void print_useful_info_10(bool rv, const char*, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	std::string  val;
@@ -635,6 +780,10 @@ void print_info(bool rv, const char* dname, const char * addr, Sock* s, const st
 		print_useful_info_1(rv, dname, name, s, policy, authz_ad, errstack);
 	} else if (output_mode == 2) {
 		print_useful_info_2(rv, dname, cmd, name, s, policy, authz_ad, errstack);
+	} else if (output_mode == 3) {
+		print_policy_ad(rv, dname, cmd, name, s, policy, authz_ad, errstack);
+	} else if (output_mode == 4) {
+		print_policy_attrs(rv, dname, cmd, name, s, policy, authz_ad, errstack);
 	} else if (output_mode == 10) {
 		print_useful_info_10(rv, dname, name, s, policy, authz_ad, errstack);
 	}
@@ -714,9 +863,6 @@ bool do_item(Daemon* d, const std::string & name, int num, int output_mode) {
 
 }
 
-
-
-
 int main( int argc, const char *argv[] )
 {
 	const char *pcolon;
@@ -726,7 +872,7 @@ int main( int argc, const char *argv[] )
 	const char *optional_config=nullptr;
 	const char *root_config=nullptr;
 	const char *dash_subsystem=nullptr;
-	int  output_mode = -1;
+	int  output_mode = -1; // 0=quiet, 1=sentence, 2=paragraph, 3=long, 4=af, 10=table
 	bool dash_help = false;
 	int  help_details = 0;
 	bool dash_debug = false;
@@ -736,6 +882,8 @@ int main( int argc, const char *argv[] )
 	std::vector<std::string> worklist_name;
 	std::vector<int> worklist_number;
 	Daemon * daemon = NULL;
+
+	App.Name = argv[0];
 
 	for( int i=1; i<argc; i++ ) {
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
@@ -772,6 +920,54 @@ int main( int argc, const char *argv[] )
 		} else if (is_dash_arg_prefix(argv[i],"verbose")) {
 			if(output_mode == -1) {
 				output_mode = 2;
+			} else {
+				fprintf(stderr,"ERROR: only one output mode may be specified.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+		} else if (is_dash_arg_prefix(argv[i],"long")) {
+			if(output_mode == -1 || output_mode == 3) {
+				output_mode = 3;
+				App.long_format = true;
+			} else {
+				fprintf(stderr,"ERROR: only one output mode may be specified.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+		} else if (is_dash_arg_prefix (argv[i], "format", 1)) {
+			if(output_mode == -1 || output_mode == 4) {
+				output_mode = 4;
+			} else {
+				fprintf(stderr,"ERROR: only one output mode may be specified.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+			if ( ! argv[i+1] || ! argv[i+2]) {
+				fprintf(stderr,"ERROR: -format requires 2 arguments\n\n");
+				usage(App.Name);
+				exit(1);
+			}
+			App.prmask.registerFormatF(argv[i+1], argv[i+2], FormatOptionNoTruncate);
+			if ( ! IsValidClassAdExpression(argv[i+2], &App.prattrs, NULL)) {
+				fprintf(stderr,"ERROR: %s is not a valid expression\n\n", argv[i+2]);
+				usage(App.Name);
+				exit(1);
+			}
+			i+=2;
+		} else if (is_dash_arg_colon_prefix(argv[i], "af", &pcolon, 2) ||
+				is_dash_arg_colon_prefix(argv[i], "autoformat", &pcolon, 5)) {
+			if (pcolon) ++pcolon; // of there are options, skip over the :
+			int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, App.prmask, App.prattrs, App.diagnostic);
+			if (ixNext < 0) {
+				fprintf(stderr,"ERROR: could not parse -af option\n\n");
+				usage(App.Name);
+				exit(1);
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+			if(output_mode == -1  || output_mode == 4) {
+				output_mode = 4;
 			} else {
 				fprintf(stderr,"ERROR: only one output mode may be specified.\n\n");
 				usage(argv[0]);
@@ -911,7 +1107,7 @@ int main( int argc, const char *argv[] )
 
 	// use some default
 	if(worklist_name.size() == 0) {
-		if(output_mode > 1) {
+		if(output_mode > 4) {
 			fprintf( stderr, "WARNING: Missing <authz-level | command-name | command-int> argument, defaulting to WRITE.\n");
 		}
 		worklist_name.push_back("WRITE");
@@ -940,7 +1136,7 @@ int main( int argc, const char *argv[] )
 	//
 
 	if(dtype == DT_NONE && !address) {
-		if(output_mode > 1) {
+		if(output_mode > 4) {
 			fprintf( stderr, "WARNING: Missing daemon argument, defaulting to SCHEDD.\n");
 		}
 		dtype = DT_SCHEDD;
