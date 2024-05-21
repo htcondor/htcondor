@@ -1,5 +1,5 @@
---- condor_config.generic	2021-05-01 07:31:58.090876247 -0500
-+++ condor_config.patched	2021-05-01 07:32:56.175626638 -0500
+--- condor_config.generic	2023-10-06 13:27:28.225551803 -0500
++++ condor_config.generic	2024-05-21 15:47:46.312454837 -0500
 @@ -19,27 +19,25 @@
  ######################################################################
  
@@ -33,7 +33,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##
-@@ -68,5 +66,26 @@
+@@ -68,5 +66,28 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -59,5 +59,7 @@
 +SHARE   = $(RELEASE_DIR)/share/condor
 +
 +JAVA_CLASSPATH_DEFAULT = $(SHARE) .
++
++SINGULARITY = /usr/bin/singularity
 +
 +##  Install the minicondor package to run HTCondor on a single node

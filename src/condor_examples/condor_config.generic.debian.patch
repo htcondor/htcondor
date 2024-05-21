@@ -1,5 +1,5 @@
---- condor_config.generic	2021-05-01 07:31:58.090876247 -0500
-+++ condor_config.patched	2021-05-01 07:33:10.903564239 -0500
+--- condor_config.generic	2023-10-06 13:27:28.225551803 -0500
++++ condor_config.generic	2024-05-21 15:50:50.397474145 -0500
 @@ -19,27 +19,25 @@
  ######################################################################
  
@@ -33,7 +33,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##
-@@ -68,5 +66,33 @@
+@@ -68,5 +66,34 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -60,6 +60,7 @@
 +LIBEXEC = $(RELEASE_DIR)/libexec/condor
 +SHARE   = $(RELEASE_DIR)/share/condor
 +GANGLIA_LIB64_PATH = /lib,/usr/lib,/usr/local/lib
++SINGULARITY = /usr/bin/singularity
 +
 +# Account for different pki locations for Debian
 +AUTH_SSL_SERVER_CAFILE   = /etc/ssl/certs/ca-certificates.crt
