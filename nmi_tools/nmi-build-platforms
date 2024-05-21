@@ -8,7 +8,7 @@ docker://htcondor/nmi-build:ppc64le_Ubuntu20-23070200
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-23070200
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-23070200
 docker://htcondor/nmi-build:x86_64_AmazonLinux2023-23070200
-docker://htcondor/nmi-build:x86_64_CentOS7-23070100
+docker://htcondor/nmi-build:x86_64_CentOS7-23070200
 docker://htcondor/nmi-build:x86_64_Debian11-23070200
 docker://htcondor/nmi-build:x86_64_Debian12-23070200
 docker://htcondor/nmi-build:x86_64_openSUSE15-23070200
