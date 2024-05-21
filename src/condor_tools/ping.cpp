@@ -643,7 +643,7 @@ static bool simulate_policy_from_errstack(ClassAd & ad, CondorError * errstack)
 	return false;
 }
 
-void print_policy_attrs(bool rv, const char* dname, int cmd, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
+void print_policy_attrs(bool rv, const char* dname, int cmd, const std::string & /*name*/, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
 	FILE * out = stdout;
 	ClassAd fake_policy;
 	std::string  buffer;
