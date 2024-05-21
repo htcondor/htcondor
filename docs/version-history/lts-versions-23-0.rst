@@ -44,6 +44,10 @@ Bugs Fixed:
   using the default Desktop policy.
   :jira:`2444`
 
+- Fixed a bug that prevented the *condor_startd* from advertising
+  :ad-attr:`DockerCachedImageSizeMb`
+  :jira:`2458`
+
 .. _lts-version-history-23010:
 
 Version 23.0.10
