@@ -6,7 +6,7 @@ Introduction
 ------------
 
 The Center Manager machine, or CM, is a role that usually runs on one machine
-in your pool.  In some ways, it defines the extend and scope of the pool.  A
+in your pool.  In some ways, it defines the extent and scope of the pool.  A
 central manager must run at least one *condor_collector* and
 *condor_negotiator* daemon, and most pools run exactly one of each.  Some large
 sites run multiple collectors, perhaps on multiple machines, to handle the load
