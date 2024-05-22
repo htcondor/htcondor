@@ -2029,7 +2029,7 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 			int deduct = MAX(0, inuse->mem);
 			mem = MAX(0, mem - deduct);
 		}
-		cp->Assign( ATTR_MEMORY, c_phys_mem );
+		cp->Assign( ATTR_MEMORY, mem );
 		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
 
