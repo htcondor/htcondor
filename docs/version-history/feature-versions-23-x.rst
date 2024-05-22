@@ -90,6 +90,10 @@ New Features:
   epoch histories.
   :jira:`2076`
 
+- Fixed a bug where backfill slots did not account for Memory used by
+  active primary slots correctly.
+  :jira:`2462`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_startd* from advertising
