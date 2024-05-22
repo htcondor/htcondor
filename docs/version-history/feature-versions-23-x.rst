@@ -92,6 +92,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that prevented the *condor_startd* from advertising
+  :ad-attr:`DockerCachedImageSizeMb`
+  :jira:`2458`
+
 - Fixed a bug where transfer of Kerberos credentials from the
   *condor_shadow* to the *condor_starter* would fail if the daemons
   weren't explicitly configured to trust each other.
