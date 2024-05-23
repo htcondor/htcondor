@@ -426,15 +426,16 @@ else()
       endif()
 
 
+      set ( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
+
+
       add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
       target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      if (APPLE)
-        target_link_libraries(        py3classad2_impl classad condor_utils ${PYTHON3_LIBRARIES} )
-        set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
-      else ()
-        target_link_libraries(        py3classad2_impl classad condor_utils )
-        set_target_properties(        py3classad2_impl PROPERTIES SUFFIX ".abi3.so" )
-      endif ()
+      target_link_libraries(        py3classad2_impl classad condor_utils ${PYTHON3_LIBRARIES} )
+      set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
+      set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+      # We actually want to copy this ...
+      set_target_properties(        py3classad2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/classad2" )
 
       set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
 
@@ -448,6 +449,9 @@ else()
         set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX ".abi3.so" )
       endif()
       set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
+      set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+      # We actually want to copy this ...
+      set_target_properties(        py3htcondor2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/htcondor2" )
 
       add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
       target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
@@ -486,7 +490,6 @@ else()
 
     # more targets are built if we plan on building wheels
     if ( WANT_PYTHON_WHEELS )
-      set ( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
       include_directories(${PYTHON3_INCLUDE_DIRS} ${BOOST_INCLUDE})
 
       # the pyclassad library and the classad and htcondor modules should not link libpython
