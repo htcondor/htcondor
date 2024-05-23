@@ -44,6 +44,10 @@ Bugs Fixed:
   using the default Desktop policy.
   :jira:`2444`
 
+- Fixed a rare bug where certain errors reported by a file transfer
+  plugin were not reported to the *condor_starter*.
+  :jira:`2464`
+
 .. _lts-version-history-23010:
 
 Version 23.0.10
