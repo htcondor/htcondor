@@ -37,6 +37,16 @@
     #include "condor_common.h"
 #endif /* _CONDOR_COMMON_FIRST */
 
+// By defining Py_LIMITED_API, we ensure that we see only the symbols that are
+// part of the "limited API", which is a strict subset of the "stable ABI", which is in
+// turn guaranteed to be compatible between all minor versions of Python 3 after
+// and including 3.2.
+//
+// The version 2 bindings don't need any part of the limited API introduced after
+// Python 3.2, so we can define Py_LIMITED_API as 3 (rather than 0x03020000,
+// which is the same but makes it look like we really want version 3.2).
+//
+// See https://docs.python.org/3/c-api/stable.html#stable-application-binary-interface.
 #define Py_LIMITED_API 3
 #include <Python.h>
 
