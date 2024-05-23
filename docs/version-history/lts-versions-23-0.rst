@@ -44,6 +44,10 @@ Bugs Fixed:
   using the default Desktop policy.
   :jira:`2444`
 
+- Fixed bug where *condor_submit_dag* would crash when DAG file contained
+  a line of only whitespace with no terminal newline.
+  :jira:`2463`
+
 .. _lts-version-history-23010:
 
 Version 23.0.10
