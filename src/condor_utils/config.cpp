@@ -1309,7 +1309,9 @@ bool MacroStreamFile::open(const char * filename, bool is_command, MACRO_SET& se
 
 int MacroStreamFile::close(MACRO_SET&set, int parsing_return_val)
 {
-	return Close_macro_source(fp, src, set, parsing_return_val);
+	int ret = Close_macro_source(fp, src, set, parsing_return_val);
+	fp = nullptr;
+	return ret;
 }
 
 bool MacroStreamCharSource::open(const char * src_string, const MACRO_SOURCE& _src)

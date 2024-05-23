@@ -11,8 +11,8 @@ Synopsis
 
 **condor_qusers** [**-help**] [**-version**] [**-debug** ]
 [**-name** *schedd-name*] [**-pool** *pool-name*]
-[**-long** | **-\-af** *{attrs}* | **-format** *fmt* *attr*]
-[**-add** | **-enable** | **-\-disable** [**-reason** *reason-string*]] *{users}*
+[**-long** | **-af** *{attrs}* | **-format** *fmt* *attr*]
+[**-add** | **-enable** | **-disable** [**-reason** *reason-string*]] *{users}*
 
 Description
 -----------
@@ -98,13 +98,13 @@ Examples
 .. code-block:: console
 
     $ condor_qusers -name north.cs.wisc.edu -pool condor.cs.wisc.edu
-    Print users from north.cs.wisc.edu in the condor.cs.wisc.edu pool
+    Print users from AP north.cs.wisc.edu in the condor.cs.wisc.edu pool
     $ condor_qusers -name perdita
-    Print users from perdition in the local pool
+    Print users from AP perdita in the local pool
     % condor_qusers -add bob
     Add user bob to the local AP
-    % condor_qusers -disable -bob -reason "talk to admin"
-    Disable user bob with the reason "talk to admin"
+    % condor_qusers -disable bob -reason "talk to admin"
+    Disable user bob in the local AP with the reason "talk to admin"
 
 General Remarks
 ---------------
