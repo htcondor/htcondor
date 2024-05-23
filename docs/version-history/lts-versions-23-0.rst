@@ -44,6 +44,10 @@ Bugs Fixed:
   using the default Desktop policy.
   :jira:`2444`
 
+- Fixed a bug that prevented the *condor_startd* from advertising
+  :ad-attr:`DockerCachedImageSizeMb`
+  :jira:`2458`
+
 - Fixed a rare bug where certain errors reported by a file transfer
   plugin were not reported to the *condor_starter*.
   :jira:`2464`
