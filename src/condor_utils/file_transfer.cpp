@@ -5002,7 +5002,7 @@ FileTransfer::uploadFileList(
 			dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
 			int exit_code = 0;
 			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
-			if (result == TransferPluginResult::Error) {
+			if (result != TransferPluginResult::Success) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!first_failed_file_transfer_happened) {
 					first_failed_file_transfer_happened = true;
@@ -5198,7 +5198,7 @@ FileTransfer::uploadFileList(
 						long long upload_bytes = 0;
 						int exit_code = 0;
 						TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, false, errstack, upload_bytes);
-						if (result == TransferPluginResult::Error) {
+						if (result != TransferPluginResult::Success) {
 							return_and_resetpriv( -1 );
 						}
 						currentUploadPlugin = "";
