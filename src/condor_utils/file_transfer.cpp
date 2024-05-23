@@ -2506,7 +2506,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// Not sure if we can safely add another value to `rc`, since
 	// it's defined -- of all places -- in `ReliSock.h`, and we
 	// really don't want the value leaking out of this function.
-	bool file_transfer_plugin_timed_out = false;
+	bool file_transfer_plugin_timed_out   = false;
+	bool file_transfer_plugin_exec_failed = false;
 
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
@@ -3182,7 +3183,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					case TransferPluginResult::Error:
 						rc = GET_FILE_PLUGIN_FAILED;
 						plugin_exit_code = exit_status;
-						[[fallthrough]];
+						break;
+					case TransferPluginResult::ExecFailed:
+						file_transfer_plugin_exec_failed = true;
+						break;
 					case TransferPluginResult::Success:
 						break;
 				}
@@ -3354,6 +3358,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					hold_subcode = ETIME;
 				}
 
+				if( file_transfer_plugin_exec_failed) {
+					try_again = true; // not our fault, try again elsewhere
+				}
+
 				dprintf(D_ALWAYS,
 						"DoDownload: consuming rest of transfer and failing "
 						"after encountering the following error: %s\n",
@@ -3497,6 +3505,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				}
 				try_again = false;
 				formatstr(error_buf, "%s", errstack.getFullText().c_str());
+				if (result == TransferPluginResult::ExecFailed) {
+					try_again = true; // not the job's fault
+				}
 			}
 		}
 	}
@@ -6765,7 +6776,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 		formatstr(message, "FILETRANSFER: Failed to execute %s: %s", plugin_path.c_str(), strerror(errno));
 		dprintf(D_ALWAYS, "%s\n", message.c_str());
 		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
-		return TransferPluginResult::Error;
+		return TransferPluginResult::ExecFailed;
 	}
 
 	int rc = 0;
