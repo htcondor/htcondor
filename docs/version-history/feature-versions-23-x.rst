@@ -105,6 +105,10 @@ Bugs Fixed:
   weren't explicitly configured to trust each other.
   :jira:`2411`
 
+- Fixed a rare bug where certain errors reported by a file transfer
+  plugin were not reported to the *condor_starter*.
+  :jira:`2464`
+
 - Fixed a bug where :tool:`condor_submit` -i did not work on a 
   cgroup v2 system.
   :jira:`2438`
