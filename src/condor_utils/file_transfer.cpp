@@ -6391,7 +6391,6 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 	// Hashtable returns zero if found.
 	if ( plugin_table->lookup( method, plugin ) ) {
 		// no plugin for this type!!!
-		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str() );
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
 		return "";
 	}
@@ -6451,14 +6450,6 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 		return TransferPluginResult::Error;
 	}
 
-
-/*
-	// TODO: check validity of plugin name.  should always be an absolute path
-	if (absolute_path_check() ) {
-		dprintf(D_ALWAYS, "FILETRANSFER: NOT invoking malformed plugin named \"%s\"\n", plugin.c_str());
-		FAIL();
-	}
-*/
 
 	// prepare environment for the plugin
 	Env plugin_env;
@@ -6760,12 +6751,22 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 
 	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", true);
 	MyPopenTimer p_timer;
-	p_timer.start_program(
+	int plugin_exec_result = p_timer.start_program(
 		plugin_args,
 		want_stderr,
 		& plugin_env,
 		drop_privs
 	);
+
+	if (plugin_exec_result != 0) {
+		exit_status = errno;
+		std::string message;
+
+		formatstr(message, "FILETRANSFER: Failed to execute %s: %s", plugin_path.c_str(), strerror(errno));
+		dprintf(D_ALWAYS, "%s\n", message.c_str());
+		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
+		return TransferPluginResult::Error;
+	}
 
 	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
@@ -7213,9 +7214,13 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 	const int timeout = 20; // max time to allow the plugin to run
 
 	MyPopenTimer pgm;
-	if (pgm.start_program(args, false) < 0) {
-		dprintf( D_ALWAYS, "FILETRANSFER: Failed to execute %s, ignoring\n", path );
-		e.pushf("FILETRANSFER", 1, "Failed to execute %s, ignoring", path );
+
+	// start_program returns 0 on success, -1 on "already started", and errno otherwise
+	if (pgm.start_program(args, false) != 0) {
+		std::string message;
+		formatstr(message, "FILETRANSFER: Failed to execute %s -classad: %s skipping", path, strerror(errno));
+		dprintf(D_ALWAYS, "%s\n", message.c_str());
+		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
 		return;
 	}
 
