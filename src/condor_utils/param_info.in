@@ -1803,7 +1803,7 @@ type=path
 tags=startd,starter_mgr
 
 [SINGULARITY]
-default=/usr/bin/singularity
+default=$(LIBEXEC)/apptainer
 win32_default=
 type=string
 reconfig=true
