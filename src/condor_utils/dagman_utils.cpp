@@ -647,8 +647,8 @@ DagmanUtils::processDagCommands( SubmitDagDeepOptions& deepOpts, SubmitDagShallo
 		//Read DAG file
 		std::string logicalLine;
 		while ( reader.NextLogicalLine( logicalLine ) ) {
+			trim(logicalLine);
 			if ( logicalLine != "" ) {
-				trim(logicalLine);
 				StringTokenIterator tokens(logicalLine);
 				const char* cmd = tokens.first();
 				// Parse CONFIG command
