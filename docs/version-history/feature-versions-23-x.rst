@@ -49,6 +49,11 @@ New Features:
   to encourage cacheable memory pages to be reclaimed faster.
   :jira:`2391`
 
+- If a file transfer plugin is broken in such a way that it cannot be executed,
+  no longer put a job that uses it on hold, but back to idle so it can try
+  again.
+  :jira:`2400`
+
 - Local universe jobs on Linux are now put into their own cgroups.  New knob
   :macro:`USE_CGROUPS_FOR_LOCAL_UNIVERSE` disables it.
   :jira:`2440`
