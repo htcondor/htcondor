@@ -86,12 +86,12 @@ bool init_local_hostname_impl()
 			}
 		}
 	} else if (!local_hostname_initialized) {
-		addrinfo_iterator ai;
+		addrinfo* info = nullptr;
 		const int MAX_TRIES = 20;
 		const int SLEEP_DUR = 3;
 		bool gai_success = false;
 		for(int try_count = 1; true; try_count++) {
-			int ret = ipv6_getaddrinfo(test_hostname.c_str(), NULL, ai);
+			int ret = ipv6_getaddrinfo(test_hostname.c_str(), NULL, info);
 			if(ret == 0) { gai_success = true; break; }
 			if(ret != EAI_AGAIN ) {
 				dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() could not look up '%s': %s (%d).  Error is not recoverable; giving up.  Problems are likely.\n", test_hostname.c_str(), gai_strerror(ret), ret );
@@ -108,10 +108,10 @@ bool init_local_hostname_impl()
 		}
 
 		if(gai_success) {
-			addrinfo* info = ai.next();
 			if (info->ai_canonname) {
 				local_hostname = info->ai_canonname;
 			}
+			freeaddrinfo(info);
 		}
 
 	}
@@ -176,20 +176,20 @@ std::string get_fqdn_from_hostname(const std::string& hostname) {
 	std::string ret;
 
 	if (!nodns_enabled()) {
-		addrinfo_iterator ai;
-		int res  = ipv6_getaddrinfo(hostname.c_str(), NULL, ai);
+		addrinfo* info = nullptr;
+		int res  = ipv6_getaddrinfo(hostname.c_str(), NULL, info);
 		if (res) {
 			dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
 				hostname.c_str(), gai_strerror(res), res);
 			return ret;
 		}
 
-		addrinfo *info = ai.next();
-		if (info != NULL && info->ai_canonname != NULL) {
+		if (info->ai_canonname != nullptr) {
 			if (strchr(info->ai_canonname, '.')) {
 				return info->ai_canonname;
 			}
 		}
+		freeaddrinfo(info);
 
 		hostent* h = gethostbyname(hostname.c_str());
 		if (h && h->h_name && strchr(h->h_name, '.')) {
@@ -217,75 +217,25 @@ int get_fqdn_and_ip_from_hostname(const std::string & hostname,
 		std::string & fqdn, condor_sockaddr& addr) {
 
 	std::string ret;
-	condor_sockaddr ret_addr;
-	bool found_ip = false;
+	std::vector<condor_sockaddr> addr_list;
 
-	// if the hostname contains dot, hostname is assumed to be full hostname
-	if( hostname.find('.') != std::string::npos ) {
-		ret = hostname;
-	}
+	addr_list = resolve_hostname(hostname, &ret);
 
-	if (nodns_enabled()) {
-		// if nodns is enabled, convert hostname to ip address directly
-		ret_addr = convert_fake_hostname_to_ipaddr(hostname);
-
-		// note that convert_fake_hostname_to_ipaddr() could fail; if so,
-		// leave found_ip = false and fall through to the block below
-		// where we try to use the resolver.
-		if (ret_addr != condor_sockaddr::null) {
-			found_ip = true;
+	// if FQDN is still unresolved, try to use given hostname
+	if (ret.empty()) {
+		std::string default_domain;
+		// if the hostname contains dot, hostname is assumed to be full hostname
+		// else try DEFAULT_DOMAIN_NAME
+		if (hostname.find('.') != std::string::npos) {
+			ret = hostname;
+		} else if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
+			ret = hostname + "." + default_domain;
 		}
 	}
 
-	if (!found_ip) {
-		// we look through getaddrinfo and gethostbyname
-		// to further seek fully-qualified domain name and corresponding
-		// ip address
-		addrinfo_iterator ai;
-		int res  = ipv6_getaddrinfo(hostname.c_str(), NULL, ai);
-		if (res) {
-			dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", hostname.c_str(),
-				gai_strerror(res), res);
-			return 0;
-		}
-
-		addrinfo *info = ai.next();
-		if (info != NULL && info->ai_canonname != NULL) {
-			fqdn = info->ai_canonname;
-			addr = condor_sockaddr(info->ai_addr);
-			return 1;
-		}
-
-		hostent* h = gethostbyname(hostname.c_str());
-		if (h && h->h_name && strchr(h->h_name, '.')) {
-			fqdn = h->h_name;
-			addr = condor_sockaddr((sockaddr*)h->h_addr);
-			return 1;
-		}
-		if (h && h->h_aliases && *h->h_aliases) {
-			for (char** alias = h->h_aliases; *alias; ++alias) {
-				if (strchr(*alias, '.')) {
-					fqdn = *alias;
-					addr = condor_sockaddr((sockaddr*)h->h_addr);
-					return 1;
-				}
-			}
-		}
-	}
-
-	std::string default_domain;
-
-	// if FQDN is still unresolved, try DEFAULT_DOMAIN_NAME
-	if (ret.length() == 0 && param(default_domain, "DEFAULT_DOMAIN_NAME")) {
-		ret = hostname;
-		if (ret[ret.length() - 1] != '.')
-			ret += ".";
-		ret += default_domain;
-	}
-
-	if (ret.length() > 0 && found_ip) {
+	if (!ret.empty() && !addr_list.empty()) {
 		fqdn = ret;
-		addr = ret_addr;
+		addr = addr_list[0];
 		return 1;
 	}
 	return 0;
@@ -436,27 +386,21 @@ std::string get_full_hostname(const condor_sockaddr& addr)
 	return ret;
 }
 
-std::vector<condor_sockaddr> resolve_hostname(const char* hostname)
-{
-	std::string host(hostname);
-	return resolve_hostname(host);
-}
-
-
-std::vector<condor_sockaddr> resolve_hostname(const std::string& hostname)
+std::vector<condor_sockaddr> resolve_hostname(const std::string& hostname, std::string* canonical)
 {
 	std::vector<condor_sockaddr> ret;
 	if (nodns_enabled()) {
 		condor_sockaddr addr = convert_fake_hostname_to_ipaddr(hostname);
-		if (addr == condor_sockaddr::null)
-			return ret;
-		ret.push_back(addr);
+		if (addr != condor_sockaddr::null) {
+			ret.push_back(addr);
+			if (canonical) *canonical = hostname;
+		}
 		return ret;
 	}
-	return resolve_hostname_raw(hostname);
+	return resolve_hostname_raw(hostname, canonical);
 }
 
-std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname) {
+std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname, std::string* canonical) {
 	//
 	// For now, we can just document that you need the Punycoded DSN name.
 	// If somebody complains about that, we can revisit this.  (If we
@@ -474,24 +418,45 @@ std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname) {
 		return ret;
 	}
 
-	addrinfo_iterator ai;
-	int res  = ipv6_getaddrinfo(hostname.c_str(), NULL, ai);
+	addrinfo* info = nullptr;
+	int res  = ipv6_getaddrinfo(hostname.c_str(), NULL, info);
 	if (res) {
 		dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
 			hostname.c_str(), gai_strerror(res), res);
 		return ret;
 	}
 
-	// To eliminate duplicate address, here we use std::set.
-	// we also want to maintain the order given by getaddrinfo.
-	std::set<condor_sockaddr> s;
-	while (addrinfo* info = ai.next()) {
-		condor_sockaddr addr(info->ai_addr);
-		if (s.find(addr) == s.end()) {
-			ret.push_back(addr);
-			s.insert(addr);
-		}
+	if (canonical && info->ai_canonname) {
+		*canonical = info->ai_canonname;
 	}
+
+	addrinfo* next = info;
+	do {
+		// Ignore non-IP address families
+		if (next->ai_family == AF_INET || next->ai_family == AF_INET6) {
+			ret.emplace_back(next->ai_addr);
+		}
+	} while ( (next = next->ai_next) );
+
+	// Sort IPv6 link-local addresses to the end of the list.
+	// Optionally sort IPv4 addresses to the top of the list.
+	bool prefer_ipv4 = false;
+	bool have_preference = param_boolean("IGNORE_DNS_PROTOCOL_PREFERENCE", true);
+	if (have_preference) {
+		prefer_ipv4 = param_boolean("PREFER_OUTBOUND_IPV4", true);
+	}
+	auto ip_sort = [=](const condor_sockaddr& a, const condor_sockaddr& b) {
+		if ((a.is_ipv4() || !a.is_link_local()) && b.is_ipv6() && b.is_link_local()) {
+			return false;
+		}
+		if (have_preference && a.is_ipv4() != b.is_ipv4()) {
+			return prefer_ipv4 == a.is_ipv4();
+		}
+		return false;
+	};
+	std::sort(ret.begin(), ret.end(), ip_sort);
+
+	freeaddrinfo(info);
 	return ret;
 }
 
