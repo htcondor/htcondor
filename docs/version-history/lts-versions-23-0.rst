@@ -56,6 +56,18 @@ Bugs Fixed:
   plugin were not reported to the *condor_starter*.
   :jira:`2464`
 
+- Removed confusing message in StartLog at shutdown about trying to
+  kill illegal pid.
+  :jira:`1012`
+
+- Container universe now works when file transfer is disabled or not used.
+  :jira:`1329`
+
+- Fixed a bug where transfer of Kerberos credentials from the
+  *condor_shadow* to the *condor_starter* would fail if the daemons
+  weren't explicitly configured to trust each other.
+  :jira:`2411`
+
 .. _lts-version-history-23010:
 
 Version 23.0.10
