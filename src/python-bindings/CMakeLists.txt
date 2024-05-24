@@ -426,7 +426,13 @@ else()
       endif()
 
 
-      set ( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
+      set( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
+
+      set( MVI_SUFFIX ".abi3.so" )
+      if (APPLE)
+        set( MVI_SUFFIX ".abi3.dylib" )
+        set( MAGIC_LINKER_FLAG "-undefined dynamic_lookup" )
+      endif ()
 
 
       add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
