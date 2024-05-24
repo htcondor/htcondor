@@ -56,6 +56,10 @@ Bugs Fixed:
   plugin were not reported to the *condor_starter*.
   :jira:`2464`
 
+- Removed confusing message in StartLog at shutdown about trying to
+  kill illegal pid.
+  :jira:`1012`
+
 - Container universe now works when file transfer is disabled or not used.
   :jira:`1329`
 

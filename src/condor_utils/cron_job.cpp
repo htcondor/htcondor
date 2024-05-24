@@ -835,7 +835,7 @@ CronJob::KillJob( bool force )
 	m_in_shutdown = true;
 
 	// Idle?
-	if ( IsIdle() || IsDead() ) {
+	if (IsIdle() || IsDead() || IsReady()) {
 		return 0;
 	}
 
