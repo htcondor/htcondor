@@ -629,7 +629,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	req.m_misc_data = misc_data;
 	req.m_nonblocking = nonblocking;
 	req.m_cmd_description = cmd_description;
-	req.m_sec_session_id = sec_session_id;
+	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -652,7 +652,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorErr
 	// This is a blocking version of startCommand().
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
-	req.m_sec_session_id = sec_session_id;
+	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -748,7 +748,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError 
 	// This is the nonblocking version of startCommand().
 	req.m_nonblocking = true;
 	req.m_cmd_description = cmd_description;
-	req.m_sec_session_id = sec_session_id;
+	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -770,7 +770,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, c
 	// This is the blocking version of startCommand().
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
-	req.m_sec_session_id = sec_session_id;
+	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
