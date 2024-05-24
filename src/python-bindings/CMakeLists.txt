@@ -430,7 +430,7 @@ else()
 
       set( MVI_SUFFIX ".abi3.so" )
       if (APPLE)
-        set( MVI_SUFFIX "abi3.dylib" )
+        set( MVI_SUFFIX ".abi3.dylib" )
         set( MAGIC_LINKER_FLAG "-undefined dynamic_lookup" )
       endif ()
 
