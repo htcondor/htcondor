@@ -648,9 +648,9 @@ DagmanUtils::processDagCommands( SubmitDagDeepOptions& deepOpts, SubmitDagShallo
 		std::string logicalLine;
 		while ( reader.NextLogicalLine( logicalLine ) ) {
 			if ( logicalLine != "" ) {
-				trim(logicalLine);
-				StringTokenIterator tokens(logicalLine);
+				StringTokenIterator tokens(logicalLine, " \t\r");
 				const char* cmd = tokens.first();
+				if ( ! cmd) { continue; }
 				// Parse CONFIG command
 				if (strcasecmp(cmd, "CONFIG") == MATCH) {
 					const char* newFile = tokens.remain();
