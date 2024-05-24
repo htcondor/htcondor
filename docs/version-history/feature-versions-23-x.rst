@@ -90,12 +90,24 @@ New Features:
   epoch histories.
   :jira:`2076`
 
+- Fixed a bug where backfill slots did not account for Memory used by
+  active primary slots correctly.
+  :jira:`2462`
+
 Bugs Fixed:
+
+- Fixed a bug that prevented the *condor_startd* from advertising
+  :ad-attr:`DockerCachedImageSizeMb`
+  :jira:`2458`
 
 - Fixed a bug where transfer of Kerberos credentials from the
   *condor_shadow* to the *condor_starter* would fail if the daemons
   weren't explicitly configured to trust each other.
   :jira:`2411`
+
+- Fixed a rare bug where certain errors reported by a file transfer
+  plugin were not reported to the *condor_starter*.
+  :jira:`2464`
 
 - Fixed a bug where :tool:`condor_submit` -i did not work on a 
   cgroup v2 system.

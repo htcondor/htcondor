@@ -93,21 +93,20 @@ TransferQueueContactInfo::GetStringRepresentation(std::string &str) {
 		return false;
 	}
 
-	StringList limited_queues;
+	std::vector<std::string> limited_queues;
 	if( !m_unlimited_uploads ) {
-		limited_queues.append("upload");
+		limited_queues.emplace_back("upload");
 	}
 	if( !m_unlimited_downloads ) {
-		limited_queues.append("download");
+		limited_queues.emplace_back("download");
 	}
-	char *list_str = limited_queues.print_to_delimed_string(",");
+
 	str = "";
 	str += "limit=";
-	str += list_str;
+	str += join(limited_queues,",");
 	str += delim;
 	str += "addr=";
 	str += m_addr;
-	free(list_str);
 
 	return true;
 }

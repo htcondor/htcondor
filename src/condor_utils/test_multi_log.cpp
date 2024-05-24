@@ -36,10 +36,7 @@ enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 static int		verbosity = 0;
 
 Status CheckArgs(int argc, char **argv);
-bool CompareStringLists(StringList &reference, StringList &test);
-bool GetGoodLogFiles(StringList &logFiles);
 bool GetBadLogFiles();
-bool ReadEvents(StringList &logFiles);
 bool ReadEventsLazy();
 bool monitorLogFile( ReadMultipleUserLogs &reader, const char *logfile,
 			bool truncateIfFirst );
