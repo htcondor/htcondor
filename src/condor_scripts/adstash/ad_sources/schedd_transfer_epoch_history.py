@@ -17,12 +17,87 @@ import time
 import logging
 import htcondor
 import traceback
+import re
+
+from itertools import chain
 
 from adstash.ad_sources.generic import GenericAdSource
-from adstash.convert import to_json
 
 
 class ScheddTransferEpochHistorySource(GenericAdSource):
+
+
+    def __init__(self, *args, **kwargs):
+        self.text_attrs = set()
+        self.indexed_keyword_attrs = {
+            "Endpoint",
+            "ErrorType",
+            "FailedName",
+            "FailureType",
+            "GLIDEIN_ResourceName",
+            "GLIDEIN_Site",
+            "GlobalJobId",
+            "Owner",
+            "PelicanClientVersion",
+            "ProjectName",
+            "ScheddName",
+            "ServerVersion",
+            "StartdName",
+            "StartdSlot",
+            "TransferProtocol",
+            "TransferType",
+        }
+        self.noindex_keyword_attrs = {
+            "AttemptError",
+            "ErrorString",
+            "TransferFileName",
+            "TransferUrl",
+        }
+        self.float_attrs = {
+            "AttemptTime",
+            "TimeToFirstByte",
+        }
+        self.int_attrs = {
+            "Attempt",
+            "Attempts",
+            "AttemptFileBytes",
+            "ClusterId",
+            "ErrorCode",
+            "ProcId",
+            "TransferFileBytes",
+            "TransferTotalBytes",
+            "TransferTries",
+        }
+        self.date_attrs = {
+            "AttemptEndTime",
+            "EpochWriteDate",
+            "RecordTime",
+            "TransferEndTime",
+            "TransferStartTime",
+        }
+        self.bool_attrs = {
+            "FinalAttempt",
+            "TransferSuccess",
+        }
+        self.nested_attrs = set()
+        self.known_attrs = (
+            self.text_attrs |
+            self.indexed_keyword_attrs |
+            self.noindex_keyword_attrs |
+            self.float_attrs |
+            self.int_attrs |
+            self.date_attrs |
+            self.bool_attrs |
+            self.nested_attrs )
+        self.dynamic_templates = [
+            {
+                "strings_as_keywords": {  # Store unknown strings as keywords
+                    "match_mapping_type": "string",
+                    "mapping": {"type": "keyword", "norms": "false", "ignore_above": 256},
+                }
+            },
+        ]
+        super().__init__(*args, **kwargs)
 
 
     def fetch_ads(self, schedd_ad, max_ads=10000):
@@ -34,7 +109,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         if ckpt is None:
             logging.warning(f"No transfer epoch checkpoint found for schedd {schedd_ad['Name']}, getting all ads available.")
         else:
-            since_expr = f"""(ClusterId == {ckpt["ClusterId"]}) && (ProcId == {ckpt["ProcId"]}) && (NumShadowStarts == {ckpt["NumShadowStarts"]})"""
+            since_expr = f"""(EpochWriteDate < {ckpt["EpochWriteDate"]})"""
             history_kwargs["since"] = since_expr
             logging.warning(f"Getting transfer epoch ads from {schedd_ad['Name']} since {since_expr}.")
         schedd = htcondor.Schedd(schedd_ad)
@@ -43,10 +118,139 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
 
     def unique_doc_id(self, doc):
         """
-        Return a string of format "<ClusterId>.<ProcId>#<NumShadowStarts>"
         To uniquely identify documents (not jobs)
         """
-        return f"{doc['ClusterId']}.{doc['ProcId']}#{doc['NumShadowStarts']}"
+        job_id = f"{doc.get('ClusterId') or 0}.{doc.get('ProcId') or 0}"
+        xfer_protocol = doc.get("TransferProtocol", "unknown")
+        xfer_type = doc.get("TransferType", "unknown")
+        date = doc.get("RecordTime", 0)
+        attempt = f"{doc.get('Attempt', 0)}_{doc.get('Attempts', 1)}"
+        return f"{job_id}#{xfer_protocol}#{xfer_type}#{date}#{attempt}"
+
+
+    def pop_attr(self, ad, attr):
+        value = ad.get(attr)
+        if value is not None:
+            del ad[attr]
+        return value
+
+
+    def normalize(self, attr, value):
+        if value is None:
+            if attr not in self.known_attrs:
+                attr = attr.lower()
+        else:
+            try:
+                if attr not in self.known_attrs:
+                    attr = attr.lower()
+                    value = str(value)
+                elif attr in (self.int_attrs | self.date_attrs):
+                    try:
+                        value = int(value)
+                    except TypeError:
+                        value = str(value)
+                        attr = f"{attr.lower()}_string"
+                elif attr in self.float_attrs:
+                    try:
+                        value = float(value)
+                    except TypeError:
+                        value = str(value)
+                        attr = f"{attr.lower()}_string"
+                elif attr in self.bool_attrs:
+                    try:
+                        value = bool(value)
+                    except TypeError:
+                        value = str(value)
+                        attr = f"{attr.lower()}_string"
+                else:
+                    value = str(value)
+            except Exception as e:
+                attr = f"{attr.lower()}_error"
+                value = str(e)
+            if isinstance(value, str) and len(value) > 255:
+                value = f"{value[:253]}..."
+        return attr, value
+
+
+    def expand_plugin_result_ads(self, ads):
+        debug_results = []
+        result = {}
+        for ad in ads:
+            for attr, value in ad.items():
+                if attr == "DeveloperData":
+                    debug_ad = self.pop_attr(ad, attr)
+                    debug_results = self.expand_debug_ad(debug_ad)
+                else:
+                    attr, value = self.normalize(attr, value)
+                    result[attr] = value
+            for debug_result in debug_results:
+                yield result | debug_result
+
+
+    def expand_debug_ad(self, ad):
+        result = {}
+        if ad.get("Attempts", 0) > 0:
+            attempts = ad["Attempts"]
+        else:
+            for attr, value in ad.items():
+                attr, value = self.normalize(attr, value)
+                result[attr] = value
+            yield result
+            return
+
+        attempt_attr_re = re.compile(r"(\D+)(\d+)$")
+        attempt_attrs = {}
+        for attr, value in ad.items():
+            attempt_attr_match = attempt_attr_re.match(attr)
+            if attempt_attr_match:
+                attempt_attrs.add(attempt_attr_match.group(1))
+            else:
+                attr, value = self.normalize(attr, value)
+                result[attr] = value
+
+        for attempt in range(attempts):
+            attempt_result = {
+                "Attempt": attempt,
+                "FinalAttempt": attempt + 1 == attempts,
+            }
+            for attr in attempt_attrs:
+                attempt_attr = f"{attempt_attr}{attempt}"
+                value = ad.get(attempt_attr)
+                if value is None:
+                    continue
+                if attr.startswith("Transfer"):
+                    attr = attr.replace("Transfer", "Attempt", count=1)
+                attr, value = self.normalize(attr, value)
+                attempt_result[attr] = value
+            yield result | attempt_result
+
+
+    def to_json_list(self, ad, return_dict=False):
+        result = {}
+
+        # Technically, there could be multiple "*PluginResultList" attrs in an epoch ad.
+        # plugin_results is a list of generators of dicts, which will be consumed using itertools.chain().
+        plugin_results = []
+
+        # Python None converts to JSON null. Helpfully, Elasticsearch will ignore null values.
+        result["RecordTime"] = ad.get("EpochWriteDate", int(time.time()))
+        result["ScheddName"] = ad.get("GlobalJobId", "").split("#", maxsplit=1)[0] or None
+        result["ClusterId"] = ad.get("ClusterId", ad.get("GlobalJobId", "#.").split("#")[1].split(".")[0]) or None
+        result["ProcId"] = ad.get("ProcId", ad.get("GlobalJobId", "#.").split("#")[1].split(".")[-1]) or None
+        result["StartdSlot"] = ad.get("RemoteHost", "").split("@", maxsplit=1)[0] or None
+        result["StartdName"] = ad.get("RemoteHost", "").split("@", maxsplit=1)[-1] or None
+        for attr in result:
+            attr, value = self.normalize(attr, value)
+            result[attr] = value
+        for attr in ad:
+            if attr.endswith("PluginResultList"):
+                plugin_result_ads = self.pop_attr(ad, attr)
+                plugin_results.append(self.expand_plugin_result_ads(plugin_result_ads))
+            else:
+                attr, value = self.normalize(attr, value)
+                result[attr] = value
+        for plugin_result in chain(*plugin_results or [{}]):
+            yield result | plugin_result
 
 
     def process_ads(self, interface, ads, schedd_ad, metadata={}, chunk_size=0, **kwargs):
@@ -56,7 +260,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         ads_posted = 0
         for ad in ads:
             try:
-                dict_ad = to_json(ad, return_dict=True)
+                dict_ads = self.to_json_list(ad, return_dict=True)
             except Exception as e:
                 message = f"Failure when converting document in {schedd_ad['name']} transfer epoch history: {str(e)}"
                 exc = traceback.format_exc()
@@ -71,12 +275,13 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
             # through by returning the new checkpoint at the end.
 
             if schedd_checkpoint is None:  # set checkpoint based on first parseable ad
-                schedd_checkpoint = {"ClusterId": ad["ClusterId"], "ProcId": ad["ProcId"], "NumShadowStarts": ad["NumShadowStarts"]}
-            chunk.append((self.unique_doc_id(dict_ad), dict_ad,))
+                schedd_checkpoint = {"EpochWriteDate": ad["EpochWriteDate"]}
+            for dict_ad in dict_ads:
+                chunk.append((self.unique_doc_id(dict_ad), dict_ad,))
 
             if (chunk_size > 0) and (len(chunk) >= chunk_size):
                 logging.debug(f"Posting {len(chunk)} transfer epoch ads from {schedd_ad['Name']}.")
-                result = interface.post_ads(chunk, metadata=metadata, **kwargs)
+                result = interface.post_ads(chunk, metadata=metadata, ad_source=self, **kwargs)
                 ads_posted += result["success"]
                 yield None  # don't update checkpoint yet, per note above
                 chunk = []
