@@ -1140,8 +1140,7 @@ FILE TRANSFER COMMANDS
     universes. If **transfer_executable** is set to ``False``, then
     HTCondor looks for the executable on the remote machine, and does
     not transfer the executable over. This is useful for an already
-    pre-staged executable; HTCondor behaves more like rsh. The default
-    value is ``True``.
+    pre-staged executable. The default value is ``True``.
 
  :subcom-def:`transfer_input_files` = < file1,file2,file... >
     A comma-delimited list of all the files and directories to be

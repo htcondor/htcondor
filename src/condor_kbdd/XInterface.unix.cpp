@@ -122,10 +122,9 @@ XInterface::TryUser(const char *user)
 
 XInterface::XInterface(int id)
 {
-	char *tmp;
 	_daemon_core_timer = id;
-	logged_on_users = 0;
-	_display_name = NULL;
+	logged_on_users = nullptr;
+	_display_name = nullptr;
 
 	// disable bump check by setting move delta to 0
 	_small_move_delta = 0;
