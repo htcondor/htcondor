@@ -4361,25 +4361,6 @@ int SubmitHash::SetExecutable()
 
 	AssignJobString (ATTR_JOB_CMD, full_ename.c_str());
 
-#if 1
-	// code below moved to SetAutoAttributes
-#else
-
-		/* MPI REALLY doesn't like these! */
-	if ( JobUniverse != CONDOR_UNIVERSE_MPI ) {
-		AssignJobVal(ATTR_MIN_HOSTS, 1);
-		AssignJobVal (ATTR_MAX_HOSTS, 1);
-	} 
-
-	if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
-		AssignJobVal(ATTR_WANT_IO_PROXY, true);
-		AssignJobVal(ATTR_JOB_REQUIRES_SANDBOX, true);
-	}
-
-	AssignJobVal (ATTR_CURRENT_HOSTS, 0);
-#endif
-
-
 	if (FnCheckFile) {
 		int rval = FnCheckFile(CheckFileArg, this, role, ename, (transfer_it ? 1 : 0));
 		if (rval) { 
@@ -4545,43 +4526,8 @@ int SubmitHash::SetUniverse()
 
 		if (IsContainerJob) {
 			AssignJobVal(ATTR_WANT_CONTAINER, true);
-		#if 1
-			// can't look at submit keywords here, code moved to SetExecutable
-		#else
-			auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
-			auto_free_ptr docker_image(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
-
-			// if docker_image is set, assume need docker repo
-			if (docker_image) {
-				AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
-			} else {
-
-				// Otherwise, guess container image type from container image string
-				if (container_image) {
-					ContainerImageType image_type = image_type_from_string(container_image.ptr());
-					switch (image_type) {
-						case ContainerImageType::DockerRepo:
-							AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
-							break;
-						case ContainerImageType::SIF:
-							AssignJobVal(ATTR_WANT_SIF,true);
-							break;
-						case ContainerImageType::SandboxImage:
-							AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
-							break;
-						default:
-							// Hope for the best...
-							AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
-					}
-				} else {
-						push_error(stderr, SUBMIT_KEY_ContainerImage
-								" must be defined for container universe jobs.\n");
-						ABORT_AND_RETURN(1);
-					}
-				}
-		#endif
-			}
-			return 0;
+		}
+		return 0;
 	}
 
 	// "globus" or "grid" universe

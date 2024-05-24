@@ -56,6 +56,9 @@ Bugs Fixed:
   plugin were not reported to the *condor_starter*.
   :jira:`2464`
 
+- Container universe now works when file transfer is disabled or not used.
+  :jira:`1329`
+
 - Fixed a bug where transfer of Kerberos credentials from the
   *condor_shadow* to the *condor_starter* would fail if the daemons
   weren't explicitly configured to trust each other.
