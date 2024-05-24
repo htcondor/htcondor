@@ -197,6 +197,9 @@ bool Dagman::Config() {
 	options[deep::i::SubmitMethod] = (int)param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_DIRECT_SUBMIT setting: %s\n", options[deep::i::SubmitMethod] ? "True" : "False");
 
+	produceJobCredentials = param_boolean("DAGMAN_PRODUCE_JOB_CREDENTIALS", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_PRODUCE_JOB_CREDENTIALS setting: %s\n", produceJobCredentials ? "True" : "False");
+
 	doAppendVars = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n", doAppendVars ? "True" : "False");
 
@@ -546,7 +549,7 @@ void main_init(int argc, char ** const argv) {
 		int minorVer;
 		int subMinorVer;
 	};
-	const DagVersionData MIN_CSD_VERSION = { 7, 1, 2 };
+	const DagVersionData MIN_CSD_VERSION = { 23, 9, 0 };
 
 		// Construct a string of the minimum submit file version.
 	std::string minSubmitVersionStr;
@@ -1364,28 +1367,21 @@ void main_pre_dc_init (int, char*[]) {
 	_setmaxstdio(2048);
 #endif
 
-	// Get the current directory
-	std::string currentDir = "";
-	if (condor_getcwd(currentDir)) {
-		currentDir += DIR_DELIM_STRING;
+	// Convert the DAGMan log file name to an absolute path if it's not one already
+	std::string fullLogFile;
+	const char* logFile = GetEnv("_CONDOR_DAGMAN_LOG");
+	if (logFile) {
+		if ( ! fullpath(logFile)) {
+			fullLogFile = dagman.workingDir + DIR_DELIM_STRING + logFile;
+			SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
+		} else { fullLogFile = logFile; }
 	} else {
-		debug_printf(DEBUG_NORMAL, "ERROR: unable to get cwd: %d, %s\n", errno, strerror(errno));
+		fullLogFile = dagman.workingDir + DIR_DELIM_STRING + "default.dagman.out";
+		SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
 	}
 
-	// Convert the DAGMan log file name to an absolute path if it's
-	// not one already
-	std::string newLogFile;
-	const char*	logFile = GetEnv("_CONDOR_DAGMAN_LOG");
-	if (logFile && !fullpath(logFile)) {
-		newLogFile = currentDir + logFile;
-		SetEnv("_CONDOR_DAGMAN_LOG", newLogFile.c_str());
-	}
-
-	// If a log filename is still not set, assign it a default
-	if ( ! GetEnv("_CONDOR_DAGMAN_LOG")) {
-		newLogFile = currentDir + ".condor_dagman.out";
-		SetEnv("_CONDOR_DAGMAN_LOG", newLogFile.c_str());
-	}
+	// Manually setup debugging file since default log is disabled via -ld
+	dprintf_config_tool(get_mySubSystem()->getName(), nullptr, fullLogFile.c_str());
 }
 
 void main_pre_command_sock_init() {
@@ -1396,7 +1392,10 @@ int main(int argc, char **argv) {
 	set_mySubSystem("DAGMAN", false, SUBSYSTEM_TYPE_DAGMAN);
 
 	// Record the workingDir before invoking daemoncore (which hijacks it)
-	condor_getcwd(dagman.workingDir);
+	if ( ! condor_getcwd(dagman.workingDir)) {
+		fprintf(stderr, "ERROR (%d): unable to get working directory: %s\n", errno, strerror(errno));
+		return EXIT_ERROR;
+	}
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

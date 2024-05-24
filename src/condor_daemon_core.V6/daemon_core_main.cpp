@@ -119,6 +119,7 @@ time_t daemon_stop_time;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
+bool disable_default_log = false;
 
 // runfor is non-zero if the -r command-line option is specified. 
 // It is specified to tell a daemon to kill itself after runfor minutes.
@@ -3194,18 +3195,20 @@ dc_reconfig()
 		check_core_files();
 	}
 
+	if ( ! disable_default_log) {
 		// If we're supposed to be using our own log file, reset that here. 
-	if( logDir ) {
-		set_log_dir();
+		if ( logDir ) {
+			set_log_dir();
+		}
+
+		if( logAppend ) {
+			handle_log_append( logAppend );
+		}
+
+		// Reinitialize logging system; after all, LOG may have been changed.
+		dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	}
 
-	if( logAppend ) {
-		handle_log_append( logAppend );
-	}
-
-	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
-	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
 	drop_core_in_log();
@@ -3581,6 +3584,12 @@ int dc_main( int argc, char** argv )
 				}
 			}
 
+			// Disable the creation of a normal log file in the log directory
+			else if (strcmp(&ptr[0][1], "ld") == MATCH) {
+				dcargs++;
+				disable_default_log = true;
+			}
+
 			// specify Log directory 
 			else {
 				ptr++;
@@ -3724,7 +3733,7 @@ int dc_main( int argc, char** argv )
 		do_kill();
 	}
 
-	if( ! DynamicDirs ) {
+	if (!disable_default_log && !DynamicDirs) {
 
 			// We need to setup logging.  Normally, we want to do this
 			// before the fork(), so that if there are problems and we
@@ -3901,7 +3910,7 @@ int dc_main( int argc, char** argv )
 		// pid. 
 	daemonCore = new DaemonCore();
 
-	if( DynamicDirs ) {
+	if (!disable_default_log && DynamicDirs) {
 			// If we want to use dynamic dirs for log, spool and
 			// execute, we now have our real pid, so we can actually
 			// give it the correct name.
