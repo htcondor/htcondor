@@ -44,6 +44,10 @@ Bugs Fixed:
   using the default Desktop policy.
   :jira:`2444`
 
+- Fixed bug where *condor_submit_dag* would crash when DAG file contained
+  a line of only whitespace with no terminal newline.
+  :jira:`2463`
+
 - Fixed a bug that prevented the *condor_startd* from advertising
   :ad-attr:`DockerCachedImageSizeMb`
   :jira:`2458`
