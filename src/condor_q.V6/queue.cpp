@@ -53,6 +53,7 @@
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
 #include "classad_helpers.h"
 #include "console-utils.h"
+#include <iterator>
 
 #include "queue_internal.h"
 
