@@ -45,13 +45,6 @@ static const char *strKeywordsModern[] =
 	"(" ATTR_ACCOUNTING_GROUP "?:" ATTR_OWNER ")"
 };
 
-// need this global variable to hold information reqd by the scan function
-// 30-Dec-2001: These no longer seem needed--nothing refers to them, there
-// doesn't seem to be a scan function.
-//static ClassAdList *__list;
-//static ClassAd     *__query;
-
-
 CondorQ::
 CondorQ(void)
 {
@@ -69,15 +62,7 @@ void CondorQ::useDefaultingOperator(bool enable)
 	defaulting_operator = enable;
 }
 
-CondorQ::
-~CondorQ ()
-{
-#if 0
-	free(clusterarray);
-	free(procarray);
-#endif
-}
-
+CondorQ::~CondorQ () {}
 
 bool CondorQ::
 init()
@@ -145,7 +130,7 @@ addScheddBirthdate (time_t value)
 
 
 int CondorQ::
-fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errstack)
+fetchQueue (ClassAdList &list, const std::vector<std::string> &attrs, ClassAd *ad, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ExprTree		*tree;
@@ -193,7 +178,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 }
 
 int CondorQ::
-fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char const *schedd_version, CondorError* errstack)
+fetchQueueFromHost (ClassAdList &list, const std::vector<std::string> &attrs, const char *host, char const *schedd_version, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ExprTree		*tree;
@@ -236,7 +221,7 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 
 int
 CondorQ::fetchQueueFromHostAndProcess ( const char *host,
-										StringList &attrs,
+										const std::vector<std::string> &attrs,
 										int fetch_opts,
 										int match_limit,
 										condor_q_process_func process_func,
@@ -285,7 +270,7 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 int
 CondorQ::initQueryAd(
 	ClassAd & request_ad,
-	StringList & attrs,
+	const std::vector<std::string> & attrs,
 	int fetch_opts,
 	int match_limit)
 {
@@ -296,17 +281,17 @@ CondorQ::initQueryAd(
 	// TODO: can we get rid of this? I don't think the schedd requires a trival constraint anymore.
 	if (constraint.empty()) constraint = "TRUE";
 
-	auto_free_ptr projection(attrs.print_to_delimed_string("\n"));
+	std::string projection(join(attrs,"\n"));
 
 	auto_free_ptr owner;
 	if (fetch_opts & fetch_MyJobs) { owner.set(my_username()); }
 
-	return DCSchedd::makeJobsQueryAd(request_ad, constraint.c_str(), projection, fetch_opts, match_limit, owner, requestservertime);
+	return DCSchedd::makeJobsQueryAd(request_ad, constraint.c_str(), projection.c_str(), fetch_opts, match_limit, owner, requestservertime);
 }
 
 int
 CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
-	StringList &attrs,
+	const std::vector<std::string> &attrs,
 	int fetch_opts,
 	int match_limit,
 	condor_q_process_func process_func,
@@ -430,7 +415,7 @@ CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType)
 
 int
 CondorQ::getFilterAndProcessAds( const char *constraint,
-								 StringList &attrs,
+								 const std::vector<std::string> &attrs,
 								 int match_limit,
 								 condor_q_process_func process_func,
 								 void * process_func_data,
@@ -442,9 +427,8 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 
 	if (useAll) {
 			// The fast case with the new protocol
-		char *attrs_str = attrs.print_to_delimed_string("\n");
-		GetAllJobsByConstraint_Start(constraint, attrs_str);
-		free(attrs_str);
+		std::string attrs_str = join(attrs,"\n");
+		GetAllJobsByConstraint_Start(constraint, attrs_str.c_str());
 
 		while( true ) {
 			ad = new ClassAd();
@@ -509,15 +493,14 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 
 int
 CondorQ::getAndFilterAds (const char *constraint,
-						  StringList &attrs,
+						  const std::vector<std::string> &attrs,
 						  int match_limit,
 						  ClassAdList &list,
 						  int useAllJobs)
 {
 	if (useAllJobs == 1) {
-		char *attrs_str = attrs.print_to_delimed_string("\n");
-		GetAllJobsByConstraint(constraint, attrs_str, list);
-		free(attrs_str);
+		std::string attrs_str = join(attrs, "\n");
+		GetAllJobsByConstraint(constraint, attrs_str.c_str(), list);
 
 	} else {
 		ClassAd		*ad;

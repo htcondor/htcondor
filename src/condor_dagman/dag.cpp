@@ -38,8 +38,6 @@
 #include "condor_daemon_core.h"
 #include "dagman_metrics.h"
 #include "enum_utils.h"
-#include "condor_getcwd.h"
-#include "directory.h"
 #include "tmp_dir.h"
 #include "condor_q.h"
 
@@ -380,7 +378,7 @@ void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 	debug_printf(DEBUG_VERBOSE, "Querying local schedd for associated jobs in queue\n");
 	// Setup variables for queue query
 	CondorQ queue;
-	StringList attrs("ClusterId,ProcId");
+	const static std::vector<std::string> attrs{"ClusterId","ProcId"};
 	CondorError errstack;
 	QueriedJobs job_info;
 
