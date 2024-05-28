@@ -426,28 +426,29 @@ else()
       endif()
 
 
-      add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
-      target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      set( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
+
+      set( MVI_SUFFIX ".abi3.so" )
       if (APPLE)
-        target_link_libraries(        py3classad2_impl classad condor_utils ${PYTHON3_LIBRARIES} )
-        set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
-      else ()
-        target_link_libraries(        py3classad2_impl classad condor_utils )
-        set_target_properties(        py3classad2_impl PROPERTIES SUFFIX ".abi3.so" )
+        # set( MVI_SUFFIX ".abi3.dylib" )
+        set( MAGIC_LINKER_FLAG "-undefined dynamic_lookup" )
       endif ()
 
+
+      add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
+      target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3classad2_impl classad condor_utils ${MAGIC_LINKER_FLAG} )
+      set_target_properties(        py3classad2_impl PROPERTIES SUFFIX ${MVI_SUFFIX} )
       set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
+      set_target_properties(        py3classad2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/classad2" )
 
       add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
       target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      if (APPLE)
-        target_link_libraries(        py3htcondor2_impl classad condor_utils ${PYTHON3_LIBRARIES} )
-        set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
-      else ()
-        target_link_libraries(        py3htcondor2_impl classad condor_utils )
-        set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX ".abi3.so" )
-      endif()
+      target_link_libraries(        py3htcondor2_impl classad condor_utils ${MAGIC_LINKER_FLAG} )
+      set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX ${MVI_SUFFIX} )
       set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
+      set_target_properties(        py3htcondor2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/htcondor2" )
+
 
       add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
       target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
@@ -464,9 +465,10 @@ else()
 
 
       install ( TARGETS py3htcondor DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
-      install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHON3ARCHLIB}/htcondor2 )
       install ( TARGETS py3classad_module DESTINATION ${C_PYTHON3ARCHLIB}/classad )
-      install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad2 )
+      # These are now built in the right place (for the wheels).
+      # install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHON3ARCHLIB}/htcondor2 )
+      # install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad2 )
       install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad3 )
 
 
@@ -477,8 +479,8 @@ else()
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/classad${PYTHON3_MODULE_SUFFIX})" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor/htcondor${PYTHON3_MODULE_SUFFIX})" )
 
-          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad2/classad2_impl${PYTHON3_MODULE_SUFFIX})" )
-          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor2/htcondor2_impl${PYTHON3_MODULE_SUFFIX})" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad2/classad2_impl${MVI_SUFFIX})" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor2/htcondor2_impl${MVI_SUFFIX})" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/3classad3_impl${PYTHON3_MODULE_SUFFIX})" )
       endif()
     endif()
@@ -486,7 +488,6 @@ else()
 
     # more targets are built if we plan on building wheels
     if ( WANT_PYTHON_WHEELS )
-      set ( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
       include_directories(${PYTHON3_INCLUDE_DIRS} ${BOOST_INCLUDE})
 
       # the pyclassad library and the classad and htcondor modules should not link libpython
