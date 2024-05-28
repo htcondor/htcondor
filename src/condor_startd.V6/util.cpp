@@ -329,19 +329,20 @@ bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & 
 }
 
 void
-cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_path, bool abnormal_exit)
+cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool remove_exec_path, bool abnormal_exit)
 {
 	ASSERT( pid );
 
-#if defined(WIN32)
+#ifdef WIN32
 	std::string buf;
 	dynuser nobody_login;
 
+	// note: reusing nobody accounts is the default on Windows, so this code seldom executes...
 	if ( nobody_login.reuse_accounts() == false ) {
-	// before removing subdir, remove any nobody-user account associated
-	// with this starter pid.  this account might have been left around
-	// if the starter did not clean up completely.
-	//sprintf(buf,"condor-run-dir_%d",pid);
+		// before removing subdir, remove any nobody-user account associated
+		// with this starter pid.  this account might have been left around
+		// if the starter did not clean up completely.
+		//sprintf(buf,"condor-run-dir_%d",pid);
 		formatstr(buf,"condor-run-%d",pid);
 		if ( nobody_login.deleteuser(buf.c_str()) ) {
 			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf.c_str());
@@ -352,32 +353,60 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_path, bool 
 	// subdirectory _after_ removing the nobody account, because the
 	// existence of the subdirectory persistantly tells us that the
 	// account may still exist [in case the startd blows up as well].
+#endif
 
-	formatstr(buf, "%s\\dir_%d", exec_path, pid );
- 
-	check_recovery_file(buf.c_str(), abnormal_exit);
+
+	// We're trying to delete a specific subdirectory, either
+	// b/c a starter just exited and we might need to clean up
+	// after it, or because we're in a recursive call.
+	std::string	pid_dir, dirbuf;
+	formatstr(pid_dir, "dir_%d", pid );
+	const char * pid_dir_path = dirscat(exec_path, pid_dir.c_str(), dirbuf);
+
+	check_recovery_file(pid_dir_path, abnormal_exit);
+
+	// TODO: move this retry loop to a self-draining queue or similar
+	// we *should* only need to do this when the starter has an abnormal exit
+	// and we normally poll the LVM for a status of all LVs, so we could detect
+	// leaked LVs there rather than here.
+	auto * volman = resmgr->getVolumeManager();
+	if (lv_name && volman && volman->is_enabled()) {
+		// Attempt LV cleanup
+		CondorError err;
+		// Attempt LV cleanup n times to prevent race condition between
+		// killing of family processes and LV cleanup causing failure
+		int max_attempts = 5;
+		for (int attempt=1; attempt<=max_attempts; attempt++) {
+			// Attempt a cleanup
+			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
+			if (!volman->CleanupLV(lv_name, err)) {
+				std::string msg = err.getFullText();
+				if (!abnormal_exit && msg.find("Failed to find logical volume") != std::string::npos) {
+					break; // If starter exited normally and we failed to find LV assume it is cleaned up
+				} else if (attempt == max_attempts){
+					// We have failed and this was the last attempt so output error message
+					dprintf(D_ALWAYS, "Failed to cleanup LV %s: %s", lv_name, msg.c_str());
+				}
+				err.clear();
+			} else {
+				dprintf(D_FULLDEBUG, "LVM cleanup succesful.\n");
+				break;
+			}
+			sleep(1);
+		}
+	}
+
+#ifdef WIN32
 
 	int err = 0;
-	if ( ! retry_cleanup_execute_dir(buf, 0, err)) {
-		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", buf.c_str());
-		add_exec_dir_cleanup_reminder(buf, 0);
+	if ( ! retry_cleanup_execute_dir(pid_dir_path, 0, err)) {
+		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", pid_dir_path);
+		add_exec_dir_cleanup_reminder(pid_dir_path, 0);
 	}
 
 #else /* UNIX */
 
-	std::string	pid_dir;
-	std::string pid_dir_path;
-
-		// We're trying to delete a specific subdirectory, either
-		// b/c a starter just exited and we might need to clean up
-		// after it, or because we're in a recursive call.
-	formatstr(pid_dir, "dir_%d", pid );
-	formatstr(pid_dir_path, "%s/%s", exec_path, pid_dir.c_str() );
-
-	check_recovery_file(pid_dir_path.c_str(), abnormal_exit);
-
 	// Instantiate a directory object pointing at the execute directory
-	std::string dirbuf;
 	pair_strings_vector root_dirs = root_dir_list();
 	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
 		const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);

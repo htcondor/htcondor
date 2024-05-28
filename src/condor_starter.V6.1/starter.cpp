@@ -1949,7 +1949,8 @@ Starter::createTempExecuteDir( void )
 #ifdef LINUX
 	const char *lvm_vg = getenv("CONDOR_LVM_VG");
 	const char *lv_size = getenv("CONDOR_LVM_LV_SIZE_KB");
-	if (lvm_vg && lv_size) {
+	const char *lv_name = getenv("CONDOR_LVM_LV_NAME");
+	if (lvm_vg && lv_size && lv_name) {
 		const char *thinpool = getenv("CONDOR_LVM_THINPOOL");
 		bool lvm_setup_successful = false;
 		bool thin_provision = strcasecmp(getenv("CONDOR_LVM_THIN_PROVISION"), "true") == MATCH;
@@ -1965,12 +1966,11 @@ Starter::createTempExecuteDir( void )
 
 		if (m_lvm_lv_size_kb > 0) {
 			CondorError err;
-			std::string thinpool_str(thinpool ? thinpool : ""), slot_name(getMySlotName());
-			if (do_encrypt) { slot_name += "-enc"; }
-			m_volume_mgr.reset(new VolumeManager::Handle(WorkingDir, slot_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, err));
+			std::string thinpool_str(thinpool ? thinpool : "");
+			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, err));
 			if ( ! err.empty()) {
-				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
-				m_volume_mgr.reset(); //This calls handle destructor and cleans up any partial setup
+				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
+				m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
 			} else {
 				lvm_setup_successful = true;
 				m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
@@ -1978,7 +1978,9 @@ Starter::createTempExecuteDir( void )
 					"check disk usage", this);
 			}
 		}
-		ASSERT( lvm_setup_successful );
+		if ( ! lvm_setup_successful) {
+			return false;
+		}
 	}
 #endif // LINUX
 
@@ -3866,10 +3868,10 @@ Starter::removeTempExecuteDir( void )
 	}
 
 #ifdef LINUX
-	if (m_volume_mgr) {
+	if (m_lv_handle) {
 		//LVM managed... reset handle pointer to call destructor for cleanup
 		//We can't determine if the cleanup failed or not, and need to rm the working dir
-		m_volume_mgr.reset(nullptr);
+		m_lv_handle.reset(nullptr);
 	}
 #endif /* LINUX */
 
@@ -4058,6 +4060,10 @@ Starter::CheckLVUsage( int /* timerID */ )
 		// Logic error?
 	if (m_lvm_lv_size_kb < 0) return;
 
+		// no handle? no point
+	auto * lv_handle = m_lv_handle.get();
+	if ( ! lv_handle) return;
+
 	// When the job exceeds its disk usage, there are three possibilities:
 	// 1. The backing pool has space remaining, we don't exhaust the extra allocated space (2GB by default),
 	//    and this polling catches the over-usage.  In that case, the job goes on hold and everyone's happy.
@@ -4075,14 +4081,14 @@ Starter::CheckLVUsage( int /* timerID */ )
 	CondorError err;
 	bool out_of_space = false;
 	uint64_t used_bytes;
-	if ( ! VolumeManager::GetVolumeUsage(m_volume_mgr.get(), used_bytes, out_of_space, err)) {
+	if ( ! VolumeManager::GetVolumeUsage(lv_handle, used_bytes, out_of_space, err)) {
 		dprintf(D_ALWAYS, "Failed to poll managed volume (may not put job on hold correctly): %s\n", err.getFullText().c_str());
 		return;
 	}
 
 	uint64_t limit = static_cast<uint64_t>(m_lvm_lv_size_kb*1024LL);
 	//Thick provisioning check for 98% LV usage
-	if ( ! m_volume_mgr->IsThin()) { limit = limit * 0.98; }
+	if ( ! m_lv_handle->IsThin()) { limit = limit * 0.98; }
 
 	if (used_bytes >= limit) {
 		std::string hold_msg;
@@ -4103,7 +4109,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 			return;
 		} else if (m_lvm_last_space_issue < 0) {
 			dprintf(D_ALWAYS, "WARNING: Thin pool used by startd (%s) is out of space; writes will be paused until this is resolved.\n",
-			        m_volume_mgr->GetPool().c_str());
+				m_lv_handle->GetPool().c_str());
 			m_lvm_last_space_issue = now;
 		}
 	} else {

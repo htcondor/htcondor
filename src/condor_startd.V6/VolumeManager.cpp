@@ -8,12 +8,15 @@
 #include <condor_uid.h>
 #include <subsystem_info.h>
 
+#ifdef LINUX
+
 #include <rapidjson/document.h>
 
 #include <sys/mount.h>
 #include <sys/statvfs.h>
 
 #include "VolumeManager.h"
+
 
 #include <sstream>
 
@@ -164,11 +167,11 @@ VolumeManager::Handle::~Handle()
 
 
 bool
-VolumeManager::CleanupSlot(const std::string &slot, CondorError &err)
+VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err)
 {
-    dprintf(D_FULLDEBUG, "StartD is cleaning up logical volume for slot %s.\n", slot.c_str());
-    if (!slot.empty() && !m_volume_group_name.empty()) {
-        return RemoveLV(slot, m_volume_group_name, err, m_cmd_timeout);
+    dprintf(D_FULLDEBUG, "StartD is cleaning up logical volume %s.\n", lv_name.c_str());
+    if (!lv_name.empty() && !m_volume_group_name.empty()) {
+        return RemoveLV(lv_name, m_volume_group_name, err, m_cmd_timeout);
     }
     return true;
 }
@@ -634,7 +637,7 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
     // Find the matching device-name field, so we can umount the mount-point
     FILE *f = fopen("/proc/self/mounts", "r");
     if (f == nullptr) {
-        dprintf(D_ALWAYS, "VolumeManager::RemoveLV error opening /proc/self/maps: %s\n", strerror(errno));
+        dprintf(D_ALWAYS, "VolumeManager::RemoveLV error opening /proc/self/mounts: %s\n", strerror(errno));
     } else {
         char dev[PATH_MAX];
         char mnt[PATH_MAX];
@@ -1072,13 +1075,47 @@ VolumeManager::CleanupLVs() {
 
 
 void
-VolumeManager::UpdateStarterEnv(Env &env)
+VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb)
 {
     if (m_volume_group_name.empty()) { return; }
     env.SetEnv("CONDOR_LVM_VG", m_volume_group_name);
+    env.SetEnv("CONDOR_LVM_LV_NAME", lv_name);
     env.SetEnv("CONDOR_LVM_THIN_PROVISION", m_use_thin_provision ? "True" : "False");
+    // TODO: pass encrypt as an argument.
     env.SetEnv("CONDOR_LVM_ENCRYPT", m_encrypt ? "True" : "False");
+    if (disk_kb >= 0) { // treat negative values as undefined
+        std::string size;
+        formatstr(size, "%lld", disk_kb);
+        env.SetEnv("CONDOR_LVM_LV_SIZE_KB", size.c_str());
+    }
 
     if ( ! m_use_thin_provision || m_pool_lv_name.empty()) { return; }
     env.SetEnv("CONDOR_LVM_THINPOOL", m_pool_lv_name);
 }
+
+#else
+   // dummy volume manager for ! LINUX
+#include "VolumeManager.h"
+
+VolumeManager::VolumeManager() {
+}
+
+VolumeManager::~VolumeManager() {
+}
+
+void VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb) {
+}
+
+bool VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err) {
+    return true;
+}
+
+bool VolumeManager::CleanupLVs() {
+    return true;
+}
+
+bool VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err) {
+    return false;
+}
+
+#endif

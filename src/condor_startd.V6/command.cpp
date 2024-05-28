@@ -170,10 +170,6 @@ command_activate_claim(int cmd, Stream* stream )
 	}
 	free( id );
 
-#ifdef LINUX
-	rip->setVolumeManager(resmgr->getVolumeManager());
-#endif //LINUX
-
 	if ( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
 		stream->end_of_message();

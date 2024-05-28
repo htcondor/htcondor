@@ -14,10 +14,13 @@ public:
     VolumeManager(const VolumeManager&) = delete;
     ~VolumeManager();
 
-    void UpdateStarterEnv(Env &env);
-    bool CleanupSlot(const std::string &slot, CondorError &err);
+    void UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb);
+    bool CleanupLV(const std::string &lv_name, CondorError &err);
     bool CleanupLVs();
     bool GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
+
+#ifdef LINUX
+    bool is_enabled() { return true; }
 
     inline std::string GetVG() const { return m_volume_group_name; }
     inline std::string GetPool() const { return m_pool_lv_name; }
@@ -78,5 +81,8 @@ private:
     std::string m_loopback_filename;
     std::string m_loopdev_name;
     int m_cmd_timeout{VOLUME_MANAGER_TIMEOUT};
+#else
+    bool is_enabled() { return false; }
+#endif // LINUX
 };
 
