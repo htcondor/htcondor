@@ -87,6 +87,7 @@ enum class TransferPluginResult {
 	Error = 1,
 	InvalidCredentials = 2,
 	TimedOut = 3,
+	ExecFailed = 4,
 };
 
 namespace htcondor {
