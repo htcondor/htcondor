@@ -53,6 +53,7 @@
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
 #include "classad_helpers.h"
 #include "console-utils.h"
+#include <iterator>
 
 #include "queue_internal.h"
 
@@ -3863,8 +3864,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			// we do this so that a subsequent "condor_q -jobs <file> -nobatch" will show the correct job times.
 			Q.requestServerTime(true);
 		}
-		StringList attrs_sl(JoinAttrNames(*pattrs,","));
-		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs_sl, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
+		std::vector<std::string> attrs;
+		std::copy(pattrs->begin(), pattrs->end(), std::back_inserter(attrs));
+		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
 		// In support of HTCONDOR-1125, grab queue time from summary ad if it is there.
 		if (summary_ad) { summary_ad->LookupInteger(ATTR_SERVER_TIME, queue_time); }
 	}
