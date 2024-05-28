@@ -34,7 +34,7 @@ bool credmon_kick(int cred_type);
 // make a .mark file for the given user in the given cred_dir.  the user may end in @domain
 // in which case only the part before the @ will be used to construct the .mark file
 bool credmon_clear_mark(const char * cred_dir, const char* user);
-bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user);
+bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user, int cred_type);
 
 #else // none of this works with multiple credmon's
 int get_credmon_pid();

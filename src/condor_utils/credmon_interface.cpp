@@ -417,21 +417,45 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 }
 #endif
 
-bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user) {
+bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user,
+		int cred_type) {
 
 	if(!cred_dir) {
 		return false;
 	}
 
-	// construct <cred_dir>/<user>.mark
-	std::string markfile;
-	const char * markfilename = credmon_user_filename(markfile, cred_dir, user, ".mark");
+	std::string filename;
 
-	priv_state priv = set_root_priv();
-	FILE* f = safe_fcreate_replace_if_exists(markfilename, "w", 0600);
-	set_priv(priv);
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	// If there's nothing to clean up, don't create a mark file
+	bool need_cleanup = false;
+	struct stat stat_buf;
+	if (cred_type == credmon_type_OAUTH) {
+		credmon_user_filename(filename, cred_dir, user);
+		if (stat(filename.c_str(), &stat_buf) == 0) {
+			need_cleanup = true;
+		}
+	} else if (cred_type == credmon_type_KRB) {
+		credmon_user_filename(filename, cred_dir, user, ".cred");
+		if (stat(filename.c_str(), &stat_buf) == 0) {
+			need_cleanup = true;
+		}
+		credmon_user_filename(filename, cred_dir, user, ".cc");
+		if (stat(filename.c_str(), &stat_buf) == 0) {
+			need_cleanup = true;
+		}
+	}
+
+	if (!need_cleanup) {
+		return true;
+	}
+
+	// construct <cred_dir>/<user>.mark
+	credmon_user_filename(filename, cred_dir, user, ".mark");
+	FILE* f = safe_fcreate_keep_if_exists(filename.c_str(), "w", 0600);
 	if (f == NULL) {
-		dprintf(D_ALWAYS, "CREDMON: ERROR: safe_fcreate_replace_if_exists(%s) failed!\n", markfilename);
+		dprintf(D_ERROR, "CREDMON: ERROR: safe_fcreate_keep_if_exists(%s) failed: %s\n", filename.c_str(), strerror(errno));
 		return false;
 	}
 
