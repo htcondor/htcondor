@@ -6730,8 +6730,6 @@ Scheduler::actOnJobs(int, Stream* s)
 
 	} else {
 		job_ids_string = join(job_ids, ",");
-		tmp = nullptr;
-
 		dprintf( D_AUDIT, *rsock, "%s jobs %s\n",
 				 getJobActionString(action), job_ids_string.c_str());
 	}		
@@ -6789,8 +6787,8 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		std::vector<std::string> expanded_ids;
 		expand_mpi_procs(job_ids, expanded_ids);
-		for (const auto &tmp: expanded_ids) {
-			tmp_id = getProcByString(tmp.c_str());
+		for (const auto &idstr: expanded_ids) {
+			tmp_id = getProcByString(idstr.c_str());
 			if( tmp_id.cluster < 0 ) {
 				continue;
 			}
