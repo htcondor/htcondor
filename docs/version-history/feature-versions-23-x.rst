@@ -86,13 +86,9 @@ New Features:
   now also provides READ authorization.
   :jira:`2424`
 
-- Added option to :tool:`condor_adstash` to poll access points' job
-  epoch histories.
+- Added option to :tool:`condor_adstash` to populate the database with
+  job epoch histories, not just the final history entry.
   :jira:`2076`
-
-- Fixed a bug where backfill slots did not account for Memory used by
-  active primary slots correctly.
-  :jira:`2462`
 
 Bugs Fixed:
 
@@ -112,6 +108,10 @@ Bugs Fixed:
 - Fixed a bug where :tool:`condor_submit` -i did not work on a 
   cgroup v2 system.
   :jira:`2438`
+
+- Fixed a bug where backfill slots did not account for Memory used by
+  active primary slots correctly.
+  :jira:`2462`
 
 Version 23.7.2
 --------------
