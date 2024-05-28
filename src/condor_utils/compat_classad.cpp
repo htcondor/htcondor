@@ -71,20 +71,17 @@ void ClassAdReconfig()
 
 	char *new_libs = param( "CLASSAD_USER_LIBS" );
 	if ( new_libs ) {
-		StringList new_libs_list( new_libs );
-		free( new_libs );
-		new_libs_list.rewind();
-		char *new_lib;
-		while ( (new_lib = new_libs_list.next()) ) {
+		for (const auto& new_lib: StringTokenIterator(new_libs)) {
 			if ( !contains(ClassAdUserLibs, new_lib) ) {
-				if ( classad::FunctionCall::RegisterSharedLibraryFunctions( new_lib ) ) {
+				if ( classad::FunctionCall::RegisterSharedLibraryFunctions(new_lib.c_str()) ) {
 					ClassAdUserLibs.emplace_back(new_lib);
 				} else {
 					dprintf( D_ALWAYS, "Failed to load ClassAd user library %s: %s\n",
-							 new_lib, classad::CondorErrMsg.c_str() );
+							 new_lib.c_str(), classad::CondorErrMsg.c_str() );
 				}
 			}
 		}
+		free(new_libs);
 	}
 
 	reconfig_user_maps();
@@ -2832,12 +2829,6 @@ GetExprReferences( const classad::ExprTree *tree, const classad::ClassAd &ad,
 		dprintf(D_FULLDEBUG,"End of offending ad.\n");
 		return false;
 	}
-
-		// We first process the references and save results in
-		// final_*_refs_set.  The processing may hit duplicates that
-		// are referred to xand then copy from there to the caller's
-		// StringLists.  This scales better than trying to remove
-		// duplicates while inserting into the StringList.
 
 	if ( external_refs ) {
 		TrimReferenceNames( ext_refs_set, true );

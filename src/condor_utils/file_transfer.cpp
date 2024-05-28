@@ -3896,7 +3896,7 @@ FileTransfer::ReceiveAliveMessage() {
 	// a message on our pipe up to the parent.
 	static time_t lastUpdate = 0;
 	time_t now = time(nullptr);
-	//GGT 
+
 	if ((now - lastUpdate) > 1) {
 		UpdateXferStatus(XFER_STATUS_ACTIVE);
 		lastUpdate = now;
@@ -5129,7 +5129,7 @@ FileTransfer::uploadFileList(
 			dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
 			int exit_code = 0;
 			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
-			if (result == TransferPluginResult::Error) {
+			if (result != TransferPluginResult::Success) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!has_failure) {
 					has_failure = true;
@@ -5320,7 +5320,7 @@ FileTransfer::uploadFileList(
 						long long upload_bytes = 0;
 						int exit_code = 0;
 						TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, false, errstack, upload_bytes);
-						if (result == TransferPluginResult::Error) {
+						if (result != TransferPluginResult::Success) {
 							return_and_resetpriv( -1 );
 						}
 						currentUploadPlugin = "";

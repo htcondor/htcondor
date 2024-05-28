@@ -22,6 +22,7 @@
 #define PARSE_H
 
 #include "dag.h"
+#include "dagman_main.h"
 
 /**
  * Set whether we should munge the node names (only applies to multi-DAG
@@ -39,8 +40,7 @@ void parseSetDoNameMunge(bool doit);
  *     "normal" DAG files (on the command line), false for splices
  *     and includes)
  */
-bool parse (Dag *dag, const char * filename, bool useDagDir,
-			DCSchedd *schedd, bool appendVars, bool incrementDagNum = true );
+bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagNum = true);
 
 /**
  * Determine whether the given token is a DAGMan reserved word.

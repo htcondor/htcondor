@@ -225,54 +225,6 @@ REMOTE_CONDOR_get_user_info(ClassAd *ad)
 	return rval;
 }
 
-
-#if 0
-int
-REMOTE_CONDOR_get_executable(char *destination)
-{
-	condor_errno_t		terrno=0;
-	int		rval=-1;
-	int result = 0;
-
-	dprintf ( D_SYSCALLS, "Doing CONDOR_get_executable\n" );
-
-	CurrentSysCall = CONDOR_get_executable;
-
-	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
-		errno = ETIMEDOUT;
-		return -1;
-	}
-
-	syscall_sock->encode();
-	result = syscall_sock->code(CurrentSysCall);
-	ON_ERROR_RETURN( result );
-	result = syscall_sock->end_of_message();
-	ON_ERROR_RETURN( result );
-
-	syscall_sock->decode();
-	result = syscall_sock->code(rval);
-	ON_ERROR_RETURN( result );
-	if( rval < 0 ) {
-		result = syscall_sock->code(terrno);
-		ON_ERROR_RETURN( result );
-		result = syscall_sock->end_of_message();
-		ON_ERROR_RETURN( result );
-		errno = terrno;
-		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
-		syscall_last_rpc_time = time(nullptr);
-		return rval;
-	}
-
-	result = ( syscall_sock->get_file(destination) > -1 );
-	ON_ERROR_RETURN( result );
-	result = syscall_sock->end_of_message();
-	ON_ERROR_RETURN( result );
-	syscall_last_rpc_time = time(nullptr);
-	return rval;
-}
-#endif
-
 int
 REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 {

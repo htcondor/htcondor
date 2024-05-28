@@ -22,8 +22,6 @@
 
 #include "condor_daemon_core.h"
 #include "condor_lock.h"
-#include "dc_collector.h"
-#include "condor_pidenvid.h"
 #include "env.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
@@ -33,6 +31,13 @@ enum StopStateT { PEACEFUL, GRACEFUL, FAST, KILL, NONE };
 const char * StopStateToString(StopStateT state);
 StopStateT StringToStopState(const char * psz);
 bool advertise_shutdown_program(ClassAd & ad);
+
+constexpr const char	*default_dc_daemon_array[] = {
+"MASTER", "STARTD", "SCHEDD", "KBDD", "COLLECTOR", "NEGOTIATOR", "EVENTD",
+"VIEW_SERVER", "CONDOR_VIEW", "VIEW_COLLECTOR", "CREDD", "HAD",
+"REPLICATION", "JOB_ROUTER", "ROOSTER", "SHARED_PORT",
+"DEFRAG", "GANGLIAD", "ANNEXD"
+};
 
 // used to keep track of a query command for which we want to deferr the reply
 class DeferredQuery
@@ -72,11 +77,6 @@ public:
 	bool	use_collector_port; // true for daemon's that are SHARED_PORT in front of a COLLECTOR
 
 	Env     env;			// Environment of daemon.
-
-#if 0
-	char*	port;				 	// for config server
-	char*	config_info_file;				// for config server
-#endif
 
 	time_t		GetNextRestart() const;
 	int		NextStart() const;
@@ -192,7 +192,7 @@ public:
 	int 	StartDaemonHere(class daemon *);
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
-	void	RemoveDaemon( char* name );
+	void	RemoveDaemon(const char* name );
 	void	HardKillAllDaemons();
 	void	StopPeacefulAllDaemons();
 	int		SetPeacefulShutdown(int timeout);
@@ -208,11 +208,7 @@ public:
 	void	ExecMaster();
 
 	const char*	DaemonLog(int pid);			// full log file path name
-#if 0
-	void	SignalAll(int signal);		// send signal to all children
-	int		NumberOfChildren();
-#endif
-	int		ChildrenOfType(daemon_t type, StringList * names=nullptr);
+	int		ChildrenOfType(daemon_t type, std::vector<std::string> *names=nullptr);
 
 	int		AllReaper(int, int);
 	int		DefaultReaper(int, int);
@@ -235,7 +231,7 @@ public:
 	StopStateT	stop_other_daemons_when_startds_gone = NONE;
 	ClassAd * cmd_after_drain = nullptr; // when draining startds in order to shutdown/restart/etc this will be non-null
 
-	StringList	ordered_daemon_names;
+	std::vector<std::string>	ordered_daemon_names;
 
 	void	Update( ClassAd* );
 	void	UpdateCollector( int timerID = -1 );

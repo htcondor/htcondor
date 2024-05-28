@@ -42,6 +42,7 @@
 #include "condor_daemon_core.h" // for extractInheritedSocks
 #include "console-utils.h"
 #include <algorithm> //for std::reverse
+#include <utility> // for std::move
 
 #include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
@@ -175,6 +176,7 @@ static bool want_startd_history = false;
 static bool delete_epoch_ads = false;
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
+static std::set<std::string> filterAdTypes; // Allow filter of Ad types specified in history banner (different from MyType)
 static HistoryRecordSource recordSrc = HRS_AUTO;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
@@ -216,11 +218,8 @@ static void condenseJobFilterList(bool sort = false) {
 		}
 	}
 
-	//Shift data structure to set all filter items set to done towards the end
-	auto rm_start = std::remove_if(jobIdFilterInfo.begin(), jobIdFilterInfo.end(),
-								   [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
-	//Erase/Remove all elements from first marked for removal to the end of data structure
-	jobIdFilterInfo.erase(rm_start, jobIdFilterInfo.end());
+	// Erase JobId filters that are completed (All possible Cluster.Procs found)
+	std::erase_if(jobIdFilterInfo, [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
 }
 
 //Use passed info to determine if we can set a record source: do so then return or error out
@@ -305,9 +304,7 @@ main(int argc, const char* argv[])
 				"Error: Argument -forwards cannot be combined with -since.\n");
 			exit(1);
 		}
-		if ( ! writetosocket) {
-			backwards=FALSE;
-		}
+		backwards=FALSE;
 		hasForwards = true;
 	}
 
@@ -497,6 +494,31 @@ main(int argc, const char* argv[])
 			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
 		}
 	}
+	else if (is_dash_arg_prefix(argv[i], "type", 1)) { // Purposefully undocumented (Intended internal use)
+		if (argc <= i+1 || *(argv[i+1]) == '-') {
+			fprintf(stderr, "Error: Argument %s requires another parameter\n", argv[i]);
+			exit(1);
+		}
+		++i; // Claim the next argument for this option even if we don't use it
+		// Process passed Filter Ad Types if 'ALL' has not been specified
+		if ( ! filterAdTypes.contains("ALL")) {
+			StringTokenIterator adTypes(argv[i]);
+			for (auto type : adTypes) {
+				upper_case(type);
+				if (type == "ALL") {
+					// 'ALL' will not filter out any ad types so add to set and break
+					filterAdTypes.insert(type);
+					break;
+				} else if (type == "TRANSFER") {
+					// Special handling to specify Plugin Transfer return ads
+					std::set<std::string> xferTypes{"INPUT", "OUTPUT", "CHECKPOINT"};
+					filterAdTypes.merge(xferTypes);
+				} else { // Insert specified type
+					filterAdTypes.insert(type);
+				}
+			}
+		}
+	}
 	else if (is_dash_arg_prefix(argv[i],"directory",3)) {
 		readFromDir = true;
 	}
@@ -683,6 +705,24 @@ main(int argc, const char* argv[])
   }
 
   if(readfromfile == true) {
+      // Set Default expected Ad type to be filtered for display per history source
+      if (filterAdTypes.empty()) {
+          switch(recordSrc) {
+              case HRS_SCHEDD_JOB_HIST:
+              case HRS_STARTD_HIST:
+                  filterAdTypes.insert("JOB");
+                  break;
+              case HRS_JOB_EPOCH:
+                  filterAdTypes.insert("EPOCH");
+                  break;
+              case HRS_AUTO:
+              default:
+                  fprintf(stderr,
+                          "Error: Invalid history record source (%d) selected for default ad types.\n",
+                          (int)recordSrc);
+                  exit(1);
+          }
+      }
       // Read from single file, matching files, or a directory (if valid option)
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
@@ -839,6 +879,8 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 		bool want_streamresults = streamresults_specified ? streamresults : true;
 		ad.InsertAttr("StreamResults", want_streamresults);
 	}
+	if ( ! backwards) { ad.InsertAttr("HistoryReadForwards", true); }
+	if (maxAds >= 0) { ad.InsertAttr("ScanLimit", maxAds); }
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
 	if (sinceExpr) ad.Insert("Since", sinceExpr);
 	// we may or may not be able to do the projection, we will decide after knowing the daemon version
@@ -899,6 +941,17 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 		if (!err_msg.empty()) {
 			fprintf(stderr,"Error: %s\n",err_msg.c_str());
 			exit(1);
+		}
+		// Add Ad type filter if remote version supports it
+		if ( ! filterAdTypes.empty()) {
+			if ( ! v.built_since_version(23, 8, 0)) {
+				const char* daemonType = (dt == DT_SCHEDD) ? "Schedd" : "StartD";
+				fprintf(stderr, "Remote %s does not support -type filering for history queries.\n", daemonType);
+				exit(1);
+			}
+			auto join = [](std::string list, std::string type) -> std::string { return std::move(list) + ',' + type; };
+			std::string adFilter = std::accumulate(std::next(filterAdTypes.begin()), filterAdTypes.end(), *(filterAdTypes.begin()), join);
+			ad.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, adFilter);
 		}
 	}
 
@@ -1138,6 +1191,8 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 		return false;
 }
 
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner);
+
 // Read the history from a single file and print it out. 
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
@@ -1203,66 +1258,22 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
             continue;
         }
-        if (!constraint || constraint[0]=='\0' || EvalExprBool(ad, constraintExpr)) {
-            if (longformat) { 
-				if( use_xml ) {
-					fPrintAdAsXML(stdout, *ad, projection.empty() ? NULL : &projection);
-				} else if ( use_json ) {
-					if ( printCount != 0 ) {
-						printf(",\n");
-					}
-					fPrintAdAsJson(stdout, *ad, projection.empty() ? NULL : &projection, false);
-				} else if ( use_json_lines ) {
-					fPrintAdAsJson(stdout, *ad, projection.empty() ? NULL : &projection, true);
-				}
-				else {
-					fPrintAd(stdout, *ad, false, projection.empty() ? NULL : &projection);
-				}
-				printf("\n"); 
-            } else {
-                if (customFormat) {
-                    mask.display(stdout, ad);
-                } else {
-                    displayJobShort(ad);
-                }
-            }
 
-            printCount++;
-            matchCount++; // if control reached here, match has occured
+		BannerInfo ad_info;
+		parseBanner(ad_info, banner);
+		bool done = printJobIfConstraint(*ad, constraint, constraintExpr, ad_info);
 
-            if (specifiedMatch > 0) { // User specified a match number
-                if (matchCount == specifiedMatch) { // Found n number of matches, cleanup  
-                    if (ad) {
-                        delete ad;
-                        ad = NULL;
-                    }
-                    
-                    fclose(LogFile);
-                    return;
-                }
-            }
-        }
-
-		if (cluster > 0) { //User specified cluster or cluster.proc.
-			BannerInfo ad_info;
-			parseBanner(ad_info, banner);
-			if (checkMatchJobIdsFound(ad_info, ad)) { //Check if all possible matches have been found
-				if (ad) {
-					delete ad;
-					ad = NULL;
-				}
-				fclose(LogFile);
-				return;
-			}
+		if (ad) {
+			delete ad;
+			ad = nullptr;
 		}
 
-        if(ad) {
-            delete ad;
-            ad = NULL;
-        }
-    }
-    fclose(LogFile);
-    return;
+		if (done || (specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
+			break;
+		}
+	}
+	fclose(LogFile);
+	return;
 }
 
 // return true if p1 starts with p2
@@ -1350,11 +1361,16 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 		}
 		exprs.pop_back();
 	}
+	printJobIfConstraint(ad, constraint, constraintExpr, banner);
+}
+
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner)
+{
 	++adCount;
 
 	if (sinceExpr && EvalExprBool(&ad, sinceExpr)) {
 		maxAds = adCount; // this will force us to stop scanning
-		return;
+		return true;
 	}
 
 	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
@@ -1364,9 +1380,10 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 	if (cluster > 0) { //User specified cluster or cluster.proc.
 		if (checkMatchJobIdsFound(banner, &ad)) { //Check if all possible ads have been displayed
 			maxAds = adCount;
-			return;
+			return true;
 		}
 	}
+	return false;
 }
 
 static void printJobAds(ClassAdList & jobs)
@@ -1393,6 +1410,13 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	BannerInfo newInfo;
 
 	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
+
+	upper_case(newInfo.ad_type);
+	if ( ! filterAdTypes.contains("ALL") && !filterAdTypes.contains(newInfo.ad_type)) {
+		//fprintf(stdout, "Banner Ad Type: %s\n", newInfo.ad_type.c_str());
+		return false;
+	}
+
 	//fprintf(stdout, "parseBanner(%s)\n", p);
 	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
 	if (!p) { info = newInfo; return true; }
@@ -1439,12 +1463,6 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	//For testing output of banner
 	//fprintf(stdout,"Ad type: %s\n",info.ad_type.c_str());
 	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %ld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
-
-	// For now, ignore the ad types.
-	if( info.ad_type != "JOB" && info.ad_type != "EPOCH" ) {
-		// fprintf( stderr, "%s\n", info.ad_type.c_str() );
-		return false;
-	}
 
 	if(jobIdFilterInfo.empty() && ownersList.empty()) { return true; } //If no searches were specified then return true to print job ad
 	else if (info.jid.cluster <= 0 && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true

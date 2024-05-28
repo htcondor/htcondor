@@ -40,6 +40,9 @@ const char* daemonString( daemon_t dt );
 daemon_t stringToDaemonType( const char* name );
 // convert MyType string from a location ad to the daemon_t enum
 daemon_t AdTypeStringToDaemonType( const char* adtype_name );
+// convert MyType string to the AdTypes enum
+// returns NO_AD for ads that have a valid MyType but no corresponding enum value
+AdTypes AdTypeStringToAdType(const char* adtype_name);
 
 // If `d` corresponds to an ad type, sets `a` to that type and return true;
 // otherwise, returns false.

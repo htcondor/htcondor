@@ -65,8 +65,6 @@ class XInterface
     bool 	needsCheck;
     bool 	hasXss; 
 
-    StringList  *_xauth_users;
-
 	// The following are for getting rid of the obnoxious utmp stuff.
 	FILE * utmp_fp;
 	std::vector<char *> *logged_on_users;

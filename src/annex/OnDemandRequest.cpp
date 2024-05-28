@@ -23,13 +23,7 @@ OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 
 		std::string iidString;
 		commandState->LookupString( "State_InstanceIDs", iidString );
-		if(! iidString.empty()) {
-			StringList sl( iidString.c_str(), "," );
-			sl.rewind(); char * current = sl.next();
-			for( ; current != NULL; current = sl.next() ) {
-				instanceIDs.emplace_back(current );
-			}
-		}
+		instanceIDs = split(iidString, ",");
 	}
 
 	// Generate a client token if we didn't get one from the log.
@@ -104,15 +98,11 @@ OnDemandRequest::log() {
 		}
 
 		if( instanceIDs.size() != 0 ) {
-			StringList sl;
-			for( size_t i = 0; i < instanceIDs.size(); ++i ) {
-				sl.append( instanceIDs[i].c_str() );
-			}
-			char * slString = sl.print_to_delimed_string( "," );
-			std::string quoted; formatstr( quoted, "\"%s\"", slString );
-			free( slString );
+			std::string sl = "\"";
+			sl += join(instanceIDs, ",");
+			sl += '"';
 			commandState->SetAttribute( commandID,
-				"State_InstanceIDs", quoted.c_str() );
+				"State_InstanceIDs", sl.c_str() );
 		} else {
 			commandState->DeleteAttribute( commandID,
 				"State_InstanceIDs" );

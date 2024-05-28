@@ -104,26 +104,6 @@ condor_dirname(const char *path) {
 }
 
 /*
-  DEPRECATED: just in case we need changes along the lines of
-  condor_basename() some time in the future.
-
-  A dirname() function that is happy on both Unix and NT. 
-  This allocates space for a new string that holds the path of the
-  parent directory of the path it was given.  If the given path has no
-  directory delimiters, or is NULL, we just return ".".  In all  
-  cases, the string we return is new space, and must be deallocated
-  with free(). 
-*/
-#if 0
-char*
-dirname( const char* path )
-{
-	return condor_dirname( path );
-}
-#endif
-
-
-/*
    return TRUE if the given path is a full pathname, FALSE if not.  by
    full pathname, we mean it either begins with "/" or "\" or "*:\"
    (something like "c:\..." on windoze).

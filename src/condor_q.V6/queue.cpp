@@ -77,7 +77,7 @@ static  bool streaming_print_job(void*, ClassAd*);
 typedef bool (* buffer_line_processor)(void*, ClassAd *);
 
 static 	void usage (const char *, int other=0);
-enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4, usage_AllOther=0xFF };
+enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4, usage_AllOther=0xFF, usage_DiagOpts=0x100 };
 
 // functions to fetch job ads and print them out
 //
@@ -1300,6 +1300,8 @@ processCommandLineArguments (int argc, const char *argv[])
 					other |= usage_JobStatus;
 				} else if (is_arg_prefix(argv[i], "submit", 2) || is_arg_prefix(argv[i], "Submit", 2)) {
 					other |= usage_SubmitMethod;
+				} else if (is_arg_prefix(argv[i], "diagnostics", 4) || is_arg_prefix(argv[i], "dry-run", 3)) {
+					other |= usage_DiagOpts;
 				} else if (is_arg_prefix(argv[i], "all", 2)) {
 					other |= usage_AllOther;
 				}
@@ -2142,6 +2144,23 @@ usage (const char *myName, int other)
 			"when the current user is a queue superuser\n"
 		"\n"
 		);
+
+	if (other & usage_DiagOpts) {
+		printf("There are options for testing condor_q itself.  they are\n"
+			"\t-dry-run[:<file>]\t Print classad formatting configuration and query information\n"
+			"\t                 \t but do not do the query. If a <file> is specified dry-run\n"
+			"\t                 \t output is written to a file. otherwise to stdout.\n"
+			"\t-capture[:[+]<file>]\t Print the raw classads that are the result of the query as\n"
+			"\t                    \t they arrive. If a <file> is specified the classads are printed\n"
+			"\t                    \t to the file. if the filename is prefixed with + then ads are\n"
+			"\t                    \t appended to the file. Filename can be - to print to stdout and\n"
+			"\t                    \t -2 to print to stderr. default is to print to stdout.\n"
+			"\n    The file produced by -capture-raw-results can be used with the -jobads argument to reproduce\n"
+			"the results a particular query repeatedly, and to see how a projection is expanded to pick up\n"
+			"referenced attributes.\n"
+		);
+		printf("\n");
+	}
 
 	if (other & usage_Universe) {
 		printf("    %s codes:\n", ATTR_JOB_UNIVERSE);

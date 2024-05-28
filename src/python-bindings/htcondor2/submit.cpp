@@ -64,7 +64,17 @@ struct SubmitBlob {
         void setSubmitMethod(int method_value) { m_hash.setSubmitMethod(method_value); }
         int  getSubmitMethod() { return m_hash.getSubmitMethod(); }
 
+        // Something in init_vars() -- probably
+        // m_hash.load_inline_q_foreach_items() -- assumes that our
+        // "macro source" for itemdata can't be rewound.  Since we know it can,
+        // we can do so and thereby make it possible to call _submit_itemdata()
+        // more than once and without breaking a subsequent submit() call.
+        void reset_itemdata_state() { m_ms_inline.rewind_to( 0, 0 ); }
         void insert_macro( const char * name, const std::string & value );
+
+        int process_job_credentials( std::string & URL, std::string & error_string ) {
+            return ::process_job_credentials( m_hash, 0, URL, error_string );
+        }
 
     private:
         SubmitHash m_hash;
@@ -637,4 +647,75 @@ _submit_get_submit_method( PyObject *, PyObject * args ) {
     long method_value = sb->getSubmitMethod();
 
     return PyLong_FromLong(method_value);
+}
+
+
+static PyObject *
+_submit_itemdata( PyObject *, PyObject * args ) {
+    PyObject * self = NULL;
+    PyObject_Handle * handle = NULL;
+
+    if(! PyArg_ParseTuple( args, "OO", & self, (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+
+    SubmitForeachArgs * itemdata = sb->init_sfa();
+    sb->set_sfa(itemdata);
+
+    if( itemdata == NULL ) {
+        sb->reset_itemdata_state();
+
+        PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
+        return NULL;
+    }
+
+    if( itemdata->items.number() == 0 ) {
+        sb->reset_itemdata_state();
+
+        Py_RETURN_NONE;
+    }
+
+    char * item = NULL;
+    itemdata->items.rewind();
+    std::vector<std::string> items;
+    while( (item = itemdata->items.next()) ) {
+        items.push_back(item);
+    }
+    std::string value = join(items, "\n");
+
+    sb->reset_itemdata_state();
+    return PyUnicode_FromString(value.c_str());
+}
+
+
+static PyObject *
+_submit_issue_credentials( PyObject *, PyObject * args ) {
+    // _submit_issue_credentials(self.handle_t)
+
+    PyObject_Handle * handle = NULL;
+
+    if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    SubmitBlob * sb = (SubmitBlob *)handle->t;
+
+    std::string URL;
+    std::string error_string;
+    int rv = sb->process_job_credentials( URL, error_string );
+
+    if(rv != 0) {
+        PyErr_SetString( PyExc_RuntimeError, error_string.c_str() );
+        return NULL;
+    }
+
+    if(! URL.empty()) {
+        return PyUnicode_FromString(URL.c_str());
+    }
+
+    Py_RETURN_NONE;
 }

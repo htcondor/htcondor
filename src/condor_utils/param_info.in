@@ -839,11 +839,6 @@ type=path
 default=$(LOCAL_DIR)
 type=path
 
-[XAUTHORITY_USERS]
-default=
-type=string
-tags=kbdd,XInterface
-
 [GROUP_NAMES]
 default=
 type=string
@@ -1134,6 +1129,10 @@ tags=had,StateMachine
 default=
 type=string
 tags=had,AbstractReplicatorStateMachine
+
+[TRANSFER_JOB_ATTRS]
+default=ClusterID, ProcID, NumShadowStarts
+type=string
 
 [MAX_TRANSFER_LIFETIME]
 default=300
@@ -1804,7 +1803,7 @@ type=path
 tags=startd,starter_mgr
 
 [SINGULARITY]
-default=/usr/bin/singularity
+default=$(LIBEXEC)/apptainer
 win32_default=
 type=string
 reconfig=true
@@ -5980,6 +5979,10 @@ default=False
 description=Should condor_adstash query Startd job history
 type=bool
 default=False
+[ADSTASH_SCHEDD_JOB_EPOCH_HISTORY]
+description=Should condor_adstash query Schedd job epoch history
+type=bool
+default=False
 [ADSTASH_SCHEDD_HISTORY_MAX_ADS]
 description=Stop retrieving ads from a Schedd after this many ads per poll
 type=int
@@ -6548,6 +6551,23 @@ default : @end
 	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0 && OpSys =!= "WINDOWS"
 
 	STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
+@end
+
+[$FEATURE.PelicanCache]
+description=Configure a Pelican local cache on an execution point
+default : @end
+	# NOTE: This feature is still very experimental and could have bugs and unexpected behavior
+	PELICANCACHE=/usr/bin/pelican
+	DAEMON_LIST=$(DAEMON_LIST) PELICANCACHE
+	PELICANCACHE_LOG=$(LOG)/PelicanCacheLog
+	PELICANCACHE_FEDERATION=osg-htc.org
+	PELICANCACHE_ARGS=serve -d --module localcache -l $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
+	STARTD_ENVIRONMENT="NEAREST_CACHE=unix:/$(LOCAL_DIR)/localcache/cache.sock"
+	PELICANCACHE_SIZE=256GB
+	PELICANCACHE_HIGHWATERMARKPERCENTAGE=95
+	PELICANCACHE_LOWWATERMARKPERCENTAGE=85
+	PELICANCACHE_RUNLOCATION=$(LOCAL_DIR)/localcache
+	PELICANCACHE_ENVIRONMENT="PELICAN_SERVER_ENABLEUI=false PELICAN_LOCALCACHE_SIZE=$(PELICANCACHE_SIZE) PELICAN_LOCALCACHE_HIGHWATERMARKPERCENTAGE=$(PELICANCACHE_HIGHWATERMARKPERCENTAGE) PELICAN_LOCALCACHE_LOWWATERMARKPERCENTAGE=$(PELICANCACHE_LOWWATERMARKPERCENTAGE) PELICAN_LOCALCACHE_RUNLOCATION=$(PELICANCACHE_RUNLOCATION)"
 @end
 
 [$FEATURE.PartitionableSlot]

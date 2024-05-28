@@ -1,6 +1,8 @@
 from typing import (
     Union,
     Dict,
+    Iterator,
+    List,
 )
 
 from pathlib import Path
@@ -24,9 +26,13 @@ from .htcondor2_impl import (
     _display_dag_options,
     _submit_set_submit_method,
     _submit_get_submit_method,
+    _submit_issue_credentials,
+    _submit_itemdata,
 )
 
 from ._submit_method import SubmitMethod
+
+DefaultItemData = object()
 
 #
 # MutableMapping provides generic implementations for all mutable mapping
@@ -251,6 +257,18 @@ class Submit(MutableMapping):
         _submit_setqargs(self, self._handle, args)
 
 
+    def itemdata(self) -> Iterator[List[str]]:
+        '''
+        Returns an iterator over the itemdata specified by the queue statement,
+        suitable for passing to meth:`schedd.Submit`.
+        '''
+        id = _submit_itemdata(self, self._handle)
+        if id is None:
+            return None
+        else:
+            return iter(id.split("\n"))
+
+
     def setSubmitMethod(self,
         method_value : Union[SubmitMethod, int] = -1,
         allow_reserved_values : bool = False
@@ -317,6 +335,17 @@ class Submit(MutableMapping):
         subfile = _submit_from_dag(filename, internal_options)
         subfile_text = Path(subfile).read_text()
         return Submit(subfile_text)
+
+
+    def issue_credentials(self) -> Union[str, None]:
+        '''
+        Issue credentials for this job description.
+
+        :return:  A string containing a URL that the submitter must visit
+                  in order to complete an OAuth2 flow, or :py:obj:`None`
+                  if no such visit is necessary.
+        '''
+        return _submit_issue_credentials(self._handle)
 
 
     @staticmethod

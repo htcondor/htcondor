@@ -90,6 +90,9 @@ else
     # Remove the python2 packages
     rm -rf usr/lib/python2*
 fi
+# Compatibility links for apptainer
+ln -s ../apptainer usr/libexec/condor/apptainer
+ln -s ../singularity usr/libexec/condor/singularity
 # Add links and configuration for Bosco
 if [ ! -f etc/blah.config ]; then
     # Fedora does not have blahp (yet)

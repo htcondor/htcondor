@@ -1949,10 +1949,7 @@ handle_dc_start_token_request(int, Stream* stream)
         std::set<std::string> config_bounding_set;
         std::string config_bounding_set_str;
         if (param(config_bounding_set_str, "SEC_TOKEN_REQUEST_LIMITS")) {
-                StringList config_bounding_set_list(config_bounding_set_str.c_str());
-                config_bounding_set_list.rewind();
-                const char *authz;
-                while ( (authz = config_bounding_set_list.next()) ) {
+                for (const auto& authz: StringTokenIterator(config_bounding_set_str)) {
                         config_bounding_set.insert(authz);
                 }
         }
@@ -1960,10 +1957,7 @@ handle_dc_start_token_request(int, Stream* stream)
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
-		StringList authz_str_list(authz_list_str.c_str());
-		authz_str_list.rewind();
-		const char *authz;
-		while ( (authz = authz_str_list.next()) ) {
+		for (const auto& authz: StringTokenIterator(authz_list_str)) {
 			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
 				authz_list.emplace_back(authz);
 			}
@@ -2621,12 +2615,7 @@ handle_dc_session_token(int, Stream* stream)
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
-		StringList authz_str_list(authz_list_str.c_str());
-		authz_str_list.rewind();
-		const char *authz;
-		while ( (authz = authz_str_list.next()) ) {
-			authz_list.emplace_back(authz);
-		}
+		authz_list = split(authz_list_str);
 	}
 	int requested_lifetime;
 	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
@@ -2645,8 +2634,8 @@ handle_dc_session_token(int, Stream* stream)
 	if (ad.EvaluateAttrString(ATTR_SEC_REQUESTED_KEY, requested_key_name)) {
 		std::string allowed_key_names_list;
 		param( allowed_key_names_list, "SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS", "POOL" );
-		StringList sl(allowed_key_names_list);
-		if( sl.contains_withwildcard(requested_key_name.c_str()) ) {
+		std::vector<std::string> sl = split(allowed_key_names_list);
+		if( contains_withwildcard(sl, requested_key_name) ) {
 			final_key_name = requested_key_name;
 		} else {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, "Server will not sign with requested key.");

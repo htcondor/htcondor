@@ -28,7 +28,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- *condor_history* will now pass along the ``-forwards`` and ``-scanlimit``
+  flags when doing a remote history query.
+  :jira:`2448`
 
 Bugs Fixed:
 
@@ -38,6 +40,34 @@ Bugs Fixed:
   Before, transfers of job sandboxes would fail after such an error.
   :jira:`2398`
 
+- Fixed a bug where the *condor_procd* could crash on Windows EPs
+  using the default Desktop policy.
+  :jira:`2444`
+
+- Fixed bug where *condor_submit_dag* would crash when DAG file contained
+  a line of only whitespace with no terminal newline.
+  :jira:`2463`
+
+- Fixed a bug that prevented the *condor_startd* from advertising
+  :ad-attr:`DockerCachedImageSizeMb`
+  :jira:`2458`
+
+- Fixed a rare bug where certain errors reported by a file transfer
+  plugin were not reported to the *condor_starter*.
+  :jira:`2464`
+
+- Removed confusing message in StartLog at shutdown about trying to
+  kill illegal pid.
+  :jira:`1012`
+
+- Container universe now works when file transfer is disabled or not used.
+  :jira:`1329`
+
+- Fixed a bug where transfer of Kerberos credentials from the
+  *condor_shadow* to the *condor_starter* would fail if the daemons
+  weren't explicitly configured to trust each other.
+  :jira:`2411`
+
 .. _lts-version-history-23010:
 
 Version 23.0.10
@@ -45,9 +75,7 @@ Version 23.0.10
 
 Release Notes:
 
-.. HTCondor version 23.0.10 released on Month Date, 2024.
-
-- HTCondor version 23.0.10 not yet released.
+- HTCondor version 23.0.10 released on May 9, 2024.
 
 - Preliminary support for Ubuntu 22.04 (Noble Numbat).
   :jira:`2407`
