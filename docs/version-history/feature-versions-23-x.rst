@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improved the tools that write a token to a file.
+  Most noticeable is the addition of a -file option to write the token
+  to an arbitrary file.
+  :jira:`2425`
 
 Bugs Fixed:
 
