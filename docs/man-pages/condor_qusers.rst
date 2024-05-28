@@ -114,7 +114,7 @@ Examples
     % condor_qusers -disable bob -reason "talk to admin"
     Disable user bob in the local AP with the reason "talk to admin"
     % condor_qusers -user bob -edit 'Department="Math"'
-    Add a Departement attribute that has the value "Math" to user bob
+    Add a Department attribute that has the value "Math" to user bob
 
 General Remarks
 ---------------
