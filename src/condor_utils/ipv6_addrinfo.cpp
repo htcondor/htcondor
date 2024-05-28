@@ -68,7 +68,6 @@ void (*getaddrinfo_slow_callback)(const char *node, const char *service, double 
 int ipv6_getaddrinfo(const char *node, const char *service,
 		addrinfo*& ai, const addrinfo& hint)
 {
-	ai = nullptr;
 	double begin = _condor_debug_get_time_double();
 	int e = getaddrinfo(node, service, &hint, &ai );
 	double timediff = _condor_debug_get_time_double() - begin;

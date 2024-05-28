@@ -184,9 +184,11 @@ std::string get_fqdn_from_hostname(const std::string& hostname) {
 			return ret;
 		}
 
-		if (info->ai_canonname != nullptr) {
+		if (info && info->ai_canonname != nullptr) {
 			if (strchr(info->ai_canonname, '.')) {
-				return info->ai_canonname;
+				ret = info->ai_canonname;
+				freeaddrinfo(info);
+				return ret;
 			}
 		}
 		freeaddrinfo(info);
