@@ -9151,7 +9151,15 @@ process_job_credentials(
 		// it.  we forward this URL to the user so they can obtain the
 		// tokens needed.
 		std::string tokens_needed;
-		if( credd_has_tokens(tokens_needed, URL, submit_hash, DashDryRun, error_string) ) {
+                std::string credmon_oauth;
+
+		if (param(credmon_oauth, "CREDMON_OAUTH")) {
+			if (credmon_oauth.find("condor_credmon_mytoken") != std::string::npos) {
+			        system("/sbin/condor_producer_mytoken");
+                        }
+                }
+
+		else if( credd_has_tokens(tokens_needed, URL, submit_hash, DashDryRun, error_string) ) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					return 0;
