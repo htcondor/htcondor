@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 	int num_tests = INT_MAX, num_funcs_or_objs = INT_MAX;
 	bool only_functions = false, only_objects = false, 
 		failures_printed = true, successes_printed = true;
-	StringList tests_to_run("");
+	std::vector<std::string> tests_to_run;
 	
 	//Checks arguments
 	if(argc >= 2) {
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
 				int j = i;
 				//Adds specific tests to list
 				while(j < argc && argv[j][0] != '-') {
-					tests_to_run.append(argv[j]);
+					tests_to_run.emplace_back(argv[j]);
 					j++;
 				}
 				i = j - 1;
@@ -198,15 +198,13 @@ int main(int argc, char *argv[]) {
 	driver.init(num_tests);
 	
 	//Specific test(s) to run
-	if(!tests_to_run.isEmpty()) {
-		char* test = NULL;
+	if(!tests_to_run.empty()) {
 		int i = 0;
-		tests_to_run.rewind();
-		while((test = tests_to_run.next())) {
+		for (const std::string &test: tests_to_run) {
 			i = 0;
 			while(i < function_map_num_elems)
 			{
-				if(strcmp(function_map[i].name, test) == MATCH) {
+				if(strcmp(function_map[i].name, test.c_str()) == MATCH) {
 					driver.register_function(function_map[i].func);
 					break;
 				}
@@ -215,7 +213,7 @@ int main(int argc, char *argv[]) {
 			
 			//Invalid test
 			if(i >= function_map_num_elems) {
-				printf("Invalid test '%s'.\n", test);
+				printf("Invalid test '%s'.\n", test.c_str());
 #ifdef WIN32
 				//This technically can fail, but at this point we don't really care.
 				WSACleanup();

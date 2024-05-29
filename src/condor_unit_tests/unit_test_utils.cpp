@@ -171,23 +171,13 @@ bool strings_similar(const std::string& str1, const std::string& str2,
 
 bool strings_similar(const char* str1, const char* str2, const char* delims) 
 {
-	StringList sl1(str1, delims);
-	StringList sl2(str2, delims);
-	if (sl1.number() != sl2.number()) {
-		return false;
-	}
-	sl1.qsort();
-	sl2.qsort();
-	sl1.rewind();
-	sl2.rewind();
-	const char* el1;
-	const char* el2;
-	while ( (el1 = sl1.next()) && (el2 = sl2.next())) {
-		if (strcmp(el1, el2) != MATCH) {
-			return false;
-		}
-	}
-	return true;
+	std::vector<std::string> sl1 = split(str1, delims);
+	std::vector<std::string> sl2 = split(str2, delims);
+
+	std::ranges::sort(sl1);
+	std::ranges::sort(sl2);
+
+	return sl1 == sl2;
 }
 
 std::string* convert_string_array(char** str, int size, const char* delim){

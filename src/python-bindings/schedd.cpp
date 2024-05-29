@@ -1436,13 +1436,13 @@ struct Schedd {
         if (constraint.size())
             q.addAND(constraint.c_str());
 
-        StringList attrs_list(NULL, "\n");
+		std::vector<std::string> attrs_list;
         // Must keep strings alive; note StringList DOES create an internal copy
         int len_attrs = py_len(attrs);
         for (int i=0; i<len_attrs; i++)
         {
             std::string attrName = extract<std::string>(attrs[i]);
-            attrs_list.append(attrName.c_str()); // note append() does strdup
+            attrs_list.emplace_back(attrName);
         }
 
         list retval;
