@@ -1118,8 +1118,8 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 			errstack.pushf("NEGOTIATOR", 1, "Not an administrator and authorization maps (NEGOTIATOR_CLASSAD_USER_MAP_NAMES) is not set.");
 			return returnPrioFactor(strm, errstack);
 		}
-		StringList map_names_list(map_names.c_str());
-		if (!map_names_list.contains("PRIORITY_FACTOR_AUTHORIZATION")) {
+		std::vector<std::string> map_names_list = split(map_names);
+		if (!contains(map_names_list, "PRIORITY_FACTOR_AUTHORIZATION")) {
 			errstack.pushf("NEGOTIATOR", 2, "Not an administrator and PRIORITY_FACTOR_AUTHORIZATION not a configured map file.");
 			return returnPrioFactor(strm, errstack);
 		}
@@ -1131,11 +1131,8 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 
 		std::string map_output;
 		if (user_map_do_mapping("PRIORITY_FACTOR_AUTHORIZATION", peer_identity, map_output)) {
-			StringList items(map_output.c_str(), ",");
-			items.rewind();
-			char * item;
-			while ( (item = items.next()) ) {
-				if (!strncmp(item, submitter.c_str(), strlen(item))) {
+			for (const auto& item: StringTokenIterator(map_output, ",")) {
+				if (submitter.starts_with(item)) {
 					authorized = true;
 				}
 			}
@@ -2883,8 +2880,8 @@ Matchmaker::TransformSubmitterAd(classad::ClassAd &ad)
 	if (!param(map_names, "NEGOTIATOR_CLASSAD_USER_MAP_NAMES")) {
 		return true;
 	}
-	StringList map_names_list(map_names.c_str());
-	if (!map_names_list.contains("GROUP_PREFIX")) {
+	std::vector<std::string> map_names_list = split(map_names);
+	if (!contains(map_names_list, "GROUP_PREFIX")) {
 		return true;
 	}
 
@@ -3234,7 +3231,6 @@ obtainAdsFromCollector (
 			// ad's job_prio_array attribute.  See gittrac #3218.
 			if ( want_globaljobprio ) {
 				std::string jobprioarray;
-				StringList jobprios;
 
 				if (!ad->LookupString(ATTR_JOB_PRIO_ARRAY,jobprioarray)) {
 					// By design, if negotiator has want_globaljobprio and a schedd
@@ -3243,15 +3239,12 @@ obtainAdsFromCollector (
 					jobprioarray = std::to_string( INT_MIN );
 				}
 
-				jobprios.initializeFromString( jobprioarray.c_str() );
-				jobprios.rewind();
-				char *prio = NULL;
 				// Insert a group of submitter ads with one ATTR_JOB_PRIO value
 				// taken from the list in ATTR_JOB_PRIO_ARRAY.
-				while ( (prio = jobprios.next()) != NULL ) {
+				for (const auto& prio: StringTokenIterator(jobprioarray)) {
 					ClassAd *adCopy = new ClassAd( *ad );
 					ASSERT(adCopy);
-					adCopy->Assign(ATTR_JOB_PRIO,atoi(prio));
+					adCopy->Assign(ATTR_JOB_PRIO, atoi(prio.c_str()));
 					submitterAds.push_back(adCopy);
 				}
 			} else {
@@ -3386,9 +3379,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 
         // Use the new claim-list if it is present, otherwise use traditional claim id (not both)
         if (ad->LookupString(ATTR_CLAIM_ID_LIST, claimlist)) {
-            StringList idlist(claimlist.c_str());
-            idlist.rewind();
-            while (char* id = idlist.next()) {
+			for (const auto& id: StringTokenIterator(claimlist)) {
                 f->second.insert(id);
             }
         } else {
@@ -4358,30 +4349,28 @@ rejectForConcurrencyLimits(std::string &limits)
 		return true;
 	}
 
-	StringList list(limits.c_str());
-	char *limit;
-	std::string str;
-	list.rewind();
-	while ((limit = list.next())) {
+	for (const auto& limit: StringTokenIterator(limits)) {
 		double increment;
-		if ( !ParseConcurrencyLimit(limit, increment) ) {
+		char* limit_cpy = strdup(limit.c_str());
+		if ( !ParseConcurrencyLimit(limit_cpy, increment) ) {
 			dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
-					 limit );
+					 limit.c_str() );
+			free(limit_cpy);
 			continue;
 		}
 
-		str = limit;
-		double count = accountant.GetLimit(str);
+		double count = accountant.GetLimit(limit_cpy);
 
-		double max = accountant.GetLimitMax(str);
+		double max = accountant.GetLimitMax(limit_cpy);
 
 		dprintf(D_FULLDEBUG,
 			"Concurrency Limit: %s is %f of max %f\n",
-			limit, count, max);
+			limit_cpy, count, max);
 
 		if (count < 0) {
 			dprintf(D_ALWAYS, "ERROR: Concurrency Limit %s is %f (below 0)\n",
-				limit, count);
+				limit_cpy, count);
+			free(limit_cpy);
 			return true;
 		}
 
@@ -4389,11 +4378,12 @@ rejectForConcurrencyLimits(std::string &limits)
 			dprintf(D_FULLDEBUG,
 				"Concurrency Limit %s is %f, requesting %f, "
 				"but cannot exceed %f\n",
-				limit, count, increment, max);
+				limit_cpy, count, increment, max);
 
 			rejForConcurrencyLimit++;
-			rejectedConcurrencyLimits.insert(limit);
+			rejectedConcurrencyLimits.insert(limit_cpy);
 			lastRejectedConcurrencyString = limits;
+			free(limit_cpy);
 			return true;
 		}
 	}
@@ -6393,15 +6383,10 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		// Sort all dslots by their current rank
 	std::sort(ranks.begin(), ranks.end(), rankPairCompare);
 
-	std::list<std::string> attrs;
+	std::vector<std::string> attrs;
 	std::string attrs_str;
 	if ( machine->LookupString( ATTR_MACHINE_RESOURCES, attrs_str ) ) {
-		StringList attrs_list( attrs_str.c_str(), " " );
-		attrs_list.rewind();
-		char *entry;
-		while ( (entry = attrs_list.next()) ) {
-			attrs.emplace_back(entry );
-		}
+		attrs = split(attrs_str, " ");
 	} else {
 		attrs.emplace_back("cpus");
 		attrs.emplace_back("memory");
@@ -6411,10 +6396,10 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		// Backup all the attributes in the machine ad we may end up mutating
 	ExprTree* expr;
 	ClassAd* backupAd = new ClassAd();
-	for (auto it = attrs.begin(); it != attrs.end(); it++) {
-		if ( (expr = machine->Lookup(*it)) ) {
+	for (const auto& attr: attrs) {
+		if ( (expr = machine->Lookup(attr)) ) {
 			expr = expr->Copy();
-			backupAd->Insert(*it,expr);
+			backupAd->Insert(attr, expr);
 		}
 	}
 	backupAd->AssignExpr(ATTR_REMOTE_USER,"UNDEFINED");
@@ -6506,26 +6491,26 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		usableDSlots.push_back(slot);
 
 			// for each splitable resource, get it from the dslot, and add to pslot
-		for (std::list<std::string>::iterator it = attrs.begin(); it != attrs.end(); it++) {
+		for (const auto& attr: attrs) {
 			double b4 = 0.0;
 			double realValue = 0.0;
 
-			if (machine->LookupFloat(*it, b4)) {
+			if (machine->LookupFloat(attr, b4)) {
 					// The value exists in the parent
 				b4 = floor(b4);
 				classad::Value result;
-				if ( !dslotLookup( machine, it->c_str(), dSlot, result ) ) {
+				if ( !dslotLookup( machine, attr.c_str(), dSlot, result ) ) {
 					result.SetUndefinedValue();
 				}
 
 				long long longValue;
 				if (result.IsIntegerValue(longValue)) {
-					machine->Assign(*it, (long long) (b4 + longValue));
+					machine->Assign(attr, (long long) (b4 + longValue));
 				} else if (result.IsRealValue(realValue)) {
-					machine->Assign(*it, (b4 + realValue));
+					machine->Assign(attr, (b4 + realValue));
 				} else {
 					// TODO: deal with slot resources that are not ints or reals, e.g. non-fungibles
-					dprintf(D_ALWAYS, "Lookup of %s failed to evalute to integer or real\n", (*it).c_str());	
+					dprintf(D_ALWAYS, "Lookup of %s failed to evalute to integer or real\n", attr.c_str());	
 				}
 			}
 		}
