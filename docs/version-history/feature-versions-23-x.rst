@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  :jira:`2453`
 
 Bugs Fixed:
 
