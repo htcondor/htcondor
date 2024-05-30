@@ -182,7 +182,7 @@ static Qmgr_connection *open_job(ClassAd &job,DCSchedd &schedd,FailObj &failobj)
 {
 		// connect to the q as the owner of this job
 	std::string effective_owner;
-	job.LookupString(ATTR_OWNER,effective_owner);
+	job.LookupString(ATTR_USER,effective_owner);
 
 	return open_q_as_owner(effective_owner.c_str(),schedd,failobj);
 }
@@ -191,7 +191,7 @@ static Qmgr_connection *open_job(classad::ClassAd const &job,DCSchedd &schedd,Fa
 {
 		// connect to the q as the owner of this job
 	std::string effective_owner;
-	job.EvaluateAttrString(ATTR_OWNER,effective_owner);
+	job.EvaluateAttrString(ATTR_USER,effective_owner);
 
 	return open_q_as_owner(effective_owner.c_str(),schedd,failobj);
 }

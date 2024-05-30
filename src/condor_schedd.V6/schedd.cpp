@@ -442,21 +442,25 @@ void AuditLogJobProxy( const Sock &sock, ClassAd *job_ad )
 
 size_t UserIdentity::HashFcn(const UserIdentity & index)
 {
-	return hashFunction(index.m_username) + hashFunction(index.m_domain) + hashFunction(index.m_auxid);
+	return hashFunction(index.m_username) + hashFunction(index.m_auxid);
 }
 
 //PRAGMA_REMIND("Owner/user change to take fully qualified user as a single string, remove separate domain string")
-UserIdentity::UserIdentity(const char *user, const char *domainname, 
-						   ClassAd *ad):
-	m_username(user), 
-	m_domain(domainname),
+UserIdentity::UserIdentity(JobQueueJob& job_ad):
+	m_username(job_ad.ownerinfo->Name()),
 	m_auxid("")
 {
+	std::string tmp;
+	m_osname = name_of_user(m_username.c_str(), tmp);
+	if (job_ad.ownerinfo->NTDomain()) {
+		m_osname += '@';
+		m_osname += job_ad.ownerinfo->NTDomain();
+	}
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	classad::Value val;
 	const char *str = NULL;
-	if ( ad && tree && 
-		 EvalExprToString(tree,ad,NULL,val) && val.IsStringValue(str) )
+	if ( tree &&
+		 EvalExprToString(tree,&job_ad,NULL,val) && val.IsStringValue(str) )
 	{
 		m_auxid = str;
 	}
@@ -1983,7 +1987,7 @@ Scheduler::count_jobs()
 		if(gridcounts.GridJobs > 0) {
 			GridUniverseLogic::JobCountUpdate(
 					userident.username().c_str(),
-					userident.domain().c_str(),
+					userident.osname().c_str(),
 					userident.auxid().c_str(),m_unparsed_gridman_selection_expr, 0, 0, 
 					gridcounts.GridJobs,
 					gridcounts.UnmanagedGridJobs);
@@ -3621,7 +3625,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		// Don't count HELD jobs that aren't externally (gridmanager) managed
 		// Don't count jobs that the gridmanager has said it's completely
 		// done with.
-		UserIdentity userident(real_owner.c_str(),domain.c_str(),job);
+		UserIdentity userident(*job);
 		if ( ( status != HELD || job_managed != false ) &&
 			 job_managed_done == false ) 
 		{
@@ -4233,13 +4237,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			}
 		}
 		if ( job_managed  ) {
-			std::string owner;
-			std::string domain;
-			job_ad->LookupString(ATTR_OWNER,owner);
-			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			UserIdentity userident(owner.c_str(),domain.c_str(),job_ad);
+			UserIdentity userident(*job_ad);
 			GridUniverseLogic::JobRemoved(userident.username().c_str(),
-					userident.domain().c_str(),
+					userident.osname().c_str(),
 					userident.auxid().c_str(),
 					scheduler.getGridUnparsedSelectionExpr(),
 					0,0);
@@ -17260,17 +17260,13 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 int
 Scheduler::FindGManagerPid(PROC_ID job_id)
 {
-	std::string owner;
-	std::string domain;
-	ClassAd *job_ad = GetJobAd(job_id.cluster,job_id.proc);
+	JobQueueJob *job_ad = GetJobAd(job_id.cluster,job_id.proc);
 
 	if ( ! job_ad ) {
 		return -1;
 	}
 
-	job_ad->LookupString(ATTR_OWNER,owner);
-	job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-	UserIdentity userident(owner.c_str(),domain.c_str(),job_ad);
+	UserIdentity userident(*job_ad);
 	return GridUniverseLogic::FindGManagerPid(userident.username().c_str(),
                                         userident.auxid().c_str(), 0, 0);
 }
