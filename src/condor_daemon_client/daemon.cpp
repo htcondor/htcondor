@@ -60,6 +60,7 @@ Daemon::common_init() {
 	Sock::set_timeout_multiplier( param_integer(buf, param_integer("TIMEOUT_MULTIPLIER", 0)) );
 	dprintf(D_DAEMONCORE, "*** TIMEOUT_MULTIPLIER :: %d\n", Sock::get_timeout_multiplier());
 	m_has_udp_command_port = true;
+	daemon_list_it = daemon_list.begin();
 }
 
 DaemonAllowLocateFull::DaemonAllowLocateFull( daemon_t tType, const char* tName, const char* tPool ) 
@@ -456,19 +457,16 @@ Daemon::display( FILE* fp )
 bool
 Daemon::nextValidCm()
 {
-	char *dname;
 	bool rval = false;
 
-	do {
- 		dname = daemon_list.next();
-		if( dname != NULL )
-		{
-			rval = findCmDaemon( dname );
+	while (rval == false && daemon_list_it != daemon_list.end()) {
+		if (++daemon_list_it != daemon_list.end()) {
+			rval = findCmDaemon(daemon_list_it->c_str());
 			if( rval == true ) {
 				locate();
 			}
 		}
-	} while( rval == false && dname != NULL );
+	}
 	return rval;
 }
 
@@ -476,10 +474,12 @@ Daemon::nextValidCm()
 void
 Daemon::rewindCmList()
 {
-	char *dname;
+	const char *dname = nullptr;
 
-	daemon_list.rewind();
- 	dname = daemon_list.next();
+	daemon_list_it = daemon_list.begin();
+	if (!daemon_list.empty()) {
+		dname = daemon_list_it->c_str();
+	}
 	findCmDaemon( dname );
 	locate();
 }
@@ -1466,9 +1466,11 @@ Daemon::getCmInfo( const char* subsys )
 			return false;
 		}
 
-		daemon_list.initializeFromString(hostnames);
-		daemon_list.rewind();
-		host = strdup(daemon_list.next());
+		daemon_list = split(hostnames);
+		daemon_list_it = daemon_list.begin();
+		if (!daemon_list.empty()) {
+			host = strdup(daemon_list_it->c_str());
+		}
 		free( hostnames );
 	}
 

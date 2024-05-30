@@ -1026,12 +1026,9 @@ Starter::peek(int /*cmd*/, Stream *sock)
 		bool found = false;
 		if (jobad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_FILES, job_transfer_list))
 		{
-			StringList job_sl(job_transfer_list.c_str());
-			job_sl.rewind();
-			const char *job_iter;
-			while ((job_iter = job_sl.next()))
+			for (const auto& job_iter: StringTokenIterator(job_transfer_list))
 			{
-				if (strcmp(iter->c_str(), job_iter) == 0)
+				if (strcmp(iter->c_str(), job_iter.c_str()) == 0)
 				{
 					filename = job_iter;
 					found = true;
@@ -1391,13 +1388,10 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	if( !preferred_shells.empty() ) {
 		dprintf(D_FULLDEBUG,
 				"Checking preferred shells: %s\n",preferred_shells.c_str());
-		StringList shells(preferred_shells.c_str(),",");
-		shells.rewind();
-		char *shell;
-		while( (shell=shells.next()) ) {
-			if( access(shell,X_OK)==0 ) {
-				dprintf(D_FULLDEBUG,"Will use shell %s\n",shell);
-				setup_env.SetEnv("_CONDOR_SHELL",shell);
+		for (const auto& shell: StringTokenIterator(preferred_shells, ",")) {
+			if( access(shell.c_str(), X_OK)==0 ) {
+				dprintf(D_FULLDEBUG, "Will use shell %s\n", shell.c_str());
+				setup_env.SetEnv("_CONDOR_SHELL", shell.c_str());
 				break;
 			}
 		}
@@ -3352,10 +3346,8 @@ Starter::PublishToEnv( Env* proc_env )
 	if (mad) {
 		std::string restags;
 		if (mad->LookupString(ATTR_MACHINE_RESOURCES, restags)) {
-			StringList tags(restags.c_str());
-			tags.rewind();
-			const char *tag;
-			while ((tag = tags.next())) {
+			std::vector<std::string> tags = split(restags);
+			for (const auto& tag: tags) {
 				std::string attr("Assigned"); attr += tag;
 
 				// we need to publish Assigned resources in the environment. the rules are 
@@ -3376,7 +3368,7 @@ Starter::PublishToEnv( Env* proc_env )
 					}
 
 					if ( ! env_name.empty()) {
-						SetEnvironmentForAssignedRes(proc_env, env_name.c_str(), assigned.c_str(), tag);
+						SetEnvironmentForAssignedRes(proc_env, env_name.c_str(), assigned.c_str(), tag.c_str());
 					}
 
 					env_name = base;
@@ -3387,7 +3379,7 @@ Starter::PublishToEnv( Env* proc_env )
 
 			// NVIDIA_VISIBLE_DEVICES needs to be set to an expression evaluated against the machine ad
 			// which may not be the same exact value as what we set CUDA_VISIBLE_DEVICES to
-			if (tags.contains_anycase("GPUs") && param_boolean("AUTO_SET_NVIDIA_VISIBLE_DEVICES",true)) {
+			if (contains_anycase(tags, "GPUs") && param_boolean("AUTO_SET_NVIDIA_VISIBLE_DEVICES",true)) {
 				classad::Value val;
 				const char * env_value = nullptr;
 				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
@@ -3481,14 +3473,10 @@ Starter::PublishToEnv( Env* proc_env )
 	char* cpu_vars_param = param("STARTER_NUM_THREADS_ENV_VARS");
 	if (cpus > 0 && cpu_vars_param) {
 		std::string jobNumThreads;
-		StringList cpu_vars_list(cpu_vars_param);
-		cpu_vars_list.remove("");
-		cpu_vars_list.rewind();
-		char *var = NULL;
-		while ((var = cpu_vars_list.next())) {
-			proc_env->GetEnv(var, jobNumThreads);
+		for (const auto& var: StringTokenIterator(cpu_vars_param)) {
+			proc_env->GetEnv(var.c_str(), jobNumThreads);
 			if (jobNumThreads.length() == 0) {
-				proc_env->SetEnv(var, std::to_string(cpus));
+				proc_env->SetEnv(var.c_str(), std::to_string(cpus));
 			}
 		}
 	}
@@ -3623,17 +3611,14 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 				if (isdigit(*p) || *p == ',') rhs += *p;
 			}
 		} else {
-			const char * resid;
 			pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
 
 			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' pattern: %s\n", tag, env_name.c_str(), peq);
 
-			StringList ids(assigned);
-			ids.rewind();
-			while ((resid = ids.next())) {
+			for (const auto& resid: StringTokenIterator(assigned)) {
 				if ( ! rhs.empty()) { rhs += env_id_separator; }
-				int cchresid = (int)strlen(resid);
-				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid);
+				int cchresid = (int)resid.size();
+				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid.c_str());
 				int status = pcre2_match(re, resid_pcre2str, static_cast<PCRE2_SIZE>(cchresid), 0, 0, matchdata, NULL);
 				if (status >= 0) {
 					const struct _pcre_vector { int start; int end; } * groups
@@ -4011,17 +3996,15 @@ Starter::WriteAdFiles() const
 		} else {
 			machineResourcesString = "CPUs, Disk, Memory";
 		}
-		StringList machineResourcesList( machineResourcesString.c_str() );
 
-		machineResourcesList.rewind();
-		while( const char * resourceName = machineResourcesList.next() ) {
+		for (const auto& resourceName: StringTokenIterator(machineResourcesString)) {
 			std::string provisionedResourceName;
-			formatstr( provisionedResourceName, "%sProvisioned", resourceName );
-			CopyAttribute( provisionedResourceName, updateAd, resourceName, *machineAd );
-			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName, provisionedResourceName.c_str() );
+			formatstr( provisionedResourceName, "%sProvisioned", resourceName.c_str() );
+			CopyAttribute( provisionedResourceName, updateAd, resourceName.c_str(), *machineAd );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName.c_str(), provisionedResourceName.c_str() );
 
 			std::string assignedResourceName;
-			formatstr( assignedResourceName, "Assigned%s", resourceName );
+			formatstr( assignedResourceName, "Assigned%s", resourceName.c_str() );
 			CopyAttribute( assignedResourceName, updateAd, *machineAd );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad\n", assignedResourceName.c_str() );
 		}

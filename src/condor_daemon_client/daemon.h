@@ -698,7 +698,8 @@ protected:
 	bool _is_configured;
 	bool m_should_try_token_request{false};
 	SecMan _sec_man;
-	StringList daemon_list;
+	std::vector<std::string> daemon_list;
+	std::vector<std::string>::iterator daemon_list_it;
 
 
 

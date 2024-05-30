@@ -94,7 +94,7 @@ classad::ExprTree * WrapExprTreeInParensForOp(classad::ExprTree * expr, classad:
 
 bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree);
 
-bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
+bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, classad::References * ignored_attrs=NULL, bool verbose=false );
 
 void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_res_list);
 

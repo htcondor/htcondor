@@ -351,8 +351,7 @@ class Matchmaker : public Service
 
 		bool m_staticRanks;
 
-		StringList NegotiatorMatchExprNames;
-		StringList NegotiatorMatchExprValues;
+		std::map<std::string, std::string> NegotiatorMatchExprs;
 
 		std::map<std::string, int> ScheddsTimeInCycle;
 
