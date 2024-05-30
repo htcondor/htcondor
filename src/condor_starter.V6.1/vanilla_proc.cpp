@@ -614,7 +614,7 @@ VanillaProc::StartJob()
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir);
 							return FALSE;
 						}
-						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir);
+						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir.c_str());
 						if (fs_remap->AddMapping(full_dir, next_dir.c_str())) {
 							// FilesystemRemap object prints out an error message for us.
 							return FALSE;
