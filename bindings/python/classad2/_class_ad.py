@@ -73,7 +73,7 @@ class ClassAd(MutableMapping):
       * a ClassAd (:class:`ClassAd`)
       * error (:data:`classad2.Value.Error`)
 
-    When setting a value, reverse is true.  Additionally, :py:obj:`None`
+    When setting a value, the reverse is true.  Additionally, :py:obj:`None`
     is converted to :data:`classad2.Value.Undefined` and :class:`dict`\s
     are converted to :class:`ClassAd`\s.
     """
@@ -82,8 +82,8 @@ class ClassAd(MutableMapping):
         """
         :param input:
             * If :py:obj:`None`, create an empty ClassAd.
-            * If a :class:`str`, parse the 'new ClassAd' format string
-              and create the corresponding ClassAd.
+            * If a :class:`str`, parse the :const:`ParserType.New` format
+              string and create the corresponding ClassAd.
             * If a :class:`dict`, convert the dictionary to a ClassAd.
         """
         self._handle = handle_t()
@@ -110,7 +110,7 @@ class ClassAd(MutableMapping):
 
     def eval(self, attr : str):
         """
-        Evaluate the attribute named by attr in the context of this ClassAd.
+        Evaluate the attribute named by *attr* in the context of this ClassAd.
 
         :param attr: The attribute to evaluate.
         """
@@ -120,8 +120,8 @@ class ClassAd(MutableMapping):
 
     def externalRefs(self, expr: "ExprTree") -> List[str]:
         """
-        Returns the list of attributes referenced by the expression which
-        are *not* defined by this ClassAd.
+        Returns the list of attributes referenced by the expression
+        *expr* which are **not** defined by this ClassAd.
 
         :param expr: The expression.
         """
@@ -151,8 +151,8 @@ class ClassAd(MutableMapping):
 
     def internalRefs(self, expr: "ExprTree") -> List[str]:
         """
-        Returns the list of attributes referenced by the expression which
-        *are* defined by this ClassAd.
+        Returns the list of attributes referenced by the expression *expr*
+        which **are** defined by this ClassAd.
 
         :param expr: The expression.
         """
@@ -165,7 +165,7 @@ class ClassAd(MutableMapping):
 
     def lookup(self, attr : str) -> "ExprTree":
         """
-        Return the :class:`ExprTree` named by attr.
+        Return the :class:`ExprTree` named by *attr*.
 
         :param attr: The attribute to look up.
         """
@@ -176,11 +176,10 @@ class ClassAd(MutableMapping):
 
     def matches(self, ad : "ClassAd") -> bool:
         """
-        Evaluate the ``requirements`` attribute of the given ``ad`` in the
+        Evaluate the ``requirements`` attribute of the given *ad* in the
         context of this one.
 
-        :param ad:
-
+        :param ad: The ClassAd to test for matching.
         :return:  ``True`` if and only if the evaluation returned ``True``.
         """
         if not isinstance(ad, ClassAd):
@@ -223,7 +222,7 @@ class ClassAd(MutableMapping):
         '''
         Equivalent to ``self.matches(ad) and ad.matches(self)``.
 
-        :param ad:
+        :param ad:  The ClassAd to match for and against.
         '''
         return self.matches(ad) and ad.matches(self)
 
@@ -306,14 +305,29 @@ def _parse_ads_generator(input, parser : Parser = Parser.Auto):
         yield ad
 
 
+#
+# Lines starting with '#' are ignored in the file parser.  The "old" and
+# "new" parsers both handle C-style ('//') and C++-style ('/* */') comments,
+# but not when a comment starts a new ad.
+#
+# The version 1 bindings didn't include JSON or XML, so I'm ignoring the
+# fact that JSON doesn't allow multiple ads at all right now (and not
+# testing XML).  We should fix this eventually, but that might be a long
+# way away.
+#
 def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator[ClassAd]:
     '''
-    Parses all of the ads in the input and returns a iterator over them.
+    Returns a generator which will parse each ad in the input.
 
-    Ads in the input may be separated by blank lines.
+    Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
+    Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
 
-    :param input:
-    :param parser:
+    :param input:  One or more serialized ClassAds.  The serializations must
+                   all be in the same format.
+    :param parser:  Which parser to use (serialization format to assume).  If
+                    unspecified, attempt to determine if the serialized ads
+                    are in the :const:`ParserType.Old` or
+                    :const:`ParserType.New` format.
     '''
     return _parse_ads_generator(input, parser)
 
@@ -322,10 +336,19 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
     '''
     Parses all of the ads in the input, merges them into one, and returns it.
 
-    Ads in the input may be separated by blank lines.
+    If *input* is a single string,
+    ads serialized in the :const:`ParserType.Old` format must be separated by blank lines;
+    ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
 
-    :param input:
-    :param parser:
+    If *input* is an iterator,
+    each serialized ad must be in its own string.
+
+    :param input:  One or more serialized ClassAds.  The serializations must
+                   all be in the same format.
+    :param parser:  Which parser to use (serialization format to assume).  If
+                    unspecified, attempt to determine if the serialized ads
+                    are in the :const:`ParserType.Old or
+                    :const:`ParserType.New` formats.
     '''
     total_offset = 0
     if not isinstance(input, str):
@@ -356,13 +379,15 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
     '''
     Parses the first ad in the input and returns it.
 
-    Ads in the input may be separated by blank lines.
+    Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
+    Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
 
-    You must specify the parser type if ``input`` is not a string and
+    You must specify the parser type if *input* is not a string and
     can not be rewound.
 
-    :param input:
-    :param parser:
+    :param input:  One or more serialized ClassAds.  The serializations must
+                   all be in the same format.
+    :param parser:  Which parser to use (serialization format to assume).
     '''
     if isinstance(input, str):
         (firstAd, offset) = _classad_parse_next(input, int(parser))
@@ -390,18 +415,18 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
 
 def _quote(input : str) -> str:
     '''
-    Quote the Python string so it can be used for building ClassAd expressions.
+    Quote *input* so it can be used for building ClassAd expressions.
 
-    :param input:
+    :param input:  The string to quote according the ClassAd syntax.
     '''
     return _classad_quote(input)
 
 
 def _unquote(input : str) -> str:
     '''
-    The reverse of :func:`quote`.  You should never need to call this.
+    The reverse of :func:`quote`.
 
-    :param input:
+    :param input:  The ClassAd string to unquote into its literal value.
     '''
     return _classad_unquote(input)
 
