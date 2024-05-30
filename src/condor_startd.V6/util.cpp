@@ -379,13 +379,13 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 		for (int attempt=1; attempt<=max_attempts; attempt++) {
 			// Attempt a cleanup
 			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
-			if (!volman->CleanupLV(lv_name, err)) {
-				std::string msg = err.getFullText();
-				if (!abnormal_exit && msg.find("Failed to find logical volume") != std::string::npos) {
+			int ret = volman->CleanupLV(lv_name, err);
+			if (ret) {
+				if (!abnormal_exit && ret == 2) {
 					break; // If starter exited normally and we failed to find LV assume it is cleaned up
 				} else if (attempt == max_attempts){
 					// We have failed and this was the last attempt so output error message
-					dprintf(D_ALWAYS, "Failed to cleanup LV %s: %s", lv_name, msg.c_str());
+					dprintf(D_ALWAYS, "Failed to cleanup LV %s: %s", lv_name, err.getFullText().c_str());
 				}
 				err.clear();
 			} else {

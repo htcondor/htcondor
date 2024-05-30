@@ -898,7 +898,7 @@ int Starter::execDCStarter(
 			// Cleanup from any previously-crashed starters.
 			// TODO: do we really want to do this here?
 		CondorError err;
-		if ( ! volman->CleanupLV(s_lv_name, err)) {
+		if (volman->CleanupLV(s_lv_name, err) == 1) {
 			std::string msg = err.getFullText();
 			dprintf(D_ERROR, "Last chance cleanup of LV %s failed : %s\n", s_lv_name.c_str(), msg.c_str());
 			return 0;
