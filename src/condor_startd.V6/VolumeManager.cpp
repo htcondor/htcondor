@@ -626,7 +626,7 @@ VolumeManager::RemoveLVEncryption(const std::string &lv_name, const std::string 
 }
 
 
-int
+int // RemoveLV() returns: 0 on success, <0 on failure, >0 on warnings (2 = LV not found)
 VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_name, CondorError &err, int timeout)
 {
     TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -652,7 +652,7 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
                 if (r != 0) {
                     dprintf(D_ALWAYS, "VolumeManager::RemoveLV error umounting %s %s\n", mnt, strerror(errno));
                     fclose(f);
-                    return 1;
+                    return -1;
                 }
             }
         }
@@ -692,8 +692,8 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
         std::string cmdErr = lvremove_output ? lvremove_output.get() : "(no output)";
         err.pushf("VolumeManager", 12, "Failed to delete logical volume %s (exit status %d): %s",
                   lv_name.c_str(), exit_status, cmdErr.c_str());
-        // Distinguish between LV not found (2) and other errors (1)
-        return cmdErr.find("Failed to find logical volume") != std::string::npos ? 2 : 1;
+        // Distinguish between LV not found (2) and other errors (-1)
+        return cmdErr.find("Failed to find logical volume") != std::string::npos ? 2 : -1;
     }
     return 0;
 }
@@ -1036,7 +1036,13 @@ VolumeManager::CleanupAllDevices(const VolumeManager &info, CondorError &err, bo
     int timeout = info.GetTimeout();
 
     if ( ! pool_name.empty()) {
-        had_failure |= (bool)RemoveLV(pool_name, vg_name, err, timeout);
+        int ret = RemoveLV(pool_name, vg_name, err, timeout);
+        if (ret) {
+            if (ret == 2) {
+                dprintf(D_ALWAYS, "Warning: Backing thinpool '%s/%s' did not exist at removal time as expected!\n",
+                        vg_name.c_str(), pool_name.c_str());
+            } else { had_failure = true; }
+        }
     }
     if ( ! vg_name.empty()) {
         had_failure |= !RemoveVG(vg_name, err, timeout);

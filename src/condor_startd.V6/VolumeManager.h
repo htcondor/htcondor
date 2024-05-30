@@ -15,7 +15,7 @@ public:
     ~VolumeManager();
 
     void UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb);
-    int  CleanupLV(const std::string &lv_name, CondorError &err);
+    int  CleanupLV(const std::string &lv_name, CondorError &err); // See RemoveLV() for return values
     bool CleanupLVs();
     bool GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
 
@@ -67,6 +67,7 @@ private:
     static bool RemoveLVEncryption(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static bool CleanupAllDevices(const VolumeManager &info, CondorError &err, bool cleanup_loopback = true);
     static bool UnmountFilesystem(const std::string &mountpoint, CondorError &err);
+    /* RemoveLV() returns: 0 on success, <0 on failure, >0 on warnings (2 = LV not found) */
     static int  RemoveLV(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static bool RemoveVG(const std::string &vg_name, CondorError &err, int timeout);
     static bool RemovePV(const std::string &pv_name, CondorError &err, int timeout);
