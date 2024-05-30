@@ -840,12 +840,12 @@ _classad_external_refs( PyObject *, PyObject * args ) {
     }
 
 
-    StringList sl;
+	std::vector<std::string> sl;
     for( const auto & ref : references ) {
-        sl.append(ref.c_str());
+        sl.emplace_back(ref);
     }
 
-    std::string result = sl.to_string();
+    std::string result = join(sl,",");
     return PyUnicode_FromString(result.c_str());
 }
 
@@ -873,12 +873,12 @@ _classad_internal_refs( PyObject *, PyObject * args ) {
     }
 
 
-    StringList sl;
+	std::vector<std::string> sl;
     for( const auto & ref : references ) {
-        sl.append(ref.c_str());
+        sl.emplace_back(ref);
     }
 
-    std::string result = sl.to_string();
+    std::string result = join(sl,",");
     return PyUnicode_FromString(result.c_str());
 }
 

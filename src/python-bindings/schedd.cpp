@@ -1437,7 +1437,7 @@ struct Schedd {
             q.addAND(constraint.c_str());
 
 		std::vector<std::string> attrs_list;
-        // Must keep strings alive; note StringList DOES create an internal copy
+        // Must keep strings alive; note vector<string> DOES create an internal copy
         int len_attrs = py_len(attrs);
         for (int i=0; i<len_attrs; i++)
         {

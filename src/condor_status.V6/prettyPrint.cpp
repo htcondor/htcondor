@@ -18,7 +18,8 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_api.h"
+#include "condor_attributes.h"
+#include "ad_printmask.h"
 #include "condor_adtypes.h"
 #include "condor_config.h"
 #include "condor_state.h"
@@ -26,7 +27,6 @@
 #include "totals.h"
 #include "format_time.h"
 #include "string_list.h"
-#include "metric_units.h"
 #include "console-utils.h"
 #include "prettyPrint.h"
 #include "setflags.h"
@@ -752,18 +752,13 @@ printCOD (ClassAd *ad)
 					ATTR_REMOTE_USER, ATTR_JOB_ID, "Keyword" );
 			first = false;
 		}
-		StringList cod_claim_list;
-		char* cod_claims = NULL;
-		ad->LookupString( ATTR_COD_CLAIMS, &cod_claims );
-		if( ! cod_claims ) {
+		std::string cod_claims;
+		ad->LookupString( ATTR_COD_CLAIMS, cod_claims );
+		if( cod_claims.empty()) {
 			return;
 		}
-		cod_claim_list.initializeFromString( cod_claims );
-		free( cod_claims );
-		char* claim_id;
-		cod_claim_list.rewind();
-		while( (claim_id = cod_claim_list.next()) ) {
-			printCODDetailLine( ad, claim_id );
+		for (const auto &claim_id : StringTokenIterator(cod_claims)) {
+			printCODDetailLine( ad, claim_id.c_str());
 		}
 	}
 }
