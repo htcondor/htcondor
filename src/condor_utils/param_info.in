@@ -3532,11 +3532,6 @@ type=int
 description=Maximum number of schedd forked workers
 tags=schedd
 
-[X_RUNS_HERE]
-default=
-type=string
-tags=master,daemon
-
 [HA_LOCK_URL]
 default=
 type=string

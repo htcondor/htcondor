@@ -2506,7 +2506,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// Not sure if we can safely add another value to `rc`, since
 	// it's defined -- of all places -- in `ReliSock.h`, and we
 	// really don't want the value leaking out of this function.
-	bool file_transfer_plugin_timed_out = false;
+	bool file_transfer_plugin_timed_out   = false;
+	bool file_transfer_plugin_exec_failed = false;
 
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
@@ -3182,7 +3183,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					case TransferPluginResult::Error:
 						rc = GET_FILE_PLUGIN_FAILED;
 						plugin_exit_code = exit_status;
-						[[fallthrough]];
+						break;
+					case TransferPluginResult::ExecFailed:
+						file_transfer_plugin_exec_failed = true;
+						break;
 					case TransferPluginResult::Success:
 						break;
 				}
@@ -3354,6 +3358,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					hold_subcode = ETIME;
 				}
 
+				if( file_transfer_plugin_exec_failed) {
+					try_again = true; // not our fault, try again elsewhere
+				}
+
 				dprintf(D_ALWAYS,
 						"DoDownload: consuming rest of transfer and failing "
 						"after encountering the following error: %s\n",
@@ -3497,6 +3505,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				}
 				try_again = false;
 				formatstr(error_buf, "%s", errstack.getFullText().c_str());
+				if (result == TransferPluginResult::ExecFailed) {
+					try_again = true; // not the job's fault
+				}
 			}
 		}
 	}
@@ -5129,7 +5140,7 @@ FileTransfer::uploadFileList(
 			dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
 			int exit_code = 0;
 			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
-			if (result == TransferPluginResult::Error) {
+			if (result != TransferPluginResult::Success) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!has_failure) {
 					has_failure = true;
@@ -5320,7 +5331,7 @@ FileTransfer::uploadFileList(
 						long long upload_bytes = 0;
 						int exit_code = 0;
 						TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, false, errstack, upload_bytes);
-						if (result == TransferPluginResult::Error) {
+						if (result != TransferPluginResult::Success) {
 							return_and_resetpriv( -1 );
 						}
 						currentUploadPlugin = "";
@@ -6391,7 +6402,6 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 	// Hashtable returns zero if found.
 	if ( plugin_table->lookup( method, plugin ) ) {
 		// no plugin for this type!!!
-		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str() );
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
 		return "";
 	}
@@ -6451,14 +6461,6 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 		return TransferPluginResult::Error;
 	}
 
-
-/*
-	// TODO: check validity of plugin name.  should always be an absolute path
-	if (absolute_path_check() ) {
-		dprintf(D_ALWAYS, "FILETRANSFER: NOT invoking malformed plugin named \"%s\"\n", plugin.c_str());
-		FAIL();
-	}
-*/
 
 	// prepare environment for the plugin
 	Env plugin_env;
@@ -6760,12 +6762,22 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 
 	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", true);
 	MyPopenTimer p_timer;
-	p_timer.start_program(
+	int plugin_exec_result = p_timer.start_program(
 		plugin_args,
 		want_stderr,
 		& plugin_env,
 		drop_privs
 	);
+
+	if (plugin_exec_result != 0) {
+		exit_status = errno;
+		std::string message;
+
+		formatstr(message, "FILETRANSFER: Failed to execute %s: %s", plugin_path.c_str(), strerror(errno));
+		dprintf(D_ALWAYS, "%s\n", message.c_str());
+		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
+		return TransferPluginResult::ExecFailed;
+	}
 
 	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
@@ -7213,9 +7225,13 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 	const int timeout = 20; // max time to allow the plugin to run
 
 	MyPopenTimer pgm;
-	if (pgm.start_program(args, false) < 0) {
-		dprintf( D_ALWAYS, "FILETRANSFER: Failed to execute %s, ignoring\n", path );
-		e.pushf("FILETRANSFER", 1, "Failed to execute %s, ignoring", path );
+
+	// start_program returns 0 on success, -1 on "already started", and errno otherwise
+	if (pgm.start_program(args, false) != 0) {
+		std::string message;
+		formatstr(message, "FILETRANSFER: Failed to execute %s -classad: %s skipping", path, strerror(errno));
+		dprintf(D_ALWAYS, "%s\n", message.c_str());
+		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
 		return;
 	}
 

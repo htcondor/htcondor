@@ -4,6 +4,25 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.9.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.9.0 released on Month Date, 2024.
+
+- HTCondor version 23.9.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-23014`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 23.8.1
 --------------
 
@@ -49,6 +68,11 @@ New Features:
   to encourage cacheable memory pages to be reclaimed faster.
   :jira:`2391`
 
+- If a file transfer plugin is broken in such a way that it cannot be executed,
+  no longer put a job that uses it on hold, but back to idle so it can try
+  again.
+  :jira:`2400`
+
 - Local universe jobs on Linux are now put into their own cgroups.  New knob
   :macro:`USE_CGROUPS_FOR_LOCAL_UNIVERSE` disables it.
   :jira:`2440`
@@ -86,13 +110,9 @@ New Features:
   now also provides READ authorization.
   :jira:`2424`
 
-- Added option to :tool:`condor_adstash` to poll access points' job
-  epoch histories.
+- Added option to :tool:`condor_adstash` to populate the database with
+  job epoch histories, not just the final history entry.
   :jira:`2076`
-
-- Fixed a bug where backfill slots did not account for Memory used by
-  active primary slots correctly.
-  :jira:`2462`
 
 Bugs Fixed:
 
@@ -105,9 +125,17 @@ Bugs Fixed:
   weren't explicitly configured to trust each other.
   :jira:`2411`
 
+- Fixed a rare bug where certain errors reported by a file transfer
+  plugin were not reported to the *condor_starter*.
+  :jira:`2464`
+
 - Fixed a bug where :tool:`condor_submit` -i did not work on a 
   cgroup v2 system.
   :jira:`2438`
+
+- Fixed a bug where backfill slots did not account for Memory used by
+  active primary slots correctly.
+  :jira:`2462`
 
 Version 23.7.2
 --------------

@@ -67,7 +67,7 @@ public:
 	char*	watch_name;
 	char*	log_name;
 	char*	ready_state;
-	int		runs_here;
+	int		runs_here;		// This only indicates whether it's the master itself
 	int		pid;
 	int 	restarts;
 	int		newExec; 
@@ -118,7 +118,6 @@ public:
 
 private:
 
-	int		runs_on_this_host();
 	void	Recover( int timerID = -1 );
 	void	DoStart( int timerID = -1 );
 	void	DoConfig( bool init );

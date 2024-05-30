@@ -15,6 +15,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23014:
+
+Version 23.0.14
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.14 released on Month Date, 2024.
+
+- HTCondor version 23.0.14 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-23012:
 
 Version 23.0.12
@@ -43,6 +62,30 @@ Bugs Fixed:
 - Fixed a bug where the *condor_procd* could crash on Windows EPs
   using the default Desktop policy.
   :jira:`2444`
+
+- Fixed bug where *condor_submit_dag* would crash when DAG file contained
+  a line of only whitespace with no terminal newline.
+  :jira:`2463`
+
+- Fixed a bug that prevented the *condor_startd* from advertising
+  :ad-attr:`DockerCachedImageSizeMb`
+  :jira:`2458`
+
+- Fixed a rare bug where certain errors reported by a file transfer
+  plugin were not reported to the *condor_starter*.
+  :jira:`2464`
+
+- Removed confusing message in StartLog at shutdown about trying to
+  kill illegal pid.
+  :jira:`1012`
+
+- Container universe now works when file transfer is disabled or not used.
+  :jira:`1329`
+
+- Fixed a bug where transfer of Kerberos credentials from the
+  *condor_shadow* to the *condor_starter* would fail if the daemons
+  weren't explicitly configured to trust each other.
+  :jira:`2411`
 
 .. _lts-version-history-23010:
 

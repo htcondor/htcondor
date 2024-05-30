@@ -49,18 +49,11 @@ _schedd_query(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    // Why _don't_ we have a std::vector<std::string> constructor for these?
-    StringList slAttributes;
-    for( const auto & attribute : attributes ) {
-        slAttributes.append(attribute.c_str());
-    }
-
-
     CondorError errStack;
     ClassAd * summaryAd = NULL;
     std::vector<ClassAd *> results;
     rv = q.fetchQueueFromHostAndProcess(
-        addr, slAttributes, opts, limit,
+        addr, attributes, opts, limit,
         _schedd_query_callback, & results,
         2 /* use fetchQueueFromHostAndProcess2() */, & errStack,
         opts == QueryFetchOpts::fetch_SummaryOnly ? & summaryAd : NULL

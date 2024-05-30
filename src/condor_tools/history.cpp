@@ -44,7 +44,7 @@
 #include <algorithm> //for std::reverse
 #include <utility> // for std::move
 
-#include "classad_helpers.h" // for initStringListFromAttrs
+#include "classad_helpers.h"
 #include "history_utils.h"
 #include "backward_file_reader.h"
 #include <fcntl.h>  // for O_BINARY
