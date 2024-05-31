@@ -78,7 +78,7 @@ class Collector():
       statistics: Optional[str] = None,
     ) -> List[classad.ClassAd]:
         r"""
-        Returns ClassAds from the collector.
+        Returns :class:`classad2.ClassAd`\(s) from the collector.
 
         :param ad_type:  The type of ClassAd to return.
         :param constraint:  Only ads matching this expression are returned;
@@ -119,8 +119,8 @@ class Collector():
       statistics: str = None,
     ) -> classad.ClassAd:
         """
-        As :meth:`query`, except querying the specified daemon rather than
-        the collector, which means that at most one ad will be returned.
+        As :meth:`query`, except querying the specified type of daemon rather
+        than the collector, which means that at most one ad will be returned.
 
         :param daemon_type:  Which type of daemon to query.  Some daemons
                              respond to more than one daemon type.
@@ -145,7 +145,7 @@ class Collector():
     ) -> classad.ClassAd:
         """
         Return a ClassAd with enough data to contact a
-        daemon known to the collector.
+        daemon (of the specified type) known to the collector.
 
         If more than one daemon matches, return only the first.  Use
         :meth:`locateAll` to find all daemons of a given type, or
@@ -178,7 +178,7 @@ class Collector():
         daemon_type: DaemonType,
     ) -> List[classad.ClassAd]:
         r"""
-        Return a list of ClassAd, each enough data to
+        Return a list of :class:`classad2.ClassAd`\s, each enough data to
         contact a daemon known of the given type to the collector.
 
         :param daemon_type:  Which type of daemons to locate.
@@ -193,9 +193,9 @@ class Collector():
         use_tcp: bool = True,
     ) -> None:
         r'''
-        Add ClassAd to the collector.
+        Add ClassAd(s) to the collector.
 
-        :param ad_list:  The ClassAd to advertise.
+        :param ad_list:  The ClassAd(s) to advertise.
         :param command:  The "advertise command" specifies which kind of
                          ad is being added to the collector.  Different
                          types of ads require different authorization.
