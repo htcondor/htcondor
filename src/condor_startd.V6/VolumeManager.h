@@ -14,10 +14,13 @@ public:
     VolumeManager(const VolumeManager&) = delete;
     ~VolumeManager();
 
-    void UpdateStarterEnv(Env &env);
-    bool CleanupSlot(const std::string &slot, CondorError &err);
+    void UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb);
+    int  CleanupLV(const std::string &lv_name, CondorError &err); // See RemoveLV() for return values
     bool CleanupLVs();
     bool GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
+
+#ifdef LINUX
+    bool is_enabled() { return true; }
 
     inline std::string GetVG() const { return m_volume_group_name; }
     inline std::string GetPool() const { return m_pool_lv_name; }
@@ -64,7 +67,8 @@ private:
     static bool RemoveLVEncryption(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static bool CleanupAllDevices(const VolumeManager &info, CondorError &err, bool cleanup_loopback = true);
     static bool UnmountFilesystem(const std::string &mountpoint, CondorError &err);
-    static bool RemoveLV(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
+    /* RemoveLV() returns: 0 on success, <0 on failure, >0 on warnings (2 = LV not found) */
+    static int  RemoveLV(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static bool RemoveVG(const std::string &vg_name, CondorError &err, int timeout);
     static bool RemovePV(const std::string &pv_name, CondorError &err, int timeout);
     static bool RemoveLoopDev(const std::string &loopdev_name, const std::string &backing_file, CondorError &err, int timeout);
@@ -78,5 +82,8 @@ private:
     std::string m_loopback_filename;
     std::string m_loopdev_name;
     int m_cmd_timeout{VOLUME_MANAGER_TIMEOUT};
+#else
+    bool is_enabled() { return false; }
+#endif // LINUX
 };
 
