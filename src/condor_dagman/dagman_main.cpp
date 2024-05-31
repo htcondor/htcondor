@@ -1372,11 +1372,11 @@ void main_pre_dc_init (int, char*[]) {
 	const char* logFile = GetEnv("_CONDOR_DAGMAN_LOG");
 	if (logFile) {
 		if ( ! fullpath(logFile)) {
-			fullLogFile = dagman.workingDir + DIR_DELIM_STRING + logFile;
+			dircat(dagman.workingDir.c_str(), logFile, fullLogFile);
 			SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
 		} else { fullLogFile = logFile; }
 	} else {
-		fullLogFile = dagman.workingDir + DIR_DELIM_STRING + "default.dagman.out";
+		dircat(dagman.workingDir.c_str(), "default.dagman.out", fullLogFile);
 		SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
 	}
 

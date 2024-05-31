@@ -17,13 +17,13 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added ability for DAGMan to produce job credentials when submitting jobs directly to
+  the *condor_schedd*. This behavior can be disabled via :macro:`DAGMAN_PRODUCE_JOB_CREDENTIALS`.
+  :jira:`1711`
 
 Bugs Fixed:
 
-- Fixed a bug where DAGMan would not produce job credentials when submitting jobs directly
-  to the *condor_schedd*. Behavior can be disabled via :macro:`DAGMAN_PRODUCE_JOB_CREDENTIALS`.
-  :jira:`1711`
+- None.
 
 Version 23.8.1
 --------------
