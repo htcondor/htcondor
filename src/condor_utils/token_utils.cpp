@@ -38,15 +38,17 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 		printf("%s\n", token.c_str());
 		return true;
 	}
+	std::string local_err;
+	if (err_msg == nullptr) {
+		err_msg = &local_err;
+	}
 
 	TemporaryPrivSentry tps( !owner.empty() );
 	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
-			if (err_msg) {
-				formatstr(*err_msg, "Failed to switch to user priv");
-			}
-			dprintf(D_ERROR, "write_out_token(%s): Failed to switch to user priv\n", owner.c_str());
+			formatstr(*err_msg, "Failed to switch to user priv");
+			dprintf(D_ERROR, "write_out_token(%s): %s\n", token_name.c_str(), err_msg->c_str());
 			return false;
 		}
 		set_user_priv();
@@ -60,10 +62,8 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 		// we may be writing out a token as root, we want to be certain we are writing it
 		// in the dirpath we got out of the condor_config configuration.
 		if (token_name != condor_basename(token_name.c_str())) {
-			if (err_msg) {
-				formatstr(*err_msg, "Token name isn't a plain filename");
-			}
-			dprintf(D_FAILURE, "write_out_token(%s): Token name isn't a plain filename\n", token_name.c_str());
+			formatstr(*err_msg, "Token name isn't a plain filename");
+			dprintf(D_FAILURE, "write_out_token(%s): %s\n", token_name.c_str(), err_msg->c_str());
 			return false;
 		}
 		std::string dirpath;
@@ -71,11 +71,9 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 			std::string file_location;
 			if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
 				if (!owner.empty()) {
-					if (err_msg) {
-						formatstr(*err_msg, "Unable to find token directory for owner %s.", owner.c_str());
-					}
-					dprintf(D_FULLDEBUG, "write_out_token(%s): Unable to find token directory for owner.\n",
-						owner.c_str());
+					formatstr(*err_msg, "Unable to find token directory for owner %s", owner.c_str());
+					dprintf(D_FULLDEBUG, "write_out_token(%s): %s\n",
+						token_name.c_str(), err_msg->c_str());
 					return false;
 				}
 				param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
@@ -92,22 +90,18 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
     int fd = safe_create_keep_if_exists(token_file.c_str(),
         O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (-1 == fd) {
-		if (err_msg) {
-			formatstr(*err_msg, "Cannot write token to %s: %s (errno=%d)",
-				token_file.c_str(), strerror(errno), errno);
-		}
-		dprintf(D_FAILURE, "Cannot write token to %s: %s (errno=%d)\n",
+		formatstr(*err_msg, "Cannot write token to %s: %s (errno=%d)",
 			token_file.c_str(), strerror(errno), errno);
+		dprintf(D_FAILURE, "write_out_token(%s): %s\n",
+			token_name.c_str(), err_msg->c_str());
 		return false;
 	}
 	auto result = full_write(fd, token.c_str(), token.size());
 	if (result != static_cast<ssize_t>(token.size())) {
-		if (err_msg) {
-			formatstr(*err_msg, "Failed to write token to %s: %s (errno=%d)",
-				token_file.c_str(), strerror(errno), errno);
-		}
-		dprintf(D_FAILURE, "Failed to write token to %s: %s (errno=%d)\n",
+		formatstr(*err_msg, "Failed to write token to %s: %s (errno=%d)",
 			token_file.c_str(), strerror(errno), errno);
+		dprintf(D_FAILURE, "write_out_token(%s): %s\n",
+			token_name.c_str(), err_msg->c_str());
 		close(fd);
 		return false;
 	}
