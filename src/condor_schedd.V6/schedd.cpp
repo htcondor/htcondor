@@ -1648,12 +1648,10 @@ Scheduler::count_jobs()
 		} else if ( current_time - owner_info.LastHitTime > AbsentOwnerLifetime ) {
 			// mark user creds for sweeping.
 			if (cred_dir_krb) {
-				dprintf(D_FULLDEBUG, "creating credmon KRB mark file for user %s\n", owner_info.Name());
-				credmon_mark_creds_for_sweeping(cred_dir_krb, owner_info.Name());
+				credmon_mark_creds_for_sweeping(cred_dir_krb, owner_info.Name(), credmon_type_KRB);
 			}
 			if (cred_dir_oauth) {
-				dprintf(D_FULLDEBUG, "creating credmon OAUTH mark file for user %s\n", owner_info.Name());
-				credmon_mark_creds_for_sweeping(cred_dir_oauth, owner_info.Name());
+				credmon_mark_creds_for_sweeping(cred_dir_oauth, owner_info.Name(), credmon_type_OAUTH);
 			}
 			// Now that we've finished using Owner.Name, we can
 			// free it.  this marks the entry as unused
@@ -6628,8 +6626,8 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		// Now, figure out if they want us to deal w/ a constraint or
 		// with specific job ids.  We don't allow both.
-		char *constraint = NULL;
-	StringList job_ids;
+	char *constraint = NULL;
+	std::vector<std::string> job_ids;
 		// NOTE: ATTR_ACTION_CONSTRAINT needs to be treated as a bool,
 		// not as a string...
 	ExprTree *tree;
@@ -6716,7 +6714,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			free( constraint );
 			return FALSE;
 		}
-		job_ids.initializeFromString( tmp );
+		job_ids = split(tmp);
 		free( tmp );
 		tmp = NULL;
 	}
@@ -6729,12 +6727,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				 getJobActionString(action), initial_constraint.c_str());
 
 	} else {
-		tmp = job_ids.print_to_string();
-		if ( tmp ) {
-			job_ids_string = tmp;
-			free( tmp ); 
-			tmp = NULL;
-		}
+		job_ids_string = join(job_ids, ",");
 		dprintf( D_AUDIT, *rsock, "%s jobs %s\n",
 				 getJobActionString(action), job_ids_string.c_str());
 	}		
@@ -6790,11 +6783,10 @@ Scheduler::actOnJobs(int, Stream* s)
 			// No need to iterate through the queue, just act on the
 			// specific ids we care about...
 
-		StringList expanded_ids;
-		expand_mpi_procs(&job_ids, &expanded_ids);
-		expanded_ids.rewind();
-		while( (tmp=expanded_ids.next()) ) {
-			tmp_id = getProcByString( tmp );
+		std::vector<std::string> expanded_ids;
+		expand_mpi_procs(job_ids, expanded_ids);
+		for (const auto &idstr: expanded_ids) {
+			tmp_id = getProcByString(idstr.c_str());
 			if( tmp_id.cluster < 0 ) {
 				continue;
 			}
@@ -12020,17 +12012,15 @@ Scheduler::shadow_prio_recs_consistent()
   adding any sibling mpi procs if needed.
 */
 void
-Scheduler::expand_mpi_procs(StringList *job_ids, StringList *expanded_ids) {
-	job_ids->rewind();
-	char *id;
+Scheduler::expand_mpi_procs(const std::vector<std::string> &job_ids, std::vector<std::string> &expanded_ids) {
 	char buf[40];
-	while( (id = job_ids->next())) {
-		expanded_ids->append(id);
+
+	for (const auto &id: job_ids) {
+		expanded_ids.emplace_back(id);
 	}
 
-	job_ids->rewind();
-	while( (id = job_ids->next()) ) {
-		PROC_ID p = getProcByString(id);
+	for (const auto &id: job_ids) {
+		PROC_ID p = getProcByString(id.c_str());
 		if( (p.cluster < 0) || (p.proc < 0) ) {
 			continue;
 		}
@@ -12044,10 +12034,10 @@ Scheduler::expand_mpi_procs(StringList *job_ids, StringList *expanded_ids) {
 		
 		
 		int proc_index = 0;
-		while( (GetJobAd(p.cluster, proc_index) )) {
+		while ((GetJobAd(p.cluster, proc_index) )) {
 			snprintf(buf, 40, "%d.%d", p.cluster, proc_index);
-			if (! expanded_ids->contains(buf)) {
-				expanded_ids->append(buf);
+			if (!contains(expanded_ids,buf)) {
+				expanded_ids.emplace_back(buf);
 			}
 			proc_index++;
 		}

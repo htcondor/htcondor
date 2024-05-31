@@ -22,6 +22,10 @@ New Features:
   to an arbitrary file.
   :jira:`2425`
 
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  :jira:`2453`
+
 Bugs Fixed:
 
 - None.
@@ -38,6 +42,13 @@ Release Notes:
 - This version includes all the updates from :ref:`lts-version-history-23012`.
 
 New Features:
+
+- The classad language no longer supports unit suffixes on numeric literals.
+  This was almost always a cause for confusion and bugs in classad expressions.
+  Note that unit suffixes are still allowed in the submit language in 
+  :subcom:`request_disk` and :subcom:`request_memory`, but not in arbitrary 
+  classad expressions.
+  :jira:2455`
 
 - Added an ``-edit`` option to the :tool:`condor_qusers`.  This option allows
   and administrator to add custom attributes to a User classad in the *condor_schedd*.
@@ -70,6 +81,11 @@ New Features:
   of a Linux cgroup v2 system to set the "memory.low" setting in a job's cgroup
   to encourage cacheable memory pages to be reclaimed faster.
   :jira:`2391`
+
+- If a file transfer plugin is broken in such a way that it cannot be executed,
+  no longer put a job that uses it on hold, but back to idle so it can try
+  again.
+  :jira:`2400`
 
 - Local universe jobs on Linux are now put into their own cgroups.  New knob
   :macro:`USE_CGROUPS_FOR_LOCAL_UNIVERSE` disables it.
@@ -108,13 +124,9 @@ New Features:
   now also provides READ authorization.
   :jira:`2424`
 
-- Added option to :tool:`condor_adstash` to poll access points' job
-  epoch histories.
+- Added option to :tool:`condor_adstash` to populate the database with
+  job epoch histories, not just the final history entry.
   :jira:`2076`
-
-- Fixed a bug where backfill slots did not account for Memory used by
-  active primary slots correctly.
-  :jira:`2462`
 
 Bugs Fixed:
 
@@ -134,6 +146,10 @@ Bugs Fixed:
 - Fixed a bug where :tool:`condor_submit` -i did not work on a 
   cgroup v2 system.
   :jira:`2438`
+
+- Fixed a bug where backfill slots did not account for Memory used by
+  active primary slots correctly.
+  :jira:`2462`
 
 Version 23.7.2
 --------------

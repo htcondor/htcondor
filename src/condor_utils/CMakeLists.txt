@@ -190,7 +190,6 @@ command_strings.h
 compat_classad_list.cpp
 compat_classad_list.h
 condor_adtypes.cpp
-condor_api.h
 condor_attributes.cpp
 condor_base64.cpp
 condor_base64.h

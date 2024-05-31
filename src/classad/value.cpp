@@ -512,17 +512,8 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 				realValue.SetErrorValue();
 				could_convert = false;
 			}
-			switch (toupper( *end )) {
-				case 'B': nf = Value::B_FACTOR; break;
-				case 'K': nf = Value::K_FACTOR; break;
-				case 'M': nf = Value::M_FACTOR; break;
-				case 'G': nf = Value::G_FACTOR; break;
-				case 'T': nf = Value::T_FACTOR; break;
-				case '\0': nf = Value::NO_FACTOR; break;
-				default:
-                    nf = Value::NO_FACTOR;
-                    break;
-			}
+			nf = Value::NO_FACTOR;
+
             if (could_convert) {
                 realValue.SetRealValue(rvalue*Value::ScaleFactor[nf]);
             }
@@ -601,17 +592,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
                 could_convert = false;
 			} else {
                 could_convert = true;
-                switch( toupper( *end ) ) {
-                case 'B':  nf = Value::B_FACTOR; break;
-                case 'K':  nf = Value::K_FACTOR; break;
-                case 'M':  nf = Value::M_FACTOR; break;
-                case 'G':  nf = Value::G_FACTOR; break;
-                case 'T':  nf = Value::T_FACTOR; break;
-                case '\0': nf = Value::NO_FACTOR; break;
-                default:  
-                    nf = Value::NO_FACTOR;
-                    break;
-                }
+				nf = Value::NO_FACTOR;
                 if (could_convert) {
                     integerValue.SetIntegerValue((long long) (ivalue*Value::ScaleFactor[nf]));
                 }

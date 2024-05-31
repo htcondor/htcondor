@@ -15,6 +15,29 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23014:
+
+Version 23.0.14
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.14 released on Month Date, 2024.
+
+- HTCondor version 23.0.14 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a couple bugs in when credentials managed by the
+  *condor_credd* are cleaned up. In some situations, credentials would
+  be removed while jobs requiring them were queued or even running,
+  resulting in the jobs being held.
+  :jira:`2467`
+
 .. _lts-version-history-23012:
 
 Version 23.0.12

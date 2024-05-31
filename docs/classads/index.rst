@@ -27,5 +27,6 @@ may specify their own custom formats, or administrators may set custom defaults.
    :glob:
 
    classad-mechanism
+   classad-builtin-functions
    transforms
    print-formats

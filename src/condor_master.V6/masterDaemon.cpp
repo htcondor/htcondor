@@ -77,20 +77,6 @@ extern time_t daemon_stop_time;
 
 int		hourly_housekeeping(void);
 
-// to add a new process as a condor daemon, just add one line in 
-// the structure below. The first elemnt is the string that is 
-// looked for in the config file for the executable, and the
-// second element is the parameter looked for in the confit
-// file for the name of the corresponding log file.If no log
-// file need be there, then put a zero in the second column.
-// The third parameter is the name of a condor_config variable
-// that is ckecked before the process is created. If it is zero, 
-// then the process is created always. If it is a valid name,
-// this name shud be set to true in the condor_config file for the
-// process to be created.
-
-// make sure that the master does not start itself : set runs_here off
-
 extern Daemons 		daemons;
 extern int			master_backoff_constant;	// Backoff time constant
 extern int			master_backoff_ceiling;		// Backoff time ceiling
@@ -165,7 +151,6 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	} else {
 		runs_here = TRUE;
 	}
-	runs_on_this_host();
 	pid = 0;
 	restarts = 0;
 	newExec = FALSE; 
@@ -218,60 +203,6 @@ daemon::~daemon()
 	if( controller_name != NULL ) {
 		free( controller_name );
 	}
-}
-
-int
-daemon::runs_on_this_host()
-{
-	char	*tmp;
-	static bool this_host_addr_cached = false;
-	static std::vector<condor_sockaddr> this_host_addr;
-
-
-	if ( flag_in_config_file != NULL ) {
-		if (strncmp(flag_in_config_file, "BOOL_", 5) == MATCH) {
-			runs_here =
-				param_boolean_crufty(flag_in_config_file, false) ? TRUE : FALSE;
-		} else {
-			if (!this_host_addr_cached) {
-				std::string local_hostname = get_local_hostname();
-				this_host_addr = resolve_hostname(local_hostname);
-				if (!this_host_addr.empty()) {
-					this_host_addr_cached = true;
-				}
-			}
-			
-			/* Get the name of the host on which this daemon should run */
-			tmp = param( flag_in_config_file );
-			if (!tmp) {
-				dprintf(D_ALWAYS, "config file parameter %s not specified",
-						flag_in_config_file);
-				return FALSE;
-			}
-			runs_here = FALSE;
-
-			std::vector<condor_sockaddr> addrs = resolve_hostname(tmp);
-			if (addrs.empty()) {
-				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
-				return FALSE;
-			} 
-			for (unsigned i = 0; i < this_host_addr.size(); ++i) {
-				for (unsigned j = 0; j < addrs.size(); ++j) {
-					if (this_host_addr[i].compare_address(addrs[j])) {
-						runs_here = TRUE;
-						break;
-					}
-				}
-			}
-		}
-	}
-	if(strcmp(name_in_config_file, "KBDD") == 0)
-	// X_RUNS_HERE controls whether or not to run kbdd if it's presented in
-	// the config file
-	{
-		runs_here = param_boolean_crufty("X_RUNS_HERE", true) ? TRUE : FALSE;
-	}
-	return runs_here;
 }
 
 
