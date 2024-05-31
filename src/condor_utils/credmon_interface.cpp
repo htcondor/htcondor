@@ -425,6 +425,7 @@ bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user,
 	}
 
 	std::string filename;
+	const char* cred_type_name = "";
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
@@ -432,11 +433,13 @@ bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user,
 	bool need_cleanup = false;
 	struct stat stat_buf;
 	if (cred_type == credmon_type_OAUTH) {
+		cred_type_name = "OAUTH";
 		credmon_user_filename(filename, cred_dir, user);
 		if (stat(filename.c_str(), &stat_buf) == 0) {
 			need_cleanup = true;
 		}
 	} else if (cred_type == credmon_type_KRB) {
+		cred_type_name = "KRB";
 		credmon_user_filename(filename, cred_dir, user, ".cred");
 		if (stat(filename.c_str(), &stat_buf) == 0) {
 			need_cleanup = true;
@@ -450,6 +453,8 @@ bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user,
 	if (!need_cleanup) {
 		return true;
 	}
+
+	dprintf(D_FULLDEBUG, "CREDMON: Creating %s mark file for user %s\n", cred_type_name, user);
 
 	// construct <cred_dir>/<user>.mark
 	credmon_user_filename(filename, cred_dir, user, ".mark");
