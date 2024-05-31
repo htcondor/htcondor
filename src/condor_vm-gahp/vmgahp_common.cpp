@@ -440,7 +440,7 @@ bool canSwitchUid(void)
 /**
  * merge_stderr_with_stdout is intended for clients of this function
  * that wish to have the old behavior, where stderr and stdout were
- * both added to the same StringList.
+ * both added to the same vector.
  */
 int systemCommand( ArgList &args, priv_state priv, std::vector<std::string> *cmd_out, std::vector<std::string> * cmd_in,
 		std::vector<std::string> *cmd_err, bool merge_stderr_with_stdout)
