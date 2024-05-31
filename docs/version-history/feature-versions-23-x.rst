@@ -17,6 +17,13 @@ Release Notes:
 
 New Features:
 
+- Improved the tools that write a token to a file.
+  Most noticeable is the addition of a -file option to write the token
+  to an arbitrary file.
+  Also, the -token option only takes a bare filename.
+  The given file is overwritten instead of appended to.
+  :jira:`2425`
+
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
   :jira:`2453`
