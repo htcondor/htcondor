@@ -32,7 +32,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a couple bugs in when credentials managed by the
+  *condor_credd* are cleaned up. In some situations, credentials would
+  be removed while jobs requiring them were queued or even running,
+  resulting in the jobs being held.
+  :jira:`2467`
 
 .. _lts-version-history-23012:
 
