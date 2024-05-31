@@ -112,7 +112,7 @@ struct Collector {
         else
         {
             PyErr_Clear();
-            StringList collector_list;
+            std::vector<std::string> collector_list;
             boost::python::object my_iter = pool.attr("__iter__")();
             if (!PyIter_Check(my_iter.ptr())) {
                 PyErr_Format(PyExc_TypeError,
@@ -127,7 +127,7 @@ struct Collector {
                 {
                     boost::python::object next_obj = my_iter.attr(NEXT_FN)();
                     std::string pool_str = boost::python::extract<std::string>(next_obj);
-                    collector_list.append(pool_str.c_str());
+                    collector_list.emplace_back(pool_str);
                 }
                 catch (const boost::python::error_already_set&)
                 {
@@ -142,9 +142,8 @@ struct Collector {
                     }
                 }
             }
-            char * pool_str = collector_list.print_to_string();
-            m_collectors = CollectorList::create(pool_str);
-            free(pool_str);
+            std::string pool_str = join(collector_list,",");
+            m_collectors = CollectorList::create(pool_str.c_str());
         }
         if (!m_collectors)
         {

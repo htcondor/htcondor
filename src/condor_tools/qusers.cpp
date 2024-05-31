@@ -295,7 +295,7 @@ main( int argc, const char *argv[] )
 					continue;
 				}
 			}
-			if (cmd == EDIT_USERREC) {
+			if (strchr(argv[i], '=')) {
 				edit_args.push_back(argv[i]);
 			} else {
 				usernames.push_back(argv[i]);
@@ -387,12 +387,20 @@ main( int argc, const char *argv[] )
 			if (pcolon) {
 				dash_long_format = parseAdsFileFormat(++pcolon, dash_long_format);
 			}
+			if ( ! prmask.IsEmpty()) {
+				fprintf( stderr, "Error: -long cannot be used with -format or -af\n" );
+				exit(1);
+			}
 		}
 		else
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
 				// make sure we have at least two more arguments
 			if( argc <= i+2 ) {
 				fprintf( stderr, "Error: -format requires format and attribute parameters\n" );
+				exit( 1 );
+			}
+			if (dash_long) {
+				fprintf( stderr, "Error: -format and -long cannot be used together\n" );
 				exit( 1 );
 			}
 			prmask.registerFormatF( argv[i+1], argv[i+2], FormatOptionNoTruncate );
@@ -408,6 +416,10 @@ main( int argc, const char *argv[] )
 			// make sure we have at least one more argument
 			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
 				fprintf( stderr, "Error: -autoformat requires at least one attribute parameter\n" );
+				exit(1);
+			}
+			if (dash_long) {
+				fprintf( stderr, "Error: -af and -long cannot be used together\n" );
 				exit(1);
 			}
 			int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, prmask, attrs, false);
@@ -456,6 +468,12 @@ main( int argc, const char *argv[] )
 	}
 
 	if (!cmd) cmd = QUERY_USERREC_ADS;
+
+	if ( ! edit_args.empty() && cmd != EDIT_USERREC) {
+		fprintf(stderr, "<attr>=<expr> arguments only work with -edit");
+		usage(stderr, my_name);
+		exit(2);
+	}
 
 	if ((cmd == QUERY_USERREC_ADS) && ! dash_long && prmask.IsEmpty()) {
 		initOutputMask(prmask, 0, false);
@@ -822,9 +840,9 @@ usage(FILE *out, const char *appname)
 		exit(1);
 	}
 	fprintf(out, "Usage: %s [ADDRESS] [DISPLAY] [USERS]\n", appname );
-	fprintf(out, "       %s [ADDRESS] [OPERATION] [USERS]\n", appname );
+	fprintf(out, "       %s [ADDRESS] [-add | -enable] [USERS]\n", appname );
 	fprintf(out, "       %s [ADDRESS] -disable [USERS] [-reason <reason-string>]\n", appname );
-	fprintf(out, "       %s [ADDRESS] -edit [USERS] <attr>=<value> [<attr>=<value> ...]\n", appname );
+	fprintf(out, "       %s [ADDRESS] [USERS] -edit <attr>=<value> [<attr>=<value> ...]\n", appname );
 
 	fprintf(out, "\n  ADDRESS is:\n"
 		"    -name <name>\t Name or address of Scheduler\n"
@@ -855,19 +873,24 @@ usage(FILE *out, const char *appname)
 
 	fprintf(out, "\n  USERS is zero or more of:\n"
 		"    <user>\t\t Operate on <user>\n"
+		"    -user <user>\t Operate on <user>\n"
 //		"    -me\t\t\t Operate on the user running the command\n"
-		"    -constraint <expr>\t Operate on users matching the <expr>\n"
+		"    -constraint <expr>\t Operate on users matching the <expr>. Cannot be used with -add.\n"
 		);
 
-	fprintf(out, "\n  OPERATION is one of:\n");
+	fprintf(out, "\n  At most one of the following operation args may be used:\n");
 	fprintf(out, "    -add\t\t Add new, enabled user records\n" );
 	fprintf(out, "    -enable\t\t Enable existing user records, Add new records as needed\n" );
 	fprintf(out, "    -disable\t\t Disable existing user records, user cannot submit jobs\n" );
-	fprintf(out, "    -reason <string>\t Reason for disabling the user. Use with -disable\n" );
-	fprintf(out, "    -delete\t\t Delete user records\n" );
+//	fprintf(out, "    -delete\t\t Delete user records\n" );
 //	fprintf(out, "    -reset\t\t Reset user records to default settings and limits\n" );
 	fprintf(out, "    -edit\t\t Edit fields of user records\n" );
+
+	fprintf(out, "\n  Other arguments:\n");
+	fprintf(out, "    -reason <string>\t Reason for disabling the user. Use with -disable\n" );
+	fprintf(out, "    <attr>=<expr>\t Store <attr>=<expr> in the user record. Use with -edit\n" );
+
 	fprintf(out, "\n"
-		"  This tool is use to query, modify and delete User/Owner records in the Schedd.\n"
+		"  This tool is use to query, create and modify User/Owner records in the Schedd.\n"
 		"  The default operation is to query and display users.\n" );
 }

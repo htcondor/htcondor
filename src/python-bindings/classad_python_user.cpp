@@ -76,10 +76,8 @@ extern "C"
         {
             return;
         }
-        StringList modules(modulesStr.c_str());
-        modules.rewind();
-        const char *tmpMod;
-        while ((tmpMod = modules.next()))
+        std::vector<std::string> modules = split(modulesStr, ", ");
+        for (const auto &tmpMod: modules) 
         {
             try
             {
@@ -196,18 +194,8 @@ python_invoke (const char *                 name,
     std::string modulesStr;
     if (param(modulesStr, "CLASSAD_USER_PYTHON_MODULES"))
     {
-        StringList modules(modulesStr.c_str());
-        modules.rewind();
-        const char *tmpMod;
-        bool whitelisted = false;
-        while ((tmpMod = modules.next()))
-        {
-            if (moduleName == tmpMod)
-            {
-                whitelisted = true;
-                break;
-            }
-        }
+        std::vector<std::string> modules = split(modulesStr, ", ");
+        bool whitelisted = std::ranges::find(modules, moduleName) != modules.end();
         if (!whitelisted)
         {
             classad::CondorErrMsg = "Requested module " + moduleName + " is not in the list of CLASSAD_USER_PYTHON_MODULES.";

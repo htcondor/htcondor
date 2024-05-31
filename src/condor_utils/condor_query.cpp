@@ -594,9 +594,8 @@ setGenericQueryType(const char* genericType) {
 QueryResult CondorQuery::
 initQueryMultipleAd (ClassAd &queryAd)
 {
-	auto_free_ptr target(targets.print_to_string());
-	if (target) {
-		queryAd.Assign(ATTR_TARGET_TYPE, target.ptr());
+	if ( !  targets.empty() ) {
+		queryAd.Assign(ATTR_TARGET_TYPE, join(targets, ","));
 	} else {
 		queryAd.Assign(ATTR_TARGET_TYPE, AdTypeToString(queryType));
 	}
@@ -832,8 +831,8 @@ CondorQuery::setDesiredAttrsExpr(char const *expr)
 //
 void CondorQuery::convertToMulti(const char * target, bool req, bool proj, bool limit)
 {
-	if ( ! targets.contains_anycase(target)) {
-		targets.append(target);
+	if ( ! contains_anycase(targets, target)) {
+		targets.emplace_back(target);
 	}
 
 	std::string buffer, attr;
