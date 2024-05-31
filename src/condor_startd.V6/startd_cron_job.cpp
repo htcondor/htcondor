@@ -103,7 +103,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 				rval = 1; // a new ad is a changed ad
 			} else {
 				std::string ignore(GetPrefix()); ignore += "LastUpdate";
-				StringList ignore_list(ignore.c_str());
+				classad::References ignore_list{ignore};
 				rval =  ! ClassAdsAreSame(ad, oldAd, &ignore_list);
 			}
 			if (rval) d_verbosity = 0; // unchanged ads log D_VERBOSE, changed ads log without the flag
