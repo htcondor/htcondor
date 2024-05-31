@@ -1,4 +1,4 @@
-# Copyright 2022 HTCondor Team, Computer Sciences Department,
+# Copyright 2024 HTCondor Team, Computer Sciences Department,
 # University of Wisconsin-Madison, WI.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
