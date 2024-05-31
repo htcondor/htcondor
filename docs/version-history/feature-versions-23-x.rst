@@ -71,6 +71,10 @@ New Features:
   that are useable on the local machine.
   :jira:`2466`
 
+- Added option to :tool:`condor_adstash` to poll access points' transfer
+  epoch histories.
+  :jira:`2435`
+
 Bugs Fixed:
 
 - Fixed a bug on EL9 where user-level checkpointing jobs would
