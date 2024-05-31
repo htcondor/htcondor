@@ -312,7 +312,7 @@ tokenizeNumber (void)
 {
 	enum { NONE, INTEGER, REAL };
 	int		numberType = NONE;
-	Value::NumberFactor f;
+	Value::NumberFactor f = Value::NumberFactor::NO_FACTOR;
 	long long integer=0;
 	double	real=0;
 	int 	och;
