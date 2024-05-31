@@ -1648,12 +1648,10 @@ Scheduler::count_jobs()
 		} else if ( current_time - owner_info.LastHitTime > AbsentOwnerLifetime ) {
 			// mark user creds for sweeping.
 			if (cred_dir_krb) {
-				dprintf(D_FULLDEBUG, "creating credmon KRB mark file for user %s\n", owner_info.Name());
-				credmon_mark_creds_for_sweeping(cred_dir_krb, owner_info.Name());
+				credmon_mark_creds_for_sweeping(cred_dir_krb, owner_info.Name(), credmon_type_KRB);
 			}
 			if (cred_dir_oauth) {
-				dprintf(D_FULLDEBUG, "creating credmon OAUTH mark file for user %s\n", owner_info.Name());
-				credmon_mark_creds_for_sweeping(cred_dir_oauth, owner_info.Name());
+				credmon_mark_creds_for_sweeping(cred_dir_oauth, owner_info.Name(), credmon_type_OAUTH);
 			}
 			// Now that we've finished using Owner.Name, we can
 			// free it.  this marks the entry as unused

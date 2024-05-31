@@ -56,6 +56,7 @@
 #include "iso_dates.h"
 #include "jobsets.h"
 #include "exit.h"
+#include "credmon_interface.h"
 #include <algorithm>
 #include <math.h>
 #include <param_info.h>
@@ -7053,6 +7054,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		int old_cluster_id = -10;
 		JobQueueJob *procad = nullptr;
 		JobQueueCluster *clusterad = nullptr;
+		bool clear_mark_files = true;
 
 		int counter = 0;
 		int ad_keys_size = (int)new_ad_keys.size();
@@ -7076,6 +7078,17 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 						InitOwnerinfo(clusterad, owner, ownerinfo_is);
 					}
 					clusterad->PopulateFromAd();
+
+					if (clear_mark_files) {
+						auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+						auto_free_ptr cred_dir_oauth(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+						if (cred_dir_krb) {
+							credmon_clear_mark(cred_dir_krb, clusterad->ownerinfo->Name());
+						}
+						if (cred_dir_oauth) {
+							credmon_clear_mark(cred_dir_oauth, clusterad->ownerinfo->Name());
+						}
+					}
 
 					// add the cluster ad to any jobsets it may be in
 					if (scheduler.jobSets) {
