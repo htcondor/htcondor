@@ -1114,8 +1114,8 @@ VolumeManager::~VolumeManager() {
 void VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb) {
 }
 
-bool VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err) {
-    return true;
+int VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err) {
+    return 0;
 }
 
 bool VolumeManager::CleanupLVs() {
