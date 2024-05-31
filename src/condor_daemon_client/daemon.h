@@ -698,8 +698,11 @@ protected:
 	bool _is_configured;
 	bool m_should_try_token_request{false};
 	SecMan _sec_man;
-	std::vector<std::string> daemon_list;
-	std::vector<std::string>::iterator daemon_list_it;
+	// If our target daemon is the default collector
+	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,
+	// keep the full set of collector names here.
+	std::vector<std::string> collector_list;
+	std::vector<std::string>::iterator collector_list_it;
 
 
 
