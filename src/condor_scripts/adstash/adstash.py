@@ -376,7 +376,7 @@ def schedd_transfer_epoch_history_processor(src, schedd_ad, ckpt_queue, iface, m
     try:
         ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads)
     except Exception as e:
-        logging.error(f"Could not fetch transfer epoch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
+        logging.exception(f"Could not fetch transfer epoch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
         return
     else:
         if ads is None:
@@ -384,6 +384,6 @@ def schedd_transfer_epoch_history_processor(src, schedd_ad, ckpt_queue, iface, m
     try:
         for ckpt in src.process_ads(iface, ads, schedd_ad, metadata=metadata, **src_kwargs):
             if ckpt is not None:
-                ckpt_queue.put({f"Job Epoch {schedd_ad['Name']}": ckpt})
+                ckpt_queue.put({f"Transfer Epoch {schedd_ad['Name']}": ckpt})
     except Exception as e:
-        logging.error(f"Could not push transfer epoch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
+        logging.exception(f"Could not push transfer epoch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
