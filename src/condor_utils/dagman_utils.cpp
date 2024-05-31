@@ -158,9 +158,9 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	// -p 0 causes DAGMan to run w/o a command socket (see gittrac #4987).
 	args.AppendArg("-p");
 	args.AppendArg("0");
-	// -ld disables daemoncore creating debug log relative to $(LOG)
-	// Done so we don't override and can access $(LOG) for local daemon address files
-	args.AppendArg("-ld");
+	args.AppendArg("-f");
+	args.AppendArg("-l");
+	args.AppendArg(".");
 	//======End DaemonCore Commands======
 
 	if (options[shallow::i::DebugLevel] != DEBUG_UNSET) {

@@ -549,7 +549,7 @@ void main_init(int argc, char ** const argv) {
 		int minorVer;
 		int subMinorVer;
 	};
-	const DagVersionData MIN_CSD_VERSION = { 23, 9, 0 };
+	const DagVersionData MIN_CSD_VERSION = { 7, 1, 2 };
 
 		// Construct a string of the minimum submit file version.
 	std::string minSubmitVersionStr;
@@ -1380,7 +1380,7 @@ void main_pre_dc_init (int, char*[]) {
 		SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
 	}
 
-	// Manually setup debugging file since default log is disabled via -ld
+	// Manually setup debugging file since default log is disabled
 	dprintf_config_tool(get_mySubSystem()->getName(), nullptr, fullLogFile.c_str());
 }
 
@@ -1390,6 +1390,7 @@ void main_pre_command_sock_init() {
 
 int main(int argc, char **argv) {
 	set_mySubSystem("DAGMAN", false, SUBSYSTEM_TYPE_DAGMAN);
+	DC_Disable_Default_Log();
 
 	// Record the workingDir before invoking daemoncore (which hijacks it)
 	if ( ! condor_getcwd(dagman.workingDir)) {

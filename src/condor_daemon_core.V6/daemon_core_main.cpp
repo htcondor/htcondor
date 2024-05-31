@@ -3367,6 +3367,9 @@ bool dc_release_background_parent(int status)
 }
 #endif
 
+// Disable default log setup and ignore -l log. Must be called before dc_main()
+void DC_Disable_Default_Log() { disable_default_log = true; }
+
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from
 // the command line args of the condor_master, in which case it registers as 
