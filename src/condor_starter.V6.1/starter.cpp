@@ -1948,7 +1948,7 @@ Starter::createTempExecuteDir( void )
 		const char *thinpool = getenv("CONDOR_LVM_THINPOOL");
 		bool lvm_setup_successful = false;
 		bool thin_provision = strcasecmp(getenv("CONDOR_LVM_THIN_PROVISION"), "true") == MATCH;
-		bool do_encrypt = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
+		// bool do_encrypt = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
 
 		try {
 			m_lvm_lv_size_kb = std::stol(lv_size);
