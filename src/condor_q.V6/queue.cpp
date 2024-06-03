@@ -1478,7 +1478,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			dash_batch = true;
 			dash_batch_specified = true;
 			if (pcolon) {
-				for (const auto &opt: StringTokenIterator(",:")) {
+				for (const auto &opt: StringTokenIterator(++pcolon, ",:")) {
 					char ch = opt.front();
 					if (ch >= '0' && ch <= '9') {
 						dash_batch = atoi(opt.c_str());
