@@ -159,15 +159,67 @@ bool job_owner_must_be_UidDomain = false; // don't allow jobs to be placed by a 
 bool allow_submit_from_known_users_only = false; // if false, create UseRec for new users when they submit
 
 #ifdef USE_JOB_QUEUE_USERREC
-JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, "condor", "", true);
+JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, USERREC_NAME_IS_FULLY_QUALIFIED ? "condor@family" : "condor", "", true);
 JobQueueUserRec * get_condor_userrec() { return &CondorUserRec; }
 JobQueueUserRec * PersonalUserRec = nullptr;
 
 // examine the socket, and if the real owner of the socket is determined to be "condor"
 // return the CondorUserRec
 // If the real owner is the process owner, return a PersonalUserRec pointer
-// TODO: fix for USERREC_NAME_IS_FULLY_QUALIFIED
 JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
+	if (sock && USERREC_NAME_IS_FULLY_QUALIFIED) {
+		static bool personal_condor = ! is_root();
+		const char* real_user = sock->getFullyQualifiedUser();
+		const char* owner_part = sock->getOwner();
+		#ifdef WIN32
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
+		#endif
+		if (YourString(CondorUserRec.Name()) == real_user || YourString("condor@child") == real_user ||
+		#ifdef WIN32
+			YourStringNoCase("LOCAL_SYSTEM") == owner_part || YourStringNoCase("SYSTEM") == owner_part
+		#else
+			YourString("root") == owner_part ||
+			( ! personal_condor && is_same_user(get_condor_username(),real_user,COMPARE_DOMAIN_FULL,scheduler.uidDomain()) )
+		#endif
+			) {
+			return get_condor_userrec();
+		}
+		if ( ! PersonalUserRec && personal_condor) {
+			const char * domain = nullptr;
+			std::string fullname;
+		#ifdef WIN32
+			// convert domain/user into user@domain so we can compare it to the socket fquser
+			auto_free_ptr fqn(strdup(get_condor_username())); // this will be domain/user on windows
+			const char * name = fqn.ptr();
+			char * slash = strchr(fqn.ptr(), '/');
+			if (slash) {
+				*slash++ = 0; domain = name;
+				formatstr(fullname, "%s@%s", slash, domain);
+				name = fullname.c_str();
+			}
+		#else
+			const char * name = get_condor_username();
+			if ( ! strchr(name, '@')) {
+				formatstr(fullname, "%s@%s", name, scheduler.uidDomain());
+				name = fullname.c_str();
+			}
+		#endif
+			PersonalUserRec = new JobQueueUserRec(CONDOR_USERREC_ID, name, domain, true);
+		}
+		if (PersonalUserRec &&
+		#ifdef WIN32
+			YourString("NTSSPI") == sock->getAuthenticationMethodUsed() &&
+			(YourStringNoCase(PersonalUserRec->Name()) == real_user ||
+			 is_same_user(PersonalUserRec->Name(),real_user,opt,scheduler.uidDomain())
+			)
+		#else
+			YourString("FS") == sock->getAuthenticationMethodUsed() &&
+			YourString(PersonalUserRec->Name()) == real_user
+		#endif
+			) {
+			return PersonalUserRec;
+		}
+	} else
 	if (sock) {
 		// TODO: check for family session??
 		// TODO: will Windows ever see "root" intended to be a super-user?
@@ -211,7 +263,13 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 }
 inline const OwnerInfo * EffectiveUserRec(const Sock * sock) {
 	if ( ! sock) return &CondorUserRec;	 // commands from inside the schedd
-	const OwnerInfo * owni = scheduler.lookup_owner_const(sock->getOwner());
+	const char * owner = nullptr;
+	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+		owner = sock->getFullyQualifiedUser();
+	} else {
+		owner = sock->getOwner();
+	}
+	const OwnerInfo * owni = scheduler.lookup_owner_const(owner);
 	if (owni) return owni;
 	return real_owner_is_condor(sock);
 }
@@ -3808,16 +3866,14 @@ Scheduler::find_ownerinfo(const char * owner)
 #ifdef USE_JOB_QUEUE_USERREC
 	// we want to allow a lookup to prefix match on the domain, so we
 	// use lower_bound instead of find.  lower_bound will return the matching item
-	// for an exact match, and and earlier item previous item when owner is a prefix match
-	// so we end up comparing only a few items, usually one or two for a prefix match
+	// for an exact match, and also when owner is a domain prefix of the OwnersInfo key
+	// this includes the case when owner is name@.  because . is less than all alphanumerics
 	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		auto lb = OwnersInfo.lower_bound(owner);
-		auto ub = OwnersInfo.upper_bound(owner);
-		while (lb != ub) {
+		auto lb = OwnersInfo.lower_bound(owner); // first element >= the owner
+		if (lb != OwnersInfo.end()) {
 			if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
 				return lb->second;
 			}
-			++lb;
 		}
 	} else {
 		std::string obuf;
@@ -3942,9 +3998,37 @@ Scheduler::insert_ownerinfo(const char * owner)
 {
 	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
+
 	dprintf(D_ALWAYS, "Owner %s has no JobQueueUserRec\n", owner);
 
-	int userrec_id = nextUnusedUserRecId();
+	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+		if (YourString("condor") == owner ||
+			YourString("condor@family") == owner ||
+			YourString("condor@child") == owner ||
+			YourString("condor@parent") == owner) {
+
+			dprintf(D_ERROR | D_BACKTRACE, "Error: insert_ownerinfo(%s) is not allowed\n", owner);
+			return &CondorUserRec;
+		}
+
+	#if 0
+		// before we insert a new ownerinfo, check to see if we already have a pending record
+		#ifdef WIN32
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
+		#else
+		CompareUsersOpt opt = COMPARE_DOMAIN_DEFAULT;
+		#endif
+
+		for (auto & [id, rec] : pendingOwners) {
+			if (is_same_user(rec->Name(), owner, opt, scheduler.uidDomain())) {
+				return rec;
+			}
+		}
+	#endif
+	}
+
+	dprintf(D_ALWAYS | D_BACKTRACE, "Creating pending JobQueueUserRec for owner %s\n", owner);
+
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
 	// if it does not have a fully qualified username, then we may want to expand it to a fqdn
 	// alternatively, it may be a fqdn that we only want to use the owner part of
@@ -3978,6 +4062,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 		}
 	}
 
+	int userrec_id = nextUnusedUserRecId();
 	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id, owner, ntdomain);
 	pendingOwners[userrec_id] = uad;
 	uad->setPending();
@@ -13099,7 +13184,8 @@ Scheduler::Init()
 		// setup the global attribute name we will use as the canonical 'owner' of a job
 		// historically this was "Owner", but in 8.9 we switch to "User" so that we use
 		// the fully qualified name and can handle jobs from other domains in the schedd
-		user_is_the_new_owner = param_boolean("USER_IS_THE_NEW_OWNER", false);
+		// NOTE: that when user_is_the_new_owner is true, the code conflicts badly with USERREC_NAME_IS_FULLY_QUALIFIED
+		user_is_the_new_owner = false; // param_boolean("USER_IS_THE_NEW_OWNER", false);
 		if (user_is_the_new_owner) {
 			ownerinfo_attr_name = ATTR_USER;
 		} else {

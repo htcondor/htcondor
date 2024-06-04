@@ -425,12 +425,38 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		failobj.fail("Can't find address of schedd\n");
 		return false;
 	}
+
+#if 1
+	// TODO: fix this to use Job owner/user instead of OS user
+	// When USERREC_NAME_IS_FULLY_QUALIFIED in enabled in the schedd
+	// we must pass a fully qualified name to ConnectQ.
+	// But using the OSuser name here wrong and will only work as
+	// long as the schedd cannot separate OSuser from job Owner.
+	// The reason we can't just use the auth identity of the socket
+	// to place jobs is that in most cases it will be condor@family
+	const char * owner = get_user_loginname();
+	std::string user(owner);
+	#ifdef WIN32
+	const char * domain = get_user_domainname();
+	#else
+	// TODO: use schedd2's value of UID_DOMAIN instead.
+	auto_free_ptr uid_domain(param("UID_DOMAIN"));
+	const char * domain = uid_domain.ptr();
+	#endif
+	formatstr_cat(user, "@%s", domain);
+
+	Qmgr_connection * qmgr = open_q_as_owner(user.c_str(),schedd,failobj);
+	if( !qmgr ) {
+		return false;
+	}
+#else
 	// TODO Consider: condor_submit has to fret about storing a credential on Win32.
 
 	Qmgr_connection * qmgr = open_job(src,schedd,failobj);
 	if( !qmgr ) {
 		return false;
 	}
+#endif
 
 	// Starting in 8.5.8, schedd clients can't set X509-related attributes
 	// other than the name of the proxy file.

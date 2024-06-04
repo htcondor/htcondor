@@ -192,7 +192,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 			
 			owner="nobody";
 			domain="";
-			if (!init_user_ids(owner.c_str(), domain.c_str()))
+			if (!init_user_ids(owner, domain.c_str()))
 			{
 				dprintf(D_ALWAYS, "init_user_ids() failed!\n");
 			}

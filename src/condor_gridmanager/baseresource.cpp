@@ -214,9 +214,6 @@ bool BaseResource::Invalidate () {
     /* Set the correct types */
     SetMyTypeName ( ad, GRID_ADTYPE );
 
-	const char * attrUserName = ATTR_OWNER;
-	if (strchr(myUserName, '@')) { attrUserName = ATTR_USER; }
-
     /* We only want to invalidate this resource. Using the tuple
        (HashName,SchedName,Owner) as unique id. */
 	std::string line;
@@ -226,13 +223,13 @@ bool BaseResource::Invalidate () {
         ATTR_HASH_NAME, GetHashName (),
         ATTR_SCHEDD_NAME, ScheddObj->name (),
 		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
-		attrUserName, myUserName );
+		ATTR_OWNER, myUserName );
     ad.AssignExpr ( ATTR_REQUIREMENTS, line.c_str() );
 
 	ad.Assign( ATTR_HASH_NAME, GetHashName() );
 	ad.Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
 	ad.Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
-	ad.Assign( attrUserName, myUserName );
+	ad.Assign( ATTR_OWNER, myUserName );
 
     dprintf (
         D_FULLDEBUG,
@@ -298,15 +295,12 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 {
 	std::string buff;
 
-	const char * attrUserName = ATTR_OWNER;
-	if (strchr(myUserName, '@')) { attrUserName = ATTR_USER; }
-
 	formatstr( buff, "%s %s", ResourceType(), resourceName );
 	resource_ad->Assign( ATTR_NAME, buff.c_str() );
 	resource_ad->Assign( "HashName", GetHashName() );
 	resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddName );
     resource_ad->Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
-	resource_ad->Assign( attrUserName, myUserName );
+	resource_ad->Assign( ATTR_OWNER, myUserName );
 	if ( SelectionValue ) {
 		resource_ad->Assign( ATTR_GRIDMANAGER_SELECTION_VALUE, SelectionValue );
 	}

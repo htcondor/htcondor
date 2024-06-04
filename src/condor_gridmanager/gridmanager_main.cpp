@@ -40,7 +40,7 @@ void
 usage( char *name )
 {
 	dprintf( D_ALWAYS, 
-		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <osname@uid-domain>] [-u <user@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
 		condor_basename( name ) );
 	DC_Exit( 1 );
 }
@@ -154,7 +154,7 @@ main_shutdown_graceful()
 void
 main_pre_dc_init( int argc, char* argv[] )
 {
-	// handle -u, so that we can switch euid to the user before
+	// handle -o, so that we can switch euid to the user before
 	// daemoncore does most of its initialization work.
 	const char *os_name = nullptr;
 	int i = 1;
