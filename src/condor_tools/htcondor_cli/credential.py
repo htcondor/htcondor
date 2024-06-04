@@ -133,8 +133,58 @@ class Add(Verb):
 
 
 class Remove(Verb):
+    def _handle_delete_password(** options):
+        user = None
+        credd = htcondor.Credd()
+
+        # This can't work except for on Windows...
+        credd.delete_user_cred(htcondor.CredTypes.Password,user)
+
+
+    def _handle_delete_kerberos(** options):
+        user = None
+        credd = htcondor.Credd()
+
+        credd.delete_user_cred(htcondor.CredTypes.Kerberos, user)
+
+
+    def _handle_delete_oauth2(*, service, handle, ** options):
+        user = None
+        credd = htcondor.Credd()
+
+        credd.delete_user_service_cred(htcondor.CredTypes.OAuth, service, handle, user)
+
+
+    choices = {
+        "password":     _handle_delete_password,
+        "kerberos":     _handle_delete_kerberos,
+        "oauth2":       _handle_delete_oauth2,
+    }
+
+
+    options = {
+        "type": {
+            "args":         ("type",),
+            "metavar":      "type",
+            "choices":      choices.keys(),
+            "help":         "The credential type: password, kerberos, or oauth2",
+        },
+        "service": {
+            "args":         ("--service",),
+            "metavar":      "service",
+            "help":         "(OAuth2)  Service name, if not from the file",
+        },
+        "handle": {
+            "args":         ("--handle",),
+            "metavar":      "handle",
+            "help":         "(OAuth2)  Handle name, if not from the file",
+        },
+    }
+
+
     def __init__(self, logger, **options):
-        pass
+        htcondor.enable_debug()
+        self.choices[options['type']](** options)
 
 
 class Credential(Noun):
