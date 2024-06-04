@@ -50,7 +50,7 @@ New Features:
   Note that unit suffixes are still allowed in the submit language in 
   :subcom:`request_disk` and :subcom:`request_memory`, but not in arbitrary 
   classad expressions.
-  :jira:2455`
+  :jira:`2455`
 
 - Added an ``-edit`` option to the :tool:`condor_qusers`.  This option allows
   and administrator to add custom attributes to a User classad in the *condor_schedd*.
