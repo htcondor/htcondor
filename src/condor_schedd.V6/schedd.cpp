@@ -514,7 +514,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 	// create the session, that may because it already exists, and this
 	// is a duplicate match record that will soon be thrown out.)
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( claim_id.secSessionId()[0] == '\0' ) {
+		if( claim_id.secSessionInfo()[0] == '\0' ) {
 			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",claim_id.publicClaimId());
 		}
 		else {
