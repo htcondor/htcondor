@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import htcondor2 as htcondor
 import classad2 as classad
 
@@ -6,10 +8,10 @@ from htcondor_cli.verb import Verb
 
 
 class List(Verb):
+    # For now, this only works for the authenticated identity and the
+    # various different local daemons (depending on the command).
     def __init__(self, logger, **options):
-        # htcondor.enable_debug()
-
-        user = ''
+        user = None
         credd = htcondor.Credd()
 
         # Check for a password credential.
@@ -68,8 +70,66 @@ class List(Verb):
 
 
 class Add(Verb):
+    def _handle_add_password(*, credential_file, ** options):
+        user = None
+        credd = htcondor.Credd()
+        contents = Path(credential_file).read_text()
+
+        # This can't work except for on Windows...
+        credd.add_user_cred(htcondor.CredTypes.Password, contents, user)
+
+
+    def _handle_add_kerberos(*, credential_file, ** options):
+        user = None
+        credd = htcondor.Credd()
+        contents = Path(credential_file).read_text()
+
+        credd.add_user_cred(htcondor.CredTypes.Kerberos, contents, user)
+
+
+    def _handle_add_oauth2(*, credential_file, service, handle, ** options):
+        user = None
+        credd = htcondor.Credd()
+        contents = Path(credential_file).read_text()
+
+        credd.add_user_service_cred(htcondor.CredTypes.OAuth, contents, service, handle, user)
+
+
+    choices = {
+        "password":     _handle_add_password,
+        "kerberos":     _handle_add_kerberos,
+        "oauth2":       _handle_add_oauth2,
+    }
+
+
+    options = {
+        "type": {
+            "args":         ("type",),
+            "metavar":      "type",
+            "choices":      choices.keys(),
+            "help":         "The credential type: password, kerberos, or oauth2",
+        },
+        "credential-file": {
+            "args":         ("credential_file",),
+            "metavar":      "credential-file",
+            "help":         "Path to a file storing the credential",
+        },
+        "service": {
+            "args":         ("--service",),
+            "metavar":      "service",
+            "help":         "(OAuth2)  Service name, if not from the file",
+        },
+        "handle": {
+            "args":         ("--handle",),
+            "metavar":      "handle",
+            "help":         "(OAuth2)  Handle name, if not from the file",
+        },
+    }
+
+
     def __init__(self, logger, **options):
-        pass
+        htcondor.enable_debug()
+        self.choices[options['type']](** options)
 
 
 class Remove(Verb):
