@@ -96,25 +96,24 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 
 	int options = 0;
 	const char * doclist = NULL;
-	StringList lst(*topics);
-	for (const char * info = lst.first(); info; info = lst.next()) {
-		if (is_arg_prefix(info, "commands", 2)) {
+	for (const auto &info: StringTokenIterator(*topics)) {
+		if (is_arg_prefix(info.c_str(), "commands", 2)) {
 			options |= HELP_INFO_COMMANDS;
-		} else if (is_arg_prefix(info, "attributes", 2)) {
+		} else if (is_arg_prefix(info.c_str(), "attributes", 2)) {
 			options |= HELP_INFO_ATTRIBUTES;
-		} else if (is_arg_prefix(info, "intrinsics", 2)) {
+		} else if (is_arg_prefix(info.c_str(), "intrinsics", 2)) {
 			options |= HELP_INFO_INTRINSICS; // from condor_attributes
-		} else if (is_arg_prefix(info, "defines", 2)) {
+		} else if (is_arg_prefix(info.c_str(), "defines", 2)) {
 			options |= HELP_INFO_DEFINES | HELP_INFO_INTRINSICS;
-		} else if (is_arg_prefix(info, "table", 2)) {
+		} else if (is_arg_prefix(info.c_str(), "table", 2)) {
 			options |= HELP_INFO_TABLE;
-		} else if (is_arg_prefix(info, "unknown", 2)) {
+		} else if (is_arg_prefix(info.c_str(), "unknown", 2)) {
 			options |= HELP_INFO_UNKNOWN | HELP_INFO_TABLE;
-		} else if (is_arg_prefix(info, "job", 2)) {
+		} else if (is_arg_prefix(info.c_str(), "job", 2)) {
 			options |= HELP_INFO_JOB | HELP_INFO_TABLE;
-		} else if (is_arg_prefix(info, "submit", 2)) {
+		} else if (is_arg_prefix(info.c_str(), "submit", 2)) {
 			options |= HELP_INFO_SUBMIT | HELP_INFO_TABLE;
-		} else if (is_arg_colon_prefix(info, "doclist", &doclist, 3)) {
+		} else if (is_arg_colon_prefix(info.c_str(), "doclist", &doclist, 3)) {
 			options |= HELP_INFO_TABLE;
 			if (doclist) ++doclist;
 		}
