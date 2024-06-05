@@ -39,8 +39,6 @@
 #include "condor_regex.h"
 #include "xform_utils.h"
 
-#include "my_popen.h"
-
 #include <charconv>
 #include <string>
 #include <set>
@@ -775,61 +773,70 @@ int MacroStreamXFormSource::setUniverse(const char * uni) {
 	return universe;
 }
 
-int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSource, std::string & errmsg)
+int MacroStreamXFormSource::open(std::vector<std::string> &lines, const MACRO_SOURCE & FileSource, std::string & errmsg)
 {
 	std::string   hereTag;
 
 	// process and remove meta statements.  NAME, REQUIREMENTS, UNIVERSE and TRANSFORM
-	for (const char *line = lines.first(); line; line = lines.next()) {
-		const char * p;
+	auto line_it = lines.begin();
+	while (line_it != lines.end()) {
+		std::string line = *line_it;
+		const char * p = nullptr;
 
 		// if we are processing a here @= variable, we don't
 		// want to remove at the lines inside the variable
 		if ( ! hereTag.empty()) {
-			p = line;
+			p = line.c_str();
 			while (*p && isspace(*p)) ++p;
 			if (hereTag == p) {
 				hereTag.clear();
 			}
+			line_it++;
 			continue;
-		} else if (NULL != (p = is_herefile_statement(line))) {
+		} if (nullptr != (p = is_herefile_statement(line.c_str()))) {
 			hereTag = '@'; hereTag += p;
 			trim(hereTag);
+			line_it++;
 			continue;
 		}
 
-		if (NULL != (p = is_xform_statement(line, "name"))) {
+		if (nullptr != (p = is_xform_statement(line.c_str(), "name"))) {
 			std::string tmp(p); trim(tmp);
 			if ( ! tmp.empty()) name = tmp;
-			lines.deleteCurrent();
-		} else if (NULL != (p = is_xform_statement(line, "requirements"))) {
+			line_it = lines.erase(line_it);
+			line_it--;
+		} else if (nullptr != (p = is_xform_statement(line.c_str(), "requirements"))) {
 			int err = 0;
 			setRequirements(p, err);
 			if (err < 0) {
 				formatstr(errmsg, "invalid REQUIREMENTS : %s", p);
 				return err;
 			}
-			lines.deleteCurrent();
-		} else if (NULL != (p = is_xform_statement(line, "universe"))) {
+			line_it = lines.erase(line_it);
+			line_it--;
+		} else if (NULL != (p = is_xform_statement(line.c_str(), "universe"))) {
 			setUniverse(p);
-			lines.deleteCurrent();
-		} else if (NULL != (p = is_xform_statement(line, "transform"))) {
+			line_it = lines.erase(line_it);
+			line_it--;
+		} else if (NULL != (p = is_xform_statement(line.c_str(), "transform"))) {
 			if ( ! iterate_args) {
 				p = is_non_trivial_iterate(p);
 				if (p) { iterate_args.set(strdup(p)); iterate_init_state = 2; }
 			}
-			lines.deleteCurrent();
+			line_it = lines.erase(line_it);
+			line_it--;
 		} else {
 			// strip blank lines and comments
 			//while (*p && isspace(*line)) ++p;
 			//if ( ! *p || *p == '#') { lines.deleteCurrent(); }
 		}
+		line_it++;
 	}
 
-	file_string.set(lines.print_to_delimed_string("\n"));
+	file_string.set(strdup(join(lines,"\n").c_str()));
 	MacroStreamCharSource::open(file_string, FileSource);
 	rewind();
-	return lines.number();
+	return lines.size();
 }
 
 // like the above open, but more efficient when loading from a config value
@@ -926,7 +933,7 @@ int MacroStreamXFormSource::open(const char * statements_in, int & offset, std::
 //
 int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource, std::string & errmsg)
 {
-	StringList lines;
+	std::vector<std::string> lines;
 
 	while (true) {
 		int lineno = FileSource.line;
@@ -948,9 +955,9 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource, std::strin
 			// if we read more than a single line, comment the new linenumber
 			std::string buf = "#opt:lineno:";
 			buf += std::to_string(FileSource.line);
-			lines.append(buf.c_str());
+			lines.emplace_back(buf);
 		}
-		lines.append(line);
+		lines.emplace_back(line);
 
 		const char * is_transform = is_xform_statement(line, "transform");
 		if (is_transform) {
@@ -1984,7 +1991,7 @@ typedef std::map<std::string, std::string, classad::CaseIgnLTStr> STRING_MAP;
 #define XForm_ConvertJobRouter_Old_CE          0x00004
 
 int ConvertClassadJobRouterRouteToXForm (
-	StringList & statements,
+	std::vector<std::string> & statements,
 	std::string & name, // name from config on input, overwritten with name from route ad if it has one
 	const std::string & routing_string,
 	int & offset,
@@ -2184,26 +2191,26 @@ int ConvertClassadJobRouterRouteToXForm (
 
 	std::string buf;
 	formatstr(buf, "# autoconversion of route '%s' from old route syntax", name.c_str());
-	statements.append(buf.c_str());
+	statements.emplace_back(buf.c_str());
 	if ( ! name.empty()) {
 		if ((options & XForm_ConvertJobRouter_Old_CE) && IsValidAttrName(name.c_str())) {
 			// no need to add this to the route text
 			// formatstr(buf, "# NAME %s", name.c_str());
 		} else {
 			formatstr(buf, "NAME %s", name.c_str());
-			statements.append(buf.c_str());
+			statements.emplace_back(buf.c_str());
 		}
 	}
-	if (target_universe) { formatstr(buf, "UNIVERSE %d", target_universe); statements.append(buf.c_str()); }
+	if (target_universe) { formatstr(buf, "UNIVERSE %d", target_universe); statements.emplace_back(buf.c_str()); }
 	if (!requirements.empty()) {
 		formatstr(buf, "REQUIREMENTS %s", requirements.c_str());
-		statements.append(buf.c_str()); 
+		statements.emplace_back(buf.c_str()); 
 	}
 
-	statements.append("");
+	statements.emplace_back();
 	for (STRING_MAP::iterator it = assignments.begin(); it != assignments.end(); ++it) {
 		formatstr(buf, "%s = %s", it->first.c_str(), it->second.c_str());
-		statements.append(buf.c_str());
+		statements.emplace_back(buf);
 	}
 
 // evaluation order of route rules:
@@ -2212,52 +2219,52 @@ int ConvertClassadJobRouterRouteToXForm (
 //3. set_* 
 //4. eval_set_* 
 	if ( ! copy_cmds.empty()) {
-		statements.append("");
-		statements.append("# copy_* rules");
+		statements.emplace_back();
+		statements.emplace_back("# copy_* rules");
 		for (STRING_MAP::iterator it = copy_cmds.begin(); it != copy_cmds.end(); ++it) {
 			formatstr(buf, "COPY %s %s", it->first.c_str(), it->second.c_str());
-			statements.append(buf.c_str());
+			statements.emplace_back(buf);
 		}
 	}
 
 	if ( ! delete_cmds.empty()) {
-		statements.append("");
-		statements.append("# delete_* rules");
+		statements.emplace_back();
+		statements.emplace_back("# delete_* rules");
 		for (STRING_MAP::iterator it = delete_cmds.begin(); it != delete_cmds.end(); ++it) {
 			formatstr(buf, "DELETE %s", it->first.c_str());
-			statements.append(buf.c_str());
+			statements.emplace_back(buf.c_str());
 		}
 	}
 
 	if ( ! set_cmds.empty()) {
-		statements.append("");
-		statements.append("# set_* rules");
+		statements.emplace_back();
+		statements.emplace_back("# set_* rules");
 		for (STRING_MAP::iterator it = set_cmds.begin(); it != set_cmds.end(); ++it) {
 			formatstr(buf, "SET %s %s", it->first.c_str(), it->second.c_str());
-			statements.append(buf.c_str());
+			statements.emplace_back(buf);
 		}
 	}
 
 	if (has_def_onexithold && (options & XForm_ConvertJobRouter_Fix_EvalSet)) {
 		// emit new boilerplate on_exit_hold
 		if (has_set_minWallTime) {
-			statements.append("");
-			statements.append("# modify OnExitHold for minWallTime");
-			statements.append("if defined MY.OnExitHold");
-			statements.append("  COPY OnExitHold orig_OnExitHold");
-			statements.append("  COPY OnExitHoldSubCode orig_OnExitHoldSubCode");
-			statements.append("  COPY OnExitHoldReason orig_OnExitHoldReason");
-			statements.append("  DEFAULT orig_OnExitHoldReason strcat(\"The on_exit_hold expression (\", unparse(orig_OnExitHold), \") evaluated to TRUE.\")");
-			statements.append("  SET OnExitHoldMinWallTime ifThenElse(RemoteWallClockTime isnt undefined, RemoteWallClockTime < 60*$(minWallTime), false)");
-			statements.append("  SET OnExitHoldReasonMinWallTime strcat(\"The job's wall clock time\", int(RemoteWallClockTime/60), \"min, is is less than the minimum specified by the job ($(minWallTime))\")");
-			statements.append("  SET OnExitHold orig_OnExitHold || OnExitHoldMinWallTime");
-			statements.append("  SET OnExitHoldSubCode ifThenElse(orig_OnExitHold, $(My.orig_OnExitHoldSubCode:1), 42)");
-			statements.append("  SET OnExitHoldReason ifThenElse(orig_OnExitHold, orig_OnExitHoldReason, ifThenElse(OnExitHoldMinWallTime, OnExitHoldReasonMinWallTime, \"Job held for unknown reason.\"))");
-			statements.append("else");
-			statements.append("  SET OnExitHold ifThenElse(RemoteWallClockTime isnt undefined, RemoteWallClockTime < 60*$(minWallTime), false)");
-			statements.append("  SET OnExitHoldSubCode 42");
-			statements.append("  SET OnExitHoldReason strcat(\"The job's wall clock time\", int(RemoteWallClockTime/60), \"min, is is less than the minimum specified by the job ($(minWallTime))\")");
-			statements.append("endif");
+			statements.emplace_back("");
+			statements.emplace_back("# modify OnExitHold for minWallTime");
+			statements.emplace_back("if defined MY.OnExitHold");
+			statements.emplace_back("  COPY OnExitHold orig_OnExitHold");
+			statements.emplace_back("  COPY OnExitHoldSubCode orig_OnExitHoldSubCode");
+			statements.emplace_back("  COPY OnExitHoldReason orig_OnExitHoldReason");
+			statements.emplace_back("  DEFAULT orig_OnExitHoldReason strcat(\"The on_exit_hold expression (\", unparse(orig_OnExitHold), \") evaluated to TRUE.\")");
+			statements.emplace_back("  SET OnExitHoldMinWallTime ifThenElse(RemoteWallClockTime isnt undefined, RemoteWallClockTime < 60*$(minWallTime), false)");
+			statements.emplace_back("  SET OnExitHoldReasonMinWallTime strcat(\"The job's wall clock time\", int(RemoteWallClockTime/60), \"min, is is less than the minimum specified by the job ($(minWallTime))\")");
+			statements.emplace_back("  SET OnExitHold orig_OnExitHold || OnExitHoldMinWallTime");
+			statements.emplace_back("  SET OnExitHoldSubCode ifThenElse(orig_OnExitHold, $(My.orig_OnExitHoldSubCode:1), 42)");
+			statements.emplace_back("  SET OnExitHoldReason ifThenElse(orig_OnExitHold, orig_OnExitHoldReason, ifThenElse(OnExitHoldMinWallTime, OnExitHoldReasonMinWallTime, \"Job held for unknown reason.\"))");
+			statements.emplace_back("else");
+			statements.emplace_back("  SET OnExitHold ifThenElse(RemoteWallClockTime isnt undefined, RemoteWallClockTime < 60*$(minWallTime), false)");
+			statements.emplace_back("  SET OnExitHoldSubCode 42");
+			statements.emplace_back("  SET OnExitHoldReason strcat(\"The job's wall clock time\", int(RemoteWallClockTime/60), \"min, is is less than the minimum specified by the job ($(minWallTime))\")");
+			statements.emplace_back("endif");
 		}
 	}
 
@@ -2266,8 +2273,8 @@ int ConvertClassadJobRouterRouteToXForm (
 	for (classad::References::const_iterator it = evalset_myrefs.begin(); it != evalset_myrefs.end(); ++it) {
 		if (assignments.find(*it) != assignments.end() && set_cmds.find(*it) == set_cmds.end()) {
 			if ( ! cSpecial) {
-				statements.append("");
-				statements.append("# temporarily SET attrs because eval_set_ rules refer to them");
+				statements.emplace_back("");
+				statements.emplace_back("# temporarily SET attrs because eval_set_ rules refer to them");
 			}
 			++cSpecial;
 			if (string_assignments.find(*it) != string_assignments.end()) {
@@ -2275,26 +2282,26 @@ int ConvertClassadJobRouterRouteToXForm (
 			} else {
 				formatstr(buf, "SET %s $(%s)", it->c_str(), it->c_str());
 			}
-			statements.append(buf.c_str());
+			statements.emplace_back(buf.c_str());
 		}
 	}
 
 	if ( ! evalset_cmds.empty()) {
-		statements.append("");
-		statements.append("# eval_set_* rules");
+		statements.emplace_back("");
+		statements.emplace_back("# eval_set_* rules");
 		for (STRING_MAP::iterator it = evalset_cmds.begin(); it != evalset_cmds.end(); ++it) {
 			formatstr(buf, "EVALSET %s %s", it->first.c_str(), it->second.c_str());
-			statements.append(buf.c_str());
+			statements.emplace_back(buf.c_str());
 		}
 	}
 
 	if (cSpecial) {
-		statements.append("");
-		statements.append("# remove temporary attrs");
+		statements.emplace_back("");
+		statements.emplace_back("# remove temporary attrs");
 		for (classad::References::const_iterator it = evalset_myrefs.begin(); it != evalset_myrefs.end(); ++it) {
 			if (assignments.find(*it) != assignments.end() && set_cmds.find(*it) == set_cmds.end()) {
 				formatstr(buf, "DELETE %s", it->c_str());
-				statements.append(buf.c_str());
+				statements.emplace_back(buf.c_str());
 			}
 		}
 	}
@@ -2309,15 +2316,15 @@ int XFormLoadFromClassadJobRouterRoute (
 	const classad::ClassAd & base_route_ad,
 	int options)
 {
-	StringList statements;
+	std::vector<std::string> statements;
 	std::string name(xform.getName());
 	int rval = ConvertClassadJobRouterRouteToXForm(statements, name, routing_string, offset, base_route_ad, options);
 	if (rval == 1) {
 		std::string errmsg;
-		auto_free_ptr xform_text(statements.print_to_delimed_string("\n"));
+		std::string xform_text = join(statements,"\n");
 		int offset = 0;
 		xform.setName(name.c_str());
-		rval = xform.open(xform_text, offset, errmsg);
+		rval = xform.open(xform_text.c_str(), offset, errmsg);
 	}
 	return rval;
 }

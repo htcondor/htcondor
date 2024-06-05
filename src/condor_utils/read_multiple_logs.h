@@ -116,7 +116,7 @@ public:
 			combines the lines into "logical" lines (joins continued
 			lines).
 			@param The filename
-			@param The StringList to receive the logical lines
+			@param The vector of strings to receive the logical lines
 			@return "" if okay, error message otherwise
 		*/
 	static std::string fileNameToLogicalLines(const std::string &filename,
