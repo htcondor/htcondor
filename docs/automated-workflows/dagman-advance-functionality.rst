@@ -14,39 +14,42 @@ easily be used for multiple nodes in a DAG with variance.
 
 :index:`VARS (macro for submit description file)<single: DAGMan; VARS (macro for submit description file)>`
 
-Macro Variables for Nodes
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
 .. sidebar:: Example Diamond DAG with VARS
 
     .. code-block:: condor-dagman
+        :caption: Example Diamond DAG descriptions using VARS command
 
         # File name: diamond.dag
-        JOB  A  A.submit
-        JOB  B  B.submit
-        JOB  C  C.submit
-        JOB  D  D.submit
+        JOB  A  A.sub
+        JOB  B  B.sub
+        JOB  C  C.sub
+        JOB  D  D.sub
         VARS A state="Wisconsin"
         PARENT A CHILD B C
         PARENT B C CHILD D
 
     .. code-block:: condor-submit
+        :caption: Example job description file referencing DAG VARS
 
-        # file name: A.submit
+        # file name: A.sub
         executable = A.exe
         log        = A.log
         arguments  = "$(state)"
         queue
 
-    The above DAG file and ``A.submit`` description will result in the
+    The above DAG file and ``A.sub`` description will result in the
     job evoking the following:
 
     .. code-block:: console
+        :caption: Example job execution command for Node A using DAG VARS
 
         $ A.exe Wisconsin
 
+Macro Variables for Nodes
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
 DAGMan can specify ``key=value`` pairs of information to be used within
-a node job submit description as a referable macro via the **VARS**
+a node's associated submit description as a referable macro via the :dag-cmd:`VARS[Usage]`
 command. This information is defined on a per-node basis using the
 following syntax:
 
@@ -64,16 +67,17 @@ double quotes. To use a double quote mark within a *string*, escape
 the double quote mark with the backslash character (``\"``). To add
 the backslash character itself, use two backslashes (``\\``).
 
-Multiple ``key=value`` pairs can be specified in a single **VARS**
-line with a space in between each pair. Multiple individual **VARS**
+Multiple ``key=value`` pairs can be specified in a single :dag-cmd:`VARS`
+line with a space in between each pair. Multiple individual :dag-cmd:`VARS`
 lines can also be used for the same node.
 
-The use of **VARS** to provide information for submit description macros
+The use of :dag-cmd:`VARS` to provide information for submit description macros
 is very useful to reduce the number of submit files needed when multiple
-nodes have job submit descriptions with simple variance. The following
+nodes have the same submit description with simple variance. The following
 example shows this behavior for a DAG with jobs that only vary in filenames.
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description utilizing VARS and a shared submit description file
 
     # File: example.dag
     JOB A shared.sub
@@ -85,6 +89,7 @@ example shows this behavior for a DAG with jobs that only vary in filenames.
     VARS C filename="charlie"
 
 .. code-block:: condor-submit
+    :caption: Example shared submit description file referencing DAG VARS
 
     # Generic submit description: shared.sub
     executable   = progX
@@ -95,14 +100,12 @@ example shows this behavior for a DAG with jobs that only vary in filenames.
 
 For a DAG such as above, but with thousands of nodes, the ability to
 write and maintain a single submit description file together with a
-single DAG input file is worthwhile.
-
-Prepend or Append Variables to Node
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+single DAG description file is worthwhile.
 
 .. sidebar:: Example Conditional Submit Description
 
     .. code-block:: condor-submit
+        :caption: Example submit description file dependent on VARS prepend/append
 
          # Submit Description: conditional.sub
          executable   = progX
@@ -122,9 +125,12 @@ Prepend or Append Variables to Node
          log          = job.log
          queue
 
-The **VARS** command can take either the optional *PREPEND* or *APPEND*
-keyword to specify how the following variable information is passed to
-a node at job submission time.
+Prepend or Append Variables to Node
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :dag-cmd:`VARS` command can take either the optional *PREPEND* or *APPEND*
+keyword to specify how the following variable information is passed to the
+node's list of jobs at submission time.
 
 - *APPEND* will add the variable after the submit description is read.
   Resulting in the passed variable being added as a macro overwriting
@@ -137,11 +143,12 @@ description on the right will result in the jobs :ad-attr:`Arguments` to
 be ``A was prepended`` and the output file being named ``results-B.out``.
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description specifying VARS prepend/append
 
-     JOB A conditional.sub
+    JOB A conditional.sub
 
-     VARS A PREPEND var1="A"
-     VARS A APPEND  var2="B"
+    VARS A PREPEND var1="A"
+    VARS A APPEND  var2="B"
 
 If instead var1 used *APPEND* and var2 used *PREPEND* then :ad-attr:`Arguments`
 will become ``No variables prepended`` and the output file will be named
@@ -149,9 +156,9 @@ will become ``No variables prepended`` and the output file will be named
 
 .. note::
 
-    If neither *PREPEND* nor *APPEND* is used in the *VARS* line then the variable
-    will either be prepended or appended based on the configuration variable
-    :macro:`DAGMAN_DEFAULT_APPEND_VARS`.
+    If neither *PREPEND* nor *APPEND* is used in the :dag-cmd:`VARS` line then
+    the variable will either be prepended or appended based on the configuration
+    variable :macro:`DAGMAN_DEFAULT_APPEND_VARS`.
 
 Multiple macroname definitions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -163,6 +170,7 @@ will be used for the variables value. Given the following example,
 warning message.
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description declaring the same VARS variable multiple times
 
     # File: example.dag
     JOB ONLY sample.sub
@@ -171,7 +179,7 @@ warning message.
 
 .. code-block:: text
 
-    Warning: VAR custom_macro is already defined in job ONLY
+    Warning: VAR custom_macro is already defined in node ONLY
     Discovered at file "example.dag", line 4
 
 :index:`VARS (use of special characters)<single: DAGMan; VARS (use of special characters)>`
@@ -194,6 +202,7 @@ escaping mechanisms.
 .. sidebar:: DAG Passing VARS in Both Argument Syntaxes
 
     .. code-block:: condor-dagman
+        :caption: Example DAG description file using VARS for arguments in different syntax
 
         # New Syntax
         VARS NodeA first="Alberto Contador"
@@ -225,7 +234,7 @@ Single quotes can be used in three ways for :subcom:`arguments`:
    a single quote as part of an argument. Example provided in NodeA's
    ``fourth`` macro (see right).
 
-Provided the example DAG input file on the right, the following would
+Provided the example DAG description file on the right, the following would
 occur:
 
 #. *NodeA* using the New Syntax:
@@ -275,9 +284,6 @@ occur:
         Nairo Quintana
         Chris Froome
 
-Referencing Macros Within a Definition
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 .. sidebar:: Special DAGMan Macros
 
     DAGMan passes the following special macros at node job submission time:
@@ -287,20 +293,28 @@ Referencing Macros Within a Definition
        the node is run and increments for each subsequent execution.
     #. **DAG_STATUS**: The current status of the DAG as represented by
        :ad-attr:`DAG_Status`. Intended for the FINAL node.
+    #. **DAG_PARENT_NAMES**: Comma separated list of node names that are parents
+       of the node this job belongs.
+    #. **DAGManJobId**: The job(s) :ad-attr:`DAGManJobId`.
     #. **FAILED_COUNT**: The current number of failed nodes in the DAG.
        Intended for the FINAL node.
 
-The variables value can contain an HTCondor Job Submit Language (JSL)
+Referencing Macros Within a Definition
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The variables value can contain an HTCondor Job Description Language (JDL)
 macro expansion ``$(<macroname>)`` allowing for the DAGMan provided
 macros to utilize other existing macros like the following:
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description creating expandable macros with DAG VARS
 
     # File: example.dag
     JOB A sample.sub
     VARS A test_case="$(JOB)-$(ClusterId)"
 
 .. code-block:: condor-submit
+    :caption: Example submit description file
 
     # File: sample.sub
     executable = progX
@@ -311,7 +325,7 @@ macros to utilize other existing macros like the following:
 
     queue
 
-Given the example listed above, if the job :ad-attr:`ClusterId` is 42 then the
+Given the example listed above, if the list of jobs :ad-attr:`ClusterId` is 42 then the
 output file would be ``A-42.out``, the error file would be ``A-42.err``, and
 the log file would be ``A-42.log``.
 
@@ -321,7 +335,7 @@ Using VARS to Define ClassAd Attributes
 .. sidebar:: Old Plus Syntax
 
     The VARS macro name can utilize the old ``+`` syntax to define
-    a Classad attribute, but it is recommended to use the ``My.``
+    a ClassAd attribute, but it is recommended to use the ``My.``
     syntax.
 
     .. code-block:: condor-dagman
@@ -344,9 +358,9 @@ results in the the ``NodeA`` job ClassAd attribute
 Special Node Types
 ------------------
 
-While most DAGMan nodes are the standard JOB type that run a job and possibly
-a PRE or POST script, special nodes can be specified in the DAG submit description
-to help manage the DAG and its resources in various ways.
+While most DAGMan nodes are the standard :dag-cmd:`JOB` type that run work jobs
+and possibly a PRE or POST script, special nodes can be specified in the DAG
+submit description to help manage the DAG and its resources in various ways.
 
 :index:`FINAL node<single: DAGMan; FINAL node>`
 
@@ -361,21 +375,20 @@ FINAL Node
     in the DAG at startup time. This detection is only run when
     :macro:`DAGMAN_STARTUP_CYCLE_DETECT[and the FINAL Node]` is ``True``.
 
-The FINAL node is a single and special node that is always run at the end
+The :dag-cmd:`FINAL[Usage]` node is a single and special node that is always run at the end
 of the DAG, even if previous nodes in the DAG have failed or the DAG is
 removed via :tool:`condor_rm[and DAG Final Node]` (On Unix systems). The
-FINAL node can be used for tasks such as cleaning up intermediate files
+:dag-cmd:`FINAL` node can be used for tasks such as cleaning up intermediate files
 and checking the output of previous nodes. To declare a FINAL node simply
-use the following syntax for the **FINAL** command:
+use the following syntax for the :dag-cmd:`FINAL` command:
 
 .. code-block:: condor-dagman
 
     FINAL NodeName SubmitDescription [DIR directory] [NOOP]
 
-Like the **JOB** command the **FINAL** command produces a node with
-name *NodeName* and an associated job submit description. The *DIR*
-and *NOOP* keywords work exactly like they do detailed in the
-:ref:`DAGMan JOB` command.
+Like the :dag-cmd:`JOB` command the :dag-cmd:`FINAL` command produces a node with
+name *NodeName* and an associated submit description. The *DIR* and *NOOP* keywords
+work exactly like they do detailed in the :ref:`DAGMan JOB` command.
 
 .. warning::
 
@@ -384,28 +397,28 @@ and *NOOP* keywords work exactly like they do detailed in the
 
 .. sidebar:: FINAL Nope Restrictions
 
-    The FINAL node can not be referenced with the following DAG commands:
+    The :dag-cmd:`FINAL` node can not be referenced with the following DAG commands:
 
-    - **PARENT/CHILD**
-    - **RETRY**
-    - **ABORT-DAG-ON**
-    - **PRIORITY**
-    - **CATEGORY**
+    - :dag-cmd:`PARENT/CHILD`
+    - :dag-cmd:`RETRY`
+    - :dag-cmd:`ABORT-DAG-ON`
+    - :dag-cmd:`PRIORITY`
+    - :dag-cmd:`CATEGORY`
 
-The success or failure of the FINAL node determines the success or
+The success or failure of the :dag-cmd:`FINAL` node determines the success or
 failure of the entire DAG. This includes any status specified by any
-ABORT-DAG-ON specification that has taken effect. If some nodes of
-a DAG fail, but the FINAL node succeeds, the DAG will be considered
+:dag-cmd:`ABORT-DAG-ON` specification that has taken effect. If some nodes of
+a DAG fail, but the :dag-cmd:`FINAL` node succeeds, the DAG will be considered
 successful. Therefore, it is important to be careful about setting
-the exit status of the FINAL node.
+the exit status of the :dag-cmd:`FINAL` node.
 
-The FINAL node can utilize the special macros ``DAG_STATUS`` and/or
+The :dag-cmd:`FINAL` node can utilize the special macros ``DAG_STATUS`` and/or
 ``FAILED_COUNT`` in the job submit description or the script (PRE/POST)
-arguments to help determine the correct exit behavior of the FINAL
+arguments to help determine the correct exit behavior of the :dag-cmd:`FINAL`
 node, and subsequently the DAG as a whole.
 
 If DAGMan is removed via :tool:`condor_rm` then DAGMan will allow two
-submit attempts of the FINAL nodes job (On Unix only).
+submit attempts of the :dag-cmd:`FINAL` node (On Unix only).
 
 :index:`PROVISIONER node<single: DAGMan; PROVISIONER node>`
 
@@ -414,29 +427,29 @@ submit attempts of the FINAL nodes job (On Unix only).
 PROVISIONER Node
 ^^^^^^^^^^^^^^^^
 
-The PROVISIONER node is a single and special node that is always run at the
+The :dag-cmd:`PROVISIONER[Usage]` node is a single and special node that is always run at the
 beginning of a DAG. It can be used to provision resources (i.e. Amazon EC2
 instances, in-memory database servers) that can then be used by the remainder
-of the nodes in the workflow. The syntax used for the **PROVISIONER** command is
+of the nodes in the workflow. The syntax used for the :dag-cmd:`PROVISIONER` command is
 
 .. code-block:: condor-dagman
 
     PROVISIONER NodeName SubmitDescription
 
-When the PROVISIONER node is defined in a DAG, DAGMan will run the PROVISIONER
-node before all other nodes and wait for the PROVISIONER job to state it is ready.
-To achieve this, the PROVISIONER job must set it's job ClassAd attribute
+When the :dag-cmd:`PROVISIONER` node is defined in a DAG, DAGMan will run the :dag-cmd:`PROVISIONER`
+node before all other nodes and wait for the provisioner node's job to state it is ready.
+To achieve this, the provisioner node's job must set it's job ClassAd attribute
 :ad-attr:`ProvisionerState` to the enumerated value ``ProvisionerState::PROVISIONING_COMPLETE``
 (currently: 2). Once notified, DAGMan will begin running the other nodes.
 
-The PROVISIONER runs for a set amount of time defined in its job. It does not
-get terminated automatically at the end of a DAG workflow. The expectation
+The :dag-cmd:`PROVISIONER` node runs for a set amount of time defined in its job.
+It does not get terminated automatically at the end of a DAG workflow. The expectation
 is that it needs to explicitly de-provision any resources, such as expensive
 cloud computing instances that should not be allowed to run indefinitely.
 
 .. warning::
 
-    Currently only one PROVISIONER node may exist for a DAG. If multiple are
+    Currently only one :dag-cmd:`PROVISIONER` node may exist for a DAG. If multiple are
     defined in a DAG then an error will be logged and the DAG will fail.
 
 :index:`SERVICE node<single: DAGMan; SERVICE node>`
@@ -446,30 +459,30 @@ cloud computing instances that should not be allowed to run indefinitely.
 SERVICE Node
 ^^^^^^^^^^^^
 
-A **SERVICE** node is a special type of node that is always run at the
+A :dag-cmd:`SERVICE[Usage]` node is a special type of node that is always run at the
 beginning of a DAG. These are typically used to run tasks that need to run
 alongside a DAGMan workflow (i.e. progress monitoring) without any direct
 dependencies to the other nodes in the workflow.
 
-The syntax used for the **SERVICE** command is
+The syntax used for the :dag-cmd:`SERVICE` command is
 
 .. code-block:: condor-dagman
 
     SERVICE NodeName SubmitDescription
 
-If a DAGMan workflow finishes while there are SERVICE nodes still running,
-it will remove all running SERVICE nodes and exit.
+If a DAGMan workflow finishes while there are :dag-cmd:`SERVICE` nodes still running,
+it will remove all running :dag-cmd:`SERVICE` nodes and exit.
 
-While the SERVICE node is started before other nodes in the DAG, there is
+While the :dag-cmd:`SERVICE` node is started before other nodes in the DAG, there is
 no guarantee that it will start running before any of the other nodes.
 However, running it directly on the access point by setting :subcom:`universe`
 to ``Local`` will make it more likely to begin running prior to other nodes.
 
 .. note::
 
-    A SERVICE node runs on a **best-effort basis**. If this node fails to submit
-    correctly, this will not register as an error and the DAG workflow will
-    continue normally.
+    A :dag-cmd:`SERVICE` node runs on a **best-effort basis**. If this node fails
+    to submit correctly, this will not register as an error and the DAG workflow
+    will continue normally.
 
 :index:`node priorities<single: DAGMan; Node priorities>`
 
@@ -483,9 +496,10 @@ Node Priorities
     The following example Node C's priority of 1 will result
     in Node C being submitted and most likely running before
     Node B. If no priority was set then Node B would be run
-    first due to it be defined earlier in the DAG input file.
+    first due to it being defined earlier in the DAG description file.
 
     .. code-block:: condor-dagman
+        :caption: Example Diamond DAG description setting node priority
 
         # File name: diamond.dag
 
@@ -503,7 +517,7 @@ determine which nodes, who's PARENT dependencies have completed, will be
 submitted. Just like the :ref:`jobprio` for a job in the queue, the priority
 value is an integer (which can be negative). Where a larger numerical
 priority is better. The default priority is 0. To assign a nodes priority
-follow the syntax for the **PRIORITY** command as follows:
+follow the syntax for the :dag-cmd:`PRIORITY[Usage]` command as follows:
 
 .. code-block:: condor-dagman
 
@@ -519,7 +533,7 @@ Properties of Setting Node Priority
 - If a node priority is set, then at submission time DAGMan will set
   the :ad-attr:`JobPrio` via :subcom:`priority`. This is passed before
   processing the submit description.
-- When a Sub-DAG has an associated node PRIORITY, the Sub-DAG priority will
+- When a Sub-DAG has an associated node :dag-cmd:`PRIORITY`, the Sub-DAG priority will
   affect all priorities for nodes in the Sub-DAG. See :ref:`DAG Effective node prio`.
 - Splices cannot be assigned priorities, but individual nodes within a
   splice can.
@@ -534,7 +548,7 @@ Properties of Setting Node Priority
 
 .. note::
 
-    Node priorities do not override DAG PARENT/CHILD dependencies and
+    Node priorities do not override DAG :dag-cmd:`PARENT/CHILD` dependencies and
     are not guarantees of the relative order in which node jobs are run.
 
 .. _DAG Effective node prio:
@@ -548,6 +562,7 @@ effective node priority is calculated by adding the Sub-DAGs priority to
 each internal nodes priority. The default Sub-DAG priority is 0.
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description declaring a Sub-DAG with node priorities
 
     # File: priorities.dag
     JOB A sample.sub
@@ -557,6 +572,7 @@ each internal nodes priority. The default Sub-DAG priority is 0.
     PRIORITY B 100
 
 .. code-block:: condor-dagman
+    :caption: Example sub-DAG description using node priorites
 
     # File: lower.dag
     JOB lowA sample.sub
@@ -598,7 +614,7 @@ DAGMan and Accounting Groups
 :tool:`condor_dagman` will propagate it's :subcom:`accounting_group[and DAGMan]`
 and :subcom:`accounting_group_user[and DAGMan]` values down to all nodes within
 the DAG (including Sub-DAGs). Any explicitly set accounting group information
-within DAGMan node job submit descriptions will take precedence over the propagated
+within DAGMan node submit descriptions will take precedence over the propagated
 accounting information. This allows for easy setting of accounting information
 for all DAG nodes while giving a way for specific nodes to run with different
 accounting information.
@@ -618,25 +634,25 @@ ALL_NODES Option
     submitted in a single :tool:`condor_submit_dag` instance. Each separate
     DAG (via splice or Sub-DAG) can utilize *ALL_NODES* individually.
 
-Certain DAG input file commands take the alternative case insensitive keyword
+Certain DAG description file commands take the alternative case insensitive keyword
 *ALL_NODES* in place of a specific node name. This allows for common node
-property to be applied to all nodes (excluding service and the FINAL node).
-The following commands can utilize *ALL_NODES*:
+property to be applied to all nodes (excluding :dag-cmd:`SERVICE` and the
+:dag-cmd:`FINAL` node). The following commands can utilize *ALL_NODES*:
 
-+------------------+------------------+------------------+
-| **SCRIPT**       | **PRE_SKIP**     | **RETRY**        |
-+------------------+------------------+------------------+
-| **VARS**         | **PRIORITY**     |                  |
-+------------------+------------------+------------------+
-| **CATEGORY**     | **ABORT-DAG-ON** |                  |
-+------------------+------------------+------------------+
++-------------------------+-------------------------+-------------------------+
+| :dag-cmd:`SCRIPT`       | :dag-cmd:`PRE_SKIP`     | :dag-cmd:`RETRY`        |
++-------------------------+-------------------------+-------------------------+
+| :dag-cmd:`VARS`         | :dag-cmd:`PRIORITY`     |                         |
++-------------------------+-------------------------+-------------------------+
+| :dag-cmd:`CATEGORY`     | :dag-cmd:`ABORT-DAG-ON` |                         |
++-------------------------+-------------------------+-------------------------+
 
 When multiple commands set a DAG nodes property, the last one defined takes
 precedent overriding other earlier definitions. For example:
 
 .. sidebar:: Multi-Command Definition Node Info
 
-    Final node properties for nodes defined in DAG described
+    Applied node properties for nodes defined in DAG described
     to the left.
 
     +--------+-------------+-----------+------------------+
@@ -650,6 +666,7 @@ precedent overriding other earlier definitions. For example:
     +--------+-------------+-----------+------------------+
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description using ALL_NODES keyword
 
     # File: sample.dag
     JOB A node.sub
@@ -669,50 +686,51 @@ precedent overriding other earlier definitions. For example:
 
     RETRY A 10
 
-.. _DAG Include cmd:
-
-INCLUDE
--------
-
 .. sidebar:: Example DAG INCLUDE
 
     Provided the two following DAGs, DAGMan will produce a single
     DAGMan process containing nodes A,B, and C.
 
     .. code-block:: condor-dagman
+        :caption: Example DAG description utilizing the INCLUDE command
 
         # File: foo.dag
         JOB A A.sub
         INCLUDE bar.dag
 
     .. code-block:: condor-dagman
+        :caption: Example DAG description being included inline
 
         # File: bar.dag
         JOB B B.sub
         JOB C C.sub
 
-The **INCLUDE** command allows the contents of one DAG file to be parsed
+.. _DAG Include cmd:
+
+INCLUDE
+-------
+
+The :dag-cmd:`INCLUDE[Usage]` command allows the contents of one DAG file to be parsed
 inline as if they were physically included in the referencing DAG file. The
-syntax for *INCLUDE* is
+syntax for :dag-cmd:`INCLUDE` is
 
 .. code-block:: condor-dagman
 
     INCLUDE FileName
 
-The INCLUDE command allows for easier DAG management and ability to easily
-change the DAG without losing the older setup. For example, a DAG could
-describe all the nodes to be executed in the workflow and include a file
-the describes the PARENT/CHILD relationships. If multiple different DAG
-structure files were created then by simply changing the INCLUDE line can
-modify the entire DAG structure without manually changing each line in
-between executions.
+The :dag-cmd:`INCLUDE` command allows for easier DAG management and ability to easily
+change the DAG without losing the older setup. For example, a DAG could describe all
+the nodes to be executed in the workflow and include a file the describes the
+:dag-cmd:`PARENT/CHILD` relationships. If multiple different DAG structure files were
+created then by simply changing the :dag-cmd:`INCLUDE` line can modify the entire
+DAG structure without manually changing each line in between executions.
 
-All INCLUDE files must contain proper DAG syntax, and INCLUDEs can nested
+All :dag-cmd:`INCLUDE` files must contain proper DAG syntax. Included files can nested
 to any depth (be careful of creating a cycle).
 
 .. warning::
 
-    INCLUDE does not modify node names like splicing which will result in
+    :dag-cmd:`INCLUDE` does not modify node names like splicing which will result in
     a parse error if the same node name is used more than once.
 
 DAG Manager Job Specifications
@@ -737,14 +755,14 @@ Setting Job Ad Attributes
 
         SET_JOB_ATTR TestNumber = 17
 
-The **SET_JOB_ATTR** command sets an attribute/value pair to be set
+The :dag-cmd:`SET_JOB_ATTR[Usage]` command sets an attribute/value pair to be set
 in the DAGMan proper job's ClassAd. The syntax is:
 
 .. code-block:: condor-dagman
 
     SET_JOB_ATTR AttributeName = AttributeValue
 
-The *SET_JOB_ATTR* attribute is not propagated down to node jobs of
+The :dag-cmd:`SET_JOB_ATTR` attribute is not propagated down to node jobs of
 the DAG.
 
 The provided value can contain spaces when contained in single or
@@ -755,6 +773,7 @@ value is utilized. An attribute set in the DAG file can be overridden
 at submit time as follows:
 
 .. code-block:: console
+    :caption: Example setting DAGMan job ad attribute at submit time
 
     $ condor_submit_dag -append 'My.<attribute> = <value>'
 
@@ -765,12 +784,12 @@ at submit time as follows:
 Controlling the Job Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The **ENV** command is used to specify environment variables to set
-into the DAGMan jobs environment or get from the environment that
+The :dag-cmd:`ENV[Usage]` command is used to specify environment variables to set
+into the DAGMan job's environment or get from the environment that
 the DAGMan job was submitted from. It is important to know that the
-environment variables in the DAG manager jobs environment effect
+environment variables in the DAG manager job's environment effect
 scripts and node jobs that rely environment variables since scripts
-and node jobs are submitted from the DAGMan jobs environment. The
+and node jobs are submitted from the DAGMan job's environment. The
 syntax is:
 
 .. code-block:: condor-dagman
@@ -780,11 +799,11 @@ syntax is:
     ENV SET Key=Value;Key=Value; ...
 
 - **GET** Keyword:
-    Takes a list of environment variable names to be added to the DAGMan jobs
+    Takes a list of environment variable names to be added to the DAGMan job's
     :subcom:`getenv` command in the ``*.condor.sub`` file.
 - **SET** Keyword:
     Takes a semi-colon delimited list of **key=value** pairs of information to
-    explicitly add to the DAGMan jobs :subcom:`environment` command in the
+    explicitly add to the DAGMan job's :subcom:`environment` command in the
     ``*.condor.sub`` file.
 
     .. note::
@@ -802,18 +821,20 @@ DAG Specific Configuration
 .. sidebar:: Example Custom DAGMan Configuration
 
     .. code-block:: condor-dagman
+        :caption: Example DAG description declaring custom configuration file
 
         # File: sample.dag
         CONFIG dagman.conf
 
     .. code-block:: condor-config
+        :caption: Example custom DAGMan configuration file contents
 
         # File: dagman.conf
         DAGMAN_MAX_JOBS_IDLE = 10
 
 DAGMan allows for all :ref:`DAGMan Configuration` to be applied on a per DAG
 basis. To apply custom configuration for a DAGMan workflow simply create a
-custom configuration file to provide the the :dag-cmd:`CONFIG` command.
+custom configuration file to provide the the :dag-cmd:`CONFIG[Usage]` command.
 
 Only one configuration file is permitted per DAGMan process. If multiple DAGs
 are submitted at one time or a workflow is comprised of Splices then a fatal
@@ -837,7 +858,7 @@ later take precedence:
 #. HTCondor system configuration as set up by the AP administrator(s).
 #. Configuration options passed as special HTCondor environment variables
    ``_CONDOR_<config option>=Value``.
-#. Custom configuration provided by the **CONFIG** command or
+#. Custom configuration provided by the :dag-cmd:`CONFIG` command or
    :tool:`condor_submit_dag[custom DAG Configuration]`\ s **-config** option.
 #. :tool:`condor_submit_dag` options that control the same behavior as a
    configuration option such as :macro:`DAGMAN_MAX_JOBS_SUBMITTED` and **-maxjobs**.
@@ -855,6 +876,7 @@ Visualizing DAGs
     file named ``dag.dot``.
 
     .. code-block:: condor-dagman
+        :caption: Example DAG description declaring DOT file
 
         DOT dag.dot
 
@@ -862,19 +884,20 @@ Visualizing DAGs
     to produce a visual of the DAG.
 
     .. code-block:: console
+        :caption: Example converting produced DOT file into image
 
         $ dot -Tps dag.dot -o dag.ps
 
 To help visualize a DAG, DAGMan has the ability to create a *dot* input file
 for the AT&T Research Labs `Graphiz <https://www.graphviz.org/>`_ package to
-draw the DAG. DAGMan will produce *dot* files when the **DOT** command is declared
-with the following syntax:
+draw the DAG. DAGMan will produce *dot* files when the :dag-cmd:`DOT[Usage]`
+command is declared with the following syntax:
 
 .. code-block:: condor-dagman
 
     DOT filename [UPDATE | DONT-UPDATE] [OVERWRITE | DONT-OVERWRITE] [INCLUDE <dot-file-header>]
 
-The DOT command can take several optional parameters as follows:
+The :dag-cmd:`DOT` command can take several optional parameters as follows:
 
 - **UPDATE** This will update the dot file every time a significant update happens.
 - **DONT-UPDATE** Creates a single dot file, when the DAGMan begins executing. This
