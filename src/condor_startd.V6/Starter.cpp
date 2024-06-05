@@ -897,15 +897,15 @@ int Starter::execDCStarter(
 			formatstr(s_lv_name, "%s#%u-%u", claim->rip()->r_id_str, daemonCore->getpid(), lv_name_uniqueness);
 		} else {
 			s_lv_name = claim->rip()->r_id_str;
-		}
 
-			// Cleanup from any previously-crashed starters.
-			// TODO: do we really want to do this here?
-		CondorError err;
-		if (volman->CleanupLV(s_lv_name, err) < 0) {
-			std::string msg = err.getFullText();
-			dprintf(D_ERROR, "Last chance cleanup of LV %s failed : %s\n", s_lv_name.c_str(), msg.c_str());
-			return 0;
+				// Cleanup from any previously-crashed starters.
+				// TODO: do we really want to do this here?
+			CondorError err;
+			if (volman->CleanupLV(s_lv_name, err) < 0) {
+				std::string msg = err.getFullText();
+				dprintf(D_ERROR, "Last chance cleanup of LV %s failed : %s\n", s_lv_name.c_str(), msg.c_str());
+				return 0;
+			}
 		}
 
 		long long disk_kb = -1;
