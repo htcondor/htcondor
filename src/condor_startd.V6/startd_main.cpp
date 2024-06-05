@@ -97,6 +97,9 @@ int		startd_noclaim_shutdown = 0;
 
 int		docker_cached_image_size_interval = 0; // how often we ask docker for the size of the cache, 0 means don't
 
+bool	use_unique_lv_names = true; // LVM LV names should never be re-used
+int		lv_name_uniqueness = 0;
+
 
 char* Name = NULL;
 
@@ -556,6 +559,10 @@ init_params( int first_time)
 
 	// how often we query docker for the size of the image cache, 0 is never
 	docker_cached_image_size_interval = param_integer("DOCKER_CACHE_ADVERTISE_INTERVAL", 1200);
+
+	// these are secret, should not be in the param table
+	use_unique_lv_names = param_boolean("LVM_USE_UNIQUE_LV_NAMES", true); // LVM LV names should never be re-used
+	lv_name_uniqueness  = param_integer("LVM_FIRST_LV_ID", 1); // In case we want to set the initial value
 
 	// Older condors incorrectly saved the docker image cache file as root.  Fix it to condor
 	// for compatibility
