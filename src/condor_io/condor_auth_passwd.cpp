@@ -534,7 +534,11 @@ Condor_Auth_Passwd::fetchLogin()
 					CondorError err;
 					std::vector<std::string> authz_list;
 					int lifetime = 60;
-					username = POOL_PASSWORD_USERNAME "@";
+					if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+						username = "condor@";
+					} else {
+						username = POOL_PASSWORD_USERNAME "@";
+					}
 					std::string local_token;
 						// Note we don't log the token generation here as it is an ephemeral token
 						// used server-side to complete the secret generation process.
