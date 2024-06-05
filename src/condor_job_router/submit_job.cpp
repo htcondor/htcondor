@@ -38,6 +38,7 @@
 #include "condor_holdcodes.h"
 #include "spooled_job_files.h"
 #include "classad_helpers.h"
+#include "condor_config.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
