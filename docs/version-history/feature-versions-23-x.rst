@@ -28,6 +28,11 @@ New Features:
   IPv6 link-local addresses.
   :jira:`2453`
 
+- The identifiers ``condor`` and ``condor_pool`` are now treated
+  identically for authorization rules (i.e. ALLOW_DAEMON).
+  They are both indicators of a trusted HTCondor dameon.
+  :jira:`2486`
+
 Bugs Fixed:
 
 - None.
