@@ -318,7 +318,7 @@ void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 void mark_serial_job_running( PROC_ID *job_id );
-int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
+//int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool jobPrepNeedsThread( int cluster, int proc );
@@ -13181,6 +13181,9 @@ Scheduler::Init()
 		// secret knob.  set to FALSE to cause persistent user records to be deleted on startup
 		EnablePersistentOwnerInfo = param_boolean("PERSISTENT_USER_RECORDS", true);
 
+		// UID_DOMAIN is a restart knob for the SCHEDD
+		UidDomain = param( "UID_DOMAIN" );
+
 		// setup the global attribute name we will use as the canonical 'owner' of a job
 		// historically this was "Owner", but in 8.9 we switch to "User" so that we use
 		// the fully qualified name and can handle jobs from other domains in the schedd
@@ -13214,28 +13217,10 @@ Scheduler::Init()
 	job_owner_must_be_UidDomain = param_boolean("JOB_OWNER_MUST_BE_FROM_UID_DOMAIN", false);
 	allow_submit_from_known_users_only = param_boolean("ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY", false);
 
-		// UidDomain will always be defined, since config() will put
-		// in get_local_fqdn() if it's not defined in the file.
-		// See if the value of this changes, since if so, we've got
-		// work to do...
-	char* oldUidDomain = UidDomain;
-	UidDomain = param( "UID_DOMAIN" );
-	if( oldUidDomain ) {
-			// We had an old version, so see if we have a new value
-		if( strcmp(UidDomain,oldUidDomain) ) {
-				// They're different!  So, now we've got to go through
-				// the whole job queue and replace ATTR_USER for all
-				// the ads with a new value that's got the new
-				// UidDomain in it.  Luckily, we shouldn't have to do
-				// this very often. :)
-			dprintf( D_FULLDEBUG, "UID_DOMAIN has changed.  "
-					 "Inserting new ATTR_USER into all classads.\n" );
-			WalkJobQueue2(fixAttrUser, oldUidDomain);
-			dirtyJobQueue();
-		}
-			// we're done with the old version, so don't leak memory 
-		free( oldUidDomain );
-	}
+	// Secret knob to set the geneneric CE domain value
+	// when QmgmtSetEffectiveOwner is passed a value with this domain, the value is re-written to UID_DOMAIN
+	param(GenericCEDomain, "GENERIC_CE_DOMAIN", "users.htcondor.org");
+
 	param(AccountingDomain, "ACCOUNTING_DOMAIN");
 
 		////////////////////////////////////////////////////////////////////
@@ -15727,60 +15712,25 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	return FALSE;
 }
 
+#if 0 // TODO: this function is untested, but probably works...
 int
 fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *oldUidDomain_raw)
 {
-	const char *oldUidDomain = static_cast<char *>(oldUidDomain_raw);
-#ifdef NO_DEPRECATED_NICE_USER
-	int nice_user = 0;
-#endif
-	std::string owner;
+	YourString oldUidDomain(static_cast<char *>(oldUidDomain_raw));
 	std::string user;
-	std::string old_user;
-	std::string old_expected_user;
 
-	if( ! job->LookupString(ATTR_OWNER, owner) ) {
-			// No ATTR_OWNER!
-		return 0;
-	}
-
-#ifdef NO_DEPRECATED_NICE_USER
-		// if it's not there, nice_user will remain 0
-	job->LookupInteger( ATTR_NICE_USER, nice_user );
-
-	formatstr( user, "%s%s@%s",
-			 (nice_user) ? "nice-user." : "", owner.c_str(),
-			 scheduler.uidDomain() );
-#else
-	user = owner + "@" + scheduler.uidDomain();
-#endif
-
-	if (user_is_the_new_owner) {
-
-		// Ignore retval; LookupString will leave things empty
-		// and we handle the case below.
-		if (job->LookupString(ATTR_USER, old_user) && !old_user.empty()) {
-
-	#ifdef NO_DEPRECATED_NICE_USER
-			formatstr(old_expected_user, "%s%s@%s",
-				(nice_user) ? "nice-user." : "", owner.c_str(),
-				oldUidDomain);
-	#else
-			old_expected_user = owner + "@" + oldUidDomain;
-	#endif
-
-			// If this job's owner was not previously in our default UID_DOMAIN,
-			// we don't want to update it for the new domain
-			if (old_user != old_expected_user) {
-				return 0;
-			}
+	if (job->LookupString(ATTR_USER, user) && domain_of_user(user.c_str(),"#") == oldUidDomain) {
+		size_t at_sign = user.find_last_of('@');
+		if (at_sign != std::string::npos) {
+			user.erase(at_sign+1);
+			user += scheduler.uidDomain();
+			job->Assign(ATTR_USER, user);
 		}
 	}
 
-	job->Assign( ATTR_USER, user );
 	return 0;
 }
-
+#endif
 
 void
 fixReasonAttrs( PROC_ID job_id, JobAction action )

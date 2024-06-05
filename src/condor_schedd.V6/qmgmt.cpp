@@ -2224,6 +2224,14 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// we failed to find header ad, so create one
 		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE);
 		CreatedAd = true;
+	} else if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+		std::string oldUidDomain;
+		bad->LookupString(ATTR_UID_DOMAIN, oldUidDomain);
+		if (oldUidDomain != scheduler.uidDomain()) {
+			JobQueue->SetAttribute(HeaderKey, ATTR_UID_DOMAIN, QuoteAdStringValue(scheduler.uidDomain(), buffer));
+			// when upgrading Schedds to 23.x oldUidDomain will be empty here.
+			// TODO: set effective PRIOR_UID_DOMAIN value here?
+		}
 	}
 
 	if (CreatedAd ||
@@ -3208,6 +3216,7 @@ QmgmtSetEffectiveOwner(char const *o)
 	char const *real_owner = Q_SOCK->getRealOwner();
 
 #ifdef USE_JOB_QUEUE_USERREC
+	std::string expanded_owner; // in case we need to re-write the effective owner name
 	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
 		real_owner = Q_SOCK->getRealUser();
 		if ( ! real_owner || ! *real_owner) {
@@ -3225,6 +3234,22 @@ QmgmtSetEffectiveOwner(char const *o)
 				real_owner ? real_owner : "(null)");
 		}
 	}
+
+	// if an effective owner arrives with a magic domain name
+	// rewrite the effective user name to use the scheduler's uid domain.
+	// We do this for the benefit of the JobRouter which has no simple way
+	// to know the UID_DOMAIN of the destination schedd and the default
+	// UID_DOMAIN of the CE is the magic value "users.htcondor.org"
+	if (o && scheduler.genericCEDomain() == domain_of_user(o, ".")) { // "." is not expected to match the CE domain
+		expanded_owner = o;
+		size_t at_sign = expanded_owner.find_last_of('@');
+		if (at_sign != std::string::npos) {
+			expanded_owner.erase(at_sign+1);
+			expanded_owner += scheduler.uidDomain();
+			o = expanded_owner.c_str();
+		}
+	}
+
 #endif
 
 	if( o && real_owner && is_same_user(o,real_owner,COMPARE_DOMAIN_DEFAULT,scheduler.uidDomain()) ) {

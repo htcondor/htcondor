@@ -657,6 +657,7 @@ class Scheduler : public Service
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
 	int				aliveInterval( void ) const { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
+	const std::string & genericCEDomain() { return GenericCEDomain; }
 	std::string 		accountingDomain() const { return AccountingDomain; };
 	int				getMaxMaterializedJobsPerCluster() const { return MaxMaterializedJobsPerCluster; }
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
@@ -933,6 +934,8 @@ private:
 	char*			CondorAdministrator;
 	char*			AccountantName;
     char*			UidDomain;
+	// when QmgmtSetEffectiveOwner domain matches this domain, use UidDomain as the effective domain
+	std::string		GenericCEDomain{"users.htcondor.org"};
 	std::string		AccountingDomain;
 
 	// connection variables
