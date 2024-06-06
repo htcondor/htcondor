@@ -27,7 +27,7 @@ New Features:
 - Container universe jobs running under singularity or apptainer now
   run with a contained home directory, when HTCondor file transfer is
   enabled.  This means the jobs get the $HOME environment variable set
-  to the scratch directory, and /etc/passwd entry inside the container
+  to the scratch directory, and an /etc/passwd entry inside the container
   with the home directory entry pointed to the same place.
   :jira:`2274`
 
