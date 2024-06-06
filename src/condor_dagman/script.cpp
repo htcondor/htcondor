@@ -110,13 +110,11 @@ Script::WriteDebug(int status) {
 int
 Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 {
-	TmpDir		tmpDir;
+	TmpDir tmpDir;
 	std::string	errMsg;
-	if ( !tmpDir.Cd2TmpDir( _node->GetDirectory(), errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to node directory %s: %s\n",
-				_node->GetDirectory(), errMsg.c_str() );
-
+	if ( ! tmpDir.Cd2TmpDir(_node->GetDirectory(), errMsg)) {
+		debug_printf(DEBUG_QUIET, "Could not change to node directory %s: %s\n",
+		             _node->GetDirectory(), errMsg.c_str());
 		return 0;
 	}
 
@@ -124,8 +122,6 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 	// information about the job.  All of these values would probably
 	// be better inserted into the environment, rather than passed on
 	// the command-line... some should be in the job's env as well...
-
-
 	ArgList args;
 	std::string executable;
 	StringTokenIterator cmd(_cmd, " \t");
@@ -215,14 +211,13 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 				             (int)_output);
 				break;
 		}
-		if (! unknown) { cpArgs.std(std_fds); }
+		if ( ! unknown) { cpArgs.std(std_fds); }
 	}
 	_pid = daemonCore->CreateProcessNew(executable, args, cpArgs);
 
-	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to original directory: %s\n",
-				errMsg.c_str() );
+	if ( ! tmpDir.Cd2MainDir(errMsg)) {
+		debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n",
+		             errMsg.c_str());
 		return 0;
 	}
 

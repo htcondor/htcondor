@@ -37,7 +37,7 @@ typedef int (*extReaperFunc_t)( Job* job, int status );
 // register ScriptReaper() as a reaper function with DaemonCore
 
 class ScriptQ : public Service {
- public:
+public:
 
 	ScriptQ( Dag* dag );
 	~ScriptQ();
@@ -57,19 +57,19 @@ class ScriptQ : public Service {
 	/** Return the number of scripts actually running (does not include
 	    scripts that are queued to run but have been deferred).
 	*/
-    int NumScriptsRunning() const;
+	int NumScriptsRunning() const;
 
-    // reaper function for PRE & POST script completion
-    int ScriptReaper( int pid, int status );
+	// reaper function for PRE & POST script completion
+	int ScriptReaper( int pid, int status );
 
 	// the number of script deferrals in this queue
 	int GetScriptDeferredCount() const { return _scriptDeferredCount; };
 
- protected:
+protected:
 
 	Dag* _dag;
 
-    // number of PRE/POST scripts currently running
+	// number of PRE/POST scripts currently running
 	int _numScriptsRunning;
 
 	// map PRE/POST script pids to Script* objects
