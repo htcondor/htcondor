@@ -25,14 +25,6 @@
 
 namespace shallow = DagmanShallowOptions;
 
-ScriptQ::ScriptQ(Dag* dag) {
-	_dag = dag;
-	// register daemonCore reaper for PRE/POST/HOLD script completion
-	_scriptReaperId = daemonCore->Register_Reaper("PRE/POST/HOLD Script Reaper",
-	                                              (ReaperHandlercpp)&ScriptQ::ScriptReaper,
-	                                              "ScriptQ::ScriptReaper", this);
-}
-
 // run script if possible, otherwise insert it into the waiting queue
 bool ScriptQ::Run(Script *script) {
 	const char *prefix = script->GetScriptName();
@@ -80,7 +72,7 @@ bool ScriptQ::Run(Script *script) {
 		_numScriptsRunning++;
 		auto insertResult = _scriptPidTable.insert(std::make_pair(pid, script));
 		ASSERT(insertResult.second == true);
-		debug_printf(DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid, script->_cmd);
+		debug_printf(DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid, script->GetCmd());
 		return true;
 	}
 	// BackgroundRun() returned pid 0

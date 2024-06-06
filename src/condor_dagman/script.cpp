@@ -30,39 +30,9 @@ extern DLL_IMPORT_MAGIC char **environ;
 constexpr int STDOUT = 1;
 constexpr int STDERR = 2;
 
-//-----------------------------------------------------------------------------
-Script::Script(ScriptType type, const char* cmd, int deferStatus, time_t deferTime) :
-	_type         (type),
-	_output       (DagScriptOutput::NONE),
-	_retValScript (-1),
-	_retValJob    (-1),
-	_pid          (0),
-	_done         (FALSE),
-	_deferStatus  (deferStatus),
-	_deferTime    (deferTime),
-	_nextRunTime  (0),
-	_debugFile    (""),
-	_node         (nullptr)
-{
-	ASSERT( cmd != NULL );
-    _cmd = strdup (cmd);
-    return;
-}
+const char* Script::GetNodeName() { return _node->GetJobName(); }
 
-//-----------------------------------------------------------------------------
-Script::~Script () {
-    free(_cmd);
-    return;
-}
-
-const char *Script::GetNodeName()
-{
-    return _node->GetJobName();
-}
-
-//-----------------------------------------------------------------------------
-void
-Script::WriteDebug(int status) {
+void Script::WriteDebug(int status) {
 	if (_output != DagScriptOutput::NONE && ! _debugFile.empty()) {
 		TmpDir tmpDir;
 		std::string errMsg;
@@ -106,10 +76,7 @@ Script::WriteDebug(int status) {
 	}
 };
 
-//-----------------------------------------------------------------------------
-int
-Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
-{
+int Script::BackgroundRun(int reaperId, int dagStatus, int failedCount) {
 	TmpDir tmpDir;
 	std::string	errMsg;
 	if ( ! tmpDir.Cd2TmpDir(_node->GetDirectory(), errMsg)) {
@@ -117,6 +84,8 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 		             _node->GetDirectory(), errMsg.c_str());
 		return 0;
 	}
+
+	_executedCMD.clear(); // Clear previous recorded executed command
 
 	// Construct the command line, replacing some tokens with
 	// information about the job.  All of these values would probably
@@ -184,11 +153,10 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 
 		args.AppendArg(arg);
 
-		if ( ! _executedCMD.empty()) { _executedCMD += " "; }
-		_executedCMD += arg;
-
 		if (executable.empty()) { executable = arg; }
 	}
+
+	args.GetArgsStringForDisplay(_executedCMD);
 
 	OptionalCreateProcessArgs cpArgs;
 	cpArgs.reaperID(reaperId).wantCommandPort(FALSE).wantUDPCommandPort(FALSE)

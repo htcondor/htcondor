@@ -2353,7 +2353,7 @@ void
 Dag::WriteScriptToRescue(FILE *fp, Script *script)
 {
 	const char *type = nullptr;
-	switch(script->_type) {
+	switch(script->GetType()) {
 		case ScriptType::PRE: type = "PRE"; break;
 		case ScriptType::POST: type = "POST"; break;
 		case ScriptType::HOLD: type = "HOLD"; break;

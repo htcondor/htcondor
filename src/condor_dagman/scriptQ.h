@@ -38,7 +38,13 @@ typedef int (*extReaperFunc_t)(Job* job, int status);
 class ScriptQ : public Service {
 public:
 
-	ScriptQ(Dag* dag);
+	ScriptQ(Dag* dag) {
+		_dag = dag;
+		// register daemonCore reaper for PRE/POST/HOLD script completion
+		_scriptReaperId = daemonCore->Register_Reaper("PRE/POST/HOLD Script Reaper",
+		                                              (ReaperHandlercpp)&ScriptQ::ScriptReaper,
+		                                              "ScriptQ::ScriptReaper", this);
+	}
 
 	// Being executing a script
 	bool Run(Script *script);
