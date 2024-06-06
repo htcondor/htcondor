@@ -29,10 +29,19 @@ New Features:
   The given file is overwritten instead of appended to.
   :jira:`2425`
 
+
 - Reduced the default value for :macro:`MAX_SHADOW_EXCEPTIONS` from
   5 to 2.  Results from many pools revealed that once a shadow excepted
   running a job on a claim, retrying it usually also failed.
   :jira:`2300`
+
+- Container universe jobs running under singularity or apptainer now
+  run with a contained home directory, when HTCondor file transfer is
+  enabled.  This means the jobs get the $HOME environment variable set
+  to the scratch directory, and an /etc/passwd entry inside the container
+  with the home directory entry pointed to the same place.
+  :jira:`2274`
+
 
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
