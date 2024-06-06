@@ -29,6 +29,11 @@ New Features:
   The given file is overwritten instead of appended to.
   :jira:`2425`
 
+- Reduced the default value for :macro:`MAX_SHADOW_EXCEPTIONS` from
+  5 to 2.  Results from many pools revealed that once a shadow excepted
+  running a job on a claim, retrying it usually also failed.
+  :jira:`2300`
+
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
   :jira:`2453`

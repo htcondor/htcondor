@@ -13660,7 +13660,7 @@ Scheduler::Init()
 		delete origCronTabs;
 	}
 
-	MaxExceptions = param_integer("MAX_SHADOW_EXCEPTIONS", 5);
+	MaxExceptions = param_integer("MAX_SHADOW_EXCEPTIONS", 2);
 
 	PeriodicExprInterval.setMinInterval( param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 
