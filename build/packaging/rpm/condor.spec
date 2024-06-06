@@ -538,6 +538,19 @@ It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
 #######################
+%package ap
+Summary: Configuration for an Access Point
+Group: Applications/System
+Requires: %name = %version-%release
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
+Requires: python3-condor = %version-%release
+%endif
+
+%description ap
+This example configuration is good for installing an Access Point.
+After installation, one could join a pool or start an annex.
+
+#######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
