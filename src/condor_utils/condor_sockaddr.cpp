@@ -3,6 +3,7 @@
 #include "condor_netaddr.h"
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
+#include "condor_sockfunc.h"
 
 #include "stl_string_utils.h"
 
@@ -50,6 +51,14 @@ bool matches_withnetwork(const std::string &pattern, const char* ip_address)
 	condor_sockaddr target;
 	if (!target.from_ip_string(ip_address)) {
 		return false;
+	}
+
+	// TODO I'd like this be in IpVerify::lookup_user(), but I first want
+	// to to make IpVerify less dumb about constantly converting the same
+	// IP address strings into condor_sockaddr and condor_netaddr
+	// constantly.
+	if (strcasecmp(pattern.c_str(), "{:local_ips:}") == 0) {
+		return addr_is_local(target);
 	}
 
 	condor_netaddr netaddr;
