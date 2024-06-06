@@ -129,3 +129,29 @@ int condor_getsockname_ex(int sockfd, condor_sockaddr& addr)
 
 	return ret;
 }
+
+bool addr_is_local(const condor_sockaddr& addr)
+{
+	bool result = false;
+	condor_sockaddr tmp_addr = addr;
+		// ... but use any old ephemeral port.
+	tmp_addr.set_port(0);
+	int sock = socket(tmp_addr.get_aftype(), SOCK_DGRAM, IPPROTO_UDP);
+
+	if (sock >= 0) { // unclear how this could fail, but best to check
+
+			// invoke OS bind, not cedar bind - cedar bind does not allow us
+			// to specify the local address.
+		if (condor_bind(sock, tmp_addr) < 0) {
+			// failed to bind.  assume we failed  because the peer address is
+			// not local.
+			result = false;
+		} else {
+			// bind worked, assume address has a local interface.
+			result = true;
+		}
+		// must not forget to close the socket we just created!
+		close(sock);
+	}
+	return result;
+}
