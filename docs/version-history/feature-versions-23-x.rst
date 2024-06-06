@@ -19,7 +19,7 @@ New Features:
 
 - Linux systems running cgroup v2 will now hide GPUs that have
   not been provisioned to the slots (usually because they did not
-  request_gpus.
+  :subcom:`request_gpus`).
   :jira:`2470`
 
 - Improved the tools that write a token to a file.
