@@ -3473,7 +3473,7 @@ type=int
 tags=schedd
 
 [MAX_SHADOW_EXCEPTIONS]
-default=5
+default=2
 type=int
 tags=schedd
 
