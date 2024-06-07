@@ -648,36 +648,32 @@ CCBListeners::RegisterWithCCBServer(bool blocking)
 void
 CCBListeners::Configure(char const *addresses)
 {
-	StringList addrlist(addresses," ,");
-
 	CCBListenerList new_ccbs;
 
-	char const *address;
-	addrlist.rewind();
-	while( (address=addrlist.next()) ) {
+	for (const auto& address: StringTokenIterator(addresses)) {
 		CCBListener *listener;
 
 			// preserve existing CCBListener if there is one connected
 			// to this address
-		listener = GetCCBListener( address );
+		listener = GetCCBListener(address.c_str());
 
 		if( !listener ) {
 
-			Daemon daemon(DT_COLLECTOR,address);
+			Daemon daemon(DT_COLLECTOR, address.c_str());
 			char const *ccb_addr_str = daemon.addr();
 			char const *my_addr_str = daemonCore->publicNetworkIpAddr();
 			Sinful ccb_addr( ccb_addr_str );
 			Sinful my_addr( my_addr_str );
 
 			if( my_addr.addressPointsToMe( ccb_addr ) ) {
-				dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address);
+				dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address.c_str());
 				continue;
 			}
 			dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s does not point to my address %s\n",
 					ccb_addr_str?ccb_addr_str:"null",
 					my_addr_str?my_addr_str:"null");
 
-			listener = new CCBListener(address);
+			listener = new CCBListener(address.c_str());
 		}
 
 		new_ccbs.push_back( listener );

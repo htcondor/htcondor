@@ -78,11 +78,8 @@ GangliaD::newMetric(Metric const *copy_me) {
 static bool
 locateSharedLib(std::string libpath,std::string libname,std::string &result)
 {
-	StringList pathlist(libpath.c_str());
-	pathlist.rewind();
-	char const *path;
-	while( (path=pathlist.next()) ) {
-		Directory d(path);
+	for (const auto& path: StringTokenIterator(libpath)) {
+		Directory d(path.c_str());
 		d.Rewind();
 		char const *fname;
 		while( (fname=d.Next()) ) {

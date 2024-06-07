@@ -568,34 +568,33 @@ main( int argc, const char *argv[] )
 				DashDryRun = 1;
 				bool needs_file_arg = true;
 				if (pcolon) { 
-					StringList opts(++pcolon);
-					for (const char * opt = opts.first(); opt; opt = opts.next()) {
-						if (YourString(opt) == "hash") {
+					for (const auto& opt: StringTokenIterator(++pcolon)) {
+						if (opt == "hash") {
 							DumpSubmitHash |= 0x100 | HASHITER_NO_DEFAULTS;
-						} else if (YourString(opt) == "def") {
+						} else if (opt == "def") {
 							DumpSubmitHash &= ~HASHITER_NO_DEFAULTS;
-						} else if (YourString(opt) == "full") {
+						} else if (opt == "full") {
 							DashDryRunFullAds = 1;
-						} else if (YourString(opt) == "digest") {
+						} else if (opt == "digest") {
 							DumpSubmitDigest = 1;
-						} else if (YourString(opt) == "jobset") {
+						} else if (opt == "jobset") {
 							DumpJOBSETClassad = 1;
-						} else if (YourString(opt) == "tpl" || starts_with(opt, "template")) {
+						} else if (opt == "tpl" || opt.starts_with("template")) {
 							DumpSubmitHash |= 0x80;
-						} else if (starts_with(opt, "cluster=")) {
+						} else if (opt.starts_with("cluster=")) {
 							sim_current_condor_version = true;
-							sim_starting_cluster = atoi(strchr(opt, '=') + 1);
+							sim_starting_cluster = atoi(strchr(opt.c_str(), '=') + 1);
 							sim_starting_cluster = MAX(sim_starting_cluster - 1, 0);
-						} else if (starts_with(opt, "oauth=")) {
+						} else if (opt.starts_with("oauth=")) {
 							// log oauth request, 4 = succeed, 2 = fail
-							DashDryRun = atoi(strchr(opt,'=')+1) ? 4 : 2;
+							DashDryRun = atoi(strchr(opt.c_str(),'=')+1) ? 4 : 2;
 						} else {
-							int optval = atoi(opt);
+							int optval = atoi(opt.c_str());
 							// if the argument is -dry:<number> and number is > 0x10,
 							// then what we are actually doing triggering the unit tests.
 							if (optval > 1) {  DashDryRun = optval; needs_file_arg = optval < 0x10; }
 							else {
-								fprintf(stderr, "unknown option %s for -dry-run:<opts>\n", opt);
+								fprintf(stderr, "unknown option %s for -dry-run:<opts>\n", opt.c_str());
 								exit(1);
 							}
 						}
