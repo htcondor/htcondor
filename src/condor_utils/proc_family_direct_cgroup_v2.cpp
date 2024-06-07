@@ -642,8 +642,22 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
 	usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
 
+	stdfs::path cgroup_procs   = leaf / "cgroup.procs";
+
+	f = fopen(cgroup_procs.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
+		return false;
+	}
+	char pidstr[64]; // Far beyond max size of a pid
+	usage.num_procs = 0;
+	while (fscanf(f, "%s\n", pidstr) == 1) {
+		usage.num_procs++;
+	}
+	fclose(f);
+
 	stdfs::path memory_current = leaf / "memory.current";
-	stdfs::path memory_peak   = leaf / "memory.peak";
+	stdfs::path memory_peak    = leaf / "memory.peak";
 
 	f = fopen(memory_current.c_str(), "r");
 	if (!f) {
