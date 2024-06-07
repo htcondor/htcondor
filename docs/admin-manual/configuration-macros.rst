@@ -4671,7 +4671,7 @@ These macros control the *condor_schedd*.
     This macro controls the maximum number of times that
     *condor_shadow* processes can have a fatal error (exception) before
     the *condor_schedd* will relinquish the match associated with the
-    dying shadow. Defaults to 5.
+    dying shadow. Defaults to 2.
 
 :macro-def:`MAX_PENDING_STARTD_CONTACTS[SCHEDD]`
     An integer value that limits the number of simultaneous connection

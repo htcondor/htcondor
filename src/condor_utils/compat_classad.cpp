@@ -598,7 +598,7 @@ bool userMap_func( const char * /*name*/,
 
 	std::string output;
 	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
-		StringList items(output.c_str(), ",");
+		StringTokenIterator items(output, ",");
 
 		if (cargs == 2) {
 			// 2 arg form, return a list.
@@ -618,8 +618,14 @@ bool userMap_func( const char * /*name*/,
 			// preferred item match is case-insensitive.  If the list is empty return undefined
 			std::string pref;
 			const char * selected_item = NULL;
-			const bool any_case = true;
-			if (prefVal.IsStringValue(pref)) { selected_item = items.find(pref.c_str(), any_case); }
+			if (prefVal.IsStringValue(pref)) {
+				for (const char* item = items.first(); item; item = items.next()) {
+					if (strcasecmp(item, pref.c_str()) == 0) {
+						selected_item = item;
+						break;
+					}
+				}
+			}
 			if ( ! selected_item) { selected_item = items.first(); }
 			if (selected_item) {
 				result.SetStringValue(selected_item);

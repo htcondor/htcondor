@@ -32,7 +32,16 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a couple bugs in when credentials managed by the
+  *condor_credd* are cleaned up. In some situations, credentials would
+  be removed while jobs requiring them were queued or even running,
+  resulting in the jobs being held.
+  :jira:`2467`
+
+- Fixed a bug where resource claiming would fail if the *condor_schedd*
+  had :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` enabled and the
+  *condor_startd* had it disabled.
+  :jira:`2484`
 
 .. _lts-version-history-23012:
 

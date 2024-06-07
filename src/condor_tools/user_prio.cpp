@@ -466,8 +466,6 @@ main(int argc, const char* argv[])
             fprintf (stderr, "Error: Invalid expression: %s\n", argv[-ixNext]);
             exit(1);
         }
-        //TODO: add support for projected queries?
-        //initStringListFromAttrs(projection, true, refs, true);
         if (ixNext > i)
             i = ixNext-1;
         customFormat = true;

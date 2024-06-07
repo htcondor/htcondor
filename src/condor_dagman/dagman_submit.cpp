@@ -137,7 +137,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 	}
 
 	if (node.GetHold()) {
-		debug_printf(DEBUG_VERBOSE, "Submitting node %s job on hold\n", nodeName);
+		debug_printf(DEBUG_VERBOSE, "Submitting node %s job(s) on hold\n", nodeName);
 		vars.push_back(NodeVar(SUBMIT_KEY_Hold, "true", false));
 	}
 

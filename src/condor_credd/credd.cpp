@@ -58,15 +58,6 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 								(CommandHandlercpp)&CredDaemon::nop_handler,
 								"nop_handler", this, DAEMON );
 
-		// NOP command for testing authentication
-#if 1
-	// TODO: PRAGMA_REMIND("tj: do we need this? no-one calls it right now")
-#else
-	daemonCore->Register_Command( CREDD_REFRESH_ALL, "CREDD_REFRESH_ALL",
-								(CommandHandlercpp)&CredDaemon::refresh_all_handler,
-								"refresh_all_handler", this, DAEMON );
-#endif
-
 		// See if creds are present for all modules requested
 	daemonCore->Register_Command( CREDD_CHECK_CREDS, "CREDD_CHECK_CREDS",
 								(CommandHandlercpp)&CredDaemon::check_creds_handler,
@@ -478,43 +469,6 @@ bail:
 	if (!r->code(URL)) {
 		dprintf(D_ALWAYS, "check_creds: error sending URL to client\n");
 	}
-	r->end_of_message();
-
-	return CLOSE_STREAM;
-}
-
-int
-CredDaemon::refresh_all_handler( int, Stream* s)
-{
-	ReliSock* r = (ReliSock*)s;
-	r->decode();
-	ClassAd ad;
-	if (!getClassAd(r, ad)) {
-		dprintf(D_ALWAYS, "credd::refresh_all_handler cannot receive classad\n");
-	}
-	r->end_of_message();
-
-	// don't actually care (at the moment) what's in the ad, it's for
-	// forward/backward compatibility.
-
-	// TODO: PRAGMA_REMIND("tj: not currently used, can we ditch this?")
-#if 0 //ndef WIN32
-	// TODO: if we need this, then we need to signal ALL of the credmon's and wait for ALL of them
-	// to refresh, currently the code only refreshes one of them.
-	if(credmon_poll( NULL, true, true )) {
-		ad.Assign("result", "success");
-	} else {
-		ad.Assign("result", "failure");
-	}
-#else   // WIN32
-	// this command handler shouldn't be getting called on windows, so fail.
-	ad.Assign("result", "not-implemented");
-#endif  // WIN32
-
-	r->encode();
-	dprintf(D_SECURITY | D_FULLDEBUG, "CREDD: refresh_all sending response ad:\n");
-	dPrintAd(D_SECURITY | D_FULLDEBUG, ad);
-	putClassAd(r, ad);
 	r->end_of_message();
 
 	return CLOSE_STREAM;

@@ -21,6 +21,30 @@ New Features:
   the *condor_schedd*. This behavior can be disabled via :macro:`DAGMAN_PRODUCE_JOB_CREDENTIALS`.
   :jira:`1711`
 
+- Linux systems running cgroup v2 will now hide GPUs that have
+  not been provisioned to the slots (usually because they did not
+  :subcom:`request_gpus`).
+  :jira:`2470`
+
+- Improved the tools that write a token to a file.
+  Most noticeable is the addition of a -file option to write the token
+  to an arbitrary file.
+  Also, the -token option only takes a bare filename.
+  The given file is overwritten instead of appended to.
+  :jira:`2425`
+
+- Reduced the default value for :macro:`MAX_SHADOW_EXCEPTIONS` from
+  5 to 2.  Results from many pools revealed that once a shadow excepted
+  running a job on a claim, retrying it usually also failed.
+  :jira:`2300`
+
+- Container universe jobs running under singularity or apptainer now
+  run with a contained home directory, when HTCondor file transfer is
+  enabled.  This means the jobs get the $HOME environment variable set
+  to the scratch directory, and an /etc/passwd entry inside the container
+  with the home directory entry pointed to the same place.
+  :jira:`2274`
+
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
   :jira:`2453`
@@ -41,6 +65,13 @@ Release Notes:
 - This version includes all the updates from :ref:`lts-version-history-23012`.
 
 New Features:
+
+- The classad language no longer supports unit suffixes on numeric literals.
+  This was almost always a cause for confusion and bugs in classad expressions.
+  Note that unit suffixes are still allowed in the submit language in 
+  :subcom:`request_disk` and :subcom:`request_memory`, but not in arbitrary 
+  classad expressions.
+  :jira:`2455`
 
 - Added an ``-edit`` option to the :tool:`condor_qusers`.  This option allows
   and administrator to add custom attributes to a User classad in the *condor_schedd*.
