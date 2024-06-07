@@ -8855,6 +8855,11 @@ General
     will open a direct connection to the local *condor_schedd* to submit jobs rather
     than spawning the :tool:`condor_submit` process.
 
+:macro-def:`DAGMAN_PRODUCE_JOB_CREDENTIALS[DAGMan]`
+    A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`
+    will attempt to produce needed credentials for jobs at submit time when using
+    direct submission.
+
 :macro-def:`DAGMAN_USE_JOIN_NODES[DAGMan]`
     A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`
     will create special *join nodes* for :dag-cmd:`PARENT/CHILD` relationships between

@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- Added ability for DAGMan to produce job credentials when submitting jobs directly to
+  the *condor_schedd*. This behavior can be disabled via :macro:`DAGMAN_PRODUCE_JOB_CREDENTIALS`.
+  :jira:`1711`
+
 - Linux systems running cgroup v2 will now hide GPUs that have
   not been provisioned to the slots (usually because they did not
   :subcom:`request_gpus`).
@@ -29,7 +33,6 @@ New Features:
   The given file is overwritten instead of appended to.
   :jira:`2425`
 
-
 - Reduced the default value for :macro:`MAX_SHADOW_EXCEPTIONS` from
   5 to 2.  Results from many pools revealed that once a shadow excepted
   running a job on a claim, retrying it usually also failed.
@@ -41,7 +44,6 @@ New Features:
   to the scratch directory, and an /etc/passwd entry inside the container
   with the home directory entry pointed to the same place.
   :jira:`2274`
-
 
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
