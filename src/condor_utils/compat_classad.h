@@ -26,7 +26,6 @@
 
 using classad::ClassAd;
 
-class StringList;
 class Stream;
 
 #ifndef ATTRLIST_MAX_EXPRESSION
