@@ -630,7 +630,7 @@ bool Job::AddVar(const char *name, const char *value, const char * filename, int
 		// because we dedup the names, we can just compare the pointers here.
 		if (name == it->_name) {
 			debug_printf(DEBUG_NORMAL, "Warning: VAR \"%s\" "
-				"is already defined in job \"%s\" "
+				"is already defined in node \"%s\" "
 				"(Discovered at file \"%s\", line %d)\n",
 					name, GetJobName(), filename, lineno);
 				check_warning_strictness(DAG_STRICT_3);

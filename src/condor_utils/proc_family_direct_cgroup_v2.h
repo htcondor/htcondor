@@ -25,7 +25,7 @@
 
 // Ths class manages sets of Linux processes with cgroups.
 // This is efficient, so we do it in the caller's process,
-// not via the procd.  
+// not via the procd.
 //
 // This requires that any sub-families of this family
 // are managed by cgroups and those cgroups are children
@@ -119,6 +119,7 @@ public:
 private:
 
 	bool cgroupify_process(const std::string &cgroup_name, pid_t pid);
+	bool install_bpf_gpu_filter(const std::string &cgroup_name);
 
 	time_t start_time;
 	pid_t family_root_pid;
@@ -126,6 +127,7 @@ private:
 	uint64_t cgroup_memory_limit_low;
 	uint64_t cgroup_memory_and_swap_limit;
 	int cgroup_cpu_shares;
+	std::vector<dev_t> cgroup_hide_devices;
 };
 
 #endif

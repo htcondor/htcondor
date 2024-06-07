@@ -523,6 +523,19 @@ if(LINUX)
 		proc_family_direct_cgroup_v1.cpp
 		proc_family_direct_cgroup_v2.cpp
 	)
+
+	# EL7 doesn't have bpf cgroup device support
+	check_c_source_compiles("
+	#include <linux/bpf.h>
+	int main() {
+	    int i = BPF_CGROUP_DEVICE;
+		return i;
+	}" HAS_CGROUP_DEVICE)
+	if (HAS_CGROUP_DEVICE)
+		set_source_files_properties(proc_family_direct_cgroup_v2.cpp PROPERTIES COMPILE_DEFINITIONS HAS_CGROUP_DEVICE)
+	endif()
+
+
 endif(LINUX)
 
 if(WINDOWS)

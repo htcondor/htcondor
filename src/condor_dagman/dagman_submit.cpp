@@ -137,7 +137,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 	}
 
 	if (node.GetHold()) {
-		debug_printf(DEBUG_VERBOSE, "Submitting node %s job on hold\n", nodeName);
+		debug_printf(DEBUG_VERBOSE, "Submitting node %s job(s) on hold\n", nodeName);
 		vars.push_back(NodeVar(SUBMIT_KEY_Hold, "true", false));
 	}
 
@@ -319,9 +319,11 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 	SubmitHash* submitHash = node->GetSubmitDesc();
 
 	int rval = 0;
+	int cred_result = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	bool success = false;
 	std::string errmsg;
+	std::string URL;
 	Qmgr_connection * qmgr = NULL;
 	auto_free_ptr owner(my_username());
 	char * qline = nullptr;
@@ -393,8 +395,24 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 		}
 	}
 
+	// TODO: Make this a verfication of credentials existing and produce earlier
+	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
+	if (dm.produceJobCredentials) {
+		// Produce credentials needed for job(s)
+		cred_result = process_job_credentials(*submitHash, 0, URL, errmsg);
+		if (cred_result != 0) {
+			errmsg = "Failed to produce job credentials (" + std::to_string(cred_result) + "): " + errmsg;
+			rval = -1;
+			goto finis;
+		} else if ( ! URL.empty()) {
+			errmsg = "Failed to submit job(s) due to credential setup. Please visit: " + URL;
+			rval = -1;
+			goto finis;
+		}
+	}
+
 	submitHash->attachTransferMap(dm._protectedUrlMap);
-	submitHash->init_base_ad(time(NULL), owner);
+	submitHash->init_base_ad(time(nullptr), owner);
 
 	qmgr = ConnectQ(schedd);
 	if (qmgr) {
