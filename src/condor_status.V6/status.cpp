@@ -1622,9 +1622,9 @@ main (int argc, char *argv[])
 	if (dash_group_by) {
 		if ( ! dashAttributes.empty()) {
 			std::string attrs = JoinAttrNames(dashAttributes, ",");
-			ad_groups.setSigAttrs(attrs.c_str(), true, true);
+			ad_groups.setSigAttrs(attrs.c_str(), true);
 		} else {
-			ad_groups.setSigAttrs("Cpus Memory GPUs IOHeavy START", false, true);
+			ad_groups.setSigAttrs("Cpus Memory GPUs IOHeavy START", true);
 		}
 		ad_groups.keepAdKeys(get_ad_name_string);
 	}
