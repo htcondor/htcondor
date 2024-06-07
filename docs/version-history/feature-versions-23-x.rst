@@ -26,6 +26,10 @@ New Features:
   :subcom:`request_gpus`).
   :jira:`2470`
 
+- :tool:`condor_suspend` now currently reports number of suspends
+  processes in the event log, on Linux systems running with root.
+  :jira:`2391`
+
 - Improved the tools that write a token to a file.
   Most noticeable is the addition of a -file option to write the token
   to an arbitrary file.
