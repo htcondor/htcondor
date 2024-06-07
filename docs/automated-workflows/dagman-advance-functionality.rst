@@ -48,10 +48,9 @@ easily be used for multiple nodes in a DAG with variance.
 Macro Variables for Nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-DAGMan can specify ``key=value`` pairs of information to be used within
-a node's associated submit description as a referable macro via the :dag-cmd:`VARS[Usage]`
-command. This information is defined on a per-node basis using the
-following syntax:
+The :dag-cmd:`VARS[Usage]` DAG command in the DAG description file defines variables using
+a ``key=value`` syntax.  These variables can then be used in the job description file.
+The complete VARS lines looks like:
 
 .. code-block:: condor-dagman
 
@@ -67,9 +66,8 @@ double quotes. To use a double quote mark within a *string*, escape
 the double quote mark with the backslash character (``\"``). To add
 the backslash character itself, use two backslashes (``\\``).
 
-Multiple ``key=value`` pairs can be specified in a single :dag-cmd:`VARS`
-line with a space in between each pair. Multiple individual :dag-cmd:`VARS`
-lines can also be used for the same node.
+A single :dag-cmd:`VARS` line may contain multiple space-separated ``key=value``
+pairs. Alternatively a node can be specified in multiple :dag-cmd:`VARS` lines.
 
 The use of :dag-cmd:`VARS` to provide information for submit description macros
 is very useful to reduce the number of submit files needed when multiple
@@ -572,7 +570,7 @@ each internal nodes priority. The default Sub-DAG priority is 0.
     PRIORITY B 100
 
 .. code-block:: condor-dagman
-    :caption: Example sub-DAG description using node priorites
+    :caption: Example sub-DAG description using node priorities
 
     # File: lower.dag
     JOB lowA sample.sub
