@@ -22,6 +22,7 @@
 
 #include "script.h"
 #include "job.h"
+#include "dag.h"
 #include "tmp_dir.h"
 
 #include "condor_daemon_core.h"
@@ -44,7 +45,7 @@ void Script::WriteDebug(int status) {
 		std::string output;
 		std::string *buffer;
 
-		time_t now = time(NULL);
+		time_t now = time(nullptr);
 		formatstr(output, "*** Node=%s Type=%s Status=%d Completion=%lld Cmd='%s'\n",
 		          _node->GetJobName(), GetScriptName(), status, (long long)now,
 		          _executedCMD.c_str());
@@ -76,9 +77,25 @@ void Script::WriteDebug(int status) {
 	}
 };
 
-int Script::BackgroundRun(int reaperId, int dagStatus, int failedCount) {
+// Helper function to check if two strings match case insensitive
+static bool match(const std::string& token, const std::string& check) {
+	return strcasecmp(token.c_str(), check.c_str()) == MATCH;
+}
+
+// Helper funtion to check if the script is type PRE to prevent expanding of certain macros
+static bool checkIsPre(const ScriptType& type, const std::string& macro) {
+	if (type == ScriptType::PRE) {
+		debug_printf(DEBUG_QUIET, "Warning: %s macro should not be used as a PRE script argument!\n",
+		             macro.c_str());
+		check_warning_strictness(DAG_STRICT_1);
+		return true;
+	}
+	return false;
+}
+
+int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	TmpDir tmpDir;
-	std::string	errMsg;
+	std::string errMsg;
 	if ( ! tmpDir.Cd2TmpDir(_node->GetDirectory(), errMsg)) {
 		debug_printf(DEBUG_QUIET, "Could not change to node directory %s: %s\n",
 		             _node->GetDirectory(), errMsg.c_str());
@@ -87,6 +104,15 @@ int Script::BackgroundRun(int reaperId, int dagStatus, int failedCount) {
 
 	_executedCMD.clear(); // Clear previous recorded executed command
 
+	std::string exitCodes, exitFreq;
+	for (const auto& [code, count] : _node->JobExitCodes()) {
+		if ( ! exitCodes.empty()) { exitCodes += ","; }
+		exitCodes += std::to_string(code);
+
+		if ( ! exitFreq.empty()) { exitFreq += ","; }
+		exitFreq += std::to_string(code) + ":" + std::to_string(count);
+	}
+
 	// Construct the command line, replacing some tokens with
 	// information about the job.  All of these values would probably
 	// be better inserted into the environment, rather than passed on
@@ -94,61 +120,76 @@ int Script::BackgroundRun(int reaperId, int dagStatus, int failedCount) {
 	ArgList args;
 	std::string executable;
 	StringTokenIterator cmd(_cmd, " \t");
-	for (auto &token : cmd) {
+	for (const auto &token : cmd) {
 		std::string arg;
 
-		if (strcasecmp(token.c_str(), "$JOB") == MATCH) {
-			arg += _node->GetJobName();
+		if (match(token, "$NODE") || match(token, "$JOB")) {
+			arg = _node->GetJobName();
 
-		} else if (strcasecmp(token.c_str(), "$RETRY") == MATCH) {
-			arg += std::to_string(_node->GetRetries());
+		} else if (match(token, "$RETRY")) {
+			arg = std::to_string(_node->GetRetries());
 
-		} else if (strcasecmp(token.c_str(), "$MAX_RETRIES") == MATCH) {
-			arg += std::to_string( _node->GetRetryMax() );
+		} else if (match(token, "$MAX_RETRIES")) {
+			arg = std::to_string(_node->GetRetryMax());
 
-		} else if (strcasecmp(token.c_str(), "$JOBID") == MATCH) {
-			if (_type == ScriptType::PRE) {
-				debug_printf(DEBUG_QUIET,
-				             "Warning: $JOBID macro should not be used as a PRE script argument!\n");
-				check_warning_strictness(DAG_STRICT_1);
-				arg += token;
-			} else {
-				arg += std::to_string( _node->GetCluster() );
-				arg += '.';
-				arg += std::to_string( _node->GetProc() );
-			}
+		} else if (match(token, "$DAG_STATUS")) {
+			arg = std::to_string(dag._dagStatus);
 
-		} else if (strcasecmp(token.c_str(), "$RETURN") == MATCH) {
-			if (_type == ScriptType::PRE) {
-				debug_printf(DEBUG_QUIET,
-				             "Warning: $RETURN macro should not be used as a PRE script argument!\n");
-				check_warning_strictness(DAG_STRICT_1);
-			}
-			arg += std::to_string( _retValJob );
+		} else if (match(token, "$FAILED_COUNT")) {
+			arg = std::to_string(dag.NumNodesFailed());
 
-		} else if (strcasecmp(token.c_str(), "$PRE_SCRIPT_RETURN") == MATCH) {
-			if (_type == ScriptType::PRE) {
-				debug_printf(DEBUG_QUIET,
-				             "Warning: $PRE_SCRIPT_RETURN macro should not be used as a PRE script argument!\n");
-				check_warning_strictness(DAG_STRICT_1);
-			}
-			arg += std::to_string( _retValScript );
+		} else if (match(token, "$FUTILE_COUNT")) {
+			arg = std::to_string(dag.NumNodesFutile());
 
-		} else if (strcasecmp(token.c_str(), "$DAG_STATUS") == MATCH) {
-			arg += std::to_string( dagStatus );
+		} else if (match(token, "$DONE_COUNT")) {
+			arg = std::to_string(dag.NumNodesDone(true));
 
-		} else if (strcasecmp(token.c_str(), "$FAILED_COUNT") == MATCH) {
-			arg += std::to_string( failedCount );
+		} else if (match(token, "$QUEUED_COUNT")) {
+			arg = std::to_string(dag.NumNodesSubmitted());
 
+		} else if (match(token, "$NUM_NODES")) {
+			arg = std::to_string(dag.NumNodes(true));
+
+		} else if (match(token, "$DAG_ID")) {
+			arg = std::to_string(dag.DAGManJobId()->_cluster);
+
+		// Macros available for POST & HOLD scripts
+		} else if (match(token, "$JOBID")) {
+			std::string id = std::to_string(_node->GetCluster()) + "." + std::to_string(_node->GetProc());
+			arg = checkIsPre(_type, "$JOBID") ? token : id;
+
+		} else if (match(token, "$CLUSTERID")) {
+			arg = checkIsPre(_type, "$CLUSTERID") ? token : std::to_string(_node->GetCluster());
+
+		} else if (match(token, "$NUM_JOBS")) {
+			arg = checkIsPre(_type, "$NUM_JOBS") ? token : std::to_string(_node->NumSubmitted());
+
+		} else if (match(token, "$SUCCESS")) {
+			arg = checkIsPre(_type, "$SUCCESS") ? token : (_node->IsJobsSuccess() ? "True" : "False");
+
+		} else if (match(token, "$RETURN")) {
+			arg = checkIsPre(_type, "$RETURN") ? token : std::to_string(_retValJob);
+
+		} else if (match(token, "$EXIT_CODES")) {
+			arg = checkIsPre(_type, "$EXIT_CODES") ? token : exitCodes;
+
+		} else if (match(token, "$EXIT_FREQUENCIES")) {
+			arg = checkIsPre(_type, "$EXIT_FREQUENCIES") ? token : exitFreq;
+
+		} else if (match(token, "$PRE_SCRIPT_RETURN")) {
+			arg = checkIsPre(_type, "$PRE_SCRIPT_RETURN") ? token : std::to_string(_retValScript);
+
+		} else if (match(token, "$NUM_JOBS_ABORTED")) {
+			arg = checkIsPre(_type, "$NUM_JOBS_ABORTED") ? token : std::to_string(_node->JobsAborted());
+
+		// Non DAGMan sanctioned script macros
 		} else if (token[0] == '$') {
-			// This should probably be a fatal error when -strict is
-			// implemented.
 			debug_printf(DEBUG_QUIET, "Warning: unrecognized macro %s in node %s %s script arguments\n",
 			             token.c_str(), _node->GetJobName(), GetScriptName());
 			check_warning_strictness(DAG_STRICT_1);
-			arg += token;
+			arg = token;
 		} else {
-			arg += token;
+			arg = token;
 		}
 
 		args.AppendArg(arg);

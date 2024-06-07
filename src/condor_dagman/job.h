@@ -460,6 +460,32 @@ public:
 	// Indicates that this node is going to write a save point file.
 	bool _isSavePoint;
 
+	void SetNumSubmitted(int num) { numJobsSubmitted = num; }
+	int NumSubmitted() const { return numJobsSubmitted; }
+
+	void IncrementJobsAborted() { numJobsAborted++; }
+	int JobsAborted() const { return numJobsAborted; }
+
+	void JobFailed() { jobsSuccessful = false; }
+	bool IsJobsSuccess() const { return jobsSuccessful; }
+
+	void CountJobExitCode(int code) {
+		if (exitCodeCounts.contains(code)) {
+			exitCodeCounts[code]++;
+		} else {
+			exitCodeCounts[code] = 1;
+		}
+	}
+
+	const std::map<int, int>& JobExitCodes() const { return exitCodeCounts; }
+
+	void ResetJobInfo() {
+		numJobsSubmitted = 0;
+		numJobsAborted = 0;
+		jobsSuccessful = true;
+		exitCodeCounts.clear();
+	}
+
 private:
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to HTCondor).
@@ -468,6 +494,13 @@ private:
 	bool _hold;
 		// What type of node (job, final, provisioner)
 	NodeType _type;
+
+	int numJobsSubmitted{0}; // Number of submitted jobs
+	int numJobsAborted{0}; // Number of jobs with abort events
+
+	bool jobsSuccessful{true}; // Was list of jobs successful
+
+	std::map<int, int> exitCodeCounts; // Exit Code : Number of jobs that returned code
 public:
 
 	struct NodeVar {

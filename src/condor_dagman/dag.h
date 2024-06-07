@@ -186,7 +186,7 @@ public:
 
 	bool GenerateSubdagSubmits(void) const { return _generateSubdagSubmits; }
 
-	const CondorID* DAGManJobId(void) { return _DAGManJobId; } // Get DAGMan job ID
+	const CondorID* DAGManJobId(void) const { return _DAGManJobId; } // Get DAGMan job ID
 	std::string DefaultNodeLog(void) { return _defaultNodeLog.string(); }
 
 	inline bool HasFinalNode() const { return _final_job != nullptr; }
@@ -200,12 +200,12 @@ public:
 
 	int NumNodes(bool includeFinal) const;
 	int NumNodesDone(bool includeFinal) const;
-	inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
+	inline int NumNodesSubmitted() const { return _numNodesSubmitted; }
 	inline int NumNodesFailed() const { return _numNodesFailed; }
 	inline int NumNodesFutile() const { return _numNodesFutile; }
 	inline int NumNodesReady() const { return _readyQ->size() - NumReadyServiceNodes(); }
 	inline int NumNodesUnready(bool includeFinal) const {
-		return (NumNodes(includeFinal) - (NumNodesDone(includeFinal) + PreRunNodeCount() + NumJobsSubmitted() +
+		return (NumNodes(includeFinal) - (NumNodesDone(includeFinal) + PreRunNodeCount() + NumNodesSubmitted() +
 		        PostRunNodeCount() + NumNodesReady() + NumNodesFailed() + NumNodesFutile()));
 	}
 
@@ -349,7 +349,7 @@ private:
 	void ProcessFailedSubmit(Job *node, int max_submit_attempts); // Post process of failed submit of node jobs
 
 	void DecrementProcCount(Job *node);
-	void UpdateJobCounts(Job *node, int change);
+	void UpdateNodeCounts(Job *node, int change);
 
 	bool StartNode(Job *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
 	void RestartNode(Job *node, bool recovery); // Restart a failed node w/ retries
@@ -469,7 +469,7 @@ private:
 	int _numNodesDone{0}; // Number of nodes that have completed execution
 	int _numNodesFailed{0}; // Number of nodes that have failed (list of jobs/PRE/POST failed)
 	int _numNodesFutile{0}; // Number of nodes that can't run due to ancestor failing
-	int _numJobsSubmitted{0}; // Number of batch system jobs currently submitted
+	int _numNodesSubmitted{0}; // Number of batch system jobs currently submitted
 	int _maxJobHolds{0}; // Maximum times a job can go on hold before being declared Faile (0=infinite)
 
 	int _totalJobsSubmitted{0}; // Total number of batch system jobs submitted

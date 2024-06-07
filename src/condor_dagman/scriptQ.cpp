@@ -56,7 +56,7 @@ bool ScriptQ::Run(Script *script) {
 	}
 	if (maxScripts != 0 && _numScriptsRunning >= maxScripts) {
 		// max scripts already running
-		debug_printf(DEBUG_DEBUG_1, "Max %s scripts (%d) already running; deferring %s script of Job %s\n",
+		debug_printf(DEBUG_DEBUG_1, "Max %s scripts (%d) already running; deferring %s script of node %s\n",
 		             prefix, maxScripts, prefix, script->GetNodeName());
 		deferScript = true;
 	}
@@ -68,7 +68,7 @@ bool ScriptQ::Run(Script *script) {
 
 	debug_printf(DEBUG_NORMAL, "Running %s script of Node %s...\n", prefix, script->GetNodeName());
 	_dag->GetJobstateLog().WriteScriptStarted(script->GetNode(), script->_type);
-	if (int pid = script->BackgroundRun(_scriptReaperId, _dag->_dagStatus, _dag->NumNodesFailed())) {
+	if (int pid = script->BackgroundRun(*_dag, _scriptReaperId)) {
 		_numScriptsRunning++;
 		auto insertResult = _scriptPidTable.insert(std::make_pair(pid, script));
 		ASSERT(insertResult.second == true);

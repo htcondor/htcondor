@@ -390,8 +390,8 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 			}
 		}
 
-		debug_printf(DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
-		             dagman.dag->NumJobsSubmitted() );
+		debug_printf(DEBUG_DEBUG_1, "We have %d running nodes to remove\n",
+		             dagman.dag->NumNodesSubmitted());
 		// We just go ahead and do a condor_rm here even if we don't
 		// think we have any jobs running, because if we're aborting
 		// because of DAGMAN_PROHIBIT_MULTI_JOBS getting triggered,
@@ -1115,7 +1115,7 @@ void print_status(bool forceScheddUpdate) {
 	int total = dagman.dag->NumNodes( true );
 	int done = dagman.dag->NumNodesDone( true );
 	int pre = dagman.dag->PreRunNodeCount();
-	int submitted = dagman.dag->NumJobsSubmitted();
+	int submitted = dagman.dag->NumNodesSubmitted();
 	int post = dagman.dag->PostRunNodeCount();
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
@@ -1231,7 +1231,7 @@ void condor_event_timer (int /* tid */) {
 	if (prevJobsDone != dagman.dag->NumNodesDone(true)
 		|| prevJobs != dagman.dag->NumNodes(true)
 		|| prevJobsFailed != dagman.dag->NumNodesFailed()
-		|| prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
+		|| prevJobsSubmitted != dagman.dag->NumNodesSubmitted()
 		|| prevJobsReady != dagman.dag->NumNodesReady()
 		|| prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
 		|| prevJobsHeld != currJobsHeld
@@ -1242,7 +1242,7 @@ void condor_event_timer (int /* tid */) {
 		prevJobsDone = dagman.dag->NumNodesDone(true);
 		prevJobs = dagman.dag->NumNodes(true);
 		prevJobsFailed = dagman.dag->NumNodesFailed();
-		prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
+		prevJobsSubmitted = dagman.dag->NumNodesSubmitted();
 		prevJobsReady = dagman.dag->NumNodesReady();
 		prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
 		prevJobsHeld = currJobsHeld;
@@ -1267,7 +1267,7 @@ void condor_event_timer (int /* tid */) {
 
 	// If DAG is complete, hurray, and exit.
 	if (dagman.dag->DoneSuccess(true)) {
-		ASSERT(dagman.dag->NumJobsSubmitted() == 0);
+		ASSERT(dagman.dag->NumNodesSubmitted() == 0);
 		dagman.dag->RemoveServiceNodes();
 		dagman.dag->CheckAllJobs();
 		debug_printf(DEBUG_NORMAL, "All jobs Completed!\n");
@@ -1296,7 +1296,7 @@ void condor_event_timer (int /* tid */) {
 		// Replace with a world view check to hopefully exit with above paths
 		debug_printf(DEBUG_QUIET,
 		             "ERROR: DAGMan FINAL node has terminated but DAGMan thinks %d job(s) are still running.\n",
-		             dagman.dag->NumJobsSubmitted());
+		             dagman.dag->NumNodesSubmitted());
 		main_shutdown_rescue(EXIT_ABORT, dagman.dag->_dagStatus);
 		return;
 	}
@@ -1313,7 +1313,7 @@ void condor_event_timer (int /* tid */) {
 	// that completed; on the other hand, we don't care about waiting
 	// for PRE scripts because they'll be re-run when the rescue
 	// DAG is run anyhow).
-	if (dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
+	if (dagman.dag->IsHalted() && dagman.dag->NumNodesSubmitted() == 0 &&
 	    dagman.dag->PostRunNodeCount() == 0 && !dagman.dag->FinalNodeRun())
 	{
 		// Note:  main_shutdown_rescue() will run the final node

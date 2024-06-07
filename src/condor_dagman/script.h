@@ -40,6 +40,7 @@ enum class DagScriptOutput {
 };
 
 class Job;
+class Dag;
 
 class Script {
 public:
@@ -52,7 +53,7 @@ public:
 		_deferTime = deferTime;
 	}
 
-	int BackgroundRun(int reaperId, int dagStatus, int failedCount);
+	int BackgroundRun(const Dag& dag, int reaperId);
 
 	void WriteDebug(int status);
 	inline void SetDebug(std::string& file, DagScriptOutput type) { _debugFile = file; _output = type; }
