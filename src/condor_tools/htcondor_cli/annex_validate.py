@@ -330,6 +330,27 @@ SYSTEM_TABLE = {
     }
     ),
 
+    "spark": System( **{
+        "pretty_name":      "Spark",
+        "host_name":        "hpclogin3.chtc.wisc.edu",
+        "default_queue":    "shared",
+        "batch_system":     "SLURM",
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
+        "allocation_reqd":  False,
+
+        "queues": {
+            "shared": {
+                "max_duration":         24 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,             # or 128
+                "ram_per_node":         512,            # "max 64 per job"
+                "max_nodes_per_job":    4,              # "max 320 cores/job"
+            },
+        },
+    }
+    ),
+
     "stampede2": System( **{
         "pretty_name":      "Stampede 2",
         "host_name":        "stampede2.tacc.utexas.edu",

@@ -1,0 +1,10 @@
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/current/condor-x86_64_AlmaLinux8-stripped.tar.gz
+
+SCRATCH=/scratch/$USER
+
+CONFIG_FRAGMENT() {
+    : # This function intentionally left defined but blank.
+}
+SHELL_FRAGMENT() {
+    : # This function intentionally left defined but blank.
+}
