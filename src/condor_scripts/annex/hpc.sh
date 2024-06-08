@@ -360,7 +360,7 @@ JOB_EXECUTION_TRANSFORM_NAMES = siffile
 JOB_EXECUTION_TRANSFORM_siffile @=end
 if defined MY.ContainerImage
     EVALMACRO FOO=TransferContainer ?: true
-    if $(FOO)
+    if \$(FOO)
         EVALSET ContainerImage strcat(\"${SIF_DIR}/\", MY.ContainerImage)
         SET TransferContainer false
     endif
