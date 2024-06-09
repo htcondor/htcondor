@@ -72,7 +72,7 @@ class Schedd():
 
     def __init__(self, location : classad.ClassAd = None):
         '''
-        :param location:  A :class:`~classad.ClassAd` specifying a remote
+        :param location:  A :class:`classad2.ClassAd` specifying a remote
             *condor_schedd* daemon, as returned by :meth:`Collector.locate`.
             If `None`, the client will connect to the local *condor_schedd*.
         '''
@@ -137,17 +137,17 @@ class Schedd():
         reason : str = None,
     ) -> classad.ClassAd:
         """
-        Change the status of job(s) in the *condor_schedd* daemon.   The
-        return value is :class:`classad.ClassAd` describing the number of
-        jobs changed.
+        Change the status of job(s) in the *condor_schedd* daemon.
 
         :param action:  The action to perform.
         :param job_spec: Which job(s) to act on.  Either a :class:`str`
              of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad.ExprTree` constraint, or
+             strings, or a :class:`classad2.ExprTree` constraint, or
              the string form of such a constraint.
         :param reason:  A free-form justification.  Defaults to
             "Python-initiated action".
+        :return:  A ClassAd describing the number of jobs changed.  This
+                  ClassAd is currently undocumented.
         """
         if not isinstance(action, JobAction):
             raise TypeError("action must be a JobAction")
@@ -195,7 +195,7 @@ class Schedd():
 
         :param job_spec: Which job(s) to edit.  Either a :class:`str`
              of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad.ExprTree` constraint, or
+             strings, or a :class:`classad2.ExprTree` constraint, or
              the string form of such a constraint.
         :param attr:  Which attribute to change.
         :param value:  The new value for the attribute.
@@ -488,7 +488,7 @@ class Schedd():
 
         :param job_spec: Which job(s) to export.  Either a :class:`str`
              of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad.ExprTree` constraint, or
+             strings, or a :class:`classad2.ExprTree` constraint, or
              the string form of such a constraint.
         """
         result = job_spec_hack(self._addr, job_spec,
@@ -522,7 +522,7 @@ class Schedd():
 
         :param job_spec: Which job(s) to export.  Either a :class:`str`
              of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad.ExprTree` constraint, or
+             strings, or a :class:`classad2.ExprTree` constraint, or
              the string form of such a constraint.
         :param export_dir:  Write the exported job(s) into this directory.
         :param new_spool_dir:  The IWD of the export job(s).
@@ -558,7 +558,7 @@ class Schedd():
 
         :param job_spec: Which job(s) to unexport.  Either a :class:`str`
              of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad.ExprTree` constraint, or
+             strings, or a :class:`classad2.ExprTree` constraint, or
              the string form of such a constraint.
         :return:  A ClassAd containing information about the unexport operation.
             This type of ClassAd is currently undocumented.
