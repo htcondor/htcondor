@@ -4178,14 +4178,9 @@ Dag::RecordInitialAndTerminalNodes(void)
 OwnedMaterials*
 Dag::RelinquishNodeOwnership(void)
 {
-	std::vector<Job*> *nodes = new std::vector<Job*>();
-
 	// 1. Copy the jobs
-	auto it = _jobs.begin();
-	while (it != _jobs.end()) {
-		nodes->push_back(*it);
-		it = _jobs.erase(it);
-	}
+	auto *nodes = new std::vector<Job*>(_jobs.begin(),_jobs.end());
+	_jobs.clear();
 
 	// shove it into a packet and give it back
 	return new OwnedMaterials(nodes, &_catThrottles, _reject, _firstRejectLoc);
