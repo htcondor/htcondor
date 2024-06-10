@@ -894,7 +894,7 @@ int Starter::execDCStarter(
 		// unique LV names is r_id_str + startd_pid + uniqueness_value
 		if (use_unique_lv_names) {
 			++lv_name_uniqueness;
-			formatstr(s_lv_name, "%s#%u-%u", claim->rip()->r_id_str, daemonCore->getpid(), lv_name_uniqueness);
+			formatstr(s_lv_name, "%s+%u-%u", claim->rip()->r_id_str, daemonCore->getpid(), lv_name_uniqueness);
 		} else {
 			s_lv_name = claim->rip()->r_id_str;
 
