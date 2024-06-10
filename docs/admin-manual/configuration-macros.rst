@@ -3506,7 +3506,7 @@ section.
     configuration macro :macro:`DETECTED_MEMORY`.
 
 :macro-def:`RESERVED_MEMORY[STARTD]`
-    How much memory would you like reserved from HTCondor? By default,
+    How much memory (in MB) would you like reserved from HTCondor? By default,
     HTCondor considers all the physical memory of your machine as
     available to be used by HTCondor jobs. If :macro:`RESERVED_MEMORY` is
     defined, HTCondor subtracts it from the amount of memory it
