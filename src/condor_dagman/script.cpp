@@ -77,11 +77,6 @@ void Script::WriteDebug(int status) {
 	}
 };
 
-// Helper function to check if two strings match case insensitive
-static bool match(const std::string& token, const std::string& check) {
-	return strcasecmp(token.c_str(), check.c_str()) == MATCH;
-}
-
 // Helper funtion to check if the script is type PRE to prevent expanding of certain macros
 static bool checkIsPre(const ScriptType& type, const std::string& macro) {
 	if (type == ScriptType::PRE) {
@@ -122,64 +117,65 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	StringTokenIterator cmd(_cmd, " \t");
 	for (const auto &token : cmd) {
 		std::string arg;
+		istring_view cmp_arg(token.c_str());
 
-		if (match(token, "$NODE") || match(token, "$JOB")) {
+		if (cmp_arg == "$NODE" || cmp_arg == "$JOB") {
 			arg = _node->GetJobName();
 
-		} else if (match(token, "$RETRY")) {
+		} else if (cmp_arg == "$RETRY") {
 			arg = std::to_string(_node->GetRetries());
 
-		} else if (match(token, "$MAX_RETRIES")) {
+		} else if (cmp_arg == "$MAX_RETRIES") {
 			arg = std::to_string(_node->GetRetryMax());
 
-		} else if (match(token, "$DAG_STATUS")) {
+		} else if (cmp_arg == "$DAG_STATUS") {
 			arg = std::to_string(dag._dagStatus);
 
-		} else if (match(token, "$FAILED_COUNT")) {
+		} else if (cmp_arg == "$FAILED_COUNT") {
 			arg = std::to_string(dag.NumNodesFailed());
 
-		} else if (match(token, "$FUTILE_COUNT")) {
+		} else if (cmp_arg == "$FUTILE_COUNT") {
 			arg = std::to_string(dag.NumNodesFutile());
 
-		} else if (match(token, "$DONE_COUNT")) {
+		} else if (cmp_arg == "$DONE_COUNT") {
 			arg = std::to_string(dag.NumNodesDone(true));
 
-		} else if (match(token, "$QUEUED_COUNT")) {
+		} else if (cmp_arg == "$QUEUED_COUNT") {
 			arg = std::to_string(dag.NumNodesSubmitted());
 
-		} else if (match(token, "$NUM_NODES")) {
+		} else if (cmp_arg == "$NUM_NODES") {
 			arg = std::to_string(dag.NumNodes(true));
 
-		} else if (match(token, "$DAG_ID")) {
+		} else if (cmp_arg == "$DAG_ID") {
 			arg = std::to_string(dag.DAGManJobId()->_cluster);
 
 		// Macros available for POST & HOLD scripts
-		} else if (match(token, "$JOBID")) {
+		} else if (cmp_arg == "$JOBID") {
 			std::string id = std::to_string(_node->GetCluster()) + "." + std::to_string(_node->GetProc());
 			arg = checkIsPre(_type, "$JOBID") ? token : id;
 
-		} else if (match(token, "$CLUSTERID")) {
+		} else if (cmp_arg == "$CLUSTERID") {
 			arg = checkIsPre(_type, "$CLUSTERID") ? token : std::to_string(_node->GetCluster());
 
-		} else if (match(token, "$NUM_JOBS")) {
+		} else if (cmp_arg == "$NUM_JOBS") {
 			arg = checkIsPre(_type, "$NUM_JOBS") ? token : std::to_string(_node->NumSubmitted());
 
-		} else if (match(token, "$SUCCESS")) {
+		} else if (cmp_arg == "$SUCCESS") {
 			arg = checkIsPre(_type, "$SUCCESS") ? token : (_node->IsJobsSuccess() ? "True" : "False");
 
-		} else if (match(token, "$RETURN")) {
+		} else if (cmp_arg == "$RETURN") {
 			arg = checkIsPre(_type, "$RETURN") ? token : std::to_string(_retValJob);
 
-		} else if (match(token, "$EXIT_CODES")) {
+		} else if (cmp_arg == "$EXIT_CODES") {
 			arg = checkIsPre(_type, "$EXIT_CODES") ? token : exitCodes;
 
-		} else if (match(token, "$EXIT_FREQUENCIES")) {
+		} else if (cmp_arg == "$EXIT_FREQUENCIES") {
 			arg = checkIsPre(_type, "$EXIT_FREQUENCIES") ? token : exitFreq;
 
-		} else if (match(token, "$PRE_SCRIPT_RETURN")) {
+		} else if (cmp_arg == "$PRE_SCRIPT_RETURN") {
 			arg = checkIsPre(_type, "$PRE_SCRIPT_RETURN") ? token : std::to_string(_retValScript);
 
-		} else if (match(token, "$NUM_JOBS_ABORTED")) {
+		} else if (cmp_arg == "$NUM_JOBS_ABORTED") {
 			arg = checkIsPre(_type, "$NUM_JOBS_ABORTED") ? token : std::to_string(_node->JobsAborted());
 
 		// Non DAGMan sanctioned script macros
