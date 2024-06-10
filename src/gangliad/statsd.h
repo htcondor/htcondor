@@ -27,6 +27,8 @@
 
 #include <list>
 #include "string_list.h"
+#include <vector>
+#include <string>
 
 // Base class defining a metric to be evaluated against ads in the collector
 class Metric {
@@ -104,7 +106,7 @@ public:
 	double sum;
 	unsigned long count;
 
-	StringList target_type; // type of condor daemons this metric applies to
+	std::vector<std::string> target_type; // type of condor daemons this metric applies to
 
 	// True if this metric only looks at slot 1 of the startd
 	// (we do this in lieu of a true machine ad)
@@ -178,7 +180,7 @@ class StatsD: Service {
 	std::map< std::string,std::string > m_daemon_ips; // map of daemon machine (and name) to IP address
 	std::string m_default_aggregate_host;
 	classad::ClassAd m_default_metric_ad;
-	StringList m_target_types;
+	std::vector<std::string> m_target_types;
 	bool m_want_projection;
 	classad::References m_projection_references;
 
