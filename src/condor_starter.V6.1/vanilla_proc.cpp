@@ -932,6 +932,19 @@ void VanillaProc::killFamilyIfWarranted() {
 }
 
 void VanillaProc::restartCheckpointedJob() {
+
+	// daemoncore unregisters the family
+	// after it calls the reaper, if it was registered.
+	// on cgroup systems, this kills everything in the cgroup.
+	//
+	// We call restartCheckpointedJob from the reaper, so the
+	// unregistration hasn't happened yet. We start a new job here In
+	// the reaper, but when we return, daemon core will unregister
+	// and kill all the processes in this cgroup, including the ones 
+	// we just starts.  Extend_Family_Lifetime turns off the unregistration
+
+	daemonCore->Extend_Family_Lifetime(JobPid);
+
 	ProcFamilyUsage last_usage;
 	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
 		dprintf( D_ALWAYS, "error getting family usage for pid %d in "

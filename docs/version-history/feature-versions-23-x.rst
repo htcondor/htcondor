@@ -51,7 +51,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug on EL9 where user-level checkpointing jobs would
+  get killed on restart.
+  :jira:`2491`
 
 Version 23.8.1
 --------------
