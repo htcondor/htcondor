@@ -31,7 +31,7 @@ def writeSubmitFile(test_dir, writeExecutable):
 executable = {writeExecutable}
 arguments  = "$(code)"
 log        = jobs.log
-priority   = $(code)
+priority   = $(code) * 100
 queue code from $(filename)
         """)
     return file
