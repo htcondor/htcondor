@@ -26,7 +26,7 @@ New Features:
   :subcom:`request_gpus`).
   :jira:`2470`
 
-- :tool:`condor_suspend` now currently reports number of suspends
+- :tool:`condor_suspend` now currently reports number of suspended
   processes in the event log, on Linux systems running with root.
   :jira:`2490`
 
