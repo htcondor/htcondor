@@ -45,6 +45,11 @@ New Features:
   with the home directory entry pointed to the same place.
   :jira:`2274`
 
+- Added more special DAGMan script macros to reference information pertaining
+  to the scripts associated DAG and node. See :ref:`DAG Script Macros` for more
+  details.
+  :jira:`2488`
+
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
   :jira:`2453`
