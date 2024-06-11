@@ -191,8 +191,16 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                 else:
                     attr, value = self.normalize(attr, value)
                     result[attr] = value
-            for debug_result in debug_results:
-                yield result | debug_result
+            if not debug_results:
+                yield result
+            else:
+                for debug_result in debug_results:
+                    if debug_result.get("FinalAttempt"):  # merge and return entire ad on final attempt
+                        yield debug_result | result
+                    else:  # otherwise only add identifying attrs
+                        for attr in ("TransferProtocol", "TransferType", "TransferUrl"):
+                            debug_result[attr] = result.get(attr)
+                        yield debug_result
 
 
     def expand_debug_ad(self, ad):
