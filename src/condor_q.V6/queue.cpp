@@ -41,7 +41,6 @@
 #include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
-#include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
 #include "condor_open.h"
@@ -1296,7 +1295,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				analyze_detail_level |= detail_better | detail_analyze_each_sub_expr | detail_always_analyze_req;
 			}
 			if (pcolon) { 
-				StringList opts(++pcolon, ",:");
+				StringTokenIterator opts(++pcolon, ",:");
 				opts.rewind();
 				while(const char *popt = opts.next()) {
 					if (is_arg_prefix(popt, "summary",1)) {
@@ -1321,8 +1320,8 @@ processCommandLineArguments (int argc, const char *argv[])
 						if (analyze_memory_usage) {
 							free(analyze_memory_usage);
 						}
-						analyze_memory_usage = opts.next();
-						if (analyze_memory_usage) { analyze_memory_usage = strdup(analyze_memory_usage); }
+						const char* arg = opts.next();
+						if (arg) { analyze_memory_usage = strdup(arg); }
 						else { analyze_memory_usage = strdup(ATTR_REQUIREMENTS); }
 					//} else if (is_arg_prefix(popt, "dslots",2)) {
 					//	analyze_dslots = true;

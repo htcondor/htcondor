@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "adcluster.h"
-#include "string_list.h"
 
 template <class K> class AdKeySet {
 public:
@@ -61,7 +60,6 @@ template <> void AdKeySet<ClassAd *>::print(std::string & ids, int cmax)
 
 template <class K> AdCluster<K>::AdCluster()
 	: next_id(1)
-	, significant_attrs(NULL)
 	, get_ad_key(NULL)
 {
 }
@@ -69,8 +67,6 @@ template <class K> AdCluster<K>::AdCluster()
 template <class K> AdCluster<K>::~AdCluster()
 {
 	clear();
-	if (significant_attrs) free(const_cast<char*>(significant_attrs));
-	significant_attrs = NULL;
 	//get_ad_key = NULL;
 }
 
@@ -82,14 +78,13 @@ template <class K> void AdCluster<K>::clear()
 	next_id = 1;
 }
 
-template <class K> bool AdCluster<K>::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, bool replace_attrs)
+template <class K> bool AdCluster<K>::setSigAttrs(const char* new_sig_attrs, bool replace_attrs)
 {
 	if ( ! new_sig_attrs) {
 		if (replace_attrs) {
 			clear();
-			if (significant_attrs) {
-				free(const_cast<char*>(significant_attrs));
-				significant_attrs = NULL;
+			if (!significant_attrs.empty()) {
+				significant_attrs.clear();
 				return true;
 			}
 		}
@@ -101,44 +96,14 @@ template <class K> bool AdCluster<K>::setSigAttrs(const char* new_sig_attrs, boo
 	bool next_id_exhausted = next_id > INT_MAX/2;
 	bool sig_attrs_changed = false;
 
-	if (significant_attrs && ! next_id_exhausted && (MATCH == strcasecmp(new_sig_attrs,significant_attrs))) {
-		if (free_input_attrs) {
-			free(const_cast<char*>(new_sig_attrs));
-			new_sig_attrs = NULL;
-		}
-		return false;
-	}
-
-	//PRAGMA_REMIND("tj: is it worth checking to see if the significant attrs only changed order?")
-
-	const char * free_attrs = NULL;
-
-	if (replace_attrs || ! significant_attrs) {
-		// Create significant_attrs from new_sig_attrs
-		free_attrs = significant_attrs; // remember to free this later
-		if (free_input_attrs) {
-			significant_attrs = new_sig_attrs;
-		} else {
-			significant_attrs = strdup(new_sig_attrs);
-		}
+	if (replace_attrs) {
+		significant_attrs.clear();
 		sig_attrs_changed = true;
-	} else {
-		// Merge everything in new_sig_attrs into our existing
-		// significant_attrs.  Take note if significant_attrs changed,
-		// since we need to return this info to our caller.
-		StringList attrs(significant_attrs);
-		StringList new_attrs(new_sig_attrs);
-		sig_attrs_changed = attrs.create_union(new_attrs,true);
-		if (sig_attrs_changed) {
-			free_attrs = significant_attrs; // free this later
-			significant_attrs = attrs.print_to_string();
-		} else if (free_input_attrs) {
-			free_attrs = new_sig_attrs; // free this later
-		}
 	}
-
-	// free whatever list of attrs we don't need anymore
-	if (free_attrs) { free(const_cast<char*>(free_attrs)); free_attrs = NULL; }
+	for (const auto& new_attr: StringTokenIterator(new_sig_attrs)) {
+		auto [itr, added] = significant_attrs.insert(new_attr);
+		sig_attrs_changed |= added;
+	}
 
 	// the SIGNIFICANT_ATTRIBUTES setting changed, purge our
 	// state.
@@ -157,86 +122,47 @@ template <class K> int AdCluster<K>::getClusterid(ClassAd & ad, bool expand_refs
 	// the signature will consist of "key1=val1\nkey2=val2\n"
 	// for each of the keys in the significant_attrs list and (if expand_refs is true)
 	// the keys that the significant_attrs values refer to that are internal references.
-	// the order of the keys in the signature will be the same as the order specified in significant_attrs
-	// followed by the expanded keys in case-insensitive alpha order.
-
-	// first put build a set of class ad values, one for each significant attribute
 	//
-	classad::References exattrs;   // expanded attribs if requested
-	std::vector<ExprTree*> sigset; // significant values, including expanded attribs if requested
 
 	// walk significant attributes list and fetch values for each attrib
 	// also fetch internal references if requested.
-	StringTokenIterator list(significant_attrs);
-	const std::string * attr;
-	while ((attr = list.next_string())) {
-		ExprTree * tree = ad.Lookup(*attr);
-		sigset.push_back(tree);
+	std::map<std::string, ExprTree*> sigset;
+	for (const auto& attr: significant_attrs) {
+		ExprTree * tree = ad.Lookup(attr);
+		sigset.emplace(attr, tree);
 		if (expand_refs && tree) {
+			classad::References exattrs;
 			ad.GetInternalReferences(tree, exattrs, false);
-		}
-	}
-
-	// if there are expanded refs, walk the expanded attribs list and fetch values for any
-	// that have not already been fetched.
-	if (expand_refs) {
-		if ( ! exattrs.empty()) {
-			// remove expanded attrs that already appear in the significant_attrs list
-			list.rewind();
-			while ((attr = list.next_string())) {
-				classad::References::iterator it = exattrs.find(*attr);
-				if (it != exattrs.end()) {
-					exattrs.erase(it);
+			for (const auto& ex_attr: exattrs) {
+				auto itr = sigset.find(ex_attr);
+				if (itr != sigset.end()) {
+					tree = ad.Lookup(ex_attr);
+					sigset.emplace_hint(itr, ex_attr, tree);
 				}
-			}
-			for (classad::References::iterator it = exattrs.begin(); it != exattrs.end(); ++it) {
-				ExprTree * tree = ad.Lookup(*it);
-				sigset.push_back(tree);
 			}
 		}
 	}
 
 	// sigset now contains the values of all the attributes we need,
-	// significant attibutes are first, followed by expanded attributes
 	// we build a signature essentially by printing it all out in one big string
 	//
 	bool need_sep = false; // true after the first item, (when we need to print separators)
 	std::string signature;
-	signature.reserve(strlen(significant_attrs) + exattrs.size()*20 + sigset.size()*20); // make a guess as to how much space the signature will take.
+	signature.reserve(sigset.size()*20); // make a guess as to how much space the signature will take.
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
 
-	// first put the pre-defined significant attrs in the sig
-	list.rewind();
-	int ix = 0;
-	while ((attr = list.next_string())) {
-		ExprTree * tree = sigset[ix];
-		signature += *attr;
+	for (const auto& [attr, tree]: sigset) {
+		signature += attr;
 		signature += " = ";
 		if (tree) { unp.Unparse(signature, tree); }
 		signature += '\n';
 		if (final_list) {
 			if (need_sep) { (*final_list) += ','; }
-			final_list->append(*attr);
+			final_list->append(attr);
 			need_sep = true;
 		}
-		++ix;
-	}
-
-	// now put out the expanded attribs (if any)
-	for (classad::References::iterator it = exattrs.begin(); it != exattrs.end(); ++it) {
-		ExprTree * tree = sigset[ix];
-		signature += *it;
-		signature += " = ";
-		if (tree) { unp.Unparse(signature, tree); }
-		signature += '\n';
-		if (final_list) {
-			if (need_sep) { (*final_list) += ','; }
-			final_list->append(*it);
-			need_sep = true;
-		}
-		++ix;
 	}
 
 	// now check the signature against the current cluster map
@@ -253,25 +179,8 @@ template <class K> int AdCluster<K>::getClusterid(ClassAd & ad, bool expand_refs
 
 	if (get_ad_key) {
 		K key = get_ad_key(ad);
-#if 1
 		// update the cluster_use map
 		cluster_use[cur_id].insert(key);
-#else
-		// update the cluster_use and cluster_gone maps
-		auto jit = cluster_use.find(cur_id);
-		if (jit != cluster_use.end() && ! jit->second.contains(key)) {
-			int old_id = jit->first;
-			if (old_id == cur_id) {
-				jit->second.insert(key);
-			} else {
-				jit->second.erase(key);
-				if (jit->second.empty()) { cluster_gone.insert(old_id); }
-				cluster_use[cur_id].insert(key);
-			}
-		} else {
-			cluster_use[cur_id].insert(key);
-		}
-#endif
 	}
 
 	return cur_id;
