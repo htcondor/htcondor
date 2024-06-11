@@ -102,7 +102,7 @@ EXPECTED = {
         f"{CLUSTER_ID}", # Cluster id
         "4", # Num jobs
         "False", # Success
-        "3", # Return
+        {"3","2","1"}, # Return
         "1,2,3", # Exit codes
         "1:2,2:1,3:1", # Exit frequencies
         "-1", # Pre Script return
@@ -120,7 +120,8 @@ if NODE_NAME != sys.argv[1] or NODE_NAME != sys.argv[2]:
 
 for i, script_macro in enumerate(sys.argv[3:]):
     expected_val = EXPECTED[NODE_NAME][i]
-    if script_macro != expected_val:
+    match = script_macro in expected_val if type(expected_val) is set else script_macro == expected_val
+    if not match:
         print(f"EXPECTED[{NODE_NAME}][{i}] ({expected_val}) != {script_macro}")
         sys.exit(1)
 

@@ -316,8 +316,8 @@ of nodes B and C. The DAG description file:
     JOB  B  B.sub
     JOB  C  C.sub
     JOB  D  D.sub
-    SCRIPT PRE  B  pre.sh $JOB .gz
-    SCRIPT PRE  C  pre.sh $JOB .gz
+    SCRIPT PRE  B  pre.sh $NODE .gz
+    SCRIPT PRE  C  pre.sh $NODE .gz
     PARENT A CHILD B C
     PARENT B C CHILD D
 
@@ -351,22 +351,11 @@ the POST script is invoked as
 
     $ stage-out job_status -1
 
-The slightly different example POST script specification in the DAG
-input file
+.. warning::
 
-.. code-block:: condor-dagman
-
-    SCRIPT POST A stage-out job_status=$RETURN
-
-invokes the POST script with
-
-.. code-block:: console
-
-    $ stage-out job_status=$RETURN
-
-This example shows that when there is no space between the ``=`` sign
-and the variable ``$RETURN``, there is no substitution of the macro's
-value.
+    DAGMan script macros must be declared individually with surrounding spaces
+    to be replaced. Providing a script argument such as ``job_status=$RETURN``
+    will not substitute the ``$RETURN`` macro and pass along the entire string.
 
 .. _DAG Script Macros:
 
@@ -407,7 +396,7 @@ The special macros for all scripts:
    specified for a node.
 -  ``$DAG_ID`` is the node's associated :ad-attr:`DAGManJobId`.
 -  ``$DAG_STATUS`` is the status of the DAG that is recorded in the DAGMan
-   scheduler universe job's Classad as :ad-attr:`DAG_Status`.
+   scheduler universe job's ClassAd as :ad-attr:`DAG_Status`.
 
    .. note::
 
@@ -524,8 +513,8 @@ SUBMIT-DESCRIPTION command
 
 In addition to declaring inline submit descriptions as part of a node, they
 can be declared independently of nodes using the :dag-cmd:`SUBMIT-DESCRIPTION[Usage]` command.
-This can be helpful to reduce the size and readability of a ``.dag`` file when
-many nodes are share the same submit description.
+This can be helpful to reduce the size and improve the readability of a ``.dag`` file when
+many nodes share the same submit description.
 
 A :dag-cmd:`SUBMIT-DESCRIPTION` can be defined using the following syntax:
 
