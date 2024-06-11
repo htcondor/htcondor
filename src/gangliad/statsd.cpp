@@ -976,7 +976,7 @@ StatsD::publishMetrics( int /* timerID */ )
 	}
 
 	// Set query constraint to only fetch ad types needed
-	if (!contains_anycase(m_target_types,"any")) {
+	if (contains_anycase(m_target_types,"any")) {
 		if( !m_requirements.empty() ) {
 			query.addANDConstraint(m_requirements.c_str());
 		}
