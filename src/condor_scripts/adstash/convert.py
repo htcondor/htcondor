@@ -17,6 +17,7 @@ import re
 import json
 import time
 import logging
+from functools import lru_cache
 
 import classad
 
@@ -577,6 +578,7 @@ KNOWN_ATTRS = (
 KNOWN_ATTRS_MAP = {x.casefold(): x for x in KNOWN_ATTRS}
 
 
+@lru_cache(maxsize=1024)
 def case_normalize(attr):
     """
     Given a ClassAd attr name, check to see if it's known. If so, normalize the
