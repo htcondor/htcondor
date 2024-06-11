@@ -709,7 +709,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job, bool recovery) {
 			// that breaks a test in Windows. Keep an eye on this in case we
 			// have trouble recovering from aborted jobs using late materialization.
 			if (job->_queuedNodeJobProcs > 0) {
-				job->JobFailed();
+				job->MarkFailed();
 				// once one job proc fails, remove the whole cluster
 				std::string rm_reason;
 				formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) got %s event.",
@@ -777,7 +777,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job, bool recovery) {
 
 				job->TerminateFailure();
 				if (job->_queuedNodeJobProcs > 0) {
-					job->JobFailed();
+					job->MarkFailed();
 					// once one job proc fails, remove the whole cluster
 					std::string rm_reason;
 					formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) failed with signal %d.",
@@ -1747,6 +1747,7 @@ Dag::PreScriptReaper(Job *job, int status)
 			// Check for POST script. PRE script Failed.  The return code is in retval member.
 			job->_scriptPost->_retValScript = job->retval;
 			job->_scriptPost->_retValJob = DAG_ERROR_JOB_SKIPPED;
+			job->MarkFailed();
 			RunPostScript(job, dagOpts[shallow::b::PostRun], job->retval);
 		} else if (job->DoRetry()) {
 			// Check for retries.
@@ -1755,6 +1756,7 @@ Dag::PreScriptReaper(Job *job, int status)
 			RestartNode(job, false);
 		} else {
 			// None of the above apply -- the node has failed.
+			job->MarkFailed();
 			job->TerminateFailure();
 			if (job->GetType() != NodeType::SERVICE) {
 				_numNodesFutile += job->SetDescendantsToFutile(*this);
@@ -2474,7 +2476,6 @@ Dag::RestartNode(Job *node, bool recovery)
 
 	node->SetStatus(Job::STATUS_READY);
 	node->retries++;
-	node->_numSubmittedProcs = 0;
 	node->ResetJobInfo();
 	ASSERT(node->GetRetries() <= node->GetRetryMax());
 	if (node->_scriptPre) {

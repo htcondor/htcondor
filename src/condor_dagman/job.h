@@ -466,8 +466,10 @@ public:
 	void IncrementJobsAborted() { numJobsAborted++; }
 	int JobsAborted() const { return numJobsAborted; }
 
-	void JobFailed() { jobsSuccessful = false; }
-	bool IsJobsSuccess() const { return jobsSuccessful; }
+	// Indicate that at this point the node is considered failed
+	void MarkFailed() { isSuccessful = false; }
+	// Check if the node is considered failed/success at point in time
+	bool IsSuccessful() const { return isSuccessful; }
 
 	void CountJobExitCode(int code) {
 		if (exitCodeCounts.contains(code)) {
@@ -480,9 +482,10 @@ public:
 	const std::map<int, int>& JobExitCodes() const { return exitCodeCounts; }
 
 	void ResetJobInfo() {
+		_numSubmittedProcs = 0;
 		numJobsSubmitted = 0;
 		numJobsAborted = 0;
-		jobsSuccessful = true;
+		isSuccessful = true;
 		exitCodeCounts.clear();
 	}
 
@@ -495,12 +498,11 @@ private:
 		// What type of node (job, final, provisioner)
 	NodeType _type;
 
+	bool isSuccessful{true}; // Is Node currently successful or not
+
 	int numJobsSubmitted{0}; // Number of submitted jobs
 	int numJobsAborted{0}; // Number of jobs with abort events
 
-	bool jobsSuccessful{true}; // Was list of jobs successful
-
-	std::map<int, int> exitCodeCounts; // Exit Code : Number of jobs that returned code
 public:
 
 	struct NodeVar {
@@ -600,6 +602,8 @@ private:
 
 	// Filename to write save point rescue file as
 	std::string _saveFile;
+
+	std::map<int, int> exitCodeCounts; // Exit Code : Number of jobs that returned code
 
     /** */ status_t _Status;
 

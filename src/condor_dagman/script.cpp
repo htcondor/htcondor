@@ -143,10 +143,10 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		} else if (cmp_arg == "$QUEUED_COUNT") {
 			arg = std::to_string(dag.NumNodesSubmitted());
 
-		} else if (cmp_arg == "$NUM_NODES") {
+		} else if (cmp_arg == "$NODE_COUNT") {
 			arg = std::to_string(dag.NumNodes(true));
 
-		} else if (cmp_arg == "$DAG_ID") {
+		} else if (cmp_arg == "$DAGID") {
 			arg = std::to_string(dag.DAGManJobId()->_cluster);
 
 		// Macros available for POST & HOLD scripts
@@ -157,11 +157,11 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		} else if (cmp_arg == "$CLUSTERID") {
 			arg = checkIsPre(_type, "$CLUSTERID") ? token : std::to_string(_node->GetCluster());
 
-		} else if (cmp_arg == "$NUM_JOBS") {
-			arg = checkIsPre(_type, "$NUM_JOBS") ? token : std::to_string(_node->NumSubmitted());
+		} else if (cmp_arg == "$JOB_COUNT") {
+			arg = checkIsPre(_type, "$JOB_COUNT") ? token : std::to_string(_node->NumSubmitted());
 
 		} else if (cmp_arg == "$SUCCESS") {
-			arg = checkIsPre(_type, "$SUCCESS") ? token : (_node->IsJobsSuccess() ? "True" : "False");
+			arg = checkIsPre(_type, "$SUCCESS") ? token : (_node->IsSuccessful() ? "True" : "False");
 
 		} else if (cmp_arg == "$RETURN") {
 			arg = checkIsPre(_type, "$RETURN") ? token : std::to_string(_retValJob);
@@ -169,14 +169,14 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		} else if (cmp_arg == "$EXIT_CODES") {
 			arg = checkIsPre(_type, "$EXIT_CODES") ? token : exitCodes;
 
-		} else if (cmp_arg == "$EXIT_FREQUENCIES") {
-			arg = checkIsPre(_type, "$EXIT_FREQUENCIES") ? token : exitFreq;
+		} else if (cmp_arg == "$EXIT_CODE_COUNTS") {
+			arg = checkIsPre(_type, "$EXIT_CODE_COUNTS") ? token : exitFreq;
 
 		} else if (cmp_arg == "$PRE_SCRIPT_RETURN") {
 			arg = checkIsPre(_type, "$PRE_SCRIPT_RETURN") ? token : std::to_string(_retValScript);
 
-		} else if (cmp_arg == "$NUM_JOBS_ABORTED") {
-			arg = checkIsPre(_type, "$NUM_JOBS_ABORTED") ? token : std::to_string(_node->JobsAborted());
+		} else if (cmp_arg == "$JOB_ABORT_COUNT") {
+			arg = checkIsPre(_type, "$JOB_ABORT_COUNT") ? token : std::to_string(_node->JobsAborted());
 
 		// Non DAGMan sanctioned script macros
 		} else if (token[0] == '$') {
