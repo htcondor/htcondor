@@ -146,7 +146,7 @@ passwd_cache::loadConfig() {
 
 			/* now get the supplemental group list */
 		group_cache_entry.gidlist.resize(ids.size()-1);
-		for (auto gid_it = ids.begin() + 2;
+		for (auto gid_it = ids.begin() + 1;
 				gid_it != ids.end();
 				gid_it++) {
 
