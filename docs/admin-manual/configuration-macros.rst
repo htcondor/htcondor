@@ -8032,6 +8032,12 @@ condor_procd Configuration File Macros
     the *BASE_CGROUP* macro with the slot type. e.g. setting
     SLOT_TYPE_1.BASE_CGROUP = hiprio_cgroup and SLOT_TYPE_2.BASE_CGROUP = low_prio
 
+:macro-def:`CREATE_CGROUP_WITHOUT_ROOT[PROCD]`
+    Defaults to false.  When true, on a Linux cgroup v2 system, a
+    condor system without root privilege (such as a glidein)
+    will attempt to create cgroups for jobs.  The condor_master
+    must have been started under a writeable cgroup for this to work.
+
 condor_credd Configuration File Macros
 ---------------------------------------
 

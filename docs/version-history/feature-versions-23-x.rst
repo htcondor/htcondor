@@ -21,6 +21,12 @@ New Features:
   the *condor_schedd*. This behavior can be disabled via :macro:`DAGMAN_PRODUCE_JOB_CREDENTIALS`.
   :jira:`1711`
 
+- Added new knob :macro:`CREATE_CGROUP_WITHOUT_ROOT` which allows a 
+  non-rootly condor to create cgroups for jobs.  Only works on 
+  cgroup v2 systems. Currently defaults to false, but might change 
+  in the future.
+  :jira:`2493`
+
 - Linux systems running cgroup v2 will now hide GPUs that have
   not been provisioned to the slots (usually because they did not
   :subcom:`request_gpus`).
