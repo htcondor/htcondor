@@ -205,9 +205,11 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
 
     def expand_debug_ad(self, ad):
         result = {}
-        if ad.get("Attempts", 0) > 0:
-            attempts = ad["Attempts"]
-        else:
+        try:
+            attempts = int(ad.get("Attempts", 0))
+        except TypeError:
+            attempts = 0
+        if attempts == 0:
             result["Attempts"] = 1
             result["Attempt"] = 0
             result["FinalAttempt"] = True
