@@ -111,8 +111,8 @@ passwd_cache::loadConfig() {
 	for (const auto &name_equal_uid_gids: StringTokenIterator(usermap_str, " ")) {
 		size_t pos = name_equal_uid_gids.find('=');
 		ASSERT(pos != std::string::npos);
-		std::string username = name_equal_uid_gids.substr(0, pos - 1);
-		std::string uid_gids = name_equal_uid_gids.substr(pos + 1, name_equal_uid_gids.size() - pos - 1);
+		std::string username = name_equal_uid_gids.substr(0, pos);
+		std::string uid_gids = name_equal_uid_gids.substr(pos + 1);
 
 			// the user/group ids are separated by commas
 		std::vector<std::string> ids = split(uid_gids,",");
