@@ -795,7 +795,6 @@ static bool Evaluate_config_if(const char * expr, bool & result, std::string & e
 		return true;
 	}
 
-#if 1
 	// TODO: convert version & defined to booleans, and then evaluate the result as a ClassAd expression
 
 	if ((ec == CIFT_COMPLEX) && ctx.is_context_ex && reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx).ad) {
@@ -807,15 +806,6 @@ static bool Evaluate_config_if(const char * expr, bool & result, std::string & e
 			}
 		}
 	}
-#else // this code sort of works, but isn't necessarily the way we want to go
-	// the expression MAY be evaluatable by the classad library, if it is, then great
-	int ival;
-	ClassAd rad;
-	if (rad.AssignExpr("ifcondition", expr) && rad.EvalBool("ifcondition", NULL, ival)) {
-		result = (ival != 0);
-		return true;
-	}
-#endif
 
 	if (ec == CIFT_COMPLEX) {
 		err_reason = "complex conditionals are not supported";
@@ -1355,29 +1345,29 @@ void MacroStreamCharSource::rewind()
 
 int MacroStreamCharSource::load(FILE* fp, MACRO_SOURCE & FileSource, bool preserve_linenumbers /*=false*/)
 {
-	StringList lines;
+	std::vector<std::string> lines;
 
 	if (preserve_linenumbers && (FileSource.line != 0)) {
 		// if we aren't starting at line zero, inject a comment indicating the starting line number
 		std::string buf; formatstr(buf, "#opt:lineno:%d", FileSource.line);
-		lines.append(buf.c_str());
+		lines.emplace_back(buf);
 	}
 	while (true) {
 		int lineno = FileSource.line;
 		char * line = getline_trim(fp, FileSource.line);
 		if ( ! line)
 			break;
-		lines.append(line);
+		lines.emplace_back(line);
 		if (preserve_linenumbers && (FileSource.line != lineno+1)) {
 			// if we read more than a single line, inject a comment indicating the new line number
 			std::string buf; formatstr(buf, "#opt:lineno:%d", FileSource.line);
-			lines.append(buf.c_str());
+			lines.emplace_back(buf);
 		}
 	}
-	file_string.set(lines.print_to_delimed_string("\n"));
+	file_string.set(strdup(join(lines,"\n").c_str()));
 	open(file_string, FileSource);
 	rewind();
-	return lines.number();
+	return lines.size();
 }
 
 
@@ -2675,31 +2665,6 @@ const char * strlen_unquote(const char * str, int & cch) {
 
 char * strlen_unquote(char * str, int & cch) { return const_cast<char*>(strlen_unquote((const char*)str, cch)); }
 
-#if 0
-// strdup a string with room to grow and an optional leading quote
-// and room for a trailing quote.
-char * strdup_quoted(const char* str, int cch, char quoted) {
-	if (cch < 0) cch = (int)strlen(str);
-
-	// ignore leading and/or trailing quotes when we dup
-	if (*str=='"' || (*str && *str == quoted)) { ++str; --cch; }
-	if (cch > 0 && (str[cch-1] == '"' || str[cch-1] == quoted)) --cch;
-
-	// malloc with room for quotes and a terminating 0
-	char * out = (char*)malloc(cch+3);
-	ASSERT(out);
-	char * p = out;
-
-	// copy, adding quotes or not as requested.
-	if (quoted) { *p++ = quoted; }
-	memcpy(p, str, cch*sizeof(str[0]));
-	if (quoted) { p[cch++] = quoted; }
-	p[cch] = 0;
-
-	return out;
-}
-#endif
-
 // return a pointer to the basename of a file + the given number of directories.
 // i.e. if the input is
 //     foo/bar/baz/file
@@ -3197,14 +3162,13 @@ static const char * evaluate_macro_func (
 
 		case SPECIAL_MACRO_ID_RANDOM_CHOICE:
 		{
-			StringList entries(name,",");
-			int num_entries = entries.number();
-			tvalue = NULL;
+			std::vector<std::string> entries = split(name, ",");
+			size_t num_entries = entries.size();
+			tvalue = nullptr;
 			// the the list we are choosing from has only one entry
 			// try and use that entry as a macro name.
 			if (num_entries == 1) {
-				entries.rewind();
-				const char * list_name = entries.next();
+				const char * list_name = entries.front().c_str();
 				if ( ! list_name) {
 					EXCEPT( "$RANDOM_CHOICE() config macro: no list!" );
 				}
@@ -3214,32 +3178,28 @@ static const char * evaluate_macro_func (
 				// if the first entry resolved to a macro, clear the entries list and
 				// repopulate it from the value of the macro.
 				if (lval) {
-					entries.clearAll(); list_name = NULL;
+					entries.clear(); list_name = nullptr;
 					// now re-populate the entries list from lval.
 					if (strchr(lval, '$')) {
 						char * tmp3 = expand_macro(lval, macro_set, ctx);
 						if (tmp3) {
-							entries.initializeFromString(tmp3);
+							entries = split(tmp3);
 							free(tmp3);
 						}
 					} else {
-						entries.initializeFromString(lval);
+						entries = split(lval);
 					}
-					num_entries = entries.number();
+					num_entries = entries.size();
 				} else {
 					// if the lookup failed, fall through to use the the list name as the list item,
 					// we do this for backward compatibility with the original behavior of RANDOM_CHOICE
 				}
 			}
 			if ( num_entries > 0 ) {
-				int rand_entry = (get_random_int_insecure() % num_entries) + 1;
-				int i = 0;
-				entries.rewind();
-				while ( (i < rand_entry) && (tvalue=entries.next()) ) {
-					i++;
-				}
+				int rand_entry = get_random_int_insecure() % num_entries;
+				tvalue = entries[rand_entry].c_str();
 			}
-			if( tvalue == NULL ) {
+			if( tvalue == nullptr ) {
 				EXCEPT("$RANDOM_CHOICE() macro in config file empty!" );
 			}
 			tvalue = buf = strdup(tvalue);
@@ -3248,27 +3208,27 @@ static const char * evaluate_macro_func (
 
 		case SPECIAL_MACRO_ID_RANDOM_INTEGER:
 		{
-			StringList entries(body, ",");
+			std::vector<std::string> entries = split(body, ",");
 
-			entries.rewind();
-			const char *tmp2;
 
-			tmp2 = entries.next();
+			std::string tmp2 = entries.empty() ? "" : entries.front();
 			long	min_value=0;
-			if ( string_to_long( tmp2, &min_value ) < 0 ) {
+			if ((tmp2.size() == 0) || string_to_long( tmp2.c_str(), &min_value ) < 0 ) {
 				EXCEPT( "$RANDOM_INTEGER() config macro: invalid min!" );
 			}
 
-			tmp2 = entries.next();
+			tmp2 = entries.size() > 1 ? entries[1] : "";
 			long	max_value=0;
-			if ( string_to_long( tmp2, &max_value ) < 0 ) {
+			if ((tmp2.size() == 0) || string_to_long( tmp2.c_str(), &max_value ) < 0 ) {
 				EXCEPT( "$RANDOM_INTEGER() config macro: invalid max!" );
 			}
 
-			tmp2 = entries.next();
+			tmp2 = entries.size() > 2 ? entries[2] : "";
 			long	step = 1;
-			if ( string_to_long( tmp2, &step ) < -1 ) {
-				EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!" );
+			if (tmp2.size() > 0) {
+				if (string_to_long( tmp2.c_str(), &step ) < -1 ) {
+					EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!");
+				}
 			}
 
 			if ( step < 1 ) {
@@ -3839,21 +3799,6 @@ static const char * get_nth_list_item(const char * list, char sep, std::string &
 	}
 	return p;
 }
-
-#if 0 // not currently  used.
-// append the value of the Nth list item to the input buffer.
-// returns NULL if the input list is NULL or if it has no Nth item.
-//
-static const char * append_nth_list_item(const char * list, char sep, std::string &buf, int index, bool trimmed=true) {
-	const char * p, *e;
-	p = nth_list_item(list, sep, e, index, trimmed);
-	if (p) {
-		// if we got non-null back. always append something to insure that buf.c_str() will not fault.
-		if (e > p) { buf.append(p, e-p); } else { buf.append(""); }
-	}
-	return p;
-}
-#endif
 
 // helper function for evaluate_macro_func.
 // Use this function when the argument of a macro can be either a macro name to be looked up, or an expression
