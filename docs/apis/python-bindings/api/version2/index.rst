@@ -6,11 +6,24 @@ Python Bindings version 2 API Reference
     This a preview release of the second major version of the HTCondor
     Python bindings.
 
+    After many years of heavy use and feedback from our users, we need
+    to reimplement the bindings.  We didn't make this decision lightly --
+    it's a lot of work that could have gone into making things better,
+    rather than staying where we are -- but it had to be done.  Our
+    goal is to keep as many existing scripts working without change as
+    possible, but we're also taking advantage of this opportunity to
+    make some significant improvements.  Some of these improvements
+    will break some -- we hope very few -- existing scripts.
+
     We are making this preview available in the 24.0.x stable series
-    so our customers who don't install the feature series will be able
-    to test their existing Python scripts against the new modules.
+    so those of you who don't install the feature series will be able
+    to test your existing Python scripts against the new modules and
+    find these problems before they become urgent.
 
     (These modules are now also included in the PyPI releases.)
+
+    For more details on what's changed, please see
+    :doc:`migration-guide`.
 
     Because this is a preview release, we may make larger changes more
     quickly than we would otherwise, which may include removing features
@@ -31,7 +44,7 @@ HTCondor's Python API.  It is not intended as a tutorial for new users.
    :maxdepth: 2
    :glob:
 
-   migration-guide
    classad2/index
    htcondor2/index
    examples
+   migration-guide

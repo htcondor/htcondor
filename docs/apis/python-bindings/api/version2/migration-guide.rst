@@ -11,15 +11,14 @@ it should mostly just work to do the following:
 
 The goal of this guide is to help when it doesn't.  In general, code
 that you haven't (but need to) migrate will simply throw an exception
-of some kind.  The specific case where that is not true is detailed in
-the warning below.
+of some kind.
 
 .. warning::
 
     There is an incompability between ``classad`` and ``classad2`` that
     won't manifest itself as an exception.  You should check your code
     for calls to ``eval()`` and ``simplify()`` that don't specify a
-    positional (scope) parameter: :class:`classad2.ExprTree` no
+    positional parameter (the scope): :class:`classad2.ExprTree` no
     longer records which :class:`classad2.ClassAd`, if any, it was extracted
     from.  Calls to ``eval()`` or ``simplify()`` without an argument may
     therefore return different values (likely :py:obj:`None`).
@@ -84,16 +83,7 @@ This method was dropped; as far as we know, no one was using it.
 
 * :meth:`classad.register`
 
-``classad.lastError()``
-~~~~~~~~~~~~~~~~~~~~~~~
-
-This function should no longer be necessary.
-
-.. rubric:: Classes or methods only in Version 1:
-
-* :meth:`classad.lastError`
-
 The :mod:`htcondor` Module
 --------------------------
 
-...
+

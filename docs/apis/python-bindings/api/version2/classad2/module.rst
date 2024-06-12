@@ -3,6 +3,8 @@
 
 .. currentmodule:: classad2
 
+.. autofunction:: lastError
+
 .. autofunction:: parseAds
 
 .. autofunction:: parseNext
@@ -12,3 +14,5 @@
 .. autofunction:: quote
 
 .. autofunction:: unquote
+
+.. autofunction:: version

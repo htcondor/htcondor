@@ -22,6 +22,7 @@ from .classad2_impl import (
     _classad_print_json,
     _classad_print_old,
     _classad_last_error,
+    _classad_version,
 )
 
 # So that the typehints match version 1.
@@ -441,6 +442,12 @@ def _lastError() -> str:
     '''
     return _classad_last_error()
 
+
+def _version() -> str:
+    '''
+    Returns the version of ClassAd library this module is linked against.
+    '''
+    return _classad_version()
 
 # Sphinx whines about forward references in the type hints if this isn't here.
 from ._expr_tree import ExprTree
