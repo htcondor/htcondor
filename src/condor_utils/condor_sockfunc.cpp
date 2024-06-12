@@ -151,7 +151,11 @@ bool addr_is_local(const condor_sockaddr& addr)
 			result = true;
 		}
 		// must not forget to close the socket we just created!
+#if defined(WIN32)
+		closesocket(sock);
+#else
 		close(sock);
+#endif
 	}
 	return result;
 }
