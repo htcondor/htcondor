@@ -62,6 +62,11 @@ New Features:
   IPv6 link-local addresses.
   :jira:`2453`
 
+- Added new special value ``{:local_ips:}`` that can be used in
+  authorization ALLOW and DENY rules to represent all IP addresses
+  that are useable on the local machine.
+  :jira:`2466`
+
 Bugs Fixed:
 
 - Fixed a bug on EL9 where user-level checkpointing jobs would
