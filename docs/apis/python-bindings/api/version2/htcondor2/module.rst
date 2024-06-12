@@ -20,7 +20,11 @@
 
 .. autofunction:: reload_config
 
+.. autofunction:: send_alive
+
 .. autofunction:: send_command
+
+.. autofunction:: set_subsystem
 
 .. autofunction:: version
 
