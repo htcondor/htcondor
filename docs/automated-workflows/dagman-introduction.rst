@@ -316,8 +316,8 @@ of nodes B and C. The DAG description file:
     JOB  B  B.sub
     JOB  C  C.sub
     JOB  D  D.sub
-    SCRIPT PRE  B  pre.sh $JOB .gz
-    SCRIPT PRE  C  pre.sh $JOB .gz
+    SCRIPT PRE  B  pre.sh $NODE .gz
+    SCRIPT PRE  C  pre.sh $NODE .gz
     PARENT A CHILD B C
     PARENT B C CHILD D
 
@@ -351,22 +351,13 @@ the POST script is invoked as
 
     $ stage-out job_status -1
 
-The slightly different example POST script specification in the DAG
-input file
+.. warning::
 
-.. code-block:: condor-dagman
+    DAGMan script macros must be declared individually with surrounding spaces
+    to be replaced. Providing a script argument such as ``job_status=$RETURN``
+    will not substitute the ``$RETURN`` macro and pass along the entire string.
 
-    SCRIPT POST A stage-out job_status=$RETURN
-
-invokes the POST script with
-
-.. code-block:: console
-
-    $ stage-out job_status=$RETURN
-
-This example shows that when there is no space between the ``=`` sign
-and the variable ``$RETURN``, there is no substitution of the macro's
-value.
+.. _DAG Script Macros:
 
 Special Script Argument Macros
 ''''''''''''''''''''''''''''''
@@ -375,54 +366,61 @@ DAGMan provides the following macros to be used for node script arguments.
 The use of these macros are limited to being used as individual command line
 arguments surrounded by spaces:
 
-+---------------+---------------+---------------+--------------------+
-|               | $JOB          | $RETRY        | $DAG_STATUS        |
-|  All Scripts  +---------------+---------------+--------------------+
-|               | $FAILED_COUNT | $MAX_RETRIES  |                    |
-+---------------+---------------+---------------+--------------------+
-|  POST Scripts | $JOBID        | $RETURN       | $PRE_SCRIPT_RETURN |
-+---------------+---------------+---------------+--------------------+
++---------------+---------------+-------------------+--------------------+
+|               | $NODE         | $NODE_COUNT       | $QUEUED_COUNT      |
+|               +---------------+-------------------+--------------------+
+|               | $DONE_COUNT   | $FAILED_COUNT     | $FUTILE_COUNT      |
+|  All Scripts  +---------------+-------------------+--------------------+
+|               | $DAGID        | $DAG_STATUS       |                    |
+|               +---------------+-------------------+--------------------+
+|               | $RETRY        | $MAX_RETRIES      |                    |
++---------------+---------------+-------------------+--------------------+
+|               | $JOBID        | $CLUSTERID        | $JOB_COUNT         |
+|               +---------------+-------------------+--------------------+
+|  POST Scripts | $RETURN       | $EXIT_CODES       | $EXIT_CODE_COUNTS  |
+|               +---------------+-------------------+--------------------+
+|               | $SUCCESS      | $JOB_ABORT_COUNT  | $PRE_SCRIPT_RETURN |
++---------------+---------------+-------------------+--------------------+
 
 
 :index:`Defined special node macros<single: DAGMan; Defined special node macros>`
 
 The special macros for all scripts:
 
--  ``$JOB`` evaluates to the (case sensitive) string defined for *NodeName*.
+-  ``$NODE`` evaluates to the (case sensitive) string defined for *NodeName*.
 -  ``$RETRY`` evaluates to an integer value set to 0 the first time a node
    is run, and is incremented each time the node is retried. See :ref:`DAG node success`
    for the description of how to cause nodes to be retried.
 -  ``$MAX_RETRIES`` evaluates to an integer value set to the maximum
    number of retries for the node. Defaults to 0 if retries aren't
    specified for a node.
-
-.. sidebar:: Useful Information
-
-    .. note::
-
-        The macro ``$DAG_STATUS`` value and definition is unrelated to the attribute named
-        ``DagStatus`` as defined in the node status file.
-
+-  ``$DAGID`` is the node's associated :ad-attr:`DAGManJobId`.
 -  ``$DAG_STATUS`` is the status of the DAG that is recorded in the DAGMan
-   scheduler universe job's Classad as :ad-attr:`DAG_Status`. This macro may
-   have the following values:
+   scheduler universe job's ClassAd as :ad-attr:`DAG_Status`.
 
-   -  0: OK
-   -  1: error; an error condition different than those listed here
-   -  2: one or more nodes in the DAG have failed
-   -  3: the DAG has been aborted by an ABORT-DAG-ON specification
-   -  4: removed; the DAG has been removed by :tool:`condor_rm`
-   -  5: cycle; a cycle was found in the DAG
-   -  6: halted; the DAG has been halted (see :ref:`Suspending a DAG`)
+   .. note::
 
--  ``$FAILED_COUNT`` is defined by the number of nodes that have failed
-   in the DAG.
+       The macro ``$DAG_STATUS`` value and definition is unrelated to the attribute named
+       ``DagStatus`` as defined in the node status file.
+
+-  ``$NODE_COUNT`` is the total number of nodes within the DAG (including
+   the :dag-cmd:`FINAL` node).
+-  ``$QUEUED_COUNT`` is the current number of nodes running jobs in the DAG.
+-  ``$DONE_COUNT`` is the current number of nodes that have completed successfully in the DAG.
+-  ``$FAILED_COUNT`` is the current number of nodes that have failed in the DAG.
+-  ``$FUTILE_COUNT`` is the current number of nodes that will never run in the DAG.
 
 Macros for POST Scripts only:
 
+-  ``$CLUSTERID`` is the node's associated list of jobs :ad-attr:`ClusterId`.
 -  ``$JOBID`` evaluates to a representation of the HTCondor job ID [ClusterId.ProcId]
    of the node job. For nodes with multiple jobs in the same cluster, the
    :ad-attr:`ProcId` value is the one of the last job within the cluster.
+-  ``$JOB_COUNT`` evaluates to the total number of jobs associated with the node.
+-  ``$JOB_ABORT_COUNT`` is the number of jobs associated with the node that
+   exited the queue with an abort event.
+-  ``$SUCCESS`` evaluates to ``True`` or ``False`` representing whether the node
+   has been successful up to this point (PRE script and list of jobs succeeded).
 -  ``$RETURN`` variable evaluates to the return value of the HTCondor job
    if there is a single job within a cluster. With multiple jobs within the
    same cluster, the value will be 0 if all jobs within the cluster are
@@ -437,6 +435,11 @@ Macros for POST Scripts only:
      other than :tool:`condor_dagman`) is reported as -1002.
    - If the node's jobs were skipped because of failure of the PRE script,
      the value of ``$RETURN`` will be -1004.
+-  ``$EXIT_CODES`` is an ordered comma separated list of :ad-attr:`ExitCode`\ s returned
+   by the jobs associated with the node.
+-  ``$EXIT_CODE_COUNTS`` is a ordered comma separated list of the number of jobs associated
+   with the node that exited with a particular :ad-attr:`ExitCode`. The information
+   is passed as ``{ExitCode}:{Count}``.
 -  ``$PRE_SCRIPT_RETURN`` variable evaluates to the return value of the
    PRE script of a node, if there is one. If there is no PRE script, this
    value will be -1.
@@ -510,8 +513,8 @@ SUBMIT-DESCRIPTION command
 
 In addition to declaring inline submit descriptions as part of a node, they
 can be declared independently of nodes using the :dag-cmd:`SUBMIT-DESCRIPTION[Usage]` command.
-This can be helpful to reduce the size and readability of a ``.dag`` file when
-many nodes are share the same submit description.
+This can be helpful to reduce the size and improve the readability of a ``.dag`` file when
+many nodes share the same submit description.
 
 A :dag-cmd:`SUBMIT-DESCRIPTION` can be defined using the following syntax:
 

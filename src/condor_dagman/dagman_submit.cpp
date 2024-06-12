@@ -297,6 +297,8 @@ static bool shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 		main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_ERROR);
 	}
 
+	node->SetNumSubmitted(jobProcCount);
+
 	return true;
 }
 
@@ -486,7 +488,7 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 		success = DisconnectQ(qmgr, true, &errstack); qmgr = NULL;
 		if ( ! success) {
 			debug_printf(DEBUG_NORMAL, "Failed to submit job %s: %s\n", node->GetJobName(), errstack.getFullText().c_str());
-		}
+		} else { node->SetNumSubmitted(proc_id+1); }
 	}
 
 finis:

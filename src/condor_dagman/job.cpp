@@ -871,7 +871,7 @@ Job::AddScript(Script* script)
 	if( old_script_name ) {
 		debug_printf( DEBUG_NORMAL,
 			"Warning: node %s already has %s script <%s> assigned; changing "
-			"to <%s>\n", GetJobName(), type_name, old_script_name, script->_cmd);
+			"to <%s>\n", GetJobName(), type_name, old_script_name, script->GetCmd());
 	}
 
 	return true;

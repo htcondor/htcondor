@@ -297,16 +297,30 @@ Macros that can be passed to a script as optional arguments like ``$<macro>``
 .. parsed-literal::
 
     For All Scripts:
-        **JOB**               | Name of the node this script is associated with.
+        **NODE**              | Name of the node this script is associated with.
         **RETRY**             | The node's current retry number. Set to 0 on first execution.
         **MAX_RETRIES**       | Maximum number of retries allowed for the node.
-        **FAILED_COUNT**      | Current number of failed nodes in the DAG.
+        **NODE_COUNT**        | The total number of nodes in the DAG (Including the :dag-cmd:`FINAL` node).
+        **QUEUED_COUNT**      | The current number of nodes running jobs in the DAG.
+        **DONE_COUNT**        | The current number of successfully completed nodes in the DAG.
+        **FAILED_COUNT**      | The current number of failed nodes in the DAG.
+        **FUTILE_COUNT**      | The current number of nodes that will never start in the DAG.
+        **DAGID**             | The node's associated :ad-attr:`DAGManJobId`
         **DAG_STATUS**        | The current :ad-attr:`DAG_Status`.
     Only for POST Scripts:
-        **JOBID**             | The Job-Id of the job executed by node. It is the\
-     :ad-attr:`ClusterId` and :ad-attr:`ProcId` of the last job in the associated list of jobs.
+        **CLUSTERID**         | The :ad-attr:`ClusterId` of the list of jobs associated with the node.
+        **JOBID**             | The Job-ID (:ad-attr:`ClusterId` & :ad-attr:`ProcId`) of the last job in\
+     the node's associated list of jobs.
+        **JOB_COUNT**         | The total number of jobs associated with the node.
+        **JOB_ABORT_COUNT**   | The number of jobs associated with the node that got an abort event.
+        **SUCCESS**           | A boolean string that represents whether the node has been successful\
+        up to this point (PRE script and list of jobs succeeded) (``True`` or ``False``).
         **RETURN**            | The exit code of the first failed job in the set or 0 for a\
      successful list of jobs execution.
+        **EXIT_CODES**        | An ordered comma separated list of all :ad-attr:`ExitCode`\ s returned by\
+     jobs associated with the node.
+        **EXIT_CODE_COUNTS**  | An ordered comma separated list of the number of jobs that exited with a particular\
+     :ad-attr:`ExitCode` (``{ExitCode}:{Count}``).
         **PRE_SCRIPT_RETURN** | Return value of the associated node's PRE Script.
 
 
