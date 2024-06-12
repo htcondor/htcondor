@@ -1,4 +1,5 @@
 from pathlib import Path
+import datetime
 
 import htcondor2 as htcondor
 import classad2 as classad
@@ -45,7 +46,7 @@ class List(Verb):
         else:
             print(f">> no Kerberos credential found")
 
-        # Check for OAuth2 credentias.
+        # Check for OAuth2 credentials.
         oauth_classad_string = credd.query_user_service_cred(htcondor.CredTypes.OAuth, None, None, user)
 
         if oauth_classad_string is None:
@@ -65,8 +66,11 @@ class List(Verb):
                 names[name] = ad[key]
 
         print(f">> Found OAuth2 credentials:")
+        print(f"   {'Service':<24} {'Handle':<24} {'Last Refreshed':>24}")
         for name in names:
-            print(f"   {name} @{names[name]}")
+            (service, _, handle) = name.partition('_')
+            date = datetime.datetime.fromtimestamp(names[name])
+            print(f"   {service:<24} {handle:<24} {str(date):>24}")
 
 
 class Add(Verb):
@@ -91,6 +95,9 @@ class Add(Verb):
         user = None
         credd = htcondor.Credd()
         contents = Path(credential_file).read_text()
+
+        if service is None and handle is None:
+            (service, _, handle) = Path(credential_file).name.partition('_')
 
         credd.add_user_service_cred(htcondor.CredTypes.OAuth, contents, service, handle, user)
 
