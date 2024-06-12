@@ -15,6 +15,10 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-23014`.
 
+- DAGMan now enforces that the :dag-cmd:`PROVISIONER` node only submits
+  one job.
+  :jira:`2492`
+
 New Features:
 
 - Added ability for DAGMan to produce job credentials when submitting jobs directly to

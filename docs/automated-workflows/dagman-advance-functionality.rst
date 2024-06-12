@@ -393,7 +393,7 @@ work exactly like they do detailed in the :ref:`DAGMan JOB` command.
     There can only be one FINAL node in a DAG. If multiple are defined then
     DAGMan will log a parse error and fail.
 
-.. sidebar:: FINAL Nope Restrictions
+.. sidebar:: FINAL Node Restrictions
 
     The :dag-cmd:`FINAL` node can not be referenced with the following DAG commands:
 
@@ -426,13 +426,19 @@ PROVISIONER Node
 ^^^^^^^^^^^^^^^^
 
 The :dag-cmd:`PROVISIONER[Usage]` node is a single and special node that is always run at the
-beginning of a DAG. It can be used to provision resources (i.e. Amazon EC2
-instances, in-memory database servers) that can then be used by the remainder
-of the nodes in the workflow. The syntax used for the :dag-cmd:`PROVISIONER` command is
+beginning of a DAG. It can be used to provision resources (i.e. Amazon EC2 instances,
+in-memory database servers, etc.) that can then be used by the remainder of the nodes in the
+workflow. The syntax used for the :dag-cmd:`PROVISIONER` command is
 
 .. code-block:: condor-dagman
 
     PROVISIONER NodeName SubmitDescription
+
+.. note::
+
+    Unlike all other node's in DAGMan, the :dag-cmd:`PROVISIONER` node is limited to running
+    a single job. If more than one job is detected at the node's job submission time DAGMan
+    will exit without writing a Rescue file or running the :dag-cmd:`FINAL` node (if provided).
 
 When the :dag-cmd:`PROVISIONER` node is defined in a DAG, DAGMan will run the :dag-cmd:`PROVISIONER`
 node before all other nodes and wait for the provisioner node's job to state it is ready.
@@ -442,7 +448,7 @@ To achieve this, the provisioner node's job must set it's job ClassAd attribute
 
 The :dag-cmd:`PROVISIONER` node runs for a set amount of time defined in its job.
 It does not get terminated automatically at the end of a DAG workflow. The expectation
-is that it needs to explicitly de-provision any resources, such as expensive
+is that the job needs to explicitly de-provision any resources, such as expensive
 cloud computing instances that should not be allowed to run indefinitely.
 
 .. warning::
