@@ -35,7 +35,6 @@
 #define EXPAND_GLOBS_TO_DIRS    (1<<4) // when you want dirs only
 #define EXPAND_GLOBS_TO_FILES   (1<<5) // when you want files only
 
-int submit_expand_globs(StringList &items, int options, std::string & errmsg);
 #endif // EXPAND_GLOBS
 
 // functions for handling the queue statement
