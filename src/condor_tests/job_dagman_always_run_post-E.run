@@ -105,7 +105,7 @@ $success = sub
 			$passed2 = 1;
 			next;
 		}
-		if(/PRE Script of node E_A completed successfully/) {
+		if(/PRE Script of Node E_A completed successfully/) {
 			CondorTest::debug("PRE script succeeded eventually as expected.\n");
 			$passed3 = 1;
 			next;
@@ -115,7 +115,7 @@ $success = sub
 			$passed4 = 1;
 			next;
 		}
-		if(/POST Script of node E_A completed successfully/) {
+		if(/POST Script of Node E_A completed successfully/) {
 			CondorTest::debug("POST script of E_A completed successfully, as expected.\n");
 			$passed5 = 1;
 			next;

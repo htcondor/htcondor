@@ -86,7 +86,7 @@ class OwnedMaterials
 	public:
 		// this structure owns the containers passed to it, but not the memory 
 		// contained in the containers...
-		OwnedMaterials(std::vector<Job*> *a, ThrottleByCategory *tr,
+		OwnedMaterials(std::vector<Node*> *a, ThrottleByCategory *tr,
 				bool reject, std::string firstRejectLoc ) :
 				nodes (a), throttles (tr), _reject(reject),
 				_firstRejectLoc(firstRejectLoc) {};
@@ -95,7 +95,7 @@ class OwnedMaterials
 			delete nodes;
 		};
 
-	std::vector<Job*> *nodes;
+	std::vector<Node*> *nodes;
 	ThrottleByCategory *throttles;
 	bool _reject;
 	std::string _firstRejectLoc;
@@ -119,15 +119,15 @@ public:
 	Dag(const Dagman& dm, bool isSplice = false, const std::string &spliceScope = "root");
 	~Dag();
 
-	int PreScriptReaper(Job *job, int status);
-	int PostScriptReaper(Job *job, int status);
-	int HoldScriptReaper(Job *job);
+	int PreScriptReaper(Node *node, int status);
+	int PostScriptReaper(Node *node, int status);
+	int HoldScriptReaper(Node *node);
 
 	// Add a node to be managed by this DAG
-	bool Add(Job& job);
+	bool Add(Node& node);
 	void PrefixAllNodeNames(const std::string &prefix);
 	// Defer setting node status to DONE when parsed from node line in file
-	void AddPreDoneNode(Job* node) { m_userDefinedDoneNodes.push_back(node); }
+	void AddPreDoneNode(Node* node) { m_userDefinedDoneNodes.push_back(node); }
 	void SetPreDoneNodes(); // Mark pre-set done nodes as such
 	void SetReject(const std::string &location); // Mark a DAG as rejected
 	bool GetReject(std::string &firstLocation); // Check if DAG was rejected
@@ -146,7 +146,7 @@ public:
 	// Verify Categories contain nodes and throttling information
 	void CheckThrottleCats();
 
-	int SubmitReadyJobs(const Dagman &dm); // Submit node jobs in the ready queue
+	int SubmitReadyNodes(const Dagman &dm); // Submit node jobs in the ready queue
 	bool StartFinalNode(); // Start the Final node
 	bool StartServiceNodes(); // Start service nodes
 	bool RemoveServiceNodes(); // Remove running service nodes
@@ -158,7 +158,7 @@ public:
 	// Remove all managed jobs from the Schedd Queue
 	void RemoveRunningJobs(const CondorID &dmJobId, const std::string& reason, bool removeCondorJobs, bool bForce);
 	// Remove all running jobs associated with a node from the Schedd Queue
-	void RemoveBatchJob(Job *node, const std::string& reason = "Removed by DAGMan");
+	void RemoveBatchJob(Node *node, const std::string& reason = "Removed by DAGMan");
 	const char* CondorRmExe() { return _condorRmExe; } // DON'T free returned pointer
 
 	void EnforceNewJobsLimit(); // Enforce new MaxJobs limit newly qedit value to DAGMan Job Ad
@@ -171,10 +171,10 @@ public:
 	const char *GetStatusName() const { return DAG_STATUS_NAMES[_dagStatus]; }
 
 	// Functions to find Nodes
-	Job* FindNodeByNodeID(const JobID_t jobID) const;
-	Job* FindNodeByName(const char * jobName) const;
-	Job* FindNodeByEventID(const CondorID condorID) const;
-	Job* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
+	Node* FindNodeByNodeID(const NodeID_t nodeID) const;
+	Node* FindNodeByName(const char * nodeName) const;
+	Node* FindNodeByEventID(const CondorID condorID) const;
+	Node* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
 	bool NodeExists(const char *nodeName) const; // Check if node with provided name exists in DAG
 
 	inline bool Recovery() const { return _recovery; }
@@ -189,11 +189,11 @@ public:
 	const CondorID* DAGManJobId(void) const { return _DAGManJobId; } // Get DAGMan job ID
 	std::string DefaultNodeLog(void) { return _defaultNodeLog.string(); }
 
-	inline bool HasFinalNode() const { return _final_job != nullptr; }
+	inline bool HasFinalNode() const { return _final_node != nullptr; }
 	inline bool FinalNodeRun() const { return _finalNodeRun; }
 	inline bool FinalNodeFinished() const {
-		return _final_job && _finalNodeRun &&
-		       (_final_job->GetStatus() == Job::STATUS_DONE || _final_job->GetStatus() == Job::STATUS_ERROR);
+		return _final_node && _finalNodeRun &&
+		       (_final_node->GetStatus() == Node::STATUS_DONE || _final_node->GetStatus() == Node::STATUS_ERROR);
 	}
 
 	inline bool HasProvisionerNode() const { return _provisioner_node != nullptr; }
@@ -225,7 +225,7 @@ public:
 	}
 
 	inline int NumReadyServiceNodes() const {
-		auto IsReady = [](Job* n) -> bool { return n->GetStatus() == Job::STATUS_READY; };
+		auto IsReady = [](Node* n) -> bool { return n->GetStatus() == Node::STATUS_READY; };
 		return std::count_if(_service_nodes.begin(), _service_nodes.end(), IsReady);
 	}
 
@@ -263,8 +263,8 @@ public:
 	                 bool isPartial = false, bool isSavePoint = false);
 
 	// Print various node information
-	void PrintJobList() const;
-	void PrintJobList(Job::status_t status) const;
+	void PrintNodeList() const;
+	void PrintNodeList(Node::status_t status) const;
 	void PrintReadyQ(debug_level_t level) const;
 	void PrintDeferrals(debug_level_t level, bool force) const;
 	void PrintPendingNodes() const;
@@ -278,8 +278,8 @@ public:
 	bool InsertSplice(std::string spliceName, Dag *splice_dag);
 	Dag* LookupSplice(std::string name);
 
-	std::vector<Job*>* InitialRecordedNodes(void);
-	std::vector<Job*>* FinalRecordedNodes(void);
+	std::vector<Node*>* InitialRecordedNodes(void);
+	std::vector<Node*>* FinalRecordedNodes(void);
 	void RecordInitialAndTerminalNodes(void);
 
 	OwnedMaterials* LiftSplices(SpliceLayer layer); // Recursively lift all lower splices up to this DAG
@@ -316,8 +316,8 @@ public:
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
 
 protected:
-	mutable std::vector<Job*> _jobs; // List of all 'normal' and SubDAG nodes
-	mutable std::vector<Job*> _service_nodes{}; // List of Service nodes
+	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes
+	mutable std::vector<Node*> _service_nodes{}; // List of Service nodes
 private:
 	typedef enum {
 		SUBMIT_RESULT_OK,
@@ -325,60 +325,60 @@ private:
 		SUBMIT_RESULT_NO_SUBMIT,
 	} submit_result_t;
 
-	using PinNodes = std::vector<Job *>;
+	using PinNodes = std::vector<Node *>;
 	using PinList = std::vector<PinNodes *>;
 
 	// Verify schedd q contains expected jobs
 	void VerifyJobsInQueue(const std::uintmax_t before_size);
 	// Process event read from shared nodes log
 	bool ProcessOneEvent(ULogEventOutcome outcome, const ULogEvent *event, bool recovery, bool &done);
-	bool EventSanityCheck(const ULogEvent* event, const Job* node, bool* result);
-	bool SanityCheckSubmitEvent(const CondorID condorID, const Job* node) const;
-	void ProcessAbortEvent(const ULogEvent *event, Job *job, bool recovery); // Job abort or executable error
-	void ProcessTerminatedEvent(const ULogEvent *event, Job *job, bool recovery); // Job terminated (success or fail)
-	void ProcessJobProcEnd(Job *node, bool recovery, bool failed); // Common Work for all jobs that have left queue
-	void ProcessPostTermEvent(const ULogEvent *event, Job *job, bool recovery); // POST Script Terminate
-	void ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane); // Job Submit event
-	void ProcessIsIdleEvent(Job *job, int proc); // Job is not actively running
-	void ProcessNotIdleEvent(Job *job, int proc); // Job is actively running
-	void ProcessHeldEvent(Job *job, const ULogEvent *event); // Job held
-	void ProcessReleasedEvent(Job *job, const ULogEvent *event); // Job released
-	void ProcessClusterSubmitEvent(Job *job); // Cluster submit (late materialization)
-	void ProcessClusterRemoveEvent(Job *job, bool recovery); // Cluster removed (late materialization)
-	void ProcessSuccessfulSubmit(Job *node, const CondorID &condorID); // Post process of successful submit of node jobs
-	void ProcessFailedSubmit(Job *node, int max_submit_attempts); // Post process of failed submit of node jobs
+	bool EventSanityCheck(const ULogEvent* event, const Node* node, bool* result);
+	bool SanityCheckSubmitEvent(const CondorID condorID, const Node* node) const;
+	void ProcessAbortEvent(const ULogEvent *event, Node *node, bool recovery); // Job abort or executable error
+	void ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery); // Job terminated (success or fail)
+	void ProcessJobProcEnd(Node *node, bool recovery, bool failed); // Common Work for all jobs that have left queue
+	void ProcessPostTermEvent(const ULogEvent *event, Node *node, bool recovery); // POST Script Terminate
+	void ProcessSubmitEvent(Node *node, bool recovery, bool &submitEventIsSane); // Job Submit event
+	void ProcessIsIdleEvent(Node *node, int proc); // Job is not actively running
+	void ProcessNotIdleEvent(Node *node, int proc); // Job is actively running
+	void ProcessHeldEvent(Node *node, const ULogEvent *event); // Job held
+	void ProcessReleasedEvent(Node *node, const ULogEvent *event); // Job released
+	void ProcessClusterSubmitEvent(Node *node); // Cluster submit (late materialization)
+	void ProcessClusterRemoveEvent(Node *node, bool recovery); // Cluster removed (late materialization)
+	void ProcessSuccessfulSubmit(Node *node, const CondorID &condorID); // Post process of successful submit of node jobs
+	void ProcessFailedSubmit(Node *node, int max_submit_attempts); // Post process of failed submit of node jobs
 
-	void DecrementProcCount(Job *node);
-	void UpdateNodeCounts(Job *node, int change);
+	void DecrementProcCount(Node *node);
+	void UpdateNodeCounts(Node *node, int change);
 
-	bool StartNode(Job *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
-	void RestartNode(Job *node, bool recovery); // Restart a failed node w/ retries
-	submit_result_t SubmitNodeJob(const Dagman &dm, Job *node, CondorID &condorID); // Submit a nodes job to Schedd queue
-	void TerminateJob(Job* job, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully
+	bool StartNode(Node *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
+	void RestartNode(Node *node, bool recovery); // Restart a failed node w/ retries
+	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID); // Submit a nodes job to Schedd queue
+	void TerminateNode(Node* node, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully
 
-	bool RunPostScript(Job *job, bool ignore_status, int status, bool incrementRunCount = true);
-	bool RunHoldScript(Job *job, bool incrementRunCount = true);
+	bool RunPostScript(Node *node, bool ignore_status, int status, bool incrementRunCount = true);
+	bool RunHoldScript(Node *node, bool incrementRunCount = true);
 
-	bool CheckForDagAbort(Job *job, const char *type); // Check ABORT-DAG-ON value for node
+	bool CheckForDagAbort(Node *node, const char *type); // Check ABORT-DAG-ON value for node
 
 	// Check if node in a no-operation (NOOP) node
-	static bool JobIsNoop(const CondorID &id) {
-		return id._cluster == 0 && id._proc == Job::NOOP_NODE_PROCID;
+	static bool NodeIsNoop(const CondorID &id) {
+		return id._cluster == 0 && id._proc == Node::NOOP_NODE_PROCID;
 	}
 	// Get Part of HTCondor ID for hash indexing
-	// (ClusterId for normal jobs & SubProcID for NOOP jobs)
+	// (ClusterId for normal nodes & SubProcID for NOOP nodes)
 	static int GetIndexID(const CondorID &id) {
-		return JobIsNoop(id) ? id._subproc : id._cluster; 
+		return NodeIsNoop(id) ? id._subproc : id._cluster; 
 	}
-	std::map<int, Job*>* GetEventIDHash(bool isNoop);
-	const std::map<int, Job*>* GetEventIDHash(bool isNoop) const;
-	Job* LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane);
+	std::map<int, Node*>* GetEventIDHash(bool isNoop);
+	const std::map<int, Node*>* GetEventIDHash(bool isNoop) const;
+	Node* LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Splicing functions
 	void LiftSplice(Dag *parent, Dag *splice);
 	int GetPinCount(bool isPinIn);
-	bool SetPinInOut(PinList &pinList, Job *node, int pinNum);
+	bool SetPinInOut(PinList &pinList, Node *node, int pinNum);
 	const PinNodes *GetPinInOut(bool isPinIn, int pinNum) const;
 	const static PinNodes *GetPinInOut(const PinList &pinList, const char *inOutStr, int pinNum);
 	static void DeletePinList(PinList &pinList) {
@@ -386,19 +386,19 @@ private:
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	void WriteSavePoint(Job* node); // Write a node save point file
-	void WriteNodeToRescue(FILE *fp, Job *node, bool reset_retries_upon_rescue, bool isPartial);
+	void WriteSavePoint(Node* node); // Write a node save point file
+	void WriteNodeToRescue(FILE *fp, Node *node, bool reset_retries_upon_rescue, bool isPartial);
 	static void WriteScriptToRescue( FILE *fp, Script *script );
 
 	void PrintDagFiles(const std::list<std::string> &dagFiles);
-	void PrintEvent(debug_level_t level, const ULogEvent* event, Job* node, bool recovery);
+	void PrintEvent(debug_level_t level, const ULogEvent* event, Node* node, bool recovery);
 
 	size_t TotalLogFileCount() { return CondorLogFileCount(); }
 	size_t CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
 	bool MonitorLogFile();
 	bool UnmonitorLogFile();
 
-	void DFSVisit(Job * job, int depth); // DFS visit and number nodes to detect cycle
+	void DFSVisit(Node * node, int depth); // DFS visit and number nodes to detect cycle
 
 	const char *EscapeClassadString(const char* strIn);
 
@@ -416,25 +416,25 @@ private:
 	CheckEvents _checkCondorEvents{};
 	JobstateLog _jobstateLog{}; // Pegasus JobState log
 	std::filesystem::path _defaultNodeLog{}; // Shared nodes job log (heart of DAGMan)
-	mutable std::vector<Job*>::iterator _allNodesIt; // ALL_NODES iterator
+	mutable std::vector<Node*>::iterator _allNodesIt; // ALL_NODES iterator
 	std::vector<int> _graph_widths{};
 
-	std::map<std::string, Job*> _nodeNameHash{};
-	std::map<JobID_t, Job*> _nodeIDHash{};
-	std::map<int, Job*> _condorIDHash{};
-	std::map<int, Job*> _noopIDHash{};
+	std::map<std::string, Node*> _nodeNameHash{};
+	std::map<NodeID_t, Node*> _nodeIDHash{};
+	std::map<int, Node*> _condorIDHash{};
+	std::map<int, Node*> _noopIDHash{};
 
 	std::map<std::string, Dag*> _splices{};
-	std::vector<Job*> _splice_initial_nodes{}; // All nodes with no parents
-	std::vector<Job*> _splice_terminal_nodes{}; // All node with no children
+	std::vector<Node*> _splice_initial_nodes{}; // All nodes with no parents
+	std::vector<Node*> _splice_terminal_nodes{}; // All node with no children
 	PinList _pinIns{};
 	PinList _pinOuts{};
 
-	std::deque<Job*> m_userDefinedDoneNodes{}; // List of nodes declared with DONE: JOB FOO submit DONE
+	std::deque<Node*> m_userDefinedDoneNodes{}; // List of nodes declared with DONE: JOB FOO submit DONE
 
 	DCSchedd* _schedd;
 	DagPriorityQ* _readyQ{nullptr};
-	std::queue<Job*>* _submitQ{nullptr}; // Queue of nodes waiting to see submit event for
+	std::queue<Node*>* _submitQ{nullptr}; // Queue of nodes waiting to see submit event for
 
 	ScriptQ* _preScriptQ{nullptr};
 	ScriptQ* _postScriptQ{nullptr};
@@ -444,8 +444,8 @@ private:
 	ProvisionerClassad* _provisionerClassad{nullptr}; // Provisioner node ClassAd functionality
 	// NOTE: Provisioner and Final nodes exist in _jobs vector.
 	//       These pointers are for quick access
-	Job* _provisioner_node{nullptr}; // Pointer to provisioner node
-	Job* _final_job{nullptr}; // Pointer to final node.
+	Node* _provisioner_node{nullptr}; // Pointer to provisioner node
+	Node* _final_node{nullptr}; // Pointer to final node.
 
 	const CondorID* _DAGManJobId; // HTCondor ID of this DAGMan job
 

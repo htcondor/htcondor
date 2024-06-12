@@ -27,9 +27,9 @@
 #include <algorithm>
 
 
-struct JobSorter {
+struct NodeSorter {
 	// Our heap is a max heap, sorted in ascending order left to right
-	bool operator() (const Job *a, const Job *b) {
+	bool operator() (const Node *a, const Node *b) {
 		if (a->_effectivePriority < b->_effectivePriority) {
 			return true;
 		}
@@ -48,24 +48,24 @@ struct JobSorter {
 class DagPriorityQ {
 	public:
 		int size() const {return (int) _q.size();}
-		void prepend(Job *j) {
+		void prepend(Node *j) {
 			generation++;
 			j->setSubPrio(generation);
 			_q.push_back(j);
-			std::push_heap(_q.begin(), _q.end(), JobSorter{});
+			std::push_heap(_q.begin(), _q.end(), NodeSorter{});
 		}
-		void append(Job *j) {
+		void append(Node *j) {
 			generation++;
 			j->setSubPrio(-generation);
 			_q.push_back(j);
-			std::push_heap(_q.begin(), _q.end(), JobSorter{});
+			std::push_heap(_q.begin(), _q.end(), NodeSorter{});
 		}
 
 		bool empty() const { return _q.empty();}
 
-		Job *pop() {
-			std::pop_heap(_q.begin(), _q.end(), JobSorter{});
-			Job *j = _q.back();
+		Node *pop() {
+			std::pop_heap(_q.begin(), _q.end(), NodeSorter{});
+			Node *j = _q.back();
 			_q.pop_back();
 			return j;
 		}	
@@ -77,15 +77,15 @@ class DagPriorityQ {
 		}
 
 		void make_heap() {
-			std::make_heap(_q.begin(), _q.end(), JobSorter{});
+			std::make_heap(_q.begin(), _q.end(), NodeSorter{});
 		}
 
 		// If you mutate the heap, you must call make_heap afterwards
-		std::vector<Job *>::iterator begin() { return _q.begin();}
-		std::vector<Job *>::iterator end()   { return _q.end();}
+		std::vector<Node *>::iterator begin() { return _q.begin();}
+		std::vector<Node *>::iterator end()   { return _q.end();}
 	private:
 		int generation = 0;
-		std::vector<Job *> _q;	
+		std::vector<Node *> _q;	
 };
 
 #endif /* #ifndef DAG_PRIORITY_Q_H */

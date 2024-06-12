@@ -31,7 +31,7 @@ extern DLL_IMPORT_MAGIC char **environ;
 constexpr int STDOUT = 1;
 constexpr int STDERR = 2;
 
-const char* Script::GetNodeName() { return _node->GetJobName(); }
+const char* Script::GetNodeName() { return _node->GetNodeName(); }
 
 void Script::WriteDebug(int status) {
 	if (_output != DagScriptOutput::NONE && ! _debugFile.empty()) {
@@ -47,7 +47,7 @@ void Script::WriteDebug(int status) {
 
 		time_t now = time(nullptr);
 		formatstr(output, "*** Node=%s Type=%s Status=%d Completion=%lld Cmd='%s'\n",
-		          _node->GetJobName(), GetScriptName(), status, (long long)now,
+		          _node->GetNodeName(), GetScriptName(), status, (long long)now,
 		          _executedCMD.c_str());
 
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDOUT);
@@ -59,12 +59,12 @@ void Script::WriteDebug(int status) {
 		if ( ! debug_fp) {
 			// don't return here in case we need to cd back to main working dir
 			debug_printf(DEBUG_NORMAL, "ERROR: Failed to open %s to write %s script output for %s\n",
-			             _debugFile.c_str(), GetScriptName(), _node->GetJobName());
+			             _debugFile.c_str(), GetScriptName(), _node->GetNodeName());
 		} else {
 			int debug_fd = fileno(debug_fp);
 			if (write(debug_fd, output.c_str(), output.length()) == -1) {
 				debug_printf(DEBUG_NORMAL, "ERROR (%d): Failed to write %s %s Script output to %s | %s\n",
-				             errno, _node->GetJobName(), GetScriptName(),
+				             errno, _node->GetNodeName(), GetScriptName(),
 				             _debugFile.c_str(), strerror(errno));
 			}
 			fclose(debug_fp);
@@ -109,9 +109,9 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	}
 
 	// Construct the command line, replacing some tokens with
-	// information about the job.  All of these values would probably
+	// information about the node.  All of these values would probably
 	// be better inserted into the environment, rather than passed on
-	// the command-line... some should be in the job's env as well...
+	// the command-line... some should be in the node's env as well...
 	ArgList args;
 	std::string executable;
 	StringTokenIterator cmd(_cmd, " \t");
@@ -120,7 +120,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		istring_view cmp_arg(token.c_str());
 
 		if (cmp_arg == "$NODE" || cmp_arg == "$JOB") {
-			arg = _node->GetJobName();
+			arg = _node->GetNodeName();
 
 		} else if (cmp_arg == "$RETRY") {
 			arg = std::to_string(_node->GetRetries());
@@ -181,7 +181,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		// Non DAGMan sanctioned script macros
 		} else if (token[0] == '$') {
 			debug_printf(DEBUG_QUIET, "Warning: unrecognized macro %s in node %s %s script arguments\n",
-			             token.c_str(), _node->GetJobName(), GetScriptName());
+			             token.c_str(), _node->GetNodeName(), GetScriptName());
 			check_warning_strictness(DAG_STRICT_1);
 			arg = token;
 		} else {

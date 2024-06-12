@@ -100,7 +100,7 @@ static bool parse_connect( Dag  *dag, const char *filename, int  lineNumber );
 static bool parse_pin_in_out( Dag  *dag, const char *filename,
 			int  lineNumber, bool isPinIn );
 static bool parse_include(const Dagman& dm, Dag  *dag, const char *filename, int  lineNumber );
-static std::string munge_job_name(const char *jobName);
+static std::string munge_node_name(const char *nodeName);
 
 static std::string current_splice_scope(void);
 
@@ -301,11 +301,11 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 						parsed_line_successfully = false;
 					} else {
 						// Attach the submit description to the actual node
-						Job *job;
-						job = dag->FindAllNodesByName((const char *)nodename.c_str(), 
+						Node *node;
+						node = dag->FindAllNodesByName((const char *)nodename.c_str(), 
 							"", filename, lineNumber);
-						if (job) {
-							job->setSubmitDesc(submitDesc);
+						if (node) {
+							node->setSubmitDesc(submitDesc);
 						}
 						else {
 							debug_printf(DEBUG_NORMAL, "Error: unable to find node "
@@ -361,11 +361,11 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 						parsed_line_successfully = false;
 					} else {
 						// Attach the submit description to the actual node
-						Job *job;
-						job = dag->FindAllNodesByName((const char *)nodename.c_str(), 
+						Node *node;
+						node = dag->FindAllNodesByName((const char *)nodename.c_str(), 
 							"", filename, lineNumber);
-						if (job) {
-							job->setSubmitDesc(submitDesc);
+						if (node) {
+							node->setSubmitDesc(submitDesc);
 						}
 						else {
 							debug_printf(DEBUG_NORMAL, "Error: unable to find node "
@@ -582,7 +582,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		}
 
 		// Handle a SCRIPT spec
-		// Example Syntax is:  SCRIPT (PRE|POST|HOLD) [DEFER status time] JobName ScriptName Args ...
+		// Example Syntax is:  SCRIPT (PRE|POST|HOLD) [DEFER status time] NodeName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
 			parsed_line_successfully = parse_script(endline, dag, 
 				filename, lineNumber);
@@ -595,13 +595,13 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		}
 			
 		// Handle a Retry spec
-		// Example Syntax is:  Retry JobName 3 UNLESS-EXIT 42
+		// Example Syntax is:  Retry NodeName 3 UNLESS-EXIT 42
 		else if( strcasecmp( token, "RETRY" ) == 0 ) {
 			parsed_line_successfully = parse_retry(dag, filename, lineNumber);
 		} 
 
 		// Handle an Abort spec
-		// Example Syntax is:  ABORT-DAG-ON JobName 2
+		// Example Syntax is:  ABORT-DAG-ON NodeName 2
 		else if( strcasecmp( token, "ABORT-DAG-ON" ) == 0 ) {
 			parsed_line_successfully = parse_abort(dag, filename, lineNumber);
 		} 
@@ -615,20 +615,20 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		} 
 
 		// Handle a Vars spec
-		// Example syntax is: Vars JobName var1="val1" var2="val2"
+		// Example syntax is: Vars NodeName var1="val1" var2="val2"
 		else if(strcasecmp(token, "VARS") == 0) {
 			parsed_line_successfully = parse_vars(dag, filename, lineNumber);
 		}
 
 		// Handle a Priority spec
-		// Example syntax is: Priority JobName 2
+		// Example syntax is: Priority NodeName 2
 		else if(strcasecmp(token, "PRIORITY") == 0) {
 			parsed_line_successfully = parse_priority(dag, filename,
 						lineNumber);
 		}
 
 		// Handle a Category spec
-		// Example syntax is: Category JobName Simulation
+		// Example syntax is: Category NodeName Simulation
 		else if(strcasecmp(token, "CATEGORY") == 0) {
 			parsed_line_successfully = parse_category(dag, filename,
 						lineNumber);
@@ -889,7 +889,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 
 	if ( isReservedWord( nodeName ) ) {
 		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): JobName cannot be a reserved word\n",
+					  "ERROR: %s (line %d): NodeName cannot be a reserved word\n",
 					  dagFile, lineNum );
 		exampleSyntax( example.c_str() );
 		return false;
@@ -898,7 +898,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 	bool allowIllegalChars = param_boolean("DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS", false );
 	if ( !allowIllegalChars && ( strcspn ( nodeName, ILLEGAL_CHARS ) < strlen ( nodeName ) ) ) {
         std::string errorMessage = "ERROR: " + std::string(dagFile) + 
-			" (line " + std::to_string(lineNum) + "): JobName " +
+			" (line " + std::to_string(lineNum) + "): NodeName " +
 			std::string(nodeName) + " contains one or more illegal characters (";
         for( unsigned int i = 0; i < strlen( ILLEGAL_CHARS ); i++ ) {
             errorMessage += "'";
@@ -913,7 +913,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
         return false;
     }
 
-	std::string tmpNodeName = munge_job_name(nodeName);
+	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
 
 		// next token is the either the submit file name,
@@ -1055,7 +1055,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 //
 // Function: parse_script
 // Purpose:  Parse a line of the format:
-//             SCRIPT [DEFER status time] (PRE|POST|HOLD) JobName ScriptName Args ...
+//             SCRIPT [DEFER status time] (PRE|POST|HOLD) NodeName ScriptName Args ...
 //
 //-----------------------------------------------------------------------------
 static bool 
@@ -1065,7 +1065,7 @@ parse_script(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "SCRIPT [DEFER status time] [DEBUG file (STDOUT|STDERR|ALL)] (PRE|POST|HOLD) JobName Script Args ...";
+	const char * example = "SCRIPT [DEFER status time] [DEBUG file (STDOUT|STDERR|ALL)] (PRE|POST|HOLD) NodeName Script Args ...";
 
 	//
 	// Second keyword is either PRE, POST or DEFER
@@ -1186,22 +1186,22 @@ parse_script(
 	}
 
 	//
-	// Next token is the JobName
+	// Next token is the NodeName
 	//
-	const char *jobName = strtok( NULL, DELIMITERS );
-	if ( jobName == NULL ) {
+	const char *nodeName = strtok( NULL, DELIMITERS );
+	if ( nodeName == NULL ) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
-	const char *rest = jobName; // For subsequent tokens
+	const char *nodeNameOrig = nodeName; // for error output
+	const char *rest = nodeName; // For subsequent tokens
 
-	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-	std::string tmpJobName = munge_job_name(jobName);
-	jobName = tmpJobName.c_str();
+	debug_printf(DEBUG_DEBUG_1, "nodeName: %s\n", nodeName);
+	std::string tmpNodeName = munge_node_name(nodeName);
+	nodeName = tmpNodeName.c_str();
 
 	//
 	// The rest of the line is the script and args
@@ -1224,7 +1224,7 @@ parse_script(
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
 					  filename, lineNumber, type_name, 
-					  jobNameOrig );
+					  nodeNameOrig );
 		exampleSyntax( example );
 		return false;
 	}
@@ -1245,17 +1245,17 @@ parse_script(
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
 					  filename, lineNumber, type_name, 
-					  jobNameOrig );
+					  nodeNameOrig );
 		exampleSyntax( example );
 		return false;
 	}
 
 
-	Job *job;
-	while ( ( job = dag->FindAllNodesByName( jobName,
+	Node *node;
+	while ( ( node = dag->FindAllNodesByName( nodeName,
 				"In parse_script(): skipping node %s because final nodes must have SCRIPT set explicitly (%s: %d)\n",
 				filename, lineNumber ) ) ) {
-		jobName = NULL;
+		nodeName = NULL;
 
 		Script* script = new Script(scriptType, rest, defer_status, defer_time);
 		if(! script) {
@@ -1264,17 +1264,17 @@ parse_script(
 		}
 		if (debugType != DagScriptOutput::NONE)
 			script->SetDebug(debugFile, debugType);
-		if(! job->AddScript(script)) {
+		if(! node->AddScript(script)) {
 			debug_printf(DEBUG_SILENT, "ERROR: %s (line %d): failed to add %s script to node %s\n",
-			             filename, lineNumber, type_name, job->GetJobName());
+			             filename, lineNumber, type_name, node->GetNodeName());
 			return false;
 		}
 	}
 
-	if ( jobName ) {
+	if ( nodeName ) {
 		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Unknown Job %s\n",
-					  filename, lineNumber, jobNameOrig );
+					  "ERROR: %s (line %d): Unknown Node %s\n",
+					  filename, lineNumber, nodeNameOrig );
 		return false;
 	}
 
@@ -1298,61 +1298,61 @@ parse_parent(
 {
 	const char * example = "PARENT p1 [p2 p3 ...] CHILD c1 [c2 c3 ...]";
 	std::string failReason = "";
-	const char *jobName;
+	const char *nodeName;
 	
-	// get the job objects for the parents
-	std::forward_list<Job*> parents;
+	// get the node objects for the parents
+	std::forward_list<Node*> parents;
 	auto last_parent = parents.before_begin();
-	while ((jobName = strtok (NULL, DELIMITERS)) != NULL &&
-		   strcasecmp (jobName, "CHILD") != 0) {
-		const char *jobNameOrig = jobName; // for error output
-		std::string tmpJobName = munge_job_name(jobName);
-		const char *jobName2 = tmpJobName.c_str();
+	while ((nodeName = strtok (NULL, DELIMITERS)) != NULL &&
+		   strcasecmp (nodeName, "CHILD") != 0) {
+		const char *nodeNameOrig = nodeName; // for error output
+		std::string tmpNodeName = munge_node_name(nodeName);
+		const char *nodeName2 = tmpNodeName.c_str();
 
 		// if splice name then deal with that first...
-		Dag* splice_dag = dag->LookupSplice(jobName2);
+		Dag* splice_dag = dag->LookupSplice(nodeName2);
 		if (splice_dag) {
 
 			// grab all of the final nodes of the splice and make them parents
-			// for this job.
-			std::vector<Job*> *splice_final;
+			// for this node.
+			std::vector<Node*> *splice_final;
 			splice_final = splice_dag->FinalRecordedNodes();
 
 			// now add each final node as a parent
-			for (auto job : *splice_final) {
-					last_parent = parents.insert_after(last_parent, job);
+			for (auto node : *splice_final) {
+					last_parent = parents.insert_after(last_parent, node);
 			}
 
 		} else {
 
 			// orig code
 			// if the name is not a splice, then see if it is a true node name.
-			Job *job = dag->FindNodeByName( jobName2 );
-			if (job == NULL) {
+			Node *node = dag->FindNodeByName( nodeName2 );
+			if (node == NULL) {
 				// oops, it was neither a splice nor a parent name, bail
 				debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobNameOrig );
+						  "ERROR: %s (line %d): Unknown Node %s\n",
+						  filename, lineNumber, nodeNameOrig );
 				return false;
 			}
-			last_parent = parents.insert_after(last_parent, job);
+			last_parent = parents.insert_after(last_parent, node);
 		}
 	}
 	
-	// There must be one or more parent job names before
+	// There must be one or more parent node names before
 	// the CHILD token
 	if (parents.empty()) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
-					  "Missing Parent Job names\n",
+					  "Missing Parent Node names\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
 	}
 
-	parents.sort(SortJobsById());
-	parents.unique(EqualJobsById());
+	parents.sort(SortNodesById());
+	parents.unique(EqualNodesById());
 	
-	if (jobName == NULL) {
+	if (nodeName == NULL) {
 		debug_printf( DEBUG_QUIET, 
 					  "ERROR: %s (line %d): Expected CHILD token\n",
 					  filename, lineNumber );
@@ -1360,60 +1360,60 @@ parse_parent(
 		return false;
 	}
 	
-	std::forward_list<Job*> children;
+	std::forward_list<Node*> children;
 	auto last_child = children.before_begin();
 	
-	// get the job objects for the children
-	while ((jobName = strtok (NULL, DELIMITERS)) != NULL) {
-		const char *jobNameOrig = jobName; // for error output
-		std::string tmpJobName = munge_job_name(jobName);
-		const char *jobName2 = tmpJobName.c_str();
+	// get the node objects for the children
+	while ((nodeName = strtok (NULL, DELIMITERS)) != NULL) {
+		const char *nodeNameOrig = nodeName; // for error output
+		std::string tmpNodeName = munge_node_name(nodeName);
+		const char *nodeName2 = tmpNodeName.c_str();
 
 		// if splice name then deal with that first...
-		Dag *splice_dag = dag->LookupSplice(jobName2);
+		Dag *splice_dag = dag->LookupSplice(nodeName2);
 		if (splice_dag) {
 			// grab all of the initial nodes of the splice and make them 
-			// children for this job.
+			// children for this node.
 
 			debug_printf( DEBUG_DEBUG_1, "%s (line %d): "
 				"Detected splice %s as a child....\n", filename, lineNumber,
-					jobName2);
+					nodeName2);
 
-			std::vector<Job*> *splice_initial;
+			std::vector<Node*> *splice_initial;
 			splice_initial = splice_dag->InitialRecordedNodes();
 			debug_printf( DEBUG_DEBUG_1, "Adding %zu initial nodes\n", 
 				splice_initial->size());
 
 			// now add each initial node as a child
-			for (auto job : *splice_initial) {
-					last_child = children.insert_after(last_child, job);
+			for (auto node : *splice_initial) {
+					last_child = children.insert_after(last_child, node);
 			}
 
 		} else {
 
 			// orig code
 			// if the name is not a splice, then see if it is a true node name.
-			Job *job = dag->FindNodeByName( jobName2 );
-			if (job == NULL) {
+			Node *node = dag->FindNodeByName( nodeName2 );
+			if (node == NULL) {
 				// oops, it was neither a splice nor a child name, bail
 				debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobNameOrig );
+						  "ERROR: %s (line %d): Unknown Node %s\n",
+						  filename, lineNumber, nodeNameOrig );
 				return false;
 			}
-			last_child = children.insert_after(last_child, job);
+			last_child = children.insert_after(last_child, node);
 		}
 	}
 	
 	if (children.empty()) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing Child Job names\n",
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing Child Node names\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
 	}
 	
-	children.sort(SortJobsById());
-	children.unique(EqualJobsById());
+	children.sort(SortNodesById());
+	children.unique(EqualNodesById());
 
 	//
 	// Now add all the dependencies
@@ -1431,7 +1431,7 @@ parse_parent(
 		// First create the join node and add it
 		std::string joinNodeName;
 		formatstr(joinNodeName, "_condor_join_node%d", ++numJoinNodes);
-		Job* joinNode = AddNode(dag, joinNodeName.c_str(), "", "noop.sub", true, 
+		Node* joinNode = AddNode(dag, joinNodeName.c_str(), "", "noop.sub", true, 
 			false, NodeType::JOB, failReason);
 		if (!joinNode) {
 			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) while attempting to"
@@ -1439,13 +1439,13 @@ parse_parent(
 		}
 		// Now connect all parents and children to the join node
 		for (auto parent : parents) {
-				std::forward_list<Job*> lst = { joinNode };
+				std::forward_list<Node*> lst = { joinNode };
 			if (!parent->AddChildren(lst, failReason)) {
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
 					" to add dependency between parent"
 					" node \"%s\" and join node \"%s\"\n",
 					filename, lineNumber,
-					parent->GetJobName(), joinNode ? joinNode->GetJobName() : "unknown");
+					parent->GetNodeName(), joinNode ? joinNode->GetNodeName() : "unknown");
 				return false;
 			}
 		}
@@ -1461,7 +1461,7 @@ parse_parent(
 				" to add dependencies between %s"
 				" node \"%s\" and child nodes : %s\n",
 				filename, lineNumber, parent_type,
-				parent->GetJobName(), failReason.c_str());
+				parent->GetNodeName(), failReason.c_str());
 			return false;
 		}
 	}
@@ -1471,7 +1471,7 @@ parse_parent(
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_retry
-// Purpose:  Parse a line of the format "Retry jobname num-times [UNLESS-EXIT 42]"
+// Purpose:  Parse a line of the format "Retry nodename num-times [UNLESS-EXIT 42]"
 // 
 //-----------------------------------------------------------------------------
 static bool 
@@ -1480,20 +1480,20 @@ parse_retry(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char *example = "Retry JobName 3 [UNLESS-EXIT 42]";
+	const char *example = "Retry NodeName 3 [UNLESS-EXIT 42]";
 	
-	const char *jobName = strtok( NULL, DELIMITERS );
-	if( jobName == NULL ) {
+	const char *nodeName = strtok( NULL, DELIMITERS );
+	if( nodeName == NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing job name\n",
+					  "ERROR: %s (line %d): Missing node name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
-	std::string tmpJobName = munge_job_name(jobName);
-	jobName = tmpJobName.c_str();
+	const char *nodeNameOrig = nodeName; // for error output
+	std::string tmpNodeName = munge_node_name(nodeName);
+	nodeName = tmpNodeName.c_str();
 	
 	char *token = strtok( NULL, DELIMITERS );
 	if( token == NULL ) {
@@ -1551,40 +1551,40 @@ parse_retry(
         }
     }
 
-	Job *job;
-	while ( ( job = dag->FindAllNodesByName( jobName,
+	Node *node;
+	while ( ( node = dag->FindAllNodesByName( nodeName,
 				"In parse_retry(): skipping node %s because final nodes cannot have RETRY specifications (%s: %d)\n",
 				filename, lineNumber ) ) ) {
-		jobName = NULL;
+		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found job %s\n",
-					job->GetJobName() );
+		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found node %s\n",
+					node->GetNodeName() );
 
-		if ( job->GetType() == NodeType::FINAL ) {
+		if ( node->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
-						"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
-						filename, lineNumber, job->GetJobName() );
+						"ERROR: %s (line %d): Final Node %s cannot have RETRY specification\n",
+						filename, lineNumber, node->GetNodeName() );
 			return false;
 		}
-		if ( job->GetType() == NodeType::SERVICE ) {
+		if ( node->GetType() == NodeType::SERVICE ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: %s (line %d): SERVICE node %s cannot have RETRY specification\n",
-						filename, lineNumber, job->GetJobName() );
+						filename, lineNumber, node->GetNodeName() );
 			return false;
 		}
 
-		job->retry_max = retryMax;
+		node->retry_max = retryMax;
 		if ( unless_exit != 0 ) {
-           	job->have_retry_abort_val = true;
-           	job->retry_abort_val = unless_exit;
+           	node->have_retry_abort_val = true;
+           	node->retry_abort_val = unless_exit;
 		}
            debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n",
-		   			job->GetJobName(), job->retry_abort_val );
+		   			node->GetNodeName(), node->retry_abort_val );
 	}
 
-	if ( jobName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig );
+	if ( nodeName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
+					filename, lineNumber, nodeNameOrig );
 		return false;
 	}
 
@@ -1595,7 +1595,7 @@ parse_retry(
 // 
 // Function: parse_abort
 // Purpose:  Parse a line of the format
-// "ABORT-DAG-ON jobname node_exit_value [RETURN dag_return_value]"
+// "ABORT-DAG-ON nodename node_exit_value [RETURN dag_return_value]"
 // 
 //-----------------------------------------------------------------------------
 static bool 
@@ -1604,21 +1604,21 @@ parse_abort(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char *example = "ABORT-DAG-ON JobName 3 [RETURN 1]";
+	const char *example = "ABORT-DAG-ON NodeName 3 [RETURN 1]";
 	
-		// Job name.
-	const char *jobName = strtok( NULL, DELIMITERS );
-	if ( jobName == NULL ) {
+		// Node name.
+	const char *nodeName = strtok( NULL, DELIMITERS );
+	if ( nodeName == NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing job name\n",
+					  "ERROR: %s (line %d): Missing node name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
-	std::string tmpJobName = munge_job_name(jobName);
-	jobName = tmpJobName.c_str();
+	const char *nodeNameOrig = nodeName; // for error output
+	std::string tmpNodeName = munge_node_name(nodeName);
+	nodeName = tmpNodeName.c_str();
 	
 		// Node abort value.
 	char *abortValStr = strtok( NULL, DELIMITERS );
@@ -1682,32 +1682,32 @@ parse_abort(
 		}
 	}
 
-	Job *job;
-	while ( ( job = dag->FindAllNodesByName( jobName,
+	Node *node;
+	while ( ( node = dag->FindAllNodesByName( nodeName,
 				"In parse_abort(): skipping node %s because final nodes cannot have ABORT-DAG-ON specification (%s: %d)s\n",
 				filename, lineNumber ) ) ) {
-		jobName = NULL;
+		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found job %s\n",
-					job->GetJobName() );
+		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found node %s\n",
+					node->GetNodeName() );
 
-		if ( job->GetType() == NodeType::FINAL ) {
+		if ( node->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
-			  			"ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
-			  			filename, lineNumber, job->GetJobName() );
+			  			"ERROR: %s (line %d): Final Node %s cannot have ABORT-DAG-ON specification\n",
+			  			filename, lineNumber, node->GetNodeName() );
 			return false;
 		}
 
-		job->abort_dag_val = abortVal;
-		job->have_abort_dag_val = true;
+		node->abort_dag_val = abortVal;
+		node->have_abort_dag_val = true;
 
-		job->abort_dag_return_val = returnVal;
-		job->have_abort_dag_return_val = haveReturnVal;
+		node->abort_dag_return_val = returnVal;
+		node->have_abort_dag_return_val = haveReturnVal;
 	}
 
-	if ( jobName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig );
+	if ( nodeName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
+					filename, lineNumber, nodeNameOrig );
 		return false;
 	}
 
@@ -1769,26 +1769,26 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_vars
-// Purpose:  Parses a line of named variables that will be made available to a job's
+// Purpose:  Parses a line of named variables that will be made available to a node's
 //           submit description file
 //           The format of this line must be
-//           Vars JobName VarName1="value1" VarName2="value2" etc
+//           Vars NodeName VarName1="value1" VarName2="value2" etc
 //           Whitespace surrounding the = sign is permissible
 //-----------------------------------------------------------------------------
 static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 {
-	const char* example = "Vars JobName [PREPEND | APPEND] VarName1=\"value1\" VarName2=\"value2\"";
-	const char *jobName = strtok( NULL, DELIMITERS );
-	if ( jobName == NULL ) {
-		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
+	const char* example = "Vars NodeName [PREPEND | APPEND] VarName1=\"value1\" VarName2=\"value2\"";
+	const char *nodeName = strtok( NULL, DELIMITERS );
+	if ( nodeName == NULL ) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n",
 					filename, lineNumber);
 		exampleSyntax(example);
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
-	std::string tmpJobName = munge_job_name(jobName);
-	jobName = tmpJobName.c_str();
+	const char *nodeNameOrig = nodeName; // for error output
+	std::string tmpNodeName = munge_node_name(nodeName);
+	nodeName = tmpNodeName.c_str();
 
 	std::string varName;
 	std::string varValue;
@@ -1814,14 +1814,14 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 		prepend = !_appendVars;
 	}
 
-	Job *job;
-	while ( ( job = dag->FindAllNodesByName( jobName,
+	Node *node;
+	while ( ( node = dag->FindAllNodesByName( nodeName,
 				"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly (%s: %d)\n",
 				filename, lineNumber ) ) ) {
-		jobName = NULL;
+		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_vars(): found job %s\n",
-					job->GetJobName() );
+		debug_printf( DEBUG_DEBUG_3, "parse_vars(): found node %s\n",
+					node->GetNodeName() );
 
 			// Note:  this re-parses most of the VARS line for every node...
 			// wenger 2016-10-13
@@ -1847,12 +1847,12 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 				varName = "My." + varName.substr(1);
 			}
 
-			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber, prepend);
+			node->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber, prepend);
 			debug_printf(DEBUG_DEBUG_1,
 				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
 				varName.c_str(), varValue.c_str());
 		}
-		job->ShrinkVars();
+		node->ShrinkVars();
 
 		if ( numPairs == 0 ) {
 			debug_printf(DEBUG_QUIET,
@@ -1862,9 +1862,9 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 		}
 	}
 
-	if ( jobName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig );
+	if ( nodeName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
+					filename, lineNumber, nodeNameOrig );
 		return false;
 	}
 	
@@ -1876,7 +1876,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 // Function: parse_priority
 // Purpose:  Parses a line specifying the priority of a node
 //           The format of this line must be
-//           Priority <JobName> <Value>
+//           Priority <NodeName> <Value>
 //-----------------------------------------------------------------------------
 static bool 
 parse_priority(
@@ -1884,23 +1884,23 @@ parse_priority(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "PRIORITY JobName Value";
+	const char * example = "PRIORITY NodeName Value";
 
 	//
-	// Next token is the JobName
+	// Next token is the NodeName
 	//
-	const char *jobName = strtok( NULL, DELIMITERS );
-	if ( jobName == NULL ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
+	const char *nodeName = strtok( NULL, DELIMITERS );
+	if ( nodeName == NULL ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
 	}
 
-	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-	const char *jobNameOrig = jobName; // for error output
-	std::string tmpJobName = munge_job_name(jobName);
-	jobName = tmpJobName.c_str();
+	debug_printf(DEBUG_DEBUG_1, "nodeName: %s\n", nodeName);
+	const char *nodeNameOrig = nodeName; // for error output
+	std::string tmpNodeName = munge_node_name(nodeName);
+	nodeName = tmpNodeName.c_str();
 
 	//
 	// Next token is the priority value.
@@ -1940,43 +1940,43 @@ parse_priority(
 	//
 	// Actually assign priorities to the relevant node(s).
 	//
-	Job *job;
-	while ( ( job = dag->FindAllNodesByName( jobName,
+	Node *node;
+	while ( ( node = dag->FindAllNodesByName( nodeName,
 				"In parse_priority(): skipping node %s because final nodes cannot have PRIORITY specifications (%s: %d)\n",
 				filename, lineNumber ) ) ) {
-		jobName = NULL;
+		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_priority(): found job %s\n",
-					job->GetJobName() );
+		debug_printf( DEBUG_DEBUG_3, "parse_priority(): found node %s\n",
+					node->GetNodeName() );
 
-		if ( job->GetType() == NodeType::FINAL ) {
+		if ( node->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
-			  			"ERROR: %s (line %d): Final job %s cannot have PRIORITY specification\n",
-			  			filename, lineNumber, job->GetJobName() );
+			  			"ERROR: %s (line %d): Final Node %s cannot have PRIORITY specification\n",
+			  			filename, lineNumber, node->GetNodeName() );
 			return false;
 		}
-		if ( job->GetType() == NodeType::SERVICE ) {
+		if ( node->GetType() == NodeType::SERVICE ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: %s (line %d): SERVICE node %s cannot have PRIORITY specification\n",
-						filename, lineNumber, job->GetJobName() );
+						filename, lineNumber, node->GetNodeName() );
 			return false;
 		}
 
-		if ( ( job->_explicitPriority != 0 )
-					&& ( job->_explicitPriority != priorityVal ) ) {
+		if ( ( node->_explicitPriority != 0 )
+					&& ( node->_explicitPriority != priorityVal ) ) {
 			debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
 						"overrides old value %d\n", priorityVal,
-						job->GetJobName(), job->_explicitPriority );
+						node->GetNodeName(), node->_explicitPriority );
 			check_warning_strictness( DAG_STRICT_2 );
 		}
 
-		job->_explicitPriority = priorityVal;
-		job->_effectivePriority = priorityVal;
+		node->_explicitPriority = priorityVal;
+		node->_effectivePriority = priorityVal;
 	}
 
-	if ( jobName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig );
+	if ( nodeName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
+					filename, lineNumber, nodeNameOrig );
 		return false;
 	}
 
@@ -1988,7 +1988,7 @@ parse_priority(
 // Function: parse_category
 // Purpose:  Parses a line specifying the type of a node
 //           The format of this line must be
-//           Category <JobName> <Category>
+//           Category <NodeName> <Category>
 //			 No whitespace is allowed in the category name
 //-----------------------------------------------------------------------------
 static bool 
@@ -1997,23 +1997,23 @@ parse_category(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "CATEGORY JobName TypeName";
+	const char * example = "CATEGORY NodeName TypeName";
 
 	//
-	// Next token is the JobName
+	// Next token is the NodeName
 	//
-	const char *jobName = strtok(NULL, DELIMITERS);
-	if ( jobName == NULL ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
+	const char *nodeName = strtok(NULL, DELIMITERS);
+	if ( nodeName == NULL ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
-	debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-	std::string tmpJobName = munge_job_name(jobName);
-	jobName = tmpJobName.c_str();
+	const char *nodeNameOrig = nodeName; // for error output
+	debug_printf(DEBUG_DEBUG_1, "nodeName: %s\n", nodeName);
+	std::string tmpNodeName = munge_node_name(nodeName);
+	nodeName = tmpNodeName.c_str();
 
 	//
 	// Next token is the category name.
@@ -2042,34 +2042,34 @@ parse_category(
 	//
 	// Actually assign categories to the relevant node(s).
 	//
-	Job *job;
-	while ( ( job = dag->FindAllNodesByName( jobName,
+	Node *node;
+	while ( ( node = dag->FindAllNodesByName( nodeName,
 				"In parse_category(): skipping node %s because final nodes cannot have CATEGORY specifications (%s: %d)\n",
 				filename, lineNumber ) ) ) {
-		jobName = NULL;
+		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_category(): found job %s\n",
-					job->GetJobName() );
+		debug_printf( DEBUG_DEBUG_3, "parse_category(): found node %s\n",
+					node->GetNodeName() );
 
-		if ( job->GetType() == NodeType::FINAL ) {
+		if ( node->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
-			  			"ERROR: %s (line %d): Final job %s cannot have CATEGORY specification\n",
-			  			filename, lineNumber, job->GetJobName() );
+			  			"ERROR: %s (line %d): Final node %s cannot have CATEGORY specification\n",
+			  			filename, lineNumber, node->GetNodeName() );
 			return false;
 		}
-		if ( job->GetType() == NodeType::SERVICE ) {
+		if ( node->GetType() == NodeType::SERVICE ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: %s (line %d): SERVICE node %s cannot have CATEGORY specification\n",
-						filename, lineNumber, job->GetJobName() );
+						filename, lineNumber, node->GetNodeName() );
 			return false;
 		}
 
-		job->SetCategory( categoryName, dag->_catThrottles );
+		node->SetCategory( categoryName, dag->_catThrottles );
 	}
 
-	if ( jobName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
-					filename, lineNumber, jobNameOrig );
+	if ( nodeName ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
+					filename, lineNumber, nodeNameOrig );
 		return false;
 	}
 
@@ -2121,7 +2121,7 @@ parse_splice(
 		munge the names of the nodes to have the splice name in them so
 		the same splice dag file with different splice names don't conflict.
 	*/
-	_spliceScope.push_back(strdup(munge_job_name(spliceName.c_str()).c_str()));
+	_spliceScope.push_back(strdup(munge_node_name(spliceName.c_str()).c_str()));
 
 	//
 	// Next token is the splice file nameMyStrstding
@@ -2230,7 +2230,7 @@ parse_splice(
 	}
 
 	// munge the splice name
-	spliceName = munge_job_name(spliceName.c_str()).c_str();
+	spliceName = munge_node_name(spliceName.c_str()).c_str();
 
 	// XXX I'm not sure this goes here quite yet....
 	debug_printf(DEBUG_DEBUG_1, "Splice scope is: %s\n", 
@@ -2240,7 +2240,7 @@ parse_splice(
 
 	// Print out a useful piece of debugging...
 	if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
-		splice_dag->PrintJobList();
+		splice_dag->PrintNodeList();
 	}
 
 	// associate the splice_dag with its name in _this_ dag, later I'll merge
@@ -2425,24 +2425,24 @@ parse_node_status_file(
 static bool
 parse_save_point_file(Dag *dag, const char* filename, int lineNumber)
 {
-	std::string example = "SAVE_POINT_FILE JobName [Filename]";
+	std::string example = "SAVE_POINT_FILE NodeName [Filename]";
 	//Get node name to apply save file info to
-	const char* jobName = strtok(NULL, DELIMITERS);
-	if (jobName == NULL) {
+	const char* nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName == NULL) {
 		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): No Node specified for SAVE_POINT_FILE.\n",
 					 filename, lineNumber);
 		exampleSyntax(example.c_str());
 		return false;
-	} else if (strcasecmp(jobName, DAG::ALL_NODES) == MATCH) { //It is redundant to use all nodes for save files
+	} else if (strcasecmp(nodeName, DAG::ALL_NODES) == MATCH) { //It is redundant to use all nodes for save files
 		debug_printf(DEBUG_NORMAL, "ERROR: %s (line %d): SAVE_POINT_FILE does not allow ALL_NODES option.\n",
 					 filename, lineNumber);
 		exampleSyntax(example.c_str());
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
-	std::string tmpJobName = munge_job_name(jobName);
-	jobName = tmpJobName.c_str();
+	const char *nodeNameOrig = nodeName; // for error output
+	std::string tmpNodeName = munge_node_name(nodeName);
+	nodeName = tmpNodeName.c_str();
 
 	//Get save file name/path&name
 	const char* p = strtok(NULL, DELIMITERS);
@@ -2456,15 +2456,15 @@ parse_save_point_file(Dag *dag, const char* filename, int lineNumber)
 			exampleSyntax(example.c_str());
 			return false;
 		}
-	} else { //No name given so create one using job name and associated dag filename
-		formatstr(saveFile,"%s-%s.save",jobNameOrig,condor_basename(filename));
+	} else { //No name given so create one using node name and associated dag filename
+		formatstr(saveFile,"%s-%s.save",nodeNameOrig,condor_basename(filename));
 	}
 
 	//Find node and set save file
-	Job *node = dag->FindNodeByName(jobName);
+	Node *node = dag->FindNodeByName(nodeName);
 	if (node == NULL) {
-		debug_printf(DEBUG_QUIET, "Warning: %s (line %d): Unknown Job %s\n",
-								  filename, lineNumber, jobNameOrig);
+		debug_printf(DEBUG_QUIET, "Warning: %s (line %d): Unknown Node %s\n",
+								  filename, lineNumber, nodeNameOrig);
 		return !check_warning_strictness(DAG_STRICT_1, false);
 	} else {
 		if (node->GetType() == NodeType::SERVICE || node->GetType() == NodeType::PROVISIONER) {
@@ -2562,24 +2562,24 @@ parse_pre_skip( Dag  *dag,
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "PRE_SKIP JobName Exitcode";
+	const char * example = "PRE_SKIP NodeName Exitcode";
 	std::string whynot;
 
 		//
-		// second token is the JobName
+		// second token is the NodeName
 		//
-	const char *jobName = strtok( NULL, DELIMITERS );
-	if ( jobName == NULL ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
+	const char *nodeName = strtok( NULL, DELIMITERS );
+	if ( nodeName == NULL ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n",
 				filename, lineNumber );
 		exampleSyntax( example );
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
-	debug_printf( DEBUG_DEBUG_1, "jobName: %s\n", jobName );
-	std::string tmpJobName = munge_job_name( jobName );
-	jobName = tmpJobName.c_str();
+	const char *nodeNameOrig = nodeName; // for error output
+	debug_printf( DEBUG_DEBUG_1, "nodeName: %s\n", nodeName );
+	std::string tmpNodeName = munge_node_name( nodeName );
+	nodeName = tmpNodeName.c_str();
 
 		//
 		// The rest of the line consists of the exitcode
@@ -2613,26 +2613,26 @@ parse_pre_skip( Dag  *dag,
 		return false;
 	}
 
-	Job *job;
-	while ( ( job = dag->FindAllNodesByName( jobName,
+	Node *node;
+	while ( ( node = dag->FindAllNodesByName( nodeName,
 				"In parse_pre_skip(): skipping node %s because final nodes must have PRE_SKIP set explicitly (%s: %d)\n",
 				filename, lineNumber ) ) ) {
-		jobName = NULL;
+		nodeName = NULL;
 
 		std::string whynot;
-		if( !job->AddPreSkip( exitCode, whynot ) ) {
+		if( !node->AddPreSkip( exitCode, whynot ) ) {
 			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  	"failed to add PRE_SKIP to node %s: %s\n",
-					  	filename, lineNumber, job->GetJobName(),
+					  	filename, lineNumber, node->GetNodeName(),
 						whynot.c_str() );
 			return false;
 		}
 	}
 
-	if ( jobName ) {
+	if ( nodeName ) {
 		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Unknown Job %s\n",
-					  filename, lineNumber, jobNameOrig );
+					  "ERROR: %s (line %d): Unknown Node %s\n",
+					  filename, lineNumber, nodeNameOrig );
 		return false;
 	}
 
@@ -2642,7 +2642,7 @@ parse_pre_skip( Dag  *dag,
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_done
-// Purpose:  Parse a line of the format "Done jobname"
+// Purpose:  Parse a line of the format "Done nodename"
 // 
 //-----------------------------------------------------------------------------
 static bool 
@@ -2651,20 +2651,20 @@ parse_done(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char *example = "Done JobName";
+	const char *example = "Done NodeName";
 	
-	const char *jobName = strtok( NULL, DELIMITERS );
-	if ( jobName == NULL ) {
+	const char *nodeName = strtok( NULL, DELIMITERS );
+	if ( nodeName == NULL ) {
 		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing job name\n",
+					  "ERROR: %s (line %d): Missing node name\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
 	}
 
-	const char *jobNameOrig = jobName; // for error output
-	std::string tmpJobName = munge_job_name( jobName );
-	jobName = tmpJobName.c_str();
+	const char *nodeNameOrig = nodeName; // for error output
+	std::string tmpNodeName = munge_node_name( nodeName );
+	nodeName = tmpNodeName.c_str();
 
 	//
 	// Check for illegal extra tokens.
@@ -2678,28 +2678,28 @@ parse_done(
 		return false;
 	}
 
-	Job *job = dag->FindNodeByName( jobName );
-	if( job == NULL ) {
+	Node *node = dag->FindNodeByName( nodeName );
+	if( node == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "Warning: %s (line %d): Unknown Job %s\n",
-					  filename, lineNumber, jobNameOrig );
+					  "Warning: %s (line %d): Unknown Node %s\n",
+					  filename, lineNumber, nodeNameOrig );
 		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
 
-	if ( job->GetType() == NodeType::FINAL ) {
+	if ( node->GetType() == NodeType::FINAL ) {
 		debug_printf( DEBUG_QUIET, 
-					"Warning: %s (line %d): FINAL Job %s cannot be set to DONE\n",
-					filename, lineNumber, jobNameOrig );
+					"Warning: %s (line %d): FINAL Node %s cannot be set to DONE\n",
+					filename, lineNumber, nodeNameOrig );
 		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
-	if ( job->GetType() == NodeType::SERVICE ) {
+	if ( node->GetType() == NodeType::SERVICE ) {
 		debug_printf( DEBUG_QUIET,
 					"Warning: %s (line %d): SERVICE node %s cannot be set to DONE\n",
-					filename, lineNumber, jobNameOrig );
+					filename, lineNumber, nodeNameOrig );
 		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
 
-	job->SetStatus( Job::STATUS_DONE );
+	node->SetStatus( Node::STATUS_DONE );
 	
 	return true;
 }
@@ -2726,7 +2726,7 @@ parse_connect(
 		exampleSyntax( example );
 		return false;
 	}
-	std::string splice1Name = munge_job_name( splice1 );
+	std::string splice1Name = munge_node_name( splice1 );
 	splice1 = splice1Name.c_str();
 
 	const char *splice2 = strtok( NULL, DELIMITERS );
@@ -2737,7 +2737,7 @@ parse_connect(
 		exampleSyntax( example );
 		return false;
 	}
-	std::string splice2Name = munge_job_name( splice2 );
+	std::string splice2Name = munge_node_name( splice2 );
 	splice2 = splice2Name.c_str();
 
 	//
@@ -2800,7 +2800,7 @@ parse_pin_in_out(
 		exampleSyntax( example );
 		return false;
 	}
-	std::string nodeName = munge_job_name( node );
+	std::string nodeName = munge_node_name( node );
 	node = nodeName.c_str();
 
 	const char *pinNumber = strtok( NULL, DELIMITERS );
@@ -2898,7 +2898,7 @@ parse_include(
 	return parse(dm, dag, tmpFilename.c_str(), false);
 }
 
-static std::string munge_job_name(const char *jobName)
+static std::string munge_node_name(const char *nodeName)
 {
 		//
 		// Munge the node name if necessary.
@@ -2906,9 +2906,9 @@ static std::string munge_job_name(const char *jobName)
 	std::string newName;
 
 	if ( _mungeNames ) {
-		newName = std::to_string(_thisDagNum) + "." + jobName;
+		newName = std::to_string(_thisDagNum) + "." + nodeName;
 	} else {
-		newName = jobName;
+		newName = nodeName;
 	}
 
 	return newName;
