@@ -127,6 +127,10 @@ extern	int		startd_noclaim_shutdown;
     // how often we query docker for the size of the image cache
 extern	int		docker_cached_image_size_interval;
 
+    // LVM LV names should never be re-used
+extern	bool	use_unique_lv_names;
+extern	int		lv_name_uniqueness;
+
 extern	char*	Name;			// The startd's name
 
 extern	int		pid_snapshot_interval;	
