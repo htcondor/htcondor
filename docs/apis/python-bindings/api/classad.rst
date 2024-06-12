@@ -36,6 +36,7 @@ objects, which correspond to un-evaluated ClassAd expressions.
 
 
 .. autoclass:: ExprTree
+
    .. automethod:: ExprTree.and_
    .. automethod:: ExprTree.or_
    .. automethod:: ExprTree.is_
