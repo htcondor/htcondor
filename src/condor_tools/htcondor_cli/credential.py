@@ -27,7 +27,8 @@ class List(Verb):
         except OSError:
             pass
         if windows_password_time is not None:
-            print(f">> Windows password timestamp {windows_password_time}")
+            date = datetime.datetime.fromtimestamp(windows_password_time)
+            print(f">> Windows password timestamp {date}")
         else:
             print(f">> no Windows password found");
 
@@ -42,7 +43,8 @@ class List(Verb):
         except OSError:
             pass
         if kerberos_time is not None:
-            print(f">> Kerberos timestamp {kerberos_time}")
+            date = datetime.datetime.fromtimestamp(kerberos_time)
+            print(f">> Kerberos timestamp {date}")
         else:
             print(f">> no Kerberos credential found")
 
@@ -135,7 +137,6 @@ class Add(Verb):
 
 
     def __init__(self, logger, **options):
-        htcondor.enable_debug()
         self.choices[options['type']](** options)
 
 
@@ -190,7 +191,6 @@ class Remove(Verb):
 
 
     def __init__(self, logger, **options):
-        htcondor.enable_debug()
         self.choices[options['type']](** options)
 
 
