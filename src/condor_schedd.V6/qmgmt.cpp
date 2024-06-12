@@ -7845,9 +7845,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			}
 		}
 
-			// Make a stringlist of all attribute names in job ad that are not MATCH_ attributes
-		StringList AttrsToExpand;
-		const char * curr_attr_to_expand = nullptr;
+			// Make a list of all attribute names in job ad that are not MATCH_ attributes
+		std::vector<std::string> AttrsToExpand;
 		for (auto & itr : *expanded_ad) {
 			if ( strncasecmp(itr.first.c_str(),"MATCH_",6) == 0 ) {
 					// We do not want to expand MATCH_XXX attributes,
@@ -7856,20 +7855,16 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// contain literal $$(...) in the replacement text.
 				continue;
 			} else {
-				AttrsToExpand.append(itr.first.c_str());
+				AttrsToExpand.emplace_back(itr.first);
 			}
 		}
 
 		std::string cachedAttrName, unparseBuf;
 
-		AttrsToExpand.rewind();
 		bool attribute_not_found = false;
-		while ( !attribute_not_found ) 
-		{
-			curr_attr_to_expand = AttrsToExpand.next();
-
-			if ( curr_attr_to_expand == nullptr ) {
-				// all done; no more attributes to try and expand
+		std::string bad_attr_name;
+		for (const auto& curr_attr_to_expand: AttrsToExpand) {
+			if (attribute_not_found) {
 				break;
 			}
 
@@ -7958,6 +7953,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					bool isok = tmpJobAd.AssignExpr(INTERNAL_DD_EXPR, expr_to_add.c_str());
 					if( ! isok ) {
 						attribute_not_found = true;
+						bad_attr_name = curr_attr_to_expand;
 						break;
 					}
 
@@ -7965,6 +7961,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					isok = EvalString(INTERNAL_DD_EXPR, &tmpJobAd, startd_ad, result);
 					if( ! isok ) {
 						attribute_not_found = true;
+						bad_attr_name = curr_attr_to_expand;
 						break;
 					}
 					std::string replacement_value;
@@ -7973,7 +7970,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					search_pos = replacement_value.length();
 					replacement_value += right;
 					expanded_ad->AssignExpr(curr_attr_to_expand, replacement_value.c_str());
-					dprintf(D_FULLDEBUG,"$$([]) substitution: %s=%s\n",curr_attr_to_expand,replacement_value.c_str());
+					dprintf(D_FULLDEBUG,"$$([]) substitution: %s=%s\n",curr_attr_to_expand.c_str(),replacement_value.c_str());
 
 					free(attribute_value);
 					attribute_value = strdup(replacement_value.c_str());
@@ -7999,6 +7996,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						// . is a legal character for some find_config_macros, but not other
 						// check here if one snuck through
 						attribute_not_found = true;
+						bad_attr_name = curr_attr_to_expand;
 						break;
 						
 					}
@@ -8039,6 +8037,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						}
 						if(!fallback || !value) {
 							attribute_not_found = true;
+							bad_attr_name = curr_attr_to_expand;
 							break;
 						}
 					}
@@ -8094,7 +8093,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					ASSERT(bigbuf2);
 					snprintf(bigbuf2,lenBigbuf,"%s%s%n%s",left,tvalue,&search_pos,right);
 					expanded_ad->AssignExpr(curr_attr_to_expand, bigbuf2);
-					dprintf(D_FULLDEBUG,"$$ substitution: %s=%s\n",curr_attr_to_expand,bigbuf2);
+					dprintf(D_FULLDEBUG,"$$ substitution: %s=%s\n",curr_attr_to_expand.c_str(),bigbuf2);
 					free(value);	// must use free here, not delete[]
 					free(attribute_value);
 					attribute_value = bigbuf2;
@@ -8232,7 +8231,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				fprintf(email,"Condor failed to start your job %d.%d \n",
 					cluster_id,proc_id);
 				fprintf(email,"because job attribute %s contains $$(%s).\n",
-					curr_attr_to_expand,name);
+					bad_attr_name.c_str(),name);
 				fprintf(email,"\nAttribute $$(%s) cannot be expanded because",
 					name);
 				fprintf(email,"\nthis attribute was not found in the "
