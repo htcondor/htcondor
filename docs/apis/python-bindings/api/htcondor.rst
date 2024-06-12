@@ -15,7 +15,6 @@ Interacting with Collectors
 ---------------------------
 
 .. autoclass:: Collector
-   :noindex:
 
    .. automethod:: locate
       :noindex:
@@ -29,17 +28,14 @@ Interacting with Collectors
       :noindex:
 
 .. autoclass:: DaemonTypes
-   :noindex:
 
 .. autoclass:: AdTypes
-   :noindex:
 
 
 Interacting with Schedulers
 ---------------------------
 
 .. autoclass:: Schedd
-   :noindex:
 
    .. automethod:: transaction
       :noindex:
@@ -75,25 +71,18 @@ Interacting with Schedulers
       :noindex:
 
 .. autoclass:: JobAction
-   :noindex:
 
 .. autoclass:: Transaction
-   :noindex:
 
 .. autoclass:: TransactionFlags
-   :noindex:
 
 .. autoclass:: QueryOpts
-   :noindex:
 
 .. autoclass:: BlockingMode
-   :noindex:
 
 .. autoclass:: HistoryIterator
-   :noindex:
 
 .. autoclass:: QueryIterator
-   :noindex:
 
    .. automethod:: nextAdsNonBlocking
       :noindex:
@@ -108,16 +97,13 @@ Interacting with Schedulers
    :noindex:
 
 .. autoclass:: BulkQueryIterator
-   :noindex:
 
 .. autoclass:: JobStatus
-   :noindex:
 
 Submitting Jobs
 ---------------
 
 .. autoclass:: Submit
-   :noindex:
 
    .. automethod:: queue
       :noindex:
@@ -143,10 +129,8 @@ Submitting Jobs
       :noindex:
 
 .. autoclass:: QueueItemsIterator
-   :noindex:
 
 .. autoclass:: SubmitResult
-   :noindex:
 
    .. automethod:: cluster
       :noindex:
@@ -162,7 +146,6 @@ Interacting with Negotiators
 ----------------------------
 
 .. autoclass:: Negotiator
-   :noindex:
 
    .. automethod:: deleteUser
       :noindex:
@@ -192,7 +175,6 @@ Managing Starters and Claims
 ----------------------------
 
 .. autoclass:: Startd
-   :noindex:
 
    .. automethod:: drainJobs
       :noindex:
@@ -201,17 +183,14 @@ Managing Starters and Claims
 
 
 .. autoclass:: DrainTypes
-   :noindex:
 
 .. autoclass:: VacateTypes
-   :noindex:
 
 
 Security Management
 -------------------
 
 .. autoclass:: Credd
-   :noindex:
 
     .. automethod:: add_password
       :noindex:
@@ -235,16 +214,12 @@ Security Management
       :noindex:
 
 .. autoclass:: CredTypes
-   :noindex:
 
 .. autoclass:: CredCheck
-   :noindex:
 
 .. autoclass:: CredStatus
-   :noindex:
 
 .. autoclass:: SecMan
-   :noindex:
 
    .. automethod:: invalidateAllSessions
       :noindex:
@@ -262,13 +237,11 @@ Security Management
       :noindex:
 
 .. autoclass:: Token
-   :noindex:
 
    .. automethod:: write
       :noindex:
 
 .. autoclass:: TokenRequest
-   :noindex:
    :members:
 
 Reading Job Events
@@ -409,7 +382,6 @@ somewhat from job to job; for instance, it's possible to submit a job
 which releases itself from certain hold conditions.
 
 .. autoclass:: JobEventLog
-   :noindex:
 
    .. automethod:: events
       :noindex:
@@ -417,7 +389,6 @@ which releases itself from certain hold conditions.
       :noindex:
 
 .. autoclass:: JobEvent
-   :noindex:
 
    .. autoattribute:: type
       :noindex:
@@ -437,9 +408,7 @@ which releases itself from certain hold conditions.
       :noindex:
 
 .. autoclass:: JobEventType
-   :noindex:
 .. autoclass:: FileTransferEventType
-   :noindex:
 
 HTCondor Configuration
 ----------------------
@@ -449,10 +418,8 @@ HTCondor Configuration
 .. autofunction:: reload_config
    :noindex:
 .. autoclass:: _Param
-   :noindex:
 
 .. autoclass:: RemoteParam
-   :noindex:
 
    .. automethod:: refresh
       :noindex:
@@ -474,7 +441,6 @@ HTCondor Logging
 .. autofunction:: log
    :noindex:
 .. autoclass:: LogLevel
-   :noindex:
 
 
 Esoteric Functionality
@@ -483,7 +449,6 @@ Esoteric Functionality
 .. autofunction:: send_command
    :noindex:
 .. autoclass:: DaemonCommands
-   :noindex:
 
 .. autofunction:: send_alive
    :noindex:
@@ -491,7 +456,6 @@ Esoteric Functionality
 .. autofunction:: set_subsystem
    :noindex:
 .. autoclass:: SubsystemType
-   :noindex:
 
 
 Exceptions
@@ -501,22 +465,14 @@ For backwards-compatibility, the exceptions in this module inherit
 from the built-in exceptions raised in earlier (pre-v8.9.9) versions.
 
 .. autoclass:: HTCondorException
-   :noindex:
 
 .. autoclass:: HTCondorEnumError
-   :noindex:
 .. autoclass:: HTCondorInternalError
-   :noindex:
 .. autoclass:: HTCondorIOError
-   :noindex:
 .. autoclass:: HTCondorLocateError
-   :noindex:
 .. autoclass:: HTCondorReplyError
-   :noindex:
 .. autoclass:: HTCondorTypeError
-   :noindex:
 .. autoclass:: HTCondorValueError
-   :noindex:
 
 
 .. _python-bindings-thread-safety:
