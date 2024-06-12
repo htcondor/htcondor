@@ -22,7 +22,7 @@
 #define DAG_H
 
 #include "condor_common.h"
-#include "job.h"
+#include "node.h"
 #include "scriptQ.h"
 #include "condor_daemon_core.h"
 #include "read_multiple_logs.h"

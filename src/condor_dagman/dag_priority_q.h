@@ -21,7 +21,7 @@
 #ifndef DAG_PRIORITY_Q_H
 #define DAG_PRIORITY_Q_H
 
-#include "job.h"
+#include "node.h"
 
 #include <vector>
 #include <algorithm>

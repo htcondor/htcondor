@@ -43,7 +43,7 @@
 
 #include <set>
 #include "condor_event.h"
-#include "job.h"
+#include "node.h"
 
 class JobstateLog {
 public:

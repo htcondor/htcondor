@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef JOB_H
-#define JOB_H
+#ifndef NODE_H
+#define NODE_H
 
 #include "condor_common.h"      /* for <stdio.h> */
 #include "condor_id.h"
@@ -839,4 +839,4 @@ template<class T> bool more_than_one(T & lst)
 }
 
 
-#endif /* ifndef JOB_H */
+#endif /* ifndef NODE_H */

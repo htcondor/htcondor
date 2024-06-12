@@ -28,7 +28,7 @@
 
 #include "condor_common.h"
 
-#include "job.h"
+#include "node.h"
 #include "parse.h"
 #include "debug.h"
 #include "dagman_commands.h"

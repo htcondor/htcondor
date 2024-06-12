@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "job.h"
+#include "node.h"
 #include "condor_debug.h"
 #include "read_multiple_logs.h"
 #include "throttle_by_category.h"
