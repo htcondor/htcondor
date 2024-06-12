@@ -291,10 +291,18 @@ static bool shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 	}
 
 	// Check for multiple job procs if configured to disallow that.
-	if (dm.prohibitMultiJobs && jobProcCount > 1) {
-		debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
-		             jobProcCount);
-		main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_ERROR);
+	if (jobProcCount > 1) {
+		if (dm.prohibitMultiJobs) {
+			// Other nodes may be single proc so fail and make forward progress
+			debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
+			             jobProcCount);
+			return false;
+		} else if (node->GetType() == NodeType::PROVISIONER) {
+			// Required first node so abort (note: debug_error calls DC_EXIT)
+			debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
+			             node->GetJobName());
+		}
+
 	}
 
 	node->SetNumSubmitted(jobProcCount);
@@ -443,10 +451,17 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 				goto finis;
 			}
 			// If this job has >1 procs, check if multi-proc jobs are prohibited
-			if (proc_id >= 1 && dm.prohibitMultiJobs) {
-				errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
-				rval = -1;
-				goto finis;
+			if (proc_id >= 1) {
+				if (dm.prohibitMultiJobs) {
+					// Other nodes may be single proc so fail and attempt forward progress
+					errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
+					rval = -1;
+					goto finis;
+				} else if (node->GetType() == NodeType::PROVISIONER) {
+					// Required first node so abort (note: debug_error calls DC_EXIT)
+					debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
+					             node->GetJobName());
+				}
 			}
 			// DAGMan does not support multi-proc factory jobs when using direct submit
 			if (proc_id >= 1 && is_factory) {
