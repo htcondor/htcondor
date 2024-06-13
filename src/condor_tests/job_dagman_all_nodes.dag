@@ -1,4 +1,4 @@
-job NodeA /dev/null noop
+node NodeA /dev/null noop
 script pre NodeA /dev/null A foobar $RETRY
 pre_skip NodeA 2
 script post NodeA /dev/null A foobar $RETURN
@@ -8,8 +8,8 @@ abort-dag-on NodeA 5 return 10
 priority NodeA 20
 category NodeA foobar
 
-job NodeB /dev/null noop
-job NodeC /dev/null noop
+node NodeB /dev/null noop
+node NodeC /dev/null noop
 
 final NodeF /dev/null noop
 script pre NodeF /dev/null F $JOB $RETRY
