@@ -28,6 +28,11 @@ New Features:
   IPv6 link-local addresses.
   :jira:`2453`
 
+- Added the ``credential`` verb to the ``htcondor`` tool, which may help
+  in debugging certain kinds of problems.  See
+  :ref:`the man page <man-pages/htcondor:Credential Verbs>` for details.
+  :jira:`2483`
+
 Bugs Fixed:
 
 - None.
