@@ -50,9 +50,7 @@ Version 23.0.12
 
 Release Notes:
 
-.. HTCondor version 23.0.12 released on Month Date, 2024.
-
-- HTCondor version 23.0.12 not yet released.
+- HTCondor version 23.0.12 released on June 13, 2024.
 
 New Features:
 
@@ -77,7 +75,7 @@ Bugs Fixed:
   :jira:`2463`
 
 - Fixed a bug that prevented the *condor_startd* from advertising
-  :ad-attr:`DockerCachedImageSizeMb`
+  ``DockerCachedImageSizeMb``
   :jira:`2458`
 
 - Fixed a rare bug where certain errors reported by a file transfer
