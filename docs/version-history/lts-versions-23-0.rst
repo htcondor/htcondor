@@ -47,7 +47,7 @@ Bugs Fixed:
   :jira:`2463`
 
 - Fixed a bug that prevented the *condor_startd* from advertising
-  :ad-attr:`DockerCachedImageSizeMb`
+  ``DockerCachedImageSizeMb``
   :jira:`2458`
 
 - Fixed a rare bug where certain errors reported by a file transfer
