@@ -24,8 +24,8 @@ input for node ``B``. This can be described as a DAGMan workflow as follows:
     :caption: Example DAG description file
 
     # Example DAGMan Workflow
-    JOB A produce_data.sub
-    JOB B process_data.sub
+    NODE A produce_data.sub
+    NODE B process_data.sub
 
     PARENT A CHILD B
 
