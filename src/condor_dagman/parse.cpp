@@ -263,14 +263,14 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		// Handle a Job spec
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
-		if(strcasecmp(token, "JOB") == 0) {
+		if(strcasecmp(token, "NODE") == MATCH || strcasecmp(token, "JOB") == MATCH) {
 			std::string nodename;
 			const char * subfile = NULL;
 			pre_parse_node(nodename, subfile);
 			bool inline_submit = subfile && *subfile == '{';
 			if (inline_submit) { subfile = "submitDesc"; } // Set a pseudo filename
 			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
-						   "JOB",
+						   "NODE",
 						   filename, lineNumber, tmpDirectory.c_str(), "",
 						   "submitfile" );
 			if (parsed_line_successfully && inline_submit) {
@@ -501,7 +501,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		// Handle a Job spec
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
-		if(strcasecmp(token, "JOB") == 0) {
+		if(strcasecmp(token, "NODE") == MATCH || strcasecmp(token, "JOB") == MATCH) {
 				// Parsed in first pass. 
 				// However we still need to check if this is an inline submit 
 				// description, and if so advance the line parser.

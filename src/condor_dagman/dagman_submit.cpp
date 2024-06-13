@@ -112,6 +112,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 		batchId = dm.options[deep::str::BatchId];
 	}
 
+	vars.push_back(NodeVar("NODE_NAME", nodeName, false));
 	vars.push_back(NodeVar("JOB", nodeName, false));
 	vars.push_back(NodeVar("RETRY", std::to_string(retry), false));
 
