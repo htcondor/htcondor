@@ -538,6 +538,19 @@ It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
 #######################
+%package ap
+Summary: Configuration for an Access Point
+Group: Applications/System
+Requires: %name = %version-%release
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
+Requires: python3-condor = %version-%release
+%endif
+
+%description ap
+This example configuration is good for installing an Access Point.
+After installation, one could join a pool or start an annex.
+
+#######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
@@ -1432,6 +1445,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 13 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.12-1
+- Remote condor_history queries now work the same as local queries
+- Improve error handling when submitting to a remote scheduler via ssh
+- Fix bug on Windows where condor_procd may crash when suspending a job
+- Fix Python binding crash when submitting a DAG which has empty lines
+
 * Thu May 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.7.2-1
 - Warns about deprecated multiple queue statements in a submit file
 - The semantics of 'skip_if_dataflow' have been improved
