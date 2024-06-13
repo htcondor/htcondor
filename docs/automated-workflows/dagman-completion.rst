@@ -119,10 +119,10 @@ DAG description file with the :dag-cmd:`RETRY[Usage]` command. The syntax for re
 
         # File name: diamond.dag
 
-        JOB  A  A.sub
-        JOB  B  B.sub
-        JOB  C  C.sub
-        JOB  D  D.sub
+        NODE  A  A.sub
+        NODE  B  B.sub
+        NODE  C  C.sub
+        NODE  D  D.sub
         PARENT A CHILD B C
         PARENT B C CHILD D
         RETRY  C 3
@@ -164,10 +164,10 @@ is
 
         # File name: diamond.dag
 
-        JOB  A  A.sub
-        JOB  B  B.sub
-        JOB  C  C.sub
-        JOB  D  D.sub
+        NODE  A  A.sub
+        NODE  B  B.sub
+        NODE  C  C.sub
+        NODE  D  D.sub
         PARENT A CHILD B C
         PARENT B C CHILD D
         RETRY  C 3
@@ -457,10 +457,10 @@ DAGMan can be told to work in recovery mode by including the
         :caption: Example DAG description using node save point files
 
         # File: savepointEx.dag
-        JOB A node.sub
-        JOB B node.sub
-        JOB C node.sub
-        JOB D node.sub
+        NODE A node.sub
+        NODE B node.sub
+        NODE C node.sub
+        NODE D node.sub
 
         PARENT A B C CHILD D
 
@@ -547,9 +547,9 @@ be set up as the following:
     :caption: Example DAG description with rolling save point file
 
     # File: progressSavefile.dag
-    JOB A node.sub
-    JOB B node.sub
-    JOB C node.sub
+    NODE A node.sub
+    NODE B node.sub
+    NODE C node.sub
     ...
     SAVE_POINT_FILE A dag-progress.save
     SAVE_POINT_FILE B dag-progress.save

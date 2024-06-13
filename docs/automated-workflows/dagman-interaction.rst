@@ -283,7 +283,7 @@ File Paths in DAGs
         :caption: Example DAG description with single node
 
         # sample.dag
-        JOB A A.sub
+        NODE A A.sub
 
     .. code-block:: condor-submit
         :caption: Example simple job submit description
@@ -311,14 +311,14 @@ working directory. All jobs will be submitted and all scripts will be ran
 from the DAGs working directory.
 
 For simple DAG structures this may be alright, but not for complex DAGs.
-To help reduce confusion of where things run or files are written, the :dag-cmd:`JOB`
+To help reduce confusion of where things run or files are written, the :dag-cmd:`NODE`
 command takes an optional keyword **DIR <path>**. This will cause DAGMan to submit
 the node's job(s) and run the node scripts from the directory specified.
 
 .. code-block:: condor-dagman
     :caption: Example DAG description with single node specifying node DIR
 
-    JOB A A.submit DIR dirA
+    NODE A A.submit DIR dirA
 
 .. code-block:: text
     :caption: Example DAGMan working directory tree
@@ -376,7 +376,7 @@ command line).
 
 .. warning::
 
-    Use of *-usedagdir* does not work in conjunction with a :dag-cmd:`JOB` command
+    Use of *-usedagdir* does not work in conjunction with a :dag-cmd:`NODE` command
     that specifies a working directory via the **DIR** keyword. Using both will be
     detected and generate an error.
 
@@ -427,11 +427,11 @@ DAGs with large number of jobs to manage:
         :caption: Example large DAG description using unique job description files
 
         # Large DAG Example: sweep.dag w/ unique submit files
-        JOB job0 job0.sub
-        JOB job1 job1.sub
-        JOB job2 job2.sub
+        NODE job0 job0.sub
+        NODE job1 job1.sub
+        NODE job2 job2.sub
         ...
-        JOB job999 job999.sub
+        NODE job999 job999.sub
 
     The benefit of this method is the individual node's job(s) can easily be
     submitted separately at any time but at the cost of producing ``n`` unique
@@ -462,14 +462,14 @@ DAGs with large number of jobs to manage:
         :caption: Example large DAG using shared job description file for all nodes
 
         # Large DAG example: sweep.dag w/ shared submit file
-        JOB job0 common.sub
+        NODE job0 common.sub
         VARS job0 runnumber="0"
-        JOB job1 common.sub
+        NODE job1 common.sub
         VARS job1 runnumber="1"
-        JOB job2 common.sub
+        NODE job2 common.sub
         VARS job2 runnumber="2"
         ...
-        JOB job999 common.sub
+        NODE job999 common.sub
         VARS job999 runnumber="999"
 
     The benefit to this method is that less files need to be produced,

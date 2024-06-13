@@ -58,6 +58,10 @@ New Features:
   details.
   :jira:`2488`
 
+- Added new :dag-cmd:`NODE` command for the DAG description language as a synonym of
+  ``JOB``. The old ``JOB`` command will still be usable, but not recommended.
+  :jira:`2499`
+
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
   :jira:`2453`
