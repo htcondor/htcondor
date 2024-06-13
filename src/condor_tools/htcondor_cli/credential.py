@@ -68,11 +68,12 @@ class List(Verb):
                 names[name] = ad[key]
 
         print(f">> Found OAuth2 credentials:")
-        print(f"   {'Service':<24} {'Handle':<24} {'Last Refreshed':>24}")
+        print(f"   {'Service':<19} {'Handle':<19} {'Last Refreshed':>19} {'File':<17}")
         for name in names:
             (service, _, handle) = name.partition('_')
             date = datetime.datetime.fromtimestamp(names[name])
-            print(f"   {service:<24} {handle:<24} {str(date):>24}")
+            # If the filename is too long, don't truncate it.
+            print(f"   {service:<19} {handle:<19} {str(date):>19} {name}.use")
 
 
 class Add(Verb):
