@@ -196,7 +196,10 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
             else:
                 for debug_result in debug_results:
                     if debug_result.get("FinalAttempt"):  # merge and return entire ad on final attempt
-                        yield debug_result | result
+                        try:
+                            yield debug_result | result
+                        except TypeError:  # backwards compat
+                            yield {**debug_result, **result}
                     else:  # otherwise only add identifying attrs
                         for attr in ("TransferProtocol", "TransferType", "TransferUrl"):
                             debug_result[attr] = result.get(attr)
@@ -243,7 +246,10 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                     attr = f"Attempt{attr[len('transfer'):]}"
                 attr, value = self.normalize(attr, value)
                 attempt_result[attr] = value
-            yield result | attempt_result
+            try:
+                yield result | attempt_result
+            except TypeError:  # backwards compat
+                yield {**result, **attempt_result}
 
 
     def to_json_list(self, ad, return_dict=False):
@@ -271,9 +277,15 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                 result[attr] = value
         for plugin_result in chain(*plugin_results or [{}]):
             if return_dict:
-                yield result | plugin_result
+                try:
+                    yield result | plugin_result
+                except TypeError:  # backwards compat
+                    yield {**result, **plugin_result}
             else:
-                yield json.dumps(result | plugin_result)
+                try:
+                    yield json.dumps(result | plugin_result)
+                except TypeError:  # backwards compat
+                    yield json.dumps({**result, **plugin_result})
 
 
     def process_ads(self, interface, ads, schedd_ad, metadata={}, chunk_size=0, **kwargs):
