@@ -303,6 +303,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                     if attr in ad:
                         schedd_checkpoint[attr] = ad[attr]
             for dict_ad in dict_ads:
+                dict_ad["ScheddName"] = schedd_ad["name"]
                 chunk.append((self.unique_doc_id(dict_ad), dict_ad,))
 
             if (chunk_size > 0) and (len(chunk) >= chunk_size):
