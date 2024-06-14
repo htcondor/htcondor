@@ -1531,7 +1531,7 @@ main( int argc, char ** argv ) {
 	// This is also dumb, but less dangerous than (a) reaching into daemon
 	// core to set a flag and (b) hoping that my command-line arguments and
 	// its command-line arguments don't conflict.
-	char ** dcArgv = (char **)malloc( 6 * sizeof( char * ) );
+	char ** dcArgv = (char **)malloc( 7 * sizeof( char * ) );
 	dcArgv[0] = argv[0];
 	// Force daemon core to run in the foreground.
 	dcArgv[1] = strdup( "-f" );
@@ -1546,6 +1546,7 @@ main( int argc, char ** argv ) {
 	dcArgv[4] = strdup( "-log" );
 	if(! createUserConfigDir( userDir )) { return 1; }
 	dcArgv[5] = strdup( userDir.c_str() );
+	dcArgv[6] = NULL;
 
 	argc = 6;
 	argv = dcArgv;
