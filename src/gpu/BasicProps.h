@@ -8,7 +8,6 @@ class BasicProps {
 
 		std::string   uuid;
 		std::string   name;
-		std::string   gcnname;
 		char          pciId[32];
 		size_t        totalGlobalMem {(size_t)-1};
 		int           ccMajor {-1};
@@ -18,6 +17,8 @@ class BasicProps {
 		int           ECCEnabled {-1};
 		int	      xNACK {-1};
 		int	      warpSize {-1};
+		int	      driverVersion {-1};
+
 		void setUUIDFromBuffer( const unsigned char buffer[16] );
 };
 #endif
