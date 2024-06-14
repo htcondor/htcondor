@@ -112,57 +112,57 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 		batchId = dm.options[deep::str::BatchId];
 	}
 
-	vars.emplace_back(NodeVar("NODE_NAME", nodeName, false));
-	vars.emplace_back(NodeVar("JOB", nodeName, false));
-	vars.emplace_back(NodeVar("RETRY", std::to_string(retry), false));
+	vars.emplace_back("NODE_NAME", nodeName, false);
+	vars.emplace_back("JOB", nodeName, false);
+	vars.emplace_back("RETRY", std::to_string(retry), false);
 
-	vars.emplace_back(NodeVar("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus), false));
-	vars.emplace_back(NodeVar("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()), false));
+	vars.emplace_back("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus), false);
+	vars.emplace_back("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()), false);
 
-	vars.emplace_back(NodeVar("DAG_PARENT_NAMES", parents, false));
-	vars.emplace_back(NodeVar("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false));
+	vars.emplace_back("DAG_PARENT_NAMES", parents, false);
+	vars.emplace_back("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false);
 
 	if ( ! batchName.empty()) {
-		vars.emplace_back(NodeVar(SUBMIT_KEY_BatchName, batchName, false));
+		vars.emplace_back(SUBMIT_KEY_BatchName, batchName, false);
 	}
 	if ( ! batchId.empty()) {
-		vars.emplace_back(NodeVar(SUBMIT_KEY_BatchId, batchId, false));
+		vars.emplace_back(SUBMIT_KEY_BatchId, batchId, false);
 	}
 
 	if (dm.jobInsertRetry && retry > 0) {
-		vars.emplace_back(NodeVar("MY.DAGManNodeRetry", std::to_string(retry), false));
+		vars.emplace_back("MY.DAGManNodeRetry", std::to_string(retry), false);
 	}
 
 	if (node._effectivePriority != 0) {
-		vars.emplace_back(NodeVar(SUBMIT_KEY_Priority, std::to_string(node._effectivePriority), false));
+		vars.emplace_back(SUBMIT_KEY_Priority, std::to_string(node._effectivePriority), false);
 	}
 
 	if (node.GetHold()) {
 		debug_printf(DEBUG_VERBOSE, "Submitting node %s job(s) on hold\n", nodeName);
-		vars.emplace_back(NodeVar(SUBMIT_KEY_Hold, "true", false));
+		vars.emplace_back(SUBMIT_KEY_Hold, "true", false);
 	}
 
 	if ( ! node.NoChildren() && dm._claim_hold_time > 0) {
-		vars.emplace_back(NodeVar(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm._claim_hold_time), false));
+		vars.emplace_back(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm._claim_hold_time), false);
 	}
 
 	if ( ! dm.options[deep::str::AcctGroup].empty()) {
-		vars.emplace_back(NodeVar(SUBMIT_KEY_AcctGroup, dm.options[deep::str::AcctGroup], false));
+		vars.emplace_back(SUBMIT_KEY_AcctGroup, dm.options[deep::str::AcctGroup], false);
 	}
 
 	if ( ! dm.options[deep::str::AcctGroupUser].empty()) {
-		vars.emplace_back(NodeVar(SUBMIT_KEY_AcctGroupUser, dm.options[deep::str::AcctGroupUser], false));
+		vars.emplace_back(SUBMIT_KEY_AcctGroupUser, dm.options[deep::str::AcctGroupUser], false);
 	}
 
 	if ( ! dm._requestedMachineAttrs.empty()) {
-		vars.emplace_back(NodeVar(SUBMIT_KEY_JobAdInformationAttrs, dm._ulogMachineAttrs, false));
-		vars.emplace_back(NodeVar(SUBMIT_KEY_JobMachineAttrs, dm._requestedMachineAttrs, false));
+		vars.emplace_back(SUBMIT_KEY_JobAdInformationAttrs, dm._ulogMachineAttrs, false);
+		vars.emplace_back(SUBMIT_KEY_JobMachineAttrs, dm._requestedMachineAttrs, false);
 	}
 
-	vars.emplace_back(NodeVar(ATTR_DAG_NODE_NAME_ALT, nodeName, true));
-	vars.emplace_back(NodeVar(SUBMIT_KEY_LogNotesCommand, std::string("DAG Node: ") + nodeName, true));
-	vars.emplace_back(NodeVar(SUBMIT_KEY_DagmanLogFile, dm._defaultNodeLog, true));
-	vars.emplace_back(NodeVar("My." ATTR_DAGMAN_WORKFLOW_MASK, std::string("\"") + getEventMask() + "\"", true));
+	vars.emplace_back(ATTR_DAG_NODE_NAME_ALT, nodeName, true);
+	vars.emplace_back(SUBMIT_KEY_LogNotesCommand, std::string("DAG Node: ") + nodeName, true);
+	vars.emplace_back(SUBMIT_KEY_DagmanLogFile, dm._defaultNodeLog, true);
+	vars.emplace_back("My." ATTR_DAGMAN_WORKFLOW_MASK, std::string("\"") + getEventMask() + "\"", true);
 
 	// NOTE: we specify the job ID of DAGMan using only its cluster ID
 	// so that it may be referenced by jobs in their priority
@@ -171,20 +171,20 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 	// submit many DAGs to the same schedd, all the ready jobs from
 	// one DAG complete before any jobs from another begin.
 	if (dm.DAGManJobId._cluster > 0) {
-		vars.emplace_back(NodeVar("My." ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true));
-		vars.emplace_back(NodeVar(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true));
+		vars.emplace_back("My." ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true);
+		vars.emplace_back(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true);
 	}
 
 	if (dm._suppressJobLogs) {
-		vars.emplace_back(NodeVar(SUBMIT_KEY_UserLogFile, "", true));
+		vars.emplace_back(SUBMIT_KEY_UserLogFile, "", true);
 	}
 
 	if (dm.options[deep::b::SuppressNotification]) {
-		vars.emplace_back(NodeVar(SUBMIT_KEY_Notification, "NEVER", true));
+		vars.emplace_back(SUBMIT_KEY_Notification, "NEVER", true);
 	}
 
 	for (auto &dagVar : node.varsFromDag) {
-		vars.emplace_back(NodeVar(dagVar._name, dagVar._value, !dagVar._prepend));
+		vars.emplace_back(dagVar._name, dagVar._value, !dagVar._prepend);
 	}
 
 	return vars;
