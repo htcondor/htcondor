@@ -136,13 +136,14 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         """
         To uniquely identify documents (not jobs)
         """
+        schedd_name = doc.get("ScheddName", "unknown") or "unknown"
         job_id = f"{doc.get('ClusterId') or 0}.{doc.get('ProcId') or 0}"
         shadow_starts = doc.get("NumShadowStarts", 0)
         xfer_protocol = doc.get("TransferProtocol", "unknown")
         xfer_type = doc.get("TransferType", "unknown")
         date = doc.get("RecordTime", 0)
         attempt = f"{doc.get('Attempt', 0)}_{doc.get('Attempts', 1)}"
-        return f"{job_id}#{shadow_starts}#{xfer_protocol}#{xfer_type}#{date}#{attempt}"
+        return f"{schedd_name}#{job_id}#{shadow_starts}#{xfer_protocol}#{xfer_type}#{date}#{attempt}"
 
 
     def normalize(self, attr, value):
