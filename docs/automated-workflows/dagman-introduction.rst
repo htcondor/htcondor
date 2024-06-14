@@ -86,7 +86,9 @@ NODE
     The previous command ``JOB`` is a synonym of the ``NODE`` command.
     Both create a node for in a DAG the same way. The ``JOB`` command
     can still be specified for backwards compatibility reasons, but it
-    is preferred to used the ``NODE`` keyword instead.
+    is preferred to used the ``NODE`` keyword instead. This is because
+    a DAGMan node can contain a list of jobs, and some users found it
+    confusing that a list of jobs was represented by an object named ``JOB``.
 
 The :dag-cmd:`NODE[Usage]` command specifies a list of one or more HTCondor jobs that
 become the core of a node in the DAG. The syntax used for each :dag-cmd:`NODE`
