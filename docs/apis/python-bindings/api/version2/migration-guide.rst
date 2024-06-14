@@ -10,7 +10,7 @@ it should mostly just work to do the following:
     import htcondor2 as htcondor
 
 The goal of this guide is to help when it doesn't.  In general, code
-that you haven't (but need to) migrate will simply throw an exception
+that you haven't (but need to) migrate will simply raise an exception
 of some kind.
 
 .. warning::
@@ -86,4 +86,125 @@ This method was dropped; as far as we know, no one was using it.
 The :mod:`htcondor` Module
 --------------------------
 
+Job Submission
+~~~~~~~~~~~~~~
 
+.. note::
+
+    Oops, we changed it again.
+
+The widest-ranging change to the :mod:`htcondor2` API is the elimination of
+all of the previously-deprecated submission-related functionality, and the
+correction and expansion of the remaining method,
+:meth:`htcondor2.Schedd.submit`.  The new ``submit`` method only takes
+:class:`htcondor.Submit` objects; you may no longer submit via raw
+ClassAds.  However, the ``Submit`` object now supports all submit
+files, and the ``submit()`` method respects any ``queue`` statements
+in the ``Submit`` object unless you specify otherwise.
+
+Submitting jobs now looks something like this:
+
+.. code:: Python
+
+    import htcondor2
+
+    submit = htcondor2.Submit("""
+        executable = my_prog
+        arguments = data_file $(SCENARIO) --seed $(SEED)
+        transfer_input_files = data_file $(SCENARIO)
+        transfer_output_files = $(SCENARIO).result
+
+        request_cpus = 1
+        request_memory = 4096
+
+        out = $(SCENARIO).out
+        err = $(SCENARIO).err
+        log = my_prog.log
+
+        queue 1 SCENARIO matching file scenarios/*
+    """)
+    submit["SEED"] = "0xDEADBEEF"
+
+    schedd = htcondor2.Schedd()
+    result = schedd.submit(submit)
+
+Note that the submit-language variable ``SEED`` was specified as a
+a string.  The HTCondor submit language (which is not the ClassAd
+language) only understands strings, so in version 2, the ``Submit``
+object no longer attempts to translate them for you.
+
+.. rubric:: Classes or methods only in Version 1:
+
+* :meth:`htcondor.Schedd.submitMany`
+* :class:`htcondor.Transaction`
+* :meth:`htcondor.Submit.queue`
+* :meth:`htcondor.Submit.queue_with_itemdata`
+* :meth:`htcondor.Schedd.transaction`
+
+Unimplemented Methods
+~~~~~~~~~~~~~~~~~~~~~
+
+These methods are not presently implemented in the version 2 bindings,
+but we will consider implementing them upon request.  We generally hope
+that they are no longer necessary.
+
+.. rubric:: Classes or methods only in Version 1:
+
+* :meth:`htcondor.Schedd.refreshGSIProxy`
+* :meth:`htcondor.Submit.jobs`
+* :meth:`htcondor.Submit.procs`
+
+Unimplemented Classes
+~~~~~~~~~~~~~~~~~~~~~
+
+:class:`htcondor.SecMan` is not presently implemented.  Because
+:class:`htcondor.Token` was only used by ``SecMan``, it has also
+been removed.
+
+:class:`htcondor.TokenRequest` is not presently implemented.
+
+.. rubric:: Classes or methods only in Version 1:
+
+* :class:`htcondor.SecMan`
+* :class:`htcondor.Token`
+* :class:`htcondor.TokenRequest`
+
+Deprecated Classes or Methods Now Removed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We removed the deprecated method :meth:`htcondor.Schedd.xquery`; use
+:meth:`htcondor2.Schedd.query` instead.  This removed the need for its
+dedicated return type, :class:`htcondor.QueryIterator`, and for the
+:meth:`htcondor.poll` method and its return type,
+:class:`htcondor.BulkQueryIterator`, and for the latter's dedicated
+enumeration, :class:`htcondor.BlockingMode`.
+
+.. rubric:: Classes or methods only in Version 1:
+
+* :meth:`htcondor.Schedd.xquery`
+* :class:`htcondor.QueryIterator`
+* :meth:`htcondor.poll`
+* :class:`htcondor.BulkQueryIterator`
+* :class:`htcondor.BlockingMode`
+
+Other Missing Classes or Methods
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`htcondor.HistoryIterator` has been replaced as the return type
+of :meth:`htcondor2.Schedd.history` with ``List[ClassAd]``.
+
+:class:`htcondor.QueueItemsIterator` has been replaced as the return type
+of :meth:`htcondor2.Submit.itemdata` with ``Iterator[List[str]]``.
+
+:class:`htcondor.VacateTypes` has been removed, as it was never used
+in a documented interface.
+
+:class:`htcondor.CredStatus` was never fully documented and has been removed,
+as it was was never used in a documented interface.
+
+.. rubric:: Classes or methods only in Version 1:
+
+* :class:`htcondor.HistoryIterator`
+* :class:`htcondor.QueueItemsIterator`
+* :class:`htcondor.VacateTypes`
+* :class:`htcondor.CredStatus`

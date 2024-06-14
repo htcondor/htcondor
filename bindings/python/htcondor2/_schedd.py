@@ -497,8 +497,16 @@ class Schedd():
         )
 
 
-    # Assuming this should be deprecated.
-    # def refreshGSIProxy()
+    def refreshGSIProxy(cluster : int, proc : int, proxy_filename : str, lifetime : int) -> int:
+        """
+        This function is not currently implemented.
+
+        :param cluster:
+        :param proc:
+        :param proxy_filename:
+        :param lifetime:
+        """
+        raise NotImplementedError("Let us know what you need this for.")
 
 
     def reschedule(self) -> None:
