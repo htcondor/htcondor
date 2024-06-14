@@ -172,10 +172,6 @@ BuildRequires: systemd-units
 %endif
 Requires: systemd
 
-%if 0%{?rhel} == 7
-BuildRequires: python36-sphinx python36-sphinx_rtd_theme
-%endif
-
 %if 0%{?rhel} >= 8 || 0%{?amzn} || 0%{?fedora}
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
@@ -638,7 +634,7 @@ export CXX=$(which c++)
 env -u RPM_BUILD_ROOT make -C docs man
 %else
 %if 0%{?rhel} == 7
-make -C docs SPHINXBUILD=sphinx-build-3.6 man
+echo Not building man pages
 %else
 make -C docs man
 %endif
@@ -1007,6 +1003,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/interfaces/null.py
 %_libexecdir/condor/adstash/interfaces/registry.py
 %_libexecdir/condor/annex
+%if 0%{?rhel} != 7
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_password.1.gz
@@ -1087,6 +1084,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_watch_q.1.gz
 %_mandir/man1/get_htcondor.1.gz
 %_mandir/man1/htcondor.1.gz
+%endif
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
@@ -1232,9 +1230,11 @@ rm -rf %{buildroot}
 %_sbindir/condor_procd
 %_sbindir/gidd_alloc
 %_sbindir/procd_ctl
+%if 0%{?rhel} != 7
 %_mandir/man1/procd_ctl.1.gz
 %_mandir/man1/gidd_alloc.1.gz
 %_mandir/man1/condor_procd.1.gz
+%endif
 
 ####### classads files #######
 %defattr(-,root,root,-)
@@ -1296,8 +1296,10 @@ rm -rf %{buildroot}
 %{_bindir}/make-personal-from-tarball
 %{_sbindir}/condor_configure
 %{_sbindir}/condor_install
+%if 0%{?rhel} != 7
 %{_mandir}/man1/condor_configure.1.gz
 %{_mandir}/man1/condor_install.1.gz
+%endif
 %endif
 
 #################
