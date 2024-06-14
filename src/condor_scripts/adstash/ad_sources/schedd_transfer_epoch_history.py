@@ -182,7 +182,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         return attr, value
 
 
-    def expand_plugin_result_ads(self, ads):
+    def expand_plugin_result_ads(self, ads, my_attr_name=None):
         debug_results = []
         result = {}
         for ad in ads:
@@ -192,7 +192,14 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                 else:
                     attr, value = self.normalize(attr, value)
                     result[attr] = value
+            if result.get("TransferProtocol") is None:
+                result["TransferProtocol"] = result.get("TransferUrl", "unknown:").split("+", maxsplit=1)[-1].split(":", maxsplit=1)[0]
+            if result.get("TransferType") is None:
+                result["TransferType"] = {"InputPluginResultList": "download", "OutputPluginResultList": "upload"}.get(my_attr_name, "unknown")
             if not debug_results:
+                result["Attempts"] = 1
+                result["Attempt"] = 0
+                result["FinalAttempt"] = True
                 yield result
             else:
                 for debug_result in debug_results:
@@ -272,7 +279,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
             result[attr] = value
         for attr, value in ad.items():
             if attr.endswith("PluginResultList"):
-                plugin_results.append(self.expand_plugin_result_ads(value))
+                plugin_results.append(self.expand_plugin_result_ads(value, my_attr_name=attr))
             else:
                 attr, value = self.normalize(attr, value)
                 result[attr] = value
