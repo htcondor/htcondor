@@ -186,7 +186,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         result = {}
         for ad in ads:
             for attr, value in ad.items():
-                if attr == "DeveloperData":
+                if attr.lower() == "developerdata":
                     debug_results = self.expand_debug_ad(value)
                 else:
                     attr, value = self.normalize(attr, value)
@@ -239,8 +239,8 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                 value = ad.get(attempt_attr)
                 if value is None:
                     continue
-                if attr.startswith("Transfer"):
-                    attr = attr.replace("Transfer", "Attempt", 1)
+                if attr.lower().startswith("transfer"):
+                    attr = f"Attempt{attr[len('transfer'):]}"
                 attr, value = self.normalize(attr, value)
                 attempt_result[attr] = value
             yield result | attempt_result
