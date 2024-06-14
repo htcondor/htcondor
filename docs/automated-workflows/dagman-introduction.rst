@@ -69,27 +69,36 @@ four node DAG would be described as the following in the DAG description file:
 
     # File name: diamond.dag
 
-    JOB A A.sub
-    JOB B B.sub
-    JOB C C.sub
-    JOB D D.sub
+    NODE A A.sub
+    NODE B B.sub
+    NODE C C.sub
+    NODE D D.sub
     PARENT A CHILD B C
     PARENT B C CHILD D
 
-.. _DAGMan JOB:
+.. _DAGMan NODE:
 
-JOB
----
+NODE
+----
 
-The :dag-cmd:`JOB[Usage]` command specifies a list of one or more HTCondor jobs that
-become the core of a node in the DAG. The syntax used for each :dag-cmd:`JOB`
+.. sidebar:: Old JOB command
+
+    The previous command ``JOB`` is a synonym of the ``NODE`` command.
+    Both create a node for in a DAG the same way. The ``JOB`` command
+    can still be specified for backwards compatibility reasons, but it
+    is preferred to used the ``NODE`` keyword instead. This is because
+    a DAGMan node can contain a list of jobs, and some users found it
+    confusing that a list of jobs was represented by an object named ``JOB``.
+
+The :dag-cmd:`NODE[Usage]` command specifies a list of one or more HTCondor jobs that
+become the core of a node in the DAG. The syntax used for each :dag-cmd:`NODE`
 command is:
 
 .. code-block:: condor-dagman
 
-    JOB NodeName SubmitDescription [DIR directory] [NOOP] [DONE]
+    NODE NodeName SubmitDescription [DIR directory] [NOOP] [DONE]
 
-A :dag-cmd:`JOB` entry maps a *NodeName* to an HTCondor submit description.
+A :dag-cmd:`NODE` entry maps a *NodeName* to an HTCondor submit description.
 The *NodeName* uniquely identifies nodes within the DAG description file and in
 output messages. Each node name, given by *NodeName*, within the DAG must
 be unique.
@@ -312,10 +321,10 @@ of nodes B and C. The DAG description file:
 
     # File name: diamond.dag
 
-    JOB  A  A.sub
-    JOB  B  B.sub
-    JOB  C  C.sub
-    JOB  D  D.sub
+    NODE  A  A.sub
+    NODE  B  B.sub
+    NODE  C  C.sub
+    NODE  D  D.sub
     SCRIPT PRE  B  pre.sh $NODE .gz
     SCRIPT PRE  C  pre.sh $NODE .gz
     PARENT A CHILD B C
@@ -451,18 +460,18 @@ Macros for POST Scripts only:
 
         # File name: diamond.dag
 
-        # Job A using personal inline
+        # Node A using personal inline
         # submit description
-        JOB A {
+        NODE A {
             executable   = /path/diamond.exe
             output       = diamond.out.$(cluster)
             error        = diamond.err.$(cluster)
             log          = diamond_condor.log
         }
 
-        JOB B B.sub
-        JOB C C.sub
-        JOB D D.sub
+        NODE B B.sub
+        NODE C C.sub
+        NODE D D.sub
 
         PARENT A CHILD B C
         PARENT B C CHILD D
@@ -484,10 +493,10 @@ Macros for POST Scripts only:
             request_disk   = 10240K
         }
 
-        JOB A DiamondDesc
-        JOB B DiamondDesc
-        JOB C DiamondDesc
-        JOB D DiamondDesc
+        NODE A DiamondDesc
+        NODE B DiamondDesc
+        NODE C DiamondDesc
+        NODE D DiamondDesc
 
         PARENT A CHILD B C
         PARENT B C CHILD D
@@ -529,7 +538,7 @@ not used by any of the nodes. It can then be linked to a node as follows:
 
 .. code-block:: condor-dagman
 
-    JOB NodeName DescriptionName
+    NODE NodeName DescriptionName
 
 .. note::
 
@@ -564,10 +573,10 @@ not used by any of the nodes. It can then be linked to a node as follows:
 
         # File name: diamond.dag
 
-        JOB  A  diamond_job.sub
-        JOB  B  diamond_job.sub
-        JOB  C  diamond_job.sub
-        JOB  D  diamond_job.sub
+        NODE  A  diamond_job.sub
+        NODE  B  diamond_job.sub
+        NODE  C  diamond_job.sub
+        NODE  D  diamond_job.sub
         PARENT A CHILD B C
         PARENT B C CHILD D
 
@@ -607,7 +616,7 @@ When submitting jobs on behalf of the user, DAGMan will create custom
 submit description macros that can be utilized. The following macros are
 referable by the job submit description:
 
-- **JOB**: The node name of which these jobs belong.
+- **NODE_NAME**: The node name of which these jobs belong.
 - **RETRY**: The current retry attempt number. First execution is 0.
 - **DAGManJobId**: The jobs associtated :ad-attr:`DAGManJobId`.
 - **DAG_STATUS**: The current DAG status as described by :ad-attr:`DAG_Status`
