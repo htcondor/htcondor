@@ -1762,8 +1762,8 @@ int submit_jobs (
 			}
 
 			// stuff foreach data for the first item before we make the cluster ad.
-			char * item = o.items.first();
-			rval = set_vars(submit_hash, o.vars, item, 0, queue_item_opts, token_seps, token_ws);
+			auto_free_ptr item(o.items.empty() ? nullptr : strdup(o.items.front().c_str()));
+			rval = set_vars(submit_hash, o.vars, item.ptr(), 0, queue_item_opts, token_seps, token_ws);
 			if (rval < 0)
 				break;
 
@@ -1792,14 +1792,13 @@ int submit_jobs (
 				fprintf(stdout, "-----\n");
 			}
 
-			char * item = NULL;
-			if (o.items.isEmpty()) {
-				rval = queue_item(o.queue_num, o.vars, item, 0, queue_item_opts, token_seps, token_ws);
+			if (o.items.empty()) {
+				rval = queue_item(o.queue_num, o.vars, nullptr, 0, queue_item_opts, token_seps, token_ws);
 			} else {
-				int citems = o.items.number();
-				o.items.rewind();
+				int citems = (int)o.items.size();
 				int item_index = 0;
-				while ((item = o.items.next())) {
+				for (size_t i = 0; i < o.items.size(); i++) {
+					char* item = const_cast<char*>(o.items[i].c_str());
 					if (o.slice.selected(item_index, citems)) {
 						rval = queue_item(o.queue_num, o.vars, item, item_index, queue_item_opts, token_seps, token_ws);
 						if (rval < 0)

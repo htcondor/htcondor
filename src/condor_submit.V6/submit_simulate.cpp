@@ -189,9 +189,9 @@ int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 		// and we have just printed Dry-Run jobs(s) without a \n, so print the \n now.
 		fprintf(fp, "\n");
 	}
-	if (o.items.number() > 0) {
+	if (o.items.size() > 0) {
 		if (log_all_communication && fp) {
-			fprintf(fp, "::sendItemdata(%d) %d items", cluster_id, o.items.number());
+			fprintf(fp, "::sendItemdata(%d) %zu items", cluster_id, o.items.size());
 		}
 		if (!echo_itemdata_filepath.empty()) {
 
@@ -211,7 +211,7 @@ int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 				int ix = 0;
 				std::string item;
 				int rval = 0;
-				o.items.rewind();
+				o.items_idx = 0;
 				while (AbstractScheddQ::next_rowdata(&o, item) == 1) {
 					if (item.size() + ix > cbAlloc) {
 						if (ix == 0) { // single item > 64k !!!
