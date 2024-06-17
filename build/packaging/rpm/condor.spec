@@ -785,6 +785,7 @@ mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 
 # not packaging configure/install scripts
 %if ! %uw_build
+rm -f %{buildroot}%{_bindir}/make-ap-from-tarball
 rm -f %{buildroot}%{_bindir}/make-personal-from-tarball
 rm -f %{buildroot}%{_sbindir}/condor_configure
 rm -f %{buildroot}%{_sbindir}/condor_install
@@ -1293,6 +1294,7 @@ rm -rf %{buildroot}
 %if %uw_build
 #################
 %files tarball
+%{_bindir}/make-ap-from-tarball
 %{_bindir}/make-personal-from-tarball
 %{_sbindir}/condor_configure
 %{_sbindir}/condor_install
