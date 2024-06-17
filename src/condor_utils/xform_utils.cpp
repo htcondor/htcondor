@@ -1073,9 +1073,11 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 				if (line[0] == '#') continue; // skip comments.
 				if (line[0] == ')') { saw_close_brace = true; break; }
 				if (oa.foreach_mode == foreach_from) {
-					oa.items.append(line);
+					oa.items.emplace_back(line);
 				} else {
-					oa.items.initializeFromString(line);
+					for (const auto& item: StringTokenIterator(line)) {
+						oa.items.emplace_back(item);
+					}
 				}
 			}
 			if (close_fp_when_done) { fclose(fp); fp = NULL; }
@@ -1090,9 +1092,11 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 				line = getline_trim(stdin, lineno);
 				if ( ! line) break;
 				if (oa.foreach_mode == foreach_from) {
-					oa.items.append(line);
+					oa.items.emplace_back(line);
 				} else {
-					oa.items.initializeFromString(line);
+					for (const auto& item: StringTokenIterator(line)) {
+						oa.items.emplace_back(item);
+					}
 				}
 			}
 		} else {
@@ -1104,7 +1108,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 			for (char* line=NULL;;) {
 				line = getline_trim(fpItems, ItemsSource.line);
 				if ( ! line) break;
-				oa.items.append(line);
+				oa.items.emplace_back(line);
 			}
 			rval = Close_macro_source(fpItems, ItemsSource, set.macros(), 0);
 		}
@@ -1119,7 +1123,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 	case foreach_from:
 		// itemlist is already correct
 		// PRAGMA_REMIND("do argument validation here?")
-		citems = oa.items.number();
+		citems = (int)oa.items.size();
 		break;
 
 	case foreach_matching:
@@ -1244,8 +1248,12 @@ bool  MacroStreamXFormSource::first_iteration(XFormHash &set)
 	checkpoint = set.save_state();
 
 	// prime the iteration variables
-	oa.items.rewind();
-	return set_iter_item(set, oa.items.next()) || (oa.queue_num > 1);
+	oa.items_idx = 0;
+	const char* item_str = nullptr;
+	if (oa.items_idx < oa.items.size()) {
+		item_str = oa.items[oa.items_idx++].c_str();
+	}
+	return set_iter_item(set, item_str) || (oa.queue_num > 1);
 }
 
 bool MacroStreamXFormSource::next_iteration(XFormHash &set)
@@ -1260,7 +1268,11 @@ bool MacroStreamXFormSource::next_iteration(XFormHash &set)
 		step = 0;
 		++row;
 		if (checkpoint) { set.rewind_to_state(checkpoint, false); }
-		has_next_item = set_iter_item(set, oa.items.next());
+		const char* item_str = nullptr;
+		if (oa.items_idx < oa.items.size()) {
+			item_str = oa.items[oa.items_idx++].c_str();
+		}
+		has_next_item = set_iter_item(set, item_str);
 		set.set_iterate_row(row, true);
 	}
 	set.set_iterate_step(step, proc);
@@ -1275,7 +1287,7 @@ void MacroStreamXFormSource::clear_iteration(XFormHash &set)
 	}
 	set.clear_live_variables();
 	curr_item.clear();
-	oa.items.rewind();
+	oa.items_idx = 0;
 }
 
 void MacroStreamXFormSource::reset(XFormHash &set)

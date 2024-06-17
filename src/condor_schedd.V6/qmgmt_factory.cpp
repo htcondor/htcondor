@@ -77,7 +77,7 @@ public:
 	// advance from the input row until the next selected row. return  < 0 if no more selected rows.
 	int NextSelectedRow(int row) const {
 		if (fea.foreach_mode == foreach_not) return -1;
-		int num_rows = fea.items.number();
+		int num_rows = (int)fea.items.size();
 		while (++row < num_rows) {
 			if (fea.slice.selected(row, num_rows)) {
 				return row;
@@ -88,7 +88,7 @@ public:
 	// returns the first row selected by the slice (if any)
 	int FirstSelectedRow() const {
 		if (fea.foreach_mode == foreach_not) return 0;
-		int num_rows = (fea.foreach_mode == foreach_from_async) ? INT_MAX : fea.items.number();
+		int num_rows = (fea.foreach_mode == foreach_from_async) ? INT_MAX : (int)fea.items.size();
 		if (num_rows <= 0) return -1;
 		if (fea.slice.selected(0, num_rows))
 			return 0;
@@ -105,7 +105,7 @@ public:
 		if (cached_total_procs == -42) {
 			total_procs = 1;
 			if (fea.foreach_mode != foreach_not) {
-				int num_rows = fea.items.number();
+				int num_rows = (int)fea.items.size();
 				int selected_rows = fea.slice.length_for(num_rows);
 				if (selected_rows > 1) total_procs = selected_rows;
 			}
@@ -133,7 +133,7 @@ public:
 			num = cached_total_procs;
 			return true;
 		}
-		num = fea.slice.length_for(fea.items.number()) * step_size;
+		num = fea.slice.length_for(fea.items.size()) * step_size;
 		return fea.foreach_mode != foreach_from_async;
 	}
 
@@ -265,7 +265,9 @@ int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::s
 	for (size_t ix = off; ix < cbbuf; ++ix) {
 		if (buf[ix] == '\n') {
 			remainder.append(buf+off, ix-off);
-			factory->fea.items.append(remainder.data(), (int)remainder.size());
+			// TODO Is this extra '\0' necessary?
+			remainder += '\0';
+			factory->fea.items.emplace_back(remainder.data());
 			remainder.clear();
 			off = ix+1;
 		}
@@ -279,7 +281,7 @@ int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::s
 int JobFactoryRowCount(JobFactory * factory)
 {
 	if ( ! factory) return 0;
-	return factory->fea.items.number();
+	return (int)factory->fea.items.size();
 }
 
 // Make a job factory for a Job object that exists, this entry point is used when
@@ -456,7 +458,7 @@ void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
 	iad.Assign("JobFactoryPaused", factory->paused);
 	iad.Assign("JobFactoryTotalProcs", factory->cached_total_procs);
 	iad.Assign("JobFactoryStepSize", factory->StepSize());
-	iad.Assign("JobFactoryItemCount", factory->fea.items.number());
+	iad.Assign("JobFactoryItemCount", factory->fea.items.size());
 	iad.Assign("JobFactoryItemReaderDone", factory->reader.done_reading());
 	// iad.Assign("JobFactoryItemReaderError", factory->reader.error_str());
 	iad.Assign("JobFactoryItemReaderErrorCode", factory->reader.error_code());
@@ -739,9 +741,9 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.c_str());
 				} else if (reader.eof_was_read()) {
 					// the reader was primed with itemdata sent over the wire...
-				} else if (fea.items.number() > 0) {
+				} else if (fea.items.size() > 0) {
 					// we populated the itemdata already
-					dprintf(D_MATERIALIZE | D_VERBOSE, "Digest itemdata for cluster %d already loaded. number=%d\n", cluster_id, fea.items.number());
+					dprintf(D_MATERIALIZE | D_VERBOSE, "Digest itemdata for cluster %d already loaded. number=%zu\n", cluster_id, fea.items.size());
 				} else {
 					// before opening the item data file, we (may) want to impersonate the user
 					bool restore_priv = false;
@@ -815,7 +817,7 @@ bool JobFactory::RowDataIsLoading(int row)
 		std::string str;
 		while (reader.output().readLine(str, false)) {
 			trim(str);
-			fea.items.append(str.c_str());
+			fea.items.emplace_back(str);
 		}
 
 		if (reader.done_reading()) {
@@ -827,7 +829,7 @@ bool JobFactory::RowDataIsLoading(int row)
 			reader.close();
 			reader.clear();
 			fea.foreach_mode = foreach_from;
-		} else if (fea.items.number() < row) {
+		} else if ((int)fea.items.size() < row) {
 			// not done reading, and also haven't read this row. return true that row data is still loading.
 			reader.check_for_read_completion();
 			return true;
@@ -847,18 +849,12 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 	const char* token_ws = " \t";
 
 	int loaded_row = row;
-	char * item = emptyItemString;
+	const char * item = emptyItemString;
 	if (fea.foreach_mode != foreach_not) {
-		loaded_row = 0;
-		item = fea.items.first();
-		//PRAGMA_REMIND("tj: need a stable iterator that keeps track of current pos, but can also seek.")
-		for (int ix = 1; ix <= row; ++ix) {
-			item = fea.items.next();
-			if (item) {
-				loaded_row = ix;
-			} else {
-				break;
-			}
+		if (row < (int)fea.items.size()) {
+			item = fea.items[row].c_str();
+		} else if (row > 0) {
+			loaded_row = row - 1;
 		}
 	}
 
@@ -874,7 +870,7 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 	// set the first loop variable unconditionally, we set it initially to the whole item
 	// we may later truncate that item when we assign fields to other loop variables.
 	auto var_it = fea.vars.begin();
-	char * data = item;
+	char * data = const_cast<char*>(item);
 	set_live_submit_variable(var_it->c_str(), data, false);
 
 	// check for the use of US as a field separator

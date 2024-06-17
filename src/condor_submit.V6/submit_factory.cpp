@@ -294,7 +294,7 @@ int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int Cluste
 	bool make_foreach_file = false;
 	if (spill_items) {
 		// PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
-		if (o.items.isEmpty()) {
+		if (o.items.empty()) {
 			o.foreach_mode = foreach_not;
 		} else {
 			make_foreach_file = true;
@@ -319,7 +319,7 @@ int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int Cluste
 		}
 
 		std::string line;
-		for (const char * item = o.items.first(); item != NULL; item = o.items.next()) {
+		for (const auto& item: o.items) {
 			line = item; line += "\n";
 			int cbwrote = write(fd, line.data(), (int)line.size());
 			if (cbwrote != (int)line.size()) {

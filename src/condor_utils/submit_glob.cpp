@@ -171,16 +171,14 @@ static bool is_dir(const char * filename)
 //fprintf(stderr, "\n" XX(GLOB_ERR) XX(GLOB_MARK) XX(GLOB_NOSORT) XX(GLOB_DOOFFS) XX(GLOB_NOCHECK) XX(GLOB_APPEND) XX(GLOB_NOESCAPE) );
 //fprintf(stderr, "\n" XX(GLOB_PERIOD) XX(GLOB_ALTDIRFUNC) XX(GLOB_BRACE) XX(GLOB_NOMAGIC) XX(GLOB_TILDE) XX(GLOB_TILDE_CHECK) XX(GLOB_ONLYDIR) );
 
-int submit_expand_globs(StringList &items, int options, std::string & errmsg)
+int submit_expand_globs(std::vector<std::string> &items, int options, std::string & errmsg)
 {
-	StringList globs(items);
-	items.clearAll();
+	std::vector<std::string> globs(items);
+	items.clear();
 
-	globs.rewind();
 	glob_t files;
 	memset(&files, 0, sizeof(files));
 
-	const char * pattern;
 	int glob_options = 0; // GLOB_NOSORT | GLOB_NOESCAPE;
 	int glob_append = 0;
 
@@ -204,8 +202,8 @@ int submit_expand_globs(StringList &items, int options, std::string & errmsg)
 	std::vector<glob_stats> matches;
 	int num_empty_globs = 0;
 
-	while ((pattern = globs.next())) {
-		int rval = glob(pattern, GLOB_MARK | glob_options | glob_append, NULL, &files);
+	for (const auto& pattern: globs) {
+		int rval = glob(pattern.c_str(), GLOB_MARK | glob_options | glob_append, NULL, &files);
 		//fprintf(stderr, "\nglob '%s' returned %d (%d, %p, %d)\n", pattern, rval, (int)files.gl_offs, files.gl_pathv, (int)files.gl_pathc);
 		if (rval != 0) {
 			if (rval == GLOB_NOMATCH) {
@@ -239,7 +237,7 @@ int submit_expand_globs(StringList &items, int options, std::string & errmsg)
 		// keep track of the location and count of the items return for various sub-patterns.
 		// we use this when we later get rid of duplicates and warn about empty matches.
 		glob_stats stats;
-		stats.pattern = pattern;
+		stats.pattern = pattern.c_str();
 		stats.pathc = files.gl_pathc;
 		stats.count = cfiles;
 		matches.push_back(stats);
@@ -292,7 +290,7 @@ int submit_expand_globs(StringList &items, int options, std::string & errmsg)
 			}
 		}
 		++citems;
-		if (files.gl_pathv[ii]) { items.insert(files.gl_pathv[ii]); }
+		if (files.gl_pathv[ii]) { items.emplace_back(files.gl_pathv[ii]); }
 	}
 
 	// if we ever allocated anything in the glob struct, free it now.
