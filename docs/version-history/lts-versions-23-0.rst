@@ -38,6 +38,9 @@ Bugs Fixed:
   resulting in the jobs being held.
   :jira:`2467`
 
+- Fixed a bug where an illformed scitoken could crash a *condor_schedd*.
+  :jira:`2504`
+
 - Fixed a bug where resource claiming would fail if the *condor_schedd*
   had :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` enabled and the
   *condor_startd* had it disabled.
