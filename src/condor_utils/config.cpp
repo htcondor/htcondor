@@ -3296,11 +3296,11 @@ static const char * evaluate_macro_func (
 				if (strchr(lval, '$')) {
 					char * tmp3 = expand_macro(lval, macro_set, ctx);
 					if (tmp3) {
-						entries = split(tmp3);
+						entries = split(tmp3, ",");
 						free(tmp3);
 					}
 				} else {
-					entries = split(lval);
+					entries = split(lval, ",");
 				}
 				entriesit = entries.begin();
 			}
