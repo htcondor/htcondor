@@ -12,6 +12,7 @@ import pytest
 import logging
 
 import time
+import pickle
 
 import htcondor
 
@@ -190,6 +191,7 @@ class TestJobEventLog:
 
 		assert(count == 39)
 
+
 	# To check that __exit__() closes the log, we need to leave at least one
 	# event in the log for the log to not return.
 	def test_enter_and_exit(self, logfile):
@@ -202,10 +204,12 @@ class TestJobEventLog:
 		except StopIteration as si:
 			pass
 
+
 	# To test __str__(), use it to reconstruct the original log string and
 	# then compare to the value of the log file.
 	def test_string_conversion(self, synthetic, original):
 		assert(synthetic == original)
+
 
 	def test_close(self, logfile):
 		with htcondor.JobEventLog(logfile) as jel:
@@ -216,3 +220,19 @@ class TestJobEventLog:
 				assert(False)
 			except StopIteration as si:
 				pass
+
+
+	def test_pickle(self, logfile):
+		p = None
+		with htcondor.JobEventLog(logfile) as jel:
+			e = next(jel)
+			assert(e["UserNotes"] == "User info")
+			p = pickle.dumps(jel)
+
+		# Make sure we throw away the pickled JobEventLog.
+		jel = None
+
+		new_jel = pickle.loads(p)
+		e = next(new_jel)
+
+		assert(e["ExecuteHost"] == "<128.105.165.12:32779>")
