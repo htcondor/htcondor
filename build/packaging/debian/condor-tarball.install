@@ -1,3 +1,4 @@
+usr/bin/make-ap-from-tarball
 usr/bin/make-personal-from-tarball
 usr/sbin/condor_configure
 usr/sbin/condor_install
