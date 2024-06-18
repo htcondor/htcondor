@@ -41,3 +41,6 @@ with _add_dll_dir():
 
     # For compability with version 1.
     from ._parser_type import ParserType as Parser
+
+    # Exceptions.
+    from .classad2_impl import ClassAdException
