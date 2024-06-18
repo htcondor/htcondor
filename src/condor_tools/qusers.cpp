@@ -32,7 +32,6 @@
 //#include "command_strings.h"
 //#include "enum_utils.h"
 #include "condor_version.h"
-#include "string_list.h"
 #include "ad_printmask.h"
 #include "internet.h"
 #include "compat_classad_util.h"

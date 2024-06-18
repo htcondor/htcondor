@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_attributes.h"
-#include "string_list.h"
 
 #include "consumption_policy.h"
 

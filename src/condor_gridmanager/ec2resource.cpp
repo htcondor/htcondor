@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "string_list.h"
 
 #include "ec2resource.h"
 #include "gridmanager.h"

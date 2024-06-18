@@ -25,7 +25,6 @@
 #include "condor_universe.h"
 #include "VanillaToGrid.h"
 #include "filename_tools.h"
-#include "string_list.h"
 #include "classad/classad_distribution.h"
 #include "condor_config.h"
 

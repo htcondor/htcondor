@@ -66,7 +66,6 @@ Example V2Quoted syntax yielding same as above:
 ***********************************************************************/
 
 
-#include "string_list.h"
 #include "condor_arglist.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"

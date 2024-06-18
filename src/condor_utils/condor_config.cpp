@@ -57,7 +57,6 @@
 #include "condor_debug.h"
 #include "pool_allocator.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
 #include "ipv6_hostname.h"

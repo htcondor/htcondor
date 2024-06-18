@@ -28,7 +28,6 @@
 #include "condor_adtypes.h"
 #include "daemon.h"
 
-#include "string_list.h"
 #include "my_username.h" // for my_domainname
 #include "directory.h"
 #include "filename_tools.h"
