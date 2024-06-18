@@ -132,7 +132,7 @@ elif [[ $OS_ID == ubuntu ]]; then
 
     echo "deb     ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
     echo "deb-src ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
-    # Update repository is only available for feature versions
+
     if [[ $HTCONDOR_VERSION == daily ]]; then
         set -o pipefail
         wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${series_str}-Daily-Key" | apt-key add -
