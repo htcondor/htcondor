@@ -212,14 +212,16 @@ static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
 }
 
 static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
-	return can_switch_ids() && cgroup_controller_is_writeable("", relative_cgroup);
+	bool use_cgroups_without_priv = param_boolean("CREATE_CGROUP_WITHOUT_ROOT", false);
+	return (use_cgroups_without_priv || can_switch_ids()) && 
+		cgroup_controller_is_writeable("", relative_cgroup);
 }
 
 static std::string current_parent_cgroup() {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	std::string cgroup;
 
-	int fd = open("/proc/self/cgroup", 0666);
+	int fd = open("/proc/self/cgroup", O_RDONLY);
 	if (fd < 0) {
 		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
 		return cgroup; // empty cgroup is invalid
