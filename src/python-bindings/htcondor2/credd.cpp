@@ -104,7 +104,7 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
     bool query_mode = (mode & MODE_MASK) == GENERIC_QUERY;
     bool delete_mode = (mode & MODE_MASK) == GENERIC_DELETE;
     if( result == FAILURE_NOT_FOUND && (query_mode || delete_mode) ) {
-        return PyLong_FromLong(result);
+        Py_RETURN_NONE;
     }
 
     const char * errString = NULL;
