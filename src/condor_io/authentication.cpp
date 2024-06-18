@@ -62,6 +62,7 @@ char const *COLLECTOR_SIDE_MATCHSESSION_FQU = "collector-side@matchsession";
 char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 char const *CONDOR_FAMILY_FQU = "condor@family";
+char const *CONDOR_PASSWORD_FQU = "condor@password";
 
 char const *AUTH_METHOD_FAMILY = "FAMILY";
 char const *AUTH_METHOD_MATCH = "MATCH";
