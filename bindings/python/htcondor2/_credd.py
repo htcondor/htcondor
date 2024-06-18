@@ -12,6 +12,7 @@ from .htcondor2_impl import (
     _credd_do_store_cred,
     _credd_do_check_oauth_creds,
     _credd_run_credential_producer,
+    HTCondorException,
 )
 
 
@@ -81,14 +82,13 @@ class Credd():
         elif credtype == CredType.Kerberos:
             mode |= credtype | self._STORE_CRED_WAIT_FOR_CREDMON
         else:
-            # This was HTCondorEnumError in version 1.
-            raise RuntimeError("invalid credtype")
+            raise ValueError("invalid credtype")
 
         if credential is None:
             producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
             if producer == "CREDENTIAL_ALREADY_STORED":
-                # This was HTCondorIOError in version 1.
-                raise IOError(producer)
+                # This raised HTCondorIOError in version 1.
+                return
 
             credential = _credd_run_credential_producer(producer)
 
@@ -112,7 +112,7 @@ class Credd():
             mode |= credtype | self._STORE_CRED_WAIT_FOR_CREDMON
         else:
             # This was HTCondorEnumError in version 1.
-            raise RuntimeError("invalid credtype")
+            raise ValueError("invalid credtype")
 
         return _credd_do_store_cred(self._addr, user, None, mode, None, None)
 
@@ -120,14 +120,14 @@ class Credd():
     def add_user_service_cred(self, credtype : CredType, credential : bytes, service : str, handle : str = None, user : str = None) -> None:
         mode = self._GENERIC_ADD | CredType.OAuth
         if credtype != CredType.OAuth:
-            # This was HTCondorEnumError in version 1.
-            raise RuntimeError("invalid credtype")
+            # This raised HTCondorIOError in version 1.
+            raise ValueError("invalid credtype")
 
         if credential is None:
             producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
             if producer == "CREDENTIAL_ALREADY_STORED":
                 # This was HTCondorIOError in version 1.
-                raise IOError(producer)
+                return
 
             credential = _credd_run_credential_producer(producer)
 
@@ -142,7 +142,7 @@ class Credd():
         mode = self._GENERIC_ADD | CredType.OAuth
         if credtype != CredType.OAuth:
             # This was HTCondorEnumError in version 1.
-            raise RuntimeError("invalid credtype")
+            raise ValueError("invalid credtype")
 
         _credd_do_store_cred(self._addr, user, None, mode, service, handle)
 
@@ -154,7 +154,7 @@ class Credd():
         mode = self._GENERIC_QUERY | CredType.OAuth
         if credtype != CredType.OAuth:
             # This was HTCondorEnumError in version 1.
-            raise RuntimeError("invalid credtype")
+            raise ValueError("invalid credtype")
 
         return _credd_do_store_cred(self._addr, user, None, mode, service, handle)
 
@@ -162,15 +162,18 @@ class Credd():
     # We should probably change the type of `services`, since they're not
     # defined by ClassAds anywhere else in the Python API.
     def check_user_service_creds(self, credtype : CredType, serviceAds : List[classad.ClassAd], user : str = None) -> CredCheck:
+        """
+        :raises HTCondorException:  If a problem occurs talking to the credd.
+        """
         mode = self._GENERIC_CONFIG | CredType.OAuth
         if credtype != CredType.OAuth:
             # This was HTCondorEnumError in version 1.
-            raise RuntimeError("invalid credtype")
+            raise ValueError("invalid credtype")
 
         services = []
         for ad in serviceAds:
             if not isinstance(ad, ClassAd):
-                raise ValueError("service must be of type classad.ClassAd")
+                raise TypeError("service must be of type classad.ClassAd")
 
             name = ad.get("Service", None)
             # This was HTCondorValueError in version 1.
@@ -186,15 +189,15 @@ class Credd():
 
         # These were HTCondorIOError in version 1.
         if result == -1:
-            raise IOError("invalid services argument")
+            raise HTCondorException("invalid services argument")
         elif result == -2:
-            raise IOError("could not locate CredD")
+            raise HTCondorException("could not locate CredD")
         elif result == -3:
-            raise IOError("startCommand failed")
+            raise HTCondorException("startCommand failed")
         elif result == -4:
-            raise IOError("communication failure")
+            raise HTCondorException("communication failure")
         elif result <= -5:
-            raise IOError("internal error")
+            raise HTCondorException("internal error")
         else:
             return CredCheck(",".join(services), url)
 

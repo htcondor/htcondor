@@ -28,6 +28,7 @@ from .htcondor2_impl import (
     _submit_get_submit_method,
     _submit_issue_credentials,
     _submit_itemdata,
+    HTCondorException,
 )
 
 from ._submit_method import SubmitMethod
@@ -318,7 +319,7 @@ class Submit(MutableMapping):
         if not isinstance(options, dict):
             raise TypeError("options must be a dict")
         if not Path(filename).exists():
-            raise IOError(f"{filename} does not exist")
+            raise HTCondorException(f"{filename} does not exist")
 
         # Convert from version 1 names to the proper internal names.
         internal_options = {}
@@ -326,7 +327,7 @@ class Submit(MutableMapping):
             if not isinstance(key, str):
                 raise TypeError("options keys must by strings")
             elif len(key) == 0:
-                raise KeyError("options key is empty")
+                raise ValueError("options key is empty")
             internal_key = _NewOptionNames.get(key.lower(), key)
             if not isinstance(value, (int, bool, str)):
                 raise TypeError("options values must be int, bool, or str")
