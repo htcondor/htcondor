@@ -8,13 +8,11 @@ USER_ID=`id -u`
 GROUP_ID=`id -g`
 CONDOR_IDS=${USER_ID}.${GROUP_ID}
 
-PERSONAL=0
-AP=0
 BASENAME=$(basename $0)
 if [[ $BASENAME = 'make-personal-from-tarball' ]]; then
-    PERSONAL=1
+    CONFIG=personal
 elif [[ $BASENAME = 'make-ap-from-tarball' ]]; then
-    AP=1
+    CONFIG=ap
 else
     echo "I don't know what condor setup you want"
     exit 1
@@ -84,10 +82,10 @@ CONDOR_IDS=${CONDOR_IDS}
 EOF
 ) >> "${RELEASE_DIR}/etc/condor_config"
 
-if [[ $PERSONAL ]]; then
-    ROLE='use role: personal'
-elif [[ $AP ]]; then
-    ROLE='use role: submit'
+if [[ $CONFIG = 'personal' ]]; then
+    ROLE='personal'
+elif [[ $CONFIG = 'ap' ]]; then
+    ROLE='submit'
 fi
 
 #
@@ -98,7 +96,7 @@ fi
 (
 cat <<EOF
 use security: user_based
-${ROLE}
+use role: ${ROLE}
 CONDOR_HOST = \$(FULL_HOSTNAME)
 
 #
@@ -108,7 +106,7 @@ CONDOR_HOST = \$(FULL_HOSTNAME)
 #
 SEC_TOKEN_DIRECTORY = \$(SEC_TOKEN_SYSTEM_DIRECTORY)
 EOF
-) > "${LOCAL_CONFIG_DIR}/00-personal-condor"
+) > "${LOCAL_CONFIG_DIR}/00-${CONFIG}-condor"
 
 (
 cat <<EOF
