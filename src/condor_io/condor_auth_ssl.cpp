@@ -425,8 +425,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 				scitoken = htcondor::discover_token();
 
 				if (scitoken.empty()) {
-					ouch( "No SciToken file provided -- BUT GGT PREVAILS!\n" );
-					//m_auth_state->m_client_status = AUTH_SSL_ERROR;
+					ouch( "No SciToken file provided\n" );
+					m_auth_state->m_client_status = AUTH_SSL_ERROR;
 				}
 			} else {
 				std::unique_ptr<FILE,fcloser> f(
