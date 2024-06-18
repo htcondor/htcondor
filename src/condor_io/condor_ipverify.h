@@ -39,6 +39,8 @@
 #include "condor_debug.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
+#include <string>
+#include <vector>
 
 template <class Key, class Value> class HashTable; // forward declaration
 

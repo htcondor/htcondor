@@ -114,7 +114,16 @@ class Credd():
             # This was HTCondorEnumError in version 1.
             raise RuntimeError("invalid credtype")
 
-        return _credd_do_store_cred(self._addr, user, None, mode, None, None)
+        result = _credd_do_store_cred(self._addr, user, None, mode, None, None)
+
+        # This function returns "The time the credential was last updated,
+        # or None."  6 is the SUCCESS_PENDING error code, which is not
+        # considered a failure and therefore doesn't trigger a None return
+        # from the C code.
+        if result == 6:
+            return None
+        else:
+            return result
 
 
     def add_user_service_cred(self, credtype : CredType, credential : bytes, service : str, handle : str = None, user : str = None) -> None:
@@ -139,7 +148,7 @@ class Credd():
 
 
     def delete_user_service_cred(self, credtype : CredType, service : str, handle : str = None, user : str = None) -> None:
-        mode = self._GENERIC_ADD | CredType.OAuth
+        mode = self._GENERIC_DELETE | CredType.OAuth
         if credtype != CredType.OAuth:
             # This was HTCondorEnumError in version 1.
             raise RuntimeError("invalid credtype")

@@ -11,15 +11,17 @@ Synopsis
 
 **condor_qusers** [**-help**] [**-version**] [**-debug** ]
 [**-name** *schedd-name*] [**-pool** *pool-name*]
-[**-long** | **-\-af** *{attrs}* | **-format** *fmt* *attr*]
-[**-add** | **-enable** | **-\-disable** [**-reason** *reason-string*]] *{users}*
+[**-long** | **-af** *{attrs}* | **-format** *fmt* *attr*]
+[**-user** *username* | **-constraint** *expression*]
+[**-add** | **-enable** | **-disable** [**-reason** *reason-string*]] *{users}*
+[**-edit** *{edits}*]
 
 Description
 -----------
 
-*condor_qusers* adds, enables or eisables or shows User records in the AP.
-Which user records are specified by name.  The tool will do only one of these
-things at a time.  It will print user records if no add, enable, or disable
+*condor_qusers* adds, edits, enables, disables or shows User records in the AP.
+Which user records are specified by name or by constraint.  The tool will do only one of these
+things at a time.  It will print user records if no add, enable, disable, or edit
 option is chosen.
 
 Options
@@ -37,6 +39,10 @@ Options
  **-pool** *pool-name*
     Modify job attributes in the queue of the schedd specified in the
     specified pool
+ **-user** *username*
+    Operate on or query the given User ClassAd
+ **-constraint** *expression*
+    Operate on or query all User ClassAds matching the given constraint expression.
  **-long**
     Print User ClassAds in long form
  **-format** *fmt* *attr*
@@ -84,6 +90,8 @@ Options
 
  **-add** *user1 [user2 ...]*
     Add User ClassAds for the given users.
+ **-edit** *attr=expr [attr2=expr2]*
+    Add custom attributes to User ClassAds. Use with a **-constraint** or **-user** argument to select which users to edit.
  **-enable** *user1 [user2 ...]*
     Enable the given users, adding them if necessary.
  **-disable** *user1 [user2 ...]*
@@ -98,13 +106,15 @@ Examples
 .. code-block:: console
 
     $ condor_qusers -name north.cs.wisc.edu -pool condor.cs.wisc.edu
-    Print users from north.cs.wisc.edu in the condor.cs.wisc.edu pool
+    Print users from AP north.cs.wisc.edu in the condor.cs.wisc.edu pool
     $ condor_qusers -name perdita
-    Print users from perdition in the local pool
+    Print users from AP perdita in the local pool
     % condor_qusers -add bob
     Add user bob to the local AP
-    % condor_qusers -disable -bob -reason "talk to admin"
-    Disable user bob with the reason "talk to admin"
+    % condor_qusers -disable bob -reason "talk to admin"
+    Disable user bob in the local AP with the reason "talk to admin"
+    % condor_qusers -user bob -edit 'Department="Math"'
+    Add a Department attribute that has the value "Math" to user bob
 
 General Remarks
 ---------------

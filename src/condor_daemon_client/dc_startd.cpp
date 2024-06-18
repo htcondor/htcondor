@@ -150,6 +150,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		// for this request. 0 is a reasonable answer when claiming the
 		// pslot.
 	m_job_ad.Assign("_condor_NUM_DYNAMIC_SLOTS", m_num_dslots);
+	if (m_num_dslots > 0) m_claimed_slots.reserve(m_num_dslots);
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
@@ -256,14 +257,18 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		  leftovers will be sent after that.
 	*/
 
-	if (m_reply == REQUEST_CLAIM_SLOT_AD) {
-		if (!sock->get_secret(m_claimed_slot_claim_id) || !getClassAd(sock, m_claimed_slot_ad) || !sock->get(m_reply)) {
+	while (m_reply == REQUEST_CLAIM_SLOT_AD) {
+		_slotClaimInfo & info = m_claimed_slots.emplace_back();
+		if (!sock->get_secret(info.claim_id) || !getClassAd(sock, info.slot_ad) || !sock->get(m_reply)) {
 			dprintf(failureDebugLevel(),
 			        "Response problem from startd when requesting claim %s.\n",
 			        description());
 			sockFailed(sock);
 			return false;
 		}
+		// the claim id on the wire can have an explicit trailing null (or more?) at the end
+		// that will mess up comparisons so remove it them here
+		while ( ! info.claim_id.empty() && info.claim_id.back() == 0) info.claim_id.pop_back(); 
 		m_have_claimed_slot_info = true;
 	}
 
@@ -341,7 +346,11 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 		// if this claim is associated with a security session
 	ClaimIdParser cid(claim_id);
-	msg->setSecSessionId(cid.secSessionId());
+	if (param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) &&
+		cid.secSessionInfo()[0] != '\0')
+	{
+		msg->setSecSessionId(cid.secSessionId());
+	}
 
 	msg->setTimeout(timeout);
 	msg->setDeadlineTimeout(deadline_timeout);

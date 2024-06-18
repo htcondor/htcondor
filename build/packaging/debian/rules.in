@@ -82,6 +82,7 @@ override_dh_auto_install:
 	rm -rf debian/tmp/etc/rc.d
 #if !defined(UW_BUILD)
 	# Remove tarball files that we do not use
+	rm -f debian/tmp/usr/bin/make-ap-from-tarball
 	rm -f debian/tmp/usr/bin/make-personal-from-tarball
 	rm -f debian/tmp/usr/sbin/condor_configure
 	rm -f debian/tmp/usr/sbin/condor_install
@@ -175,3 +176,10 @@ override_dh_strip:
 
 override_dh_auto_test:
 
+override_dh_gencontrol:
+	dh_gencontrol -- \\
+		-Vlib:Depends="$(foreach package, libscitokens libssl, \\
+			$(shell dpkg-query -W -f '$${Depends}' $(package)-dev \\
+				| sed -E 's/.*($(package)[[:alnum:].-]+).*/\\1,/' )) \\
+			$(shell dpkg-query -W -f '$${Depends}' voms-dev \\
+				| sed -E 's/.*(libvomsapi[[:alnum:].-]+).*/\\1,/' )"

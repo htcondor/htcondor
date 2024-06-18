@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "string_list.h"
 #include "CondorError.h"
 #include "ad_printmask.h"
 #include "daemon.h" // for STARTD_ADTYPE
@@ -33,6 +32,30 @@
 #include "classad/classadCache.h" // for CachedExprEnvelope
 #include "expr_analyze.h"
 
+
+// return true if expression is an attribute refer that will resolve
+// to the current ad, either because it is an explicit MY.Foo, or a bare Foo that is present in myad
+bool ExprTreeIsMyRef(classad::ExprTree * expr, ClassAd * myad)
+{
+	if ( ! expr) return false;
+	expr = SkipExprParens(expr);
+	if (expr->GetKind() != classad::ExprTree::ATTRREF_NODE) return false;
+
+	// we want to push TARGET refs, but not other refs
+	bool absAttr = false, absScope = false;
+	std::string strAttr, strScope;
+	classad::ExprTree *scope=nullptr, *scope2=nullptr;
+	((classad::AttributeReference*)expr)->GetComponents(scope, strAttr, absAttr);
+	if (scope && scope->GetKind() == classad::ExprTree::ATTRREF_NODE) {
+		((classad::AttributeReference*)scope)->GetComponents(scope2, strScope, absScope);
+		if (YourStringNoCase("MY") == strScope) {
+			return true;
+		}
+	} else if ( ! scope && myad->Lookup(strAttr)) {
+		return true;
+	}
+	return false;
+}
 
 // AnalyzeThisSubExpr recursively walks an ExprTree and builds a vector of
 // this class, one entry for each clause of the ExprTree that deserves to be
@@ -181,6 +204,8 @@ int AnalyzeThisSubExpr(
 
 	bool show_work = fmt.detail_mask & detail_diagnostic;
 	bool show_ifthenelse = fmt.detail_mask & detail_show_ifthenelse;
+	bool my_elvis_is_not_interesting = true; // ?: operator should get an index [] number (i.e. push_it)
+	bool elvis_is_never_interesting = false; // this was set to 'true' for years (until 23.x)
 	bool evaluate_logical = false;
 	int  child_depth = depth;
 	int  logic_op = 0;
@@ -194,9 +219,16 @@ int AnalyzeThisSubExpr(
 
 	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
 	switch(kind) {
-		case classad::ExprTree::LITERAL_NODE: {
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
-			((classad::Literal*)expr)->GetComponents(val);
+			((classad::Literal*)expr)->GetValue(val);
 			unparser.UnparseAux(strLabel, val);
 			if (chatty) {
 				printf("     %d:const : %s\n", kind, strLabel.c_str());
@@ -222,6 +254,7 @@ int AnalyzeThisSubExpr(
 				// special case for inline_attrs and CurrentTime expressions, we want behave as if the *value* of the
 				// attribute were here rather than just the attr reference.
 				left = myad->LookupExpr(strAttr);
+				if (chatty) printf("              : inlining %s = %p\n", strAttr.c_str(), left);
 			}
 			show_work = false;
 			break;
@@ -251,9 +284,18 @@ int AnalyzeThisSubExpr(
 				child_depth += 1;
 			} else if (op == classad::Operation::TERNARY_OP && ! right) {
 				// when the right op of the ?: operator is NULL, this is the defaulting operator
-				//logic_op = 4; 
-				push_it = false;
-				//evaluate_logical = true;
+				// elvis of MY refs are not interesting,
+				// elvis of possible TARGET refs are interesting
+				if (my_elvis_is_not_interesting) {
+					if (ExprTreeIsMyRef(left, myad) && dynamic_cast<classad::Literal *>(SkipExprParens(gripping)) != nullptr) {
+						push_it = false;
+					} else {
+						//logic_op = 4;
+						//evaluate_logical = true;
+					}
+				} else if (elvis_is_never_interesting) {
+					push_it = false;
+				}
 			} else {
 				//show_work = false;
 			}
@@ -570,7 +612,7 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 }
 
 // insert spaces and \n into temp_buffer so that it will print out neatly on a display with the given width
-// spaces are added at the start of each newly created line for the given indet, 
+// spaces are added at the start of each newly created line for the given indent,
 // but spaces are NOT added to the start of the input buffer.
 //
 const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buffer, int indent, int width)
@@ -1390,9 +1432,16 @@ size_t AddExprTreeMemoryUse (const classad::ExprTree* expr, QuantizingAccumulato
 
 	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
 	switch(kind) {
-		case classad::ExprTree::LITERAL_NODE: {
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
-			((const classad::Literal*)expr)->GetComponents(val);
+			((const classad::Literal*)expr)->GetValue(val);
 			accum += sizeof(classad::Literal);
 			const char * s = NULL;
 			classad::ExprList * lst = NULL;

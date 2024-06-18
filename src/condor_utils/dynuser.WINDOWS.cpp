@@ -254,7 +254,6 @@ bool dynuser::logon_user(){
 
 		// since update_psid failed, create the account we want
 		this->createaccount();		// Create the account
-		//	this->dump_groups();	// This tests to make sure that we're reading groups correctly.
 
 		if (! this->update_psid() ) { // now update sid 
 			dprintf(D_ALWAYS, "update_psid() failed after account creation!\n");
@@ -732,46 +731,6 @@ bool dynuser::del_users_group() {
 	dprintf(D_ALWAYS,"dynuser::del_users_group() NetLocalGroupDelMembers failed\n");	
 	return false;
 }
-
-#if 0
-// Dump the groups...
-bool dynuser::dump_groups() {
-
-	LOCALGROUP_INFO_0 *lgz;
-	unsigned long numentries;
-	unsigned long totalentries;
-
-	NET_API_STATUS nerr = NetLocalGroupEnum(
-		NULL,								//LPWSTR servername,    
-		(DWORD) 0,							//DWORD level,          
-		(BYTE **) &lgz,						//LPBYTE *bufptr,       
-		100 * sizeof(LOCALGROUP_INFO_0),	//DWORD prefmaxlen,     
-		&numentries,						//LPDWORD entriesread,  
-		&totalentries,						//LPDWORD totalentries, 
-		NULL								//LPDWORD resumehandle  
-	);
-
-	if ( nerr == NERR_Success ) {
-		cout << "Got the dump of "<<numentries<<" things!"<<endl;
-		for (int i = 0; i < numentries; i++) {
-			cout << "Group "<<i<<":\t";
-			wcout << lgz[i].lgrpi0_name;
-			cout << "\t";
-
-			cout << lgz[i].lgrpi0_name << endl;
-		}
-
-		return true;
-	}
-
-	cout << "Didn't get the dump!"<<endl;
-
-	//NetApiBufferFree(ndg);  Without this, this leaks RAM
-
-	return false;
-
-}
-#endif 
 
 bool dynuser::update_psid() {
 	SID_NAME_USE snu;

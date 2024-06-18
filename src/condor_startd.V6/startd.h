@@ -35,7 +35,6 @@
 #include "my_hostname.h"
 #include "condor_state.h"
 #include "condor_string.h"
-#include "string_list.h"
 #include "condor_random_num.h"
 #include "../condor_procapi/procapi.h"
 //#include "misc_utils.h"
@@ -87,6 +86,7 @@ extern	int		polling_interval;	// Interval for polling when
 									// running a job
 extern	int		update_interval;	// Interval to update CM
 extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or "Slot" and "StartDaemon" ads
+extern  bool	enable_claimable_partitionable_slots;
 
 // Extra attrs for slot ads
 extern	std::vector<std::string> startd_job_attrs;
@@ -125,6 +125,10 @@ extern	int		startd_noclaim_shutdown;
 
     // how often we query docker for the size of the image cache
 extern	int		docker_cached_image_size_interval;
+
+    // LVM LV names should never be re-used
+extern	bool	use_unique_lv_names;
+extern	int		lv_name_uniqueness;
 
 extern	char*	Name;			// The startd's name
 

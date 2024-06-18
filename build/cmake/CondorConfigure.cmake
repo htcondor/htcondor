@@ -80,6 +80,9 @@ endif (WINDOWS)
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS)
+	# Prefer "/usr/bin/python3" over "/usr/bin/python3.10"
+	set(Python3_FIND_UNVERSIONED_NAMES FIRST)
+
 	# We don't support python2 on mac (anymore)
 	if (APPLE)
 		set(WANT_PYTHON2_BINDINGS OFF)
@@ -96,6 +99,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -143,6 +151,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter Development)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -430,7 +443,6 @@ if( NOT WINDOWS)
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
-      add_definitions(-D_FORTIFY_SOURCE=2)
 	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
 	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
 	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
@@ -529,6 +541,8 @@ if( NOT WINDOWS)
 	set(SIGWAIT_ARGS "2")
 
 	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
+
+	option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 endif()
 
 find_program(LN ln)
@@ -589,7 +603,6 @@ if("${OS_NAME}" STREQUAL "LINUX")
 	set(HAVE_PSS ON)
 
 	set(HAVE_GNU_LD ON)
-    option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
     option(WITH_BLAHP "Compiling the blahp" ON)
 
@@ -853,6 +866,9 @@ set (FMT_INSTALL false)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
 
+# Remove when we have C++23 everywhere
+include_directories(${CONDOR_SOURCE_DIR}/src/vendor/zip-views-1.0)
+
 # But don't try to install the header files anywhere
 set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
 install(TARGETS fmt
@@ -1084,6 +1100,18 @@ else(MSVC)
 		if (c_rdynamic)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
 		endif(c_rdynamic)
+	endif()
+
+
+	# rpmbuild/debian set _FORTIFY_SOURCE to 2 or 3 depending on platform
+	# If already set, let's trust that they set it to the right value
+	# otherwise set it to 2 (most portable)
+
+	if (LINUX)
+		string(FIND "${CMAKE_CXX_FLAGS}" "-D_FORTIFY_SOURCE" ALREADY_FORTIFIED)
+		if (${ALREADY_FORTIFIED} EQUAL -1)
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2")
+		endif()
 	endif()
 
 	if (LINUX)

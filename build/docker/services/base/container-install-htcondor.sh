@@ -7,6 +7,9 @@ PS4='+ ${LINENO}: '
 update_os=false
 extra_packages_centos=(openssh-clients openssh-server supervisor)
 extra_packages_ubuntu=(ssh supervisor)
+# add some basic debugging tools too
+extra_packages_centos+=(procps-ng less nano)
+extra_packages_ubuntu+=(procps less nano)
 repo_base_ubuntu=https://research.cs.wisc.edu/htcondor/repo/ubuntu
 repo_base_centos=https://research.cs.wisc.edu/htcondor/repo
 

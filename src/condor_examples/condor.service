@@ -10,6 +10,7 @@ Wants=network-online.target
 EnvironmentFile=-/etc/sysconfig/condor
 ExecStart=/usr/sbin/condor_master -f
 Delegate=true
+DelegateSubgroup=leaf
 # In the future, we will use ExecStop with a synchronous condor_off
 KillMode=mixed
 ExecReload=/bin/kill -HUP $MAINPID

@@ -26,23 +26,33 @@ Synopsis
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
 
-| **htcondor** **eventlog** *read* [ **-csv** | **-json**] [ **-\-groupby attribute** ] eventlog [ eventlog2 [ eventlog3 ...  ] ]
-| **htcondor** **eventlog** *follow* [ **-csv** | **-json**] [ **-\-groupby attribute** ] eventlog 
+| **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby attribute**] eventlog [eventlog2 [eventlog3 ...]]
+| **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby attribute**] eventlog
+
+| **htcondor** **annex** *create* [*description-options*] annex-name queue\@system
+| **htcondor** **annex** *add* [*description-options*] annex-name queue\@system
+| **htcondor** **annex** *status* annex-name
+| **htcondor** **annex** *shutdown* annex-name
+| **htcondor** **annex** *systems*
+
+| **htcondor** **credential** *list*
+| **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service service**] [**-\-handle handle**]
+| **htcondor** **credential** *remove* password|kerberos|oauth2 [**-\-service service**] [**-\-handle handle**]
 
 Description
 -----------
 
 *htcondor* is a tool for managing HTCondor jobs, job sets, resources, event
-logs, and DAGs.  It can replace *condor_submit*, *condor_submit_dag*,
-*condor_q*, *condor_status*, and *condor_userlog*, as well as all-new
+logs, DAGs, and annexes.  It can replace *condor_submit*, *condor_submit_dag*,
+*condor_q*, *condor_status*, and *condor_userlog*, and adds new
 functionality and features.  The user interface is more consistent than its
 predecessor tools.
 
 The first argument of the *htcondor* command (ignoring any global options) is
 the *noun* representing an object in the HTCondor system to be operated on.
-The nouns include an individual *job*, *jobset*, *eventlog*, or a *dag*.  Each
-noun is then followed by a noun-specific *verb* that describe the operation on
-that noun.
+The nouns include an individual *job*, *jobset*, *eventlog*, *dag*,
+or *annex*.  Each noun is then followed by a noun-specific *verb* that
+describes the operation on that noun.
 
 One of the following optional global option may appear before the noun:
 
@@ -50,13 +60,12 @@ Global Options
 --------------
 
  **htcondor -h**, **htcondor -\-help**
-     Display the help message. Can also be specified after any
-     verb to display the options available for each verb.
+     Display the help message.  Can also be specified after any
+     noun or verb to display the options available for each noun or verb.
  **htcondor -q ...**
      Reduce verbosity of log messages.
  **htcondor -v ...**
      Increase verbosity of log messages.
-
 
 A noun-specific verb appears after each noun; the verbs are sorted by noun in
 the list, which includes with their individual option flags.
@@ -79,8 +88,7 @@ Job Verbs
           **htcondor job submit -\-email** *address submit_file*
             Email address to receive notification messages.
             Used in conjunction with the *-\-resource* flag.
-    
-    
+
  **htcondor job status**
      Takes as an argument a job id in the form of clusterid.procid,
      and returns a human readable presentation of the status
@@ -105,7 +113,7 @@ Job Verbs
 
  **htcondor job log**
      Takes as an argument a job id in the form of clusterid.procid,
-     and prints out the contents of that job's event log 
+     and prints out the contents of that job's event log
      file.  If the job shared an event log file with other jobs,
      the complete event log file will be printed, which may contain
      events for other jobs.
@@ -126,7 +134,7 @@ Jobset Verbs
     Succinctly lists all the jobsets in the queue which are owned by the current user.
 
      **htcondor jobset list options**
-     
+
           **htcondor jobset list -\-allusers**
             Shows jobs from all users, not just those owned by the current user.
 
@@ -135,13 +143,13 @@ Jobset Verbs
      that job set.
 
      **htcondor jobset status options**
-     
+
           **htcondor jobset status -\-nobatch**
             Shows jobs in a more detailed view, one line per job
-     
+
           **htcondor jobset status -\-owner** *ownername*
             Shows jobs from the specified job owner.
-     
+
           **htcondor jobset status -\-skiphistory**
             Shows detailed information only about active jobs in the queue, and
             ignore historical jobs which have left the queue.  This runs much
@@ -149,11 +157,11 @@ Jobset Verbs
 
 
  **htcondor jobset remove** *job_name*
-     Takes as an argument a *job_name* in the queue, and removes it from 
+     Takes as an argument a *job_name* in the queue, and removes it from
      the Access Point.
 
      **htcondor jobsets remove options**
-     
+
           **htcondor jobset remove -\-owner=owner_name**
           Removes all jobs owned by the given owner.
 
@@ -196,8 +204,106 @@ Eventlog Verbs
           With a job ad attribute name, instead of one line per job, emit one line
           summarizing all jobs that share the same value for the attribute name
           given.  In the OSG, the GLIDEIN_SITE attribute is injected into all jobs,
-          so one can quickly get a count of all jobs running, idle and exitted 
+          so one can quickly get a count of all jobs running, idle and exitted
           per site by using this option.
+
+Annex Verbs
+-----------
+
+An *annex* is a named set of leased resources.  If the AP's administrator
+has enabled this command, any submitter who can run jobs on one of the
+supported systems can use resources from that system to run jobs placed
+at that AP.
+
+  | **htcondor annex create** [*description-options*] *annex-name* *queue@system*
+  | **htcondor annex add** [*description-options*] *annex-name* *queue@system*
+
+    Create new annex with a given *annex-name* using resources from the
+    specified *queue* at the specific *system*.  The description options
+    are the same for creating a new annex and for adding more resources
+    to the same annex.  You will be prompted to login to the system.
+
+    **Description Options**
+
+        **-\-nodes** *nodes*
+            Number of nodes to request.  Defaults to 1.
+        **-\-lifetime** *lifetime*
+            Annex lifetime (in seconds).  Defaults to 3600.  After this
+            length of time, the annex terminates even if jobs are running.
+        **-\-cpus** *cpus*
+            Number of CPUs to request (shared queues only).  Unset by
+            default.
+        **-\-mem_mb** *memory*
+            Memory (in MB) to request (shared queues only).  Unset by
+            default.
+        **-\-gpus** *gpu-count*
+            Number of GPUs to request (GPU queues only).  Unset by default.
+        **-\-gpu-type** *type*
+            Type of GPU to request (GPU queues only).  Unset by default.
+        **-\-idle-time** *seconds*
+            The number of seconds to remain idle (not running any jobs)
+            before shutting down.  Default and suggested minimum is
+            300 seconds.
+        **-\-login-name** *login*
+            The (SSH) login name to use for this capacity request.
+            Uses SSH's default.
+        **-\-login-host** *host*
+            The (SSH) login name to use for this capacity request.
+            The default is system-specific.
+
+  **htcondor annex status** *annex-name*
+
+    Prints human-readable information about the state of the named annex.
+
+  **htcondor annex shutdown** *annex-name*
+
+    Shuts the named annex down, releasing its resources.
+
+  **htcondor annex systems**
+
+    Displays the list of supported systems and their queues.
+
+Credential Verbs
+----------------
+
+A *credential* is (part of) the authentication data necessary to verify
+identity (or capability).  This noun refers to three different types of
+credentials: ``password``, ``kerberos``, and ``oauth2``.  For this tool,
+``password`` credentials are only useful on Windows, where they are
+required to run a job as its submitter.  Likewise, ``kerberos``
+credentials are only useful on APs which use Kerberos; HTCondor can run
+jobs with the Kerberos credentials of their submitters, usually to allow
+them to access files of AFS.  Finally, ``oauth2`` credentials refer to
+a number of different kinds of credentials usually (but not always) obtained
+via the OAuth2 protocol, but which HTCondor knows how to refresh and
+distribute to jobs which request them.
+
+  **htcondor credential list**
+
+    Lists the credentials associated with the current user.  (To be precise,
+    the identifier the current user authenticates as to HTCondor when they
+    run this command.)  Windows passwords and Kerberos credentials are unique
+    for each such identity, and only their presence (and last-refresh time)
+    is reported.  A user may have multiple OAuth2 credentials, one or more
+    from one or more different services, distinguished by their handles.  The
+    service name, handle name, and file name in the ``$CONDOR_CREDS``
+    directory are listed, in addition to the last-refresh time, for each
+    OAuth2 credential.
+
+  **htcondor credential add** **password|kerberos|oauth2** *credential-file* [**-\-service service**] [**-\-handle handle**]
+
+    Sets the stored Windows password, Kerberos credential, or OAuth2
+    credential to the contents of the named file.  For OAuth2 credentials,
+    the service and handle will be derived from the file name unless
+    specified with the corresponding flags.
+
+  **htcondor credential remove** **password|kerberos|oauth2** [**-\-service service**] [**-\-handle handle**]
+
+    Unsets the stored Windows password, Kerberos credential, or OAuth2
+    credential(s).  If you specify a service, the credential from that
+    service without a handle will be removed.  To remove a specific credential,
+    you must specify both its service and its handle.  If you specify neither
+    service nor handle, all OAuth2 tokens are removed.
 
 Examples
 --------

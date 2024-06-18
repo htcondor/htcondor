@@ -328,8 +328,9 @@ Machine ClassAd Attributes
     *condor_starter* has exited.
 
 :classad-attribute-def:`JobBusyTimeCount`
-    attribute. This is also the total number times a
-    *condor_starter* has exited.
+    The total number of jobs used to calculate the :ad-attr:`JobBusyTimeAvg`
+    attribute. This is also the the total number times a *condor_starter*
+    has exited.
 
 :classad-attribute-def:`JobBusyTimeMax`
     The Maximum lifetime of all jobs, including transfer time. This is
@@ -375,7 +376,8 @@ Machine ClassAd Attributes
     transfer input, for instance) will not be included in the average.
 
 :classad-attribute-def:`JobDurationCount`
-    attribute. This is also the total number times a job has exited.
+    The total number of jobs used to calculate the :ad-attr:`JobDurationAvg`
+    attribute. This is also the the total number times a job has exited.
     Jobs that never start (because input transfer fails, for instance)
     are not included in the count.
 
@@ -438,9 +440,7 @@ Machine ClassAd Attributes
     keyboard activity from telnet and rlogin sessions. Note that
     :ad-attr:`KeyboardIdle` will always be equal to or less than
     :ad-attr:`ConsoleIdle`. The value can be modified with
-    :macro:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
-    :ref:`admin-manual/configuration-macros:condor_startd configuration file
-    macros` section.
+    :macro:`SLOTS_CONNECTED_TO_KEYBOARD`.
 
 :classad-attribute-def:`KFlops`
     Relative floating point performance as determined via a Linpack
@@ -558,11 +558,6 @@ Machine ClassAd Attributes
     names will be of the form "slot#@full.hostname", for example,
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
-
-:classad-attribute-def:`Offline`
-    A string that lists specific instances of a user-defined machine
-    resource, identified by ``name``. Each instance is currently
-    unavailable for purposes of match making.
 
 :classad-attribute-def:`OfflineUniverses`
     A ClassAd list that specifies which job universes are presently

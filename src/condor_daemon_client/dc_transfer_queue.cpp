@@ -62,18 +62,15 @@ TransferQueueContactInfo::TransferQueueContactInfo(char const *str) {
 		}
 
 		if( name == "limit" ) {
-			StringList limited_queues(value.c_str(),",");
-			char const *queue;
-			limited_queues.rewind();
-			while( (queue=limited_queues.next()) ) {
-				if( !strcmp(queue,"upload") ) {
+			for (auto& queue: StringTokenIterator(value, ",")) {
+				if( queue == "upload" ) {
 					m_unlimited_uploads = false;
 				}
-				else if( !strcmp(queue,"download") ) {
+				else if( queue == "download" ) {
 					m_unlimited_downloads = false;
 				}
 				else {
-					EXCEPT("Unexpected value %s=%s",name.c_str(),queue);
+					EXCEPT("Unexpected value %s=%s",name.c_str(),queue.c_str());
 				}
 			}
 		}
@@ -96,21 +93,20 @@ TransferQueueContactInfo::GetStringRepresentation(std::string &str) {
 		return false;
 	}
 
-	StringList limited_queues;
+	std::vector<std::string> limited_queues;
 	if( !m_unlimited_uploads ) {
-		limited_queues.append("upload");
+		limited_queues.emplace_back("upload");
 	}
 	if( !m_unlimited_downloads ) {
-		limited_queues.append("download");
+		limited_queues.emplace_back("download");
 	}
-	char *list_str = limited_queues.print_to_delimed_string(",");
+
 	str = "";
 	str += "limit=";
-	str += list_str;
+	str += join(limited_queues,",");
 	str += delim;
 	str += "addr=";
 	str += m_addr;
-	free(list_str);
 
 	return true;
 }

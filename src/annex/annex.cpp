@@ -1292,17 +1292,16 @@ annex_main( int argc, char ** argv ) {
 	switch( theCommand ) {
 		case ct_create_annex:
 		case ct_update_annex: {
-			StringList tagNames;
+			std::string tagNames;
 			std::string attrName;
 			for( unsigned i = 0; i < tags.size(); ++i ) {
-				tagNames.append(tags[i].first.c_str());
+				if (!tagNames.empty()) tagNames += ',';
+				tagNames += tags[i].first;
 				formatstr( attrName, "%s%s", ATTR_EC2_TAG_PREFIX, tags[i].first.c_str() );
-				commandArguments.Assign( attrName, tags[i].second.c_str() );
+				commandArguments.Assign( attrName, tags[i].second );
 			}
 
-			char * sl = tagNames.print_to_string();
-			commandArguments.Assign( ATTR_EC2_TAG_NAMES, sl );
-			free( sl );
+			commandArguments.Assign( ATTR_EC2_TAG_NAMES, tagNames );
 			} break;
 
 		default:

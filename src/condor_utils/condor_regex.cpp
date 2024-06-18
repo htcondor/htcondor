@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_regex.h"
+#include <vector>
 
 
 Regex::Regex()

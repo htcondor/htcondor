@@ -23,7 +23,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "basename.h"
-#include "string_list.h"
 #include "directory.h"
 #include "condor_attributes.h"
 #include "setenv.h"

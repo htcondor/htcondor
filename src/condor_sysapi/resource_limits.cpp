@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "limit.h"
+#include "sysapi.h"
 
 #define SLOP 50
 

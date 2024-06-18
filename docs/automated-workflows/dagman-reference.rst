@@ -16,12 +16,18 @@ General
 
         INCLUDE filename
 
-:dag-cmd-def:`JOB` (see :ref:`Full Description<DAGMan JOB>`)
-    Create a normal DAG node to execute a specified HTCondor job.
+:dag-cmd-def:`NODE` (see :ref:`Full Description<DAGMan NODE>`)
+    Create a normal DAG node to execute specified HTCondor jobs.
 
     .. code-block:: condor-dagman
 
-        JOB NodeName SubmitDescription [DIR directory] [NOOP] [DONE]
+        NODE NodeName SubmitDescription [DIR directory] [NOOP] [DONE]
+
+.. note::
+
+    The keywords ``NODE`` and ``JOB`` (former DAG description command) are synonyms
+    and do the exact same thing. ``JOB`` can still be specified for backwards compatibility
+    reasons, but it is preferred to use ``NODE``.
 
 :dag-cmd-def:`PARENT/CHILD` (see :ref:`Full Description<DAG node dependencies>`)
     Create dependencies between two or more DAG nodes.
@@ -59,7 +65,7 @@ Node Behavior
 ^^^^^^^^^^^^^
 
 :dag-cmd-def:`DONE`
-    Mark a DAG node as done causing neither the associated job or scripts to execute.
+    Mark a DAG node as done causing neither the associated jobs or scripts to execute.
 
     .. code-block:: condor-dagman
 
@@ -102,7 +108,7 @@ Node Behavior
 
 :dag-cmd-def:`VARS` (see :ref:`Full Description<DAGMan VARS>`)
     Specify a list of **key="Value"** pairs of information to be applied to the
-    specified node as referable submit macros.
+    specified node's jobs as referable submit macros.
 
     .. code-block:: condor-dagman
 
@@ -146,7 +152,7 @@ Throttling
         CATEGORY <NodeName | ALL_NODES> CategoryName
 
 :dag-cmd-def:`MAXJOBS` (see :ref:`Full Description<DAG throttling cmds>`)
-    Set the max number of submitted set of jobs for a specified :dag-cmd:`CATEGORY`
+    Set the max number of submitted list of jobs for a specified :dag-cmd:`CATEGORY`
 
     .. code-block:: condor-dagman
 
@@ -164,7 +170,7 @@ DAG Control
         ABORT-DAG-ON <NodeName | ALL_NODES> AbortExitValue [RETURN DAGReturnValue]
 
 :dag-cmd-def:`CONFIG` (see :ref:`Full Description<Per DAG Config>`)
-    Specify custom DAGMan configuration file for the DAG.
+    Specify custom DAGMan configuration file for DAGMan.
 
     .. code-block:: condor-dagman
 
@@ -189,7 +195,7 @@ DAG Control
         SET_JOB_ATTR AttributeName = AttributeValue
 
 :dag-cmd-def:`REJECT`
-    Mark the DAG input file as rejected to prevent execution.
+    Mark the DAG description file as rejected to prevent execution.
 
     .. code-block:: condor-dagman
 
@@ -206,7 +212,7 @@ Special Files
         DOT filename [UPDATE | DONT-UPDATE] [OVERWRITE | DONT-OVERWRITE] [INCLUDE <dot-file-header>]
 
 :dag-cmd-def:`JOBSTATE_LOG` (see :ref:`Full Description<DAGMan Machine Readable History>`)
-    Inform DAGMan to produce a machine-readable history file.
+    Inform DAGMan to produce a machine-readable event history file.
 
     .. code-block:: condor-dagman
 
@@ -231,7 +237,7 @@ Special Files
 Produced Files
 --------------
 
-The following are always produced automatically by DAGMan on execution. Where the
+The following files are always produced automatically by DAGMan on execution. Where the
 primary DAG is the only or first DAG file specified at submit time.
 
 #. :tool:`condor_dagman` scheduler universe job files:
@@ -252,6 +258,7 @@ primary DAG is the only or first DAG file specified at submit time.
     .. parsed-literal::
 
         <Primary DAG>.rescue<XXX> | Rescue DAG file denoting completed work from previous execution (see :ref:`Rescue DAG`).
+        <Primary DAG>.lock        | DAGMan process lock file to prevent multiple executions of one DAG in the same directory.
 
 Referable DAG Information
 -------------------------
@@ -266,10 +273,13 @@ Macros referable by job submit description as ``$(<macro>)``
 
 .. parsed-literal::
 
-    **JOB**          | Name of the node this job is associated with.
-    **RETRY**        | Current node retry attempt value. Set to 0 on first execution.
-    **FAILED_COUNT** | Number of failed nodes currently in the DAG (intended for Final Node).
-    **DAG_STATUS**   | Current :ad-attr:`DAG_Status` (intended for Final Node).
+    **NODE_NAME**        | Name of the node this job is associated with.
+    **JOB**              | Equivalent to **NODE_NAME**. Exists for backwards compatibility reasons.
+    **RETRY**            | Current node retry attempt value. Set to 0 on first execution.
+    **FAILED_COUNT**     | Number of failed nodes currently in the DAG (intended for Final Node).
+    **DAG_STATUS**       | Current :ad-attr:`DAG_Status` (intended for Final Node).
+    **DAGManJobId**      | The job(s) :ad-attr:`DAGManJobId`.
+    **DAG_PARENT_NAMES** | Comma separated list of node names that are parents of the node this job belongs.
 
 Job ClassAd Attributes
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -294,16 +304,31 @@ Macros that can be passed to a script as optional arguments like ``$<macro>``
 .. parsed-literal::
 
     For All Scripts:
-        **JOB**               | Name of the node this script is associated with.
-        **RETRY**             | The nodes current retry number. Set to 0 on first execution.
+        **NODE**              | Name of the node this script is associated with.
+        **JOB**               | Equivalent to **NODE**. Exists for backwards compatibility reasons.
+        **RETRY**             | The node's current retry number. Set to 0 on first execution.
         **MAX_RETRIES**       | Maximum number of retries allowed for the node.
-        **FAILED_COUNT**      | Current number of failed nodes in the DAG.
+        **NODE_COUNT**        | The total number of nodes in the DAG (Including the :dag-cmd:`FINAL` node).
+        **QUEUED_COUNT**      | The current number of nodes running jobs in the DAG.
+        **DONE_COUNT**        | The current number of successfully completed nodes in the DAG.
+        **FAILED_COUNT**      | The current number of failed nodes in the DAG.
+        **FUTILE_COUNT**      | The current number of nodes that will never start in the DAG.
+        **DAGID**             | The node's associated :ad-attr:`DAGManJobId`
         **DAG_STATUS**        | The current :ad-attr:`DAG_Status`.
     Only for POST Scripts:
-        **JOBID**             | The Job-Id of the job executed by node. It is the\
-     :ad-attr:`ClusterId` and :ad-attr:`ProcId` of the last job in the set.
+        **CLUSTERID**         | The :ad-attr:`ClusterId` of the list of jobs associated with the node.
+        **JOBID**             | The Job-ID (:ad-attr:`ClusterId` & :ad-attr:`ProcId`) of the last job in\
+     the node's associated list of jobs.
+        **JOB_COUNT**         | The total number of jobs associated with the node.
+        **JOB_ABORT_COUNT**   | The number of jobs associated with the node that got an abort event.
+        **SUCCESS**           | A boolean string (``True`` or ``False``) that represents whether the PRE\
+     script and list of jobs completed successfully.
         **RETURN**            | The exit code of the first failed job in the set or 0 for a\
-     successful job execution.
+     successful list of jobs execution.
+        **EXIT_CODES**        | An ordered comma separated list of all :ad-attr:`ExitCode`\ s returned by\
+     jobs associated with the node.
+        **EXIT_CODE_COUNTS**  | An ordered comma separated list of the number of jobs that exited with a particular\
+     :ad-attr:`ExitCode` (``{ExitCode}:{Count}``).
         **PRE_SCRIPT_RETURN** | Return value of the associated node's PRE Script.
 
 
@@ -324,8 +349,8 @@ For more in depth explanation of controlling a DAG see :ref:`DAG controls`
 DAG Submission
 ^^^^^^^^^^^^^^
 
-To submit a DAGMan workflow simply use :tool:`condor_submit_dag` an input file
-describing the DAG.
+To submit a DAGMan workflow simply use :tool:`condor_submit_dag` on a DAG
+description file.
 
 .. code-block:: console
 
@@ -334,7 +359,7 @@ describing the DAG.
 DAG Monitoring
 ^^^^^^^^^^^^^^
 
-All the jobs managed by the DAG and the DAGMan proper job itself can be monitored
+All the jobs managed by DAGMan and the DAGMan proper job itself can be monitored
 with the tools listed below. :tool:`condor_q` by default returns a condensed overview
 of jobs managed by DAGMan currently in the queue. To see all jobs individually use
 the **-nobatch** flag.

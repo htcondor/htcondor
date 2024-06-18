@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "string_list.h"
 #include "condor_config.h"
 #include "../condor_sysapi/sysapi.h"
 #include "java_config.h"
@@ -59,21 +58,19 @@ int java_config( std::string &cmd, ArgList &args, const std::vector<std::string>
 	tmp = param("JAVA_CLASSPATH_DEFAULT");
 	if(!tmp) tmp = strdup(".");
 	if(!tmp) return 0;
-	StringList classpath_list(tmp);
-	free(tmp);
 
 	int first = 1;
 
-	classpath_list.rewind();
-	arg_buf = "";
-	while((tmp=classpath_list.next())) {
+	for (auto& item: StringTokenIterator(tmp)) {
 		if(!first) {
 			arg_buf += separator;
 		} else {
 			first = 0;
 		}
-		arg_buf += tmp;
+		arg_buf += item;
 	}
+
+	free(tmp);
 
 	if(extra_classpath) {
 		for (auto& xpath: *extra_classpath) {

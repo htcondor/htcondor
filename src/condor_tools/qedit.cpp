@@ -194,7 +194,7 @@ main(int argc, const char *argv[])
 	bool has_arbitrary_constraint = false;
 	bool dash_forward = false;
 	int dash_diagnostic = 0;
-	StringList job_list; // list of job ids (or mixed job & cluster id's to modify)
+	std::vector<std::string> job_list; // list of job ids (or mixed job & cluster id's to modify)
 	std::map<std::string, std::string> kvp_list; // Classad of attr=value pairs to set
 
 	set_priv_initialize(); // allow uid switching if root
@@ -285,7 +285,8 @@ main(int argc, const char *argv[])
 				fprintf(stderr, "%s: %s requires a list of job ids as an argument\n", MyName, parg);
 				exit(1);
 			}
-			job_list.initializeFromString(argv[ixarg]);
+			std::vector<std::string> tmp_list = split(argv[ixarg]);
+			job_list.insert(job_list.end(), tmp_list.begin(), tmp_list.end());
 			bare_arg_must_identify_jobs = false;
 			only_my_jobs = false;
 		}
@@ -347,10 +348,10 @@ main(int argc, const char *argv[])
 			only_my_jobs = false;
 			// arg is bare, and the first one of that type, so it must be a jobid or owner name
 			if (isdigit(*parg)) {
-				job_list.initializeFromString(parg);
+				job_list.emplace_back(parg);
 				// treat all of the following args that start with a digit as job ids also
 				while (ixarg+1 < argc && isdigit(*argv[ixarg+1])) {
-					job_list.initializeFromString(argv[++ixarg]);
+					job_list.emplace_back(argv[++ixarg]);
 				}
 			} else {
 				// assume that this argument is an ownername
@@ -414,7 +415,7 @@ main(int argc, const char *argv[])
 	bool have_cluster_id = false;
 	bool can_do_cluster_edits = ! has_arbitrary_constraint; // if the gquery as things other than Owner== or Job== constraints, we cannot safely do cluster edits.
 	std::set<JOB_ID_KEY> jobids;
-	for (const char * jobid = job_list.first(); jobid; jobid = job_list.next()) {
+	for (auto& jobid: job_list) {
 		JOB_ID_KEY jid(jobid);
 		jobids.insert(jid);
 		if (jid.proc < 0) { have_cluster_id = true; }

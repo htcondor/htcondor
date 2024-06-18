@@ -56,6 +56,9 @@
 #include <iomanip>
 #include <string.h>
 
+// remove when we have C++ 23 everywhere
+#include "zip_view.hpp"
+
 #include "condor_daemon_core.h"
 
 GCC_DIAG_OFF(float-equal)
@@ -1012,10 +1015,16 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 						m_auth_state->m_token_length, m_auth_state->m_ssl_status);
 				}
 			}
-			if (m_auth_state->m_token_length >= 0) {
+			if (m_auth_state->m_token_length == 0) {
+				ouch("Received zero-length scitoken: quitting.\n");
+				m_auth_state->m_done = 1;
+				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+				break;
+			}
+			if (m_auth_state->m_token_length > 0) {
 				token_contents.resize(m_auth_state->m_token_length + sizeof(uint32_t), 0);
 				m_auth_state->m_ssl_status = SSL_read_ptr(m_auth_state->m_ssl,
-					static_cast<void*>(&token_contents[0]),
+					static_cast<void*>(token_contents.data()),
 					m_auth_state->m_token_length + sizeof(uint32_t));
 			}
 		}
@@ -2004,7 +2013,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 	// otherwise, we will use the system default.
 
     if (cafile) {
-        for (const auto& ca_str : StringTokenIterator(cafile, ",", true)) {
+        for (const auto& ca_str : StringTokenIterator(cafile, ",")) {
             int fd = open(ca_str.c_str(), O_RDONLY);
             if (fd < 0) {
                 continue;
@@ -2028,8 +2037,8 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
         goto setup_server_ctx_err;
     }
     {
-        StringTokenIterator certfile_list(certfile ? certfile : "", ",", true);
-        StringTokenIterator keyfile_list(keyfile ? keyfile : "", ",", true);
+        StringTokenIterator certfile_list(certfile ? certfile : "", ",");
+        StringTokenIterator keyfile_list(keyfile ? keyfile : "", ",");
         const char *cert, *key;
         while ((cert = certfile_list.next()))
         {
@@ -2114,29 +2123,23 @@ Condor_Auth_SSL::should_try_auth()
 		return false;
 	}
 
-	StringTokenIterator certfile_list(certfile, ",", true);
-	StringTokenIterator keyfile_list(keyfile, ",", true);
-	keyfile_list.rewind();
-	const char *cert, *key;
+	StringTokenIterator certfile_list(certfile, ",");
+	StringTokenIterator keyfile_list(keyfile, ",");
+
 	std::string last_error;
-	while ((cert = certfile_list.next())) {
-		key = keyfile_list.next();
-		if (key == nullptr) {
-			last_error = formatstr(last_error, "No key to match the certificate %s", cert);
-			break;
-		}
+	for (const auto &[cert, key]: c9::zip(certfile_list, keyfile_list)) {
 		TemporaryPrivSentry sentry(PRIV_ROOT);
-		int fd = open(cert, O_RDONLY);
+		int fd = open(cert.c_str(), O_RDONLY);
 		if (fd < 0) {
 			formatstr(last_error, "Not trying SSL auth because server certificate"
-				" (%s) is not readable by HTCondor: %s.\n", cert, strerror(errno));
+				" (%s) is not readable by HTCondor: %s.\n", cert.c_str(), strerror(errno));
 			continue;
 		}
 		close(fd);
-		fd = open(key, O_RDONLY);
+		fd = open(key.c_str(), O_RDONLY);
 		if (fd < 0) {
 			formatstr(last_error, "Not trying SSL auth because server key"
-			          " (%s) is not readable by HTCondor: %s.\n", key, strerror(errno));
+			          " (%s) is not readable by HTCondor: %s.\n", key.c_str(), strerror(errno));
 			continue;
 		}
 		close(fd);

@@ -48,7 +48,6 @@ Files:  build/cmake/CondorConfigure.cmake
         externals/bundles/libxml2/2.7.3/CMakeLists.txt
         externals/bundles/voms/2.1.0/CMakeLists.txt
         src/ccb/CMakeLists.txt
-        src/classad_analysis/CMakeLists.txt
         src/classad/classadCache.cpp
         src/classad/classad/classadCache.h
         src/classad/CMakeLists.txt
@@ -254,11 +253,6 @@ License: BSD-2-clause
  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE.
-
-Files: bindings/python/htcondor/compat_enum/*
-       bindings/python/htcondor2/compat_enum/*
-Copyright: 2013, Ethan Furman.
-License: BSD-3-clause
 
 Files: src/gpu/opencl_header_doc.h
 Copyright: 2008-2009, The Khronos Group Inc.

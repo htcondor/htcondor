@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_uid.h"
 #include "subsystem_info.h"
 
 /*
@@ -30,6 +31,7 @@
 #include "misc_utils.h"
 #include "slot_builder.h"
 #include "history_queue.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "StartdPlugin.h"
@@ -59,10 +61,13 @@ int	update_interval = 0;	// Interval to update CM
 //      and advertise STARTD_OLD_ADTYPE to older collectors
 int enable_single_startd_daemon_ad = 0;
 
+// set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
+bool enable_claimable_partitionable_slots = false;
+
 // String Lists
 std::vector<std::string> startd_job_attrs;
 std::vector<std::string> startd_slot_attrs;
-static StringList *valid_cod_users = NULL; 
+std::vector<std::string> valid_cod_users;
 
 // Hosts
 char*	accountant_host = NULL;
@@ -91,6 +96,9 @@ int		startd_noclaim_shutdown = 0;
     // the plug" and tell the master to shutdown.
 
 int		docker_cached_image_size_interval = 0; // how often we ask docker for the size of the cache, 0 means don't
+
+bool	use_unique_lv_names = true; // LVM LV names should never be re-used
+int		lv_name_uniqueness = 0;
 
 
 char* Name = NULL;
@@ -226,8 +234,8 @@ main_init( int, char* argv[] )
 	resmgr->init_resources();
 
 		// Do a little sanity checking and cleanup
-	StringList execute_dirs;
-	resmgr->FillExecuteDirsList( &execute_dirs );
+	std::vector<std::string> execute_dirs;
+	resmgr->FillExecuteDirsList( execute_dirs );
 	check_execute_dir_perms( execute_dirs );
 	cleanup_execute_dirs( execute_dirs );
 
@@ -486,6 +494,8 @@ init_params( int first_time)
 	if (first_time) {
 		std::string func_name("SlotEval");
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
+
+		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
 	}
 
 	resmgr->init_config_classad();
@@ -550,6 +560,31 @@ init_params( int first_time)
 	// how often we query docker for the size of the image cache, 0 is never
 	docker_cached_image_size_interval = param_integer("DOCKER_CACHE_ADVERTISE_INTERVAL", 1200);
 
+	// these are secret, should not be in the param table
+	use_unique_lv_names = param_boolean("LVM_USE_UNIQUE_LV_NAMES", true); // LVM LV names should never be re-used
+	lv_name_uniqueness  = param_integer("LVM_FIRST_LV_ID", 1); // In case we want to set the initial value
+
+	// Older condors incorrectly saved the docker image cache file as root.  Fix it to condor
+	// for compatibility
+#ifdef LINUX
+	if (can_switch_ids()) {
+		std::string cache_file;
+		param(cache_file, "LOG");
+		cache_file += "/.startd_docker_images";
+
+		uid_t condor_uid = get_condor_uid();
+		gid_t condor_gid = get_condor_gid();
+
+		if ((condor_uid != 0) && (condor_gid != 0)) {
+			TemporaryPrivSentry sentry(PRIV_ROOT);
+			int r = chown(cache_file.c_str(), condor_uid, condor_gid);
+			if ((r != 0 ) && (errno != ENOENT)) {
+				dprintf(D_ALWAYS, "Cannot chown docker image cache: %s\n", strerror(errno));
+			}
+		}
+	}
+#endif
+
 	// a 0 or negative value for the timer interval will disable cleanup reminders entirely
 	cleanup_reminder_timer_interval = param_integer( "STARTD_CLEANUP_REMINDER_TIMER_INTERVAL", 62 );
 
@@ -564,14 +599,11 @@ init_params( int first_time)
 
 	pid_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", DEFAULT_PID_SNAPSHOT_INTERVAL );
 
-	if( valid_cod_users ) {
-		delete( valid_cod_users );
-		valid_cod_users = NULL;
-	}
 	tmp.set(param("VALID_COD_USERS"));
 	if (tmp) {
-		valid_cod_users = new StringList();
-		valid_cod_users->initializeFromString( tmp );
+		valid_cod_users = split(tmp);
+	} else {
+		valid_cod_users.clear();
 	}
 
 	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
@@ -698,14 +730,14 @@ startd_exit()
 
 	// Shut down the cron logic
 	if( cron_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting cron job manager\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of cron job manager\n" );
 		cron_job_mgr->Shutdown( true );
 		delete cron_job_mgr;
 	}
 
 	// Shut down the benchmark job manager
 	if( bench_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting benchmark job mgr\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of benchmark job mgr\n" );
 		bench_job_mgr->Shutdown( true );
 		delete bench_job_mgr;
 	}
@@ -921,8 +953,5 @@ main( int argc, char **argv )
 bool
 authorizedForCOD( const char* owner )
 {
-	if( ! valid_cod_users ) {
-		return false;
-	}
-	return valid_cod_users->contains( owner );
+	return contains(valid_cod_users, owner);
 }

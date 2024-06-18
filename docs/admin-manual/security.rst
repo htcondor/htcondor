@@ -776,7 +776,7 @@ The DEFAULT value for <context> provides a way to set a policy for all
 access levels (READ, WRITE, etc.) that do not have a specific
 configuration variable defined. In addition, some access levels will
 default to the settings specified for other access levels. For example,
-:macro:`ADVERTISE_STARTD` defaults to ``DAEMON``, and ``DAEMON`` defaults to
+:macro:`ALLOW_ADVERTISE_STARTD` defaults to ``DAEMON``, and ``DAEMON`` defaults to
 ``WRITE``, which then defaults to the general DEFAULT setting.
 
 Configuration for Security Methods
@@ -2106,6 +2106,16 @@ User joesmith within the cs.wisc.edu domain is given write authorization
 when originating from machines that match their leftmost 17 bits of the
 IP address. :index:`of Unix netgroups<single: of Unix netgroups; authorization>`
 
+The special value ``{:local_ips:}`` can be used to represent all IP
+addresses that are useable on the local machine. To allow any client
+that is connecting from the local machine, you would use the
+following:
+
+.. code-block:: condor-config
+
+    ALLOW_WRITE = */{:local_ips:}
+
+
 For Unix platforms where netgroups are implemented, a netgroup may
 specify a set of fully qualified users by using an extension to the
 syntax for all configuration variables of the form ``ALLOW_*`` and
@@ -2522,8 +2532,8 @@ different read access for the *condor_schedd*:
 
     ALLOW_READ_SCHEDD = <list of machines>
 
-Here are more examples of configuration settings. Notice that
-``ADMINISTRATOR`` access is only granted through an :macro:`ALLOW` setting to
+Here are more examples of configuration settings. Notice that ``ADMINISTRATOR``
+access is only granted through an :macro:`ALLOW_ADMINISTRATOR` setting to
 explicitly grant access to a small number of machines. We recommend
 this.
 

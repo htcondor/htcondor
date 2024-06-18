@@ -1,6 +1,8 @@
 from typing import (
     Union,
     Dict,
+    Iterator,
+    List,
 )
 
 from pathlib import Path
@@ -22,7 +24,15 @@ from .htcondor2_impl import (
     _submit_setqargs,
     _submit_from_dag,
     _display_dag_options,
+    _submit_set_submit_method,
+    _submit_get_submit_method,
+    _submit_issue_credentials,
+    _submit_itemdata,
 )
+
+from ._submit_method import SubmitMethod
+
+DefaultItemData = object()
 
 #
 # MutableMapping provides generic implementations for all mutable mapping
@@ -247,24 +257,52 @@ class Submit(MutableMapping):
         _submit_setqargs(self, self._handle, args)
 
 
+    def itemdata(self) -> Iterator[List[str]]:
+        '''
+        Returns an iterator over the itemdata specified by the queue statement,
+        suitable for passing to meth:`schedd.Submit`.
+        '''
+        id = _submit_itemdata(self, self._handle)
+        if id is None:
+            return None
+        else:
+            return iter(id.split("\n"))
+
+
     def setSubmitMethod(self,
-        method_value : int = -1,
+        method_value : Union[SubmitMethod, int] = -1,
         allow_reserved_values : bool = False
     ):
         """
-        FIXME (unimplemented)
+        By default, jobs created by this class record (in the job ad
+        attribute :ad-attr:`JobSubmitMethod`) that they were submitted via
+        the  Python bindings.  Calling this method before submitting allows
+        you to change that.  Values between ``0`` (inclusive) and ``100``
+        (exclusive) are reserved for :class:`htcondor2.SubmitMethod`
+        and can't be set unless the ``allowed_reserved_values`` flag is
+        :const:`True`.  Values less than `0` may be used to remove
+        ``JobSubmitMethod`` from the job ad entirely.
 
-        :param method_value:
-        :param allowed_reserved_values:
+        :param method_value:  The method to record.
+        :param allowed_reserved_values:  Set to true to used a reserved ``method_value``.
         """
-        pass
+        if isinstance(method_value, SubmitMethod):
+            method_value = int(method_value)
+        if 0 <= method_value and method_value < 100:
+            if not allow_reserved_values:
+                # This was HTCondorValueError in version 1.
+                raise ValueError("Submit method value must be 100 or greater, or allowed_reserved_values must be True.")
+        _submit_set_submit_method(self._handle, method_value)
 
 
     def getSubmitMethod(self) -> int:
         """
-        FIXME (unimplemented)
+        Returns the submit method.
+
+        :return:  The integer value of the submit method.  The symbolic
+                  value can be obtained from the :class:`SubmitMethod`.
         """
-        pass
+        return _submit_get_submit_method(self._handle)
 
 
     @staticmethod
@@ -297,6 +335,17 @@ class Submit(MutableMapping):
         subfile = _submit_from_dag(filename, internal_options)
         subfile_text = Path(subfile).read_text()
         return Submit(subfile_text)
+
+
+    def issue_credentials(self) -> Union[str, None]:
+        '''
+        Issue credentials for this job description.
+
+        :return:  A string containing a URL that the submitter must visit
+                  in order to complete an OAuth2 flow, or :py:obj:`None`
+                  if no such visit is necessary.
+        '''
+        return _submit_issue_credentials(self._handle)
 
 
     @staticmethod

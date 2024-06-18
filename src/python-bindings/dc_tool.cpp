@@ -179,14 +179,12 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
 bool get_family_session(std::string & sess)
 {
 	sess.clear();
-	char *ptmp;
 	char *private_var = getenv("CONDOR_PRIVATE_INHERIT");
-	StringList private_list(private_var, " ");
-	private_list.rewind();
-	while((ptmp = private_list.next()) != NULL)
+	if (!private_var) return false;
+	for (const auto &ptmp: StringTokenIterator(private_var, " ")) 
 	{
-		if( strncmp(ptmp,"FamilySessionKey:",17)==0 ) {
-			sess = ptmp + 17;
+		if (ptmp.starts_with("FamilySessionKey:")) {
+			sess = ptmp.c_str() + 17;
 			break;
 		}
 	}

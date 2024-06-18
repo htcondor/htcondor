@@ -443,12 +443,13 @@ enum {
 
 class SubmitForeachArgs {
 public:
-	SubmitForeachArgs() : foreach_mode(foreach_not), queue_num(1) {}
+	SubmitForeachArgs() : foreach_mode(foreach_not), queue_num(1), items_idx(0) {}
 	void clear() {
 		foreach_mode = foreach_not;
 		queue_num = 1;
-		vars.clearAll();
-		items.clearAll();
+		items_idx = 0;
+		vars.clear();
+		items.clear();
 		slice.clear();
 		items_filename.clear();
 	}
@@ -467,8 +468,9 @@ public:
 
 	int        foreach_mode;   // the mode of operation for foreach, one of the foreach_xxx enum values
 	int        queue_num;      // the count of processes to queue for each item
-	StringList vars;           // loop variable names
-	StringList items;          // list of items to iterate over
+	std::vector<std::string> vars; // loop variable names
+	std::vector<std::string> items; // list of items to iterate over
+	size_t items_idx;
 	qslice     slice;          // may be initialized to slice if "[]" is parsed.
 	std::string   items_filename; // file to read list of items from, if it is "<" list should be read from submit file until )
 };
@@ -675,7 +677,7 @@ public:
 	void dump(FILE* out, int flags); // print the hash to the given FILE*
 	void dump_templates(FILE* out, const char * category, int flags); // print the templates to the given FILE*
 	const char* to_string(std::string & buf, int flags); // print (append) the hash to the supplied buffer
-	const char* make_digest(std::string & buf, int cluster_id, StringList & vars, int options);
+	const char* make_digest(std::string & buf, int cluster_id, const std::vector<std::string> & vars, int options);
 	void setup_macro_defaults(); // setup live defaults table
 	void setup_submit_time_defaults(time_t stime); // setup defaults table for $(SUBMIT_TIME)
 
@@ -877,7 +879,7 @@ private:
 	int64_t calc_image_size_kb( const char *name);
 
 	// returns a count of files in the input list
-	int process_input_file_list(StringList * input_list, long long * accumulate_size_kb);
+	int process_input_file_list(std::vector<std::string>& input_list, long long * accumulate_size_kb);
 	//int non_negative_int_fail(const char * Name, char * Value);
 	typedef int (SubmitHash::*FNSETATTRS)(const char * key);
 	FNSETATTRS is_special_request_resource(const char * key);
@@ -892,7 +894,7 @@ private:
 	  const char * sp, const char * jp,
 	  const YourStringNoCase & gt );      /* used by SetGridParams */
 
-	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
+	int process_container_input_files(std::vector<std::string> & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
 	ContainerImageType image_type_from_string(std::string image) const;
 };
@@ -912,7 +914,7 @@ struct SubmitStepFromQArgs {
 		unset_live_vars();
 	}
 
-	bool has_items() const { return m_fea.items.number() > 0; }
+	bool has_items() const { return m_fea.items.size() > 0; }
 	bool done() const { return m_done; }
 	int  step_size() const { return m_step_size; }
 
@@ -927,8 +929,8 @@ struct SubmitStepFromQArgs {
 			if (m_hash.parse_q_args(qargs, m_fea, errmsg) != 0) {
 				return -1;
 			}
-			for (const char * key = vars().first(); key != NULL; key = vars().next()) {
-				m_hash.set_live_submit_variable(key, "", false);
+			for (const auto& key: vars()) {
+				m_hash.set_live_submit_variable(key.c_str(), "", false);
 			}
 		} else {
 			m_hash.set_live_submit_variable("Item", "", false);
@@ -962,7 +964,7 @@ struct SubmitStepFromQArgs {
 	// returns 0 if done iterating
 	// returns 2 for first iteration
 	// returns 1 for subsequent iterations
-	int next(JOB_ID_KEY & jid, int & item_index, int & step)
+	int next(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
 	{
 		if (m_done) return 0;
 
@@ -975,7 +977,7 @@ struct SubmitStepFromQArgs {
 
 		if (0 == step) { // have we started a new row?
 			if (next_rowdata()) {
-				set_live_vars();
+				if (set_live) set_live_vars();
 			} else {
 				// if no next row, then we are done iterating, unless it is the FIRST iteration
 				// in which case we want to pretend there is a single empty item called "Item"
@@ -992,17 +994,17 @@ struct SubmitStepFromQArgs {
 		return (0 == iter_index) ? 2 : 1;
 	}
 
-	StringList & vars() { return m_fea.vars; }
+	std::vector<std::string> & vars() { return m_fea.vars; }
 
 	// 
 	void set_live_vars()
 	{
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+		for (const auto& key: vars()) {
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end()) {
-				m_hash.set_live_submit_variable(key, str->second.c_str(), false);
+				m_hash.set_live_submit_variable(key.c_str(), str->second.c_str(), false);
 			} else {
-				m_hash.unset_live_submit_variable(key);
+				m_hash.unset_live_submit_variable(key.c_str());
 			}
 		}
 	}
@@ -1010,8 +1012,8 @@ struct SubmitStepFromQArgs {
 	void unset_live_vars()
 	{
 		// set the pointers of the 'live' variables to the unset string (i.e. "")
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
-			m_hash.unset_live_submit_variable(key);
+		for (const auto& key: vars()) {
+			m_hash.unset_live_submit_variable(key.c_str());
 		}
 	}
 
@@ -1019,19 +1021,25 @@ struct SubmitStepFromQArgs {
 	// but not into the SubmitHash
 	int next_rowdata()
 	{
-		auto_free_ptr data(m_fea.items.pop());
-		if ( ! data) {
+		if (m_fea.items_idx >= m_fea.items.size()) {
 			return 0;
 		}
+		auto_free_ptr data(strdup(m_fea.items[m_fea.items_idx++].c_str()));
 
 		// split the data in the reqired number of fields
 		// then store that field data into the m_livevars set
 		// NOTE: we don't use the SubmitForeachArgs::split_item method that takes a NOCASE_STRING_MAP
 		// because it clears the map first, and that is only safe to do after we unset_live_vars()
+
+		// NOTE: If a row of item data does not contain a value for each variable (A,B,C -> 1,2) then
+		// the remaining variables will not update their values. Meaning they inherit the previous
+		// jobs values (or is undefined). If this 'allowed' behavior changes in condor_submit then
+		// also change it here.
 		std::vector<const char*> splits;
-		m_fea.split_item(data.ptr(), splits);
+		int num_items = m_fea.split_item(data.ptr(), splits);
 		int ix = 0;
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+		for (const auto& key: vars()) {
+			if (ix >= num_items) { break; }
 			m_livevars[key] = splits[ix++];
 		}
 		return 1;
@@ -1045,7 +1053,7 @@ struct SubmitStepFromQArgs {
 		int cchSep = sep ? (sep[0] ? (int)strlen(sep) : 1) : 0;
 		int cchEol = eol ? (eol[0] ? (int)strlen(eol) : 1) : 0;
 		line.clear();
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+		for (const auto& key: vars()) {
 			if ( ! line.empty() && sep) line.append(sep, cchSep);
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end() && ! str->second.empty()) {
@@ -1102,12 +1110,27 @@ const struct SimpleSubmitKeyword * get_submit_keywords();
 #define EXPAND_GLOBS_TO_DIRS    (1<<4) // when you want dirs only
 #define EXPAND_GLOBS_TO_FILES   (1<<5) // when you want files only
 
-int submit_expand_globs(StringList &items, int options, std::string & errmsg);
+int submit_expand_globs(std::vector<std::string> &items, int options, std::string & errmsg);
 #endif // EXPAND_GLOBS
 
 const	int			SCHEDD_INTERVAL_DEFAULT = 300;
 const	int			JOB_DEFERRAL_PREP_TIME_DEFAULT = 300; // seconds
 const	int			JOB_DEFERRAL_WINDOW_DEFAULT = 0; // seconds
+
+
+#define PJC_NOT_DRY_RUN 0
+
+int process_job_credentials(
+    // Input parameters.
+    SubmitHash & submit_hash,
+    int DashDryRun /* should default to 0 */,
+
+    // Output parameters.
+    std::string & URL,
+    std::string & error_string
+);
+
+int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o);
 
 #endif // _SUBMIT_UTILS_H
 

@@ -9,6 +9,7 @@ Workflow Metrics
 .. sidebar:: Example Metrics File Contents
 
     .. code-block:: json
+        :caption: Example DAGMan metrics file contents
 
         {
             "client":"condor_dagman",
@@ -32,7 +33,7 @@ Workflow Metrics
             "dag_status":2
         }
 
-For every DAG, a JSON formatted metrics file named ``<DAG input file>.metrics``
+For every DAG, a JSON formatted metrics file named ``<DAG description file>.metrics``
 is created when DAGMan exits. In a workflow with nested DAGs, each nested DAG
 will create its own metrics file. The metrics file will contain the following
 information:
@@ -51,15 +52,15 @@ information:
    :tool:`condor_dagman` instance; empty if this DAG is not a SUBDAG.
 -  ``rescue_dag_number``: The number of the Rescue DAG being run; 0 if not running
    a Rescue DAG.
--  ``jobs``: The number of nodes in the DAG input file, not including SUBDAG nodes.
+-  ``jobs``: The number of nodes in the DAG description file, not including SUBDAG nodes.
 -  ``jobs_failed``: The number of failed nodes in the workflow, not including
    SUBDAG nodes.
 -  ``jobs_succeeded``: The number of successful nodes in the workflow, not including
    SUBDAG nodes; this includes jobs that succeeded after retries.
--  ``dag_jobs``: The number of SUBDAG nodes in the DAG input file.
+-  ``dag_jobs``: The number of SUBDAG nodes in the DAG description file.
 -  ``dag_jobs_failed``: The number of SUBDAG nodes that failed.
 -  ``dag_jobs_succeeded``: The number of SUBDAG nodes that succeeded.
--  ``total_jobs``: The total number of jobs in the DAG input file.
+-  ``total_jobs``: The total number of nodes in the DAG description file.
 -  ``total_jobs_run``: The total number of nodes executed in a DAG. It should be
    equal to ``jobs_succeeded + jobs_failed + dag_jobs_succeeded + dag_jobs_failed``.
 -  ``dag_status``: The final :ad-attr:`DAG_Status` of the DAG.
@@ -75,6 +76,7 @@ additionally following metrics will be recorded:
 .. sidebar:: Sample Node Status File Contents
 
     .. code-block:: condor-classad
+        :caption: Example node status file contents
 
         [
           Type = "DagStatus";
@@ -129,7 +131,7 @@ Current Node Status File
 DAGMan has the option to write the DAG and its node statuses to a file
 periodically. This is intended for a user or script to use for monitoring
 the DAG. To have DAGMan write the node status file simply use the
-**NODE_STATUS_FILE** commands syntax as follows:
+:dag-cmd:`NODE_STATUS_FILE[Usage]` commands syntax as follows:
 
 .. code-block:: condor-dagman
 
@@ -155,6 +157,7 @@ rewritten with the current DAG status information at intervals of 30 seconds
 or more:
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description declaring node status file
 
     NODE_STATUS_FILE my.dag.status 30
 
@@ -172,7 +175,7 @@ Possible ``DagStatus`` and ``NodeStatus`` attribute values are:
 -  7 (STATUS_FUTILE): The node will never run because an ancestor node failed.
 
 An *ancestor* is a node that a another node depends on either directly or indirectly
-through a chain of **PARENT/CHILD** relationships. Provided the DAG visualized below,
+through a chain of :dag-cmd:`PARENT/CHILD` relationships. Provided the DAG visualized below,
 node **G**'s *ancestors* are nodes **A**, **B**, **D**, and **F**.
 
 .. mermaid::
@@ -186,7 +189,7 @@ node **G**'s *ancestors* are nodes **A**, **B**, **D**, and **F**.
 
 .. note::
 
-    A *NODE_STATUS_FILE* command inside any splice is ignored, and if multiple
+    A :dag-cmd:`NODE_STATUS_FILE` command inside any splice is ignored, and if multiple
     DAG files are specified then the first specification takes precedence.
 
 :index:`machine-readable event history<single: DAGMan; Machine-readable event history>`
@@ -200,7 +203,7 @@ DAGMan can produce a machine-readable history of events called the job state
 log. This log was designed for use by the `Pegasus Workflow Management System <https://pegasus.isi.edu/>`_
 which operates as a layer on top of DAGMan. The job state log can be used
 to monitor the state of the DAGMan workflow. The job state log is produced
-when the **JOBSTATE_LOG** command is declared with the following syntax:
+when the :dag-cmd:`JOBSTATE_LOG[Usage]` command is declared with the following syntax:
 
 .. code-block:: condor-dagman
 
@@ -258,8 +261,8 @@ are separated by a single space character.
 
         timestamp NodeName EventName CondorID JobTag - SequenceNumber
 
-    The *NodeName* is the DAG identifier for the node as specified by the **JOB**
-    command.
+    The *NodeName* is the DAG identifier for the node as specified by the
+    :dag-cmd:`NODE` command.
 
     The *EventName* is one of the many defined event or meta-events
     as listed below:
@@ -299,6 +302,7 @@ are separated by a single space character.
 Below is example contents of a job state log assuming *JobTag* was set to ``local``:
 
 .. code-block:: text
+    :caption: Example jobstate log contents
 
     1292620511 INTERNAL *** DAGMAN_STARTED 4972.0 ***
     1292620523 NodeA PRE_SCRIPT_STARTED - local - 1

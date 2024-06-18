@@ -270,8 +270,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 		char * return_address_ss = NULL;
 
 		if (cleartext_info) {
-			StringList info_list(cleartext_info);
-			char * tmp = NULL;
+			StringTokenIterator info_list(cleartext_info);
+			const char * tmp = nullptr;
 
 			info_list.rewind();
 			tmp = info_list.next();
@@ -287,7 +287,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				}
 
 			} else {
-				// protocol violation... StringList didn't give us anything!
+				// protocol violation... We didn't get anything!
 				// this is unlikely to work, but we may as well try... so, we
 				// don't fail here.
 			}
@@ -363,8 +363,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 		return_address_ss = NULL;
 
 		if (cleartext_info) {
-			StringList info_list(cleartext_info);
-			char * tmp = NULL;
+			StringTokenIterator info_list(cleartext_info);
+			const char* tmp = nullptr;
 
 			info_list.rewind();
 			tmp = info_list.next();
@@ -381,7 +381,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				}
 
 			} else {
-				// protocol violation... StringList didn't give us anything!
+				// protocol violation... We didn't get anything!
 				// this is unlikely to work, but we may as well try... so, we
 				// don't fail here.
 			}
@@ -1224,11 +1224,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		// levels to that of the current command and any implied ones.
 		if ( !strcasecmp(method_used, "CLAIMTOBE") ) {
 			std::string perm_list;
-			DCpermissionHierarchy hierarchy( m_comTable[m_cmd_index].perm );
-			DCpermission const *perms = hierarchy.getImpliedPerms();
-
-			// iterate through a list of this perm and all perms implied by it
-			for (DCpermission perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+			DCpermission perm = m_comTable[m_cmd_index].perm;
+			for ( ; perm < LAST_PERM; perm = DCpermissionHierarchy::nextImplied(perm)) {
 				if (!perm_list.empty()) {
 					perm_list += ',';
 				}
@@ -1546,32 +1543,25 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			std::string authz_policy;
 			bool can_attempt = true;
 			if (m_policy && m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
-				StringList authz_limits(authz_policy.c_str());
-				authz_limits.rewind();
-				const char *perm_cstr = PermString(m_comTable[m_cmd_index].perm);
-				const char *authz_name;
-				bool found_limit = false;
-				while ( (authz_name = authz_limits.next()) ) {
-					if (!strcmp(perm_cstr, authz_name)) {
-						found_limit = true;
-						break;
+				std::set<DCpermission> authz_limits;
+				for (const auto& limit_str: StringTokenIterator(authz_policy)) {
+					DCpermission limit_perm = getPermissionFromString(limit_str.c_str());
+					if (limit_perm != NOT_A_PERM) {
+						authz_limits.insert(limit_perm);
+						while ((limit_perm = DCpermissionHierarchy::nextImplied(limit_perm)) < LAST_PERM) {
+							authz_limits.insert(limit_perm);
+						}
 					}
 				}
+				bool found_limit = authz_limits.count(m_comTable[m_cmd_index].perm) > 0;
+				const char *perm_cstr = PermString(m_comTable[m_cmd_index].perm);
 				bool has_allow_perm = !strcmp(perm_cstr, "ALLOW");
 					// If there was no match, iterate through the alternates table.
 				if (!found_limit && m_comTable[m_cmd_index].alternate_perm) {
 					for (auto perm : *m_comTable[m_cmd_index].alternate_perm) {
-						auto perm_cstr = PermString(perm);
-						const char *authz_name;
-						authz_limits.rewind();
+						perm_cstr = PermString(perm);
 						has_allow_perm |= !strcmp(perm_cstr, "ALLOW");
-						while ( (authz_name = authz_limits.next()) ) {
-							dprintf(D_SECURITY, "Checking limit in token (%s) for permission %s\n", authz_name, perm_cstr);
-							if (!strcmp(perm_cstr, authz_name)) {
-								found_limit = true;
-								break;
-							}
-						}
+						found_limit = authz_limits.count(perm) > 0;
 						if (found_limit) {break;}
 					}
 				}
@@ -1785,8 +1775,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 				std::string all_methods;
 				if (m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
 					dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
-					StringList sl(all_methods.c_str());
-					if (sl.contains_anycase(fallback_method_str.c_str())) {
+					std::vector<std::string> sl = split(all_methods);
+					if (contains_anycase(sl, fallback_method_str)) {
 						keyvec.emplace_back(m_key->getKeyData(), 24, fallback_method, 0);
 						dprintf(D_SECURITY, "SESSION: server duplicated AES to %s key for UDP.\n",
 							fallback_method_str.c_str());

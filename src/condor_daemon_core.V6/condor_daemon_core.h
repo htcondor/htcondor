@@ -41,7 +41,6 @@
 #include "condor_classad.h"
 #include "condor_secman.h"
 #include "KeyCache.h"
-#include "list.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"
@@ -101,6 +100,8 @@ int dc_main( int argc, char **argv );
 bool dc_args_is_background(int argc, char** argv); // return true if we should run in background
 // set the default for -f / -b flag for this daemon, used by the master to default to backround, all other daemons default to foreground.
 bool dc_args_default_to_background(bool background);
+// Disable default log setup and ignore -l log directory. Must be called before dc_main()
+void DC_Disable_Default_Log();
 
 #ifndef WIN32
 // call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit
@@ -217,6 +218,7 @@ struct FamilyInfo {
 	bool want_pid_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
+	uint64_t cgroup_memory_limit_low{0};      // limit after which kernel aggressively evicts memory
 	uint64_t cgroup_memory_and_swap_limit{0}; // limit of swap INclusive of memory. i.e.  
 											 // if same as cgroup_memory_limit, then
 											 // use memory but no swap
@@ -1414,6 +1416,7 @@ class DaemonCore : public Service
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
+    int Extend_Family_Lifetime(pid_t);
     int Signal_Process(pid_t,int);
     
 	// This method should go away in the long term.
@@ -2141,7 +2144,7 @@ class DaemonCore : public Service
         int nEntries;
     };
 
-    List<PidWatcherEntry> PidWatcherList;
+	std::vector<PidWatcherEntry *> PidWatcherList;
 
     int                 WatchPid(PidEntry *pidentry);
 
@@ -2254,7 +2257,7 @@ class DaemonCore : public Service
 		*/
 	void InitSettableAttrsLists( void );
 	bool InitSettableAttrsList( const char* subsys, int i );
-	StringList* SettableAttrsLists[LAST_PERM];
+	std::vector<std::string>* SettableAttrsLists[LAST_PERM];
 
 	bool peaceful_shutdown;
 
@@ -2263,7 +2266,7 @@ class DaemonCore : public Service
 		void * data;
 	};
 
-    List<TimeSkipWatcher> m_TimeSkipWatchers;
+	std::vector<TimeSkipWatcher *> m_TimeSkipWatchers;
 
 		/**
 		   Evaluate a DC-specific policy expression and return the
@@ -2380,7 +2383,7 @@ bool InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & so
 // helper function to extract the parent address and inherited socket information from
 // the inherit string that is normally passed via the CONDOR_INHERIT environment variable
 // This function extracts parent & socket info then tokenizes the remaining items from
-// the string into the supplied StringList.
+// the string into the supplied vector.
 //
 // @return
 //    number of entries in the socks[] array that were populated.
@@ -2395,7 +2398,7 @@ int extractInheritedSocks (
 	std::string & psinful, // out: sinful of the parent
 	Stream* socks[],   // out: filled in with items from the inherit string
 	int     cMaxSocks, // in: number of items in the socks array
-	StringList & remaining_items); // out: unparsed items from the inherit string are appended
+	std::vector<std::string> & remaining_items); // out: unparsed items from the inherit string are appended
 
 // helper class that uses C++ constructor/destructor to automatically
 // time a function call. 

@@ -22,13 +22,11 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_state.h"
-#include "status_types.h"
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_collector.h"
-#include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
-#include "condor_api.h"
+#include "ad_printmask.h"
 #include "condor_string.h"
 #include "directory.h"
 #include "format_time.h"
@@ -84,8 +82,8 @@ static bool get_daemon_ready(const char * addr, const char * requirements, time_
 // app globals
 static struct AppType {
 	const char * Name; // tool name as invoked from argv[0]
-	List<const char> target_names;    // list of target names to query
-	List<LOG_INFO>   all_log_info;    // pool of info from scanning log directories.
+	std::vector<const char *> target_names;    // list of target names to query
+	std::vector<LOG_INFO *>   all_log_info;    // pool of info from scanning log directories.
 
 	std::vector<const char *> print_head; // The list of headings for the mask entries
 	AttrListPrintMask print_mask;
@@ -152,8 +150,8 @@ static struct AppType {
 	}
 
 	~AppType() {
-		target_names.Clear();
-		all_log_info.Clear();
+		target_names.clear();
+		all_log_info.clear();
 		print_head.clear();
 		for (char *p : query_addrs) {
 			free(p);
@@ -1075,7 +1073,7 @@ void parse_args(int /*argc*/, char *argv[])
 
 		if (*parg != '-') {
 			// arg without leading - is a target
-			App.target_names.Append(parg);
+			App.target_names.emplace_back(parg);
 		} else {
 			// arg with leading '-' is an option
 			const char * pcolon = NULL;
@@ -1817,7 +1815,7 @@ static LOG_INFO * find_or_add_log_info(LOG_INFO_MAP & info, std::string name, st
 		pli->name = name;
 		pli->log_dir = log_dir;
 		info[name] = pli;
-		App.all_log_info.Append(pli);
+		App.all_log_info.emplace_back(pli);
 	} else {
 		pli = it->second;
 	}

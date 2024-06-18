@@ -25,7 +25,6 @@
 #include <string.h>
 #include <string>
 #include <map>
-#include <fstream>
 #include <filesystem>
 
 #include <openssl/hmac.h>

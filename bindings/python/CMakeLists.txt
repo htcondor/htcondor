@@ -1,11 +1,9 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor2/compat_enum" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum" "htcondor/_utils")
+set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils")
 
 # The python sources to copy
 set(PYTHON_SOURCES
-htcondor/compat_enum/__init__.py
-htcondor/compat_enum/LICENSE
 htcondor/_wrap.py
 htcondor/__init__.py
 htcondor/_lock.py
@@ -32,8 +30,6 @@ htcondor/_utils/__init__.py
 htcondor/_utils/ansi.py
 
 # Version 2.
-htcondor2/compat_enum/__init__.py
-htcondor2/compat_enum/LICENSE
 htcondor2/_negotiator.py
 htcondor2/_collector.py
 htcondor2/_startd.py
@@ -43,6 +39,7 @@ htcondor2/_cred_type.py
 htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py
 htcondor2/_ad_type.py
+htcondor2/_daemon_command.py
 htcondor2/_drain_type.py
 htcondor2/_completion_type.py
 htcondor2/_common_imports.py
@@ -51,15 +48,18 @@ htcondor2/_query_opt.py
 htcondor2/_job_action.py
 htcondor2/_transaction_flag.py
 htcondor2/_submit.py
+htcondor2/_submit_method.py
 htcondor2/_submit_result.py
 htcondor2/_job_event.py
 htcondor2/_job_event_log.py
 htcondor2/_job_event_type.py
 htcondor2/_job_status.py
 htcondor2/_param.py
+htcondor2/_remote_param.py
 htcondor2/_file_transfer_event_type.py
 htcondor2/_logging.py
 htcondor2/_log_level.py
+htcondor2/_loose_functions.py
 htcondor2/__init__.py
 
 classad2/__init__.py
@@ -89,7 +89,6 @@ if (WITH_PYTHON_BINDINGS)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/compat_enum)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/_utils)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad2)

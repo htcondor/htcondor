@@ -35,7 +35,6 @@
 #include "proxymanager.h"
 #include "gridmanager.h"
 
-#include <sstream>
 #include <algorithm>
 #include <map>
 
@@ -167,9 +166,8 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		std::string iwd;
 		job_ad->LookupString(ATTR_JOB_IWD, iwd);
 		if (!iwd.empty()) {
-			std::stringstream ss;
-			ss << iwd << DIR_DELIM_CHAR << proxy_path;
-			proxy_path = ss.str();
+			std::string s = iwd + DIR_DELIM_CHAR + proxy_path;
+			proxy_path = s;
 		}
 	}
 

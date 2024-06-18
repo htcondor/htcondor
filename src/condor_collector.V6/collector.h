@@ -24,7 +24,6 @@
 #include <queue>
 
 #include "condor_classad.h"
-#include "totals.h"
 #include "forkwork.h"
 
 #include "collector_engine.h"

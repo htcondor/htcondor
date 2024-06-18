@@ -21,6 +21,35 @@ table.indextable li {
 	display: table-cell;
 }
 
+div.wy-side-nav-search {
+	background-color: #d312456e;
+}
+
+div.wy-side-nav-search a.icon.icon-home:before {
+	content: url(../logo.svg);
+	width: 25px;
+	height: 15px;
+}
+
+/* Override Sidebar Section Header Colors*/
+.wy-menu-vertical header, .wy-menu-vertical p.caption {
+	color: #d31245;
+}
+
+/* Override inline literal (``some text``) */
+.rst-content code.literal,.rst-content tt.literal {
+	text-decoration: underline #d3d3d3 1px;
+	font-weight: 575;
+	font-size: 85%;
+	font-style: italic;
+	/*color: #8B0000; Dark Red*/
+	color: #000000;
+	background-color: transparent;
+	border: 0px solid #e1e1e1;
+	padding: 1px 1px;
+	white-space: normal;
+}
+
 /* override table width restrictions */
 @media screen and (min-width: 767px) {
 

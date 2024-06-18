@@ -111,7 +111,14 @@ should_convert_to_python(classad::ExprTree * e) {
     }
 
     switch( kind ) {
-        case classad::ExprTree::LITERAL_NODE:
+		case classad::ExprTree::ERROR_LITERAL:
+		case classad::ExprTree::UNDEFINED_LITERAL:
+		case classad::ExprTree::BOOLEAN_LITERAL:
+		case classad::ExprTree::INTEGER_LITERAL:
+		case classad::ExprTree::REAL_LITERAL:
+		case classad::ExprTree::RELTIME_LITERAL:
+		case classad::ExprTree::ABSTIME_LITERAL:
+		case classad::ExprTree::STRING_LITERAL:
         case classad::ExprTree::CLASSAD_NODE:
         case classad::ExprTree::EXPR_LIST_NODE:
             return true;
@@ -750,7 +757,7 @@ _classad_unquote( PyObject *, PyObject * args ) {
         PyErr_SetString(PyExc_ValueError, "String does not parse to a ClassAd string literal");
         return NULL;
     }
-    if( expr->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+    if( dynamic_cast<classad::Literal *>(expr) == nullptr) {
         delete expr;
 
         // This was a ClassAdParseError in version 1.
@@ -833,12 +840,12 @@ _classad_external_refs( PyObject *, PyObject * args ) {
     }
 
 
-    StringList sl;
+	std::vector<std::string> sl;
     for( const auto & ref : references ) {
-        sl.append(ref.c_str());
+        sl.emplace_back(ref);
     }
 
-    std::string result = sl.to_string();
+    std::string result = join(sl,",");
     return PyUnicode_FromString(result.c_str());
 }
 
@@ -866,12 +873,12 @@ _classad_internal_refs( PyObject *, PyObject * args ) {
     }
 
 
-    StringList sl;
+	std::vector<std::string> sl;
     for( const auto & ref : references ) {
-        sl.append(ref.c_str());
+        sl.emplace_back(ref);
     }
 
-    std::string result = sl.to_string();
+    std::string result = join(sl,",");
     return PyUnicode_FromString(result.c_str());
 }
 

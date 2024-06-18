@@ -37,8 +37,9 @@
 #include "condor_sockfunc.h"
 #include "condor_config.h"
 #include "condor_sinful.h"
-#include <classad/classad.h>
+#include "classad/classad.h"
 #include "condor_attributes.h"
+#include "condor_daemon_core.h"
 
 #if defined(WIN32)
 // <winsock2.h> already included...
@@ -330,8 +331,12 @@ Sock::isAuthorizationInBoundingSet(const std::string &authz) const
 			if (_policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy))
 			{
 				for (const auto& authz_name : StringTokenIterator(authz_policy)) {
-					if (authz_name[0]) {
-						const_cast<Sock*>(this)->m_authz_bound.insert(authz_name);
+					const_cast<Sock*>(this)->m_authz_bound.insert(authz_name);
+					DCpermission implied_perm = getPermissionFromString(authz_name.c_str());
+					if (implied_perm != NOT_A_PERM) {
+						while ((implied_perm = DCpermissionHierarchy::nextImplied(implied_perm)) < LAST_PERM) {
+							const_cast<Sock*>(this)->m_authz_bound.insert(PermString(implied_perm));
+						}
 					}
 				}
 			}
@@ -1194,7 +1199,7 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 		}
 
 		if( (!acceptIPv4) && (!acceptIPv6) ) {
-			EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE.\n" );
+			EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE." );
 		}
 	}
 
@@ -2487,106 +2492,7 @@ Sock::peer_is_local() const
 	if (!peer_addr().is_valid())
 		return false;
 
-	bool result = false;
-	condor_sockaddr addr = peer_addr();
-		// ... but use any old ephemeral port.
-	addr.set_port(0);
-	int sock = ::socket(addr.get_aftype(), SOCK_DGRAM, IPPROTO_UDP);
-
-	if (sock >= 0) { // unclear how this could fail, but best to check
-
-			// invoke OS bind, not cedar bind - cedar bind does not allow us
-			// to specify the local address.
-		if (condor_bind(sock, addr) < 0) {
-			// failed to bind.  assume we failed  because the peer address is
-			// not local.
-			result = false;
-		} else {
-			// bind worked, assume address has a local interface.
-			result = true;
-		}
-		// must not forget to close the socket we just created!
-		::closesocket(sock);
-	}
-	return result;
-	
-		/*
-
-	// Keep a static cache of results, since determining if the peer is local
-	// is somewhat expensive. Flush the cache every 20 min to deal w/
-	// interfaces on the machine being activated/deactivated during runtime.
-	static HashTable<int,bool>* isLocalTable = NULL;
-	static time_t cache_ttl = 0;
-	
-	bool result;
-	int peer_int = peer_ip_int();
-
-	// if there is no peer, bail out now.
-	if ( peer_int == 0 ) {
-		return false;
-	}
-
-	// allocate hashtable dynamically first time we are called, so
-	// we don't bloat private address space for daemons that never
-	// invoke this method.
-	if ( !isLocalTable ) {
-		isLocalTable = new HashTable<int,bool>(hashFuncInt);
-	}
-
-	// check the time to live (ttl) on our cached data
-	time_t now = time(NULL);
-	if ( now >= cache_ttl ) {
-		// ttl has expired; flush the cache and reset ttl
-		isLocalTable->clear();
-		cache_ttl = now + (20 * 60);	// push ttl 20 min into the future
-	}
-
-	// see if our cache already has the answer
-	if (isLocalTable->lookup(peer_int,result) == 0) {
-		// found the answer is in our cache table, just return what we found.
-		return result;
-	} 
-
-	// if we made it here, we don't have a cached answer, so 
-	// we run an experiment to see if the peer address relates
-	// to one of our interfaces.  the experiment is simply try 
-	// and bind a socket to the peer address on an ephemeral port - 
-	// if it works, we must have a local interface w/ that address,
-	// if it fails, assume we don't. 
-	// note: this algorithm may be imperfect if the host is serving
-	// as a NAT gateway.
-
-	int sock = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if ( sock < 0 ) {
-		dprintf(D_ALWAYS,"Sock::peer_is_local(): ERROR failed to create socket\n");
-        return false;
-    }
-		// Bind to the *same address* as our peer ....
-		//struct sockaddr_in mySockAddr = *( peer_addr() );
-	sockaddr_in mySockAddr = peer_addr().to_sin();
-		// ... but use any old ephemeral port.
-    mySockAddr.sin_port = htons( 0 );
-		// invoke OS bind, not cedar bind - cedar bind does not allow us
-		// to specify the local address.
-	if ( ::bind(sock, (const struct sockaddr*) &mySockAddr,
-		        sizeof(mySockAddr)) < 0 ) 
-	{
-		// failed to bind.  assume we failed  because the peer address is
-		// not local.
-		result = false;        
-	} else {
-		// bind worked, assume address has a local interface.
-		result = true;
-	}
-	// must not forget to close the socket we just created!
-	::closesocket(sock);
-	
-	// Stash our result in the cache.
-	isLocalTable->insert(peer_int,result);
-
-	// return the result to the caller
-	return result;
-		*/
+	return addr_is_local(peer_addr());
 }
 
 condor_sockaddr
@@ -3007,3 +2913,133 @@ Sock::invalidateSock()
 {
 	_sock = INVALID_SOCKET; 
 }
+
+char const *
+Sock::get_sinful_public() const
+{
+		// In case TCP_FORWARDING_HOST changes, do not cache it.
+	std::string tcp_forwarding_host;
+	param(tcp_forwarding_host,"TCP_FORWARDING_HOST");
+	if (!tcp_forwarding_host.empty()) {
+		condor_sockaddr addr;
+		
+		if (!addr.from_ip_string(tcp_forwarding_host)) {
+			std::vector<condor_sockaddr> addrs = resolve_hostname(tcp_forwarding_host);
+			if (addrs.empty()) {
+				dprintf(D_ALWAYS,
+					"failed to resolve address of TCP_FORWARDING_HOST=%s\n",
+					tcp_forwarding_host.c_str());
+				return NULL;
+			}
+			addr = addrs.front();
+		}
+		addr.set_port(get_port());
+		_sinful_public_buf = addr.to_sinful().c_str();
+
+		std::string alias;
+		if( param(alias,"HOST_ALIAS") ) {
+			Sinful s(_sinful_public_buf.c_str());
+			s.setAlias(alias.c_str());
+			_sinful_public_buf = s.getSinful();
+		}
+
+		return _sinful_public_buf.c_str();
+	}
+
+	return get_sinful();
+}
+
+int 
+Sock::special_connect(char const *host,int /*port*/,bool nonblocking,CondorError * errorStack)
+{
+	if( !host || *host != '<' ) {
+		return CEDAR_ENOCCB;
+	}
+
+	Sinful sinful(host);
+	if( !sinful.valid() ) {
+		return CEDAR_ENOCCB;
+	}
+
+	char const *shared_port_id = sinful.getSharedPortID();
+	if( shared_port_id ) {
+			// If the port of the SharedPortServer is 0, that means
+			// we do not know the address of the SharedPortServer.
+			// This happens, for example when Create_Process passes
+			// the parent's address to a child or the child's address
+			// to the parent and the SharedPortServer does not exist yet.
+			// So do a local connection bypassing SharedPortServer,
+			// if we are on the same machine.
+
+			// Another case where we want to bypass connecting to
+			// SharedPortServer is if we are the shared port server,
+			// because this causes us to hang.
+
+			// We could additionally bypass using the shared port
+			// server if we use the same shared port server as the
+			// target daemon and we are on the same machine.  However,
+			// this causes us to use an additional ephemeral port than
+			// if we connect to the shared port, so in case that is
+			// important, use the shared port server instead.
+
+		bool no_shared_port_server =
+			sinful.getPort() && strcmp(sinful.getPort(),"0")==0;
+
+		bool same_host = false;
+		// TODO: Picking IPv4 arbitrarily.
+		//   We should do a better job of detecting whether sinful
+		//   points to a local interface.
+		std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		if( sinful.getHost() && strcmp(my_ip.c_str(),sinful.getHost())==0 ) {
+			same_host = true;
+		}
+
+		bool i_am_shared_port_server = false;
+		if( daemonCore ) {
+			char const *daemon_addr = daemonCore->publicNetworkIpAddr();
+			if( daemon_addr ) {
+				Sinful my_sinful(daemon_addr);
+				if( my_sinful.getHost() && sinful.getHost() &&
+					strcmp(my_sinful.getHost(),sinful.getHost())==0 &&
+					my_sinful.getPort() && sinful.getPort() &&
+					strcmp(my_sinful.getPort(),sinful.getPort())==0 &&
+					(!my_sinful.getSharedPortID() ||
+					 strcmp(my_sinful.getSharedPortID(),shared_port_id)==0) )
+				{
+					i_am_shared_port_server = true;
+					dprintf(D_FULLDEBUG,"Bypassing connection to shared port server %s, because that is me.\n",daemon_addr);
+				}
+			}
+		}
+		if( (no_shared_port_server && same_host) || i_am_shared_port_server ) {
+
+			if( no_shared_port_server && same_host ) {
+				dprintf(D_FULLDEBUG,"Bypassing connection to shared port server, because its address is not yet established; passing socket directly to %s.\n",host);
+			}
+
+			// do_shared_port_local_connect() calls connect_socketpair(), which
+			// normally uses loopback addresses.  However, the loopback address
+			// may not be in the ALLOW list.  Instead, we need to use the
+			// address we would use to contact the shared port daemon.
+			const char * sharedPortIP = sinful.getHost();
+			// Presently, for either same_host or i_am_shared_port_server to
+			// be true, this must be as well.
+			ASSERT( sharedPortIP );
+
+			return do_shared_port_local_connect( shared_port_id, nonblocking, sharedPortIP );
+		}
+	}
+
+		// Set shared port id even if it is null so we clear whatever may
+		// already be there.  If it is not null, then this information
+		// is saved here and used later after we have connected.
+	setTargetSharedPortID( shared_port_id );
+
+	char const *ccb_contact = sinful.getCCBContact();
+	if( !ccb_contact || !*ccb_contact ) {
+		return CEDAR_ENOCCB;
+	}
+
+	return do_reverse_connect(ccb_contact,nonblocking, errorStack);
+}
+

@@ -96,11 +96,7 @@ GroupEntry::hgq_construct_tree(
 	std::string hgq_root_name = "<none>";
 	std::vector<std::string> groups;
 	if (NULL != groupnames) {
-		StringList group_name_list;
-		group_name_list.initializeFromString(groupnames);
-		group_name_list.rewind();
-		while (char* g = group_name_list.next()) {
-			const std::string gname(g);
+		for (const auto& gname: StringTokenIterator(groupnames)) {
 
 			// Best to sanity-check this as early as possible.  This will also
 			// be useful if we ever decided to allow users to name the root group

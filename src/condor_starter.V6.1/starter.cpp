@@ -57,8 +57,6 @@
 #endif
 #include "authentication.h"
 
-#include <sstream>
-
 extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";
@@ -377,7 +375,6 @@ bool
 Starter::ShutdownGraceful( void )
 {
 	bool jobRunning = false;
-	UserProc *job;
 
 	dprintf(D_ALWAYS, "ShutdownGraceful all jobs.\n");
 
@@ -389,15 +386,17 @@ Starter::ShutdownGraceful( void )
 		this->removeDeferredJobs();
 	}
 
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	auto listit = m_job_list.begin();
+	while (listit != m_job_list.end()) {
+		auto *job = *listit;
 		if ( job->ShutdownGraceful() ) {
 			// job is completely shut down, so delete it
-			m_job_list.DeleteCurrent();
+			listit = m_job_list.erase(listit);
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
 	}
 	ShuttingDown = TRUE;
@@ -449,7 +448,6 @@ bool
 Starter::ShutdownFast( void )
 {
 	bool jobRunning = false;
-	UserProc *job;
 
 	dprintf(D_ALWAYS, "ShutdownFast all jobs.\n");
 	
@@ -461,15 +459,17 @@ Starter::ShutdownFast( void )
 		this->removeDeferredJobs();
 	}
 
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	auto listit = m_job_list.begin();
+	while (listit != m_job_list.end()) {
+		UserProc *job = *listit;;
 		if ( job->ShutdownFast() ) {
 			// job is completely shut down, so delete it
-			m_job_list.DeleteCurrent();
+			listit = m_job_list.erase(listit);
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
 	}
 	ShuttingDown = TRUE;
@@ -522,7 +522,6 @@ Starter::RemoteRemove( int )
 bool
 Starter::Remove( ) {
 	bool jobRunning = false;
-	UserProc *job;
 
 	dprintf( D_ALWAYS, "Remove all jobs\n" );
 
@@ -534,15 +533,17 @@ Starter::Remove( ) {
 		this->removeDeferredJobs();
 	}
 
-	m_job_list.Rewind();
-	while( (job = m_job_list.Next()) != NULL ) {
+	auto listit = m_job_list.begin();
+	while (listit != m_job_list.end()) {
+		UserProc *job = *listit;
 		if( job->Remove() ) {
 			// job is completely shut down, so delete it
-			m_job_list.DeleteCurrent();
+			listit = m_job_list.erase(listit);
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
 	}
 	ShuttingDown = TRUE;
@@ -1025,12 +1026,9 @@ Starter::peek(int /*cmd*/, Stream *sock)
 		bool found = false;
 		if (jobad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_FILES, job_transfer_list))
 		{
-			StringList job_sl(job_transfer_list.c_str());
-			job_sl.rewind();
-			const char *job_iter;
-			while ((job_iter = job_sl.next()))
+			for (const auto& job_iter: StringTokenIterator(job_transfer_list))
 			{
-				if (strcmp(iter->c_str(), job_iter) == 0)
+				if (strcmp(iter->c_str(), job_iter.c_str()) == 0)
 				{
 					filename = job_iter;
 					found = true;
@@ -1390,13 +1388,10 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	if( !preferred_shells.empty() ) {
 		dprintf(D_FULLDEBUG,
 				"Checking preferred shells: %s\n",preferred_shells.c_str());
-		StringList shells(preferred_shells.c_str(),",");
-		shells.rewind();
-		char *shell;
-		while( (shell=shells.next()) ) {
-			if( access(shell,X_OK)==0 ) {
-				dprintf(D_FULLDEBUG,"Will use shell %s\n",shell);
-				setup_env.SetEnv("_CONDOR_SHELL",shell);
+		for (const auto& shell: StringTokenIterator(preferred_shells, ",")) {
+			if( access(shell.c_str(), X_OK)==0 ) {
+				dprintf(D_FULLDEBUG, "Will use shell %s\n", shell.c_str());
+				setup_env.SetEnv("_CONDOR_SHELL", shell.c_str());
 				break;
 			}
 		}
@@ -1641,7 +1636,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		delete proc;
 		return FALSE;
 	}
-	m_job_list.Append(proc);
+	m_job_list.emplace_back(proc);
 	if( this->suspended ) {
 		proc->Suspend();
 	}
@@ -1722,7 +1717,6 @@ bool
 Starter::Hold( void )
 {	
 	bool jobRunning = false;
-	UserProc *job;
 
 	dprintf( D_ALWAYS, "Hold all jobs\n" );
 
@@ -1734,15 +1728,17 @@ Starter::Hold( void )
 		this->removeDeferredJobs();
 	}
 
-	m_job_list.Rewind();
-	while( (job = m_job_list.Next()) != NULL ) {
+	auto listit = m_job_list.begin();
+	while (listit != m_job_list.end()) {
+		UserProc *job = *listit;;
 		if( job->Hold() ) {
 			// job is completely shut down, so delete it
-			m_job_list.DeleteCurrent();
+			listit = m_job_list.erase(listit);
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
 			jobRunning = true;
+			listit++;
 		}
 	}
 	ShuttingDown = TRUE;
@@ -1947,11 +1943,12 @@ Starter::createTempExecuteDir( void )
 #ifdef LINUX
 	const char *lvm_vg = getenv("CONDOR_LVM_VG");
 	const char *lv_size = getenv("CONDOR_LVM_LV_SIZE_KB");
-	if (lvm_vg && lv_size) {
+	const char *lv_name = getenv("CONDOR_LVM_LV_NAME");
+	if (lvm_vg && lv_size && lv_name) {
 		const char *thinpool = getenv("CONDOR_LVM_THINPOOL");
 		bool lvm_setup_successful = false;
 		bool thin_provision = strcasecmp(getenv("CONDOR_LVM_THIN_PROVISION"), "true") == MATCH;
-		bool do_encrypt = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
+		// bool do_encrypt = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
 
 		try {
 			m_lvm_lv_size_kb = std::stol(lv_size);
@@ -1963,12 +1960,11 @@ Starter::createTempExecuteDir( void )
 
 		if (m_lvm_lv_size_kb > 0) {
 			CondorError err;
-			std::string thinpool_str(thinpool ? thinpool : ""), slot_name(getMySlotName());
-			if (do_encrypt) { slot_name += "-enc"; }
-			m_volume_mgr.reset(new VolumeManager::Handle(WorkingDir, slot_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, err));
+			std::string thinpool_str(thinpool ? thinpool : "");
+			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, err));
 			if ( ! err.empty()) {
-				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
-				m_volume_mgr.reset(); //This calls handle destructor and cleans up any partial setup
+				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
+				m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
 			} else {
 				lvm_setup_successful = true;
 				m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
@@ -1976,7 +1972,9 @@ Starter::createTempExecuteDir( void )
 					"check disk usage", this);
 			}
 		}
-		ASSERT( lvm_setup_successful );
+		if ( ! lvm_setup_successful) {
+			return false;
+		}
 	}
 #endif // LINUX
 
@@ -2014,6 +2012,49 @@ Starter::createTempExecuteDir( void )
 	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir.c_str() );
 	set_priv( priv );
 	m_workingDirExists = true;
+	return true;
+}
+
+/*
+ * When input file transfer or other setup tasks fail, will enter this method
+ * to begin reporting the failure.  Reporting might include transferring FailureFiles
+ **/
+int
+Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea)
+{
+	// record these for later
+	m_setupStatus = status;
+	m_urea = urea;
+
+	// we've already decided to start the job, so just exit here
+	if (this->deferral_tid != -1) {
+		dprintf(D_ALWAYS, "ERROR: deferral timer already queued when jobEnvironmentCannotReady\n");
+		return 0;
+	}
+
+	//
+	// Now we will register a callback that will
+	// call the function to actually execute the job
+	// If there wasn't a deferral time then the job will 
+	// be started right away. We store the timer id so that
+	// if a suspend comes in, we can cancel the job from being
+	// executed
+	//
+	this->deferral_tid = daemonCore->Register_Timer(0,
+		(TimerHandlercpp)&Starter::SkipJobs,
+		"SkipJobs",
+		this );
+
+	//
+	// Make sure our timer callback registered properly
+	//
+	if( this->deferral_tid < 0 ) {
+		EXCEPT( "Can't register SkipJob DaemonCore timer" );
+	}
+	dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
+			this->jic->jobCluster(),
+			this->jic->jobProc() );
+
 	return true;
 }
 
@@ -2289,7 +2330,6 @@ Starter::removeDeferredJobs() {
  * Start the prescript for a job, if one exists
  * If one doesn't, then we will call SpawnJob() directly
  * 
- * return true if no errors occured
  **/
 void
 Starter::SpawnPreScript( int /* timerID */ )
@@ -2346,6 +2386,30 @@ Starter::SpawnPreScript( int /* timerID */ )
 		main_shutdown_fast();
 	}
 }
+
+/**
+* Timer handler to Skip job execution because we failed setup
+* used instead of the deferral timer that executes SpawnPreScript above
+* return true if no errors occured
+**/
+void
+Starter::SkipJobs( int /* timerID */ )
+{
+	//
+	// Unset the deferral timer so that we know that no job
+	// is waiting to be spawned
+	//
+	if ( this->deferral_tid != -1 ) {
+		this->deferral_tid = -1;
+	}
+
+	if (m_setupStatus != 0) {
+		jic->setJobFailed(); // so we transfer FailureFiles instead of output files
+	}
+	// this starts output transfer of FailureFiles
+	allJobsDone();
+}
+
 
 void Starter::getJobOwnerFQUOrDummy(std::string &result) const
 {
@@ -2465,7 +2529,7 @@ Starter::SpawnJob( void )
 			job = new ParallelProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_MPI: {
-			EXCEPT("MPI Universe is no longer supported\n");
+			EXCEPT("MPI Universe is no longer supported");
 			break;
 		}
 		case CONDOR_UNIVERSE_VM:
@@ -2479,7 +2543,7 @@ Starter::SpawnJob( void )
 	} /* switch */
 
 	if (job->StartJob()) {
-		m_job_list.Append(job);
+		m_job_list.emplace_back(job);
 		
 			//
 			// If the Starter received a Suspend call while the
@@ -2507,7 +2571,7 @@ Starter::SpawnJob( void )
 			tool_daemon_proc = new ToolDaemonProc( jobAd, job->GetJobPid() );
 
 			if( tool_daemon_proc->StartJob() ) {
-				m_job_list.Append( tool_daemon_proc );
+				m_job_list.emplace_back( tool_daemon_proc );
 				dprintf( D_FULLDEBUG, "ToolDaemonProc added to m_job_list\n");
 					//
 					// If the Starter received a Suspend call while the
@@ -2633,9 +2697,7 @@ bool
 Starter::Suspend( void ) {
 	dprintf(D_ALWAYS, "Suspending all jobs.\n");
 
-	UserProc *job;
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	for (auto *job: m_job_list) {
 		job->Suspend();
 	}
 	
@@ -2691,11 +2753,8 @@ Starter::Continue( void )
 {
 	dprintf(D_ALWAYS, "Continuing all jobs.\n");
 
-	UserProc *job;
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
-		if (this->suspended)
-		{
+	for (auto *job: m_job_list) {
+		if (this->suspended) {
 		  job->Continue();
 		}
 	}
@@ -2744,9 +2803,7 @@ Starter::PeriodicCkpt( void )
 	}
 	if( ! wantCheckpoint ) { return false; }
 
-	UserProc *job;
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	for (auto *job: m_job_list) {
 		if( job->Ckpt() ) {
 
 			bool transfer_ok = jic->uploadWorkingFiles();
@@ -2778,12 +2835,10 @@ Starter::PeriodicCkpt( void )
 	return true;
 }
 
-void copyProcList( List<UserProc> & from, List<UserProc> & to ) {
-	to.Clear();
-	from.Rewind();
-	UserProc * job = NULL;
-	while( (job = from.Next()) != NULL ) {
-		to.Append( job );
+void copyProcList( std::vector<UserProc *> & from, std::vector<UserProc *> & to ) {
+	to.clear();
+	for (auto *job: from) {
+		to.emplace_back( job );
 	}
 }
 
@@ -2793,7 +2848,6 @@ Starter::Reaper(int pid, int exit_status)
 {
 	int handled_jobs = 0;
 	int all_jobs = 0;
-	UserProc *job;
 
 	if( WIFSIGNALED(exit_status) ) {
 		dprintf( D_ALWAYS, "Process exited, pid=%d, signal=%d\n", pid,
@@ -2886,19 +2940,22 @@ Starter::Reaper(int pid, int exit_status)
 	//
 
 	// Is there a good reason to have neither assignment nor copy ctor?
-	List<UserProc> stable_job_list;
-	List<UserProc> stable_reaped_job_list;
+	std::vector<UserProc *> stable_job_list;
+	std::vector<UserProc *> stable_reaped_job_list;
 
 	copyProcList( m_job_list, stable_job_list );
 	copyProcList( m_reaped_job_list, stable_reaped_job_list );
 
-	stable_job_list.Rewind();
-	while ((job = stable_job_list.Next()) != NULL) {
+	auto listit = stable_job_list.begin();
+	while (listit != stable_job_list.end()) {
+		auto *job = *listit;
 		all_jobs++;
 		if( job->GetJobPid()==pid && job->JobReaper(pid, exit_status) ) {
 			handled_jobs++;
-			stable_job_list.DeleteCurrent();
-			stable_reaped_job_list.Append(job);
+			listit = stable_job_list.erase(listit);
+			stable_reaped_job_list.emplace_back(job);
+		} else {
+			listit++;
 		}
 	}
 
@@ -2944,6 +3001,7 @@ Starter::allJobsDone( void )
 {
 	m_all_jobs_done = true;
 	bool bRet=false;
+	dprintf(D_ZKM | D_BACKTRACE, "Starter::allJobsDone()\n");
 
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
@@ -2954,7 +3012,7 @@ Starter::allJobsDone( void )
 	if (m_deferred_job_update){
 		jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, 0 );
 	}
-		// JIC::allJobsDonbRete() returned false: propagate that so we
+		// JIC::allJobsDone() returned false: propagate that so we
 		// halt the cleanup process and wait for external events.
 	return bRet;
 }
@@ -2963,8 +3021,9 @@ Starter::allJobsDone( void )
 bool
 Starter::transferOutput( void )
 {
-	UserProc *job;
 	bool transient_failure = false;
+
+	dprintf(D_ZKM | D_BACKTRACE, "Starter::transferOutput()\n");
 
 	if( recorded_job_exit_status ) {
 		bool exitStatusSpecified = false;
@@ -2991,8 +3050,7 @@ Starter::transferOutput( void )
 		//
 		// See the usage of the "name" variable in user_proc.h/cpp
 
-		m_reaped_job_list.Rewind();
-		while ((job = m_reaped_job_list.Next()) != NULL) {
+		for (auto *job: m_reaped_job_list) {
 			ClassAd ad;
 			int pid;
 			job->PublishUpdateAd(&ad);
@@ -3031,11 +3089,11 @@ Starter::cleanupJobs( void )
 		// Now that we're done with HOOK_JOB_EXIT and transfering
 		// files, we can finally go through the m_reaped_job_list and
 		// call JobExit() on all the procs in there.
-	UserProc *job;
-	m_reaped_job_list.Rewind();
-	while( (job = m_reaped_job_list.Next()) != NULL) {
+	auto listit = m_reaped_job_list.begin();
+	while (listit != m_reaped_job_list.end()) {
+		auto *job = *listit;
 		if( job->JobExit() ) {
-			m_reaped_job_list.DeleteCurrent();
+			listit = m_reaped_job_list.erase(listit);
 			delete job;
 		} else {
 				// This could fail because either we're talking to a
@@ -3048,6 +3106,12 @@ Starter::cleanupJobs( void )
 			return false;
 		}
 	}
+
+	// If setup failed and we should hold the job, notify the startd
+	if (m_setupStatus == JOB_SHOULD_HOLD) {
+		jic->notifyStarterError(m_urea.message.c_str(), true, m_urea.hold_code, m_urea.hold_subcode);
+	}
+
 		// No more jobs, all cleanup done, notify our JIC
 	jic->allJobsGone();
 	return true;
@@ -3069,7 +3133,7 @@ Starter::publishJobExitAd( ClassAd* ad )
 
 
 bool
-Starter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
+Starter::publishJobInfoAd(std::vector<UserProc *> *proc_list, ClassAd* ad)
 {
 		// Iterate through all our UserProcs and have those publish,
 		// as well.  This method is virtual, so we'll get all the
@@ -3080,9 +3144,7 @@ Starter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
 		found_one = true;
 	}
 	
-	UserProc *job;
-	proc_list->Rewind();
-	while ((job = proc_list->Next()) != NULL) {
+	for (auto *job: *proc_list) {
 		if( job->PublishUpdateAd(ad) ) {
 			found_one = true;
 		}
@@ -3236,9 +3298,7 @@ Starter::PublishToEnv( Env* proc_env )
 	proc_env->SetEnv("_CONDOR_JOB_IWD",jic->jobRemoteIWD());
 
 	std::string job_pids;
-	UserProc* uproc;
-	m_job_list.Rewind();
-	while ((uproc = m_job_list.Next()) != NULL) {
+	for (auto *uproc: m_job_list) {
 		uproc->PublishToEnv( proc_env );
 
 		if( ! job_pids.empty() ) {
@@ -3258,8 +3318,7 @@ Starter::PublishToEnv( Env* proc_env )
 	}
 
 		// put in environment variables specific to the type (universe) of job
-	m_reaped_job_list.Rewind();
-	while ((uproc = m_reaped_job_list.Next()) != NULL) {
+	for (auto *uproc: m_reaped_job_list) {
 		uproc->PublishToEnv( proc_env );	// a virtual method per universe
 	}
 
@@ -3289,10 +3348,8 @@ Starter::PublishToEnv( Env* proc_env )
 	if (mad) {
 		std::string restags;
 		if (mad->LookupString(ATTR_MACHINE_RESOURCES, restags)) {
-			StringList tags(restags.c_str());
-			tags.rewind();
-			const char *tag;
-			while ((tag = tags.next())) {
+			std::vector<std::string> tags = split(restags);
+			for (const auto& tag: tags) {
 				std::string attr("Assigned"); attr += tag;
 
 				// we need to publish Assigned resources in the environment. the rules are 
@@ -3313,7 +3370,7 @@ Starter::PublishToEnv( Env* proc_env )
 					}
 
 					if ( ! env_name.empty()) {
-						SetEnvironmentForAssignedRes(proc_env, env_name.c_str(), assigned.c_str(), tag);
+						SetEnvironmentForAssignedRes(proc_env, env_name.c_str(), assigned.c_str(), tag.c_str());
 					}
 
 					env_name = base;
@@ -3324,7 +3381,7 @@ Starter::PublishToEnv( Env* proc_env )
 
 			// NVIDIA_VISIBLE_DEVICES needs to be set to an expression evaluated against the machine ad
 			// which may not be the same exact value as what we set CUDA_VISIBLE_DEVICES to
-			if (tags.contains_anycase("GPUs") && param_boolean("AUTO_SET_NVIDIA_VISIBLE_DEVICES",true)) {
+			if (contains_anycase(tags, "GPUs") && param_boolean("AUTO_SET_NVIDIA_VISIBLE_DEVICES",true)) {
 				classad::Value val;
 				const char * env_value = nullptr;
 				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
@@ -3418,14 +3475,10 @@ Starter::PublishToEnv( Env* proc_env )
 	char* cpu_vars_param = param("STARTER_NUM_THREADS_ENV_VARS");
 	if (cpus > 0 && cpu_vars_param) {
 		std::string jobNumThreads;
-		StringList cpu_vars_list(cpu_vars_param);
-		cpu_vars_list.remove("");
-		cpu_vars_list.rewind();
-		char *var = NULL;
-		while ((var = cpu_vars_list.next())) {
-			proc_env->GetEnv(var, jobNumThreads);
+		for (const auto& var: StringTokenIterator(cpu_vars_param)) {
+			proc_env->GetEnv(var.c_str(), jobNumThreads);
 			if (jobNumThreads.length() == 0) {
-				proc_env->SetEnv(var, std::to_string(cpus));
+				proc_env->SetEnv(var.c_str(), std::to_string(cpus));
 			}
 		}
 	}
@@ -3560,17 +3613,14 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 				if (isdigit(*p) || *p == ',') rhs += *p;
 			}
 		} else {
-			const char * resid;
 			pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
 
 			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' pattern: %s\n", tag, env_name.c_str(), peq);
 
-			StringList ids(assigned);
-			ids.rewind();
-			while ((resid = ids.next())) {
+			for (const auto& resid: StringTokenIterator(assigned)) {
 				if ( ! rhs.empty()) { rhs += env_id_separator; }
-				int cchresid = (int)strlen(resid);
-				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid);
+				int cchresid = (int)resid.size();
+				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid.c_str());
 				int status = pcre2_match(re, resid_pcre2str, static_cast<PCRE2_SIZE>(cchresid), 0, 0, matchdata, NULL);
 				if (status >= 0) {
 					const struct _pcre_vector { int start; int end; } * groups
@@ -3803,10 +3853,10 @@ Starter::removeTempExecuteDir( void )
 	}
 
 #ifdef LINUX
-	if (m_volume_mgr) {
+	if (m_lv_handle) {
 		//LVM managed... reset handle pointer to call destructor for cleanup
 		//We can't determine if the cleanup failed or not, and need to rm the working dir
-		m_volume_mgr.reset(nullptr);
+		m_lv_handle.reset(nullptr);
 	}
 #endif /* LINUX */
 
@@ -3948,17 +3998,15 @@ Starter::WriteAdFiles() const
 		} else {
 			machineResourcesString = "CPUs, Disk, Memory";
 		}
-		StringList machineResourcesList( machineResourcesString.c_str() );
 
-		machineResourcesList.rewind();
-		while( const char * resourceName = machineResourcesList.next() ) {
+		for (const auto& resourceName: StringTokenIterator(machineResourcesString)) {
 			std::string provisionedResourceName;
-			formatstr( provisionedResourceName, "%sProvisioned", resourceName );
-			CopyAttribute( provisionedResourceName, updateAd, resourceName, *machineAd );
-			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName, provisionedResourceName.c_str() );
+			formatstr( provisionedResourceName, "%sProvisioned", resourceName.c_str() );
+			CopyAttribute( provisionedResourceName, updateAd, resourceName.c_str(), *machineAd );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName.c_str(), provisionedResourceName.c_str() );
 
 			std::string assignedResourceName;
-			formatstr( assignedResourceName, "Assigned%s", resourceName );
+			formatstr( assignedResourceName, "Assigned%s", resourceName.c_str() );
 			CopyAttribute( assignedResourceName, updateAd, *machineAd );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad\n", assignedResourceName.c_str() );
 		}
@@ -3995,6 +4043,10 @@ Starter::CheckLVUsage( int /* timerID */ )
 		// Logic error?
 	if (m_lvm_lv_size_kb < 0) return;
 
+		// no handle? no point
+	auto * lv_handle = m_lv_handle.get();
+	if ( ! lv_handle) return;
+
 	// When the job exceeds its disk usage, there are three possibilities:
 	// 1. The backing pool has space remaining, we don't exhaust the extra allocated space (2GB by default),
 	//    and this polling catches the over-usage.  In that case, the job goes on hold and everyone's happy.
@@ -4012,19 +4064,20 @@ Starter::CheckLVUsage( int /* timerID */ )
 	CondorError err;
 	bool out_of_space = false;
 	uint64_t used_bytes;
-	if ( ! VolumeManager::GetVolumeUsage(m_volume_mgr.get(), used_bytes, out_of_space, err)) {
+	if ( ! VolumeManager::GetVolumeUsage(lv_handle, used_bytes, out_of_space, err)) {
 		dprintf(D_ALWAYS, "Failed to poll managed volume (may not put job on hold correctly): %s\n", err.getFullText().c_str());
 		return;
 	}
 
 	uint64_t limit = static_cast<uint64_t>(m_lvm_lv_size_kb*1024LL);
 	//Thick provisioning check for 98% LV usage
-	if ( ! m_volume_mgr->IsThin()) { limit = limit * 0.98; }
+	if ( ! m_lv_handle->IsThin()) { limit = limit * 0.98; }
 
 	if (used_bytes >= limit) {
 		std::string hold_msg;
-		formatstr(hold_msg, "Job is using %lluKB of space, over limit of %lluKB",
-		         (used_bytes/1024LL), (limit/1024LL));
+		double limit_gb = limit / (1024LL*1024LL*1024LL);
+		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",
+		         limit_gb);
 		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 		m_lvm_held_job = true;
 	}
@@ -4039,7 +4092,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 			return;
 		} else if (m_lvm_last_space_issue < 0) {
 			dprintf(D_ALWAYS, "WARNING: Thin pool used by startd (%s) is out of space; writes will be paused until this is resolved.\n",
-			        m_volume_mgr->GetPool().c_str());
+				m_lv_handle->GetPool().c_str());
 			m_lvm_last_space_issue = now;
 		}
 	} else {

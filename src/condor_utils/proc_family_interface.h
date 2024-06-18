@@ -56,6 +56,7 @@ public:
 
 	virtual bool track_family_via_cgroup(pid_t, FamilyInfo *) = 0;
 #endif
+	virtual void assign_cgroup_for_pid(pid_t, const std::string &){}
 
 	virtual bool get_usage(pid_t, ProcFamilyUsage&, bool) = 0;
 
@@ -66,6 +67,7 @@ public:
 	virtual bool continue_family(pid_t) = 0;
 
 	virtual bool kill_family(pid_t) = 0;
+	virtual bool extend_family_lifetime(pid_t) { return true;}
 	
 	// Really should be named unregister_subfamily...
 	virtual bool unregister_family(pid_t) = 0;

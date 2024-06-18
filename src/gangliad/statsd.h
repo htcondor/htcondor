@@ -26,13 +26,21 @@
  */
 
 #include <list>
-#include "string_list.h"
+#include <vector>
+#include <string>
 
 // Base class defining a metric to be evaluated against ads in the collector
 class Metric {
 public:
 	Metric();
 	virtual ~Metric() {}
+
+	// Serialize state in this metric to a string
+	std::string serialize() const;
+
+	// Deserialize state from a string or a deserializer stream into this metric
+	bool deserialize(const std::string &buf);
+	bool deserialize(YourStringDeserializer &in);
 
 	// Given a metric definition ad and an ad to monitor,
 	// evaluate the monitored value and other properties such as
@@ -65,6 +73,7 @@ public:
 	std::string ip;
 	std::string cluster;
 	bool derivative;
+	bool zero_value;
 	int verbosity;
 	int lifetime;
     double scale;
@@ -96,7 +105,7 @@ public:
 	double sum;
 	unsigned long count;
 
-	StringList target_type; // type of condor daemons this metric applies to
+	std::vector<std::string> target_type; // type of condor daemons this metric applies to
 
 	// True if this metric only looks at slot 1 of the startd
 	// (we do this in lieu of a true machine ad)
@@ -165,16 +174,29 @@ class StatsD: Service {
 	std::list< classad::ClassAd * > m_metrics;
 	typedef std::map< std::string, Metric *> AggregateMetricList;
 	AggregateMetricList m_aggregate_metrics;
+	AggregateMetricList m_previous_aggregate_metrics;
+	std::unordered_set< std::string > m_metrics_to_reset_at_startup;
 	std::map< std::string,std::string > m_daemon_ips; // map of daemon machine (and name) to IP address
 	std::string m_default_aggregate_host;
 	classad::ClassAd m_default_metric_ad;
-	StringList m_target_types;
+	std::vector<std::string> m_target_types;
+	bool m_want_projection;
+	classad::References m_projection_references;
+
 
 	unsigned m_derivative_publication_failed;
 	unsigned m_non_derivative_publication_failed;
 	unsigned m_derivative_publication_succeeded;
 	unsigned m_non_derivative_publication_succeeded;
 	bool m_warned_about_derivative;
+
+	std::string m_reset_metrics_filename;  // empty if reset metrics not desired
+
+	// Write out file of metrics to reset to zero at startup. Return true on success.
+	bool WriteMetricsToReset();
+
+	// Read in file of metrics to reset to zero at daemon startup. Return true on success.
+	bool ReadMetricsToReset();
 
 	// Read metric definition ads.  Add them to the list of metric ads.
 	void ParseMetrics( std::string const &stats_metrics_string, char const *param_name, std::list< classad::ClassAd * > &stats_metrics );

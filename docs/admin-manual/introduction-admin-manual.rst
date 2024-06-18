@@ -133,6 +133,75 @@ Access Point
     machines or scheduler machine.
 
 
+Putting it all together
+-----------------------
+
+.. mermaid::
+    :caption: HTCondor Process Architecture
+    :align: center
+ 
+     flowchart TD
+         subgraph Access Point - AP
+         direction LR;
+         
+         subgraph Persistent Services
+             direction TB
+             condor_master
+             condor_schedd
+         end
+             direction TB
+             condor_master -- spawns at boot --> condor_schedd
+ 
+             job_queue[(job_queue)]
+             condor_schedd -- spawns for job --> condor_shadow1
+             condor_schedd -- spawns for job --> condor_shadow2
+             condor_schedd -- writes to file --o job_queue
+         end
+     
+         subgraph Central Manager - CM
+         subgraph Persistent Services for CM
+             direction TB
+             cm_master[condor master]
+             condor_collector
+             condor_negotiator
+ 
+             cm_master -- spawns at boot --> condor_collector
+             cm_master -- spawns at boot --> condor_negotiator
+            
+         end
+     end
+ 
+     subgraph Execution Point - EP
+     subgraph Persistent Services for EP
+             direction TB
+             ep_master[condor_master]
+             condor_startd
+         end
+     direction TB
+         ep_master -- spawns at boot --> condor_startd
+                     
+         condor_startd -- spawns for job --> condor_starter1
+         condor_startd -- spawns for job --> condor_starter2
+         condor_starter1 -- spawns job --> job1
+         condor_starter2 -- spawns job --> job2
+     end
+ 
+     condor_shadow1 -- connects to --o condor_starter1
+     condor_shadow2 -- connects to --o condor_starter2
+     condor_schedd  -- claims      --o condor_startd
+ 
+     condor_startd  -- updates     --o condor_collector
+     condor_schedd  -- updates     --o condor_collector
+     condor_negotiator -- sends matches --o condor_schedd
+ 
+     %%subgraph tools       
+     %%        condor_submit -- connects to --o condor_schedd
+     %%        condor_q      -- connects to --o condor_schedd
+     %%        condor_rm     -- connects to --o condor_schedd
+     %%        condor_status -- queries     --o condor_collector
+     %%        condor_userprio -- queries   --o condor_negotiator
+     %%end
+ 
 The HTCondor Daemons
 --------------------
 

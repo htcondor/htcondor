@@ -67,7 +67,6 @@ typedef HashTable <std::string, CatalogEntry *> FileCatalogHashTable;
 typedef HashTable <std::string, std::string> PluginHashTable;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
-typedef int		(*FileTransferHandler)(FileTransfer *);
 
 enum FileTransferStatus {
 	XFER_STATUS_UNKNOWN,
@@ -88,6 +87,7 @@ enum class TransferPluginResult {
 	Error = 1,
 	InvalidCredentials = 2,
 	TimedOut = 3,
+	ExecFailed = 4,
 };
 
 namespace htcondor {
@@ -207,11 +207,6 @@ class FileTransfer final: public Service {
 			last transfer.  It is safe for the handler to deallocate the
 			FileTransfer object.
 		*/
-	void RegisterCallback(FileTransferHandler handler, bool want_status_updates=false)
-		{ 
-			ClientCallback = handler; 
-			ClientCallbackWantsStatusUpdates = want_status_updates;
-		}
 	void RegisterCallback(FileTransferHandlerCpp handler, Service* handlerclass, bool want_status_updates=false)
 		{ 
 			ClientCallbackCpp = handler; 
@@ -282,6 +277,12 @@ class FileTransfer final: public Service {
 	//
 	void addOutputFile( const char* filename );
 
+	// Add the given filename to the list of "failure" files.
+	void addFailureFile( const char* filename );
+
+	// Check if we have failure files
+	bool hasFailureFiles() const { return !FailureFiles.empty(); }
+
 	//
 	// Add the given path or URL to the list of checkpoint files.  The file
 	// will be transferred to the named destination* in the sandbox.
@@ -350,7 +351,7 @@ class FileTransfer final: public Service {
 
 	void setTransferQueueContactInfo(char const *contact);
 
-	void InsertPluginMappings(const std::string& methods, const std::string& p, bool supports_testing);
+	void InsertPluginMappings(const std::string& methods, const std::string& p, bool supports_testing, std::string & failed_methods);
 		// Run a test invocation of URL schema using plugin.  Will attempt to download
 		// the URL specified by config param `schema`_TEST_URL to a temporary directory.
 	bool TestPlugin(const std::string &schema, const std::string &plugin);
@@ -361,11 +362,11 @@ class FileTransfer final: public Service {
 		// is set to true, then potentially test the plugins as well.
 	int InitializeSystemPlugins(CondorError &e, bool enable_testing);
 	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
-	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const;
+	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, std::vector<std::string> &infiles) const;
 	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
-	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
-	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
+	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
+	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, int &exit_code, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
+	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, int &exit_code, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
 	int RecordFileTransferStats( ClassAd &stats );
 	std::string GetSupportedMethods(CondorError &err);
 	void DoPluginConfiguration();
@@ -407,6 +408,9 @@ class FileTransfer final: public Service {
 	}
 
 	ClassAd *GetJobAd();
+
+	// get the raw '-classad' results from when we build the plugin to url map
+	const std::vector<ClassAd> & getPluginQueryAds() { return plugin_ads; }
 
 	bool transferIsInProgress() const { return ActiveTransferTid != -1; }
 
@@ -492,7 +496,7 @@ class FileTransfer final: public Service {
 	int AddInputFilenameRemaps(ClassAd *Ad);
 #endif
 	uint64_t bytesSent{0}, bytesRcvd{0};
-	StringList* InputFiles{nullptr};
+	std::vector<std::string> InputFiles;
 
   private:
 
@@ -519,19 +523,20 @@ class FileTransfer final: public Service {
 #else
 	std::vector<std::string> ExceptionFiles;
 #endif
-	StringList* OutputFiles{nullptr};
-	StringList* EncryptInputFiles{nullptr};
-	StringList* EncryptOutputFiles{nullptr};
-	StringList* DontEncryptInputFiles{nullptr};
-	StringList* DontEncryptOutputFiles{nullptr};
-	StringList* IntermediateFiles{nullptr};
-	StringList* FilesToSend{nullptr};
-	StringList* EncryptFiles{nullptr};
-	StringList* DontEncryptFiles{nullptr};
+	std::vector<std::string> OutputFiles;
+	std::vector<std::string> EncryptInputFiles;
+	std::vector<std::string> EncryptOutputFiles;
+	std::vector<std::string> DontEncryptInputFiles;
+	std::vector<std::string> DontEncryptOutputFiles;
+	std::vector<std::string> IntermediateFiles;
+	std::vector<std::string>* FilesToSend{nullptr};
+	std::vector<std::string>* EncryptFiles{nullptr};
+	std::vector<std::string>* DontEncryptFiles{nullptr};
 
-	StringList* CheckpointFiles{nullptr};
-	StringList* EncryptCheckpointFiles{nullptr};
-	StringList* DontEncryptCheckpointFiles{nullptr};
+	std::vector<std::string> CheckpointFiles;
+	std::vector<std::string> EncryptCheckpointFiles;
+	std::vector<std::string> DontEncryptCheckpointFiles;
+	std::vector<std::string> FailureFiles;
 
 	char* OutputDestination{nullptr};
 	char* SpooledIntermediateFiles{nullptr};
@@ -553,12 +558,12 @@ class FileTransfer final: public Service {
 	time_t TransferStart{0};
 	int TransferPipe[2] {-1, -1};
 	bool registered_xfer_pipe{false};
-	FileTransferHandler ClientCallback{nullptr};
 	FileTransferHandlerCpp ClientCallbackCpp{nullptr};
 	Service* ClientCallbackClass{nullptr};
 	bool ClientCallbackWantsStatusUpdates{false};
 	FileTransferInfo Info;
 	PluginHashTable* plugin_table{nullptr};
+	std::vector<ClassAd> plugin_ads;  // raw results from -classad query of the plugins
 	std::map<std::string, bool> plugins_multifile_support;
 	std::map<std::string, bool> plugins_from_job;
 	bool I_support_filetransfer_plugins{false};
@@ -635,20 +640,22 @@ class FileTransfer final: public Service {
 
 	std::string GetTransferQueueUser();
 
+	void ReceiveAliveMessage();
+
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 	ClassAd jobAd;
 
 	//
 	// As of this writing, this function should only ever be called from
-	// DoUpload().  It converts from a StringList of entries to a
+	// DoUpload().  It converts from a std::vector<std::string> of entries to a
 	// a FileTransferList, a std::vector of FileTransferItems.  The
 	// FileTransferList is a sequence of commands, and should not be
 	// reordered except by operator < (and probably not even then),
 	// because -- for example -- directories must be created before the
 	// file that live in them.
 	//
-	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths, const char* queue = nullptr );
+	bool ExpandFileTransferList( std::vector<std::string> *input_list, FileTransferList &expanded_list, bool preserveRelativePaths, const char* queue = nullptr );
 
 		// This function generates a list of files to transfer, including
 		// directories to create and their full contents.

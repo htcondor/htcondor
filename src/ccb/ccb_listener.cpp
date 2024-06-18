@@ -429,7 +429,7 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 	{
 		std::string msg_str;
 		sPrintAd(msg_str, msg);
-		EXCEPT("CCBListener: invalid CCB request from %s: %s\n",
+		EXCEPT("CCBListener: invalid CCB request from %s: %s",
 			   m_ccb_address.c_str(),
 			   msg_str.c_str() );
 	}
@@ -648,39 +648,37 @@ CCBListeners::RegisterWithCCBServer(bool blocking)
 void
 CCBListeners::Configure(char const *addresses)
 {
-	StringList addrlist(addresses," ,");
-
 	CCBListenerList new_ccbs;
 
-	char const *address;
-	addrlist.rewind();
-	while( (address=addrlist.next()) ) {
-		CCBListener *listener;
+	if (addresses) {
+		for (const auto& address: StringTokenIterator(addresses)) {
+			CCBListener *listener;
 
 			// preserve existing CCBListener if there is one connected
 			// to this address
-		listener = GetCCBListener( address );
+			listener = GetCCBListener(address.c_str());
 
-		if( !listener ) {
+			if( !listener ) {
 
-			Daemon daemon(DT_COLLECTOR,address);
-			char const *ccb_addr_str = daemon.addr();
-			char const *my_addr_str = daemonCore->publicNetworkIpAddr();
-			Sinful ccb_addr( ccb_addr_str );
-			Sinful my_addr( my_addr_str );
+				Daemon daemon(DT_COLLECTOR, address.c_str());
+				char const *ccb_addr_str = daemon.addr();
+				char const *my_addr_str = daemonCore->publicNetworkIpAddr();
+				Sinful ccb_addr( ccb_addr_str );
+				Sinful my_addr( my_addr_str );
 
-			if( my_addr.addressPointsToMe( ccb_addr ) ) {
-				dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address);
-				continue;
+				if( my_addr.addressPointsToMe( ccb_addr ) ) {
+					dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address.c_str());
+					continue;
+				}
+				dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s does not point to my address %s\n",
+						ccb_addr_str?ccb_addr_str:"null",
+						my_addr_str?my_addr_str:"null");
+
+				listener = new CCBListener(address.c_str());
 			}
-			dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s does not point to my address %s\n",
-					ccb_addr_str?ccb_addr_str:"null",
-					my_addr_str?my_addr_str:"null");
 
-			listener = new CCBListener(address);
+			new_ccbs.push_back( listener );
 		}
-
-		new_ccbs.push_back( listener );
 	}
 
 	m_ccb_listeners.clear();

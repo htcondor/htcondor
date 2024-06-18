@@ -17,14 +17,15 @@ multiple times in the future.
          A --> B
 
 
-A simple example is a workflow that requires output from job ``A`` to become
-input for job ``B``. This can be described as a DAGMan workflow as follows:
+A simple example is a workflow that requires output from node ``A`` to become
+input for node ``B``. This can be described as a DAGMan workflow as follows:
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description file
 
     # Example DAGMan Workflow
-    JOB A produce_data.sub
-    JOB B process_data.sub
+    NODE A produce_data.sub
+    NODE B process_data.sub
 
     PARENT A CHILD B
 

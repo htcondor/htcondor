@@ -121,7 +121,7 @@ executing job that may be useful.
    All job running under a HTCondor starter have the environment variable BATCH_SYSTEM 
    set to the string *HTCondor*.  Inspecting this variable allows a job to
    determine if it is running under HTCondor.
--  ``SINGULARITY_CACHEDIR`` ``SINGULARITY_CACHEDIR``
+-  ``SINGULARITY_CACHEDIR`` ``APPTAINER_CACHEDIR``
    :index:`SINGULARITY_CACHEDIR<pair: SINGULARITY_CACHEDIR; environment variables for jobs>`
    :index:`APPTAINER_CACHEDIR<pair: APPTAINER_CACHEDIR; environment variables for jobs>`
    These two variables are set to the location of the scratch directory to prevent apptainer
@@ -262,11 +262,11 @@ with
    container_image = http://example.com/dir/image.sif
 
 A container image that would otherwise be transferred can be forced
-to never be transferred by setting
+to never be transferred with :subcom:`transfer_container`.
 
 .. code-block:: condor-submit
 
-      should_transfer_container = no
+      transfer_container = false
 
 HTCondor knows that "docker://" and "oras://" (for apptainer) are special, and
 are never transferred by HTCondor plugins.
@@ -822,7 +822,7 @@ The parallel universe supersedes the mpi universe. The mpi universe
 eventually will be removed from HTCondor.
 
 How Parallel Jobs Run
-;''''''''''''''''''''
+'''''''''''''''''''''
 
 Parallel universe jobs are submitted from the machine running the
 dedicated scheduler. The dedicated scheduler matches and claims a fixed

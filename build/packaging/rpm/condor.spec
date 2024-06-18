@@ -538,6 +538,19 @@ It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
 #######################
+%package ap
+Summary: Configuration for an Access Point
+Group: Applications/System
+Requires: %name = %version-%release
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
+Requires: python3-condor = %version-%release
+%endif
+
+%description ap
+This example configuration is good for installing an Access Point.
+After installation, one could join a pool or start an annex.
+
+#######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
@@ -657,6 +670,9 @@ make -C docs man
 %if 0%{?suse_version}
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
 %endif
+%if 0%{?rhel} == 7 || 0%{?rhel} == 8
+       -DPython3_EXECUTABLE=%__python3 \
+%endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
@@ -769,6 +785,7 @@ mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 
 # not packaging configure/install scripts
 %if ! %uw_build
+rm -f %{buildroot}%{_bindir}/make-ap-from-tarball
 rm -f %{buildroot}%{_bindir}/make-personal-from-tarball
 rm -f %{buildroot}%{_sbindir}/condor_configure
 rm -f %{buildroot}%{_sbindir}/condor_install
@@ -982,6 +999,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/ad_sources/registry.py
 %_libexecdir/condor/adstash/ad_sources/schedd_history.py
 %_libexecdir/condor/adstash/ad_sources/startd_history.py
+%_libexecdir/condor/adstash/ad_sources/schedd_job_epoch_history.py
 %_libexecdir/condor/adstash/interfaces/__init__.py
 %_libexecdir/condor/adstash/interfaces/elasticsearch.py
 %_libexecdir/condor/adstash/interfaces/opensearch.py
@@ -1276,6 +1294,7 @@ rm -rf %{buildroot}
 %if %uw_build
 #################
 %files tarball
+%{_bindir}/make-ap-from-tarball
 %{_bindir}/make-personal-from-tarball
 %{_sbindir}/condor_configure
 %{_sbindir}/condor_install
@@ -1428,6 +1447,64 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 13 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.12-1
+- Remote condor_history queries now work the same as local queries
+- Improve error handling when submitting to a remote scheduler via ssh
+- Fix bug on Windows where condor_procd may crash when suspending a job
+- Fix Python binding crash when submitting a DAG which has empty lines
+
+* Thu May 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.7.2-1
+- Warns about deprecated multiple queue statements in a submit file
+- The semantics of 'skip_if_dataflow' have been improved
+- Removing large DAGs is now non-blocking, preserving schedd performance
+- Periodic policy expressions are now checked during input file transfer
+- Local universe jobs can now specify a container image
+- File transfer plugins can now advertise extra attributes
+- DAGMan can rescue and abort if pending jobs are missing from the job queue
+- Fix so 'condor_submit -interactive' works on cgroup v2 execution points
+
+* Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.10-1
+- Preliminary support for Ubuntu 22.04 (Noble Numbat)
+- Warns about deprecated multiple queue statements in a submit file
+- Fix bug where plugins could not signify to retry a file transfer
+- The condor_upgrade_check script checks for proper token file permissions
+- Fix bug where the condor_upgrade_check script crashes on older platforms
+- The bundled version of apptainer was moved to libexec in the tarball
+
+* Tue Apr 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.2-1
+- Fix bug where file transfer plugin error was not in hold reason code
+
+* Mon Apr 15 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.1-1
+- Add the ability to force vanilla universe jobs to run in a container
+- Add the ability to override the entrypoint for a Docker image
+- condor_q -better-analyze includes units for memory and disk quantities
+
+* Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+- Fix bug where ssh-agent processes were leaked with grid universe jobs
+- Fix DAGMan crash when a provisioner node was given a parent
+- Fix bug that prevented use of "ftp:" URLs in file transfer
+- Fix bug where jobs that matched an offline slot never start
+
+* Mon Mar 25 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.3-1
+- HTCondor tarballs now contain Pelican 7.6.2
+
+* Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.2-1
+- Old ClassAd based syntax is disabled by default for the job router
+- Can efficiently manage/enforce disk space using LVM partitions
+- GPU discovery is enabled on all Execution Points by default
+- Prevents accessing unallocated GPUs using cgroup v1 enforcement
+- New condor_submit commands for constraining GPU properties
+- Add ability to transfer EP's starter log back to the Access Point
+- Can use VOMS attributes when mapping identities of SSL connections
+- The CondorVersion string contains the source git SHA
+
+* Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.6-1
+- Fix DAGMan where descendants of removed retry-able jobs are marked futile
+- Ensure the condor_test_token works correctly when invoked as root
+- Fix bug where empty multi-line values could cause a crash
+- condor_qusers returns proper exit code for errors in formatting options
+- Fix crash in job router when a job transform is missing an argument
+
 * Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.4.0-1
 - condor_submit warns about unit-less request_disk and request_memory
 - Separate condor-credmon-local RPM package provides local SciTokens issuer

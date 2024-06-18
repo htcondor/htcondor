@@ -38,6 +38,7 @@
 #include "condor_holdcodes.h"
 #include "spooled_job_files.h"
 #include "classad_helpers.h"
+#include "condor_config.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -178,20 +179,22 @@ static Qmgr_connection *open_q_as_owner(char const *effective_owner,DCSchedd &sc
 	return qmgr;
 }
 
+#if 0
 static Qmgr_connection *open_job(ClassAd &job,DCSchedd &schedd,FailObj &failobj)
 {
 		// connect to the q as the owner of this job
 	std::string effective_owner;
-	job.LookupString(ATTR_OWNER,effective_owner);
+	job.LookupString(ATTR_USER,effective_owner);
 
 	return open_q_as_owner(effective_owner.c_str(),schedd,failobj);
 }
+#endif
 
 static Qmgr_connection *open_job(classad::ClassAd const &job,DCSchedd &schedd,FailObj &failobj)
 {
 		// connect to the q as the owner of this job
 	std::string effective_owner;
-	job.EvaluateAttrString(ATTR_OWNER,effective_owner);
+	job.EvaluateAttrString(ATTR_USER,effective_owner);
 
 	return open_q_as_owner(effective_owner.c_str(),schedd,failobj);
 }
@@ -425,12 +428,38 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		failobj.fail("Can't find address of schedd\n");
 		return false;
 	}
+
+#if 1
+	// TODO: fix this to use Job owner/user instead of OS user
+	// When USERREC_NAME_IS_FULLY_QUALIFIED in enabled in the schedd
+	// we must pass a fully qualified name to ConnectQ.
+	// But using the OSuser name here wrong and will only work as
+	// long as the schedd cannot separate OSuser from job Owner.
+	// The reason we can't just use the auth identity of the socket
+	// to place jobs is that in most cases it will be condor@family
+	const char * owner = get_user_loginname();
+	std::string user(owner);
+	#ifdef WIN32
+	const char * domain = get_user_domainname();
+	#else
+	// TODO: use schedd2's value of UID_DOMAIN instead.
+	auto_free_ptr uid_domain(param("UID_DOMAIN"));
+	const char * domain = uid_domain.ptr();
+	#endif
+	formatstr_cat(user, "@%s", domain);
+
+	Qmgr_connection * qmgr = open_q_as_owner(user.c_str(),schedd,failobj);
+	if( !qmgr ) {
+		return false;
+	}
+#else
 	// TODO Consider: condor_submit has to fret about storing a credential on Win32.
 
 	Qmgr_connection * qmgr = open_job(src,schedd,failobj);
 	if( !qmgr ) {
 		return false;
 	}
+#endif
 
 	// Starting in 8.5.8, schedd clients can't set X509-related attributes
 	// other than the name of the proxy file.
@@ -853,10 +882,10 @@ static bool remove_job_with_current_privs(int cluster, int proc, char const *rea
 
 	std::string id_str;
 	formatstr(id_str, "%d.%d", cluster, proc);
-	StringList job_ids(id_str.c_str());
+	std::vector<std::string> job_ids = {id_str};
 	ClassAd *result_ad;
 
-	result_ad = schedd.removeJobs(&job_ids, reason, &errstack, AR_LONG);
+	result_ad = schedd.removeJobs(job_ids, reason, &errstack, AR_LONG);
 
 	PROC_ID job_id;
 	job_id.cluster = cluster;
@@ -909,7 +938,9 @@ bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job
 			 "(%d.%d) Writing abort record to user logfile\n",
 			 cluster, proc );
 
-	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, event->reason);
+	std::string reasonstr;
+	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, reasonstr);
+	event->setReason(reasonstr);
 
 	return true;
 }
@@ -1007,7 +1038,9 @@ bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 			 "(%d.%d) Writing hold record to user logfile\n",
 			 cluster, proc );
 
-	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, event->reason);
+	std::string reasonstr;
+	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, reasonstr);
+	event->setReason(reasonstr);
 
 	return true;
 }

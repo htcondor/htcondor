@@ -10,7 +10,12 @@ import subprocess
 import textwrap
 import argparse
 from enum import Enum
+
 # Temporary needed imports (for a check)
+import stat
+import pwd
+import grp
+import platform
 # End imports
 
 try:
@@ -33,7 +38,8 @@ class Debug(Enum):
     WARNING = 0
     BASE = 1
     DETAILED = 2
-    MAX = 3
+    DEBUGGING = 3
+    MAX = 4
 
     def __gt__(self, other):
         if self.__class__ is other.__class__:
@@ -105,7 +111,32 @@ def make_version_str(version):
     return ".".join([f"{n}" for n in version])
 
 
+def iter_list(l: list):
+    """Recursively yield each item in a list of lists"""
+    for item in l:
+        if type(item) is list:
+            yield from iter_list(item)
+        else:
+            yield item
+
+
 # ===============================Incompatibility Check Functions===============================
+def warn_multi_q_deprecation(*args, **kwargs):
+    """Warn about multi-queue statement deprecation"""
+    format_print(
+        """
+        Warning:
+            The use of multiple queue statements in a single submit
+            description file is now deprecated. This functionality
+            will be removed during the lifetime of the V24 feature
+            series.
+        """,
+        offset=4,
+        newline=True,
+        debug=Debug.WARNING,
+    )
+
+
 def warn_dagman_env(*args, **kwargs):
     """Warn about DAGMan cleansing its environment"""
     format_print(
@@ -339,8 +370,173 @@ def check_pslot_default(*args, **kwargs):
     return True
 
 
+def uid2user(uid: int):
+    udata = pwd.getpwuid(uid)
+    return udata.pw_name if uid != 0 else "root"
+
+
+def validate_token_permissions(info: os.stat_result, uid: int, perms: dict):
+    """Function to verify token directory/file ownership and permissions"""
+
+    errors = []
+
+    if info.st_uid != uid:
+        errors.append(f"Owner is not '{uid2user(uid)}'")
+
+    keys = list(perms.keys())
+    keys.sort()
+    perms_str = "|".join(keys)
+
+    fs_perm = info.st_mode & (stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+
+    valid = False
+    for perm in perms.values():
+        if fs_perm == perm:
+            valid = True
+            break
+
+    if not valid:
+            errors.append(f"Invalid permissions ({oct(fs_perm)[2:]}): Requires ({perms_str})")
+
+    return errors if len(errors) > 0 else None
+
+
+def check_token_permissions(*args, **kwargs):
+    """Check the token directories and stored tokens for the apropriate ownership and access permissions"""
+
+    # Does not apply to Windows hosts
+    if IS_WINDOWS:
+        return True
+
+    p = subprocess.run(["hostname", "-f"], stdout=subprocess.PIPE)
+    hostname = p.stdout.rstrip().decode()
+    if len(hostname) == 0:
+        format_print("Error: Failed to get hostname", newline=True, err=True)
+        return False
+
+    format_print(f"Hostname: {hostname}", newline=True, debug=Debug.DEBUGGING)
+
+    try:
+        ads = htcondor.Collector().query(
+            htcondor.AdTypes.Master,
+            constraint=f'Machine=="{hostname}"',
+            projection=["RealUid"]
+        )
+        if len(ads) != 1:
+            format_print("Error: No Master Ad returned for this host", newline=True, err=True)
+            return False
+    except Exception as e:
+        format_print(f"Error: Failed to contact pool Collector: {repr(e)}", newline=True, err=True)
+        return False
+
+    master_ad = ads[0]
+
+    if "RealUid" not in master_ad:
+        format_print("Error: Master Ad missing 'RealUid'", newline=True, err=True)
+        return False
+
+    uid = master_ad["RealUid"]
+
+    if uid == 0 and os.getuid() != 0:
+        format_print("HTCondor is running as root on system so test requires root", newline=True)
+        return False
+
+    format_print("", newline=True, debug=Debug.DEBUGGING)
+
+    TOKEN_DIRS = [
+        htcondor.param["SEC_TOKEN_SYSTEM_DIRECTORY"],
+        htcondor.param.get("SEC_TOKEN_DIRECTORY", "~/.condor/tokens.d"),
+    ]
+
+    issues = {}
+    extra_msg = None
+
+    for directory in TOKEN_DIRS:
+        if len(directory) == 0:
+            continue
+
+        if directory[0] == "~":
+            extra_msg = """
+                        Warning:
+                            SEC_TOKEN_DIRECTORY is relative to a home directory '~'
+                            which is applied on a per user basis. This directory and
+                            stored tokens are expected to be owned and only readable
+                            by the user. This tool is not verifying this behavior.
+                        """
+            continue
+
+        valid_perms = {"700" : stat.S_IRWXU}
+
+        format_print(f"Validating: {directory}", offset=4, debug=Debug.DEBUGGING)
+        errors = validate_token_permissions(os.stat(directory), uid, valid_perms)
+
+        if errors is not None:
+            issues[directory] = errors
+
+        valid_perms.update({
+            "400" : stat.S_IRUSR,
+            "600" : stat.S_IRUSR | stat.S_IWUSR,
+        })
+
+        for f in os.listdir(directory):
+            token_file = os.path.join(directory, f)
+            format_print(f"Validating: {token_file}", offset=4, debug=Debug.DEBUGGING)
+            errors = validate_token_permissions(os.stat(token_file), uid, valid_perms)
+
+            if errors is not None:
+                issues[token_file] = errors
+
+    if len(issues) > 0:
+        user = uid2user(uid)
+
+        format_print(
+            f"""
+            Found {len(issues)} token related thing(s) with incorrect ownership
+            or file permissions. Expected:
+                - Token Directories-> {user}:700
+                - Token Files-------> {user}:400|600|700
+            """,
+            newline=True,
+            offset=4,
+        )
+
+        if extra_msg is not None:
+            format_print(extra_msg, offset=4)
+
+        if VERBOSITY < Debug.DETAILED:
+            format_print(
+                """
+                For a complete list of files and their issues, increase
+                the tool output verbosity with -v
+                """,
+                newline=True,
+                offset=4,
+            )
+
+        format_print("", newline=True, debug=Debug.DETAILED)
+
+        for item, errors in issues.items():
+            i_type = "DIR" if item in TOKEN_DIRS else "FILE"
+            format_print(f"{i_type:<4s}> {item}", offset=4, debug=Debug.DETAILED)
+            for err in errors:
+                format_print(f"* {err}", offset=10, debug=Debug.DETAILED)
+
+        return False
+
+    return True
+
+
 # =============================================================================================
 INCOMPATIBILITY_CHECKS = [
+    Check(
+        test=warn_multi_q_deprecation,
+        name="Multiple Queue Statment Deprecation",
+        tag="MULTI-Q",
+        synopsis="The use of multiple queue statements in one submit file is deprecated",
+        version=(23, 7, 1),
+        daemons=["SCHEDD"],
+        warning=True,
+    ),
     Check(
         test=warn_dagman_env,
         name="DAGMan Environment Cleanse",
@@ -389,6 +585,20 @@ INCOMPATIBILITY_CHECKS = [
         synopsis="Use of StartD RANK doesn't function with new Partitionable Slot default",
         version=(23, 0, 0),
         daemons=["STARTD"],
+    ),
+    Check(
+        test=check_token_permissions,
+        name="Token Permissions",
+        tag="TOK-PERM",
+        synopsis="Verify ownership and permissions of stored tokens",
+        desc="""
+             This check will verify that the SEC_TOKEN_SYSTEM_DIRECTORY
+             along with all stored tokens have the correct owner and
+             file system permissions.
+             $(<EMPTY_LINE>)
+             Note: Requires root if HTCondor is running as root
+             """,
+        version=(23, 7, 1),
     ),
 ]
 
@@ -525,8 +735,11 @@ class NegateAction(argparse.Action):
         setattr(args, self.dest, option_string.rstrip("-").startswith("no"))
 
 
-def parse_args():
+def parse_args(has_extend_action: bool):
     """Function to parse tool command line arguments"""
+
+    list_action = "extend" if has_extend_action else "append"
+
     parser = argparse.ArgumentParser(
         prog="condor_upgrade_check",
         description=textwrap.dedent(
@@ -571,7 +784,7 @@ def parse_args():
         "-i",
         "--ignore",
         nargs="+",
-        action="extend",
+        action=list_action,
         metavar="TAG",
         default=[],
         help="Skip the provided TAGs. This option takes precedence over the --only option.",
@@ -581,7 +794,7 @@ def parse_args():
         "-o",
         "--only",
         nargs="+",
-        action="extend",
+        action=list_action,
         metavar="TAG",
         default=[],
         help="Check only the provided TAGs. Use the tag WARNINGS to only check warnings",
@@ -633,7 +846,8 @@ def main():
         )
         sys.exit(0)
 
-    args = parse_args()
+    has_extend_action = sys.version_info[0] >= 3 and sys.version_info[1] >= 8
+    args = parse_args(has_extend_action)
 
     global VERBOSITY
     try:
@@ -641,8 +855,16 @@ def main():
     except ValueError:
         VERBOSITY = Debug.MAX
 
-    ignore_list = [tag.upper() for tag in args.ignore]
-    only_list = [tag.upper() for tag in args.only]
+    ignore_list = (
+        [tag.upper() for tag in args.ignore]
+        if has_extend_action
+        else [tag.upper() for tag in iter_list(args.ignore)]
+    )
+    only_list = (
+        [tag.upper() for tag in args.only]
+        if has_extend_action
+        else [tag.upper() for tag in iter_list(args.only)]
+    )
 
     if args.tags:
         list_tags()

@@ -40,7 +40,7 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-//#define USE_CLASSAD_FLAT_MAP
+#define USE_CLASSAD_FLAT_MAP
 #ifdef USE_CLASSAD_FLAT_MAP
 using AttrList = ClassAdFlatMap;
 #else
@@ -111,7 +111,7 @@ class ClassAd : public ExprTree
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax
-		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
+		bool InsertViaCache(const std::string& attrName, const std::string & rhs, bool lazy=false);
 
 		/** Insert an attribute/value into the ClassAd
 		 *  @param str A string of the form "Attribute = Value"
@@ -429,6 +429,19 @@ class ClassAd : public ExprTree
 		*/
 		bool EvaluateExpr( const ExprTree* expr, Value &result, Value::ValueType mask=Value::ValueType::SAFE_VALUES ) const;
 
+		/* Evaluates a loose expression in the context of a single ad (or nullptr) without mutating the expression
+		 *   Note that since this function cannot call setParentScope() on tree, the tree cannot contain a nested ad that
+		 *   with attribute references that are expected to resolve against attributes of the ad.
+		 *   i.e.  when expr is [foo = RequestCpus;].foo, foo will evaluate to 'undefined' rather than looking up RequestCpus in the ad.
+		 */
+		static bool EvaluateExpr(const ClassAd * ad, const ExprTree * tree, Value & val, Value::ValueType mask=Value::ValueType::SAFE_VALUES) {
+			EvalState state;
+			state.SetScopes(ad);
+			if ( ! tree->Evaluate(state, val)) return false;
+			if ( ! val.SafetyCheck(state, mask)) return false;
+			return true;
+		}
+
 		/** Evaluates an expression, and returns the significant subexpressions
 				encountered during the evaluation.  If the expression doesn't 
 				already live in this ClassAd, call the setParentScope() method 
@@ -542,44 +555,6 @@ class ClassAd : public ExprTree
 		bool EvaluateAttrBoolEquiv( const std::string &attr, bool& boolValue ) const;
 		bool LookupBool(const std::string &name, bool &value) const
 		{ return EvaluateAttrBoolEquiv(name, value); }
-
-		/** Evaluates an attribute to a ClassAd.  A pointer to the ClassAd is 
-				returned. You do not own the ClassAd--do not free it.
-			@param attr The name of the attribute.
-			@param classad The value of the attribute.
-			@return true if attrName evaluated to a ClassAd, false 
-				otherwise.
-		*/
-		// This interface is disabled, because it cannot support dynamically allocated
-		// classad values (in case such a thing is ever added, similar to SLIST_VALUE).
-		// Instead, use EvaluateAttr().
-		// Waiting to hear if anybody cares ...
-		// If anybody does, we can make this set a shared_ptr instead, but that
-		// has performance implications that depend on whether all ClassAds
-		// are managed via shared_ptr or only ones dynamically created
-		// during evaluation (because a fresh copy has to be made for
-		// objects not already managed via shared_ptr).  So let's avoid depending
-		// on this interface until we need it.
-        //bool EvaluateAttrClassAd( const std::string &attr, ClassAd *&classad ) const;
-
-		/** Evaluates an attribute to an ExprList.  A pointer to the ExprList is 
-				returned. You do not own the ExprList--do not free it.
-			@param attr The name of the attribute.
-			@param l The value of the attribute.
-			@return true if attrName evaluated to a ExprList, false 
-				otherwise.
-		*/
-		// This interface is disabled, because it cannot support dynamically allocated
-		// list values (SLIST_VALUE).  Instead, use EvaluateAttr().
-		// Waiting to hear if anybody cares ...
-		// If anybody does, we can make this set a shared_ptr instead, but that
-		// has performance implications that depend on whether all ExprLists
-		// in ClassAds are managed via shared_ptr or only ones dynamically created
-		// during evaluation  (because a fresh copy has to be made for
-		// objects not already managed via shared_ptr).  So let's avoid depending
-		// on this interface until we need it.
-        //bool EvaluateAttrList( const std::string &attr, ExprList *&l ) const;
-		//@}
 
 		/**@name STL-like Iterators */
 		//@{

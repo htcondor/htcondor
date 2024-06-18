@@ -34,10 +34,7 @@ def map_attrs(dir: str):
         with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                if "classad-attribute-def" in line:
-                    begin = line.find("`") + 1
-                    end = line.rfind("`")
-                    attr = line[begin:end]
+                for attr in get_all_defined_role("classad-attribute-def", line):
                     html_file = ad_file.replace(".rst", ".html")
                     if attr in attrs:
                         attrs[attr].append(html_file)
