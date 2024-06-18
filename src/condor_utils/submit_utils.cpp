@@ -29,7 +29,6 @@
 #include "domain_tools.h"
 #include "sig_install.h"
 #include "daemon.h"
-#include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "my_username.h" // for my_domainname

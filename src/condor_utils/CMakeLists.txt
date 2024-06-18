@@ -84,8 +84,6 @@ stat_wrapper.h
 stl_string_utils.cpp
 stl_string_utils.h
 strcasestr.cpp
-string_list.cpp
-string_list.h
 strupr.cpp
 subsystem_info.cpp
 subsystem_info.h
@@ -349,7 +347,6 @@ limit_directory_access.h
 linebuffer.cpp
 link.cpp
 link.h
-list.h
 LoadPlugins.cpp
 LoadPlugins.h
 log.cpp

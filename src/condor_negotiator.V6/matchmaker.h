@@ -25,7 +25,6 @@
 #include "condor_accountant.h"
 #include "condor_io.h"
 #include "HashTable.h"
-#include "string_list.h"
 #include "dc_collector.h"
 #include "condor_ver_info.h"
 #include "matchmaker_negotiate.h"

@@ -40,7 +40,6 @@
 #include "internet.h"
 #include "access.h"
 
-#include "string_list.h"
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"

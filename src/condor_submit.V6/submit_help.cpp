@@ -30,7 +30,6 @@
 #include <sys/stat.h>
 #endif
 #include "match_prefix.h"
-#include "string_list.h"
 #include "filename_tools.h"
 #include <submit_utils.h>
 #include <param_info.h> // for BinaryLookup

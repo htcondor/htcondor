@@ -45,7 +45,6 @@
 #include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
-#include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
 #include "condor_open.h"

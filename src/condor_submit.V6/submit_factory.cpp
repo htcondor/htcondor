@@ -46,7 +46,6 @@
 #include "daemon.h"
 #include "match_prefix.h"
 
-#include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "dc_schedd.h"
