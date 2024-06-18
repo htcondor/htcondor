@@ -346,7 +346,11 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 		// if this claim is associated with a security session
 	ClaimIdParser cid(claim_id);
-	msg->setSecSessionId(cid.secSessionId());
+	if (param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) &&
+		cid.secSessionInfo()[0] != '\0')
+	{
+		msg->setSecSessionId(cid.secSessionId());
+	}
 
 	msg->setTimeout(timeout);
 	msg->setDeadlineTimeout(deadline_timeout);

@@ -15,7 +15,30 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-23014`.
 
+- DAGMan now enforces that the :dag-cmd:`PROVISIONER` node only submits
+  one job.
+  :jira:`2492`
+
 New Features:
+
+- Added ability for DAGMan to produce job credentials when submitting jobs directly to
+  the *condor_schedd*. This behavior can be disabled via :macro:`DAGMAN_PRODUCE_JOB_CREDENTIALS`.
+  :jira:`1711`
+
+- Added new knob :macro:`CREATE_CGROUP_WITHOUT_ROOT` which allows a 
+  non-rootly condor to create cgroups for jobs.  Only works on 
+  cgroup v2 systems. Currently defaults to false, but might change 
+  in the future.
+  :jira:`2493`
+
+- Linux systems running cgroup v2 will now hide GPUs that have
+  not been provisioned to the slots (usually because they did not
+  :subcom:`request_gpus`).
+  :jira:`2470`
+
+- :tool:`condor_suspend` now currently reports number of suspended
+  processes in the event log, on Linux systems running with root.
+  :jira:`2490`
 
 - Improved the tools that write a token to a file.
   Most noticeable is the addition of a -file option to write the token
@@ -23,6 +46,27 @@ New Features:
   Also, the -token option only takes a bare filename.
   The given file is overwritten instead of appended to.
   :jira:`2425`
+
+- Reduced the default value for :macro:`MAX_SHADOW_EXCEPTIONS` from
+  5 to 2.  Results from many pools revealed that once a shadow excepted
+  running a job on a claim, retrying it usually also failed.
+  :jira:`2300`
+
+- Container universe jobs running under singularity or apptainer now
+  run with a contained home directory, when HTCondor file transfer is
+  enabled.  This means the jobs get the $HOME environment variable set
+  to the scratch directory, and an /etc/passwd entry inside the container
+  with the home directory entry pointed to the same place.
+  :jira:`2274`
+
+- Added more special DAGMan script macros to reference information pertaining
+  to the scripts associated DAG and node. See :ref:`DAG Script Macros` for more
+  details.
+  :jira:`2488`
+
+- Added new :dag-cmd:`NODE` command for the DAG description language as a synonym of
+  ``JOB``. The old ``JOB`` command will still be usable, but not recommended.
+  :jira:`2499`
 
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
@@ -33,9 +77,16 @@ New Features:
   :ref:`the man page <man-pages/htcondor:Credential Verbs>` for details.
   :jira:`2483`
 
+- Added new special value ``{:local_ips:}`` that can be used in
+  authorization ALLOW and DENY rules to represent all IP addresses
+  that are useable on the local machine.
+  :jira:`2466`
+
 Bugs Fixed:
 
-- None.
+- Fixed a bug on EL9 where user-level checkpointing jobs would
+  get killed on restart.
+  :jira:`2491`
 
 Version 23.8.1
 --------------
@@ -55,7 +106,7 @@ New Features:
   Note that unit suffixes are still allowed in the submit language in 
   :subcom:`request_disk` and :subcom:`request_memory`, but not in arbitrary 
   classad expressions.
-  :jira:2455`
+  :jira:`2455`
 
 - Added an ``-edit`` option to the :tool:`condor_qusers`.  This option allows
   and administrator to add custom attributes to a User classad in the *condor_schedd*.

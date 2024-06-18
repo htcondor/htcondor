@@ -54,7 +54,11 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
 	// It is safest to read this attribute now, before the ad is
 	// potentially modified.  If it is missing, then SetEffectiveOwner
 	// will just be a no-op.
-	job_ad->LookupString(ATTR_OWNER, m_owner);
+	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+		job_ad->LookupString(ATTR_USER, m_owner);
+	} else {
+		job_ad->LookupString(ATTR_OWNER, m_owner);
+	}
 
 	initJobQueueAttrLists();
 

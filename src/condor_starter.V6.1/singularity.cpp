@@ -356,8 +356,15 @@ Singularity::setup(ClassAd &machineAd,
 		}
 	}
 
-	if (!param_boolean("SINGULARITY_MOUNT_HOME", false, false, &machineAd, &jobAd)) {
-		sing_args.AppendArg("--no-home");
+	// If file xfer is on...
+	// pass --home <scratch_dir>
+	// 1) bind_mounts /home/<user_name> onto <scratch_dir>
+	// 2) sets $HOME to /home/<user_name>
+	// 3) puts <scratch_dir> as the home dir entry in the /etc/passwd entry
+
+	if (job_iwd == execute_dir) {
+		sing_args.AppendArg("--home");
+		sing_args.AppendArg(execute_dir);
 	}
 
 	// Setup Singularity containerization options.

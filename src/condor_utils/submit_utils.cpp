@@ -29,7 +29,6 @@
 #include "domain_tools.h"
 #include "sig_install.h"
 #include "daemon.h"
-#include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "my_username.h" // for my_domainname
@@ -8044,7 +8043,7 @@ static char * queue_token_scan(char * ptr, const struct _qtoken tokens[], int ct
 int SubmitForeachArgs::item_len() const
 {
 	if (foreach_mode == foreach_not) return 1;
-	return slice.length_for(items.number());
+	return slice.length_for(items.size());
 }
 
 enum {
@@ -8179,25 +8178,29 @@ int SubmitForeachArgs::parse_queue_args (
 			while (isspace(*plist)) ++plist;
 			if (*plist) {
 				if (foreach_mode == foreach_from) {
-					items.clearAll();
-					items.append(plist);
+					items.clear();
+					items.emplace_back(plist);
 				} else {
-					items.initializeFromString(plist);
+					for (const auto& item: StringTokenIterator(plist)) {
+						items.emplace_back(item);
+					}
 				}
 			}
 			items_filename = "<";
 		} else if (foreach_mode == foreach_from) {
 			while (isspace(*plist)) ++plist;
 			if (one_line_list) {
-				items.clearAll();
-				items.append(plist);
+				items.clear();
+				items.emplace_back(plist);
 			} else {
 				items_filename = plist;
 				trim(items_filename);
 			}
 		} else {
 			while (isspace(*plist)) ++plist;
-			items.initializeFromString(plist);
+			for (const auto& item: StringTokenIterator(plist)) {
+				items.emplace_back(item);
+			}
 		}
 
 		// trim trailing whitespace before the in,from, or matching keyword.
@@ -8403,9 +8406,11 @@ int SubmitHash::load_inline_q_foreach_items (
 				if (line[0] == '#') continue; // skip comments.
 				if (line[0] == ')') { saw_close_brace = true; break; }
 				if (o.foreach_mode == foreach_from) {
-					o.items.append(line);
+					o.items.emplace_back(line);
 				} else {
-					o.items.initializeFromString(line);
+					for (const auto& item: StringTokenIterator(line)) {
+						o.items.emplace_back(item);
+					}
 				}
 			}
 			if ( ! saw_close_brace) {
@@ -8494,9 +8499,11 @@ int SubmitHash::load_external_q_foreach_items (
 				line = getline_trim(stdin, lineno);
 				if ( ! line) break;
 				if (o.foreach_mode == foreach_from) {
-					o.items.append(line);
+					o.items.emplace_back(line);
 				} else {
-					o.items.initializeFromString(line);
+					for (const auto& item: StringTokenIterator(line)) {
+						o.items.emplace_back(item);
+					}
 				}
 			}
 		} else {
@@ -8508,7 +8515,7 @@ int SubmitHash::load_external_q_foreach_items (
 			for (char* line=NULL;;) {
 				line = getline_trim(fp, ItemsSource.line);
 				if ( ! line) break;
-				o.items.append(line);
+				o.items.emplace_back(line);
 			}
 			Close_macro_source(fp, ItemsSource, SubmitMacroSet, 0);
 		}

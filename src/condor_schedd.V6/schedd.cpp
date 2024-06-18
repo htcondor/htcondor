@@ -159,15 +159,67 @@ bool job_owner_must_be_UidDomain = false; // don't allow jobs to be placed by a 
 bool allow_submit_from_known_users_only = false; // if false, create UseRec for new users when they submit
 
 #ifdef USE_JOB_QUEUE_USERREC
-JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, "condor", "", true);
+JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, USERREC_NAME_IS_FULLY_QUALIFIED ? "condor@family" : "condor", "", true);
 JobQueueUserRec * get_condor_userrec() { return &CondorUserRec; }
 JobQueueUserRec * PersonalUserRec = nullptr;
 
 // examine the socket, and if the real owner of the socket is determined to be "condor"
 // return the CondorUserRec
 // If the real owner is the process owner, return a PersonalUserRec pointer
-// TODO: fix for USERREC_NAME_IS_FULLY_QUALIFIED
 JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
+	if (sock && USERREC_NAME_IS_FULLY_QUALIFIED) {
+		static bool personal_condor = ! is_root();
+		const char* real_user = sock->getFullyQualifiedUser();
+		const char* owner_part = sock->getOwner();
+		#ifdef WIN32
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
+		#endif
+		if (YourString(CondorUserRec.Name()) == real_user || YourString("condor@child") == real_user ||
+		#ifdef WIN32
+			YourStringNoCase("LOCAL_SYSTEM") == owner_part || YourStringNoCase("SYSTEM") == owner_part
+		#else
+			YourString("root") == owner_part ||
+			( ! personal_condor && is_same_user(get_condor_username(),real_user,COMPARE_DOMAIN_FULL,scheduler.uidDomain()) )
+		#endif
+			) {
+			return get_condor_userrec();
+		}
+		if ( ! PersonalUserRec && personal_condor) {
+			const char * domain = nullptr;
+			std::string fullname;
+		#ifdef WIN32
+			// convert domain/user into user@domain so we can compare it to the socket fquser
+			auto_free_ptr fqn(strdup(get_condor_username())); // this will be domain/user on windows
+			const char * name = fqn.ptr();
+			char * slash = strchr(fqn.ptr(), '/');
+			if (slash) {
+				*slash++ = 0; domain = name;
+				formatstr(fullname, "%s@%s", slash, domain);
+				name = fullname.c_str();
+			}
+		#else
+			const char * name = get_condor_username();
+			if ( ! strchr(name, '@')) {
+				formatstr(fullname, "%s@%s", name, scheduler.uidDomain());
+				name = fullname.c_str();
+			}
+		#endif
+			PersonalUserRec = new JobQueueUserRec(CONDOR_USERREC_ID, name, domain, true);
+		}
+		if (PersonalUserRec &&
+		#ifdef WIN32
+			YourString("NTSSPI") == sock->getAuthenticationMethodUsed() &&
+			(YourStringNoCase(PersonalUserRec->Name()) == real_user ||
+			 is_same_user(PersonalUserRec->Name(),real_user,opt,scheduler.uidDomain())
+			)
+		#else
+			YourString("FS") == sock->getAuthenticationMethodUsed() &&
+			YourString(PersonalUserRec->Name()) == real_user
+		#endif
+			) {
+			return PersonalUserRec;
+		}
+	} else
 	if (sock) {
 		// TODO: check for family session??
 		// TODO: will Windows ever see "root" intended to be a super-user?
@@ -211,7 +263,13 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 }
 inline const OwnerInfo * EffectiveUserRec(const Sock * sock) {
 	if ( ! sock) return &CondorUserRec;	 // commands from inside the schedd
-	const OwnerInfo * owni = scheduler.lookup_owner_const(sock->getOwner());
+	const char * owner = nullptr;
+	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+		owner = sock->getFullyQualifiedUser();
+	} else {
+		owner = sock->getOwner();
+	}
+	const OwnerInfo * owni = scheduler.lookup_owner_const(owner);
 	if (owni) return owni;
 	return real_owner_is_condor(sock);
 }
@@ -260,7 +318,7 @@ void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 void mark_serial_job_running( PROC_ID *job_id );
-int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
+//int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool jobPrepNeedsThread( int cluster, int proc );
@@ -442,21 +500,25 @@ void AuditLogJobProxy( const Sock &sock, ClassAd *job_ad )
 
 size_t UserIdentity::HashFcn(const UserIdentity & index)
 {
-	return hashFunction(index.m_username) + hashFunction(index.m_domain) + hashFunction(index.m_auxid);
+	return hashFunction(index.m_username) + hashFunction(index.m_auxid);
 }
 
 //PRAGMA_REMIND("Owner/user change to take fully qualified user as a single string, remove separate domain string")
-UserIdentity::UserIdentity(const char *user, const char *domainname, 
-						   ClassAd *ad):
-	m_username(user), 
-	m_domain(domainname),
+UserIdentity::UserIdentity(JobQueueJob& job_ad):
+	m_username(job_ad.ownerinfo->Name()),
 	m_auxid("")
 {
+	std::string tmp;
+	m_osname = name_of_user(m_username.c_str(), tmp);
+	if (job_ad.ownerinfo->NTDomain()) {
+		m_osname += '@';
+		m_osname += job_ad.ownerinfo->NTDomain();
+	}
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	classad::Value val;
 	const char *str = NULL;
-	if ( ad && tree && 
-		 EvalExprToString(tree,ad,NULL,val) && val.IsStringValue(str) )
+	if ( tree &&
+		 EvalExprToString(tree,&job_ad,NULL,val) && val.IsStringValue(str) )
 	{
 		m_auxid = str;
 	}
@@ -512,7 +574,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 	// create the session, that may because it already exists, and this
 	// is a duplicate match record that will soon be thrown out.)
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( claim_id.secSessionId()[0] == '\0' ) {
+		if( claim_id.secSessionInfo()[0] == '\0' ) {
 			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",claim_id.publicClaimId());
 		}
 		else {
@@ -1981,7 +2043,7 @@ Scheduler::count_jobs()
 		if(gridcounts.GridJobs > 0) {
 			GridUniverseLogic::JobCountUpdate(
 					userident.username().c_str(),
-					userident.domain().c_str(),
+					userident.osname().c_str(),
 					userident.auxid().c_str(),m_unparsed_gridman_selection_expr, 0, 0, 
 					gridcounts.GridJobs,
 					gridcounts.UnmanagedGridJobs);
@@ -3619,7 +3681,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		// Don't count HELD jobs that aren't externally (gridmanager) managed
 		// Don't count jobs that the gridmanager has said it's completely
 		// done with.
-		UserIdentity userident(real_owner.c_str(),domain.c_str(),job);
+		UserIdentity userident(*job);
 		if ( ( status != HELD || job_managed != false ) &&
 			 job_managed_done == false ) 
 		{
@@ -3802,16 +3864,14 @@ Scheduler::find_ownerinfo(const char * owner)
 #ifdef USE_JOB_QUEUE_USERREC
 	// we want to allow a lookup to prefix match on the domain, so we
 	// use lower_bound instead of find.  lower_bound will return the matching item
-	// for an exact match, and and earlier item previous item when owner is a prefix match
-	// so we end up comparing only a few items, usually one or two for a prefix match
+	// for an exact match, and also when owner is a domain prefix of the OwnersInfo key
+	// this includes the case when owner is name@.  because . is less than all alphanumerics
 	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		auto lb = OwnersInfo.lower_bound(owner);
-		auto ub = OwnersInfo.upper_bound(owner);
-		while (lb != ub) {
+		auto lb = OwnersInfo.lower_bound(owner); // first element >= the owner
+		if (lb != OwnersInfo.end()) {
 			if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
 				return lb->second;
 			}
-			++lb;
 		}
 	} else {
 		std::string obuf;
@@ -3936,9 +3996,37 @@ Scheduler::insert_ownerinfo(const char * owner)
 {
 	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
+
 	dprintf(D_ALWAYS, "Owner %s has no JobQueueUserRec\n", owner);
 
-	int userrec_id = nextUnusedUserRecId();
+	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+		if (YourString("condor") == owner ||
+			YourString("condor@family") == owner ||
+			YourString("condor@child") == owner ||
+			YourString("condor@parent") == owner) {
+
+			dprintf(D_ERROR | D_BACKTRACE, "Error: insert_ownerinfo(%s) is not allowed\n", owner);
+			return &CondorUserRec;
+		}
+
+	#if 0
+		// before we insert a new ownerinfo, check to see if we already have a pending record
+		#ifdef WIN32
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
+		#else
+		CompareUsersOpt opt = COMPARE_DOMAIN_DEFAULT;
+		#endif
+
+		for (auto & [id, rec] : pendingOwners) {
+			if (is_same_user(rec->Name(), owner, opt, scheduler.uidDomain())) {
+				return rec;
+			}
+		}
+	#endif
+	}
+
+	dprintf(D_ALWAYS | D_BACKTRACE, "Creating pending JobQueueUserRec for owner %s\n", owner);
+
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
 	// if it does not have a fully qualified username, then we may want to expand it to a fqdn
 	// alternatively, it may be a fqdn that we only want to use the owner part of
@@ -3972,6 +4060,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 		}
 	}
 
+	int userrec_id = nextUnusedUserRecId();
 	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id, owner, ntdomain);
 	pendingOwners[userrec_id] = uad;
 	uad->setPending();
@@ -4231,13 +4320,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			}
 		}
 		if ( job_managed  ) {
-			std::string owner;
-			std::string domain;
-			job_ad->LookupString(ATTR_OWNER,owner);
-			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			UserIdentity userident(owner.c_str(),domain.c_str(),job_ad);
+			UserIdentity userident(*job_ad);
 			GridUniverseLogic::JobRemoved(userident.username().c_str(),
-					userident.domain().c_str(),
+					userident.osname().c_str(),
 					userident.auxid().c_str(),
 					scheduler.getGridUnparsedSelectionExpr(),
 					0,0);
@@ -13094,10 +13179,14 @@ Scheduler::Init()
 		// secret knob.  set to FALSE to cause persistent user records to be deleted on startup
 		EnablePersistentOwnerInfo = param_boolean("PERSISTENT_USER_RECORDS", true);
 
+		// UID_DOMAIN is a restart knob for the SCHEDD
+		UidDomain = param( "UID_DOMAIN" );
+
 		// setup the global attribute name we will use as the canonical 'owner' of a job
 		// historically this was "Owner", but in 8.9 we switch to "User" so that we use
 		// the fully qualified name and can handle jobs from other domains in the schedd
-		user_is_the_new_owner = param_boolean("USER_IS_THE_NEW_OWNER", false);
+		// NOTE: that when user_is_the_new_owner is true, the code conflicts badly with USERREC_NAME_IS_FULLY_QUALIFIED
+		user_is_the_new_owner = false; // param_boolean("USER_IS_THE_NEW_OWNER", false);
 		if (user_is_the_new_owner) {
 			ownerinfo_attr_name = ATTR_USER;
 		} else {
@@ -13126,28 +13215,10 @@ Scheduler::Init()
 	job_owner_must_be_UidDomain = param_boolean("JOB_OWNER_MUST_BE_FROM_UID_DOMAIN", false);
 	allow_submit_from_known_users_only = param_boolean("ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY", false);
 
-		// UidDomain will always be defined, since config() will put
-		// in get_local_fqdn() if it's not defined in the file.
-		// See if the value of this changes, since if so, we've got
-		// work to do...
-	char* oldUidDomain = UidDomain;
-	UidDomain = param( "UID_DOMAIN" );
-	if( oldUidDomain ) {
-			// We had an old version, so see if we have a new value
-		if( strcmp(UidDomain,oldUidDomain) ) {
-				// They're different!  So, now we've got to go through
-				// the whole job queue and replace ATTR_USER for all
-				// the ads with a new value that's got the new
-				// UidDomain in it.  Luckily, we shouldn't have to do
-				// this very often. :)
-			dprintf( D_FULLDEBUG, "UID_DOMAIN has changed.  "
-					 "Inserting new ATTR_USER into all classads.\n" );
-			WalkJobQueue2(fixAttrUser, oldUidDomain);
-			dirtyJobQueue();
-		}
-			// we're done with the old version, so don't leak memory 
-		free( oldUidDomain );
-	}
+	// Secret knob to set the geneneric CE domain value
+	// when QmgmtSetEffectiveOwner is passed a value with this domain, the value is re-written to UID_DOMAIN
+	param(GenericCEDomain, "GENERIC_CE_DOMAIN", "users.htcondor.org");
+
 	param(AccountingDomain, "ACCOUNTING_DOMAIN");
 
 		////////////////////////////////////////////////////////////////////
@@ -13589,7 +13660,7 @@ Scheduler::Init()
 		delete origCronTabs;
 	}
 
-	MaxExceptions = param_integer("MAX_SHADOW_EXCEPTIONS", 5);
+	MaxExceptions = param_integer("MAX_SHADOW_EXCEPTIONS", 2);
 
 	PeriodicExprInterval.setMinInterval( param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 
@@ -15639,60 +15710,25 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	return FALSE;
 }
 
+#if 0 // TODO: this function is untested, but probably works...
 int
 fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *oldUidDomain_raw)
 {
-	const char *oldUidDomain = static_cast<char *>(oldUidDomain_raw);
-#ifdef NO_DEPRECATED_NICE_USER
-	int nice_user = 0;
-#endif
-	std::string owner;
+	YourString oldUidDomain(static_cast<char *>(oldUidDomain_raw));
 	std::string user;
-	std::string old_user;
-	std::string old_expected_user;
 
-	if( ! job->LookupString(ATTR_OWNER, owner) ) {
-			// No ATTR_OWNER!
-		return 0;
-	}
-
-#ifdef NO_DEPRECATED_NICE_USER
-		// if it's not there, nice_user will remain 0
-	job->LookupInteger( ATTR_NICE_USER, nice_user );
-
-	formatstr( user, "%s%s@%s",
-			 (nice_user) ? "nice-user." : "", owner.c_str(),
-			 scheduler.uidDomain() );
-#else
-	user = owner + "@" + scheduler.uidDomain();
-#endif
-
-	if (user_is_the_new_owner) {
-
-		// Ignore retval; LookupString will leave things empty
-		// and we handle the case below.
-		if (job->LookupString(ATTR_USER, old_user) && !old_user.empty()) {
-
-	#ifdef NO_DEPRECATED_NICE_USER
-			formatstr(old_expected_user, "%s%s@%s",
-				(nice_user) ? "nice-user." : "", owner.c_str(),
-				oldUidDomain);
-	#else
-			old_expected_user = owner + "@" + oldUidDomain;
-	#endif
-
-			// If this job's owner was not previously in our default UID_DOMAIN,
-			// we don't want to update it for the new domain
-			if (old_user != old_expected_user) {
-				return 0;
-			}
+	if (job->LookupString(ATTR_USER, user) && domain_of_user(user.c_str(),"#") == oldUidDomain) {
+		size_t at_sign = user.find_last_of('@');
+		if (at_sign != std::string::npos) {
+			user.erase(at_sign+1);
+			user += scheduler.uidDomain();
+			job->Assign(ATTR_USER, user);
 		}
 	}
 
-	job->Assign( ATTR_USER, user );
 	return 0;
 }
-
+#endif
 
 void
 fixReasonAttrs( PROC_ID job_id, JobAction action )
@@ -17258,17 +17294,13 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 int
 Scheduler::FindGManagerPid(PROC_ID job_id)
 {
-	std::string owner;
-	std::string domain;
-	ClassAd *job_ad = GetJobAd(job_id.cluster,job_id.proc);
+	JobQueueJob *job_ad = GetJobAd(job_id.cluster,job_id.proc);
 
 	if ( ! job_ad ) {
 		return -1;
 	}
 
-	job_ad->LookupString(ATTR_OWNER,owner);
-	job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-	UserIdentity userident(owner.c_str(),domain.c_str(),job_ad);
+	UserIdentity userident(*job_ad);
 	return GridUniverseLogic::FindGManagerPid(userident.username().c_str(),
                                         userident.auxid().c_str(), 0, 0);
 }

@@ -2106,6 +2106,16 @@ User joesmith within the cs.wisc.edu domain is given write authorization
 when originating from machines that match their leftmost 17 bits of the
 IP address. :index:`of Unix netgroups<single: of Unix netgroups; authorization>`
 
+The special value ``{:local_ips:}`` can be used to represent all IP
+addresses that are useable on the local machine. To allow any client
+that is connecting from the local machine, you would use the
+following:
+
+.. code-block:: condor-config
+
+    ALLOW_WRITE = */{:local_ips:}
+
+
 For Unix platforms where netgroups are implemented, a netgroup may
 specify a set of fully qualified users by using an extension to the
 syntax for all configuration variables of the form ``ALLOW_*`` and

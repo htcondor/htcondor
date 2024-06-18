@@ -84,7 +84,7 @@ Metric::serialize() const {
 		+ std::to_string(type) + METRIC_SERIALIZATION_DELIM
 		+ std::to_string(aggregate) + METRIC_SERIALIZATION_DELIM
 		+ aggregate_group + METRIC_SERIALIZATION_DELIM
-		+ target_type.to_string() + METRIC_SERIALIZATION_DELIM
+		+ join(target_type, ",") + METRIC_SERIALIZATION_DELIM
 		+ (restrict_slot1 ? "1" : "0") + METRIC_SERIALIZATION_DELIM;
 	
 	return result;
@@ -144,7 +144,7 @@ Metric::deserialize(YourStringDeserializer &in)
 
 	type = static_cast<MetricTypeEnum>(type_int);
 	aggregate = static_cast<AggregateFunc>(aggregate_int);
-	target_type.initializeFromString(target_type_buf.c_str());
+	target_type = split(target_type_buf);
 
 	return true;
 }
@@ -265,14 +265,14 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 
 	std::string target_type_str;
 	if( !evaluateOptionalString(ATTR_TARGET_TYPE,target_type_str,metric_ad,daemon_ad,regex_groups) ) return false;
-	target_type.initializeFromString(target_type_str.c_str());
-	if( target_type.contains_anycase("machine_slot1") ) {
+	target_type = split(target_type_str);
+	if( contains_anycase(target_type, "machine_slot1") ) {
 		restrict_slot1 = true;
 	}
 
 	std::string my_type;
 	daemon_ad.EvaluateAttrString(ATTR_MY_TYPE,my_type);
-	if( !target_type.isEmpty() && !target_type.contains_anycase("any") ) {
+	if( !target_type.empty() && !contains_anycase(target_type, "any") ) {
 		if( restrict_slot1 && !strcasecmp(my_type.c_str(),"machine") ) {
 			int slotid = 1;
 			daemon_ad.EvaluateAttrInt(ATTR_SLOT_ID,slotid);
@@ -285,7 +285,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				return false;
 			}
 		}
-		else if( !target_type.contains_anycase(my_type.c_str()) ) {
+		else if( !contains_anycase(target_type, my_type.c_str()) ) {
 			// avoid doing more work; this is not the right type of daemon ad
 			return false;
 		}
@@ -669,7 +669,7 @@ StatsD::initAndReconfig(char const *service_name)
 		}
 	}
 	else {
-		m_stats_heartbeat_interval = MIN(m_stats_pub_interval,m_stats_heartbeat_interval);
+		m_stats_heartbeat_interval = std::min(m_stats_pub_interval,m_stats_heartbeat_interval);
 		m_stats_pub_timer = daemonCore->Register_Timer(
 			m_stats_heartbeat_interval,
 			m_stats_heartbeat_interval,
@@ -889,8 +889,21 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 				   param_name,
 				   ad_str.c_str());
 		}
-		StringList target_types(target_type.c_str());
-		m_target_types.create_union(target_types,true);
+
+		struct caselt {
+			bool operator()(const std::string &l, const std::string &r) {return strcasecmp(l.c_str(), r.c_str()) < 0;};
+		};
+		struct caseeq {
+			bool operator()(const std::string &l, const std::string &r) {return strcasecmp(l.c_str(), r.c_str()) == 0;};
+		};
+
+		// m_target_types = cat m_target_types target_type | sort | uniq
+		StringTokenIterator new_targets(target_type);
+		m_target_types.insert(m_target_types.end(), new_targets.begin(), new_targets.end());
+
+		std::ranges::sort(m_target_types, caselt{});
+		const auto duplicates_range = std::ranges::unique(m_target_types, caseeq{});
+		m_target_types.erase(duplicates_range.begin(), duplicates_range.end());
 
 		// Add this metric ad to our list of metrics
 		stats_metrics.push_back(ad);
@@ -963,20 +976,19 @@ StatsD::publishMetrics( int /* timerID */ )
 	}
 
 	// Set query constraint to only fetch ad types needed
-	if( !m_target_types.contains_anycase("any") ) {
+	if (contains_anycase(m_target_types,"any")) {
 		if( !m_requirements.empty() ) {
 			query.addANDConstraint(m_requirements.c_str());
 		}
 	}
 	else {
-		char const *target_type;
-		while( (target_type=m_target_types.next()) ) {
+		for (const auto &target_type: m_target_types) {
 			std::string constraint;
-			if( !strcasecmp(target_type,"machine_slot1") ) {
+			if( !strcasecmp(target_type.c_str(),"machine_slot1") ) {
 				formatstr(constraint,"MyType == \"Machine\" && SlotID==1 && DynamicSlot =!= True");
 			}
 			else {
-				formatstr(constraint,"MyType == \"%s\"",target_type);
+				formatstr(constraint,"MyType == \"%s\"",target_type.c_str());
 			}
 			if( !m_requirements.empty() ) {
 				constraint += " && (";

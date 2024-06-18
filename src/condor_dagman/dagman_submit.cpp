@@ -112,56 +112,57 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 		batchId = dm.options[deep::str::BatchId];
 	}
 
-	vars.push_back(NodeVar("JOB", nodeName, false));
-	vars.push_back(NodeVar("RETRY", std::to_string(retry), false));
+	vars.emplace_back("NODE_NAME", nodeName, false);
+	vars.emplace_back("JOB", nodeName, false);
+	vars.emplace_back("RETRY", std::to_string(retry), false);
 
-	vars.push_back(NodeVar("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus), false));
-	vars.push_back(NodeVar("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()), false));
+	vars.emplace_back("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus), false);
+	vars.emplace_back("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()), false);
 
-	vars.push_back(NodeVar("DAG_PARENT_NAMES", parents, false));
-	vars.push_back(NodeVar("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false));
+	vars.emplace_back("DAG_PARENT_NAMES", parents, false);
+	vars.emplace_back("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false);
 
 	if ( ! batchName.empty()) {
-		vars.push_back(NodeVar(SUBMIT_KEY_BatchName, batchName, false));
+		vars.emplace_back(SUBMIT_KEY_BatchName, batchName, false);
 	}
 	if ( ! batchId.empty()) {
-		vars.push_back(NodeVar(SUBMIT_KEY_BatchId, batchId, false));
+		vars.emplace_back(SUBMIT_KEY_BatchId, batchId, false);
 	}
 
 	if (dm.jobInsertRetry && retry > 0) {
-		vars.push_back(NodeVar("MY.DAGManNodeRetry", std::to_string(retry), false));
+		vars.emplace_back("MY.DAGManNodeRetry", std::to_string(retry), false);
 	}
 
 	if (node._effectivePriority != 0) {
-		vars.push_back(NodeVar(SUBMIT_KEY_Priority, std::to_string(node._effectivePriority), false));
+		vars.emplace_back(SUBMIT_KEY_Priority, std::to_string(node._effectivePriority), false);
 	}
 
 	if (node.GetHold()) {
-		debug_printf(DEBUG_VERBOSE, "Submitting node %s job on hold\n", nodeName);
-		vars.push_back(NodeVar(SUBMIT_KEY_Hold, "true", false));
+		debug_printf(DEBUG_VERBOSE, "Submitting node %s job(s) on hold\n", nodeName);
+		vars.emplace_back(SUBMIT_KEY_Hold, "true", false);
 	}
 
 	if ( ! node.NoChildren() && dm._claim_hold_time > 0) {
-		vars.push_back(NodeVar(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm._claim_hold_time), false));
+		vars.emplace_back(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm._claim_hold_time), false);
 	}
 
 	if ( ! dm.options[deep::str::AcctGroup].empty()) {
-		vars.push_back(NodeVar(SUBMIT_KEY_AcctGroup, dm.options[deep::str::AcctGroup], false));
+		vars.emplace_back(SUBMIT_KEY_AcctGroup, dm.options[deep::str::AcctGroup], false);
 	}
 
 	if ( ! dm.options[deep::str::AcctGroupUser].empty()) {
-		vars.push_back(NodeVar(SUBMIT_KEY_AcctGroupUser, dm.options[deep::str::AcctGroupUser], false));
+		vars.emplace_back(SUBMIT_KEY_AcctGroupUser, dm.options[deep::str::AcctGroupUser], false);
 	}
 
 	if ( ! dm._requestedMachineAttrs.empty()) {
-		vars.push_back(NodeVar(SUBMIT_KEY_JobAdInformationAttrs, dm._ulogMachineAttrs, false));
-		vars.push_back(NodeVar(SUBMIT_KEY_JobMachineAttrs, dm._requestedMachineAttrs, false));
+		vars.emplace_back(SUBMIT_KEY_JobAdInformationAttrs, dm._ulogMachineAttrs, false);
+		vars.emplace_back(SUBMIT_KEY_JobMachineAttrs, dm._requestedMachineAttrs, false);
 	}
 
-	vars.push_back(NodeVar(ATTR_DAG_NODE_NAME_ALT, nodeName, true));
-	vars.push_back(NodeVar(SUBMIT_KEY_LogNotesCommand, std::string("DAG Node: ") + nodeName, true));
-	vars.push_back(NodeVar(SUBMIT_KEY_DagmanLogFile, dm._defaultNodeLog, true));
-	vars.push_back(NodeVar("My." ATTR_DAGMAN_WORKFLOW_MASK, std::string("\"") + getEventMask() + "\"", true));
+	vars.emplace_back(ATTR_DAG_NODE_NAME_ALT, nodeName, true);
+	vars.emplace_back(SUBMIT_KEY_LogNotesCommand, std::string("DAG Node: ") + nodeName, true);
+	vars.emplace_back(SUBMIT_KEY_DagmanLogFile, dm._defaultNodeLog, true);
+	vars.emplace_back("My." ATTR_DAGMAN_WORKFLOW_MASK, std::string("\"") + getEventMask() + "\"", true);
 
 	// NOTE: we specify the job ID of DAGMan using only its cluster ID
 	// so that it may be referenced by jobs in their priority
@@ -170,20 +171,20 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 	// submit many DAGs to the same schedd, all the ready jobs from
 	// one DAG complete before any jobs from another begin.
 	if (dm.DAGManJobId._cluster > 0) {
-		vars.push_back(NodeVar("My." ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true));
-		vars.push_back(NodeVar(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true));
+		vars.emplace_back("My." ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true);
+		vars.emplace_back(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true);
 	}
 
 	if (dm._suppressJobLogs) {
-		vars.push_back(NodeVar(SUBMIT_KEY_UserLogFile, "", true));
+		vars.emplace_back(SUBMIT_KEY_UserLogFile, "", true);
 	}
 
 	if (dm.options[deep::b::SuppressNotification]) {
-		vars.push_back(NodeVar(SUBMIT_KEY_Notification, "NEVER", true));
+		vars.emplace_back(SUBMIT_KEY_Notification, "NEVER", true);
 	}
 
 	for (auto &dagVar : node.varsFromDag) {
-		vars.push_back(NodeVar(dagVar._name, dagVar._value, !dagVar._prepend));
+		vars.emplace_back(dagVar._name, dagVar._value, !dagVar._prepend);
 	}
 
 	return vars;
@@ -291,11 +292,21 @@ static bool shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 	}
 
 	// Check for multiple job procs if configured to disallow that.
-	if (dm.prohibitMultiJobs && jobProcCount > 1) {
-		debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
-		             jobProcCount);
-		main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_ERROR);
+	if (jobProcCount > 1) {
+		if (dm.prohibitMultiJobs) {
+			// Other nodes may be single proc so fail and make forward progress
+			debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
+			             jobProcCount);
+			return false;
+		} else if (node->GetType() == NodeType::PROVISIONER) {
+			// Required first node so abort (note: debug_error calls DC_EXIT)
+			debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
+			             node->GetJobName());
+		}
+
 	}
+
+	node->SetNumSubmitted(jobProcCount);
 
 	return true;
 }
@@ -319,9 +330,11 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 	SubmitHash* submitHash = node->GetSubmitDesc();
 
 	int rval = 0;
+	int cred_result = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	bool success = false;
 	std::string errmsg;
+	std::string URL;
 	Qmgr_connection * qmgr = NULL;
 	auto_free_ptr owner(my_username());
 	char * qline = nullptr;
@@ -393,8 +406,24 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 		}
 	}
 
+	// TODO: Make this a verfication of credentials existing and produce earlier
+	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
+	if (dm.produceJobCredentials) {
+		// Produce credentials needed for job(s)
+		cred_result = process_job_credentials(*submitHash, 0, URL, errmsg);
+		if (cred_result != 0) {
+			errmsg = "Failed to produce job credentials (" + std::to_string(cred_result) + "): " + errmsg;
+			rval = -1;
+			goto finis;
+		} else if ( ! URL.empty()) {
+			errmsg = "Failed to submit job(s) due to credential setup. Please visit: " + URL;
+			rval = -1;
+			goto finis;
+		}
+	}
+
 	submitHash->attachTransferMap(dm._protectedUrlMap);
-	submitHash->init_base_ad(time(NULL), owner);
+	submitHash->init_base_ad(time(nullptr), owner);
 
 	qmgr = ConnectQ(schedd);
 	if (qmgr) {
@@ -423,10 +452,17 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 				goto finis;
 			}
 			// If this job has >1 procs, check if multi-proc jobs are prohibited
-			if (proc_id >= 1 && dm.prohibitMultiJobs) {
-				errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
-				rval = -1;
-				goto finis;
+			if (proc_id >= 1) {
+				if (dm.prohibitMultiJobs) {
+					// Other nodes may be single proc so fail and attempt forward progress
+					errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
+					rval = -1;
+					goto finis;
+				} else if (node->GetType() == NodeType::PROVISIONER) {
+					// Required first node so abort (note: debug_error calls DC_EXIT)
+					debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
+					             node->GetJobName());
+				}
 			}
 			// DAGMan does not support multi-proc factory jobs when using direct submit
 			if (proc_id >= 1 && is_factory) {
@@ -468,7 +504,7 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 		success = DisconnectQ(qmgr, true, &errstack); qmgr = NULL;
 		if ( ! success) {
 			debug_printf(DEBUG_NORMAL, "Failed to submit job %s: %s\n", node->GetJobName(), errstack.getFullText().c_str());
-		}
+		} else { node->SetNumSubmitted(proc_id+1); }
 	}
 
 finis:

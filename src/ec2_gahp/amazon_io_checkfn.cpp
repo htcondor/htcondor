@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "condor_arglist.h"
 #include "util_lib_proto.h"
 #include "internet.h"
