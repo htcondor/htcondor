@@ -85,3 +85,6 @@ with _add_dll_dir():
     from ._transaction_flag import TransactionFlag as TransactionFlags
     from ._query_opt import QueryOpt as QueryOpts
     from ._daemon_command import DaemonCommand as DaemonCommands
+
+    # Exceptions.
+    from .htcondor2_impl import HTCondorException

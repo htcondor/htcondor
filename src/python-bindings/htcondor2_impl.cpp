@@ -8,6 +8,9 @@
 #include "condor_config.h"
 #include "common2/py_handle.cpp"
 
+// htcondor.HTCondorException
+PyObject * PyExc_HTCondorException = NULL;
+
 // htcondor.*
 #include "condor_version.h"
 #include "subsystem_info.h"
@@ -225,6 +228,14 @@ PyInit_htcondor2_impl(void) {
 	PyObject * pt_handle_object = PyType_FromSpec(& dpt_handle.type_spec);
 	Py_INCREF(pt_handle_object);
 	PyModule_AddObject(the_module, "_handle", pt_handle_object);
+
+	// Create the new exception type(s).
+	PyExc_HTCondorException = PyErr_NewExceptionWithDoc(
+		"htcondor2_impl.HTCondorException",
+		"... the doc string ...",
+		NULL, NULL
+	);
+	PyModule_AddObject(the_module, "HTCondorException", PyExc_HTCondorException);
 
 	return the_module;
 }
