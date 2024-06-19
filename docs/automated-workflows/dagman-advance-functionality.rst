@@ -20,10 +20,10 @@ easily be used for multiple nodes in a DAG with variance.
         :caption: Example Diamond DAG descriptions using VARS command
 
         # File name: diamond.dag
-        NODE  A  A.sub
-        NODE  B  B.sub
-        NODE  C  C.sub
-        NODE  D  D.sub
+        JOB  A  A.sub
+        JOB  B  B.sub
+        JOB  C  C.sub
+        JOB  D  D.sub
         VARS A state="Wisconsin"
         PARENT A CHILD B C
         PARENT B C CHILD D
@@ -78,9 +78,9 @@ example shows this behavior for a DAG with jobs that only vary in filenames.
     :caption: Example DAG description utilizing VARS and a shared submit description file
 
     # File: example.dag
-    NODE A shared.sub
-    NODE B shared.sub
-    NODE C shared.sub
+    JOB A shared.sub
+    JOB B shared.sub
+    JOB C shared.sub
 
     VARS A filename="alpha"
     VARS B filename="beta"
@@ -143,7 +143,7 @@ be ``A was prepended`` and the output file being named ``results-B.out``.
 .. code-block:: condor-dagman
     :caption: Example DAG description specifying VARS prepend/append
 
-    NODE A conditional.sub
+    JOB A conditional.sub
 
     VARS A PREPEND var1="A"
     VARS A APPEND  var2="B"
@@ -171,7 +171,7 @@ warning message.
     :caption: Example DAG description declaring the same VARS variable multiple times
 
     # File: example.dag
-    NODE ONLY sample.sub
+    JOB ONLY sample.sub
     VARS ONLY custom_macro="foo"
     VARS ONLY custom_macro="bar"
 
@@ -286,7 +286,7 @@ occur:
 
     DAGMan passes the following special macros at node job submission time:
 
-    #. **NODE_NAME**: Represents the fully scoped node name to which this job belongs.
+    #. **JOB**: Represents the fully scoped node name to which this job belongs.
     #. **RETRY**: The current node retry value. Value is 0 the first time
        the node is run and increments for each subsequent execution.
     #. **DAG_STATUS**: The current status of the DAG as represented by
@@ -308,8 +308,8 @@ macros to utilize other existing macros like the following:
     :caption: Example DAG description creating expandable macros with DAG VARS
 
     # File: example.dag
-    NODE A sample.sub
-    VARS A test_case="$(NODE_NAME)-$(ClusterId)"
+    JOB A sample.sub
+    VARS A test_case="$(JOB)-$(ClusterId)"
 
 .. code-block:: condor-submit
     :caption: Example submit description file
@@ -356,7 +356,7 @@ results in the the ``NodeA`` job ClassAd attribute
 Special Node Types
 ------------------
 
-While most DAGMan nodes are the standard :dag-cmd:`NODE` type that run work jobs
+While most DAGMan nodes are the standard :dag-cmd:`JOB` type that run work jobs
 and possibly a PRE or POST script, special nodes can be specified in the DAG
 submit description to help manage the DAG and its resources in various ways.
 
@@ -384,9 +384,9 @@ use the following syntax for the :dag-cmd:`FINAL` command:
 
     FINAL NodeName SubmitDescription [DIR directory] [NOOP]
 
-Like the :dag-cmd:`NODE` command the :dag-cmd:`FINAL` command produces a node with
+Like the :dag-cmd:`JOB` command the :dag-cmd:`FINAL` command produces a node with
 name *NodeName* and an associated submit description. The *DIR* and *NOOP* keywords
-work exactly like they do detailed in the :ref:`DAGMan NODE` command.
+work exactly like they do detailed in the :ref:`DAGMan JOB` command.
 
 .. warning::
 
@@ -507,10 +507,10 @@ Node Priorities
 
         # File name: diamond.dag
 
-        NODE  A  A.condor
-        NODE  B  B.condor
-        NODE  C  C.condor
-        NODE  D  D.condor
+        JOB  A  A.condor
+        JOB  B  B.condor
+        JOB  C  C.condor
+        JOB  D  D.condor
         PARENT A CHILD B C
         PARENT B C CHILD D
         RETRY  C 3
@@ -569,7 +569,7 @@ each internal nodes priority. The default Sub-DAG priority is 0.
     :caption: Example DAG description declaring a Sub-DAG with node priorities
 
     # File: priorities.dag
-    NODE A sample.sub
+    JOB A sample.sub
     SUBDAG EXTERNAL B lower.dag
 
     PRIORITY A 25
@@ -579,8 +579,8 @@ each internal nodes priority. The default Sub-DAG priority is 0.
     :caption: Example sub-DAG description using node priorities
 
     # File: lower.dag
-    NODE lowA sample.sub
-    NODE lowB sample.sub
+    JOB lowA sample.sub
+    JOB lowB sample.sub
 
     PRIORITY lowA 10
     PRIORITY lowB 50
@@ -673,15 +673,15 @@ precedent overriding other earlier definitions. For example:
     :caption: Example DAG description using ALL_NODES keyword
 
     # File: sample.dag
-    NODE A node.sub
-    NODE B node.sub
-    NODE C node.sub
+    JOB A node.sub
+    JOB B node.sub
+    JOB C node.sub
 
-    SCRIPT PRE ALL_NODES my_script $NODE
+    SCRIPT PRE ALL_NODES my_script $JOB
 
     VARS A name="alphaNode"
 
-    VARS ALL_NODES name="$(NODE_NAME)"
+    VARS ALL_NODES name="$(JOB)"
 
     # This overrides the above VARS command for node B.
     VARS B name="nodeB"
@@ -699,15 +699,15 @@ precedent overriding other earlier definitions. For example:
         :caption: Example DAG description utilizing the INCLUDE command
 
         # File: foo.dag
-        NODE A A.sub
+        JOB A A.sub
         INCLUDE bar.dag
 
     .. code-block:: condor-dagman
         :caption: Example DAG description being included inline
 
         # File: bar.dag
-        NODE B B.sub
-        NODE C C.sub
+        JOB B B.sub
+        JOB C C.sub
 
 .. _DAG Include cmd:
 

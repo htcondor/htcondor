@@ -467,11 +467,6 @@ DAGMAN_COMMON = [
     (r"\s", token.Text),
 ]
 
-DAGMAN_NODE = [
-    # Note: ^ is not the beginning of the substring match, but of the line.
-    ( r"(\s+\S+\s+)({)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
-    ( r"\s+(\S+)\s+(\S+)", token.Text, "submit-job" ),
-]
 
 class CondorDAGManLexer(lexer.RegexLexer):
     name = "condor-dagman"
@@ -508,12 +503,14 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^save_point_file", token.Keyword, "save_point_file"),
             (r"^done", token.Keyword, "done"),
             (r"^reject", token.Keyword, "reject"),
-            (r"^node", token.Keyword, "node"),
             # examples sometimes use ... to indicate continuation
             (r"^.{3}$", token.Text),
         ],
-        "job": DAGMAN_NODE,
-        "node": DAGMAN_NODE,
+        "job": [
+            # Note: ^ is not the beginning of the substring match, but of the line.
+            ( r"(\s+\S+\s+)({)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
+            ( r"\s+(\S+)\s+(\S+)", token.Text, "submit-job" ),
+        ],
         "submit-description": [
             ( r"(\s+\S+\s+)({)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
         ],
