@@ -16,18 +16,12 @@ General
 
         INCLUDE filename
 
-:dag-cmd-def:`NODE` (see :ref:`Full Description<DAGMan NODE>`)
+:dag-cmd-def:`JOB` (see :ref:`Full Description<DAGMan JOB>`)
     Create a normal DAG node to execute specified HTCondor jobs.
 
     .. code-block:: condor-dagman
 
-        NODE NodeName SubmitDescription [DIR directory] [NOOP] [DONE]
-
-.. note::
-
-    The keywords ``NODE`` and ``JOB`` (former DAG description command) are synonyms
-    and do the exact same thing. ``JOB`` can still be specified for backwards compatibility
-    reasons, but it is preferred to use ``NODE``.
+        JOB NodeName SubmitDescription [DIR directory] [NOOP] [DONE]
 
 :dag-cmd-def:`PARENT/CHILD` (see :ref:`Full Description<DAG node dependencies>`)
     Create dependencies between two or more DAG nodes.
@@ -273,8 +267,7 @@ Macros referable by job submit description as ``$(<macro>)``
 
 .. parsed-literal::
 
-    **NODE_NAME**        | Name of the node this job is associated with.
-    **JOB**              | Equivalent to **NODE_NAME**. Exists for backwards compatibility reasons.
+    **JOB**              | Name of the node this job is associated with.
     **RETRY**            | Current node retry attempt value. Set to 0 on first execution.
     **FAILED_COUNT**     | Number of failed nodes currently in the DAG (intended for Final Node).
     **DAG_STATUS**       | Current :ad-attr:`DAG_Status` (intended for Final Node).
@@ -305,7 +298,6 @@ Macros that can be passed to a script as optional arguments like ``$<macro>``
 
     For All Scripts:
         **NODE**              | Name of the node this script is associated with.
-        **JOB**               | Equivalent to **NODE**. Exists for backwards compatibility reasons.
         **RETRY**             | The node's current retry number. Set to 0 on first execution.
         **MAX_RETRIES**       | Maximum number of retries allowed for the node.
         **NODE_COUNT**        | The total number of nodes in the DAG (Including the :dag-cmd:`FINAL` node).
@@ -321,8 +313,8 @@ Macros that can be passed to a script as optional arguments like ``$<macro>``
      the node's associated list of jobs.
         **JOB_COUNT**         | The total number of jobs associated with the node.
         **JOB_ABORT_COUNT**   | The number of jobs associated with the node that got an abort event.
-        **SUCCESS**           | A boolean string (``True`` or ``False``) that represents whether the PRE\
-     script and list of jobs completed successfully.
+        **SUCCESS**           | A boolean string that represents whether the node has been successful\
+        up to this point (PRE script and list of jobs succeeded) (``True`` or ``False``).
         **RETURN**            | The exit code of the first failed job in the set or 0 for a\
      successful list of jobs execution.
         **EXIT_CODES**        | An ordered comma separated list of all :ad-attr:`ExitCode`\ s returned by\

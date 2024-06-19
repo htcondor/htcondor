@@ -262,7 +262,7 @@ are separated by a single space character.
         timestamp NodeName EventName CondorID JobTag - SequenceNumber
 
     The *NodeName* is the DAG identifier for the node as specified by the
-    :dag-cmd:`NODE` command.
+    :dag-cmd:`JOB` command.
 
     The *EventName* is one of the many defined event or meta-events
     as listed below:
