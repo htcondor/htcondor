@@ -52,6 +52,10 @@ SUPPORTED_DAILY_DISTROS = [
     "el9",
     "ubu22.04",
 ]
+SUPPORTED_ARCHITECTURES = [
+    "x86_64",
+    "arm64",
+]
 X86_64_DISTRO_IMAGE = {
          "el8": "almalinux:8",
          "el9": "almalinux:9",
@@ -449,6 +453,8 @@ org.htcondor.version="%s"
 
         - distro: the distribution to build images for e.g. `el7`
 
+        - image: the Docker image to use e.g. almalinux:8
+
         Returns a list of image names.
 
         Images are built from the files in the `base/` subdirectory.  One image
@@ -576,6 +582,12 @@ def parse_arguments(argv, known_versions):
         default=DISTRO_FOR_LATEST_TAGS,
     )
     parser.add_argument(
+        "--arch",
+        help="Architecture to build/push for (default '%(default)s')",
+        choices=SUPPORTED_ARCHITECTURES + ["all"],
+        default="all",
+    )
+    parser.add_argument(
         "--series",
         help="The release series for daily or latest builds (default '%(default)s'). "
         f"Either an explicit series (e.g. '9.0', '9.x'), 'latest' (which is '{known_versions.latest_series}'), "
@@ -692,12 +704,18 @@ def parse_arguments(argv, known_versions):
                 raise RuntimeError("Daily builds aren't available for this distro")
         distros = [args.distro]
 
+    if args.arch == "all":
+        arches = SUPPORTED_ARCHITECTURES
+    else:
+        assert args.arch in SUPPORTED_ARCHITECTURES, "Should have been caught"
+        arches = [args.arch]
+
     if args.registry.lower() == "dockerhub":
         args.registry = "docker.io"
     elif args.registry.lower() == "osg":
         args.registry = "hub.opensciencegrid.org"
 
-    return args, distros, images
+    return args, distros, arches, images
 
 
 def main(argv) -> Union[int,str]:
@@ -710,7 +728,7 @@ def main(argv) -> Union[int,str]:
 
     known_versions = KnownVersions()
 
-    args, distros, images = parse_arguments(argv, known_versions)
+    args, distros, arches, images = parse_arguments(argv, known_versions)
 
     builder = Builder(
         executable=args.executable,
@@ -725,31 +743,26 @@ def main(argv) -> Union[int,str]:
 
     images_to_push = []
     for distro in distros:
-        base_images = builder.build_base(distro, X86_64_DISTRO_IMAGE[distro])
-        images_to_push.extend(base_images)
-        if not args.base_only:
-            for image in images:
-                new_tags = [re.sub(r"base:", f"{image}:", x) for x in base_images]
-                builder.build_derived(
-                    image=image,
-                    base_image=base_images[0],
-                    new_tags=new_tags,
-                    distro=distro,
-                )
-                images_to_push.extend(new_tags)
+        for arch in arches:
+            if arch == 'x86_64':
+                distro_image = X86_64_DISTRO_IMAGE[distro]
+                suffix = ''
+            elif arch == 'arm64':
+                distro_image = ARM64_DISTRO_IMAGE[distro]
+                suffix = '_arm64'
 
-        arm_base_images = builder.build_base(distro, ARM64_DISTRO_IMAGE[distro])
-        images_to_push.extend(arm_base_images)
-        if not args.base_only:
-            for image in images:
-                new_tags = [re.sub(r"base_arm64:", f"{image}_arm64:", x) for x in arm_base_images]
-                builder.build_derived(
-                    image=image,
-                    base_image=arm_base_images[0],
-                    new_tags=new_tags,
-                    distro=distro,
-                )
-                images_to_push.extend(new_tags)
+            base_images = builder.build_base(distro, distro_image)
+            images_to_push.extend(base_images)
+            if not args.base_only:
+                for image in images:
+                    new_tags = [re.sub(r"base{suffix}:", f"{image}{suffix}:", x) for x in base_images]
+                    builder.build_derived(
+                        image=image,
+                        base_image=base_images[0],
+                        new_tags=new_tags,
+                        distro=distro,
+                    )
+                    images_to_push.extend(new_tags)
 
     if args.push:
         for img in images_to_push:
