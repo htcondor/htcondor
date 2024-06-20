@@ -41,7 +41,6 @@
 #include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
-#include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
 #include "condor_open.h"
@@ -367,7 +366,6 @@ static struct {
 	classad::References attrs;
 	AttrListPrintMask prmask;
 	printmask_headerfooter_t HeadFoot;
-	StringList sumyattrs;         // attribute references in summary printmask
 	AttrListPrintMask sumymask;   // printmask for summary ad(s)
 	LiveJobCounters sumy;         // in case we have to do our own summary, or for -global?
 	void init() {
@@ -862,12 +860,11 @@ processCommandLineArguments (int argc, const char *argv[])
 			//summarize = 0;
 			//customHeadFoot = HF_BARE;
 			if (pcolon) {
-				StringList opts(++pcolon);
-				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+				for (const auto &opt: StringTokenIterator(++pcolon)) {
 					if (YourString(opt) == "nosort") {
 						print_attrs_in_hash_order = true;
 					} else {
-						dash_long_format = parseAdsFileFormat(opt, dash_long_format);
+						dash_long_format = parseAdsFileFormat(opt.c_str(), dash_long_format);
 					}
 				}
 			}
@@ -1082,32 +1079,10 @@ processCommandLineArguments (int argc, const char *argv[])
 				if( strstr( argv[i] , NiceUserName ) == argv[i] ) {
 					ownerName = argv[i]+strlen(NiceUserName)+1;
 				}
-			#if 1
 				if (Q.add (CQ_SUBMITTER, ownerName) != Q_OK) {
 					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
 					exit (1);
 				}
-			#else
-				const char * dotptr = strchr(ownerName, '.');
-				if (dotptr) {
-					// ensure that the group prefix isn't inserted as part
-					// of the job ad constraint.
-					auto_free_ptr groups(param("GROUP_NAMES"));
-					if (groups) {
-						std::string owner(ownerName, dotptr - ownerName);
-						StringList groupList(groups.ptr());
-						if ( groupList.contains_anycase(owner.c_str()) ) {
-							// this name starts with a group prefix.
-							// so use the part after the group name for the owner name.
-							ownerName = dotptr + 1;	// add one for the '.'
-						}
-					}
-				}
-				if (Q.add (CQ_OWNER, ownerName) != Q_OK) {
-					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
-					exit (1);
-				}
-			#endif
 			}
 
 			querySubmittors = true;
@@ -1182,14 +1157,13 @@ processCommandLineArguments (int argc, const char *argv[])
 		else
 		if (is_dash_arg_colon_prefix (dash_arg, "factory", &pcolon, 4)) {
 			if (pcolon) {
-				StringList opts(++pcolon, ",");
-				for (const char * opt = opts.first(); opt; opt = opts.next()) {
-					if (is_arg_prefix(opt, "clusters_only", 1)) {
+				for (const auto &opt: StringTokenIterator(++pcolon, ",")) {
+					if (is_arg_prefix(opt.c_str(), "clusters_only", 1)) {
 						dash_factory |= 1;
-					} else if (is_arg_prefix(opt, "late_materialize", 1)) {
+					} else if (is_arg_prefix(opt.c_str(), "late_materialize", 1)) {
 						dash_factory |= 2;
 					} else {
-						fprintf( stderr, "Error: unknown option %s for -factory\n", opt );
+						fprintf( stderr, "Error: unknown option %s for -factory\n", opt.c_str());
 						exit (1);
 					}
 				}
@@ -1321,10 +1295,9 @@ processCommandLineArguments (int argc, const char *argv[])
 				analyze_detail_level |= detail_better | detail_analyze_each_sub_expr | detail_always_analyze_req;
 			}
 			if (pcolon) { 
-				StringList opts(++pcolon, ",:");
+				StringTokenIterator opts(++pcolon, ",:");
 				opts.rewind();
 				while(const char *popt = opts.next()) {
-					//printf("parsing opt='%s'\n", popt);
 					if (is_arg_prefix(popt, "summary",1)) {
 						analysis_mode = anaModeSummary;
 						analyze_with_userprio = false;
@@ -1347,8 +1320,8 @@ processCommandLineArguments (int argc, const char *argv[])
 						if (analyze_memory_usage) {
 							free(analyze_memory_usage);
 						}
-						analyze_memory_usage = opts.next();
-						if (analyze_memory_usage) { analyze_memory_usage = strdup(analyze_memory_usage); }
+						const char* arg = opts.next();
+						if (arg) { analyze_memory_usage = strdup(arg); }
 						else { analyze_memory_usage = strdup(ATTR_REQUIREMENTS); }
 					//} else if (is_arg_prefix(popt, "dslots",2)) {
 					//	analyze_dslots = true;
@@ -1504,12 +1477,10 @@ processCommandLineArguments (int argc, const char *argv[])
 			dash_batch = true;
 			dash_batch_specified = true;
 			if (pcolon) {
-				StringList opts(++pcolon, ",:");
-				opts.rewind();
-				while (const char * popt = opts.next()) {
-					char ch = *popt;
+				for (const auto &opt: StringTokenIterator(++pcolon, ",:")) {
+					char ch = opt.front();
 					if (ch >= '0' && ch <= '9') {
-						dash_batch = atoi(popt);
+						dash_batch = atoi(opt.c_str());
 					} else if (strchr("b?*.-_#z", ch)) {
 						dash_progress_alt_char = ch;
 					}
@@ -1594,12 +1565,10 @@ processCommandLineArguments (int argc, const char *argv[])
 		else if (is_dash_arg_colon_prefix(dash_arg, "profile", &pcolon, 4)) {
 			dash_profile = true;
 			if (pcolon) {
-				StringList opts(++pcolon, ",:");
-				opts.rewind();
-				while (const char * popt = opts.next()) {
-					if (is_arg_prefix(popt, "on", 2)) {
+				for (const auto &opt: StringTokenIterator(++pcolon, ",:")) {
+					if (is_arg_prefix(opt.c_str(), "on", 2)) {
 						classad::ClassAdSetExpressionCaching(true);
-					} else if (is_arg_prefix(popt, "off", 2)) {
+					} else if (is_arg_prefix(opt.c_str(), "off", 2)) {
 						classad::ClassAdSetExpressionCaching(false);
 					}
 				}
@@ -2201,7 +2170,6 @@ usage (const char *myName, int other)
 static void
 print_full_footer(ClassAd * summary_ad, CondorClassAdListWriter * writer)
 {
-#if 1
 	if (customHeadFoot & HF_NOSUMMARY) {
 		return;
 	}
@@ -2228,53 +2196,6 @@ print_full_footer(ClassAd * summary_ad, CondorClassAdListWriter * writer)
 		text += "\n";
 	}
 	fputs(text.c_str(), stdout);
-#else
-	// If we want to summarize, do that too.
-	if( ! (customHeadFoot && HF_NOSUMMARY) ) {
-		printf( "\n%d jobs; "
-				"%d completed, %d removed, %d idle, %d running, %d held, %d suspended",
-				idle+running+held+malformed+suspended+completed+removed,
-				completed,removed,idle,running,held,suspended);
-		if (malformed>0) printf( ", %d malformed",malformed);
-		printf("\n");
-
-		if (summary_ad) {
-			AttrListPrintMask prtot;
-			StringList totattrs;
-			std::string text;
-
-			static const char * totfmt = "SELECT\n"
-				"JobsCompleted AS Completed PRINTF 'Total for query: %d Completed,'\n"
-				"JobsRemoved AS Removed PRINTF '%d Removed,'\n"
-				"JobsIdle AS Idle PRINTF '%d Idle,'\n"
-				"JobsRunning AS Running PRINTF '%d Running,'\n"
-				"JobsHeld AS Held PRINTF '%d Held,'\n"
-				"JobsSuspended AS Suspended PRINTF '%d Suspended'\n"
-				
-				"MyJobsCompleted AS Completed PRINTF '\\nTotal for user: %d Completed,'\n"
-				"MyJobsRemoved AS Removed PRINTF '%d Removed,'\n"
-				"MyJobsIdle AS Idle PRINTF '%d Idle,'\n"
-				"MyJobsRunning AS Running PRINTF '%d Running,'\n"
-				"MyJobsHeld AS Held PRINTF '%d Held,'\n"
-				"MyJobsSuspended AS Suspended PRINTF '%d Suspended'\n"
-
-				"AllusersJobsCompleted AS Idle PRINTF '\\nTotal for all users: %d Completed,'\n"
-				"AllusersJobsRemoved AS Idle PRINTF '%d Removed,'\n"
-				"AllusersJobsIdle AS Idle PRINTF '%d Idle,'\n"
-				"AllusersJobsRunning AS Running PRINTF '%d Running,'\n"
-				"AllusersJobsHeld AS Held PRINTF '%d Held,'\n"
-				"AllusersJobsSuspended AS Suspended PRINTF '%d Suspended'\n"
-				;
-			set_print_mask_from_stream(prtot, totfmt, false, totattrs);
-			prtot.display(text, summary_ad);
-
-			//CondorClassAdListWriter writer;
-			//writer.appendAd(*summary_ad, text);
-			printf("%s\n", text.c_str());
-
-		}
-	}
-#endif
 }
 
 static void

@@ -298,14 +298,19 @@ fi
 
 # Install pytest for BaTLab testing
 # Install sphinx-mermaid so docs can have images
+# Install scitokens for BaTLab testing
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     if [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ] || [ "$VERSION_CODENAME" = 'jammy' ]; then
-        pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
     else
-        pip3 install --break-system-packages pytest pytest-httpserver sphinxcontrib-mermaid
+        pip3 install --break-system-packages pytest pytest-httpserver scitokens sphinxcontrib-mermaid
     fi
 else
+    if [ $ID = 'centos' ]; then
         pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+    else
+        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
+    fi
 fi
 
 if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then

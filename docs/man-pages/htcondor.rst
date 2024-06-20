@@ -35,6 +35,10 @@ Synopsis
 | **htcondor** **annex** *shutdown* annex-name
 | **htcondor** **annex** *systems*
 
+| **htcondor** **credential** *list*
+| **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service service**] [**-\-handle handle**]
+| **htcondor** **credential** *remove* password|kerberos|oauth2 [**-\-service service**] [**-\-handle handle**]
+
 Description
 -----------
 
@@ -259,6 +263,47 @@ at that AP.
 
     Displays the list of supported systems and their queues.
 
+Credential Verbs
+----------------
+
+A *credential* is (part of) the authentication data necessary to verify
+identity (or capability).  This noun refers to three different types of
+credentials: ``password``, ``kerberos``, and ``oauth2``.  For this tool,
+``password`` credentials are only useful on Windows, where they are
+required to run a job as its submitter.  Likewise, ``kerberos``
+credentials are only useful on APs which use Kerberos; HTCondor can run
+jobs with the Kerberos credentials of their submitters, usually to allow
+them to access files of AFS.  Finally, ``oauth2`` credentials refer to
+a number of different kinds of credentials usually (but not always) obtained
+via the OAuth2 protocol, but which HTCondor knows how to refresh and
+distribute to jobs which request them.
+
+  **htcondor credential list**
+
+    Lists the credentials associated with the current user.  (To be precise,
+    the identifier the current user authenticates as to HTCondor when they
+    run this command.)  Windows passwords and Kerberos credentials are unique
+    for each such identity, and only their presence (and last-refresh time)
+    is reported.  A user may have multiple OAuth2 credentials, one or more
+    from one or more different services, distinguished by their handles.  The
+    service name, handle name, and file name in the ``$CONDOR_CREDS``
+    directory are listed, in addition to the last-refresh time, for each
+    OAuth2 credential.
+
+  **htcondor credential add** **password|kerberos|oauth2** *credential-file* [**-\-service service**] [**-\-handle handle**]
+
+    Sets the stored Windows password, Kerberos credential, or OAuth2
+    credential to the contents of the named file.  For OAuth2 credentials,
+    the service and handle will be derived from the file name unless
+    specified with the corresponding flags.
+
+  **htcondor credential remove** **password|kerberos|oauth2** [**-\-service service**] [**-\-handle handle**]
+
+    Unsets the stored Windows password, Kerberos credential, or OAuth2
+    credential(s).  If you specify a service, the credential from that
+    service without a handle will be removed.  To remove a specific credential,
+    you must specify both its service and its handle.  If you specify neither
+    service nor handle, all OAuth2 tokens are removed.
 
 Examples
 --------

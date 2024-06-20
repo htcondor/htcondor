@@ -26,7 +26,6 @@
 #include <time.h>
 #include <assert.h>
 #include "write_user_log.h"
-#include "string_list.h"
 #include "read_multiple_logs.h"
 
 static const char * VERSION = "0.9.3";

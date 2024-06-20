@@ -22,7 +22,6 @@
 
 #include "gahp_common.h"
 #include <string>
-#include "string_list.h"
 #include "amazonCommands.h"
 
 #define AMAZON_SCRIPT_INTERPRETER "perl"

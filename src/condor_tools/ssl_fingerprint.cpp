@@ -23,7 +23,6 @@
 
 #include "ca_utils.h"
 #include "CondorError.h"
-#include "string_list.h"
 #include "fcloser.h"
 
 #include <openssl/err.h>

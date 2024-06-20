@@ -43,7 +43,6 @@
 #include "condor_query.h"
 #include "daemon_list.h"
 #include "my_username.h"
-#include "string_list.h"
 
 
 void computeRealAction( void );
