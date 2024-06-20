@@ -230,7 +230,7 @@ class TestJobEventLog:
 			p = pickle.dumps(jel)
 
 		# Make sure we throw away the pickled JobEventLog.
-		jel = None
+		del jel
 
 		new_jel = pickle.loads(p)
 		e = next(new_jel)
