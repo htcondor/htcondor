@@ -2,7 +2,7 @@
 
 from ornithology import *
 
-import classad
+import classad2 as classad
 
 
 TEST_CASES = {

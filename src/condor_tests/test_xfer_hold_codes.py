@@ -10,7 +10,7 @@
 
 
 import logging
-import classad
+import classad2 as classad
 from ornithology import *
 
 logger = logging.getLogger(__name__)

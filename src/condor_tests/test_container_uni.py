@@ -7,7 +7,6 @@
 # wrapper script.
 
 import logging
-import htcondor
 import os,sys,stat
 
 from ornithology import *

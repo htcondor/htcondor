@@ -15,7 +15,7 @@
 
 import pytest
 
-import htcondor
+import htcondor2 as htcondor
 
 
 def test_can_use_collector(pool):
@@ -29,14 +29,9 @@ def test_can_use_schedd(pool):
     assert len(pool.schedd.query(constraint="true")) == 0
 
 
-@pytest.mark.parametrize("queue_method", ["queue", "queue_with_itemdata"])
-def test_can_submit_a_job(pool, queue_method):
+def test_can_submit_a_job(pool):
     sub = htcondor.Submit({"executable": "foobar"})
-
-    # make sure the schedd doesn't get garbage collected out from under us
-    schedd = pool.schedd
-    with schedd.transaction() as txn:
-        cluster_id = getattr(sub, queue_method)(txn)
+    pool.schedd.submit(sub)
 
 
 def test_different_pools_have_different_collectors(pool, another_pool):
@@ -52,14 +47,20 @@ def test_different_pools_have_different_collectors(pool, another_pool):
 
 
 def test_different_pools_have_different_schedds(pool, another_pool):
-    assert pool.schedd.location != another_pool.schedd.location
+    # This test is invalid; a Schedd object doesn't have any defined
+    # attributes, and also doesn't have any accessor methods for location.
+    # assert pool.schedd.location != another_pool.schedd.location
+    #
+    # Other asserts involving .location have been commented out.
+    assert pool.schedd._addr != another_pool.schedd._addr
 
 
 def test_schedd_is_right_schedd(pool):
     via_pool = pool.schedd
     via_locate = htcondor.Schedd(pool.collector.locate(htcondor.DaemonTypes.Schedd))
 
-    assert via_pool.location == via_locate.location
+    # assert via_pool.location == via_locate.location
+    assert via_pool._addr == via_locate._addr
 
 
 def test_schedd_is_right_schedd_with_another_pool_present(pool, another_pool):
@@ -67,5 +68,8 @@ def test_schedd_is_right_schedd_with_another_pool_present(pool, another_pool):
     via_locate = htcondor.Schedd(pool.collector.locate(htcondor.DaemonTypes.Schedd))
     via_another_pool = another_pool.schedd
 
-    assert via_pool.location != via_another_pool.location
-    assert via_pool.location == via_locate.location
+    # assert via_pool.location != via_another_pool.location
+    # assert via_pool.location == via_locate.location
+    assert via_pool._addr != via_another_pool._addr
+    assert via_pool._addr == via_locate._addr
+

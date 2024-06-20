@@ -11,11 +11,11 @@
 # want to test the pieces individually, you'll have to change the code.
 #
 
-import pytest 
+import pytest
 import logging
 import time
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     config,

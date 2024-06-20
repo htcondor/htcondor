@@ -22,8 +22,8 @@ from pathlib import Path
 import collections
 import weakref
 
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 
 from . import jobs, exceptions, utils
 

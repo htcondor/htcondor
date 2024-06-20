@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import re
-import classad
+import classad2 as classad
 import unittest
 
 class TestClassad(unittest.TestCase):

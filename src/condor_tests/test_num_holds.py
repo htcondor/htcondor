@@ -72,4 +72,4 @@ class TestJobHoldAggregates:
         assert job["NumHolds"] == 2
 
     def test_hold_numholdsbyreason_was_policy(self, job):
-        assert job["NumHoldsByReason"] == { 'JobPolicy' : 2 }
+        assert dict(job["NumHoldsByReason"]) == { 'JobPolicy' : 2 }

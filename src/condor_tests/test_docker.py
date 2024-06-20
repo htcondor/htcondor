@@ -7,7 +7,6 @@
 # so it isnt in the ctest lists, # but will run under a personal condor
 
 import logging
-import htcondor
 
 from ornithology import *
 

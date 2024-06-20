@@ -7,7 +7,7 @@ import pytest
 import logging
 import time
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     config,

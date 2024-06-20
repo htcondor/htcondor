@@ -5,7 +5,7 @@
 # and rescue/abort if a job pending nodes jobs is not found
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 import os
 
 #--------------------------------------------------------------------------
@@ -25,7 +25,7 @@ def write_chmod_script():
         f.write("""#!/usr/bin/env python3
 import sys
 import os
-import htcondor
+import htcondor2 as htcondor
 
 ID = int(sys.argv[1])
 

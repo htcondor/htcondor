@@ -2,8 +2,7 @@
 
 import pytest
 
-import classad
-import htcondor
+import classad2 as classad
 
 import logging
 

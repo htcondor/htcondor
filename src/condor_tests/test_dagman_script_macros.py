@@ -2,7 +2,7 @@
 
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 import os
 
 @action
@@ -42,7 +42,7 @@ def writePostScript(test_dir):
     with open(file, "w") as f:
         f.write("""#!/usr/bin/env python3
 import sys
-import htcondor
+import htcondor2 as htcondor
 
 if len(sys.argv) != 21:
     print(f"Unexepected number of arguments: {len(sys.argv)}")

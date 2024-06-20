@@ -4,7 +4,7 @@
 
 import logging
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     config,
@@ -77,20 +77,16 @@ def jobids_for_sleep_jobs(test_dir, path_to_sleep, condor, max_idle, max_materia
 
     submit = htcondor.Submit(sub_description)
     schedd = condor.get_local_schedd()
-    result = schedd.submit(
-        submit,
-        # This isn't necessary in version 2.
-        count=(max_materialize + max_idle + 1)
-    )
+    result = schedd.submit(submit)
     clusterid = result.cluster()
     num_procs = result.num_procs()
-
 
     jobids = [JobID(clusterid, n) for n in range(num_procs)]
 
     condor.job_queue.wait_for_events(
         {jobid: [SetJobStatus(JobStatus.COMPLETED)] for jobid in jobids}
     )
+
 
     return jobids
 
@@ -187,13 +183,7 @@ def clusterid_for_itemdata(test_dir, path_to_sleep, condor):
 
     submit = htcondor.Submit(sub_description)
     schedd = condor.get_local_schedd()
-    result = schedd.submit(
-        submit,
-        # This isn't necessary in version 2.
-        count=1,
-        # That this is required is actually just broken in version 1.
-        itemdata=iter(['A', 'B', 'C', 'D', 'E' ])
-    )
+    result = schedd.submit(submit)
     clusterid = result.cluster()
     num_procs = result.num_procs()
 

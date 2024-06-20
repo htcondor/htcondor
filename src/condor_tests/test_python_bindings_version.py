@@ -1,6 +1,6 @@
 #!/usr/bin/env pytest
 
-import htcondor
+import htcondor2 as htcondor
 import logging
 
 from ornithology import *
@@ -51,10 +51,6 @@ class TestPythonBindingsVersion:
     def test_full_version(self, condor, full_version):
         print(f"\n\nChecking htcondor.version() against {full_version}\n\n")
         assert htcondor.version() == full_version
-
-    def test_version(self, condor, version):
-        print(f"\n\nChecking htcondor.__version__ against {version}\n\n")
-        assert htcondor.__version__ == version
 
     def test_full_platform(self, condor, full_platform):
         print(f"\n\nChecking htcondor.platform() against {full_platform}\n\n")

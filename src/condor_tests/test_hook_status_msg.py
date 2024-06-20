@@ -119,7 +119,7 @@ class TestHookStatusCodeAndMsg:
         assert heldjob["HoldReasonSubCode"] == 190
 
     def test_hold_numholdsbyreason_was_policy(self, heldjob):
-        assert heldjob["NumHoldsByReason"] == { 'HookPrepareJobFailure' : 1 }
+        assert dict(heldjob["NumHoldsByReason"]) == { 'HookPrepareJobFailure' : 1 }
 
     def test_hold_reason(self, heldjob):
         assert "Really bad" in heldjob["HoldReason"]

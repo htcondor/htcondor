@@ -4,8 +4,8 @@ import time
 import unittest
 import threading
 
-import classad
-import htcondor
+import classad2 as classad
+import htcondor2 as htcondor
 
 SAMPLE_EVENT_TEXT = """\
 006 (23515.000.000) 04/09 17:55:39 Image size of job updated: 260

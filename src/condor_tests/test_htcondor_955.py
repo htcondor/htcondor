@@ -30,7 +30,7 @@ def job_python_file(test_dir):
     """
         #!/usr/bin/python3
 
-        import classad
+        import classad2 as classad
         import json
         import os
         import posixpath

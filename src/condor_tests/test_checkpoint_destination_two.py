@@ -14,8 +14,8 @@ from ornithology import (
     ClusterState,
 )
 
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 
 import logging
 logger = logging.getLogger(__name__)
@@ -653,7 +653,7 @@ def path_to_the_plugin(test_dir):
         from urllib.parse import urlparse
         from pathlib import Path
 
-        import classad
+        import classad2 as classad
 
         DEFAULT_TIMEOUT = 30
         PLUGIN_VERSION = '1.0.0'
