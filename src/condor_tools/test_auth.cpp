@@ -31,7 +31,6 @@
 #include "condor_io.h"
 #include "condor_uid.h"
 #include "match_prefix.h"
-#include "string_list.h"
 #include "daemon.h"
 #include "dc_collector.h"
 #include "daemon_types.h"
@@ -123,50 +122,49 @@ main( int argc, char* argv[] )
 			continue;
 		}
 
-		StringList fields(line.c_str()," ");
-		fields.rewind();
+		StringTokenIterator fields(line.c_str()," ");
 
-		char const *perm_str = fields.next();
-		char const *fqu = fields.next();
-		char const *ip = fields.next();
-		char const *expected = fields.next();
+		const std::string perm_str = *fields++;
+		      std::string fqu = *fields++;
+		const std::string ip = *fields++;
+		const std::string expected = *fields++;
 
-		std::string sin_str = generate_sinful(ip, 0);
+		std::string sin_str = generate_sinful(ip.c_str(), 0);
 
 		condor_sockaddr addr;
 		if( !addr.from_sinful(sin_str) ) {
-			fprintf(stderr,"Invalid ip address: %s\n",ip);
+			fprintf(stderr,"Invalid ip address: %s\n",ip.c_str());
 			failures++;
 			continue;
 		}
 
-		DCpermission perm = StringToDCpermission(perm_str);
+		DCpermission perm = StringToDCpermission(perm_str.c_str());
 		if( perm == LAST_PERM ) {
-			fprintf(stderr,"Invalid permission level: %s\n",perm_str);
+			fprintf(stderr,"Invalid permission level: %s\n",perm_str.c_str());
 			failures++;
 			continue;
 		}
 
-		if( strcmp(fqu,"*") == 0 ) {
+		if (fqu == "*") {
 			fqu = "";
 		}
 
 		char const *result;
 		std::string reason;
-		if( ipverify.Verify(perm,addr,fqu, reason, reason) != USER_AUTH_SUCCESS ) {
+		if( ipverify.Verify(perm,addr,fqu.c_str(), reason, reason) != USER_AUTH_SUCCESS ) {
 			result = "DENIED";
 		}
 		else {
 			result = "ALLOWED";
 		}
 
-		if( expected && strcasecmp(expected,result) != 0 ) {
+		if( strcasecmp(expected.c_str(),result) != 0 ) {
 			printf("Got wrong result '%s' for '%s': reason: %s!\n",
 				   result,line.c_str(),reason.c_str());
 			failures++;
 			continue;
 		}
-		if( expected ) {
+		if(!expected.empty() ) {
 			printf("%s\n",line.c_str());
 		}
 		else {

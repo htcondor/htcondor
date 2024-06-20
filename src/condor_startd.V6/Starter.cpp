@@ -425,12 +425,6 @@ Starter::finalizeExecuteDir(Claim * claim)
 	}
 }
 
-char const *
-Starter::executeDir()
-{
-	return !s_execute_dir.empty() ? s_execute_dir.c_str() : NULL;
-}
-
 // Spawn the starter process that this starter object is managing.
 // the claim is optional and will be NULL for boinc jobs and possibly others.
 //
@@ -562,41 +556,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// encryption), then clean that up, too.
 	ASSERT( executeDir() );
 
-#ifdef LINUX
-	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
-		// Attempt to cleanup of recovery files/directories used by docker/vm universe
-		std::string pid_dir, pid_dir_path;
-		formatstr(pid_dir, "dir_%d", s_pid);
-		formatstr(pid_dir_path, "%s/%s", executeDir(), pid_dir.c_str());
-		check_recovery_file(pid_dir_path.c_str(), abnormal_exit);
-		// Attempt LV cleanup
-		auto &slot_name = claim->rip()->r_id_str;
-		dprintf(D_ALWAYS,"Starter::Exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
-		CondorError err;
-		// Attempt LV cleanup n times to prevent race condition between
-		// killing of family processes and LV cleanup causing failure
-		int max_attempts = 5;
-		for (int attempt=1; attempt<=max_attempts; attempt++) {
-			// Attempt a cleanup
-			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
-			if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
-				std::string msg = err.getFullText();
-				if (!abnormal_exit && msg.find("Failed to find logical volume") != std::string::npos) {
-					break; // If starter exited normally and we failed to find LV assume it is cleaned up
-				} else if (attempt == max_attempts){
-					// We have failed and this was the last attempt so output error message
-					dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s", slot_name, msg.c_str());
-				}
-				err.clear();
-			} else {
-				dprintf(D_FULLDEBUG, "LVM cleanup succesful.\n");
-				break;
-			}
-			sleep(1);
-		}
-	}
-#endif // LINUX
-	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
+	cleanup_execute_dir( s_pid, executeDir(), logicalVolumeName(), s_created_execute_dir, abnormal_exit );
 
 }
 
@@ -928,21 +888,30 @@ int Starter::execDCStarter(
 	ASSERT( executeDir() );
 	new_env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
 
-#ifdef LINUX
-	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
-		auto &slot_name = claim->rip()->r_id_str;
-			// Cleanup from any previously-crashed starters.
-		CondorError err;
-		claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err);
+	auto * volman = resmgr->getVolumeManager();
 
-		claim->rip()->getVolumeManager()->UpdateStarterEnv(new_env);
-		if (claim->rip()->r_attr) {
-			std::string size;
-			formatstr(size, "%lld", claim->rip()->r_attr->get_disk());
-			new_env.SetEnv("CONDOR_LVM_LV_SIZE_KB", size.c_str());
+	if (claim && volman && volman->is_enabled() && claim->rip()) {
+		// unique LV names is r_id_str+startd_pid_uniqueness_value
+		if (use_unique_lv_names) {
+			++lv_name_uniqueness;
+			formatstr(s_lv_name, "%s+%u_%u", claim->rip()->r_id_str, daemonCore->getpid(), lv_name_uniqueness);
+		} else {
+			s_lv_name = claim->rip()->r_id_str;
+
+				// Cleanup from any previously-crashed starters.
+				// TODO: do we really want to do this here?
+			CondorError err;
+			if (volman->CleanupLV(s_lv_name, err) < 0) {
+				std::string msg = err.getFullText();
+				dprintf(D_ERROR, "Last chance cleanup of LV %s failed : %s\n", s_lv_name.c_str(), msg.c_str());
+				return 0;
+			}
 		}
+
+		long long disk_kb = -1;
+		if (claim->rip()->r_attr) { disk_kb = claim->rip()->r_attr->get_disk(); }
+		volman->UpdateStarterEnv(new_env, s_lv_name, disk_kb);
 	}
-#endif // LINUX
 
 	env = &new_env;
 

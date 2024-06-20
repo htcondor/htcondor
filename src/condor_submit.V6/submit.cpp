@@ -49,7 +49,6 @@
 #include "match_prefix.h"
 
 #include "HashTable.h"
-#include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "dc_schedd.h"
@@ -89,11 +88,6 @@
 
 std::set<std::string> CheckFilesRead;
 std::set<std::string> CheckFilesWrite;
-
-#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
-#else
-StringList NoClusterCheckAttrs;
-#endif
 
 time_t submit_time = 0;
 
@@ -361,152 +355,6 @@ void print_errstack(FILE* out, CondorError *errstack)
 	}
 }
 
-#if 0 // moved to submit_utils
-struct SubmitStepFromQArgs {
-
-	SubmitStepFromQArgs(SubmitHash & h)
-		: m_hash(h)
-		, m_jidInit(0,0)
-		, m_nextProcId(0)
-		, m_step_size(0)
-		, m_done(false)
-	{} // this needs to be cheap because Submit.queue() will always invoke it, even if there is no foreach data
-
-	~SubmitStepFromQArgs() {
-		// disconnnect the hashtable from our livevars pointers
-		unset_live_vars();
-	}
-
-	bool has_items() { return m_fea.items.number() > 0; }
-	bool done() { return m_done; }
-
-	// returns < 0 on error
-	// returns 0 if done iterating
-	// returns 2 for first iteration
-	// returns 1 for subsequent iterations
-	int next(JOB_ID_KEY & jid, int & item_index, int & step)
-	{
-		if (m_done) return 0;
-
-		int iter_index = (m_nextProcId - m_jidInit.proc);
-
-		jid.cluster = m_jidInit.cluster;
-		jid.proc = m_nextProcId;
-		item_index = iter_index / m_step_size;
-		step = iter_index % m_step_size;
-
-		if (0 == step) { // have we started a new row?
-			if (next_rowdata()) {
-				set_live_vars();
-			} else {
-				// if no next row, then we are done iterating, unless it is the FIRST iteration
-				// in which case we want to pretend there is a single empty item called "Item"
-				if (0 == iter_index) {
-					m_hash.set_live_submit_variable("Item", "", false);
-				} else {
-					m_done = true;
-					return 0;
-				}
-			}
-		}
-
-		++m_nextProcId;
-		return (0 == iter_index) ? 2 : 1;
-	}
-
-	StringList & vars() { return m_fea.vars; }
-
-	// 
-	void set_live_vars()
-	{
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
-			auto str = m_livevars.find(key);
-			if (str != m_livevars.end()) {
-				m_hash.set_live_submit_variable(key, str->second.c_str(), false);
-			} else {
-				m_hash.unset_live_submit_variable(key);
-			}
-		}
-	}
-
-	void unset_live_vars()
-	{
-		// set the pointers of the 'live' variables to the unset string (i.e. "")
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
-			m_hash.unset_live_submit_variable(key);
-		}
-	}
-
-	// load the next rowdata into livevars
-	// but not into the SubmitHash
-	int next_rowdata()
-	{
-		auto_free_ptr data(m_fea.items.pop());
-		if ( ! data) {
-			return 0;
-		}
-
-		// split the data in the reqired number of fields
-		// then store that field data into the m_livevars set
-		// NOTE: we don't use the SubmitForeachArgs::split_item method that takes a NOCASE_STRING_MAP
-		// because it clears the map first, and that is only safe to do after we unset_live_vars()
-		std::vector<const char*> splits;
-		m_fea.split_item(data.ptr(), splits);
-		int ix = 0;
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
-			m_livevars[key] = splits[ix++];
-		}
-		return 1;
-	}
-
-	// return all of the live value data as a single 'line' using the given item separator and line terminator
-	int get_rowdata(std::string & line, const char * sep, const char * eol)
-	{
-		// so that the separator and line terminators can be \0, we make the size strlen()
-		// unless the first character is \0, then the size is 1
-		int cchSep = sep ? (sep[0] ? strlen(sep) : 1) : 0;
-		int cchEol = eol ? (eol[0] ? strlen(eol) : 1) : 0;
-		line.clear();
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
-			if ( ! line.empty() && sep) line.append(sep, cchSep);
-			auto str = m_livevars.find(key);
-			if (str != m_livevars.end() && ! str->second.empty()) {
-				line += str->second;
-			}
-		}
-		if (eol && ! line.empty()) line.append(eol, cchEol);
-		return (int)line.size();
-	}
-
-	// this is called repeatedly when we are sending rowdata to the schedd
-	static int send_row(void* pv, std::string & rowdata) {
-		SubmitStepFromQArgs *sii = (SubmitStepFromQArgs*)pv;
-
-		rowdata.clear();
-		if (sii->done())
-			return 0;
-
-		// Split and write into the string using US (0x1f) a field separator and LF as record terminator
-		if ( ! sii->get_rowdata(rowdata, "\x1F", "\n"))
-			return 0;
-
-		int rval = sii->next_rowdata();
-		if (rval < 0) { return rval; }
-		if (rval == 0) { sii->m_done = true; } // so subsequent iterations will return 0
-		return 1;
-	}
-
-
-	SubmitHash & m_hash;         // the (externally owned) submit hash we are updating as we iterate
-	JOB_ID_KEY m_jidInit;
-	SubmitForeachArgs m_fea;
-	NOCASE_STRING_MAP m_livevars; // holds live data for active vars
-	int  m_nextProcId;
-	int  m_step_size;
-	bool m_done;
-};
-#endif
-
 int
 main( int argc, const char *argv[] )
 {
@@ -568,34 +416,33 @@ main( int argc, const char *argv[] )
 				DashDryRun = 1;
 				bool needs_file_arg = true;
 				if (pcolon) { 
-					StringList opts(++pcolon);
-					for (const char * opt = opts.first(); opt; opt = opts.next()) {
-						if (YourString(opt) == "hash") {
+					for (const auto& opt: StringTokenIterator(++pcolon)) {
+						if (opt == "hash") {
 							DumpSubmitHash |= 0x100 | HASHITER_NO_DEFAULTS;
-						} else if (YourString(opt) == "def") {
+						} else if (opt == "def") {
 							DumpSubmitHash &= ~HASHITER_NO_DEFAULTS;
-						} else if (YourString(opt) == "full") {
+						} else if (opt == "full") {
 							DashDryRunFullAds = 1;
-						} else if (YourString(opt) == "digest") {
+						} else if (opt == "digest") {
 							DumpSubmitDigest = 1;
-						} else if (YourString(opt) == "jobset") {
+						} else if (opt == "jobset") {
 							DumpJOBSETClassad = 1;
-						} else if (YourString(opt) == "tpl" || starts_with(opt, "template")) {
+						} else if (opt == "tpl" || opt.starts_with("template")) {
 							DumpSubmitHash |= 0x80;
-						} else if (starts_with(opt, "cluster=")) {
+						} else if (opt.starts_with("cluster=")) {
 							sim_current_condor_version = true;
-							sim_starting_cluster = atoi(strchr(opt, '=') + 1);
+							sim_starting_cluster = atoi(strchr(opt.c_str(), '=') + 1);
 							sim_starting_cluster = MAX(sim_starting_cluster - 1, 0);
-						} else if (starts_with(opt, "oauth=")) {
+						} else if (opt.starts_with("oauth=")) {
 							// log oauth request, 4 = succeed, 2 = fail
-							DashDryRun = atoi(strchr(opt,'=')+1) ? 4 : 2;
+							DashDryRun = atoi(strchr(opt.c_str(),'=')+1) ? 4 : 2;
 						} else {
-							int optval = atoi(opt);
+							int optval = atoi(opt.c_str());
 							// if the argument is -dry:<number> and number is > 0x10,
 							// then what we are actually doing triggering the unit tests.
 							if (optval > 1) {  DashDryRun = optval; needs_file_arg = optval < 0x10; }
 							else {
-								fprintf(stderr, "unknown option %s for -dry-run:<opts>\n", opt);
+								fprintf(stderr, "unknown option %s for -dry-run:<opts>\n", opt.c_str());
 								exit(1);
 							}
 						}
@@ -1914,8 +1761,8 @@ int submit_jobs (
 			}
 
 			// stuff foreach data for the first item before we make the cluster ad.
-			char * item = o.items.first();
-			rval = set_vars(submit_hash, o.vars, item, 0, queue_item_opts, token_seps, token_ws);
+			auto_free_ptr item(o.items.empty() ? nullptr : strdup(o.items.front().c_str()));
+			rval = set_vars(submit_hash, o.vars, item.ptr(), 0, queue_item_opts, token_seps, token_ws);
 			if (rval < 0)
 				break;
 
@@ -1944,14 +1791,13 @@ int submit_jobs (
 				fprintf(stdout, "-----\n");
 			}
 
-			char * item = NULL;
-			if (o.items.isEmpty()) {
-				rval = queue_item(o.queue_num, o.vars, item, 0, queue_item_opts, token_seps, token_ws);
+			if (o.items.empty()) {
+				rval = queue_item(o.queue_num, o.vars, nullptr, 0, queue_item_opts, token_seps, token_ws);
 			} else {
-				int citems = o.items.number();
-				o.items.rewind();
+				int citems = (int)o.items.size();
 				int item_index = 0;
-				while ((item = o.items.next())) {
+				for (size_t i = 0; i < o.items.size(); i++) {
+					char* item = const_cast<char*>(o.items[i].c_str());
 					if (o.slice.selected(item_index, citems)) {
 						rval = queue_item(o.queue_num, o.vars, item, item_index, queue_item_opts, token_seps, token_ws);
 						if (rval < 0)
@@ -2004,7 +1850,6 @@ int submit_jobs (
 	return rval;
 }
 
-#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
   // To facilitate processing of job status from the
   // job_queue.log, the ATTR_JOB_STATUS attribute should not
   // be stored within the cluster ad. Instead, it should be
@@ -2023,12 +1868,6 @@ bool IsNoClusterAttr(const char * name) {
 	}
 	return false;
 }
-#else
-void SetNoClusterAttr(const char * name)
-{
-	NoClusterCheckAttrs.append( name );
-}
-#endif
 
 
 void
@@ -2251,10 +2090,6 @@ int queue_item(int num, const std::vector<std::string> & vars, char * item, int 
 
 	/* queue num jobs */
 	for (int ii = 0; ii < num; ++ii) {
-	#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
-	#else
-		NoClusterCheckAttrs.clearAll();
-	#endif
 		ErrContext.step = ii;
 
 		if ( ClusterId == -1 ) {

@@ -3506,7 +3506,7 @@ section.
     configuration macro :macro:`DETECTED_MEMORY`.
 
 :macro-def:`RESERVED_MEMORY[STARTD]`
-    How much memory would you like reserved from HTCondor? By default,
+    How much memory (in MB) would you like reserved from HTCondor? By default,
     HTCondor considers all the physical memory of your machine as
     available to be used by HTCondor jobs. If :macro:`RESERVED_MEMORY` is
     defined, HTCondor subtracts it from the amount of memory it
@@ -4671,7 +4671,7 @@ These macros control the *condor_schedd*.
     This macro controls the maximum number of times that
     *condor_shadow* processes can have a fatal error (exception) before
     the *condor_schedd* will relinquish the match associated with the
-    dying shadow. Defaults to 5.
+    dying shadow. Defaults to 2.
 
 :macro-def:`MAX_PENDING_STARTD_CONTACTS[SCHEDD]`
     An integer value that limits the number of simultaneous connection
@@ -8032,6 +8032,12 @@ condor_procd Configuration File Macros
     the *BASE_CGROUP* macro with the slot type. e.g. setting
     SLOT_TYPE_1.BASE_CGROUP = hiprio_cgroup and SLOT_TYPE_2.BASE_CGROUP = low_prio
 
+:macro-def:`CREATE_CGROUP_WITHOUT_ROOT[PROCD]`
+    Defaults to false.  When true, on a Linux cgroup v2 system, a
+    condor system without root privilege (such as a glidein)
+    will attempt to create cgroups for jobs.  The condor_master
+    must have been started under a writeable cgroup for this to work.
+
 condor_credd Configuration File Macros
 ---------------------------------------
 
@@ -8854,6 +8860,11 @@ General
     A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`
     will open a direct connection to the local *condor_schedd* to submit jobs rather
     than spawning the :tool:`condor_submit` process.
+
+:macro-def:`DAGMAN_PRODUCE_JOB_CREDENTIALS[DAGMan]`
+    A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`
+    will attempt to produce needed credentials for jobs at submit time when using
+    direct submission.
 
 :macro-def:`DAGMAN_USE_JOIN_NODES[DAGMan]`
     A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`

@@ -30,7 +30,6 @@
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "directory.h"
-#include "string_list.h"
 #include "get_daemon_name.h"
 #include "daemon_types.h"
 #include "strupr.h"

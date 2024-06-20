@@ -630,7 +630,7 @@ bool Job::AddVar(const char *name, const char *value, const char * filename, int
 		// because we dedup the names, we can just compare the pointers here.
 		if (name == it->_name) {
 			debug_printf(DEBUG_NORMAL, "Warning: VAR \"%s\" "
-				"is already defined in job \"%s\" "
+				"is already defined in node \"%s\" "
 				"(Discovered at file \"%s\", line %d)\n",
 					name, GetJobName(), filename, lineno);
 				check_warning_strictness(DAG_STRICT_3);
@@ -871,7 +871,7 @@ Job::AddScript(Script* script)
 	if( old_script_name ) {
 		debug_printf( DEBUG_NORMAL,
 			"Warning: node %s already has %s script <%s> assigned; changing "
-			"to <%s>\n", GetJobName(), type_name, old_script_name, script->_cmd);
+			"to <%s>\n", GetJobName(), type_name, old_script_name, script->GetCmd());
 	}
 
 	return true;

@@ -11,7 +11,7 @@ Synopsis
 
 **condor_token_fetch** [**-authz** *authz* ...] [**-lifetime** *value*]
 [**-pool** *pool_name*] [**-name** hostname] [**-type** *type*]
-[**-token** *filename*] [**-key** *signing_key*]
+[**-token** *filename* | **-file** *filename*] [**-key** *signing_key*]
 
 **condor_token_fetch** [**-help** ]
 
@@ -37,8 +37,11 @@ By default, *condor_token_fetch* will query the local *condor_schedd*; by specif
 a combination of **-pool**, **-name**, or **-type**, the tool can request tokens
 in other pools, on other hosts, or different daemon types.
 
-If successful, the resulting token will be sent to ``stdout``; by specifying
-the **-token** option, it will instead be written to the user's token directory.
+If successful, the resulting token will be sent to ``stdout``.
+With the **-token** option, the token will instead be written to the user's
+token directory (the value may not have any path information).
+With the **-file** option, the token will be written to the given file
+(the value may be an arbitrary filename).
 
 Options
 -------

@@ -114,7 +114,6 @@ void __wrap_dprintf(int flags, const char * fmt, ...)
  * Note: we don't default basic output D_ALWAYS here, it's up to the caller to do so if needed.
  *       we also don't clear basic & verbose here.  once again its up to the caller to initialize
  *
- * If this were C++ code, we could use StringList instead of strtok().
  * We don't use strtok_r() because it's not available on Windows.
  */
 void

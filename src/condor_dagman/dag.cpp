@@ -38,8 +38,6 @@
 #include "condor_daemon_core.h"
 #include "dagman_metrics.h"
 #include "enum_utils.h"
-#include "condor_getcwd.h"
-#include "directory.h"
 #include "tmp_dir.h"
 #include "condor_q.h"
 
@@ -380,7 +378,7 @@ void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 	debug_printf(DEBUG_VERBOSE, "Querying local schedd for associated jobs in queue\n");
 	// Setup variables for queue query
 	CondorQ queue;
-	StringList attrs("ClusterId,ProcId");
+	const static std::vector<std::string> attrs{"ClusterId","ProcId"};
 	CondorError errstack;
 	QueriedJobs job_info;
 
@@ -688,6 +686,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job, bool recovery) {
 
 	if (job) {
 		job->SetProcEvent(event->proc, ABORT_TERM_MASK);
+		job->IncrementJobsAborted();
 
 		// This code is here because if a held job is removed, we
 		// don't get a released event for that job.  This may not
@@ -710,6 +709,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job, bool recovery) {
 			// that breaks a test in Windows. Keep an eye on this in case we
 			// have trouble recovering from aborted jobs using late materialization.
 			if (job->_queuedNodeJobProcs > 0) {
+				job->MarkFailed();
 				// once one job proc fails, remove the whole cluster
 				std::string rm_reason;
 				formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) got %s event.",
@@ -740,6 +740,8 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job, bool recovery) {
 		const JobTerminatedEvent* termEvent = (const JobTerminatedEvent*) event;
 
 		bool failed = !(termEvent->normal && termEvent->returnValue == 0);
+
+		job->CountJobExitCode(termEvent->returnValue);
 
 		if (failed) { // job failed or was killed by a signal
 			if (termEvent->normal) {
@@ -775,6 +777,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job, bool recovery) {
 
 				job->TerminateFailure();
 				if (job->_queuedNodeJobProcs > 0) {
+					job->MarkFailed();
 					// once one job proc fails, remove the whole cluster
 					std::string rm_reason;
 					formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) failed with signal %d.",
@@ -1058,12 +1061,12 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		_totalJobsSubmitted++;
 	}
 
-	// Note: in non-recovery mode, we increment _numJobsSubmitted in ProcessSuccessfulSubmit().
+	// Note: in non-recovery mode, we increment _numNodesSubmitted in ProcessSuccessfulSubmit().
 	if (recovery) {
 		if (submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED) {
 			// Only increment the submitted job count on the *first* proc of a job.
 			if (job->_numSubmittedProcs == 1) {
-				UpdateJobCounts(job, 1);
+				UpdateNodeCounts(job, 1);
 			}
 		}
 
@@ -1126,7 +1129,7 @@ Dag::ProcessIsIdleEvent(Job *job, int proc) {
 	}
 
 	// Do some consistency checks here.
-	if (_numIdleJobProcs > 0 && NumJobsSubmitted() < 1) {
+	if (_numIdleJobProcs > 0 && NumNodesSubmitted() < 1) {
 		debug_printf(DEBUG_NORMAL,
 		            "Warning:  DAGMan thinks there are %d idle job procs, even though there are no jobs in the queue!  Setting idle count to 0 so DAG continues.\n",
 		            _numIdleJobProcs );
@@ -1155,7 +1158,7 @@ Dag::ProcessNotIdleEvent(Job *job, int proc) {
 		             _numIdleJobProcs );
 	}
 
-	if (_numIdleJobProcs > 0 && NumJobsSubmitted() < 1) {
+	if (_numIdleJobProcs > 0 && NumNodesSubmitted() < 1) {
 		debug_printf(DEBUG_NORMAL,
 		             "Warning:  DAGMan thinks there are %d idle job procs, even though there are no jobs in the queue!  Setting idle count to 0 so DAG continues.\n",
 		             _numIdleJobProcs);
@@ -1252,7 +1255,7 @@ Dag::ProcessClusterRemoveEvent(Job *job, bool recovery) {
 	// Cleanup the job and write succcess/failure to the log. 
 	// For non-cluster jobs, this is done in DecrementProcCount
 	_jobstateLog.WriteJobSuccessOrFailure(job);
-	UpdateJobCounts(job, -1);
+	UpdateNodeCounts(job, -1);
 	job->Cleanup();
 }
 
@@ -1596,7 +1599,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		if (_readyQ->empty()) { break; }
 
 		// max jobs already submitted
-		if (maxJobs && _numJobsSubmitted >= maxJobs) {
+		if (maxJobs && _numNodesSubmitted >= maxJobs) {
 			debug_printf(DEBUG_DEBUG_1, "Max jobs (%d) already running; deferring submission of %d ready job%s.\n",
 			             maxJobs, _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
 			_maxJobsDeferredCount += _readyQ->size();
@@ -1744,6 +1747,7 @@ Dag::PreScriptReaper(Job *job, int status)
 			// Check for POST script. PRE script Failed.  The return code is in retval member.
 			job->_scriptPost->_retValScript = job->retval;
 			job->_scriptPost->_retValJob = DAG_ERROR_JOB_SKIPPED;
+			job->MarkFailed();
 			RunPostScript(job, dagOpts[shallow::b::PostRun], job->retval);
 		} else if (job->DoRetry()) {
 			// Check for retries.
@@ -1752,6 +1756,7 @@ Dag::PreScriptReaper(Job *job, int status)
 			RestartNode(job, false);
 		} else {
 			// None of the above apply -- the node has failed.
+			job->MarkFailed();
 			job->TerminateFailure();
 			if (job->GetType() != NodeType::SERVICE) {
 				_numNodesFutile += job->SetDescendantsToFutile(*this);
@@ -1939,10 +1944,10 @@ Dag::FinishedRunning(bool includeFinalNode) const
 		// Note that we're checking for scripts actually running here,
 		// not the number of nodes in the PRERUN or POSTRUN state --
 		// if we're halted, we don't start any new PRE scripts.
-		return (NumJobsSubmitted() == 0 && NumScriptsRunning() == 0);
+		return (NumNodesSubmitted() == 0 && NumScriptsRunning() == 0);
 	}
 
-	return (NumJobsSubmitted() == 0 && NumNodesReady() == 0 && ScriptRunNodeCount() == 0);
+	return (NumNodesSubmitted() == 0 && NumNodesReady() == 0 && ScriptRunNodeCount() == 0);
 }
 
 //---------------------------------------------------------------------------
@@ -2355,7 +2360,7 @@ void
 Dag::WriteScriptToRescue(FILE *fp, Script *script)
 {
 	const char *type = nullptr;
-	switch(script->_type) {
+	switch(script->GetType()) {
 		case ScriptType::PRE: type = "PRE"; break;
 		case ScriptType::POST: type = "POST"; break;
 		case ScriptType::HOLD: type = "HOLD"; break;
@@ -2471,7 +2476,7 @@ Dag::RestartNode(Job *node, bool recovery)
 
 	node->SetStatus(Job::STATUS_READY);
 	node->retries++;
-	node->_numSubmittedProcs = 0;
+	node->ResetJobInfo();
 	ASSERT(node->GetRetries() <= node->GetRetryMax());
 	if (node->_scriptPre) {
 		// undo PRE script completion
@@ -2837,7 +2842,7 @@ Dag::DumpNodeStatus(bool held, bool removed)
 	fprintf(outfile, "  DagStatus = %d; /* %s */\n", dagJobStatus, EscapeClassadString(statusStr.c_str()));
 
 	int nodesPre = PreRunNodeCount();
-	int nodesQueued = NumJobsSubmitted();
+	int nodesQueued = NumNodesSubmitted();
 	int nodesPost = PostRunNodeCount();
 	int nodesFailed = NumNodesFailed();
 	int nodesHeld = 0, nodesIdle = 0;
@@ -3765,7 +3770,7 @@ Dag::ProcessSuccessfulSubmit(Job *node, const CondorID &condorID)
 	// we see the submit events so that we don't accidentally exceed
 	// maxjobs (now really maxnodes) if it takes a while to see
 	// the submit events.  wenger 2006-02-10.
-	UpdateJobCounts(node, 1);
+	UpdateNodeCounts(node, 1);
 
 
 	// stash the job ID reported by the submit command, to compare
@@ -3862,19 +3867,19 @@ Dag::DecrementProcCount(Job *node)
 	ASSERT(node->_queuedNodeJobProcs >= 0);
 
 	if (node->AllProcsDone()) {
-		UpdateJobCounts(node, -1);
+		UpdateNodeCounts(node, -1);
 		node->Cleanup();
 	}
 }
 
 //---------------------------------------------------------------------------
 void
-Dag::UpdateJobCounts(Job *node, int change)
+Dag::UpdateNodeCounts(Job *node, int change)
 {
 	// Service nodes are separate from normal jobs
 	if (node->GetType() == NodeType::SERVICE) { return; }
-	_numJobsSubmitted += change;
-	ASSERT(_numJobsSubmitted >= 0);
+	_numNodesSubmitted += change;
+	ASSERT(_numNodesSubmitted >= 0);
 
 	if (node->GetThrottleInfo()) {
 		node->GetThrottleInfo()->_currentJobs += change;
@@ -4180,14 +4185,9 @@ Dag::RecordInitialAndTerminalNodes(void)
 OwnedMaterials*
 Dag::RelinquishNodeOwnership(void)
 {
-	std::vector<Job*> *nodes = new std::vector<Job*>();
-
 	// 1. Copy the jobs
-	auto it = _jobs.begin();
-	while (it != _jobs.end()) {
-		nodes->push_back(*it);
-		it = _jobs.erase(it);
-	}
+	auto *nodes = new std::vector<Job*>(_jobs.begin(),_jobs.end());
+	_jobs.clear();
 
 	// shove it into a packet and give it back
 	return new OwnedMaterials(nodes, &_catThrottles, _reject, _firstRejectLoc);

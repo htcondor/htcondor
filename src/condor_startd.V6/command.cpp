@@ -170,10 +170,6 @@ command_activate_claim(int cmd, Stream* stream )
 	}
 	free( id );
 
-#ifdef LINUX
-	rip->setVolumeManager(resmgr->getVolumeManager());
-#endif //LINUX
-
 	if ( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
 		stream->end_of_message();
@@ -490,7 +486,7 @@ countres:
 		int ResCount = resmgr->claims_for_this_user(curuser);
 		if (ResCount == 0) {
 			dprintf(D_FULLDEBUG, "user %s no longer has any claims, marking KRB cred for sweeping.\n", curuser.c_str());
-			credmon_mark_creds_for_sweeping(cred_dir_krb, curuser.c_str());
+			credmon_mark_creds_for_sweeping(cred_dir_krb, curuser.c_str(), credmon_type_KRB);
 		} else {
 			dprintf(D_FULLDEBUG, "user %s still has %d claims\n", curuser.c_str(), ResCount);
 		}

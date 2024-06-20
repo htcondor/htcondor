@@ -67,12 +67,11 @@ std::vector<std::string> get_hostname_with_alias(const condor_sockaddr& addr);
 std::string get_full_hostname(const condor_sockaddr& addr);
 
 // DNS-lookup for given hostname
-std::vector<condor_sockaddr> resolve_hostname(const std::string& hostname);
-std::vector<condor_sockaddr> resolve_hostname(const char* hostname);
+std::vector<condor_sockaddr> resolve_hostname(const std::string& hostname, std::string* canonical = nullptr);
 
 // _raw function directly calls getaddrinfo, does not do any of NO_DNS
 // related handlings.
-std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname);
+std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname, std::string* canonical = nullptr);
 
 // NODNS functions
 //

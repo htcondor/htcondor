@@ -212,14 +212,16 @@ static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
 }
 
 static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
-	return can_switch_ids() && cgroup_controller_is_writeable("", relative_cgroup);
+	bool use_cgroups_without_priv = param_boolean("CREATE_CGROUP_WITHOUT_ROOT", false);
+	return (use_cgroups_without_priv || can_switch_ids()) && 
+		cgroup_controller_is_writeable("", relative_cgroup);
 }
 
 static std::string current_parent_cgroup() {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	std::string cgroup;
 
-	int fd = open("/proc/self/cgroup", 0666);
+	int fd = open("/proc/self/cgroup", O_RDONLY);
 	if (fd < 0) {
 		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
 		return cgroup; // empty cgroup is invalid
@@ -474,27 +476,24 @@ VanillaProc::StartJob()
        const char * allowed_root_dirs = param("NAMED_CHROOT");
        if (requested_chroot_name.size()) {
                dprintf(D_FULLDEBUG, "Checking for chroot: %s\n", requested_chroot_name.c_str());
-               StringList chroot_list(allowed_root_dirs);
-               chroot_list.rewind();
-               const char * next_chroot;
                bool acceptable_chroot = false;
                std::string requested_chroot;
-               while ( (next_chroot=chroot_list.next()) ) {
+               for (const auto& next_chroot: StringTokenIterator(allowed_root_dirs)) {
                        StringTokenIterator chroot_spec(next_chroot, "=");
                        const char* tok;
                        tok = chroot_spec.next();
                        if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
                                continue;
                        }
                        std::string chroot_name = tok;
                        tok = chroot_spec.next();
                        if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
                                continue;
                        }
                        std::string next_dir = tok;
-                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir.c_str(), next_chroot);
+                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir.c_str(), next_chroot.c_str());
                        if (IsDirectory(next_dir.c_str()) && requested_chroot_name == chroot_name) {
                                acceptable_chroot = true;
                                requested_chroot = next_dir;
@@ -596,30 +595,20 @@ VanillaProc::StartJob()
 		const char* working_dir = Starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
-			StringList mount_list(mount_under_scratch);
-
-			mount_list.rewind();
 			if (!fs_remap) {
 				fs_remap.reset(new FilesystemRemap());
 			}
-			const char * next_dir;
-			while ( (next_dir=mount_list.next()) ) {
-				if (!*next_dir) {
-					// empty string?
-					mount_list.deleteCurrent();
-					continue;
-				}
-
+			for (const auto& next_dir: StringTokenIterator(mount_under_scratch)) {
 				// Gah, I wish I could throw an exception to clean up these nested if statements.
-				if (IsDirectory(next_dir)) {
+				if (IsDirectory(next_dir.c_str())) {
 					std::string fulldirbuf;
-					const char * full_dir = dirscat(working_dir, next_dir, fulldirbuf);
+					const char * full_dir = dirscat(working_dir, next_dir.c_str(), fulldirbuf);
 
 					if (full_dir) {
 							// If the execute dir is under any component of MOUNT_UNDER_SCRATCH,
 							// bad things happen, so give up.
-						if (fulldirbuf.find(next_dir) == 0) {
-							dprintf(D_ALWAYS, "Can't bind mount %s under execute dir %s -- skipping MOUNT_UNDER_SCRATCH\n", next_dir, full_dir);
+						if (fulldirbuf.find(next_dir.c_str()) == 0) {
+							dprintf(D_ALWAYS, "Can't bind mount %s under execute dir %s -- skipping MOUNT_UNDER_SCRATCH\n", next_dir.c_str(), full_dir);
 							continue;
 						}
 
@@ -627,17 +616,17 @@ VanillaProc::StartJob()
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir);
 							return FALSE;
 						}
-						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir);
-						if (fs_remap->AddMapping(full_dir, next_dir)) {
+						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir.c_str());
+						if (fs_remap->AddMapping(full_dir, next_dir.c_str())) {
 							// FilesystemRemap object prints out an error message for us.
 							return FALSE;
 						}
 					} else {
-						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir, next_dir);
+						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir, next_dir.c_str());
 						return FALSE;
 					}
 				} else {
-					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir, next_dir);
+					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir.c_str(), next_dir.c_str());
 				}
 			}
 		Starter->setTmpDir("/tmp");
@@ -945,6 +934,19 @@ void VanillaProc::killFamilyIfWarranted() {
 }
 
 void VanillaProc::restartCheckpointedJob() {
+
+	// daemoncore unregisters the family
+	// after it calls the reaper, if it was registered.
+	// on cgroup systems, this kills everything in the cgroup.
+	//
+	// We call restartCheckpointedJob from the reaper, so the
+	// unregistration hasn't happened yet. We start a new job here In
+	// the reaper, but when we return, daemon core will unregister
+	// and kill all the processes in this cgroup, including the ones 
+	// we just starts.  Extend_Family_Lifetime turns off the unregistration
+
+	daemonCore->Extend_Family_Lifetime(JobPid);
+
 	ProcFamilyUsage last_usage;
 	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
 		dprintf( D_ALWAYS, "error getting family usage for pid %d in "

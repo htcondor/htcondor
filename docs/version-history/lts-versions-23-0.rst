@@ -15,6 +15,37 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23014:
+
+Version 23.0.14
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.14 released on Month Date, 2024.
+
+- HTCondor version 23.0.14 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a couple bugs in when credentials managed by the
+  *condor_credd* are cleaned up. In some situations, credentials would
+  be removed while jobs requiring them were queued or even running,
+  resulting in the jobs being held.
+  :jira:`2467`
+
+- Fixed a bug where an illformed scitoken could crash a *condor_schedd*.
+  :jira:`2503`
+
+- Fixed a bug where resource claiming would fail if the *condor_schedd*
+  had :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` enabled and the
+  *condor_startd* had it disabled.
+  :jira:`2484`
+
 .. _lts-version-history-23012:
 
 Version 23.0.12
@@ -22,9 +53,7 @@ Version 23.0.12
 
 Release Notes:
 
-.. HTCondor version 23.0.12 released on Month Date, 2024.
-
-- HTCondor version 23.0.12 not yet released.
+- HTCondor version 23.0.12 released on June 13, 2024.
 
 New Features:
 

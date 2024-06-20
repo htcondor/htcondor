@@ -25,9 +25,8 @@
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_collector.h"
-#include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
-#include "condor_api.h"
+#include "ad_printmask.h"
 #include "condor_string.h"
 #include "directory.h"
 #include "format_time.h"

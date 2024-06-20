@@ -15,7 +15,7 @@ if [[ $OS_ID != centos && $OS_ID != almalinux && $OS_ID != ubuntu ]]; then
     exit 1
 fi
 
-getent passwd rest || useradd -m restd
+getent passwd restd || useradd -m restd
 getent passwd submituser || useradd -m submituser
 
 if [[ $OS_ID == centos || $OS_ID == almalinux ]]; then
@@ -24,7 +24,7 @@ if [[ $OS_ID == centos || $OS_ID == almalinux ]]; then
     rm -f /tmp/00-minicondor-ubuntu
 
     # perl is needed for condor_run. Reinstalling condor to get the man pages too.
-    # git and flask are needed for the restd; jq is too useful not to include.
+    # git is needed for the restd; jq is too useful not to include.
     yum='yum -y'
     $yum install perl
     rpm -q perl
@@ -35,10 +35,9 @@ if [[ $OS_ID == centos || $OS_ID == almalinux ]]; then
     HTCONDOR_VERSION=$(rpm -q --qf='%{VERSION}\n' condor)
     $yum install --setopt=tsflags='' "minicondor = ${HTCONDOR_VERSION}"
     rpm -q minicondor
-    $yum install -y jq git-core python3-flask
+    $yum install -y jq git-core
     rpm -q jq
     (rpm -q git || rpm -q git-core)
-    (rpm -q python3-flask || rpm -q python36-flask)
 
     yum clean all
     rm -rf /var/cache/yum/*

@@ -220,10 +220,15 @@ class JobQueueUserRec;
 typedef JobQueueUserRec OwnerInfo;
 typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
 // attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
-#define ATTR_USERREC_NAME ATTR_OWNER
 constexpr int  CONDOR_USERREC_ID = 1;
 constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
-constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = false;
+#if 1
+ constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = true;
+ #define ATTR_USERREC_NAME ATTR_USER
+#else
+ constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = false;
+ #define ATTR_USERREC_NAME ATTR_OWNER
+#endif
 #else
 
 struct RealOwnerCounters {
@@ -342,36 +347,35 @@ class UserIdentity {
 			// The default constructor is not recommended as it
 			// has no real identity.  It only exists so
 			// we can put UserIdentities in various templates.
-		UserIdentity() : m_username(""), m_domain(""), m_auxid("") { }
-		UserIdentity(const char * user, const char * domainname, const char * aux)
-			: m_username(user), m_domain(domainname), m_auxid(aux) { }		
+		UserIdentity() : m_username(""), m_osname(""), m_auxid("") { }
+		UserIdentity(const char * user, const char * osname, const char * aux)
+			: m_username(user), m_osname(osname), m_auxid(aux) { }
 		UserIdentity(const UserIdentity & src) {
 			m_username = src.m_username;
-			m_domain = src.m_domain;
+			m_osname = src.m_osname;
 			m_auxid = src.m_auxid;			
 		}
-		UserIdentity(const char * user, const char * domainname, ClassAd * ad);
+		UserIdentity(JobQueueJob& job_ad);
 		const UserIdentity & operator=(const UserIdentity & src) {
 			m_username = src.m_username;
-			m_domain = src.m_domain;
+			m_osname = src.m_osname;
 			m_auxid = src.m_auxid;
 			return *this;
 		}
 		bool operator==(const UserIdentity & rhs) {
 			return m_username == rhs.m_username && 
-				m_domain == rhs.m_domain && 
 				m_auxid == rhs.m_auxid;
 		}
-		std::string username() const { return m_username; }
-		std::string domain() const { return m_domain; }
-		std::string auxid() const { return m_auxid; }
+		const std::string& username() const { return m_username; }
+		const std::string& osname() const { return m_osname; }
+		const std::string& auxid() const { return m_auxid; }
 
 			// For use in HashTables
 		static size_t HashFcn(const UserIdentity & index);
 	
 	private:
 		std::string m_username;
-		std::string m_domain;
+		std::string m_osname;
 		std::string m_auxid;
 };
 
@@ -653,6 +657,7 @@ class Scheduler : public Service
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
 	int				aliveInterval( void ) const { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
+	const std::string & genericCEDomain() { return GenericCEDomain; }
 	std::string 		accountingDomain() const { return AccountingDomain; };
 	int				getMaxMaterializedJobsPerCluster() const { return MaxMaterializedJobsPerCluster; }
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
@@ -929,6 +934,8 @@ private:
 	char*			CondorAdministrator;
 	char*			AccountantName;
     char*			UidDomain;
+	// when QmgmtSetEffectiveOwner domain matches this domain, use UidDomain as the effective domain
+	std::string		GenericCEDomain{"users.htcondor.org"};
 	std::string		AccountingDomain;
 
 	// connection variables
@@ -1031,7 +1038,7 @@ private:
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
 	
-	void			expand_mpi_procs(StringList *, StringList *);
+	void			expand_mpi_procs(const std::vector<std::string> &, std::vector<std::string> &);
 
 	static void		token_request_callback(bool success, void *miscdata);
 

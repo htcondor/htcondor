@@ -41,7 +41,6 @@
 
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "MapFile.h"
 #include "condor_daemon_core.h"
 

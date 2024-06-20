@@ -96,11 +96,11 @@ class CondorQ
 	// fetch the job ads from the schedd corresponding to the given classad
 	// which pass the criterion specified by the constraints; default is
 	// from the local schedd
-	int fetchQueue (ClassAdList &, StringList &attrs, ClassAd * = 0, CondorError* errstack = 0);
-	int fetchQueueFromHost (ClassAdList &, StringList &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
-	int fetchQueueFromHostAndProcess (const char * schedd_host, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
+	int fetchQueue (ClassAdList &, const std::vector<std::string> &attrs, ClassAd * = 0, CondorError* errstack = 0);
+	int fetchQueueFromHost (ClassAdList &, const std::vector<std::string> &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
+	int fetchQueueFromHostAndProcess (const char * schedd_host, const std::vector<std::string> &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
 
-	int initQueryAd(ClassAd & request_ad, StringList &attrs, int fetch_opts, int match_limit);
+	int initQueryAd(ClassAd & request_ad, const std::vector<std::string> &attrs, int fetch_opts, int match_limit);
 
 	void useDefaultingOperator(bool enable);
 
@@ -131,9 +131,9 @@ class CondorQ
 	time_t scheddBirthdate;
 	
 	// helper functions
-	int fetchQueueFromHostAndProcessV2 ( const char * host, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
-	int getAndFilterAds( const char * constraint, StringList &attrs, int match_limit, ClassAdList &, int useAll );
-	int getFilterAndProcessAds( const char * constraint, StringList &attrs, int match_limit, condor_q_process_func pfn, void * process_func_data, bool useAll );
+	int fetchQueueFromHostAndProcessV2 ( const char * host, const std::vector<std::string> &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
+	int getAndFilterAds( const char * constraint, const std::vector<std::string> &attrs, int match_limit, ClassAdList &, int useAll );
+	int getFilterAndProcessAds( const char * constraint, const std::vector<std::string> &attrs, int match_limit, condor_q_process_func pfn, void * process_func_data, bool useAll );
 };
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data);

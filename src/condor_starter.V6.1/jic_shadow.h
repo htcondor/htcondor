@@ -539,18 +539,18 @@ private:
 		/** A list of output files that have been dynamically added
 		    (e.g. a core file dumped by the job)
 		*/
-	StringList m_added_output_files;
+	std::vector<std::string> m_added_output_files;
 
 		/** A list of files that should NOT be transfered back to the
 			job submitter. (e.g. the job's executable itself)
 		*/
-	StringList m_removed_output_files;
+	std::vector<std::string> m_removed_output_files;
 
 		/** A list of attributes to copy from the update ad to the job
 			ad every time we update the shadow.
 		*/
 	bool m_job_update_attrs_set;
-	StringList m_job_update_attrs;
+	std::vector<std::string> m_job_update_attrs;
 
 	time_t file_xfer_last_alive_time = 0;
 	int    file_xfer_last_alive_tid = 0;

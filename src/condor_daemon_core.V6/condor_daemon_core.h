@@ -100,6 +100,8 @@ int dc_main( int argc, char **argv );
 bool dc_args_is_background(int argc, char** argv); // return true if we should run in background
 // set the default for -f / -b flag for this daemon, used by the master to default to backround, all other daemons default to foreground.
 bool dc_args_default_to_background(bool background);
+// Disable default log setup and ignore -l log directory. Must be called before dc_main()
+void DC_Disable_Default_Log();
 
 #ifndef WIN32
 // call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit

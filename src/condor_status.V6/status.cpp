@@ -20,18 +20,16 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_state.h"
-#include "condor_api.h"
+#include "ad_printmask.h"
 #include "status_types.h"
 #include "totals.h"
 #include "get_daemon_name.h"
 #include "daemon.h"
 #include "dc_collector.h"
 #include "sig_install.h"
-#include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "print_wrapped_text.h"
 #include "error_utils.h"
-#include "condor_distribution.h"
 #include "condor_version.h"
 #include "classad/natural_cmp.h"
 #include "classad/jsonSource.h"
@@ -397,7 +395,7 @@ public:
 	TrackGPUs () {};
 	~TrackGPUs() {};
 
-	int  ingest(ClassAd * ad, StringList * ids_added, StringList * ids_offline);
+	int  ingest(ClassAd * ad, std::vector<std::string> &ids_added, std::vector<std::string> &ids_offline);
 	void displayGPUs(FILE * out, bool verbose) const;
 	bool haveGPUs() const { return ! gpu_props.empty(); }
 
@@ -449,7 +447,7 @@ private:
 // global GPU property ads
 TrackGPUs mainGpuInfo;
 
-int TrackGPUs::ingest(ClassAd * ad, StringList * ids_added, StringList * ids_offline)
+int TrackGPUs::ingest(ClassAd * ad, std::vector<std::string>& ids_added, std::vector<std::string>&ids_offline)
 {
 	classad::ClassAdUnParser unparser;
 	unparser.SetOldClassAd( true, true );
@@ -505,19 +503,19 @@ int TrackGPUs::ingest(ClassAd * ad, StringList * ids_added, StringList * ids_off
 				if ( ! propsAd.size()) {
 					propsAd.Update(*gpuAd);
 					++added;
-					if (ids_added) ids_added->append(gpu_id.c_str());
+					ids_added.emplace_back(gpu_id);
 				}
 			}
 
 			slot_state.bit.offline = 0;
 			if ( ! offline.empty()) {
-				StringList ol(offline);
-				if (ol.contains(gpu_id.c_str())) {
+				std::vector<std::string> ol = split(offline);
+				if (contains(ol, gpu_id)) {
 					slot_state.bit.offline = 1;
 				}
-				for (const char * offid = ol.first(); offid; offid = ol.next()) {
+				for (const std::string &offid: ol) {
 					if (gpu_offline.count(offid)) continue;
-					if (ids_offline) { ids_offline->append(offid); }
+					ids_offline.emplace_back(offid);
 					gpu_offline.insert(offid);
 				}
 			}
@@ -681,9 +679,10 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 	} else {
 
 		// ingest GPU properties ads, If we added any, we may need to re-render some p-slot GPUs columns
-		StringList gpu_ids_added, gpu_ids_offline;
+		std::vector<std::string> gpu_ids_added;
+		std::vector<std::string> gpu_ids_offline;
 		if (pi->gpusInfo) {
-		   	pi->gpusInfo->ingest(ad, &gpu_ids_added, &gpu_ids_offline);
+		   	pi->gpusInfo->ingest(ad, gpu_ids_added, gpu_ids_offline);
 		}
 
 		// we can do normal totals now. but compact mode totals we have to do after checking the slot type
@@ -741,7 +740,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				std::string keybuf, devname;
 				int bk_opt = (srod.flags & SROD_BACKFILL_SLOT) ? TOTALS_OPTION_BACKFILL_SLOTS : 0;
 				if (dash_gpus) {
-					for (const char * gpuid = gpu_ids_added.first(); gpuid; gpuid = gpu_ids_added.next()) {
+					for (const auto &gpuid: gpu_ids_added) {
 						double capy=0.0;
 						long long mb=0;
 						if ( ! pi->gpusInfo->LookupFloat(gpuid, "Capability", capy)) continue;
@@ -1622,9 +1621,9 @@ main (int argc, char *argv[])
 	if (dash_group_by) {
 		if ( ! dashAttributes.empty()) {
 			std::string attrs = JoinAttrNames(dashAttributes, ",");
-			ad_groups.setSigAttrs(attrs.c_str(), true, true);
+			ad_groups.setSigAttrs(attrs.c_str(), true);
 		} else {
-			ad_groups.setSigAttrs("Cpus Memory GPUs IOHeavy START", false, true);
+			ad_groups.setSigAttrs("Cpus Memory GPUs IOHeavy START", true);
 		}
 		ad_groups.keepAdKeys(get_ad_name_string);
 	}
@@ -2004,8 +2003,8 @@ const char * extractGPUsProps ( const classad::Value & value, ClassAd* /*slot*/,
 		}
 	} else if (value.IsStringValue(list_out)) {
 		// for strings, parse as a string list, and add each unique item into the set
-		StringList lst(list_out.c_str());
-		for (const char * psz = lst.first(); psz; psz = lst.next()) {
+		std::vector<std::string> lst = split(list_out);
+		for (const std::string &psz : lst) {
 			uniq.insert(psz);
 		}
 	} else {
@@ -2233,10 +2232,11 @@ bool local_render_totgpus ( classad::Value & value, ClassAd* ad, Formatter & fmt
 	std::string gpus, offline;
 	if (ad->LookupString("AssignedGPUs", gpus)) {
 		int num_assigned = 0, num_offline = 0;
-		StringList sl(gpus); num_assigned = sl.number();
+		std::vector<std::string> sl = split(gpus);
+		num_assigned = sl.size();
 		if (ad->LookupString("OfflineGPUs", offline) && ! offline.empty()) {
 			for (auto id : StringTokenIterator(offline)) {
-				if (sl.contains_anycase(id.c_str())) { ++num_offline; }
+				if (contains_anycase(sl, id)) { ++num_offline; }
 			}
 		}
 		if (num_offline) { formatstr(gpus, "%4d-%d", num_assigned, num_offline); }
@@ -2709,13 +2709,12 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_colon_prefix (argv[i], "long", &pcolon, 1)) {
 			ClassAdFileParseType::ParseType parse_type = ClassAdFileParseType::Parse_long;
 			if (pcolon) {
-				StringList opts(++pcolon);
-				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+				for (const auto &opt: StringTokenIterator(++pcolon)) {
 					if (YourString(opt) == "nosort") {
 						// Note: -attributes quietly disables -long:nosort unless output is long form
 						print_attrs_in_hash_order = true;
 					} else {
-						parse_type = parseAdsFileFormat(opt, parse_type);
+						parse_type = parseAdsFileFormat(opt.c_str(), parse_type);
 					}
 				}
 			}
@@ -2901,8 +2900,7 @@ firstPass (int argc, char *argv[])
 			}
 			multiTag = argv[i];
 			if (pcolon) {
-				StringList opts(++pcolon);
-				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+				for (const auto &opt: StringTokenIterator(++pcolon)) {
 					if (YourString(opt) == "test") {
 						// Note: -attributes quietly disables -long:nosort unless output is long form
 						multipleAdsTest = true;

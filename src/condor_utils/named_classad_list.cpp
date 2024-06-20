@@ -83,7 +83,7 @@ NamedClassAdList::Register( NamedClassAd *ad )
 
 int
 NamedClassAdList::Replace( const char *name, ClassAd *newAd, 
-						   bool report_diff, StringList* ignore_attrs )
+						   bool report_diff, classad::References* ignore_attrs )
 {
 	NamedClassAd	*named_ad = Find( name );
 	if ( NULL == named_ad ) {

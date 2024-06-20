@@ -1015,10 +1015,16 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 						m_auth_state->m_token_length, m_auth_state->m_ssl_status);
 				}
 			}
-			if (m_auth_state->m_token_length >= 0) {
+			if (m_auth_state->m_token_length == 0) {
+				ouch("Received zero-length scitoken: quitting.\n");
+				m_auth_state->m_done = 1;
+				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+				break;
+			}
+			if (m_auth_state->m_token_length > 0) {
 				token_contents.resize(m_auth_state->m_token_length + sizeof(uint32_t), 0);
 				m_auth_state->m_ssl_status = SSL_read_ptr(m_auth_state->m_ssl,
-					static_cast<void*>(&token_contents[0]),
+					static_cast<void*>(token_contents.data()),
 					m_auth_state->m_token_length + sizeof(uint32_t));
 			}
 		}
