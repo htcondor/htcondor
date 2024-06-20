@@ -43,6 +43,9 @@ Bugs Fixed:
   *condor_startd* had it disabled.
   :jira:`2484`
 
+- Fixed a bug where *condor_annex* could segfault on start-up.
+  :jira:`2502`
+
 .. _lts-version-history-23012:
 
 Version 23.0.12
