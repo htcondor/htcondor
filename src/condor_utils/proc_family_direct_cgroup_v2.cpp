@@ -851,12 +851,18 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	char word[128]; // max size of a word in memory_events
 	while (fscanf(f, "%s", word) != EOF) {
 		// if word is oom_killed
-		if (strcmp(word, "oom_group_kill") == 0) {
+		uint64_t oom_kill_value = 0;
+		if ((strcmp(word, "oom_group_kill") == 0) ||
+			(strcmp(word, "oom_kill") == 0))	{
 			// next word is the count
-			if (fscanf(f, "%ld", &oom_count) != 1) {
-				dprintf(D_ALWAYS, "Error reading oom_count field out of cpu.stat\n");
+			if (fscanf(f, "%ld", &oom_kill_value) != 1) {
+				dprintf(D_ALWAYS, "Error reading oom_count field out of memory.events\n");
 				fclose(f);
 				return false;
+			}
+			// Take the higher of "oom_group_kill" or "oom_kill"
+			if (oom_kill_value > oom_count) {
+				oom_count = oom_kill_value;
 			}
 		}
 	}
