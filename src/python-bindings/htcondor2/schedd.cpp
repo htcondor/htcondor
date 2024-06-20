@@ -66,7 +66,7 @@ _schedd_query(PyObject *, PyObject * args) {
         case Q_PARSE_ERROR:
         case Q_INVALID_CATEGORY:
             // This was ClassAdParseError in version 1.
-            PyErr_SetString(PyExc_ClassAdException, "Parse error in constraint");
+            PyErr_SetString(PyExc_HTCondorException, "Parse error in constraint");
             return NULL;
 
         case Q_UNSUPPORTED_OPTION_ERROR:
