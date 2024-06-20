@@ -156,7 +156,7 @@ _send_command( PyObject *, PyObject * args ) {
 	}
 	if(! result) {
 		// This was HTCondorLocateError in version 1.
-		PyErr_SetString( PyExc_RuntimeError, "Unable to locate daemon." );
+		PyErr_SetString( PyExc_HTCondorException, "Unable to locate daemon." );
 		return NULL;
 	}
 
@@ -168,7 +168,7 @@ _send_command( PyObject *, PyObject * args ) {
 	}
 	if(! result) {
 		// This was HTCondorIOError in version 1.
-		PyErr_SetString( PyExc_IOError, "Unable to connect to the remote daemon." );
+		PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the remote daemon." );
 		return NULL;
 	}
 
@@ -178,7 +178,7 @@ _send_command( PyObject *, PyObject * args ) {
 	}
 	if(! result) {
 		// This was HTCondorIOError in version 1.
-		PyErr_SetString( PyExc_IOError, "Failed to start command." );
+		PyErr_SetString( PyExc_HTCondorException, "Failed to start command." );
 		return NULL;
 	}
 
@@ -186,7 +186,7 @@ _send_command( PyObject *, PyObject * args ) {
 		std::string api_failure(target);
 		if(! sock.code(api_failure)) {
 			// This was HTCondorIOError in version 1.
-			PyErr_SetString( PyExc_IOError, "Failed to send target." );
+			PyErr_SetString( PyExc_HTCondorException, "Failed to send target." );
 			return NULL;
 		}
 	}
@@ -194,7 +194,7 @@ _send_command( PyObject *, PyObject * args ) {
 	// Version 1 only sent the end-of-message if the command had a payload.
 	if(! sock.end_of_message()) {
 		// This was HTCondorIOError in version 1.
-		PyErr_SetString( PyExc_IOError, "Failed to send end-of-message." );
+		PyErr_SetString( PyExc_HTCondorException, "Failed to send end-of-message." );
 		return NULL;
 	}
 
@@ -223,7 +223,7 @@ _send_alive( PyObject *, PyObject * args ) {
 	daemon->sendBlockingMsg(message);
 	if( message->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED) {
 		// This was HTCondorIOError in version 1.
-		PyErr_SetString( PyExc_IOError, "Failed to deliver keepalive message." );
+		PyErr_SetString( PyExc_HTCondorException, "Failed to deliver keepalive message." );
 		return NULL;
 	}
 

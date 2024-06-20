@@ -24,7 +24,7 @@ _negotiator_command(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
@@ -37,7 +37,7 @@ _negotiator_command(PyObject *, PyObject * args) {
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 
@@ -59,7 +59,7 @@ _negotiator_command_return(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
@@ -76,7 +76,7 @@ _negotiator_command_return(PyObject *, PyObject * args) {
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 
@@ -99,7 +99,7 @@ _negotiator_command_user(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
@@ -112,7 +112,7 @@ _negotiator_command_user(PyObject *, PyObject * args) {
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 
@@ -135,7 +135,7 @@ _negotiator_command_user_return(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
@@ -152,7 +152,7 @@ _negotiator_command_user_return(PyObject *, PyObject * args) {
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 
@@ -183,7 +183,7 @@ _negotiator_command_user_value(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
@@ -202,7 +202,7 @@ _negotiator_command_user_value(PyObject *, PyObject * args) {
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 
