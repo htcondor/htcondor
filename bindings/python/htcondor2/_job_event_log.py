@@ -98,13 +98,12 @@ class JobEventLog():
         offset = _job_event_log_get_offset(self, self._handle)
         state = self.__dict__.copy()
         del state['_handle']
-        return (state, self._deadline, offset, self._filename)
+        return (state, offset)
 
 
     def __setstate__(self, t):
         self.__dict__ = t[0]
-        self._deadline = t[1]
-        self._filename = t[3]
         self._handle = handle_t()
+        offset = t[1]
         _job_event_log_init(self, self._handle, self._filename)
-        _job_event_log_set_offset(self, self._handle, t[2])
+        _job_event_log_set_offset(self, self._handle, offset)
