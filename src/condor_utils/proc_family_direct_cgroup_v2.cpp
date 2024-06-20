@@ -126,7 +126,7 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 	// sub-cgroups.  Let's try to use it, and also try the old-fashioned way.
 
 	stdfs::path kill_path = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.kill");
-	FILE *f = fopen(kill_path.c_str(), "r");
+	FILE *f = fopen(kill_path.c_str(), "w");
 	if (!f) {
 		// Could be it just doesn't exist
 		if (errno != ENOENT) {
