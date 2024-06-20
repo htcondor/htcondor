@@ -5757,7 +5757,7 @@ int SubmitHash::SetRequirements()
 
 	GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs);
 
-	bool	checks_arch = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_ARCH );
+	bool	checks_arch = machine_refs.count( ATTR_ARCH );
 	bool	checks_opsys = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
 		machine_refs.count( ATTR_OPSYS_AND_VER ) ||
 		machine_refs.count( ATTR_OPSYS_LONG_NAME ) ||
@@ -5835,6 +5835,14 @@ int SubmitHash::SetRequirements()
 			}
 		}
 	} else if (IsDockerJob) {
+			if( !checks_arch ) {
+				if( answer[0] ) {
+					answer += " && ";
+				}
+				answer += "(TARGET.Arch == \"";
+				answer += ArchMacroDef.psz;
+				answer += "\")";
+			}
 			if( answer[0] ) {
 				answer += " && ";
 			}
@@ -5850,6 +5858,14 @@ int SubmitHash::SetRequirements()
 				}
 			}
 	} else if (IsContainerJob) {
+			if( !checks_arch ) {
+				if( answer[0] ) {
+					answer += " && ";
+				}
+				answer += "(TARGET.Arch == \"";
+				answer += ArchMacroDef.psz;
+				answer += "\")";
+			}
 			if( answer[0] ) {
 				answer += " && ";
 			}
