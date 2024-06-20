@@ -68,9 +68,11 @@ New Features:
   IPv6 link-local addresses.
   :jira:`2453`
 
-- The identifiers ``condor`` and ``condor_pool`` are now treated
-  identically for authorization rules (i.e. ALLOW_DAEMON).
-  They are both indicators of a trusted HTCondor dameon.
+- The identifier ``condor_pool`` is no longer used for the IDTOKENS
+  and PASSWORD authentication methods; ``condor`` is used instead. 
+  When authenticating with an older peer, ``condor_pool`` is still
+  used, but is treated identically to ``condor`` for authorization
+  rules (i.e. ALLOW_DAEMON).
   :jira:`2486`
 
 - Added the ``credential`` verb to the ``htcondor`` tool, which may help
