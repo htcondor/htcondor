@@ -52,7 +52,6 @@ deb-based Distributions
 We support four deb-based platforms: Debian 11 (Bullseye) and Debian 12 (Bookworm); and
 Ubuntu 20.04 (Focal Fossa) and 22.04 (Jammy Jellyfish).
 Binaries are available for x86_64 for all these platforms.
-For Unbuntu 20.04 (Focal Fossa) HTCondor also supports Power PC (ppc64el).
 These repositories also include the source packages.
 
 Debian 11, and 12
