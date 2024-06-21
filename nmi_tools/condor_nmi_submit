@@ -984,8 +984,8 @@ sub createSubmitFilesNew
 
 	my $job_prio = time;
 	if (defined($importance)) { $job_prio = $job_prio + ($importance * 3600); }
-	# Lower priority of emulated jobs
-	print CMDFILE "++jobprio = $job_prio - (regexp(\"x86_64\", (nmi_target_platform ?: \"x86_64\")) ? 0 : 86400)\n";
+	# Lower priority of emulated Power PC jobs
+	print CMDFILE "++jobprio = $job_prio - (regexp(\"ppc64le\", (nmi_target_platform ?: \"x86_64\")) ? 86400 : 0)\n";
 
 	# Glorious hack.
 	# It is best if the 'build' and 'test' jobs request the same amount of memory
@@ -995,8 +995,6 @@ sub createSubmitFilesNew
 		print CMDFILE "request_cpus = 1\n";
 		# 9GiB (expect 8 cores, 1+ GiB per core)
 		print CMDFILE "request_memory = 9G\n";
-		# ARM64 builds on EL9 take a huge amount of memory creating condor_util library
-		print CMDFILE "nmi-build:aarch64_AlmaLinux9_request_memory = 20G\n";
 		print CMDFILE "request_disk = 8G\n";
 
 		# Select Docker NAT network for more reliable HTCondor startup
@@ -1008,8 +1006,6 @@ sub createSubmitFilesNew
 		print CMDFILE "request_memory = 9G\n";
 		# Emulated plaforms need more memory for tests
 		print CMDFILE "nmi-build:ppc64le_AlmaLinux8_request_memory = 12G\n";
-		print CMDFILE "nmi-build:aarch64_AlmaLinux8_request_memory = 12G\n";
-		print CMDFILE "nmi-build:aarch64_AlmaLinux9_request_memory = 12G\n";
 		print CMDFILE "nmi-build:ppc64le_Ubuntu20_request_memory = 12G\n";
 		print CMDFILE "request_disk = 8G\n";
 
