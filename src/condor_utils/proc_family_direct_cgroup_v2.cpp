@@ -126,7 +126,7 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 	// sub-cgroups.  Let's try to use it, and also try the old-fashioned way.
 
 	stdfs::path kill_path = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.kill");
-	FILE *f = fopen(kill_path.c_str(), "r");
+	FILE *f = fopen(kill_path.c_str(), "w");
 	if (!f) {
 		// Could be it just doesn't exist
 		if (errno != ENOENT) {
@@ -851,12 +851,18 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	char word[128]; // max size of a word in memory_events
 	while (fscanf(f, "%s", word) != EOF) {
 		// if word is oom_killed
-		if (strcmp(word, "oom_group_kill") == 0) {
+		uint64_t oom_kill_value = 0;
+		if ((strcmp(word, "oom_group_kill") == 0) ||
+			(strcmp(word, "oom_kill") == 0))	{
 			// next word is the count
-			if (fscanf(f, "%ld", &oom_count) != 1) {
-				dprintf(D_ALWAYS, "Error reading oom_count field out of cpu.stat\n");
+			if (fscanf(f, "%ld", &oom_kill_value) != 1) {
+				dprintf(D_ALWAYS, "Error reading oom_count field out of memory.events\n");
 				fclose(f);
 				return false;
+			}
+			// Take the higher of "oom_group_kill" or "oom_kill"
+			if (oom_kill_value > oom_count) {
+				oom_count = oom_kill_value;
 			}
 		}
 	}
