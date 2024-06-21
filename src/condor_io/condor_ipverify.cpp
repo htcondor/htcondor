@@ -25,7 +25,6 @@
 #include "condor_netdb.h"
 #include "subsystem_info.h"
 
-#include "HashTable.h"
 #include "sock.h"
 #include "condor_secman.h"
 #include "ipv6_hostname.h"
