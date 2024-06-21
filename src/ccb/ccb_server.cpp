@@ -978,12 +978,6 @@ CCBServer::AddTarget( CCBTarget *target )
 			break; // success
 		}
 
-		if (m_targets.contains(target->getCCBID())) {
-			EXCEPT( "CCB: failed to insert registered target ccbid %lu "
-					"for %s",
-					target->getCCBID(),
-					target->getSock()->peer_description());
-		}
 		// else this ccbid is already taken, so try again
 	}
 
