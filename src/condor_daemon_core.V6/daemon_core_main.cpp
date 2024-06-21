@@ -491,6 +491,11 @@ private:
 				dprintf(D_ALWAYS, "Token request approved.\n");
 					// Flush the cached result of the token search.
 				Condor_Auth_Passwd::retry_token_search();
+					// Don't flush any security sessions. It's highly unlikely
+					// there are any relevant ones, and flushing the
+					// non-negotiated sessions will cause problems
+					// (like crashing when we want to use the family session).
+				#if 0
 					// Flush out the security sessions; will need to force a re-auth.
 				auto sec_man = daemonCore->getSecMan();
 				sec_man->reconfig();
@@ -502,6 +507,7 @@ private:
 				} else {
 					sec_man->invalidateAllCache();
 				}
+				#endif
 					// Invoke the daemon-provided callback to do daemon-specific cleanups.
 				(*req.m_callback_fn)(true, req.m_callback_data);
 			}

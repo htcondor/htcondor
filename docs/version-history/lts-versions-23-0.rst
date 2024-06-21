@@ -54,6 +54,10 @@ Bugs Fixed:
 - Fixed a bug where *condor_annex* could segfault on start-up.
   :jira:`2502`
 
+- Fixed a bug where some daemons would crash after an IDTOKEN they
+  requested from the *condor_collector* was approved.
+  :jira:`2517`
+
 .. _lts-version-history-23012:
 
 Version 23.0.12
