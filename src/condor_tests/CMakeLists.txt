@@ -378,7 +378,7 @@ endif ()
 			if (${BIT_MODE} MATCHES "32")
 				condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
 			endif()
-		endif()
+		endif(NOT EMULATED_PLATFORM)
 	endif(LINUX)
 
 	##########################################################
