@@ -52,6 +52,10 @@ New Features:
   running a job on a claim, retrying it usually also failed.
   :jira:`2300`
 
+- The :macro:`MODIFY_REQUEST_EXPR_REQUEST<RES>` configuration variables
+  can now be prefixed with `SLOT_TYPE_<N>_` to be specialized by slot type.
+  :jira:`2512`
+
 - Container universe jobs running under singularity or apptainer now
   run with a contained home directory, when HTCondor file transfer is
   enabled.  This means the jobs get the $HOME environment variable set
