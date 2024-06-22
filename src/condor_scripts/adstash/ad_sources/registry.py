@@ -23,6 +23,9 @@ def startd_history_source():
 def schedd_job_epoch_history_source():
     from adstash.ad_sources.schedd_job_epoch_history import ScheddJobEpochHistorySource
     return ScheddJobEpochHistorySource
+def schedd_transfer_epoch_history_source():
+    from adstash.ad_sources.schedd_transfer_epoch_history import ScheddTransferEpochHistorySource
+    return ScheddTransferEpochHistorySource
 def ad_file_source():
     from adstash.ad_sources.ad_file import FileAdSource
     return FileAdSource
@@ -32,6 +35,7 @@ ADSTASH_AD_SOURCE_REGISTRY = {
     "schedd_history": schedd_history_source,
     "startd_history": startd_history_source,
     "schedd_job_epoch_history": schedd_job_epoch_history_source,
+    "schedd_transfer_epoch_history": schedd_transfer_epoch_history_source,
     "ad_file": ad_file_source,
 }
 ADSTASH_AD_SOURCES = list(ADSTASH_AD_SOURCE_REGISTRY.keys())
