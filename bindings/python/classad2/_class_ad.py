@@ -425,7 +425,7 @@ def _quote(input : str) -> str:
 
 def _unquote(input : str) -> str:
     '''
-    The reverse of :func:`quote`.
+    The inverse of :func:`quote`.
 
     :param input:  The ClassAd string to unquote into its literal value.
     '''
