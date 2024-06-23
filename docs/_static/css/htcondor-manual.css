@@ -64,6 +64,7 @@ div.wy-side-nav-search a.icon.icon-home:before {
     border: none;
     background-color: transparent;
     font-weight: normal;
+    font-size: 100%;
 }
 
 /* override the ``literal`` formating */
@@ -72,4 +73,7 @@ div.wy-side-nav-search a.icon.icon-home:before {
 {
     color: #000000;
     background-color: transparent;
+    border: none;
+    font-size: 100%;
+    background-color: ivory;
 }
