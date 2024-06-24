@@ -994,7 +994,6 @@ ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & /*mythread*/)
 }
 
 ThreadImplementation::ThreadImplementation()
-	: hashThreadToWorker(hashFuncThreadInfo)
 {
 	return;
 }
@@ -1039,7 +1038,7 @@ int ThreadImplementation::pool_add(condor_thread_func_t , void *, int *, const c
 	return -1;
 }
 
-const WorkerThreadPtr_t ThreadImplementation::get_handle(int /*tid*/)
+const WorkerThreadPtr_t ThreadImplementation::get_handle(ThreadInfo /*tid*/)
 {
 	return get_main_thread_ptr();
 }
