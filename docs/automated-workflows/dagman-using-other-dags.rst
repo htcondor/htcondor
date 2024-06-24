@@ -142,12 +142,12 @@ To declare a Sub-DAG simply use the following syntax for the :dag-cmd:`SUBDAG[Us
 
 .. code-block:: condor-dagman
 
-    SUBDAG EXTERNAL NodeName DagFileName [DIR directory] [NOOP] [DONE]
+    SUBDAG EXTERNAL JobName DagFileName [DIR directory] [NOOP] [DONE]
 
 Since a Sub-DAG is run as a separate :tool:`condor_dagman` job, the parent DAG
 views the entire sub-workflow as a single node in its workflow. For this reason,
 the **DIR**, **NOOP**, and **DONE** keywords work exactly the same the regular
-node :dag-cmd:`NODE` command. The main difference is instead of an HTCondor submit
+node :dag-cmd:`JOB` command. The main difference is instead of an HTCondor submit
 description the Sub-DAG takes DAG description file.
 
 .. note::
@@ -170,9 +170,9 @@ the inner DAG is submitted automatically once Node Y is ready to start.
     :caption: Example Line DAG description containing a sub-DAG
 
     # Outer DAG: line.dag
-    NODE X job.sub
+    JOB X job.sub
     SUBDAG EXTERNAL Y diamond.dag
-    NODE Z job.sub
+    JOB Z job.sub
 
     PARENT X CHILD Y
     PARENT Y CHILD Z
@@ -181,10 +181,10 @@ the inner DAG is submitted automatically once Node Y is ready to start.
     :caption: Example Diamond DAG description utilized as a sub-DAG
 
     # Inner DAG: diamond.dag
-    NODE A job.sub
-    NODE B job.sub
-    NODE C job.sub
-    NODE D job.sub
+    JOB A job.sub
+    JOB B job.sub
+    JOB C job.sub
+    JOB D job.sub
 
     PARENT A CHILD B C
     PARENT B C CHILD D
@@ -329,8 +329,8 @@ simple HTCondor submit description file:
     # File simple-job.sub
     executable   = /bin/echo
     arguments    = OK
-    output       = $(NODE_NAME).out
-    error        = $(NODE_NAME).err
+    output       = $(JOB).out
+    error        = $(JOB).err
     log          = submit.log
     notification = NEVER
 
@@ -371,10 +371,10 @@ single DAGMan workflow will be created as shown on the right.
     :caption: Example Diamond DAG description
 
     # Inner DAG: diamond.dag
-    NODE A simple-job.sub
-    NODE B simple-job.sub
-    NODE C simple-job.sub
-    NODE D simple-job.sub
+    JOB A simple-job.sub
+    JOB B simple-job.sub
+    JOB C simple-job.sub
+    JOB D simple-job.sub
 
     PARENT A CHILD B C
     PARENT B C CHILD D
@@ -383,13 +383,13 @@ single DAGMan workflow will be created as shown on the right.
     :caption: Example top level DAG description splicing in Diamond DAG
 
     # Outer DAG: topLevel.dag
-    NODE X simple-job.sub
-    NODE Y simple-job.sub
+    JOB X simple-job.sub
+    JOB Y simple-job.sub
 
     # This is an instance of diamond.dag, given the symbolic name DIAMOND
     SPLICE DIAMOND diamond.dag
 
-    # Set up a relationship between the nodes in this DAG and the splice
+    # Set up a relationship between the nodes in this dag and the splice
     PARENT X CHILD DIAMOND
     PARENT DIAMOND CHILD Y
 
@@ -413,13 +413,13 @@ which can be visualized on the right.
     :caption: Example X shaped DAG description
 
     # Example: X.dag
-    NODE A simple-job.sub
-    NODE B simple-job.sub
-    NODE C simple-job.sub
-    NODE D simple-job.sub
-    NODE E simple-job.sub
-    NODE F simple-job.sub
-    NODE G simple-job.sub
+    JOB A simple-job.sub
+    JOB B simple-job.sub
+    JOB C simple-job.sub
+    JOB D simple-job.sub
+    JOB E simple-job.sub
+    JOB F simple-job.sub
+    JOB G simple-job.sub
 
     # Make an X-shaped dependency graph
     PARENT A B C CHILD D
@@ -452,8 +452,8 @@ file is specified.
     :caption: Example top level DAG splicing in X shaped DAG twice
 
     # Top-level DAG: s1.dag
-    NODE A simple-job.sub
-    NODE B simple-job.sub
+    JOB A simple-job.sub
+    JOB B simple-job.sub
 
     # name two individual splices of the X-shaped DAG
     SPLICE X1 X.dag
@@ -486,10 +486,10 @@ in the disjointed ``S3`` splice.
     :caption: Example top level DAG description splicing multiple disjointed DAGs
 
     # Outer DAG: toplevel.dag
-    NODE A simple-job.sub
-    NODE B simple-job.sub
-    NODE C simple-job.sub
-    NODE D simple-job.sub
+    JOB A simple-job.sub
+    JOB B simple-job.sub
+    JOB C simple-job.sub
+    JOB D simple-job.sub
 
     # a diamond-shaped DAG
     PARENT A CHILD B C
@@ -572,8 +572,8 @@ Splice Limitations
         # Outer DAG: example.dag
         # Names a node with no associated node job, a NOOP node
         # Note that the file noop.sub does not need to exist
-        NODE OnlyPreNode noop.sub NOOP
-        NODE OnlyPostNode noop.sub NOOP
+        JOB OnlyPreNode noop.sub NOOP
+        JOB OnlyPostNode noop.sub NOOP
 
         # Attach Scripts to NOOP Nodes
         SCRIPT PRE OnlyPreNode prescript.sh
@@ -628,18 +628,18 @@ Splice Limitations
         :caption: Example SPLICE A DAG description adding nodes to global category
 
         # relevant portion of file name: splice1.dag
-        NODE C C.sub
+        JOB C C.sub
         CATEGORY C +init
-        NODE D D.sub
+        JOB D D.sub
         CATEGORY D +init
 
     .. code-block:: condor-dagman
         :caption: Example SPLICE B DAG description adding nodes to global category
 
         # relevant portion of file name: splice2.dag
-        NODE X X.sub
+        JOB X X.sub
         CATEGORY X +init
-        NODE Y Y.sub
+        JOB Y Y.sub
         CATEGORY Y +init
 
     For both global and non-global category throttles, settings at a higher

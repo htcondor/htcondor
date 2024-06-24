@@ -832,7 +832,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
 
         //
-        // FIXME: It's wrong for the cluster ad to have the first
+        // It's wrong for the cluster ad to have the first
         // proc ad's queue variables set in it, but that's what everyone
         // expects to see.
         //

@@ -25,7 +25,6 @@
 #include "condor_auth_kerberos.h"
 #include "condor_config.h"
 #include "condor_string.h"
-#include "string_list.h"
 #include "CondorError.h"
 #include "condor_netdb.h"
 #include "subsystem_info.h"

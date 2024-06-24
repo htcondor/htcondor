@@ -31,7 +31,6 @@
 #include "condor_io.h"
 #include "condor_config.h"
 #include "condor_uid.h"
-#include "string_list.h"
 #include "directory.h"
 #include "condor_qmgr.h"
 #include "condor_classad.h"

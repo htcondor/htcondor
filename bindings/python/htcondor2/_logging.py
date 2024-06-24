@@ -5,7 +5,7 @@ from .htcondor2_impl import _py_dprintf
 
 def _log(level : Union[LogLevel, int], message : str):
     """
-    Log a message using the HTCondor loggin subsystem.
+    Log a message using the HTCondor logging subsystem.
 
     :param level:  Specify multiple :class:`LogLevel` values using bitwise-or.
     :param message:  The message to log.

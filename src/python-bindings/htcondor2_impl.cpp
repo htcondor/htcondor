@@ -76,13 +76,13 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	)C0ND0R"},
 
 	{"_enable_debug", & _enable_debug, METH_VARARGS, R"C0ND0R(
-	    Enable debugging output from HTCondor, where output is sent to
+	    Enable debugging output from HTCondor, where the output is sent to
 	    ``stderr``.  The logging level is set by the ``TOOL_DEBUG``
 	    parameter.
 	)C0ND0R"},
 
 	{"_enable_log", & _enable_log, METH_VARARGS, R"C0ND0R(
-	    Enable debugging output from HTCondor, where output is sent to
+	    Enable debugging output from HTCondor, where the output is sent to
 	    a file. The logging level is set by the ``TOOL_DEBUG``
 	    parameter, and the file by ``TOOL_LOG``.
 	)C0ND0R"},

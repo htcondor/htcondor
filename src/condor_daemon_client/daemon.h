@@ -33,7 +33,6 @@ class Daemon;
 #include "condor_secman.h"
 #include "daemon_types.h"
 #include "KeyCache.h"
-#include "string_list.h"
 #include "CondorError.h"
 #include "command_strings.h"
 #include "dc_message.h"

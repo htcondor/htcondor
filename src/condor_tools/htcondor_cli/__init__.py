@@ -64,11 +64,13 @@ from htcondor_cli.dagman import DAG
 from htcondor_cli.job import Job
 from htcondor_cli.job_set import JobSet
 from htcondor_cli.eventlog import EventLog
+from htcondor_cli.credential import Credential
 NOUNS = _OrderedDict()
 NOUNS["dag"] = DAG
 NOUNS["job"] = Job
 NOUNS["jobset"] = JobSet
 NOUNS["eventlog"] = EventLog
+NOUNS["credential"] = Credential
 
 # Should we knob these lines?
 from htcondor_cli.annex import Annex

@@ -175,6 +175,8 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
 		#endif
 		if (YourString(CondorUserRec.Name()) == real_user || YourString("condor@child") == real_user ||
+			YourString("condor@password") == real_user ||
+			YourString("condor_pool@") == real_user ||
 		#ifdef WIN32
 			YourStringNoCase("LOCAL_SYSTEM") == owner_part || YourStringNoCase("SYSTEM") == owner_part
 		#else

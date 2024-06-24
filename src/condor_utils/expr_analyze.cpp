@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "string_list.h"
 #include "CondorError.h"
 #include "ad_printmask.h"
 #include "daemon.h" // for STARTD_ADTYPE

@@ -26,7 +26,6 @@
  */
 
 #include <list>
-#include "string_list.h"
 #include <vector>
 #include <string>
 

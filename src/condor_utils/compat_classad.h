@@ -22,7 +22,6 @@
 
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "string_list.h"
 
 using classad::ClassAd;
 

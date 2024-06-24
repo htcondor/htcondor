@@ -25,6 +25,12 @@ New Features:
   the *condor_schedd*. This behavior can be disabled via :macro:`DAGMAN_PRODUCE_JOB_CREDENTIALS`.
   :jira:`1711`
 
+- Added new knob :macro:`CREATE_CGROUP_WITHOUT_ROOT` which allows a 
+  non-rootly condor to create cgroups for jobs.  Only works on 
+  cgroup v2 systems. Currently defaults to false, but might change 
+  in the future.
+  :jira:`2493`
+
 - Linux systems running cgroup v2 will now hide GPUs that have
   not been provisioned to the slots (usually because they did not
   :subcom:`request_gpus`).
@@ -46,6 +52,10 @@ New Features:
   running a job on a claim, retrying it usually also failed.
   :jira:`2300`
 
+- The :macro:`MODIFY_REQUEST_EXPR_REQUEST<RES>` configuration variables
+  can now be prefixed with `SLOT_TYPE_<N>_` to be specialized by slot type.
+  :jira:`2512`
+
 - Container universe jobs running under singularity or apptainer now
   run with a contained home directory, when HTCondor file transfer is
   enabled.  This means the jobs get the $HOME environment variable set
@@ -58,13 +68,21 @@ New Features:
   details.
   :jira:`2488`
 
-- Added new :dag-cmd:`NODE` command for the DAG description language as a synonym of
-  ``JOB``. The old ``JOB`` command will still be usable, but not recommended.
-  :jira:`2499`
-
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
   :jira:`2453`
+
+- The identifier ``condor_pool`` is no longer used for the IDTOKENS
+  and PASSWORD authentication methods; ``condor`` is used instead. 
+  When authenticating with an older peer, ``condor_pool`` is still
+  used, but is treated identically to ``condor`` for authorization
+  rules (i.e. ALLOW_DAEMON).
+  :jira:`2486`
+
+- Added the ``credential`` verb to the ``htcondor`` tool, which may help
+  in debugging certain kinds of problems.  See
+  :ref:`the man page <man-pages/htcondor:Credential Verbs>` for details.
+  :jira:`2483`
 
 - Added new special value ``{:local_ips:}`` that can be used in
   authorization ALLOW and DENY rules to represent all IP addresses

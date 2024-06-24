@@ -26,7 +26,6 @@
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
-#include "string_list.h"
 #include "console-utils.h"
 #include "prettyPrint.h"
 #include "setflags.h"

@@ -151,7 +151,6 @@ _send_command( PyObject *, PyObject * args ) {
 	bool result;
 	Daemon d(& copy, daemonType, NULL);
 	{
-		// FIXME: condor::ModuleLock ml;
 		result = d.locate(Daemon::LOCATE_FOR_ADMIN);
 	}
 	if(! result) {
@@ -163,7 +162,6 @@ _send_command( PyObject *, PyObject * args ) {
 	ReliSock sock;
 	CondorError errorStack;
 	{
-		// FIXME: condor::ModuleLock ml;
 		result = sock.connect( d.addr(), 0, false, & errorStack );
 	}
 	if(! result) {
@@ -173,7 +171,6 @@ _send_command( PyObject *, PyObject * args ) {
 	}
 
 	{
-		// FIXME: condor::ModuleLock ml;
 		result = d.startCommand(command, & sock, 0, NULL);
 	}
 	if(! result) {

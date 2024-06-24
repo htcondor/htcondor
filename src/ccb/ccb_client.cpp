@@ -29,6 +29,7 @@
 
 #include <memory>
 #include <random>
+#include <map>
 #include "condor_sinful.h"
 #include "shared_port_endpoint.h"
 #include "condor_config.h"
@@ -37,8 +38,7 @@ static bool registered_reverse_connect_command = false;
 
 // hash of CCBClients waiting for a reverse connect command
 // indexed by connection id
-static HashTable< std::string,classy_counted_ptr<CCBClient> > waiting_for_reverse_connect(hashFunction);
-
+static std::map<std::string,classy_counted_ptr<CCBClient>> waiting_for_reverse_connect;
 
 
 CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
@@ -770,8 +770,7 @@ CCBClient::RegisterReverseConnectCallback()
 			this );
 	}
 
-	int rc = waiting_for_reverse_connect.insert( m_connect_id, this );
-	ASSERT( rc == 0 );
+	waiting_for_reverse_connect.emplace(m_connect_id, this);
 }
 
 void
@@ -796,8 +795,7 @@ CCBClient::UnregisterReverseConnectCallback()
 	// Remove ourselves from the list of waiting CCB clients.
 	// Note that this could be removing the last reference
 	// to this class, so it may be destructed as a result.
-	int rc = waiting_for_reverse_connect.remove( m_connect_id );
-	ASSERT( rc == 0 );
+	waiting_for_reverse_connect.erase(m_connect_id);
 }
 
 int
@@ -823,14 +821,14 @@ CCBClient::ReverseConnectCommandHandler(int cmd,Stream *stream)
 	msg.LookupString(ATTR_CLAIM_ID,connect_id);
 
 	classy_counted_ptr<CCBClient> client;
-	int rc = waiting_for_reverse_connect.lookup(connect_id,client);
-	if( rc < 0 ) {
+	auto it = waiting_for_reverse_connect.find(connect_id);
+	if (it == waiting_for_reverse_connect.end()) {
 		dprintf(D_ALWAYS,
 				"CCBClient: failed to find requested connection id %s.\n",
 				connect_id.c_str());
-		return FALSE;
+		return false;
 	}
-	client->ReverseConnectCallback((Sock *)stream);
+	it->second->ReverseConnectCallback((Sock *)stream);
 	return KEEP_STREAM;
 }
 

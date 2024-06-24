@@ -27,7 +27,6 @@
 #include "daemon.h"
 #include "dc_collector.h"
 #include "sig_install.h"
-#include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "print_wrapped_text.h"
 #include "error_utils.h"

@@ -20,10 +20,10 @@
 
 #include "condor_common.h"
 #include "condor_io.h"
-#include "string_list.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_daemon_core.h"
+#include "authentication.h"
 
 #include "basename.h"
 #include "qmgmt.h"
@@ -6368,7 +6368,15 @@ static bool MakeUserRec(JobQueueKey & key,
 	bool enabled,
 	const ClassAd * defaults)
 {
-	if (( ! user || MATCH == strcmp(user, "condor@family") || MATCH == strcmp(user, "condor@child")) ||
+	const char* uid_domain = nullptr;
+	if (user && (uid_domain = strchr(user, '@'))) {
+		uid_domain++;
+	}
+	if (( ! user || MATCH == strcmp(user, "condor@family") ||
+			MATCH == strcmp(user, "condor@child") ||
+			MATCH == strcmp(user, "condor@password") ||
+			MATCH == strcmp(user, "condor_pool@")) ||
+		(uid_domain && MATCH == strcmp(uid_domain, UNMAPPED_DOMAIN)) ||
 		( ! owner || MATCH == strcmp(owner, "condor")) ||
 		(ntdomain && (MATCH == strcmp(ntdomain, "family") || MATCH == strcmp(ntdomain, "child")) ))
 	{

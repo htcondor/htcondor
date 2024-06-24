@@ -146,6 +146,7 @@ public:
 	unsigned m_recent_usec_net_read;
 	unsigned m_recent_usec_net_write;
 
+	unsigned m_report_count; // numer of reports sent
 	void Init();
 
 		// Verify that transfer queue server hasn't revoked our slot.

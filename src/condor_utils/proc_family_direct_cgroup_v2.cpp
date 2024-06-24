@@ -126,7 +126,7 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 	// sub-cgroups.  Let's try to use it, and also try the old-fashioned way.
 
 	stdfs::path kill_path = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.kill");
-	FILE *f = fopen(kill_path.c_str(), "r");
+	FILE *f = fopen(kill_path.c_str(), "w");
 	if (!f) {
 		// Could be it just doesn't exist
 		if (errno != ENOENT) {
@@ -237,6 +237,8 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 			dprintf(D_ALWAYS, "Error writing procid %d to %s: %s\n", pid, procs_filename.c_str(), strerror(errno));
 			close(fd);
 			return false;
+		} else {
+			dprintf(D_ALWAYS, "Successfully moved procid %d to cgroup %s\n", pid, procs_filename.c_str());
 		}
 		close(fd);
 	}
@@ -345,28 +347,31 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 	//                  node and into the leaf.  Cgroupv2 requires all processes to live in the leaf nodes.
 	// 3.) cgroup.subtree_control
 
-	uid_t uid = get_user_uid();
-	gid_t gid = get_user_gid();
+	// none of this works if we aren't root, so avoid confusing warnings when we aren't
+	if (can_switch_ids()) {
+		uid_t uid = get_user_uid();
+		gid_t gid = get_user_gid();
 
-	if ( (uid != (uid_t) -1) && (gid != (gid_t) -1)) {
-		int r = chown((cgroup_mount_point() / stdfs::path(cgroup_name)).c_str(), uid, gid);
-		if (r < 0) {
-			dprintf(D_ALWAYS, "Error chown'ing cgroup directory to user %u and group %u: %s\n", uid, gid, strerror(errno));
+		if ( (uid != (uid_t) -1) && (gid != (gid_t) -1)) {
+			int r = chown((cgroup_mount_point() / stdfs::path(cgroup_name)).c_str(), uid, gid);
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error chown'ing cgroup directory to user %u and group %u: %s\n", uid, gid, strerror(errno));
+			}
+
+			r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.procs").c_str(), uid, gid);
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error chown'ing cgroup.procs file to user %u and group %u: %s\n", uid, gid, strerror(errno));
+			}
+
+			r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.subtree_control").c_str(), uid, gid);
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error chown'ing cgroup.subtree_control file to user %u and group %u: %s\n", uid, gid, strerror(errno));
+			}
 		}
 
-		r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.procs").c_str(), uid, gid);
-		if (r < 0) {
-			dprintf(D_ALWAYS, "Error chown'ing cgroup.procs file to user %u and group %u: %s\n", uid, gid, strerror(errno));
+		if (!this->cgroup_hide_devices.empty()) {
+			this->install_bpf_gpu_filter(cgroup_name);
 		}
-
-		r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.subtree_control").c_str(), uid, gid);
-		if (r < 0) {
-			dprintf(D_ALWAYS, "Error chown'ing cgroup.subtree_control file to user %u and group %u: %s\n", uid, gid, strerror(errno));
-		}
-	}
-
-	if (!this->cgroup_hide_devices.empty()) {
-		this->install_bpf_gpu_filter(cgroup_name);
 	}
 
 	return true;
@@ -846,12 +851,18 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	char word[128]; // max size of a word in memory_events
 	while (fscanf(f, "%s", word) != EOF) {
 		// if word is oom_killed
-		if (strcmp(word, "oom_group_kill") == 0) {
+		uint64_t oom_kill_value = 0;
+		if ((strcmp(word, "oom_group_kill") == 0) ||
+			(strcmp(word, "oom_kill") == 0))	{
 			// next word is the count
-			if (fscanf(f, "%ld", &oom_count) != 1) {
-				dprintf(D_ALWAYS, "Error reading oom_count field out of cpu.stat\n");
+			if (fscanf(f, "%ld", &oom_kill_value) != 1) {
+				dprintf(D_ALWAYS, "Error reading oom_count field out of memory.events\n");
 				fclose(f);
 				return false;
+			}
+			// Take the higher of "oom_group_kill" or "oom_kill"
+			if (oom_kill_value > oom_count) {
+				oom_count = oom_kill_value;
 			}
 		}
 	}
@@ -881,6 +892,46 @@ ProcFamilyDirectCgroupV2::has_cgroup_v2() {
 	return found;
 }
 
+static std::string current_parent_cgroup() {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	std::string cgroup;
+
+	int fd = open("/proc/self/cgroup", O_RDONLY);
+	if (fd < 0) {
+		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
+		return cgroup; // empty cgroup is invalid
+	}
+
+	char buf[2048];
+	int r = read(fd, buf, sizeof(buf)-1);
+	if (r < 0) {
+		dprintf(D_ALWAYS, "Cannot read /proc/self/cgroup: %s\n", strerror(errno));
+		close(fd);
+		return cgroup;
+	}
+
+	buf[r] = '\0';
+	cgroup = buf;
+	close(fd);
+
+	if (cgroup.starts_with("0::")) {
+		cgroup = cgroup.substr(3,cgroup.size() - 4); // 4 because of newline at end
+	} else {
+		dprintf(D_ALWAYS, "Unknown prefix for /proc/self/cgroup: %s\n", cgroup.c_str());
+		cgroup = "";
+	}
+
+	size_t lastSlash = cgroup.rfind('/');
+	if (lastSlash == std::string::npos) {
+		// This can happen if you are at the root of a cgroup namespace.  Not sure how to handle
+		dprintf(D_ALWAYS, "Cgroup %s has no internal directory to chdir .. to...\n", cgroup.c_str());
+		cgroup = "";
+	} else {
+		cgroup.erase(lastSlash); // Remove trailing slash
+	}
+	return cgroup;
+}
+
 bool 
 ProcFamilyDirectCgroupV2::can_create_cgroup_v2() {
 	bool success = false;
@@ -890,7 +941,8 @@ ProcFamilyDirectCgroupV2::can_create_cgroup_v2() {
 	}
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	if (access(cgroup_mount_point().c_str(), R_OK | W_OK) == 0) {
+	std::string parent = cgroup_mount_point().string() + current_parent_cgroup();
+	if (access(parent.c_str(), R_OK | W_OK) == 0) {
 		success = true;
 	}
 	return success;

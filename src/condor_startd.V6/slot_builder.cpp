@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "misc_utils.h"
-#include "string_list.h"
 #include "condor_config.h"
 #include "ResAttributes.h"
 #include "condor_daemon_core.h"
