@@ -47,6 +47,9 @@ class ThreadInfo {
 public:
 	ThreadInfo() { pt_ = pthread_self(); }
 	ThreadInfo(pthread_t pt) { pt_ = pt; }	
+#ifdef DARWIN
+	explicit ThreadInfo(unsigned long pt) { pt_ = (pthread_t)pt; }	
+#endif
 	pthread_t get_pthread() const { return pt_; }
 	friend bool operator<(const ThreadInfo &lhs, const ThreadInfo &rhs) {
 		return lhs.pt_ < rhs.pt_;
@@ -74,7 +77,7 @@ public:
 	int pool_init(int num_threads);
 	int pool_add(condor_thread_func_t routine, void* arg, int* tid=NULL,
 				 const char* descrip=NULL);
-	static const WorkerThreadPtr_t get_handle(ThreadInfo tid = 0);
+	static const WorkerThreadPtr_t get_handle(int tid = 0);
 	int pool_size() { return num_threads_; }
 	int get_tid();
 	void set_switch_callback(condor_thread_switch_callback_t func);

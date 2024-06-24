@@ -621,7 +621,7 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void* arg,
 }
 
 const WorkerThreadPtr_t 
-ThreadImplementation::get_handle(ThreadInfo tid)
+ThreadImplementation::get_handle(int tid)
 {
 	static bool inserted_main_thread = false;
 	static WorkerThreadPtr_t zombie = WorkerThread::create("zombie",NULL);
@@ -643,7 +643,7 @@ ThreadImplementation::get_handle(ThreadInfo tid)
 	mutex_handle_lock();
 
 	if (tid != 0) {
-		auto it = TI->hashThreadToWorker.find(tid);
+		auto it = TI->hashThreadToWorker.find((ThreadInfo)tid);
 		if (it == TI->hashThreadToWorker.end()) {
 			worker = nullptr;
 		} else {
@@ -651,7 +651,7 @@ ThreadImplementation::get_handle(ThreadInfo tid)
 		}
 	} else {
 		ThreadInfo ti( pthread_self() );
-		auto it = TI->hashThreadToWorker.find(tid);
+		auto it = TI->hashThreadToWorker.find((ThreadInfo)tid);
 		if (it == TI->hashThreadToWorker.end()) {
 			worker = nullptr;
 		} else {
