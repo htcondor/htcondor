@@ -137,7 +137,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Job& node) {
 	}
 
 	if (node.GetHold()) {
-		debug_printf(DEBUG_VERBOSE, "Submitting node %s job on hold\n", nodeName);
+		debug_printf(DEBUG_VERBOSE, "Submitting node %s job(s) on hold\n", nodeName);
 		vars.push_back(NodeVar(SUBMIT_KEY_Hold, "true", false));
 	}
 
@@ -291,11 +291,21 @@ static bool shell_condor_submit(const Dagman &dm, Job* node, CondorID& condorID)
 	}
 
 	// Check for multiple job procs if configured to disallow that.
-	if (dm.prohibitMultiJobs && jobProcCount > 1) {
-		debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
-		             jobProcCount);
-		main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_ERROR);
+	if (jobProcCount > 1) {
+		if (dm.prohibitMultiJobs) {
+			// Other nodes may be single proc so fail and make forward progress
+			debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
+			             jobProcCount);
+			return false;
+		} else if (node->GetType() == NodeType::PROVISIONER) {
+			// Required first node so abort (note: debug_error calls DC_EXIT)
+			debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
+			             node->GetJobName());
+		}
+
 	}
+
+	node->SetNumSubmitted(jobProcCount);
 
 	return true;
 }
@@ -319,9 +329,11 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 	SubmitHash* submitHash = node->GetSubmitDesc();
 
 	int rval = 0;
+	int cred_result = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	bool success = false;
 	std::string errmsg;
+	std::string URL;
 	Qmgr_connection * qmgr = NULL;
 	auto_free_ptr owner(my_username());
 	char * qline = nullptr;
@@ -393,8 +405,24 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 		}
 	}
 
+	// TODO: Make this a verfication of credentials existing and produce earlier
+	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
+	if (dm.produceJobCredentials) {
+		// Produce credentials needed for job(s)
+		cred_result = process_job_credentials(*submitHash, 0, URL, errmsg);
+		if (cred_result != 0) {
+			errmsg = "Failed to produce job credentials (" + std::to_string(cred_result) + "): " + errmsg;
+			rval = -1;
+			goto finis;
+		} else if ( ! URL.empty()) {
+			errmsg = "Failed to submit job(s) due to credential setup. Please visit: " + URL;
+			rval = -1;
+			goto finis;
+		}
+	}
+
 	submitHash->attachTransferMap(dm._protectedUrlMap);
-	submitHash->init_base_ad(time(NULL), owner);
+	submitHash->init_base_ad(time(nullptr), owner);
 
 	qmgr = ConnectQ(schedd);
 	if (qmgr) {
@@ -423,10 +451,17 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 				goto finis;
 			}
 			// If this job has >1 procs, check if multi-proc jobs are prohibited
-			if (proc_id >= 1 && dm.prohibitMultiJobs) {
-				errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
-				rval = -1;
-				goto finis;
+			if (proc_id >= 1) {
+				if (dm.prohibitMultiJobs) {
+					// Other nodes may be single proc so fail and attempt forward progress
+					errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
+					rval = -1;
+					goto finis;
+				} else if (node->GetType() == NodeType::PROVISIONER) {
+					// Required first node so abort (note: debug_error calls DC_EXIT)
+					debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
+					             node->GetJobName());
+				}
 			}
 			// DAGMan does not support multi-proc factory jobs when using direct submit
 			if (proc_id >= 1 && is_factory) {
@@ -468,7 +503,7 @@ static bool direct_condor_submit(const Dagman &dm, Job* node, CondorID& condorID
 		success = DisconnectQ(qmgr, true, &errstack); qmgr = NULL;
 		if ( ! success) {
 			debug_printf(DEBUG_NORMAL, "Failed to submit job %s: %s\n", node->GetJobName(), errstack.getFullText().c_str());
-		}
+		} else { node->SetNumSubmitted(proc_id+1); }
 	}
 
 finis:

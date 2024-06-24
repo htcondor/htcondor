@@ -40,7 +40,7 @@ class NamedClassAdList
 	bool Register( NamedClassAd *ad );
 
 	int	Replace( const char *name, ClassAd *ad, bool report_diff = false,
-				 StringList* ignore_attrs = NULL );
+				 classad::References* ignore_attrs = NULL );
 	int	Delete( const char *name );
 	int	Publish( ClassAd *ad );
 

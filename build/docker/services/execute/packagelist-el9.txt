@@ -1,0 +1,42 @@
+# GNU's bc (a numeric processing language) and dc (a calculator):
+bc
+# Utilities for querying DNS name servers:
+bind-utils
+# A GNU archiving program:
+cpio
+# PLAIN and LOGIN authentication support for Cyrus SASL:
+cyrus-sasl-plain
+# The GNU line editor:
+ed
+# A utility for determining file types:
+file
+# A file compression utility:
+bzip2
+# Utility for secure communication and data storage:
+gnupg2
+# Linux-native asynchronous I/O access library:
+libaio
+# Random number generator related utilities:
+rng-tools
+# A program for synchronizing files over a network:
+rsync
+# An enhanced version of csh, the C shell:
+tcsh
+# A GNU utility for monitoring a program's use of system resources:
+time
+# A utility for unpacking zip files:
+unzip
+# A utility for retrieving files using the HTTP or FTP protocols:
+wget
+# Displays where a particular program in your path is located:
+which
+# A dictionary of English words for the /usr/share/dict directory:
+words
+# LZMA compression utilities:
+xz
+# Utilities based around the yum package manager:
+yum-utils
+# A file compression and packaging utility compatible with PKZIP:
+zip
+# Text file format converters
+dos2unix

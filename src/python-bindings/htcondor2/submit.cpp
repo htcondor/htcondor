@@ -672,19 +672,13 @@ _submit_itemdata( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    if( itemdata->items.number() == 0 ) {
+    if( itemdata->items.size() == 0 ) {
         sb->reset_itemdata_state();
 
         Py_RETURN_NONE;
     }
 
-    char * item = NULL;
-    itemdata->items.rewind();
-    std::vector<std::string> items;
-    while( (item = itemdata->items.next()) ) {
-        items.push_back(item);
-    }
-    std::string value = join(items, "\n");
+    std::string value = join(itemdata->items, "\n");
 
     sb->reset_itemdata_state();
     return PyUnicode_FromString(value.c_str());

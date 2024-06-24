@@ -409,6 +409,10 @@ private:
 #ifdef WIN32
 	bool has_encrypted_working_dir;
 #endif
+#ifdef LINUX
+	std::unique_ptr<VolumeManager::Handle> m_lv_handle;
+#endif // LINUX
+
 	int ShuttingDown;
 	int starter_stdin_fd;
 	int starter_stdout_fd;
@@ -464,10 +468,6 @@ private:
 
 	// The string to set the tmp env vars to
 	std::string tmpdir;
-
-#ifdef LINUX
-	std::unique_ptr<VolumeManager::Handle> m_volume_mgr;
-#endif // LINUX
 };
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"

@@ -32,7 +32,6 @@
 #include "condor_attributes.h"
 #include "enum_utils.h"
 #include "classad_log.h"
-#include "string_list.h"
 #include "HashTable.h"
 #include "NegotiationUtils.h"
 #include "matchmaker.h"
@@ -201,7 +200,7 @@ void Accountant::Initialize(GroupEntry* root_group)
   if ( first_time ) {
 	  std::string HK;
 	  ClassAd* ad;
-	  StringList users;
+	  std::vector<std::string> users;
 	  int resources_used, resources_used_really;
 	  int total_overestimated_resources = 0;
 	  int total_overestimated_users = 0;
@@ -224,26 +223,24 @@ void Accountant::Initialize(GroupEntry* root_group)
 			dprintf(D_ALWAYS, "questionable user %s\n", thisUser);
 		}
 			// if we made it here, append to our list of users
-		users.append( thisUser );
+		users.emplace_back( thisUser );
 	  }
-		// ok, now StringList users has all the users.  for each user,
+		// ok, now vector users has all the users.  for each user,
 		// compare what the customer record claims for usage -vs- actual
 		// number of resources
-	  users.rewind();
-	  while (char* next_user=users.next()) {
-		  std::string user = next_user;
+	  for (const auto& user: users) {
 		  resources_used = GetResourcesUsed(user);
 		  resourcesRW_used = GetWeightedResourcesUsed(user);
 
 		  CheckResources(user, resources_used_really, resourcesRW_used_really);
 
 		  if ( resources_used == resources_used_really ) {
-			dprintf(D_ACCOUNTANT,"Customer %s using %d resources\n",next_user,
+			dprintf(D_ACCOUNTANT,"Customer %s using %d resources\n",user.c_str(),
 				  resources_used);
 		  } else {
 			dprintf(D_ALWAYS,
 				"FIXING - Customer %s using %d resources, but only found %d\n",
-				next_user,resources_used,resources_used_really);
+				user.c_str(),resources_used,resources_used_really);
 			SetAttributeInt(CustomerRecord+user,ResourcesUsedAttr,resources_used_really);
 			if ( resources_used > resources_used_really ) {
 				total_overestimated_resources += 
@@ -252,12 +249,12 @@ void Accountant::Initialize(GroupEntry* root_group)
 			}
 		  }
 		  if ( resourcesRW_used == resourcesRW_used_really ) {
-			dprintf(D_ACCOUNTANT,"Customer %s using %f weighted resources\n",next_user,
+			dprintf(D_ACCOUNTANT,"Customer %s using %f weighted resources\n",user.c_str(),
 				  resourcesRW_used);
 		  } else {
 			dprintf(D_ALWAYS,
 				"FIXING - Customer record %s using %f weighted resources, but found %f\n",
-				next_user,resourcesRW_used,resourcesRW_used_really);
+				user.c_str(),resourcesRW_used,resourcesRW_used_really);
 			SetAttributeFloat(CustomerRecord+user,WeightedResourcesUsedAttr,resourcesRW_used_really);
 			if ( resourcesRW_used > resourcesRW_used_really ) {
 				total_overestimated_resourcesRW += 
@@ -269,16 +266,16 @@ void Accountant::Initialize(GroupEntry* root_group)
 	  if ( total_overestimated_users ) {
 		  dprintf( D_ALWAYS,
 			  "FIXING - Overestimated %d resources across %d users "
-			  "(from a total of %d users)\n",
+			  "(from a total of %zu users)\n",
 			  total_overestimated_resources,total_overestimated_users,
-			  users.number() );
+			  users.size() );
 	  }
 	  if ( total_overestimated_usersRW ) {
 		  dprintf( D_ALWAYS,
 			  "FIXING - Overestimated %f resources across %d users "
-			  "(from a total of %d users)\n",
+			  "(from a total of %zu users)\n",
 			  total_overestimated_resourcesRW,total_overestimated_users,
-			  users.number() );
+			  users.size() );
 	  }
   }
 
@@ -1954,20 +1951,14 @@ void Accountant::DecrementLimit(const std::string& _limit)
 
 void Accountant::IncrementLimits(const std::string& limits)
 {
-	StringList list(limits.c_str());
-	const char *limit;
-	list.rewind();
-	while ((limit = list.next())) {
+	for (const auto& limit: StringTokenIterator(limits)) {
 		IncrementLimit(limit);
 	}
 }
 
 void Accountant::DecrementLimits(const std::string& limits)
 {
-	StringList list(limits.c_str());
-	char *limit;
-	list.rewind();
-	while ((limit = list.next())) {
+	for (const auto& limit: StringTokenIterator(limits)) {
 		DecrementLimit(limit);
 	}
 }

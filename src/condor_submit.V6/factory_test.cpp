@@ -324,11 +324,10 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_colon_prefix(ptr[0], "out", &pcolon, 1)) {
 				bool needs_file_arg = true;
 				if (pcolon) { 
-					StringList opts(++pcolon);
-					for (const char * opt = opts.first(); opt; opt = opts.next()) {
-						if (is_arg_prefix(opt, "full", -1)) {
+					for (const auto& opt: StringTokenIterator(++pcolon)) {
+						if (is_arg_prefix(opt.c_str(), "full", -1)) {
 							output_full_ads = true;
-						} else if (is_arg_prefix(opt, "proc-only", 4)) {
+						} else if (is_arg_prefix(opt.c_str(), "proc-only", 4)) {
 							output_proc_ads_only = true;
 						}
 					}

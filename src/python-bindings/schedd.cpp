@@ -569,8 +569,8 @@ struct QueueItemsIterator {
 
 	boost::python::object next()
 	{
-		auto_free_ptr line(m_fea.items.pop());
-		if ( ! line) { THROW_EX(StopIteration, "All items returned"); }
+		if (m_fea.items_idx >= m_fea.items.size()) { THROW_EX(StopIteration, "All items returned"); }
+		auto_free_ptr line(strdup(m_fea.items[m_fea.items_idx++].c_str()));
 
 		if (m_fea.vars.size() > 1 || (m_fea.vars.size()==1 && (YourStringNoCase("Item") != m_fea.vars[0]))) {
 			std::vector<const char*> splits;
@@ -591,8 +591,11 @@ struct QueueItemsIterator {
 
 	char * next_row()
 	{
-		char * row = m_fea.items.pop();
-		if (row) { ++num_rows; }
+		char * row = nullptr;
+		if (m_fea.items_idx < m_fea.items.size()) {
+			row = strdup(m_fea.items[m_fea.items_idx++].c_str());
+			++num_rows;
+		}
 		return row;
 	}
 
@@ -1437,7 +1440,7 @@ struct Schedd {
             q.addAND(constraint.c_str());
 
 		std::vector<std::string> attrs_list;
-        // Must keep strings alive; note StringList DOES create an internal copy
+        // Must keep strings alive; note vector<string> DOES create an internal copy
         int len_attrs = py_len(attrs);
         for (int i=0; i<len_attrs; i++)
         {

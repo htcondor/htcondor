@@ -31,10 +31,6 @@
 
 #include <set>
 
-#ifdef LINUX
-class VolumeManager;
-#endif // LINUX
-
 #define USE_STARTD_LATCHES 1
 #define DO_BULK_COLLECTOR_UPDATES 1
 
@@ -480,11 +476,6 @@ public:
 	void set_res_conflict(const std::string & conflict) { m_res_conflict = conflict; }
 	bool has_nft_conflicts(MachAttributes* ma) { return ma->has_nft_conflicts(r_id, r_sub_id); }
 
-#ifdef LINUX
-	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
-	VolumeManager *getVolumeManager() const {return m_volume_mgr;}
-#endif // LINUX
-
 	bool wasAcceptedWhileDraining() const { return m_acceptedWhileDraining; }
 	void setAcceptedWhileDraining() { m_acceptedWhileDraining = isDraining(); }
 private:
@@ -540,10 +531,6 @@ private:
 	char*	m_hook_keyword;
 	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */
-
-#ifdef LINUX
-	VolumeManager *m_volume_mgr{nullptr};
-#endif
 
 	std::list<int> m_affinity_mask;
 

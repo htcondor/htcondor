@@ -541,7 +541,6 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
-#ifdef LINUX
 	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
 		dprintf(D_STATUS, "Startd will not enforce disk limits via logical volume management.\n");
 		m_volume_mgr.reset(nullptr);
@@ -549,7 +548,6 @@ ResMgr::init_resources( void )
 		m_volume_mgr.reset(new VolumeManager());
 		m_volume_mgr->CleanupLVs();
 	}
-#endif // LINUX
 
     stats.Init();
 
@@ -1911,12 +1909,6 @@ ResMgr::addResource( Resource *rip )
 			parent->add_dynamic_child(rip);
 		}
 	}
-
-#ifdef LINUX
-	if (!m_volume_mgr) {
-		rip->setVolumeManager(m_volume_mgr.get());
-	}
-#endif // LINUX
 }
 
 // private helper functions for removing slots while walking

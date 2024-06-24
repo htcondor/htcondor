@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "condor_api.h"
 #include "condor_classad.h"
 #include "condor_query.h"
 #include "daemon.h"
@@ -720,40 +719,28 @@ reinitialize ()
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = None\n");
 	}
 
-	NegotiatorMatchExprNames.clearAll();
-	NegotiatorMatchExprValues.clearAll();
+	NegotiatorMatchExprs.clear();
 	tmp = param("NEGOTIATOR_MATCH_EXPRS");
 	if( tmp ) {
-		NegotiatorMatchExprNames.initializeFromString( tmp );
-		free( tmp );
-		tmp = NULL;
-
+		for (const auto& expr_name: StringTokenIterator(tmp)) {
 			// Now read in the values of the macros in the list.
-		NegotiatorMatchExprNames.rewind();
-		char const *expr_name;
-		while( (expr_name=NegotiatorMatchExprNames.next()) ) {
-			char *expr_value = param( expr_name );
-			if( !expr_value ) {
-				dprintf(D_ALWAYS,"Warning: NEGOTIATOR_MATCH_EXPRS references a macro '%s' which is not defined in the configuration file.\n",expr_name);
-				NegotiatorMatchExprNames.deleteCurrent();
+			char* expr_value = param(expr_name.c_str());
+			if (!expr_value ) {
+				dprintf(D_ALWAYS, "Warning: NEGOTIATOR_MATCH_EXPRS references a macro '%s' which is not defined in the configuration file.\n", expr_name.c_str());
 				continue;
 			}
-			NegotiatorMatchExprValues.append( expr_value );
-			free( expr_value );
-		}
-
 			// Now change the names of the ExprNames so they have the prefix
 			// "MatchExpr" that is expected by the schedd.
-		size_t prefix_len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-		NegotiatorMatchExprNames.rewind();
-		while( (expr_name=NegotiatorMatchExprNames.next()) ) {
-			if( strncmp(expr_name,ATTR_NEGOTIATOR_MATCH_EXPR,prefix_len) != 0 ) {
-				std::string new_name = ATTR_NEGOTIATOR_MATCH_EXPR;
-				new_name += expr_name;
-				NegotiatorMatchExprNames.insert(new_name.c_str());
-				NegotiatorMatchExprNames.deleteCurrent();
+			std::string new_name;
+			if (!expr_name.starts_with(ATTR_NEGOTIATOR_MATCH_EXPR)) {
+				new_name = ATTR_NEGOTIATOR_MATCH_EXPR;
 			}
+			new_name += expr_name;
+			NegotiatorMatchExprs.emplace(new_name, expr_value);
+			free(expr_value);
 		}
+		free( tmp );
+		tmp = NULL;
 	}
 
 	dprintf (D_ALWAYS,"ACCOUNTANT_HOST = %s\n", AccountantHost ?
@@ -5035,14 +5022,8 @@ insertNegotiatorMatchExprs(ClassAd *ad)
 {
 	ASSERT(ad);
 
-	NegotiatorMatchExprNames.rewind();
-	NegotiatorMatchExprValues.rewind();
-	char const *expr_name;
-	while( (expr_name=NegotiatorMatchExprNames.next()) ) {
-		char const *expr_value = NegotiatorMatchExprValues.next();
-		ASSERT(expr_value);
-
-		ad->AssignExpr(expr_name,expr_value);
+	for (const auto& [expr_name, expr_value]: NegotiatorMatchExprs) {
+		ad->AssignExpr(expr_name, expr_value.c_str());
 	}
 }
 

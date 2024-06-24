@@ -24,6 +24,7 @@
 #include "basename.h"
 #include "my_username.h"
 #include "subsystem_info.h"
+//#include "condor_uid.h"
 
 #include "globus_utils.h"
 
@@ -39,7 +40,7 @@ void
 usage( char *name )
 {
 	dprintf( D_ALWAYS, 
-		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <osname@uid-domain>] [-u <user@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
 		condor_basename( name ) );
 	DC_Exit( 1 );
 }
@@ -98,6 +99,12 @@ main_init( int argc, char ** const argv )
 			GridmanagerScratchDir = strdup( argv[i + 1] );
 			i++;
 			break;
+		case 'u':
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			myUserName = strdup(argv[i + 1]);
+			i++;
+			break;
 		case 'o':
 			// We handled this in main_pre_dc_init(), so just verify that
 			// it has an argument.
@@ -111,6 +118,10 @@ main_init( int argc, char ** const argv )
 		}
 
 		i++;
+	}
+
+	if (!myUserName) {
+		EXCEPT("I don't know whose jobs I'm managing!");
 	}
 
 	// Tell DaemonCore that we want to spend all our time as the job owner,
@@ -145,6 +156,7 @@ main_pre_dc_init( int argc, char* argv[] )
 {
 	// handle -o, so that we can switch euid to the user before
 	// daemoncore does most of its initialization work.
+	const char *os_name = nullptr;
 	int i = 1;
 	while ( i < argc ) {
 		if ( !strcmp( argv[i], "-o" ) ) {
@@ -154,19 +166,16 @@ main_pre_dc_init( int argc, char* argv[] )
 			if ( argc <= i + 1 ) {
 				usage( argv[0] );
 			}
-			myUserName = strdup( argv[i + 1] );
+			os_name = argv[i + 1];
 			break;
 		}
 		i++;
 	}
 
-	if ( myUserName ) {
-		char *owner = strdup( myUserName );
-		char *domain = strchr( owner, '@' );
-		if ( domain ) {
-			*domain = '\0';
-			domain = domain + 1;
-		}
+	if ( os_name ) {
+		std::string buf;
+		const char *owner = name_of_user(os_name, buf);
+		const char *domain = domain_of_user(os_name, nullptr);
 		if ( !init_user_ids(owner, domain)) {
 			dprintf(D_ALWAYS, "init_user_ids() failed!\n");
 			// uids.C will EXCEPT when we set_user_priv() now
@@ -175,14 +184,9 @@ main_pre_dc_init( int argc, char* argv[] )
 		set_user_priv();
 		// We can't call daemonCore->Register_Priv_State() here because
 		// there's no daemonCore object yet. We'll call it in main_init().
-
-		free( myUserName );
-		myUserName = owner;
 	} else if ( is_root() ) {
 		dprintf( D_ALWAYS, "Don't know what user to run as!\n" );
 		DC_Exit( 1 );
-	} else {
-		myUserName = my_username();
 	}
 }
 

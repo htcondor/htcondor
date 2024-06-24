@@ -37,9 +37,7 @@
 #include <stack>
 using std::string;
 
-#ifdef LINUX
 class VolumeManager;
-#endif // LINUX
 
 class Resource;
 
@@ -497,14 +495,10 @@ public:
 			c_total_disk = r_attr->c_total_disk;
 		}
 	}
-	bool set_total_disk(long long total, bool refresh);
+	bool set_total_disk(long long total, bool refresh, VolumeManager * volman);
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
-
-#ifdef LINUX
-	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
-#endif // LINUX
 
 private:
 	Resource*	 	rip;
@@ -547,10 +541,6 @@ private:
 	std::string     c_execute_partition_id;  // unique id for partition
 
 	unsigned int	c_type_id;		// The slot type of this resource
-
-#ifdef LINUX
-	VolumeManager *m_volume_mgr{nullptr};
-#endif // LINUX
 };	
 
 // a loose bag of resource quantities, for doing resource math

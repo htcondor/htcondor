@@ -28,6 +28,8 @@
 #include "ccb_client.h"
 
 #include <memory>
+#include <random>
+#include <map>
 #include "condor_sinful.h"
 #include "shared_port_endpoint.h"
 #include "condor_config.h"
@@ -36,13 +38,12 @@ static bool registered_reverse_connect_command = false;
 
 // hash of CCBClients waiting for a reverse connect command
 // indexed by connection id
-static HashTable< std::string,classy_counted_ptr<CCBClient> > waiting_for_reverse_connect(hashFunction);
-
+static std::map<std::string,classy_counted_ptr<CCBClient>> waiting_for_reverse_connect;
 
 
 CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	m_ccb_contact(ccb_contact),
-	m_ccb_contacts(ccb_contact," "),
+	m_ccb_contacts(split(ccb_contact," ")),
 	m_target_sock(target_sock),
 	m_target_peer_description(m_target_sock->peer_description()),
 	m_ccb_sock(NULL),
@@ -50,7 +51,9 @@ CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	m_deadline_timer(-1)
 {
 	// balance load across the CCB servers by randomizing order
-	m_ccb_contacts.shuffle();
+	std::random_device rd;
+	std::default_random_engine rng(rd());
+	std::shuffle(m_ccb_contacts.begin(), m_ccb_contacts.end(), rng);
 
 	// Generate some random bits for the connection id.  In a
 	// reverse-connect operation, the target daemon must present this
@@ -101,7 +104,7 @@ CCBClient::ReverseConnect( CondorError *error, bool non_blocking )
 		// connect operation to finish, so our caller can call
 		// DaemonCore::Register_Socket() and wait for a callback.
 
-		m_ccb_contacts.rewind();
+		m_ccb_contacts_nb = m_ccb_contacts;
 		return try_next_ccb();
 	}
 
@@ -129,12 +132,10 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 	std::shared_ptr<SharedPortEndpoint> shared_listener;
 	char const *listener_addr = NULL;
 
-	m_ccb_contacts.rewind();
-	char const *ccb_contact;
-	while( (ccb_contact = m_ccb_contacts.next()) ) {
+	for (const auto& ccb_contact: m_ccb_contacts) {
 		bool success = false;
 		std::string ccb_address, ccbid;
-		if( !SplitCCBContact( ccb_contact, ccb_address, ccbid, m_target_peer_description, error ) ) {
+		if( !SplitCCBContact( ccb_contact.c_str(), ccb_address, ccbid, m_target_peer_description, error ) ) {
 			continue;
 		}
 
@@ -541,8 +542,7 @@ CCBClient::try_next_ccb()
 
 	RegisterReverseConnectCallback();
 
-	char const *ccb_contact = m_ccb_contacts.next();
-	if( !ccb_contact ) {
+	if(m_ccb_contacts_nb.empty()) {
 		dprintf(D_ALWAYS,
 				"CCBClient: no more CCB servers to try for requesting "
 				"reversed connection to %s; giving up.\n",
@@ -551,8 +551,11 @@ CCBClient::try_next_ccb()
 		return false;
 	}
 
+	std::string ccb_contact = m_ccb_contacts_nb.back();
+	m_ccb_contacts_nb.pop_back();
+
 	std::string ccbid;
-	if( !SplitCCBContact( ccb_contact, m_cur_ccb_address, ccbid, m_target_peer_description, NULL ) ) {
+	if( !SplitCCBContact( ccb_contact.c_str(), m_cur_ccb_address, ccbid, m_target_peer_description, NULL ) ) {
 		return try_next_ccb();
 	}
 
@@ -767,8 +770,7 @@ CCBClient::RegisterReverseConnectCallback()
 			this );
 	}
 
-	int rc = waiting_for_reverse_connect.insert( m_connect_id, this );
-	ASSERT( rc == 0 );
+	waiting_for_reverse_connect.emplace(m_connect_id, this);
 }
 
 void
@@ -793,8 +795,7 @@ CCBClient::UnregisterReverseConnectCallback()
 	// Remove ourselves from the list of waiting CCB clients.
 	// Note that this could be removing the last reference
 	// to this class, so it may be destructed as a result.
-	int rc = waiting_for_reverse_connect.remove( m_connect_id );
-	ASSERT( rc == 0 );
+	waiting_for_reverse_connect.erase(m_connect_id);
 }
 
 int
@@ -820,14 +821,14 @@ CCBClient::ReverseConnectCommandHandler(int cmd,Stream *stream)
 	msg.LookupString(ATTR_CLAIM_ID,connect_id);
 
 	classy_counted_ptr<CCBClient> client;
-	int rc = waiting_for_reverse_connect.lookup(connect_id,client);
-	if( rc < 0 ) {
+	auto it = waiting_for_reverse_connect.find(connect_id);
+	if (it == waiting_for_reverse_connect.end()) {
 		dprintf(D_ALWAYS,
 				"CCBClient: failed to find requested connection id %s.\n",
 				connect_id.c_str());
-		return FALSE;
+		return false;
 	}
-	client->ReverseConnectCallback((Sock *)stream);
+	it->second->ReverseConnectCallback((Sock *)stream);
 	return KEEP_STREAM;
 }
 
