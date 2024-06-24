@@ -1671,7 +1671,7 @@ default=
 description=STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
 
 [ENABLE_STARTD_DAEMON_AD]
-default=false
+default=auto
 description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
 usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
@@ -4920,7 +4920,7 @@ type=string
 tags=condor_config
 
 [GANGLIAD_WANT_PROJECTION]
-default=false
+default=true
 type=bool
 description=Should gangliad use an attribute projection to query the collector
 tags=gangliad
