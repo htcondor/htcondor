@@ -23,6 +23,7 @@
 #include "condor_uid.h"
 #include "directory.h"
 #include "proc_family_direct_cgroup_v2.h"
+#include "condor_config.h"
 #include <numeric>
 #include <algorithm>
 
@@ -679,30 +680,32 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	}
 	fclose(f);
 
-	f = fopen(memory_stat.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
-		return false;
-	}
-
-	uint64_t memory_inactive_anon_value = 0;
-	uint64_t memory_inactive_file_value = 0;
-	char line[256];
-	size_t total_read = 0;
-	while (fgets(line, 256, f)) {
-		total_read += sscanf(line, "inactive_file %ld", &memory_inactive_file_value);
-		total_read += sscanf(line, "inactive_anon %ld", &memory_inactive_anon_value);
-		if (total_read == 2) {
-			break;
+	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", false)) {
+		f = fopen(memory_stat.c_str(), "r");
+		if (!f) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+			return false;
 		}
-	}
-	fclose(f);
-	if (total_read != 2) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+
+		uint64_t memory_inactive_anon_value = 0;
+		uint64_t memory_inactive_file_value = 0;
+		char line[256];
+		size_t total_read = 0;
+		while (fgets(line, 256, f)) {
+			total_read += sscanf(line, "inactive_file %ld", &memory_inactive_file_value);
+			total_read += sscanf(line, "inactive_anon %ld", &memory_inactive_anon_value);
+			if (total_read == 2) {
+				break;
+			}
+		}
 		fclose(f);
-		return false;
+		if (total_read != 2) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+			fclose(f);
+			return false;
+		}
+		memory_current_value -= memory_inactive_anon_value + memory_inactive_file_value;
 	}
-	memory_current_value -= memory_inactive_anon_value + memory_inactive_file_value;
 
 	uint64_t memory_peak_value = 0;
 
