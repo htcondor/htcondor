@@ -47,9 +47,6 @@ class ThreadInfo {
 public:
 	ThreadInfo() { pt_ = pthread_self(); }
 	ThreadInfo(pthread_t pt) { pt_ = pt; }	
-#ifdef DARWIN
-	explicit ThreadInfo(unsigned long pt) { pt_ = (pthread_t)pt; }	
-#endif
 	pthread_t get_pthread() const { return pt_; }
 	friend bool operator<(const ThreadInfo &lhs, const ThreadInfo &rhs) {
 		return lhs.pt_ < rhs.pt_;

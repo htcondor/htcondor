@@ -643,15 +643,15 @@ ThreadImplementation::get_handle(int tid)
 	mutex_handle_lock();
 
 	if (tid != 0) {
-		auto it = TI->hashThreadToWorker.find((ThreadInfo)tid);
-		if (it == TI->hashThreadToWorker.end()) {
+		auto it = TI->hashTidToWorker.find(tid);
+		if (it == TI->hashTidToWorker.end()) {
 			worker = nullptr;
 		} else {
 			worker = it->second;
 		}
 	} else {
 		ThreadInfo ti( pthread_self() );
-		auto it = TI->hashThreadToWorker.find((ThreadInfo)tid);
+		auto it = TI->hashThreadToWorker.find(ti);
 		if (it == TI->hashThreadToWorker.end()) {
 			worker = nullptr;
 		} else {
