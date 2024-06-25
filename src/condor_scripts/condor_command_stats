@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+
+import htcondor
+import classad
+import argparse
+import pandas as pd
+import json
+import os
+import sys
+import signal
+import datetime as dt
+from time import sleep
+from collections import defaultdict
+
+# Constants
+DANGER_THRESHOLD = 25 # Threshold for highlighting a user in red (% runtime)
+
+# Define terminal colors for printing
+class colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+# Cleanly exit on SIGINT
+signal.signal(signal.SIGINT, lambda x, y: exit(0))
+
+# Initialize global variables
+collector = htcondor.Collector()
+old = None
+
+# Hardcoded kwargs for querying the schedd
+kwargs = {
+    'daemon_type':htcondor.DaemonTypes.Schedd,
+    'statistics':'All:2',
+} 
+
+
+def get_name():
+    """Returns the name of the schedd, or exits if it can't be found."""
+    # Get name of Schedd
+    machine = htcondor.param['FULL_HOSTNAME']
+    # Query for the schedd ad
+    ads = collector.query(htcondor.AdTypes.names["Schedd"],
+                                    constraint=f"Machine == {machine}",
+                                    projection=['Name'])
+    # if that doesn't work, remove the constraint and try again
+    if len(ads) == 0:
+        ads = collector.query(htcondor.AdTypes.names["Schedd"],
+                                    projection=['Name'])
+    # Still doesn't work -> we have an error
+    if len(ads) == 0:
+        print(f"Error: Couldn't find hostname for schedd")
+        sys.exit(1)
+    return ads[0]['Name']
+
+
+def map_dict(d, lambda_):
+    """Maps a lambda function over a (possibly nested) dictionary
+    d: The dictionary to map over
+    lambda_: The function to apply to each value
+    returns: The modified dictionary
+    """
+    for key, value in d.items():
+        if isinstance(value, dict):
+            d[key] = map_dict(value, lambda_)
+        else:
+            d[key] = lambda_(value)
+    return d
+
+
+def get_stats():
+    """Queries the collector for command statistics on the schedd.
+    returns: A tuple of the statistics and the time the statistics were taken
+    """
+    ad = collector.directQuery(**kwargs)
+    recent_dcdc = ad['RecentDaemonCoreDutyCycle']
+    pump_cycle = ad['RecentDCPumpCycleSum']
+    cpu_time = recent_dcdc * pump_cycle
+    server_time = ad['MyCurrentTime']
+    format_time = dt.datetime.fromtimestamp(server_time)
+
+    names = [a[3:].split("_", 1) for a in ad.keys() if a.startswith("CCS")] # Creates list of [user, command] for accessing attributes
+    stats = defaultdict(lambda: defaultdict(lambda: 0)) #dict of dicts (user->command->value)
+    for [name, command] in names:
+        stats[name][command] = ad[f"CCS{name}_{command}"]
+
+    stats |= {
+        'Time': pump_cycle,
+        'CPU': cpu_time,
+        'RecentDCDC': recent_dcdc,
+    } # Shove ancillary data along with the command statistics, kinda messy but we can filter it later
+    return stats, format_time
+
+
+def get_diffs(old, new):
+    """Calculates the difference between two sets of statistics.
+    old: The previous set of statistics
+    new: The current set of statistics
+    returns: A tuple of the new statistics and the difference between the two sets
+    """
+    new_stats = {key: value for key, value in new.items() if isinstance(value, dict)}
+    diff = {}
+    if old is None:
+        print("Waiting on second sample...")
+    else:
+        diff = defaultdict(lambda: defaultdict(lambda: 0))
+        # Calculate diffs
+        cmd_total = 0
+        for name, cmdtable in new_stats.items():
+            for cmd, value in cmdtable.items():
+                try:
+                    diff[name][cmd] = (value - old[name][cmd])
+                    cmd_total += diff[name][cmd]
+                except KeyError: # command was called for first time this instance between samples
+                    diff[name][cmd] = value
+                    cmd_total += value
+        diff = map_dict(diff, lambda x: x / cmd_total * 100)
+        diff['cmd_total'] = cmd_total
+    return new, diff
+
+
+def print_stats(diff, stats, time):
+    """Prints the user statistics
+    diff: The difference between the two sets of statistics
+    stats: The current set of statistics (used for CPU time, RecentDCDC, etc.)
+    time: The time the current set of statistics were taken
+    """
+    if not diff:
+        return
+    else:
+        # Extract total command time and remove it from the dict
+        cmd_total = diff['cmd_total']
+        del diff['cmd_total']
+        # Print header
+        os.system("clear")
+        print(f"{time}---------------")
+        print(f"Time: {stats['Time']:16.3f} seconds")
+        print(f"CPU Time: {stats['CPU']:16.3f} seconds")
+        print(f"Recent CPU Usage: {(stats['RecentDCDC'] * 100):8.3f}%")
+        print("----------------------------------")
+        print(f"Total Command Time: {cmd_total:8.5f}")
+        
+        # Finally print the stats
+        for user, table in sorted(diff.items(), key=lambda x: sum(x[1].values()), reverse=True):
+            user_total = sum(table.values())
+            if user_total >= DANGER_THRESHOLD:
+                print(colors.FAIL, f"\t * {user}: {user_total:.2f}%", colors.ENDC)
+            else:
+                print(f"\t * {user}: {user_total:.2f}%")
+            for cmd, value in table.items():
+                if value == 0:
+                    continue
+                print(f"\t\t- {cmd}: {value:.2f}%")
+
+def save_stats(stats, time, filename):
+    """Saves the command statistics to a json file.
+    stats: A dict of statistics to save
+    time: The time the statistics were taken
+    filename: The name of the file to save to
+    """
+    if not stats:
+        return
+    stats = stats | {"Time": str(time)}
+    if os.path.exists(filename):
+        with open(filename, "r+") as f:
+            base = json.load(f)
+            base.append(stats)
+            f.seek(0)
+            json.dump(base, f, indent=4)
+    else:
+        with open(filename, "w") as f:
+            json.dump([stats], f)
+    
+
+def parse_args():
+    """Parses command line arguments"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--live", default=240, type=int, help="Seconds between updates (default 240)")
+    parser.add_argument("-s", "--save", default=None, help="Save statistics to a file (default None)")
+    return parser.parse_args()
+
+def wait(seconds):
+    """Waits for a number of seconds and prints the remaining time to console."""
+    for i in range(seconds):
+        print(f"Waiting {seconds - i} seconds", end="\r")
+        sleep(1)
+    print(" " * 30, end="\r")
+
+if __name__ == "__main__":
+    kwargs['name'] = get_name()
+    args = parse_args()
+    while True:
+        stats, time = get_stats()
+        old, diff = get_diffs(old, stats)
+        print_stats(diff, old, time)
+        if args.save:
+            save_stats(diff, time, args.save)
+        if args.live:
+            wait(args.live)
+        else:
+            break
