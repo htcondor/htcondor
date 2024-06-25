@@ -30,12 +30,11 @@
 # include <sys/procfs.h>
 #endif
 
-#include <sstream>
+//#include <sstream>
 
 size_t pidHashFunc( const pid_t& pid );
 
-HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
-    new HashTable <pid_t, procHashNode *> ( pidHashFunc );
+std::map<pid_t, procHashNode> ProcAPI::procHash;
 
 piPTR ProcAPI::allProcInfos = NULL;
 
@@ -106,32 +105,12 @@ double ProcAPI::TIME_UNITS_PER_SEC = (double) sysconf(_SC_CLK_TCK);
 double ProcAPI::TIME_UNITS_PER_SEC = 1.0;
 #endif
 
-procHashNode::procHashNode()
-{
-	lasttime = 0.0;
-	oldtime = 0.0;
-	oldusage = 0.0;
-	oldminf = 0L;
-	oldmajf = 0L;
-	majfaultrate = 0L;
-	minfaultrate = 0L;
-	creation_time = 0L;
-	garbage = false;
-}
-
 ProcAPI::~ProcAPI() {
         // deallocate stuff like crazy.
 #ifndef WIN32
     pidList.clear();
 #endif
     deallocAllProcInfos();
-
-    struct procHashNode * phn;
-    procHash->startIterations();
-    while ( procHash->iterate( phn ) )
-        delete phn;
-    
-    delete procHash;
 
 #ifdef WIN32
     if ( offsets )
@@ -1692,23 +1671,21 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 		procHashNode which we have not performed a lookup on in
 		over an hour.  -Todd <tannenba@cs.wisc.edu> */
 	static double last_garbage_collection_time = 0.0;	
-	pid_t garbage_pid;
 	if ( now - last_garbage_collection_time > 3600 ) {
 		last_garbage_collection_time = now;
 			// first delete anything still flagged as garbage
-		procHash->startIterations();
-		while ( procHash->iterate( garbage_pid, phn ) ) {
-			if ( phn->garbage == true ) {
+		auto it = procHash.begin();
+		while (it != procHash.end()) {
+			if ( it->second.garbage == true ) {
 				// it is still flagged as garbage; delete it
-				procHash->remove(garbage_pid);
-				delete phn;
-				phn = NULL;
+				it = procHash.erase(it);
 			} else {
 				// it is not still flagged as garbarge; so do 
 				// not delete it, but instead reset the garbage
 				// flag to true.  It will be cleared when/if we
 				// perform a lookup on this node.
-				phn->garbage = true;
+				it->second.garbage = true;
+				it++;
 			}
 		}	// end of while loop to iterate through the hash table
 	}	// end of if it is garbage collection time
@@ -1722,7 +1699,10 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 		   sure we've got the right one. Mike & Derek 3/24/99 */
 
 	phn = NULL;	// clear to NULL before attempting the lookup
-	if (procHash->lookup( pi->pid, phn ) == 0) {
+	auto it = procHash.find(pi->pid);
+	if (it != procHash.end()) {
+
+		phn = &it->second;
 
 		/* Allow 2 seconds "slack" on creation time, like we do in
 		   ProcFamily, since (at least on Linux) the value can
@@ -1731,8 +1711,7 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 		long birth = phn->creation_time - pi->creation_time;
 		if (-2 > birth || birth > 2) {
 			/* must be a different process associated with this, remove it. */
-			procHash->remove(pi->pid);
-			delete phn;
+			procHash.erase(it);
 			phn = NULL;
 		}
 	}
@@ -1786,24 +1765,21 @@ ProcAPI::do_usage_sampling( piPTR& pi,
             pi->minfault = (long unsigned)(nowminf / (double) pi->age);
             pi->majfault = (long unsigned)(nowmajf / (double) pi->age);
         }
-    } 
 
-		// if we got that phn from the hashtable, remove it now.
-	if ( phn ) {
-		procHash->remove(pi->pid);
-	}
+        auto [it, success] = procHash.emplace(pi->pid, procHashNode());
+        ASSERT(success);
+        phn = &it->second;
+    }
 
 		// put new vals back into hashtable
-	struct procHashNode * new_phn = new procHashNode;
-	new_phn->lasttime = now;
-	new_phn->oldtime  = ustime;   // store raw data for next call...
-	new_phn->oldminf  = nowminf;  //  ""
-	new_phn->oldmajf  = nowmajf;  //  ""
-	new_phn->oldusage = pi->cpuusage;  // Also store results in case the
-	new_phn->minfaultrate = pi->minfault;   // next sample is < 1 sec
-	new_phn->majfaultrate = pi->majfault;   // from now.
-	new_phn->creation_time = pi->creation_time;
-	procHash->insert( pi->pid, new_phn );
+	phn->lasttime = now;
+	phn->oldtime  = ustime;   // store raw data for next call...
+	phn->oldminf  = nowminf;  //  ""
+	phn->oldmajf  = nowmajf;  //  ""
+	phn->oldusage = pi->cpuusage;  // Also store results in case the
+	phn->minfaultrate = pi->minfault;   // next sample is < 1 sec
+	phn->majfaultrate = pi->majfault;   // from now.
+	phn->creation_time = pi->creation_time;
 
 		// due to some funky problems, do some sanity checking here for
 		// strange numbers:
@@ -1832,9 +1808,6 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 		pi->age = 0;
 	}
 
-		// now we can delete this.
-	if ( phn ) delete phn;
-	
 }
 
 procInfo*
