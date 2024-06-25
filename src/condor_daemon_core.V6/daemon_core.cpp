@@ -4345,8 +4345,9 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 					comTable[index].command_descrip,
 					user,
 					stream ? stream->peer_description() : "");
-			handler_start_time = _condor_debug_get_time_double();
 		}
+		
+		handler_start_time = _condor_debug_get_time_double();
 
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
@@ -4364,14 +4365,16 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		// clear curr_dataptr
 		curr_dataptr = NULL;
 
+		double handler_time = _condor_debug_get_time_double() - handler_start_time;
+		dc_stats.UserRuntimes[user][comTable[index].handler_descrip] += handler_time;
+		
 		if (IsDebugLevel(D_COMMAND)) {
-			double handler_time = _condor_debug_get_time_double() - handler_start_time;
 			dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.6fs, sec: %.3fs, payload: %.3fs)\n", 
 					comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
 		}
 
 	}
-
+	
 	if ( delete_stream && result != KEEP_STREAM ) {
 		delete stream;
 	}

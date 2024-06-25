@@ -2158,6 +2158,13 @@ int Scheduler::make_ad_list(
    // publish scheduler generic statistics
    stats.Publish(*cad, stats_config.c_str());
 
+   // publish user statistics
+   for(auto const& [username, table]: daemonCore->dc_stats.UserRuntimes) {
+		for(auto const& [command, probe]: table) {
+			cad->Assign("CCS" + username + "_" + command, probe.Total());
+		}
+   }
+
    m_xfer_queue_mgr.publish(cad, stats_config.c_str());
 
    // publish daemon core stats
