@@ -23,6 +23,11 @@ Release Notes:
 
 New Features:
 
+- Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to false.
+  when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
+  a job.
+  :jira:`2510`
+
 - The classad language no longer supports unit suffixes on numeric literals.
   This was almost always a cause for confusion and bugs in classad expressions.
   Note that unit suffixes are still allowed in the submit language in 
