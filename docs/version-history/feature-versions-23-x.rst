@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to false.
+  when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
+  a job.
+  :jira:`2510`
 
 Bugs Fixed:
 
