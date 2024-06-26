@@ -1625,7 +1625,7 @@ int count_effective_slots(std::vector<ClassAd *>& startdAds, ExprTree* constrain
 
 
 static int 
-CountMatches(std::vector<ClassAd *> ads, classad::ExprTree* constraint) {
+CountMatches(const std::vector<ClassAd *> &ads, classad::ExprTree* constraint) {
 	// Check for null constraint.
 	if (constraint == nullptr) {
 		return 0;
@@ -2713,9 +2713,6 @@ int Matchmaker::
 trimStartdAds_PreemptionLogic(std::vector<ClassAd *> &startdAds) const
 {
 	int removed = 0;
-	char const *claimed_state_str = state_to_string(claimed_state);
-	char const *preempting_state_str = state_to_string(preempting_state);
-	ASSERT(claimed_state_str && preempting_state_str);
 
 		// If we are not considering preemption, we can save time
 		// (and also make the spinning pie algorithm more correct) by
@@ -2758,6 +2755,32 @@ trimStartdAds_PreemptionLogic(std::vector<ClassAd *> &startdAds) const
 		return removed;
 	}
 
+	const std::string claimed_state_str = state_to_string(claimed_state);
+	const std::string preempting_state_str = state_to_string(preempting_state);
+
+	auto isClaimedOrPreempting = [&claimed_state_str,&preempting_state_str](ClassAd *ad) {
+		std::string curState;
+		bool is_pslot = false;
+		if (ad->LookupString(ATTR_STATE, curState)) {
+			if ((curState == claimed_state_str) || (curState == preempting_state_str)) {
+				// Ignore Claimed pslots, they aren't eligible for preemption
+				ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+				if (is_pslot) {
+					return false;
+				}
+				return true;
+			}
+		}
+		return false;
+	};
+
+	auto lastGood = std::remove_if(startdAds.begin(), startdAds.end(), isClaimedOrPreempting);
+	removed = std::distance(lastGood, startdAds.end());
+	startdAds.erase(lastGood, startdAds.end());
+
+	dprintf(D_FULLDEBUG,
+			"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_PREEMPTION=False\n",
+			removed);
 	return removed;
 }
 
