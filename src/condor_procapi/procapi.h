@@ -28,6 +28,7 @@
 #include "condor_system.h"
 #include "condor_pidenvid.h"
 #include "processid.h"
+#include <vector>
 
 #ifndef WIN32 // all the below is for UNIX
 

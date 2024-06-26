@@ -30,7 +30,7 @@
 # include <sys/procfs.h>
 #endif
 
-//#include <sstream>
+#include <sstream>
 
 size_t pidHashFunc( const pid_t& pid );
 
