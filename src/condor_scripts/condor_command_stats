@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 import htcondor
-import classad
 import argparse
-import pandas as pd
 import json
 import os
 import sys
@@ -12,8 +10,10 @@ import datetime as dt
 from time import sleep
 from collections import defaultdict
 
-# Constants
-DANGER_THRESHOLD = 25 # Threshold for highlighting a user in red (% runtime)
+# Constants (TODO make these config attributes)
+ATTR_PREFIX = "CCS" # Prefix for command statistics attributes
+DANGER_THRESHOLD = 10 # Threshold for highlighting a user in red (% runtime)
+WARNING_THRESHOLD = 5 # Threshold for highlighting a user in yellow (% runtime)
 
 # Define terminal colors for printing
 class colors:
@@ -21,12 +21,12 @@ class colors:
     OKBLUE = '\033[94m'
     OKGREEN = '\033[92m'
     WARNING = '\033[93m'
-    FAIL = '\033[91m'
+    DANGER = '\033[91m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-# Cleanly exit on SIGINT
+# Cleanly exit on SIGINT (Ctrl+C)
 signal.signal(signal.SIGINT, lambda x, y: exit(0))
 
 # Initialize global variables
@@ -73,6 +73,61 @@ def map_dict(d, lambda_):
     return d
 
 
+def bimap_dict(d1, d2, lambda_, fail_ = None):
+    """Maps a lambda function over two (possibly nested) dictionaries, combining them
+    d1: The first dictionary to map over
+    d2: The second dictionary to map over
+    lambda_: The function to apply to each pair of values
+    returns: A combined dictionary
+    """
+    res = {}
+    for key, value in d1.items():
+        if key not in d2:
+            if fail_ is not None:
+                res[key] = fail_(value)
+            else:
+                continue
+        if isinstance(value, dict):
+            res[key] = bimap_dict(value, d2[key], lambda_)
+        else:
+            res[key] = lambda_(value, d2[key])
+    return res
+
+
+def add_totals_dict(d):
+    """Adds a total key to dict fields recursively.
+    dict: The dictionary to add totals to
+    returns: The modified dictionary
+    """
+    res = {}
+    # Base case, flat dictionary. Add total key and return
+    if not any(isinstance(value, dict) for value in d.values()): 
+        res = {key: value for key, value in d.items()}
+        res['total'] = sum(d.values())
+        return res
+
+    # Recursive case, add totals to sub-dictionaries
+    else:
+        for key, value in d.items():
+            if isinstance(value, dict):
+                res[key] = add_totals_dict(value)
+        res['total'] = sum([value['total'] for value in res.values()])
+        
+    return res
+
+
+def invert_dict(dict):
+    """Inverts stats from (user->command) to (command->user)
+    dict: The dictionary to invert
+    returns: The inverted dictionary
+    """
+    new = defaultdict(lambda: defaultdict(lambda: 0))
+    for user, cmdtable in dict.items():
+        for cmd, value in cmdtable.items():
+            new[cmd][user] = value
+    return new
+
+
 def get_stats():
     """Queries the collector for command statistics on the schedd.
     returns: A tuple of the statistics and the time the statistics were taken
@@ -80,14 +135,18 @@ def get_stats():
     ad = collector.directQuery(**kwargs)
     recent_dcdc = ad['RecentDaemonCoreDutyCycle']
     pump_cycle = ad['RecentDCPumpCycleSum']
-    cpu_time = recent_dcdc * pump_cycle
+    cpu_time = recent_dcdc * args.live
     server_time = ad['MyCurrentTime']
     format_time = dt.datetime.fromtimestamp(server_time)
 
-    names = [a[3:].split("_", 1) for a in ad.keys() if a.startswith("CCS")] # Creates list of [user, command] for accessing attributes
+    names = [a[3:].split("_", 1) for a in ad.keys() if a.startswith(ATTR_PREFIX)] # Creates list of [user, command] for accessing attributes
     stats = defaultdict(lambda: defaultdict(lambda: 0)) #dict of dicts (user->command->value)
     for [name, command] in names:
-        stats[name][command] = ad[f"CCS{name}_{command}"]
+        stats[name][command] = ad[f"{ATTR_PREFIX}{name}_{command}"]
+
+    # Invert table before we add extra top-level keys
+    if args.flip:
+        stats = invert_dict(stats)
 
     stats |= {
         'Time': pump_cycle,
@@ -103,25 +162,62 @@ def get_diffs(old, new):
     new: The current set of statistics
     returns: A tuple of the new statistics and the difference between the two sets
     """
-    new_stats = {key: value for key, value in new.items() if isinstance(value, dict)}
-    diff = {}
     if old is None:
         print("Waiting on second sample...")
+        return new, {}
     else:
-        diff = defaultdict(lambda: defaultdict(lambda: 0))
-        # Calculate diffs
-        cmd_total = 0
-        for name, cmdtable in new_stats.items():
-            for cmd, value in cmdtable.items():
-                try:
-                    diff[name][cmd] = (value - old[name][cmd])
-                    cmd_total += diff[name][cmd]
-                except KeyError: # command was called for first time this instance between samples
-                    diff[name][cmd] = value
-                    cmd_total += value
-        diff = map_dict(diff, lambda x: x / cmd_total * 100)
-        diff['cmd_total'] = cmd_total
-    return new, diff
+        # Filter out non-dict values
+        old_stats = {key: value for key, value in old.items() if isinstance(value, dict)} 
+        new_stats = {key: value for key, value in new.items() if isinstance(value, dict)} 
+    
+        diff = bimap_dict(old_stats, new_stats, lambda x, y: y - x, fail_=lambda x: x)
+        diff = add_totals_dict(diff)
+        diff = map_dict(diff, lambda x: x / new['CPU'] * 100)
+        return new, diff
+
+
+def print_stat(key, value, spacing, bullet, color=False):
+    """Prints a single statistic with color coding
+    key: The key to print
+    value: The value to print
+    spacing: The number of tabs to indent
+    bullet: The bullet to print before the key
+    color: Whether to color code the output
+    """
+    if value == 0:
+        return
+    if not color:
+        print(f"\t{' ' * spacing} {bullet} {key}: {value:.2f}%")
+        return
+    
+    print_color = ""
+    whitespace = "  " * spacing
+    if value >= DANGER_THRESHOLD:
+        print_color = colors.DANGER
+    elif value >= WARNING_THRESHOLD:
+        print_color = colors.WARNING
+    print(print_color, f"{whitespace} {bullet} {key}: {value:.2f}%", colors.ENDC)
+
+
+def print_dict(d, depth, bullets, color_flags, sort_ascending=False):
+    """Recursively prints a dictionary of statistics
+    d: The dictionary to print
+    depth: The current depth of the recursion
+    bullets: A list of bullets to print at each depth
+    color_flags: A list of flags to determine whether to color code the output at that depth
+    (Anything beyond the end of the list will default to no color)
+    """
+    subdicts = [i for i in d.items() if isinstance(i[1], dict)]
+    if not subdicts:
+        for key, value in sorted(d.items(), key=lambda x: x[1], reverse=not sort_ascending):
+            if key == "total":
+                continue
+            print_stat(key, value, depth, bullets[min(depth, len(bullets) - 1)], color_flags[min(depth, len(color_flags) - 1)])
+    else:
+        for key, value in sorted(subdicts, key=lambda x: x[1]['total'], reverse=not sort_ascending):
+            if isinstance(value, dict):
+                print_stat(key, value["total"], depth, bullets[min(depth, len(bullets) - 1)], color_flags[min(depth, len(color_flags) - 1)])
+                print_dict(value, depth+1, bullets, color_flags)
 
 
 def print_stats(diff, stats, time):
@@ -130,32 +226,23 @@ def print_stats(diff, stats, time):
     stats: The current set of statistics (used for CPU time, RecentDCDC, etc.)
     time: The time the current set of statistics were taken
     """
+    BULLETS = ["*", "-", ">"]
     if not diff:
         return
     else:
-        # Extract total command time and remove it from the dict
-        cmd_total = diff['cmd_total']
-        del diff['cmd_total']
         # Print header
         os.system("clear")
-        print(f"{time}---------------")
-        print(f"Time: {stats['Time']:16.3f} seconds")
-        print(f"CPU Time: {stats['CPU']:16.3f} seconds")
-        print(f"Recent CPU Usage: {(stats['RecentDCDC'] * 100):8.3f}%")
-        print("----------------------------------")
-        print(f"Total Command Time: {cmd_total:8.5f}")
-        
+        print(f"{time}" + "-" * 61) #Timestamp is 19 characters until the year 10000
+        print(f"Sample Window: {args.live:7.1f} s")
+        print(f"CPU Time: {stats['CPU']:12.1f} s")
+        print(f"CPU Usage: {(stats['RecentDCDC'] * 100):12.2f}%")
+        print("-" * 80)
+        print(f"Total Command Time: {(diff['total'] * stats['CPU'] / 100):8.4f}s ({diff['total']:.2f}%)")
         # Finally print the stats
-        for user, table in sorted(diff.items(), key=lambda x: sum(x[1].values()), reverse=True):
-            user_total = sum(table.values())
-            if user_total >= DANGER_THRESHOLD:
-                print(colors.FAIL, f"\t * {user}: {user_total:.2f}%", colors.ENDC)
-            else:
-                print(f"\t * {user}: {user_total:.2f}%")
-            for cmd, value in table.items():
-                if value == 0:
-                    continue
-                print(f"\t\t- {cmd}: {value:.2f}%")
+        print_dict(diff, depth=0, bullets=BULLETS, color_flags=[True, True, False], sort_ascending=args.ascending)
+        print(f"Other: {1 - (diff['total'] * stats['CPU'] / 100):.2f}s ({100 - diff['total']:.2f}%)")
+        print("-" * 80)
+
 
 def save_stats(stats, time, filename):
     """Saves the command statistics to a json file.
@@ -182,18 +269,22 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--live", default=240, type=int, help="Seconds between updates (default 240)")
     parser.add_argument("-s", "--save", default=None, help="Save statistics to a file (default None)")
+    parser.add_argument("-f", "--flip", action="store_true", help="Flip the user/command ordering")
+    parser.add_argument("-a", "--ascending", action="store_true", help="Sort values in ascending order")
     return parser.parse_args()
 
 def wait(seconds):
     """Waits for a number of seconds and prints the remaining time to console."""
     for i in range(seconds):
-        print(f"Waiting {seconds - i} seconds", end="\r")
+        print(f"Waiting {seconds - i} seconds    ", end='\r') # Spaced so carriage return works on 10->9, etc.
         sleep(1)
     print(" " * 30, end="\r")
 
 if __name__ == "__main__":
     kwargs['name'] = get_name()
     args = parse_args()
+
+    # Main driver loop
     while True:
         stats, time = get_stats()
         old, diff = get_diffs(old, stats)
