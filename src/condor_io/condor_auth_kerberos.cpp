@@ -1450,9 +1450,9 @@ int Condor_Auth_Kerberos :: init_server_info()
     }
 
     if (IsDebugLevel(D_SECURITY) && !err) {
-        char *tmp;
-        if (!krb5_unparse_name_ptr(krb_context_, mySock_->isClient() ? krb_principal_ : server_, &tmp))
-	    dprintf(D_SECURITY, "KERBEROS: the server principal is \"%s\"\n", tmp);
+        char *tmp = nullptr;
+        if (!krb5_unparse_name_ptr(krb_context_, mySock_->isClient() ? server_ : krb_principal_, &tmp))
+   	        dprintf(D_SECURITY, "KERBEROS: the server principal is \"%s\"\n", tmp);
         free(tmp);
     }
 
