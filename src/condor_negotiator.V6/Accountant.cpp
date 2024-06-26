@@ -1004,11 +1004,10 @@ Accountant::UpdateOnePriority(int T, int TimePassed, double AgingFactor, const c
 // that were broken (by checkibg the claimed state)
 //------------------------------------------------------------------
 
-void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList) 
+void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList) 
 {
   dprintf(D_ACCOUNTANT,"(Accountant) Checking Matches\n");
 
-  ClassAd* ResourceAd;
   std::string HK;
   ClassAd* ad;
   std::string ResourceName;
@@ -1016,8 +1015,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 
 	  // Create a hash table for speedier lookups of Resource ads.
   HashTable<std::string,ClassAd *> resource_hash(hashFunction);
-  ResourceList.Open();
-  while ((ResourceAd=ResourceList.Next())!=NULL) {
+  for (ClassAd *ResourceAd: ResourceList) {
     ResourceName = GetResourceName(ResourceAd);
     bool success = ( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
     if (!success) {
@@ -1025,7 +1023,6 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
       dPrintAd(D_FULLDEBUG, *ResourceAd);
     }
   }
-  ResourceList.Close();
 
   // Remove matches that were broken
   AcctLog->table.startIterations();
@@ -1033,6 +1030,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
     char const *key = HK.c_str();
     if (strncmp(ResourceRecord.c_str(),key,ResourceRecord.length())) continue;
     ResourceName=key+ResourceRecord.length();
+	ClassAd *ResourceAd = nullptr;
     if( resource_hash.lookup(ResourceName,ResourceAd) < 0 ) {
       dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.c_str());
       RemoveMatch(ResourceName);
@@ -1048,12 +1046,10 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   }
 
   // Scan startd ads and add matches that are not registered
-  ResourceList.Open();
-  while ((ResourceAd=ResourceList.Next())!=NULL) {
+  for (ClassAd *ResourceAd: ResourceList) {
 	  std::string cust_name;
     if (IsClaimed(ResourceAd, cust_name)) AddMatch(cust_name, ResourceAd);
   }
-  ResourceList.Close();
 
 	  // Recalculate limits from the set of resources that are reporting
   LoadLimits(ResourceList);
@@ -1779,24 +1775,6 @@ bool Accountant::GetAttributeString(const std::string& Key, const std::string& A
 }
 
 //------------------------------------------------------------------
-// Find a resource ad in class ad list (by name)
-//------------------------------------------------------------------
-
-#if 0
-ClassAd* Accountant::FindResourceAd(const string& ResourceName, ClassAdListDoesNotDeleteAds& ResourceList)
-{
-  ClassAd* ResourceAd;
-  
-  ResourceList.Open();
-  while ((ResourceAd=ResourceList.Next())!=NULL) {
-	if (ResourceName==GetResourceName(ResourceAd)) break;
-  }
-  ResourceList.Close();
-  return ResourceAd;
-}
-#endif
-
-//------------------------------------------------------------------
 // Get the users domain
 //------------------------------------------------------------------
 
@@ -1813,17 +1791,14 @@ std::string Accountant::GetDomain(const std::string& CustomerName)
 // Functions for accessing and changing Concurrency Limits
 //------------------------------------------------------------------
 
-void Accountant::LoadLimits(ClassAdListDoesNotDeleteAds &resourceList)
+void Accountant::LoadLimits(std::vector<ClassAd *> &resourceList)
 {
-	ClassAd *resourceAd;
-
 		// Wipe out all the knowledge of limits we think we know
 	dprintf(D_ACCOUNTANT, "Previous Limits --\n");
 	ClearLimits();
 
 		// Record all the limits that are actually in use in the pool
-	resourceList.Open();
-	while (NULL != (resourceAd = resourceList.Next())) {
+	for (ClassAd *resourceAd: resourceList) {
 		std::string limits;
 
 		if (resourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
@@ -1848,7 +1823,6 @@ void Accountant::LoadLimits(ClassAdListDoesNotDeleteAds &resourceList)
 			IncrementLimits(str);
 		}
 	}
-	resourceList.Close();
 
 		// Print out the new limits, at D_ACCOUNTANT. This is useful
 		// because the list printed from ClearLimits can be compared
