@@ -341,11 +341,25 @@ SYSTEM_TABLE = {
 
         "queues": {
             "shared": {
-                "max_duration":         24 * 60 * 60,
+                "max_duration":         7* 24 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,             # or 128
+                "ram_per_node":         512,
+                "max_nodes_per_job":    2,              # "max 320 cores/job"
+            },
+            "int": {
+                "max_duration":         4 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       64,             # or 128
                 "ram_per_node":         512,            # "max 64 per job"
-                "max_nodes_per_job":    4,              # "max 320 cores/job"
+                "max_nodes_per_job":    1,              # "max 16 cores/job"
+            },
+            "pre": {
+                "max_duration":         24 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,             # or 128
+                "ram_per_node":         512,
+                "max_nodes_per_job":    2,              # "max 320 cores/job"
             },
         },
     }
