@@ -13,7 +13,7 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-23012`.
 
-- The HTCondor Docker images are now based on AlmaLinux 9
+- The HTCondor Docker images are now based on Alma Linux 9.
   :jira:`2504`
 
 - HTCondor Docker images are now available for the ARM64 CPU architecture.
@@ -30,12 +30,12 @@ New Features:
   :jira:`2406`
 
 - Added an ``-edit`` option to the :tool:`condor_qusers`.  This option allows
-  and administrator to add custom attributes to a User classad in the *condor_schedd*.
+  and administrator to add custom attributes to a User ClassAd in the *condor_schedd*.
   :jira:`2381`
 
 - The *condor_gangliad* memory consumption has been reduced, and it also places less load on
   the *condor_collector*.  Specifically, it now uses a projection when querying the collector
-  if config knob :macro:`GANGLIAD_WANT_PROJECTION` is set to True. Currently the default for
+  if the configuration knob :macro:`GANGLIAD_WANT_PROJECTION` is set to True. Currently the default for
   this knob is False, but after additional testing, an upcoming release will default to True.
   :jira:`2394`
 
@@ -62,7 +62,7 @@ New Features:
   systemd "one writer" cgroup rule.
   :jira:`2445`
 
-- New config parameter :macro:`CGROUP_LOW_MEMORY_LIMIT` allows an administrator
+- New configuration parameter :macro:`CGROUP_LOW_MEMORY_LIMIT` allows an administrator
   of a Linux cgroup v2 system to set the "memory.low" setting in a job's cgroup
   to encourage cacheable memory pages to be reclaimed faster.
   :jira:`2391`
