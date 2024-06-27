@@ -1004,9 +1004,9 @@ CCBServer::RemoveTarget( CCBTarget *target )
 		// hang up on all requests for this target
 	std::map<CCBID,CCBServerRequest *> *trequests;
 	while ((trequests = target->getRequests())) {
-		CCBServerRequest *request = nullptr;
 		auto requestit = trequests->begin();
 		if (requestit != trequests->end()) {
+			CCBServerRequest *request = requestit->second;
 			RemoveRequest( request );
 			ccb_stats.CCBRequestsFailed += 1;
 			// note that trequests may point to a deleted hash table
