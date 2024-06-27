@@ -183,7 +183,7 @@ echo "${CONTROL_PREFIX} PILOT_DIR ${PILOT_DIR}"
 
 function cleanup() {
     echo "Cleaning up temporary directory..."
-    # rm -fr ${PILOT_DIR}
+    rm -fr ${PILOT_DIR}
 }
 trap cleanup EXIT
 
