@@ -2161,8 +2161,13 @@ int Scheduler::make_ad_list(
    // publish user statistics
    for(auto const& [username, table]: daemonCore->dc_stats.UserRuntimes) {
 		for(auto const& [command, probe]: table) {
-			cad->Assign("CCS" + username + "_" + command, probe.Total());
+			cad->Assign("DIAG_CCS" + username + "_" + command, probe.Total());
 		}
+   }
+
+   // publish reaper statistics
+   for(auto const& [reaper, probe]: daemonCore->dc_stats.ReaperRuntimes) {
+		cad->Assign("DIAG_CRS" + reaper, probe.Total());
    }
 
    m_xfer_queue_mgr.publish(cad, stats_config.c_str());
