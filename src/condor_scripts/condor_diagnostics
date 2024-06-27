@@ -11,9 +11,10 @@ from time import sleep
 from collections import defaultdict
 
 # Constants (TODO make these config attributes)
-ATTR_PREFIX = "CCS" # Prefix for command statistics attributes
-DANGER_THRESHOLD = 10 # Threshold for highlighting a user in red (% runtime)
-WARNING_THRESHOLD = 5 # Threshold for highlighting a user in yellow (% runtime)
+COMMAND_PREFIX = "DIAG_CCS" # Prefix for command statistics attributes
+REAP_PREFIX = "DIAG_CRS" # Prefix for command reaper statistics attributes
+DANGER_THRESHOLD = 20 # Threshold for highlighting a user in red (% runtime)
+WARNING_THRESHOLD = 10 # Threshold for highlighting a user in yellow (% runtime)
 
 # Define terminal colors for printing
 class colors:
@@ -30,7 +31,6 @@ class colors:
 signal.signal(signal.SIGINT, lambda x, y: exit(0))
 
 # Initialize global variables
-collector = htcondor.Collector()
 old = None
 
 # Hardcoded kwargs for querying the schedd
@@ -42,7 +42,7 @@ kwargs = {
 
 def get_name():
     """Returns the name of the schedd, or exits if it can't be found."""
-    # Get name of Schedd
+    collector = htcondor.Collector()
     machine = htcondor.param['FULL_HOSTNAME']
     # Query for the schedd ad
     ads = collector.query(htcondor.AdTypes.names["Schedd"],
@@ -73,8 +73,9 @@ def map_dict(d, lambda_):
     return d
 
 
-def bimap_dict(d1, d2, lambda_, fail_ = None):
-    """Maps a lambda function over two (possibly nested) dictionaries, combining them
+def bimap_dict(d1, d2, lambda_, fail_=None):
+    """Maps a lambda function over two (possibly nested) dictionaries, combining them.
+    Searches through the keys of d1, applying fail if the key is not in d2.
     d1: The first dictionary to map over
     d2: The second dictionary to map over
     lambda_: The function to apply to each pair of values
@@ -88,7 +89,7 @@ def bimap_dict(d1, d2, lambda_, fail_ = None):
             else:
                 continue
         if isinstance(value, dict):
-            res[key] = bimap_dict(value, d2[key], lambda_)
+            res[key] = bimap_dict(value, d2[key], lambda_, fail_)
         else:
             res[key] = lambda_(value, d2[key])
     return res
@@ -116,33 +117,59 @@ def add_totals_dict(d):
     return res
 
 
-def invert_dict(dict):
+def invert_dict(d):
     """Inverts stats from (user->command) to (command->user)
-    dict: The dictionary to invert
+    d: The dictionary to invert
     returns: The inverted dictionary
     """
     new = defaultdict(lambda: defaultdict(lambda: 0))
-    for user, cmdtable in dict.items():
+    for user, cmdtable in d.items():
         for cmd, value in cmdtable.items():
             new[cmd][user] = value
     return new
 
+def get_fields(dict, ad, prefix, title, splituser=False):
+    """Populates a dictionary with statistics from a given prefix
+    dict: The dictionary to populate
+    ad: The ad to pull statistics from
+    prefix: The prefix to search for
+    title: The top-level key to add to the dictionary
+    splituser: Whether the ad needs to be split into user and value
+    """
+    names = [key[len(prefix):] for key in ad.keys() if key.startswith(prefix)]
+    if splituser:
+        for name in names:
+            user, value = name.split("_", 1)
+            dict[title][user][value] = ad[prefix + name]
+    else:
+        for name in names:
+            dict[title][name] = ad[prefix + name]
+
+    return dict
 
 def get_stats():
     """Queries the collector for command statistics on the schedd.
     returns: A tuple of the statistics and the time the statistics were taken
     """
-    ad = collector.directQuery(**kwargs)
+    try:
+        collector = htcondor.Collector()
+        ad = collector.directQuery(**kwargs)
+    except Exception as e:
+        print(f"Error: Couldn't query collector: {e}")
+        sys.exit(1)
+
+    # Get useful metadata
     recent_dcdc = ad['RecentDaemonCoreDutyCycle']
     pump_cycle = ad['RecentDCPumpCycleSum']
     cpu_time = recent_dcdc * args.live
     server_time = ad['MyCurrentTime']
     format_time = dt.datetime.fromtimestamp(server_time)
 
-    names = [a[3:].split("_", 1) for a in ad.keys() if a.startswith(ATTR_PREFIX)] # Creates list of [user, command] for accessing attributes
-    stats = defaultdict(lambda: defaultdict(lambda: 0)) #dict of dicts (user->command->value)
-    for [name, command] in names:
-        stats[name][command] = ad[f"{ATTR_PREFIX}{name}_{command}"]
+    # Populate statistics in each category
+    recursive_defaultdict = lambda: defaultdict(recursive_defaultdict)
+    stats = recursive_defaultdict()
+    get_fields(stats, ad, COMMAND_PREFIX, "Commands", splituser=True)
+    get_fields(stats, ad, REAP_PREFIX, "Reapers")
 
     # Invert table before we add extra top-level keys
     if args.flip:
@@ -152,7 +179,7 @@ def get_stats():
         'Time': pump_cycle,
         'CPU': cpu_time,
         'RecentDCDC': recent_dcdc,
-    } # Shove ancillary data along with the command statistics, kinda messy but we can filter it later
+    } # Shove ancillary data in with the command statistics, kinda messy but we can filter it later
     return stats, format_time
 
 
@@ -166,12 +193,15 @@ def get_diffs(old, new):
         print("Waiting on second sample...")
         return new, {}
     else:
-        # Filter out non-dict values
+        # Filter out metadata
         old_stats = {key: value for key, value in old.items() if isinstance(value, dict)} 
         new_stats = {key: value for key, value in new.items() if isinstance(value, dict)} 
     
         diff = bimap_dict(old_stats, new_stats, lambda x, y: y - x, fail_=lambda x: x)
         diff = add_totals_dict(diff)
+        # Use the total CPU time to calculate the "Other" category then discard
+        diff["Other"] = {"total": new['CPU'] - diff["total"]}
+        del diff["total"]
         diff = map_dict(diff, lambda x: x / new['CPU'] * 100)
         return new, diff
 
@@ -232,15 +262,17 @@ def print_stats(diff, stats, time):
     else:
         # Print header
         os.system("clear")
-        print(f"{time}" + "-" * 61) #Timestamp is 19 characters until the year 10000
-        print(f"Sample Window: {args.live:7.1f} s")
-        print(f"CPU Time: {stats['CPU']:12.1f} s")
+        print(f"{time}" + "-" * 61) #Timestamp is 19 characters until 10000AD
+        print(f"Sample Window: {args.live:7.0f} s")
+        print(f"CPU Time: {stats['CPU']:12.3f} s")
         print(f"CPU Usage: {(stats['RecentDCDC'] * 100):12.2f}%")
         print("-" * 80)
-        print(f"Total Command Time: {(diff['total'] * stats['CPU'] / 100):8.4f}s ({diff['total']:.2f}%)")
-        # Finally print the stats
-        print_dict(diff, depth=0, bullets=BULLETS, color_flags=[True, True, False], sort_ascending=args.ascending)
-        print(f"Other: {1 - (diff['total'] * stats['CPU'] / 100):.2f}s ({100 - diff['total']:.2f}%)")
+        order = sorted(diff.items(), key=lambda x: x[1]['total'], reverse=not args.ascending)
+        for key, table in order:
+            if key == "total":
+                continue
+            print(colors.BOLD, f"{key}: {(table['total'] * stats['CPU'] / 100):.4f}s ({table['total']:.3f}%)", colors.ENDC)
+            print_dict(table, depth=0, bullets=BULLETS, color_flags=[True, True, False], sort_ascending=args.ascending)
         print("-" * 80)
 
 
@@ -273,12 +305,14 @@ def parse_args():
     parser.add_argument("-a", "--ascending", action="store_true", help="Sort values in ascending order")
     return parser.parse_args()
 
+
 def wait(seconds):
     """Waits for a number of seconds and prints the remaining time to console."""
     for i in range(seconds):
         print(f"Waiting {seconds - i} seconds    ", end='\r') # Spaced so carriage return works on 10->9, etc.
         sleep(1)
     print(" " * 30, end="\r")
+
 
 if __name__ == "__main__":
     kwargs['name'] = get_name()
