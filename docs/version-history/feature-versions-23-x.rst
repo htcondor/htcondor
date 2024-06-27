@@ -5,7 +5,7 @@ We release new features in these releases of HTCondor. The details of each
 version are described below.
 
 Version 23.10.0
---------------
+---------------
 
 Release Notes:
 
@@ -71,7 +71,8 @@ New Features:
   running a job on a claim, retrying it usually also failed.
   :jira:`2300`
 
-- The :macro:`MODIFY_REQUEST_EXPR_REQUEST<RES>` configuration variables
+- The MODIFY_REQUEST_EXPR_REQUEST<RES> configuration variables
+  (such as :macro:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`)
   can now be prefixed with `SLOT_TYPE_<N>_` to be specialized by slot type.
   :jira:`2512`
 
