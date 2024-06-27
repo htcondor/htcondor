@@ -123,10 +123,14 @@ def invert_dict(d):
     returns: The inverted dictionary
     """
     new = defaultdict(lambda: defaultdict(lambda: 0))
-    for user, cmdtable in d.items():
-        for cmd, value in cmdtable.items():
-            new[cmd][user] = value
-    return new
+    for category, table in d.items():
+        if category == "Commands":
+            for user, commands in table.items():
+                for command, value in commands.items():
+                    new[command][user] = value
+            d["Commands"] = new
+    return d
+
 
 def get_fields(dict, ad, prefix, title, splituser=False):
     """Populates a dictionary with statistics from a given prefix
@@ -189,6 +193,8 @@ def get_diffs(old, new):
     new: The current set of statistics
     returns: A tuple of the new statistics and the difference between the two sets
     """
+    global CPU_OVERFLOW
+    CPU_OVERFLOW = False
     if old is None:
         print("Waiting on second sample...")
         return new, {}
@@ -199,6 +205,10 @@ def get_diffs(old, new):
     
         diff = bimap_dict(old_stats, new_stats, lambda x, y: y - x, fail_=lambda x: x)
         diff = add_totals_dict(diff)
+        # Renormalize the totals if they go over 100% of CPU time
+        if diff['total'] > new['CPU']:
+            new['CPU'] = diff['total']
+            CPU_OVERFLOW = True
         # Use the total CPU time to calculate the "Other" category then discard
         diff["Other"] = {"total": new['CPU'] - diff["total"]}
         del diff["total"]
@@ -267,6 +277,9 @@ def print_stats(diff, stats, time):
         print(f"CPU Time: {stats['CPU']:12.3f} s")
         print(f"CPU Usage: {(stats['RecentDCDC'] * 100):12.2f}%")
         print("-" * 80)
+        if CPU_OVERFLOW:
+            print(colors.DANGER, "WARNING: Summed statistics exceeded CPU time! These values are renormalized!", colors.ENDC)
+            print(colors.DANGER, "This typically happends when traffic spikes faster then CPU Usage can update.", colors.ENDC)
         order = sorted(diff.items(), key=lambda x: x[1]['total'], reverse=not args.ascending)
         for key, table in order:
             if key == "total":
@@ -316,6 +329,7 @@ def wait(seconds):
 
 if __name__ == "__main__":
     kwargs['name'] = get_name()
+    print(f"Monitoring {kwargs['name']}...")
     args = parse_args()
 
     # Main driver loop

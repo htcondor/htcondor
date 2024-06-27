@@ -4367,7 +4367,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 
 		double handler_time = _condor_debug_get_time_double() - handler_start_time;
 		// RecycleShadow has garbage usernames, so don't count them
-		if(strcmp(user, "RecycleShadow") != MATCH) {
+		if(strcmp(comTable[index].handler_descrip, "RecycleShadow") != MATCH) {
 			dc_stats.UserRuntimes[user][comTable[index].handler_descrip] += handler_time;
 		}
 		
