@@ -507,7 +507,7 @@ bool ClassAd::InsertViaCache(const std::string& name, const std::string & rhs, b
 
 	// use cache if it is enabled, and the attribute name is not 'special' (i.e. doesn't start with a quote)
 	bool use_cache = doExpressionCaching;
-	if (name[0] == '\'' && CachedExprEnvelope::cacheable(rhs)) {
+	if (name[0] == '\'' || ! CachedExprEnvelope::cacheable(rhs)) {
 		use_cache = false;
 	}
 
