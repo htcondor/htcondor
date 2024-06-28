@@ -217,10 +217,17 @@ class StatsD: Service {
 	void clearMetricDefinitions();
 
 	// Extract IP addresses from daemon ads.
-	void mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors);
+	void mapDaemonIPs(ClassAdList &daemon_ads);
+
+	// Extract IP addresses of collectors, and set a default aggregate host
+	void mapCollectorIPs(CollectorList &collectors, int collector_index);
 
 	// Determine which machines are execute-only nodes
 	void determineExecuteNodes(ClassAdList &daemon_ads);
+
+	// Fetch daemon ads from collector(s) - invoked from publishMetrics()
+	void getDaemonAds(ClassAdList &daemon_ads);
+
 };
 
 #endif
