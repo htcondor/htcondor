@@ -21,6 +21,13 @@ Release Notes:
 
 New Features:
 
+- The classad language no longer supports unit suffixes on numeric literals.
+  This was almost always a cause for confusion and bugs in classad expressions.
+  Note that unit suffixes are still allowed in the submit language in 
+  :subcom:`request_disk` and :subcom:`request_memory`, but not in arbitrary 
+  classad expressions.
+  :jira:`2455`
+
 - Added ability for DAGMan to produce job credentials when submitting jobs directly to
   the *condor_schedd*. This behavior can be disabled via :macro:`DAGMAN_PRODUCE_JOB_CREDENTIALS`.
   :jira:`1711`
@@ -100,24 +107,35 @@ Version 23.8.1
 
 Release Notes:
 
-.. HTCondor version 23.8.1 released on Month Date, 2024.
-
-- HTCondor version 23.8.1 not yet released.
+- HTCondor version 23.8.1 released on June 27, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-23012`.
 
+- The HTCondor Docker images are now based on Alma Linux 9.
+  :jira:`2504`
+
+- HTCondor Docker images are now available for the ARM64 CPU architecture.
+  :jira:`2188`
+
 New Features:
 
-- The classad language no longer supports unit suffixes on numeric literals.
-  This was almost always a cause for confusion and bugs in classad expressions.
-  Note that unit suffixes are still allowed in the submit language in 
-  :subcom:`request_disk` and :subcom:`request_memory`, but not in arbitrary 
-  classad expressions.
-  :jira:`2455`
+- ``IDTOKEN`` files whose access permissions are too open are now ignored.
+  :jira:`232`
+
+- Added new ``-SubmitMethod`` flag to :tool:`condor_submit_dag` which controls whether
+  DAGMan directly submits jobs to the local *condor_schedd* queue or externally runs
+  :tool:`condor_submit`.
+  :jira:`2406`
 
 - Added an ``-edit`` option to the :tool:`condor_qusers`.  This option allows
-  and administrator to add custom attributes to a User classad in the *condor_schedd*.
+  and administrator to add custom attributes to a User ClassAd in the *condor_schedd*.
   :jira:`2381`
+
+- The *condor_gangliad* memory consumption has been reduced, and it also places less load on
+  the *condor_collector*.  Specifically, it now uses a projection when querying the collector
+  if the configuration knob :macro:`GANGLIAD_WANT_PROJECTION` is set to True. Currently the default for
+  this knob is False, but after additional testing, an upcoming release will default to True.
+  :jira:`2394`
 
 - Added an ``-long``, ``-format`` and ``-autoformat`` options to the :tool:`condor_ping`.
   These options give predictable output for programs that wish to parse the results
@@ -142,7 +160,7 @@ New Features:
   systemd "one writer" cgroup rule.
   :jira:`2445`
 
-- New config parameter :macro:`CGROUP_LOW_MEMORY_LIMIT` allows an administrator
+- New configuration parameter :macro:`CGROUP_LOW_MEMORY_LIMIT` allows an administrator
   of a Linux cgroup v2 system to set the "memory.low" setting in a job's cgroup
   to encourage cacheable memory pages to be reclaimed faster.
   :jira:`2391`
@@ -164,20 +182,6 @@ New Features:
   set back to idle and can start again.
   :jira:`1395`
 
-- The *condor_gangliad* memory consumption has been reduced, and it also places less load on
-  the *condor_collector*.  Specifically, it now uses a projection when querying the collector
-  if config knob :macro:`GANGLIAD_WANT_PROJECTION` is set to True. Currently the default for
-  this knob is False, but after additional testing, an upcoming release will default to True.
-  :jira:`2394`
-
-- ``IDTOKEN`` files whose access permissions are too open are now ignored.
-  :jira:`232`
-
-- Added new ``-SubmitMethod`` flag to :tool:`condor_submit_dag` which controls whether
-  DAGMan directly submits jobs to the local *condor_schedd* queue or externally runs
-  :tool:`condor_submit`.
-  :jira:`2406`
-
 - For **batch** grid universe jobs, the HOME environment variable is no
   longer set to the job's current working directory.
   :jira:`2413`
@@ -195,6 +199,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where :tool:`condor_submit` -i did not work on a 
+  cgroup v2 system.
+  :jira:`2438`
+
 - Fixed a bug that prevented the *condor_startd* from advertising
   :ad-attr:`DockerCachedImageSizeMb`
   :jira:`2458`
@@ -207,10 +215,6 @@ Bugs Fixed:
 - Fixed a rare bug where certain errors reported by a file transfer
   plugin were not reported to the *condor_starter*.
   :jira:`2464`
-
-- Fixed a bug where :tool:`condor_submit` -i did not work on a 
-  cgroup v2 system.
-  :jira:`2438`
 
 - Fixed a bug where backfill slots did not account for Memory used by
   active primary slots correctly.
