@@ -86,7 +86,6 @@ class Lexer
 			public:
 				TokenValue( ) {
 					tt                   = LEX_TOKEN_ERROR;
-					factor               = Value::NO_FACTOR;
 					intValue             = 0;
 					realValue            = 0.0;
 					boolValue            = false;
@@ -100,14 +99,12 @@ class Lexer
 					tt = t;
 				}
 
-				void SetIntValue( long long i, Value::NumberFactor f) {
+				void SetIntValue( long long i) {
 					intValue = i;
-					factor = f;
 				}
 
-				void SetRealValue( double r, Value::NumberFactor f ) {
+				void SetRealValue( double r ) {
 					realValue = r;
-					factor = f;
 				}
 
 				void SetBoolValue( bool b ) {
@@ -125,14 +122,12 @@ class Lexer
 					return tt;
 				}
 
-				void GetIntValue( long long& i, Value::NumberFactor& f) {
+				void GetIntValue( long long& i) {
 					i = intValue;
-					f = factor;
 				}
 
-				void GetRealValue( double& r, Value::NumberFactor& f ) {
+				void GetRealValue( double& r ) {
 					r = realValue;
-					f = factor;
 				}
 
 				void GetBoolValue( bool& b ) const {
@@ -148,7 +143,6 @@ class Lexer
 
 				void CopyFrom( TokenValue &tv ) {
 					tt = tv.tt;
-					factor = tv.factor;
 					intValue = tv.intValue;
 					realValue = tv.realValue;
 					boolValue = tv.boolValue;
@@ -158,7 +152,6 @@ class Lexer
 					
 			private:
 				TokenType 			tt;
-				Value::NumberFactor factor;
 				long long			intValue;
 				double 				realValue;
 				bool 				boolValue;

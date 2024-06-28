@@ -1061,9 +1061,8 @@ parsePrimaryExpression(ExprTree *&tree)
 		case Lexer::LEX_INTEGER_VALUE:
 			{
 				long long 	i;
-				Value::NumberFactor f;
 
-				tv.GetIntValue( i, f );
+				tv.GetIntValue( i );
 				lexer.ConsumeToken( );
 				return( (tree=Literal::MakeInteger(i)) != NULL );
 			}
@@ -1071,9 +1070,8 @@ parsePrimaryExpression(ExprTree *&tree)
 		case Lexer::LEX_REAL_VALUE:
 			{
 				double 	r;
-				Value::NumberFactor f;
 
-				tv.GetRealValue( r, f );
+				tv.GetRealValue( r );
 				lexer.ConsumeToken( );
 				return( (tree=Literal::MakeReal(r)) != NULL );
 			}

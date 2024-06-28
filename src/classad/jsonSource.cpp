@@ -371,24 +371,22 @@ parseExpression( ExprTree *&tree, bool full )
 			{
 				Value 	val;
 				long long 	i;
-				Value::NumberFactor f;
 
-				tv.GetIntValue( i, f );
+				tv.GetIntValue( i );
 				lexer.ConsumeToken( );
 				val.SetIntegerValue( i );
-				return( (tree=Literal::MakeLiteral(val, f)) != NULL );
+				return( (tree=Literal::MakeLiteral(val)) != NULL );
 			}
 
 		case Lexer::LEX_REAL_VALUE:
 			{
 				Value 	val;
 				double 	r;
-				Value::NumberFactor f;
 
-				tv.GetRealValue( r, f );
+				tv.GetRealValue( r );
 				lexer.ConsumeToken( );
 				val.SetRealValue( r );
-				return( (tree=Literal::MakeLiteral(val, f)) != NULL );
+				return( (tree=Literal::MakeLiteral(val)) != NULL );
 			}
 
 		case Lexer::LEX_STRING_VALUE:

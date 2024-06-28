@@ -144,15 +144,9 @@ class ClassAd : public ExprTree
 				the classad.
 			@param attrName The name of the attribute.
 			@param value The integer value of the attribute.
-			@param f The multiplicative factor to be attached to value.
-			@see Value::NumberFactor
 		*/
-		bool InsertAttr( const std::string &attrName,int value, 
-				Value::NumberFactor f=Value::NO_FACTOR );
-		bool InsertAttr( const std::string &attrName,long value, 
-				Value::NumberFactor f=Value::NO_FACTOR );
-		bool InsertAttr( const std::string &attrName,long long value, 
-				Value::NumberFactor f );
+		bool InsertAttr( const std::string &attrName,int value );
+		bool InsertAttr( const std::string &attrName,long value );
 		bool InsertAttr( const std::string &attrName,long long value );
 		bool Assign(const std::string &name, int value)
 		{ return InsertAttr(name, value); }
@@ -175,27 +169,21 @@ class ClassAd : public ExprTree
 			@param scopeExpr The scope expression.
 			@param attrName The name of the attribute.
 			@param value The integer value of the attribute.
-			@param f The multiplicative factor to be attached to value.
-			@see Value::NumberFactor
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				int value, Value::NumberFactor f=Value::NO_FACTOR );
+				int value );
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				long value, Value::NumberFactor f=Value::NO_FACTOR );
+				long value );
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				long long value, Value::NumberFactor f=Value::NO_FACTOR );
+				long long value );
 
 		/** Inserts an attribute into the ClassAd.  The real value is
 				converted into a Literal expression, and then inserted into
 				the classad.
 			@param attrName The name of the attribute.
 			@param value The real value of the attribute.
-			@param f The multiplicative factor to be attached to value.
-			@see Value::NumberFactor
             @return true on success, false otherwise
 		*/
-		bool InsertAttr( const std::string &attrName,double value, 
-				Value::NumberFactor f);
 		bool InsertAttr( const std::string &attrName,double value);
 		bool Assign(const std::string &name, float value)
 		{ return InsertAttr(name, (double)value); }
@@ -211,11 +199,10 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The string attribute
             @param f A multipler for the number.
-			@see Value::NumberFactor
             @return true on success, false otherwise
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				double value, Value::NumberFactor f=Value::NO_FACTOR);
+				double value);
 
 		/** Inserts an attribute into the ClassAd.  The boolean value is
 				converted into a Literal expression, and then inserted into

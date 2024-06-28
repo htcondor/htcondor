@@ -312,7 +312,6 @@ tokenizeNumber (void)
 {
 	enum { NONE, INTEGER, REAL };
 	int		numberType = NONE;
-	Value::NumberFactor f = Value::NumberFactor::NO_FACTOR;
 	long long integer=0;
 	double	real=0;
 	int 	och;
@@ -457,11 +456,11 @@ tokenizeNumber (void)
 	}
 
 	if( numberType == INTEGER ) {
-		yylval.SetIntValue( integer, f );
+		yylval.SetIntValue( integer );
 		yylval.SetTokenType( LEX_INTEGER_VALUE );
 		tokenType = LEX_INTEGER_VALUE;
 	} else {
-		yylval.SetRealValue( real, f );
+		yylval.SetRealValue( real );
 		yylval.SetTokenType( LEX_REAL_VALUE );
 		tokenType = LEX_REAL_VALUE;
 	}

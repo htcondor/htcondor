@@ -29,37 +29,6 @@ using std::pair;
 
 namespace classad {
 
-const double Value::ScaleFactor[] = {
-	1.0, 						// none
-	1.0, 						// B
-	1024.0,						// Kilo
-	1024.0*1024.0, 				// Mega
-	1024.0*1024.0*1024.0, 		// Giga
-	1024.0*1024.0*1024.0*1024.0	// Terra
-};
-
-void Value::ApplyFactor(Value::NumberFactor factor)
-{
-	if (factor == NO_FACTOR) return;
-
-	double r = 0;
-	switch( valueType ) {
-	case INTEGER_VALUE:
-		r = integerValue;
-		break;
-	case REAL_VALUE:
-		r = realValue;
-		break;
-	default:
-		factor = NO_FACTOR;
-		return;
-	}
-
-	valueType = REAL_VALUE;
-	realValue = r * ScaleFactor[factor];
-	factor = NO_FACTOR;
-}
-
 bool Value::
 IsNumber (int &i) const
 {
@@ -483,7 +452,6 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 	abstime_t           atvalue = { 0, 0 };
 	bool	            bvalue = false;
 	double	            rvalue;
-	Value::NumberFactor nf;
 
 	switch(value.GetType()) {
 		case Value::UNDEFINED_VALUE:
@@ -512,10 +480,9 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 				realValue.SetErrorValue();
 				could_convert = false;
 			}
-			nf = Value::NO_FACTOR;
 
             if (could_convert) {
-                realValue.SetRealValue(rvalue*Value::ScaleFactor[nf]);
+                realValue.SetRealValue(rvalue);
             }
             break;
 
@@ -566,7 +533,6 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 	abstime_t           atvalue = { 0, 0 };
 	bool	            bvalue = false;
 	double	            rvalue;
-	Value::NumberFactor nf;
 
 	switch(value.GetType()) {
 		case Value::UNDEFINED_VALUE:
@@ -592,9 +558,8 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
                 could_convert = false;
 			} else {
                 could_convert = true;
-				nf = Value::NO_FACTOR;
                 if (could_convert) {
-                    integerValue.SetIntegerValue((long long) (ivalue*Value::ScaleFactor[nf]));
+                    integerValue.SetIntegerValue((long long) (ivalue));
                 }
             }
             break;
