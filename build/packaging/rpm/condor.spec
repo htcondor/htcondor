@@ -1450,6 +1450,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 27 2024 Tim Theisen <tim@cs.wisc.edu> - 23.8.1-1
+- Add new condor-ap package to facilitate Access Point installation
+- HTCondor Docker images are now based on Alma Linux 9
+- HTCondor Docker images are now available for the arm64 CPU architecture
+- The user can now choose which submit method DAGMan will use
+- Can add custom attributes to the User ClassAd with condor_qusers -edit
+- Add use-projection option to condor_gangliad to reduce memory footprint
+- Fix bug where interactive submit does not work on cgroup v2 systems (EL9)
+
 * Thu Jun 13 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.12-1
 - Remote condor_history queries now work the same as local queries
 - Improve error handling when submitting to a remote scheduler via ssh
