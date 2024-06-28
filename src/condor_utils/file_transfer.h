@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
-#include "HashTable.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -32,6 +31,7 @@
 #include "condor_classad.h"
 #include "dc_transfer_queue.h"
 #include <vector>
+#include <map>
 
 
 extern const char * const StdoutRemapName;
@@ -61,10 +61,10 @@ struct CatalogEntry {
 };
 
 
-typedef HashTable <std::string, FileTransfer *> TranskeyHashTable;
-typedef HashTable <int, FileTransfer *> TransThreadHashTable;
-typedef HashTable <std::string, CatalogEntry *> FileCatalogHashTable;
-typedef HashTable <std::string, std::string> PluginHashTable;
+using TranskeyHashTable    = std::map<std::string, FileTransfer *>;
+using TransThreadHashTable = std::map<int, FileTransfer *>;
+using FileCatalogHashTable = std::map<std::string, CatalogEntry *>;
+using PluginHashTable      = std::map<std::string, std::string>;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
 
