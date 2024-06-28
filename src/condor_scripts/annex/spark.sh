@@ -183,7 +183,7 @@ echo "${CONTROL_PREFIX} PILOT_DIR ${PILOT_DIR}"
 
 function cleanup() {
     echo "Cleaning up temporary directory..."
-    rm -fr ${PILOT_DIR}
+    # rm -fr ${PILOT_DIR}
 }
 trap cleanup EXIT
 
@@ -500,7 +500,10 @@ ${SBATCH_RESOURCES_LINES}
 ${SBATCH_ALLOCATION_LINE}
 ${SBATCH_CONSTRAINT_LINE}
 
-${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
+# This will block until all of the pilots terminate.
+srun -K0 -W0 -n ${NODES} ${PILOT_BIN} ${PILOT_DIR}
+rm -fr ${PILOT_DIR}
+
 " >> "${PILOT_DIR}/hpc.slurm"
 
 
