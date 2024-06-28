@@ -20,6 +20,7 @@ usr/bin/condor_gather_info
 usr/bin/condor_history
 usr/bin/condor_hold
 usr/bin/condor_job_router_info
+usr/bin/condor_login
 usr/bin/condor_manifest
 usr/bin/condor_now
 usr/bin/condor_nsenter
@@ -144,6 +145,7 @@ usr/sbin/condor_master
 usr/sbin/condor_negotiator
 usr/sbin/condor_off
 usr/sbin/condor_on
+usr/sbin/condor_placementd
 usr/sbin/condor_preen
 usr/sbin/condor_procd
 usr/sbin/condor_reconfig

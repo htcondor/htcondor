@@ -1099,6 +1099,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_transferer
 %_bindir/condor_docker_enter
 %_bindir/condor_qedit
+%_bindir/condor_login
 %_bindir/condor_qusers
 %_bindir/condor_userlog
 %_bindir/condor_release
@@ -1172,6 +1173,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_negotiator
 %_sbindir/condor_off
 %_sbindir/condor_on
+%_sbindir/condor_placementd
 %_sbindir/condor_preen
 %_sbindir/condor_reconfig
 %_sbindir/condor_replication

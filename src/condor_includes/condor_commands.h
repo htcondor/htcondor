@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 197> makeCommandTable() {
+std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -386,6 +386,8 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 		{RESET_USERREC, "RESET_USERREC"},
 #define DELETE_USERREC    (SCHED_VERS+149)
 		{DELETE_USERREC, "DELETE_USERREC"},
+#define USER_LOGIN    (SCHED_VERS+150)
+		{USER_LOGIN, "DELETE_USERREC"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},

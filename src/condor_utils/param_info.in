@@ -6048,6 +6048,18 @@ description=Location of the checkpoint destination map file
 default=$(LOCAL_DIR)/checkpoint-destination-mapfile
 type=path
 
+[PLACEMENTD]
+default=$(SBIN)/condor_placementd
+type=path
+
+[PLACEMENTD_LOG]
+default=$(LOG)/PlacementdLog
+type=path
+
+[PLACEMENTD_DATAFILE]
+default=$(SPOOL)/PlacementData
+type=path
+
 ######
 ## add metaknobs below this banner
 ##
