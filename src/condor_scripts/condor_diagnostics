@@ -13,6 +13,9 @@ from collections import defaultdict
 # Constants (TODO make these config attributes)
 COMMAND_PREFIX = "DIAG_CCS" # Prefix for command statistics attributes
 REAP_PREFIX = "DIAG_CRS" # Prefix for command reaper statistics attributes
+FSYNC_PREFIX = "DIAG_CFS"
+TIMER_PREFIX = "DCTimer_"
+TIMER_SUFFIX = "Runtime"
 DANGER_THRESHOLD = 20 # Threshold for highlighting a user in red (% runtime)
 WARNING_THRESHOLD = 10 # Threshold for highlighting a user in yellow (% runtime)
 
@@ -132,7 +135,7 @@ def invert_dict(d):
     return d
 
 
-def get_fields(dict, ad, prefix, title, splituser=False):
+def get_fields(dict, ad, title, prefix="", suffix="", splituser=False):
     """Populates a dictionary with statistics from a given prefix
     dict: The dictionary to populate
     ad: The ad to pull statistics from
@@ -140,7 +143,7 @@ def get_fields(dict, ad, prefix, title, splituser=False):
     title: The top-level key to add to the dictionary
     splituser: Whether the ad needs to be split into user and value
     """
-    names = [key[len(prefix):] for key in ad.keys() if key.startswith(prefix)]
+    names = [key[len(prefix):] for key in ad.keys() if key.startswith(prefix) and key.endswith(suffix)]
     if splituser:
         for name in names:
             user, value = name.split("_", 1)
@@ -150,6 +153,7 @@ def get_fields(dict, ad, prefix, title, splituser=False):
             dict[title][name] = ad[prefix + name]
 
     return dict
+
 
 def get_stats():
     """Queries the collector for command statistics on the schedd.
@@ -165,18 +169,25 @@ def get_stats():
     # Get useful metadata
     recent_dcdc = ad['RecentDaemonCoreDutyCycle']
     pump_cycle = ad['RecentDCPumpCycleSum']
-    cpu_time = recent_dcdc * args.live
+    cpu_time = recent_dcdc * args.window
     server_time = ad['MyCurrentTime']
     format_time = dt.datetime.fromtimestamp(server_time)
 
-    # Populate statistics in each category
+    # Lets us make entries arbitrarily deep
     recursive_defaultdict = lambda: defaultdict(recursive_defaultdict)
     stats = recursive_defaultdict()
-    get_fields(stats, ad, COMMAND_PREFIX, "Commands", splituser=True)
-    get_fields(stats, ad, REAP_PREFIX, "Reapers")
+    # Get the statistics for each category
+    if args.c or args.all:
+        get_fields(stats, ad, "Commands", prefix=COMMAND_PREFIX, splituser=True)
+    if args.r or args.all:
+        get_fields(stats, ad, "Reapers", prefix=REAP_PREFIX)
+    if args.t or args.all:
+        get_fields(stats, ad, "Timers", prefix=TIMER_PREFIX, suffix=TIMER_SUFFIX)
+    if args.f or args.all:
+        stats["Fsync"] = {"total": ad["DCfsyncRuntime"]}
 
     # Invert table before we add extra top-level keys
-    if args.flip:
+    if args.invert:
         stats = invert_dict(stats)
 
     stats |= {
@@ -212,7 +223,10 @@ def get_diffs(old, new):
         # Use the total CPU time to calculate the "Other" category then discard
         diff["Other"] = {"total": new['CPU'] - diff["total"]}
         del diff["total"]
-        diff = map_dict(diff, lambda x: x / new['CPU'] * 100)
+        if args.rel:
+            diff = map_dict(diff, lambda x: x / new['CPU'] * 100)
+        else:
+            diff = map_dict(diff, lambda x: x / args.window * 100)
         return new, diff
 
 
@@ -273,31 +287,36 @@ def print_stats(diff, stats, time):
         # Print header
         os.system("clear")
         print(f"{time}" + "-" * 61) #Timestamp is 19 characters until 10000AD
-        print(f"Sample Window: {args.live:7.0f} s")
+        print(f"Sample Window: {args.window:7.0f} s")
         print(f"CPU Time: {stats['CPU']:12.3f} s")
         print(f"CPU Usage: {(stats['RecentDCDC'] * 100):12.2f}%")
         print("-" * 80)
         if CPU_OVERFLOW:
             print(colors.DANGER, "WARNING: Summed statistics exceeded CPU time! These values are renormalized!", colors.ENDC)
             print(colors.DANGER, "This typically happends when traffic spikes faster then CPU Usage can update.", colors.ENDC)
-        order = sorted(diff.items(), key=lambda x: x[1]['total'], reverse=not args.ascending)
+        order = sorted([(k,v) for (k,v) in diff.items() if k != "Other"], key=lambda x: x[1]['total'], reverse=not args.ascending)
         for key, table in order:
-            if key == "total":
+            if key == "total" or table["total"] == 0:
                 continue
-            print(colors.BOLD, f"{key}: {(table['total'] * stats['CPU'] / 100):.4f}s ({table['total']:.3f}%)", colors.ENDC)
+            print(colors.BOLD, f"{key}: {(table['total'] * stats['CPU'] / 100):.3f}s ({table['total']:.2f}%)", colors.ENDC)
             print_dict(table, depth=0, bullets=BULLETS, color_flags=[True, True, False], sort_ascending=args.ascending)
+        # Always put "Other" on bottom
+        print(colors.BOLD, f"Other: {(diff['Other']['total'] * stats['CPU'] / 100):.3f}s ({diff['Other']['total']:.2f}%)", colors.ENDC)
         print("-" * 80)
 
 
-def save_stats(stats, time, filename):
+def save_stats(stats, old, time, filename):
     """Saves the command statistics to a json file.
     stats: A dict of statistics to save
     time: The time the statistics were taken
     filename: The name of the file to save to
     """
-    if not stats:
+    if not stats or not old:
         return
     stats = stats | {"Time": str(time)}
+    stats = stats | {"RecentDCDC": old["RecentDCDC"]}
+    stats = stats | {"CPU": old["CPU"]}
+    stats = stats | {"Window": args.window}
     if os.path.exists(filename):
         with open(filename, "r+") as f:
             base = json.load(f)
@@ -312,10 +331,16 @@ def save_stats(stats, time, filename):
 def parse_args():
     """Parses command line arguments"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--live", default=240, type=int, help="Seconds between updates (default 240)")
+    parser.add_argument("-w", "--window", default=240, type=int, help="Seconds between updates (default 240)")
     parser.add_argument("-s", "--save", default=None, help="Save statistics to a file (default None)")
-    parser.add_argument("-f", "--flip", action="store_true", help="Flip the user/command ordering")
+    parser.add_argument("-i", "--invert", action="store_true", help="Invert the user/command ordering")
     parser.add_argument("-a", "--ascending", action="store_true", help="Sort values in ascending order")
+    parser.add_argument("-c", action="store_true", help="Show command statistics")
+    parser.add_argument("-r", action="store_true", help="Show reaper statistics")
+    parser.add_argument("-t", action="store_true", help="Show timer statistics")
+    parser.add_argument("-f", action="store_true", help="Show fsync statistics")
+    parser.add_argument("--all", action="store_true", help="Show all statistics")
+    parser.add_argument("--rel", action="store_true", help="Show percentages relative to CPU time")
     return parser.parse_args()
 
 
@@ -338,8 +363,8 @@ if __name__ == "__main__":
         old, diff = get_diffs(old, stats)
         print_stats(diff, old, time)
         if args.save:
-            save_stats(diff, time, args.save)
-        if args.live:
-            wait(args.live)
+            save_stats(diff, old, time, args.save)
+        if args.window:
+            wait(args.window)
         else:
             break
