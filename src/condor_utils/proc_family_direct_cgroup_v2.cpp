@@ -701,7 +701,6 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		fclose(f);
 		if (total_read != 2) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
-			fclose(f);
 			return false;
 		}
 		memory_current_value -= memory_inactive_anon_value + memory_inactive_file_value;
