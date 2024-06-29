@@ -173,20 +173,11 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 	return true;
 }
 
-// mkdir the cgroup, and all required interior cgroups.  Note that the leaf
-// cgroup in v2 cannot have anything in ../cgroup_subtree_control, or else
-// we can't put a process in it.  Interior nodes *must* have the controllers
-// put in that file, or else we won't have any controllers to query in
-// our interior nodes.
-bool 
-ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
-	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
-
+static bool makeCgroup(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 
 	// Start from the root of the cgroup mount point
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
-
 	stdfs::path cgroup_relative_to_root_dir(cgroup_name);
 
 	// If the full cgroup exists, remove it to clear the various
@@ -227,8 +218,29 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		return false;
 	}
 
-	// Now move pid to the leaf of the newly-created tree
+	return true;
+}
+
+// mkdir the cgroup, and all required interior cgroups.  Note that the leaf
+// cgroup in v2 cannot have anything in ../cgroup_subtree_control, or else
+// we can't put a process in it.  Interior nodes *must* have the controllers
+// put in that file, or else we won't have any controllers to query in
+// our interior nodes.
+//
+// Note this is called after the fork, but before the exec of the process to
+// be monitored/controlled.
+
+bool 
+ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
+	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
+
+	TemporaryPrivSentry sentry( PRIV_ROOT );
+
+	// Move pid to the leaf of the newly-created tree
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+	stdfs::path leaf = cgroup_root_dir / cgroup_name;
 	stdfs::path procs_filename = leaf / "cgroup.procs";
+
 	int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
 	if (fd >= 0) {
 		std::string buf;
@@ -279,7 +291,6 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		}
 	}
 
-	//
 	// Set swap limits, if any
 	if (cgroup_memory_and_swap_limit > 0) {
 		// write memory limits
@@ -553,7 +564,6 @@ ProcFamilyDirectCgroupV2::install_bpf_gpu_filter(const std::string &cgroup_name)
 #endif
 	return true;	
 }
-
 void 
 ProcFamilyDirectCgroupV2::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
 	auto [it, success] = cgroup_map.emplace(pid, cgroup_name);
@@ -578,10 +588,9 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
 	return fi->cgroup_active;
-
 }
 
-	bool
+bool
 ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
 {
 	// DaemonCore uses "get_usage(getpid())" to test the procd, ignoring the usage
@@ -701,7 +710,6 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		fclose(f);
 		if (total_read != 2) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
-			fclose(f);
 			return false;
 		}
 		memory_current_value -= memory_inactive_anon_value + memory_inactive_file_value;
@@ -835,6 +843,20 @@ ProcFamilyDirectCgroupV2::extend_family_lifetime(pid_t pid)
 {
 	lifetime_extended_pids.emplace_back(pid);
 	return true;
+}
+
+bool 
+ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
+
+	bool success = false;
+
+	if (fi->cgroup) {
+		// Hopefully, if we can make the cgroup, we will be able to use it
+		// in the child process
+		success = makeCgroup(fi->cgroup);
+	}
+
+	return success;
 }
 
 //

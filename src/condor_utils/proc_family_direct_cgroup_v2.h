@@ -59,6 +59,8 @@ public:
 	ProcFamilyDirectCgroupV2() = default;
 	virtual ~ProcFamilyDirectCgroupV2() = default;
 	
+	bool register_subfamily_before_fork(FamilyInfo *fi);
+
 	bool register_subfamily(pid_t pid, pid_t /*ppid*/, int /*snapshot_interval*/) {
 		family_root_pid = pid;
 		start_time = time(nullptr);

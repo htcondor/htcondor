@@ -43,6 +43,13 @@ public:
 	virtual bool register_from_child() = 0;
 #endif
 	
+	// The cgroup v2 proc family requires some code to run before
+	// we fork (so we can save information to use later), and some
+	// to happen in the forked child (so we can change it's state
+	// without changing the parent). This function is called
+	// in the parent before the fork.
+	virtual bool register_subfamily_before_fork(FamilyInfo *) {return true;}
+
 	virtual bool register_subfamily(pid_t,
 	                                pid_t,
 	                                int) = 0;

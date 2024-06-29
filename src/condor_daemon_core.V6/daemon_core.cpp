@@ -7821,6 +7821,11 @@ int DaemonCore::Create_Process(
 		}
 	}
 
+	// If needed, call the pre-fork proc family registration
+	if (m_proc_family && family_info) {
+		m_proc_family->register_subfamily_before_fork(family_info);
+	}
+
 	if (remap) {
 		if (executable_fullpath) {
 			alt_executable_fullpath = remap->RemapFile(executable_fullpath);
