@@ -18,17 +18,14 @@ TIMER_PREFIX = "DCTimer_"
 TIMER_SUFFIX = "Runtime"
 DANGER_THRESHOLD = 20 # Threshold for highlighting a user in red (% runtime)
 WARNING_THRESHOLD = 10 # Threshold for highlighting a user in yellow (% runtime)
+PRINT_THRESHOLD = 0.0001 # Threshold for printing a stat (% runtime)
 
 # Define terminal colors for printing
 class colors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
     WARNING = '\033[93m'
     DANGER = '\033[91m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
 
 # Cleanly exit on SIGINT (Ctrl+C)
 signal.signal(signal.SIGINT, lambda x, y: exit(0))
@@ -161,7 +158,7 @@ def get_stats():
     """
     try:
         collector = htcondor.Collector()
-        ad = collector.directQuery(**kwargs)
+        ad = collector.directQuery(**kwargs)     
     except Exception as e:
         print(f"Error: Couldn't query collector: {e}")
         sys.exit(1)
@@ -184,7 +181,7 @@ def get_stats():
     if args.t or args.all:
         get_fields(stats, ad, "Timers", prefix=TIMER_PREFIX, suffix=TIMER_SUFFIX)
     if args.f or args.all:
-        stats["Fsync"] = {"total": ad["DCfsyncRuntime"]}
+        get_fields(stats, ad, "Fsync", prefix=FSYNC_PREFIX)
 
     # Invert table before we add extra top-level keys
     if args.invert:
@@ -238,7 +235,7 @@ def print_stat(key, value, spacing, bullet, color=False):
     bullet: The bullet to print before the key
     color: Whether to color code the output
     """
-    if value == 0:
+    if value <= PRINT_THRESHOLD:
         return
     if not color:
         print(f"\t{' ' * spacing} {bullet} {key}: {value:.2f}%")
@@ -289,19 +286,22 @@ def print_stats(diff, stats, time):
         print(f"{time}" + "-" * 61) #Timestamp is 19 characters until 10000AD
         print(f"Sample Window: {args.window:7.0f} s")
         print(f"CPU Time: {stats['CPU']:12.3f} s")
-        print(f"CPU Usage: {(stats['RecentDCDC'] * 100):12.2f}%")
+        if CPU_OVERFLOW:
+            print(f"CPU Usage: {(stats['CPU'] / args.window * 100):12.2f}%")
+        else:
+            print(f"CPU Usage: {(stats['RecentDCDC'] * 100):12.2f}%")
         print("-" * 80)
         if CPU_OVERFLOW:
             print(colors.DANGER, "WARNING: Summed statistics exceeded CPU time! These values are renormalized!", colors.ENDC)
             print(colors.DANGER, "This typically happends when traffic spikes faster then CPU Usage can update.", colors.ENDC)
         order = sorted([(k,v) for (k,v) in diff.items() if k != "Other"], key=lambda x: x[1]['total'], reverse=not args.ascending)
         for key, table in order:
-            if key == "total" or table["total"] == 0:
+            if key == "total" or table["total"] <= PRINT_THRESHOLD:
                 continue
-            print(colors.BOLD, f"{key}: {(table['total'] * stats['CPU'] / 100):.3f}s ({table['total']:.2f}%)", colors.ENDC)
+            print(colors.BOLD, f"{key}: {(table['total'] * stats['CPU'] / 100):.1e}s ({table['total']:.2f}%)", colors.ENDC)
             print_dict(table, depth=0, bullets=BULLETS, color_flags=[True, True, False], sort_ascending=args.ascending)
         # Always put "Other" on bottom
-        print(colors.BOLD, f"Other: {(diff['Other']['total'] * stats['CPU'] / 100):.3f}s ({diff['Other']['total']:.2f}%)", colors.ENDC)
+        print(colors.BOLD, f"Other ({diff['Other']['total']:.2f}%)", colors.ENDC)
         print("-" * 80)
 
 

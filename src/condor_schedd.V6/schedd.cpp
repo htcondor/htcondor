@@ -2170,6 +2170,11 @@ int Scheduler::make_ad_list(
 		cad->Assign("DIAG_CRS" + reaper, probe.Total());
    }
 
+   // publish fsync statistics
+   for(auto const& [user, value]: this->FsyncRuntimes) {
+		cad->Assign("DIAG_CFS" + user, value.Total());
+   }
+
    m_xfer_queue_mgr.publish(cad, stats_config.c_str());
 
    // publish daemon core stats
@@ -5072,7 +5077,9 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 
 	bool status = false;
 	if (do_fsync) {
+		double startTime = _condor_debug_get_time_double();
 		status = ULog->writeEvent(&event, job);
+		this->FsyncRuntimes[job->ownerinfo->Name()] += _condor_debug_get_time_double() - startTime;
 	} else {
 		status = ULog->writeEventNoFsync(&event, job);
 	}
