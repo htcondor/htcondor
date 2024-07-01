@@ -135,10 +135,12 @@ UPDATE_INTERVAL = 5
 
 " > local/config.d/00-basic-pilot
 
-mkdir local/tokens.d
+mkdir -m0700 local/tokens.d
+chmod 0600 ../token_file
 mv ../token_file local/tokens.d
 
-mkdir local/passwords.d
+mkdir -m0700 local/passwords.d
+chmod 0600 ../password_file
 mv ../password_file local/passwords.d/POOL
 
 

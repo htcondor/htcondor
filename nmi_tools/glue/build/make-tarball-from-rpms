@@ -107,8 +107,8 @@ fi
 mv tarball/etc/condor/config.d/* tarball/examples/
 
 # Fixup directory permissions for the tarball
-chmod 755 tarball/etc/condor/passwords.d
-chmod 755 tarball/etc/condor/tokens.d
+chmod 700 tarball/etc/condor/passwords.d
+chmod 700 tarball/etc/condor/tokens.d
 chmod 755 tarball/var/lib/condor/execute
 chmod 755 tarball/var/lib/condor/oauth_credentials
 chmod g-s tarball/var/lib/condor/oauth_credentials
