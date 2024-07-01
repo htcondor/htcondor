@@ -865,7 +865,7 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 	// Note: structure here should be cleaned up, but I'm leaving it for
 	// now to make sure parallel universe support is complete for 6.7.17.
 	// wenger 2006-02-15.
-	bool putFailedJobsOnHold = param_boolean("DAGMAN_PUT_FAILED_nodes_ON_HOLD", false);
+	bool putFailedJobsOnHold = param_boolean("DAGMAN_PUT_FAILED_JOBS_ON_HOLD", false);
 	if (failed && node->_scriptPost == nullptr) {
 		if (node->DoRetry()) {
 			if (node->AllProcsDone()) { RestartNode(node, recovery); }
@@ -944,7 +944,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Node *node, bool recovery) {
 		const PostScriptTerminatedEvent* termEvent = (const PostScriptTerminatedEvent*)event;
 
 		std::string header;
-		formatstr(header, "POST Script of Node %s ", node->GetNodeName());
+		formatstr(header, "POST Script of node %s ", node->GetNodeName());
 		if( ! (termEvent->normal && termEvent->returnValue == 0)) {
 			// POST script failed or was killed by a signal
 			node->TerminateFailure();
@@ -1699,7 +1699,7 @@ Dag::PreScriptReaper(Node *node, int status)
 	if (WIFSIGNALED(status)) {
 		// if script was killed by a signal
 		preScriptFailed = true;
-		debug_printf(DEBUG_QUIET, "PRE Script of Node %s died on %s\n",
+		debug_printf(DEBUG_QUIET, "PRE Script of node %s died on %s\n",
 		             node->GetNodeName(), daemonCore->GetExceptionString(status));
 		formatstr(node->error_text, "PRE Script died on %s", daemonCore->GetExceptionString(status));
 		node->retval = (0 - WTERMSIG(status));
