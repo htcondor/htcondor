@@ -220,8 +220,8 @@ SYSTEM_TABLE = {
         "host_name":        "perlmutter-p1.nersc.gov",
         "default_queue":    "regular",
         "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "allocation_reqd":  True,  # Only for GPUs, oddly.
 
         # Actually "QoS" limits.  See get_constraints().
@@ -257,8 +257,8 @@ SYSTEM_TABLE = {
         "host_name":        "login.delta.ncsa.illinois.edu",
         "default_queue":    "cpu",
         "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "allocation_reqd":  True,
 
         "queues": {
@@ -411,8 +411,8 @@ SYSTEM_TABLE = {
         "host_name":        "login.expanse.sdsc.edu",
         "default_queue":    "compute",
         "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "allocation_reqd":  True,
 
         "queues": {
@@ -467,8 +467,8 @@ SYSTEM_TABLE = {
         "host_name":        "anvil.rcac.purdue.edu",
         "default_queue":    "wholenode",
         "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "allocation_reqd":  False,
 
         "queues": {
@@ -533,8 +533,8 @@ SYSTEM_TABLE = {
         "pretty_name":      "Bridges-2",
         "host_name":        "bridges2.psc.edu",
         "default_queue":    "RM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "batch_system":     "SLURM",
         "allocation_reqd":  False,
 
