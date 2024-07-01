@@ -1,8 +1,10 @@
 import sys
 import os
+import os.path
 import logging
 import subprocess
 import shlex
+import shutil
 import tempfile
 import time
 import getpass
@@ -647,6 +649,46 @@ class Resources(Verb):
                     time_diff = current_time - provisioner_job_scheduled_end_time
                     logger.info(f"Slurm resources were terminated since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
 
+def load_templates() -> list:
+    """
+    Load templates from a directory.
+    """
+    try:
+        template_dir = htcondor.param.get("JOB_TEMPLATE_DIR", "")
+        templates    = [f for f in os.listdir(template_dir) if os.path.isfile(os.path.join(template_dir, f))]
+        return templates
+    except FileNotFoundError:
+        return []
+
+class Template(Verb):
+    """
+    Displays and copies template submit files
+    """
+
+    options = {
+        "template_file": {
+            "args": ("template_file",),
+            "nargs": "*",
+            "help": "Name of template to use",
+            "default": "",
+        },
+    }
+
+    def __init__(self, logger, template_file, **options):
+        templates = load_templates()
+        if template_file:
+            if (not template_file[0] in templates):
+                raise RuntimeError(f"No template found named {template_file}.")
+            logger.info(f"Creating submit file from template: {template_file[0]}")
+            shutil.copyfile(htcondor.param.get("JOB_TEMPLATE_DIR", "") + "/" + template_file[0], "./" + template_file[0])
+        else:
+            if templates:
+                logger.info("Available templates:")
+                for template in templates:
+                   logger.info(f"Name: {template}")
+            else:
+               logger.info("No templates available.")
+        return
 
 class Job(Noun):
     """
@@ -671,6 +713,9 @@ class Job(Noun):
     class resources(Resources):
         pass
 
+    class template(Template):
+        pass
+
     @classmethod
     def verbs(cls):
-        return [cls.submit, cls.status, cls.out, cls.err, cls.log, cls.resources]
+        return [cls.submit, cls.status, cls.out, cls.err, cls.log, cls.resources, cls.template]
