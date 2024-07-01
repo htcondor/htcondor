@@ -70,18 +70,6 @@ public:
 	
 	virtual ~ClassAdCache(){ m_destroyed = true; };
 
-	pCacheData cache(const std::string & szName, ExprTree * pVal)
-	{
-		std::string szValue;
-		if (pVal) {
-			m_UnparseCount++;
-			ClassAdUnParser unparser;
-			//PRAGMA_REMIND("this should probably unparse in old classad form")
-			unparser.Unparse(szValue, pVal);
-		}
-		return cache(szName, szValue, pVal);
-	}
-
 	///< cache's a local attribute->ExpTree
 	pCacheData cache(const std::string & szName, const std::string & szValue , ExprTree * pVal)
 	{
@@ -334,27 +322,12 @@ CacheEntry::~CacheEntry()
 ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTree, const std::string & szValue)
 {
 	ExprTree * pRet = pTree;
-	CachedExprEnvelope * pNewEnv = NULL;
-	
-	NodeKind nk = pTree->GetKind();
-	switch (nk)
-	{
-	case EXPR_ENVELOPE:
-		pRet = pTree;
-		break;
-
-	case EXPR_LIST_NODE:
-	case CLASSAD_NODE:
-		break;
-
-	default:
+	if (cacheable(pTree)) {
 		if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
-		pNewEnv = new CachedExprEnvelope();
+		CachedExprEnvelope * pNewEnv = new CachedExprEnvelope();
 		pNewEnv->m_pLetter = _cache->cache(pName, szValue, pTree);
 		pRet = pNewEnv;
-		break;
 	}
-	
 	return pRet;
 }
 
