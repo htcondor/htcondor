@@ -223,7 +223,7 @@ JobstateLog::InitializeRescue()
 	debug_printf( DEBUG_DEBUG_2,
 				"Max sequence num in jobstate.log file: %d\n", maxSeqNum );
 
-	Job::SetJobstateNextSequenceNum( maxSeqNum + 1 );
+	Node::SetJobstateNextSequenceNum( maxSeqNum + 1 );
 }
 
 //---------------------------------------------------------------------------
@@ -301,7 +301,7 @@ JobstateLog::WriteRecoveryFailure()
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
+JobstateLog::WriteEvent( const ULogEvent *event, Node *node )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -329,7 +329,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteJobSuccessOrFailure( Job *node )
+JobstateLog::WriteJobSuccessOrFailure( Node *node )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -348,7 +348,7 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteScriptStarted( Job *node, ScriptType type )
+JobstateLog::WriteScriptStarted( Node *node, ScriptType type )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -378,7 +378,7 @@ JobstateLog::WriteScriptStarted( Job *node, ScriptType type )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteScriptSuccessOrFailure( Job *node, ScriptType type )
+JobstateLog::WriteScriptSuccessOrFailure( Node *node, ScriptType type )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -411,7 +411,7 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, ScriptType type )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteSubmitFailure( Job *node )
+JobstateLog::WriteSubmitFailure( Node *node )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -423,12 +423,12 @@ JobstateLog::WriteSubmitFailure( Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::Write( const time_t *eventTimeP, Job *node,
+JobstateLog::Write( const time_t *eventTimeP, Node *node,
 			const char *eventName, const char *condorID )
 {
 	std::string info;
 
-	formatstr( info, "%s %s %s %s - %d", node->GetJobName(), eventName,
+	formatstr( info, "%s %s %s %s - %d", node->GetNodeName(), eventName,
 				condorID, node->GetJobstateJobTag(),
 				node->GetJobstateSequenceNum() );
 	Write( eventTimeP, info );

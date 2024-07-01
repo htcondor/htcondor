@@ -20,7 +20,7 @@
 #include "condor_common.h"
 
 #include "script.h"
-#include "job.h"
+#include "node.h"
 #include "dag.h"
 
 namespace shallow = DagmanShallowOptions;
@@ -33,7 +33,7 @@ bool ScriptQ::Run(Script *script) {
 
 	// Defer PRE scripts if the DAG is halted (we need to go ahead
 	// and run POST scripts so we don't "waste" the fact that the
-	// job completed).  (Allow PRE script for final node, though.)
+	// job(s) completed).  (Allow PRE script for final node, though.)
 	if (_dag->IsHalted() && script->_type == ScriptType::PRE && script->GetNode()->GetType() != NodeType::FINAL) {
 		debug_printf(DEBUG_DEBUG_1, "Deferring %s script of node %s because DAG is halted\n",
 		             prefix, script->GetNodeName());

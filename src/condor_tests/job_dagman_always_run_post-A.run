@@ -107,7 +107,7 @@ $failure = sub
 	$passed_second = 0;
 	foreach (@outfilelist) {
 		chomp;
-		if(/PRE Script of Job A_A failed/) {
+		if(/PRE Script of Node A_A failed/) {
 			CondorTest::debug("Saw PRE script A_A fail correctly: $_\n",1);
 			$passed_first = 1;
 		}

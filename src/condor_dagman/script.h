@@ -39,7 +39,7 @@ enum class DagScriptOutput {
 	ALL,
 };
 
-class Job;
+class Node;
 class Dag;
 
 class Script {
@@ -61,8 +61,8 @@ public:
 	const char* GetNodeName();
 	inline const char* GetCmd() const { return _cmd.c_str(); }
 
-	Job* GetNode() { return _node; }
-	inline void SetNode(Job* node) { _node = node; }
+	Node* GetNode() { return _node; }
+	inline void SetNode(Node* node) { _node = node; }
 
 	inline ScriptType GetType() const { return _type; }
 	const char* GetScriptName() {
@@ -87,7 +87,7 @@ public:
 	bool _done{false}; // Script has been run?
 
 private:
-	Job *_node{nullptr};
+	Node *_node{nullptr};
 
 	std::string _cmd{}; // cmd from DAG description file
 	std::string _debugFile{}; // Path/Name of script debug file relative to node dir

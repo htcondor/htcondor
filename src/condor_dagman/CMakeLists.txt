@@ -25,7 +25,7 @@ dagman_metrics.cpp
 dagman_stats.cpp
 dagman_submit.cpp
 debug.cpp
-job.cpp
+node.cpp
 jobstate_log.cpp
 parse.cpp
 script.cpp
