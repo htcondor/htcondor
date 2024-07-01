@@ -1773,7 +1773,7 @@ Dag::PreScriptReaper(Node *node, int status)
 		}
 
 	} else {
-		debug_printf(DEBUG_NORMAL, "PRE Script of Node %s completed successfully.\n", node->GetNodeName());
+		debug_printf(DEBUG_NORMAL, "PRE Script of node %s completed successfully.\n", node->GetNodeName());
 		node->retval = 0; // for safety on retries
 		node->SetStatus(Node::STATUS_READY);
 		if (_submitDepthFirst) {
