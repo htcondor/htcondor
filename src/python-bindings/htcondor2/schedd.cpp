@@ -744,7 +744,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
     int numJobs = 0;
 
-    int itemCount = itemdata->items.number();
+    int itemCount = (int)itemdata->items.size();
     if( (! isFactoryJob) && itemCount == 0 ) {
         sb->set_sfa(itemdata);
 
@@ -780,9 +780,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
         // ActualScheddQ::send_Itemdata(), and at some point it might be
         // worth refactoring that function so we can keep the same set of
         // exceptions.
-        if( itemdata->items.number() > 0 ) {
+        if( itemdata->items.size() > 0 ) {
             int numItems = 0;
-            itemdata->items.rewind();
+            itemdata->items_idx = 0;
             int rval = SendMaterializeData(
                 clusterID, 0,
                 & AbstractScheddQ::next_rowdata, itemdata,
@@ -797,9 +797,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
                 return NULL;
             }
 
-            if( numItems != itemdata->items.number() ) {
+            if( numItems != (int)itemdata->items.size() ) {
                 std::string message = "Item data size mismatch in late materialization: ";
-                formatstr_cat( message, "%d (local) != %d (remote)", itemdata->items.number(), numItems );
+                formatstr_cat( message, "%zu (local) != %d (remote)", itemdata->items.size(), numItems );
                 PyErr_SetString( PyExc_RuntimeError, message.c_str() );
 
                 delete itemdata;
@@ -826,14 +826,13 @@ _schedd_submit( PyObject *, PyObject * args ) {
         sb->set_sfa(itemdata);
 
         const int itemIndex = 0;
-        itemdata->items.rewind();
-        char * item = itemdata->items.next();
+        char* item = itemdata->items.empty() ? nullptr : const_cast<char*>(itemdata->items.front().c_str());
 
         sb->set_vars( itemdata->vars, item, itemIndex );
 
 
         //
-        // FIXME: It's wrong for the cluster ad to have the first
+        // It's wrong for the cluster ad to have the first
         // proc ad's queue variables set in it, but that's what everyone
         // expects to see.
         //
@@ -904,10 +903,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
         sb->set_sfa(itemdata);
 
         int itemIndex = 0;
-        char * item = NULL;
-        itemdata->items.rewind();
-        while( (item = itemdata->items.next()) ) {
+        for (const auto& elem: itemdata->items) {
             if( itemdata->slice.selected( itemIndex, itemCount ) ) {
+                char* item = const_cast<char*>(elem.c_str());
                 sb->set_vars( itemdata->vars, item, itemIndex );
                 int nj = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds, itemIndex );
                 if( nj < 0 ) {

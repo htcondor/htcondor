@@ -58,11 +58,6 @@ void AddCCBStatsToPool(StatisticsPool& pool, int publevel)
 	ccb_stats.AddStatsToPool(pool, publevel);
 }
 
-static size_t
-ccbid_hash(const CCBID &ccbid) {
-	return ccbid;
-}
-
 bool
 CCBServer::CCBIDFromString(CCBID &ccbid,char const *ccbid_str)
 {
@@ -98,8 +93,6 @@ CCBServer::CCBIDToContactString(char const *my_address,CCBID ccbid,std::string &
 
 CCBServer::CCBServer():
 	m_registered_handlers(false),
-	m_targets(ccbid_hash),
-	m_reconnect_info(ccbid_hash),
 	m_reconnect_fp(NULL),
 	m_last_reconnect_info_sweep(0),
 	m_reconnect_info_sweep_interval(0),
@@ -108,7 +101,6 @@ CCBServer::CCBServer():
 	m_next_request_id(1),
 	m_read_buffer_size(0),
 	m_write_buffer_size(0),
-	m_requests(ccbid_hash),
 	m_polling_timer(-1),
 	m_epfd(-1)
 {
@@ -126,9 +118,7 @@ CCBServer::~CCBServer()
 		daemonCore->Cancel_Timer( m_polling_timer );
 		m_polling_timer = -1;
 	}
-	CCBTarget *target=NULL;
-	m_targets.startIterations();
-	while( m_targets.iterate(target) ) {
+	for (const auto &[ccbid, target]: m_targets) {
 		RemoveTarget(target);
 	}
 	if (-1 != m_epfd)
@@ -247,7 +237,7 @@ CCBServer::InitAndReconfig()
 	}
 	if( old_reconnect_fname.empty() &&
 		!m_reconnect_fname.empty() &&
-		m_reconnect_info.getNumElements() == 0 )
+		m_reconnect_info.size() == 0 )
 	{
 		// we are starting up from scratch, so load saved info
 		LoadReconnectInfo();
@@ -348,12 +338,12 @@ CCBServer::EpollSockets(int)
 			for (int idx=0; idx<result; idx++)
 			{
 				CCBID id = events[idx].data.u64;
-				CCBTarget *target = NULL;
-				if (m_targets.lookup(id, target) == -1)
-				{
+				auto targetit = m_targets.find(id);
+				if (targetit == m_targets.end()) {
 					dprintf(D_FULLDEBUG, "No target found for CCBID %ld.\n", id);
 					continue;
 				}
+				CCBTarget *target = targetit->second;
 				if (target->getSock()->readReady())
 				{
 					HandleRequestResultsMsg(target);
@@ -431,9 +421,7 @@ CCBServer::PollSockets(int /* timerID */)
 		// too much.
 	if (m_epfd == -1)
 	{
-		CCBTarget *target=NULL;
-		m_targets.startIterations();
-		while( m_targets.iterate(target) ) {
+		for (const auto &[ccbid, target]: m_targets) {
 			if( target->getSock()->readReady() ) {
 				HandleRequestResultsMsg(target);
 			}
@@ -879,21 +867,21 @@ CCBServer::RequestFinished( CCBServerRequest *request, bool success, char const 
 CCBServerRequest *
 CCBServer::GetRequest( CCBID request_id )
 {
-	CCBServerRequest *result = NULL;
-	if( m_requests.lookup(request_id,result) == -1 ) {
-		return NULL;
+	auto requestsit = m_requests.find(request_id);
+	if (requestsit == m_requests.end()) {
+		return nullptr;
 	}
-	return result;
+	return requestsit->second;
 }
 
 CCBTarget *
 CCBServer::GetTarget( CCBID ccbid )
 {
-	CCBTarget *result = NULL;
-	if( m_targets.lookup(ccbid,result) == -1 ) {
-		return NULL;
+	auto targetsit = m_targets.find(ccbid);
+	if (targetsit == m_targets.end()) {
+		return nullptr;
 	}
-	return result;
+	return targetsit->second;
 }
 
 bool
@@ -946,19 +934,19 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 
 	reconnect_info->alive();
 
-	CCBTarget *existing = NULL;
-	if( m_targets.lookup(target->getCCBID(),existing) == 0 ) {
+	auto targetsit = m_targets.find(target->getCCBID());
+	if (targetsit != m_targets.end()) {
 		// perhaps we haven't noticed yet that this existing target socket
 		// has become disconnected; get rid of it
 		dprintf(D_ALWAYS,
 				"CCB: disconnecting existing connection from target daemon "
 				"%s with ccbid %lu because this daemon is reconnecting.\n",
-				existing->getSock()->peer_description(),
+				targetsit->second->getSock()->peer_description(),
 				target->getCCBID());
-		RemoveTarget( existing );
+		RemoveTarget( targetsit->second);
 	}
 
-	ASSERT( m_targets.insert(target->getCCBID(),target) == 0 );
+	m_targets.emplace(target->getCCBID(),target);
 	EpollAdd(target);
 
 	ccb_stats.CCBEndpointsConnected += 1;
@@ -984,20 +972,12 @@ CCBServer::AddTarget( CCBTarget *target )
 			continue;
 		}
 
-		if( m_targets.insert(target->getCCBID(),target) == 0 ) {
+		if (!m_targets.contains(target->getCCBID())) {
+			m_targets.emplace(target->getCCBID(), target);
 			EpollAdd(target);
 			break; // success
 		}
 
-		CCBTarget *existing = NULL;
-		if( m_targets.lookup(target->getCCBID(),existing) != 0 ) {
-				// That's odd: there is no conflicting ccbid, so why did
-				// the insert fail?!
-			EXCEPT( "CCB: failed to insert registered target ccbid %lu "
-					"for %s",
-					target->getCCBID(),
-					target->getSock()->peer_description());
-		}
 		// else this ccbid is already taken, so try again
 	}
 
@@ -1022,11 +1002,11 @@ void
 CCBServer::RemoveTarget( CCBTarget *target )
 {
 		// hang up on all requests for this target
-	HashTable<CCBID,CCBServerRequest *> *trequests;
-	while( (trequests = target->getRequests()) ) {
-		CCBServerRequest *request = NULL;
-		trequests->startIterations();
-		if( trequests->iterate(request) ) {
+	std::map<CCBID,CCBServerRequest *> *trequests;
+	while ((trequests = target->getRequests())) {
+		auto requestit = trequests->begin();
+		if (requestit != trequests->end()) {
+			CCBServerRequest *request = requestit->second;
 			RemoveRequest( request );
 			ccb_stats.CCBRequestsFailed += 1;
 			// note that trequests may point to a deleted hash table
@@ -1037,10 +1017,7 @@ CCBServer::RemoveTarget( CCBTarget *target )
 		}
 	}
 
-	if( m_targets.remove(target->getCCBID()) != 0 ) {
-		EXCEPT("CCB: failed to remove target ccbid=%lu, %s",
-			   target->getCCBID(), target->getSock()->peer_description());
-	}
+	m_targets.erase(target->getCCBID());
 	EpollRemove(target);
 
 	ccb_stats.CCBEndpointsConnected -= 1;
@@ -1059,20 +1036,11 @@ CCBServer::AddRequest( CCBServerRequest *request, CCBTarget *target )
 	while(true) {
 		request->setRequestID(m_next_request_id++);
 
-		if( m_requests.insert(request->getRequestID(),request) == 0 ) {
+		auto resultpair = m_requests.emplace(request->getRequestID(), request);
+		if (resultpair.second) {
+			// If we did insert
 			break; // success
 		}
-
-		CCBServerRequest *existing = NULL;
-		if( m_requests.lookup(request->getRequestID(),existing) != 0 ) {
-				// That's odd: there is no conflicting id, so why did
-				// the insert fail?!
-			EXCEPT( "CCB: failed to insert request id %lu "
-					"for %s",
-					request->getRequestID(),
-					request->getSock()->peer_description());
-		}
-		// else this ccbid is already taken, so try again
 	}
 
 		// add this request to the list of requests waiting for the target
@@ -1107,12 +1075,7 @@ CCBServer::RemoveRequest( CCBServerRequest *request )
 {
 	daemonCore->Cancel_Socket( request->getSock() );
 
-	if( m_requests.remove(request->getRequestID()) != 0 ) {
-		EXCEPT("CCB: failed to remove request id=%lu from %s for ccbid %lu",
-			   request->getRequestID(),
-			   request->getSock()->peer_description(),
-			   request->getTargetCCBID());
-	}
+	m_requests.erase(request->getRequestID());
 
 		// remove this request from the list of requests waiting for the target
 	CCBTarget *target = GetTarget( request->getTargetCCBID() );
@@ -1200,20 +1163,19 @@ CCBTarget::AddRequest(CCBServerRequest *request, CCBServer *ccb_server)
 	incPendingRequestResults(ccb_server);
 
 	if( !m_requests ) {
-		m_requests = new HashTable<CCBID,CCBServerRequest *>(ccbid_hash);
+		m_requests = new std::map<CCBID,CCBServerRequest *>;
 		ASSERT( m_requests );
 	}
-	int rc = m_requests->insert(request->getRequestID(),request);
-	ASSERT( rc == 0 );
+	m_requests->emplace(request->getRequestID(),request);
 }
 
 void
 CCBTarget::RemoveRequest(CCBServerRequest *request)
 {
 	if( m_requests ) {
-		m_requests->remove( request->getRequestID() );
+		m_requests->erase(request->getRequestID());
 
-		if( m_requests->getNumElements() == 0 ) {
+		if( m_requests->size() == 0 ) {
 			delete m_requests;
 			m_requests = NULL;
 		}
@@ -1248,33 +1210,26 @@ CCBReconnectInfo::CCBReconnectInfo(CCBID ccbid,CCBID reconnect_cookie,char const
 CCBReconnectInfo *
 CCBServer::GetReconnectInfo(CCBID ccbid)
 {
-	CCBReconnectInfo *result = NULL;
-	if( m_reconnect_info.lookup(ccbid,result) == -1 ) {
-		return NULL;
+	auto it = m_reconnect_info.find(ccbid);
+	if (it == m_reconnect_info.end()) {
+		return nullptr;
 	}
-	return result;
+	return it->second;
 }
 
 void
 CCBServer::AddReconnectInfo( CCBReconnectInfo *reconnect_info )
 {
-	if( m_reconnect_info.insert(reconnect_info->getCCBID(),reconnect_info) == 0 ) {
+	auto resultpair = m_reconnect_info.emplace(reconnect_info->getCCBID(), reconnect_info);
+	if (resultpair.second) {
+		// If we did insert
 		ccb_stats.CCBEndpointsRegistered += 1;
 		return;
 	}
 
 	dprintf(D_ALWAYS, "CCBServer::AddReconnectInfo(): Found stale reconnect entry!\n");
-	ASSERT( m_reconnect_info.remove(reconnect_info->getCCBID()) == 0 );
-	ASSERT( m_reconnect_info.insert(reconnect_info->getCCBID(),reconnect_info) == 0);
-}
-
-void
-CCBServer::RemoveReconnectInfo( CCBReconnectInfo *reconnect_info )
-{
-	ASSERT( m_reconnect_info.remove(reconnect_info->getCCBID()) == 0 );
-	delete reconnect_info;
-
-	ccb_stats.CCBEndpointsRegistered -= 1;
+	m_reconnect_info.erase(reconnect_info->getCCBID());
+	m_reconnect_info.emplace(reconnect_info->getCCBID(),reconnect_info);
 }
 
 void
@@ -1356,8 +1311,8 @@ CCBServer::LoadReconnectInfo()
 	// that may have been recently assigned.
 	m_next_ccbid += 100;
 
-	dprintf(D_ALWAYS,"CCB: loaded %d reconnect records from %s.\n",
-			m_reconnect_info.getNumElements(), m_reconnect_fname.c_str());
+	dprintf(D_ALWAYS,"CCB: loaded %zu reconnect records from %s.\n",
+			m_reconnect_info.size(), m_reconnect_fname.c_str());
 }
 
 bool
@@ -1395,7 +1350,7 @@ CCBServer::SaveAllReconnectInfo()
 	}
 	CloseReconnectFile();
 
-	if( m_reconnect_info.getNumElements()==0 ) {
+	if( m_reconnect_info.size()==0 ) {
 		IGNORE_RETURN remove( m_reconnect_fname.c_str() );
 		return;
 	}
@@ -1408,9 +1363,7 @@ CCBServer::SaveAllReconnectInfo()
 		return;
 	}
 
-	CCBReconnectInfo *reconnect_info=NULL;
-	m_reconnect_info.startIterations();
-	while( m_reconnect_info.iterate(reconnect_info) ) {
+	for (const auto &[ccbid, reconnect_info]: m_reconnect_info) {
 		if( !SaveReconnectInfo(reconnect_info) ) {
 			CloseReconnectFile();
 			m_reconnect_fname = orig_reconnect_fname;
@@ -1447,23 +1400,19 @@ CCBServer::SweepReconnectInfo()
 	m_last_reconnect_info_sweep = now;
 
 	// Now it is time to delete expired reconnect records
-
-	CCBReconnectInfo *reconnect_info=NULL;
-	CCBTarget *target=NULL;
-
-	m_targets.startIterations();
-	while( m_targets.iterate(target) ) {
-		reconnect_info = GetReconnectInfo(target->getCCBID());
+	for (const auto &[ccbid, target]: m_targets) {
+		CCBReconnectInfo *reconnect_info = GetReconnectInfo(target->getCCBID());
 		ASSERT( reconnect_info );
 		reconnect_info->alive();
 	}
 
 	unsigned long removed = 0;
-	m_reconnect_info.startIterations();
-	while( m_reconnect_info.iterate(reconnect_info) ) {
-		time_t last = reconnect_info->getLastAlive();
-		if( now - last > 2*m_reconnect_info_sweep_interval ) {
-			RemoveReconnectInfo( reconnect_info );
+	for (auto it = m_reconnect_info.begin(); it != m_reconnect_info.end(); it++) {
+		time_t last = it->second->getLastAlive();
+		if( now - last > 2 * m_reconnect_info_sweep_interval ) {
+			delete it->second;
+			it = m_reconnect_info.erase(it);
+			ccb_stats.CCBEndpointsRegistered -= 1;
 			removed++;
 		}
 	}

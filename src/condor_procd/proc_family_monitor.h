@@ -151,12 +151,12 @@ private:
 	// keep a hash of all families we are tracking, keyed by the "root"
 	// process's pid
 	//
-	HashTable<pid_t, Tree<ProcFamily*>*> m_family_table;
+	std::map<pid_t, Tree<ProcFamily*>*> m_family_table;
 
 	// we keep a hash table over all processes that are in families
 	// we are monitoring
 	//
-	HashTable<pid_t, ProcFamilyMember*> m_member_table;
+	std::map<pid_t, ProcFamilyMember*> m_member_table;
 
 	// Upon consutruction of this object, the first pid we monitor is either
 	// going to be the condor_master or an arbitrary pid on the machine.

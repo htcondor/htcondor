@@ -3,7 +3,6 @@ start_negotiator_command( long command, const char * addr ) {
     Daemon negotiator( DT_NEGOTIATOR, addr );
     Sock * s;
     {
-        // FIXME: condor::ModuleLock ml;
         s = negotiator.startCommand(command, Stream::reli_sock, 0);
     }
     return s;
@@ -30,7 +29,6 @@ _negotiator_command(PyObject *, PyObject * args) {
 
     bool rv = false;
     {
-        // FIXME: condor::ModuleLock ml;
         rv = !s->end_of_message();
     }
     s->close();
@@ -66,7 +64,6 @@ _negotiator_command_return(PyObject *, PyObject * args) {
     bool rv = false;
     ClassAd * returnAd = new ClassAd();
     {
-        // FIXME: condor::ModuleLock ml;
         rv |= !s->end_of_message();
         s->decode();
         rv |= !getClassAdNoTypes(s, *returnAd);
@@ -105,7 +102,6 @@ _negotiator_command_user(PyObject *, PyObject * args) {
 
     bool rv = false;
     {
-        // FIXME: condor::ModuleLock ml;
         rv = !s->put(user) || !s->end_of_message();
     }
     s->close();
@@ -142,7 +138,6 @@ _negotiator_command_user_return(PyObject *, PyObject * args) {
     bool rv = false;
     ClassAd * returnAd = new ClassAd();
     {
-        // FIXME: condor::ModuleLock ml;
         rv = !s->put(user) || !s->end_of_message();
         s->decode();
         rv |= !getClassAdNoTypes(s, *returnAd);
@@ -189,7 +184,6 @@ _negotiator_command_user_value(PyObject *, PyObject * args) {
 
     bool rv = false;
     {
-        // FIXME: condor::ModuleLock ml;
         if( is_float ) {
             float value = (float)PyFloat_AsDouble(py_val);
             rv = !s->put(user) || !s->put(value) || !s->end_of_message();

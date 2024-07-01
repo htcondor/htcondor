@@ -8,9 +8,8 @@ class ParserType(enum.IntEnum):
 
     .. attribute:: Auto
 
-        Assuming that the input is a sequence of serialized ClassAds,
-        determine if the first ad is in the "old" or "new" format and
-        parse all ads accordingly.
+        Assuming that the input is a sequence of serialized ClassAds
+        in either the "new" or the "old" format, determine which.
 
     .. attribute:: Old
 

@@ -569,8 +569,8 @@ struct QueueItemsIterator {
 
 	boost::python::object next()
 	{
-		auto_free_ptr line(m_fea.items.pop());
-		if ( ! line) { THROW_EX(StopIteration, "All items returned"); }
+		if (m_fea.items_idx >= m_fea.items.size()) { THROW_EX(StopIteration, "All items returned"); }
+		auto_free_ptr line(strdup(m_fea.items[m_fea.items_idx++].c_str()));
 
 		if (m_fea.vars.size() > 1 || (m_fea.vars.size()==1 && (YourStringNoCase("Item") != m_fea.vars[0]))) {
 			std::vector<const char*> splits;
@@ -591,8 +591,11 @@ struct QueueItemsIterator {
 
 	char * next_row()
 	{
-		char * row = m_fea.items.pop();
-		if (row) { ++num_rows; }
+		char * row = nullptr;
+		if (m_fea.items_idx < m_fea.items.size()) {
+			row = strdup(m_fea.items[m_fea.items_idx++].c_str());
+			++num_rows;
+		}
 		return row;
 	}
 
@@ -4376,7 +4379,7 @@ void export_schedd()
             :param constraint: A query constraint.
                 Only jobs matching this constraint will be returned.
                 Defaults to ``'true'``, which means all jobs will be returned.
-            :type constraint: str or :class:`~classad.ExprTree`
+            :type constraint: str or :class:`classad.classad.ExprTree`
             :param projection: Attributes that will be returned for each job in the query.
                 At least the attributes in this list will be returned, but additional ones may be returned as well.
                 An empty list (the default) returns all attributes.
@@ -4718,7 +4721,7 @@ void export_schedd()
 
             :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
                 Only jobs matching this description will be acted upon.
-            :type job_spec: list[str] or str or ExprTree
+            :type job_spec: list[str] or str or ~classad.ExprTree
             :param str export_dir: The path to the directory that exported jobs will be written into.
             :param str new_spool_dir: The path to the base directory that exported jobs will use as IWD while they are exported
             :return: A ClassAd containing information about the export operation.
@@ -4740,7 +4743,7 @@ void export_schedd()
 
             :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
                 Only jobs matching this description will be acted upon.
-            :type job_spec: list[str] or str or ExprTree
+            :type job_spec: list[str] or str or ~classad.ExprTree
             :return: A ClassAd containing information about the unexport operation.
             :rtype: :class:`~classad.ClassAd`
             )C0ND0R",

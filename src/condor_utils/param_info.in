@@ -1671,7 +1671,7 @@ default=
 description=STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
 
 [ENABLE_STARTD_DAEMON_AD]
-default=false
+default=auto
 description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
 usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
@@ -3473,7 +3473,7 @@ type=int
 tags=schedd
 
 [MAX_SHADOW_EXCEPTIONS]
-default=5
+default=2
 type=int
 tags=schedd
 
@@ -4920,7 +4920,7 @@ type=string
 tags=condor_config
 
 [GANGLIAD_WANT_PROJECTION]
-default=false
+default=true
 type=bool
 description=Should gangliad use an attribute projection to query the collector
 tags=gangliad
@@ -6549,21 +6549,30 @@ default : @end
 @end
 
 [$FEATURE.PelicanCache]
-description=Configure a Pelican local cache on an execution point
-default : @end
+description=Configure a Pelican local cache daemon, args([size [, dir [,federation]]])  default: 256GB, $(LOCAL_DIR)/localcache, osg-htc.org
+default : @fin
 	# NOTE: This feature is still very experimental and could have bugs and unexpected behavior
 	PELICANCACHE=/usr/bin/pelican
 	DAEMON_LIST=$(DAEMON_LIST) PELICANCACHE
 	PELICANCACHE_LOG=$(LOG)/PelicanCacheLog
-	PELICANCACHE_FEDERATION=osg-htc.org
-	PELICANCACHE_ARGS=serve -d --module localcache -l $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
-	STARTD_ENVIRONMENT="NEAREST_CACHE=unix:/$(LOCAL_DIR)/localcache/cache.sock"
-	PELICANCACHE_SIZE=256GB
+	PELICANCACHE_SIZE=$(1:256GB)
+	PELICANCACHE_RUNLOCATION=$(2:$(LOCAL_DIR)/localcache)
+	PELICANCACHE_FEDERATION=$(3:osg-htc.org)
 	PELICANCACHE_HIGHWATERMARKPERCENTAGE=95
 	PELICANCACHE_LOWWATERMARKPERCENTAGE=85
-	PELICANCACHE_RUNLOCATION=$(LOCAL_DIR)/localcache
-	PELICANCACHE_ENVIRONMENT="PELICAN_SERVER_ENABLEUI=false PELICAN_LOCALCACHE_SIZE=$(PELICANCACHE_SIZE) PELICAN_LOCALCACHE_HIGHWATERMARKPERCENTAGE=$(PELICANCACHE_HIGHWATERMARKPERCENTAGE) PELICAN_LOCALCACHE_LOWWATERMARKPERCENTAGE=$(PELICANCACHE_LOWWATERMARKPERCENTAGE) PELICAN_LOCALCACHE_RUNLOCATION=$(PELICANCACHE_RUNLOCATION)"
-@end
+	# pass some args to the PELICANCACHE daemon in the environment and some in the args
+	PELICANCACHE_ARGS=serve -d --module localcache -l $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
+	PELICANCACHE_ENVIRONMENT @=end
+	   PELICAN_SERVER_ENABLEUI=false
+	   PELICAN_LOCALCACHE_SIZE=$(PELICANCACHE_SIZE)
+	   PELICAN_LOCALCACHE_RUNLOCATION=$(PELICANCACHE_RUNLOCATION)
+	   PELICAN_LOCALCACHE_HIGHWATERMARKPERCENTAGE=$(PELICANCACHE_HIGHWATERMARKPERCENTAGE)
+	   PELICAN_LOCALCACHE_LOWWATERMARKPERCENTAGE=$(PELICANCACHE_LOWWATERMARKPERCENTAGE)
+	@end
+	# push an environment variable into the STARTD, which the STARTER and the transfer plugins will inherit
+	# we use the leading delimiter syntax here, with ; as the delimiter on all platforms
+	STARTD_ENVIRONMENT=;NEAREST_CACHE=unix:/$(PELICANCACHE_RUNLOCATION)/cache.sock;$(STARTD_ENVIRONMENT)
+@fin
 
 [$FEATURE.PartitionableSlot]
 description=Configure a partitionable slot, args:([type# [, allocation]])  default: 1, 100%

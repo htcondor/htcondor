@@ -24,7 +24,7 @@ class JobEvent(Mapping):
 
     # It would be nice if this signature didn't appear in the docs,
     # since instantiating these objects shouldn't be in the API.
-    # ... there's probably a standard Pythonic way ot indicating that.
+    # ... there's probably a standard Pythonic way of indicating that.
     def __init__(self, data : classad.ClassAd, event_text : str):
         self._data = data
         self._event_text = event_text

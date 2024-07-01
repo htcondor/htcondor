@@ -33,7 +33,7 @@ def send_command(ad : classad.ClassAd, dc : DaemonCommand, target : Optional[str
     """
     Send a command to an HTCondor daemon.
 
-    :param ClassAd ad: The daemon's location.
+    :param classad2.ClassAd ad: The daemon's location.
     :param DaemonCommand dc: The command.
     :param str target: An optional parameter for the command.
     """

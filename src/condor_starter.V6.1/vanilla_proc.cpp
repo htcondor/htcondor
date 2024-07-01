@@ -212,14 +212,16 @@ static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
 }
 
 static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
-	return can_switch_ids() && cgroup_controller_is_writeable("", relative_cgroup);
+	bool use_cgroups_without_priv = param_boolean("CREATE_CGROUP_WITHOUT_ROOT", false);
+	return (use_cgroups_without_priv || can_switch_ids()) && 
+		cgroup_controller_is_writeable("", relative_cgroup);
 }
 
 static std::string current_parent_cgroup() {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	std::string cgroup;
 
-	int fd = open("/proc/self/cgroup", 0666);
+	int fd = open("/proc/self/cgroup", O_RDONLY);
 	if (fd < 0) {
 		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
 		return cgroup; // empty cgroup is invalid
@@ -932,6 +934,19 @@ void VanillaProc::killFamilyIfWarranted() {
 }
 
 void VanillaProc::restartCheckpointedJob() {
+
+	// daemoncore unregisters the family
+	// after it calls the reaper, if it was registered.
+	// on cgroup systems, this kills everything in the cgroup.
+	//
+	// We call restartCheckpointedJob from the reaper, so the
+	// unregistration hasn't happened yet. We start a new job here In
+	// the reaper, but when we return, daemon core will unregister
+	// and kill all the processes in this cgroup, including the ones 
+	// we just starts.  Extend_Family_Lifetime turns off the unregistration
+
+	daemonCore->Extend_Family_Lifetime(JobPid);
+
 	ProcFamilyUsage last_usage;
 	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
 		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
@@ -1010,10 +1025,15 @@ VanillaProc::outOfMemoryEvent() {
 	// lower than the limit when the OOM killer fired.
 	// So have some slop, just in case.
 	if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
-		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
-		Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
-		Starter->jic->allJobsGone(); // and exit to clean up more memory
-		return 0;
+		// But sometimes the job dies before we can poll for memory on systems 
+		// that don't have a memory.peak, and we get 0 MB. Assume job should go
+		// on hold in that case 
+		if (usageMB > 0) {
+			dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
+			Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
+			Starter->jic->allJobsGone(); // and exit to clean up more memory
+			return 0;
+		}
 	}
 
 	std::string ss;

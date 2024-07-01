@@ -179,6 +179,7 @@ static Qmgr_connection *open_q_as_owner(char const *effective_owner,DCSchedd &sc
 	return qmgr;
 }
 
+#if 0
 static Qmgr_connection *open_job(ClassAd &job,DCSchedd &schedd,FailObj &failobj)
 {
 		// connect to the q as the owner of this job
@@ -187,6 +188,7 @@ static Qmgr_connection *open_job(ClassAd &job,DCSchedd &schedd,FailObj &failobj)
 
 	return open_q_as_owner(effective_owner.c_str(),schedd,failobj);
 }
+#endif
 
 static Qmgr_connection *open_job(classad::ClassAd const &job,DCSchedd &schedd,FailObj &failobj)
 {

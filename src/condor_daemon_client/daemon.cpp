@@ -31,7 +31,6 @@
 #include "condor_query.h"
 #include "get_daemon_name.h"
 #include "internet.h"
-#include "HashTable.h"
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 #include "time_offset.h"

@@ -1,3 +1,24 @@
+condor (23.8.1-1) stable; urgency=medium
+
+  * Add new condor-ap package to facilitate Access Point installation
+  * HTCondor Docker images are now based on Alma Linux 9
+  * HTCondor Docker images are now available for the arm64 CPU architecture
+  * The user can now choose which submit method DAGMan will use
+  * Can add custom attributes to the User ClassAd with condor_qusers -edit
+  * Add use-projection option to condor_gangliad to reduce memory footprint
+  * Fix bug where interactive submit does not work on cgroup v2 systems (EL9)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 27 Jun 2024 11:21:00 -0500
+
+condor (23.0.12-1) stable; urgency=medium
+
+  * Remote condor_history queries now work the same as local queries
+  * Improve error handling when submitting to a remote scheduler via ssh
+  * Fix bug on Windows where condor_procd may crash when suspending a job
+  * Fix Python binding crash when submitting a DAG which has empty lines
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 13 Jun 2024 11:13:00 -0500
+
 condor (23.7.2-1) stable; urgency=medium
 
   * Warns about deprecated multiple queue statements in a submit file

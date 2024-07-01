@@ -316,16 +316,14 @@ SYSTEM_TABLE = {
                 "gpus_per_node":        4,
                 "max_nodes_per_job":    4, # "TBD"
             },
-# Disabled until HTCONDOR-2377 is released (and the well-known URL for
-# binaries is updated to match).
-#            "gpuMI100x8": {
-#                "max_duration":         48 * 60 * 60,
-#                "allocation_type":      "cores_or_ram",
-#                "cores_per_node":       128,
-#                "ram_per_node":         2048 * 1024,
-#                "gpus_per_node":        8,
-#                "max_nodes_per_job":    4, # "TBD"
-#            },
+            "gpuMI100x8": {
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       128,
+                "ram_per_node":         2048 * 1024,
+                "gpus_per_node":        8,
+                "max_nodes_per_job":    4, # "TBD"
+            },
         },
     }
     ),

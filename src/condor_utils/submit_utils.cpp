@@ -29,7 +29,6 @@
 #include "domain_tools.h"
 #include "sig_install.h"
 #include "daemon.h"
-#include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "my_username.h" // for my_domainname
@@ -5495,7 +5494,7 @@ int SubmitHash::SetRequirements()
 
 	GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs);
 
-	bool	checks_arch = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_ARCH );
+	bool	checks_arch = machine_refs.count( ATTR_ARCH );
 	bool	checks_opsys = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
 		machine_refs.count( ATTR_OPSYS_AND_VER ) ||
 		machine_refs.count( ATTR_OPSYS_LONG_NAME ) ||
@@ -5573,6 +5572,14 @@ int SubmitHash::SetRequirements()
 			}
 		}
 	} else if (IsDockerJob) {
+			if( !checks_arch ) {
+				if( answer[0] ) {
+					answer += " && ";
+				}
+				answer += "(TARGET.Arch == \"";
+				answer += ArchMacroDef.psz;
+				answer += "\")";
+			}
 			if( answer[0] ) {
 				answer += " && ";
 			}
@@ -5588,6 +5595,14 @@ int SubmitHash::SetRequirements()
 				}
 			}
 	} else if (IsContainerJob) {
+			if( !checks_arch ) {
+				if( answer[0] ) {
+					answer += " && ";
+				}
+				answer += "(TARGET.Arch == \"";
+				answer += ArchMacroDef.psz;
+				answer += "\")";
+			}
 			if( answer[0] ) {
 				answer += " && ";
 			}
@@ -8044,7 +8059,7 @@ static char * queue_token_scan(char * ptr, const struct _qtoken tokens[], int ct
 int SubmitForeachArgs::item_len() const
 {
 	if (foreach_mode == foreach_not) return 1;
-	return slice.length_for(items.number());
+	return slice.length_for(items.size());
 }
 
 enum {
@@ -8179,25 +8194,29 @@ int SubmitForeachArgs::parse_queue_args (
 			while (isspace(*plist)) ++plist;
 			if (*plist) {
 				if (foreach_mode == foreach_from) {
-					items.clearAll();
-					items.append(plist);
+					items.clear();
+					items.emplace_back(plist);
 				} else {
-					items.initializeFromString(plist);
+					for (const auto& item: StringTokenIterator(plist)) {
+						items.emplace_back(item);
+					}
 				}
 			}
 			items_filename = "<";
 		} else if (foreach_mode == foreach_from) {
 			while (isspace(*plist)) ++plist;
 			if (one_line_list) {
-				items.clearAll();
-				items.append(plist);
+				items.clear();
+				items.emplace_back(plist);
 			} else {
 				items_filename = plist;
 				trim(items_filename);
 			}
 		} else {
 			while (isspace(*plist)) ++plist;
-			items.initializeFromString(plist);
+			for (const auto& item: StringTokenIterator(plist)) {
+				items.emplace_back(item);
+			}
 		}
 
 		// trim trailing whitespace before the in,from, or matching keyword.
@@ -8403,9 +8422,11 @@ int SubmitHash::load_inline_q_foreach_items (
 				if (line[0] == '#') continue; // skip comments.
 				if (line[0] == ')') { saw_close_brace = true; break; }
 				if (o.foreach_mode == foreach_from) {
-					o.items.append(line);
+					o.items.emplace_back(line);
 				} else {
-					o.items.initializeFromString(line);
+					for (const auto& item: StringTokenIterator(line)) {
+						o.items.emplace_back(item);
+					}
 				}
 			}
 			if ( ! saw_close_brace) {
@@ -8494,9 +8515,11 @@ int SubmitHash::load_external_q_foreach_items (
 				line = getline_trim(stdin, lineno);
 				if ( ! line) break;
 				if (o.foreach_mode == foreach_from) {
-					o.items.append(line);
+					o.items.emplace_back(line);
 				} else {
-					o.items.initializeFromString(line);
+					for (const auto& item: StringTokenIterator(line)) {
+						o.items.emplace_back(item);
+					}
 				}
 			}
 		} else {
@@ -8508,7 +8531,7 @@ int SubmitHash::load_external_q_foreach_items (
 			for (char* line=NULL;;) {
 				line = getline_trim(fp, ItemsSource.line);
 				if ( ! line) break;
-				o.items.append(line);
+				o.items.emplace_back(line);
 			}
 			Close_macro_source(fp, ItemsSource, SubmitMacroSet, 0);
 		}

@@ -22,7 +22,6 @@
 #include "condor_threads.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "HashTable.h"
 #include "dc_service.h"		// for class Service
 #include "subsystem_info.h"
 #include <queue>
@@ -593,9 +592,9 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void* arg,
 		next_tid_++;
 		if ( next_tid_ == 1 ) next_tid_++;	// tid 1 is for main thread
 		if ( next_tid_ == INT_MAX ) next_tid_ = 2;	// we wrapped!
-	} while ( hashTidToWorker.exists(next_tid_) == 0 );	
+	} while (hashTidToWorker.contains(next_tid_));
 	int mytid = next_tid_;
-	hashTidToWorker.insert(mytid,newthread);
+	hashTidToWorker.emplace(mytid,newthread);
 	mutex_handle_unlock();
 	
 	newthread->tid_ = mytid;
@@ -643,11 +642,21 @@ ThreadImplementation::get_handle(int tid)
 
 	mutex_handle_lock();
 
-	if ( tid ) {
-		TI->hashTidToWorker.lookup(tid,worker);
+	if (tid != 0) {
+		auto it = TI->hashTidToWorker.find(tid);
+		if (it == TI->hashTidToWorker.end()) {
+			worker = nullptr;
+		} else {
+			worker = it->second;
+		}
 	} else {
 		ThreadInfo ti( pthread_self() );
-		TI->hashThreadToWorker.lookup(ti,worker);
+		auto it = TI->hashThreadToWorker.find(ti);
+		if (it == TI->hashThreadToWorker.end()) {
+			worker = nullptr;
+		} else {
+			worker = it->second;
+		}
 
 		if ( !worker) {
 			// not in our table; if this is the first time we are being
@@ -656,7 +665,7 @@ ThreadImplementation::get_handle(int tid)
 			// main thread into the hash.
 			if ( inserted_main_thread == false ) {
 				worker = get_main_thread_ptr();
-				TI->hashThreadToWorker.insert(ti,worker);
+				TI->hashThreadToWorker.emplace(ti,worker);
 				inserted_main_thread = true;
 			} else {
 				// if we have already inserted the main thread, and still
@@ -738,11 +747,7 @@ ThreadImplementation::threadStart(void *)
 
 		mutex_handle_lock();
 		// map this thread to this work unit 
-		if ( TI->hashThreadToWorker.insert(ti,item) < 0 ) {
-			// Insert failed; this thread must already be in the
-			// hashtable.  This should never happen!
-			EXCEPT("Threading data structures inconsistent!");
-		}		
+		TI->hashThreadToWorker.emplace(ti,item);
 		mutex_handle_unlock();
 
 		// update status for this work unit
@@ -767,11 +772,7 @@ ThreadImplementation::threadStart(void *)
 
 		mutex_handle_lock();
 		// this thread is done w/ this work item, unmap it.
-		if ( TI->hashThreadToWorker.remove(ti) < 0 ) {
-			// Removal failed because we didn't find this thread
-			// in our hashtable. This should never happen!
-			EXCEPT("Threading data structures inconsistent!");
-		}		
+		TI->hashThreadToWorker.erase(ti);
 		mutex_handle_unlock();
 
 
@@ -800,9 +801,7 @@ ThreadImplementation::initCurrentTid()
 	setCurrentTid(0);
 }
 
-ThreadImplementation::ThreadImplementation()
-	: hashThreadToWorker(hashFuncThreadInfo), hashTidToWorker(hashFuncInt)
-{
+ThreadImplementation::ThreadImplementation() {
 	num_threads_ = 0;
 	num_threads_busy_ = 0;
 	next_tid_ = 0;
@@ -968,7 +967,7 @@ ThreadImplementation::remove_tid(int tid)
 	}
 
 	mutex_handle_lock();
-	hashTidToWorker.remove(tid);
+	hashTidToWorker.erase(tid);
 	mutex_handle_unlock();
 }
 
@@ -995,7 +994,6 @@ ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & /*mythread*/)
 }
 
 ThreadImplementation::ThreadImplementation()
-	: hashThreadToWorker(hashFuncThreadInfo), hashTidToWorker(hashFuncInt)
 {
 	return;
 }
@@ -1040,7 +1038,7 @@ int ThreadImplementation::pool_add(condor_thread_func_t , void *, int *, const c
 	return -1;
 }
 
-const WorkerThreadPtr_t ThreadImplementation::get_handle(int /*tid*/)
+const WorkerThreadPtr_t ThreadImplementation::get_handle(ThreadInfo /*tid*/)
 {
 	return get_main_thread_ptr();
 }

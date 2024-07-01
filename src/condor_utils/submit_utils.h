@@ -443,12 +443,13 @@ enum {
 
 class SubmitForeachArgs {
 public:
-	SubmitForeachArgs() : foreach_mode(foreach_not), queue_num(1) {}
+	SubmitForeachArgs() : foreach_mode(foreach_not), queue_num(1), items_idx(0) {}
 	void clear() {
 		foreach_mode = foreach_not;
 		queue_num = 1;
+		items_idx = 0;
 		vars.clear();
-		items.clearAll();
+		items.clear();
 		slice.clear();
 		items_filename.clear();
 	}
@@ -468,7 +469,8 @@ public:
 	int        foreach_mode;   // the mode of operation for foreach, one of the foreach_xxx enum values
 	int        queue_num;      // the count of processes to queue for each item
 	std::vector<std::string> vars; // loop variable names
-	StringList items;          // list of items to iterate over
+	std::vector<std::string> items; // list of items to iterate over
+	size_t items_idx;
 	qslice     slice;          // may be initialized to slice if "[]" is parsed.
 	std::string   items_filename; // file to read list of items from, if it is "<" list should be read from submit file until )
 };
@@ -912,7 +914,7 @@ struct SubmitStepFromQArgs {
 		unset_live_vars();
 	}
 
-	bool has_items() const { return m_fea.items.number() > 0; }
+	bool has_items() const { return m_fea.items.size() > 0; }
 	bool done() const { return m_done; }
 	int  step_size() const { return m_step_size; }
 
@@ -1019,10 +1021,10 @@ struct SubmitStepFromQArgs {
 	// but not into the SubmitHash
 	int next_rowdata()
 	{
-		auto_free_ptr data(m_fea.items.pop());
-		if ( ! data) {
+		if (m_fea.items_idx >= m_fea.items.size()) {
 			return 0;
 		}
+		auto_free_ptr data(strdup(m_fea.items[m_fea.items_idx++].c_str()));
 
 		// split the data in the reqired number of fields
 		// then store that field data into the m_livevars set
@@ -1108,7 +1110,7 @@ const struct SimpleSubmitKeyword * get_submit_keywords();
 #define EXPAND_GLOBS_TO_DIRS    (1<<4) // when you want dirs only
 #define EXPAND_GLOBS_TO_FILES   (1<<5) // when you want files only
 
-int submit_expand_globs(StringList &items, int options, std::string & errmsg);
+int submit_expand_globs(std::vector<std::string> &items, int options, std::string & errmsg);
 #endif // EXPAND_GLOBS
 
 const	int			SCHEDD_INTERVAL_DEFAULT = 300;

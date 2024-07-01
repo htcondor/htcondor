@@ -4,7 +4,6 @@
 docker://htcondor/nmi-build:aarch64_AlmaLinux8-23070200
 docker://htcondor/nmi-build:aarch64_AlmaLinux9-23070200
 docker://htcondor/nmi-build:ppc64le_AlmaLinux8-23070200
-docker://htcondor/nmi-build:ppc64le_Ubuntu20-23070200
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-23070200
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-23070200
 docker://htcondor/nmi-build:x86_64_AmazonLinux2023-23070200

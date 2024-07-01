@@ -49,13 +49,13 @@ static const int command_int_from_adtype_table[NUM_AD_TYPES] = {
 	QUERY_NEGOTIATOR_ADS,//NEGOTIATOR_AD
 	QUERY_HAD_ADS,		//HAD_AD
 	QUERY_GENERIC_ADS,	//GENERIC_AD
-	QUERY_ANY_ADS,	//CREDD_AD
-	QUERY_ANY_ADS,	//DATABASE_AD
-	QUERY_ANY_ADS,	//TT_AD
+	QUERY_GENERIC_ADS,	//CREDD_AD
+	QUERY_GENERIC_ADS,	//DATABASE_AD
+	QUERY_GENERIC_ADS,	//TT_AD
 	QUERY_GRID_ADS,		//GRID_AD
 	0,//XFER_SERVICE_AD  /* No longer used */
 	0,//LEASE_MANAGER_AD /* No longer used */
-	QUERY_ANY_ADS,	//DEFRAG_AD
+	QUERY_GENERIC_ADS,	//DEFRAG_AD
 	QUERY_ACCOUNTING_ADS,//ACCOUNTING_AD = 23
 	QUERY_STARTD_ADS,	//SLOT_AD
 	QUERY_MULTIPLE_ADS, //STARTDAEMON_AD
@@ -287,7 +287,7 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case COLLECTOR_AD:
@@ -322,7 +322,7 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case GENERIC_AD:
@@ -343,14 +343,14 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case TT_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case ACCOUNTING_AD:

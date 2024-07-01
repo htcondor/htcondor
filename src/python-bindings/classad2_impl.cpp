@@ -16,10 +16,6 @@
 
 
 static PyMethodDef classad2_impl_methods[] = {
-	{"_version", & _version, METH_VARARGS, R"C0ND0R(
-        Returns the version of ClassAds this module is linked against.
-    )C0ND0R"},
-
     {"_classad_init", & _classad_init, METH_VARARGS, NULL},
     {"_classad_init_from_dict", & _classad_init_from_dict, METH_VARARGS, NULL},
     {"_classad_init_from_string", & _classad_init_from_string, METH_VARARGS, NULL},
@@ -40,6 +36,7 @@ static PyMethodDef classad2_impl_methods[] = {
     {"_classad_print_json", &_classad_print_json, METH_VARARGS, NULL},
     {"_classad_print_old", &_classad_print_old, METH_VARARGS, NULL},
     {"_classad_last_error", &_classad_last_error, METH_VARARGS, NULL},
+    {"_classad_version", &_classad_version, METH_VARARGS, NULL},
 
     {"_exprtree_init", & _exprtree_init, METH_VARARGS, NULL},
     {"_exprtree_eq", & _exprtree_eq, METH_VARARGS, NULL},

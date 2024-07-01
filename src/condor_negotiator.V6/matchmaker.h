@@ -25,7 +25,6 @@
 #include "condor_accountant.h"
 #include "condor_io.h"
 #include "HashTable.h"
-#include "string_list.h"
 #include "dc_collector.h"
 #include "condor_ver_info.h"
 #include "matchmaker_negotiate.h"
@@ -114,8 +113,8 @@ class Matchmaker : public Service
 		void updateCollector( int timerID = -1 );
 		
 		// auxillary functions
-		bool obtainAdsFromCollector(ClassAdList &allAds, ClassAdListDoesNotDeleteAds &startdAds, std::vector<ClassAd *> &submitterAds, std::set<std::string> &submitterNames, ClaimIdHash &claimIds );	
-		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
+		bool obtainAdsFromCollector(ClassAdList &allAds, std::vector<ClassAd *> &startdAds, std::vector<ClassAd *> &submitterAds, std::set<std::string> &submitterNames, ClaimIdHash &claimIds );	
+		char * compute_significant_attrs(std::vector<ClassAd *> & startdAds);
 		bool consolidate_globaljobprio_submitter_ads(std::vector<ClassAd *>& submitterAds) const;
 
 		void SetupMatchSecurity(std::vector<ClassAd *> &submitterAds);
@@ -170,7 +169,7 @@ class Matchmaker : public Service
 		int negotiate(char const* groupName, char const *submitterName, const ClassAd *submitterAd,
 		   double priority,
            double submitterLimit, double submitterLimitUnclaimed, int submitterCeiling,
-		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
+		   std::vector<ClassAd *> &startdAds, ClaimIdHash &claimIds, 
 		   bool ignore_schedd_limit, time_t deadline,
            int& numMatched, double &pieLeft);
 
@@ -178,13 +177,13 @@ class Matchmaker : public Service
 								 int untrimmed_num_startds,
 								 double untrimmedSlotWeightTotal,
 								 double minSlotWeight,
-								 ClassAdListDoesNotDeleteAds& startdAds, 
+								 std::vector<ClassAd *>& startdAds, 
 								 ClaimIdHash& claimIds,
 								 std::vector<ClassAd *>& submitterAds, 
 								 double groupQuota=INT_MAX, const char* groupName=NULL);
 
 		
-		ClassAd *matchmakingAlgorithm(const char* submitterName, const char* scheddAddr, const char* scheddName, ClassAd& request, ClassAdListDoesNotDeleteAds& startdAds,
+		ClassAd *matchmakingAlgorithm(const char* submitterName, const char* scheddAddr, const char* scheddName, ClassAd& request, std::vector<ClassAd *>& startdAds,
 									  double preemptPrio, 
                                       double limitUsed, double limitUsedUnclaimed,
                                       double submitterLimit, double submitterLimitUnclaimed, 
@@ -274,9 +273,9 @@ class Matchmaker : public Service
 
 		void MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
 		void addRemoteUserPrios( ClassAd* ad );
-		void addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal );
+		void addRemoteUserPrios( std::vector<ClassAd *> &cal );
 		void insertNegotiatorMatchExprs(ClassAd *ad);
-		void insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal );
+		void insertNegotiatorMatchExprs(std::vector<ClassAd *> &cal );
 		void reeval( ClassAd *ad );
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
 		friend int comparisonFunction (ClassAd *, ClassAd *,
@@ -299,14 +298,14 @@ class Matchmaker : public Service
 			@param startdAds List of startd ads to trim
 			@return the number of ads removed from the startdAds list 
 		**/
-		int trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds);
+		int trimStartdAds(std::vector<ClassAd *> &startdAds);
 		// Note: these are called by trimStartdAds as required
-		int trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const;
-		int trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds);
-		int trimStartdAds_ClaimedPslotLogic(ClassAdListDoesNotDeleteAds &startdAds);
+		int trimStartdAds_PreemptionLogic(std::vector<ClassAd *> &startdAds) const;
+		int trimStartdAds_ShutdownLogic(std::vector<ClassAd *> &startdAds);
+		int trimStartdAds_ClaimedPslotLogic(std::vector<ClassAd *> &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft);
-		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight, ExprTree* constraint);
+		double sumSlotWeights(std::vector<ClassAd *> &startdAds,double *minSlotWeight, ExprTree* constraint);
 
 			// Returns a pslot to the match list (after consumption policies have been applied).
 			// Recalculates ranks and re-sorts match list.
